@@ -49,6 +49,14 @@ Feats, spells, class/species/background features, items, conditions, effects, Co
 
 Unknown mechanics are reported as `unsupported`; the engine does not silently approximate them.
 
+### Rule content composes across modules
+
+Builtin rules, expansion-style modules, local homebrew, and DM session modules use the same ContentCatalog and RuleSource pipeline.
+
+A module may add standalone content or contribute to content owned by another module without rewriting that module. Cross-module composition uses stable declarative relationships such as `parent`, `extends`, and explicit `replaces`, plus ChoiceDefinition option and ProgressionTrack contributions.
+
+Examples include a homebrew subclass attached to an existing class, a new species variant attached to an existing species, or an expansion module adding an option to an existing feature choice. The normative relationship/contribution contract is `docs/rules/content-relationships.md`.
+
 ### UI does not own rules
 
 React components render domain state and collect user decisions. They do not contain hidden edition-specific arithmetic, named spell/feat logic, stacking rules, or lifecycle semantics.
@@ -72,6 +80,7 @@ Use versioned contracts, registries, descriptors, scenario tests, and declarativ
 ## Canonical documents
 
 - `docs/rules/README.md` — Common Rule Definition Specification v0.x draft.
+- `docs/rules/content-relationships.md` — normative cross-module `parent` / `extends` / `replaces`, Choice option contribution, and progression contribution semantics.
 - `docs/design/character-lifecycle.md` — Character creation, editing, progression, revision, and local ownership.
 - `docs/design/content-modules-items.md` — RuleModule, ContentCatalog, RuleSource import, inventory, ItemDefinition, and ItemInstance.
 - `docs/design/session-runtime.md` — state lifetimes, authority, Freeform/Initiative, targeting, ResolutionEvent, EffectInstance, and DM adjudication.
@@ -86,7 +95,10 @@ Use versioned contracts, registries, descriptors, scenario tests, and declarativ
 
 - `RulesProfile` — edition/ruleset policy: formulas, stacking, economy, timing interpretation, progression semantics, recovery policy, and validation.
 - `RuleModule` — portable content package.
-- `ContentCatalog` — merged view of enabled compatible content.
+- `ContentEntry` — stable catalog-visible content unit supplied by a RuleModule.
+- `ContentRelationship` — stable cross-content relation such as `parent`, additive `extends`, or explicit `replaces`.
+- `ExtensionPoint` — stable target through which compatible modules may contribute options/content without copying the target definition.
+- `ContentCatalog` — merged view of enabled compatible content and resolved cross-module contributions.
 - `RuleSource` — stable source of one or more mechanics: feat, spell, item feature, class feature, condition, situational rule, and similar.
 - `ItemDefinition` — reusable content definition for an item.
 - `CombatantDefinition` — reusable stat-block-like content definition.
@@ -125,7 +137,7 @@ Top-level product discovery is considered sufficiently complete. Before the firs
 
 The implementation gate is:
 
-1. Common Rule Definition Specification v0.x baseline.
+1. Common Rule Definition Specification v0.x baseline, including cross-module content relationship/contribution semantics.
 2. Initial RulesProfile selected and minimally specified.
 3. Core persisted IDs/versions/lifetimes defined.
 4. Deterministic ResolutionEvent/StateChange scenario fixtures defined.

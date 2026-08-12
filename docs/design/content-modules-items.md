@@ -60,6 +60,8 @@ Catalog entries may include profile-defined categories such as:
 
 The generic module layer does not hard-code one edition's taxonomy.
 
+ContentCatalog also resolves cross-module content relationships and contributions defined by `docs/rules/content-relationships.md`. This allows one module to add a subclass/variant/option/progression contribution to content defined by another module without rewriting the target module.
+
 ## 5. Grants and ChoiceDefinition
 
 Content may produce deterministic grants and/or real choices.
@@ -92,6 +94,8 @@ Examples:
 
 Selections are stored as Character source data. Resulting grants are derived.
 
+A ChoiceDefinition may use a catalog-backed option provider/extension point. Compatible modules can contribute additional options by stable ID without copying or replacing the base ChoiceDefinition.
+
 ## 6. Progression-driven content
 
 Module entries may use ProgressionTrack context and Predicates.
@@ -107,6 +111,8 @@ When a threshold becomes true:
 - deterministic grants activate automatically;
 - new required ChoiceDefinitions become unresolved until answered;
 - replacements/supersessions retain provenance.
+
+A module may also contribute progression behavior to a parent/related content context. For example, a homebrew subclass may attach features to an existing class ProgressionTrack at profile-defined thresholds without duplicating the class progression table.
 
 ## 7. Single RuleSource import
 
@@ -309,3 +315,36 @@ The system distinguishes:
 A session-only item is removed/unmounted according to its lifetime and is not silently persisted.
 
 A permanent DM grant requires an explicit durable-grant/write-back operation.
+
+## 19. Cross-module content relationships
+
+The normative cross-module relationship contract is `docs/rules/content-relationships.md`.
+
+A RuleModule may add either standalone content or content attached to/extending another module. Initial relationship semantics are:
+
+- `parent` — hierarchy/placement, such as subclass -> class or variant -> species;
+- `extends` — additive contribution to an explicit extension point, ChoiceDefinition option source, or progression context;
+- `replaces` — explicit substitution of a stable target, never inferred from load order.
+
+Representative supported cases:
+
+```text
+Base class + expansion subclass
+Base species + homebrew variant
+Base feature choice + expansion option
+Base progression + subclass progression contribution
+Base spell/feat/item catalog + additional compatible entries
+```
+
+Rules:
+
+- relationships use stable module/content IDs, not display names;
+- external targets require compatible module dependencies;
+- missing targets/cycles/category mismatches are validation failures or disabled inspection-only content;
+- multiple compatible additive contributors may coexist;
+- multiple competing replacements must produce an explicit conflict;
+- Characters persist the exact module/version/content identity of selected extension content;
+- session-only contributions cannot silently become permanent Character dependencies;
+- provenance traces the full base-choice -> extension-content -> RuleSource -> Mechanic chain.
+
+The Character builder and progression UX render the resolved ContentCatalog result. They do not contain dedicated hard-coded logic for each expansion book or homebrew package.

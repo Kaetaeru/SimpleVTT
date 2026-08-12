@@ -10,6 +10,7 @@
 - [x] Character 생성/편집/레벨업 계약 병합
 - [x] RuleSource / provenance / Predicate / Timing / action economy 계약 병합
 - [x] RuleModule / ContentCatalog / ChoiceDefinition 계약 병합
+- [x] cross-module `parent` / `extends` / `replaces` / Choice option / Progression contribution 계약 작성
 - [x] Inventory / ItemDefinition / ItemInstance / magic-item 계약 병합
 - [x] Freeform / Initiative / authority / state lifetime / write-back 계약 병합
 - [x] Targeting / EffectInstance / ResolutionEvent / StateChange 계약 병합
@@ -19,6 +20,7 @@
 - [x] 기존 stacked design PR #4/#6/#10/#12/#15/#16/#22 종료
 - [x] design Issue #3/#5/#7/#11/#13/#14/#18/#19/#20/#21/#23 종료
 - [x] planning epic #17을 최신 implementation gate 기준으로 정리
+- [ ] Issue #26 content relationship 문서 PR review/merge
 - [ ] 초기 D&D RulesProfile 선택/최소 규격 확정
 - [ ] Combatant schema/template/example 자동 validation 추가
 - [ ] golden scenario fixture와 첫 rules tests 작성
@@ -30,6 +32,8 @@
 - 모든 중요한 계산값은 RuleSource별 provenance로 설명 가능해야 한다.
 - feat/spell/item/condition/class feature는 runtime prose parsing이 아니라 구조화 mechanics를 제공한다.
 - 기본 콘텐츠와 homebrew JSON은 동일한 validation/rules pipeline을 사용한다.
+- RuleModule은 standalone content와 기존 content에 대한 안정적인 additive contribution을 모두 표현할 수 있어야 한다.
+- cross-module 관계는 stable ID 기반 `parent` / `extends` / explicit `replaces`를 사용하고 load order로 의미를 결정하지 않는다.
 - deterministic grant는 자동 적용하고 실제 선택만 ChoiceDefinition으로 질문한다.
 - Character 원본은 player-local이다.
 - connected session의 shared runtime ordering/result는 DM host authoritative다.
@@ -56,9 +60,10 @@
 - [ ] Initiative lifecycle ordering
 - [ ] damage/resistance/immunity/vulnerability/critical policy
 - [ ] ProgressionTrack / threshold semantics
+- [ ] content categories / parent-child rules / extension-point descriptors
 - [ ] rest/recovery/time-advance policy
-- [ ] content categories / validation tags
-- [ ] required capability set
+- [ ] validation tags
+- [ ] required capability set, including content relationship/contribution capabilities
 - [ ] 최소 default content module 연결
 
 ### 2. Schema / golden-scenario validation 기반
@@ -67,6 +72,7 @@
 - [ ] template/example schema validation test
 - [ ] semantic validator skeleton: IDs/references/property/mechanic/Predicate/Timing/capability
 - [ ] Common Rule Specification 대응 JSON Schema tree 시작
+- [ ] RuleModule/ContentEntry relationship schema: parent/extends/replaces/extensionPoint/progressionContribution
 - [ ] golden scenario fixture format 확정
 - [ ] AC provenance + suppressed contribution scenario
 - [ ] attack + typed damage + resistance + temp HP scenario
@@ -76,6 +82,11 @@
 - [ ] Freeform -> Initiative -> Freeform state preservation scenario
 - [ ] duplicate ResolutionEvent idempotency scenario
 - [ ] DM force outcome + correction scenario
+- [ ] homebrew subclass -> builtin class option contribution scenario
+- [ ] external ChoiceDefinition option contribution scenario
+- [ ] subclass progression contribution scenario
+- [ ] missing parent / relationship cycle / competing replacement validation scenarios
+- [ ] session-only content cannot silently become durable Character dependency scenario
 
 ### 3. 첫 Offline Vertical Slice
 
@@ -87,6 +98,8 @@
 - [ ] local Character library / safe JSON persistence
 - [ ] Guided/Quick Character draft 최소 UX
 - [ ] default ContentCatalog에서 build 선택
+- [ ] builtin + local module ContentCatalog merge
+- [ ] external subclass/species/choice-option contribution 최소 path
 - [ ] deterministic grant + ChoiceDefinition
 - [ ] local RuleSource/feat JSON import
 - [ ] ItemInstance 장착 -> property provenance 재계산
@@ -103,7 +116,7 @@
 
 - [ ] 불편/미지원 규칙을 deterministic failing scenario로 기록
 - [ ] 기존 primitive로 표현 가능한지 먼저 확인
-- [ ] 불가능할 때만 최소 Mechanic/Predicate/Timing/Targeting primitive 추가
+- [ ] 불가능할 때만 최소 Mechanic/Predicate/Timing/Targeting/content-relationship primitive 추가
 - [ ] persisted contract 변경 시 version/migration/capability 갱신
 - [ ] 기존 scenarios 회귀 검증
 - [ ] UX는 domain schema와 분리해서 빠르게 수정
@@ -118,6 +131,7 @@
 - SessionProjection + snapshot/event cursor
 - ActionRequest / Choice / ResolutionEvent sync
 - session RuleModule temporary mount
+- session content relationship/contribution compatibility validation
 - reconnect / duplicate / out-of-order handling
 - durable Character write-back
 
