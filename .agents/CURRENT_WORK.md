@@ -18,6 +18,7 @@
 - [x] Combatant import guide/schema/template/example `0.2-draft` 병합
 - [x] 초기 RulesProfile source 선택: **D&D SRD 5.2.1 / CC-BY-4.0**
 - [x] 초기 profile identity 선택: `dnd.srd-5.2.1` / `0.1-draft`
+- [x] 한국어-first content localization 계약 작성: 기본 `ko-KR`, 번역 기준 `Kaetaeru/D-D-2024-`
 - [ ] Issue #32 RulesProfile Draft PR review/merge
 - [ ] RulesProfile registry/schema + golden-scenario fixture를 executable contract로 전환
 - [ ] Combatant schema/template/example 자동 validation 추가
@@ -41,6 +42,9 @@
 - UI는 rules의 source of truth가 아니다.
 - 실제 플레이에서 실패한 scenario를 근거로 최소 primitive를 확장한다.
 - SRD 5.2.1은 public domain이 아니라 CC-BY-4.0 licensed source이므로 배포 시 required attribution과 non-SRD proprietary boundary를 지킨다.
+- 기본 SRD 콘텐츠의 플레이어 표시 언어는 `ko-KR`이며, 규칙 mechanics와 localized prose를 분리한다.
+- SRD 한국어명/설명은 `Kaetaeru/D-D-2024-`의 검수된 SRD 번역, 용어집, 번역 지침을 우선 기준으로 삼는다.
+- stable content ID와 규칙 결과는 번역 문구에 의존하지 않으며 translation-only update는 mechanical compatibility를 깨지 않는다.
 
 ## 단기 체크리스트
 
@@ -53,6 +57,7 @@ profileId: dnd.srd-5.2.1
 profileVersion: 0.1-draft
 defaultModuleId: dnd.srd-5.2.1.core
 sourceLicense: CC-BY-4.0
+defaultContentLocale: ko-KR
 ```
 
 - [x] source/version/license boundary
@@ -70,11 +75,14 @@ sourceLicense: CC-BY-4.0
 - [x] content category/extension-point boundary
 - [x] first profile capability set
 - [x] required golden-scenario list
+- [x] Korean-first localized presentation / translation-source policy
 - [ ] exact machine-readable Property registry
 - [ ] exact machine-readable Predicate operator registry
 - [ ] exact machine-readable TimingPoint registry
 - [ ] exact machine-readable economy/damage/progression policy tables
 - [ ] Default SRD RuleModule manifest/schema skeleton
+- [ ] localized presentation schema (`ko-KR` default, `originalName`, fallback/search metadata)
+- [ ] translation provenance/revision metadata schema
 - [ ] repository/product attribution notice location finalized before SRD-derived data ships
 
 ### 2. Schema / golden-scenario validation 기반
@@ -84,6 +92,7 @@ sourceLicense: CC-BY-4.0
 - [ ] Common Rule Specification 대응 JSON Schema tree
 - [ ] RulesProfile schema/registry format
 - [ ] RuleModule / ContentEntry schema
+- [ ] LocalizedPresentation / translation provenance schema
 - [ ] `parent` / `extends` / `replaces` / extensionPoint / ProgressionContribution schema
 - [ ] semantic validator skeleton: IDs/references/property/mechanic/Predicate/Timing/capability
 - [ ] golden scenario fixture format
@@ -104,12 +113,19 @@ sourceLicense: CC-BY-4.0
 - [ ] subclass Progression contribution scenario
 - [ ] missing parent / cycle / competing replacement validation scenarios
 - [ ] duplicate ResolutionEvent idempotency scenario
+- [ ] translation-only revision preserves mechanical identity/outcome scenario
+- [ ] Korean name + English original name resolve to same ContentCatalog entry search scenario
 
 ### 3. Default SRD content bootstrap
 
 전체 SRD를 먼저 변환하지 않는다. Vertical Slice와 golden scenarios에 필요한 대표 content부터 추가한다.
 
 - [ ] Default RuleModule manifest `dnd.srd-5.2.1.core`
+- [ ] `defaultLocale: ko-KR`
+- [ ] `Kaetaeru/D-D-2024-/10-RULEBOOKS/srd-5.2.1/` 기반 reviewed Korean display data
+- [ ] English `originalName` + source reference metadata
+- [ ] glossary/translation revision provenance
+- [ ] Korean + English original-name ContentCatalog search
 - [ ] 대표 class + subclass 관계
 - [ ] 대표 species/background path
 - [ ] 대표 feat/option ChoiceDefinition
@@ -119,6 +135,7 @@ sourceLicense: CC-BY-4.0
 - [ ] representative Combatant definitions
 - [ ] 필요한 condition/effect subset
 - [ ] source/license metadata preserved on module/content
+- [ ] non-SRD PHB/DMG/MM private translation text가 distributable module에 섞이지 않는지 검증
 
 ### 4. 첫 Offline Vertical Slice
 
@@ -129,6 +146,9 @@ sourceLicense: CC-BY-4.0
 - [ ] lint/typecheck/test/build + GitHub Actions
 - [ ] local Character library / safe JSON persistence
 - [ ] Guided/Quick Character draft 최소 UX
+- [ ] UI 기본 rules-content locale `ko-KR`
+- [ ] feat/spell/item/class feature 등 이름/설명 한국어 기본 표시
+- [ ] 한국어명 + 영문 원명 검색 지원
 - [ ] default ContentCatalog에서 build 선택
 - [ ] builtin + local module ContentCatalog merge
 - [ ] external subclass/species/choice-option contribution 최소 path
@@ -152,6 +172,7 @@ sourceLicense: CC-BY-4.0
 - [ ] persisted contract 변경 시 version/migration/capability 갱신
 - [ ] 기존 scenarios 회귀 검증
 - [ ] UX는 domain schema와 분리해서 빠르게 수정
+- [ ] 번역/용어 수정은 mechanics와 독립적으로 반영하고 localization regression을 검증
 
 ## 중기 이후
 
