@@ -38,6 +38,9 @@ Available to modules, homebrew JSON, Characters, Combatants, items, and sessions
 - ChoiceDefinitions;
 - Effects;
 - module/catalog content;
+- ContentEntry relationships and contributions;
+- Choice option extension points;
+- Progression contributions;
 - ItemDefinitions;
 - CombatantDefinitions;
 - SituationalRules;
@@ -57,6 +60,7 @@ Candidates include:
 - TimingPoint registry;
 - targeting-strategy registry;
 - content-category descriptors;
+- content relationship/extension-point descriptors;
 - RulesProfile policy tables;
 - UI presentation descriptors where appropriate.
 
@@ -76,6 +80,7 @@ They must not become the source of truth for:
 - edition arithmetic;
 - stacking;
 - named feat/spell/item behavior;
+- named class/subclass/species expansion wiring;
 - Timing/Duration;
 - action legality;
 - session authority;
@@ -91,6 +96,7 @@ Representative boundaries:
 
 ```text
 RuleModule(s) -> ContentCatalog
+ContentEntry relationships -> resolved catalog/extension graph
 Character source -> Rule/property resolver
 ActionRequest + Context -> PendingResolution
 PendingResolution -> StateChange[]
@@ -139,6 +145,9 @@ Content/session negotiation may require named capabilities such as:
 - TimingPoint;
 - targeting strategy;
 - ActivationState semantics;
+- content relationship kind;
+- Choice option contribution;
+- Progression contribution;
 - ResolutionEvent payload capability;
 - RulesProfile policy version.
 
@@ -158,6 +167,8 @@ Allowed outcomes include:
 
 Never silently discard an unsupported mechanic while claiming the content is fully supported.
 
+The same rule applies to unsupported cross-module relationship semantics: a client that can parse a module but cannot safely resolve its `parent`, `extends`, `replaces`, option contribution, or progression contribution contract must not partially activate it as if complete.
+
 ## 9. Versioning and migration
 
 Track independently where needed:
@@ -175,6 +186,8 @@ Track independently where needed:
 Rules content updates must not silently reinterpret old Characters or historical event data.
 
 Migration boundaries should be explicit and testable.
+
+Cross-module selections must retain stable target/source identities so a module update cannot silently retarget a Character to a different same-named subclass/species/choice option.
 
 ## 10. Scenario-driven evolution
 
@@ -199,6 +212,7 @@ The rules engine should be tested primarily with deterministic domain scenarios.
 A fixture should be able to specify:
 
 - RulesProfile/module versions/capabilities;
+- module/content relationship graph where relevant;
 - initial Character/Combatant/session state;
 - active RuleSources/ItemInstances/EffectInstances;
 - ActionRequest;
@@ -231,6 +245,15 @@ At minimum cover:
 15. Reconnect from an event cursor applies only missing events.
 16. Character progression applies deterministic grants and asks only new choices.
 17. Unsupported imported rule remains explicit rather than partially executing.
+18. Homebrew subclass contributes to a builtin class subclass choice without changing the base module.
+19. Two compatible modules add independent options to one ChoiceDefinition extension point.
+20. Standalone homebrew species and a variant attached to an existing species both resolve through ContentCatalog.
+21. Subclass progression contribution activates against the parent class ProgressionTrack at the expected threshold.
+22. Missing parent/extension target disables or rejects only the affected content with a useful diagnostic.
+23. Competing explicit replacements produce a deterministic conflict rather than load-order behavior.
+24. Content relationship cycle is rejected.
+25. Character preserves exact module/version/content identity for extension content across save/load.
+26. Session-only extension content does not silently become a durable Character dependency.
 
 ## 13. Undo symmetry tests
 
@@ -253,6 +276,7 @@ If later events depend on the changed state, the system must reject unsafe rever
 Given the same:
 
 - versions/capabilities;
+- module/content relationship graph;
 - snapshots;
 - ActionRequest;
 - dice;
@@ -260,7 +284,7 @@ Given the same:
 - DM adjudication;
 - authoritative ordering;
 
-the engine must produce the same outcome/provenance/StateChanges.
+the engine must produce the same catalog resolution and the same outcome/provenance/StateChanges.
 
 Visual dice state is never an input to deterministic rules tests.
 
@@ -272,6 +296,7 @@ Test:
 
 - old Character -> current model;
 - old RuleModule -> validation/migration or clear incompatibility;
+- old cross-module selection -> current relationship graph or explicit review;
 - old CombatantDefinition -> current model;
 - old event/log -> supported read/replay/inspection behavior;
 - unknown future fields -> safe preservation/rejection according to policy.
@@ -284,6 +309,8 @@ Design and tests must cover:
 - corrupted Character file;
 - invalid RuleModule/Combatant/item JSON;
 - missing module/version;
+- missing parent/extension-point target;
+- relationship cycle/conflict;
 - unresolved required ChoiceDefinition;
 - unsupported mechanic;
 - stale ActionRequest;
@@ -342,3 +369,13 @@ Do not add merely for extensibility:
 - automatic Internet module download;
 - cloud sync/account infrastructure;
 - requirement that all internal TypeScript details remain backward-compatible forever.
+
+## 21. Cross-module content extension contract
+
+The normative contract is `docs/rules/content-relationships.md`.
+
+The architectural test for this feature is simple:
+
+> Can a new compatible module add a subclass, species variant, ChoiceDefinition option, or progression contribution to existing content without modifying the original module, without React-specific wiring, and without load-order-dependent behavior?
+
+If not, the ContentCatalog/relationship boundary is too rigid.
