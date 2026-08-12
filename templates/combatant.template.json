@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "0.1-draft",
+  "ruleset": "replace-with-ruleset",
+  "id": "replace-me",
+  "name": "Replace Me",
+  "metadata": {
+    "sourceLabel": "",
+    "sourceReference": "",
+    "tags": []
+  },
+  "abilities": {
+    "str": { "score": 10, "modifier": 0 },
+    "dex": { "score": 10, "modifier": 0 },
+    "con": { "score": 10, "modifier": 0 },
+    "int": { "score": 10, "modifier": 0 },
+    "wis": { "score": 10, "modifier": 0 },
+    "cha": { "score": 10, "modifier": 0 }
+  },
+  "proficiencyBonus": null,
+  "initiativeModifier": 0,
+  "armorClass": {
+    "base": 10,
+    "label": "",
+    "variants": []
+  },
+  "hitPoints": {
+    "max": 1
+  },
+  "movement": {
+    "walk": 30
+  },
+  "savingThrows": {},
+  "skills": {},
+  "defenses": {
+    "damageModifiers": [],
+    "conditionImmunities": []
+  },
+  "resources": [],
+  "traits": [],
+  "actions": [],
+  "reactions": [],
+  "notes": "",
+  "extensions": {}
+}
