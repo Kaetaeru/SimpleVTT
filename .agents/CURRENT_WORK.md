@@ -1,204 +1,183 @@
 # 현재 작업 체크리스트
 
-이 문서는 에이전트가 현재 우선순위를 빠르게 파악하기 위한 비공식 작업 문서다. 공식 제품/아키텍처 계약은 `docs/`, `schemas/`, `templates/`, `examples/`에 둔다.
+이 문서는 에이전트가 현재 우선순위를 빠르게 파악하기 위한 비공식 작업 문서다. 공식 제품/아키텍처 계약은 `docs/`, `rules/`, `content/`, `schemas/`, `templates/`, `examples/`에 둔다.
 
 ## 현재 상태
 
-- [x] 최신 제품/아키텍처 설계를 canonical 문서 세트로 통합
-- [x] Common Rule Definition Specification `0.1-draft` 병합
-- [x] Character 생성/편집/레벨업 계약 병합
-- [x] RuleSource / provenance / Predicate / Timing / action economy 계약 병합
-- [x] RuleModule / ContentCatalog / ChoiceDefinition 계약 병합
-- [x] cross-module `parent` / `extends` / `replaces` / Choice option / Progression contribution 계약 병합 (Issue #26 / PR #31)
-- [x] Inventory / ItemDefinition / ItemInstance / magic-item 계약 병합
-- [x] Freeform / Initiative / authority / state lifetime / write-back 계약 병합
-- [x] Targeting / EffectInstance / ResolutionEvent / StateChange 계약 병합
-- [x] DM situational ruling/correction UX 계약 병합
-- [x] extensibility/versioning/golden-scenario 전략 병합
-- [x] Combatant import guide/schema/template/example `0.2-draft` 병합
-- [x] 초기 RulesProfile source 선택: **D&D SRD 5.2.1 / CC-BY-4.0**
-- [x] 초기 profile identity 선택: `dnd.srd-5.2.1` / `0.1-draft`
-- [x] 한국어-first content localization 계약 작성: 기본 `ko-KR`, 번역 기준 `Kaetaeru/D-D-2024-`
-- [ ] Issue #32 RulesProfile Draft PR review/merge
-- [ ] RulesProfile registry/schema + golden-scenario fixture를 executable contract로 전환
-- [ ] Combatant schema/template/example 자동 validation 추가
-- [ ] 첫 오프라인 vertical slice 구현 시작
+- [x] 제품/아키텍처 canonical 설계 통합
+- [x] Common Rule Definition Specification `0.1-draft`
+- [x] Character 생성/편집/레벨업 계약
+- [x] RuleSource / provenance / Predicate / Timing / action economy 계약
+- [x] RuleModule / ContentCatalog / ChoiceDefinition 계약
+- [x] cross-module `parent` / `extends` / `replaces` / Choice option / Progression contribution 계약 (Issue #26 / PR #31)
+- [x] Inventory / ItemDefinition / ItemInstance / magic-item 계약
+- [x] Freeform / Initiative / authority / state lifetime / write-back 계약
+- [x] Targeting / EffectInstance / ResolutionEvent / StateChange 계약
+- [x] DM situational ruling/correction UX 계약
+- [x] extensibility/versioning/golden-scenario 전략
+- [x] Combatant import guide/schema/template/example `0.2-draft`
+- [x] 초기 RulesProfile: **D&D SRD 5.2.1 / CC-BY-4.0**
+- [x] RulesProfile identity: `dnd.srd-5.2.1` / `0.1-draft`
+- [x] 한국어-first localization: `ko-KR`, 기준 `Kaetaeru/D-D-2024-`
+- [x] Issue #32 / PR #33 RulesProfile + localization 설계 병합
+- [ ] Issue #34 / Draft PR #35 executable rules contracts review/merge
+- [x] PR #35 Contract validation CI 전체 checkout 통과
+- [ ] semantic validator + 추가 golden scenarios
+- [ ] 대표 한국어 SRD content bootstrap
+- [ ] TypeScript rules/domain + 첫 offline vertical slice 시작
 
 ## 제품 핵심 원칙
 
 - 수학은 자동화하고 실제 선택은 플레이어/DM에게 남긴다.
 - 모든 중요한 계산값은 RuleSource별 provenance로 설명 가능해야 한다.
-- 이름 있는 class/subclass/species/feat/spell/item/condition은 runtime prose parsing이나 resolver hard-code가 아니라 구조화 content로 제공한다.
-- RulesProfile은 규칙 의미를 정의하고, Default RuleModule은 이름 있는 SRD 콘텐츠를 제공한다.
-- 기본 콘텐츠와 homebrew JSON은 동일한 validation/rules pipeline을 사용한다.
-- RuleModule은 standalone content와 기존 content에 대한 additive contribution을 모두 표현할 수 있어야 한다.
-- cross-module 관계는 stable ID 기반 `parent` / `extends` / explicit `replaces`를 사용하고 load order로 의미를 결정하지 않는다.
-- deterministic grant는 자동 적용하고 실제 선택만 ChoiceDefinition으로 질문한다.
-- Character 원본은 player-local이다.
-- connected session의 shared runtime ordering/result는 DM host authoritative다.
-- Character-owned durable runtime 변화는 authoritative ResolutionEvent 후 local write-back한다.
+- 이름 있는 class/subclass/species/feat/spell/item/condition은 prose parsing이나 resolver hard-code가 아니라 구조화 content로 제공한다.
+- RulesProfile은 규칙 의미를 정의하고 Default RuleModule은 이름 있는 SRD 콘텐츠를 제공한다.
+- builtin과 homebrew는 동일한 RuleModule/ContentCatalog/validation pipeline을 사용한다.
+- cross-module 의미는 stable ID 기반 `parent` / additive `extends` / explicit `replaces`로 결정하고 load order로 결정하지 않는다.
+- Character 원본은 player-local, connected shared runtime 결과는 DM host authoritative다.
 - Freeform과 Initiative는 같은 RuleSource/Predicate/Timing/ResolutionEvent 시스템을 사용한다.
 - imported content는 declarative only이며 unsupported mechanic은 명시적으로 드러낸다.
-- UI는 rules의 source of truth가 아니다.
-- 실제 플레이에서 실패한 scenario를 근거로 최소 primitive를 확장한다.
-- SRD 5.2.1은 public domain이 아니라 CC-BY-4.0 licensed source이므로 배포 시 required attribution과 non-SRD proprietary boundary를 지킨다.
-- 기본 SRD 콘텐츠의 플레이어 표시 언어는 `ko-KR`이며, 규칙 mechanics와 localized prose를 분리한다.
-- SRD 한국어명/설명은 `Kaetaeru/D-D-2024-`의 검수된 SRD 번역, 용어집, 번역 지침을 우선 기준으로 삼는다.
-- stable content ID와 규칙 결과는 번역 문구에 의존하지 않으며 translation-only update는 mechanical compatibility를 깨지 않는다.
+- UI와 localized prose는 rules의 source of truth가 아니다.
+- persisted 규칙 확장은 실제 실패 scenario를 근거로 최소 primitive만 추가한다.
+- SRD 5.2.1 파생 번들은 CC-BY-4.0 attribution과 non-SRD proprietary boundary를 지킨다.
+- 기본 rules-content locale은 `ko-KR`; 한국어명/설명은 `Kaetaeru/D-D-2024-`의 검수된 SRD 번역/용어집/번역 지침을 우선한다.
+- 번역 변경은 stable content ID나 mechanical compatibility를 바꾸지 않는다.
 
 ## 단기 체크리스트
 
-### 1. Initial RulesProfile — 현재 작업
+### 1. Executable Rules Contracts — Issue #34 / PR #35
 
-Source: `System Reference Document 5.2.1`
+현재 브랜치: `agent/34-executable-rules-contracts`
 
 ```text
 profileId: dnd.srd-5.2.1
 profileVersion: 0.1-draft
 defaultModuleId: dnd.srd-5.2.1.core
-sourceLicense: CC-BY-4.0
 defaultContentLocale: ko-KR
 ```
 
-- [x] source/version/license boundary
-- [x] RulesProfile vs Default RuleModule boundary
-- [x] ability modifier / Proficiency Bonus baseline
-- [x] D20 Test / Advantage-Disadvantage policy
-- [x] Initiative / turn-round lifecycle baseline
-- [x] Action / Bonus Action / Reaction / movement economy baseline
-- [x] Freeform economy baseline
-- [x] typed damage / critical / Resistance / Vulnerability / Immunity ordering
-- [x] Temporary HP baseline
-- [x] ProgressionTrack / multiclass-ready model
-- [x] rest/recovery/time hooks
-- [x] Item activation/attunement boundary
-- [x] content category/extension-point boundary
-- [x] first profile capability set
-- [x] required golden-scenario list
-- [x] Korean-first localized presentation / translation-source policy
-- [ ] exact machine-readable Property registry
-- [ ] exact machine-readable Predicate operator registry
-- [ ] exact machine-readable TimingPoint registry
-- [ ] exact machine-readable economy/damage/progression policy tables
-- [ ] Default SRD RuleModule manifest/schema skeleton
-- [ ] localized presentation schema (`ko-KR` default, `originalName`, fallback/search metadata)
-- [ ] translation provenance/revision metadata schema
-- [ ] repository/product attribution notice location finalized before SRD-derived data ships
+- [x] machine-readable Property registry
+- [x] ability modifier Expression AST
+- [x] Proficiency Bonus thresholds/multipliers
+- [x] D20 Test / Advantage-Disadvantage registry
+- [x] Predicate operator registry
+- [x] TimingPoint registry
+- [x] explicit Initiative policy
+- [x] explicit AC formula-candidate policy
+- [x] Initiative economy / Freeform economy policy
+- [x] typed damage / critical / Resistance / Vulnerability / Immunity policy
+- [x] Temporary HP policy
+- [x] progression/rest/activation/category/capability metadata
+- [x] `schemas/rules-profile.schema.json`
+- [x] `schemas/rule-module.schema.json`
+- [x] `schemas/content-entry.schema.json`
+- [x] `schemas/localized-presentation.schema.json`
+- [x] `schemas/golden-scenario.schema.json`
+- [x] Default SRD RuleModule manifest skeleton
+- [x] `ko-KR` / translation-source / `srd-only` distribution metadata
+- [x] ability-modifier golden fixture
+- [x] Advantage + Disadvantage cancellation fixture
+- [x] homebrew subclass `parent` + `extends` + Progression contribution fixture
+- [x] repeatable `tools/validate_contracts.py`
+- [x] 기존 Combatant schema/example/template도 validator에 연결
+- [x] minimal GitHub Actions `Contract validation`
+- [x] full PR checkout CI success
+- [ ] PR #35 review/merge
 
-### 2. Schema / golden-scenario validation 기반
+### 2. Semantic validation + Golden Scenarios — 다음 작업
 
-- [ ] `schemas/combatant.schema.json` 자체 JSON Schema 유효성 test
-- [ ] template/example schema validation test
-- [ ] Common Rule Specification 대응 JSON Schema tree
-- [ ] RulesProfile schema/registry format
-- [ ] RuleModule / ContentEntry schema
-- [ ] LocalizedPresentation / translation provenance schema
-- [ ] `parent` / `extends` / `replaces` / extensionPoint / ProgressionContribution schema
-- [ ] semantic validator skeleton: IDs/references/property/mechanic/Predicate/Timing/capability
-- [ ] golden scenario fixture format
-- [ ] ability/proficiency provenance scenario
-- [ ] Advantage + Disadvantage cancellation scenario
+Structural JSON Schema 다음 계층이다.
+
+- [ ] stable ID uniqueness / qualified reference resolution
+- [ ] RulesProfile property/operator/TimingPoint registry membership
+- [ ] module dependency/version/capability checks
+- [ ] `parent` / `extends` / `replaces` target resolution
+- [ ] missing parent / relationship cycle / competing replacement diagnostics
+- [ ] extension-point category compatibility
+- [ ] ProgressionContribution target/threshold validation
+- [ ] localized presentation quality gate for builtin SRD content
+- [ ] non-SRD translated prose leakage check strategy
 - [ ] AC formula candidate + item/effect scenario
 - [ ] Initiative + surprise + economy/reset scenario
-- [ ] attack + critical scenario
+- [ ] attack hit/miss + critical scenario
 - [ ] multi-target save + shared damage roll scenario
 - [ ] typed damage + R/V/I + temp HP scenario
 - [ ] Reaction interrupt scenario
 - [ ] Short/Long Rest recovery scenario
-- [ ] item charge + effect atomic transaction scenario
+- [ ] ItemInstance charge + effect atomic transaction scenario
 - [ ] Freeform -> Initiative -> Freeform preservation scenario
 - [ ] DM force outcome + correction scenario
-- [ ] homebrew subclass -> builtin class contribution scenario
 - [ ] external Choice option contribution scenario
 - [ ] subclass Progression contribution scenario
-- [ ] missing parent / cycle / competing replacement validation scenarios
 - [ ] duplicate ResolutionEvent idempotency scenario
-- [ ] translation-only revision preserves mechanical identity/outcome scenario
-- [ ] Korean name + English original name resolve to same ContentCatalog entry search scenario
+- [ ] translation-only revision preserves mechanical result scenario
+- [ ] Korean name + English original name search-equivalence scenario
 
-### 3. Default SRD content bootstrap
+### 3. Default SRD Content Bootstrap
 
-전체 SRD를 먼저 변환하지 않는다. Vertical Slice와 golden scenarios에 필요한 대표 content부터 추가한다.
+전체 SRD를 먼저 옮기지 않는다. 위 golden scenarios와 첫 vertical slice에서 실제로 쓰는 항목만 추가한다.
 
-- [ ] Default RuleModule manifest `dnd.srd-5.2.1.core`
-- [ ] `defaultLocale: ko-KR`
-- [ ] `Kaetaeru/D-D-2024-/10-RULEBOOKS/srd-5.2.1/` 기반 reviewed Korean display data
-- [ ] English `originalName` + source reference metadata
-- [ ] glossary/translation revision provenance
-- [ ] Korean + English original-name ContentCatalog search
-- [ ] 대표 class + subclass 관계
-- [ ] 대표 species/background path
-- [ ] 대표 feat/option ChoiceDefinition
-- [ ] 기본 weapon/armor subset
+- [ ] representative class + subclass
+- [ ] representative species + background
+- [ ] representative feat / extensible option ChoiceDefinition
+- [ ] basic weapon/armor subset
 - [ ] charge-based magic item 1개 이상
 - [ ] Reaction source 1개 이상
-- [ ] representative Combatant definitions
-- [ ] 필요한 condition/effect subset
-- [ ] source/license metadata preserved on module/content
-- [ ] non-SRD PHB/DMG/MM private translation text가 distributable module에 섞이지 않는지 검증
+- [ ] representative spells for attack/save/effect paths
+- [ ] representative Combatants
+- [ ] 필요한 conditions/effects subset
+- [ ] reviewed Korean `name` / `description` from `Kaetaeru/D-D-2024-/10-RULEBOOKS/srd-5.2.1/`
+- [ ] English `originalName`, SRD source, translation provenance
+- [ ] final repository/product SRD attribution notice location
 
 ### 4. 첫 Offline Vertical Slice
 
-네트워크 없이 한 PC에서 end-to-end domain/UX를 먼저 완성한다.
-
 - [ ] Tauri + React + TypeScript scaffold
-- [ ] rules/domain package와 React UI 경계 분리
-- [ ] lint/typecheck/test/build + GitHub Actions
+- [ ] React와 독립된 rules/domain package
+- [ ] lint/typecheck/test/build CI
 - [ ] local Character library / safe JSON persistence
 - [ ] Guided/Quick Character draft 최소 UX
-- [ ] UI 기본 rules-content locale `ko-KR`
-- [ ] feat/spell/item/class feature 등 이름/설명 한국어 기본 표시
-- [ ] 한국어명 + 영문 원명 검색 지원
-- [ ] default ContentCatalog에서 build 선택
-- [ ] builtin + local module ContentCatalog merge
-- [ ] external subclass/species/choice-option contribution 최소 path
-- [ ] deterministic grant + ChoiceDefinition
-- [ ] local RuleSource/feat JSON import
-- [ ] ItemInstance 장착 -> property provenance 재계산
-- [ ] Combatant JSON import/review/instantiate
-- [ ] Freeform check/Action Resolution
-- [ ] Initiative start/end + action economy
-- [ ] target selection + attack Resolution
+- [ ] `ko-KR` rules-content 기본 표시 + English original-name search
+- [ ] default ContentCatalog + local module merge
+- [ ] deterministic grants + ChoiceDefinition
+- [ ] external subclass/species/choice contribution path
+- [ ] local homebrew RuleSource/content JSON import
+- [ ] ItemInstance activation -> property provenance
+- [ ] Combatant import/review/instantiate
+- [ ] Freeform Action Resolution
+- [ ] Initiative start/end + economy
+- [ ] target selection + attack/damage Resolution
 - [ ] Resource/item charge tracking
-- [ ] authoritative dice record + visual presentation
+- [ ] authoritative dice records
 - [ ] compact + expandable ResolutionEvent log
 - [ ] safe Undo/correction
 
-### 5. Vertical Slice 이후 실제 플레이 피드백
+## 이후 원칙
 
-- [ ] 불편/미지원 규칙을 deterministic failing scenario로 기록
-- [ ] 기존 primitive로 표현 가능한지 먼저 확인
-- [ ] 불가능할 때만 최소 Mechanic/Predicate/Timing/Targeting/content-relationship primitive 추가
-- [ ] persisted contract 변경 시 version/migration/capability 갱신
-- [ ] 기존 scenarios 회귀 검증
-- [ ] UX는 domain schema와 분리해서 빠르게 수정
-- [ ] 번역/용어 수정은 mechanics와 독립적으로 반영하고 localization regression을 검증
+실제 플레이/구현에서 표현 불가능하거나 불편한 경우:
+
+1. deterministic failing scenario를 만든다.
+2. 기존 primitive로 표현 가능한지 먼저 확인한다.
+3. 불가능할 때만 최소 Mechanic/Predicate/Timing/Targeting/content primitive를 추가한다.
+4. persisted contract 변경이면 schema/version/capability/migration을 함께 갱신한다.
+5. 전체 scenario 회귀 검증을 통과시킨다.
+6. UX는 domain contract와 가능한 한 분리해서 빠르게 수정한다.
 
 ## 중기 이후
 
-### LAN / Hamachi Session
-
-- DM PC session host
-- Character source player-local 유지
-- RulesProfile/module/capability compatibility negotiation
-- SessionProjection + snapshot/event cursor
-- ActionRequest / Choice / ResolutionEvent sync
+- LAN / Hamachi host session protocol
+- RulesProfile/module/capability negotiation
+- snapshot + ResolutionEvent cursor sync
 - session RuleModule temporary mount
-- session content relationship/contribution compatibility validation
 - reconnect / duplicate / out-of-order handling
-- durable Character write-back
-
-### Stability / Distribution
-
-- Character/Combatant/RuleModule migration
-- invalid/unsupported content diagnostics
-- save/recovery UX
+- Character durable write-back
+- schema/data migrations
 - Windows distribution
-- 실제 DM 1명 + player 2명 이상 LAN/Hamachi playtest
+- 실제 DM + 여러 player playtest
 
 ## MVP에서 의도적으로 제외
 
-- cloud account/central Character server
+- cloud account / central Character server
 - friend/social system
 - chat/voice
 - battle map/token/fog of war
