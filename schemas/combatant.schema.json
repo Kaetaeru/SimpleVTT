@@ -1,0 +1,627 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simplevtt.local/schemas/combatant.schema.json",
+  "title": "SimpleVTT Combatant Definition",
+  "description": "Draft declarative import format for calculation-relevant encounter combatant data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "ruleset",
+    "id",
+    "name",
+    "abilities",
+    "armorClass",
+    "hitPoints",
+    "movement",
+    "savingThrows",
+    "skills",
+    "defenses",
+    "resources",
+    "traits",
+    "actions",
+    "reactions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "0.1-draft"
+    },
+    "ruleset": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rules profile identifier. The first supported D&D rules version is intentionally not fixed by this draft."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "abilities": {
+      "$ref": "#/$defs/abilities"
+    },
+    "proficiencyBonus": {
+      "type": ["integer", "null"]
+    },
+    "initiativeModifier": {
+      "type": "integer",
+      "default": 0
+    },
+    "armorClass": {
+      "$ref": "#/$defs/armorClass"
+    },
+    "hitPoints": {
+      "$ref": "#/$defs/hitPoints"
+    },
+    "movement": {
+      "$ref": "#/$defs/movement"
+    },
+    "savingThrows": {
+      "$ref": "#/$defs/abilityBonuses"
+    },
+    "skills": {
+      "type": "object",
+      "description": "Final skill bonuses keyed by a normalized skill identifier.",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "defenses": {
+      "$ref": "#/$defs/defenses"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
+    "traits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/trait"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "reactions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Namespaced future/vendor data. Resolver behavior must never execute arbitrary code from this object.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sourceLabel": {
+          "type": "string"
+        },
+        "sourceReference": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "ability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "modifier"],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modifier": {
+          "type": "integer"
+        }
+      }
+    },
+    "abilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["str", "dex", "con", "int", "wis", "cha"],
+      "properties": {
+        "str": { "$ref": "#/$defs/ability" },
+        "dex": { "$ref": "#/$defs/ability" },
+        "con": { "$ref": "#/$defs/ability" },
+        "int": { "$ref": "#/$defs/ability" },
+        "wis": { "$ref": "#/$defs/ability" },
+        "cha": { "$ref": "#/$defs/ability" }
+      }
+    },
+    "abilityBonuses": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "str": { "type": "integer" },
+        "dex": { "type": "integer" },
+        "con": { "type": "integer" },
+        "int": { "type": "integer" },
+        "wis": { "type": "integer" },
+        "cha": { "type": "integer" }
+      }
+    },
+    "armorClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base"],
+      "properties": {
+        "base": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "label": {
+          "type": "string"
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "integer", "minimum": 0 },
+              "requiresTags": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "type": "string" }
+              },
+              "excludesTags": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hitPoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max"],
+      "properties": {
+        "max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "movement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "walk": { "type": "integer", "minimum": 0 },
+        "fly": { "type": "integer", "minimum": 0 },
+        "swim": { "type": "integer", "minimum": 0 },
+        "climb": { "type": "integer", "minimum": 0 },
+        "burrow": { "type": "integer", "minimum": 0 },
+        "special": { "type": "string" }
+      }
+    },
+    "defenses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["damageModifiers", "conditionImmunities"],
+      "properties": {
+        "damageModifiers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/damageModifier"
+          }
+        },
+        "conditionImmunities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "damageModifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "damageTypes"],
+      "properties": {
+        "mode": {
+          "enum": ["resistance", "immunity", "vulnerability"]
+        },
+        "damageTypes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "requiresTags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "excludesTags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "max", "initial", "reset"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "initial": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reset": {
+          "enum": ["none", "turn", "short-rest", "long-rest", "manual"]
+        }
+      }
+    },
+    "duration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["instant", "until-resolution-end", "until-turn-start", "until-turn-end", "rounds", "manual"]
+        },
+        "rounds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "timing", "scope", "operation", "duration"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timing": {
+          "enum": [
+            "passive",
+            "before-roll",
+            "after-roll",
+            "on-hit",
+            "on-damage",
+            "on-save-success",
+            "on-save-failure",
+            "turn-start",
+            "turn-end",
+            "reaction"
+          ]
+        },
+        "scope": {
+          "enum": ["self", "actor", "target", "all-targets"]
+        },
+        "operation": {
+          "$ref": "#/$defs/effectOperation"
+        },
+        "requiresTags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "excludesTags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "duration": {
+          "$ref": "#/$defs/duration"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "effectOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "target"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "add-flat",
+            "add-dice",
+            "advantage",
+            "disadvantage",
+            "set",
+            "minimum",
+            "maximum",
+            "multiply",
+            "add-damage",
+            "resistance",
+            "immunity",
+            "vulnerability",
+            "apply-condition",
+            "remove-condition",
+            "change-resource"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable resolver target identifier such as roll.attack, defense.ac, damage.fire, or resource.reaction."
+        },
+        "value": {
+          "description": "Declarative operation payload. Semantic validation belongs to the rules/effect layer.",
+          "type": ["number", "integer", "string", "boolean", "object", "array", "null"]
+        }
+      }
+    },
+    "trait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "effects"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/effect"
+          }
+        }
+      }
+    },
+    "damageComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formula", "type"],
+      "properties": {
+        "formula": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "targeting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["self", "single", "multiple", "area", "allies", "enemies", "any"]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "resourceCost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resourceId", "amount"],
+      "properties": {
+        "resourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "optional": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "attackData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attackType", "toHit", "criticalRange", "damage"],
+      "properties": {
+        "attackType": {
+          "enum": ["melee", "ranged", "spell", "other"]
+        },
+        "toHit": {
+          "type": "integer"
+        },
+        "criticalRange": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "damage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/damageComponent"
+          }
+        }
+      }
+    },
+    "saveData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ability", "dc", "onSuccess", "damage"],
+      "properties": {
+        "ability": {
+          "enum": ["str", "dex", "con", "int", "wis", "cha"]
+        },
+        "dc": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "onSuccess": {
+          "enum": ["none", "half", "full", "custom"]
+        },
+        "damage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/damageComponent"
+          }
+        }
+      }
+    },
+    "healingData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formula"],
+      "properties": {
+        "formula": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "targeting", "costs", "effects"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": ["attack", "save", "healing", "utility"]
+        },
+        "targeting": {
+          "$ref": "#/$defs/targeting"
+        },
+        "costs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resourceCost"
+          }
+        },
+        "attack": {
+          "$ref": "#/$defs/attackData"
+        },
+        "save": {
+          "$ref": "#/$defs/saveData"
+        },
+        "healing": {
+          "$ref": "#/$defs/healingData"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/effect"
+          }
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "attack" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["attack"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "save" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["save"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "healing" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["healing"]
+          }
+        }
+      ]
+    }
+  }
+}
