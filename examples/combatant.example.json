@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "0.1-draft",
+  "ruleset": "example-5e-profile",
+  "id": "emberhide-brute",
+  "name": "Emberhide Brute",
+  "metadata": {
+    "sourceLabel": "SimpleVTT fictional example",
+    "sourceReference": "Issue #3",
+    "tags": ["example", "humanoid", "brute"]
+  },
+  "abilities": {
+    "str": { "score": 16, "modifier": 3 },
+    "dex": { "score": 10, "modifier": 0 },
+    "con": { "score": 15, "modifier": 2 },
+    "int": { "score": 8, "modifier": -1 },
+    "wis": { "score": 12, "modifier": 1 },
+    "cha": { "score": 9, "modifier": -1 }
+  },
+  "proficiencyBonus": 2,
+  "initiativeModifier": 0,
+  "armorClass": {
+    "base": 15,
+    "label": "reinforced hide",
+    "variants": []
+  },
+  "hitPoints": {
+    "max": 37,
+    "formula": "5d10+10"
+  },
+  "movement": {
+    "walk": 30
+  },
+  "savingThrows": {
+    "con": 4,
+    "wis": 3
+  },
+  "skills": {
+    "perception": 3
+  },
+  "defenses": {
+    "damageModifiers": [
+      {
+        "mode": "resistance",
+        "damageTypes": ["fire"],
+        "note": "Used to exercise typed damage reduction in resolver examples."
+      }
+    ],
+    "conditionImmunities": []
+  },
+  "resources": [
+    {
+      "id": "reaction",
+      "name": "Reaction",
+      "max": 1,
+      "initial": 1,
+      "reset": "turn"
+    }
+  ],
+  "traits": [
+    {
+      "id": "steady-footing",
+      "name": "Steady Footing",
+      "description": "Example display-only trait with no calculation effect in this draft.",
+      "effects": []
+    }
+  ],
+  "actions": [
+    {
+      "id": "heavy-club",
+      "name": "Heavy Club",
+      "kind": "attack",
+      "targeting": {
+        "kind": "single",
+        "count": 1
+      },
+      "costs": [],
+      "attack": {
+        "attackType": "melee",
+        "toHit": 5,
+        "criticalRange": [20],
+        "damage": [
+          {
+            "formula": "1d8+3",
+            "type": "bludgeoning",
+            "tags": ["weapon"]
+          }
+        ]
+      },
+      "effects": [],
+      "description": "Simple melee attack example."
+    },
+    {
+      "id": "cinder-burst",
+      "name": "Cinder Burst",
+      "kind": "save",
+      "targeting": {
+        "kind": "multiple",
+        "count": 3
+      },
+      "costs": [],
+      "save": {
+        "ability": "dex",
+        "dc": 13,
+        "onSuccess": "half",
+        "damage": [
+          {
+            "formula": "2d6",
+            "type": "fire",
+            "tags": ["magical"]
+          }
+        ]
+      },
+      "effects": [],
+      "description": "Example saving-throw action with half damage on success."
+    }
+  ],
+  "reactions": [
+    {
+      "id": "guard",
+      "name": "Guard",
+      "kind": "utility",
+      "targeting": {
+        "kind": "self"
+      },
+      "costs": [
+        {
+          "resourceId": "reaction",
+          "amount": 1,
+          "optional": false
+        }
+      ],
+      "effects": [
+        {
+          "id": "guard-ac",
+          "name": "Guard AC bonus",
+          "timing": "reaction",
+          "scope": "self",
+          "operation": {
+            "kind": "add-flat",
+            "target": "defense.ac",
+            "value": 2
+          },
+          "duration": {
+            "kind": "until-resolution-end"
+          },
+          "description": "Example interrupt that changes AC before a pending hit is committed."
+        }
+      ],
+      "description": "Spend the reaction resource to gain +2 AC for the current resolution."
+    }
+  ],
+  "notes": "Fictional data for validating SimpleVTT import and resolver design.",
+  "extensions": {}
+}
