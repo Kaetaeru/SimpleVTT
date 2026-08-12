@@ -1,1 +1,117 @@
-{"$schema":"https://simplevtt.local/schemas/rules-profile.schema.json","schemaVersion":"0.1-draft","profileId":"dnd.srd-5.2.1","profileVersion":"0.1-draft","source":{"document":"System Reference Document","version":"5.2.1","published":"2025-05-01","license":"CC-BY-4.0","urls":["https://www.dndbeyond.com/srd","https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"]},"defaultLocale":"ko-KR","roundingPolicy":{"id":"dnd.rounding.default-floor","default":"floor"},"properties":{"ability.str.score":{"type":"integer","storage":"stored"},"ability.str.modifier":{"type":"integer","storage":"derived","formula":{"op":"floor","args":[{"op":"divide","args":[{"op":"subtract","args":[{"ref":"ability.str.score"},{"value":10}]},{"value":2}]}]}},"ability.dex.score":{"type":"integer","storage":"stored"},"ability.dex.modifier":{"type":"integer","storage":"derived","formula":{"op":"floor","args":[{"op":"divide","args":[{"op":"subtract","args":[{"ref":"ability.dex.score"},{"value":10}]},{"value":2}]}]}},"ability.con.score":{"type":"integer","storage":"stored"},"ability.con.modifier":{"type":"integer","storage":"derived","formula":{"op":"floor","args":[{"op":"divide","args":[{"op":"subtract","args":[{"ref":"ability.con.score"},{"value":10}]},{"value":2}]}]}},"ability.int.score":{"type":"integer","storage":"stored"},"ability.int.modifier":{"type":"integer","storage":"derived","formula":{"op":"floor","args":[{"op":"divide","args":[{"op":"subtract","args":[{"ref":"ability.int.score"},{"value":10}]},{"value":2}]}]}},"ability.wis.score":{"type":"integer","storage":"stored"},"ability.wis.modifier":{"type":"integer","storage":"derived","formula":{"op":"floor","args":[{"op":"divide","args":[{"op":"subtract","args":[{"ref":"ability.wis.score"},{"value":10}]},{"value":2}]}]}},"ability.cha.score":{"type":"integer","storage":"stored"},"ability.cha.modifier":{"type":"integer","storage":"derived","formula":{"op":"floor","args":[{"op":"divide","args":[{"op":"subtract","args":[{"ref":"ability.cha.score"},{"value":10}]},{"value":2}]}]}},"progression.character.level":{"type":"integer","storage":"stored","minimum":1,"maximum":20},"proficiency.bonus":{"type":"integer","storage":"derived"},"defense.ac":{"type":"integer","storage":"derived"},"initiative":{"type":"integer","storage":"derived"},"movement.walk":{"type":"integer","storage":"derived","minimum":0},"hp.current":{"type":"integer","storage":"stored","minimum":0},"hp.maximum":{"type":"integer","storage":"derived","minimum":0},"hp.temporary":{"type":"integer","storage":"stored","minimum":0}},"proficiency":{"characterLevelThresholds":[{"minLevel":1,"maxLevel":4,"bonus":2},{"minLevel":5,"maxLevel":8,"bonus":3},{"minLevel":9,"maxLevel":12,"bonus":4},{"minLevel":13,"maxLevel":16,"bonus":5},{"minLevel":17,"maxLevel":20,"bonus":6}],"multipliers":[0,0.5,1,2],"repeatSameBonus":false},"d20Test":{"families":["ability-check","saving-throw","attack-roll"],"rollStates":["normal","advantage","disadvantage"],"advantageDisadvantage":{"sameSideStacks":false,"opposingCancel":true,"defaultDiceCount":2}},"predicateOperators":["all","any","not","eq","ne","lt","lte","gt","gte","contains","exists","has-tag","activation-is","mode-is","source-active","resource-at-least","progression-at-least","relation-matches"],"timingPoints":["action.declared","targets.selected","roll.before","roll.generated","roll.after","outcome.before-determine","outcome.determined","damage.before-roll","damage.rolled","damage.before-apply","state.before-apply","state.applied","action.resolved","initiative.before-start","initiative.started","round.started","turn.started","turn.before-action-window","turn.ending","turn.ended","round.ended","initiative.ending","initiative.ended","rest.short.started","rest.short.completed","rest.long.started","rest.long.completed","effect.expiring","effect.expired"],"economy":{"initiativeBuckets":{"action":{"kind":"count","capacity":1,"resetTiming":"turn.started","resetOwner":"actor","availability":"always"},"bonus-action":{"kind":"count","capacity":1,"resetTiming":"turn.started","resetOwner":"actor","availability":"granted-option-required"},"reaction":{"kind":"count","capacity":1,"resetTiming":"turn.started","resetOwner":"owner","availability":"trigger-required"},"movement":{"kind":"budget","capacityRef":"movement.walk","resetTiming":"turn.started","resetOwner":"actor","availability":"always"}},"freeformPolicy":{"turnLimitedSpendPersistence":"none","realResourcesPersistent":true,"bucketPolicies":{"action":"per-activity","bonus-action":"per-activity","reaction":"per-activity","movement":"per-activity"}}},"damagePolicy":{"componentOrder":["adjustments","resistance","vulnerability"],"immunityStage":"before-final-application","duplicateResistanceStacks":false,"duplicateVulnerabilityStacks":false,"critical":{"eligibleDiceMultiplier":2,"flatModifierMultiplier":1}},"hpPolicy":{"temporaryHp":{"absorbsBeforeHp":true,"stacksByDefault":false,"competingGrantPolicy":"keep-or-replace-choice","isHealing":false}},"progression":{"characterLevel":{"min":1,"max":20},"characterTrack":"progression.character.level","classTrackPattern":"progression.class.<classId>.level"},"activities":{"shortRest":{"id":"dnd.activity.short-rest","completedTiming":"rest.short.completed"},"longRest":{"id":"dnd.activity.long-rest","completedTiming":"rest.long.completed"}},"activationStates":["equipped","wielded","carried","attuned","selected-mode","enabled","suppressed"],"contentCategories":["class","subclass","species","background","feat","spell","item","condition","combatant","feature","option"],"damageTypes":["acid","bludgeoning","cold","fire","force","lightning","necrotic","piercing","poison","psychic","radiant","slashing","thunder"],"capabilities":["dnd.ability-modifier.v1","dnd.proficiency.v1","dnd.d20-test.v1","dnd.advantage-disadvantage.v1","dnd.ac-formula-candidate.v1","dnd.initiative.v1","dnd.economy.action-bonus-reaction.v1","dnd.damage.typed.v1","dnd.damage.critical.v1","dnd.damage.resistance-vulnerability-immunity.v1","dnd.hp.basic.v1","dnd.temp-hp.v1","dnd.rest.short-long.v1","dnd.progression.multitrack.v1","dnd.item.activation-attunement.v1","dnd.content.cross-module-contribution.v1"]}
+{
+  "$schema": "https://simplevtt.local/schemas/rules-profile.schema.json",
+  "schemaVersion": "0.1-draft",
+  "profileId": "dnd.srd-5.2.1",
+  "profileVersion": "0.1-draft",
+  "source": {
+    "document": "System Reference Document",
+    "version": "5.2.1",
+    "published": "2025-05-01",
+    "license": "CC-BY-4.0",
+    "urls": [
+      "https://www.dndbeyond.com/srd",
+      "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+    ]
+  },
+  "defaultLocale": "ko-KR",
+  "roundingPolicy": {
+    "id": "dnd.rounding.default-floor",
+    "default": "floor"
+  },
+  "properties": {
+    "ability.str.score": {"type": "integer", "storage": "stored"},
+    "ability.str.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.str.score"}, {"value": 10}]}, {"value": 2}]}]}},
+    "ability.dex.score": {"type": "integer", "storage": "stored"},
+    "ability.dex.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.dex.score"}, {"value": 10}]}, {"value": 2}]}]}},
+    "ability.con.score": {"type": "integer", "storage": "stored"},
+    "ability.con.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.con.score"}, {"value": 10}]}, {"value": 2}]}]}},
+    "ability.int.score": {"type": "integer", "storage": "stored"},
+    "ability.int.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.int.score"}, {"value": 10}]}, {"value": 2}]}]}},
+    "ability.wis.score": {"type": "integer", "storage": "stored"},
+    "ability.wis.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.wis.score"}, {"value": 10}]}, {"value": 2}]}]}},
+    "ability.cha.score": {"type": "integer", "storage": "stored"},
+    "ability.cha.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.cha.score"}, {"value": 10}]}, {"value": 2}]}]}},
+    "progression.character.level": {"type": "integer", "storage": "stored", "minimum": 1, "maximum": 20},
+    "proficiency.bonus": {"type": "integer", "storage": "derived"},
+    "defense.ac": {"type": "integer", "storage": "derived"},
+    "initiative": {"type": "integer", "storage": "derived"},
+    "movement.walk": {"type": "integer", "storage": "derived", "minimum": 0},
+    "hp.current": {"type": "integer", "storage": "stored", "minimum": 0},
+    "hp.maximum": {"type": "integer", "storage": "derived", "minimum": 0},
+    "hp.temporary": {"type": "integer", "storage": "stored", "minimum": 0}
+  },
+  "proficiency": {
+    "characterLevelThresholds": [
+      {"minLevel": 1, "maxLevel": 4, "bonus": 2},
+      {"minLevel": 5, "maxLevel": 8, "bonus": 3},
+      {"minLevel": 9, "maxLevel": 12, "bonus": 4},
+      {"minLevel": 13, "maxLevel": 16, "bonus": 5},
+      {"minLevel": 17, "maxLevel": 20, "bonus": 6}
+    ],
+    "multipliers": [0, 0.5, 1, 2],
+    "repeatSameBonus": false
+  },
+  "d20Test": {
+    "families": ["ability-check", "saving-throw", "attack-roll"],
+    "rollStates": ["normal", "advantage", "disadvantage"],
+    "advantageDisadvantage": {
+      "sameSideStacks": false,
+      "opposingCancel": true,
+      "defaultDiceCount": 2
+    }
+  },
+  "initiativePolicy": {
+    "ability": "dex",
+    "order": "descending",
+    "tieResolution": "explicit-choice",
+    "surpriseRollState": "disadvantage"
+  },
+  "acPolicy": {
+    "property": "defense.ac",
+    "formulaResolution": "select-valid-candidate-then-apply-compatible-modifiers",
+    "loadOrderOverrides": false
+  },
+  "predicateOperators": ["all", "any", "not", "eq", "ne", "lt", "lte", "gt", "gte", "contains", "exists", "has-tag", "activation-is", "mode-is", "source-active", "resource-at-least", "progression-at-least", "relation-matches"],
+  "timingPoints": ["action.declared", "targets.selected", "roll.before", "roll.generated", "roll.after", "outcome.before-determine", "outcome.determined", "damage.before-roll", "damage.rolled", "damage.before-apply", "state.before-apply", "state.applied", "action.resolved", "initiative.before-start", "initiative.started", "round.started", "turn.started", "turn.before-action-window", "turn.ending", "turn.ended", "round.ended", "initiative.ending", "initiative.ended", "rest.short.started", "rest.short.completed", "rest.long.started", "rest.long.completed", "effect.expiring", "effect.expired"],
+  "economy": {
+    "initiativeBuckets": {
+      "action": {"kind": "count", "capacity": 1, "resetTiming": "turn.started", "resetOwner": "actor", "availability": "always"},
+      "bonus-action": {"kind": "count", "capacity": 1, "resetTiming": "turn.started", "resetOwner": "actor", "availability": "granted-option-required"},
+      "reaction": {"kind": "count", "capacity": 1, "resetTiming": "turn.started", "resetOwner": "owner", "availability": "trigger-required"},
+      "movement": {"kind": "budget", "capacityRef": "movement.walk", "resetTiming": "turn.started", "resetOwner": "actor", "availability": "always"}
+    },
+    "freeformPolicy": {
+      "turnLimitedSpendPersistence": "none",
+      "realResourcesPersistent": true,
+      "bucketPolicies": {"action": "per-activity", "bonus-action": "per-activity", "reaction": "per-activity", "movement": "per-activity"}
+    }
+  },
+  "damagePolicy": {
+    "componentOrder": ["adjustments", "resistance", "vulnerability"],
+    "immunityStage": "before-final-application",
+    "duplicateResistanceStacks": false,
+    "duplicateVulnerabilityStacks": false,
+    "critical": {"eligibleDiceMultiplier": 2, "flatModifierMultiplier": 1}
+  },
+  "hpPolicy": {
+    "temporaryHp": {
+      "absorbsBeforeHp": true,
+      "stacksByDefault": false,
+      "competingGrantPolicy": "keep-or-replace-choice",
+      "isHealing": false
+    }
+  },
+  "progression": {
+    "characterLevel": {"min": 1, "max": 20},
+    "characterTrack": "progression.character.level",
+    "classTrackPattern": "progression.class.<classId>.level"
+  },
+  "activities": {
+    "shortRest": {"id": "dnd.activity.short-rest", "completedTiming": "rest.short.completed"},
+    "longRest": {"id": "dnd.activity.long-rest", "completedTiming": "rest.long.completed"}
+  },
+  "activationStates": ["equipped", "wielded", "carried", "attuned", "selected-mode", "enabled", "suppressed"],
+  "contentCategories": ["class", "subclass", "species", "background", "feat", "spell", "item", "condition", "combatant", "feature", "option"],
+  "damageTypes": ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"],
+  "capabilities": ["dnd.ability-modifier.v1", "dnd.proficiency.v1", "dnd.d20-test.v1", "dnd.advantage-disadvantage.v1", "dnd.ac-formula-candidate.v1", "dnd.initiative.v1", "dnd.economy.action-bonus-reaction.v1", "dnd.damage.typed.v1", "dnd.damage.critical.v1", "dnd.damage.resistance-vulnerability-immunity.v1", "dnd.hp.basic.v1", "dnd.temp-hp.v1", "dnd.rest.short-long.v1", "dnd.progression.multitrack.v1", "dnd.item.activation-attunement.v1", "dnd.content.cross-module-contribution.v1"]
+}
