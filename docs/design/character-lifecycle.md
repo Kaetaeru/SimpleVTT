@@ -118,6 +118,8 @@ The exact steps are RulesProfile-driven, but the default shape is:
 
 The builder queries the active ContentCatalog. Named class/species/feat lists are not hard-coded in React.
 
+The resolved ContentCatalog may contain builtin entries plus compatible additions from expansion-style modules, local homebrew, and session modules. If an external module adds a subclass, species variant, feature option, or progression contribution through the content-relationship contract, it appears in the same Guided/Quick flow as native content.
+
 ## 5. Source, derived, contribution, override
 
 The UI distinguishes:
@@ -225,6 +227,8 @@ At a threshold, content may:
 
 Deterministic changes are automatic. Only real choices are presented.
 
+Progression resolution includes compatible cross-module progression contributions. A subclass or optional-rules module can attach grants/choices to an existing progression context without duplicating the parent progression definition.
+
 ### Review
 
 Level-up review should show meaningful source-level changes, for example:
@@ -240,6 +244,8 @@ Required choice          choose 1
 ```
 
 Every change links back to module/source/provenance.
+
+When multiple modules contribute to the same level-up, the review should group changes by source where useful while still presenting one coherent Character revision.
 
 ### HP/resource current value policy
 
@@ -292,3 +298,35 @@ The player should see actionable states, not distributed-system jargon:
 - Draft recovered.
 
 A confirmed host event is not independently rolled back from shared history merely because local disk persistence failed. Instead, the local app enters a recoverable unsaved state.
+
+## 14. Cross-module Character content
+
+Character authoring must support content supplied by modules other than the module that defined the parent choice.
+
+Normative relationship semantics are defined in `docs/rules/content-relationships.md`.
+
+Required authoring cases include:
+
+- new standalone class/species/background/feat/spell/item content;
+- external subclass attached to an existing class;
+- external variant/lineage/trait branch attached to an existing species/ancestry;
+- external option contributed to an existing ChoiceDefinition;
+- external progression feature/choice contributed to an existing ProgressionTrack context.
+
+The Character source stores the selected qualified module/content identity and ChoiceDefinition option identity. It does not flatten the extension into anonymous grants.
+
+Example source chain:
+
+```text
+Class: Fighter (core.rules)
+-> Choice: subclass
+-> Spellblade (my.homebrew)
+-> Fighter progression 7 contribution
+-> Arcane Assault RuleSource
+```
+
+The same chain feeds provenance, migration, compatibility checks, and the UI's source labels.
+
+If the selected extension module becomes unavailable or incompatible, the Character remains intact but enters an actionable missing/incompatible-content state. The app must not silently substitute a same-named option from another module.
+
+A session-only module may expose temporary choices/actions, but a durable Character build cannot silently acquire a permanent dependency on session-only content. Permanent adoption requires explicit local installation/adoption or a durable-grant workflow.
