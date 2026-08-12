@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "0.2-draft",
+  "id": "combatant.example-id",
+  "name": "Example Combatant",
+  "description": "Replace this template data with the imported stat block.",
+  "tags": [],
+  "rulesProfile": {
+    "id": "REPLACE_WITH_PROFILE_ID",
+    "version": "REPLACE_WITH_PROFILE_VERSION"
+  },
+  "stats": {
+    "hp": { "max": 1, "tempDefault": 0 },
+    "ac": 10,
+    "speed": { "walk": 30 }
+  },
+  "abilities": {},
+  "saves": {},
+  "skills": {},
+  "defenses": {
+    "damageResistances": [],
+    "damageImmunities": [],
+    "damageVulnerabilities": [],
+    "conditionImmunities": []
+  },
+  "resources": [],
+  "actions": [],
+  "reactions": [],
+  "activities": [],
+  "ruleSources": [],
+  "activationState": {},
+  "unsupportedMechanics": [],
+  "metadata": {}
+}

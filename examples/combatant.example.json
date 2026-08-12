@@ -1,0 +1,212 @@
+{
+  "schemaVersion": "0.2-draft",
+  "id": "combatant.training-brute",
+  "name": "Training Brute",
+  "description": "Fictional example used to demonstrate the Combatant import structure.",
+  "tags": ["example", "humanoid"],
+  "rulesProfile": {
+    "id": "example.dnd-profile",
+    "version": "0.1"
+  },
+  "stats": {
+    "hp": { "max": 45, "tempDefault": 0 },
+    "ac": 15,
+    "speed": { "walk": 30 },
+    "initiative": 1,
+    "proficiency": 2
+  },
+  "abilities": {
+    "str": 16,
+    "dex": 12,
+    "con": 14,
+    "int": 8,
+    "wis": 10,
+    "cha": 9
+  },
+  "saves": {
+    "str": 5,
+    "con": 4
+  },
+  "skills": {
+    "athletics": 5
+  },
+  "defenses": {
+    "damageResistances": ["fire"],
+    "damageImmunities": [],
+    "damageVulnerabilities": [],
+    "conditionImmunities": []
+  },
+  "resources": [
+    {
+      "id": "resource.fire-burst",
+      "name": "Fire Burst Uses",
+      "max": 1,
+      "initial": 1,
+      "resetPolicy": "profile.example-rest",
+      "sourceId": "source.fire-burst"
+    }
+  ],
+  "actions": [
+    {
+      "id": "action.heavy-strike",
+      "name": "Heavy Strike",
+      "kind": "attack",
+      "description": "Example melee attack.",
+      "sourceId": "source.heavy-strike",
+      "targeting": {
+        "mode": "single",
+        "minTargets": 1,
+        "maxTargets": 1,
+        "rollPolicy": "shared"
+      },
+      "cost": {
+        "economy": { "primary": 1 },
+        "resources": []
+      },
+      "mechanics": [
+        {
+          "id": "mechanic.heavy-strike.attack",
+          "kind": "attack-roll",
+          "data": {
+            "modifier": 5,
+            "criticalPolicy": "rules-profile"
+          }
+        },
+        {
+          "id": "mechanic.heavy-strike.damage",
+          "kind": "typed-damage",
+          "data": {
+            "formula": "1d8+3",
+            "damageType": "bludgeoning"
+          }
+        }
+      ]
+    },
+    {
+      "id": "action.fire-burst",
+      "name": "Fire Burst",
+      "kind": "saving-throw",
+      "description": "Example multi-target save action with half damage on a successful save.",
+      "sourceId": "source.fire-burst",
+      "targeting": {
+        "mode": "multiple-manual",
+        "minTargets": 1,
+        "maxTargets": 6,
+        "rollPolicy": "per-target"
+      },
+      "cost": {
+        "economy": { "primary": 1 },
+        "resources": [
+          {
+            "resourceId": "resource.fire-burst",
+            "amount": 1
+          }
+        ]
+      },
+      "mechanics": [
+        {
+          "id": "mechanic.fire-burst.save",
+          "kind": "saving-throw",
+          "data": {
+            "ability": "dex",
+            "dc": 13
+          }
+        },
+        {
+          "id": "mechanic.fire-burst.damage",
+          "kind": "typed-damage",
+          "data": {
+            "formula": "2d6",
+            "damageType": "fire",
+            "onSuccessfulSave": "half"
+          }
+        }
+      ]
+    }
+  ],
+  "reactions": [
+    {
+      "id": "reaction.guard-up",
+      "name": "Guard Up",
+      "kind": "reaction",
+      "description": "Example reaction that temporarily changes AC before outcome commitment.",
+      "sourceId": "source.guard-up",
+      "targeting": {
+        "mode": "self",
+        "minTargets": 1,
+        "maxTargets": 1,
+        "rollPolicy": "profile-defined"
+      },
+      "cost": {
+        "economy": { "reaction": 1 },
+        "resources": []
+      },
+      "mechanics": [
+        {
+          "id": "mechanic.guard-up.ac",
+          "kind": "property-add",
+          "target": "defense.ac",
+          "value": 2,
+          "timing": "before-outcome-determination",
+          "duration": {
+            "kind": "until-timing",
+            "timing": "turn-start",
+            "subject": "self"
+          }
+        }
+      ]
+    }
+  ],
+  "activities": [],
+  "ruleSources": [
+    {
+      "id": "source.heavy-strike",
+      "name": "Heavy Strike",
+      "kind": "combatant-feature",
+      "mechanics": [
+        {
+          "kind": "grant-action",
+          "data": { "actionId": "action.heavy-strike" }
+        }
+      ]
+    },
+    {
+      "id": "source.fire-burst",
+      "name": "Fire Burst",
+      "kind": "combatant-feature",
+      "mechanics": [
+        {
+          "kind": "grant-action",
+          "data": { "actionId": "action.fire-burst" }
+        }
+      ]
+    },
+    {
+      "id": "source.fire-resistance",
+      "name": "Fire Resistance",
+      "kind": "defense",
+      "mechanics": [
+        {
+          "kind": "damage-resistance",
+          "data": { "damageType": "fire" }
+        }
+      ]
+    },
+    {
+      "id": "source.guard-up",
+      "name": "Guard Up",
+      "kind": "combatant-feature",
+      "mechanics": [
+        {
+          "kind": "grant-action",
+          "data": { "actionId": "reaction.guard-up" }
+        }
+      ]
+    }
+  ],
+  "activationState": {},
+  "unsupportedMechanics": [],
+  "metadata": {
+    "exampleOnly": true
+  }
+}

@@ -1,143 +1,151 @@
 # 현재 작업 체크리스트
 
-이 문서는 SimpleVTT 개발에서 에이전트가 현재 상태와 다음 작업을 빠르게 파악하기 위한 살아있는 작업 체크리스트다.
-
-- 이 문서는 **공식 제품 명세가 아니다**.
-- 구현에 들어가는 항목은 GitHub Issue로 구체화하고, 전용 브랜치와 Pull Request로 처리한다.
-- 세부 구현 내용은 단기 체크리스트에만 유지하고, 장기 체크리스트는 방향과 완료 조건 중심으로 유지한다.
-- 단기 항목이 완료되면 장기 항목에서 다음 작업을 끌어와 단기 목록을 갱신한다.
+이 문서는 에이전트가 현재 우선순위를 빠르게 파악하기 위한 비공식 작업 문서다. 공식 제품/아키텍처 계약은 `docs/`, `schemas/`, `templates/`, `examples/`에 둔다.
 
 ## 현재 상태
 
-- [x] `SimpleVTT` 저장소 생성
-- [x] 에이전트 전용 작업 공간 `.agents/` 분리
-- [x] `.agents/README.md`에 에이전트 작업 공간의 경계 정의
-- [x] 현재 작업 체크리스트 작성
-- [ ] Draft PR #2 검토 후 `main`에 병합
-- [ ] 첫 제품 개발 Issue를 생성하고 구현 단계 시작
+- [x] `.agents/` 작업 공간을 프로젝트/공식 문서와 분리
+- [x] 제품 목표를 전투 산수/규칙 상태 자동화 중심으로 확정
+- [x] Character 생성/편집/레벨업 UX 방향 확정
+- [x] RuleSource provenance / Predicate / Timing / action economy 방향 확정
+- [x] RuleModule / ContentCatalog / ChoiceDefinition 방향 확정
+- [x] Freeform / Initiative 공통 rules engine 방향 확정
+- [x] Inventory / ItemDefinition / ItemInstance / magic-item 방향 확정
+- [x] DM situational ruling/correction UX 방향 확정
+- [x] authority / state lifetime / session write-back 방향 확정
+- [x] ResolutionEvent / typed atomic StateChange 방향 확정
+- [x] change-friendly extension seams / golden scenario 전략 확정
+- [ ] 최신 설계 통합 PR을 `main`에 병합하고 이전 stacked design PR 정리
+- [ ] 초기 D&D RulesProfile 선택/최소 규격 확정
+- [ ] Combatant schema/template/example 실제 자동 validation 추가
+- [ ] 첫 오프라인 vertical slice 구현 시작
+
+## 제품 핵심 원칙
+
+- 수학은 자동화하고 실제 선택은 플레이어/DM에게 남긴다.
+- 모든 중요한 계산값은 RuleSource별 provenance로 설명할 수 있어야 한다.
+- feat/spell/item/condition/class feature는 runtime prose parsing이 아니라 구조화 mechanics를 제공한다.
+- 기본 콘텐츠와 homebrew JSON은 동일한 validation/rules pipeline을 사용한다.
+- deterministic grant는 자동 적용하고 실제 선택만 ChoiceDefinition으로 질문한다.
+- Character 원본은 player-local이다.
+- connected session의 shared runtime event ordering/result는 DM host authoritative다.
+- Character-owned durable runtime 변화는 authoritative ResolutionEvent 후 local write-back한다.
+- Freeform과 Initiative는 같은 RuleSource/Predicate/Timing/ResolutionEvent 시스템을 사용한다.
+- CombatEvent 용어는 폐기하고 ResolutionEvent를 공통 event/transaction 단위로 사용한다.
+- imported content는 declarative only이며 unsupported mechanic은 명시적으로 드러낸다.
+- UI는 rules의 source of truth가 아니다.
+- 실제 플레이에서 실패한 scenario를 근거로 최소 primitive를 확장한다.
 
 ## 단기 체크리스트
 
-단기 범위는 **현재 작업과 다음 2~4개의 PR**이다. 바로 Issue로 전환할 수 있을 정도로 구체적으로 관리한다.
+### 1. 최신 설계 통합 / 저장소 정리 — 현재 작업
 
-### 1. 저장소 기반 정리 — 현재 PR
+- [x] `docs/design/README.md` canonical design index 작성
+- [x] `docs/rules/README.md` Common Rule Definition Specification `0.1-draft` 작성
+- [x] Character lifecycle/create/edit/progression 계약 통합
+- [x] RuleModule/ContentCatalog/Inventory/Item 계약 통합
+- [x] authority/state lifetime/Freeform/Initiative/ResolutionEvent/DM ruling 계약 통합
+- [x] combat/activity/dice/log UX 계약 통합
+- [x] extensibility/versioning/golden scenario 계약 통합
+- [x] Combatant import guide/schema/template/example 최신화
+- [ ] 통합 PR diff 검증
+- [ ] 통합 PR `main` squash merge
+- [ ] superseded Draft PR #4/#6/#10/#12/#15/#16/#22 종료
+- [ ] 통합본으로 충족된 design Issue #3/#5/#7/#11/#13/#14/#18/#19/#20/#21/#23 종료
+- [ ] planning epic #17은 RulesProfile/implementation gate가 남아 있으므로 유지
 
-- [x] 에이전트 지시/작업 문서를 `.agents/`로 격리
-- [x] 에이전트 작업 문서와 공식 프로젝트 문서의 경계 명시
-- [x] 장기/단기 개발 체크리스트 도입
-- [ ] PR #2의 변경 범위와 문서 내용 최종 검토
-- [ ] PR #2 병합 및 Issue #1 종료 확인
+### 2. 초기 RulesProfile — 다음 설계/구현 전 마지막 gate
 
-### 2. 애플리케이션 골격 구축 — 다음 PR
+- [ ] 초기 지원 D&D 규칙 버전/profile ID/version 확정
+- [ ] stable Property registry 최소 집합
+- [ ] derived formulas / stacking / rounding 규칙
+- [ ] Predicate operator / TimingPoint / Duration 최소 registry
+- [ ] action-economy buckets / reset / Freeform economy policy
+- [ ] Initiative lifecycle ordering
+- [ ] damage/resistance/immunity/vulnerability/critical policy
+- [ ] ProgressionTrack / threshold semantics
+- [ ] rest/recovery/time-advance policy
+- [ ] initial content categories / validation tags
+- [ ] required capabilities 목록
+- [ ] 최소 default content module과 연결
 
-- [ ] 초기 타깃 D&D 규칙 버전을 확정한 뒤 Issue에 기록
-- [ ] Tauri + React + TypeScript 프로젝트 초기화
-- [ ] 플레이어 모드와 세션 호스트 모드를 하나의 앱에서 제공할 기본 라우팅/화면 구조 작성
-- [ ] 개발·빌드 명령 정리
-- [ ] lint, typecheck, build 기본 검증 추가
-- [ ] GitHub Actions에서 최소 검증이 PR마다 실행되도록 구성
-- [ ] 루트 README에 개발 실행 방법과 프로젝트 목표의 최소 설명 추가
+### 3. Schema / scenario validation 기반
 
-### 3. 플레이어 소유 로컬 캐릭터 기반 — 후속 PR
+- [ ] `schemas/combatant.schema.json` 자체 JSON Schema 유효성 test
+- [ ] template/example schema validation test
+- [ ] semantic validator skeleton: IDs/references/property/timing/mechanic/capability
+- [ ] Common Rule Specification schema tree 시작
+- [ ] golden scenario fixture format 확정
+- [ ] 초기 scenario 작성: AC provenance
+- [ ] 초기 scenario 작성: attack + typed damage + resistance + temp HP
+- [ ] 초기 scenario 작성: reaction changes AC
+- [ ] 초기 scenario 작성: item charge + effect atomic transaction
+- [ ] 초기 scenario 작성: Freeform -> Initiative state preservation
+- [ ] 초기 scenario 작성: duplicate ResolutionEvent idempotency
+- [ ] 초기 scenario 작성: DM force outcome + correction
 
-- [ ] 캐릭터 식별자와 저장 스키마 버전 정의
-- [ ] 플레이어 PC 로컬 저장 구조 구현
-- [ ] 캐릭터 생성, 목록 조회, 수정, 삭제 구현
-- [ ] 저장 실패나 파일 손상 시 원본을 최대한 보존할 수 있도록 안전한 쓰기 방식 적용
-- [ ] 직렬화/역직렬화와 기본 저장 동작 테스트
-- [ ] 세션이 없어도 캐릭터를 만들고 다시 열 수 있는 최소 UI 완성
+### 4. 첫 Offline Vertical Slice
 
-### 4. 첫 사용 가능한 캐릭터 시트 — 후속 PR
+네트워크 없이 한 PC에서 end-to-end rules/domain/UX 흐름을 먼저 완성한다.
 
-- [ ] 핵심 캐릭터 정보 입력/수정 UI 구현
-- [ ] HP, AC, 능력치와 플레이 중 자주 변하는 값의 자동 저장 구현
-- [ ] 규칙 계산 로직과 UI 상태를 분리
-- [ ] 캐릭터 데이터가 네트워크 기능 없이 완전히 동작하는지 검증
-- [ ] 이후 주사위 기능이 시트 필드에서 호출될 수 있는 인터페이스 준비
+- [ ] Tauri + React + TypeScript scaffold
+- [ ] rules/domain package와 React UI 경계 분리
+- [ ] lint/typecheck/test/build + GitHub Actions
+- [ ] local Character library / safe JSON persistence
+- [ ] Guided/Quick Character draft 최소 UX
+- [ ] default ContentCatalog에서 build 선택
+- [ ] deterministic grant + ChoiceDefinition 처리
+- [ ] local single RuleSource/feat JSON import
+- [ ] ItemInstance 장착 -> AC provenance 재계산
+- [ ] Combatant JSON import/review/instantiate
+- [ ] Freeform check/Action Resolution
+- [ ] Initiative start/end
+- [ ] target selection + attack Resolution
+- [ ] action economy/resource/item charge tracking
+- [ ] authoritative dice record + visual presentation
+- [ ] compact + expandable ResolutionEvent log
+- [ ] safe Undo/correction
 
-## 장기 체크리스트
+### 5. Vertical Slice 이후 실제 플레이 피드백
 
-장기 범위는 **MVP 완성까지의 단계와 MVP 이후의 확장 후보**다. 세부 구현은 해당 단계가 단기 범위로 승격될 때 Issue에서 구체화한다.
+- [ ] 불편/미지원 규칙은 재현 가능한 golden scenario로 먼저 기록
+- [ ] 기존 primitive로 표현 가능한지 확인
+- [ ] 불가능할 때만 최소 Mechanic/Predicate/Timing/Targeting primitive 추가
+- [ ] persisted contract 변경 시 version/migration/capability 갱신
+- [ ] 기존 scenarios 회귀 검증
+- [ ] UX는 domain schema와 분리해서 빠르게 수정
 
-### Phase 0 — 저장소와 개발 흐름
+## 중기 이후
 
-- [ ] `main`을 항상 실행 가능한 상태로 유지
-- [ ] 기능 단위 Issue → 작업 브랜치 → Draft PR → 검증 → 병합 흐름 정착
-- [ ] 최소 CI(lint/typecheck/test/build) 정착
-- [ ] 프로젝트 구조와 핵심 설계 결정이 코드와 함께 추적되도록 정리
+### LAN / Hamachi Session
 
-### Phase 1 — 오프라인 플레이어 앱
+- DM PC session host
+- Character source는 player-local 유지
+- RulesProfile/module/capability compatibility negotiation
+- SessionProjection + snapshot/event cursor
+- ActionRequest / Choice / ResolutionEvent sync
+- session RuleModule temporary mount
+- reconnect / duplicate / out-of-order handling
+- durable Character write-back
 
-- [ ] 플레이어가 세션 없이 캐릭터를 생성하고 수정할 수 있음
-- [ ] 캐릭터 원본은 플레이어 PC가 소유함
-- [ ] 앱 재실행 후에도 캐릭터 상태가 유지됨
-- [ ] 캐릭터 내보내기/가져오기 제공
-- [ ] 저장 스키마 변경에 대비한 버전 관리 기반 마련
+### Stability / Distribution
 
-### Phase 2 — 주사위 시스템
+- Character/Combatant/RuleModule migration
+- invalid/unsupported content diagnostics
+- save/recovery UX
+- Windows distribution
+- 실제 DM 1명 + player 2명 이상 LAN/Hamachi playtest
 
-- [ ] 기본 주사위 표현식 지원 (`d20`, `1d20+5`, `2d6+3` 등)
-- [ ] 일반/이점/불리점 굴림 지원
-- [ ] 시트의 능력치, 판정, 공격 등에서 직접 굴릴 수 있음
-- [ ] 굴림 결과를 표준화된 `RollEvent` 형태로 생성
-- [ ] 로컬 주사위 기록 제공
+## MVP에서 의도적으로 제외
 
-### Phase 3 — LAN / Hamachi 세션
-
-- [ ] 같은 Wi-Fi에서 DM PC가 세션 호스트가 될 수 있음
-- [ ] Hamachi 가상 LAN에서도 동일한 방식으로 접속 가능
-- [ ] 플레이어가 DM 주소를 입력해 한 번에 세션 연결
-- [ ] 하나의 WebSocket 연결로 캐릭터 세션 정보와 주사위 이벤트 전달
-- [ ] DM 서버에 캐릭터 원본을 저장하지 않음
-- [ ] 세션 종료 또는 연결 실패가 플레이어 로컬 캐릭터 저장에 영향을 주지 않음
-
-### Phase 4 — DM 세션 화면
-
-- [ ] 현재 접속 플레이어와 선택 캐릭터 표시
-- [ ] 실시간 Roll Feed 표시
-- [ ] 공개/GM 전용 등 최소한의 굴림 공개 범위 지원
-- [ ] 세션 중 필요한 캐릭터 상태만 임시 동기화
-- [ ] DM이 캐릭터 원본의 소유자가 되지 않도록 권한 경계 유지
-
-### Phase 5 — 안정성 및 배포
-
-- [ ] WebSocket 연결 끊김 시 자동 재접속
-- [ ] 중복/누락 RollEvent를 줄이기 위한 이벤트 ID 처리
-- [ ] 잘못된 세션 데이터가 로컬 캐릭터 파일을 손상시키지 않도록 검증
-- [ ] Windows에서 실행 가능한 배포 패키지 생성
-- [ ] 새 PC에서도 설치 후 캐릭터 생성 → 세션 참가 → 주사위 공유 흐름 검증
-- [ ] 최소 1명의 DM과 2명 이상의 플레이어 환경에서 LAN/Hamachi 실제 플레이 테스트
-
-## MVP 완료 조건
-
-아래 흐름이 별도 클라우드 서비스 없이 안정적으로 동작하면 첫 MVP로 본다.
-
-- [ ] 플레이어가 자신의 PC에서 캐릭터를 미리 생성하고 저장할 수 있다.
-- [ ] DM이 자신의 PC에서 세션을 연다.
-- [ ] 플레이어들이 같은 Wi-Fi 또는 Hamachi를 통해 DM PC에 접속한다.
-- [ ] 플레이어는 자신의 로컬 캐릭터를 선택해 세션에 참가한다.
-- [ ] 시트에서 굴린 주사위 결과가 DM 및 필요한 참가자에게 실시간 전달된다.
-- [ ] 세션이 종료되어도 플레이어 캐릭터의 변경사항은 로컬에 남는다.
-- [ ] DM PC에는 플레이어 캐릭터의 영구 원본이 필요하지 않다.
-
-## MVP 이후 후보
-
-- [ ] 같은 LAN의 세션 자동 발견
-- [ ] 최근 접속한 DM 주소 기억
-- [ ] GM PIN 또는 간단한 세션 접근 제어
-- [ ] 더 복잡한 주사위 문법 (`kh`, `kl`, reroll 등)
-- [ ] 선택적 세션 로그 저장
-- [ ] 캐릭터 파일 백업/복구 UX 개선
-- [ ] 사용자 경험이 충분히 검증된 뒤에만 추가 편의 기능 검토
-
-## 의도적으로 제외하는 범위
-
-아래 항목은 현재 SimpleVTT의 목표가 아니다. 별도의 강한 필요가 생기기 전에는 장기 체크리스트로도 승격하지 않는다.
-
-- 클라우드 계정 및 중앙 캐릭터 서버
-- 친구/소셜 시스템
-- 음성 또는 텍스트 채팅
-- 전투 맵, 토큰, 포그 오브 워
-- 캠페인 위키
-- 대규모 몬스터/주문 콘텐츠 데이터베이스
-- 범용 Foundry VTT 대체 기능
+- cloud account/central Character server
+- friend/social system
+- chat/voice
+- battle map/token/fog of war
+- campaign wiki
+- marketplace/package registry
+- automatic Internet module download
+- arbitrary executable rule/plugin scripts
+- 앱 내부 AI runtime 의존
+- 대규모 proprietary rules database 번들
+- Foundry/Roll20 전체 대체
