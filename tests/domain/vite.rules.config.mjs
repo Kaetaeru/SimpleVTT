@@ -8,6 +8,8 @@ export default defineConfig({
         profileEngine: resolve(process.cwd(), "src/domain/profileEngine.ts"),
         d20: resolve(process.cwd(), "src/domain/d20.ts"),
         damage: resolve(process.cwd(), "src/domain/damage.ts"),
+        damageRoll: resolve(process.cwd(), "src/domain/damageRoll.ts"),
+        life: resolve(process.cwd(), "src/domain/life.ts"),
       },
       formats: ["es"],
     },
