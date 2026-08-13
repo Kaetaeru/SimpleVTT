@@ -2,6 +2,7 @@ import type {
   AbilityKey,
   AbilityScores,
   ActionVm,
+  ActivityEntry,
   AppSnapshot,
   AppRole,
   CatalogEntry,
@@ -253,7 +254,7 @@ export class MockAdapter implements SimpleVttAdapter {
     actionsByActor: clone(actionsByActor),
   };
   private catalog = clone(catalog);
-  private activity = [
+  private activity: ActivityEntry[] = [
     { id: "evt.201", time: "17:31", actor: "Aelar", title: "롱소드 → 고블린 A", summary: "18 vs AC 15 — 명중 · 12 참격 피해", detail: ["d20 11 + 공격 보너스 7 = 18", "고블린 A HP 24 → 12"] },
     { id: "evt.200", time: "17:30", actor: "Mira", title: "치유의 단어 → Aelar", summary: "8 HP 회복", detail: ["Aelar HP 23 → 31"] },
   ];
