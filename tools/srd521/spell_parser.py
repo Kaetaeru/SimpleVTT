@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import unicodedata
+import urllib.request
 from pathlib import Path
 
 SCHOOLS={"방호술":"abjuration","조형술":"conjuration","예지술":"divination","환혹술":"enchantment","방출술":"evocation","환영술":"illusion","사령술":"necromancy","변환술":"transmutation"}
@@ -49,6 +50,12 @@ def _entry(s,letter):
     return {"id":_id(s),"category":"spell","presentation":{"originalName":s["originalName"],"defaultLocale":"ko-KR","locales":{"ko-KR":{"name":s["nameKo"],"description":s["description"]}},"translationSource":_source(letter)},"mechanics":[{"kind":"spell-definition","config":{"level":s["level"],"school":s["school"],"ritual":s["ritual"],"castingTimeText":s["castingTime"],"rangeText":s["range"],"componentsText":s["components"],"durationText":s["duration"],"supportStatus":"presentation-only"}}]}
 def _module(letter,content):
     return {"$schema":"https://simplevtt.local/schemas/rule-module.schema.json","schemaVersion":"0.1-draft","moduleId":f"dnd.srd-5.2.1.spells-{letter}-generated","moduleVersion":"0.1-draft","rulesProfile":{"id":"dnd.srd-5.2.1","version":"0.1-draft"},"defaultLocale":"ko-KR","source":{"document":"System Reference Document","version":"5.2.1","license":"CC-BY-4.0","srdDerived":True},"dependencies":[{"moduleId":"dnd.srd-5.2.1.core","version":"0.1-draft"}],"conflicts":[],"capabilities":[],"extensionPoints":[],"content":content}
+def fetch_pinned_source(repo_root:Path):
+    base=repo_root/".cache/dnd-translation/10-RULEBOOKS/srd-5.2.1/spells"; base.mkdir(parents=True,exist_ok=True)
+    for letter in LETTERS:
+        url=f"https://raw.githubusercontent.com/Kaetaeru/D-D-2024-/{REV}/10-RULEBOOKS/srd-5.2.1/spells/{letter}.md"
+        with urllib.request.urlopen(url,timeout=30) as r: (base/f"{letter}.md").write_bytes(r.read())
+    return repo_root/".cache/dnd-translation"
 def generate_all(source_root:Path,repo_root:Path):
     src=source_root/"10-RULEBOOKS/srd-5.2.1/spells"; out=repo_root/"content/modules"; source={}; by_letter={}
     for letter in LETTERS:
@@ -72,5 +79,7 @@ def generate_all(source_root:Path,repo_root:Path):
         target=out/f"dnd-srd-5.2.1.spells-{letter}-generated/module.json"; target.parent.mkdir(parents=True,exist_ok=True); target.write_text(json.dumps(_module(letter,content),ensure_ascii=False,separators=(",",":")),encoding="utf-8")
     print(f"source=339 preserved={len(existing)} generated={339-len(existing)}")
 
-if __name__=="__main__" and len(sys.argv)>1:
-    generate_all(Path(sys.argv[1]),Path(__file__).resolve().parents[2])
+if __name__=="__main__":
+    root=Path(__file__).resolve().parents[2]
+    source=fetch_pinned_source(root) if len(sys.argv)>1 and sys.argv[1]=="--fetch" else Path(sys.argv[1])
+    generate_all(source,root)
