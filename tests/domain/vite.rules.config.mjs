@@ -10,6 +10,8 @@ export default defineConfig({
         damage: resolve(process.cwd(), "src/domain/damage.ts"),
         damageRoll: resolve(process.cwd(), "src/domain/damageRoll.ts"),
         life: resolve(process.cwd(), "src/domain/life.ts"),
+        temporaryHp: resolve(process.cwd(), "src/domain/temporaryHp.ts"),
+        lifeTransitions: resolve(process.cwd(), "src/domain/lifeTransitions.ts"),
       },
       formats: ["es"],
     },
