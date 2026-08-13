@@ -14,7 +14,6 @@ test("guided fighter creation reaches a commit-ready review and creates a level-
   assert.equal(plan.sections.find((section) => section.id === "review")?.status, "complete");
   assert.equal(plan.sections.find((section) => section.id === "spells")?.status, "not-applicable");
   assert.equal(beforeCommit.createDraft?.subclassName, "");
-
   assert.equal(afterCommit.createDraft, null);
   assert.equal(afterCommit.activeCharacter.name, "Gate Fighter");
   assert.equal(afterCommit.activeCharacter.level, 1);
