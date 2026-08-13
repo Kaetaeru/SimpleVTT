@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppProvider } from "./app/AppProvider";
-import "./app/characterCreationV09";
+import "./app/characterCreationV09Adapter";
 import "./app/mockAdapterCompletion";
 import "./styles.css";
 import "./responsive.css";
