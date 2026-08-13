@@ -83,10 +83,75 @@ export interface AbilityRollSlot {
   dropped: number;
 }
 
+export type CharacterCreationSectionKind =
+  | "rules-profile"
+  | "identity"
+  | "species"
+  | "background"
+  | "class"
+  | "abilities"
+  | "proficiencies"
+  | "class-choices"
+  | "equipment"
+  | "spells"
+  | "dynamic-choice"
+  | "review";
+
+export type CharacterCreationSectionStatus = "complete" | "incomplete" | "blocked" | "warning" | "not-applicable";
+
+export interface CharacterCreationOptionVm {
+  id: string;
+  name: string;
+  nameEn: string;
+  summary: string;
+  source: string;
+  selected: boolean;
+  recommended: boolean;
+  grants: string[];
+  choices: string[];
+}
+
+export interface CharacterCreationSection {
+  id: string;
+  kind: CharacterCreationSectionKind;
+  label: string;
+  description: string;
+  status: CharacterCreationSectionStatus;
+  required: boolean;
+  dependsOn: string[];
+  options: CharacterCreationOptionVm[];
+  automaticGrants: string[];
+  validation: ValidationMessage[];
+}
+
+export interface CharacterCreationSummary {
+  name: string;
+  species: string;
+  background: string;
+  className: string;
+  subclassName?: string;
+  level: number;
+  abilities: AbilityScores;
+  unresolvedCount: number;
+  blockingCount: number;
+  warningCount: number;
+}
+
+export interface CharacterCreationPlan {
+  draftId: string;
+  rulesProfileId: string;
+  activeSectionId: string;
+  recommendedSectionId: string;
+  sections: CharacterCreationSection[];
+  summary: CharacterCreationSummary;
+  validation: ValidationMessage[];
+}
+
 export interface CharacterCreateDraft {
   id: string;
   editingCharacterId?: string;
   step: number;
+  activeSectionId?: string;
   mode: "guided" | "quick" | "import" | "duplicate";
   rulesProfileId: string;
   name: string;
@@ -101,6 +166,7 @@ export interface CharacterCreateDraft {
   rolledAssignments: Partial<Record<AbilityKey, string>>;
   selectedSkills: string[];
   selectedSpells: string[];
+  selectedClassChoices?: string[];
   equipmentPreset: string;
   notes: string;
   overrides: { hp?: number; ac?: number; speed?: number };
@@ -410,6 +476,7 @@ export interface AppSnapshot {
   characters: CharacterSummary[];
   activeCharacter: CharacterSheet;
   createDraft: CharacterCreateDraft | null;
+  creationPlan?: CharacterCreationPlan | null;
   levelUpDraft: LevelUpDraft | null;
   scene: SceneVm;
   catalog: CatalogEntry[];
@@ -424,6 +491,7 @@ export interface AppSnapshot {
 export interface CharacterDraftCommand {
   type:
     | "set-step"
+    | "set-section"
     | "set-mode"
     | "set-name"
     | "set-class"
@@ -436,6 +504,7 @@ export interface CharacterDraftCommand {
     | "apply-recommended-array"
     | "roll-abilities"
     | "toggle-skill"
+    | "toggle-class-choice"
     | "toggle-spell"
     | "set-equipment"
     | "set-notes"
