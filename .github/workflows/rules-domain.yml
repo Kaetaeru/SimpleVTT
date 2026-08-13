@@ -1,0 +1,35 @@
+name: Rules Domain
+
+on:
+  pull_request:
+    paths:
+      - "src/domain/**"
+      - "tests/domain/**"
+      - "tests/fixtures/rules/**"
+      - "rules/**"
+      - ".github/workflows/rules-domain.yml"
+  push:
+    branches:
+      - "agent/39-real-rules-engine-phase-01"
+    paths:
+      - "src/domain/**"
+      - "tests/domain/**"
+      - "tests/fixtures/rules/**"
+      - "rules/**"
+
+jobs:
+  rules-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Bundle rules domain
+        run: npx vite build --config tests/domain/vite.rules.config.mjs
+      - name: Run rules golden fixtures
+        run: node --test tests/domain/*.test.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
