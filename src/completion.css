@@ -41,3 +41,15 @@
   .roll-slot-pool { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .action-hover-detail { left:5%; right:5%; }
 }
+
+/* Canonical sheet direction: digital information surface, not parchment skin. */
+.sheet-bg { background: radial-gradient(circle at 76% -18%, var(--accent-soft), transparent 34rem), linear-gradient(var(--bg-2),var(--bg)); color:var(--text); }
+.sheet-bg .screen-head { color:var(--text); }.sheet-bg .screen-head p,.sheet-bg .eyebrow { color:var(--muted); }.sheet-bg .eyebrow.accent { color:var(--accent); }
+.sheet-bg button { background:linear-gradient(var(--surface-2),var(--surface)); border-color:var(--line); color:var(--text); }.sheet-bg button.primary { border-color:var(--line-strong); color:var(--accent); background:var(--accent-soft); }
+.paper-sheet { background:linear-gradient(150deg,color-mix(in srgb,var(--surface-2) 72%,var(--surface)),var(--surface)); color:var(--text); border-color:var(--line); border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+.sheet-identity { border-color:var(--line); }.sheet-identity > div + div { border-color:var(--line); }.sheet-identity small,.paper-sheet .hp-block small { color:var(--muted); }
+.sheet-columns > section + section { border-color:var(--line); }
+.ability,.plain-list span,.row,.feature-list article,.inventory-item { background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); }.ability small,.feature-list article p,.inventory-item details { color:var(--muted); }.ability b { background:var(--recess); color:var(--text); }
+.paper-sheet .metric { background:var(--surface-2); border-color:var(--line); }.hp-block { background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); }.hp-block > div + div { border-color:var(--line); }
+.item-state span { border-color:var(--line); }
+.undo-preview { margin:10px 0; padding:10px; display:grid; gap:4px; border:1px solid var(--line-strong); background:var(--accent-soft); font-size:9px; }.undo-preview span,.undo-preview p { margin:0; color:var(--muted); }.undo-preview em { color:var(--accent); font-style:normal; }
