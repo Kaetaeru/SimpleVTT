@@ -8,5 +8,8 @@
     "moduleResolution": "NodeNext",
     "isolatedModules": false
   },
-  "include": ["src/domain/profileEngine.ts"]
+  "include": [
+    "src/domain/profileEngine.ts",
+    "src/domain/d20.ts"
+  ]
 }
