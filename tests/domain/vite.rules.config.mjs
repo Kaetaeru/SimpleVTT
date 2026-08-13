@@ -13,6 +13,8 @@ export default defineConfig({
         temporaryHp: resolve(process.cwd(), "src/domain/temporaryHp.ts"),
         lifeTransitions: resolve(process.cwd(), "src/domain/lifeTransitions.ts"),
         turnEconomy: resolve(process.cwd(), "src/domain/turnEconomy.ts"),
+        initiative: resolve(process.cwd(), "src/domain/initiative.ts"),
+        reactionWindow: resolve(process.cwd(), "src/domain/reactionWindow.ts"),
       },
       formats: ["es"],
     },
