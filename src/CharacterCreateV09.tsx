@@ -1,61 +1,50 @@
 import { useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { CharacterCreateDraft, CharacterCreationPlan, CharacterCreationSection } from "./app/contracts";
+import { creationContextSections, creationPrimarySections, creationPrimaryStatus, nextCreationPrimaryId } from "./app/characterProgressionPresentation";
 import { AbilitiesSection } from "./character-create/V09Abilities";
 import { ClassChoicesSection, ClassSection, EquipmentSection, IdentitySection, ProficienciesSection, ReviewSection, SourceSection, SpellSection } from "./character-create/V09Sections";
-import { OptionCard, SectionShell, STATUS_LABEL } from "./character-create/v09Ui";
+
+const LABELS: Record<string, string> = { identity: "정체성", species: "종족", class: "클래스", background: "배경", abilities: "능력치", proficiencies: "기술", review: "검토" };
 
 export function CharacterCreateScreenV09({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
   const { snapshot, createCharacterDraft, updateCharacterDraft, finalizeCharacterDraft } = useSimpleVtt();
   const [importText, setImportText] = useState('{\n  "name": "새 캐릭터",\n  "className": "전사",\n  "species": "인간",\n  "background": "병사",\n  "level": 1\n}');
-  if (!snapshot?.createDraft) return <div className="screen page-dark create-v09-empty"><div><span className="eyebrow accent">CHARACTER CREATION v0.9</span><h1>새 캐릭터</h1><p>큰 선택을 하나씩 고르고, 그 선택 때문에 생긴 질문만 해결합니다.</p><button className="primary" onClick={() => createCharacterDraft("guided")}>가이드 생성 시작</button></div></div>;
+  if (!snapshot?.createDraft) return <div className="focused-create-empty"><div><span>CHARACTER CREATION</span><h1>새 캐릭터</h1><p>큰 선택을 정하고 필요한 선택은 그 자리에서 이어서 처리합니다.</p><button className="primary" onClick={() => createCharacterDraft("guided")}>캐릭터 만들기</button><button onClick={onCancel}>돌아가기</button></div></div>;
   const draft = snapshot.createDraft;
   const plan = snapshot.creationPlan;
-  if (!plan) return <div className="loading-screen">CharacterCreationPlan 계산 중…</div>;
-  const active = plan.sections.find((section) => section.id === plan.activeSectionId) ?? plan.sections[0];
+  if (!plan) return <div className="loading-screen">캐릭터 선택 준비 중…</div>;
+  const primary = creationPrimarySections(plan);
+  const activeId = primary.some((section) => section.id === plan.activeSectionId) ? plan.activeSectionId : ["class-choices", "equipment", "spells"].includes(plan.activeSectionId) ? "class" : plan.recommendedSectionId;
+  const active = primary.find((section) => section.id === activeId) ?? primary[0];
+  const context = creationContextSections(plan, active.id);
   const blocking = plan.validation.some((message) => message.severity === "blocking");
   const importPending = draft.mode === "import" && draft.importStatus !== "valid";
-  const openSection = (section: CharacterCreationSection) => { if (section.status !== "blocked" && section.status !== "not-applicable") void updateCharacterDraft({ type: "set-section", value: section.id }); };
-  const nav = plan.sections.filter((section) => section.status !== "blocked" && section.status !== "not-applicable");
-  const index = nav.findIndex((section) => section.id === active.id);
-  const previous = index > 0 ? nav[index - 1] : undefined;
-  const next = index >= 0 ? nav[index + 1] : nav[0];
-  const canCommit = active.id === "review" && !blocking && !importPending;
-  return <div className="builder-screen create-v09">
-    <header className="builder-top create-v09-top"><div><span className="eyebrow accent">{draft.editingCharacterId ? "캐릭터 편집 · v0.9" : "캐릭터 생성 · v0.9"}</span><h1>{draft.name || "이름 없는 캐릭터"}</h1></div><div className="mode-tabs create-v09-modes"><button className={draft.mode === "guided" ? "active" : ""} onClick={() => updateCharacterDraft({ type: "set-mode", value: "guided" })}>가이드</button><button className={draft.mode === "quick" ? "active" : ""} onClick={() => updateCharacterDraft({ type: "set-mode", value: "quick" })}>빠른 편집</button><button className={draft.mode === "import" ? "active" : ""} onClick={() => createCharacterDraft("import")}>JSON 가져오기</button><button className={draft.mode === "duplicate" ? "active" : ""} onClick={() => createCharacterDraft("duplicate")}>Aelar 복제</button></div><button onClick={onCancel}>닫기</button></header>
-    <div className="create-v09-layout"><CreationRail plan={plan} onOpen={openSection}/><main className="create-v09-main">{importPending ? <ImportEntry draft={draft} value={importText} setValue={setImportText} onPreview={() => updateCharacterDraft({ type: "import-json", value: importText })}/> : draft.mode === "quick" ? <QuickPlan plan={plan} draft={draft} onOpen={(section) => { void updateCharacterDraft({ type: "set-mode", value: "guided" }).then(() => updateCharacterDraft({ type: "set-section", value: section.id })); }}/> : <SectionView section={active} plan={plan} draft={draft}/>}</main><CreationSummary plan={plan}/></div>
-    <footer className="builder-footer create-v09-footer"><button disabled={!previous || draft.mode === "quick" || importPending} onClick={() => previous && openSection(previous)}>이전</button><div className="create-v09-progress"><span>{plan.sections.filter((section) => section.status === "complete").length} 완료</span><span>·</span><span>{plan.summary.unresolvedCount} 미해결</span><span>·</span><span>{plan.summary.blockingCount} Blocking</span></div>{draft.mode === "quick" ? <button className="primary" onClick={() => { void updateCharacterDraft({ type: "set-mode", value: "guided" }).then(() => updateCharacterDraft({ type: "set-section", value: plan.recommendedSectionId })); }}>추천 다음 항목 열기</button> : canCommit ? <button className="primary" onClick={async () => { await finalizeCharacterDraft(); onDone(); }}>{draft.editingCharacterId ? "변경 Revision 저장" : "캐릭터 생성"}</button> : <button className="primary" disabled={!next || importPending} onClick={() => next && openSection(next)}>다음</button>}</footer>
+  const go = (id: string) => void updateCharacterDraft({ type: "set-section", value: id });
+  const previousId = nextCreationPrimaryId(plan, active.id, -1);
+  const nextId = nextCreationPrimaryId(plan, active.id, 1);
+  return <div className="focused-create-shell">
+    <header className="focused-create-header"><div className="focused-create-title"><span>{draft.editingCharacterId ? "CHARACTER EDIT" : "CHARACTER CREATION"}</span><strong>{draft.name || "이름 없는 캐릭터"}</strong></div><nav className="focused-create-tabs">{primary.map((section) => { const status = creationPrimaryStatus(plan, section); return <button key={section.id} className={`${active.id === section.id ? "active" : ""} status-${status}`} onClick={() => go(section.id)}><i>{status === "complete" ? "✓" : status === "warning" ? "!" : status === "incomplete" || status === "blocked" ? "•" : ""}</i><span>{LABELS[section.id] ?? section.label}</span></button>; })}</nav><div className="focused-create-header-actions"><button className="quiet" onClick={() => createCharacterDraft("import")}>JSON</button><button onClick={onCancel}>닫기</button></div></header>
+    <div className="focused-create-body"><main className="focused-create-stage">{importPending ? <ImportPanel draft={draft} value={importText} setValue={setImportText} onPreview={() => updateCharacterDraft({ type: "import-json", value: importText })}/> : <PrimarySection section={active} context={context} plan={plan} draft={draft}/>}</main><CharacterPreview plan={plan} draft={draft} onReview={() => go("review")}/></div>
+    <footer className="focused-create-footer"><button disabled={primary[0]?.id === active.id || importPending} onClick={() => go(previousId)}>이전</button><div><span>{LABELS[active.id] ?? active.label}</span><small>{active.id === "class" && context.length ? `${draft.className || "클래스"}에 필요한 선택을 여기서 함께 처리합니다.` : active.description}</small></div>{active.id === "review" ? <button className="primary" disabled={blocking || importPending} onClick={async () => { await finalizeCharacterDraft(); onDone(); }}>{draft.editingCharacterId ? "변경 적용" : "모험 시작"}</button> : <button className="primary" disabled={importPending} onClick={() => go(nextId)}>다음</button>}</footer>
   </div>;
 }
 
-function CreationRail({ plan, onOpen }: { plan: CharacterCreationPlan; onOpen(section: CharacterCreationSection): void }) {
-  return <aside className="builder-steps create-v09-rail"><div className="create-v09-rail-title"><span className="eyebrow">BUILD SECTIONS</span><strong>캐릭터 생성</strong></div>{plan.sections.map((section, index) => <button key={section.id} disabled={section.status === "blocked" || section.status === "not-applicable"} className={`${plan.activeSectionId === section.id ? "active" : ""} status-${section.status}`} onClick={() => onOpen(section)}><b>{section.status === "complete" ? "✓" : section.status === "warning" ? "!" : section.status === "not-applicable" ? "—" : String(index + 1).padStart(2, "0")}</b><span><strong>{section.label}</strong><small>{STATUS_LABEL[section.status]}</small></span></button>)}</aside>;
-}
-
-function CreationSummary({ plan }: { plan: CharacterCreationPlan }) {
-  const s = plan.summary;
-  return <aside className="builder-preview create-v09-summary"><span className="eyebrow accent">현재 캐릭터</span><h2>{s.name || "이름 없음"}</h2><div className="create-summary-sources"><Summary label="종족" value={s.species || "미선택"}/><Summary label="배경" value={s.background || "미선택"}/><Summary label="클래스" value={s.className ? `${s.className} ${s.level}` : "미선택"}/><Summary label="서브클래스" value={s.subclassName || (s.level === 1 ? "레벨업에서 해금 시 선택" : "미선택")}/></div><h3 className="section-title">능력치</h3><div className="ability-mini">{Object.entries(s.abilities).map(([key, value]) => <span key={key}>{key.toUpperCase()} <b>{value}</b></span>)}</div><h3 className="section-title">진행 상태</h3><div className="create-summary-counts"><span><b>{s.unresolvedCount}</b> 미해결</span><span className={s.blockingCount ? "bad-text" : "good-text"}><b>{s.blockingCount}</b> Blocking</span><span><b>{s.warningCount}</b> Warning</span></div><div className="builder-save">하나의 초안 · 자동 저장 · Guided/Quick 공유</div></aside>;
-}
-function Summary({ label, value }: { label: string; value: string }) { return <div><span>{label}</span><strong>{value}</strong></div>; }
-
-function SectionView({ section, plan, draft }: { section: CharacterCreationSection; plan: CharacterCreationPlan; draft: CharacterCreateDraft }) {
-  if (section.kind === "rules-profile") return <SectionShell section={section}><div className="create-option-grid">{section.options.map((option) => <OptionCard key={option.id} option={option}/>)}</div></SectionShell>;
+function PrimarySection({ section, context, plan, draft }: { section: CharacterCreationSection; context: CharacterCreationSection[]; plan: CharacterCreationPlan; draft: CharacterCreateDraft }) {
   if (section.kind === "identity") return <IdentitySection section={section} draft={draft}/>;
   if (section.kind === "species") return <SourceSection section={section} commandType="set-species"/>;
   if (section.kind === "background") return <SourceSection section={section} commandType="set-background"/>;
-  if (section.kind === "class") return <ClassSection section={section} draft={draft}/>;
+  if (section.kind === "class") return <div className="focused-class-flow"><ClassSection section={section} draft={draft}/>{draft.className && context.length > 0 && <div className="focused-context-block"><div className="focused-context-heading"><span>현재 클래스 선택</span><strong>{draft.className}에게 지금 필요한 결정</strong><p>별도 단계로 이동하지 않고 클래스 선택의 결과를 바로 이어서 정합니다.</p></div>{context.map((child) => <ContextSection key={child.id} section={child} draft={draft}/>)}</div>}</div>;
   if (section.kind === "abilities") return <AbilitiesSection section={section} draft={draft}/>;
   if (section.kind === "proficiencies") return <ProficienciesSection section={section} draft={draft}/>;
-  if (section.kind === "class-choices") return <ClassChoicesSection section={section}/>;
-  if (section.kind === "equipment") return <EquipmentSection section={section}/>;
-  if (section.kind === "spells") return <SpellSection section={section} draft={draft}/>;
   return <ReviewSection section={section} plan={plan} draft={draft}/>;
 }
 
-function QuickPlan({ plan, draft, onOpen }: { plan: CharacterCreationPlan; draft: CharacterCreateDraft; onOpen(section: CharacterCreationSection): void }) {
-  return <section className="create-v09-section quick-plan"><header><div><span className="create-status-pill complete">동일 초안</span><h2>빠른 편집</h2><p>별도 간소화 모델이 아니라 같은 CharacterCreationPlan을 밀도 높게 봅니다.</p></div></header><div className="quick-plan-grid">{plan.sections.filter((section) => section.status !== "not-applicable").map((section) => <button key={section.id} disabled={section.status === "blocked"} className={`quick-section-card status-${section.status}`} onClick={() => onOpen(section)}><div><span>{STATUS_LABEL[section.status]}</span><strong>{section.label}</strong></div><p>{section.description}</p><small>{section.options.filter((option) => option.selected).map((option) => option.name).join(" · ") || section.automaticGrants.slice(0, 2).join(" · ") || "열어서 확인"}</small></button>)}</div><div className="create-principle-callout"><strong>현재 source</strong><span>{draft.species || "종족 미선택"} · {draft.background || "배경 미선택"} · {draft.className || "클래스 미선택"}</span></div></section>;
+function ContextSection({ section, draft }: { section: CharacterCreationSection; draft: CharacterCreateDraft }) { if (section.kind === "class-choices") return <ClassChoicesSection section={section}/>; if (section.kind === "equipment") return <EquipmentSection section={section}/>; if (section.kind === "spells") return <SpellSection section={section} draft={draft}/>; return null; }
+
+function CharacterPreview({ plan, draft, onReview }: { plan: CharacterCreationPlan; draft: CharacterCreateDraft; onReview(): void }) {
+  const unresolved = creationPrimarySections(plan).filter((section) => ["incomplete", "blocked"].includes(creationPrimaryStatus(plan, section))).map((section) => LABELS[section.id] ?? section.label);
+  return <aside className="focused-character-preview"><div className="focused-character-portrait"><span>{(draft.name || "?").slice(0, 1)}</span></div><div className="focused-character-identity"><h2>{draft.name || "이름 없음"}</h2><p>{draft.className ? `${draft.className} ${draft.level}` : "클래스 미선택"}</p><span>{draft.species || "종족 미선택"} · {draft.background || "배경 미선택"}</span></div><div className="focused-character-vitals"><div><span>HP</span><strong>{draft.derived.hp}</strong></div><div><span>AC</span><strong>{draft.derived.ac}</strong></div><div><span>이동</span><strong>{draft.derived.speed}</strong></div></div><div className="focused-character-abilities">{Object.entries(draft.abilities).map(([key, value]) => <div key={key}><span>{key.toUpperCase()}</span><strong>{value}</strong></div>)}</div><button className="focused-review-button" onClick={onReview}><span>캐릭터 검토</span><strong>{unresolved.length ? `${unresolved.join(" · ")} 확인 필요` : "준비 완료"}</strong></button></aside>;
 }
 
-function ImportEntry({ draft, value, setValue, onPreview }: { draft: CharacterCreateDraft; value: string; setValue(value: string): void; onPreview(): void }) {
-  return <section className="create-v09-section"><header><div><span className="create-status-pill incomplete">Import</span><h2>JSON 가져오기</h2><p>가져오기는 생성기를 우회하지 않습니다. 읽은 뒤 같은 Plan에서 미해결 선택을 검토합니다.</p></div></header><textarea className="json-box create-import-json" value={value} onChange={(event) => setValue(event.target.value)}/><button className="primary" onClick={onPreview}>검증하고 Plan으로 가져오기</button>{draft.importStatus && draft.importStatus !== "idle" && <div className={`validation ${draft.importStatus === "valid" ? "info" : "blocking"}`}>{draft.importMessage}</div>}</section>;
-}
+function ImportPanel({ draft, value, setValue, onPreview }: { draft: CharacterCreateDraft; value: string; setValue(value: string): void; onPreview(): void }) { return <section className="focused-import"><span>IMPORT CHARACTER</span><h2>JSON 가져오기</h2><p>가져온 캐릭터도 같은 선택 화면에서 검토합니다.</p><textarea value={value} onChange={(event) => setValue(event.target.value)}/><button className="primary" onClick={onPreview}>가져와서 검토</button>{draft.importStatus && draft.importStatus !== "idle" && <div className={`validation ${draft.importStatus === "valid" ? "info" : "blocking"}`}>{draft.importMessage}</div>}</section>; }
