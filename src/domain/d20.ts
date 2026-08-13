@@ -90,7 +90,10 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
   if (!Number.isFinite(request.target)) throw new DomainEvaluationError("d20 target must be finite");
 
   const rollStateResolution = resolveRollState(profile, request.rollStateContributions ?? []);
-  const defaultDiceCount = profile.d20Test?.advantageDisadvantage?.defaultDiceCount ?? 2;
+  const d20Policy = profile.d20Test?.advantageDisadvantage as
+    | { sameSideStacks?: boolean; opposingCancel?: boolean; defaultDiceCount?: number }
+    | undefined;
+  const defaultDiceCount = d20Policy?.defaultDiceCount ?? 2;
   const dice = selectD20(rollStateResolution.rollState, request.dice, defaultDiceCount);
   const modifier = request.modifierContributions.reduce((sum, entry) => sum + entry.value, 0);
   const natural = dice.selectedFace;
