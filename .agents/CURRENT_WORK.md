@@ -39,31 +39,41 @@
 - [ ] React-independent TypeScript rules/domain package
 - [ ] incrementally replace MockAdapter paths with real services
 
+## 병렬 작업 결정
+
+Owner 방향에 따라 UI 승인 대기와 Real Rules Engine 구현을 더 이상 완전 순차로 묶지 않는다.
+
+- UI 검증은 Issue #36 / PR #37에서 계속한다.
+- Real Rules Engine Phase 01은 Issue #39 / `agent/39-real-rules-engine-phase-01`에서 별도로 진행한다.
+- 구체적인 판단, 구현 순서, 완료 기준은 `.agents/REAL_RULES_ENGINE.md`를 따른다.
+- 이유: adapter 경계와 mock UX가 이미 안정되어 있고, 현재 가장 큰 공백은 RulesProfile/Common Rule 계약을 실제로 실행하는 domain kernel이다.
+- PR #38의 semantic catalog는 generic engine 준비 후 연결한다.
+
 ## 현재 Gate
 
 ```text
 Executable Contracts ✅
         ↓
 UI Session 01 interaction prototype ✅
-        ↓
-Owner full Windows walkthrough + final revisions ← current
-        ↓
-Owner explicit acceptance
-        ↓
-Semantic validation + representative SRD content
-        ↓
-Real TypeScript domain / persistence / networking adapters
+        ├─ Owner walkthrough + final revisions
+        └─ Real Rules Engine Phase 01 ← 병렬 current
+               ↓
+        executable domain + golden tests
+               ↓
+        SRD semantic catalog integration
+               ↓
+        RealAdapter replacement
 ```
 
 ## UI Session 01 원칙
 
 - `main`은 안정 상태로 유지한다.
-- 작업은 `agent/36-ui-session-01`에 누적한다.
+- UI 작업은 `agent/36-ui-session-01`에 누적한다.
+- Real Engine 작업은 `agent/39-real-rules-engine-phase-01`에서 분리한다.
 - 사용자는 필요할 때 로컬에서 해당 브랜치를 pull하여 Windows/Tauri 환경으로 직접 검증한다.
 - 정상 Player/DM 화면에는 reference 테스트 조작을 노출하지 않는다.
 - 역할, 세션 모드, 현재 Actor, queued d20, 연결 상태, edge/scenario 강제 변경은 Debug Dock에만 둔다.
 - Target eligibility와 Resolution state는 application adapter/ViewModel에서 제공하며 React가 규칙을 재계산하지 않는다.
-- UI Session 01 동안 실제 Resolver, WebSocket, production persistence를 UI 편의를 위해 React에 임시 구현하지 않는다.
 - owner 승인 전에는 Issue #36/PR을 완료 또는 merge하지 않는다.
 
 ## Owner walkthrough 순서
