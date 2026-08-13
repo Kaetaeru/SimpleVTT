@@ -15,6 +15,7 @@ export default defineConfig({
         turnEconomy: resolve(process.cwd(), "src/domain/turnEconomy.ts"),
         initiative: resolve(process.cwd(), "src/domain/initiative.ts"),
         reactionWindow: resolve(process.cwd(), "src/domain/reactionWindow.ts"),
+        stateChange: resolve(process.cwd(), "src/domain/stateChange.ts"),
       },
       formats: ["es"],
     },
