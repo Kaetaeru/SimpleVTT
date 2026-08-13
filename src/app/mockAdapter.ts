@@ -1,467 +1,191 @@
 import type {
-  AbilityKey,
-  AbilityScores,
-  ActionVm,
-  ActivityEntry,
-  AppSnapshot,
-  AppRole,
-  CatalogEntry,
-  CharacterCreateDraft,
-  CharacterDraftCommand,
-  CharacterSheet,
-  CharacterSummary,
-  ConnectionState,
-  LevelUpCommand,
-  LevelUpDraft,
-  ResolutionView,
-  SceneEntity,
-  SceneVm,
-  SessionMode,
-  SimpleVttAdapter,
-  ValidationMessage,
+  AbilityKey, AbilityRollSlot, AbilityScores, ActionVm, ActivityEntry, AppRole, AppSnapshot,
+  CatalogEntry, CharacterCreateDraft, CharacterDraftCommand, CharacterSheet, CharacterSummary,
+  CombatantDefinitionVm, ConnectionState, DamageComponentView, DmAdjudicationCommand, EconomyVm,
+  EdgeState, ItemInstanceVm, LevelUpCommand, LevelUpDraft, ResolutionView, SceneEntity, SceneVm,
+  SessionMode, SimpleVttAdapter, ValidationMessage,
 } from "./contracts";
 
-const ABILITY_KEYS: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
-const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
-const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+const KEYS: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
+const STANDARD = [15, 14, 13, 12, 10, 8];
+const COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+const cp = <T,>(v: T): T => structuredClone(v);
+const uid = (p: string) => `${p}.${Date.now()}.${Math.floor(Math.random() * 1000)}`;
+const mod = (score: number) => Math.floor((score - 10) / 2);
 
-const aelar: CharacterSheet = {
-  id: "char.aelar",
-  name: "Aelar",
-  className: "전사",
-  subclassName: "챔피언",
-  level: 5,
-  species: "인간",
-  background: "병사",
-  hp: 31,
-  maxHp: 42,
-  tempHp: 5,
-  ac: 18,
-  speed: 30,
-  proficiencyBonus: 3,
-  saveState: "saved",
-  abilities: { str: 18, dex: 14, con: 16, int: 10, wis: 12, cha: 8 },
-  saves: ["근력 +7", "건강 +6"],
-  skills: ["운동 +7", "지각 +4", "위협 +2"],
-  features: ["전투 방식: 방어", "세컨드 윈드", "액션 서지", "추가 공격", "경계"],
-  equipment: ["체인 메일", "방패", "롱소드", "숏보우", "치유 물약 ×2"],
-  resources: [
-    { label: "세컨드 윈드", current: 1, max: 1 },
-    { label: "액션 서지", current: 1, max: 1 },
-  ],
-  attacks: [
-    { id: "action.longsword", name: "롱소드", bonus: 7, damage: "1d8 + 4 참격" },
-    { id: "action.shortbow", name: "숏보우", bonus: 5, damage: "1d6 + 2 관통" },
-  ],
-};
+function rollSlots(seed = 0): AbilityRollSlot[] {
+  const sets = seed % 2 ? [[6,6,5,1],[6,5,4,3],[6,4,4,2],[5,5,3,1],[4,4,3,2],[5,3,2,1]] : [[6,5,4,1],[6,6,3,2],[5,5,4,2],[5,4,3,3],[6,3,2,1],[4,4,3,2]];
+  return sets.map((dice, i) => { const d = [...dice].sort((a,b) => b-a); return { id: `roll.${seed}.${i}`, total: d[0]+d[1]+d[2], dice: d, dropped: d[3] }; });
+}
 
-const mira: CharacterSummary = {
-  id: "char.mira",
-  name: "Mira",
-  className: "음유시인",
-  level: 4,
-  species: "엘프",
-  background: "연예인",
-  hp: 24,
-  maxHp: 31,
-  ac: 15,
-  saveState: "saved",
-};
-
-const entities: SceneEntity[] = [
-  { id: "char.mira", name: "Mira", side: "ally", kind: "character", hp: 24, maxHp: 31, ac: 15, initiative: 19, status: [] },
-  { id: "char.aelar", name: "Aelar", side: "ally", kind: "character", hp: 31, maxHp: 42, ac: 18, initiative: 17, status: [] },
-  { id: "combatant.goblin-a", name: "고블린 A", side: "enemy", kind: "combatant", hp: 12, maxHp: 21, ac: 15, initiative: 14, status: ["중독됨"], distance: "22피트" },
-  { id: "combatant.goblin-b", name: "고블린 B", side: "enemy", kind: "combatant", hp: 21, maxHp: 21, ac: 14, initiative: 11, status: [], distance: "35피트" },
-  { id: "combatant.wolf", name: "늑대", side: "enemy", kind: "combatant", hp: 8, maxHp: 11, ac: 13, initiative: 9, status: ["넘어짐"], distance: "18피트" },
+const items: ItemInstanceVm[] = [
+  { id:"item.chain.aelar", definitionId:"item.chain-mail", name:"체인 메일", nameEn:"Chain Mail", kind:"equipment", quantity:1, equipped:true, passiveEffects:["기본 AC 16"], grantedActionIds:[], provenance:["SRD 5.2.1 · 장비","장착 상태가 AC 계산에 기여"] },
+  { id:"item.shield.aelar", definitionId:"item.shield", name:"방패", nameEn:"Shield", kind:"equipment", quantity:1, equipped:true, wielded:true, passiveEffects:["AC +2"], grantedActionIds:[], provenance:["SRD 5.2.1 · 장비","장착 중 AC +2"] },
+  { id:"item.potion.aelar", definitionId:"item.potion-of-healing", name:"치유 물약", nameEn:"Potion of Healing", kind:"consumable", quantity:2, equipped:false, passiveEffects:[], grantedActionIds:["action.healing-potion"], provenance:["SRD 5.2.1 · 소모품","사용 시 수량 1 감소"] },
+  { id:"item.wand.aelar", definitionId:"item.wand-of-magic-missiles", name:"마법 미사일 완드", nameEn:"Wand of Magic Missiles", kind:"magic", quantity:1, equipped:true, charges:{current:7,max:7}, passiveEffects:[], grantedActionIds:["action.wand"], provenance:["Reference catalog · 충전형 아이템","Action 사용 시 충전 1 소모"] },
+  { id:"item.charm.aelar", definitionId:"local.item.guardian-charm", name:"수호 부적", nameEn:"Guardian Charm", kind:"magic", quantity:1, equipped:true, attunementRequired:true, attuned:false, passiveEffects:["조율 중 Reference 방어 효과 활성"], grantedActionIds:[], provenance:["Local/Homebrew 0.1","UI Session 조율 상태 예시"] },
 ];
 
-const actionsByActor: Record<string, ActionVm[]> = {
-  "char.aelar": [
-    { id: "action.longsword", actorId: "char.aelar", name: "롱소드", category: "weapon", target: "enemy", economy: "행동", summary: "+7 · 1d8+4 참격", available: true },
-    { id: "action.shortbow", actorId: "char.aelar", name: "숏보우", category: "weapon", target: "enemy", economy: "행동", summary: "+5 · 1d6+2 관통", available: true },
-    { id: "action.second-wind", actorId: "char.aelar", name: "세컨드 윈드", category: "basic", target: "self", economy: "추가 행동", summary: "1d10+5 회복", available: true },
-    { id: "action.dash", actorId: "char.aelar", name: "질주", category: "basic", target: "self", economy: "행동", summary: "이동 가능량 증가", available: true },
-  ],
-  "char.mira": [
-    { id: "action.healing-word", actorId: "char.mira", name: "치유의 단어", category: "magic", target: "ally", economy: "추가 행동", summary: "1d4+4 회복", available: true },
-    { id: "action.vicious-mockery", actorId: "char.mira", name: "신랄한 조롱", category: "magic", target: "enemy", economy: "행동", summary: "지혜 내성 · 정신 피해", available: true },
-  ],
-  "combatant.goblin-a": [
-    { id: "action.scimitar", actorId: "combatant.goblin-a", name: "시미터", category: "weapon", target: "enemy", economy: "행동", summary: "+4 · 1d6+2 참격", available: true },
-    { id: "action.goblin-bow", actorId: "combatant.goblin-a", name: "숏보우", category: "weapon", target: "enemy", economy: "행동", summary: "+4 · 1d6+2 관통", available: true },
-  ],
-  "combatant.goblin-b": [
-    { id: "action.scimitar-b", actorId: "combatant.goblin-b", name: "시미터", category: "weapon", target: "enemy", economy: "행동", summary: "+4 · 1d6+2 참격", available: true },
-  ],
-  "combatant.wolf": [
-    { id: "action.bite", actorId: "combatant.wolf", name: "물기", category: "basic", target: "enemy", economy: "행동", summary: "+4 · 2d4+2 관통", available: true },
-  ],
+const AELAR: CharacterSheet = {
+  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, species:"인간", background:"병사",
+  hp:31, maxHp:42, tempHp:5, ac:18, speed:30, proficiencyBonus:3, saveState:"saved",
+  abilities:{str:18,dex:14,con:16,int:10,wis:12,cha:8}, saves:["근력 +7","건강 +6"], skills:["운동 +7","지각 +4","위협 +2"],
+  features:["전투 방식: 방어","세컨드 윈드","액션 서지","추가 공격","경계"], equipment:["체인 메일","방패","롱소드","숏보우","치유 물약 ×2","마법 미사일 완드"], items:cp(items),
+  resources:[{id:"resource.second-wind",label:"세컨드 윈드",current:1,max:1,source:"전사 1레벨"},{id:"resource.action-surge",label:"액션 서지",current:1,max:1,source:"전사 2레벨"}],
+  attacks:[{id:"action.longsword",name:"롱소드",bonus:7,damage:"1d8 + 4 참격"},{id:"action.shortbow",name:"숏보우",bonus:5,damage:"1d6 + 2 관통"}],
 };
+const MIRA: CharacterSummary = { id:"char.mira",name:"Mira",className:"음유시인",level:4,species:"엘프",background:"연예인",hp:24,maxHp:31,ac:15,saveState:"saved" };
 
-const catalog: CatalogEntry[] = [
-  { id: "class.fighter", category: "class", nameKo: "전사", nameEn: "Fighter", scope: "builtin", source: "SRD 5.2.1", description: "무기와 방어구에 숙련된 전투 클래스입니다." },
-  { id: "subclass.champion", category: "subclass", nameKo: "챔피언", nameEn: "Champion", scope: "builtin", source: "SRD 5.2.1", description: "전사의 전투 능력을 직접적으로 강화하는 서브클래스입니다." },
-  { id: "species.human", category: "species", nameKo: "인간", nameEn: "Human", scope: "builtin", source: "SRD 5.2.1", description: "다재다능한 플레이어 캐릭터 종족입니다." },
-  { id: "background.soldier", category: "background", nameKo: "병사", nameEn: "Soldier", scope: "builtin", source: "SRD 5.2.1", description: "군사 경험을 가진 캐릭터의 배경입니다." },
-  { id: "feat.alert", category: "feat", nameKo: "경계", nameEn: "Alert", scope: "builtin", source: "SRD 5.2.1", description: "우선권과 관련된 능력을 제공합니다." },
-  { id: "spell.healing-word", category: "spell", nameKo: "치유의 단어", nameEn: "Healing Word", scope: "builtin", source: "SRD 5.2.1", description: "원거리에서 아군을 회복시키는 주문입니다." },
-  { id: "item.longsword", category: "item", nameKo: "롱소드", nameEn: "Longsword", scope: "builtin", source: "SRD 5.2.1", description: "군용 근접 무기입니다." },
-  { id: "condition.poisoned", category: "condition", nameKo: "중독됨", nameEn: "Poisoned", scope: "builtin", source: "SRD 5.2.1", description: "독의 영향을 받는 상태입니다." },
-  { id: "combatant.goblin", category: "combatant", nameKo: "고블린", nameEn: "Goblin", scope: "local", source: "로컬 JSON", description: "가져온 전투원 정의입니다." },
-  { id: "subclass.homebrew-warden", category: "subclass", nameKo: "철벽 수호자", nameEn: "Iron Warden", scope: "local", source: "Homebrew 0.1", description: "기본 전사 클래스를 확장하는 로컬 홈브루 서브클래스 예시입니다." },
+const ENTITIES: SceneEntity[] = [
+  {id:"char.mira",name:"Mira",side:"ally",kind:"character",hp:24,maxHp:31,tempHp:0,ac:15,initiative:19,status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
+  {id:"char.aelar",name:"Aelar",side:"ally",kind:"character",hp:31,maxHp:42,tempHp:5,ac:18,initiative:17,status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
+  {id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,tempHp:0,ac:15,initiative:14,status:["중독됨"],distance:"22피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
+  {id:"combatant.goblin-b",name:"고블린 B",side:"enemy",kind:"combatant",hp:21,maxHp:21,tempHp:0,ac:14,initiative:11,status:[],distance:"35피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
+  {id:"combatant.wolf",name:"늑대",side:"enemy",kind:"combatant",hp:8,maxHp:11,tempHp:0,ac:13,initiative:9,status:["넘어짐"],distance:"18피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
+  {id:"combatant.training-guardian",name:"훈련용 수호체",side:"enemy",kind:"combatant",hp:30,maxHp:30,tempHp:4,ac:16,initiative:7,status:["Reference Mock"],distance:"20피트",resistances:["천둥"],immunities:["독"],vulnerabilities:["냉기"],reactions:[{id:"reaction.guard",name:"방어 반응",trigger:"공격에 명중될 때",cost:"반응 1",effect:"이번 공격에 대한 AC +3",source:"Reference Mock · UI Session",acBonus:3}]},
 ];
 
-function createInitialDraft(mode: CharacterCreateDraft["mode"] = "guided"): CharacterCreateDraft {
-  return withCreateDerived({
-    id: "draft.character.new",
-    step: 0,
-    mode,
-    rulesProfileId: "dnd.srd-5.2.1",
-    name: "",
-    className: "전사",
-    species: "인간",
-    background: "병사",
-    level: 1,
-    abilityMethod: "standard",
-    abilities: { str: 15, dex: 14, con: 13, int: 10, wis: 12, cha: 8 },
-    rolledPool: [16, 15, 14, 13, 12, 10],
-    selectedSkills: ["운동", "지각"],
-    equipmentPreset: "chain-shield",
-    notes: "",
-    derived: { proficiencyBonus: 2, ac: 18, hp: 11, speed: 30 },
-    validation: [],
-  });
-}
+const details = (rows: Array<[string,string,string?]>) => rows.map(([label,value,source]) => ({label,value,source}));
+const BASE_ACTIONS: Record<string, ActionVm[]> = {
+  "char.aelar":[
+    {id:"action.longsword",actorId:"char.aelar",name:"롱소드",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",summary:"+7 · 1d8+4 참격",available:true,eligibleTargetIds:[],attackBonus:7,damage:[{type:"참격",dice:"1d8",flat:4,average:9}],details:details([["대상","크리처 1개"],["사거리","근접 5피트"],["명중","+7","근력 +4 + 숙련 +3"],["피해","1d8 + 4 참격"],["비용","행동 1"]])},
+    {id:"action.shortbow",actorId:"char.aelar",name:"숏보우",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",summary:"+5 · 1d6+2 관통",available:true,eligibleTargetIds:[],attackBonus:5,damage:[{type:"관통",dice:"1d6",flat:2,average:6}],details:details([["대상","크리처 1개"],["사거리","80/320피트"],["명중","+5","민첩 +2 + 숙련 +3"],["피해","1d6 + 2 관통"],["비용","행동 1"]])},
+    {id:"action.second-wind",actorId:"char.aelar",name:"세컨드 윈드",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"healing",summary:"1d10+5 회복",available:true,eligibleTargetIds:[],healing:{dice:"1d10",flat:5,average:10},resourceCost:{resourceId:"resource.second-wind",amount:1},details:details([["대상","자신"],["회복","1d10 + 5"],["비용","추가 행동 + 자원 1"],["출처","전사 클래스 기능"]])},
+    {id:"action.dash",actorId:"char.aelar",name:"질주",category:"basic",target:"self",economy:"행동",resolutionKind:"no-roll",summary:"이동 가능량 증가",available:true,eligibleTargetIds:[],details:details([["대상","자신"],["효과","이동 가능량 +30피트"],["비용","행동 1"]])},
+    {id:"action.athletics",actorId:"char.aelar",name:"운동 판정",category:"basic",target:"none",economy:"없음",resolutionKind:"ability-check",summary:"근력(운동) +7",available:true,eligibleTargetIds:[],checkBonus:7,details:details([["판정","근력(운동)"],["보너스","+7","근력 +4 + 숙련 +3"],["비용","장면 판정"]])},
+    {id:"action.healing-potion",actorId:"char.aelar",name:"치유 물약",category:"basic",target:"self",economy:"행동",resolutionKind:"healing",summary:"2d4+2 회복 · 수량 1",available:true,eligibleTargetIds:[],healing:{dice:"2d4",flat:2,average:7},itemCost:{itemId:"item.potion.aelar",quantity:1},details:details([["대상","자신"],["회복","2d4 + 2"],["비용","행동 + 물약 1"],["출처","ItemInstance"]])},
+    {id:"action.wand",actorId:"char.aelar",name:"마법 미사일 완드",category:"magic",target:"enemy",economy:"행동",resolutionKind:"no-roll-damage",summary:"자동 명중 · 역장 · 충전 1",available:true,eligibleTargetIds:[],damage:[{type:"역장",dice:"3d4",flat:3,average:10}],itemCost:{itemId:"item.wand.aelar",charges:1},details:details([["대상","크리처 1개"],["명중","자동"],["피해","Reference 3d4 + 3 역장"],["비용","행동 + 충전 1"],["출처","ItemInstance"]])},
+  ],
+  "char.mira":[
+    {id:"action.healing-word",actorId:"char.mira",name:"치유의 단어",category:"magic",target:"ally",economy:"추가 행동",resolutionKind:"healing",summary:"1d4+4 회복",available:true,eligibleTargetIds:[],healing:{dice:"1d4",flat:4,average:7},details:details([["대상","아군 1명"],["회복","1d4 + 4"],["비용","추가 행동"]])},
+    {id:"action.vicious-mockery",actorId:"char.mira",name:"신랄한 조롱",category:"magic",target:"enemy",economy:"행동",resolutionKind:"saving-throw",summary:"지혜 내성 DC 14 · 정신 피해",available:true,eligibleTargetIds:[],saveDc:14,saveAbility:"지혜",damage:[{type:"정신",dice:"2d6",flat:0,average:7}],details:details([["대상","적 1명"],["내성","지혜 DC 14"],["피해","2d6 정신"],["비용","행동"]])},
+    {id:"action.thunderwave",actorId:"char.mira",name:"천둥파",category:"magic",target:"multi-enemy",economy:"행동",resolutionKind:"saving-throw",summary:"건강 내성 DC 14 · 여러 대상",available:true,eligibleTargetIds:[],maxTargets:4,saveDc:14,saveAbility:"건강",saveHalf:true,damage:[{type:"천둥",dice:"2d8",flat:0,average:9}],details:details([["대상","적 최대 4명"],["내성","건강 DC 14"],["피해","2d8 천둥 · 성공 시 절반"],["비용","행동"]])},
+  ],
+  "combatant.goblin-a":[{id:"action.scimitar",actorId:"combatant.goblin-a",name:"시미터",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",summary:"+4 · 1d6+2 참격",available:true,eligibleTargetIds:[],attackBonus:4,damage:[{type:"참격",dice:"1d6",flat:2,average:6}],details:details([["명중","+4"],["피해","1d6+2 참격"]])}],
+  "combatant.goblin-b":[{id:"action.scimitar-b",actorId:"combatant.goblin-b",name:"시미터",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",summary:"+4 · 1d6+2 참격",available:true,eligibleTargetIds:[],attackBonus:4,damage:[{type:"참격",dice:"1d6",flat:2,average:6}],details:details([["명중","+4"],["피해","1d6+2 참격"]])}],
+  "combatant.wolf":[{id:"action.bite",actorId:"combatant.wolf",name:"물기",category:"basic",target:"enemy",economy:"행동",resolutionKind:"attack",summary:"+4 · 2d4+2 관통",available:true,eligibleTargetIds:[],attackBonus:4,damage:[{type:"관통",dice:"2d4",flat:2,average:7}],details:details([["명중","+4"],["피해","2d4+2 관통"]])}],
+  "combatant.training-guardian":[{id:"action.guardian-slam",actorId:"combatant.training-guardian",name:"훈련 타격",category:"basic",target:"enemy",economy:"행동",resolutionKind:"attack",summary:"+5 · 1d8+3 타격",available:true,eligibleTargetIds:[],attackBonus:5,damage:[{type:"타격",dice:"1d8",flat:3,average:8}],details:details([["출처","Reference Mock"]])}],
+};
 
-function createValidation(draft: CharacterCreateDraft): ValidationMessage[] {
-  const messages: ValidationMessage[] = [];
-  if (!draft.name.trim()) messages.push({ severity: "blocking", message: "캐릭터 이름을 입력해야 합니다." });
-  const scores = ABILITY_KEYS.map((key) => draft.abilities[key]);
-  if (draft.abilityMethod === "standard") {
-    const actual = [...scores].sort((a, b) => b - a);
-    if (actual.some((score, index) => score !== STANDARD_ARRAY[index])) {
-      messages.push({ severity: "blocking", message: "표준 배열의 여섯 값을 한 번씩 배치해야 합니다." });
-    }
-  }
-  if (draft.abilityMethod === "point-buy") {
-    if (scores.some((score) => score < 8 || score > 15 || POINT_COST[score] === undefined)) {
-      messages.push({ severity: "blocking", message: "포인트 구매 점수는 8~15 범위여야 합니다." });
-    } else {
-      const used = scores.reduce((sum, score) => sum + POINT_COST[score], 0);
-      if (used > 27) messages.push({ severity: "blocking", message: `포인트 구매 한도 27점을 ${used - 27}점 초과했습니다.` });
-      else messages.push({ severity: "info", message: `포인트 구매 ${used}/27점 사용 중입니다.` });
-    }
-  }
-  if (draft.abilityMethod === "custom") {
-    messages.push({ severity: "warning", message: "커스텀 능력치는 공식 기본 생성 방식이 아니며 명시적으로 저장됩니다." });
-  }
-  if (draft.abilityMethod === "rolled") {
-    messages.push({ severity: "info", message: "4d6에서 가장 낮은 주사위를 제외하는 방식의 Mock 결과를 사용 중입니다." });
-  }
-  if (draft.selectedSkills.length < 2) messages.push({ severity: "warning", message: "기술 숙련 선택이 아직 완료되지 않았습니다." });
-  return messages;
-}
+const CATALOG: CatalogEntry[] = [
+  {id:"class.fighter",category:"class",nameKo:"전사",nameEn:"Fighter",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"무기와 방어구에 숙련된 클래스입니다.",relationships:[],capabilities:["progression","actions"]},
+  {id:"subclass.champion",category:"subclass",nameKo:"챔피언",nameEn:"Champion",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"전사의 전투 능력을 강화하는 서브클래스입니다.",relationships:[{label:"기본 클래스",targetId:"class.fighter",targetName:"전사"}],capabilities:["progression"]},
+  {id:"species.human",category:"species",nameKo:"인간",nameEn:"Human",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"다재다능한 종족입니다.",relationships:[],capabilities:["character-create"]},
+  {id:"background.soldier",category:"background",nameKo:"병사",nameEn:"Soldier",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"군사 경험을 가진 배경입니다.",relationships:[],capabilities:["character-create"]},
+  {id:"feat.alert",category:"feat",nameKo:"경계",nameEn:"Alert",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"우선권 관련 능력을 제공합니다.",relationships:[],capabilities:["progression"]},
+  {id:"feat.magic-initiate",category:"feat",nameKo:"마법 입문자",nameEn:"Magic Initiate",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"마법 입문 선택 예시입니다.",relationships:[],capabilities:["progression","spells"]},
+  {id:"spell.healing-word",category:"spell",nameKo:"치유의 단어",nameEn:"Healing Word",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"원거리 회복 주문입니다.",relationships:[],capabilities:["actions"]},
+  {id:"item.longsword",category:"item",nameKo:"롱소드",nameEn:"Longsword",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"군용 근접 무기입니다.",relationships:[],capabilities:["items","actions"]},
+  {id:"condition.poisoned",category:"condition",nameKo:"중독됨",nameEn:"Poisoned",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"중독 상태입니다.",relationships:[],capabilities:["effects"]},
+  {id:"combatant.goblin",category:"combatant",nameKo:"고블린",nameEn:"Goblin",scope:"local",source:"로컬 JSON",version:"0.2",description:"가져온 전투원 정의 예시입니다.",relationships:[],capabilities:["combatants"]},
+  {id:"subclass.iron-warden",category:"subclass",nameKo:"철벽 수호자",nameEn:"Iron Warden",scope:"local",source:"Homebrew 0.1",version:"0.1",description:"전사를 확장하는 로컬 홈브루 예시입니다.",relationships:[{label:"기본 클래스",targetId:"class.fighter",targetName:"전사"}],capabilities:["progression"]},
+  {id:"option.fighting-style-defense",category:"option",nameKo:"전투 방식: 방어",nameEn:"Defense",scope:"builtin",source:"SRD 5.2.1",version:"0.1",description:"일반 선택 콘텐츠 예시입니다.",relationships:[{label:"소유 클래스",targetId:"class.fighter",targetName:"전사"}],capabilities:["choices"]},
+];
+const DEFINITIONS: CombatantDefinitionVm[] = [
+  {id:"combatant.goblin",name:"고블린",nameEn:"Goblin",ac:15,maxHp:21,source:"로컬 JSON",version:"0.2",actions:["시미터","숏보우"],statusImmunities:[]},
+  {id:"combatant.training-guardian",name:"훈련용 수호체",nameEn:"Training Guardian",ac:16,maxHp:30,source:"Reference Mock",version:"0.1",actions:["훈련 타격","방어 반응"],statusImmunities:["독"]},
+];
 
-function withCreateDerived(draft: CharacterCreateDraft): CharacterCreateDraft {
-  const ac = draft.equipmentPreset === "chain-shield" ? 18 : 14 + Math.max(0, Math.min(2, Math.floor((draft.abilities.dex - 10) / 2)));
-  const conMod = Math.floor((draft.abilities.con - 10) / 2);
-  const next = {
-    ...draft,
-    derived: {
-      proficiencyBonus: 2,
-      ac,
-      hp: 10 + conMod,
-      speed: 30,
-    },
-  };
-  next.validation = createValidation(next);
-  return next;
-}
+const economy = (entities: SceneEntity[]) => Object.fromEntries(entities.map((e) => [e.id,{action:true,bonusAction:true,reaction:true,movement:30,movementMax:30} satisfies EconomyVm]));
+function defaultScene(): SceneVm { const entities=cp(ENTITIES); return {id:"scene.ruined-gate",name:"폐허가 된 성문",round:3,currentActorId:"char.aelar",selectedActorId:"char.aelar",entities,actionsByActor:cp(BASE_ACTIONS),economyByActor:economy(entities)}; }
 
-function buildLevelUpDraft(character: CharacterSheet): LevelUpDraft {
-  const before = { ...character.abilities };
-  const after = { ...before, str: Math.min(20, before.str + 2) };
-  return {
-    characterId: character.id,
-    fromLevel: character.level,
-    toLevel: character.level + 1,
-    step: 0,
-    hpMethod: "fixed",
-    hpGain: 9,
-    asiMode: "plus-two",
-    asiPrimary: "str",
-    asiSecondary: "con",
-    preview: {
-      maxHpBefore: character.maxHp,
-      maxHpAfter: character.maxHp + 9,
-      abilityBefore: before,
-      abilityAfter: after,
-      grantedFeatures: ["Ability Score Improvement"],
-    },
-    validation: [],
-  };
+function newDraft(mode: CharacterCreateDraft["mode"]="guided"): CharacterCreateDraft {
+  const slots=rollSlots(0); const assignments=Object.fromEntries(KEYS.map((k,i)=>[k,slots[i].id])) as Partial<Record<AbilityKey,string>>;
+  const base: CharacterCreateDraft={id:"draft.character.new",step:0,mode,rulesProfileId:"dnd.srd-5.2.1",name:mode==="duplicate"?"Aelar 사본":"",className:"전사",subclassName:"챔피언",species:"인간",background:"병사",level:1,abilityMethod:"standard",abilities:{str:15,dex:14,con:13,int:10,wis:12,cha:8},rolledPool:slots,rolledAssignments:assignments,selectedSkills:["운동","지각"],selectedSpells:[],equipmentPreset:"chain-shield",notes:"",overrides:{},importStatus:"idle",derived:{proficiencyBonus:2,ac:18,hp:11,speed:30},validation:[]};
+  return deriveDraft(base);
 }
-
-function updateLevelPreview(draft: LevelUpDraft, character: CharacterSheet): LevelUpDraft {
-  const after: AbilityScores = { ...character.abilities };
-  const validation: ValidationMessage[] = [];
-  if (draft.asiMode === "plus-two") {
-    after[draft.asiPrimary] = Math.min(20, after[draft.asiPrimary] + 2);
-  } else if (draft.asiMode === "split") {
-    if (draft.asiPrimary === draft.asiSecondary) {
-      validation.push({ severity: "blocking", message: "+1 / +1은 서로 다른 두 능력치를 선택해야 합니다." });
-    } else {
-      after[draft.asiPrimary] = Math.min(20, after[draft.asiPrimary] + 1);
-      after[draft.asiSecondary] = Math.min(20, after[draft.asiSecondary] + 1);
-    }
-  }
-  const hpGain = draft.hpMethod === "fixed" ? 9 : 11;
-  return {
-    ...draft,
-    hpGain,
-    preview: {
-      maxHpBefore: character.maxHp,
-      maxHpAfter: character.maxHp + hpGain,
-      abilityBefore: { ...character.abilities },
-      abilityAfter: after,
-      grantedFeatures: draft.asiMode === "feat" ? ["선택한 적격 일반 재주"] : ["Ability Score Improvement"],
-    },
-    validation,
-  };
+function editDraft(c: CharacterSheet): CharacterCreateDraft { return deriveDraft({...newDraft("guided"),id:`draft.edit.${c.id}`,editingCharacterId:c.id,name:c.name,className:c.className,subclassName:c.subclassName??"",species:c.species,background:c.background,level:c.level,abilityMethod:"custom",abilities:cp(c.abilities),selectedSkills:c.skills.map(s=>s.split(" ")[0]),derived:{proficiencyBonus:c.proficiencyBonus,ac:c.ac,hp:c.maxHp,speed:c.speed}}); }
+function validateDraft(d: CharacterCreateDraft): ValidationMessage[] {
+  const out:ValidationMessage[]=[]; const scores=KEYS.map(k=>d.abilities[k]);
+  if(!d.name.trim()) out.push({severity:"blocking",message:"캐릭터 이름을 입력해야 합니다."});
+  if(d.abilityMethod==="standard" && [...scores].sort((a,b)=>b-a).some((v,i)=>v!==STANDARD[i])) out.push({severity:"blocking",message:"표준 배열의 여섯 값을 한 번씩 배치해야 합니다."});
+  if(d.abilityMethod==="rolled"){ const ids=KEYS.map(k=>d.rolledAssignments[k]); if(ids.some(v=>!v)||new Set(ids).size!==6) out.push({severity:"blocking",message:"각 Roll Slot을 정확히 한 번씩 배치해야 합니다."}); else out.push({severity:"info",message:"각 4d6 Roll Slot identity를 유지하고 있습니다."}); }
+  if(d.abilityMethod==="point-buy"){ const used=scores.reduce((s,v)=>s+(COST[v]??99),0); if(scores.some(v=>v<8||v>15)||used>27) out.push({severity:"blocking",message:`포인트 구매는 8~15, 총 27점 이하여야 합니다. 현재 ${used}/27`}); else if(used<27) out.push({severity:"info",message:`포인트 구매 ${used}/27 · ${27-used}점 남음`}); }
+  if(d.abilityMethod==="custom") out.push({severity:"warning",message:"커스텀 능력치는 RulesProfile 기본 생성 방식이 아닙니다."});
+  if(d.selectedSkills.length!==2) out.push({severity:d.selectedSkills.length>2?"blocking":"warning",message:`기술 숙련은 2개를 선택합니다. 현재 ${d.selectedSkills.length}/2`});
+  if(Object.keys(d.overrides).length) out.push({severity:"warning",message:"수동 Override가 있으며 provenance에 별도 기록됩니다."});
+  return out;
 }
+function deriveDraft(d: CharacterCreateDraft): CharacterCreateDraft { const con=mod(d.abilities.con); const autoAc=d.equipmentPreset==="chain-shield"?18:14+Math.max(0,Math.min(2,mod(d.abilities.dex))); const next={...d,derived:{proficiencyBonus:d.level>=5?3:2,ac:d.overrides.ac??autoAc,hp:d.overrides.hp??Math.max(1,(d.level===1?10:10+(d.level-1)*6)+con*d.level),speed:d.overrides.speed??30}}; next.validation=validateDraft(next); return next; }
 
-function clone<T>(value: T): T {
-  return structuredClone(value);
-}
+function buildLevel(c: CharacterSheet): LevelUpDraft { const base:LevelUpDraft={characterId:c.id,fromLevel:c.level,toLevel:c.level+1,step:0,hpMethod:"fixed",hpGain:9,asiMode:"plus-two",asiPrimary:"str",asiSecondary:"con",preview:{maxHpBefore:c.maxHp,maxHpAfter:c.maxHp+9,abilityBefore:cp(c.abilities),abilityAfter:{...c.abilities,str:Math.min(20,c.abilities.str+2)},proficiencyBefore:c.proficiencyBonus,proficiencyAfter:3,hitDiceBefore:`${c.level}d10`,hitDiceAfter:`${c.level+1}d10`,grantedFeatures:["Ability Score Improvement"],resourceChanges:["Second Wind 3/3 유지"],actionChanges:["Weapon Mastery 4 유지"],spellChanges:[],diffs:[]},validation:[]}; return levelPreview(base,c); }
+function levelPreview(d:LevelUpDraft,c:CharacterSheet):LevelUpDraft { const a=cp(c.abilities); const v:ValidationMessage[]=[]; if(d.asiMode==="plus-two") a[d.asiPrimary]=Math.min(20,a[d.asiPrimary]+2); if(d.asiMode==="split"){ if(d.asiPrimary===d.asiSecondary) v.push({severity:"blocking",message:"+1/+1은 서로 다른 능력치를 선택해야 합니다."}); else {a[d.asiPrimary]=Math.min(20,a[d.asiPrimary]+1);a[d.asiSecondary]=Math.min(20,a[d.asiSecondary]+1);} } if(d.asiMode==="feat"&&!d.featId) v.push({severity:"blocking",message:"적격 재주를 선택해야 합니다."}); const hpGain=d.hpMethod==="fixed"?9:11; const conDelta=mod(a.con)-mod(c.abilities.con); const hpAfter=c.maxHp+hpGain+conDelta*(c.level+1); const changes=KEYS.filter(k=>a[k]!==c.abilities[k]).map(k=>`${k.toUpperCase()} ${c.abilities[k]} → ${a[k]}`); const feat=d.asiMode==="feat"?(d.featId??"미선택"):changes.join(", ")||"변화 없음"; const diffs=[{label:"Level",before:String(c.level),after:String(d.toLevel),source:"Progression"},{label:"Max HP",before:String(c.maxHp),after:String(hpAfter),source:conDelta?"Hit Die + CON retroactive":"Hit Die + CON"},{label:"Hit Dice",before:`${c.level}d10`,after:`${c.level+1}d10`,source:"Fighter"},{label:"Ability / Feat",before:"—",after:feat,source:"ASI Choice"},{label:"Proficiency",before:`+${c.proficiencyBonus}`,after:"+3",source:"Level table"},{label:"New Features",before:"—",after:"Ability Score Improvement",source:"AutomaticGrant"},{label:"Resources",before:"Second Wind 3",after:"Second Wind 3",source:"Capacity"},{label:"Actions",before:"현재 Action set",after:"현재 Action set",source:"Registry"},{label:"Spells",before:"변화 없음",after:"변화 없음",source:"Progression"},{label:"Equipment derived",before:`AC ${c.ac}`,after:`AC ${c.ac}`,source:"Dependency recalculation"}]; return {...d,hpGain,preview:{...d.preview,maxHpAfter:hpAfter,abilityAfter:a,diffs},validation:v}; }
 
+type Before={scene:SceneVm;activeCharacter:CharacterSheet;characters:CharacterSummary[]};
 export class MockAdapter implements SimpleVttAdapter {
-  private role: AppRole = "player";
-  private sessionMode: SessionMode = "initiative";
-  private connectionState: ConnectionState = "connected";
-  private queuedD20: number | null = null;
-  private characters: CharacterSummary[] = [aelar, mira];
-  private activeCharacter: CharacterSheet = clone(aelar);
-  private createDraft: CharacterCreateDraft | null = null;
-  private levelUpDraft: LevelUpDraft | null = null;
-  private scene: SceneVm = {
-    id: "scene.ruined-gate",
-    name: "폐허가 된 성문",
-    round: 3,
-    currentActorId: "char.aelar",
-    selectedActorId: "char.aelar",
-    entities: clone(entities),
-    actionsByActor: clone(actionsByActor),
-  };
-  private catalog = clone(catalog);
-  private activity: ActivityEntry[] = [
-    { id: "evt.201", time: "17:31", actor: "Aelar", title: "롱소드 → 고블린 A", summary: "18 vs AC 15 — 명중 · 12 참격 피해", detail: ["d20 11 + 공격 보너스 7 = 18", "고블린 A HP 24 → 12"] },
-    { id: "evt.200", time: "17:30", actor: "Mira", title: "치유의 단어 → Aelar", summary: "8 HP 회복", detail: ["Aelar HP 23 → 31"] },
-  ];
-  private resolution: ResolutionView | null = null;
+  private role:AppRole="player"; private sessionMode:SessionMode="initiative"; private connectionState:ConnectionState="connected"; private edgeState:EdgeState="normal"; private queuedD20:number|null=null;
+  private characters:CharacterSummary[]=[cp(AELAR),cp(MIRA)]; private activeCharacter=cp(AELAR); private createDraft:CharacterCreateDraft|null=null; private levelUpDraft:LevelUpDraft|null=null; private scene=defaultScene();
+  private catalog=cp(CATALOG); private contentImport:AppSnapshot["contentImport"]=null; private combatantDefinitions=cp(DEFINITIONS); private combatantImport:AppSnapshot["combatantImport"]=null;
+  private activity:ActivityEntry[]=[{id:"evt.201",time:"17:31",actor:"Aelar",title:"롱소드 → 고블린 A",summary:"18 vs AC 15 — 명중 · 12 참격 피해",detail:["d20 11 + 공격 보너스 7 = 18","참격 12"],stateChanges:["고블린 A HP 24 → 12"]},{id:"evt.200",time:"17:30",actor:"Mira",title:"치유의 단어 → Aelar",summary:"8 HP 회복",detail:["회복 8"],stateChanges:["Aelar HP 23 → 31"]}];
+  private resolution:ResolutionView|null=null; private before:Before|null=null; private lastBefore:Before|null=null; private lastResolutionId:string|null=null; private rollSeed=0;
+  private session:AppSnapshot["session"]={name:"금요일 세션",address:"192.168.0.10:3210",role:"offline",compatibility:"compatible",compatibilityMessage:"RulesProfile과 활성 모듈이 호환됩니다.",participants:[{id:"user.aelar",name:"Player 1",characterName:"Aelar",state:"connected"},{id:"user.mira",name:"Player 2",characterName:"Mira",state:"connected"}],sessionContent:["Homebrew 0.1 · 철벽 수호자"]};
 
-  async getSnapshot(): Promise<AppSnapshot> {
-    return clone({
-      role: this.role,
-      sessionMode: this.sessionMode,
-      connectionState: this.connectionState,
-      queuedD20: this.queuedD20,
-      characters: this.characters,
-      activeCharacter: this.activeCharacter,
-      createDraft: this.createDraft,
-      levelUpDraft: this.levelUpDraft,
-      scene: this.scene,
-      catalog: this.catalog,
-      activity: this.activity,
-      resolution: this.resolution,
-    });
-  }
+  private entity(id:string){return this.scene.entities.find(e=>e.id===id);} private action(id:string){return Object.values(this.scene.actionsByActor).flat().find(a=>a.id===id);}
+  private side(actorId:string){return this.entity(actorId)?.side??"ally";}
+  private eligible(a:ActionVm){const side=this.side(a.actorId); if(a.target==="none")return[]; if(a.target==="self")return[a.actorId]; if(a.target==="enemy"||a.target==="multi-enemy")return this.scene.entities.filter(e=>e.side!==side).map(e=>e.id); if(a.target==="ally")return this.scene.entities.filter(e=>e.side===side).map(e=>e.id); return this.scene.entities.map(e=>e.id);}
+  private availability(a:ActionVm){ if(this.sessionMode==="initiative"&&this.role==="player"&&a.actorId!==this.scene.currentActorId)return{available:false,reason:"현재 Actor의 턴이 아닙니다."}; const eco=this.scene.economyByActor[a.actorId]; if(this.sessionMode==="initiative"&&eco){if(a.economy==="행동"&&!eco.action)return{available:false,reason:"행동을 이미 사용했습니다."};if(a.economy==="추가 행동"&&!eco.bonusAction)return{available:false,reason:"추가 행동을 이미 사용했습니다."};if(a.economy==="반응"&&!eco.reaction)return{available:false,reason:"반응을 이미 사용했습니다."};} if(a.resourceCost){const r=this.activeCharacter.resources.find(r=>r.id===a.resourceCost!.resourceId);if(!r||r.current<a.resourceCost.amount)return{available:false,reason:"필요 자원이 부족합니다."};} if(a.itemCost){const it=this.activeCharacter.items.find(i=>i.id===a.itemCost!.itemId);if(!it)return{available:false,reason:"필요 아이템이 없습니다."};if(a.itemCost.quantity&&(it.quantity<a.itemCost.quantity))return{available:false,reason:"아이템 수량이 부족합니다."};if(a.itemCost.charges&&(!it.charges||it.charges.current<a.itemCost.charges))return{available:false,reason:"충전이 부족합니다."};} return{available:true}; }
+  private sceneVm(){const s=cp(this.scene);for(const [id,acts]of Object.entries(s.actionsByActor)){s.actionsByActor[id]=acts.map(a=>{const x=this.availability(a);return{...a,eligibleTargetIds:this.eligible(a),available:x.available,disabledReason:x.reason};});}return s;}
+  private syncChar(){const e=this.entity(this.activeCharacter.id);if(e){this.activeCharacter.hp=e.hp;this.activeCharacter.maxHp=e.maxHp;this.activeCharacter.tempHp=e.tempHp;this.activeCharacter.ac=e.ac;}this.characters=this.characters.map(c=>c.id===this.activeCharacter.id?{...c,...this.activeCharacter}:c);}
+  private resetEco(id:string){this.scene.economyByActor[id]={action:true,bonusAction:true,reaction:true,movement:30,movementMax:30};}
 
-  async createCharacterDraft(mode: CharacterCreateDraft["mode"] = "guided") {
-    this.createDraft = createInitialDraft(mode);
-    return this.getSnapshot();
-  }
+  async getSnapshot():Promise<AppSnapshot>{this.syncChar();return cp({role:this.role,sessionMode:this.sessionMode,connectionState:this.connectionState,edgeState:this.edgeState,queuedD20:this.queuedD20,characters:this.characters,activeCharacter:this.activeCharacter,createDraft:this.createDraft,levelUpDraft:this.levelUpDraft,scene:this.sceneVm(),catalog:this.catalog,contentImport:this.contentImport,combatantDefinitions:this.combatantDefinitions,combatantImport:this.combatantImport,activity:this.activity,resolution:this.resolution,session:this.session});}
+  async createCharacterDraft(mode:CharacterCreateDraft["mode"]="guided"){this.createDraft=newDraft(mode);return this.getSnapshot();}
+  async editCharacterDraft(characterId:string){if(characterId===this.activeCharacter.id)this.createDraft=editDraft(this.activeCharacter);return this.getSnapshot();}
+  async updateCharacterDraft(c:CharacterDraftCommand){if(!this.createDraft)this.createDraft=newDraft();let d=cp(this.createDraft);switch(c.type){case"set-step":d.step=Number(c.value);break;case"set-mode":d.mode=String(c.value) as CharacterCreateDraft["mode"];break;case"set-name":d.name=String(c.value??"");break;case"set-class":d.className=String(c.value);break;case"set-subclass":d.subclassName=String(c.value);break;case"set-species":d.species=String(c.value);break;case"set-background":d.background=String(c.value);break;case"set-ability-method":d.abilityMethod=String(c.value) as CharacterCreateDraft["abilityMethod"];if(d.abilityMethod==="standard")d.abilities={str:15,dex:14,con:13,int:10,wis:12,cha:8};if(d.abilityMethod==="point-buy")d.abilities={str:13,dex:12,con:13,int:10,wis:12,cha:10};if(d.abilityMethod==="rolled"){const slots=d.rolledPool;d.rolledAssignments=Object.fromEntries(KEYS.map((k,i)=>[k,slots[i].id]));d.abilities=Object.fromEntries(KEYS.map((k,i)=>[k,slots[i].total])) as AbilityScores;}break;case"set-ability":if(c.ability)d.abilities[c.ability]=Number(c.value);break;case"assign-roll":if(c.ability){const id=String(c.value);d.rolledAssignments[c.ability]=id;const slot=d.rolledPool.find(s=>s.id===id);if(slot)d.abilities[c.ability]=slot.total;}break;case"apply-recommended-array":d.abilities={str:15,dex:14,con:13,int:8,wis:10,cha:12};break;case"roll-abilities":d.rolledPool=rollSlots(++this.rollSeed);d.rolledAssignments=Object.fromEntries(KEYS.map((k,i)=>[k,d.rolledPool[i].id]));d.abilities=Object.fromEntries(KEYS.map((k,i)=>[k,d.rolledPool[i].total])) as AbilityScores;break;case"toggle-skill":{const v=String(c.value);d.selectedSkills=d.selectedSkills.includes(v)?d.selectedSkills.filter(x=>x!==v):[...d.selectedSkills,v];break;}case"toggle-spell":{const v=String(c.value);d.selectedSpells=d.selectedSpells.includes(v)?d.selectedSpells.filter(x=>x!==v):[...d.selectedSpells,v];break;}case"set-equipment":d.equipmentPreset=String(c.value);break;case"set-notes":d.notes=String(c.value??"");break;case"set-override":if(c.field)d.overrides[c.field]=Number(c.value);break;case"clear-overrides":d.overrides={};break;case"import-json":try{const p=JSON.parse(String(c.value)) as Record<string,unknown>;d.name=String(p.name??d.name);d.className=String(p.className??d.className);d.subclassName=String(p.subclassName??d.subclassName);d.species=String(p.species??d.species);d.background=String(p.background??d.background);d.importStatus="valid";d.importMessage="구조 Validation + Semantic Mock Validation 통과";}catch{d.importStatus="invalid";d.importMessage="JSON을 해석할 수 없습니다.";}break;}this.createDraft=deriveDraft(d);return this.getSnapshot();}
+  async finalizeCharacterDraft(){if(!this.createDraft)return this.getSnapshot();if(this.edgeState==="save-error"){this.createDraft={...this.createDraft,validation:[...this.createDraft.validation,{severity:"blocking",message:"Reference 저장 실패: 기존 Character Revision은 보존됩니다."}]};return this.getSnapshot();}if(this.createDraft.validation.some(v=>v.severity==="blocking"))return this.getSnapshot();const d=this.createDraft;const existing=d.editingCharacterId===this.activeCharacter.id;const id=existing?this.activeCharacter.id:`char.${d.name.trim().toLowerCase().replace(/\s+/g,"-")||"new"}`;const sheet:CharacterSheet={...cp(AELAR),id,name:d.name,className:d.className,subclassName:d.subclassName,level:d.level,species:d.species,background:d.background,hp:d.derived.hp,maxHp:d.derived.hp,tempHp:existing?this.activeCharacter.tempHp:0,ac:d.derived.ac,speed:d.derived.speed,proficiencyBonus:d.derived.proficiencyBonus,abilities:cp(d.abilities),skills:cp(d.selectedSkills),items:existing?cp(this.activeCharacter.items):cp(items),equipment:d.equipmentPreset==="chain-shield"?["체인 메일","방패","롱소드"]:["가죽 갑옷","롱소드"]};this.activeCharacter=sheet;this.characters=existing?this.characters.map(c=>c.id===id?{...sheet}:c):[...this.characters,sheet];if(existing){const e=this.entity(id);if(e){e.hp=sheet.hp;e.maxHp=sheet.maxHp;e.tempHp=sheet.tempHp;e.ac=sheet.ac;}}this.activity.unshift({id:uid("character"),time:"지금",actor:sheet.name,title:existing?"캐릭터 Revision 저장":"캐릭터 생성",summary:`${sheet.className} ${sheet.level} · ${sheet.species}`,detail:["source choices + derived preview 검토"],stateChanges:[existing?"기존 Revision → 새 Revision":"새 Character source 생성"]});this.createDraft=null;return this.getSnapshot();}
 
-  async updateCharacterDraft(command: CharacterDraftCommand) {
-    if (!this.createDraft) this.createDraft = createInitialDraft();
-    const draft = clone(this.createDraft);
-    switch (command.type) {
-      case "set-step": draft.step = Number(command.value ?? 0); break;
-      case "set-mode": draft.mode = String(command.value) as CharacterCreateDraft["mode"]; break;
-      case "set-name": draft.name = String(command.value ?? ""); break;
-      case "set-class": draft.className = String(command.value ?? "전사"); break;
-      case "set-species": draft.species = String(command.value ?? "인간"); break;
-      case "set-background": draft.background = String(command.value ?? "병사"); break;
-      case "set-ability-method": {
-        draft.abilityMethod = String(command.value) as CharacterCreateDraft["abilityMethod"];
-        if (draft.abilityMethod === "standard") draft.abilities = { str: 15, dex: 14, con: 13, int: 10, wis: 12, cha: 8 };
-        if (draft.abilityMethod === "point-buy") draft.abilities = { str: 13, dex: 12, con: 13, int: 10, wis: 12, cha: 10 };
-        if (draft.abilityMethod === "rolled") draft.abilities = { str: 16, dex: 15, con: 14, int: 12, wis: 13, cha: 10 };
-        break;
-      }
-      case "set-ability": if (command.ability) draft.abilities[command.ability] = Number(command.value); break;
-      case "roll-abilities": {
-        draft.rolledPool = [17, 15, 14, 13, 11, 9];
-        draft.abilities = { str: 17, dex: 15, con: 14, int: 11, wis: 13, cha: 9 };
-        break;
-      }
-      case "toggle-skill": {
-        const skill = String(command.value ?? "");
-        draft.selectedSkills = draft.selectedSkills.includes(skill) ? draft.selectedSkills.filter((item) => item !== skill) : [...draft.selectedSkills, skill];
-        break;
-      }
-      case "set-equipment": draft.equipmentPreset = String(command.value ?? "chain-shield"); break;
-      case "set-notes": draft.notes = String(command.value ?? ""); break;
-    }
-    this.createDraft = withCreateDerived(draft);
-    return this.getSnapshot();
-  }
+  async toggleItemEquipped(id:string){const it=this.activeCharacter.items.find(i=>i.id===id);if(it){it.equipped=!it.equipped;this.activity.unshift({id:uid("item"),time:"지금",actor:this.activeCharacter.name,title:`${it.name} ${it.equipped?"장착":"해제"}`,summary:"ItemInstance 상태 변경",detail:cp(it.provenance),stateChanges:[`equipped = ${it.equipped}`]});}return this.getSnapshot();}
+  async toggleItemAttunement(id:string){const it=this.activeCharacter.items.find(i=>i.id===id);if(it?.attunementRequired){it.attuned=!it.attuned;this.activity.unshift({id:uid("item"),time:"지금",actor:this.activeCharacter.name,title:`${it.name} ${it.attuned?"조율":"조율 해제"}`,summary:"활성 상태 변경",detail:cp(it.provenance),stateChanges:[`attuned = ${it.attuned}`]});}return this.getSnapshot();}
+  async useItem(id:string){const it=this.activeCharacter.items.find(i=>i.id===id);if(it){const changes:string[]=[];if(it.kind==="consumable"&&it.quantity>0){const b=it.quantity;it.quantity--;changes.push(`수량 ${b} → ${it.quantity}`);}else if(it.charges&&it.charges.current>0){const b=it.charges.current;it.charges.current--;changes.push(`충전 ${b} → ${it.charges.current}`);}if(changes.length)this.activity.unshift({id:uid("item"),time:"지금",actor:this.activeCharacter.name,title:`${it.name} 빠른 사용`,summary:changes.join(" · "),detail:cp(it.provenance),stateChanges:changes});}return this.getSnapshot();}
 
-  async finalizeCharacterDraft() {
-    if (!this.createDraft) return this.getSnapshot();
-    const blocking = this.createDraft.validation.some((message) => message.severity === "blocking");
-    if (blocking) return this.getSnapshot();
-    const id = `char.${this.createDraft.name.toLowerCase().replace(/\s+/g, "-") || "new"}`;
-    const sheet: CharacterSheet = {
-      id,
-      name: this.createDraft.name,
-      className: this.createDraft.className,
-      level: this.createDraft.level,
-      species: this.createDraft.species,
-      background: this.createDraft.background,
-      hp: this.createDraft.derived.hp,
-      maxHp: this.createDraft.derived.hp,
-      tempHp: 0,
-      ac: this.createDraft.derived.ac,
-      speed: this.createDraft.derived.speed,
-      proficiencyBonus: this.createDraft.derived.proficiencyBonus,
-      saveState: "saved",
-      abilities: clone(this.createDraft.abilities),
-      saves: ["근력", "건강"],
-      skills: clone(this.createDraft.selectedSkills),
-      features: ["세컨드 윈드"],
-      equipment: this.createDraft.equipmentPreset === "chain-shield" ? ["체인 메일", "방패", "롱소드"] : ["가죽 갑옷", "롱소드"],
-      resources: [{ label: "세컨드 윈드", current: 1, max: 1 }],
-      attacks: [{ id: "action.longsword", name: "롱소드", bonus: 5, damage: "1d8 + 3 참격" }],
-    };
-    this.activeCharacter = sheet;
-    this.characters = [...this.characters, sheet];
-    this.createDraft = null;
-    return this.getSnapshot();
-  }
+  async startLevelUp(id:string){if(id===this.activeCharacter.id)this.levelUpDraft=buildLevel(this.activeCharacter);return this.getSnapshot();}
+  async updateLevelUp(c:LevelUpCommand){if(!this.levelUpDraft)this.levelUpDraft=buildLevel(this.activeCharacter);const d=cp(this.levelUpDraft);if(c.type==="set-step")d.step=Number(c.value);if(c.type==="set-hp-method")d.hpMethod=String(c.value) as LevelUpDraft["hpMethod"];if(c.type==="set-asi-mode")d.asiMode=String(c.value) as LevelUpDraft["asiMode"];if(c.type==="set-asi-primary")d.asiPrimary=String(c.value) as AbilityKey;if(c.type==="set-asi-secondary")d.asiSecondary=String(c.value) as AbilityKey;if(c.type==="set-feat")d.featId=String(c.value);this.levelUpDraft=levelPreview(d,this.activeCharacter);return this.getSnapshot();}
+  async commitLevelUp(){const d=this.levelUpDraft;if(!d||d.validation.some(v=>v.severity==="blocking"))return this.getSnapshot();if(this.edgeState==="save-error"){d.validation=[...d.validation,{severity:"blocking",message:"Character Revision 저장에 실패했습니다. 원본은 변경되지 않았습니다."}];return this.getSnapshot();}const before=cp(this.activeCharacter);this.activeCharacter.level=d.toLevel;this.activeCharacter.maxHp=d.preview.maxHpAfter;this.activeCharacter.hp=Math.min(d.preview.maxHpAfter,this.activeCharacter.hp+d.hpGain);this.activeCharacter.abilities=cp(d.preview.abilityAfter);this.activeCharacter.proficiencyBonus=d.preview.proficiencyAfter;this.activeCharacter.features=[...this.activeCharacter.features,...d.preview.grantedFeatures];if(d.asiMode==="feat"&&d.featId){const feat=this.catalog.find(x=>x.id===d.featId);if(feat)this.activeCharacter.features.push(feat.nameKo);}this.syncChar();this.activity.unshift({id:uid("level"),time:"지금",actor:this.activeCharacter.name,title:`레벨 업 ${d.fromLevel} → ${d.toLevel}`,summary:`HP ${before.maxHp} → ${this.activeCharacter.maxHp}`,detail:d.preview.diffs.map(x=>`${x.label}: ${x.before} → ${x.after} (${x.source})`),stateChanges:["ProgressionDraft → Character Revision","Dependency recalculation"]});this.levelUpDraft=null;return this.getSnapshot();}
 
-  async startLevelUp(characterId: string) {
-    if (characterId === this.activeCharacter.id) this.levelUpDraft = buildLevelUpDraft(this.activeCharacter);
-    return this.getSnapshot();
-  }
+  async selectDmActor(id:string){if(this.entity(id))this.scene.selectedActorId=id;return this.getSnapshot();}
+  async startInitiative(){this.sessionMode="initiative";this.scene.round=1;this.scene.currentActorId=[...this.scene.entities].sort((a,b)=>b.initiative-a.initiative)[0]?.id??this.scene.currentActorId;for(const e of this.scene.entities)this.resetEco(e.id);this.activity.unshift({id:uid("mode"),time:"지금",actor:"DM",title:"이니셔티브 시작",summary:"1라운드",detail:[],stateChanges:[`Current Actor = ${this.entity(this.scene.currentActorId)?.name}`]});return this.getSnapshot();}
+  async endInitiative(){this.sessionMode="freeform";this.activity.unshift({id:uid("mode"),time:"지금",actor:"DM",title:"이니셔티브 종료",summary:"자유 진행으로 전환",detail:[],stateChanges:["Turn-bound economy 숨김"]});return this.getSnapshot();}
+  async endTurn(){if(this.sessionMode!=="initiative")return this.getSnapshot();const order=[...this.scene.entities].sort((a,b)=>b.initiative-a.initiative);const i=Math.max(0,order.findIndex(e=>e.id===this.scene.currentActorId));const next=order[(i+1)%order.length];if(i===order.length-1)this.scene.round++;this.scene.currentActorId=next.id;this.resetEco(next.id);this.activity.unshift({id:uid("turn"),time:"지금",actor:"시스템",title:"턴 종료",summary:`→ ${next.name}`,detail:[],stateChanges:[`Current Actor = ${next.id}`]});return this.getSnapshot();}
 
-  async updateLevelUp(command: LevelUpCommand) {
-    if (!this.levelUpDraft) this.levelUpDraft = buildLevelUpDraft(this.activeCharacter);
-    const draft = clone(this.levelUpDraft);
-    switch (command.type) {
-      case "set-step": draft.step = Number(command.value); break;
-      case "set-hp-method": draft.hpMethod = String(command.value) as LevelUpDraft["hpMethod"]; break;
-      case "set-asi-mode": draft.asiMode = String(command.value) as LevelUpDraft["asiMode"]; break;
-      case "set-asi-primary": draft.asiPrimary = String(command.value) as AbilityKey; break;
-      case "set-asi-secondary": draft.asiSecondary = String(command.value) as AbilityKey; break;
-      case "set-feat": draft.featId = String(command.value); break;
-    }
-    this.levelUpDraft = updateLevelPreview(draft, this.activeCharacter);
-    return this.getSnapshot();
-  }
+  private d20(actionId:string,i=0){if(this.queuedD20!==null){const v=this.queuedD20;this.queuedD20=null;return v;}const map:Record<string,number[]>={"action.longsword":[11],"action.shortbow":[6],"action.scimitar":[13],"action.vicious-mockery":[8],"action.thunderwave":[7,18,10,16],"action.athletics":[12]};return map[actionId]?.[i]??12;}
+  private damageDice(a:ActionVm,critical=false){const base=a.damage?.[0]?.average??0;return critical?[Math.ceil(base/2),Math.floor(base/2)]:[base];}
+  private capture(){this.before={scene:cp(this.scene),activeCharacter:cp(this.activeCharacter),characters:cp(this.characters)};}
+  async resolveAction(actionId:string,targetIds:string[]){const a=this.action(actionId);if(!a)return this.getSnapshot();const live=this.availability(a);if(!live.available)return this.getSnapshot();const allowed=new Set(this.eligible(a));if(targetIds.some(id=>!allowed.has(id)))return this.getSnapshot();if(a.target==="multi-enemy"&&targetIds.length>(a.maxTargets??99))return this.getSnapshot();this.capture();const id=uid("resolution");if(a.resolutionKind==="attack"){const d=this.d20(a.id);const total=d+(a.attackBonus??0);const t=this.entity(targetIds[0]);const hit=Boolean(t&&(d===20||total>=t.ac));this.resolution={id,actorId:a.actorId,targetIds,actionId:a.id,actionName:a.name,rollKind:"attack",stage:"roll-animation",authoritativeDice:[d],rollTotal:total,attackTotal:total,targetAc:t?.ac,attackOutcome:hit?"명중":"빗나감",critical:d===20,saveResults:[],damageComponents:[],compact:`${total} vs AC ${t?.ac??"—"} — ${hit?"명중":"빗나감"}`,detail:[`d20 ${d} + 공격 보너스 ${a.attackBonus??0} = ${total}`],provenance:a.details.filter(x=>x.source).map(x=>`${x.label}: ${x.source}`),calculatedOutcome:hit?"명중":"빗나감",finalOutcome:hit?"명중":"빗나감",stateChanges:[],adjudicated:false,canAdvance:true,nextLabel:"명중 결과"};}
+    else if(a.resolutionKind==="ability-check"){const d=this.d20(a.id);const total=d+(a.checkBonus??0);this.resolution={id,actorId:a.actorId,targetIds:[],actionId:a.id,actionName:a.name,rollKind:"check",stage:"roll-animation",authoritativeDice:[d],rollTotal:total,saveResults:[],damageComponents:[],compact:`d20 ${d} + ${a.checkBonus??0} = ${total}`,detail:[`근력(운동) ${total}`],provenance:["근력 +4","숙련 +3"],calculatedOutcome:`총합 ${total}`,finalOutcome:`총합 ${total}`,stateChanges:[],adjudicated:false,canAdvance:true,nextLabel:"결과 적용"};}
+    else if(a.resolutionKind==="saving-throw"){const saves=targetIds.map((tid,i)=>{const d=this.d20(a.id,i);const bonus=i%2===0?2:5;const total=d+bonus;return{targetId:tid,targetName:this.entity(tid)?.name??tid,d20:d,total,dc:a.saveDc??10,outcome:(total>=(a.saveDc??10)?"성공":"실패") as "성공"|"실패"};});this.resolution={id,actorId:a.actorId,targetIds,actionId:a.id,actionName:a.name,rollKind:"save",stage:"save-animation",authoritativeDice:saves.map(s=>s.d20),saveResults:saves,damageComponents:[],compact:`${a.saveAbility} 내성 DC ${a.saveDc} · ${saves.filter(s=>s.outcome==="성공").length} 성공 / ${saves.filter(s=>s.outcome==="실패").length} 실패`,detail:saves.map(s=>`${s.targetName}: d20 ${s.d20} → ${s.total} vs DC ${s.dc} · ${s.outcome}`),provenance:[`Action ${a.id}`,`내성 ${a.saveAbility} DC ${a.saveDc}`],calculatedOutcome:"내성 결과",finalOutcome:"내성 결과",stateChanges:[],adjudicated:false,canAdvance:true,nextLabel:"내성 결과"};}
+    else if(a.resolutionKind==="healing"){const dice=a.healing?.dice.startsWith("2d")?[3,4]:[5];const total=dice.reduce((s,v)=>s+v,0)+(a.healing?.flat??0);this.resolution={id,actorId:a.actorId,targetIds,actionId:a.id,actionName:a.name,rollKind:"healing",stage:"roll-animation",authoritativeDice:dice,rollTotal:total,saveResults:[],damageComponents:[],compact:`${total} HP 회복`,detail:[`${a.healing?.dice} + ${a.healing?.flat??0} = ${total}`],provenance:[a.details.find(x=>x.label==="출처")?.value??"Action"],calculatedOutcome:`${total} HP 회복`,finalOutcome:`${total} HP 회복`,stateChanges:[],adjudicated:false,canAdvance:true,nextLabel:"회복 Preview"};}
+    else {this.resolution={id,actorId:a.actorId,targetIds,actionId:a.id,actionName:a.name,rollKind:"effect",stage:"effect-preview",authoritativeDice:[],saveResults:[],damageComponents:[],compact:a.summary,detail:a.details.map(x=>`${x.label}: ${x.value}`),provenance:a.details.filter(x=>x.source).map(x=>x.source!),calculatedOutcome:"적용 예정",finalOutcome:"적용 예정",stateChanges:[],adjudicated:false,canAdvance:true,nextLabel:"적용"};}return this.getSnapshot();}
 
-  async commitLevelUp() {
-    if (!this.levelUpDraft || this.levelUpDraft.validation.some((item) => item.severity === "blocking")) return this.getSnapshot();
-    this.activeCharacter.level = this.levelUpDraft.toLevel;
-    this.activeCharacter.maxHp = this.levelUpDraft.preview.maxHpAfter;
-    this.activeCharacter.hp = Math.min(this.activeCharacter.maxHp, this.activeCharacter.hp + this.levelUpDraft.hpGain);
-    this.activeCharacter.abilities = clone(this.levelUpDraft.preview.abilityAfter);
-    this.activeCharacter.features = [...this.activeCharacter.features, ...this.levelUpDraft.preview.grantedFeatures];
-    this.characters = this.characters.map((character) => character.id === this.activeCharacter.id ? { ...this.activeCharacter } : character);
-    this.activity.unshift({ id: `evt.${Date.now()}`, time: "지금", actor: this.activeCharacter.name, title: `레벨 업 ${this.levelUpDraft.fromLevel} → ${this.levelUpDraft.toLevel}`, summary: `최대 HP ${this.levelUpDraft.preview.maxHpBefore} → ${this.levelUpDraft.preview.maxHpAfter}`, detail: ["ProgressionDraft 검토 후 Character Revision 커밋"] });
-    this.levelUpDraft = null;
-    return this.getSnapshot();
-  }
+  private spend(a:ActionVm,changes:string[]){if(this.sessionMode==="initiative"){const e=this.scene.economyByActor[a.actorId];if(e){if(a.economy==="행동"){e.action=false;changes.push("행동 사용");}if(a.economy==="추가 행동"){e.bonusAction=false;changes.push("추가 행동 사용");}if(a.economy==="반응"){e.reaction=false;changes.push("반응 사용");}}}if(a.resourceCost){const r=this.activeCharacter.resources.find(r=>r.id===a.resourceCost!.resourceId);if(r){const b=r.current;r.current=Math.max(0,r.current-a.resourceCost.amount);changes.push(`${r.label} ${b} → ${r.current}`);}}if(a.itemCost){const it=this.activeCharacter.items.find(i=>i.id===a.itemCost!.itemId);if(it&&a.itemCost.quantity){const b=it.quantity;it.quantity=Math.max(0,it.quantity-a.itemCost.quantity);changes.push(`${it.name} 수량 ${b} → ${it.quantity}`);}if(it?.charges&&a.itemCost.charges){const b=it.charges.current;it.charges.current=Math.max(0,it.charges.current-a.itemCost.charges);changes.push(`${it.name} 충전 ${b} → ${it.charges.current}`);}}}
+  private hurt(t:SceneEntity,type:string,raw:number,changes:string[]):DamageComponentView{let adjusted=raw;let adjustment="조정 없음";if(t.immunities.includes(type)){adjusted=0;adjustment=`${type} 면역`;}else if(t.resistances.includes(type)){adjusted=Math.floor(raw/2);adjustment=`${type} 저항 ${raw} → ${adjusted}`;}else if(t.vulnerabilities.includes(type)){adjusted=raw*2;adjustment=`${type} 취약 ${raw} → ${adjusted}`;}let remaining=adjusted;if(t.tempHp>0){const b=t.tempHp;const used=Math.min(t.tempHp,remaining);t.tempHp-=used;remaining-=used;changes.push(`${t.name} 임시 HP ${b} → ${t.tempHp}`);}if(remaining>0){const b=t.hp;t.hp=Math.max(0,t.hp-remaining);changes.push(`${t.name} HP ${b} → ${t.hp}`);}return{type,roll:String(raw),raw,adjusted,adjustment,source:"Typed Defense → Temp HP → HP"};}
+  private commit(a:ActionVm){if(!this.resolution)return;const r=this.resolution;const changes=r.stateChanges;this.spend(a,changes);r.stage="complete";r.canAdvance=false;r.nextLabel=undefined;this.syncChar();const entry:ActivityEntry={id:r.id,time:"지금",actor:this.entity(r.actorId)?.name??r.actorId,title:`${r.actionName} → ${r.targetIds.map(id=>this.entity(id)?.name??id).join(", ")||"—"}`,summary:r.compact,detail:[...r.detail,...r.provenance.map(p=>`출처: ${p}`)],stateChanges:cp(changes)};this.activity.unshift(entry);this.lastBefore=this.before?cp(this.before):null;this.lastResolutionId=r.id;this.before=null;}
+  async advanceResolution(){const r=this.resolution;if(!r)return this.getSnapshot();const a=this.action(r.actionId);if(!a)return this.getSnapshot();if(r.stage==="roll-animation"&&r.rollKind==="attack"){const t=this.entity(r.targetIds[0]);const canReact=Boolean(r.attackOutcome==="명중"&&t?.reactions.length&&this.scene.economyByActor[t.id]?.reaction);if(canReact&&t){const o=t.reactions[0];r.interrupt={id:o.id,responderId:t.id,responderName:t.name,trigger:o.trigger,optionName:o.name,cost:o.cost,effect:o.effect,source:o.source};r.stage="interrupt";r.canAdvance=false;r.nextLabel=undefined;}else{r.stage="attack-result";r.canAdvance=true;r.nextLabel=r.attackOutcome==="명중"?"피해 굴림":"판정 적용";}return this.getSnapshot();}
+    if(r.stage==="attack-result"){if(r.attackOutcome==="빗나감"){this.commit(a);return this.getSnapshot();}r.stage="damage-animation";r.rollKind="damage";r.authoritativeDice=this.damageDice(a,r.critical);r.canAdvance=true;r.nextLabel="피해 적용";return this.getSnapshot();}
+    if(r.stage==="damage-animation"&&a.resolutionKind==="attack"){const t=this.entity(r.targetIds[0]);if(t&&a.damage){const raw=(a.damage[0].average)*(r.critical?2:1);const c=this.hurt(t,a.damage[0].type,raw,r.stateChanges);r.damageComponents=[c];r.compact=`${r.attackTotal} vs AC ${r.targetAc} — ${r.attackOutcome}${r.critical?" · 치명타":""} · ${c.adjusted} ${c.type} 피해`;r.calculatedOutcome=r.compact;r.finalOutcome=r.adjudicated?r.finalOutcome:r.compact;}this.commit(a);return this.getSnapshot();}
+    if(r.stage==="roll-animation"&&r.rollKind==="check"){r.stage="complete";r.canAdvance=false;r.nextLabel=undefined;this.commit(a);return this.getSnapshot();}
+    if(r.stage==="save-animation"){r.stage="save-result";r.canAdvance=true;r.nextLabel=a.damage?.length?"피해 굴림":"적용";return this.getSnapshot();}
+    if(r.stage==="save-result"){if(!a.damage?.length){this.commit(a);return this.getSnapshot();}r.stage="damage-animation";r.rollKind="damage";r.authoritativeDice=[a.damage[0].average];r.canAdvance=true;r.nextLabel="대상별 피해 적용";return this.getSnapshot();}
+    if(r.stage==="damage-animation"&&a.resolutionKind==="saving-throw"){const spec=a.damage?.[0];if(spec){const comps:DamageComponentView[]=[];for(const s of r.saveResults){const t=this.entity(s.targetId);if(!t)continue;const raw=s.outcome==="성공"&&a.saveHalf?Math.floor(spec.average/2):s.outcome==="성공"&&!a.saveHalf?0:spec.average;const c=this.hurt(t,spec.type,raw,r.stateChanges);s.finalDamage=c.adjusted;comps.push({...c,source:`${s.targetName} · ${c.source}`});}r.damageComponents=comps;r.compact=r.saveResults.map(s=>`${s.targetName} ${s.outcome}${s.finalDamage!==undefined?` · ${s.finalDamage} 피해`:""}`).join(" / ");r.finalOutcome=r.compact;}this.commit(a);return this.getSnapshot();}
+    if(r.stage==="roll-animation"&&r.rollKind==="healing"){r.stage="effect-preview";r.canAdvance=true;r.nextLabel="회복 적용";return this.getSnapshot();}
+    if(r.stage==="effect-preview"){if(a.resolutionKind==="healing"){const t=this.entity(r.targetIds[0]);if(t){const b=t.hp;t.hp=Math.min(t.maxHp,t.hp+(r.rollTotal??0));r.stateChanges.push(`${t.name} HP ${b} → ${t.hp}`);r.compact=`${t.name} ${(r.rollTotal??0)} HP 회복`;r.finalOutcome="회복 적용";}}else if(a.resolutionKind==="no-roll-damage"){const t=this.entity(r.targetIds[0]);const spec=a.damage?.[0];if(t&&spec){const c=this.hurt(t,spec.type,spec.average,r.stateChanges);r.damageComponents=[c];r.compact=`자동 명중 · ${c.adjusted} ${c.type} 피해`;r.finalOutcome=r.compact;}}else if(a.id==="action.dash"){const e=this.scene.economyByActor[a.actorId];if(e){const b=e.movementMax;e.movementMax+=30;e.movement+=30;r.stateChanges.push(`이동 가능량 ${b} → ${e.movementMax}`);}r.finalOutcome="질주 적용";}this.commit(a);return this.getSnapshot();}return this.getSnapshot();}
 
-  async selectDmActor(actorId: string) {
-    this.scene.selectedActorId = actorId;
-    return this.getSnapshot();
-  }
+  async respondToInterrupt(accept:boolean){const r=this.resolution;if(!r?.interrupt)return this.getSnapshot();const i=r.interrupt;const t=this.entity(i.responderId);if(accept&&t){const opt=t.reactions.find(x=>x.id===i.id);const bonus=opt?.acBonus??0;const before=r.targetAc??t.ac;r.targetAc=before+bonus;r.attackOutcome=(r.attackTotal??0)>=r.targetAc?"명중":"빗나감";r.finalOutcome=r.attackOutcome;r.compact=`${r.attackTotal} vs AC ${r.targetAc} — ${r.attackOutcome} · ${i.optionName}`;r.detail.push(`${i.responderName} ${i.optionName}: AC ${before} → ${r.targetAc}`);const eco=this.scene.economyByActor[t.id];if(eco){eco.reaction=false;r.stateChanges.push(`${t.name} 반응 사용`);}}else r.detail.push(`${i.responderName} 반응 넘김`);r.interrupt=undefined;r.stage="attack-result";r.canAdvance=true;r.nextLabel=r.attackOutcome==="명중"?"피해 굴림":"판정 적용";return this.getSnapshot();}
+  async dismissResolution(){if(this.resolution?.stage==="complete")this.resolution=null;return this.getSnapshot();}
 
-  async resolveAction(actionId: string, targetId: string) {
-    const allActions = Object.values(this.scene.actionsByActor).flat();
-    const action = allActions.find((item) => item.id === actionId);
-    const target = this.scene.entities.find((item) => item.id === targetId);
-    if (!action || !target) return this.getSnapshot();
-    const actor = this.scene.entities.find((item) => item.id === action.actorId);
-    const d20 = this.queuedD20 ?? (action.id.includes("longsword") ? 11 : action.id.includes("scimitar") ? 13 : 12);
-    this.queuedD20 = null;
-    let compact = `${action.name} → ${target.name}`;
-    let calculatedOutcome = "적용";
-    const detail: string[] = [];
-    const stateChanges: string[] = [];
-    if (action.id === "action.second-wind" || action.id === "action.healing-word") {
-      const healing = action.id === "action.second-wind" ? 10 : 8;
-      const before = target.hp;
-      target.hp = Math.min(target.maxHp, target.hp + healing);
-      compact = `${healing} HP 회복`;
-      calculatedOutcome = "회복";
-      detail.push(`회복량 ${healing}`);
-      stateChanges.push(`${target.name} HP ${before} → ${target.hp}`);
-    } else {
-      const bonus = action.actorId.startsWith("combatant") ? 4 : action.id === "action.shortbow" ? 5 : 7;
-      const total = d20 + bonus;
-      const hit = total >= target.ac;
-      calculatedOutcome = hit ? "명중" : "빗나감";
-      compact = `${total} vs AC ${target.ac} — ${calculatedOutcome}`;
-      detail.push(`d20 ${d20} + 공격 보너스 ${bonus} = ${total}`);
-      if (hit) {
-        const damage = action.id.includes("longsword") ? 12 : action.id.includes("bite") ? 8 : 7;
-        const before = target.hp;
-        target.hp = Math.max(0, target.hp - damage);
-        compact += ` · ${damage} 피해`;
-        stateChanges.push(`${target.name} HP ${before} → ${target.hp}`);
-      }
-    }
-    this.resolution = {
-      id: `resolution.${Date.now()}`,
-      actorId: action.actorId,
-      targetId,
-      actionId,
-      actionName: action.name,
-      stage: "complete",
-      compact,
-      detail,
-      calculatedOutcome,
-      finalOutcome: calculatedOutcome,
-      stateChanges,
-      adjudicated: false,
-    };
-    this.activity.unshift({ id: this.resolution.id, time: "지금", actor: actor?.name ?? "—", title: `${action.name} → ${target.name}`, summary: compact, detail: [...detail, ...stateChanges] });
-    return this.getSnapshot();
-  }
+  async applyDmAdjudication(c:DmAdjudicationCommand){const r=this.resolution;if(!r)return this.getSnapshot();r.adjudicated=true;const t=this.entity(c.targetId??r.targetIds[0]??"");const suffix=`범위 ${c.scope}${c.reason?` · 사유 ${c.reason}`:""}`;if(c.type==="force-success"){r.finalOutcome="DM 강제 성공";r.attackOutcome="명중";}if(c.type==="force-failure"){r.finalOutcome="DM 강제 실패";r.attackOutcome="빗나감";}if(c.type==="modifier"){const v=Number(c.value??0);r.rollTotal=(r.rollTotal??r.attackTotal??0)+v;r.attackTotal=r.attackTotal!==undefined?r.attackTotal+v:r.attackTotal;r.finalOutcome=`DM 보정 ${v>=0?"+":""}${v}`;}if(c.type==="advantage"||c.type==="disadvantage"){const first=r.authoritativeDice[0]??10,second=c.type==="advantage"?18:4,chosen=c.type==="advantage"?Math.max(first,second):Math.min(first,second);r.authoritativeDice=[first,second];const delta=chosen-first;r.attackTotal=r.attackTotal!==undefined?r.attackTotal+delta:r.attackTotal;r.rollTotal=r.rollTotal!==undefined?r.rollTotal+delta:r.rollTotal;r.finalOutcome=c.type==="advantage"?"DM 유리점 적용":"DM 불리점 적용";}if(c.type==="ac-dc-adjustment"){const v=Number(c.value??0);r.targetAc=r.targetAc!==undefined?r.targetAc+v:r.targetAc;r.finalOutcome=`임시 AC/DC ${v>=0?"+":""}${v}`;}if((c.type==="damage-correction"||c.type==="healing-correction")&&t){const v=Number(c.value??0),b=t.hp;t.hp=Math.max(0,Math.min(t.maxHp,t.hp+(c.type==="healing-correction"?v:-v)));r.stateChanges.push(`${t.name} HP ${b} → ${t.hp}`);r.finalOutcome=`${c.type==="healing-correction"?"회복":"피해"} 정정 ${v}`;}if(c.type==="condition-add"&&t){const s=String(c.value??"상태");if(!t.status.includes(s))t.status.push(s);r.stateChanges.push(`${t.name} 상태 추가: ${s}`);r.finalOutcome=`상태 추가 ${s}`;}if(c.type==="condition-remove"&&t){const s=String(c.value??"");t.status=t.status.filter(x=>x!==s);r.stateChanges.push(`${t.name} 상태 제거: ${s}`);r.finalOutcome=`상태 제거 ${s}`;}if(c.type==="resource-correction"){const rr=this.activeCharacter.resources[0],v=Number(c.value??0);if(rr){const b=rr.current;rr.current=Math.max(0,Math.min(rr.max,rr.current+v));r.stateChanges.push(`${rr.label} ${b} → ${rr.current}`);r.finalOutcome=`자원 정정 ${v}`;}}if(c.type==="target-correction"&&t){r.targetIds=[t.id];r.finalOutcome=`대상 정정 · ${t.name}`;}r.detail.push(`DM 판정 수정: ${r.finalOutcome} · ${suffix}`);this.activity.unshift({id:uid("ruling"),time:"지금",actor:"DM",title:"상황 / 판정 수정",summary:`${r.calculatedOutcome} → ${r.finalOutcome}`,detail:[suffix],stateChanges:cp(r.stateChanges),correction:true,ruling:r.finalOutcome});this.syncChar();return this.getSnapshot();}
+  async undoLastResolution(){if(!this.lastBefore||!this.lastResolutionId)return this.getSnapshot();const id=this.lastResolutionId;this.scene=cp(this.lastBefore.scene);this.activeCharacter=cp(this.lastBefore.activeCharacter);this.characters=cp(this.lastBefore.characters);this.activity=this.activity.map(e=>e.id===id?{...e,reversed:true}:e);this.activity.unshift({id:uid("undo"),time:"지금",actor:"시스템",title:"Resolution 되돌림",summary:id,detail:["Before snapshot 복원"],stateChanges:["HP/임시 HP/자원/아이템/행동경제 복원"],correction:true,undoOf:id});this.resolution=null;this.lastBefore=null;this.lastResolutionId=null;return this.getSnapshot();}
 
-  async applyDmAdjudication(outcome: "success" | "failure") {
-    if (!this.resolution) return this.getSnapshot();
-    this.resolution.adjudicated = true;
-    this.resolution.finalOutcome = outcome === "success" ? "DM 강제 성공" : "DM 강제 실패";
-    this.resolution.detail.push(`DM 판정 수정: ${this.resolution.finalOutcome}`);
-    this.activity.unshift({ id: `evt.${Date.now()}`, time: "지금", actor: "DM", title: "판정 수정", summary: `${this.resolution.calculatedOutcome} → ${this.resolution.finalOutcome}`, detail: ["원래 계산 결과는 보존됨"], correction: true });
-    return this.getSnapshot();
-  }
+  async previewContentImport(payload:string){const validation:ValidationMessage[]=[];let entry:CatalogEntry|undefined;const unsupported:string[]=[];try{const p=JSON.parse(payload) as Record<string,unknown>;if(typeof p.id!=="string"||typeof p.nameKo!=="string"||typeof p.nameEn!=="string")throw new Error("id, nameKo, nameEn이 필요합니다.");const cap=typeof p.requiresCapability==="string"?p.requiresCapability:undefined;if(cap==="arbitrary-code"){unsupported.push(cap);validation.push({severity:"blocking",message:"임의 실행 코드 capability는 지원하지 않습니다."});}entry={id:p.id,category:(typeof p.category==="string"?p.category:"subclass") as CatalogEntry["category"],nameKo:p.nameKo,nameEn:p.nameEn,scope:"local",source:typeof p.source==="string"?p.source:"Imported JSON",version:typeof p.version==="string"?p.version:"0.1",description:typeof p.description==="string"?p.description:"가져온 로컬 콘텐츠",relationships:typeof p.baseClassId==="string"?[{label:"기본 클래스",targetId:p.baseClassId,targetName:this.catalog.find(x=>x.id===p.baseClassId)?.nameKo??p.baseClassId}]:[],capabilities:cap?[cap]:["progression"]};if(!unsupported.length)validation.push({severity:"info",message:"구조 Validation 통과"},{severity:"info",message:"Semantic Validation Mock 통과"},{severity:"warning",message:"활성화 전에 관계와 출처를 검토하세요."});}catch(e){validation.push({severity:"blocking",message:e instanceof Error?e.message:"JSON 해석 실패"});}this.contentImport={payload,validation,entry,unsupportedCapabilities:unsupported};return this.getSnapshot();}
+  async activateContentImport(){const p=this.contentImport;if(!p?.entry||p.validation.some(v=>v.severity==="blocking"))return this.getSnapshot();this.catalog=[...this.catalog.filter(x=>x.id!==p.entry!.id),p.entry];this.activity.unshift({id:uid("content"),time:"지금",actor:"사용자",title:"로컬 콘텐츠 활성화",summary:p.entry.nameKo,detail:p.entry.relationships.map(r=>`${r.label}: ${r.targetName}`),stateChanges:["ContentCatalog composition 갱신"]});this.contentImport=null;return this.getSnapshot();}
+  async clearContentImport(){this.contentImport=null;return this.getSnapshot();}
+  async previewCombatantImport(payload:string){const validation:ValidationMessage[]=[];let definition:CombatantDefinitionVm|undefined;try{const p=JSON.parse(payload) as Record<string,unknown>;if(typeof p.id!=="string"||typeof p.name!=="string")throw new Error("id와 name이 필요합니다.");definition={id:p.id,name:p.name,nameEn:typeof p.nameEn==="string"?p.nameEn:undefined,ac:typeof p.ac==="number"?p.ac:12,maxHp:typeof p.maxHp==="number"?p.maxHp:10,source:typeof p.source==="string"?p.source:"Imported JSON",version:typeof p.version==="string"?p.version:"0.2",actions:Array.isArray(p.actions)?p.actions.map(String):["기본 공격"],statusImmunities:Array.isArray(p.statusImmunities)?p.statusImmunities.map(String):[]};validation.push({severity:"info",message:"Combatant schema Mock 검증 통과"},{severity:"warning",message:"인스턴스 생성 전 Stat Block을 검토하세요."});}catch(e){validation.push({severity:"blocking",message:e instanceof Error?e.message:"JSON 해석 실패"});}this.combatantImport={payload,validation,definition};return this.getSnapshot();}
+  async activateCombatantImport(){const p=this.combatantImport;if(!p?.definition||p.validation.some(v=>v.severity==="blocking"))return this.getSnapshot();this.combatantDefinitions=[...this.combatantDefinitions.filter(x=>x.id!==p.definition!.id),p.definition];this.combatantImport=null;return this.getSnapshot();}
+  async clearCombatantImport(){this.combatantImport=null;return this.getSnapshot();}
+  async instantiateCombatant(id:string){const d=this.combatantDefinitions.find(x=>x.id===id);if(!d)return this.getSnapshot();const n=this.scene.entities.filter(e=>e.id.startsWith(`${id}.instance`)).length+1;const eid=`${id}.instance-${n}`;const e:SceneEntity={id:eid,name:`${d.name} ${n}`,side:"enemy",kind:"combatant",hp:d.maxHp,maxHp:d.maxHp,tempHp:0,ac:d.ac,initiative:6,status:[],distance:"—",resistances:[],immunities:[],vulnerabilities:[],reactions:[]};this.scene.entities.push(e);this.resetEco(eid);this.scene.actionsByActor[eid]=[{id:`action.${eid}.basic`,actorId:eid,name:d.actions[0]??"기본 공격",category:"basic",target:"enemy",economy:"행동",resolutionKind:"attack",summary:"+3 · 1d6+1",available:true,eligibleTargetIds:[],attackBonus:3,damage:[{type:"타격",dice:"1d6",flat:1,average:4}],details:details([["출처",d.source]])}];this.activity.unshift({id:uid("combatant"),time:"지금",actor:"DM",title:"컴배턴트 인스턴스 추가",summary:e.name,detail:[`Definition ${d.id} → Instance ${eid}`],stateChanges:["Scene participant 추가"]});return this.getSnapshot();}
 
-  async undoLastResolution() {
-    if (!this.resolution) return this.getSnapshot();
-    this.activity.unshift({ id: `evt.${Date.now()}`, time: "지금", actor: "시스템", title: "최근 Resolution 되돌림", summary: this.resolution.actionName, detail: ["Reference Mock에서는 로그 반전 상태만 표시합니다."], correction: true });
-    this.resolution = null;
-    return this.getSnapshot();
-  }
-
-  async setReferenceRole(role: AppRole) { this.role = role; return this.getSnapshot(); }
-  async setSessionMode(mode: SessionMode) { this.sessionMode = mode; return this.getSnapshot(); }
-  async setCurrentActor(actorId: string) { this.scene.currentActorId = actorId; return this.getSnapshot(); }
-  async setQueuedD20(value: number | null) { this.queuedD20 = value; return this.getSnapshot(); }
-  async setConnectionState(state: ConnectionState) { this.connectionState = state; return this.getSnapshot(); }
+  async hostSession(){this.session.role="host";this.connectionState="connected";this.session.address="192.168.0.10:3210";return this.getSnapshot();}
+  async joinSession(address:string){this.session.role="client";this.session.address=address||"192.168.0.10:3210";this.connectionState="connected";this.session.compatibility=address.includes("incompatible")?"incompatible":"compatible";this.session.compatibilityMessage=this.session.compatibility==="compatible"?"RulesProfile과 활성 모듈이 호환됩니다.":"RulesProfile 또는 모듈 capability가 일치하지 않습니다.";return this.getSnapshot();}
+  async setReferenceRole(role:AppRole){this.role=role;return this.getSnapshot();} async setSessionMode(mode:SessionMode){this.sessionMode=mode;if(mode==="initiative")for(const e of this.scene.entities)this.resetEco(e.id);return this.getSnapshot();} async setCurrentActor(id:string){if(this.entity(id))this.scene.currentActorId=id;return this.getSnapshot();} async setQueuedD20(v:number|null){this.queuedD20=v;return this.getSnapshot();} async setConnectionState(v:ConnectionState){this.connectionState=v;return this.getSnapshot();} async setEdgeState(v:EdgeState){this.edgeState=v;return this.getSnapshot();}
+  async loadReferenceScenario(id:"attack"|"critical"|"reaction"|"multi-save"|"typed-damage"){this.resolution=null;this.scene=defaultScene();if(id==="critical")this.queuedD20=20;if(id==="reaction"){this.scene.currentActorId="char.aelar";this.scene.selectedActorId="char.aelar";}if(id==="multi-save"||id==="typed-damage"){this.role="dm";this.scene.currentActorId="char.mira";this.scene.selectedActorId="char.mira";}return this.getSnapshot();}
 }
-
-export const mockAdapter = new MockAdapter();
+export const mockAdapter=new MockAdapter();

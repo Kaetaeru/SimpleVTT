@@ -4,6 +4,7 @@ import { App } from "./App";
 import { AppProvider } from "./app/AppProvider";
 import "./styles.css";
 import "./responsive.css";
+import "./completion.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

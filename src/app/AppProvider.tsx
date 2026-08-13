@@ -1,35 +1,68 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
+  AdjudicationScope,
   AppRole,
   AppSnapshot,
   CharacterCreateDraft,
   CharacterDraftCommand,
   ConnectionState,
+  DmAdjudicationCommand,
+  EdgeState,
   LevelUpCommand,
   SessionMode,
 } from "./contracts";
 import { mockAdapter } from "./mockAdapter";
 
+export interface UiDebugState {
+  selectedActionId: string | null;
+  eligibleTargetIds: string[];
+  selectedTargetIds: string[];
+  hoverTargetId: string | null;
+}
+
 interface AppContextValue {
   snapshot: AppSnapshot | null;
   loading: boolean;
+  uiDebug: UiDebugState;
+  setUiDebug(patch: Partial<UiDebugState>): void;
   refresh(): Promise<void>;
   createCharacterDraft(mode?: CharacterCreateDraft["mode"]): Promise<void>;
+  editCharacterDraft(characterId: string): Promise<void>;
   updateCharacterDraft(command: CharacterDraftCommand): Promise<void>;
   finalizeCharacterDraft(): Promise<void>;
+  toggleItemEquipped(itemId: string): Promise<void>;
+  toggleItemAttunement(itemId: string): Promise<void>;
+  useItem(itemId: string): Promise<void>;
   startLevelUp(characterId: string): Promise<void>;
   updateLevelUp(command: LevelUpCommand): Promise<void>;
   commitLevelUp(): Promise<void>;
   selectDmActor(actorId: string): Promise<void>;
-  resolveAction(actionId: string, targetId: string): Promise<void>;
-  applyDmAdjudication(outcome: "success" | "failure"): Promise<void>;
+  startInitiative(): Promise<void>;
+  endInitiative(): Promise<void>;
+  endTurn(): Promise<void>;
+  resolveAction(actionId: string, targetIds: string[]): Promise<void>;
+  advanceResolution(): Promise<void>;
+  respondToInterrupt(accept: boolean): Promise<void>;
+  dismissResolution(): Promise<void>;
+  applyDmAdjudication(command: DmAdjudicationCommand): Promise<void>;
   undoLastResolution(): Promise<void>;
+  previewContentImport(payload: string): Promise<void>;
+  activateContentImport(): Promise<void>;
+  clearContentImport(): Promise<void>;
+  previewCombatantImport(payload: string): Promise<void>;
+  activateCombatantImport(): Promise<void>;
+  clearCombatantImport(): Promise<void>;
+  instantiateCombatant(definitionId: string): Promise<void>;
+  hostSession(): Promise<void>;
+  joinSession(address: string): Promise<void>;
   debug: {
     setRole(role: AppRole): Promise<void>;
     setMode(mode: SessionMode): Promise<void>;
     setCurrentActor(actorId: string): Promise<void>;
     setQueuedD20(value: number | null): Promise<void>;
     setConnectionState(state: ConnectionState): Promise<void>;
+    setEdgeState(state: EdgeState): Promise<void>;
+    loadScenario(id: "attack" | "critical" | "reaction" | "multi-save" | "typed-damage"): Promise<void>;
   };
 }
 
@@ -42,6 +75,7 @@ function isOptimisticTextCommand(command: CharacterDraftCommand) {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uiDebug, setUiDebugState] = useState<UiDebugState>({ selectedActionId: null, eligibleTargetIds: [], selectedTargetIds: [], hoverTargetId: null });
   const operationSequenceRef = useRef(0);
 
   const publishIfLatest = useCallback((sequence: number, next: AppSnapshot) => {
@@ -66,14 +100,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await apply(() => mockAdapter.updateCharacterDraft(command));
       return;
     }
-
     const sequence = ++operationSequenceRef.current;
     const value = String(command.value ?? "");
-
-    // React controlled inputs must receive their new value synchronously from the
-    // onChange call. Publishing the text optimistically here lets the browser keep
-    // ownership of an active Korean/IME composition instead of restoring the old
-    // controlled value after each input event.
     setSnapshot((current) => {
       if (!current?.createDraft) return current;
       return {
@@ -84,10 +112,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
       };
     });
-
     const next = await mockAdapter.updateCharacterDraft(command);
     publishIfLatest(sequence, next);
   }, [apply, publishIfLatest]);
+
+  const setUiDebug = useCallback((patch: Partial<UiDebugState>) => {
+    setUiDebugState((current) => ({ ...current, ...patch }));
+  }, []);
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
@@ -96,25 +127,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppContextValue>(() => ({
     snapshot,
     loading,
+    uiDebug,
+    setUiDebug,
     refresh,
     createCharacterDraft: async (mode) => apply(() => mockAdapter.createCharacterDraft(mode)),
+    editCharacterDraft: async (characterId) => apply(() => mockAdapter.editCharacterDraft(characterId)),
     updateCharacterDraft,
     finalizeCharacterDraft: async () => apply(() => mockAdapter.finalizeCharacterDraft()),
+    toggleItemEquipped: async (itemId) => apply(() => mockAdapter.toggleItemEquipped(itemId)),
+    toggleItemAttunement: async (itemId) => apply(() => mockAdapter.toggleItemAttunement(itemId)),
+    useItem: async (itemId) => apply(() => mockAdapter.useItem(itemId)),
     startLevelUp: async (characterId) => apply(() => mockAdapter.startLevelUp(characterId)),
     updateLevelUp: async (command) => apply(() => mockAdapter.updateLevelUp(command)),
     commitLevelUp: async () => apply(() => mockAdapter.commitLevelUp()),
     selectDmActor: async (actorId) => apply(() => mockAdapter.selectDmActor(actorId)),
-    resolveAction: async (actionId, targetId) => apply(() => mockAdapter.resolveAction(actionId, targetId)),
-    applyDmAdjudication: async (outcome) => apply(() => mockAdapter.applyDmAdjudication(outcome)),
+    startInitiative: async () => apply(() => mockAdapter.startInitiative()),
+    endInitiative: async () => apply(() => mockAdapter.endInitiative()),
+    endTurn: async () => apply(() => mockAdapter.endTurn()),
+    resolveAction: async (actionId, targetIds) => apply(() => mockAdapter.resolveAction(actionId, targetIds)),
+    advanceResolution: async () => apply(() => mockAdapter.advanceResolution()),
+    respondToInterrupt: async (accept) => apply(() => mockAdapter.respondToInterrupt(accept)),
+    dismissResolution: async () => apply(() => mockAdapter.dismissResolution()),
+    applyDmAdjudication: async (command) => apply(() => mockAdapter.applyDmAdjudication(command)),
     undoLastResolution: async () => apply(() => mockAdapter.undoLastResolution()),
+    previewContentImport: async (payload) => apply(() => mockAdapter.previewContentImport(payload)),
+    activateContentImport: async () => apply(() => mockAdapter.activateContentImport()),
+    clearContentImport: async () => apply(() => mockAdapter.clearContentImport()),
+    previewCombatantImport: async (payload) => apply(() => mockAdapter.previewCombatantImport(payload)),
+    activateCombatantImport: async () => apply(() => mockAdapter.activateCombatantImport()),
+    clearCombatantImport: async () => apply(() => mockAdapter.clearCombatantImport()),
+    instantiateCombatant: async (definitionId) => apply(() => mockAdapter.instantiateCombatant(definitionId)),
+    hostSession: async () => apply(() => mockAdapter.hostSession()),
+    joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
     debug: {
       setRole: async (role) => apply(() => mockAdapter.setReferenceRole(role)),
       setMode: async (mode) => apply(() => mockAdapter.setSessionMode(mode)),
       setCurrentActor: async (actorId) => apply(() => mockAdapter.setCurrentActor(actorId)),
       setQueuedD20: async (value) => apply(() => mockAdapter.setQueuedD20(value)),
       setConnectionState: async (state) => apply(() => mockAdapter.setConnectionState(state)),
+      setEdgeState: async (state) => apply(() => mockAdapter.setEdgeState(state)),
+      loadScenario: async (id) => apply(() => mockAdapter.loadReferenceScenario(id)),
     },
-  }), [snapshot, loading, refresh, apply, updateCharacterDraft]);
+  }), [snapshot, loading, uiDebug, setUiDebug, refresh, apply, updateCharacterDraft]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
@@ -124,3 +178,5 @@ export function useSimpleVtt() {
   if (!value) throw new Error("useSimpleVtt must be used inside AppProvider");
   return value;
 }
+
+export type { AdjudicationScope };
