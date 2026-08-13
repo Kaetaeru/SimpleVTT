@@ -7,6 +7,7 @@ export default defineConfig({
       entry: {
         profileEngine: resolve(process.cwd(), "src/domain/profileEngine.ts"),
         d20: resolve(process.cwd(), "src/domain/d20.ts"),
+        damage: resolve(process.cwd(), "src/domain/damage.ts"),
       },
       formats: ["es"],
     },
