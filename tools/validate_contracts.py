@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate SimpleVTT JSON Schemas and current contract fixtures."""
+"""Validate SimpleVTT JSON Schemas, builtin catalog references, and fixtures."""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,10 @@ from referencing import Registry, Resource
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIR = ROOT / "schemas"
+MODULE_DIR = ROOT / "content/modules"
+ALIASES_PATH = ROOT / "content/catalog-reference-aliases.json"
+REFERENCE_KEYS = {"originFeat", "featId", "itemId", "spellId", "contentId"}
+REFERENCE_LIST_KEYS = {"itemIds", "spellIds", "contentIds"}
 
 
 def load_json(path: Path):
@@ -52,6 +56,72 @@ def schema_by_id(schemas: dict[str, dict], schema_id: str) -> dict:
         raise SystemExit(f"missing schema id: {schema_id}") from exc
 
 
+def iter_config_references(value, path="config"):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key in REFERENCE_KEYS and isinstance(child, str) and child.startswith("dnd.srd521."):
+                yield child_path, child
+            elif key in REFERENCE_LIST_KEYS and isinstance(child, list):
+                for index, item in enumerate(child):
+                    if isinstance(item, str) and item.startswith("dnd.srd521."):
+                        yield f"{child_path}[{index}]", item
+            yield from iter_config_references(child, child_path)
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from iter_config_references(child, f"{path}[{index}]")
+
+
+def validate_catalog_references(module_paths: list[Path]) -> None:
+    modules = [(path, load_json(path)) for path in module_paths]
+    module_ids: dict[str, Path] = {}
+    content_ids: dict[str, Path] = {}
+
+    for path, module in modules:
+        module_id = module["moduleId"]
+        if module_id in module_ids:
+            raise SystemExit(f"duplicate moduleId: {module_id}")
+        module_ids[module_id] = path
+        for entry in module.get("content", []):
+            content_id = entry["id"]
+            if content_id in content_ids:
+                raise SystemExit(f"duplicate content id: {content_id}")
+            content_ids[content_id] = path
+
+    aliases = load_json(ALIASES_PATH) if ALIASES_PATH.exists() else {}
+    for alias, definition in aliases.items():
+        target = definition.get("target")
+        if alias in content_ids:
+            raise SystemExit(f"catalog alias shadows real content id: {alias}")
+        if target not in content_ids:
+            raise SystemExit(f"catalog alias target missing: {alias} -> {target}")
+
+    known_content = set(content_ids) | set(aliases)
+    errors: list[str] = []
+    for path, module in modules:
+        for dependency in module.get("dependencies", []):
+            target = dependency["moduleId"]
+            if target not in module_ids:
+                errors.append(f"{path.relative_to(ROOT)} dependency missing: {target}")
+
+        for entry in module.get("content", []):
+            for relationship in entry.get("relationships", []):
+                target = relationship["target"]
+                if target.startswith("dnd.srd521.") and target not in known_content:
+                    errors.append(f"{entry['id']} relationship target missing: {target}")
+            for mechanic in entry.get("mechanics", []):
+                for location, target in iter_config_references(mechanic.get("config", {})):
+                    if target not in known_content:
+                        errors.append(f"{entry['id']} {location} missing: {target}")
+
+    if errors:
+        print("catalog reference validation failed", file=sys.stderr)
+        for error in errors:
+            print(f"  {error}", file=sys.stderr)
+        raise SystemExit(1)
+    print(f"catalog references ok: {len(module_ids)} modules, {len(content_ids)} entries, {len(aliases)} aliases")
+
+
 def main() -> None:
     schemas, registry = build_registry()
 
@@ -62,11 +132,12 @@ def main() -> None:
     )
 
     module_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/rule-module.schema.json")
-    module_paths = sorted((ROOT / "content/modules").glob("*/module.json"))
+    module_paths = sorted(MODULE_DIR.glob("*/module.json"))
     if not module_paths:
         raise SystemExit("no builtin RuleModule manifests found")
     for path in module_paths:
         validate(path, module_schema, registry)
+    validate_catalog_references(module_paths)
 
     golden_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/golden-scenario.schema.json")
     for path in sorted((ROOT / "tests/fixtures/rules").glob("*.json")):
