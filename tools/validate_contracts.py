@@ -34,11 +34,7 @@ def build_registry() -> tuple[dict[str, dict], Registry]:
 
 def validate(instance_path: Path, schema: dict, registry: Registry) -> None:
     instance = load_json(instance_path)
-    validator = Draft202012Validator(
-        schema,
-        registry=registry,
-        format_checker=FormatChecker(),
-    )
+    validator = Draft202012Validator(schema, registry=registry, format_checker=FormatChecker())
     errors = sorted(validator.iter_errors(instance), key=lambda e: list(e.absolute_path))
     if errors:
         print(f"invalid: {instance_path.relative_to(ROOT)}", file=sys.stderr)
@@ -64,27 +60,23 @@ def main() -> None:
         schema_by_id(schemas, "https://simplevtt.local/schemas/rules-profile.schema.json"),
         registry,
     )
-    validate(
-        ROOT / "content/modules/dnd-srd-5.2.1.core/module.json",
-        schema_by_id(schemas, "https://simplevtt.local/schemas/rule-module.schema.json"),
-        registry,
-    )
 
-    golden_schema = schema_by_id(
-        schemas, "https://simplevtt.local/schemas/golden-scenario.schema.json"
-    )
+    module_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/rule-module.schema.json")
+    module_paths = sorted((ROOT / "content/modules").glob("*/module.json"))
+    if not module_paths:
+        raise SystemExit("no builtin RuleModule manifests found")
+    for path in module_paths:
+        validate(path, module_schema, registry)
+
+    golden_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/golden-scenario.schema.json")
     for path in sorted((ROOT / "tests/fixtures/rules").glob("*.json")):
         validate(path, golden_schema, registry)
 
-    content_entry_schema = schema_by_id(
-        schemas, "https://simplevtt.local/schemas/content-entry.schema.json"
-    )
+    content_entry_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/content-entry.schema.json")
     for path in sorted((ROOT / "tests/fixtures/content").glob("*.json")):
         validate(path, content_entry_schema, registry)
 
-    combatant_schema = schema_by_id(
-        schemas, "https://simplevtt.local/schemas/combatant.schema.json"
-    )
+    combatant_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/combatant.schema.json")
     validate(ROOT / "examples/combatant.example.json", combatant_schema, registry)
     validate(ROOT / "templates/combatant.template.json", combatant_schema, registry)
 
