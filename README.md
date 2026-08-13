@@ -1,26 +1,46 @@
 # SimpleVTT
 
-SimpleVTT is a local-first D&D play assistant focused on reducing routine combat arithmetic and rules-state bookkeeping while preserving player and DM decisions.
+SimpleVTT is a local-first desktop companion for lightweight D&D play. The repository currently contains the rule/content contracts plus the UI Session 01 application prototype.
 
-The planned application uses Tauri + React + TypeScript and is designed to support offline Character management plus DM-hosted LAN/Hamachi sessions without a central cloud account service.
+## UI Session 01
 
-## Design baseline
+The active implementation branch is `agent/36-ui-session-01` for Issue #36.
 
-The current pre-implementation architecture is documented in:
+### Frontend
 
-- [`docs/design/README.md`](docs/design/README.md) — product/architecture canon and document index.
-- [`docs/rules/README.md`](docs/rules/README.md) — Common Rule Definition Specification `0.1-draft`.
-- [`docs/guides/combatant-json-import.md`](docs/guides/combatant-json-import.md) — Combatant JSON authoring/import guide.
+- React 19 + TypeScript
+- Vite 8
+- Korean-first UI
+- Application/ViewModel contracts backed by a replaceable `MockAdapter`
 
-Core principles include:
+### Desktop shell
 
-- automate arithmetic, preserve human choices;
-- source-by-source provenance for important calculations;
-- declarative RuleSource/Predicate/Timing/content data;
-- one ResolutionEvent/StateChange model for Freeform and Initiative;
-- player-owned permanent Characters with DM-hosted shared session authority;
-- default and homebrew content using the same validated mechanics pipeline;
-- no arbitrary executable rule scripts in imported content;
-- scenario-driven extension after real playtesting.
+- Tauri 2
+- Desktop-first window
+- Real rule resolution, persistence, and networking remain behind the adapter boundary during UI Session 01.
 
-Implementation has not started yet. The next gate is selecting and minimally specifying the initial D&D RulesProfile, then building a narrow offline vertical slice before networking.
+### Run the prototype
+
+Requirements:
+
+- Node.js 20.19+ or 22.12+
+- Rust stable MSVC toolchain on Windows
+- Tauri Windows prerequisites (WebView2 and Visual Studio C++ build tools)
+
+```powershell
+npm install
+npm run tauri:dev
+```
+
+For browser-only UI iteration:
+
+```powershell
+npm install
+npm run dev
+```
+
+Reference-only state controls are intentionally hidden from normal Player/DM screens. Press `Ctrl+Shift+D` to open the developer dock and switch reference role, session mode, current actor, queued d20 value, or connection state.
+
+## Repository contracts
+
+The machine-readable rules and content contracts remain under `rules/`, `content/`, `schemas/`, `templates/`, `examples/`, and `docs/`.
