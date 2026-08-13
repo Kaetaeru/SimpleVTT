@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -22,6 +23,16 @@ SPELL_SUPPORT_STATUSES = {"reviewed", "partial", "presentation-only"}
 def load_json(path: Path):
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def ensure_complete_spell_catalog() -> None:
+    count = 0
+    for path in MODULE_DIR.glob("*/module.json"):
+        count += sum(1 for entry in load_json(path).get("content", []) if entry.get("category") == "spell")
+    if count == 339:
+        return
+    print(f"spell catalog materialization required: {count}/339")
+    subprocess.run([sys.executable, str(ROOT / "tools/srd521/spell_parser.py"), "--fetch"], check=True)
 
 
 def build_registry() -> tuple[dict[str, dict], Registry]:
@@ -157,6 +168,7 @@ def validate_spell_catalog(module_paths: list[Path]) -> None:
 
 
 def main() -> None:
+    ensure_complete_spell_catalog()
     schemas, registry = build_registry()
 
     validate(
