@@ -7,7 +7,6 @@ on:
       - "tests/domain/**"
       - "tests/fixtures/rules/**"
       - "rules/**"
-      - "tsconfig.rules-test.json"
       - ".github/workflows/rules-domain.yml"
   push:
     branches:
@@ -17,7 +16,6 @@ on:
       - "tests/domain/**"
       - "tests/fixtures/rules/**"
       - "rules/**"
-      - "tsconfig.rules-test.json"
 
 jobs:
   rules-domain:
@@ -29,8 +27,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Compile rules domain
-        run: npx tsc -p tsconfig.rules-test.json
+      - name: Bundle rules domain
+        run: npx vite build --config tests/domain/vite.rules.config.mjs
       - name: Run rules golden fixtures
         run: node --test tests/domain/*.test.mjs
       - name: Typecheck application
