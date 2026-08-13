@@ -1,0 +1,43 @@
+{
+  "classId": "dnd.srd521.class.fighter",
+  "sourcePath": "10-RULEBOOKS/srd-5.2.1/classes/fighter.md",
+  "sourceBlob": "42be9226f64094750066dc5583abe77e841f4f37",
+  "progressionTrack": "class.fighter.level",
+  "hitDie": 10,
+  "savingThrowProficiencies": ["str", "con"],
+  "skillChoice": {"min": 2, "max": 2, "options": ["acrobatics", "animal-handling", "athletics", "history", "insight", "intimidation", "perception", "persuasion", "survival"]},
+  "level1": {
+    "fightingStyle": {"kind": "choice", "count": 1, "category": "feat.fighting-style"},
+    "secondWind": {"kind": "resource-action", "resourceFormula": "fighter-table.second-wind-uses", "actionEconomy": "bonus-action", "healing": "1d10 + class.fighter.level", "shortRestRestore": 1, "longRestRestore": "all"},
+    "weaponMastery": {"kind": "choice", "countFormula": "fighter-table.weapon-mastery-count", "category": "weapon-mastery"}
+  },
+  "progression": [
+    {"level": 1, "grants": ["fighting-style", "second-wind", "weapon-mastery"]},
+    {"level": 2, "grants": ["action-surge", "tactical-mind"]},
+    {"level": 3, "choices": ["subclass"]},
+    {"level": 4, "choices": ["ability-score-improvement-or-feat"]},
+    {"level": 5, "grants": ["extra-attack-1", "tactical-shift"]},
+    {"level": 6, "choices": ["ability-score-improvement-or-feat"]},
+    {"level": 7, "grants": ["subclass-feature"]},
+    {"level": 8, "choices": ["ability-score-improvement-or-feat"]},
+    {"level": 9, "grants": ["indomitable-1", "tactical-master"]},
+    {"level": 10, "grants": ["subclass-feature"]},
+    {"level": 11, "grants": ["extra-attack-2"]},
+    {"level": 12, "choices": ["ability-score-improvement-or-feat"]},
+    {"level": 13, "grants": ["indomitable-2", "studied-attacks"]},
+    {"level": 14, "choices": ["ability-score-improvement-or-feat"]},
+    {"level": 15, "grants": ["subclass-feature"]},
+    {"level": 16, "choices": ["ability-score-improvement-or-feat"]},
+    {"level": 17, "grants": ["action-surge-2", "indomitable-3"]},
+    {"level": 18, "grants": ["subclass-feature"]},
+    {"level": 19, "choices": ["epic-boon-or-eligible-feat"]},
+    {"level": 20, "grants": ["extra-attack-3"]}
+  ],
+  "unsupportedOrPending": [
+    "weapon mastery property registry and per-weapon choice provider",
+    "Tactical Mind refund-on-failure-after-added-die semantics",
+    "Tactical Shift movement without opportunity attacks",
+    "Studied Attacks target-scoped next-roll effect",
+    "Champion critical-range policy and survivor turn-start healing"
+  ]
+}

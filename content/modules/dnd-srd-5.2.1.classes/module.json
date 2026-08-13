@@ -1,0 +1,40 @@
+{
+  "$schema":"https://simplevtt.local/schemas/rule-module.schema.json",
+  "schemaVersion":"0.1-draft",
+  "moduleId":"dnd.srd-5.2.1.classes",
+  "moduleVersion":"0.1-draft",
+  "rulesProfile":{"id":"dnd.srd-5.2.1","version":"0.1-draft"},
+  "defaultLocale":"ko-KR",
+  "source":{"document":"System Reference Document","version":"5.2.1","license":"CC-BY-4.0","srdDerived":true},
+  "localizationSource":{"defaultLocale":"ko-KR","repository":"Kaetaeru/D-D-2024-","srdPathRoot":"10-RULEBOOKS/srd-5.2.1/","distributionBoundary":"srd-only"},
+  "dependencies":[{"moduleId":"dnd.srd-5.2.1.core","version":"0.1-draft"}],
+  "conflicts":[],
+  "capabilities":["dnd.progression.multitrack.v1","dnd.economy.action-bonus-reaction.v1","dnd.hp.basic.v1","dnd.rest.short-long.v1"],
+  "extensionPoints":[],
+  "content":[{
+    "id":"dnd.srd521.class.fighter",
+    "category":"class",
+    "presentation":{
+      "originalName":"Fighter",
+      "defaultLocale":"ko-KR",
+      "locales":{"ko-KR":{"name":"파이터","summary":"파이터는 모든 종류의 무기와 방어구를 숙달하고, 뛰어난 전술과 끈기로 전장을 지배하는 전사다.","keywords":["파이터","Fighter","클래스"]}},
+      "translationSource":{"repository":"Kaetaeru/D-D-2024-","path":"10-RULEBOOKS/srd-5.2.1/classes/fighter.md","revision":"d3d574725e0ecdfd05cb69fa32cf66196e3a8ee4","status":"reviewed","sourceCode":"SRD52","errataChecked":"2026-08-05"}
+    },
+    "tags":["class","martial","srd-5.2.1"],
+    "requiresCapabilities":["dnd.progression.multitrack.v1"],
+    "relationships":[],
+    "extensionPoints":[{"id":"class.fighter.subclass","acceptsCategories":["subclass"]}],
+    "progressionContributions":[
+      {"track":"class.fighter.level","threshold":1,"grants":["fighter.fighting-style-choice","fighter.second-wind","fighter.weapon-mastery-choice"]},
+      {"track":"class.fighter.level","threshold":2,"grants":["fighter.action-surge","fighter.tactical-mind"]},
+      {"track":"class.fighter.level","threshold":3,"grants":["fighter.subclass-choice"]},
+      {"track":"class.fighter.level","threshold":4,"grants":["fighter.asi-or-feat-choice"]},
+      {"track":"class.fighter.level","threshold":5,"grants":["fighter.extra-attack-1","fighter.tactical-shift"]}
+    ],
+    "mechanics":[
+      {"id":"fighter.core","kind":"class-definition","config":{"hitDie":10,"primaryAbilities":["str","dex"],"savingThrowProficiencies":["str","con"],"skillChoice":{"min":2,"max":2,"options":["acrobatics","animal-handling","athletics","history","insight","intimidation","perception","persuasion","survival"]}}},
+      {"id":"fighter.second-wind","kind":"resource-action","config":{"economy":"bonus-action","healing":"1d10 + class.fighter.level","shortRestRestore":1,"longRestRestore":"all"}},
+      {"id":"fighter.subclass-choice","kind":"progression-choice","config":{"threshold":3,"extensionPoint":"class.fighter.subclass","min":1,"max":1}}
+    ]
+  }]
+}

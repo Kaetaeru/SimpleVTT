@@ -1,0 +1,13 @@
+{
+  "formatVersion": "1",
+  "rulesProfile": {"id": "dnd.srd-5.2.1", "version": "0.1-draft"},
+  "srd": {"document": "System Reference Document", "version": "5.2.1", "license": "CC-BY-4.0"},
+  "localization": {
+    "locale": "ko-KR",
+    "repository": "Kaetaeru/D-D-2024-",
+    "revision": "d3d574725e0ecdfd05cb69fa32cf66196e3a8ee4",
+    "root": "10-RULEBOOKS/srd-5.2.1/",
+    "policy": "Use reviewed SRD translation text as-is; missing localization remains explicit."
+  },
+  "simpleVttBase": "be67f0f8a939acb07d6b846a86e79a072cb81b0d"
+}
