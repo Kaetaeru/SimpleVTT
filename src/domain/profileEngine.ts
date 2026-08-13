@@ -18,6 +18,12 @@ export interface RulesProfileLike {
   profileId: string;
   roundingPolicy?: { id: string };
   properties: Record<string, { storage?: string; formula?: ExpressionNode }>;
+  d20Test?: {
+    advantageDisadvantage?: {
+      sameSideStacks?: boolean;
+      opposingCancel?: boolean;
+    };
+  };
 }
 
 export interface ProvenanceRecord {
@@ -29,6 +35,18 @@ export interface ProvenanceRecord {
 export interface PropertyResolution {
   property: string;
   value: number;
+  provenance: ProvenanceRecord[];
+}
+
+export type RollState = "normal" | "advantage" | "disadvantage";
+
+export interface RollStateContribution {
+  source: string;
+  state: Exclude<RollState, "normal">;
+}
+
+export interface RollStateResolution {
+  rollState: RollState;
   provenance: ProvenanceRecord[];
 }
 
@@ -88,10 +106,6 @@ export function evaluateExpression(
     case "round":
       assertArgs(expression.op, expression.args, 1);
       return Math.round(values[0]);
-    default: {
-      const neverOperator: never = expression.op;
-      throw new DomainEvaluationError(`unsupported expression operator: ${neverOperator}`);
-    }
   }
 }
 
@@ -148,10 +162,11 @@ export function resolveProfileProperty(
     memo.set(propertyId, value);
     resolving.delete(propertyId);
 
-    const source =
-      definition.formula.op === "floor" && profile.roundingPolicy?.id
-        ? `profile:${profile.profileId}/${profile.roundingPolicy.id}`
-        : `profile:${profile.profileId}/property:${propertyId}`;
+    const usesDefaultFloor =
+      "op" in definition.formula && definition.formula.op === "floor" && profile.roundingPolicy?.id;
+    const source = usesDefaultFloor
+      ? `profile:${profile.profileId}/${profile.roundingPolicy!.id}`
+      : `profile:${profile.profileId}/property:${propertyId}`;
     provenance.push({
       source,
       status: "applied",
@@ -161,4 +176,45 @@ export function resolveProfileProperty(
   };
 
   return { property, value: resolve(property), provenance };
+}
+
+export function resolveRollState(
+  profile: RulesProfileLike,
+  contributions: RollStateContribution[],
+): RollStateResolution {
+  const advantages = contributions.filter((entry) => entry.state === "advantage");
+  const disadvantages = contributions.filter((entry) => entry.state === "disadvantage");
+  const policy = profile.d20Test?.advantageDisadvantage;
+  const opposingCancel = policy?.opposingCancel ?? true;
+  const sameSideStacks = policy?.sameSideStacks ?? false;
+
+  if (opposingCancel && advantages.length > 0 && disadvantages.length > 0) {
+    return {
+      rollState: "normal",
+      provenance: contributions.map((entry) => ({
+        source: entry.source,
+        status: "suppressed",
+        reason:
+          entry.state === "advantage"
+            ? "cancelled by opposing Disadvantage contribution"
+            : "cancelled by opposing Advantage contribution",
+      })),
+    };
+  }
+
+  const active = advantages.length > 0 ? advantages : disadvantages;
+  if (active.length === 0) return { rollState: "normal", provenance: [] };
+
+  const rollState = active[0].state;
+  return {
+    rollState,
+    provenance: active.map((entry, index) => ({
+      source: entry.source,
+      status: index === 0 || sameSideStacks ? "applied" : "suppressed",
+      reason:
+        index === 0 || sameSideStacks
+          ? `${rollState} contribution applied`
+          : `additional ${rollState} contribution does not stack`,
+    })),
+  };
 }
