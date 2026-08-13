@@ -1,23 +1,44 @@
 # SimpleVTT
 
-SimpleVTT is a local-first desktop companion for lightweight D&D play. The repository currently contains the rule/content contracts plus the UI Session 01 application prototype.
+SimpleVTT is a local-first desktop companion for lightweight D&D play. The repository contains the rule/content contracts plus the UI Session 01 application prototype.
 
 ## UI Session 01
 
-The active implementation branch is `agent/36-ui-session-01` for Issue #36.
+Active issue: #36  
+Active branch: `agent/36-ui-session-01`
+
+The UI is intentionally backed by a replaceable application adapter during this gate:
+
+```text
+React UI
+   ↓
+Application/ViewModel contracts
+   ↓
+MockAdapter          ← UI Session 01
+
+later
+
+React UI
+   ↓
+Application/ViewModel contracts
+   ↓
+Real adapters        ← rules/domain, persistence, networking
+```
 
 ### Frontend
 
 - React 19 + TypeScript
 - Vite 8
 - Korean-first UI
-- Application/ViewModel contracts backed by a replaceable `MockAdapter`
+- Player and DM surfaces render the same entity/action model with different authority
+- Character creation supports standard array, 4d6-drop-lowest mock rolls, 27-point buy, and explicit custom scores
+- Level-up uses a reviewed `ProgressionDraft` flow
 
 ### Desktop shell
 
 - Tauri 2
 - Desktop-first window
-- Real rule resolution, persistence, and networking remain behind the adapter boundary during UI Session 01.
+- Rule resolution, production persistence, and real networking remain out of the React components during UI Session 01
 
 ### Run the prototype
 
