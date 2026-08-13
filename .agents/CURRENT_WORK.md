@@ -15,12 +15,24 @@
 - [x] Issue #36 작업 브랜치 `agent/36-ui-session-01` 생성
 - [x] Tauri 2 + React + TypeScript application scaffold
 - [x] application-facing contracts + replaceable `MockAdapter`
-- [x] Player Character sheet / create / level-up UI first implementation
-- [x] Player Scene / DM Session / Catalog / Activity / Session / Settings first implementation
+- [x] Player Character sheet / create / level-up UI
+- [x] Character ItemInstance / inventory / provenance interaction prototype
+- [x] Player Scene / DM Session / Catalog / Activity / Session / Settings UI
+- [x] ViewModel-provided eligible targeting + global targeting overlay
+- [x] staged Resolution UI: roll / result / interrupt / damage / apply
+- [x] ability check / save / attack / critical / healing / multi-target / typed-defense mock paths
+- [x] Initiative economy + Freeform persistent-resource separation
+- [x] DM adjudication + real mock Undo/reversal path
+- [x] Content JSON import / validation / review / activation prototype
+- [x] Combatant JSON import / validation / review / instantiate prototype
+- [x] Host / Join / compatibility / connection-state shell
 - [x] reference-only Debug Dock separation (`Ctrl+Shift+D`)
-- [ ] UI CI green
-- [ ] owner Windows `tauri dev` walkthrough
-- [ ] owner-requested UI revisions
+- [x] loading / reconnecting / save-error / unsupported reference states
+- [x] Light / Dark / Accent / Reduced Motion controls
+- [x] responsive Scene layout + Korean IME fixes from initial Windows walkthrough
+- [x] UI GitHub Actions typecheck/build green
+- [ ] owner full Windows walkthrough of the completed interaction prototype
+- [ ] owner-requested final UI revisions
 - [ ] UI Session 01 explicit acceptance
 - [ ] semantic validator + additional golden scenarios
 - [ ] representative Korean SRD content bootstrap
@@ -32,9 +44,9 @@
 ```text
 Executable Contracts ✅
         ↓
-UI Session 01 ← current
+UI Session 01 interaction prototype ✅
         ↓
-Owner Windows walkthrough + revisions
+Owner full Windows walkthrough + final revisions ← current
         ↓
 Owner explicit acceptance
         ↓
@@ -49,22 +61,27 @@ Real TypeScript domain / persistence / networking adapters
 - 작업은 `agent/36-ui-session-01`에 누적한다.
 - 사용자는 필요할 때 로컬에서 해당 브랜치를 pull하여 Windows/Tauri 환경으로 직접 검증한다.
 - 정상 Player/DM 화면에는 reference 테스트 조작을 노출하지 않는다.
-- 역할, 세션 모드, 현재 Actor, queued d20, 연결 상태 강제 변경은 Debug Dock에만 둔다.
-- UI는 component-local mock fixture를 직접 변경하지 않고 application adapter 계약을 사용한다.
-- UI Session 01 동안 Resolver, 실제 WebSocket, production persistence를 UI 편의를 위해 React에 임시 구현하지 않는다.
+- 역할, 세션 모드, 현재 Actor, queued d20, 연결 상태, edge/scenario 강제 변경은 Debug Dock에만 둔다.
+- Target eligibility와 Resolution state는 application adapter/ViewModel에서 제공하며 React가 규칙을 재계산하지 않는다.
+- UI Session 01 동안 실제 Resolver, WebSocket, production persistence를 UI 편의를 위해 React에 임시 구현하지 않는다.
 - owner 승인 전에는 Issue #36/PR을 완료 또는 merge하지 않는다.
 
-## 다음 구현 순서
+## Owner walkthrough 순서
 
-1. GitHub Actions UI typecheck/build green 만들기
-2. Windows `npm run tauri:dev` owner walkthrough
-3. Character create/level-up 실제 UX 수정
-4. Player Scene targeting/resolution/reaction 상세화
-5. DM adjudication/Undo/correction 상세화
-6. Combatant JSON import/review/instantiate UI 상세화
-7. Rules Catalog JSON import/validation/review UI 상세화
-8. empty/error/reconnecting/unsupported edge states
-9. owner acceptance
+1. Character 생성/편집을 처음부터 검토까지 완료한다.
+2. Aelar 레벨 업 ProgressionDraft를 검토하고 적용/취소를 확인한다.
+3. 장비 장착/해제, 조율, 소모품/충전 아이템과 provenance를 확인한다.
+4. 홈브루 subclass JSON을 검증/활성화하고 builtin class 관계를 확인한다.
+5. Freeform에서 ability/action/no-roll 흐름과 Persistent Resource만 보이는지 확인한다.
+6. DM에서 Initiative 시작 후 Actor/Current Turn/action economy/턴 종료를 확인한다.
+7. 공격 → 주사위 → Result → Reaction → Damage → StateChange 흐름을 확인한다.
+8. Multi-target save와 대상별 결과/피해 조정을 확인한다.
+9. DM `상황 / 판정 수정`에서 보정/유불리/강제 결과/상태/피해/자원/대상을 수정한다.
+10. Activity Log에서 계산/provenance/DM ruling/StateChange를 확인한다.
+11. 안전 Undo로 HP/resource/item/economy가 판정 전 상태로 복원되는지 확인한다.
+12. Combatant JSON을 검증/활성화하고 세션 Instance로 추가한다.
+13. Host/Join/compatibility와 connected/reconnecting/disconnected 상태를 확인한다.
+14. `Ctrl+Shift+D`에서 deterministic scenario와 targeting/resolution debug state를 확인한다.
 
 ## 이후 원칙
 
