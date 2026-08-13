@@ -35,77 +35,63 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-function isBufferedTextCommand(command: CharacterDraftCommand) {
+function isOptimisticTextCommand(command: CharacterDraftCommand) {
   return command.type === "set-name" || command.type === "set-notes";
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
-  const isComposingRef = useRef(false);
-  const queuedTextCommandRef = useRef<CharacterDraftCommand | null>(null);
+  const operationSequenceRef = useRef(0);
+
+  const publishIfLatest = useCallback((sequence: number, next: AppSnapshot) => {
+    if (sequence !== operationSequenceRef.current) return;
+    setSnapshot(next);
+  }, []);
 
   const apply = useCallback(async (operation: () => Promise<AppSnapshot>) => {
-    setSnapshot(await operation());
-  }, []);
+    const sequence = ++operationSequenceRef.current;
+    const next = await operation();
+    publishIfLatest(sequence, next);
+  }, [publishIfLatest]);
 
   const refresh = useCallback(async () => {
-    setSnapshot(await mockAdapter.getSnapshot());
-  }, []);
-
-  const commitCharacterDraftCommand = useCallback(async (command: CharacterDraftCommand) => {
-    await apply(() => mockAdapter.updateCharacterDraft(command));
-  }, [apply]);
+    const sequence = ++operationSequenceRef.current;
+    const next = await mockAdapter.getSnapshot();
+    publishIfLatest(sequence, next);
+  }, [publishIfLatest]);
 
   const updateCharacterDraft = useCallback(async (command: CharacterDraftCommand) => {
-    if (isBufferedTextCommand(command) && isComposingRef.current) {
-      // During IME composition the browser owns the live input value. Do not mutate
-      // Adapter state or publish a new controlled value until composition finishes.
-      queuedTextCommandRef.current = command;
+    if (!isOptimisticTextCommand(command)) {
+      await apply(() => mockAdapter.updateCharacterDraft(command));
       return;
     }
 
-    if (isBufferedTextCommand(command)) {
-      // A final input event can arrive after compositionend. Prefer that final value
-      // and cancel any older queued syllable so it cannot overwrite the result.
-      queuedTextCommandRef.current = null;
-    }
+    const sequence = ++operationSequenceRef.current;
+    const value = String(command.value ?? "");
 
-    await commitCharacterDraftCommand(command);
-  }, [commitCharacterDraftCommand]);
+    // React controlled inputs must receive their new value synchronously from the
+    // onChange call. Publishing the text optimistically here lets the browser keep
+    // ownership of an active Korean/IME composition instead of restoring the old
+    // controlled value after each input event.
+    setSnapshot((current) => {
+      if (!current?.createDraft) return current;
+      return {
+        ...current,
+        createDraft: {
+          ...current.createDraft,
+          ...(command.type === "set-name" ? { name: value } : { notes: value }),
+        },
+      };
+    });
+
+    const next = await mockAdapter.updateCharacterDraft(command);
+    publishIfLatest(sequence, next);
+  }, [apply, publishIfLatest]);
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
-
-  useEffect(() => {
-    const handleCompositionStart = () => {
-      isComposingRef.current = true;
-      queuedTextCommandRef.current = null;
-    };
-
-    const handleCompositionEnd = () => {
-      isComposingRef.current = false;
-
-      // React/WebView may deliver the final input event immediately after
-      // compositionend. Give it one task to win; otherwise flush the latest
-      // queued composed value ourselves.
-      window.setTimeout(() => {
-        if (isComposingRef.current) return;
-        const queued = queuedTextCommandRef.current;
-        if (!queued) return;
-        queuedTextCommandRef.current = null;
-        void commitCharacterDraftCommand(queued);
-      }, 0);
-    };
-
-    document.addEventListener("compositionstart", handleCompositionStart, true);
-    document.addEventListener("compositionend", handleCompositionEnd, true);
-    return () => {
-      document.removeEventListener("compositionstart", handleCompositionStart, true);
-      document.removeEventListener("compositionend", handleCompositionEnd, true);
-    };
-  }, [commitCharacterDraftCommand]);
 
   const value = useMemo<AppContextValue>(() => ({
     snapshot,
