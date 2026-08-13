@@ -15,6 +15,8 @@ MODULE_DIR = ROOT / "content/modules"
 ALIASES_PATH = ROOT / "content/catalog-reference-aliases.json"
 REFERENCE_KEYS = {"originFeat", "featId", "itemId", "spellId", "contentId"}
 REFERENCE_LIST_KEYS = {"itemIds", "spellIds", "contentIds"}
+SPELL_SOURCE_REVISION = "d3d574725e0ecdfd05cb69fa32cf66196e3a8ee4"
+SPELL_SUPPORT_STATUSES = {"reviewed", "partial", "presentation-only"}
 
 
 def load_json(path: Path):
@@ -122,6 +124,38 @@ def validate_catalog_references(module_paths: list[Path]) -> None:
     print(f"catalog references ok: {len(module_ids)} modules, {len(content_ids)} entries, {len(aliases)} aliases")
 
 
+def validate_spell_catalog(module_paths: list[Path]) -> None:
+    spells = []
+    for path in module_paths:
+        for entry in load_json(path).get("content", []):
+            if entry.get("category") == "spell":
+                spells.append(entry)
+    if len(spells) != 339:
+        raise SystemExit(f"spell coverage incomplete: {len(spells)}/339")
+    ids = [entry["id"] for entry in spells]
+    if len(set(ids)) != 339:
+        raise SystemExit("duplicate spell IDs in complete catalog")
+    errors = []
+    for entry in spells:
+        presentation = entry.get("presentation", {})
+        ko = presentation.get("locales", {}).get("ko-KR", {})
+        source = presentation.get("translationSource", {})
+        definitions = [m for m in entry.get("mechanics", []) if m.get("kind") == "spell-definition"]
+        if not ko.get("name") or not ko.get("description"):
+            errors.append(f"{entry['id']}: missing ko-KR name/description")
+        if source.get("repository") != "Kaetaeru/D-D-2024-" or source.get("revision") != SPELL_SOURCE_REVISION:
+            errors.append(f"{entry['id']}: translation source pin mismatch")
+        if len(definitions) != 1:
+            errors.append(f"{entry['id']}: expected one spell-definition")
+        elif definitions[0].get("config", {}).get("supportStatus") not in SPELL_SUPPORT_STATUSES:
+            errors.append(f"{entry['id']}: invalid supportStatus")
+    if errors:
+        for error in errors[:50]:
+            print(error, file=sys.stderr)
+        raise SystemExit(f"spell integrity failures: {len(errors)}")
+    print("spell catalog integrity ok: 339/339, unique IDs, pinned ko-KR source, valid supportStatus")
+
+
 def main() -> None:
     schemas, registry = build_registry()
 
@@ -138,6 +172,7 @@ def main() -> None:
     for path in module_paths:
         validate(path, module_schema, registry)
     validate_catalog_references(module_paths)
+    validate_spell_catalog(module_paths)
 
     golden_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/golden-scenario.schema.json")
     for path in sorted((ROOT / "tests/fixtures/rules").glob("*.json")):
