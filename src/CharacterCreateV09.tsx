@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
-import type { CharacterCreateDraft, CharacterCreationPlan, CharacterCreationSection } from "./app/contracts";
-import { creationContextSections, creationPrimarySections, creationPrimaryStatus, nextCreationPrimaryId } from "./app/characterProgressionPresentation";
+import type { AbilityKey, CharacterCreateDraft, CharacterCreationPlan, CharacterCreationSection } from "./app/contracts";
+import { creationContextSections, creationPrimarySections, creationPrimaryStatus, levelUpFocusItems, nextCreationPrimaryId, type LevelUpFocusId } from "./app/characterProgressionPresentation";
 import { AbilitiesSection } from "./character-create/V09Abilities";
 import { ClassChoicesSection, ClassSection, EquipmentSection, IdentitySection, ProficienciesSection, ReviewSection, SourceSection, SpellSection } from "./character-create/V09Sections";
 
 const LABELS: Record<string, string> = { identity: "정체성", species: "종족", class: "클래스", background: "배경", abilities: "능력치", proficiencies: "기술", review: "검토" };
+const ABILITY_LABELS: Record<AbilityKey, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
+const ABILITY_KEYS = Object.keys(ABILITY_LABELS) as AbilityKey[];
 
 export function CharacterCreateScreenV09({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
   const { snapshot, createCharacterDraft, updateCharacterDraft, finalizeCharacterDraft } = useSimpleVtt();
@@ -48,3 +50,28 @@ function CharacterPreview({ plan, draft, onReview }: { plan: CharacterCreationPl
 }
 
 function ImportPanel({ draft, value, setValue, onPreview }: { draft: CharacterCreateDraft; value: string; setValue(value: string): void; onPreview(): void }) { return <section className="focused-import"><span>IMPORT CHARACTER</span><h2>JSON 가져오기</h2><p>가져온 캐릭터도 같은 선택 화면에서 검토합니다.</p><textarea value={value} onChange={(event) => setValue(event.target.value)}/><button className="primary" onClick={onPreview}>가져와서 검토</button>{draft.importStatus && draft.importStatus !== "idle" && <div className={`validation ${draft.importStatus === "valid" ? "info" : "blocking"}`}>{draft.importMessage}</div>}</section>; }
+
+export function LevelUpFocused({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
+  const { snapshot, startLevelUp, updateLevelUp, commitLevelUp } = useSimpleVtt();
+  const character = snapshot?.activeCharacter;
+  const draft = snapshot?.levelUpDraft;
+  const [focus, setFocus] = useState<LevelUpFocusId>("choice");
+  useEffect(() => { if (character && !draft) void startLevelUp(character.id); }, [character, draft, startLevelUp]);
+  if (!snapshot || !character || !draft) return <div className="loading-screen">레벨 업 준비 중…</div>;
+  const blocking = draft.validation.some((message) => message.severity === "blocking");
+  const focusItems = levelUpFocusItems(draft);
+  const eligibleFeats = snapshot.catalog.filter((entry) => entry.category === "feat");
+  return <div className="focused-level-shell">
+    <header className="focused-level-header"><div><span>LEVEL UP</span><h1>{character.name} · {draft.fromLevel} → {draft.toLevel}</h1></div><button onClick={onCancel}>취소</button></header>
+    <div className="focused-level-body"><aside className="focused-level-nav"><span>이번 레벨에서 결정할 것</span>{focusItems.map((item, index) => <button key={item.id} className={focus === item.id ? "active" : ""} onClick={() => setFocus(item.id)}><i>{item.needsAttention ? "!" : index + 1}</i><span><strong>{item.label}</strong><small>{item.detail}</small></span></button>)}</aside><main className="focused-level-stage"><div className="focused-level-stage-inner"><AutomaticLevelChanges draft={draft}/>{focus === "hp" ? <HpChoice draft={draft} onChange={(value) => updateLevelUp({ type: "set-hp-method", value })}/> : focus === "choice" ? <AdvancementChoice draft={draft} eligibleFeats={eligibleFeats} onUpdate={updateLevelUp}/> : <LevelReview draft={draft}/>}</div></main><aside className="focused-level-preview"><span>AFTER LEVEL UP</span><h2>{character.name} {draft.toLevel}레벨</h2><div className="diff-list rich">{draft.preview.diffs.map((diff) => <div key={diff.label}><span>{diff.label}<small>{diff.source}</small></span><b>{diff.before}</b><i>→</i><strong>{diff.after}</strong></div>)}</div>{draft.validation.map((message) => <div className={`validation ${message.severity}`} key={message.message}>{message.message}</div>)}</aside></div>
+    <footer className="focused-level-footer"><span>자동 획득은 이미 반영되어 있고, 선택만 확인하면 됩니다.</span><button className="primary" disabled={blocking} onClick={async () => { await commitLevelUp(); onDone(); }}>레벨 업 확정</button></footer>
+  </div>;
+}
+
+function AutomaticLevelChanges({ draft }: { draft: NonNullable<ReturnType<typeof useSimpleVtt>["snapshot"]>["levelUpDraft"] extends infer T ? NonNullable<T> : never }) { return <section className="focused-level-auto"><span>자동 획득</span><h2>{draft.preview.grantedFeatures.join(" · ") || "클래스 진행"}</h2><p>Hit Dice {draft.preview.hitDiceBefore} → {draft.preview.hitDiceAfter}</p>{draft.preview.resourceChanges.map((change) => <p key={change}>{change}</p>)}</section>; }
+
+function HpChoice({ draft, onChange }: { draft: NonNullable<ReturnType<typeof useSimpleVtt>["snapshot"]>["levelUpDraft"] extends infer T ? NonNullable<T> : never; onChange(value: "fixed" | "roll"): void }) { return <section className="focused-level-panel"><span>HIT POINTS</span><h2>생명력 증가</h2><p>이번 레벨에서 사용할 HP 증가 방식을 선택합니다.</p><div className="method-tabs"><button className={draft.hpMethod === "fixed" ? "active" : ""} onClick={() => onChange("fixed")}><strong>고정값</strong><span>최대 HP {draft.preview.maxHpBefore} → {draft.preview.maxHpAfter}</span></button><button className={draft.hpMethod === "roll" ? "active" : ""} onClick={() => onChange("roll")}><strong>Hit Die 굴림</strong><span>굴림 결과를 사용</span></button></div></section>; }
+
+function AdvancementChoice({ draft, eligibleFeats, onUpdate }: { draft: NonNullable<ReturnType<typeof useSimpleVtt>["snapshot"]>["levelUpDraft"] extends infer T ? NonNullable<T> : never; eligibleFeats: Array<{ id: string; nameKo: string; nameEn: string; source: string }>; onUpdate(command: { type: "set-step" | "set-hp-method" | "set-asi-mode" | "set-asi-primary" | "set-asi-secondary" | "set-feat"; value: string | number }): Promise<void> }) { return <section className="focused-level-panel"><span>CHOICE</span><h2>능력치 향상 또는 재주</h2><p>현재 레벨에서 실제로 열린 선택만 처리합니다.</p><div className="method-tabs"><button className={draft.asiMode === "plus-two" ? "active" : ""} onClick={() => onUpdate({ type: "set-asi-mode", value: "plus-two" })}><strong>능력치 +2</strong><span>한 능력치</span></button><button className={draft.asiMode === "split" ? "active" : ""} onClick={() => onUpdate({ type: "set-asi-mode", value: "split" })}><strong>+1 / +1</strong><span>서로 다른 두 능력치</span></button><button className={draft.asiMode === "feat" ? "active" : ""} onClick={() => onUpdate({ type: "set-asi-mode", value: "feat" })}><strong>재주</strong><span>적격 목록에서 선택</span></button></div>{draft.asiMode === "feat" ? <div className="catalog-choice-grid">{eligibleFeats.map((feat) => <button className={draft.featId === feat.id ? "selected" : ""} key={feat.id} onClick={() => onUpdate({ type: "set-feat", value: feat.id })}><strong>{feat.nameKo}</strong><small>{feat.nameEn}</small><span>{feat.source}</span></button>)}</div> : <div className="choice-grid"><label className="field"><span>첫 번째 능력치</span><select value={draft.asiPrimary} onChange={(event) => onUpdate({ type: "set-asi-primary", value: event.target.value })}>{ABILITY_KEYS.map((key) => <option value={key} key={key}>{ABILITY_LABELS[key]}</option>)}</select></label>{draft.asiMode === "split" && <label className="field"><span>두 번째 능력치</span><select value={draft.asiSecondary} onChange={(event) => onUpdate({ type: "set-asi-secondary", value: event.target.value })}>{ABILITY_KEYS.map((key) => <option value={key} key={key}>{ABILITY_LABELS[key]}</option>)}</select></label>}</div>}</section>; }
+
+function LevelReview({ draft }: { draft: NonNullable<ReturnType<typeof useSimpleVtt>["snapshot"]>["levelUpDraft"] extends infer T ? NonNullable<T> : never }) { return <section className="focused-level-panel"><span>REVIEW</span><h2>이번 레벨의 변화</h2><p>자동 획득과 선택 결과를 한 번에 확인합니다.</p><div className="review-rows">{draft.preview.diffs.map((diff) => <div key={diff.label}><span>{diff.label}</span><strong>{diff.before} → {diff.after} · {diff.source}</strong></div>)}</div></section>; }
