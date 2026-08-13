@@ -15,8 +15,8 @@
         "title": "SimpleVTT",
         "width": 1440,
         "height": 900,
-        "minWidth": 1100,
-        "minHeight": 720,
+        "minWidth": 800,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false
       }

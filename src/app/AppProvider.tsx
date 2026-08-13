@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
   AppRole,
   AppSnapshot,
@@ -35,21 +35,77 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+type PendingSnapshot = {
+  sequence: number;
+  snapshot: AppSnapshot;
+};
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const isComposingRef = useRef(false);
+  const operationSequenceRef = useRef(0);
+  const publishedSequenceRef = useRef(0);
+  const pendingSnapshotRef = useRef<PendingSnapshot | null>(null);
+
+  const publishSnapshot = useCallback((sequence: number, next: AppSnapshot, deferForComposition = false) => {
+    if (deferForComposition || isComposingRef.current) {
+      const pending = pendingSnapshotRef.current;
+      if (!pending || sequence >= pending.sequence) {
+        pendingSnapshotRef.current = { sequence, snapshot: next };
+      }
+      return;
+    }
+
+    if (sequence < publishedSequenceRef.current) return;
+    publishedSequenceRef.current = sequence;
+    setSnapshot(next);
+  }, []);
 
   const apply = useCallback(async (operation: () => Promise<AppSnapshot>) => {
-    setSnapshot(await operation());
-  }, []);
+    const sequence = ++operationSequenceRef.current;
+    const deferForComposition = isComposingRef.current;
+    const next = await operation();
+    publishSnapshot(sequence, next, deferForComposition);
+  }, [publishSnapshot]);
 
   const refresh = useCallback(async () => {
-    setSnapshot(await mockAdapter.getSnapshot());
-  }, []);
+    const sequence = ++operationSequenceRef.current;
+    const next = await mockAdapter.getSnapshot();
+    publishSnapshot(sequence, next);
+  }, [publishSnapshot]);
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
+
+  useEffect(() => {
+    const handleCompositionStart = () => {
+      isComposingRef.current = true;
+    };
+
+    const handleCompositionEnd = () => {
+      isComposingRef.current = false;
+
+      // Let the browser/React deliver the final composed onChange first.
+      window.setTimeout(() => {
+        if (isComposingRef.current) return;
+        const pending = pendingSnapshotRef.current;
+        if (!pending) return;
+        pendingSnapshotRef.current = null;
+        if (pending.sequence < publishedSequenceRef.current) return;
+        publishedSequenceRef.current = pending.sequence;
+        setSnapshot(pending.snapshot);
+      }, 0);
+    };
+
+    document.addEventListener("compositionstart", handleCompositionStart, true);
+    document.addEventListener("compositionend", handleCompositionEnd, true);
+    return () => {
+      document.removeEventListener("compositionstart", handleCompositionStart, true);
+      document.removeEventListener("compositionend", handleCompositionEnd, true);
+    };
+  }, []);
 
   const value = useMemo<AppContextValue>(() => ({
     snapshot,
