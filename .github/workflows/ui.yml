@@ -1,0 +1,35 @@
+name: UI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "package.json"
+      - "tsconfig.json"
+      - "vite.config.ts"
+      - "index.html"
+      - ".github/workflows/ui.yml"
+  push:
+    branches:
+      - "agent/36-ui-session-01"
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "package.json"
+      - "tsconfig.json"
+      - "vite.config.ts"
+      - "index.html"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck and build
+        run: npm run build
