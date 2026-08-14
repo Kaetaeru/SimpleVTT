@@ -6,6 +6,7 @@ export const PALADIN_ID = "dnd.srd521.class.paladin";
 export const DRUID_ID = "dnd.srd521.class.druid";
 
 export const CLERIC_CHANNEL_DIVINITY_RESOURCE_ID = "resource:cleric.channel-divinity";
+export const CLERIC_DIVINE_INTERVENTION_RESOURCE_ID = "resource:cleric.divine-intervention";
 export const PALADIN_LAY_ON_HANDS_RESOURCE_ID = "resource:paladin.lay-on-hands";
 export const PALADIN_CHANNEL_DIVINITY_RESOURCE_ID = "resource:paladin.channel-divinity";
 export const DRUID_WILD_SHAPE_RESOURCE_ID = "resource:druid.wild-shape";
@@ -35,6 +36,11 @@ export function clericChannelDivinityMaximum(level: number) {
   if (level >= 18) return 4;
   if (level >= 6) return 3;
   return 2;
+}
+
+export function clericDivineInterventionMaximum(level: number) {
+  validatedLevel("Cleric", level);
+  return level >= 10 ? 1 : 0;
 }
 
 export function paladinLayOnHandsMaximum(level: number) {
@@ -69,6 +75,18 @@ export function coreClassResourceDefinitions(classTracks: ProgressionClassTrack[
       maximum:clericMaximum,
       source:`클레릭 ${clericLevel}레벨 · Channel Divinity · SRD 5.2.1`,
       recovery:{ shortRest:1, longRest:"all" },
+    });
+  }
+  const divineInterventionMaximum = clericDivineInterventionMaximum(clericLevel);
+  if (divineInterventionMaximum > 0) {
+    definitions.push({
+      classId:CLERIC_ID,
+      classLevel:clericLevel,
+      resourceId:CLERIC_DIVINE_INTERVENTION_RESOURCE_ID,
+      label:"Divine Intervention",
+      maximum:divineInterventionMaximum,
+      source:`클레릭 ${clericLevel}레벨 · Divine Intervention · SRD 5.2.1`,
+      recovery:{ longRest:"all" },
     });
   }
 
