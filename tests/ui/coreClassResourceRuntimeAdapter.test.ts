@@ -4,6 +4,7 @@ import "../../src/app/classFeatureSpellRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import {
   CLERIC_CHANNEL_DIVINITY_RESOURCE_ID,
+  CLERIC_DIVINE_INTERVENTION_RESOURCE_ID,
   CLERIC_ID,
   DRUID_ID,
   DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID,
@@ -50,6 +51,32 @@ test("Cleric Channel Divinity projection preserves spent uses and only raises ca
   resource = snapshot.activeCharacter.resources.find((entry) => entry.id === CLERIC_CHANNEL_DIVINITY_RESOURCE_ID);
   assert.equal(resource?.max, 3);
   assert.equal(resource?.current, 0, "capacity growth must not grant an implicit Channel Divinity use");
+});
+
+test("Cleric level 10 projects one Long-Rest Divine Intervention use without snapshot refill", async () => {
+  const { adapter, internal } = await baselineAdapter();
+  internal.activeCharacter = {
+    ...internal.activeCharacter,
+    className:"클레릭",
+    level:10,
+    classLevels:[{ classId:CLERIC_ID, className:"클레릭", level:10 }],
+    resources:[],
+  };
+  let snapshot = await adapter.getSnapshot();
+  let resource = snapshot.activeCharacter.resources.find((entry) => entry.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID);
+  assert.deepEqual({ current:resource?.current, max:resource?.max, recovery:resource?.recovery }, {
+    current:1,
+    max:1,
+    recovery:{ longRest:"all" },
+  });
+  assert.match(resource?.source ?? "", /클레릭 10레벨 · Divine Intervention/);
+
+  const internalResource = internal.activeCharacter.resources.find((entry) => entry.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID);
+  assert.ok(internalResource);
+  internalResource!.current = 0;
+  snapshot = await adapter.getSnapshot();
+  resource = snapshot.activeCharacter.resources.find((entry) => entry.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID);
+  assert.equal(resource?.current, 0, "snapshot normalization must not restore a spent Divine Intervention use");
 });
 
 test("Paladin level 11 projects Channel Divinity and Lay On Hands with independent recovery and no snapshot refill", async () => {
