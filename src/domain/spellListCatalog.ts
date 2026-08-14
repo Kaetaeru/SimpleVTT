@@ -29,7 +29,7 @@ const RANGER: ClassSpellList = {
     spell("entangle","Entangle",1),
     spell("fog-cloud","Fog Cloud",1),
     spell("goodberry","Goodberry",1),
-    spell("hunters-mark","Hunter's Mark",1),
+    spell("hunter-s-mark","Hunter's Mark",1),
     spell("jump","Jump",1),
     spell("longstrider","Longstrider",1),
     spell("speak-with-animals","Speak with Animals",1),
