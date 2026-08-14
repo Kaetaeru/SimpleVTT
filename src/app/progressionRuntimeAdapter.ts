@@ -1,6 +1,7 @@
 import "./progressionContracts";
 import "./creationContracts";
 import type { AppSnapshot, CharacterSheet, CharacterSummary, LevelUpCommand, LevelUpDraft } from "./contracts";
+import { generalLanguageOptions } from "./characterCreationV10Data";
 import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { classById, classByName } from "../domain/progressionCatalog";
@@ -62,6 +63,9 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
   sheet.expertiseSkills = unique([...(sheet.expertiseSkills ?? []), ...migratedExpertise]);
   sheet.expertiseSources ??= {};
   for (const skill of migratedExpertise) sheet.expertiseSources[skill] ??= "SRD 5.2.1 · Character Creation · 전문화";
+  sheet.languages = unique(sheet.languages ?? []);
+  sheet.languageSources ??= {};
+  for (const language of sheet.languages) sheet.languageSources[language] ??= "Character Creation / existing character";
   sheet.progressionRevision ??= 0;
   return sheet;
 }
@@ -83,12 +87,18 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     proficientSkills:unique(sheet.skills.map(normalizedSkillName)),
     expertiseSkills:clone(sheet.expertiseSkills ?? []),
     expertiseSources:clone(sheet.expertiseSources ?? {}),
+    languages:clone(sheet.languages ?? []),
+    languageSources:clone(sheet.languageSources ?? {}),
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
   };
 }
 
 function featOptions(state: AdapterState) {
   return state.catalog.filter((entry) => entry.category === "feat").map((entry) => ({ id:entry.id, label:entry.nameKo, description:entry.description }));
+}
+
+function progressionLanguageOptions() {
+  return generalLanguageOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
 }
 
 function targetClassId(sheet: CharacterSheet, draft: LevelUpDraft) {
@@ -106,6 +116,7 @@ function requestFor(state: AdapterState) {
     hpRoll:draft.hpRoll,
     selections:clone(draft.progressionSelections ?? {}),
     featOptions:featOptions(state),
+    languageOptions:progressionLanguageOptions(),
   } as const;
 }
 
@@ -157,6 +168,8 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.progressionRevision = next.revision;
   sheet.expertiseSkills = clone(next.expertiseSkills ?? []);
   sheet.expertiseSources = clone(next.expertiseSources ?? {});
+  sheet.languages = clone(next.languages ?? []);
+  sheet.languageSources = clone(next.languageSources ?? {});
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
