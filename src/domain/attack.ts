@@ -34,6 +34,12 @@ export interface AttackCriticalRange {
   sourceId: string;
 }
 
+export interface AttackCriticalFreeMovement {
+  distanceFeet:number;
+  maximumDistanceFeet:number;
+  doesNotProvokeOpportunityAttacks?:boolean;
+}
+
 export interface AttackRequest {
   id: string;
   actorId: string;
@@ -48,6 +54,7 @@ export interface AttackRequest {
   riders?: AttackDamageComponent[];
   economy?: AttackEconomyCost;
   criticalRange?: AttackCriticalRange;
+  onCriticalFreeMovement?:AttackCriticalFreeMovement;
   concentrationCheck?: Omit<ConcentrationCheckRequest, "damage">;
 }
 
@@ -73,6 +80,18 @@ function validateRequest(request: AttackRequest) {
     if (!request.criticalRange.sourceId) throw new DomainEvaluationError("critical range source id is required");
     if (!Number.isInteger(request.criticalRange.threshold) || request.criticalRange.threshold < 2 || request.criticalRange.threshold > 20) {
       throw new DomainEvaluationError("critical range threshold must be an integer from 2 to 20");
+    }
+  }
+  if (request.onCriticalFreeMovement) {
+    const movement = request.onCriticalFreeMovement;
+    if (!Number.isFinite(movement.distanceFeet) || movement.distanceFeet < 0) {
+      throw new DomainEvaluationError("critical granted movement distance must be non-negative and finite");
+    }
+    if (!Number.isFinite(movement.maximumDistanceFeet) || movement.maximumDistanceFeet < 0) {
+      throw new DomainEvaluationError("critical granted movement maximum must be non-negative and finite");
+    }
+    if (movement.distanceFeet > movement.maximumDistanceFeet) {
+      throw new DomainEvaluationError(`critical granted movement cannot exceed ${movement.maximumDistanceFeet} feet`);
     }
   }
   validateComponent(request.baseDamage, "base attack damage");
@@ -182,6 +201,18 @@ export function compileAttack(request: AttackRequest): PendingResolution {
     criticalFrom:attackId,
     concentrationCheck:request.concentrationCheck,
   });
+
+  if (request.onCriticalFreeMovement) {
+    operations.push({
+      id:`${request.id}:critical-movement`,
+      kind:"free-move",
+      actorId:request.actorId,
+      distanceFeet:request.onCriticalFreeMovement.distanceFeet,
+      maximumDistanceFeet:request.onCriticalFreeMovement.maximumDistanceFeet,
+      doesNotProvokeOpportunityAttacks:request.onCriticalFreeMovement.doesNotProvokeOpportunityAttacks,
+      when:{ operationId:attackId, field:"critical", equals:true },
+    });
+  }
 
   return {
     id:request.id,
