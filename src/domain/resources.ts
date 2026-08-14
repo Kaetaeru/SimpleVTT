@@ -14,6 +14,7 @@ export interface ResourcePool {
   current: number;
   maximum: number;
   recovery?: ResourceRecovery;
+  maximumAfterLongRest?: number;
 }
 
 export interface ResourceResolution {
@@ -26,6 +27,9 @@ function validate(pool: ResourcePool) {
   if (!pool.id) throw new DomainEvaluationError("resource id is required");
   if (!Number.isInteger(pool.current) || !Number.isInteger(pool.maximum) || pool.current < 0 || pool.maximum < 0 || pool.current > pool.maximum) {
     throw new DomainEvaluationError(`invalid resource pool ${pool.id}`);
+  }
+  if (pool.maximumAfterLongRest !== undefined && (!Number.isInteger(pool.maximumAfterLongRest) || pool.maximumAfterLongRest < 0 || pool.maximumAfterLongRest > pool.maximum)) {
+    throw new DomainEvaluationError(`invalid long-rest maximum for ${pool.id}`);
   }
 }
 
@@ -41,6 +45,35 @@ export function spendResource(pool: ResourcePool, amount: number, source: string
   };
 }
 
+export function gainResource(
+  pool: ResourcePool,
+  amount: number,
+  source: string,
+  options: { maximumDelta?: number; temporaryCapacityUntilLongRest?: boolean } = {},
+): ResourceResolution {
+  validate(pool);
+  const maximumDelta = options.maximumDelta ?? 0;
+  if (!Number.isInteger(amount) || amount < 0) throw new DomainEvaluationError("resource gain must be a non-negative integer");
+  if (!Number.isInteger(maximumDelta) || maximumDelta < 0) throw new DomainEvaluationError("resource maximum gain must be a non-negative integer");
+  const nextMaximum = pool.maximum + maximumDelta;
+  const nextCurrent = pool.current + amount;
+  if (nextCurrent > nextMaximum) throw new DomainEvaluationError(`${pool.id} cannot exceed maximum ${nextMaximum}`);
+  const next: ResourcePool = {
+    ...pool,
+    current:nextCurrent,
+    maximum:nextMaximum,
+    maximumAfterLongRest:options.temporaryCapacityUntilLongRest && maximumDelta > 0
+      ? (pool.maximumAfterLongRest ?? pool.maximum)
+      : pool.maximumAfterLongRest,
+  };
+  validate(next);
+  return {
+    next,
+    delta:amount,
+    provenance:[{ source, status:"applied", reason:`${pool.label} ${pool.current}/${pool.maximum} -> ${next.current}/${next.maximum}` }],
+  };
+}
+
 export function recoverResource(pool: ResourcePool, amount: RecoveryAmount, source: string): ResourceResolution {
   validate(pool);
   if (amount !== "all" && (!Number.isInteger(amount) || amount < 0)) throw new DomainEvaluationError("resource recovery must be a non-negative integer or all");
@@ -53,6 +86,17 @@ export function recoverResource(pool: ResourcePool, amount: RecoveryAmount, sour
   };
 }
 
+function normalizeLongRestMaximum(pool: ResourcePool) {
+  if (pool.maximumAfterLongRest === undefined) return pool;
+  const maximum = pool.maximumAfterLongRest;
+  return {
+    ...pool,
+    current:Math.min(pool.current, maximum),
+    maximum,
+    maximumAfterLongRest:undefined,
+  } satisfies ResourcePool;
+}
+
 export function recoverResources(
   pools: ResourcePool[],
   trigger: "shortRest" | "longRest" | "turnStart",
@@ -60,10 +104,19 @@ export function recoverResources(
   const provenance: ProvenanceRecord[] = [];
   const next = pools.map((pool) => {
     validate(pool);
-    const amount = pool.recovery?.[trigger];
-    if (amount === undefined) return { ...pool };
-    const resolved = recoverResource(pool, amount, `resource-recovery:${trigger}`);
+    const normalized = trigger === "longRest" ? normalizeLongRestMaximum(pool) : { ...pool };
+    const amount = normalized.recovery?.[trigger];
+    if (amount === undefined) {
+      if (trigger === "longRest" && normalized.maximum !== pool.maximum) {
+        provenance.push({ source:"resource-recovery:longRest", status:"applied", reason:`${pool.label} temporary maximum ${pool.maximum} -> ${normalized.maximum}` });
+      }
+      return normalized;
+    }
+    const resolved = recoverResource(normalized, amount, `resource-recovery:${trigger}`);
     provenance.push(...resolved.provenance);
+    if (trigger === "longRest" && normalized.maximum !== pool.maximum) {
+      provenance.push({ source:"resource-recovery:longRest", status:"applied", reason:`${pool.label} temporary maximum ${pool.maximum} -> ${normalized.maximum}` });
+    }
     return resolved.next;
   });
   return { next, provenance };
