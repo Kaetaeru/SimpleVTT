@@ -12,9 +12,9 @@ export const WIZARD_SPELL_ROWS: ReadonlyArray<readonly [nameEn: string, level: n
   ["Longstrider",1], ["Mage Armor",1], ["Magic Missile",1], ["Protection from Evil and Good",1], ["Ray of Sickness",1],
   ["Shield",1], ["Silent Image",1], ["Sleep",1], ["Thunderwave",1], ["Unseen Servant",1],
 
-  ["Acid Arrow",2], ["Alter Self",2], ["Arcane Lock",2], ["Arcanist’s Magic Aura",2], ["Augury",2],
+  ["Acid Arrow",2], ["Alter Self",2], ["Arcane Lock",2], ["Arcanist's Magic Aura",2], ["Augury",2],
   ["Blindness/Deafness",2], ["Blur",2], ["Continual Flame",2], ["Darkness",2], ["Darkvision",2],
-  ["Detect Thoughts",2], ["Dragon’s Breath",2], ["Enhance Ability",2], ["Enlarge/Reduce",2], ["Flaming Sphere",2],
+  ["Detect Thoughts",2], ["Dragon's Breath",2], ["Enhance Ability",2], ["Enlarge/Reduce",2], ["Flaming Sphere",2],
   ["Gentle Repose",2], ["Gust of Wind",2], ["Hold Person",2], ["Invisibility",2], ["Knock",2], ["Levitate",2],
   ["Locate Object",2], ["Magic Mouth",2], ["Magic Weapon",2], ["Mind Spike",2], ["Mirror Image",2], ["Misty Step",2],
   ["Ray of Enfeeblement",2], ["Rope Trick",2], ["Scorching Ray",2], ["See Invisibility",2], ["Shatter",2],
