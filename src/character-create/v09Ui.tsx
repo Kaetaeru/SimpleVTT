@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CharacterCreationOptionVm, CharacterCreationSection, CharacterCreationSectionStatus } from "../app/contracts";
 import { featDescription } from "../app/rulePresentation";
+import { isGenericSpellSummary, SPELL_DESCRIPTION_PENDING, spellNameKo } from "../app/spellPresentation";
 
 export const STATUS_LABEL: Record<CharacterCreationSectionStatus, string> = {
   complete: "완료",
@@ -16,9 +17,12 @@ export function SectionShell({ section, children, aside }: { section: CharacterC
 }
 
 function inferredDetail(option: CharacterCreationOptionVm) {
-  const description = option.description ?? featDescription(option.id) ?? option.summary;
+  const isSpell = option.id.startsWith("dnd.srd521.spell.");
+  const genericSpellSummary = isSpell && isGenericSpellSummary(option.summary);
+  const description = option.description ?? featDescription(option.id) ?? (genericSpellSummary ? SPELL_DESCRIPTION_PENDING : option.summary);
   const detailLines = option.detailLines ?? [
-    ...(option.id.startsWith("dnd.srd521.spell.") ? ["SRD 5.2.1 주문"] : []),
+    ...(isSpell ? ["SRD 5.2.1 주문"] : []),
+    ...(genericSpellSummary ? ["상세 설명 본문 미연결"] : []),
     ...option.grants,
   ];
   return { description, detailLines };
@@ -34,6 +38,11 @@ function popoverPosition(rect: DOMRect): PopoverPosition {
 
 export function OptionCard({ option, onClick }: { option: CharacterCreationOptionVm; onClick?: () => void }) {
   const detail = inferredDetail(option);
+  const isSpell = option.id.startsWith("dnd.srd521.spell.");
+  const genericSpellSummary = isSpell && isGenericSpellSummary(option.summary);
+  const primaryName = isSpell ? spellNameKo(option.id, option.name) : option.name;
+  const secondaryName = option.nameEn && option.nameEn !== primaryName ? option.nameEn : "";
+  const summary = genericSpellSummary ? `${option.summary.replace(/^SRD\s+/, "")} · 상세 설명 미연결` : option.summary;
   const unavailable = !onClick && !option.selected;
   const ref = useRef<HTMLButtonElement>(null);
   const tooltipId = useId();
@@ -66,15 +75,15 @@ export function OptionCard({ option, onClick }: { option: CharacterCreationOptio
       onBlur={() => setOpen(false)}
     >
       <div className="create-option-card-head">
-        <span className="option-monogram">{option.name.slice(0, 1)}</span>
-        <div><strong>{option.name}</strong><small>{option.nameEn}</small></div>
+        <span className="option-monogram">{primaryName.slice(0, 1)}</span>
+        <div><strong>{primaryName}</strong>{secondaryName && <small>{secondaryName}</small>}</div>
         <span className="option-card-state">{option.selected ? "✓" : option.recommended ? "추천" : ""}</span>
       </div>
-      <p className="option-card-summary">{option.summary}</p>
+      <p className="option-card-summary">{summary}</p>
     </button>
     {open && position && createPortal(
       <div id={tooltipId} className="option-detail-popover portal" role="tooltip" style={{ top: position.top, left: position.left, width: position.width }}>
-        <div className="option-detail-title"><strong>{option.name}</strong><small>{option.nameEn}</small></div>
+        <div className="option-detail-title"><strong>{primaryName}</strong>{secondaryName && <small>{secondaryName}</small>}</div>
         <p>{detail.description}</p>
         {detail.detailLines.length > 0 && <div className="option-detail-facts">{detail.detailLines.map((line) => <span key={line}>{line}</span>)}</div>}
         {option.choices.length > 0 && <div className="option-detail-followups"><b>이 선택 뒤에 결정할 것</b>{option.choices.map((choice) => <span key={choice}>{choice}</span>)}</div>}
