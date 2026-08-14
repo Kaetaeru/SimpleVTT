@@ -2,9 +2,10 @@ import { resolveDamage, resolveHealing } from "./damage";
 import { type D20TestResult } from "./d20";
 import { resolveZeroHpAfterDamage } from "./life";
 import { applyHealingToLife } from "./lifeTransitions";
-import { conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
+import { activeConditionIds, conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
 import { concentrationBreakReason, endConcentration, resolveConcentrationDamageCheck } from "./concentration";
+import { terminateEffectsForCreatureState, terminateEffectsForDamage } from "./effects";
 import { resolveTemporaryHpGain } from "./temporaryHp";
 import { hpStateChanges } from "./stateChange";
 import {
@@ -28,6 +29,15 @@ function endActorConcentration(ctx: ResolutionExecutionContext, actorId: string,
   ctx.state.effects = ended.effects;
   ctx.state.concentration[actorId] = ended.next;
   return { current, ended };
+}
+
+function appendExpiredEffects(
+  changes: RuntimeStateChange[],
+  expired: ReturnType<typeof terminateEffectsForDamage>,
+) {
+  for (const effect of expired.expired) {
+    changes.push(effectStateChange(effect.targetId, effect.id, "removed", expired.provenance));
+  }
 }
 
 export function executeDamage(ctx: ResolutionExecutionContext, operation: DamageOp): OperationExecution {
@@ -107,6 +117,26 @@ export function executeDamage(ctx: ResolutionExecutionContext, operation: Damage
         });
       }
     }
+  }
+
+  if (damage.finalDamage > 0) {
+    const terminated = terminateEffectsForDamage(ctx.state.effects, operation.targetId);
+    ctx.state.effects = terminated.active;
+    provenance.push(...terminated.provenance);
+    appendExpiredEffects(changes, terminated);
+  }
+
+  const incapacitated = target.life.unconscious
+    || target.life.dead
+    || activeConditionIds(conditionEffectsFor(ctx.state, operation.targetId)).includes("incapacitated");
+  if (incapacitated || target.life.dead) {
+    const terminated = terminateEffectsForCreatureState(ctx.state.effects, operation.targetId, {
+      incapacitated,
+      dead:target.life.dead,
+    });
+    ctx.state.effects = terminated.active;
+    provenance.push(...terminated.provenance);
+    appendExpiredEffects(changes, terminated);
   }
 
   return {
