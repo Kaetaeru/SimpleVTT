@@ -13,6 +13,8 @@ declare module "./contracts" {
     cantripSources?: Record<string, string>;
     preparedSpellSources?: Record<string, string>;
     spellbookSpellSources?: Record<string, string>;
+    metamagicIds?: string[];
+    metamagicSources?: Record<string, string>;
     spellSlotMaximums?: Record<number, number>;
   }
 
