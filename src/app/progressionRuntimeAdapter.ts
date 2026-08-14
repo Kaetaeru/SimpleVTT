@@ -7,6 +7,7 @@ import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { classById, classByName } from "../domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState, type ProgressionPlan } from "../domain/progression";
+import { wizardSignatureSpellResourceId } from "../domain/wizardProgressionChoices";
 
 const clone = <T,>(value: T): T => structuredClone(value);
 const unique = (values: string[]) => [...new Set(values.filter(Boolean))];
@@ -46,6 +47,22 @@ function creationExpertise(sheet: CharacterSheet) {
   return unique([...selected, ...fromFeatures]);
 }
 
+function ensureSignatureSpellResources(sheet: CharacterSheet) {
+  const presentation = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
+  for (const spellId of sheet.signatureSpellIds ?? []) {
+    const resourceId = wizardSignatureSpellResourceId(spellId);
+    if (sheet.resources.some((resource) => resource.id === resourceId)) continue;
+    sheet.resources.push({
+      id:resourceId,
+      label:`대표 주문 · ${presentation.get(spellId)?.name ?? spellId}`,
+      current:1,
+      max:1,
+      source:sheet.signatureSpellSources?.[spellId] ?? "위저드 20레벨 · 대표 주문 · SRD 5.2.1",
+      recovery:{ shortRest:"all", longRest:"all" },
+    });
+  }
+}
+
 export function ensureProgressionMetadata(sheet: CharacterSheet) {
   if (!sheet.classLevels?.length) {
     const definition = primaryClass(sheet);
@@ -80,6 +97,11 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
   sheet.spellbookSpells = unique(sheet.spellbookSpells ?? []);
   sheet.spellbookSpellSources ??= {};
   for (const spell of sheet.spellbookSpells) sheet.spellbookSpellSources[spell] ??= "Character Creation / existing character";
+  sheet.spellMasterySpellIds ??= {};
+  sheet.spellMasterySources ??= {};
+  sheet.signatureSpellIds = unique(sheet.signatureSpellIds ?? []);
+  sheet.signatureSpellSources ??= {};
+  ensureSignatureSpellResources(sheet);
   sheet.metamagicIds = unique(sheet.metamagicIds ?? []);
   sheet.metamagicSources ??= {};
   for (const metamagicId of sheet.metamagicIds) sheet.metamagicSources[metamagicId] ??= "Existing character / Sorcerer Metamagic";
@@ -119,6 +141,10 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
     spellbookSpellIds:clone(sheet.spellbookSpells ?? []),
     spellbookSpellSources:clone(sheet.spellbookSpellSources ?? {}),
+    spellMasterySpellIds:clone(sheet.spellMasterySpellIds ?? {}),
+    spellMasterySources:clone(sheet.spellMasterySources ?? {}),
+    signatureSpellIds:clone(sheet.signatureSpellIds ?? []),
+    signatureSpellSources:clone(sheet.signatureSpellSources ?? {}),
     metamagicIds:clone(sheet.metamagicIds ?? []),
     metamagicSources:clone(sheet.metamagicSources ?? {}),
     eldritchInvocationIds:clone(sheet.eldritchInvocationIds ?? []),
@@ -250,6 +276,11 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.preparedSpellSources = clone(next.preparedSpellSources ?? {});
   sheet.spellbookSpells = clone(next.spellbookSpellIds ?? []);
   sheet.spellbookSpellSources = clone(next.spellbookSpellSources ?? {});
+  sheet.spellMasterySpellIds = clone(next.spellMasterySpellIds ?? {});
+  sheet.spellMasterySources = clone(next.spellMasterySources ?? {});
+  sheet.signatureSpellIds = clone(next.signatureSpellIds ?? []);
+  sheet.signatureSpellSources = clone(next.signatureSpellSources ?? {});
+  ensureSignatureSpellResources(sheet);
   sheet.metamagicIds = clone(next.metamagicIds ?? []);
   sheet.metamagicSources = clone(next.metamagicSources ?? {});
   sheet.eldritchInvocationIds = clone(next.eldritchInvocationIds ?? []);
