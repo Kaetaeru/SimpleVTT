@@ -1,4 +1,4 @@
-import type { ChoiceDefinition } from "./choiceDefinition";
+import type { ChoiceDefinition, ChoiceSelectionMap } from "./choiceDefinition";
 
 export const SORCERER_ID = "dnd.srd521.class.sorcerer";
 
@@ -54,4 +54,71 @@ export function sorcererMetamagicChoice(args: {
       disabledReason:known.has(option.id) ? "이미 알고 있는 메타매직입니다." : undefined,
     })),
   };
+}
+
+export function sorcererMetamagicReplacementFromId(targetLevel: number) {
+  return `progression.${SORCERER_ID}.${targetLevel}.metamagic-replace.from`;
+}
+
+export function sorcererMetamagicReplacementToId(targetLevel: number) {
+  return `progression.${SORCERER_ID}.${targetLevel}.metamagic-replace.to`;
+}
+
+export function isSorcererMetamagicReplacementChoice(id: string) {
+  return id.startsWith(`progression.${SORCERER_ID}.`) && id.includes(".metamagic-replace.");
+}
+
+export function sorcererMetamagicReplacementChoices(args: {
+  targetLevel: number;
+  knownMetamagicIds: string[];
+  selections: ChoiceSelectionMap;
+}): ChoiceDefinition[] {
+  if (args.targetLevel < 3 || args.knownMetamagicIds.length === 0) return [];
+  const known = new Set(args.knownMetamagicIds);
+  const additions = new Set(
+    args.selections[sorcererMetamagicChoiceId(args.targetLevel)]?.kind === "options"
+      ? args.selections[sorcererMetamagicChoiceId(args.targetLevel)].optionIds
+      : [],
+  );
+  const fromId = sorcererMetamagicReplacementFromId(args.targetLevel);
+  const fromSelection = args.selections[fromId];
+  const selectedFrom = fromSelection?.kind === "options" ? fromSelection.optionIds[0] : undefined;
+  const source = `소서러 ${args.targetLevel}레벨 · 메타매직 교체 · SRD 5.2.1`;
+  const from: ChoiceDefinition = {
+    id:fromId,
+    label:"메타매직 교체 · 기존 옵션",
+    description:"이번 소서러 레벨 상승에서 원한다면 알고 있는 메타매직 하나를 교체할 수 있습니다.",
+    kind:"feature-option",
+    count:1,
+    required:false,
+    status:"ready",
+    source,
+    options:METAMAGIC_OPTIONS.filter((option) => known.has(option.id)).map((option) => ({
+      id:option.id,
+      label:option.label,
+      description:option.description,
+    })),
+  };
+  if (!selectedFrom) return [from];
+  const to: ChoiceDefinition = {
+    id:sorcererMetamagicReplacementToId(args.targetLevel),
+    label:"메타매직 교체 · 새 옵션",
+    description:"기존 옵션을 대신해 아직 알고 있지 않은 메타매직 하나를 선택합니다.",
+    kind:"feature-option",
+    count:1,
+    required:true,
+    status:"ready",
+    source,
+    options:METAMAGIC_OPTIONS.map((option) => ({
+      id:option.id,
+      label:option.label,
+      description:`소서리 포인트 ${option.cost} · ${option.description}`,
+      disabledReason:known.has(option.id)
+        ? (option.id === selectedFrom ? "같은 옵션으로 교체할 수 없습니다." : "이미 알고 있는 메타매직입니다.")
+        : additions.has(option.id)
+          ? "이번 레벨에서 새로 추가하는 메타매직과 중복됩니다."
+          : undefined,
+    })),
+  };
+  return [from,to];
 }
