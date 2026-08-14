@@ -12,6 +12,7 @@ declare module "./contracts" {
     languageSources?: Record<string, string>;
     cantripSources?: Record<string, string>;
     preparedSpellSources?: Record<string, string>;
+    spellbookSpellSources?: Record<string, string>;
     spellSlotMaximums?: Record<number, number>;
   }
 
