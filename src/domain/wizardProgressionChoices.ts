@@ -82,7 +82,7 @@ function availableWizardBookIds(args: {
 }
 
 function isActionCastingTime(value?: string) {
-  return Boolean(value && /행동/.test(value) && !/보너스 행동|추가 행동/.test(value));
+  return Boolean(value && /행동/.test(value) && !/보너스 행동|추가 행동|반응|reaction/i.test(value));
 }
 
 export function wizardSpellMasteryChoiceId(spellLevel: 1 | 2) {
