@@ -69,6 +69,15 @@ export type ResolutionOperation =
       visibleSourceIds?: string[];
     })
   | (OperationBase & {
+      kind:"free-move";
+      actorId?:string;
+      distanceFeet:number;
+      maximumDistanceFeet:number;
+      doesNotProvokeOpportunityAttacks?:boolean;
+      destinationMovesCloserToVisibleFrighteningSource?:boolean;
+      visibleSourceIds?:string[];
+    })
+  | (OperationBase & {
       kind: "spend-resource";
       actorId?: string;
       resourceId: string;
