@@ -1,6 +1,7 @@
 import { BARD_SPELL_ROWS } from "./bardSpellList";
 import { CLERIC_SPELL_ROWS } from "./clericSpellList";
 import { DRUID_SPELL_ROWS } from "./druidSpellList";
+import { SORCERER_SPELL_ROWS } from "./sorcererSpellList";
 import { WIZARD_SPELL_ROWS } from "./wizardSpellList";
 
 export interface ClassSpellListEntry {
@@ -54,6 +55,12 @@ const DRUID: ClassSpellList = {
   classId:"dnd.srd521.class.druid",
   source:{ document:"System Reference Document 5.2.1", page:44, license:"CC-BY-4.0" },
   spells:DRUID_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
+};
+
+const SORCERER: ClassSpellList = {
+  classId:"dnd.srd521.class.sorcerer",
+  source:{ document:"System Reference Document 5.2.1", page:67, license:"CC-BY-4.0" },
+  spells:SORCERER_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
 };
 
 const WIZARD: ClassSpellList = {
@@ -121,6 +128,7 @@ const LISTS = new Map<string, ClassSpellList>([
   [BARD.classId, BARD],
   [CLERIC.classId, CLERIC],
   [DRUID.classId, DRUID],
+  [SORCERER.classId, SORCERER],
   [WIZARD.classId, WIZARD],
   [RANGER.classId, RANGER],
   [PALADIN.classId, PALADIN],
