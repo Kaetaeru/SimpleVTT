@@ -7,6 +7,7 @@ import {
   frightenedMovementRestriction,
 } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
+import { selectEffectTurnActivity } from "./effects";
 import { findResource, spendResource } from "./resources";
 import { openReactorWindow, resolveReactionChoice } from "./reaction";
 import { resolveTargeting } from "./targeting";
@@ -58,8 +59,23 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
   if (operation.slot === "bonus-action" && !operation.bonusActionGranted) {
     throw new DomainEvaluationError("bonus action requires an explicit granting rule");
   }
+
+  let restrictionProvenance: ProvenanceRecord[] = [];
+  if (ctx.state.clock.activeActorId === actorId && (operation.slot === "action" || operation.slot === "bonus-action")) {
+    const selected = selectEffectTurnActivity(
+      ctx.state.effects,
+      actorId,
+      operation.slot === "action" ? "action" : "bonus-action",
+    );
+    ctx.state.effects = selected.effects;
+    restrictionProvenance = selected.provenance;
+  }
+
   actor.economy = { ...before, [key]:false };
-  const provenance: ProvenanceRecord[] = [{ source:ctx.pending.sourceId, status:"applied", reason:`${operation.slot} spent` }];
+  const provenance: ProvenanceRecord[] = [
+    ...restrictionProvenance,
+    { source:ctx.pending.sourceId, status:"applied", reason:`${operation.slot} spent` },
+  ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
   const result = { slot:operation.slot, spent:true };
   return {
@@ -77,13 +93,24 @@ export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):Op
     operation.visibleSourceIds ?? [],
   );
   if (restriction) throw new DomainEvaluationError(restriction);
+
+  let restrictionProvenance: ProvenanceRecord[] = [];
+  if (ctx.state.clock.activeActorId === actorId) {
+    const selected = selectEffectTurnActivity(ctx.state.effects, actorId, "movement");
+    ctx.state.effects = selected.effects;
+    restrictionProvenance = selected.provenance;
+  }
+
   const before = actor.economy;
   actor.economy = useMovement(before, operation.distanceFeet);
-  const provenance:ProvenanceRecord[] = [{
-    source:ctx.pending.sourceId,
-    status:"applied",
-    reason:`${actorId} moves ${operation.distanceFeet} ft`,
-  }];
+  const provenance:ProvenanceRecord[] = [
+    ...restrictionProvenance,
+    {
+      source:ctx.pending.sourceId,
+      status:"applied",
+      reason:`${actorId} moves ${operation.distanceFeet} ft`,
+    },
+  ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
   const result = { distanceFeet:operation.distanceFeet, remaining:actor.economy.movement };
   return {
