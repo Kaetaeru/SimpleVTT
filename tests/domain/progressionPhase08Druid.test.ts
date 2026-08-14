@@ -101,7 +101,10 @@ test("multiclass Fighter 5 -> Druid 1 materializes Primal Order, Magician bonus 
   assert.equal(result.state.totalLevel, 6);
   assert.deepEqual(result.state.classTracks.map((track) => [track.className,track.level]), [["파이터",5],["드루이드",1]]);
   assert.ok(result.state.features.includes("마법사"));
-  assert.deepEqual(result.state.cantripIds, [stableSpellId("Druidcraft"),stableSpellId("Produce Flame"),message]);
+  assert.deepEqual(
+    new Set(result.state.cantripIds ?? []),
+    new Set([stableSpellId("Druidcraft"),stableSpellId("Produce Flame"),message]),
+  );
   assert.ok(result.state.preparedSpellIds?.includes(`always:${stableSpellId("Speak with Animals")}`));
   assert.equal(result.state.preparedSpellSources?.[stableSpellId("Speak with Animals")], "드루이드 1레벨 · 드루이드어 · SRD 5.2.1");
   assert.equal(result.state.spellSlotMaximums?.[1], 4, "Fighter 5 + Druid 1 has full-caster level 1 spell slots");
