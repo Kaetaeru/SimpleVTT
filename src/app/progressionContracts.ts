@@ -35,6 +35,9 @@ declare module "./contracts" {
     persistentFeatureOptionSources?: Record<string, string>;
     subclassIds?: Record<string, string>;
     subclassSources?: Record<string, string>;
+    pactTomeCantripIds?: string[];
+    pactTomeRitualSpellIds?: string[];
+    pactTomeSpellSources?: Record<string, string>;
     pactMagicSlotLevel?: number;
     pactMagicSlotMaximum?: number;
     spellSlotMaximums?: Record<number, number>;
