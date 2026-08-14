@@ -70,7 +70,7 @@ type CreationIndex = {
   artisanToolIds: string[];
 };
 
-const INDEX = creationIndexJson as CreationIndex;
+const INDEX = creationIndexJson as unknown as CreationIndex;
 export const CREATION_SOURCE = `SRD 5.2.1 · ${INDEX.source.translationRevision.slice(0, 8)}`;
 export const SKILL_LABELS = INDEX.skills;
 export const ALL_SKILLS = Object.values(SKILL_LABELS);
@@ -89,14 +89,15 @@ const itemById = new Map(itemEntries.map((entry) => [entry.id, entry]));
 const classById = new Map(classEntries.map((entry) => [entry.id, entry]));
 const speciesEntries = originEntries.filter((entry) => entry.category === "species");
 const backgroundEntries = originEntries.filter((entry) => entry.category === "background");
+const EMPTY_ENTRY: Entry = { id:"__empty__", category:"", presentation:{ originalName:"", locales:{} }, mechanics:[] };
 
 export const classIdFromName = (name: string) => CLASSES.find((entry) => entry.name === name || entry.nameEn === name || entry.id === name)?.id ?? "dnd.srd521.class.fighter";
 export const speciesIdFromName = (name: string) => speciesEntries.find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
 export const backgroundIdFromName = (name: string) => backgroundEntries.find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
 export const classSemantics = (classId: string): IndexedClassSemantics => INDEX.classes[classId] ?? { skills: { count: 0, options: [] }, choices: [] };
-export const classDefinition = (classId: string) => config<ClassDef>(classById.get(classId) ?? ({ mechanics: [] } as Entry), "class-definition");
-export const speciesDefinition = (name: string) => config<SpeciesDef>(speciesEntries.find((entry) => entryName(entry) === name) ?? ({ mechanics: [] } as Entry), "species-definition") ?? {};
-export const backgroundDefinition = (name: string) => config<BackgroundDef>(backgroundEntries.find((entry) => entryName(entry) === name) ?? ({ mechanics: [] } as Entry), "background-definition") ?? {};
+export const classDefinition = (classId: string) => config<ClassDef>(classById.get(classId) ?? EMPTY_ENTRY, "class-definition");
+export const speciesDefinition = (name: string) => config<SpeciesDef>(speciesEntries.find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "species-definition") ?? {};
+export const backgroundDefinition = (name: string) => config<BackgroundDef>(backgroundEntries.find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "background-definition") ?? {};
 export const speciesTraits = (name: string) => speciesDefinition(name).traits ?? [];
 export const speciesSemantics = (name: string): IndexedSpeciesSemantics => INDEX.species?.[speciesIdFromName(name)] ?? {};
 
@@ -255,10 +256,10 @@ export function humanOriginFeatOptions(backgroundName: string): Option[] {
   const existing = canonicalFeatId(backgroundOriginFeat(backgroundName));
   return originFeatOptions.filter((item) => {
     if (item.id !== existing) return true;
-    const def = config<{ repeatable?: boolean }>(featEntries.find((entry) => entry.id === item.id) ?? ({ mechanics: [] } as Entry), "feat-definition");
+    const def = config<{ repeatable?: boolean }>(featEntries.find((entry) => entry.id === item.id) ?? EMPTY_ENTRY, "feat-definition");
     return def?.repeatable === true;
   });
 }
 
-export const toolDefinition = (id: string) => config<ToolDef>(itemById.get(id) ?? ({ mechanics: [] } as Entry), "tool-definition");
+export const toolDefinition = (id: string) => config<ToolDef>(itemById.get(id) ?? EMPTY_ENTRY, "tool-definition");
 export type { CharacterCreationOptionVm };
