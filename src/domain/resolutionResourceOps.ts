@@ -1,10 +1,11 @@
 import { requireCombatant } from "./combatState";
-import { gainResource, type ResourcePool } from "./resources";
+import { gainResource, setResourceRecoveryLockout, type ResourcePool } from "./resources";
 import { resourceStateChange } from "./runtimeStateChange";
 import { makeEvent, type OperationExecution, type ResolutionExecutionContext } from "./resolutionContext";
 import type { ResolutionOperation } from "./resolutionTypes";
 
 type GainResourceOp = Extract<ResolutionOperation, { kind:"gain-resource" }>;
+type SetResourceRecoveryLockoutOp = Extract<ResolutionOperation, { kind:"set-resource-recovery-lockout" }>;
 
 export function executeGainResource(ctx: ResolutionExecutionContext, operation: GainResourceOp): OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
@@ -38,6 +39,31 @@ export function executeGainResource(ctx: ResolutionExecutionContext, operation: 
       resolved,
       resolved.provenance,
       changes,
+      actorId,
+    ),
+  };
+}
+
+export function executeSetResourceRecoveryLockout(
+  ctx:ResolutionExecutionContext,
+  operation:SetResourceRecoveryLockoutOp,
+):OperationExecution {
+  const actorId = operation.actorId ?? ctx.pending.actorId;
+  const actor = requireCombatant(ctx.state,actorId);
+  const index = actor.resources.findIndex((pool) => pool.id === operation.resourceId);
+  if (index < 0) throw new Error(`resource not found: ${operation.resourceId}`);
+  const before = actor.resources[index];
+  const resolved = setResourceRecoveryLockout(before,operation.trigger,operation.rests,ctx.pending.sourceId);
+  actor.resources[index] = resolved.next;
+  return {
+    result:resolved,
+    event:makeEvent(
+      ctx.pending,
+      operation,
+      `${operation.resourceId} ${operation.trigger} recovery locked for ${operation.rests} rests`,
+      resolved,
+      resolved.provenance,
+      [],
       actorId,
     ),
   };
