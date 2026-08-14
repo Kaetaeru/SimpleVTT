@@ -3,6 +3,14 @@ import type { ChoiceSelectionMap } from "../domain/choiceDefinition";
 import type { ProgressionClassTrack, ProgressionPlan } from "../domain/progression";
 
 declare module "./contracts" {
+  interface CharacterResourceVm {
+    recovery?: {
+      shortRest?: number | "all";
+      longRest?: number | "all";
+      turnStart?: number | "all";
+    };
+  }
+
   interface CharacterSheet {
     classLevels?: ProgressionClassTrack[];
     hitDiceByDie?: Record<string, number>;
@@ -13,6 +21,10 @@ declare module "./contracts" {
     cantripSources?: Record<string, string>;
     preparedSpellSources?: Record<string, string>;
     spellbookSpellSources?: Record<string, string>;
+    spellMasterySpellIds?: Record<number, string>;
+    spellMasterySources?: Record<number, string>;
+    signatureSpellIds?: string[];
+    signatureSpellSources?: Record<string, string>;
     metamagicIds?: string[];
     metamagicSources?: Record<string, string>;
     eldritchInvocationIds?: string[];
