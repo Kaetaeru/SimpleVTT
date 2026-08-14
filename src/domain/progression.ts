@@ -34,6 +34,17 @@ import {
   sorcererMetamagicChoice,
 } from "./sorcererProgressionChoices";
 import {
+  ELDRITCH_INVOCATIONS,
+  WARLOCK_ID,
+  invocationBaseId,
+  invocationTargetId,
+  isWarlockInvocationChoice,
+  mysticArcanumSpellLevel,
+  pactMagicProgression,
+  warlockInvocationChoices,
+  warlockMysticArcanumChoice,
+} from "./warlockProgressionChoices";
+import {
   WIZARD_ID,
   wizardScholarChoice,
   wizardSpellbookChoice,
@@ -73,6 +84,12 @@ export interface ProgressionCharacterState {
   spellbookSpellSources?: Record<string, string>;
   metamagicIds?: string[];
   metamagicSources?: Record<string, string>;
+  eldritchInvocationIds?: string[];
+  eldritchInvocationSources?: Record<string, string>;
+  mysticArcanumSpellIds?: Record<number, string>;
+  mysticArcanumSources?: Record<number, string>;
+  pactMagicSlotLevel?: number;
+  pactMagicSlotMaximum?: number;
   spellSlotMaximums?: Record<number, number>;
 }
 
@@ -83,6 +100,7 @@ export interface ProgressionRequest {
   hpRoll?: number;
   selections: ChoiceSelectionMap;
   featOptions?: Array<{ id: string; label: string; description?: string }>;
+  originFeatOptions?: Array<{ id: string; label: string; description?: string }>;
   fightingStyleOptions?: Array<{ id: string; label: string; description?: string }>;
   druidCantripOptions?: Array<{ id: string; label: string; description?: string }>;
   clericCantripOptions?: Array<{ id: string; label: string; description?: string }>;
@@ -120,6 +138,8 @@ export interface ProgressionPlan {
   hitDiceAfter: Record<string, number>;
   spellcastingBefore: { casterLevel: number; slots: Record<number, number> };
   spellcastingAfter: { casterLevel: number; slots: Record<number, number> };
+  pactMagicBefore: { slotLevel: number; slotMaximum: number };
+  pactMagicAfter: { slotLevel: number; slotMaximum: number };
   diffs: ProgressionDiff[];
 }
 
@@ -144,6 +164,7 @@ function unique(values: string[]) { return [...new Set(values.filter(Boolean))];
 function normalizedSpellId(id: string) { return id.replace(/^always:/, ""); }
 function isCantripChoiceId(id: string) { return id.endsWith(".column.소마법") || id.endsWith(".cantrip") || id.endsWith(".cantrips"); }
 function bardMagicalSecretsListsReady() { return classSpellListEntries(WIZARD_ID).length > 0; }
+function classLevelFor(tracks: ProgressionClassTrack[], classId: string) { return tracks.find((track) => track.classId === classId)?.level ?? 0; }
 
 function expertiseChoice(
   state: ProgressionCharacterState,
@@ -303,6 +324,7 @@ function classFightingStyleChoices(
 }
 
 function highestClassSpellSlotLevel(classId: string, classLevel: number) {
+  if (classId === WARLOCK_ID) return pactMagicProgression(classLevel).slotLevel;
   let highest = 0;
   for (let spellLevel = 1; spellLevel <= 9; spellLevel += 1) {
     if (numericProgressionColumn(classId, classLevel, String(spellLevel)) > 0) highest = spellLevel;
@@ -388,7 +410,9 @@ function preparedSpellChoice(
       ? `마법의 비밀에 따라 바드, 클레릭, 드루이드, 위저드 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`
       : targetClassId === WIZARD_ID
         ? `주문책에 기록된 ${maxSpellLevel}레벨 이하 위저드 주문 중 ${count}개를 추가로 준비합니다.`
-        : `${definition.nameKo} 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`,
+        : targetClassId === WARLOCK_ID
+          ? `계약 마법 슬롯 레벨 ${maxSpellLevel} 이하 워락 주문 중 ${count}개를 추가로 준비합니다.`
+          : `${definition.nameKo} 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`,
     kind:"spell",
     count,
     required:true,
@@ -491,6 +515,18 @@ function featureChoiceDefinitions(
         continue;
       }
     }
+    if (targetClassId === WARLOCK_ID && feature === "섬뜩한 기원술") continue;
+    if (targetClassId === WARLOCK_ID && feature.startsWith("신비한 비전")) {
+      const arcanum = warlockMysticArcanumChoice({
+        targetLevel,
+        knownArcanumSpellIds:state.mysticArcanumSpellIds ?? {},
+        spellOptions:request.spellOptions,
+      });
+      if (arcanum) {
+        result.push(arcanum);
+        continue;
+      }
+    }
     if (targetClassId === WIZARD_ID && feature === "학자") {
       const scholar = wizardScholarChoice({
         targetLevel,
@@ -567,6 +603,19 @@ function columnChoiceDefinitions(
         continue;
       }
     }
+    if (watchedColumn.key === "기원술" && targetClassId === WARLOCK_ID) {
+      result.push(...warlockInvocationChoices({
+        targetLevel:toLevel,
+        count,
+        knownInvocationIds:state.eldritchInvocationIds ?? [],
+        knownCantripIds:state.cantripIds ?? [],
+        knownFeatureIds:state.features,
+        originFeatOptions:request.originFeatOptions ?? [],
+        spellOptions:request.spellOptions,
+        selections:request.selections,
+      }));
+      continue;
+    }
     result.push({
       id:`progression.${targetClassId}.${toLevel}.column.${watchedColumn.key}`,
       label:`${watchedColumn.label} +${count}`,
@@ -608,6 +657,7 @@ function displayTracks(tracks: ProgressionClassTrack[]) { return tracks.map((tra
 function displayHitDice(hitDice: Record<string, number>) { return Object.entries(hitDice).filter(([,count]) => count > 0).sort().map(([die,count]) => `${count}${die}`).join(" + ") || "—"; }
 function displaySlots(slots: Record<number, number>) { const text = Object.entries(slots).filter(([,count]) => count > 0).map(([level,count]) => `${level}레벨 ${count}`).join(" · "); return text || "없음"; }
 function displayList(values: string[]) { return values.length ? values.join(", ") : "없음"; }
+function displayPactMagic(value: { slotLevel:number; slotMaximum:number }) { return value.slotMaximum > 0 ? `${value.slotLevel}레벨 × ${value.slotMaximum}` : "없음"; }
 
 export function buildProgressionPlan(state: ProgressionCharacterState, request: ProgressionRequest): ProgressionPlan {
   const target = classById(request.targetClassId);
@@ -656,6 +706,19 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
     for (const id of selectedOptionIds(choice, request.selections)) selectedCantripCounts.set(id, (selectedCantripCounts.get(id) ?? 0) + 1);
   }
   for (const [id, count] of selectedCantripCounts) if (count > 1) blocking.push(`소마법 선택은 같은 progression 트랜잭션 안에서 중복될 수 없습니다: ${id}`);
+  const invocationSelections = choices
+    .filter((choice) => isWarlockInvocationChoice(choice.id))
+    .flatMap((choice) => selectedOptionIds(choice, request.selections));
+  const invocationExactCounts = new Map<string,number>();
+  const invocationBaseCounts = new Map<string,number>();
+  for (const id of invocationSelections) {
+    invocationExactCounts.set(id, (invocationExactCounts.get(id) ?? 0) + 1);
+    const base = invocationBaseId(id);
+    invocationBaseCounts.set(base, (invocationBaseCounts.get(base) ?? 0) + 1);
+  }
+  for (const [id, count] of invocationExactCounts) if (count > 1) blocking.push(`같은 섬뜩한 기원술 획득은 한 progression 트랜잭션에서 중복될 수 없습니다: ${id}`);
+  const repeatableInvocationIds = new Set(ELDRITCH_INVOCATIONS.filter((entry) => entry.repeatable).map((entry) => entry.id));
+  for (const [base, count] of invocationBaseCounts) if (count > 1 && !repeatableInvocationIds.has(base)) blocking.push(`Repeatable이 아닌 섬뜩한 기원술은 한 번만 선택할 수 있습니다: ${base}`);
   const choiceFeatureSet = new Set(choices.map((choice) => choice.label.replace(/ \+\d+$/, "")));
   const automaticGrants = rowFeatures.filter((feature) => feature !== "능력치 향상" && feature !== "에픽 은총" && feature !== "마법의 비밀" && !feature.includes("서브클래스") && !choiceFeatureSet.has(feature) && !CHOICE_FEATURE_NAMES.has(feature) && !isDruidElementalFuryFeature(feature) && !feature.startsWith("신비한 비전") && !/선택/.test(feature));
   const classTracksBefore = clone(state.classTracks);
@@ -684,6 +747,8 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const proficiencyAfter = proficiencyBonusForTotalLevel(toTotalLevel);
   const spellcastingBefore = multiclassSpellSlots(classTracksBefore);
   const spellcastingAfter = multiclassSpellSlots(classTracksAfter);
+  const pactMagicBefore = pactMagicProgression(classLevelFor(classTracksBefore, WARLOCK_ID));
+  const pactMagicAfter = pactMagicProgression(classLevelFor(classTracksAfter, WARLOCK_ID));
   const multiclassGrants = isMulticlass ? target.multiclassGrants : [];
   const expertiseBefore = unique(state.expertiseSkills ?? []);
   const expertiseAdded = choices.filter((choice) => choice.kind === "expertise").flatMap((choice) => selectedOptionLabels(choice, request.selections));
@@ -708,6 +773,12 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const metamagicLabels = choices
     .filter((choice) => isSorcererMetamagicChoice(choice.id))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const invocationLabels = choices
+    .filter((choice) => isWarlockInvocationChoice(choice.id))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const arcanumLabels = choices
+    .filter((choice) => choice.id.includes(".mystic-arcanum."))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const spellbookLabels = target.id === WIZARD_ID
     ? choices.filter((choice) => choice.id === wizardSpellbookChoiceId(targetClassLevel)).flatMap((choice) => selectedOptionLabels(choice, request.selections))
     : [];
@@ -723,6 +794,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
     { label:"숙련 보너스", before:`+${state.proficiencyBonus}`, after:`+${proficiencyAfter}`, source:"총 캐릭터 레벨" },
   ];
   if (spellcastingBefore.casterLevel !== spellcastingAfter.casterLevel || displaySlots(spellcastingBefore.slots) !== displaySlots(spellcastingAfter.slots)) diffs.push({ label:"멀티클래스 주문 슬롯", before:displaySlots(spellcastingBefore.slots), after:displaySlots(spellcastingAfter.slots), source:"SRD Multiclass Spellcaster Level" });
+  if (displayPactMagic(pactMagicBefore) !== displayPactMagic(pactMagicAfter)) diffs.push({ label:"계약 마법 슬롯", before:displayPactMagic(pactMagicBefore), after:displayPactMagic(pactMagicAfter), source:"Warlock Pact Magic · SRD 5.2.1" });
   if (expertiseAfter.length !== expertiseBefore.length) diffs.push({ label:"전문화", before:displayList(expertiseBefore), after:displayList(expertiseAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (languagesAfter.length !== languagesBefore.length) diffs.push({ label:"언어", before:displayList(languagesBefore), after:displayList(languagesAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (fightingStyleLabels.length) diffs.push({ label:"전투 방식", before:"—", after:fightingStyleLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -731,6 +803,8 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (clericFeatureLabels.length) diffs.push({ label:"클레릭 선택", before:"—", after:clericFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (druidFeatureLabels.length) diffs.push({ label:"드루이드 선택", before:"—", after:druidFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (metamagicLabels.length) diffs.push({ label:"메타매직", before:String((state.metamagicIds ?? []).length), after:String((state.metamagicIds ?? []).length + metamagicLabels.length), source:`소서러 ${targetClassLevel}레벨 · SRD 5.2.1` });
+  if (invocationLabels.length) diffs.push({ label:"섬뜩한 기원술", before:String((state.eldritchInvocationIds ?? []).length), after:String((state.eldritchInvocationIds ?? []).length + invocationLabels.length), source:`워락 ${targetClassLevel}레벨 · SRD 5.2.1` });
+  if (arcanumLabels.length) diffs.push({ label:"신비한 비전", before:"—", after:arcanumLabels.join(", "), source:`워락 ${targetClassLevel}레벨 · SRD 5.2.1` });
   if (spellbookLabels.length) diffs.push({ label:"주문책 추가", before:"—", after:spellbookLabels.join(", "), source:`위저드 ${targetClassLevel}레벨 · SRD 5.2.1` });
   if (automaticPrepared.length) diffs.push({ label:"항상 준비 주문", before:"—", after:automaticPrepared.map((entry) => entry.nameEn).join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -739,7 +813,8 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
     targetClassId:target.id, targetClassName:target.nameKo, targetClassLevel, fromTotalLevel:state.totalLevel, toTotalLevel,
     isMulticlass, eligible, eligibilityReason, automaticGrants, multiclassGrants, choices, blocking:[...new Set(blocking)], warnings:[...new Set(warnings)],
     hp:{ hitDie:target.hitDie, method:request.hpMethod, baseGain, constitutionModifier:oldCon, gainBeforeConRetroactive, retroactiveConstitutionGain, totalGain },
-    proficiencyBefore:state.proficiencyBonus, proficiencyAfter, classTracksBefore, classTracksAfter, hitDiceBefore, hitDiceAfter, spellcastingBefore, spellcastingAfter, diffs,
+    proficiencyBefore:state.proficiencyBonus, proficiencyAfter, classTracksBefore, classTracksAfter, hitDiceBefore, hitDiceAfter,
+    spellcastingBefore, spellcastingAfter, pactMagicBefore, pactMagicAfter, diffs,
   };
 }
 
@@ -758,6 +833,8 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   next.hpCurrent = Math.min(next.hpCurrent, next.hpMaximum);
   next.abilities = asi.abilities;
   next.spellSlotMaximums = clone(plan.spellcastingAfter.slots);
+  next.pactMagicSlotLevel = plan.pactMagicAfter.slotLevel;
+  next.pactMagicSlotMaximum = plan.pactMagicAfter.slotMaximum;
   next.features.push(...plan.automaticGrants);
   const expertiseSkills = new Set(next.expertiseSkills ?? []);
   const expertiseSources = { ...(next.expertiseSources ?? {}) };
@@ -799,6 +876,33 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   }
   next.metamagicIds = [...metamagicIds];
   next.metamagicSources = metamagicSources;
+  const invocationIds = new Set(next.eldritchInvocationIds ?? []);
+  const invocationSources = { ...(next.eldritchInvocationSources ?? {}) };
+  for (const choice of plan.choices.filter((entry) => isWarlockInvocationChoice(entry.id))) {
+    for (const acquisitionId of selectedOptionIds(choice, request.selections)) {
+      invocationIds.add(acquisitionId);
+      invocationSources[acquisitionId] = choice.source;
+      if (invocationBaseId(acquisitionId) === "invocation:lessons-of-the-first-ones") {
+        const featId = invocationTargetId(acquisitionId);
+        if (featId) next.features.push(featId);
+      }
+    }
+  }
+  next.eldritchInvocationIds = [...invocationIds];
+  next.eldritchInvocationSources = invocationSources;
+  const arcanumIds = { ...(next.mysticArcanumSpellIds ?? {}) };
+  const arcanumSources = { ...(next.mysticArcanumSources ?? {}) };
+  const arcanumLevel = mysticArcanumSpellLevel(plan.targetClassLevel);
+  const arcanumChoice = plan.choices.find((choice) => choice.id.includes(".mystic-arcanum."));
+  if (arcanumLevel && arcanumChoice) {
+    const spellId = selectedOptionIds(arcanumChoice, request.selections)[0];
+    if (spellId) {
+      arcanumIds[arcanumLevel] = spellId;
+      arcanumSources[arcanumLevel] = arcanumChoice.source;
+    }
+  }
+  next.mysticArcanumSpellIds = arcanumIds;
+  next.mysticArcanumSources = arcanumSources;
   const cantripIds = [...(next.cantripIds ?? [])];
   const cantripKeys = new Set(cantripIds);
   const cantripSources = { ...(next.cantripSources ?? {}) };
