@@ -110,6 +110,7 @@ export function compileTurnUndead(request: TurnUndeadRequest): PendingResolution
       kind:"use-economy",
       actorId:request.actorId,
       slot:"action",
+      actionKind:"magic",
     },
     {
       id:`${request.id}:channel-divinity`,
