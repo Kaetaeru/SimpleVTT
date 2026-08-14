@@ -7,6 +7,8 @@ import { classById, classByName } from "../domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState, type ProgressionPlan } from "../domain/progression";
 
 const clone = <T,>(value: T): T => structuredClone(value);
+const unique = (values: string[]) => [...new Set(values.filter(Boolean))];
+const normalizedSkillName = (value: string) => value.replace(/\s+[+-]\d+$/, "").trim();
 
 type AdapterState = {
   activeCharacter: CharacterSheet;
@@ -30,6 +32,17 @@ function primaryClass(sheet: CharacterSheet) {
   return classByName(sheet.className) ?? classByName(sheet.className.split("/")[0]?.trim() ?? sheet.className);
 }
 
+function creationExpertise(sheet: CharacterSheet) {
+  const selected = (sheet.creationSelections?.["class.expertise"] ?? [])
+    .map((value) => value.replace(/^expertise\./, ""))
+    .map(normalizedSkillName);
+  const fromFeatures = sheet.features.flatMap((feature) => {
+    const match = feature.match(/^(?:expertise|전문화)\s*·\s*(.+)$/i);
+    return match ? [normalizedSkillName(match[1])] : [];
+  });
+  return unique([...selected, ...fromFeatures]);
+}
+
 export function ensureProgressionMetadata(sheet: CharacterSheet) {
   if (!sheet.classLevels?.length) {
     const definition = primaryClass(sheet);
@@ -45,6 +58,10 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
     }
     sheet.hitDiceByDie = dice;
   }
+  const migratedExpertise = creationExpertise(sheet);
+  sheet.expertiseSkills = unique([...(sheet.expertiseSkills ?? []), ...migratedExpertise]);
+  sheet.expertiseSources ??= {};
+  for (const skill of migratedExpertise) sheet.expertiseSources[skill] ??= "SRD 5.2.1 · Character Creation · 전문화";
   sheet.progressionRevision ??= 0;
   return sheet;
 }
@@ -63,6 +80,9 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     classTracks:clone(sheet.classLevels ?? []),
     hitDiceByDie:clone(sheet.hitDiceByDie ?? {}),
     features:clone(sheet.features),
+    proficientSkills:unique(sheet.skills.map(normalizedSkillName)),
+    expertiseSkills:clone(sheet.expertiseSkills ?? []),
+    expertiseSources:clone(sheet.expertiseSources ?? {}),
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
   };
 }
@@ -135,6 +155,8 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.classLevels = clone(next.classTracks);
   sheet.hitDiceByDie = clone(next.hitDiceByDie);
   sheet.progressionRevision = next.revision;
+  sheet.expertiseSkills = clone(next.expertiseSkills ?? []);
+  sheet.expertiseSources = clone(next.expertiseSources ?? {});
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
@@ -259,7 +281,7 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     title:`레벨 업 ${result.plan.fromTotalLevel} → ${result.plan.toTotalLevel}`,
     summary:`${result.plan.targetClassName} ${result.plan.targetClassLevel}레벨 · HP ${before.maxHp} → ${internal.activeCharacter.maxHp}`,
     detail:result.plan.diffs.map((diff) => `${diff.label}: ${diff.before} → ${diff.after} (${diff.source})`),
-    stateChanges:["Phase 07 Progression transaction → Character Revision", `progressionRevision ${stateBefore.revision} → ${result.state.revision}`],
+    stateChanges:["Phase 08 Progression transaction → Character Revision", `progressionRevision ${stateBefore.revision} → ${result.state.revision}`],
   });
   internal.levelUpDraft = null;
   return internal.getSnapshot();
