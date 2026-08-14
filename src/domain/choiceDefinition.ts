@@ -48,14 +48,16 @@ export interface ChoiceValidationIssue {
 export function validateChoiceDefinitions(definitions: ChoiceDefinition[], selections: ChoiceSelectionMap): ChoiceValidationIssue[] {
   const issues: ChoiceValidationIssue[] = [];
   for (const definition of definitions) {
-    if (!definition.required || definition.status === "not-applicable") continue;
+    if (definition.status === "not-applicable") continue;
+    const selection = selections[definition.id];
     if (definition.status === "catalog-pending") {
-      issues.push({ choiceId: definition.id, severity: "blocking", message: definition.pendingReason ?? `${definition.label} 선택 데이터가 아직 연결되지 않았습니다.` });
+      if (definition.required || selection) {
+        issues.push({ choiceId: definition.id, severity: "blocking", message: definition.pendingReason ?? `${definition.label} 선택 데이터가 아직 연결되지 않았습니다.` });
+      }
       continue;
     }
-    const selection = selections[definition.id];
     if (!selection) {
-      issues.push({ choiceId: definition.id, severity: "blocking", message: `${definition.label} 선택이 필요합니다.` });
+      if (definition.required) issues.push({ choiceId: definition.id, severity: "blocking", message: `${definition.label} 선택이 필요합니다.` });
       continue;
     }
     if (definition.kind === "asi-or-feat") {
