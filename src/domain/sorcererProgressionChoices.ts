@@ -75,11 +75,8 @@ export function sorcererMetamagicReplacementChoices(args: {
 }): ChoiceDefinition[] {
   if (args.targetLevel < 3 || args.knownMetamagicIds.length === 0) return [];
   const known = new Set(args.knownMetamagicIds);
-  const additions = new Set(
-    args.selections[sorcererMetamagicChoiceId(args.targetLevel)]?.kind === "options"
-      ? args.selections[sorcererMetamagicChoiceId(args.targetLevel)].optionIds
-      : [],
-  );
+  const additionSelection = args.selections[sorcererMetamagicChoiceId(args.targetLevel)];
+  const additions = new Set(additionSelection?.kind === "options" ? additionSelection.optionIds : []);
   const fromId = sorcererMetamagicReplacementFromId(args.targetLevel);
   const fromSelection = args.selections[fromId];
   const selectedFrom = fromSelection?.kind === "options" ? fromSelection.optionIds[0] : undefined;
