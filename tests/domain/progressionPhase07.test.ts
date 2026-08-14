@@ -98,11 +98,11 @@ test("multiclass spellcaster level uses full levels plus ceil of each half-caste
 
 test("a level that needs a not-yet-materialized spell choice rejects atomically instead of approximating", () => {
   const state: ProgressionCharacterState = {
-    revision:3, id:"sorcerer", name:"Sorcerer", totalLevel:4,
-    abilities:{ str:8,dex:14,con:14,int:10,wis:12,cha:18 }, hpCurrent:22,hpMaximum:30,proficiencyBonus:2,
-    classTracks:[{ classId:"dnd.srd521.class.sorcerer", className:"소서러", level:4, subclassName:"용의 혈통" }], hitDiceByDie:{ d6:4 }, features:["주문 시전","마법의 화신","메타매직"],
+    revision:3, id:"warlock", name:"Warlock", totalLevel:4,
+    abilities:{ str:8,dex:14,con:14,int:10,wis:12,cha:18 }, hpCurrent:26,hpMaximum:34,proficiencyBonus:2,
+    classTracks:[{ classId:"dnd.srd521.class.warlock", className:"워락", level:4, subclassName:"마족 후원자" }], hitDiceByDie:{ d8:4 }, features:["계약 마법","섬뜩한 기원술"],
   };
-  const request = { expectedRevision:3, targetClassId:"dnd.srd521.class.sorcerer", hpMethod:"fixed" as const, selections:{} };
+  const request = { expectedRevision:3, targetClassId:"dnd.srd521.class.warlock", hpMethod:"fixed" as const, selections:{} };
   const plan = buildProgressionPlan(state, request);
   assert.ok(plan.choices.some((choice) => choice.kind === "spell" && choice.status === "catalog-pending"));
   const result = resolveProgression(state, request);
