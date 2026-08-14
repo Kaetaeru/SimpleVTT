@@ -6,7 +6,7 @@ import {
   type OperationExecution,
   type ResolutionExecutionContext,
 } from "./resolutionContext";
-import { executeDamage, executeHealing, executeTemporaryHp } from "./resolutionHealthOps";
+import { executeCompoundDamage, executeDamage, executeHealing, executeTemporaryHp } from "./resolutionHealthOps";
 import {
   executeD20,
   executeDamageRoll,
@@ -47,6 +47,7 @@ function executeOperation(
     case "d20": return executeD20(ctx, operation);
     case "damage-roll": return executeDamageRoll(ctx, operation);
     case "damage": return executeDamage(ctx, operation);
+    case "compound-damage": return executeCompoundDamage(ctx, operation);
     case "healing": return executeHealing(ctx, operation);
     case "temporary-hp": return executeTemporaryHp(ctx, operation);
     case "apply-effect": return executeApplyEffect(ctx, operation);
