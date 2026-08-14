@@ -5,6 +5,7 @@ import { classCantripListEntries, classSpellListAllEntries, classSpellListEntrie
 
 const clericId = "dnd.srd521.class.cleric";
 const spellChoice = (level: number) => `progression.${clericId}.${level}.column.준비 주문`;
+const cantripChoice = (level: number) => `progression.${clericId}.${level}.column.소마법`;
 
 function cleric(level: number, overrides: Partial<ProgressionCharacterState> = {}): ProgressionCharacterState {
   return {
@@ -104,7 +105,7 @@ test("Cleric 2 -> 3 applies Life Domain spells as always prepared and keeps them
   assert.equal(result.state.preparedSpellSources?.[stableSpellId("Aid")], "클레릭 3레벨 · 생명 권역 주문 · SRD 5.2.1");
 });
 
-test("Cleric 3 -> 4 still exposes the cantrip increase explicitly until the canonical cantrip choice is wired", () => {
+test("Cleric 3 -> 4 commits cantrip + prepared spell + ASI through one progression transaction", () => {
   const state = cleric(3, {
     preparedSpellIds:[
       `always:${stableSpellId("Bless")}`, `always:${stableSpellId("Cure Wounds")}`,
@@ -112,15 +113,36 @@ test("Cleric 3 -> 4 still exposes the cantrip increase explicitly until the cano
       stableSpellId("Command"), stableSpellId("Healing Word"), stableSpellId("Shield of Faith"), stableSpellId("Spiritual Weapon"),
     ],
   });
-  const plan = buildProgressionPlan(state, {
+  const light = stableSpellId("Light");
+  const prayer = stableSpellId("Prayer of Healing");
+  const request = {
     expectedRevision:0,
     targetClassId:clericId,
-    hpMethod:"fixed",
+    hpMethod:"fixed" as const,
     selections:{
-      [spellChoice(4)]:{ kind:"options", optionIds:[stableSpellId("Prayer of Healing")] },
-      [`progression.${clericId}.4.asi`]:{ kind:"asi", mode:"plus-two", primary:"wis" },
+      [spellChoice(4)]:{ kind:"options" as const, optionIds:[prayer] },
+      [cantripChoice(4)]:{ kind:"options" as const, optionIds:[light] },
+      [`progression.${clericId}.4.asi`]:{ kind:"asi" as const, mode:"plus-two" as const, primary:"wis" as const },
     },
-  });
-  assert.ok(plan.choices.some((entry) => entry.id.endsWith(".column.소마법") && entry.status === "catalog-pending"));
-  assert.ok(plan.blocking.some((message) => /소마법/.test(message)));
+  };
+  const plan = buildProgressionPlan(state, request);
+  const cantrip = plan.choices.find((entry) => entry.id === cantripChoice(4));
+  assert.equal(cantrip?.status, "ready");
+  assert.equal(cantrip?.count, 1);
+  assert.equal(cantrip?.options.find((option) => option.id === stableSpellId("Guidance"))?.disabledReason, "이미 알고 있는 소마법입니다.");
+  assert.equal(cantrip?.options.find((option) => option.id === light)?.disabledReason, undefined);
+  assert.ok(plan.diffs.some((diff) => diff.label === "소마법 추가" && diff.after.includes("Light")));
+  assert.equal(plan.blocking.length, 0);
+
+  const result = resolveProgression(state, request);
+  assert.equal(result.status, "committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.totalLevel, 4);
+  assert.equal(result.state.abilities.wis, 20);
+  assert.ok(result.state.cantripIds?.includes(light));
+  assert.equal(result.state.cantripSources?.[light], "클레릭 4레벨 표 · SRD 5.2.1");
+  assert.ok(result.state.preparedSpellIds?.includes(prayer));
+  assert.equal(result.state.preparedSpellSources?.[prayer], "클레릭 4레벨 표 · SRD 5.2.1");
+  assert.equal(result.state.spellSlotMaximums?.[1], 4);
+  assert.equal(result.state.spellSlotMaximums?.[2], 3);
 });
