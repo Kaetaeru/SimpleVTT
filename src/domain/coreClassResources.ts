@@ -4,6 +4,7 @@ import type { ResourceRecovery } from "./resources";
 export const CLERIC_ID = "dnd.srd521.class.cleric";
 export const PALADIN_ID = "dnd.srd521.class.paladin";
 export const DRUID_ID = "dnd.srd521.class.druid";
+export const FIGHTER_ID = "dnd.srd521.class.fighter";
 
 export const CLERIC_CHANNEL_DIVINITY_RESOURCE_ID = "resource:cleric.channel-divinity";
 export const CLERIC_DIVINE_INTERVENTION_RESOURCE_ID = "resource:cleric.divine-intervention";
@@ -12,6 +13,7 @@ export const PALADIN_CHANNEL_DIVINITY_RESOURCE_ID = "resource:paladin.channel-di
 export const DRUID_WILD_SHAPE_RESOURCE_ID = "resource:druid.wild-shape";
 export const DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID = "resource:druid.wild-resurgence.turn";
 export const DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID = "resource:druid.wild-resurgence.long-rest";
+export const FIGHTER_SECOND_WIND_RESOURCE_ID = "resource:fighter.second-wind";
 
 export interface CoreClassResourceDefinition {
   classId: string;
@@ -59,6 +61,14 @@ export function druidWildShapeMaximum(level: number) {
   if (level < 2) return 0;
   if (level >= 17) return 4;
   if (level >= 6) return 3;
+  return 2;
+}
+
+export function fighterSecondWindMaximum(level: number) {
+  validatedLevel("Fighter", level);
+  if (level < 1) return 0;
+  if (level >= 10) return 4;
+  if (level >= 4) return 3;
   return 2;
 }
 
@@ -150,6 +160,20 @@ export function coreClassResourceDefinitions(classTracks: ProgressionClassTrack[
         recovery:{ longRest:"all" },
       },
     );
+  }
+
+  const fighterLevel = classTracks.find((track) => track.classId === FIGHTER_ID)?.level ?? 0;
+  const secondWindMaximum = fighterSecondWindMaximum(fighterLevel);
+  if (secondWindMaximum > 0) {
+    definitions.push({
+      classId:FIGHTER_ID,
+      classLevel:fighterLevel,
+      resourceId:FIGHTER_SECOND_WIND_RESOURCE_ID,
+      label:"Second Wind",
+      maximum:secondWindMaximum,
+      source:`파이터 ${fighterLevel}레벨 · Second Wind · SRD 5.2.1`,
+      recovery:{ shortRest:1, longRest:"all" },
+    });
   }
   return definitions;
 }
