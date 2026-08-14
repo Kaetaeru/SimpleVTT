@@ -1,5 +1,6 @@
 import type { RulesRuntimeState } from "./combatState";
 import { requireCombatant } from "./combatState";
+import { compileDivineSpark, type DivineSparkRequest } from "./clericDivineSpark";
 import { CLERIC_CHANNEL_DIVINITY_RESOURCE_ID } from "./coreClassResources";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
@@ -38,6 +39,19 @@ function validateLifeDomain(context: LifeDomainContext, minimumLevel: number, fe
 function addToOperand(amount: NumericOperand, add: number): NumericOperand {
   if (typeof amount === "number") return amount + add;
   return { ...amount, add:(amount.add ?? 0) + add };
+}
+
+function maximizeDamageRollDice(operations: ResolutionOperation[]) {
+  for (const operation of operations) {
+    if (operation.kind !== "damage-roll") continue;
+    operation.request = {
+      ...operation.request,
+      dice:operation.request.dice.map((die) => ({
+        ...die,
+        faces:Array.from({ length:die.count },() => die.sides),
+      })),
+    };
+  }
 }
 
 function rejectedSpell(
@@ -83,18 +97,7 @@ export function resolveLifeDomainHealingSpell(
       throw new DomainEvaluationError("Life Domain healing wrapper requires an authoritative healing operation");
     }
 
-    if (context.clericLevel >= 17) {
-      for (const operation of pending.operations) {
-        if (operation.kind !== "damage-roll") continue;
-        operation.request = {
-          ...operation.request,
-          dice:operation.request.dice.map((die) => ({
-            ...die,
-            faces:Array.from({ length:die.count },() => die.sides),
-          })),
-        };
-      }
-    }
+    if (context.clericLevel >= 17) maximizeDamageRollDice(pending.operations);
 
     healingOperations.forEach((operation) => {
       operation.amount = addToOperand(operation.amount,slotBonus);
@@ -123,6 +126,31 @@ export function resolveLifeDomainHealingSpell(
     };
   } catch (error) {
     return rejectedSpell(inputState,request,error);
+  }
+}
+
+export function resolveLifeDomainDivineSparkHealing(
+  profile: RulesProfileLike,
+  inputState: RulesRuntimeState,
+  request: DivineSparkRequest,
+  context: LifeDomainContext,
+): ResolutionCommit {
+  try {
+    validateLifeDomain(context,17,"Supreme Healing");
+    if (request.mode !== "healing") {
+      throw new DomainEvaluationError("Supreme Healing only maximizes the healing mode of Divine Spark");
+    }
+    const pending = compileDivineSpark(request);
+    maximizeDamageRollDice(pending.operations);
+    return resolvePendingResolution(profile,inputState,pending);
+  } catch (error) {
+    return {
+      status:"rejected",
+      state:inputState,
+      events:[],
+      results:{},
+      error:error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
