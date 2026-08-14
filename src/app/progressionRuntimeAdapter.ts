@@ -15,6 +15,7 @@ type AdapterState = {
   catalog: AppSnapshot["catalog"];
   edgeState: AppSnapshot["edgeState"];
   activity: AppSnapshot["activity"];
+  scene: AppSnapshot["scene"];
   syncChar(): void;
   getSnapshot(): Promise<AppSnapshot>;
 };
@@ -140,6 +141,15 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   if (primary?.subclassName) sheet.subclassName = primary.subclassName;
 }
 
+function syncCommittedSheetToScene(state: AdapterState) {
+  const entity = state.scene.entities.find((entry) => entry.id === state.activeCharacter.id);
+  if (!entity) return;
+  entity.hp = state.activeCharacter.hp;
+  entity.maxHp = state.activeCharacter.maxHp;
+  entity.tempHp = state.activeCharacter.tempHp;
+  entity.ac = state.activeCharacter.ac;
+}
+
 const oldGetSnapshot = MockAdapter.prototype.getSnapshot;
 const oldStartLevelUp = MockAdapter.prototype.startLevelUp;
 const oldUpdateLevelUp = MockAdapter.prototype.updateLevelUp;
@@ -239,6 +249,7 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     return internal.getSnapshot();
   }
   applyCommittedSheet(internal.activeCharacter, result, internal);
+  syncCommittedSheetToScene(internal);
   internal.syncChar();
   internal.characters = internal.characters.map((summary) => summary.id === internal.activeCharacter.id ? summaryFromSheet(internal.activeCharacter) : summary);
   internal.activity.unshift({
