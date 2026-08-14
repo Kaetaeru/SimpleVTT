@@ -9,6 +9,7 @@ declare module "./contracts" {
     progressionRevision?: number;
     expertiseSkills?: string[];
     expertiseSources?: Record<string, string>;
+    languageSources?: Record<string, string>;
     spellSlotMaximums?: Record<number, number>;
   }
 
