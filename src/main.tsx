@@ -8,6 +8,7 @@ import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
 import "./character-creation-v09.css";
+import "./focused-layout-fix.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
