@@ -29,6 +29,11 @@ import {
 } from "./progressionCatalog";
 import { automaticPreparedSpellsForLevel, classCantripListEntries, classSpellListEntries } from "./spellListCatalog";
 import {
+  SORCERER_ID,
+  isSorcererMetamagicChoice,
+  sorcererMetamagicChoice,
+} from "./sorcererProgressionChoices";
+import {
   WIZARD_ID,
   wizardScholarChoice,
   wizardSpellbookChoice,
@@ -66,6 +71,8 @@ export interface ProgressionCharacterState {
   preparedSpellSources?: Record<string, string>;
   spellbookSpellIds?: string[];
   spellbookSpellSources?: Record<string, string>;
+  metamagicIds?: string[];
+  metamagicSources?: Record<string, string>;
   spellSlotMaximums?: Record<number, number>;
 }
 
@@ -474,6 +481,16 @@ function featureChoiceDefinitions(
         continue;
       }
     }
+    if (targetClassId === SORCERER_ID && feature === "메타매직") {
+      const metamagic = sorcererMetamagicChoice({
+        targetLevel,
+        knownMetamagicIds:state.metamagicIds ?? [],
+      });
+      if (metamagic) {
+        result.push(metamagic);
+        continue;
+      }
+    }
     if (targetClassId === WIZARD_ID && feature === "학자") {
       const scholar = wizardScholarChoice({
         targetLevel,
@@ -688,6 +705,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const druidFeatureLabels = choices
     .filter((choice) => isDruidPersistentFeatureChoice(choice.id))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const metamagicLabels = choices
+    .filter((choice) => isSorcererMetamagicChoice(choice.id))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const spellbookLabels = target.id === WIZARD_ID
     ? choices.filter((choice) => choice.id === wizardSpellbookChoiceId(targetClassLevel)).flatMap((choice) => selectedOptionLabels(choice, request.selections))
     : [];
@@ -710,6 +730,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (classCantripLabels.length) diffs.push({ label:"소마법 추가", before:"—", after:classCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (clericFeatureLabels.length) diffs.push({ label:"클레릭 선택", before:"—", after:clericFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (druidFeatureLabels.length) diffs.push({ label:"드루이드 선택", before:"—", after:druidFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (metamagicLabels.length) diffs.push({ label:"메타매직", before:String((state.metamagicIds ?? []).length), after:String((state.metamagicIds ?? []).length + metamagicLabels.length), source:`소서러 ${targetClassLevel}레벨 · SRD 5.2.1` });
   if (spellbookLabels.length) diffs.push({ label:"주문책 추가", before:"—", after:spellbookLabels.join(", "), source:`위저드 ${targetClassLevel}레벨 · SRD 5.2.1` });
   if (automaticPrepared.length) diffs.push({ label:"항상 준비 주문", before:"—", after:automaticPrepared.map((entry) => entry.nameEn).join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -768,6 +789,16 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   for (const choice of plan.choices.filter((entry) => isClericPersistentFeatureChoice(entry.id) || isDruidPersistentFeatureChoice(entry.id))) {
     next.features.push(...selectedOptionLabels(choice, request.selections));
   }
+  const metamagicIds = new Set(next.metamagicIds ?? []);
+  const metamagicSources = { ...(next.metamagicSources ?? {}) };
+  for (const choice of plan.choices.filter((entry) => isSorcererMetamagicChoice(entry.id))) {
+    for (const optionId of selectedOptionIds(choice, request.selections)) {
+      metamagicIds.add(optionId);
+      metamagicSources[optionId] = choice.source;
+    }
+  }
+  next.metamagicIds = [...metamagicIds];
+  next.metamagicSources = metamagicSources;
   const cantripIds = [...(next.cantripIds ?? [])];
   const cantripKeys = new Set(cantripIds);
   const cantripSources = { ...(next.cantripSources ?? {}) };
