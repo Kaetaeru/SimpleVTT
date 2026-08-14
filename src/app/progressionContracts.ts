@@ -31,6 +31,8 @@ declare module "./contracts" {
     eldritchInvocationSources?: Record<string, string>;
     mysticArcanumSpellIds?: Record<number, string>;
     mysticArcanumSources?: Record<number, string>;
+    persistentFeatureOptionIds?: string[];
+    persistentFeatureOptionSources?: Record<string, string>;
     pactMagicSlotLevel?: number;
     pactMagicSlotMaximum?: number;
     spellSlotMaximums?: Record<number, number>;
