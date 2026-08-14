@@ -12,6 +12,7 @@ import "./character-creation-v09.css";
 import "./character-creation-v10.css";
 import "./compact-options.css";
 import "./character-sheet-v10.css";
+import "./spell-ui.css";
 import "./focused-layout-fix.css";
 import "./character-sheet-v10-viewport.css";
 
