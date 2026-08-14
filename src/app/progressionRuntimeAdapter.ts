@@ -80,6 +80,9 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
   sheet.spellbookSpells = unique(sheet.spellbookSpells ?? []);
   sheet.spellbookSpellSources ??= {};
   for (const spell of sheet.spellbookSpells) sheet.spellbookSpellSources[spell] ??= "Character Creation / existing character";
+  sheet.metamagicIds = unique(sheet.metamagicIds ?? []);
+  sheet.metamagicSources ??= {};
+  for (const metamagicId of sheet.metamagicIds) sheet.metamagicSources[metamagicId] ??= "Existing character / Sorcerer Metamagic";
   sheet.progressionRevision ??= 0;
   return sheet;
 }
@@ -109,6 +112,8 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
     spellbookSpellIds:clone(sheet.spellbookSpells ?? []),
     spellbookSpellSources:clone(sheet.spellbookSpellSources ?? {}),
+    metamagicIds:clone(sheet.metamagicIds ?? []),
+    metamagicSources:clone(sheet.metamagicSources ?? {}),
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
   };
 }
@@ -227,6 +232,8 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.preparedSpellSources = clone(next.preparedSpellSources ?? {});
   sheet.spellbookSpells = clone(next.spellbookSpellIds ?? []);
   sheet.spellbookSpellSources = clone(next.spellbookSpellSources ?? {});
+  sheet.metamagicIds = clone(next.metamagicIds ?? []);
+  sheet.metamagicSources = clone(next.metamagicSources ?? {});
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
