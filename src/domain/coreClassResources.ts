@@ -13,6 +13,7 @@ export const PALADIN_CHANNEL_DIVINITY_RESOURCE_ID = "resource:paladin.channel-di
 export const DRUID_WILD_SHAPE_RESOURCE_ID = "resource:druid.wild-shape";
 export const DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID = "resource:druid.wild-resurgence.turn";
 export const DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID = "resource:druid.wild-resurgence.long-rest";
+export const DRUID_NATURE_MAGICIAN_RESOURCE_ID = "resource:druid.archdruid.nature-magician";
 export const FIGHTER_SECOND_WIND_RESOURCE_ID = "resource:fighter.second-wind";
 export const FIGHTER_ACTION_SURGE_RESOURCE_ID = "resource:fighter.action-surge";
 export const FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID = "resource:fighter.action-surge.turn";
@@ -65,6 +66,11 @@ export function druidWildShapeMaximum(level: number) {
   if (level >= 17) return 4;
   if (level >= 6) return 3;
   return 2;
+}
+
+export function druidNatureMagicianMaximum(level: number) {
+  validatedLevel("Druid", level);
+  return level >= 20 ? 1 : 0;
 }
 
 export function fighterSecondWindMaximum(level: number) {
@@ -177,6 +183,18 @@ export function coreClassResourceDefinitions(classTracks: ProgressionClassTrack[
         recovery:{ longRest:"all" },
       },
     );
+  }
+  const natureMagicianMaximum = druidNatureMagicianMaximum(druidLevel);
+  if (natureMagicianMaximum > 0) {
+    definitions.push({
+      classId:DRUID_ID,
+      classLevel:druidLevel,
+      resourceId:DRUID_NATURE_MAGICIAN_RESOURCE_ID,
+      label:"Archdruid · Nature Magician",
+      maximum:natureMagicianMaximum,
+      source:`드루이드 ${druidLevel}레벨 · Archdruid · Nature Magician · SRD 5.2.1`,
+      recovery:{ longRest:"all" },
+    });
   }
 
   const fighterLevel = classTracks.find((track) => track.classId === FIGHTER_ID)?.level ?? 0;
