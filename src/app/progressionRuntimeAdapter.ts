@@ -1,7 +1,7 @@
 import "./progressionContracts";
 import "./creationContracts";
 import type { AppSnapshot, CharacterSheet, CharacterSummary, LevelUpCommand, LevelUpDraft } from "./contracts";
-import { generalLanguageOptions } from "./characterCreationV10Data";
+import { fightingStyleOptions, generalLanguageOptions, spellOptions } from "./characterCreationV10Data";
 import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
@@ -68,6 +68,9 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
   sheet.languages = unique(sheet.languages ?? []);
   sheet.languageSources ??= {};
   for (const language of sheet.languages) sheet.languageSources[language] ??= "Character Creation / existing character";
+  sheet.cantrips = unique(sheet.cantrips ?? []);
+  sheet.cantripSources ??= {};
+  for (const cantrip of sheet.cantrips) sheet.cantripSources[cantrip] ??= "Character Creation / existing character";
   sheet.preparedSpells = unique(sheet.preparedSpells ?? []);
   sheet.preparedSpellSources ??= {};
   for (const spell of sheet.preparedSpells) {
@@ -97,6 +100,8 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     expertiseSources:clone(sheet.expertiseSources ?? {}),
     languages:clone(sheet.languages ?? []),
     languageSources:clone(sheet.languageSources ?? {}),
+    cantripIds:clone(sheet.cantrips ?? []),
+    cantripSources:clone(sheet.cantripSources ?? {}),
     preparedSpellIds:clone(sheet.preparedSpells ?? []),
     preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
@@ -105,6 +110,22 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
 
 function featOptions(state: AdapterState) {
   return state.catalog.filter((entry) => entry.category === "feat").map((entry) => ({ id:entry.id, label:entry.nameKo, description:entry.description }));
+}
+
+function progressionFightingStyleOptions() {
+  return fightingStyleOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
+}
+
+function progressionDruidCantripOptions() {
+  const presentations = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
+  return spellOptions("dnd.srd521.class.druid", 0).map((option) => {
+    const presentation = presentations.get(option.id);
+    return {
+      id:option.id,
+      label:presentation?.name ?? option.name,
+      description:presentation?.summary ?? option.summary,
+    };
+  });
 }
 
 function progressionLanguageOptions() {
@@ -130,6 +151,8 @@ function requestFor(state: AdapterState) {
     hpRoll:draft.hpRoll,
     selections:clone(draft.progressionSelections ?? {}),
     featOptions:featOptions(state),
+    fightingStyleOptions:progressionFightingStyleOptions(),
+    druidCantripOptions:progressionDruidCantripOptions(),
     languageOptions:progressionLanguageOptions(),
     spellOptions:progressionSpellOptions(),
   } as const;
@@ -155,7 +178,7 @@ function syncLegacyDraft(draft: LevelUpDraft, plan: ProgressionPlan) {
     grantedFeatures:[...plan.automaticGrants],
     resourceChanges:plan.multiclassGrants,
     actionChanges:[],
-    spellChanges:plan.diffs.filter((diff) => diff.label.includes("주문")).map((diff) => `${diff.label}: ${diff.before} → ${diff.after}`),
+    spellChanges:plan.diffs.filter((diff) => diff.label.includes("주문") || diff.label.includes("소마법")).map((diff) => `${diff.label}: ${diff.before} → ${diff.after}`),
     diffs:plan.diffs,
   };
   draft.validation = [
@@ -185,6 +208,8 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.expertiseSources = clone(next.expertiseSources ?? {});
   sheet.languages = clone(next.languages ?? []);
   sheet.languageSources = clone(next.languageSources ?? {});
+  sheet.cantrips = clone(next.cantripIds ?? []);
+  sheet.cantripSources = clone(next.cantripSources ?? {});
   sheet.preparedSpells = clone(next.preparedSpellIds ?? []);
   sheet.preparedSpellSources = clone(next.preparedSpellSources ?? {});
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
