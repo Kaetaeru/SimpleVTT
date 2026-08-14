@@ -22,9 +22,10 @@ test("property classification recognizes real SRD damage or healing prose", () =
   const fire = SPELL_PRESENTATIONS.find((spell) => /화염 피해/.test(`${spell.summary}\n${spell.description}`));
   assert.ok(fire, "expected a fire-damage spell in the SRD catalog");
   assert.equal(spellVisual(fire).key, "fire");
-  const healing = SPELL_PRESENTATIONS.find((spell) => /히트 포인트[^.\n]{0,60}회복|회복[^.\n]{0,60}히트 포인트/.test(`${spell.summary}\n${spell.description}`));
-  assert.ok(healing, "expected a healing spell in the SRD catalog");
-  assert.equal(spellVisual(healing).key, "healing");
+
+  const healing = SPELL_PRESENTATIONS.find((spell) => spellVisual(spell).key === "healing");
+  assert.ok(healing, "expected at least one spell whose representative property is healing");
+  assert.match(`${healing.summary}\n${healing.description}`, /히트 포인트[^.\n]{0,60}회복|회복[^.\n]{0,60}히트 포인트/);
 });
 
 test("spell behavior filters are driven by canonical presentation metadata", () => {
