@@ -35,6 +35,80 @@ test("Second Wind spends one Bonus Action and use to heal 1d10 + Fighter level",
   assert.equal(result.state.combatants.hero.resources.find((pool) => pool.id === FIGHTER_SECOND_WIND_RESOURCE_ID)?.current, 2);
 });
 
+test("Tactical Shift reuses Second Wind to grant up to half Speed without spending normal movement or provoking Opportunity Attacks", () => {
+  const state = runtimeState();
+  state.combatants.hero.life.hp = { current:5, maximum:30, temporary:0 };
+  addSecondWind(state,3,3);
+  const beforeMovement = state.combatants.hero.economy.movement;
+  const result = resolveFighterSecondWind(TEST_PROFILE,state,{
+    id:"fighter.tactical-shift",
+    actorId:"hero",
+    expectedRevision:0,
+    fighterLevel:5,
+    d10Face:5,
+    useActionEconomy:true,
+    tacticalShift:{ speedFeet:30, distanceFeet:15 },
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  const movement = result.results["fighter.tactical-shift:tactical-shift"] as {
+    distanceFeet:number;
+    maximumDistanceFeet:number;
+    regularMovementSpent:number;
+    doesNotProvokeOpportunityAttacks:boolean;
+  };
+  assert.deepEqual(movement,{
+    distanceFeet:15,
+    maximumDistanceFeet:15,
+    regularMovementSpent:0,
+    doesNotProvokeOpportunityAttacks:true,
+  });
+  assert.equal(result.state.combatants.hero.economy.movement,beforeMovement);
+  assert.equal(result.state.combatants.hero.economy.bonusAction,false);
+  assert.equal(result.state.combatants.hero.resources.find((pool) => pool.id === FIGHTER_SECOND_WIND_RESOURCE_ID)?.current,2);
+});
+
+test("Tactical Shift requires Fighter 5, a Bonus Action activation, and no more than half Speed", () => {
+  const state = runtimeState();
+  addSecondWind(state,2,2);
+  const premature = resolveFighterSecondWind(TEST_PROFILE,state,{
+    id:"fighter.tactical-shift.premature",
+    actorId:"hero",
+    expectedRevision:0,
+    fighterLevel:4,
+    d10Face:5,
+    useActionEconomy:true,
+    tacticalShift:{ speedFeet:30, distanceFeet:15 },
+  });
+  assert.equal(premature.status,"rejected");
+  assert.match(premature.status === "rejected" ? premature.error : "",/requires Fighter level 5/);
+
+  const noBonus = resolveFighterSecondWind(TEST_PROFILE,state,{
+    id:"fighter.tactical-shift.no-bonus",
+    actorId:"hero",
+    expectedRevision:0,
+    fighterLevel:5,
+    d10Face:5,
+    useActionEconomy:false,
+    tacticalShift:{ speedFeet:30, distanceFeet:15 },
+  });
+  assert.equal(noBonus.status,"rejected");
+  assert.match(noBonus.status === "rejected" ? noBonus.error : "",/requires Second Wind to be activated with its Bonus Action/);
+
+  const tooFar = resolveFighterSecondWind(TEST_PROFILE,state,{
+    id:"fighter.tactical-shift.too-far",
+    actorId:"hero",
+    expectedRevision:0,
+    fighterLevel:5,
+    d10Face:5,
+    useActionEconomy:true,
+    tacticalShift:{ speedFeet:30, distanceFeet:20 },
+  });
+  assert.equal(tooFar.status,"rejected");
+  assert.match(tooFar.status === "rejected" ? tooFar.error : "",/cannot exceed 15 feet/);
+  assert.equal(state.combatants.hero.resources.find((pool) => pool.id === FIGHTER_SECOND_WIND_RESOURCE_ID)?.current,2);
+});
+
 test("Second Wind healing respects maximum HP while still consuming its use", () => {
   const state = runtimeState();
   state.combatants.hero.life.hp = { current:18, maximum:20, temporary:0 };
