@@ -118,6 +118,18 @@ export type ResolutionOperation =
       concentrationCheck?: Omit<ConcentrationCheckRequest, "damage">;
     })
   | (OperationBase & {
+      kind: "compound-damage";
+      targetId: string;
+      components: Array<{
+        damageType: string;
+        amount: NumericOperand;
+        defenses?: DamageDefenseContribution[];
+      }>;
+      creatureKind: "character" | "monster";
+      criticalFrom?: string;
+      concentrationCheck?: Omit<ConcentrationCheckRequest, "damage">;
+    })
+  | (OperationBase & {
       kind: "healing";
       targetId: string;
       amount: NumericOperand;
