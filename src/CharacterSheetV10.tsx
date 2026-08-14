@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { AbilityKey, ItemInstanceVm } from "./app/contracts";
@@ -33,7 +33,7 @@ function HoverRule({ title, subtitle, description, lines = [], children }: { tit
   }, [open]);
   return <>
     <div ref={host} className="sheet-hover-host" tabIndex={0} onPointerEnter={() => setOpen(true)} onPointerLeave={() => setOpen(false)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}>{children}</div>
-    {open && pos && createPortal(<div className="sheet-rule-tooltip" style={{ top:pos.top, left:pos.left, width:pos.width }}><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}<p>{description || "이 항목의 상세 설명 데이터는 presentation catalog와 연결되는 중입니다."}</p>{lines.length > 0 && <div>{lines.map((line) => <span key={line}>{line}</span>)}</div>}</div>, document.body)}
+    {open && pos && createPortal(<div className="sheet-rule-tooltip" style={{ top:pos.top, left:pos.left, width:pos.width }}><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}<p>{description || "현재 카탈로그에 연결된 요약 정보만 표시합니다. 전체 SRD 본문이 materialize되면 이 자리에서 바로 표시됩니다."}</p>{lines.length > 0 && <div>{lines.map((line) => <span key={line}>{line}</span>)}</div>}</div>, document.body)}
   </>;
 }
 
@@ -61,12 +61,11 @@ export function CharacterSheetV10({ onScene, onLevelUp, onEdit }: Props) {
   const { snapshot, startLevelUp, editCharacterDraft, toggleItemEquipped, toggleItemAttunement, useItem } = useSimpleVtt();
   if (!snapshot) return null;
   const c = snapshot.activeCharacter;
-  const view = useMemo(() => projectOfficialSheet(c), [c]);
+  const view = projectOfficialSheet(c);
   const classId = classIdFromName(c.className);
   const casting = spellcastingAbility(classId);
   const castingMod = casting ? mod(c.abilities[casting]) : 0;
   const cantrips = view.spells.filter((spell) => spell.level === 0);
-  const leveledSpells = view.spells.filter((spell) => spell.level > 0);
   const trainingLines = [
     ...(c.masteryWeapons?.length ? [`무기 통달 · ${c.masteryWeapons.join(", ")}`] : []),
     ...(c.toolProficiencies?.length ? [`도구 · ${c.toolProficiencies.join(", ")}`] : []),
