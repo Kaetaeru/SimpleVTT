@@ -6,6 +6,7 @@ export const PALADIN_ID = "dnd.srd521.class.paladin";
 export const DRUID_ID = "dnd.srd521.class.druid";
 
 export const CLERIC_CHANNEL_DIVINITY_RESOURCE_ID = "resource:cleric.channel-divinity";
+export const PALADIN_LAY_ON_HANDS_RESOURCE_ID = "resource:paladin.lay-on-hands";
 export const PALADIN_CHANNEL_DIVINITY_RESOURCE_ID = "resource:paladin.channel-divinity";
 export const DRUID_WILD_SHAPE_RESOURCE_ID = "resource:druid.wild-shape";
 export const DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID = "resource:druid.wild-resurgence.turn";
@@ -34,6 +35,11 @@ export function clericChannelDivinityMaximum(level: number) {
   if (level >= 18) return 4;
   if (level >= 6) return 3;
   return 2;
+}
+
+export function paladinLayOnHandsMaximum(level: number) {
+  validatedLevel("Paladin", level);
+  return level * 5;
 }
 
 export function paladinChannelDivinityMaximum(level: number) {
@@ -67,6 +73,18 @@ export function coreClassResourceDefinitions(classTracks: ProgressionClassTrack[
   }
 
   const paladinLevel = classTracks.find((track) => track.classId === PALADIN_ID)?.level ?? 0;
+  const layOnHandsMaximum = paladinLayOnHandsMaximum(paladinLevel);
+  if (layOnHandsMaximum > 0) {
+    definitions.push({
+      classId:PALADIN_ID,
+      classLevel:paladinLevel,
+      resourceId:PALADIN_LAY_ON_HANDS_RESOURCE_ID,
+      label:"Lay On Hands",
+      maximum:layOnHandsMaximum,
+      source:`팔라딘 ${paladinLevel}레벨 · Lay On Hands · SRD 5.2.1`,
+      recovery:{ longRest:"all" },
+    });
+  }
   const paladinMaximum = paladinChannelDivinityMaximum(paladinLevel);
   if (paladinMaximum > 0) {
     definitions.push({
