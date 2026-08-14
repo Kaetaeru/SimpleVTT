@@ -8,7 +8,7 @@ import type { PendingResolution, ResolutionCommit, ResolutionOperation } from ".
 import type { TargetFacts } from "./targeting";
 import type { TurnSlot } from "./turnEconomy";
 
-export type AttackSourceKind = "weapon" | "wild-shape";
+export type AttackSourceKind = "weapon" | "unarmed" | "wild-shape";
 
 export interface AttackTarget extends TargetFacts {
   ac: number;
@@ -29,6 +29,11 @@ export interface AttackEconomyCost {
   bonusActionGranted?: boolean;
 }
 
+export interface AttackCriticalRange {
+  threshold: number;
+  sourceId: string;
+}
+
 export interface AttackRequest {
   id: string;
   actorId: string;
@@ -42,6 +47,7 @@ export interface AttackRequest {
   baseDamage: AttackDamageComponent;
   riders?: AttackDamageComponent[];
   economy?: AttackEconomyCost;
+  criticalRange?: AttackCriticalRange;
   concentrationCheck?: Omit<ConcentrationCheckRequest, "damage">;
 }
 
@@ -62,6 +68,12 @@ function validateRequest(request: AttackRequest) {
   }
   if (!Number.isFinite(request.target.ac) || request.target.ac < 0) {
     throw new DomainEvaluationError("attack target AC must be a non-negative finite number");
+  }
+  if (request.criticalRange) {
+    if (!request.criticalRange.sourceId) throw new DomainEvaluationError("critical range source id is required");
+    if (!Number.isInteger(request.criticalRange.threshold) || request.criticalRange.threshold < 2 || request.criticalRange.threshold > 20) {
+      throw new DomainEvaluationError("critical range threshold must be an integer from 2 to 20");
+    }
   }
   validateComponent(request.baseDamage, "base attack damage");
   (request.riders ?? []).forEach((rider, index) => validateComponent(rider, `attack rider ${index}`));
@@ -119,6 +131,8 @@ export function compileAttack(request: AttackRequest): PendingResolution {
       modifierContributions:request.attackModifierContributions,
       dice:request.attackDice,
       targetSource:`target:${targetId}:ac`,
+      criticalThreshold:request.criticalRange?.threshold,
+      criticalThresholdSource:request.criticalRange?.sourceId,
     },
     cover:{ targetingOperationId:targetingId, targetId, appliesTo:"ac" },
     condition:{
