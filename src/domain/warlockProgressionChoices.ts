@@ -92,15 +92,17 @@ function concreteInvocationOptions(args: {
   targetLevel: number;
   knownInvocationIds: string[];
   knownCantripIds: string[];
+  knownFeatureIds: string[];
   originFeatOptions: Array<{ id: string; label: string; description?: string }>;
+  spellOptions?: Array<{ id:string; label:string; description?:string }>;
   selections: ChoiceSelectionMap;
 }) {
   const knownConcrete = new Set(args.knownInvocationIds);
   const knownBases = new Set(args.knownInvocationIds.map(invocationBaseId));
-  const selectedConcrete = selectedInvocationAcquisitionIds(args.selections);
-  const selectedBases = new Set(selectedConcrete.map(invocationBaseId));
+  const selectedBases = new Set(selectedInvocationAcquisitionIds(args.selections).map(invocationBaseId));
   const availableBases = new Set([...knownBases, ...selectedBases]);
-  const knownCantrips = new Set(args.knownCantripIds);
+  const knownFeatures = new Set(args.knownFeatureIds);
+  const presentation = new Map((args.spellOptions ?? []).map((option) => [option.id, option]));
   const result: Array<{ id:string; label:string; description:string; disabledReason?:string }> = [];
 
   for (const invocation of ELDRITCH_INVOCATIONS) {
@@ -110,18 +112,29 @@ function concreteInvocationOptions(args: {
         ? `${ELDRITCH_INVOCATIONS.find((entry) => entry.id === invocation.prerequisiteInvocationId)?.label ?? invocation.prerequisiteInvocationId} 기원술이 필요합니다.`
         : undefined;
 
+    if (invocation.id === "invocation:pact-of-the-tome") {
+      result.push({
+        id:invocation.id,
+        label:invocation.label,
+        description:invocation.description,
+        disabledReason:prerequisiteReason ?? "Book of Shadows의 소마법 3개와 의식 주문 2개 선택 관계가 아직 materialize되지 않았습니다.",
+      });
+      continue;
+    }
+
     if (invocation.targetKind === "damage-cantrip" || invocation.targetKind === "attack-cantrip") {
       const eligible = invocation.targetKind === "damage-cantrip" ? DAMAGE_WARLOCK_CANTRIPS : ATTACK_WARLOCK_CANTRIPS;
-      for (const cantripId of args.knownCantripIds.filter((id) => eligible.has(id))) {
+      const candidates = args.knownCantripIds.filter((id) => eligible.has(id));
+      for (const cantripId of candidates) {
         const concreteId = `${invocation.id}|target=${cantripId}`;
         result.push({
           id:concreteId,
-          label:`${invocation.label} · ${cantripId.split(".").at(-1)}`,
+          label:`${invocation.label} · ${presentation.get(cantripId)?.label ?? cantripId.split(".").slice(-1)[0]}`,
           description:invocation.description,
-          disabledReason:prerequisiteReason ?? (knownConcrete.has(concreteId) || selectedConcrete.includes(concreteId) ? "이미 같은 대상에 적용한 기원술입니다." : undefined),
+          disabledReason:prerequisiteReason ?? (knownConcrete.has(concreteId) ? "이미 같은 대상에 적용한 기원술입니다." : undefined),
         });
       }
-      if (![...knownCantrips].some((id) => eligible.has(id))) {
+      if (!candidates.length) {
         result.push({
           id:`${invocation.id}|target=none`,
           label:invocation.label,
@@ -139,7 +152,9 @@ function concreteInvocationOptions(args: {
           id:concreteId,
           label:`${invocation.label} · ${feat.label}`,
           description:`${invocation.description} ${feat.description ?? ""}`.trim(),
-          disabledReason:prerequisiteReason ?? (knownConcrete.has(concreteId) || selectedConcrete.includes(concreteId) ? "이미 같은 기원 재주로 이 기원술을 얻었습니다." : undefined),
+          disabledReason:prerequisiteReason
+            ?? (knownFeatures.has(feat.id) ? "이미 보유한 기원 재주입니다." : undefined)
+            ?? (knownConcrete.has(concreteId) ? "이미 같은 기원 재주로 이 기원술을 얻었습니다." : undefined),
         });
       }
       continue;
@@ -149,7 +164,7 @@ function concreteInvocationOptions(args: {
       id:invocation.id,
       label:invocation.label,
       description:invocation.description,
-      disabledReason:prerequisiteReason ?? (knownBases.has(invocation.id) || selectedBases.has(invocation.id) ? "이미 알고 있는 기원술입니다." : undefined),
+      disabledReason:prerequisiteReason ?? (knownBases.has(invocation.id) ? "이미 알고 있는 기원술입니다." : undefined),
     });
   }
   return result;
@@ -160,7 +175,9 @@ export function warlockInvocationChoices(args: {
   count: number;
   knownInvocationIds: string[];
   knownCantripIds: string[];
+  knownFeatureIds: string[];
   originFeatOptions: Array<{ id: string; label: string; description?: string }>;
+  spellOptions?: Array<{ id:string; label:string; description?:string }>;
   selections: ChoiceSelectionMap;
 }): ChoiceDefinition[] {
   if (args.count <= 0) return [];
