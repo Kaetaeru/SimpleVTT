@@ -17,6 +17,7 @@ const normalizedSkillName = (value:string) => value.replace(/\s+[+-]\d+$/,"").tr
 
 function characterState(sheet:CharacterSheet):ProgressionCharacterState {
   const primary = classByName(sheet.className) ?? classByName(sheet.className.split("/")[0]?.trim() ?? sheet.className);
+  const currentTome = new Set([...(sheet.pactTomeCantripIds ?? []),...(sheet.pactTomeRitualSpellIds ?? [])]);
   return {
     revision:sheet.progressionRevision ?? 0,
     id:sheet.id,
@@ -34,9 +35,9 @@ function characterState(sheet:CharacterSheet):ProgressionCharacterState {
     expertiseSources:clone(sheet.expertiseSources ?? {}),
     languages:clone(sheet.languages ?? []),
     languageSources:clone(sheet.languageSources ?? {}),
-    cantripIds:clone(sheet.cantrips ?? []),
+    cantripIds:clone((sheet.cantrips ?? []).filter((spellId) => !currentTome.has(spellId))),
     cantripSources:clone(sheet.cantripSources ?? {}),
-    preparedSpellIds:clone(sheet.preparedSpells ?? []),
+    preparedSpellIds:clone((sheet.preparedSpells ?? []).filter((spellId) => !currentTome.has(spellId))),
     preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
     spellbookSpellIds:clone(sheet.spellbookSpells ?? []),
     spellbookSpellSources:clone(sheet.spellbookSpellSources ?? {}),
