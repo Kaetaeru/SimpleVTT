@@ -2,6 +2,7 @@ import { BARD_SPELL_ROWS } from "./bardSpellList";
 import { CLERIC_SPELL_ROWS } from "./clericSpellList";
 import { DRUID_SPELL_ROWS } from "./druidSpellList";
 import { SORCERER_SPELL_ROWS } from "./sorcererSpellList";
+import { WARLOCK_SPELL_ROWS } from "./warlockSpellList";
 import { WIZARD_SPELL_ROWS } from "./wizardSpellList";
 
 export interface ClassSpellListEntry {
@@ -61,6 +62,12 @@ const SORCERER: ClassSpellList = {
   classId:"dnd.srd521.class.sorcerer",
   source:{ document:"System Reference Document 5.2.1", page:67, license:"CC-BY-4.0" },
   spells:SORCERER_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
+};
+
+const WARLOCK: ClassSpellList = {
+  classId:"dnd.srd521.class.warlock",
+  source:{ document:"System Reference Document 5.2.1", page:74, license:"CC-BY-4.0" },
+  spells:WARLOCK_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
 };
 
 const WIZARD: ClassSpellList = {
@@ -129,6 +136,7 @@ const LISTS = new Map<string, ClassSpellList>([
   [CLERIC.classId, CLERIC],
   [DRUID.classId, DRUID],
   [SORCERER.classId, SORCERER],
+  [WARLOCK.classId, WARLOCK],
   [WIZARD.classId, WIZARD],
   [RANGER.classId, RANGER],
   [PALADIN.classId, PALADIN],
@@ -174,6 +182,18 @@ const AUTOMATIC_PREPARED: AutomaticPreparedSpellRelationship[] = [
     spellId:stableSpellId(String(nameEn)),
     nameEn:String(nameEn),
     sourceFeature:"생명 권역 주문",
+  })),
+  ...[
+    [3,"Burning Hands"], [3,"Command"], [3,"Scorching Ray"], [3,"Suggestion"],
+    [5,"Fireball"], [5,"Stinking Cloud"],
+    [7,"Fire Shield"], [7,"Wall of Fire"],
+    [9,"Geas"], [9,"Insect Plague"],
+  ].map(([classLevel, nameEn]) => ({
+    classId:"dnd.srd521.class.warlock",
+    classLevel:Number(classLevel),
+    spellId:stableSpellId(String(nameEn)),
+    nameEn:String(nameEn),
+    sourceFeature:"마족 후원자 주문",
   })),
   ...["Power Word Heal","Power Word Kill"].map((nameEn) => ({
     classId:"dnd.srd521.class.bard",
