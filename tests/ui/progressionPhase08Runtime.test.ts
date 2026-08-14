@@ -9,16 +9,19 @@ import { SPELL_PRESENTATIONS } from "../../src/app/spellPresentation";
 import { classSpellListEntries } from "../../src/domain/spellListCatalog";
 
 const rangerId = "dnd.srd521.class.ranger";
+const paladinId = "dnd.srd521.class.paladin";
 
-test("every canonical Ranger spell-list entry resolves to the checked-in 339-spell presentation catalog at the same level", () => {
+test("canonical Ranger and Paladin spell lists resolve to the checked-in 339-spell presentation catalog at the same level", () => {
   const presentations = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
-  const entries = classSpellListEntries(rangerId);
-  assert.equal(entries.length, 48);
-  for (const entry of entries) {
-    const presentation = presentations.get(entry.id);
-    assert.ok(presentation, `${entry.id} missing from spell presentation catalog`);
-    assert.equal(presentation?.level, entry.level, `${entry.id} spell level mismatch`);
-    assert.equal(presentation?.nameEn, entry.nameEn, `${entry.id} English name mismatch`);
+  for (const [classId, expectedCount] of [[rangerId,48],[paladinId,38]] as const) {
+    const entries = classSpellListEntries(classId);
+    assert.equal(entries.length, expectedCount);
+    for (const entry of entries) {
+      const presentation = presentations.get(entry.id);
+      assert.ok(presentation, `${entry.id} missing from spell presentation catalog`);
+      assert.equal(presentation?.level, entry.level, `${entry.id} spell level mismatch`);
+      assert.equal(presentation?.nameEn, entry.nameEn, `${entry.id} English name mismatch`);
+    }
   }
 });
 
@@ -93,6 +96,69 @@ test("Ranger 1 -> 2 runtime exposes four Fighting Style feats plus Druidic Warri
   assert.deepEqual(snapshot.activeCharacter.expertiseSkills, ["은신"]);
   assert.ok(snapshot.activeCharacter.languages?.includes("드워프어"));
   assert.ok(snapshot.activeCharacter.languages?.includes("거인어"));
+});
+
+test("Paladin 1 -> 2 runtime exposes Blessed Warrior, commits two Cleric cantrips, and makes Divine Smite always prepared", async () => {
+  const adapter = new MockAdapter();
+  const baseline = (await adapter.getSnapshot()).activeCharacter;
+  const internal = adapter as unknown as { activeCharacter: typeof baseline };
+  internal.activeCharacter = {
+    ...baseline,
+    className:"팔라딘",
+    subclassName:undefined,
+    level:1,
+    hp:12,
+    maxHp:12,
+    proficiencyBonus:2,
+    abilities:{ str:16, dex:10, con:14, int:8, wis:12, cha:16 },
+    skills:["운동","설득"],
+    features:["안수","주문 시전","무기 통달"],
+    cantrips:[],
+    classLevels:[{ classId:paladinId, className:"팔라딘", level:1 }],
+    hitDiceByDie:{ d10:1 },
+    progressionRevision:0,
+    preparedSpells:["dnd.srd521.spell.bless","dnd.srd521.spell.cure-wounds"],
+  };
+  delete internal.activeCharacter.cantripSources;
+  delete internal.activeCharacter.preparedSpellSources;
+
+  await adapter.startLevelUp(internal.activeCharacter.id);
+  let snapshot = await adapter.getSnapshot();
+  const styleId = `progression.${paladinId}.2.fighting-style`;
+  const style = snapshot.progressionPlan?.choices.find((choice) => choice.id === styleId);
+  assert.ok(style);
+  assert.equal(style?.status, "ready");
+  assert.equal(style?.options.length, 5);
+  assert.equal(style?.options.at(-1)?.label, "축복받은 전사");
+  const prepared = snapshot.progressionPlan?.choices.find((choice) => choice.id === `progression.${paladinId}.2.column.준비 주문`);
+  assert.ok(prepared);
+  assert.equal(prepared?.options.find((option) => option.id === "dnd.srd521.spell.divine-smite")?.disabledReason, "이미 준비했거나 항상 준비된 주문입니다.");
+
+  const phase08 = adapter as unknown as Phase07AdapterCommands;
+  await phase08.setProgressionChoice(prepared!.id, { kind:"options", optionIds:["dnd.srd521.spell.command"] });
+  await phase08.setProgressionChoice(styleId, { kind:"options", optionIds:["feature:paladin.blessed-warrior"] });
+  snapshot = await adapter.getSnapshot();
+  const cantripChoice = snapshot.progressionPlan?.choices.find((choice) => choice.id === `${styleId}.blessed-warrior.cantrips`);
+  assert.ok(cantripChoice);
+  assert.equal(cantripChoice?.count, 2);
+  assert.ok(cantripChoice?.options.some((option) => option.id === "dnd.srd521.spell.sacred-flame"));
+  assert.ok(cantripChoice?.options.some((option) => option.id === "dnd.srd521.spell.thaumaturgy"));
+  await phase08.setProgressionChoice(cantripChoice!.id, {
+    kind:"options",
+    optionIds:["dnd.srd521.spell.sacred-flame","dnd.srd521.spell.thaumaturgy"],
+  });
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.progressionPlan?.blocking.length, 0);
+
+  await adapter.commitLevelUp();
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.level, 2);
+  assert.ok(snapshot.activeCharacter.features.includes("축복받은 전사"));
+  assert.ok(snapshot.activeCharacter.cantrips?.includes("dnd.srd521.spell.sacred-flame"));
+  assert.ok(snapshot.activeCharacter.cantrips?.includes("dnd.srd521.spell.thaumaturgy"));
+  assert.ok(snapshot.activeCharacter.preparedSpells?.includes("dnd.srd521.spell.command"));
+  assert.ok(snapshot.activeCharacter.preparedSpells?.includes("always:dnd.srd521.spell.divine-smite"));
+  assert.equal(snapshot.activeCharacter.preparedSpellSources?.["dnd.srd521.spell.divine-smite"], "팔라딘 2레벨 · 팔라딘의 강타 · SRD 5.2.1");
 });
 
 test("Ranger 4 -> 5 prepared-spell progression uses localized spell presentation and persists into the official sheet", async () => {
