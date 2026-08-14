@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test:creation-structure": "tsx --test tests/ui/characterCreationCatalogGate.test.ts",
+    "test:creation-structure": "tsx --test tests/ui/characterCreationCompleteGate.test.ts",
     "build": "tsc --noEmit && npm run test:creation-structure && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
