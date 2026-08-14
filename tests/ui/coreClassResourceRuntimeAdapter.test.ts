@@ -11,6 +11,7 @@ import {
   DRUID_WILD_SHAPE_RESOURCE_ID,
   PALADIN_CHANNEL_DIVINITY_RESOURCE_ID,
   PALADIN_ID,
+  PALADIN_LAY_ON_HANDS_RESOURCE_ID,
 } from "../../src/domain/coreClassResources";
 
 async function baselineAdapter() {
@@ -51,7 +52,7 @@ test("Cleric Channel Divinity projection preserves spent uses and only raises ca
   assert.equal(resource?.current, 0, "capacity growth must not grant an implicit Channel Divinity use");
 });
 
-test("Paladin level 11 projects three Channel Divinity uses with one-per-Short-Rest recovery", async () => {
+test("Paladin level 11 projects Channel Divinity and Lay On Hands with independent recovery and no snapshot refill", async () => {
   const { adapter, internal } = await baselineAdapter();
   internal.activeCharacter = {
     ...internal.activeCharacter,
@@ -60,14 +61,31 @@ test("Paladin level 11 projects three Channel Divinity uses with one-per-Short-R
     classLevels:[{ classId:PALADIN_ID, className:"팔라딘", level:11 }],
     resources:[],
   };
-  const snapshot = await adapter.getSnapshot();
-  const resource = snapshot.activeCharacter.resources.find((entry) => entry.id === PALADIN_CHANNEL_DIVINITY_RESOURCE_ID);
-  assert.deepEqual({ current:resource?.current, max:resource?.max, recovery:resource?.recovery }, {
+  let snapshot = await adapter.getSnapshot();
+  const channel = snapshot.activeCharacter.resources.find((entry) => entry.id === PALADIN_CHANNEL_DIVINITY_RESOURCE_ID);
+  let layOnHands = snapshot.activeCharacter.resources.find((entry) => entry.id === PALADIN_LAY_ON_HANDS_RESOURCE_ID);
+  assert.deepEqual({ current:channel?.current, max:channel?.max, recovery:channel?.recovery }, {
     current:3,
     max:3,
     recovery:{ shortRest:1, longRest:"all" },
   });
-  assert.match(resource?.source ?? "", /팔라딘 11레벨 · Channel Divinity/);
+  assert.deepEqual({ current:layOnHands?.current, max:layOnHands?.max, recovery:layOnHands?.recovery }, {
+    current:55,
+    max:55,
+    recovery:{ longRest:"all" },
+  });
+  assert.match(channel?.source ?? "", /팔라딘 11레벨 · Channel Divinity/);
+  assert.match(layOnHands?.source ?? "", /팔라딘 11레벨 · Lay On Hands/);
+
+  const internalLay = internal.activeCharacter.resources.find((entry) => entry.id === PALADIN_LAY_ON_HANDS_RESOURCE_ID);
+  assert.ok(internalLay);
+  internalLay!.current = 7;
+  internal.activeCharacter.level = 12;
+  internal.activeCharacter.classLevels = [{ classId:PALADIN_ID, className:"팔라딘", level:12 }];
+  snapshot = await adapter.getSnapshot();
+  layOnHands = snapshot.activeCharacter.resources.find((entry) => entry.id === PALADIN_LAY_ON_HANDS_RESOURCE_ID);
+  assert.equal(layOnHands?.max, 60);
+  assert.equal(layOnHands?.current, 7, "level-up capacity growth must not refill Lay On Hands");
 });
 
 test("Druid Wild Shape projection preserves spent uses while the level-17 capacity increases to four", async () => {
