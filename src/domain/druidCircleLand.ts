@@ -1,5 +1,6 @@
 import type { FixedDiceInput } from "./d20";
 import type { RulesRuntimeState } from "./combatState";
+import type { ConcentrationCheckRequest } from "./concentration";
 import { DRUID_WILD_SHAPE_RESOURCE_ID } from "./coreClassResources";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
@@ -15,6 +16,7 @@ export interface LandsAidDamageTarget {
   constitutionSaveModifier: number;
   saveDice: FixedDiceInput;
   creatureKind: "character" | "monster";
+  concentrationCheck?: Omit<ConcentrationCheckRequest,"damage">;
 }
 
 export interface LandsAidHealingTarget {
@@ -199,6 +201,7 @@ export function compileLandsAid(request: LandsAidRequest): PendingResolution {
           damageType:"necrotic",
           amount:{ operationId:damageRollId, field:"total" },
           creatureKind:entry.creatureKind,
+          concentrationCheck:entry.concentrationCheck,
         },
         {
           id:`${request.id}:damage-success:${index}`,
@@ -208,6 +211,7 @@ export function compileLandsAid(request: LandsAidRequest): PendingResolution {
           damageType:"necrotic",
           amount:{ operationId:damageRollId, field:"total", multiplier:0.5, rounding:"floor" },
           creatureKind:entry.creatureKind,
+          concentrationCheck:entry.concentrationCheck,
         },
       );
     });
