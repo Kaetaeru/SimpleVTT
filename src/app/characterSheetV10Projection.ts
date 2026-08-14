@@ -3,6 +3,7 @@ import type { AbilityKey, CharacterSheet } from "./contracts";
 import type { CharacterSheetSpellVm, CharacterSheetTraitVm } from "./creationContracts";
 import { classIdFromName, classMeta, classSemantics, originFeatOptions, spellOptions } from "./characterCreationV10Data";
 import { featDescription, featureDescription, featureLabel } from "./rulePresentation";
+import { SPELL_DESCRIPTION_PENDING, spellNameKo } from "./spellPresentation";
 
 export const SHEET_ABILITY_LABELS: Record<AbilityKey, string> = {
   str: "근력",
@@ -129,15 +130,17 @@ function spellEntries(c: CharacterSheet): CharacterSheetSpellVm[] {
     const option = names.get(id);
     const level = cantrips.has(id) ? 0 : 1;
     const raw = id.replace(/^dnd\.srd521\.spell\./, "").replaceAll("-", " ");
+    const nameEn = option?.nameEn ?? titleCase(raw);
+    const hasDescription = Boolean(option?.description);
     return {
       id,
-      name:option?.name ?? titleCase(raw),
-      nameEn:option?.nameEn,
+      name:spellNameKo(id, option?.name ?? nameEn),
+      nameEn,
       level,
       prepared:cantrips.has(id) || prepared.has(id),
       alwaysPrepared:always.has(id),
-      description:option?.description,
-      detailLines:[level === 0 ? "소마법" : "1레벨 주문", ...(spellbook.has(id) ? ["주문서"] : []), ...(always.has(id) ? ["항상 준비"] : []), "SRD 5.2.1"],
+      description:option?.description ?? SPELL_DESCRIPTION_PENDING,
+      detailLines:[level === 0 ? "소마법" : "1레벨 주문", ...(spellbook.has(id) ? ["주문서"] : []), ...(always.has(id) ? ["항상 준비"] : []), ...(!hasDescription ? ["상세 설명 본문 미연결"] : []), "SRD 5.2.1"],
     };
   });
 }
