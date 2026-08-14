@@ -75,6 +75,7 @@ export function compileDivineSpark(request: DivineSparkRequest): PendingResoluti
       kind:"use-economy",
       actorId:request.actorId,
       slot:"action",
+      actionKind:"magic",
     },
     {
       id:`${request.id}:channel-divinity`,
