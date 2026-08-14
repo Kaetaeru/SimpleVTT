@@ -151,6 +151,11 @@ export type ResolutionOperation =
       effect: EffectApplyRequest;
     })
   | (OperationBase & {
+      kind: "update-effect";
+      effectId: string;
+      metadataPatch: Record<string,string|number|boolean>;
+    })
+  | (OperationBase & {
       kind: "remove-effect";
       effectId: string;
     })
