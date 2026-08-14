@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "phase07.srd521.progression.v1",
+  "source": {
+    "repository": "Kaetaeru/D-D-2024-",
+    "revision": "d3d574725e0ecdfd05cb69fa32cf66196e3a8ee4",
+    "root": "10-RULEBOOKS/srd-5.2.1/",
+    "documents": [
+      "classes/*.md",
+      "character-creation/level-advancement.md",
+      "character-creation/multiclassing.md"
+    ]
+  },
+  "compressedBytes": 6090,
+  "uncompressedBytes": 100609,
+  "sha256": "af16e5da72629ca6b6844fecccff408300718c00c544b90522201c0fcf79a327",
+  "classCount": 12,
+  "levelRows": 240,
+  "prerequisiteCount": 12,
+  "multiclassSpellSlotRows": 20,
+  "growthRows": 20
+}

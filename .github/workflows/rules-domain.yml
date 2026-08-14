@@ -5,10 +5,16 @@ on:
     paths:
       - "src/domain/**"
       - "src/app/spellcastingRuntime*.ts"
+      - "src/app/progression*.ts"
       - "src/CombatSpellHud.tsx"
+      - "src/LevelUpV10.tsx"
+      - "content/presentation/dnd-srd-5.2.1.progression/**"
+      - "scripts/generate-progression.mjs"
       - "tests/domain/**"
       - "tests/ui/combatSpellHudStructure.test.ts"
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
+      - "tests/ui/levelUpV10Structure.test.ts"
+      - "tests/ui/progressionRuntimeAdapter.test.ts"
       - "package.json"
       - ".github/workflows/rules-domain.yml"
   push:
@@ -17,10 +23,16 @@ on:
     paths:
       - "src/domain/**"
       - "src/app/spellcastingRuntime*.ts"
+      - "src/app/progression*.ts"
       - "src/CombatSpellHud.tsx"
+      - "src/LevelUpV10.tsx"
+      - "content/presentation/dnd-srd-5.2.1.progression/**"
+      - "scripts/generate-progression.mjs"
       - "tests/domain/**"
       - "tests/ui/combatSpellHudStructure.test.ts"
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
+      - "tests/ui/levelUpV10Structure.test.ts"
+      - "tests/ui/progressionRuntimeAdapter.test.ts"
       - "package.json"
 
 jobs:
@@ -33,11 +45,13 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Run Phase 04/05/06 rules gate
+      - name: Run Phase 04/05/06/07 rules gate
         run: npm run test:rules-domain
       - name: Run Phase 06 spellcasting integration gate
         run: npm run test:spellcasting
-      - name: Generate presentation dependency
-        run: npm run generate:presentation
+      - name: Run Phase 07 progression integration gate
+        run: npm run test:progression
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Typecheck application
         run: npx tsc --noEmit
