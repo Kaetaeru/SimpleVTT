@@ -1,0 +1,76 @@
+/* Gate 04.5: keep focused character creation/progression inside the app viewport.
+   The app shell intentionally hides document overflow, so the center stage owns vertical scrolling. */
+.focused-create-shell,
+.focused-level-shell {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.focused-create-header,
+.focused-create-footer,
+.focused-level-header,
+.focused-level-footer {
+  position: relative;
+  z-index: 10;
+  min-width: 0;
+}
+
+.focused-create-body,
+.focused-level-body {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.focused-create-body > *,
+.focused-level-body > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+.focused-create-stage,
+.focused-level-stage,
+.focused-character-preview,
+.focused-level-preview {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.focused-create-stage {
+  padding-bottom: 56px;
+}
+
+.focused-class-flow {
+  min-width: 0;
+  min-height: min-content;
+}
+
+.focused-context-block {
+  margin-bottom: 0;
+  padding-bottom: 72px;
+}
+
+@media (max-width: 930px) {
+  .focused-create-body,
+  .focused-level-body {
+    overflow: hidden;
+  }
+
+  .focused-create-stage,
+  .focused-level-stage {
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+}
