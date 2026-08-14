@@ -59,8 +59,8 @@ export function spellPresentationByEnglish(nameEn: string) {
   return BY_EN.get(nameEn.toLocaleLowerCase("en-US"));
 }
 
-export function spellNameKo(id: string, fallback: string) {
-  return spellPresentationById(id)?.name ?? fallback;
+export function spellNameKo(id: string, fallback?: string) {
+  return spellPresentationById(id)?.name ?? fallback ?? id;
 }
 
 export function hasLocalizedSpellName(id: string) {
