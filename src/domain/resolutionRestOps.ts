@@ -42,20 +42,56 @@ function executeRest(
   ctx.state.effects = [...otherEffects, ...resolved.next.effects];
   const provenance = [...resolved.provenance];
   let resourceRestoration: { resourceId:string; amount:number; usageResourceId:string } | undefined;
+  let resourceRestorationBatch: { restorations:Array<{resourceId:string; amount:number}>; usageResourceId:string } | undefined;
 
-  if (operation.kind === "short-rest" && operation.resourceRestoration) {
-    const restoration = operation.resourceRestoration;
-    const usageIndex = actor.resources.findIndex((pool) => pool.id === restoration.usageResourceId);
-    const resourceIndex = actor.resources.findIndex((pool) => pool.id === restoration.resourceId);
-    if (usageIndex < 0) throw new Error(`resource not found: ${restoration.usageResourceId}`);
-    if (resourceIndex < 0) throw new Error(`resource not found: ${restoration.resourceId}`);
-    const usage = spendResource(actor.resources[usageIndex], 1, ctx.pending.sourceId);
-    actor.resources[usageIndex] = usage.next;
-    provenance.push(...usage.provenance);
-    const gain = gainResource(actor.resources[resourceIndex], restoration.amount, ctx.pending.sourceId);
-    actor.resources[resourceIndex] = gain.next;
-    provenance.push(...gain.provenance);
-    resourceRestoration = { ...restoration };
+  if (operation.kind === "short-rest") {
+    if (operation.resourceRestoration && operation.resourceRestorationBatch) {
+      throw new Error("short rest cannot use single and batch resource restoration in the same operation");
+    }
+
+    if (operation.resourceRestoration) {
+      const restoration = operation.resourceRestoration;
+      const usageIndex = actor.resources.findIndex((pool) => pool.id === restoration.usageResourceId);
+      const resourceIndex = actor.resources.findIndex((pool) => pool.id === restoration.resourceId);
+      if (usageIndex < 0) throw new Error(`resource not found: ${restoration.usageResourceId}`);
+      if (resourceIndex < 0) throw new Error(`resource not found: ${restoration.resourceId}`);
+      const usage = spendResource(actor.resources[usageIndex], 1, ctx.pending.sourceId);
+      actor.resources[usageIndex] = usage.next;
+      provenance.push(...usage.provenance);
+      const gain = gainResource(actor.resources[resourceIndex], restoration.amount, ctx.pending.sourceId);
+      actor.resources[resourceIndex] = gain.next;
+      provenance.push(...gain.provenance);
+      resourceRestoration = { ...restoration };
+    }
+
+    if (operation.resourceRestorationBatch) {
+      const batch = operation.resourceRestorationBatch;
+      if (!batch.restorations.length) throw new Error("batch resource restoration requires at least one resource");
+      const ids = batch.restorations.map((entry) => entry.resourceId);
+      if (new Set(ids).size !== ids.length) throw new Error("batch resource restoration resource IDs must be unique");
+      for (const restoration of batch.restorations) {
+        if (!Number.isInteger(restoration.amount) || restoration.amount < 1) {
+          throw new Error("batch resource restoration amounts must be positive integers");
+        }
+      }
+      const usageIndex = actor.resources.findIndex((pool) => pool.id === batch.usageResourceId);
+      if (usageIndex < 0) throw new Error(`resource not found: ${batch.usageResourceId}`);
+      const usage = spendResource(actor.resources[usageIndex], 1, ctx.pending.sourceId);
+      actor.resources[usageIndex] = usage.next;
+      provenance.push(...usage.provenance);
+
+      for (const restoration of batch.restorations) {
+        const resourceIndex = actor.resources.findIndex((pool) => pool.id === restoration.resourceId);
+        if (resourceIndex < 0) throw new Error(`resource not found: ${restoration.resourceId}`);
+        const gain = gainResource(actor.resources[resourceIndex], restoration.amount, ctx.pending.sourceId);
+        actor.resources[resourceIndex] = gain.next;
+        provenance.push(...gain.provenance);
+      }
+      resourceRestorationBatch = {
+        usageResourceId:batch.usageResourceId,
+        restorations:batch.restorations.map((entry) => ({ ...entry })),
+      };
+    }
   }
 
   const changes:RuntimeStateChange[] = [
@@ -93,7 +129,11 @@ function executeRest(
     ctx.state.concentration[operation.targetId] = undefined;
   }
 
-  const result = resourceRestoration ? { ...resolved, resourceRestoration } : resolved;
+  const result = resourceRestorationBatch
+    ? { ...resolved, resourceRestorationBatch }
+    : resourceRestoration
+      ? { ...resolved, resourceRestoration }
+      : resolved;
   return {
     result,
     event:makeEvent(
