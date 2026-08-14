@@ -6,7 +6,9 @@ import "./app/characterCreationV10Adapter";
 import "./app/characterSheetV10Runtime";
 import "./app/mockAdapterCompletion";
 import "./app/spellcastingRuntimeAdapter";
+import "./app/progressionRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
+import { LevelUpV10Bridge } from "./LevelUpV10";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -16,6 +18,7 @@ import "./compact-options.css";
 import "./character-sheet-v10.css";
 import "./spell-ui.css";
 import "./combat-spell-hud.css";
+import "./level-up-v10.css";
 import "./focused-layout-fix.css";
 import "./character-sheet-v10-viewport.css";
 
@@ -24,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
     <AppProvider>
       <App />
       <CombatSpellHudBridge />
+      <LevelUpV10Bridge />
     </AppProvider>
   </StrictMode>,
 );
