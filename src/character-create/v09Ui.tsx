@@ -18,7 +18,7 @@ export function SectionShell({ section, children, aside }: { section: CharacterC
 function inferredDetail(option: CharacterCreationOptionVm) {
   const description = option.description ?? featDescription(option.id) ?? option.summary;
   const detailLines = option.detailLines ?? [
-    ...(option.id.startsWith("dnd.srd521.spell.") ? ["SRD 주문 · 전체 본문은 presentation materialization과 연결되는 슬롯입니다."] : []),
+    ...(option.id.startsWith("dnd.srd521.spell.") ? ["SRD 5.2.1 주문"] : []),
     ...option.grants,
   ];
   return { description, detailLines };
