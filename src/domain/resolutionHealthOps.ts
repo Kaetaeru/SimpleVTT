@@ -1,4 +1,4 @@
-import { resolveDamage, resolveHealing } from "./damage";
+import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageResolution } from "./damage";
 import { type D20TestResult } from "./d20";
 import { resolveZeroHpAfterDamage } from "./life";
 import { applyHealingToLife } from "./lifeTransitions";
@@ -20,8 +20,10 @@ import { makeEvent, valueFromResult } from "./resolutionContext";
 import type { ResolutionOperation } from "./resolutionTypes";
 
 type DamageOp = Extract<ResolutionOperation, { kind:"damage" }>;
+type CompoundDamageOp = Extract<ResolutionOperation, { kind:"compound-damage" }>;
 type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;
 type TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;
+type DamageLifecycleOp = DamageOp | CompoundDamageOp;
 
 function endActorConcentration(ctx: ResolutionExecutionContext, actorId: string, reason: string) {
   const current = ctx.state.concentration[actorId];
@@ -40,17 +42,15 @@ function appendExpiredEffects(
   }
 }
 
-export function executeDamage(ctx: ResolutionExecutionContext, operation: DamageOp): OperationExecution {
+function finalizeDamage(
+  ctx: ResolutionExecutionContext,
+  operation: DamageLifecycleOp,
+  beforeLife: ReturnType<typeof structuredClone>,
+  damage: DamageResolution,
+  summary: string,
+): OperationExecution {
   const target = requireCombatant(ctx.state, operation.targetId);
-  const beforeLife = structuredClone(target.life);
   const beforeHp = { ...beforeLife.hp };
-  const amount = valueFromResult(ctx.results, operation.amount);
-  const defenses = [
-    ...(target.damageDefenses ?? []),
-    ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
-    ...(operation.defenses ?? []),
-  ];
-  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });
   const critical = operation.criticalFrom
     ? Boolean((ctx.results.get(operation.criticalFrom) as D20TestResult | undefined)?.critical)
     : false;
@@ -144,13 +144,61 @@ export function executeDamage(ctx: ResolutionExecutionContext, operation: Damage
     event:makeEvent(
       ctx.pending,
       operation,
-      `${operation.targetId} takes ${damage.finalDamage} ${operation.damageType} damage`,
+      summary,
       damage,
       provenance,
       changes,
       operation.targetId,
     ),
   };
+}
+
+export function executeDamage(ctx: ResolutionExecutionContext, operation: DamageOp): OperationExecution {
+  const target = requireCombatant(ctx.state, operation.targetId);
+  const beforeLife = structuredClone(target.life);
+  const beforeHp = { ...beforeLife.hp };
+  const amount = valueFromResult(ctx.results, operation.amount);
+  const defenses = [
+    ...(target.damageDefenses ?? []),
+    ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
+    ...(operation.defenses ?? []),
+  ];
+  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });
+  return finalizeDamage(
+    ctx,
+    operation,
+    beforeLife,
+    damage,
+    `${operation.targetId} takes ${damage.finalDamage} ${operation.damageType} damage`,
+  );
+}
+
+export function executeCompoundDamage(ctx: ResolutionExecutionContext, operation: CompoundDamageOp): OperationExecution {
+  const target = requireCombatant(ctx.state, operation.targetId);
+  const beforeLife = structuredClone(target.life);
+  const beforeHp = { ...beforeLife.hp };
+  const commonDefenses = [
+    ...(target.damageDefenses ?? []),
+    ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
+  ];
+  const damage = resolveCompoundDamage({
+    hp:beforeHp,
+    components:operation.components.map((component) => ({
+      damageType:component.damageType,
+      amount:valueFromResult(ctx.results, component.amount),
+      defenses:[...commonDefenses, ...(component.defenses ?? [])],
+    })),
+  });
+  const detail = damage.components
+    .map((component) => `${component.finalDamage} ${component.damageType}`)
+    .join(" + ");
+  return finalizeDamage(
+    ctx,
+    operation,
+    beforeLife,
+    damage,
+    `${operation.targetId} takes ${damage.finalDamage} compound damage (${detail})`,
+  );
 }
 
 export function executeHealing(ctx: ResolutionExecutionContext, operation: HealingOp): OperationExecution {
