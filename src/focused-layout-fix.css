@@ -1,5 +1,7 @@
 /* Gate 04.5: keep focused character creation/progression inside the app viewport.
-   The app shell intentionally hides document overflow, so the center stage owns vertical scrolling. */
+   The app shell intentionally hides document overflow, so the middle grid track owns scrolling.
+   Do not give the middle body or its stage height:100%; that makes the middle row consume the
+   whole shell height again and pushes the footer / lower class choices outside the clipped viewport. */
 .focused-create-shell,
 .focused-level-shell {
   width: 100%;
@@ -8,6 +10,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  grid-template-rows: max-content minmax(0, 1fr) max-content !important;
 }
 
 .focused-create-header,
@@ -17,60 +20,68 @@
   position: relative;
   z-index: 10;
   min-width: 0;
+  min-height: 0;
 }
 
 .focused-create-body,
 .focused-level-body {
   width: 100%;
-  height: 100%;
+  height: auto !important;
+  max-height: none !important;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 0 !important;
+  align-self: stretch;
+  overflow: hidden !important;
 }
 
 .focused-create-body > *,
 .focused-level-body > * {
   min-width: 0;
-  min-height: 0;
+  min-height: 0 !important;
 }
 
 .focused-create-stage,
 .focused-level-stage,
 .focused-character-preview,
 .focused-level-preview {
-  height: 100%;
-  max-height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  align-self: stretch;
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 
 .focused-create-stage {
-  padding-bottom: 56px;
+  padding-bottom: 72px;
 }
 
 .focused-class-flow {
   min-width: 0;
-  min-height: min-content;
+  min-height: 0;
+  padding-bottom: 24px;
 }
 
 .focused-context-block {
   margin-bottom: 0;
-  padding-bottom: 72px;
+  padding-bottom: 96px;
 }
 
 @media (max-width: 930px) {
   .focused-create-body,
   .focused-level-body {
-    overflow: hidden;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 
   .focused-create-stage,
   .focused-level-stage {
-    height: 100%;
-    max-height: 100%;
-    overflow-y: auto;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow-y: scroll !important;
   }
 }
