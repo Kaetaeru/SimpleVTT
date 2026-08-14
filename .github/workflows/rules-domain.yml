@@ -4,15 +4,23 @@ on:
   pull_request:
     paths:
       - "src/domain/**"
+      - "src/app/spellcastingRuntime*.ts"
+      - "src/CombatSpellHud.tsx"
       - "tests/domain/**"
+      - "tests/ui/combatSpellHudStructure.test.ts"
+      - "tests/ui/spellcastingRuntimeAdapter.test.ts"
       - "package.json"
       - ".github/workflows/rules-domain.yml"
   push:
     branches:
-      - "agent/46-rules-phase04-05"
+      - "agent/**"
     paths:
       - "src/domain/**"
+      - "src/app/spellcastingRuntime*.ts"
+      - "src/CombatSpellHud.tsx"
       - "tests/domain/**"
+      - "tests/ui/combatSpellHudStructure.test.ts"
+      - "tests/ui/spellcastingRuntimeAdapter.test.ts"
       - "package.json"
 
 jobs:
@@ -25,8 +33,10 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Run Phase 04/05 rules gate
+      - name: Run Phase 04/05/06 rules gate
         run: npm run test:rules-domain
+      - name: Run Phase 06 spellcasting integration gate
+        run: npm run test:spellcasting
       - name: Generate presentation dependency
         run: npm run generate:presentation
       - name: Typecheck application

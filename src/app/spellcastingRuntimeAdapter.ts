@@ -55,6 +55,7 @@ type AdapterInternalState = {
   queuedD20: number | null;
   lastBefore?: unknown;
   lastResolutionId?: string | null;
+  _undoPreviewArmed?: boolean;
   getSnapshot(): Promise<AppSnapshot>;
 };
 
@@ -63,7 +64,13 @@ type BridgeState = {
   casterByActor: Record<string, SpellCasterContext>;
 };
 
+type SpellUndoRecord = {
+  resolutionId: string;
+  runtime: RulesRuntimeState;
+};
+
 const bridgeByAdapter = new WeakMap<object, BridgeState>();
+const spellUndoByAdapter = new WeakMap<object, SpellUndoRecord>();
 
 const MIRA_CASTER: SpellCasterContext = {
   characterLevel: 4,
@@ -335,6 +342,7 @@ function resolutionFromCast(
 
 const originalGetSnapshot = MockAdapter.prototype.getSnapshot;
 const originalResolveAction = MockAdapter.prototype.resolveAction;
+const originalUndoLastResolution = MockAdapter.prototype.undoLastResolution;
 
 MockAdapter.prototype.getSnapshot = async function getSnapshotWithSpellcasting() {
   const snapshot = await originalGetSnapshot.call(this);
@@ -398,6 +406,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionThroughSpellKe
     activeCharacter: structuredClone(internal.activeCharacter),
     characters: structuredClone(internal.characters),
   };
+  const runtimeBefore = structuredClone(bridge.runtime);
   const faces = metadata.spellId === "dnd.srd521.spell.healing-word" ? facesForHealingWord(slotLevel ?? 1) : [];
 
   let targets: SpellCastTarget[];
@@ -438,6 +447,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionThroughSpellKe
     syncSceneFromRuntime(bridge, internal);
     internal.lastBefore = before;
     internal.lastResolutionId = internal.resolution.id;
+    spellUndoByAdapter.set(this, { resolutionId: internal.resolution.id, runtime: runtimeBefore });
     internal.activity.unshift({
       id: internal.resolution.id,
       time: "지금",
@@ -450,4 +460,24 @@ MockAdapter.prototype.resolveAction = async function resolveActionThroughSpellKe
   }
 
   return this.getSnapshot();
+};
+
+MockAdapter.prototype.undoLastResolution = async function undoSpellcastingResolution() {
+  const internal = this as unknown as AdapterInternalState;
+  const undoRecord = spellUndoByAdapter.get(this);
+  const matchesSpellResolution = Boolean(undoRecord && undoRecord.resolutionId === internal.lastResolutionId);
+  const wasPreviewArmed = internal._undoPreviewArmed === true;
+  const snapshot = await originalUndoLastResolution.call(this);
+
+  if (wasPreviewArmed) {
+    if (matchesSpellResolution && undoRecord) {
+      const bridge = bridgeFor(this, internal);
+      bridge.runtime = structuredClone(undoRecord.runtime);
+      syncSceneFromRuntime(bridge, internal);
+    }
+    spellUndoByAdapter.delete(this);
+    return this.getSnapshot();
+  }
+
+  return snapshot;
 };
