@@ -16,6 +16,7 @@ import {
   progressionRow,
   type AbilityKey,
 } from "./progressionCatalog";
+import { classSpellListEntries } from "./spellListCatalog";
 
 export interface ProgressionClassTrack {
   classId: string;
@@ -41,6 +42,8 @@ export interface ProgressionCharacterState {
   expertiseSources?: Record<string, string>;
   languages?: string[];
   languageSources?: Record<string, string>;
+  preparedSpellIds?: string[];
+  preparedSpellSources?: Record<string, string>;
   spellSlotMaximums?: Record<number, number>;
 }
 
@@ -52,6 +55,7 @@ export interface ProgressionRequest {
   selections: ChoiceSelectionMap;
   featOptions?: Array<{ id: string; label: string; description?: string }>;
   languageOptions?: Array<{ id: string; label: string; description?: string }>;
+  spellOptions?: Array<{ id: string; label: string; description?: string; level: number }>;
 }
 
 export interface ProgressionDiff {
@@ -100,6 +104,7 @@ const CHOICE_FEATURE_NAMES = new Set([
 function modifier(score: number) { return Math.floor((score - 10) / 2); }
 function clone<T>(value: T): T { return structuredClone(value); }
 function unique(values: string[]) { return [...new Set(values.filter(Boolean))]; }
+function normalizedSpellId(id: string) { return id.replace(/^always:/, ""); }
 
 function expertiseChoice(
   state: ProgressionCharacterState,
@@ -165,6 +170,49 @@ function languageChoice(
   };
 }
 
+function highestClassSpellSlotLevel(classId: string, classLevel: number) {
+  let highest = 0;
+  for (let spellLevel = 1; spellLevel <= 9; spellLevel += 1) {
+    if (numericProgressionColumn(classId, classLevel, String(spellLevel)) > 0) highest = spellLevel;
+  }
+  return highest;
+}
+
+function preparedSpellChoice(
+  state: ProgressionCharacterState,
+  targetClassId: string,
+  targetLevel: number,
+  count: number,
+  spellOptions: ProgressionRequest["spellOptions"],
+): ChoiceDefinition | undefined {
+  const maxSpellLevel = highestClassSpellSlotLevel(targetClassId, targetLevel);
+  if (maxSpellLevel <= 0) return undefined;
+  const canonical = classSpellListEntries(targetClassId, maxSpellLevel);
+  if (!canonical.length) return undefined;
+  const definition = classById(targetClassId)!;
+  const presentation = new Map((spellOptions ?? []).map((option) => [option.id, option]));
+  const alreadyPrepared = new Set((state.preparedSpellIds ?? []).map(normalizedSpellId));
+  return {
+    id:`progression.${targetClassId}.${targetLevel}.column.준비 주문`,
+    label:`준비 주문 +${count}`,
+    description:`${definition.nameKo} 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`,
+    kind:"spell",
+    count,
+    required:true,
+    status:"ready",
+    source:`${definition.nameKo} ${targetLevel}레벨 표 · SRD 5.2.1`,
+    options:canonical.map((entry) => {
+      const display = presentation.get(entry.id);
+      return {
+        id:entry.id,
+        label:display?.label ?? entry.nameEn,
+        description:display?.description ?? `${entry.level}레벨 ${definition.nameKo} 주문`,
+        disabledReason:alreadyPrepared.has(entry.id) ? "이미 준비했거나 항상 준비된 주문입니다." : undefined,
+      };
+    }),
+  };
+}
+
 function featureChoiceDefinitions(
   state: ProgressionCharacterState,
   targetClassId: string,
@@ -223,7 +271,13 @@ function featureChoiceDefinitions(
   return result;
 }
 
-function columnChoiceDefinitions(targetClassId: string, fromLevel: number, toLevel: number) {
+function columnChoiceDefinitions(
+  state: ProgressionCharacterState,
+  targetClassId: string,
+  fromLevel: number,
+  toLevel: number,
+  request: ProgressionRequest,
+) {
   const definition = classById(targetClassId)!;
   const result: ChoiceDefinition[] = [];
   const watched: Array<{ key:string; kind:ChoiceDefinition["kind"]; label:string }> = [
@@ -236,12 +290,20 @@ function columnChoiceDefinitions(targetClassId: string, fromLevel: number, toLev
     const before = fromLevel <= 0 ? 0 : numericProgressionColumn(targetClassId, fromLevel, watchedColumn.key);
     const after = numericProgressionColumn(targetClassId, toLevel, watchedColumn.key);
     if (after <= before) continue;
+    const count = after - before;
+    if (watchedColumn.key === "준비 주문") {
+      const ready = preparedSpellChoice(state, targetClassId, toLevel, count, request.spellOptions);
+      if (ready) {
+        result.push(ready);
+        continue;
+      }
+    }
     result.push({
       id:`progression.${targetClassId}.${toLevel}.column.${watchedColumn.key}`,
-      label:`${watchedColumn.label} +${after - before}`,
+      label:`${watchedColumn.label} +${count}`,
       description:`${definition.nameKo} 표의 ${watchedColumn.key} 수가 ${before} → ${after}로 증가합니다.`,
       kind:watchedColumn.kind,
-      count:after - before,
+      count,
       required:true,
       status:"catalog-pending",
       source:`${definition.nameKo} ${toLevel}레벨 표`,
@@ -263,11 +325,14 @@ function applyAsi(abilities: Record<AbilityKey, number>, selection: ChoiceSelect
   return { abilities: next, featId: selection.mode === "feat" ? selection.featId : undefined };
 }
 
-function selectedOptionLabels(choice: ChoiceDefinition, selections: ChoiceSelectionMap) {
+function selectedOptionIds(choice: ChoiceDefinition, selections: ChoiceSelectionMap) {
   const selection = selections[choice.id];
-  if (selection?.kind !== "options") return [];
+  return selection?.kind === "options" ? selection.optionIds : [];
+}
+
+function selectedOptionLabels(choice: ChoiceDefinition, selections: ChoiceSelectionMap) {
   const byId = new Map(choice.options.map((option) => [option.id, option.label]));
-  return selection.optionIds.map((id) => byId.get(id)).filter((label): label is string => Boolean(label));
+  return selectedOptionIds(choice, selections).map((id) => byId.get(id)).filter((label): label is string => Boolean(label));
 }
 
 function displayTracks(tracks: ProgressionClassTrack[]) { return tracks.map((track) => `${track.className} ${track.level}`).join(" / "); }
@@ -300,7 +365,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const rowFeatures = row?.features ?? [];
   const choices = [
     ...featureChoiceDefinitions(state, target.id, targetClassLevel, rowFeatures, request.featOptions, request.languageOptions),
-    ...columnChoiceDefinitions(target.id, existing?.level ?? 0, targetClassLevel),
+    ...columnChoiceDefinitions(state, target.id, existing?.level ?? 0, targetClassLevel, request),
   ];
   for (const choice of choices) {
     if (!choice.required || choice.status !== "ready" || choice.kind === "asi-or-feat") continue;
@@ -345,6 +410,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const languagesBefore = unique(state.languages ?? []);
   const languagesAdded = choices.filter((choice) => choice.kind === "language").flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const languagesAfter = unique([...languagesBefore, ...languagesAdded]);
+  const preparedSpellLabels = choices
+    .filter((choice) => choice.kind === "spell" && choice.id.endsWith(".column.준비 주문"))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const diffs: ProgressionDiff[] = [
     { label:"총 레벨", before:String(state.totalLevel), after:String(toTotalLevel), source:"SRD Level Advancement" },
     { label:"클래스", before:displayTracks(classTracksBefore), after:displayTracks(classTracksAfter), source:isMulticlass ? "SRD Multiclassing" : `${target.nameKo} progression` },
@@ -355,6 +423,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (spellcastingBefore.casterLevel !== spellcastingAfter.casterLevel || displaySlots(spellcastingBefore.slots) !== displaySlots(spellcastingAfter.slots)) diffs.push({ label:"멀티클래스 주문 슬롯", before:displaySlots(spellcastingBefore.slots), after:displaySlots(spellcastingAfter.slots), source:"SRD Multiclass Spellcaster Level" });
   if (expertiseAfter.length !== expertiseBefore.length) diffs.push({ label:"전문화", before:displayList(expertiseBefore), after:displayList(expertiseAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (languagesAfter.length !== languagesBefore.length) diffs.push({ label:"언어", before:displayList(languagesBefore), after:displayList(languagesAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   return {
     targetClassId:target.id, targetClassName:target.nameKo, targetClassLevel, fromTotalLevel:state.totalLevel, toTotalLevel,
@@ -400,6 +469,20 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   }
   next.languages = [...languages];
   next.languageSources = languageSources;
+  const preparedSpellIds = [...(next.preparedSpellIds ?? [])];
+  const preparedSpellKeys = new Set(preparedSpellIds.map(normalizedSpellId));
+  const preparedSpellSources = { ...(next.preparedSpellSources ?? {}) };
+  for (const choice of plan.choices.filter((entry) => entry.kind === "spell" && entry.id.endsWith(".column.준비 주문"))) {
+    for (const spellId of selectedOptionIds(choice, request.selections)) {
+      if (!preparedSpellKeys.has(spellId)) {
+        preparedSpellKeys.add(spellId);
+        preparedSpellIds.push(spellId);
+      }
+      preparedSpellSources[spellId] = choice.source;
+    }
+  }
+  next.preparedSpellIds = preparedSpellIds;
+  next.preparedSpellSources = preparedSpellSources;
   if (plan.isMulticlass) next.features.push(...plan.multiclassGrants.map((grant) => `${plan.targetClassName} 멀티클래스 · ${grant}`));
   const subclass = plan.classTracksAfter.find((track) => track.classId === plan.targetClassId)?.subclassName;
   if (subclass && !next.features.includes(subclass)) next.features.push(subclass);
