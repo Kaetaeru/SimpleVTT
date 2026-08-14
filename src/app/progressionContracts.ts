@@ -7,6 +7,8 @@ declare module "./contracts" {
     classLevels?: ProgressionClassTrack[];
     hitDiceByDie?: Record<string, number>;
     progressionRevision?: number;
+    expertiseSkills?: string[];
+    expertiseSources?: Record<string, string>;
     spellSlotMaximums?: Record<number, number>;
   }
 
