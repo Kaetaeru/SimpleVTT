@@ -1,7 +1,7 @@
 import "./progressionContracts";
 import "./creationContracts";
 import type { AppSnapshot, CharacterSheet, CharacterSummary, LevelUpCommand, LevelUpDraft } from "./contracts";
-import { fightingStyleOptions, generalLanguageOptions, spellOptions } from "./characterCreationV10Data";
+import { fightingStyleOptions, generalLanguageOptions, originFeatOptions, spellOptions } from "./characterCreationV10Data";
 import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
@@ -83,6 +83,13 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
   sheet.metamagicIds = unique(sheet.metamagicIds ?? []);
   sheet.metamagicSources ??= {};
   for (const metamagicId of sheet.metamagicIds) sheet.metamagicSources[metamagicId] ??= "Existing character / Sorcerer Metamagic";
+  sheet.eldritchInvocationIds = unique(sheet.eldritchInvocationIds ?? []);
+  sheet.eldritchInvocationSources ??= {};
+  for (const invocationId of sheet.eldritchInvocationIds) sheet.eldritchInvocationSources[invocationId] ??= "Existing character / Eldritch Invocation";
+  sheet.mysticArcanumSpellIds ??= {};
+  sheet.mysticArcanumSources ??= {};
+  sheet.pactMagicSlotLevel ??= 0;
+  sheet.pactMagicSlotMaximum ??= 0;
   sheet.progressionRevision ??= 0;
   return sheet;
 }
@@ -114,12 +121,22 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     spellbookSpellSources:clone(sheet.spellbookSpellSources ?? {}),
     metamagicIds:clone(sheet.metamagicIds ?? []),
     metamagicSources:clone(sheet.metamagicSources ?? {}),
+    eldritchInvocationIds:clone(sheet.eldritchInvocationIds ?? []),
+    eldritchInvocationSources:clone(sheet.eldritchInvocationSources ?? {}),
+    mysticArcanumSpellIds:clone(sheet.mysticArcanumSpellIds ?? {}),
+    mysticArcanumSources:clone(sheet.mysticArcanumSources ?? {}),
+    pactMagicSlotLevel:sheet.pactMagicSlotLevel ?? 0,
+    pactMagicSlotMaximum:sheet.pactMagicSlotMaximum ?? 0,
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
   };
 }
 
 function featOptions(state: AdapterState) {
   return state.catalog.filter((entry) => entry.category === "feat").map((entry) => ({ id:entry.id, label:entry.nameKo, description:entry.description }));
+}
+
+function progressionOriginFeatOptions() {
+  return originFeatOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
 }
 
 function progressionFightingStyleOptions() {
@@ -168,6 +185,7 @@ function requestFor(state: AdapterState) {
     hpRoll:draft.hpRoll,
     selections:clone(draft.progressionSelections ?? {}),
     featOptions:featOptions(state),
+    originFeatOptions:progressionOriginFeatOptions(),
     fightingStyleOptions:progressionFightingStyleOptions(),
     druidCantripOptions:progressionClassCantripOptions("dnd.srd521.class.druid"),
     clericCantripOptions:progressionClassCantripOptions("dnd.srd521.class.cleric"),
@@ -196,7 +214,7 @@ function syncLegacyDraft(draft: LevelUpDraft, plan: ProgressionPlan) {
     grantedFeatures:[...plan.automaticGrants],
     resourceChanges:plan.multiclassGrants,
     actionChanges:[],
-    spellChanges:plan.diffs.filter((diff) => diff.label.includes("주문") || diff.label.includes("소마법")).map((diff) => `${diff.label}: ${diff.before} → ${diff.after}`),
+    spellChanges:plan.diffs.filter((diff) => diff.label.includes("주문") || diff.label.includes("소마법") || diff.label.includes("계약 마법") || diff.label.includes("신비한 비전")).map((diff) => `${diff.label}: ${diff.before} → ${diff.after}`),
     diffs:plan.diffs,
   };
   draft.validation = [
@@ -234,6 +252,12 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.spellbookSpellSources = clone(next.spellbookSpellSources ?? {});
   sheet.metamagicIds = clone(next.metamagicIds ?? []);
   sheet.metamagicSources = clone(next.metamagicSources ?? {});
+  sheet.eldritchInvocationIds = clone(next.eldritchInvocationIds ?? []);
+  sheet.eldritchInvocationSources = clone(next.eldritchInvocationSources ?? {});
+  sheet.mysticArcanumSpellIds = clone(next.mysticArcanumSpellIds ?? {});
+  sheet.mysticArcanumSources = clone(next.mysticArcanumSources ?? {});
+  sheet.pactMagicSlotLevel = next.pactMagicSlotLevel ?? 0;
+  sheet.pactMagicSlotMaximum = next.pactMagicSlotMaximum ?? 0;
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
