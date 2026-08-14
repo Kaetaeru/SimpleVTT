@@ -17,6 +17,7 @@ export const FIGHTER_CHAMPION_HEROIC_WARRIOR_SOURCE = "feature:fighter.champion.
 export const FIGHTER_CHAMPION_SURVIVOR_SOURCE = "feature:fighter.champion.survivor";
 export const FIGHTER_CHAMPION_HEROIC_RALLY_SOURCE = "feature:fighter.champion.survivor.heroic-rally";
 export const FIGHTER_CHAMPION_DEFY_DEATH_SOURCE = "feature:fighter.champion.survivor.defy-death";
+export const FIGHTER_CHAMPION_TURN_START_SOURCE = "feature:fighter.champion.turn-start";
 
 function validateChampion(args:{ fighterLevel:number; subclassId?:string; minimumLevel:number; feature:string }) {
   if (!Number.isInteger(args.fighterLevel) || args.fighterLevel < 0 || args.fighterLevel > 20) {
@@ -171,7 +172,7 @@ export function resolveChampionTurnStart(
     return resolvePendingResolution(profile,inputState,{
       id:request.id,
       actorId:request.actorId,
-      sourceId:FIGHTER_CHAMPION_SURVIVOR_SOURCE,
+      sourceId:FIGHTER_CHAMPION_TURN_START_SOURCE,
       expectedRevision:request.expectedRevision,
       operations,
     });
