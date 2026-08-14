@@ -46,7 +46,12 @@ import {
 } from "./warlockProgressionChoices";
 import {
   WIZARD_ID,
+  isWizardSignatureSpellsChoice,
+  isWizardSpellMasteryChoice,
   wizardScholarChoice,
+  wizardSignatureSpellsChoice,
+  wizardSpellMasteryChoices,
+  wizardSpellMasteryLevelFromChoiceId,
   wizardSpellbookChoice,
   wizardSpellbookChoiceId,
   wizardSpellbookSelectionIds,
@@ -82,6 +87,10 @@ export interface ProgressionCharacterState {
   preparedSpellSources?: Record<string, string>;
   spellbookSpellIds?: string[];
   spellbookSpellSources?: Record<string, string>;
+  spellMasterySpellIds?: Record<number, string>;
+  spellMasterySources?: Record<number, string>;
+  signatureSpellIds?: string[];
+  signatureSpellSources?: Record<string, string>;
   metamagicIds?: string[];
   metamagicSources?: Record<string, string>;
   eldritchInvocationIds?: string[];
@@ -402,7 +411,12 @@ function preparedSpellChoice(
   const definition = classById(targetClassId)!;
   const presentation = new Map((request.spellOptions ?? []).map((option) => [option.id, option]));
   const automaticAtTargetLevel = automaticPreparedSpellsForLevel(targetClassId, targetLevel).map((entry) => entry.spellId);
-  const alreadyPrepared = new Set([...(state.preparedSpellIds ?? []).map(normalizedSpellId), ...automaticAtTargetLevel]);
+  const wizardFeaturePrepared = targetClassId === WIZARD_ID
+    ? Object.entries(request.selections)
+      .filter(([choiceId, selection]) => (isWizardSpellMasteryChoice(choiceId) || isWizardSignatureSpellsChoice(choiceId)) && selection.kind === "options")
+      .flatMap(([, selection]) => selection.kind === "options" ? selection.optionIds : [])
+    : [];
+  const alreadyPrepared = new Set([...(state.preparedSpellIds ?? []).map(normalizedSpellId), ...automaticAtTargetLevel, ...wizardFeaturePrepared]);
   return {
     id:`progression.${targetClassId}.${targetLevel}.column.준비 주문`,
     label:`준비 주문 +${count}`,
@@ -526,6 +540,25 @@ function featureChoiceDefinitions(
         result.push(arcanum);
         continue;
       }
+    }
+    if (targetClassId === WIZARD_ID && feature === "주문 숙련") {
+      result.push(...wizardSpellMasteryChoices({
+        targetLevel,
+        knownSpellbookIds:state.spellbookSpellIds ?? [],
+        selections:request.selections,
+        spellOptions:request.spellOptions,
+      }));
+      continue;
+    }
+    if (targetClassId === WIZARD_ID && feature === "대표 주문") {
+      const signature = wizardSignatureSpellsChoice({
+        targetLevel,
+        knownSpellbookIds:state.spellbookSpellIds ?? [],
+        selections:request.selections,
+        spellOptions:request.spellOptions,
+      });
+      if (signature) result.push(signature);
+      continue;
     }
     if (targetClassId === WIZARD_ID && feature === "학자") {
       const scholar = wizardScholarChoice({
@@ -782,6 +815,12 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const spellbookLabels = target.id === WIZARD_ID
     ? choices.filter((choice) => choice.id === wizardSpellbookChoiceId(targetClassLevel)).flatMap((choice) => selectedOptionLabels(choice, request.selections))
     : [];
+  const spellMasteryLabels = choices
+    .filter((choice) => isWizardSpellMasteryChoice(choice.id))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const signatureSpellLabels = choices
+    .filter((choice) => isWizardSignatureSpellsChoice(choice.id))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const preparedSpellLabels = choices
     .filter((choice) => choice.kind === "spell" && choice.id.endsWith(".column.준비 주문"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
@@ -806,6 +845,8 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (invocationLabels.length) diffs.push({ label:"섬뜩한 기원술", before:String((state.eldritchInvocationIds ?? []).length), after:String((state.eldritchInvocationIds ?? []).length + invocationLabels.length), source:`워락 ${targetClassLevel}레벨 · SRD 5.2.1` });
   if (arcanumLabels.length) diffs.push({ label:"신비한 비전", before:"—", after:arcanumLabels.join(", "), source:`워락 ${targetClassLevel}레벨 · SRD 5.2.1` });
   if (spellbookLabels.length) diffs.push({ label:"주문책 추가", before:"—", after:spellbookLabels.join(", "), source:`위저드 ${targetClassLevel}레벨 · SRD 5.2.1` });
+  if (spellMasteryLabels.length) diffs.push({ label:"주문 숙련", before:"—", after:spellMasteryLabels.join(", "), source:"위저드 18레벨 · SRD 5.2.1" });
+  if (signatureSpellLabels.length) diffs.push({ label:"대표 주문", before:"—", after:signatureSpellLabels.join(", "), source:"위저드 20레벨 · SRD 5.2.1" });
   if (automaticPrepared.length) diffs.push({ label:"항상 준비 주문", before:"—", after:automaticPrepared.map((entry) => entry.nameEn).join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -903,6 +944,28 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   }
   next.mysticArcanumSpellIds = arcanumIds;
   next.mysticArcanumSources = arcanumSources;
+  const spellMasteryIds = { ...(next.spellMasterySpellIds ?? {}) };
+  const spellMasterySources = { ...(next.spellMasterySources ?? {}) };
+  for (const choice of plan.choices.filter((entry) => isWizardSpellMasteryChoice(entry.id))) {
+    const spellLevel = wizardSpellMasteryLevelFromChoiceId(choice.id);
+    const spellId = selectedOptionIds(choice, request.selections)[0];
+    if (spellLevel && spellId) {
+      spellMasteryIds[spellLevel] = spellId;
+      spellMasterySources[spellLevel] = choice.source;
+    }
+  }
+  next.spellMasterySpellIds = spellMasteryIds;
+  next.spellMasterySources = spellMasterySources;
+  const signatureSpellIds = new Set(next.signatureSpellIds ?? []);
+  const signatureSpellSources = { ...(next.signatureSpellSources ?? {}) };
+  for (const choice of plan.choices.filter((entry) => isWizardSignatureSpellsChoice(entry.id))) {
+    for (const spellId of selectedOptionIds(choice, request.selections)) {
+      signatureSpellIds.add(spellId);
+      signatureSpellSources[spellId] = choice.source;
+    }
+  }
+  next.signatureSpellIds = [...signatureSpellIds];
+  next.signatureSpellSources = signatureSpellSources;
   const cantripIds = [...(next.cantripIds ?? [])];
   const cantripKeys = new Set(cantripIds);
   const cantripSources = { ...(next.cantripSources ?? {}) };
@@ -946,13 +1009,22 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
       preparedSpellSources[spellId] = choice.source;
     }
   }
-  for (const relationship of automaticPreparedSpellsForLevel(plan.targetClassId, plan.targetClassLevel)) {
-    const existingIndex = preparedSpellIds.findIndex((id) => normalizedSpellId(id) === relationship.spellId);
-    const alwaysId = `always:${relationship.spellId}`;
+  const markAlwaysPrepared = (spellId: string, source: string) => {
+    const existingIndex = preparedSpellIds.findIndex((id) => normalizedSpellId(id) === spellId);
+    const alwaysId = `always:${spellId}`;
     if (existingIndex >= 0) preparedSpellIds[existingIndex] = alwaysId;
     else preparedSpellIds.push(alwaysId);
-    preparedSpellKeys.add(relationship.spellId);
-    preparedSpellSources[relationship.spellId] = `${plan.targetClassName} ${plan.targetClassLevel}레벨 · ${relationship.sourceFeature} · SRD 5.2.1`;
+    preparedSpellKeys.add(spellId);
+    preparedSpellSources[spellId] = source;
+  };
+  for (const choice of plan.choices.filter((entry) => isWizardSpellMasteryChoice(entry.id) || isWizardSignatureSpellsChoice(entry.id))) {
+    for (const spellId of selectedOptionIds(choice, request.selections)) markAlwaysPrepared(spellId, choice.source);
+  }
+  for (const relationship of automaticPreparedSpellsForLevel(plan.targetClassId, plan.targetClassLevel)) {
+    markAlwaysPrepared(
+      relationship.spellId,
+      `${plan.targetClassName} ${plan.targetClassLevel}레벨 · ${relationship.sourceFeature} · SRD 5.2.1`,
+    );
   }
   next.preparedSpellIds = unique(preparedSpellIds);
   next.preparedSpellSources = preparedSpellSources;
