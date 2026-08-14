@@ -54,7 +54,7 @@ test("positive damage ends only effects whose targetTakesDamage trigger matches 
   assert.equal(result.state.effects.some((effect) => effect.id === "break-on-goblin-damage"), false);
   assert.equal(result.state.effects.some((effect) => effect.id === "unrelated-hero-damage"), true);
   assert.equal(result.state.effects.some((effect) => effect.id === "persistent-goblin"), true);
-  assert.ok(result.events[0].stateChanges.some((change) => change.kind === "effect" && change.effectId === "break-on-goblin-damage" && change.action === "removed"));
+  assert.ok(result.events[0].stateChanges.some((change) => change.kind === "effect" && change.effectId === "break-on-goblin-damage" && change.operation === "removed"));
 });
 
 test("applying Stunned ends effects sourced by that creature when sourceBecomesIncapacitated is declared", () => {
