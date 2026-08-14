@@ -107,7 +107,7 @@ test("multiclass Fighter 5 -> Druid 1 materializes Primal Order, Magician bonus 
   );
   assert.ok(result.state.preparedSpellIds?.includes(`always:${stableSpellId("Speak with Animals")}`));
   assert.equal(result.state.preparedSpellSources?.[stableSpellId("Speak with Animals")], "드루이드 1레벨 · 드루이드어 · SRD 5.2.1");
-  assert.equal(result.state.spellSlotMaximums?.[1], 4, "Fighter 5 + Druid 1 has full-caster level 1 spell slots");
+  assert.equal(result.state.spellSlotMaximums?.[1], 2, "Fighter 5 + Druid 1 has caster level 1 spell slots");
 });
 
 test("Druid entry rejects a Magician bonus cantrip duplicated in the base Druid cantrip allotment", () => {
