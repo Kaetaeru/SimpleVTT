@@ -125,17 +125,16 @@ const AUTOMATIC_PREPARED: AutomaticPreparedSpellRelationship[] = [
     sourceFeature:"충직한 군마",
   },
   ...[
-    [3,"Aid",2], [3,"Bless",1], [3,"Cure Wounds",1], [3,"Lesser Restoration",2],
-    [5,"Mass Healing Word",3], [5,"Revivify",3],
-    [7,"Aura of Life",4], [7,"Death Ward",4],
-    [9,"Greater Restoration",5], [9,"Mass Cure Wounds",5],
+    [3,"Aid"], [3,"Bless"], [3,"Cure Wounds"], [3,"Lesser Restoration"],
+    [5,"Mass Healing Word"], [5,"Revivify"],
+    [7,"Aura of Life"], [7,"Death Ward"],
+    [9,"Greater Restoration"], [9,"Mass Cure Wounds"],
   ].map(([classLevel, nameEn]) => ({
     classId:"dnd.srd521.class.cleric",
     classLevel:Number(classLevel),
     spellId:stableSpellId(String(nameEn)),
     nameEn:String(nameEn),
     sourceFeature:"생명 권역 주문",
-    subclassName:"생명 권역",
   })),
 ];
 
