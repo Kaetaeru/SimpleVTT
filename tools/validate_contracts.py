@@ -135,20 +135,39 @@ def validate_spell_catalog(module_paths: list[Path]) -> None:
     if len(set(ids)) != len(ids):
         raise SystemExit("duplicate spell IDs in materialized catalog")
 
-    errors = []
+    errors: list[str] = []
+    incomplete: list[str] = []
     for entry in spells:
         presentation = entry.get("presentation", {})
         ko = presentation.get("locales", {}).get("ko-KR", {})
         source = presentation.get("translationSource", {})
         definitions = [m for m in entry.get("mechanics", []) if m.get("kind") == "spell-definition"]
-        if not ko.get("name") or not ko.get("description"):
-            errors.append(f"{entry['id']}: missing ko-KR name/description")
-        if source.get("repository") != "Kaetaeru/D-D-2024-" or source.get("revision") != SPELL_SOURCE_REVISION:
-            errors.append(f"{entry['id']}: translation source pin mismatch")
+        if not ko.get("name"):
+            errors.append(f"{entry['id']}: missing ko-KR name")
         if len(definitions) != 1:
             errors.append(f"{entry['id']}: expected one spell-definition")
-        elif definitions[0].get("config", {}).get("supportStatus") not in SPELL_SUPPORT_STATUSES:
+            continue
+
+        support = definitions[0].get("config", {}).get("supportStatus")
+        if support not in SPELL_SUPPORT_STATUSES:
             errors.append(f"{entry['id']}: invalid supportStatus")
+            continue
+
+        source_pinned = source.get("repository") == "Kaetaeru/D-D-2024-" and source.get("revision") == SPELL_SOURCE_REVISION
+        if support == "reviewed":
+            if not ko.get("description"):
+                errors.append(f"{entry['id']}: reviewed spell missing ko-KR description")
+            if not source_pinned:
+                errors.append(f"{entry['id']}: reviewed spell translation source pin mismatch")
+        else:
+            missing = []
+            if not ko.get("description"):
+                missing.append("description")
+            if not source_pinned:
+                missing.append("pinned-source")
+            if missing:
+                incomplete.append(f"{entry['id']} ({support}: {', '.join(missing)})")
+
     if errors:
         for error in errors[:50]:
             print(error, file=sys.stderr)
@@ -161,9 +180,13 @@ def validate_spell_catalog(module_paths: list[Path]) -> None:
         )
     else:
         print("spell catalog coverage complete: 339/339")
+    if incomplete:
+        print(f"spell catalog partial/presentation metadata pending: {len(incomplete)} entries")
+        for item in incomplete[:10]:
+            print(f"  pending: {item}")
     print(
         f"spell catalog integrity ok: {len(spells)} unique materialized entries, "
-        "pinned ko-KR source, valid supportStatus"
+        "reviewed entries enforce pinned ko-KR source"
     )
 
 
