@@ -1,7 +1,7 @@
 import { beginTurn } from "./turnEconomy";
 import { conditionActionAvailability, effectiveSpeed } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { expireEffectsAtClock } from "./effects";
+import { expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
 import { recoverResources } from "./resources";
 import { economyStateChanges } from "./stateChange";
 import { effectStateChange, type RuntimeStateChange } from "./runtimeStateChange";
@@ -23,7 +23,7 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
     phase:"start",
   };
   const expiry = expireEffectsAtClock(ctx.state.effects, ctx.state.clock);
-  ctx.state.effects = expiry.active;
+  ctx.state.effects = resetEffectTurnActivity(expiry.active, operation.actorId);
 
   const conditions = conditionEffectsFor(ctx.state, operation.actorId);
   const speed = effectiveSpeed(actor.baseSpeed, conditions);
