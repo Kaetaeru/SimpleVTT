@@ -18,6 +18,7 @@ import {
   executeTargeting,
   executeTurnFeature,
 } from "./resolutionActionOps";
+import { executeFreeMove } from "./resolutionMovementOps";
 import { executeGainResource, executeSetResourceRecoveryLockout } from "./resolutionResourceOps";
 import {
   executeApplyEffect,
@@ -45,6 +46,7 @@ function executeOperation(
     case "grant-extra-action": return executeGrantExtraAction(ctx, operation);
     case "use-turn-feature": return executeTurnFeature(ctx, operation);
     case "move": return executeMove(ctx, operation);
+    case "free-move": return executeFreeMove(ctx, operation);
     case "spend-resource": return executeResource(ctx, operation);
     case "gain-resource": return executeGainResource(ctx, operation);
     case "set-resource-recovery-lockout": return executeSetResourceRecoveryLockout(ctx, operation);
