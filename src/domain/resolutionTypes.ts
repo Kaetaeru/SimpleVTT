@@ -12,6 +12,7 @@ import type { ProvenanceRecord } from "./profileEngine";
 import type { RulesRuntimeState } from "./combatState";
 import type { RuntimeStateChange } from "./runtimeStateChange";
 import type { TemporaryHpChoice } from "./temporaryHp";
+import type { ResourceRecovery } from "./resources";
 
 export type NumericOperand = number | {
   operationId: string;
@@ -58,6 +59,18 @@ export type ResolutionOperation =
       actorId?: string;
       resourceId: string;
       amount: number;
+    })
+  | (OperationBase & {
+      kind: "gain-resource";
+      actorId?: string;
+      resourceId: string;
+      amount: number;
+      maximumDelta?: number;
+      temporaryCapacityUntilLongRest?: boolean;
+      createIfMissing?: {
+        label: string;
+        recovery?: ResourceRecovery;
+      };
     })
   | (OperationBase & {
       kind: "d20";
