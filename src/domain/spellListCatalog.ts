@@ -1,4 +1,5 @@
 import { CLERIC_SPELL_ROWS } from "./clericSpellList";
+import { DRUID_SPELL_ROWS } from "./druidSpellList";
 
 export interface ClassSpellListEntry {
   id: string;
@@ -39,6 +40,12 @@ const CLERIC: ClassSpellList = {
   classId:"dnd.srd521.class.cleric",
   source:{ document:"System Reference Document 5.2.1", page:38, license:"CC-BY-4.0" },
   spells:CLERIC_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
+};
+
+const DRUID: ClassSpellList = {
+  classId:"dnd.srd521.class.druid",
+  source:{ document:"System Reference Document 5.2.1", page:44, license:"CC-BY-4.0" },
+  spells:DRUID_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
 };
 
 const RANGER: ClassSpellList = {
@@ -98,6 +105,7 @@ const PALADIN: ClassSpellList = {
 
 const LISTS = new Map<string, ClassSpellList>([
   [CLERIC.classId, CLERIC],
+  [DRUID.classId, DRUID],
   [RANGER.classId, RANGER],
   [PALADIN.classId, PALADIN],
 ]);
@@ -109,6 +117,13 @@ const AUTOMATIC_PREPARED: AutomaticPreparedSpellRelationship[] = [
     spellId:spellId("hunter-s-mark"),
     nameEn:"Hunter's Mark",
     sourceFeature:"주적",
+  },
+  {
+    classId:"dnd.srd521.class.druid",
+    classLevel:1,
+    spellId:stableSpellId("Speak with Animals"),
+    nameEn:"Speak with Animals",
+    sourceFeature:"드루이드어",
   },
   {
     classId:"dnd.srd521.class.paladin",
