@@ -9,7 +9,7 @@ import {
 import type { TargetFacts } from "../../src/domain/targeting";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
-function point(distanceFeet = 40):TargetFacts {
+function point(distanceFeet = 10):TargetFacts {
   return {
     id:"point:land-aid",
     kind:"point",
@@ -55,13 +55,13 @@ test("Land's Aid uses one Magic Action and Wild Shape use for failed-save damage
     spellSaveDc:14,
     point:point(),
     damageTargets:[{
-      target:creature("goblin","enemy",45),
+      target:creature("goblin","enemy",15),
       distanceFromPointFeet:5,
       constitutionSaveModifier:0,
       saveDice:{ id:"land-aid-save", purpose:"Land's Aid Constitution save", sides:20, faces:[5] },
       creatureKind:"monster",
     }],
-    healingTarget:{ target:creature("hero","self",0), distanceFromPointFeet:8 },
+    healingTarget:{ target:creature("hero","self",0), distanceFromPointFeet:10 },
     damageFaces:[3,4],
     healingFaces:[5,6],
     useActionEconomy:true,
@@ -92,7 +92,7 @@ test("Land's Aid halves damage on a successful Constitution save and follows exa
     spellSaveDc:14,
     point:point(),
     damageTargets:[{
-      target:creature("goblin","enemy",45),
+      target:creature("goblin","enemy",15),
       distanceFromPointFeet:5,
       constitutionSaveModifier:0,
       saveDice:{ id:"land-aid-success", purpose:"Land's Aid Constitution save", sides:20, faces:[18] },
@@ -137,7 +137,7 @@ test("Land's Aid rejects a point or creature outside authoritative geometry befo
     spellSaveDc:14,
     point:point(),
     damageTargets:[{
-      target:creature("goblin","enemy",55),
+      target:creature("goblin","enemy",21),
       distanceFromPointFeet:11,
       constitutionSaveModifier:0,
       saveDice:{ id:"land-aid-outside", purpose:"Land's Aid Constitution save", sides:20, faces:[5] },
@@ -165,7 +165,7 @@ test("Land's Aid forwards a target's fixed Concentration check to the damage lif
     spellSaveDc:18,
     point:point(),
     damageTargets:[{
-      target:creature("goblin","enemy",45),
+      target:creature("goblin","enemy",15),
       distanceFromPointFeet:5,
       constitutionSaveModifier:0,
       saveDice:{ id:"land-aid-fail", purpose:"Land's Aid Constitution save", sides:20, faces:[5] },
