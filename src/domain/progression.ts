@@ -4,6 +4,11 @@ import {
   type ChoiceSelectionMap,
   validateChoiceDefinitions,
 } from "./choiceDefinition";
+import {
+  CLERIC_ID,
+  clericFeatureChoiceDefinitions,
+  isClericPersistentFeatureChoice,
+} from "./clericProgressionChoices";
 import { expertiseChoiceRelationship, seasonedExplorerRelationship } from "./progressionChoiceCatalog";
 import {
   PROGRESSION_CATALOG,
@@ -114,6 +119,7 @@ function modifier(score: number) { return Math.floor((score - 10) / 2); }
 function clone<T>(value: T): T { return structuredClone(value); }
 function unique(values: string[]) { return [...new Set(values.filter(Boolean))]; }
 function normalizedSpellId(id: string) { return id.replace(/^always:/, ""); }
+function isCantripChoiceId(id: string) { return id.endsWith(".column.소마법") || id.endsWith(".cantrip") || id.endsWith(".cantrips"); }
 
 function expertiseChoice(
   state: ProgressionCharacterState,
@@ -398,6 +404,19 @@ function featureChoiceDefinitions(
         continue;
       }
     }
+    if (targetClassId === CLERIC_ID && (feature === "신성한 역할" || feature === "축복받은 일격")) {
+      const clericChoices = clericFeatureChoiceDefinitions({
+        feature,
+        targetLevel,
+        knownCantripIds:state.cantripIds ?? [],
+        selections:request.selections,
+        spellOptions:request.spellOptions,
+      });
+      if (clericChoices) {
+        result.push(...clericChoices);
+        continue;
+      }
+    }
     if (feature === "전문화") {
       const expertise = expertiseChoiceDefinition(state, targetClassId, targetLevel);
       if (expertise) {
@@ -524,6 +543,11 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const choiceIssues = validateChoiceDefinitions(choices, request.selections);
   blocking.push(...choiceIssues.filter((issue) => issue.severity === "blocking").map((issue) => issue.message));
   warnings.push(...choiceIssues.filter((issue) => issue.severity === "warning").map((issue) => issue.message));
+  const selectedCantripCounts = new Map<string, number>();
+  for (const choice of choices.filter((entry) => isCantripChoiceId(entry.id))) {
+    for (const id of selectedOptionIds(choice, request.selections)) selectedCantripCounts.set(id, (selectedCantripCounts.get(id) ?? 0) + 1);
+  }
+  for (const [id, count] of selectedCantripCounts) if (count > 1) blocking.push(`소마법 선택은 같은 progression 트랜잭션 안에서 중복될 수 없습니다: ${id}`);
   const choiceFeatureSet = new Set(choices.map((choice) => choice.label.replace(/ \+\d+$/, "")));
   const automaticGrants = rowFeatures.filter((feature) => feature !== "능력치 향상" && feature !== "에픽 은총" && !feature.includes("서브클래스") && !choiceFeatureSet.has(feature) && !CHOICE_FEATURE_NAMES.has(feature) && !feature.startsWith("신비한 비전") && !/선택/.test(feature));
   const classTracksBefore = clone(state.classTracks);
@@ -567,6 +591,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const classCantripLabels = choices
     .filter((choice) => choice.id.endsWith(".column.소마법"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const clericFeatureLabels = choices
+    .filter((choice) => isClericPersistentFeatureChoice(choice.id))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const preparedSpellLabels = choices
     .filter((choice) => choice.kind === "spell" && choice.id.endsWith(".column.준비 주문"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
@@ -584,6 +611,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (fightingStyleLabels.length) diffs.push({ label:"전투 방식", before:"—", after:fightingStyleLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (alternativeCantripLabels.length) diffs.push({ label:"전투 방식 소마법", before:"—", after:alternativeCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (classCantripLabels.length) diffs.push({ label:"소마법 추가", before:"—", after:classCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (clericFeatureLabels.length) diffs.push({ label:"클레릭 선택", before:"—", after:clericFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticPrepared.length) diffs.push({ label:"항상 준비 주문", before:"—", after:automaticPrepared.map((entry) => entry.nameEn).join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -638,12 +666,13 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
     else if (styleId === RANGER_DRUIDIC_WARRIOR) next.features.push("드루이드 전사");
     else if (styleId === PALADIN_BLESSED_WARRIOR) next.features.push("축복받은 전사");
   }
+  for (const choice of plan.choices.filter((entry) => isClericPersistentFeatureChoice(entry.id))) {
+    next.features.push(...selectedOptionLabels(choice, request.selections));
+  }
   const cantripIds = [...(next.cantripIds ?? [])];
   const cantripKeys = new Set(cantripIds);
   const cantripSources = { ...(next.cantripSources ?? {}) };
-  for (const choice of plan.choices.filter((entry) =>
-    (entry.id.includes(".fighting-style.") && entry.id.endsWith(".cantrips")) || entry.id.endsWith(".column.소마법")
-  )) {
+  for (const choice of plan.choices.filter((entry) => isCantripChoiceId(entry.id))) {
     for (const spellId of selectedOptionIds(choice, request.selections)) {
       if (!cantripKeys.has(spellId)) {
         cantripKeys.add(spellId);
