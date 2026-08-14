@@ -28,7 +28,7 @@ export function rangerFavoredEnemyUses(rangerLevel: number) {
     throw new Error("Ranger level must be an integer from 0 to 20");
   }
   if (rangerLevel <= 0) return 0;
-  return 2 + Math.floor(rangerLevel / 4);
+  return 2 + Math.floor((rangerLevel - 1) / 4);
 }
 
 export function classFeatureSpellResourceDefinitions(
