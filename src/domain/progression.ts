@@ -28,6 +28,13 @@ import {
   type AbilityKey,
 } from "./progressionCatalog";
 import { automaticPreparedSpellsForLevel, classCantripListEntries, classSpellListEntries } from "./spellListCatalog";
+import {
+  WIZARD_ID,
+  wizardScholarChoice,
+  wizardSpellbookChoice,
+  wizardSpellbookChoiceId,
+  wizardSpellbookSelectionIds,
+} from "./wizardProgressionChoices";
 
 export interface ProgressionClassTrack {
   classId: string;
@@ -57,6 +64,8 @@ export interface ProgressionCharacterState {
   cantripSources?: Record<string, string>;
   preparedSpellIds?: string[];
   preparedSpellSources?: Record<string, string>;
+  spellbookSpellIds?: string[];
+  spellbookSpellSources?: Record<string, string>;
   spellSlotMaximums?: Record<number, number>;
 }
 
@@ -71,7 +80,7 @@ export interface ProgressionRequest {
   druidCantripOptions?: Array<{ id: string; label: string; description?: string }>;
   clericCantripOptions?: Array<{ id: string; label: string; description?: string }>;
   languageOptions?: Array<{ id: string; label: string; description?: string }>;
-  spellOptions?: Array<{ id: string; label: string; description?: string; level: number }>;
+  spellOptions?: Array<{ id: string; label: string; description?: string; level: number; castingTime?: string; school?: string }>;
 }
 
 export interface ProgressionDiff {
@@ -117,7 +126,6 @@ const CHOICE_FEATURE_NAMES = new Set([
   "메타매직", "섬뜩한 기원술", "마법의 비밀", "학자", "주문 숙련", "대표 주문",
 ]);
 const BARD_ID = "dnd.srd521.class.bard";
-const WIZARD_ID = "dnd.srd521.class.wizard";
 const RANGER_ID = "dnd.srd521.class.ranger";
 const PALADIN_ID = "dnd.srd521.class.paladin";
 const RANGER_DRUIDIC_WARRIOR = "feature:ranger.druidic-warrior";
@@ -328,7 +336,20 @@ function cantripChoice(
   };
 }
 
-function preparedSpellCandidates(targetClassId: string, targetLevel: number, maxSpellLevel: number) {
+function preparedSpellCandidates(
+  state: ProgressionCharacterState,
+  request: ProgressionRequest,
+  targetClassId: string,
+  targetLevel: number,
+  maxSpellLevel: number,
+) {
+  if (targetClassId === WIZARD_ID) {
+    const availableBookIds = new Set([
+      ...(state.spellbookSpellIds ?? []),
+      ...wizardSpellbookSelectionIds(request.selections, targetLevel),
+    ]);
+    return classSpellListEntries(WIZARD_ID, maxSpellLevel).filter((entry) => availableBookIds.has(entry.id));
+  }
   if (targetClassId === BARD_ID && targetLevel >= 10) {
     if (!bardMagicalSecretsListsReady()) return [];
     const entries = [BARD_ID,CLERIC_ID,DRUID_ID,WIZARD_ID]
@@ -343,14 +364,14 @@ function preparedSpellChoice(
   targetClassId: string,
   targetLevel: number,
   count: number,
-  spellOptions: ProgressionRequest["spellOptions"],
+  request: ProgressionRequest,
 ): ChoiceDefinition | undefined {
   const maxSpellLevel = highestClassSpellSlotLevel(targetClassId, targetLevel);
   if (maxSpellLevel <= 0) return undefined;
-  const canonical = preparedSpellCandidates(targetClassId, targetLevel, maxSpellLevel);
-  if (!canonical.length) return undefined;
+  const canonical = preparedSpellCandidates(state, request, targetClassId, targetLevel, maxSpellLevel);
+  if (!canonical.length && targetClassId !== WIZARD_ID) return undefined;
   const definition = classById(targetClassId)!;
-  const presentation = new Map((spellOptions ?? []).map((option) => [option.id, option]));
+  const presentation = new Map((request.spellOptions ?? []).map((option) => [option.id, option]));
   const automaticAtTargetLevel = automaticPreparedSpellsForLevel(targetClassId, targetLevel).map((entry) => entry.spellId);
   const alreadyPrepared = new Set([...(state.preparedSpellIds ?? []).map(normalizedSpellId), ...automaticAtTargetLevel]);
   return {
@@ -358,7 +379,9 @@ function preparedSpellChoice(
     label:`준비 주문 +${count}`,
     description:targetClassId === BARD_ID && targetLevel >= 10
       ? `마법의 비밀에 따라 바드, 클레릭, 드루이드, 위저드 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`
-      : `${definition.nameKo} 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`,
+      : targetClassId === WIZARD_ID
+        ? `주문책에 기록된 ${maxSpellLevel}레벨 이하 위저드 주문 중 ${count}개를 추가로 준비합니다.`
+        : `${definition.nameKo} 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`,
     kind:"spell",
     count,
     required:true,
@@ -451,9 +474,18 @@ function featureChoiceDefinitions(
         continue;
       }
     }
-    if (targetClassId === BARD_ID && feature === "마법의 비밀") {
-      continue;
+    if (targetClassId === WIZARD_ID && feature === "학자") {
+      const scholar = wizardScholarChoice({
+        targetLevel,
+        proficientSkills:state.proficientSkills ?? [],
+        expertiseSkills:state.expertiseSkills ?? [],
+      });
+      if (scholar) {
+        result.push(scholar);
+        continue;
+      }
     }
+    if (targetClassId === BARD_ID && feature === "마법의 비밀") continue;
     if (feature === "전문화") {
       const expertise = expertiseChoiceDefinition(state, targetClassId, targetLevel);
       if (expertise) {
@@ -512,7 +544,7 @@ function columnChoiceDefinitions(
         });
         continue;
       }
-      const ready = preparedSpellChoice(state, targetClassId, toLevel, count, request.spellOptions);
+      const ready = preparedSpellChoice(state, targetClassId, toLevel, count, request);
       if (ready) {
         result.push(ready);
         continue;
@@ -583,8 +615,15 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const row = progressionRow(target.id, targetClassLevel);
   if (!row) blocking.push(`${target.nameKo} ${targetClassLevel}레벨 progression row가 없습니다.`);
   const rowFeatures = row?.features ?? [];
+  const wizardChoices = target.id === WIZARD_ID ? [wizardSpellbookChoice({
+    targetLevel:targetClassLevel,
+    maxSpellLevel:highestClassSpellSlotLevel(WIZARD_ID, targetClassLevel),
+    knownSpellbookIds:state.spellbookSpellIds ?? [],
+    spellOptions:request.spellOptions,
+  })] : [];
   const choices = [
     ...featureChoiceDefinitions(state, target.id, targetClassLevel, rowFeatures, request),
+    ...wizardChoices,
     ...columnChoiceDefinitions(state, target.id, existing?.level ?? 0, targetClassLevel, request),
   ];
   for (const choice of choices) {
@@ -649,6 +688,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const druidFeatureLabels = choices
     .filter((choice) => isDruidPersistentFeatureChoice(choice.id))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const spellbookLabels = target.id === WIZARD_ID
+    ? choices.filter((choice) => choice.id === wizardSpellbookChoiceId(targetClassLevel)).flatMap((choice) => selectedOptionLabels(choice, request.selections))
+    : [];
   const preparedSpellLabels = choices
     .filter((choice) => choice.kind === "spell" && choice.id.endsWith(".column.준비 주문"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
@@ -668,6 +710,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (classCantripLabels.length) diffs.push({ label:"소마법 추가", before:"—", after:classCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (clericFeatureLabels.length) diffs.push({ label:"클레릭 선택", before:"—", after:clericFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (druidFeatureLabels.length) diffs.push({ label:"드루이드 선택", before:"—", after:druidFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (spellbookLabels.length) diffs.push({ label:"주문책 추가", before:"—", after:spellbookLabels.join(", "), source:`위저드 ${targetClassLevel}레벨 · SRD 5.2.1` });
   if (automaticPrepared.length) diffs.push({ label:"항상 준비 주문", before:"—", after:automaticPrepared.map((entry) => entry.nameEn).join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -739,6 +782,23 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   }
   next.cantripIds = cantripIds;
   next.cantripSources = cantripSources;
+  const spellbookSpellIds = [...(next.spellbookSpellIds ?? [])];
+  const spellbookKeys = new Set(spellbookSpellIds);
+  const spellbookSpellSources = { ...(next.spellbookSpellSources ?? {}) };
+  if (plan.targetClassId === WIZARD_ID) {
+    const spellbookChoice = plan.choices.find((choice) => choice.id === wizardSpellbookChoiceId(plan.targetClassLevel));
+    if (spellbookChoice) {
+      for (const spellId of selectedOptionIds(spellbookChoice, request.selections)) {
+        if (!spellbookKeys.has(spellId)) {
+          spellbookKeys.add(spellId);
+          spellbookSpellIds.push(spellId);
+        }
+        spellbookSpellSources[spellId] = spellbookChoice.source;
+      }
+    }
+  }
+  next.spellbookSpellIds = spellbookSpellIds;
+  next.spellbookSpellSources = spellbookSpellSources;
   const preparedSpellIds = [...(next.preparedSpellIds ?? [])];
   const preparedSpellKeys = new Set(preparedSpellIds.map(normalizedSpellId));
   const preparedSpellSources = { ...(next.preparedSpellSources ?? {}) };
