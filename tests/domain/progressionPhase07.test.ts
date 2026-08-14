@@ -20,6 +20,26 @@ function fighter(level = 5, overrides: Partial<ProgressionCharacterState> = {}):
   };
 }
 
+function rogue(level = 5, overrides: Partial<ProgressionCharacterState> = {}): ProgressionCharacterState {
+  return {
+    revision:0,
+    id:"rogue",
+    name:"Nyx",
+    totalLevel:level,
+    abilities:{ str:8, dex:18, con:14, int:14, wis:12, cha:10 },
+    hpCurrent:30,
+    hpMaximum:38,
+    proficiencyBonus:level >= 5 ? 3 : 2,
+    classTracks:[{ classId:"dnd.srd521.class.rogue", className:"로그", level, subclassName:"도둑" }],
+    hitDiceByDie:{ d8:level },
+    features:["암습","교활한 행동"],
+    proficientSkills:["은신","손재주","지각","조사"],
+    expertiseSkills:["은신","손재주"],
+    expertiseSources:{ 은신:"로그 1레벨", 손재주:"로그 1레벨" },
+    ...overrides,
+  };
+}
+
 const asi = (ability: "str" | "dex" | "con" | "int" | "wis" | "cha") => ({
   kind:"asi" as const, mode:"plus-two" as const, primary:ability,
 });
@@ -111,6 +131,50 @@ test("a level that needs a not-yet-materialized spell choice rejects atomically 
   assert.equal(result.status, "rejected");
   assert.equal(result.state, state);
   assert.equal(state.revision, 3);
+});
+
+test("Rogue 5 -> 6 materializes Expertise from proficient skills and commits the selected skills with provenance", () => {
+  const state = rogue();
+  const choiceId = "progression.dnd.srd521.class.rogue.6.expertise";
+  const request = {
+    expectedRevision:0,
+    targetClassId:"dnd.srd521.class.rogue",
+    hpMethod:"fixed" as const,
+    selections:{ [choiceId]:{ kind:"options" as const, optionIds:["skill:지각","skill:조사"] } },
+  };
+  const plan = buildProgressionPlan(state, request);
+  assert.equal(plan.choices.length, 1);
+  assert.equal(plan.choices[0].kind, "expertise");
+  assert.equal(plan.choices[0].status, "ready");
+  assert.equal(plan.choices[0].count, 2);
+  assert.equal(plan.choices[0].options.find((option) => option.id === "skill:은신")?.disabledReason, "이미 전문화를 보유하고 있습니다.");
+  assert.equal(plan.choices[0].options.find((option) => option.id === "skill:지각")?.disabledReason, undefined);
+  assert.equal(plan.blocking.length, 0);
+  assert.ok(plan.diffs.some((diff) => diff.label === "전문화" && diff.after.includes("지각") && diff.after.includes("조사")));
+
+  const result = resolveProgression(state, request);
+  assert.equal(result.status, "committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.totalLevel, 6);
+  assert.deepEqual(result.state.expertiseSkills, ["은신","손재주","지각","조사"]);
+  assert.equal(result.state.expertiseSources?.지각, "로그 6레벨 · SRD 5.2.1");
+  assert.equal(result.state.expertiseSources?.조사, "로그 6레벨 · SRD 5.2.1");
+});
+
+test("Expertise rejects an already-expert skill even if a client submits the disabled option", () => {
+  const state = rogue();
+  const choiceId = "progression.dnd.srd521.class.rogue.6.expertise";
+  const result = resolveProgression(state, {
+    expectedRevision:0,
+    targetClassId:"dnd.srd521.class.rogue",
+    hpMethod:"fixed",
+    selections:{ [choiceId]:{ kind:"options", optionIds:["skill:은신","skill:지각"] } },
+  });
+  assert.equal(result.status, "rejected");
+  if (result.status !== "rejected") return;
+  assert.match(result.error, /이미 전문화/);
+  assert.equal(result.state, state);
+  assert.equal(state.revision, 0);
 });
 
 test("a no-choice Fighter 8 -> 9 level commits automatic grants without manufacturing a decision", () => {
