@@ -17,7 +17,7 @@ export interface EffectStateChange {
   kind:"effect";
   targetId:string;
   effectId:string;
-  operation:"added" | "removed";
+  operation:"added" | "updated" | "removed";
   provenance:ProvenanceRecord[];
   lifetime:"session-runtime";
   writeBack:"session";
@@ -55,7 +55,7 @@ export function resourceStateChange(targetId:string, resourceId:string, before:n
   return { kind:"resource", targetId, resourceId, before, after, provenance, lifetime:"character-durable", writeBack:"character" };
 }
 
-export function effectStateChange(targetId:string, effectId:string, operation:"added"|"removed", provenance:ProvenanceRecord[]): EffectStateChange {
+export function effectStateChange(targetId:string, effectId:string, operation:"added"|"updated"|"removed", provenance:ProvenanceRecord[]): EffectStateChange {
   return { kind:"effect", targetId, effectId, operation, provenance, lifetime:"session-runtime", writeBack:"session" };
 }
 
