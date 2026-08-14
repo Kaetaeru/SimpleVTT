@@ -5,6 +5,22 @@ import "../../src/app/progressionContracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
 import { projectOfficialSheet } from "../../src/app/characterSheetV10Projection";
+import { SPELL_PRESENTATIONS } from "../../src/app/spellPresentation";
+import { classSpellListEntries } from "../../src/domain/spellListCatalog";
+
+const rangerId = "dnd.srd521.class.ranger";
+
+test("every canonical Ranger spell-list entry resolves to the checked-in 339-spell presentation catalog at the same level", () => {
+  const presentations = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
+  const entries = classSpellListEntries(rangerId);
+  assert.equal(entries.length, 48);
+  for (const entry of entries) {
+    const presentation = presentations.get(entry.id);
+    assert.ok(presentation, `${entry.id} missing from spell presentation catalog`);
+    assert.equal(presentation?.level, entry.level, `${entry.id} spell level mismatch`);
+    assert.equal(presentation?.nameEn, entry.nameEn, `${entry.id} English name mismatch`);
+  }
+});
 
 test("Ranger 4 -> 5 prepared-spell progression uses localized spell presentation and persists into the official sheet", async () => {
   const adapter = new MockAdapter();
@@ -22,7 +38,7 @@ test("Ranger 4 -> 5 prepared-spell progression uses localized spell presentation
     skills:["지각","은신","생존"],
     features:["주문 시전","주적","무기 통달"],
     languages:["공용어","엘프어"],
-    classLevels:[{ classId:"dnd.srd521.class.ranger", className:"레인저", level:4, subclassName:"사냥꾼" }],
+    classLevels:[{ classId:rangerId, className:"레인저", level:4, subclassName:"사냥꾼" }],
     hitDiceByDie:{ d10:4 },
     progressionRevision:0,
     preparedSpells:[
@@ -38,7 +54,7 @@ test("Ranger 4 -> 5 prepared-spell progression uses localized spell presentation
 
   await adapter.startLevelUp(internal.activeCharacter.id);
   let snapshot = await adapter.getSnapshot();
-  const choice = snapshot.progressionPlan?.choices.find((entry) => entry.id === "progression.dnd.srd521.class.ranger.5.column.준비 주문");
+  const choice = snapshot.progressionPlan?.choices.find((entry) => entry.id === `progression.${rangerId}.5.column.준비 주문`);
   assert.ok(choice);
   assert.equal(choice?.status, "ready");
   assert.equal(choice?.options.find((option) => option.id === "dnd.srd521.spell.aid")?.label, "지원");
