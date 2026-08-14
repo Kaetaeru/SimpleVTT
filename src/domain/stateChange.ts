@@ -21,7 +21,7 @@ export interface HpStateChange extends StateChangeBase {
 
 export interface EconomyStateChange extends StateChangeBase {
   kind: "economy";
-  field: "action" | "bonusAction" | "reaction" | "movement" | "movementMaximum";
+  field: "action" | "bonusAction" | "reaction" | "movement" | "movementMaximum" | "extraActions";
   before: boolean | number;
   after: boolean | number;
 }
@@ -55,14 +55,14 @@ export function economyStateChanges(
   after: TurnEconomyState,
   provenance: ProvenanceRecord[],
 ): EconomyStateChange[] {
-  const fields: Array<EconomyStateChange["field"]> = [
+  const fields: Array<Exclude<EconomyStateChange["field"], "extraActions">> = [
     "action",
     "bonusAction",
     "reaction",
     "movement",
     "movementMaximum",
   ];
-  return fields
+  const changes: EconomyStateChange[] = fields
     .filter((field) => before[field] !== after[field])
     .map((field) => ({
       kind: "economy",
@@ -74,4 +74,19 @@ export function economyStateChanges(
       lifetime: "session-runtime",
       writeBack: "session",
     }));
+  const beforeExtra = before.extraActions?.length ?? 0;
+  const afterExtra = after.extraActions?.length ?? 0;
+  if (beforeExtra !== afterExtra) {
+    changes.push({
+      kind:"economy",
+      targetId,
+      field:"extraActions",
+      before:beforeExtra,
+      after:afterExtra,
+      provenance,
+      lifetime:"session-runtime",
+      writeBack:"session",
+    });
+  }
+  return changes;
 }
