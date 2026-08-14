@@ -6,6 +6,15 @@ export interface ExpertiseChoiceRelationship {
   sourcePath: string;
 }
 
+export interface SeasonedExplorerRelationship {
+  classId: "dnd.srd521.class.ranger";
+  level: 2;
+  feature: "노련한 탐험가";
+  expertiseCount: 1;
+  languageCount: 2;
+  sourcePath: string;
+}
+
 const EXPERTISE_RELATIONSHIPS: ExpertiseChoiceRelationship[] = [
   {
     classId:"dnd.srd521.class.bard",
@@ -44,10 +53,23 @@ const EXPERTISE_RELATIONSHIPS: ExpertiseChoiceRelationship[] = [
   },
 ];
 
+const SEASONED_EXPLORER: SeasonedExplorerRelationship = {
+  classId:"dnd.srd521.class.ranger",
+  level:2,
+  feature:"노련한 탐험가",
+  expertiseCount:1,
+  languageCount:2,
+  sourcePath:"10-RULEBOOKS/integrated-2024/classes/ranger.md",
+};
+
 export function expertiseChoiceRelationship(classId: string, level: number) {
   return EXPERTISE_RELATIONSHIPS.find((relationship) => relationship.classId === classId && relationship.level === level);
 }
 
 export function expertiseChoiceRelationships() {
   return EXPERTISE_RELATIONSHIPS.map((relationship) => ({ ...relationship }));
+}
+
+export function seasonedExplorerRelationship(classId: string, level: number) {
+  return SEASONED_EXPLORER.classId === classId && SEASONED_EXPLORER.level === level ? { ...SEASONED_EXPLORER } : undefined;
 }
