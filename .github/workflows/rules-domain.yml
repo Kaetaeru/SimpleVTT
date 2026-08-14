@@ -1,0 +1,31 @@
+name: Rules Domain
+
+on:
+  pull_request:
+    paths:
+      - "src/domain/**"
+      - "tests/domain/**"
+      - "package.json"
+      - ".github/workflows/rules-domain.yml"
+  push:
+    branches:
+      - "agent/46-rules-phase04-05"
+    paths:
+      - "src/domain/**"
+      - "tests/domain/**"
+      - "package.json"
+
+jobs:
+  rules-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run Phase 04/05 rules gate
+        run: npm run test:rules-domain
+      - name: Typecheck application
+        run: npx tsc --noEmit
