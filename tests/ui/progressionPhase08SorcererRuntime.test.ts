@@ -6,8 +6,9 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
 import { stableSpellId } from "../../src/domain/spellListCatalog";
 import { SORCERER_ID, sorcererMetamagicChoiceId } from "../../src/domain/sorcererProgressionChoices";
+import { SORCERY_POINT_RESOURCE_ID } from "../../src/domain/sorcery";
 
-test("Sorcerer 1 -> 2 runtime persists prepared spells, Metamagic IDs/provenance, and full-caster slots", async () => {
+test("Sorcerer 1 -> 2 runtime persists prepared spells, Metamagic IDs/provenance, full-caster slots, and Sorcery Points", async () => {
   const adapter = new MockAdapter();
   const baseline = (await adapter.getSnapshot()).activeCharacter;
   const internal = adapter as unknown as { activeCharacter: typeof baseline };
@@ -31,6 +32,7 @@ test("Sorcerer 1 -> 2 runtime persists prepared spells, Metamagic IDs/provenance
     progressionRevision:0,
     metamagicIds:[],
     metamagicSources:{},
+    resources:baseline.resources.filter((resource) => resource.id !== SORCERY_POINT_RESOURCE_ID),
   };
   delete internal.activeCharacter.preparedSpellSources;
 
@@ -56,4 +58,14 @@ test("Sorcerer 1 -> 2 runtime persists prepared spells, Metamagic IDs/provenance
   assert.deepEqual(new Set(snapshot.activeCharacter.metamagicIds), new Set(["metamagic:quickened-spell","metamagic:subtle-spell"]));
   assert.equal(snapshot.activeCharacter.metamagicSources?.["metamagic:quickened-spell"], "소서러 2레벨 · 메타매직 · SRD 5.2.1");
   assert.equal(snapshot.activeCharacter.spellSlotMaximums?.[1], 3);
+  const sorceryPoints = snapshot.activeCharacter.resources.find((resource) => resource.id === SORCERY_POINT_RESOURCE_ID);
+  assert.equal(sorceryPoints?.current, 2);
+  assert.equal(sorceryPoints?.max, 2);
+  assert.equal(sorceryPoints?.recovery?.longRest, "all");
+
+  const internalPoints = internal.activeCharacter.resources.find((resource) => resource.id === SORCERY_POINT_RESOURCE_ID);
+  assert.ok(internalPoints);
+  internalPoints!.current = 0;
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.resources.find((resource) => resource.id === SORCERY_POINT_RESOURCE_ID)?.current, 0, "metadata normalization must not refill spent Sorcery Points");
 });
