@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "test:creation-structure": "tsx --test tests/ui/characterCreationCatalogGate.test.ts",
+    "build": "tsc --noEmit && npm run test:creation-structure && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
@@ -21,6 +22,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "tsx": "^4.20.6",
     "typescript": "~6.0.2",
     "vite": "^8.1.5"
   }
