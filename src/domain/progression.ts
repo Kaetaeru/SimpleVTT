@@ -9,6 +9,12 @@ import {
   clericFeatureChoiceDefinitions,
   isClericPersistentFeatureChoice,
 } from "./clericProgressionChoices";
+import {
+  DRUID_ID,
+  druidFeatureChoiceDefinitions,
+  isDruidElementalFuryFeature,
+  isDruidPersistentFeatureChoice,
+} from "./druidProgressionChoices";
 import { expertiseChoiceRelationship, seasonedExplorerRelationship } from "./progressionChoiceCatalog";
 import {
   PROGRESSION_CATALOG,
@@ -417,6 +423,19 @@ function featureChoiceDefinitions(
         continue;
       }
     }
+    if (targetClassId === DRUID_ID && (feature === "원초적 역할" || isDruidElementalFuryFeature(feature))) {
+      const druidChoices = druidFeatureChoiceDefinitions({
+        feature,
+        targetLevel,
+        knownCantripIds:state.cantripIds ?? [],
+        selections:request.selections,
+        spellOptions:request.spellOptions,
+      });
+      if (druidChoices) {
+        result.push(...druidChoices);
+        continue;
+      }
+    }
     if (feature === "전문화") {
       const expertise = expertiseChoiceDefinition(state, targetClassId, targetLevel);
       if (expertise) {
@@ -549,7 +568,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   }
   for (const [id, count] of selectedCantripCounts) if (count > 1) blocking.push(`소마법 선택은 같은 progression 트랜잭션 안에서 중복될 수 없습니다: ${id}`);
   const choiceFeatureSet = new Set(choices.map((choice) => choice.label.replace(/ \+\d+$/, "")));
-  const automaticGrants = rowFeatures.filter((feature) => feature !== "능력치 향상" && feature !== "에픽 은총" && !feature.includes("서브클래스") && !choiceFeatureSet.has(feature) && !CHOICE_FEATURE_NAMES.has(feature) && !feature.startsWith("신비한 비전") && !/선택/.test(feature));
+  const automaticGrants = rowFeatures.filter((feature) => feature !== "능력치 향상" && feature !== "에픽 은총" && !feature.includes("서브클래스") && !choiceFeatureSet.has(feature) && !CHOICE_FEATURE_NAMES.has(feature) && !isDruidElementalFuryFeature(feature) && !feature.startsWith("신비한 비전") && !/선택/.test(feature));
   const classTracksBefore = clone(state.classTracks);
   const classTracksAfter = clone(state.classTracks);
   if (existing) classTracksAfter.find((track) => track.classId === target.id)!.level += 1;
@@ -594,6 +613,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const clericFeatureLabels = choices
     .filter((choice) => isClericPersistentFeatureChoice(choice.id))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const druidFeatureLabels = choices
+    .filter((choice) => isDruidPersistentFeatureChoice(choice.id))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const preparedSpellLabels = choices
     .filter((choice) => choice.kind === "spell" && choice.id.endsWith(".column.준비 주문"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
@@ -612,6 +634,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (alternativeCantripLabels.length) diffs.push({ label:"전투 방식 소마법", before:"—", after:alternativeCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (classCantripLabels.length) diffs.push({ label:"소마법 추가", before:"—", after:classCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (clericFeatureLabels.length) diffs.push({ label:"클레릭 선택", before:"—", after:clericFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (druidFeatureLabels.length) diffs.push({ label:"드루이드 선택", before:"—", after:druidFeatureLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticPrepared.length) diffs.push({ label:"항상 준비 주문", before:"—", after:automaticPrepared.map((entry) => entry.nameEn).join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -666,7 +689,7 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
     else if (styleId === RANGER_DRUIDIC_WARRIOR) next.features.push("드루이드 전사");
     else if (styleId === PALADIN_BLESSED_WARRIOR) next.features.push("축복받은 전사");
   }
-  for (const choice of plan.choices.filter((entry) => isClericPersistentFeatureChoice(entry.id))) {
+  for (const choice of plan.choices.filter((entry) => isClericPersistentFeatureChoice(entry.id) || isDruidPersistentFeatureChoice(entry.id))) {
     next.features.push(...selectedOptionLabels(choice, request.selections));
   }
   const cantripIds = [...(next.cantripIds ?? [])];
