@@ -15,7 +15,7 @@ export interface TurnEconomyState {
   reaction: boolean;
   movement: number;
   movementMaximum: number;
-  extraActions: ExtraActionGrant[];
+  extraActions?: ExtraActionGrant[];
 }
 
 export interface TurnSlotSpendResolution {
@@ -55,23 +55,24 @@ export function spendTurnSlot(
   }
 
   if (slot === "action") {
+    const grants = state.extraActions ?? [];
     const extraIndex = compatibleExtraActionIndex(state, actionKind);
     if (actionKind === "other" && extraIndex >= 0) {
-      const grant = state.extraActions[extraIndex];
+      const grant = grants[extraIndex];
       return {
-        next:{ ...state, extraActions:state.extraActions.filter((_, index) => index !== extraIndex) },
+        next:{ ...state, extraActions:grants.filter((_, index) => index !== extraIndex) },
         spentFrom:grant.id,
       };
     }
     if (state.action) return { next:{ ...state, action:false }, spentFrom:"standard" };
     if (extraIndex >= 0) {
-      const grant = state.extraActions[extraIndex];
+      const grant = grants[extraIndex];
       return {
-        next:{ ...state, extraActions:state.extraActions.filter((_, index) => index !== extraIndex) },
+        next:{ ...state, extraActions:grants.filter((_, index) => index !== extraIndex) },
         spentFrom:grant.id,
       };
     }
-    if (actionKind === "magic" && state.extraActions.length > 0) {
+    if (actionKind === "magic" && grants.length > 0) {
       throw new DomainEvaluationError("no remaining action can be used for a Magic Action");
     }
     throw new DomainEvaluationError("action is not available");
@@ -93,10 +94,11 @@ export function useTurnSlot(
 
 export function grantExtraAction(state: TurnEconomyState, grant: ExtraActionGrant): TurnEconomyState {
   if (!grant.id || !grant.source) throw new DomainEvaluationError("extra action grant id and source are required");
-  if (state.extraActions.some((entry) => entry.id === grant.id)) {
+  const grants = state.extraActions ?? [];
+  if (grants.some((entry) => entry.id === grant.id)) {
     throw new DomainEvaluationError(`duplicate extra action grant: ${grant.id}`);
   }
-  return { ...state, extraActions:[...state.extraActions, { ...grant }] };
+  return { ...state, extraActions:[...grants, { ...grant }] };
 }
 
 export function useMovement(state: TurnEconomyState, distance: number): TurnEconomyState {
