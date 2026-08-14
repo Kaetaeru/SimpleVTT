@@ -15,6 +15,12 @@ declare module "./contracts" {
     spellbookSpellSources?: Record<string, string>;
     metamagicIds?: string[];
     metamagicSources?: Record<string, string>;
+    eldritchInvocationIds?: string[];
+    eldritchInvocationSources?: Record<string, string>;
+    mysticArcanumSpellIds?: Record<number, string>;
+    mysticArcanumSources?: Record<number, string>;
+    pactMagicSlotLevel?: number;
+    pactMagicSlotMaximum?: number;
     spellSlotMaximums?: Record<number, number>;
   }
 
