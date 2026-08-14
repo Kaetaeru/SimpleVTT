@@ -2,6 +2,7 @@ import "./progressionContracts";
 import "./creationContracts";
 import type { AppSnapshot, CharacterSheet, CharacterSummary, LevelUpCommand, LevelUpDraft } from "./contracts";
 import { generalLanguageOptions } from "./characterCreationV10Data";
+import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { classById, classByName } from "../domain/progressionCatalog";
@@ -10,6 +11,7 @@ import { buildProgressionPlan, resolveProgression, type ProgressionCharacterStat
 const clone = <T,>(value: T): T => structuredClone(value);
 const unique = (values: string[]) => [...new Set(values.filter(Boolean))];
 const normalizedSkillName = (value: string) => value.replace(/\s+[+-]\d+$/, "").trim();
+const normalizedSpellId = (value: string) => value.replace(/^always:/, "");
 
 type AdapterState = {
   activeCharacter: CharacterSheet;
@@ -66,6 +68,12 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
   sheet.languages = unique(sheet.languages ?? []);
   sheet.languageSources ??= {};
   for (const language of sheet.languages) sheet.languageSources[language] ??= "Character Creation / existing character";
+  sheet.preparedSpells = unique(sheet.preparedSpells ?? []);
+  sheet.preparedSpellSources ??= {};
+  for (const spell of sheet.preparedSpells) {
+    const id = normalizedSpellId(spell);
+    sheet.preparedSpellSources[id] ??= spell.startsWith("always:") ? "Always prepared / existing character" : "Character Creation / existing character";
+  }
   sheet.progressionRevision ??= 0;
   return sheet;
 }
@@ -89,6 +97,8 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     expertiseSources:clone(sheet.expertiseSources ?? {}),
     languages:clone(sheet.languages ?? []),
     languageSources:clone(sheet.languageSources ?? {}),
+    preparedSpellIds:clone(sheet.preparedSpells ?? []),
+    preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
   };
 }
@@ -99,6 +109,10 @@ function featOptions(state: AdapterState) {
 
 function progressionLanguageOptions() {
   return generalLanguageOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
+}
+
+function progressionSpellOptions() {
+  return SPELL_PRESENTATIONS.map((spell) => ({ id:spell.id, label:spell.name, description:spell.summary, level:spell.level }));
 }
 
 function targetClassId(sheet: CharacterSheet, draft: LevelUpDraft) {
@@ -117,6 +131,7 @@ function requestFor(state: AdapterState) {
     selections:clone(draft.progressionSelections ?? {}),
     featOptions:featOptions(state),
     languageOptions:progressionLanguageOptions(),
+    spellOptions:progressionSpellOptions(),
   } as const;
 }
 
@@ -140,7 +155,7 @@ function syncLegacyDraft(draft: LevelUpDraft, plan: ProgressionPlan) {
     grantedFeatures:[...plan.automaticGrants],
     resourceChanges:plan.multiclassGrants,
     actionChanges:[],
-    spellChanges:plan.spellcastingBefore.casterLevel === plan.spellcastingAfter.casterLevel ? [] : [`주문 시전자 레벨 ${plan.spellcastingBefore.casterLevel} → ${plan.spellcastingAfter.casterLevel}`],
+    spellChanges:plan.diffs.filter((diff) => diff.label.includes("주문")).map((diff) => `${diff.label}: ${diff.before} → ${diff.after}`),
     diffs:plan.diffs,
   };
   draft.validation = [
@@ -170,6 +185,8 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.expertiseSources = clone(next.expertiseSources ?? {});
   sheet.languages = clone(next.languages ?? []);
   sheet.languageSources = clone(next.languageSources ?? {});
+  sheet.preparedSpells = clone(next.preparedSpellIds ?? []);
+  sheet.preparedSpellSources = clone(next.preparedSpellSources ?? {});
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
