@@ -1,87 +1,185 @@
-/* Gate 04.5: keep focused character creation/progression inside the app viewport.
-   The app shell intentionally hides document overflow, so the middle grid track owns scrolling.
-   Do not give the middle body or its stage height:100%; that makes the middle row consume the
-   whole shell height again and pushes the footer / lower class choices outside the clipped viewport. */
+/* Gate 04.5 viewport contract.
+   The app-level .content clips document overflow, so the focused character/progression
+   screens must own a definite viewport. Header and footer are fixed to that viewport;
+   only the middle stage scrolls. Do not rely on nested grid percentage heights here. */
+
 .focused-create-shell,
 .focused-level-shell {
-  width: 100%;
-  height: 100%;
-  max-height: 100%;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  grid-template-rows: max-content minmax(0, 1fr) max-content !important;
-}
-
-.focused-create-header,
-.focused-create-footer,
-.focused-level-header,
-.focused-level-footer {
-  position: relative;
-  z-index: 10;
-  min-width: 0;
-  min-height: 0;
-}
-
-.focused-create-body,
-.focused-level-body {
-  width: 100%;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
   height: auto !important;
+  max-width: none !important;
   max-height: none !important;
-  min-width: 0;
+  min-width: 0 !important;
   min-height: 0 !important;
-  align-self: stretch;
+  overflow: hidden !important;
+  display: block !important;
+}
+
+/* Character creation: 76px header + 64px footer. */
+.focused-create-header {
+  position: absolute !important;
+  z-index: 30 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 76px !important;
+  min-height: 76px !important;
   overflow: hidden !important;
 }
 
-.focused-create-body > *,
-.focused-level-body > * {
-  min-width: 0;
+.focused-create-footer {
+  position: absolute !important;
+  z-index: 30 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 64px !important;
+  min-height: 64px !important;
+  overflow: hidden !important;
+}
+
+.focused-create-body {
+  position: absolute !important;
+  z-index: 10 !important;
+  top: 76px !important;
+  right: 0 !important;
+  bottom: 64px !important;
+  left: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  min-width: 0 !important;
   min-height: 0 !important;
+  overflow: hidden !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 300px !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+
+.focused-create-body > * {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
 }
 
 .focused-create-stage,
-.focused-level-stage,
-.focused-character-preview,
-.focused-level-preview {
-  height: auto !important;
-  max-height: none !important;
+.focused-character-preview {
+  position: relative !important;
+  min-width: 0 !important;
   min-height: 0 !important;
-  align-self: stretch;
-  overflow-y: scroll !important;
+  height: 100% !important;
+  max-height: 100% !important;
   overflow-x: hidden !important;
+  overflow-y: auto !important;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
 }
 
 .focused-create-stage {
-  padding-bottom: 72px;
+  padding-bottom: 40px !important;
 }
 
 .focused-class-flow {
-  min-width: 0;
-  min-height: 0;
-  padding-bottom: 24px;
+  display: block !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-bottom: 24px !important;
+}
+
+.focused-class-flow > .create-v09-section,
+.focused-context-block,
+.focused-context-block > .create-v09-section {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
 }
 
 .focused-context-block {
-  margin-bottom: 0;
-  padding-bottom: 96px;
+  margin-bottom: 0 !important;
+  padding-bottom: 96px !important;
+}
+
+/* Level up uses the same viewport contract with an 80px header. */
+.focused-level-header {
+  position: absolute !important;
+  z-index: 30 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  overflow: hidden !important;
+}
+
+.focused-level-footer {
+  position: absolute !important;
+  z-index: 30 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 64px !important;
+  min-height: 64px !important;
+  overflow: hidden !important;
+}
+
+.focused-level-body {
+  position: absolute !important;
+  z-index: 10 !important;
+  top: 80px !important;
+  right: 0 !important;
+  bottom: 64px !important;
+  left: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: grid !important;
+  grid-template-columns: 220px minmax(0, 1fr) 300px !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+
+.focused-level-body > * {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+.focused-level-stage,
+.focused-level-preview,
+.focused-level-nav {
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
 }
 
 @media (max-width: 930px) {
-  .focused-create-body,
-  .focused-level-body {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
+  .focused-create-body {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
-  .focused-create-stage,
-  .focused-level-stage {
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    overflow-y: scroll !important;
+  .focused-character-preview {
+    display: none !important;
+  }
+
+  .focused-level-body {
+    grid-template-columns: 155px minmax(0, 1fr) !important;
+  }
+
+  .focused-level-preview {
+    display: none !important;
   }
 }
