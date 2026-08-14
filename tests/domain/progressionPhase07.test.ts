@@ -177,6 +177,53 @@ test("Expertise rejects an already-expert skill even if a client submits the dis
   assert.equal(state.revision, 0);
 });
 
+test("Ranger 1 -> 2 materializes Deft Explorer as Expertise 1 + languages 2 while leaving Fighting Style explicitly pending", () => {
+  const state: ProgressionCharacterState = {
+    revision:0,
+    id:"ranger",
+    name:"Ilyra",
+    totalLevel:1,
+    abilities:{ str:10,dex:16,con:14,int:10,wis:16,cha:8 },
+    hpCurrent:12,
+    hpMaximum:12,
+    proficiencyBonus:2,
+    classTracks:[{ classId:"dnd.srd521.class.ranger", className:"레인저", level:1 }],
+    hitDiceByDie:{ d10:1 },
+    features:["주문 시전","주적","무기 통달"],
+    proficientSkills:["지각","은신","생존"],
+    expertiseSkills:["지각"],
+    languages:["공용어","엘프어"],
+  };
+  const expertiseId = "progression.dnd.srd521.class.ranger.2.seasoned-explorer.expertise";
+  const languagesId = "progression.dnd.srd521.class.ranger.2.seasoned-explorer.languages";
+  const plan = buildProgressionPlan(state, {
+    expectedRevision:0,
+    targetClassId:"dnd.srd521.class.ranger",
+    hpMethod:"fixed",
+    selections:{
+      [expertiseId]:{ kind:"options", optionIds:["skill:은신"] },
+      [languagesId]:{ kind:"options", optionIds:["language.dwarvish","language.giant"] },
+    },
+    languageOptions:[
+      { id:"language.common", label:"공용어" },
+      { id:"language.elvish", label:"엘프어" },
+      { id:"language.dwarvish", label:"드워프어" },
+      { id:"language.giant", label:"거인어" },
+    ],
+  });
+  const expertise = plan.choices.find((choice) => choice.id === expertiseId);
+  const languages = plan.choices.find((choice) => choice.id === languagesId);
+  assert.equal(expertise?.kind, "expertise");
+  assert.equal(expertise?.count, 1);
+  assert.equal(expertise?.options.find((option) => option.label === "지각")?.disabledReason, "이미 전문화를 보유하고 있습니다.");
+  assert.equal(languages?.kind, "language");
+  assert.equal(languages?.count, 2);
+  assert.equal(languages?.options.find((option) => option.label === "공용어")?.disabledReason, "이미 알고 있는 언어입니다.");
+  assert.ok(plan.choices.some((choice) => choice.label === "전투 방식" && choice.status === "catalog-pending"));
+  assert.ok(plan.blocking.some((message) => /전투 방식/.test(message)));
+  assert.ok(!plan.blocking.some((message) => /노련한 탐험가/.test(message)));
+});
+
 test("a no-choice Fighter 8 -> 9 level commits automatic grants without manufacturing a decision", () => {
   const state = fighter(8, { hpMaximum:70, hpCurrent:50, proficiencyBonus:3, hitDiceByDie:{d10:8} });
   const result = resolveProgression(state, { expectedRevision:0, targetClassId:"dnd.srd521.class.fighter", hpMethod:"fixed", selections:{} });
