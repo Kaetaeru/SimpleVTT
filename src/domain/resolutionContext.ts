@@ -43,7 +43,10 @@ export function predicateMatches(results: Map<string, unknown>, predicate: Opera
   if (!predicate) return true;
   const result = results.get(predicate.operationId);
   if (!result || typeof result !== "object") throw new Error(`predicate result not found: ${predicate.operationId}`);
-  return (result as Record<string, unknown>)[predicate.field] === predicate.equals;
+  const raw = (result as Record<string, unknown>)[predicate.field];
+  if ("equals" in predicate) return raw === predicate.equals;
+  if (!Number.isFinite(predicate.greaterThan)) throw new Error("predicate greaterThan must be finite");
+  return typeof raw === "number" && Number.isFinite(raw) && raw > predicate.greaterThan;
 }
 
 export function targetingResult(results: Map<string, unknown>, operationId: string) {
