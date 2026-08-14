@@ -11,6 +11,7 @@ import {
   executeD20,
   executeDamageRoll,
   executeEconomy,
+  executeGrantExtraAction,
   executeMove,
   executeReaction,
   executeResource,
@@ -39,6 +40,7 @@ function executeOperation(
   switch (operation.kind) {
     case "targeting": return executeTargeting(ctx, operation);
     case "use-economy": return executeEconomy(ctx, operation);
+    case "grant-extra-action": return executeGrantExtraAction(ctx, operation);
     case "move": return executeMove(ctx, operation);
     case "spend-resource": return executeResource(ctx, operation);
     case "gain-resource": return executeGainResource(ctx, operation);
