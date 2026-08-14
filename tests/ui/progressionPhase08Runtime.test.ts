@@ -47,7 +47,7 @@ test("Ranger 4 -> 5 prepared-spell progression uses localized spell presentation
       "dnd.srd521.spell.goodberry",
       "dnd.srd521.spell.fog-cloud",
       "dnd.srd521.spell.speak-with-animals",
-      "always:dnd.srd521.spell.hunters-mark",
+      "always:dnd.srd521.spell.hunter-s-mark",
     ],
   };
   delete internal.activeCharacter.preparedSpellSources;
