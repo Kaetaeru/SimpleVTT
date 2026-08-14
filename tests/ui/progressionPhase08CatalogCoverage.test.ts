@@ -7,6 +7,7 @@ const bardId = "dnd.srd521.class.bard";
 const clericId = "dnd.srd521.class.cleric";
 const druidId = "dnd.srd521.class.druid";
 const sorcererId = "dnd.srd521.class.sorcerer";
+const warlockId = "dnd.srd521.class.warlock";
 const wizardId = "dnd.srd521.class.wizard";
 const normalizedName = (value: string) => value.normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase();
 
@@ -37,6 +38,10 @@ test("all 124 canonical Druid spell-list entries resolve to the 339-spell presen
 
 test("all 138 canonical Sorcerer spell-list entries resolve to the 339-spell presentation catalog", () => {
   assertCanonicalCoverage(sorcererId, 138);
+});
+
+test("all 72 canonical Warlock spell-list entries resolve to the 339-spell presentation catalog", () => {
+  assertCanonicalCoverage(warlockId, 72);
 });
 
 test("all 217 canonical Wizard spell-list entries resolve to the 339-spell presentation catalog", () => {
