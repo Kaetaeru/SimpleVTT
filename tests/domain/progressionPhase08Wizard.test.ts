@@ -76,7 +76,7 @@ function highLevelWizard(level: 17 | 19): ProgressionCharacterState {
     cantripIds:[stableSpellId("Fire Bolt"),stableSpellId("Mage Hand"),stableSpellId("Minor Illusion"),stableSpellId("Prestidigitation"),stableSpellId("Ray of Frost")],
     spellbookSpellIds:book,
     spellbookSpellSources:Object.fromEntries(book.map((id) => [id,"위저드 기존 주문책"])),
-    preparedSpellIds:[stableSpellId("Detect Magic"),stableSpellId("Fireball"),stableSpellId("Fly")],
+    preparedSpellIds:[stableSpellId("Detect Magic")],
   };
 }
 
