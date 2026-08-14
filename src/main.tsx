@@ -12,6 +12,7 @@ import "./app/progressionPhase08SorcererAdapter";
 import "./app/progressionPhase08WarlockAdapter";
 import "./app/progressionPersistentFeatureRuntimeAdapter";
 import "./app/subclassRuntimeAdapter";
+import "./app/pactTomeRuntimeAdapter";
 import "./app/classFeatureSpellRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
