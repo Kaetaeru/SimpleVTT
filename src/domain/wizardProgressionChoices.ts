@@ -69,3 +69,109 @@ export function wizardScholarChoice(args: {
     })),
   };
 }
+
+function availableWizardBookIds(args: {
+  targetLevel: number;
+  knownSpellbookIds: string[];
+  selections: ChoiceSelectionMap;
+}) {
+  return new Set([
+    ...args.knownSpellbookIds,
+    ...wizardSpellbookSelectionIds(args.selections, args.targetLevel),
+  ]);
+}
+
+function isActionCastingTime(value?: string) {
+  return Boolean(value && /행동/.test(value) && !/보너스 행동|추가 행동/.test(value));
+}
+
+export function wizardSpellMasteryChoiceId(spellLevel: 1 | 2) {
+  return `progression.${WIZARD_ID}.18.spell-mastery.${spellLevel}`;
+}
+
+export function wizardSpellMasteryLevelFromChoiceId(choiceId: string): 1 | 2 | undefined {
+  if (choiceId === wizardSpellMasteryChoiceId(1)) return 1;
+  if (choiceId === wizardSpellMasteryChoiceId(2)) return 2;
+  return undefined;
+}
+
+export function isWizardSpellMasteryChoice(choiceId: string) {
+  return wizardSpellMasteryLevelFromChoiceId(choiceId) !== undefined;
+}
+
+export function wizardSpellMasteryChoices(args: {
+  targetLevel: number;
+  knownSpellbookIds: string[];
+  selections: ChoiceSelectionMap;
+  spellOptions?: SpellPresentationOption[];
+}): ChoiceDefinition[] {
+  if (args.targetLevel !== 18) return [];
+  const availableBookIds = availableWizardBookIds(args);
+  const presentation = new Map((args.spellOptions ?? []).map((option) => [option.id, option]));
+  return ([1,2] as const).map((spellLevel) => ({
+    id:wizardSpellMasteryChoiceId(spellLevel),
+    label:`주문 숙련 · ${spellLevel}레벨`,
+    description:`주문책에 기록된 ${spellLevel}레벨 위저드 주문 중 시전 시간이 행동인 주문 하나를 주문 숙련으로 선택합니다. 이 주문은 항상 준비되며 최저 레벨로 시전할 때 주문 슬롯을 소비하지 않습니다.`,
+    kind:"spell",
+    count:1,
+    required:true,
+    status:"ready",
+    source:"위저드 18레벨 · 주문 숙련 · SRD 5.2.1",
+    options:classSpellListEntries(WIZARD_ID, spellLevel)
+      .filter((entry) => entry.level === spellLevel && availableBookIds.has(entry.id))
+      .map((entry) => {
+        const display = presentation.get(entry.id);
+        const action = isActionCastingTime(display?.castingTime);
+        return {
+          id:entry.id,
+          label:display?.label ?? entry.nameEn,
+          description:display?.description ?? `${spellLevel}레벨 위저드 주문`,
+          disabledReason:display?.castingTime === undefined
+            ? "시전 시간 metadata가 없어 주문 숙련 적격성을 확정할 수 없습니다."
+            : !action
+              ? "시전 시간이 행동인 주문만 주문 숙련으로 선택할 수 있습니다."
+              : undefined,
+        };
+      }),
+  }));
+}
+
+export function wizardSignatureSpellsChoiceId() {
+  return `progression.${WIZARD_ID}.20.signature-spells`;
+}
+
+export function isWizardSignatureSpellsChoice(choiceId: string) {
+  return choiceId === wizardSignatureSpellsChoiceId();
+}
+
+export function wizardSignatureSpellsChoice(args: {
+  targetLevel: number;
+  knownSpellbookIds: string[];
+  selections: ChoiceSelectionMap;
+  spellOptions?: SpellPresentationOption[];
+}): ChoiceDefinition | undefined {
+  if (args.targetLevel !== 20) return undefined;
+  const availableBookIds = availableWizardBookIds(args);
+  const presentation = new Map((args.spellOptions ?? []).map((option) => [option.id, option]));
+  return {
+    id:wizardSignatureSpellsChoiceId(),
+    label:"대표 주문",
+    description:"주문책에 기록된 3레벨 위저드 주문 두 개를 대표 주문으로 선택합니다. 두 주문은 항상 준비되며 각각 3레벨로 한 번 무료 시전할 수 있고 짧은 휴식 또는 긴 휴식 후 그 무료 시전을 회복합니다.",
+    kind:"spell",
+    count:2,
+    required:true,
+    status:"ready",
+    source:"위저드 20레벨 · 대표 주문 · SRD 5.2.1",
+    options:classSpellListEntries(WIZARD_ID, 3)
+      .filter((entry) => entry.level === 3 && availableBookIds.has(entry.id))
+      .map((entry) => ({
+        id:entry.id,
+        label:presentation.get(entry.id)?.label ?? entry.nameEn,
+        description:presentation.get(entry.id)?.description ?? "3레벨 위저드 주문",
+      })),
+  };
+}
+
+export function wizardSignatureSpellResourceId(spellId: string) {
+  return `resource:wizard.signature-spell:${spellId}`;
+}
