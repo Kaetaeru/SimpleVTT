@@ -22,6 +22,7 @@ import type { ResolutionOperation } from "./resolutionTypes";
 type TargetingOp = Extract<ResolutionOperation, { kind:"targeting" }>;
 type EconomyOp = Extract<ResolutionOperation, { kind:"use-economy" }>;
 type ExtraActionOp = Extract<ResolutionOperation, { kind:"grant-extra-action" }>;
+type TurnFeatureOp = Extract<ResolutionOperation, { kind:"use-turn-feature" }>;
 type MoveOp = Extract<ResolutionOperation, { kind:"move" }>;
 type ResourceOp = Extract<ResolutionOperation, { kind:"spend-resource" }>;
 type D20Op = Extract<ResolutionOperation, { kind:"d20" }>;
@@ -115,6 +116,32 @@ export function executeGrantExtraAction(ctx: ResolutionExecutionContext, operati
   return {
     result,
     event:makeEvent(ctx.pending, operation, `${actorId} gains an extra action`, result, provenance, changes, actorId),
+  };
+}
+
+export function executeTurnFeature(ctx: ResolutionExecutionContext, operation: TurnFeatureOp): OperationExecution {
+  const actorId = operation.actorId ?? ctx.pending.actorId;
+  requireCombatant(ctx.state, actorId);
+  if (ctx.state.clock.activeActorId !== actorId) {
+    throw new DomainEvaluationError("once-per-turn feature requires the actor's own active turn");
+  }
+  const usage = ctx.state.turnFeatureUsage;
+  if (!usage || usage.actorId !== actorId) {
+    throw new DomainEvaluationError("turn feature usage is not initialized for the active actor");
+  }
+  if (usage.featureIds.includes(operation.featureId)) {
+    throw new DomainEvaluationError(`turn feature already used: ${operation.featureId}`);
+  }
+  usage.featureIds = [...usage.featureIds, operation.featureId];
+  const provenance: ProvenanceRecord[] = [{
+    source:operation.featureId,
+    status:"applied",
+    reason:`once-per-turn feature used by ${actorId}`,
+  }];
+  const result = { actorId, featureId:operation.featureId, used:true };
+  return {
+    result,
+    event:makeEvent(ctx.pending, operation, `${actorId} uses ${operation.featureId} for this turn`, result, provenance, [], actorId),
   };
 }
 
