@@ -1,9 +1,9 @@
 import "./creationContracts";
 import type { AbilityKey, CharacterSheet } from "./contracts";
 import type { CharacterSheetSpellVm, CharacterSheetTraitVm } from "./creationContracts";
-import { classIdFromName, classMeta, classSemantics, originFeatOptions, spellOptions } from "./characterCreationV10Data";
+import { classIdFromName, classMeta, classSemantics, originFeatOptions } from "./characterCreationV10Data";
 import { featDescription, featureDescription, featureLabel } from "./rulePresentation";
-import { SPELL_DESCRIPTION_PENDING, spellNameKo } from "./spellPresentation";
+import { SPELL_DESCRIPTION_PENDING, spellDetailLines, spellPresentationById } from "./spellPresentation";
 
 export const SHEET_ABILITY_LABELS: Record<AbilityKey, string> = {
   str: "근력",
@@ -112,14 +112,7 @@ function speciesAutomatic(c: CharacterSheet, classFeatures: CharacterSheetTraitV
     }));
 }
 
-function spellNameMap(c: CharacterSheet) {
-  const classId = classIdFromName(c.className);
-  const options = [...spellOptions(classId, 0), ...spellOptions(classId, 1)];
-  return new Map(options.map((item) => [item.id, item]));
-}
-
 function spellEntries(c: CharacterSheet): CharacterSheetSpellVm[] {
-  const names = spellNameMap(c);
   const cantrips = new Set(c.cantrips ?? []);
   const preparedRaw = c.preparedSpells ?? [];
   const prepared = new Set(preparedRaw.map((id) => id.replace(/^always:/, "")));
@@ -127,20 +120,24 @@ function spellEntries(c: CharacterSheet): CharacterSheetSpellVm[] {
   const spellbook = new Set(c.spellbookSpells ?? []);
   const ids = [...new Set([...cantrips, ...prepared, ...spellbook])];
   return ids.map((id) => {
-    const option = names.get(id);
-    const level = cantrips.has(id) ? 0 : 1;
+    const presentation = spellPresentationById(id);
+    const fallbackLevel = cantrips.has(id) ? 0 : 1;
     const raw = id.replace(/^dnd\.srd521\.spell\./, "").replaceAll("-", " ");
-    const nameEn = option?.nameEn ?? titleCase(raw);
-    const hasDescription = Boolean(option?.description);
+    const level = presentation?.level ?? fallbackLevel;
     return {
       id,
-      name:spellNameKo(id, option?.name ?? nameEn),
-      nameEn,
+      name:presentation?.name ?? titleCase(raw),
+      nameEn:presentation?.nameEn ?? titleCase(raw),
       level,
       prepared:cantrips.has(id) || prepared.has(id),
       alwaysPrepared:always.has(id),
-      description:option?.description ?? SPELL_DESCRIPTION_PENDING,
-      detailLines:[level === 0 ? "소마법" : "1레벨 주문", ...(spellbook.has(id) ? ["주문서"] : []), ...(always.has(id) ? ["항상 준비"] : []), ...(!hasDescription ? ["상세 설명 본문 미연결"] : []), "SRD 5.2.1"],
+      description:presentation?.description ?? SPELL_DESCRIPTION_PENDING,
+      detailLines:[
+        ...(presentation ? spellDetailLines(presentation) : [level === 0 ? "소마법" : `${level}레벨 주문`, "상세 설명 본문 미연결"]),
+        ...(spellbook.has(id) ? ["주문서"] : []),
+        ...(always.has(id) ? ["항상 준비"] : []),
+        "SRD 5.2.1",
+      ],
     };
   });
 }
