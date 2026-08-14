@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState } from "../../src/domain/progression";
 import { multiclassSpellSlots } from "../../src/domain/progressionCatalog";
+import { stableSpellId } from "../../src/domain/spellListCatalog";
 
 const fighter = (): ProgressionCharacterState => ({
   revision:0, id:"fighter", name:"Aelar", totalLevel:5,
@@ -97,14 +98,23 @@ test("multiclass spellcaster level uses full levels plus ceil of each half-caste
 });
 
 test("a level that needs a not-yet-materialized spell choice rejects atomically instead of approximating", () => {
+  const wizardId = "dnd.srd521.class.wizard";
   const state: ProgressionCharacterState = {
-    revision:3, id:"warlock", name:"Warlock", totalLevel:4,
-    abilities:{ str:8,dex:14,con:14,int:10,wis:12,cha:18 }, hpCurrent:26,hpMaximum:34,proficiencyBonus:2,
-    classTracks:[{ classId:"dnd.srd521.class.warlock", className:"워락", level:4, subclassName:"마족 후원자" }], hitDiceByDie:{ d8:4 }, features:["계약 마법","섬뜩한 기원술"],
+    revision:3, id:"wizard-17", name:"Wizard", totalLevel:17,
+    abilities:{ str:8,dex:14,con:14,int:20,wis:12,cha:10 }, hpCurrent:80,hpMaximum:96,proficiencyBonus:6,
+    classTracks:[{ classId:wizardId, className:"위저드", level:17, subclassName:"환영술사" }], hitDiceByDie:{ d6:17 }, features:["주문 시전","주문책"],
+    spellbookSpellIds:[stableSpellId("Magic Missile"),stableSpellId("Shield")],
+    preparedSpellIds:[stableSpellId("Magic Missile"),stableSpellId("Shield")],
   };
-  const request = { expectedRevision:3, targetClassId:"dnd.srd521.class.warlock", hpMethod:"fixed" as const, selections:{} };
+  const spellbookChoice = `progression.${wizardId}.18.spellbook`;
+  const request = {
+    expectedRevision:3,
+    targetClassId:wizardId,
+    hpMethod:"fixed" as const,
+    selections:{ [spellbookChoice]:{ kind:"options" as const, optionIds:[stableSpellId("Wish"),stableSpellId("Time Stop")] } },
+  };
   const plan = buildProgressionPlan(state, request);
-  assert.ok(plan.choices.some((choice) => choice.kind === "spell" && choice.status === "catalog-pending"));
+  assert.ok(plan.choices.some((choice) => choice.kind === "spell" && choice.status === "catalog-pending" && choice.label === "주문 숙련"));
   const result = resolveProgression(state, request);
   assert.equal(result.status, "rejected");
   assert.equal(result.state, state);
