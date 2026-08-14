@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { recoverResources } from "../../src/domain/resources";
 import {
+  SORCEROUS_RESTORATION_USAGE_RESOURCE_ID,
   SORCERY_POINT_RESOURCE_ID,
   resolveFontOfMagic,
+  resolveSorcerousRestoration,
+  sorcerousRestorationMaximum,
   sorceryPointMaximum,
 } from "../../src/domain/sorcery";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
@@ -13,16 +16,21 @@ function sorcererState() {
   state.combatants.hero.resources.push(
     { id:"spell-slot-2", label:"2레벨 주문 슬롯", current:1, maximum:2, recovery:{ longRest:"all" } },
     { id:SORCERY_POINT_RESOURCE_ID, label:"소서리 포인트", current:1, maximum:5, recovery:{ longRest:"all" } },
+    { id:SORCEROUS_RESTORATION_USAGE_RESOURCE_ID, label:"마력 회복", current:1, maximum:1, recovery:{ longRest:"all" } },
   );
   return state;
 }
 
-test("Sorcery Point maximum follows Sorcerer class level rather than total character level", () => {
+test("Sorcery Point and Sorcerous Restoration limits follow Sorcerer class level", () => {
   assert.equal(sorceryPointMaximum(0), 0);
   assert.equal(sorceryPointMaximum(1), 0);
   assert.equal(sorceryPointMaximum(2), 2);
   assert.equal(sorceryPointMaximum(5), 5);
   assert.equal(sorceryPointMaximum(20), 20);
+  assert.equal(sorcerousRestorationMaximum(4), 0);
+  assert.equal(sorcerousRestorationMaximum(5), 2);
+  assert.equal(sorcerousRestorationMaximum(11), 5);
+  assert.equal(sorcerousRestorationMaximum(20), 10);
 });
 
 test("Font of Magic converts a spell slot to Sorcery Points with no action and rejects overflow atomically", () => {
@@ -144,4 +152,62 @@ test("Font of Magic enforces creation minimum level and available Bonus Action b
   assert.equal(actionRejected.status, "rejected");
   assert.equal(actionRejected.state, noBonus);
   assert.equal(noBonus.combatants.hero.resources.find((pool) => pool.id === SORCERY_POINT_RESOURCE_ID)?.current, 5);
+});
+
+test("Sorcerous Restoration restores at most half Sorcerer level on the Short Rest and consumes its Long-Rest use", () => {
+  const state = sorcererState();
+  state.combatants.hero.resources.find((pool) => pool.id === SORCERY_POINT_RESOURCE_ID)!.current = 0;
+  const committed = resolveSorcerousRestoration(TEST_PROFILE, state, {
+    id:"sorcery.restore",
+    actorId:"hero",
+    expectedRevision:0,
+    sorcererLevel:5,
+  });
+  assert.equal(committed.status, "committed");
+  if (committed.status !== "committed") return;
+  assert.equal(committed.state.combatants.hero.resources.find((pool) => pool.id === SORCERY_POINT_RESOURCE_ID)?.current, 2);
+  assert.equal(committed.state.combatants.hero.resources.find((pool) => pool.id === SORCEROUS_RESTORATION_USAGE_RESOURCE_ID)?.current, 0);
+
+  const second = resolveSorcerousRestoration(TEST_PROFILE, committed.state, {
+    id:"sorcery.restore.again",
+    actorId:"hero",
+    expectedRevision:committed.state.revision,
+    sorcererLevel:5,
+  });
+  assert.equal(second.status, "rejected");
+  assert.equal(second.state, committed.state);
+  assert.match(second.status === "rejected" ? second.error : "", /already been used/);
+});
+
+test("Sorcerous Restoration only restores expended points and Long Rest refreshes both points and the restoration use", () => {
+  const state = sorcererState();
+  state.combatants.hero.resources.find((pool) => pool.id === SORCERY_POINT_RESOURCE_ID)!.current = 4;
+  const committed = resolveSorcerousRestoration(TEST_PROFILE, state, {
+    id:"sorcery.restore.one",
+    actorId:"hero",
+    expectedRevision:0,
+    sorcererLevel:8,
+  });
+  assert.equal(committed.status, "committed");
+  if (committed.status !== "committed") return;
+  assert.equal(committed.state.combatants.hero.resources.find((pool) => pool.id === SORCERY_POINT_RESOURCE_ID)?.current, 5, "cannot exceed the Sorcery Point maximum");
+  assert.equal(committed.state.combatants.hero.resources.find((pool) => pool.id === SORCEROUS_RESTORATION_USAGE_RESOURCE_ID)?.current, 0);
+
+  const longRested = recoverResources(committed.state.combatants.hero.resources, "longRest").next;
+  assert.equal(longRested.find((pool) => pool.id === SORCERY_POINT_RESOURCE_ID)?.current, 5);
+  assert.equal(longRested.find((pool) => pool.id === SORCEROUS_RESTORATION_USAGE_RESOURCE_ID)?.current, 1);
+});
+
+test("Sorcerous Restoration rejects before the rest if no Sorcery Points are expended", () => {
+  const state = sorcererState();
+  state.combatants.hero.resources.find((pool) => pool.id === SORCERY_POINT_RESOURCE_ID)!.current = 5;
+  const rejected = resolveSorcerousRestoration(TEST_PROFILE, state, {
+    id:"sorcery.restore.full",
+    actorId:"hero",
+    expectedRevision:0,
+    sorcererLevel:5,
+  });
+  assert.equal(rejected.status, "rejected");
+  assert.equal(rejected.state, state);
+  assert.match(rejected.status === "rejected" ? rejected.error : "", /no expended Sorcery Points/);
 });
