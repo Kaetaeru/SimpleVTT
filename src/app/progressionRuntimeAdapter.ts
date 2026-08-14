@@ -7,6 +7,8 @@ import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { classById, classByName } from "../domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState, type ProgressionPlan } from "../domain/progression";
+import { SORCERER_ID } from "../domain/sorcererProgressionChoices";
+import { SORCERY_POINT_RESOURCE_ID, sorceryPointMaximum } from "../domain/sorcery";
 import { wizardSignatureSpellResourceId } from "../domain/wizardProgressionChoices";
 
 const clone = <T,>(value: T): T => structuredClone(value);
@@ -63,6 +65,28 @@ function ensureSignatureSpellResources(sheet: CharacterSheet) {
   }
 }
 
+function ensureSorceryPointResource(sheet: CharacterSheet) {
+  const sorcererLevel = sheet.classLevels?.find((track) => track.classId === SORCERER_ID)?.level ?? 0;
+  const maximum = sorceryPointMaximum(sorcererLevel);
+  if (maximum <= 0) return;
+  const existing = sheet.resources.find((resource) => resource.id === SORCERY_POINT_RESOURCE_ID);
+  if (!existing) {
+    sheet.resources.push({
+      id:SORCERY_POINT_RESOURCE_ID,
+      label:"소서리 포인트",
+      current:maximum,
+      max:maximum,
+      source:`소서러 ${sorcererLevel}레벨 · Font of Magic · SRD 5.2.1`,
+      recovery:{ longRest:"all" },
+    });
+    return;
+  }
+  existing.max = maximum;
+  existing.current = Math.min(existing.current, maximum);
+  existing.source = `소서러 ${sorcererLevel}레벨 · Font of Magic · SRD 5.2.1`;
+  existing.recovery = { ...(existing.recovery ?? {}), longRest:"all" };
+}
+
 export function ensureProgressionMetadata(sheet: CharacterSheet) {
   if (!sheet.classLevels?.length) {
     const definition = primaryClass(sheet);
@@ -78,6 +102,7 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
     }
     sheet.hitDiceByDie = dice;
   }
+  ensureSorceryPointResource(sheet);
   const migratedExpertise = creationExpertise(sheet);
   sheet.expertiseSkills = unique([...(sheet.expertiseSkills ?? []), ...migratedExpertise]);
   sheet.expertiseSources ??= {};
@@ -293,6 +318,7 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
   if (primary?.subclassName) sheet.subclassName = primary.subclassName;
+  ensureSorceryPointResource(sheet);
 }
 
 function syncCommittedSheetToScene(state: AdapterState) {
