@@ -77,6 +77,9 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
     const id = normalizedSpellId(spell);
     sheet.preparedSpellSources[id] ??= spell.startsWith("always:") ? "Always prepared / existing character" : "Character Creation / existing character";
   }
+  sheet.spellbookSpells = unique(sheet.spellbookSpells ?? []);
+  sheet.spellbookSpellSources ??= {};
+  for (const spell of sheet.spellbookSpells) sheet.spellbookSpellSources[spell] ??= "Character Creation / existing character";
   sheet.progressionRevision ??= 0;
   return sheet;
 }
@@ -104,6 +107,8 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     cantripSources:clone(sheet.cantripSources ?? {}),
     preparedSpellIds:clone(sheet.preparedSpells ?? []),
     preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
+    spellbookSpellIds:clone(sheet.spellbookSpells ?? []),
+    spellbookSpellSources:clone(sheet.spellbookSpellSources ?? {}),
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
   };
 }
@@ -133,7 +138,14 @@ function progressionLanguageOptions() {
 }
 
 function progressionSpellOptions() {
-  return SPELL_PRESENTATIONS.map((spell) => ({ id:spell.id, label:spell.name, description:spell.summary, level:spell.level }));
+  return SPELL_PRESENTATIONS.map((spell) => ({
+    id:spell.id,
+    label:spell.name,
+    description:spell.summary,
+    level:spell.level,
+    castingTime:spell.castingTime,
+    school:spell.school,
+  }));
 }
 
 function targetClassId(sheet: CharacterSheet, draft: LevelUpDraft) {
@@ -213,6 +225,8 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.cantripSources = clone(next.cantripSources ?? {});
   sheet.preparedSpells = clone(next.preparedSpellIds ?? []);
   sheet.preparedSpellSources = clone(next.preparedSpellSources ?? {});
+  sheet.spellbookSpells = clone(next.spellbookSpellIds ?? []);
+  sheet.spellbookSpellSources = clone(next.spellbookSpellSources ?? {});
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
