@@ -7,6 +7,7 @@ import "./app/characterSheetV10Runtime";
 import "./app/mockAdapterCompletion";
 import "./app/spellcastingRuntimeAdapter";
 import "./app/progressionRuntimeAdapter";
+import "./app/sorceryRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import "./styles.css";
