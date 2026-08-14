@@ -33,12 +33,15 @@ The implementation does not reproduce Wizards of the Coast artwork or decorative
 
 ## Interaction rules
 
+- The character sheet owns its viewport scrolling explicitly because the app-level `.content` container clips overflow.
 - Dense data should remain scannable without forcing every rule paragraph into the sheet.
 - Traits, feats, spells, and items expose detail on pointer hover and keyboard focus.
 - Character Creation option cards use the same progressive-disclosure principle: compact selector first, rule detail on hover/focus.
 - Popovers render in a fixed React portal so scrolling containers cannot clip them.
 - Feat hover copy is derived from the pinned SRD 5.2.1 translation/mechanics.
-- Spell hover uses materialized catalog description when available. The current repository does not yet contain full description materialization for all 339 spells; absent text remains an explicit catalog-coverage issue rather than invented prose.
+- Level-0 and level-1 spells use Korean primary names from the pinned `Kaetaeru/D-D-2024-` SRD translation, with the English original name retained as secondary metadata.
+- `SRD 소마법` and `SRD 1레벨 주문` are spell-list metadata, not rules prose. They must never be presented as the spell description.
+- Until full spell prose is materialized into the SimpleVTT presentation catalog, hover explicitly reports that the detailed SRD description is not yet connected instead of inventing or disguising fallback text.
 
 ## Structure Gate
 
@@ -47,4 +50,7 @@ The implementation does not reproduce Wizards of the Coast artwork or decorative
 - distinct Class / Species / Feat / Other trait projections;
 - saving throws and skills grouped under their governing ability;
 - SRD-derived feat description availability;
+- Korean primary spell names with English originals retained separately;
+- generic spell-list metadata never masquerading as rules prose;
+- explicit character-sheet viewport scroll ownership;
 - compact option-card and official-sheet structural CSS hooks.
