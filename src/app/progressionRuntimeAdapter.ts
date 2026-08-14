@@ -116,9 +116,9 @@ function progressionFightingStyleOptions() {
   return fightingStyleOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
 }
 
-function progressionDruidCantripOptions() {
+function progressionClassCantripOptions(classId: string) {
   const presentations = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
-  return spellOptions("dnd.srd521.class.druid", 0).map((option) => {
+  return spellOptions(classId, 0).map((option) => {
     const presentation = presentations.get(option.id);
     return {
       id:option.id,
@@ -152,7 +152,8 @@ function requestFor(state: AdapterState) {
     selections:clone(draft.progressionSelections ?? {}),
     featOptions:featOptions(state),
     fightingStyleOptions:progressionFightingStyleOptions(),
-    druidCantripOptions:progressionDruidCantripOptions(),
+    druidCantripOptions:progressionClassCantripOptions("dnd.srd521.class.druid"),
+    clericCantripOptions:progressionClassCantripOptions("dnd.srd521.class.cleric"),
     languageOptions:progressionLanguageOptions(),
     spellOptions:progressionSpellOptions(),
   } as const;
