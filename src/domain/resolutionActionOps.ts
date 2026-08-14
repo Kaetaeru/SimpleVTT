@@ -67,11 +67,13 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
     restrictionProvenance = selected.provenance;
   }
 
+  const actionKind = operation.actionKind
+    ?? (ctx.pending.sourceId.startsWith("dnd.srd521.spell.") ? "magic" : "other");
   const spent = spendTurnSlot(
     before,
     operation.slot,
     operation.bonusActionGranted === true,
-    operation.actionKind ?? "other",
+    actionKind,
   );
   actor.economy = spent.next;
   const provenance: ProvenanceRecord[] = [
@@ -85,7 +87,7 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
     },
   ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
-  const result = { slot:operation.slot, spent:true, spentFrom:spent.spentFrom, actionKind:operation.actionKind ?? "other" };
+  const result = { slot:operation.slot, spent:true, spentFrom:spent.spentFrom, actionKind };
   return {
     result,
     event:makeEvent(ctx.pending, operation, `${actorId} spends ${operation.slot}`, result, provenance, changes, actorId),
