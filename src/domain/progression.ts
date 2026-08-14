@@ -116,6 +116,8 @@ const CHOICE_FEATURE_NAMES = new Set([
   "전문화", "전투 방식", "신성한 역할", "원초적 역할", "원초적 지식", "노련한 탐험가",
   "메타매직", "섬뜩한 기원술", "마법의 비밀", "학자", "주문 숙련", "대표 주문",
 ]);
+const BARD_ID = "dnd.srd521.class.bard";
+const WIZARD_ID = "dnd.srd521.class.wizard";
 const RANGER_ID = "dnd.srd521.class.ranger";
 const PALADIN_ID = "dnd.srd521.class.paladin";
 const RANGER_DRUIDIC_WARRIOR = "feature:ranger.druidic-warrior";
@@ -126,6 +128,7 @@ function clone<T>(value: T): T { return structuredClone(value); }
 function unique(values: string[]) { return [...new Set(values.filter(Boolean))]; }
 function normalizedSpellId(id: string) { return id.replace(/^always:/, ""); }
 function isCantripChoiceId(id: string) { return id.endsWith(".column.소마법") || id.endsWith(".cantrip") || id.endsWith(".cantrips"); }
+function bardMagicalSecretsListsReady() { return classSpellListEntries(WIZARD_ID).length > 0; }
 
 function expertiseChoice(
   state: ProgressionCharacterState,
@@ -325,6 +328,16 @@ function cantripChoice(
   };
 }
 
+function preparedSpellCandidates(targetClassId: string, targetLevel: number, maxSpellLevel: number) {
+  if (targetClassId === BARD_ID && targetLevel >= 10) {
+    if (!bardMagicalSecretsListsReady()) return [];
+    const entries = [BARD_ID,CLERIC_ID,DRUID_ID,WIZARD_ID]
+      .flatMap((classId) => classSpellListEntries(classId, maxSpellLevel));
+    return [...new Map(entries.map((entry) => [entry.id, entry])).values()];
+  }
+  return classSpellListEntries(targetClassId, maxSpellLevel);
+}
+
 function preparedSpellChoice(
   state: ProgressionCharacterState,
   targetClassId: string,
@@ -334,7 +347,7 @@ function preparedSpellChoice(
 ): ChoiceDefinition | undefined {
   const maxSpellLevel = highestClassSpellSlotLevel(targetClassId, targetLevel);
   if (maxSpellLevel <= 0) return undefined;
-  const canonical = classSpellListEntries(targetClassId, maxSpellLevel);
+  const canonical = preparedSpellCandidates(targetClassId, targetLevel, maxSpellLevel);
   if (!canonical.length) return undefined;
   const definition = classById(targetClassId)!;
   const presentation = new Map((spellOptions ?? []).map((option) => [option.id, option]));
@@ -343,7 +356,9 @@ function preparedSpellChoice(
   return {
     id:`progression.${targetClassId}.${targetLevel}.column.준비 주문`,
     label:`준비 주문 +${count}`,
-    description:`${definition.nameKo} 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`,
+    description:targetClassId === BARD_ID && targetLevel >= 10
+      ? `마법의 비밀에 따라 바드, 클레릭, 드루이드, 위저드 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`
+      : `${definition.nameKo} 주문 목록에서 현재 사용할 수 있는 ${maxSpellLevel}레벨 이하 주문 ${count}개를 추가로 준비합니다.`,
     kind:"spell",
     count,
     required:true,
@@ -436,6 +451,9 @@ function featureChoiceDefinitions(
         continue;
       }
     }
+    if (targetClassId === BARD_ID && feature === "마법의 비밀") {
+      continue;
+    }
     if (feature === "전문화") {
       const expertise = expertiseChoiceDefinition(state, targetClassId, targetLevel);
       if (expertise) {
@@ -479,6 +497,21 @@ function columnChoiceDefinitions(
       }
     }
     if (watchedColumn.key === "준비 주문") {
+      if (targetClassId === BARD_ID && toLevel >= 10 && !bardMagicalSecretsListsReady()) {
+        result.push({
+          id:`progression.${targetClassId}.${toLevel}.column.준비 주문`,
+          label:`준비 주문 +${count}`,
+          description:"마법의 비밀이 적용되는 새 준비 주문을 선택합니다.",
+          kind:"spell",
+          count,
+          required:true,
+          status:"catalog-pending",
+          source:`${definition.nameKo} ${toLevel}레벨 표 · SRD 5.2.1`,
+          options:[],
+          pendingReason:"바드 10레벨 이후 마법의 비밀은 바드/클레릭/드루이드/위저드 네 주문 목록을 모두 요구합니다. 위저드 canonical spell-list relationship이 materialize되기 전에는 후보를 축약하지 않습니다.",
+        });
+        continue;
+      }
       const ready = preparedSpellChoice(state, targetClassId, toLevel, count, request.spellOptions);
       if (ready) {
         result.push(ready);
@@ -568,7 +601,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   }
   for (const [id, count] of selectedCantripCounts) if (count > 1) blocking.push(`소마법 선택은 같은 progression 트랜잭션 안에서 중복될 수 없습니다: ${id}`);
   const choiceFeatureSet = new Set(choices.map((choice) => choice.label.replace(/ \+\d+$/, "")));
-  const automaticGrants = rowFeatures.filter((feature) => feature !== "능력치 향상" && feature !== "에픽 은총" && !feature.includes("서브클래스") && !choiceFeatureSet.has(feature) && !CHOICE_FEATURE_NAMES.has(feature) && !isDruidElementalFuryFeature(feature) && !feature.startsWith("신비한 비전") && !/선택/.test(feature));
+  const automaticGrants = rowFeatures.filter((feature) => feature !== "능력치 향상" && feature !== "에픽 은총" && feature !== "마법의 비밀" && !feature.includes("서브클래스") && !choiceFeatureSet.has(feature) && !CHOICE_FEATURE_NAMES.has(feature) && !isDruidElementalFuryFeature(feature) && !feature.startsWith("신비한 비전") && !/선택/.test(feature));
   const classTracksBefore = clone(state.classTracks);
   const classTracksAfter = clone(state.classTracks);
   if (existing) classTracksAfter.find((track) => track.classId === target.id)!.level += 1;
