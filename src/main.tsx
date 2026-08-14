@@ -9,6 +9,8 @@ import "./responsive.css";
 import "./completion.css";
 import "./character-creation-v09.css";
 import "./character-creation-v10.css";
+import "./compact-options.css";
+import "./character-sheet-v10.css";
 import "./focused-layout-fix.css";
 
 createRoot(document.getElementById("root")!).render(
