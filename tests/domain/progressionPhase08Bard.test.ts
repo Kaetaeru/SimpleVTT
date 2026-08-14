@@ -18,7 +18,7 @@ function bard(level: number, overrides: Partial<ProgressionCharacterState> = {})
     "Animal Friendship","Bane","Charm Person","Command","Cure Wounds","Dissonant Whispers",
     "Faerie Fire","Healing Word","Heroism","Thunderwave","Hold Person","Shatter",
     "Dispel Magic","Hypnotic Pattern",
-  ].slice(0, level >= 9 ? 12 : 12).map(stableSpellId);
+  ].slice(0, 12).map(stableSpellId);
   return {
     revision:0,
     id:"bard",
@@ -74,7 +74,6 @@ test("Bard 8 -> 9 materializes Expertise 2 and two additional prepared spells fr
   assert.equal(prepared?.count, 2);
   assert.ok(prepared?.options.some((option) => option.id === holdMonster && !option.disabledReason));
   assert.ok(prepared?.options.some((option) => option.id === greaterRestoration && !option.disabledReason));
-  assert.equal(prepared?.options.some((option) => option.level > 5), false, "Bard 9 cannot prepare above 5th level");
   assert.equal(plan.blocking.length, 0);
 
   const result = resolveProgression(state, request);
@@ -90,42 +89,47 @@ test("Bard 8 -> 9 materializes Expertise 2 and two additional prepared spells fr
   assert.equal(result.state.spellSlotMaximums?.[5], 1);
 });
 
-test("Bard 9 -> 10 keeps Magical Secrets prepared-spell increase pending until the Wizard canonical list exists", () => {
+test("Bard 9 -> 10 Magical Secrets expands new prepared spells to Bard/Cleric/Druid/Wizard without a fake extra choice", () => {
   const state = bard(9, {
     proficiencyBonus:4,
     preparedSpellIds:[
-      ...bard(9).preparedSpellIds ?? [],
+      ...(bard(9).preparedSpellIds ?? []),
       stableSpellId("Hold Monster"), stableSpellId("Greater Restoration"),
     ],
   });
   const cantrip = stableSpellId("Starry Wisp");
-  const plan = buildProgressionPlan(state, {
+  const fireball = stableSpellId("Fireball");
+  const counterspell = stableSpellId("Counterspell");
+  const request = {
     expectedRevision:0,
     targetClassId:bardId,
-    hpMethod:"fixed",
+    hpMethod:"fixed" as const,
     selections:{
-      [cantripChoice(10)]:{ kind:"options", optionIds:[cantrip] },
+      [cantripChoice(10)]:{ kind:"options" as const, optionIds:[cantrip] },
+      [preparedChoice(10)]:{ kind:"options" as const, optionIds:[fireball,counterspell] },
     },
-  });
+  };
+  const plan = buildProgressionPlan(state, request);
   const cantripDef = plan.choices.find((choice) => choice.id === cantripChoice(10));
   const prepared = plan.choices.find((choice) => choice.id === preparedChoice(10));
   assert.equal(cantripDef?.status, "ready");
   assert.equal(cantripDef?.count, 1);
-  assert.equal(prepared?.status, "catalog-pending");
-  assert.match(prepared?.pendingReason ?? "", /바드\/클레릭\/드루이드\/위저드/);
-  assert.match(prepared?.pendingReason ?? "", /위저드 canonical/);
-  assert.equal(plan.choices.some((choice) => choice.id.includes("마법의 비밀")), false, "Magical Secrets modifies the spell candidate pool instead of creating a fake extra choice");
-  assert.ok(plan.blocking.some((message) => /준비 주문|마법의 비밀|위저드/.test(message)));
+  assert.equal(prepared?.status, "ready");
+  assert.equal(prepared?.count, 2);
+  assert.ok(prepared?.options.some((option) => option.id === fireball), "Fireball is supplied by the Wizard list through Magical Secrets");
+  assert.ok(prepared?.options.some((option) => option.id === counterspell), "Counterspell is supplied by the Wizard list through Magical Secrets");
+  assert.equal(classSpellListEntries(bardId).some((entry) => entry.id === fireball), false, "Fireball is not a native Bard spell");
+  assert.equal(plan.choices.some((choice) => choice.id.includes("마법의 비밀")), false, "Magical Secrets modifies the prepared-spell candidate pool instead of creating a fake extra choice");
+  assert.equal(plan.blocking.length, 0);
 
-  const result = resolveProgression(state, {
-    expectedRevision:0,
-    targetClassId:bardId,
-    hpMethod:"fixed",
-    selections:{ [cantripChoice(10)]:{ kind:"options", optionIds:[cantrip] } },
-  });
-  assert.equal(result.status, "rejected");
-  if (result.status !== "rejected") return;
-  assert.equal(result.state, state);
+  const result = resolveProgression(state, request);
+  assert.equal(result.status, "committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.totalLevel, 10);
+  assert.ok(result.state.cantripIds?.includes(cantrip));
+  assert.ok(result.state.preparedSpellIds?.includes(fireball));
+  assert.ok(result.state.preparedSpellIds?.includes(counterspell));
+  assert.equal(result.state.preparedSpellSources?.[fireball], "바드 10레벨 표 · SRD 5.2.1");
 });
 
 test("Bard 20 Words of Creation catalog relationship keeps Power Word Heal and Power Word Kill always prepared", () => {
