@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CLERIC_LIFE_DOMAIN_SUBCLASS_ID,
+  resolveLifeDomainDivineSparkHealing,
   resolveLifeDomainHealingSpell,
   resolvePreserveLife,
 } from "../../src/domain/clericLifeDomain";
@@ -92,7 +93,7 @@ test("Blessed Healer restores the Cleric once when a slotted healing spell heals
   assert.equal(result.state.combatants.hero.life.hp.current,8,"Blessed Healer restores 2 + slot level once");
 });
 
-test("Supreme Healing replaces healing dice with maximum faces before Disciple of Life is added", () => {
+test("Supreme Healing replaces healing spell dice with maximum faces before Disciple of Life is added", () => {
   const state = runtimeState();
   state.combatants.hero.life.hp = { current:1, maximum:50, temporary:0 };
   const request = spellRequest("life.supreme",CURE_WOUNDS,creature("hero"),[1,1]);
@@ -108,6 +109,46 @@ test("Supreme Healing replaces healing dice with maximum faces before Disciple o
   assert.equal(result.state.combatants.hero.life.hp.current,24,"max 2d8 = 16 + Wis 4 + Disciple 3 = 23 healing");
   const roll = result.results["life.supreme:healing-roll"] as { dice:Array<{ selectedFaces:number[] }> };
   assert.deepEqual(roll.dice[0]?.selectedFaces,[8,8]);
+});
+
+test("Supreme Healing also maximizes Divine Spark healing dice from Channel Divinity", () => {
+  const state = runtimeState();
+  state.combatants.goblin.life.hp = { current:1, maximum:50, temporary:0 };
+  state.combatants.hero.resources.push({
+    id:CLERIC_CHANNEL_DIVINITY_RESOURCE_ID,
+    label:"Channel Divinity",
+    current:2,
+    maximum:2,
+    recovery:{ shortRest:1, longRest:"all" },
+  });
+  const result = resolveLifeDomainDivineSparkHealing(TEST_PROFILE,state,{
+    id:"life.supreme.divine-spark",
+    actorId:"hero",
+    expectedRevision:0,
+    clericLevel:17,
+    wisdomModifier:5,
+    spellSaveDc:17,
+    target:{
+      id:"goblin",
+      kind:"creature",
+      relation:"ally",
+      distanceFeet:30,
+      visible:true,
+      cover:"none",
+      constitutionSaveModifier:0,
+      creatureKind:"monster",
+    },
+    effectFaces:[1,1,1],
+    mode:"healing",
+  },{
+    clericLevel:17,
+    subclassId:CLERIC_LIFE_DOMAIN_SUBCLASS_ID,
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.combatants.goblin.life.hp.current,30,"Cleric 17 Divine Spark heals max 3d8 + Wis 5 = 29");
+  const roll = result.results["life.supreme.divine-spark:effect-roll"] as { dice:Array<{ selectedFaces:number[] }> };
+  assert.deepEqual(roll.dice[0]?.selectedFaces,[8,8,8]);
 });
 
 test("Preserve Life atomically spends Channel Divinity and distributes at most 5 x Cleric level without healing above half maximum", () => {
