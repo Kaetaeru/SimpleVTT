@@ -10,6 +10,8 @@ import {
   DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID,
   DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID,
   DRUID_WILD_SHAPE_RESOURCE_ID,
+  FIGHTER_ID,
+  FIGHTER_SECOND_WIND_RESOURCE_ID,
   PALADIN_CHANNEL_DIVINITY_RESOURCE_ID,
   PALADIN_ID,
   PALADIN_LAY_ON_HANDS_RESOURCE_ID,
@@ -172,4 +174,39 @@ test("Druid level 5 projects independent turn and Long-Rest Wild Resurgence gate
   snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID)?.current, 0);
   assert.equal(snapshot.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID)?.current, 0);
+});
+
+test("Fighter Second Wind projection follows 2/3/4 uses and preserves spent uses when capacity grows", async () => {
+  const { adapter, internal } = await baselineAdapter();
+  internal.activeCharacter = {
+    ...internal.activeCharacter,
+    className:"파이터",
+    level:3,
+    classLevels:[{ classId:FIGHTER_ID, className:"파이터", level:3 }],
+    resources:[],
+  };
+  let snapshot = await adapter.getSnapshot();
+  let resource = snapshot.activeCharacter.resources.find((entry) => entry.id === FIGHTER_SECOND_WIND_RESOURCE_ID);
+  assert.deepEqual({ current:resource?.current, max:resource?.max, recovery:resource?.recovery }, {
+    current:2,
+    max:2,
+    recovery:{ shortRest:1, longRest:"all" },
+  });
+
+  const internalResource = internal.activeCharacter.resources.find((entry) => entry.id === FIGHTER_SECOND_WIND_RESOURCE_ID);
+  assert.ok(internalResource);
+  internalResource!.current = 0;
+  internal.activeCharacter.level = 4;
+  internal.activeCharacter.classLevels = [{ classId:FIGHTER_ID, className:"파이터", level:4 }];
+  snapshot = await adapter.getSnapshot();
+  resource = snapshot.activeCharacter.resources.find((entry) => entry.id === FIGHTER_SECOND_WIND_RESOURCE_ID);
+  assert.equal(resource?.max, 3);
+  assert.equal(resource?.current, 0, "level-4 capacity growth must not grant an implicit Second Wind use");
+
+  internal.activeCharacter.level = 10;
+  internal.activeCharacter.classLevels = [{ classId:FIGHTER_ID, className:"파이터", level:10 }];
+  snapshot = await adapter.getSnapshot();
+  resource = snapshot.activeCharacter.resources.find((entry) => entry.id === FIGHTER_SECOND_WIND_RESOURCE_ID);
+  assert.equal(resource?.max, 4);
+  assert.equal(resource?.current, 0, "level-10 capacity growth must not refill Second Wind");
 });
