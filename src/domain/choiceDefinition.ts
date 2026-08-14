@@ -5,6 +5,7 @@ export type ChoiceDefinitionKind =
   | "weapon-mastery"
   | "skill"
   | "expertise"
+  | "language"
   | "feature-option"
   | "epic-boon";
 
