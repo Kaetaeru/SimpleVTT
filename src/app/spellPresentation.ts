@@ -91,7 +91,7 @@ export function spellDetailLines(spell: SpellPresentation) {
   ];
 }
 
-export function decorateSpellOption<T extends Omit<CharacterCreationOptionVm, "selected"> | CharacterCreationOptionVm>(option: T): T {
+export function decorateSpellOption(option: CharacterCreationOptionVm): CharacterCreationOptionVm {
   const spell = spellPresentationById(option.id);
   if (!spell) return option;
   return {
