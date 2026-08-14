@@ -1,0 +1,169 @@
+.create-option-grid,
+.dynamic-choice-grid,
+.equipment-options {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 7px;
+  align-items: start;
+}
+
+.create-option-card.compact {
+  position: relative;
+  min-height: 72px;
+  padding: 8px 9px;
+  gap: 4px;
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  overflow: visible;
+  box-shadow: none;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-2) 82%, var(--surface));
+  transition: border-color .12s ease, background .12s ease, transform .12s ease;
+}
+
+.create-option-card.compact:hover,
+.create-option-card.compact:focus-visible {
+  z-index: 3;
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  outline: none;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-2));
+}
+
+.create-option-card.compact.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.create-option-card.compact.is-unavailable:not(.selected) {
+  opacity: .62;
+}
+
+.create-option-card.compact .create-option-card-head {
+  gap: 7px;
+  min-width: 0;
+}
+
+.create-option-card.compact .option-monogram {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.create-option-card.compact .create-option-card-head > div {
+  gap: 0;
+}
+
+.create-option-card.compact .create-option-card-head strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: Inter, Pretendard, "Noto Sans KR", sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.create-option-card.compact .create-option-card-head small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 7px;
+}
+
+.option-card-state {
+  min-width: 18px;
+  color: var(--accent);
+  font-size: 8px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.option-card-summary {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding-left: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted) !important;
+  font-size: 8px !important;
+  line-height: 1.35 !important;
+}
+
+.option-detail-popover.portal {
+  position: fixed;
+  z-index: 10000;
+  max-height: min(370px, calc(100vh - 24px));
+  overflow: auto;
+  padding: 13px 14px;
+  pointer-events: none;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 97%, black);
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.46);
+}
+
+.option-detail-title {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.option-detail-title strong {
+  font: 700 15px Georgia, "Noto Serif KR", serif;
+}
+.option-detail-title small {
+  color: var(--accent);
+  font-size: 8px;
+}
+.option-detail-popover > p {
+  margin: 10px 0;
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+.option-detail-facts,
+.option-detail-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.option-detail-facts span {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+.option-detail-followups {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  background: var(--recess);
+}
+.option-detail-followups b {
+  color: var(--accent);
+  font-size: 8px;
+}
+.option-detail-followups span {
+  color: var(--muted);
+  font-size: 8px;
+}
+.option-detail-source {
+  display: block;
+  margin-top: 10px;
+  color: var(--quiet);
+  font-size: 7px;
+}
+
+@media (max-width: 1100px) {
+  .create-option-grid,
+  .dynamic-choice-grid,
+  .equipment-options { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+}
