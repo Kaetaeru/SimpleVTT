@@ -16,6 +16,7 @@ import {
   executeResource,
   executeTargeting,
 } from "./resolutionActionOps";
+import { executeGainResource } from "./resolutionResourceOps";
 import {
   executeApplyEffect,
   executeEndConcentration,
@@ -40,6 +41,7 @@ function executeOperation(
     case "use-economy": return executeEconomy(ctx, operation);
     case "move": return executeMove(ctx, operation);
     case "spend-resource": return executeResource(ctx, operation);
+    case "gain-resource": return executeGainResource(ctx, operation);
     case "d20": return executeD20(ctx, operation);
     case "damage-roll": return executeDamageRoll(ctx, operation);
     case "damage": return executeDamage(ctx, operation);
