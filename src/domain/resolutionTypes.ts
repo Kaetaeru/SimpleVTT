@@ -195,6 +195,13 @@ export type ResolutionOperation =
         amount: number;
         usageResourceId: string;
       };
+      resourceRestorationBatch?: {
+        restorations: Array<{
+          resourceId: string;
+          amount: number;
+        }>;
+        usageResourceId: string;
+      };
     })
   | (OperationBase & {
       kind: "long-rest";
