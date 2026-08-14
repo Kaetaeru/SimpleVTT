@@ -87,6 +87,13 @@ export type ResolutionOperation =
       };
     })
   | (OperationBase & {
+      kind: "set-resource-recovery-lockout";
+      actorId?: string;
+      resourceId:string;
+      trigger:"shortRest"|"longRest";
+      rests:number;
+    })
+  | (OperationBase & {
       kind: "d20";
       actorId?: string;
       targetId?: string;
