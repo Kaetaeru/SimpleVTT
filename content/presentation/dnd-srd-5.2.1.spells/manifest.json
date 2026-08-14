@@ -1,0 +1,41 @@
+{
+  "formatVersion": "1",
+  "rulesProfileId": "dnd.srd-5.2.1",
+  "locale": "ko-KR",
+  "count": 339,
+  "source": {
+    "document": "System Reference Document",
+    "version": "5.2.1",
+    "license": "CC-BY-4.0",
+    "repository": "Kaetaeru/D-D-2024-",
+    "revision": "d3d574725e0ecdfd05cb69fa32cf66196e3a8ee4",
+    "bundlePaths": [
+      "10-RULEBOOKS/srd-5.2.1/spells/a.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/b.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/c.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/d.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/e.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/f.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/g.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/h.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/i.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/j.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/k.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/l.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/m.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/n.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/p.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/r.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/s.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/t.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/u.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/v.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/w.md",
+      "10-RULEBOOKS/srd-5.2.1/spells/z.md"
+    ]
+  },
+  "encoding": "base64+gzip+utf8-json",
+  "compressedBytes": 83943,
+  "uncompressedBytes": 440137,
+  "sha256": "5bcdd8206281d6701270931b10df8d7f8debe9c4a9bca7aff79d5ecb38c19d51"
+}
