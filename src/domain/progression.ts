@@ -16,7 +16,7 @@ import {
   progressionRow,
   type AbilityKey,
 } from "./progressionCatalog";
-import { automaticPreparedSpellsForLevel, classSpellListEntries } from "./spellListCatalog";
+import { automaticPreparedSpellsForLevel, classCantripListEntries, classSpellListEntries } from "./spellListCatalog";
 
 export interface ProgressionClassTrack {
   classId: string;
@@ -280,6 +280,39 @@ function highestClassSpellSlotLevel(classId: string, classLevel: number) {
   return highest;
 }
 
+function cantripChoice(
+  state: ProgressionCharacterState,
+  targetClassId: string,
+  targetLevel: number,
+  count: number,
+  spellOptions: ProgressionRequest["spellOptions"],
+): ChoiceDefinition | undefined {
+  const canonical = classCantripListEntries(targetClassId);
+  if (!canonical.length) return undefined;
+  const definition = classById(targetClassId)!;
+  const presentation = new Map((spellOptions ?? []).map((option) => [option.id, option]));
+  const known = new Set(state.cantripIds ?? []);
+  return {
+    id:`progression.${targetClassId}.${targetLevel}.column.소마법`,
+    label:`소마법 +${count}`,
+    description:`${definition.nameKo} 주문 목록에서 아직 알지 못하는 소마법 ${count}개를 추가로 배웁니다.`,
+    kind:"spell",
+    count,
+    required:true,
+    status:"ready",
+    source:`${definition.nameKo} ${targetLevel}레벨 표 · SRD 5.2.1`,
+    options:canonical.map((entry) => {
+      const display = presentation.get(entry.id);
+      return {
+        id:entry.id,
+        label:display?.label ?? entry.nameEn,
+        description:display?.description ?? `${definition.nameKo} 소마법`,
+        disabledReason:known.has(entry.id) ? "이미 알고 있는 소마법입니다." : undefined,
+      };
+    }),
+  };
+}
+
 function preparedSpellChoice(
   state: ProgressionCharacterState,
   targetClassId: string,
@@ -400,6 +433,13 @@ function columnChoiceDefinitions(
     const after = numericProgressionColumn(targetClassId, toLevel, watchedColumn.key);
     if (after <= before) continue;
     const count = after - before;
+    if (watchedColumn.key === "소마법") {
+      const ready = cantripChoice(state, targetClassId, toLevel, count, request.spellOptions);
+      if (ready) {
+        result.push(ready);
+        continue;
+      }
+    }
     if (watchedColumn.key === "준비 주문") {
       const ready = preparedSpellChoice(state, targetClassId, toLevel, count, request.spellOptions);
       if (ready) {
@@ -524,6 +564,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const alternativeCantripLabels = choices
     .filter((choice) => choice.id.includes(".fighting-style.") && choice.id.endsWith(".cantrips"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const classCantripLabels = choices
+    .filter((choice) => choice.id.endsWith(".column.소마법"))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const preparedSpellLabels = choices
     .filter((choice) => choice.kind === "spell" && choice.id.endsWith(".column.준비 주문"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
@@ -540,6 +583,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (languagesAfter.length !== languagesBefore.length) diffs.push({ label:"언어", before:displayList(languagesBefore), after:displayList(languagesAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (fightingStyleLabels.length) diffs.push({ label:"전투 방식", before:"—", after:fightingStyleLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (alternativeCantripLabels.length) diffs.push({ label:"전투 방식 소마법", before:"—", after:alternativeCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (classCantripLabels.length) diffs.push({ label:"소마법 추가", before:"—", after:classCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticPrepared.length) diffs.push({ label:"항상 준비 주문", before:"—", after:automaticPrepared.map((entry) => entry.nameEn).join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
@@ -597,7 +641,9 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   const cantripIds = [...(next.cantripIds ?? [])];
   const cantripKeys = new Set(cantripIds);
   const cantripSources = { ...(next.cantripSources ?? {}) };
-  for (const choice of plan.choices.filter((entry) => entry.id.includes(".fighting-style.") && entry.id.endsWith(".cantrips"))) {
+  for (const choice of plan.choices.filter((entry) =>
+    (entry.id.includes(".fighting-style.") && entry.id.endsWith(".cantrips")) || entry.id.endsWith(".column.소마법")
+  )) {
     for (const spellId of selectedOptionIds(choice, request.selections)) {
       if (!cantripKeys.has(spellId)) {
         cantripKeys.add(spellId);
