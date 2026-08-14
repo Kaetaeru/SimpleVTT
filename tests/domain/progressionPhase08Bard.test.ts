@@ -89,7 +89,7 @@ test("Bard 8 -> 9 materializes Expertise 2 and two additional prepared spells fr
   assert.equal(result.state.spellSlotMaximums?.[5], 1);
 });
 
-test("Bard 9 -> 10 Magical Secrets expands new prepared spells to Bard/Cleric/Druid/Wizard without a fake extra choice", () => {
+test("Bard 9 -> 10 Magical Secrets expands the new prepared spell to Bard/Cleric/Druid/Wizard without a fake extra choice", () => {
   const state = bard(9, {
     proficiencyBonus:4,
     preparedSpellIds:[
@@ -106,7 +106,7 @@ test("Bard 9 -> 10 Magical Secrets expands new prepared spells to Bard/Cleric/Dr
     hpMethod:"fixed" as const,
     selections:{
       [cantripChoice(10)]:{ kind:"options" as const, optionIds:[cantrip] },
-      [preparedChoice(10)]:{ kind:"options" as const, optionIds:[fireball,counterspell] },
+      [preparedChoice(10)]:{ kind:"options" as const, optionIds:[fireball] },
     },
   };
   const plan = buildProgressionPlan(state, request);
@@ -115,9 +115,9 @@ test("Bard 9 -> 10 Magical Secrets expands new prepared spells to Bard/Cleric/Dr
   assert.equal(cantripDef?.status, "ready");
   assert.equal(cantripDef?.count, 1);
   assert.equal(prepared?.status, "ready");
-  assert.equal(prepared?.count, 2);
+  assert.equal(prepared?.count, 1);
   assert.ok(prepared?.options.some((option) => option.id === fireball), "Fireball is supplied by the Wizard list through Magical Secrets");
-  assert.ok(prepared?.options.some((option) => option.id === counterspell), "Counterspell is supplied by the Wizard list through Magical Secrets");
+  assert.ok(prepared?.options.some((option) => option.id === counterspell), "Counterspell is also available from the Wizard list even though this level adds one prepared spell");
   assert.equal(classSpellListEntries(bardId).some((entry) => entry.id === fireball), false, "Fireball is not a native Bard spell");
   assert.equal(plan.choices.some((choice) => choice.id.includes("마법의 비밀")), false, "Magical Secrets modifies the prepared-spell candidate pool instead of creating a fake extra choice");
   assert.equal(plan.blocking.length, 0);
@@ -128,7 +128,6 @@ test("Bard 9 -> 10 Magical Secrets expands new prepared spells to Bard/Cleric/Dr
   assert.equal(result.state.totalLevel, 10);
   assert.ok(result.state.cantripIds?.includes(cantrip));
   assert.ok(result.state.preparedSpellIds?.includes(fireball));
-  assert.ok(result.state.preparedSpellIds?.includes(counterspell));
   assert.equal(result.state.preparedSpellSources?.[fireball], "바드 10레벨 표 · SRD 5.2.1");
 });
 
