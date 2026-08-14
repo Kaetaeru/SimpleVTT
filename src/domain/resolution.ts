@@ -24,6 +24,7 @@ import {
   executeEndConcentration,
   executeRemoveEffect,
   executeStartConcentration,
+  executeUpdateEffect,
 } from "./resolutionEffectOps";
 import { executeAdvanceTime, executeBeginTurn, executeEndTurn } from "./resolutionTurnOps";
 import { executeLongRest, executeShortRest } from "./resolutionRestOps";
@@ -53,6 +54,7 @@ function executeOperation(
     case "healing": return executeHealing(ctx, operation);
     case "temporary-hp": return executeTemporaryHp(ctx, operation);
     case "apply-effect": return executeApplyEffect(ctx, operation);
+    case "update-effect": return executeUpdateEffect(ctx, operation);
     case "remove-effect": return executeRemoveEffect(ctx, operation);
     case "start-concentration": return executeStartConcentration(ctx, operation);
     case "end-concentration": return executeEndConcentration(ctx, operation);
