@@ -10,6 +10,7 @@ declare module "./contracts" {
     expertiseSkills?: string[];
     expertiseSources?: Record<string, string>;
     languageSources?: Record<string, string>;
+    cantripSources?: Record<string, string>;
     preparedSpellSources?: Record<string, string>;
     spellSlotMaximums?: Record<number, number>;
   }
