@@ -1,3 +1,5 @@
+import { CLERIC_SPELL_ROWS } from "./clericSpellList";
+
 export interface ClassSpellListEntry {
   id: string;
   nameEn: string;
@@ -20,10 +22,24 @@ export interface AutomaticPreparedSpellRelationship {
   spellId: string;
   nameEn: string;
   sourceFeature: string;
+  subclassName?: string;
+}
+
+export function stableSpellId(nameEn: string) {
+  const ascii = nameEn.normalize("NFKD").replace(/[^\x00-\x7F]/g, "");
+  const slug = ascii.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
+  return `dnd.srd521.spell.${slug}`;
 }
 
 const spell = (id: string, nameEn: string, level: number): ClassSpellListEntry => ({ id:`dnd.srd521.spell.${id}`, nameEn, level });
+const spellByName = (nameEn: string, level: number): ClassSpellListEntry => ({ id:stableSpellId(nameEn), nameEn, level });
 const spellId = (id: string) => `dnd.srd521.spell.${id}`;
+
+const CLERIC: ClassSpellList = {
+  classId:"dnd.srd521.class.cleric",
+  source:{ document:"System Reference Document 5.2.1", page:38, license:"CC-BY-4.0" },
+  spells:CLERIC_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
+};
 
 const RANGER: ClassSpellList = {
   classId:"dnd.srd521.class.ranger",
@@ -81,6 +97,7 @@ const PALADIN: ClassSpellList = {
 };
 
 const LISTS = new Map<string, ClassSpellList>([
+  [CLERIC.classId, CLERIC],
   [RANGER.classId, RANGER],
   [PALADIN.classId, PALADIN],
 ]);
@@ -107,6 +124,19 @@ const AUTOMATIC_PREPARED: AutomaticPreparedSpellRelationship[] = [
     nameEn:"Find Steed",
     sourceFeature:"충직한 군마",
   },
+  ...[
+    [3,"Aid",2], [3,"Bless",1], [3,"Cure Wounds",1], [3,"Lesser Restoration",2],
+    [5,"Mass Healing Word",3], [5,"Revivify",3],
+    [7,"Aura of Life",4], [7,"Death Ward",4],
+    [9,"Greater Restoration",5], [9,"Mass Cure Wounds",5],
+  ].map(([classLevel, nameEn]) => ({
+    classId:"dnd.srd521.class.cleric",
+    classLevel:Number(classLevel),
+    spellId:stableSpellId(String(nameEn)),
+    nameEn:String(nameEn),
+    sourceFeature:"생명 권역 주문",
+    subclassName:"생명 권역",
+  })),
 ];
 
 export function classSpellList(classId: string) {
@@ -117,9 +147,24 @@ export function classSpellList(classId: string) {
 export function classSpellListEntries(classId: string, maxLevel?: number) {
   const list = LISTS.get(classId);
   if (!list) return [];
-  return list.spells.filter((entry) => maxLevel === undefined || entry.level <= maxLevel).map((entry) => ({ ...entry }));
+  return list.spells
+    .filter((entry) => entry.level >= 1 && (maxLevel === undefined || entry.level <= maxLevel))
+    .map((entry) => ({ ...entry }));
 }
 
-export function automaticPreparedSpellsForLevel(classId: string, classLevel: number) {
-  return AUTOMATIC_PREPARED.filter((entry) => entry.classId === classId && entry.classLevel === classLevel).map((entry) => ({ ...entry }));
+export function classCantripListEntries(classId: string) {
+  const list = LISTS.get(classId);
+  if (!list) return [];
+  return list.spells.filter((entry) => entry.level === 0).map((entry) => ({ ...entry }));
+}
+
+export function classSpellListAllEntries(classId: string) {
+  const list = LISTS.get(classId);
+  return list ? list.spells.map((entry) => ({ ...entry })) : [];
+}
+
+export function automaticPreparedSpellsForLevel(classId: string, classLevel: number, subclassName?: string) {
+  return AUTOMATIC_PREPARED
+    .filter((entry) => entry.classId === classId && entry.classLevel === classLevel && (!entry.subclassName || entry.subclassName === subclassName))
+    .map((entry) => ({ ...entry }));
 }
