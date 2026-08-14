@@ -6,6 +6,7 @@ import { classSpellListAllEntries, stableSpellId } from "../../src/domain/spellL
 const bardId = "dnd.srd521.class.bard";
 const clericId = "dnd.srd521.class.cleric";
 const druidId = "dnd.srd521.class.druid";
+const wizardId = "dnd.srd521.class.wizard";
 const normalizedName = (value: string) => value.normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase();
 
 function assertCanonicalCoverage(classId: string, expectedCount: number) {
@@ -31,4 +32,8 @@ test("all 109 canonical Cleric spell-list entries resolve to the 339-spell prese
 
 test("all 124 canonical Druid spell-list entries resolve to the 339-spell presentation catalog", () => {
   assertCanonicalCoverage(druidId, 124);
+});
+
+test("all 217 canonical Wizard spell-list entries resolve to the 339-spell presentation catalog", () => {
+  assertCanonicalCoverage(wizardId, 217);
 });
