@@ -47,6 +47,25 @@ const SCHOOL_LABELS: Record<string, string> = {
   transmutation: "변환술",
 };
 
+export type SpellPropertyKey = "fire" | "cold" | "lightning" | "acid" | "poison" | "psychic" | "radiant" | "necrotic" | "force" | "thunder" | "healing";
+export type SpellVisualKey = SpellPropertyKey | `school:${string}`;
+export type SpellVisual = { key: SpellVisualKey; label: string; source: "property" | "school" };
+export type SpellUiFilter = "all" | "concentration" | "ritual" | "action" | "bonus" | "reaction";
+
+const PROPERTY_PATTERNS: Array<{ key: SpellPropertyKey; label: string; patterns: RegExp[] }> = [
+  { key:"fire", label:"화염", patterns:[/화염 피해/g] },
+  { key:"cold", label:"냉기", patterns:[/냉기 피해/g] },
+  { key:"lightning", label:"번개", patterns:[/번개 피해/g] },
+  { key:"acid", label:"산성", patterns:[/산성 피해/g, /산 피해/g] },
+  { key:"poison", label:"독", patterns:[/독성 피해/g, /독 피해/g] },
+  { key:"psychic", label:"정신", patterns:[/정신 피해/g] },
+  { key:"radiant", label:"광휘", patterns:[/광휘 피해/g] },
+  { key:"necrotic", label:"괴저", patterns:[/괴저 피해/g] },
+  { key:"force", label:"역장", patterns:[/역장 피해/g] },
+  { key:"thunder", label:"천둥", patterns:[/천둥 피해/g] },
+  { key:"healing", label:"회복", patterns:[/히트 포인트[^.\n]{0,60}회복/g, /회복[^.\n]{0,60}히트 포인트/g] },
+];
+
 export const SPELL_PRESENTATION_COUNT = CATALOG.count;
 export const SPELL_PRESENTATION_SOURCE = CATALOG.source;
 export const SPELL_PRESENTATIONS: readonly SpellPresentation[] = CATALOG.spells;
@@ -81,9 +100,41 @@ export function spellSchoolLabel(spell: SpellPresentation) {
   return SCHOOL_LABELS[spell.school] ?? spell.school;
 }
 
+export function isConcentrationSpell(spell: SpellPresentation) {
+  return /집중/.test(spell.duration);
+}
+
+export function spellVisual(spell: SpellPresentation): SpellVisual {
+  const text = `${spell.summary}\n${spell.description}`;
+  let best: { index:number; key:SpellPropertyKey; label:string } | undefined;
+  for (const candidate of PROPERTY_PATTERNS) {
+    for (const pattern of candidate.patterns) {
+      pattern.lastIndex = 0;
+      const match = pattern.exec(text);
+      if (match && (!best || match.index < best.index)) best = { index:match.index, key:candidate.key, label:candidate.label };
+    }
+  }
+  if (best) return { key:best.key, label:best.label, source:"property" };
+  return { key:`school:${spell.school}`, label:spellSchoolLabel(spell), source:"school" };
+}
+
+export function spellMatchesFilter(spell: SpellPresentation, filter: SpellUiFilter) {
+  if (filter === "all") return true;
+  if (filter === "concentration") return isConcentrationSpell(spell);
+  if (filter === "ritual") return spell.ritual;
+  if (filter === "bonus") return /보너스 행동|추가 행동/.test(spell.castingTime);
+  if (filter === "reaction") return /반응/.test(spell.castingTime);
+  if (filter === "action") return /행동/.test(spell.castingTime) && !/보너스 행동|추가 행동/.test(spell.castingTime);
+  return true;
+}
+
+export function spellSearchText(spell: SpellPresentation) {
+  return `${spell.name} ${spell.nameEn} ${spellSchoolLabel(spell)} ${spellVisual(spell).label}`.toLocaleLowerCase("ko-KR");
+}
+
 export function spellDetailLines(spell: SpellPresentation) {
   return [
-    `${spellLevelLabel(spell)} · ${spellSchoolLabel(spell)}${spell.ritual ? " · 의식" : ""}`,
+    `${spellLevelLabel(spell)} · ${spellSchoolLabel(spell)}${spell.ritual ? " · 의식" : ""}${isConcentrationSpell(spell) ? " · 집중" : ""}`,
     `시전 시간 · ${spell.castingTime}`,
     `사거리 · ${spell.range}`,
     `구성요소 · ${spell.components}`,
