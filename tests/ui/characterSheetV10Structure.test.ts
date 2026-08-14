@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import type { CharacterSheet } from "../../src/app/contracts";
 import { projectOfficialSheet } from "../../src/app/characterSheetV10Projection";
 import { featDescription } from "../../src/app/rulePresentation";
+import { SPELL_DESCRIPTION_PENDING, spellNameKo } from "../../src/app/spellPresentation";
 
 const SHEET: CharacterSheet = {
   id:"char.sheet-gate",
@@ -71,9 +72,34 @@ test("feat hover presentation has real SRD-derived descriptions", () => {
   assert.match(featDescription("dnd.srd521.feat.fighting-style.defense") ?? "", /AC에 \+1/);
 });
 
+test("spell presentation uses Korean primary labels and never treats level metadata as prose", () => {
+  const wizard: CharacterSheet = {
+    ...SHEET,
+    id:"char.spell-gate",
+    name:"Spell Gate",
+    className:"위저드",
+    features:[],
+    cantrips:["dnd.srd521.spell.fire-bolt"],
+    preparedSpells:["dnd.srd521.spell.magic-missile"],
+    spellbookSpells:["dnd.srd521.spell.magic-missile"],
+    creationSelections:{},
+  };
+  const spells = projectOfficialSheet(wizard).spells;
+  const fireBolt = spells.find((spell) => spell.id === "dnd.srd521.spell.fire-bolt");
+  const missile = spells.find((spell) => spell.id === "dnd.srd521.spell.magic-missile");
+  assert.equal(spellNameKo("dnd.srd521.spell.vicious-mockery"), "잔혹한 모욕");
+  assert.equal(fireBolt?.name, "화염 화살");
+  assert.equal(fireBolt?.nameEn, "Fire Bolt");
+  assert.equal(missile?.name, "마법 화살");
+  assert.equal(missile?.nameEn, "Magic Missile");
+  assert.equal(missile?.description, SPELL_DESCRIPTION_PENDING);
+  assert.notEqual(missile?.description, "SRD 1레벨 주문");
+});
+
 test("compact creation choices and official sheet chrome remain structurally present", () => {
   const compact = readFileSync(new URL("../../src/compact-options.css", import.meta.url), "utf8");
   const sheet = readFileSync(new URL("../../src/character-sheet-v10.css", import.meta.url), "utf8");
+  const viewport = readFileSync(new URL("../../src/character-sheet-v10-viewport.css", import.meta.url), "utf8");
   assert.match(compact, /\.create-option-card\.compact/);
   assert.match(compact, /min-height:\s*72px/);
   assert.match(compact, /\.option-detail-popover\.portal/);
@@ -82,4 +108,7 @@ test("compact creation choices and official sheet chrome remain structurally pre
   assert.match(sheet, /\.official-class-features/);
   assert.match(sheet, /\.official-bottom-traits/);
   assert.match(sheet, /\.official-spell-list/);
+  assert.match(viewport, /\.official-sheet-screen/);
+  assert.match(viewport, /overflow-y:\s*auto\s*!important/);
+  assert.match(viewport, /position:\s*absolute\s*!important/);
 });
