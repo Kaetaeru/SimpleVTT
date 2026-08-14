@@ -92,9 +92,9 @@ test("multiclass Fighter 5 -> Cleric 1 materializes Divine Order and Thaumaturge
   assert.equal(result.state.totalLevel, 6);
   assert.deepEqual(result.state.classTracks.map((track) => [track.className,track.level]), [["파이터",5],["클레릭",1]]);
   assert.ok(result.state.features.includes("기적술사"));
-  assert.deepEqual(result.state.cantripIds, [
+  assert.deepEqual(new Set(result.state.cantripIds), new Set([
     stableSpellId("Guidance"), stableSpellId("Sacred Flame"), stableSpellId("Thaumaturgy"), stableSpellId("Light"),
-  ]);
+  ]));
   assert.equal(result.state.cantripSources?.[stableSpellId("Light")], "클레릭 1레벨 · SRD 5.2.1");
   assert.equal(result.state.preparedSpellIds?.length, 4);
   assert.equal(result.state.spellSlotMaximums?.[1], 2);
