@@ -3,6 +3,7 @@ import test from "node:test";
 import { SPELL_PRESENTATIONS } from "../../src/app/spellPresentation";
 import { classSpellListAllEntries, stableSpellId } from "../../src/domain/spellListCatalog";
 
+const bardId = "dnd.srd521.class.bard";
 const clericId = "dnd.srd521.class.cleric";
 const druidId = "dnd.srd521.class.druid";
 const normalizedName = (value: string) => value.normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase();
@@ -19,6 +20,10 @@ function assertCanonicalCoverage(classId: string, expectedCount: number) {
     assert.equal(normalizedName(presentation?.nameEn ?? ""), normalizedName(entry.nameEn), `${entry.id} English name mismatch`);
   }
 }
+
+test("all 129 canonical Bard spell-list entries resolve to the 339-spell presentation catalog", () => {
+  assertCanonicalCoverage(bardId, 129);
+});
 
 test("all 109 canonical Cleric spell-list entries resolve to the 339-spell presentation catalog", () => {
   assertCanonicalCoverage(clericId, 109);
