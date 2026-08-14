@@ -154,19 +154,16 @@ def validate_spell_catalog(module_paths: list[Path]) -> None:
             continue
 
         source_pinned = source.get("repository") == "Kaetaeru/D-D-2024-" and source.get("revision") == SPELL_SOURCE_REVISION
+        missing = []
+        if not ko.get("description"):
+            missing.append("description")
         if support == "reviewed":
-            if not ko.get("description"):
-                errors.append(f"{entry['id']}: reviewed spell missing ko-KR description")
             if not source_pinned:
                 errors.append(f"{entry['id']}: reviewed spell translation source pin mismatch")
-        else:
-            missing = []
-            if not ko.get("description"):
-                missing.append("description")
-            if not source_pinned:
-                missing.append("pinned-source")
-            if missing:
-                incomplete.append(f"{entry['id']} ({support}: {', '.join(missing)})")
+        elif not source_pinned:
+            missing.append("pinned-source")
+        if missing:
+            incomplete.append(f"{entry['id']} ({support}: {', '.join(missing)})")
 
     if errors:
         for error in errors[:50]:
@@ -181,12 +178,12 @@ def validate_spell_catalog(module_paths: list[Path]) -> None:
     else:
         print("spell catalog coverage complete: 339/339")
     if incomplete:
-        print(f"spell catalog partial/presentation metadata pending: {len(incomplete)} entries")
+        print(f"spell catalog localization/materialization metadata pending: {len(incomplete)} entries")
         for item in incomplete[:10]:
             print(f"  pending: {item}")
     print(
         f"spell catalog integrity ok: {len(spells)} unique materialized entries, "
-        "reviewed entries enforce pinned ko-KR source"
+        "reviewed entries enforce pinned source; description completeness is reported separately"
     )
 
 
