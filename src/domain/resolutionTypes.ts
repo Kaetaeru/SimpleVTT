@@ -164,6 +164,11 @@ export type ResolutionOperation =
       kind: "short-rest";
       targetId: string;
       spends: HitDieSpend[];
+      resourceRestoration?: {
+        resourceId: string;
+        amount: number;
+        usageResourceId: string;
+      };
     })
   | (OperationBase & {
       kind: "long-rest";
