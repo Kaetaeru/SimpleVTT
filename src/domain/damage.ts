@@ -21,23 +21,39 @@ export interface DamageDefenseContribution {
   damageType: string;
 }
 
-export interface DamageRequest {
+export interface DamageComponentRequest {
   damageType: string;
   amount: number;
-  hp: HpState;
   adjustments?: DamageAdjustment[];
   defenses?: DamageDefenseContribution[];
 }
 
-export interface DamageResolution {
+export interface DamageRequest extends DamageComponentRequest {
+  hp: HpState;
+}
+
+export interface CompoundDamageRequest {
+  hp: HpState;
+  components: DamageComponentRequest[];
+}
+
+export interface DamageAmountResolution {
   damageType: string;
   raw: number;
   adjusted: number;
   finalDamage: number;
+  provenance: ProvenanceRecord[];
+}
+
+export interface DamageResolution extends DamageAmountResolution {
   temporaryHpAbsorbed: number;
   hpDamage: number;
   nextHp: HpState;
-  provenance: ProvenanceRecord[];
+}
+
+export interface CompoundDamageResolution extends DamageResolution {
+  damageType: "compound";
+  components: DamageAmountResolution[];
 }
 
 export interface HealingResolution {
@@ -64,8 +80,7 @@ function appliesToType(contribution: DamageDefenseContribution, damageType: stri
   return contribution.damageType === damageType || contribution.damageType === "*";
 }
 
-export function resolveDamage(request: DamageRequest): DamageResolution {
-  validateHp(request.hp);
+export function resolveDamageAmount(request: DamageComponentRequest): DamageAmountResolution {
   requireNonNegativeInteger(request.amount, "damage amount");
   if (!request.damageType) throw new DomainEvaluationError("damage type is required");
 
@@ -130,13 +145,29 @@ export function resolveDamage(request: DamageRequest): DamageResolution {
   }
 
   requireNonNegativeInteger(adjusted, "final damage");
-  const temporaryHpAbsorbed = Math.min(request.hp.temporary, adjusted);
-  const remaining = adjusted - temporaryHpAbsorbed;
-  const hpDamage = Math.min(request.hp.current, remaining);
+  return {
+    damageType:request.damageType,
+    raw:request.amount,
+    adjusted,
+    finalDamage:adjusted,
+    provenance,
+  };
+}
+
+function applyDamageToHp(
+  hp: HpState,
+  amount: number,
+  provenance: ProvenanceRecord[],
+) {
+  validateHp(hp);
+  requireNonNegativeInteger(amount, "final damage");
+  const temporaryHpAbsorbed = Math.min(hp.temporary, amount);
+  const remaining = amount - temporaryHpAbsorbed;
+  const hpDamage = Math.min(hp.current, remaining);
   const nextHp = {
-    current: request.hp.current - hpDamage,
-    maximum: request.hp.maximum,
-    temporary: request.hp.temporary - temporaryHpAbsorbed,
+    current: hp.current - hpDamage,
+    maximum: hp.maximum,
+    temporary: hp.temporary - temporaryHpAbsorbed,
   };
 
   if (temporaryHpAbsorbed > 0) {
@@ -150,18 +181,42 @@ export function resolveDamage(request: DamageRequest): DamageResolution {
     provenance.push({
       source: "profile:dnd.srd-5.2.1/hp",
       status: "applied",
-      reason: `HP ${request.hp.current} -> ${nextHp.current}`,
+      reason: `HP ${hp.current} -> ${nextHp.current}`,
     });
   }
+  return { temporaryHpAbsorbed, hpDamage, nextHp };
+}
 
+export function resolveDamage(request: DamageRequest): DamageResolution {
+  validateHp(request.hp);
+  const amount = resolveDamageAmount(request);
+  const provenance = [...amount.provenance];
+  const hp = applyDamageToHp(request.hp, amount.finalDamage, provenance);
   return {
-    damageType: request.damageType,
-    raw: request.amount,
-    adjusted,
-    finalDamage: adjusted,
-    temporaryHpAbsorbed,
-    hpDamage,
-    nextHp,
+    ...amount,
+    ...hp,
+    provenance,
+  };
+}
+
+export function resolveCompoundDamage(request: CompoundDamageRequest): CompoundDamageResolution {
+  validateHp(request.hp);
+  if (request.components.length === 0) throw new DomainEvaluationError("compound damage requires at least one component");
+  const components = request.components.map((component) => resolveDamageAmount(component));
+  const raw = components.reduce((sum, component) => sum + component.raw, 0);
+  const finalDamage = components.reduce((sum, component) => sum + component.finalDamage, 0);
+  const provenance = components.flatMap((component) => component.provenance.map((entry) => ({
+    ...entry,
+    reason:`${component.damageType}: ${entry.reason}`,
+  })));
+  const hp = applyDamageToHp(request.hp, finalDamage, provenance);
+  return {
+    damageType:"compound",
+    raw,
+    adjusted:finalDamage,
+    finalDamage,
+    ...hp,
+    components,
     provenance,
   };
 }
