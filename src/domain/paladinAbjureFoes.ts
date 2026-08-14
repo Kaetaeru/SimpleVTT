@@ -71,6 +71,7 @@ export function compileAbjureFoes(request: AbjureFoesRequest): PendingResolution
       kind:"use-economy",
       actorId:request.actorId,
       slot:"action",
+      actionKind:"magic",
     },
     {
       id:`${request.id}:channel-divinity`,
