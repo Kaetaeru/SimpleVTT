@@ -38,7 +38,7 @@ interface FeatRuleCatalog {
   feats:FeatRuleDefinition[];
 }
 
-export const FEAT_RULE_CATALOG = rawCatalog as FeatRuleCatalog;
+export const FEAT_RULE_CATALOG = rawCatalog as unknown as FeatRuleCatalog;
 const BY_ID = new Map(FEAT_RULE_CATALOG.feats.map((entry) => [entry.id,entry]));
 
 export function featRuleById(featId:string) {
