@@ -34,6 +34,14 @@ export type EffectExpiry =
 
 export type EffectKind = "condition" | "modifier" | "marker";
 
+export interface EffectTermination {
+  targetTakesDamage?: boolean;
+  targetBecomesIncapacitated?: boolean;
+  targetDies?: boolean;
+  sourceBecomesIncapacitated?: boolean;
+  sourceDies?: boolean;
+}
+
 export interface EffectInstance {
   id: string;
   sourceId: string;
@@ -43,6 +51,7 @@ export interface EffectInstance {
   conditionId?: ConditionId;
   tags: string[];
   expiry: EffectExpiry;
+  termination?: EffectTermination;
   concentrationGroupId?: string;
   metadata?: Record<string, string | number | boolean>;
 }
@@ -56,6 +65,7 @@ export interface EffectApplyRequest {
   conditionId?: ConditionId;
   tags?: string[];
   duration: DurationSpec;
+  termination?: EffectTermination;
   concentrationGroupId?: string;
   metadata?: Record<string, string | number | boolean>;
 }
@@ -105,6 +115,7 @@ export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): 
     conditionId:request.conditionId,
     tags:[...(request.tags ?? [])],
     expiry:materializeDuration(request.duration, clock),
+    termination:request.termination ? { ...request.termination } : undefined,
     concentrationGroupId:request.concentrationGroupId,
     metadata:request.metadata ? { ...request.metadata } : undefined,
   };
@@ -114,6 +125,57 @@ function boundaryReached(expiry: Extract<EffectExpiry,{kind:"turn-boundary"}>, c
   if (clock.round > expiry.round) return true;
   if (clock.round < expiry.round) return false;
   return clock.activeActorId === expiry.actorId && clock.phase === expiry.boundary;
+}
+
+function terminateEffects(
+  effects: EffectInstance[],
+  predicate: (effect:EffectInstance) => boolean,
+  reason: (effect:EffectInstance) => string,
+): EffectExpiryResolution {
+  const expired: EffectInstance[] = [];
+  const active: EffectInstance[] = [];
+  for (const effect of effects) (predicate(effect) ? expired : active).push(effect);
+  return {
+    active,
+    expired,
+    provenance:expired.map((effect) => ({
+      source:effect.sourceId,
+      status:"applied",
+      reason:reason(effect),
+    })),
+  };
+}
+
+export function terminateEffectsForDamage(effects: EffectInstance[], targetId: string): EffectExpiryResolution {
+  return terminateEffects(
+    effects,
+    (effect) => effect.targetId === targetId && effect.termination?.targetTakesDamage === true,
+    (effect) => `effect ${effect.id} ended because ${targetId} took damage`,
+  );
+}
+
+export function terminateEffectsForCreatureState(
+  effects: EffectInstance[],
+  actorId: string,
+  state: { incapacitated:boolean; dead:boolean },
+): EffectExpiryResolution {
+  return terminateEffects(
+    effects,
+    (effect) => {
+      const targetEnds = effect.targetId === actorId
+        && ((state.incapacitated && effect.termination?.targetBecomesIncapacitated === true)
+          || (state.dead && effect.termination?.targetDies === true));
+      const sourceEnds = effect.sourceActorId === actorId
+        && ((state.incapacitated && effect.termination?.sourceBecomesIncapacitated === true)
+          || (state.dead && effect.termination?.sourceDies === true));
+      return targetEnds || sourceEnds;
+    },
+    (effect) => {
+      const role = effect.targetId === actorId ? "target" : "source";
+      const stateName = state.dead ? "died" : "became Incapacitated";
+      return `effect ${effect.id} ended because its ${role} ${actorId} ${stateName}`;
+    },
+  );
 }
 
 export function expireEffectsAtClock(effects: EffectInstance[], clock: RuntimeClock): EffectExpiryResolution {
