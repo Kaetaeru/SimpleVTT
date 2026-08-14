@@ -22,6 +22,7 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
     activeActorId:operation.actorId,
     phase:"start",
   };
+  ctx.state.turnFeatureUsage = { actorId:operation.actorId, featureIds:[] };
   const expiry = expireEffectsAtClock(ctx.state.effects, ctx.state.clock);
   ctx.state.effects = resetEffectTurnActivity(expiry.active, operation.actorId);
 
