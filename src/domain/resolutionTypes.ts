@@ -57,6 +57,11 @@ export type ResolutionOperation =
       allowsMagicAction: boolean;
     })
   | (OperationBase & {
+      kind: "use-turn-feature";
+      actorId?: string;
+      featureId: string;
+    })
+  | (OperationBase & {
       kind: "move";
       actorId?: string;
       distanceFeet: number;
