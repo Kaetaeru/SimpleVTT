@@ -42,6 +42,8 @@ export interface ProgressionCharacterState {
   expertiseSources?: Record<string, string>;
   languages?: string[];
   languageSources?: Record<string, string>;
+  cantripIds?: string[];
+  cantripSources?: Record<string, string>;
   preparedSpellIds?: string[];
   preparedSpellSources?: Record<string, string>;
   spellSlotMaximums?: Record<number, number>;
@@ -54,6 +56,8 @@ export interface ProgressionRequest {
   hpRoll?: number;
   selections: ChoiceSelectionMap;
   featOptions?: Array<{ id: string; label: string; description?: string }>;
+  fightingStyleOptions?: Array<{ id: string; label: string; description?: string }>;
+  druidCantripOptions?: Array<{ id: string; label: string; description?: string }>;
   languageOptions?: Array<{ id: string; label: string; description?: string }>;
   spellOptions?: Array<{ id: string; label: string; description?: string; level: number }>;
 }
@@ -100,6 +104,8 @@ const CHOICE_FEATURE_NAMES = new Set([
   "전문화", "전투 방식", "신성한 역할", "원초적 역할", "원초적 지식", "노련한 탐험가",
   "메타매직", "섬뜩한 기원술", "마법의 비밀", "학자", "주문 숙련", "대표 주문",
 ]);
+const RANGER_ID = "dnd.srd521.class.ranger";
+const RANGER_DRUIDIC_WARRIOR = "feature:ranger.druidic-warrior";
 
 function modifier(score: number) { return Math.floor((score - 10) / 2); }
 function clone<T>(value: T): T { return structuredClone(value); }
@@ -170,6 +176,59 @@ function languageChoice(
   };
 }
 
+function rangerFightingStyleChoices(
+  state: ProgressionCharacterState,
+  targetLevel: number,
+  request: ProgressionRequest,
+): ChoiceDefinition[] | undefined {
+  if (targetLevel !== 2 || !request.fightingStyleOptions?.length || !request.druidCantripOptions?.length) return undefined;
+  const source = `레인저 ${targetLevel}레벨 · SRD 5.2.1`;
+  const knownCantrips = new Set(state.cantripIds ?? []);
+  const availableDruidCantrips = request.druidCantripOptions.filter((option) => !knownCantrips.has(option.id)).length;
+  const parentId = `progression.${RANGER_ID}.${targetLevel}.fighting-style`;
+  const parent: ChoiceDefinition = {
+    id:parentId,
+    label:"전투 방식",
+    description:"전투 방식 재주 하나 또는 드루이드 전사를 선택합니다.",
+    kind:"feature-option",
+    count:1,
+    required:true,
+    status:"ready",
+    source,
+    options:[
+      ...request.fightingStyleOptions.map((option) => ({
+        ...option,
+        disabledReason:state.features.includes(option.id) || state.features.includes(option.label) ? "이미 보유한 전투 방식 재주입니다." : undefined,
+      })),
+      {
+        id:RANGER_DRUIDIC_WARRIOR,
+        label:"드루이드 전사",
+        description:"드루이드 주문 목록에서 소마법 두 개를 배웁니다. 이 주문은 레인저 주문으로 취급합니다.",
+        disabledReason:availableDruidCantrips < 2 ? "새로 배울 수 있는 드루이드 소마법이 두 개 미만입니다." : undefined,
+      },
+    ],
+  };
+  const result = [parent];
+  const parentSelection = request.selections[parentId];
+  if (parentSelection?.kind === "options" && parentSelection.optionIds[0] === RANGER_DRUIDIC_WARRIOR) {
+    result.push({
+      id:`${parentId}.druidic-warrior.cantrips`,
+      label:"드루이드 전사 · 소마법",
+      description:"드루이드 주문 목록에서 아직 알지 못하는 소마법 두 개를 선택합니다.",
+      kind:"spell",
+      count:2,
+      required:true,
+      status:"ready",
+      source,
+      options:request.druidCantripOptions.map((option) => ({
+        ...option,
+        disabledReason:knownCantrips.has(option.id) ? "이미 알고 있는 소마법입니다." : undefined,
+      })),
+    });
+  }
+  return result;
+}
+
 function highestClassSpellSlotLevel(classId: string, classLevel: number) {
   let highest = 0;
   for (let spellLevel = 1; spellLevel <= 9; spellLevel += 1) {
@@ -218,8 +277,7 @@ function featureChoiceDefinitions(
   targetClassId: string,
   targetLevel: number,
   features: string[],
-  featOptions: ProgressionRequest["featOptions"],
-  languageOptions: ProgressionRequest["languageOptions"],
+  request: ProgressionRequest,
 ): ChoiceDefinition[] {
   const definition = classById(targetClassId)!;
   const result: ChoiceDefinition[] = [];
@@ -229,7 +287,7 @@ function featureChoiceDefinitions(
         id:`progression.${targetClassId}.${targetLevel}.asi`, label:"능력치 향상 또는 재주", description:"능력치 +2, 서로 다른 능력치 +1/+1, 또는 적격 재주 하나를 선택합니다.", kind:"asi-or-feat", count:1, required:true, status:"ready", source:`${definition.nameKo} ${targetLevel}레벨`,
         options:[
           ...Object.entries(ABILITY_LABELS).map(([id, label]) => ({ id:`ability:${id}`, label })),
-          ...(featOptions ?? []).map((feat) => ({ id:`feat:${feat.id}`, label:feat.label, description:feat.description })),
+          ...(request.featOptions ?? []).map((feat) => ({ id:`feat:${feat.id}`, label:feat.label, description:feat.description })),
         ],
       });
       continue;
@@ -251,8 +309,15 @@ function featureChoiceDefinitions(
       if (relationship) {
         result.push(
           expertiseChoice(state, targetClassId, targetLevel, relationship.expertiseCount, "seasoned-explorer.expertise", "노련한 탐험가 · 전문화"),
-          languageChoice(state, targetClassId, targetLevel, relationship.languageCount, languageOptions),
+          languageChoice(state, targetClassId, targetLevel, relationship.languageCount, request.languageOptions),
         );
+        continue;
+      }
+    }
+    if (feature === "전투 방식" && targetClassId === RANGER_ID) {
+      const choices = rangerFightingStyleChoices(state, targetLevel, request);
+      if (choices) {
+        result.push(...choices);
         continue;
       }
     }
@@ -364,7 +429,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (!row) blocking.push(`${target.nameKo} ${targetClassLevel}레벨 progression row가 없습니다.`);
   const rowFeatures = row?.features ?? [];
   const choices = [
-    ...featureChoiceDefinitions(state, target.id, targetClassLevel, rowFeatures, request.featOptions, request.languageOptions),
+    ...featureChoiceDefinitions(state, target.id, targetClassLevel, rowFeatures, request),
     ...columnChoiceDefinitions(state, target.id, existing?.level ?? 0, targetClassLevel, request),
   ];
   for (const choice of choices) {
@@ -410,6 +475,11 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const languagesBefore = unique(state.languages ?? []);
   const languagesAdded = choices.filter((choice) => choice.kind === "language").flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const languagesAfter = unique([...languagesBefore, ...languagesAdded]);
+  const fightingStyleChoice = choices.find((choice) => choice.id === `progression.${RANGER_ID}.2.fighting-style`);
+  const fightingStyleLabels = fightingStyleChoice ? selectedOptionLabels(fightingStyleChoice, request.selections) : [];
+  const druidicCantripLabels = choices
+    .filter((choice) => choice.id.endsWith(".fighting-style.druidic-warrior.cantrips"))
+    .flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const preparedSpellLabels = choices
     .filter((choice) => choice.kind === "spell" && choice.id.endsWith(".column.준비 주문"))
     .flatMap((choice) => selectedOptionLabels(choice, request.selections));
@@ -423,6 +493,8 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (spellcastingBefore.casterLevel !== spellcastingAfter.casterLevel || displaySlots(spellcastingBefore.slots) !== displaySlots(spellcastingAfter.slots)) diffs.push({ label:"멀티클래스 주문 슬롯", before:displaySlots(spellcastingBefore.slots), after:displaySlots(spellcastingAfter.slots), source:"SRD Multiclass Spellcaster Level" });
   if (expertiseAfter.length !== expertiseBefore.length) diffs.push({ label:"전문화", before:displayList(expertiseBefore), after:displayList(expertiseAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (languagesAfter.length !== languagesBefore.length) diffs.push({ label:"언어", before:displayList(languagesBefore), after:displayList(languagesAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (fightingStyleLabels.length) diffs.push({ label:"전투 방식", before:"—", after:fightingStyleLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (druidicCantripLabels.length) diffs.push({ label:"드루이드 전사 소마법", before:"—", after:druidicCantripLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (preparedSpellLabels.length) diffs.push({ label:"준비 주문 추가", before:"—", after:preparedSpellLabels.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   return {
@@ -469,6 +541,26 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   }
   next.languages = [...languages];
   next.languageSources = languageSources;
+  const rangerFightingStyle = plan.choices.find((choice) => choice.id === `progression.${RANGER_ID}.2.fighting-style`);
+  if (rangerFightingStyle) {
+    const styleId = selectedOptionIds(rangerFightingStyle, request.selections)[0];
+    if (styleId?.startsWith("dnd.srd521.feat.fighting-style.")) next.features.push(styleId);
+    else if (styleId === RANGER_DRUIDIC_WARRIOR) next.features.push("드루이드 전사");
+  }
+  const cantripIds = [...(next.cantripIds ?? [])];
+  const cantripKeys = new Set(cantripIds);
+  const cantripSources = { ...(next.cantripSources ?? {}) };
+  for (const choice of plan.choices.filter((entry) => entry.id.endsWith(".fighting-style.druidic-warrior.cantrips"))) {
+    for (const spellId of selectedOptionIds(choice, request.selections)) {
+      if (!cantripKeys.has(spellId)) {
+        cantripKeys.add(spellId);
+        cantripIds.push(spellId);
+      }
+      cantripSources[spellId] = choice.source;
+    }
+  }
+  next.cantripIds = cantripIds;
+  next.cantripSources = cantripSources;
   const preparedSpellIds = [...(next.preparedSpellIds ?? [])];
   const preparedSpellKeys = new Set(preparedSpellIds.map(normalizedSpellId));
   const preparedSpellSources = { ...(next.preparedSpellSources ?? {}) };
