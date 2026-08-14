@@ -87,6 +87,7 @@ function withDivineInterventionCosts(
       kind:"use-economy",
       actorId:request.actorId,
       slot:"action",
+      actionKind:"magic",
     });
   }
   costs.push({
