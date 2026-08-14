@@ -4,7 +4,7 @@ import {
   type ChoiceSelectionMap,
   validateChoiceDefinitions,
 } from "./choiceDefinition";
-import { expertiseChoiceRelationship } from "./progressionChoiceCatalog";
+import { expertiseChoiceRelationship, seasonedExplorerRelationship } from "./progressionChoiceCatalog";
 import {
   PROGRESSION_CATALOG,
   classById,
@@ -39,6 +39,8 @@ export interface ProgressionCharacterState {
   proficientSkills?: string[];
   expertiseSkills?: string[];
   expertiseSources?: Record<string, string>;
+  languages?: string[];
+  languageSources?: Record<string, string>;
   spellSlotMaximums?: Record<number, number>;
 }
 
@@ -49,6 +51,7 @@ export interface ProgressionRequest {
   hpRoll?: number;
   selections: ChoiceSelectionMap;
   featOptions?: Array<{ id: string; label: string; description?: string }>;
+  languageOptions?: Array<{ id: string; label: string; description?: string }>;
 }
 
 export interface ProgressionDiff {
@@ -98,22 +101,23 @@ function modifier(score: number) { return Math.floor((score - 10) / 2); }
 function clone<T>(value: T): T { return structuredClone(value); }
 function unique(values: string[]) { return [...new Set(values.filter(Boolean))]; }
 
-function expertiseChoiceDefinition(
+function expertiseChoice(
   state: ProgressionCharacterState,
   targetClassId: string,
   targetLevel: number,
-): ChoiceDefinition | undefined {
-  const relationship = expertiseChoiceRelationship(targetClassId, targetLevel);
-  if (!relationship) return undefined;
+  count: number,
+  idSuffix = "expertise",
+  label = "전문화",
+): ChoiceDefinition {
   const definition = classById(targetClassId)!;
   const alreadyExpert = new Set(state.expertiseSkills ?? []);
   const proficientSkills = unique(state.proficientSkills ?? []);
   return {
-    id:`progression.${targetClassId}.${targetLevel}.expertise`,
-    label:"전문화",
-    description:`이미 숙련된 기술 중 전문화가 없는 기술 ${relationship.count}개를 선택합니다.`,
+    id:`progression.${targetClassId}.${targetLevel}.${idSuffix}`,
+    label,
+    description:`이미 숙련된 기술 중 전문화가 없는 기술 ${count}개를 선택합니다.`,
     kind:"expertise",
-    count:relationship.count,
+    count,
     required:true,
     status:"ready",
     source:`${definition.nameKo} ${targetLevel}레벨 · SRD 5.2.1`,
@@ -126,12 +130,48 @@ function expertiseChoiceDefinition(
   };
 }
 
+function expertiseChoiceDefinition(
+  state: ProgressionCharacterState,
+  targetClassId: string,
+  targetLevel: number,
+): ChoiceDefinition | undefined {
+  const relationship = expertiseChoiceRelationship(targetClassId, targetLevel);
+  if (!relationship) return undefined;
+  return expertiseChoice(state, targetClassId, targetLevel, relationship.count);
+}
+
+function languageChoice(
+  state: ProgressionCharacterState,
+  targetClassId: string,
+  targetLevel: number,
+  count: number,
+  languageOptions: ProgressionRequest["languageOptions"],
+): ChoiceDefinition {
+  const definition = classById(targetClassId)!;
+  const known = new Set(state.languages ?? []);
+  return {
+    id:`progression.${targetClassId}.${targetLevel}.seasoned-explorer.languages`,
+    label:"노련한 탐험가 · 언어",
+    description:`아직 알지 못하는 언어 ${count}개를 선택합니다.`,
+    kind:"language",
+    count,
+    required:true,
+    status:"ready",
+    source:`${definition.nameKo} ${targetLevel}레벨 · SRD 5.2.1`,
+    options:(languageOptions ?? []).map((option) => ({
+      ...option,
+      disabledReason:known.has(option.label) ? "이미 알고 있는 언어입니다." : undefined,
+    })),
+  };
+}
+
 function featureChoiceDefinitions(
   state: ProgressionCharacterState,
   targetClassId: string,
   targetLevel: number,
   features: string[],
   featOptions: ProgressionRequest["featOptions"],
+  languageOptions: ProgressionRequest["languageOptions"],
 ): ChoiceDefinition[] {
   const definition = classById(targetClassId)!;
   const result: ChoiceDefinition[] = [];
@@ -157,6 +197,16 @@ function featureChoiceDefinitions(
     if (feature.includes("서브클래스") && feature.includes("특성")) {
       result.push({ id:`progression.${targetClassId}.${targetLevel}.subclass-feature`, label:"서브클래스 특성", description:"선택한 서브클래스의 해당 레벨 특성을 적용합니다.", kind:"feature-option", count:1, required:true, status:"catalog-pending", source:`${definition.nameKo} ${targetLevel}레벨`, options:[], pendingReason:"서브클래스별 고레벨 mechanics relationship은 Phase 08에서 materialize됩니다." });
       continue;
+    }
+    if (feature === "노련한 탐험가") {
+      const relationship = seasonedExplorerRelationship(targetClassId, targetLevel);
+      if (relationship) {
+        result.push(
+          expertiseChoice(state, targetClassId, targetLevel, relationship.expertiseCount, "seasoned-explorer.expertise", "노련한 탐험가 · 전문화"),
+          languageChoice(state, targetClassId, targetLevel, relationship.languageCount, languageOptions),
+        );
+        continue;
+      }
     }
     if (feature === "전문화") {
       const expertise = expertiseChoiceDefinition(state, targetClassId, targetLevel);
@@ -223,7 +273,7 @@ function selectedOptionLabels(choice: ChoiceDefinition, selections: ChoiceSelect
 function displayTracks(tracks: ProgressionClassTrack[]) { return tracks.map((track) => `${track.className} ${track.level}`).join(" / "); }
 function displayHitDice(hitDice: Record<string, number>) { return Object.entries(hitDice).filter(([,count]) => count > 0).sort().map(([die,count]) => `${count}${die}`).join(" + ") || "—"; }
 function displaySlots(slots: Record<number, number>) { const text = Object.entries(slots).filter(([,count]) => count > 0).map(([level,count]) => `${level}레벨 ${count}`).join(" · "); return text || "없음"; }
-function displaySkills(skills: string[]) { return skills.length ? skills.join(", ") : "없음"; }
+function displayList(values: string[]) { return values.length ? values.join(", ") : "없음"; }
 
 export function buildProgressionPlan(state: ProgressionCharacterState, request: ProgressionRequest): ProgressionPlan {
   const target = classById(request.targetClassId);
@@ -249,7 +299,7 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   if (!row) blocking.push(`${target.nameKo} ${targetClassLevel}레벨 progression row가 없습니다.`);
   const rowFeatures = row?.features ?? [];
   const choices = [
-    ...featureChoiceDefinitions(state, target.id, targetClassLevel, rowFeatures, request.featOptions),
+    ...featureChoiceDefinitions(state, target.id, targetClassLevel, rowFeatures, request.featOptions, request.languageOptions),
     ...columnChoiceDefinitions(target.id, existing?.level ?? 0, targetClassLevel),
   ];
   for (const choice of choices) {
@@ -292,6 +342,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
   const expertiseBefore = unique(state.expertiseSkills ?? []);
   const expertiseAdded = choices.filter((choice) => choice.kind === "expertise").flatMap((choice) => selectedOptionLabels(choice, request.selections));
   const expertiseAfter = unique([...expertiseBefore, ...expertiseAdded]);
+  const languagesBefore = unique(state.languages ?? []);
+  const languagesAdded = choices.filter((choice) => choice.kind === "language").flatMap((choice) => selectedOptionLabels(choice, request.selections));
+  const languagesAfter = unique([...languagesBefore, ...languagesAdded]);
   const diffs: ProgressionDiff[] = [
     { label:"총 레벨", before:String(state.totalLevel), after:String(toTotalLevel), source:"SRD Level Advancement" },
     { label:"클래스", before:displayTracks(classTracksBefore), after:displayTracks(classTracksAfter), source:isMulticlass ? "SRD Multiclassing" : `${target.nameKo} progression` },
@@ -300,7 +353,8 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
     { label:"숙련 보너스", before:`+${state.proficiencyBonus}`, after:`+${proficiencyAfter}`, source:"총 캐릭터 레벨" },
   ];
   if (spellcastingBefore.casterLevel !== spellcastingAfter.casterLevel || displaySlots(spellcastingBefore.slots) !== displaySlots(spellcastingAfter.slots)) diffs.push({ label:"멀티클래스 주문 슬롯", before:displaySlots(spellcastingBefore.slots), after:displaySlots(spellcastingAfter.slots), source:"SRD Multiclass Spellcaster Level" });
-  if (expertiseAfter.length !== expertiseBefore.length) diffs.push({ label:"전문화", before:displaySkills(expertiseBefore), after:displaySkills(expertiseAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (expertiseAfter.length !== expertiseBefore.length) diffs.push({ label:"전문화", before:displayList(expertiseBefore), after:displayList(expertiseAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
+  if (languagesAfter.length !== languagesBefore.length) diffs.push({ label:"언어", before:displayList(languagesBefore), after:displayList(languagesAfter), source:`${target.nameKo} ${targetClassLevel}레벨` });
   if (automaticGrants.length) diffs.push({ label:"자동 클래스 특성", before:"—", after:automaticGrants.join(", "), source:`${target.nameKo} ${targetClassLevel}레벨` });
   return {
     targetClassId:target.id, targetClassName:target.nameKo, targetClassLevel, fromTotalLevel:state.totalLevel, toTotalLevel,
@@ -336,6 +390,16 @@ export function resolveProgression(state: ProgressionCharacterState, request: Pr
   }
   next.expertiseSkills = [...expertiseSkills];
   next.expertiseSources = expertiseSources;
+  const languages = new Set(next.languages ?? []);
+  const languageSources = { ...(next.languageSources ?? {}) };
+  for (const choice of plan.choices.filter((entry) => entry.kind === "language")) {
+    for (const language of selectedOptionLabels(choice, request.selections)) {
+      languages.add(language);
+      languageSources[language] = choice.source;
+    }
+  }
+  next.languages = [...languages];
+  next.languageSources = languageSources;
   if (plan.isMulticlass) next.features.push(...plan.multiclassGrants.map((grant) => `${plan.targetClassName} 멀티클래스 · ${grant}`));
   const subclass = plan.classTracksAfter.find((track) => track.classId === plan.targetClassId)?.subclassName;
   if (subclass && !next.features.includes(subclass)) next.features.push(subclass);
