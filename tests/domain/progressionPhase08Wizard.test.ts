@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState } from "../../src/domain/progression";
 import { classCantripListEntries, classSpellListAllEntries, classSpellListEntries, stableSpellId } from "../../src/domain/spellListCatalog";
-import { WIZARD_ID, wizardSpellbookChoiceId } from "../../src/domain/wizardProgressionChoices";
+import {
+  WIZARD_ID,
+  wizardSignatureSpellsChoiceId,
+  wizardSpellMasteryChoiceId,
+  wizardSpellbookChoiceId,
+} from "../../src/domain/wizardProgressionChoices";
 
 const cantripChoice = (level: number) => `progression.${WIZARD_ID}.${level}.column.소마법`;
 const preparedChoice = (level: number) => `progression.${WIZARD_ID}.${level}.column.준비 주문`;
@@ -48,6 +53,41 @@ function wizardOne(): ProgressionCharacterState {
     preparedSpellIds:[stableSpellId("Detect Magic"),stableSpellId("Find Familiar"),stableSpellId("Magic Missile"),stableSpellId("Shield")],
   };
 }
+
+function highLevelWizard(level: 17 | 19): ProgressionCharacterState {
+  const book = [
+    "Magic Missile","Shield","Detect Magic","Web","Misty Step","Fireball","Fly","Counterspell",
+    "Dimension Door","Wall of Force","Disintegrate","Teleport","Mind Blank","Wish",
+  ].map(stableSpellId);
+  return {
+    revision:0,
+    id:`wizard-${level}`,
+    name:"Mira",
+    totalLevel:level,
+    abilities:{ str:8,dex:14,con:16,int:20,wis:12,cha:10 },
+    hpCurrent:100,
+    hpMaximum:100,
+    proficiencyBonus:6,
+    classTracks:[{ classId:WIZARD_ID, className:"위저드", level }],
+    hitDiceByDie:{ d6:level },
+    features:["주문 시전","비전 회복","의식 시전자","학자"],
+    proficientSkills:["비전","역사"],
+    expertiseSkills:["비전"],
+    cantripIds:[stableSpellId("Fire Bolt"),stableSpellId("Mage Hand"),stableSpellId("Minor Illusion"),stableSpellId("Prestidigitation"),stableSpellId("Ray of Frost")],
+    spellbookSpellIds:book,
+    spellbookSpellSources:Object.fromEntries(book.map((id) => [id,"위저드 기존 주문책"])),
+    preparedSpellIds:[stableSpellId("Detect Magic"),stableSpellId("Fireball"),stableSpellId("Fly")],
+  };
+}
+
+const masterySpellOptions = [
+  { id:stableSpellId("Magic Missile"), label:"마법 화살", description:"", level:1, castingTime:"행동" },
+  { id:stableSpellId("Shield"), label:"방패", description:"", level:1, castingTime:"반응행동" },
+  { id:stableSpellId("Chromatic Orb"), label:"색채의 구체", description:"", level:1, castingTime:"행동" },
+  { id:stableSpellId("Web"), label:"거미줄", description:"", level:2, castingTime:"행동" },
+  { id:stableSpellId("Misty Step"), label:"안개 걸음", description:"", level:2, castingTime:"보너스 행동" },
+  { id:stableSpellId("Scorching Ray"), label:"작열 광선", description:"", level:2, castingTime:"행동" },
+];
 
 test("canonical Wizard spell list contains 15 cantrips and 202 leveled SRD 5.2.1 spells", () => {
   assert.equal(classCantripListEntries(WIZARD_ID).length, 15);
@@ -191,4 +231,100 @@ test("Wizard 2 -> 3 unlocks level-2 research and can prepare a newly recorded le
   assert.ok(result.state.spellbookSpellIds?.includes(web));
   assert.ok(result.state.preparedSpellIds?.includes(mistyStep));
   assert.equal(result.state.spellSlotMaximums?.[2], 2);
+});
+
+test("Wizard 17 -> 18 materializes one Action spell at levels 1 and 2 for Spell Mastery and makes both always prepared", () => {
+  const state = highLevelWizard(17);
+  const chromaticOrb = stableSpellId("Chromatic Orb");
+  const scorchingRay = stableSpellId("Scorching Ray");
+  const web = stableSpellId("Web");
+  const fireball = stableSpellId("Fireball");
+  const request = {
+    expectedRevision:0,
+    targetClassId:WIZARD_ID,
+    hpMethod:"fixed" as const,
+    spellOptions:masterySpellOptions,
+    selections:{
+      [wizardSpellbookChoiceId(18)]:{ kind:"options" as const, optionIds:[chromaticOrb,scorchingRay] },
+      [wizardSpellMasteryChoiceId(1)]:{ kind:"options" as const, optionIds:[chromaticOrb] },
+      [wizardSpellMasteryChoiceId(2)]:{ kind:"options" as const, optionIds:[web] },
+      [preparedChoice(18)]:{ kind:"options" as const, optionIds:[fireball] },
+    },
+  };
+  const plan = buildProgressionPlan(state, request);
+  const levelOne = plan.choices.find((choice) => choice.id === wizardSpellMasteryChoiceId(1));
+  const levelTwo = plan.choices.find((choice) => choice.id === wizardSpellMasteryChoiceId(2));
+  assert.equal(levelOne?.status, "ready");
+  assert.equal(levelOne?.count, 1);
+  assert.equal(levelTwo?.status, "ready");
+  assert.equal(levelTwo?.count, 1);
+  assert.equal(levelOne?.options.find((option) => option.id === stableSpellId("Shield"))?.disabledReason, "시전 시간이 행동인 주문만 주문 숙련으로 선택할 수 있습니다.");
+  assert.equal(levelTwo?.options.find((option) => option.id === stableSpellId("Misty Step"))?.disabledReason, "시전 시간이 행동인 주문만 주문 숙련으로 선택할 수 있습니다.");
+  assert.ok(levelOne?.options.some((option) => option.id === chromaticOrb && !option.disabledReason), "newly researched level-1 Action spell is immediately eligible");
+  assert.equal(plan.blocking.length, 0);
+
+  const result = resolveProgression(state, request);
+  assert.equal(result.status, "committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.spellMasterySpellIds?.[1], chromaticOrb);
+  assert.equal(result.state.spellMasterySpellIds?.[2], web);
+  assert.equal(result.state.spellMasterySources?.[1], "위저드 18레벨 · 주문 숙련 · SRD 5.2.1");
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${chromaticOrb}`));
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${web}`));
+  assert.equal(result.state.preparedSpellIds?.filter((id) => id.replace(/^always:/, "") === chromaticOrb).length, 1);
+});
+
+test("Spell Mastery rejects a non-Action spell even when a client submits the disabled spellbook option", () => {
+  const state = highLevelWizard(17);
+  const chromaticOrb = stableSpellId("Chromatic Orb");
+  const scorchingRay = stableSpellId("Scorching Ray");
+  const result = resolveProgression(state, {
+    expectedRevision:0,
+    targetClassId:WIZARD_ID,
+    hpMethod:"fixed",
+    spellOptions:masterySpellOptions,
+    selections:{
+      [wizardSpellbookChoiceId(18)]:{ kind:"options", optionIds:[chromaticOrb,scorchingRay] },
+      [wizardSpellMasteryChoiceId(1)]:{ kind:"options", optionIds:[stableSpellId("Shield")] },
+      [wizardSpellMasteryChoiceId(2)]:{ kind:"options", optionIds:[stableSpellId("Web")] },
+      [preparedChoice(18)]:{ kind:"options", optionIds:[stableSpellId("Fireball")] },
+    },
+  });
+  assert.equal(result.status, "rejected");
+  if (result.status !== "rejected") return;
+  assert.match(result.error, /시전 시간이 행동/);
+  assert.equal(result.state, state);
+});
+
+test("Wizard 19 -> 20 selects two exact level-3 Signature Spells from the expanded spellbook and makes them always prepared", () => {
+  const state = highLevelWizard(19);
+  const haste = stableSpellId("Haste");
+  const lightningBolt = stableSpellId("Lightning Bolt");
+  const fireball = stableSpellId("Fireball");
+  const fly = stableSpellId("Fly");
+  const request = {
+    expectedRevision:0,
+    targetClassId:WIZARD_ID,
+    hpMethod:"fixed" as const,
+    selections:{
+      [wizardSpellbookChoiceId(20)]:{ kind:"options" as const, optionIds:[haste,lightningBolt] },
+      [wizardSignatureSpellsChoiceId()]:{ kind:"options" as const, optionIds:[haste,fireball] },
+      [preparedChoice(20)]:{ kind:"options" as const, optionIds:[fly] },
+    },
+  };
+  const plan = buildProgressionPlan(state, request);
+  const signature = plan.choices.find((choice) => choice.id === wizardSignatureSpellsChoiceId());
+  assert.equal(signature?.status, "ready");
+  assert.equal(signature?.count, 2);
+  assert.ok(signature?.options.some((option) => option.id === haste), "newly researched level-3 spell is immediately eligible");
+  assert.equal(signature?.options.some((option) => option.id === stableSpellId("Magic Missile")), false, "Signature Spells are exactly level 3");
+  assert.equal(plan.blocking.length, 0);
+
+  const result = resolveProgression(state, request);
+  assert.equal(result.status, "committed");
+  if (result.status !== "committed") return;
+  assert.deepEqual(new Set(result.state.signatureSpellIds), new Set([haste,fireball]));
+  assert.equal(result.state.signatureSpellSources?.[haste], "위저드 20레벨 · 대표 주문 · SRD 5.2.1");
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${haste}`));
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${fireball}`));
 });
