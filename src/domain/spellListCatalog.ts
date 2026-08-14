@@ -1,3 +1,4 @@
+import { BARD_SPELL_ROWS } from "./bardSpellList";
 import { CLERIC_SPELL_ROWS } from "./clericSpellList";
 import { DRUID_SPELL_ROWS } from "./druidSpellList";
 
@@ -35,6 +36,12 @@ export function stableSpellId(nameEn: string) {
 const spell = (id: string, nameEn: string, level: number): ClassSpellListEntry => ({ id:`dnd.srd521.spell.${id}`, nameEn, level });
 const spellByName = (nameEn: string, level: number): ClassSpellListEntry => ({ id:stableSpellId(nameEn), nameEn, level });
 const spellId = (id: string) => `dnd.srd521.spell.${id}`;
+
+const BARD: ClassSpellList = {
+  classId:"dnd.srd521.class.bard",
+  source:{ document:"System Reference Document 5.2.1", page:33, license:"CC-BY-4.0" },
+  spells:BARD_SPELL_ROWS.map(([nameEn, level]) => spellByName(nameEn, level)),
+};
 
 const CLERIC: ClassSpellList = {
   classId:"dnd.srd521.class.cleric",
@@ -104,6 +111,7 @@ const PALADIN: ClassSpellList = {
 };
 
 const LISTS = new Map<string, ClassSpellList>([
+  [BARD.classId, BARD],
   [CLERIC.classId, CLERIC],
   [DRUID.classId, DRUID],
   [RANGER.classId, RANGER],
@@ -150,6 +158,13 @@ const AUTOMATIC_PREPARED: AutomaticPreparedSpellRelationship[] = [
     spellId:stableSpellId(String(nameEn)),
     nameEn:String(nameEn),
     sourceFeature:"생명 권역 주문",
+  })),
+  ...["Power Word Heal","Power Word Kill"].map((nameEn) => ({
+    classId:"dnd.srd521.class.bard",
+    classLevel:20,
+    spellId:stableSpellId(nameEn),
+    nameEn,
+    sourceFeature:"창조의 말씀",
   })),
 ];
 
