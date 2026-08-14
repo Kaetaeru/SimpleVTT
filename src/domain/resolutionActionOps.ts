@@ -13,7 +13,7 @@ import { openReactorWindow, resolveReactionChoice } from "./reaction";
 import { resolveTargeting } from "./targeting";
 import { economyStateChanges } from "./stateChange";
 import { resourceStateChange } from "./runtimeStateChange";
-import { useMovement } from "./turnEconomy";
+import { grantExtraAction, spendTurnSlot, useMovement } from "./turnEconomy";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent, targetingResult } from "./resolutionContext";
@@ -21,6 +21,7 @@ import type { ResolutionOperation } from "./resolutionTypes";
 
 type TargetingOp = Extract<ResolutionOperation, { kind:"targeting" }>;
 type EconomyOp = Extract<ResolutionOperation, { kind:"use-economy" }>;
+type ExtraActionOp = Extract<ResolutionOperation, { kind:"grant-extra-action" }>;
 type MoveOp = Extract<ResolutionOperation, { kind:"move" }>;
 type ResourceOp = Extract<ResolutionOperation, { kind:"spend-resource" }>;
 type D20Op = Extract<ResolutionOperation, { kind:"d20" }>;
@@ -54,11 +55,6 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
   if (operation.slot === "action" && !availability.action) throw new DomainEvaluationError("action blocked by condition");
   if (operation.slot === "bonus-action" && !availability.bonusAction) throw new DomainEvaluationError("bonus action blocked by condition");
   if (operation.slot === "reaction" && !availability.reaction) throw new DomainEvaluationError("reaction blocked by condition");
-  const key = operation.slot === "bonus-action" ? "bonusAction" : operation.slot;
-  if (!before[key]) throw new DomainEvaluationError(`${operation.slot} is not available`);
-  if (operation.slot === "bonus-action" && !operation.bonusActionGranted) {
-    throw new DomainEvaluationError("bonus action requires an explicit granting rule");
-  }
 
   let restrictionProvenance: ProvenanceRecord[] = [];
   if (ctx.state.clock.activeActorId === actorId && (operation.slot === "action" || operation.slot === "bonus-action")) {
@@ -71,16 +67,52 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
     restrictionProvenance = selected.provenance;
   }
 
-  actor.economy = { ...before, [key]:false };
+  const spent = spendTurnSlot(
+    before,
+    operation.slot,
+    operation.bonusActionGranted === true,
+    operation.actionKind ?? "other",
+  );
+  actor.economy = spent.next;
   const provenance: ProvenanceRecord[] = [
     ...restrictionProvenance,
-    { source:ctx.pending.sourceId, status:"applied", reason:`${operation.slot} spent` },
+    {
+      source:ctx.pending.sourceId,
+      status:"applied",
+      reason:spent.spentFrom === "standard"
+        ? `${operation.slot} spent`
+        : `${operation.slot} spent from extra action grant ${spent.spentFrom}`,
+    },
   ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
-  const result = { slot:operation.slot, spent:true };
+  const result = { slot:operation.slot, spent:true, spentFrom:spent.spentFrom, actionKind:operation.actionKind ?? "other" };
   return {
     result,
     event:makeEvent(ctx.pending, operation, `${actorId} spends ${operation.slot}`, result, provenance, changes, actorId),
+  };
+}
+
+export function executeGrantExtraAction(ctx: ResolutionExecutionContext, operation: ExtraActionOp): OperationExecution {
+  const actorId = operation.actorId ?? ctx.pending.actorId;
+  const actor = requireCombatant(ctx.state, actorId);
+  const before = actor.economy;
+  actor.economy = grantExtraAction(before, {
+    id:operation.grantId,
+    source:ctx.pending.sourceId,
+    allowsMagicAction:operation.allowsMagicAction,
+  });
+  const provenance: ProvenanceRecord[] = [{
+    source:ctx.pending.sourceId,
+    status:"applied",
+    reason:operation.allowsMagicAction
+      ? `extra action granted: ${operation.grantId}`
+      : `extra action granted without Magic Action permission: ${operation.grantId}`,
+  }];
+  const changes = economyStateChanges(actorId, before, actor.economy, provenance);
+  const result = { grantId:operation.grantId, allowsMagicAction:operation.allowsMagicAction };
+  return {
+    result,
+    event:makeEvent(ctx.pending, operation, `${actorId} gains an extra action`, result, provenance, changes, actorId),
   };
 }
 
