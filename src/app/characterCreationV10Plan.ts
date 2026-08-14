@@ -2,6 +2,7 @@ import "./creationContracts";
 import type { AbilityKey, CharacterCreateDraft, CharacterCreationOptionVm, CharacterCreationPlan, CharacterCreationSection, ValidationMessage } from "./contracts";
 import { BACKGROUNDS, CLASSES, SPECIES, SKILL_LABELS, backgroundSkills, classIdFromName, classLoadoutOptions, classMeta, classSkillOptions, itemMechanic, opt, speciesDefinition, speciesTraits, type Option } from "./characterCreationV10Data";
 import { classAndBackgroundLoadout, creationChoiceSpecs, finalAbilities, nonClassSkillNames, normalizeChoiceSelections, speciesAutomaticEffects } from "./characterCreationV10Choices";
+import { decorateSpellOption } from "./spellPresentation";
 
 const choose = (xs: Option[], value: string | string[] | undefined) => {
   const values = Array.isArray(value) ? value : [value];
@@ -94,7 +95,7 @@ function section(
   automaticGrants: string[] = [],
   validation: ValidationMessage[] = [],
 ): CharacterCreationSection {
-  return { id, kind, label, description, status:sectionStatus, required, dependsOn, options, automaticGrants, validation };
+  return { id, kind, label, description, status:sectionStatus, required, dependsOn, options:options.map(decorateSpellOption), automaticGrants, validation };
 }
 
 function dynamicSections(draft: CharacterCreateDraft, validation: ValidationMessage[]) {
