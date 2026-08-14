@@ -22,11 +22,13 @@ export type NumericOperand = number | {
   rounding?: "floor" | "ceil" | "round";
 };
 
-export interface OperationPredicate {
+export type OperationPredicate = {
   operationId: string;
   field: string;
-  equals: string | number | boolean;
-}
+} & (
+  | { equals: string | number | boolean; greaterThan?: never }
+  | { greaterThan: number; equals?: never }
+);
 
 interface OperationBase {
   id: string;
