@@ -103,10 +103,12 @@ export function resolveLifeDomainHealingSpell(
       operation.amount = addToOperand(operation.amount,slotBonus);
     });
 
-    if (context.clericLevel >= 6 && request.targets.some((target) => target.id !== request.actorId)) {
+    const otherCreatureHealing = healingOperations.find((operation) => operation.targetId !== request.actorId);
+    if (context.clericLevel >= 6 && otherCreatureHealing) {
       pending.operations.push({
         id:`${request.id}:life-domain:blessed-healer`,
         kind:"healing",
+        when:{ operationId:otherCreatureHealing.id, field:"restored", greaterThan:0 },
         targetId:request.actorId,
         amount:slotBonus,
       });
