@@ -1,6 +1,6 @@
 import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageResolution } from "./damage";
 import { type D20TestResult } from "./d20";
-import { resolveZeroHpAfterDamage } from "./life";
+import { resolveZeroHpAfterDamage, type LifeState } from "./life";
 import { applyHealingToLife } from "./lifeTransitions";
 import { activeConditionIds, conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
@@ -45,7 +45,7 @@ function appendExpiredEffects(
 function finalizeDamage(
   ctx: ResolutionExecutionContext,
   operation: DamageLifecycleOp,
-  beforeLife: ReturnType<typeof structuredClone>,
+  beforeLife: LifeState,
   damage: DamageResolution,
   summary: string,
 ): OperationExecution {
