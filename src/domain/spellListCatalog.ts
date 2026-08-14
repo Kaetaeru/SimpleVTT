@@ -14,7 +14,16 @@ export interface ClassSpellList {
   spells: ClassSpellListEntry[];
 }
 
+export interface AutomaticPreparedSpellRelationship {
+  classId: string;
+  classLevel: number;
+  spellId: string;
+  nameEn: string;
+  sourceFeature: string;
+}
+
 const spell = (id: string, nameEn: string, level: number): ClassSpellListEntry => ({ id:`dnd.srd521.spell.${id}`, nameEn, level });
+const spellId = (id: string) => `dnd.srd521.spell.${id}`;
 
 const RANGER: ClassSpellList = {
   classId:"dnd.srd521.class.ranger",
@@ -76,6 +85,30 @@ const LISTS = new Map<string, ClassSpellList>([
   [PALADIN.classId, PALADIN],
 ]);
 
+const AUTOMATIC_PREPARED: AutomaticPreparedSpellRelationship[] = [
+  {
+    classId:"dnd.srd521.class.ranger",
+    classLevel:1,
+    spellId:spellId("hunter-s-mark"),
+    nameEn:"Hunter's Mark",
+    sourceFeature:"주적",
+  },
+  {
+    classId:"dnd.srd521.class.paladin",
+    classLevel:2,
+    spellId:spellId("divine-smite"),
+    nameEn:"Divine Smite",
+    sourceFeature:"팔라딘의 강타",
+  },
+  {
+    classId:"dnd.srd521.class.paladin",
+    classLevel:5,
+    spellId:spellId("find-steed"),
+    nameEn:"Find Steed",
+    sourceFeature:"충직한 군마",
+  },
+];
+
 export function classSpellList(classId: string) {
   const list = LISTS.get(classId);
   return list ? { ...list, source:{ ...list.source }, spells:list.spells.map((entry) => ({ ...entry })) } : undefined;
@@ -85,4 +118,8 @@ export function classSpellListEntries(classId: string, maxLevel?: number) {
   const list = LISTS.get(classId);
   if (!list) return [];
   return list.spells.filter((entry) => maxLevel === undefined || entry.level <= maxLevel).map((entry) => ({ ...entry }));
+}
+
+export function automaticPreparedSpellsForLevel(classId: string, classLevel: number) {
+  return AUTOMATIC_PREPARED.filter((entry) => entry.classId === classId && entry.classLevel === classLevel).map((entry) => ({ ...entry }));
 }
