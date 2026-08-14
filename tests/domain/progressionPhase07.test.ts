@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState } from "../../src/domain/progression";
 import { multiclassSpellSlots } from "../../src/domain/progressionCatalog";
-import { stableSpellId } from "../../src/domain/spellListCatalog";
 
 const fighter = (): ProgressionCharacterState => ({
   revision:0, id:"fighter", name:"Aelar", totalLevel:5,
@@ -97,24 +96,18 @@ test("multiclass spellcaster level uses full levels plus ceil of each half-caste
   assert.equal(withWarlock.casterLevel, 5, "Warlock Pact Magic levels are not merged into multiclass Spellcasting slots");
 });
 
-test("a level that needs a not-yet-materialized spell choice rejects atomically instead of approximating", () => {
-  const wizardId = "dnd.srd521.class.wizard";
+test("a level that needs a not-yet-materialized choice rejects atomically instead of approximating", () => {
+  const fighterId = "dnd.srd521.class.fighter";
   const state: ProgressionCharacterState = {
-    revision:3, id:"wizard-17", name:"Wizard", totalLevel:17,
-    abilities:{ str:8,dex:14,con:14,int:20,wis:12,cha:10 }, hpCurrent:80,hpMaximum:96,proficiencyBonus:6,
-    classTracks:[{ classId:wizardId, className:"위저드", level:17, subclassName:"환영술사" }], hitDiceByDie:{ d6:17 }, features:["주문 시전","주문책"],
-    spellbookSpellIds:[stableSpellId("Magic Missile"),stableSpellId("Shield")],
-    preparedSpellIds:[stableSpellId("Magic Missile"),stableSpellId("Shield")],
+    revision:3, id:"fighter-18", name:"Fighter", totalLevel:18,
+    abilities:{ str:20,dex:14,con:18,int:10,wis:12,cha:10 }, hpCurrent:170,hpMaximum:170,proficiencyBonus:6,
+    classTracks:[{ classId:fighterId, className:"파이터", level:18, subclassName:"챔피언" }],
+    hitDiceByDie:{ d10:18 },
+    features:["추가 공격","불굴","액션 서지","챔피언"],
   };
-  const spellbookChoice = `progression.${wizardId}.18.spellbook`;
-  const request = {
-    expectedRevision:3,
-    targetClassId:wizardId,
-    hpMethod:"fixed" as const,
-    selections:{ [spellbookChoice]:{ kind:"options" as const, optionIds:[stableSpellId("Wish"),stableSpellId("Time Stop")] } },
-  };
+  const request = { expectedRevision:3, targetClassId:fighterId, hpMethod:"fixed" as const, selections:{} };
   const plan = buildProgressionPlan(state, request);
-  assert.ok(plan.choices.some((choice) => choice.kind === "spell" && choice.status === "catalog-pending" && choice.label === "주문 숙련"));
+  assert.ok(plan.choices.some((choice) => choice.status === "catalog-pending" && choice.label === "에픽 은총"));
   const result = resolveProgression(state, request);
   assert.equal(result.status, "rejected");
   assert.equal(result.state, state);
