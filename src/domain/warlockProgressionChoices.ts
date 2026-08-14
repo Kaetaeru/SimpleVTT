@@ -112,16 +112,6 @@ function concreteInvocationOptions(args: {
         ? `${ELDRITCH_INVOCATIONS.find((entry) => entry.id === invocation.prerequisiteInvocationId)?.label ?? invocation.prerequisiteInvocationId} 기원술이 필요합니다.`
         : undefined;
 
-    if (invocation.id === "invocation:pact-of-the-tome") {
-      result.push({
-        id:invocation.id,
-        label:invocation.label,
-        description:invocation.description,
-        disabledReason:prerequisiteReason ?? "Book of Shadows의 소마법 3개와 의식 주문 2개 선택 관계가 아직 materialize되지 않았습니다.",
-      });
-      continue;
-    }
-
     if (invocation.targetKind === "damage-cantrip" || invocation.targetKind === "attack-cantrip") {
       const eligible = invocation.targetKind === "damage-cantrip" ? DAMAGE_WARLOCK_CANTRIPS : ATTACK_WARLOCK_CANTRIPS;
       const candidates = args.knownCantripIds.filter((id) => eligible.has(id));
