@@ -9,6 +9,10 @@ declare module "./contracts" {
       longRest?: number | "all";
       turnStart?: number | "all";
     };
+    recoveryLockouts?: {
+      shortRest?: number;
+      longRest?: number;
+    };
   }
 
   interface CharacterSheet {
