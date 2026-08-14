@@ -18,6 +18,7 @@ import { makeEvent } from "./resolutionContext";
 import type { ResolutionOperation } from "./resolutionTypes";
 
 type ApplyEffectOp = Extract<ResolutionOperation, { kind:"apply-effect" }>;
+type UpdateEffectOp = Extract<ResolutionOperation, { kind:"update-effect" }>;
 type RemoveEffectOp = Extract<ResolutionOperation, { kind:"remove-effect" }>;
 type StartConcentrationOp = Extract<ResolutionOperation, { kind:"start-concentration" }>;
 type EndConcentrationOp = Extract<ResolutionOperation, { kind:"end-concentration" }>;
@@ -114,6 +115,35 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
   return {
     result,
     event:makeEvent(ctx.pending, operation, `effect ${effect.id} applied`, result, provenance, changes, effect.targetId),
+  };
+}
+
+export function executeUpdateEffect(ctx:ResolutionExecutionContext, operation:UpdateEffectOp):OperationExecution {
+  const index = ctx.state.effects.findIndex((entry) => entry.id === operation.effectId);
+  if (index < 0) throw new DomainEvaluationError(`effect not found: ${operation.effectId}`);
+  const before = ctx.state.effects[index];
+  const after = {
+    ...before,
+    metadata:{ ...(before.metadata ?? {}), ...operation.metadataPatch },
+  };
+  ctx.state.effects[index] = after;
+  const provenance:ProvenanceRecord[] = [{
+    source:before.sourceId,
+    status:"applied",
+    reason:`effect ${before.id} metadata updated without changing duration`,
+  }];
+  const result = { updated:true, beforeMetadata:before.metadata ?? {}, effect:after };
+  return {
+    result,
+    event:makeEvent(
+      ctx.pending,
+      operation,
+      `effect ${before.id} updated`,
+      result,
+      provenance,
+      [effectStateChange(before.targetId,before.id,"updated",provenance)],
+      before.targetId,
+    ),
   };
 }
 
