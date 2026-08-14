@@ -33,6 +33,8 @@ declare module "./contracts" {
     mysticArcanumSources?: Record<number, string>;
     persistentFeatureOptionIds?: string[];
     persistentFeatureOptionSources?: Record<string, string>;
+    subclassIds?: Record<string, string>;
+    subclassSources?: Record<string, string>;
     pactMagicSlotLevel?: number;
     pactMagicSlotMaximum?: number;
     spellSlotMaximums?: Record<number, number>;
