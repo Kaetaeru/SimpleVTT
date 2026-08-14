@@ -49,6 +49,7 @@ export function compileDivineSpark(request: DivineSparkRequest): PendingResoluti
   const diceCount = clericDivineSparkDiceCount(request.clericLevel);
   if (!Number.isFinite(request.wisdomModifier)) throw new DomainEvaluationError("Wisdom modifier must be finite");
   if (!Number.isFinite(request.spellSaveDc)) throw new DomainEvaluationError("Cleric spell save DC must be finite");
+  if (request.target.id === request.actorId) throw new DomainEvaluationError("Divine Spark must target another creature");
   const targetId = request.target.id;
   const targetOpId = `${request.id}:target`;
   const rollId = `${request.id}:effect-roll`;
