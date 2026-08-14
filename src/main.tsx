@@ -2,12 +2,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppProvider } from "./app/AppProvider";
-import "./app/characterCreationV09Adapter";
+import "./app/characterCreationV10Adapter";
 import "./app/mockAdapterCompletion";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
 import "./character-creation-v09.css";
+import "./character-creation-v10.css";
 import "./focused-layout-fix.css";
 
 createRoot(document.getElementById("root")!).render(

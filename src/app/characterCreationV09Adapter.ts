@@ -1,15 +1,152 @@
 import type { AppSnapshot, CharacterCreateDraft, CharacterSheet, CharacterSummary, ItemInstanceVm } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { FIGHTER, META, buildPlan, classId, meta, normalize, recommended } from "./characterCreationV09Plan";
+import { equipmentForPreset, itemMechanic, itemName } from "./srdCatalogBridge";
 
-type State={createDraft:CharacterCreateDraft|null;activeCharacter:CharacterSheet;characters:CharacterSummary[];edgeState:AppSnapshot["edgeState"];getSnapshot():Promise<AppSnapshot>};
-const cp=<T,>(v:T):T=>structuredClone(v),mod=(n:number)=>Math.floor((n-10)/2);
-function items(d:CharacterCreateDraft):ItemInstanceVm[]{const source=`${d.className} 시작 장비`;return[{id:"item.armor.new",definitionId:"item.starter-armor",name:d.className==="마법사"?"주문서":d.equipmentPreset==="chain-shield"?"체인 메일":"시작 방어구",kind:"equipment",quantity:1,equipped:true,passiveEffects:[`AC ${d.derived.ac}`],grantedActionIds:[],provenance:[source]},{id:"item.weapon.new",definitionId:"item.starter-weapon",name:d.className==="성직자"?"메이스":d.className==="음유시인"?"레이피어":d.className==="마법사"?"단검":"롱소드",kind:"equipment",quantity:1,equipped:true,passiveEffects:[],grantedActionIds:[],provenance:[source]}];}
-function sheet(d:CharacterCreateDraft):CharacterSheet{const m=meta(d),its=items(d),style=FIGHTER.find((x)=>x.id===d.selectedClassChoices?.[0])?.name;return{id:`char.${d.name.trim().toLowerCase().replace(/\s+/g,"-")||"new"}`,name:d.name.trim()||"이름 없음",className:d.className,level:d.level,species:d.species,background:d.background,hp:d.derived.hp,maxHp:d.derived.hp,tempHp:0,ac:d.derived.ac,speed:d.derived.speed,proficiencyBonus:d.derived.proficiencyBonus,saveState:"saved",abilities:cp(d.abilities),saves:m.saves.map((x)=>`${x} +${d.derived.proficiencyBonus}`),skills:cp(d.selectedSkills),features:[...m.features,...(style?[style]:[])],equipment:its.map((x)=>x.name),items:its,resources:d.className==="전사"?[{id:"resource.second-wind",label:"세컨드 윈드",current:1,max:1,source:"전사 1레벨"}]:[],attacks:[{id:"action.starter",name:d.className==="성직자"?"메이스":d.className==="음유시인"?"레이피어":d.className==="마법사"?"단검":"롱소드",bonus:d.derived.proficiencyBonus+mod(d.abilities[m.rec[0]]),damage:"시작 무기 피해"}]};}
+type State = { createDraft: CharacterCreateDraft | null; activeCharacter: CharacterSheet; characters: CharacterSummary[]; edgeState: AppSnapshot["edgeState"]; getSnapshot(): Promise<AppSnapshot> };
+const cp = <T,>(value: T): T => structuredClone(value);
+const mod = (score: number) => Math.floor((score - 10) / 2);
+const FIGHTER_ID = "dnd.srd521.class.fighter";
 
-const oldGet=MockAdapter.prototype.getSnapshot,oldCreate=MockAdapter.prototype.createCharacterDraft,oldEdit=MockAdapter.prototype.editCharacterDraft,oldUpdate=MockAdapter.prototype.updateCharacterDraft,oldFinalize=MockAdapter.prototype.finalizeCharacterDraft;
-MockAdapter.prototype.getSnapshot=async function(){const snap=await oldGet.call(this);if(snap.createDraft){const d=normalize(snap.createDraft);snap.createDraft=cp(d);snap.creationPlan=buildPlan(d);}else snap.creationPlan=null;return snap;};
-MockAdapter.prototype.createCharacterDraft=async function(mode="guided"){await oldCreate.call(this,mode);const s=this as unknown as State,d=s.createDraft;if(!d)return s.getSnapshot();d.activeSectionId="identity";d.selectedClassChoices=[];if(mode!=="duplicate"){d.className="";d.subclassName="";d.species="";d.background="";d.selectedSkills=[];d.selectedSpells=[];d.equipmentPreset="";d.level=1;}else if(d.className==="전사")d.selectedClassChoices=["choice.fighting-style.defense"];normalize(d);return s.getSnapshot();};
-MockAdapter.prototype.editCharacterDraft=async function(id:string){await oldEdit.call(this,id);const s=this as unknown as State,d=s.createDraft;if(d){d.activeSectionId="identity";d.selectedClassChoices=d.className==="전사"?["choice.fighting-style.defense"]:[];normalize(d);}return s.getSnapshot();};
-MockAdapter.prototype.updateCharacterDraft=async function(command){const s=this as unknown as State;if(!s.createDraft)await oldCreate.call(this,"guided");let d=s.createDraft;if(!d)return s.getSnapshot();if(command.type==="set-section"){d.activeSectionId=String(command.value??"identity");return s.getSnapshot();}if(command.type==="toggle-class-choice"){const value=String(command.value??"");d.selectedClassChoices=(d.selectedClassChoices??[]).includes(value)?[]:[value];normalize(d);return s.getSnapshot();}const previous=d.className;await oldUpdate.call(this,command);d=s.createDraft;if(!d)return s.getSnapshot();if(command.type==="set-class"&&d.className!==previous){d.subclassName="";d.selectedClassChoices=[];d.selectedSpells=[];const m=META[classId(d)]??META["class.fighter"];d.selectedSkills=d.selectedSkills.filter((x)=>m.skills.includes(x));d.equipmentPreset=m.gear[0]?.id??"";}if(command.type==="apply-recommended-array")d.abilities=recommended(d);if(command.type==="import-json"&&d.importStatus==="valid"){if(d.level<=1)d.subclassName="";d.activeSectionId="review";}normalize(d);return s.getSnapshot();};
-MockAdapter.prototype.finalizeCharacterDraft=async function(){const s=this as unknown as State,d=s.createDraft;if(!d)return oldFinalize.call(this);normalize(d);if(s.edgeState==="save-error"||buildPlan(d).validation.some((x)=>x.severity==="blocking"))return s.getSnapshot();if(d.editingCharacterId)return oldFinalize.call(this);const next=sheet(d);s.activeCharacter=cp(next);s.characters=[...s.characters.filter((x)=>x.id!==next.id),cp(next)];s.createDraft=null;return s.getSnapshot();};
+function items(draft: CharacterCreateDraft): ItemInstanceVm[] {
+  const source = `${draft.className} 시작 장비 · SRD catalog`;
+  return equipmentForPreset(draft.equipmentPreset).map((item, index) => {
+    const armor = itemMechanic(item.entry, "armor-definition") as { ac?: { base?: number } } | undefined;
+    const shield = itemMechanic(item.entry, "shield-definition") as { acBonus?: number } | undefined;
+    const weapon = itemMechanic(item.entry, "weapon-definition") as { damage?: string; damageType?: string } | undefined;
+    const effects = [armor?.ac?.base !== undefined ? `기본 AC ${armor.ac.base}` : "", shield?.acBonus !== undefined ? `AC +${shield.acBonus}` : "", weapon?.damage ? `${weapon.damage} ${weapon.damageType ?? ""}`.trim() : ""].filter(Boolean);
+    const equipmentCategory = ["armor", "shield", "weapon", "focus"].includes(item.entry.category);
+    return { id: `item.created.${index}.${item.id}`, definitionId: item.id, name: itemName(item.entry), nameEn: item.entry.presentation.originalName, kind: "equipment", quantity: item.quantity, equipped: equipmentCategory, passiveEffects: effects, grantedActionIds: [], provenance: [source, item.id] };
+  });
+}
+
+function sheet(draft: CharacterCreateDraft): CharacterSheet {
+  const m = meta(draft);
+  const resolved = equipmentForPreset(draft.equipmentPreset);
+  const its = items(draft);
+  const style = FIGHTER.find((item) => item.id === draft.selectedClassChoices?.[0])?.name;
+  const weapon = resolved.find((item) => item.entry.category === "weapon");
+  const weaponDef = weapon ? itemMechanic(weapon.entry, "weapon-definition") as { damage?: string; damageType?: string } | undefined : undefined;
+  const attacks = weapon ? [{ id: "action.starter", name: itemName(weapon.entry), bonus: draft.derived.proficiencyBonus + mod(draft.abilities[m.rec[0]]), damage: weaponDef?.damage ? `${weaponDef.damage} ${weaponDef.damageType ?? ""}`.trim() : "시작 무기 피해" }] : [];
+  return {
+    id: `char.${draft.name.trim().toLowerCase().replace(/\s+/g, "-") || "new"}`,
+    name: draft.name.trim() || "이름 없음",
+    className: draft.className,
+    level: draft.level,
+    species: draft.species,
+    background: draft.background,
+    hp: draft.derived.hp,
+    maxHp: draft.derived.hp,
+    tempHp: 0,
+    ac: draft.derived.ac,
+    speed: draft.derived.speed,
+    proficiencyBonus: draft.derived.proficiencyBonus,
+    saveState: "saved",
+    abilities: cp(draft.abilities),
+    saves: m.saves.map((value) => `${value} +${draft.derived.proficiencyBonus}`),
+    skills: cp(draft.selectedSkills),
+    features: [...m.features, ...(style ? [style] : [])],
+    equipment: its.map((item) => item.quantity > 1 ? `${item.name} ×${item.quantity}` : item.name),
+    items: its,
+    resources: classId(draft) === FIGHTER_ID ? [{ id: "resource.second-wind", label: "세컨드 윈드", current: 1, max: 1, source: "SRD Fighter level 1 catalog slice" }] : [],
+    attacks,
+  };
+}
+
+const oldGet = MockAdapter.prototype.getSnapshot;
+const oldCreate = MockAdapter.prototype.createCharacterDraft;
+const oldEdit = MockAdapter.prototype.editCharacterDraft;
+const oldUpdate = MockAdapter.prototype.updateCharacterDraft;
+const oldFinalize = MockAdapter.prototype.finalizeCharacterDraft;
+
+MockAdapter.prototype.getSnapshot = async function () {
+  const snapshot = await oldGet.call(this);
+  if (snapshot.createDraft) {
+    const draft = normalize(snapshot.createDraft);
+    snapshot.createDraft = cp(draft);
+    snapshot.creationPlan = buildPlan(draft);
+  } else snapshot.creationPlan = null;
+  return snapshot;
+};
+
+MockAdapter.prototype.createCharacterDraft = async function (mode = "guided") {
+  await oldCreate.call(this, mode);
+  const state = this as unknown as State;
+  const draft = state.createDraft;
+  if (!draft) return state.getSnapshot();
+  draft.activeSectionId = "identity";
+  draft.selectedClassChoices = [];
+  if (mode !== "duplicate") {
+    draft.className = "";
+    draft.subclassName = "";
+    draft.species = "";
+    draft.background = "";
+    draft.selectedSkills = [];
+    draft.selectedSpells = [];
+    draft.equipmentPreset = "";
+    draft.level = 1;
+  }
+  normalize(draft);
+  return state.getSnapshot();
+};
+
+MockAdapter.prototype.editCharacterDraft = async function (id: string) {
+  await oldEdit.call(this, id);
+  const state = this as unknown as State;
+  if (state.createDraft) {
+    state.createDraft.activeSectionId = "identity";
+    state.createDraft.selectedClassChoices = [];
+    normalize(state.createDraft);
+  }
+  return state.getSnapshot();
+};
+
+MockAdapter.prototype.updateCharacterDraft = async function (command) {
+  const state = this as unknown as State;
+  if (!state.createDraft) await oldCreate.call(this, "guided");
+  let draft = state.createDraft;
+  if (!draft) return state.getSnapshot();
+  if (command.type === "set-section") {
+    draft.activeSectionId = String(command.value ?? "identity");
+    return state.getSnapshot();
+  }
+  if (command.type === "toggle-class-choice") {
+    const value = String(command.value ?? "");
+    draft.selectedClassChoices = (draft.selectedClassChoices ?? []).includes(value) ? [] : [value];
+    normalize(draft);
+    return state.getSnapshot();
+  }
+  const previousClass = draft.className;
+  await oldUpdate.call(this, command);
+  draft = state.createDraft;
+  if (!draft) return state.getSnapshot();
+  if (command.type === "set-class" && draft.className !== previousClass) {
+    draft.subclassName = "";
+    draft.selectedClassChoices = [];
+    draft.selectedSpells = [];
+    const m = META[classId(draft)] ?? META[FIGHTER_ID];
+    draft.selectedSkills = m.skillsMapped ? draft.selectedSkills.filter((value) => m.skills.includes(value)) : [];
+    draft.equipmentPreset = m.gear[0]?.id ?? "";
+  }
+  if (command.type === "apply-recommended-array") draft.abilities = recommended(draft);
+  if (command.type === "import-json" && draft.importStatus === "valid") {
+    if (draft.level <= 1) draft.subclassName = "";
+    draft.activeSectionId = "review";
+  }
+  normalize(draft);
+  return state.getSnapshot();
+};
+
+MockAdapter.prototype.finalizeCharacterDraft = async function () {
+  const state = this as unknown as State;
+  const draft = state.createDraft;
+  if (!draft) return oldFinalize.call(this);
+  normalize(draft);
+  if (state.edgeState === "save-error" || buildPlan(draft).validation.some((item) => item.severity === "blocking")) return state.getSnapshot();
+  if (draft.editingCharacterId) return oldFinalize.call(this);
+  const next = sheet(draft);
+  state.activeCharacter = cp(next);
+  state.characters = [...state.characters.filter((item) => item.id !== next.id), cp(next)];
+  state.createDraft = null;
+  return state.getSnapshot();
+};
