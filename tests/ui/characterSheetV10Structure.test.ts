@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import type { CharacterSheet } from "../../src/app/contracts";
 import { projectOfficialSheet } from "../../src/app/characterSheetV10Projection";
 import { featDescription } from "../../src/app/rulePresentation";
-import { SPELL_DESCRIPTION_PENDING, spellNameKo } from "../../src/app/spellPresentation";
+import { spellNameKo } from "../../src/app/spellPresentation";
 
 const SHEET: CharacterSheet = {
   id:"char.sheet-gate",
@@ -72,7 +72,7 @@ test("feat hover presentation has real SRD-derived descriptions", () => {
   assert.match(featDescription("dnd.srd521.feat.fighting-style.defense") ?? "", /AC에 \+1/);
 });
 
-test("spell presentation uses Korean primary labels and never treats level metadata as prose", () => {
+test("spell presentation uses Korean primary labels and real SRD prose", () => {
   const wizard: CharacterSheet = {
     ...SHEET,
     id:"char.spell-gate",
@@ -90,9 +90,10 @@ test("spell presentation uses Korean primary labels and never treats level metad
   assert.equal(spellNameKo("dnd.srd521.spell.vicious-mockery"), "잔혹한 모욕");
   assert.equal(fireBolt?.name, "화염 화살");
   assert.equal(fireBolt?.nameEn, "Fire Bolt");
+  assert.match(fireBolt?.description ?? "", /1d10 화염 피해/);
   assert.equal(missile?.name, "마법 화살");
   assert.equal(missile?.nameEn, "Magic Missile");
-  assert.equal(missile?.description, SPELL_DESCRIPTION_PENDING);
+  assert.match(missile?.description ?? "", /1d4 \+ 1 역장 피해/);
   assert.notEqual(missile?.description, "SRD 1레벨 주문");
 });
 
