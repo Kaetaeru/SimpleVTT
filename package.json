@@ -6,7 +6,7 @@
   "scripts": {
     "generate:presentation": "node scripts/generate-spell-presentation.mjs",
     "dev": "npm run generate:presentation && vite",
-    "test:creation-structure:raw": "tsx --test tests/ui/characterCreationCompleteGate.test.ts tests/ui/characterSheetV10Structure.test.ts tests/ui/spellPresentationCatalog.test.ts",
+    "test:creation-structure:raw": "tsx --test tests/ui/characterCreationCompleteGate.test.ts tests/ui/characterSheetV10Structure.test.ts tests/ui/spellPresentationCatalog.test.ts tests/ui/spellUiStructure.test.ts",
     "test:creation-structure": "npm run generate:presentation && npm run test:creation-structure:raw",
     "build": "npm run generate:presentation && tsc --noEmit && npm run test:creation-structure:raw && vite build",
     "preview": "vite preview",
