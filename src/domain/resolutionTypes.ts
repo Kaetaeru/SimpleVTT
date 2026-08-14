@@ -7,7 +7,7 @@ import type { EffectApplyRequest } from "./effects";
 import type { HitDieSpend } from "./rest";
 import type { ReactorOption } from "./reaction";
 import type { TargetFacts, TargetingRule } from "./targeting";
-import type { TurnSlot } from "./turnEconomy";
+import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { RulesRuntimeState } from "./combatState";
 import type { RuntimeStateChange } from "./runtimeStateChange";
@@ -48,6 +48,13 @@ export type ResolutionOperation =
       actorId?: string;
       slot: TurnSlot;
       bonusActionGranted?: boolean;
+      actionKind?: ActionUseKind;
+    })
+  | (OperationBase & {
+      kind: "grant-extra-action";
+      actorId?: string;
+      grantId: string;
+      allowsMagicAction: boolean;
     })
   | (OperationBase & {
       kind: "move";
