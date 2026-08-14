@@ -29,7 +29,7 @@ test("canonical Ranger spell list contains the complete SRD 5.2.1 level 1-5 memb
   const entries = classSpellListEntries(rangerId);
   assert.equal(entries.length, 48);
   assert.deepEqual([...new Set(entries.map((entry) => entry.level))], [1,2,3,4,5]);
-  assert.ok(entries.some((entry) => entry.id === "dnd.srd521.spell.hunters-mark" && entry.level === 1));
+  assert.ok(entries.some((entry) => entry.id === "dnd.srd521.spell.hunter-s-mark" && entry.level === 1));
   assert.ok(entries.some((entry) => entry.id === "dnd.srd521.spell.aid" && entry.level === 2));
   assert.ok(entries.some((entry) => entry.id === "dnd.srd521.spell.tree-stride" && entry.level === 5));
 });
@@ -40,7 +40,7 @@ test("Ranger 1 -> 2 exposes only level-1 prepared-spell additions, disables exis
     preparedSpellIds:[
       "dnd.srd521.spell.cure-wounds",
       "dnd.srd521.spell.goodberry",
-      "always:dnd.srd521.spell.hunters-mark",
+      "always:dnd.srd521.spell.hunter-s-mark",
     ],
   });
   const expertiseId = `progression.${rangerId}.2.seasoned-explorer.expertise`;
@@ -66,7 +66,7 @@ test("Ranger 1 -> 2 exposes only level-1 prepared-spell additions, disables exis
   assert.equal(spells?.status, "ready");
   assert.equal(spells?.count, 1);
   assert.equal(spells?.options.find((option) => option.id === "dnd.srd521.spell.cure-wounds")?.disabledReason, "이미 준비했거나 항상 준비된 주문입니다.");
-  assert.equal(spells?.options.find((option) => option.id === "dnd.srd521.spell.hunters-mark")?.disabledReason, "이미 준비했거나 항상 준비된 주문입니다.");
+  assert.equal(spells?.options.find((option) => option.id === "dnd.srd521.spell.hunter-s-mark")?.disabledReason, "이미 준비했거나 항상 준비된 주문입니다.");
   assert.equal(spells?.options.some((option) => option.id === "dnd.srd521.spell.aid"), false, "Ranger 2 has no level-2 spell slot yet");
   assert.ok(plan.choices.some((choice) => choice.label === "전투 방식" && choice.status === "catalog-pending"));
   assert.ok(plan.blocking.some((message) => /전투 방식/.test(message)));
@@ -81,7 +81,7 @@ test("Ranger 4 -> 5 unlocks level-2 spell options and commits a newly prepared s
       "dnd.srd521.spell.goodberry",
       "dnd.srd521.spell.fog-cloud",
       "dnd.srd521.spell.speak-with-animals",
-      "always:dnd.srd521.spell.hunters-mark",
+      "always:dnd.srd521.spell.hunter-s-mark",
     ],
     preparedSpellSources:{
       "dnd.srd521.spell.alarm":"Character Creation",
@@ -89,7 +89,7 @@ test("Ranger 4 -> 5 unlocks level-2 spell options and commits a newly prepared s
       "dnd.srd521.spell.goodberry":"Character Creation",
       "dnd.srd521.spell.fog-cloud":"Character Creation",
       "dnd.srd521.spell.speak-with-animals":"Character Creation",
-      "dnd.srd521.spell.hunters-mark":"Always prepared",
+      "dnd.srd521.spell.hunter-s-mark":"Always prepared",
     },
   });
   const choiceId = spellChoice(5);
@@ -125,7 +125,7 @@ test("Ranger prepared-spell progression rejects a duplicate always-prepared Hunt
       "dnd.srd521.spell.goodberry",
       "dnd.srd521.spell.fog-cloud",
       "dnd.srd521.spell.speak-with-animals",
-      "always:dnd.srd521.spell.hunters-mark",
+      "always:dnd.srd521.spell.hunter-s-mark",
     ],
   });
   const choiceId = spellChoice(5);
@@ -133,7 +133,7 @@ test("Ranger prepared-spell progression rejects a duplicate always-prepared Hunt
     expectedRevision:0,
     targetClassId:rangerId,
     hpMethod:"fixed",
-    selections:{ [choiceId]:{ kind:"options", optionIds:["dnd.srd521.spell.hunters-mark"] } },
+    selections:{ [choiceId]:{ kind:"options", optionIds:["dnd.srd521.spell.hunter-s-mark"] } },
   });
   assert.equal(result.status, "rejected");
   if (result.status !== "rejected") return;
