@@ -27,5 +27,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run Phase 04/05 rules gate
         run: npm run test:rules-domain
+      - name: Generate presentation dependency
+        run: npm run generate:presentation
       - name: Typecheck application
         run: npx tsc --noEmit
