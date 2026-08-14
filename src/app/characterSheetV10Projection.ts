@@ -1,4 +1,5 @@
 import "./creationContracts";
+import "./progressionContracts";
 import type { AbilityKey, CharacterSheet } from "./contracts";
 import type { CharacterSheetSpellVm, CharacterSheetTraitVm } from "./creationContracts";
 import { classIdFromName, classMeta, classSemantics, originFeatOptions } from "./characterCreationV10Data";
@@ -143,7 +144,8 @@ function spellEntries(c: CharacterSheet): CharacterSheetSpellVm[] {
 }
 
 function expertiseSet(c: CharacterSheet) {
-  return new Set((c.creationSelections?.["class.expertise"] ?? []).map((value) => value.replace(/^expertise\./, "")));
+  const creation = (c.creationSelections?.["class.expertise"] ?? []).map((value) => value.replace(/^expertise\./, ""));
+  return new Set([...creation, ...(c.expertiseSkills ?? [])]);
 }
 
 export type OfficialSheetProjection = {
@@ -176,7 +178,11 @@ export function projectOfficialSheet(c: CharacterSheet): OfficialSheetProjection
   const perception = skillBonus("지각", "wis");
   const semantic = classSemantics(classId);
   const levelOneSlots = semantic.spells ? (classId === "dnd.srd521.class.warlock" ? 1 : 2) : undefined;
-  const spellSlots = Array.from({ length:9 }, (_, index) => ({ level:index + 1, total:c.level === 1 && index === 0 ? levelOneSlots : undefined }));
+  const spellSlots = Array.from({ length:9 }, (_, index) => {
+    const level = index + 1;
+    const progressionTotal = c.spellSlotMaximums?.[level];
+    return { level, total:progressionTotal ?? (c.level === 1 && level === 1 ? levelOneSlots : undefined) };
+  });
   return {
     hitDie:meta.hit,
     saveProficiencies:new Set(meta.saves),
