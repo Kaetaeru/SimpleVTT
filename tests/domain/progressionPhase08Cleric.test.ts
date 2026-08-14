@@ -39,12 +39,13 @@ test("Cleric 1 -> 2 exposes one additional level-1 prepared spell and commits it
   const state = cleric(1);
   const choiceId = spellChoice(2);
   const command = stableSpellId("Command");
-  const plan = buildProgressionPlan(state, {
+  const request = {
     expectedRevision:0,
     targetClassId:clericId,
-    hpMethod:"fixed",
-    selections:{ [choiceId]:{ kind:"options", optionIds:[command] } },
-  });
+    hpMethod:"fixed" as const,
+    selections:{ [choiceId]:{ kind:"options" as const, optionIds:[command] } },
+  };
+  const plan = buildProgressionPlan(state, request);
   const choice = plan.choices.find((entry) => entry.id === choiceId);
   assert.equal(choice?.status, "ready");
   assert.equal(choice?.count, 1);
@@ -54,12 +55,7 @@ test("Cleric 1 -> 2 exposes one additional level-1 prepared spell and commits it
   assert.equal(choice?.options.find((option) => option.id === stableSpellId("Bless"))?.disabledReason, "이미 준비했거나 항상 준비된 주문입니다.");
   assert.equal(plan.blocking.length, 0);
 
-  const result = resolveProgression(state, {
-    expectedRevision:0,
-    targetClassId:clericId,
-    hpMethod:"fixed",
-    selections:{ [choiceId]:{ kind:"options", optionIds:[command] } },
-  });
+  const result = resolveProgression(state, request);
   assert.equal(result.status, "committed");
   if (result.status !== "committed") return;
   assert.equal(result.state.totalLevel, 2);
@@ -68,7 +64,7 @@ test("Cleric 1 -> 2 exposes one additional level-1 prepared spell and commits it
   assert.equal(result.state.spellSlotMaximums?.[1], 3);
 });
 
-test("Cleric 2 -> 3 exposes level-2 spell membership while the SRD subclass choice remains explicit", () => {
+test("Cleric 2 -> 3 applies Life Domain spells as always prepared and keeps them out of the ordinary prepared choice", () => {
   const state = cleric(2, {
     preparedSpellIds:[
       stableSpellId("Bless"), stableSpellId("Command"), stableSpellId("Cure Wounds"),
@@ -76,26 +72,44 @@ test("Cleric 2 -> 3 exposes level-2 spell membership while the SRD subclass choi
     ],
   });
   const choiceId = spellChoice(3);
-  const plan = buildProgressionPlan(state, {
+  const spiritualWeapon = stableSpellId("Spiritual Weapon");
+  const request = {
     expectedRevision:0,
     targetClassId:clericId,
-    hpMethod:"fixed",
+    hpMethod:"fixed" as const,
     selections:{
-      [choiceId]:{ kind:"options", optionIds:[stableSpellId("Aid")] },
-      [`progression.${clericId}.3.subclass`]:{ kind:"options", optionIds:["subclass:생명 권역"] },
+      [choiceId]:{ kind:"options" as const, optionIds:[spiritualWeapon] },
+      [`progression.${clericId}.3.subclass`]:{ kind:"options" as const, optionIds:["subclass:생명 권역"] },
     },
-  });
+  };
+  const plan = buildProgressionPlan(state, request);
   const choice = plan.choices.find((entry) => entry.id === choiceId);
   assert.equal(choice?.status, "ready");
-  assert.ok(choice?.options.some((option) => option.id === stableSpellId("Aid")));
-  assert.ok(plan.choices.some((entry) => entry.kind === "subclass"));
+  assert.equal(choice?.options.find((option) => option.id === stableSpellId("Aid"))?.disabledReason, "이미 준비했거나 항상 준비된 주문입니다.");
+  assert.equal(choice?.options.find((option) => option.id === stableSpellId("Lesser Restoration"))?.disabledReason, "이미 준비했거나 항상 준비된 주문입니다.");
+  assert.ok(choice?.options.some((option) => option.id === spiritualWeapon && !option.disabledReason));
+  assert.ok(plan.diffs.some((diff) => diff.label === "항상 준비 주문" && diff.after.includes("Aid") && diff.after.includes("Lesser Restoration")));
+  assert.equal(plan.blocking.length, 0);
+
+  const result = resolveProgression(state, request);
+  assert.equal(result.status, "committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.totalLevel, 3);
+  assert.equal(result.state.classTracks[0].subclassName, "생명 권역");
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${stableSpellId("Aid")}`));
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${stableSpellId("Bless")}`));
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${stableSpellId("Cure Wounds")}`));
+  assert.ok(result.state.preparedSpellIds?.includes(`always:${stableSpellId("Lesser Restoration")}`));
+  assert.ok(result.state.preparedSpellIds?.includes(spiritualWeapon));
+  assert.equal(result.state.preparedSpellSources?.[stableSpellId("Aid")], "클레릭 3레벨 · 생명 권역 주문 · SRD 5.2.1");
 });
 
 test("Cleric 3 -> 4 still exposes the cantrip increase explicitly until the canonical cantrip choice is wired", () => {
   const state = cleric(3, {
     preparedSpellIds:[
-      stableSpellId("Bless"), stableSpellId("Command"), stableSpellId("Cure Wounds"), stableSpellId("Healing Word"),
-      stableSpellId("Shield of Faith"), stableSpellId("Aid"),
+      `always:${stableSpellId("Bless")}`, `always:${stableSpellId("Cure Wounds")}`,
+      `always:${stableSpellId("Aid")}`, `always:${stableSpellId("Lesser Restoration")}`,
+      stableSpellId("Command"), stableSpellId("Healing Word"), stableSpellId("Shield of Faith"), stableSpellId("Spiritual Weapon"),
     ],
   });
   const plan = buildProgressionPlan(state, {
@@ -103,7 +117,7 @@ test("Cleric 3 -> 4 still exposes the cantrip increase explicitly until the cano
     targetClassId:clericId,
     hpMethod:"fixed",
     selections:{
-      [spellChoice(4)]:{ kind:"options", optionIds:[stableSpellId("Lesser Restoration")] },
+      [spellChoice(4)]:{ kind:"options", optionIds:[stableSpellId("Prayer of Healing")] },
       [`progression.${clericId}.4.asi`]:{ kind:"asi", mode:"plus-two", primary:"wis" },
     },
   });
