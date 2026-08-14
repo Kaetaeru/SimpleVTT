@@ -16,6 +16,9 @@ import type { TemporaryHpChoice } from "./temporaryHp";
 export type NumericOperand = number | {
   operationId: string;
   field: "total" | "diceTotal" | "finalDamage" | "restored";
+  multiplier?: number;
+  add?: number;
+  rounding?: "floor" | "ceil" | "round";
 };
 
 export interface OperationPredicate {

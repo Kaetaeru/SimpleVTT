@@ -19,10 +19,23 @@ export function valueFromResult(results: Map<string, unknown>, operand: NumericO
   if (typeof operand === "number") return operand;
   const result = results.get(operand.operationId);
   if (!result || typeof result !== "object") throw new Error(`numeric result not found: ${operand.operationId}`);
-  const value = (result as Record<string, unknown>)[operand.field];
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  const raw = (result as Record<string, unknown>)[operand.field];
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
     throw new Error(`numeric field ${operand.field} missing on ${operand.operationId}`);
   }
+  let value = raw;
+  if (operand.multiplier !== undefined) {
+    if (!Number.isFinite(operand.multiplier)) throw new Error("numeric operand multiplier must be finite");
+    value *= operand.multiplier;
+  }
+  if (operand.add !== undefined) {
+    if (!Number.isFinite(operand.add)) throw new Error("numeric operand add must be finite");
+    value += operand.add;
+  }
+  if (operand.rounding === "floor") value = Math.floor(value);
+  else if (operand.rounding === "ceil") value = Math.ceil(value);
+  else if (operand.rounding === "round") value = Math.round(value);
+  if (!Number.isFinite(value)) throw new Error("numeric operand resolved to a non-finite value");
   return value;
 }
 
