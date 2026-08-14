@@ -6,6 +6,8 @@ import {
   CLERIC_CHANNEL_DIVINITY_RESOURCE_ID,
   CLERIC_ID,
   DRUID_ID,
+  DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID,
+  DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID,
   DRUID_WILD_SHAPE_RESOURCE_ID,
   PALADIN_CHANNEL_DIVINITY_RESOURCE_ID,
   PALADIN_ID,
@@ -92,4 +94,37 @@ test("Druid Wild Shape projection preserves spent uses while the level-17 capaci
   resource = snapshot.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_SHAPE_RESOURCE_ID);
   assert.equal(resource?.max, 4);
   assert.equal(resource?.current, 1, "level-17 capacity growth must not refill Wild Shape");
+});
+
+test("Druid level 5 projects independent turn and Long-Rest Wild Resurgence gates without snapshot refills", async () => {
+  const { adapter, internal } = await baselineAdapter();
+  internal.activeCharacter = {
+    ...internal.activeCharacter,
+    className:"드루이드",
+    level:5,
+    classLevels:[{ classId:DRUID_ID, className:"드루이드", level:5 }],
+    resources:[],
+  };
+  let snapshot = await adapter.getSnapshot();
+  const turnGate = snapshot.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID);
+  const longRestGate = snapshot.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID);
+  assert.deepEqual({ current:turnGate?.current, max:turnGate?.max, recovery:turnGate?.recovery }, {
+    current:1,
+    max:1,
+    recovery:{ turnStart:"all" },
+  });
+  assert.deepEqual({ current:longRestGate?.current, max:longRestGate?.max, recovery:longRestGate?.recovery }, {
+    current:1,
+    max:1,
+    recovery:{ longRest:"all" },
+  });
+
+  const internalTurn = internal.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID);
+  const internalLong = internal.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID);
+  assert.ok(internalTurn && internalLong);
+  internalTurn!.current = 0;
+  internalLong!.current = 0;
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID)?.current, 0);
+  assert.equal(snapshot.activeCharacter.resources.find((entry) => entry.id === DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID)?.current, 0);
 });
