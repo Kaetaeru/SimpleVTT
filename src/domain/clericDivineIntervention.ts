@@ -52,6 +52,8 @@ function validateRequest(definition: SpellMechanicDefinition, request: ClericDiv
 
 function spellRequest(request: ClericDivineInterventionRequest) {
   const featureSpellIds = [...new Set([...(request.caster.featureSpellIds ?? []), request.spellId])];
+  const featureResourceIds = { ...(request.caster.featureResourceIds ?? {}) };
+  delete featureResourceIds[request.spellId];
   return {
     id:request.id,
     actorId:request.actorId,
@@ -61,7 +63,7 @@ function spellRequest(request: ClericDivineInterventionRequest) {
     caster:{
       ...request.caster,
       featureSpellIds,
-      featureResourceIds:{ ...(request.caster.featureResourceIds ?? {}) },
+      featureResourceIds,
     },
     targets:request.targets,
     componentsSatisfied:true,
