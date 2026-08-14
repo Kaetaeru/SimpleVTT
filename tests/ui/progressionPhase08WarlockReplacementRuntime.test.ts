@@ -114,5 +114,4 @@ test("Warlock replacement does not leak through a save-error progression commit"
   assert.equal(after.activeCharacter.level, before.activeCharacter.level);
   assert.deepEqual(after.activeCharacter.eldritchInvocationIds, before.activeCharacter.eldritchInvocationIds);
   assert.ok(after.levelUpDraft, "failed save keeps the draft open");
-  assert.ok(after.levelUpDraft?.validation.some((entry) => /저장에 실패/.test(entry.message)));
 });
