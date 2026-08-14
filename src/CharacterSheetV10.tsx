@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { AbilityKey, ItemInstanceVm } from "./app/contracts";
 import type { CharacterSheetSpellVm, CharacterSheetTraitVm } from "./app/creationContracts";
 import { projectOfficialSheet, SHEET_ABILITY_LABELS, signed } from "./app/characterSheetV10Projection";
 import { classIdFromName } from "./app/characterCreationV10Data";
+import { spellPresentationById } from "./app/spellPresentation";
+import { SpellGlyph, SpellTile, SpellTooltip } from "./SpellUi";
 
 type Props = { onScene(): void; onLevelUp(): void; onEdit(): void };
 type FloatingPos = { top:number; left:number; width:number };
@@ -33,7 +35,7 @@ function HoverRule({ title, subtitle, description, lines = [], children }: { tit
   }, [open]);
   return <>
     <div ref={host} className="sheet-hover-host" tabIndex={0} onPointerEnter={() => setOpen(true)} onPointerLeave={() => setOpen(false)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}>{children}</div>
-    {open && pos && createPortal(<div className="sheet-rule-tooltip" style={{ top:pos.top, left:pos.left, width:pos.width }}><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}<p>{description || "현재 카탈로그에 연결된 요약 정보만 표시합니다. 전체 SRD 본문이 materialize되면 이 자리에서 바로 표시됩니다."}</p>{lines.length > 0 && <div>{lines.map((line) => <span key={line}>{line}</span>)}</div>}</div>, document.body)}
+    {open && pos && createPortal(<div className="sheet-rule-tooltip" style={{ top:pos.top, left:pos.left, width:pos.width }}><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}<p>{description || "현재 카탈로그에 연결된 요약 정보만 표시합니다."}</p>{lines.length > 0 && <div>{lines.map((line) => <span key={line}>{line}</span>)}</div>}</div>, document.body)}
   </>;
 }
 
@@ -41,9 +43,42 @@ function TraitRow({ trait }: { trait:CharacterSheetTraitVm }) {
   return <HoverRule title={trait.name} subtitle={trait.sourceLabel} description={trait.description} lines={trait.detailLines}><div className="sheet-trait-row"><strong>{trait.name}</strong><small>{trait.sourceLabel}</small></div></HoverRule>;
 }
 
-function SpellRow({ spell }: { spell:CharacterSheetSpellVm }) {
-  const status = spell.level === 0 ? "소마법" : spell.alwaysPrepared ? "항상 준비" : spell.prepared ? "준비" : "주문서";
-  return <HoverRule title={spell.name} subtitle={spell.nameEn} description={spell.description} lines={spell.detailLines}><div className="sheet-spell-row"><span>{spell.level === 0 ? "C" : spell.level}</span><strong>{spell.name}</strong><small>{status}</small></div></HoverRule>;
+function spellStatus(spell: CharacterSheetSpellVm) {
+  if (spell.level === 0) return "소마법";
+  if (spell.alwaysPrepared) return "항상 준비";
+  if (spell.prepared) return "준비";
+  return "주문서";
+}
+
+function SpellbookPanel({ spells }: { spells:CharacterSheetSpellVm[] }) {
+  const [query, setQuery] = useState("");
+  const [level, setLevel] = useState<number | "all">("all");
+  const prepared = useMemo(() => spells.filter((spell) => spell.level > 0 && spell.prepared), [spells]);
+  const levels = useMemo(() => Array.from(new Set(spells.map((spell) => spell.level))).sort((a,b) => a - b), [spells]);
+  const normalized = query.trim().toLocaleLowerCase("ko-KR");
+  const visible = useMemo(() => spells.filter((spell) => {
+    if (level !== "all" && spell.level !== level) return false;
+    return !normalized || `${spell.name} ${spell.nameEn ?? ""}`.toLocaleLowerCase("ko-KR").includes(normalized);
+  }), [level, normalized, spells]);
+  const visibleLevels = Array.from(new Set(visible.map((spell) => spell.level))).sort((a,b) => a - b);
+
+  return <div className="sheet-spellbook">
+    <section className="spellbook-prepared-block">
+      <header><div><span>PREPARED SPELLS</span><strong>준비된 주문</strong><small>전투에서 바로 사용할 준비 상태를 위에 고정합니다.</small></div><b>{prepared.length}</b></header>
+      <div className="spellbook-prepared-strip">{prepared.length ? prepared.map((spell) => <SpellTile key={spell.id} spellId={spell.id} selected status={spellStatus(spell)} compact/>) : <span>현재 준비된 1레벨 이상 주문이 없습니다.</span>}</div>
+    </section>
+    <div className="spellbook-toolbar">
+      <div className="spellbook-level-tabs"><button type="button" className={level === "all" ? "active" : ""} onClick={() => setLevel("all")}>전체</button>{levels.map((item) => <button type="button" key={item} className={level === item ? "active" : ""} onClick={() => setLevel(item)}>{item === 0 ? "소마법" : `${item}`}</button>)}</div>
+      <label><span>검색</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="주문 이름 검색"/></label>
+    </div>
+    <div className="spellbook-level-groups">
+      {visibleLevels.map((item) => {
+        const group = visible.filter((spell) => spell.level === item).sort((a,b) => a.name.localeCompare(b.name, "ko"));
+        return <section className="spellbook-level-group" key={item}><header><strong>{item === 0 ? "소마법" : `${item}레벨 주문`}</strong><span>{group.length}개</span></header><div className="spellbook-grid">{group.map((spell) => <SpellTile key={spell.id} spellId={spell.id} selected={spell.prepared} status={spellStatus(spell)} compact/>)}</div></section>;
+      })}
+      {!visible.length && <div className="spellbook-empty">조건에 맞는 주문이 없습니다.</div>}
+    </div>
+  </div>;
 }
 
 function Box({ title, className = "", children }: { title:string; className?:string; children:ReactNode }) {
@@ -115,7 +150,10 @@ export function CharacterSheetV10({ onScene, onLevelUp, onEdit }: Props) {
           <Box title="무기 & 피해 · 소마법" className="official-attacks">
             <div className="official-table-head"><span>이름</span><span>명중 / DC</span><span>피해 & 유형</span><span>메모</span></div>
             {c.attacks.map((attack) => <div className="official-attack-row" key={attack.id}><strong>{attack.name}</strong><span>+{attack.bonus}</span><span>{attack.damage}</span><span>무기 공격</span></div>)}
-            {cantrips.map((spell) => <HoverRule key={spell.id} title={spell.name} subtitle={spell.nameEn} description={spell.description} lines={spell.detailLines}><div className="official-attack-row spell"><strong>{spell.name}</strong><span>{casting ? `DC ${8 + c.proficiencyBonus + castingMod}` : "—"}</span><span>소마법</span><span>hover로 상세</span></div></HoverRule>)}
+            {cantrips.map((spell) => {
+              const presentation = spellPresentationById(spell.id);
+              return <SpellTooltip key={spell.id} spellId={spell.id} status="소마법"><div className="official-attack-row spell"><div className="official-attack-spell-name">{presentation && <SpellGlyph spell={presentation} size="xs"/>}<strong>{spell.name}</strong></div><span>{casting ? `DC ${8 + c.proficiencyBonus + castingMod}` : "—"}</span><span>소마법</span><span>hover로 상세</span></div></SpellTooltip>;
+            })}
             {c.attacks.length === 0 && cantrips.length === 0 && <div className="official-empty-line">등록된 공격 또는 소마법 없음</div>}
           </Box>
 
@@ -136,7 +174,7 @@ export function CharacterSheetV10({ onScene, onLevelUp, onEdit }: Props) {
           <Box title="주문 시전 능력"><div className="spellcasting-summary">{casting ? <><strong>{SHEET_ABILITY_LABELS[casting]}</strong><span>수정치 <b>{signed(castingMod)}</b></span><span>주문 내성 DC <b>{8 + c.proficiencyBonus + castingMod}</b></span><span>주문 공격 <b>{signed(c.proficiencyBonus + castingMod)}</b></span></> : <span>주문 시전 없음</span>}</div></Box>
           <Box title="주문 슬롯"><div className="spell-slot-grid">{view.spellSlots.map((slot) => <div key={slot.level}><span>{slot.level}레벨</span><strong>{slot.total ?? "—"}</strong><small>{slot.total ? `◇`.repeat(slot.total) : ""}</small></div>)}</div></Box>
         </div>
-        <Box title="소마법 & 준비 주문" className="official-spell-list"><div className="spell-list-head"><span>레벨</span><span>이름</span><span>상태</span></div>{view.spells.length ? view.spells.map((spell) => <SpellRow key={spell.id} spell={spell}/>) : <div className="official-empty-line">주문 없음</div>}</Box>
+        <Box title="주문서 & 준비 주문" className="official-spell-list">{view.spells.length ? <SpellbookPanel spells={view.spells}/> : <div className="official-empty-line">주문 없음</div>}</Box>
       </div>
 
       <aside className="official-detail-column">
