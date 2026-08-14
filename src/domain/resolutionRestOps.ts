@@ -1,4 +1,5 @@
 import { requireCombatant } from "./combatState";
+import { gainResource, spendResource } from "./resources";
 import { resolveLongRest, resolveShortRest } from "./rest";
 import { hpStateChanges } from "./stateChange";
 import {
@@ -39,10 +40,27 @@ function executeRest(
   actor.resources = resolved.next.resources;
   actor.hitDice = resolved.next.hitDice;
   ctx.state.effects = [...otherEffects, ...resolved.next.effects];
+  const provenance = [...resolved.provenance];
+  let resourceRestoration: { resourceId:string; amount:number; usageResourceId:string } | undefined;
+
+  if (operation.kind === "short-rest" && operation.resourceRestoration) {
+    const restoration = operation.resourceRestoration;
+    const usageIndex = actor.resources.findIndex((pool) => pool.id === restoration.usageResourceId);
+    const resourceIndex = actor.resources.findIndex((pool) => pool.id === restoration.resourceId);
+    if (usageIndex < 0) throw new Error(`resource not found: ${restoration.usageResourceId}`);
+    if (resourceIndex < 0) throw new Error(`resource not found: ${restoration.resourceId}`);
+    const usage = spendResource(actor.resources[usageIndex], 1, ctx.pending.sourceId);
+    actor.resources[usageIndex] = usage.next;
+    provenance.push(...usage.provenance);
+    const gain = gainResource(actor.resources[resourceIndex], restoration.amount, ctx.pending.sourceId);
+    actor.resources[resourceIndex] = gain.next;
+    provenance.push(...gain.provenance);
+    resourceRestoration = { ...restoration };
+  }
 
   const changes:RuntimeStateChange[] = [
-    ...hpStateChanges(operation.targetId, beforeHp, actor.life.hp, resolved.provenance),
-    ...lifeFlagStateChanges(operation.targetId, beforeLife, actor.life, resolved.provenance),
+    ...hpStateChanges(operation.targetId, beforeHp, actor.life.hp, provenance),
+    ...lifeFlagStateChanges(operation.targetId, beforeLife, actor.life, provenance),
   ];
   for (const before of beforeResources) {
     const after = actor.resources.find((pool) => pool.id === before.id);
@@ -53,13 +71,13 @@ function executeRest(
           before.id,
           before.current,
           after.current,
-          resolved.provenance,
+          provenance,
         ),
       );
     }
   }
   resolved.expiredEffects.forEach((effect) => {
-    changes.push(effectStateChange(effect.targetId, effect.id, "removed", resolved.provenance));
+    changes.push(effectStateChange(effect.targetId, effect.id, "removed", provenance));
   });
 
   const concentration = ctx.state.concentration[operation.targetId];
@@ -69,20 +87,21 @@ function executeRest(
         operation.targetId,
         concentration.groupId,
         undefined,
-        resolved.provenance,
+        provenance,
       ),
     );
     ctx.state.concentration[operation.targetId] = undefined;
   }
 
+  const result = resourceRestoration ? { ...resolved, resourceRestoration } : resolved;
   return {
-    result:resolved,
+    result,
     event:makeEvent(
       ctx.pending,
       operation,
       `${operation.targetId} completes ${operation.kind}`,
-      resolved,
-      resolved.provenance,
+      result,
+      provenance,
       changes,
       operation.targetId,
     ),
