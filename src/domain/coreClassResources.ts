@@ -14,6 +14,8 @@ export const DRUID_WILD_SHAPE_RESOURCE_ID = "resource:druid.wild-shape";
 export const DRUID_WILD_RESURGENCE_TURN_RESOURCE_ID = "resource:druid.wild-resurgence.turn";
 export const DRUID_WILD_RESURGENCE_LONG_REST_RESOURCE_ID = "resource:druid.wild-resurgence.long-rest";
 export const FIGHTER_SECOND_WIND_RESOURCE_ID = "resource:fighter.second-wind";
+export const FIGHTER_ACTION_SURGE_RESOURCE_ID = "resource:fighter.action-surge";
+export const FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID = "resource:fighter.action-surge.turn";
 export const FIGHTER_INDOMITABLE_RESOURCE_ID = "resource:fighter.indomitable";
 
 export interface CoreClassResourceDefinition {
@@ -71,6 +73,12 @@ export function fighterSecondWindMaximum(level: number) {
   if (level >= 10) return 4;
   if (level >= 4) return 3;
   return 2;
+}
+
+export function fighterActionSurgeMaximum(level: number) {
+  validatedLevel("Fighter", level);
+  if (level < 2) return 0;
+  return level >= 17 ? 2 : 1;
 }
 
 export function fighterIndomitableMaximum(level: number) {
@@ -183,6 +191,29 @@ export function coreClassResourceDefinitions(classTracks: ProgressionClassTrack[
       source:`파이터 ${fighterLevel}레벨 · Second Wind · SRD 5.2.1`,
       recovery:{ shortRest:1, longRest:"all" },
     });
+  }
+  const actionSurgeMaximum = fighterActionSurgeMaximum(fighterLevel);
+  if (actionSurgeMaximum > 0) {
+    definitions.push(
+      {
+        classId:FIGHTER_ID,
+        classLevel:fighterLevel,
+        resourceId:FIGHTER_ACTION_SURGE_RESOURCE_ID,
+        label:"Action Surge",
+        maximum:actionSurgeMaximum,
+        source:`파이터 ${fighterLevel}레벨 · Action Surge · SRD 5.2.1`,
+        recovery:{ shortRest:"all", longRest:"all" },
+      },
+      {
+        classId:FIGHTER_ID,
+        classLevel:fighterLevel,
+        resourceId:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID,
+        label:"Action Surge · turn gate",
+        maximum:1,
+        source:`파이터 ${fighterLevel}레벨 · Action Surge same-turn limit · SRD 5.2.1`,
+        recovery:{ turnStart:"all" },
+      },
+    );
   }
   const indomitableMaximum = fighterIndomitableMaximum(fighterLevel);
   if (indomitableMaximum > 0) {
