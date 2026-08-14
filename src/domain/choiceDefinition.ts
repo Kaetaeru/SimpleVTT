@@ -71,8 +71,20 @@ export function validateChoiceDefinitions(definitions: ChoiceDefinition[], selec
       issues.push({ choiceId: definition.id, severity: "blocking", message: `${definition.label}에서 ${definition.count}개를 선택해야 합니다.` });
       continue;
     }
-    const known = new Set(definition.options.map((option) => option.id));
-    if (selection.optionIds.some((id) => !known.has(id))) issues.push({ choiceId: definition.id, severity: "blocking", message: `${definition.label}에 알 수 없는 선택값이 있습니다.` });
+    if (new Set(selection.optionIds).size !== selection.optionIds.length) {
+      issues.push({ choiceId: definition.id, severity: "blocking", message: `${definition.label}에서 같은 선택지를 중복 선택할 수 없습니다.` });
+      continue;
+    }
+    const byId = new Map(definition.options.map((option) => [option.id, option]));
+    const unknown = selection.optionIds.filter((id) => !byId.has(id));
+    if (unknown.length) {
+      issues.push({ choiceId: definition.id, severity: "blocking", message: `${definition.label}에 알 수 없는 선택값이 있습니다.` });
+      continue;
+    }
+    const disabled = selection.optionIds.map((id) => byId.get(id)!).find((option) => Boolean(option.disabledReason));
+    if (disabled) {
+      issues.push({ choiceId: definition.id, severity: "blocking", message: `${disabled.label}은(는) 선택할 수 없습니다: ${disabled.disabledReason}` });
+    }
   }
   return issues;
 }
