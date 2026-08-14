@@ -202,7 +202,7 @@ test("compound class rider damage makes one Concentration check from the aggrega
   if (result.status !== "committed") return;
   const damage = result.results[`${request.id}:damage`] as { finalDamage:number };
   assert.equal(damage.finalDamage,12, "8 slashing resisted to 4 plus 8 radiant");
-  assert.ok(result.state.concentration.goblin, "12 aggregate damage sets DC 10, so a 9 should fail only if no modifier; natural total 9 fails");
+  assert.equal(result.state.concentration.goblin, undefined, "aggregate damage 12 sets DC 10, so a total 9 fails exactly one Concentration check");
   const concentrationEntries = result.events
     .flatMap((event) => event.provenance)
     .filter((entry) => entry.source === "profile:dnd.srd-5.2.1/concentration");
