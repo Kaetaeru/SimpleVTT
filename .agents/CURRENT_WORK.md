@@ -120,12 +120,16 @@ Implementation checkpoint:
 - [x] fully atomic Shortbow transaction raw `ResolutionEvent[]` 보존
 - [x] Shortbow Activity Log를 committed events에서 직접 projection
 - [x] Shortbow safe Undo를 before-snapshot 대신 event state-change inverse로 실행
+- [x] Second Wind healing + Bonus Action + class resource를 **하나의 atomic domain transaction**으로 실행
+- [x] Second Wind Activity Log를 committed `ResolutionEvent[]`에서 직접 projection
+- [x] Second Wind Undo를 HP + economy + class resource event inverse로 실행
+- [x] generic event-native inverse가 HP / economy / character resource를 지원
 - [x] event `after`와 현재 state 불일치 시 stale Undo explicit reject
 - [x] event-native Undo 후 turn runtime HP/economy reconcile
 
 #### Representative E2E paths
 
-- [x] Second Wind — structured healing → domain healing → Bonus Action + class resource
+- [x] Second Wind — structured `1d10+5` → **atomic healing + Bonus Action + class resource** → event Activity → event Undo
 - [x] Thunderwave — runtime save stats → save-half → typed damage → resistance/Temp HP → Action cost
 - [x] Shortbow — visual dice → canonical weapon fact → pairwise spatial targeting → atomic `resolveAttack` → event Activity → event Undo
 - [x] Healing Potion — `2d4+2` → healing → quantity + Action
@@ -134,7 +138,7 @@ Implementation checkpoint:
 ### 현재 verified implementation checkpoint
 
 ```text
-0bed704d80191d5d0170df05bd0adb0fa23caa2c
+827befbc9d6b195dd6e1e835987b0b1fd123af5f
 ```
 
 검증:
@@ -152,8 +156,9 @@ UI production build               ✅
 
 ### 다음 Phase 09 작업
 
-- [ ] Shortbow 외 Second Wind / Thunderwave / Potion / Wand Activity를 raw committed `ResolutionEvent[]` projection으로 확대
-- [ ] event-native Undo inverse를 resource / item / effect / concentration / life state change까지 확대
+- [ ] Thunderwave / Potion / Wand Activity를 raw committed `ResolutionEvent[]` projection으로 확대
+- [ ] event-native Undo inverse를 ItemInstance quantity/charges / effect / concentration / life state change까지 확대
+- [ ] Potion / Wand를 HP/damage + item cost + economy가 한 domain transaction으로 commit되는 경로로 수렴
 - [ ] multi-target saving throw damage/economy를 하나의 atomic transaction으로 수렴
 - [ ] movement / Reaction / interrupt command를 turn runtime 직접 command로 수렴
 - [ ] pairwise spatial relation을 실제 scene movement/position command로 갱신하는 application service 추가
