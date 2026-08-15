@@ -4,47 +4,50 @@ SimpleVTT is a local-first desktop companion for lightweight D&D play. The repos
 
 ## Current development gate
 
-Phase 08 implementation issue: #51 — canonical catalog relationships and class/subclass mechanics  
-Active PR: #52 — `rules: execute Phase 08 catalog relationships`  
-Active branch: `agent/50-rules-phase08`
+Active issue: #53 — Phase 09 mechanics integration / RealAdapter convergence  
+Active PR: #54 — `app: converge Phase 09 mechanics into RealAdapter services`  
+Active branch: `agent/53-mechanics-phase09`  
+Stacked base: Phase 08 PR #52 / `agent/50-rules-phase08`
 
-Phase 08 replaces Phase 07 `catalog-pending` progression choices with canonical stable-ID relationships and mechanics-backed execution. The current branch now has an outermost progression audit covering all 12 classes across levels 2-20 with **zero `catalog-pending` choices**, while preserving explicit rejection for downstream mechanics that require a primitive outside the current engine boundary.
+Phase 08 is complete at the catalog/class-mechanics boundary. Its outermost progression audit covers all 12 SRD classes across target levels 2-20 with **zero `catalog-pending` choices**. Unsupported downstream execution shapes still reject explicitly rather than being approximated.
 
-Phase 08 coverage includes:
+Phase 09 now moves representative play paths out of MockAdapter-owned rule calculation and into shared application/domain services while keeping the current UI/ViewModel contracts stable.
 
-- generated spell, feat, weapon, and class-skill rule metadata plus stable-ID/provenance persistence
-- Expertise, higher-level spell choices, Metamagic, Invocations, Mystic Arcanum, Epic Boons, Weapon Mastery, and Fighting Style progression
-- Ranger / Hunter and Paladin / Oath of Devotion progression and representative runtime mechanics
-- Cleric / Life Domain, including Divine Intervention and Greater Divine Intervention's executable Wish spell-replication path for supported level-8-or-lower spell mechanics
-- Druid / Circle of the Land, including session-scoped current-land configuration and rest-time spell-package reconfiguration
-- Fighter / Champion progression/runtime, Weapon Mastery, Fighting Style, and subclass feature relationships
-- Barbarian / Path of the Berserker mechanics-backed high-level subclass relationships
-- Monk / Warrior of the Open Hand, including Focus projection, Wholeness of Body, Fleet Step, and Quivering Palm contracts
-- Rogue / Thief, including Supreme Sneak, Use Magic Device, and Thief's Reflexes contracts
-- Bard / College of Lore, including Bardic Inspiration runtime mechanics
-- Sorcerer / Draconic Sorcery progression/runtime
-- Wizard spellbook/Spell Mastery/Signature Spells plus School of Evocation progression/runtime
-- Warlock / Fiend Patron plus Pact Magic, Invocations, Mystic Arcanum, and Pact of the Tome rest configuration
+Current Phase 09 integration coverage includes:
 
-The Phase 08 rules implementation checkpoint is `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`. Contract validation, Rules Domain, Phase 07/08 aggregate progression, TypeScript, UI runtime gates, and production build are green on that checkpoint.
+- targetless/freeform ability checks through a generic domain `openD20` resolver without inventing a DC
+- attack hit/critical previews through the canonical d20 resolver, including natural 1 and natural 20 semantics
+- typed attack damage through the domain damage resolver, including resistance, vulnerability, immunity, Temporary HP, and HP ordering
+- Action / Bonus Action / Reaction and class-resource costs through atomic `ResolutionEvent` transactions with rollback on invalid resource spend
+- healing state application through the domain healing resolver
+- an end-to-end Second Wind representative path: healing + Bonus Action + class resource + Activity provenance/state changes + Undo restoration
+- Phase 08 zero-pending, aggregate progression, TypeScript, and production UI regression gates remain green
 
-Issue #51 remains the integration tracker for PR #52. After this stacked PR is integrated, the next implementation gate is Phase 09: converge the executable Phase 08 rules paths into real application/domain services and remove MockAdapter rule calculation from representative play flows.
+Latest Phase 09 integration checkpoint:
+
+```text
+41563dfe49cb7a5e733b9f671b985472ec371a44
+```
+
+On that checkpoint, Contract validation, Rules Domain, Phase 07/08 aggregate progression, Phase 09 service/adapter tests, TypeScript, and the UI production build are green.
 
 ## Application architecture
 
-The React UI consumes application/ViewModel contracts rather than calculating named rules directly. The current development shell still uses `MockAdapter` as its replaceable application boundary, while Phase 06-08 runtime adapters delegate increasingly large rule paths to the executable domain layer.
+The React UI consumes application/ViewModel contracts rather than calculating named rules directly. During Phase 09, `MockAdapter` remains transitional fixture/state storage, while rule calculation is moved behind shared application services backed by the executable rules domain.
 
 ```text
 React UI
    ↓
 Application / ViewModel contracts
    ↓
-Runtime adapter boundary
+Phase 09 application services
    ↓
-Executable rules domain + generated canonical catalogs
+Executable rules domain / ResolutionEvent transactions
+   ↓
+Transitional state projection into the current adapter shell
 ```
 
-Phase 09 will converge these paths into the real application/domain adapter and remove remaining MockAdapter rule calculation from representative play flows.
+The next Phase 09 slices are authoritative saving-throw target modifiers, fully atomic staged attack transactions, ItemInstance charge/quantity transactions, real initiative/turn runtime state, and direct Activity/Undo projection from committed domain events.
 
 ## Frontend
 

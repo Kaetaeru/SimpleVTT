@@ -19,77 +19,101 @@
 - [x] Rules Engine Phase 06 — spellcasting kernel + reference runtime bridge
 - [x] Rules Engine Phase 07 — 1-20 progression / multiclass / ChoiceDefinition
 - [x] Rules Engine Phase 08 — canonical catalog relationships + class/subclass mechanics
-- [ ] Rules Engine Phase 09 — real mechanics integration / RealAdapter ← **next**
+- [ ] Rules Engine Phase 09 — real mechanics integration / RealAdapter ← **current**
 
-Phase 08 integration branch/PR:
+현재 작업 스택:
 
 ```text
-Issue #51  rules: execute Phase 08 catalog relationships
-PR    #52  agent/50-rules-phase08
+Issue #53  app: converge Phase 09 mechanics into RealAdapter services
+PR    #54  agent/53-mechanics-phase09
+Base       agent/50-rules-phase08 (PR #52)
 ```
 
 ## Phase 08 — Catalog Relationships / Class Mechanics ✅
 
-목표: Phase 07의 `catalog-pending` 선택을 실제 SRD 5.2.1 stable-ID 관계와 mechanics-backed 실행 경로로 교체한다.
-
 완료 기준:
 
-- 12개 클래스 × 레벨 2-20 outermost progression audit에서 `catalog-pending` **0개**
+- 12개 SRD 클래스 × target level 2-20 outermost progression audit에서 `catalog-pending` **0개**
 - unsupported downstream mechanic은 silent approximation 없이 explicit reject
 - stable ID + provenance + ChoiceDefinition + atomic revision-checked commit 유지
 - Contract / Rules Domain / Phase 07/08 aggregate progression / TypeScript / UI-build 전체 green
 
-### 완료/구현된 주요 범위
+Rules implementation checkpoint:
 
-- [x] ChoiceDefinition required/optional/disabled/duplicate validation
-- [x] class / spell / feat / feature stable-ID 관계와 provenance
-- [x] generated spell / feat / weapon / class-skill rule metadata
-- [x] Expertise, higher-level spell choices, Metamagic, Invocations, Mystic Arcanum
-- [x] Epic Boon generated catalog + Phase 08 progression resolver + CharacterSheet projection
-- [x] weapon mastery / fighting style progression catalogs
-- [x] Ranger / Hunter progression + representative runtime mechanics
-- [x] Paladin / Oath of Devotion progression + representative runtime mechanics
-- [x] Cleric + Life Domain mechanics-backed progression/runtime
-- [x] Greater Divine Intervention Wish basic spell-replication path for fully executable level-8-or-lower spell mechanics + exact 2d4 Long-Rest lockout
-- [x] Druid + Circle of the Land mechanics-backed progression/runtime + session-scoped current-land configuration
-- [x] Fighter + Champion mechanics-backed progression/runtime
-- [x] Barbarian + Path of the Berserker high-level subclass mechanics
-- [x] Monk + Warrior of the Open Hand high-level subclass relationships and mechanics contracts
-- [x] Rogue + Thief high-level subclass relationships and mechanics contracts
-- [x] Bard progression + College of Lore + Bardic Inspiration domain/runtime
-- [x] Wizard spellbook / Scholar / Spell Mastery / Signature Spells / Long-Rest preparation + School of Evocation domain/runtime
-- [x] Sorcerer progression / Metamagic replacement / Draconic Sorcery domain/runtime
-- [x] Warlock Pact Magic / Invocation replacement / Mystic Arcanum / Pact of the Tome + Fiend Patron mechanics
-- [x] Wizard Long-Rest, Pact of the Tome rest, Circle of the Land rest application commands
-- [x] authoritative attack transaction, compound damage, restricted extra Actions, resource recovery lockouts
-- [x] latest subclass domain/UI/runtime tests are part of the formal CI gates
+```text
+3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb
+```
 
-### Phase 08 마감 결과
+Phase 08 integration/document head:
 
-- [x] Bard Lore / Sorcerer Draconic / Wizard Evocation progression wrapper를 실제 앱 adapter chain에 끝까지 연결
-- [x] 최신 Phase 08 domain/UI 테스트를 정식 CI gate에 편입
-- [x] Greater Divine Intervention Wish basic replication executable path 연결
-- [x] Circle of the Land current-land를 permanent Character field가 아닌 rest/session configuration state로 정리
-- [x] Berserker / Devotion / Hunter / Fiend / Open Hand / Thief 고레벨 subclass catalog relationship을 mechanics-backed stable ID로 연결
-- [x] outermost Phase 08 audit: `catalog-pending` 18 → 0
-- [x] rules implementation checkpoint `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`에서 Contract / Rules Domain / UI full green
-- [x] README / CURRENT_WORK / PR #52 completion state 동기화
+```text
+ef2f726a248c538fdbd9c6c2d23b38321aae5e45
+```
 
-Phase 08의 completion boundary는 **catalog relationship과 현재 rules primitive로 표현 가능한 mechanics-backed contract를 모두 materialize하고, 현재 primitive 밖의 downstream 실행 형태는 explicit reject로 남기는 것**이다. 예를 들어 Open Hand Quivering Palm의 Action activation은 실행되며, Attack action 내부의 단일 공격 대체 경로는 generic attack-sequence replacement primitive가 생길 때까지 명시적으로 거부한다.
+Phase 08의 completion boundary는 **catalog relationship과 현재 rules primitive로 표현 가능한 mechanics-backed contract를 모두 materialize하고, 현재 primitive 밖의 downstream 실행 형태는 explicit reject로 남기는 것**이다.
 
-## Phase 09 — Mechanics Integration / RealAdapter
+## Phase 09 — Mechanics Integration / RealAdapter ← current
 
-목표: Phase 08까지 만든 실제 규칙/콘텐츠를 MockAdapter 바깥의 공용 application/domain 경로로 수렴시킨다.
+목표: Phase 08까지 만든 실제 규칙/콘텐츠를 MockAdapter-owned 규칙 계산에서 공용 application/domain service로 수렴시키고, 대표 플레이 경로를 authoritative domain 결과로 실행한다.
 
+현재 branch는 MockAdapter를 **transitional fixture/state storage**로 유지하되, 계산 자체를 단계적으로 실제 domain resolver로 옮긴다. React/UI contract는 유지한다.
+
+### 완료된 첫 integration cluster
+
+- [x] target/DC를 발명하지 않는 generic `openD20` domain primitive
+- [x] Freeform 능력 판정 → `resolveOpenD20Roll` → application `ResolutionView` projection
+- [x] 공격 명중 판정 → domain `resolveD20Test`
+  - natural 1 자동 실패
+  - natural 20 자동 명중/치명타
+  - target AC + provenance authoritative projection
+- [x] 공격 typed damage → domain `resolveDamage`
+  - resistance / vulnerability / immunity
+  - Temporary HP → HP 순서
+  - domain provenance/state-change projection
+- [x] Action / Bonus Action / Reaction + class resource 비용을 `resolvePendingResolution`의 동일 transaction으로 실행하는 application service
+  - resource 부족 시 앞선 economy spend까지 atomic rollback 검증
+  - freeform에서는 turn economy 비소비
+- [x] migrated attack/check commit에서 domain economy transaction 결과를 Scene/Activity에 projection
+- [x] healing state 적용 → domain `resolveHealing`
+- [x] Second Wind representative path
+  - healing 적용
+  - Bonus Action 소비
+  - Second Wind resource 소비
+  - Activity provenance/state changes
+  - 기존 Undo로 HP/resource/economy before snapshot 복원
+- [x] Phase 09 service/adapter regression tests를 UI CI gate에 편입
+- [x] Phase 08 zero-pending + aggregate progression 회귀 유지
+
+현재 integration checkpoint:
+
+```text
+41563dfe49cb7a5e733b9f671b985472ec371a44
+```
+
+검증:
+
+```text
+Contract validation  ✅
+Rules Domain         ✅
+Phase 08 zero-pending audit ✅
+Phase 07/08 aggregate progression ✅
+TypeScript           ✅
+Phase 09 service/adapter tests ✅
+UI production build ✅
+```
+
+### 다음 Phase 09 작업
+
+- [ ] saving-throw target modifiers를 Mock index 보정이 아닌 authoritative combatant/runtime data로 공급
+- [ ] staged attack의 hit + damage + economy/resource를 하나의 authoritative ResolutionEvent transaction으로 수렴
+- [ ] healing dice/formula calculation까지 공용 dice service로 수렴
+- [ ] ItemInstance quantity/charges/resource spend를 atomic ResolutionEvent transaction으로 실행
+- [ ] Combatant instantiate/runtime action을 실제 domain state로 실행
+- [ ] Initiative / turn economy / Reaction / movement를 real runtime state에서 직접 실행
+- [ ] Activity Log의 dice/provenance/state change를 committed domain events에서 직접 projection
+- [ ] Safe Undo/correction을 before-snapshot bridge에서 committed ResolutionEvent 기준으로 점진 전환
 - [ ] Character Creation의 기존 전용 choice graph를 `ChoiceDefinition` 기반 경로로 점진 통합
 - [ ] level-up / rest-time configuration / class-feature commands를 공용 application service로 수렴
-- [ ] MockAdapter의 규칙 계산 경로를 실제 domain resolver 호출로 교체
-- [ ] ItemInstance 사용/charge/resource spend를 동일한 atomic `ResolutionEvent` transaction으로 실행
-- [ ] Combatant instantiate/runtime action을 실제 domain state로 실행
-- [ ] Freeform check/action/spell/item resolution을 real domain으로 실행
-- [ ] Initiative / turn economy / Reaction / movement를 real domain으로 실행
-- [ ] Activity Log의 dice/provenance/state change를 authoritative result에서 직접 투영
-- [ ] Safe Undo/correction을 실제 committed `ResolutionEvent` 기준으로 동작
 - [ ] UI component가 named-rule 계산을 하지 않고 application contracts만 소비한다는 구조 gate 추가
 
 Phase 09 완료 기준:
@@ -146,7 +170,7 @@ Phase 11 완료 기준:
 ```text
 Phase 01-08 rules/catalog foundation ✅
         ↓
-Phase 09 real mechanics integration / RealAdapter ← next
+Phase 09 real mechanics integration / RealAdapter ← current
         ↓
 Phase 10 persistence / ContentCatalog / homebrew platform
         ↓
