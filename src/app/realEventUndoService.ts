@@ -16,6 +16,9 @@ export type ResolutionEventUndoResult =
   | { status:"rejected"; error:string };
 
 const ITEM_PREFIX="phase09:item:";
+type ReadValue={ found:boolean;value:unknown };
+const missing=():ReadValue=>({ found:false,value:undefined });
+const found=(value:unknown):ReadValue=>({ found:true,value });
 
 function itemResource(resourceId:string) {
   if (!resourceId.startsWith(ITEM_PREFIX)) return undefined;
@@ -24,8 +27,6 @@ function itemResource(resourceId:string) {
   if (rest.endsWith(":charges")) return { itemId:rest.slice(0,-":charges".length),field:"charges" as const };
   return undefined;
 }
-
-function valueEquals(left:boolean|number,right:boolean|number) { return left===right; }
 
 function deepEquals(left:unknown,right:unknown):boolean {
   if (Object.is(left,right)) return true;
@@ -42,47 +43,71 @@ function deepEquals(left:unknown,right:unknown):boolean {
   return leftKeys.every((key)=>deepEquals(leftRecord[key],rightRecord[key]));
 }
 
-function currentValue(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange):boolean|number|undefined {
+function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange):ReadValue {
   if (change.kind==="hp") {
     const entity=scene.entities.find((entry)=>entry.id===change.targetId);
-    if (!entity) return undefined;
-    if (change.field==="current") return entity.hp;
-    if (change.field==="maximum") return entity.maxHp;
-    return entity.tempHp;
+    if (!entity) return missing();
+    if (change.field==="current") return found(entity.hp);
+    if (change.field==="maximum") return found(entity.maxHp);
+    return found(entity.tempHp);
   }
   if (change.kind==="economy") {
     const economy=scene.economyByActor[change.targetId];
-    if (!economy) return undefined;
-    if (change.field==="action") return economy.action;
-    if (change.field==="bonusAction") return economy.bonusAction;
-    if (change.field==="reaction") return economy.reaction;
-    if (change.field==="movement") return economy.movement;
-    if (change.field==="movementMaximum") return economy.movementMax;
-    return undefined;
+    if (!economy) return missing();
+    if (change.field==="action") return found(economy.action);
+    if (change.field==="bonusAction") return found(economy.bonusAction);
+    if (change.field==="reaction") return found(economy.reaction);
+    if (change.field==="movement") return found(economy.movement);
+    if (change.field==="movementMaximum") return found(economy.movementMax);
+    return missing();
   }
   if (change.kind==="resource") {
     const item=itemResource(change.resourceId);
     if (item) {
       const instance=items.find((entry)=>entry.id===item.itemId);
-      if (!instance) return undefined;
-      return item.field==="quantity" ? instance.quantity : instance.charges?.current;
+      if (!instance) return missing();
+      if (item.field==="quantity") return found(instance.quantity);
+      return instance.charges ? found(instance.charges.current) : missing();
     }
-    return resources.find((resource)=>resource.id===change.resourceId)?.current;
+    const resource=resources.find((entry)=>entry.id===change.resourceId);
+    return resource ? found(resource.current) : missing();
   }
   if (change.kind==="life") {
     const life=scene.entities.find((entry)=>entry.id===change.targetId)?.runtimeLife;
-    return life?.[change.field];
+    return life ? found(life[change.field]) : missing();
   }
-  return undefined;
+  return missing();
 }
 
-function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateChange) {
-  if (change.kind==="effect") return runtimeState.effects.find((effect)=>effect.id===change.effectId);
-  if (change.kind==="concentration") return runtimeState.concentration[change.targetId];
-  return undefined;
+function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateChange):ReadValue {
+  if (change.kind==="effect") return found(runtimeState.effects.find((effect)=>effect.id===change.effectId));
+  if (change.kind==="concentration") return found(runtimeState.concentration[change.targetId]);
+  if (change.kind==="spellcasting-turn") return found(runtimeState.spellcastingTurn);
+  const combatant=runtimeState.combatants[change.targetId];
+  if (!combatant) return missing();
+  if (change.kind==="hp") {
+    if (change.field==="current") return found(combatant.life.hp.current);
+    if (change.field==="maximum") return found(combatant.life.hp.maximum);
+    return found(combatant.life.hp.temporary);
+  }
+  if (change.kind==="economy") {
+    if (change.field==="action") return found(combatant.economy.action);
+    if (change.field==="bonusAction") return found(combatant.economy.bonusAction);
+    if (change.field==="reaction") return found(combatant.economy.reaction);
+    if (change.field==="movement") return found(combatant.economy.movement);
+    if (change.field==="movementMaximum") return found(combatant.economy.movementMaximum);
+    return missing();
+  }
+  if (change.kind==="resource") {
+    if (itemResource(change.resourceId)) return missing();
+    const resource=combatant.resources.find((entry)=>entry.id===change.resourceId);
+    return resource ? found(resource.current) : missing();
+  }
+  if (change.kind==="life") return found(combatant.life[change.field]);
+  return missing();
 }
 
-function applyChange(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange) {
+function applyAppChange(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange) {
   if (change.kind==="hp") {
     const entity=scene.entities.find((entry)=>entry.id===change.targetId)!;
     if (change.field==="current") entity.hp=change.before;
@@ -131,6 +156,10 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
     runtimeState.concentration[change.targetId]=change.before ? structuredClone(change.before) : undefined;
     return;
   }
+  if (change.kind==="spellcasting-turn") {
+    runtimeState.spellcastingTurn=change.before ? structuredClone(change.before) : undefined;
+    return;
+  }
   const combatant=runtimeState.combatants[change.targetId];
   if (!combatant) return;
   if (change.kind==="hp") {
@@ -156,6 +185,18 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
   if (change.kind==="life") combatant.life[change.field]=change.before;
 }
 
+function runtimeOnly(change:RuntimeStateChange) {
+  return change.kind==="effect" || change.kind==="concentration" || change.kind==="spellcasting-turn";
+}
+
+function changeField(change:RuntimeStateChange) {
+  if (change.kind==="resource") return `resource.${change.resourceId}`;
+  if (change.kind==="effect") return `effect.${change.effectId}`;
+  if (change.kind==="concentration") return "concentration";
+  if (change.kind==="spellcasting-turn") return "spellcasting-turn";
+  return `${change.kind}.${change.field}`;
+}
+
 function validate(
   scene:SceneVm,
   resources:CharacterResourceVm[],
@@ -168,27 +209,25 @@ function validate(
   const probeItems=structuredClone(items);
   const probeRuntime=runtimeState ? cloneRuntimeState(runtimeState) : undefined;
   for (const change of [...changes].reverse()) {
-    if (change.kind==="effect" || change.kind==="concentration") {
-      if (!probeRuntime) return `event-native undo requires runtime state for ${change.kind}`;
-      const current=runtimeCurrentValue(probeRuntime,change);
-      if (!deepEquals(current,change.after)) {
-        const field=change.kind==="effect" ? `effect.${change.effectId}` : "concentration";
-        return `event-native undo drift for ${change.targetId}/${field}`;
-      }
-      applyRuntimeChange(probeRuntime,change);
-      continue;
-    }
     if (change.kind==="economy"&&change.field==="extraActions") return "event-native undo does not support economy.extraActions yet";
-    const current=currentValue(probeScene,probeResources,probeItems,change);
-    if (current===undefined) return `event-native undo target is missing: ${change.targetId}`;
-    if (!valueEquals(current,change.after)) {
-      const field=change.kind==="resource" ? `resource.${change.resourceId}` : `${change.kind}.${change.field}`;
-      return `event-native undo drift for ${change.targetId}/${field}: expected ${String(change.after)}, current ${String(current)}`;
+    const app=appCurrentValue(probeScene,probeResources,probeItems,change);
+    const runtime=probeRuntime ? runtimeCurrentValue(probeRuntime,change) : missing();
+    if (runtimeOnly(change) && !probeRuntime) return `event-native undo requires runtime state for ${change.kind}`;
+    if (!app.found && !runtime.found) return `event-native undo target is missing: ${change.targetId}/${changeField(change)}`;
+    if (app.found && !deepEquals(app.value,change.after)) {
+      return `event-native undo drift for ${change.targetId}/${changeField(change)}: expected ${String(change.after)}, current ${String(app.value)}`;
     }
-    applyChange(probeScene,probeResources,probeItems,change);
-    if (probeRuntime) applyRuntimeChange(probeRuntime,change);
+    if (runtime.found && !deepEquals(runtime.value,change.after)) {
+      return `event-native undo runtime drift for ${change.targetId}/${changeField(change)}`;
+    }
+    if (app.found) applyAppChange(probeScene,probeResources,probeItems,change);
+    if (probeRuntime && runtime.found) applyRuntimeChange(probeRuntime,change);
   }
   return undefined;
+}
+
+function spellcastingTurnLabel(state:Extract<RuntimeStateChange,{kind:"spellcasting-turn"}>["before"]) {
+  return state ? `${state.turnId} [${state.slottedCasterIds.join(", ") || "—"}]` : "—";
 }
 
 function undoLabel(change:RuntimeStateChange) {
@@ -208,9 +247,12 @@ function undoLabel(change:RuntimeStateChange) {
     const after=change.after ? change.after.id : "없음";
     return `${change.targetId} effect.${change.effectId} ${after} → ${before}`;
   }
-  const before=change.before ? change.before.groupId : "없음";
-  const after=change.after ? change.after.groupId : "없음";
-  return `${change.targetId} concentration ${after} → ${before}`;
+  if (change.kind==="concentration") {
+    const before=change.before ? change.before.groupId : "없음";
+    const after=change.after ? change.after.groupId : "없음";
+    return `${change.targetId} concentration ${after} → ${before}`;
+  }
+  return `${change.targetId} spellcasting-turn ${spellcastingTurnLabel(change.after)} → ${spellcastingTurnLabel(change.before)}`;
 }
 
 export function undoResolutionEvents(
@@ -229,12 +271,10 @@ export function undoResolutionEvents(
   const nextRuntimeState=runtimeState ? cloneRuntimeState(runtimeState) : undefined;
   const labels:string[]=[];
   for (const change of [...changes].reverse()) {
-    if (change.kind==="effect" || change.kind==="concentration") {
-      if (nextRuntimeState) applyRuntimeChange(nextRuntimeState,change);
-    } else {
-      applyChange(nextScene,nextResources,nextItems,change);
-      if (nextRuntimeState) applyRuntimeChange(nextRuntimeState,change);
-    }
+    const app=appCurrentValue(nextScene,nextResources,nextItems,change);
+    const runtime=nextRuntimeState ? runtimeCurrentValue(nextRuntimeState,change) : missing();
+    if (app.found) applyAppChange(nextScene,nextResources,nextItems,change);
+    if (nextRuntimeState && runtime.found) applyRuntimeChange(nextRuntimeState,change);
     labels.push(undoLabel(change));
   }
   if (nextRuntimeState && changes.length) nextRuntimeState.revision+=1;
