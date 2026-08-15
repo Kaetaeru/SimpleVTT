@@ -14,7 +14,7 @@ Recent Phase 08 coverage includes:
 
 - Ranger and Paladin progression, Fighting Styles, prepared-spell relationships, and representative class mechanics
 - Cleric and Life Domain progression/runtime, including Divine Intervention and Greater Divine Intervention's executable Wish spell-replication path for supported level-8-or-lower spell mechanics
-- Druid and Circle of the Land mechanics, including rest-time land package reconfiguration
+- Druid and Circle of the Land mechanics, including session-scoped current-land configuration and rest-time spell-package reconfiguration
 - Fighter and Champion progression/runtime, Weapon Mastery, Fighting Style, and subclass feature relationships
 - Bard and College of Lore, including Bardic Inspiration runtime mechanics
 - Sorcerer and Draconic Sorcery progression/runtime
@@ -22,7 +22,7 @@ Recent Phase 08 coverage includes:
 - Warlock Pact Magic, Invocations, Mystic Arcanum, and Pact of the Tome rest configuration
 - Epic Boon progression from the generated canonical feat catalog
 
-The remaining Phase 08 work is tracked in issue #51. In particular, Circle of the Land's mutable current-land choice still needs to move from durable character data into an explicit rest/session configuration state, and unsupported mechanics remain explicit blockers rather than silent approximations.
+The remaining Phase 08 work is tracked in issue #51. Unsupported mechanics remain explicit blockers rather than silent approximations; additional SRD class/subclass/feat relationships are added only when their required generic primitives are executable.
 
 ## Application architecture
 

@@ -42,7 +42,7 @@ PR    #52  agent/50-rules-phase08
 - [x] Ranger / Paladin canonical progression + representative runtime mechanics
 - [x] Cleric + Life Domain mechanics-backed progression/runtime
 - [x] Greater Divine Intervention Wish basic spell-replication path for fully executable level-8-or-lower spell mechanics + exact 2d4 Long-Rest lockout
-- [x] Druid + Circle of the Land mechanics-backed progression/runtime
+- [x] Druid + Circle of the Land mechanics-backed progression/runtime + session-scoped current-land configuration
 - [x] Fighter + Champion mechanics-backed progression/runtime
 - [x] Bard progression + College of Lore + Bardic Inspiration domain/runtime
 - [x] Wizard spellbook / Scholar / Spell Mastery / Signature Spells / Long-Rest preparation + School of Evocation domain/runtime
@@ -56,10 +56,10 @@ PR    #52  agent/50-rules-phase08
 
 - [x] 최신 Bard Lore / Sorcerer Draconic / Wizard Evocation progression wrapper를 실제 앱 adapter chain에 끝까지 연결
 - [x] 최신 Phase 08 domain/UI 테스트를 `package.json`의 정식 CI gate에 모두 편입
-- [x] public Actions에서 Contract / Rules Domain / UI-build full green 재확립 — code checkpoint `adfda64cca1e5ae2d881fe6a159c563522dd6c9b`
+- [x] public Actions에서 Contract / Rules Domain / UI-build full green 재확립 — runtime checkpoint `ca897bfea86d6265cf65b9e3f5c8acd59174ac48`
 - [x] Greater Divine Intervention의 Wish basic replication을 executable mechanic으로 연결; 미지원 Wish 효과/복제 대상은 explicit reject 유지
 - [ ] 남은 SRD class/subclass/feat 관계 중 아직 필요한 공용 primitive를 구현하고 silent approximation 없이 연결
-- [ ] Circle of the Land의 current-land 선택을 permanent Character field가 아닌 명시적 rest/session configuration state로 정리
+- [x] Circle of the Land의 current-land 선택을 permanent Character field가 아닌 명시적 rest/session configuration state로 정리
 - [x] PR #52 설명과 README/current-work를 현재 구현 상태에 맞춰 동기화
 
 ## Phase 09 — Mechanics Integration / RealAdapter
