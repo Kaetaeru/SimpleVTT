@@ -5,14 +5,17 @@ import type {
   AppSnapshot,
   CharacterSheet,
   CharacterSummary,
+  DamageComponentView,
   ResolutionView,
   SceneEntity,
   SessionMode,
 } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { phase09ReferenceSaveModifier } from "./phase09ReferenceRulesFacts";
 import { resolveActionCostTransaction } from "./realActionCostService";
 import { resolveSceneDamage, resolveSceneHealing } from "./realHealthService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
+import { resolveSavingThrowResolution } from "./realSavingThrowService";
 
 interface Phase09BeforeSnapshot {
   scene:AppSnapshot["scene"];
@@ -46,7 +49,9 @@ function resolutionId() {
 }
 
 function migratedD20Action(action:ActionVm) {
-  return action.resolutionKind === "ability-check" || action.resolutionKind === "attack";
+  return action.resolutionKind === "ability-check"
+    || action.resolutionKind === "attack"
+    || action.resolutionKind === "saving-throw";
 }
 
 const oldResolveAction = MockAdapter.prototype.resolveAction;
@@ -123,6 +128,9 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealD20(ac
   if (!availability.available) return internal.getSnapshot();
   const allowed = new Set(internal.eligible(action));
   if (targetIds.some((id) => !allowed.has(id))) return internal.getSnapshot();
+  if (action.target === "multi-enemy" && targetIds.length > (action.maxTargets ?? Number.POSITIVE_INFINITY)) {
+    return internal.getSnapshot();
+  }
 
   if (action.resolutionKind === "attack") {
     if (targetIds.length !== 1) return internal.getSnapshot();
@@ -138,6 +146,24 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealD20(ac
         source:`action:${action.id}:attack-bonus`,
         value:action.attackBonus ?? 0,
       }],
+    });
+    return internal.getSnapshot();
+  }
+
+  if (action.resolutionKind === "saving-throw") {
+    const targets = targetIds.map((id) => {
+      const target = internal.entity(id);
+      if (!target) return undefined;
+      const fact = phase09ReferenceSaveModifier(id,action.saveAbility ?? "내성");
+      return { id, name:target.name, modifier:fact.modifier, modifierSource:fact.source };
+    });
+    if (targets.some((target) => target === undefined)) return internal.getSnapshot();
+    internal.capture();
+    internal.resolution = resolveSavingThrowResolution({
+      resolutionId:resolutionId(),
+      action,
+      targets:targets as Array<{ id:string; name:string; modifier:number; modifierSource:string }>,
+      diceFaces:targetIds.map((_,index) => internal.d20(action.id,index)),
     });
     return internal.getSnapshot();
   }
@@ -176,6 +202,34 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     resolution.provenance.push(...resolved.provenance);
     resolution.damageComponents = [resolved.component];
     resolution.compact = `${resolution.attackTotal} vs AC ${resolution.targetAc} — ${resolution.attackOutcome}${resolution.critical ? " · 치명타" : ""} · ${resolved.component.adjusted} ${resolved.component.type} 피해`;
+    resolution.calculatedOutcome = resolution.compact;
+    if (!resolution.adjudicated) resolution.finalOutcome = resolution.compact;
+    internal.commit(action);
+    return internal.getSnapshot();
+  }
+
+  if (resolution.stage === "damage-animation" && action.resolutionKind === "saving-throw") {
+    const spec = action.damage?.[0];
+    if (!spec) return oldAdvanceResolution.call(this);
+    const components:DamageComponentView[] = [];
+    for (const save of resolution.saveResults) {
+      const target = internal.entity(save.targetId);
+      if (!target) continue;
+      const raw = save.outcome === "성공"
+        ? (action.saveHalf ? Math.floor(spec.average / 2) : 0)
+        : spec.average;
+      const resolved = resolveSceneDamage(target,spec.type,raw);
+      target.hp = resolved.nextHp;
+      target.tempHp = resolved.nextTempHp;
+      resolution.stateChanges.push(...resolved.stateChanges);
+      resolution.provenance.push(...resolved.provenance.map((entry) => `${save.targetName} · ${entry}`));
+      save.finalDamage = resolved.component.adjusted;
+      components.push({ ...resolved.component, source:`${save.targetName} · ${resolved.component.source}` });
+    }
+    resolution.damageComponents = components;
+    resolution.compact = resolution.saveResults
+      .map((save) => `${save.targetName} ${save.outcome}${save.finalDamage !== undefined ? ` · ${save.finalDamage} 피해` : ""}`)
+      .join(" / ");
     resolution.calculatedOutcome = resolution.compact;
     if (!resolution.adjudicated) resolution.finalOutcome = resolution.compact;
     internal.commit(action);
