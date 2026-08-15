@@ -8,7 +8,7 @@
 - [x] Common Rule Definition Specification `0.1-draft`
 - [x] 초기 RulesProfile: **D&D SRD 5.2.1 / CC-BY-4.0**
 - [x] executable rules contracts + deterministic validation
-- [x] UI Session 01 application shell / interaction prototype
+- [x] UI application shell / interaction prototype
 - [x] complete SRD-backed level-1 Character Creation slice
 - [x] canonical 339-spell Korean-first presentation catalog
 - [x] Rules Engine Phase 01 — executable profile kernel
@@ -37,27 +37,30 @@ PR    #52  agent/50-rules-phase08
 - [x] class / spell / feat / feature stable-ID 관계와 provenance
 - [x] generated spell / feat / weapon / class-skill rule metadata
 - [x] Expertise, higher-level spell choices, Metamagic, Invocations, Mystic Arcanum
-- [x] Epic Boon generated catalog + Phase 08 progression resolver
+- [x] Epic Boon generated catalog + Phase 08 progression resolver + CharacterSheet projection
 - [x] weapon mastery / fighting style progression catalogs
 - [x] Ranger / Paladin canonical progression + representative runtime mechanics
 - [x] Cleric + Life Domain mechanics-backed progression/runtime
+- [x] Greater Divine Intervention Wish basic spell-replication path for fully executable level-8-or-lower spell mechanics + exact 2d4 Long-Rest lockout
 - [x] Druid + Circle of the Land mechanics-backed progression/runtime
 - [x] Fighter + Champion mechanics-backed progression/runtime
-- [x] Bard progression + College of Lore domain/runtime work
-- [x] Wizard spellbook / Scholar / Spell Mastery / Signature Spells / Long-Rest preparation domain
-- [x] Sorcerer progression / Metamagic replacement / Draconic Sorcery domain/runtime work
+- [x] Bard progression + College of Lore + Bardic Inspiration domain/runtime
+- [x] Wizard spellbook / Scholar / Spell Mastery / Signature Spells / Long-Rest preparation + School of Evocation domain/runtime
+- [x] Sorcerer progression / Metamagic replacement / Draconic Sorcery domain/runtime
 - [x] Warlock Pact Magic / Invocation replacement / Mystic Arcanum / Pact of the Tome
+- [x] Wizard Long-Rest, Pact of the Tome rest, Circle of the Land rest application commands
 - [x] authoritative attack transaction, compound damage, restricted extra Actions, resource recovery lockouts
+- [x] latest Bard Lore / Draconic / Evocation domain and UI/runtime tests are part of the formal npm CI gates
 
 ### Phase 08 마감 작업
 
-- [ ] 최신 Bard Lore / Sorcerer Draconic / Wizard Evocation progression wrapper를 실제 앱 adapter chain에 끝까지 연결
-- [ ] 최신 Phase 08 domain/UI 테스트를 `package.json`의 정식 CI gate에 모두 편입
-- [ ] public Actions에서 최신 PR head의 Contract / Rules Domain / UI-build를 다시 green으로 확정
-- [ ] Wish를 executable mechanic으로 만들어 Greater Divine Intervention level-20 경로 완성
-- [ ] 남은 SRD class/subclass 관계 중 아직 필요한 공용 primitive를 구현하고 silent approximation 없이 연결
-- [ ] Circle of the Land의 current-land 선택을 permanent Character field가 아닌 명시적 rest/session state로 정리
-- [ ] PR #52 설명과 README/current-work를 최종 구현 상태에 맞춰 동기화
+- [x] 최신 Bard Lore / Sorcerer Draconic / Wizard Evocation progression wrapper를 실제 앱 adapter chain에 끝까지 연결
+- [x] 최신 Phase 08 domain/UI 테스트를 `package.json`의 정식 CI gate에 모두 편입
+- [x] public Actions에서 Contract / Rules Domain / UI-build full green 재확립 — code checkpoint `adfda64cca1e5ae2d881fe6a159c563522dd6c9b`
+- [x] Greater Divine Intervention의 Wish basic replication을 executable mechanic으로 연결; 미지원 Wish 효과/복제 대상은 explicit reject 유지
+- [ ] 남은 SRD class/subclass/feat 관계 중 아직 필요한 공용 primitive를 구현하고 silent approximation 없이 연결
+- [ ] Circle of the Land의 current-land 선택을 permanent Character field가 아닌 명시적 rest/session configuration state로 정리
+- [x] PR #52 설명과 README/current-work를 현재 구현 상태에 맞춰 동기화
 
 ## Phase 09 — Mechanics Integration / RealAdapter
 
