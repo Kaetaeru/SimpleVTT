@@ -31,7 +31,7 @@ async function selectRemainingRequired(adapter:MockAdapter,commands:Phase07Adapt
   }
 }
 
-test("Sorcerer 2 to 3 runtime commits Draconic Resilience +3 max HP and four always-prepared Draconic spells", async () => {
+async function draconicLevel3Ready() {
   const adapter = new MockAdapter();
   const baseline = (await adapter.getSnapshot()).activeCharacter;
   const internal = adapter as unknown as { activeCharacter:typeof baseline };
@@ -55,7 +55,6 @@ test("Sorcerer 2 to 3 runtime commits Draconic Resilience +3 max HP and four alw
     subclassFeatureIds:[],
     subclassFeatureSources:{},
   };
-
   await adapter.startLevelUp(internal.activeCharacter.id);
   const commands = adapter as unknown as Phase07AdapterCommands;
   const initial = await adapter.getSnapshot();
@@ -63,16 +62,31 @@ test("Sorcerer 2 to 3 runtime commits Draconic Resilience +3 max HP and four alw
   assert.ok(subclassChoice);
   await commands.setProgressionChoice(subclassChoice!.id,{ kind:"options", optionIds:[`subclass:${subclassName}`] });
   const ready = await selectRemainingRequired(adapter,commands);
+  return { adapter, ready };
+}
+
+test("Sorcerer 2 to 3 runtime preview includes Draconic Resilience HP", async () => {
+  const { ready } = await draconicLevel3Ready();
   assert.deepEqual(ready.progressionPlan?.blocking,[]);
   assert.equal(ready.progressionPlan?.diffs.find((diff) => diff.label === "최대 HP")?.after,"23");
+});
 
+test("Sorcerer 2 to 3 runtime commits Draconic identity and HP", async () => {
+  const { adapter } = await draconicLevel3Ready();
   await adapter.commitLevelUp();
   const snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.activeCharacter.level,3);
+  assert.equal(snapshot.activeCharacter.hp,23);
   assert.equal(snapshot.activeCharacter.maxHp,23);
   assert.equal(snapshot.activeCharacter.subclassIds?.[SORCERER_ID],SORCERER_DRACONIC_SUBCLASS_ID);
   assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes(DRACONIC_RESILIENCE_FEATURE_ID));
   assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes(DRACONIC_SPELLS_FEATURE_ID));
+});
+
+test("Sorcerer 2 to 3 runtime commits four always-prepared Draconic spells", async () => {
+  const { adapter } = await draconicLevel3Ready();
+  await adapter.commitLevelUp();
+  const snapshot = await adapter.getSnapshot();
   for (const name of ["Alter Self","Chromatic Orb","Command","Dragon's Breath"]) {
     assert.ok(snapshot.activeCharacter.preparedSpells.includes(`always:${stableSpellId(name)}`),name);
   }
