@@ -45,12 +45,44 @@ export interface ChoiceValidationIssue {
   severity: "blocking" | "warning";
 }
 
+export type CatalogPendingChoiceResolver = (
+  definition: ChoiceDefinition,
+  selection: ChoiceSelectionValue | undefined,
+) => ChoiceValidationIssue[] | undefined;
+
+const catalogPendingResolvers = new Map<string,CatalogPendingChoiceResolver>();
+
+export function registerCatalogPendingChoiceResolver(id:string,resolver:CatalogPendingChoiceResolver) {
+  if (!id) throw new Error("catalog pending choice resolver id is required");
+  catalogPendingResolvers.set(id,resolver);
+}
+
+export function unregisterCatalogPendingChoiceResolver(id:string) {
+  catalogPendingResolvers.delete(id);
+}
+
+function externallyResolveCatalogPending(
+  definition:ChoiceDefinition,
+  selection:ChoiceSelectionValue|undefined,
+):ChoiceValidationIssue[]|undefined {
+  for (const resolver of catalogPendingResolvers.values()) {
+    const result = resolver(definition,selection);
+    if (result !== undefined) return result;
+  }
+  return undefined;
+}
+
 export function validateChoiceDefinitions(definitions: ChoiceDefinition[], selections: ChoiceSelectionMap): ChoiceValidationIssue[] {
   const issues: ChoiceValidationIssue[] = [];
   for (const definition of definitions) {
     if (definition.status === "not-applicable") continue;
     const selection = selections[definition.id];
     if (definition.status === "catalog-pending") {
+      const external = externallyResolveCatalogPending(definition,selection);
+      if (external !== undefined) {
+        issues.push(...external);
+        continue;
+      }
       if (definition.required || selection) {
         issues.push({ choiceId: definition.id, severity: "blocking", message: definition.pendingReason ?? `${definition.label} 선택 데이터가 아직 연결되지 않았습니다.` });
       }
