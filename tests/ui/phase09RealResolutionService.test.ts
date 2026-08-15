@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/phase09RealResolutionAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { ActionVm } from "../../src/app/contracts";
+import { resolveSceneDamage } from "../../src/app/realHealthService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "../../src/app/realResolutionService";
 
 const CHECK_ACTION:ActionVm = {
@@ -81,6 +82,39 @@ test("Phase 09 attack projection uses domain natural-1 and natural-20 semantics 
   assert.ok(naturalTwenty.provenance.some((entry) => entry.includes("attack-natural-20")));
 });
 
+test("Phase 09 typed damage service delegates defenses and Temporary HP ordering to the domain", () => {
+  const base = {
+    id:"guardian",
+    name:"수호체",
+    hp:30,
+    maxHp:30,
+    tempHp:4,
+    resistances:["천둥"],
+    immunities:["독"],
+    vulnerabilities:["냉기"],
+  };
+
+  const resisted = resolveSceneDamage(base,"천둥",9);
+  assert.equal(resisted.component.raw,9);
+  assert.equal(resisted.component.adjusted,4);
+  assert.equal(resisted.nextTempHp,0);
+  assert.equal(resisted.nextHp,30);
+  assert.ok(resisted.provenance.some((entry) => entry.includes("Resistance 9 -> 4")));
+  assert.ok(resisted.provenance.some((entry) => entry.includes("Temporary HP absorbs 4")));
+
+  const immune = resolveSceneDamage(base,"독",10);
+  assert.equal(immune.component.adjusted,0);
+  assert.equal(immune.nextTempHp,4);
+  assert.equal(immune.nextHp,30);
+  assert.ok(immune.provenance.some((entry) => entry.includes("Immunity 10 -> 0")));
+
+  const vulnerable = resolveSceneDamage(base,"냉기",5);
+  assert.equal(vulnerable.component.adjusted,10);
+  assert.equal(vulnerable.nextTempHp,0);
+  assert.equal(vulnerable.nextHp,24);
+  assert.deepEqual(vulnerable.stateChanges,["수호체 임시 HP 4 → 0","수호체 HP 30 → 24"]);
+});
+
 test("MockAdapter freeform Athletics now delegates its d20 arithmetic to the Phase 09 real resolution service", async () => {
   const adapter = new MockAdapter();
   await adapter.setSessionMode("freeform");
@@ -126,4 +160,32 @@ test("MockAdapter weapon attack preview delegates hit and critical semantics to 
   snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"attack-result");
   assert.equal(snapshot.resolution?.nextLabel,"피해 굴림");
+});
+
+test("MockAdapter staged attack damage applies domain typed-defense and Temporary HP results before the existing commit boundary", async () => {
+  const adapter = new MockAdapter();
+  await adapter.loadReferenceScenario("critical");
+  await adapter.resolveAction("action.longsword",["combatant.training-guardian"]);
+
+  let snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.critical,true);
+  await adapter.advanceResolution();
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"interrupt");
+  await adapter.respondToInterrupt(false);
+  await adapter.advanceResolution();
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"damage-animation");
+  await adapter.advanceResolution();
+  snapshot = await adapter.getSnapshot();
+
+  const guardian = snapshot.scene.entities.find((entity) => entity.id === "combatant.training-guardian");
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(guardian?.tempHp,0);
+  assert.equal(guardian?.hp,16,"critical longsword average 18 consumes 4 Temporary HP then 14 HP");
+  assert.equal(snapshot.resolution?.damageComponents[0]?.adjusted,18);
+  assert.match(snapshot.resolution?.damageComponents[0]?.source ?? "",/Rules Domain/);
+  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("profile:dnd.srd-5.2.1/temp-hp")));
+  assert.ok(snapshot.resolution?.stateChanges.includes("훈련용 수호체 임시 HP 4 → 0"));
+  assert.ok(snapshot.resolution?.stateChanges.includes("훈련용 수호체 HP 30 → 16"));
 });
