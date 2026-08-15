@@ -29,6 +29,7 @@ import "./app/phase09RealRuntimeStatAdapter";
 import "./app/phase09RealRuntimeAttackAdapter";
 import "./app/phase09RealAtomicHealingAdapter";
 import "./app/phase09RealAtomicItemAdapter";
+import "./app/phase09RealAtomicSavingThrowAdapter";
 import "./app/subclassRuntimeAdapter";
 import "./app/pactTomeRuntimeAdapter";
 import "./app/druidCircleLandSpellRuntimeAdapter";
