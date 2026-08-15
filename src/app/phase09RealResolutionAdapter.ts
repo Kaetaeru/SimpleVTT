@@ -1,6 +1,15 @@
 import "./progressionPhase08RogueThiefAdapter";
-import type { ActionVm, AppSnapshot, ResolutionView, SceneEntity } from "./contracts";
+import type {
+  ActionVm,
+  ActivityEntry,
+  AppSnapshot,
+  CharacterSheet,
+  ResolutionView,
+  SceneEntity,
+  SessionMode,
+} from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { resolveActionCostTransaction } from "./realActionCostService";
 import { resolveSceneDamage } from "./realHealthService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
 
@@ -12,7 +21,15 @@ interface Phase09ResolutionAdapterState {
   capture():void;
   d20(actionId:string,index?:number):number;
   commit(action:ActionVm):void;
+  syncChar():void;
   resolution:ResolutionView|null;
+  scene:AppSnapshot["scene"];
+  activeCharacter:CharacterSheet;
+  sessionMode:SessionMode;
+  activity:ActivityEntry[];
+  before:unknown|null;
+  lastBefore:unknown|null;
+  lastResolutionId:string|null;
   getSnapshot():Promise<AppSnapshot>;
 }
 
@@ -20,13 +37,72 @@ function resolutionId() {
   return `resolution.phase09.${Date.now()}.${Math.floor(Math.random() * 1000)}`;
 }
 
+function migratedD20Action(action:ActionVm) {
+  return action.resolutionKind === "ability-check" || action.resolutionKind === "attack";
+}
+
 const oldResolveAction = MockAdapter.prototype.resolveAction;
 const oldAdvanceResolution = MockAdapter.prototype.advanceResolution;
+const phase09Prototype = MockAdapter.prototype as unknown as { commit(action:ActionVm):void };
+const oldCommit = phase09Prototype.commit;
+
+phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
+  const internal = this as unknown as Phase09ResolutionAdapterState;
+  const resolution = internal.resolution;
+  if (!resolution || !migratedD20Action(action) || action.itemCost) {
+    return oldCommit.call(this,action);
+  }
+  const actor = internal.entity(action.actorId);
+  const economy = internal.scene.economyByActor[action.actorId];
+  if (!actor || !economy) return oldCommit.call(this,action);
+  if (action.resourceCost && actor.id !== internal.activeCharacter.id) return oldCommit.call(this,action);
+
+  const costs = resolveActionCostTransaction({
+    resolutionId:resolution.id,
+    action,
+    actor,
+    economy,
+    resources:actor.id === internal.activeCharacter.id ? internal.activeCharacter.resources : [],
+    initiativeMode:internal.sessionMode === "initiative",
+  });
+  if (costs.status === "rejected") {
+    resolution.detail.push(`비용 적용 거부: ${costs.error}`);
+    resolution.finalOutcome = `적용 거부: ${costs.error}`;
+    resolution.stage = "complete";
+    resolution.canAdvance = false;
+    resolution.nextLabel = undefined;
+    return;
+  }
+
+  internal.scene.economyByActor[action.actorId] = { ...costs.economy };
+  if (actor.id === internal.activeCharacter.id) {
+    internal.activeCharacter.resources = costs.resources.map((resource) => ({ ...resource }));
+  }
+  resolution.stateChanges.push(...costs.stateChanges);
+  resolution.provenance.push(...costs.provenance);
+  resolution.stage = "complete";
+  resolution.canAdvance = false;
+  resolution.nextLabel = undefined;
+  internal.syncChar();
+
+  internal.activity.unshift({
+    id:resolution.id,
+    time:"지금",
+    actor:internal.entity(resolution.actorId)?.name ?? resolution.actorId,
+    title:`${resolution.actionName} → ${resolution.targetIds.map((id) => internal.entity(id)?.name ?? id).join(", ") || "—"}`,
+    summary:resolution.compact,
+    detail:[...resolution.detail,...resolution.provenance.map((entry) => `출처: ${entry}`)],
+    stateChanges:structuredClone(resolution.stateChanges),
+  });
+  internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
+  internal.lastResolutionId = resolution.id;
+  internal.before = null;
+};
 
 MockAdapter.prototype.resolveAction = async function resolveActionWithRealD20(actionId:string,targetIds:string[]) {
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const action = internal.action(actionId);
-  if (!action || (action.resolutionKind !== "ability-check" && action.resolutionKind !== "attack")) {
+  if (!action || !migratedD20Action(action)) {
     return oldResolveAction.call(this,actionId,targetIds);
   }
 
