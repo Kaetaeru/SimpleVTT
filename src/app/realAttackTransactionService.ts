@@ -4,7 +4,8 @@ import type { RuntimeLifeVm } from "./lifeRuntimeContracts";
 import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09ReferenceRulesFacts";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { compileAttack, resolveAttack } from "../domain/attack";
-import type { RulesRuntimeState } from "../domain/combatState";
+import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
+import type { ConcentrationCheckRequest } from "../domain/concentration";
 import type { D20TestResult } from "../domain/d20";
 import type { CompoundDamageResolution, DamageDefenseContribution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
@@ -38,6 +39,8 @@ export interface AtomicAttackTransactionRequest {
   attackFact:Phase09AttackFact;
   targetingFact:Phase09TargetingFact;
   expectedPreview?:AtomicAttackPreviewExpectation;
+  runtimeState?:RulesRuntimeState;
+  concentrationCheck?:Omit<ConcentrationCheckRequest,"damage">;
 }
 
 export type AtomicAttackTransactionResult =
@@ -55,6 +58,8 @@ export type AtomicAttackTransactionResult =
       provenance:string[];
       events:ResolutionEvent[];
       eventCount:number;
+      runtimeState?:RulesRuntimeState;
+      runtimeInputRevision?:number;
     }
   | {
       status:"rejected";
@@ -99,7 +104,7 @@ function runtimeCombatant(entity:SceneEntity,economy:EconomyVm) {
   };
 }
 
-function runtimeState(request:AtomicAttackTransactionRequest):RulesRuntimeState {
+function isolatedRuntimeState(request:AtomicAttackTransactionRequest):RulesRuntimeState {
   return {
     revision:0,
     clock:{
@@ -115,6 +120,14 @@ function runtimeState(request:AtomicAttackTransactionRequest):RulesRuntimeState 
     concentration:{},
     history:[],
   };
+}
+
+function transactionInput(request:AtomicAttackTransactionRequest) {
+  if (!request.runtimeState) return isolatedRuntimeState(request);
+  const input=cloneRuntimeState(request.runtimeState);
+  if (!input.combatants[request.actor.id]) throw new Error(`runtime attack actor is missing from authoritative runtime: ${request.actor.id}`);
+  if (!input.combatants[request.target.id]) throw new Error(`runtime attack target is missing from authoritative runtime: ${request.target.id}`);
+  return input;
 }
 
 function economyCost(action:ActionVm,initiativeMode:boolean) {
@@ -138,6 +151,7 @@ function componentAdjustment(target:SceneEntity,damageType:string,raw:number,fin
   if (resistance && vulnerability) return `${damageType} 저항/취약 ${raw} → ${finalDamage}`;
   if (resistance) return `${damageType} 저항 ${raw} → ${finalDamage}`;
   if (vulnerability) return `${damageType} 취약 ${raw} → ${finalDamage}`;
+  if (raw!==finalDamage) return `런타임 효과 조정 ${raw} → ${finalDamage}`;
   return "조정 없음";
 }
 
@@ -200,6 +214,7 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       flat:request.attackFact.flatDamage,
     },
     economy:request.reaction ? undefined : economyCost(request.action,request.initiativeMode),
+    concentrationCheck:request.concentrationCheck,
   };
 }
 
@@ -233,7 +248,13 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
   if (request.action.resolutionKind !== "attack" || !damageSpec) {
     return { status:"rejected", error:`atomic attack requires one attack damage component: ${request.action.id}` };
   }
-  const input = runtimeState(request);
+  let input:RulesRuntimeState;
+  try {
+    input=transactionInput(request);
+  } catch(error) {
+    return { status:"rejected",error:error instanceof Error ? error.message : String(error) };
+  }
+  const runtimeInputRevision=request.runtimeState ? input.revision : undefined;
   const transaction = resolveAttackTransaction(request,input);
   if (transaction.status === "rejected") return { status:"rejected", error:transaction.error };
 
@@ -292,5 +313,7 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
     provenance:events.flatMap((event) => event.provenance.map((entry) => `${entry.source} · ${entry.status} · ${entry.reason}`)),
     events,
     eventCount:events.length,
+    runtimeState:request.runtimeState ? cloneRuntimeState(transaction.state) : undefined,
+    runtimeInputRevision,
   };
 }
