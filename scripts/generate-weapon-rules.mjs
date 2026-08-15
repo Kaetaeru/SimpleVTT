@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)),"..");
 const modulePaths = [
   "dnd-srd-5.2.1.equipment-simple-melee",
+  "dnd-srd-5.2.1.equipment-simple-ranged",
   "dnd-srd-5.2.1.equipment-martial-melee",
   "dnd-srd-5.2.1.equipment-martial-ranged",
 ].map((name) => join(root,"content","modules",name,"module.json"));
