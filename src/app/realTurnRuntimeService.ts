@@ -1,6 +1,9 @@
 import type { EconomyVm, SceneEntity, SceneVm } from "./contracts";
+import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
 import { orderInitiative } from "../domain/initiative";
+import { resolvePendingResolution } from "../domain/resolution";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 import { beginTurn } from "../domain/turnEconomy";
 
 export interface TurnRuntimeSession {
@@ -8,6 +11,17 @@ export interface TurnRuntimeSession {
   initiativeOrder:string[];
   activeIndex:number;
 }
+
+export interface TurnRuntimeReactionRequest {
+  resolutionId:string;
+  reactorId:string;
+  trigger:string;
+  option:{ id:string; source:string };
+}
+
+export type TurnRuntimeReactionResult =
+  | { status:"committed"; economy:EconomyVm; events:ResolutionEvent[] }
+  | { status:"rejected"; error:string };
 
 function runtimeEconomy(economy:EconomyVm) {
   return {
@@ -166,4 +180,38 @@ export function setTurnRuntimeActiveActor(session:TurnRuntimeSession,actorId:str
   session.state=state;
   session.activeIndex=index;
   return true;
+}
+
+export function resolveTurnRuntimeReaction(
+  session:TurnRuntimeSession,
+  request:TurnRuntimeReactionRequest,
+):TurnRuntimeReactionResult {
+  const reactor=session.state.combatants[request.reactorId];
+  if (!reactor) return { status:"rejected",error:`reaction reactor is missing from turn runtime: ${request.reactorId}` };
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,session.state,{
+    id:`${request.resolutionId}:reaction`,
+    actorId:request.reactorId,
+    sourceId:request.option.id,
+    expectedRevision:session.state.revision,
+    operations:[{
+      id:`${request.option.id}:reaction`,
+      kind:"reaction",
+      reactorId:request.reactorId,
+      trigger:request.trigger,
+      options:[{
+        id:request.option.id,
+        actorId:request.reactorId,
+        trigger:request.trigger,
+        source:request.option.source,
+      }],
+      optionId:request.option.id,
+    }],
+  });
+  if (committed.status==="rejected") return { status:"rejected",error:committed.error };
+  session.state=committed.state;
+  return {
+    status:"committed",
+    economy:sceneEconomy(committed.state.combatants[request.reactorId].economy),
+    events:committed.events.map((event)=>structuredClone(event)),
+  };
 }

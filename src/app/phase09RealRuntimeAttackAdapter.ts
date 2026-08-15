@@ -2,6 +2,7 @@ import "./phase09RealRuntimeStatAdapter";
 import "./combatantRuntimeContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, CharacterSummary, ResolutionView, SceneEntity, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
 import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
@@ -123,19 +124,23 @@ function apply(internal:RuntimeAttackAdapterState,resolution:ResolutionView,tran
 function finalize(adapter:MockAdapter,internal:RuntimeAttackAdapterState,transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>) {
   const resolution = internal.resolution;
   if (!resolution) return;
+  const events=[
+    ...consumeAdapterInterruptEvents(adapter,resolution.id),
+    ...transaction.events.map((event)=>structuredClone(event)),
+  ];
   resolution.stage = "complete";
   resolution.canAdvance = false;
   resolution.nextLabel = undefined;
   internal.syncChar();
   internal.activity.unshift(projectResolutionEventsToActivity({
     resolution,
-    events:transaction.events,
+    events,
     actorName:internal.entity(resolution.actorId)?.name ?? resolution.actorId,
     targetNames:resolution.targetIds.map((id) => internal.entity(id)?.name ?? id),
   }));
   committedEventHistory.set(adapter,{
     resolutionId:resolution.id,
-    events:transaction.events.map((event) => structuredClone(event)),
+    events:events.map((event) => structuredClone(event)),
   });
   internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
   internal.lastResolutionId = resolution.id;

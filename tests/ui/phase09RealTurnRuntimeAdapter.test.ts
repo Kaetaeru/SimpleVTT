@@ -50,6 +50,48 @@ test("outer atomic attack HP/economy is reconciled into turn runtime and survive
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12,"event-native Undo is reconciled back into turn runtime");
 });
 
+test("accepted interrupt spends Reaction in turn runtime and attack Undo restores the reaction event", async () => {
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  await adapter.setQueuedD20(15);
+  await adapter.resolveAction("action.shortbow",["combatant.training-guardian"]);
+  await adapter.advanceResolution();
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"interrupt");
+  assert.equal(snapshot.scene.economyByActor["combatant.training-guardian"]?.reaction,true);
+
+  await adapter.respondToInterrupt(true);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"attack-result");
+  assert.equal(snapshot.resolution?.targetAc,19);
+  assert.equal(snapshot.resolution?.attackOutcome,"명중");
+  assert.equal(snapshot.scene.economyByActor["combatant.training-guardian"]?.reaction,false);
+  assert.ok(snapshot.resolution?.detail.some((line)=>line.includes("RulesRuntimeState reaction commit")));
+  assert.ok(snapshot.resolution?.provenance.some((line)=>line.includes("reaction:reaction.guard")));
+
+  await adapter.advanceResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"damage-animation");
+  await adapter.advanceResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["combatant.training-guardian"]?.reaction,false);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.tempHp,0);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.hp,28);
+  assert.ok(snapshot.activity[0]?.stateChanges.some((line)=>line.includes("combatant.training-guardian economy.reaction true → false")));
+
+  (adapter as unknown as { lastBefore:unknown }).lastBefore=null;
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
+  assert.equal(snapshot.scene.economyByActor["combatant.training-guardian"]?.reaction,true);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.tempHp,4);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.hp,30);
+  assert.equal(snapshot.resolution,null);
+});
+
 test("round wrap starts Aelar's next turn from base speed and refreshed economy", async () => {
   const adapter=new MockAdapter();
   await adapter.startInitiative();

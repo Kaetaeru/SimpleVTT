@@ -1,25 +1,34 @@
 import "./phase09CombatantDefinitionRuntimeAdapter";
-import type { ActivityEntry, AppSnapshot, SceneVm, SessionMode } from "./contracts";
+import type { ActivityEntry, AppSnapshot, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import {
   addTurnRuntimeCombatant,
   advanceTurnRuntimeSession,
   createTurnRuntimeSession,
   projectTurnRuntimeToScene,
+  resolveTurnRuntimeReaction,
   setTurnRuntimeActiveActor,
   synchronizeTurnRuntimeFromScene,
   type TurnRuntimeSession,
 } from "./realTurnRuntimeService";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface Phase09TurnAdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
+  resolution:ResolutionView|null;
   activity:ActivityEntry[];
   getSnapshot():Promise<AppSnapshot>;
 }
 
+interface InterruptEventHistory {
+  resolutionId:string;
+  events:ResolutionEvent[];
+}
+
 const sessions=new WeakMap<MockAdapter,TurnRuntimeSession>();
 const suppressProjection=new WeakSet<MockAdapter>();
+const interruptEvents=new WeakMap<MockAdapter,InterruptEventHistory>();
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
@@ -48,6 +57,13 @@ export function synchronizeAdapterTurnRuntime(adapter:MockAdapter) {
   return syncFromScene(adapter,adapter as unknown as Phase09TurnAdapterState);
 }
 
+export function consumeAdapterInterruptEvents(adapter:MockAdapter,resolutionId:string) {
+  const history=interruptEvents.get(adapter);
+  if (!history||history.resolutionId!==resolutionId) return [];
+  interruptEvents.delete(adapter);
+  return history.events.map((event)=>structuredClone(event));
+}
+
 MockAdapter.prototype.getSnapshot=async function getSnapshotFromTurnRuntime() {
   const internal=this as unknown as Phase09TurnAdapterState;
   if (!suppressProjection.has(this)) syncFromScene(this,internal);
@@ -57,6 +73,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotFromTurnRuntime() {
 MockAdapter.prototype.startInitiative=async function startInitiativeWithTurnRuntime() {
   const internal=this as unknown as Phase09TurnAdapterState;
   internal.sessionMode="initiative";
+  interruptEvents.delete(this);
   const session=createTurnRuntimeSession(internal.scene);
   sessions.set(this,session);
   projectTurnRuntimeToScene(session,internal.scene);
@@ -76,6 +93,7 @@ MockAdapter.prototype.startInitiative=async function startInitiativeWithTurnRunt
 MockAdapter.prototype.endInitiative=async function endInitiativeWithTurnRuntime() {
   const internal=this as unknown as Phase09TurnAdapterState;
   sessions.delete(this);
+  interruptEvents.delete(this);
   internal.sessionMode="freeform";
   internal.activity.unshift({
     id:eventId("initiative-end"),
@@ -135,15 +153,59 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithTurn
   return this.getSnapshot();
 };
 
-MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntimeSync(accept:boolean) {
+MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntime(accept:boolean) {
   const internal=this as unknown as Phase09TurnAdapterState;
-  suppressProjection.add(this);
-  try {
-    await previousRespondToInterrupt.call(this,accept);
-  } finally {
-    suppressProjection.delete(this);
+  const session=sessions.get(this);
+  const resolution=internal.resolution;
+  const interrupt=resolution?.interrupt;
+  if (!session||!resolution||!interrupt) return previousRespondToInterrupt.call(this,accept);
+
+  if (!accept) {
+    interruptEvents.delete(this);
+    resolution.detail.push(`${interrupt.responderName} 반응 넘김`);
+    resolution.interrupt=undefined;
+    resolution.stage="attack-result";
+    resolution.canAdvance=true;
+    resolution.nextLabel=resolution.attackOutcome==="명중" ? "피해 굴림" : "판정 적용";
+    return this.getSnapshot();
   }
-  syncFromScene(this,internal);
+
+  const reactor=internal.scene.entities.find((entity)=>entity.id===interrupt.responderId);
+  const option=reactor?.reactions.find((entry)=>entry.id===interrupt.id);
+  if (!reactor||!option) {
+    resolution.detail.push(`Reaction runtime 거부: responder/option missing (${interrupt.responderId}/${interrupt.id})`);
+    resolution.finalOutcome="Reaction 적용 거부";
+    return this.getSnapshot();
+  }
+
+  const committed=resolveTurnRuntimeReaction(session,{
+    resolutionId:resolution.id,
+    reactorId:reactor.id,
+    trigger:interrupt.trigger,
+    option:{ id:option.id,source:option.source },
+  });
+  if (committed.status==="rejected") {
+    resolution.detail.push(`Reaction runtime 거부: ${committed.error}`);
+    resolution.finalOutcome=`Reaction 적용 거부: ${committed.error}`;
+    return this.getSnapshot();
+  }
+
+  projectTurnRuntimeToScene(session,internal.scene);
+  const bonus=option.acBonus ?? 0;
+  const beforeAc=resolution.targetAc ?? reactor.ac;
+  resolution.targetAc=beforeAc+bonus;
+  resolution.attackOutcome=(resolution.attackTotal ?? 0)>=resolution.targetAc ? "명중" : "빗나감";
+  resolution.finalOutcome=resolution.attackOutcome;
+  resolution.compact=`${resolution.attackTotal} vs AC ${resolution.targetAc} — ${resolution.attackOutcome} · ${interrupt.optionName}`;
+  resolution.detail.push(`${interrupt.responderName} ${interrupt.optionName}: AC ${beforeAc} → ${resolution.targetAc}`);
+  resolution.detail.push(`RulesRuntimeState reaction commit · revision ${session.state.revision}`);
+  resolution.stateChanges.push(`${reactor.name} 반응 사용`);
+  resolution.provenance.push(...committed.events.flatMap((event)=>event.provenance.map((entry)=>`${entry.source} · ${entry.status} · ${entry.reason}`)));
+  interruptEvents.set(this,{ resolutionId:resolution.id,events:committed.events.map((event)=>structuredClone(event)) });
+  resolution.interrupt=undefined;
+  resolution.stage="attack-result";
+  resolution.canAdvance=true;
+  resolution.nextLabel=resolution.attackOutcome==="명중" ? "피해 굴림" : "판정 적용";
   return this.getSnapshot();
 };
 
@@ -179,6 +241,7 @@ MockAdapter.prototype.loadReferenceScenario=async function loadReferenceScenario
   } finally {
     suppressProjection.delete(this);
   }
+  interruptEvents.delete(this);
   if (internal.sessionMode==="initiative") {
     const session=createTurnRuntimeSession(internal.scene);
     sessions.set(this,session);
