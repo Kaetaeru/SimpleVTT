@@ -46,6 +46,8 @@ declare module "./contracts" {
     fightingStyleFeatSources?:Record<string,string>;
     subclassIds?: Record<string, string>;
     subclassSources?: Record<string, string>;
+    subclassFeatureIds?:string[];
+    subclassFeatureSources?:Record<string,string>;
     circleLandType?:CircleLandType;
     circleLandCantripIds?:string[];
     circleLandPreparedSpellIds?:string[];
