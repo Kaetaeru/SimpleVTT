@@ -56,6 +56,7 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] Initiative에서 모듈이 요청할 경우 기존 domain `move` primitive로 이동력/제약 검증 가능
 - [x] 갱신된 module spatial fact가 즉시 attack targeting에 반영되는 회귀 테스트
 - [x] canonical policy: `docs/design/movement-modules.md`
+- [x] design canon index에서 movement/module policy를 canonical 문서로 링크
 
 #### Manual movement-triggered reactions
 - [x] Core는 기회공격/이동 유발 반응을 자동 감지하지 않음
