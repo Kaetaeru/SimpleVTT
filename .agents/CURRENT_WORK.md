@@ -43,15 +43,19 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] built-in Goblin exact Scimitar/Shortbow runtime actions
 - [x] structured Combatant에 fake `+3 / 1d6+1` fallback 미생성
 
-#### Spatial / targeting / movement
+#### Spatial / targeting / optional movement module boundary
 - [x] `SceneEntity.distance` presentation 문자열을 rules input에서 제거
 - [x] `sourceId => targetId` structured distance/visibility/cover/sight/provenance
 - [x] reference Aelar↔enemy relations materialization
 - [x] missing relation은 Action/HP 변경 없이 reject
-- [x] `moveActor` application command → active turn runtime `move` operation
-- [x] tracked actor relation 전체 post-move set을 요구; 부분 spatial update면 movement 자체 reject
-- [x] movement commit 후 pairwise relations 갱신
-- [x] 갱신된 90ft fact가 즉시 Shortbow out-of-range 판정에 사용되는 회귀 테스트
+- [x] **Core SimpleVTT는 이동/격자/토큰 좌표/경로/LOS 시스템을 제공하지 않음**
+- [x] `SimpleVttAdapter` / `MockAdapter` 기본 API에서 `moveActor` 제거
+- [x] 2D grid / 3D scene / custom 모듈 공용 `MovementModuleCommand` + `MovementModuleHost` 계약
+- [x] 모듈이 좌표/경로/거리/visibility/cover를 계산하고 complete pairwise post-move facts를 제출
+- [x] module provenance를 spatial facts에 보존
+- [x] Initiative에서 모듈이 요청할 경우 기존 domain `move` primitive로 이동력/제약 검증 가능
+- [x] 갱신된 module spatial fact가 즉시 attack targeting에 반영되는 회귀 테스트
+- [x] canonical policy: `docs/design/movement-modules.md`
 
 #### Damage / healing / life
 - [x] typed damage resistance/vulnerability/immunity → Temp HP → HP
@@ -63,7 +67,7 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 
 #### Turn runtime / interrupt
 - [x] initiative order / round / active actor / HP / economy를 RulesRuntimeState session에 materialize
-- [x] beginTurn 기반 Action / Bonus Action / Reaction / movement reset
+- [x] beginTurn 기반 Action / Bonus Action / Reaction / movement allowance reset
 - [x] manual actor selection은 spent economy를 reset하지 않음
 - [x] dynamic Combatant instantiate → active runtime에 즉시 materialize
 - [x] accepted interrupt → domain `reaction` operation
@@ -91,7 +95,7 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 
 ### 현재 verified implementation checkpoint
 
-`92cd8a21711ddc415ec6a4b1c9c9fa8f516dacb1`
+`9a62d689fe1cb77d223cc9d030da2f8ca0ee2bc6`
 
 ```text
 Contract validation               ✅
@@ -114,6 +118,7 @@ UI production build               ✅
 - [ ] level-up / rest-time configuration / class-feature commands를 공용 application service로 수렴
 - [ ] UI component에 named-rule 계산이 재유입되지 않는 구조 gate 추가
 - [ ] optional WebGL/physics 3D dice renderer
+- [ ] 실제 2D/3D 모듈 요구가 생길 때 executable presentation-module loader/registration 설계; core movement ownership은 금지
 
 Phase 09 완료 기준:
 
@@ -136,7 +141,7 @@ Phase 09 완료 기준:
 - [ ] progression / multiclass
 - [ ] equipment / ItemInstance / resources
 - [ ] Freeform ability/save/action/spell/item resolution
-- [ ] initiative / turn economy / movement
+- [ ] initiative / turn economy (map/movement UI는 optional module)
 - [ ] attack / damage / healing / conditions / Concentration
 - [ ] reaction/interrupt flow
 - [ ] class/subclass representative E2E
@@ -155,3 +160,4 @@ Phase 09 완료 기준:
 5. 전체 scenario 회귀 검증을 통과시킨다.
 6. unsupported mechanic은 explicit blocker로 유지한다.
 7. UI에 named-rule 계산을 넣지 않는다.
+8. **Core는 movement/map/coordinate 시스템을 소유하지 않는다.** 2D/3D 모듈은 coordinate-agnostic host contract를 통해 rules/spatial primitive만 재사용한다.
