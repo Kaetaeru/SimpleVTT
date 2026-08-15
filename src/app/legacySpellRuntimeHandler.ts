@@ -1,3 +1,4 @@
+import "./mockAdapterCompletion";
 import "./spellcastingRuntimeAdapter";
 import { MockAdapter } from "./mockAdapter";
 
