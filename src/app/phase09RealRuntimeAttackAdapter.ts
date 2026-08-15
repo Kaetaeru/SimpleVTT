@@ -3,7 +3,9 @@ import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, CharacterSum
 import { MockAdapter } from "./mockAdapter";
 import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
+import { undoResolutionEvents } from "./realEventUndoService";
 import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface BeforeState {
   scene:AppSnapshot["scene"];
@@ -27,8 +29,15 @@ interface RuntimeAttackAdapterState {
   getSnapshot():Promise<AppSnapshot>;
 }
 
+interface CommittedEventHistory {
+  resolutionId:string;
+  events:ResolutionEvent[];
+}
+
 const pending = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
+const committedEventHistory = new WeakMap<MockAdapter,CommittedEventHistory>();
 const previousAdvance = MockAdapter.prototype.advanceResolution;
+const previousUndo = MockAdapter.prototype.undoLastResolution;
 
 function isRuntimeAtomicAttack(action:ActionVm|undefined) {
   return action?.id === "action.shortbow"
@@ -112,7 +121,7 @@ function apply(internal:RuntimeAttackAdapterState,resolution:ResolutionView,tran
   return true;
 }
 
-function finalize(internal:RuntimeAttackAdapterState,transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>) {
+function finalize(adapter:MockAdapter,internal:RuntimeAttackAdapterState,transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>) {
   const resolution = internal.resolution;
   if (!resolution) return;
   resolution.stage = "complete";
@@ -125,6 +134,10 @@ function finalize(internal:RuntimeAttackAdapterState,transaction:Extract<AtomicA
     actorName:internal.entity(resolution.actorId)?.name ?? resolution.actorId,
     targetNames:resolution.targetIds.map((id) => internal.entity(id)?.name ?? id),
   }));
+  committedEventHistory.set(adapter,{
+    resolutionId:resolution.id,
+    events:transaction.events.map((event) => structuredClone(event)),
+  });
   internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
   internal.lastResolutionId = resolution.id;
   internal.before = null;
@@ -142,12 +155,13 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
     const transaction = build(internal,action!,resolution);
     if (transaction.status === "rejected") {
       pending.delete(this);
+      committedEventHistory.delete(this);
       reject(internal,transaction.error);
       return internal.getSnapshot();
     }
     if (resolution.attackOutcome === "빗나감") {
       apply(internal,resolution,transaction);
-      finalize(internal,transaction);
+      finalize(this,internal,transaction);
       return internal.getSnapshot();
     }
     pending.set(this,transaction);
@@ -170,9 +184,44 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
       reject(internal,"runtime atomic attack target disappeared before projection");
       return internal.getSnapshot();
     }
-    finalize(internal,transaction);
+    finalize(this,internal,transaction);
     return internal.getSnapshot();
   }
 
   return previousAdvance.call(this);
+};
+
+MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFromDomainEvents() {
+  const internal=this as unknown as RuntimeAttackAdapterState;
+  const history=committedEventHistory.get(this);
+  if (!history || internal.lastResolutionId !== history.resolutionId) {
+    return previousUndo.call(this);
+  }
+  const undone=undoResolutionEvents(internal.scene,history.events);
+  if (undone.status === "rejected") {
+    if (internal.resolution) {
+      internal.resolution.detail.push(`Event-native Undo 거부: ${undone.error}`);
+      internal.resolution.finalOutcome=`Undo 거부: ${undone.error}`;
+    }
+    return internal.getSnapshot();
+  }
+  internal.scene=undone.scene;
+  internal.syncChar();
+  internal.activity=internal.activity.map((entry)=>entry.id===history.resolutionId ? { ...entry, reversed:true } : entry);
+  internal.activity.unshift({
+    id:`phase09.event-undo.${Date.now()}.${Math.floor(Math.random()*1000)}`,
+    time:"지금",
+    actor:"시스템",
+    title:"Resolution 되돌림",
+    summary:history.resolutionId,
+    detail:[`ResolutionEvent ${history.events.length}개 역순 적용`,`Before snapshot 미사용`],
+    stateChanges:undone.stateChanges,
+    correction:true,
+    undoOf:history.resolutionId,
+  });
+  internal.resolution=null;
+  internal.lastBefore=null;
+  internal.lastResolutionId=null;
+  committedEventHistory.delete(this);
+  return internal.getSnapshot();
 };

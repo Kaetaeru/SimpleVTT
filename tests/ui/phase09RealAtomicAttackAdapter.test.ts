@@ -141,7 +141,7 @@ async function hitShortbow(adapter:MockAdapter) {
   return adapter.getSnapshot();
 }
 
-test("MockAdapter Shortbow final apply is one authoritative runtime-fact attack transaction with event-native Activity", async () => {
+test("MockAdapter Shortbow final apply uses event-native Activity and Undo without the before snapshot", async () => {
   const adapter = new MockAdapter();
   const snapshot = await hitShortbow(adapter);
   const goblin = snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a");
@@ -162,10 +162,34 @@ test("MockAdapter Shortbow final apply is one authoritative runtime-fact attack 
   assert.ok(activity.stateChanges.some((line) => line.includes("combatant.goblin-a HP 12 → 6")));
   assert.ok(activity.stateChanges.some((line) => line.includes("char.aelar economy.action true → false")));
 
+  (adapter as unknown as { lastBefore:unknown }).lastBefore=null;
   await adapter.undoLastResolution();
   const undone = await adapter.getSnapshot();
   assert.equal(undone.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.hp,12);
   assert.equal(undone.scene.economyByActor["char.aelar"]?.action,true);
+  assert.equal(undone.resolution,null);
+  assert.ok(undone.activity[0]?.detail.includes("Before snapshot 미사용"));
+  assert.ok(undone.activity[0]?.stateChanges.some((line) => line.includes("combatant.goblin-a HP 6 → 12")));
+  assert.ok(undone.activity.find((entry) => entry.id === activity.id)?.reversed);
+});
+
+test("event-native Undo rejects when current scene state drifted after the committed events", async () => {
+  const adapter = new MockAdapter();
+  await hitShortbow(adapter);
+  await adapter.applyDmAdjudication({
+    type:"healing-correction",
+    value:1,
+    targetId:"combatant.goblin-a",
+    scope:"resolution",
+    reason:"stale undo guard fixture",
+  });
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.hp,7);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.hp,7,"stale event inverse must not overwrite later state");
+  assert.match(snapshot.resolution?.finalOutcome ?? "",/Undo 거부/);
+  assert.match(snapshot.resolution?.detail.at(-1) ?? "",/event-native scene undo drift/);
 });
 
 test("Shortbow miss still commits Action cost atomically and projects the economy event", async () => {
