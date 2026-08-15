@@ -143,6 +143,8 @@ jobs:
           tests/domain/progressionPhase08BardLore.test.ts
           tests/domain/progressionPhase08SorcererDraconic.test.ts
           tests/domain/progressionPhase08WizardEvocation.test.ts
+      - name: Audit remaining Phase 08 catalog pending
+        run: npx tsx --test tests/domain/progressionPhase08CatalogPendingAudit.test.ts
       - name: Run Phase 06 spellcasting integration gate
         run: npm run test:spellcasting
       - name: Run Phase 07/08 progression integration gate
