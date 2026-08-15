@@ -3,17 +3,24 @@ import type { ActionVm, DamageComponentView, EconomyVm, SceneEntity } from "./co
 import type { RuntimeLifeVm } from "./lifeRuntimeContracts";
 import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09ReferenceRulesFacts";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
-import { resolveAttack } from "../domain/attack";
+import { compileAttack, resolveAttack } from "../domain/attack";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult } from "../domain/d20";
 import type { CompoundDamageResolution, DamageDefenseContribution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
-import type { ResolutionEvent } from "../domain/resolutionTypes";
+import { resolvePendingResolution } from "../domain/resolution";
+import type { ResolutionEvent, ResolutionOperation } from "../domain/resolutionTypes";
 
 export interface AtomicAttackPreviewExpectation {
   total:number;
   outcome:"명중"|"빗나감";
   critical:boolean;
+}
+
+export interface AtomicReactionAttackContext {
+  trigger:string;
+  optionId:string;
+  source:string;
 }
 
 export interface AtomicAttackTransactionRequest {
@@ -24,6 +31,8 @@ export interface AtomicAttackTransactionRequest {
   actorEconomy:EconomyVm;
   targetEconomy:EconomyVm;
   initiativeMode:boolean;
+  activeTurnActorId?:string;
+  reaction?:AtomicReactionAttackContext;
   attackD20Face:number;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
@@ -93,7 +102,11 @@ function runtimeCombatant(entity:SceneEntity,economy:EconomyVm) {
 function runtimeState(request:AtomicAttackTransactionRequest):RulesRuntimeState {
   return {
     revision:0,
-    clock:{ round:1, elapsedSeconds:0, activeActorId:request.initiativeMode ? request.actor.id : undefined },
+    clock:{
+      round:1,
+      elapsedSeconds:0,
+      activeActorId:request.initiativeMode ? (request.activeTurnActorId ?? request.actor.id) : undefined,
+    },
     combatants:{
       [request.actor.id]:runtimeCombatant(request.actor,request.actorEconomy),
       [request.target.id]:runtimeCombatant(request.target,request.targetEconomy),
@@ -149,13 +162,9 @@ function projectLife(state:RulesRuntimeState,targetId:string):RuntimeLifeVm {
   };
 }
 
-export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRequest):AtomicAttackTransactionResult {
-  const damageSpec = request.action.damage?.[0];
-  if (request.action.resolutionKind !== "attack" || !damageSpec) {
-    return { status:"rejected", error:`atomic attack requires one attack damage component: ${request.action.id}` };
-  }
-  const input = runtimeState(request);
-  const transaction = resolveAttack(SIMPLEVTT_APP_RULES_PROFILE,input,{
+function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
+  const damageSpec=request.action.damage![0];
+  return {
     id:request.resolutionId,
     actorId:request.actor.id,
     expectedRevision:input.revision,
@@ -163,13 +172,13 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
     sourceKind:request.attackFact.sourceKind,
     target:{
       id:request.target.id,
-      kind:"creature",
+      kind:"creature" as const,
       relation:attackRelation(request.actor,request.target),
       distanceFeet:request.targetingFact.distanceFeet,
       visible:request.targetingFact.visible,
       cover:request.targetingFact.cover,
       ac:request.effectiveTargetAc,
-      creatureKind:request.target.kind === "character" ? "character" : "monster",
+      creatureKind:request.target.kind === "character" ? "character" as const : "monster" as const,
       targetCanSeeAttacker:request.targetingFact.targetCanSeeAttacker,
     },
     rangeFeet:request.attackFact.rangeFeet,
@@ -190,8 +199,42 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
       dice:request.attackFact.damageDice,
       flat:request.attackFact.flatDamage,
     },
-    economy:economyCost(request.action,request.initiativeMode),
+    economy:request.reaction ? undefined : economyCost(request.action,request.initiativeMode),
+  };
+}
+
+function resolveAttackTransaction(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
+  const compiledRequest=attackRequest(request,input);
+  if (!request.reaction) return resolveAttack(SIMPLEVTT_APP_RULES_PROFILE,input,compiledRequest);
+
+  const compiled=compileAttack(compiledRequest);
+  const [targeting,...rest]=compiled.operations;
+  const reaction:ResolutionOperation={
+    id:`${request.resolutionId}:reaction`,
+    kind:"reaction",
+    reactorId:request.actor.id,
+    trigger:request.reaction.trigger,
+    options:[{
+      id:request.reaction.optionId,
+      actorId:request.actor.id,
+      trigger:request.reaction.trigger,
+      source:request.reaction.source,
+    }],
+    optionId:request.reaction.optionId,
+  };
+  return resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,input,{
+    ...compiled,
+    operations:[targeting,reaction,...rest],
   });
+}
+
+export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRequest):AtomicAttackTransactionResult {
+  const damageSpec = request.action.damage?.[0];
+  if (request.action.resolutionKind !== "attack" || !damageSpec) {
+    return { status:"rejected", error:`atomic attack requires one attack damage component: ${request.action.id}` };
+  }
+  const input = runtimeState(request);
+  const transaction = resolveAttackTransaction(request,input);
   if (transaction.status === "rejected") return { status:"rejected", error:transaction.error };
 
   const attack = transaction.results[`${request.resolutionId}:attack`] as D20TestResult;
