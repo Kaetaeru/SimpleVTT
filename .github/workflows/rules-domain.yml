@@ -8,8 +8,9 @@ on:
       - "src/app/progression*.ts"
       - "src/CombatSpellHud.tsx"
       - "src/LevelUpV10.tsx"
+      - "content/modules/**"
       - "content/presentation/dnd-srd-5.2.1.progression/**"
-      - "scripts/generate-progression.mjs"
+      - "scripts/generate-*.mjs"
       - "tests/domain/**"
       - "tests/ui/combatSpellHudStructure.test.ts"
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
@@ -28,8 +29,9 @@ on:
       - "src/app/progression*.ts"
       - "src/CombatSpellHud.tsx"
       - "src/LevelUpV10.tsx"
+      - "content/modules/**"
       - "content/presentation/dnd-srd-5.2.1.progression/**"
-      - "scripts/generate-progression.mjs"
+      - "scripts/generate-*.mjs"
       - "tests/domain/**"
       - "tests/ui/combatSpellHudStructure.test.ts"
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
@@ -50,13 +52,79 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Run Phase 04/05/06/07 rules gate
-        run: npm run test:rules-domain
-      - name: Run Phase 06 spellcasting integration gate
-        run: npm run test:spellcasting
-      - name: Run Phase 07/08 progression integration gate
-        run: npm run test:progression
-      - name: Run latest Phase 08 subclass gate
+      - name: Generate Phase 08 content catalogs
+        run: npm run generate:content
+      - name: Verify core resolution primitives
+        run: >-
+          npx tsx --test
+          tests/domain/phase04TargetingReaction.test.ts
+          tests/domain/phase05Lifecycle.test.ts
+          tests/domain/effectTermination.test.ts
+          tests/domain/effectTurnActivity.test.ts
+          tests/domain/resolutionAtomic.test.ts
+          tests/domain/resourceRecoveryLockout.test.ts
+          tests/domain/compoundDamage.test.ts
+          tests/domain/attackRiders.test.ts
+      - name: Verify spell and resource primitives
+        run: >-
+          npx tsx --test
+          tests/domain/spellcastingKernel.test.ts
+          tests/domain/spellcastingFeatureResource.test.ts
+          tests/domain/classFeatureSpellResources.test.ts
+          tests/domain/coreClassResources.test.ts
+          tests/domain/wildResurgence.test.ts
+          tests/domain/wizardLongRestPreparation.test.ts
+          tests/domain/warlockPactTome.test.ts
+          tests/domain/featRuleCatalog.test.ts
+      - name: Verify class mechanics
+        run: >-
+          npx tsx --test
+          tests/domain/druidArchdruid.test.ts
+          tests/domain/druidElementalFury.test.ts
+          tests/domain/druidCircleLand.test.ts
+          tests/domain/druidCircleLandRecovery.test.ts
+          tests/domain/druidCircleLandWard.test.ts
+          tests/domain/druidCircleLandSanctuary.test.ts
+          tests/domain/druidCircleLandSpells.test.ts
+          tests/domain/clericDivineSpark.test.ts
+          tests/domain/clericTurnUndead.test.ts
+          tests/domain/clericBlessedStrikes.test.ts
+          tests/domain/clericDivineIntervention.test.ts
+          tests/domain/clericGreaterDivineIntervention.test.ts
+          tests/domain/clericLifeDomain.test.ts
+          tests/domain/fighterSecondWind.test.ts
+          tests/domain/fighterTacticalMind.test.ts
+          tests/domain/fighterActionSurge.test.ts
+          tests/domain/fighterIndomitable.test.ts
+          tests/domain/fighterChampion.test.ts
+          tests/domain/fighterChampionRuntime.test.ts
+          tests/domain/paladinLayOnHands.test.ts
+          tests/domain/paladinDivineSense.test.ts
+          tests/domain/paladinAbjureFoes.test.ts
+          tests/domain/paladinAura.test.ts
+          tests/domain/sorcery.test.ts
+          tests/domain/sorcererMetamagicReplacement.test.ts
+      - name: Verify Phase 07/08 progression domain
+        run: >-
+          npx tsx --test
+          tests/domain/progressionPhase07.test.ts
+          tests/domain/progressionPhase08.test.ts
+          tests/domain/progressionPhase08Paladin.test.ts
+          tests/domain/progressionPhase08Cleric.test.ts
+          tests/domain/progressionPhase08ClericChoices.test.ts
+          tests/domain/progressionPhase08Druid.test.ts
+          tests/domain/progressionPhase08Bard.test.ts
+          tests/domain/progressionPhase08Wizard.test.ts
+          tests/domain/progressionPhase08Sorcerer.test.ts
+          tests/domain/progressionPhase08SorcererReplacement.test.ts
+          tests/domain/progressionPhase08Warlock.test.ts
+          tests/domain/progressionPhase08WarlockReplacement.test.ts
+          tests/domain/progressionPhase08EpicBoon.test.ts
+          tests/domain/progressionPhase08WeaponMastery.test.ts
+          tests/domain/progressionPhase08FighterStyle.test.ts
+          tests/domain/progressionPhase08BarbarianPrimalKnowledge.test.ts
+          tests/domain/progressionPhase08Subclass.test.ts
+      - name: Verify latest Phase 08 subclass domain
         run: >-
           npx tsx --test
           tests/domain/bardCollegeLore.test.ts
@@ -64,11 +132,9 @@ jobs:
           tests/domain/progressionPhase08BardLore.test.ts
           tests/domain/progressionPhase08SorcererDraconic.test.ts
           tests/domain/progressionPhase08WizardEvocation.test.ts
-          tests/ui/bardicInspirationRuntimeAdapter.test.ts
-          tests/ui/progressionPhase08BardLoreRuntime.test.ts
-          tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
-          tests/ui/progressionPhase08WizardEvocationRuntime.test.ts
-      - name: Generate content dependencies
-        run: npm run generate:content
+      - name: Run Phase 06 spellcasting integration gate
+        run: npm run test:spellcasting
+      - name: Run Phase 07/08 progression integration gate
+        run: npm run test:progression
       - name: Typecheck application
         run: npx tsc --noEmit
