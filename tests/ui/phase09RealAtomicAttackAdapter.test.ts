@@ -52,7 +52,7 @@ test("runtime targeting provider derives scene distance from target runtime stat
   assert.throws(() => resolveRuntimeTargetingFact({ ...TARGET, id:"combatant.unknown", distance:undefined }),/missing structured runtime distance/);
 });
 
-test("atomic attack service keeps preview parity and doubles only dice on critical", () => {
+test("atomic attack service keeps preview parity, domain events, and doubles only dice on critical", () => {
   const common = {
     action:SHORTBOW,
     actor:ACTOR,
@@ -77,6 +77,10 @@ test("atomic attack service keeps preview parity and doubles only dice on critic
     assert.deepEqual(normal.damageFaces,[4]);
     assert.equal(normal.targetHp,6);
     assert.equal(normal.actorEconomy.action,false);
+    assert.equal(normal.eventCount,normal.events.length);
+    assert.ok(normal.events.length > 0);
+    assert.ok(normal.events.some((event) => event.stateChanges.some((change) => change.kind === "hp" && change.targetId === "combatant.goblin-a")));
+    assert.ok(normal.events.some((event) => event.stateChanges.some((change) => change.kind === "economy" && change.targetId === "char.aelar" && change.field === "action")));
   }
 
   const critical = resolveAtomicAttackTransaction({
@@ -91,6 +95,7 @@ test("atomic attack service keeps preview parity and doubles only dice on critic
     assert.deepEqual(critical.damageFaces,[4,4]);
     assert.equal(critical.targetHp,2);
     assert.equal(critical.actorEconomy.action,false);
+    assert.equal(critical.eventCount,critical.events.length);
   }
 });
 
@@ -136,7 +141,7 @@ async function hitShortbow(adapter:MockAdapter) {
   return adapter.getSnapshot();
 }
 
-test("MockAdapter Shortbow final apply is one authoritative runtime-fact attack transaction", async () => {
+test("MockAdapter Shortbow final apply is one authoritative runtime-fact attack transaction with event-native Activity", async () => {
   const adapter = new MockAdapter();
   const snapshot = await hitShortbow(adapter);
   const goblin = snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a");
@@ -151,13 +156,19 @@ test("MockAdapter Shortbow final apply is one authoritative runtime-fact attack 
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));
   assert.ok(snapshot.resolution?.stateChanges.includes("고블린 A HP 12 → 6"));
 
+  const activity = snapshot.activity[0];
+  assert.equal(activity.id,snapshot.resolution?.id);
+  assert.ok(activity.detail.some((line) => line.startsWith("ResolutionEvent ")));
+  assert.ok(activity.stateChanges.some((line) => line.includes("combatant.goblin-a HP 12 → 6")));
+  assert.ok(activity.stateChanges.some((line) => line.includes("char.aelar economy.action true → false")));
+
   await adapter.undoLastResolution();
   const undone = await adapter.getSnapshot();
   assert.equal(undone.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.hp,12);
   assert.equal(undone.scene.economyByActor["char.aelar"]?.action,true);
 });
 
-test("Shortbow miss still commits Action cost atomically and no damage", async () => {
+test("Shortbow miss still commits Action cost atomically and projects the economy event", async () => {
   const adapter = new MockAdapter();
   await adapter.setQueuedD20(6);
   await adapter.resolveAction("action.shortbow",["combatant.goblin-a"]);
@@ -170,4 +181,6 @@ test("Shortbow miss still commits Action cost atomically and no damage", async (
   assert.equal(snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.hp,12);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));
+  assert.ok(snapshot.activity[0]?.detail.some((line) => line.startsWith("ResolutionEvent ")));
+  assert.ok(snapshot.activity[0]?.stateChanges.some((line) => line.includes("char.aelar economy.action true → false")));
 });

@@ -2,6 +2,7 @@ import "./phase09RealRuntimeStatAdapter";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, CharacterSummary, ResolutionView, SceneEntity, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
+import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 
 interface BeforeState {
@@ -111,22 +112,19 @@ function apply(internal:RuntimeAttackAdapterState,resolution:ResolutionView,tran
   return true;
 }
 
-function finalize(internal:RuntimeAttackAdapterState) {
+function finalize(internal:RuntimeAttackAdapterState,transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>) {
   const resolution = internal.resolution;
   if (!resolution) return;
   resolution.stage = "complete";
   resolution.canAdvance = false;
   resolution.nextLabel = undefined;
   internal.syncChar();
-  internal.activity.unshift({
-    id:resolution.id,
-    time:"지금",
-    actor:internal.entity(resolution.actorId)?.name ?? resolution.actorId,
-    title:`${resolution.actionName} → ${resolution.targetIds.map((id) => internal.entity(id)?.name ?? id).join(", ") || "—"}`,
-    summary:resolution.compact,
-    detail:[...resolution.detail,...resolution.provenance.map((entry) => `출처: ${entry}`)],
-    stateChanges:structuredClone(resolution.stateChanges),
-  });
+  internal.activity.unshift(projectResolutionEventsToActivity({
+    resolution,
+    events:transaction.events,
+    actorName:internal.entity(resolution.actorId)?.name ?? resolution.actorId,
+    targetNames:resolution.targetIds.map((id) => internal.entity(id)?.name ?? id),
+  }));
   internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
   internal.lastResolutionId = resolution.id;
   internal.before = null;
@@ -149,7 +147,7 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
     }
     if (resolution.attackOutcome === "빗나감") {
       apply(internal,resolution,transaction);
-      finalize(internal);
+      finalize(internal,transaction);
       return internal.getSnapshot();
     }
     pending.set(this,transaction);
@@ -172,7 +170,7 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
       reject(internal,"runtime atomic attack target disappeared before projection");
       return internal.getSnapshot();
     }
-    finalize(internal);
+    finalize(internal,transaction);
     return internal.getSnapshot();
   }
 

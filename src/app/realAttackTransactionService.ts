@@ -6,6 +6,7 @@ import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult } from "../domain/d20";
 import type { CompoundDamageResolution, DamageDefenseContribution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export interface AtomicAttackPreviewExpectation {
   total:number;
@@ -40,6 +41,7 @@ export type AtomicAttackTransactionResult =
       targetTempHp:number;
       stateChanges:string[];
       provenance:string[];
+      events:ResolutionEvent[];
       eventCount:number;
     }
   | {
@@ -209,6 +211,7 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
     source:"Rules Domain · atomic resolveAttack transaction",
   } satisfies DamageComponentView : undefined;
 
+  const events = transaction.events.map((event) => structuredClone(event));
   return {
     status:"committed",
     attack,
@@ -219,7 +222,8 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
     targetHp:targetAfter.current,
     targetTempHp:targetAfter.temporary,
     stateChanges,
-    provenance:transaction.events.flatMap((event) => event.provenance.map((entry) => `${entry.source} · ${entry.status} · ${entry.reason}`)),
-    eventCount:transaction.events.length,
+    provenance:events.flatMap((event) => event.provenance.map((entry) => `${entry.source} · ${entry.status} · ${entry.reason}`)),
+    events,
+    eventCount:events.length,
   };
 }
