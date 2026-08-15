@@ -65,17 +65,22 @@ jobs:
           tests/domain/resourceRecoveryLockout.test.ts
           tests/domain/compoundDamage.test.ts
           tests/domain/attackRiders.test.ts
-      - name: Verify spell and resource primitives
-        run: >-
-          npx tsx --test
-          tests/domain/spellcastingKernel.test.ts
-          tests/domain/spellcastingFeatureResource.test.ts
-          tests/domain/classFeatureSpellResources.test.ts
-          tests/domain/coreClassResources.test.ts
-          tests/domain/wildResurgence.test.ts
-          tests/domain/wizardLongRestPreparation.test.ts
-          tests/domain/warlockPactTome.test.ts
-          tests/domain/featRuleCatalog.test.ts
+      - name: Verify spellcasting kernel
+        run: npx tsx --test tests/domain/spellcastingKernel.test.ts
+      - name: Verify spellcasting feature resources
+        run: npx tsx --test tests/domain/spellcastingFeatureResource.test.ts
+      - name: Verify class feature spell resources
+        run: npx tsx --test tests/domain/classFeatureSpellResources.test.ts
+      - name: Verify core class resources
+        run: npx tsx --test tests/domain/coreClassResources.test.ts
+      - name: Verify Wild Resurgence
+        run: npx tsx --test tests/domain/wildResurgence.test.ts
+      - name: Verify Wizard Long Rest preparation
+        run: npx tsx --test tests/domain/wizardLongRestPreparation.test.ts
+      - name: Verify Pact of the Tome
+        run: npx tsx --test tests/domain/warlockPactTome.test.ts
+      - name: Verify feat rule catalog
+        run: npx tsx --test tests/domain/featRuleCatalog.test.ts
       - name: Verify class mechanics
         run: >-
           npx tsx --test
