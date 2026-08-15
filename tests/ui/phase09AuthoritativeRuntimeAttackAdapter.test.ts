@@ -9,6 +9,11 @@ function internalScene(adapter:MockAdapter) {
   return (adapter as unknown as { scene:Awaited<ReturnType<MockAdapter["getSnapshot"]>>["scene"] }).scene;
 }
 
+async function startAelarInitiative(adapter:MockAdapter) {
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+}
+
 function seedRuntime(adapter:MockAdapter,mutate:(state:NonNullable<ReturnType<typeof snapshotAdapterTurnRuntimeState>>)=>void) {
   const scene=internalScene(adapter);
   const before=snapshotAdapterTurnRuntimeState(adapter,scene);
@@ -33,7 +38,7 @@ async function stageShortbowHit(adapter:MockAdapter) {
 
 test("initiative attack uses authoritative runtime effects and commits the staged runtime revision", async () => {
   const adapter=new MockAdapter();
-  await adapter.startInitiative();
+  await startAelarInitiative(adapter);
   seedRuntime(adapter,(state)=>{
     state.effects.push(createEffect({
       id:"runtime-piercing-resistance",
@@ -62,7 +67,7 @@ test("initiative attack uses authoritative runtime effects and commits the stage
 
 test("initiative attack explicitly rejects damage to a concentrator when no fixed concentration save input exists", async () => {
   const adapter=new MockAdapter();
-  await adapter.startInitiative();
+  await startAelarInitiative(adapter);
   seedRuntime(adapter,(state)=>{
     state.concentration["combatant.goblin-a"]={
       actorId:"combatant.goblin-a",
@@ -98,7 +103,7 @@ test("initiative attack explicitly rejects damage to a concentrator when no fixe
 
 test("staged initiative attack rejects stale runtime revision without discarding the intervening runtime mutation", async () => {
   const adapter=new MockAdapter();
-  await adapter.startInitiative();
+  await startAelarInitiative(adapter);
   let snapshot=await stageShortbowHit(adapter);
   assert.equal(snapshot.resolution?.stage,"damage-animation");
 
@@ -124,7 +129,7 @@ test("staged initiative attack rejects stale runtime revision without discarding
 
 test("initiative event-native Undo restores Scene and authoritative runtime through the same revision-checked seam", async () => {
   const adapter=new MockAdapter();
-  await adapter.startInitiative();
+  await startAelarInitiative(adapter);
   let snapshot=await stageShortbowHit(adapter);
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
