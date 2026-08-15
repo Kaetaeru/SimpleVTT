@@ -27,6 +27,7 @@ import "./app/phase09RealNoRollDamageAdapter";
 import "./app/phase09RealTurnRuntimeAdapter";
 import "./app/phase09RealRuntimeStatAdapter";
 import "./app/phase09RealRuntimeAttackAdapter";
+import "./app/phase09ManualMovementReactionAdapter";
 import "./app/phase09RealAtomicHealingAdapter";
 import "./app/phase09RealAtomicItemAdapter";
 import "./app/phase09RealAtomicSavingThrowAdapter";
@@ -38,10 +39,12 @@ import "./app/classFeatureSpellRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
+import { MovementReactionBridge } from "./MovementReactionBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
 import "./visual-dice.css";
+import "./movement-reaction.css";
 import "./character-creation-v09.css";
 import "./character-creation-v10.css";
 import "./compact-options.css";
@@ -59,6 +62,7 @@ createRoot(document.getElementById("root")!).render(
       <CombatSpellHudBridge />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
+      <MovementReactionBridge />
     </AppProvider>
   </StrictMode>,
 );
