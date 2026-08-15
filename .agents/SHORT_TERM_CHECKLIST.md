@@ -64,21 +64,38 @@ Verification:
 Tracking: Issue #71 / Draft PR #72
 Branch: `agent/71-concentration-save-workflow`
 
-### 3. Combatant runtime action expansion — IN PROGRESS
+### 3. Combatant runtime action expansion — CLOSED
 
-- [ ] authoritative spatial facts가 있는 encounter instance로 runtime actions 확대
-- [ ] imported / builtin Combatant representative actions
-- [ ] missing stat/spatial fact guess 금지
-- [ ] Activity / Undo convergence
-- [ ] deterministic runtime-action regressions
-- [ ] full Phase 09 + Rules Domain + TypeScript + production build green
-- [ ] Draft PR checkpoint
+- [x] authoritative spatial facts가 있는 encounter instance로 runtime actions 확대
+- [x] imported / builtin Combatant representative actions
+- [x] missing stat/spatial fact guess 금지
+- [x] Activity / Undo convergence
+- [x] deterministic runtime-action regressions
+- [x] runtime spatial provenance를 targeting ResolutionEvent / Activity에 보존
+- [x] full Phase 09 + Rules Domain + TypeScript + production build green
+- [x] Draft PR checkpoint
 
-### 4. Character Creation ChoiceDefinition convergence
+Verified implementation checkpoint: `3b4afb6adfe9de26c83cf5bace672a79af95e7cd`
+
+Verification:
+- UI workflow `31898238908` ✅
+- Phase 09 mechanics 98/98 ✅
+- TypeScript / production build ✅
+- Rules Domain workflow `31898238909` ✅
+- spellcasting / progression integration gates ✅
+
+Tracking: Issue #73 / Draft PR #74
+Branch: `agent/73-combatant-runtime-actions`
+
+### 4. Character Creation ChoiceDefinition convergence — IN PROGRESS
 
 - [ ] creation 전용 choice graph inventory
 - [ ] 공용 `ChoiceDefinition`으로 점진 수렴
 - [ ] creation -> progression stable ID / provenance 정합성
+- [ ] creation UI/adapter가 choice 의미를 재계산하지 않고 공용 정의를 소비
+- [ ] deterministic creation / handoff regressions
+- [ ] full creation/progression + Rules Domain + TypeScript + production build green
+- [ ] Draft PR checkpoint
 
 ### 5. Progression / rest / class-feature application service convergence
 
@@ -107,5 +124,6 @@ Branch: `agent/71-concentration-save-workflow`
 Phase 09
 Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
 Step 2: CLOSED @ ee95adf56a9f6481f754df5dbf5fde277bc18912 · PR #72
-Step 3: IN PROGRESS — Combatant runtime action expansion
+Step 3: CLOSED @ 3b4afb6adfe9de26c83cf5bace672a79af95e7cd · PR #74
+Step 4: IN PROGRESS — Character Creation ChoiceDefinition convergence
 ```
