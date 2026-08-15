@@ -52,5 +52,7 @@ jobs:
         run: npx tsx --test --test-name-pattern="Sorcerer 5 to 6" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
       - name: Verify School of Evocation progression runtime
         run: npx tsx --test tests/ui/progressionPhase08WizardEvocationRuntime.test.ts
+      - name: Verify Phase 09 real resolution service
+        run: npx tsx --test tests/ui/phase09RealResolutionService.test.ts
       - name: Typecheck and build
         run: npm run build
