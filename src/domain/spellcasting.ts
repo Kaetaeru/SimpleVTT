@@ -3,8 +3,9 @@ import type { DurationSpec } from "./effects";
 import type { FixedDiceInput } from "./d20";
 import type { FixedDamageDice } from "./damageRoll";
 import { cloneRuntimeState, type RulesRuntimeState } from "./combatState";
-import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
+import { DomainEvaluationError, type ProvenanceRecord, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
+import { spellcastingTurnStateChange } from "./runtimeStateChange";
 import type { PendingResolution, ResolutionEvent, ResolutionOperation } from "./resolutionTypes";
 import type { TargetFacts, TargetingRule } from "./targeting";
 
@@ -219,25 +220,16 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
   }
   if (request.source === "feature") {
     if (!(request.caster.featureSpellIds ?? []).includes(definition.spellId)) {
-      throw new DomainEvaluationError("spell is not granted for slotless feature casting");
+      throw new DomainEvaluationError("spell is not available from the requested feature source");
     }
-    if (request.slotLevel !== undefined) throw new DomainEvaluationError("slotless feature casting cannot specify a slot level");
-    return {
-      slotted:false as const,
-      slotResourceId:undefined,
-      featureResourceId:request.caster.featureResourceIds?.[definition.spellId],
-    };
+    const featureResourceId = request.caster.featureResourceIds?.[definition.spellId];
+    if (request.slotLevel !== undefined) throw new DomainEvaluationError("feature spell casting cannot specify a slot level");
+    return { slotted: false as const, slotResourceId: undefined, featureResourceId };
   }
-
-  if (request.slotLevel === undefined) throw new DomainEvaluationError("level 1+ prepared spells require a spell slot");
-  if (!Number.isInteger(request.slotLevel) || request.slotLevel < definition.baseLevel || request.slotLevel > 9) {
-    throw new DomainEvaluationError(`slot level must be ${definition.baseLevel}-9`);
-  }
+  if (request.slotLevel === undefined) throw new DomainEvaluationError("slotted spell casting requires a slot level");
+  if (request.slotLevel < definition.baseLevel || request.slotLevel > 9) throw new DomainEvaluationError("invalid spell slot level");
   const slotResourceId = request.caster.slotResourceIds[request.slotLevel];
-  if (!slotResourceId) throw new DomainEvaluationError(`no slot resource mapped for level ${request.slotLevel}`);
-  if (request.useActionEconomy && !request.turnId) {
-    throw new DomainEvaluationError("turn-bound slotted casting requires turnId for the one-slot-per-turn rule");
-  }
+  if (!slotResourceId) throw new DomainEvaluationError(`caster has no spell slot resource for level ${request.slotLevel}`);
   return { slotted: true as const, slotResourceId, featureResourceId: undefined };
 }
 
@@ -248,40 +240,92 @@ function economyOperation(definition: SpellMechanicDefinition, request: SpellCas
     kind: "use-economy",
     actorId: request.actorId,
     slot: definition.castingEconomy,
-    bonusActionGranted: definition.castingEconomy === "bonus-action",
+    source: definition.spellId,
+    bonusActionGranted: definition.castingEconomy === "bonus-action" ? true : undefined,
   };
+}
+
+function resourceOperations(
+  definition: SpellMechanicDefinition,
+  request: SpellCastRequest,
+  access: ReturnType<typeof validateAccess>,
+): ResolutionOperation[] {
+  if (access.slotResourceId) {
+    return [{
+      id: `${request.id}:slot`,
+      kind: "spend-resource",
+      targetId: request.actorId,
+      resourceId: access.slotResourceId,
+      amount: 1,
+    }];
+  }
+  if (access.featureResourceId) {
+    return [{
+      id: `${request.id}:feature-resource`,
+      kind: "spend-resource",
+      targetId: request.actorId,
+      resourceId: access.featureResourceId,
+      amount: 1,
+    }];
+  }
+  return [];
+}
+
+function concentrationOperation(definition: SpellMechanicDefinition, request: SpellCastRequest) {
+  if (!definition.concentration) return undefined;
+  return {
+    id: `${request.id}:concentration`,
+    kind: "start-concentration" as const,
+    actorId: request.actorId,
+    groupId: `${request.actorId}:${request.id}`,
+    sourceId: definition.spellId,
+  };
+}
+
+function targetOperations(definition: SpellMechanicDefinition, request: SpellCastRequest) {
+  return request.targets.map((target) => ({
+    id: `${request.id}:target:${target.id}`,
+    kind: "targeting" as const,
+    actorId: request.actorId,
+    target,
+    rule: definition.targeting,
+  }));
+}
+
+function effectOperationId(request: SpellCastRequest, targetId: string, conditionId: ConditionId, index: number) {
+  return `${request.id}:effect:${targetId}:${conditionId}:${index}`;
 }
 
 function applyEffectOperations(
   definition: SpellMechanicDefinition,
   request: SpellCastRequest,
-  triggerOperationIds: Record<string, string | undefined>,
-  concentrationGroupId: string | undefined,
+  triggerOperationIds: Record<string, string>,
+  concentrationGroupId?: string,
 ): ResolutionOperation[] {
+  if (!definition.effects?.length) return [];
   const operations: ResolutionOperation[] = [];
-  for (const [effectIndex, effect] of (definition.effects ?? []).entries()) {
-    for (const target of request.targets) {
-      const triggerId = triggerOperationIds[target.id];
-      if (effect.trigger !== "always" && !triggerId) continue;
-      const when = effect.trigger === "hit" && triggerId
-        ? { operationId: triggerId, field: "outcome", equals: "success" as const }
-        : effect.trigger === "failed-save" && triggerId
-          ? { operationId: triggerId, field: "outcome", equals: "failure" as const }
-          : undefined;
+  for (const target of request.targets) {
+    for (const [index, effect] of definition.effects.entries()) {
+      const triggerOperationId = triggerOperationIds[target.id];
+      const when = effect.trigger === "always"
+        ? undefined
+        : effect.trigger === "hit"
+          ? { operationId: triggerOperationId, field: "outcome", equals: "success" }
+          : { operationId: triggerOperationId, field: "outcome", equals: "failure" };
       operations.push({
-        id: `${request.id}:effect:${effectIndex}:${target.id}`,
+        id: effectOperationId(request, target.id, effect.conditionId, index),
         kind: "apply-effect",
         when,
         effect: {
-          id: `${request.id}:effect:${effectIndex}:${target.id}`,
+          id: `${request.id}:effect:${target.id}:${effect.conditionId}:${index}`,
           sourceId: definition.spellId,
           sourceActorId: request.actorId,
           targetId: target.id,
           kind: "condition",
           conditionId: effect.conditionId,
+          tags: [`spell:${definition.spellId}`],
           duration: effect.duration,
           concentrationGroupId,
-          tags: ["spell", definition.spellId],
         },
       });
     }
@@ -291,101 +335,94 @@ function applyEffectOperations(
 
 export function compileSpellCast(
   definition: SpellMechanicDefinition,
-  inputState: RulesRuntimeState,
+  state: RulesRuntimeState,
   request: SpellCastRequest,
 ): SpellCastCompilation {
-  if (request.expectedRevision !== inputState.revision) throw new DomainEvaluationError("spell cast revision mismatch");
   const access = validateAccess(definition, request);
-  const operations: ResolutionOperation[] = [];
-  const targetOpId = `${request.id}:targets`;
-  let targetRule = definition.targeting;
-
+  if (!state.combatants[request.actorId]) throw new DomainEvaluationError(`caster combatant not found: ${request.actorId}`);
+  if (definition.targeting.minTargets > 0 && request.targets.length < definition.targeting.minTargets) {
+    throw new DomainEvaluationError(`spell requires at least ${definition.targeting.minTargets} target(s)`);
+  }
+  if (request.targets.length > definition.targeting.maxTargets) {
+    throw new DomainEvaluationError(`spell allows at most ${definition.targeting.maxTargets} target(s)`);
+  }
   if (definition.primary.kind === "automatic-projectiles") {
-    const projectileCount = definition.primary.baseProjectiles
+    const allocations = request.projectileAllocations ?? [];
+    const expected = definition.primary.baseProjectiles
       + Math.max(0, (request.slotLevel ?? definition.baseLevel) - definition.baseLevel)
-        * (definition.primary.projectilesPerSlotAboveBase ?? 0);
-    targetRule = { ...targetRule, maxTargets: projectileCount };
+      * (definition.primary.projectilesPerSlotAboveBase ?? 0);
+    const allocated = allocations.reduce((sum, entry) => sum + entry.count, 0);
+    if (allocations.some((entry) => !Number.isInteger(entry.count) || entry.count < 1)) {
+      throw new DomainEvaluationError("projectile allocation counts must be positive integers");
+    }
+    if (allocated !== expected) throw new DomainEvaluationError(`projectile allocation must total ${expected}`);
+    for (const allocation of allocations) {
+      if (!request.targets.some((target) => target.id === allocation.targetId)) {
+        throw new DomainEvaluationError(`projectile allocation target is missing: ${allocation.targetId}`);
+      }
+    }
   }
 
-  operations.push({
-    id: targetOpId,
-    kind: "targeting",
-    sourceId: request.actorId,
-    rule: targetRule,
-    targets: request.targets,
-    harmful: definition.primary.kind === "attack-damage"
-      || definition.primary.kind === "save-damage"
-      || definition.primary.kind === "automatic-projectiles",
-  });
-
+  const operations: ResolutionOperation[] = [];
   const economy = economyOperation(definition, request);
   if (economy) operations.push(economy);
-  if (access.slotted) {
-    operations.push({
-      id: `${request.id}:slot`,
-      kind: "spend-resource",
-      actorId: request.actorId,
-      resourceId: access.slotResourceId,
-      amount: 1,
-    });
-  }
-  if (access.featureResourceId) {
-    operations.push({
-      id:`${request.id}:feature-resource`,
-      kind:"spend-resource",
-      actorId:request.actorId,
-      resourceId:access.featureResourceId,
-      amount:1,
-    });
-  }
+  operations.push(...resourceOperations(definition, request, access));
 
-  const concentrationGroupId = definition.concentration ? `${request.id}:concentration` : undefined;
-  if (definition.concentration) {
+  const concentration = concentrationOperation(definition, request);
+  if (concentration) operations.push(concentration);
+
+  operations.push(...targetOperations(definition, request));
+  const triggerOperationIds: Record<string, string> = {};
+  const concentrationGroupId = concentration?.groupId;
+
+  if (definition.primary.kind === "healing") {
+    const scaled = scaledFormula(definition.primary.dice, definition, request);
+    const faces = request.dice.effectFaces ?? [];
+    const rollId = `${request.id}:healing-roll`;
     operations.push({
-      id: `${request.id}:concentration:start`,
-      kind: "start-concentration",
-      actorId: request.actorId,
-      groupId: concentrationGroupId!,
-      sourceId: definition.spellId,
+      id: rollId,
+      kind: "damage-roll",
+      request: diceRequest(definition.spellId, scaled.count, scaled.sides, faces, scaled.flat),
     });
-  }
-
-  const triggerOperationIds: Record<string, string | undefined> = {};
-
-  if (definition.primary.kind === "attack-damage") {
-    if (request.targets.length !== 1) throw new DomainEvaluationError("attack spell requires exactly one target in this execution envelope");
+    for (const target of request.targets) {
+      operations.push({
+        id: `${request.id}:healing:${target.id}`,
+        kind: "healing",
+        targetId: target.id,
+        amount: { operationId: rollId, field: "total" },
+      });
+      triggerOperationIds[target.id] = `${request.id}:healing:${target.id}`;
+    }
+  } else if (definition.primary.kind === "attack-damage") {
+    const attack = request.dice.attack;
+    if (!attack) throw new DomainEvaluationError("spell attack requires fixed d20 input");
+    if (request.targets.length !== 1) throw new DomainEvaluationError("spell attack runtime currently requires exactly one target");
     const target = request.targets[0];
-    if (target.ac === undefined) throw new DomainEvaluationError("spell attack requires authoritative target AC");
-    if (!request.dice.attack) throw new DomainEvaluationError("spell attack requires fixed d20 input");
     const attackId = `${request.id}:attack:${target.id}`;
-    triggerOperationIds[target.id] = attackId;
     operations.push({
       id: attackId,
       kind: "d20",
+      family: "attack",
       actorId: request.actorId,
       targetId: target.id,
-      request: {
-        family: "attack-roll",
-        target: target.ac,
-        modifierContributions: [{ source: `${definition.spellId}:spell-attack`, value: request.caster.spellAttackModifier }],
-        dice: request.dice.attack,
-        targetSource: `target:${target.id}:ac`,
-      },
-      cover: { targetingOperationId: targetOpId, targetId: target.id, appliesTo: "ac" },
-      condition: {
-        distanceToTargetFeet: target.distanceFeet,
-        actorCanSeeTarget: target.visible,
-        targetCanSeeActor: target.targetCanSeeCaster,
-      },
+      ability: "int",
+      dice: attack,
+      modifierContributions: [{ source: `${definition.spellId}:spell-attack`, value: request.caster.spellAttackModifier }],
+      target: target.ac,
+      sourceKind: "spell",
+      criticalOnNatural20: true,
+      naturalOneAlwaysFails: true,
+      naturalTwentyAlwaysSucceeds: true,
     });
-    const formula = scaledFormula(definition.primary.dice, definition, request);
-    const rollId = `${request.id}:damage-roll`;
+    const scaled = scaledFormula(definition.primary.dice, definition, request);
+    const faces = request.dice.effectFaces ?? [];
+    const rollId = `${request.id}:damage-roll:${target.id}`;
     operations.push({
       id: rollId,
       kind: "damage-roll",
       when: { operationId: attackId, field: "outcome", equals: "success" },
+      request: diceRequest(definition.spellId, scaled.count, scaled.sides, faces, scaled.flat),
       criticalFrom: attackId,
-      request: diceRequest(definition.spellId, formula.count, formula.sides, request.dice.effectFaces ?? [], formula.flat),
     });
     operations.push({
       id: `${request.id}:damage:${target.id}`,
@@ -394,108 +431,67 @@ export function compileSpellCast(
       targetId: target.id,
       damageType: definition.primary.damageType,
       amount: { operationId: rollId, field: "total" },
-      creatureKind: target.creatureKind,
       criticalFrom: attackId,
+      creatureKind: target.creatureKind,
     });
+    triggerOperationIds[target.id] = attackId;
   } else if (definition.primary.kind === "save-damage") {
-    const formula = scaledFormula(definition.primary.dice, definition, request);
-    const rollId = `${request.id}:damage-roll`;
-    operations.push({
-      id: rollId,
-      kind: "damage-roll",
-      request: diceRequest(definition.spellId, formula.count, formula.sides, request.dice.effectFaces ?? [], formula.flat),
-    });
+    const scaled = scaledFormula(definition.primary.dice, definition, request);
     for (const target of request.targets) {
-      const saveDice = request.dice.saves?.[target.id];
-      if (!saveDice) throw new DomainEvaluationError(`missing fixed save dice for ${target.id}`);
+      const save = request.dice.saves?.[target.id];
+      if (!save) throw new DomainEvaluationError(`saving throw input is required for ${target.id}`);
+      const targetRule = definition.targeting;
+      const effectiveCover = definition.primary.ignoresCoverForSave ? "none" : target.cover;
+      const targetOperationId = `${request.id}:target:${target.id}`;
       const saveId = `${request.id}:save:${target.id}`;
-      triggerOperationIds[target.id] = saveId;
       operations.push({
         id: saveId,
         kind: "d20",
+        family: "saving-throw",
         actorId: target.id,
-        request: {
-          family: "saving-throw",
-          target: request.caster.spellSaveDc,
-          modifierContributions: [{
-            source: `target:${target.id}:${definition.primary.saveAbility}-save`,
-            value: target.saveModifiers?.[definition.primary.saveAbility] ?? 0,
-          }],
-          dice: saveDice,
-          targetSource: `${definition.spellId}:spell-save-dc`,
-        },
-        cover: definition.primary.saveAbility === "dex" && !definition.primary.ignoresCoverForSave
-          ? { targetingOperationId: targetOpId, targetId: target.id, appliesTo: "dexterity-save" }
-          : undefined,
-        condition: {
-          ability: definition.primary.saveAbility,
-          actorCanSeeTarget: target.targetCanSeeCaster,
-          targetCanSeeActor: target.visible,
-        },
+        ability: definition.primary.saveAbility,
+        dice: save,
+        modifierContributions: [{
+          source: `${definition.spellId}:${target.id}:save-modifier`,
+          value: target.saveModifiers?.[definition.primary.saveAbility] ?? 0,
+        }],
+        target: request.caster.spellSaveDc,
+        naturalOneAlwaysFails: false,
+        naturalTwentyAlwaysSucceeds: false,
+        rollStateContributions: effectiveCover === "total" && targetRule.requiresSight
+          ? [{ source: `${definition.spellId}:total-cover`, state: "disadvantage" }]
+          : [],
+      });
+      triggerOperationIds[target.id] = saveId;
+      const rollId = `${request.id}:damage-roll:${target.id}`;
+      operations.push({
+        id: rollId,
+        kind: "damage-roll",
+        request: diceRequest(definition.spellId, scaled.count, scaled.sides, request.dice.effectFaces ?? [], scaled.flat),
       });
       operations.push({
-        id: `${request.id}:damage:${target.id}:failed-save`,
+        id: `${request.id}:damage:${target.id}`,
         kind: "damage",
-        when: { operationId: saveId, field: "outcome", equals: "failure" },
         targetId: target.id,
         damageType: definition.primary.damageType,
         amount: { operationId: rollId, field: "total" },
         creatureKind: target.creatureKind,
       });
-      if (definition.primary.successDamage === "half") {
-        operations.push({
-          id: `${request.id}:damage:${target.id}:successful-save`,
-          kind: "damage",
-          when: { operationId: saveId, field: "outcome", equals: "success" },
-          targetId: target.id,
-          damageType: definition.primary.damageType,
-          amount: { operationId: rollId, field: "total", multiplier: 0.5, rounding: "floor" },
-          creatureKind: target.creatureKind,
-        });
-      }
     }
-  } else if (definition.primary.kind === "healing") {
-    if (request.targets.length !== 1) throw new DomainEvaluationError("healing spell requires exactly one target in this execution envelope");
-    const target = request.targets[0];
-    const formula = scaledFormula(definition.primary.dice, definition, request);
-    const rollId = `${request.id}:healing-roll`;
-    operations.push({
-      id: rollId,
-      kind: "damage-roll",
-      request: diceRequest(`${definition.spellId}:healing`, formula.count, formula.sides, request.dice.effectFaces ?? [], formula.flat),
-    });
-    operations.push({
-      id: `${request.id}:healing:${target.id}`,
-      kind: "healing",
-      targetId: target.id,
-      amount: { operationId: rollId, field: "total" },
-    });
   } else {
-    const projectileCount = definition.primary.baseProjectiles
-      + Math.max(0, (request.slotLevel ?? definition.baseLevel) - definition.baseLevel)
-        * (definition.primary.projectilesPerSlotAboveBase ?? 0);
-    const allocations = request.projectileAllocations ?? (request.targets[0] ? [{ targetId: request.targets[0].id, count: projectileCount }] : []);
-    const totalAllocated = allocations.reduce((sum, entry) => sum + entry.count, 0);
-    if (totalAllocated !== projectileCount) throw new DomainEvaluationError(`projectile allocation must total ${projectileCount}`);
-    const knownTargets = new Set(request.targets.map((target) => target.id));
-    let faceOffset = 0;
+    const allocations = request.projectileAllocations ?? [];
+    const faces = request.dice.projectileFaces ?? [];
+    let faceIndex = 0;
     for (const allocation of allocations) {
-      if (!knownTargets.has(allocation.targetId)) throw new DomainEvaluationError(`projectile target not selected: ${allocation.targetId}`);
-      requirePositiveInteger(allocation.count, "projectile allocation");
       const target = request.targets.find((entry) => entry.id === allocation.targetId)!;
-      const faces = (request.dice.projectileFaces ?? []).slice(faceOffset, faceOffset + allocation.count);
-      faceOffset += allocation.count;
+      const count = allocation.count;
+      const selectedFaces = faces.slice(faceIndex, faceIndex + count);
+      faceIndex += count;
       const rollId = `${request.id}:projectiles:${allocation.targetId}`;
       operations.push({
         id: rollId,
         kind: "damage-roll",
-        request: diceRequest(
-          `${definition.spellId}:projectile`,
-          allocation.count,
-          definition.primary.projectileDice.sides,
-          faces,
-          allocation.count * definition.primary.projectileDice.flat,
-        ),
+        request: diceRequest(definition.spellId, count, definition.primary.projectileDice.sides, selectedFaces, definition.primary.projectileDice.flat * count),
       });
       operations.push({
         id: `${request.id}:damage:${allocation.targetId}`,
@@ -546,6 +542,7 @@ export function resolveSpellCast(
   try {
     const compilation = compileSpellCast(definition, inputState, request);
     const workingState = cloneRuntimeState(inputState);
+    const beforeTurn = workingState.spellcastingTurn ? structuredClone(workingState.spellcastingTurn) : undefined;
     if (compilation.slotted && request.turnId) {
       const marker = workingState.spellcastingTurn?.turnId === request.turnId
         ? { ...workingState.spellcastingTurn, slottedCasterIds: [...workingState.spellcastingTurn.slottedCasterIds] }
@@ -561,12 +558,24 @@ export function resolveSpellCast(
     if (commit.status === "rejected") {
       return reject(inputState, request, commit.error, commit.failedOperationId);
     }
+    const events=commit.events.map((event)=>structuredClone(event));
+    const afterTurn=commit.state.spellcastingTurn ? structuredClone(commit.state.spellcastingTurn) : undefined;
+    if (compilation.slotted && request.turnId && events.length) {
+      const provenance:ProvenanceRecord[]=[{
+        source:`spellcasting-turn:${request.turnId}`,
+        status:"applied",
+        reason:`${request.actorId} expended a spell slot on ${request.turnId}`,
+      }];
+      const event=events[events.length-1];
+      event.stateChanges.push(spellcastingTurnStateChange(request.actorId,beforeTurn,afterTurn,provenance));
+      event.provenance.push(...provenance);
+    }
     return {
       status: "committed",
       state: commit.state,
       spellId: request.spellId,
       slotLevel: request.slotLevel,
-      events: commit.events,
+      events,
       results: commit.results,
     };
   } catch (error) {
