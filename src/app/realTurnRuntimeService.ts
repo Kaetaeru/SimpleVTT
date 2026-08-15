@@ -23,6 +23,18 @@ export type TurnRuntimeReactionResult =
   | { status:"committed"; economy:EconomyVm; events:ResolutionEvent[] }
   | { status:"rejected"; error:string };
 
+export interface TurnRuntimeMovementRequest {
+  resolutionId:string;
+  actorId:string;
+  distanceFeet:number;
+  destinationMovesCloserToVisibleFrighteningSource?:boolean;
+  visibleSourceIds?:string[];
+}
+
+export type TurnRuntimeMovementResult =
+  | { status:"committed"; economy:EconomyVm; events:ResolutionEvent[] }
+  | { status:"rejected"; error:string };
+
 function runtimeEconomy(economy:EconomyVm) {
   return {
     action:economy.action,
@@ -212,6 +224,39 @@ export function resolveTurnRuntimeReaction(
   return {
     status:"committed",
     economy:sceneEconomy(committed.state.combatants[request.reactorId].economy),
+    events:committed.events.map((event)=>structuredClone(event)),
+  };
+}
+
+export function resolveTurnRuntimeMovement(
+  session:TurnRuntimeSession,
+  request:TurnRuntimeMovementRequest,
+):TurnRuntimeMovementResult {
+  if (session.state.clock.activeActorId!==request.actorId) {
+    return { status:"rejected",error:`movement requires the active turn actor: ${request.actorId}` };
+  }
+  if (!session.state.combatants[request.actorId]) {
+    return { status:"rejected",error:`movement actor is missing from turn runtime: ${request.actorId}` };
+  }
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,session.state,{
+    id:`${request.resolutionId}:movement`,
+    actorId:request.actorId,
+    sourceId:"runtime:movement-command",
+    expectedRevision:session.state.revision,
+    operations:[{
+      id:`${request.actorId}:move:${request.distanceFeet}`,
+      kind:"move",
+      actorId:request.actorId,
+      distanceFeet:request.distanceFeet,
+      destinationMovesCloserToVisibleFrighteningSource:request.destinationMovesCloserToVisibleFrighteningSource,
+      visibleSourceIds:request.visibleSourceIds,
+    }],
+  });
+  if (committed.status==="rejected") return { status:"rejected",error:committed.error };
+  session.state=committed.state;
+  return {
+    status:"committed",
+    economy:sceneEconomy(committed.state.combatants[request.actorId].economy),
     events:committed.events.map((event)=>structuredClone(event)),
   };
 }

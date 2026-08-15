@@ -1,11 +1,15 @@
 import "./phase09CombatantDefinitionRuntimeAdapter";
+import "./movementRuntimeContracts";
 import type { ActivityEntry, AppSnapshot, ResolutionView, SceneVm, SessionMode } from "./contracts";
+import type { MoveActorCommand } from "./movementRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
+import { applyMovementSpatialPlan, prepareMovementSpatialUpdates } from "./realSpatialRuntimeService";
 import {
   addTurnRuntimeCombatant,
   advanceTurnRuntimeSession,
   createTurnRuntimeSession,
   projectTurnRuntimeToScene,
+  resolveTurnRuntimeMovement,
   resolveTurnRuntimeReaction,
   setTurnRuntimeActiveActor,
   synchronizeTurnRuntimeFromScene,
@@ -51,6 +55,19 @@ function syncFromScene(adapter:MockAdapter,internal:Phase09TurnAdapterState) {
   const changed=synchronizeTurnRuntimeFromScene(session,internal.scene);
   projectTurnRuntimeToScene(session,internal.scene);
   return changed;
+}
+
+function movementRejected(internal:Phase09TurnAdapterState,actorId:string,error:string) {
+  internal.activity.unshift({
+    id:eventId("movement-rejected"),
+    time:"지금",
+    actor:internal.scene.entities.find((entity)=>entity.id===actorId)?.name ?? actorId,
+    title:"이동 적용 거부",
+    summary:error,
+    detail:["Turn runtime/spatial transaction not committed"],
+    stateChanges:[],
+    correction:true,
+  });
 }
 
 export function synchronizeAdapterTurnRuntime(adapter:MockAdapter) {
@@ -138,6 +155,61 @@ MockAdapter.prototype.setCurrentActor=async function setCurrentActorWithTurnRunt
   const session=sessions.get(this);
   if (!session) return previousSetCurrentActor.call(this,id);
   if (setTurnRuntimeActiveActor(session,id)) projectTurnRuntimeToScene(session,internal.scene);
+  return this.getSnapshot();
+};
+
+MockAdapter.prototype.moveActor=async function moveActorOnTurnRuntime(command:MoveActorCommand) {
+  const internal=this as unknown as Phase09TurnAdapterState;
+  const session=sessions.get(this);
+  if (!session||internal.sessionMode!=="initiative") {
+    movementRejected(internal,command.actorId,"movement requires an active initiative turn runtime");
+    return this.getSnapshot();
+  }
+
+  let spatialPlan;
+  try {
+    spatialPlan=prepareMovementSpatialUpdates(internal.scene,command.actorId,command.spatialUpdates);
+  } catch(error) {
+    movementRejected(internal,command.actorId,error instanceof Error ? error.message : String(error));
+    return this.getSnapshot();
+  }
+
+  const beforeMovement=internal.scene.economyByActor[command.actorId]?.movement;
+  const movement=resolveTurnRuntimeMovement(session,{
+    resolutionId:eventId("movement"),
+    actorId:command.actorId,
+    distanceFeet:command.distanceFeet,
+    destinationMovesCloserToVisibleFrighteningSource:command.destinationMovesCloserToVisibleFrighteningSource,
+    visibleSourceIds:command.visibleSourceIds,
+  });
+  if (movement.status==="rejected") {
+    movementRejected(internal,command.actorId,movement.error);
+    return this.getSnapshot();
+  }
+
+  projectTurnRuntimeToScene(session,internal.scene);
+  applyMovementSpatialPlan(internal.scene,spatialPlan);
+  const actor=internal.scene.entities.find((entity)=>entity.id===command.actorId);
+  const afterMovement=movement.economy.movement;
+  internal.activity.unshift({
+    id:eventId("movement-commit"),
+    time:"지금",
+    actor:actor?.name ?? command.actorId,
+    title:"이동 적용",
+    summary:`${command.distanceFeet}피트 이동`,
+    detail:[
+      ...movement.events.flatMap((event,index)=>[
+        `ResolutionEvent ${index+1}/${movement.events.length} · ${event.kind} · ${event.operationId}`,
+        event.summary,
+        ...event.provenance.map((entry)=>`출처: ${entry.source} · ${entry.status} · ${entry.reason}`),
+      ]),
+      ...spatialPlan.provenance.map((entry)=>`출처: ${entry}`),
+    ],
+    stateChanges:[
+      ...(beforeMovement===undefined ? [] : [`${command.actorId} movement ${beforeMovement} → ${afterMovement}`]),
+      ...spatialPlan.stateChanges,
+    ],
+  });
   return this.getSnapshot();
 };
 

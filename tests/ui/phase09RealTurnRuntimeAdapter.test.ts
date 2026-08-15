@@ -2,6 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/phase09RealRuntimeAttackAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import type { MovementSpatialUpdate } from "../../src/app/movementRuntimeContracts";
+
+function movedAelarSpatial():MovementSpatialUpdate[] {
+  const pairs:Array<[string,string,number]> = [
+    ["char.aelar","combatant.goblin-a",90],["combatant.goblin-a","char.aelar",90],
+    ["char.aelar","combatant.goblin-b",40],["combatant.goblin-b","char.aelar",40],
+    ["char.aelar","combatant.wolf",25],["combatant.wolf","char.aelar",25],
+    ["char.aelar","combatant.training-guardian",30],["combatant.training-guardian","char.aelar",30],
+  ];
+  return pairs.map(([sourceId,targetId,distanceFeet])=>({
+    sourceId,targetId,distanceFeet,visible:true,cover:"none",targetCanSeeAttacker:true,
+  }));
+}
 
 test("initiative start and turn advancement project domain turn runtime state into SceneVm", async () => {
   const adapter=new MockAdapter();
@@ -22,6 +35,47 @@ test("initiative start and turn advancement project domain turn runtime state in
   assert.equal(snapshot.scene.currentActorId,"char.aelar");
   assert.equal(snapshot.scene.round,1);
   assert.ok(snapshot.activity[0]?.detail.some((entry)=>entry.includes("RulesRuntimeState revision")));
+});
+
+test("movement spends turn-runtime movement and atomically replaces the complete tracked spatial set", async () => {
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  await adapter.moveActor({
+    actorId:"char.aelar",
+    distanceFeet:10,
+    spatialUpdates:movedAelarSpatial().slice(0,2),
+  });
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,30,"incomplete spatial updates must reject before movement commit");
+  assert.equal(snapshot.activity[0]?.title,"이동 적용 거부");
+  assert.match(snapshot.activity[0]?.summary ?? "",/complete tracked spatial updates/);
+
+  await adapter.moveActor({
+    actorId:"char.aelar",
+    distanceFeet:10,
+    spatialUpdates:movedAelarSpatial(),
+  });
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,20);
+  assert.equal(snapshot.scene.spatialByPair?.["char.aelar=>combatant.goblin-a"]?.distanceFeet,90);
+  assert.equal(snapshot.scene.spatialByPair?.["combatant.goblin-a=>char.aelar"]?.distanceFeet,90);
+  assert.equal(snapshot.activity[0]?.title,"이동 적용");
+  assert.ok(snapshot.activity[0]?.detail.some((line)=>line.startsWith("ResolutionEvent ")&&line.includes("move")));
+  assert.ok(snapshot.activity[0]?.stateChanges.includes("char.aelar movement 30 → 20"));
+  assert.ok(snapshot.activity[0]?.stateChanges.some((line)=>line.includes("char.aelar->combatant.goblin-a distance 22 → 90ft")));
+
+  await adapter.setQueuedD20(15);
+  await adapter.resolveAction("action.shortbow",["combatant.goblin-a"]);
+  await adapter.advanceResolution();
+  await adapter.advanceResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.match(snapshot.resolution?.finalOutcome ?? "",/range|거리|90/i,"updated spatial fact must drive targeting rejection");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true,"out-of-range attack must not spend Action");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,20,"attack rejection must preserve committed movement spend");
 });
 
 test("outer atomic attack HP/economy is reconciled into turn runtime and survives later snapshots", async () => {
