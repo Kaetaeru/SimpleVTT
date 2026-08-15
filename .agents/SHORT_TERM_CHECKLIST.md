@@ -87,7 +87,7 @@ Verification:
 Tracking: Issue #73 / Draft PR #74
 Branch: `agent/73-combatant-runtime-actions`
 
-### 4. Character Creation ChoiceDefinition convergence — IN VALIDATION
+### 4. Character Creation ChoiceDefinition convergence — CLOSED
 
 - [x] creation 전용 `CreationChoiceSpec` producer/consumer inventory
 - [x] dynamic creation rule choices를 공용 `ChoiceDefinition`으로 변환하는 application boundary
@@ -102,20 +102,35 @@ Branch: `agent/73-combatant-runtime-actions`
 - [x] creation UI named-rule validation 비소유 structure gate
 - [x] creation level-1 choice가 progression-only ASI/subclass를 제조하지 않는 regression
 - [x] 기존 created Monk -> level 2 no phantom ASI progression handoff gate 유지
-- [ ] latest creation ChoiceDefinition CI gate green 확인
-- [ ] full creation/progression + Rules Domain + TypeScript + production build green
-- [ ] verified checkpoint 기록
-- [ ] Draft PR checkpoint
+- [x] creation ChoiceDefinition gate를 canonical `test:creation-structure:raw`에 편입
+- [x] full creation/progression + Rules Domain + TypeScript + production build green
+- [x] Draft PR checkpoint
 
-Tracking: Issue #75
+Verified implementation checkpoint: `d0bb91a835020cf457c85cd5beede5fc8ffb3303`
+
+Verification:
+- UI workflow `31898762544` ✅
+- creation ChoiceDefinition + structure gate ✅
+- progression choice schedule / created Monk handoff ✅
+- Phase 09 mechanics ✅
+- TypeScript / production build ✅
+- Rules Domain workflow `31898762524` ✅
+
+Tracking: Issue #75 / Draft PR #76
 Branch: `agent/75-creation-choice-definition`
 
-### 5. Progression / rest / class-feature application service convergence
+### 5. Progression / rest / class-feature application service convergence — IN PROGRESS
 
-- [ ] level-up commands
-- [ ] rest-time configuration
-- [ ] class-feature application
-- [ ] MockAdapter prototype wrapper 의존 감소
+- [x] progression / rest / class-feature direct-write inventory 시작
+- [ ] shared CharacterSheet <-> ProgressionCharacterState projection boundary
+- [ ] level-up commit write-back을 shared application service로 수렴
+- [ ] Wizard Long Rest preparation write-back 수렴
+- [ ] Pact Tome / Circle Land rest-time config write-back 수렴
+- [ ] class-feature/core/subclass resource upsert 수렴
+- [ ] revision / source / non-refill semantics 보존
+- [ ] existing progression/rest/class-feature regressions green
+- [ ] full creation/progression + Rules Domain + TypeScript + production build green
+- [ ] Draft PR checkpoint
 
 ### 6. UI named-rule structural gate
 
@@ -138,5 +153,6 @@ Phase 09
 Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
 Step 2: CLOSED @ ee95adf56a9f6481f754df5dbf5fde277bc18912 · PR #72
 Step 3: CLOSED @ 3b4afb6adfe9de26c83cf5bace672a79af95e7cd · PR #74
-Step 4: implementation complete, validation in progress — Character Creation ChoiceDefinition convergence
+Step 4: CLOSED @ d0bb91a835020cf457c85cd5beede5fc8ffb3303 · PR #76
+Step 5: IN PROGRESS — progression/rest/class-feature application service convergence
 ```
