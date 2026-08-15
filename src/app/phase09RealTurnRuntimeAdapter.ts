@@ -12,8 +12,8 @@ import {
   resolveTurnRuntimeReaction,
   setTurnRuntimeActiveActor,
   synchronizeTurnRuntimeFromScene,
-  type TurnRuntimeSession,
 } from "./realTurnRuntimeService";
+import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface Phase09TurnAdapterState {
@@ -29,7 +29,7 @@ interface InterruptEventHistory {
   events:ResolutionEvent[];
 }
 
-const sessions=new WeakMap<MockAdapter,TurnRuntimeSession>();
+const sessions=turnRuntimeSessions;
 const suppressProjection=new WeakSet<MockAdapter>();
 const interruptEvents=new WeakMap<MockAdapter,InterruptEventHistory>();
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
