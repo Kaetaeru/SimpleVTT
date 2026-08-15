@@ -6,8 +6,9 @@ import type { ChoiceSelectionMap } from "../../src/domain/choiceDefinition";
 import type { ProgressionCharacterState, ProgressionRequest } from "../../src/domain/progression";
 import { PROGRESSION_CATALOG, proficiencyBonusForTotalLevel } from "../../src/domain/progressionCatalog";
 import { buildProgressionPlanPhase08MonkOpenHand } from "../../src/domain/progressionPhase08MonkOpenHand";
+import { buildProgressionPlanPhase08RogueThief } from "../../src/domain/progressionPhase08RogueThief";
 import { classCantripListEntries } from "../../src/domain/spellListCatalog";
-import { MONK_OPEN_HAND_SUBCLASS_ID, srdSubclassIdForClass } from "../../src/domain/srdSubclassCatalog";
+import { MONK_OPEN_HAND_SUBCLASS_ID, ROGUE_THIEF_SUBCLASS_ID, srdSubclassIdForClass } from "../../src/domain/srdSubclassCatalog";
 import {
   MONK_FOCUS_RESOURCE_ID,
   MONK_OPEN_HAND_CLASS_ID,
@@ -24,6 +25,18 @@ import {
   resolveOpenHandQuiveringPalmSeed,
   resolveOpenHandWholenessOfBody,
 } from "../../src/domain/monkOpenHand";
+import {
+  ROGUE_THIEF_CLASS_ID,
+  THIEF_SUPREME_SNEAK_CUNNING_STRIKE,
+  THIEF_SUPREME_SNEAK_FEATURE_ID,
+  THIEF_THIEFS_REFLEXES_FEATURE_ID,
+  THIEF_USE_MAGIC_DEVICE_FEATURE_ID,
+  resolveThiefMagicItemChargeUse,
+  resolveThiefSpellScrollUse,
+  supremeSneakPreservesHideInvisible,
+  thiefFirstRoundTurns,
+  thiefMagicItemAttunementMaximum,
+} from "../../src/domain/rogueThief";
 import { resolvePendingResolution } from "../../src/domain/resolution";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
@@ -143,18 +156,12 @@ function requestFor(state:AuditState,classId:string,targetLevel:number):Progress
   };
 }
 
-const KNOWN_BLOCKERS = [
-  "dnd.srd521.class.rogue:9",
-  "dnd.srd521.class.rogue:13",
-  "dnd.srd521.class.rogue:17",
-] as const;
-
-test("outermost Phase 08 progression plans match the explicit known catalog-pending blocker allowlist", () => {
+test("outermost Phase 08 progression plans have zero catalog-pending choices across all 12 classes and levels 2-20", () => {
   const pending:Array<{ classId:string; className:string; level:number; choiceId:string; label:string; reason:string }> = [];
   for (const definition of PROGRESSION_CATALOG.classes) {
     for (let targetLevel = 2; targetLevel <= 20; targetLevel += 1) {
       const state = stateFor(definition.id,targetLevel);
-      const plan = buildProgressionPlanPhase08MonkOpenHand(state,requestFor(state,definition.id,targetLevel));
+      const plan = buildProgressionPlanPhase08RogueThief(state,requestFor(state,definition.id,targetLevel));
       for (const choice of plan.choices.filter((entry) => entry.status === "catalog-pending")) {
         pending.push({
           classId:definition.id,
@@ -167,12 +174,7 @@ test("outermost Phase 08 progression plans match the explicit known catalog-pend
       }
     }
   }
-  assert.deepEqual(
-    pending.map((entry) => `${entry.classId}:${entry.level}`),
-    [...KNOWN_BLOCKERS],
-    `unexpected Phase 08 catalog-pending choices:\n${JSON.stringify(pending,null,2)}`,
-  );
-  assert.ok(pending.every((entry) => entry.choiceId.endsWith(".subclass-feature")));
+  assert.deepEqual(pending,[],`unexpected Phase 08 catalog-pending choices:\n${JSON.stringify(pending,null,2)}`);
 });
 
 test("Open Hand 6/11/17 progression replaces generic subclass blockers with stable mechanics-backed feature ids", () => {
@@ -412,4 +414,90 @@ test("Quivering Palm spends 4 Focus, keeps only one seeded target, and Action de
   assert.equal(successfulSave.status,"committed");
   if (successfulSave.status !== "committed") return;
   assert.equal(successfulSave.state.combatants.goblin.life.hp.current,60,"80 force damage is halved to 40 on a successful save");
+});
+
+test("Thief 9/13/17 progression replaces the final generic subclass blockers with stable mechanics-backed feature ids", () => {
+  const expected = [
+    [9,THIEF_SUPREME_SNEAK_FEATURE_ID,"최고의 은신"],
+    [13,THIEF_USE_MAGIC_DEVICE_FEATURE_ID,"마법 장치 사용"],
+    [17,THIEF_THIEFS_REFLEXES_FEATURE_ID,"도둑의 반사 신경"],
+  ] as const;
+  for (const [level,featureId,label] of expected) {
+    const state = stateFor(ROGUE_THIEF_CLASS_ID,level);
+    const plan = buildProgressionPlanPhase08RogueThief(state,requestFor(state,ROGUE_THIEF_CLASS_ID,level));
+    assert.equal(plan.choices.some((choice) => choice.status === "catalog-pending"),false);
+    assert.ok(plan.diffs.some((diff) => diff.label === "서브클래스 특성" && diff.after === label));
+    assert.ok(featureId.startsWith("dnd.srd521.feature.rogue.thief."));
+  }
+});
+
+test("Supreme Sneak exposes the exact one-die Cunning Strike cost and preserves Hide invisibility only behind Three-Quarters or Total Cover", () => {
+  assert.equal(THIEF_SUPREME_SNEAK_CUNNING_STRIKE.sneakAttackDiceCost,1);
+  const base = {
+    rogueLevel:9,
+    subclassId:ROGUE_THIEF_SUBCLASS_ID,
+    usedStealthAttackOption:true,
+    invisibleFromHideAction:true,
+  } as const;
+  assert.equal(supremeSneakPreservesHideInvisible({ ...base, endTurnCover:"three-quarters" }),true);
+  assert.equal(supremeSneakPreservesHideInvisible({ ...base, endTurnCover:"total" }),true);
+  assert.equal(supremeSneakPreservesHideInvisible({ ...base, endTurnCover:"half" }),false);
+  assert.equal(supremeSneakPreservesHideInvisible({ ...base, usedStealthAttackOption:false, endTurnCover:"total" }),false);
+  assert.equal(supremeSneakPreservesHideInvisible({ ...base, invisibleFromHideAction:false, endTurnCover:"total" }),false);
+});
+
+test("Use Magic Device raises attunement to four, preserves charges only on d6=6, and uses Intelligence Arcana for level 2+ spell scrolls", () => {
+  assert.equal(thiefMagicItemAttunementMaximum(3,13,ROGUE_THIEF_SUBCLASS_ID),4);
+  assert.equal(thiefMagicItemAttunementMaximum(5,13,ROGUE_THIEF_SUBCLASS_ID),5,"a higher independent attunement cap is never reduced");
+
+  assert.deepEqual(resolveThiefMagicItemChargeUse(13,ROGUE_THIEF_SUBCLASS_ID,3,6),{
+    dieFace:6,
+    requestedCharges:3,
+    spentCharges:0,
+    preserved:true,
+  });
+  assert.deepEqual(resolveThiefMagicItemChargeUse(13,ROGUE_THIEF_SUBCLASS_ID,3,5),{
+    dieFace:5,
+    requestedCharges:3,
+    spentCharges:3,
+    preserved:false,
+  });
+
+  const low = resolveThiefSpellScrollUse(TEST_PROFILE,{
+    rogueLevel:13,
+    subclassId:ROGUE_THIEF_SUBCLASS_ID,
+    spellLevel:1,
+  });
+  assert.equal(low.spellcastingAbility,"intelligence");
+  assert.equal(low.checkRequired,false);
+  assert.equal(low.outcome,"cast");
+
+  const success = resolveThiefSpellScrollUse(TEST_PROFILE,{
+    rogueLevel:13,
+    subclassId:ROGUE_THIEF_SUBCLASS_ID,
+    spellLevel:5,
+    dice:{ id:"thief.scroll.success", purpose:"Intelligence (Arcana) spell scroll check", sides:20, faces:[12] },
+    intelligenceArcanaModifiers:[{ source:"thief:intelligence-arcana", value:3 }],
+  });
+  assert.equal(success.dc,15);
+  assert.equal(success.check?.total,15);
+  assert.equal(success.outcome,"cast");
+
+  const failure = resolveThiefSpellScrollUse(TEST_PROFILE,{
+    rogueLevel:13,
+    subclassId:ROGUE_THIEF_SUBCLASS_ID,
+    spellLevel:5,
+    dice:{ id:"thief.scroll.failure", purpose:"Intelligence (Arcana) spell scroll check", sides:20, faces:[1] },
+    intelligenceArcanaModifiers:[{ source:"thief:intelligence-arcana", value:3 }],
+  });
+  assert.equal(failure.outcome,"destroyed");
+});
+
+test("Thief's Reflexes emits exactly two first-round turn slots at normal initiative and initiative minus 10", () => {
+  const turns = thiefFirstRoundTurns({ id:"rogue", controller:"player", total:18 },17,ROGUE_THIEF_SUBCLASS_ID);
+  assert.deepEqual(turns.map((turn) => ({ actorId:turn.actorId, initiativeTotal:turn.initiativeTotal, ordinal:turn.ordinal })),[
+    { actorId:"rogue", initiativeTotal:18, ordinal:1 },
+    { actorId:"rogue", initiativeTotal:8, ordinal:2 },
+  ]);
+  assert.equal(turns[1]?.sourceId,THIEF_THIEFS_REFLEXES_FEATURE_ID);
 });

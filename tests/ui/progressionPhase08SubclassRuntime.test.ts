@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionPhase08SubclassAdapter";
 import "../../src/app/progressionPhase08MonkOpenHandAdapter";
+import "../../src/app/progressionPhase08RogueThiefAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { AppSnapshot } from "../../src/app/contracts";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
@@ -11,7 +12,11 @@ import {
   MONK_OPEN_HAND_CLASS_ID,
   OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID,
 } from "../../src/domain/monkOpenHand";
-import { MONK_OPEN_HAND_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
+import {
+  ROGUE_THIEF_CLASS_ID,
+  THIEF_SUPREME_SNEAK_FEATURE_ID,
+} from "../../src/domain/rogueThief";
+import { MONK_OPEN_HAND_SUBCLASS_ID, ROGUE_THIEF_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 import { subclassFeatureChoiceId } from "../../src/domain/srdSubclassProgression";
 
 const ARCHERY = "dnd.srd521.feat.fighting-style.archery";
@@ -83,6 +88,32 @@ async function openHand5Adapter() {
     progressionRevision:30,
     subclassIds:{ [MONK_OPEN_HAND_CLASS_ID]:MONK_OPEN_HAND_SUBCLASS_ID },
     subclassSources:{ [MONK_OPEN_HAND_CLASS_ID]:"SRD 5.2.1 · 수도승 · 열린 손의 전사" },
+    subclassFeatureIds:[],
+    subclassFeatureSources:{},
+  };
+  syncSceneHp(internal);
+  return { adapter, internal };
+}
+
+async function thief8Adapter() {
+  const adapter = new MockAdapter();
+  const baseline = (await adapter.getSnapshot()).activeCharacter;
+  const internal = adapter as unknown as FixtureState;
+  internal.activeCharacter = {
+    ...baseline,
+    className:"로그",
+    subclassName:"도둑",
+    level:8,
+    hp:51,
+    maxHp:51,
+    proficiencyBonus:3,
+    abilities:{ str:10, dex:18, con:14, int:14, wis:12, cha:10 },
+    features:["암습","교활한 행동","도둑"],
+    classLevels:[{ classId:ROGUE_THIEF_CLASS_ID, className:"로그", level:8, subclassName:"도둑" }],
+    hitDiceByDie:{ d8:8 },
+    progressionRevision:40,
+    subclassIds:{ [ROGUE_THIEF_CLASS_ID]:ROGUE_THIEF_SUBCLASS_ID },
+    subclassSources:{ [ROGUE_THIEF_CLASS_ID]:"SRD 5.2.1 · 로그 · 도둑" },
     subclassFeatureIds:[],
     subclassFeatureSources:{},
   };
@@ -164,4 +195,21 @@ test("Open Hand Monk 5 to 6 removes the generic subclass blocker and persists Wh
   assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes(OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID));
   assert.ok(snapshot.activeCharacter.features.includes("신체 완성"));
   assert.equal(snapshot.activeCharacter.progressionRevision,31);
+});
+
+test("Thief Rogue 8 to 9 removes the final generic subclass blocker and persists Supreme Sneak through the outermost runtime adapter", async () => {
+  const { adapter, internal } = await thief8Adapter();
+  await adapter.startLevelUp(internal.activeCharacter.id);
+  let snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.progressionPlan?.choices.some((choice) => choice.status === "catalog-pending"),false);
+  assert.equal(snapshot.progressionPlan?.choices.some((choice) => choice.id === subclassFeatureChoiceId(ROGUE_THIEF_CLASS_ID,9)),false);
+  assert.ok(snapshot.progressionPlan?.diffs.some((diff) => diff.label === "서브클래스 특성" && diff.after === "최고의 은신"));
+  assert.deepEqual(snapshot.progressionPlan?.blocking,[]);
+
+  await adapter.commitLevelUp();
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.level,9);
+  assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes(THIEF_SUPREME_SNEAK_FEATURE_ID));
+  assert.ok(snapshot.activeCharacter.features.includes("최고의 은신"));
+  assert.equal(snapshot.activeCharacter.progressionRevision,41);
 });

@@ -20,6 +20,7 @@ import "./app/progressionPhase08BardLoreAdapter";
 import "./app/progressionPhase08SorcererDraconicAdapter";
 import "./app/progressionPhase08WizardEvocationAdapter";
 import "./app/progressionPhase08MonkOpenHandAdapter";
+import "./app/progressionPhase08RogueThiefAdapter";
 import "./app/subclassRuntimeAdapter";
 import "./app/pactTomeRuntimeAdapter";
 import "./app/druidCircleLandSpellRuntimeAdapter";
