@@ -102,11 +102,10 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     || target.life.dead
     || activeConditionIds(activeConditions).includes("incapacitated");
   if (concentration && incapacitated) {
-    const previous = concentration.groupId;
     const reason = target.life.dead ? "creature died" : "Incapacitated condition applied";
     const { ended } = endActorConcentration(ctx, target.id, reason);
     provenance.push(...ended.provenance);
-    changes.push(concentrationStateChange(target.id, previous, undefined, ended.provenance));
+    changes.push(concentrationStateChange(target.id, concentration, undefined, ended.provenance));
     ended.expiredEffects.forEach((expired) => {
       changes.push(effectStateChange(expired.targetId, expired.id, "removed", ended.provenance, expired, undefined));
     });
@@ -200,7 +199,7 @@ export function executeStartConcentration(ctx:ResolutionExecutionContext, operat
   ctx.state.effects = resolved.effects;
   ctx.state.concentration[actorId] = resolved.next;
   const changes:RuntimeStateChange[] = [
-    concentrationStateChange(actorId, before?.groupId, operation.groupId, resolved.provenance),
+    concentrationStateChange(actorId, before, resolved.next, resolved.provenance),
   ];
   resolved.expiredEffects.forEach((expired) => {
     changes.push(effectStateChange(expired.targetId, expired.id, "removed", resolved.provenance, expired, undefined));
@@ -216,7 +215,7 @@ export function executeEndConcentration(ctx:ResolutionExecutionContext, operatio
   requireCombatant(ctx.state, actorId);
   const { current, ended } = endActorConcentration(ctx, actorId, operation.reason);
   const changes:RuntimeStateChange[] = current
-    ? [concentrationStateChange(actorId, current.groupId, undefined, ended.provenance)]
+    ? [concentrationStateChange(actorId, current, undefined, ended.provenance)]
     : [];
   ended.expiredEffects.forEach((expired) => {
     changes.push(effectStateChange(expired.targetId, expired.id, "removed", ended.provenance, expired, undefined));
