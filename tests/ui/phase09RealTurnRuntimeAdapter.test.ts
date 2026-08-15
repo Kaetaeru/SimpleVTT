@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/phase09RealTurnRuntimeAdapter";
+import "../../src/app/phase09RealRuntimeAttackAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 
 test("initiative start and turn advancement project domain turn runtime state into SceneVm", async () => {
@@ -24,7 +24,7 @@ test("initiative start and turn advancement project domain turn runtime state in
   assert.ok(snapshot.activity[0]?.detail.some((entry)=>entry.includes("RulesRuntimeState revision")));
 });
 
-test("committed action economy is synchronized into turn runtime and survives manual actor changes", async () => {
+test("outer atomic attack HP/economy is reconciled into turn runtime and survives later snapshots", async () => {
   const adapter=new MockAdapter();
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
@@ -36,11 +36,18 @@ test("committed action economy is synchronized into turn runtime and survives ma
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.currentActorId,"char.aelar");
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6);
 
   await adapter.setCurrentActor("combatant.goblin-a");
   await adapter.setCurrentActor("char.aelar");
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false,"manual actor selection must not start a new turn");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6,"runtime projection must preserve committed HP");
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12,"event-native Undo is reconciled back into turn runtime");
 });
 
 test("round wrap starts Aelar's next turn from base speed and refreshed economy", async () => {
@@ -66,6 +73,37 @@ test("round wrap starts Aelar's next turn from base speed and refreshed economy"
     movement:30,
     movementMax:30,
   });
+});
+
+test("combatant instantiated during initiative is materialized into the active RulesRuntimeState without resetting the current turn", async () => {
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.currentActorId,"char.mira");
+
+  await adapter.instantiateCombatant("combatant.goblin");
+  snapshot=await adapter.getSnapshot();
+  const added=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin.instance-1");
+  assert.ok(added);
+  assert.equal(snapshot.scene.currentActorId,"char.mira","adding a combatant must not restart initiative");
+  assert.deepEqual(snapshot.scene.economyByActor[added!.id],{
+    action:true,
+    bonusAction:true,
+    reaction:true,
+    movement:30,
+    movementMax:30,
+  });
+  const activity=snapshot.activity.find((entry)=>entry.title==="컴배턴트 인스턴스 추가" && entry.summary===added!.name);
+  assert.ok(activity?.detail.some((line)=>line.includes("RulesRuntimeState combatant materialized")));
+  assert.ok(activity?.stateChanges.includes(`Runtime combatant ${added!.id} 추가`));
+
+  await adapter.setCurrentActor(added!.id);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.currentActorId,added!.id,"new runtime combatant participates in initiative actor selection");
+  await adapter.endTurn();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.currentActorId,"char.mira","advancing from the lowest-initiative added combatant wraps the round");
+  assert.equal(snapshot.scene.round,2);
 });
 
 test("ending initiative releases the runtime session and returns to freeform", async () => {
