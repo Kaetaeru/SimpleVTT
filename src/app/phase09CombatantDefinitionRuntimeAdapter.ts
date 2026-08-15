@@ -1,6 +1,6 @@
 import "./phase09RealNoRollDamageAdapter";
 import "./combatantRuntimeContracts";
-import type { AbilityKey, AbilityScores, ActionVm, AppSnapshot, CombatantDefinitionVm, CombatantImportPreview, SceneVm } from "./contracts";
+import type { AbilityKey, AbilityScores, ActionVm, AppSnapshot, CombatantDefinitionVm, CombatantImportPreview, SceneEntity, SceneVm } from "./contracts";
 import type { CombatantRuntimeAttackVm } from "./combatantRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
 
@@ -100,12 +100,17 @@ function parseRuntimeActions(payload:Record<string,unknown>):CombatantRuntimeAtt
   });
 }
 
-function actionVm(definition:CombatantDefinitionVm,actorId:string,spec:CombatantRuntimeAttackVm):ActionVm {
+function actionVm(
+  definition:CombatantDefinitionVm,
+  actorId:string,
+  spec:CombatantRuntimeAttackVm,
+  existingId?:string,
+):ActionVm {
   const shape=diceShape(spec.damage.dice);
   const average=Math.max(0,Math.round(shape.count*((shape.sides+1)/2)+spec.damage.flat));
   const signedFlat=spec.damage.flat===0 ? "" : ` ${spec.damage.flat>0?"+":"-"} ${Math.abs(spec.damage.flat)}`;
   return {
-    id:`action.${actorId}.${spec.id}`,
+    id:existingId ?? `action.${actorId}.${spec.id}`,
     actorId,
     name:spec.name,
     category:spec.category,
@@ -133,8 +138,62 @@ function actionVm(definition:CombatantDefinitionVm,actorId:string,spec:Combatant
   };
 }
 
+function matchesDefinition(entityId:string,definitionId:string) {
+  return entityId===definitionId
+    || entityId.startsWith(`${definitionId}.`)
+    || entityId.startsWith(`${definitionId}-`);
+}
+
+function definitionForEntity(definitions:CombatantDefinitionVm[],entityId:string) {
+  return [...definitions]
+    .sort((left,right)=>right.id.length-left.id.length)
+    .find((definition)=>matchesDefinition(entityId,definition.id));
+}
+
+function runtimeActionsFor(definition:CombatantDefinitionVm) {
+  return definition.runtimeActions ?? BUILTIN_RUNTIME_ACTIONS[definition.id];
+}
+
+function sameRuntimeAction(left:ActionVm,right:ActionVm) {
+  return left.id===right.id
+    && left.actorId===right.actorId
+    && left.name===right.name
+    && left.attackBonus===right.attackBonus
+    && left.damage?.[0]?.type===right.damage?.[0]?.type
+    && left.damage?.[0]?.dice===right.damage?.[0]?.dice
+    && left.damage?.[0]?.flat===right.damage?.[0]?.flat
+    && left.runtimeAttack?.sourceKind===right.runtimeAttack?.sourceKind
+    && left.runtimeAttack?.rangeFeet===right.runtimeAttack?.rangeFeet
+    && left.runtimeAttack?.damageSource===right.runtimeAttack?.damageSource;
+}
+
+function materializeEncounterRuntimeActions(internal:CombatantRuntimeAdapterState,entity?:SceneEntity) {
+  const entities=entity ? [entity] : internal.scene.entities.filter((entry)=>entry.kind==="combatant");
+  for (const combatant of entities) {
+    const definition=definitionForEntity(internal.combatantDefinitions,combatant.id);
+    if (!definition) continue;
+    const specs=runtimeActionsFor(definition);
+    if (!specs) continue;
+    const existing=internal.scene.actionsByActor[combatant.id] ?? [];
+    const preserveLegacyIds=!combatant.id.includes(".instance-");
+    const next=specs.map((spec)=>{
+      const existingId=preserveLegacyIds ? existing.find((action)=>action.name===spec.name)?.id : undefined;
+      return actionVm(definition,combatant.id,spec,existingId);
+    });
+    if (existing.length===next.length && existing.every((action,index)=>sameRuntimeAction(action,next[index]))) continue;
+    internal.scene.actionsByActor[combatant.id]=next;
+  }
+}
+
+const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousPreview=MockAdapter.prototype.previewCombatantImport;
 const previousInstantiate=MockAdapter.prototype.instantiateCombatant;
+
+MockAdapter.prototype.getSnapshot=async function getSnapshotWithEncounterRuntimeActions() {
+  const internal=this as unknown as CombatantRuntimeAdapterState;
+  materializeEncounterRuntimeActions(internal);
+  return previousGetSnapshot.call(this);
+};
 
 MockAdapter.prototype.previewCombatantImport=async function previewCombatantImportWithRuntimeStats(payload:string) {
   const internal=this as unknown as CombatantRuntimeAdapterState;
@@ -178,11 +237,12 @@ MockAdapter.prototype.instantiateCombatant=async function instantiateCombatantWi
     added.vulnerabilities=[...stats.vulnerabilities];
     internal.scene.economyByActor[added.id]={ action:true, bonusAction:true, reaction:true, movement:stats.speed, movementMax:stats.speed };
   }
-  const runtimeActions=definition.runtimeActions ?? BUILTIN_RUNTIME_ACTIONS[definition.id];
+  const runtimeActions=runtimeActionsFor(definition);
   if (runtimeActions) {
     internal.scene.actionsByActor[added.id]=runtimeActions.map((entry)=>actionVm(definition,added.id,entry));
   } else if (stats) {
     internal.scene.actionsByActor[added.id]=[];
   }
+  materializeEncounterRuntimeActions(internal,added);
   return internal.getSnapshot();
 };
