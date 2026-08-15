@@ -4,6 +4,7 @@ import "./lifeRuntimeContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, CharacterSummary, ResolutionView, SceneEntity, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
@@ -56,11 +57,11 @@ function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMo
     && !action!.resourceCost;
 }
 
-function reject(adapter:MockAdapter,internal:RuntimeAttackAdapterState,error:string) {
+function reject(adapter:MockAdapter,internal:RuntimeAttackAdapterState,error:string,restoreBefore=true) {
   const resolution = internal.resolution;
   clearPendingManualMovementReaction(adapter);
   if (!resolution) return;
-  if (internal.before) {
+  if (restoreBefore && internal.before) {
     internal.scene = structuredClone(internal.before.scene);
     internal.activeCharacter = structuredClone(internal.before.activeCharacter);
     internal.characters = structuredClone(internal.before.characters);
@@ -94,6 +95,9 @@ function build(
   try {
     const attackFact = resolveRuntimeAttackFact(action,phase09DeterministicAttackFaces(action));
     const targetingFact = manual?.targetingFact ?? resolveRuntimeTargetingFact(internal.scene,action.actorId,target.id);
+    const runtimeState=internal.sessionMode === "initiative"
+      ? snapshotAdapterTurnRuntimeState(adapter,internal.scene)
+      : undefined;
     const transaction = resolveAtomicAttackTransaction({
       resolutionId:`${resolution.id}:runtime-atomic`,
       action,
@@ -112,6 +116,7 @@ function build(
       effectiveTargetAc,
       attackFact,
       targetingFact,
+      runtimeState,
       expectedPreview:{
         total:resolution.attackTotal,
         outcome:resolution.attackOutcome,
@@ -123,6 +128,20 @@ function build(
   } catch (error) {
     return { status:"rejected", error:error instanceof Error ? error.message : String(error) };
   }
+}
+
+function commitRuntimeTransaction(
+  adapter:MockAdapter,
+  internal:RuntimeAttackAdapterState,
+  transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>,
+) {
+  if (!transaction.runtimeState || transaction.runtimeInputRevision===undefined) return true;
+  return commitAdapterTurnRuntimeState(
+    adapter,
+    internal.scene,
+    transaction.runtimeInputRevision,
+    transaction.runtimeState,
+  );
 }
 
 function apply(internal:RuntimeAttackAdapterState,resolution:ResolutionView,transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>) {
@@ -186,6 +205,10 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
       return internal.getSnapshot();
     }
     if (resolution.attackOutcome === "빗나감") {
+      if (!commitRuntimeTransaction(this,internal,transaction)) {
+        reject(this,internal,"turn runtime revision changed before attack commit",false);
+        return internal.getSnapshot();
+      }
       apply(internal,resolution,transaction);
       finalize(this,internal,transaction);
       return internal.getSnapshot();
@@ -206,8 +229,12 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
       reject(this,internal,"missing staged runtime atomic attack transaction");
       return internal.getSnapshot();
     }
+    if (!commitRuntimeTransaction(this,internal,transaction)) {
+      reject(this,internal,"turn runtime revision changed before staged damage commit",false);
+      return internal.getSnapshot();
+    }
     if (!apply(internal,resolution,transaction)) {
-      reject(this,internal,"runtime atomic attack target disappeared before projection");
+      reject(this,internal,"runtime atomic attack target disappeared before projection",false);
       return internal.getSnapshot();
     }
     finalize(this,internal,transaction);
@@ -221,13 +248,31 @@ MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFrom
   const internal=this as unknown as RuntimeAttackAdapterState;
   const history=committedEventHistory.get(this);
   if (!history || internal.lastResolutionId !== history.resolutionId) return previousUndo.call(this);
-  const undone=undoResolutionEvents(internal.scene,history.events);
+  const runtimeState=internal.sessionMode === "initiative"
+    ? snapshotAdapterTurnRuntimeState(this,internal.scene)
+    : undefined;
+  const undone=undoResolutionEvents(internal.scene,history.events,[],[],runtimeState);
   if (undone.status === "rejected") {
     if (internal.resolution) {
       internal.resolution.detail.push(`Event-native Undo 거부: ${undone.error}`);
       internal.resolution.finalOutcome=`Undo 거부: ${undone.error}`;
     }
     return internal.getSnapshot();
+  }
+  if (runtimeState && undone.runtimeState) {
+    const committed=commitAdapterTurnRuntimeState(
+      this,
+      internal.scene,
+      runtimeState.revision,
+      undone.runtimeState,
+    );
+    if (!committed) {
+      if (internal.resolution) {
+        internal.resolution.detail.push("Event-native Undo 거부: turn runtime revision changed before Undo commit");
+        internal.resolution.finalOutcome="Undo 거부: turn runtime revision changed before Undo commit";
+      }
+      return internal.getSnapshot();
+    }
   }
   internal.scene=undone.scene;
   internal.syncChar();
