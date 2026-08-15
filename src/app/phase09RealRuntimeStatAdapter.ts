@@ -1,5 +1,5 @@
 import "./phase09RealTurnRuntimeAdapter";
-import type { ActionVm, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity } from "./contracts";
+import type { ActionVm, AppSnapshot, CharacterSheet, CombatantDefinitionVm, ResolutionView, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { resolveRuntimeSaveModifier } from "./realRuntimeStatProvider";
 import { resolveSavingThrowResolution } from "./realSavingThrowService";
@@ -12,6 +12,7 @@ interface Phase09RuntimeStatAdapterState {
   capture():void;
   d20(actionId:string,index?:number):number;
   activeCharacter:CharacterSheet;
+  combatantDefinitions:CombatantDefinitionVm[];
   resolution:ResolutionView|null;
   getSnapshot():Promise<AppSnapshot>;
 }
@@ -70,7 +71,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRuntimeSav
     const targets = targetIds.map((id) => {
       const target = internal.entity(id);
       if (!target) throw new Error(`missing runtime target entity: ${id}`);
-      const stat = resolveRuntimeSaveModifier(target,internal.activeCharacter,ability);
+      const stat = resolveRuntimeSaveModifier(target,internal.activeCharacter,ability,internal.combatantDefinitions);
       return { id, name:target.name, modifier:stat.modifier, modifierSource:stat.source };
     });
     internal.capture();

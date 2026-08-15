@@ -137,3 +137,45 @@ test("saving throw explicitly rejects a Combatant instance without runtime abili
   assert.deepEqual(snapshot.resolution?.stateChanges,[]);
   assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("explicit reject")));
 });
+
+test("imported Combatant runtime stats feed saving throws, speed, and typed defenses", async () => {
+  const adapter=new MockAdapter();
+  await adapter.previewCombatantImport(JSON.stringify({
+    id:"combatant.local-scout",
+    name:"로컬 정찰병",
+    ac:14,
+    maxHp:20,
+    speed:35,
+    proficiencyBonus:2,
+    abilities:{ str:8, dex:16, con:12, int:10, wis:14, cha:10 },
+    savingThrowProficiencies:["wis"],
+    resistances:["냉기"],
+    immunities:[],
+    vulnerabilities:["화염"],
+    actions:["단검"],
+  }));
+  let snapshot=await adapter.getSnapshot();
+  assert.ok(snapshot.combatantImport?.definition?.runtimeStats);
+  assert.ok(snapshot.combatantImport?.validation.some((entry)=>entry.message.includes("runtime ability/save/speed/defense stats")));
+  await adapter.activateCombatantImport();
+  await adapter.startInitiative();
+  await adapter.instantiateCombatant("combatant.local-scout");
+  snapshot=await adapter.getSnapshot();
+  const scout=snapshot.scene.entities.find((entity)=>entity.id==="combatant.local-scout.instance-1")!;
+  assert.deepEqual(snapshot.scene.economyByActor[scout.id],{
+    action:true,bonusAction:true,reaction:true,movement:35,movementMax:35,
+  });
+  assert.deepEqual(scout.resistances,["냉기"]);
+  assert.deepEqual(scout.vulnerabilities,["화염"]);
+
+  await adapter.setCurrentActor("char.mira");
+  await adapter.resolveAction("action.thunderwave",[scout.id]);
+  snapshot=await adapter.getSnapshot();
+  const save=snapshot.resolution?.saveResults[0];
+  assert.equal((save?.total ?? 0)-(save?.d20 ?? 0),1,"CON 12 produces +1 without CON save proficiency");
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("runtime:combatant-definition:combatant.local-scout:ability:con")));
+
+  const wis=resolveRuntimeSaveModifier(scout,snapshot.activeCharacter,"지혜",snapshot.combatantDefinitions);
+  assert.equal(wis.modifier,4,"WIS 14 (+2) plus proficiency +2");
+  assert.match(wis.source,/combatant\.local-scout:ability:wis:save-proficient/);
+});

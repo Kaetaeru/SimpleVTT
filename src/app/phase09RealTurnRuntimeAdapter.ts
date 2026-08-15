@@ -1,4 +1,4 @@
-import "./phase09RealNoRollDamageAdapter";
+import "./phase09CombatantDefinitionRuntimeAdapter";
 import type { ActivityEntry, AppSnapshot, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import {

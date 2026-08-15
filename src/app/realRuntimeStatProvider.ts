@@ -1,4 +1,5 @@
-import type { AbilityKey, AbilityScores, CharacterSheet, SceneEntity } from "./contracts";
+import "./combatantRuntimeContracts";
+import type { AbilityKey, AbilityScores, CharacterSheet, CombatantDefinitionVm, SceneEntity } from "./contracts";
 import { CLASSES, classMeta } from "./characterCreationV10Data";
 
 export interface RuntimeSaveModifierFact {
@@ -25,7 +26,7 @@ const LEGACY_CLASS_NAMES:Record<string,string> = {
   "성직자":"클레릭",
 };
 
-const COMBATANT_RUNTIME_STATS:Record<string,CombatantRuntimeStatDefinition> = {
+const BUILTIN_COMBATANT_RUNTIME_STATS:Record<string,CombatantRuntimeStatDefinition> = {
   "combatant.goblin":{
     abilities:{ str:8, dex:14, con:10, int:10, wis:8, cha:8 },
   },
@@ -64,24 +65,41 @@ function characterSaveModifier(sheet:CharacterSheet,ability:AbilityKey):RuntimeS
   };
 }
 
-function combatantDefinitionId(entityId:string) {
-  return Object.keys(COMBATANT_RUNTIME_STATS).find((definitionId) =>
-    entityId === definitionId
+function matchesDefinition(entityId:string,definitionId:string) {
+  return entityId === definitionId
     || entityId.startsWith(`${definitionId}.`)
-    || entityId.startsWith(`${definitionId}-`),
-  );
+    || entityId.startsWith(`${definitionId}-`);
 }
 
-function combatantSaveModifier(entity:SceneEntity,ability:AbilityKey):RuntimeSaveModifierFact {
-  const definitionId = combatantDefinitionId(entity.id);
-  if (!definitionId) throw new Error(`missing runtime combatant stat definition: ${entity.id}`);
-  const stats = COMBATANT_RUNTIME_STATS[definitionId];
-  const proficient = stats.savingThrowProficiencies?.includes(ability) ?? false;
-  const proficiency = proficient ? (stats.proficiencyBonus ?? 0) : 0;
+function runtimeCombatantStats(entityId:string,definitions:CombatantDefinitionVm[]) {
+  const imported=[...definitions]
+    .sort((left,right)=>right.id.length-left.id.length)
+    .find((definition)=>matchesDefinition(entityId,definition.id) && definition.runtimeStats);
+  if (imported?.runtimeStats) {
+    return {
+      definitionId:imported.id,
+      stats:imported.runtimeStats,
+      sourcePrefix:`runtime:combatant-definition:${imported.id}`,
+    };
+  }
+  const definitionId=Object.keys(BUILTIN_COMBATANT_RUNTIME_STATS).find((id)=>matchesDefinition(entityId,id));
+  if (!definitionId) return undefined;
+  return {
+    definitionId,
+    stats:BUILTIN_COMBATANT_RUNTIME_STATS[definitionId],
+    sourcePrefix:`runtime:combatant:${definitionId}`,
+  };
+}
+
+function combatantSaveModifier(entity:SceneEntity,ability:AbilityKey,definitions:CombatantDefinitionVm[]):RuntimeSaveModifierFact {
+  const resolved=runtimeCombatantStats(entity.id,definitions);
+  if (!resolved) throw new Error(`missing runtime combatant stat definition: ${entity.id}`);
+  const proficient = resolved.stats.savingThrowProficiencies?.includes(ability) ?? false;
+  const proficiency = proficient ? (resolved.stats.proficiencyBonus ?? 0) : 0;
   return {
     ability,
-    modifier:abilityModifier(stats.abilities[ability]) + proficiency,
-    source:`runtime:combatant:${definitionId}:ability:${ability}${proficient ? ":save-proficient" : ""}`,
+    modifier:abilityModifier(resolved.stats.abilities[ability]) + proficiency,
+    source:`${resolved.sourcePrefix}:ability:${ability}${proficient ? ":save-proficient" : ""}`,
   };
 }
 
@@ -89,6 +107,7 @@ export function resolveRuntimeSaveModifier(
   entity:SceneEntity,
   activeCharacter:CharacterSheet,
   abilityLabel:string,
+  combatantDefinitions:CombatantDefinitionVm[] = [],
 ):RuntimeSaveModifierFact {
   const ability = runtimeAbilityKey(abilityLabel);
   if (entity.kind === "character") {
@@ -97,5 +116,5 @@ export function resolveRuntimeSaveModifier(
     }
     return characterSaveModifier(activeCharacter,ability);
   }
-  return combatantSaveModifier(entity,ability);
+  return combatantSaveModifier(entity,ability,combatantDefinitions);
 }
