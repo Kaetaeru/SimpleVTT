@@ -7,6 +7,22 @@ import {
   chooseAuraOfProtection,
   paladinAuraRadiusFeet,
 } from "../../src/domain/paladinAura";
+import {
+  DEVOTION_HOLY_NIMBUS_RESOURCE_ID,
+  DEVOTION_HOLY_NIMBUS_TAG,
+  DEVOTION_SMITE_OF_PROTECTION_TAG,
+  auraOfDevotionSuppressesCharmed,
+  holyNimbusSavingThrowAdvantage,
+  paladinDevotionRuntimeResourceDefinitions,
+  resolveDevotionHolyNimbusActivation,
+  resolveDevotionHolyNimbusRecovery,
+  resolveDevotionHolyNimbusTurnStart,
+  resolveDevotionSmiteOfProtection,
+  smiteOfProtectionGrantsHalfCover,
+} from "../../src/domain/paladinDevotion";
+import { PALADIN_ID } from "../../src/domain/classFeatureSpellResources";
+import { PALADIN_DEVOTION_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
+import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 const fact = (overrides: Partial<Parameters<typeof auraOfProtectionContribution>[0]> = {}) => ({
   paladinId:"paladin-a",
@@ -67,4 +83,132 @@ test("Aura of Courage suppresses Frightened only for self/allies in an active le
   assert.equal(auraOfCourageSuppressesFrightened(fact({ paladinLevel:18, distanceFeet:31 })), false);
   assert.equal(auraOfCourageSuppressesFrightened(fact({ paladinLevel:18, relation:"enemy" })), false);
   assert.equal(auraOfCourageSuppressesFrightened(fact({ paladinLevel:18, incapacitated:true })), false);
+});
+
+test("Oath of Devotion level 7 suppresses Charmed through the same active Aura of Protection geometry", () => {
+  assert.equal(auraOfDevotionSuppressesCharmed(fact({ paladinLevel:7 }),PALADIN_DEVOTION_SUBCLASS_ID),true);
+  assert.equal(auraOfDevotionSuppressesCharmed(fact({ paladinLevel:7, distanceFeet:11 }),PALADIN_DEVOTION_SUBCLASS_ID),false);
+  assert.equal(auraOfDevotionSuppressesCharmed(fact({ paladinLevel:18, distanceFeet:30 }),PALADIN_DEVOTION_SUBCLASS_ID),true);
+  assert.equal(auraOfDevotionSuppressesCharmed(fact({ paladinLevel:18, relation:"enemy" }),PALADIN_DEVOTION_SUBCLASS_ID),false);
+  assert.equal(auraOfDevotionSuppressesCharmed(fact({ paladinLevel:18, incapacitated:true }),PALADIN_DEVOTION_SUBCLASS_ID),false);
+});
+
+test("Smite of Protection creates a next-turn-boundary marker and grants Half Cover only inside the active Protection aura", () => {
+  const state = runtimeState();
+  const result = resolveDevotionSmiteOfProtection(TEST_PROFILE,state,{
+    id:"devotion.smite-protection",
+    actorId:"hero",
+    expectedRevision:state.revision,
+    paladinLevel:15,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    divineSmiteCast:true,
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  const marker = result.state.effects.find((effect) => effect.tags.includes(DEVOTION_SMITE_OF_PROTECTION_TAG));
+  assert.ok(marker);
+  assert.deepEqual(marker?.expiry,{ kind:"turn-boundary", actorId:"hero", round:state.clock.round + 1, boundary:"start" });
+  assert.equal(smiteOfProtectionGrantsHalfCover({
+    state:result.state,
+    paladinId:"hero",
+    paladinLevel:15,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    paladinIncapacitated:false,
+    relation:"ally",
+    distanceFeet:10,
+  }),true);
+  assert.equal(smiteOfProtectionGrantsHalfCover({
+    state:result.state,
+    paladinId:"hero",
+    paladinLevel:15,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    paladinIncapacitated:false,
+    relation:"ally",
+    distanceFeet:11,
+  }),false);
+});
+
+test("Holy Nimbus projects one Long-Rest use, activates for ten minutes, grants Fiend/Undead save advantage, damages enemies on turn start, and recovers from a level-5 slot", () => {
+  const definitions = paladinDevotionRuntimeResourceDefinitions(
+    [{ classId:PALADIN_ID, className:"팔라딘", level:20, subclassName:"헌신의 맹세" }],
+    { [PALADIN_ID]:PALADIN_DEVOTION_SUBCLASS_ID },
+  );
+  assert.deepEqual(definitions.map((entry) => [entry.resourceId,entry.maximum,entry.recovery.longRest]),[
+    [DEVOTION_HOLY_NIMBUS_RESOURCE_ID,1,"all"],
+  ]);
+
+  const state = runtimeState();
+  state.combatants.hero.resources.push(
+    { id:DEVOTION_HOLY_NIMBUS_RESOURCE_ID, label:"성스러운 후광", current:1, maximum:1, recovery:{ longRest:"all" } },
+    { id:"spell-slot-5", label:"5레벨 주문 슬롯", current:1, maximum:1, recovery:{ longRest:"all" } },
+  );
+  const activated = resolveDevotionHolyNimbusActivation(TEST_PROFILE,state,{
+    id:"devotion.holy-nimbus",
+    actorId:"hero",
+    expectedRevision:state.revision,
+    paladinLevel:20,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    charismaModifier:5,
+    proficiencyBonus:6,
+  });
+  assert.equal(activated.status,"committed");
+  if (activated.status !== "committed") return;
+  assert.equal(activated.state.combatants.hero.economy.bonusAction,false);
+  assert.equal(activated.state.combatants.hero.resources.find((entry) => entry.id === DEVOTION_HOLY_NIMBUS_RESOURCE_ID)?.current,0);
+  const nimbus = activated.state.effects.find((effect) => effect.tags.includes(DEVOTION_HOLY_NIMBUS_TAG));
+  assert.ok(nimbus);
+  assert.deepEqual(nimbus?.expiry,{ kind:"time", elapsedSeconds:state.clock.elapsedSeconds + 600 });
+  assert.equal(nimbus?.metadata?.sunlight,true);
+  assert.equal(holyNimbusSavingThrowAdvantage({
+    state:activated.state,
+    paladinId:"hero",
+    paladinLevel:20,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    paladinIncapacitated:false,
+    relation:"ally",
+    distanceFeet:30,
+    sourceCreatureType:"undead",
+  })?.state,"advantage");
+  assert.equal(holyNimbusSavingThrowAdvantage({
+    state:activated.state,
+    paladinId:"hero",
+    paladinLevel:20,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    paladinIncapacitated:false,
+    relation:"ally",
+    distanceFeet:30,
+    sourceCreatureType:"dragon",
+  }),undefined);
+
+  const hpBefore = activated.state.combatants.goblin.life.hp.current;
+  const turnStart = resolveDevotionHolyNimbusTurnStart(TEST_PROFILE,activated.state,{
+    id:"devotion.holy-nimbus.enemy-turn",
+    paladinId:"hero",
+    targetId:"goblin",
+    expectedRevision:activated.state.revision,
+    paladinLevel:20,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    paladinIncapacitated:false,
+    relationToPaladin:"enemy",
+    distanceFeet:30,
+    round:activated.state.clock.round,
+    creatureKind:"monster",
+  });
+  assert.equal(turnStart.status,"committed");
+  if (turnStart.status !== "committed") return;
+  assert.equal(turnStart.state.combatants.goblin.life.hp.current,hpBefore - 11);
+
+  const recovered = resolveDevotionHolyNimbusRecovery(TEST_PROFILE,turnStart.state,{
+    id:"devotion.holy-nimbus.recover",
+    actorId:"hero",
+    expectedRevision:turnStart.state.revision,
+    paladinLevel:20,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    spellSlotLevel:5,
+    spellSlotResourceId:"spell-slot-5",
+  });
+  assert.equal(recovered.status,"committed");
+  if (recovered.status !== "committed") return;
+  assert.equal(recovered.state.combatants.hero.resources.find((entry) => entry.id === "spell-slot-5")?.current,0);
+  assert.equal(recovered.state.combatants.hero.resources.find((entry) => entry.id === DEVOTION_HOLY_NIMBUS_RESOURCE_ID)?.current,1);
 });

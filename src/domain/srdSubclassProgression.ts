@@ -8,6 +8,11 @@ import {
 import { CLERIC_LIFE_DOMAIN_SUBCLASS_ID } from "./clericLifeDomain";
 import { DRUID_CIRCLE_LAND_SUBCLASS_ID } from "./druidCircleLand";
 import { FIGHTER_CHAMPION_SUBCLASS_ID } from "./fighterChampion";
+import {
+  DEVOTION_AURA_FEATURE_ID,
+  DEVOTION_HOLY_NIMBUS_FEATURE_ID,
+  DEVOTION_SMITE_OF_PROTECTION_FEATURE_ID,
+} from "./paladinDevotion";
 import type { ProgressionCharacterState } from "./progression";
 import {
   inferSrdSubclassId,
@@ -161,6 +166,24 @@ const RELATIONSHIPS:readonly SrdSubclassLevelRelationship[] = [
   },
   { classId:MONK_SUBCLASS_CLASS_ID, subclassId:MONK_OPEN_HAND_SUBCLASS_ID, classLevel:3, features:[] },
   { classId:PALADIN_SUBCLASS_CLASS_ID, subclassId:PALADIN_DEVOTION_SUBCLASS_ID, classLevel:3, features:[] },
+  {
+    classId:PALADIN_SUBCLASS_CLASS_ID,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    classLevel:7,
+    features:[{ id:DEVOTION_AURA_FEATURE_ID, label:"헌신의 오라" }],
+  },
+  {
+    classId:PALADIN_SUBCLASS_CLASS_ID,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    classLevel:15,
+    features:[{ id:DEVOTION_SMITE_OF_PROTECTION_FEATURE_ID, label:"보호의 강타" }],
+  },
+  {
+    classId:PALADIN_SUBCLASS_CLASS_ID,
+    subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
+    classLevel:20,
+    features:[{ id:DEVOTION_HOLY_NIMBUS_FEATURE_ID, label:"성스러운 후광" }],
+  },
   { classId:RANGER_SUBCLASS_CLASS_ID, subclassId:RANGER_HUNTER_SUBCLASS_ID, classLevel:3, features:[] },
   { classId:ROGUE_SUBCLASS_CLASS_ID, subclassId:ROGUE_THIEF_SUBCLASS_ID, classLevel:3, features:[] },
   { classId:WARLOCK_SUBCLASS_CLASS_ID, subclassId:WARLOCK_FIEND_SUBCLASS_ID, classLevel:3, features:[] },

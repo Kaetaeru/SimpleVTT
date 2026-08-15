@@ -9,6 +9,7 @@ import {
   CLERIC_SUBCLASS_CLASS_ID,
   DRUID_SUBCLASS_CLASS_ID,
   FIGHTER_SUBCLASS_CLASS_ID,
+  PALADIN_SUBCLASS_CLASS_ID,
   srdSubclassRelationship,
   subclassFeatureChoiceId,
   type SrdSubclassProgressionState,
@@ -16,6 +17,7 @@ import {
 import { CLERIC_LIFE_DOMAIN_SUBCLASS_ID } from "../../src/domain/clericLifeDomain";
 import { DRUID_CIRCLE_LAND_SUBCLASS_ID } from "../../src/domain/druidCircleLand";
 import { FIGHTER_CHAMPION_SUBCLASS_ID } from "../../src/domain/fighterChampion";
+import { PALADIN_DEVOTION_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 import { weaponMasteryChoiceId } from "../../src/domain/weaponMasteryProgression";
 
 const ARCHERY = "dnd.srd521.feat.fighting-style.archery";
@@ -88,6 +90,10 @@ test("SRD subclass progression catalog records only the mechanics-backed automat
   assert.deepEqual(
     srdSubclassRelationship(DRUID_SUBCLASS_CLASS_ID,DRUID_CIRCLE_LAND_SUBCLASS_ID,14)?.features.map((feature) => feature.label),
     ["자연의 성역"],
+  );
+  assert.deepEqual(
+    [7,15,20].map((level) => srdSubclassRelationship(PALADIN_SUBCLASS_CLASS_ID,PALADIN_DEVOTION_SUBCLASS_ID,level)?.features[0]?.label),
+    ["헌신의 오라","보호의 강타","성스러운 후광"],
   );
   assert.equal(srdSubclassRelationship("dnd.srd521.class.paladin","external-subclass",7),undefined);
 });

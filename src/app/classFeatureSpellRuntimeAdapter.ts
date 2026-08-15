@@ -10,6 +10,7 @@ import {
 } from "../domain/classFeatureSpellResources";
 import { coreClassResourceDefinitions } from "../domain/coreClassResources";
 import { barbarianRuntimeResourceDefinitions } from "../domain/barbarianBerserker";
+import { paladinDevotionRuntimeResourceDefinitions } from "../domain/paladinDevotion";
 
 type AdapterState = {
   activeCharacter: CharacterSheet;
@@ -56,6 +57,7 @@ export function ensureCoreClassResources(sheet: CharacterSheet) {
   ensureProgressionMetadata(sheet);
   for (const definition of coreClassResourceDefinitions(sheet.classLevels ?? [])) upsertResource(sheet, definition);
   for (const definition of barbarianRuntimeResourceDefinitions(sheet.classLevels ?? [],sheet.subclassIds ?? {})) upsertResource(sheet, definition);
+  for (const definition of paladinDevotionRuntimeResourceDefinitions(sheet.classLevels ?? [],sheet.subclassIds ?? {})) upsertResource(sheet, definition);
   return sheet;
 }
 
