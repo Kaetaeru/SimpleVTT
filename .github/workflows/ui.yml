@@ -63,6 +63,7 @@ jobs:
           tests/ui/phase09RealAttackTransactionService.test.ts
           tests/ui/phase09RealAtomicAttackAdapter.test.ts
           tests/ui/phase09RealLifeRuntime.test.ts
+          tests/ui/phase09ManualMovementReactionAdapter.test.ts
           tests/ui/phase09RealHealingRollService.test.ts
           tests/ui/phase09RealItemCostService.test.ts
           tests/ui/phase09RealItemCostAdapter.test.ts
@@ -71,5 +72,6 @@ jobs:
           tests/ui/phase09RealTurnRuntimeAdapter.test.ts
           tests/ui/visualDiceProjection.test.ts
           tests/ui/visualDiceStructure.test.ts
+          tests/ui/movementReactionStructure.test.ts
       - name: Typecheck and build
         run: npm run build
