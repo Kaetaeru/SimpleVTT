@@ -40,6 +40,8 @@ declare module "./contracts" {
     persistentFeatureOptionSources?: Record<string, string>;
     epicBoonFeatIds?:string[];
     epicBoonFeatSources?:Record<string,string>;
+    weaponMasteryIds?:string[];
+    weaponMasterySources?:Record<string,string>;
     subclassIds?: Record<string, string>;
     subclassSources?: Record<string, string>;
     circleLandType?:CircleLandType;
