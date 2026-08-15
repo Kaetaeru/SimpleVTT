@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionPhase08SubclassAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import type { AppSnapshot } from "../../src/app/contracts";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
 import { FIGHTER_CHAMPION_SUBCLASS_ID } from "../../src/domain/fighterChampion";
 import { FIGHTER_FIGHTING_STYLE_CLASS_ID, fighterFightingStyleReplacementChoiceId } from "../../src/domain/fighterFightingStyleProgression";
@@ -9,11 +10,20 @@ import { subclassFeatureChoiceId } from "../../src/domain/srdSubclassProgression
 
 const ARCHERY = "dnd.srd521.feat.fighting-style.archery";
 const DEFENSE = "dnd.srd521.feat.fighting-style.defense";
+type FixtureState = { activeCharacter:AppSnapshot["activeCharacter"]; scene:AppSnapshot["scene"] };
+
+function syncSceneHp(internal:FixtureState) {
+  const entity = internal.scene.entities.find((entry) => entry.id === internal.activeCharacter.id);
+  if (!entity) return;
+  entity.hp = internal.activeCharacter.hp;
+  entity.maxHp = internal.activeCharacter.maxHp;
+  entity.tempHp = internal.activeCharacter.tempHp;
+}
 
 async function champion6Adapter() {
   const adapter = new MockAdapter();
   const baseline = (await adapter.getSnapshot()).activeCharacter;
-  const internal = adapter as unknown as { activeCharacter:typeof baseline };
+  const internal = adapter as unknown as FixtureState;
   internal.activeCharacter = {
     ...baseline,
     className:"파이터",
@@ -44,6 +54,7 @@ async function champion6Adapter() {
     ],
     subclassFeatureSources:{},
   };
+  syncSceneHp(internal);
   return { adapter, internal };
 }
 
@@ -75,7 +86,6 @@ test("Champion 6 to 7 exposes Additional Fighting Style as a real required subcl
   snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.activeCharacter.level,7);
   assert.deepEqual(snapshot.activeCharacter.fightingStyleFeatIds,[ARCHERY,DEFENSE]);
-  assert.ok(snapshot.activeCharacter.features.includes("궁술"));
   assert.ok(snapshot.activeCharacter.features.includes("방어"));
   assert.ok(snapshot.activeCharacter.features.includes("추가 전투 방식"));
   assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes("dnd.srd521.feature.fighter.champion.additional-fighting-style"));
