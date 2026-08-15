@@ -8,6 +8,7 @@ import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import { ensureProgressionMetadata } from "./progressionRuntimeAdapter";
 import type { ChoiceSelectionMap } from "../domain/choiceDefinition";
+import { featRuleById } from "../domain/featRuleCatalog";
 import { classByName } from "../domain/progressionCatalog";
 import type { ProgressionCharacterState, ProgressionRequest } from "../domain/progression";
 import {
@@ -171,7 +172,7 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpWithEpicBoonPr
     ...(internal.activeCharacter.epicBoonFeatSources ?? {}),
     [selected.featId]:selected.source,
   };
-  internal.activeCharacter.features = resolved.state.features.map((feature) => internal.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
+  internal.activeCharacter.features = resolved.state.features.map((feature) => internal.catalog.find((entry) => entry.id === feature)?.nameKo ?? featRuleById(feature)?.name ?? feature);
   const sceneEntity = internal.scene.entities.find((entity) => entity.id === internal.activeCharacter.id);
   if (sceneEntity) {
     sceneEntity.hp = internal.activeCharacter.hp;
