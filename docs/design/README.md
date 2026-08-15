@@ -86,6 +86,7 @@ Use versioned contracts, registries, descriptors, scenario tests, and declarativ
 - `docs/design/session-runtime.md` — state lifetimes, authority, Freeform/Initiative, targeting, ResolutionEvent, EffectInstance, and DM adjudication.
 - `docs/design/combat-ux.md` — action-first player UX, authoritative dice presentation, activity log, breakdowns, and Undo.
 - `docs/design/extensibility-testing.md` — extension seams, capabilities, compatibility, migration, and golden-scenario testing.
+- `docs/design/movement-modules.md` — canonical mapless-Core policy, optional 2D/3D movement-module seam, and current-turn-controller manual movement-triggered reaction policy.
 - `docs/guides/combatant-json-import.md` — Combatant authoring/import workflow.
 - `schemas/combatant.schema.json` — current draft structural Combatant contract.
 
@@ -118,29 +119,3 @@ Use versioned contracts, registries, descriptors, scenario tests, and declarativ
 - `Predicate` — restricted declarative condition tree.
 - `TimingPoint` — stable event/timing identifier.
 - `Mechanic` — typed operation that changes or grants rules behavior.
-- `Action` / `Activity` — resolvable operation with targeting, costs, legality, and mechanics.
-- `ChoiceDefinition` — explicit human decision required by content or resolution.
-- `ActivationState` — generic state governing whether a RuleSource/item/loadout contribution is active.
-- `ProgressionTrack` — RulesProfile-defined progression axis.
-
-### Transaction layer
-
-- `ActionRequest` — intent; never committed game state.
-- `PendingResolution` — ephemeral calculation awaiting dice, choices, interrupts, adjudication, or validation.
-- `StateChange` — typed atomic mutation proposal/result.
-- `ResolutionEvent` — authoritative committed transaction and log/sync unit.
-- `Provenance` — explanation of what sources, predicates, policies, and operations produced a result.
-
-## Implementation gate
-
-Top-level product discovery is considered sufficiently complete. Before the first implementation vertical slice, remaining design work should only close concrete contract gaps needed by the canonical documents and initial RulesProfile.
-
-The implementation gate is:
-
-1. Common Rule Definition Specification v0.x baseline, including cross-module content relationship/contribution semantics.
-2. Initial RulesProfile selected and minimally specified.
-3. Core persisted IDs/versions/lifetimes defined.
-4. Deterministic ResolutionEvent/StateChange scenario fixtures defined.
-5. Combatant schema/example structurally validated.
-
-After that, new architecture should be driven by failing real scenarios rather than speculative generalization.
