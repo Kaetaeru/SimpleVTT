@@ -127,6 +127,10 @@ function expectedAsi(classId:string,level:number) {
   return STANDARD_ASI_LEVELS.has(level);
 }
 
+function isSubclassUnlockFeature(feature:string) {
+  return feature.includes("서브클래스") && !feature.includes("특성");
+}
+
 test("production route preserves the legacy host required by LevelUpV10Bridge instead of substituting unconditional ASI UI", () => {
   const viteSource = readFileSync(new URL("../../vite.config.ts",import.meta.url),"utf8");
   const mainSource = readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
@@ -149,7 +153,7 @@ test("all 12 SRD classes expose ASI and subclass choices only at their canonical
       const row = progressionRow(definition.id,targetLevel);
       assert.ok(row,`${definition.nameKo} ${targetLevel}: progression row missing`);
       assert.equal(row!.features.includes("능력치 향상"),expectAsi,`${definition.nameKo} ${targetLevel}: canonical row ASI mismatch`);
-      assert.equal(row!.features.includes("서브클래스"),expectSubclass,`${definition.nameKo} ${targetLevel}: canonical row subclass mismatch`);
+      assert.equal(row!.features.some(isSubclassUnlockFeature),expectSubclass,`${definition.nameKo} ${targetLevel}: canonical row subclass mismatch`);
 
       const state = matrixState(definition.id,targetLevel);
       const plan = buildProgressionPlanPhase08RogueThief(state,matrixRequest(state,definition.id));
