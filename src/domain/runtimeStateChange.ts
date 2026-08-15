@@ -1,3 +1,4 @@
+import type { ConcentrationState } from "./concentration";
 import type { EffectInstance } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
@@ -29,8 +30,8 @@ export interface EffectStateChange {
 export interface ConcentrationStateChange {
   kind:"concentration";
   targetId:string;
-  before?:string;
-  after?:string;
+  before?:ConcentrationState;
+  after?:ConcentrationState;
   provenance:ProvenanceRecord[];
   lifetime:"session-runtime";
   writeBack:"session";
@@ -79,8 +80,21 @@ export function effectStateChange(
   };
 }
 
-export function concentrationStateChange(targetId:string, before:string|undefined, after:string|undefined, provenance:ProvenanceRecord[]): ConcentrationStateChange {
-  return { kind:"concentration", targetId, before, after, provenance, lifetime:"session-runtime", writeBack:"session" };
+export function concentrationStateChange(
+  targetId:string,
+  before:ConcentrationState|undefined,
+  after:ConcentrationState|undefined,
+  provenance:ProvenanceRecord[],
+): ConcentrationStateChange {
+  return {
+    kind:"concentration",
+    targetId,
+    before:before ? structuredClone(before) : undefined,
+    after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
 }
 
 export function lifeFlagStateChanges(
