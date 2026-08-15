@@ -34,7 +34,7 @@ Verification:
 
 Tracking: Issue #69 / Draft PR #70
 
-### 2. Concentration damage save authoritative dice workflow — IN PROGRESS
+### 2. Concentration damage save authoritative dice workflow — CLOSED
 
 - [x] 피해 transaction이 concentration check 필요 상태를 명시적으로 노출
 - [x] 실제 d20 입력을 받는 app/adapter contract
@@ -44,23 +44,35 @@ Tracking: Issue #69 / Draft PR #70
 - [x] 성공: concentration 유지
 - [x] 실패: concentration + group effects 제거
 - [x] HP + concentration + effect changes를 동일 raw ResolutionEvent transaction에 보존
-- [ ] Activity에 concentration save 결과/provenance 표시 — event projection 연결됨, regression 확인 대기
-- [x] event-native Undo가 HP + concentration + effects를 exact restore — regression 작성됨, CI 확인 대기
-- [ ] stale runtime revision / drift explicit reject — 구현됨, 전용 regression 추가 필요
-- [ ] deterministic service tests
-- [ ] adapter/UI workflow regression — 작성/CI gate 연결됨, green 확인 대기
-- [ ] full Phase 09 + Rules Domain + TypeScript + production build green
-- [ ] Draft PR checkpoint
+- [x] Activity에 concentration save 결과/provenance 표시
+- [x] event-native Undo가 HP + concentration + effects를 exact restore
+- [x] stale runtime revision / concentration-group drift explicit reject
+- [x] deterministic domain result test: natural/modifier/total/DC/outcome 보존
+- [x] Character CON proficiency + Combatant structured save-stat boundary regression
+- [x] adapter workflow + UI no-rule-arithmetic structure gate
+- [x] full Phase 09 + Rules Domain + TypeScript + production build green
+- [x] Draft PR checkpoint
 
-Current implementation branch: `agent/71-concentration-save-workflow`
-Tracking: Issue #71
+Verified implementation checkpoint: `ee95adf56a9f6481f754df5dbf5fde277bc18912`
 
-### 3. Combatant runtime action expansion
+Verification:
+- UI Phase 09 mechanics + concentration workflow/structure ✅
+- TypeScript / production build ✅
+- Rules Domain core primitives + typed concentration result ✅
+- spellcasting / progression integration gates ✅
+
+Tracking: Issue #71 / Draft PR #72
+Branch: `agent/71-concentration-save-workflow`
+
+### 3. Combatant runtime action expansion — IN PROGRESS
 
 - [ ] authoritative spatial facts가 있는 encounter instance로 runtime actions 확대
 - [ ] imported / builtin Combatant representative actions
 - [ ] missing stat/spatial fact guess 금지
 - [ ] Activity / Undo convergence
+- [ ] deterministic runtime-action regressions
+- [ ] full Phase 09 + Rules Domain + TypeScript + production build green
+- [ ] Draft PR checkpoint
 
 ### 4. Character Creation ChoiceDefinition convergence
 
@@ -94,5 +106,6 @@ Tracking: Issue #71
 ```text
 Phase 09
 Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
-Step 2: IN PROGRESS — implementation wired; regression/CI validation in progress
+Step 2: CLOSED @ ee95adf56a9f6481f754df5dbf5fde277bc18912 · PR #72
+Step 3: IN PROGRESS — Combatant runtime action expansion
 ```
