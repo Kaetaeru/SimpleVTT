@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/phase09RealRuntimeStatAdapter";
+import "../../src/app/phase09RealAtomicSavingThrowAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { ActionVm } from "../../src/app/contracts";
 import { resolveRuntimeSaveModifier } from "../../src/app/realRuntimeStatProvider";
@@ -46,7 +46,7 @@ test("saving-throw service projects each target modifier through the canonical d
   assert.ok(result.provenance.some((entry) => entry.includes("fixture:guardian:con")));
 });
 
-test("MockAdapter Thunderwave uses runtime Combatant stats and domain typed damage independent of target index", async () => {
+test("MockAdapter Thunderwave uses one atomic multi-target damage transaction with event-native Activity and Undo", async () => {
   const adapter = new MockAdapter();
   await adapter.setCurrentActor("char.mira");
   await adapter.resolveAction("action.thunderwave",["combatant.goblin-a","combatant.training-guardian"]);
@@ -76,11 +76,27 @@ test("MockAdapter Thunderwave uses runtime Combatant stats and domain typed dama
   assert.equal(snapshot.scene.economyByActor["char.mira"]?.action,false);
   assert.equal(snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.goblin-a")?.finalDamage,9);
   assert.equal(snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.training-guardian")?.finalDamage,2);
-  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("고블린 A") && entry.includes("HP 12 -> 3")));
-  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("훈련용 수호체") && entry.includes("Resistance 4 -> 2")));
   assert.ok(snapshot.resolution?.stateChanges.includes("고블린 A HP 12 → 3"));
   assert.ok(snapshot.resolution?.stateChanges.includes("훈련용 수호체 임시 HP 4 → 2"));
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));
+  const activity=snapshot.activity[0];
+  assert.equal(activity.id,snapshot.resolution?.id);
+  assert.ok(activity.detail.some((line)=>line.startsWith("ResolutionEvent ")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.goblin-a HP 12 → 3")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.training-guardian 임시 HP 4 → 2")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("char.mira economy.action true → false")));
+
+  (adapter as unknown as { lastBefore:unknown }).lastBefore=null;
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.tempHp,4);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.hp,30);
+  assert.equal(snapshot.scene.economyByActor["char.mira"]?.action,true);
+  assert.equal(snapshot.resolution,null);
+  assert.ok(snapshot.activity[0]?.detail.includes("Before snapshot 미사용"));
+  assert.ok(snapshot.activity[0]?.detail.includes("multi-target HP/Temp HP + economy inverse"));
+  assert.ok(snapshot.activity.find((entry)=>entry.id===activity.id)?.reversed);
 });
 
 test("reordering targets does not reassign their runtime saving-throw modifiers", async () => {
