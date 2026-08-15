@@ -10,6 +10,7 @@ import {
   DRUID_SUBCLASS_CLASS_ID,
   FIGHTER_SUBCLASS_CLASS_ID,
   PALADIN_SUBCLASS_CLASS_ID,
+  RANGER_SUBCLASS_CLASS_ID,
   srdSubclassRelationship,
   subclassFeatureChoiceId,
   type SrdSubclassProgressionState,
@@ -17,7 +18,8 @@ import {
 import { CLERIC_LIFE_DOMAIN_SUBCLASS_ID } from "../../src/domain/clericLifeDomain";
 import { DRUID_CIRCLE_LAND_SUBCLASS_ID } from "../../src/domain/druidCircleLand";
 import { FIGHTER_CHAMPION_SUBCLASS_ID } from "../../src/domain/fighterChampion";
-import { PALADIN_DEVOTION_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
+import { HUNTER_DEFENSIVE_TACTICS_FEATURE_ID } from "../../src/domain/rangerHunter";
+import { PALADIN_DEVOTION_SUBCLASS_ID, RANGER_HUNTER_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 import { weaponMasteryChoiceId } from "../../src/domain/weaponMasteryProgression";
 
 const ARCHERY = "dnd.srd521.feat.fighting-style.archery";
@@ -95,6 +97,12 @@ test("SRD subclass progression catalog records only the mechanics-backed automat
     [7,15,20].map((level) => srdSubclassRelationship(PALADIN_SUBCLASS_CLASS_ID,PALADIN_DEVOTION_SUBCLASS_ID,level)?.features[0]?.label),
     ["헌신의 오라","보호의 강타","성스러운 후광"],
   );
+  assert.deepEqual(
+    [7,11,15].map((level) => srdSubclassRelationship(RANGER_SUBCLASS_CLASS_ID,RANGER_HUNTER_SUBCLASS_ID,level)?.features[0]?.label),
+    ["방어 전술","우월한 사냥꾼의 먹잇감","우월한 사냥꾼의 방어"],
+  );
+  assert.equal(srdSubclassRelationship(RANGER_SUBCLASS_CLASS_ID,RANGER_HUNTER_SUBCLASS_ID,7)?.choice,"ranger-defensive-tactics");
+  assert.equal(srdSubclassRelationship(RANGER_SUBCLASS_CLASS_ID,RANGER_HUNTER_SUBCLASS_ID,7)?.features[0]?.id,HUNTER_DEFENSIVE_TACTICS_FEATURE_ID);
   assert.equal(srdSubclassRelationship("dnd.srd521.class.paladin","external-subclass",7),undefined);
 });
 

@@ -13,6 +13,12 @@ import {
   DEVOTION_HOLY_NIMBUS_FEATURE_ID,
   DEVOTION_SMITE_OF_PROTECTION_FEATURE_ID,
 } from "./paladinDevotion";
+import {
+  HUNTER_DEFENSIVE_TACTIC_OPTIONS,
+  HUNTER_DEFENSIVE_TACTICS_FEATURE_ID,
+  HUNTER_SUPERIOR_DEFENSE_FEATURE_ID,
+  HUNTER_SUPERIOR_PREY_FEATURE_ID,
+} from "./rangerHunter";
 import type { ProgressionCharacterState } from "./progression";
 import {
   inferSrdSubclassId,
@@ -45,7 +51,7 @@ export interface SrdSubclassLevelRelationship {
   subclassId:string;
   classLevel:number;
   features:SrdSubclassFeatureDefinition[];
-  choice?:"fighting-style";
+  choice?:"fighting-style"|"ranger-defensive-tactics";
 }
 
 export interface SrdSubclassProgressionState extends ProgressionCharacterState {
@@ -185,6 +191,25 @@ const RELATIONSHIPS:readonly SrdSubclassLevelRelationship[] = [
     features:[{ id:DEVOTION_HOLY_NIMBUS_FEATURE_ID, label:"성스러운 후광" }],
   },
   { classId:RANGER_SUBCLASS_CLASS_ID, subclassId:RANGER_HUNTER_SUBCLASS_ID, classLevel:3, features:[] },
+  {
+    classId:RANGER_SUBCLASS_CLASS_ID,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    classLevel:7,
+    features:[{ id:HUNTER_DEFENSIVE_TACTICS_FEATURE_ID, label:"방어 전술" }],
+    choice:"ranger-defensive-tactics",
+  },
+  {
+    classId:RANGER_SUBCLASS_CLASS_ID,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    classLevel:11,
+    features:[{ id:HUNTER_SUPERIOR_PREY_FEATURE_ID, label:"우월한 사냥꾼의 먹잇감" }],
+  },
+  {
+    classId:RANGER_SUBCLASS_CLASS_ID,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    classLevel:15,
+    features:[{ id:HUNTER_SUPERIOR_DEFENSE_FEATURE_ID, label:"우월한 사냥꾼의 방어" }],
+  },
   { classId:ROGUE_SUBCLASS_CLASS_ID, subclassId:ROGUE_THIEF_SUBCLASS_ID, classLevel:3, features:[] },
   { classId:WARLOCK_SUBCLASS_CLASS_ID, subclassId:WARLOCK_FIEND_SUBCLASS_ID, classLevel:3, features:[] },
 ] as const;
@@ -254,6 +279,23 @@ export function championAdditionalFightingStyleChoice(args:{
       ...option,
       disabledReason:known.has(option.id) ? "이미 보유한 전투 방식 재주입니다." : undefined,
     })),
+  };
+}
+
+export function rangerDefensiveTacticsChoice(args:{
+  relationship:SrdSubclassLevelRelationship;
+}):ChoiceDefinition|undefined {
+  if (args.relationship.choice !== "ranger-defensive-tactics") return undefined;
+  return {
+    id:subclassFeatureChoiceId(args.relationship.classId,args.relationship.classLevel),
+    label:"방어 전술",
+    description:"사냥꾼 7레벨 방어 전술을 하나 선택합니다. 짧은 휴식이나 긴 휴식이 끝날 때 다른 선택지로 바꿀 수 있습니다.",
+    kind:"feature-option",
+    count:1,
+    required:true,
+    status:"ready",
+    source:"사냥꾼 7레벨 · 방어 전술 · SRD 5.2.1",
+    options:HUNTER_DEFENSIVE_TACTIC_OPTIONS.map((option) => ({ ...option })),
   };
 }
 

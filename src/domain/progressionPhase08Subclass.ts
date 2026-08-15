@@ -15,6 +15,7 @@ import {
 } from "./progressionPhase08BarbarianPrimalKnowledge";
 import {
   championAdditionalFightingStyleChoice,
+  rangerDefensiveTacticsChoice,
   resolveSrdSubclassId,
   selectedSubclassFeatureOption,
   srdSubclassRelationship,
@@ -100,7 +101,7 @@ export function buildProgressionPlanPhase08Subclass(
     state:state as SrdSubclassProgressionState,
     relationship,
     fightingStyleOptions:request.fightingStyleOptions ?? [],
-  });
+  }) ?? rangerDefensiveTacticsChoice({ relationship });
   if (actualChoice) {
     choices.push(actualChoice);
     const issues = validateChoiceDefinitions([actualChoice],request.selections);
@@ -109,7 +110,7 @@ export function buildProgressionPlanPhase08Subclass(
     const selectedStyleId = selectedSubclassFeatureOption(actualChoice,request.selections);
     const selected = actualChoice.options.find((option) => option.id === selectedStyleId);
     if (selected) {
-      diffs.push({ label:"서브클래스 특성 · 추가 전투 방식", before:"—", after:selected.label, source:actualChoice.source });
+      diffs.push({ label:`서브클래스 특성 · ${actualChoice.label}`, before:"—", after:selected.label, source:actualChoice.source });
     }
   } else if (relationship.features.length) {
     diffs.push({
@@ -150,6 +151,15 @@ function persistRelationship(
       state.fightingStyleFeatIds = unique([...(state.fightingStyleFeatIds ?? []),styleId]);
       state.fightingStyleFeatSources = { ...(state.fightingStyleFeatSources ?? {}), [styleId]:choice?.source ?? source };
       state.features = unique([...state.features,styleId]);
+    }
+  }
+  if (relationship.choice === "ranger-defensive-tactics") {
+    const choice = plan.choices.find((entry) => entry.id === subclassFeatureChoiceId(relationship.classId,relationship.classLevel));
+    const optionId = selectedSubclassFeatureOption(choice,request.selections);
+    if (optionId) {
+      state.subclassFeatureIds = unique([...(state.subclassFeatureIds ?? []),optionId]);
+      state.subclassFeatureSources[optionId] = choice?.source ?? source;
+      state.features = unique([...state.features,optionId]);
     }
   }
 }

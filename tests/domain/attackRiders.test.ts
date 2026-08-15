@@ -8,6 +8,19 @@ import {
 } from "../../src/domain/classAttackRiders";
 import { CLERIC_DIVINE_STRIKE_OPTION } from "../../src/domain/clericProgressionChoices";
 import { DRUID_PRIMAL_STRIKE_OPTION } from "../../src/domain/druidProgressionChoices";
+import {
+  HUNTER_ESCAPE_THE_HORDE_OPTION_ID,
+  HUNTER_MULTIATTACK_DEFENSE_OPTION_ID,
+  HUNTER_SUPERIOR_PREY_FEATURE_ID,
+  hunterEscapeTheHordeContribution,
+  hunterMultiattackDefenseContribution,
+  hunterSuperiorDefenseResistance,
+  replaceHunterDefensiveTactic,
+  resolveHunterMultiattackDefenseTrigger,
+  resolveHunterSuperiorDefense,
+  resolveHunterSuperiorPrey,
+} from "../../src/domain/rangerHunter";
+import { RANGER_HUNTER_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 import { resolvePendingResolution } from "../../src/domain/resolution";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
@@ -207,4 +220,123 @@ test("compound class rider damage makes one Concentration check from the aggrega
     .flatMap((event) => event.provenance)
     .filter((entry) => entry.source === "profile:dnd.srd-5.2.1/concentration");
   assert.equal(concentrationEntries.length,1);
+});
+
+test("Hunter Defensive Tactics uses stable option IDs and supports Short/Long Rest replacement", () => {
+  assert.equal(hunterEscapeTheHordeContribution({
+    rangerLevel:7,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    subclassFeatureIds:[HUNTER_ESCAPE_THE_HORDE_OPTION_ID],
+    opportunityAttack:true,
+  })?.state,"disadvantage");
+  assert.equal(hunterEscapeTheHordeContribution({
+    rangerLevel:7,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    subclassFeatureIds:[HUNTER_ESCAPE_THE_HORDE_OPTION_ID],
+    opportunityAttack:false,
+  }),undefined);
+  assert.deepEqual(
+    replaceHunterDefensiveTactic([HUNTER_ESCAPE_THE_HORDE_OPTION_ID],HUNTER_MULTIATTACK_DEFENSE_OPTION_ID,"short"),
+    [HUNTER_MULTIATTACK_DEFENSE_OPTION_ID],
+  );
+});
+
+test("Hunter Multiattack Defense marks the creature that hit and penalizes only its later attacks until that turn ends", () => {
+  const state = runtimeState();
+  const triggered = resolveHunterMultiattackDefenseTrigger(TEST_PROFILE,state,{
+    id:"hunter.multiattack-defense",
+    rangerId:"hero",
+    attackerId:"goblin",
+    expectedRevision:state.revision,
+    rangerLevel:7,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    subclassFeatureIds:[HUNTER_MULTIATTACK_DEFENSE_OPTION_ID],
+    attackHit:true,
+    round:1,
+  });
+  assert.equal(triggered.status,"committed");
+  if (triggered.status !== "committed") return;
+  assert.equal(hunterMultiattackDefenseContribution({ state:triggered.state, rangerId:"hero", attackerId:"goblin" })?.state,"disadvantage");
+  assert.equal(hunterMultiattackDefenseContribution({ state:triggered.state, rangerId:"hero", attackerId:"other" }),undefined);
+  const ended = resolvePendingResolution(TEST_PROFILE,triggered.state,{
+    id:"hunter.attacker-turn.end",
+    actorId:"goblin",
+    sourceId:"turn:test",
+    expectedRevision:triggered.state.revision,
+    operations:[{ id:"hunter.attacker-turn.end:op", kind:"end-turn", actorId:"goblin", round:1 }],
+  });
+  assert.equal(ended.status,"committed");
+  if (ended.status !== "committed") return;
+  assert.equal(hunterMultiattackDefenseContribution({ state:ended.state, rangerId:"hero", attackerId:"goblin" }),undefined);
+});
+
+test("Superior Hunter's Prey mirrors the already-rolled Hunter's Mark bonus damage once per Ranger turn to a visible creature within 30 feet", () => {
+  const state = beginHeroTurn();
+  state.combatants.goblin2 = structuredClone(state.combatants.goblin);
+  state.combatants.goblin2.id = "goblin2";
+  const first = resolveHunterSuperiorPrey(TEST_PROFILE,state,{
+    id:"hunter.superior-prey",
+    rangerId:"hero",
+    expectedRevision:state.revision,
+    rangerLevel:11,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    primaryTargetId:"goblin",
+    primaryTargetIsHuntersMarkTarget:true,
+    huntersMarkBonusDamage:6,
+    secondaryTarget:{ id:"goblin2", distanceFromPrimaryFeet:30, visibleByRanger:true, creatureKind:"monster" },
+  });
+  assert.equal(first.status,"committed");
+  if (first.status !== "committed") return;
+  assert.equal(first.state.combatants.goblin2.life.hp.current,9);
+  assert.ok(first.state.turnFeatureUsage?.featureIds.includes(HUNTER_SUPERIOR_PREY_FEATURE_ID));
+  const repeated = resolveHunterSuperiorPrey(TEST_PROFILE,first.state,{
+    id:"hunter.superior-prey.repeat",
+    rangerId:"hero",
+    expectedRevision:first.state.revision,
+    rangerLevel:11,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    primaryTargetId:"goblin",
+    primaryTargetIsHuntersMarkTarget:true,
+    huntersMarkBonusDamage:6,
+    secondaryTarget:{ id:"goblin2", distanceFromPrimaryFeet:30, visibleByRanger:true, creatureKind:"monster" },
+  });
+  assert.equal(repeated.status,"rejected");
+  assert.equal(repeated.state.combatants.goblin2.life.hp.current,9);
+});
+
+test("Superior Hunter's Defense spends Reaction, resists the triggering damage, and exposes same-type resistance until the current turn ends", () => {
+  const state = runtimeState();
+  const hpBefore = state.combatants.hero.life.hp.current;
+  const result = resolveHunterSuperiorDefense(TEST_PROFILE,state,{
+    id:"hunter.superior-defense",
+    rangerId:"hero",
+    expectedRevision:state.revision,
+    rangerLevel:15,
+    subclassId:RANGER_HUNTER_SUBCLASS_ID,
+    damageType:"slashing",
+    incomingDamage:9,
+    creatureKind:"character",
+    currentTurnActorId:"goblin",
+    round:1,
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.combatants.hero.economy.reaction,false);
+  assert.equal(result.state.combatants.hero.life.hp.current,hpBefore - 4);
+  assert.deepEqual(hunterSuperiorDefenseResistance(result.state,"hero","slashing"),{
+    source:"dnd.srd521.feature.ranger.hunter.superior-hunters-defense",
+    kind:"resistance",
+    damageType:"slashing",
+  });
+  assert.equal(hunterSuperiorDefenseResistance(result.state,"hero","fire"),undefined);
+  const ended = resolvePendingResolution(TEST_PROFILE,result.state,{
+    id:"hunter.superior-defense.turn-end",
+    actorId:"goblin",
+    sourceId:"turn:test",
+    expectedRevision:result.state.revision,
+    operations:[{ id:"hunter.superior-defense.turn-end:op", kind:"end-turn", actorId:"goblin", round:1 }],
+  });
+  assert.equal(ended.status,"committed");
+  if (ended.status !== "committed") return;
+  assert.equal(hunterSuperiorDefenseResistance(ended.state,"hero","slashing"),undefined);
 });
