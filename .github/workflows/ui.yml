@@ -58,5 +58,6 @@ jobs:
           tests/ui/phase09RealResolutionService.test.ts
           tests/ui/phase09RealActionCostService.test.ts
           tests/ui/phase09RealActionCostAdapter.test.ts
+          tests/ui/phase09RealHealingAdapter.test.ts
       - name: Typecheck and build
         run: npm run build

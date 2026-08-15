@@ -1,10 +1,18 @@
 import type { DamageComponentView, SceneEntity } from "./contracts";
-import { resolveDamage, type DamageDefenseContribution } from "../domain/damage";
+import { resolveDamage, resolveHealing, type DamageDefenseContribution } from "../domain/damage";
 
 export interface SceneDamageResolution {
   nextHp:number;
   nextTempHp:number;
   component:DamageComponentView;
+  stateChanges:string[];
+  provenance:string[];
+}
+
+export interface SceneHealingResolution {
+  requested:number;
+  restored:number;
+  nextHp:number;
   stateChanges:string[];
   provenance:string[];
 }
@@ -58,6 +66,25 @@ export function resolveSceneDamage(
       source:"Rules Domain · Typed Defense → Temp HP → HP",
     },
     stateChanges,
+    provenance:resolved.provenance.map((entry) => `${entry.source} · ${entry.status} · ${entry.reason}`),
+  };
+}
+
+export function resolveSceneHealing(
+  target:Pick<SceneEntity,"id"|"name"|"hp"|"maxHp"|"tempHp">,
+  amount:number,
+):SceneHealingResolution {
+  const resolved = resolveHealing(
+    { current:target.hp, maximum:target.maxHp, temporary:target.tempHp },
+    amount,
+  );
+  return {
+    requested:resolved.requested,
+    restored:resolved.restored,
+    nextHp:resolved.nextHp.current,
+    stateChanges:target.hp === resolved.nextHp.current
+      ? []
+      : [`${target.name} HP ${target.hp} → ${resolved.nextHp.current}`],
     provenance:resolved.provenance.map((entry) => `${entry.source} · ${entry.status} · ${entry.reason}`),
   };
 }

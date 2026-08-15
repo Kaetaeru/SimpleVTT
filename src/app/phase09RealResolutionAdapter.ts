@@ -4,14 +4,21 @@ import type {
   ActivityEntry,
   AppSnapshot,
   CharacterSheet,
+  CharacterSummary,
   ResolutionView,
   SceneEntity,
   SessionMode,
 } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { resolveActionCostTransaction } from "./realActionCostService";
-import { resolveSceneDamage } from "./realHealthService";
+import { resolveSceneDamage, resolveSceneHealing } from "./realHealthService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
+
+interface Phase09BeforeSnapshot {
+  scene:AppSnapshot["scene"];
+  activeCharacter:CharacterSheet;
+  characters:CharacterSummary[];
+}
 
 interface Phase09ResolutionAdapterState {
   action(id:string):ActionVm|undefined;
@@ -25,10 +32,11 @@ interface Phase09ResolutionAdapterState {
   resolution:ResolutionView|null;
   scene:AppSnapshot["scene"];
   activeCharacter:CharacterSheet;
+  characters:CharacterSummary[];
   sessionMode:SessionMode;
   activity:ActivityEntry[];
-  before:unknown|null;
-  lastBefore:unknown|null;
+  before:Phase09BeforeSnapshot|null;
+  lastBefore:Phase09BeforeSnapshot|null;
   lastResolutionId:string|null;
   getSnapshot():Promise<AppSnapshot>;
 }
@@ -49,9 +57,7 @@ const oldCommit = phase09Prototype.commit;
 phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const resolution = internal.resolution;
-  if (!resolution || !migratedD20Action(action) || action.itemCost) {
-    return oldCommit.call(this,action);
-  }
+  if (!resolution || action.itemCost) return oldCommit.call(this,action);
   const actor = internal.entity(action.actorId);
   const economy = internal.scene.economyByActor[action.actorId];
   if (!actor || !economy) return oldCommit.call(this,action);
@@ -66,11 +72,18 @@ phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
     initiativeMode:internal.sessionMode === "initiative",
   });
   if (costs.status === "rejected") {
+    if (internal.before) {
+      internal.scene = structuredClone(internal.before.scene);
+      internal.activeCharacter = structuredClone(internal.before.activeCharacter);
+      internal.characters = structuredClone(internal.before.characters);
+    }
+    resolution.stateChanges = [];
     resolution.detail.push(`비용 적용 거부: ${costs.error}`);
     resolution.finalOutcome = `적용 거부: ${costs.error}`;
     resolution.stage = "complete";
     resolution.canAdvance = false;
     resolution.nextLabel = undefined;
+    internal.before = null;
     return;
   }
 
@@ -144,28 +157,44 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealD20(ac
   return internal.getSnapshot();
 };
 
-MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRealDamage() {
+MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRealHealth() {
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const resolution = internal.resolution;
   if (!resolution) return oldAdvanceResolution.call(this);
   const action = internal.action(resolution.actionId);
-  if (!action || resolution.stage !== "damage-animation" || action.resolutionKind !== "attack") {
-    return oldAdvanceResolution.call(this);
+  if (!action) return oldAdvanceResolution.call(this);
+
+  if (resolution.stage === "damage-animation" && action.resolutionKind === "attack") {
+    const target = internal.entity(resolution.targetIds[0]);
+    const damage = action.damage?.[0];
+    if (!target || !damage) return oldAdvanceResolution.call(this);
+    const raw = damage.average * (resolution.critical ? 2 : 1);
+    const resolved = resolveSceneDamage(target,damage.type,raw);
+    target.hp = resolved.nextHp;
+    target.tempHp = resolved.nextTempHp;
+    resolution.stateChanges.push(...resolved.stateChanges);
+    resolution.provenance.push(...resolved.provenance);
+    resolution.damageComponents = [resolved.component];
+    resolution.compact = `${resolution.attackTotal} vs AC ${resolution.targetAc} — ${resolution.attackOutcome}${resolution.critical ? " · 치명타" : ""} · ${resolved.component.adjusted} ${resolved.component.type} 피해`;
+    resolution.calculatedOutcome = resolution.compact;
+    if (!resolution.adjudicated) resolution.finalOutcome = resolution.compact;
+    internal.commit(action);
+    return internal.getSnapshot();
   }
 
-  const target = internal.entity(resolution.targetIds[0]);
-  const damage = action.damage?.[0];
-  if (!target || !damage) return oldAdvanceResolution.call(this);
-  const raw = damage.average * (resolution.critical ? 2 : 1);
-  const resolved = resolveSceneDamage(target,damage.type,raw);
-  target.hp = resolved.nextHp;
-  target.tempHp = resolved.nextTempHp;
-  resolution.stateChanges.push(...resolved.stateChanges);
-  resolution.provenance.push(...resolved.provenance);
-  resolution.damageComponents = [resolved.component];
-  resolution.compact = `${resolution.attackTotal} vs AC ${resolution.targetAc} — ${resolution.attackOutcome}${resolution.critical ? " · 치명타" : ""} · ${resolved.component.adjusted} ${resolved.component.type} 피해`;
-  resolution.calculatedOutcome = resolution.compact;
-  if (!resolution.adjudicated) resolution.finalOutcome = resolution.compact;
-  internal.commit(action);
-  return internal.getSnapshot();
+  if (resolution.stage === "effect-preview" && action.resolutionKind === "healing") {
+    const target = internal.entity(resolution.targetIds[0]);
+    if (!target) return oldAdvanceResolution.call(this);
+    const resolved = resolveSceneHealing(target,resolution.rollTotal ?? 0);
+    target.hp = resolved.nextHp;
+    resolution.stateChanges.push(...resolved.stateChanges);
+    resolution.provenance.push(...resolved.provenance);
+    resolution.compact = `${target.name} ${resolved.restored} HP 회복`;
+    resolution.calculatedOutcome = `${resolved.restored} HP 회복`;
+    if (!resolution.adjudicated) resolution.finalOutcome = "회복 적용";
+    internal.commit(action);
+    return internal.getSnapshot();
+  }
+
+  return oldAdvanceResolution.call(this);
 };
