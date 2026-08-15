@@ -119,23 +119,42 @@ Verification:
 Tracking: Issue #75 / Draft PR #76
 Branch: `agent/75-creation-choice-definition`
 
-### 5. Progression / rest / class-feature application service convergence — IN PROGRESS
+### 5. Progression / rest / class-feature application service convergence — CLOSED
 
-- [x] progression / rest / class-feature direct-write inventory 시작
-- [ ] shared CharacterSheet <-> ProgressionCharacterState projection boundary
-- [ ] level-up commit write-back을 shared application service로 수렴
-- [ ] Wizard Long Rest preparation write-back 수렴
-- [ ] Pact Tome / Circle Land rest-time config write-back 수렴
-- [ ] class-feature/core/subclass resource upsert 수렴
-- [ ] revision / source / non-refill semantics 보존
-- [ ] existing progression/rest/class-feature regressions green
-- [ ] full creation/progression + Rules Domain + TypeScript + production build green
-- [ ] Draft PR checkpoint
+- [x] progression / rest / class-feature direct-write inventory
+- [x] shared CharacterSheet <-> ProgressionCharacterState projection boundary
+- [x] level-up commit write-back을 shared application service로 수렴
+- [x] Wizard Long Rest preparation write-back을 scoped shared application으로 수렴
+- [x] Pact Tome rest write-back을 explicit `pact-tome` scope로 수렴
+- [x] Circle Land는 별도 `CircleLandSpellRestState` revision domain임을 구조 gate로 명시하고 progression write-back과 의도적으로 분리
+- [x] class-feature/core/subclass + Sorcery Point + Signature Spell resource upsert 수렴
+- [x] revision / source / non-refill / idempotent semantics 보존
+- [x] shared application service + structure regressions를 canonical creation/progression build gates에 편입
+- [x] existing progression/rest/class-feature regressions green
+- [x] full creation/progression + Rules Domain + TypeScript + production build green
+- [x] Draft PR checkpoint
 
-### 6. UI named-rule structural gate
+Verified implementation checkpoint: `7b0b9e237f0763e2fd2020452594e4fefc501fa8`
+
+Verification:
+- UI workflow `31899274706` ✅
+- shared progression application service / structure gates ✅
+- creation / progression / rest / class-feature runtime regressions ✅
+- Phase 09 mechanics ✅
+- TypeScript / production build ✅
+- Rules Domain workflow `31899236207` ✅
+
+Tracking: Issue #77
+Branch: `agent/77-progression-application-service`
+
+### 6. UI named-rule structural gate — IN PROGRESS
 
 - [ ] UI component named-rule 계산 inventory
-- [ ] domain/application 밖 신규 계산 차단 CI gate
+- [ ] React/UI 계층의 허용 presentation-only 계산과 금지 named-rule 계산 분류
+- [ ] domain/application 밖 신규 named-rule 계산 차단 CI gate
+- [ ] 기존 legitimate UI-only formatting false positive 최소화
+- [ ] full UI + TypeScript + production build green
+- [ ] Draft PR checkpoint
 
 ### 7. Optional 3D dice renderer
 
@@ -154,5 +173,6 @@ Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
 Step 2: CLOSED @ ee95adf56a9f6481f754df5dbf5fde277bc18912 · PR #72
 Step 3: CLOSED @ 3b4afb6adfe9de26c83cf5bace672a79af95e7cd · PR #74
 Step 4: CLOSED @ d0bb91a835020cf457c85cd5beede5fc8ffb3303 · PR #76
-Step 5: IN PROGRESS — progression/rest/class-feature application service convergence
+Step 5: CLOSED @ 7b0b9e237f0763e2fd2020452594e4fefc501fa8
+Step 6: IN PROGRESS — UI named-rule structural gate
 ```
