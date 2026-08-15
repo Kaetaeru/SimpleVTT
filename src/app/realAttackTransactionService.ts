@@ -37,7 +37,7 @@ export interface AtomicAttackTransactionRequest {
   attackD20Face:number;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
-  targetingFact:Phase09TargetingFact;
+  targetingFact:Phase09TargetingFact & { provenance?:string[] };
   expectedPreview?:AtomicAttackPreviewExpectation;
   runtimeState?:RulesRuntimeState;
   concentrationCheck?:Omit<ConcentrationCheckRequest,"damage">;
@@ -243,6 +243,18 @@ function resolveAttackTransaction(request:AtomicAttackTransactionRequest,input:R
   });
 }
 
+function retainTargetingFactProvenance(events:ResolutionEvent[],request:AtomicAttackTransactionRequest) {
+  const provenance=request.targetingFact.provenance ?? [];
+  if (!provenance.length) return;
+  const targeting=events.find((event)=>event.kind==="targeting");
+  if (!targeting) return;
+  targeting.provenance.push(...provenance.map((source)=>({
+    source,
+    status:"applied" as const,
+    reason:"authoritative runtime targeting fact",
+  })));
+}
+
 export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRequest):AtomicAttackTransactionResult {
   const damageSpec = request.action.damage?.[0];
   if (request.action.resolutionKind !== "attack" || !damageSpec) {
@@ -299,6 +311,7 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
   } satisfies DamageComponentView : undefined;
 
   const events = transaction.events.map((event) => structuredClone(event));
+  retainTargetingFactProvenance(events,request);
   return {
     status:"committed",
     attack,

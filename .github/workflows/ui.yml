@@ -80,6 +80,7 @@ jobs:
           tests/ui/phase09RealAtomicAttackAdapter.test.ts
           tests/ui/phase09AuthoritativeRuntimeAttackAdapter.test.ts
           tests/ui/phase09ConcentrationSaveWorkflow.test.ts
+          tests/ui/phase09CombatantRuntimeActions.test.ts
           tests/ui/phase09RealLifeRuntime.test.ts
           tests/ui/phase09ManualMovementReactionAdapter.test.ts
           tests/ui/phase09RealHealingRollService.test.ts
