@@ -2,7 +2,7 @@ import type { FixedDiceInput, ModifierContribution } from "./d20";
 import type { FixedDamageDice, FlatDamageContribution } from "./damageRoll";
 import type { RulesRuntimeState } from "./combatState";
 import type { ConcentrationCheckRequest } from "./concentration";
-import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
+import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { TargetFacts } from "./targeting";
@@ -50,6 +50,8 @@ export interface AttackRequest {
   rangeFeet: number;
   attackDice: FixedDiceInput;
   attackModifierContributions: ModifierContribution[];
+  rollStateContributions?: RollStateContribution[];
+  requiresSight?: boolean;
   baseDamage: AttackDamageComponent;
   riders?: AttackDamageComponent[];
   economy?: AttackEconomyCost;
@@ -120,7 +122,7 @@ export function compileAttack(request: AttackRequest): PendingResolution {
         minTargets:1,
         maxTargets:1,
         allowedRelations:["ally","enemy","neutral"],
-        requiresSight:true,
+        requiresSight:request.requiresSight ?? true,
         directTarget:true,
       },
       targets:[request.target],
@@ -148,6 +150,7 @@ export function compileAttack(request: AttackRequest): PendingResolution {
       family:"attack-roll",
       target:request.target.ac,
       modifierContributions:request.attackModifierContributions,
+      rollStateContributions:request.rollStateContributions,
       dice:request.attackDice,
       targetSource:`target:${targetId}:ac`,
       criticalThreshold:request.criticalRange?.threshold,

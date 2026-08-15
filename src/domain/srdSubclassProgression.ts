@@ -1,13 +1,33 @@
 import type { ChoiceDefinition, ChoiceSelectionMap } from "./choiceDefinition";
+import {
+  BARBARIAN_BERSERKER_SUBCLASS_ID,
+  BERSERKER_INTIMIDATING_PRESENCE_FEATURE_ID,
+  BERSERKER_MINDLESS_RAGE_FEATURE_ID,
+  BERSERKER_RETALIATION_FEATURE_ID,
+} from "./barbarianBerserker";
 import { CLERIC_LIFE_DOMAIN_SUBCLASS_ID } from "./clericLifeDomain";
 import { DRUID_CIRCLE_LAND_SUBCLASS_ID } from "./druidCircleLand";
 import { FIGHTER_CHAMPION_SUBCLASS_ID } from "./fighterChampion";
 import type { ProgressionCharacterState } from "./progression";
-import { inferSrdSubclassId, srdSubclassIdForClass } from "./srdSubclassCatalog";
+import {
+  inferSrdSubclassId,
+  MONK_OPEN_HAND_SUBCLASS_ID,
+  PALADIN_DEVOTION_SUBCLASS_ID,
+  RANGER_HUNTER_SUBCLASS_ID,
+  ROGUE_THIEF_SUBCLASS_ID,
+  srdSubclassIdForClass,
+  WARLOCK_FIEND_SUBCLASS_ID,
+} from "./srdSubclassCatalog";
 
+export const BARBARIAN_SUBCLASS_CLASS_ID = "dnd.srd521.class.barbarian";
 export const CLERIC_SUBCLASS_CLASS_ID = "dnd.srd521.class.cleric";
 export const DRUID_SUBCLASS_CLASS_ID = "dnd.srd521.class.druid";
 export const FIGHTER_SUBCLASS_CLASS_ID = "dnd.srd521.class.fighter";
+export const MONK_SUBCLASS_CLASS_ID = "dnd.srd521.class.monk";
+export const PALADIN_SUBCLASS_CLASS_ID = "dnd.srd521.class.paladin";
+export const RANGER_SUBCLASS_CLASS_ID = "dnd.srd521.class.ranger";
+export const ROGUE_SUBCLASS_CLASS_ID = "dnd.srd521.class.rogue";
+export const WARLOCK_SUBCLASS_CLASS_ID = "dnd.srd521.class.warlock";
 export const SUBCLASS_AUTO_SELECTION_PREFIX = "auto-subclass-feature:";
 
 export interface SrdSubclassFeatureDefinition {
@@ -32,6 +52,30 @@ export interface SrdSubclassProgressionState extends ProgressionCharacterState {
 }
 
 const RELATIONSHIPS:readonly SrdSubclassLevelRelationship[] = [
+  {
+    classId:BARBARIAN_SUBCLASS_CLASS_ID,
+    subclassId:BARBARIAN_BERSERKER_SUBCLASS_ID,
+    classLevel:3,
+    features:[],
+  },
+  {
+    classId:BARBARIAN_SUBCLASS_CLASS_ID,
+    subclassId:BARBARIAN_BERSERKER_SUBCLASS_ID,
+    classLevel:6,
+    features:[{ id:BERSERKER_MINDLESS_RAGE_FEATURE_ID, label:"무심한 격노" }],
+  },
+  {
+    classId:BARBARIAN_SUBCLASS_CLASS_ID,
+    subclassId:BARBARIAN_BERSERKER_SUBCLASS_ID,
+    classLevel:10,
+    features:[{ id:BERSERKER_RETALIATION_FEATURE_ID, label:"보복" }],
+  },
+  {
+    classId:BARBARIAN_SUBCLASS_CLASS_ID,
+    subclassId:BARBARIAN_BERSERKER_SUBCLASS_ID,
+    classLevel:14,
+    features:[{ id:BERSERKER_INTIMIDATING_PRESENCE_FEATURE_ID, label:"위압적인 존재감" }],
+  },
   {
     classId:CLERIC_SUBCLASS_CLASS_ID,
     subclassId:CLERIC_LIFE_DOMAIN_SUBCLASS_ID,
@@ -115,6 +159,11 @@ const RELATIONSHIPS:readonly SrdSubclassLevelRelationship[] = [
     classLevel:18,
     features:[{ id:"dnd.srd521.feature.fighter.champion.survivor", label:"생존자" }],
   },
+  { classId:MONK_SUBCLASS_CLASS_ID, subclassId:MONK_OPEN_HAND_SUBCLASS_ID, classLevel:3, features:[] },
+  { classId:PALADIN_SUBCLASS_CLASS_ID, subclassId:PALADIN_DEVOTION_SUBCLASS_ID, classLevel:3, features:[] },
+  { classId:RANGER_SUBCLASS_CLASS_ID, subclassId:RANGER_HUNTER_SUBCLASS_ID, classLevel:3, features:[] },
+  { classId:ROGUE_SUBCLASS_CLASS_ID, subclassId:ROGUE_THIEF_SUBCLASS_ID, classLevel:3, features:[] },
+  { classId:WARLOCK_SUBCLASS_CLASS_ID, subclassId:WARLOCK_FIEND_SUBCLASS_ID, classLevel:3, features:[] },
 ] as const;
 
 const RELATIONSHIP_BY_KEY = new Map(RELATIONSHIPS.map((entry) => [`${entry.classId}:${entry.subclassId}:${entry.classLevel}`,entry]));

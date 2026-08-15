@@ -2,9 +2,11 @@ import {
   activeConditionIds,
   conditionImmunities,
   exhaustionIsFatal,
+  SRD_521_CONDITIONS,
+  type ConditionId,
 } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { createEffect, terminateEffectsForCreatureState } from "./effects";
+import { createEffect, terminateEffectsForCreatureState, type EffectInstance } from "./effects";
 import { endConcentration, startConcentration } from "./concentration";
 import {
   concentrationStateChange,
@@ -22,6 +24,21 @@ type UpdateEffectOp = Extract<ResolutionOperation, { kind:"update-effect" }>;
 type RemoveEffectOp = Extract<ResolutionOperation, { kind:"remove-effect" }>;
 type StartConcentrationOp = Extract<ResolutionOperation, { kind:"start-concentration" }>;
 type EndConcentrationOp = Extract<ResolutionOperation, { kind:"end-concentration" }>;
+
+const CONDITION_IMMUNITY_TAG_PREFIX = "condition-immunity:";
+
+function taggedConditionImmunities(effects:EffectInstance[],targetId:string):ConditionId[] {
+  const immunities = new Set<ConditionId>();
+  for (const effect of effects) {
+    if (effect.targetId !== targetId) continue;
+    for (const tag of effect.tags) {
+      if (!tag.startsWith(CONDITION_IMMUNITY_TAG_PREFIX)) continue;
+      const conditionId = tag.slice(CONDITION_IMMUNITY_TAG_PREFIX.length) as ConditionId;
+      if (conditionId in SRD_521_CONDITIONS) immunities.add(conditionId);
+    }
+  }
+  return [...immunities];
+}
 
 function endActorConcentration(ctx: ResolutionExecutionContext, actorId:string, reason:string) {
   const current = ctx.state.concentration[actorId];
@@ -41,6 +58,7 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
   if (effect.conditionId) {
     const immunities = new Set([
       ...conditionImmunities(conditionEffectsFor(ctx.state, target.id)),
+      ...taggedConditionImmunities(ctx.state.effects,target.id),
       ...(target.conditionImmunities ?? []),
     ]);
     if (immunities.has(effect.conditionId)) {
