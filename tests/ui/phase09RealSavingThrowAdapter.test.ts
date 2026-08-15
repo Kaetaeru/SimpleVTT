@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/phase09RealResolutionAdapter";
+import "../../src/app/phase09RealRuntimeStatAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { ActionVm } from "../../src/app/contracts";
-import { phase09ReferenceSaveModifier } from "../../src/app/phase09ReferenceRulesFacts";
+import { resolveRuntimeSaveModifier } from "../../src/app/realRuntimeStatProvider";
 import { resolveSavingThrowResolution } from "../../src/app/realSavingThrowService";
 
 const THUNDERWAVE:ActionVm = {
@@ -25,10 +25,26 @@ const THUNDERWAVE:ActionVm = {
   details:[],
 };
 
-test("Phase 09 reference save facts are target-based rather than target-index based", () => {
-  assert.equal(phase09ReferenceSaveModifier("combatant.goblin-a","건강").modifier,0);
-  assert.equal(phase09ReferenceSaveModifier("combatant.training-guardian","건강").modifier,3);
-  assert.equal(phase09ReferenceSaveModifier("combatant.goblin-a","지혜").modifier,-1);
+test("runtime stat provider derives Character saves from canonical class proficiency and ability scores", async () => {
+  const adapter = new MockAdapter();
+  const snapshot = await adapter.getSnapshot();
+  const aelar = snapshot.scene.entities.find((entity) => entity.id === snapshot.activeCharacter.id)!;
+  const strength = resolveRuntimeSaveModifier(aelar,snapshot.activeCharacter,"근력");
+  const wisdom = resolveRuntimeSaveModifier(aelar,snapshot.activeCharacter,"지혜");
+  assert.equal(strength.modifier,7);
+  assert.equal(wisdom.modifier,1);
+  assert.match(strength.source,/runtime:character:char\.aelar:save:str:class:.*fighter.*:proficient/);
+  assert.match(wisdom.source,/runtime:character:char\.aelar:save:wis:class:/);
+});
+
+test("runtime stat provider derives Combatant saves from structured ability-score definitions", async () => {
+  const adapter = new MockAdapter();
+  const snapshot = await adapter.getSnapshot();
+  const goblin = snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a")!;
+  const guardian = snapshot.scene.entities.find((entity) => entity.id === "combatant.training-guardian")!;
+  assert.equal(resolveRuntimeSaveModifier(goblin,snapshot.activeCharacter,"건강").modifier,0);
+  assert.equal(resolveRuntimeSaveModifier(guardian,snapshot.activeCharacter,"건강").modifier,3);
+  assert.equal(resolveRuntimeSaveModifier(goblin,snapshot.activeCharacter,"지혜").modifier,-1);
 });
 
 test("saving-throw service projects each target modifier through the canonical d20 resolver", () => {
@@ -51,7 +67,7 @@ test("saving-throw service projects each target modifier through the canonical d
   assert.ok(result.provenance.some((entry) => entry.includes("fixture:guardian:con")));
 });
 
-test("MockAdapter Thunderwave uses explicit target save facts and domain typed damage independent of target index", async () => {
+test("MockAdapter Thunderwave uses runtime Combatant stats and domain typed damage independent of target index", async () => {
   const adapter = new MockAdapter();
   await adapter.setCurrentActor("char.mira");
   await adapter.resolveAction("action.thunderwave",["combatant.goblin-a","combatant.training-guardian"]);
@@ -64,7 +80,8 @@ test("MockAdapter Thunderwave uses explicit target save facts and domain typed d
   assert.equal((guardianSave?.total ?? 0) - (guardianSave?.d20 ?? 0),3);
   assert.equal(goblinSave?.outcome,"실패");
   assert.equal(guardianSave?.outcome,"성공");
-  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("phase09:reference-save:combatant.goblin-a:건강")));
+  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("runtime:combatant:combatant.goblin:ability:con")));
+  assert.ok(!snapshot.resolution?.provenance.some((entry) => entry.includes("phase09:reference-save")));
 
   await adapter.advanceResolution();
   await adapter.advanceResolution();
@@ -89,7 +106,7 @@ test("MockAdapter Thunderwave uses explicit target save facts and domain typed d
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));
 });
 
-test("reordering targets does not reassign their saving-throw modifiers", async () => {
+test("reordering targets does not reassign their runtime saving-throw modifiers", async () => {
   const adapter = new MockAdapter();
   await adapter.setCurrentActor("char.mira");
   await adapter.resolveAction("action.thunderwave",["combatant.training-guardian","combatant.goblin-a"]);
@@ -99,4 +116,24 @@ test("reordering targets does not reassign their saving-throw modifiers", async 
 
   assert.equal((guardian?.total ?? 0) - (guardian?.d20 ?? 0),3);
   assert.equal((goblin?.total ?? 0) - (goblin?.d20 ?? 0),0);
+});
+
+test("saving throw explicitly rejects a Combatant instance without runtime ability stats", async () => {
+  const adapter = new MockAdapter();
+  await adapter.previewCombatantImport(JSON.stringify({
+    id:"combatant.local-bandit",
+    name:"로컬 산적",
+    ac:14,
+    maxHp:18,
+    actions:["단검"],
+  }));
+  await adapter.activateCombatantImport();
+  await adapter.instantiateCombatant("combatant.local-bandit");
+  await adapter.setCurrentActor("char.mira");
+  await adapter.resolveAction("action.thunderwave",["combatant.local-bandit.instance-1"]);
+  const snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.match(snapshot.resolution?.finalOutcome ?? "",/missing runtime combatant stat definition/);
+  assert.deepEqual(snapshot.resolution?.stateChanges,[]);
+  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("explicit reject")));
 });
