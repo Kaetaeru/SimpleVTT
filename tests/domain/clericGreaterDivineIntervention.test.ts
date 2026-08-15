@@ -3,9 +3,11 @@ import test from "node:test";
 import { CLERIC_DIVINE_INTERVENTION_RESOURCE_ID } from "../../src/domain/coreClassResources";
 import {
   greaterDivineInterventionLockoutLongRests,
+  resolveGreaterDivineInterventionWishCopy,
   resolveGreaterDivineInterventionWishLockout,
 } from "../../src/domain/clericGreaterDivineIntervention";
 import { resolvePendingResolution } from "../../src/domain/resolution";
+import { spellMechanicById } from "../../src/domain/spellMechanics";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 function stateAfterWish() {
@@ -14,6 +16,18 @@ function stateAfterWish() {
     id:CLERIC_DIVINE_INTERVENTION_RESOURCE_ID,
     label:"Divine Intervention",
     current:0,
+    maximum:1,
+    recovery:{ longRest:"all" },
+  });
+  return state;
+}
+
+function stateBeforeWish() {
+  const state = runtimeState();
+  state.combatants.hero.resources.push({
+    id:CLERIC_DIVINE_INTERVENTION_RESOURCE_ID,
+    label:"Divine Intervention",
+    current:1,
     maximum:1,
     recovery:{ longRest:"all" },
   });
@@ -30,10 +44,124 @@ function longRest(state:ReturnType<typeof runtimeState>,expectedRevision:number,
   });
 }
 
+function caster() {
+  return {
+    characterLevel:20,
+    spellAttackModifier:9,
+    spellSaveDc:17,
+    spellcastingAbilityModifier:5,
+    preparedSpellIds:[],
+    alwaysPreparedSpellIds:[],
+    cantripSpellIds:[],
+    slotResourceIds:{},
+  };
+}
+
+function goblinTarget() {
+  return {
+    id:"goblin",
+    kind:"creature" as const,
+    relation:"enemy" as const,
+    distanceFeet:10,
+    visible:true,
+    cover:"none" as const,
+    creatureKind:"monster" as const,
+    saveModifiers:{ dex:0 },
+    targetCanSeeCaster:true,
+  };
+}
+
 test("Greater Divine Intervention Wish lockout uses the authoritative 2d4 total", () => {
   assert.equal(greaterDivineInterventionLockoutLongRests([1,1]),2);
   assert.equal(greaterDivineInterventionLockoutLongRests([4,4]),8);
   assert.throws(() => greaterDivineInterventionLockoutLongRests([0,4]),/exactly two authoritative d4 faces/);
+});
+
+test("Greater Divine Intervention can use Wish's basic mode to replicate an executable level-8-or-lower spell in one atomic transaction", () => {
+  const state = stateBeforeWish();
+  const burningHands = spellMechanicById("dnd.srd521.spell.burning-hands");
+  assert.ok(burningHands);
+  const result = resolveGreaterDivineInterventionWishCopy(TEST_PROFILE,burningHands!,state,{
+    id:"greater-di.wish-copy",
+    actorId:"hero",
+    expectedRevision:0,
+    clericLevel:20,
+    copiedSpellId:burningHands!.spellId,
+    caster:caster(),
+    targets:[goblinTarget()],
+    wishNonMaterialComponentsSatisfied:true,
+    useActionEconomy:true,
+    dice:{
+      saves:{ goblin:{ id:"wish-copy-save", purpose:"Burning Hands via Wish", sides:20, faces:[3] } },
+      effectFaces:[3,4,5],
+    },
+    d4Faces:[2,3],
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.combatants.goblin.life.hp.current,3,"replicated Burning Hands deals its exact base 3d6 damage");
+  assert.equal(result.state.combatants.hero.economy.action,false,"Greater Divine Intervention spends the Magic Action, not the copied spell's own economy");
+  assert.equal(result.state.combatants.hero.resources.find((pool) => pool.id === "spell-slot-1")?.current,2,"Wish replication spends no spell slot");
+  const divineIntervention = result.state.combatants.hero.resources.find((pool) => pool.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID);
+  assert.equal(divineIntervention?.current,0);
+  assert.deepEqual(divineIntervention?.recoveryLockouts,{ longRest:5 });
+  assert.equal((result.results["greater-di.wish-copy:lockout-roll"] as { total:number }).total,5);
+});
+
+test("Wish replication rejects unsupported copied mechanics atomically instead of approximating them", () => {
+  const state = stateBeforeWish();
+  const thunderwave = spellMechanicById("dnd.srd521.spell.thunderwave");
+  assert.ok(thunderwave);
+  const result = resolveGreaterDivineInterventionWishCopy(TEST_PROFILE,thunderwave!,state,{
+    id:"greater-di.wish-partial",
+    actorId:"hero",
+    expectedRevision:0,
+    clericLevel:20,
+    copiedSpellId:thunderwave!.spellId,
+    caster:caster(),
+    targets:[goblinTarget()],
+    wishNonMaterialComponentsSatisfied:true,
+    useActionEconomy:true,
+    dice:{ saves:{ goblin:{ id:"partial-save", purpose:"partial", sides:20, faces:[3] } }, effectFaces:[4,5] },
+    d4Faces:[2,2],
+  });
+  assert.equal(result.status,"rejected");
+  assert.equal(result.state,state);
+  assert.equal(state.combatants.hero.economy.action,true);
+  assert.equal(state.combatants.hero.resources.find((pool) => pool.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID)?.current,1);
+  assert.match(result.status === "rejected" ? result.error : "",/fully executable/);
+});
+
+test("Wish replication requires level 20 and Wish's own non-material component before mutation", () => {
+  const state = stateBeforeWish();
+  const cureWounds = spellMechanicById("dnd.srd521.spell.cure-wounds");
+  assert.ok(cureWounds);
+  const common = {
+    id:"greater-di.wish-validation",
+    actorId:"hero",
+    expectedRevision:0,
+    copiedSpellId:cureWounds!.spellId,
+    caster:caster(),
+    targets:[{ ...goblinTarget(), relation:"ally" as const, distanceFeet:5 }],
+    useActionEconomy:true,
+    dice:{ effectFaces:[4,5] },
+    d4Faces:[1,1] as [number,number],
+  };
+  const premature = resolveGreaterDivineInterventionWishCopy(TEST_PROFILE,cureWounds!,state,{
+    ...common,
+    clericLevel:19,
+    wishNonMaterialComponentsSatisfied:true,
+  });
+  assert.equal(premature.status,"rejected");
+  assert.equal(premature.state,state);
+
+  const missingVerbal = resolveGreaterDivineInterventionWishCopy(TEST_PROFILE,cureWounds!,state,{
+    ...common,
+    clericLevel:20,
+    wishNonMaterialComponentsSatisfied:false,
+  });
+  assert.equal(missingVerbal.status,"rejected");
+  assert.equal(missingVerbal.state,state);
 });
 
 test("post-Wish Greater Divine Intervention lockout blocks recovery until all rolled Long Rests are finished", () => {
