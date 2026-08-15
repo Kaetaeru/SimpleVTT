@@ -42,6 +42,8 @@ jobs:
         run: npx tsx --test tests/ui/bardicInspirationRuntimeAdapter.test.ts
       - name: Verify College of Lore progression runtime
         run: npx tsx --test tests/ui/progressionPhase08BardLoreRuntime.test.ts
+      - name: Diagnose Draconic level 3 preview
+        run: npx tsx --test tests/ui/progressionPhase08SorcererDraconicPreviewDiagnostic.test.ts
       - name: Verify Draconic level 3 preview
         run: npx tsx --test --test-name-pattern="runtime preview includes" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
       - name: Verify Draconic level 3 identity and HP
