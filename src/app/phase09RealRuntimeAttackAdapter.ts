@@ -8,6 +8,7 @@ import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } fr
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
 import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
+import { clearPendingManualMovementReaction, manualMovementReactionFor, type PendingManualMovementReaction } from "./manualMovementReactionRuntime";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface BeforeState {
@@ -42,16 +43,22 @@ const committedEventHistory = new WeakMap<MockAdapter,CommittedEventHistory>();
 const previousAdvance = MockAdapter.prototype.advanceResolution;
 const previousUndo = MockAdapter.prototype.undoLastResolution;
 
-function isRuntimeAtomicAttack(action:ActionVm|undefined) {
+function manualFor(adapter:MockAdapter,action:ActionVm|undefined,resolution:ResolutionView|undefined|null) {
+  if (!action || !resolution || resolution.targetIds.length!==1) return undefined;
+  return manualMovementReactionFor(adapter,action.actorId,action.id,resolution.targetIds[0]);
+}
+
+function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMovementReaction) {
   return Boolean(action)
     && action!.resolutionKind === "attack"
-    && (action!.id === "action.shortbow" || Boolean(action!.runtimeAttack))
+    && (Boolean(manual) || action!.id === "action.shortbow" || Boolean(action!.runtimeAttack))
     && !action!.itemCost
     && !action!.resourceCost;
 }
 
-function reject(internal:RuntimeAttackAdapterState,error:string) {
+function reject(adapter:MockAdapter,internal:RuntimeAttackAdapterState,error:string) {
   const resolution = internal.resolution;
+  clearPendingManualMovementReaction(adapter);
   if (!resolution) return;
   if (internal.before) {
     internal.scene = structuredClone(internal.before.scene);
@@ -61,25 +68,32 @@ function reject(internal:RuntimeAttackAdapterState,error:string) {
   resolution.stateChanges = [];
   resolution.detail.push(`runtime attack transaction 거부: ${error}`);
   resolution.finalOutcome = `적용 거부: ${error}`;
-  resolution.provenance.push("Phase 09 · canonical/runtime attack fact + pairwise spatial runtime · explicit reject");
+  resolution.provenance.push("Phase 09 · canonical/runtime attack fact + authoritative targeting fact · explicit reject");
   resolution.stage = "complete";
   resolution.canAdvance = false;
   resolution.nextLabel = undefined;
   internal.before = null;
 }
 
-function build(internal:RuntimeAttackAdapterState,action:ActionVm,resolution:ResolutionView):AtomicAttackTransactionResult {
+function build(
+  adapter:MockAdapter,
+  internal:RuntimeAttackAdapterState,
+  action:ActionVm,
+  resolution:ResolutionView,
+  manual?:PendingManualMovementReaction,
+):AtomicAttackTransactionResult {
   const actor = internal.entity(action.actorId);
   const target = internal.entity(resolution.targetIds[0]);
   const actorEconomy = internal.scene.economyByActor[action.actorId];
   const targetEconomy = target ? internal.scene.economyByActor[target.id] : undefined;
   const attackD20Face = resolution.authoritativeDice[0];
-  if (!actor || !target || !actorEconomy || !targetEconomy || attackD20Face === undefined || resolution.attackTotal === undefined || resolution.targetAc === undefined || !resolution.attackOutcome) {
+  const effectiveTargetAc = manual?.baseTargetAc ?? resolution.targetAc;
+  if (!actor || !target || !actorEconomy || !targetEconomy || attackD20Face === undefined || resolution.attackTotal === undefined || effectiveTargetAc === undefined || !resolution.attackOutcome) {
     return { status:"rejected", error:"runtime atomic attack is missing authoritative actor/target/roll state" };
   }
   try {
     const attackFact = resolveRuntimeAttackFact(action,phase09DeterministicAttackFaces(action));
-    const targetingFact = resolveRuntimeTargetingFact(internal.scene,action.actorId,target.id);
+    const targetingFact = manual?.targetingFact ?? resolveRuntimeTargetingFact(internal.scene,action.actorId,target.id);
     const transaction = resolveAtomicAttackTransaction({
       resolutionId:`${resolution.id}:runtime-atomic`,
       action,
@@ -88,8 +102,14 @@ function build(internal:RuntimeAttackAdapterState,action:ActionVm,resolution:Res
       actorEconomy,
       targetEconomy,
       initiativeMode:internal.sessionMode === "initiative",
+      activeTurnActorId:manual?.provokerId,
+      reaction:manual ? {
+        trigger:manual.triggerId,
+        optionId:manual.optionId,
+        source:manual.source,
+      } : undefined,
       attackD20Face,
-      effectiveTargetAc:resolution.targetAc,
+      effectiveTargetAc,
       attackFact,
       targetingFact,
       expectedPreview:{
@@ -147,20 +167,22 @@ function finalize(adapter:MockAdapter,internal:RuntimeAttackAdapterState,transac
   internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
   internal.lastResolutionId = resolution.id;
   internal.before = null;
+  clearPendingManualMovementReaction(adapter);
 }
 
 MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRuntimeAttackFacts() {
   const internal = this as unknown as RuntimeAttackAdapterState;
   const resolution = internal.resolution;
   const action = resolution ? internal.action(resolution.actionId) : undefined;
-  if (!resolution || !isRuntimeAtomicAttack(action) || resolution.adjudicated) return previousAdvance.call(this);
+  const manual = manualFor(this,action,resolution);
+  if (!resolution || !isRuntimeAtomicAttack(action,manual) || resolution.adjudicated) return previousAdvance.call(this);
 
   if (resolution.stage === "attack-result") {
-    const transaction = build(internal,action!,resolution);
+    const transaction = build(this,internal,action!,resolution,manual);
     if (transaction.status === "rejected") {
       pending.delete(this);
       committedEventHistory.delete(this);
-      reject(internal,transaction.error);
+      reject(this,internal,transaction.error);
       return internal.getSnapshot();
     }
     if (resolution.attackOutcome === "빗나감") {
@@ -181,11 +203,11 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
     const transaction = pending.get(this);
     pending.delete(this);
     if (!transaction) {
-      reject(internal,"missing staged runtime atomic attack transaction");
+      reject(this,internal,"missing staged runtime atomic attack transaction");
       return internal.getSnapshot();
     }
     if (!apply(internal,resolution,transaction)) {
-      reject(internal,"runtime atomic attack target disappeared before projection");
+      reject(this,internal,"runtime atomic attack target disappeared before projection");
       return internal.getSnapshot();
     }
     finalize(this,internal,transaction);
