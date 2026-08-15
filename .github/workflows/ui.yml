@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - "src/**"
-      - "src-tauri/**"
+      - "tests/ui/**"
+      - "content/**"
+      - "scripts/**"
       - "package.json"
       - "tsconfig.json"
       - "vite.config.ts"
@@ -12,14 +14,17 @@ on:
       - ".github/workflows/ui.yml"
   push:
     branches:
-      - "agent/36-ui-session-01"
+      - "agent/**"
     paths:
       - "src/**"
-      - "src-tauri/**"
+      - "tests/ui/**"
+      - "content/**"
+      - "scripts/**"
       - "package.json"
       - "tsconfig.json"
       - "vite.config.ts"
       - "index.html"
+      - ".github/workflows/ui.yml"
 
 jobs:
   frontend:
@@ -31,5 +36,21 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Bardic Inspiration runtime
+        run: npx tsx --test tests/ui/bardicInspirationRuntimeAdapter.test.ts
+      - name: Verify College of Lore progression runtime
+        run: npx tsx --test tests/ui/progressionPhase08BardLoreRuntime.test.ts
+      - name: Verify Draconic level 3 preview
+        run: npx tsx --test --test-name-pattern="runtime preview includes" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+      - name: Verify Draconic level 3 identity and HP
+        run: npx tsx --test --test-name-pattern="runtime commits Draconic identity" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+      - name: Verify Draconic level 3 spells
+        run: npx tsx --test --test-name-pattern="runtime commits four" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+      - name: Verify Draconic Sorcery level 6 runtime
+        run: npx tsx --test --test-name-pattern="Sorcerer 5 to 6" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+      - name: Verify School of Evocation progression runtime
+        run: npx tsx --test tests/ui/progressionPhase08WizardEvocationRuntime.test.ts
       - name: Typecheck and build
         run: npm run build

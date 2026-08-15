@@ -8,13 +8,16 @@ on:
       - "src/app/progression*.ts"
       - "src/CombatSpellHud.tsx"
       - "src/LevelUpV10.tsx"
+      - "content/modules/**"
       - "content/presentation/dnd-srd-5.2.1.progression/**"
-      - "scripts/generate-progression.mjs"
+      - "scripts/generate-*.mjs"
       - "tests/domain/**"
       - "tests/ui/combatSpellHudStructure.test.ts"
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
       - "tests/ui/levelUpV10Structure.test.ts"
       - "tests/ui/progressionRuntimeAdapter.test.ts"
+      - "tests/ui/progressionPhase08*.test.ts"
+      - "tests/ui/bardicInspirationRuntimeAdapter.test.ts"
       - "package.json"
       - ".github/workflows/rules-domain.yml"
   push:
@@ -26,14 +29,18 @@ on:
       - "src/app/progression*.ts"
       - "src/CombatSpellHud.tsx"
       - "src/LevelUpV10.tsx"
+      - "content/modules/**"
       - "content/presentation/dnd-srd-5.2.1.progression/**"
-      - "scripts/generate-progression.mjs"
+      - "scripts/generate-*.mjs"
       - "tests/domain/**"
       - "tests/ui/combatSpellHudStructure.test.ts"
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
       - "tests/ui/levelUpV10Structure.test.ts"
       - "tests/ui/progressionRuntimeAdapter.test.ts"
+      - "tests/ui/progressionPhase08*.test.ts"
+      - "tests/ui/bardicInspirationRuntimeAdapter.test.ts"
       - "package.json"
+      - ".github/workflows/rules-domain.yml"
 
 jobs:
   rules-domain:
@@ -45,13 +52,102 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Run Phase 04/05/06/07 rules gate
-        run: npm run test:rules-domain
+      - name: Generate Phase 08 content catalogs
+        run: npm run generate:content
+      - name: Verify core resolution primitives
+        run: >-
+          npx tsx --test
+          tests/domain/phase04TargetingReaction.test.ts
+          tests/domain/phase05Lifecycle.test.ts
+          tests/domain/effectTermination.test.ts
+          tests/domain/effectTurnActivity.test.ts
+          tests/domain/resolutionAtomic.test.ts
+          tests/domain/resourceRecoveryLockout.test.ts
+          tests/domain/compoundDamage.test.ts
+          tests/domain/attackRiders.test.ts
+      - name: Verify spellcasting and feature resources
+        run: >-
+          npx tsx --test
+          tests/domain/spellcastingKernel.test.ts
+          tests/domain/spellcastingFeatureResource.test.ts
+          tests/domain/classFeatureSpellResources.test.ts
+          tests/domain/coreClassResources.test.ts
+          tests/domain/wildResurgence.test.ts
+          tests/domain/wizardLongRestPreparation.test.ts
+      - name: Verify Pact of the Tome
+        run: npx tsx --test tests/domain/warlockPactTome.test.ts
+      - name: Verify feat rule catalog
+        run: npx tsx --test tests/domain/featRuleCatalog.test.ts
+      - name: Verify class mechanics
+        run: >-
+          npx tsx --test
+          tests/domain/druidArchdruid.test.ts
+          tests/domain/druidElementalFury.test.ts
+          tests/domain/druidCircleLand.test.ts
+          tests/domain/druidCircleLandRecovery.test.ts
+          tests/domain/druidCircleLandWard.test.ts
+          tests/domain/druidCircleLandSanctuary.test.ts
+          tests/domain/druidCircleLandSpells.test.ts
+          tests/domain/clericDivineSpark.test.ts
+          tests/domain/clericTurnUndead.test.ts
+          tests/domain/clericBlessedStrikes.test.ts
+          tests/domain/clericDivineIntervention.test.ts
+          tests/domain/clericGreaterDivineIntervention.test.ts
+          tests/domain/clericLifeDomain.test.ts
+          tests/domain/fighterSecondWind.test.ts
+          tests/domain/fighterTacticalMind.test.ts
+          tests/domain/fighterActionSurge.test.ts
+          tests/domain/fighterIndomitable.test.ts
+          tests/domain/fighterChampion.test.ts
+          tests/domain/fighterChampionRuntime.test.ts
+          tests/domain/paladinLayOnHands.test.ts
+          tests/domain/paladinDivineSense.test.ts
+          tests/domain/paladinAbjureFoes.test.ts
+          tests/domain/paladinAura.test.ts
+          tests/domain/sorcery.test.ts
+          tests/domain/sorcererMetamagicReplacement.test.ts
+      - name: Verify progression foundation
+        run: npx tsx --test tests/domain/progressionPhase07.test.ts tests/domain/progressionPhase08.test.ts
+      - name: Verify Paladin Cleric Druid progression
+        run: >-
+          npx tsx --test
+          tests/domain/progressionPhase08Paladin.test.ts
+          tests/domain/progressionPhase08Cleric.test.ts
+          tests/domain/progressionPhase08ClericChoices.test.ts
+          tests/domain/progressionPhase08Druid.test.ts
+      - name: Verify Bard Wizard progression
+        run: npx tsx --test tests/domain/progressionPhase08Bard.test.ts tests/domain/progressionPhase08Wizard.test.ts
+      - name: Verify Sorcerer progression
+        run: npx tsx --test tests/domain/progressionPhase08Sorcerer.test.ts
+      - name: Verify Sorcerer replacement progression
+        run: npx tsx --test tests/domain/progressionPhase08SorcererReplacement.test.ts
+      - name: Verify Warlock progression
+        run: npx tsx --test tests/domain/progressionPhase08Warlock.test.ts
+      - name: Verify Warlock replacement progression
+        run: npx tsx --test tests/domain/progressionPhase08WarlockReplacement.test.ts
+      - name: Verify Epic Boon progression
+        run: npx tsx --test tests/domain/progressionPhase08EpicBoon.test.ts
+      - name: Verify Weapon Mastery progression
+        run: npx tsx --test tests/domain/progressionPhase08WeaponMastery.test.ts
+      - name: Verify Fighting Style progression
+        run: npx tsx --test tests/domain/progressionPhase08FighterStyle.test.ts
+      - name: Verify Barbarian Primal Knowledge progression
+        run: npx tsx --test tests/domain/progressionPhase08BarbarianPrimalKnowledge.test.ts
+      - name: Verify generic subclass progression
+        run: npx tsx --test tests/domain/progressionPhase08Subclass.test.ts
+      - name: Verify latest Phase 08 subclass domain
+        run: >-
+          npx tsx --test
+          tests/domain/bardCollegeLore.test.ts
+          tests/domain/bardicInspiration.test.ts
+          tests/domain/progressionPhase08BardLore.test.ts
+          tests/domain/progressionPhase08SorcererDraconic.test.ts
+          tests/domain/progressionPhase08WizardEvocation.test.ts
+      - name: Audit remaining Phase 08 catalog pending
+        run: npx tsx --test tests/domain/progressionPhase08CatalogPendingAudit.test.ts
       - name: Run Phase 06 spellcasting integration gate
         run: npm run test:spellcasting
-      - name: Run Phase 07 progression integration gate
+      - name: Run Phase 07/08 progression integration gate
         run: npm run test:progression
-      - name: Generate content dependencies
-        run: npm run generate:content
       - name: Typecheck application
         run: npx tsc --noEmit

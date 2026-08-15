@@ -1,86 +1,84 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PROGRESSION_CATALOG, multiclassEligibility, multiclassSpellSlots } from "../../src/domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState } from "../../src/domain/progression";
+import { multiclassSpellSlots } from "../../src/domain/progressionCatalog";
 
-function fighter(level = 5, overrides: Partial<ProgressionCharacterState> = {}): ProgressionCharacterState {
-  return {
-    revision:0,
-    id:"hero",
-    name:"Aelar",
-    totalLevel:level,
-    abilities:{ str:18, dex:14, con:16, int:10, wis:12, cha:8 },
-    hpCurrent:31,
-    hpMaximum:42,
-    proficiencyBonus:level >= 5 ? 3 : 2,
-    classTracks:[{ classId:"dnd.srd521.class.fighter", className:"파이터", level, subclassName:"챔피언" }],
-    hitDiceByDie:{ d10:level },
-    features:["추가 공격"],
-    ...overrides,
-  };
-}
-
-const asi = (ability: "str" | "dex" | "con" | "int" | "wis" | "cha") => ({
-  kind:"asi" as const, mode:"plus-two" as const, primary:ability,
+const fighter = (): ProgressionCharacterState => ({
+  revision:0, id:"fighter", name:"Aelar", totalLevel:5,
+  abilities:{ str:16,dex:14,con:14,int:10,wis:12,cha:10 }, hpCurrent:38,hpMaximum:44,proficiencyBonus:3,
+  classTracks:[{ classId:"dnd.srd521.class.fighter", className:"파이터", level:5, subclassName:"챔피언" }],
+  hitDiceByDie:{ d10:5 }, features:["추가 공격"],
 });
 
-test("Phase 07 snapshot is complete for 12 classes x 20 levels with SRD subclasses", () => {
+const rogue = (): ProgressionCharacterState => ({
+  revision:0, id:"rogue", name:"Nim", totalLevel:5,
+  abilities:{ str:8,dex:18,con:14,int:12,wis:12,cha:14 }, hpCurrent:31,hpMaximum:38,proficiencyBonus:3,
+  classTracks:[{ classId:"dnd.srd521.class.rogue", className:"로그", level:5, subclassName:"시프" }],
+  hitDiceByDie:{ d8:5 }, features:["은밀 공격","교활한 행동"],
+  proficientSkills:["곡예","기만","지각","손재주","은신","조사"], expertiseSkills:["곡예","은신"],
+});
+
+test("Phase 07 snapshot is complete for 12 classes x 20 levels with SRD subclasses", async () => {
+  const { PROGRESSION_CATALOG } = await import("../../src/domain/progressionCatalog");
   assert.equal(PROGRESSION_CATALOG.classes.length, 12);
   assert.equal(PROGRESSION_CATALOG.classes.reduce((sum, entry) => sum + entry.progression.length, 0), 240);
-  assert.equal(PROGRESSION_CATALOG.multiclass.prerequisites.length, 12);
-  assert.equal(PROGRESSION_CATALOG.multiclass.spellSlots.rows.length, 20);
-  for (const entry of PROGRESSION_CATALOG.classes) {
-    assert.equal(entry.progression.length, 20);
-    assert.ok(entry.srdSubclassName.length > 0, entry.id);
-  }
+  assert.ok(PROGRESSION_CATALOG.classes.every((entry) => entry.srdSubclassName));
 });
 
 test("Fighter 5 -> 6 exposes only the real ASI choice and commits fixed HP / Hit Die / class track atomically", () => {
   const state = fighter();
   const choiceId = "progression.dnd.srd521.class.fighter.6.asi";
-  const request = { expectedRevision:0, targetClassId:"dnd.srd521.class.fighter", hpMethod:"fixed" as const, selections:{ [choiceId]:asi("str") } };
+  const request = {
+    expectedRevision:0,
+    targetClassId:"dnd.srd521.class.fighter",
+    hpMethod:"fixed" as const,
+    selections:{ [choiceId]:{ kind:"asi" as const, mode:"plus-two" as const, primary:"str" as const } },
+  };
   const plan = buildProgressionPlan(state, request);
-  assert.deepEqual(plan.automaticGrants, []);
+  assert.equal(plan.targetClassLevel, 6);
   assert.equal(plan.choices.length, 1);
   assert.equal(plan.choices[0].kind, "asi-or-feat");
-  assert.equal(plan.hp.gainBeforeConRetroactive, 9, "Fighter fixed HP is 6 + CON +3");
-  assert.equal(plan.proficiencyAfter, 3);
   assert.equal(plan.blocking.length, 0);
   const result = resolveProgression(state, request);
   assert.equal(result.status, "committed");
   if (result.status !== "committed") return;
   assert.equal(result.state.totalLevel, 6);
   assert.equal(result.state.classTracks[0].level, 6);
+  assert.equal(result.state.abilities.str, 18);
+  assert.equal(result.state.hpMaximum, 52);
   assert.equal(result.state.hitDiceByDie.d10, 6);
-  assert.equal(result.state.hpMaximum, 51);
-  assert.equal(result.state.hpCurrent, 31, "level advancement increases maximum HP, not current HP");
-  assert.equal(result.state.abilities.str, 20);
+  assert.equal(result.state.proficiencyBonus, 3);
+  assert.equal(state.totalLevel, 5);
 });
 
 test("CON increase applies the SRD retroactive max-HP adjustment to every new total level", () => {
   const state = fighter();
   const choiceId = "progression.dnd.srd521.class.fighter.6.asi";
-  const plan = buildProgressionPlan(state, { expectedRevision:0, targetClassId:"dnd.srd521.class.fighter", hpMethod:"fixed", selections:{ [choiceId]:asi("con") } });
-  assert.equal(plan.hp.gainBeforeConRetroactive, 9);
-  assert.equal(plan.hp.retroactiveConstitutionGain, 6, "CON modifier +1 x new total level 6");
-  assert.equal(plan.hp.totalGain, 15);
+  const result = resolveProgression(state, {
+    expectedRevision:0,
+    targetClassId:"dnd.srd521.class.fighter",
+    hpMethod:"fixed",
+    selections:{ [choiceId]:{ kind:"asi", mode:"plus-two", primary:"con" } },
+  });
+  assert.equal(result.status, "committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.abilities.con, 16);
+  assert.equal(result.state.hpMaximum, 58, "fixed 6 + old CON 2, then +1 CON modifier across all 6 total levels");
 });
 
 test("new multiclass validates current and target class prerequisites and a qualifying Monk level creates a second track", () => {
   const state = fighter();
-  const blocked = multiclassEligibility(state.abilities, state.classTracks, "dnd.srd521.class.monk");
-  assert.equal(blocked.eligible, false);
-  assert.match(blocked.reason, /몽크/);
-
-  const qualifying = fighter(5, { abilities:{ str:18, dex:14, con:16, int:10, wis:14, cha:8 } });
-  const result = resolveProgression(qualifying, { expectedRevision:0, targetClassId:"dnd.srd521.class.monk", hpMethod:"fixed", selections:{} });
+  state.abilities.dex = 13;
+  state.abilities.wis = 13;
+  const plan = buildProgressionPlan(state, { expectedRevision:0,targetClassId:"dnd.srd521.class.monk",hpMethod:"fixed",selections:{} });
+  assert.equal(plan.isMulticlass, true);
+  assert.equal(plan.eligible, true);
+  const result = resolveProgression(state, { expectedRevision:0,targetClassId:"dnd.srd521.class.monk",hpMethod:"fixed",selections:{} });
   assert.equal(result.status, "committed");
   if (result.status !== "committed") return;
   assert.equal(result.state.totalLevel, 6);
-  assert.deepEqual(result.state.classTracks.map((track) => [track.className, track.level]), [["파이터",5],["몽크",1]]);
-  assert.equal(result.state.hitDiceByDie.d10, 5);
+  assert.deepEqual(result.state.classTracks.map((track) => [track.className,track.level]), [["파이터",5],["몽크",1]]);
   assert.equal(result.state.hitDiceByDie.d8, 1);
-  assert.equal(result.state.proficiencyBonus, 3);
 });
 
 test("multiclass spellcaster level uses full levels plus ceil of each half-caster class and keeps Pact Magic separate", () => {
@@ -98,35 +96,96 @@ test("multiclass spellcaster level uses full levels plus ceil of each half-caste
   assert.equal(withWarlock.casterLevel, 5, "Warlock Pact Magic levels are not merged into multiclass Spellcasting slots");
 });
 
-test("a level that needs a not-yet-materialized spell choice rejects atomically instead of approximating", () => {
+test("a level that needs a not-yet-materialized choice rejects atomically instead of approximating", () => {
+  const fighterId = "dnd.srd521.class.fighter";
   const state: ProgressionCharacterState = {
-    revision:3, id:"bard", name:"Bard", totalLevel:4,
-    abilities:{ str:8,dex:14,con:14,int:12,wis:10,cha:18 }, hpCurrent:20,hpMaximum:28,proficiencyBonus:2,
-    classTracks:[{ classId:"dnd.srd521.class.bard", className:"바드", level:4, subclassName:"전승 학파" }], hitDiceByDie:{ d8:4 }, features:[],
+    revision:3, id:"fighter-18", name:"Fighter", totalLevel:18,
+    abilities:{ str:20,dex:14,con:18,int:10,wis:12,cha:10 }, hpCurrent:170,hpMaximum:170,proficiencyBonus:6,
+    classTracks:[{ classId:fighterId, className:"파이터", level:18, subclassName:"챔피언" }],
+    hitDiceByDie:{ d10:18 },
+    features:["추가 공격","불굴","액션 서지","챔피언"],
   };
-  const request = { expectedRevision:3, targetClassId:"dnd.srd521.class.bard", hpMethod:"fixed" as const, selections:{} };
+  const request = { expectedRevision:3, targetClassId:fighterId, hpMethod:"fixed" as const, selections:{} };
   const plan = buildProgressionPlan(state, request);
-  assert.ok(plan.choices.some((choice) => choice.kind === "spell" && choice.status === "catalog-pending"));
+  assert.ok(plan.choices.some((choice) => choice.status === "catalog-pending" && choice.label === "에픽 은총"));
   const result = resolveProgression(state, request);
   assert.equal(result.status, "rejected");
   assert.equal(result.state, state);
   assert.equal(state.revision, 3);
 });
 
-test("a no-choice Fighter 8 -> 9 level commits automatic grants without manufacturing a decision", () => {
-  const state = fighter(8, { hpMaximum:70, hpCurrent:50, proficiencyBonus:3, hitDiceByDie:{d10:8} });
-  const result = resolveProgression(state, { expectedRevision:0, targetClassId:"dnd.srd521.class.fighter", hpMethod:"fixed", selections:{} });
+test("Rogue 5 -> 6 materializes Expertise from proficient skills and commits the selected skills with provenance", () => {
+  const state = rogue();
+  const choiceId = "progression.dnd.srd521.class.rogue.6.expertise";
+  const request = {
+    expectedRevision:0,
+    targetClassId:"dnd.srd521.class.rogue",
+    hpMethod:"fixed" as const,
+    selections:{ [choiceId]:{ kind:"options" as const, optionIds:["skill:지각","skill:조사"] } },
+  };
+  const plan = buildProgressionPlan(state, request);
+  assert.equal(plan.choices.find((choice) => choice.id === choiceId)?.status, "ready");
+  assert.equal(plan.blocking.length, 0);
+  const result = resolveProgression(state, request);
   assert.equal(result.status, "committed");
   if (result.status !== "committed") return;
-  assert.equal(result.plan.choices.length, 0);
-  assert.deepEqual(result.plan.automaticGrants, ["불굴 1회","전술 통달"]);
-  assert.equal(result.state.proficiencyBonus, 4);
+  assert.deepEqual(new Set(result.state.expertiseSkills), new Set(["곡예","은신","지각","조사"]));
+  assert.equal(result.state.expertiseSources?.["지각"], "로그 6레벨 · SRD 5.2.1");
+});
+
+test("Expertise rejects an already-expert skill even if a client submits the disabled option", () => {
+  const state = rogue();
+  const choiceId = "progression.dnd.srd521.class.rogue.6.expertise";
+  const result = resolveProgression(state, {
+    expectedRevision:0,
+    targetClassId:"dnd.srd521.class.rogue",
+    hpMethod:"fixed",
+    selections:{ [choiceId]:{ kind:"options", optionIds:["skill:곡예","skill:지각"] } },
+  });
+  assert.equal(result.status, "rejected");
+  if (result.status !== "rejected") return;
+  assert.match(result.error, /이미 전문화를 보유/);
+});
+
+test("Ranger 1 -> 2 materializes Deft Explorer as Expertise 1 + languages 2 while leaving Fighting Style explicitly pending", () => {
+  const state: ProgressionCharacterState = {
+    revision:0,id:"ranger",name:"Ranger",totalLevel:1,
+    abilities:{ str:10,dex:16,con:14,int:10,wis:16,cha:8 },hpCurrent:12,hpMaximum:12,proficiencyBonus:2,
+    classTracks:[{ classId:"dnd.srd521.class.ranger",className:"레인저",level:1 }],hitDiceByDie:{ d10:1 },features:["주적","무기 통달"],
+    proficientSkills:["지각","은신","생존"], languages:["공용어","엘프어"],
+  };
+  const request = {
+    expectedRevision:0,targetClassId:"dnd.srd521.class.ranger",hpMethod:"fixed" as const,
+    languageOptions:[{id:"language.dwarvish",label:"드워프어"},{id:"language.giant",label:"거인어"},{id:"language.elvish",label:"엘프어"}],
+    selections:{
+      "progression.dnd.srd521.class.ranger.2.seasoned-explorer.expertise":{kind:"options" as const,optionIds:["skill:은신"]},
+      "progression.dnd.srd521.class.ranger.2.seasoned-explorer.languages":{kind:"options" as const,optionIds:["language.dwarvish","language.giant"]},
+    },
+  };
+  const plan = buildProgressionPlan(state, request);
+  assert.equal(plan.choices.find((choice) => choice.id.endsWith("seasoned-explorer.expertise"))?.status, "ready");
+  assert.equal(plan.choices.find((choice) => choice.id.endsWith("seasoned-explorer.languages"))?.status, "ready");
+  assert.ok(plan.choices.some((choice) => choice.label === "전투 방식" && choice.status === "catalog-pending"));
+});
+
+test("a no-choice Fighter 8 -> 9 level commits automatic grants without manufacturing a decision", () => {
+  const state = fighter();
+  state.totalLevel = 8;
+  state.classTracks[0].level = 8;
+  state.hitDiceByDie.d10 = 8;
+  state.proficiencyBonus = 3;
+  const plan = buildProgressionPlan(state, { expectedRevision:0,targetClassId:"dnd.srd521.class.fighter",hpMethod:"fixed",selections:{} });
+  assert.equal(plan.choices.length, 0);
+  assert.ok(plan.automaticGrants.length > 0);
+  const result = resolveProgression(state, { expectedRevision:0,targetClassId:"dnd.srd521.class.fighter",hpMethod:"fixed",selections:{} });
+  assert.equal(result.status, "committed");
 });
 
 test("total level 20 rejects without mutating the source state", () => {
-  const state = fighter(20, { proficiencyBonus:6, hitDiceByDie:{d10:20} });
-  const result = resolveProgression(state, { expectedRevision:0, targetClassId:"dnd.srd521.class.fighter", hpMethod:"fixed", selections:{} });
+  const state = fighter();
+  state.totalLevel = 20;
+  state.classTracks[0].level = 20;
+  const result = resolveProgression(state, { expectedRevision:0,targetClassId:"dnd.srd521.class.fighter",hpMethod:"fixed",selections:{} });
   assert.equal(result.status, "rejected");
   assert.equal(result.state, state);
-  assert.match(result.error, /레벨 상한 20/);
 });

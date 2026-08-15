@@ -6,21 +6,26 @@ import {
   type OperationExecution,
   type ResolutionExecutionContext,
 } from "./resolutionContext";
-import { executeDamage, executeHealing, executeTemporaryHp } from "./resolutionHealthOps";
+import { executeCompoundDamage, executeDamage, executeHealing, executeTemporaryHp } from "./resolutionHealthOps";
 import {
   executeD20,
   executeDamageRoll,
   executeEconomy,
+  executeGrantExtraAction,
   executeMove,
   executeReaction,
   executeResource,
   executeTargeting,
+  executeTurnFeature,
 } from "./resolutionActionOps";
+import { executeFreeMove } from "./resolutionMovementOps";
+import { executeGainResource, executeSetResourceRecoveryLockout } from "./resolutionResourceOps";
 import {
   executeApplyEffect,
   executeEndConcentration,
   executeRemoveEffect,
   executeStartConcentration,
+  executeUpdateEffect,
 } from "./resolutionEffectOps";
 import { executeAdvanceTime, executeBeginTurn, executeEndTurn } from "./resolutionTurnOps";
 import { executeLongRest, executeShortRest } from "./resolutionRestOps";
@@ -38,14 +43,21 @@ function executeOperation(
   switch (operation.kind) {
     case "targeting": return executeTargeting(ctx, operation);
     case "use-economy": return executeEconomy(ctx, operation);
+    case "grant-extra-action": return executeGrantExtraAction(ctx, operation);
+    case "use-turn-feature": return executeTurnFeature(ctx, operation);
     case "move": return executeMove(ctx, operation);
+    case "free-move": return executeFreeMove(ctx, operation);
     case "spend-resource": return executeResource(ctx, operation);
+    case "gain-resource": return executeGainResource(ctx, operation);
+    case "set-resource-recovery-lockout": return executeSetResourceRecoveryLockout(ctx, operation);
     case "d20": return executeD20(ctx, operation);
     case "damage-roll": return executeDamageRoll(ctx, operation);
     case "damage": return executeDamage(ctx, operation);
+    case "compound-damage": return executeCompoundDamage(ctx, operation);
     case "healing": return executeHealing(ctx, operation);
     case "temporary-hp": return executeTemporaryHp(ctx, operation);
     case "apply-effect": return executeApplyEffect(ctx, operation);
+    case "update-effect": return executeUpdateEffect(ctx, operation);
     case "remove-effect": return executeRemoveEffect(ctx, operation);
     case "start-concentration": return executeStartConcentration(ctx, operation);
     case "end-concentration": return executeEndConcentration(ctx, operation);

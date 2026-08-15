@@ -1,0 +1,110 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  CLERIC_CHANNEL_DIVINITY_RESOURCE_ID,
+  CLERIC_DIVINE_INTERVENTION_RESOURCE_ID,
+  CLERIC_ID,
+  DRUID_ID,
+  DRUID_WILD_SHAPE_RESOURCE_ID,
+  FIGHTER_ID,
+  FIGHTER_INDOMITABLE_RESOURCE_ID,
+  FIGHTER_SECOND_WIND_RESOURCE_ID,
+  PALADIN_CHANNEL_DIVINITY_RESOURCE_ID,
+  PALADIN_ID,
+  PALADIN_LAY_ON_HANDS_RESOURCE_ID,
+  clericChannelDivinityMaximum,
+  clericDivineInterventionMaximum,
+  coreClassResourceDefinitions,
+  druidWildShapeMaximum,
+  fighterIndomitableMaximum,
+  fighterSecondWindMaximum,
+  paladinChannelDivinityMaximum,
+  paladinLayOnHandsMaximum,
+} from "../../src/domain/coreClassResources";
+import { recoverResources } from "../../src/domain/resources";
+
+test("core class resource maxima follow their exact class-table breakpoints", () => {
+  for (const [level, expected] of [[0,0],[1,0],[2,2],[5,2],[6,3],[17,3],[18,4],[20,4]] as const) {
+    assert.equal(clericChannelDivinityMaximum(level), expected, `Cleric ${level}`);
+  }
+  for (const [level, expected] of [[0,0],[9,0],[10,1],[19,1],[20,1]] as const) {
+    assert.equal(clericDivineInterventionMaximum(level), expected, `Cleric Divine Intervention ${level}`);
+  }
+  for (const [level, expected] of [[0,0],[1,5],[3,15],[14,70],[20,100]] as const) {
+    assert.equal(paladinLayOnHandsMaximum(level), expected, `Paladin Lay On Hands ${level}`);
+  }
+  for (const [level, expected] of [[0,0],[2,0],[3,2],[10,2],[11,3],[20,3]] as const) {
+    assert.equal(paladinChannelDivinityMaximum(level), expected, `Paladin ${level}`);
+  }
+  for (const [level, expected] of [[0,0],[1,0],[2,2],[5,2],[6,3],[16,3],[17,4],[20,4]] as const) {
+    assert.equal(druidWildShapeMaximum(level), expected, `Druid ${level}`);
+  }
+  for (const [level, expected] of [[0,0],[1,2],[3,2],[4,3],[9,3],[10,4],[20,4]] as const) {
+    assert.equal(fighterSecondWindMaximum(level), expected, `Fighter Second Wind ${level}`);
+  }
+  for (const [level, expected] of [[0,0],[8,0],[9,1],[12,1],[13,2],[16,2],[17,3],[20,3]] as const) {
+    assert.equal(fighterIndomitableMaximum(level), expected, `Fighter Indomitable ${level}`);
+  }
+});
+
+test("multiclass tracks materialize independent core class resource pools with their own recovery rules", () => {
+  const definitions = coreClassResourceDefinitions([
+    { classId:CLERIC_ID, className:"클레릭", level:10 },
+    { classId:PALADIN_ID, className:"팔라딘", level:11 },
+    { classId:DRUID_ID, className:"드루이드", level:17 },
+    { classId:FIGHTER_ID, className:"파이터", level:17 },
+  ]);
+  const cleric = definitions.find((entry) => entry.resourceId === CLERIC_CHANNEL_DIVINITY_RESOURCE_ID);
+  const divineIntervention = definitions.find((entry) => entry.resourceId === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID);
+  const layOnHands = definitions.find((entry) => entry.resourceId === PALADIN_LAY_ON_HANDS_RESOURCE_ID);
+  const paladin = definitions.find((entry) => entry.resourceId === PALADIN_CHANNEL_DIVINITY_RESOURCE_ID);
+  const druid = definitions.find((entry) => entry.resourceId === DRUID_WILD_SHAPE_RESOURCE_ID);
+  const secondWind = definitions.find((entry) => entry.resourceId === FIGHTER_SECOND_WIND_RESOURCE_ID);
+  const indomitable = definitions.find((entry) => entry.resourceId === FIGHTER_INDOMITABLE_RESOURCE_ID);
+  assert.deepEqual({ maximum:cleric?.maximum, recovery:cleric?.recovery }, { maximum:3, recovery:{ shortRest:1, longRest:"all" } });
+  assert.deepEqual({ maximum:divineIntervention?.maximum, recovery:divineIntervention?.recovery }, { maximum:1, recovery:{ longRest:"all" } });
+  assert.deepEqual({ maximum:layOnHands?.maximum, recovery:layOnHands?.recovery }, { maximum:55, recovery:{ longRest:"all" } });
+  assert.deepEqual({ maximum:paladin?.maximum, recovery:paladin?.recovery }, { maximum:3, recovery:{ shortRest:1, longRest:"all" } });
+  assert.deepEqual({ maximum:druid?.maximum, recovery:druid?.recovery }, { maximum:4, recovery:{ shortRest:1, longRest:"all" } });
+  assert.deepEqual({ maximum:secondWind?.maximum, recovery:secondWind?.recovery }, { maximum:4, recovery:{ shortRest:1, longRest:"all" } });
+  assert.deepEqual({ maximum:indomitable?.maximum, recovery:indomitable?.recovery }, { maximum:3, recovery:{ longRest:"all" } });
+  assert.match(cleric?.source ?? "", /클레릭 10레벨 · Channel Divinity/);
+  assert.match(divineIntervention?.source ?? "", /클레릭 10레벨 · Divine Intervention/);
+  assert.match(layOnHands?.source ?? "", /팔라딘 11레벨 · Lay On Hands/);
+  assert.match(paladin?.source ?? "", /팔라딘 11레벨 · Channel Divinity/);
+  assert.match(druid?.source ?? "", /드루이드 17레벨 · Wild Shape/);
+  assert.match(secondWind?.source ?? "", /파이터 17레벨 · Second Wind/);
+  assert.match(indomitable?.source ?? "", /파이터 17레벨 · Indomitable/);
+});
+
+test("generic ResourcePool recovery restores Short-Rest pools separately and all Long-Rest pools exactly", () => {
+  const definitions = coreClassResourceDefinitions([
+    { classId:CLERIC_ID, className:"클레릭", level:10 },
+    { classId:PALADIN_ID, className:"팔라딘", level:3 },
+    { classId:DRUID_ID, className:"드루이드", level:6 },
+    { classId:FIGHTER_ID, className:"파이터", level:13 },
+  ]);
+  const pools = definitions.map((definition) => ({
+    id:definition.resourceId,
+    label:definition.label,
+    current:0,
+    maximum:definition.maximum,
+    recovery:definition.recovery,
+  }));
+  const shortRest = recoverResources(pools, "shortRest").next;
+  assert.equal(shortRest.find((pool) => pool.id === CLERIC_CHANNEL_DIVINITY_RESOURCE_ID)?.current, 1);
+  assert.equal(shortRest.find((pool) => pool.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID)?.current, 0, "Divine Intervention does not recover on Short Rest");
+  assert.equal(shortRest.find((pool) => pool.id === PALADIN_CHANNEL_DIVINITY_RESOURCE_ID)?.current, 1);
+  assert.equal(shortRest.find((pool) => pool.id === DRUID_WILD_SHAPE_RESOURCE_ID)?.current, 1);
+  assert.equal(shortRest.find((pool) => pool.id === FIGHTER_SECOND_WIND_RESOURCE_ID)?.current, 1);
+  assert.equal(shortRest.find((pool) => pool.id === FIGHTER_INDOMITABLE_RESOURCE_ID)?.current, 0, "Indomitable does not recover on Short Rest");
+  assert.equal(shortRest.find((pool) => pool.id === PALADIN_LAY_ON_HANDS_RESOURCE_ID)?.current, 0, "Lay On Hands does not recover on Short Rest");
+  const longRest = recoverResources(shortRest, "longRest").next;
+  assert.equal(longRest.find((pool) => pool.id === CLERIC_CHANNEL_DIVINITY_RESOURCE_ID)?.current, 3);
+  assert.equal(longRest.find((pool) => pool.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID)?.current, 1);
+  assert.equal(longRest.find((pool) => pool.id === PALADIN_CHANNEL_DIVINITY_RESOURCE_ID)?.current, 2);
+  assert.equal(longRest.find((pool) => pool.id === PALADIN_LAY_ON_HANDS_RESOURCE_ID)?.current, 15);
+  assert.equal(longRest.find((pool) => pool.id === DRUID_WILD_SHAPE_RESOURCE_ID)?.current, 3);
+  assert.equal(longRest.find((pool) => pool.id === FIGHTER_SECOND_WIND_RESOURCE_ID)?.current, 4);
+  assert.equal(longRest.find((pool) => pool.id === FIGHTER_INDOMITABLE_RESOURCE_ID)?.current, 2);
+});

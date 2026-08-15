@@ -1,12 +1,20 @@
 import "./progressionContracts";
 import "./creationContracts";
 import type { AppSnapshot, CharacterSheet, CharacterSummary, LevelUpCommand, LevelUpDraft } from "./contracts";
+import { fightingStyleOptions, generalLanguageOptions, originFeatOptions, spellOptions } from "./characterCreationV10Data";
+import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { classById, classByName } from "../domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState, type ProgressionPlan } from "../domain/progression";
+import { SORCERER_ID } from "../domain/sorcererProgressionChoices";
+import { SORCERY_POINT_RESOURCE_ID, sorceryPointMaximum } from "../domain/sorcery";
+import { wizardSignatureSpellResourceId } from "../domain/wizardProgressionChoices";
 
 const clone = <T,>(value: T): T => structuredClone(value);
+const unique = (values: string[]) => [...new Set(values.filter(Boolean))];
+const normalizedSkillName = (value: string) => value.replace(/\s+[+-]\d+$/, "").trim();
+const normalizedSpellId = (value: string) => value.replace(/^always:/, "");
 
 type AdapterState = {
   activeCharacter: CharacterSheet;
@@ -30,6 +38,55 @@ function primaryClass(sheet: CharacterSheet) {
   return classByName(sheet.className) ?? classByName(sheet.className.split("/")[0]?.trim() ?? sheet.className);
 }
 
+function creationExpertise(sheet: CharacterSheet) {
+  const selected = (sheet.creationSelections?.["class.expertise"] ?? [])
+    .map((value) => value.replace(/^expertise\./, ""))
+    .map(normalizedSkillName);
+  const fromFeatures = sheet.features.flatMap((feature) => {
+    const match = feature.match(/^(?:expertise|전문화)\s*·\s*(.+)$/i);
+    return match ? [normalizedSkillName(match[1])] : [];
+  });
+  return unique([...selected, ...fromFeatures]);
+}
+
+function ensureSignatureSpellResources(sheet: CharacterSheet) {
+  const presentation = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
+  for (const spellId of sheet.signatureSpellIds ?? []) {
+    const resourceId = wizardSignatureSpellResourceId(spellId);
+    if (sheet.resources.some((resource) => resource.id === resourceId)) continue;
+    sheet.resources.push({
+      id:resourceId,
+      label:`대표 주문 · ${presentation.get(spellId)?.name ?? spellId}`,
+      current:1,
+      max:1,
+      source:sheet.signatureSpellSources?.[spellId] ?? "위저드 20레벨 · 대표 주문 · SRD 5.2.1",
+      recovery:{ shortRest:"all", longRest:"all" },
+    });
+  }
+}
+
+function ensureSorceryPointResource(sheet: CharacterSheet) {
+  const sorcererLevel = sheet.classLevels?.find((track) => track.classId === SORCERER_ID)?.level ?? 0;
+  const maximum = sorceryPointMaximum(sorcererLevel);
+  if (maximum <= 0) return;
+  const existing = sheet.resources.find((resource) => resource.id === SORCERY_POINT_RESOURCE_ID);
+  if (!existing) {
+    sheet.resources.push({
+      id:SORCERY_POINT_RESOURCE_ID,
+      label:"소서리 포인트",
+      current:maximum,
+      max:maximum,
+      source:`소서러 ${sorcererLevel}레벨 · Font of Magic · SRD 5.2.1`,
+      recovery:{ longRest:"all" },
+    });
+    return;
+  }
+  existing.max = maximum;
+  existing.current = Math.min(existing.current, maximum);
+  existing.source = `소서러 ${sorcererLevel}레벨 · Font of Magic · SRD 5.2.1`;
+  existing.recovery = { ...(existing.recovery ?? {}), longRest:"all" };
+}
+
 export function ensureProgressionMetadata(sheet: CharacterSheet) {
   if (!sheet.classLevels?.length) {
     const definition = primaryClass(sheet);
@@ -45,6 +102,41 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
     }
     sheet.hitDiceByDie = dice;
   }
+  ensureSorceryPointResource(sheet);
+  const migratedExpertise = creationExpertise(sheet);
+  sheet.expertiseSkills = unique([...(sheet.expertiseSkills ?? []), ...migratedExpertise]);
+  sheet.expertiseSources ??= {};
+  for (const skill of migratedExpertise) sheet.expertiseSources[skill] ??= "SRD 5.2.1 · Character Creation · 전문화";
+  sheet.languages = unique(sheet.languages ?? []);
+  sheet.languageSources ??= {};
+  for (const language of sheet.languages) sheet.languageSources[language] ??= "Character Creation / existing character";
+  sheet.cantrips = unique(sheet.cantrips ?? []);
+  sheet.cantripSources ??= {};
+  for (const cantrip of sheet.cantrips) sheet.cantripSources[cantrip] ??= "Character Creation / existing character";
+  sheet.preparedSpells = unique(sheet.preparedSpells ?? []);
+  sheet.preparedSpellSources ??= {};
+  for (const spell of sheet.preparedSpells) {
+    const id = normalizedSpellId(spell);
+    sheet.preparedSpellSources[id] ??= spell.startsWith("always:") ? "Always prepared / existing character" : "Character Creation / existing character";
+  }
+  sheet.spellbookSpells = unique(sheet.spellbookSpells ?? []);
+  sheet.spellbookSpellSources ??= {};
+  for (const spell of sheet.spellbookSpells) sheet.spellbookSpellSources[spell] ??= "Character Creation / existing character";
+  sheet.spellMasterySpellIds ??= {};
+  sheet.spellMasterySources ??= {};
+  sheet.signatureSpellIds = unique(sheet.signatureSpellIds ?? []);
+  sheet.signatureSpellSources ??= {};
+  ensureSignatureSpellResources(sheet);
+  sheet.metamagicIds = unique(sheet.metamagicIds ?? []);
+  sheet.metamagicSources ??= {};
+  for (const metamagicId of sheet.metamagicIds) sheet.metamagicSources[metamagicId] ??= "Existing character / Sorcerer Metamagic";
+  sheet.eldritchInvocationIds = unique(sheet.eldritchInvocationIds ?? []);
+  sheet.eldritchInvocationSources ??= {};
+  for (const invocationId of sheet.eldritchInvocationIds) sheet.eldritchInvocationSources[invocationId] ??= "Existing character / Eldritch Invocation";
+  sheet.mysticArcanumSpellIds ??= {};
+  sheet.mysticArcanumSources ??= {};
+  sheet.pactMagicSlotLevel ??= 0;
+  sheet.pactMagicSlotMaximum ??= 0;
   sheet.progressionRevision ??= 0;
   return sheet;
 }
@@ -63,12 +155,70 @@ function characterState(sheet: CharacterSheet): ProgressionCharacterState {
     classTracks:clone(sheet.classLevels ?? []),
     hitDiceByDie:clone(sheet.hitDiceByDie ?? {}),
     features:clone(sheet.features),
+    proficientSkills:unique(sheet.skills.map(normalizedSkillName)),
+    expertiseSkills:clone(sheet.expertiseSkills ?? []),
+    expertiseSources:clone(sheet.expertiseSources ?? {}),
+    languages:clone(sheet.languages ?? []),
+    languageSources:clone(sheet.languageSources ?? {}),
+    cantripIds:clone(sheet.cantrips ?? []),
+    cantripSources:clone(sheet.cantripSources ?? {}),
+    preparedSpellIds:clone(sheet.preparedSpells ?? []),
+    preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
+    spellbookSpellIds:clone(sheet.spellbookSpells ?? []),
+    spellbookSpellSources:clone(sheet.spellbookSpellSources ?? {}),
+    spellMasterySpellIds:clone(sheet.spellMasterySpellIds ?? {}),
+    spellMasterySources:clone(sheet.spellMasterySources ?? {}),
+    signatureSpellIds:clone(sheet.signatureSpellIds ?? []),
+    signatureSpellSources:clone(sheet.signatureSpellSources ?? {}),
+    metamagicIds:clone(sheet.metamagicIds ?? []),
+    metamagicSources:clone(sheet.metamagicSources ?? {}),
+    eldritchInvocationIds:clone(sheet.eldritchInvocationIds ?? []),
+    eldritchInvocationSources:clone(sheet.eldritchInvocationSources ?? {}),
+    mysticArcanumSpellIds:clone(sheet.mysticArcanumSpellIds ?? {}),
+    mysticArcanumSources:clone(sheet.mysticArcanumSources ?? {}),
+    pactMagicSlotLevel:sheet.pactMagicSlotLevel ?? 0,
+    pactMagicSlotMaximum:sheet.pactMagicSlotMaximum ?? 0,
     spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
   };
 }
 
 function featOptions(state: AdapterState) {
   return state.catalog.filter((entry) => entry.category === "feat").map((entry) => ({ id:entry.id, label:entry.nameKo, description:entry.description }));
+}
+
+function progressionOriginFeatOptions() {
+  return originFeatOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
+}
+
+function progressionFightingStyleOptions() {
+  return fightingStyleOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
+}
+
+function progressionClassCantripOptions(classId: string) {
+  const presentations = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
+  return spellOptions(classId, 0).map((option) => {
+    const presentation = presentations.get(option.id);
+    return {
+      id:option.id,
+      label:presentation?.name ?? option.name,
+      description:presentation?.summary ?? option.summary,
+    };
+  });
+}
+
+function progressionLanguageOptions() {
+  return generalLanguageOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary }));
+}
+
+function progressionSpellOptions() {
+  return SPELL_PRESENTATIONS.map((spell) => ({
+    id:spell.id,
+    label:spell.name,
+    description:spell.summary,
+    level:spell.level,
+    castingTime:spell.castingTime,
+    school:spell.school,
+  }));
 }
 
 function targetClassId(sheet: CharacterSheet, draft: LevelUpDraft) {
@@ -86,6 +236,12 @@ function requestFor(state: AdapterState) {
     hpRoll:draft.hpRoll,
     selections:clone(draft.progressionSelections ?? {}),
     featOptions:featOptions(state),
+    originFeatOptions:progressionOriginFeatOptions(),
+    fightingStyleOptions:progressionFightingStyleOptions(),
+    druidCantripOptions:progressionClassCantripOptions("dnd.srd521.class.druid"),
+    clericCantripOptions:progressionClassCantripOptions("dnd.srd521.class.cleric"),
+    languageOptions:progressionLanguageOptions(),
+    spellOptions:progressionSpellOptions(),
   } as const;
 }
 
@@ -109,7 +265,7 @@ function syncLegacyDraft(draft: LevelUpDraft, plan: ProgressionPlan) {
     grantedFeatures:[...plan.automaticGrants],
     resourceChanges:plan.multiclassGrants,
     actionChanges:[],
-    spellChanges:plan.spellcastingBefore.casterLevel === plan.spellcastingAfter.casterLevel ? [] : [`주문 시전자 레벨 ${plan.spellcastingBefore.casterLevel} → ${plan.spellcastingAfter.casterLevel}`],
+    spellChanges:plan.diffs.filter((diff) => diff.label.includes("주문") || diff.label.includes("소마법") || diff.label.includes("계약 마법") || diff.label.includes("신비한 비전")).map((diff) => `${diff.label}: ${diff.before} → ${diff.after}`),
     diffs:plan.diffs,
   };
   draft.validation = [
@@ -135,10 +291,34 @@ function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<t
   sheet.classLevels = clone(next.classTracks);
   sheet.hitDiceByDie = clone(next.hitDiceByDie);
   sheet.progressionRevision = next.revision;
+  sheet.expertiseSkills = clone(next.expertiseSkills ?? []);
+  sheet.expertiseSources = clone(next.expertiseSources ?? {});
+  sheet.languages = clone(next.languages ?? []);
+  sheet.languageSources = clone(next.languageSources ?? {});
+  sheet.cantrips = clone(next.cantripIds ?? []);
+  sheet.cantripSources = clone(next.cantripSources ?? {});
+  sheet.preparedSpells = clone(next.preparedSpellIds ?? []);
+  sheet.preparedSpellSources = clone(next.preparedSpellSources ?? {});
+  sheet.spellbookSpells = clone(next.spellbookSpellIds ?? []);
+  sheet.spellbookSpellSources = clone(next.spellbookSpellSources ?? {});
+  sheet.spellMasterySpellIds = clone(next.spellMasterySpellIds ?? {});
+  sheet.spellMasterySources = clone(next.spellMasterySources ?? {});
+  sheet.signatureSpellIds = clone(next.signatureSpellIds ?? []);
+  sheet.signatureSpellSources = clone(next.signatureSpellSources ?? {});
+  ensureSignatureSpellResources(sheet);
+  sheet.metamagicIds = clone(next.metamagicIds ?? []);
+  sheet.metamagicSources = clone(next.metamagicSources ?? {});
+  sheet.eldritchInvocationIds = clone(next.eldritchInvocationIds ?? []);
+  sheet.eldritchInvocationSources = clone(next.eldritchInvocationSources ?? {});
+  sheet.mysticArcanumSpellIds = clone(next.mysticArcanumSpellIds ?? {});
+  sheet.mysticArcanumSources = clone(next.mysticArcanumSources ?? {});
+  sheet.pactMagicSlotLevel = next.pactMagicSlotLevel ?? 0;
+  sheet.pactMagicSlotMaximum = next.pactMagicSlotMaximum ?? 0;
   sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
   sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
   const primary = sheet.classLevels[0];
   if (primary?.subclassName) sheet.subclassName = primary.subclassName;
+  ensureSorceryPointResource(sheet);
 }
 
 function syncCommittedSheetToScene(state: AdapterState) {
@@ -259,7 +439,7 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     title:`레벨 업 ${result.plan.fromTotalLevel} → ${result.plan.toTotalLevel}`,
     summary:`${result.plan.targetClassName} ${result.plan.targetClassLevel}레벨 · HP ${before.maxHp} → ${internal.activeCharacter.maxHp}`,
     detail:result.plan.diffs.map((diff) => `${diff.label}: ${diff.before} → ${diff.after} (${diff.source})`),
-    stateChanges:["Phase 07 Progression transaction → Character Revision", `progressionRevision ${stateBefore.revision} → ${result.state.revision}`],
+    stateChanges:["Phase 08 Progression transaction → Character Revision", `progressionRevision ${stateBefore.revision} → ${result.state.revision}`],
   });
   internal.levelUpDraft = null;
   return internal.getSnapshot();

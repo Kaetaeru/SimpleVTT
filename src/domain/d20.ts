@@ -33,6 +33,8 @@ export interface D20TestRequest {
   rollStateContributions?: RollStateContribution[];
   dice: FixedDiceInput;
   targetSource?: string;
+  criticalThreshold?: number;
+  criticalThresholdSource?: string;
 }
 
 export interface D20TestResult {
@@ -88,6 +90,14 @@ export function selectD20(
 
 export function resolveD20Test(profile: RulesProfileLike, request: D20TestRequest): D20TestResult {
   if (!Number.isFinite(request.target)) throw new DomainEvaluationError("d20 target must be finite");
+  if (request.criticalThreshold !== undefined) {
+    if (request.family !== "attack-roll") {
+      throw new DomainEvaluationError("critical thresholds apply only to attack rolls");
+    }
+    if (!Number.isInteger(request.criticalThreshold) || request.criticalThreshold < 2 || request.criticalThreshold > 20) {
+      throw new DomainEvaluationError("attack critical threshold must be an integer from 2 to 20");
+    }
+  }
 
   const rollStateResolution = resolveRollState(profile, request.rollStateContributions ?? []);
   const d20Policy = profile.d20Test?.advantageDisadvantage as
@@ -103,11 +113,12 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
   let critical = false;
 
   if (request.family === "attack-roll") {
-    if (natural === 20) {
+    const criticalThreshold = request.criticalThreshold ?? 20;
+    if (natural === 1) {
+      outcome = "failure";
+    } else if (natural >= criticalThreshold) {
       outcome = "success";
       critical = true;
-    } else if (natural === 1) {
-      outcome = "failure";
     }
   }
 
@@ -130,17 +141,22 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
     },
   ];
 
-  if (request.family === "attack-roll" && natural === 20) {
-    provenance.push({
-      source: "profile:dnd.srd-5.2.1/attack-natural-20",
-      status: "applied",
-      reason: "natural 20 automatically hits and is critical",
-    });
-  } else if (request.family === "attack-roll" && natural === 1) {
+  if (request.family === "attack-roll" && natural === 1) {
     provenance.push({
       source: "profile:dnd.srd-5.2.1/attack-natural-1",
       status: "applied",
       reason: "natural 1 automatically misses",
+    });
+  } else if (request.family === "attack-roll" && critical) {
+    const threshold = request.criticalThreshold ?? 20;
+    provenance.push({
+      source: threshold === 20
+        ? "profile:dnd.srd-5.2.1/attack-natural-20"
+        : (request.criticalThresholdSource ?? "feature:expanded-critical-range"),
+      status: "applied",
+      reason: threshold === 20
+        ? "natural 20 automatically hits and is critical"
+        : `natural ${natural} meets critical threshold ${threshold}; attack automatically hits and is critical`,
     });
   }
 

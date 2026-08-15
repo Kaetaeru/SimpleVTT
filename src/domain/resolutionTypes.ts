@@ -7,11 +7,12 @@ import type { EffectApplyRequest } from "./effects";
 import type { HitDieSpend } from "./rest";
 import type { ReactorOption } from "./reaction";
 import type { TargetFacts, TargetingRule } from "./targeting";
-import type { TurnSlot } from "./turnEconomy";
+import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { RulesRuntimeState } from "./combatState";
 import type { RuntimeStateChange } from "./runtimeStateChange";
 import type { TemporaryHpChoice } from "./temporaryHp";
+import type { ResourceRecovery } from "./resources";
 
 export type NumericOperand = number | {
   operationId: string;
@@ -21,11 +22,13 @@ export type NumericOperand = number | {
   rounding?: "floor" | "ceil" | "round";
 };
 
-export interface OperationPredicate {
+export type OperationPredicate = {
   operationId: string;
   field: string;
-  equals: string | number | boolean;
-}
+} & (
+  | { equals: string | number | boolean; greaterThan?: never }
+  | { greaterThan: number; equals?: never }
+);
 
 interface OperationBase {
   id: string;
@@ -45,6 +48,18 @@ export type ResolutionOperation =
       actorId?: string;
       slot: TurnSlot;
       bonusActionGranted?: boolean;
+      actionKind?: ActionUseKind;
+    })
+  | (OperationBase & {
+      kind: "grant-extra-action";
+      actorId?: string;
+      grantId: string;
+      allowsMagicAction: boolean;
+    })
+  | (OperationBase & {
+      kind: "use-turn-feature";
+      actorId?: string;
+      featureId: string;
     })
   | (OperationBase & {
       kind: "move";
@@ -54,10 +69,38 @@ export type ResolutionOperation =
       visibleSourceIds?: string[];
     })
   | (OperationBase & {
+      kind:"free-move";
+      actorId?:string;
+      distanceFeet:number;
+      maximumDistanceFeet:number;
+      doesNotProvokeOpportunityAttacks?:boolean;
+      destinationMovesCloserToVisibleFrighteningSource?:boolean;
+      visibleSourceIds?:string[];
+    })
+  | (OperationBase & {
       kind: "spend-resource";
       actorId?: string;
       resourceId: string;
       amount: number;
+    })
+  | (OperationBase & {
+      kind: "gain-resource";
+      actorId?: string;
+      resourceId: string;
+      amount: number;
+      maximumDelta?: number;
+      temporaryCapacityUntilLongRest?: boolean;
+      createIfMissing?: {
+        label: string;
+        recovery?: ResourceRecovery;
+      };
+    })
+  | (OperationBase & {
+      kind: "set-resource-recovery-lockout";
+      actorId?: string;
+      resourceId:string;
+      trigger:"shortRest"|"longRest";
+      rests:number;
     })
   | (OperationBase & {
       kind: "d20";
@@ -96,6 +139,18 @@ export type ResolutionOperation =
       concentrationCheck?: Omit<ConcentrationCheckRequest, "damage">;
     })
   | (OperationBase & {
+      kind: "compound-damage";
+      targetId: string;
+      components: Array<{
+        damageType: string;
+        amount: NumericOperand;
+        defenses?: DamageDefenseContribution[];
+      }>;
+      creatureKind: "character" | "monster";
+      criticalFrom?: string;
+      concentrationCheck?: Omit<ConcentrationCheckRequest, "damage">;
+    })
+  | (OperationBase & {
       kind: "healing";
       targetId: string;
       amount: NumericOperand;
@@ -110,6 +165,11 @@ export type ResolutionOperation =
   | (OperationBase & {
       kind: "apply-effect";
       effect: EffectApplyRequest;
+    })
+  | (OperationBase & {
+      kind: "update-effect";
+      effectId: string;
+      metadataPatch: Record<string,string|number|boolean>;
     })
   | (OperationBase & {
       kind: "remove-effect";
@@ -151,6 +211,18 @@ export type ResolutionOperation =
       kind: "short-rest";
       targetId: string;
       spends: HitDieSpend[];
+      resourceRestoration?: {
+        resourceId: string;
+        amount: number;
+        usageResourceId: string;
+      };
+      resourceRestorationBatch?: {
+        restorations: Array<{
+          resourceId: string;
+          amount: number;
+        }>;
+        usageResourceId: string;
+      };
     })
   | (OperationBase & {
       kind: "long-rest";

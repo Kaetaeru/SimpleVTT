@@ -2,9 +2,11 @@ import {
   activeConditionIds,
   conditionImmunities,
   exhaustionIsFatal,
+  SRD_521_CONDITIONS,
+  type ConditionId,
 } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { createEffect } from "./effects";
+import { createEffect, terminateEffectsForCreatureState, type EffectInstance } from "./effects";
 import { endConcentration, startConcentration } from "./concentration";
 import {
   concentrationStateChange,
@@ -18,9 +20,25 @@ import { makeEvent } from "./resolutionContext";
 import type { ResolutionOperation } from "./resolutionTypes";
 
 type ApplyEffectOp = Extract<ResolutionOperation, { kind:"apply-effect" }>;
+type UpdateEffectOp = Extract<ResolutionOperation, { kind:"update-effect" }>;
 type RemoveEffectOp = Extract<ResolutionOperation, { kind:"remove-effect" }>;
 type StartConcentrationOp = Extract<ResolutionOperation, { kind:"start-concentration" }>;
 type EndConcentrationOp = Extract<ResolutionOperation, { kind:"end-concentration" }>;
+
+const CONDITION_IMMUNITY_TAG_PREFIX = "condition-immunity:";
+
+function taggedConditionImmunities(effects:EffectInstance[],targetId:string):ConditionId[] {
+  const immunities = new Set<ConditionId>();
+  for (const effect of effects) {
+    if (effect.targetId !== targetId) continue;
+    for (const tag of effect.tags) {
+      if (!tag.startsWith(CONDITION_IMMUNITY_TAG_PREFIX)) continue;
+      const conditionId = tag.slice(CONDITION_IMMUNITY_TAG_PREFIX.length) as ConditionId;
+      if (conditionId in SRD_521_CONDITIONS) immunities.add(conditionId);
+    }
+  }
+  return [...immunities];
+}
 
 function endActorConcentration(ctx: ResolutionExecutionContext, actorId:string, reason:string) {
   const current = ctx.state.concentration[actorId];
@@ -40,6 +58,7 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
   if (effect.conditionId) {
     const immunities = new Set([
       ...conditionImmunities(conditionEffectsFor(ctx.state, target.id)),
+      ...taggedConditionImmunities(ctx.state.effects,target.id),
       ...(target.conditionImmunities ?? []),
     ]);
     if (immunities.has(effect.conditionId)) {
@@ -79,8 +98,10 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
   }
 
   const concentration = ctx.state.concentration[target.id];
-  const incapacitated = activeConditionIds(activeConditions).includes("incapacitated");
-  if (concentration && (incapacitated || target.life.dead)) {
+  const incapacitated = target.life.unconscious
+    || target.life.dead
+    || activeConditionIds(activeConditions).includes("incapacitated");
+  if (concentration && incapacitated) {
     const previous = concentration.groupId;
     const reason = target.life.dead ? "creature died" : "Incapacitated condition applied";
     const { ended } = endActorConcentration(ctx, target.id, reason);
@@ -88,6 +109,18 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     changes.push(concentrationStateChange(target.id, previous, undefined, ended.provenance));
     ended.expiredEffects.forEach((expired) => {
       changes.push(effectStateChange(expired.targetId, expired.id, "removed", ended.provenance));
+    });
+  }
+
+  if (incapacitated || target.life.dead) {
+    const terminated = terminateEffectsForCreatureState(ctx.state.effects, target.id, {
+      incapacitated,
+      dead:target.life.dead,
+    });
+    ctx.state.effects = terminated.active;
+    provenance.push(...terminated.provenance);
+    terminated.expired.forEach((expired) => {
+      changes.push(effectStateChange(expired.targetId, expired.id, "removed", terminated.provenance));
     });
   }
 
@@ -100,6 +133,35 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
   return {
     result,
     event:makeEvent(ctx.pending, operation, `effect ${effect.id} applied`, result, provenance, changes, effect.targetId),
+  };
+}
+
+export function executeUpdateEffect(ctx:ResolutionExecutionContext, operation:UpdateEffectOp):OperationExecution {
+  const index = ctx.state.effects.findIndex((entry) => entry.id === operation.effectId);
+  if (index < 0) throw new DomainEvaluationError(`effect not found: ${operation.effectId}`);
+  const before = ctx.state.effects[index];
+  const after = {
+    ...before,
+    metadata:{ ...(before.metadata ?? {}), ...operation.metadataPatch },
+  };
+  ctx.state.effects[index] = after;
+  const provenance:ProvenanceRecord[] = [{
+    source:before.sourceId,
+    status:"applied",
+    reason:`effect ${before.id} metadata updated without changing duration`,
+  }];
+  const result = { updated:true, beforeMetadata:before.metadata ?? {}, effect:after };
+  return {
+    result,
+    event:makeEvent(
+      ctx.pending,
+      operation,
+      `effect ${before.id} updated`,
+      result,
+      provenance,
+      [effectStateChange(before.targetId,before.id,"updated",provenance)],
+      before.targetId,
+    ),
   };
 }
 
@@ -126,7 +188,7 @@ export function executeRemoveEffect(ctx:ResolutionExecutionContext, operation:Re
 export function executeStartConcentration(ctx:ResolutionExecutionContext, operation:StartConcentrationOp):OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
   const actor = requireCombatant(ctx.state, actorId);
-  if (actor.life.dead || activeConditionIds(conditionEffectsFor(ctx.state, actorId)).includes("incapacitated")) {
+  if (actor.life.dead || actor.life.unconscious || activeConditionIds(conditionEffectsFor(ctx.state, actorId)).includes("incapacitated")) {
     throw new DomainEvaluationError("dead or Incapacitated creatures cannot start Concentration");
   }
   const before = ctx.state.concentration[actorId];

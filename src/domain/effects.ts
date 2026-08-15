@@ -3,6 +3,7 @@ import type { ConditionId } from "./conditions";
 
 export type TurnBoundary = "start" | "end";
 export type RestKind = "short" | "long";
+export type TurnActivityCategory = "movement" | "action" | "bonus-action";
 
 export interface RuntimeClock {
   round: number;
@@ -34,6 +35,19 @@ export type EffectExpiry =
 
 export type EffectKind = "condition" | "modifier" | "marker";
 
+export interface EffectTermination {
+  targetTakesDamage?: boolean;
+  targetBecomesIncapacitated?: boolean;
+  targetDies?: boolean;
+  sourceBecomesIncapacitated?: boolean;
+  sourceDies?: boolean;
+}
+
+export interface EffectTurnActivityRestriction {
+  chooseOneOf: TurnActivityCategory[];
+  selectedCategory?: TurnActivityCategory;
+}
+
 export interface EffectInstance {
   id: string;
   sourceId: string;
@@ -43,6 +57,8 @@ export interface EffectInstance {
   conditionId?: ConditionId;
   tags: string[];
   expiry: EffectExpiry;
+  termination?: EffectTermination;
+  turnActivity?: EffectTurnActivityRestriction;
   concentrationGroupId?: string;
   metadata?: Record<string, string | number | boolean>;
 }
@@ -56,6 +72,8 @@ export interface EffectApplyRequest {
   conditionId?: ConditionId;
   tags?: string[];
   duration: DurationSpec;
+  termination?: EffectTermination;
+  turnActivity?: EffectTurnActivityRestriction;
   concentrationGroupId?: string;
   metadata?: Record<string, string | number | boolean>;
 }
@@ -92,10 +110,22 @@ export function materializeDuration(duration: DurationSpec, clock: RuntimeClock)
   }
 }
 
+function validateTurnActivity(restriction: EffectTurnActivityRestriction | undefined) {
+  if (!restriction) return;
+  if (!restriction.chooseOneOf.length) throw new DomainEvaluationError("turn-activity restriction requires at least one category");
+  if (new Set(restriction.chooseOneOf).size !== restriction.chooseOneOf.length) {
+    throw new DomainEvaluationError("turn-activity restriction cannot repeat categories");
+  }
+  if (restriction.selectedCategory && !restriction.chooseOneOf.includes(restriction.selectedCategory)) {
+    throw new DomainEvaluationError("selected turn-activity category must be one of the allowed categories");
+  }
+}
+
 export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): EffectInstance {
   if (!request.id || !request.sourceId || !request.targetId) throw new DomainEvaluationError("effect id, sourceId, and targetId are required");
   if (request.kind === "condition" && !request.conditionId) throw new DomainEvaluationError("condition effect requires conditionId");
   if (request.duration.kind === "concentration" && !request.concentrationGroupId) throw new DomainEvaluationError("concentration effect requires concentrationGroupId");
+  validateTurnActivity(request.turnActivity);
   return {
     id:request.id,
     sourceId:request.sourceId,
@@ -105,15 +135,117 @@ export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): 
     conditionId:request.conditionId,
     tags:[...(request.tags ?? [])],
     expiry:materializeDuration(request.duration, clock),
+    termination:request.termination ? { ...request.termination } : undefined,
+    turnActivity:request.turnActivity ? {
+      chooseOneOf:[...request.turnActivity.chooseOneOf],
+      selectedCategory:request.turnActivity.selectedCategory,
+    } : undefined,
     concentrationGroupId:request.concentrationGroupId,
     metadata:request.metadata ? { ...request.metadata } : undefined,
   };
+}
+
+export function selectEffectTurnActivity(
+  effects: EffectInstance[],
+  actorId: string,
+  category: TurnActivityCategory,
+): { effects:EffectInstance[]; provenance:ProvenanceRecord[] } {
+  const provenance: ProvenanceRecord[] = [];
+  const next = effects.map((effect) => {
+    if (effect.targetId !== actorId || !effect.turnActivity) return effect;
+    validateTurnActivity(effect.turnActivity);
+    if (!effect.turnActivity.chooseOneOf.includes(category)) {
+      throw new DomainEvaluationError(`effect ${effect.id} does not allow ${category} on this turn`);
+    }
+    const selected = effect.turnActivity.selectedCategory;
+    if (selected && selected !== category) {
+      throw new DomainEvaluationError(`effect ${effect.id} already committed this turn to ${selected}; cannot use ${category}`);
+    }
+    if (!selected) {
+      provenance.push({
+        source:effect.sourceId,
+        status:"applied",
+        reason:`effect ${effect.id} commits ${actorId} to ${category} for this turn`,
+      });
+    }
+    return {
+      ...effect,
+      turnActivity:{
+        chooseOneOf:[...effect.turnActivity.chooseOneOf],
+        selectedCategory:category,
+      },
+    };
+  });
+  return { effects:next, provenance };
+}
+
+export function resetEffectTurnActivity(effects: EffectInstance[], actorId: string): EffectInstance[] {
+  return effects.map((effect) => effect.targetId === actorId && effect.turnActivity?.selectedCategory
+    ? {
+        ...effect,
+        turnActivity:{
+          chooseOneOf:[...effect.turnActivity.chooseOneOf],
+          selectedCategory:undefined,
+        },
+      }
+    : effect);
 }
 
 function boundaryReached(expiry: Extract<EffectExpiry,{kind:"turn-boundary"}>, clock: RuntimeClock) {
   if (clock.round > expiry.round) return true;
   if (clock.round < expiry.round) return false;
   return clock.activeActorId === expiry.actorId && clock.phase === expiry.boundary;
+}
+
+function terminateEffects(
+  effects: EffectInstance[],
+  predicate: (effect:EffectInstance) => boolean,
+  reason: (effect:EffectInstance) => string,
+): EffectExpiryResolution {
+  const expired: EffectInstance[] = [];
+  const active: EffectInstance[] = [];
+  for (const effect of effects) (predicate(effect) ? expired : active).push(effect);
+  return {
+    active,
+    expired,
+    provenance:expired.map((effect) => ({
+      source:effect.sourceId,
+      status:"applied",
+      reason:reason(effect),
+    })),
+  };
+}
+
+export function terminateEffectsForDamage(effects: EffectInstance[], targetId: string): EffectExpiryResolution {
+  return terminateEffects(
+    effects,
+    (effect) => effect.targetId === targetId && effect.termination?.targetTakesDamage === true,
+    (effect) => `effect ${effect.id} ended because ${targetId} took damage`,
+  );
+}
+
+export function terminateEffectsForCreatureState(
+  effects: EffectInstance[],
+  actorId: string,
+  state: { incapacitated:boolean; dead:boolean },
+): EffectExpiryResolution {
+  return terminateEffects(
+    effects,
+    (effect) => {
+      const targetEnds = effect.targetId === actorId
+        && ((state.incapacitated && effect.termination?.targetBecomesIncapacitated === true)
+          || (state.dead && effect.termination?.targetDies === true));
+      const sourceEnds = effect.sourceActorId === actorId
+        && ((state.incapacitated && effect.termination?.sourceBecomesIncapacitated === true)
+          || (state.dead && effect.termination?.sourceDies === true));
+      return targetEnds || sourceEnds;
+    },
+    (effect) => {
+      const role = effect.targetId === actorId ? "target" : "source";
+      const stateName = state.dead ? "died" : "became Incapacitated";
+      return `effect ${effect.id} ended because its ${role} ${actorId} ${stateName}`;
+    },
+  );
 }
 
 export function expireEffectsAtClock(effects: EffectInstance[], clock: RuntimeClock): EffectExpiryResolution {

@@ -76,6 +76,8 @@ export interface SpellCasterContext {
   alwaysPreparedSpellIds?: string[];
   cantripSpellIds: string[];
   slotResourceIds: Partial<Record<number, string>>;
+  featureSpellIds?: string[];
+  featureResourceIds?: Partial<Record<string, string>>;
 }
 
 export interface SpellCastTarget extends TargetFacts {
@@ -202,7 +204,7 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
       throw new DomainEvaluationError("cantrip is not available to the caster");
     }
     if (request.slotLevel !== undefined) throw new DomainEvaluationError("cantrips do not expend spell slots");
-    return { slotted: false as const, slotResourceId: undefined };
+    return { slotted: false as const, slotResourceId: undefined, featureResourceId: undefined };
   }
 
   if (request.source === "prepared" && !request.caster.preparedSpellIds.includes(definition.spellId)) {
@@ -211,9 +213,20 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
   if (request.source === "always-prepared" && !(request.caster.alwaysPreparedSpellIds ?? []).includes(definition.spellId)) {
     throw new DomainEvaluationError("spell is not always prepared for this caster");
   }
-  if (request.source === "item" || request.source === "feature") {
-    if (request.slotLevel !== undefined) throw new DomainEvaluationError("slotless item/feature casting cannot specify a slot level");
-    return { slotted: false as const, slotResourceId: undefined };
+  if (request.source === "item") {
+    if (request.slotLevel !== undefined) throw new DomainEvaluationError("slotless item casting cannot specify a slot level");
+    return { slotted: false as const, slotResourceId: undefined, featureResourceId: undefined };
+  }
+  if (request.source === "feature") {
+    if (!(request.caster.featureSpellIds ?? []).includes(definition.spellId)) {
+      throw new DomainEvaluationError("spell is not granted for slotless feature casting");
+    }
+    if (request.slotLevel !== undefined) throw new DomainEvaluationError("slotless feature casting cannot specify a slot level");
+    return {
+      slotted:false as const,
+      slotResourceId:undefined,
+      featureResourceId:request.caster.featureResourceIds?.[definition.spellId],
+    };
   }
 
   if (request.slotLevel === undefined) throw new DomainEvaluationError("level 1+ prepared spells require a spell slot");
@@ -225,7 +238,7 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
   if (request.useActionEconomy && !request.turnId) {
     throw new DomainEvaluationError("turn-bound slotted casting requires turnId for the one-slot-per-turn rule");
   }
-  return { slotted: true as const, slotResourceId };
+  return { slotted: true as const, slotResourceId, featureResourceId: undefined };
 }
 
 function economyOperation(definition: SpellMechanicDefinition, request: SpellCastRequest): ResolutionOperation | undefined {
@@ -314,6 +327,15 @@ export function compileSpellCast(
       actorId: request.actorId,
       resourceId: access.slotResourceId,
       amount: 1,
+    });
+  }
+  if (access.featureResourceId) {
+    operations.push({
+      id:`${request.id}:feature-resource`,
+      kind:"spend-resource",
+      actorId:request.actorId,
+      resourceId:access.featureResourceId,
+      amount:1,
     });
   }
 

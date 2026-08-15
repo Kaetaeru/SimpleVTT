@@ -46,10 +46,13 @@ export interface DeathSaveRequest {
   dice: FixedDiceInput;
   rollStateContributions?: RollStateContribution[];
   modifierContributions?: ModifierContribution[];
+  natural20Minimum?: number;
+  natural20MinimumSource?: string;
 }
 
 export interface DeathSaveResolution {
   natural: number;
+  treatedNatural: number;
   total: number;
   outcome: "success" | "failure" | "stable" | "dead" | "revived";
   next: LifeState;
@@ -177,6 +180,10 @@ export function resolveDeathSavingThrow(
   if (next.dead) throw new DomainEvaluationError("dead creatures do not make death saving throws");
   if (next.hp.current !== 0) throw new DomainEvaluationError("death saving throws require 0 HP");
   if (next.stable) throw new DomainEvaluationError("stable creatures do not make death saving throws");
+  const natural20Minimum = request.natural20Minimum ?? 20;
+  if (!Number.isInteger(natural20Minimum) || natural20Minimum < 2 || natural20Minimum > 20) {
+    throw new DomainEvaluationError("death-save natural-20 threshold must be an integer from 2 to 20");
+  }
 
   const d20 = resolveD20Test(profile, {
     family: "saving-throw",
@@ -186,9 +193,17 @@ export function resolveDeathSavingThrow(
     dice: request.dice,
     targetSource: "profile:dnd.srd-5.2.1/death-save-dc",
   });
+  const treatedNatural = d20.natural >= natural20Minimum ? 20 : d20.natural;
   const provenance = [...d20.provenance];
+  if (treatedNatural === 20 && d20.natural !== 20) {
+    provenance.push({
+      source:request.natural20MinimumSource ?? "feature:death-save-natural-20-threshold",
+      status:"applied",
+      reason:`death-save natural ${d20.natural} is treated as natural 20`,
+    });
+  }
 
-  if (d20.natural === 20) {
+  if (treatedNatural === 20) {
     next.hp.current = 1;
     next.deathSaves = { successes: 0, failures: 0 };
     next.stable = false;
@@ -198,7 +213,7 @@ export function resolveDeathSavingThrow(
       status: "applied",
       reason: "natural 20 restores 1 HP and resets death saves",
     });
-    return { natural: d20.natural, total: d20.total, outcome: "revived", next, provenance };
+    return { natural:d20.natural, treatedNatural, total:d20.total, outcome:"revived", next, provenance };
   }
 
   if (d20.natural === 1) {
@@ -213,9 +228,10 @@ export function resolveDeathSavingThrow(
       reason: "natural 1 adds two death save failures",
     });
     return {
-      natural: d20.natural,
-      total: d20.total,
-      outcome: next.dead ? "dead" : "failure",
+      natural:d20.natural,
+      treatedNatural,
+      total:d20.total,
+      outcome:next.dead ? "dead" : "failure",
       next,
       provenance,
     };
@@ -231,9 +247,9 @@ export function resolveDeathSavingThrow(
         status: "applied",
         reason: "three successful death saves stabilize the creature and reset death saves",
       });
-      return { natural: d20.natural, total: d20.total, outcome: "stable", next, provenance };
+      return { natural:d20.natural, treatedNatural, total:d20.total, outcome:"stable", next, provenance };
     }
-    return { natural: d20.natural, total: d20.total, outcome: "success", next, provenance };
+    return { natural:d20.natural, treatedNatural, total:d20.total, outcome:"success", next, provenance };
   }
 
   next.deathSaves.failures = Math.min(3, next.deathSaves.failures + 1);
@@ -242,9 +258,10 @@ export function resolveDeathSavingThrow(
     next.unconscious = false;
   }
   return {
-    natural: d20.natural,
-    total: d20.total,
-    outcome: next.dead ? "dead" : "failure",
+    natural:d20.natural,
+    treatedNatural,
+    total:d20.total,
+    outcome:next.dead ? "dead" : "failure",
     next,
     provenance,
   };

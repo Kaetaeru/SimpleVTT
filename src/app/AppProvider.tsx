@@ -11,6 +11,9 @@ import type {
   LevelUpCommand,
   SessionMode,
 } from "./contracts";
+import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
+import type { CircleLandType } from "../domain/druidCircleLandRecovery";
+import "./restSpellManagementRuntimeAdapter";
 import { mockAdapter } from "./mockAdapter";
 
 export interface UiDebugState {
@@ -36,6 +39,9 @@ interface AppContextValue {
   startLevelUp(characterId: string): Promise<void>;
   updateLevelUp(command: LevelUpCommand): Promise<void>;
   commitLevelUp(): Promise<void>;
+  configureWizardLongRest(command: WizardLongRestSpellCommand): Promise<void>;
+  configurePactTomeRest(command: PactTomeRestSpellCommand): Promise<void>;
+  configureCircleLandRest(landType: CircleLandType): Promise<void>;
   selectDmActor(actorId: string): Promise<void>;
   startInitiative(): Promise<void>;
   endInitiative(): Promise<void>;
@@ -140,6 +146,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     startLevelUp: async (characterId) => apply(() => mockAdapter.startLevelUp(characterId)),
     updateLevelUp: async (command) => apply(() => mockAdapter.updateLevelUp(command)),
     commitLevelUp: async () => apply(() => mockAdapter.commitLevelUp()),
+    configureWizardLongRest: async (command) => apply(() => mockAdapter.configureWizardLongRest(command)),
+    configurePactTomeRest: async (command) => apply(() => mockAdapter.configurePactTomeRest(command)),
+    configureCircleLandRest: async (landType) => apply(() => mockAdapter.configureCircleLandRest(landType)),
     selectDmActor: async (actorId) => apply(() => mockAdapter.selectDmActor(actorId)),
     startInitiative: async () => apply(() => mockAdapter.startInitiative()),
     endInitiative: async () => apply(() => mockAdapter.endInitiative()),

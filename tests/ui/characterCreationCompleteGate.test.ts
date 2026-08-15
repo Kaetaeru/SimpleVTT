@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import "../../src/app/characterCreationV10Adapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { BACKGROUNDS, CLASSES, SPECIES, classIdFromName, classMeta } from "../../src/app/characterCreationV10Data";
+import { BACKGROUNDS, CLASSES, SPECIES, classIdFromName, classMeta, spellId } from "../../src/app/characterCreationV10Data";
 import type { CharacterCreationSection } from "../../src/app/contracts";
 
 async function setSource(adapter: MockAdapter, type:"set-species"|"set-background"|"set-class", value:string) {
@@ -107,6 +107,7 @@ test("all twelve SRD classes can reach a fully resolved level-1 commit", async (
     if (semantic.spells?.spellbook) assert.equal(sheet.spellbookSpells?.length, semantic.spells.spellbook);
     if (semantic.spells?.preparedFromSpellbook) assert.equal(sheet.preparedSpells?.filter((id) => !id.startsWith("always:")).length, semantic.spells.preparedFromSpellbook);
     else if (semantic.spells?.prepared) assert.ok((sheet.preparedSpells?.length ?? 0) >= semantic.spells.prepared);
+    for (const name of semantic.spells?.alwaysPrepared ?? []) assert.ok(sheet.preparedSpells?.includes(`always:${spellId(name)}`), `${klass.name}: ${name} must be always prepared`);
   }
 });
 

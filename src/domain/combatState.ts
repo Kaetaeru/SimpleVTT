@@ -29,6 +29,11 @@ export interface RuntimeLogEntry {
   summary:string;
 }
 
+export interface TurnFeatureUsageState {
+  actorId: string;
+  featureIds: string[];
+}
+
 export interface RulesRuntimeState {
   revision: number;
   clock: RuntimeClock;
@@ -36,6 +41,7 @@ export interface RulesRuntimeState {
   effects: EffectInstance[];
   concentration: Record<string, ConcentrationState | undefined>;
   history: RuntimeLogEntry[];
+  turnFeatureUsage?: TurnFeatureUsageState;
 }
 
 export function cloneRuntimeState(state: RulesRuntimeState): RulesRuntimeState {

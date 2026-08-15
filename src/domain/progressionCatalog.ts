@@ -138,6 +138,12 @@ function numericCell(value: string | null | undefined) {
   return match ? Number(match[0]) : 0;
 }
 
+function standardCasterSpellSlot(casterLevel: number, spellLevel: number) {
+  if (casterLevel <= 0 || spellLevel < 1 || spellLevel > 9) return 0;
+  const row = PROGRESSION_CATALOG.multiclass.spellSlots.rows.find((entry) => numericCell(entry["주문 시전자 레벨"]) === casterLevel);
+  return numericCell(row?.[`${spellLevel}레벨`]);
+}
+
 export function multiclassSpellcasterLevel(tracks: ClassTrackLike[]) {
   let total = 0;
   for (const track of tracks) {
@@ -152,9 +158,8 @@ export function multiclassSpellcasterLevel(tracks: ClassTrackLike[]) {
 export function multiclassSpellSlots(tracks: ClassTrackLike[]) {
   const casterLevel = multiclassSpellcasterLevel(tracks);
   if (casterLevel <= 0) return { casterLevel: 0, slots: {} as Record<number, number> };
-  const row = PROGRESSION_CATALOG.multiclass.spellSlots.rows.find((entry) => numericCell(entry["주문 시전자 레벨"]) === casterLevel);
   const slots: Record<number, number> = {};
-  for (let level = 1; level <= 9; level += 1) slots[level] = numericCell(row?.[`${level}레벨`]);
+  for (let level = 1; level <= 9; level += 1) slots[level] = standardCasterSpellSlot(casterLevel, level);
   return { casterLevel, slots };
 }
 
@@ -163,5 +168,12 @@ export function classProgressionColumns(classId: string, level: number) {
 }
 
 export function numericProgressionColumn(classId: string, level: number, key: string) {
-  return numericCell(classProgressionColumns(classId, level)[key]);
+  const direct = numericCell(classProgressionColumns(classId, level)[key]);
+  if (direct > 0) return direct;
+  const spellLevel = Number(key);
+  const definition = classById(classId);
+  if (definition?.spellcastingMode === "full" && Number.isInteger(spellLevel) && spellLevel >= 1 && spellLevel <= 9) {
+    return standardCasterSpellSlot(level, spellLevel);
+  }
+  return direct;
 }

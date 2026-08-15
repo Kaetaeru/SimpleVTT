@@ -21,6 +21,25 @@ export const SRD_521_SPELL_MECHANICS: Record<string, SpellMechanicDefinition> = 
     },
     executionScope: "Creature-target combat resolution. The separate flammable-object rider is outside this execution envelope.",
   },
+  "dnd.srd521.spell.poison-spray": {
+    spellId: "dnd.srd521.spell.poison-spray",
+    baseLevel: 0,
+    runtimeSupport: "combat-executable",
+    castingEconomy: "action",
+    targeting: {
+      kind: "creature",
+      rangeFeet: 30,
+      minTargets: 1,
+      maxTargets: 1,
+      allowedRelations: ["self", "ally", "enemy", "neutral"],
+      directTarget: true,
+    },
+    primary: {
+      kind: "attack-damage",
+      damageType: "poison",
+      dice: { count: 1, sides: 12, cantripScaling: true },
+    },
+  },
   "dnd.srd521.spell.sacred-flame": {
     spellId: "dnd.srd521.spell.sacred-flame",
     baseLevel: 0,

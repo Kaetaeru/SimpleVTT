@@ -1,10 +1,11 @@
-import { resolveDamage, resolveHealing } from "./damage";
+import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageDefenseContribution, type DamageResolution } from "./damage";
 import { type D20TestResult } from "./d20";
-import { resolveZeroHpAfterDamage } from "./life";
+import { resolveZeroHpAfterDamage, type LifeState } from "./life";
 import { applyHealingToLife } from "./lifeTransitions";
-import { conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
+import { activeConditionIds, conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
 import { concentrationBreakReason, endConcentration, resolveConcentrationDamageCheck } from "./concentration";
+import { terminateEffectsForCreatureState, terminateEffectsForDamage } from "./effects";
 import { resolveTemporaryHpGain } from "./temporaryHp";
 import { hpStateChanges } from "./stateChange";
 import {
@@ -19,8 +20,27 @@ import { makeEvent, valueFromResult } from "./resolutionContext";
 import type { ResolutionOperation } from "./resolutionTypes";
 
 type DamageOp = Extract<ResolutionOperation, { kind:"damage" }>;
+type CompoundDamageOp = Extract<ResolutionOperation, { kind:"compound-damage" }>;
 type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;
 type TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;
+type DamageLifecycleOp = DamageOp | CompoundDamageOp;
+
+function effectDamageDefenses(ctx:ResolutionExecutionContext,targetId:string):DamageDefenseContribution[] {
+  const defenses:DamageDefenseContribution[] = [];
+  for (const effect of ctx.state.effects.filter((entry) => entry.targetId === targetId)) {
+    for (const tag of effect.tags) {
+      const match = /^(damage-resistance|damage-vulnerability|damage-immunity):(.+)$/.exec(tag);
+      if (!match) continue;
+      const kind = match[1] === "damage-resistance"
+        ? "resistance"
+        : match[1] === "damage-vulnerability"
+          ? "vulnerability"
+          : "immunity";
+      defenses.push({ source:effect.sourceId, kind, damageType:match[2] });
+    }
+  }
+  return defenses;
+}
 
 function endActorConcentration(ctx: ResolutionExecutionContext, actorId: string, reason: string) {
   const current = ctx.state.concentration[actorId];
@@ -30,17 +50,24 @@ function endActorConcentration(ctx: ResolutionExecutionContext, actorId: string,
   return { current, ended };
 }
 
-export function executeDamage(ctx: ResolutionExecutionContext, operation: DamageOp): OperationExecution {
+function appendExpiredEffects(
+  changes: RuntimeStateChange[],
+  expired: ReturnType<typeof terminateEffectsForDamage>,
+) {
+  for (const effect of expired.expired) {
+    changes.push(effectStateChange(effect.targetId, effect.id, "removed", expired.provenance));
+  }
+}
+
+function finalizeDamage(
+  ctx: ResolutionExecutionContext,
+  operation: DamageLifecycleOp,
+  beforeLife: LifeState,
+  damage: DamageResolution,
+  summary: string,
+): OperationExecution {
   const target = requireCombatant(ctx.state, operation.targetId);
-  const beforeLife = structuredClone(target.life);
   const beforeHp = { ...beforeLife.hp };
-  const amount = valueFromResult(ctx.results, operation.amount);
-  const defenses = [
-    ...(target.damageDefenses ?? []),
-    ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
-    ...(operation.defenses ?? []),
-  ];
-  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });
   const critical = operation.criticalFrom
     ? Boolean((ctx.results.get(operation.criticalFrom) as D20TestResult | undefined)?.critical)
     : false;
@@ -109,18 +136,88 @@ export function executeDamage(ctx: ResolutionExecutionContext, operation: Damage
     }
   }
 
+  if (damage.finalDamage > 0) {
+    const terminated = terminateEffectsForDamage(ctx.state.effects, operation.targetId);
+    ctx.state.effects = terminated.active;
+    provenance.push(...terminated.provenance);
+    appendExpiredEffects(changes, terminated);
+  }
+
+  const incapacitated = target.life.unconscious
+    || target.life.dead
+    || activeConditionIds(conditionEffectsFor(ctx.state, operation.targetId)).includes("incapacitated");
+  if (incapacitated || target.life.dead) {
+    const terminated = terminateEffectsForCreatureState(ctx.state.effects, operation.targetId, {
+      incapacitated,
+      dead:target.life.dead,
+    });
+    ctx.state.effects = terminated.active;
+    provenance.push(...terminated.provenance);
+    appendExpiredEffects(changes, terminated);
+  }
+
   return {
     result:damage,
     event:makeEvent(
       ctx.pending,
       operation,
-      `${operation.targetId} takes ${damage.finalDamage} ${operation.damageType} damage`,
+      summary,
       damage,
       provenance,
       changes,
       operation.targetId,
     ),
   };
+}
+
+export function executeDamage(ctx: ResolutionExecutionContext, operation: DamageOp): OperationExecution {
+  const target = requireCombatant(ctx.state, operation.targetId);
+  const beforeLife = structuredClone(target.life);
+  const beforeHp = { ...beforeLife.hp };
+  const amount = valueFromResult(ctx.results, operation.amount);
+  const defenses = [
+    ...(target.damageDefenses ?? []),
+    ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
+    ...effectDamageDefenses(ctx,operation.targetId),
+    ...(operation.defenses ?? []),
+  ];
+  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });
+  return finalizeDamage(
+    ctx,
+    operation,
+    beforeLife,
+    damage,
+    `${operation.targetId} takes ${damage.finalDamage} ${operation.damageType} damage`,
+  );
+}
+
+export function executeCompoundDamage(ctx: ResolutionExecutionContext, operation: CompoundDamageOp): OperationExecution {
+  const target = requireCombatant(ctx.state, operation.targetId);
+  const beforeLife = structuredClone(target.life);
+  const beforeHp = { ...beforeLife.hp };
+  const commonDefenses = [
+    ...(target.damageDefenses ?? []),
+    ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
+    ...effectDamageDefenses(ctx,operation.targetId),
+  ];
+  const damage = resolveCompoundDamage({
+    hp:beforeHp,
+    components:operation.components.map((component) => ({
+      damageType:component.damageType,
+      amount:valueFromResult(ctx.results, component.amount),
+      defenses:[...commonDefenses, ...(component.defenses ?? [])],
+    })),
+  });
+  const detail = damage.components
+    .map((component) => `${component.finalDamage} ${component.damageType}`)
+    .join(" + ");
+  return finalizeDamage(
+    ctx,
+    operation,
+    beforeLife,
+    damage,
+    `${operation.targetId} takes ${damage.finalDamage} compound damage (${detail})`,
+  );
 }
 
 export function executeHealing(ctx: ResolutionExecutionContext, operation: HealingOp): OperationExecution {
