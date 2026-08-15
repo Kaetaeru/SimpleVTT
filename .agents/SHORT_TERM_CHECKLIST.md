@@ -10,7 +10,7 @@
 
 ## Phase 09 실행 단계
 
-### 1. Turn lifecycle / effect-aware turn — IN VALIDATION
+### 1. Turn lifecycle / effect-aware turn — CLOSED
 
 - [x] domain `end-turn(current)` + `begin-turn(next)` lifecycle service
 - [x] current end-turn effect expiry
@@ -19,12 +19,22 @@
 - [x] production `MockAdapter.endTurn()` overlay wiring
 - [x] raw lifecycle ResolutionEvent -> Activity projection
 - [x] adapter / structure regression tests
-- [ ] latest UI + Rules Domain checks 최종 확인
-- [ ] verified checkpoint를 기록하고 Step 1을 CLOSED로 전환
+- [x] legacy `advanceTurnRuntimeSession()` direct reset 제거; 동일 domain lifecycle transaction 사용
+- [x] latest UI + Rules Domain checks 최종 확인
+- [x] verified checkpoint 기록
+
+Verified implementation checkpoint: `1fca7c6050784908a2c9c04155269a13955140fb`
+
+Verification:
+- UI Phase 09 mechanics ✅
+- authoritative spellcasting gate ✅
+- TypeScript / production build ✅
+- Rules Domain ✅
+- Contract validation ✅
 
 Tracking: Issue #69 / Draft PR #70
 
-### 2. Concentration damage save authoritative dice workflow — NEXT
+### 2. Concentration damage save authoritative dice workflow — IN PROGRESS
 
 - [ ] 피해 transaction이 concentration check 필요 상태를 명시적으로 노출
 - [ ] 실제 d20 입력을 받는 app/adapter contract
@@ -80,6 +90,6 @@ Tracking: Issue #69 / Draft PR #70
 
 ```text
 Phase 09
-Step 1: implementation complete, final validation pending
-Step 2: queued next — Concentration damage save authoritative dice workflow
+Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
+Step 2: IN PROGRESS — Concentration damage save authoritative dice workflow
 ```
