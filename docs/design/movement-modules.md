@@ -59,7 +59,9 @@ Modules call the prepared `MovementModuleHost.apply(...)` / `applyMovementModule
 
 Because mapless Core does not observe token paths, it must not infer opportunity attacks or other movement-triggered reaction attacks.
 
-When no movement module supplies an authoritative trigger, the **current-turn controller** explicitly declares the movement reaction from the Scene UI. The current Phase 09 input records:
+When no movement module supplies an authoritative trigger, the **current-turn controller** explicitly declares the movement reaction from the Scene UI. In other words, whoever currently controls the moving/provoking Actor is responsible for pressing the manual reaction-input button when movement caused a reaction window.
+
+The current Phase 09 input records:
 
 - the current moving/provoking Actor;
 - the reacting Actor;
