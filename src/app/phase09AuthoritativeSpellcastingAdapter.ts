@@ -11,9 +11,11 @@ import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import type { RulesRuntimeState } from "../domain/combatState";
+import { spellcastingTurnStateChange, type SpellcastingTurnSnapshot } from "../domain/runtimeStateChange";
 import type { SpellCasterContext, SpellCastResolution, SpellCastTarget } from "../domain/spellcasting";
 import { resolveSpellCast } from "../domain/spellcasting";
 import { spellMechanicById } from "../domain/spellMechanics";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 const NO_SLOT="사용 가능한 주문 슬롯이 없습니다.";
 const SLOT_ALREADY_USED="이번 턴에는 이미 주문 슬롯을 소비해 주문을 시전했습니다.";
@@ -225,6 +227,29 @@ function resolutionFromCast(
   };
 }
 
+function eventHistoryForSpellCast(
+  input:RulesRuntimeState,
+  result:Extract<SpellCastResolution,{status:"committed"}>,
+  actorId:string,
+  turnId:string|undefined,
+  slotLevel:number|undefined,
+):ResolutionEvent[] {
+  const events=result.events.map((event)=>structuredClone(event));
+  if (!turnId||slotLevel===undefined||!events.length) return events;
+  const before=input.spellcastingTurn ? structuredClone(input.spellcastingTurn) as SpellcastingTurnSnapshot : undefined;
+  const after=result.state.spellcastingTurn ? structuredClone(result.state.spellcastingTurn) as SpellcastingTurnSnapshot : undefined;
+  if (JSON.stringify(before)===JSON.stringify(after)) return events;
+  const provenance=[{
+    source:`spellcasting-turn:${turnId}`,
+    status:"applied" as const,
+    reason:`${actorId} expended a spell slot on ${turnId}`,
+  }];
+  const last=events[events.length-1];
+  last.stateChanges.push(spellcastingTurnStateChange(actorId,before,after,provenance));
+  last.provenance.push(...provenance);
+  return events;
+}
+
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithAuthoritativeSpellcasting() {
   const snapshot=await previousGetSnapshot.call(this);
   const internal=this as unknown as AdapterInternalState;
@@ -262,6 +287,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     return this.getSnapshot();
   }
 
+  const turnId=currentTurnId(runtime);
   const result=resolveSpellCast(SIMPLEVTT_APP_RULES_PROFILE,definition,runtime,{
     id:castId,
     actorId:sourceAction.actorId,
@@ -271,7 +297,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     caster,targets,slotLevel,
     componentsSatisfied:true,
     useActionEconomy:true,
-    turnId:currentTurnId(runtime),
+    turnId,
     dice:{ effectFaces:faces },
   });
   internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,faces);
@@ -284,15 +310,16 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     return this.getSnapshot();
   }
 
+  const events=eventHistoryForSpellCast(runtime,result,sourceAction.actorId,turnId,slotLevel);
   const actorName=internal.scene.entities.find((entity)=>entity.id===sourceAction.actorId)?.name ?? sourceAction.actorId;
   internal.activity.unshift(projectRuntimeEventsToActivity({
     id:internal.resolution.id,
     actorName,
     title:`${sourceAction.name} 시전`,
     summary:internal.resolution.compact,
-    events:result.events,
+    events,
   }));
-  recordRuntimeResolutionEvents(this,internal.resolution.id,result.events);
+  recordRuntimeResolutionEvents(this,internal.resolution.id,events);
   internal.lastBefore=null;
   internal.lastResolutionId=internal.resolution.id;
   return this.getSnapshot();
