@@ -117,13 +117,14 @@ jobs:
           tests/domain/progressionPhase08Druid.test.ts
       - name: Verify Bard Wizard progression
         run: npx tsx --test tests/domain/progressionPhase08Bard.test.ts tests/domain/progressionPhase08Wizard.test.ts
-      - name: Verify Sorcerer Warlock progression
-        run: >-
-          npx tsx --test
-          tests/domain/progressionPhase08Sorcerer.test.ts
-          tests/domain/progressionPhase08SorcererReplacement.test.ts
-          tests/domain/progressionPhase08Warlock.test.ts
-          tests/domain/progressionPhase08WarlockReplacement.test.ts
+      - name: Verify Sorcerer progression
+        run: npx tsx --test tests/domain/progressionPhase08Sorcerer.test.ts
+      - name: Verify Sorcerer replacement progression
+        run: npx tsx --test tests/domain/progressionPhase08SorcererReplacement.test.ts
+      - name: Verify Warlock progression
+        run: npx tsx --test tests/domain/progressionPhase08Warlock.test.ts
+      - name: Verify Warlock replacement progression
+        run: npx tsx --test tests/domain/progressionPhase08WarlockReplacement.test.ts
       - name: Verify Phase 08 catalog progression
         run: >-
           npx tsx --test
