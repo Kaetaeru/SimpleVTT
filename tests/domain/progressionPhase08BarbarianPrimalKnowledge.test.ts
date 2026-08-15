@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ProgressionCharacterState, ProgressionRequest } from "../../src/domain/progression";
+import { classById } from "../../src/domain/progressionCatalog";
 import {
   buildProgressionPlanPhase08BarbarianPrimalKnowledge,
   resolveProgressionPhase08BarbarianPrimalKnowledge,
@@ -58,7 +59,11 @@ test("Barbarian 2 to 3 materializes Primal Knowledge from the canonical Barbaria
 test("Primal Knowledge commits one new skill proficiency and the class feature atomically", () => {
   const state = barbarian2();
   const choiceId = barbarianPrimalKnowledgeChoiceId(3);
-  const selections = { [choiceId]:{ kind:"options" as const, optionIds:["skill:perception"] } };
+  const subclassName = classById(BARBARIAN_PRIMAL_KNOWLEDGE_CLASS_ID)!.srdSubclassName;
+  const selections = {
+    [`progression.${BARBARIAN_PRIMAL_KNOWLEDGE_CLASS_ID}.3.subclass`]:{ kind:"options" as const, optionIds:[`subclass:${subclassName}`] },
+    [choiceId]:{ kind:"options" as const, optionIds:["skill:perception"] },
+  };
   const plan = buildProgressionPlanPhase08BarbarianPrimalKnowledge(state,request(state,selections));
   assert.deepEqual(plan.blocking,[]);
   assert.ok(plan.diffs.some((diff) => diff.label === "원초적 지식 · 기술 숙련" && diff.after === "지각"));
