@@ -9,33 +9,35 @@ Active PR: #54 — `app: converge Phase 09 mechanics into RealAdapter services`
 Active branch: `agent/53-mechanics-phase09`  
 Stacked base: Phase 08 PR #52 / `agent/50-rules-phase08`
 
-Phase 08 is complete at the catalog/class-mechanics boundary. Its outermost progression audit covers all 12 SRD classes across target levels 2-20 with **zero `catalog-pending` choices**. Unsupported downstream execution shapes still reject explicitly rather than being approximated.
+Phase 08 is complete at the catalog/class-mechanics boundary: the outermost progression audit covers all 12 SRD classes across target levels 2-20 with **zero `catalog-pending` choices**.
 
-Phase 09 now moves representative play paths out of MockAdapter-owned rule calculation and into shared application/domain services while keeping the current UI/ViewModel contracts stable.
+Phase 09 is moving representative play paths out of MockAdapter-owned calculation and into shared application/domain services while preserving current UI/ViewModel contracts. `MockAdapter` remains transitional fixture/state storage while authoritative rule evaluation moves into the rules domain.
 
 Current Phase 09 integration coverage includes:
 
-- targetless/freeform ability checks through a generic domain `openD20` resolver without inventing a DC
-- attack hit/critical previews through the canonical d20 resolver, including natural 1 and natural 20 semantics
-- typed attack damage through the domain damage resolver, including resistance, vulnerability, immunity, Temporary HP, and HP ordering
-- Action / Bonus Action / Reaction and class-resource costs through atomic `ResolutionEvent` transactions with rollback on invalid resource spend
-- healing state application through the domain healing resolver
-- an end-to-end Second Wind representative path: healing + Bonus Action + class resource + Activity provenance/state changes + Undo restoration
-- saving throws use explicit target-bound reference modifiers instead of index-derived Mock bonuses, and each target is resolved by the canonical d20 resolver
-- saving-throw damage uses the same typed domain damage path, including save-half, resistance, and Temporary HP ordering
+- targetless/freeform checks through a generic domain `openD20` resolver without inventing a DC
+- attack hit/critical semantics through canonical d20 resolution, including natural 1/20 behavior
+- target-bound saving throws through canonical d20 resolution rather than index-derived Mock modifiers
+- typed damage through the domain damage resolver, including resistance, vulnerability, immunity, Temporary HP, and HP ordering
+- generic validated fixed-dice formulas used by structured healing and item damage rolls
+- Action / Bonus Action / Reaction + class-resource costs through atomic `ResolutionEvent` transactions with rollback
+- ItemInstance quantity and charge costs projected through the same atomic resource/economy transaction model
+- Second Wind: structured healing + Bonus Action + class resource + Activity + Undo
+- Thunderwave: per-target saves + save-half + typed damage + resistance/Temp HP + Action cost
+- Shortbow: staged preview with one authoritative `resolveAttack` transaction for targeting, d20, critical dice, typed damage, and Action economy
+- Healing Potion: `2d4+2` healing + quantity/Action transaction + Undo
+- Wand: `3d4+3` structured damage + typed health application + charge/Action transaction + Undo
 - Phase 08 zero-pending, aggregate progression, TypeScript, and production UI regression gates remain green
 
-Latest Phase 09 integration checkpoint:
+Latest verified Phase 09 integration checkpoint:
 
 ```text
-37e5f7b5a4d6b507fdb7789cf3a1d28af6ee5b40
+60b9dff44c20b8f752ec2c800e2d9ad6df882006
 ```
 
 On that checkpoint, Contract validation, Rules Domain, Phase 07/08 aggregate progression, Phase 09 service/adapter tests, TypeScript, and the UI production build are green.
 
 ## Application architecture
-
-The React UI consumes application/ViewModel contracts rather than calculating named rules directly. During Phase 09, `MockAdapter` remains transitional fixture/state storage, while rule calculation is moved behind shared application services backed by the executable rules domain.
 
 ```text
 React UI
@@ -46,10 +48,10 @@ Phase 09 application services
    ↓
 Executable rules domain / ResolutionEvent transactions
    ↓
-Transitional state projection into the current adapter shell
+Transitional projection into the current adapter shell
 ```
 
-The next Phase 09 slices are fully atomic staged attack transactions, moving reference save facts to real Character/Combatant runtime stats, ItemInstance charge/quantity transactions, real initiative/turn runtime state, and direct Activity/Undo projection from committed domain events.
+The next Phase 09 work is replacing transitional reference facts with real Character/Combatant runtime stats, moving Initiative/turn economy/Reaction/movement authority into `RulesRuntimeState`, expanding atomic attacks where authoritative spatial data exists, and projecting Activity/Undo directly from committed domain events.
 
 ## Frontend
 
@@ -75,21 +77,19 @@ Requirements:
 - Rust stable toolchain for Tauri development
 - Tauri platform prerequisites for your operating system
 
-Install dependencies and run the browser application:
-
 ```sh
 npm install
 npm run dev
 ```
 
-Run the desktop shell:
+Desktop shell:
 
 ```sh
 npm install
 npm run tauri:dev
 ```
 
-Run the main verification gates:
+Main verification gates:
 
 ```sh
 npm run test:rules-domain
