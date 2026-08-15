@@ -47,7 +47,7 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
   ];
   const changes:RuntimeStateChange[] = economyStateChanges(operation.actorId, before, actor.economy, provenance);
   expiry.expired.forEach((effect) => {
-    changes.push(effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance));
+    changes.push(effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined));
   });
   const result = {
     round:operation.round,
@@ -71,7 +71,7 @@ export function executeEndTurn(ctx:ResolutionExecutionContext, operation:EndTurn
   const expiry = expireEffectsAtClock(ctx.state.effects, ctx.state.clock);
   ctx.state.effects = expiry.active;
   const changes = expiry.expired.map((effect) =>
-    effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance),
+    effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined),
   );
   const result = {
     round:operation.round,
@@ -92,7 +92,7 @@ export function executeAdvanceTime(ctx:ResolutionExecutionContext, operation:Adv
   const expiry = expireEffectsAtClock(ctx.state.effects, ctx.state.clock);
   ctx.state.effects = expiry.active;
   const changes = expiry.expired.map((effect) =>
-    effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance),
+    effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined),
   );
   const result = {
     elapsedSeconds:operation.elapsedSeconds,

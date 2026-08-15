@@ -82,7 +82,7 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     status:"applied",
     reason:`effect ${effect.id} applied to ${effect.targetId}`,
   }];
-  const changes:RuntimeStateChange[] = [effectStateChange(effect.targetId, effect.id, "added", provenance)];
+  const changes:RuntimeStateChange[] = [effectStateChange(effect.targetId, effect.id, "added", provenance, undefined, effect)];
   const activeConditions = conditionEffectsFor(ctx.state, target.id);
 
   if (effect.conditionId === "exhaustion" && exhaustionIsFatal(activeConditions) && !target.life.dead) {
@@ -108,7 +108,7 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     provenance.push(...ended.provenance);
     changes.push(concentrationStateChange(target.id, previous, undefined, ended.provenance));
     ended.expiredEffects.forEach((expired) => {
-      changes.push(effectStateChange(expired.targetId, expired.id, "removed", ended.provenance));
+      changes.push(effectStateChange(expired.targetId, expired.id, "removed", ended.provenance, expired, undefined));
     });
   }
 
@@ -120,7 +120,7 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     ctx.state.effects = terminated.active;
     provenance.push(...terminated.provenance);
     terminated.expired.forEach((expired) => {
-      changes.push(effectStateChange(expired.targetId, expired.id, "removed", terminated.provenance));
+      changes.push(effectStateChange(expired.targetId, expired.id, "removed", terminated.provenance, expired, undefined));
     });
   }
 
@@ -159,7 +159,7 @@ export function executeUpdateEffect(ctx:ResolutionExecutionContext, operation:Up
       `effect ${before.id} updated`,
       result,
       provenance,
-      [effectStateChange(before.targetId,before.id,"updated",provenance)],
+      [effectStateChange(before.targetId,before.id,"updated",provenance,before,after)],
       before.targetId,
     ),
   };
@@ -179,7 +179,7 @@ export function executeRemoveEffect(ctx:ResolutionExecutionContext, operation:Re
       `effect ${effect.id} removed`,
       result,
       provenance,
-      [effectStateChange(effect.targetId, effect.id, "removed", provenance)],
+      [effectStateChange(effect.targetId, effect.id, "removed", provenance, effect, undefined)],
       effect.targetId,
     ),
   };
@@ -203,7 +203,7 @@ export function executeStartConcentration(ctx:ResolutionExecutionContext, operat
     concentrationStateChange(actorId, before?.groupId, operation.groupId, resolved.provenance),
   ];
   resolved.expiredEffects.forEach((expired) => {
-    changes.push(effectStateChange(expired.targetId, expired.id, "removed", resolved.provenance));
+    changes.push(effectStateChange(expired.targetId, expired.id, "removed", resolved.provenance, expired, undefined));
   });
   return {
     result:resolved,
@@ -219,7 +219,7 @@ export function executeEndConcentration(ctx:ResolutionExecutionContext, operatio
     ? [concentrationStateChange(actorId, current.groupId, undefined, ended.provenance)]
     : [];
   ended.expiredEffects.forEach((expired) => {
-    changes.push(effectStateChange(expired.targetId, expired.id, "removed", ended.provenance));
+    changes.push(effectStateChange(expired.targetId, expired.id, "removed", ended.provenance, expired, undefined));
   });
   return {
     result:ended,
