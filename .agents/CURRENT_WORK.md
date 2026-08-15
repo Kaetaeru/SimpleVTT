@@ -40,19 +40,20 @@ Implementation checkpoint:
 
 ### 완료된 integration cluster
 
-#### D20 / saving throw
+#### D20 / runtime stats
 
 - [x] target/DC를 발명하지 않는 generic `openD20` primitive
 - [x] Freeform 능력 판정 → domain open-D20 → 기존 `ResolutionView`
 - [x] 공격 명중/치명타 → canonical `resolveD20Test`
   - natural 1 자동 실패
   - natural 20 자동 명중/치명타
-- [x] saving throw의 target-index 기반 Mock modifier 제거
-  - 대상 identity + ability에 묶인 transitional reference fact 사용
-  - 대상 순서를 바꿔도 modifier identity 유지
-  - 각 대상 판정은 domain `resolveD20Test`
+- [x] saving throw target-index Mock modifier 제거
+- [x] Character saving throw를 현재 ability + proficiencyBonus + canonical class save proficiency에서 계산
+- [x] built-in Combatant saving throw를 structured ability-score runtime stat에서 계산
+- [x] 대상 순서를 바꿔도 save modifier identity 유지
+- [x] runtime stat이 없는 imported Combatant는 modifier를 추측하지 않고 explicit reject
 
-#### Damage / healing
+#### Damage / healing / dice
 
 - [x] typed damage → domain `resolveDamage`
   - resistance / vulnerability / immunity
@@ -60,12 +61,20 @@ Implementation checkpoint:
 - [x] saving-throw damage의 save-half → typed defense → Temp HP → HP 경로
 - [x] healing state 적용 → domain `resolveHealing`
 - [x] generic fixed dice/formula primitive
-  - declared die 범위를 벗어난 face는 reject
-  - Healing Word의 기존 invalid d4 reference 값 제거
 - [x] structured healing rolls
   - Second Wind `1d10 + 5`
   - Healing Word `1d4 + 4`
   - Healing Potion `2d4 + 2`
+- [x] Wand structured `3d4+3` force damage
+
+#### 3D visual dice replay
+
+- [x] `authoritativeDice` → presentation-only visual roll contract
+- [x] d4 / d6 / d8 / d10 / d12 / d20 CSS 3D/faceted renderer
+- [x] attack/check/save/damage/healing authoritative faces replay
+- [x] visual layer가 rules result를 생성하거나 변경하지 않음
+- [x] reduced-motion 및 기존 Resolution auto-advance cadence 호환
+- [ ] optional WebGL/physics renderer — authoritative-result replay contract는 그대로 유지
 
 #### Atomic costs / ItemInstance
 
@@ -76,57 +85,80 @@ Implementation checkpoint:
   - Wand charge + Action
   - 부족 quantity/charge는 economy까지 rollback
 
+#### Runtime turn / Combatant state
+
+- [x] initiative ordering / round / active actor를 Phase 09 `RulesRuntimeState` session으로 이동
+- [x] `beginTurn()` 기반 Action / Bonus Action / Reaction / movement reset
+- [x] manual actor 선택은 spent economy를 리셋하지 않음
+- [x] round wrap은 temporary movementMaximum이 아니라 base speed로 복원
+- [x] Scene HP/economy 변경을 runtime에 reconcile하고 다시 projection
+- [x] initiative 도중 Combatant instantiate 시 active `RulesRuntimeState`에 즉시 materialize
+- [x] 동적 Combatant 추가가 현재 턴을 재시작하지 않고 initiative order에 합류
+
+#### ResolutionEvent / Activity / Undo
+
+- [x] fully atomic Shortbow transaction의 raw `ResolutionEvent[]`를 application 결과에 보존
+- [x] Shortbow Activity Log를 committed `ResolutionEvent[]`에서 직접 projection
+- [x] Shortbow safe Undo를 before-snapshot 복원 대신 event state-change inverse로 실행
+- [x] event `after`와 현재 state가 다르면 stale Undo를 explicit reject
+- [x] event-native Undo 후 turn runtime에도 HP/economy를 reconcile
+
 #### Representative E2E paths
 
 - [x] Second Wind
   - structured healing → domain healing → Bonus Action + class resource transaction → Activity → Undo
 - [x] Thunderwave
-  - target-bound saves → save-half → typed damage → resistance → Temp HP → Action cost
+  - runtime target save stats → save-half → typed damage → resistance → Temp HP → Action cost
 - [x] Shortbow fully atomic staged attack
-  - staged UI preview 유지
+  - canonical weapon catalog에서 `1d6`, `ammunition:80/320` 관계 사용
+  - runtime scene target distance 사용
   - Apply 시 `resolveAttack` 하나로 targeting → d20 → critical dice → typed damage → Action economy
   - miss도 Action spend만 atomic commit
   - preview/domain drift는 explicit reject
   - critical은 **damage dice만 두 배**, flat modifier는 1회
+  - Activity / Undo는 committed ResolutionEvent 기반
 - [x] Healing Potion
   - structured `2d4+2` → healing → item quantity + Action transaction → Undo
-- [x] Wand representative ItemInstance path
-  - structured `3d4+3` → typed force damage → charge + Action transaction → Undo
+- [x] Wand
+  - visual `3d4` replay → typed force damage → charge + Action transaction → Undo
 
-### 현재 integration checkpoint
+### 현재 verified implementation checkpoint
 
 ```text
-60b9dff44c20b8f752ec2c800e2d9ad6df882006
+0a13cd7ae759296df2d8c750a10658880014f6d1
 ```
 
 검증:
 
 ```text
-Contract validation              ✅
-Rules Domain                     ✅
-Phase 08 zero-pending audit      ✅
+Contract validation               ✅
+Rules Domain                      ✅
+Phase 08 zero-pending audit       ✅
 Phase 07/08 aggregate progression ✅
-Phase 09 service/adapter tests   ✅
-TypeScript                       ✅
-UI production build              ✅
+Phase 09 service/adapter tests    ✅
+3D dice tests                     ✅
+TypeScript                        ✅
+UI production build               ✅
 ```
 
 ### 다음 Phase 09 작업
 
-- [ ] transitional reference save/target/attack facts를 실제 Character/Combatant runtime stat provider로 교체
-- [ ] Shortbow 외 공격도 authoritative targeting/spatial data가 있는 범위부터 atomic `resolveAttack`으로 확대
-- [ ] Combatant instantiate/runtime action을 실제 `RulesRuntimeState`로 실행
-- [ ] Initiative / turn economy / Reaction / movement의 authoritative state를 `RulesRuntimeState`로 이동
-- [ ] Activity Log를 application 재포맷이 아니라 committed domain event stream에서 직접 projection
-- [ ] Safe Undo/correction을 before-snapshot bridge에서 committed ResolutionEvent history 기준으로 전환
+- [ ] Scene presentation `distance` 문자열과 default visibility/cover를 pairwise structured spatial/targeting runtime fact로 교체
+- [ ] imported Combatant Definition에 ability/save/speed/defense/action runtime stats를 구조화하고 stat provider에 연결
+- [ ] Combatant runtime action의 Mock `+3 · 1d6+1` 생성 경로를 실제 Definition/canonical action contract로 교체
+- [ ] Shortbow 외 공격도 authoritative spatial/runtime data가 있는 범위부터 atomic `resolveAttack`으로 확대
+- [ ] Thunderwave / Second Wind / Potion / Wand Activity를 raw committed ResolutionEvent stream projection으로 확대
+- [ ] event-native Undo inverse를 resource/item/effect/concentration/life state change까지 확대
 - [ ] saving-throw multi-target damage/economy를 하나의 atomic transaction 형태로 더 수렴
+- [ ] movement / Reaction / interrupt command를 turn runtime 직접 command로 수렴
 - [ ] Character Creation 전용 choice graph를 `ChoiceDefinition` 경로로 점진 통합
 - [ ] level-up / rest-time configuration / class-feature commands를 공용 application service로 수렴
 - [ ] UI component에 named-rule 계산이 재유입되지 않는 구조 gate 추가
+- [ ] optional WebGL/physics 3D dice renderer
 
 Phase 09 완료 기준:
 
-> 기존 화면 흐름을 유지하면서 대표 Character/Combatant 플레이 경로가 MockAdapter의 규칙 계산 없이 실제 rules domain을 사용한다.
+> 기존 화면 흐름을 유지하면서 대표 Character/Combatant 플레이 경로가 MockAdapter의 규칙 계산 없이 실제 rules domain을 사용하고, authoritative runtime/event state가 Activity와 Undo까지 일관되게 이어진다.
 
 ## Phase 10 — Persistence / Content Platform
 
