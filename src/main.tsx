@@ -26,6 +26,7 @@ import "./app/phase09RealItemCostAdapter";
 import "./app/phase09RealNoRollDamageAdapter";
 import "./app/phase09RealTurnRuntimeAdapter";
 import "./app/phase09RealRuntimeStatAdapter";
+import "./app/phase09RealRuntimeAttackAdapter";
 import "./app/subclassRuntimeAdapter";
 import "./app/pactTomeRuntimeAdapter";
 import "./app/druidCircleLandSpellRuntimeAdapter";
