@@ -1,4 +1,6 @@
+import "./lifeRuntimeContracts";
 import type { ActionVm, DamageComponentView, EconomyVm, SceneEntity } from "./contracts";
+import type { RuntimeLifeVm } from "./lifeRuntimeContracts";
 import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09ReferenceRulesFacts";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { resolveAttack } from "../domain/attack";
@@ -39,6 +41,7 @@ export type AtomicAttackTransactionResult =
       actorEconomy:EconomyVm;
       targetHp:number;
       targetTempHp:number;
+      targetLife:RuntimeLifeVm;
       stateChanges:string[];
       provenance:string[];
       events:ResolutionEvent[];
@@ -57,17 +60,22 @@ function defensesFor(target:SceneEntity):DamageDefenseContribution[] {
   ];
 }
 
+function runtimeLife(entity:SceneEntity) {
+  const life=entity.runtimeLife;
+  return {
+    hp:{ current:entity.hp, maximum:entity.maxHp, temporary:entity.tempHp },
+    deathSaves:{ successes:life?.deathSaves.successes ?? 0, failures:life?.deathSaves.failures ?? 0 },
+    stable:life?.stable ?? false,
+    unconscious:life?.unconscious ?? false,
+    dead:life?.dead ?? false,
+  };
+}
+
 function runtimeCombatant(entity:SceneEntity,economy:EconomyVm) {
   return {
     id:entity.id,
     baseSpeed:economy.movementMax,
-    life:{
-      hp:{ current:entity.hp, maximum:entity.maxHp, temporary:entity.tempHp },
-      deathSaves:{ successes:0, failures:0 },
-      stable:false,
-      unconscious:false,
-      dead:false,
-    },
+    life:runtimeLife(entity),
     economy:{
       action:economy.action,
       bonusAction:economy.bonusAction,
@@ -128,6 +136,16 @@ function projectEconomy(state:RulesRuntimeState,actorId:string):EconomyVm {
     reaction:economy.reaction,
     movement:economy.movement,
     movementMax:economy.movementMaximum,
+  };
+}
+
+function projectLife(state:RulesRuntimeState,targetId:string):RuntimeLifeVm {
+  const life=state.combatants[targetId].life;
+  return {
+    deathSaves:{ ...life.deathSaves },
+    stable:life.stable,
+    unconscious:life.unconscious,
+    dead:life.dead,
   };
 }
 
@@ -193,6 +211,7 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
   const damage = "skipped" in damageResult ? undefined : damageResult;
   const damageRoll = "skipped" in rollResult ? undefined : rollResult;
   const targetAfter = transaction.state.combatants[request.target.id].life.hp;
+  const targetLife=projectLife(transaction.state,request.target.id);
   const actorEconomy = projectEconomy(transaction.state,request.actor.id);
   const stateChanges:string[] = [];
   if (request.actorEconomy.action && !actorEconomy.action) stateChanges.push("행동 사용");
@@ -200,6 +219,10 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
   if (request.actorEconomy.reaction && !actorEconomy.reaction) stateChanges.push("반응 사용");
   if (request.target.tempHp !== targetAfter.temporary) stateChanges.push(`${request.target.name} 임시 HP ${request.target.tempHp} → ${targetAfter.temporary}`);
   if (request.target.hp !== targetAfter.current) stateChanges.push(`${request.target.name} HP ${request.target.hp} → ${targetAfter.current}`);
+  const beforeLife=request.target.runtimeLife;
+  if ((beforeLife?.stable ?? false)!==targetLife.stable) stateChanges.push(`${request.target.name} stable ${beforeLife?.stable ?? false} → ${targetLife.stable}`);
+  if ((beforeLife?.unconscious ?? false)!==targetLife.unconscious) stateChanges.push(`${request.target.name} unconscious ${beforeLife?.unconscious ?? false} → ${targetLife.unconscious}`);
+  if ((beforeLife?.dead ?? false)!==targetLife.dead) stateChanges.push(`${request.target.name} dead ${beforeLife?.dead ?? false} → ${targetLife.dead}`);
 
   const component = damage?.components[0];
   const damageComponent = component ? {
@@ -221,6 +244,7 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
     actorEconomy,
     targetHp:targetAfter.current,
     targetTempHp:targetAfter.temporary,
+    targetLife,
     stateChanges,
     provenance:events.flatMap((event) => event.provenance.map((entry) => `${entry.source} · ${entry.status} · ${entry.reason}`)),
     events,

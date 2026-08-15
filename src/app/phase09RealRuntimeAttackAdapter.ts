@@ -1,5 +1,6 @@
 import "./phase09RealRuntimeStatAdapter";
 import "./combatantRuntimeContracts";
+import "./lifeRuntimeContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, CharacterSummary, ResolutionView, SceneEntity, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
@@ -109,6 +110,7 @@ function apply(internal:RuntimeAttackAdapterState,resolution:ResolutionView,tran
   if (!target) return false;
   target.hp = transaction.targetHp;
   target.tempHp = transaction.targetTempHp;
+  target.runtimeLife=structuredClone(transaction.targetLife);
   internal.scene.economyByActor[resolution.actorId] = { ...transaction.actorEconomy };
   resolution.stateChanges.push(...transaction.stateChanges);
   resolution.provenance.push(...transaction.provenance);

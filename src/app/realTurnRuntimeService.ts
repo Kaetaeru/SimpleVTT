@@ -1,3 +1,4 @@
+import "./lifeRuntimeContracts";
 import type { EconomyVm, SceneEntity, SceneVm } from "./contracts";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
@@ -67,15 +68,16 @@ function initiativeOrder(scene:SceneVm) {
 
 function runtimeCombatant(scene:SceneVm,entity:SceneEntity):RulesRuntimeState["combatants"][string] {
   const speed=scene.economyByActor[entity.id]?.movementMax ?? 30;
+  const life=entity.runtimeLife;
   return {
     id:entity.id,
     baseSpeed:speed,
     life:{
       hp:{ current:entity.hp, maximum:entity.maxHp, temporary:entity.tempHp },
-      deathSaves:{ successes:0, failures:0 },
-      stable:false,
-      unconscious:false,
-      dead:false,
+      deathSaves:{ successes:life?.deathSaves.successes ?? 0, failures:life?.deathSaves.failures ?? 0 },
+      stable:life?.stable ?? false,
+      unconscious:life?.unconscious ?? false,
+      dead:life?.dead ?? false,
     },
     economy:beginTurn(speed),
     resources:[],
@@ -130,6 +132,12 @@ export function projectTurnRuntimeToScene(session:TurnRuntimeSession,scene:Scene
       entity.hp=runtime.life.hp.current;
       entity.maxHp=runtime.life.hp.maximum;
       entity.tempHp=runtime.life.hp.temporary;
+      entity.runtimeLife={
+        deathSaves:{ ...runtime.life.deathSaves },
+        stable:runtime.life.stable,
+        unconscious:runtime.life.unconscious,
+        dead:runtime.life.dead,
+      };
     }
   }
 }
@@ -140,6 +148,16 @@ function sameEconomy(left:EconomyVm,right:EconomyVm) {
     && left.reaction===right.reaction
     && left.movement===right.movement
     && left.movementMax===right.movementMax;
+}
+
+function sameProjectedLife(runtime:RulesRuntimeState["combatants"][string]["life"],entity:SceneEntity) {
+  const life=entity.runtimeLife;
+  if (!life) return true;
+  return runtime.stable===life.stable
+    && runtime.unconscious===life.unconscious
+    && runtime.dead===life.dead
+    && runtime.deathSaves.successes===life.deathSaves.successes
+    && runtime.deathSaves.failures===life.deathSaves.failures;
 }
 
 export function synchronizeTurnRuntimeFromScene(session:TurnRuntimeSession,scene:SceneVm) {
@@ -158,6 +176,13 @@ export function synchronizeTurnRuntimeFromScene(session:TurnRuntimeSession,scene
       const hp=runtime.life.hp;
       if (hp.current!==entity.hp || hp.maximum!==entity.maxHp || hp.temporary!==entity.tempHp) {
         runtime.life.hp={ current:entity.hp, maximum:entity.maxHp, temporary:entity.tempHp };
+        changed=true;
+      }
+      if (!sameProjectedLife(runtime.life,entity)&&entity.runtimeLife) {
+        runtime.life.deathSaves={ ...entity.runtimeLife.deathSaves };
+        runtime.life.stable=entity.runtimeLife.stable;
+        runtime.life.unconscious=entity.runtimeLife.unconscious;
+        runtime.life.dead=entity.runtimeLife.dead;
         changed=true;
       }
     }

@@ -1,3 +1,4 @@
+import "./lifeRuntimeContracts";
 import type { CharacterResourceVm, ItemInstanceVm, SceneVm } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RuntimeStateChange } from "../domain/runtimeStateChange";
@@ -45,6 +46,10 @@ function currentValue(scene:SceneVm,resources:CharacterResourceVm[],items:ItemIn
     }
     return resources.find((resource)=>resource.id===change.resourceId)?.current;
   }
+  if (change.kind==="life") {
+    const life=scene.entities.find((entry)=>entry.id===change.targetId)?.runtimeLife;
+    return life?.[change.field];
+  }
   return undefined;
 }
 
@@ -75,6 +80,11 @@ function applyChange(scene:SceneVm,resources:CharacterResourceVm[],items:ItemIns
     }
     const resource=resources.find((entry)=>entry.id===change.resourceId)!;
     resource.current=change.before;
+    return;
+  }
+  if (change.kind==="life") {
+    const entity=scene.entities.find((entry)=>entry.id===change.targetId)!;
+    entity.runtimeLife![change.field]=change.before;
   }
 }
 
@@ -83,7 +93,9 @@ function validate(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstan
   const probeResources=structuredClone(resources);
   const probeItems=structuredClone(items);
   for (const change of [...changes].reverse()) {
-    if (change.kind!=="hp"&&change.kind!=="economy"&&change.kind!=="resource") return `event-native undo does not support ${change.kind} yet`;
+    if (change.kind!=="hp"&&change.kind!=="economy"&&change.kind!=="resource"&&change.kind!=="life") {
+      return `event-native undo does not support ${change.kind} yet`;
+    }
     if (change.kind==="economy"&&change.field==="extraActions") return "event-native undo does not support economy.extraActions yet";
     const current=currentValue(probeScene,probeResources,probeItems,change);
     if (current===undefined) return `event-native undo target is missing: ${change.targetId}`;
@@ -107,6 +119,7 @@ function undoLabel(change:RuntimeStateChange) {
     if (item) return `${change.targetId} item.${item.itemId}.${item.field} ${change.after} → ${change.before}`;
     return `${change.targetId} resource.${change.resourceId} ${change.after} → ${change.before}`;
   }
+  if (change.kind==="life") return `${change.targetId} life.${change.field} ${String(change.after)} → ${String(change.before)}`;
   return `${change.targetId} ${change.kind} 역적용`;
 }
 

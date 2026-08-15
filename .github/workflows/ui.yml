@@ -62,6 +62,7 @@ jobs:
           tests/ui/phase09RealSavingThrowAdapter.test.ts
           tests/ui/phase09RealAttackTransactionService.test.ts
           tests/ui/phase09RealAtomicAttackAdapter.test.ts
+          tests/ui/phase09RealLifeRuntime.test.ts
           tests/ui/phase09RealHealingRollService.test.ts
           tests/ui/phase09RealItemCostService.test.ts
           tests/ui/phase09RealItemCostAdapter.test.ts
