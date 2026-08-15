@@ -101,5 +101,7 @@ export function phase09DeterministicAttackFaces(action:ActionVm) {
     return Array.from({ length:action.runtimeAttack.diceCount*2 },()=>face);
   }
   if (action.id === "action.shortbow") return [4,4];
-  throw new Error(`missing deterministic attack dice fixture: ${action.id}`);
+  const formula=damageDice(action.damage?.[0]?.dice ?? "");
+  const face=Math.max(1,Math.ceil(formula.sides/2));
+  return Array.from({ length:formula.count*2 },()=>face);
 }
