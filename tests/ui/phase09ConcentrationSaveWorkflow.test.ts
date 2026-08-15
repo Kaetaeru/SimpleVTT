@@ -51,7 +51,8 @@ async function reachConcentrationPrompt(adapter:MockAdapter) {
 
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.resolution?.stage,"concentration-save");
+  assert.equal(snapshot.resolution?.stage,"save-animation");
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[]);
   assert.equal(snapshot.resolution?.canAdvance,false);
   assert.equal(snapshot.resolution?.concentrationSave?.targetId,"combatant.goblin-a");
   assert.equal(snapshot.resolution?.concentrationSave?.ability,"con");
