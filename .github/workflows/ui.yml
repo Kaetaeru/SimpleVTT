@@ -7,6 +7,7 @@ on:
       - "tests/ui/**"
       - "content/**"
       - "scripts/**"
+      - ".agents/UI_NAMED_RULE_BASELINE.json"
       - "docs/design/movement-modules.md"
       - "package.json"
       - "tsconfig.json"
@@ -21,6 +22,7 @@ on:
       - "tests/ui/**"
       - "content/**"
       - "scripts/**"
+      - ".agents/UI_NAMED_RULE_BASELINE.json"
       - "docs/design/movement-modules.md"
       - "package.json"
       - "tsconfig.json"
@@ -40,6 +42,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate content dependencies
         run: npm run generate:content
+      - name: Verify UI named-rule boundary
+        run: npm run test:ui-rule-boundary
       - name: Verify creation ChoiceDefinition convergence
         run: npx tsx --test tests/ui/characterCreationChoiceDefinition.test.ts tests/ui/characterCreationChoiceDefinitionStructure.test.ts
       - name: Verify progression choice schedule regression
