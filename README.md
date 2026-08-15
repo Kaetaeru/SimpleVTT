@@ -4,25 +4,31 @@ SimpleVTT is a local-first desktop companion for lightweight D&D play. The repos
 
 ## Current development gate
 
-Active issue: #51 — Rules Engine Phase 08, canonical catalog relationships and class/subclass mechanics  
+Phase 08 implementation issue: #51 — canonical catalog relationships and class/subclass mechanics  
 Active PR: #52 — `rules: execute Phase 08 catalog relationships`  
 Active branch: `agent/50-rules-phase08`
 
-Phase 08 replaces Phase 07 `catalog-pending` progression choices with canonical stable-ID relationships and mechanics-backed execution. The current branch includes generated spell/feat/weapon/class-skill metadata, executable level-up choices, representative class/subclass mechanics, and runtime projection through the application adapter boundary.
+Phase 08 replaces Phase 07 `catalog-pending` progression choices with canonical stable-ID relationships and mechanics-backed execution. The current branch now has an outermost progression audit covering all 12 classes across levels 2-20 with **zero `catalog-pending` choices**, while preserving explicit rejection for downstream mechanics that require a primitive outside the current engine boundary.
 
-Recent Phase 08 coverage includes:
+Phase 08 coverage includes:
 
-- Ranger and Paladin progression, Fighting Styles, prepared-spell relationships, and representative class mechanics
-- Cleric and Life Domain progression/runtime, including Divine Intervention and Greater Divine Intervention's executable Wish spell-replication path for supported level-8-or-lower spell mechanics
-- Druid and Circle of the Land mechanics, including session-scoped current-land configuration and rest-time spell-package reconfiguration
-- Fighter and Champion progression/runtime, Weapon Mastery, Fighting Style, and subclass feature relationships
-- Bard and College of Lore, including Bardic Inspiration runtime mechanics
-- Sorcerer and Draconic Sorcery progression/runtime
+- generated spell, feat, weapon, and class-skill rule metadata plus stable-ID/provenance persistence
+- Expertise, higher-level spell choices, Metamagic, Invocations, Mystic Arcanum, Epic Boons, Weapon Mastery, and Fighting Style progression
+- Ranger / Hunter and Paladin / Oath of Devotion progression and representative runtime mechanics
+- Cleric / Life Domain, including Divine Intervention and Greater Divine Intervention's executable Wish spell-replication path for supported level-8-or-lower spell mechanics
+- Druid / Circle of the Land, including session-scoped current-land configuration and rest-time spell-package reconfiguration
+- Fighter / Champion progression/runtime, Weapon Mastery, Fighting Style, and subclass feature relationships
+- Barbarian / Path of the Berserker mechanics-backed high-level subclass relationships
+- Monk / Warrior of the Open Hand, including Focus projection, Wholeness of Body, Fleet Step, and Quivering Palm contracts
+- Rogue / Thief, including Supreme Sneak, Use Magic Device, and Thief's Reflexes contracts
+- Bard / College of Lore, including Bardic Inspiration runtime mechanics
+- Sorcerer / Draconic Sorcery progression/runtime
 - Wizard spellbook/Spell Mastery/Signature Spells plus School of Evocation progression/runtime
-- Warlock Pact Magic, Invocations, Mystic Arcanum, and Pact of the Tome rest configuration
-- Epic Boon progression from the generated canonical feat catalog
+- Warlock / Fiend Patron plus Pact Magic, Invocations, Mystic Arcanum, and Pact of the Tome rest configuration
 
-The remaining Phase 08 work is tracked in issue #51. Unsupported mechanics remain explicit blockers rather than silent approximations; additional SRD class/subclass/feat relationships are added only when their required generic primitives are executable.
+The Phase 08 rules implementation checkpoint is `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`. Contract validation, Rules Domain, Phase 07/08 aggregate progression, TypeScript, UI runtime gates, and production build are green on that checkpoint.
+
+Issue #51 remains the integration tracker for PR #52. After this stacked PR is integrated, the next implementation gate is Phase 09: converge the executable Phase 08 rules paths into real application/domain services and remove MockAdapter rule calculation from representative play flows.
 
 ## Application architecture
 

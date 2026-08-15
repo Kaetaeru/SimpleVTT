@@ -18,18 +18,26 @@
 - [x] Rules Engine Phase 05 — EffectInstance lifecycle / atomic ResolutionEvent
 - [x] Rules Engine Phase 06 — spellcasting kernel + reference runtime bridge
 - [x] Rules Engine Phase 07 — 1-20 progression / multiclass / ChoiceDefinition
-- [ ] Rules Engine Phase 08 — canonical catalog relationships + class/subclass mechanics ← **current**
+- [x] Rules Engine Phase 08 — canonical catalog relationships + class/subclass mechanics
+- [ ] Rules Engine Phase 09 — real mechanics integration / RealAdapter ← **next**
 
-현재 작업 브랜치/PR:
+Phase 08 integration branch/PR:
 
 ```text
 Issue #51  rules: execute Phase 08 catalog relationships
 PR    #52  agent/50-rules-phase08
 ```
 
-## Phase 08 — Catalog Relationships / Class Mechanics
+## Phase 08 — Catalog Relationships / Class Mechanics ✅
 
 목표: Phase 07의 `catalog-pending` 선택을 실제 SRD 5.2.1 stable-ID 관계와 mechanics-backed 실행 경로로 교체한다.
+
+완료 기준:
+
+- 12개 클래스 × 레벨 2-20 outermost progression audit에서 `catalog-pending` **0개**
+- unsupported downstream mechanic은 silent approximation 없이 explicit reject
+- stable ID + provenance + ChoiceDefinition + atomic revision-checked commit 유지
+- Contract / Rules Domain / Phase 07/08 aggregate progression / TypeScript / UI-build 전체 green
 
 ### 완료/구현된 주요 범위
 
@@ -39,28 +47,35 @@ PR    #52  agent/50-rules-phase08
 - [x] Expertise, higher-level spell choices, Metamagic, Invocations, Mystic Arcanum
 - [x] Epic Boon generated catalog + Phase 08 progression resolver + CharacterSheet projection
 - [x] weapon mastery / fighting style progression catalogs
-- [x] Ranger / Paladin canonical progression + representative runtime mechanics
+- [x] Ranger / Hunter progression + representative runtime mechanics
+- [x] Paladin / Oath of Devotion progression + representative runtime mechanics
 - [x] Cleric + Life Domain mechanics-backed progression/runtime
 - [x] Greater Divine Intervention Wish basic spell-replication path for fully executable level-8-or-lower spell mechanics + exact 2d4 Long-Rest lockout
 - [x] Druid + Circle of the Land mechanics-backed progression/runtime + session-scoped current-land configuration
 - [x] Fighter + Champion mechanics-backed progression/runtime
+- [x] Barbarian + Path of the Berserker high-level subclass mechanics
+- [x] Monk + Warrior of the Open Hand high-level subclass relationships and mechanics contracts
+- [x] Rogue + Thief high-level subclass relationships and mechanics contracts
 - [x] Bard progression + College of Lore + Bardic Inspiration domain/runtime
 - [x] Wizard spellbook / Scholar / Spell Mastery / Signature Spells / Long-Rest preparation + School of Evocation domain/runtime
 - [x] Sorcerer progression / Metamagic replacement / Draconic Sorcery domain/runtime
-- [x] Warlock Pact Magic / Invocation replacement / Mystic Arcanum / Pact of the Tome
+- [x] Warlock Pact Magic / Invocation replacement / Mystic Arcanum / Pact of the Tome + Fiend Patron mechanics
 - [x] Wizard Long-Rest, Pact of the Tome rest, Circle of the Land rest application commands
 - [x] authoritative attack transaction, compound damage, restricted extra Actions, resource recovery lockouts
-- [x] latest Bard Lore / Draconic / Evocation domain and UI/runtime tests are part of the formal npm CI gates
+- [x] latest subclass domain/UI/runtime tests are part of the formal CI gates
 
-### Phase 08 마감 작업
+### Phase 08 마감 결과
 
-- [x] 최신 Bard Lore / Sorcerer Draconic / Wizard Evocation progression wrapper를 실제 앱 adapter chain에 끝까지 연결
-- [x] 최신 Phase 08 domain/UI 테스트를 `package.json`의 정식 CI gate에 모두 편입
-- [x] public Actions에서 Contract / Rules Domain / UI-build full green 재확립 — runtime checkpoint `ca897bfea86d6265cf65b9e3f5c8acd59174ac48`
-- [x] Greater Divine Intervention의 Wish basic replication을 executable mechanic으로 연결; 미지원 Wish 효과/복제 대상은 explicit reject 유지
-- [ ] 남은 SRD class/subclass/feat 관계 중 아직 필요한 공용 primitive를 구현하고 silent approximation 없이 연결
-- [x] Circle of the Land의 current-land 선택을 permanent Character field가 아닌 명시적 rest/session configuration state로 정리
-- [x] PR #52 설명과 README/current-work를 현재 구현 상태에 맞춰 동기화
+- [x] Bard Lore / Sorcerer Draconic / Wizard Evocation progression wrapper를 실제 앱 adapter chain에 끝까지 연결
+- [x] 최신 Phase 08 domain/UI 테스트를 정식 CI gate에 편입
+- [x] Greater Divine Intervention Wish basic replication executable path 연결
+- [x] Circle of the Land current-land를 permanent Character field가 아닌 rest/session configuration state로 정리
+- [x] Berserker / Devotion / Hunter / Fiend / Open Hand / Thief 고레벨 subclass catalog relationship을 mechanics-backed stable ID로 연결
+- [x] outermost Phase 08 audit: `catalog-pending` 18 → 0
+- [x] rules implementation checkpoint `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`에서 Contract / Rules Domain / UI full green
+- [x] README / CURRENT_WORK / PR #52 completion state 동기화
+
+Phase 08의 completion boundary는 **catalog relationship과 현재 rules primitive로 표현 가능한 mechanics-backed contract를 모두 materialize하고, 현재 primitive 밖의 downstream 실행 형태는 explicit reject로 남기는 것**이다. 예를 들어 Open Hand Quivering Palm의 Action activation은 실행되며, Attack action 내부의 단일 공격 대체 경로는 generic attack-sequence replacement primitive가 생길 때까지 명시적으로 거부한다.
 
 ## Phase 09 — Mechanics Integration / RealAdapter
 
@@ -129,11 +144,9 @@ Phase 11 완료 기준:
 ## 현재 Gate
 
 ```text
-Phase 01-07 rules foundation ✅
+Phase 01-08 rules/catalog foundation ✅
         ↓
-Phase 08 catalog/class mechanics ← current
-        ↓
-Phase 09 real mechanics integration / RealAdapter
+Phase 09 real mechanics integration / RealAdapter ← next
         ↓
 Phase 10 persistence / ContentCatalog / homebrew platform
         ↓
