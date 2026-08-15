@@ -1,0 +1,37 @@
+name: Progression Fix Windows Test Build
+
+on:
+  push:
+    branches:
+      - "agent/55-progression-fix-windows-test-build"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-test-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify progression fix and latest SimpleVTT build
+        run: npm run build
+      - name: Verify focused progression regression
+        run: npx tsx --test tests/ui/progressionChoiceScheduleRegression.test.ts
+      - name: Build Windows test app
+        run: npm run tauri:build
+      - name: Upload progression fix Windows test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-progression-fix-windows
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            src-tauri/target/release/simplevtt.exe
+            src-tauri/target/release/bundle/nsis/*.exe
