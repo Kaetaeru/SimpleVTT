@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/phase09AuthoritativeSpellcastingAdapter";
+import "../../src/app/phase09SpellcastingRuntimeRouter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
