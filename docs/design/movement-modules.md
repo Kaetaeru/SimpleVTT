@@ -55,6 +55,24 @@ interface MovementModuleCommand {
 
 Modules call the prepared `MovementModuleHost.apply(...)` / `applyMovementModuleCommand(...)` hook. Core itself never originates this command. The current Phase 09 host applies this hook to an active Initiative runtime; future map modules may add a separate freeform spatial-update capability without introducing turn economy into Freeform.
 
+## Manual movement-triggered reactions
+
+Because mapless Core does not observe token paths, it must not infer opportunity attacks or other movement-triggered reaction attacks.
+
+When no movement module supplies an authoritative trigger, the **current-turn controller** explicitly declares the movement reaction from the Scene UI. The current Phase 09 input records:
+
+- the current moving/provoking Actor;
+- the reacting Actor;
+- the attack Action used as the reaction;
+- trigger kind (`opportunity attack` or another manually described movement reaction attack);
+- authoritative distance, visibility, cover, and mutual-sight facts at the trigger instant.
+
+This manual declaration is an input fact, not an automatic ruling. Core still validates the submitted facts against the selected attack and runtime state. Reaction availability, targeting/range/sight legality, attack roll, critical handling, typed damage, life state, Activity, and Undo remain authoritative rules-domain work.
+
+A manual reaction attack is committed atomically: the domain Reaction spend and the attack are one transaction. If targeting or attack application is rejected, the Reaction spend rolls back as well. The reaction attack does not consume the reactor's normal Action.
+
+Future 2D/3D modules may originate the same trigger through a module integration seam. They must not receive a separate rules implementation; manual input and module-generated triggers converge on the same reaction/attack transaction boundary.
+
 ## Default behavior without a module
 
 Without a movement/map module:
@@ -63,6 +81,7 @@ Without a movement/map module:
 - no token coordinates are stored or simulated by core;
 - no pathfinding or grid calculations occur;
 - `SimpleVttAdapter` exposes no default movement command;
+- the current-turn controller may explicitly input movement-triggered reaction attacks;
 - existing/imported/manual spatial facts may still be used by rules resolution;
 - if a rule requires a spatial fact that is unavailable, resolution rejects explicitly rather than inventing distance or cover.
 
@@ -82,3 +101,5 @@ A future executable module/plugin system may host 2D/3D presentation capabilitie
 6. Module-supplied spatial facts carry module provenance.
 7. Initiative movement legality remains authoritative in the rules domain when a movement module asks core to enforce it.
 8. Core does not persist or assume a particular coordinate system.
+9. Core never auto-detects an opportunity attack without authoritative movement-trigger input.
+10. Manual and module-originated movement reaction attacks converge on the same authoritative Reaction + attack transaction.
