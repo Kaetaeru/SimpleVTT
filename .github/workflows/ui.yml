@@ -40,6 +40,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate content dependencies
         run: npm run generate:content
+      - name: Verify progression choice schedule regression
+        run: npx tsx --test tests/ui/progressionChoiceScheduleRegression.test.ts
       - name: Verify Bardic Inspiration runtime
         run: npx tsx --test tests/ui/bardicInspirationRuntimeAdapter.test.ts
       - name: Verify College of Lore progression runtime
