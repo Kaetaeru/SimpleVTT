@@ -5,7 +5,6 @@ import { SKILL_LABELS, backgroundSkills, classIdFromName, classLoadoutOptions, c
 import {
   activeOriginFeats,
   classAndBackgroundLoadout,
-  creationChoiceSpecs,
   finalAbilities,
   finalCantrips,
   finalLanguageNames,
@@ -15,11 +14,13 @@ import {
   finalSkillNames,
   finalSpellbook,
   finalToolProficiencies,
-  normalizeChoiceSelections,
   selectedChoiceLabels,
   speciesAutomaticEffects,
-  toggleChoiceSelection,
 } from "./characterCreationV10Choices";
+import {
+  normalizeCreationChoiceSelections,
+  toggleCreationChoiceSelection,
+} from "./characterCreationChoiceDefinition";
 import { buildCreationPlanV10, normalizeCreationV10, recommendedAbilitiesV10 } from "./characterCreationV10Plan";
 
 type State = {
@@ -213,7 +214,7 @@ MockAdapter.prototype.updateCharacterDraft = async function (command) {
     return state.getSnapshot();
   }
   if (command.type === "toggle-class-choice" && command.choiceId) {
-    toggleChoiceSelection(draft, command.choiceId, String(command.value ?? ""));
+    toggleCreationChoiceSelection(draft, command.choiceId, String(command.value ?? ""));
     normalizeCreationV10(draft);
     return state.getSnapshot();
   }
@@ -244,9 +245,9 @@ MockAdapter.prototype.updateCharacterDraft = async function (command) {
     draft.equipmentPreset = classLoadoutOptions(classIdFromName(draft.className))[0]?.id ?? "";
     draft.activeSectionId = "review";
   }
-  normalizeChoiceSelections(draft);
+  normalizeCreationChoiceSelections(draft);
   normalizeClassSkills(draft);
-  normalizeChoiceSelections(draft);
+  normalizeCreationChoiceSelections(draft);
   normalizeCreationV10(draft);
   return state.getSnapshot();
 };
