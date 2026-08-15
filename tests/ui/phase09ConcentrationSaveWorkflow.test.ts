@@ -14,27 +14,37 @@ async function startAelarInitiative(adapter:MockAdapter) {
   await adapter.setCurrentActor("char.aelar");
 }
 
-function seedGoblinConcentration(adapter:MockAdapter) {
+function mutateRuntime(
+  adapter:MockAdapter,
+  mutate:(state:NonNullable<ReturnType<typeof snapshotAdapterTurnRuntimeState>>)=>void,
+) {
   const scene=internalScene(adapter);
   const before=snapshotAdapterTurnRuntimeState(adapter,scene);
   assert.ok(before,"initiative runtime must exist");
   const next=structuredClone(before!);
-  next.concentration["combatant.goblin-a"]={
-    actorId:"combatant.goblin-a",
-    groupId:"goblin:focus",
-    sourceId:"spell:focus",
-  };
-  next.effects.push(createEffect({
-    id:"goblin-focus-effect",
-    sourceId:"spell:focus",
-    sourceActorId:"combatant.goblin-a",
-    targetId:"char.aelar",
-    kind:"marker",
-    duration:{ kind:"concentration" },
-    concentrationGroupId:"goblin:focus",
-  },next.clock));
+  mutate(next);
   next.revision=before!.revision+1;
   assert.equal(commitAdapterTurnRuntimeState(adapter,scene,before!.revision,next),true);
+  return next;
+}
+
+function seedGoblinConcentration(adapter:MockAdapter) {
+  mutateRuntime(adapter,(state)=>{
+    state.concentration["combatant.goblin-a"]={
+      actorId:"combatant.goblin-a",
+      groupId:"goblin:focus",
+      sourceId:"spell:focus",
+    };
+    state.effects.push(createEffect({
+      id:"goblin-focus-effect",
+      sourceId:"spell:focus",
+      sourceActorId:"combatant.goblin-a",
+      targetId:"char.aelar",
+      kind:"marker",
+      duration:{ kind:"concentration" },
+      concentrationGroupId:"goblin:focus",
+    },state.clock));
+  });
 }
 
 async function reachConcentrationPrompt(adapter:MockAdapter) {
@@ -98,7 +108,7 @@ test("successful fixed concentration save commits damage and keeps concentration
   assert.ok(runtime?.effects.some((effect)=>effect.id==="goblin-focus-effect"));
 });
 
-test("failed fixed concentration save removes concentration group and event-native Undo restores all state", async () => {
+test("failed fixed concentration save removes concentration group, projects raw Activity, and event-native Undo restores all state", async () => {
   const adapter=new MockAdapter();
   await startAelarInitiative(adapter);
   seedGoblinConcentration(adapter);
@@ -114,6 +124,12 @@ test("failed fixed concentration save removes concentration group and event-nati
   assert.equal(runtime?.concentration["combatant.goblin-a"],undefined);
   assert.equal(runtime?.effects.some((effect)=>effect.id==="goblin-focus-effect"),false);
 
+  const activity=snapshot.activity[0];
+  assert.equal(activity.id,snapshot.resolution?.id);
+  assert.ok(activity.detail.some((line)=>line.includes("Concentration broken by damage")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.goblin-a concentration goblin:focus (spell:focus) → —")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar effect.goblin-focus-effect removed")));
+
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);
@@ -121,4 +137,31 @@ test("failed fixed concentration save removes concentration group and event-nati
   runtime=snapshotAdapterTurnRuntimeState(adapter,internalScene(adapter));
   assert.equal(runtime?.concentration["combatant.goblin-a"]?.groupId,"goblin:focus");
   assert.ok(runtime?.effects.some((effect)=>effect.id==="goblin-focus-effect"));
+});
+
+test("concentration save input rejects stale runtime revision without discarding the intervening mutation", async () => {
+  const adapter=new MockAdapter();
+  await startAelarInitiative(adapter);
+  seedGoblinConcentration(adapter);
+  await reachConcentrationPrompt(adapter);
+
+  mutateRuntime(adapter,(state)=>{
+    state.effects.push(createEffect({
+      id:"intervening-after-concentration-prompt",
+      sourceId:"effect:external",
+      targetId:"char.aelar",
+      kind:"marker",
+      duration:{ kind:"permanent" },
+    },state.clock));
+  });
+
+  await adapter.submitConcentrationSaveD20(15);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.match(snapshot.resolution?.finalOutcome ?? "",/revision changed while concentration save awaited input/);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
+  const runtime=snapshotAdapterTurnRuntimeState(adapter,internalScene(adapter));
+  assert.equal(runtime?.concentration["combatant.goblin-a"]?.groupId,"goblin:focus");
+  assert.ok(runtime?.effects.some((effect)=>effect.id==="intervening-after-concentration-prompt"));
 });
