@@ -72,6 +72,7 @@ jobs:
           tests/domain/compoundDamage.test.ts
           tests/domain/attackRiders.test.ts
           tests/domain/openD20.test.ts
+          tests/domain/diceFormula.test.ts
       - name: Verify spellcasting and feature resources
         run: >-
           npx tsx --test

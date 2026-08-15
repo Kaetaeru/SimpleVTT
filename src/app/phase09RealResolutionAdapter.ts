@@ -13,6 +13,7 @@ import type {
 import { MockAdapter } from "./mockAdapter";
 import {
   phase09ReferenceAttackFact,
+  phase09ReferenceHealingFact,
   phase09ReferenceSaveModifier,
   phase09ReferenceTargetingFact,
 } from "./phase09ReferenceRulesFacts";
@@ -22,6 +23,7 @@ import {
 } from "./realAttackTransactionService";
 import { resolveActionCostTransaction } from "./realActionCostService";
 import { resolveSceneDamage, resolveSceneHealing } from "./realHealthService";
+import { resolveHealingRollResolution } from "./realHealingRollService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
 import { resolveSavingThrowResolution } from "./realSavingThrowService";
 
@@ -53,15 +55,17 @@ interface Phase09ResolutionAdapterState {
 }
 
 const pendingAtomicAttacks = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
+const REAL_HEALING_ACTION_IDS = new Set(["action.second-wind","action.healing-word","action.healing-potion"]);
 
 function resolutionId() {
   return `resolution.phase09.${Date.now()}.${Math.floor(Math.random() * 1000)}`;
 }
 
-function migratedD20Action(action:ActionVm) {
+function migratedResolutionAction(action:ActionVm) {
   return action.resolutionKind === "ability-check"
     || action.resolutionKind === "attack"
-    || action.resolutionKind === "saving-throw";
+    || action.resolutionKind === "saving-throw"
+    || (action.resolutionKind === "healing" && REAL_HEALING_ACTION_IDS.has(action.id));
 }
 
 function atomicAttackAction(action:ActionVm) {
@@ -107,7 +111,6 @@ function rejectAtomicAttack(internal:Phase09ResolutionAdapterState,error:string)
 }
 
 function buildAtomicAttack(
-  adapter:MockAdapter,
   internal:Phase09ResolutionAdapterState,
   action:ActionVm,
   resolution:ResolutionView,
@@ -228,10 +231,10 @@ phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
   internal.before = null;
 };
 
-MockAdapter.prototype.resolveAction = async function resolveActionWithRealD20(actionId:string,targetIds:string[]) {
+MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(actionId:string,targetIds:string[]) {
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const action = internal.action(actionId);
-  if (!action || !migratedD20Action(action)) {
+  if (!action || !migratedResolutionAction(action)) {
     return oldResolveAction.call(this,actionId,targetIds);
   }
 
@@ -279,6 +282,17 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealD20(ac
     return internal.getSnapshot();
   }
 
+  if (action.resolutionKind === "healing") {
+    internal.capture();
+    internal.resolution = resolveHealingRollResolution({
+      resolutionId:resolutionId(),
+      action,
+      targetIds,
+      healingFact:phase09ReferenceHealingFact(action.id),
+    });
+    return internal.getSnapshot();
+  }
+
   internal.capture();
   const checkLabel = action.details.find((entry) => entry.label === "판정")?.value ?? action.name;
   internal.resolution = resolveOpenAbilityCheckResolution({
@@ -302,7 +316,7 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
   if (!action) return oldAdvanceResolution.call(this);
 
   if (atomicAttackAction(action) && !resolution.adjudicated && resolution.stage === "attack-result") {
-    const transaction = buildAtomicAttack(this,internal,action,resolution);
+    const transaction = buildAtomicAttack(internal,action,resolution);
     if (transaction.status === "rejected") {
       pendingAtomicAttacks.delete(this);
       rejectAtomicAttack(internal,transaction.error);
