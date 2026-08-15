@@ -71,7 +71,9 @@ for (const moduleDir of moduleDirs) {
     const expected = canonical.get(item.id);
     if (!expected) throw new Error(`${item.id}: spell-definition has no canonical presentation metadata`);
     if (expected.level !== config.level || expected.ritual !== config.ritual) {
-      throw new Error(`${item.id}: spell-definition metadata disagrees with canonical level/Ritual metadata`);
+      const message = `${item.id}: mechanics level=${config.level}, ritual=${config.ritual}; canonical level=${expected.level}, ritual=${expected.ritual}`;
+      console.error(`::error title=Spell metadata mismatch::${message}`);
+      throw new Error(message);
     }
   }
 }
