@@ -57,6 +57,17 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] 갱신된 module spatial fact가 즉시 attack targeting에 반영되는 회귀 테스트
 - [x] canonical policy: `docs/design/movement-modules.md`
 
+#### Manual movement-triggered reactions
+- [x] Core는 기회공격/이동 유발 반응을 자동 감지하지 않음
+- [x] 현재 턴 조종자가 Scene의 `이동 반응 입력` 버튼으로 trigger를 명시적으로 선언
+- [x] provoker/reactor/attack + trigger 순간 distance/visibility/cover/mutual-sight를 authoritative input으로 제출
+- [x] Reaction availability / range / sight / cover / attack / critical / typed damage는 rules domain이 재검증
+- [x] Reaction spend + attack을 하나의 atomic transaction으로 commit; targeting 실패 시 Reaction도 rollback
+- [x] 반응 공격은 reactor의 일반 Action을 소비하지 않음
+- [x] raw ResolutionEvent Activity + event-native Undo로 Reaction/HP/Temp HP 복원
+- [x] future 2D/3D module trigger도 동일한 Reaction + attack boundary에 합류하도록 정책 고정
+- [x] movement policy 문서 변경이 구조 테스트와 함께 CI를 재실행하도록 workflow dependency 고정
+
 #### Damage / healing / life
 - [x] typed damage resistance/vulnerability/immunity → Temp HP → HP
 - [x] save-half → typed defense → Temp HP → HP
@@ -79,9 +90,10 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] Healing Potion = healing + Action + quantity one transaction
 - [x] Wand = typed damage + Action + charge one transaction
 - [x] Thunderwave = all target saves + per-target damage + Action one transaction
+- [x] Manual Opportunity Attack = declared trigger facts + Reaction + attack + damage one transaction
 
 #### ResolutionEvent / Activity / Undo
-- [x] Shortbow / Second Wind / Potion / Wand / Thunderwave raw events → Activity
+- [x] Shortbow / Second Wind / Potion / Wand / Thunderwave / manual Opportunity Attack raw events → Activity
 - [x] event-native inverse: HP / economy / Character resource / ItemInstance quantity+charges / life flags
 - [x] critical wolf death `dead false→true` → Undo `true→false`
 - [x] stale current state와 event `after` 불일치 시 explicit reject
@@ -95,17 +107,19 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 
 ### 현재 verified implementation checkpoint
 
-`9a62d689fe1cb77d223cc9d030da2f8ca0ee2bc6`
+`13d772e22d2d7f60ea08c95508c4c7869ad1c5ec`
 
 ```text
-Contract validation               ✅
-Rules Domain                      ✅
-Phase 08 zero-pending audit       ✅
-Phase 07/08 aggregate progression ✅
-Phase 09 service/adapter tests    ✅
-3D dice tests                     ✅
-TypeScript                        ✅
-UI production build               ✅
+Contract validation                    ✅
+Rules Domain                           ✅
+Phase 08 zero-pending audit            ✅
+Phase 07/08 aggregate progression      ✅
+Phase 09 service/adapter tests         ✅
+Manual movement reaction E2E           ✅
+Movement reaction UI/policy structure  ✅
+3D dice tests                          ✅
+TypeScript                             ✅
+UI production build                    ✅
 ```
 
 ### 다음 Phase 09 작업
@@ -161,3 +175,4 @@ Phase 09 완료 기준:
 6. unsupported mechanic은 explicit blocker로 유지한다.
 7. UI에 named-rule 계산을 넣지 않는다.
 8. **Core는 movement/map/coordinate 시스템을 소유하지 않는다.** 2D/3D 모듈은 coordinate-agnostic host contract를 통해 rules/spatial primitive만 재사용한다.
+9. **Core는 movement-triggered reaction을 자동 감지하지 않는다.** 현재 턴 조종자의 수동 입력 또는 future movement module의 authoritative trigger fact를 동일한 Reaction/action transaction으로 검증한다.
