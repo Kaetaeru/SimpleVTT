@@ -56,15 +56,17 @@ test("Bard 2 to 3 runtime materializes College of Lore bonus skills and Cutting 
   let snapshot = await adapter.getSnapshot();
   const subclassChoice = snapshot.progressionPlan?.choices.find((choice) => choice.id === `progression.${BARD_LORE_CLASS_ID}.3.subclass`);
   const preparedChoice = snapshot.progressionPlan?.choices.find((choice) => choice.id === `progression.${BARD_LORE_CLASS_ID}.3.column.준비 주문`);
-  const skillChoice = snapshot.progressionPlan?.choices.find((choice) => choice.id === loreBonusProficienciesChoiceId());
   assert.ok(subclassChoice);
   assert.ok(preparedChoice);
+
+  await commands.setProgressionChoice(subclassChoice!.id,{ kind:"options", optionIds:[`subclass:${subclassName}`] });
+  snapshot = await adapter.getSnapshot();
+  const skillChoice = snapshot.progressionPlan?.choices.find((choice) => choice.id === loreBonusProficienciesChoiceId());
   assert.ok(skillChoice);
   assert.equal(skillChoice?.options.length,18);
   assert.equal(skillChoice?.options.find((option) => option.label === "공연")?.disabledReason,"이미 숙련된 기술입니다.");
 
   const preparedId = preparedChoice!.options.find((option) => !option.disabledReason)!.id;
-  await commands.setProgressionChoice(subclassChoice!.id,{ kind:"options", optionIds:[`subclass:${subclassName}`] });
   await commands.setProgressionChoice(preparedChoice!.id,{ kind:"options", optionIds:[preparedId] });
   await commands.setProgressionChoice(skillChoice!.id,{ kind:"options", optionIds:["skill:history","skill:perception","skill:stealth"] });
   snapshot = await adapter.getSnapshot();
