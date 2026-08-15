@@ -121,7 +121,7 @@ function executeRest(
     changes.push(
       concentrationStateChange(
         operation.targetId,
-        concentration.groupId,
+        concentration,
         undefined,
         provenance,
       ),
