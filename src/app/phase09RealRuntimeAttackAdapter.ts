@@ -1,4 +1,5 @@
 import "./phase09RealRuntimeStatAdapter";
+import "./combatantRuntimeContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, CharacterSummary, ResolutionView, SceneEntity, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
@@ -40,10 +41,11 @@ const previousAdvance = MockAdapter.prototype.advanceResolution;
 const previousUndo = MockAdapter.prototype.undoLastResolution;
 
 function isRuntimeAtomicAttack(action:ActionVm|undefined) {
-  return action?.id === "action.shortbow"
-    && action.resolutionKind === "attack"
-    && !action.itemCost
-    && !action.resourceCost;
+  return Boolean(action)
+    && action!.resolutionKind === "attack"
+    && (action!.id === "action.shortbow" || Boolean(action!.runtimeAttack))
+    && !action!.itemCost
+    && !action!.resourceCost;
 }
 
 function reject(internal:RuntimeAttackAdapterState,error:string) {
@@ -57,7 +59,7 @@ function reject(internal:RuntimeAttackAdapterState,error:string) {
   resolution.stateChanges = [];
   resolution.detail.push(`runtime attack transaction 거부: ${error}`);
   resolution.finalOutcome = `적용 거부: ${error}`;
-  resolution.provenance.push("Phase 09 · canonical weapon + runtime scene targeting provider · explicit reject");
+  resolution.provenance.push("Phase 09 · canonical/runtime attack fact + runtime scene targeting provider · explicit reject");
   resolution.stage = "complete";
   resolution.canAdvance = false;
   resolution.nextLabel = undefined;
@@ -147,9 +149,7 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
   const internal = this as unknown as RuntimeAttackAdapterState;
   const resolution = internal.resolution;
   const action = resolution ? internal.action(resolution.actionId) : undefined;
-  if (!resolution || !isRuntimeAtomicAttack(action) || resolution.adjudicated) {
-    return previousAdvance.call(this);
-  }
+  if (!resolution || !isRuntimeAtomicAttack(action) || resolution.adjudicated) return previousAdvance.call(this);
 
   if (resolution.stage === "attack-result") {
     const transaction = build(internal,action!,resolution);
@@ -194,9 +194,7 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
 MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFromDomainEvents() {
   const internal=this as unknown as RuntimeAttackAdapterState;
   const history=committedEventHistory.get(this);
-  if (!history || internal.lastResolutionId !== history.resolutionId) {
-    return previousUndo.call(this);
-  }
+  if (!history || internal.lastResolutionId !== history.resolutionId) return previousUndo.call(this);
   const undone=undoResolutionEvents(internal.scene,history.events);
   if (undone.status === "rejected") {
     if (internal.resolution) {

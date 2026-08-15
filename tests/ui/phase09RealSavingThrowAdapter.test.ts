@@ -7,22 +7,9 @@ import { resolveRuntimeSaveModifier } from "../../src/app/realRuntimeStatProvide
 import { resolveSavingThrowResolution } from "../../src/app/realSavingThrowService";
 
 const THUNDERWAVE:ActionVm = {
-  id:"action.test.thunderwave",
-  actorId:"char.mira",
-  name:"천둥파",
-  category:"magic",
-  target:"multi-enemy",
-  economy:"행동",
-  resolutionKind:"saving-throw",
-  summary:"건강 내성 DC 14",
-  available:true,
-  eligibleTargetIds:["goblin","guardian"],
-  maxTargets:4,
-  saveDc:14,
-  saveAbility:"건강",
-  saveHalf:true,
-  damage:[{ type:"천둥", dice:"2d8", flat:0, average:9 }],
-  details:[],
+  id:"action.test.thunderwave",actorId:"char.mira",name:"천둥파",category:"magic",target:"multi-enemy",economy:"행동",resolutionKind:"saving-throw",
+  summary:"건강 내성 DC 14",available:true,eligibleTargetIds:["goblin","guardian"],maxTargets:4,saveDc:14,saveAbility:"건강",saveHalf:true,
+  damage:[{ type:"천둥", dice:"2d8", flat:0, average:9 }],details:[],
 };
 
 test("runtime stat provider derives Character saves from canonical class proficiency and ability scores", async () => {
@@ -49,20 +36,12 @@ test("runtime stat provider derives Combatant saves from structured ability-scor
 
 test("saving-throw service projects each target modifier through the canonical d20 resolver", () => {
   const result = resolveSavingThrowResolution({
-    resolutionId:"phase09.save.service",
-    action:THUNDERWAVE,
-    targets:[
-      { id:"goblin", name:"Goblin", modifier:0, modifierSource:"fixture:goblin:con" },
-      { id:"guardian", name:"Guardian", modifier:3, modifierSource:"fixture:guardian:con" },
-    ],
+    resolutionId:"phase09.save.service",action:THUNDERWAVE,
+    targets:[{ id:"goblin", name:"Goblin", modifier:0, modifierSource:"fixture:goblin:con" },{ id:"guardian", name:"Guardian", modifier:3, modifierSource:"fixture:guardian:con" }],
     diceFaces:[7,18],
   });
-
   assert.equal(result.stage,"save-animation");
-  assert.deepEqual(result.saveResults.map((entry) => [entry.targetId,entry.d20,entry.total,entry.outcome]),[
-    ["goblin",7,7,"실패"],
-    ["guardian",18,21,"성공"],
-  ]);
+  assert.deepEqual(result.saveResults.map((entry) => [entry.targetId,entry.d20,entry.total,entry.outcome]),[["goblin",7,7,"실패"],["guardian",18,21,"성공"]]);
   assert.ok(result.provenance.some((entry) => entry.includes("fixture:goblin:con")));
   assert.ok(result.provenance.some((entry) => entry.includes("fixture:guardian:con")));
 });
@@ -72,7 +51,6 @@ test("MockAdapter Thunderwave uses runtime Combatant stats and domain typed dama
   await adapter.setCurrentActor("char.mira");
   await adapter.resolveAction("action.thunderwave",["combatant.goblin-a","combatant.training-guardian"]);
   let snapshot = await adapter.getSnapshot();
-
   assert.equal(snapshot.resolution?.stage,"save-animation");
   const goblinSave = snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.goblin-a");
   const guardianSave = snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.training-guardian");
@@ -89,12 +67,11 @@ test("MockAdapter Thunderwave uses runtime Combatant stats and domain typed dama
   assert.equal(snapshot.resolution?.stage,"damage-animation");
   await adapter.advanceResolution();
   snapshot = await adapter.getSnapshot();
-
   const goblin = snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a");
   const guardian = snapshot.scene.entities.find((entity) => entity.id === "combatant.training-guardian");
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(goblin?.hp,3,"failed save takes 9 thunder damage");
-  assert.equal(guardian?.tempHp,2,"successful save halves 9 to 4, then thunder resistance halves 4 to 2, absorbed by Temporary HP");
+  assert.equal(goblin?.hp,3);
+  assert.equal(guardian?.tempHp,2);
   assert.equal(guardian?.hp,30);
   assert.equal(snapshot.scene.economyByActor["char.mira"]?.action,false);
   assert.equal(snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.goblin-a")?.finalDamage,9);
@@ -113,20 +90,13 @@ test("reordering targets does not reassign their runtime saving-throw modifiers"
   const snapshot = await adapter.getSnapshot();
   const guardian = snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.training-guardian");
   const goblin = snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.goblin-a");
-
   assert.equal((guardian?.total ?? 0) - (guardian?.d20 ?? 0),3);
   assert.equal((goblin?.total ?? 0) - (goblin?.d20 ?? 0),0);
 });
 
 test("saving throw explicitly rejects a Combatant instance without runtime ability stats", async () => {
   const adapter = new MockAdapter();
-  await adapter.previewCombatantImport(JSON.stringify({
-    id:"combatant.local-bandit",
-    name:"로컬 산적",
-    ac:14,
-    maxHp:18,
-    actions:["단검"],
-  }));
+  await adapter.previewCombatantImport(JSON.stringify({ id:"combatant.local-bandit",name:"로컬 산적",ac:14,maxHp:18,actions:["단검"] }));
   await adapter.activateCombatantImport();
   await adapter.instantiateCombatant("combatant.local-bandit");
   await adapter.setCurrentActor("char.mira");
@@ -138,44 +108,57 @@ test("saving throw explicitly rejects a Combatant instance without runtime abili
   assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("explicit reject")));
 });
 
-test("imported Combatant runtime stats feed saving throws, speed, and typed defenses", async () => {
+test("imported Combatant runtime stats/actions feed saving throws, speed, defenses, and exact action projection", async () => {
   const adapter=new MockAdapter();
   await adapter.previewCombatantImport(JSON.stringify({
-    id:"combatant.local-scout",
-    name:"로컬 정찰병",
-    ac:14,
-    maxHp:20,
-    speed:35,
-    proficiencyBonus:2,
-    abilities:{ str:8, dex:16, con:12, int:10, wis:14, cha:10 },
-    savingThrowProficiencies:["wis"],
-    resistances:["냉기"],
-    immunities:[],
-    vulnerabilities:["화염"],
-    actions:["단검"],
+    id:"combatant.local-scout",name:"로컬 정찰병",ac:14,maxHp:20,speed:35,proficiencyBonus:2,
+    abilities:{ str:8, dex:16, con:12, int:10, wis:14, cha:10 },savingThrowProficiencies:["wis"],
+    resistances:["냉기"],immunities:[],vulnerabilities:["화염"],
+    runtimeActions:[{
+      id:"dagger",name:"단검",category:"weapon",sourceKind:"weapon",attackBonus:5,rangeFeet:5,
+      damage:{ type:"관통", dice:"1d4", flat:3 },
+    }],
   }));
   let snapshot=await adapter.getSnapshot();
   assert.ok(snapshot.combatantImport?.definition?.runtimeStats);
+  assert.equal(snapshot.combatantImport?.definition?.runtimeActions?.length,1);
   assert.ok(snapshot.combatantImport?.validation.some((entry)=>entry.message.includes("runtime ability/save/speed/defense stats")));
+  assert.ok(snapshot.combatantImport?.validation.some((entry)=>entry.message.includes("runtime action contracts")));
   await adapter.activateCombatantImport();
   await adapter.startInitiative();
   await adapter.instantiateCombatant("combatant.local-scout");
   snapshot=await adapter.getSnapshot();
   const scout=snapshot.scene.entities.find((entity)=>entity.id==="combatant.local-scout.instance-1")!;
-  assert.deepEqual(snapshot.scene.economyByActor[scout.id],{
-    action:true,bonusAction:true,reaction:true,movement:35,movementMax:35,
-  });
+  assert.deepEqual(snapshot.scene.economyByActor[scout.id],{ action:true,bonusAction:true,reaction:true,movement:35,movementMax:35 });
   assert.deepEqual(scout.resistances,["냉기"]);
   assert.deepEqual(scout.vulnerabilities,["화염"]);
+  const dagger=snapshot.scene.actionsByActor[scout.id]?.[0];
+  assert.equal(dagger?.name,"단검");
+  assert.equal(dagger?.attackBonus,5);
+  assert.equal(dagger?.damage?.[0]?.dice,"1d4");
+  assert.equal(dagger?.damage?.[0]?.flat,3);
+  assert.equal(dagger?.runtimeAttack?.rangeFeet,5);
+  assert.equal(dagger?.runtimeAttack?.damageSource,"runtime:combatant-definition:combatant.local-scout:action:dagger:damage");
 
   await adapter.setCurrentActor("char.mira");
   await adapter.resolveAction("action.thunderwave",[scout.id]);
   snapshot=await adapter.getSnapshot();
   const save=snapshot.resolution?.saveResults[0];
-  assert.equal((save?.total ?? 0)-(save?.d20 ?? 0),1,"CON 12 produces +1 without CON save proficiency");
+  assert.equal((save?.total ?? 0)-(save?.d20 ?? 0),1);
   assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("runtime:combatant-definition:combatant.local-scout:ability:con")));
-
   const wis=resolveRuntimeSaveModifier(scout,snapshot.activeCharacter,"지혜",snapshot.combatantDefinitions);
-  assert.equal(wis.modifier,4,"WIS 14 (+2) plus proficiency +2");
+  assert.equal(wis.modifier,4);
   assert.match(wis.source,/combatant\.local-scout:ability:wis:save-proficient/);
+});
+
+test("structured Combatant without runtimeActions does not receive the legacy generated +3 / 1d6+1 attack", async () => {
+  const adapter=new MockAdapter();
+  await adapter.previewCombatantImport(JSON.stringify({
+    id:"combatant.local-pacifist",name:"로컬 비전투원",ac:12,maxHp:12,speed:30,proficiencyBonus:2,
+    abilities:{ str:10,dex:10,con:10,int:10,wis:10,cha:10 },savingThrowProficiencies:[],
+  }));
+  await adapter.activateCombatantImport();
+  await adapter.instantiateCombatant("combatant.local-pacifist");
+  const snapshot=await adapter.getSnapshot();
+  assert.deepEqual(snapshot.scene.actionsByActor["combatant.local-pacifist.instance-1"],[]);
 });

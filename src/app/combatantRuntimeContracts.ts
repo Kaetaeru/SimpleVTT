@@ -10,8 +10,34 @@ export interface CombatantRuntimeStatsVm {
   vulnerabilities:string[];
 }
 
+export interface CombatantRuntimeAttackVm {
+  id:string;
+  name:string;
+  category:"basic"|"weapon"|"magic";
+  sourceKind:"weapon"|"spell";
+  attackBonus:number;
+  rangeFeet:number;
+  damage:{
+    type:string;
+    dice:string;
+    flat:number;
+  };
+}
+
+export interface RuntimeAttackFactVm {
+  sourceKind:"weapon"|"spell";
+  rangeFeet:number;
+  diceSides:number;
+  diceCount:number;
+  damageSource:string;
+}
+
 declare module "./contracts" {
   interface CombatantDefinitionVm {
     runtimeStats?:CombatantRuntimeStatsVm;
+    runtimeActions?:CombatantRuntimeAttackVm[];
+  }
+  interface ActionVm {
+    runtimeAttack?:RuntimeAttackFactVm;
   }
 }

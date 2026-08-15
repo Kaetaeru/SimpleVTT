@@ -75,7 +75,7 @@ test("round wrap starts Aelar's next turn from base speed and refreshed economy"
   });
 });
 
-test("combatant instantiated during initiative is materialized into the active RulesRuntimeState without resetting the current turn", async () => {
+test("combatant instantiated during initiative joins runtime with Definition-backed actions instead of the Mock +3 attack", async () => {
   const adapter=new MockAdapter();
   await adapter.startInitiative();
   let snapshot=await adapter.getSnapshot();
@@ -93,6 +93,18 @@ test("combatant instantiated during initiative is materialized into the active R
     movement:30,
     movementMax:30,
   });
+  const actions=snapshot.scene.actionsByActor[added!.id] ?? [];
+  assert.equal(actions.length,2);
+  const scimitar=actions.find((action)=>action.name==="시미터")!;
+  const shortbow=actions.find((action)=>action.name==="숏보우")!;
+  assert.equal(scimitar.attackBonus,4);
+  assert.equal(scimitar.damage?.[0]?.dice,"1d6");
+  assert.equal(scimitar.damage?.[0]?.flat,2);
+  assert.equal(scimitar.runtimeAttack?.rangeFeet,5);
+  assert.equal(shortbow.attackBonus,4);
+  assert.equal(shortbow.runtimeAttack?.rangeFeet,80);
+  assert.ok(!actions.some((action)=>action.attackBonus===3 && action.damage?.[0]?.flat===1),"legacy generated +3/1d6+1 attack must be gone");
+
   const activity=snapshot.activity.find((entry)=>entry.title==="컴배턴트 인스턴스 추가" && entry.summary===added!.name);
   assert.ok(activity?.detail.some((line)=>line.includes("RulesRuntimeState combatant materialized")));
   assert.ok(activity?.stateChanges.includes(`Runtime combatant ${added!.id} 추가`));
