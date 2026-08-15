@@ -2,11 +2,16 @@ import "./progressionContracts";
 import "./creationContracts";
 import type { AppSnapshot, CharacterSheet, CharacterSummary, LevelUpCommand, LevelUpDraft } from "./contracts";
 import { fightingStyleOptions, generalLanguageOptions, originFeatOptions, spellOptions } from "./characterCreationV10Data";
+import { upsertCharacterResource } from "./characterResourceApplicationService";
+import {
+  applyProgressionCharacterState,
+  projectProgressionCharacterState,
+} from "./progressionCharacterApplicationService";
 import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { classById, classByName } from "../domain/progressionCatalog";
-import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState, type ProgressionPlan } from "../domain/progression";
+import { buildProgressionPlan, resolveProgression, type ProgressionPlan } from "../domain/progression";
 import { SORCERER_ID } from "../domain/sorcererProgressionChoices";
 import { SORCERY_POINT_RESOURCE_ID, sorceryPointMaximum } from "../domain/sorcery";
 import { wizardSignatureSpellResourceId } from "../domain/wizardProgressionChoices";
@@ -52,13 +57,10 @@ function creationExpertise(sheet: CharacterSheet) {
 function ensureSignatureSpellResources(sheet: CharacterSheet) {
   const presentation = new Map(SPELL_PRESENTATIONS.map((spell) => [spell.id, spell]));
   for (const spellId of sheet.signatureSpellIds ?? []) {
-    const resourceId = wizardSignatureSpellResourceId(spellId);
-    if (sheet.resources.some((resource) => resource.id === resourceId)) continue;
-    sheet.resources.push({
-      id:resourceId,
+    upsertCharacterResource(sheet,{
+      resourceId:wizardSignatureSpellResourceId(spellId),
       label:`대표 주문 · ${presentation.get(spellId)?.name ?? spellId}`,
-      current:1,
-      max:1,
+      maximum:1,
       source:sheet.signatureSpellSources?.[spellId] ?? "위저드 20레벨 · 대표 주문 · SRD 5.2.1",
       recovery:{ shortRest:"all", longRest:"all" },
     });
@@ -69,22 +71,13 @@ function ensureSorceryPointResource(sheet: CharacterSheet) {
   const sorcererLevel = sheet.classLevels?.find((track) => track.classId === SORCERER_ID)?.level ?? 0;
   const maximum = sorceryPointMaximum(sorcererLevel);
   if (maximum <= 0) return;
-  const existing = sheet.resources.find((resource) => resource.id === SORCERY_POINT_RESOURCE_ID);
-  if (!existing) {
-    sheet.resources.push({
-      id:SORCERY_POINT_RESOURCE_ID,
-      label:"소서리 포인트",
-      current:maximum,
-      max:maximum,
-      source:`소서러 ${sorcererLevel}레벨 · Font of Magic · SRD 5.2.1`,
-      recovery:{ longRest:"all" },
-    });
-    return;
-  }
-  existing.max = maximum;
-  existing.current = Math.min(existing.current, maximum);
-  existing.source = `소서러 ${sorcererLevel}레벨 · Font of Magic · SRD 5.2.1`;
-  existing.recovery = { ...(existing.recovery ?? {}), longRest:"all" };
+  upsertCharacterResource(sheet,{
+    resourceId:SORCERY_POINT_RESOURCE_ID,
+    label:"소서리 포인트",
+    maximum,
+    source:`소서러 ${sorcererLevel}레벨 · Font of Magic · SRD 5.2.1`,
+    recovery:{ longRest:"all" },
+  });
 }
 
 export function ensureProgressionMetadata(sheet: CharacterSheet) {
@@ -139,47 +132,6 @@ export function ensureProgressionMetadata(sheet: CharacterSheet) {
   sheet.pactMagicSlotMaximum ??= 0;
   sheet.progressionRevision ??= 0;
   return sheet;
-}
-
-function characterState(sheet: CharacterSheet): ProgressionCharacterState {
-  ensureProgressionMetadata(sheet);
-  return {
-    revision:sheet.progressionRevision ?? 0,
-    id:sheet.id,
-    name:sheet.name,
-    totalLevel:sheet.level,
-    abilities:clone(sheet.abilities),
-    hpCurrent:sheet.hp,
-    hpMaximum:sheet.maxHp,
-    proficiencyBonus:sheet.proficiencyBonus,
-    classTracks:clone(sheet.classLevels ?? []),
-    hitDiceByDie:clone(sheet.hitDiceByDie ?? {}),
-    features:clone(sheet.features),
-    proficientSkills:unique(sheet.skills.map(normalizedSkillName)),
-    expertiseSkills:clone(sheet.expertiseSkills ?? []),
-    expertiseSources:clone(sheet.expertiseSources ?? {}),
-    languages:clone(sheet.languages ?? []),
-    languageSources:clone(sheet.languageSources ?? {}),
-    cantripIds:clone(sheet.cantrips ?? []),
-    cantripSources:clone(sheet.cantripSources ?? {}),
-    preparedSpellIds:clone(sheet.preparedSpells ?? []),
-    preparedSpellSources:clone(sheet.preparedSpellSources ?? {}),
-    spellbookSpellIds:clone(sheet.spellbookSpells ?? []),
-    spellbookSpellSources:clone(sheet.spellbookSpellSources ?? {}),
-    spellMasterySpellIds:clone(sheet.spellMasterySpellIds ?? {}),
-    spellMasterySources:clone(sheet.spellMasterySources ?? {}),
-    signatureSpellIds:clone(sheet.signatureSpellIds ?? []),
-    signatureSpellSources:clone(sheet.signatureSpellSources ?? {}),
-    metamagicIds:clone(sheet.metamagicIds ?? []),
-    metamagicSources:clone(sheet.metamagicSources ?? {}),
-    eldritchInvocationIds:clone(sheet.eldritchInvocationIds ?? []),
-    eldritchInvocationSources:clone(sheet.eldritchInvocationSources ?? {}),
-    mysticArcanumSpellIds:clone(sheet.mysticArcanumSpellIds ?? {}),
-    mysticArcanumSources:clone(sheet.mysticArcanumSources ?? {}),
-    pactMagicSlotLevel:sheet.pactMagicSlotLevel ?? 0,
-    pactMagicSlotMaximum:sheet.pactMagicSlotMaximum ?? 0,
-    spellSlotMaximums:clone(sheet.spellSlotMaximums ?? {}),
-  };
 }
 
 function featOptions(state: AdapterState) {
@@ -247,7 +199,10 @@ function requestFor(state: AdapterState) {
 
 function planFor(state: AdapterState): ProgressionPlan | null {
   if (!state.levelUpDraft) return null;
-  return buildProgressionPlan(characterState(state.activeCharacter), requestFor(state));
+  return buildProgressionPlan(
+    projectProgressionCharacterState(ensureProgressionMetadata(state.activeCharacter)),
+    requestFor(state),
+  );
 }
 
 function syncLegacyDraft(draft: LevelUpDraft, plan: ProgressionPlan) {
@@ -279,46 +234,6 @@ function summaryFromSheet(sheet: CharacterSheet): CharacterSummary {
     id:sheet.id, name:sheet.name, className:sheet.className, subclassName:sheet.subclassName, level:sheet.level,
     species:sheet.species, background:sheet.background, hp:sheet.hp, maxHp:sheet.maxHp, ac:sheet.ac, saveState:sheet.saveState,
   };
-}
-
-function applyCommittedSheet(sheet: CharacterSheet, result: Extract<ReturnType<typeof resolveProgression>, { status:"committed" }>, state: AdapterState) {
-  const next = result.state;
-  sheet.level = next.totalLevel;
-  sheet.hp = next.hpCurrent;
-  sheet.maxHp = next.hpMaximum;
-  sheet.proficiencyBonus = next.proficiencyBonus;
-  sheet.abilities = clone(next.abilities);
-  sheet.classLevels = clone(next.classTracks);
-  sheet.hitDiceByDie = clone(next.hitDiceByDie);
-  sheet.progressionRevision = next.revision;
-  sheet.expertiseSkills = clone(next.expertiseSkills ?? []);
-  sheet.expertiseSources = clone(next.expertiseSources ?? {});
-  sheet.languages = clone(next.languages ?? []);
-  sheet.languageSources = clone(next.languageSources ?? {});
-  sheet.cantrips = clone(next.cantripIds ?? []);
-  sheet.cantripSources = clone(next.cantripSources ?? {});
-  sheet.preparedSpells = clone(next.preparedSpellIds ?? []);
-  sheet.preparedSpellSources = clone(next.preparedSpellSources ?? {});
-  sheet.spellbookSpells = clone(next.spellbookSpellIds ?? []);
-  sheet.spellbookSpellSources = clone(next.spellbookSpellSources ?? {});
-  sheet.spellMasterySpellIds = clone(next.spellMasterySpellIds ?? {});
-  sheet.spellMasterySources = clone(next.spellMasterySources ?? {});
-  sheet.signatureSpellIds = clone(next.signatureSpellIds ?? []);
-  sheet.signatureSpellSources = clone(next.signatureSpellSources ?? {});
-  ensureSignatureSpellResources(sheet);
-  sheet.metamagicIds = clone(next.metamagicIds ?? []);
-  sheet.metamagicSources = clone(next.metamagicSources ?? {});
-  sheet.eldritchInvocationIds = clone(next.eldritchInvocationIds ?? []);
-  sheet.eldritchInvocationSources = clone(next.eldritchInvocationSources ?? {});
-  sheet.mysticArcanumSpellIds = clone(next.mysticArcanumSpellIds ?? {});
-  sheet.mysticArcanumSources = clone(next.mysticArcanumSources ?? {});
-  sheet.pactMagicSlotLevel = next.pactMagicSlotLevel ?? 0;
-  sheet.pactMagicSlotMaximum = next.pactMagicSlotMaximum ?? 0;
-  sheet.spellSlotMaximums = clone(next.spellSlotMaximums ?? {});
-  sheet.features = next.features.map((feature) => state.catalog.find((entry) => entry.id === feature)?.nameKo ?? feature);
-  const primary = sheet.classLevels[0];
-  if (primary?.subclassName) sheet.subclassName = primary.subclassName;
-  ensureSorceryPointResource(sheet);
 }
 
 function syncCommittedSheetToScene(state: AdapterState) {
@@ -417,7 +332,7 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
   const internal = this as unknown as AdapterState;
   if (!internal.levelUpDraft) return internal.getSnapshot();
   const before = clone(internal.activeCharacter);
-  const stateBefore = characterState(internal.activeCharacter);
+  const stateBefore = projectProgressionCharacterState(ensureProgressionMetadata(internal.activeCharacter));
   const request = requestFor(internal);
   const result = resolveProgression(stateBefore, request);
   if (result.status === "rejected") {
@@ -428,7 +343,12 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     internal.levelUpDraft.validation = [...internal.levelUpDraft.validation, { severity:"blocking", message:"Character Revision 저장에 실패했습니다. 원본은 변경되지 않았습니다." }];
     return internal.getSnapshot();
   }
-  applyCommittedSheet(internal.activeCharacter, result, internal);
+  applyProgressionCharacterState(internal.activeCharacter,result.state,{
+    scope:"full",
+    featureLabelById:(featureId)=>internal.catalog.find((entry)=>entry.id===featureId)?.nameKo,
+  });
+  ensureSignatureSpellResources(internal.activeCharacter);
+  ensureSorceryPointResource(internal.activeCharacter);
   syncCommittedSheetToScene(internal);
   internal.syncChar();
   internal.characters = internal.characters.map((summary) => summary.id === internal.activeCharacter.id ? summaryFromSheet(internal.activeCharacter) : summary);
