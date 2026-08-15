@@ -65,32 +65,17 @@ jobs:
           tests/domain/resourceRecoveryLockout.test.ts
           tests/domain/compoundDamage.test.ts
           tests/domain/attackRiders.test.ts
-      - name: Verify spellcasting kernel
-        run: npx tsx --test tests/domain/spellcastingKernel.test.ts
-      - name: Verify spellcasting feature resources
-        run: npx tsx --test tests/domain/spellcastingFeatureResource.test.ts
-      - name: Verify class feature spell resources
-        run: npx tsx --test tests/domain/classFeatureSpellResources.test.ts
-      - name: Verify core class resources
-        run: npx tsx --test tests/domain/coreClassResources.test.ts
-      - name: Verify Wild Resurgence
-        run: npx tsx --test tests/domain/wildResurgence.test.ts
-      - name: Verify Wizard Long Rest preparation
-        run: npx tsx --test tests/domain/wizardLongRestPreparation.test.ts
-      - name: Verify Pact Tome metadata
-        run: npx tsx --test --test-name-pattern="canonical spell rule metadata" tests/domain/warlockPactTome.test.ts
-      - name: Verify Pact Tome invocation option
-        run: npx tsx --test --test-name-pattern="selectable once" tests/domain/warlockPactTome.test.ts
-      - name: Verify Pact Tome initial configuration
-        run: npx tsx --test --test-name-pattern="configures exactly" tests/domain/warlockPactTome.test.ts
-      - name: Verify Pact Tome replacement
-        run: npx tsx --test --test-name-pattern="new Book of Shadows" tests/domain/warlockPactTome.test.ts
-      - name: Verify Pact Tome outside preparation rejection
-        run: npx tsx --test --test-name-pattern="already prepared outside" tests/domain/warlockPactTome.test.ts
-      - name: Verify Pact Tome Ritual rejection
-        run: npx tsx --test --test-name-pattern="non-Ritual" tests/domain/warlockPactTome.test.ts
-      - name: Verify Pact Tome invocation removal
-        run: npx tsx --test --test-name-pattern="become inactive" tests/domain/warlockPactTome.test.ts
+      - name: Verify spellcasting and feature resources
+        run: >-
+          npx tsx --test
+          tests/domain/spellcastingKernel.test.ts
+          tests/domain/spellcastingFeatureResource.test.ts
+          tests/domain/classFeatureSpellResources.test.ts
+          tests/domain/coreClassResources.test.ts
+          tests/domain/wildResurgence.test.ts
+          tests/domain/wizardLongRestPreparation.test.ts
+      - name: Verify Pact of the Tome
+        run: npx tsx --test tests/domain/warlockPactTome.test.ts
       - name: Verify feat rule catalog
         run: npx tsx --test tests/domain/featRuleCatalog.test.ts
       - name: Verify class mechanics
@@ -121,21 +106,27 @@ jobs:
           tests/domain/paladinAura.test.ts
           tests/domain/sorcery.test.ts
           tests/domain/sorcererMetamagicReplacement.test.ts
-      - name: Verify Phase 07/08 progression domain
+      - name: Verify progression foundation
+        run: npx tsx --test tests/domain/progressionPhase07.test.ts tests/domain/progressionPhase08.test.ts
+      - name: Verify Paladin Cleric Druid progression
         run: >-
           npx tsx --test
-          tests/domain/progressionPhase07.test.ts
-          tests/domain/progressionPhase08.test.ts
           tests/domain/progressionPhase08Paladin.test.ts
           tests/domain/progressionPhase08Cleric.test.ts
           tests/domain/progressionPhase08ClericChoices.test.ts
           tests/domain/progressionPhase08Druid.test.ts
-          tests/domain/progressionPhase08Bard.test.ts
-          tests/domain/progressionPhase08Wizard.test.ts
+      - name: Verify Bard Wizard progression
+        run: npx tsx --test tests/domain/progressionPhase08Bard.test.ts tests/domain/progressionPhase08Wizard.test.ts
+      - name: Verify Sorcerer Warlock progression
+        run: >-
+          npx tsx --test
           tests/domain/progressionPhase08Sorcerer.test.ts
           tests/domain/progressionPhase08SorcererReplacement.test.ts
           tests/domain/progressionPhase08Warlock.test.ts
           tests/domain/progressionPhase08WarlockReplacement.test.ts
+      - name: Verify Phase 08 catalog progression
+        run: >-
+          npx tsx --test
           tests/domain/progressionPhase08EpicBoon.test.ts
           tests/domain/progressionPhase08WeaponMastery.test.ts
           tests/domain/progressionPhase08FighterStyle.test.ts
