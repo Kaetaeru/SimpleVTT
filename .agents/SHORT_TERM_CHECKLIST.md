@@ -36,21 +36,24 @@ Tracking: Issue #69 / Draft PR #70
 
 ### 2. Concentration damage save authoritative dice workflow — IN PROGRESS
 
-- [ ] 피해 transaction이 concentration check 필요 상태를 명시적으로 노출
-- [ ] 실제 d20 입력을 받는 app/adapter contract
-- [ ] CON saving throw modifier / proficiency를 기존 authoritative stat 경계에서 공급
-- [ ] domain `concentrationCheckDc()` / `resolveConcentrationDamageCheck()`만 판정에 사용
-- [ ] 입력이 없으면 자동 roll/DC/modifier를 발명하지 않고 explicit reject 유지
-- [ ] 성공: concentration 유지
-- [ ] 실패: concentration + group effects 제거
-- [ ] HP + concentration + effect changes를 동일 raw ResolutionEvent transaction에 보존
-- [ ] Activity에 concentration save 결과/provenance 표시
-- [ ] event-native Undo가 HP + concentration + effects를 exact restore
-- [ ] stale runtime revision / drift explicit reject
+- [x] 피해 transaction이 concentration check 필요 상태를 명시적으로 노출
+- [x] 실제 d20 입력을 받는 app/adapter contract
+- [x] CON saving throw modifier / proficiency를 기존 authoritative stat 경계에서 공급
+- [x] domain `concentrationCheckDc()` / `resolveConcentrationDamageCheck()`만 판정에 사용
+- [x] 입력이 없으면 자동 roll/DC/modifier를 발명하지 않음; lower-level domain explicit reject + app pending-input state 유지
+- [x] 성공: concentration 유지
+- [x] 실패: concentration + group effects 제거
+- [x] HP + concentration + effect changes를 동일 raw ResolutionEvent transaction에 보존
+- [ ] Activity에 concentration save 결과/provenance 표시 — event projection 연결됨, regression 확인 대기
+- [x] event-native Undo가 HP + concentration + effects를 exact restore — regression 작성됨, CI 확인 대기
+- [ ] stale runtime revision / drift explicit reject — 구현됨, 전용 regression 추가 필요
 - [ ] deterministic service tests
-- [ ] adapter/UI workflow regression
+- [ ] adapter/UI workflow regression — 작성/CI gate 연결됨, green 확인 대기
 - [ ] full Phase 09 + Rules Domain + TypeScript + production build green
 - [ ] Draft PR checkpoint
+
+Current implementation branch: `agent/71-concentration-save-workflow`
+Tracking: Issue #71
 
 ### 3. Combatant runtime action expansion
 
@@ -91,5 +94,5 @@ Tracking: Issue #69 / Draft PR #70
 ```text
 Phase 09
 Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
-Step 2: IN PROGRESS — Concentration damage save authoritative dice workflow
+Step 2: IN PROGRESS — implementation wired; regression/CI validation in progress
 ```
