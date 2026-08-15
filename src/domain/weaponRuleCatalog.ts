@@ -23,6 +23,11 @@ interface WeaponRuleCatalog {
 }
 
 export const WEAPON_RULE_CATALOG = rawCatalog as unknown as WeaponRuleCatalog;
+if (WEAPON_RULE_CATALOG.count !== WEAPON_RULE_CATALOG.weapons.length) {
+  throw new Error(`weapon rule catalog count mismatch: ${WEAPON_RULE_CATALOG.count} != ${WEAPON_RULE_CATALOG.weapons.length}`);
+}
+const ids = WEAPON_RULE_CATALOG.weapons.map((weapon) => weapon.id);
+if (new Set(ids).size !== ids.length) throw new Error("weapon rule catalog contains duplicate weapon IDs");
 const BY_ID = new Map(WEAPON_RULE_CATALOG.weapons.map((weapon) => [weapon.id,weapon]));
 
 export function weaponRuleById(weaponId:string) {
