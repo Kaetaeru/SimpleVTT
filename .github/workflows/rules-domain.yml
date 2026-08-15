@@ -125,14 +125,16 @@ jobs:
         run: npx tsx --test tests/domain/progressionPhase08Warlock.test.ts
       - name: Verify Warlock replacement progression
         run: npx tsx --test tests/domain/progressionPhase08WarlockReplacement.test.ts
-      - name: Verify Phase 08 catalog progression
-        run: >-
-          npx tsx --test
-          tests/domain/progressionPhase08EpicBoon.test.ts
-          tests/domain/progressionPhase08WeaponMastery.test.ts
-          tests/domain/progressionPhase08FighterStyle.test.ts
-          tests/domain/progressionPhase08BarbarianPrimalKnowledge.test.ts
-          tests/domain/progressionPhase08Subclass.test.ts
+      - name: Verify Epic Boon progression
+        run: npx tsx --test tests/domain/progressionPhase08EpicBoon.test.ts
+      - name: Verify Weapon Mastery progression
+        run: npx tsx --test tests/domain/progressionPhase08WeaponMastery.test.ts
+      - name: Verify Fighting Style progression
+        run: npx tsx --test tests/domain/progressionPhase08FighterStyle.test.ts
+      - name: Verify Barbarian Primal Knowledge progression
+        run: npx tsx --test tests/domain/progressionPhase08BarbarianPrimalKnowledge.test.ts
+      - name: Verify generic subclass progression
+        run: npx tsx --test tests/domain/progressionPhase08Subclass.test.ts
       - name: Verify latest Phase 08 subclass domain
         run: >-
           npx tsx --test
