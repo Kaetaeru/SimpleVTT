@@ -92,10 +92,9 @@ function finalizeDamage(
       dead:target.life.dead,
     });
     if (immediateBreak) {
-      const previous = currentConcentration.groupId;
       const { ended } = endActorConcentration(ctx, operation.targetId, immediateBreak);
       provenance.push(...ended.provenance);
-      changes.push(concentrationStateChange(operation.targetId, previous, undefined, ended.provenance));
+      changes.push(concentrationStateChange(operation.targetId, currentConcentration, undefined, ended.provenance));
       ended.expiredEffects.forEach((effect) => {
         changes.push(effectStateChange(effect.targetId, effect.id, "removed", ended.provenance, effect, undefined));
       });
@@ -125,10 +124,9 @@ function finalizeDamage(
       });
       provenance.push(...check.provenance);
       if (!check.maintained) {
-        const previous = currentConcentration.groupId;
         const { ended } = endActorConcentration(ctx, operation.targetId, "failed damage concentration save");
         provenance.push(...ended.provenance);
-        changes.push(concentrationStateChange(operation.targetId, previous, undefined, ended.provenance));
+        changes.push(concentrationStateChange(operation.targetId, currentConcentration, undefined, ended.provenance));
         ended.expiredEffects.forEach((effect) => {
           changes.push(effectStateChange(effect.targetId, effect.id, "removed", ended.provenance, effect, undefined));
         });
