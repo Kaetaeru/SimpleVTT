@@ -3,6 +3,23 @@ import test from "node:test";
 import { buildProgressionPlan, resolveProgression, type ProgressionCharacterState } from "../../src/domain/progression";
 import { classCantripListEntries, classSpellListAllEntries, classSpellListEntries, stableSpellId } from "../../src/domain/spellListCatalog";
 import { WARLOCK_ID } from "../../src/domain/warlockProgressionChoices";
+import {
+  FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID,
+  FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID,
+  FIEND_FIENDISH_RESILIENCE_FEATURE_ID,
+  FIEND_HURL_THROUGH_HELL_FEATURE_ID,
+  FIEND_HURL_THROUGH_HELL_RESOURCE_ID,
+  fiendishResilienceDefense,
+  resolveFiendDarkOnesOwnLuck,
+  resolveFiendHurlThroughHell,
+  resolveFiendHurlThroughHellRecovery,
+  resolveFiendishResilienceSelection,
+  warlockFiendRuntimeResourceDefinitions,
+} from "../../src/domain/warlockFiend";
+import { WARLOCK_FIEND_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
+import { srdSubclassRelationship } from "../../src/domain/srdSubclassProgression";
+import { resolvePendingResolution } from "../../src/domain/resolution";
+import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 const cantripChoice = (level: number) => `progression.${WARLOCK_ID}.${level}.column.소마법`;
 const preparedChoice = (level: number) => `progression.${WARLOCK_ID}.${level}.column.준비 주문`;
@@ -196,4 +213,180 @@ test("Warlock 10 -> 11 grants a separate level-6 Mystic Arcanum and increases Pa
   assert.equal(result.state.preparedSpellIds?.includes(arcanum), false, "Mystic Arcanum must remain separate from ordinary Pact Magic prepared spells");
   assert.equal(result.state.pactMagicSlotMaximum, 3);
   assert.equal(Object.values(result.state.spellSlotMaximums ?? {}).some((count) => count > 0), false);
+});
+
+test("Fiend 6/10/14 progression relationships are stable and runtime resources follow Charisma plus Long-Rest usage", () => {
+  assert.deepEqual(
+    [6,10,14].map((level) => srdSubclassRelationship(WARLOCK_ID,WARLOCK_FIEND_SUBCLASS_ID,level)?.features[0]?.id),
+    [FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID,FIEND_FIENDISH_RESILIENCE_FEATURE_ID,FIEND_HURL_THROUGH_HELL_FEATURE_ID],
+  );
+  const definitions = warlockFiendRuntimeResourceDefinitions(
+    [{ classId:WARLOCK_ID, className:"워락", level:14, subclassName:"악마 후원자" }],
+    { [WARLOCK_ID]:WARLOCK_FIEND_SUBCLASS_ID },
+    18,
+  );
+  assert.deepEqual(definitions.map((entry) => [entry.resourceId,entry.maximum]),[
+    [FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID,4],
+    [FIEND_HURL_THROUGH_HELL_RESOURCE_ID,1],
+  ]);
+  assert.ok(definitions.every((entry) => entry.recovery.longRest === "all"));
+});
+
+test("Dark One's Own Luck adds the fixed d10 after the d20 and spends a use even when the final total still fails", () => {
+  const state = runtimeState();
+  state.combatants.hero.resources.push({
+    id:FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID,
+    label:"어둠의 존재의 행운",
+    current:2,
+    maximum:4,
+    recovery:{ longRest:"all" },
+  });
+  const result = resolveFiendDarkOnesOwnLuck(TEST_PROFILE,state,{
+    id:"fiend.luck",
+    actorId:"hero",
+    expectedRevision:state.revision,
+    warlockLevel:6,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    family:"saving-throw",
+    initialTotal:8,
+    target:15,
+    d10Face:6,
+  });
+  assert.equal(result.status,"committed");
+  assert.deepEqual(result.check,{ family:"saving-throw", initialTotal:8, target:15, bonus:6, finalTotal:14, outcome:"failure" });
+  if (result.status !== "committed") return;
+  assert.equal(result.state.combatants.hero.resources.find((entry) => entry.id === FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,1);
+});
+
+test("Fiendish Resilience rest selection replaces the prior type and its effect tag participates in the normal damage pipeline", () => {
+  const state = runtimeState();
+  const selected = resolveFiendishResilienceSelection(TEST_PROFILE,state,{
+    id:"fiend.resilience.fire",
+    actorId:"hero",
+    expectedRevision:state.revision,
+    warlockLevel:10,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    rest:"short",
+    damageType:"fire",
+  });
+  assert.equal(selected.status,"committed");
+  if (selected.status !== "committed") return;
+  assert.deepEqual(fiendishResilienceDefense(selected.state,"hero","fire"),{
+    source:FIEND_FIENDISH_RESILIENCE_FEATURE_ID,
+    kind:"resistance",
+    damageType:"fire",
+  });
+  const damaged = resolvePendingResolution(TEST_PROFILE,selected.state,{
+    id:"fiend.resilience.damage",
+    actorId:"goblin",
+    sourceId:"test:fire",
+    expectedRevision:selected.state.revision,
+    operations:[{ id:"damage", kind:"damage", targetId:"hero", damageType:"fire", amount:9, creatureKind:"character" }],
+  });
+  assert.equal(damaged.status,"committed");
+  if (damaged.status !== "committed") return;
+  assert.equal(damaged.state.combatants.hero.life.hp.current,16,"9 fire damage is resisted to 4");
+
+  const replaced = resolveFiendishResilienceSelection(TEST_PROFILE,damaged.state,{
+    id:"fiend.resilience.cold",
+    actorId:"hero",
+    expectedRevision:damaged.state.revision,
+    warlockLevel:10,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    rest:"long",
+    damageType:"cold",
+  });
+  assert.equal(replaced.status,"committed");
+  if (replaced.status !== "committed") return;
+  assert.equal(fiendishResilienceDefense(replaced.state,"hero","fire"),undefined);
+  assert.equal(fiendishResilienceDefense(replaced.state,"hero","cold")?.kind,"resistance");
+  const force = resolveFiendishResilienceSelection(TEST_PROFILE,replaced.state,{
+    id:"fiend.resilience.force",
+    actorId:"hero",
+    expectedRevision:replaced.state.revision,
+    warlockLevel:10,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    rest:"short",
+    damageType:"force",
+  });
+  assert.equal(force.status,"rejected");
+});
+
+test("Hurl Through Hell consumes its use on the save, removes the failed target from scene targeting, deals 8d10 psychic to non-Fiends, and Pact Magic can recharge it", () => {
+  const state = runtimeState();
+  state.clock.activeActorId = "hero";
+  state.turnFeatureUsage = { actorId:"hero", featureIds:[] };
+  state.combatants.goblin.life.hp = { current:100, maximum:100, temporary:0 };
+  state.combatants.hero.resources.push(
+    { id:FIEND_HURL_THROUGH_HELL_RESOURCE_ID, label:"지옥으로 내던지기", current:1, maximum:1, recovery:{ longRest:"all" } },
+    { id:"pact-slot", label:"계약 마법 슬롯", current:1, maximum:1, recovery:{ shortRest:"all", longRest:"all" } },
+  );
+  const hurled = resolveFiendHurlThroughHell(TEST_PROFILE,state,{
+    id:"fiend.hurl",
+    actorId:"hero",
+    expectedRevision:state.revision,
+    warlockLevel:14,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    attackHit:true,
+    targetId:"goblin",
+    targetCreatureKind:"monster",
+    targetCreatureType:"humanoid",
+    targetCharismaSaveModifier:1,
+    spellSaveDc:16,
+    saveDice:{ id:"fiend-hurl-save", purpose:"Charisma save", sides:20, faces:[4] },
+    psychicDamageFaces:[5,5,5,5,5,5,5,5],
+  });
+  assert.equal(hurled.status,"committed");
+  if (hurled.status !== "committed") return;
+  assert.equal(hurled.state.combatants.hero.resources.find((entry) => entry.id === FIEND_HURL_THROUGH_HELL_RESOURCE_ID)?.current,0);
+  assert.equal(hurled.state.combatants.goblin.life.hp.current,60);
+  assert.ok(hurled.state.effects.some((effect) => effect.targetId === "goblin" && effect.conditionId === "incapacitated"));
+
+  const targetAttempt = resolvePendingResolution(TEST_PROFILE,hurled.state,{
+    id:"fiend.hurl.target-attempt",
+    actorId:"hero",
+    sourceId:"test:attack",
+    expectedRevision:hurled.state.revision,
+    operations:[{
+      id:"target",
+      kind:"targeting",
+      sourceId:"hero",
+      rule:{ kind:"creature", rangeFeet:30, minTargets:1, maxTargets:1, allowedRelations:["enemy"], requiresSight:true, directTarget:true },
+      targets:[{ id:"goblin", kind:"creature", relation:"enemy", distanceFeet:5, visible:true, cover:"none" }],
+      harmful:true,
+    }],
+  });
+  assert.equal(targetAttempt.status,"rejected");
+  if (targetAttempt.status === "rejected") assert.match(targetAttempt.error,/temporarily unavailable/);
+
+  const recovered = resolveFiendHurlThroughHellRecovery(TEST_PROFILE,hurled.state,{
+    id:"fiend.hurl.recover",
+    actorId:"hero",
+    expectedRevision:hurled.state.revision,
+    warlockLevel:14,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    pactMagicSlotResourceId:"pact-slot",
+  });
+  assert.equal(recovered.status,"committed");
+  if (recovered.status !== "committed") return;
+  assert.equal(recovered.state.combatants.hero.resources.find((entry) => entry.id === "pact-slot")?.current,0);
+  assert.equal(recovered.state.combatants.hero.resources.find((entry) => entry.id === FIEND_HURL_THROUGH_HELL_RESOURCE_ID)?.current,1);
+
+  const sameTurn = resolveFiendHurlThroughHell(TEST_PROFILE,recovered.state,{
+    id:"fiend.hurl.same-turn",
+    actorId:"hero",
+    expectedRevision:recovered.state.revision,
+    warlockLevel:14,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    attackHit:true,
+    targetId:"goblin",
+    targetCreatureKind:"monster",
+    targetCreatureType:"humanoid",
+    targetCharismaSaveModifier:1,
+    spellSaveDc:16,
+    saveDice:{ id:"fiend-hurl-save-2", purpose:"Charisma save", sides:20, faces:[4] },
+    psychicDamageFaces:[1,1,1,1,1,1,1,1],
+  });
+  assert.equal(sameTurn.status,"rejected");
+  if (sameTurn.status === "rejected") assert.match(sameTurn.error,/already been used this turn/);
 });

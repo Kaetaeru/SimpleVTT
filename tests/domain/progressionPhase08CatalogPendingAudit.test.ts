@@ -132,9 +132,6 @@ const KNOWN_BLOCKERS = [
   "dnd.srd521.class.rogue:9",
   "dnd.srd521.class.rogue:13",
   "dnd.srd521.class.rogue:17",
-  "dnd.srd521.class.warlock:6",
-  "dnd.srd521.class.warlock:10",
-  "dnd.srd521.class.warlock:14",
 ] as const;
 
 test("outermost Phase 08 progression plans match the explicit known catalog-pending blocker allowlist", () => {

@@ -19,6 +19,11 @@ import {
   HUNTER_SUPERIOR_DEFENSE_FEATURE_ID,
   HUNTER_SUPERIOR_PREY_FEATURE_ID,
 } from "./rangerHunter";
+import {
+  FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID,
+  FIEND_FIENDISH_RESILIENCE_FEATURE_ID,
+  FIEND_HURL_THROUGH_HELL_FEATURE_ID,
+} from "./warlockFiend";
 import type { ProgressionCharacterState } from "./progression";
 import {
   inferSrdSubclassId,
@@ -212,6 +217,24 @@ const RELATIONSHIPS:readonly SrdSubclassLevelRelationship[] = [
   },
   { classId:ROGUE_SUBCLASS_CLASS_ID, subclassId:ROGUE_THIEF_SUBCLASS_ID, classLevel:3, features:[] },
   { classId:WARLOCK_SUBCLASS_CLASS_ID, subclassId:WARLOCK_FIEND_SUBCLASS_ID, classLevel:3, features:[] },
+  {
+    classId:WARLOCK_SUBCLASS_CLASS_ID,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    classLevel:6,
+    features:[{ id:FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID, label:"어둠의 존재의 행운" }],
+  },
+  {
+    classId:WARLOCK_SUBCLASS_CLASS_ID,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    classLevel:10,
+    features:[{ id:FIEND_FIENDISH_RESILIENCE_FEATURE_ID, label:"악마적 회복력" }],
+  },
+  {
+    classId:WARLOCK_SUBCLASS_CLASS_ID,
+    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
+    classLevel:14,
+    features:[{ id:FIEND_HURL_THROUGH_HELL_FEATURE_ID, label:"지옥으로 내던지기" }],
+  },
 ] as const;
 
 const RELATIONSHIP_BY_KEY = new Map(RELATIONSHIPS.map((entry) => [`${entry.classId}:${entry.subclassId}:${entry.classLevel}`,entry]));

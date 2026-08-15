@@ -1,4 +1,4 @@
-import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageResolution } from "./damage";
+import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageDefenseContribution, type DamageResolution } from "./damage";
 import { type D20TestResult } from "./d20";
 import { resolveZeroHpAfterDamage, type LifeState } from "./life";
 import { applyHealingToLife } from "./lifeTransitions";
@@ -24,6 +24,23 @@ type CompoundDamageOp = Extract<ResolutionOperation, { kind:"compound-damage" }>
 type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;
 type TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;
 type DamageLifecycleOp = DamageOp | CompoundDamageOp;
+
+function effectDamageDefenses(ctx:ResolutionExecutionContext,targetId:string):DamageDefenseContribution[] {
+  const defenses:DamageDefenseContribution[] = [];
+  for (const effect of ctx.state.effects.filter((entry) => entry.targetId === targetId)) {
+    for (const tag of effect.tags) {
+      const match = /^(damage-resistance|damage-vulnerability|damage-immunity):(.+)$/.exec(tag);
+      if (!match) continue;
+      const kind = match[1] === "damage-resistance"
+        ? "resistance"
+        : match[1] === "damage-vulnerability"
+          ? "vulnerability"
+          : "immunity";
+      defenses.push({ source:effect.sourceId, kind, damageType:match[2] });
+    }
+  }
+  return defenses;
+}
 
 function endActorConcentration(ctx: ResolutionExecutionContext, actorId: string, reason: string) {
   const current = ctx.state.concentration[actorId];
@@ -161,6 +178,7 @@ export function executeDamage(ctx: ResolutionExecutionContext, operation: Damage
   const defenses = [
     ...(target.damageDefenses ?? []),
     ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
+    ...effectDamageDefenses(ctx,operation.targetId),
     ...(operation.defenses ?? []),
   ];
   const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });
@@ -180,6 +198,7 @@ export function executeCompoundDamage(ctx: ResolutionExecutionContext, operation
   const commonDefenses = [
     ...(target.damageDefenses ?? []),
     ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
+    ...effectDamageDefenses(ctx,operation.targetId),
   ];
   const damage = resolveCompoundDamage({
     hp:beforeHp,

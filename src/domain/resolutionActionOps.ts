@@ -6,7 +6,7 @@ import {
   conditionTargetingRestriction,
   frightenedMovementRestriction,
 } from "./conditions";
-import { conditionEffectsFor, requireCombatant } from "./combatState";
+import { conditionEffectsFor, requireCombatant, type RulesRuntimeState } from "./combatState";
 import { selectEffectTurnActivity } from "./effects";
 import { findResource, spendResource } from "./resources";
 import { openReactorWindow, resolveReactionChoice } from "./reaction";
@@ -29,8 +29,23 @@ type D20Op = Extract<ResolutionOperation, { kind:"d20" }>;
 type DamageRollOp = Extract<ResolutionOperation, { kind:"damage-roll" }>;
 type ReactionOp = Extract<ResolutionOperation, { kind:"reaction" }>;
 
+const TEMPORARILY_UNAVAILABLE_TARGET_TAG = "runtime:temporarily-unavailable-target";
+
+function temporarilyUnavailable(state:RulesRuntimeState,actorId:string) {
+  return state.effects.some((effect) => effect.targetId === actorId && effect.tags.includes(TEMPORARILY_UNAVAILABLE_TARGET_TAG));
+}
+
+function requireAvailableInScene(state:RulesRuntimeState,actorId:string,label:string) {
+  if (temporarilyUnavailable(state,actorId)) {
+    throw new DomainEvaluationError(`${label} is temporarily unavailable in the current scene: ${actorId}`);
+  }
+}
+
 export function executeTargeting(ctx: ResolutionExecutionContext, operation: TargetingOp): OperationExecution {
   const sourceId = operation.sourceId ?? ctx.pending.actorId;
+  requireAvailableInScene(ctx.state,sourceId,"targeting source");
+  const unavailableTarget = operation.targets.find((target) => temporarilyUnavailable(ctx.state,target.id));
+  if (unavailableTarget) throw new DomainEvaluationError(`target is temporarily unavailable in the current scene: ${unavailableTarget.id}`);
   const restriction = operation.harmful
     ? operation.targets
         .map((target) => conditionTargetingRestriction(conditionEffectsFor(ctx.state, sourceId), target.id, true))
@@ -50,6 +65,7 @@ export function executeTargeting(ctx: ResolutionExecutionContext, operation: Tar
 
 export function executeEconomy(ctx: ResolutionExecutionContext, operation: EconomyOp): OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
+  requireAvailableInScene(ctx.state,actorId,"economy actor");
   const actor = requireCombatant(ctx.state, actorId);
   const before = actor.economy;
   const availability = conditionActionAvailability(conditionEffectsFor(ctx.state, actorId));
@@ -97,6 +113,7 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
 
 export function executeGrantExtraAction(ctx: ResolutionExecutionContext, operation: ExtraActionOp): OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
+  requireAvailableInScene(ctx.state,actorId,"extra-action actor");
   const actor = requireCombatant(ctx.state, actorId);
   const before = actor.economy;
   actor.economy = grantExtraAction(before, {
@@ -121,6 +138,7 @@ export function executeGrantExtraAction(ctx: ResolutionExecutionContext, operati
 
 export function executeTurnFeature(ctx: ResolutionExecutionContext, operation: TurnFeatureOp): OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
+  requireAvailableInScene(ctx.state,actorId,"turn-feature actor");
   requireCombatant(ctx.state, actorId);
   if (ctx.state.clock.activeActorId !== actorId) {
     throw new DomainEvaluationError("once-per-turn feature requires the actor's own active turn");
@@ -147,6 +165,7 @@ export function executeTurnFeature(ctx: ResolutionExecutionContext, operation: T
 
 export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
+  requireAvailableInScene(ctx.state,actorId,"movement actor");
   const actor = requireCombatant(ctx.state, actorId);
   const restriction = frightenedMovementRestriction(
     conditionEffectsFor(ctx.state, actorId),
@@ -195,6 +214,7 @@ export function executeResource(ctx: ResolutionExecutionContext, operation: Reso
 
 export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
+  requireAvailableInScene(ctx.state,actorId,"d20 actor");
   const adjustments = conditionD20Adjustments({
     actorId,
     targetId:operation.targetId,
@@ -266,6 +286,7 @@ export function executeDamageRoll(ctx: ResolutionExecutionContext, operation: Da
 }
 
 export function executeReaction(ctx: ResolutionExecutionContext, operation: ReactionOp): OperationExecution {
+  requireAvailableInScene(ctx.state,operation.reactorId,"reaction actor");
   const reactor = requireCombatant(ctx.state, operation.reactorId);
   const window = openReactorWindow(operation.reactorId, reactor.economy, operation.trigger, operation.options);
   const resolved = resolveReactionChoice(operation.reactorId, reactor.economy, window, operation.optionId);
