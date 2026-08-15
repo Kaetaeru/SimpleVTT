@@ -74,6 +74,7 @@ jobs:
           tests/ui/phase09RealNoRollDamageAdapter.test.ts
           tests/ui/phase09RealTurnRuntimeService.test.ts
           tests/ui/phase09RealTurnRuntimeAdapter.test.ts
+          tests/ui/phase09EffectConcentrationUndo.test.ts
           tests/ui/visualDiceProjection.test.ts
           tests/ui/visualDiceStructure.test.ts
           tests/ui/movementReactionStructure.test.ts
