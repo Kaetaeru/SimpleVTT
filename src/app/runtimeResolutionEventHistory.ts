@@ -29,3 +29,16 @@ export function runtimeResolutionEventHistory(adapter:MockAdapter) {
 export function clearRuntimeResolutionEventHistory(adapter:MockAdapter) {
   historyByAdapter.delete(adapter);
 }
+
+export const runtimeResolutionEventHistories={
+  get:runtimeResolutionEventHistory,
+  set:(adapter:MockAdapter,history:RuntimeResolutionEventHistory)=>{
+    recordRuntimeResolutionEvents(adapter,history.resolutionId,history.events);
+    return runtimeResolutionEventHistories;
+  },
+  delete:(adapter:MockAdapter)=>{
+    const existed=Boolean(historyByAdapter.get(adapter));
+    clearRuntimeResolutionEventHistory(adapter);
+    return existed;
+  },
+};
