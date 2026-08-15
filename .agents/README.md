@@ -2,11 +2,22 @@
 
 This directory is reserved for user/operator instructions and agent-only working coordination for this repository.
 
+## Continuation order
+
+When resuming work on a branch, inspect the agent workspace before choosing the next implementation slice.
+
+1. Read `DEFERRED_FIXES.md` first when it exists. Active owner-playtest regressions and explicit blocking queues there take priority over planned work in `CURRENT_WORK.md`.
+2. Then read `CURRENT_WORK.md` for the current phase, completed checkpoints, and planned implementation order.
+3. Read `UX_STRUCTURE_GATES.md` when the task touches a previously deferred owner walkthrough, UX acceptance, or structure gate.
+
+Do not resume a later feature slice merely because automated CI is green when `DEFERRED_FIXES.md` records an unresolved owner-playtest gate.
+
 ## Allowed here
 
 - Agent-specific operating instructions and runbooks.
 - Working checklists used to track current and upcoming agent work.
 - Temporary coordination notes that help an agent continue work consistently.
+- Consolidated owner-playtest regression queues that must survive across development sessions.
 
 ## Boundary
 
