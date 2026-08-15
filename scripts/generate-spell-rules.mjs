@@ -55,6 +55,7 @@ const moduleDirs = readdirSync(modulesDir,{ withFileTypes:true })
 
 const mechanicsIds = new Set();
 const metadataMismatches = [];
+const legacyAliases = [];
 for (const moduleDir of moduleDirs) {
   const modulePath = join(modulesDir,moduleDir,"module.json");
   const module = JSON.parse(readFileSync(modulePath,"utf8"));
@@ -70,7 +71,10 @@ for (const moduleDir of moduleDirs) {
     if (mechanicsIds.has(item.id)) throw new Error(`duplicate spell mechanics id ${item.id}`);
     mechanicsIds.add(item.id);
     const expected = canonical.get(item.id);
-    if (!expected) throw new Error(`${item.id}: spell-definition has no canonical presentation metadata`);
+    if (!expected) {
+      legacyAliases.push(item.id);
+      continue;
+    }
     if (expected.level !== config.level || expected.ritual !== config.ritual) {
       metadataMismatches.push({
         id:item.id,
@@ -91,6 +95,9 @@ writeFileSync(outputPath,JSON.stringify({
   mechanicsDefinitionCount:mechanicsIds.size,
   spells,
 }),"utf8");
+if (legacyAliases.length) {
+  console.warn(`Warning: ${legacyAliases.length} legacy spell mechanics IDs are not canonical 339-spell IDs: ${legacyAliases.join(", ")}`);
+}
 if (metadataMismatches.length) {
   console.warn(`Warning: ${metadataMismatches.length} legacy spell-definition level/Ritual metadata values differ from the canonical 339-spell snapshot.`);
   for (const mismatch of metadataMismatches) {
