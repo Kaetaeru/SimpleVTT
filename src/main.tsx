@@ -11,6 +11,7 @@ import "./app/sorceryRuntimeAdapter";
 import "./app/progressionPhase08SorcererAdapter";
 import "./app/progressionPhase08WarlockAdapter";
 import "./app/progressionPersistentFeatureRuntimeAdapter";
+import "./app/progressionPhase08EpicBoonAdapter";
 import "./app/subclassRuntimeAdapter";
 import "./app/pactTomeRuntimeAdapter";
 import "./app/druidCircleLandSpellRuntimeAdapter";
