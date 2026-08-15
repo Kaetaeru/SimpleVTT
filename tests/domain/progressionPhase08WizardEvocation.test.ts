@@ -98,7 +98,18 @@ test("Evocation acquisition at Wizard 3 adds two extra level-1/2 Evocation spell
   assert.ok(savant);
   assert.equal(savant?.count,2);
   assert.ok(savant?.options.every((option) => evocationSpellOptions.some((spell) => spell.id === option.id)));
-  selections[savantId] = { kind:"options", optionIds:savant!.options.filter((option) => !option.disabledReason).slice(0,2).map((option) => option.id) };
+  const savantSpellIds = savant!.options.filter((option) => !option.disabledReason).slice(0,2).map((option) => option.id);
+  selections[savantId] = { kind:"options", optionIds:savantSpellIds };
+
+  plan = buildProgressionPlanPhase08WizardEvocation(state,request(state,selections));
+  const ordinary = plan.choices.find((choice) => choice.id !== savantId && choice.id.includes("spellbook") && choice.required);
+  assert.ok(ordinary);
+  const ordinaryOptions = ordinary!.options
+    .filter((option) => !option.disabledReason && !savantSpellIds.includes(option.id))
+    .slice(0,ordinary!.count);
+  assert.equal(ordinaryOptions.length,ordinary!.count,"ordinary Wizard spellbook additions must remain distinct from Evocation Savant additions");
+  selections[ordinary!.id] = { kind:"options", optionIds:ordinaryOptions.map((option) => option.id) };
+
   plan = buildProgressionPlanPhase08WizardEvocation(state,request(state,selections));
   selections = fillRequired(plan,selections);
   plan = buildProgressionPlanPhase08WizardEvocation(state,request(state,selections));
@@ -111,7 +122,7 @@ test("Evocation acquisition at Wizard 3 adds two extra level-1/2 Evocation spell
   assert.equal(next.subclassIds?.[WIZARD_EVOCATION_CLASS_ID],WIZARD_EVOCATION_SUBCLASS_ID);
   assert.ok(next.subclassFeatureIds?.includes(EVOCATION_SAVANT_FEATURE_ID));
   assert.ok(next.subclassFeatureIds?.includes(POTENT_CANTRIP_FEATURE_ID));
-  for (const spellId of (selections[savantId] as { kind:"options"; optionIds:string[] }).optionIds) {
+  for (const spellId of savantSpellIds) {
     assert.ok(next.spellbookSpellIds?.includes(spellId));
     assert.match(next.spellbookSpellSources?.[spellId] ?? "",/환기술 전문가/);
   }
