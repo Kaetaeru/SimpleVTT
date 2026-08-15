@@ -42,8 +42,12 @@ jobs:
         run: npx tsx --test tests/ui/bardicInspirationRuntimeAdapter.test.ts
       - name: Verify College of Lore progression runtime
         run: npx tsx --test tests/ui/progressionPhase08BardLoreRuntime.test.ts
-      - name: Verify Draconic Sorcery level 3 runtime
-        run: npx tsx --test --test-name-pattern="Sorcerer 2 to 3" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+      - name: Verify Draconic level 3 preview
+        run: npx tsx --test --test-name-pattern="runtime preview includes" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+      - name: Verify Draconic level 3 identity and HP
+        run: npx tsx --test --test-name-pattern="runtime commits Draconic identity" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+      - name: Verify Draconic level 3 spells
+        run: npx tsx --test --test-name-pattern="runtime commits four" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
       - name: Verify Draconic Sorcery level 6 runtime
         run: npx tsx --test --test-name-pattern="Sorcerer 5 to 6" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
       - name: Verify School of Evocation progression runtime
