@@ -1,3 +1,4 @@
+import { BARD_COLLEGE_LORE_SUBCLASS_ID } from "./bardCollegeLore";
 import { CLERIC_LIFE_DOMAIN_SUBCLASS_ID } from "./clericLifeDomain";
 import { DRUID_CIRCLE_LAND_SUBCLASS_ID } from "./druidCircleLand";
 import { FIGHTER_CHAMPION_SUBCLASS_ID } from "./fighterChampion";
@@ -9,6 +10,7 @@ export interface SrdSubclassDefinition {
 }
 
 const SRD_SUBCLASSES: SrdSubclassDefinition[] = [
+  { classId:"dnd.srd521.class.bard", subclassId:BARD_COLLEGE_LORE_SUBCLASS_ID },
   { classId:"dnd.srd521.class.cleric", subclassId:CLERIC_LIFE_DOMAIN_SUBCLASS_ID },
   { classId:"dnd.srd521.class.druid", subclassId:DRUID_CIRCLE_LAND_SUBCLASS_ID },
   { classId:"dnd.srd521.class.fighter", subclassId:FIGHTER_CHAMPION_SUBCLASS_ID },
