@@ -15,6 +15,8 @@ on:
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
       - "tests/ui/levelUpV10Structure.test.ts"
       - "tests/ui/progressionRuntimeAdapter.test.ts"
+      - "tests/ui/progressionPhase08*.test.ts"
+      - "tests/ui/bardicInspirationRuntimeAdapter.test.ts"
       - "package.json"
       - ".github/workflows/rules-domain.yml"
   push:
@@ -33,7 +35,10 @@ on:
       - "tests/ui/spellcastingRuntimeAdapter.test.ts"
       - "tests/ui/levelUpV10Structure.test.ts"
       - "tests/ui/progressionRuntimeAdapter.test.ts"
+      - "tests/ui/progressionPhase08*.test.ts"
+      - "tests/ui/bardicInspirationRuntimeAdapter.test.ts"
       - "package.json"
+      - ".github/workflows/rules-domain.yml"
 
 jobs:
   rules-domain:
@@ -49,8 +54,20 @@ jobs:
         run: npm run test:rules-domain
       - name: Run Phase 06 spellcasting integration gate
         run: npm run test:spellcasting
-      - name: Run Phase 07 progression integration gate
+      - name: Run Phase 07/08 progression integration gate
         run: npm run test:progression
+      - name: Run latest Phase 08 subclass gate
+        run: >-
+          npx tsx --test
+          tests/domain/bardCollegeLore.test.ts
+          tests/domain/bardicInspiration.test.ts
+          tests/domain/progressionPhase08BardLore.test.ts
+          tests/domain/progressionPhase08SorcererDraconic.test.ts
+          tests/domain/progressionPhase08WizardEvocation.test.ts
+          tests/ui/bardicInspirationRuntimeAdapter.test.ts
+          tests/ui/progressionPhase08BardLoreRuntime.test.ts
+          tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+          tests/ui/progressionPhase08WizardEvocationRuntime.test.ts
       - name: Generate content dependencies
         run: npm run generate:content
       - name: Typecheck application
