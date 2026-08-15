@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import "../../src/app/progressionPhase08RogueThiefAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -41,6 +42,14 @@ async function monkAdapter(level:number) {
 function choiceKinds(snapshot:AppSnapshot) {
   return (snapshot.progressionPlan?.choices ?? []).map((choice) => [choice.id,choice.kind,choice.required] as const);
 }
+
+test("production route preserves the legacy host required by LevelUpV10Bridge instead of substituting unconditional ASI UI", () => {
+  const viteSource = readFileSync(new URL("../../vite.config.ts",import.meta.url),"utf8");
+  const mainSource = readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
+  assert.doesNotMatch(viteSource,/LevelUpFocused/);
+  assert.match(viteSource,/Expected legacy LevelUpScreen route was not found/);
+  assert.match(mainSource,/LevelUpV10Bridge/);
+});
 
 test("canonical generated Monk rows keep subclass and ASI at their exact SRD unlock levels", () => {
   assert.deepEqual(progressionRow(monkId,2)?.features,["몽크의 기","비무장 이동","경이로운 신진대사"]);
