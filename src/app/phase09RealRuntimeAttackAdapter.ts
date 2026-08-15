@@ -103,7 +103,7 @@ function build(
     const runtimeState=internal.sessionMode === "initiative"
       ? snapshotAdapterTurnRuntimeState(adapter,internal.scene)
       : undefined;
-    const transaction = resolveAtomicAttackTransaction({
+    return resolveAtomicAttackTransaction({
       resolutionId:`${resolution.id}:runtime-atomic`,
       action,
       actor,
@@ -128,8 +128,6 @@ function build(
         critical:resolution.critical === true,
       },
     });
-    if (transaction.status === "committed") transaction.provenance.push(...targetingFact.provenance);
-    return transaction;
   } catch (error) {
     return { status:"rejected", error:error instanceof Error ? error.message : String(error) };
   }
