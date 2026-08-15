@@ -14,6 +14,15 @@ export interface PactTomeRestSpellCommand {
   ritualSpellIds:string[];
 }
 
+export interface CircleLandRestConfigurationVm {
+  characterId:string;
+  revision:number;
+  landType?:CircleLandType;
+  cantripIds:string[];
+  preparedSpellIds:string[];
+  spellSources:Record<string,string>;
+}
+
 export interface RestSpellManagementResultVm {
   kind:"wizard-long-rest"|"pact-tome"|"circle-land";
   status:"committed"|"rejected";
@@ -23,6 +32,7 @@ export interface RestSpellManagementResultVm {
 declare module "./contracts" {
   interface AppSnapshot {
     restSpellManagement?:RestSpellManagementResultVm;
+    circleLandRestConfiguration?:CircleLandRestConfigurationVm;
   }
 
   interface SimpleVttAdapter {

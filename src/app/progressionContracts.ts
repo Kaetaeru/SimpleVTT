@@ -1,7 +1,6 @@
 import "./contracts";
 import type { ChoiceSelectionMap } from "../domain/choiceDefinition";
 import type { ProgressionClassTrack, ProgressionPlan } from "../domain/progression";
-import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 
 declare module "./contracts" {
   interface CharacterResourceVm {
@@ -50,10 +49,6 @@ declare module "./contracts" {
     subclassFeatureSources?:Record<string,string>;
     bardMagicalDiscoverySpellIds?:string[];
     bardMagicalDiscoverySpellSources?:Record<string,string>;
-    circleLandType?:CircleLandType;
-    circleLandCantripIds?:string[];
-    circleLandPreparedSpellIds?:string[];
-    circleLandSpellSources?:Record<string,string>;
     pactTomeCantripIds?: string[];
     pactTomeRitualSpellIds?: string[];
     pactTomeSpellSources?: Record<string, string>;

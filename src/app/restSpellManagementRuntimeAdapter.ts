@@ -137,8 +137,7 @@ MockAdapter.prototype.configurePactTomeRest = async function configurePactTomeRe
 };
 
 MockAdapter.prototype.configureCircleLandRest = async function configureCircleLandRest(landType:CircleLandType) {
-  const internal = this as unknown as AdapterState;
-  const result = configureCircleLandSpells(internal.activeCharacter,landType);
+  const result = configureCircleLandSpells(this,landType);
   if (result.status === "rejected") {
     return snapshotWithResult(this,{
       kind:"circle-land",

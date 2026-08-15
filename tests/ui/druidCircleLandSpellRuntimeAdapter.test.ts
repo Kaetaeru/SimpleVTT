@@ -15,7 +15,7 @@ async function baselineAdapter() {
   return { adapter, internal:adapter as unknown as { activeCharacter:typeof baseline } };
 }
 
-test("Circle of the Land stores the current land package separately and projects it into spell views", async () => {
+test("Circle of the Land keeps the current land package in session configuration and projects it into spell views", async () => {
   const { adapter, internal } = await baselineAdapter();
   const guidance = id("Guidance");
   const cureWounds = id("Cure Wounds");
@@ -31,22 +31,24 @@ test("Circle of the Land stores the current land package separately and projects
     preparedSpells:[cureWounds],
     cantripSources:{ [guidance]:"드루이드 기본 소마법" },
     preparedSpellSources:{ [cureWounds]:"드루이드 기본 준비 주문" },
-    circleLandCantripIds:[],
-    circleLandPreparedSpellIds:[],
-    circleLandSpellSources:{},
   };
 
-  const configured = configureCircleLandSpells(internal.activeCharacter,"arid");
+  const configured = configureCircleLandSpells(adapter,"arid");
   assert.equal(configured.status,"committed");
-  assert.equal(internal.activeCharacter.progressionRevision,12);
+  assert.equal(internal.activeCharacter.progressionRevision,11,"rest configuration must not advance durable character progression revision");
   assert.deepEqual(internal.activeCharacter.cantrips,[guidance],"base cantrips stay durable and separate");
   assert.deepEqual(internal.activeCharacter.preparedSpells,[cureWounds],"base prepared spells stay durable and separate");
-  assert.deepEqual(internal.activeCharacter.circleLandCantripIds,[id("Fire Bolt")]);
-  assert.deepEqual(internal.activeCharacter.circleLandPreparedSpellIds,[
-    id("Blur"),id("Burning Hands"),id("Fireball"),id("Blight"),id("Wall of Stone"),
-  ]);
+  assert.equal(Object.prototype.hasOwnProperty.call(internal.activeCharacter,"circleLandType"),false);
+  assert.equal(Object.prototype.hasOwnProperty.call(internal.activeCharacter,"circleLandCantripIds"),false);
+  assert.equal(Object.prototype.hasOwnProperty.call(internal.activeCharacter,"circleLandPreparedSpellIds"),false);
 
   const snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.circleLandRestConfiguration?.revision,1);
+  assert.equal(snapshot.circleLandRestConfiguration?.landType,"arid");
+  assert.deepEqual(snapshot.circleLandRestConfiguration?.cantripIds,[id("Fire Bolt")]);
+  assert.deepEqual(snapshot.circleLandRestConfiguration?.preparedSpellIds,[
+    id("Blur"),id("Burning Hands"),id("Fireball"),id("Blight"),id("Wall of Stone"),
+  ]);
   assert.deepEqual(snapshot.activeCharacter.cantrips,[guidance,id("Fire Bolt")]);
   assert.deepEqual(snapshot.activeCharacter.preparedSpells,[
     cureWounds,id("Blur"),id("Burning Hands"),id("Fireball"),id("Blight"),id("Wall of Stone"),
@@ -55,7 +57,7 @@ test("Circle of the Land stores the current land package separately and projects
   assert.match(snapshot.activeCharacter.preparedSpellSources?.[id("Fireball")] ?? "",/circle-of-the-land\.circle-spells:arid/);
 });
 
-test("changing land replaces only the Circle package while the character's base spell state survives", async () => {
+test("changing land replaces only the session package while the character's durable spell state survives", async () => {
   const { adapter, internal } = await baselineAdapter();
   const guidance = id("Guidance");
   const cureWounds = id("Cure Wounds");
@@ -73,39 +75,41 @@ test("changing land replaces only the Circle package while the character's base 
     preparedSpellSources:{ [cureWounds]:"base prepared" },
   };
 
-  assert.equal(configureCircleLandSpells(internal.activeCharacter,"arid").status,"committed");
-  assert.equal(configureCircleLandSpells(internal.activeCharacter,"polar").status,"committed");
-  assert.equal(internal.activeCharacter.progressionRevision,5);
-  assert.deepEqual(internal.activeCharacter.circleLandCantripIds,[id("Ray of Frost")]);
-  assert.deepEqual(internal.activeCharacter.circleLandPreparedSpellIds,[id("Fog Cloud"),id("Hold Person"),id("Sleet Storm")]);
+  assert.equal(configureCircleLandSpells(adapter,"arid").status,"committed");
+  assert.equal(configureCircleLandSpells(adapter,"polar").status,"committed");
+  assert.equal(internal.activeCharacter.progressionRevision,3);
 
   const snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.circleLandRestConfiguration?.revision,2);
+  assert.equal(snapshot.circleLandRestConfiguration?.landType,"polar");
+  assert.deepEqual(snapshot.circleLandRestConfiguration?.cantripIds,[id("Ray of Frost")]);
+  assert.deepEqual(snapshot.circleLandRestConfiguration?.preparedSpellIds,[id("Fog Cloud"),id("Hold Person"),id("Sleet Storm")]);
   assert.deepEqual(snapshot.activeCharacter.cantrips,[guidance,id("Ray of Frost")]);
   assert.ok(!snapshot.activeCharacter.cantrips.includes(id("Fire Bolt")));
   assert.ok(snapshot.activeCharacter.preparedSpells.includes(cureWounds));
   assert.ok(!snapshot.activeCharacter.preparedSpells.includes(id("Fireball")));
-  assert.deepEqual(snapshot.activeCharacter.circleLandPreparedSpellIds,[id("Fog Cloud"),id("Hold Person"),id("Sleet Storm")]);
 });
 
-test("stored Circle package becomes inactive if the stable subclass id is no longer Circle of the Land", async () => {
+test("session Circle package becomes mechanically inactive if the stable subclass id is no longer Circle of the Land", async () => {
   const { adapter, internal } = await baselineAdapter();
   const guidance = id("Guidance");
-  const fireBolt = id("Fire Bolt");
   internal.activeCharacter = {
     ...internal.activeCharacter,
     className:"드루이드",
+    subclassName:"대지의 회합",
     level:3,
-    classLevels:[{ classId:DRUID_ID, className:"드루이드", level:3 }],
-    subclassIds:{ [DRUID_ID]:"dnd.srd521.subclass.druid.other" },
+    classLevels:[{ classId:DRUID_ID, className:"드루이드", level:3, subclassName:"대지의 회합" }],
+    subclassIds:{ [DRUID_ID]:DRUID_CIRCLE_LAND_SUBCLASS_ID },
+    progressionRevision:8,
     cantrips:[guidance],
     preparedSpells:[],
-    circleLandType:"arid",
-    circleLandCantripIds:[fireBolt],
-    circleLandPreparedSpellIds:[id("Blur"),id("Burning Hands")],
-    circleLandSpellSources:{ [fireBolt]:"stale land package" },
   };
+  assert.equal(configureCircleLandSpells(adapter,"arid").status,"committed");
+
+  internal.activeCharacter.subclassIds = { [DRUID_ID]:"dnd.srd521.subclass.druid.other" };
   const snapshot = await adapter.getSnapshot();
   assert.deepEqual(snapshot.activeCharacter.cantrips,[guidance]);
   assert.deepEqual(snapshot.activeCharacter.preparedSpells,[]);
-  assert.deepEqual(snapshot.activeCharacter.circleLandCantripIds,[fireBolt],"durable history may remain but has no active mechanics");
+  assert.equal(snapshot.circleLandRestConfiguration?.landType,"arid","session configuration may remain as inactive state");
+  assert.ok(snapshot.circleLandRestConfiguration?.cantripIds.includes(id("Fire Bolt")));
 });

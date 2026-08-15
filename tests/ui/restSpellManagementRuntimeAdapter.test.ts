@@ -89,7 +89,7 @@ test("Pact of the Tome rest command commits Book choices and returns the project
   ritualSpellIds.forEach((spellId) => assert.ok(snapshot.activeCharacter.preparedSpells.includes(spellId)));
 });
 
-test("Circle of the Land rest command changes the current land package without touching base Druid spells", async () => {
+test("Circle of the Land rest command changes session configuration without mutating durable Druid progression", async () => {
   const { adapter, internal } = await baselineAdapter();
   const guidance = id("Guidance");
   const cureWounds = id("Cure Wounds");
@@ -109,13 +109,18 @@ test("Circle of the Land rest command changes the current land package without t
 
   const arid = await adapter.configureCircleLandRest("arid");
   assert.equal(arid.restSpellManagement?.status,"committed");
-  assert.equal(arid.activeCharacter.progressionRevision,21);
+  assert.equal(arid.activeCharacter.progressionRevision,20);
+  assert.equal(arid.circleLandRestConfiguration?.revision,1);
+  assert.equal(arid.circleLandRestConfiguration?.landType,"arid");
   assert.ok(arid.activeCharacter.cantrips.includes(id("Fire Bolt")));
   assert.ok(arid.activeCharacter.preparedSpells.includes(id("Fireball")));
+  assert.equal(Object.prototype.hasOwnProperty.call(internal.activeCharacter,"circleLandType"),false);
 
   const polar = await adapter.configureCircleLandRest("polar");
   assert.equal(polar.restSpellManagement?.status,"committed");
-  assert.equal(polar.activeCharacter.progressionRevision,22);
+  assert.equal(polar.activeCharacter.progressionRevision,20);
+  assert.equal(polar.circleLandRestConfiguration?.revision,2);
+  assert.equal(polar.circleLandRestConfiguration?.landType,"polar");
   assert.ok(polar.activeCharacter.cantrips.includes(guidance));
   assert.ok(polar.activeCharacter.preparedSpells.includes(cureWounds));
   assert.ok(polar.activeCharacter.cantrips.includes(id("Ray of Frost")));
