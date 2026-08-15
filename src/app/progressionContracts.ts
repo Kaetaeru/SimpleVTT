@@ -42,6 +42,8 @@ declare module "./contracts" {
     epicBoonFeatSources?:Record<string,string>;
     weaponMasteryIds?:string[];
     weaponMasterySources?:Record<string,string>;
+    fightingStyleFeatIds?:string[];
+    fightingStyleFeatSources?:Record<string,string>;
     subclassIds?: Record<string, string>;
     subclassSources?: Record<string, string>;
     circleLandType?:CircleLandType;
