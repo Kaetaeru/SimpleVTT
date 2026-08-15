@@ -1,4 +1,4 @@
-import { resolveD20Test, type FixedDiceInput, type ModifierContribution } from "./d20";
+import { resolveD20Test, type D20TestResult, type FixedDiceInput, type ModifierContribution } from "./d20";
 import { DomainEvaluationError, type ProvenanceRecord, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import type { EffectInstance } from "./effects";
 import { removeEffectGroup } from "./effects";
@@ -27,6 +27,7 @@ export interface ConcentrationCheckRequest {
 export interface ConcentrationCheckResolution {
   dc: number;
   maintained: boolean;
+  test?: D20TestResult;
   provenance: ProvenanceRecord[];
 }
 
@@ -87,6 +88,7 @@ export function resolveConcentrationDamageCheck(
   return {
     dc,
     maintained:result.outcome === "success",
+    test:structuredClone(result),
     provenance:[...result.provenance, {
       source:"profile:dnd.srd-5.2.1/concentration",
       status:"applied",
