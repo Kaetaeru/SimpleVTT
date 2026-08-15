@@ -12,7 +12,11 @@
 ```text
 Issue #53  app: converge Phase 09 mechanics into RealAdapter services
 PR    #54  agent/53-mechanics-phase09
-Base       agent/50-rules-phase08 (PR #52)
+Owner progression regression stack:
+PR    #60  agent/55-progression-choice-schedule-fix                DRAFT / Windows owner gate pending
+PR    #62  agent/61-effect-concentration-runtime-undo               DRAFT
+PR    #64  agent/63-authoritative-turn-runtime-attacks              DRAFT
+PR    #66  agent/65-runtime-effect-activity-undo                    DRAFT / current stack head
 ```
 
 ## Phase 08 ✅
@@ -23,6 +27,18 @@ Base       agent/50-rules-phase08 (PR #52)
 - Contract / Rules / progression aggregate / TypeScript / UI build green
 
 Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
+
+## Owner progression gate — OPEN
+
+- [x] production Vite route가 stale `LevelUpFocused`를 주입하던 원인 수정
+- [x] Monk 1→2 phantom ASI 제거 자동 검증
+- [x] Monk 2→3 required subclass choice 자동 검증
+- [x] Monk 3→4 ASI schedule 자동 검증
+- [x] 12 SRD classes × target levels 2-20 semantic choice schedule gate
+- [x] Windows build / focused regression / Tauri / NSIS package green
+- [ ] owner가 수정 Windows build에서 progression walkthrough 재검증
+
+**owner 확인 전에는 PR #60을 ready/merge 처리하거나 progression acceptance gate를 닫지 않는다.**
 
 ## Phase 09 — Mechanics Integration / RealAdapter ← current
 
@@ -84,6 +100,10 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] dynamic Combatant instantiate → active runtime에 즉시 materialize
 - [x] accepted interrupt → domain `reaction` operation
 - [x] Reaction event를 attack history에 합쳐 Undo가 defender Reaction까지 복원
+- [x] shared TurnRuntimeSession registry + clone-only snapshot / revision-checked commit seam
+- [x] initiative atomic attack이 실제 TurnRuntimeSession의 effects/concentration/history/combatants를 사용
+- [x] staged attack 중 runtime revision drift 시 stale commit reject + intervening runtime mutation 보존
+- [x] 실제 TurnRuntimeSession이 없으면 기존 isolated attack fallback 유지
 
 #### Atomic representative actions
 - [x] Shortbow = targeting + attack + damage + Action one transaction
@@ -93,12 +113,30 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] Thunderwave = all target saves + per-target damage + Action one transaction
 - [x] Manual Opportunity Attack = declared trigger facts + Reaction + attack + damage one transaction
 
+#### Effect / Concentration runtime convergence
+- [x] `EffectStateChange` safe inverse용 cloned before/after `EffectInstance` payload
+- [x] `ConcentrationStateChange` groupId 문자열 대신 cloned full `ConcentrationState` before/after payload
+- [x] start/end concentration, damage break, incapacitation/death, rest expiry에서 full state-change event 보존
+- [x] event-native runtime inverse: Effect / Concentration drift-check + exact restore
+- [x] runtime Undo는 revision을 과거로 되돌리지 않고 새로운 correction revision으로 +1
+- [x] authoritative attack이 runtime-only damage effect를 실제 피해 계산에 반영
+- [x] 집중 중 대상이 피해를 받고 fixed concentration-check input이 없으면 roll을 발명하지 않고 explicit reject
+- [x] fixed failed concentration save는 concentration + group effects 제거 event를 기록
+- [x] 일반 `apply/update/remove-effect`, `start/end-concentration` application service가 authoritative TurnRuntimeSession을 사용
+- [x] effect/concentration application raw ResolutionEvent → Activity → shared event-native Undo
+- [x] concentration Activity label은 `groupId (sourceId)`로 표시하고 `[object Object]` 누수 금지
+- [x] 일반 effect application commit도 runtime revision drift를 덮어쓰지 않음
+- [x] `SceneVm`에 effect/concentration 저장 필드를 추가하지 않음
+
 #### ResolutionEvent / Activity / Undo
 - [x] Shortbow / Second Wind / Potion / Wand / Thunderwave / manual Opportunity Attack raw events → Activity
 - [x] event-native inverse: HP / economy / Character resource / ItemInstance quantity+charges / life flags
+- [x] event-native inverse: EffectInstance / ConcentrationState
 - [x] critical wolf death `dead false→true` → Undo `true→false`
 - [x] stale current state와 event `after` 불일치 시 explicit reject
 - [x] event Undo 결과를 active turn runtime에 reconcile
+- [x] attack과 일반 effect application이 shared raw-event history registry를 사용
+- [x] pure runtime application용 generic Activity projector
 
 #### 3D visual dice
 - [x] authoritativeDice presentation-only replay
@@ -108,14 +146,16 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 
 ### 현재 verified implementation checkpoint
 
-`13d772e22d2d7f60ea08c95508c4c7869ad1c5ec`
+`ebe095223d3cdf3d6be1e9d8448cd372eea499b8`
 
 ```text
-Contract validation                    ✅
 Rules Domain                           ✅
 Phase 08 zero-pending audit            ✅
 Phase 07/08 aggregate progression      ✅
 Phase 09 service/adapter tests         ✅
+Authoritative turn-runtime attacks     ✅
+Effect/Concentration runtime Undo      ✅
+Effect application Activity/Undo       ✅
 Manual movement reaction E2E           ✅
 Movement reaction UI/policy structure  ✅
 3D dice tests                          ✅
@@ -125,15 +165,15 @@ UI production build                    ✅
 
 ### 다음 Phase 09 작업
 
-- [ ] EffectStateChange에 safe inverse용 before/after effect payload 추가
-- [ ] concentration runtime projection + event-native inverse
-- [ ] effect/concentration application path를 raw event Activity/Undo에 연결
+- [ ] `spellcastingRuntimeAdapter`의 별도 `bridge.runtime` / Before-snapshot Undo를 공용 TurnRuntimeSession + ResolutionEvent 경계로 수렴
+- [ ] concentration damage save를 실제 사용자 입력/authoritative dice workflow와 연결; fixed input 없는 경우 explicit reject 유지
+- [ ] condition/effect-aware turn begin semantics가 active runtime에 완전히 수렴하는지 검증 (`advanceTurnRuntimeSession` direct reset 제거)
 - [ ] Combatant runtime action을 authoritative spatial facts가 있는 encounter instance에 확대
 - [ ] Character Creation choice graph를 `ChoiceDefinition` 경로로 점진 통합
 - [ ] level-up / rest-time configuration / class-feature commands를 공용 application service로 수렴
 - [ ] UI component에 named-rule 계산이 재유입되지 않는 구조 gate 추가
 - [ ] optional WebGL/physics 3D dice renderer
-- [ ] 실제 2D/3D 모듈 요구가 생길 때 executable presentation-module loader/registration 설계; core movement ownership은 금지
+- [ ] 실제 2D/3D 모듈 요구가 생길 때만 executable presentation-module loader/registration 설계; core movement ownership은 금지
 
 Phase 09 완료 기준:
 

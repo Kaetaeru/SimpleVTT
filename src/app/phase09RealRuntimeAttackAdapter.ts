@@ -10,6 +10,7 @@ import { projectResolutionEventsToActivity } from "./realActivityProjectionServi
 import { undoResolutionEvents } from "./realEventUndoService";
 import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 import { clearPendingManualMovementReaction, manualMovementReactionFor, type PendingManualMovementReaction } from "./manualMovementReactionRuntime";
+import { runtimeResolutionEventHistories } from "./runtimeResolutionEventHistory";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface BeforeState {
@@ -40,7 +41,11 @@ interface CommittedEventHistory {
 }
 
 const pending = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
-const committedEventHistory = new WeakMap<MockAdapter,CommittedEventHistory>();
+const committedEventHistory:{
+  get(adapter:MockAdapter):CommittedEventHistory|undefined;
+  set(adapter:MockAdapter,history:CommittedEventHistory):unknown;
+  delete(adapter:MockAdapter):boolean;
+}=runtimeResolutionEventHistories;
 const previousAdvance = MockAdapter.prototype.advanceResolution;
 const previousUndo = MockAdapter.prototype.undoLastResolution;
 
@@ -181,7 +186,7 @@ function finalize(adapter:MockAdapter,internal:RuntimeAttackAdapterState,transac
   }));
   committedEventHistory.set(adapter,{
     resolutionId:resolution.id,
-    events:events.map((event) => structuredClone(event)),
+    events:events.map((event)=>structuredClone(event)),
   });
   internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
   internal.lastResolutionId = resolution.id;
