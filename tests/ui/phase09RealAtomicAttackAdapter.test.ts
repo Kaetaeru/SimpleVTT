@@ -101,7 +101,7 @@ test("MockAdapter Shortbow final apply uses pairwise spatial runtime, event-nati
 test("event-native Undo rejects when current scene state drifted after the committed events", async () => {
   const adapter=new MockAdapter();await hitShortbow(adapter);await adapter.applyDmAdjudication({ type:"healing-correction",value:1,targetId:"combatant.goblin-a",scope:"resolution",reason:"stale undo guard fixture" });
   let snapshot=await adapter.getSnapshot();assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);await adapter.undoLastResolution();snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);assert.match(snapshot.resolution?.finalOutcome??"",/Undo 거부/);assert.match(snapshot.resolution?.detail.at(-1)??"",/event-native scene undo drift/);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);assert.match(snapshot.resolution?.finalOutcome??"",/Undo 거부/);assert.match(snapshot.resolution?.detail.at(-1)??"",/event-native undo drift/);
 });
 
 test("Shortbow miss still commits Action cost atomically and projects the economy event", async () => {
