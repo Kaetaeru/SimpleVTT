@@ -14,7 +14,7 @@ export interface CombatantRuntimeAttackVm {
   id:string;
   name:string;
   category:"basic"|"weapon"|"magic";
-  sourceKind:"weapon"|"spell";
+  sourceKind:"weapon"|"unarmed"|"wild-shape";
   attackBonus:number;
   rangeFeet:number;
   damage:{
@@ -25,7 +25,7 @@ export interface CombatantRuntimeAttackVm {
 }
 
 export interface RuntimeAttackFactVm {
-  sourceKind:"weapon"|"spell";
+  sourceKind:"weapon"|"unarmed"|"wild-shape";
   rangeFeet:number;
   diceSides:number;
   diceCount:number;

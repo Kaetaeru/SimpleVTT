@@ -89,7 +89,7 @@ function parseRuntimeActions(payload:Record<string,unknown>):CombatantRuntimeAtt
     if (typeof id!=="string" || !/^[a-z0-9][a-z0-9-]*$/i.test(id)) throw new Error(`runtimeActions[${index}].id must be a stable slug`);
     if (typeof name!=="string" || !name.trim()) throw new Error(`runtimeActions[${index}].name is required`);
     if (category!=="basic" && category!=="weapon" && category!=="magic") throw new Error(`runtimeActions[${index}].category is invalid`);
-    if (sourceKind!=="weapon" && sourceKind!=="spell") throw new Error(`runtimeActions[${index}].sourceKind is invalid`);
+    if (sourceKind!=="weapon" && sourceKind!=="unarmed" && sourceKind!=="wild-shape") throw new Error(`runtimeActions[${index}].sourceKind is invalid for the current atomic attack domain`);
     if (typeof attackBonus!=="number" || !Number.isInteger(attackBonus)) throw new Error(`runtimeActions[${index}].attackBonus must be an integer`);
     if (typeof rangeFeet!=="number" || !Number.isInteger(rangeFeet) || rangeFeet<0) throw new Error(`runtimeActions[${index}].rangeFeet must be a non-negative integer`);
     if (typeof type!=="string" || !type.trim()) throw new Error(`runtimeActions[${index}].damage.type is required`);
