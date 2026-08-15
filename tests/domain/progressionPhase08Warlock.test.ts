@@ -78,7 +78,9 @@ test("multiclass Fighter 5 -> Warlock 1 keeps Pact Magic separate while committi
   assert.equal(plan.choices.find((choice) => choice.id === cantripChoice(1))?.count, 2);
   assert.equal(plan.choices.find((choice) => choice.id === preparedChoice(1))?.count, 2);
   assert.equal(plan.choices.find((choice) => choice.id === invocationChoice(1,1))?.status, "ready");
-  assert.equal(plan.choices.find((choice) => choice.id === invocationChoice(1,1))?.options.find((option) => option.id === "invocation:pact-of-the-tome")?.disabledReason?.includes("Book of Shadows"), true);
+  const tome = plan.choices.find((choice) => choice.id === invocationChoice(1,1))?.options.find((option) => option.id === "invocation:pact-of-the-tome");
+  assert.ok(tome);
+  assert.equal(tome?.disabledReason, undefined, "Pact of the Tome is executable now that Book of Shadows configuration has canonical Ritual metadata");
   assert.equal(plan.blocking.length, 0);
   assert.equal(plan.spellcastingAfter.casterLevel, 0, "Warlock Pact Magic must stay out of multiclass Spellcasting caster level");
   assert.deepEqual(plan.pactMagicAfter, { slotLevel:1, slotMaximum:1 });
