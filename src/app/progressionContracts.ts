@@ -38,6 +38,8 @@ declare module "./contracts" {
     mysticArcanumSources?: Record<number, string>;
     persistentFeatureOptionIds?: string[];
     persistentFeatureOptionSources?: Record<string, string>;
+    epicBoonFeatIds?:string[];
+    epicBoonFeatSources?:Record<string,string>;
     subclassIds?: Record<string, string>;
     subclassSources?: Record<string, string>;
     circleLandType?:CircleLandType;
