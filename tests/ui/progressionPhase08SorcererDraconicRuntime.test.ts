@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionPhase08SorcererDraconicAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import type { AppSnapshot } from "../../src/app/contracts";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
 import { classById } from "../../src/domain/progressionCatalog";
 import { draconicAffinityChoiceId } from "../../src/domain/progressionPhase08SorcererDraconic";
@@ -15,6 +16,15 @@ import {
 import { stableSpellId } from "../../src/domain/spellListCatalog";
 
 const subclassName = classById(SORCERER_ID)!.srdSubclassName;
+type FixtureState = { activeCharacter:AppSnapshot["activeCharacter"]; scene:AppSnapshot["scene"] };
+
+function syncSceneHp(internal:FixtureState) {
+  const entity = internal.scene.entities.find((entry) => entry.id === internal.activeCharacter.id);
+  if (!entity) return;
+  entity.hp = internal.activeCharacter.hp;
+  entity.maxHp = internal.activeCharacter.maxHp;
+  entity.tempHp = internal.activeCharacter.tempHp;
+}
 
 async function selectRemainingRequired(adapter:MockAdapter,commands:Phase07AdapterCommands,excluded = new Set<string>()) {
   for (;;) {
@@ -34,7 +44,7 @@ async function selectRemainingRequired(adapter:MockAdapter,commands:Phase07Adapt
 async function draconicLevel3Ready() {
   const adapter = new MockAdapter();
   const baseline = (await adapter.getSnapshot()).activeCharacter;
-  const internal = adapter as unknown as { activeCharacter:typeof baseline };
+  const internal = adapter as unknown as FixtureState;
   internal.activeCharacter = {
     ...baseline,
     className:"소서러",
@@ -55,6 +65,7 @@ async function draconicLevel3Ready() {
     subclassFeatureIds:[],
     subclassFeatureSources:{},
   };
+  syncSceneHp(internal);
   await adapter.startLevelUp(internal.activeCharacter.id);
   const commands = adapter as unknown as Phase07AdapterCommands;
   const initial = await adapter.getSnapshot();
@@ -99,7 +110,7 @@ test("Sorcerer 2 to 3 runtime commits four always-prepared Draconic spells", asy
 test("Sorcerer 5 to 6 runtime replaces generic subclass pending with Elemental Affinity and preserves the selected type", async () => {
   const adapter = new MockAdapter();
   const baseline = (await adapter.getSnapshot()).activeCharacter;
-  const internal = adapter as unknown as { activeCharacter:typeof baseline };
+  const internal = adapter as unknown as FixtureState;
   internal.activeCharacter = {
     ...baseline,
     className:"소서러",
@@ -110,6 +121,7 @@ test("Sorcerer 5 to 6 runtime replaces generic subclass pending with Elemental A
     proficiencyBonus:3,
     abilities:{ str:8,dex:14,con:14,int:10,wis:10,cha:18 },
     features:["주문 시전","타고난 마법","드라코닉 회복력","드라코닉 주문",subclassName],
+    skills:[],
     cantrips:[stableSpellId("Fire Bolt"),stableSpellId("Mage Hand"),stableSpellId("Minor Illusion"),stableSpellId("Prestidigitation")],
     preparedSpells:[
       stableSpellId("Burning Hands"),stableSpellId("Magic Missile"),stableSpellId("Shield"),
@@ -123,6 +135,7 @@ test("Sorcerer 5 to 6 runtime replaces generic subclass pending with Elemental A
     subclassFeatureIds:[DRACONIC_RESILIENCE_FEATURE_ID,DRACONIC_SPELLS_FEATURE_ID],
     subclassFeatureSources:{},
   };
+  syncSceneHp(internal);
 
   await adapter.startLevelUp(internal.activeCharacter.id);
   const commands = adapter as unknown as Phase07AdapterCommands;
