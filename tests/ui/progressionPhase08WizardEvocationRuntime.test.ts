@@ -74,8 +74,19 @@ test("Wizard 2 to 3 runtime commits School of Evocation and Evocation Savant spe
   assert.equal(savant?.count,2);
   const selectedSavant = savant!.options.filter((option) => !option.disabledReason).slice(0,2);
   assert.equal(selectedSavant.length,2);
-  await commands.setProgressionChoice(savant!.id,{ kind:"options", optionIds:selectedSavant.map((option) => option.id) });
-  snapshot = await selectRemainingRequired(adapter,commands,new Set([savant!.id]));
+  const selectedSavantIds = selectedSavant.map((option) => option.id);
+  await commands.setProgressionChoice(savant!.id,{ kind:"options", optionIds:selectedSavantIds });
+
+  snapshot = await adapter.getSnapshot();
+  const ordinary = snapshot.progressionPlan?.choices.find((choice) => choice.id !== savant!.id && choice.id.includes("spellbook") && choice.required);
+  assert.ok(ordinary);
+  const ordinaryOptions = ordinary!.options
+    .filter((option) => !option.disabledReason && !selectedSavantIds.includes(option.id))
+    .slice(0,ordinary!.count);
+  assert.equal(ordinaryOptions.length,ordinary!.count,"ordinary Wizard spellbook additions must remain distinct from Evocation Savant additions");
+  await commands.setProgressionChoice(ordinary!.id,{ kind:"options", optionIds:ordinaryOptions.map((option) => option.id) });
+
+  snapshot = await selectRemainingRequired(adapter,commands,new Set([savant!.id,ordinary!.id]));
   assert.deepEqual(snapshot.progressionPlan?.blocking,[]);
 
   await adapter.commitLevelUp();
