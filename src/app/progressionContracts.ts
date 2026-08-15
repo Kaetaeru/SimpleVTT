@@ -48,6 +48,8 @@ declare module "./contracts" {
     subclassSources?: Record<string, string>;
     subclassFeatureIds?:string[];
     subclassFeatureSources?:Record<string,string>;
+    bardMagicalDiscoverySpellIds?:string[];
+    bardMagicalDiscoverySpellSources?:Record<string,string>;
     circleLandType?:CircleLandType;
     circleLandCantripIds?:string[];
     circleLandPreparedSpellIds?:string[];
