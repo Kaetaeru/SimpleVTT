@@ -82,7 +82,7 @@ test("MockAdapter Thunderwave uses explicit target save facts and domain typed d
   assert.equal(snapshot.scene.economyByActor["char.mira"]?.action,false);
   assert.equal(snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.goblin-a")?.finalDamage,9);
   assert.equal(snapshot.resolution?.saveResults.find((entry) => entry.targetId === "combatant.training-guardian")?.finalDamage,2);
-  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("고블린 A") && entry.includes("Incoming thunder damage 9")));
+  assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("고블린 A") && entry.includes("HP 12 -> 3")));
   assert.ok(snapshot.resolution?.provenance.some((entry) => entry.includes("훈련용 수호체") && entry.includes("Resistance 4 -> 2")));
   assert.ok(snapshot.resolution?.stateChanges.includes("고블린 A HP 12 → 3"));
   assert.ok(snapshot.resolution?.stateChanges.includes("훈련용 수호체 임시 HP 4 → 2"));
