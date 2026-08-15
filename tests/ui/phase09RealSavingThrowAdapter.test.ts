@@ -17,10 +17,13 @@ test("runtime stat provider derives Character saves from canonical class profici
   const snapshot = await adapter.getSnapshot();
   const aelar = snapshot.scene.entities.find((entity) => entity.id === snapshot.activeCharacter.id)!;
   const strength = resolveRuntimeSaveModifier(aelar,snapshot.activeCharacter,"근력");
+  const constitution = resolveRuntimeSaveModifier(aelar,snapshot.activeCharacter,"건강");
   const wisdom = resolveRuntimeSaveModifier(aelar,snapshot.activeCharacter,"지혜");
   assert.equal(strength.modifier,7);
+  assert.equal(constitution.modifier,6,"Fighter CON save = ability +3 + proficiency +3");
   assert.equal(wisdom.modifier,1);
   assert.match(strength.source,/runtime:character:char\.aelar:save:str:class:.*fighter.*:proficient/);
+  assert.match(constitution.source,/runtime:character:char\.aelar:save:con:class:.*fighter.*:proficient/);
   assert.match(wisdom.source,/runtime:character:char\.aelar:save:wis:class:/);
 });
 
@@ -88,7 +91,7 @@ test("MockAdapter Thunderwave uses one atomic multi-target damage transaction wi
 
   (adapter as unknown as { lastBefore:unknown }).lastBefore=null;
   await adapter.undoLastResolution();
-  snapshot=await adapter.getSnapshot();
+  snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.tempHp,4);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.hp,30);
