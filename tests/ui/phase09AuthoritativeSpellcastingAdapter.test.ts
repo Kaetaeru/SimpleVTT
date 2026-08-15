@@ -94,7 +94,7 @@ test("authoritative HUD never re-seeds a depleted slot from the legacy bridge", 
   assert.equal(spellSlotCurrent(adapter,1),3,"legacy HUD is materialization input only; it cannot overwrite authoritative slot state");
 });
 
-test("no-session Healing Word preserves the existing legacy spell bridge fallback", async () => {
+test("no-session Healing Word preserves the existing legacy spell bridge and two-step safe Undo", async () => {
   const adapter=new MockAdapter();
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot)=>slot.level===1)?.current,4);
@@ -106,6 +106,13 @@ test("no-session Healing Word preserves the existing legacy spell bridge fallbac
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
+  assert.match(snapshot.resolution?.id ?? "",/^undo-preview\./,"legacy fallback preserves the existing confirmation preview");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,42,"preview does not mutate Scene state");
+  assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot)=>slot.level===1)?.current,3,"preview does not mutate legacy spell-slot state");
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution,null);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,31);
   assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot)=>slot.level===1)?.current,4);
 });
