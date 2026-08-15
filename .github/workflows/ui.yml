@@ -68,5 +68,7 @@ jobs:
           tests/ui/phase09RealNoRollDamageAdapter.test.ts
           tests/ui/phase09RealTurnRuntimeService.test.ts
           tests/ui/phase09RealTurnRuntimeAdapter.test.ts
+          tests/ui/visualDiceProjection.test.ts
+          tests/ui/visualDiceStructure.test.ts
       - name: Typecheck and build
         run: npm run build

@@ -17,7 +17,7 @@ const previousAdvance = MockAdapter.prototype.advanceResolution;
 MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRealNoRollDamage() {
   const internal = this as unknown as Phase09NoRollDamageState;
   const resolution = internal.resolution;
-  if (!resolution || resolution.stage !== "effect-preview") {
+  if (!resolution || !["effect-preview","damage-animation"].includes(resolution.stage)) {
     return previousAdvance.call(this);
   }
   const action = internal.action(resolution.actionId);
@@ -38,12 +38,25 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     return previousAdvance.call(this);
   }
 
+  if (resolution.stage === "effect-preview") {
+    resolution.authoritativeDice = [...resolved.authoritativeDice];
+    resolution.rollKind = "damage";
+    resolution.stage = "damage-animation";
+    resolution.compact = `${action.damage?.[0]?.dice ?? "피해"} · 권위 주사위 결과 준비`;
+    resolution.calculatedOutcome = `${resolved.raw} ${resolved.component.type} 피해 예정`;
+    if (!resolution.adjudicated) resolution.finalOutcome = resolution.calculatedOutcome;
+    resolution.provenance.push(...resolved.provenance.filter((entry) => !resolution.provenance.includes(entry)));
+    resolution.canAdvance = true;
+    resolution.nextLabel = "피해 적용";
+    return internal.getSnapshot();
+  }
+
   target.hp = resolved.nextHp;
   target.tempHp = resolved.nextTempHp;
   resolution.authoritativeDice = [...resolved.authoritativeDice];
   resolution.damageComponents = [resolved.component];
   resolution.stateChanges.push(...resolved.stateChanges);
-  resolution.provenance.push(...resolved.provenance);
+  resolution.provenance.push(...resolved.provenance.filter((entry) => !resolution.provenance.includes(entry)));
   resolution.compact = `자동 명중 · ${resolved.component.adjusted} ${resolved.component.type} 피해`;
   resolution.calculatedOutcome = resolution.compact;
   if (!resolution.adjudicated) resolution.finalOutcome = resolution.compact;

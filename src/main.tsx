@@ -32,9 +32,11 @@ import "./app/restSpellManagementRuntimeAdapter";
 import "./app/classFeatureSpellRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
+import { VisualDiceBridge } from "./VisualDiceBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
+import "./visual-dice.css";
 import "./character-creation-v09.css";
 import "./character-creation-v10.css";
 import "./compact-options.css";
@@ -51,6 +53,7 @@ createRoot(document.getElementById("root")!).render(
       <App />
       <CombatSpellHudBridge />
       <LevelUpV10Bridge />
+      <VisualDiceBridge />
     </AppProvider>
   </StrictMode>,
 );

@@ -53,13 +53,22 @@ test("no-roll damage service resolves structured damage dice before typed damage
   assert.ok(result.provenance.some((entry) => entry.includes("HP 12 -> 3")));
 });
 
-test("wand now runs structured damage, typed health, charge spend, and Action spend through Phase 09 services", async () => {
+test("wand exposes its authoritative 3d4 as a visual damage stage before the atomic apply", async () => {
   const adapter = new MockAdapter();
   await adapter.resolveAction("action.wand",["combatant.goblin-a"]);
   let snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"effect-preview");
   assert.equal(snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.hp,12);
   assert.equal(snapshot.activeCharacter.items.find((item) => item.id === "item.wand.aelar")?.charges?.current,7);
+
+  await adapter.advanceResolution();
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"damage-animation");
+  assert.equal(snapshot.resolution?.rollKind,"damage");
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[2,2,2]);
+  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.hp,12);
+  assert.equal(snapshot.activeCharacter.items.find((item) => item.id === "item.wand.aelar")?.charges?.current,7);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
 
   await adapter.advanceResolution();
   snapshot = await adapter.getSnapshot();
