@@ -6,6 +6,7 @@ import type { AppSnapshot } from "./contracts";
 
 interface RouterState {
   scene:AppSnapshot["scene"];
+  _undoPreviewArmed?:boolean;
   getSnapshot():Promise<AppSnapshot>;
 }
 
@@ -33,8 +34,10 @@ MockAdapter.prototype.resolveAction=async function resolveActionByRuntimePresenc
 
 MockAdapter.prototype.undoLastResolution=async function undoLastResolutionByRuntimePresence() {
   if (legacySpellUndoPending.has(this)) {
-    legacySpellUndoPending.delete(this);
-    return legacySpellUndoLastResolution.call(this);
+    const internal=this as unknown as RouterState;
+    const snapshot=await legacySpellUndoLastResolution.call(this);
+    if (!internal._undoPreviewArmed) legacySpellUndoPending.delete(this);
+    return snapshot;
   }
   return authoritativeUndoLastResolution.call(this);
 };
