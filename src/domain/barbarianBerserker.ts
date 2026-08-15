@@ -214,6 +214,7 @@ export function compileBerserkerIntimidatingPresence(request:BerserkerIntimidati
       kind:"use-economy",
       actorId:request.actorId,
       slot:"bonus-action",
+      bonusActionGranted:true,
       actionKind:"other",
     },
   ];

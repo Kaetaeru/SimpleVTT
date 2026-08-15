@@ -15,7 +15,9 @@ import {
   resolveBerserkerMindlessRageStart,
   resolveBerserkerRetaliation,
 } from "../../src/domain/barbarianBerserker";
+import { barbarianPrimalKnowledgeChoiceId } from "../../src/domain/barbarianPrimalKnowledgeProgression";
 import type { ProgressionRequest } from "../../src/domain/progression";
+import { classById } from "../../src/domain/progressionCatalog";
 import { buildProgressionPlanPhase08Subclass, resolveProgressionPhase08Subclass } from "../../src/domain/progressionPhase08Subclass";
 import {
   BARBARIAN_SUBCLASS_CLASS_ID,
@@ -85,14 +87,17 @@ test("the remaining six SRD subclasses have stable identity relationships withou
 
 test("Barbarian 2 to 3 persists Path of the Berserker stable identity", () => {
   const state = berserkerState(2);
+  const subclassName = classById(BARBARIAN_SUBCLASS_CLASS_ID)!.srdSubclassName;
   const selections = {
-    [`progression.${BARBARIAN_SUBCLASS_CLASS_ID}.3.subclass`]:{ kind:"options" as const, optionIds:["subclass:광전사의 길"] },
+    [`progression.${BARBARIAN_SUBCLASS_CLASS_ID}.3.subclass`]:{ kind:"options" as const, optionIds:[`subclass:${subclassName}`] },
+    [barbarianPrimalKnowledgeChoiceId(3)]:{ kind:"options" as const, optionIds:["skill:survival"] },
   };
   const result = resolveProgressionPhase08Subclass(state,progressionRequest(state,selections));
   assert.equal(result.status,"committed");
   if (result.status !== "committed") return;
   const next = result.state as SrdSubclassProgressionState;
   assert.equal(next.subclassIds?.[BARBARIAN_SUBCLASS_CLASS_ID],BARBARIAN_BERSERKER_SUBCLASS_ID);
+  assert.ok(next.proficientSkills?.includes("생존"));
 });
 
 test("Berserker 6/10/14 progression relationships replace the generic subclass blocker with mechanics-backed feature ids", () => {
