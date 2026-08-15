@@ -66,7 +66,7 @@ export function creationChoiceSelectionMap(
 ):ChoiceSelectionMap {
   return Object.fromEntries(definitions.flatMap((definition)=>{
     const optionIds=draft.choiceSelections?.[definition.id];
-    return optionIds ? [[definition.id,{ kind:"options" as const,optionIds:[...optionIds] }]] : [];
+    return optionIds?.length ? [[definition.id,{ kind:"options" as const,optionIds:[...optionIds] }]] : [];
   }));
 }
 
