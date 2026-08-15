@@ -59,7 +59,7 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 
 #### Manual movement-triggered reactions
 - [x] Core는 기회공격/이동 유발 반응을 자동 감지하지 않음
-- [x] 현재 턴 조종자가 Scene의 `이동 반응 입력` 버튼으로 trigger를 명시적으로 선언
+- [x] **현재 움직이는/provoking Actor를 조종하는 현재 턴 조종자**가 Scene의 `이동 반응 입력` 버튼으로 trigger를 명시적으로 선언
 - [x] provoker/reactor/attack + trigger 순간 distance/visibility/cover/mutual-sight를 authoritative input으로 제출
 - [x] Reaction availability / range / sight / cover / attack / critical / typed damage는 rules domain이 재검증
 - [x] Reaction spend + attack을 하나의 atomic transaction으로 commit; targeting 실패 시 Reaction도 rollback
