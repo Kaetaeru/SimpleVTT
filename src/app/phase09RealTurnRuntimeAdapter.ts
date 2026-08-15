@@ -1,7 +1,6 @@
 import "./phase09CombatantDefinitionRuntimeAdapter";
-import "./movementRuntimeContracts";
 import type { ActivityEntry, AppSnapshot, ResolutionView, SceneVm, SessionMode } from "./contracts";
-import type { MoveActorCommand } from "./movementRuntimeContracts";
+import type { MovementModuleCommand, MovementModuleHost } from "./movementRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
 import { applyMovementSpatialPlan, prepareMovementSpatialUpdates } from "./realSpatialRuntimeService";
 import {
@@ -57,14 +56,14 @@ function syncFromScene(adapter:MockAdapter,internal:Phase09TurnAdapterState) {
   return changed;
 }
 
-function movementRejected(internal:Phase09TurnAdapterState,actorId:string,error:string) {
+function movementRejected(internal:Phase09TurnAdapterState,moduleId:string,actorId:string,error:string) {
   internal.activity.unshift({
-    id:eventId("movement-rejected"),
+    id:eventId("movement-module-rejected"),
     time:"지금",
     actor:internal.scene.entities.find((entity)=>entity.id===actorId)?.name ?? actorId,
-    title:"이동 적용 거부",
+    title:"이동 모듈 적용 거부",
     summary:error,
-    detail:["Turn runtime/spatial transaction not committed"],
+    detail:[`Movement module ${moduleId} · turn runtime/spatial transaction not committed`],
     stateChanges:[],
     correction:true,
   });
@@ -79,6 +78,72 @@ export function consumeAdapterInterruptEvents(adapter:MockAdapter,resolutionId:s
   if (!history||history.resolutionId!==resolutionId) return [];
   interruptEvents.delete(adapter);
   return history.events.map((event)=>structuredClone(event));
+}
+
+/**
+ * Optional movement-module host hook.
+ * Core SimpleVTT never calls this function by itself and exposes no moveActor
+ * method on SimpleVttAdapter. A map module owns coordinates/pathing and invokes
+ * this hook only after it has produced the complete authoritative spatial set.
+ */
+export async function applyMovementModuleCommand(adapter:MockAdapter,command:MovementModuleCommand):Promise<AppSnapshot> {
+  const internal=adapter as unknown as Phase09TurnAdapterState;
+  const session=sessions.get(adapter);
+  if (!session||internal.sessionMode!=="initiative") {
+    movementRejected(internal,command.moduleId,command.actorId,"movement module requires an active initiative turn runtime");
+    return adapter.getSnapshot();
+  }
+
+  let spatialPlan;
+  try {
+    spatialPlan=prepareMovementSpatialUpdates(internal.scene,command.actorId,command.spatialUpdates,command.moduleId);
+  } catch(error) {
+    movementRejected(internal,command.moduleId,command.actorId,error instanceof Error ? error.message : String(error));
+    return adapter.getSnapshot();
+  }
+
+  const beforeMovement=internal.scene.economyByActor[command.actorId]?.movement;
+  const movement=resolveTurnRuntimeMovement(session,{
+    resolutionId:eventId("movement-module"),
+    actorId:command.actorId,
+    distanceFeet:command.distanceFeet,
+    destinationMovesCloserToVisibleFrighteningSource:command.destinationMovesCloserToVisibleFrighteningSource,
+    visibleSourceIds:command.visibleSourceIds,
+  });
+  if (movement.status==="rejected") {
+    movementRejected(internal,command.moduleId,command.actorId,movement.error);
+    return adapter.getSnapshot();
+  }
+
+  projectTurnRuntimeToScene(session,internal.scene);
+  applyMovementSpatialPlan(internal.scene,spatialPlan);
+  const actor=internal.scene.entities.find((entity)=>entity.id===command.actorId);
+  const afterMovement=movement.economy.movement;
+  internal.activity.unshift({
+    id:eventId("movement-module-commit"),
+    time:"지금",
+    actor:actor?.name ?? command.actorId,
+    title:"이동 모듈 적용",
+    summary:`${command.distanceFeet}피트 이동`,
+    detail:[
+      `Movement module: ${command.moduleId}`,
+      ...movement.events.flatMap((event,index)=>[
+        `ResolutionEvent ${index+1}/${movement.events.length} · ${event.kind} · ${event.operationId}`,
+        event.summary,
+        ...event.provenance.map((entry)=>`출처: ${entry.source} · ${entry.status} · ${entry.reason}`),
+      ]),
+      ...spatialPlan.provenance.map((entry)=>`출처: ${entry}`),
+    ],
+    stateChanges:[
+      ...(beforeMovement===undefined ? [] : [`${command.actorId} movement ${beforeMovement} → ${afterMovement}`]),
+      ...spatialPlan.stateChanges,
+    ],
+  });
+  return adapter.getSnapshot();
+}
+
+export function createMovementModuleHost(adapter:MockAdapter):MovementModuleHost {
+  return { apply:(command)=>applyMovementModuleCommand(adapter,command) };
 }
 
 MockAdapter.prototype.getSnapshot=async function getSnapshotFromTurnRuntime() {
@@ -155,61 +220,6 @@ MockAdapter.prototype.setCurrentActor=async function setCurrentActorWithTurnRunt
   const session=sessions.get(this);
   if (!session) return previousSetCurrentActor.call(this,id);
   if (setTurnRuntimeActiveActor(session,id)) projectTurnRuntimeToScene(session,internal.scene);
-  return this.getSnapshot();
-};
-
-MockAdapter.prototype.moveActor=async function moveActorOnTurnRuntime(command:MoveActorCommand) {
-  const internal=this as unknown as Phase09TurnAdapterState;
-  const session=sessions.get(this);
-  if (!session||internal.sessionMode!=="initiative") {
-    movementRejected(internal,command.actorId,"movement requires an active initiative turn runtime");
-    return this.getSnapshot();
-  }
-
-  let spatialPlan;
-  try {
-    spatialPlan=prepareMovementSpatialUpdates(internal.scene,command.actorId,command.spatialUpdates);
-  } catch(error) {
-    movementRejected(internal,command.actorId,error instanceof Error ? error.message : String(error));
-    return this.getSnapshot();
-  }
-
-  const beforeMovement=internal.scene.economyByActor[command.actorId]?.movement;
-  const movement=resolveTurnRuntimeMovement(session,{
-    resolutionId:eventId("movement"),
-    actorId:command.actorId,
-    distanceFeet:command.distanceFeet,
-    destinationMovesCloserToVisibleFrighteningSource:command.destinationMovesCloserToVisibleFrighteningSource,
-    visibleSourceIds:command.visibleSourceIds,
-  });
-  if (movement.status==="rejected") {
-    movementRejected(internal,command.actorId,movement.error);
-    return this.getSnapshot();
-  }
-
-  projectTurnRuntimeToScene(session,internal.scene);
-  applyMovementSpatialPlan(internal.scene,spatialPlan);
-  const actor=internal.scene.entities.find((entity)=>entity.id===command.actorId);
-  const afterMovement=movement.economy.movement;
-  internal.activity.unshift({
-    id:eventId("movement-commit"),
-    time:"지금",
-    actor:actor?.name ?? command.actorId,
-    title:"이동 적용",
-    summary:`${command.distanceFeet}피트 이동`,
-    detail:[
-      ...movement.events.flatMap((event,index)=>[
-        `ResolutionEvent ${index+1}/${movement.events.length} · ${event.kind} · ${event.operationId}`,
-        event.summary,
-        ...event.provenance.map((entry)=>`출처: ${entry.source} · ${entry.status} · ${entry.reason}`),
-      ]),
-      ...spatialPlan.provenance.map((entry)=>`출처: ${entry}`),
-    ],
-    stateChanges:[
-      ...(beforeMovement===undefined ? [] : [`${command.actorId} movement ${beforeMovement} → ${afterMovement}`]),
-      ...spatialPlan.stateChanges,
-    ],
-  });
   return this.getSnapshot();
 };
 

@@ -1,6 +1,21 @@
 import type { AppSnapshot } from "./contracts";
 import type { RuntimeCover } from "./spatialRuntimeContracts";
 
+/**
+ * Core policy: SimpleVTT does not provide or own a movement/map system.
+ * A 2D grid, 3D scene, theater-of-the-mind aid, or other external module
+ * calculates positions/pathing/spatial facts and may submit the resulting
+ * authoritative movement facts through the movement-module host hook.
+ */
+export type MovementModuleKind = "2d-grid" | "3d-scene" | "custom";
+
+export interface MovementModuleDescriptor {
+  id:string;
+  kind:MovementModuleKind;
+  label:string;
+  version?:string;
+}
+
 export interface MovementSpatialUpdate {
   sourceId:string;
   targetId:string;
@@ -10,7 +25,12 @@ export interface MovementSpatialUpdate {
   targetCanSeeAttacker:boolean;
 }
 
-export interface MoveActorCommand {
+/**
+ * This command is intentionally module-facing and is not part of
+ * SimpleVttAdapter. Core never originates one on its own.
+ */
+export interface MovementModuleCommand {
+  moduleId:string;
   actorId:string;
   distanceFeet:number;
   spatialUpdates:MovementSpatialUpdate[];
@@ -18,14 +38,6 @@ export interface MoveActorCommand {
   visibleSourceIds?:string[];
 }
 
-declare module "./contracts" {
-  interface SimpleVttAdapter {
-    moveActor(command:MoveActorCommand):Promise<AppSnapshot>;
-  }
-}
-
-declare module "./mockAdapter" {
-  interface MockAdapter {
-    moveActor(command:MoveActorCommand):Promise<AppSnapshot>;
-  }
+export interface MovementModuleHost {
+  apply(command:MovementModuleCommand):Promise<AppSnapshot>;
 }

@@ -68,12 +68,18 @@ function relationChanges(before:SpatialRelationVm|undefined,after:SpatialRelatio
   return changes;
 }
 
+/**
+ * Validates a complete post-move spatial snapshot supplied by an external map
+ * module. Core does not calculate coordinates, paths, LOS, or cover itself.
+ */
 export function prepareMovementSpatialUpdates(
   scene:SceneVm,
   actorId:string,
   updates:MovementSpatialUpdate[],
+  moduleId:string,
 ):MovementSpatialPlan {
   ensureReferenceSpatialRuntime(scene);
+  if (!moduleId.trim()) throw new Error("movement module id is required");
   if (!scene.entities.some((entry)=>entry.id===actorId)) throw new Error(`moving actor is missing from scene: ${actorId}`);
   const provided=new Map<string,MovementSpatialUpdate>();
   for (const update of updates) {
@@ -88,16 +94,16 @@ export function prepareMovementSpatialUpdates(
     .map((relation)=>spatialPairKey(relation.sourceId,relation.targetId))
     .filter((key)=>!provided.has(key));
   if (missing.length>0) {
-    throw new Error(`movement requires complete tracked spatial updates for ${actorId}; missing ${missing.join(", ")}`);
+    throw new Error(`movement module must provide complete tracked spatial updates for ${actorId}; missing ${missing.join(", ")}`);
   }
 
-  const provenance=`runtime:spatial:${scene.id}:movement:${actorId}`;
+  const provenance=`module:${moduleId}:spatial:${scene.id}:${actorId}`;
   const normalized=[...provided.values()].map((update)=>({ ...update,provenance }));
   return {
     actorId,
     updates:normalized,
     stateChanges:normalized.flatMap((update)=>relationChanges(scene.spatialByPair?.[spatialPairKey(update.sourceId,update.targetId)],update)),
-    provenance:[provenance,`complete tracked spatial set ${tracked.length}/${tracked.length}`],
+    provenance:[provenance,`external movement module supplied complete tracked spatial set ${tracked.length}/${tracked.length}`],
   };
 }
 

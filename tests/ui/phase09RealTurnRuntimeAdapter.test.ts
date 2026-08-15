@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/phase09RealRuntimeAttackAdapter";
+import { createMovementModuleHost } from "../../src/app/phase09RealTurnRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { MovementSpatialUpdate } from "../../src/app/movementRuntimeContracts";
 
@@ -37,22 +38,26 @@ test("initiative start and turn advancement project domain turn runtime state in
   assert.ok(snapshot.activity[0]?.detail.some((entry)=>entry.includes("RulesRuntimeState revision")));
 });
 
-test("movement spends turn-runtime movement and atomically replaces the complete tracked spatial set", async () => {
+test("core exposes no movement command while an external map module can use the prepared movement host", async () => {
   const adapter=new MockAdapter();
+  assert.equal(typeof (adapter as unknown as { moveActor?:unknown }).moveActor,"undefined","core adapter must not provide movement by default");
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
+  const movementHost=createMovementModuleHost(adapter);
 
-  await adapter.moveActor({
+  await movementHost.apply({
+    moduleId:"module.test-2d-grid",
     actorId:"char.aelar",
     distanceFeet:10,
     spatialUpdates:movedAelarSpatial().slice(0,2),
   });
   let snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,30,"incomplete spatial updates must reject before movement commit");
-  assert.equal(snapshot.activity[0]?.title,"이동 적용 거부");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,30,"incomplete module spatial updates must reject before movement commit");
+  assert.equal(snapshot.activity[0]?.title,"이동 모듈 적용 거부");
   assert.match(snapshot.activity[0]?.summary ?? "",/complete tracked spatial updates/);
 
-  await adapter.moveActor({
+  await movementHost.apply({
+    moduleId:"module.test-2d-grid",
     actorId:"char.aelar",
     distanceFeet:10,
     spatialUpdates:movedAelarSpatial(),
@@ -61,8 +66,10 @@ test("movement spends turn-runtime movement and atomically replaces the complete
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,20);
   assert.equal(snapshot.scene.spatialByPair?.["char.aelar=>combatant.goblin-a"]?.distanceFeet,90);
   assert.equal(snapshot.scene.spatialByPair?.["combatant.goblin-a=>char.aelar"]?.distanceFeet,90);
-  assert.equal(snapshot.activity[0]?.title,"이동 적용");
+  assert.equal(snapshot.activity[0]?.title,"이동 모듈 적용");
+  assert.ok(snapshot.activity[0]?.detail.includes("Movement module: module.test-2d-grid"));
   assert.ok(snapshot.activity[0]?.detail.some((line)=>line.startsWith("ResolutionEvent ")&&line.includes("move")));
+  assert.ok(snapshot.activity[0]?.detail.some((line)=>line.includes("module:module.test-2d-grid:spatial")));
   assert.ok(snapshot.activity[0]?.stateChanges.includes("char.aelar movement 30 → 20"));
   assert.ok(snapshot.activity[0]?.stateChanges.some((line)=>line.includes("char.aelar->combatant.goblin-a distance 22 → 90ft")));
 
@@ -72,10 +79,10 @@ test("movement spends turn-runtime movement and atomically replaces the complete
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.match(snapshot.resolution?.finalOutcome ?? "",/range|거리|90/i,"updated spatial fact must drive targeting rejection");
+  assert.match(snapshot.resolution?.finalOutcome ?? "",/range|거리|90/i,"module-supplied spatial fact must drive targeting rejection");
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true,"out-of-range attack must not spend Action");
-  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,20,"attack rejection must preserve committed movement spend");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,20,"attack rejection must preserve module-committed movement spend");
 });
 
 test("outer atomic attack HP/economy is reconciled into turn runtime and survives later snapshots", async () => {
