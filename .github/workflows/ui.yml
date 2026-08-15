@@ -7,6 +7,7 @@ on:
       - "tests/ui/**"
       - "content/**"
       - "scripts/**"
+      - "docs/design/movement-modules.md"
       - "package.json"
       - "tsconfig.json"
       - "vite.config.ts"
@@ -20,6 +21,7 @@ on:
       - "tests/ui/**"
       - "content/**"
       - "scripts/**"
+      - "docs/design/movement-modules.md"
       - "package.json"
       - "tsconfig.json"
       - "vite.config.ts"
@@ -52,5 +54,26 @@ jobs:
         run: npx tsx --test --test-name-pattern="Sorcerer 5 to 6" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
       - name: Verify School of Evocation progression runtime
         run: npx tsx --test tests/ui/progressionPhase08WizardEvocationRuntime.test.ts
+      - name: Verify Phase 09 real mechanics services
+        run: >-
+          npx tsx --test
+          tests/ui/phase09RealResolutionService.test.ts
+          tests/ui/phase09RealActionCostService.test.ts
+          tests/ui/phase09RealActionCostAdapter.test.ts
+          tests/ui/phase09RealHealingAdapter.test.ts
+          tests/ui/phase09RealSavingThrowAdapter.test.ts
+          tests/ui/phase09RealAttackTransactionService.test.ts
+          tests/ui/phase09RealAtomicAttackAdapter.test.ts
+          tests/ui/phase09RealLifeRuntime.test.ts
+          tests/ui/phase09ManualMovementReactionAdapter.test.ts
+          tests/ui/phase09RealHealingRollService.test.ts
+          tests/ui/phase09RealItemCostService.test.ts
+          tests/ui/phase09RealItemCostAdapter.test.ts
+          tests/ui/phase09RealNoRollDamageAdapter.test.ts
+          tests/ui/phase09RealTurnRuntimeService.test.ts
+          tests/ui/phase09RealTurnRuntimeAdapter.test.ts
+          tests/ui/visualDiceProjection.test.ts
+          tests/ui/visualDiceStructure.test.ts
+          tests/ui/movementReactionStructure.test.ts
       - name: Typecheck and build
         run: npm run build

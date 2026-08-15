@@ -55,7 +55,7 @@ function appendExpiredEffects(
   expired: ReturnType<typeof terminateEffectsForDamage>,
 ) {
   for (const effect of expired.expired) {
-    changes.push(effectStateChange(effect.targetId, effect.id, "removed", expired.provenance));
+    changes.push(effectStateChange(effect.targetId, effect.id, "removed", expired.provenance, effect, undefined));
   }
 }
 
@@ -97,7 +97,7 @@ function finalizeDamage(
       provenance.push(...ended.provenance);
       changes.push(concentrationStateChange(operation.targetId, previous, undefined, ended.provenance));
       ended.expiredEffects.forEach((effect) => {
-        changes.push(effectStateChange(effect.targetId, effect.id, "removed", ended.provenance));
+        changes.push(effectStateChange(effect.targetId, effect.id, "removed", ended.provenance, effect, undefined));
       });
     } else if (damage.finalDamage > 0) {
       if (!operation.concentrationCheck) {
@@ -130,7 +130,7 @@ function finalizeDamage(
         provenance.push(...ended.provenance);
         changes.push(concentrationStateChange(operation.targetId, previous, undefined, ended.provenance));
         ended.expiredEffects.forEach((effect) => {
-          changes.push(effectStateChange(effect.targetId, effect.id, "removed", ended.provenance));
+          changes.push(effectStateChange(effect.targetId, effect.id, "removed", ended.provenance, effect, undefined));
         });
       }
     }

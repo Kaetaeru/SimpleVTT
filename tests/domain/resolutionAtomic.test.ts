@@ -91,6 +91,65 @@ test("a later failure rolls back every earlier state mutation and emits no parti
   assert.deepEqual(resolved.events, []);
 });
 
+test("effect ResolutionEvents retain before/after payloads for safe inverse", () => {
+  const state = runtimeState();
+  const pending:PendingResolution = {
+    id:"effect-payloads",
+    actorId:"hero",
+    sourceId:"effect:test",
+    expectedRevision:0,
+    operations:[
+      {
+        id:"apply",
+        kind:"apply-effect",
+        effect:{
+          id:"tracked-effect",
+          sourceId:"effect:test",
+          targetId:"hero",
+          kind:"marker",
+          duration:{ kind:"permanent" },
+        },
+      },
+      {
+        id:"update",
+        kind:"update-effect",
+        effectId:"tracked-effect",
+        metadataPatch:{ phase:"updated" },
+      },
+      {
+        id:"remove",
+        kind:"remove-effect",
+        effectId:"tracked-effect",
+      },
+    ],
+  };
+
+  const committed = resolvePendingResolution(TEST_PROFILE, state, pending);
+  assert.equal(committed.status, "committed");
+  if (committed.status !== "committed") return;
+  assert.equal(committed.state.effects.some((effect) => effect.id === "tracked-effect"), false);
+
+  const added = committed.events[0].stateChanges.find((change) => change.kind === "effect");
+  assert.ok(added && added.kind === "effect");
+  assert.equal(added.operation, "added");
+  assert.equal(added.before, undefined);
+  assert.equal(added.after?.id, "tracked-effect");
+  assert.equal(added.after?.metadata, undefined);
+
+  const updated = committed.events[1].stateChanges.find((change) => change.kind === "effect");
+  assert.ok(updated && updated.kind === "effect");
+  assert.equal(updated.operation, "updated");
+  assert.equal(updated.before?.id, "tracked-effect");
+  assert.equal(updated.before?.metadata, undefined);
+  assert.deepEqual(updated.after?.metadata, { phase:"updated" });
+
+  const removed = committed.events[2].stateChanges.find((change) => change.kind === "effect");
+  assert.ok(removed && removed.kind === "effect");
+  assert.equal(removed.operation, "removed");
+  assert.deepEqual(removed.before?.metadata, { phase:"updated" });
+  assert.equal(removed.after, undefined);
+});
+
 test("damage to a concentrator requires fixed save input and failed save removes its whole effect group", () => {
   const state = runtimeState();
   state.effects.push(createEffect({
@@ -241,6 +300,11 @@ test("turn boundary expiry happens before economy refresh and Frightened movemen
   assert.equal(refreshed.state.combatants.hero.economy.action, true);
   assert.equal(refreshed.state.combatants.hero.economy.reaction, true);
   assert.equal(refreshed.state.combatants.hero.resources.find((pool) => pool.id === "turn-resource")?.current, 1);
+  const expired = refreshed.events[0].stateChanges.find((change) => change.kind === "effect");
+  assert.ok(expired && expired.kind === "effect");
+  assert.equal(expired.operation, "removed");
+  assert.equal(expired.before?.id, "until-turn-start");
+  assert.equal(expired.after, undefined);
 
   const feared = runtimeState();
   feared.effects.push(createEffect({

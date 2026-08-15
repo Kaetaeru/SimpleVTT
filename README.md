@@ -4,47 +4,54 @@ SimpleVTT is a local-first desktop companion for lightweight D&D play. The repos
 
 ## Current development gate
 
-Phase 08 implementation issue: #51 — canonical catalog relationships and class/subclass mechanics  
-Active PR: #52 — `rules: execute Phase 08 catalog relationships`  
-Active branch: `agent/50-rules-phase08`
+Active issue: #53 — Phase 09 mechanics integration / RealAdapter convergence  
+Active PR: #54 — `app: converge Phase 09 mechanics into RealAdapter services`  
+Active branch: `agent/53-mechanics-phase09`  
+Stacked base: Phase 08 PR #52 / `agent/50-rules-phase08`
 
-Phase 08 replaces Phase 07 `catalog-pending` progression choices with canonical stable-ID relationships and mechanics-backed execution. The current branch now has an outermost progression audit covering all 12 classes across levels 2-20 with **zero `catalog-pending` choices**, while preserving explicit rejection for downstream mechanics that require a primitive outside the current engine boundary.
+Phase 08 is complete at the catalog/class-mechanics boundary: the outermost progression audit covers all 12 SRD classes across target levels 2-20 with **zero `catalog-pending` choices**.
 
-Phase 08 coverage includes:
+Phase 09 is moving representative play paths out of MockAdapter-owned calculation and into shared application/domain services while preserving current UI/ViewModel contracts. `MockAdapter` remains transitional fixture/state storage while authoritative rule evaluation moves into the rules domain.
 
-- generated spell, feat, weapon, and class-skill rule metadata plus stable-ID/provenance persistence
-- Expertise, higher-level spell choices, Metamagic, Invocations, Mystic Arcanum, Epic Boons, Weapon Mastery, and Fighting Style progression
-- Ranger / Hunter and Paladin / Oath of Devotion progression and representative runtime mechanics
-- Cleric / Life Domain, including Divine Intervention and Greater Divine Intervention's executable Wish spell-replication path for supported level-8-or-lower spell mechanics
-- Druid / Circle of the Land, including session-scoped current-land configuration and rest-time spell-package reconfiguration
-- Fighter / Champion progression/runtime, Weapon Mastery, Fighting Style, and subclass feature relationships
-- Barbarian / Path of the Berserker mechanics-backed high-level subclass relationships
-- Monk / Warrior of the Open Hand, including Focus projection, Wholeness of Body, Fleet Step, and Quivering Palm contracts
-- Rogue / Thief, including Supreme Sneak, Use Magic Device, and Thief's Reflexes contracts
-- Bard / College of Lore, including Bardic Inspiration runtime mechanics
-- Sorcerer / Draconic Sorcery progression/runtime
-- Wizard spellbook/Spell Mastery/Signature Spells plus School of Evocation progression/runtime
-- Warlock / Fiend Patron plus Pact Magic, Invocations, Mystic Arcanum, and Pact of the Tome rest configuration
+Current Phase 09 integration coverage includes:
 
-The Phase 08 rules implementation checkpoint is `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`. Contract validation, Rules Domain, Phase 07/08 aggregate progression, TypeScript, UI runtime gates, and production build are green on that checkpoint.
+- targetless/freeform checks through a generic domain `openD20` resolver without inventing a DC
+- attack hit/critical semantics through canonical d20 resolution, including natural 1/20 behavior
+- target-bound saving throws through canonical d20 resolution rather than index-derived Mock modifiers
+- typed damage through the domain damage resolver, including resistance, vulnerability, immunity, Temporary HP, and HP ordering
+- generic validated fixed-dice formulas used by structured healing and item damage rolls
+- Action / Bonus Action / Reaction + class-resource costs through atomic `ResolutionEvent` transactions with rollback
+- ItemInstance quantity and charge costs projected through the same atomic resource/economy transaction model
+- Second Wind: structured healing + Bonus Action + class resource + Activity + Undo
+- Thunderwave: per-target saves + save-half + typed damage + resistance/Temp HP + Action cost
+- Shortbow: staged preview with one authoritative `resolveAttack` transaction for targeting, d20, critical dice, typed damage, and Action economy
+- Healing Potion: `2d4+2` healing + quantity/Action transaction + Undo
+- Wand: `3d4+3` structured damage + typed health application + charge/Action transaction + Undo
+- Phase 08 zero-pending, aggregate progression, TypeScript, and production UI regression gates remain green
 
-Issue #51 remains the integration tracker for PR #52. After this stacked PR is integrated, the next implementation gate is Phase 09: converge the executable Phase 08 rules paths into real application/domain services and remove MockAdapter rule calculation from representative play flows.
+Latest verified Phase 09 integration checkpoint:
+
+```text
+60b9dff44c20b8f752ec2c800e2d9ad6df882006
+```
+
+On that checkpoint, Contract validation, Rules Domain, Phase 07/08 aggregate progression, Phase 09 service/adapter tests, TypeScript, and the UI production build are green.
 
 ## Application architecture
-
-The React UI consumes application/ViewModel contracts rather than calculating named rules directly. The current development shell still uses `MockAdapter` as its replaceable application boundary, while Phase 06-08 runtime adapters delegate increasingly large rule paths to the executable domain layer.
 
 ```text
 React UI
    ↓
 Application / ViewModel contracts
    ↓
-Runtime adapter boundary
+Phase 09 application services
    ↓
-Executable rules domain + generated canonical catalogs
+Executable rules domain / ResolutionEvent transactions
+   ↓
+Transitional projection into the current adapter shell
 ```
 
-Phase 09 will converge these paths into the real application/domain adapter and remove remaining MockAdapter rule calculation from representative play flows.
+The next Phase 09 work is replacing transitional reference facts with real Character/Combatant runtime stats, moving Initiative/turn economy/Reaction/movement authority into `RulesRuntimeState`, expanding atomic attacks where authoritative spatial data exists, and projecting Activity/Undo directly from committed domain events.
 
 ## Frontend
 
@@ -70,21 +77,19 @@ Requirements:
 - Rust stable toolchain for Tauri development
 - Tauri platform prerequisites for your operating system
 
-Install dependencies and run the browser application:
-
 ```sh
 npm install
 npm run dev
 ```
 
-Run the desktop shell:
+Desktop shell:
 
 ```sh
 npm install
 npm run tauri:dev
 ```
 
-Run the main verification gates:
+Main verification gates:
 
 ```sh
 npm run test:rules-domain

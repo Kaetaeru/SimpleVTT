@@ -1,3 +1,4 @@
+import type { EffectInstance } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { StateChange } from "./stateChange";
@@ -18,6 +19,8 @@ export interface EffectStateChange {
   targetId:string;
   effectId:string;
   operation:"added" | "updated" | "removed";
+  before?:EffectInstance;
+  after?:EffectInstance;
   provenance:ProvenanceRecord[];
   lifetime:"session-runtime";
   writeBack:"session";
@@ -55,8 +58,25 @@ export function resourceStateChange(targetId:string, resourceId:string, before:n
   return { kind:"resource", targetId, resourceId, before, after, provenance, lifetime:"character-durable", writeBack:"character" };
 }
 
-export function effectStateChange(targetId:string, effectId:string, operation:"added"|"updated"|"removed", provenance:ProvenanceRecord[]): EffectStateChange {
-  return { kind:"effect", targetId, effectId, operation, provenance, lifetime:"session-runtime", writeBack:"session" };
+export function effectStateChange(
+  targetId:string,
+  effectId:string,
+  operation:"added"|"updated"|"removed",
+  provenance:ProvenanceRecord[],
+  before?:EffectInstance,
+  after?:EffectInstance,
+): EffectStateChange {
+  return {
+    kind:"effect",
+    targetId,
+    effectId,
+    operation,
+    before:before ? structuredClone(before) : undefined,
+    after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
 }
 
 export function concentrationStateChange(targetId:string, before:string|undefined, after:string|undefined, provenance:ProvenanceRecord[]): ConcentrationStateChange {

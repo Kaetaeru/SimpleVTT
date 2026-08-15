@@ -113,7 +113,7 @@ function executeRest(
     }
   }
   resolved.expiredEffects.forEach((effect) => {
-    changes.push(effectStateChange(effect.targetId, effect.id, "removed", provenance));
+    changes.push(effectStateChange(effect.targetId, effect.id, "removed", provenance, effect, undefined));
   });
 
   const concentration = ctx.state.concentration[operation.targetId];
