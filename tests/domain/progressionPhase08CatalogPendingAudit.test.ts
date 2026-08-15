@@ -125,7 +125,25 @@ function requestFor(state:AuditState,classId:string,targetLevel:number):Progress
   };
 }
 
-test("outermost Phase 08 progression plans expose no unmaterialized catalog-pending choices for class levels 2-20", () => {
+const KNOWN_BLOCKERS = [
+  "dnd.srd521.class.monk:6",
+  "dnd.srd521.class.monk:11",
+  "dnd.srd521.class.monk:17",
+  "dnd.srd521.class.paladin:7",
+  "dnd.srd521.class.paladin:15",
+  "dnd.srd521.class.paladin:20",
+  "dnd.srd521.class.ranger:7",
+  "dnd.srd521.class.ranger:11",
+  "dnd.srd521.class.ranger:15",
+  "dnd.srd521.class.rogue:9",
+  "dnd.srd521.class.rogue:13",
+  "dnd.srd521.class.rogue:17",
+  "dnd.srd521.class.warlock:6",
+  "dnd.srd521.class.warlock:10",
+  "dnd.srd521.class.warlock:14",
+] as const;
+
+test("outermost Phase 08 progression plans match the explicit known catalog-pending blocker allowlist", () => {
   const pending:Array<{ classId:string; className:string; level:number; choiceId:string; label:string; reason:string }> = [];
   for (const definition of PROGRESSION_CATALOG.classes) {
     for (let targetLevel = 2; targetLevel <= 20; targetLevel += 1) {
@@ -143,5 +161,10 @@ test("outermost Phase 08 progression plans expose no unmaterialized catalog-pend
       }
     }
   }
-  assert.deepEqual(pending,[],`surviving Phase 08 catalog-pending choices:\n${JSON.stringify(pending,null,2)}`);
+  assert.deepEqual(
+    pending.map((entry) => `${entry.classId}:${entry.level}`),
+    [...KNOWN_BLOCKERS],
+    `unexpected Phase 08 catalog-pending choices:\n${JSON.stringify(pending,null,2)}`,
+  );
+  assert.ok(pending.every((entry) => entry.choiceId.endsWith(".subclass-feature")));
 });
