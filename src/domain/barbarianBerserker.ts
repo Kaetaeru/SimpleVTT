@@ -2,17 +2,69 @@ import type { AttackRequest } from "./attack";
 import { compileAttack } from "./attack";
 import type { RulesRuntimeState } from "./combatState";
 import type { FixedDiceInput } from "./d20";
+import type { ProgressionClassTrack } from "./progression";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { TargetFacts } from "./targeting";
 
+export const BARBARIAN_CLASS_ID = "dnd.srd521.class.barbarian";
 export const BARBARIAN_BERSERKER_SUBCLASS_ID = "dnd.srd521.subclass.barbarian.path-of-the-berserker";
+export const BARBARIAN_RAGE_RESOURCE_ID = "resource:barbarian.rage";
 export const BERSERKER_MINDLESS_RAGE_FEATURE_ID = "dnd.srd521.feature.barbarian.berserker.mindless-rage";
 export const BERSERKER_RETALIATION_FEATURE_ID = "dnd.srd521.feature.barbarian.berserker.retaliation";
 export const BERSERKER_INTIMIDATING_PRESENCE_FEATURE_ID = "dnd.srd521.feature.barbarian.berserker.intimidating-presence";
+export const BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID = "resource:barbarian.berserker.intimidating-presence";
 export const BERSERKER_MINDLESS_RAGE_TAG = "barbarian:berserker:mindless-rage";
 export const BERSERKER_INTIMIDATING_PRESENCE_TAG = "barbarian:berserker:intimidating-presence";
+
+export interface BarbarianRuntimeResourceDefinition {
+  resourceId:string;
+  label:string;
+  maximum:number;
+  source:string;
+  recovery:{ shortRest?:number|"all"; longRest?:number|"all" };
+}
+
+export function barbarianRageMaximum(level:number) {
+  if (!Number.isInteger(level) || level < 0 || level > 20) {
+    throw new DomainEvaluationError("Barbarian level must be an integer from 0 to 20");
+  }
+  if (level < 1) return 0;
+  if (level >= 17) return 6;
+  if (level >= 12) return 5;
+  if (level >= 6) return 4;
+  if (level >= 3) return 3;
+  return 2;
+}
+
+export function barbarianRuntimeResourceDefinitions(
+  classTracks:ProgressionClassTrack[],
+  subclassIds:Record<string,string> = {},
+):BarbarianRuntimeResourceDefinition[] {
+  const level = classTracks.find((track) => track.classId === BARBARIAN_CLASS_ID)?.level ?? 0;
+  const definitions:BarbarianRuntimeResourceDefinition[] = [];
+  const rageMaximum = barbarianRageMaximum(level);
+  if (rageMaximum > 0) {
+    definitions.push({
+      resourceId:BARBARIAN_RAGE_RESOURCE_ID,
+      label:"격노",
+      maximum:rageMaximum,
+      source:`바바리안 ${level}레벨 · Rage · SRD 5.2.1`,
+      recovery:{ shortRest:1, longRest:"all" },
+    });
+  }
+  if (level >= 14 && subclassIds[BARBARIAN_CLASS_ID] === BARBARIAN_BERSERKER_SUBCLASS_ID) {
+    definitions.push({
+      resourceId:BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
+      label:"위압적인 존재감",
+      maximum:1,
+      source:`바바리안 ${level}레벨 · Path of the Berserker · Intimidating Presence · SRD 5.2.1`,
+      recovery:{ longRest:"all" },
+    });
+  }
+  return definitions;
+}
 
 function validateBerserker(level:number,subclassId:string|undefined,minimumLevel:number,feature:string) {
   if (!Number.isInteger(level) || level < minimumLevel || level > 20) {
@@ -210,6 +262,13 @@ export function compileBerserkerIntimidatingPresence(request:BerserkerIntimidati
       harmful:true,
     },
     {
+      id:`${request.id}:usage`,
+      kind:"spend-resource",
+      actorId:request.actorId,
+      resourceId:BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
+      amount:1,
+    },
+    {
       id:`${request.id}:bonus-action`,
       kind:"use-economy",
       actorId:request.actorId,
@@ -270,6 +329,54 @@ export function resolveBerserkerIntimidatingPresence(
 ):ResolutionCommit {
   try {
     return resolvePendingResolution(profile,inputState,compileBerserkerIntimidatingPresence(request));
+  } catch (error) {
+    return { status:"rejected", state:inputState, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export interface BerserkerRecoverIntimidatingPresenceRequest {
+  id:string;
+  actorId:string;
+  expectedRevision:number;
+  barbarianLevel:number;
+  subclassId?:string;
+}
+
+export function compileBerserkerRecoverIntimidatingPresence(
+  request:BerserkerRecoverIntimidatingPresenceRequest,
+):PendingResolution {
+  validateBerserker(request.barbarianLevel,request.subclassId,14,"Intimidating Presence recovery");
+  return {
+    id:request.id,
+    actorId:request.actorId,
+    sourceId:BERSERKER_INTIMIDATING_PRESENCE_FEATURE_ID,
+    expectedRevision:request.expectedRevision,
+    operations:[
+      {
+        id:`${request.id}:spend-rage`,
+        kind:"spend-resource",
+        actorId:request.actorId,
+        resourceId:BARBARIAN_RAGE_RESOURCE_ID,
+        amount:1,
+      },
+      {
+        id:`${request.id}:recover-presence`,
+        kind:"gain-resource",
+        actorId:request.actorId,
+        resourceId:BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
+        amount:1,
+      },
+    ],
+  };
+}
+
+export function resolveBerserkerRecoverIntimidatingPresence(
+  profile:RulesProfileLike,
+  inputState:RulesRuntimeState,
+  request:BerserkerRecoverIntimidatingPresenceRequest,
+):ResolutionCommit {
+  try {
+    return resolvePendingResolution(profile,inputState,compileBerserkerRecoverIntimidatingPresence(request));
   } catch (error) {
     return { status:"rejected", state:inputState, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
   }

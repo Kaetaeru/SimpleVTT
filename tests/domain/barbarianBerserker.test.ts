@@ -3,7 +3,9 @@ import test from "node:test";
 import { createEffect } from "../../src/domain/effects";
 import {
   BARBARIAN_BERSERKER_SUBCLASS_ID,
+  BARBARIAN_RAGE_RESOURCE_ID,
   BERSERKER_INTIMIDATING_PRESENCE_FEATURE_ID,
+  BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
   BERSERKER_INTIMIDATING_PRESENCE_TAG,
   BERSERKER_MINDLESS_RAGE_FEATURE_ID,
   BERSERKER_MINDLESS_RAGE_TAG,
@@ -13,6 +15,7 @@ import {
   resolveBerserkerIntimidatingPresenceRepeatSave,
   resolveBerserkerMindlessRageEnd,
   resolveBerserkerMindlessRageStart,
+  resolveBerserkerRecoverIntimidatingPresence,
   resolveBerserkerRetaliation,
 } from "../../src/domain/barbarianBerserker";
 import { barbarianPrimalKnowledgeChoiceId } from "../../src/domain/barbarianPrimalKnowledgeProgression";
@@ -72,6 +75,27 @@ function progressionRequest(state:SrdSubclassProgressionState,selections:Progres
     languageOptions:[],
     spellOptions:[],
   };
+}
+
+function berserkerRuntimeState() {
+  const state = runtimeState();
+  state.combatants.hero.resources.push(
+    {
+      id:BARBARIAN_RAGE_RESOURCE_ID,
+      label:"격노",
+      current:5,
+      maximum:5,
+      recovery:{ shortRest:1, longRest:"all" },
+    },
+    {
+      id:BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
+      label:"위압적인 존재감",
+      current:1,
+      maximum:1,
+      recovery:{ longRest:"all" },
+    },
+  );
+  return state;
 }
 
 test("the remaining six SRD subclasses have stable identity relationships without inventing unsupported high-level mechanics", () => {
@@ -232,9 +256,9 @@ test("Retaliation spends Reaction and makes the melee attack against the trigger
   assert.equal(wrongSource.state.combatants.hero.economy.reaction,true);
 });
 
-test("Intimidating Presence uses the Strength-based save DC, spends Bonus Action, applies Frightened for one minute, and repeat success ends it", () => {
+test("Intimidating Presence spends its Long-Rest use, applies Frightened, repeats the save, and recovers atomically by spending Rage", () => {
   assert.equal(berserkerIntimidatingPresenceDc(4,3),15);
-  const state = runtimeState();
+  const state = berserkerRuntimeState();
   const result = resolveBerserkerIntimidatingPresence(TEST_PROFILE,state,{
     id:"berserker.intimidating",
     actorId:"hero",
@@ -257,6 +281,7 @@ test("Intimidating Presence uses the Strength-based save DC, spends Bonus Action
   assert.equal(result.status,"committed");
   if (result.status !== "committed") return;
   assert.equal(result.state.combatants.hero.economy.bonusAction,false);
+  assert.equal(result.state.combatants.hero.resources.find((entry) => entry.id === BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID)?.current,0);
   const effect = result.state.effects.find((entry) => entry.sourceId === BERSERKER_INTIMIDATING_PRESENCE_FEATURE_ID && entry.tags.includes(BERSERKER_INTIMIDATING_PRESENCE_TAG));
   assert.ok(effect);
   assert.equal(effect?.conditionId,"frightened");
@@ -273,4 +298,27 @@ test("Intimidating Presence uses the Strength-based save DC, spends Bonus Action
   assert.equal(repeated.status,"committed");
   if (repeated.status !== "committed") return;
   assert.equal(repeated.state.effects.some((entry) => entry.id === effect?.id),false);
+
+  const recovered = resolveBerserkerRecoverIntimidatingPresence(TEST_PROFILE,repeated.state,{
+    id:"berserker.intimidating.recover",
+    actorId:"hero",
+    expectedRevision:repeated.state.revision,
+    barbarianLevel:14,
+    subclassId:BARBARIAN_BERSERKER_SUBCLASS_ID,
+  });
+  assert.equal(recovered.status,"committed");
+  if (recovered.status !== "committed") return;
+  assert.equal(recovered.state.combatants.hero.resources.find((entry) => entry.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,4);
+  assert.equal(recovered.state.combatants.hero.resources.find((entry) => entry.id === BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID)?.current,1);
+
+  const redundant = resolveBerserkerRecoverIntimidatingPresence(TEST_PROFILE,recovered.state,{
+    id:"berserker.intimidating.recover-again",
+    actorId:"hero",
+    expectedRevision:recovered.state.revision,
+    barbarianLevel:14,
+    subclassId:BARBARIAN_BERSERKER_SUBCLASS_ID,
+  });
+  assert.equal(redundant.status,"rejected");
+  assert.equal(redundant.state.combatants.hero.resources.find((entry) => entry.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,4,"failed over-recovery must roll Rage spend back atomically");
+  assert.equal(redundant.state.combatants.hero.resources.find((entry) => entry.id === BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID)?.current,1);
 });

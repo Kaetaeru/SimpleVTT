@@ -9,6 +9,7 @@ import {
   classFeatureSpellSources,
 } from "../domain/classFeatureSpellResources";
 import { coreClassResourceDefinitions } from "../domain/coreClassResources";
+import { barbarianRuntimeResourceDefinitions } from "../domain/barbarianBerserker";
 
 type AdapterState = {
   activeCharacter: CharacterSheet;
@@ -54,6 +55,7 @@ export function ensureClassFeatureSpellResources(sheet: CharacterSheet) {
 export function ensureCoreClassResources(sheet: CharacterSheet) {
   ensureProgressionMetadata(sheet);
   for (const definition of coreClassResourceDefinitions(sheet.classLevels ?? [])) upsertResource(sheet, definition);
+  for (const definition of barbarianRuntimeResourceDefinitions(sheet.classLevels ?? [],sheet.subclassIds ?? {})) upsertResource(sheet, definition);
   return sheet;
 }
 

@@ -3,6 +3,12 @@ import test from "node:test";
 import "../../src/app/classFeatureSpellRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import {
+  BARBARIAN_BERSERKER_SUBCLASS_ID,
+  BARBARIAN_CLASS_ID,
+  BARBARIAN_RAGE_RESOURCE_ID,
+  BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
+} from "../../src/domain/barbarianBerserker";
+import {
   DIVINE_SMITE_FREE_CAST_RESOURCE_ID,
   DIVINE_SMITE_ID,
   FIND_STEED_FREE_CAST_RESOURCE_ID,
@@ -69,4 +75,41 @@ test("Paladin CharacterSheet projects independent Divine Smite and Find Steed fr
   assert.equal(snapshot.activeCharacter.featureSpellResourceIds?.[FIND_STEED_ID], FIND_STEED_FREE_CAST_RESOURCE_ID);
   assert.match(snapshot.activeCharacter.featureSpellSources?.[DIVINE_SMITE_ID] ?? "", /팔라딘 5레벨 · 팔라딘의 강타/);
   assert.match(snapshot.activeCharacter.featureSpellSources?.[FIND_STEED_ID] ?? "", /팔라딘 5레벨 · 충직한 군마/);
+});
+
+test("Berserker level 14 projects Rage plus one Long-Rest Intimidating Presence use without snapshot refills", async () => {
+  const { adapter, internal } = await baselineAdapter();
+  internal.activeCharacter = {
+    ...internal.activeCharacter,
+    className:"바바리안",
+    subclassName:"광전사의 길",
+    level:14,
+    classLevels:[{ classId:BARBARIAN_CLASS_ID, className:"바바리안", level:14, subclassName:"광전사의 길" }],
+    subclassIds:{ [BARBARIAN_CLASS_ID]:BARBARIAN_BERSERKER_SUBCLASS_ID },
+    resources:[],
+  };
+  let snapshot = await adapter.getSnapshot();
+  let rage = snapshot.activeCharacter.resources.find((resource) => resource.id === BARBARIAN_RAGE_RESOURCE_ID);
+  let presence = snapshot.activeCharacter.resources.find((resource) => resource.id === BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID);
+  assert.deepEqual({ current:rage?.current, max:rage?.max, recovery:rage?.recovery }, {
+    current:5,
+    max:5,
+    recovery:{ shortRest:1, longRest:"all" },
+  });
+  assert.deepEqual({ current:presence?.current, max:presence?.max, recovery:presence?.recovery }, {
+    current:1,
+    max:1,
+    recovery:{ longRest:"all" },
+  });
+
+  const internalRage = internal.activeCharacter.resources.find((resource) => resource.id === BARBARIAN_RAGE_RESOURCE_ID);
+  const internalPresence = internal.activeCharacter.resources.find((resource) => resource.id === BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID);
+  assert.ok(internalRage && internalPresence);
+  internalRage!.current = 2;
+  internalPresence!.current = 0;
+  snapshot = await adapter.getSnapshot();
+  rage = snapshot.activeCharacter.resources.find((resource) => resource.id === BARBARIAN_RAGE_RESOURCE_ID);
+  presence = snapshot.activeCharacter.resources.find((resource) => resource.id === BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID);
+  assert.equal(rage?.current,2,"snapshot normalization must not refill spent Rage uses");
+  assert.equal(presence?.current,0,"snapshot normalization must not refill spent Intimidating Presence");
 });
