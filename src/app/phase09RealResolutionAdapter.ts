@@ -1,10 +1,17 @@
 import "./progressionPhase08RogueThiefAdapter";
 import type { ActionVm, AppSnapshot, ResolutionView } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { resolveOpenAbilityCheckResolution } from "./realResolutionService";
+import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
+
+interface Phase09ResolutionTarget {
+  id:string;
+  name:string;
+  ac:number;
+}
 
 interface Phase09ResolutionAdapterState {
   action(id:string):ActionVm|undefined;
+  entity(id:string):Phase09ResolutionTarget|undefined;
   availability(action:ActionVm):{ available:boolean; reason?:string };
   eligible(action:ActionVm):string[];
   capture():void;
@@ -19,10 +26,10 @@ function resolutionId() {
 
 const oldResolveAction = MockAdapter.prototype.resolveAction;
 
-MockAdapter.prototype.resolveAction = async function resolveActionWithRealOpenCheck(actionId:string,targetIds:string[]) {
+MockAdapter.prototype.resolveAction = async function resolveActionWithRealD20(actionId:string,targetIds:string[]) {
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const action = internal.action(actionId);
-  if (!action || action.resolutionKind !== "ability-check") {
+  if (!action || (action.resolutionKind !== "ability-check" && action.resolutionKind !== "attack")) {
     return oldResolveAction.call(this,actionId,targetIds);
   }
 
@@ -30,6 +37,24 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealOpenCh
   if (!availability.available) return internal.getSnapshot();
   const allowed = new Set(internal.eligible(action));
   if (targetIds.some((id) => !allowed.has(id))) return internal.getSnapshot();
+
+  if (action.resolutionKind === "attack") {
+    if (targetIds.length !== 1) return internal.getSnapshot();
+    const target = internal.entity(targetIds[0]);
+    if (!target) return internal.getSnapshot();
+    internal.capture();
+    internal.resolution = resolveAttackRollResolution({
+      resolutionId:resolutionId(),
+      action,
+      target,
+      diceFaces:[internal.d20(action.id)],
+      modifierContributions:[{
+        source:`action:${action.id}:attack-bonus`,
+        value:action.attackBonus ?? 0,
+      }],
+    });
+    return internal.getSnapshot();
+  }
 
   internal.capture();
   const checkLabel = action.details.find((entry) => entry.label === "판정")?.value ?? action.name;
