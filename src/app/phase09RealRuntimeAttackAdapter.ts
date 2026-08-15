@@ -59,7 +59,7 @@ function reject(internal:RuntimeAttackAdapterState,error:string) {
   resolution.stateChanges = [];
   resolution.detail.push(`runtime attack transaction 거부: ${error}`);
   resolution.finalOutcome = `적용 거부: ${error}`;
-  resolution.provenance.push("Phase 09 · canonical/runtime attack fact + runtime scene targeting provider · explicit reject");
+  resolution.provenance.push("Phase 09 · canonical/runtime attack fact + pairwise spatial runtime · explicit reject");
   resolution.stage = "complete";
   resolution.canAdvance = false;
   resolution.nextLabel = undefined;
@@ -77,7 +77,7 @@ function build(internal:RuntimeAttackAdapterState,action:ActionVm,resolution:Res
   }
   try {
     const attackFact = resolveRuntimeAttackFact(action,phase09DeterministicAttackFaces(action));
-    const targetingFact = resolveRuntimeTargetingFact(target);
+    const targetingFact = resolveRuntimeTargetingFact(internal.scene,action.actorId,target.id);
     const transaction = resolveAtomicAttackTransaction({
       resolutionId:`${resolution.id}:runtime-atomic`,
       action,
@@ -96,10 +96,7 @@ function build(internal:RuntimeAttackAdapterState,action:ActionVm,resolution:Res
         critical:resolution.critical === true,
       },
     });
-    if (transaction.status === "committed") {
-      transaction.provenance.push(`runtime:scene:${target.id}:distance:${targetingFact.distanceFeet}ft`);
-      transaction.provenance.push("runtime:scene:visibility:visible:no-cover:mutual-sight");
-    }
+    if (transaction.status === "committed") transaction.provenance.push(...targetingFact.provenance);
     return transaction;
   } catch (error) {
     return { status:"rejected", error:error instanceof Error ? error.message : String(error) };

@@ -1,7 +1,12 @@
 import "./combatantRuntimeContracts";
-import type { ActionVm, SceneEntity } from "./contracts";
+import type { ActionVm, SceneVm } from "./contracts";
 import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09ReferenceRulesFacts";
+import { runtimeSpatialRelation } from "./realSpatialRuntimeService";
 import { weaponRuleById } from "../domain/weaponRuleCatalog";
+
+export interface RuntimeTargetingFact extends Phase09TargetingFact {
+  provenance:string[];
+}
 
 function canonicalWeaponIdFromAction(action:ActionVm) {
   if (action.resolutionKind !== "attack") throw new Error(`runtime weapon fact requires attack action: ${action.id}`);
@@ -75,11 +80,19 @@ export function resolveRuntimeAttackFact(action:ActionVm,fixedFaces:number[]):Ph
   };
 }
 
-export function resolveRuntimeTargetingFact(target:SceneEntity):Phase09TargetingFact {
-  const distance = target.distance?.match(/(-?\d+(?:\.\d+)?)/)?.[1];
-  const distanceFeet = distance === undefined ? Number.NaN : Number(distance);
-  if (!Number.isFinite(distanceFeet) || distanceFeet < 0) throw new Error(`missing structured runtime distance for target: ${target.id}`);
-  return { distanceFeet, visible:true, cover:"none", targetCanSeeAttacker:true };
+export function resolveRuntimeTargetingFact(scene:SceneVm,sourceId:string,targetId:string):RuntimeTargetingFact {
+  const relation=runtimeSpatialRelation(scene,sourceId,targetId);
+  return {
+    distanceFeet:relation.distanceFeet,
+    visible:relation.visible,
+    cover:relation.cover,
+    targetCanSeeAttacker:relation.targetCanSeeAttacker,
+    provenance:[
+      relation.provenance,
+      `runtime:spatial:${sourceId}->${targetId}:distance:${relation.distanceFeet}ft`,
+      `runtime:spatial:${sourceId}->${targetId}:visibility:${relation.visible ? "visible" : "hidden"}:cover:${relation.cover}:target-sight:${relation.targetCanSeeAttacker}`,
+    ],
+  };
 }
 
 export function phase09DeterministicAttackFaces(action:ActionVm) {
