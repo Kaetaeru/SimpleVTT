@@ -14,6 +14,7 @@ import "./app/progressionPersistentFeatureRuntimeAdapter";
 import "./app/subclassRuntimeAdapter";
 import "./app/pactTomeRuntimeAdapter";
 import "./app/druidCircleLandSpellRuntimeAdapter";
+import "./app/restSpellManagementRuntimeAdapter";
 import "./app/classFeatureSpellRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
