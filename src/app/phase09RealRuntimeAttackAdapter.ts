@@ -98,9 +98,6 @@ function build(
     const runtimeState=internal.sessionMode === "initiative"
       ? snapshotAdapterTurnRuntimeState(adapter,internal.scene)
       : undefined;
-    if (internal.sessionMode === "initiative" && !runtimeState) {
-      return { status:"rejected",error:"initiative attack requires an authoritative turn runtime session" };
-    }
     const transaction = resolveAtomicAttackTransaction({
       resolutionId:`${resolution.id}:runtime-atomic`,
       action,
