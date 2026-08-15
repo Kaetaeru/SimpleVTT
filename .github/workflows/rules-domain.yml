@@ -77,8 +77,20 @@ jobs:
         run: npx tsx --test tests/domain/wildResurgence.test.ts
       - name: Verify Wizard Long Rest preparation
         run: npx tsx --test tests/domain/wizardLongRestPreparation.test.ts
-      - name: Verify Pact of the Tome
-        run: npx tsx --test tests/domain/warlockPactTome.test.ts
+      - name: Verify Pact Tome metadata
+        run: npx tsx --test --test-name-pattern="canonical spell rule metadata" tests/domain/warlockPactTome.test.ts
+      - name: Verify Pact Tome invocation option
+        run: npx tsx --test --test-name-pattern="selectable once" tests/domain/warlockPactTome.test.ts
+      - name: Verify Pact Tome initial configuration
+        run: npx tsx --test --test-name-pattern="configures exactly" tests/domain/warlockPactTome.test.ts
+      - name: Verify Pact Tome replacement
+        run: npx tsx --test --test-name-pattern="new Book of Shadows" tests/domain/warlockPactTome.test.ts
+      - name: Verify Pact Tome outside preparation rejection
+        run: npx tsx --test --test-name-pattern="already prepared outside" tests/domain/warlockPactTome.test.ts
+      - name: Verify Pact Tome Ritual rejection
+        run: npx tsx --test --test-name-pattern="non-Ritual" tests/domain/warlockPactTome.test.ts
+      - name: Verify Pact Tome invocation removal
+        run: npx tsx --test --test-name-pattern="become inactive" tests/domain/warlockPactTome.test.ts
       - name: Verify feat rule catalog
         run: npx tsx --test tests/domain/featRuleCatalog.test.ts
       - name: Verify class mechanics
