@@ -34,30 +34,45 @@ Verification:
 
 Tracking: Issue #69 / Draft PR #70
 
-### 2. Concentration damage save authoritative dice workflow — IN PROGRESS
+### 2. Concentration damage save authoritative dice workflow — CLOSED
 
-- [ ] 피해 transaction이 concentration check 필요 상태를 명시적으로 노출
-- [ ] 실제 d20 입력을 받는 app/adapter contract
-- [ ] CON saving throw modifier / proficiency를 기존 authoritative stat 경계에서 공급
-- [ ] domain `concentrationCheckDc()` / `resolveConcentrationDamageCheck()`만 판정에 사용
-- [ ] 입력이 없으면 자동 roll/DC/modifier를 발명하지 않고 explicit reject 유지
-- [ ] 성공: concentration 유지
-- [ ] 실패: concentration + group effects 제거
-- [ ] HP + concentration + effect changes를 동일 raw ResolutionEvent transaction에 보존
-- [ ] Activity에 concentration save 결과/provenance 표시
-- [ ] event-native Undo가 HP + concentration + effects를 exact restore
-- [ ] stale runtime revision / drift explicit reject
-- [ ] deterministic service tests
-- [ ] adapter/UI workflow regression
-- [ ] full Phase 09 + Rules Domain + TypeScript + production build green
-- [ ] Draft PR checkpoint
+- [x] 피해 transaction이 concentration check 필요 상태를 명시적으로 노출
+- [x] 실제 d20 입력을 받는 app/adapter contract
+- [x] CON saving throw modifier / proficiency를 기존 authoritative stat 경계에서 공급
+- [x] domain `concentrationCheckDc()` / `resolveConcentrationDamageCheck()`만 판정에 사용
+- [x] 입력이 없으면 자동 roll/DC/modifier를 발명하지 않음; lower-level domain explicit reject + app pending-input state 유지
+- [x] 성공: concentration 유지
+- [x] 실패: concentration + group effects 제거
+- [x] HP + concentration + effect changes를 동일 raw ResolutionEvent transaction에 보존
+- [x] Activity에 concentration save 결과/provenance 표시
+- [x] event-native Undo가 HP + concentration + effects를 exact restore
+- [x] stale runtime revision / concentration-group drift explicit reject
+- [x] deterministic domain result test: natural/modifier/total/DC/outcome 보존
+- [x] Character CON proficiency + Combatant structured save-stat boundary regression
+- [x] adapter workflow + UI no-rule-arithmetic structure gate
+- [x] full Phase 09 + Rules Domain + TypeScript + production build green
+- [x] Draft PR checkpoint
 
-### 3. Combatant runtime action expansion
+Verified implementation checkpoint: `ee95adf56a9f6481f754df5dbf5fde277bc18912`
+
+Verification:
+- UI Phase 09 mechanics + concentration workflow/structure ✅
+- TypeScript / production build ✅
+- Rules Domain core primitives + typed concentration result ✅
+- spellcasting / progression integration gates ✅
+
+Tracking: Issue #71 / Draft PR #72
+Branch: `agent/71-concentration-save-workflow`
+
+### 3. Combatant runtime action expansion — IN PROGRESS
 
 - [ ] authoritative spatial facts가 있는 encounter instance로 runtime actions 확대
 - [ ] imported / builtin Combatant representative actions
 - [ ] missing stat/spatial fact guess 금지
 - [ ] Activity / Undo convergence
+- [ ] deterministic runtime-action regressions
+- [ ] full Phase 09 + Rules Domain + TypeScript + production build green
+- [ ] Draft PR checkpoint
 
 ### 4. Character Creation ChoiceDefinition convergence
 
@@ -91,5 +106,6 @@ Tracking: Issue #69 / Draft PR #70
 ```text
 Phase 09
 Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
-Step 2: IN PROGRESS — Concentration damage save authoritative dice workflow
+Step 2: CLOSED @ ee95adf56a9f6481f754df5dbf5fde277bc18912 · PR #72
+Step 3: IN PROGRESS — Combatant runtime action expansion
 ```

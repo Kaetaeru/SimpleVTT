@@ -15,6 +15,7 @@ import type { ManualMovementReactionCommand } from "./manualMovementReactionCont
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 import "./restSpellManagementRuntimeAdapter";
+import "./phase09ConcentrationSaveAdapter";
 import { mockAdapter } from "./mockAdapter";
 
 export interface UiDebugState {
@@ -50,6 +51,7 @@ interface AppContextValue {
   declareManualMovementReaction(command:ManualMovementReactionCommand):Promise<void>;
   resolveAction(actionId: string, targetIds: string[]): Promise<void>;
   advanceResolution(): Promise<void>;
+  submitConcentrationSaveD20(face:number):Promise<void>;
   respondToInterrupt(accept: boolean): Promise<void>;
   dismissResolution(): Promise<void>;
   applyDmAdjudication(command: DmAdjudicationCommand): Promise<void>;
@@ -158,6 +160,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     declareManualMovementReaction: async (command) => apply(() => mockAdapter.declareManualMovementReaction(command)),
     resolveAction: async (actionId, targetIds) => apply(() => mockAdapter.resolveAction(actionId, targetIds)),
     advanceResolution: async () => apply(() => mockAdapter.advanceResolution()),
+    submitConcentrationSaveD20: async (face) => apply(() => mockAdapter.submitConcentrationSaveD20(face)),
     respondToInterrupt: async (accept) => apply(() => mockAdapter.respondToInterrupt(accept)),
     dismissResolution: async () => apply(() => mockAdapter.dismissResolution()),
     applyDmAdjudication: async (command) => apply(() => mockAdapter.applyDmAdjudication(command)),

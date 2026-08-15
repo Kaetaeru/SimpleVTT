@@ -4,7 +4,7 @@ import { resolveZeroHpAfterDamage, type LifeState } from "./life";
 import { applyHealingToLife } from "./lifeTransitions";
 import { activeConditionIds, conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { concentrationBreakReason, endConcentration, resolveConcentrationDamageCheck } from "./concentration";
+import { concentrationBreakReason, endConcentration, resolveConcentrationDamageCheck, type ConcentrationCheckResolution } from "./concentration";
 import { terminateEffectsForCreatureState, terminateEffectsForDamage } from "./effects";
 import { resolveTemporaryHpGain } from "./temporaryHp";
 import { hpStateChanges } from "./stateChange";
@@ -85,6 +85,7 @@ function finalizeDamage(
     ...lifeFlagStateChanges(operation.targetId, beforeLife, target.life, provenance),
   ];
   const currentConcentration = ctx.state.concentration[operation.targetId];
+  let concentrationCheck:ConcentrationCheckResolution|undefined;
 
   if (currentConcentration) {
     const immediateBreak = concentrationBreakReason({
@@ -122,6 +123,7 @@ function finalizeDamage(
           ...conditionAdjustments.rollStateContributions,
         ],
       });
+      concentrationCheck=check;
       provenance.push(...check.provenance);
       if (!check.maintained) {
         const { ended } = endActorConcentration(ctx, operation.targetId, "failed damage concentration save");
@@ -154,13 +156,16 @@ function finalizeDamage(
     appendExpiredEffects(changes, terminated);
   }
 
+  const result = concentrationCheck
+    ? { ...damage, concentrationCheck:structuredClone(concentrationCheck) }
+    : damage;
   return {
-    result:damage,
+    result,
     event:makeEvent(
       ctx.pending,
       operation,
       summary,
-      damage,
+      result,
       provenance,
       changes,
       operation.targetId,
