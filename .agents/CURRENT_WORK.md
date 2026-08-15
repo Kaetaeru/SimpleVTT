@@ -50,15 +50,13 @@ Phase 08 integration/document head:
 ef2f726a248c538fdbd9c6c2d23b38321aae5e45
 ```
 
-Phase 08의 completion boundary는 **catalog relationship과 현재 rules primitive로 표현 가능한 mechanics-backed contract를 모두 materialize하고, 현재 primitive 밖의 downstream 실행 형태는 explicit reject로 남기는 것**이다.
-
 ## Phase 09 — Mechanics Integration / RealAdapter ← current
 
 목표: Phase 08까지 만든 실제 규칙/콘텐츠를 MockAdapter-owned 규칙 계산에서 공용 application/domain service로 수렴시키고, 대표 플레이 경로를 authoritative domain 결과로 실행한다.
 
 현재 branch는 MockAdapter를 **transitional fixture/state storage**로 유지하되, 계산 자체를 단계적으로 실제 domain resolver로 옮긴다. React/UI contract는 유지한다.
 
-### 완료된 첫 integration cluster
+### 완료된 integration cluster
 
 - [x] target/DC를 발명하지 않는 generic `openD20` domain primitive
 - [x] Freeform 능력 판정 → `resolveOpenD20Roll` → application `ResolutionView` projection
@@ -73,7 +71,7 @@ Phase 08의 completion boundary는 **catalog relationship과 현재 rules primit
 - [x] Action / Bonus Action / Reaction + class resource 비용을 `resolvePendingResolution`의 동일 transaction으로 실행하는 application service
   - resource 부족 시 앞선 economy spend까지 atomic rollback 검증
   - freeform에서는 turn economy 비소비
-- [x] migrated attack/check commit에서 domain economy transaction 결과를 Scene/Activity에 projection
+- [x] migrated non-item commit에서 domain economy/resource transaction 결과를 Scene/Activity에 projection
 - [x] healing state 적용 → domain `resolveHealing`
 - [x] Second Wind representative path
   - healing 적용
@@ -81,13 +79,20 @@ Phase 08의 completion boundary는 **catalog relationship과 현재 rules primit
   - Second Wind resource 소비
   - Activity provenance/state changes
   - 기존 Undo로 HP/resource/economy before snapshot 복원
+- [x] saving throw target modifier의 index 기반 Mock 계산 제거
+  - 대상별 explicit reference save facts 사용
+  - 대상 순서를 바꿔도 modifier identity 유지
+  - 각 대상 판정을 domain `resolveD20Test`로 실행
+- [x] saving-throw damage도 domain `resolveDamage`로 실행
+  - save-half → resistance/vulnerability/immunity → Temporary HP → HP 순서 검증
+  - Thunderwave multi-target representative path 검증
 - [x] Phase 09 service/adapter regression tests를 UI CI gate에 편입
 - [x] Phase 08 zero-pending + aggregate progression 회귀 유지
 
 현재 integration checkpoint:
 
 ```text
-41563dfe49cb7a5e733b9f671b985472ec371a44
+37e5f7b5a4d6b507fdb7789cf3a1d28af6ee5b40
 ```
 
 검증:
@@ -104,9 +109,9 @@ UI production build ✅
 
 ### 다음 Phase 09 작업
 
-- [ ] saving-throw target modifiers를 Mock index 보정이 아닌 authoritative combatant/runtime data로 공급
 - [ ] staged attack의 hit + damage + economy/resource를 하나의 authoritative ResolutionEvent transaction으로 수렴
 - [ ] healing dice/formula calculation까지 공용 dice service로 수렴
+- [ ] saving modifier reference facts를 실제 Combatant/Character runtime stats 공급자로 교체
 - [ ] ItemInstance quantity/charges/resource spend를 atomic ResolutionEvent transaction으로 실행
 - [ ] Combatant instantiate/runtime action을 실제 domain state로 실행
 - [ ] Initiative / turn economy / Reaction / movement를 real runtime state에서 직접 실행
@@ -180,8 +185,6 @@ LAN/Hamachi authoritative session work
 ```
 
 ## 구현 원칙
-
-실제 플레이/구현에서 표현 불가능하거나 불편한 경우:
 
 1. deterministic failing scenario를 만든다.
 2. 기존 primitive로 표현 가능한지 먼저 확인한다.

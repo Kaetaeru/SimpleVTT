@@ -21,12 +21,14 @@ Current Phase 09 integration coverage includes:
 - Action / Bonus Action / Reaction and class-resource costs through atomic `ResolutionEvent` transactions with rollback on invalid resource spend
 - healing state application through the domain healing resolver
 - an end-to-end Second Wind representative path: healing + Bonus Action + class resource + Activity provenance/state changes + Undo restoration
+- saving throws use explicit target-bound reference modifiers instead of index-derived Mock bonuses, and each target is resolved by the canonical d20 resolver
+- saving-throw damage uses the same typed domain damage path, including save-half, resistance, and Temporary HP ordering
 - Phase 08 zero-pending, aggregate progression, TypeScript, and production UI regression gates remain green
 
 Latest Phase 09 integration checkpoint:
 
 ```text
-41563dfe49cb7a5e733b9f671b985472ec371a44
+37e5f7b5a4d6b507fdb7789cf3a1d28af6ee5b40
 ```
 
 On that checkpoint, Contract validation, Rules Domain, Phase 07/08 aggregate progression, Phase 09 service/adapter tests, TypeScript, and the UI production build are green.
@@ -47,7 +49,7 @@ Executable rules domain / ResolutionEvent transactions
 Transitional state projection into the current adapter shell
 ```
 
-The next Phase 09 slices are authoritative saving-throw target modifiers, fully atomic staged attack transactions, ItemInstance charge/quantity transactions, real initiative/turn runtime state, and direct Activity/Undo projection from committed domain events.
+The next Phase 09 slices are fully atomic staged attack transactions, moving reference save facts to real Character/Combatant runtime stats, ItemInstance charge/quantity transactions, real initiative/turn runtime state, and direct Activity/Undo projection from committed domain events.
 
 ## Frontend
 
