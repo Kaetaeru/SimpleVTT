@@ -2,17 +2,27 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionPhase08EpicBoonAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import type { AppSnapshot } from "../../src/app/contracts";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
 import { epicBoonAbilityChoiceId, epicBoonChoiceId } from "../../src/domain/epicBoonProgression";
 
 const FIGHTER_ID = "dnd.srd521.class.fighter";
 const COMBAT_PROWESS = "dnd.srd521.feat.epic.combat-prowess";
 const SPELL_RECALL = "dnd.srd521.feat.epic.spell-recall";
+type FixtureState = { activeCharacter:AppSnapshot["activeCharacter"]; scene:AppSnapshot["scene"] };
+
+function syncSceneHp(internal:FixtureState) {
+  const entity = internal.scene.entities.find((entry) => entry.id === internal.activeCharacter.id);
+  if (!entity) return;
+  entity.hp = internal.activeCharacter.hp;
+  entity.maxHp = internal.activeCharacter.maxHp;
+  entity.tempHp = internal.activeCharacter.tempHp;
+}
 
 test("Fighter 18 to 19 runtime materializes Epic Boon choices and commits stable feat id plus Constitution HP growth", async () => {
   const adapter = new MockAdapter();
   const baseline = (await adapter.getSnapshot()).activeCharacter;
-  const internal = adapter as unknown as { activeCharacter:typeof baseline };
+  const internal = adapter as unknown as FixtureState;
   internal.activeCharacter = {
     ...baseline,
     className:"파이터",
@@ -29,6 +39,7 @@ test("Fighter 18 to 19 runtime materializes Epic Boon choices and commits stable
     epicBoonFeatIds:[],
     epicBoonFeatSources:{},
   };
+  syncSceneHp(internal);
 
   await adapter.startLevelUp(internal.activeCharacter.id);
   let snapshot = await adapter.getSnapshot();
