@@ -37,6 +37,21 @@ export interface ConcentrationStateChange {
   writeBack:"session";
 }
 
+export interface SpellcastingTurnSnapshot {
+  turnId:string;
+  slottedCasterIds:string[];
+}
+
+export interface SpellcastingTurnStateChange {
+  kind:"spellcasting-turn";
+  targetId:string;
+  before?:SpellcastingTurnSnapshot;
+  after?:SpellcastingTurnSnapshot;
+  provenance:ProvenanceRecord[];
+  lifetime:"session-runtime";
+  writeBack:"session";
+}
+
 export interface LifeFlagStateChange {
   kind:"life";
   targetId:string;
@@ -53,6 +68,7 @@ export type RuntimeStateChange =
   | ResourceStateChange
   | EffectStateChange
   | ConcentrationStateChange
+  | SpellcastingTurnStateChange
   | LifeFlagStateChange;
 
 export function resourceStateChange(targetId:string, resourceId:string, before:number, after:number, provenance:ProvenanceRecord[]): ResourceStateChange {
@@ -88,6 +104,23 @@ export function concentrationStateChange(
 ): ConcentrationStateChange {
   return {
     kind:"concentration",
+    targetId,
+    before:before ? structuredClone(before) : undefined,
+    after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
+}
+
+export function spellcastingTurnStateChange(
+  targetId:string,
+  before:SpellcastingTurnSnapshot|undefined,
+  after:SpellcastingTurnSnapshot|undefined,
+  provenance:ProvenanceRecord[],
+):SpellcastingTurnStateChange {
+  return {
+    kind:"spellcasting-turn",
     targetId,
     before:before ? structuredClone(before) : undefined,
     after:after ? structuredClone(after) : undefined,

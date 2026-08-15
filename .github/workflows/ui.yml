@@ -56,6 +56,18 @@ jobs:
         run: npx tsx --test --test-name-pattern="Sorcerer 5 to 6" tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
       - name: Verify School of Evocation progression runtime
         run: npx tsx --test tests/ui/progressionPhase08WizardEvocationRuntime.test.ts
+      - name: Verify authoritative spellcasting runtime
+        shell: bash
+        run: |
+          set +e
+          npx tsx --test tests/ui/phase09AuthoritativeSpellcastingAdapter.test.ts > authoritative-spell.log 2>&1
+          status=$?
+          cat authoritative-spell.log
+          if [ "$status" -ne 0 ]; then
+            message=$(tail -n 50 authoritative-spell.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+            echo "::error title=Authoritative spellcasting regression::$message"
+            exit "$status"
+          fi
       - name: Verify Phase 09 real mechanics services
         run: >-
           npx tsx --test

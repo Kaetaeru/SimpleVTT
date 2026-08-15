@@ -6,6 +6,10 @@ function concentrationLabel(state:Extract<RuntimeStateChange,{kind:"concentratio
   return state ? `${state.groupId} (${state.sourceId})` : "—";
 }
 
+function spellcastingTurnLabel(state:Extract<RuntimeStateChange,{kind:"spellcasting-turn"}>["before"]) {
+  return state ? `${state.turnId} [${state.slottedCasterIds.join(", ") || "—"}]` : "—";
+}
+
 function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "hp") {
     const field = change.field === "current" ? "HP" : change.field === "maximum" ? "최대 HP" : "임시 HP";
@@ -22,6 +26,9 @@ function stateChangeLabel(change:RuntimeStateChange) {
   }
   if (change.kind === "concentration") {
     return `${change.targetId} concentration ${concentrationLabel(change.before)} → ${concentrationLabel(change.after)}`;
+  }
+  if (change.kind === "spellcasting-turn") {
+    return `${change.targetId} spellcasting-turn ${spellcastingTurnLabel(change.before)} → ${spellcastingTurnLabel(change.after)}`;
   }
   return `${change.targetId} life.${change.field} ${String(change.before)} → ${String(change.after)}`;
 }
