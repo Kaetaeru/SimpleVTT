@@ -22,6 +22,7 @@ import "./app/progressionPhase08WizardEvocationAdapter";
 import "./app/progressionPhase08MonkOpenHandAdapter";
 import "./app/progressionPhase08RogueThiefAdapter";
 import "./app/phase09RealResolutionAdapter";
+import "./app/phase09RealItemCostAdapter";
 import "./app/subclassRuntimeAdapter";
 import "./app/pactTomeRuntimeAdapter";
 import "./app/druidCircleLandSpellRuntimeAdapter";
