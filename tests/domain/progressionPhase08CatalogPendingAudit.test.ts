@@ -5,9 +5,27 @@ import { FEAT_RULE_CATALOG } from "../../src/domain/featRuleCatalog";
 import type { ChoiceSelectionMap } from "../../src/domain/choiceDefinition";
 import type { ProgressionCharacterState, ProgressionRequest } from "../../src/domain/progression";
 import { PROGRESSION_CATALOG, proficiencyBonusForTotalLevel } from "../../src/domain/progressionCatalog";
-import { buildProgressionPlanPhase08WizardEvocation } from "../../src/domain/progressionPhase08WizardEvocation";
+import { buildProgressionPlanPhase08MonkOpenHand } from "../../src/domain/progressionPhase08MonkOpenHand";
 import { classCantripListEntries } from "../../src/domain/spellListCatalog";
-import { srdSubclassIdForClass } from "../../src/domain/srdSubclassCatalog";
+import { MONK_OPEN_HAND_SUBCLASS_ID, srdSubclassIdForClass } from "../../src/domain/srdSubclassCatalog";
+import {
+  MONK_FOCUS_RESOURCE_ID,
+  MONK_OPEN_HAND_CLASS_ID,
+  OPEN_HAND_FLEET_STEP_FEATURE_ID,
+  OPEN_HAND_FLEET_STEP_JUMP_TAG,
+  OPEN_HAND_QUIVERING_PALM_FEATURE_ID,
+  OPEN_HAND_QUIVERING_PALM_TAG,
+  OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID,
+  OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID,
+  STEP_OF_THE_WIND_SOURCE_ID,
+  monkOpenHandRuntimeResourceDefinitions,
+  resolveOpenHandFleetStep,
+  resolveOpenHandQuiveringPalmDetonation,
+  resolveOpenHandQuiveringPalmSeed,
+  resolveOpenHandWholenessOfBody,
+} from "../../src/domain/monkOpenHand";
+import { resolvePendingResolution } from "../../src/domain/resolution";
+import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 type AuditState = ProgressionCharacterState & {
   subclassIds?:Record<string,string>;
@@ -126,9 +144,6 @@ function requestFor(state:AuditState,classId:string,targetLevel:number):Progress
 }
 
 const KNOWN_BLOCKERS = [
-  "dnd.srd521.class.monk:6",
-  "dnd.srd521.class.monk:11",
-  "dnd.srd521.class.monk:17",
   "dnd.srd521.class.rogue:9",
   "dnd.srd521.class.rogue:13",
   "dnd.srd521.class.rogue:17",
@@ -139,7 +154,7 @@ test("outermost Phase 08 progression plans match the explicit known catalog-pend
   for (const definition of PROGRESSION_CATALOG.classes) {
     for (let targetLevel = 2; targetLevel <= 20; targetLevel += 1) {
       const state = stateFor(definition.id,targetLevel);
-      const plan = buildProgressionPlanPhase08WizardEvocation(state,requestFor(state,definition.id,targetLevel));
+      const plan = buildProgressionPlanPhase08MonkOpenHand(state,requestFor(state,definition.id,targetLevel));
       for (const choice of plan.choices.filter((entry) => entry.status === "catalog-pending")) {
         pending.push({
           classId:definition.id,
@@ -158,4 +173,243 @@ test("outermost Phase 08 progression plans match the explicit known catalog-pend
     `unexpected Phase 08 catalog-pending choices:\n${JSON.stringify(pending,null,2)}`,
   );
   assert.ok(pending.every((entry) => entry.choiceId.endsWith(".subclass-feature")));
+});
+
+test("Open Hand 6/11/17 progression replaces generic subclass blockers with stable mechanics-backed feature ids", () => {
+  const expected = [
+    [6,OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID,"신체 완성"],
+    [11,OPEN_HAND_FLEET_STEP_FEATURE_ID,"날랜 발걸음"],
+    [17,OPEN_HAND_QUIVERING_PALM_FEATURE_ID,"진동장"],
+  ] as const;
+  for (const [level,featureId,label] of expected) {
+    const state = stateFor(MONK_OPEN_HAND_CLASS_ID,level);
+    const plan = buildProgressionPlanPhase08MonkOpenHand(state,requestFor(state,MONK_OPEN_HAND_CLASS_ID,level));
+    assert.equal(plan.choices.some((choice) => choice.status === "catalog-pending"),false);
+    assert.ok(plan.diffs.some((diff) => diff.label === "서브클래스 특성" && diff.after === label));
+    assert.ok(featureId.startsWith("dnd.srd521.feature.monk.open-hand."));
+  }
+});
+
+test("Monk Focus and Wholeness of Body resources use the shared class pool model and Wisdom-based Long-Rest uses", () => {
+  const definitions = monkOpenHandRuntimeResourceDefinitions(
+    [{ classId:MONK_OPEN_HAND_CLASS_ID, className:"수도승", level:17, subclassName:"열린 손의 전사" }],
+    { [MONK_OPEN_HAND_CLASS_ID]:MONK_OPEN_HAND_SUBCLASS_ID },
+    18,
+  );
+  assert.deepEqual(definitions.map((entry) => [entry.resourceId,entry.maximum]),[
+    [MONK_FOCUS_RESOURCE_ID,17],
+    [OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID,4],
+  ]);
+  assert.equal(definitions[0]?.recovery.shortRest,"all");
+  assert.equal(definitions[0]?.recovery.longRest,"all");
+  assert.equal(definitions[1]?.recovery.longRest,"all");
+});
+
+test("Wholeness of Body spends Bonus Action plus one use and heals one Martial Arts die plus Wisdom", () => {
+  const state = runtimeState();
+  state.combatants.hero.life.hp.current = 7;
+  state.combatants.hero.resources.push({
+    id:OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID,
+    label:"신체 완성",
+    current:4,
+    maximum:4,
+    recovery:{ longRest:"all" },
+  });
+  const result = resolveOpenHandWholenessOfBody(TEST_PROFILE,state,{
+    id:"open-hand.wholeness",
+    actorId:"hero",
+    expectedRevision:state.revision,
+    monkLevel:6,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    wisdomModifier:4,
+    martialArtsDieFace:8,
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.combatants.hero.life.hp.current,19);
+  assert.equal(result.state.combatants.hero.economy.bonusAction,false);
+  assert.equal(result.state.combatants.hero.resources.find((entry) => entry.id === OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID)?.current,3);
+});
+
+test("Fleet Step requires the immediately preceding non-Step Bonus Action and reuses Step of the Wind without spending another Bonus Action", () => {
+  const state = runtimeState();
+  state.clock.activeActorId = "hero";
+  state.combatants.hero.resources.push({
+    id:MONK_FOCUS_RESOURCE_ID,
+    label:"기 점수",
+    current:11,
+    maximum:11,
+    recovery:{ shortRest:"all", longRest:"all" },
+  });
+  const trigger = resolvePendingResolution(TEST_PROFILE,state,{
+    id:"open-hand.trigger-bonus",
+    actorId:"hero",
+    sourceId:"test:non-step-bonus-action",
+    expectedRevision:state.revision,
+    operations:[{
+      id:"open-hand.trigger-bonus:economy",
+      kind:"use-economy",
+      actorId:"hero",
+      slot:"bonus-action",
+      bonusActionGranted:true,
+      actionKind:"other",
+    }],
+  });
+  assert.equal(trigger.status,"committed");
+  if (trigger.status !== "committed") return;
+  const result = resolveOpenHandFleetStep(TEST_PROFILE,trigger.state,{
+    id:"open-hand.fleet-step",
+    actorId:"hero",
+    expectedRevision:trigger.state.revision,
+    monkLevel:11,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    triggeringResolutionId:"open-hand.trigger-bonus",
+    triggeringBonusActionSourceId:"test:non-step-bonus-action",
+    spendFocus:true,
+    distanceFeet:30,
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.combatants.hero.economy.bonusAction,false,"Fleet Step must not spend a second Bonus Action");
+  assert.equal(result.state.combatants.hero.resources.find((entry) => entry.id === MONK_FOCUS_RESOURCE_ID)?.current,10);
+  assert.ok(result.state.effects.some((effect) => effect.tags.includes(OPEN_HAND_FLEET_STEP_JUMP_TAG) && effect.metadata?.jumpDistanceMultiplier === 2));
+
+  const invalid = resolveOpenHandFleetStep(TEST_PROFILE,trigger.state,{
+    id:"open-hand.fleet-step.invalid",
+    actorId:"hero",
+    expectedRevision:trigger.state.revision,
+    monkLevel:11,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    triggeringResolutionId:"open-hand.trigger-bonus",
+    triggeringBonusActionSourceId:STEP_OF_THE_WIND_SOURCE_ID,
+    spendFocus:false,
+    distanceFeet:30,
+  });
+  assert.equal(invalid.status,"rejected");
+});
+
+test("Quivering Palm spends 4 Focus, keeps only one seeded target, and Action detonation deals 10d12 force or half on a successful Constitution save", () => {
+  const state = runtimeState();
+  state.clock.activeActorId = "hero";
+  state.combatants.hero.resources.push({
+    id:MONK_FOCUS_RESOURCE_ID,
+    label:"기 점수",
+    current:12,
+    maximum:17,
+    recovery:{ shortRest:"all", longRest:"all" },
+  });
+  state.combatants.goblin.life.hp = { current:100, maximum:100, temporary:0 };
+  state.combatants.orc = structuredClone(state.combatants.goblin);
+  state.combatants.orc.id = "orc";
+
+  const first = resolveOpenHandQuiveringPalmSeed(TEST_PROFILE,state,{
+    id:"open-hand.quivering.first",
+    actorId:"hero",
+    targetId:"goblin",
+    expectedRevision:state.revision,
+    monkLevel:17,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    unarmedStrikeHit:true,
+  });
+  assert.equal(first.status,"committed");
+  if (first.status !== "committed") return;
+  assert.equal(first.state.combatants.hero.resources.find((entry) => entry.id === MONK_FOCUS_RESOURCE_ID)?.current,8);
+
+  const second = resolveOpenHandQuiveringPalmSeed(TEST_PROFILE,first.state,{
+    id:"open-hand.quivering.second",
+    actorId:"hero",
+    targetId:"orc",
+    expectedRevision:first.state.revision,
+    monkLevel:17,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    unarmedStrikeHit:true,
+  });
+  assert.equal(second.status,"committed");
+  if (second.status !== "committed") return;
+  const seeded = second.state.effects.filter((effect) => effect.tags.includes(OPEN_HAND_QUIVERING_PALM_TAG));
+  assert.equal(seeded.length,1);
+  assert.equal(seeded[0]?.targetId,"orc");
+  assert.equal(second.state.combatants.hero.resources.find((entry) => entry.id === MONK_FOCUS_RESOURCE_ID)?.current,4);
+
+  const unsupported = resolveOpenHandQuiveringPalmDetonation(TEST_PROFILE,second.state,{
+    id:"open-hand.quivering.replace-attack",
+    actorId:"hero",
+    targetId:"orc",
+    expectedRevision:second.state.revision,
+    monkLevel:17,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    activation:"replace-attack",
+    samePlane:true,
+    proficiencyBonus:6,
+    wisdomModifier:4,
+    targetConSaveModifier:0,
+    saveDice:{ id:"open-hand.save.unsupported", purpose:"Quivering Palm Constitution save", sides:20, faces:[1] },
+    forceDamageFaces:[8,8,8,8,8,8,8,8,8,8],
+    creatureKind:"monster",
+  });
+  assert.equal(unsupported.status,"rejected");
+  assert.match(unsupported.status === "rejected" ? unsupported.error : "",/Attack-sequence replacement support/);
+
+  const failedSave = resolveOpenHandQuiveringPalmDetonation(TEST_PROFILE,second.state,{
+    id:"open-hand.quivering.detonate",
+    actorId:"hero",
+    targetId:"orc",
+    expectedRevision:second.state.revision,
+    monkLevel:17,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    activation:"action",
+    samePlane:true,
+    proficiencyBonus:6,
+    wisdomModifier:4,
+    targetConSaveModifier:0,
+    saveDice:{ id:"open-hand.save.fail", purpose:"Quivering Palm Constitution save", sides:20, faces:[1] },
+    forceDamageFaces:[8,8,8,8,8,8,8,8,8,8],
+    creatureKind:"monster",
+  });
+  assert.equal(failedSave.status,"committed");
+  if (failedSave.status !== "committed") return;
+  assert.equal(failedSave.state.combatants.orc.life.hp.current,20);
+  assert.equal(failedSave.state.combatants.hero.economy.action,false);
+  assert.equal(failedSave.state.effects.some((effect) => effect.tags.includes(OPEN_HAND_QUIVERING_PALM_TAG)),false);
+
+  const halfState = runtimeState();
+  halfState.clock.activeActorId = "hero";
+  halfState.combatants.hero.resources.push({
+    id:MONK_FOCUS_RESOURCE_ID,
+    label:"기 점수",
+    current:4,
+    maximum:17,
+    recovery:{ shortRest:"all", longRest:"all" },
+  });
+  halfState.combatants.goblin.life.hp = { current:100, maximum:100, temporary:0 };
+  const halfSeed = resolveOpenHandQuiveringPalmSeed(TEST_PROFILE,halfState,{
+    id:"open-hand.quivering.half.seed",
+    actorId:"hero",
+    targetId:"goblin",
+    expectedRevision:halfState.revision,
+    monkLevel:17,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    unarmedStrikeHit:true,
+  });
+  assert.equal(halfSeed.status,"committed");
+  if (halfSeed.status !== "committed") return;
+  const successfulSave = resolveOpenHandQuiveringPalmDetonation(TEST_PROFILE,halfSeed.state,{
+    id:"open-hand.quivering.half.detonate",
+    actorId:"hero",
+    targetId:"goblin",
+    expectedRevision:halfSeed.state.revision,
+    monkLevel:17,
+    subclassId:MONK_OPEN_HAND_SUBCLASS_ID,
+    activation:"action",
+    samePlane:true,
+    proficiencyBonus:6,
+    wisdomModifier:4,
+    targetConSaveModifier:0,
+    saveDice:{ id:"open-hand.save.success", purpose:"Quivering Palm Constitution save", sides:20, faces:[20] },
+    forceDamageFaces:[8,8,8,8,8,8,8,8,8,8],
+    creatureKind:"monster",
+  });
+  assert.equal(successfulSave.status,"committed");
+  if (successfulSave.status !== "committed") return;
+  assert.equal(successfulSave.state.combatants.goblin.life.hp.current,60,"80 force damage is halved to 40 on a successful save");
 });

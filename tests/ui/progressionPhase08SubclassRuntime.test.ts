@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionPhase08SubclassAdapter";
+import "../../src/app/progressionPhase08MonkOpenHandAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { AppSnapshot } from "../../src/app/contracts";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
 import { FIGHTER_CHAMPION_SUBCLASS_ID } from "../../src/domain/fighterChampion";
 import { FIGHTER_FIGHTING_STYLE_CLASS_ID, fighterFightingStyleReplacementChoiceId } from "../../src/domain/fighterFightingStyleProgression";
+import {
+  MONK_OPEN_HAND_CLASS_ID,
+  OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID,
+} from "../../src/domain/monkOpenHand";
+import { MONK_OPEN_HAND_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 import { subclassFeatureChoiceId } from "../../src/domain/srdSubclassProgression";
 
 const ARCHERY = "dnd.srd521.feat.fighting-style.archery";
@@ -52,6 +58,32 @@ async function champion6Adapter() {
       "dnd.srd521.feature.fighter.champion.improved-critical",
       "dnd.srd521.feature.fighter.champion.remarkable-athlete",
     ],
+    subclassFeatureSources:{},
+  };
+  syncSceneHp(internal);
+  return { adapter, internal };
+}
+
+async function openHand5Adapter() {
+  const adapter = new MockAdapter();
+  const baseline = (await adapter.getSnapshot()).activeCharacter;
+  const internal = adapter as unknown as FixtureState;
+  internal.activeCharacter = {
+    ...baseline,
+    className:"수도승",
+    subclassName:"열린 손의 전사",
+    level:5,
+    hp:38,
+    maxHp:38,
+    proficiencyBonus:3,
+    abilities:{ str:10, dex:18, con:14, int:10, wis:16, cha:8 },
+    features:["무술","기","열린 손의 전사"],
+    classLevels:[{ classId:MONK_OPEN_HAND_CLASS_ID, className:"수도승", level:5, subclassName:"열린 손의 전사" }],
+    hitDiceByDie:{ d8:5 },
+    progressionRevision:30,
+    subclassIds:{ [MONK_OPEN_HAND_CLASS_ID]:MONK_OPEN_HAND_SUBCLASS_ID },
+    subclassSources:{ [MONK_OPEN_HAND_CLASS_ID]:"SRD 5.2.1 · 수도승 · 열린 손의 전사" },
+    subclassFeatureIds:[],
     subclassFeatureSources:{},
   };
   syncSceneHp(internal);
@@ -115,4 +147,21 @@ test("Champion automatic subclass features no longer surface a fake catalog choi
   assert.equal(snapshot.activeCharacter.level,10);
   assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes("dnd.srd521.feature.fighter.champion.heroic-warrior"));
   assert.ok(snapshot.activeCharacter.features.includes("영웅적 전사"));
+});
+
+test("Open Hand Monk 5 to 6 removes the generic subclass blocker and persists Wholeness of Body through the outermost runtime adapter", async () => {
+  const { adapter, internal } = await openHand5Adapter();
+  await adapter.startLevelUp(internal.activeCharacter.id);
+  let snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.progressionPlan?.choices.some((choice) => choice.status === "catalog-pending"),false);
+  assert.equal(snapshot.progressionPlan?.choices.some((choice) => choice.id === subclassFeatureChoiceId(MONK_OPEN_HAND_CLASS_ID,6)),false);
+  assert.ok(snapshot.progressionPlan?.diffs.some((diff) => diff.label === "서브클래스 특성" && diff.after === "신체 완성"));
+  assert.deepEqual(snapshot.progressionPlan?.blocking,[]);
+
+  await adapter.commitLevelUp();
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.level,6);
+  assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes(OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID));
+  assert.ok(snapshot.activeCharacter.features.includes("신체 완성"));
+  assert.equal(snapshot.activeCharacter.progressionRevision,31);
 });

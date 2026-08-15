@@ -12,6 +12,7 @@ import { coreClassResourceDefinitions } from "../domain/coreClassResources";
 import { barbarianRuntimeResourceDefinitions } from "../domain/barbarianBerserker";
 import { paladinDevotionRuntimeResourceDefinitions } from "../domain/paladinDevotion";
 import { warlockFiendRuntimeResourceDefinitions } from "../domain/warlockFiend";
+import { monkOpenHandRuntimeResourceDefinitions } from "../domain/monkOpenHand";
 
 type AdapterState = {
   activeCharacter: CharacterSheet;
@@ -60,6 +61,7 @@ export function ensureCoreClassResources(sheet: CharacterSheet) {
   for (const definition of barbarianRuntimeResourceDefinitions(sheet.classLevels ?? [],sheet.subclassIds ?? {})) upsertResource(sheet, definition);
   for (const definition of paladinDevotionRuntimeResourceDefinitions(sheet.classLevels ?? [],sheet.subclassIds ?? {})) upsertResource(sheet, definition);
   for (const definition of warlockFiendRuntimeResourceDefinitions(sheet.classLevels ?? [],sheet.subclassIds ?? {},sheet.abilities.cha)) upsertResource(sheet, definition);
+  for (const definition of monkOpenHandRuntimeResourceDefinitions(sheet.classLevels ?? [],sheet.subclassIds ?? {},sheet.abilities.wis)) upsertResource(sheet, definition);
   return sheet;
 }
 

@@ -18,6 +18,12 @@ import {
   PALADIN_ID,
   RANGER_ID,
 } from "../../src/domain/classFeatureSpellResources";
+import {
+  MONK_FOCUS_RESOURCE_ID,
+  MONK_OPEN_HAND_CLASS_ID,
+  OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID,
+} from "../../src/domain/monkOpenHand";
+import { MONK_OPEN_HAND_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 
 async function baselineAdapter() {
   const adapter = new MockAdapter();
@@ -112,4 +118,42 @@ test("Berserker level 14 projects Rage plus one Long-Rest Intimidating Presence 
   presence = snapshot.activeCharacter.resources.find((resource) => resource.id === BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID);
   assert.equal(rage?.current,2,"snapshot normalization must not refill spent Rage uses");
   assert.equal(presence?.current,0,"snapshot normalization must not refill spent Intimidating Presence");
+});
+
+test("Open Hand Monk projects the shared Focus pool plus Wisdom-based Wholeness of Body uses without snapshot refills", async () => {
+  const { adapter, internal } = await baselineAdapter();
+  internal.activeCharacter = {
+    ...internal.activeCharacter,
+    className:"수도승",
+    subclassName:"열린 손의 전사",
+    level:6,
+    abilities:{ ...internal.activeCharacter.abilities, wis:18 },
+    classLevels:[{ classId:MONK_OPEN_HAND_CLASS_ID, className:"수도승", level:6, subclassName:"열린 손의 전사" }],
+    subclassIds:{ [MONK_OPEN_HAND_CLASS_ID]:MONK_OPEN_HAND_SUBCLASS_ID },
+    resources:[],
+  };
+  let snapshot = await adapter.getSnapshot();
+  let focus = snapshot.activeCharacter.resources.find((resource) => resource.id === MONK_FOCUS_RESOURCE_ID);
+  let wholeness = snapshot.activeCharacter.resources.find((resource) => resource.id === OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID);
+  assert.deepEqual({ current:focus?.current, max:focus?.max, recovery:focus?.recovery }, {
+    current:6,
+    max:6,
+    recovery:{ shortRest:"all", longRest:"all" },
+  });
+  assert.deepEqual({ current:wholeness?.current, max:wholeness?.max, recovery:wholeness?.recovery }, {
+    current:4,
+    max:4,
+    recovery:{ longRest:"all" },
+  });
+
+  const internalFocus = internal.activeCharacter.resources.find((resource) => resource.id === MONK_FOCUS_RESOURCE_ID);
+  const internalWholeness = internal.activeCharacter.resources.find((resource) => resource.id === OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID);
+  assert.ok(internalFocus && internalWholeness);
+  internalFocus!.current = 2;
+  internalWholeness!.current = 0;
+  snapshot = await adapter.getSnapshot();
+  focus = snapshot.activeCharacter.resources.find((resource) => resource.id === MONK_FOCUS_RESOURCE_ID);
+  wholeness = snapshot.activeCharacter.resources.find((resource) => resource.id === OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID);
+  assert.equal(focus?.current,2,"snapshot normalization must not refill spent Focus Points");
+  assert.equal(wholeness?.current,0,"snapshot normalization must not refill spent Wholeness of Body uses");
 });
