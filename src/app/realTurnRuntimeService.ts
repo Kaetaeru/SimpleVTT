@@ -194,16 +194,36 @@ export function synchronizeTurnRuntimeFromScene(session:TurnRuntimeSession,scene
 
 export function advanceTurnRuntimeSession(session:TurnRuntimeSession) {
   if (session.initiativeOrder.length===0) return session;
-  const state=cloneRuntimeState(session.state);
-  const nextIndex=(session.activeIndex+1)%session.initiativeOrder.length;
-  const wrapped=nextIndex===0;
+  const currentActorId=session.state.clock.activeActorId ?? session.initiativeOrder[session.activeIndex];
+  const currentIndex=session.initiativeOrder.indexOf(currentActorId);
+  if (currentIndex<0) return session;
+  const nextIndex=(currentIndex+1)%session.initiativeOrder.length;
   const nextId=session.initiativeOrder[nextIndex];
-  const combatant=state.combatants[nextId];
-  if (combatant) combatant.economy=beginTurn(combatant.baseSpeed);
-  state.clock.activeActorId=nextId;
-  if (wrapped) state.clock.round+=1;
-  state.revision+=1;
-  session.state=state;
+  const nextRound=session.state.clock.round+(nextIndex===0 ? 1 : 0);
+  const expectedRevision=session.state.revision;
+  const resolutionId=`turn-runtime:${expectedRevision}:${currentActorId}->${nextId}`;
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,session.state,{
+    id:resolutionId,
+    actorId:currentActorId,
+    sourceId:"app:turn-runtime:lifecycle",
+    expectedRevision,
+    operations:[
+      {
+        id:`${resolutionId}:end`,
+        kind:"end-turn",
+        actorId:currentActorId,
+        round:session.state.clock.round,
+      },
+      {
+        id:`${resolutionId}:begin`,
+        kind:"begin-turn",
+        actorId:nextId,
+        round:nextRound,
+      },
+    ],
+  });
+  if (committed.status==="rejected") return session;
+  session.state=committed.state;
   session.activeIndex=nextIndex;
   return session;
 }

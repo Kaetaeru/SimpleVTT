@@ -8,6 +8,7 @@ import {
   setTurnRuntimeActiveActor,
   synchronizeTurnRuntimeFromScene,
 } from "../../src/app/realTurnRuntimeService";
+import { createEffect } from "../../src/domain/effects";
 
 function scene():SceneVm {
   return {
@@ -59,6 +60,57 @@ test("turn runtime absorbs committed economy projection and only resets the acto
   assert.equal(value.round,2);
   assert.equal(value.currentActorId,"fast");
   assert.deepEqual(value.economyByActor.fast,{ action:true, bonusAction:true, reaction:true, movement:30, movementMax:30 },"next turn resets to base speed, not a previous temporary movement maximum");
+});
+
+test("turn advance expires boundary effects before computing next actor speed and action availability", () => {
+  const value=scene();
+  const session=createTurnRuntimeSession(value);
+  const currentId=session.initiativeOrder[0];
+  const nextId=session.initiativeOrder[1];
+  const round=session.state.clock.round;
+  const historyBefore=session.state.history.length;
+
+  session.state.effects.push(
+    createEffect({
+      id:"expire-current-end",
+      sourceId:"test:end-boundary",
+      targetId:currentId,
+      kind:"marker",
+      duration:{ kind:"until-turn-boundary",actorId:currentId,round,boundary:"end" },
+    },session.state.clock),
+    createEffect({
+      id:"expire-next-start-grappled",
+      sourceId:"test:start-boundary",
+      targetId:nextId,
+      kind:"condition",
+      conditionId:"grappled",
+      duration:{ kind:"until-turn-boundary",actorId:nextId,round,boundary:"start" },
+    },session.state.clock),
+    createEffect({
+      id:"persist-next-incapacitated",
+      sourceId:"test:incapacitated",
+      targetId:nextId,
+      kind:"condition",
+      conditionId:"incapacitated",
+      duration:{ kind:"permanent" },
+    },session.state.clock),
+  );
+
+  advanceTurnRuntimeSession(session);
+
+  assert.equal(session.state.clock.activeActorId,nextId);
+  assert.equal(session.state.effects.some((effect)=>effect.id==="expire-current-end"),false,"current end-turn effect expires in end-turn operation");
+  assert.equal(session.state.effects.some((effect)=>effect.id==="expire-next-start-grappled"),false,"next start-turn effect expires before begin-turn economy is calculated");
+  assert.equal(session.state.effects.some((effect)=>effect.id==="persist-next-incapacitated"),true);
+  const economy=session.state.combatants[nextId].economy;
+  assert.equal(economy.movement,session.state.combatants[nextId].baseSpeed,"expired Grappled cannot leave movement at 0");
+  assert.equal(economy.movementMaximum,session.state.combatants[nextId].baseSpeed);
+  assert.equal(economy.action,false,"persistent Incapacitated suppresses Action on begin-turn");
+  assert.equal(economy.bonusAction,false,"persistent Incapacitated suppresses Bonus Action on begin-turn");
+  assert.equal(economy.reaction,false,"persistent Incapacitated suppresses Reaction on begin-turn");
+  assert.equal(session.state.history.length,historyBefore+2,"turn advance records end-turn and begin-turn ResolutionEvents");
+  assert.equal(session.state.history.at(-2)?.kind,"end-turn");
+  assert.equal(session.state.history.at(-1)?.kind,"begin-turn");
 });
 
 test("manual active-actor selection changes turn pointer without resetting spent economy", () => {
