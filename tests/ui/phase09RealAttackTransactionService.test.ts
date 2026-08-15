@@ -51,7 +51,6 @@ function authoritativeRuntime(actor:SceneEntity,target:SceneEntity) {
     round:1,
     currentActorId:actor.id,
     selectedActorId:actor.id,
-    sessionMode:"initiative",
     entities:[structuredClone(actor),structuredClone(target)],
     actionsByActor:{},
     economyByActor:{ [actor.id]:{ ...ECONOMY },[target.id]:{ ...ECONOMY } },
