@@ -91,7 +91,7 @@ test("Sorcerer 2 to 3 runtime commits Draconic identity and HP", async () => {
   await adapter.commitLevelUp();
   const snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.activeCharacter.level,3);
-  assert.equal(snapshot.activeCharacter.hp,23);
+  assert.equal(snapshot.activeCharacter.hp,14,"level-up increases maximum HP without automatically healing current HP");
   assert.equal(snapshot.activeCharacter.maxHp,23);
   assert.equal(snapshot.activeCharacter.subclassIds?.[SORCERER_ID],SORCERER_DRACONIC_SUBCLASS_ID);
   assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes(DRACONIC_RESILIENCE_FEATURE_ID));
