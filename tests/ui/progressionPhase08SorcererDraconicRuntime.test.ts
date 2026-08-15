@@ -65,9 +65,13 @@ async function draconicLevel3Ready() {
   return { adapter, ready };
 }
 
-test("Sorcerer 2 to 3 runtime preview includes Draconic Resilience HP", async () => {
+test("Sorcerer 2 to 3 runtime preview has no blockers", async () => {
   const { ready } = await draconicLevel3Ready();
   assert.deepEqual(ready.progressionPlan?.blocking,[]);
+});
+
+test("Sorcerer 2 to 3 runtime preview includes Draconic Resilience HP", async () => {
+  const { ready } = await draconicLevel3Ready();
   assert.equal(ready.progressionPlan?.diffs.find((diff) => diff.label === "최대 HP")?.after,"23");
 });
 
