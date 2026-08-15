@@ -203,6 +203,7 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpWithDraconicSo
   }
 
   const next = resolved.state as SorcererDraconicProgressionState;
+  internal.activeCharacter.hp = next.hpCurrent;
   internal.activeCharacter.maxHp = next.hpMaximum;
   internal.activeCharacter.preparedSpells = clone(next.preparedSpellIds ?? internal.activeCharacter.preparedSpells);
   internal.activeCharacter.preparedSpellSources = clone(next.preparedSpellSources ?? internal.activeCharacter.preparedSpellSources ?? {});
@@ -215,7 +216,10 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpWithDraconicSo
   const labels = (next.subclassFeatureIds ?? []).map((id) => FEATURE_LABELS[id]).filter((value):value is string => Boolean(value));
   internal.activeCharacter.features = unique([...internal.activeCharacter.features,...labels]);
   const sceneEntity = internal.scene.entities.find((entity) => entity.id === internal.activeCharacter.id);
-  if (sceneEntity) sceneEntity.maxHp = internal.activeCharacter.maxHp;
+  if (sceneEntity) {
+    sceneEntity.hp = internal.activeCharacter.hp;
+    sceneEntity.maxHp = internal.activeCharacter.maxHp;
+  }
   internal.syncChar();
 
   const activity = internal.activity[0];
