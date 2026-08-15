@@ -16,7 +16,8 @@ Owner progression regression stack:
 PR    #60  agent/55-progression-choice-schedule-fix                DRAFT / Windows owner gate pending
 PR    #62  agent/61-effect-concentration-runtime-undo               DRAFT
 PR    #64  agent/63-authoritative-turn-runtime-attacks              DRAFT
-PR    #66  agent/65-runtime-effect-activity-undo                    DRAFT / current stack head
+PR    #66  agent/65-runtime-effect-activity-undo                    DRAFT
+PR    #68  agent/67-spellcasting-authoritative-runtime              DRAFT / current stack head
 ```
 
 ## Phase 08 ✅
@@ -128,14 +129,29 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] 일반 effect application commit도 runtime revision drift를 덮어쓰지 않음
 - [x] `SceneVm`에 effect/concentration 저장 필드를 추가하지 않음
 
+#### Spellcasting runtime convergence
+- [x] 실제 TurnRuntimeSession이 있을 때 executable spell cast가 authoritative RulesRuntimeState를 사용
+- [x] legacy spell HUD slot pool은 runtime resource가 없을 때만 최초 materialization input으로 사용
+- [x] authoritative slot resource는 반복 snapshot으로 legacy bridge 값에 덮어써지지 않음
+- [x] Healing Word initiative path: slot + Bonus Action + HP + spellcasting-turn marker를 동일 runtime revision에서 commit
+- [x] raw spell ResolutionEvent → generic Activity → shared event-native Undo
+- [x] runtime-only spell-slot resource와 `{ turnId, slottedCasterIds }` marker를 drift-check / exact inverse
+- [x] Undo 후 slot / Bonus Action / HP / HUD / turn-marker 복원 및 같은 turn 재시전 회귀 검증
+- [x] 같은 turn 두 번째 slotted spell은 추가 slot 소비 없이 explicit reject
+- [x] 실제 TurnRuntimeSession이 없는 spell action은 captured legacy spell bridge + 기존 2단계 safe Undo로 명시적 fallback
+- [x] no-session non-spell action은 legacy fallback으로 우회하지 않고 전체 Phase 09 adapter chain 유지
+- [x] canonical `src/domain/spellcasting.ts`는 변경하지 않고 app/event integration 경계에서 turn-marker state change 보강
+- [x] dedicated authoritative spellcasting CI gate 추가
+
 #### ResolutionEvent / Activity / Undo
 - [x] Shortbow / Second Wind / Potion / Wand / Thunderwave / manual Opportunity Attack raw events → Activity
 - [x] event-native inverse: HP / economy / Character resource / ItemInstance quantity+charges / life flags
 - [x] event-native inverse: EffectInstance / ConcentrationState
+- [x] event-native inverse: runtime-only spell-slot resource / spellcasting-turn marker
 - [x] critical wolf death `dead false→true` → Undo `true→false`
 - [x] stale current state와 event `after` 불일치 시 explicit reject
 - [x] event Undo 결과를 active turn runtime에 reconcile
-- [x] attack과 일반 effect application이 shared raw-event history registry를 사용
+- [x] attack / 일반 effect application / authoritative spellcasting이 shared raw-event history registry를 사용
 - [x] pure runtime application용 generic Activity projector
 
 #### 3D visual dice
@@ -146,7 +162,7 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 
 ### 현재 verified implementation checkpoint
 
-`ebe095223d3cdf3d6be1e9d8448cd372eea499b8`
+`ca0967a69d3525ce26df0e36ea5ba8ef68fd9c8b`
 
 ```text
 Rules Domain                           ✅
@@ -156,6 +172,7 @@ Phase 09 service/adapter tests         ✅
 Authoritative turn-runtime attacks     ✅
 Effect/Concentration runtime Undo      ✅
 Effect application Activity/Undo       ✅
+Authoritative spellcasting gate        ✅
 Manual movement reaction E2E           ✅
 Movement reaction UI/policy structure  ✅
 3D dice tests                          ✅
@@ -165,9 +182,8 @@ UI production build                    ✅
 
 ### 다음 Phase 09 작업
 
-- [ ] `spellcastingRuntimeAdapter`의 별도 `bridge.runtime` / Before-snapshot Undo를 공용 TurnRuntimeSession + ResolutionEvent 경계로 수렴
-- [ ] concentration damage save를 실제 사용자 입력/authoritative dice workflow와 연결; fixed input 없는 경우 explicit reject 유지
 - [ ] condition/effect-aware turn begin semantics가 active runtime에 완전히 수렴하는지 검증 (`advanceTurnRuntimeSession` direct reset 제거)
+- [ ] concentration damage save를 실제 사용자 입력/authoritative dice workflow와 연결; fixed input 없는 경우 explicit reject 유지
 - [ ] Combatant runtime action을 authoritative spatial facts가 있는 encounter instance에 확대
 - [ ] Character Creation choice graph를 `ChoiceDefinition` 경로로 점진 통합
 - [ ] level-up / rest-time configuration / class-feature commands를 공용 application service로 수렴
