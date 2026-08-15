@@ -1,8 +1,15 @@
 import "./creationContracts";
 import type { AbilityKey, CharacterCreateDraft, CharacterCreationOptionVm, CharacterCreationPlan, CharacterCreationSection, ValidationMessage } from "./contracts";
 import { BACKGROUNDS, CLASSES, SPECIES, SKILL_LABELS, backgroundSkills, classIdFromName, classLoadoutOptions, classMeta, classSkillOptions, itemMechanic, opt, speciesDefinition, speciesTraits, type Option } from "./characterCreationV10Data";
-import { classAndBackgroundLoadout, creationChoiceSpecs, finalAbilities, nonClassSkillNames, normalizeChoiceSelections, speciesAutomaticEffects } from "./characterCreationV10Choices";
+import { classAndBackgroundLoadout, finalAbilities, nonClassSkillNames, speciesAutomaticEffects } from "./characterCreationV10Choices";
+import {
+  creationChoiceDefinitions,
+  creationChoiceOptionViews,
+  normalizeCreationChoiceSelections,
+  validateCreationChoiceDefinitions,
+} from "./characterCreationChoiceDefinition";
 import { decorateSpellOption } from "./spellPresentation";
+import type { ChoiceValidationIssue } from "../domain/choiceDefinition";
 
 const choose = (xs: Option[], value: string | string[] | undefined) => {
   const values = Array.isArray(value) ? value : [value];
@@ -44,10 +51,8 @@ export function validateCreationV10(draft: CharacterCreateDraft): ValidationMess
     const loadouts = classLoadoutOptions(classIdFromName(draft.className));
     if (loadouts.length && !loadouts.some((item) => item.id === draft.equipmentPreset)) out.push({ severity:"blocking", message:"클래스 시작 장비 또는 시작 금화를 선택해야 합니다." });
   }
-  for (const spec of creationChoiceSpecs(draft)) {
-    if (spec.blocked) continue;
-    const count = draft.choiceSelections?.[spec.id]?.length ?? 0;
-    if (count !== spec.count) out.push({ severity:"blocking", message:`${spec.label}: ${spec.count}개 선택이 필요합니다. 현재 ${count}/${spec.count}` });
+  for (const issue of validateCreationChoiceDefinitions(draft)) {
+    out.push({ severity:issue.severity, message:issue.message });
   }
   return out;
 }
@@ -57,7 +62,7 @@ export function normalizeCreationV10(draft: CharacterCreateDraft) {
   draft.selectedClassChoices ??= [];
   draft.choiceSelections ??= {};
   if (draft.level <= 1 && !draft.editingCharacterId) draft.subclassName = "";
-  normalizeChoiceSelections(draft);
+  normalizeCreationChoiceSelections(draft);
   const abilities = finalAbilities(draft);
   draft.finalAbilities = abilities;
   const meta = classMeta(classIdFromName(draft.className));
@@ -98,31 +103,34 @@ function section(
   return { id, kind, label, description, status:sectionStatus, required, dependsOn, options:options.map(decorateSpellOption), automaticGrants, validation };
 }
 
-function dynamicSections(draft: CharacterCreateDraft, validation: ValidationMessage[]) {
-  return creationChoiceSpecs(draft).map((spec) => {
-    const selected = draft.choiceSelections?.[spec.id] ?? [];
-    const complete = selected.length === spec.count;
-    const blocking = validation.filter((item) => item.message.startsWith(`${spec.label}:`));
+function dynamicSections(draft: CharacterCreateDraft, issues: ChoiceValidationIssue[]) {
+  return creationChoiceDefinitions(draft).map((definition) => {
+    const selected = draft.choiceSelections?.[definition.id] ?? [];
+    const complete = selected.length === definition.count;
+    const blocking = issues
+      .filter((issue) => issue.choiceId === definition.id)
+      .map((issue) => ({ severity:issue.severity, message:issue.message }) satisfies ValidationMessage);
     return {
       ...section(
-        `choice:${spec.id}`,
+        `choice:${definition.id}`,
         "dynamic-choice",
-        spec.label,
-        spec.description,
-        status(true, Boolean(spec.blocked), complete),
+        definition.label,
+        definition.description,
+        status(true, Boolean(definition.blocked), complete),
         true,
-        [spec.owner],
-        spec.options.map((item) => ({ ...item, selected:selected.includes(item.id) })),
-        spec.automaticGrants ?? [],
+        [definition.owner],
+        creationChoiceOptionViews(definition,selected),
+        definition.automaticGrants ?? [],
         blocking,
       ),
-      selection: { choiceId:spec.id, count:spec.count },
+      selection: { choiceId:definition.id, count:definition.count },
     } satisfies CharacterCreationSection;
   });
 }
 
 export function buildCreationPlanV10(draft: CharacterCreateDraft): CharacterCreationPlan {
-  normalizeChoiceSelections(draft);
+  normalizeCreationChoiceSelections(draft);
+  const choiceIssues = validateCreationChoiceDefinitions(draft);
   const validation = validateCreationV10(draft);
   const classId = classIdFromName(draft.className);
   const meta = classMeta(classId);
@@ -151,7 +159,7 @@ export function buildCreationPlanV10(draft: CharacterCreateDraft): CharacterCrea
     section("proficiencies", "proficiencies", "기술 숙련", draft.className ? `${draft.className} 클래스 목록에서 기술 숙련 ${meta.semantics.skills.count}개를 선택합니다.` : "클래스를 먼저 선택합니다.", status(true, !draft.className, Boolean(draft.className) && draft.selectedSkills.length === meta.semantics.skills.count), true, ["class"], skillOptions.map((item) => ({ ...item, selected:draft.selectedSkills.includes(item.name) })), meta.saves.map((key) => `${key.toUpperCase()} 내성`), validation.filter((item) => item.message.includes("기술 숙련"))),
     section("review", "review", "검토", "모든 SRD source 선택과 최종 파생값을 검토합니다.", validation.some((item) => item.severity === "blocking") ? "incomplete" : "complete", true, ["identity", "species", "background", "class", "abilities", "proficiencies"], [], [], validation),
   ];
-  const dynamic = dynamicSections(draft, validation);
+  const dynamic = dynamicSections(draft, choiceIssues);
   const sections = [primary[0], ...primary.slice(1, 4), primary[4], classEquipment, ...primary.slice(5, 7), ...dynamic, primary[7]];
   const unresolved = sections.filter((item) => item.status === "incomplete" || item.status === "blocked");
   const unresolvedPrimary = unresolved.map((item) => item.dependsOn[0] ?? item.id).find((id) => ["identity","species","background","class","abilities","proficiencies","review"].includes(id));
