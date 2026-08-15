@@ -14,6 +14,7 @@ import "./app/progressionPersistentFeatureRuntimeAdapter";
 import "./app/progressionPhase08EpicBoonAdapter";
 import "./app/progressionPhase08WeaponMasteryAdapter";
 import "./app/progressionPhase08FighterStyleAdapter";
+import "./app/progressionPhase08BarbarianPrimalKnowledgeAdapter";
 import "./app/subclassRuntimeAdapter";
 import "./app/pactTomeRuntimeAdapter";
 import "./app/druidCircleLandSpellRuntimeAdapter";
