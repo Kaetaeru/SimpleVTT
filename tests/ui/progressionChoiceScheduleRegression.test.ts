@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import "../../src/app/characterCreationV10Adapter";
 import "../../src/app/progressionPhase08RogueThiefAdapter";
+import { classIdFromName, classMeta } from "../../src/app/characterCreationV10Data";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import type { AppSnapshot } from "../../src/app/contracts";
+import type { AppSnapshot, CharacterCreationSection } from "../../src/app/contracts";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
 import type { ProgressionCharacterState, ProgressionRequest } from "../../src/domain/progression";
 import { buildProgressionPlanPhase08RogueThief } from "../../src/domain/progressionPhase08RogueThief";
@@ -41,6 +43,59 @@ async function monkAdapter(level:number) {
     subclassFeatureSources:{},
   };
   return { adapter, internal };
+}
+
+async function completeCreatedMonk(adapter:MockAdapter) {
+  await adapter.createCharacterDraft("guided");
+  await adapter.updateCharacterDraft({ type:"set-name", value:"Progression Monk" });
+  await adapter.updateCharacterDraft({ type:"set-species", value:"드워프" });
+  await adapter.updateCharacterDraft({ type:"set-background", value:"범죄자" });
+  await adapter.updateCharacterDraft({ type:"set-class", value:"몽크" });
+  await adapter.updateCharacterDraft({ type:"apply-recommended-array" });
+
+  for (let pass = 0; pass < 40; pass += 1) {
+    const snapshot = await adapter.getSnapshot();
+    const draft = snapshot.createDraft;
+    const plan = snapshot.creationPlan;
+    assert.ok(draft && plan,"creation draft/plan must exist");
+    let changed = false;
+
+    const skills = plan.sections.find((section) => section.id === "proficiencies");
+    if (skills?.status === "incomplete") {
+      const count = classMeta(classIdFromName(draft.className)).semantics.skills.count;
+      for (const option of skills.options.filter((item) => !item.selected).slice(0,Math.max(0,count - draft.selectedSkills.length))) {
+        await adapter.updateCharacterDraft({ type:"toggle-skill", value:option.name });
+        changed = true;
+      }
+    }
+
+    const equipment = plan.sections.find((section) => section.id === "class-equipment");
+    if (equipment?.status === "incomplete" && equipment.options[0]) {
+      await adapter.updateCharacterDraft({ type:"set-equipment", value:equipment.options[0].id });
+      changed = true;
+    }
+
+    const current = await adapter.getSnapshot();
+    const dynamic = (current.creationPlan?.sections ?? []).filter(
+      (section) => section.kind === "dynamic-choice" && section.status === "incomplete" && section.selection,
+    ) as Array<CharacterCreationSection & { selection:{ choiceId:string; count:number } }>;
+    for (const section of dynamic) {
+      const selectedCount = section.options.filter((option) => option.selected).length;
+      const ids = section.options.filter((option) => !option.selected).slice(0,Math.max(0,section.selection.count - selectedCount)).map((option) => option.id);
+      for (const id of ids) {
+        await adapter.updateCharacterDraft({ type:"toggle-class-choice", choiceId:section.selection.choiceId, value:id });
+        changed = true;
+      }
+    }
+
+    const after = await adapter.getSnapshot();
+    if ((after.creationPlan?.summary.blockingCount ?? 1) === 0) {
+      await adapter.finalizeCharacterDraft();
+      return adapter.getSnapshot();
+    }
+    if (!changed) assert.fail(`unable to complete Monk creation: ${after.creationPlan?.validation.map((item) => item.message).join(" | ")}`);
+  }
+  assert.fail("Monk creation completion exceeded 40 passes");
 }
 
 function choiceKinds(snapshot:AppSnapshot) {
@@ -165,6 +220,19 @@ test("all 12 SRD classes expose ASI and subclass choices only at their canonical
       if (expectSubclass) assert.equal(subclass[0]?.id,`progression.${definition.id}.3.subclass`);
     }
   }
+});
+
+test("a newly created Monk hands off to progression metadata without a level-2 phantom ASI", async () => {
+  const adapter = new MockAdapter();
+  let snapshot = await completeCreatedMonk(adapter);
+  assert.equal(snapshot.activeCharacter.className,"몽크");
+  assert.equal(snapshot.activeCharacter.level,1);
+  assert.equal(snapshot.activeCharacter.classLevels?.[0]?.classId,monkId);
+  await adapter.startLevelUp(snapshot.activeCharacter.id);
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.progressionPlan?.targetClassLevel,2);
+  assert.equal(snapshot.progressionPlan?.choices.some((choice) => choice.kind === "asi-or-feat"),false,JSON.stringify(choiceKinds(snapshot)));
+  assert.equal(snapshot.progressionPlan?.choices.some((choice) => choice.kind === "subclass"),false,JSON.stringify(choiceKinds(snapshot)));
 });
 
 test("final app adapter plan has no phantom ASI at Monk 2 and requires subclass exactly at Monk 3", async () => {
