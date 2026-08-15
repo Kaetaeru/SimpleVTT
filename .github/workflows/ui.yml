@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "src/**"
-      - "src-tauri/**"
+      - "tests/ui/**"
       - "package.json"
       - "tsconfig.json"
       - "vite.config.ts"
@@ -12,14 +12,15 @@ on:
       - ".github/workflows/ui.yml"
   push:
     branches:
-      - "agent/36-ui-session-01"
+      - "agent/**"
     paths:
       - "src/**"
-      - "src-tauri/**"
+      - "tests/ui/**"
       - "package.json"
       - "tsconfig.json"
       - "vite.config.ts"
       - "index.html"
+      - ".github/workflows/ui.yml"
 
 jobs:
   frontend:
@@ -31,5 +32,14 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Run latest Phase 08 runtime adapter gate
+        run: >-
+          npx tsx --test
+          tests/ui/bardicInspirationRuntimeAdapter.test.ts
+          tests/ui/progressionPhase08BardLoreRuntime.test.ts
+          tests/ui/progressionPhase08SorcererDraconicRuntime.test.ts
+          tests/ui/progressionPhase08WizardEvocationRuntime.test.ts
       - name: Typecheck and build
         run: npm run build
