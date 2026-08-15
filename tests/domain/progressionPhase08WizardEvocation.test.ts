@@ -99,6 +99,7 @@ test("Evocation acquisition at Wizard 3 adds two extra level-1/2 Evocation spell
   assert.equal(savant?.count,2);
   assert.ok(savant?.options.every((option) => evocationSpellOptions.some((spell) => spell.id === option.id)));
   selections[savantId] = { kind:"options", optionIds:savant!.options.filter((option) => !option.disabledReason).slice(0,2).map((option) => option.id) };
+  plan = buildProgressionPlanPhase08WizardEvocation(state,request(state,selections));
   selections = fillRequired(plan,selections);
   plan = buildProgressionPlanPhase08WizardEvocation(state,request(state,selections));
   assert.deepEqual(plan.blocking,[]);
