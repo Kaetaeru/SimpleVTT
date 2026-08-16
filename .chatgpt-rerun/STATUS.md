@@ -1,24 +1,24 @@
 # Rerun Status
 
-**Connection:** `main` · waiting after completed sequence
+**Connection:** `main` · Phase 14 authorized
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Branch: `main`
+- Canonical branch: `main`
+- Planned work branch: `agent/108-production-play-session-ux`
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- Sequence: `0`
-- Task: `phase13-closeout-ui-dice-regression`
-- Control transition: `complete`
+- Sequence: `1`
+- Task: `phase14-production-play-session-ux`
+- Control transition: `continue` pending final authoritative write
+- Tracking issue: #108
 
 ## Human summary
 
-Phase 13 closeout is complete.
+Phase 14 is now the active product-completion phase. Its goal is to replace the reference-fixture-dependent production play path with a genuine persisted Character -> session -> Scene actor/actions flow and carry that through to an exact-head Windows playable build.
 
-The final source-changing implementation head `7c9440970753a370fec7830cfa691832552e1d05` had green Contract, Rules, Persistence, UI, Phase 11, Phase 12, and Phase 13 workflows. The exact-head Windows Phase 13 artifact is `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05` (artifact `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`).
+The user specifically requires strong in-session UX: a single play workspace with first-class `행동`, `기술`, `주문`, and `인벤토리` surfaces. Skills must roll through authoritative dice/provenance, and inventory items must be inspectable/usable during the session without leaving play.
 
-No source/test/workflow change occurred between that verified implementation head and the Rerun coordination commits, so the validated work was not repeated.
+The discovered root cause is that `AppProvider` still delegates through a reference-seeded `MockAdapter`; newly authored Characters are persisted but are not reliably materialized as live Scene actors with their own derived action surface. Existing green Phase 11 tests exercised reference ids and therefore did not prove the real user journey.
 
-`.agents/PHASE13_CHECKLIST.md` is CLOSED on `main`; issue #104 is closed as completed; historical Draft PR #107 is closed without merge because the implementation was already promoted to `main` through the user's clean fast-forward request.
+Phase 13 network authority and durable write-back subsystems remain preserved. Phase 14 will reconcile the actual Character into those proven runtime boundaries rather than replacing them.
 
-`main` is the canonical baseline for all future work.
-
-No Phase 14 or unrelated implementation has been started. `STATUS.md` is human-facing only; dispatch/reconciliation remains README → control → STATE → PLAN.
+`STATUS.md` is human-facing only; dispatch/reconciliation remains README → control → STATE → PLAN.
