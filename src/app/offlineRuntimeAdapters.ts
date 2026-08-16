@@ -3,6 +3,7 @@
 // Keep order aligned with the dependency layering below: authoring/progression,
 // Phase 09 rules/runtime/event adapters, then Phase 10 durable persistence/content.
 import "./characterCreationV10Adapter";
+import "./characterCreationWeaponAttackAdapter";
 import "./characterCreationSourceEditAdapter";
 import "./characterSheetV10Runtime";
 import "./mockAdapterCompletion";
