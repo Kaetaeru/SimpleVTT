@@ -16,10 +16,22 @@ type ProjectionMountAdapterState = {
 export interface ProjectionResolutionContext {
   previousActiveCharacter:CharacterSheet;
   previousSelectedActorId?:string;
+  previousActionActorOrder:string[];
 }
 
 function internal(adapter:MockAdapter) {
   return adapter as unknown as ProjectionMountAdapterState;
+}
+
+function reorderActionsByActor(actions:SceneVm["actionsByActor"],preferredOrder:string[]) {
+  const next:SceneVm["actionsByActor"]={};
+  for (const actorId of preferredOrder) {
+    if (actions[actorId]) next[actorId]=actions[actorId];
+  }
+  for (const [actorId,actorActions] of Object.entries(actions)) {
+    if (!next[actorId]) next[actorId]=actorActions;
+  }
+  return next;
 }
 
 export function mountReconstructedCharacterSessionProjection(
@@ -65,12 +77,18 @@ export function activateProjectedCharacterResolutionContext(
   const mounted=projectedCharacterForPeer(adapter,peerId);
   if (!mounted) return {status:"rejected",error:`peer has no mounted Character SessionProjection: ${peerId}`};
   const app=internal(adapter);
+  const previousActionActorOrder=Object.keys(app.scene.actionsByActor);
   const context:ProjectionResolutionContext={
     previousActiveCharacter:structuredClone(app.activeCharacter),
     previousSelectedActorId:app.scene.selectedActorId,
+    previousActionActorOrder,
   };
   app.activeCharacter=structuredClone(mounted.sheet);
   app.scene.selectedActorId=mounted.characterId;
+  app.scene.actionsByActor=reorderActionsByActor(app.scene.actionsByActor,[
+    mounted.characterId,
+    ...previousActionActorOrder.filter((actorId)=>actorId!==mounted.characterId),
+  ]);
   return {status:"accepted",context};
 }
 
@@ -78,6 +96,7 @@ export function restoreProjectionResolutionContext(adapter:MockAdapter,context:P
   const app=internal(adapter);
   app.activeCharacter=structuredClone(context.previousActiveCharacter);
   app.scene.selectedActorId=context.previousSelectedActorId;
+  app.scene.actionsByActor=reorderActionsByActor(app.scene.actionsByActor,context.previousActionActorOrder);
 }
 
 export function unmountReconstructedCharacterSessionProjection(adapter:MockAdapter,peerId:string) {
