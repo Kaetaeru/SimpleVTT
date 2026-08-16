@@ -1,12 +1,15 @@
 import type { CharacterSheet } from "./contracts";
 import type { CharacterDurableLifeFlagsV1 } from "./persistenceContracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
-import type { RuntimeStateChange } from "../domain/runtimeStateChange";
+import type { LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
+import type { HpStateChange } from "../domain/stateChange";
 
 export type CharacterWriteBackDirection = "forward" | "inverse";
 export type CharacterWriteBackProjection =
   | { status:"committed"; changed:boolean; sheet:CharacterSheet }
   | { status:"rejected"; error:string };
+
+type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange;
 
 const ITEM_PREFIX="phase09:item:";
 
@@ -18,15 +21,11 @@ function itemResource(resourceId:string) {
   return undefined;
 }
 
-function expected(change:Extract<RuntimeStateChange,{writeBack:"character"}>,direction:CharacterWriteBackDirection) {
-  return direction==="forward" ? change.before : change.after;
+function isCharacterDurableChange(change:RuntimeStateChange):change is CharacterDurableStateChange {
+  return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life");
 }
 
-function nextValue(change:Extract<RuntimeStateChange,{writeBack:"character"}>,direction:CharacterWriteBackDirection) {
-  return direction==="forward" ? change.after : change.before;
-}
-
-function label(change:Extract<RuntimeStateChange,{writeBack:"character"}>) {
+function label(change:CharacterDurableStateChange) {
   if (change.kind==="hp") return `hp.${change.field}`;
   if (change.kind==="resource") return `resource.${change.resourceId}`;
   return `life.${change.field}`;
@@ -38,21 +37,23 @@ function lifeFlags(sheet:CharacterSheet,fallback?:CharacterDurableLifeFlagsV1):C
 
 function applyChange(
   sheet:CharacterSheet,
-  change:Extract<RuntimeStateChange,{writeBack:"character"}>,
+  change:CharacterDurableStateChange,
   direction:CharacterWriteBackDirection,
   fallbackLife?:CharacterDurableLifeFlagsV1,
 ):string|undefined {
-  const before=expected(change,direction);
-  const after=nextValue(change,direction);
   if (change.kind==="hp") {
     if (change.field==="maximum") return "Character write-back for maximum HP requires an explicit source-model contract";
+    const before=direction==="forward" ? change.before : change.after;
+    const after=direction==="forward" ? change.after : change.before;
     const current=change.field==="current" ? sheet.hp : sheet.tempHp;
-    if (current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${String(before)}, current ${String(current)}`;
+    if (current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${current}`;
     if (change.field==="current") sheet.hp=after;
     else sheet.tempHp=after;
     return;
   }
   if (change.kind==="resource") {
+    const before=direction==="forward" ? change.before : change.after;
+    const after=direction==="forward" ? change.after : change.before;
     const pseudo=itemResource(change.resourceId);
     if (pseudo) {
       const item=sheet.items.find((entry)=>entry.id===pseudo.itemId);
@@ -70,6 +71,8 @@ function applyChange(
     resource.current=after;
     return;
   }
+  const before=direction==="forward" ? change.before : change.after;
+  const after=direction==="forward" ? change.after : change.before;
   const flags=lifeFlags(sheet,fallbackLife);
   if (flags[change.field]!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${String(before)}, current ${String(flags[change.field])}`;
   flags[change.field]=after;
@@ -84,7 +87,7 @@ export function projectResolutionCharacterWriteBack(
 ):CharacterWriteBackProjection {
   const changes=events
     .flatMap((event)=>event.stateChanges)
-    .filter((change):change is Extract<RuntimeStateChange,{writeBack:"character"}>=>change.writeBack==="character" && change.targetId===sheet.id);
+    .filter((change):change is CharacterDurableStateChange=>isCharacterDurableChange(change) && change.targetId===sheet.id);
   if (!changes.length) return { status:"committed",changed:false,sheet:structuredClone(sheet) };
   const next=structuredClone(sheet);
   const ordered=direction==="forward" ? changes : [...changes].reverse();
