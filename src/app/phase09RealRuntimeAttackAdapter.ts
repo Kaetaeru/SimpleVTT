@@ -140,7 +140,8 @@ function runtimeRevisionMatches(
   transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>,
 ) {
   if (!transaction.runtimeState || transaction.runtimeInputRevision===undefined) return true;
-  return snapshotAdapterTurnRuntimeState(adapter,internal.scene).revision===transaction.runtimeInputRevision;
+  const current=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  return current?.revision===transaction.runtimeInputRevision;
 }
 
 function commitRuntimeTransaction(
