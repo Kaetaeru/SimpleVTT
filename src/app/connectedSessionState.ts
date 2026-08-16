@@ -17,6 +17,8 @@ export interface ConnectedRuntimeState {
   pendingRemoteAction:PendingRemoteAction|null;
   publishedResolutionIds:Set<string>;
   peerManifests:Map<string,SessionCompatibilityManifest>;
+  peerParticipants:Map<string,string>;
+  sessionStarted:boolean;
   reconnectTimer:ReturnType<typeof setTimeout>|null;
   reconnectAttempts:number;
   reconnectInFlight:boolean;
@@ -36,6 +38,8 @@ export function connectedStateFor(adapter:MockAdapter) {
       pendingRemoteAction:null,
       publishedResolutionIds:new Set<string>(),
       peerManifests:new Map<string,SessionCompatibilityManifest>(),
+      peerParticipants:new Map<string,string>(),
+      sessionStarted:false,
       reconnectTimer:null,
       reconnectAttempts:0,
       reconnectInFlight:false,
@@ -55,6 +59,8 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.pendingRemoteAction=null;
   state.publishedResolutionIds.clear();
   state.peerManifests.clear();
+  state.peerParticipants.clear();
+  state.sessionStarted=false;
   state.reconnectTimer=null;
   state.reconnectAttempts=0;
   state.reconnectInFlight=false;
