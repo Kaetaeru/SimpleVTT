@@ -153,27 +153,47 @@ export class InstalledContentRepository {
   }
 
   async install(entry:InstalledCatalogEntryV1):Promise<InstalledContentInstallResult> {
+    return this.installMany([entry]);
+  }
+
+  async installMany(entries:InstalledCatalogEntryV1[]):Promise<InstalledContentInstallResult> {
     if (!this.document) throw new Error("installed content repository must hydrate before install");
-    const qualifiedId=catalogQualifiedId(entry.contentId,entry.sourceId,entry.version);
-    const existing=this.document.entries.find((candidate) =>
-      catalogQualifiedId(candidate.contentId,candidate.sourceId,candidate.version)===qualifiedId,
-    );
-    if (existing) {
-      if (same(existing,entry)) return { status:"committed",hydration:this.result(false,false) };
-      return { status:"conflict",qualifiedId,error:`Installed content conflict for ${qualifiedId}: same qualified identity has a different payload` };
+    if (!entries.length) return {status:"committed",hydration:this.result(false,false)};
+
+    const incoming=new Map<string,InstalledCatalogEntryV1>();
+    for (const entry of entries) {
+      const qualifiedId=catalogQualifiedId(entry.contentId,entry.sourceId,entry.version);
+      if (incoming.has(qualifiedId)) {
+        return {status:"conflict",qualifiedId,error:`Installed content package contains duplicate qualified identity: ${qualifiedId}`};
+      }
+      incoming.set(qualifiedId,entry);
     }
+
+    const existingById=new Map(this.document.entries.map((entry)=>[
+      catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry,
+    ]));
+    const additions:InstalledCatalogEntryV1[]=[];
+    for (const [qualifiedId,entry] of incoming) {
+      const existing=existingById.get(qualifiedId);
+      if (!existing) { additions.push(entry); continue; }
+      if (!same(existing,entry)) {
+        return {status:"conflict",qualifiedId,error:`Installed content conflict for ${qualifiedId}: same qualified identity has a different payload`};
+      }
+    }
+    if (!additions.length) return {status:"committed",hydration:this.result(false,false)};
+
     const nextGeneration=this.physicalGeneration+1;
     const next:InstalledContentDocumentV1={
       schemaId:INSTALLED_CONTENT_SCHEMA_ID,
       schemaVersion:INSTALLED_CONTENT_SCHEMA_VERSION,
       storageRevision:nextGeneration,
-      entries:sortedEntries([...this.document.entries,entry]),
+      entries:sortedEntries([...this.document.entries,...additions]),
     };
     await this.store.writeGeneration(this.physicalGeneration,nextGeneration,encodeInstalledContentV1(next));
     this.document=next;
     this.physicalGeneration=nextGeneration;
     this.loadedGeneration=nextGeneration;
-    return { status:"committed",hydration:this.result(false,true) };
+    return {status:"committed",hydration:this.result(false,true)};
   }
 
   snapshot() { return this.document ? cp(this.document) : null; }

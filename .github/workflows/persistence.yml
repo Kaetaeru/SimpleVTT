@@ -15,6 +15,8 @@ on:
       - "src/app/*contentCatalog*"
       - "src/app/*ModuleValidation*"
       - "src/app/*moduleValidation*"
+      - "src/app/*ruleModulePackage*"
+      - "src/app/*RuleModulePackage*"
       - "src/app/*characterCreation*Source*"
       - "src/app/*resolutionCharacter*"
       - "src/app/phase09RealRuntimeAttackAdapter.ts"
@@ -26,6 +28,7 @@ on:
       - "tests/ui/authoringDraft*.test.ts"
       - "tests/ui/installedContent*.test.ts"
       - "tests/ui/declarativeModuleValidation.test.ts"
+      - "tests/ui/ruleModulePackage*.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
       - "schemas/**"
       - "rules/profiles/**"
@@ -50,6 +53,8 @@ on:
       - "src/app/*contentCatalog*"
       - "src/app/*ModuleValidation*"
       - "src/app/*moduleValidation*"
+      - "src/app/*ruleModulePackage*"
+      - "src/app/*RuleModulePackage*"
       - "src/app/*characterCreation*Source*"
       - "src/app/*resolutionCharacter*"
       - "src/app/phase09RealRuntimeAttackAdapter.ts"
@@ -61,6 +66,7 @@ on:
       - "tests/ui/authoringDraft*.test.ts"
       - "tests/ui/installedContent*.test.ts"
       - "tests/ui/declarativeModuleValidation.test.ts"
+      - "tests/ui/ruleModulePackage*.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
       - "schemas/**"
       - "rules/profiles/**"
@@ -82,8 +88,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate content dependencies
         run: npm run generate:content
-      - name: Verify Character, content and module persistence contracts
-        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/declarativeModuleValidation.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
+      - name: Verify Character, content, module and package persistence contracts
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/declarativeModuleValidation.test.ts tests/ui/ruleModulePackageImport.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
       - name: Verify production build
         run: npm run build
 
