@@ -65,6 +65,11 @@ export type HostCommitResult =
   | { status:"duplicate"; event:ConnectedSessionEvent }
   | { status:"rejected"; error:string; hostCursor:number };
 
+export type HostReserveResult =
+  | { status:"reserved"; hostCursor:number }
+  | { status:"duplicate"; event:ConnectedSessionEvent }
+  | { status:"rejected"; error:string; hostCursor:number };
+
 export type ClientApplyResult =
   | { status:"applied"; cursor:number }
   | { status:"duplicate"; cursor:number }
@@ -104,6 +109,7 @@ export class HostSessionLedger {
   readonly manifest:SessionCompatibilityManifest;
   private readonly events:ConnectedSessionEvent[] = [];
   private readonly requestEvents = new Map<string,ConnectedSessionEvent>();
+  private readonly reservedRequestCursors = new Map<string,number>();
 
   constructor(sessionId:string, manifest:SessionCompatibilityManifest) {
     this.sessionId=sessionId;
@@ -116,18 +122,48 @@ export class HostSessionLedger {
     return compareSessionCompatibility(this.manifest,client);
   }
 
-  commitActionRequest(request:ConnectedActionRequest,candidate:HostEventCandidate):HostCommitResult {
+  reserveActionRequest(request:ConnectedActionRequest):HostReserveResult {
     if (request.sessionId !== this.sessionId) {
       return { status:"rejected", error:`session mismatch: expected ${this.sessionId}, received ${request.sessionId}`, hostCursor:this.cursor };
     }
     const duplicate=this.requestEvents.get(request.requestId);
     if (duplicate) return { status:"duplicate", event:structuredClone(duplicate) };
+    if (this.reservedRequestCursors.has(request.requestId)) {
+      return { status:"reserved", hostCursor:this.reservedRequestCursors.get(request.requestId)! };
+    }
     if (request.knownEventCursor !== this.cursor) {
       return { status:"rejected", error:`stale event cursor: client ${request.knownEventCursor}, host ${this.cursor}`, hostCursor:this.cursor };
     }
-    const event=this.commitCandidate(candidate,request.requestId);
-    this.requestEvents.set(request.requestId,event);
+    this.reservedRequestCursors.set(request.requestId,this.cursor);
+    return { status:"reserved", hostCursor:this.cursor };
+  }
+
+  commitReservedActionRequest(requestId:string,candidate:HostEventCandidate):HostCommitResult {
+    const duplicate=this.requestEvents.get(requestId);
+    if (duplicate) return { status:"duplicate", event:structuredClone(duplicate) };
+    const reservedCursor=this.reservedRequestCursors.get(requestId);
+    if (reservedCursor===undefined) {
+      return { status:"rejected", error:`request was not reserved: ${requestId}`, hostCursor:this.cursor };
+    }
+    if (reservedCursor!==this.cursor) {
+      this.reservedRequestCursors.delete(requestId);
+      return { status:"rejected", error:`host history advanced while request was pending: reserved ${reservedCursor}, host ${this.cursor}`, hostCursor:this.cursor };
+    }
+    const event=this.commitCandidate(candidate,requestId);
+    this.reservedRequestCursors.delete(requestId);
+    this.requestEvents.set(requestId,event);
     return { status:"committed", event:structuredClone(event) };
+  }
+
+  cancelReservedActionRequest(requestId:string) {
+    this.reservedRequestCursors.delete(requestId);
+  }
+
+  commitActionRequest(request:ConnectedActionRequest,candidate:HostEventCandidate):HostCommitResult {
+    const reserved=this.reserveActionRequest(request);
+    if (reserved.status==="duplicate") return reserved;
+    if (reserved.status==="rejected") return reserved;
+    return this.commitReservedActionRequest(request.requestId,candidate);
   }
 
   commitHostEvent(candidate:HostEventCandidate):ConnectedSessionEvent {
