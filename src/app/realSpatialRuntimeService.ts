@@ -133,5 +133,5 @@ export function prepareMovementSpatialUpdates(
 
 export function applyMovementSpatialPlan(scene:SceneVm,plan:MovementSpatialPlan) {
   for (const update of plan.updates) setSpatialRelation(scene,update);
-  return scene;
+  return plan;
 }
