@@ -104,6 +104,17 @@ function pendingResolution(actorId:string) {
   };
 }
 
+function assertFreshLocalEconomy(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) {
+  assert.deepEqual(Object.keys(snapshot.scene.economyByActor),[snapshot.activeCharacter.id]);
+  assert.deepEqual(snapshot.scene.economyByActor[snapshot.activeCharacter.id],{
+    action:true,
+    bonusAction:true,
+    reaction:true,
+    movement:30,
+    movementMax:30,
+  });
+}
+
 async function savedProductionPlayerAdapter() {
   const adapter=new MockAdapter();
   const template=await adapter.getSnapshot();
@@ -163,7 +174,7 @@ test("Host ends live play by notifying clients before teardown, clears transient
     assert.equal(ended.connectionState,"disconnected");
     assert.equal(ended.sessionMode,"freeform");
     assert.equal(ended.scene.round,0);
-    assert.deepEqual(ended.scene.economyByActor,{});
+    assertFreshLocalEconomy(ended);
     assert.equal(ended.resolution,null);
     assert.deepEqual(ended.session.participants,[]);
     assert.deepEqual(projectedCharacterIds(adapter),[]);
@@ -183,6 +194,7 @@ test("Host ends live play by notifying clients before teardown, clears transient
     assert.deepEqual(projectedCharacterIds(adapter),[]);
     assert.equal(restarted.sessionMode,"freeform");
     assert.equal(restarted.scene.round,0);
+    assertFreshLocalEconomy(restarted);
     assert.equal(restarted.activeCharacter.resources[0].current,0);
     assert.equal(transport.hostStarts(),2);
   } finally {
@@ -232,7 +244,7 @@ test("Client receiving session-ended becomes explicitly offline without reconnec
     assert.deepEqual(ended.session.participants,[]);
     assert.equal(ended.sessionMode,"freeform");
     assert.equal(ended.scene.round,0);
-    assert.deepEqual(ended.scene.economyByActor,{});
+    assertFreshLocalEconomy(ended);
     assert.equal(ended.resolution,null);
     assert.match(ended.session.compatibilityMessage,/Session ended by Host/);
     assert.equal(ended.activeCharacter.resources[0].current,0,"owner durable Character state must survive Host end");
