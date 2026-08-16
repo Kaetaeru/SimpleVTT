@@ -97,9 +97,11 @@ test("reconnect rejects source/content drift even if the client reuses the old s
 
 test("host-known permanent Character keeps the Phase 12 path and does not require a projection", () => {
   const adapter=host();
-  const snapshotCharacter={id:"char.aelar",sourceRevision:0,runtimeRevision:0};
   const knownManifest:SessionCompatibilityManifest={
-    protocolVersion:1,rulesProfileId:"dnd.srd-5.2.1",capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1"],character:snapshotCharacter,
+    protocolVersion:1,
+    rulesProfileId:"dnd.srd-5.2.1",
+    capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1"],
+    character:{characterId:"char.aelar",sourceRevision:0,runtimeRevision:0},
   };
   const accepted=acceptHostCharacterSessionProjection(adapter,"peer.known",knownManifest);
   assert.deepEqual(accepted,{status:"accepted",mode:"host-known",characterId:"char.aelar"});
