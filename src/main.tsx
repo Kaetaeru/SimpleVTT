@@ -42,6 +42,7 @@ import "./app/classFeatureSpellRuntimeAdapter";
 import "./app/phase09SpellcastingRuntimeRouter";
 import "./app/characterLibraryRuntimeAdapter";
 import "./app/authoringDraftRuntimeAdapter";
+import "./app/builtinCatalogRuntimeAdapter";
 import "./app/installedContentRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";

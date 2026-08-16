@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "../../src/app/builtinCatalogRuntimeAdapter";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
@@ -18,7 +19,7 @@ function payload(overrides:Record<string,unknown>={}) {
     source:"Stone Pack",
     version:"0.1",
     description:"durable local subclass",
-    relationships:[{label:"기본 클래스",targetId:"class.fighter",targetName:"전사"}],
+    relationships:[{label:"기본 클래스",targetId:"dnd.srd521.class.fighter",targetName:"파이터"}],
     capabilities:["content"],
     ...overrides,
   });
@@ -31,13 +32,25 @@ async function previewAndActivate(adapter:MockAdapter,json:string) {
   return adapter.activateContentImport();
 }
 
-test("local activation persists, composes with builtin content, and reloads before the next snapshot", async () => {
+test("canonical builtin catalog composes before durable local content and reloads", async () => {
   const store=new MemoryInstalledContentStore();
   const writer=new MockAdapter();
   setInstalledContentStoreForTests(writer,store);
   const initial=await writer.getSnapshot();
   assert.ok(initial.catalog.every((entry)=>entry.id.startsWith("content:")));
-  assert.ok(initial.catalog.some((entry)=>entry.scope==="builtin" && entry.contentId==="class.fighter" && entry.sourceId==="dnd.srd-5.2.1"));
+  const builtin=initial.catalog.filter((entry)=>entry.scope==="builtin");
+  assert.equal(builtin.filter((entry)=>entry.category==="class").length,12);
+  assert.equal(builtin.filter((entry)=>entry.category==="species").length,9);
+  assert.equal(builtin.filter((entry)=>entry.category==="background").length,4);
+  assert.equal(builtin.filter((entry)=>entry.category==="spell").length,339);
+  assert.ok(builtin.filter((entry)=>entry.category==="feat").length>=17);
+  assert.ok(builtin.filter((entry)=>entry.category==="item").length>=51);
+  assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.class.fighter" && entry.nameKo==="파이터" && entry.nameEn==="Fighter" && entry.sourceId==="dnd.srd-5.2.1" && entry.version==="0.1-draft"));
+  assert.ok(!builtin.some((entry)=>entry.contentId==="class.fighter"));
+  assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.item.weapon.longsword" && entry.category==="item"));
+  assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.spell.healing-word" && entry.description.length>0 && !entry.description.includes("DEMO")));
+  assert.equal(new Set(builtin.map((entry)=>entry.id)).size,builtin.length);
+  assert.equal(getInstalledContentPersistenceStateForTests(writer)?.document?.entries.length,0,"builtin product content must not be copied into the installed-content document");
 
   const committed=await previewAndActivate(writer,payload());
   const local=committed.catalog.find((entry)=>entry.scope==="local" && entry.contentId==="subclass.stoneguard");
@@ -51,6 +64,7 @@ test("local activation persists, composes with builtin content, and reloads befo
   setInstalledContentStoreForTests(reader,store);
   const restored=await reader.getSnapshot();
   assert.ok(restored.catalog.some((entry)=>entry.id===local.id));
+  assert.ok(restored.catalog.some((entry)=>entry.scope==="builtin" && entry.contentId==="dnd.srd521.class.fighter"));
   assert.equal(restored.contentCatalogPersistence?.storageRevision,1);
 });
 
