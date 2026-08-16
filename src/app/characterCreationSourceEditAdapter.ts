@@ -107,8 +107,6 @@ MockAdapter.prototype.editCharacterDraft = async function editCharacterDraftFrom
 
   if (authoringSource?.completeness === "explicit") {
     applyCreationAuthoringSourceV1(draft,authoringSource);
-    draft.choiceSelections = cp(state.activeCharacter.creationSelections ?? {});
-    draft.notes = state.activeCharacter.notes ?? "";
   } else {
     draft.authoringSourceCompleteness = "legacy-reconstructed";
   }
