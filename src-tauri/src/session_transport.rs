@@ -13,6 +13,7 @@ use tauri::{AppHandle, Emitter};
 
 const MESSAGE_EVENT: &str = "session-transport-message";
 const STATE_EVENT: &str = "session-transport-state";
+const PEER_LIFECYCLE_EVENT: &str = "session-transport-peer-lifecycle";
 const MAX_FRAME_BYTES: usize = 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
@@ -36,6 +37,13 @@ pub struct TransportStatusDto {
 struct TransportMessageDto {
     peer: String,
     message: String,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct TransportPeerLifecycleDto {
+    peer: String,
+    state: String,
 }
 
 struct PeerWriter {
@@ -70,6 +78,13 @@ fn frame_message(message: &str) -> Result<Vec<u8>, String> {
     bytes.extend_from_slice(message.as_bytes());
     bytes.push(b'\n');
     Ok(bytes)
+}
+
+fn disconnected_peer(peer: &str) -> TransportPeerLifecycleDto {
+    TransportPeerLifecycleDto {
+        peer: peer.to_owned(),
+        state: "disconnected".into(),
+    }
 }
 
 fn emit_state(app: &AppHandle, status: &TransportStatusDto) {
@@ -144,6 +159,7 @@ fn spawn_reader(
         if let Ok(mut peers) = writers.lock() {
             peers.retain(|entry| entry.peer != peer);
         }
+        let _ = app.emit(PEER_LIFECYCLE_EVENT, disconnected_peer(&peer));
         let next_state = if role == TransportRole::Client {
             set_connection_state(&connection_state, "disconnected");
             "disconnected"
@@ -378,5 +394,16 @@ mod tests {
     fn raw_newlines_and_oversized_frames_are_rejected() {
         assert!(frame_message("{\n}").is_err());
         assert!(frame_message(&"x".repeat(MAX_FRAME_BYTES + 1)).is_err());
+    }
+
+    #[test]
+    fn disconnected_peer_event_preserves_exact_transport_identity() {
+        assert_eq!(
+            disconnected_peer("127.0.0.1:54321"),
+            TransportPeerLifecycleDto {
+                peer: "127.0.0.1:54321".into(),
+                state: "disconnected".into(),
+            }
+        );
     }
 }
