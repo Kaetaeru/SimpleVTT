@@ -3,6 +3,7 @@ import type { ActionVm, DamageComponentView, EconomyVm, SceneEntity } from "./co
 import type { RuntimeLifeVm } from "./lifeRuntimeContracts";
 import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09ReferenceRulesFacts";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import { compileAttack, resolveAttack } from "../domain/attack";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
 import type { ConcentrationCheckRequest } from "../domain/concentration";
@@ -255,6 +256,14 @@ function retainTargetingFactProvenance(events:ResolutionEvent[],request:AtomicAt
   })));
 }
 
+function retainStagedAtomicEvents(request:AtomicAttackTransactionRequest,events:ResolutionEvent[]) {
+  const suffix=":atomic";
+  if (!request.resolutionId.endsWith(suffix)) return;
+  const parentResolutionId=request.resolutionId.slice(0,-suffix.length);
+  if (!parentResolutionId) return;
+  recordCommittedResolutionEvents(parentResolutionId,events);
+}
+
 export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRequest):AtomicAttackTransactionResult {
   const damageSpec = request.action.damage?.[0];
   if (request.action.resolutionKind !== "attack" || !damageSpec) {
@@ -312,6 +321,7 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
 
   const events = transaction.events.map((event) => structuredClone(event));
   retainTargetingFactProvenance(events,request);
+  retainStagedAtomicEvents(request,events);
   return {
     status:"committed",
     attack,
