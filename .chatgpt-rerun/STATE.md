@@ -8,14 +8,14 @@
 - canonical watcher/baseline branch: `main`
 - active work branch: `agent/108-production-play-session-ux`
 - tracking issue: #108
-- draft PR: #109 — `Phase 14: production play session UX`
+- draft PR: #109 — open/draft, not merged
 - phase checklist: `.agents/PHASE14_CHECKLIST.md` on the work branch
 
 ## Preserved completion history
 
-Sequence 0 / `phase13-closeout-ui-dice-regression` remains complete and is not reset by Phase 14.
+Sequence 0 / `phase13-closeout-ui-dice-regression` remains complete and is not reset.
 
-Preserved verified implementation head: `7c9440970753a370fec7830cfa691832552e1d05`.
+Preserved Phase 13 implementation head: `7c9440970753a370fec7830cfa691832552e1d05`.
 
 Preserved exact-head workflow evidence:
 
@@ -27,88 +27,133 @@ Preserved exact-head workflow evidence:
 - Phase 12 Connected Session `31955742539` — success
 - Phase 13 SessionProjection `31955742524` — success
 
-Preserved Phase 13 artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
+Preserved Phase 13 Windows artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
 
-The later Main Playable workflow at `0ebc8b7a020b4ec64c2678b398aa5c064de46a93` produced a green Windows artifact, but manual product inspection established that those gates did not prove user-created Character -> actual session/play UI. Phase 14 exists specifically to correct that gap.
+Do not rerun preserved Phase 13 gates unless a Phase 14 change touches those boundaries.
 
-## Sequence 1 release scope
+## Sequence 1 current work state
 
-The user explicitly authorized continuation of the same run_id / sequence 1 / task. The release scope includes:
+**Work branch/head:** `agent/108-production-play-session-ux` @ `e6386ea172dd3ce5ac89cdb1608964158ffbaf01`.
 
-1. DM starts/stops the actual Host/server from visible UI and receives actionable listen/bind/network state.
-2. DM preparation/lobby exposes Scene/Combatants, participants, compatibility, and readiness before play begins.
-3. Player selects a persisted Character, joins by Host address, completes compatibility + SessionProjection, and reaches the lobby without debug controls.
-4. Host-unknown Character remains an ephemeral host-authoritative projection while durable ownership remains on the player.
-5. Ready/start transitions the prepared participant set into Freeform or Initiative play.
-6. Actions, Skills, Spells, Inventory, targeting, Combatants, corrections, reactions, conditions/concentration, Activity/Undo, and authoritative dice share one session state.
-7. Late join, disconnect/reconnect, duplicate/replayed requests/events, incompatibility, and invalid projection recover or fail safely.
-8. Session end clears transient/projection state while preserving only owning-player durable Character changes.
-9. Final Windows acceptance covers Host start -> preparation -> Character selection/join -> Ready/start -> play -> reconnect -> session end/restart.
+**Validated source head:** `7d83f263609b5dc2cf18ec43ed617568fedff9ba`.
 
-## Production root cause and authority boundaries
+`e6386ea...` is documentation-only: it records checklist evidence on top of the validated source and does not change product/runtime code.
 
-1. Visible UI still delegates through a singleton `MockAdapter`; historical base state contains Aelar/Mira/reference Combatants and fixed action identities.
-2. Phase 14 must prove newly authored/persisted Character -> live Scene/actions instead of relying on reference ids.
-3. Existing Tauri Host/Join transport, compatibility handshake, Host ledger, SessionProjection acceptance, reconnect/catch-up, authoritative ActionRequest/ResolutionEvent routing, and owning-client durable write-back are real subsystems to preserve.
-4. `tauriSessionTransport` already exposes `startHost`, `connectClient`, `stop`, status, and state/message listeners.
-5. `connectedSessionRuntimeAdapter` already owns host/client setup, hello/hello-ack compatibility, participant projection, event catch-up, and reconnect scheduling.
-6. The current visible `SessionScreen` calls `hostSession/joinSession`, but labels the path as a reference shell; no explicit preparation/lobby/ready/start/end state is modeled yet.
-
-## Current work branch state
-
-**Work branch/head:** `agent/108-production-play-session-ux` @ `41db6832cc0a95f085f8161bfed665dbcc71090d`.
-
-**Checklist focus:** P14.2/P14.11 narrow PlaySessionDock validation completed; next planning boundary is explicit P14.7/P14.8 connected lifecycle decomposition before broader product code.
+**Checklist focus completed in this slice:** first P14.7/P14.8 Host lifecycle/preparation slice. Next focus: P14.8 player persisted-Character entry and compatible lobby.
 
 ### Completed since previous checkpoint
 
-- Added `tests/ui/playSessionDockStructure.test.ts`.
-- The regression asserts PlaySessionDock local Hooks are established before the `snapshot === null` guard and no Hook is conditionally reached only after hydration.
-- The regression asserts tab switching does not clear `pendingActionId` and the pending target picker remains wired.
-- Added the Phase 14 regression to `.github/workflows/ui.yml`.
-- Opened Draft PR #109 to `main` with #108, checklist, fixture-removal risk, exact-head evidence, and next lifecycle scope documented.
-- Inspected the existing connected runtime/state/transport and visible SessionScreen to establish the reuse boundary before lifecycle work.
+1. Reconciled `.agents/PHASE14_CHECKLIST.md` at `650c6fa5728d982cd58fd1de8d96549c002f66da` so the release-blocking lifecycle explicitly includes:
+   - actual Host bind/start/stop/restart;
+   - DM preparation/lobby;
+   - persisted Character selection/join;
+   - Ready/start;
+   - late join/disconnect/reconnect/idempotency;
+   - session end/restart;
+   - connected automation and Windows walkthrough coverage.
+   Existing handshake/SessionProjection/Host-authority/ownership gates were retained.
+
+2. Added `src/app/productionSessionLifecycleAdapter.ts` as an outer production lifecycle layer over the existing connected runtime:
+   - successful Host setup enters explicit `preparing` state;
+   - transport-returned Host address remains the shareable address;
+   - Host startup/bind errors return actionable offline/incompatible snapshots instead of rejected/fake-success UI state;
+   - `stopSession` stops the real transport, rejects unsafe pending/projection-resolution contexts, unmounts ephemeral reconstructed projection state, resets connected ledger/peer/transient state, and returns offline;
+   - Host restart creates fresh authority/ledger state while preserving installed listener reuse.
+
+3. Updated production composition and command path:
+   - `src/app/AppProvider.tsx` exposes `stopSession` through the normal app context;
+   - `src/main.tsx` installs the lifecycle adapter and visible bridge;
+   - `src/ProductionSessionLifecycleBridge.tsx` shows `Host 준비 중`, actual server-open state, session name, shareable address, participant count, compatibility message, and `Host 중지` without reference/debug controls.
+
+4. Added/expanded `tests/ui/productionSessionLifecycleAdapter.test.ts`:
+   - Host start -> preparation;
+   - transient peer/published/projection cleanup on stop while permanent Character library state survives;
+   - clean Host restart with a fresh ledger;
+   - no duplicated connected listeners across restart;
+   - actionable Host bind failure snapshot;
+   - visible preparation/address/Host-stop surface and no debug/reference control dependency.
+
+5. Added the lifecycle regression to `.github/workflows/ui.yml` alongside the existing connected runtime test.
+
+6. Recorded evidence-backed checklist credit at work head `e6386ea172dd3ce5ac89cdb1608964158ffbaf01` for the validated Host lifecycle/preparation items only. Unfinished player join/Ready/live/session-end items remain unchecked.
 
 ### Validation evidence
 
-- Exact work head: `41db6832cc0a95f085f8161bfed665dbcc71090d`.
-- UI workflow run `31965607635` — `success` at that exact head.
-- The run includes the new Phase 14 PlaySessionDock regression and the final `npm run build` TypeScript/production build; both succeeded.
-- Existing UI regression steps in that same workflow also succeeded.
-- No older Phase 11/12/13 workflow was rerun because this slice did not modify those authority boundaries.
-- No broad feature checkbox is awarded solely from source presence; this evidence covers only the narrow PlaySessionDock hydration/tab-context repair and its build boundary.
+- PlaySessionDock boundary remains validated by UI run `31965607635` at `41db6832cc0a95f085f8161bfed665dbcc71090d`; it was not independently rerun as a separate task.
+- Initial lifecycle UI run `31967233149` at `24f7b8a65a00b2533d0a3bbbde8390660c47634c` failed only the newly added lifecycle test. Root cause: the test unnecessarily invoked the already-proven Phase 13 SessionProjection builder while trying to seed cleanup state.
+- The test was narrowed to seed an already-registered ephemeral projection and verify only the new lifecycle cleanup boundary.
+- UI run `31967313740` succeeded at exact head `13b4bb3b40cdcb5338f95b00d08783b79a58377d`, proving the Host lifecycle runtime plus final TypeScript/production build.
+- After adding the visible preparation/address/stop surface, UI run `31967444715` succeeded at exact source head `7d83f263609b5dc2cf18ec43ed617568fedff9ba`.
+- Run `31967444715` includes successful `Verify Phase 14 production Host lifecycle`, existing Phase09 mechanics regressions, and final `Typecheck and build`.
+- No Phase 11/12/13 full workflow was rerun because this slice did not replace the connected protocol, SessionProjection authority, or durable write-back implementation.
 
-### Known failures / risks
+### Evidence-backed checklist progress
 
-1. `.agents/PHASE14_CHECKLIST.md` still phrases P14.7/P14.8 too broadly relative to the explicit release lifecycle. It must be expanded to retain server start/stop -> DM preparation/lobby -> persisted Character selection/join -> Ready/start -> participant lifecycle -> session end/restart gates without deleting existing authority gates.
-2. Production `SessionScreen` currently exposes Host/Join but still describes it as a reference shell; safe stop/restart and explicit preparation/lobby/ready/start/end states are absent.
-3. `ConnectedRuntimeState` tracks host/client/session ledger/replica/reconnect but not lifecycle phase/readiness, so new state must be added without moving authority into presentation code.
-4. Product-realistic fresh-Character local/connected gates remain unverified.
-5. The draft PR is not merge-authorized; no merge may occur without user authorization.
+Current checklist now credits, with exact workflow evidence:
 
-### Files / architecture boundaries changed in this slice
+- explicit DM preparation state before play;
+- actual production Host transport start from visible UI;
+- explicit successful Host/listen state with shareable address;
+- visible safe Host stop;
+- transient connected/projection cleanup on stop while permanent Character state survives;
+- fresh Host authority on restart;
+- listener reuse across restart;
+- automated Host start/stop/restart regression;
+- UI/TypeScript production frontend green for this lifecycle slice.
 
-- `src/PlaySessionDock.tsx` — hydration Hook-order and tab-context repair (previous source commit, now verified).
-- `tests/ui/playSessionDockStructure.test.ts` — new focused regression.
-- `.github/workflows/ui.yml` — runs the focused regression before production build.
-- No rules, persistence, Tauri transport, SessionProjection authority, connected event protocol, or durable write-back implementation changed in this slice.
+Bind failure runtime handling is implemented/tested but its dedicated visible error presentation is intentionally not credited yet.
 
-## Rerun connectivity
+## Authority boundaries preserved
 
-Chrome Side Panel remains connected to:
+The slice deliberately reuses rather than replaces:
 
-- Owner: `Kaetaeru`
-- Repository: `SimpleVTT`
-- Branch: `main`
-- Control: `.chatgpt-rerun/control.json`
+- `tauriSessionTransport.startHost/connectClient/stop` and state/message listeners;
+- `connectedSessionRuntimeAdapter` Host/client setup and handshake;
+- Host ledger and shared-session authority;
+- SessionProjection validation/reconstruction;
+- reconnect/catch-up and event cursor behavior;
+- ActionRequest/ResolutionEvent routing;
+- owning-client durable Character write-back.
 
-The watcher reads coordination from `main`; implementation occurs on the active work branch recorded above. `continue` on the same sequence means resume from this checkpoint.
+No tactical map/grid/token/path/LOS scope was added.
+
+## Known failures / risks
+
+1. Player connected entry is still incomplete as a product lifecycle: selected persisted Character identity, explicit connecting/handshake/lobby states, and no-valid-Character setup rejection are not yet evidence-backed.
+2. Ready/unready, Host readiness display, and Host start gating into Freeform/Initiative are not implemented as lifecycle state yet.
+3. Live session end semantics beyond Host transport stop are not yet proven for readiness/turn/pending Resolution cleanup because those lifecycle states do not exist yet.
+4. Host bind failure is normalized into an actionable snapshot, but a dedicated visible failure/retry treatment is still uncredited.
+5. Fresh non-fixture Character -> local Scene/actions and product-realistic connected gates remain incomplete.
+6. `productionPlayRuntimeAdapter` still needs targeted protection against stale local Scene projection when switching between two non-fixture local Characters without disturbing remote ephemeral projections.
+7. Windows two-instance human walkthrough and exact-head release artifact remain future release gates.
+8. PR #109 remains draft; no merge is authorized.
+
+## Files / architecture boundaries changed in this slice
+
+- `.agents/PHASE14_CHECKLIST.md`
+- `src/app/productionSessionLifecycleAdapter.ts`
+- `src/app/AppProvider.tsx`
+- `src/ProductionSessionLifecycleBridge.tsx`
+- `src/main.tsx`
+- `tests/ui/productionSessionLifecycleAdapter.test.ts`
+- `.github/workflows/ui.yml`
+
+No rules-domain, persistence format, connected wire protocol, SessionProjection schema, or durable ownership boundary was changed.
 
 ## Next Exact Action
 
-On `agent/108-production-play-session-ux`, first reconcile `.agents/PHASE14_CHECKLIST.md` so P14.7/P14.8 explicitly enumerate server start/stop, DM preparation/lobby, persisted Character selection + join, Ready/start, late join/disconnect/reconnect, and session end/restart while preserving all existing handshake/projection/authority/error gates. Then implement the smallest lifecycle slice: add safe Host stop/restart plus explicit preparation-state surface through the existing connected runtime/`tauriSessionTransport` boundary, add a focused regression, and run only the affected UI/connected gates at the resulting exact head.
+On `agent/108-production-play-session-ux`, resume at P14.8 **Player Character selection, join, and lobby**. Do not rerun Host lifecycle run `31967444715` or PlaySessionDock run `31965607635` unless a new commit changes those validated boundaries.
 
-Do not rerun UI workflow `31965607635` or the PlaySessionDock regression unless a later commit changes that boundary.
+Implement the smallest coherent player-lobby slice:
+
+1. Require/select a valid persisted active Character for connected join and reject the no-valid-Character setup state without fixture fallback.
+2. Represent connecting/compatibility-handshake/lobby distinctly enough that connected join is not an immediate presentation-only success.
+3. On compatible `hello-ack`, move the client to explicit lobby state and expose selected Character identity, Host address, compatibility, and participant information through visible production UI.
+4. Preserve the existing SessionProjection builder, Host canonical validation, Host authority, reconnect/catch-up, and owner-only persistence boundaries.
+5. Add a focused runtime/UI regression for persisted Character -> join -> compatible lobby and invalid/no-Character setup rejection.
+6. Run only the affected connected/UI/TypeScript production gate at the resulting exact head.
+
+After that slice is evidence-backed, continue to Ready/unready and Host start gating into Freeform/Initiative.
 
 ## Dispatch recommendation
 
