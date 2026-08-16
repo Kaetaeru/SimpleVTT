@@ -2,6 +2,7 @@ mod generation_store;
 mod character_library;
 mod authoring_drafts;
 mod installed_content;
+mod session_transport;
 
 use tauri::Manager;
 
@@ -63,16 +64,63 @@ fn write_installed_content_generation(
     installed_content::write_generation_at(&dir, &request)
 }
 
+#[tauri::command]
+fn start_session_host(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, session_transport::SessionTransportState>,
+    bind_address: Option<String>,
+) -> Result<session_transport::TransportStatusDto, String> {
+    state.start_host(&app, bind_address.as_deref().unwrap_or("0.0.0.0:3210"))
+}
+
+#[tauri::command]
+fn connect_session_client(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, session_transport::SessionTransportState>,
+    address: String,
+) -> Result<session_transport::TransportStatusDto, String> {
+    state.connect_client(&app, &address)
+}
+
+#[tauri::command]
+fn send_session_message(
+    state: tauri::State<'_, session_transport::SessionTransportState>,
+    message: String,
+) -> Result<usize, String> {
+    state.send(&message)
+}
+
+#[tauri::command]
+fn stop_session_transport(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, session_transport::SessionTransportState>,
+) -> Result<session_transport::TransportStatusDto, String> {
+    state.stop(&app)
+}
+
+#[tauri::command]
+fn get_session_transport_status(
+    state: tauri::State<'_, session_transport::SessionTransportState>,
+) -> Result<session_transport::TransportStatusDto, String> {
+    state.status()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(session_transport::SessionTransportState::default())
         .invoke_handler(tauri::generate_handler![
             read_character_library_generations,
             write_character_library_generation,
             read_authoring_draft_generations,
             write_authoring_draft_generation,
             read_installed_content_generations,
-            write_installed_content_generation
+            write_installed_content_generation,
+            start_session_host,
+            connect_session_client,
+            send_session_message,
+            stop_session_transport,
+            get_session_transport_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running SimpleVTT");
