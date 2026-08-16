@@ -40,7 +40,9 @@ export type CharacterSessionProjectionReconstruction =
 
 type ArmorDefinition = { ac?:{ base?:number; dex?:string; dexMax?:number } };
 type ShieldDefinition = { acBonus?:number };
+type ConsumableDefinition = { economy?:string; healing?:string };
 
+const POTION_OF_HEALING_ID="dnd.srd521.item.gear.potion-of-healing";
 const clone=<T,>(value:T):T=>structuredClone(value);
 const abilityMod=(score:number)=>Math.floor((score-10)/2);
 
@@ -84,10 +86,8 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
     if (!canonical && runtime.equipped) {
       throw new Error(`equipped projected item has no trusted host mechanic entry: ${source.definitionId}`);
     }
-    const category=canonical?.category ?? "";
-    const kind:ItemInstanceVm["kind"] = category==="potion" || category==="consumable"
-      ? "consumable"
-      : "equipment";
+    const consumable=canonical ? itemMechanic(canonical,"consumable-definition") : undefined;
+    const kind:ItemInstanceVm["kind"] = consumable ? "consumable" : "equipment";
     const maxCharges=source.chargeMaximum;
     if (runtime.charges && (!Number.isInteger(runtime.charges.current) || runtime.charges.current<0 || maxCharges===undefined || runtime.charges.current>maxCharges)) {
       throw new Error(`projection item charge state is invalid: ${source.id}`);
@@ -180,6 +180,56 @@ function skillProficient(skills:string[],nameKo:string,nameEn:string) {
   });
 }
 
+function parseHealingFormula(value:string|undefined) {
+  const match=value?.trim().match(/^(\d+)d(\d+)(?:\s*\+\s*(\d+))?$/i);
+  if (!match) return undefined;
+  const count=Number(match[1]);
+  const sides=Number(match[2]);
+  const flat=Number(match[3]??0);
+  if (!Number.isInteger(count)||count<1||!Number.isInteger(sides)||sides<2||!Number.isInteger(flat)||flat<0) return undefined;
+  return { dice:`${count}d${sides}`,flat,average:Math.floor(count*(sides+1)/2+flat) };
+}
+
+function consumableEconomy(value:string|undefined):ActionVm["economy"]|undefined {
+  if (value==="bonus-action") return "추가 행동";
+  if (value==="action") return "행동";
+  return undefined;
+}
+
+function projectedItemActions(sheet:CharacterSheet,targetSelf:string[]):ActionVm[] {
+  const actions:ActionVm[]=[];
+  for (const item of sheet.items) {
+    if (item.definitionId!==POTION_OF_HEALING_ID) continue;
+    const canonical=itemEntryById(item.definitionId);
+    if (!canonical) continue;
+    const mechanic=itemMechanic(canonical,"consumable-definition") as ConsumableDefinition|undefined;
+    const healing=parseHealingFormula(mechanic?.healing);
+    const economy=consumableEconomy(mechanic?.economy);
+    if (!mechanic||!healing||!economy) continue;
+    actions.push({
+      id:"action.healing-potion",
+      actorId:sheet.id,
+      name:item.name,
+      category:"basic",
+      target:"self",
+      economy,
+      resolutionKind:"healing",
+      summary:`${healing.dice} + ${healing.flat} 회복 · ${item.quantity}개`,
+      available:item.quantity>0,
+      disabledReason:item.quantity>0 ? undefined : "남은 수량이 없습니다.",
+      eligibleTargetIds:targetSelf,
+      healing,
+      itemCost:{itemId:item.id,quantity:1},
+      details:[
+        {label:"대상",value:"자신"},
+        {label:"회복",value:`${healing.dice} + ${healing.flat}`,source:`canonical-item:${item.definitionId}`},
+        {label:"비용",value:`${economy} + ${item.name} 1개`,source:`SessionProjection:${sheet.id}`},
+      ],
+    });
+  }
+  return actions;
+}
+
 function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet):ActionVm[] {
   const targetSelf=[sheet.id];
   const actions:ActionVm[]=[
@@ -245,6 +295,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       ],
     });
   }
+  actions.push(...projectedItemActions(sheet,targetSelf));
   return actions;
 }
 
