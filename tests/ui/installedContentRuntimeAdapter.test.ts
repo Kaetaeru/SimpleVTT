@@ -37,8 +37,8 @@ test("canonical builtin catalog composes before durable local content and reload
   const writer=new MockAdapter();
   setInstalledContentStoreForTests(writer,store);
   const initial=await writer.getSnapshot();
-  assert.ok(initial.catalog.every((entry)=>entry.id.startsWith("content:")));
   const builtin=initial.catalog.filter((entry)=>entry.scope==="builtin");
+  assert.ok(builtin.every((entry)=>entry.id.startsWith("content:")));
   assert.equal(builtin.filter((entry)=>entry.category==="class").length,12);
   assert.equal(builtin.filter((entry)=>entry.category==="species").length,9);
   assert.equal(builtin.filter((entry)=>entry.category==="background").length,4);
@@ -50,6 +50,7 @@ test("canonical builtin catalog composes before durable local content and reload
   assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.item.weapon.longsword" && entry.category==="item"));
   assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.spell.healing-word" && entry.description.length>0 && !entry.description.includes("DEMO")));
   assert.equal(new Set(builtin.map((entry)=>entry.id)).size,builtin.length);
+  assert.ok(initial.catalog.some((entry)=>entry.scope!=="builtin"),"legacy/session mock entries remain non-builtin instead of being rewritten as product content");
   assert.equal(getInstalledContentPersistenceStateForTests(writer)?.document?.entries.length,0,"builtin product content must not be copied into the installed-content document");
 
   const committed=await previewAndActivate(writer,payload());
@@ -124,7 +125,8 @@ test("a local install cannot claim an existing builtin qualified identity", asyn
     source:builtin.source,
     version:builtin.version,
   }));
-  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /Builtin content qualified identity/.test(entry.message)));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>/module\.manifest\.drift/.test(entry.message)));
   const rejected=await adapter.activateContentImport();
   assert.ok(rejected.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /Builtin content qualified identity/.test(entry.message)));
   assert.equal(rejected.contentCatalogPersistence?.storageRevision,0);
