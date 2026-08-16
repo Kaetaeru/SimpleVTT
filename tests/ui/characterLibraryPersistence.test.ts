@@ -44,6 +44,43 @@ function sheet(id="char.test"):CharacterSheet {
   };
 }
 
+function sourceRichSheet():CharacterSheet {
+  const value=sheet();
+  value.features=["무술","기의 점","source-feature"];
+  value.cantrips=["dnd.srd521.spell.guidance"];
+  value.preparedSpells=["dnd.srd521.spell.cure-wounds"];
+  value.spellbookSpells=["dnd.srd521.spell.magic-missile"];
+  value.masteryWeapons=["dnd.srd521.item.weapon.dagger"];
+  value.cantripSources={"dnd.srd521.spell.guidance":"source-cantrip"};
+  value.preparedSpellSources={"dnd.srd521.spell.cure-wounds":"source-prepared"};
+  value.spellbookSpellSources={"dnd.srd521.spell.magic-missile":"source-spellbook"};
+  value.persistentFeatureOptionIds=["feature:source-option"];
+  value.persistentFeatureOptionSources={"feature:source-option":"source-choice"};
+  value.items=[{
+    id:"item.test.dagger",
+    definitionId:"dnd.srd521.item.weapon.dagger",
+    name:"단검",
+    nameEn:"Dagger",
+    kind:"equipment",
+    quantity:2,
+    equipped:true,
+    wielded:true,
+    attunementRequired:false,
+    passiveEffects:["source-item-effect"],
+    grantedActionIds:["action.source-dagger"],
+    provenance:["SRD 5.2.1","source-item"],
+  }];
+  value.resources=[{
+    id:"resource.focus",
+    label:"집중점",
+    current:2,
+    max:3,
+    source:"Monk 3 · SRD 5.2.1",
+    recovery:{shortRest:"all"},
+  }];
+  return value;
+}
+
 test("Character library keeps source and durable runtime revisions independent", async () => {
   const store = new MemoryCharacterLibraryStore();
   const repository = new CharacterLibraryRepository(store);
@@ -65,6 +102,86 @@ test("Character library keeps source and durable runtime revisions independent",
   assert.equal(sourceCommit.document.storageRevision,2);
   assert.equal(sourceCommit.document.characters[0].sourceRevision,2);
   assert.equal(sourceCommit.document.characters[0].runtimeRevision,2);
+
+  const sourceStaticChange=structuredClone(renamed);
+  sourceStaticChange.items[0].provenance=[...sourceStaticChange.items[0].provenance,"source-only"];
+  sourceStaticChange.resources[0].label="집중점 (정규화)";
+  sourceStaticChange.features=[...sourceStaticChange.features,"source-only-feature"];
+  const sourceStaticCommit=await repository.commit([sourceStaticChange],sourceStaticChange.id);
+  assert.equal(sourceStaticCommit.document.characters[0].sourceRevision,3);
+  assert.equal(sourceStaticCommit.document.characters[0].runtimeRevision,2,"source-owned item/resource/feature changes must not increment runtime revision");
+});
+
+test("source and runtime reconstruct item/spell/resource/feature state when the materialized cache drifts", async () => {
+  const store=new MemoryCharacterLibraryStore();
+  const writer=new CharacterLibraryRepository(store);
+  const original=sourceRichSheet();
+  await writer.hydrate([original],original.id);
+  const committed=await writer.commit([original],original.id);
+  const drifted=structuredClone(committed.document);
+  drifted.storageRevision=2;
+  const record=drifted.characters[0];
+  record.runtime.items[0].quantity=1;
+  record.runtime.items[0].equipped=false;
+  record.runtime.resources[0].current=1;
+  record.materializedCache.sheet.className="CACHE CLASS";
+  record.materializedCache.sheet.features=["CACHE FEATURE"];
+  record.materializedCache.sheet.cantrips=["cache.cantrip"];
+  record.materializedCache.sheet.preparedSpells=["cache.prepared"];
+  record.materializedCache.sheet.spellbookSpells=["cache.spellbook"];
+  record.materializedCache.sheet.cantripSources={"cache.cantrip":"cache"};
+  record.materializedCache.sheet.persistentFeatureOptionIds=["cache-feature-option"];
+  record.materializedCache.sheet.items[0]={
+    ...record.materializedCache.sheet.items[0],
+    definitionId:"cache.item",
+    name:"CACHE ITEM",
+    quantity:99,
+    equipped:true,
+    passiveEffects:["cache-effect"],
+    grantedActionIds:["cache-action"],
+    provenance:["cache"],
+  };
+  record.materializedCache.sheet.resources[0]={
+    ...record.materializedCache.sheet.resources[0],
+    label:"CACHE RESOURCE",
+    current:99,
+    max:99,
+    source:"cache",
+  };
+  store.seed(2,encodeCharacterLibraryV1(drifted));
+
+  const reader=new CharacterLibraryRepository(store);
+  const hydration=await reader.hydrate([sheet()],original.id);
+  const restored=hydration.sheets[0];
+  assert.equal(restored.className,"몽크");
+  assert.deepEqual(restored.features,["무술","기의 점","source-feature"]);
+  assert.deepEqual(restored.cantrips,["dnd.srd521.spell.guidance"]);
+  assert.deepEqual(restored.preparedSpells,["dnd.srd521.spell.cure-wounds"]);
+  assert.deepEqual(restored.spellbookSpells,["dnd.srd521.spell.magic-missile"]);
+  assert.deepEqual(restored.cantripSources,{"dnd.srd521.spell.guidance":"source-cantrip"});
+  assert.deepEqual(restored.persistentFeatureOptionIds,["feature:source-option"]);
+  assert.deepEqual(restored.items[0],{
+    id:"item.test.dagger",
+    definitionId:"dnd.srd521.item.weapon.dagger",
+    name:"단검",
+    nameEn:"Dagger",
+    kind:"equipment",
+    quantity:1,
+    equipped:false,
+    wielded:true,
+    attunementRequired:false,
+    attuned:undefined,
+    charges:undefined,
+    passiveEffects:["source-item-effect"],
+    grantedActionIds:["action.source-dagger"],
+    provenance:["SRD 5.2.1","source-item"],
+  });
+  assert.equal(restored.resources[0].label,"집중점");
+  assert.equal(restored.resources[0].max,3);
+  assert.equal(restored.resources[0].current,1);
+  assert.equal(restored.resources[0].source,"Monk 3 · SRD 5.2.1");
+  assert.deepEqual(restored.resources[0].recovery,{shortRest:"all"});
+  assert.deepEqual(restored.equipment,["단검"]);
 });
 
 test("stale Character library writers cannot overwrite a newer generation", async () => {
