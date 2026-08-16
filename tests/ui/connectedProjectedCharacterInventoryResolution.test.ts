@@ -153,7 +153,8 @@ test("host-unknown projected Character uses its persisted potion through Host au
   assert.ok(projectedPotion);
   assert.equal(projectedPotion?.definitionId,POTION_DEFINITION_ID);
   assert.equal(projectedPotion?.kind,"consumable");
-  const projectedAction=mountedBefore!.actions.find((action)=>action.id==="action.healing-potion");
+  const mountedSnapshot=await host.getSnapshot();
+  const projectedAction=(mountedSnapshot.scene.actionsByActor[remote.id]??[]).find((action)=>action.id==="action.healing-potion");
   assert.ok(projectedAction,"host must reconstruct the supported persisted potion as an executable projected action");
   assert.equal(projectedAction?.actorId,remote.id);
   assert.equal(projectedAction?.itemCost?.itemId,POTION_ID);
