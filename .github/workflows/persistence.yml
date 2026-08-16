@@ -13,6 +13,8 @@ on:
       - "src/app/*installedContent*"
       - "src/app/*ContentCatalog*"
       - "src/app/*contentCatalog*"
+      - "src/app/*ModuleValidation*"
+      - "src/app/*moduleValidation*"
       - "src/app/*characterCreation*Source*"
       - "src/app/*resolutionCharacter*"
       - "src/app/phase09RealRuntimeAttackAdapter.ts"
@@ -23,13 +25,11 @@ on:
       - "tests/ui/characterSource*.test.ts"
       - "tests/ui/authoringDraft*.test.ts"
       - "tests/ui/installedContent*.test.ts"
+      - "tests/ui/declarativeModuleValidation.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
-      - "schemas/character-library.schema.json"
-      - "schemas/authoring-drafts.schema.json"
-      - "schemas/installed-content.schema.json"
-      - "docs/design/persistence.md"
-      - "docs/design/content-modules-items.md"
-      - "docs/design/installed-content-catalog.md"
+      - "schemas/**"
+      - "rules/profiles/**"
+      - "docs/design/**"
       - ".agents/PHASE10_CHECKLIST.md"
       - "src/main.tsx"
       - "src-tauri/**"
@@ -48,6 +48,8 @@ on:
       - "src/app/*installedContent*"
       - "src/app/*ContentCatalog*"
       - "src/app/*contentCatalog*"
+      - "src/app/*ModuleValidation*"
+      - "src/app/*moduleValidation*"
       - "src/app/*characterCreation*Source*"
       - "src/app/*resolutionCharacter*"
       - "src/app/phase09RealRuntimeAttackAdapter.ts"
@@ -58,13 +60,11 @@ on:
       - "tests/ui/characterSource*.test.ts"
       - "tests/ui/authoringDraft*.test.ts"
       - "tests/ui/installedContent*.test.ts"
+      - "tests/ui/declarativeModuleValidation.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
-      - "schemas/character-library.schema.json"
-      - "schemas/authoring-drafts.schema.json"
-      - "schemas/installed-content.schema.json"
-      - "docs/design/persistence.md"
-      - "docs/design/content-modules-items.md"
-      - "docs/design/installed-content-catalog.md"
+      - "schemas/**"
+      - "rules/profiles/**"
+      - "docs/design/**"
       - ".agents/PHASE10_CHECKLIST.md"
       - "src/main.tsx"
       - "src-tauri/**"
@@ -82,8 +82,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate content dependencies
         run: npm run generate:content
-      - name: Verify Character and content persistence repositories and adapters
-        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
+      - name: Verify Character, content and module persistence contracts
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/declarativeModuleValidation.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
       - name: Verify production build
         run: npm run build
 

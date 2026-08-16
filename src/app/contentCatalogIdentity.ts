@@ -1,5 +1,11 @@
 import type { CatalogEntry } from "./contracts";
-import type { InstalledCatalogEntryV1 } from "./installedContentContracts";
+import type {
+  InstalledCatalogEntryV1,
+  InstalledContentRelationshipV1,
+  InstalledModuleExtensionPointV1,
+  InstalledModuleManifestV1,
+  InstalledModuleRefV1,
+} from "./installedContentContracts";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -15,6 +21,50 @@ export function builtinCatalogSourceId(entry:CatalogEntry) {
   if (entry.sourceId?.trim()) return entry.sourceId.trim();
   if (entry.source === "SRD 5.2.1") return "dnd.srd-5.2.1";
   throw new Error(`Builtin catalog entry is missing a stable source identity: ${entry.id} / ${entry.source}`);
+}
+
+function object(value:unknown):Record<string,unknown>|undefined {
+  return value && typeof value==="object" && !Array.isArray(value) ? value as Record<string,unknown> : undefined;
+}
+function strings(value:unknown) { return Array.isArray(value) ? value.filter((item):item is string=>typeof item==="string") : []; }
+function moduleRefs(value:unknown):InstalledModuleRefV1[] {
+  return Array.isArray(value) ? value.flatMap((item)=>{
+    const ref=object(item);
+    return ref && typeof ref.moduleId==="string" && typeof ref.version==="string" ? [{moduleId:ref.moduleId,version:ref.version}] : [];
+  }) : [];
+}
+function extensionPoints(value:unknown):InstalledModuleExtensionPointV1[] {
+  return Array.isArray(value) ? value.flatMap((item)=>{
+    const point=object(item);
+    return point && typeof point.id==="string" ? [{id:point.id,acceptsCategories:strings(point.acceptsCategories)}] : [];
+  }) : [];
+}
+function semanticRelationships(value:unknown):InstalledContentRelationshipV1[] {
+  return Array.isArray(value) ? value.flatMap((item)=>{
+    const relation=object(item);
+    const kind=relation?.kind;
+    if (!relation || (kind!=="parent"&&kind!=="extends"&&kind!=="replaces") || typeof relation.target!=="string") return [];
+    return [{
+      kind,
+      target:relation.target,
+      targetVersion:typeof relation.targetVersion==="string" ? relation.targetVersion : undefined,
+      extensionPoint:typeof relation.extensionPoint==="string" ? relation.extensionPoint : undefined,
+    }];
+  }) : [];
+}
+function moduleManifest(value:unknown):InstalledModuleManifestV1|undefined {
+  const module=object(value);
+  const profile=object(module?.rulesProfile);
+  if (!module || typeof module.moduleId!=="string" || typeof module.moduleVersion!=="string" || !profile || typeof profile.id!=="string" || typeof profile.version!=="string") return undefined;
+  return {
+    moduleId:module.moduleId,
+    moduleVersion:module.moduleVersion,
+    rulesProfile:{id:profile.id,version:profile.version},
+    dependencies:moduleRefs(module.dependencies),
+    conflicts:moduleRefs(module.conflicts),
+    capabilities:strings(module.capabilities),
+    extensionPoints:extensionPoints(module.extensionPoints),
+  };
 }
 
 export function installedEntryFromPreview(entry:CatalogEntry):InstalledCatalogEntryV1 {
@@ -35,6 +85,18 @@ export function installedEntryFromPreview(entry:CatalogEntry):InstalledCatalogEn
     relationships:entry.relationships,
     capabilities:entry.capabilities,
   });
+}
+
+export function installedEntryFromPayload(entry:CatalogEntry,payload:string):InstalledCatalogEntryV1 {
+  const installed=installedEntryFromPreview(entry);
+  const raw=object(JSON.parse(payload));
+  if (!raw) return installed;
+  installed.requiresCapabilities=strings(raw.requiresCapabilities);
+  if (typeof raw.requiresCapability==="string" && !installed.requiresCapabilities.includes(raw.requiresCapability)) installed.requiresCapabilities.push(raw.requiresCapability);
+  installed.semanticRelationships=semanticRelationships(raw.relationships);
+  installed.extensionPoints=extensionPoints(raw.extensionPoints);
+  installed.module=moduleManifest(raw.module);
+  return installed;
 }
 
 export function resolvedCatalogEntryFromInstalled(entry:InstalledCatalogEntryV1):CatalogEntry {

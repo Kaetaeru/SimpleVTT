@@ -3,6 +3,33 @@ import type { CatalogEntry } from "./contracts";
 export const INSTALLED_CONTENT_SCHEMA_ID = "simplevtt.installed-content" as const;
 export const INSTALLED_CONTENT_SCHEMA_VERSION = 1 as const;
 
+export interface InstalledModuleRefV1 {
+  moduleId:string;
+  version:string;
+}
+
+export interface InstalledModuleExtensionPointV1 {
+  id:string;
+  acceptsCategories:string[];
+}
+
+export interface InstalledModuleManifestV1 {
+  moduleId:string;
+  moduleVersion:string;
+  rulesProfile:{ id:string; version:string };
+  dependencies:InstalledModuleRefV1[];
+  conflicts:InstalledModuleRefV1[];
+  capabilities:string[];
+  extensionPoints:InstalledModuleExtensionPointV1[];
+}
+
+export interface InstalledContentRelationshipV1 {
+  kind:"parent"|"extends"|"replaces";
+  target:string;
+  targetVersion?:string;
+  extensionPoint?:string;
+}
+
 export interface InstalledCatalogEntryV1 {
   contentId:string;
   category:CatalogEntry["category"];
@@ -14,6 +41,10 @@ export interface InstalledCatalogEntryV1 {
   description:string;
   relationships:CatalogEntry["relationships"];
   capabilities:string[];
+  requiresCapabilities?:string[];
+  semanticRelationships?:InstalledContentRelationshipV1[];
+  extensionPoints?:InstalledModuleExtensionPointV1[];
+  module?:InstalledModuleManifestV1;
 }
 
 export interface InstalledContentDocumentV1 {
