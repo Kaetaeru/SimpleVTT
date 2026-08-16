@@ -82,7 +82,6 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
 
 registerConnectedActionRequestHandler(async (adapter,transportMessage,request) => {
   const state=connectedStateFor(adapter);
-  const app=connectedInternal(adapter);
   const ledger=state.ledger;
   if (state.mode!=="host"||!ledger) return;
 
@@ -90,8 +89,17 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"host-busy",message:"host already has an uncommitted remote PendingResolution",hostCursor:ledger.cursor});
     return;
   }
-  if (!request.character||request.character.characterId!==request.actorId) {
-    await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"actor-projection-mismatch",message:"ActionRequest actor must match the submitted Character projection",hostCursor:ledger.cursor});
+  const peerManifest=state.peerManifests.get(transportMessage.peer);
+  if (!peerManifest?.character) {
+    await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"handshake-required",message:"ActionRequest requires a compatible Character hello handshake",hostCursor:ledger.cursor});
+    return;
+  }
+  if (!request.character||request.character.characterId!==request.actorId||peerManifest.character.characterId!==request.actorId) {
+    await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"actor-projection-mismatch",message:"ActionRequest actor must match the peer Character projection from hello",hostCursor:ledger.cursor});
+    return;
+  }
+  if (request.character.sourceRevision!==peerManifest.character.sourceRevision) {
+    await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"source-revision-changed",message:"Character source revision changed after handshake; reconnect/revalidate before acting",hostCursor:ledger.cursor});
     return;
   }
   if (CONNECTED_CAPABILITIES.some((capability)=>!request.capabilities.includes(capability))) {
