@@ -45,10 +45,10 @@ function applyChange(
   const before=expected(change,direction);
   const after=nextValue(change,direction);
   if (change.kind==="hp") {
-    const current=change.field==="current" ? sheet.hp : change.field==="maximum" ? sheet.maxHp : sheet.tempHp;
+    if (change.field==="maximum") return "Character write-back for maximum HP requires an explicit source-model contract";
+    const current=change.field==="current" ? sheet.hp : sheet.tempHp;
     if (current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${String(before)}, current ${String(current)}`;
     if (change.field==="current") sheet.hp=after;
-    else if (change.field==="maximum") sheet.maxHp=after;
     else sheet.tempHp=after;
     return;
   }
