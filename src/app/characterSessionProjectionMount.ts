@@ -3,7 +3,6 @@ import type { MockAdapter } from "./mockAdapter";
 import type { CharacterSessionProjectionReconstruction } from "./characterSessionProjectionReconstruction";
 import {
   mountCharacterSessionProjection,
-  projectedCharacterById,
   projectedCharacterForPeer,
   projectedCharacterIds,
   unmountAllCharacterSessionProjections,
@@ -107,6 +106,9 @@ export function unmountReconstructedCharacterSessionProjection(adapter:MockAdapt
   const mounted=projectedCharacterForPeer(adapter,peerId);
   if (!mounted) return false;
   const characterId=mounted.characterId;
+  if (app.activeCharacter.id===characterId) {
+    throw new Error(`cannot unmount active projected Character before restoring its resolution context: ${characterId}`);
+  }
   app.scene.entities=app.scene.entities.filter((entity)=>entity.id!==characterId);
   const actions={...app.scene.actionsByActor};
   delete actions[characterId];
@@ -125,17 +127,15 @@ export function unmountAllReconstructedCharacterSessionProjections(adapter:MockA
   const characterIds=projectedCharacterIds(adapter);
   if (!characterIds.length) return 0;
   const projected=new Set(characterIds);
+  if (projected.has(app.activeCharacter.id)) {
+    throw new Error(`cannot clear SessionProjections while projected resolution context is active: ${app.activeCharacter.id}`);
+  }
   app.scene.entities=app.scene.entities.filter((entity)=>!projected.has(entity.id));
   const actions={...app.scene.actionsByActor};
   const economy={...app.scene.economyByActor};
   for (const characterId of characterIds) {
     delete actions[characterId];
     delete economy[characterId];
-    const mounted=projectedCharacterById(adapter,characterId);
-    if (mounted && app.activeCharacter.id===characterId) {
-      const durable=app.characters.find((candidate)=>candidate.id!==characterId && "abilities" in candidate) as CharacterSheet|undefined;
-      if (durable) app.activeCharacter=structuredClone(durable);
-    }
   }
   app.scene.actionsByActor=actions;
   app.scene.economyByActor=economy;
