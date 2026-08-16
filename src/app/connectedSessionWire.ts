@@ -26,6 +26,7 @@ export type ConnectedWireMessage =
   | { type:"action-request"; request:ConnectedActionRequest }
   | { type:"catchup-request"; sessionId:string; afterCursor:number }
   | { type:"event-batch"; sessionId:string; afterCursor:number; events:ConnectedSessionEvent[] }
+  | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number };
 
 export type DecodeWireResult =
@@ -169,6 +170,10 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if (value.type==="event-batch") {
     if (!isString(value.sessionId)||!isCursor(value.afterCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid event-batch message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="session-ended") {
+    if (!isString(value.sessionId)||!isString(value.reason)) return "invalid session-ended message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="error") {
