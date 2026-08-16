@@ -60,7 +60,12 @@ export function decodeInstalledContentV1(payload:string):InstalledContentDocumen
     if (ids.has(id)) throw new Error(`duplicate installed content qualified identity: ${id}`);
     ids.add(id);
   }
-  return { ...(cp(parsed) as InstalledContentDocumentV1),entries:sortedEntries(parsed.entries) };
+  return {
+    schemaId:INSTALLED_CONTENT_SCHEMA_ID,
+    schemaVersion:INSTALLED_CONTENT_SCHEMA_VERSION,
+    storageRevision:Number(parsed.storageRevision),
+    entries:sortedEntries(parsed.entries),
+  };
 }
 
 export class InstalledContentSchemaError extends Error {}
