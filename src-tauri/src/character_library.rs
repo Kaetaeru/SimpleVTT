@@ -76,6 +76,38 @@ mod tests {
     }
 
     #[test]
+    fn interrupted_save_after_temp_sync_preserves_previous_commit_and_allows_retry() {
+        let dir = test_dir("interrupted-save");
+        write_generation_at(&dir, &request(0, 1, "stable"))
+            .expect("stable generation writes");
+
+        let error = generation_store::write_generation_at_with_fault_after_temp_sync(
+            &dir,
+            FILE_PREFIX,
+            LABEL,
+            &request(1, 2, "candidate"),
+        )
+        .expect_err("fault must interrupt before commit rename");
+        assert!(error.contains("simulated interrupted Character library save after temp sync"));
+        assert!(!dir.join("character-library.2.json").exists());
+        assert!(!dir.join("character-library.2.json.tmp").exists());
+
+        let after_failure = read_generations_at(&dir).expect("stable generation remains readable");
+        assert_eq!(after_failure.len(), 1);
+        assert_eq!(after_failure[0].generation, 1);
+        assert_eq!(after_failure[0].payload.as_deref(), Some("stable"));
+
+        write_generation_at(&dir, &request(1, 2, "retry"))
+            .expect("retry commits next generation");
+        let after_retry = read_generations_at(&dir).expect("retry generation reads");
+        assert_eq!(after_retry[0].generation, 2);
+        assert_eq!(after_retry[0].payload.as_deref(), Some("retry"));
+        assert_eq!(after_retry[1].generation, 1);
+        assert_eq!(after_retry[1].payload.as_deref(), Some("stable"));
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
     fn keeps_recent_committed_generations_only_after_successful_commit() {
         let dir = test_dir("prune");
         for generation in 1..=5 {
