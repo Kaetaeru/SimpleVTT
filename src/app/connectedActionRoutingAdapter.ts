@@ -12,14 +12,29 @@ import {
 } from "./connectedSessionRuntimeAdapter";
 import { clearCommittedResolutionEvents, takeCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import { tauriSessionTransport } from "./tauriSessionTransport";
+import {
+  activateProjectedCharacterResolutionContext,
+  restoreProjectionResolutionContext,
+  type ProjectionResolutionContext,
+} from "./characterSessionProjectionMount";
+import { projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const previousDismissResolution=MockAdapter.prototype.dismissResolution;
+const projectionContexts=new WeakMap<MockAdapter,ProjectionResolutionContext>();
 
 function requestId() {
   return `request.${Date.now().toString(36)}.${Math.floor(Math.random()*1_000_000).toString(36)}`;
+}
+
+function restoreProjectedContext(adapter:MockAdapter) {
+  const context=projectionContexts.get(adapter);
+  if (!context) return false;
+  restoreProjectionResolutionContext(adapter,context);
+  projectionContexts.delete(adapter);
+  return true;
 }
 
 async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnapshot) {
@@ -30,9 +45,10 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   if (!resolution||resolution.stage!=="complete"||state.publishedResolutionIds.has(resolution.id)) return current;
 
   const pending=state.pendingRemoteAction;
+  const isRemotePending=pending?.resolutionId===resolution.id;
   const events=takeCommittedResolutionEvents(resolution.id);
   if (!events?.length) {
-    if (pending?.resolutionId===resolution.id) {
+    if (isRemotePending&&pending) {
       state.ledger.cancelReservedActionRequest(pending.request.requestId);
       await sendConnectedWireTo(pending.peer,{
         type:"error",
@@ -41,6 +57,8 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
         hostCursor:state.ledger.cursor,
       });
       state.pendingRemoteAction=null;
+      restoreProjectedContext(adapter);
+      return connectedInternal(adapter).getSnapshot();
     }
     return current;
   }
@@ -56,27 +74,30 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
     },
   };
 
-  const committed=pending?.resolutionId===resolution.id
+  const committed=isRemotePending&&pending
     ? state.ledger.commitReservedActionRequest(pending.request.requestId,candidate)
     : { status:"committed" as const,event:state.ledger.commitHostEvent(candidate) };
 
   if (committed.status==="rejected") {
-    if (pending?.resolutionId===resolution.id) {
+    if (isRemotePending&&pending) {
       await sendConnectedWireTo(pending.peer,{type:"error",code:"host-commit-rejected",message:committed.error,hostCursor:committed.hostCursor});
       state.pendingRemoteAction=null;
+      restoreProjectedContext(adapter);
+      return connectedInternal(adapter).getSnapshot();
     }
     return current;
   }
 
   const event=committed.event;
   state.publishedResolutionIds.add(resolution.id);
-  if (pending?.resolutionId===resolution.id) state.pendingRemoteAction=null;
+  if (isRemotePending) state.pendingRemoteAction=null;
   await broadcastConnectedWire({
     type:"event-batch",
     sessionId:state.ledger.sessionId,
     afterCursor:event.sequence-1,
     events:[event],
   });
+  if (isRemotePending&&restoreProjectedContext(adapter)) return connectedInternal(adapter).getSnapshot();
   return current;
 }
 
@@ -107,6 +128,12 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     return;
   }
 
+  const mounted=projectedCharacterForPeer(adapter,transportMessage.peer);
+  if (mounted&&mounted.characterId!==request.actorId) {
+    await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"actor-projection-mismatch",message:"ActionRequest actor does not match the mounted host SessionProjection",hostCursor:ledger.cursor});
+    return;
+  }
+
   const reserved=ledger.reserveActionRequest(request);
   if (reserved.status==="duplicate") {
     await sendConnectedWireTo(transportMessage.peer,{type:"event-batch",sessionId:ledger.sessionId,afterCursor:reserved.event.sequence-1,events:[reserved.event]});
@@ -117,11 +144,22 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     return;
   }
 
+  if (mounted) {
+    const activated=activateProjectedCharacterResolutionContext(adapter,transportMessage.peer);
+    if (activated.status==="rejected") {
+      ledger.cancelReservedActionRequest(request.requestId);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"projection-activation-failed",message:activated.error,hostCursor:ledger.cursor});
+      return;
+    }
+    projectionContexts.set(adapter,activated.context);
+  }
+
   try {
     const next=await previousResolveAction.call(adapter,request.actionId,request.targetIds);
     const resolution=next.resolution;
     if (!resolution||resolution.actorId!==request.actorId||resolution.actionId!==request.actionId) {
       ledger.cancelReservedActionRequest(request.requestId);
+      restoreProjectedContext(adapter);
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:"host production resolution path rejected the requested actor/action/targets",hostCursor:ledger.cursor});
       return;
     }
@@ -131,6 +169,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
   } catch(error) {
     ledger.cancelReservedActionRequest(request.requestId);
     state.pendingRemoteAction=null;
+    restoreProjectedContext(adapter);
     await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-resolution-error",message:error instanceof Error?error.message:String(error),hostCursor:ledger.cursor});
   }
 });
@@ -194,6 +233,7 @@ MockAdapter.prototype.dismissResolution=async function dismissConnectedResolutio
     state.ledger.cancelReservedActionRequest(pending.request.requestId);
     clearCommittedResolutionEvents(pending.resolutionId);
     state.pendingRemoteAction=null;
+    restoreProjectedContext(this);
     await sendConnectedWireTo(pending.peer,{type:"error",code:"host-dismissed",message:"host dismissed the pending remote resolution",hostCursor:state.ledger.cursor});
   }
   return previousDismissResolution.call(this);
