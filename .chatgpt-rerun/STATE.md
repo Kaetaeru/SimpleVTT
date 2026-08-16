@@ -3,7 +3,7 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch transition: `needs_user` prepared; publish `control.json` last
+- dispatch transition: `continue` prepared; publish `control.json` last
 - repository: `Kaetaeru/SimpleVTT`
 - canonical watcher/baseline branch: `main`
 - active work branch: `agent/108-production-play-session-ux`
@@ -32,9 +32,21 @@ The later Main Playable workflow at `0ebc8b7a020b4ec64c2678b398aa5c064de46a93` p
 
 ## Sequence 1 durable checkpoint
 
-The user authorized planning through actual playable Windows build completion, with special emphasis on in-session Inventory/item use plus comprehensive Skills/Actions UX.
+The user has now reviewed the Phase 14 completion scope and explicitly authorized Rerun to resume from the checklist checkpoint. This is the same run_id / sequence 1 / task; no prior validation history is reset.
 
-The production root cause remains:
+The release scope explicitly includes the complete connected-session lifecycle in addition to the in-session mechanics:
+
+1. DM starts/stops the actual Host/server from visible UI, sees listen/address/port state, and gets actionable bind/network errors.
+2. DM has a preparation/lobby flow for rules/content status, Scene/Combatants, participant visibility, and readiness before starting play.
+3. Player selects their persisted Character, enters the Host address, completes transport + compatibility handshake, and reaches the lobby without debug controls.
+4. Host-unknown player Character is reconstructed as an ephemeral host-authoritative SessionProjection while permanent Character ownership remains with the player.
+5. Ready/start transitions the prepared participant set into actual Freeform or Initiative play.
+6. Actions, Skills, Spells, Inventory, targeting, Combatants, DM corrections, reactions, conditions/concentration, Activity/Undo, and authoritative dice share the same session state.
+7. Late join, disconnect/reconnect, duplicate/replayed requests/events, incompatibility, and invalid projection have explicit safe behavior.
+8. Session end clears transient/projection state while preserving only owning-player durable Character changes.
+9. Final Windows acceptance covers DM app launch -> Host start -> DM preparation -> Player launch -> Character selection -> Join -> Ready/start -> play -> disconnect/reconnect -> session end/restart.
+
+## Production root cause to preserve during implementation
 
 1. `AppProvider` delegates the visible UI command surface through a singleton `MockAdapter`.
 2. The base adapter is seeded with Aelar/Mira/reference Combatants and fixed action identities.
@@ -46,11 +58,11 @@ The production root cause remains:
 
 ## Current work branch state
 
-Current work branch head after checklist expansion:
+Last recorded work branch head:
 
 `01cb784f1c64d46c931175126dde6abadc744907`
 
-The branch is based on the Phase 14-authorized `main` baseline and already contains early unverified implementation from the interrupted prior execution:
+The branch contains early **unverified** Phase 14 implementation:
 
 - `src/app/productionPlayRuntimeAdapter.ts`
 - `src/app/productionDiceRuntimeAdapter.ts`
@@ -58,34 +70,9 @@ The branch is based on the Phase 14-authorized `main` baseline and already conta
 - outer composition imports in `src/app/offlineRuntimeAdapters.ts`
 - `.agents/PHASE14_CHECKLIST.md`
 
-These files are **not treated as completed product behavior yet**. They require compilation, product-realistic integration tests, UI verification, connected regressions, and human acceptance as defined by the checklist.
+Do not award completion credit from source presence. Validate behavior at concrete commits.
 
-## Final completion checklist created
-
-`.agents/PHASE14_CHECKLIST.md` was expanded at work-branch head `01cb784f1c64d46c931175126dde6abadc744907` into the release-blocking execution contract for Phase 14.
-
-It covers:
-
-- Rerun Side Panel/main coordination and mandatory dispatch protocol
-- Character -> Scene/action materialization
-- Play entry/session information architecture
-- authoritative Skills rolls
-- Actions/attacks/features
-- in-session Inventory/equipment/attunement/item use
-- real Character spellcasting
-- local player + DM live-session flow
-- connected Host/Join with host-unknown Character
-- persistence/restart/data ownership
-- viewport/keyboard/reduced-motion UX quality
-- fresh non-fixture Character integration gates
-- Phase 11/12/13 and rules/persistence/UI/Tauri regression matrix
-- required local and two-instance connected human Windows walkthroughs
-- exact-head Windows artifact metadata and SHA-256 validation
-- merge/main validation and final Rerun closeout
-
-The checklist explicitly forbids claiming “모든 기능을 담은 플레이 가능한 버전” before both automated and human acceptance gates pass.
-
-## Rerun connectivity decision
+## Rerun connectivity
 
 Chrome Side Panel remains connected to:
 
@@ -94,16 +81,16 @@ Chrome Side Panel remains connected to:
 - Branch: `main`
 - Control: `.chatgpt-rerun/control.json`
 
-The watcher reads coordination from `main`; implementation occurs on the work branch named above. This prevents dispatch/control drift while allowing isolated feature development.
-
-The latest user instruction asks to establish the checklist first. Therefore this checkpoint intentionally pauses further implementation for checklist review instead of allowing the watcher to continue automatically.
+The watcher reads coordination from `main`; implementation occurs on the active work branch recorded above. `continue` on the same sequence means resume from this checkpoint.
 
 ## Next Exact Action
 
-After `control.json` is published last with the same run_id, sequence `1`, task_id, and `status: needs_user`:
+After `control.json` is published last with the same run_id, sequence `1`, task_id, and `status: continue`:
 
-1. Do not make further Phase 14 source changes until the user approves/resumes the checklist.
-2. Keep Side Panel watcher running if desired; `needs_user` is a polling/waiting state, not Stop.
-3. On user approval, change the same sequence 1 back to `continue` using PLAN -> STATE -> control order.
-4. The first implementation action after reauthorization is **validate the already-present work-branch changes before adding more code**: inspect the current diff, run/trigger TypeScript + relevant UI/integration gates, identify any compile/runtime breakage, and only then continue from checklist P14.1.
-5. Do not repeat Phase 13 validations unless a Phase 14 change touches the boundary they cover.
+1. Read README -> control -> STATE -> PLAN and re-fetch current `main` plus `agent/108-production-play-session-ux` before writing.
+2. Fetch `.agents/PHASE14_CHECKLIST.md`; reconcile its broad Host/Join and DM sections with the newly explicit server startup -> DM preparation/lobby -> player Character selection/join -> Ready/start -> participant lifecycle -> session shutdown release requirements. Do not remove existing gates.
+3. Validate the already-present work-branch changes **before adding more product code**: inspect the diff, run/trigger TypeScript + production UI/build gates and the smallest relevant product-realistic tests, and identify compile/runtime failures.
+4. Fix validation failures first. Then continue from checklist P14.1 Character -> live Scene/action materialization, followed by visible play entry and session lifecycle UX.
+5. Preserve Phase 09-13 authoritative rules/network/write-back boundaries; do not replace proven transport or SessionProjection authority with UI-owned state.
+6. Record only evidence-backed checklist completion. Do not repeat old validation unless a Phase 14 change touches that boundary.
+7. Maintain STATUS on meaningful milestones and write a durable checkpoint before the Rerun hard stop.
