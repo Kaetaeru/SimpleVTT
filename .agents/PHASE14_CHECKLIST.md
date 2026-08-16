@@ -314,12 +314,14 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## Ready and start lifecycle
 
-- [ ] Player can mark themselves ready/unready while in the lobby.
-- [ ] Host sees readiness for each compatible participant.
-- [ ] Host start is disabled or rejects explicitly when required preparation/readiness conditions are not satisfied.
-- [ ] Host can start the prepared participant set into Freeform mode.
-- [ ] Host can start the prepared participant set into Initiative mode with authoritative turn state.
-- [ ] Clients converge on the Host-selected started mode without presentation-only mutation.
+- [x] Player can mark themselves ready/unready while in the lobby.
+- [x] Host sees readiness for each compatible participant.
+- [x] Host start is disabled or rejects explicitly when required preparation/readiness conditions are not satisfied.
+- [x] Host can start the prepared participant set into Freeform mode.
+- [x] Host can start the prepared participant set into Initiative mode with authoritative turn state.
+- [x] Clients converge on the Host-selected started mode without presentation-only mutation.
+
+Evidence for the six Ready/start items: exact source `bd1077b9bc61b86c2c0370543a16496c72f840c2`; Phase12 `31971618571` connected authority + Phase11 preservation + production build green; UI `31971618534` including production Host lifecycle and TypeScript/build green; Main Playable `31971618703` playable-contract green. Focused `productionReadyStartSafety.test.ts` proves Host peer-count drop resets stale Ready through Host-authoritative participant events and directly proves prepared Freeform start; `productionSessionLifecycleAdapter.test.ts` proves Ready gating and prepared Initiative start. Existing connected turn projection tests in the same Phase12 gate prove client convergence through Host `mode-transition` events.
 
 ## Handshake and projection
 
