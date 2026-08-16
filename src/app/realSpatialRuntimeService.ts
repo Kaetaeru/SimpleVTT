@@ -18,6 +18,15 @@ function sceneDistanceFeet(distance:string|undefined) {
   return Number.isFinite(feet)&&feet>=0?feet:undefined;
 }
 
+function sceneBaselineDistanceFeet(scene:SceneVm,targetId:string,presentationDistance:string|undefined) {
+  const provenance=`runtime:spatial:${scene.id}:scene-distance-baseline`;
+  const existing=Object.values(scene.spatialByPair ?? {}).find((relation)=>(
+    relation.provenance===provenance
+    && (relation.sourceId===targetId||relation.targetId===targetId)
+  ));
+  return existing?.distanceFeet ?? sceneDistanceFeet(presentationDistance);
+}
+
 function addSymmetricSceneRelation(scene:SceneVm,sourceId:string,targetId:string,distanceFeet:number) {
   const provenance=`runtime:spatial:${scene.id}:scene-distance-baseline`;
   const forward:SpatialRelationVm={
@@ -43,24 +52,22 @@ function addSymmetricSceneRelation(scene:SceneVm,sourceId:string,targetId:string
 }
 
 /**
- * The built-in theater-of-mind scene already carries a distance label on each
- * combatant. Materialize that scene-owned state into the pairwise runtime
- * contract for every live Character actor instead of binding targeting facts to
- * reference Character/combatant ids. External movement/map modules can replace
- * these pairwise facts later without core calculating coordinates, paths, LOS,
- * or cover.
+ * The built-in theater-of-mind scene may seed its initial pairwise runtime facts
+ * from combatant presentation distance labels. Once any scene-distance baseline
+ * exists for a combatant, that structured value is reused for newly materialized
+ * Character actors instead of re-reading mutable presentation text. External
+ * movement/map modules can replace pairwise facts later without core calculating
+ * coordinates, paths, LOS, or cover.
  */
 export function ensureReferenceSpatialRuntime(scene:SceneVm) {
   scene.spatialByPair ??={};
   if (scene.id!=="scene.ruined-gate") return scene.spatialByPair;
   const actors=scene.entities.filter((entity)=>entity.kind==="character");
   const combatants=scene.entities.filter((entity)=>entity.kind==="combatant");
-  for (const actor of actors) {
-    for (const target of combatants) {
-      const distanceFeet=sceneDistanceFeet(target.distance);
-      if (distanceFeet===undefined) continue;
-      addSymmetricSceneRelation(scene,actor.id,target.id,distanceFeet);
-    }
+  for (const target of combatants) {
+    const distanceFeet=sceneBaselineDistanceFeet(scene,target.id,target.distance);
+    if (distanceFeet===undefined) continue;
+    for (const actor of actors) addSymmetricSceneRelation(scene,actor.id,target.id,distanceFeet);
   }
   return scene.spatialByPair;
 }
