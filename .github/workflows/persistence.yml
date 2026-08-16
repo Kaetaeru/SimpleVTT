@@ -5,6 +5,7 @@ on:
     paths:
       - "src/app/*Persistence*"
       - "src/app/*persistence*"
+      - "src/app/*CharacterLibrary*"
       - "tests/ui/characterLibraryPersistence.test.ts"
       - "schemas/character-library.schema.json"
       - "docs/design/persistence.md"
@@ -17,6 +18,7 @@ on:
     paths:
       - "src/app/*Persistence*"
       - "src/app/*persistence*"
+      - "src/app/*CharacterLibrary*"
       - "tests/ui/characterLibraryPersistence.test.ts"
       - "schemas/character-library.schema.json"
       - "docs/design/persistence.md"
@@ -38,3 +40,11 @@ jobs:
         run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts
       - name: Verify production build
         run: npm run build
+
+  tauri-storage:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify immutable Character library store
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib

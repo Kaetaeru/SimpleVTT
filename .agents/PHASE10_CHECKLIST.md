@@ -16,7 +16,8 @@ Owner progression acceptance remains separate: PR #60 stays Draft until owner Wi
 - [x] source/build revision separated from durable runtime revision
 - [x] materialized CharacterSheet marked non-authoritative cache only
 - [x] deterministic stale-writer / corrupt-newest recovery repository tests added
-- [ ] Tauri immutable-generation store
+- [x] Tauri immutable-generation store implemented with fixed app-local-data path, temp flush, rename commit, stale-generation reject, and post-commit pruning
+- [x] Tauri store ignores temp files and retains previous committed generations on stale/failure paths
 - [ ] adapter hydration before first snapshot
 - [ ] Character create/edit/progression direct commit persistence
 - [ ] durable item/rest direct mutation persistence
