@@ -1,6 +1,7 @@
 mod generation_store;
 mod character_library;
 mod authoring_drafts;
+mod installed_content;
 
 use tauri::Manager;
 
@@ -45,6 +46,23 @@ fn write_authoring_draft_generation(
     authoring_drafts::write_generation_at(&dir, &request)
 }
 
+#[tauri::command]
+fn read_installed_content_generations(
+    app: tauri::AppHandle,
+) -> Result<Vec<installed_content::InstalledContentGenerationDto>, String> {
+    let dir = local_data_child(&app, "installed-content")?;
+    installed_content::read_generations_at(&dir)
+}
+
+#[tauri::command]
+fn write_installed_content_generation(
+    app: tauri::AppHandle,
+    request: installed_content::WriteInstalledContentGenerationRequest,
+) -> Result<(), String> {
+    let dir = local_data_child(&app, "installed-content")?;
+    installed_content::write_generation_at(&dir, &request)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -52,7 +70,9 @@ pub fn run() {
             read_character_library_generations,
             write_character_library_generation,
             read_authoring_draft_generations,
-            write_authoring_draft_generation
+            write_authoring_draft_generation,
+            read_installed_content_generations,
+            write_installed_content_generation
         ])
         .run(tauri::generate_context!())
         .expect("error while running SimpleVTT");
