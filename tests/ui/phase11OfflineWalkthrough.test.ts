@@ -103,7 +103,8 @@ test("production offline composition casts a slotted spell in Freeform without s
   }
 
   assert.equal(snapshot.resolution?.stage, "complete");
-  assert.match(snapshot.resolution?.compact ?? "", /치유의 단어/);
+  assert.equal(snapshot.resolution?.actionId, "action.healing-word");
+  assert.match(snapshot.resolution?.compact ?? "", /HP 회복/);
   assert.equal(snapshot.scene.entities.find((entity) => entity.id === "char.aelar")?.hp, 42);
   assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current, (slotBefore ?? 0) - 1);
   assert.equal(snapshot.scene.economyByActor["char.mira"]?.bonusAction, true, "Freeform spell must not consume Initiative Bonus Action economy");
