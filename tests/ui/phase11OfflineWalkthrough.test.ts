@@ -87,7 +87,7 @@ test("production offline composition uses an ItemInstance in Freeform without sp
   assert.ok(snapshot.activity[0]?.stateChanges.some((line) => line.includes("item.potion.aelar") && line.includes("2 → 1")));
 });
 
-test("production offline composition casts a slotted spell in Freeform without spending turn economy", async () => {
+test("production offline composition casts and safely undoes a slotted spell in Freeform without spending turn economy", async () => {
   const adapter = new MockAdapter();
   await adapter.setSessionMode("freeform");
 
@@ -105,6 +105,7 @@ test("production offline composition casts a slotted spell in Freeform without s
 
   assert.equal(snapshot.resolution?.stage, "complete");
   assert.equal(snapshot.resolution?.actionId, "action.healing-word");
+  const resolutionId = snapshot.resolution?.id;
   const healingDie = snapshot.resolution?.authoritativeDice[0];
   assert.ok(healingDie !== undefined && healingDie >= 1 && healingDie <= 4, "Healing Word must expose one authoritative d4 face");
   const hpAfter = snapshot.scene.entities.find((entity) => entity.id === "char.aelar")?.hp;
@@ -115,6 +116,15 @@ test("production offline composition casts a slotted spell in Freeform without s
   assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current, (slotBefore ?? 0) - 1);
   assert.equal(snapshot.scene.economyByActor["char.mira"]?.bonusAction, true, "Freeform spell must not consume Initiative Bonus Action economy");
   assert.match(snapshot.resolution?.provenance.join(" ") ?? "", /dnd\.srd521\.spell\.healing-word/);
+  assert.ok(snapshot.activity.find((entry) => entry.id === resolutionId)?.stateChanges.some((line) => line.includes("주문 슬롯") && line.includes("4 → 3")));
+
+  const preview = await adapter.undoLastResolution();
+  assert.equal(preview.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current, (slotBefore ?? 0) - 1, "Undo preview must not restore the slot early");
+  snapshot = await adapter.undoLastResolution();
+  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "char.aelar")?.hp, hpBefore);
+  assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current, slotBefore);
+  assert.equal(snapshot.activity.find((entry) => entry.id === resolutionId)?.reversed, true);
+  assert.ok(snapshot.activity.find((entry) => entry.undoOf === resolutionId)?.stateChanges.some((line) => line.includes("주문 슬롯") && line.includes("3 → 4")));
 });
 
 test("production offline composition records a DM condition correction without turning it into Character source state", async () => {
