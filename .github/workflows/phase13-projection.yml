@@ -1,29 +1,45 @@
-name: Phase 13 SessionProjection
+name: Main Playable
 
 env:
   SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
-  group: phase13-session-projection-${{ github.event.pull_request.number || github.ref }}
+  group: main-playable-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 on:
   push:
     branches:
-      - "agent/104-arbitrary-character-session-projection"
-  pull_request:
+      - "main"
     paths:
       - "src/**"
       - "src-tauri/**"
-      - "tests/ui/**"
-      - "docs/design/session-runtime.md"
-      - ".agents/PHASE13_CHECKLIST.md"
+      - "content/**"
+      - "scripts/**"
+      - "tests/**"
+      - "schemas/**"
+      - "docs/design/**"
       - ".github/workflows/phase13-projection.yml"
       - "package.json"
       - "package-lock.json"
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "content/**"
+      - "scripts/**"
+      - "tests/**"
+      - "schemas/**"
+      - "docs/design/**"
+      - ".github/workflows/phase13-projection.yml"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
 
 jobs:
-  projection-contract:
+  playable-contract:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,20 +50,18 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Generate canonical content
-        run: npm run generate:content
-      - name: Verify arbitrary Character SessionProjection boundary, reconstruction, mount, hello, and authoritative action flow
-        run: npx tsx --test tests/ui/characterSessionProjection.test.ts tests/ui/characterSessionProjectionReconstruction.test.ts tests/ui/characterSessionProjectionMount.test.ts tests/ui/connectedCharacterProjectionHandshake.test.ts tests/ui/connectedProjectedCharacterResolution.test.ts
-      - name: Verify Phase 12 connected authority remains green
-        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts
-      - name: Verify Phase 11 offline walkthrough remains green
-        run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
-      - name: Verify production frontend gate
+      - name: Verify full UI, rules, TypeScript, and production frontend
         run: npm run build
+      - name: Verify Phase 11 complete offline playable walkthrough
+        run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
+      - name: Verify Phase 12 connected-session authority
+        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts
+      - name: Verify Phase 13 arbitrary Character SessionProjection
+        run: npx tsx --test tests/ui/characterSessionProjection.test.ts tests/ui/characterSessionProjectionReconstruction.test.ts tests/ui/characterSessionProjectionMount.test.ts tests/ui/connectedCharacterProjectionHandshake.test.ts tests/ui/connectedProjectedCharacterResolution.test.ts
 
-  windows-projected-character-playable:
+  windows-playable:
     runs-on: windows-latest
-    needs: projection-contract
+    needs: playable-contract
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,42 +72,41 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Verify Tauri session transport and persistence library
+      - name: Verify Tauri persistence and connected-session transport
         run: cargo test --manifest-path src-tauri/Cargo.toml --lib
-      - name: Build Windows projected-character executable
+      - name: Build Windows playable executable
         run: npm run tauri:build -- --no-bundle
-      - name: Stage Phase 13 artifact
+      - name: Stage main playable artifact
         shell: pwsh
         run: |
           $source = "src-tauri/target/release/simplevtt.exe"
           if (-not (Test-Path $source)) { throw "SimpleVTT executable was not produced at $source" }
-          New-Item -ItemType Directory -Force -Path phase13-artifact | Out-Null
-          Copy-Item $source "phase13-artifact/SimpleVTT.exe"
+          New-Item -ItemType Directory -Force -Path playable-artifact | Out-Null
+          Copy-Item $source "playable-artifact/SimpleVTT.exe"
           @(
-            "SimpleVTT Phase 13 arbitrary Character SessionProjection build",
+            "SimpleVTT main playable build",
             "commit=${{ env.SOURCE_SHA }}",
             "ref=${{ github.ref }}",
-            "run_id=${{ github.run_id }}"
-          ) | Set-Content -Encoding utf8 "phase13-artifact/BUILD.txt"
+            "run_id=${{ github.run_id }}",
+            "scope=character creation + progression + persistence + offline play + connected play + arbitrary Character SessionProjection"
+          ) | Set-Content -Encoding utf8 "playable-artifact/BUILD.txt"
           @(
-            "SimpleVTT Phase 13 two-instance projected Character walkthrough",
+            "SimpleVTT main playable walkthrough",
             "",
-            "1. On the player Windows machine create/save a supported Character that does not exist in the DM host Character library. A Fighter with Second Wind is the deterministic representative gate.",
-            "2. Close/reopen the player app once and confirm that Character restores locally before connecting.",
-            "3. On the DM machine choose Host. Allow SimpleVTT through Windows Firewall on private networks if prompted. The host listens on TCP 3210.",
-            "4. On the player machine Join <HOST_LAN_OR_HAMACHI_IPV4>:3210 using the locally saved Character.",
-            "5. Confirm the connection is compatible and the DM session can see/select the projected player Character even though the host Character library did not contain it before join.",
-            "6. With the projected Fighter below maximum HP, submit Second Wind from the player. The DM host resolves the authoritative action and only the committed ResolutionEvent is synchronized.",
-            "7. Confirm host and player converge on HP/resource state, while the DM host still has no permanent Character-library copy of the player's Character.",
-            "8. Close/reopen the player app and confirm the host-confirmed HP/resource change persisted in the player's own Character library.",
-            "9. Reconnect the same Character. Confirm no duplicate HP/resource change occurs and reconnect resumes from the existing event cursor.",
-            "10. Start a new Host session and confirm prior ephemeral projected Characters are cleared from the new session while permanent local Characters remain unchanged.",
-            "11. Verify ordinary Phase 11 offline play still works with no network connection."
-          ) | Set-Content -Encoding utf8 "phase13-artifact/REMOTE-WALKTHROUGH.txt"
-      - name: Upload Phase 13 Windows artifact
+            "1. Create and save a Character, close/reopen the app, and confirm local restore.",
+            "2. Level the Character through a representative progression choice and confirm Character Sheet updates.",
+            "3. Use Freeform checks/actions/spells/items, initiative/turn economy, attacks, damage, healing, conditions, concentration, reactions, DM correction, Activity/dice/provenance, and Undo.",
+            "4. Confirm visual dice replay for creation ability rolls, level-up hit-die HP rolls, and authoritative play resolution.",
+            "5. Import/instantiate a Combatant and resolve a representative runtime action.",
+            "6. For connected play, start Host on one Windows instance and Join from another using <HOST_IPV4>:3210.",
+            "7. Join with a locally saved Character unknown to the host and confirm it mounts as an ephemeral SessionProjection without creating a permanent host Character copy.",
+            "8. Resolve a Character-durable action remotely, confirm host/client convergence, reconnect idempotently, and verify durable state persists only in the owning client's Character library.",
+            "9. Start a new Host session and confirm previous ephemeral projections are cleared while permanent local Characters remain intact."
+          ) | Set-Content -Encoding utf8 "playable-artifact/PLAYABLE-WALKTHROUGH.txt"
+      - name: Upload Windows playable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SimpleVTT-Phase13-Windows-${{ env.SOURCE_SHA }}
-          path: phase13-artifact/
+          name: SimpleVTT-Main-Playable-${{ env.SOURCE_SHA }}
+          path: playable-artifact/
           if-no-files-found: error
           retention-days: 14
