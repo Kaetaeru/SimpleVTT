@@ -31,7 +31,13 @@ function request(overrides:Partial<ConnectedActionRequest>={}):ConnectedActionRe
 }
 
 function payload(label:string):ConnectedEventPayload {
-  return { kind:"resolution",resolutionId:`resolution.${label}`,stateChanges:[label],provenance:["host authoritative test"] };
+  return {
+    kind:"resolution",
+    resolutionId:`resolution.${label}`,
+    resolutionEvents:[],
+    stateChanges:[label],
+    provenance:["host authoritative test"],
+  };
 }
 
 test("connected session handshake rejects protocol/rules/capability drift explicitly", () => {
@@ -75,7 +81,7 @@ test("client applies host events exactly once and rejects gaps/conflicting histo
   const second=host.commitHostEvent({payload:payload("second")});
   const client=new ClientSessionReplica("session.test");
   const applied:string[]=[];
-  const apply=(entry:ConnectedEventPayload)=>applied.push(...entry.stateChanges);
+  const apply=(entry:ConnectedEventPayload)=>{ applied.push(...entry.stateChanges); };
 
   const gap=client.apply(second,apply);
   assert.equal(gap.status,"rejected");
@@ -93,6 +99,18 @@ test("client applies host events exactly once and rejects gaps/conflicting histo
   assert.deepEqual(applied,["first","second"]);
 });
 
+test("client does not advance its cursor when authoritative state application rejects", () => {
+  const host=new HostSessionLedger("session.test",hostManifest);
+  const first=host.commitHostEvent({payload:payload("first")});
+  const client=new ClientSessionReplica("session.test");
+  const rejected=client.apply(first,()=>({ status:"rejected",error:"local state drift" }));
+  assert.equal(rejected.status,"rejected");
+  assert.equal(client.cursor,0);
+  assert.match(rejected.status==="rejected" ? rejected.error : "",/local state drift/);
+  assert.equal(client.apply(first,()=>({ status:"committed" })).status,"applied");
+  assert.equal(client.cursor,1);
+});
+
 test("reconnect catch-up returns only missing host events and replays them once", () => {
   const host=new HostSessionLedger("session.test",hostManifest);
   host.commitHostEvent({payload:payload("one")});
@@ -101,7 +119,7 @@ test("reconnect catch-up returns only missing host events and replays them once"
 
   const client=new ClientSessionReplica("session.test");
   const applied:string[]=[];
-  const apply=(entry:ConnectedEventPayload)=>applied.push(...entry.stateChanges);
+  const apply=(entry:ConnectedEventPayload)=>{ applied.push(...entry.stateChanges); };
   assert.equal(client.apply(host.eventsAfter(0)[0],apply).status,"applied");
   assert.equal(client.cursor,1);
 
