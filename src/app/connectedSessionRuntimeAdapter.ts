@@ -72,6 +72,17 @@ export async function broadcastConnectedWire(message:ConnectedWireMessage) {
   await tauriSessionTransport.send(encodeConnectedWireMessage(message));
 }
 
+async function sendClientHello(adapter:MockAdapter,knownEventCursor:number) {
+  const app=connectedInternal(adapter);
+  await tauriSessionTransport.send(encodeConnectedWireMessage({
+    type:"hello",
+    manifest:connectedManifest(adapter),
+    participantId:`client:${app.activeCharacter.id}`,
+    participantName:app.activeCharacter.name,
+    knownEventCursor,
+  }));
+}
+
 async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventPayload,event:ConnectedSessionEvent) {
   if (payload.kind!=="resolution") return { status:"committed" as const };
   const app=connectedInternal(adapter);
@@ -105,6 +116,38 @@ export async function applyConnectedClientEvents(adapter:MockAdapter,events:Conn
   return state.replica.applyBatchAsync(events,(payload,event)=>applyConfirmedPayload(adapter,payload,event));
 }
 
+function scheduleClientReconnect(adapter:MockAdapter) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if (state.mode!=="client"||!state.sessionId||!app.session.address||state.reconnectTimer||state.reconnectInFlight) return;
+  app.connectionState="reconnecting";
+  app.session.participants=app.session.participants.map((participant)=>({ ...participant,state:"reconnecting" as const }));
+  const delay=Math.min(1000*(2**Math.min(state.reconnectAttempts,3)),8000);
+  app.session.compatibility="warning";
+  app.session.compatibilityMessage=`Connection lost · retrying from event cursor ${state.replica?.cursor ?? 0}.`;
+  state.reconnectTimer=setTimeout(async()=>{
+    state.reconnectTimer=null;
+    if (state.mode!=="client") return;
+    state.reconnectInFlight=true;
+    try {
+      const status=await tauriSessionTransport.connectClient(app.session.address);
+      setTransportStatus(adapter,status);
+      state.reconnectAttempts=0;
+      await sendClientHello(adapter,state.replica?.cursor ?? 0);
+    } catch(error) {
+      state.reconnectAttempts+=1;
+      app.connectionState="reconnecting";
+      app.session.compatibility="warning";
+      app.session.compatibilityMessage=`Reconnect attempt ${state.reconnectAttempts} failed: ${error instanceof Error?error.message:String(error)}`;
+    } finally {
+      state.reconnectInFlight=false;
+      await publishConnectedSnapshot(adapter);
+    }
+    if (app.connectionState!=="connected") scheduleClientReconnect(adapter);
+  },delay);
+  void publishConnectedSnapshot(adapter);
+}
+
 async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMessage,wire:ConnectedWireMessage) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
@@ -120,6 +163,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         await sendConnectedWireTo(message.peer,{type:"error",code:"invalid-event-cursor",message:error instanceof Error?error.message:String(error),hostCursor:ledger.cursor});
         return;
       }
+      state.peerManifests.set(message.peer,structuredClone(wire.manifest));
       const existing=app.session.participants.find((entry)=>entry.id===wire.participantId);
       const participant={
         id:wire.participantId,
@@ -166,6 +210,7 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
     app.session.compatibility=wire.compatibility.status;
     app.session.compatibilityMessage=wire.compatibility.message;
     if (wire.compatibility.status==="incompatible") {
+      state.mode=null;
       app.connectionState="disconnected";
       await tauriSessionTransport.stop();
       await publishConnectedSnapshot(adapter);
@@ -175,11 +220,14 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
     if (applied.status==="rejected") {
       app.session.compatibility="warning";
       app.session.compatibilityMessage=applied.error;
+    } else {
+      app.connectionState="connected";
+      state.reconnectAttempts=0;
+      app.session.participants=[
+        {id:"host",name:"DM Host",state:"connected"},
+        {id:`client:${app.activeCharacter.id}`,name:"Local Player",characterName:app.activeCharacter.name,state:"connected"},
+      ];
     }
-    app.session.participants=[
-      {id:"host",name:"DM Host",state:"connected"},
-      {id:`client:${app.activeCharacter.id}`,name:"Local Player",characterName:app.activeCharacter.name,state:"connected"},
-    ];
     await publishConnectedSnapshot(adapter);
     return;
   }
@@ -231,6 +279,17 @@ async function ensureListeners(adapter:MockAdapter) {
   state.listenersInstalled=true;
   await tauriSessionTransport.onMessage((message)=>{ void handleMessage(adapter,message); });
   await tauriSessionTransport.onState((status)=>{
+    const current=connectedStateFor(adapter);
+    if (current.mode==="client"&&status.state==="disconnected"&&current.sessionId) {
+      if (current.reconnectInFlight) {
+        connectedInternal(adapter).connectionState="reconnecting";
+        void publishConnectedSnapshot(adapter);
+        return;
+      }
+      setTransportStatus(adapter,status);
+      scheduleClientReconnect(adapter);
+      return;
+    }
     setTransportStatus(adapter,status);
     void publishConnectedSnapshot(adapter);
   });
@@ -291,12 +350,6 @@ MockAdapter.prototype.joinSession=async function joinConnectedSession(address:st
   app.session.address=target;
   app.session.compatibility="warning";
   app.session.compatibilityMessage="Transport connected · waiting for host compatibility handshake.";
-  await tauriSessionTransport.send(encodeConnectedWireMessage({
-    type:"hello",
-    manifest:connectedManifest(this),
-    participantId:`client:${app.activeCharacter.id}`,
-    participantName:app.activeCharacter.name,
-    knownEventCursor:0,
-  }));
+  await sendClientHello(this,0);
   return app.getSnapshot();
 };
