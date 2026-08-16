@@ -90,11 +90,12 @@ fn prune_old_generations(dir: &Path, file_prefix: &str, label: &str) {
     }
 }
 
-pub(crate) fn write_generation_at(
+fn write_generation_at_impl(
     dir: &Path,
     file_prefix: &str,
     label: &str,
     request: &WriteGenerationRequest,
+    fail_after_temp_sync: bool,
 ) -> Result<(), String> {
     fs::create_dir_all(dir)
         .map_err(|error| format!("failed to create {label} directory: {error}"))?;
@@ -133,6 +134,9 @@ pub(crate) fn write_generation_at(
         file.sync_all()
             .map_err(|error| format!("failed to flush {label} temp file: {error}"))?;
         drop(file);
+        if fail_after_temp_sync {
+            return Err(format!("simulated interrupted {label} save after temp sync"));
+        }
         fs::rename(&temp_path, &final_path)
             .map_err(|error| format!("failed to commit {label} generation: {error}"))?;
         Ok(())
@@ -145,4 +149,23 @@ pub(crate) fn write_generation_at(
 
     prune_old_generations(dir, file_prefix, label);
     Ok(())
+}
+
+pub(crate) fn write_generation_at(
+    dir: &Path,
+    file_prefix: &str,
+    label: &str,
+    request: &WriteGenerationRequest,
+) -> Result<(), String> {
+    write_generation_at_impl(dir, file_prefix, label, request, false)
+}
+
+#[cfg(test)]
+pub(crate) fn write_generation_at_with_fault_after_temp_sync(
+    dir: &Path,
+    file_prefix: &str,
+    label: &str,
+    request: &WriteGenerationRequest,
+) -> Result<(), String> {
+    write_generation_at_impl(dir, file_prefix, label, request, true)
 }
