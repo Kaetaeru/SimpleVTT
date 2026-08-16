@@ -97,21 +97,44 @@ Validation:
 - Initial run `31967233149` failed only the new lifecycle test because the first test version unnecessarily re-invoked the already-proven Phase 13 SessionProjection builder. That test was narrowed to seed an already-registered ephemeral projection and test only the new lifecycle cleanup boundary.
 - UI run `31967313740` then succeeded at exact source head `13b4bb3b40cdcb5338f95b00d08783b79a58377d` for runtime Host lifecycle and production build.
 - After adding the visible preparation/stop surface, UI run `31967444715` succeeded at exact source head `7d83f263609b5dc2cf18ec43ed617568fedff9ba`, including the focused Host lifecycle/UI regression, existing Phase09 mechanics regressions, and final `Typecheck and build`.
-- The work branch then advanced only by checklist evidence recording to `e6386ea172dd3ce5ac89cdb1608964158ffbaf01`; this documentation-only commit does not alter the validated source boundary.
 
-Checklist evidence is recorded on the work branch. Draft PR #109 remains open/draft and no merge is authorized or attempted.
+### Player Character selection / Join / compatible lobby
+
+Validated source head: `a01221ac78827e3075c678c6e727a3ca4af695b5`.
+
+Implemented boundaries:
+
+- `productionSessionLifecycleAdapter` now models client `connecting` separately from compatible `lobby` and derives lobby only after the existing connected runtime has accepted a `hello-ack` and recorded a real session id.
+- Production Join requires the active Character to be a saved non-reference Character; `char.aelar` / `char.mira` cannot silently enter the production Join path.
+- Invalid/no-valid-Character Join returns an explicit offline/incompatible setup requirement without invoking the desktop transport.
+- `ProductionPlayerLobbyBridge` replaces the visible reference Join card on the Session route with saved Character selection, Host address, lifecycle progress, compatibility result, and selected identity.
+- Character selection reuses `selectProductionCharacter`; Join still delegates to the existing `connectedSessionRuntimeAdapter`, compatibility handshake, SessionProjection, Host authority, reconnect, and owner-write-back boundaries.
+- Focused regression verifies reference Join rejection, saved non-fixture Join, `connecting -> hello-ack -> lobby`, and the visible selector/address/lobby surface.
+
+Validation:
+
+- First test attempt at `97771a2909a94c5f24be4deba4c84480e621be11` over-coupled this lifecycle regression to Character-library repository generation and failed the new Phase 14 lifecycle step; no completion credit is taken from that run.
+- The regression was isolated to the Join/lifecycle boundary at `a01221ac78827e3075c678c6e727a3ca4af695b5` without weakening the production Join gate.
+- UI run `31967966233` succeeded at exact head `a01221ac78827e3075c678c6e727a3ca4af695b5`, including the Phase 14 lifecycle regression and final TypeScript/production build.
+- PR-triggered Contract validation and UI also succeeded at that exact head.
+- Persistence run `31967968226` completed successfully at the same head for both application-contract/production build and Windows Tauri storage/atomic Character recovery.
+
+### Existing regression debt discovered by PR matrix
+
+The automatic PR matrix at `a01221ac...` still reports Phase 11 Playable, Phase 12 Connected Session, and Main Playable failures. Comparison against the immediately preceding validated source head `7d83f263...` shows those same workflows were already failing there. They therefore predate this player-lobby slice and are not evidence that the new Join/lobby changes regressed those boundaries.
+
+The failures are nevertheless release blockers. Their common surface is the old fixture-based Phase11/12 acceptance suites being executed through `offlineRuntimeAdapters`, which now intentionally includes the Phase14 `productionPlayRuntimeAdapter`. They must be migrated or split so preserved subsystem assertions remain meaningful while the production-composed acceptance path uses fresh non-fixture Character state. Do not silence or disable these workflows.
+
+Draft PR #109 remains open/draft and no merge is authorized or attempted.
 
 ## Next Exact Action
 
-Resume from the **player entry/lobby** portion of P14.8 without rerunning the validated Host lifecycle or PlaySessionDock gates unless those boundaries change.
+Before implementing Ready/unready or broader lifecycle state, repair the pre-existing Phase14 regression-matrix debt exposed by the PR runs:
 
-Implement the smallest coherent player-lobby slice on top of the existing connected handshake:
+1. Reproduce/locate the first failing assertion in Phase 11 `phase11OfflineWalkthrough.test.ts` under current Phase14 `offlineRuntimeAdapters` composition.
+2. Separate fixture-specific subsystem regression from production-composed acceptance where necessary; do not weaken the production no-fixture path and do not disable Phase11/12/Main workflows.
+3. Convert the production-composed Phase11 acceptance path to a fresh saved non-fixture Character and actual derived Scene/actions, preserving authoritative rule/economy/undo assertions with actor ids derived from that Character rather than hard-coded Aelar/Mira.
+4. Re-run the smallest affected Phase11 gate first; once green, re-check Phase12/Main because their current failures predate the player-lobby slice and may cascade from the same production-composition mismatch.
+5. Preserve the exact-head `a01221ac...` player-lobby evidence; do not repeat its focused UI gate unless code touching that boundary changes.
 
-1. Require/select a persisted active Character for connected join; do not fall back to a fixture when no valid persisted Character is available.
-2. Model player lifecycle progress distinctly enough to represent connecting/handshake/lobby rather than immediate presentation-only success.
-3. On compatible `hello-ack`, place the client in explicit lobby lifecycle with selected Character identity, Host address, compatibility result, and participant information visible without debug controls.
-4. Keep SessionProjection construction, Host validation, Host authority, and permanent Character ownership in their existing runtime boundaries.
-5. Add focused runtime/UI regression for valid persisted Character -> join -> compatible lobby and invalid/no-Character setup rejection.
-6. Run only the affected connected/UI/TypeScript production gate at the resulting exact head.
-
-After this slice is evidence-backed, continue to Ready/unready and Host start gating into Freeform/Initiative.
+After the regression matrix is repaired, resume P14.8 Ready/unready and Host start gating into Freeform/Initiative.
