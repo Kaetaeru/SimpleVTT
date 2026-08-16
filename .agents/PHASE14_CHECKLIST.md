@@ -269,7 +269,7 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## DM preparation and lobby
 
-- [ ] DM can hold the session in an explicit preparation/lobby state before play begins.
+- [x] DM can hold the session in an explicit preparation/lobby state before play begins. Evidence: `productionSessionLifecycleAdapter` + visible `ProductionSessionLifecycleBridge`, exact-head UI run `31967444715` at `7d83f263609b5dc2cf18ec43ed617568fedff9ba`.
 - [ ] Session name and current play mode intent are visible/editable in preparation without hidden debug controls.
 - [ ] Rules/content compatibility and active session content are visible before start.
 - [ ] DM can prepare the live Scene and instantiate/remove Combatants before start.
@@ -295,13 +295,13 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## Host/server lifecycle
 
-- [ ] DM starts the actual Host transport from visible production UI.
-- [ ] Successful bind/listen state is explicit and displays the shareable address/port returned by the transport.
-- [ ] Bind/port/network failure is shown as an actionable Host startup error without pretending the session is open.
-- [ ] Host stop is explicit, safe, and returns the app to a non-hosting preparation/offline state.
-- [ ] Stopping a Host clears transient connected participants, pending remote action state, stale peer manifests, and ephemeral SessionProjection actors without deleting permanent Characters.
-- [ ] Restarting Host after stop creates a fresh connected session/authority context and does not revive stale participants or projections.
-- [ ] Repeated stop/restart operations are idempotent enough to avoid duplicate listeners or duplicated host authority state.
+- [x] DM starts the actual Host transport from visible production UI. Existing SessionScreen invokes production `hostSession`; lifecycle adapter preserves `tauriSessionTransport.startHost`. Exact-head UI run `31967444715` passed at `7d83f263609b5dc2cf18ec43ed617568fedff9ba`.
+- [x] Successful bind/listen state is explicit and displays the shareable address/port returned by the transport. Visible preparation bridge and focused regression passed in run `31967444715`.
+- [ ] Bind/port/network failure is shown as an actionable Host startup error without pretending the session is open. Runtime snapshot handling is implemented/tested, but the final dedicated visible error surface is not yet credited.
+- [x] Host stop is explicit, safe, and returns the app to a non-hosting preparation/offline state. `Host 중지` invokes tested `stopSession`; run `31967444715` passed.
+- [x] Stopping a Host clears transient connected participants, pending-safe connected state, stale peer manifests, and ephemeral SessionProjection registry state without deleting permanent Characters. Focused lifecycle test passed in run `31967444715`.
+- [x] Restarting Host after stop creates a fresh connected session/authority context and does not revive stale participants or projections. Focused lifecycle test passed in run `31967444715`.
+- [x] Repeated stop/restart operations reuse installed listeners instead of duplicating connected listeners. Focused lifecycle test passed in run `31967444715`.
 
 ## Player Character selection, join, and lobby
 
@@ -436,7 +436,7 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 ## Connected integration
 
 - [ ] Host-unknown Character projection test uses non-fixture Character identity.
-- [ ] Host start/stop/restart test proves transient connected state is cleared without deleting permanent Character state.
+- [x] Host start/stop/restart test proves transient connected state is cleared without deleting permanent Character state. Exact-head UI run `31967444715` at `7d83f263609b5dc2cf18ec43ed617568fedff9ba`.
 - [ ] Preparation/lobby/readiness test proves play does not start from an unprepared or unready state.
 - [ ] Action request -> Host authoritative ResolutionEvent -> Client apply/write-back is tested.
 - [ ] Reconnect/idempotency remains tested.
@@ -453,7 +453,7 @@ Run only the relevant older gates after each coherent slice; run the full matrix
 - [ ] Contract validation green.
 - [ ] Rules Domain green.
 - [ ] Persistence green.
-- [ ] UI/TypeScript/production frontend green.
+- [x] UI/TypeScript/production frontend green for the current Host lifecycle slice at `7d83f263609b5dc2cf18ec43ed617568fedff9ba`, UI run `31967444715`.
 - [ ] Character Creation regressions green.
 - [ ] Level Up/progression/subclass regressions green.
 - [ ] Visual dice regressions green.
