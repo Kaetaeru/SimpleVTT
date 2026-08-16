@@ -75,7 +75,7 @@ jobs:
       - name: Generate content dependencies
         run: npm run generate:content
       - name: Verify Character, content and module persistence contracts
-        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/declarativeModuleValidation.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/declarativeModuleValidation.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
       - name: Verify production build
         run: npm run build
 
