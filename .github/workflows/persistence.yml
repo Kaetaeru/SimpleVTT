@@ -1,0 +1,56 @@
+name: Persistence
+
+on:
+  pull_request:
+    paths:
+      - "src/app/*Persistence*"
+      - "src/app/*persistence*"
+      - "src/app/*CharacterLibrary*"
+      - "src/app/*characterLibrary*"
+      - "tests/ui/characterLibrary*.test.ts"
+      - "schemas/character-library.schema.json"
+      - "docs/design/persistence.md"
+      - ".agents/PHASE10_CHECKLIST.md"
+      - "src/main.tsx"
+      - "src-tauri/**"
+      - ".github/workflows/persistence.yml"
+  push:
+    branches:
+      - "agent/**"
+    paths:
+      - "src/app/*Persistence*"
+      - "src/app/*persistence*"
+      - "src/app/*CharacterLibrary*"
+      - "src/app/*characterLibrary*"
+      - "tests/ui/characterLibrary*.test.ts"
+      - "schemas/character-library.schema.json"
+      - "docs/design/persistence.md"
+      - ".agents/PHASE10_CHECKLIST.md"
+      - "src/main.tsx"
+      - "src-tauri/**"
+      - ".github/workflows/persistence.yml"
+
+jobs:
+  application-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Character library repository and adapter
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts
+      - name: Verify production build
+        run: npm run build
+
+  tauri-storage:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify immutable Character library store
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib

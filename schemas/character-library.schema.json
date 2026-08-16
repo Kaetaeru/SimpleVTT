@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simplevtt.local/schemas/character-library.schema.json",
+  "title": "SimpleVTT Character Library v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaId", "schemaVersion", "storageRevision", "activeCharacterId", "characters"],
+  "properties": {
+    "schemaId": { "const": "simplevtt.character-library" },
+    "schemaVersion": { "const": 1 },
+    "storageRevision": { "type": "integer", "minimum": 0 },
+    "activeCharacterId": { "type": ["string", "null"] },
+    "characters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/record" }
+    }
+  },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["characterId", "sourceRevision", "runtimeRevision", "source", "runtime", "materializedCache"],
+      "properties": {
+        "characterId": { "type": "string", "minLength": 1 },
+        "sourceRevision": { "type": "integer", "minimum": 1 },
+        "runtimeRevision": { "type": "integer", "minimum": 1 },
+        "source": { "$ref": "#/$defs/source" },
+        "runtime": { "$ref": "#/$defs/runtime" },
+        "materializedCache": { "$ref": "#/$defs/cache" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["characterId", "name", "rulesProfile", "build", "spellAndFeatureSelections", "progression", "itemReferences"],
+      "properties": {
+        "characterId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "rulesProfile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 }
+          }
+        },
+        "build": { "type": "object" },
+        "spellAndFeatureSelections": { "type": "object" },
+        "progression": { "type": "object" },
+        "itemReferences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "definitionId", "provenance"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "definitionId": { "type": "string", "minLength": 1 },
+              "provenance": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["hp", "tempHp", "resources", "items"],
+      "properties": {
+        "hp": { "type": "number" },
+        "tempHp": { "type": "number" },
+        "resources": { "type": "array" },
+        "items": { "type": "array" },
+        "goldGp": { "type": "number" }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceRevision", "runtimeRevision", "sheet"],
+      "properties": {
+        "sourceRevision": { "type": "integer", "minimum": 1 },
+        "runtimeRevision": { "type": "integer", "minimum": 1 },
+        "sheet": { "type": "object" }
+      }
+    }
+  }
+}
