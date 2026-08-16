@@ -75,7 +75,7 @@ function roundTrip(message:ConnectedWireMessage) {
   if (decoded.status==="ok") assert.deepEqual(decoded.message,message);
 }
 
-test("connected wire round-trips handshake, readiness, action request, catch-up, and event batch envelopes", () => {
+test("connected wire round-trips handshake, readiness, action request, catch-up, event batch, and session end envelopes", () => {
   roundTrip({ type:"hello",manifest,participantId:"player.aelar",participantName:"Aelar",knownEventCursor:0 });
   roundTrip({
     type:"hello-ack",sessionId:"session.test",compatibility:{status:"compatible",message:"ok"},hostCursor:1,events:[event],
@@ -91,14 +91,16 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
   });
   roundTrip({ type:"catchup-request",sessionId:"session.test",afterCursor:1 });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:1,events:[readyEvent] });
+  roundTrip({ type:"session-ended",sessionId:"session.test",reason:"Host ended live play." });
   roundTrip({ type:"error",code:"stale-cursor",message:"client is behind",hostCursor:3 });
 });
 
-test("connected wire rejects malformed JSON, unknown message types, invalid cursors, and malformed readiness", () => {
+test("connected wire rejects malformed JSON, unknown message types, invalid cursors, malformed readiness, and malformed session end", () => {
   assert.equal(decodeConnectedWireMessage("{").status,"rejected");
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"mystery"})).status,"rejected");
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"catchup-request",sessionId:"session.test",afterCursor:-1})).status,"rejected");
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"ready-intent",sessionId:"session.test",ready:"yes"})).status,"rejected");
+  assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"session-ended",sessionId:"session.test",reason:""})).status,"rejected");
   const malformedParticipant=structuredClone(readyEvent) as unknown as {payload:{ready:unknown}};
   malformedParticipant.payload.ready="yes";
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"event-batch",sessionId:"session.test",afterCursor:1,events:[malformedParticipant]})).status,"rejected");
