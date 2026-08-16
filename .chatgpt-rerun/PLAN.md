@@ -101,19 +101,34 @@ The user reviewed the completion scope and explicitly authorized Rerun to resume
 
 The active work branch already contains early implementation files from the interrupted prior execution, including production play/dice adapters and an in-session play dock. These remain **implemented but unverified** until evidence-backed gates pass.
 
-On continuation, read README -> control -> STATE -> PLAN, fetch `.agents/PHASE14_CHECKLIST.md` and the active work branch, then resume from STATE `Next Exact Action`. The first implementation action is to validate the already-present work-branch changes before adding further code. Do not repeat Phase 13 or already evidence-backed work unless a Phase 14 change touches that boundary.
+On continuation, read README -> control -> STATE -> PLAN, fetch `.agents/PHASE14_CHECKLIST.md` and the active work branch, then resume from STATE `Next Exact Action`. Do not repeat Phase 13 or already evidence-backed work unless a Phase 14 change touches that boundary.
 
 ## Sequence 1 checkpoint — PlaySessionDock context repair
 
-Preflight reconciled against `main` at `ab76ca5b7a36f339a03cc0409bc06a274ba79309`; dispatch remains the same run_id / sequence `1` / task with `status: continue`.
+The work branch reached `eaac9d7de499433f8f6da8e04f16100326facd57` with a narrow `src/PlaySessionDock.tsx` repair:
 
-The active work branch advanced to `eaac9d7de499433f8f6da8e04f16100326facd57` with a narrow `src/PlaySessionDock.tsx` repair:
-
-- removed a conditionally reached `useMemo` hook after the `snapshot === null` early return, eliminating a React hook-order runtime risk during hydration;
+- removed a conditionally reached `useMemo` hook after the `snapshot === null` early return;
 - stopped clearing `pendingActionId` on tab changes so switching `행동` / `기술` / `주문` / `인벤토리` does not discard pending legal/target context.
 
-This commit is source-only evidence. No Phase 14 completion checkbox receives credit yet because exact-head post-change UI/runtime validation has not run. Earlier green UI/build evidence predates `eaac9d7...` and is not reused as validation for this source change.
+That checkpoint intentionally withheld completion credit until exact-head validation.
 
-The existing connected transport/authority stack remains the implementation boundary: Tauri transport, Host-authoritative resolution/event routing, SessionProjection, reconnect/catch-up, and owning-client write-back are to be surfaced through production lifecycle UX rather than replaced.
+## Sequence 1 checkpoint — exact-head UI validation and lifecycle handoff
 
-**Next Exact Action:** at work head `eaac9d7de499433f8f6da8e04f16100326facd57`, add the smallest focused Phase 14 UI regression proving PlaySessionDock can transition from `snapshot=null` to hydrated state without hook-order failure and that pending target/action context survives tab switches; then run the exact-head UI/TypeScript production gate before awarding checklist credit or adding broader Host/Join lifecycle UI.
+The active work branch is now `41db6832cc0a95f085f8161bfed665dbcc71090d`.
+
+Validated slice:
+
+- `tests/ui/playSessionDockStructure.test.ts` fixes the regression boundary for null-to-hydrated Hook ordering and pending action/target context across tab switches.
+- `.github/workflows/ui.yml` explicitly runs that Phase 14 regression.
+- UI workflow run `31965607635` completed `success` at exact head `41db6832cc0a95f085f8161bfed665dbcc71090d`, including the new regression and final TypeScript/production `npm run build` step.
+- This evidence validates the narrow PlaySessionDock repair only; it does not prove fresh-Character materialization or broader Phase 14 product completion.
+
+Planning/PR state:
+
+- Draft PR #109 (`Phase 14: production play session UX`) is open from `agent/108-production-play-session-ux` to `main`.
+- Its body references #108, `.agents/PHASE14_CHECKLIST.md`, the fixture-removal risk, exact validated head, and workflow evidence.
+- No merge is authorized or attempted.
+
+Connected lifecycle architecture reconnaissance confirms that Tauri `startHost/connectClient/stop`, compatibility handshake, Host ledger, SessionProjection acceptance, reconnect/catch-up, ResolutionEvent routing, and owning-client write-back already exist. The visible `SessionScreen` currently calls `hostSession/joinSession`, but it still presents them as a reference shell and the state model has no explicit preparation/lobby/ready/start/end lifecycle.
+
+**Next Exact Action:** before adding broader connected product code, reconcile `.agents/PHASE14_CHECKLIST.md` so P14.7/P14.8 explicitly retain server start/stop, DM preparation/lobby, persisted Character selection + join, Ready/start, participant lifecycle, and session end/restart gates without removing existing authority gates. Then implement the first lifecycle slice by exposing safe Host stop/restart and explicit preparation-state UI through the existing `tauriSessionTransport` / connected runtime boundary, with a focused regression before rerunning only the affected UI/connected gates.
