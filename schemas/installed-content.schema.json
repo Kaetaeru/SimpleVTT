@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simplevtt.local/schemas/installed-content.schema.json",
+  "title": "SimpleVTT Installed Content v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaId", "schemaVersion", "storageRevision", "entries"],
+  "properties": {
+    "schemaId": { "const": "simplevtt.installed-content" },
+    "schemaVersion": { "const": 1 },
+    "storageRevision": { "type": "integer", "minimum": 0 },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contentId", "category", "nameKo", "nameEn", "sourceId", "source", "version", "description", "relationships", "capabilities"],
+      "properties": {
+        "contentId": { "type": "string", "minLength": 1 },
+        "category": { "enum": ["class", "subclass", "species", "background", "feat", "spell", "item", "condition", "combatant", "option"] },
+        "nameKo": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "source": { "type": "string" },
+        "version": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "targetId", "targetName"],
+            "properties": {
+              "label": { "type": "string" },
+              "targetId": { "type": "string" },
+              "targetName": { "type": "string" }
+            }
+          }
+        },
+        "capabilities": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
