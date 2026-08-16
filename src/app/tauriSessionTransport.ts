@@ -35,6 +35,11 @@ export class TauriSessionTransport {
     return invoke<number>("send_session_message",{ message });
   }
 
+  async sendTo(peer:string,message:string):Promise<number> {
+    if (!this.available()) throw new Error("Tauri session transport is unavailable outside the desktop runtime");
+    return invoke<number>("send_session_message_to",{ peer,message });
+  }
+
   async stop():Promise<SessionTransportStatus> {
     if (!this.available()) return { role:null,state:"disconnected",address:"",peerCount:0 };
     return invoke<SessionTransportStatus>("stop_session_transport");
