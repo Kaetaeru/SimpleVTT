@@ -220,7 +220,7 @@ async function handleMessage(adapter:MockAdapter,message:SessionTransportMessage
   const state=runtimeFor(adapter);
   if (decoded.status==="rejected") {
     if (state.mode==="host") {
-      await sendTo(message.peer,{type:"error",code:"malformed-wire",message:decoded.error,state:undefined} as never).catch(()=>undefined);
+      await sendTo(message.peer,{type:"error",code:"malformed-wire",message:decoded.error}).catch(()=>undefined);
     } else {
       const app=internal(adapter);
       app.session.compatibility="warning";
