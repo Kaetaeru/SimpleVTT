@@ -4,19 +4,36 @@ import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
 import "../../src/app/progressionContracts";
-import type { CatalogEntry, CharacterSheet } from "../../src/app/contracts";
+import type { CatalogEntry, CharacterSheet, CharacterSummary, SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import { reconstructCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjectionReconstruction";
 import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
 import { projectedCharacterById } from "../../src/app/characterSessionProjectionRegistry";
-import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
-import { HostSessionLedger, type ConnectedActionRequest, type SessionCompatibilityManifest } from "../../src/app/connectedSessionProtocol";
+import {
+  ClientSessionReplica,
+  HostSessionLedger,
+  type ConnectedActionRequest,
+  type ConnectedSessionEvent,
+  type SessionCompatibilityManifest,
+} from "../../src/app/connectedSessionProtocol";
 import { routeConnectedActionRequest } from "../../src/app/connectedActionRequestPort";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+import {
+  getCharacterLibraryPersistenceStateForTests,
+  setCharacterLibraryStoreForTests,
+} from "../../src/app/characterLibraryRuntimeAdapter";
 
 const PEER="peer.phase13.remote";
 type ResolvedCatalogEntry=CatalogEntry & {contentId?:string;sourceId?:string};
+type MutableAdapterState={
+  activeCharacter:CharacterSheet;
+  characters:CharacterSummary[];
+  scene:SceneVm;
+};
 
 function contentEntry(catalog:CatalogEntry[],contentId:string) {
   const found=(catalog as ResolvedCatalogEntry[]).find((entry)=>entry.contentId===contentId);
@@ -67,6 +84,28 @@ function manifest(sheet:CharacterSheet):SessionCompatibilityManifest {
   };
 }
 
+function prepareOwningClient(
+  client:MockAdapter,
+  sheet:CharacterSheet,
+  projection:ReturnType<typeof buildCharacterSessionProjectionV1>,
+  catalog:CatalogEntry[],
+) {
+  const reconstructed=reconstructCharacterSessionProjectionV1(projection,catalog);
+  assert.equal(reconstructed.status,"accepted",reconstructed.status==="rejected"?reconstructed.error:undefined);
+  if (reconstructed.status!=="accepted") throw new Error(reconstructed.error);
+  const state=client as unknown as MutableAdapterState;
+  state.activeCharacter=structuredClone(sheet);
+  state.characters=[structuredClone(sheet)];
+  state.scene.entities=[
+    ...state.scene.entities.filter((entity)=>entity.id!==sheet.id && entity.kind!=="character"),
+    structuredClone(reconstructed.entity),
+  ];
+  state.scene.actionsByActor={...state.scene.actionsByActor,[sheet.id]:structuredClone(reconstructed.actions)};
+  state.scene.economyByActor={...state.scene.economyByActor,[sheet.id]:structuredClone(reconstructed.economy)};
+  state.scene.selectedActorId=sheet.id;
+  state.scene.currentActorId=sheet.id;
+}
+
 async function finishResolution(adapter:MockAdapter) {
   let snapshot=await adapter.getSnapshot();
   for (let step=0;step<8&&snapshot.resolution?.stage!=="complete";step+=1) {
@@ -77,7 +116,7 @@ async function finishResolution(adapter:MockAdapter) {
   return snapshot;
 }
 
-test("host-unknown projected Fighter resolves Second Wind through host authority without creating a host Character record", async () => {
+test("host-unknown projected Fighter resolves through host authority and converges once into the owning client Character library", async () => {
   const host=new MockAdapter();
   await host.setReferenceRole("dm");
   const before=await host.getSnapshot();
@@ -136,14 +175,53 @@ test("host-unknown projected Fighter resolves Second Wind through host authority
     assert.ok((mounted?.sheet.hp??0)<=remote.maxHp);
 
     assert.equal(broadcasts.length,1,"canonical remote commit must broadcast exactly one ordered event batch");
-    const batch=JSON.parse(broadcasts[0]) as {type:string;events:Array<{sequence:number;actorId?:string;payload:{kind:string;resolutionEvents?:unknown[]}}>};
+    const batch=JSON.parse(broadcasts[0]) as {type:string;events:ConnectedSessionEvent[]};
     assert.equal(batch.type,"event-batch");
     assert.equal(batch.events.length,1);
-    assert.equal(batch.events[0].sequence,1);
-    assert.equal(batch.events[0].actorId,remote.id);
-    assert.equal(batch.events[0].payload.kind,"resolution");
-    assert.ok((batch.events[0].payload.resolutionEvents?.length??0)>0);
+    const hostEvent=batch.events[0];
+    assert.equal(hostEvent.sequence,1);
+    assert.equal(hostEvent.actorId,remote.id);
+    assert.equal(hostEvent.payload.kind,"resolution");
+    if (hostEvent.payload.kind!=="resolution") throw new Error("expected host resolution event");
+    assert.ok(hostEvent.payload.resolutionEvents.length>0);
     assert.equal(sentToPeer.length,0);
+
+    const clientStore=new MemoryCharacterLibraryStore();
+    const client=new MockAdapter();
+    setCharacterLibraryStoreForTests(client,clientStore);
+    prepareOwningClient(client,remote,projection,hostCatalog);
+    const clientBaseline=await client.getSnapshot();
+    assert.equal(clientBaseline.activeCharacter.id,remote.id);
+    const persistenceBefore=getCharacterLibraryPersistenceStateForTests(client);
+    const clientState=connectedStateFor(client);
+    clientState.mode="client";
+    clientState.sessionId=state.sessionId;
+    clientState.replica=new ClientSessionReplica(state.sessionId);
+
+    const applied=await applyConnectedClientEvents(client,[hostEvent]);
+    assert.equal(applied.status,"applied");
+    assert.equal(applied.cursor,1);
+    const clientAfter=await client.getSnapshot();
+    assert.equal(clientAfter.activeCharacter.hp,mounted?.sheet.hp);
+    assert.equal(clientAfter.activeCharacter.resources.find((resource)=>resource.id==="resource.second-wind")?.current,1);
+    const persistenceAfter=getCharacterLibraryPersistenceStateForTests(client);
+    assert.ok((persistenceAfter?.storageRevision??0)>(persistenceBefore?.storageRevision??0),"owning client must persist the host-confirmed durable mutation before cursor advancement");
+
+    const storageRevisionAfterFirstApply=persistenceAfter?.storageRevision;
+    const duplicateApply=await applyConnectedClientEvents(client,[hostEvent]);
+    assert.equal(duplicateApply.status,"applied");
+    assert.equal(duplicateApply.cursor,1);
+    const clientAfterDuplicate=await client.getSnapshot();
+    assert.equal(clientAfterDuplicate.activeCharacter.hp,clientAfter.activeCharacter.hp);
+    assert.equal(clientAfterDuplicate.activeCharacter.resources.find((resource)=>resource.id==="resource.second-wind")?.current,1);
+    assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,storageRevisionAfterFirstApply,"duplicate host event must not create another Character generation");
+
+    const reloadedClient=new MockAdapter();
+    setCharacterLibraryStoreForTests(reloadedClient,clientStore);
+    const reloaded=await reloadedClient.getSnapshot();
+    assert.equal(reloaded.activeCharacter.id,remote.id,"persisted player-owned Character must remain the library active Character after restart");
+    assert.equal(reloaded.activeCharacter.hp,clientAfter.activeCharacter.hp);
+    assert.equal(reloaded.activeCharacter.resources.find((resource)=>resource.id==="resource.second-wind")?.current,1);
 
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
     assert.equal(broadcasts.length,1,"duplicate request must not create a second host broadcast");
