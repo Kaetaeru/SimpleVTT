@@ -36,10 +36,13 @@ function progressionDraft():LevelUpDraft {
   };
 }
 
-test("creation autosave projection contains source intent but excludes derived/validation caches", () => {
-  const intent = projectCreationDraftIntentV1(creationDraft(),{});
+const creationContext = {baseCharacterIds:["char.aelar","char.mira"]};
+
+test("creation autosave projection contains source intent/preconditions but excludes derived/validation caches", () => {
+  const intent = projectCreationDraftIntentV1(creationDraft(),creationContext);
   const text = JSON.stringify(intent);
   assert.equal(intent.name,"Draft Hero");
+  assert.deepEqual(intent.baseCharacterIds,["char.aelar","char.mira"]);
   assert.deepEqual(intent.choiceSelections,{"class.style":["style.defense"]});
   for (const forbidden of ["derived","validation","finalAbilities","goldGp","importStatus","importMessage","creationPlan"]) {
     assert.equal(text.includes(`\"${forbidden}\"`),false,forbidden);
@@ -61,7 +64,7 @@ test("authoring draft repository persists creation/progression independently and
   const store = new MemoryAuthoringDraftStore();
   const repository = new AuthoringDraftRepository(store);
   await repository.hydrate();
-  const creation = projectCreationDraftIntentV1(creationDraft(),{});
+  const creation = projectCreationDraftIntentV1(creationDraft(),creationContext);
   const first = await repository.commit({creation});
   assert.equal(first.document.storageRevision,1);
   const noOp = await repository.commit({creation});
@@ -80,7 +83,7 @@ test("stale authoring draft writers cannot overwrite a newer generation", async 
   const stale = new AuthoringDraftRepository(store);
   await first.hydrate();
   await stale.hydrate();
-  await first.commit({creation:projectCreationDraftIntentV1(creationDraft(),{})});
+  await first.commit({creation:projectCreationDraftIntentV1(creationDraft(),creationContext)});
   await assert.rejects(
     () => stale.commit({progression:projectProgressionDraftIntentV1(progressionDraft(),7)}),
     /stale authoring draft generation/,
@@ -91,7 +94,7 @@ test("corrupt newest authoring draft generation recovers from previous valid gen
   const store = new MemoryAuthoringDraftStore();
   const writer = new AuthoringDraftRepository(store);
   await writer.hydrate();
-  const creation = projectCreationDraftIntentV1(creationDraft(),{});
+  const creation = projectCreationDraftIntentV1(creationDraft(),creationContext);
   await writer.commit({creation});
   store.seed(2,"{broken");
   const reader = new AuthoringDraftRepository(store);

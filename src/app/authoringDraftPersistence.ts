@@ -26,12 +26,13 @@ function same(a:unknown,b:unknown) {
 
 export function projectCreationDraftIntentV1(
   draft:CharacterCreateDraft,
-  context:{editingBaseSourceRevision?:number},
+  context:{editingBaseSourceRevision?:number;baseCharacterIds:string[]},
 ):CreationDraftIntentV1 {
   return cp({
     draftId:draft.id,
     editingCharacterId:draft.editingCharacterId,
     editingBaseSourceRevision:context.editingBaseSourceRevision,
+    baseCharacterIds:[...context.baseCharacterIds].sort(),
     step:draft.step,
     activeSectionId:draft.activeSectionId,
     mode:draft.mode,
@@ -85,6 +86,7 @@ function assertCreation(value:unknown):asserts value is CreationDraftIntentV1 {
   if (typeof value.draftId !== "string" || !value.draftId) throw new Error("creation draft intent is missing draftId");
   if (value.editingCharacterId !== undefined && typeof value.editingCharacterId !== "string") throw new Error("creation draft editingCharacterId is invalid");
   if (value.editingBaseSourceRevision !== undefined) assertFiniteInteger(value.editingBaseSourceRevision,"creation draft editingBaseSourceRevision",1);
+  if (!Array.isArray(value.baseCharacterIds) || value.baseCharacterIds.some((id) => typeof id !== "string" || !id)) throw new Error("creation draft baseCharacterIds are invalid");
   assertFiniteInteger(value.step,"creation draft step",0);
   if (typeof value.rulesProfileId !== "string" || !value.rulesProfileId) throw new Error("creation draft intent is missing rulesProfileId");
   if (!isObject(value.abilities) || !isObject(value.rolledAssignments) || !Array.isArray(value.rolledPool)) throw new Error("creation draft ability intent is invalid");

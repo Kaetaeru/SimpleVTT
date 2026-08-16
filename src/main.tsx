@@ -40,6 +40,7 @@ import "./app/restSpellManagementRuntimeAdapter";
 import "./app/classFeatureSpellRuntimeAdapter";
 import "./app/phase09SpellcastingRuntimeRouter";
 import "./app/characterLibraryRuntimeAdapter";
+import "./app/authoringDraftRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";

@@ -13,18 +13,18 @@
     "progression": { "$ref": "#/$defs/progressionIntent" }
   },
   "$defs": {
-    "nullableString": { "type": ["string", "null"] },
     "creationIntent": {
       "oneOf": [
         { "type": "null" },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["draftId", "step", "mode", "rulesProfileId", "name", "className", "subclassName", "species", "background", "level", "abilityMethod", "abilities", "rolledPool", "rolledAssignments", "selectedSkills", "selectedSpells", "equipmentPreset", "notes", "overrides", "choiceSelections"],
+          "required": ["draftId", "baseCharacterIds", "step", "mode", "rulesProfileId", "name", "className", "subclassName", "species", "background", "level", "abilityMethod", "abilities", "rolledPool", "rolledAssignments", "selectedSkills", "selectedSpells", "equipmentPreset", "notes", "overrides", "choiceSelections"],
           "properties": {
             "draftId": { "type": "string", "minLength": 1 },
             "editingCharacterId": { "type": "string", "minLength": 1 },
             "editingBaseSourceRevision": { "type": "integer", "minimum": 1 },
+            "baseCharacterIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
             "step": { "type": "integer", "minimum": 0 },
             "activeSectionId": { "type": "string" },
             "mode": { "enum": ["guided", "quick", "import", "duplicate"] },

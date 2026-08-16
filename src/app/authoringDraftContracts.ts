@@ -17,6 +17,7 @@ export interface CreationDraftIntentV1 {
   draftId:string;
   editingCharacterId?:string;
   editingBaseSourceRevision?:number;
+  baseCharacterIds:string[];
   step:number;
   activeSectionId?:string;
   mode:CharacterCreateDraft["mode"];
