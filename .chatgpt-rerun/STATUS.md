@@ -1,6 +1,6 @@
 # Rerun Status
 
-**Connection:** `main` · Phase 14 checklist review checkpoint
+**Connection:** `main` · Phase 14 resumed
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Canonical/Side Panel branch: `main`
@@ -8,18 +8,18 @@
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
-- Control transition: `needs_user` pending final authoritative write
+- Control transition: `continue` pending final authoritative write
 - Tracking issue: #108
 - Detailed checklist: `.agents/PHASE14_CHECKLIST.md` on the work branch
 
 ## Human summary
 
-Phase 14 now has a full release-blocking checklist from architecture through final Windows delivery. It explicitly covers real persisted Character -> Scene/action materialization, visible Play entry, in-session `행동 / 기술 / 주문 / 인벤토리`, authoritative dice/resolution, local/DM play, connected Host/Join, reconnect/write-back, persistence/restart, UX/accessibility, product-realistic integration tests, Phase 11-13 regressions, Windows human walkthroughs, exact-head artifact verification, merge-to-main, and Rerun closeout.
+The user approved the Phase 14 completion scope and authorized Rerun to resume on the same sequence 1.
 
-The work branch already contains some early implementation from the interrupted prior execution, but it is deliberately classified as **unverified**. No product completion claim is granted until checklist evidence exists at concrete commits.
+Phase 14 is release-blocking through the complete product lifecycle: real Character materialization; visible play entry; in-session `행동 / 기술 / 주문 / 인벤토리`; actual Host/server startup and shutdown; DM preparation/lobby; player Character selection and Join; compatibility/SessionProjection; participant ready/start; live Freeform/Initiative play; late join/disconnect/reconnect/error handling; durable owning-client write-back; session end; full regressions; local and two-instance Windows human walkthroughs; and exact-head artifact verification.
 
-The Side Panel should continue using `Kaetaeru / SimpleVTT / main`. Rerun coordination/control lives on `main`; implementation is performed on the active work branch recorded in STATE/PLAN.
+The active work branch already contains early implementation, but it remains **unverified**. Rerun must validate those existing changes before adding more product code, then continue from the first incomplete evidence-backed checklist gate.
 
-The current checkpoint pauses further implementation for user checklist review. If the user approves, sequence 1 can return to `continue` and Rerun should first validate the existing work-branch changes before adding more code.
+The Side Panel remains `Kaetaeru / SimpleVTT / main`. Coordination/control stays on `main`; implementation stays on `agent/108-production-play-session-ux` until accepted.
 
 `STATUS.md` is human-facing only; authoritative dispatch reconciliation remains README -> control -> STATE -> PLAN.
