@@ -66,6 +66,44 @@ test("production offline composition resolves a Freeform ability check through t
   assert.equal(snapshot.activity[0]?.summary, "d20 14 + 7 = 21");
 });
 
+test("production offline composition uses an ItemInstance in Freeform without spending turn economy", async () => {
+  const adapter = new MockAdapter();
+  await adapter.setSessionMode("freeform");
+
+  await adapter.resolveAction("action.healing-potion", ["char.aelar"]);
+  let snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage, "roll-animation");
+  await adapter.advanceResolution();
+  snapshot = await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage, "effect-preview");
+  await adapter.advanceResolution();
+  snapshot = await adapter.getSnapshot();
+
+  assert.equal(snapshot.sessionMode, "freeform");
+  assert.equal(snapshot.resolution?.stage, "complete");
+  assert.equal(snapshot.activeCharacter.hp, 40);
+  assert.equal(snapshot.activeCharacter.items.find((item) => item.id === "item.potion.aelar")?.quantity, 1);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action, true, "Freeform item use must not consume Initiative Action economy");
+  assert.ok(snapshot.activity[0]?.stateChanges.some((line) => line.includes("item.potion.aelar") && line.includes("2 → 1")));
+});
+
+test("production offline composition casts a slotted spell in Freeform without spending turn economy", async () => {
+  const adapter = new MockAdapter();
+  await adapter.setSessionMode("freeform");
+
+  const before = await adapter.getSnapshot();
+  const slotBefore = before.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current;
+  const snapshot = await adapter.resolveAction("action.healing-word", ["char.aelar"]);
+
+  assert.equal(snapshot.sessionMode, "freeform");
+  assert.equal(snapshot.resolution?.stage, "complete");
+  assert.match(snapshot.resolution?.compact ?? "", /치유의 단어/);
+  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "char.aelar")?.hp, 42);
+  assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current, (slotBefore ?? 0) - 1);
+  assert.equal(snapshot.scene.economyByActor["char.mira"]?.bonusAction, true, "Freeform spell must not consume Initiative Bonus Action economy");
+  assert.match(snapshot.resolution?.provenance.join(" ") ?? "", /dnd\.srd521\.spell\.healing-word/);
+});
+
 test("production offline composition records a DM condition correction without turning it into Character source state", async () => {
   const adapter = new MockAdapter();
   await adapter.setSessionMode("freeform");
