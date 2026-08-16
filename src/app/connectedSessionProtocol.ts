@@ -164,10 +164,7 @@ export class ClientSessionReplica {
   constructor(sessionId:string) { this.sessionId=sessionId; }
   get cursor() { return this._cursor; }
 
-  apply(
-    event:ConnectedSessionEvent,
-    applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>ConnectedPayloadApplyResult,
-  ):ClientApplyResult {
+  private preflight(event:ConnectedSessionEvent):ClientApplyResult|undefined {
     if (event.sessionId !== this.sessionId) {
       return { status:"rejected", error:`session mismatch: expected ${this.sessionId}, received ${event.sessionId}`, cursor:this.cursor };
     }
@@ -180,13 +177,39 @@ export class ClientSessionReplica {
     if (event.sequence !== this.cursor+1) {
       return { status:"rejected", error:`event gap: expected ${this.cursor+1}, received ${event.sequence}`, cursor:this.cursor };
     }
+    return undefined;
+  }
+
+  private accept(event:ConnectedSessionEvent):ClientApplyResult {
+    this.appliedEventIds.add(event.eventId);
+    this._cursor=event.sequence;
+    return { status:"applied", cursor:this.cursor };
+  }
+
+  apply(
+    event:ConnectedSessionEvent,
+    applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>ConnectedPayloadApplyResult,
+  ):ClientApplyResult {
+    const preflight=this.preflight(event);
+    if (preflight) return preflight;
     const applied=applyPayload(structuredClone(event.payload),structuredClone(event));
     if (applied && applied.status === "rejected") {
       return { status:"rejected", error:`authoritative event apply rejected: ${applied.error}`, cursor:this.cursor };
     }
-    this.appliedEventIds.add(event.eventId);
-    this._cursor=event.sequence;
-    return { status:"applied", cursor:this.cursor };
+    return this.accept(event);
+  }
+
+  async applyAsync(
+    event:ConnectedSessionEvent,
+    applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>Promise<ConnectedPayloadApplyResult>,
+  ):Promise<ClientApplyResult> {
+    const preflight=this.preflight(event);
+    if (preflight) return preflight;
+    const applied=await applyPayload(structuredClone(event.payload),structuredClone(event));
+    if (applied && applied.status === "rejected") {
+      return { status:"rejected", error:`authoritative event apply rejected: ${applied.error}`, cursor:this.cursor };
+    }
+    return this.accept(event);
   }
 
   applyBatch(
@@ -196,6 +219,18 @@ export class ClientSessionReplica {
     let result:ClientApplyResult={ status:"duplicate", cursor:this.cursor };
     for (const event of events) {
       result=this.apply(event,applyPayload);
+      if (result.status === "rejected") return result;
+    }
+    return result;
+  }
+
+  async applyBatchAsync(
+    events:ConnectedSessionEvent[],
+    applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>Promise<ConnectedPayloadApplyResult>,
+  ):Promise<ClientApplyResult> {
+    let result:ClientApplyResult={ status:"duplicate", cursor:this.cursor };
+    for (const event of events) {
+      result=await this.applyAsync(event,applyPayload);
       if (result.status === "rejected") return result;
     }
     return result;
