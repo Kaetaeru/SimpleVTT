@@ -91,7 +91,6 @@ export interface CharacterSourceSnapshotV1 {
 
 export interface CharacterRuntimeDurableSnapshotV1 {
   hp:number;
-  maxHp?:number;
   tempHp:number;
   lifeFlags?:CharacterDurableLifeFlagsV1;
   resources:CharacterResourceVm[];
