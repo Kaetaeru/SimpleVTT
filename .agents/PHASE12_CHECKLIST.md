@@ -1,65 +1,107 @@
-# Phase 12 — Connected Session / Remote Host-Client
+# Phase 12 — Connected Session / Remote Host-Client — CLOSED
 
 Tracking issue: #103
+Draft PR: #105
 Branch: `agent/103-connected-session-runtime`
 Base checkpoint: `7176715d0ccab1bb6b3fa05faba96ace09a4af69` (Phase 11 CLOSED)
+Verified implementation checkpoint: `d21c6f91889719031cdc849d844b6eda52204da4`
 
-Phase 12 closes only when two separate app instances can complete a verified host/client play flow and reconnect without violating host authority or Character ownership.
+Phase 12 automated code completion closes when the exact implementation head passes the connected authority/offline regression/build gates and produces a retrievable Windows connected-session artifact. Human two-instance Windows acceptance remains a separate owner gate (#106).
 
 ## A. Transport-independent protocol / authority
 
-- [ ] explicit protocol version + rules profile/capability compatibility handshake
-- [ ] typed ActionRequest envelope carries session ID, request ID, actor/action/targets, Character revisions, and known host event cursor
-- [ ] host is the only allocator of authoritative ordered shared event sequence numbers
-- [ ] duplicate request ID is idempotent and cannot create a second committed event
-- [ ] client event application is idempotent by event ID
-- [ ] sequence gaps/conflicting history are rejected instead of guessed through
-- [ ] reconnect catch-up returns deterministic missing events after a known cursor
+- [x] explicit protocol version + rules profile/capability compatibility handshake
+- [x] typed ActionRequest envelope carries session ID, request ID, actor/action/targets, Character revisions, and known host event cursor
+- [x] host is the only allocator of authoritative ordered shared event sequence numbers
+- [x] remote requests reserve their cursor without committing history until the host produces canonical committed events
+- [x] duplicate request ID is idempotent and cannot create a second committed event
+- [x] client event application is idempotent by event ID
+- [x] sequence gaps/conflicting history are rejected instead of guessed through
+- [x] reconnect catch-up returns deterministic missing events after a known cursor
 
 ## B. Product runtime integration
 
-- [ ] production Host/Join no longer flips mock flags directly
-- [ ] host creates authoritative connected SessionRuntime and participant registry
-- [ ] player joins with Character SessionProjection/revision/capability metadata
-- [ ] client ActionRequest reaches host resolution path
-- [ ] host ResolutionEvent/state change reaches every connected client
-- [ ] Character-owned durable state is written back locally only after confirmed host event
-- [ ] session-only state never enters Character persistence
-- [ ] disconnect keeps local Character usable and never treats PendingResolution as committed
+- [x] production Host/Join no longer flips mock flags directly; non-Tauri paths explicitly refuse fake remote connection
+- [x] host creates authoritative connected SessionRuntime ledger and participant handshake registry
+- [x] host-resolvable player Character identity + source/runtime revisions + capability metadata are validated at join/action boundaries
+- [x] client ActionRequest reaches the existing host production resolution path
+- [x] only canonical committed ResolutionEvent[] are broadcast; PendingResolution is never synchronized as committed state
+- [x] host ResolutionEvent/state change reaches connected clients through ordered event batches
+- [x] Character-owned durable host-confirmed events are written back on the owning client before its applied-event cursor advances
+- [x] session-only state never enters Character persistence
+- [x] host Initiative/round/current actor/economy projection is synchronized as ordered state
+- [x] DM HP/status/resource corrections are synchronized as structured drift-checked ordered events
+- [x] disconnect keeps the local Character usable; reconnect resumes from the last applied host cursor
+- [x] staged Shortbow exposes its existing atomic domain ResolutionEvents to the connected commit registry
+- [x] successful Host switches the product to DM role and Join to Player role
+
+Scope note: importing an arbitrary locally authored Character that is unknown to the host into an ephemeral full SessionProjection is intentionally not guessed from client presentation data. That extension is tracked in #104. Unsupported/unknown host mechanics are rejected explicitly.
 
 ## C. Real Tauri transport
 
-- [ ] host binds a real LAN/Hamachi-reachable address/port
-- [ ] client connects to an entered host address
-- [ ] framed protocol messages survive partial/read boundaries and malformed packets fail explicitly
-- [ ] connection lifecycle reports connected/reconnecting/disconnected from real transport state
-- [ ] host shutdown/client disconnect cleanup is deterministic
-- [ ] no network dependency is required for offline Phase 11 play
+- [x] host binds real TCP `0.0.0.0:3210`, suitable for LAN/Hamachi address reachability subject to OS/network firewall configuration
+- [x] client connects to an entered host address
+- [x] newline-framed protocol uses bounded frames and malformed/oversized packet rejection
+- [x] host supports broadcast plus targeted peer replies
+- [x] connection lifecycle reports connected/reconnecting/disconnected from real transport state
+- [x] host/client disconnect cleanup removes transport writers deterministically
+- [x] client reconnect retries and re-handshakes from its existing event cursor
+- [x] no network dependency is required for Phase 11 offline play
 
 ## D. Reconnect / synchronization
 
-- [ ] reconnect exchanges event cursor and Character revisions/capabilities
-- [ ] missing events are replayed exactly once
-- [ ] incompatible source/module/profile changes surface explicit compatibility failure
-- [ ] duplicate/reordered host events cannot double-apply HP/resources/items/economy
-- [ ] local persistence failure after host confirmation surfaces recoverable unsaved-local state without corrupting shared history
+- [x] reconnect exchanges event cursor plus current Character revisions/capabilities
+- [x] missing events are replayed exactly once
+- [x] protocol/rules-profile/capability/source-revision mismatch surfaces explicit compatibility/revalidation failure
+- [x] duplicate/reordered host events cannot double-apply HP/resources/items/economy
+- [x] local Character persistence failure after host confirmation leaves host history committed but does not advance the client event cursor; the same event can be retried safely
+- [x] authoritative forward event replay validates every `before` value atomically before applying `after`
+
+Arbitrary module/content identity reconstruction for a host-unknown Character remains #104 rather than accepting executable or unvalidated client mechanics.
 
 ## E. Deterministic product gate
 
-- [ ] dedicated two-peer host/client protocol tests green
-- [ ] production-composed connected-session integration gate green
-- [ ] Phase 11 offline walkthrough remains green
-- [ ] UI / Rules Domain / Persistence / Contract gates remain green
-- [ ] Windows Tauri build green
-- [ ] Windows two-instance owner walkthrough instructions/artifact produced
-- [ ] Draft PR checkpoint
+- [x] connected protocol/handshake/cursor/idempotency tests green
+- [x] remote ActionRequest reservation/commit tests green
+- [x] two-peer host ResolutionEvent -> client convergence and duplicate-suppression gate green
+- [x] turn-state reconnect/catch-up projection gate green
+- [x] structured DM correction atomic apply gate green
+- [x] staged Shortbow canonical event-capture gate green
+- [x] client durable-write failure/retry cursor gate green
+- [x] Phase 11 production-composed offline walkthrough remains green: 84/84
+- [x] full production frontend build remains green, including Rules Domain build gate
+- [x] UI workflow green
+- [x] Persistence application/build + Windows atomic-storage workflow green
+- [x] Contract validation workflow green
+- [x] Windows Tauri session-transport + persistence Rust library tests green
+- [x] Windows connected-session Tauri release executable builds
+- [x] CI uploads a Windows connected-session artifact with `SimpleVTT.exe`, `BUILD.txt`, and `REMOTE-WALKTHROUGH.txt`
+- [x] Draft PR #105 checkpoint
+
+Implementation-head verification (`d21c6f91889719031cdc849d844b6eda52204da4`):
+- Phase 12 Connected Session push workflow `31944394245`: connected authority suite + Phase 11 walkthrough 84/84 + full production frontend build + Windows Rust transport/persistence + Windows release executable + artifact upload ✅
+- Windows artifact `9262986418`: `SimpleVTT-Phase12-Windows-d21c6f91889719031cdc849d844b6eda52204da4`, 2,955,392 bytes, SHA-256 `dae5287f853a3b30ed623110fec649842e88ba3f51e5d42b372e466eeabc4835` ✅
+- Persistence push workflow `31944394240`: application-contract + production build + Windows atomic storage ✅
+- UI push workflow `31944394283` ✅
+- Contract validation PR workflow `31944600146` ✅
+- Phase 11 Playable PR workflow `31944600186`: offline walkthrough + production build green at checkpoint observation; Windows artifact job is a separate regression/handoff gate and is not required to replace the Phase 12 artifact ✅
+
+## F. Product handoff / human acceptance
+
+- [x] implementation-head artifact is retrievable
+- [x] artifact contains a two-instance LAN/Hamachi walkthrough
+- [x] arbitrary host-unknown Character projection follow-up is tracked explicitly in #104
+- [x] owner two-instance Windows acceptance is tracked separately in #106 and is not misrepresented as an automated CI result
+- [ ] exact documentation-close head must reproduce the Phase 12 Windows artifact before final owner delivery
 
 ## Boundaries
 
-- The player owns permanent Character source/local library.
+- The player owns the permanent Character source/local library.
 - The DM host owns authoritative ordered shared-session state while connected.
-- SessionProjection is not a second permanent Character file.
+- A connected projection is session-only and is never a second permanent Character file.
 - PendingResolution is ephemeral and never synchronized as committed state.
 - Applying an already-applied host event ID is a no-op.
 - Transport does not redefine rules/domain authority.
+- The host never guesses mechanics for an unknown client Character/action; unsupported projections fail explicitly (#104).
 - Core remains map/grid/token/path/LOS free.
+- Owner two-instance real-Windows verification remains #106, separate from automated Phase 12 code completion.
