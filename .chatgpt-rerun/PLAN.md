@@ -14,71 +14,66 @@
 
 ## Preserved evidence — do not repeat unchanged boundaries
 
-Phase13 remains complete at `7c9440970753a370fec7830cfa691832552e1d05`; retain its recorded validation/artifact history.
-
-Phase14 preserved slices:
-
+- Phase13 complete baseline: `7c9440970753a370fec7830cfa691832552e1d05` with recorded regression/Windows artifact evidence.
 - Ready/start: product `bd1077b9bc61b86c2c0370543a16496c72f840c2`, Phase12 `31971618571`, UI `31971618534`, Main `31971618703`.
 - exact-peer disconnect/live late-join/Host reconnect: `84d1d39135c08a2094783fb336a606f294b1cf58`, Phase12 `31972318100`, UI `31972318109`, Main `31972318188`.
 - client reconnect cursor + hello replay idempotency: `cf520d35acd1e21a0247fdeb2d3664ae8a334345`, Phase12 `31973034389`, UI `31973034337`, Main `31973034347`.
-- explicit session end/restart product: `240592cb646bfbbfe9466f94047bc1e2f544dcf9`, Phase12 `31973878162`, Main `31973878165`.
-- local active-Character projection ownership product: `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`, UI `31974455354`, Main `31974455339`.
+- explicit session end/restart: product `240592cb646bfbbfe9466f94047bc1e2f544dcf9`, Phase12 `31973878162`, Main `31973878165`.
+- local active-Character projection ownership: product `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`, UI `31974455354`, Main `31974455339`.
+- rejected incompatible/invalid participant entry: test boundary `7ce39fe44b91009cb1fa660b5e45cb8cf54bfc6d`, Phase12 `31974996616`.
+- owning-client durable state through explicit end + fresh storage rehydrate: test boundary `b20ecf18015cec15ad3eb26aba5674e5c91013cb`, Phase12 `31975132450`, Main `31975132458`.
 
-No product source changed in the latest continuation. Current work head is documentation-only `e0f568cf71cfd05f490187fd206a5b0ef237f0d4`; the latest test head is its parent `b20ecf18015cec15ad3eb26aba5674e5c91013cb`.
+Do not rerun these gates unless their relevant product/source boundary changes.
 
-## Latest validated slice — rejected participant entry safety
+## Latest validated slice — fresh non-fixture Character create/save -> local play -> restart
 
-Test-only work:
+Current work head: `8b162dd3b45e77f5a742badcdd7f03d613321497`.
 
-1. `a745ac7b739655fbd02aec5fc3f50f1b95952303` added explicit regressions for incompatible manifest and invalid SessionProjection entry, asserting no Host ledger cursor change, no participant, no `peerParticipants`/`peerManifests`, no projection registry mount, and no Scene/actions/economy ghost.
-2. Phase12 `31974876763` failed only in test fixture construction: the invalid-projection regression attempted to build a projection from the legacy mock class name `전사`, which is not a canonical generated catalog identity. The incompatible-manifest regression itself passed. This was not a product behavior failure.
-3. `7ce39fe44b91009cb1fa660b5e45cb8cf54bfc6d` rebuilt that unknown Character from the Host catalog's actual class/species/background identities, then intentionally mismatched the projection Character id.
-4. Phase12 `31974996616`, connected-protocol job `95233005867`: **completed success** — rejection safety, existing connected authority, Phase11 preservation, and production frontend gate all green.
+No product source changed. The latest slice is test/workflow only:
 
-The final P14.8 participant lifecycle checkbox is now credited on the checklist.
+1. `a5386f96dd0d0ad5b71c5247d8b6645ecdadbee9` adds `tests/ui/characterLibraryProductionPlayIntegration.test.ts` using the canonical `offlineRuntimeAdapters` composition and existing Character Creation + Character library persistence paths.
+2. The test completes a guided Fighter draft, calls the real `finalizeCharacterDraft()`, and uses the generated Character id rather than any fixture id.
+3. It proves the newly saved Character becomes the local production Scene actor, reference Character actors are absent, and derived production actions are keyed to the generated id (including basic `action.dash` and skill `action.skill.athletics`).
+4. It creates a fresh adapter backed by the same `MemoryCharacterLibraryStore`, proves active Character identity rehydrates from storage, proves the Scene projection is rebuilt during hydration, and proves the same Character can re-enter local production play.
+5. `f36229fd1b794953c62ea463e459c9b5b97a17ec` adds the regression to the canonical Persistence application-contract gate.
+6. `8b162dd3b45e77f5a742badcdd7f03d613321497` adds the same regression to the existing Phase14 UI lifecycle/local projection step.
 
-## Latest validated slice — owning-client durable state across explicit session end
+### Exact validation at `8b162dd3b45e77f5a742badcdd7f03d613321497`
 
-Test-only `b20ecf18015cec15ad3eb26aba5674e5c91013cb` extends `productionSessionEnd.test.ts` with the actual connected/persistence path:
+- Persistence `31975560620`, application-contract job `95234394249`: **completed success** — new fresh Character production-play regression + existing persistence contracts + production build green. Separate Windows Tauri storage job was still running when this checkpoint was prepared and is not acceptance evidence for this test-only slice.
+- UI `31975560755`, frontend job `95234394744`: **completed success** — new fresh Character regression in the Phase14 step, all historical UI/mechanics regressions, TypeScript, and production build green.
+- Main Playable `31975560651`, playable-contract job `95234395572`: **completed success** — full UI/rules/TypeScript/build + Phase11 + Phase12 + Phase13 green. Windows executable subjob is not human/final release acceptance evidence here.
 
-1. create a saved non-fixture owning Client backed by `MemoryCharacterLibraryStore`;
-2. enter the production client lobby and initialize the connected replica;
-3. receive a Host-authoritative `event-batch` containing a character-durable resource `ResolutionEvent`;
-4. require Character library generation commit before client event cursor advances;
-5. receive explicit `session-ended` and become offline;
-6. create a fresh adapter against the same store and rehydrate the same non-fixture Character id and committed resource value;
-7. verify session lifecycle remains offline rather than being persisted as Character durability.
+The regression directly supports the P14.1/P14.7/P14.9/P14.11 baseline statements for newly authored Character persistence, live Scene materialization, derived actions, active identity rehydrate, and local-play re-entry. Do not infer broader HP/item runtime durability, full spell/inventory surfaces, or human acceptance from this baseline alone.
 
-Validation at exact test head `b20ecf18015cec15ad3eb26aba5674e5c91013cb`:
+## P14.8 existing-evidence audit
 
-- Phase12 `31975132450`, connected-protocol job `95233321482`: **completed success** — new storage rehydrate proof, existing connected authority, Phase11 preservation, and production frontend gate all green.
-- Main Playable `31975132458`, playable-contract job `95233333094`: **completed success** — full UI/rules/TypeScript/build + Phase11 + Phase12 + Phase13 green.
-- Persistence `31975132446` application-contract job `95233321444`: **completed success**, including production build. Its separate Tauri storage job was still running when this checkpoint was prepared and is not needed as evidence for this test-only slice.
-- Windows jobs are not human/final release acceptance evidence here.
+Existing `productionSessionLifecycleAdapter.test.ts`, `ProductionPlayerLobbyBridge.tsx`, and exact UI run `31967966233` directly prove without new CI:
 
-Checklist-only `e0f568cf71cfd05f490187fd206a5b0ef237f0d4` credits exactly:
+- a user-entered Host address is passed into production `joinSession`/transport and the visible player entry path contains no reference/debug control;
+- a saved non-fixture Character enters an explicit `connecting`/compatibility state and reaches `lobby` only after a compatible `hello-ack`;
+- a reference/no-valid-saved production Character is blocked before transport with an explicit “select a saved production Character” requirement, while the visible lobby warns to create/save a Character rather than falling back to a fixture.
 
-- P14.8 incompatible/invalid participant entry leaves no ghost participant or stale projection;
-- P14.8 owning-player durable Character changes already committed through authoritative events remain persisted after session end.
+Do not over-credit yet:
+
+- “selected persisted Character is projected before joining” should be credited together with direct SessionProjection-send/Host mount evidence;
+- complete selected identity/address/compatibility/readiness display should receive one focused visible-structure assertion before credit if the current test does not assert every field;
+- Error UX items using words such as actionable/retry remain open until the visible retry/error behavior itself is directly proven.
 
 ## Architecture boundaries preserved
 
-- Host ledger/peer/session authority is unchanged; the latest connected work is regression coverage only.
-- SessionProjection remains ephemeral Host session authority.
-- owning-client Character library write-back remains the only permanent storage path for remote player Characters.
-- local active-Character cleanup still distinguishes registry-backed remote SessionProjection actors from local-owned projections.
-- no fixture fallback, hard-coded production Character id, tactical map/grid/path/LOS expansion, or second durability source was introduced.
-
-## Housekeeping note
-
-Accidental refs `tmp/noop-do-not-use`, `tmp/noop-do-not-use-2`, `tmp/noop-do-not-use-3`, and `tmp/noop-do-not-use-4` remain outside `agent/**` and do not affect PR #109 or product CI. The connected connector exposes no delete-ref operation and `gh` is unavailable in this environment. Do not use these refs; remove them later through a delete-ref-capable path. This is not a product blocker.
+- Character Creation and Character library persistence remain the sole durable source for the newly authored Character.
+- `offlineRuntimeAdapters` remains canonical local composition; the test did not manufacture a parallel play state.
+- `productionPlayRuntimeAdapter` derives Scene/action projection from the real active Character id; no Aelar/Mira fallback is introduced.
+- connected Host authority, SessionProjection ownership, reconnect, session end, and owning-client write-back are unchanged.
+- no tactical map/grid/path/LOS scope expansion.
 
 ## Next Exact Action
 
-1. Do **not** rerun the now-closed Ready/start, participant lifecycle, session-end, local projection ownership, or durable-after-end gates unless their relevant product boundary changes.
-2. Audit existing exact evidence for P14.8 Player Character selection/join/lobby and visible error UX. Credit an item only when an existing test actually proves the exact statement; do not add tests merely to restate already-proven behavior.
-3. Then build the next product-realistic integration slice around P14.1/P14.11: author/finalize a brand-new non-fixture Character id through the existing creation + Character library persistence path, enter local production play, verify Scene actor materialization and derived `actionsByActor`, persist/restart a fresh adapter, and prove the same Character re-enters play without reference fixture fallback.
-4. Start test-first. Patch product source only if that fresh Character create/save -> play -> restart regression exposes a real reconciliation/composition gap.
-5. Run only the gates affected by that source boundary: focused test first; Persistence/UI/Phase11/Main once if product or persistence composition changes. Preserve existing connected gates if untouched.
-6. After P14.1 baseline is concrete, continue Skills/Actions/Inventory/Spells and DM/live-session product-realistic coverage, then Windows two-instance human acceptance/final exact-head artifact verification.
+1. Do **not** rerun the fresh Character create/save/play/restart baseline or closed connected lifecycle gates unless their source boundary changes.
+2. Begin P14.3 Skills on the exact fresh Character path: inspect the current production ability-check resolution routing and extend the fresh non-fixture integration with at least two different skill actions.
+3. Prove each skill action uses the generated Character id, derives the expected ability/proficiency modifier, creates an authoritative d20 Resolution/result, produces Activity/provenance, and does not consume hidden initiative economy in Freeform.
+4. Start test-first. Patch product source only if the fresh Character skill regression exposes a real routing/dice/activity/economy gap.
+5. Run only affected UI/Main gates once; Persistence need not repeat unless durable composition changes.
+6. After Skills, continue Actions/Inventory/Spells product-realistic slices, then remaining DM/live-session coverage, Windows two-instance human acceptance, and final exact-head artifact verification.
 7. PR #109 remains draft/unmerged. No merge is authorized.
