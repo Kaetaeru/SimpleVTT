@@ -217,7 +217,7 @@ test("fresh non-fixture Character commits a canonical weapon attack and a non-we
   assert.deepEqual(attackState.scene.economyByActor[characterId],economy,"Freeform weapon attack must not consume hidden initiative economy");
   const attackActivity=attackState.activity.find((entry)=>entry.id===attackResolutionId);
   assert.ok(attackActivity,"weapon attack must project committed ResolutionEvent activity");
-  assert.ok(attackActivity.stateChanges.some((entry)=>entry.includes(target.name)&&entry.includes("HP")));
+  assert.ok(attackActivity.stateChanges.some((entry)=>entry.includes(target.id)&&entry.includes("HP")));
 
   const dash=(attackState.scene.actionsByActor[characterId]??[]).find((action)=>action.id==="action.dash");
   assert.ok(dash,"fresh Fighter must expose the basic Dash action");
