@@ -66,6 +66,7 @@ interface AppContextValue {
   instantiateCombatant(definitionId: string): Promise<void>;
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
+  stopSession(): Promise<void>;
   debug: {
     setRole(role: AppRole): Promise<void>;
     setMode(mode: SessionMode): Promise<void>;
@@ -182,6 +183,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     instantiateCombatant: async (definitionId) => apply(() => mockAdapter.instantiateCombatant(definitionId)),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
+    stopSession: async () => apply(() => mockAdapter.stopSession()),
     debug: {
       setRole: async (role) => apply(() => mockAdapter.setReferenceRole(role)),
       setMode: async (mode) => apply(() => mockAdapter.setSessionMode(mode)),
