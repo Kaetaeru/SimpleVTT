@@ -95,7 +95,7 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [ ] Reconciliation occurs after level-up commit.
 - [ ] Reconciliation occurs after authoritative durable write-back.
 - [ ] Reconciliation is idempotent and does not duplicate the actor.
-- [ ] Switching active Character safely removes/replaces the local player projection without corrupting other Scene entities.
+- [x] Switching active Character safely removes/replaces the local player projection without corrupting other Scene entities. Evidence: exact source `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`; UI `31974455354` passed the focused `productionLocalCharacterSwitch.test.ts` ownership regression and final TypeScript/build; Main Playable `31974455339` playable-contract passed. The regression proves local A -> B removes only A while preserving a remote ephemeral SessionProjection actor/registry/actions/economy and preserving local ownership across a temporary remote resolution context.
 
 ## Action derivation boundary
 
@@ -357,11 +357,13 @@ Evidence for the four participant lifecycle items: exact source `cf520d35acd1e21
 
 ## Session end and restart
 
-- [ ] Host can explicitly end the live session from visible UI.
-- [ ] Session end stops connected transport and clears transient lobby/readiness/turn/pending Resolution state that must not leak into a new session.
-- [ ] Host-side ephemeral remote Character projections are removed at session end.
+- [x] Host can explicitly end the live session from visible UI.
+- [x] Session end stops connected transport and clears transient lobby/readiness/turn/pending Resolution state that must not leak into a new session.
+- [x] Host-side ephemeral remote Character projections are removed at session end.
 - [ ] Owning-player durable Character changes already committed through authoritative events remain persisted after session end.
-- [ ] Starting a new session after end begins from fresh lifecycle state while preserving permanent Character libraries and canonical content.
+- [x] Starting a new session after end begins from fresh lifecycle state while preserving permanent Character libraries and canonical content.
+
+Evidence for the four checked session-end/restart items: exact source `240592cb646bfbbfe9466f94047bc1e2f544dcf9`; Phase12 `31973878162` connected authority + Phase11 preservation + production build green; Main Playable `31973878165` full build + Phase11 + Phase12 + Phase13 green. `productionSessionEnd.test.ts` proves Host `session-ended` notification precedes transport teardown, Host/client transient authority and pending Resolution clear, reconstructed remote SessionProjection actors are removed, explicit ended clients do not reconnect, and a fresh Host receives a new session authority context. The durable-after-end persistence checkbox remains open until owner storage restart is proven.
 
 ## Error UX
 
@@ -370,7 +372,7 @@ Evidence for the four participant lifecycle items: exact source `cf520d35acd1e21
 - [ ] Host startup/bind failure identifies that hosting never became active and allows correction/retry.
 - [ ] Host busy/pending Resolution state is understandable.
 - [ ] Reconnect state is visible without losing the play workspace.
-- [ ] Session ended/stopped state is explicit to former clients instead of looking like an unexplained transient disconnect.
+- [x] Session ended/stopped state is explicit to former clients instead of looking like an unexplained transient disconnect. Evidence: `session-ended` drives explicit offline/ended client state without reconnect in `productionSessionEnd.test.ts`, exact source `240592cb646bfbbfe9466f94047bc1e2f544dcf9`, Phase12 `31973878162`.
 
 **Gate P14.8:** two production desktop instances complete Host bind/start -> DM preparation/lobby -> persisted host-unknown Character selection/join -> compatibility/projection -> Ready -> Host Freeform/Initiative start -> visible Host-authoritative action -> Client convergence -> disconnect/reconnect -> explicit session end -> clean Host restart.
 
@@ -444,7 +446,7 @@ Evidence for the four participant lifecycle items: exact source `cf520d35acd1e21
 - [ ] Preparation/lobby/readiness test proves play does not start from an unprepared or unready state.
 - [ ] Action request -> Host authoritative ResolutionEvent -> Client apply/write-back is tested.
 - [ ] Reconnect/idempotency remains tested.
-- [ ] Session end/restart test proves stale projections/readiness/turn state do not leak into the next session.
+- [x] Session end/restart test proves stale projections/readiness/turn state do not leak into the next session. Evidence: canonical `productionSessionEnd.test.ts`, exact source `240592cb646bfbbfe9466f94047bc1e2f544dcf9`, Phase12 `31973878162`; latest Main Playable `31974455339` also preserves the Phase12 session-end regression at source `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`.
 
 **Gate P14.11:** product-realistic tests fail if the implementation falls back to Aelar/Mira/reference-only behavior or skips the required connected lifecycle.
 
