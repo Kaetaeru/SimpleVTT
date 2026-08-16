@@ -104,6 +104,7 @@ export function projectCharacterRuntimeDurableV1(sheet:CharacterSheet):Character
   return {
     hp:sheet.hp,
     tempHp:sheet.tempHp,
+    lifeFlags:sheet.durableLifeFlags ? cp(sheet.durableLifeFlags) : undefined,
     resources:cp(sheet.resources),
     items:cp(sheet.items),
     goldGp:sheet.goldGp,
@@ -143,6 +144,7 @@ export function materializeCharacterRecordV1(record:CharacterLibraryRecordV1):Ch
   sheet.resources = cp(record.runtime.resources);
   sheet.items = cp(record.runtime.items);
   sheet.goldGp = record.runtime.goldGp;
+  sheet.durableLifeFlags = record.runtime.lifeFlags ? cp(record.runtime.lifeFlags) : sheet.durableLifeFlags;
   sheet.rulesProfileId = record.source.rulesProfile.id;
   sheet.rulesProfileVersion = record.source.rulesProfile.version;
   sheet.sourceRevision = record.sourceRevision;
@@ -189,17 +191,10 @@ export class CharacterLibraryMigrationRequiredError extends Error {
   }
 }
 
-/**
- * Version-aware decode entrypoint. Future schema migrations are added here.
- * Unknown/newer schemas are blockers rather than corruption fallback candidates:
- * silently loading an older generation and writing v1 over a newer format could lose data.
- */
 export function decodeCharacterLibrary(payload:string):CharacterLibraryDocumentV1 {
   const parsed:unknown = JSON.parse(payload);
   if (!isObject(parsed)) throw new Error("character library must be an object");
-  if (parsed.schemaId !== CHARACTER_LIBRARY_SCHEMA_ID) {
-    throw new CharacterLibrarySchemaError(`unsupported character library schema: ${String(parsed.schemaId)}`);
-  }
+  if (parsed.schemaId !== CHARACTER_LIBRARY_SCHEMA_ID) throw new CharacterLibrarySchemaError(`unsupported character library schema: ${String(parsed.schemaId)}`);
   switch (parsed.schemaVersion) {
     case CHARACTER_LIBRARY_SCHEMA_VERSION:
       return decodeCharacterLibraryV1(payload);
@@ -269,7 +264,6 @@ export class CharacterLibraryRepository {
         return this.result(generation.generation < this.physicalGeneration);
       } catch (error) {
         if (error instanceof CharacterLibraryMigrationRequiredError || error instanceof CharacterLibrarySchemaError) throw error;
-        // Malformed/corrupt generation: try the previous committed generation.
       }
     }
     if (generations.length) throw new CharacterLibraryCorruptError("no valid committed Character library generation remains");

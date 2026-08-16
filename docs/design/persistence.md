@@ -10,7 +10,7 @@ The local Character library persists only player-owned durable state:
 
 - Character source/build identity and selections;
 - a monotonically increasing source revision;
-- Character durable runtime state such as HP, Resources and ItemInstance mutable state;
+- Character durable runtime state such as current HP, Temp HP, Resources, ItemInstance mutable state, and the explicitly modeled stable/unconscious/dead life flags;
 - a separate monotonically increasing runtime revision;
 - RulesProfile identity/version and qualified content/source identities where available.
 
@@ -33,6 +33,8 @@ Each Character record has independent revisions:
 - `storageRevision` belongs to a persisted document generation and changes for every committed file generation.
 
 A stale writer must be rejected rather than overwriting a newer generation.
+
+Maximum HP is currently treated as a source/progression-derived property rather than duplicated into the runtime projection. A future ResolutionEvent that changes maximum HP therefore needs an explicit source-model contract; the runtime write-back path rejects such an event instead of silently changing revision ownership.
 
 ## 4. Generation-based local commit protocol
 
@@ -82,16 +84,44 @@ Character commit and draft clear are ordered transactions across two stores:
 
 If Character persistence fails, the autosaved draft remains available for retry. If Character persistence succeeds but draft clear fails, the next boot detects the changed Character-library/source precondition and refuses to replay the old draft automatically.
 
-## 7. Write-back roadmap
+## 7. ResolutionEvent Character write-back
 
-The Character library and authoring-draft lifecycle are now established. Follow-up Phase 10 slices connect:
+`writeBack: "character"` is a persistence classification attached to an individual state change. It is not permission to serialize the runtime state or `AppSnapshot`.
 
-1. ResolutionEvent state changes whose `writeBack` class is `character`;
-2. existing Character source edit/revalidation and reduction of materialized-cache dependence;
-3. real ContentCatalog/local-homebrew installation state.
+The current Character write-back projection supports only local Character-target changes that have an explicit durable representation:
+
+- current HP and Temp HP;
+- Character resources;
+- ItemInstance quantity and charge changes represented by the existing event resource bridge;
+- `stable`, `unconscious`, and `dead` life flags.
+
+Combatant-target changes are Scene/session state and are ignored by the local Character store. Economy, effects, concentration, spellcasting-turn markers, targeting/spatial facts, PendingResolution, and other session-only state remain outside the Character file even when they occur in the same ResolutionEvent batch.
+
+A confirmed event-native resolution follows this order:
+
+1. domain/application transaction computes the complete ResolutionEvents without mutating the committed Character;
+2. the Character write-back projection filters local Character-durable changes and validates their event `before` values against the current durable Character projection;
+3. all durable changes for that confirmed resolution are committed in one Character-library generation;
+4. only after the durable commit succeeds does the adapter apply the corresponding Scene/runtime state and Activity/history projection.
+
+If no local Character-durable state exists in the event batch, step 3 is a no-op; for example, enemy HP damage is not persisted merely because the local Character caused it.
+
+Undo uses the same contract in reverse. The event-native inverse is first validated, then its Character-durable inverse is committed, and only then is the Scene/runtime inverse applied. A drift mismatch or storage failure rejects the operation rather than reporting unsaved Character state as committed.
+
+Turn-runtime attacks add a revision precheck before Character persistence. If the runtime revision changes after Character persistence but before its compare-and-swap commit, the adapter attempts the exact inverse Character write-back as compensation and rejects the resolution. The same compensation rule is used for an Undo whose runtime compare-and-swap loses the race.
+
+Maximum-HP ResolutionEvent write-back is deliberately rejected today. Maximum HP is source/progression-owned in the current Character model; silently placing it in the runtime projection would incorrectly increment both source and runtime revisions during level-up.
+
+## 8. Write-back roadmap
+
+The Character library, authoring-draft lifecycle, and current event-native Character runtime write-back are now established. Follow-up Phase 10 slices focus on:
+
+1. existing Character source edit/revalidation and reduction of materialized-cache dependence;
+2. real ContentCatalog/local-homebrew installation state;
+3. additional durable state kinds only when their canonical source/runtime ownership is explicit.
 
 Session-only state remains outside the permanent Character file unless a specific rule and write-back classification says otherwise.
 
-## 8. Movement boundary
+## 9. Movement boundary
 
 Persistence does not add battle-map state to Core. Coordinates, tokens, grids, paths, LOS and external map-module state remain outside the core Character library unless a future optional module defines and owns its own persistence contract.
