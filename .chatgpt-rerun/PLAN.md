@@ -102,3 +102,18 @@ The user reviewed the completion scope and explicitly authorized Rerun to resume
 The active work branch already contains early implementation files from the interrupted prior execution, including production play/dice adapters and an in-session play dock. These remain **implemented but unverified** until evidence-backed gates pass.
 
 On continuation, read README -> control -> STATE -> PLAN, fetch `.agents/PHASE14_CHECKLIST.md` and the active work branch, then resume from STATE `Next Exact Action`. The first implementation action is to validate the already-present work-branch changes before adding further code. Do not repeat Phase 13 or already evidence-backed work unless a Phase 14 change touches that boundary.
+
+## Sequence 1 checkpoint — PlaySessionDock context repair
+
+Preflight reconciled against `main` at `ab76ca5b7a36f339a03cc0409bc06a274ba79309`; dispatch remains the same run_id / sequence `1` / task with `status: continue`.
+
+The active work branch advanced to `eaac9d7de499433f8f6da8e04f16100326facd57` with a narrow `src/PlaySessionDock.tsx` repair:
+
+- removed a conditionally reached `useMemo` hook after the `snapshot === null` early return, eliminating a React hook-order runtime risk during hydration;
+- stopped clearing `pendingActionId` on tab changes so switching `행동` / `기술` / `주문` / `인벤토리` does not discard pending legal/target context.
+
+This commit is source-only evidence. No Phase 14 completion checkbox receives credit yet because exact-head post-change UI/runtime validation has not run. Earlier green UI/build evidence predates `eaac9d7...` and is not reused as validation for this source change.
+
+The existing connected transport/authority stack remains the implementation boundary: Tauri transport, Host-authoritative resolution/event routing, SessionProjection, reconnect/catch-up, and owning-client write-back are to be surfaced through production lifecycle UX rather than replaced.
+
+**Next Exact Action:** at work head `eaac9d7de499433f8f6da8e04f16100326facd57`, add the smallest focused Phase 14 UI regression proving PlaySessionDock can transition from `snapshot=null` to hydrated state without hook-order failure and that pending target/action context survives tab switches; then run the exact-head UI/TypeScript production gate before awarding checklist credit or adding broader Host/Join lifecycle UI.
