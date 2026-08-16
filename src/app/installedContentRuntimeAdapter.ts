@@ -15,6 +15,7 @@ import { ruleModulePackageReviewEntry } from "./ruleModulePackageReviewEntry";
 import { InstalledContentRepository } from "./installedContentPersistence";
 import type { InstalledCatalogEntryV1, InstalledContentDocumentV1, InstalledContentStore } from "./installedContentContracts";
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
+import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -58,8 +59,7 @@ async function ensureHydrated(adapter:MockAdapter) {
   if (context.hydration) return context.hydration;
   context.hydration=(async()=>{
     await oldGetSnapshot.call(adapter);
-    const state=stateOf(adapter);
-    context.builtin=cp(state.catalog.filter((entry)=>entry.scope==="builtin"));
+    context.builtin=generatedBuiltinCatalog();
     try {
       const hydration=await context.repository.hydrate();
       applyComposition(adapter);
@@ -83,6 +83,9 @@ function collidesWithBuiltin(context:Context,contentId:string,sourceId:string,ve
   const qualifiedId=catalogQualifiedId(contentId,sourceId,version);
   return Boolean(context.builtin?.some((entry)=>resolvedBuiltinCatalogEntry(entry).id===qualifiedId));
 }
+function builtinCollisionMessage(contentId:string,sourceId:string,version:string) {
+  return `Builtin content qualified identity cannot be installed as local content: ${catalogQualifiedId(contentId,sourceId,version)}`;
+}
 function builtinValidationEntries(context:Context):InstalledCatalogEntryV1[] {
   const profile=activeRulesProfileCompatibility();
   const module={moduleId:profile.id,moduleVersion:profile.version,rulesProfile:{id:profile.id,version:profile.version},dependencies:[],conflicts:[],capabilities:profile.capabilities,extensionPoints:[]};
@@ -103,6 +106,10 @@ function validateSinglePreview(adapter:MockAdapter) {
   if (!preview?.entry || !context.repository.snapshot()) return;
   try {
     const installed=installedEntryFromPayload(preview.entry,preview.payload);
+    if (collidesWithBuiltin(context,installed.contentId,installed.sourceId,installed.version)) {
+      addPreviewMessage(state,"blocking",builtinCollisionMessage(installed.contentId,installed.sourceId,installed.version));
+      return;
+    }
     for (const issue of validateInstalledContentCandidate(validationDocument(context),installed)) addPreviewMessage(state,issue.severity,issueMessage(issue));
   } catch(error) {
     addPreviewMessage(state,"blocking",error instanceof Error?error.message:String(error));
@@ -126,7 +133,7 @@ function previewPackage(adapter:MockAdapter,payload:string) {
     };
     for (const entry of parsed.entries) {
       if (collidesWithBuiltin(context,entry.contentId,entry.sourceId,entry.version)) {
-        addPreviewMessage(state,"blocking",`Builtin content qualified identity cannot be installed as local content: ${catalogQualifiedId(entry.contentId,entry.sourceId,entry.version)}`);
+        addPreviewMessage(state,"blocking",builtinCollisionMessage(entry.contentId,entry.sourceId,entry.version));
       }
     }
   } catch(error) {
@@ -167,7 +174,7 @@ MockAdapter.prototype.activateContentImport=async function activateInstalledCont
       const parsed=parseRuleModulePackage(preview.payload);
       const validation=validateInstalledContentPackage(validationDocument(context),parsed.entries);
       for (const issue of validation.issues) if (issue.severity==="blocking") addPreviewMessage(state,issue.severity,issueMessage(issue));
-      for (const entry of parsed.entries) if (collidesWithBuiltin(context,entry.contentId,entry.sourceId,entry.version)) addPreviewMessage(state,"blocking",`Builtin content qualified identity cannot be installed as local content: ${catalogQualifiedId(entry.contentId,entry.sourceId,entry.version)}`);
+      for (const entry of parsed.entries) if (collidesWithBuiltin(context,entry.contentId,entry.sourceId,entry.version)) addPreviewMessage(state,"blocking",builtinCollisionMessage(entry.contentId,entry.sourceId,entry.version));
       if (state.contentImport?.validation.some((entry)=>entry.severity==="blocking")) return this.getSnapshot();
       const result=await context.repository.installMany(parsed.entries);
       if (result.status==="conflict") { addPreviewMessage(state,"blocking",result.error); return this.getSnapshot(); }
@@ -186,13 +193,13 @@ MockAdapter.prototype.activateContentImport=async function activateInstalledCont
   let installed;
   try { installed=installedEntryFromPayload(preview.entry,preview.payload); }
   catch(error) { addPreviewMessage(state,"blocking",error instanceof Error?error.message:String(error)); return this.getSnapshot(); }
+  if (collidesWithBuiltin(context,installed.contentId,installed.sourceId,installed.version)) {
+    addPreviewMessage(state,"blocking",builtinCollisionMessage(installed.contentId,installed.sourceId,installed.version));
+    return this.getSnapshot();
+  }
   const validation=validateInstalledContentCandidate(validationDocument(context),installed);
   for (const issue of validation) if (issue.severity==="blocking") addPreviewMessage(state,issue.severity,issueMessage(issue));
   if (state.contentImport?.validation.some((entry)=>entry.severity==="blocking")) return this.getSnapshot();
-  if (collidesWithBuiltin(context,installed.contentId,installed.sourceId,installed.version)) {
-    addPreviewMessage(state,"blocking",`Builtin content qualified identity cannot be installed as local content: ${catalogQualifiedId(installed.contentId,installed.sourceId,installed.version)}`);
-    return this.getSnapshot();
-  }
   try {
     const result=await context.repository.install(installed);
     if (result.status==="conflict") { addPreviewMessage(state,"blocking",result.error); return this.getSnapshot(); }

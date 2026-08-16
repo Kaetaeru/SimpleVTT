@@ -188,9 +188,40 @@ Verification:
 
 Note: this slice deliberately remains textarea/package-JSON only. It does not add executable module loading, arbitrary code execution, or a new Tauri file-dialog dependency.
 
+## Follow-up A — Canonical SRD builtin generic catalog feed — CLOSED
+
+Tracking issue: #95
+Draft PR: #96
+Branch: `agent/95-canonical-builtin-catalog`
+Base checkpoint: `1acbe92c9a40af55e78dab926a0d82773fafe273`
+Verified implementation checkpoint: `a6440f8cc925099d42a0bd2f80edfefe5b7fcd19`
+
+- [x] deterministic build-time builtin Catalog generation added to `generate:content`; no runtime filesystem/network discovery
+- [x] non-spell generic entries sourced from canonical SRD 5.2.1 RuleModules with canonical `contentId` and product source identity
+- [x] complete spell feed sourced from the pinned 339-spell presentation catalog; RuleModule spell records remain mechanics backing rather than enumeration authority
+- [x] pinned spell payload byte count / SHA-256 / decompressed size / RulesProfile / 339-entry integrity validated during generation
+- [x] canonical `dnd.srd521.item.*` weapon/armor/ammunition/focus/tool/etc. entries projected into the existing generic `item` presentation category without rewriting identity
+- [x] generated feed breadth locked to 495 entries: 12 classes / 9 species / 4 backgrounds / 17 feats / 339 spells / 114 item-like entries
+- [x] `installedContentRuntimeAdapter` uses the generated feed directly as the authoritative builtin side of Phase 10 composition
+- [x] builtin product content remains read-only and is never serialized into `simplevtt.installed-content`; local content still layers on top and reloads independently
+- [x] builtin qualified-identity collision is surfaced explicitly before deeper module validation
+- [x] legacy Step 6 builtin relationship fixture migrated to canonical Fighter `dnd.srd521.class.fighter`; validator semantics remain strict
+- [x] deterministic breadth/identity/item projection/spell presentation/local reload/idempotency/conflict/storage-failure/session-exclusion regressions
+- [x] production build, full UI, Rules Domain, Contract validation and Windows Rust persistence gates
+- [x] Draft PR checkpoint
+
+Verification:
+- Persistence workflow `31936795709` 69/69 application-contract + production build ✅
+- Persistence workflow `31936795709` Windows `cargo test --lib` ✅
+- UI workflow `31936795705` ✅
+- Rules Domain workflow `31936796051` ✅
+- Contract validation workflow `31936795707` ✅
+
+Note: this slice normalizes only categories with a canonical repository source and a real generic Catalog consumer. It does not fabricate subclass/monster/category data solely for presentation completeness.
+
 ## Follow-up Phase 10 slices
 
-- [ ] normalize generated builtin catalogs into the generic catalog feed where required by real consumers
+- [x] normalize generated builtin catalogs into the generic catalog feed where required by real consumers
 - [ ] ItemInstance/spellbook/resource/feature source reconstruction without materialized-cache dependence
 - [ ] atomic save failure/recovery end-to-end Windows gate
 
