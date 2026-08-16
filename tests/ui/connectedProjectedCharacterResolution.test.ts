@@ -209,7 +209,7 @@ test("host-unknown projected Fighter resolves through host authority and converg
 
     const storageRevisionAfterFirstApply=persistenceAfter?.storageRevision;
     const duplicateApply=await applyConnectedClientEvents(client,[hostEvent]);
-    assert.equal(duplicateApply.status,"applied");
+    assert.equal(duplicateApply.status,"duplicate");
     assert.equal(duplicateApply.cursor,1);
     const clientAfterDuplicate=await client.getSnapshot();
     assert.equal(clientAfterDuplicate.activeCharacter.hp,clientAfter.activeCharacter.hp);
