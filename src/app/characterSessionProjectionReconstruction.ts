@@ -13,6 +13,7 @@ import type {
   SceneEntity,
 } from "./contracts";
 import {
+  classIdFromName,
   entryName,
   itemEntryById,
   itemMechanic,
@@ -22,6 +23,7 @@ import {
 import { proficiencyBonusForTotalLevel } from "../domain/progressionCatalog";
 import {
   parseCharacterSessionProjectionV1,
+  type CharacterProjectionContentIdentityV1,
   type CharacterSessionProjectionV1,
 } from "./characterSessionProjection";
 
@@ -42,10 +44,25 @@ type ShieldDefinition = { acBonus?:number };
 const clone=<T,>(value:T):T=>structuredClone(value);
 const abilityMod=(score:number)=>Math.floor((score-10)/2);
 
-function classIdentity(projection:CharacterSessionProjectionV1) {
-  const classes=projection.contentIdentities.filter((identity)=>identity.category==="class");
-  if (classes.length!==1) throw new Error(`projection requires exactly one primary class identity; received ${classes.length}`);
-  return classes[0];
+function classIdentities(projection:CharacterSessionProjectionV1) {
+  return projection.contentIdentities.filter((identity)=>identity.category==="class");
+}
+
+function primaryClassId(projection:CharacterSessionProjectionV1) {
+  return projection.source.build.classLevels?.[0]?.classId ?? classIdFromName(projection.source.build.className);
+}
+
+function primaryClassIdentity(projection:CharacterSessionProjectionV1):CharacterProjectionContentIdentityV1 {
+  const id=primaryClassId(projection);
+  const identity=classIdentities(projection).find((entry)=>entry.contentId===id);
+  if (!identity) throw new Error(`projection is missing primary class identity: ${id}`);
+  return identity;
+}
+
+function classLevel(projection:CharacterSessionProjectionV1,classId:string) {
+  const tracks=projection.source.build.classLevels ?? [];
+  if (tracks.length) return tracks.find((track)=>track.classId===classId)?.level ?? 0;
+  return primaryClassId(projection)===classId ? projection.source.build.level : 0;
 }
 
 function runtimeItemById(projection:CharacterSessionProjectionV1) {
@@ -149,7 +166,7 @@ function equipmentArmorClass(projection:CharacterSessionProjectionV1,items:ItemI
     }
   }
   let ac=(armorAc ?? (10+dex))+shield;
-  const primaryClass=classIdentity(projection).contentId;
+  const primaryClass=primaryClassIdentity(projection).contentId;
   if (primaryClass==="dnd.srd521.class.barbarian" && !hasArmor) ac=Math.max(ac,10+dex+con+shield);
   if (primaryClass==="dnd.srd521.class.monk" && !hasArmor && !hasShield) ac=Math.max(ac,10+dex+wis);
   if (hasArmor && (projection.source.progression.fightingStyleFeatIds ?? []).includes("dnd.srd521.feat.fighting-style.defense")) ac+=1;
@@ -203,8 +220,8 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
     ],
   });
 
-  const primaryClass=classIdentity(projection).contentId;
-  if (primaryClass==="dnd.srd521.class.fighter" && sheet.level>=1) {
+  const fighterLevel=classLevel(projection,"dnd.srd521.class.fighter");
+  if (fighterLevel>=1) {
     const secondWind=sheet.resources.find((resource)=>resource.id==="resource.second-wind" || resource.id.includes("second-wind"));
     if (!secondWind) throw new Error("Fighter SessionProjection is missing canonical Second Wind resource state");
     actions.push({
@@ -215,15 +232,15 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       target:"self",
       economy:"추가 행동",
       resolutionKind:"healing",
-      summary:`1d10+${sheet.level} 회복`,
+      summary:`1d10+${fighterLevel} 회복`,
       available:secondWind.current>0,
       disabledReason:secondWind.current>0 ? undefined : "세컨드 윈드 자원 없음",
       eligibleTargetIds:targetSelf,
-      healing:{dice:"1d10",flat:sheet.level,average:Math.floor(5.5+sheet.level)},
+      healing:{dice:"1d10",flat:fighterLevel,average:Math.floor(5.5+fighterLevel)},
       resourceCost:{resourceId:secondWind.id,amount:1},
       details:[
         {label:"대상",value:"자신"},
-        {label:"회복",value:`1d10 + ${sheet.level}`,source:"SRD Fighter · Second Wind"},
+        {label:"회복",value:`1d10 + ${fighterLevel}`,source:"SRD Fighter · Second Wind"},
         {label:"비용",value:"추가 행동 + 자원 1"},
       ],
     });
@@ -232,7 +249,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
 }
 
 function reconstructAccepted(projection:CharacterSessionProjectionV1):CharacterSessionProjectionReconstruction {
-  const classId=classIdentity(projection).contentId;
+  const classId=primaryClassIdentity(projection).contentId;
   const meta=classMeta(classId);
   const species=speciesDefinition(projection.source.build.species);
   const proficiencyBonus=proficiencyBonusForTotalLevel(projection.source.build.level);
