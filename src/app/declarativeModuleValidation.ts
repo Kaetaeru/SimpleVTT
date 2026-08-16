@@ -32,7 +32,7 @@ function syntheticModule(entry:InstalledCatalogEntryV1):InstalledModuleManifestV
     rulesProfile:{id:ACTIVE_PROFILE.id,version:ACTIVE_PROFILE.version},
     dependencies:[],
     conflicts:[],
-    capabilities:entry.capabilities,
+    capabilities:[],
     extensionPoints:[],
   };
 }
