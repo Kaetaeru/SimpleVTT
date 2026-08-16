@@ -29,6 +29,7 @@ function entry(contentId:string,category:CatalogEntry["category"],nameKo:string,
 
 const baseCatalog:CatalogEntry[]=[
   entry("dnd.srd521.class.fighter","class","파이터","Fighter"),
+  entry("dnd.srd521.class.wizard","class","위저드","Wizard"),
   entry("dnd.srd521.species.human","species","인간","Human"),
   entry("dnd.srd521.background.soldier","background","군인","Soldier"),
 ];
@@ -113,6 +114,46 @@ test("runtime resource state overlays source definition but cannot exceed source
   const invalid=reconstructCharacterSessionProjectionV1(projection,baseCatalog);
   assert.equal(invalid.status,"rejected");
   if (invalid.status==="rejected") assert.match(invalid.error,/resource state is invalid/);
+});
+
+test("multiclass projection requires every class-track identity and class features use their own class level", () => {
+  const multiclass=fighter({
+    className:"파이터",
+    level:3,
+    classLevels:[
+      {classId:"dnd.srd521.class.fighter",level:1},
+      {classId:"dnd.srd521.class.wizard",level:2},
+    ],
+  });
+  const projection=buildCharacterSessionProjectionV1(multiclass,baseCatalog);
+  assert.deepEqual(
+    projection.contentIdentities.filter((identity)=>identity.category==="class").map((identity)=>identity.contentId).sort(),
+    ["dnd.srd521.class.fighter","dnd.srd521.class.wizard"],
+  );
+
+  const reconstructed=reconstructCharacterSessionProjectionV1(projection,baseCatalog);
+  assert.equal(reconstructed.status,"accepted");
+  if (reconstructed.status!=="accepted") return;
+  assert.deepEqual(reconstructed.sheet.saves,["STR +5","CON +4"]);
+  assert.equal(reconstructed.actions.find((action)=>action.id==="action.second-wind")?.healing?.flat,1);
+
+  const hostMissingWizard=baseCatalog.filter((catalogEntry)=>catalogEntry.nameEn!=="Wizard");
+  const rejected=reconstructCharacterSessionProjectionV1(projection,hostMissingWizard);
+  assert.equal(rejected.status,"rejected");
+  if (rejected.status==="rejected") assert.match(rejected.error,/missing projected content|missing canonical host\/client content/);
+});
+
+test("class-track totals must match the Character total level", () => {
+  const projection=buildCharacterSessionProjectionV1(fighter({
+    classLevels:[
+      {classId:"dnd.srd521.class.fighter",level:1},
+      {classId:"dnd.srd521.class.wizard",level:2},
+    ],
+  }),baseCatalog);
+  projection.source.build.level=4;
+  const rejected=reconstructCharacterSessionProjectionV1(projection,baseCatalog);
+  assert.equal(rejected.status,"rejected");
+  if (rejected.status==="rejected") assert.match(rejected.error,/classLevels total does not match Character level/);
 });
 
 test("equipped item with a catalog identity but no trusted host mechanic entry rejects instead of trusting client item metadata", () => {
