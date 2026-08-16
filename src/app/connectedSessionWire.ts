@@ -1,0 +1,134 @@
+import type {
+  ConnectedActionRequest,
+  ConnectedSessionEvent,
+  SessionCompatibilityManifest,
+  SessionCompatibilityResult,
+} from "./connectedSessionProtocol";
+
+export type ConnectedWireMessage =
+  | {
+      type:"hello";
+      manifest:SessionCompatibilityManifest;
+      participantId:string;
+      participantName:string;
+      knownEventCursor:number;
+    }
+  | {
+      type:"hello-ack";
+      sessionId:string;
+      compatibility:SessionCompatibilityResult;
+      hostCursor:number;
+      events:ConnectedSessionEvent[];
+    }
+  | { type:"action-request"; request:ConnectedActionRequest }
+  | { type:"catchup-request"; sessionId:string; afterCursor:number }
+  | { type:"event-batch"; sessionId:string; afterCursor:number; events:ConnectedSessionEvent[] }
+  | { type:"error"; code:string; message:string; hostCursor?:number };
+
+export type DecodeWireResult =
+  | { status:"ok"; message:ConnectedWireMessage }
+  | { status:"rejected"; error:string };
+
+type JsonRecord=Record<string,unknown>;
+const isRecord=(value:unknown):value is JsonRecord=>typeof value==="object"&&value!==null&&!Array.isArray(value);
+const isString=(value:unknown):value is string=>typeof value==="string"&&value.length>0;
+const isCursor=(value:unknown):value is number=>Number.isInteger(value)&&Number(value)>=0;
+const isStringArray=(value:unknown):value is string[]=>Array.isArray(value)&&value.every((entry)=>typeof entry==="string");
+
+function isCharacterRevision(value:unknown) {
+  if (!isRecord(value)) return false;
+  return isString(value.characterId)&&isCursor(value.sourceRevision)&&isCursor(value.runtimeRevision);
+}
+
+function isManifest(value:unknown):value is SessionCompatibilityManifest {
+  if (!isRecord(value)) return false;
+  return isCursor(value.protocolVersion)&&isString(value.rulesProfileId)&&isStringArray(value.capabilities)
+    && (value.character===undefined||isCharacterRevision(value.character));
+}
+
+function isCompatibility(value:unknown):value is SessionCompatibilityResult {
+  if (!isRecord(value)||!isString(value.status)||!isString(value.message)) return false;
+  return value.status==="compatible"||value.status==="warning"||value.status==="incompatible";
+}
+
+function isRuntimeStateChange(value:unknown) {
+  if (!isRecord(value)||!isString(value.kind)||!isString(value.targetId)||!isStringArray(value.provenance)) return false;
+  if (value.lifetime!=="character-durable"&&value.lifetime!=="session-runtime") return false;
+  if (value.writeBack!=="character"&&value.writeBack!=="session") return false;
+  if (value.kind==="hp") return ["current","maximum","temporary"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
+  if (value.kind==="economy") return ["action","bonusAction","reaction","movement","movementMaximum","extraActions"].includes(String(value.field))&&value.before!==undefined&&value.after!==undefined;
+  if (value.kind==="resource") return isString(value.resourceId)&&typeof value.before==="number"&&typeof value.after==="number";
+  if (value.kind==="life") return ["stable","unconscious","dead"].includes(String(value.field))&&typeof value.before==="boolean"&&typeof value.after==="boolean";
+  if (value.kind==="effect") return isString(value.effectId)&&["added","updated","removed"].includes(String(value.operation));
+  if (value.kind==="concentration"||value.kind==="spellcasting-turn") return true;
+  return false;
+}
+
+function isResolutionEvent(value:unknown) {
+  if (!isRecord(value)) return false;
+  return isString(value.id)&&isString(value.resolutionId)&&isString(value.operationId)&&isString(value.kind)
+    &&isString(value.actorId)&&typeof value.summary==="string"&&Array.isArray(value.provenance)
+    &&Array.isArray(value.stateChanges)&&value.stateChanges.every(isRuntimeStateChange);
+}
+
+function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
+  if (!isRecord(value)||!isString(value.sessionId)||!isString(value.eventId)||!isCursor(value.sequence)||!isRecord(value.payload)) return false;
+  const payload=value.payload;
+  if (!isString(payload.kind)||!isStringArray(payload.stateChanges)||!isStringArray(payload.provenance)) return false;
+  if (payload.kind==="resolution") {
+    if (!isString(payload.resolutionId)||!Array.isArray(payload.resolutionEvents)||!payload.resolutionEvents.every(isResolutionEvent)) return false;
+  } else if (!["mode-transition","correction","participant"].includes(payload.kind)) return false;
+  return (value.requestId===undefined||isString(value.requestId))&&(value.actorId===undefined||isString(value.actorId));
+}
+
+function isActionRequest(value:unknown):value is ConnectedActionRequest {
+  if (!isRecord(value)) return false;
+  return isString(value.sessionId)&&isString(value.requestId)&&isString(value.actorId)&&isString(value.actionId)
+    &&isStringArray(value.targetIds)&&isCursor(value.knownEventCursor)&&isStringArray(value.capabilities)
+    &&(value.character===undefined||isCharacterRevision(value.character));
+}
+
+function validateMessage(value:unknown):ConnectedWireMessage|string {
+  if (!isRecord(value)||!isString(value.type)) return "wire message must be an object with a type";
+  if (value.type==="hello") {
+    if (!isManifest(value.manifest)||!isString(value.participantId)||!isString(value.participantName)||!isCursor(value.knownEventCursor)) return "invalid hello message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="hello-ack") {
+    if (!isString(value.sessionId)||!isCompatibility(value.compatibility)||!isCursor(value.hostCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid hello-ack message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="action-request") {
+    if (!isActionRequest(value.request)) return "invalid action-request message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="catchup-request") {
+    if (!isString(value.sessionId)||!isCursor(value.afterCursor)) return "invalid catchup-request message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="event-batch") {
+    if (!isString(value.sessionId)||!isCursor(value.afterCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid event-batch message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="error") {
+    if (!isString(value.code)||!isString(value.message)||(value.hostCursor!==undefined&&!isCursor(value.hostCursor))) return "invalid error message";
+    return value as ConnectedWireMessage;
+  }
+  return `unknown wire message type: ${value.type}`;
+}
+
+export function encodeConnectedWireMessage(message:ConnectedWireMessage) {
+  return JSON.stringify(message);
+}
+
+export function decodeConnectedWireMessage(raw:string):DecodeWireResult {
+  let value:unknown;
+  try {
+    value=JSON.parse(raw);
+  } catch(error) {
+    return { status:"rejected",error:`invalid session JSON: ${error instanceof Error ? error.message : String(error)}` };
+  }
+  const validated=validateMessage(value);
+  if (typeof validated==="string") return { status:"rejected",error:validated };
+  return { status:"ok",message:validated };
+}
