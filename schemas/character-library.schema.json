@@ -67,7 +67,18 @@
       "required": ["hp", "tempHp", "resources", "items"],
       "properties": {
         "hp": { "type": "number" },
+        "maxHp": { "type": "number" },
         "tempHp": { "type": "number" },
+        "lifeFlags": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stable", "unconscious", "dead"],
+          "properties": {
+            "stable": { "type": "boolean" },
+            "unconscious": { "type": "boolean" },
+            "dead": { "type": "boolean" }
+          }
+        },
         "resources": { "type": "array" },
         "items": { "type": "array" },
         "goldGp": { "type": "number" }

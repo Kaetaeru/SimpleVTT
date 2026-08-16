@@ -2,6 +2,7 @@ import "./characterCreationV10Adapter";
 import "./progressionRuntimeAdapter";
 import "./restSpellManagementRuntimeAdapter";
 import "./persistenceRuntimeContracts";
+import "./lifeRuntimeContracts";
 import type {
   ActivityEntry,
   AppSnapshot,
@@ -17,6 +18,8 @@ import type { CharacterLibraryStore } from "./persistenceContracts";
 import { createPlatformCharacterLibraryStore } from "./tauriCharacterLibraryStore";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
+import { installCharacterResolutionWriteBackHandler } from "./resolutionCharacterWriteBackPort";
+import { projectResolutionCharacterWriteBack } from "./resolutionCharacterDurableProjection";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -68,12 +71,12 @@ function stateOf(adapter:MockAdapter) {
   return adapter as unknown as AdapterState;
 }
 
-function collectPersistableSheets(state:AdapterState):CharacterSheet[] {
+function collectPersistableSheets(state:AdapterState,replacement?:CharacterSheet):CharacterSheet[] {
   const byId = new Map<string,CharacterSheet>();
   for (const character of state.characters) {
     if (isCharacterSheet(character)) byId.set(character.id,character);
   }
-  byId.set(state.activeCharacter.id,state.activeCharacter);
+  byId.set(state.activeCharacter.id,replacement ?? state.activeCharacter);
   return [...byId.values()].sort((a,b) => a.id.localeCompare(b.id));
 }
 
@@ -109,6 +112,15 @@ function projectActiveCharacterToScene(state:AdapterState) {
   entity.maxHp = state.activeCharacter.maxHp;
   entity.tempHp = state.activeCharacter.tempHp;
   entity.ac = state.activeCharacter.ac;
+  if (state.activeCharacter.durableLifeFlags) {
+    entity.runtimeLife = {
+      deathSaves:{
+        successes:entity.runtimeLife?.deathSaves.successes ?? 0,
+        failures:entity.runtimeLife?.deathSaves.failures ?? 0,
+      },
+      ...cp(state.activeCharacter.durableLifeFlags),
+    };
+  }
 }
 
 function applyHydration(state:AdapterState, sheets:CharacterSheet[], activeCharacterId:string|null) {
@@ -129,8 +141,6 @@ async function ensureHydrated(adapter:MockAdapter) {
   if (context.hydration) return context.hydration;
   context.hydration = (async () => {
     const state = stateOf(adapter);
-    // Let the already-installed application adapters normalize the built-in Character once.
-    // Persisted state is applied only after that normalization, so no default projection can overwrite it.
     await oldGetSnapshot.call(adapter);
     try {
       const hydration = await context.repository.hydrate(collectPersistableSheets(state),state.activeCharacter.id);
@@ -199,9 +209,7 @@ function preserveOperationProjection(snapshot:AppSnapshot,operationResult:AppSna
       ? { ...operationResult.restSpellManagement,status:"rejected",message:"Character library 저장에 실패하여 변경을 롤백했습니다." }
       : cp(operationResult.restSpellManagement);
   }
-  if (operationResult.circleLandRestConfiguration) {
-    snapshot.circleLandRestConfiguration = cp(operationResult.circleLandRestConfiguration);
-  }
+  if (operationResult.circleLandRestConfiguration) snapshot.circleLandRestConfiguration = cp(operationResult.circleLandRestConfiguration);
   return snapshot;
 }
 
@@ -249,6 +257,44 @@ async function durableMutation(
     return preserveOperationProjection(snapshot,operationResult,true);
   }
 }
+
+installCharacterResolutionWriteBackHandler(async (adapter,events,direction) => {
+  await ensureHydrated(adapter);
+  const state=stateOf(adapter);
+  const context=contextFor(adapter);
+  const entity=state.scene.entities.find((entry)=>entry.id===state.activeCharacter.id);
+  const fallbackLife=entity?.runtimeLife ? {
+    stable:entity.runtimeLife.stable,
+    unconscious:entity.runtimeLife.unconscious,
+    dead:entity.runtimeLife.dead,
+  } : undefined;
+  const projected=projectResolutionCharacterWriteBack(state.activeCharacter,events,direction,fallbackLife);
+  if (projected.status==="rejected") return projected;
+  if (!projected.changed) return { status:"committed" as const,changed:false };
+  try {
+    const hydration=await context.repository.commit(collectPersistableSheets(state,projected.sheet),state.activeCharacter.id);
+    const committed=hydration.sheets.find((sheet)=>sheet.id===state.activeCharacter.id);
+    if (!committed) return { status:"rejected" as const,error:`persisted active Character is missing: ${state.activeCharacter.id}` };
+    state.activeCharacter=cp(committed);
+    state.characters=state.characters.map((character)=>character.id===committed.id ? { ...character,...cp(committed) } : character);
+    context.draftSaveError=undefined;
+    context.vm={
+      durability:context.repository.durability,
+      status:"ready",
+      storageRevision:hydration.document.storageRevision,
+    };
+    return { status:"committed" as const,changed:true };
+  } catch(error) {
+    const message=error instanceof Error ? error.message : String(error);
+    context.vm={
+      durability:context.repository.durability,
+      status:"error",
+      storageRevision:context.repository.snapshot()?.storageRevision ?? 0,
+      message,
+    };
+    return { status:"rejected" as const,error:message };
+  }
+});
 
 MockAdapter.prototype.getSnapshot = async function getSnapshotWithCharacterLibrary() {
   await ensureHydrated(this);

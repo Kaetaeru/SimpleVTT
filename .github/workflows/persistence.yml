@@ -9,8 +9,10 @@ on:
       - "src/app/*characterLibrary*"
       - "src/app/*AuthoringDraft*"
       - "src/app/*authoringDraft*"
+      - "src/app/*resolutionCharacter*"
       - "tests/ui/characterLibrary*.test.ts"
       - "tests/ui/authoringDraft*.test.ts"
+      - "tests/ui/resolutionCharacter*.test.ts"
       - "schemas/character-library.schema.json"
       - "schemas/authoring-drafts.schema.json"
       - "docs/design/persistence.md"
@@ -28,8 +30,10 @@ on:
       - "src/app/*characterLibrary*"
       - "src/app/*AuthoringDraft*"
       - "src/app/*authoringDraft*"
+      - "src/app/*resolutionCharacter*"
       - "tests/ui/characterLibrary*.test.ts"
       - "tests/ui/authoringDraft*.test.ts"
+      - "tests/ui/resolutionCharacter*.test.ts"
       - "schemas/character-library.schema.json"
       - "schemas/authoring-drafts.schema.json"
       - "docs/design/persistence.md"
@@ -51,7 +55,7 @@ jobs:
       - name: Generate content dependencies
         run: npm run generate:content
       - name: Verify Character persistence repositories and adapters
-        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts
       - name: Verify production build
         run: npm run build
 

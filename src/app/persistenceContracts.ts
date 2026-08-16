@@ -12,6 +12,12 @@ export interface RulesProfileRefV1 {
   version:string;
 }
 
+export interface CharacterDurableLifeFlagsV1 {
+  stable:boolean;
+  unconscious:boolean;
+  dead:boolean;
+}
+
 export interface CharacterProgressionSelectionsV1 {
   expertiseSkills?:string[];
   expertiseSources?:Record<string,string>;
@@ -85,7 +91,9 @@ export interface CharacterSourceSnapshotV1 {
 
 export interface CharacterRuntimeDurableSnapshotV1 {
   hp:number;
+  maxHp?:number;
   tempHp:number;
+  lifeFlags?:CharacterDurableLifeFlagsV1;
   resources:CharacterResourceVm[];
   items:ItemInstanceVm[];
   goldGp?:number;
@@ -132,6 +140,7 @@ declare module "./contracts" {
     rulesProfileVersion?:string;
     sourceRevision?:number;
     runtimeRevision?:number;
+    durableLifeFlags?:CharacterDurableLifeFlagsV1;
   }
 }
 
