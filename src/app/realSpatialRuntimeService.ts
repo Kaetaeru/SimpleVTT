@@ -10,7 +10,8 @@ export interface MovementSpatialPlan {
   provenance:string[];
 }
 
-function sceneDistanceFeet(distance:string) {
+function sceneDistanceFeet(distance:string|undefined) {
+  if (!distance) return undefined;
   const match=distance.match(/(\d+(?:\.\d+)?)/);
   if (!match) return undefined;
   const feet=Number(match[1]);
