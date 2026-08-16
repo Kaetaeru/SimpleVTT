@@ -40,13 +40,19 @@ import "./pactTomeRuntimeAdapter";
 import "./druidCircleLandSpellRuntimeAdapter";
 import "./restSpellManagementRuntimeAdapter";
 import "./classFeatureSpellRuntimeAdapter";
+// Project persisted arbitrary Character spell facts before the Phase 09 router captures
+// its underlying snapshot function, so the existing authoritative HUD/slot bridge can
+// seed TurnRuntime resources without any fixture-only caster registry.
+import "./productionSpellcasterProjectionAdapter";
 import "./phase09SpellcastingRuntimeRouter";
 import "./characterLibraryRuntimeAdapter";
 import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";
 import "./installedContentRuntimeAdapter";
 // Phase 14 outermost production composition: real Character -> live Scene/actions,
-// canonical ItemInstance-backed weapon runtime facts, then production-only random authoritative d20 faces.
+// authoritative spell execution, canonical ItemInstance-backed weapon runtime facts,
+// then production-only random authoritative d20 faces.
 import "./productionPlayRuntimeAdapter";
+import "./productionSpellRuntimeAdapter";
 import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
