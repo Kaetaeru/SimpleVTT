@@ -80,61 +80,55 @@ Task 1 is complete only when all are true:
 
 Validated source head: `7d83f263609b5dc2cf18ec43ed617568fedff9ba`.
 
-Implemented boundaries:
-
-- `src/app/productionSessionLifecycleAdapter.ts` wraps the existing connected Host runtime instead of replacing it.
-- Successful real Host setup enters explicit `preparing` lifecycle state and exposes the transport-returned address.
-- Host startup/bind rejection is converted into an actionable offline/incompatible snapshot rather than a falsely open Host state.
-- `stopSession` refuses unsafe pending/projection resolution contexts, invokes the real transport stop, unmounts ephemeral reconstructed projections, clears connected ledger/peer/transient state, and returns to offline.
-- Host restart creates fresh authority/ledger state while reusing the already-installed listeners.
-- `AppProvider` exposes `stopSession` through the normal visible UI command path.
-- `ProductionSessionLifecycleBridge` provides a visible Korean-first preparation surface showing server-open state, session name, shareable address, participant count, compatibility, and `Host 중지` without debug controls.
-- `src/main.tsx` installs/mounts the lifecycle adapter and visible bridge in production composition.
-- `tests/ui/productionSessionLifecycleAdapter.test.ts` verifies Host start -> preparation -> transient state/projection cleanup -> stop -> fresh restart, listener reuse, startup error snapshot, and the visible preparation/address/stop surface.
-
-Validation:
-
-- Initial run `31967233149` failed only the new lifecycle test because the first test version unnecessarily re-invoked the already-proven Phase 13 SessionProjection builder. That test was narrowed to seed an already-registered ephemeral projection and test only the new lifecycle cleanup boundary.
-- UI run `31967313740` then succeeded at exact source head `13b4bb3b40cdcb5338f95b00d08783b79a58377d` for runtime Host lifecycle and production build.
-- After adding the visible preparation/stop surface, UI run `31967444715` succeeded at exact source head `7d83f263609b5dc2cf18ec43ed617568fedff9ba`, including the focused Host lifecycle/UI regression, existing Phase09 mechanics regressions, and final `Typecheck and build`.
+- `productionSessionLifecycleAdapter` wraps existing connected Host runtime and enters explicit `preparing` state on successful Host setup.
+- Host startup/bind rejection becomes actionable offline/incompatible state instead of fake success.
+- `stopSession` stops transport, rejects unsafe pending contexts, unmounts ephemeral projections, clears transient connected state, and returns offline.
+- Host restart creates fresh authority while reusing installed listeners.
+- `ProductionSessionLifecycleBridge` exposes preparation state, shareable address and Host stop in visible UI.
+- UI run `31967444715` succeeded at exact source head `7d83f263609b5dc2cf18ec43ed617568fedff9ba`, including focused lifecycle/UI regression and final TypeScript/production build.
 
 ### Player Character selection / Join / compatible lobby
 
 Validated source head: `a01221ac78827e3075c678c6e727a3ca4af695b5`.
 
-Implemented boundaries:
+- Client lifecycle distinguishes `connecting` from compatible `lobby`; lobby is entered only after accepted `hello-ack` establishes session identity.
+- Production Join requires a saved non-reference Character and rejects Aelar/Mira fallback before transport.
+- `ProductionPlayerLobbyBridge` exposes saved Character selection, Host address, lifecycle progress, compatibility result and selected identity.
+- Existing SessionProjection, Host validation/authority, reconnect and owner-write-back boundaries remain unchanged.
+- UI run `31967966233` succeeded at exact head `a01221ac78827e3075c678c6e727a3ca4af695b5`, including lifecycle regression and final TypeScript/production build.
+- Persistence run `31967968226` succeeded at the same head for application contracts/build and Windows Tauri storage recovery.
 
-- `productionSessionLifecycleAdapter` now models client `connecting` separately from compatible `lobby` and derives lobby only after the existing connected runtime has accepted a `hello-ack` and recorded a real session id.
-- Production Join requires the active Character to be a saved non-reference Character; `char.aelar` / `char.mira` cannot silently enter the production Join path.
-- Invalid/no-valid-Character Join returns an explicit offline/incompatible setup requirement without invoking the desktop transport.
-- `ProductionPlayerLobbyBridge` replaces the visible reference Join card on the Session route with saved Character selection, Host address, lifecycle progress, compatibility result, and selected identity.
-- Character selection reuses `selectProductionCharacter`; Join still delegates to the existing `connectedSessionRuntimeAdapter`, compatibility handshake, SessionProjection, Host authority, reconnect, and owner-write-back boundaries.
-- Focused regression verifies reference Join rejection, saved non-fixture Join, `connecting -> hello-ack -> lobby`, and the visible selector/address/lobby surface.
+### Regression-matrix debt investigation and production acceptance migration
 
-Validation:
+Current work head: `8128fcb86d7a7d8ff935e1e322c8a9a495fdd036`.
 
-- First test attempt at `97771a2909a94c5f24be4deba4c84480e621be11` over-coupled this lifecycle regression to Character-library repository generation and failed the new Phase 14 lifecycle step; no completion credit is taken from that run.
-- The regression was isolated to the Join/lifecycle boundary at `a01221ac78827e3075c678c6e727a3ca4af695b5` without weakening the production Join gate.
-- UI run `31967966233` succeeded at exact head `a01221ac78827e3075c678c6e727a3ca4af695b5`, including the Phase 14 lifecycle regression and final TypeScript/production build.
-- PR-triggered Contract validation and UI also succeeded at that exact head.
-- Persistence run `31967968226` completed successfully at the same head for both application-contract/production build and Windows Tauri storage/atomic Character recovery.
+Work completed in this continuation:
 
-### Existing regression debt discovered by PR matrix
+- `0eda3629fc750ffd0fce024fe804965e1e3a3d8e` migrated `phase11OfflineWalkthrough.test.ts` away from importing Phase09 fixture-specific assertions under the final Phase14 production composition. Dedicated Phase09 tests remain in the UI workflow; the Phase11 acceptance now creates a saved unique Character and exercises local production play.
+- Phase11 run `31968377305` exposed a real product boundary rather than a mere test mismatch: fresh Character attacks had no pairwise spatial facts because `realSpatialRuntimeService` hard-coded Aelar/reference pairs.
+- `b6cffefa11c64e2f7b206f449570fcc9bd9d5136` generalized the built-in theater-of-mind baseline to materialize pairwise spatial facts for every live Character against live Combatants using existing Scene distance labels, without adding coordinates/pathfinding/LOS computation.
+- `2612a48604970c4fb4d83395ba29791efa55a9e4` immediately restored the existing `applyMovementSpatialPlan` return contract after the prior edit accidentally changed it.
+- `d7759b50e9bbe4375139e940c638820a796f19bd` updated the Phase11 attack acceptance to choose a dynamically legal derived attack/target and assert live Character-id targeting provenance.
+- Phase11 run `31968566259` then showed the created Fighter's default loadout had only melee attacks while built-in enemies were outside melee range. This was a legitimate legal-action state, not a spatial failure.
+- SRD loadout data confirms Fighter loadout B contains a Longbow. `8128fcb86d7a7d8ff935e1e322c8a9a495fdd036` changed the production creation acceptance to choose loadout B and assert that the committed Character materializes its Longbow attack.
+- Phase11 run `31968670109` failed that assertion before entering the play tests: final `CharacterSheet.attacks` does **not** materialize the Longbow selected through production starting equipment. This is now the first Phase11 product blocker: production starting loadout/item state is not feeding weapon-attack derivation for a fresh saved Character.
 
-The automatic PR matrix at `a01221ac...` still reports Phase 11 Playable, Phase 12 Connected Session, and Main Playable failures. Comparison against the immediately preceding validated source head `7d83f263...` shows those same workflows were already failing there. They therefore predate this player-lobby slice and are not evidence that the new Join/lobby changes regressed those boundaries.
+Independent Phase12 finding:
 
-The failures are nevertheless release blockers. Their common surface is the old fixture-based Phase11/12 acceptance suites being executed through `offlineRuntimeAdapters`, which now intentionally includes the Phase14 `productionPlayRuntimeAdapter`. They must be migrated or split so preserved subsystem assertions remain meaningful while the production-composed acceptance path uses fresh non-fixture Character state. Do not silence or disable these workflows.
+- At `d7759b50...`, Phase12 run `31968566206` passed 22/23 connected authority tests. The only failure was `tests/ui/connectedAttackEventCapture.test.ts`, where `takeCommittedResolutionEvents(snapshot.resolution.id)` returned no captured events after staged Shortbow completion.
+- Handshake, wire protocol, reconnect, runtime adapter, corrections and event application all remained green in that run. Treat the event-capture failure as a separate narrow repair after the Phase11 attack-materialization blocker, not as a reason to replace connected authority architecture.
 
-Draft PR #109 remains open/draft and no merge is authorized or attempted.
+Current exact-head PR workflows for `8128fcb8...` were generated automatically. Phase11 is known failed as above; UI/Contract/Persistence/Phase12/Main were still running when this checkpoint began. Do not infer success until their concrete conclusions are fetched.
+
+Draft PR #109 remains open/draft. No merge is authorized or attempted.
 
 ## Next Exact Action
 
-Before implementing Ready/unready or broader lifecycle state, repair the pre-existing Phase14 regression-matrix debt exposed by the PR runs:
+Resume at the production Character **starting equipment -> weapon attack materialization** boundary before Ready/start work:
 
-1. Reproduce/locate the first failing assertion in Phase 11 `phase11OfflineWalkthrough.test.ts` under current Phase14 `offlineRuntimeAdapters` composition.
-2. Separate fixture-specific subsystem regression from production-composed acceptance where necessary; do not weaken the production no-fixture path and do not disable Phase11/12/Main workflows.
-3. Convert the production-composed Phase11 acceptance path to a fresh saved non-fixture Character and actual derived Scene/actions, preserving authoritative rule/economy/undo assertions with actor ids derived from that Character rather than hard-coded Aelar/Mira.
-4. Re-run the smallest affected Phase11 gate first; once green, re-check Phase12/Main because their current failures predate the player-lobby slice and may cascade from the same production-composition mismatch.
-5. Preserve the exact-head `a01221ac...` player-lobby evidence; do not repeat its focused UI gate unless code touching that boundary changes.
-
-After the regression matrix is repaired, resume P14.8 Ready/unready and Host start gating into Freeform/Initiative.
+1. Trace production creation finalization and Character-sheet projection for selected class loadout items, beginning with Fighter loadout B / Longbow, and identify why the saved Character contains the loadout selection/items but does not expose the corresponding canonical attack in `CharacterSheet.attacks` / production play actions.
+2. Fix the canonical derivation boundary, not the test: weapon attacks must derive from the actual saved Character/loadout and remain actor-id independent. Do not inject a test-only attack, fixed Aelar action, fake range or fixture fallback.
+3. Re-run the smallest Phase11 production-composed gate. Once it is green, verify the UI/TypeScript gate because `realSpatialRuntimeService` changed a Phase09/movement boundary.
+4. Then repair the single remaining Phase12 `connectedAttackEventCapture.test.ts` commit-event capture failure while preserving the existing Host-authoritative ResolutionEvent pipeline; do not disable the test/workflow.
+5. Re-check Main Playable after Phase11 and Phase12 are independently green. Only after this regression matrix is repaired resume P14.8 Ready/unready and Host start gating into Freeform/Initiative.
+6. Preserve exact-head Host lifecycle (`31967444715`) and player-lobby (`31967966233`) evidence unless code touching those boundaries changes.
