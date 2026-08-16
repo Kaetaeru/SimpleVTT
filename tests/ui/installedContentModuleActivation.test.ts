@@ -48,13 +48,13 @@ test("installed exact dependency satisfies a later manifest and both module meta
   assert.ok(restored.catalog.some((entry)=>entry.contentId==="option.child"));
 });
 
-test("semantic parent relationship can target the builtin catalog without persisting builtin entries", async () => {
+test("semantic parent relationship can target the canonical builtin catalog without persisting builtin entries", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,store);
   const preview=await adapter.previewContentImport(modulePayload("subclass.local","mod.subclass",{
     category:"subclass",
-    relationships:[{kind:"parent",target:"class.fighter"}],
+    relationships:[{kind:"parent",target:"dnd.srd521.class.fighter"}],
   }));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   const committed=await adapter.activateContentImport();
@@ -62,7 +62,7 @@ test("semantic parent relationship can target the builtin catalog without persis
   const generations=await store.readGenerations();
   assert.equal(generations.length,1);
   assert.ok(generations[0].payload?.includes("subclass.local"));
-  assert.ok(!generations[0].payload?.includes('"contentId": "class.fighter"'));
+  assert.ok(!generations[0].payload?.includes('"contentId": "dnd.srd521.class.fighter"'));
 });
 
 test("RulesProfile mismatch and unsupported capability reject a reviewed manifest without storage mutation", async () => {
