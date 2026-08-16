@@ -3,49 +3,49 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `0`
 - task_id: `phase13-closeout-ui-dice-regression`
-- dispatch: awaiting final control publication
+- dispatch: `continue`
 - repository: `Kaetaeru/SimpleVTT`
-- branch/ref: `agent/104-arbitrary-character-session-projection`
+- branch/ref: `main`
 
 ## Durable checkpoint
 
-This is a **new Rerun run**. No prior `.chatgpt-rerun` directory or active run existed on the target branch when bootstrap began.
+This is the same Rerun run created during the initial connection bootstrap. Its run_id, sequence, task, and validation history have **not** been reset.
 
-Confirmed from the GitHub app before bootstrap:
+After the user explicitly requested promotion to `main`, GitHub ancestry was revalidated before changing refs:
 
-- the repository is `Kaetaeru/SimpleVTT` and the connected account has contents write permission;
-- the active work branch is `agent/104-arbitrary-character-session-projection`;
-- the implementation head immediately before Rerun bootstrap was `7c9440970753a370fec7830cfa691832552e1d05`;
-- issue #104 is open and defines Phase 13 arbitrary Character SessionProjection;
-- Draft PR #107 is open, mergeable, unmerged, and targets the Phase 12 branch;
-- `.agents/PHASE13_CHECKLIST.md` exists but still contains unchecked closeout items and therefore must be reconciled against current evidence rather than assumed complete;
-- recent conversation work on the same branch aligned level-up UI with character creation and shared the visual-dice renderer across creation, level-up, and authoritative play; the implementation checkpoint passed the UI/production gate before this Rerun bootstrap.
+- prior `main` head / merge base: `be67f0f8a939acb07d6b846a86e79a072cb81b0d`;
+- `agent/104-arbitrary-character-session-projection` was 1144 commits ahead and 0 commits behind `main`;
+- because the histories were a clean fast-forward, `main` was advanced with `force=false` to `807670b8fb5b58d9d6fc5e13223df765b645eb1e`;
+- an immediate compare then reported `main` and the historical Phase 13 branch as `identical`, ahead 0 / behind 0.
 
-Rerun bootstrap writes completed before this STATE publication:
+The Rerun coordination documents are now being reconciled on `main`. No Phase 13 implementation task was started by this branch promotion.
 
-- `.chatgpt-rerun/README.md` created at commit `1c82e9c8bfad0c9420cfde1c880254b69b8cf870`;
-- `.chatgpt-rerun/PLAN.md` created at commit `420decba006fc3e312cf23e8450065707d212138`.
+Earlier confirmed project context remains valid:
 
-No project implementation task has been started as part of connection/bootstrap.
+- issue #104 defines Phase 13 arbitrary Character SessionProjection;
+- Draft PR #107 is historical stacked context and originally targeted the Phase 12 branch;
+- `.agents/PHASE13_CHECKLIST.md` exists and still requires evidence-based closeout reconciliation;
+- the recent character-creation/level-up UI convergence and shared visual-dice implementation passed the UI/production gates at implementation head `7c9440970753a370fec7830cfa691832552e1d05` before Rerun coordination commits were added.
 
 ## Validation record
 
-- Repository identity: confirmed through GitHub repository metadata.
-- Branch identity: confirmed through GitHub branch lookup and branch endpoint.
-- Project instructions: root `README.md` read; no root `AGENTS.md` or `CONTRIBUTING.md` exists on this branch.
-- Current Phase 13 scope: `.agents/PHASE13_CHECKLIST.md`, issue #104, and Draft PR #107 read.
-- Existing Rerun state: `.chatgpt-rerun` returned Not Found before creation, so no run_id/sequence/task/checkpoint was overwritten.
+- Repository identity: `Kaetaeru/SimpleVTT`, confirmed through GitHub repository metadata with write permission.
+- Main ancestry before promotion: clean descendant relation, 1144 ahead / 0 behind, merge base equal to the prior `main` head.
+- Main promotion: GitHub `update_ref` succeeded with `force=false`.
+- Post-promotion ancestry: `main` and `agent/104-arbitrary-character-session-projection` confirmed identical at `807670b8...` before main-only Rerun reconciliation commits.
+- Rerun continuity: run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `0`, task_id `phase13-closeout-ui-dice-regression` preserved.
 
 ## Next Exact Action
 
 When the watcher dispatches this run:
 
 1. Read `.chatgpt-rerun/README.md` → `control.json` → `STATE.md` → `PLAN.md` in the mandatory order.
-2. Confirm `run_id=b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, `sequence=0`, `task_id=phase13-closeout-ui-dice-regression`, and control status `continue` still reconcile.
-3. Re-fetch `agent/104-arbitrary-character-session-projection` and record its then-current exact head; do not assume `7c944097...` remains the head because Rerun bootstrap itself adds documentation commits.
-4. Re-read `.agents/PHASE13_CHECKLIST.md`, issue #104, Draft PR #107, and the current Phase 13/session design contracts.
-5. Verify current exact-head UI/Phase 11/Phase 12/Phase 13/Windows artifact evidence, including recent creation/level-up/dice regression coverage.
-6. Reconcile and close Phase 13 tracking/handoff records only where evidence supports it. Keep PR #107 Draft/unmerged unless the user separately authorizes a merge.
-7. Write PLAN → STATE → control.json last for any dispatch-state transition, with STATUS refreshed for human visibility.
+2. Confirm `run_id=b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, `sequence=0`, `task_id=phase13-closeout-ui-dice-regression`, branch/ref `main`, and control status `continue` still reconcile.
+3. Re-fetch current `main` and record its exact head. Do not use the historical Phase 13 branch as the future-work baseline.
+4. Re-read `.agents/PHASE13_CHECKLIST.md`, issue #104, historical Draft PR #107, and the current Phase 13/session design contracts.
+5. Verify the applicable UI/Phase 11/Phase 12/Phase 13/Windows artifact evidence, distinguishing source-changing implementation commits from Rerun-only coordination commits.
+6. Reconcile and close Phase 13 tracking/handoff records only where evidence supports it.
+7. For any new implementation after Task 0, branch from or work against the then-current `main` unless the user explicitly chooses another ref.
+8. Write PLAN → STATE → control.json last for any dispatch-state transition, with STATUS refreshed for human visibility.
 
 Do not begin Phase 14 or unrelated feature implementation under Task 0.
