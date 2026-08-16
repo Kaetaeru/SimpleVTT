@@ -335,11 +335,13 @@ Evidence for the six Ready/start items: exact source `bd1077b9bc61b86c2c0370543a
 
 ## Participant lifecycle
 
-- [ ] Late join has an explicit policy for preparation and already-started sessions and never silently corrupts turn/session state.
-- [ ] Disconnect marks the participant unavailable without deleting authoritative session state required for reconnect.
-- [ ] Reconnect resumes from the last accepted event cursor and restores the participant/projection without duplication.
-- [ ] Duplicate/replayed hello/action/event traffic is idempotent according to the existing connected protocol guarantees.
+- [x] Late join has an explicit policy for preparation and already-started sessions and never silently corrupts turn/session state.
+- [x] Disconnect marks the participant unavailable without deleting authoritative session state required for reconnect.
+- [x] Reconnect resumes from the last accepted event cursor and restores the participant/projection without duplication.
+- [x] Duplicate/replayed hello/action/event traffic is idempotent according to the existing connected protocol guarantees.
 - [ ] Incompatible or invalid participant entry does not leave a ghost participant or stale projection behind.
+
+Evidence for the four participant lifecycle items: exact source `cf520d35acd1e21a0247fdeb2d3664ae8a334345`; Phase12 `31973034389` connected authority + reconnect cursor/idempotency + production build green; UI `31973034337` TypeScript/build green; Main Playable `31973034347` full build + Phase11 + Phase12 + Phase13 green. Earlier exact-peer disconnect/live late-join/Host reconnect authority remains evidenced at `84d1d39135c08a2094783fb336a606f294b1cf58`.
 
 ## Remote actions
 
