@@ -17,6 +17,7 @@ import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import { mockAdapter } from "./mockAdapter";
+import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 
 export interface UiDebugState {
   selectedActionId: string | null;
@@ -129,6 +130,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setUiDebug = useCallback((patch: Partial<UiDebugState>) => {
     setUiDebugState((current) => ({ ...current, ...patch }));
   }, []);
+
+  useEffect(() => {
+    return subscribeExternalAdapterSnapshot((next) => {
+      const sequence = ++operationSequenceRef.current;
+      publishIfLatest(sequence, next);
+    });
+  }, [publishIfLatest]);
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
