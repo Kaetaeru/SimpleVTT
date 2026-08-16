@@ -12,6 +12,11 @@ import type {
 } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import {
+  commitFreeformSpellSlot,
+  restoreFreeformSpellSlot,
+  type FreeformSpellSlotChange,
+} from "./spellcastingRuntimeAdapter";
+import {
   phase09ReferenceAttackFact,
   phase09ReferenceHealingFact,
   phase09ReferenceSaveModifier,
@@ -54,7 +59,13 @@ interface Phase09ResolutionAdapterState {
   getSnapshot():Promise<AppSnapshot>;
 }
 
+interface FreeformSpellSlotHistory {
+  resolutionId:string;
+  change:FreeformSpellSlotChange;
+}
+
 const pendingAtomicAttacks = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
+const freeformSpellSlotHistories = new WeakMap<MockAdapter,FreeformSpellSlotHistory>();
 const REAL_HEALING_ACTION_IDS = new Set(["action.second-wind","action.healing-word","action.healing-potion"]);
 
 function resolutionId() {
@@ -108,6 +119,23 @@ function rejectAtomicAttack(internal:Phase09ResolutionAdapterState,error:string)
   resolution.canAdvance = false;
   resolution.nextLabel = undefined;
   internal.before = null;
+}
+
+function rejectCost(internal:Phase09ResolutionAdapterState,error:string) {
+  const resolution=internal.resolution;
+  if (!resolution) return;
+  if (internal.before) {
+    internal.scene=structuredClone(internal.before.scene);
+    internal.activeCharacter=structuredClone(internal.before.activeCharacter);
+    internal.characters=structuredClone(internal.before.characters);
+  }
+  resolution.stateChanges=[];
+  resolution.detail.push(`비용 적용 거부: ${error}`);
+  resolution.finalOutcome=`적용 거부: ${error}`;
+  resolution.stage="complete";
+  resolution.canAdvance=false;
+  resolution.nextLabel=undefined;
+  internal.before=null;
 }
 
 function buildAtomicAttack(
@@ -170,10 +198,12 @@ function applyAtomicAttack(
 
 const oldResolveAction = MockAdapter.prototype.resolveAction;
 const oldAdvanceResolution = MockAdapter.prototype.advanceResolution;
+const oldUndoLastResolution = MockAdapter.prototype.undoLastResolution;
 const phase09Prototype = MockAdapter.prototype as unknown as { commit(action:ActionVm):void };
 const oldCommit = phase09Prototype.commit;
 
 phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
+  const adapter=this as unknown as MockAdapter;
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const resolution = internal.resolution;
   if (!resolution || action.itemCost) return oldCommit.call(this,action);
@@ -191,18 +221,15 @@ phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
     initiativeMode:internal.sessionMode === "initiative",
   });
   if (costs.status === "rejected") {
-    if (internal.before) {
-      internal.scene = structuredClone(internal.before.scene);
-      internal.activeCharacter = structuredClone(internal.before.activeCharacter);
-      internal.characters = structuredClone(internal.before.characters);
-    }
-    resolution.stateChanges = [];
-    resolution.detail.push(`비용 적용 거부: ${costs.error}`);
-    resolution.finalOutcome = `적용 거부: ${costs.error}`;
-    resolution.stage = "complete";
-    resolution.canAdvance = false;
-    resolution.nextLabel = undefined;
-    internal.before = null;
+    rejectCost(internal,costs.error);
+    return;
+  }
+
+  const slotCommit=internal.sessionMode === "freeform"
+    ? commitFreeformSpellSlot(adapter,action.id,action.actorId)
+    : { status:"not-applicable" as const };
+  if (slotCommit.status === "rejected") {
+    rejectCost(internal,slotCommit.error);
     return;
   }
 
@@ -212,6 +239,10 @@ phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
   }
   resolution.stateChanges.push(...costs.stateChanges);
   resolution.provenance.push(...costs.provenance);
+  if (slotCommit.status === "committed") {
+    resolution.stateChanges.push(slotCommit.stateChange);
+    resolution.provenance.push(slotCommit.provenance);
+  }
   resolution.stage = "complete";
   resolution.canAdvance = false;
   resolution.nextLabel = undefined;
@@ -229,6 +260,9 @@ phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
   internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
   internal.lastResolutionId = resolution.id;
   internal.before = null;
+  if (slotCommit.status === "committed") {
+    freeformSpellSlotHistories.set(adapter,{ resolutionId:resolution.id,change:slotCommit.change });
+  }
 };
 
 MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(actionId:string,targetIds:string[]) {
@@ -412,4 +446,27 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
   }
 
   return oldAdvanceResolution.call(this);
+};
+
+MockAdapter.prototype.undoLastResolution=async function undoWithFreeformSpellSlotRestore() {
+  const internal=this as unknown as Phase09ResolutionAdapterState;
+  const history=freeformSpellSlotHistories.get(this);
+  const matches=Boolean(history && internal.lastResolutionId===history.resolutionId);
+  const snapshot=await oldUndoLastResolution.call(this);
+  if (!matches || !history || internal.lastResolutionId===history.resolutionId) return snapshot;
+  const restored=restoreFreeformSpellSlot(this,history.change);
+  if (restored.status==="rejected") {
+    if (internal.resolution) {
+      internal.resolution.detail.push(`Freeform spell-slot Undo 거부: ${restored.error}`);
+      internal.resolution.finalOutcome=`Undo 거부: ${restored.error}`;
+    }
+    return internal.getSnapshot();
+  }
+  freeformSpellSlotHistories.delete(this);
+  const undoEntry=internal.activity.find((entry)=>entry.undoOf===history.resolutionId);
+  if (undoEntry) {
+    undoEntry.detail.push("Freeform spell slot drift-check + restore");
+    undoEntry.stateChanges.push(restored.stateChange);
+  }
+  return internal.getSnapshot();
 };
