@@ -16,6 +16,7 @@ import { VisualDiceBridge } from "./VisualDiceBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
 import { ProductionSessionLifecycleBridge } from "./ProductionSessionLifecycleBridge";
+import { ProductionPlayerLobbyBridge } from "./ProductionPlayerLobbyBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -41,6 +42,7 @@ createRoot(document.getElementById("root")!).render(
       <ConcentrationSaveBridge />
       <MovementReactionBridge />
       <ProductionSessionLifecycleBridge />
+      <ProductionPlayerLobbyBridge />
     </AppProvider>
   </StrictMode>,
 );
