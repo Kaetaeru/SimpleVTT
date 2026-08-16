@@ -9,33 +9,69 @@ import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter"
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { mountCharacterSessionProjection, projectedCharacterIds } from "../../src/app/characterSessionProjectionRegistry";
-import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { tauriSessionTransport, type SessionTransportMessage } from "../../src/app/tauriSessionTransport";
+import { encodeConnectedWireMessage, type ConnectedWireMessage } from "../../src/app/connectedSessionWire";
+import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+import { CharacterLibraryRepository } from "../../src/app/characterLibraryPersistence";
+import { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
 
 function installFakeDesktopTransport() {
   const original={
     available:tauriSessionTransport.available,
     startHost:tauriSessionTransport.startHost,
+    connectClient:tauriSessionTransport.connectClient,
+    send:tauriSessionTransport.send,
     stop:tauriSessionTransport.stop,
     onMessage:tauriSessionTransport.onMessage,
     onState:tauriSessionTransport.onState,
   };
   let startCount=0;
+  let connectCount=0;
   let listenerCount=0;
+  let messageHandler:((message:SessionTransportMessage)=>void)|undefined;
   tauriSessionTransport.available=()=>true;
   tauriSessionTransport.startHost=async()=>({role:"host",state:"connected",address:`127.0.0.1:${3210+startCount++}`,peerCount:0});
+  tauriSessionTransport.connectClient=async(address)=>{connectCount+=1;return {role:"client",state:"connected",address,peerCount:1};};
+  tauriSessionTransport.send=async()=>1;
   tauriSessionTransport.stop=async()=>({role:null,state:"disconnected",address:"",peerCount:0});
-  tauriSessionTransport.onMessage=async()=>{listenerCount+=1;return()=>{};};
+  tauriSessionTransport.onMessage=async(handler)=>{listenerCount+=1;messageHandler=handler;return()=>{};};
   tauriSessionTransport.onState=async()=>()=>{};
   return {
     listenerCount:()=>listenerCount,
+    connectCount:()=>connectCount,
+    emit(message:ConnectedWireMessage) {
+      messageHandler?.({peer:"host",message:encodeConnectedWireMessage(message)});
+    },
     restore() {
       tauriSessionTransport.available=original.available;
       tauriSessionTransport.startHost=original.startHost;
+      tauriSessionTransport.connectClient=original.connectClient;
+      tauriSessionTransport.send=original.send;
       tauriSessionTransport.stop=original.stop;
       tauriSessionTransport.onMessage=original.onMessage;
       tauriSessionTransport.onState=original.onState;
     },
   };
+}
+
+async function persistedPlayerAdapter() {
+  const templateAdapter=new MockAdapter();
+  const template=await templateAdapter.getSnapshot();
+  const saved={
+    ...structuredClone(template.activeCharacter),
+    id:"char.phase14.persisted-player",
+    name:"Phase14 Persisted Player",
+    saveState:"saved" as const,
+  };
+  const store=new MemoryCharacterLibraryStore();
+  const repository=new CharacterLibraryRepository(store);
+  await repository.hydrate([saved],saved.id);
+  await repository.commit([saved],saved.id);
+  const adapter=new MockAdapter();
+  setCharacterLibraryStoreForTests(adapter,store);
+  const hydrated=await adapter.getSnapshot();
+  assert.equal(hydrated.activeCharacter.id,saved.id);
+  return adapter;
 }
 
 test("Host start enters preparation, stop clears transient authority, and restart creates fresh authority", async()=>{
@@ -119,6 +155,51 @@ test("Host bind failure returns an actionable offline snapshot instead of a reje
   }
 });
 
+test("reference Character cannot enter a production connected session",async()=>{
+  const transport=installFakeDesktopTransport();
+  try {
+    const adapter=new MockAdapter();
+    const blocked=await adapter.joinSession("127.0.0.1:3210");
+    assert.equal(blocked.session.lifecycle,"offline");
+    assert.equal(blocked.session.role,"offline");
+    assert.equal(blocked.session.compatibility,"incompatible");
+    assert.match(blocked.session.compatibilityMessage,/saved production Character/);
+    assert.equal(transport.connectCount(),0);
+  } finally {
+    transport.restore();
+  }
+});
+
+test("persisted Character joins through explicit connecting state and reaches compatible lobby after hello-ack",async()=>{
+  const transport=installFakeDesktopTransport();
+  try {
+    const adapter=await persistedPlayerAdapter();
+    const joining=await adapter.joinSession("127.0.0.1:3210");
+    assert.equal(joining.activeCharacter.id,"char.phase14.persisted-player");
+    assert.equal(joining.session.role,"client");
+    assert.equal(joining.session.lifecycle,"connecting");
+    assert.equal(joining.session.compatibility,"warning");
+    assert.match(joining.session.compatibilityMessage,/waiting for host compatibility handshake/);
+    assert.equal(transport.connectCount(),1);
+
+    transport.emit({
+      type:"hello-ack",
+      sessionId:"session.phase14.player-lobby",
+      compatibility:{status:"compatible",message:"Compatible production lobby."},
+      hostCursor:0,
+      events:[],
+    });
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+    const lobby=await adapter.getSnapshot();
+    assert.equal(lobby.session.lifecycle,"lobby");
+    assert.equal(lobby.session.compatibility,"compatible");
+    assert.equal(lobby.connectionState,"connected");
+    assert.ok(lobby.session.participants.some((participant)=>participant.id==="client:char.phase14.persisted-player"));
+  } finally {
+    transport.restore();
+  }
+});
+
 test("production UI surfaces preparation status, shareable address, and Host stop without debug controls",()=>{
   const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
   assert.match(source,/Host 준비 중/);
@@ -127,5 +208,19 @@ test("production UI surfaces preparation status, shareable address, and Host sto
   assert.match(source,/snapshot\.session\.participants\.length/);
   assert.match(source,/Host 중지/);
   assert.match(source,/stopSession\(\)/);
+  assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
+});
+
+test("production Session screen replaces reference Join card with persisted Character selection and lobby lifecycle",()=>{
+  const source=readFileSync(new URL("../../src/ProductionPlayerLobbyBridge.tsx",import.meta.url),"utf8");
+  const css=readFileSync(new URL("../../src/production-player-lobby.css",import.meta.url),"utf8");
+  assert.match(source,/productionJoinCharacters/);
+  assert.match(source,/selectProductionCharacter/);
+  assert.match(source,/Host 주소/);
+  assert.match(source,/connecting/);
+  assert.match(source,/lobby/);
+  assert.match(source,/joinSession\(address\)/);
+  assert.match(css,/article:nth-child\(2\)/);
+  assert.match(css,/screen-head p/);
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
