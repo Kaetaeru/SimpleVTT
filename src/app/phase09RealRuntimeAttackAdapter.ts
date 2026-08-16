@@ -11,6 +11,7 @@ import { undoResolutionEvents } from "./realEventUndoService";
 import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 import { clearPendingManualMovementReaction, manualMovementReactionFor, type PendingManualMovementReaction } from "./manualMovementReactionRuntime";
 import { runtimeResolutionEventHistories } from "./runtimeResolutionEventHistory";
+import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface BeforeState {
@@ -133,6 +134,15 @@ function build(
   }
 }
 
+function runtimeRevisionMatches(
+  adapter:MockAdapter,
+  internal:RuntimeAttackAdapterState,
+  transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>,
+) {
+  if (!transaction.runtimeState || transaction.runtimeInputRevision===undefined) return true;
+  return snapshotAdapterTurnRuntimeState(adapter,internal.scene).revision===transaction.runtimeInputRevision;
+}
+
 function commitRuntimeTransaction(
   adapter:MockAdapter,
   internal:RuntimeAttackAdapterState,
@@ -145,6 +155,21 @@ function commitRuntimeTransaction(
     transaction.runtimeInputRevision,
     transaction.runtimeState,
   );
+}
+
+async function persistThenCommitRuntime(
+  adapter:MockAdapter,
+  internal:RuntimeAttackAdapterState,
+  transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>,
+) {
+  if (!runtimeRevisionMatches(adapter,internal,transaction)) {
+    return { status:"rejected" as const,error:"turn runtime revision changed before attack write-back" };
+  }
+  const writeBack=await persistCharacterResolutionEvents(adapter,transaction.events,"forward");
+  if (writeBack.status==="rejected") return writeBack;
+  if (commitRuntimeTransaction(adapter,internal,transaction)) return { status:"committed" as const,changed:writeBack.changed };
+  if (writeBack.changed) await persistCharacterResolutionEvents(adapter,transaction.events,"inverse");
+  return { status:"rejected" as const,error:"turn runtime revision changed before attack commit" };
 }
 
 function apply(internal:RuntimeAttackAdapterState,resolution:ResolutionView,transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>) {
@@ -208,8 +233,9 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
       return internal.getSnapshot();
     }
     if (resolution.attackOutcome === "빗나감") {
-      if (!commitRuntimeTransaction(this,internal,transaction)) {
-        reject(this,internal,"turn runtime revision changed before attack commit",false);
+      const committed=await persistThenCommitRuntime(this,internal,transaction);
+      if (committed.status==="rejected") {
+        reject(this,internal,committed.error,false);
         return internal.getSnapshot();
       }
       apply(internal,resolution,transaction);
@@ -232,11 +258,13 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRu
       reject(this,internal,"missing staged runtime atomic attack transaction");
       return internal.getSnapshot();
     }
-    if (!commitRuntimeTransaction(this,internal,transaction)) {
-      reject(this,internal,"turn runtime revision changed before staged damage commit",false);
+    const committed=await persistThenCommitRuntime(this,internal,transaction);
+    if (committed.status==="rejected") {
+      reject(this,internal,committed.error,false);
       return internal.getSnapshot();
     }
     if (!apply(internal,resolution,transaction)) {
+      if (committed.changed) await persistCharacterResolutionEvents(this,transaction.events,"inverse");
       reject(this,internal,"runtime atomic attack target disappeared before projection",false);
       return internal.getSnapshot();
     }
@@ -262,6 +290,14 @@ MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFrom
     }
     return internal.getSnapshot();
   }
+  const writeBack=await persistCharacterResolutionEvents(this,history.events,"inverse");
+  if (writeBack.status==="rejected") {
+    if (internal.resolution) {
+      internal.resolution.detail.push(`Event-native Undo 거부: Character write-back 실패: ${writeBack.error}`);
+      internal.resolution.finalOutcome=`Undo 거부: Character write-back 실패: ${writeBack.error}`;
+    }
+    return internal.getSnapshot();
+  }
   if (runtimeState && undone.runtimeState) {
     const committed=commitAdapterTurnRuntimeState(
       this,
@@ -270,6 +306,7 @@ MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFrom
       undone.runtimeState,
     );
     if (!committed) {
+      if (writeBack.changed) await persistCharacterResolutionEvents(this,history.events,"forward");
       if (internal.resolution) {
         internal.resolution.detail.push("Event-native Undo 거부: turn runtime revision changed before Undo commit");
         internal.resolution.finalOutcome="Undo 거부: turn runtime revision changed before Undo commit";
