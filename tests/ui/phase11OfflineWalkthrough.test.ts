@@ -92,6 +92,7 @@ test("production offline composition casts a slotted spell in Freeform without s
   await adapter.setSessionMode("freeform");
 
   const before = await adapter.getSnapshot();
+  const hpBefore = before.scene.entities.find((entity) => entity.id === "char.aelar")?.hp;
   const slotBefore = before.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current;
   let snapshot = await adapter.resolveAction("action.healing-word", ["char.aelar"]);
 
@@ -104,8 +105,11 @@ test("production offline composition casts a slotted spell in Freeform without s
 
   assert.equal(snapshot.resolution?.stage, "complete");
   assert.equal(snapshot.resolution?.actionId, "action.healing-word");
-  assert.match(snapshot.resolution?.compact ?? "", /HP 회복/);
-  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "char.aelar")?.hp, 42);
+  const healingDie = snapshot.resolution?.authoritativeDice[0];
+  assert.ok(healingDie !== undefined && healingDie >= 1 && healingDie <= 4, "Healing Word must expose one authoritative d4 face");
+  const expectedHealing = healingDie + 3;
+  assert.equal(snapshot.resolution?.compact, `Aelar ${expectedHealing} HP 회복`);
+  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "char.aelar")?.hp, (hpBefore ?? 0) + expectedHealing);
   assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current, (slotBefore ?? 0) - 1);
   assert.equal(snapshot.scene.economyByActor["char.mira"]?.bonusAction, true, "Freeform spell must not consume Initiative Bonus Action economy");
   assert.match(snapshot.resolution?.provenance.join(" ") ?? "", /dnd\.srd521\.spell\.healing-word/);
