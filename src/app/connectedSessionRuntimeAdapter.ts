@@ -25,7 +25,7 @@ declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","character-projection-v1","event-cursor-v1","ready-intent-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","character-projection-v1","event-cursor-v1","ready-intent-v1","session-end-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -33,6 +33,7 @@ export interface ConnectedAdapterState {
   sessionMode:AppSnapshot["sessionMode"];
   session:AppSnapshot["session"];
   scene:SceneVm;
+  resolution:AppSnapshot["resolution"];
   activeCharacter:CharacterSheet;
   characters:CharacterSummary[];
   catalog:CatalogEntry[];
@@ -61,6 +62,24 @@ export function connectedManifest(adapter:MockAdapter):SessionCompatibilityManif
 
 export async function publishConnectedSnapshot(adapter:MockAdapter) {
   publishExternalAdapterSnapshot(await connectedInternal(adapter).getSnapshot());
+}
+
+export function resetConnectedSessionTransientState(adapter:MockAdapter,message:string) {
+  const app=connectedInternal(adapter);
+  resetConnectedState(adapter,null);
+  app.sessionMode="freeform";
+  app.scene.round=0;
+  const localActorId=app.scene.entities.some((entity)=>entity.id===app.activeCharacter.id) ? app.activeCharacter.id : "";
+  app.scene.currentActorId=localActorId;
+  app.scene.selectedActorId=localActorId;
+  app.scene.economyByActor={};
+  app.resolution=null;
+  app.connectionState="disconnected";
+  app.session.role="offline";
+  app.session.address="";
+  app.session.participants=[];
+  app.session.compatibility="warning";
+  app.session.compatibilityMessage=message;
 }
 
 function setTransportStatus(adapter:MockAdapter,status:SessionTransportStatus) {
@@ -380,6 +399,18 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
 async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
+  if (wire.type==="session-ended") {
+    if (!state.sessionId||wire.sessionId!==state.sessionId) {
+      app.session.compatibility="warning";
+      app.session.compatibilityMessage=`Ignored session end for another session: ${wire.sessionId}.`;
+      await publishConnectedSnapshot(adapter);
+      return;
+    }
+    resetConnectedSessionTransientState(adapter,`Session ended by Host · ${wire.reason}`);
+    await tauriSessionTransport.stop().catch(()=>undefined);
+    await publishConnectedSnapshot(adapter);
+    return;
+  }
   if (wire.type==="hello-ack") {
     state.sessionId=wire.sessionId;
     if (!state.replica || state.replica.sessionId!==wire.sessionId) state.replica=new ClientSessionReplica(wire.sessionId);
