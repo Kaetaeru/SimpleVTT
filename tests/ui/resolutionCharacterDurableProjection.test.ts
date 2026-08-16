@@ -35,7 +35,6 @@ test("Character ResolutionEvent projection persists HP/resource/item/life in eve
     event(
       hp("char.hero","temporary",4,0),
       hp("char.hero","current",20,11),
-      hp("char.hero","maximum",30,28),
       resource("char.hero","resource.second-wind",1,0),
       resource("char.hero","phase09:item:item.potion:quantity",2,1),
       resource("char.hero","phase09:item:item.wand:charges",7,6),
@@ -47,7 +46,7 @@ test("Character ResolutionEvent projection persists HP/resource/item/life in eve
   assert.equal(result.changed,true);
   assert.equal(result.sheet.tempHp,0);
   assert.equal(result.sheet.hp,11);
-  assert.equal(result.sheet.maxHp,28);
+  assert.equal(result.sheet.maxHp,30);
   assert.equal(result.sheet.resources[0].current,0);
   assert.equal(result.sheet.items[0].quantity,1);
   assert.equal(result.sheet.items[1].charges?.current,6);
@@ -74,6 +73,12 @@ test("inverse Character write-back is drift-safe and restores the exact durable 
   const rejected=projectResolutionCharacterWriteBack(drifted,events,"inverse");
   assert.equal(rejected.status,"rejected");
   if (rejected.status==="rejected") assert.match(rejected.error,/write-back drift/);
+});
+
+test("maximum HP write-back is rejected until an explicit canonical source contract exists", () => {
+  const result=projectResolutionCharacterWriteBack(sheet(),[event(hp("char.hero","maximum",30,25))],"forward");
+  assert.equal(result.status,"rejected");
+  if (result.status==="rejected") assert.match(result.error,/maximum HP requires an explicit source-model contract/);
 });
 
 test("combatant state changes do not mutate the local Character durable projection", () => {
