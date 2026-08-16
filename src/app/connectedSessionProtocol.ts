@@ -32,6 +32,11 @@ export interface ConnectedActionRequest {
   capabilities:string[];
 }
 
+export type ConnectedCorrectionChange =
+  | { kind:"hp"; targetId:string; before:number; after:number }
+  | { kind:"status"; targetId:string; before:string[]; after:string[] }
+  | { kind:"resource"; targetId:string; resourceId:string; before:number; after:number };
+
 export type ConnectedEventPayload =
   | {
       kind:"resolution";
@@ -50,8 +55,15 @@ export type ConnectedEventPayload =
       provenance:string[];
     }
   | {
-      kind:"correction"|"participant";
+      kind:"correction";
       resolutionId?:string;
+      ruling:string;
+      changes:ConnectedCorrectionChange[];
+      stateChanges:string[];
+      provenance:string[];
+    }
+  | {
+      kind:"participant";
       stateChanges:string[];
       provenance:string[];
     };
