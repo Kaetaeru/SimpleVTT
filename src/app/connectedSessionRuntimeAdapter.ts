@@ -221,6 +221,29 @@ function scheduleClientReconnect(adapter:MockAdapter) {
   void publishConnectedSnapshot(adapter);
 }
 
+function acceptedManifestForParticipant(adapter:MockAdapter,participantId:string) {
+  const state=connectedStateFor(adapter);
+  for (const [peer,mappedParticipantId] of state.peerParticipants.entries()) {
+    if (mappedParticipantId!==participantId) continue;
+    const manifest=state.peerManifests.get(peer);
+    if (manifest) return manifest;
+  }
+  return undefined;
+}
+
+async function rejectLiveHello(adapter:MockAdapter,peer:string,message:string) {
+  const state=connectedStateFor(adapter);
+  const ledger=state.ledger;
+  if (!ledger) return;
+  await sendConnectedWireTo(peer,{
+    type:"hello-ack",
+    sessionId:ledger.sessionId,
+    compatibility:{status:"incompatible",message},
+    hostCursor:ledger.cursor,
+    events:[],
+  });
+}
+
 async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMessage,wire:ConnectedWireMessage) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
@@ -228,6 +251,21 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
   if (!ledger) return;
 
   if (wire.type==="hello") {
+    const existingParticipant=app.session.participants.find((participant)=>participant.id===wire.participantId);
+    const previousManifest=existingParticipant ? acceptedManifestForParticipant(adapter,wire.participantId) : undefined;
+    if (state.sessionStarted&&!existingParticipant) {
+      await rejectLiveHello(adapter,message.peer,"Session is already live; new participants can join the next preparation lobby.");
+      return;
+    }
+    if (state.sessionStarted&&existingParticipant) {
+      const expectedCharacterId=previousManifest?.character?.characterId;
+      const reconnectCharacterId=wire.manifest.character?.characterId;
+      if (!previousManifest||expectedCharacterId!==reconnectCharacterId) {
+        await rejectLiveHello(adapter,message.peer,"Live reconnect must use the previously accepted participant and Character identity.");
+        return;
+      }
+    }
+
     let compatibility=ledger.handshake(wire.manifest);
     let events:ConnectedSessionEvent[]=[];
     if (compatibility.status!=="incompatible") {
@@ -262,7 +300,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
             state:"connected",
             ready:false,
             stateChanges:[`${wire.participantName} connected · Ready reset`],
-            provenance:["host-authoritative participant handshake"],
+            provenance:[existingParticipant?"host-authoritative participant reconnect":"host-authoritative participant handshake"],
           },
         });
         applyParticipantPayload(adapter,participantEvent.payload as Extract<ConnectedEventPayload,{kind:"participant"}>);
