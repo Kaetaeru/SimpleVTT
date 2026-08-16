@@ -67,6 +67,26 @@ test("same qualified identity with different payload is an explicit conflict and
   assert.equal(repository.snapshot()?.entries[0].description,"local content");
 });
 
+test("stale installed-content writers cannot overwrite a newer physical generation", async () => {
+  const store=new MemoryInstalledContentStore();
+  const first=new InstalledContentRepository(store);
+  const stale=new InstalledContentRepository(store);
+  await first.hydrate();
+  await stale.hydrate();
+  await first.install(entry());
+
+  await assert.rejects(
+    ()=>stale.install(entry({sourceId:"homebrew.stale-writer",source:"Stale Writer"})),
+    /stale Installed content generation/,
+  );
+  assert.equal(stale.snapshot()?.storageRevision,0);
+  const reloaded=new InstalledContentRepository(store);
+  const hydration=await reloaded.hydrate();
+  assert.equal(hydration.document.storageRevision,1);
+  assert.equal(hydration.document.entries.length,1);
+  assert.equal(hydration.document.entries[0].sourceId,"homebrew.stone-pack");
+});
+
 test("corrupt newest installed-content generation recovers from the previous valid commit", async () => {
   const valid=encodeInstalledContentV1(document(1,[entry()]));
   const store=new MemoryInstalledContentStore([
