@@ -93,9 +93,15 @@ test("production offline composition casts a slotted spell in Freeform without s
 
   const before = await adapter.getSnapshot();
   const slotBefore = before.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot) => slot.level === 1)?.current;
-  const snapshot = await adapter.resolveAction("action.healing-word", ["char.aelar"]);
+  let snapshot = await adapter.resolveAction("action.healing-word", ["char.aelar"]);
 
   assert.equal(snapshot.sessionMode, "freeform");
+  assert.equal(snapshot.resolution?.stage, "roll-animation", "Freeform spell should expose its authoritative roll presentation before commit");
+  for (let step = 0; step < 4 && snapshot.resolution?.stage !== "complete"; step += 1) {
+    assert.equal(snapshot.resolution?.canAdvance, true, `Freeform spell presentation stalled at ${snapshot.resolution?.stage}`);
+    snapshot = await adapter.advanceResolution();
+  }
+
   assert.equal(snapshot.resolution?.stage, "complete");
   assert.match(snapshot.resolution?.compact ?? "", /치유의 단어/);
   assert.equal(snapshot.scene.entities.find((entity) => entity.id === "char.aelar")?.hp, 42);
