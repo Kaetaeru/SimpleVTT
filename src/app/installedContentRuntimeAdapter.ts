@@ -7,9 +7,9 @@ import {
   installedEntryFromPayload,
   resolvedBuiltinCatalogEntry,
 } from "./contentCatalogIdentity";
-import { validateInstalledContentCandidate } from "./declarativeModuleValidation";
+import { activeRulesProfileCompatibility, validateInstalledContentCandidate } from "./declarativeModuleValidation";
 import { InstalledContentRepository } from "./installedContentPersistence";
-import type { InstalledContentStore } from "./installedContentContracts";
+import type { InstalledCatalogEntryV1, InstalledContentDocumentV1, InstalledContentStore } from "./installedContentContracts";
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
 
 const cp = <T,>(value:T):T => structuredClone(value);
@@ -79,12 +79,34 @@ function collidesWithBuiltin(context:Context,contentId:string,sourceId:string,ve
   const qualifiedId=catalogQualifiedId(contentId,sourceId,version);
   return Boolean(context.builtin?.some((entry)=>resolvedBuiltinCatalogEntry(entry).id===qualifiedId));
 }
+function builtinValidationEntries(context:Context):InstalledCatalogEntryV1[] {
+  const profile=activeRulesProfileCompatibility();
+  const module={
+    moduleId:profile.id,
+    moduleVersion:profile.version,
+    rulesProfile:{id:profile.id,version:profile.version},
+    dependencies:[],conflicts:[],capabilities:profile.capabilities,extensionPoints:[],
+  };
+  return (context.builtin ?? []).map((entry) => {
+    const resolved=resolvedBuiltinCatalogEntry(entry);
+    return {
+      contentId:resolved.contentId!,category:resolved.category,nameKo:resolved.nameKo,nameEn:resolved.nameEn,
+      sourceId:resolved.sourceId!,source:resolved.source,version:resolved.version,description:resolved.description,
+      relationships:cp(resolved.relationships),capabilities:cp(resolved.capabilities),module:cp(module),
+    };
+  });
+}
+function validationDocument(context:Context):InstalledContentDocumentV1 {
+  const document=context.repository.snapshot();
+  if (!document) throw new Error("installed content repository is not hydrated");
+  return {...document,entries:[...builtinValidationEntries(context),...document.entries]};
+}
 function validatePreview(adapter:MockAdapter) {
-  const state=stateOf(adapter), context=contextFor(adapter), preview=state.contentImport, document=context.repository.snapshot();
-  if (!preview?.entry || !document) return;
+  const state=stateOf(adapter), context=contextFor(adapter), preview=state.contentImport;
+  if (!preview?.entry || !context.repository.snapshot()) return;
   try {
     const installed=installedEntryFromPayload(preview.entry,preview.payload);
-    for (const issue of validateInstalledContentCandidate(document,installed)) addPreviewMessage(state,issue.severity,`${issue.code}: ${issue.message}`);
+    for (const issue of validateInstalledContentCandidate(validationDocument(context),installed)) addPreviewMessage(state,issue.severity,`${issue.code}: ${issue.message}`);
   } catch(error) {
     addPreviewMessage(state,"blocking",error instanceof Error?error.message:String(error));
   }
@@ -116,7 +138,7 @@ MockAdapter.prototype.activateContentImport=async function activateInstalledCont
   let installed;
   try { installed=installedEntryFromPayload(preview.entry,preview.payload); }
   catch(error) { addPreviewMessage(state,"blocking",error instanceof Error?error.message:String(error)); return this.getSnapshot(); }
-  const validation=validateInstalledContentCandidate(context.repository.snapshot()!,installed);
+  const validation=validateInstalledContentCandidate(validationDocument(context),installed);
   for (const issue of validation) if (issue.severity==="blocking") addPreviewMessage(state,issue.severity,`${issue.code}: ${issue.message}`);
   if (state.contentImport?.validation.some((entry)=>entry.severity==="blocking")) return this.getSnapshot();
   if (collidesWithBuiltin(context,installed.contentId,installed.sourceId,installed.version)) {
