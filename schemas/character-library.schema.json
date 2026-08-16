@@ -67,7 +67,6 @@
       "required": ["hp", "tempHp", "resources", "items"],
       "properties": {
         "hp": { "type": "number" },
-        "maxHp": { "type": "number" },
         "tempHp": { "type": "number" },
         "lifeFlags": {
           "type": "object",
