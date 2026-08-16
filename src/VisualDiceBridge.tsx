@@ -89,6 +89,7 @@ export function VisualDiceBridge() {
   return createPortal(
     <div className="visual-dice-overlay" data-resolution-id={replay.roll.resolutionId}>
       <VisualDiceTray
+        key={replay.key}
         label={replay.roll.label}
         dice={replay.roll.dice}
         caption="authoritative result · visual replay"
