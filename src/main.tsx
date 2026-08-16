@@ -4,6 +4,7 @@ import { App } from "./App";
 import { AppProvider } from "./app/AppProvider";
 import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
+import "./app/connectedActionRoutingAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
