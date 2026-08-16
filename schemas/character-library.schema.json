@@ -66,9 +66,20 @@
     "creationAuthoring": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["completeness", "abilityMethod", "abilities", "rolledPool", "rolledAssignments", "selectedSkills", "selectedSpells", "selectedClassChoices", "equipmentPreset", "backgroundEquipmentPreset", "overrides"],
+      "required": [
+        "completeness", "rulesProfileId", "name", "className", "subclassName", "species", "background", "level",
+        "abilityMethod", "abilities", "rolledPool", "rolledAssignments", "selectedSkills", "selectedSpells",
+        "selectedClassChoices", "equipmentPreset", "backgroundEquipmentPreset", "choiceSelections", "notes", "overrides"
+      ],
       "properties": {
         "completeness": { "const": "explicit" },
+        "rulesProfileId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "className": { "type": "string" },
+        "subclassName": { "type": "string" },
+        "species": { "type": "string" },
+        "background": { "type": "string" },
+        "level": { "type": "integer", "minimum": 1 },
         "abilityMethod": { "enum": ["standard", "rolled", "point-buy", "custom"] },
         "abilities": { "type": "object" },
         "rolledPool": { "type": "array" },
@@ -78,6 +89,14 @@
         "selectedClassChoices": { "type": "array", "items": { "type": "string" } },
         "equipmentPreset": { "type": "string" },
         "backgroundEquipmentPreset": { "type": "string" },
+        "choiceSelections": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "notes": { "type": "string" },
         "overrides": { "type": "object" }
       }
     },
