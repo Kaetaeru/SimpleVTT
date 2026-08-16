@@ -163,13 +163,13 @@ async function persistThenCommitRuntime(
   transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>,
 ) {
   if (!runtimeRevisionMatches(adapter,internal,transaction)) {
-    return { status:"rejected" as const,error:"turn runtime revision changed before attack write-back" };
+    return { status:"rejected" as const,error:"turn runtime revision changed before staged damage commit" };
   }
   const writeBack=await persistCharacterResolutionEvents(adapter,transaction.events,"forward");
   if (writeBack.status==="rejected") return writeBack;
   if (commitRuntimeTransaction(adapter,internal,transaction)) return { status:"committed" as const,changed:writeBack.changed };
   if (writeBack.changed) await persistCharacterResolutionEvents(adapter,transaction.events,"inverse");
-  return { status:"rejected" as const,error:"turn runtime revision changed before attack commit" };
+  return { status:"rejected" as const,error:"turn runtime revision changed before staged damage commit" };
 }
 
 function apply(internal:RuntimeAttackAdapterState,resolution:ResolutionView,transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>) {
