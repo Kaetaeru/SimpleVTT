@@ -3,6 +3,8 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import { projectedCharacterForPeer, projectedCharacterIds } from "../../src/app/characterSessionProjectionRegistry";
 import { connectedInternal, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { tauriSessionTransport, type SessionTransportMessage } from "../../src/app/tauriSessionTransport";
@@ -43,6 +45,100 @@ function installFakeDesktopTransport() {
     },
   };
 }
+
+function assertNoRejectedPeerGhost(adapter:MockAdapter,peer:string,participantId:string,characterId:string,cursorBefore:number) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  assert.ok(state.ledger);
+  assert.equal(state.ledger.cursor,cursorBefore,"rejected hello must not advance Host ledger cursor");
+  assert.equal(state.peerParticipants.has(peer),false,"rejected peer must not gain participant binding");
+  assert.equal(state.peerManifests.has(peer),false,"rejected peer must not gain accepted manifest state");
+  assert.equal(app.session.participants.some((participant)=>participant.id===participantId),false,"rejected participant must not enter Host roster");
+  assert.equal(projectedCharacterForPeer(adapter,peer),undefined,"rejected peer must not gain SessionProjection registry state");
+  assert.equal(projectedCharacterIds(adapter).includes(characterId),false,"rejected Character must not remain in projection registry");
+  assert.equal(app.scene.entities.some((entity)=>entity.id===characterId),false,"rejected Character must not remain in Host Scene");
+  assert.equal(Boolean(app.scene.actionsByActor[characterId]),false,"rejected Character must not leave Host actions");
+  assert.equal(Boolean(app.scene.economyByActor[characterId]),false,"rejected Character must not leave Host economy");
+}
+
+test("preparation Host rejects incompatible hello without ghost participant, peer, ledger, or projection state",async()=>{
+  const transport=installFakeDesktopTransport();
+  try {
+    const adapter=new MockAdapter();
+    await adapter.hostSession();
+    const state=connectedStateFor(adapter);
+    assert.ok(state.ledger);
+    const cursorBefore=state.ledger.cursor;
+    const participantId="client:char.phase14.incompatible";
+    const characterId="char.phase14.incompatible";
+    const manifest=connectedManifest(adapter);
+    manifest.protocolVersion+=1;
+    manifest.character={characterId,sourceRevision:1,runtimeRevision:1};
+
+    transport.emitFrom("peer.incompatible",{
+      type:"hello",
+      manifest,
+      participantId,
+      participantName:"Incompatible Player",
+      knownEventCursor:0,
+    });
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+
+    assertNoRejectedPeerGhost(adapter,"peer.incompatible",participantId,characterId,cursorBefore);
+    const ack=transport.sentTo().find((entry)=>entry.peer==="peer.incompatible")?.message;
+    assert.equal(ack?.type,"hello-ack");
+    if (ack?.type!=="hello-ack") throw new Error("expected incompatible hello-ack rejection");
+    assert.equal(ack.compatibility.status,"incompatible");
+    assert.deepEqual(ack.events,[]);
+  } finally {
+    transport.restore();
+  }
+});
+
+test("preparation Host rejects invalid SessionProjection before creating ghost state",async()=>{
+  const transport=installFakeDesktopTransport();
+  try {
+    const adapter=new MockAdapter();
+    await adapter.hostSession();
+    const state=connectedStateFor(adapter);
+    const app=connectedInternal(adapter);
+    assert.ok(state.ledger);
+    const cursorBefore=state.ledger.cursor;
+    const participantId="client:char.phase14.invalid-projection";
+    const characterId="char.phase14.invalid-projection";
+    const sheet=structuredClone(app.activeCharacter);
+    sheet.id=characterId;
+    sheet.name="Invalid Projection Player";
+    sheet.sourceRevision=17;
+    sheet.runtimeRevision=19;
+    const manifest=connectedManifest(adapter);
+    manifest.character={characterId,sourceRevision:17,runtimeRevision:19};
+    const projection=buildCharacterSessionProjectionV1(sheet,app.catalog);
+    projection.characterId="char.phase14.mismatched-projection";
+
+    transport.emitFrom("peer.invalid-projection",{
+      type:"hello",
+      manifest,
+      participantId,
+      participantName:sheet.name,
+      knownEventCursor:0,
+      projection,
+    });
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+
+    assertNoRejectedPeerGhost(adapter,"peer.invalid-projection",participantId,characterId,cursorBefore);
+    assert.equal(projectedCharacterIds(adapter).includes(projection.characterId),false,"mismatched projection id must not mount either");
+    assert.equal(app.scene.entities.some((entity)=>entity.id===projection.characterId),false,"mismatched projection entity must not appear in Scene");
+    const ack=transport.sentTo().find((entry)=>entry.peer==="peer.invalid-projection")?.message;
+    assert.equal(ack?.type,"hello-ack");
+    if (ack?.type!=="hello-ack") throw new Error("expected invalid projection hello-ack rejection");
+    assert.equal(ack.compatibility.status,"incompatible");
+    assert.match(ack.compatibility.message,/SessionProjection rejected/);
+    assert.deepEqual(ack.events,[]);
+  } finally {
+    transport.restore();
+  }
+});
 
 test("live Host rejects genuinely new participant before mutating accepted participant or ledger state",async()=>{
   const transport=installFakeDesktopTransport();
