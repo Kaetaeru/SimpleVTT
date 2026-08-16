@@ -1,7 +1,12 @@
 import "./installedContentContracts";
 import type { AppSnapshot, CatalogEntry, ContentImportPreview } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { composeContentCatalog, installedEntryFromPreview } from "./contentCatalogIdentity";
+import {
+  catalogQualifiedId,
+  composeContentCatalog,
+  installedEntryFromPreview,
+  resolvedBuiltinCatalogEntry,
+} from "./contentCatalogIdentity";
 import { InstalledContentRepository } from "./installedContentPersistence";
 import type { InstalledContentStore } from "./installedContentContracts";
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
@@ -104,6 +109,11 @@ function sourceIdFromPayload(payload:string) {
   }
 }
 
+function collidesWithBuiltin(context:Context,contentId:string,sourceId:string,version:string) {
+  const qualifiedId=catalogQualifiedId(contentId,sourceId,version);
+  return Boolean(context.builtin?.some((entry)=>resolvedBuiltinCatalogEntry(entry).id===qualifiedId));
+}
+
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithInstalledContent() {
   await ensureHydrated(this);
   const snapshot=await oldGetSnapshot.call(this);
@@ -136,6 +146,14 @@ MockAdapter.prototype.activateContentImport=async function activateInstalledCont
     installed=installedEntryFromPreview(preview.entry);
   } catch(error) {
     addPreviewBlocking(state,error instanceof Error ? error.message : String(error));
+    return this.getSnapshot();
+  }
+
+  if (collidesWithBuiltin(context,installed.contentId,installed.sourceId,installed.version)) {
+    addPreviewBlocking(
+      state,
+      `Builtin content qualified identity cannot be installed as local content: ${catalogQualifiedId(installed.contentId,installed.sourceId,installed.version)}`,
+    );
     return this.getSnapshot();
   }
 
