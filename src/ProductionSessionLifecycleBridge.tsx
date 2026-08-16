@@ -68,7 +68,9 @@ export function ProductionSessionLifecycleBridge() {
       )}
       {!canStart && snapshot.session.lifecycle==="preparing" && <small>연결된 모든 Player가 Ready여야 시작할 수 있습니다.</small>}
       <p style={{ margin: "10px 0 12px", opacity: .78 }}>{snapshot.session.compatibilityMessage}</p>
-      <button type="button" onClick={() => void stopSession()}>Host 중지</button>
+      <button type="button" onClick={() => void stopSession()}>
+        {snapshot.session.lifecycle==="live" ? "세션 종료" : "Host 중지"}
+      </button>
     </aside>
   );
 }
