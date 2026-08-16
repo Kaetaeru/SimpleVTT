@@ -17,39 +17,46 @@
 - invalid-entry ghost safety: `7ce39fe44b91009cb1fa660b5e45cb8cf54bfc6d`; Phase12 `31974996616`.
 - durable-after-end rehydrate: `b20ecf18015cec15ad3eb26aba5674e5c91013cb`; Phase12 `31975132450`; Main `31975132458`.
 - fresh Character create/save/play/restart baseline: `8b162dd3b45e77f5a742badcdd7f03d613321497`; Persistence `31975560620`; UI `31975560755`; Main `31975560651`.
+- fresh Character Skills: `c835963e918cce94bd535054a6553ead7e786262`; UI `31976028376`; Main `31976028381`.
+- fresh Character attack + Dash/session-economy repair: product boundary `5d48312289e2f01508b3860428ce98e2830d5f26`; UI `31976479248`; Main `31976479264`.
 
-## Current validated slice — fresh Character Skills + Actions
-Current exact work/product head: `5d48312289e2f01508b3860428ce98e2830d5f26`.
+Do not manually repeat these gates unless their relevant source boundary changes.
 
-### Skills
-`c835963e918cce94bd535054a6553ead7e786262` added `productionFreshCharacterSkills.test.ts` and wired it into the canonical UI Phase14 step. A newly created/saved non-fixture Fighter resolves one proficient and one different-ability non-proficient `action.skill.*` check with correct modifiers, generated actor id, authoritative queued d20 faces, Resolution provenance, Activity, and no Freeform action-economy consumption.
+## Latest validated slice — persisted non-fixture Inventory use
+Current exact work head: `c61469c87f6343ff55601e60890d13a58b6a5536`.
 
-Validation at `c835963e...`: UI `31976028376` success including TypeScript/build; Main Playable `31976028381` playable-contract success including Phase11/12/13. Product source was unchanged for Skills.
+No product source changed in this slice.
 
-### Actions and session economy repair
-`da594a0858e1ee804120d6bdc807ef3d4912e241` extended the same fresh Character regression with a runtime-backed weapon attack and `action.dash`.
+1. `ce4b9db158476259588ea3baca9c710b783ad35c` adds `tests/ui/productionFreshCharacterInventory.test.ts`.
+2. The test seeds a persisted non-fixture Character through `CharacterLibraryRepository` with unique Character id `char.phase14-inventory-fighter` and unique ItemInstance id `item.phase14-inventory-fighter.healing-potion`; it does not use Aelar/Mira as the played Character.
+3. A fresh production adapter hydrates that Character from the same `MemoryCharacterLibraryStore`, enters local Freeform play, and derives `action.healing-potion` with `itemCost.itemId` equal to the actual persisted ItemInstance id.
+4. Roll/effect preview does not spend quantity, mutate HP, or create a storage generation.
+5. Confirmed use flows through existing `phase09RealAtomicItemAdapter`: authoritative healing + item quantity event stream commits HP and quantity together, event-native Activity records HP and `phase09:item:<itemId>:quantity`, and Freeform does not consume hidden Initiative economy.
+6. Character Library storage revision advances once for the atomic durable commit; a fresh adapter rehydrates the same Character with committed HP and potion quantity, and the production item action is re-derived from the same ItemInstance id/remaining quantity.
+7. `04534e61fcf6453e6c1d77f84a8d0b799a5b3d0b` wires the regression into the Phase14 UI gate; `c61469c87f6343ff55601e60890d13a58b6a5536` wires it into Persistence application-contract.
 
-Two failures were diagnostic, not accepted evidence:
-1. UI `31976234616` exposed an over-specific test assertion: event-native Activity state changes use target ids, not display names. `cb2427f044845ae1864f5860a31771e178a0d684` corrected only that assertion.
-2. UI `31976332027` then exposed a real product bug: Dash committed, but `productionPlayRuntimeAdapter.reconcile()` reset `movementMax`/`movement` to Character speed on every snapshot, erasing session-only economy.
+### Exact validation at `c61469c87f6343ff55601e60890d13a58b6a5536`
+- Persistence `31976901167`, application-contract `95237644695`: **completed success** — new Inventory durability regression, existing Character/content/module persistence contracts, and production build all green. Separate Windows Tauri storage job is not required acceptance evidence for this test-only slice.
+- UI `31976901162`, frontend `95237644651`: **completed success** — new Inventory regression, previous Phase14 fresh Character Skills/Actions, historical mechanics regressions, TypeScript, and production build all green.
+- Main Playable `31976901170`, playable-contract `95237648526`: **completed success** — full UI/rules/build + Phase11 + Phase12 + Phase13 green. Windows executable subjob is not human/final release acceptance evidence here.
 
-Product fix: remove the two unconditional movement reset lines and initialize economy from Character speed only when no economy exists. `b74d94a70e06d422e1c79f8ee6f3dff5fbf2bf2b` made that change; a whole-file write typo in one existing potion detail string was immediately repaired in `5d48312289e2f01508b3860428ce98e2830d5f26`. Final diff versus `cb2427f...` is the intended session-economy preservation only (plus file-ending newline representation).
+This directly supports the P14.5 authoritative item-use/durable-write-back gate and P14.9/P14.11 item durability statements. It does not by itself credit full Inventory browsing/grouping UI, equipment/attunement interactions, charged-magic-item behavior on a non-fixture Character, target-required item UX, or human acceptance.
 
-Exact validation at `5d483122...`:
-- UI `31976479248`, frontend `95236648612`: **success**. Fresh Character Skills + canonical weapon attack + Dash regression green; historical mechanics and final TypeScript/build green.
-- Main Playable `31976479264`, playable-contract `95236648664`: **success**. Full UI/rules/build + Phase11 + Phase12 + Phase13 green. Windows subjob is not human/final acceptance evidence.
-
-The action regression proves a generated Fighter attack uses its runtime-backed Character attack fact, authoritative d20/critical transaction, committed target HP event/Activity, and Freeform economy preservation; Dash commits movement state and that session-only economy now survives subsequent Character reconciliation.
+## Checklist documentation status
+The fresh Character baseline, P14.3, P14.4 and this P14.5 core behavior now have durable exact-head evidence. Physical `.agents/PHASE14_CHECKLIST.md` boxes remain unchanged because the connected GitHub file writer only exposes whole-file replacement while reads of this long file truncate. Do not risk truncating/corrupting the checklist merely to mark credit; retain evidence in PLAN/STATE until a safe partial edit method is available.
 
 ## Architecture constraints preserved
-- Character source/runtime facts remain canonical; no fixture fallback or hard-coded product Character id added.
-- Character reconciliation no longer overwrites existing session economy; it still initializes economy for newly materialized actors.
+- Character Library remains the durable source; the Inventory test seeds and rehydrates through the actual repository/store contract rather than a parallel state path.
+- Item use reuses the existing atomic ResolutionEvent -> Character write-back -> Activity/Undo architecture; no direct UI mutation or fixture fallback was introduced.
+- production play derives item actions from the persisted Character/ItemInstance ids.
 - connected Host authority/SessionProjection/reconnect/end/write-back boundaries were untouched.
 - no tactical map/grid/path/LOS expansion.
 
 ## Next Exact Action
-1. Documentation-only: safely credit only directly proven checklist statements for the fresh Character baseline, P14.3 Skills gate/core statements, and P14.4 generated attack + basic Dash behavior. Do not infer visible-UI presentation, Initiative-specific behavior, expertise, Undo, or other untested statements.
-2. Begin P14.5 Inventory test-first on a saved non-fixture Character. Reuse actual ItemInstance ids and existing authoritative item/healing/cost/write-back services; prove at least one supported item interaction commits atomically and persists after fresh storage rehydrate.
-3. Patch product source only if the product-realistic inventory regression exposes a real gap. Run only affected UI/Persistence/Main boundaries once.
-4. Then continue Spells, remaining DM/live-session and P14.8 handshake/remote-action coverage, P14.10 UX/accessibility, Windows two-instance human acceptance, and final exact-head artifact verification.
-5. PR #109 remains draft/unmerged. No merge is authorized.
+1. Do not rerun the Inventory slice or prior connected/session-end gates unless their source boundary changes.
+2. Begin P14.6 Spells test-first using a persisted non-fixture spellcasting Character through the production play composition.
+3. Prove at least one supported cantrip and one supported slotted spell are derived for the generated/persisted Character id, resolve through authoritative runtime services, create Activity/provenance, and obey slot/resource commit semantics without fixture ids.
+4. Include fresh storage rehydrate if a slotted-spell durable resource is currently modeled by the existing Character persistence contract; do not invent a second source of truth just to satisfy the test.
+5. Patch product source only if the product-realistic spell regression exposes a real gap. Run only affected UI/Persistence/Main boundaries once.
+6. Then continue remaining DM/live-session and P14.8 handshake/remote-action coverage, P14.10 UX/accessibility, Windows two-instance human acceptance, and final exact-head artifact verification.
+7. PR #109 remains draft/unmerged. No merge is authorized.
