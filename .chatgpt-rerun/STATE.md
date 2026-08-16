@@ -9,118 +9,83 @@
 - active work branch: `agent/108-production-play-session-ux`
 - tracking issue: #108
 - draft PR: #109 — open/draft, not merged
-- phase checklist: `.agents/PHASE14_CHECKLIST.md` on the work branch
+- phase checklist: `.agents/PHASE14_CHECKLIST.md`
 
 ## Preserved evidence
 
-Phase13 remains complete at `7c9440970753a370fec7830cfa691832552e1d05`; preserved Contract `31955742556`, Rules `31955742577`, Persistence `31955742563`, UI `31955742530`, Phase11 `31955742560`, Phase12 `31955742539`, Phase13 `31955742524` success and Windows artifact id `9266043327` / SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
+Phase13 remains complete at `7c9440970753a370fec7830cfa691832552e1d05`; preserved Contract `31955742556`, Rules `31955742577`, Persistence `31955742563`, UI `31955742530`, Phase11 `31955742560`, Phase12 `31955742539`, Phase13 `31955742524`, Windows artifact id `9266043327` / SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
 
-Reusable Phase14 evidence unless source boundary changes:
+Reusable Phase14 slices remain preserved unless their boundary changes. Ready/start is closed at product source `bd1077b9bc61b86c2c0370543a16496c72f840c2` and checklist-only credit `56ef07b85e805368b1a9a61863c68683c3409208`; do not rerun or reopen it without a relevant source change.
 
-- PlaySessionDock `41db6832cc0a95f085f8161bfed665dbcc71090d`, UI `31965607635`.
-- Host start/stop/restart/preparation `7d83f263609b5dc2cf18ec43ed617568fedff9ba`, UI `31967444715`.
-- saved non-reference Character Join/compatible lobby `a01221ac78827e3075c678c6e727a3ca4af695b5`, UI `31967966233`, Persistence `31967968226`.
-- fresh non-fixture production play `c6d494cf26f081741da0fb3afca2230bcfde2eb1`, Phase11 `31969356422`.
-- repaired pre-Ready core matrix `c991ef2a28efe01b389f22141a9be6bb24f11862`: UI `31970228863`/`31970230351`, Contract `31970230345`, Phase11 `31970230344`, Phase12 `31970230336`, Main `31970230364` success.
+## Preflight for this continuation
 
-## Preflight and actual state for this continuation
-
-The required files were read from `main` in the mandatory order:
-
-1. `.chatgpt-rerun/README.md`
-2. `.chatgpt-rerun/control.json`
-3. `.chatgpt-rerun/STATE.md`
-4. `.chatgpt-rerun/PLAN.md`
-
-run_id / sequence / task_id / `continue` reconciled successfully.
+Mandatory files were read from `main` in exact order: README -> control -> STATE -> PLAN. run_id / sequence / task / `continue` reconciled.
 
 Initial actual state:
 
-- `main=743e72605ae198b99dc31382b9b535eee9d17379`
-- work branch=`04ceba160ac84052866f5b7fc91e4c69ab1db527`
+- main `6de08cb69f51f3a67a325567486522647d92d35b`
+- work `56ef07b85e805368b1a9a61863c68683c3409208`
 - PR #109 open/draft/unmerged
-- exact-head Main `31971251262` playable-contract at `04ceba...` was fetched and confirmed success: full UI/build, Phase11, Phase12 authority and Phase13 SessionProjection all passed. Its Windows job was separate and not used as completion evidence.
 
-## Completed in this continuation — Ready/start safety closure
+## Current work state
 
-Current work branch head after checklist-only credit: `56ef07b85e805368b1a9a61863c68683c3409208`.
-Validated product source boundary: `bd1077b9bc61b86c2c0370543a16496c72f840c2`.
+**Exact work head before coordination writes:** `84d1d39135c08a2094783fb336a606f294b1cf58`.
 
-### Host peer-loss stale-Ready safety
+Participant lifecycle changes:
 
-`c6d766ef452d31223617978f5421c8ed6563b3ec` changed `productionSessionLifecycleAdapter.ts` only at the production lifecycle boundary:
+- Tauri backend now emits exact disconnect peer identity through `session-transport-peer-lifecycle` instead of forcing frontend peer-count inference.
+- frontend transport exposes typed `onPeerLifecycle`.
+- Host maps the exact peer to one participant, commits `state:"disconnected", ready:false` through `HostSessionLedger`, broadcasts the existing participant event-batch, and preserves reconnectable peer manifest / SessionProjection state.
+- live sessions reject genuinely new participant hello before projection or ledger mutation.
+- previously accepted participants may reconnect only with the accepted Character identity; existing SessionProjection source-fingerprint/rebind logic preserves Host runtime and moves the binding to the new transport peer.
+- reconnect hello returns ordered Host `eventsAfter(knownEventCursor)` catch-up and emits a connected participant event with Ready reset.
+- focused regressions cover exact disconnect, live late-join rejection, Host-side reconnect/rebind/catch-up, and Freeform/Ready safety preservation.
 
-- installs one reusable Host `SessionTransportStatus` observer per adapter;
-- tracks aggregate Host `peerCount` without inventing a disconnected peer identity;
-- before session start, a peer-count decrease resets every currently Ready player to `ready:false`;
-- each reset is committed through the existing Host `participant` ledger event and normal event-batch broadcast;
-- peer/manifests stay bound, so remaining peers may Ready again while a missing peer remains unable to Ready and therefore still blocks Start until reconnect/re-handshake;
-- stop/restart resets the observer's peer-count baseline without duplicating listeners;
-- no duplicate mode/participant authority channel was added.
+Implementation commits in this continuation:
 
-This is intentionally conservative because the current frontend transport status exposes aggregate peer count, not the departing peer id.
+- `b92435ea55fb9e18935cda63f684b1f3e89f587e` — frontend exact peer lifecycle contract
+- `1e0d6d3e9c32c7b145ce6c6963e85b40434f67be` — Rust exact disconnect peer event + unit test
+- `c6dceb9c5c99a223412e181edd6a4f5480d0df5e` — exact Host participant disconnect authority
+- `748e9ec5e709d8e970e4901562260ff535db581b` — live late-join/reconnect hello policy
+- `d1e0c0ebc1692efe61fc446596d4979229618f12` — lifecycle test transport compatibility
+- `13a8ce8b97243a94e719be636fdd093788a0cd3a` — exact disconnect safety regression
+- `886b04897bec699d9c9cdb6b1e972134b506005e` — live participant lifecycle regressions
+- `c736dc8bcaaab068e68f374ab42a2179aa3c13f6` — canonical Phase12 lifecycle gate; initial Linux Rust gate attempt
+- `84d1d39135c08a2094783fb336a606f294b1cf58` — keep Rust validation on supported Windows job; remove invalid bare-Linux Tauri compile assumption
 
-### Direct Freeform prepared-start regression
+## Validation
 
-`2564bca3904072d552ef470257ca05fc92e9f794` added `tests/ui/productionReadyStartSafety.test.ts`:
+At `84d1d39135c08a2094783fb336a606f294b1cf58`:
 
-- proves `peerCount 1 -> 0` resets stale Ready through authoritative participant events and re-blocks Start;
-- directly proves a fully Ready prepared Host can call `startPreparedSession("freeform")`, enter live Freeform and publish the existing authoritative `mode-transition` event-batch.
+- Phase12 `31972318100` connected-protocol: **success**. New participant lifecycle tests, Phase11 preservation, and production frontend build all passed.
+- Phase12 Windows job `95226630569`: `Verify Tauri session transport and persistence library` **success**, including the new exact-peer Rust test. Subsequent executable/artifact build was still running and is not human/release acceptance evidence.
+- UI `31972318109`: **success**, including Host lifecycle, mechanics, TypeScript and production build.
+- Main Playable `31972318188`: playable-contract **success** — full UI/rules/build, Phase11, Phase12 and Phase13. Its Windows `Verify Tauri persistence and connected-session transport` step also succeeded; later artifact build was still running.
 
-`bd1077b9bc61b86c2c0370543a16496c72f840c2` added this focused regression to the canonical Phase12 connected authority command.
+The earlier Phase12 `31972118864` failure was not product failure. A newly inserted Linux `cargo test` caused Tauri GTK/GIO crates to require missing `gio-2.0`, `glib-2.0`, and `gobject-2.0` native packages. The invalid CI assumption was removed; Windows remains the existing supported Tauri test path.
 
-### Exact validation at `bd1077b9...`
+## Checklist discipline
 
-- Phase12 `31971618571`: connected authority step success including the new safety test; Phase11 preservation success; production frontend build success.
-- UI `31971618534`: production Host lifecycle focused gate, Phase09 mechanics, TypeScript and production build all success; frontend job completed success.
-- Phase11 `31971618537`: production-composed offline walkthrough and full frontend gate success.
-- Main Playable `31971618703`: playable-contract completed success; full UI/rules/TypeScript/build, Phase11, Phase12 connected authority and Phase13 arbitrary Character SessionProjection all success.
-
-No verified Ready/start work was repeated unnecessarily; the earlier PlaySessionDock/Host basic lifecycle/player lobby gates were not manually rerun outside the workflow matrix.
-
-### Checklist credit
-
-`56ef07b85e805368b1a9a61863c68683c3409208` is checklist-only and marks exactly the six P14.8 `Ready and start lifecycle` items complete with the exact `bd1077b9...` evidence:
-
-- player Ready/unready;
-- Host readiness roster;
-- Start rejection before readiness;
-- prepared Freeform start;
-- prepared Initiative start;
-- client convergence through Host mode-transition events.
-
-Do not reopen these boxes unless later code changes the connected readiness/start authority boundary.
+No participant-lifecycle checklist boxes were marked in this continuation yet. Direct evidence is sufficient for exact Host disconnect and live-new-participant rejection, and Host-side reconnect/rebind/catch-up is green. The broader reconnect box still needs one focused client production path proving transport disconnect -> reconnect attempt -> hello with the current replica cursor -> hello-ack catch-up applied exactly once. Duplicate/replayed hello lifecycle behavior also remains uncredited.
 
 ## Architecture boundaries preserved
 
 - Host ledger/shared-session authority preserved.
-- compatibility handshake + SessionProjection preserved.
-- event cursor/catch-up and ResolutionEvent routing preserved.
-- owning-client durable Character write-back preserved.
-- no tactical map/grid/path/LOS scope added.
-- no fixture Character fallback added to production play.
-- aggregate peer count is not treated as a fabricated peer identity.
-
-## Known remaining work
-
-1. P14.8 participant lifecycle: exact participant disconnect state, live late-join policy, reconnect restoration/idempotency.
-2. Explicit live session end notification/cleanup and former-client ended state, then clean Host restart.
-3. Known stale previous local projection when switching two non-fixture local Characters; repair must preserve remote ephemeral SessionProjection actors.
-4. Additional product checklist areas remain incomplete: local/DM full flow, inventory/spell coverage, broader checklist reconciliation, human acceptance.
-5. Windows two-instance human acceptance/final artifact verification remains future work. Automated Windows sub-jobs are not human acceptance.
-6. PR #109 remains draft and unmerged; no merge is authorized.
+- SessionProjection Host runtime remains authoritative across reconnect.
+- peer identity comes from Tauri transport, never inferred from aggregate peer counts.
+- event cursor/catch-up path remains the existing ledger/replica path.
+- owning-client durable Character ownership is unchanged.
+- no tactical map/grid/path/LOS scope and no fixture fallback added.
 
 ## Next Exact Action
 
-Resume P14.8 `Participant lifecycle`; do not revisit Ready/start first.
-
-1. Inspect the Tauri connected-session backend peer lifecycle and frontend `tauriSessionTransport` event contract to determine whether the exact departing peer id already exists below aggregate `SessionTransportStatus.peerCount`.
-2. If available, expose that identity with the smallest typed peer-lifecycle event; otherwise add the narrowest backend event necessary. Never infer a peer id from peer-count arithmetic.
-3. Host should commit exact participant `state:"disconnected", ready:false` while preserving reconnectable authoritative SessionProjection/runtime state.
-4. Define live late join explicitly: allow preparation joins; reject/defer a genuinely new participant after `sessionStarted` without mutating live turn/session state; allow a previously accepted participant to reconnect and resume from its accepted event cursor.
-5. Reconnect must safely rebind peer -> participant/Character, preserve Host runtime over stale client projection, avoid duplication, and emit connected participant state. Preparation reconnect requires Ready again.
-6. Add the smallest relevant Rust/transport tests plus Phase12 connected frontend regressions. Run source-relevant Tauri tests and Phase12 first; run UI/Main only if their product boundary changes.
-7. After participant lifecycle is green, continue explicit session end/restart, then the local active-Character stale projection cleanup.
+1. Add a focused client reconnect production test around the existing reconnect timer/path: initialize client replica/cursor, emit transport disconnect, run reconnect, verify hello carries the existing cursor, deliver Host hello-ack catch-up, and prove events/durable mutation are applied once without projection/participant duplication.
+2. Add/confirm duplicate/replayed hello behavior for an accepted participant so replay cannot create extra participant/projection or corrupt ledger state.
+3. When those are exact-head green, update only the P14.8 participant lifecycle checklist boxes actually supported by evidence.
+4. Then continue explicit Host live-session end notification/cleanup + former-client ended state + fresh Host restart.
+5. After connected end/restart, repair stale prior local-owned projection on non-fixture Character switching without deleting remote ephemeral SessionProjection actors.
+6. Windows two-instance human acceptance/final artifact verification remain later release gates.
+7. PR #109 remains draft/unmerged; no merge authorized.
 
 ## Dispatch recommendation
 
