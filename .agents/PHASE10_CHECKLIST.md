@@ -44,23 +44,54 @@ Verification:
 
 Note: the current creation-edit command still shares the legacy materialized authoring path. Full source-graph edit/revalidation and eventual removal of materialized-cache dependence remain Phase 10 follow-up work; this slice does not claim canonical source reconstruction is complete.
 
-## Step 2 — Authoring draft autosave / recovery — NEXT
+## Step 2 — Authoring draft autosave / recovery — CLOSED
 
-- [ ] persist source intent for `CharacterCreationDraft` without derived/validation cache
-- [ ] persist source intent for `ProgressionDraft` with base Character source revision
-- [ ] reconstruct current application plans from recovered intent rather than trusting persisted previews
-- [ ] creation draft meaningful-change autosave
-- [ ] progression draft meaningful-change autosave
-- [ ] clear committed/cancelled drafts only after corresponding durable Character commit succeeds
-- [ ] stale progression draft vs changed Character source revision explicit blocker
-- [ ] corrupt-newest / stale-writer / failed-autosave recovery
-- [ ] Tauri durable draft store + browser explicit volatile store
-- [ ] deterministic recovery regressions + production build + Windows Rust tests
+Tracking issue: #83
+Draft PR: #84
+Branch: `agent/83-authoring-draft-persistence`
+Base checkpoint: `d19b64ffcc257f854bd3f069b3c78f71c83fb259`
+Verified implementation checkpoint: `78b65fa8ef70017ba7220bb49b55c48341da285c`
+
+- [x] separate versioned `simplevtt.authoring-drafts` document/store from committed Character library
+- [x] persist source intent for `CharacterCreationDraft` without derived/validation/final-value cache
+- [x] persist canonical input for `ProgressionDraft` with base Character source revision
+- [x] reconstruct current creation/progression plans from recovered intent rather than trusting persisted previews
+- [x] creation draft meaningful-change autosave
+- [x] progression target/HP/ChoiceDefinition meaningful-change autosave
+- [x] clear corresponding authoring draft only after durable Character commit succeeds
+- [x] failed Character persistence retains autosaved draft for retry
+- [x] failed draft autosave preserves in-memory editable intent and previous committed draft generation
+- [x] stale progression/edit draft vs changed Character source revision is explicit and never silently replayed
+- [x] new creation draft uses Character-library identity precondition so commit-success/draft-clear-failure cannot replay an already committed Character
+- [x] corrupt-newest / stale-writer / newer-schema migration-blocker behavior
+- [x] shared immutable-generation Rust primitive with separate Character / authoring namespaces
+- [x] Tauri durable authoring-draft store + browser/test explicit volatile store
+- [x] deterministic recovery and cross-store ordering regressions
+- [x] production build and full UI regression green
+- [x] Windows Rust immutable persistence-store tests green
+- [x] Draft PR checkpoint
+
+Verification:
+- Persistence workflow `31927369690` application-contract ✅
+- Persistence workflow `31927369690` Windows `cargo test --lib` ✅
+- UI workflow `31927335894` ✅
+- UI named-rule / creation / progression / Phase 09 mechanics / TypeScript / production build ✅
+
+## Step 3 — ResolutionEvent Character durable write-back — NEXT
+
+- [ ] inventory every state-change kind currently marked `writeBack: "character"`
+- [ ] persist confirmed Character-target HP/resource/item/life changes only; combatants are excluded
+- [ ] do not persist preview/intermediate/session-only effect/concentration/economy state
+- [ ] use one Character-library transaction for a confirmed resolution write-back
+- [ ] persist Undo/inverse durable state through the same path
+- [ ] storage failure must not leave Character/Scene/runtime in a falsely committed state
+- [ ] runtime revision changes only for durable runtime projection changes
+- [ ] deterministic damage/healing/resource/item/Undo/failure regressions
+- [ ] production build + full UI regression + Windows persistence tests
 - [ ] Draft PR checkpoint
 
 ## Follow-up Phase 10 slices
 
-- [ ] ResolutionEvent `writeBack: character` durable write-back
 - [ ] existing Character source edit/revalidation + materialized-cache reduction
 - [ ] real ContentCatalog builtin/local/homebrew composition
 - [ ] module dependency/version/capability/cycle/conflict validation
@@ -73,6 +104,7 @@ Note: the current creation-edit command still shares the legacy materialized aut
 - Do not serialize `AppSnapshot` as the durable file.
 - Do not persist Scene/PendingResolution/connection/initiative/session-only effects into Character library.
 - Draft persistence stores user/source intent, not derived previews or validation results.
+- Confirmed ResolutionEvents write back only explicitly Character-durable state; session-only state stays session-only.
 - Do not silently overwrite corrupt or newer generations.
 - Do not call volatile browser memory/localStorage durable persistence.
 - Core remains map/grid/token/path/LOS free.

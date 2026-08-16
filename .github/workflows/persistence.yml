@@ -7,8 +7,12 @@ on:
       - "src/app/*persistence*"
       - "src/app/*CharacterLibrary*"
       - "src/app/*characterLibrary*"
+      - "src/app/*AuthoringDraft*"
+      - "src/app/*authoringDraft*"
       - "tests/ui/characterLibrary*.test.ts"
+      - "tests/ui/authoringDraft*.test.ts"
       - "schemas/character-library.schema.json"
+      - "schemas/authoring-drafts.schema.json"
       - "docs/design/persistence.md"
       - ".agents/PHASE10_CHECKLIST.md"
       - "src/main.tsx"
@@ -22,8 +26,12 @@ on:
       - "src/app/*persistence*"
       - "src/app/*CharacterLibrary*"
       - "src/app/*characterLibrary*"
+      - "src/app/*AuthoringDraft*"
+      - "src/app/*authoringDraft*"
       - "tests/ui/characterLibrary*.test.ts"
+      - "tests/ui/authoringDraft*.test.ts"
       - "schemas/character-library.schema.json"
+      - "schemas/authoring-drafts.schema.json"
       - "docs/design/persistence.md"
       - ".agents/PHASE10_CHECKLIST.md"
       - "src/main.tsx"
@@ -42,8 +50,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate content dependencies
         run: npm run generate:content
-      - name: Verify Character library repository and adapter
-        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts
+      - name: Verify Character persistence repositories and adapters
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts
       - name: Verify production build
         run: npm run build
 
@@ -52,5 +60,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Verify immutable Character library store
+      - name: Verify immutable persistence stores
         run: cargo test --manifest-path src-tauri/Cargo.toml --lib

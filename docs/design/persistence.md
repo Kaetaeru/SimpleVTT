@@ -26,17 +26,17 @@ Derived totals such as AC, attack modifiers, save DCs, action availability, and 
 
 ## 3. Revision model
 
-Each record has independent revisions:
+Each Character record has independent revisions:
 
 - `sourceRevision` changes only when durable build/source selections change;
 - `runtimeRevision` changes only when durable mutable Character state changes;
-- `storageRevision` belongs to the library document generation and changes for every committed file generation.
+- `storageRevision` belongs to a persisted document generation and changes for every committed file generation.
 
 A stale writer must be rejected rather than overwriting a newer generation.
 
 ## 4. Generation-based local commit protocol
 
-The desktop store uses immutable committed generations rather than overwriting one file in place.
+Desktop persistence uses immutable committed generations rather than overwriting one file in place.
 
 ```text
 character-library.17.json       previous valid generation
@@ -44,28 +44,54 @@ character-library.18.json.tmp   write + flush in progress
 character-library.18.json       atomically renamed committed generation
 ```
 
+The Character library and authoring drafts use the same generation-store primitive but separate app-local-data directories and filename prefixes. Their generation numbers and recovery histories never share a namespace.
+
 A read scans committed generations from newest to oldest. An unreadable/invalid newest generation does not destroy the previous valid generation; the application may recover from the older valid document and the next write advances beyond the highest physical generation.
 
 Temporary files are never treated as committed state. Old committed generations may be pruned only after the new generation is safely committed.
 
 ## 5. Failure policy
 
-- No valid generation + existing corrupt generations is an explicit blocker; do not silently seed a new library over the damaged data.
+- No valid generation + existing corrupt generations is an explicit blocker; do not silently seed new state over damaged data.
 - A failed write leaves the previous committed generation authoritative.
 - Schema/version mismatches are explicit until a migration exists.
 - In browser/dev contexts, an explicitly volatile in-memory store may be used for testing/preview, but it must never be represented as durable local persistence.
 
-## 6. Write-back roadmap
+## 6. Authoring draft persistence
 
-The first Phase 10 slice establishes the library contract and storage transaction. Follow-up slices connect:
+Character authoring drafts are stored in a separate versioned `simplevtt.authoring-drafts` document. They are not embedded in the committed Character library and are not serialized `AppSnapshot`, `CharacterCreationPlan`, or `ProgressionPlan` values.
 
-1. Character creation/edit and progression commits;
-2. draft autosave/recovery;
-3. ResolutionEvent state changes whose `writeBack` class is `character`;
-4. real ContentCatalog/local-homebrew installation state.
+The creation draft stores user/source intent and the minimum recovery preconditions needed to decide whether that intent is still applicable: identity/content selections, ChoiceDefinition selections, ability input and roll-slot identity, equipment selections, notes/overrides, authoring cursor, the edited Character source revision when applicable, and the Character-library identity set that existed when a new draft began.
+
+The progression draft stores only canonical progression input: Character ID, base Character `sourceRevision`, target progression track/class, HP input, ChoiceDefinition selections, and authoring cursor.
+
+The following are deliberately not persisted as draft authority:
+
+- creation `derived`, `finalAbilities`, validation output, or plan sections;
+- progression `preview`, `hpGain`, validation output, legacy ASI mirror fields, or plan diffs;
+- any Scene/session/resolution state.
+
+Recovery runs only after Character-library hydration. A valid persisted intent is materialized into a draft skeleton and the current application/rules projection recomputes its derived plan. A progression/edit draft whose base source revision no longer matches is `stale` and is not silently replayed. A new creation draft whose Character-library identity precondition no longer matches is likewise stale; this protects the case where a Character commit succeeded but clearing the separate draft store failed.
+
+Meaningful creation/progression mutations autosave the current intent. Autosave failure keeps the in-memory editable draft and the previous committed draft generation, and exposes persistence error state rather than rolling the user's current input back.
+
+Character commit and draft clear are ordered transactions across two stores:
+
+1. persist the Character revision successfully;
+2. only then clear the corresponding authoring draft generation.
+
+If Character persistence fails, the autosaved draft remains available for retry. If Character persistence succeeds but draft clear fails, the next boot detects the changed Character-library/source precondition and refuses to replay the old draft automatically.
+
+## 7. Write-back roadmap
+
+The Character library and authoring-draft lifecycle are now established. Follow-up Phase 10 slices connect:
+
+1. ResolutionEvent state changes whose `writeBack` class is `character`;
+2. existing Character source edit/revalidation and reduction of materialized-cache dependence;
+3. real ContentCatalog/local-homebrew installation state.
 
 Session-only state remains outside the permanent Character file unless a specific rule and write-back classification says otherwise.
 
-## 7. Movement boundary
+## 8. Movement boundary
 
 Persistence does not add battle-map state to Core. Coordinates, tokens, grids, paths, LOS and external map-module state remain outside the core Character library unless a future optional module defines and owns its own persistence contract.
