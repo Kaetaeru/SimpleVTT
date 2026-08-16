@@ -10,6 +10,7 @@ import {
   type SessionCompatibilityManifest,
 } from "./connectedSessionProtocol";
 import { decodeConnectedWireMessage, encodeConnectedWireMessage, type ConnectedWireMessage } from "./connectedSessionWire";
+import { applyConnectedCorrections } from "./connectedCorrectionApply";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
@@ -99,6 +100,25 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       summary:`${payload.sessionMode} · round ${payload.round} · ${payload.currentActorId}`,
       detail:[`eventId=${event.eventId}`,...payload.provenance],
       stateChanges:[...payload.stateChanges],
+    });
+    return { status:"committed" as const };
+  }
+  if (payload.kind==="correction") {
+    const corrected=applyConnectedCorrections(app.scene,app.activeCharacter.resources,payload.changes);
+    if (corrected.status==="rejected") return corrected;
+    app.scene=corrected.scene;
+    app.activeCharacter.resources=corrected.resources.map((entry)=>structuredClone(entry));
+    app.syncChar();
+    app.activity.unshift({
+      id:`connected:${event.eventId}`,
+      time:"지금",
+      actor:"DM",
+      title:"원격 DM 판정 수정",
+      summary:payload.ruling,
+      detail:[`eventId=${event.eventId}`,...payload.provenance],
+      stateChanges:corrected.stateChanges.length ? corrected.stateChanges : [...payload.stateChanges],
+      correction:true,
+      ruling:payload.ruling,
     });
     return { status:"committed" as const };
   }
