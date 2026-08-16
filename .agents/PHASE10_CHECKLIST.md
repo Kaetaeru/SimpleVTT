@@ -77,22 +77,57 @@ Verification:
 - UI workflow `31927335894` ✅
 - UI named-rule / creation / progression / Phase 09 mechanics / TypeScript / production build ✅
 
-## Step 3 — ResolutionEvent Character durable write-back — NEXT
+## Step 3 — ResolutionEvent Character durable write-back — CLOSED
 
-- [ ] inventory every state-change kind currently marked `writeBack: "character"`
-- [ ] persist confirmed Character-target HP/resource/item/life changes only; combatants are excluded
-- [ ] do not persist preview/intermediate/session-only effect/concentration/economy state
-- [ ] use one Character-library transaction for a confirmed resolution write-back
-- [ ] persist Undo/inverse durable state through the same path
-- [ ] storage failure must not leave Character/Scene/runtime in a falsely committed state
-- [ ] runtime revision changes only for durable runtime projection changes
-- [ ] deterministic damage/healing/resource/item/Undo/failure regressions
-- [ ] production build + full UI regression + Windows persistence tests
+Tracking issue: #85
+Branch: `agent/85-resolution-character-writeback`
+Base checkpoint: `29354fdcb3b26e62acbbdf9aeb7cdca9c59f25bd`
+Verified implementation checkpoint: `dd708c5c6f2af231a54200d00aba920bdd1023dc`
+
+- [x] inventoried `writeBack: "character"`: HP current/maximum/temp, resource, life; economy/effect/concentration stay session-only
+- [x] Character-target current HP / Temp HP / resource / ItemInstance quantity+charges / stable-unconscious-dead life flags persist
+- [x] combatant-target and session-only changes are excluded from the local Character store
+- [x] maximum-HP event write-back explicitly rejects until a source-model ownership contract exists
+- [x] one Character-library transaction per confirmed event-native resolution with any local durable changes
+- [x] Scene/runtime/history apply only after Character durable commit succeeds
+- [x] event-native Undo persists the drift-safe inverse before applying Scene/runtime inverse
+- [x] turn-runtime attacks precheck runtime revision and compensate Character write-back if a later CAS loses the race
+- [x] storage failure leaves Character/Scene/resource/economy/history uncommitted
+- [x] runtime revision increments only when Character durable runtime projection changes
+- [x] deterministic Second Wind HP+resource write-back/reload/Undo regression
+- [x] deterministic healing-potion HP+quantity write-back/reload/Undo regression
+- [x] wand charge persists while combatant HP remains Scene/session-only
+- [x] direct Character HP/Temp HP/life event write-back + inverse/reload regression
+- [x] persistence failure no-apply regression
+- [x] existing Fighter progression source/runtime revision semantics preserved
+- [x] production build + full UI/Phase09 + Rules Domain + Windows persistence tests green
+- [x] persistence design updated with write-back/Undo/failure/max-HP boundaries
+- [x] Draft PR checkpoint pending only PR creation
+
+Verification:
+- Persistence workflow `31928471561` application-contract + production build ✅
+- Persistence workflow `31928471561` Windows `cargo test --lib` ✅
+- UI workflow `31928471521` ✅
+- Rules Domain workflow `31928471507` ✅
+- UI named-rule / creation / progression / Phase 09 mechanics / TypeScript / production build ✅
+
+## Step 4 — Canonical Character source edit/revalidation — NEXT
+
+Tracking issue: #86
+
+- [ ] inventory every authoring source field required for exact edit reopen
+- [ ] persist explicit creation-authoring source intent instead of relying on materialized derived fields
+- [ ] reconstruct edit draft from committed Character source document and rerun current application/rules plan
+- [ ] upstream source changes invalidate/revalidate downstream ChoiceDefinition selections
+- [ ] source-only edit increments source revision exactly once and preserves durable runtime revision/state
+- [ ] legacy records without complete authoring intent have explicit deterministic reconstruction/migration status
+- [ ] reduce edit-path dependence on `materializedCache`
+- [ ] deterministic reopen/edit/reload/stale-draft/revision regressions
+- [ ] production build + full UI + persistence gates
 - [ ] Draft PR checkpoint
 
 ## Follow-up Phase 10 slices
 
-- [ ] existing Character source edit/revalidation + materialized-cache reduction
 - [ ] real ContentCatalog builtin/local/homebrew composition
 - [ ] module dependency/version/capability/cycle/conflict validation
 - [ ] local homebrew import → validation → review → activation
@@ -105,6 +140,7 @@ Verification:
 - Do not persist Scene/PendingResolution/connection/initiative/session-only effects into Character library.
 - Draft persistence stores user/source intent, not derived previews or validation results.
 - Confirmed ResolutionEvents write back only explicitly Character-durable state; session-only state stays session-only.
+- Maximum HP stays source/progression-owned until an explicit source-model write-back contract exists.
 - Do not silently overwrite corrupt or newer generations.
 - Do not call volatile browser memory/localStorage durable persistence.
 - Core remains map/grid/token/path/LOS free.
