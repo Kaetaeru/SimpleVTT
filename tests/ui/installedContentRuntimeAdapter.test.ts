@@ -95,6 +95,29 @@ test("local import requires stable sourceId separate from display source", async
   assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /sourceId/.test(entry.message)));
 });
 
+test("a local install cannot claim an existing builtin qualified identity", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const initial=await adapter.getSnapshot();
+  const builtin=initial.catalog.find((entry)=>entry.scope==="builtin");
+  assert.ok(builtin?.contentId && builtin.sourceId);
+
+  const preview=await adapter.previewContentImport(payload({
+    id:builtin.contentId,
+    category:builtin.category,
+    sourceId:builtin.sourceId,
+    source:builtin.source,
+    version:builtin.version,
+  }));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"));
+  const rejected=await adapter.activateContentImport();
+  assert.ok(rejected.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /Builtin content qualified identity/.test(entry.message)));
+  assert.equal(rejected.contentCatalogPersistence?.storageRevision,0);
+  assert.equal((await store.readGenerations()).length,0);
+  assert.equal(rejected.catalog.filter((entry)=>entry.id===builtin.id).length,1);
+});
+
 test("storage failure keeps the reviewed preview and previous composed catalog authoritative", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
