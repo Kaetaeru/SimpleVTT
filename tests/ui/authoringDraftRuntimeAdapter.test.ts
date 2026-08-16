@@ -127,6 +127,55 @@ test("a progression draft with an old Character source revision is not silently 
   assert.ok(getAuthoringDraftPersistenceStateForTests(reader)?.document?.progression);
 });
 
+test("an edit draft with an old Character source revision is not silently replayed", async () => {
+  const characterStore = new MemoryCharacterLibraryStore();
+  const draftStore = new MemoryAuthoringDraftStore();
+  const writer = adapterWithStores(characterStore,draftStore);
+  const baseline = (await writer.getSnapshot()).activeCharacter;
+  await writer.editCharacterDraft(baseline.id);
+  const persisted = await latestDraftDocument(draftStore);
+  assert.equal(persisted.creation?.editingCharacterId,baseline.id);
+  assert.equal(persisted.creation?.editingBaseSourceRevision,1);
+
+  const external = new CharacterLibraryRepository(characterStore);
+  await external.hydrate([baseline],baseline.id);
+  const renamed = structuredClone(baseline);
+  renamed.name = "Aelar External Revision";
+  const committed = await external.commit([renamed],renamed.id);
+  assert.equal(committed.document.characters[0].sourceRevision,2);
+
+  const reader = adapterWithStores(characterStore,draftStore);
+  const restored = await reader.getSnapshot();
+  assert.equal(restored.createDraft,null);
+  assert.equal(restored.persistence?.authoringDrafts?.status,"stale");
+  assert.match(restored.persistence?.authoringDrafts?.message ?? "",/편집 draft의 기준 source revision 1.*현재 2/);
+});
+
+test("a new creation draft is not replayed after the Character library changed since its autosave base", async () => {
+  const characterStore = new MemoryCharacterLibraryStore();
+  const draftStore = new MemoryAuthoringDraftStore();
+  const writer = adapterWithStores(characterStore,draftStore);
+  await writer.createCharacterDraft("guided");
+  await writer.updateCharacterDraft({type:"set-name",value:"Already Committed Candidate"});
+  const baseline = (await writer.getSnapshot()).activeCharacter;
+  const persisted = await latestDraftDocument(draftStore);
+  assert.deepEqual(persisted.creation?.baseCharacterIds,["char.aelar","char.mira"]);
+
+  const external = new CharacterLibraryRepository(characterStore);
+  await external.hydrate([baseline],baseline.id);
+  const added = structuredClone(baseline);
+  added.id = "char.already-committed-candidate";
+  added.name = "Already Committed Candidate";
+  await external.commit([baseline,added],added.id);
+
+  const reader = adapterWithStores(characterStore,draftStore);
+  const restored = await reader.getSnapshot();
+  assert.equal(restored.createDraft,null);
+  assert.equal(restored.persistence?.authoringDrafts?.status,"stale");
+  assert.match(restored.persistence?.authoringDrafts?.message ?? "",/기준 Character library가 변경/);
+  assert.ok(getAuthoringDraftPersistenceStateForTests(reader)?.document?.creation);
+});
+
 test("successful progression commit clears the autosaved draft only after Character persistence succeeds", async () => {
   const characterStore = new MemoryCharacterLibraryStore();
   const draftStore = new MemoryAuthoringDraftStore();
