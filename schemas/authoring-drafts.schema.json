@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simplevtt.local/schemas/authoring-drafts.schema.json",
+  "title": "SimpleVTT Authoring Drafts v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaId", "schemaVersion", "storageRevision", "creation", "progression"],
+  "properties": {
+    "schemaId": { "const": "simplevtt.authoring-drafts" },
+    "schemaVersion": { "const": 1 },
+    "storageRevision": { "type": "integer", "minimum": 0 },
+    "creation": { "$ref": "#/$defs/creationIntent" },
+    "progression": { "$ref": "#/$defs/progressionIntent" }
+  },
+  "$defs": {
+    "nullableString": { "type": ["string", "null"] },
+    "creationIntent": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["draftId", "step", "mode", "rulesProfileId", "name", "className", "subclassName", "species", "background", "level", "abilityMethod", "abilities", "rolledPool", "rolledAssignments", "selectedSkills", "selectedSpells", "equipmentPreset", "notes", "overrides", "choiceSelections"],
+          "properties": {
+            "draftId": { "type": "string", "minLength": 1 },
+            "editingCharacterId": { "type": "string", "minLength": 1 },
+            "editingBaseSourceRevision": { "type": "integer", "minimum": 1 },
+            "step": { "type": "integer", "minimum": 0 },
+            "activeSectionId": { "type": "string" },
+            "mode": { "enum": ["guided", "quick", "import", "duplicate"] },
+            "rulesProfileId": { "type": "string", "minLength": 1 },
+            "name": { "type": "string" },
+            "className": { "type": "string" },
+            "subclassName": { "type": "string" },
+            "species": { "type": "string" },
+            "background": { "type": "string" },
+            "level": { "type": "integer", "minimum": 1 },
+            "abilityMethod": { "enum": ["standard", "rolled", "point-buy", "custom"] },
+            "abilities": { "type": "object" },
+            "rolledPool": { "type": "array" },
+            "rolledAssignments": { "type": "object" },
+            "selectedSkills": { "type": "array", "items": { "type": "string" } },
+            "selectedSpells": { "type": "array", "items": { "type": "string" } },
+            "selectedClassChoices": { "type": "array", "items": { "type": "string" } },
+            "equipmentPreset": { "type": "string" },
+            "backgroundEquipmentPreset": { "type": "string" },
+            "notes": { "type": "string" },
+            "overrides": { "type": "object" },
+            "choiceSelections": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } }
+          }
+        }
+      ]
+    },
+    "progressionIntent": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["characterId", "baseSourceRevision", "step", "hpMethod", "progressionSelections"],
+          "properties": {
+            "characterId": { "type": "string", "minLength": 1 },
+            "baseSourceRevision": { "type": "integer", "minimum": 1 },
+            "step": { "type": "integer", "minimum": 0 },
+            "targetClassId": { "type": "string" },
+            "hpMethod": { "enum": ["fixed", "roll"] },
+            "hpRoll": { "type": "integer", "minimum": 1 },
+            "progressionSelections": { "type": "object" }
+          }
+        }
+      ]
+    }
+  }
+}
