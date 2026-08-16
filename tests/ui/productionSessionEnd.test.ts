@@ -4,13 +4,17 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/productionSessionLifecycleAdapter";
+import "../../src/app/characterLibraryRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+import { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
 import { connectedInternal } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { mountCharacterSessionProjection, projectedCharacterIds } from "../../src/app/characterSessionProjectionRegistry";
 import { tauriSessionTransport, type SessionTransportMessage, type SessionTransportStatus } from "../../src/app/tauriSessionTransport";
 import { encodeConnectedWireMessage, type ConnectedWireMessage } from "../../src/app/connectedSessionWire";
+import type { ResolutionEvent } from "../../src/domain/resolutionTypes";
 
 function installFakeDesktopTransport() {
   const original={
@@ -115,8 +119,9 @@ function assertFreshLocalEconomy(snapshot:Awaited<ReturnType<MockAdapter["getSna
   });
 }
 
-async function savedProductionPlayerAdapter() {
+async function savedProductionPlayerAdapter(store?:MemoryCharacterLibraryStore) {
   const adapter=new MockAdapter();
+  if (store) setCharacterLibraryStoreForTests(adapter,store);
   const template=await adapter.getSnapshot();
   const saved={
     ...structuredClone(template.activeCharacter),
@@ -255,6 +260,93 @@ test("Client receiving session-ended becomes explicitly offline without reconnec
     assert.equal(endedState.reconnectInFlight,false);
     assert.equal(transport.clientConnects(),1,"explicit Host end must not schedule a reconnect attempt");
     assert.ok(transport.operations().includes("stop"));
+  } finally {
+    transport.restore();
+  }
+});
+
+test("owning Client persists a Host-confirmed durable event across explicit session end and fresh library rehydrate",async()=>{
+  const transport=installFakeDesktopTransport();
+  const store=new MemoryCharacterLibraryStore();
+  try {
+    const adapter=await savedProductionPlayerAdapter(store);
+    await adapter.joinSession("127.0.0.1:3210");
+    const sessionId="session.phase14.persist-through-end";
+    transport.emit({
+      type:"hello-ack",
+      sessionId,
+      compatibility:{status:"compatible",message:"Connected."},
+      hostCursor:0,
+      events:[],
+    });
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+
+    const before=await adapter.getSnapshot();
+    const characterId=before.activeCharacter.id;
+    const resource=before.activeCharacter.resources.find((entry)=>entry.current>0);
+    assert.ok(resource,"saved non-fixture Character needs a spendable durable resource for the regression");
+    const afterValue=resource.current-1;
+    const resolutionEvent:ResolutionEvent={
+      id:"event.phase14.owner-persist",
+      resolutionId:"resolution.phase14.owner-persist",
+      operationId:"operation.phase14.owner-persist",
+      kind:"resource-spend",
+      actorId:characterId,
+      targetId:characterId,
+      summary:"Host-confirmed owning-client durable resource spend",
+      provenance:[],
+      stateChanges:[{
+        kind:"resource",
+        targetId:characterId,
+        resourceId:resource.id,
+        before:resource.current,
+        after:afterValue,
+        provenance:[],
+        lifetime:"character-durable",
+        writeBack:"character",
+      }],
+      result:{connected:true},
+    };
+    transport.emit({
+      type:"event-batch",
+      sessionId,
+      afterCursor:0,
+      events:[{
+        sessionId,
+        eventId:`${sessionId}:event:1`,
+        sequence:1,
+        actorId:characterId,
+        payload:{
+          kind:"resolution",
+          resolutionId:resolutionEvent.resolutionId,
+          resolutionEvents:[resolutionEvent],
+          stateChanges:[`${resource.id} ${resource.current} -> ${afterValue}`],
+          provenance:["host-authoritative committed event"],
+        },
+      }],
+    });
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+
+    const committed=await adapter.getSnapshot();
+    assert.equal(connectedStateFor(adapter).replica?.cursor,1,"owning Client accepts the Host event exactly once after durable write-back");
+    assert.equal(committed.activeCharacter.resources.find((entry)=>entry.id===resource.id)?.current,afterValue);
+    assert.equal(committed.persistence?.storageRevision,1,"Host-confirmed durable event must create a Character library generation before cursor advance");
+
+    transport.emit({type:"session-ended",sessionId,reason:"Host ended live play."});
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+    const ended=await adapter.getSnapshot();
+    assert.equal(ended.session.lifecycle,"offline");
+    assert.equal(ended.activeCharacter.resources.find((entry)=>entry.id===resource.id)?.current,afterValue);
+
+    const restoredAdapter=new MockAdapter();
+    setCharacterLibraryStoreForTests(restoredAdapter,store);
+    const restored=await restoredAdapter.getSnapshot();
+    assert.equal(restored.activeCharacter.id,characterId,"persisted owning Character identity must survive fresh app hydration after session end");
+    assert.equal(restored.activeCharacter.resources.find((entry)=>entry.id===resource.id)?.current,afterValue,"durable Host-confirmed resource state must survive fresh Character library hydration");
+    assert.equal(restored.persistence?.storageRevision,1);
+    assert.equal(restored.session.lifecycle,"offline","session lifecycle state must not be persisted with Character durability");
   } finally {
     transport.restore();
   }
