@@ -28,8 +28,62 @@ jobs:
       - name: Generate canonical content
         run: npm run generate:content
       - name: Verify connected-session authority protocol
-        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts
+        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts
       - name: Verify Phase 11 offline walkthrough remains green
         run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
       - name: Verify production frontend gate
         run: npm run build
+
+  windows-connected-playable:
+    runs-on: windows-latest
+    needs: connected-protocol
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Tauri session transport and persistence library
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+      - name: Build Windows connected-session executable
+        run: npm run tauri:build -- --no-bundle
+      - name: Stage connected-session artifact
+        shell: pwsh
+        run: |
+          $source = "src-tauri/target/release/simplevtt.exe"
+          if (-not (Test-Path $source)) { throw "SimpleVTT executable was not produced at $source" }
+          New-Item -ItemType Directory -Force -Path phase12-artifact | Out-Null
+          Copy-Item $source "phase12-artifact/SimpleVTT.exe"
+          @(
+            "SimpleVTT Phase 12 connected-session build",
+            "commit=${{ github.sha }}",
+            "ref=${{ github.ref }}",
+            "run_id=${{ github.run_id }}",
+            "",
+            "Two-instance LAN/Hamachi walkthrough:",
+            "1. On the DM/host machine open Session and choose Host. SimpleVTT binds TCP port 3210.",
+            "2. Find the host LAN or Hamachi IPv4 address.",
+            "3. On the player machine open Session and Join <HOST_IPV4>:3210.",
+            "4. Confirm compatibility is not incompatible and both sides show connected.",
+            "5. Host starts Initiative. Confirm round/current actor/economy synchronize to the player.",
+            "6. Player submits an event-native action such as Second Wind or Shortbow. The host resolves the staged UI; only the committed host ResolutionEvent is broadcast.",
+            "7. Disconnect the client, let the host advance an event, reconnect, and confirm catch-up resumes from the previous event cursor without duplicate HP/resource/economy changes.",
+            "8. Verify offline play still works with no network connection.",
+            "",
+            "Windows Firewall may ask for permission to allow SimpleVTT on private networks when hosting."
+          ) | Set-Content -Encoding utf8 "phase12-artifact/REMOTE-WALKTHROUGH.txt"
+          @(
+            "SimpleVTT Phase 12 connected-session build",
+            "commit=${{ github.sha }}",
+            "ref=${{ github.ref }}",
+            "run_id=${{ github.run_id }}"
+          ) | Set-Content -Encoding utf8 "phase12-artifact/BUILD.txt"
+      - name: Upload Windows connected-session artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-Phase12-Windows-${{ github.sha }}
+          path: phase12-artifact/
+          if-no-files-found: error
+          retention-days: 14
