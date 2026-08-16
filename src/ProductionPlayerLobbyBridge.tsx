@@ -16,7 +16,7 @@ function lifecycleLabel(lifecycle:string|undefined) {
 }
 
 export function ProductionPlayerLobbyBridge() {
-  const { snapshot, joinSession }=useSimpleVtt();
+  const { snapshot, joinSession, setSessionReady }=useSimpleVtt();
   const [target,setTarget]=useState<HTMLElement|null>(null);
   const [address,setAddress]=useState("192.168.0.10:3210");
 
@@ -33,6 +33,10 @@ export function ProductionPlayerLobbyBridge() {
   const selected=candidates.find((character)=>character.id===snapshot.activeCharacter.id);
   const lifecycle=snapshot.session.lifecycle;
   const joining=lifecycle==="connecting";
+  const joined=lifecycle==="lobby"||lifecycle==="live";
+  const localParticipant=snapshot.session.participants.find((participant)=>participant.id===`client:${snapshot.activeCharacter.id}`);
+  const ready=Boolean(localParticipant?.ready);
+  const canReady=lifecycle==="lobby"&&snapshot.connectionState==="connected"&&snapshot.session.compatibility!=="incompatible";
 
   async function selectCharacter(characterId:string) {
     if (!characterId) return;
@@ -50,7 +54,7 @@ export function ProductionPlayerLobbyBridge() {
       </div>
       <label className="field">
         <span>플레이 Character</span>
-        <select value={selected?.id ?? ""} onChange={(event)=>void selectCharacter(event.target.value)} disabled={joining}>
+        <select value={selected?.id ?? ""} onChange={(event)=>void selectCharacter(event.target.value)} disabled={joining||joined}>
           <option value="">저장된 Character 선택</option>
           {candidates.map((character)=><option key={character.id} value={character.id}>{character.name}</option>)}
         </select>
@@ -58,15 +62,21 @@ export function ProductionPlayerLobbyBridge() {
       {!candidates.length && <p className="production-player-lobby__warning">저장한 production Character가 없습니다. Character를 생성·저장한 뒤 참가하세요.</p>}
       <label className="field">
         <span>Host 주소</span>
-        <input value={address} onChange={(event)=>setAddress(event.target.value)} placeholder="192.168.0.10:3210" disabled={joining}/>
+        <input value={address} onChange={(event)=>setAddress(event.target.value)} placeholder="192.168.0.10:3210" disabled={joining||joined}/>
       </label>
-      <button className="primary" disabled={!selected || joining || !address.trim()} onClick={()=>void joinSession(address)}>
-        {joining ? "Host 호환성 확인 중…" : lifecycle==="lobby" ? "로비 참가 완료" : "선택 Character로 참가"}
+      <button className="primary" disabled={!selected || joining || joined || !address.trim()} onClick={()=>void joinSession(address)}>
+        {joining ? "Host 호환성 확인 중…" : joined ? "로비 참가 완료" : "선택 Character로 참가"}
       </button>
+      {lifecycle==="lobby" && (
+        <button className={ready ? "secondary" : "primary"} disabled={!canReady} onClick={()=>void setSessionReady(!ready)}>
+          {ready ? "Ready 취소" : "Ready"}
+        </button>
+      )}
       <div className={`compatibility ${snapshot.session.compatibility}`}>
         <strong>{snapshot.session.compatibility}</strong>
         <span>{snapshot.session.compatibilityMessage}</span>
       </div>
+      {localParticipant && lifecycle==="lobby" && <small>Host 확인 상태 · {ready ? "Ready" : "대기 중"}</small>}
       {selected && <small>선택됨 · {selected.name} · {selected.id}</small>}
     </article>,
     target,
