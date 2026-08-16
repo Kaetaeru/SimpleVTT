@@ -85,11 +85,11 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## Actor identity and lifecycle
 
-- [ ] A newly authored Character id is materialized into `SceneVm.entities` without any fixture id mapping.
-- [ ] The active persisted Character becomes the normal player actor in local play.
+- [x] A newly authored Character id is materialized into `SceneVm.entities` without any fixture id mapping.
+- [x] The active persisted Character becomes the normal player actor in local play.
 - [ ] HP, max HP, temp HP, AC, speed, conditions/life flags, resources, items, and source/runtime revisions are projected from the real Character/runtime state.
 - [ ] Scene projection preserves session-only state and does not copy it back into Character source.
-- [ ] Reconciliation occurs after initial hydration.
+- [x] Reconciliation occurs after initial hydration.
 - [ ] Reconciliation occurs after new Character finalization.
 - [ ] Reconciliation occurs after Character edit/revision.
 - [ ] Reconciliation occurs after level-up commit.
@@ -97,16 +97,20 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [ ] Reconciliation is idempotent and does not duplicate the actor.
 - [x] Switching active Character safely removes/replaces the local player projection without corrupting other Scene entities. Evidence: exact source `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`; UI `31974455354` passed the focused `productionLocalCharacterSwitch.test.ts` ownership regression and final TypeScript/build; Main Playable `31974455339` playable-contract passed. The regression proves local A -> B removes only A while preserving a remote ephemeral SessionProjection actor/registry/actions/economy and preserving local ownership across a temporary remote resolution context.
 
+Fresh Character actor evidence: exact source `8b162dd3b45e77f5a742badcdd7f03d613321497`; Persistence `31975560620`, UI `31975560755`, Main Playable `31975560651`. `characterLibraryProductionPlayIntegration.test.ts` authors and saves a unique Character, proves Aelar/Mira are absent from the production Scene, verifies the real Character entity/identity/HP/max HP/temp HP/AC and derived actions, then rehydrates a new adapter from the same Character Library and re-enters local production play with the same actor id.
+
 ## Action derivation boundary
 
-- [ ] `actionsByActor[activeCharacter.id]` is produced for a fresh non-fixture Character.
-- [ ] Action derivation uses canonical Character/content/rules facts rather than copied presentation values.
-- [ ] Weapon attacks derive attack bonus, damage, range, and provenance from the actual Character/loadout.
+- [x] `actionsByActor[activeCharacter.id]` is produced for a fresh non-fixture Character.
+- [x] Action derivation uses canonical Character/content/rules facts rather than copied presentation values.
+- [x] Weapon attacks derive attack bonus, damage, range, and provenance from the actual Character/loadout.
 - [ ] Basic/freeform actions exist even for Characters with no class-specific action.
 - [ ] Feature/resource actions are derived from actual Character capabilities.
-- [ ] Item actions use actual ItemInstance ids.
-- [ ] Spell actions use actual Character spell availability.
-- [ ] Normal player path does not require `char.aelar`, `char.mira`, goblin fixture ids, or `loadReferenceScenario`.
+- [x] Item actions use actual ItemInstance ids.
+- [x] Spell actions use actual Character spell availability.
+- [x] Normal player path does not require `char.aelar`, `char.mira`, goblin fixture ids, or `loadReferenceScenario`.
+
+Action-derivation evidence: fresh Character source `8b162dd3b45e77f5a742badcdd7f03d613321497`; Skills/attack source `c835963e918cce94bd535054a6553ead7e786262` with product repair through `5d48312289e2f01508b3860428ce98e2830d5f26`; Inventory `c61469c87f6343ff55601e60890d13a58b6a5536`; Spells `868b8e37127ea644444630cb45a84f36664912ed`. These regressions derive skill/check facts, runtime-backed weapon facts, exact persisted ItemInstance ids, and actual Character spell ids for non-fixture actors rather than copying fixture presentation state.
 
 ## Safe empty/setup states
 
@@ -146,23 +150,25 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## Skill model
 
-- [ ] Standard skills are derived from Character ability scores and proficiency data.
+- [x] Standard skills are derived from Character ability scores and proficiency data.
 - [ ] Each tile shows Korean skill name, governing ability, total modifier, and proficiency state.
 - [ ] Expertise or other multiplier, if present in current Character capabilities, is represented correctly.
 - [ ] Hover/focus/detail shows provenance for ability modifier + proficiency contributions.
-- [ ] Skills not explicitly proficient still appear with the correct ability modifier.
+- [x] Skills not explicitly proficient still appear with the correct ability modifier.
 - [ ] Pure ability checks are available when a specific skill is inappropriate.
 
 ## Resolution behavior
 
 - [ ] Clicking a skill creates an authoritative ability-check Resolution.
-- [ ] Actual d20 face is generated by the production dice/runtime source, not the presentation component.
+- [x] Actual d20 face is generated by the production dice/runtime source, not the presentation component.
 - [ ] VisualDice replays the authoritative face.
-- [ ] Result shows d20, modifier contributions, total, and provenance.
-- [ ] Result produces an Activity entry.
-- [ ] Freeform skill rolls do not consume Initiative Action economy.
+- [x] Result shows d20, modifier contributions, total, and provenance.
+- [x] Result produces an Activity entry.
+- [x] Freeform skill rolls do not consume Initiative Action economy.
 - [ ] Initiative-mode skill action economy follows explicit rules/command context rather than accidental tab behavior.
 - [ ] Undo behavior is defined for any skill roll state change; pure informational checks do not invent durable state.
+
+Evidence: exact fresh-Skills source `c835963e918cce94bd535054a6553ead7e786262`; UI `31976028376`, Main Playable `31976028381`. `productionFreshCharacterSkills.test.ts` creates/saves a unique Fighter, derives one proficient and one untrained skill from actual ability/proficiency facts, injects authoritative adapter d20 faces, verifies totals/provenance/Activity for both, and proves Freeform economy is unchanged.
 
 **Gate P14.3:** fresh non-fixture Character performs at least two different skill rolls with verified modifiers and authoritative dice.
 
@@ -176,18 +182,20 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [ ] Weapon/action tiles show cost, target type, attack/save/check summary, and disabled reason where relevant.
 - [ ] Target selection only enables eligible targets.
 - [ ] Same action id on different actors never resolves through the wrong actor.
-- [ ] Freeform actions preserve persistent resources without consuming hidden Initiative economy.
+- [x] Freeform actions preserve persistent resources without consuming hidden Initiative economy.
 - [ ] Initiative action/bonus action/reaction availability is enforced and displayed.
 
 ## Attacks
 
-- [ ] Real Character attack uses canonical runtime attack fact.
-- [ ] Hit/miss/critical uses authoritative d20 and target AC.
+- [x] Real Character attack uses canonical runtime attack fact.
+- [x] Hit/miss/critical uses authoritative d20 and target AC.
 - [ ] Damage uses authoritative damage dice and typed defense.
 - [ ] Temp HP -> HP application remains correct.
 - [ ] Reactions/interrupts still function.
 - [ ] Concentration/life-state interactions remain intact where triggered.
 - [ ] ResolutionEvent activity and event-native Undo remain intact.
+
+Evidence: fresh Character test source `c835963e918cce94bd535054a6553ead7e786262`, with the session-economy/runtime repair validated at product boundary `5d48312289e2f01508b3860428ce98e2830d5f26`; UI `31976479248`, Main Playable `31976479264`. The regression resolves a runtime-backed weapon action whose provenance names the actual Character id, proves an authoritative natural 20/critical against the selected target, commits target HP change and ResolutionEvent Activity, then commits Dash while preserving hidden Freeform Action economy.
 
 ## Class/feature actions
 
@@ -220,14 +228,16 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## Item use
 
-- [ ] Consumable with supported mechanics exposes a `사용` action.
+- [x] Consumable with supported mechanics exposes a `사용` action.
 - [ ] Charged magic item exposes a `사용` action and current charge count.
 - [ ] Item use requiring a target enters normal targeting flow.
-- [ ] Healing/damage/effect item uses the authoritative Resolution pipeline rather than direct UI mutation.
-- [ ] Quantity/charge cost and effect commit atomically where existing engine support requires atomicity.
+- [x] Healing/damage/effect item uses the authoritative Resolution pipeline rather than direct UI mutation.
+- [x] Quantity/charge cost and effect commit atomically where existing engine support requires atomicity.
 - [ ] Failed/rejected resolution does not spend quantity/charge.
-- [ ] Owning Character durable write-back records persistent quantity/charge changes.
+- [x] Owning Character durable write-back records persistent quantity/charge changes.
 - [ ] Undo restores event-native reversible item/resource changes when rules permit.
+
+Evidence: exact source `c61469c87f6343ff55601e60890d13a58b6a5536`; Persistence `31976901167`, UI `31976901162`, Main Playable `31976901170`. `productionFreshCharacterInventory.test.ts` hydrates a unique persisted Fighter with an exact healing-potion ItemInstance id, derives the production item action from that id, proves roll/effect preview does not spend quantity or HP, commits healing + quantity `2 -> 1` in one durable generation with ResolutionEvent Activity, and rehydrates the committed HP/quantity/action in a fresh adapter.
 
 **Gate P14.5:** in-session inventory use demonstrably changes an actual Character ItemInstance and persists after restart.
 
@@ -245,13 +255,15 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## Authoritative casting
 
-- [ ] Spell caster context is built for real Character ids, not only `char.mira`.
-- [ ] Slot resources are derived for the real caster.
-- [ ] Cantrips do not spend slots.
-- [ ] Slotted spells spend the correct slot/resource only on committed use.
-- [ ] Spell attack/save/healing/damage uses authoritative runtime services.
+- [x] Spell caster context is built for real Character ids, not only `char.mira`.
+- [x] Slot resources are derived for the real caster.
+- [x] Cantrips do not spend slots.
+- [x] Slotted spells spend the correct slot/resource only on committed use.
+- [x] Spell attack/save/healing/damage uses authoritative runtime services.
 - [ ] Concentration state remains authoritative.
 - [ ] Connected remote spell action follows Host resolution/event path.
+
+Evidence: exact product head `868b8e37127ea644444630cb45a84f36664912ed`; UI `31977494408` / frontend `95239056759`, Main Playable `31977496228` / playable-contract `95239068920`. `productionFreshCharacterSpells.test.ts` hydrates a unique persisted Sorcerer, projects its Fire Bolt/Magic Missile caster HUD and `2/2` level-1 slots, commits Fire Bolt through authoritative spell attack/damage without slot cost, cycles the turn, commits Magic Missile projectile damage with slot `2 -> 1` plus Activity/provenance/slotted-turn marker, and proves session slot use does not create a Character Library generation.
 
 **Gate P14.6:** at least one supported cantrip and one supported slotted spell work for a non-fixture Character where the Character build grants them.
 
@@ -261,11 +273,13 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 
 ## Local player flow
 
-- [ ] Fresh Character -> Play creates/joins a local scene with the actual Character.
-- [ ] Restarted persisted Character can re-enter local play.
+- [x] Fresh Character -> Play creates/joins a local scene with the actual Character.
+- [x] Restarted persisted Character can re-enter local play.
 - [ ] Freeform mode can run skills/actions/items/spells without debug setup.
 - [ ] Initiative can start from the live participant set.
 - [ ] Turn progression uses live actors, not fixture ordering assumptions.
+
+Evidence for the first two local-player items: fresh Character source `8b162dd3b45e77f5a742badcdd7f03d613321497`; Persistence `31975560620`, UI `31975560755`, Main Playable `31975560651`. The test creates and saves a non-fixture Character, enters local production play, creates a new adapter against the same store, restores the same active id, and re-enters local play.
 
 ## DM preparation and lobby
 
@@ -380,14 +394,16 @@ Evidence for session end/restart: exact session-end product source `240592cb646b
 
 # P14.9 Persistence, restart, and data ownership
 
-- [ ] Newly created Character is persisted before restart test.
-- [ ] Active Character identity restores correctly.
-- [ ] HP/resource/item durable changes from play restore correctly after restart.
+- [x] Newly created Character is persisted before restart test.
+- [x] Active Character identity restores correctly.
+- [x] HP/resource/item durable changes from play restore correctly after restart.
 - [ ] Session-only target/initiative/transient Resolution state is not incorrectly persisted as permanent Character source.
 - [ ] Creation/edit/level-up draft recovery still works.
 - [ ] Atomic Character library save failure still rolls back safely.
 - [ ] Projection Characters remain excluded from host permanent library writes.
 - [ ] No new duplicate source-of-truth document is introduced for Character mechanics.
+
+Evidence: fresh create/save/restart source `8b162dd3b45e77f5a742badcdd7f03d613321497` (Persistence `31975560620`, UI `31975560755`, Main `31975560651`) proves a newly authored saved Character and active identity survive storage restart/re-entry. Inventory source `c61469c87f6343ff55601e60890d13a58b6a5536` (Persistence `31976901167`, UI `31976901162`, Main `31976901170`) proves committed play HP and ItemInstance quantity survive a fresh adapter/storage rehydrate.
 
 **Gate P14.9:** restart regression proves the same non-fixture Character remains playable with correct durable state.
 
@@ -414,21 +430,25 @@ Evidence for session end/restart: exact session-end product source `240592cb646b
 
 ## Fresh Character integration
 
-- [ ] Test authors a brand-new Character id not present in fixture source.
-- [ ] Finalizes/saves it.
-- [ ] Verifies Scene actor materialization.
-- [ ] Verifies derived Skills/Actions/Inventory/Spells surfaces as appropriate to build.
-- [ ] Executes a skill check.
-- [ ] Executes an attack or feature action.
-- [ ] Executes a supported item interaction.
-- [ ] Executes a supported spell for a spellcasting test Character.
-- [ ] Verifies Activity/provenance/state changes.
+- [x] Test authors a brand-new Character id not present in fixture source.
+- [x] Finalizes/saves it.
+- [x] Verifies Scene actor materialization.
+- [x] Verifies derived Skills/Actions/Inventory/Spells surfaces as appropriate to build.
+- [x] Executes a skill check.
+- [x] Executes an attack or feature action.
+- [x] Executes a supported item interaction.
+- [x] Executes a supported spell for a spellcasting test Character.
+- [x] Verifies Activity/provenance/state changes.
+
+Evidence: `characterLibraryProductionPlayIntegration.test.ts`, `productionFreshCharacterSkills.test.ts`, `productionFreshCharacterInventory.test.ts`, and `productionFreshCharacterSpells.test.ts` together use unique non-fixture Character ids, derive the corresponding production actor/action surfaces, and execute authoritative skill, attack/basic, item, and spell paths with Activity/provenance/state assertions. Exact validated boundaries are `8b162dd3b45e77f5a742badcdd7f03d613321497`, `5d48312289e2f01508b3860428ce98e2830d5f26`, `c61469c87f6343ff55601e60890d13a58b6a5536`, and `868b8e37127ea644444630cb45a84f36664912ed`.
 
 ## Restart integration
 
-- [ ] Persists Character and runtime durable changes.
-- [ ] Rehydrates a new app/adapter instance.
-- [ ] Verifies the same Character can enter play and retains correct durable state/actions.
+- [x] Persists Character and runtime durable changes.
+- [x] Rehydrates a new app/adapter instance.
+- [x] Verifies the same Character can enter play and retains correct durable state/actions.
+
+Evidence: fresh Character restart at `8b162dd3b45e77f5a742badcdd7f03d613321497` and Inventory durable restart at `c61469c87f6343ff55601e60890d13a58b6a5536` prove Character Library generations rehydrate into new adapters with the same identity plus committed HP/item state and re-derived production actions.
 
 ## UI structure/behavior
 
