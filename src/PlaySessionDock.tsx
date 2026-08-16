@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ActionVm, SceneEntity } from "./app/contracts";
 import { useSimpleVtt } from "./app/AppProvider";
 import { mockAdapter } from "./app/mockAdapter";
@@ -40,12 +40,12 @@ export function PlaySessionDock() {
   const pending=actions.find((action)=>action.id===pendingActionId)??null;
   const targets=pending?scene.entities.filter((entity)=>pending.eligibleTargetIds.includes(entity.id)):[];
 
-  const counts=useMemo(()=>({
+  const counts={
     actions:actions.filter((action)=>actionGroup(action)==="actions").length,
     skills:actions.filter((action)=>actionGroup(action)==="skills").length,
     spells:actions.filter((action)=>actionGroup(action)==="spells").length,
     inventory:character.items.length,
-  }),[actions,character.items.length]);
+  };
 
   const chooseCharacter=async(id:string)=>{
     await selectProductionCharacter(mockAdapter,id);
@@ -102,7 +102,7 @@ export function PlaySessionDock() {
     {!actor&&<div className="play-empty-state"><strong>플레이 Actor를 준비하는 중입니다.</strong><span>선택한 Character를 production Scene으로 투영합니다.</span></div>}
 
     <nav className="play-dock-tabs" aria-label="플레이 카테고리">
-      {(Object.keys(TAB_LABEL) as PlayTab[]).map((id)=><button type="button" key={id} className={tab===id?"active":""} onClick={()=>{setTab(id);setPendingActionId(null);}}><span>{TAB_LABEL[id]}</span><b>{counts[id]}</b></button>)}
+      {(Object.keys(TAB_LABEL) as PlayTab[]).map((id)=><button type="button" key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}><span>{TAB_LABEL[id]}</span><b>{counts[id]}</b></button>)}
     </nav>
 
     <div className="play-dock-body">
