@@ -1,5 +1,8 @@
 name: Phase 12 Connected Session
 
+env:
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 on:
   push:
     branches:
@@ -20,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -39,6 +44,8 @@ jobs:
     needs: connected-protocol
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -58,7 +65,7 @@ jobs:
           Copy-Item $source "phase12-artifact/SimpleVTT.exe"
           @(
             "SimpleVTT Phase 12 connected-session build",
-            "commit=${{ github.sha }}",
+            "commit=${{ env.SOURCE_SHA }}",
             "ref=${{ github.ref }}",
             "run_id=${{ github.run_id }}",
             "",
@@ -76,14 +83,14 @@ jobs:
           ) | Set-Content -Encoding utf8 "phase12-artifact/REMOTE-WALKTHROUGH.txt"
           @(
             "SimpleVTT Phase 12 connected-session build",
-            "commit=${{ github.sha }}",
+            "commit=${{ env.SOURCE_SHA }}",
             "ref=${{ github.ref }}",
             "run_id=${{ github.run_id }}"
           ) | Set-Content -Encoding utf8 "phase12-artifact/BUILD.txt"
       - name: Upload Windows connected-session artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SimpleVTT-Phase12-Windows-${{ github.sha }}
+          name: SimpleVTT-Phase12-Windows-${{ env.SOURCE_SHA }}
           path: phase12-artifact/
           if-no-files-found: error
           retention-days: 14
