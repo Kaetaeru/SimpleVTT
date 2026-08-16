@@ -8,6 +8,7 @@ import {
   projectLevelUpClassOptions,
   projectLevelUpFixedHpGain,
   projectLevelUpSubclassPresentation,
+  rollLevelUpHitDie,
 } from "./app/levelUpV10Presentation";
 import { mockAdapter } from "./app/mockAdapter";
 import type { ChoiceDefinition, ChoiceSelectionValue } from "./app/progressionContracts";
@@ -15,6 +16,7 @@ import type { Phase07AdapterCommands } from "./app/progressionRuntimeAdapter";
 import { spellMatchesFilter, spellPresentationById, spellSearchText, type SpellUiFilter } from "./app/spellPresentation";
 import { OptionCard, SectionShell } from "./character-create/v09Ui";
 import { SpellTile } from "./SpellUi";
+import { VisualDiceTray } from "./VisualDiceBridge";
 
 const SPELL_FILTERS: Array<{ id:SpellUiFilter; label:string }> = [
   { id:"all", label:"전체" },
@@ -244,6 +246,7 @@ export function LevelUpV10Bridge() {
   const character = snapshot?.activeCharacter;
   const [busy, setBusy] = useState(false);
   const [activeStage,setActiveStage] = useState<LevelUpStageId>("class");
+  const [hpRollReplay,setHpRollReplay] = useState(0);
   const classOptions = useMemo(() => character ? projectLevelUpClassOptions(character) : [], [character]);
 
   if (!host || !snapshot || !plan || !draft || !character) return null;
@@ -255,6 +258,11 @@ export function LevelUpV10Bridge() {
   const chooseClass = (classId: string) => run(() => adapter.setProgressionTargetClass(classId));
   const choose = (choiceId: string, value: ChoiceSelectionValue) => run(() => adapter.setProgressionChoice(choiceId, value));
   const setHp = (method: "fixed" | "roll", roll?: number) => run(() => adapter.setProgressionHp(method, roll));
+  const rollHp = () => {
+    const face = rollLevelUpHitDie(plan.hp.hitDie);
+    setHpRollReplay((value) => value + 1);
+    void setHp("roll",face);
+  };
   const legacyCancel = () => host.querySelector<HTMLButtonElement>(".builder-screen .builder-top > button:last-child")?.click();
   const legacyCommit = () => host.querySelector<HTMLButtonElement>(".builder-screen .builder-footer button.primary")?.click();
   const fixedGain = projectLevelUpFixedHpGain(plan);
@@ -262,6 +270,7 @@ export function LevelUpV10Bridge() {
   const choicesComplete = plan.choices.every((choice) => choiceComplete(choice,currentSelection(snapshot,choice.id)));
   const choicesBlocked = plan.choices.some((choice) => choice.status === "catalog-pending");
   const ready = hpComplete && choicesComplete && plan.blocking.length === 0;
+  const hitDieSides = plan.hp.hitDie as 4|6|8|10|12|20;
 
   const classSection:CharacterCreationSection = {
     id:"levelup-class",
@@ -291,7 +300,7 @@ export function LevelUpV10Bridge() {
     id:"levelup-hp",
     kind:"dynamic-choice",
     label:"히트 포인트 증가",
-    description:`d${plan.hp.hitDie} + 건강 수정치 ${plan.hp.constitutionModifier >= 0 ? "+" : ""}${plan.hp.constitutionModifier}. 고정값 또는 주사위 결과를 선택합니다.`,
+    description:`d${plan.hp.hitDie} + 건강 수정치 ${plan.hp.constitutionModifier >= 0 ? "+" : ""}${plan.hp.constitutionModifier}. 고정값 또는 실제 히트 다이스 굴림을 선택합니다.`,
     status:hpComplete ? "complete" : "incomplete",
     required:true,
     dependsOn:[],
@@ -359,8 +368,11 @@ export function LevelUpV10Bridge() {
   </SectionShell>;
 
   const hpStage = <SectionShell section={hpSection}>
-    <div className="levelup-segmented"><button type="button" className={draft.hpMethod === "fixed" ? "active" : ""} onClick={() => { void setHp("fixed"); }} disabled={busy}>고정값 · {fixedGain} HP</button><button type="button" className={draft.hpMethod === "roll" ? "active" : ""} onClick={() => { void setHp("roll", draft.hpRoll ?? 1); }} disabled={busy}>d{plan.hp.hitDie} 굴림</button></div>
-    {draft.hpMethod === "roll" && <label className="levelup-roll"><span>d{plan.hp.hitDie} 결과</span><input type="number" min={1} max={plan.hp.hitDie} value={draft.hpRoll ?? ""} onChange={(event) => { void setHp("roll", Number(event.target.value)); }}/></label>}
+    <div className="levelup-segmented"><button type="button" className={draft.hpMethod === "fixed" ? "active" : ""} onClick={() => { void setHp("fixed"); }} disabled={busy}>고정값 · {fixedGain} HP</button><button type="button" className={draft.hpMethod === "roll" ? "active" : ""} onClick={() => { void setHp("roll",draft.hpRoll); }} disabled={busy}>d{plan.hp.hitDie} 굴림</button></div>
+    {draft.hpMethod === "roll" && <div className="levelup-hit-die-panel">
+      {draft.hpRoll ? <VisualDiceTray key={`levelup-hp:${hpRollReplay}:${draft.hpRoll}`} label={`히트 다이스 d${plan.hp.hitDie}`} dice={[{ value:draft.hpRoll, sides:hitDieSides }]} caption={`굴림 결과 ${draft.hpRoll} · 건강 수정치 ${plan.hp.constitutionModifier >= 0 ? "+" : ""}${plan.hp.constitutionModifier}`} compact/> : <div className="create-principle-callout"><strong>히트 다이스를 굴리세요.</strong><span>굴림 결과가 나온 뒤 최대 HP Preview가 확정됩니다.</span></div>}
+      <button type="button" className="primary levelup-roll-button" disabled={busy} onClick={rollHp}>{draft.hpRoll ? `d${plan.hp.hitDie} 다시 굴리기` : `d${plan.hp.hitDie} 굴리기`}</button>
+    </div>}
     {plan.hp.retroactiveConstitutionGain !== 0 && <div className="create-principle-callout levelup-con-retro"><strong>건강 수정치 소급</strong><span>기존 레벨에도 적용되는 최대 HP 변화 · {plan.hp.retroactiveConstitutionGain > 0 ? "+" : ""}{plan.hp.retroactiveConstitutionGain}</span></div>}
   </SectionShell>;
 
