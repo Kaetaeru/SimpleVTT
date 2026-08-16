@@ -145,7 +145,7 @@ async function resolveSkill(
   assert.equal(activity.stateChanges.some((entry)=>/행동 사용|추가 행동 사용|반응 사용/.test(entry)),false);
 }
 
-test("fresh non-fixture Character resolves proficient and untrained skills with authoritative dice without Freeform economy cost",async()=>{
+async function freshFreeformFighter() {
   const store=new MemoryCharacterLibraryStore();
   const adapter=new MockAdapter();
   setCharacterLibraryStoreForTests(adapter,store);
@@ -155,10 +155,14 @@ test("fresh non-fixture Character resolves proficient and untrained skills with 
   assert.notEqual(characterId,"char.aelar");
   assert.notEqual(characterId,"char.mira");
   assert.equal(created.activeCharacter.saveState,"saved");
-
   await adapter.startProductionLocalPlay("player");
   const freeform=await adapter.setSessionMode("freeform");
   assert.equal(freeform.activeCharacter.id,characterId);
+  return {adapter,freeform,characterId};
+}
+
+test("fresh non-fixture Character resolves proficient and untrained skills with authoritative dice without Freeform economy cost",async()=>{
+  const {adapter,freeform,characterId}=await freshFreeformFighter();
   const {trained,untrained}=findSkillActions(freeform);
   const character=freeform.activeCharacter;
 
@@ -172,6 +176,62 @@ test("fresh non-fixture Character resolves proficient and untrained skills with 
   await resolveSkill(adapter,untrained.action,untrained.fact,16,untrainedExpected);
 
   const done=await adapter.getSnapshot();
+  assert.equal(done.activeCharacter.id,characterId);
   const skillActivities=done.activity.filter((entry)=>entry.actor===done.activeCharacter.name&&entry.detail.some((detail)=>detail.includes(":check-bonus")));
   assert.ok(skillActivities.length>=2);
+});
+
+test("fresh non-fixture Character commits a canonical weapon attack and a non-weapon Dash action",async()=>{
+  const {adapter,freeform,characterId}=await freshFreeformFighter();
+  const actions=freeform.scene.actionsByActor[characterId]??[];
+  const attack=actions
+    .filter((action)=>action.resolutionKind==="attack"&&action.runtimeAttack)
+    .sort((a,b)=>(b.runtimeAttack?.rangeFeet??0)-(a.runtimeAttack?.rangeFeet??0))[0];
+  assert.ok(attack,"fresh Fighter must expose a runtime-backed weapon attack");
+  assert.equal(attack.actorId,characterId);
+  assert.ok(attack.runtimeAttack?.damageSource.includes(`character:${characterId}:attack:`));
+
+  const range=attack.runtimeAttack?.rangeFeet??0;
+  const target=freeform.scene.entities.find((entity)=>{
+    if (entity.side==="ally"||entity.reactions.length) return false;
+    const distance=Number.parseInt(entity.distance??"");
+    return Number.isFinite(distance)&&distance<=range;
+  });
+  assert.ok(target,`fresh Fighter attack requires an enemy within ${range} feet`);
+  const targetHp=target.hp;
+  const economy=structuredClone(freeform.scene.economyByActor[characterId]);
+
+  await adapter.setQueuedD20(20);
+  let attackState=await adapter.resolveAction(attack.id,[target.id]);
+  const attackResolutionId=attackState.resolution?.id;
+  assert.ok(attackResolutionId);
+  assert.equal(attackState.resolution?.actorId,characterId);
+  assert.deepEqual(attackState.resolution?.authoritativeDice,[20]);
+  assert.equal(attackState.resolution?.attackOutcome,"명중");
+  assert.equal(attackState.resolution?.critical,true);
+  for (let step=0;step<4&&attackState.resolution?.stage!=="complete";step++) {
+    attackState=await adapter.advanceResolution();
+  }
+  assert.equal(attackState.resolution?.stage,"complete");
+  assert.ok((attackState.scene.entities.find((entity)=>entity.id===target.id)?.hp??targetHp)<targetHp);
+  assert.deepEqual(attackState.scene.economyByActor[characterId],economy,"Freeform weapon attack must not consume hidden initiative economy");
+  const attackActivity=attackState.activity.find((entry)=>entry.id===attackResolutionId);
+  assert.ok(attackActivity,"weapon attack must project committed ResolutionEvent activity");
+  assert.ok(attackActivity.stateChanges.some((entry)=>entry.includes(target.name)&&entry.includes("HP")));
+
+  const dash=(attackState.scene.actionsByActor[characterId]??[]).find((action)=>action.id==="action.dash");
+  assert.ok(dash,"fresh Fighter must expose the basic Dash action");
+  assert.equal(dash.actorId,characterId);
+  const movementBefore=attackState.scene.economyByActor[characterId]?.movementMax??0;
+  const dashPreview=await adapter.resolveAction(dash.id,[characterId]);
+  const dashResolutionId=dashPreview.resolution?.id;
+  assert.ok(dashResolutionId);
+  assert.equal(dashPreview.resolution?.actorId,characterId);
+  const dashCommitted=await adapter.advanceResolution();
+  assert.equal(dashCommitted.resolution?.stage,"complete");
+  assert.ok((dashCommitted.scene.economyByActor[characterId]?.movementMax??0)>movementBefore);
+  assert.equal(dashCommitted.scene.economyByActor[characterId]?.action,economy.action);
+  const dashActivity=dashCommitted.activity.find((entry)=>entry.id===dashResolutionId);
+  assert.ok(dashActivity,"Dash must produce Activity");
+  assert.ok(dashActivity.stateChanges.some((entry)=>entry.includes("이동 가능량")));
 });
