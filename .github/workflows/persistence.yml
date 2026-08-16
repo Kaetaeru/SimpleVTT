@@ -1,0 +1,40 @@
+name: Persistence
+
+on:
+  pull_request:
+    paths:
+      - "src/app/*Persistence*"
+      - "src/app/*persistence*"
+      - "tests/ui/characterLibraryPersistence.test.ts"
+      - "schemas/character-library.schema.json"
+      - "docs/design/persistence.md"
+      - ".agents/PHASE10_CHECKLIST.md"
+      - "src-tauri/**"
+      - ".github/workflows/persistence.yml"
+  push:
+    branches:
+      - "agent/**"
+    paths:
+      - "src/app/*Persistence*"
+      - "src/app/*persistence*"
+      - "tests/ui/characterLibraryPersistence.test.ts"
+      - "schemas/character-library.schema.json"
+      - "docs/design/persistence.md"
+      - ".agents/PHASE10_CHECKLIST.md"
+      - "src-tauri/**"
+      - ".github/workflows/persistence.yml"
+
+jobs:
+  application-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Character library repository
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts
+      - name: Verify production build
+        run: npm run build
