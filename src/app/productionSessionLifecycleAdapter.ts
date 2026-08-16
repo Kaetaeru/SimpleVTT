@@ -1,7 +1,8 @@
-import type { AppSnapshot, CharacterSummary } from "./contracts";
+import type { AppSnapshot, CharacterSummary, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { connectedInternal } from "./connectedSessionRuntimeAdapter";
+import { broadcastConnectedWire, connectedInternal } from "./connectedSessionRuntimeAdapter";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
+import { publishConnectedTurnProjection } from "./connectedTurnRoutingAdapter";
 import { projectedCharacterIds } from "./characterSessionProjectionRegistry";
 import { unmountAllReconstructedCharacterSessionProjections } from "./characterSessionProjectionMount";
 import { tauriSessionTransport } from "./tauriSessionTransport";
@@ -17,6 +18,8 @@ declare module "./contracts" {
 declare module "./mockAdapter" {
   interface MockAdapter {
     stopSession():Promise<AppSnapshot>;
+    setSessionReady(ready:boolean):Promise<AppSnapshot>;
+    startPreparedSession(mode:SessionMode):Promise<AppSnapshot>;
   }
 }
 
@@ -39,6 +42,7 @@ export function activeCharacterCanJoinProductionSession(adapter:MockAdapter) {
 function lifecycleFor(adapter:MockAdapter):ProductionSessionLifecycle {
   const app=connectedInternal(adapter);
   const state=connectedStateFor(adapter);
+  if (state.sessionStarted && (state.mode==="host"||state.mode==="client")) return "live";
   if (app.session.role==="client") {
     if (state.mode!=="client") return "offline";
     return state.sessionId ? "lobby" : "connecting";
@@ -64,6 +68,26 @@ function stopBlockedReason(adapter:MockAdapter) {
   return undefined;
 }
 
+function startBlockedReason(adapter:MockAdapter) {
+  const app=connectedInternal(adapter);
+  const state=connectedStateFor(adapter);
+  const ledger=state.ledger;
+  if (state.mode!=="host"||!ledger||app.session.role!=="host") return "Only an active Host can start prepared play.";
+  if (state.sessionStarted) return "The connected session is already live.";
+  const players=app.session.participants.filter((participant)=>participant.id!=="host");
+  if (players.length===0) return "At least one compatible player must join before play can start.";
+  for (const participant of players) {
+    if (participant.state!=="connected") return `${participant.name} is not connected.`;
+    if (!participant.ready) return `${participant.name} is not Ready.`;
+    const peer=[...state.peerParticipants.entries()].find(([,participantId])=>participantId===participant.id)?.[0];
+    const manifest=peer ? state.peerManifests.get(peer) : undefined;
+    if (!peer||!manifest||ledger.handshake(manifest).status==="incompatible") {
+      return `${participant.name} does not have a compatible accepted handshake.`;
+    }
+  }
+  return undefined;
+}
+
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithProductionSessionLifecycle() {
   const snapshot=await previousGetSnapshot.call(this);
@@ -71,6 +95,44 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithProductionSessio
   snapshot.session.lifecycle=lifecycle;
   connectedInternal(this).session.lifecycle=lifecycle;
   return snapshot;
+};
+
+MockAdapter.prototype.setSessionReady=async function setProductionSessionReady(ready:boolean) {
+  const app=connectedInternal(this);
+  const state=connectedStateFor(this);
+  if (state.mode!=="client"||!state.sessionId||app.session.role!=="client"||lifecycleFor(this)!=="lobby") {
+    app.session.compatibility="warning";
+    app.session.compatibilityMessage="Ready can only change from a compatible player lobby.";
+    return app.getSnapshot();
+  }
+  if (app.connectionState!=="connected"||app.session.compatibility==="incompatible") {
+    app.session.compatibility="warning";
+    app.session.compatibilityMessage="Ready requires an active compatible Host connection.";
+    return app.getSnapshot();
+  }
+  await broadcastConnectedWire({type:"ready-intent",sessionId:state.sessionId,ready});
+  app.session.compatibilityMessage=ready ? "Ready sent to Host · waiting for authoritative confirmation." : "Ready cancellation sent to Host.";
+  return app.getSnapshot();
+};
+
+MockAdapter.prototype.startPreparedSession=async function startProductionPreparedSession(mode:SessionMode) {
+  const app=connectedInternal(this);
+  const state=connectedStateFor(this);
+  const blocked=startBlockedReason(this);
+  if (blocked) {
+    app.session.compatibility="warning";
+    app.session.compatibilityMessage=blocked;
+    return app.getSnapshot();
+  }
+  state.sessionStarted=true;
+  setLifecycle(this,"live");
+  app.session.compatibility="compatible";
+  app.session.compatibilityMessage=`Host starting ${mode} play.`;
+  if (mode==="initiative") {
+    return this.startInitiative();
+  }
+  await this.setSessionMode("freeform");
+  return publishConnectedTurnProjection(this,"session-start-freeform");
 };
 
 MockAdapter.prototype.stopSession=async function stopProductionSession() {
