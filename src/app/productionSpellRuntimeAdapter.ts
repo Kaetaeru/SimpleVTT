@@ -82,11 +82,13 @@ function boundedFace(adapter:MockAdapter,actionId:string,index:number,sides:numb
 
 function spellDice(adapter:MockAdapter,actionId:string,spellId:string,slotLevel:number|undefined) {
   if (actionId===FIRE_BOLT_ACTION) {
+    const attackFace=d20(adapter,actionId,0);
+    const damageFace=boundedFace(adapter,actionId,1,10);
     return {
-      authoritative:[d20(adapter,actionId,0),boundedFace(adapter,actionId,1,10)],
+      authoritative:[attackFace,damageFace],
       request:{
-        attack:{id:`${spellId}:attack`,purpose:`${spellId} spell attack`,sides:20,faces:[d20(adapter,actionId,0)]},
-        effectFaces:[boundedFace(adapter,actionId,1,10)],
+        attack:{id:`${spellId}:attack`,purpose:`${spellId} spell attack`,sides:20,faces:[attackFace]},
+        effectFaces:[damageFace],
       },
     };
   }
