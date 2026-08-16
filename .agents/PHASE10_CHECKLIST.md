@@ -18,11 +18,13 @@ Owner progression acceptance remains separate: PR #60 stays Draft until owner Wi
 - [x] deterministic stale-writer / corrupt-newest recovery repository tests added
 - [x] Tauri immutable-generation store implemented with fixed app-local-data path, temp flush, rename commit, stale-generation reject, and post-commit pruning
 - [x] Tauri store ignores temp files and retains previous committed generations on stale/failure paths
-- [ ] adapter hydration before first snapshot
-- [ ] Character create/edit/progression direct commit persistence
-- [ ] durable item/rest direct mutation persistence
-- [ ] storage failure rollback preserves prior committed Character + editable draft where applicable
-- [ ] schema contract validation / migration entrypoint
+- [x] adapter hydration installed after existing rule/progression adapters and before first UI snapshot
+- [x] direct ItemInstance equip/attunement/use mutations write through Character library
+- [x] direct rest-time spell configuration methods write through the same persistence transaction
+- [x] storage failure restores in-memory Character/library state; creation/progression wrappers retain editable drafts and attach blocking validation
+- [x] persistence status/durability exposed as non-rule AppSnapshot metadata; browser preview store is explicitly volatile
+- [ ] Character create/edit/progression successful commits verified by dedicated persistence regressions
+- [ ] schema migration entrypoint
 - [ ] frontend + Rust CI green
 - [ ] Draft PR checkpoint
 
