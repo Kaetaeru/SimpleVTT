@@ -22,6 +22,24 @@ test("Phase 07 level-up keeps authoritative progression controls while using the
   assert.doesNotMatch(ui, /LEVEL_STEPS/);
 });
 
+test("Phase 07 level-up follows the same active-stage navigation contract as character creation", () => {
+  const levelUp = source("src/LevelUpV10.tsx");
+  const creation = source("src/CharacterCreateV10.tsx");
+  assert.match(levelUp, /type LevelUpStageId = "class" \| "automatic" \| "hp" \| "choices" \| "review"/);
+  assert.match(levelUp, /const \[activeStage,setActiveStage\] = useState<LevelUpStageId>\("class"\)/);
+  assert.match(levelUp, /activeStage === item\.id \? "active /);
+  assert.match(levelUp, />이전<\/button>/);
+  assert.match(levelUp, />다음<\/button>/);
+  assert.match(levelUp, /activeStage === "review" \? <button[^>]*>레벨 업<\/button>/);
+  assert.match(levelUp, /focused-create-header-actions/);
+  assert.match(levelUp, />닫기<\/button>/);
+  assert.match(creation, /focused-create-tabs/);
+  assert.match(creation, />이전<\/button>/);
+  assert.match(creation, />다음<\/button>/);
+  assert.doesNotMatch(levelUp, /jumpTo\(/);
+  assert.doesNotMatch(levelUp, /scrollIntoView/);
+});
+
 test("Phase 07 level-up reuses character-creation option cards and spell library interactions", () => {
   const ui = source("src/LevelUpV10.tsx");
   assert.match(ui, /import \{ OptionCard, SectionShell \} from "\.\/character-create\/v09Ui"/);
@@ -32,18 +50,6 @@ test("Phase 07 level-up reuses character-creation option cards and spell library
   assert.match(ui, /한국어 \/ English \/ 학파 \/ 속성/);
   assert.match(ui, /spell-filter-chips/);
   assert.match(ui, /spell-choice-grid/);
-});
-
-test("Phase 07 level-up and character creation share section anchors for header navigation", () => {
-  const ui = source("src/LevelUpV10.tsx");
-  const shared = source("src/character-create/v09Ui.tsx");
-  assert.match(shared, /<section id=\{section\.id\} className="create-v09-section">/);
-  assert.match(ui, /jumpTo\("levelup-class"\)/);
-  assert.match(ui, /jumpTo\("levelup-automatic"\)/);
-  assert.match(ui, /jumpTo\("levelup-hp"\)/);
-  assert.match(ui, /id:"levelup-class"/);
-  assert.match(ui, /id:"levelup-automatic"/);
-  assert.match(ui, /id:"levelup-hp"/);
 });
 
 test("Phase 07 level-up subclass choices expose rich hover presentation instead of name-only buttons", () => {
@@ -60,11 +66,12 @@ test("Phase 07 level-up subclass choices expose rich hover presentation instead 
   assert.match(presentation, /School of Evocation/);
 });
 
-test("Phase 07 level-up owns a definite viewport while the creation-style stage and preview scroll", () => {
+test("Phase 07 level-up uses the same stage-only scroll and persistent preview viewport as character creation", () => {
   const css = source("src/level-up-v10.css");
   assert.match(css, /\.levelup-v10\s*\{[^}]*position:absolute;[^}]*inset:0;[^}]*grid-template-rows:auto minmax\(0,1fr\) auto;[^}]*overflow:hidden;/s);
   assert.match(css, /\.levelup-v10-main\s*\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*scrollbar-gutter:stable;/s);
   assert.match(css, /\.levelup-v10-preview\s*\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*scrollbar-gutter:stable;/s);
+  assert.match(css, /\.levelup-create-tabs \{ grid-template-columns:repeat\(5/);
 });
 
 test("Phase 07 UI renders catalog-pending choices explicitly instead of silently approximating them", () => {
