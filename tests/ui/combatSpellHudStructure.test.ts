@@ -24,6 +24,7 @@ test("combat spell HUD reuses canonical SpellTile UI, shows slots separately, an
   const hud = source("src/CombatSpellHud.tsx");
   const runtime = source("src/app/spellcastingRuntimeAdapter.ts");
   const main = source("src/main.tsx");
+  const offlineRuntime = source("src/app/offlineRuntimeAdapters.ts");
   const css = source("src/combat-spell-hud.css");
 
   assert.match(hud, /SpellTile/);
@@ -34,6 +35,8 @@ test("combat spell HUD reuses canonical SpellTile UI, shows slots separately, an
   assert.match(runtime, /spell-slot-1/);
   assert.match(runtime, /runtimeSupport === "partial"/);
   assert.match(main, /CombatSpellHudBridge/);
-  assert.match(main, /spellcastingRuntimeAdapter/);
+  assert.match(main, /offlineRuntimeAdapters/);
+  assert.match(offlineRuntime, /spellcastingRuntimeAdapter/);
+  assert.match(offlineRuntime, /phase09SpellcastingRuntimeRouter/);
   assert.match(css, /phase06-magic-active/);
 });

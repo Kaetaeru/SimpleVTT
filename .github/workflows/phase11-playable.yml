@@ -1,0 +1,71 @@
+name: Phase 11 Playable
+
+on:
+  push:
+    branches:
+      - "agent/101-offline-playable-vertical-slice"
+  pull_request:
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "tests/ui/**"
+      - "tests/domain/**"
+      - "rules/**"
+      - "content/**"
+      - "schemas/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".agents/PHASE11_CHECKLIST.md"
+      - ".github/workflows/phase11-playable.yml"
+
+jobs:
+  offline-walkthrough:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate canonical content
+        run: npm run generate:content
+      - name: Verify production-composed offline walkthrough
+        run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
+      - name: Verify full production frontend gate
+        run: npm run build
+
+  windows-playable:
+    runs-on: windows-latest
+    needs: offline-walkthrough
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build Windows playable executable
+        run: npm run tauri:build -- --no-bundle
+      - name: Stage playable artifact
+        shell: pwsh
+        run: |
+          $source = "src-tauri/target/release/simplevtt.exe"
+          if (-not (Test-Path $source)) { throw "SimpleVTT executable was not produced at $source" }
+          New-Item -ItemType Directory -Force -Path phase11-artifact | Out-Null
+          Copy-Item $source "phase11-artifact/SimpleVTT.exe"
+          @(
+            "SimpleVTT Phase 11 playable offline build",
+            "commit=${{ github.sha }}",
+            "ref=${{ github.ref }}",
+            "run_id=${{ github.run_id }}"
+          ) | Set-Content -Encoding utf8 "phase11-artifact/BUILD.txt"
+      - name: Upload Windows playable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-Phase11-Windows-${{ github.sha }}
+          path: phase11-artifact/
+          if-no-files-found: error
+          retention-days: 14
