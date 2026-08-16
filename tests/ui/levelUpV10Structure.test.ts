@@ -34,6 +34,18 @@ test("Phase 07 level-up reuses character-creation option cards and spell library
   assert.match(ui, /spell-choice-grid/);
 });
 
+test("Phase 07 level-up and character creation share section anchors for header navigation", () => {
+  const ui = source("src/LevelUpV10.tsx");
+  const shared = source("src/character-create/v09Ui.tsx");
+  assert.match(shared, /<section id=\{section\.id\} className="create-v09-section">/);
+  assert.match(ui, /jumpTo\("levelup-class"\)/);
+  assert.match(ui, /jumpTo\("levelup-automatic"\)/);
+  assert.match(ui, /jumpTo\("levelup-hp"\)/);
+  assert.match(ui, /id:"levelup-class"/);
+  assert.match(ui, /id:"levelup-automatic"/);
+  assert.match(ui, /id:"levelup-hp"/);
+});
+
 test("Phase 07 level-up subclass choices expose rich hover presentation instead of name-only buttons", () => {
   const ui = source("src/LevelUpV10.tsx");
   const presentation = source("src/app/levelUpV10Presentation.ts");
