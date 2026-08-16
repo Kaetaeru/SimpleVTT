@@ -69,6 +69,20 @@ type SpellUndoRecord = {
   runtime: RulesRuntimeState;
 };
 
+export interface FreeformSpellSlotChange {
+  actorId: string;
+  spellId: string;
+  slotLevel: number;
+  resourceId: string;
+  before: number;
+  after: number;
+}
+
+export type FreeformSpellSlotCommit =
+  | { status: "not-applicable" }
+  | { status: "rejected"; error: string }
+  | { status: "committed"; change: FreeformSpellSlotChange; stateChange: string; provenance: string };
+
 const bridgeByAdapter = new WeakMap<object, BridgeState>();
 const spellUndoByAdapter = new WeakMap<object, SpellUndoRecord>();
 
@@ -196,6 +210,59 @@ function syncSceneFromRuntime(bridge: BridgeState, internal: AdapterInternalStat
       economy.movementMax = runtime.economy.movementMaximum;
     }
   }
+}
+
+export function commitFreeformSpellSlot(adapter: MockAdapter, actionId: string, actorId: string): FreeformSpellSlotCommit {
+  const metadata = SPELL_META[actionId as keyof typeof SPELL_META];
+  if (!metadata || metadata.runtimeSupport !== "combat-executable" || metadata.baseLevel === 0 || metadata.castSource === "item" || metadata.castSource === "feature") {
+    return { status: "not-applicable" };
+  }
+  const internal = adapter as unknown as AdapterInternalState;
+  const bridge = bridgeFor(adapter, internal);
+  syncRuntimeFromScene(bridge, internal);
+  const caster = bridge.casterByActor[actorId];
+  if (!caster) return { status: "rejected", error: `spell caster runtime is missing for ${actorId}` };
+  const selected = selectedCombatSpellSlot(actorId, metadata.baseLevel);
+  const slotLevel = Math.max(metadata.baseLevel, selected);
+  const resourceId = caster.slotResourceIds[slotLevel];
+  if (!resourceId) return { status: "rejected", error: `no slot resource mapped for level ${slotLevel}` };
+  const resource = bridge.runtime.combatants[actorId]?.resources.find((entry) => entry.id === resourceId);
+  if (!resource) return { status: "rejected", error: `spell slot resource is missing: ${resourceId}` };
+  if (resource.current < 1) return { status: "rejected", error: `spell slot resource is exhausted: ${resourceId}` };
+  const before = resource.current;
+  resource.current -= 1;
+  bridge.runtime.revision += 1;
+  const change: FreeformSpellSlotChange = {
+    actorId,
+    spellId: metadata.spellId,
+    slotLevel,
+    resourceId,
+    before,
+    after: resource.current,
+  };
+  return {
+    status: "committed",
+    change,
+    stateChange: `${actorId} ${slotLevel}레벨 주문 슬롯 ${before} → ${resource.current}`,
+    provenance: `Spellcasting Kernel · ${metadata.spellId} · Freeform slot resource`,
+  };
+}
+
+export function restoreFreeformSpellSlot(adapter: MockAdapter, change: FreeformSpellSlotChange) {
+  const internal = adapter as unknown as AdapterInternalState;
+  const bridge = bridgeFor(adapter, internal);
+  syncRuntimeFromScene(bridge, internal);
+  const resource = bridge.runtime.combatants[change.actorId]?.resources.find((entry) => entry.id === change.resourceId);
+  if (!resource) return { status: "rejected" as const, error: `spell slot resource is missing: ${change.resourceId}` };
+  if (resource.current !== change.after) {
+    return { status: "rejected" as const, error: `spell slot resource drift: expected ${change.after}, current ${resource.current}` };
+  }
+  resource.current = change.before;
+  bridge.runtime.revision += 1;
+  return {
+    status: "committed" as const,
+    stateChange: `${change.actorId} ${change.slotLevel}레벨 주문 슬롯 ${change.after} → ${change.before}`,
+  };
 }
 
 function referenceDistance(actorId: string, targetId: string, target: SceneEntity) {
