@@ -6,6 +6,7 @@ import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
 import "./app/connectedActionRoutingAdapter";
 import "./app/connectedTurnRoutingAdapter";
+import "./app/connectedCorrectionRoutingAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
