@@ -1,6 +1,7 @@
 import type { ActivityEntry, ResolutionView } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RuntimeStateChange } from "../domain/runtimeStateChange";
+import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 
 function concentrationLabel(state:Extract<RuntimeStateChange,{kind:"concentration"}>["before"]) {
   return state ? `${state.groupId} (${state.sourceId})` : "—";
@@ -40,6 +41,7 @@ export function projectRuntimeEventsToActivity(input:{
   summary:string;
   events:ResolutionEvent[];
 }):ActivityEntry {
+  recordCommittedResolutionEvents(input.id,input.events);
   const detail = input.events.flatMap((event,index) => [
     `ResolutionEvent ${index + 1}/${input.events.length} · ${event.kind} · ${event.operationId}`,
     event.summary,
