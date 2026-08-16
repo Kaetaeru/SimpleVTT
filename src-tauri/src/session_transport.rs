@@ -38,11 +38,17 @@ struct TransportMessageDto {
     message: String,
 }
 
+struct PeerWriter {
+    peer: String,
+    stream: TcpStream,
+}
+
 struct RunningTransport {
     role: TransportRole,
     address: String,
+    connection_state: Arc<Mutex<String>>,
     stop: Arc<AtomicBool>,
-    writers: Arc<Mutex<Vec<TcpStream>>>,
+    writers: Arc<Mutex<Vec<PeerWriter>>>,
 }
 
 #[derive(Default)]
@@ -70,7 +76,26 @@ fn emit_state(app: &AppHandle, status: &TransportStatusDto) {
     let _ = app.emit(STATE_EVENT, status.clone());
 }
 
-fn spawn_reader(app: AppHandle, stream: TcpStream, peer: String, stop: Arc<AtomicBool>) {
+fn peer_count(writers: &Arc<Mutex<Vec<PeerWriter>>>) -> usize {
+    writers.lock().map(|entries| entries.len()).unwrap_or(0)
+}
+
+fn set_connection_state(connection_state: &Arc<Mutex<String>>, state: &str) {
+    if let Ok(mut current) = connection_state.lock() {
+        *current = state.to_owned();
+    }
+}
+
+fn spawn_reader(
+    app: AppHandle,
+    stream: TcpStream,
+    peer: String,
+    role: TransportRole,
+    address: String,
+    connection_state: Arc<Mutex<String>>,
+    stop: Arc<AtomicBool>,
+    writers: Arc<Mutex<Vec<PeerWriter>>>,
+) {
     thread::spawn(move || {
         let _ = stream.set_read_timeout(Some(Duration::from_millis(250)));
         let mut reader = BufReader::new(stream);
@@ -80,7 +105,7 @@ fn spawn_reader(app: AppHandle, stream: TcpStream, peer: String, stop: Arc<Atomi
             }
             let mut line = String::new();
             match reader.read_line(&mut line) {
-                Ok(0) => return,
+                Ok(0) => break,
                 Ok(_) => {
                     let line = line.trim_end_matches(['\r', '\n']);
                     if line.is_empty() {
@@ -94,7 +119,7 @@ fn spawn_reader(app: AppHandle, stream: TcpStream, peer: String, stop: Arc<Atomi
                                 message: "{\"type\":\"transport-error\",\"message\":\"frame-too-large\"}".into(),
                             },
                         );
-                        return;
+                        break;
                     }
                     let _ = app.emit(
                         MESSAGE_EVENT,
@@ -109,9 +134,31 @@ fn spawn_reader(app: AppHandle, stream: TcpStream, peer: String, stop: Arc<Atomi
                         error.kind(),
                         std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
                     ) => {}
-                Err(_) => return,
+                Err(_) => break,
             }
         }
+
+        if stop.load(Ordering::Relaxed) {
+            return;
+        }
+        if let Ok(mut peers) = writers.lock() {
+            peers.retain(|entry| entry.peer != peer);
+        }
+        let next_state = if role == TransportRole::Client {
+            set_connection_state(&connection_state, "disconnected");
+            "disconnected"
+        } else {
+            "connected"
+        };
+        emit_state(
+            &app,
+            &TransportStatusDto {
+                role: Some(role),
+                state: next_state.into(),
+                address,
+                peer_count: peer_count(&writers),
+            },
+        );
     });
 }
 
@@ -119,16 +166,16 @@ impl SessionTransportState {
     pub fn status(&self) -> Result<TransportStatusDto, String> {
         let guard = self.inner.lock().map_err(|_| "session transport lock poisoned".to_string())?;
         if let Some(runtime) = guard.as_ref() {
-            let peer_count = runtime
-                .writers
+            let state = runtime
+                .connection_state
                 .lock()
-                .map_err(|_| "session transport writers lock poisoned".to_string())?
-                .len();
+                .map_err(|_| "session transport state lock poisoned".to_string())?
+                .clone();
             Ok(TransportStatusDto {
                 role: Some(runtime.role),
-                state: "connected".into(),
+                state,
                 address: runtime.address.clone(),
-                peer_count,
+                peer_count: peer_count(&runtime.writers),
             })
         } else {
             Ok(TransportStatusDto {
@@ -144,6 +191,7 @@ impl SessionTransportState {
         let mut guard = self.inner.lock().map_err(|_| "session transport lock poisoned".to_string())?;
         if let Some(runtime) = guard.take() {
             runtime.stop.store(true, Ordering::Relaxed);
+            set_connection_state(&runtime.connection_state, "disconnected");
             if let Ok(mut writers) = runtime.writers.lock() {
                 writers.clear();
             }
@@ -169,29 +217,46 @@ impl SessionTransportState {
             .local_addr()
             .map_err(|error| format!("failed to read session listener address: {error}"))?
             .to_string();
+        let connection_state = Arc::new(Mutex::new("connected".to_owned()));
         let stop = Arc::new(AtomicBool::new(false));
-        let writers = Arc::new(Mutex::new(Vec::<TcpStream>::new()));
+        let writers = Arc::new(Mutex::new(Vec::<PeerWriter>::new()));
         let accept_stop = stop.clone();
         let accept_writers = writers.clone();
+        let accept_state = connection_state.clone();
+        let accept_address = address.clone();
         let accept_app = app.clone();
 
         thread::spawn(move || {
             while !accept_stop.load(Ordering::Relaxed) {
                 match listener.accept() {
                     Ok((stream, peer_addr)) => {
+                        let peer = peer_addr.to_string();
                         let _ = stream.set_nodelay(true);
                         let writer = match stream.try_clone() {
                             Ok(writer) => writer,
                             Err(_) => continue,
                         };
                         if let Ok(mut peers) = accept_writers.lock() {
-                            peers.push(writer);
+                            peers.push(PeerWriter { peer: peer.clone(), stream: writer });
                         }
+                        emit_state(
+                            &accept_app,
+                            &TransportStatusDto {
+                                role: Some(TransportRole::Host),
+                                state: "connected".into(),
+                                address: accept_address.clone(),
+                                peer_count: peer_count(&accept_writers),
+                            },
+                        );
                         spawn_reader(
                             accept_app.clone(),
                             stream,
-                            peer_addr.to_string(),
+                            peer,
+                            TransportRole::Host,
+                            accept_address.clone(),
+                            accept_state.clone(),
                             accept_stop.clone(),
+                            accept_writers.clone(),
                         );
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
@@ -212,6 +277,7 @@ impl SessionTransportState {
         *guard = Some(RunningTransport {
             role: TransportRole::Host,
             address,
+            connection_state,
             stop,
             writers,
         });
@@ -227,9 +293,19 @@ impl SessionTransportState {
         let writer = stream
             .try_clone()
             .map_err(|error| format!("failed to clone session client stream: {error}"))?;
+        let connection_state = Arc::new(Mutex::new("connected".to_owned()));
         let stop = Arc::new(AtomicBool::new(false));
-        let writers = Arc::new(Mutex::new(vec![writer]));
-        spawn_reader(app.clone(), stream, address.to_owned(), stop.clone());
+        let writers = Arc::new(Mutex::new(vec![PeerWriter { peer: address.to_owned(), stream: writer }]));
+        spawn_reader(
+            app.clone(),
+            stream,
+            address.to_owned(),
+            TransportRole::Client,
+            address.to_owned(),
+            connection_state.clone(),
+            stop.clone(),
+            writers.clone(),
+        );
 
         let status = TransportStatusDto {
             role: Some(TransportRole::Client),
@@ -241,6 +317,7 @@ impl SessionTransportState {
         *guard = Some(RunningTransport {
             role: TransportRole::Client,
             address: address.to_owned(),
+            connection_state,
             stop,
             writers,
         });
@@ -257,7 +334,7 @@ impl SessionTransportState {
             .lock()
             .map_err(|_| "session transport writers lock poisoned".to_string())?;
         let mut sent = 0usize;
-        writers.retain_mut(|stream| match stream.write_all(&frame) {
+        writers.retain_mut(|entry| match entry.stream.write_all(&frame) {
             Ok(()) => {
                 sent += 1;
                 true
@@ -265,6 +342,25 @@ impl SessionTransportState {
             Err(_) => false,
         });
         Ok(sent)
+    }
+
+    pub fn send_to(&self, peer: &str, message: &str) -> Result<usize, String> {
+        let frame = frame_message(message)?;
+        let guard = self.inner.lock().map_err(|_| "session transport lock poisoned".to_string())?;
+        let runtime = guard.as_ref().ok_or_else(|| "session transport is not connected".to_string())?;
+        let mut writers = runtime
+            .writers
+            .lock()
+            .map_err(|_| "session transport writers lock poisoned".to_string())?;
+        let entry = writers
+            .iter_mut()
+            .find(|entry| entry.peer == peer)
+            .ok_or_else(|| format!("session transport peer is not connected: {peer}"))?;
+        entry
+            .stream
+            .write_all(&frame)
+            .map_err(|error| format!("failed to send session frame to {peer}: {error}"))?;
+        Ok(1)
     }
 }
 
