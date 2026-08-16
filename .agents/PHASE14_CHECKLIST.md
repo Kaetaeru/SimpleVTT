@@ -339,9 +339,9 @@ Evidence for the six Ready/start items: exact source `bd1077b9bc61b86c2c0370543a
 - [x] Disconnect marks the participant unavailable without deleting authoritative session state required for reconnect.
 - [x] Reconnect resumes from the last accepted event cursor and restores the participant/projection without duplication.
 - [x] Duplicate/replayed hello/action/event traffic is idempotent according to the existing connected protocol guarantees.
-- [ ] Incompatible or invalid participant entry does not leave a ghost participant or stale projection behind.
+- [x] Incompatible or invalid participant entry does not leave a ghost participant or stale projection behind.
 
-Evidence for the four participant lifecycle items: exact source `cf520d35acd1e21a0247fdeb2d3664ae8a334345`; Phase12 `31973034389` connected authority + reconnect cursor/idempotency + production build green; UI `31973034337` TypeScript/build green; Main Playable `31973034347` full build + Phase11 + Phase12 + Phase13 green. Earlier exact-peer disconnect/live late-join/Host reconnect authority remains evidenced at `84d1d39135c08a2094783fb336a606f294b1cf58`.
+Evidence for participant lifecycle: exact product behavior remains at the previously validated connected source boundary; test-only head `7ce39fe44b91009cb1fa660b5e45cb8cf54bfc6d` adds explicit incompatible-manifest and invalid-SessionProjection rejection regressions. Phase12 `31974996616` connected-protocol + Phase11 preservation + production frontend gate all passed. The new regressions prove rejected entry does not advance Host ledger cursor, create participant/peer bindings, mount SessionProjection registry state, or leave Scene/actions/economy ghosts. Earlier late-join/disconnect/reconnect/replay evidence remains at `cf520d35acd1e21a0247fdeb2d3664ae8a334345` and `84d1d39135c08a2094783fb336a606f294b1cf58`.
 
 ## Remote actions
 
@@ -360,10 +360,10 @@ Evidence for the four participant lifecycle items: exact source `cf520d35acd1e21
 - [x] Host can explicitly end the live session from visible UI.
 - [x] Session end stops connected transport and clears transient lobby/readiness/turn/pending Resolution state that must not leak into a new session.
 - [x] Host-side ephemeral remote Character projections are removed at session end.
-- [ ] Owning-player durable Character changes already committed through authoritative events remain persisted after session end.
+- [x] Owning-player durable Character changes already committed through authoritative events remain persisted after session end.
 - [x] Starting a new session after end begins from fresh lifecycle state while preserving permanent Character libraries and canonical content.
 
-Evidence for the four checked session-end/restart items: exact source `240592cb646bfbbfe9466f94047bc1e2f544dcf9`; Phase12 `31973878162` connected authority + Phase11 preservation + production build green; Main Playable `31973878165` full build + Phase11 + Phase12 + Phase13 green. `productionSessionEnd.test.ts` proves Host `session-ended` notification precedes transport teardown, Host/client transient authority and pending Resolution clear, reconstructed remote SessionProjection actors are removed, explicit ended clients do not reconnect, and a fresh Host receives a new session authority context. The durable-after-end persistence checkbox remains open until owner storage restart is proven.
+Evidence for session end/restart: exact session-end product source `240592cb646bfbbfe9466f94047bc1e2f544dcf9`; Phase12 `31973878162` and Main Playable `31973878165` prove explicit end, transient cleanup, projection removal, former-client ended UX, and fresh restart. Test-only head `b20ecf18015cec15ad3eb26aba5674e5c91013cb` adds owning-client storage durability: a saved non-fixture Client accepts a Host-authoritative durable ResolutionEvent, commits Character library generation before cursor advance, receives `session-ended`, and a fresh adapter using the same store rehydrates the same Character identity and resource value while session lifecycle remains offline. Phase12 `31975132450` and Main Playable `31975132458` playable-contract both passed at that exact test head.
 
 ## Error UX
 
@@ -446,7 +446,7 @@ Evidence for the four checked session-end/restart items: exact source `240592cb6
 - [ ] Preparation/lobby/readiness test proves play does not start from an unprepared or unready state.
 - [ ] Action request -> Host authoritative ResolutionEvent -> Client apply/write-back is tested.
 - [ ] Reconnect/idempotency remains tested.
-- [x] Session end/restart test proves stale projections/readiness/turn state do not leak into the next session. Evidence: canonical `productionSessionEnd.test.ts`, exact source `240592cb646bfbbfe9466f94047bc1e2f544dcf9`, Phase12 `31973878162`; latest Main Playable `31974455339` also preserves the Phase12 session-end regression at source `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`.
+- [x] Session end/restart test proves stale projections/readiness/turn state do not leak into the next session. Evidence: canonical `productionSessionEnd.test.ts`, exact source `240592cb646bfbbfe9466f94047bc1e2f544dcf9`, Phase12 `31973878162`; latest Main Playable `31975132458` also preserves the Phase12 session-end regression at test head `b20ecf18015cec15ad3eb26aba5674e5c91013cb`.
 
 **Gate P14.11:** product-realistic tests fail if the implementation falls back to Aelar/Mira/reference-only behavior or skips the required connected lifecycle.
 
