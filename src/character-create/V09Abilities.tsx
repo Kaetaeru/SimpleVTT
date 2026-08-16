@@ -5,6 +5,7 @@ import {
   abilityEditorFacts,
   pointBuyPresentation,
 } from "../app/characterCreationAbilityPresentation";
+import { VisualDiceTray } from "../VisualDiceBridge";
 import { SectionShell } from "./v09Ui";
 
 const LABELS: Record<AbilityKey, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
@@ -15,10 +16,12 @@ export function AbilitiesSection({ section, draft }: { section: CharacterCreatio
   const methods: Array<[AbilityMethod, string, string]> = [["standard", "표준 배열", "15 / 14 / 13 / 12 / 10 / 8"], ["rolled", "무작위 생성", "4d6 중 가장 낮은 1개 제외 × 6"], ["point-buy", "포인트 구매", "27점 · 8~15"], ["custom", "커스텀", "이전/홈브루용 직접 입력"]];
   const pointBuy = pointBuyPresentation(draft.abilities);
   const usedStandard = KEYS.map((key) => draft.abilities[key]);
+  const rolledDice = draft.rolledPool.flatMap((slot) => slot.dice.map((value) => ({ value, sides:6 as const })));
+  const rollSignature = draft.rolledPool.map((slot) => `${slot.id}:${slot.dice.join("-")}`).join("|");
   return <SectionShell section={section} aside={<button onClick={() => updateCharacterDraft({ type: "apply-recommended-array" })}>{draft.className || "클래스"} 추천 배치</button>}>
     <div className="method-tabs create-method-tabs">{methods.map(([id, title, subtitle]) => <button key={id} className={draft.abilityMethod === id ? "active" : ""} onClick={() => updateCharacterDraft({ type: "set-ability-method", value: id })}><strong>{title}</strong><span>{subtitle}</span></button>)}</div>
     {draft.abilityMethod === "standard" && <div className="roll-pool"><div><b>표준 배열 사용 현황</b><span>{STANDARD_ABILITY_ARRAY.map((value) => `${value}${usedStandard.includes(value) ? " ✓" : ""}`).join(" · ")}</span></div></div>}
-    {draft.abilityMethod === "rolled" && <div className="roll-slot-pool">{draft.rolledPool.map((slot) => <div key={slot.id}><strong>{slot.total}</strong><span>{slot.dice.join(" + ")} · {slot.dropped} 제외</span><small>{slot.id}</small></div>)}<button onClick={() => updateCharacterDraft({ type: "roll-abilities" })}>4d6 × 6 다시 굴리기</button></div>}
+    {draft.abilityMethod === "rolled" && <div className="ability-roll-visual"><VisualDiceTray key={rollSignature} label="능력치 4d6 × 6" dice={rolledDice} caption="각 묶음에서 가장 낮은 d6 1개 제외" compact/><div className="roll-slot-pool">{draft.rolledPool.map((slot) => <div key={slot.id}><strong>{slot.total}</strong><span>{slot.dice.join(" + ")} · {slot.dropped} 제외</span><small>{slot.id}</small></div>)}<button onClick={() => updateCharacterDraft({ type: "roll-abilities" })}>4d6 × 6 다시 굴리기</button></div></div>}
     {draft.abilityMethod === "point-buy" && <div className="point-budget"><strong>{pointBuy.used} / {pointBuy.budget}</strong><span>사용 포인트 · 남은 {pointBuy.remaining}</span><i style={{ width: `${pointBuy.usedPercent}%` }}/></div>}
     <div className="ability-builder-grid">{KEYS.map((ability) => <AbilityEditor key={ability} ability={ability} draft={draft}/>)}</div>
   </SectionShell>;
