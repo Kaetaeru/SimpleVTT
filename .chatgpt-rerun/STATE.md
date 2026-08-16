@@ -13,92 +13,86 @@
 
 ## Preserved evidence
 
-Phase13 remains complete at `7c9440970753a370fec7830cfa691832552e1d05`; preserved Contract `31955742556`, Rules `31955742577`, Persistence `31955742563`, UI `31955742530`, Phase11 `31955742560`, Phase12 `31955742539`, Phase13 `31955742524`, Windows artifact id `9266043327` / SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
-
-Reusable Phase14 slices remain preserved unless their boundary changes. Ready/start remains closed at product source `bd1077b9bc61b86c2c0370543a16496c72f840c2` and checklist-only credit `56ef07b85e805368b1a9a61863c68683c3409208`. Exact-peer disconnect/live late-join/Host reconnect is preserved at `84d1d39135c08a2094783fb336a606f294b1cf58` with Phase12 `31972318100`, UI `31972318109`, Main `31972318188` success.
+Phase13 remains complete at `7c9440970753a370fec7830cfa691832552e1d05`; preserve its recorded validation/artifact history. Ready/start, exact-peer participant lifecycle, and client reconnect/replay idempotency remain closed at their recorded exact heads and must not be manually repeated unless their relevant boundary changes.
 
 ## Preflight for this continuation
 
 Mandatory files were read from `main` in exact order: README -> control -> STATE -> PLAN. run_id / sequence / task / `continue` reconciled.
 
-Actual initial state:
+Initial actual state:
 
-- main `56b3a73c6927af2390cfed8bef58376072602c72`
-- work `84d1d39135c08a2094783fb336a606f294b1cf58`
+- main `7449e294259f2e98ccfad04e10e620cb6557177a`
+- work `cf520d35acd1e21a0247fdeb2d3664ae8a334345`
 - PR #109 open/draft/unmerged
-
-No verified Ready/start or previous exact-disconnect/live-late-join work was manually repeated.
 
 ## Completed in this continuation
 
-**Exact work head before coordination writes:** `cf520d35acd1e21a0247fdeb2d3664ae8a334345`.
+**Exact work head before coordination writes:** `240592cb646bfbbfe9466f94047bc1e2f544dcf9`.
 
-### Client reconnect from accepted cursor
+### Participant lifecycle documentation credit
 
-`7676f0390f8f86d9484a5da9661b6218bd82fdd1` adds a focused production client regression that exercises the existing reconnect timer rather than bypassing it:
+`8bfaf4dd3a35e2a9da81022d4a7c91bdbaabd9b3` safely updated the full checklist from its exact blob and marked only the four P14.8 participant lifecycle items previously proven at `cf520d35...`: late join policy, disconnect preservation, cursor reconnect without duplication, and duplicate/replayed traffic idempotency. The invalid/ghost participant checkbox remains open.
 
-- initial connected hello uses cursor 0;
-- client applies Host event sequence 1;
-- transport disconnect schedules reconnect and reports cursor 1;
-- reconnect reuses the same Host address and sends hello with `knownEventCursor:1`;
-- hello-ack catch-up sequence 2 applies once;
-- replaying the same hello-ack leaves replica cursor at 2, does not duplicate Activity mutation, and leaves exactly one local participant record.
+### Explicit session end / restart implementation
 
-`9436d8e8873eab81d9eddf53d501325413f2d090` added this test to canonical Phase12. The new authority step passed before later source changes.
+- `6b0d78868dab5383f731d0e82c28eccc88369f40`: adds `session-ended` wire envelope and validation.
+- `22df2903091f5caef2b3337c4cebee9d61c681c5`: adds `session-end-v1`, shared transient cleanup and client end handling. Client connected mode/sessionId/replica/reconnect timer is cleared before transport stop, so the ensuing disconnect cannot schedule reconnect.
+- Transient cleanup resets connected authority, participants/Ready, session mode, round/current turn, economy and pending Resolution while preserving permanent Character/resource/item/catalog state. Production reconciliation rematerializes only a fresh local active-Character economy when needed.
+- `ca5193b4d94989dd511bf3d3772e48729779e110`: Host broadcasts `session-ended` before transport teardown, then unmounts reconstructed remote SessionProjection actors and resets connected authority.
+- `0082f8d8aaafd4a751cee47abba739005142a751`: visible live Host control says `세션 종료`; preparation retains `Host 중지`.
+- `f9d54edc20d087922ce808ee41225f7ccf377318`: session-end wire roundtrip/rejection tests.
+- `4fc799602d88247c2729a3ec2628efaa068454f0`, `6e3247ab079473623fdff4b920c79395a35d7c73`: focused Host notify-before-stop/cleanup/fresh restart, client ended/no-reconnect, projection removal, permanent resource preservation, and visible-control tests.
+- `a03f1b585b4fa9663e2a1e4aaa8c55613ffb620a`: canonical Phase12 includes `productionSessionEnd.test.ts`.
+- `c39df9d01821b96a3b4f06b28016e8f9956a802e`: Main Playable includes the session-end regression and connected walkthrough end/restart step.
+- Phase12 `31973697477` initially failed only because the new test asserted `economyByActor={}`. Actual product reconciliation correctly created a fresh default economy for the active local Character and removed stale remote/turn economy.
+- `240592cb646bfbbfe9466f94047bc1e2f544dcf9`: corrects that test expectation; no product behavior was weakened.
 
-### Replayed hello idempotency
+## Validation
 
-Inspection then found the remaining lifecycle hole: same accepted peer/participant hello replay could create an extra semantic `participant connected` Host ledger event.
+At exact work head `240592cb646bfbbfe9466f94047bc1e2f544dcf9`:
 
-- `1d4112b53f99252cdb576f992a31118c62643e72` adds `connectedParticipantIdempotencyAdapter.ts`. It only deduplicates Host participant events when the latest authoritative state for the same participant has identical participant name, Character name, connection state and Ready value. It does not replace ActionRequest/event idempotency logic.
-- `00f353b7cd3002fd528d3fcbd3f1ce64d2db0703` composes that adapter in production `src/main.tsx`.
-- `f36121fbcbd5933e1126bb2abedaa9cc8cc42f90` adds a focused same-peer hello replay regression: current-cursor replay does not advance Host history and returns no event; stale-cursor replay returns the existing event only and still does not advance Host history.
-- `f7ec37c95b38a3ae8328d3aaddc0445beb74c383` adds the test to canonical Phase12.
-- Main `31972970460` at the intermediate `f7ec...` head failed only TypeScript narrowing in the new adapter (`candidate.payload.participantId` inside a callback). No product authority behavior failed.
-- `cf520d35acd1e21a0247fdeb2d3664ae8a334345` fixes that compile-only issue by capturing the narrowed participant payload before the callback.
+- Phase12 `31973878162` connected-protocol: **success**. Explicit session-end regressions, existing Ready/participant/reconnect authority, Phase11 preservation and production frontend build passed.
+- Main Playable `31973878165` playable-contract: **success**. Full UI/rules/TypeScript/build, Phase11, Phase12 including `productionSessionEnd.test.ts`, and Phase13 passed.
+- UI `31973684409`: **success** at the identical product source boundary before later test/workflow-only commits; TypeScript/build and existing UI regressions passed.
+- Windows jobs were still separate/in progress and are not used as human/final release acceptance evidence here.
 
-## Exact validation at `cf520d35...`
+## Evidence-backed session-end status
 
-- Phase12 `31973034389` connected-protocol: **success**. New client reconnect and hello replay tests, existing connected authority/lifecycle tests, Phase11 preservation and production frontend build all passed.
-- UI `31973034337`: **success**, including Phase14 Host lifecycle, mechanics regressions, TypeScript and production build.
-- Main Playable `31973034347`: playable-contract **success** — full UI/rules/TypeScript/build, Phase11, Phase12 core authority and Phase13 arbitrary Character SessionProjection all passed.
-- Windows sub-jobs may continue independently and are not human/final release acceptance evidence for this checkpoint.
+The following P14.8/P14.11 behaviors are now directly supported and may be credited documentation-only next invocation without rerunning gates:
 
-## Participant lifecycle evidence status
+1. visible Host live-session end control;
+2. Host notifies clients before transport teardown;
+3. Host/client transient participants, Ready, cursor/replica, turn/economy and pending Resolution state do not leak into a fresh session;
+4. Host ephemeral reconstructed SessionProjection actors are removed;
+5. former Client receives an explicit ended/offline state and does not reconnect;
+6. fresh Host restart gets a new session authority context while permanent local Character state remains intact;
+7. canonical Phase12/Main contain the session end/restart regression.
 
-The four P14.8 participant lifecycle behaviors are now evidence-backed:
-
-1. late join policy is explicit: preparation join accepted through the existing production lobby path, genuinely new live join rejected before projection/ledger mutation;
-2. exact transport disconnect marks only the mapped participant unavailable/Ready false while preserving Host SessionProjection/runtime state;
-3. reconnect rebinds the accepted participant/Character, resumes from the client replica's last accepted cursor, applies ordered catch-up once, and does not duplicate participant/projection/session mutation;
-4. duplicate/replayed hello is now semantically idempotent, while existing request/event replay protections remain preserved in the same canonical connected suite.
-
-`.agents/PHASE14_CHECKLIST.md` was not bulk-rewritten in this execution. The connected GitHub write action replaces whole files and the checklist is a long completion record; a documentation-only bulk rewrite was deliberately avoided after validation. This is not a product blocker. The next invocation should safely mark exactly those four boxes `[x]` with the evidence above without rerunning the gates.
+Do **not** credit the checklist statement that owning-player durable changes “remain persisted after session end” yet. Current regression proves in-memory permanent Character state is preserved through end/restart authority cleanup, but does not perform an owner storage restart after ending the session.
 
 ## Architecture boundaries preserved
 
 - Host ledger/shared-session authority preserved.
-- SessionProjection Host runtime remains authoritative across reconnect.
-- exact peer identity continues to come from Tauri transport, never peer-count inference.
-- client reconnect uses the existing replica event cursor and existing hello-ack/event-batch apply path.
-- owning-client durable Character ownership is unchanged.
+- SessionProjection remains ephemeral Host session authority and is explicitly removed on end.
+- owning-client permanent Character ownership remains unchanged.
+- normal disconnect/reconnect still uses cursor replay; explicit Host end is distinguished by `session-ended`.
 - no tactical map/grid/path/LOS scope and no fixture fallback added.
 
 ## Known remaining work
 
-1. Documentation-only: credit the four now-proven P14.8 participant lifecycle checklist boxes.
-2. Explicit live session end notification/cleanup and former-client ended/offline state, then fresh Host restart.
-3. Known stale prior local-owned projection when switching two non-fixture local Characters; repair must preserve remote ephemeral SessionProjection actors.
-4. Additional P14.1–P14.7 product/checklist areas remain incomplete.
-5. Windows two-instance human acceptance/final release artifact verification remains future work.
-6. PR #109 remains draft and unmerged; no merge is authorized.
+1. Documentation-only session-end checklist credits listed above.
+2. Stale previous local-owned projection when switching between two saved non-fixture local Characters; repair must not delete remote ephemeral SessionProjection actors.
+3. Owner persistent-storage end/restart proof remains needed before crediting durable-after-end persistence.
+4. Other P14.1–P14.7 checklist/product areas remain incomplete.
+5. Windows two-instance human acceptance/final exact-head release artifact remains later.
+6. PR #109 remains draft and unmerged; no merge authorized.
 
 ## Next Exact Action
 
-1. Safely update only the four P14.8 `Participant lifecycle` boxes in `.agents/PHASE14_CHECKLIST.md` to `[x]` with `cf520d35...` / Phase12 `31973034389` / UI `31973034337` / Main `31973034347` evidence. This is documentation-only; do not rerun lifecycle gates.
-2. Immediately continue explicit connected session end/restart: define the Host-to-client end notification on the existing wire model, ensure clients clear transient live/lobby authority after end, preserve owner durable Character data, clear ephemeral SessionProjection state, and start a fresh Host authority context without stale participants/cursors.
-3. Add focused end/client cleanup/restart regressions and run Phase12 first. Run UI/Main only if production source boundaries change.
-4. After end/restart, fix stale previous local-owned projection when switching active non-fixture Characters without deleting remote ephemeral SessionProjection actors.
+1. Safely mark only the evidence-backed P14.8 session-end/restart + former-client ended UX + P14.11 session-end regression boxes; leave owner durable-after-end persistence unchecked. Documentation-only, no gate rerun.
+2. Inspect `productionPlayRuntimeAdapter` and projection registry ownership around active Character switching.
+3. Reproduce two saved non-fixture local Characters plus one remote ephemeral SessionProjection; switch local active Character and prove only the previous local-owned actor/projection is removed/replaced.
+4. Add a focused regression preserving the remote projected actor/registry binding; run the narrow relevant production/UI gate, then Main only if product source changes.
 
 ## Dispatch recommendation
 
