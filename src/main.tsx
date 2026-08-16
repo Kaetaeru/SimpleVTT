@@ -15,6 +15,7 @@ import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
+import { ProductionSessionLifecycleBridge } from "./ProductionSessionLifecycleBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -39,6 +40,7 @@ createRoot(document.getElementById("root")!).render(
       <VisualDiceBridge />
       <ConcentrationSaveBridge />
       <MovementReactionBridge />
+      <ProductionSessionLifecycleBridge />
     </AppProvider>
   </StrictMode>,
 );
