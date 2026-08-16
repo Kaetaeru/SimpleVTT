@@ -3,7 +3,10 @@ import type { MockAdapter } from "./mockAdapter";
 import type { CharacterSessionProjectionReconstruction } from "./characterSessionProjectionReconstruction";
 import {
   mountCharacterSessionProjection,
+  projectedCharacterById,
   projectedCharacterForPeer,
+  projectedCharacterIds,
+  unmountAllCharacterSessionProjections,
   unmountCharacterSessionProjectionForPeer,
 } from "./characterSessionProjectionRegistry";
 
@@ -111,7 +114,33 @@ export function unmountReconstructedCharacterSessionProjection(adapter:MockAdapt
   const economy={...app.scene.economyByActor};
   delete economy[characterId];
   app.scene.economyByActor=economy;
+  if (app.scene.currentActorId===characterId) app.scene.currentActorId=app.activeCharacter.id;
   if (app.scene.selectedActorId===characterId) app.scene.selectedActorId=app.scene.currentActorId;
   unmountCharacterSessionProjectionForPeer(adapter,peerId);
   return true;
+}
+
+export function unmountAllReconstructedCharacterSessionProjections(adapter:MockAdapter) {
+  const app=internal(adapter);
+  const characterIds=projectedCharacterIds(adapter);
+  if (!characterIds.length) return 0;
+  const projected=new Set(characterIds);
+  app.scene.entities=app.scene.entities.filter((entity)=>!projected.has(entity.id));
+  const actions={...app.scene.actionsByActor};
+  const economy={...app.scene.economyByActor};
+  for (const characterId of characterIds) {
+    delete actions[characterId];
+    delete economy[characterId];
+    const mounted=projectedCharacterById(adapter,characterId);
+    if (mounted && app.activeCharacter.id===characterId) {
+      const durable=app.characters.find((candidate)=>candidate.id!==characterId && "abilities" in candidate) as CharacterSheet|undefined;
+      if (durable) app.activeCharacter=structuredClone(durable);
+    }
+  }
+  app.scene.actionsByActor=actions;
+  app.scene.economyByActor=economy;
+  if (projected.has(app.scene.currentActorId)) app.scene.currentActorId=app.activeCharacter.id;
+  if (projected.has(app.scene.selectedActorId)) app.scene.selectedActorId=app.scene.currentActorId;
+  unmountAllCharacterSessionProjections(adapter);
+  return characterIds.length;
 }
