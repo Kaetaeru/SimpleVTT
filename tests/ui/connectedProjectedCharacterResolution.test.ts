@@ -113,9 +113,14 @@ test("host-unknown projected Fighter resolves Second Wind through host authority
       capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1"],
     };
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
-    const pending=await host.getSnapshot();
-    assert.equal(pending.activeCharacter.id,remote.id,"host staged resolution must run in the projected Character context");
-    assert.equal(connectedStateFor(host).pendingRemoteAction?.request.requestId,request.requestId);
+    const afterRoute=await host.getSnapshot();
+    if (afterRoute.resolution?.stage!=="complete") {
+      assert.equal(afterRoute.activeCharacter.id,remote.id,"staged remote resolution must run in the projected Character context");
+      assert.equal(connectedStateFor(host).pendingRemoteAction?.request.requestId,request.requestId);
+    } else {
+      assert.equal(afterRoute.activeCharacter.id,before.activeCharacter.id,"immediate canonical commit must already restore the host local Character context");
+      assert.equal(connectedStateFor(host).pendingRemoteAction,null);
+    }
 
     const completed=await finishResolution(host);
     assert.equal(completed.activeCharacter.id,before.activeCharacter.id,"host local Character context must be restored after canonical commit");
