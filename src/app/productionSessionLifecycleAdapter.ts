@@ -5,7 +5,7 @@ import { connectedStateFor, resetConnectedState } from "./connectedSessionState"
 import { publishConnectedTurnProjection } from "./connectedTurnRoutingAdapter";
 import { projectedCharacterIds } from "./characterSessionProjectionRegistry";
 import { unmountAllReconstructedCharacterSessionProjections } from "./characterSessionProjectionMount";
-import { tauriSessionTransport, type SessionTransportStatus } from "./tauriSessionTransport";
+import { tauriSessionTransport, type SessionTransportPeerLifecycle } from "./tauriSessionTransport";
 
 export type ProductionSessionLifecycle = "offline" | "preparing" | "connecting" | "lobby" | "live";
 
@@ -25,7 +25,6 @@ declare module "./mockAdapter" {
 
 const REFERENCE_CHARACTER_IDS=new Set(["char.aelar","char.mira"]);
 const lifecycleByAdapter=new WeakMap<MockAdapter,ProductionSessionLifecycle>();
-const hostPeerCountByAdapter=new WeakMap<MockAdapter,number>();
 const hostPeerObserverInstalled=new WeakSet<MockAdapter>();
 
 function isSavedProductionCharacter(character:CharacterSummary) {
@@ -90,39 +89,37 @@ function startBlockedReason(adapter:MockAdapter) {
   return undefined;
 }
 
-async function resetReadyAfterHostPeerDrop(adapter:MockAdapter,status:SessionTransportStatus) {
+async function markHostPeerDisconnected(adapter:MockAdapter,event:SessionTransportPeerLifecycle) {
   const state=connectedStateFor(adapter);
-  if (state.mode!=="host") return;
-  const previousPeerCount=hostPeerCountByAdapter.get(adapter) ?? 0;
-  hostPeerCountByAdapter.set(adapter,status.peerCount);
-  if (state.sessionStarted||!state.ledger||status.peerCount>=previousPeerCount) return;
-
+  const ledger=state.ledger;
+  if (state.mode!=="host"||!ledger||event.state!=="disconnected") return;
+  const participantId=state.peerParticipants.get(event.peer);
+  if (!participantId) return;
   const app=connectedInternal(adapter);
-  const readyPlayers=app.session.participants.filter((participant)=>participant.id!=="host"&&participant.ready);
-  if (readyPlayers.length===0) return;
+  const participant=app.session.participants.find((entry)=>entry.id===participantId);
+  if (!participant||(participant.state==="disconnected"&&!participant.ready)) return;
 
-  const readyIds=new Set(readyPlayers.map((participant)=>participant.id));
-  const events=readyPlayers.map((participant)=>state.ledger!.commitHostEvent({
-    actorId:participant.id,
+  const committed=ledger.commitHostEvent({
+    actorId:participantId,
     payload:{
       kind:"participant" as const,
-      participantId:participant.id,
+      participantId,
       participantName:participant.name,
       characterName:participant.characterName,
-      state:participant.state,
+      state:"disconnected",
       ready:false,
-      stateChanges:[`${participant.name} Ready reset after Host peer count dropped from ${previousPeerCount} to ${status.peerCount}`],
-      provenance:["host-authoritative transport peer-count drop"],
+      stateChanges:[`${participant.name} disconnected · Ready reset`],
+      provenance:[`host-authoritative exact transport disconnect: ${event.peer}`],
     },
-  }));
-  app.session.participants=app.session.participants.map((participant)=>readyIds.has(participant.id)?{...participant,ready:false}:participant);
+  });
+  app.session.participants=app.session.participants.map((entry)=>entry.id===participantId?{...entry,state:"disconnected" as const,ready:false}:entry);
   app.session.compatibility="warning";
-  app.session.compatibilityMessage=`Player connection count dropped from ${previousPeerCount} to ${status.peerCount}; Ready was reset and disconnected players must re-handshake before Host start.`;
+  app.session.compatibilityMessage=`${participant.name} disconnected. Host runtime is preserved for reconnect.`;
   await broadcastConnectedWire({
     type:"event-batch",
-    sessionId:state.ledger.sessionId,
-    afterCursor:events[0].sequence-1,
-    events,
+    sessionId:ledger.sessionId,
+    afterCursor:committed.sequence-1,
+    events:[committed],
   });
   await publishConnectedSnapshot(adapter);
 }
@@ -130,8 +127,8 @@ async function resetReadyAfterHostPeerDrop(adapter:MockAdapter,status:SessionTra
 function ensureHostPeerObserver(adapter:MockAdapter) {
   if (hostPeerObserverInstalled.has(adapter)||!tauriSessionTransport.available()) return;
   hostPeerObserverInstalled.add(adapter);
-  void tauriSessionTransport.onState((status)=>{
-    void resetReadyAfterHostPeerDrop(adapter,status).catch(()=>undefined);
+  void tauriSessionTransport.onPeerLifecycle((event)=>{
+    void markHostPeerDisconnected(adapter,event).catch(()=>undefined);
   });
 }
 
@@ -191,7 +188,6 @@ MockAdapter.prototype.stopSession=async function stopProductionSession() {
     return app.getSnapshot();
   }
 
-  hostPeerCountByAdapter.set(this,0);
   try {
     await tauriSessionTransport.stop();
   } catch(error) {
@@ -227,14 +223,12 @@ MockAdapter.prototype.hostSession=async function hostProductionSessionWithLifecy
       setLifecycle(this,"offline");
       return app.getSnapshot();
     }
-    hostPeerCountByAdapter.set(this,0);
     ensureHostPeerObserver(this);
     setLifecycle(this,"preparing");
     app.session.compatibility="compatible";
     app.session.compatibilityMessage=`Host listening at ${started.session.address} · preparation lobby open.`;
     return app.getSnapshot();
   } catch(error) {
-    hostPeerCountByAdapter.set(this,0);
     await tauriSessionTransport.stop().catch(()=>undefined);
     resetConnectedState(this,null);
     setLifecycle(this,"offline");
