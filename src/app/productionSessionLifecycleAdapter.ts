@@ -1,4 +1,4 @@
-import type { AppSnapshot } from "./contracts";
+import type { AppSnapshot, CharacterSummary } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { connectedInternal } from "./connectedSessionRuntimeAdapter";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
@@ -6,7 +6,7 @@ import { projectedCharacterIds } from "./characterSessionProjectionRegistry";
 import { unmountAllReconstructedCharacterSessionProjections } from "./characterSessionProjectionMount";
 import { tauriSessionTransport } from "./tauriSessionTransport";
 
-export type ProductionSessionLifecycle = "offline" | "preparing" | "lobby" | "live";
+export type ProductionSessionLifecycle = "offline" | "preparing" | "connecting" | "lobby" | "live";
 
 declare module "./contracts" {
   interface SessionVm {
@@ -20,12 +20,33 @@ declare module "./mockAdapter" {
   }
 }
 
+const REFERENCE_CHARACTER_IDS=new Set(["char.aelar","char.mira"]);
 const lifecycleByAdapter=new WeakMap<MockAdapter,ProductionSessionLifecycle>();
 
+function isSavedProductionCharacter(character:CharacterSummary) {
+  return !REFERENCE_CHARACTER_IDS.has(character.id) && character.saveState==="saved";
+}
+
+export function productionJoinCharacters(adapter:MockAdapter) {
+  return connectedInternal(adapter).characters.filter(isSavedProductionCharacter).map((character)=>structuredClone(character));
+}
+
+export function activeCharacterCanJoinProductionSession(adapter:MockAdapter) {
+  const app=connectedInternal(adapter);
+  return productionJoinCharacters(adapter).some((character)=>character.id===app.activeCharacter.id);
+}
+
 function lifecycleFor(adapter:MockAdapter):ProductionSessionLifecycle {
+  const app=connectedInternal(adapter);
+  const state=connectedStateFor(adapter);
+  if (app.session.role==="client") {
+    if (state.mode!=="client") return "offline";
+    return state.sessionId ? "lobby" : "connecting";
+  }
+  if (app.session.role==="offline") return "offline";
   const stored=lifecycleByAdapter.get(adapter);
   if (stored) return stored;
-  return connectedInternal(adapter).session.role==="offline" ? "offline" : "lobby";
+  return "lobby";
 }
 
 function setLifecycle(adapter:MockAdapter,lifecycle:ProductionSessionLifecycle) {
@@ -46,7 +67,9 @@ function stopBlockedReason(adapter:MockAdapter) {
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithProductionSessionLifecycle() {
   const snapshot=await previousGetSnapshot.call(this);
-  snapshot.session.lifecycle=lifecycleFor(this);
+  const lifecycle=lifecycleFor(this);
+  snapshot.session.lifecycle=lifecycle;
+  connectedInternal(this).session.lifecycle=lifecycle;
   return snapshot;
 };
 
@@ -108,6 +131,44 @@ MockAdapter.prototype.hostSession=async function hostProductionSessionWithLifecy
     app.session.participants=[];
     app.session.compatibility="incompatible";
     app.session.compatibilityMessage=`Host start failed: ${error instanceof Error?error.message:String(error)}`;
+    return app.getSnapshot();
+  }
+};
+
+const previousJoinSession=MockAdapter.prototype.joinSession;
+MockAdapter.prototype.joinSession=async function joinProductionSessionWithLifecycle(address:string) {
+  const app=connectedInternal(this);
+  const state=connectedStateFor(this);
+  if (!activeCharacterCanJoinProductionSession(this)) {
+    setLifecycle(this,"offline");
+    app.connectionState="disconnected";
+    app.session.role="offline";
+    app.session.compatibility="incompatible";
+    app.session.compatibilityMessage="Select a saved production Character before joining. Reference Characters cannot enter production sessions.";
+    return app.getSnapshot();
+  }
+  if (state.mode!==null || app.session.role!=="offline") {
+    const stopped=await this.stopSession();
+    if (stopped.session.role!=="offline") return stopped;
+  }
+
+  setLifecycle(this,"connecting");
+  try {
+    const joined=await previousJoinSession.call(this,address);
+    if (joined.session.role!=="client") {
+      setLifecycle(this,"offline");
+      return app.getSnapshot();
+    }
+    return app.getSnapshot();
+  } catch(error) {
+    await tauriSessionTransport.stop().catch(()=>undefined);
+    resetConnectedState(this,null);
+    setLifecycle(this,"offline");
+    app.connectionState="disconnected";
+    app.session.role="offline";
+    app.session.participants=[];
+    app.session.compatibility="incompatible";
+    app.session.compatibilityMessage=`Join failed: ${error instanceof Error?error.message:String(error)}`;
     return app.getSnapshot();
   }
 };
