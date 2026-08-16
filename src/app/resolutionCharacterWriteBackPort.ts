@@ -12,10 +12,21 @@ type CharacterResolutionWriteBackHandler = (
   direction:CharacterWriteBackDirection,
 ) => Promise<CharacterResolutionWriteBackResult>;
 
+type CharacterResolutionWriteBackGuard = (
+  adapter:MockAdapter,
+  events:ResolutionEvent[],
+  direction:CharacterWriteBackDirection,
+) => Promise<CharacterResolutionWriteBackResult|undefined>;
+
 let handler:CharacterResolutionWriteBackHandler|undefined;
+let guard:CharacterResolutionWriteBackGuard|undefined;
 
 export function installCharacterResolutionWriteBackHandler(next:CharacterResolutionWriteBackHandler) {
   handler=next;
+}
+
+export function installCharacterResolutionWriteBackGuard(next:CharacterResolutionWriteBackGuard) {
+  guard=next;
 }
 
 export async function persistCharacterResolutionEvents(
@@ -23,6 +34,8 @@ export async function persistCharacterResolutionEvents(
   events:ResolutionEvent[],
   direction:CharacterWriteBackDirection,
 ):Promise<CharacterResolutionWriteBackResult> {
+  const guarded=await guard?.(adapter,events,direction);
+  if (guarded) return guarded;
   if (!handler) return { status:"committed",changed:false };
   return handler(adapter,events,direction);
 }
