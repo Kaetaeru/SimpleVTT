@@ -21,56 +21,60 @@
 - fresh attack + Dash/session-economy: product boundary `5d48312289e2f01508b3860428ce98e2830d5f26`; UI `31976479248`; Main `31976479264`.
 - persisted non-fixture Inventory: `c61469c87f6343ff55601e60890d13a58b6a5536`; Persistence `31976901167`; UI `31976901162`; Main `31976901170`.
 - persisted non-fixture spellcasting: product/final head `868b8e37127ea644444630cb45a84f36664912ed`; UI `31977494408`; Main `31977496228`; Contract `31977496255`; Rules `31977496204`.
+- P14.8 host-unknown remote Inventory authority: validated head `00487d6f421a43b15fb5ef77419e87d8182c35d4`; product boundary `bd4c104eeb9e953ffdc94468f2ae8f502fc724e3`; Phase12 `31979232001`; Main `31979231986`.
 
 Do not manually repeat these gates unless their relevant source boundary changes.
 
-## Documentation credit completed this continuation
-- `.agents/PHASE14_CHECKLIST.md` was safely read through the full-blob path and updated documentation-only at `119bf5dd029ab7cd4268c908afa1cf28075d16de`.
+## Documentation credit already completed
+- `.agents/PHASE14_CHECKLIST.md` documentation-only credit is at `119bf5dd029ab7cd4268c908afa1cf28075d16de`.
 - Product source did not change in that commit, so no green gate was rerun just for checkbox credit.
-- Credit was deliberately conservative: fresh Character actor/action derivation, core P14.3 skill runtime, canonical P14.4 attack/Freeform economy, P14.5 atomic consumable durability, P14.6 real-caster spell authority, local/restart integration, and directly proven automated integration items. Visible-UI/accessibility, concentration, connected spell, broad equipment/attunement and unproven lifecycle wording remain unchecked.
+- Credit remains conservative: visible-UI/accessibility, concentration, broad equipment/attunement, remote skill and other unproven wording remain open.
 
-## Latest validated slice — P14.8 host-unknown remote Inventory authority
-Final validated work head: `00487d6f421a43b15fb5ef77419e87d8182c35d4`.
-Product behavior boundary: `bd4c104eeb9e953ffdc94468f2ae8f502fc724e3`.
+## Completed this continuation — P14.8 host-unknown remote spell authority
+Final validated work head: `82933a63846dae55fd4183eef15c22ca3836f082`.
+No product source repair was required for this slice.
 
-### Test-first evidence and product gap
-- `30bb1f51b495b6b21f5b9f334c5f3090b7e30495` added `tests/ui/connectedProjectedCharacterInventoryResolution.test.ts` for a host-unknown persisted Fighter with exact ItemInstance `item.phase14.remote-inventory-fighter.healing-potion` and canonical definition `dnd.srd521.item.gear.potion-of-healing`.
-- `39eadde71371fb5508ded21bebfca2c39424661b` wired it into the canonical Phase12 connected authority batch.
-- Phase12 `31979020855`, connected-protocol `95242770542`: existing 42 connected regressions passed; only the new test failed because Host reconstruction classified the canonical potion as `equipment` instead of `consumable`. This isolated a real SessionProjection reconstruction gap rather than a ledger/apply regression.
+### Test-first evidence
+- `3359883f2894687680c18874f23e612fc6ede564` added `tests/ui/connectedProjectedCharacterSpellResolution.test.ts` for a host-unknown persisted Sorcerer with canonical Fire Bolt `dnd.srd521.spell.fire-bolt`.
+- The regression proves the SessionProjection carries the canonical spell content identity and persisted cantrip selection, then submits the normal connected `ActionRequest` using `action.fire-bolt` rather than introducing a parallel spell message.
+- `395303b1033b754d348557718e20c827b7f0d415` wired the regression into the Phase12 connected-authority batch.
+- Phase12 run `31980480472` reached the connected-authority step with the new test and that step passed before any product source change. This established that the existing projected-resolution context + production spell runtime already handles the remote Fire Bolt path.
+- `82933a63846dae55fd4183eef15c22ca3836f082` wired the same regression into Main Playable's arbitrary SessionProjection gate.
 
-### Product repair
-- `bd4c104eeb9e953ffdc94468f2ae8f502fc724e3` updates `characterSessionProjectionReconstruction.ts` only:
-  - determines consumable ItemInstance kind from the Host-trusted canonical `consumable-definition` mechanic instead of presentation category;
-  - derives the supported Potion of Healing action only from the Host canonical definition/mechanic, including canonical `2d4+2`, bonus-action economy and actual projected ItemInstance id;
-  - does not trust client-provided `grantedActionIds` or presentation strings as mechanics authority;
-  - leaves connected ledger, event application, persistence and replay protocols unchanged.
-- `dfdbceeddef85fc4b0b9b42f1fd1d0b386dee839` adds the new regression to Main Playable's arbitrary SessionProjection gate.
-- The next Phase12 run `31979172287` proved kind reconstruction passed; its only failure was test-only registry misuse (`MountedCharacterSessionProjection` intentionally has no `actions` field). `00487d6f421a43b15fb5ef77419e87d8182c35d4` corrected the test to assert the mounted action from `SceneVm.actionsByActor`; no product behavior changed.
+### Existing architecture reused unchanged
+- Host handshake accepts and mounts the remote Character SessionProjection ephemerally.
+- On remote action routing, Host activates the mounted projected Character as the temporary resolution context and calls the existing production resolver.
+- The existing production spellcaster projection derives the Fire Bolt action from the persisted Character spell selection; the existing production spell runtime resolves it through canonical spell mechanics and event-native ResolutionEvents.
+- Host ledger commits and broadcasts the canonical resolution event exactly once, then restores the Host's own local Character context.
+- Client applies the Host event through the existing replica/apply path; session-only enemy HP damage does not create a Character-library generation.
+- Duplicate event/request traffic remains idempotent.
+- Host permanent Character library remains unchanged; no fixture Character fallback or duplicate durable source was added.
 
-### Exact validation at `00487d6f421a43b15fb5ef77419e87d8182c35d4`
-- Phase12 `31979232001`, connected-protocol `95243277113`: **completed success** — new remote projected Inventory regression + all existing connected authority tests + Phase11 offline preservation + production frontend build all green.
-- Main Playable `31979231986`, playable-contract `95243277140`: **completed success** — full UI/rules/TypeScript/build + Phase11 + Phase12 + Phase13 arbitrary SessionProjection, including the new remote Inventory regression, all green.
-- Windows subjobs are not used as human/final release acceptance evidence for this slice.
+### Exact validation at `82933a63846dae55fd4183eef15c22ca3836f082`
+- Phase12 `31980517723`, connected-protocol `95246365126`: **completed success** — connected authority including the new remote Fire Bolt regression, Phase11 offline preservation and production frontend build all green.
+- Main Playable `31980517740`, playable-contract `95246392981`: **completed success** — full UI/rules/TypeScript/build, Phase11, Phase12 and Phase13 arbitrary SessionProjection including the new remote Fire Bolt regression all green.
+- Windows subjobs are not treated as human/final release acceptance evidence for this slice.
 
 The focused regression proves:
-- a host-unknown non-fixture Character's canonical Potion of Healing is reconstructed as a consumable and executable action with its exact projected ItemInstance id;
-- the remote ActionRequest stages/resolves on Host authority, does not spend quantity during preview, then atomically commits healing plus quantity `2 -> 1`;
-- Host restores its own local Character context and permanent Character library remains unchanged;
-- Host broadcasts exactly one ordered committed event batch after commit;
-- owning Client applies HP/item changes, persists them before cursor advancement, rehydrates them from Character Library, and duplicate event/request traffic does not double-apply or create another durable generation.
+- a host-unknown non-fixture Sorcerer's persisted Fire Bolt selection is present in the SessionProjection under the expected rules profile;
+- the normal connected ActionRequest resolves through Host authoritative spell runtime and damages a Host Scene target;
+- Host restores its own local Character context and permanent Character library is unchanged;
+- Host emits one ordered committed event batch with canonical Fire Bolt provenance;
+- Client converges target HP exactly once; duplicate event/request traffic does not apply damage twice;
+- session-only target damage does not invent an owning Character-library durable generation.
 
-This directly supports P14.8 remote `행동`/Inventory action, committed event batch, owning-client once-only durable apply, replay/idempotency, and host permanent-library isolation. Remote spell and remote skill remain open.
+This directly supports P14.8 remote spell authority. Remote skill remains the next connected-action gap.
 
 ## Architecture constraints preserved
-- SessionProjection mechanics are reconstructed from Host canonical content; client source declares identity/runtime values but does not own mechanics.
-- Character Library remains the owning Client's durable source. Host projected Characters stay ephemeral.
-- Existing Host ledger, ResolutionEvent broadcast, client apply-before-cursor, duplicate request/event and reconnect semantics were reused unchanged.
-- No fixture Character fallback, parallel connected protocol, duplicate durable source, or tactical map/grid/path/LOS scope was added.
+- SessionProjection mechanics are reconstructed/derived from Host canonical content and runtime, not client presentation strings.
+- Character Library remains the owning Client's durable source. Host projected Characters remain ephemeral.
+- Existing Host ledger, ResolutionEvent broadcast, client apply-before-cursor, duplicate request/event and reconnect semantics are reused unchanged.
+- No parallel connected protocol, fixture fallback, duplicate Character source, or tactical map/grid/path/LOS scope was added.
 
 ## Next Exact Action
-1. Do not rerun the remote Inventory slice, P14.6 spell slice, or prior connected lifecycle gates unless their relevant source boundary changes.
-2. Documentation-only: on the next safe checklist write, credit the P14.8 remote-action statements directly proven by existing `connectedProjectedCharacterResolution.test.ts` plus the new remote Inventory regression; do not credit remote spell/skill yet.
-3. Continue P14.8 test-first with a host-unknown persisted spellcaster projection. Prove one supported spell ActionRequest resolves on Host through canonical SessionProjection/runtime authority, broadcasts committed ResolutionEvents once, and the Client converges without Host permanent-library mutation. Prefer the already-supported Fire Bolt or Magic Missile path and reuse the connected protocol rather than adding a parallel spell message.
-4. Patch product only if that remote-spell regression exposes a real reconstruction/runtime gap; run Phase12 and Main only once for the changed boundary.
+1. Do not rerun remote Inventory, remote Fire Bolt, local P14.6 spell, or unchanged connected lifecycle gates unless their relevant source boundary changes.
+2. On the next safe documentation-only checklist write, credit the P14.8 remote action/Inventory/spell statements directly proven by `connectedProjectedCharacterResolution.test.ts`, `connectedProjectedCharacterInventoryResolution.test.ts`, and `connectedProjectedCharacterSpellResolution.test.ts`; leave remote skill wording unchecked until separately proven.
+3. Continue P14.8 test-first with a host-unknown persisted Character skill/check over the existing connected ActionRequest path. Prove Host canonical ability/proficiency modifier + authoritative d20/ResolutionEvent, exactly one committed event batch, Client once-only convergence/replay, no Host permanent-library mutation, and no unintended Initiative action-economy consumption for a freeform skill check.
+4. Patch product only if the remote-skill regression exposes a real gap; run Phase12 and Main once for the changed boundary.
 5. Then continue remaining P14.7 DM/live-session gaps, P14.10 UX/accessibility, Windows two-instance human acceptance and final exact-head artifact verification.
 6. PR #109 remains draft/unmerged. No merge is authorized.
