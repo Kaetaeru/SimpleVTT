@@ -15,6 +15,7 @@ import { resolveAtomicSavingThrowTransaction } from "./realAtomicSavingThrowTran
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
 import { resolveRuntimeSaveModifier } from "./realRuntimeStatProvider";
+import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface BeforeState {
@@ -140,10 +141,17 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
     reject(internal,transaction.error);
     return internal.getSnapshot();
   }
+  const writeBack=await persistCharacterResolutionEvents(this,transaction.events,"forward");
+  if (writeBack.status==="rejected") {
+    histories.delete(this);
+    reject(internal,`Character write-back 실패: ${writeBack.error}`);
+    return internal.getSnapshot();
+  }
 
   for (const projected of transaction.targets) {
     const target=internal.entity(projected.id);
     if (!target) {
+      if (writeBack.changed) await persistCharacterResolutionEvents(this,transaction.events,"inverse");
       histories.delete(this);
       reject(internal,`atomic saving-throw target disappeared before projection: ${projected.id}`);
       return internal.getSnapshot();
@@ -198,6 +206,14 @@ MockAdapter.prototype.undoLastResolution=async function undoAtomicSavingThrowFro
     if (internal.resolution) {
       internal.resolution.detail.push(`Event-native Undo 거부: ${undone.error}`);
       internal.resolution.finalOutcome=`Undo 거부: ${undone.error}`;
+    }
+    return internal.getSnapshot();
+  }
+  const writeBack=await persistCharacterResolutionEvents(this,history.events,"inverse");
+  if (writeBack.status==="rejected") {
+    if (internal.resolution) {
+      internal.resolution.detail.push(`Event-native Undo 거부: Character write-back 실패: ${writeBack.error}`);
+      internal.resolution.finalOutcome=`Undo 거부: Character write-back 실패: ${writeBack.error}`;
     }
     return internal.getSnapshot();
   }
