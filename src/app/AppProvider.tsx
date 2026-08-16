@@ -67,6 +67,8 @@ interface AppContextValue {
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
   stopSession(): Promise<void>;
+  setSessionReady(ready:boolean):Promise<void>;
+  startPreparedSession(mode:SessionMode):Promise<void>;
   debug: {
     setRole(role: AppRole): Promise<void>;
     setMode(mode: SessionMode): Promise<void>;
@@ -184,6 +186,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
     stopSession: async () => apply(() => mockAdapter.stopSession()),
+    setSessionReady: async (ready) => apply(() => mockAdapter.setSessionReady(ready)),
+    startPreparedSession: async (mode) => apply(() => mockAdapter.startPreparedSession(mode)),
     debug: {
       setRole: async (role) => apply(() => mockAdapter.setReferenceRole(role)),
       setMode: async (mode) => apply(() => mockAdapter.setSessionMode(mode)),
