@@ -30,12 +30,14 @@ type AdapterState = {
 };
 
 type PersistenceVm = NonNullable<AppSnapshot["persistence"]>;
+type DraftSaveError = { draft:"creation"|"progression"; message:string };
 
 type PersistenceContext = {
   repository:CharacterLibraryRepository;
   hydration:Promise<void>|null;
   hydrated:boolean;
   vm:PersistenceVm;
+  draftSaveError?:DraftSaveError;
 };
 
 type CapturedState = {
@@ -175,16 +177,18 @@ function restore(state:AdapterState,before:CapturedState) {
   state.scene = cp(before.scene);
 }
 
-function addSaveError(state:AdapterState,draft:"creation"|"progression"|undefined,message:string) {
-  const validation = { severity:"blocking" as const, message:`Character library 저장 실패: ${message}` };
-  if (draft === "creation" && state.createDraft) {
-    if (!state.createDraft.validation.some((item) => item.message === validation.message)) {
-      state.createDraft.validation = [...state.createDraft.validation,validation];
+function projectDraftSaveError(snapshot:AppSnapshot,context:PersistenceContext) {
+  const saveError = context.draftSaveError;
+  if (!saveError) return;
+  const validation = { severity:"blocking" as const, message:`Character library 저장 실패: ${saveError.message}` };
+  if (saveError.draft === "creation" && snapshot.createDraft) {
+    if (!snapshot.createDraft.validation.some((item) => item.message === validation.message)) {
+      snapshot.createDraft.validation = [...snapshot.createDraft.validation,validation];
     }
   }
-  if (draft === "progression" && state.levelUpDraft) {
-    if (!state.levelUpDraft.validation.some((item) => item.message === validation.message)) {
-      state.levelUpDraft.validation = [...state.levelUpDraft.validation,validation];
+  if (saveError.draft === "progression" && snapshot.levelUpDraft) {
+    if (!snapshot.levelUpDraft.validation.some((item) => item.message === validation.message)) {
+      snapshot.levelUpDraft.validation = [...snapshot.levelUpDraft.validation,validation];
     }
   }
 }
@@ -223,6 +227,7 @@ async function durableMutation(
   try {
     const hydration = await context.repository.commit(collectPersistableSheets(state),state.activeCharacter.id);
     applyHydration(state,hydration.sheets,hydration.activeCharacterId);
+    context.draftSaveError = undefined;
     context.vm = {
       durability:context.repository.durability,
       status:"ready",
@@ -233,7 +238,7 @@ async function durableMutation(
   } catch (error) {
     restore(state,before);
     const message = error instanceof Error ? error.message : String(error);
-    addSaveError(state,draft,message);
+    context.draftSaveError = draft ? { draft,message } : undefined;
     context.vm = {
       durability:context.repository.durability,
       status:"error",
@@ -248,7 +253,9 @@ async function durableMutation(
 MockAdapter.prototype.getSnapshot = async function getSnapshotWithCharacterLibrary() {
   await ensureHydrated(this);
   const snapshot = await oldGetSnapshot.call(this);
-  snapshot.persistence = cp(contextFor(this).vm);
+  const context = contextFor(this);
+  snapshot.persistence = cp(context.vm);
+  projectDraftSaveError(snapshot,context);
   return snapshot;
 };
 
