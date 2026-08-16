@@ -14,91 +14,55 @@
 
 ## Preserved completion
 
-Phase 13 remains complete and must not be reset merely because Phase 14 is unfinished.
+Phase 13 remains complete and is not reset by unfinished Phase 14 work.
 
-- Preserved implementation head: `7c9440970753a370fec7830cfa691832552e1d05`.
-- Preserved exact-head successes: Contract `31955742556`, Rules `31955742577`, Persistence `31955742563`, UI `31955742530`, Phase11 `31955742560`, Phase12 `31955742539`, Phase13 `31955742524`.
-- Preserved Windows artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
+- Phase13 implementation head `7c9440970753a370fec7830cfa691832552e1d05`; preserved Contract `31955742556`, Rules `31955742577`, Persistence `31955742563`, UI `31955742530`, Phase11 `31955742560`, Phase12 `31955742539`, Phase13 `31955742524` success.
+- Preserved Windows artifact `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
+- Reusable Phase14 evidence unless its source boundary changes:
+  - PlaySessionDock `41db6832cc0a95f085f8161bfed665dbcc71090d`, UI `31965607635` success.
+  - Host start/stop/restart/preparation `7d83f263609b5dc2cf18ec43ed617568fedff9ba`, UI `31967444715` success.
+  - saved non-reference Character Join/compatible lobby `a01221ac78827e3075c678c6e727a3ca4af695b5`, UI `31967966233`, Persistence `31967968226` success.
+  - fresh non-fixture local production play `c6d494cf26f081741da0fb3afca2230bcfde2eb1`, Phase11 `31969356422` success.
+  - repaired core matrix `c991ef2a28efe01b389f22141a9be6bb24f11862`: UI `31970228863`/`31970230351`, Contract `31970230345`, Phase11 `31970230344`, Phase12 `31970230336`, Main `31970230364` success.
 
-Reusable narrow Phase14 evidence unless its source changes:
+Do not repeat focused gates unless the relevant source changes.
 
-- PlaySessionDock: `41db6832cc0a95f085f8161bfed665dbcc71090d`, UI `31965607635` success.
-- Host start/stop/restart/preparation: `7d83f263609b5dc2cf18ec43ed617568fedff9ba`, UI `31967444715` success.
-- Saved non-reference Character selection / Join / compatible lobby: `a01221ac78827e3075c678c6e727a3ca4af695b5`, UI `31967966233` and Persistence `31967968226` success.
-- Fresh non-fixture local production play: `c6d494cf26f081741da0fb3afca2230bcfde2eb1`, Phase11 `31969356422` success for create/save/restart, derived skill, canonical ranged attack, Initiative economy/Undo, DM correction and frontend gate.
+## Phase 14 authority constraints
 
-Do not repeat these focused gates unless a later source edit touches the relevant boundary.
+Normal product play must use user-created/persisted Characters and visible production UI, not Aelar/Mira/fixed goblin ids/reference shortcuts. Reuse Tauri transport, Host ledger, compatibility handshake, SessionProjection, event cursor/catch-up, ActionRequest/ResolutionEvent and owning-client durable write-back. Shared session state remains Host-authoritative; permanent Character ownership remains with the owning player. Do not add tactical map/grid/path/LOS scope.
 
-## Phase 14 product and authority constraints
+## Ready/start implementation in this continuation
 
-SimpleVTT must be playable through visible production UI with user-created/persisted Characters. The normal path must not depend on Aelar/Mira/fixed goblin ids, Ctrl+Shift+D or reference scenario loading. Reference fixtures remain only for explicit subsystem tests/debug.
+Current work head: `04ceba160ac84052866f5b7fc91e4c69ab1db527`.
 
-Reuse the existing Tauri transport, connected runtime, Host ledger, compatibility handshake, SessionProjection, reconnect/catch-up, ActionRequest/ResolutionEvent routing and owning-client durable write-back. Shared session state remains Host-authoritative; permanent Character ownership remains with the owning player. Do not add tactical map/grid/path/LOS scope.
+The Ready/start slice was implemented on top of the existing Host-authoritative `mode-transition` path:
 
-## Regression repair completed in this continuation
+1. `b4d1d77e795db66afba1f28e000d17bf83706bdc` structured participant events with participant identity, connection state and explicit `ready:boolean`.
+2. `99a5e01583c9d28530529bf30fc33527efce0cee` added `ready-intent` wire input without a client-supplied participant id, so the Host binds Ready to the transport peer rather than trusting spoofable identity.
+3. `ae5cbd63932ef1ecc85db0d91bcdce10a75b539e` added peer->participant authority mapping and connected-session `sessionStarted` state.
+4. `64f426f092e2de4678bf1b9ebafd48478b61ff5d` routes Ready through Host validation/ledger/event-batch; hello/reconnect establishes participant state with Ready reset; clients apply authoritative participant events. `ready-intent-v1` is a required connected capability.
+5. `c3d6d1b5057be5309c763fab01d3983d2ff44fa1` exposed the existing Host turn/mode projection helper instead of creating a duplicate mode channel.
+6. `1b88cfae5d3c8f3d1fe00dbc5b7420efc97493a7` added production `setSessionReady(ready)` and `startPreparedSession(mode)`. Host Start requires at least one non-host player and every player must be connected, Ready and bound to an accepted compatible peer manifest. Host itself is excluded from player readiness. Initiative reuses `startInitiative`; Freeform explicitly publishes the existing `mode-transition` projection.
+7. `98f1820f4ee9699c121ecd3f3acba6cc8e048f64`, `1177ac2c02aac33e170eb6e02e0a1054a1abf66c`, `263ad566a37caee4af1f6db877f2261662fba063` expose the lifecycle controls through AppProvider and visible Player Ready/취소 plus Host participant readiness/mode/Start UI.
+8. `83646e0071209859202a3eff6606458ee46df55a`, `5c7c1e271c4944ca8252a6cbc149c0fdc9a4ece0`, `a208f87f2e95838c3d011ac9e3420605d254c980` add wire/lifecycle authority regressions and include the production lifecycle test in the Phase12 canonical gate.
 
-Current validated work head: `c991ef2a28efe01b389f22141a9be6bb24f11862`.
+### Validation at `a208f87f...`
 
-### Stable structured spatial baseline
+- Phase12 run `31970977017`, job `95223275319`: `connected-protocol` success. The Ready/start authority batch passed, then Phase11 preservation passed, then production frontend build passed.
+- UI run `31970977035`, job `95223275314`: Phase14 Host/lifecycle tests, Phase09 mechanics and final TypeScript/production build all passed. The job was only completing post-actions when last fetched; all load-bearing test/build steps were success.
+- Main Playable `31970977130`: full UI/build, Phase11 and Phase12 passed; only `Verify Phase 13 arbitrary Character SessionProjection` failed.
 
-The generalized theater-of-mind spatial layer previously re-read mutable presentation `entity.distance`, so a test changing display text from 22 ft to 999 ft overwrote runtime targeting state.
-
-- `c9f103fee28c683129c1139b3d946cc3edf69604` changed `realSpatialRuntimeService` so presentation distance may seed a scene baseline only when no structured baseline exists; existing `scene-distance-baseline` relations are authoritative thereafter and are reused for newly materialized Character actors.
-- `9aeb32a92c21b031156e2f221aacb8f24e39a2ec` aligned stale provenance expectations with the generalized baseline.
-- `fed72ebcb786bf952eb5286c475b724c57503806` strengthened the atomic attack regression: seed 22 ft, mutate presentation to 999 ft, verify the existing pair stays 22 ft and a late arbitrary Character also receives 22 ft from the stable structured baseline.
-- UI run `31969830496` at `fed72ebc...` succeeded, including the Phase09 99-test mechanics batch and final TypeScript/production build.
-- Phase11 run `31969832891` at the same source boundary succeeded for the production offline walkthrough/frontend gate.
-
-This spatial regression is closed. Do not revert to mutable presentation strings or hard-coded reference actor pairs.
-
-### Phase12 committed-event capture fixture migration
-
-Phase12 remained 22/23 because the old focused test attempted fixture Aelar `action.shortbow` under the final Phase14 production composition.
-
-- Diagnostic head `795b8a3a203b5d608a2737d01da9eecfbe0e818f`, Phase12 run `31970028904`, proved the failure occurred before connected publication: no runtime event history existed after the fixture attack.
-- Root cause: fixture Aelar exposes a historical Shortbow attack but does not own a real Shortbow `ItemInstance`. Final production action reconstruction therefore cannot recover canonical weapon metadata for that fixture; the localized fixture name `숏보우` falls through to a 5 ft legacy fallback, so the 22 ft target is correctly rejected and no committed event batch exists.
-- The product path was not weakened and no fixture fallback was restored.
-- `c991ef2a28efe01b389f22141a9be6bb24f11862` migrated `connectedAttackEventCapture.test.ts` to a saved non-fixture Character with an actual canonical Longbow `ItemInstance` (`dnd.srd521.item.weapon.longbow`). The test enters production local play, materializes 150 ft runtime range, commits the attack and verifies runtime history plus the connected publication registry share the product resolution id and contain HP/economy events.
-
-### Exact-head regression matrix at `c991ef2a...`
-
-Core Linux/contract gates are green:
-
-- UI push `31970228863`: success including Phase09 mechanics and final TypeScript/production build.
-- PR UI `31970230351`: success.
-- Contract validation `31970230345`: success.
-- Phase11 `31970230344`: offline production walkthrough and full frontend gate success.
-- Phase12 `31970230336`: all 23 connected authority/protocol tests success; its Phase11 preservation and production frontend gate also success.
-- Main Playable `31970230364`: Phase13 contract, Phase11, Phase12 connected authority, Phase13 projection lifecycle and frontend gate success.
-
-Windows artifact sub-jobs triggered by these workflows were still separate release/artifact work and are not used as completion evidence here unless their final conclusions are explicitly fetched. The regression debt that blocked Ready/start is closed for the core matrix.
-
-## Ready/start boundary discovered
-
-No Ready/start source change has been made yet. The existing model currently has:
-
-- `SessionParticipantVm` with identity/connection state but no readiness field.
-- `productionSessionLifecycleAdapter` lifecycle `offline | preparing | connecting | lobby | live`, but no Ready intent or Host start command.
-- `ProductionPlayerLobbyBridge` with Character selection/Join/lobby state but no Ready control.
-- `ProductionSessionLifecycleBridge` with Host preparation/shareable address/stop but no participant readiness list, mode selection or Start gate.
-- `ConnectedEventPayload.kind="participant"` exists but currently carries only textual state/provenance; it can be extended as the Host-authoritative participant-state event rather than adding a second synchronization channel.
-- `connectedSessionWire` has no client Ready intent message yet.
-- Existing event-batch application and `mode-transition` payload already provide the right Host-led convergence pattern for session state. Inspect and reuse `connectedTurnRoutingAdapter.ts` before adding any new start/mode publication path.
+The Main failure was fixture capability drift, not a product authority failure. `connectedProjectedCharacterResolution.test.ts` hard-coded the pre-Ready capability list, so its projected remote ActionRequest omitted required `ready-intent-v1` and was correctly rejected by current production routing. `04ceba160ac84052866f5b7fc91e4c69ab1db527` migrated that test to `CONNECTED_CAPABILITIES` for both manifest and request. New exact-head Main run `31971251262` was queued at checkpoint time and must be fetched before crediting Main green or checklist completion.
 
 ## Next Exact Action
 
-Resume P14.8 Ready/unready + Host start gating, preserving the now-green matrix:
+1. Fetch exact-head Main Playable run `31971251262` for `04ceba160ac84052866f5b7fc91e4c69ab1db527`. If the Phase13 arbitrary Character SessionProjection step and preceding gates are green, record the exact evidence; if red, inspect only that failing step.
+2. Reconcile the exact-head Phase12/UI runs generated for `04ceba...` only if necessary. The only source difference from `a208f87f...` is the Phase13 test capability fixture, so do not rerun unrelated product gates manually.
+3. Before crediting P14.8 Ready/start checklist boxes, add/verify the remaining lifecycle safety boundary: the Host transport reports aggregate `peerCount` but not the disconnected peer identity. A Host must never start from stale Ready after a player disconnects. Conservatively reset/disconnect player readiness when Host peer count drops if exact peer identity is unavailable, then require re-handshake/re-Ready. Add a focused regression.
+4. Add a focused `startPreparedSession("freeform")` regression if not already covered by an equivalent production lifecycle test; Initiative is directly tested now, while the reusable mode-transition machinery already has historical Freeform coverage.
+5. After disconnect stale-Ready safety and both start modes are exact-head green, update `.agents/PHASE14_CHECKLIST.md` for Ready/start only to the evidence actually proved.
+6. Then continue participant late join/disconnect/reconnect, explicit session end/restart, local-active-Character projection cleanup, and Windows two-instance release walkthrough.
 
-1. Read `connectedTurnRoutingAdapter.ts` first and identify the existing Host-authoritative Freeform/Initiative `mode-transition` publication path. Reuse it rather than implementing duplicate mode synchronization.
-2. Add readiness as explicit shared participant state, not a UI-local boolean. Extend `SessionParticipantVm` and structured `ConnectedEventPayload.kind="participant"` with readiness while keeping connection lifecycle explicit.
-3. Add one narrow client -> Host Ready intent envelope to `connectedSessionWire`. Host must bind the intent to the transport peer/known participant and reject wrong session, incompatible/disconnected/spoofed participant state. Host commits the accepted change through `HostSessionLedger` and broadcasts it through the existing authoritative event-batch path.
-4. Apply Host participant events on both Host and clients so Ready and Undo Ready converge to the same participant list. Reconnect/late-join semantics must reset or explicitly re-establish readiness safely; do not silently trust stale readiness from disconnected peers.
-5. Expose `setSessionReady(ready)` on the production/AppProvider boundary. In `ProductionPlayerLobbyBridge`, show visible Ready / Ready 취소 only after compatible lobby entry.
-6. Expose Host mode selection (`freeform` / `initiative`) and `startPreparedSession(mode)` through the production lifecycle boundary. Host Start is disabled/rejected until all required connected player participants are compatible and ready; Host itself is not a player-readiness requirement. Early start must return a clear visible reason.
-7. In `ProductionSessionLifecycleBridge`, show participants and readiness, mode selection and Start. Successful Host start must transition both peers through the existing Host-authoritative mode event and set lifecycle `live` without presentation-owned authority.
-8. Add focused wire/runtime/lifecycle/UI regressions for Ready, Undo Ready, spoof/reject, Host gating and both-client mode convergence. Run Phase12 first for authority semantics, UI for visible controls/TypeScript, then Main Playable. Do not credit checklist Ready/start boxes until these exact-head gates pass.
-9. After Ready/start is green, continue participant disconnect/reconnect/late-join lifecycle, explicit session end/restart, active-local-Character projection cleanup and the Windows two-instance release walkthrough.
-
-Known future risk: `productionPlayRuntimeAdapter` can leave a stale previous local projection when switching between two non-fixture local Characters. Any repair must remove only the prior local-owned projection and preserve remote ephemeral SessionProjection actors.
+Known separate risk: switching two non-fixture local Characters can leave a stale previous local projection in `productionPlayRuntimeAdapter`; any fix must preserve remote ephemeral SessionProjection actors.
 
 Draft PR #109 remains open/draft. No merge is authorized or attempted.
