@@ -17,6 +17,8 @@ export interface ConnectedRuntimeState {
   pendingRemoteAction:PendingRemoteAction|null;
   publishedResolutionIds:Set<string>;
   peerManifests:Map<string,SessionCompatibilityManifest>;
+  reconnectTimer:ReturnType<typeof setTimeout>|null;
+  reconnectAttempts:number;
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -33,6 +35,8 @@ export function connectedStateFor(adapter:MockAdapter) {
       pendingRemoteAction:null,
       publishedResolutionIds:new Set<string>(),
       peerManifests:new Map<string,SessionCompatibilityManifest>(),
+      reconnectTimer:null,
+      reconnectAttempts:0,
     };
     states.set(adapter,state);
   }
@@ -41,6 +45,7 @@ export function connectedStateFor(adapter:MockAdapter) {
 
 export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|null) {
   const state=connectedStateFor(adapter);
+  if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
   state.mode=mode;
   state.sessionId=null;
   state.ledger=null;
@@ -48,5 +53,7 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.pendingRemoteAction=null;
   state.publishedResolutionIds.clear();
   state.peerManifests.clear();
+  state.reconnectTimer=null;
+  state.reconnectAttempts=0;
   return state;
 }
