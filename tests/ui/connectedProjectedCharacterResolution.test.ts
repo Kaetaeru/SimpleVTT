@@ -6,7 +6,6 @@ import "../../src/app/connectedActionRoutingAdapter";
 import "../../src/app/progressionContracts";
 import type { CatalogEntry, CharacterSheet } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
 import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
 import { projectedCharacterById } from "../../src/app/characterSessionProjectionRegistry";
@@ -16,30 +15,45 @@ import { HostSessionLedger, type ConnectedActionRequest, type SessionCompatibili
 import { routeConnectedActionRequest } from "../../src/app/connectedActionRequestPort";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 
-const SOURCE_ID="dnd.srd-5.2.1";
-const VERSION="2024";
 const PEER="peer.phase13.remote";
+type ResolvedCatalogEntry=CatalogEntry & {contentId?:string;sourceId?:string};
 
-function entry(contentId:string,category:CatalogEntry["category"],nameKo:string,nameEn:string):CatalogEntry & {contentId:string;sourceId:string} {
-  return {
-    id:catalogQualifiedId(contentId,SOURCE_ID,VERSION),contentId,sourceId:SOURCE_ID,category,nameKo,nameEn,
-    scope:"builtin",source:"SRD 5.2.1",version:VERSION,description:"test",relationships:[],capabilities:[],
-  };
+function contentEntry(catalog:CatalogEntry[],contentId:string) {
+  const found=(catalog as ResolvedCatalogEntry[]).find((entry)=>entry.contentId===contentId);
+  assert.ok(found,`production catalog must contain ${contentId}`);
+  return found;
 }
 
-const catalog:CatalogEntry[]=[
-  entry("dnd.srd521.class.fighter","class","파이터","Fighter"),
-  entry("dnd.srd521.species.human","species","인간","Human"),
-  entry("dnd.srd521.background.soldier","background","군인","Soldier"),
-];
-
-function remoteCharacter():CharacterSheet {
+function remoteCharacter(catalog:CatalogEntry[]):CharacterSheet {
+  const fighter=contentEntry(catalog,"dnd.srd521.class.fighter");
+  const human=contentEntry(catalog,"dnd.srd521.species.human");
+  const soldier=contentEntry(catalog,"dnd.srd521.background.soldier");
   return {
-    id:"char.phase13.remote-fighter",name:"Remote Fighter",className:"파이터",level:1,species:"인간",background:"군인",
-    hp:4,maxHp:12,tempHp:0,ac:12,speed:30,proficiencyBonus:2,saveState:"saved",
-    abilities:{str:16,dex:14,con:14,int:10,wis:12,cha:8},saves:[],skills:["운동"],features:["Second Wind"],equipment:[],items:[],
-    resources:[{id:"resource.second-wind",label:"재기의 바람",current:2,max:2,source:"SRD Fighter"}],attacks:[],
-    rulesProfileId:"dnd.srd-5.2.1",rulesProfileVersion:"0.1-draft",sourceRevision:2,runtimeRevision:3,
+    id:"char.phase13.remote-fighter",
+    name:"Remote Fighter",
+    className:fighter.nameKo || fighter.nameEn,
+    level:1,
+    species:human.nameKo || human.nameEn,
+    background:soldier.nameKo || soldier.nameEn,
+    hp:4,
+    maxHp:12,
+    tempHp:0,
+    ac:12,
+    speed:30,
+    proficiencyBonus:2,
+    saveState:"saved",
+    abilities:{str:16,dex:14,con:14,int:10,wis:12,cha:8},
+    saves:[],
+    skills:["운동"],
+    features:["Second Wind"],
+    equipment:[],
+    items:[],
+    resources:[{id:"resource.second-wind",label:"재기의 바람",current:2,max:2,source:"SRD Fighter"}],
+    attacks:[],
+    rulesProfileId:"dnd.srd-5.2.1",
+    rulesProfileVersion:"0.1-draft",
+    sourceRevision:2,
+    runtimeRevision:3,
     classLevels:[{classId:"dnd.srd521.class.fighter",level:1}],
   };
 }
@@ -65,14 +79,14 @@ async function finishResolution(adapter:MockAdapter) {
 
 test("host-unknown projected Fighter resolves Second Wind through host authority without creating a host Character record", async () => {
   const host=new MockAdapter();
-  const app=host as unknown as {catalog:CatalogEntry[];role:"player"|"dm"};
-  app.catalog=structuredClone(catalog);
-  app.role="dm";
+  await host.setReferenceRole("dm");
   const before=await host.getSnapshot();
-  const remote=remoteCharacter();
+  const hostCatalog=structuredClone(before.catalog);
+  const remote=remoteCharacter(hostCatalog);
   const remoteManifest=manifest(remote);
-  const projection=buildCharacterSessionProjectionV1(remote,catalog);
-  assert.equal(acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection).status,"accepted");
+  const projection=buildCharacterSessionProjectionV1(remote,hostCatalog);
+  const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);
+  assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
 
   const state=connectedStateFor(host);
   state.mode="host";
