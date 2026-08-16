@@ -40,3 +40,56 @@ jobs:
         run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
       - name: Verify production frontend gate
         run: npm run build
+
+  windows-projected-character-playable:
+    runs-on: windows-latest
+    needs: projection-contract
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Tauri session transport and persistence library
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+      - name: Build Windows projected-character executable
+        run: npm run tauri:build -- --no-bundle
+      - name: Stage Phase 13 artifact
+        shell: pwsh
+        run: |
+          $source = "src-tauri/target/release/simplevtt.exe"
+          if (-not (Test-Path $source)) { throw "SimpleVTT executable was not produced at $source" }
+          New-Item -ItemType Directory -Force -Path phase13-artifact | Out-Null
+          Copy-Item $source "phase13-artifact/SimpleVTT.exe"
+          @(
+            "SimpleVTT Phase 13 arbitrary Character SessionProjection build",
+            "commit=${{ env.SOURCE_SHA }}",
+            "ref=${{ github.ref }}",
+            "run_id=${{ github.run_id }}"
+          ) | Set-Content -Encoding utf8 "phase13-artifact/BUILD.txt"
+          @(
+            "SimpleVTT Phase 13 two-instance projected Character walkthrough",
+            "",
+            "1. On the player Windows machine create/save a supported Character that does not exist in the DM host Character library. A Fighter with Second Wind is the deterministic representative gate.",
+            "2. Close/reopen the player app once and confirm that Character restores locally before connecting.",
+            "3. On the DM machine choose Host. Allow SimpleVTT through Windows Firewall on private networks if prompted. The host listens on TCP 3210.",
+            "4. On the player machine Join <HOST_LAN_OR_HAMACHI_IPV4>:3210 using the locally saved Character.",
+            "5. Confirm the connection is compatible and the DM session can see/select the projected player Character even though the host Character library did not contain it before join.",
+            "6. With the projected Fighter below maximum HP, submit Second Wind from the player. The DM host resolves the authoritative action and only the committed ResolutionEvent is synchronized.",
+            "7. Confirm host and player converge on HP/resource state, while the DM host still has no permanent Character-library copy of the player's Character.",
+            "8. Close/reopen the player app and confirm the host-confirmed HP/resource change persisted in the player's own Character library.",
+            "9. Reconnect the same Character. Confirm no duplicate HP/resource change occurs and reconnect resumes from the existing event cursor.",
+            "10. Start a new Host session and confirm prior ephemeral projected Characters are cleared from the new session while permanent local Characters remain unchanged.",
+            "11. Verify ordinary Phase 11 offline play still works with no network connection."
+          ) | Set-Content -Encoding utf8 "phase13-artifact/REMOTE-WALKTHROUGH.txt"
+      - name: Upload Phase 13 Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-Phase13-Windows-${{ env.SOURCE_SHA }}
+          path: phase13-artifact/
+          if-no-files-found: error
+          retention-days: 14
