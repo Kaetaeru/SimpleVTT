@@ -9,6 +9,7 @@ import "./app/connectedRoleRoutingAdapter";
 import "./app/connectedActionRoutingAdapter";
 import "./app/connectedTurnRoutingAdapter";
 import "./app/connectedCorrectionRoutingAdapter";
+import "./app/productionSessionLifecycleAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
