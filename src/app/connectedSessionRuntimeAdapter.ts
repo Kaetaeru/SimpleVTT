@@ -1,5 +1,5 @@
 import "./persistenceContracts";
-import type { ActivityEntry, AppSnapshot, CharacterSheet, CharacterSummary, ConnectionState, SceneVm } from "./contracts";
+import type { ActivityEntry, AppSnapshot, CatalogEntry, CharacterSheet, CharacterSummary, ConnectionState, SceneVm } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import {
   CONNECTED_SESSION_PROTOCOL_VERSION,
@@ -18,6 +18,8 @@ import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
 import { routeConnectedActionRequest } from "./connectedActionRequestPort";
 import { tauriSessionTransport, type SessionTransportMessage, type SessionTransportStatus } from "./tauriSessionTransport";
+import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
+import { acceptHostCharacterSessionProjection } from "./connectedCharacterProjectionHandshake";
 
 export const CONNECTED_CAPABILITIES=["resolution-event-v1","character-projection-v1","event-cursor-v1"];
 
@@ -29,6 +31,7 @@ export interface ConnectedAdapterState {
   scene:SceneVm;
   activeCharacter:CharacterSheet;
   characters:CharacterSummary[];
+  catalog:CatalogEntry[];
   activity:ActivityEntry[];
   syncChar():void;
   getSnapshot():Promise<AppSnapshot>;
@@ -76,12 +79,20 @@ export async function broadcastConnectedWire(message:ConnectedWireMessage) {
 
 async function sendClientHello(adapter:MockAdapter,knownEventCursor:number) {
   const app=connectedInternal(adapter);
+  let projection;
+  try {
+    projection=buildCharacterSessionProjectionV1(app.activeCharacter,app.catalog);
+  } catch(error) {
+    app.session.compatibility="warning";
+    app.session.compatibilityMessage=`Character SessionProjection unavailable: ${error instanceof Error?error.message:String(error)}`;
+  }
   await tauriSessionTransport.send(encodeConnectedWireMessage({
     type:"hello",
     manifest:connectedManifest(adapter),
     participantId:`client:${app.activeCharacter.id}`,
     participantName:app.activeCharacter.name,
     knownEventCursor,
+    projection,
   }));
 }
 
@@ -192,7 +203,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
   if (!ledger) return;
 
   if (wire.type==="hello") {
-    const compatibility=ledger.handshake(wire.manifest);
+    let compatibility=ledger.handshake(wire.manifest);
     let events:ConnectedSessionEvent[]=[];
     if (compatibility.status!=="incompatible") {
       try { events=ledger.eventsAfter(wire.knownEventCursor); }
@@ -200,17 +211,30 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         await sendConnectedWireTo(message.peer,{type:"error",code:"invalid-event-cursor",message:error instanceof Error?error.message:String(error),hostCursor:ledger.cursor});
         return;
       }
-      state.peerManifests.set(message.peer,structuredClone(wire.manifest));
-      const existing=app.session.participants.find((entry)=>entry.id===wire.participantId);
-      const participant={
-        id:wire.participantId,
-        name:wire.participantName,
-        characterName:wire.manifest.character?.characterId,
-        state:"connected" as const,
-      };
-      app.session.participants=existing
-        ? app.session.participants.map((entry)=>entry.id===participant.id ? participant : entry)
-        : [...app.session.participants,participant];
+
+      const projectionAcceptance=acceptHostCharacterSessionProjection(adapter,message.peer,wire.manifest,wire.projection);
+      if (projectionAcceptance.status==="rejected") {
+        compatibility={status:"incompatible",message:`Character SessionProjection rejected: ${projectionAcceptance.error}`};
+        events=[];
+      } else {
+        const characterId=wire.manifest.character?.characterId;
+        if (characterId) {
+          for (const [peer,manifest] of state.peerManifests.entries()) {
+            if (peer!==message.peer&&manifest.character?.characterId===characterId) state.peerManifests.delete(peer);
+          }
+        }
+        state.peerManifests.set(message.peer,structuredClone(wire.manifest));
+        const existing=app.session.participants.find((entry)=>entry.id===wire.participantId);
+        const participant={
+          id:wire.participantId,
+          name:wire.participantName,
+          characterName:wire.manifest.character?.characterId,
+          state:"connected" as const,
+        };
+        app.session.participants=existing
+          ? app.session.participants.map((entry)=>entry.id===participant.id ? participant : entry)
+          : [...app.session.participants,participant];
+      }
     }
     await sendConnectedWireTo(message.peer,{type:"hello-ack",sessionId:ledger.sessionId,compatibility,hostCursor:ledger.cursor,events});
     await publishConnectedSnapshot(adapter);
