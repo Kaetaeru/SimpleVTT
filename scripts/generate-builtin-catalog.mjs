@@ -82,7 +82,6 @@ function localized(entry,module) {
 }
 
 const spellPresentation = loadSpellPresentation();
-const spellById = new Map(spellPresentation.spells.map((spell) => [spell.id,spell]));
 const records = [];
 const allNames = new Map();
 const moduleIds = [];
@@ -99,16 +98,18 @@ for (const dirent of readdirSync(modulesDir,{withFileTypes:true}).sort((a,b) => 
     if (allNames.has(entry.id)) throw new Error(`duplicate canonical content id while generating builtin catalog: ${entry.id}`);
     allNames.set(entry.id,presentation);
     const category = genericCategory(entry);
-    if (category && (category !== "spell" || spellById.has(entry.id))) records.push({module,entry,category,presentation});
+    if (category && category !== "spell") records.push({module,entry,category,presentation});
   }
 }
 
-const entries = records.map(({module,entry,category,presentation}) => {
-  const spell = category === "spell" ? spellById.get(entry.id) : undefined;
-  if (category === "spell" && !spell) throw new Error(`missing canonical spell presentation for ${entry.id}`);
-  const nameKo = spell?.name ?? presentation.nameKo;
-  const nameEn = spell?.nameEn ?? presentation.nameEn;
-  const description = (spell?.summary ?? presentation.summary)
+for (const spell of spellPresentation.spells) {
+  allNames.set(spell.id,{nameKo:spell.name,nameEn:spell.nameEn,summary:spell.summary});
+}
+
+const moduleEntries = records.map(({module,entry,category,presentation}) => {
+  const nameKo = presentation.nameKo;
+  const nameEn = presentation.nameEn;
+  const description = presentation.summary
     || `${nameKo} / ${nameEn} · ${sourceLabel} ${categoryLabel[category] ?? category}`;
   return {
     id:entry.id,
@@ -128,7 +129,24 @@ const entries = records.map(({module,entry,category,presentation}) => {
     })),
     capabilities:[...new Set(module.capabilities ?? [])].sort((a,b) => a.localeCompare(b,"en")),
   };
-}).sort((a,b) => {
+});
+
+const spellEntries = spellPresentation.spells.map((spell) => ({
+  id:spell.id,
+  contentId:spell.id,
+  category:"spell",
+  nameKo:spell.name,
+  nameEn:spell.nameEn,
+  scope:"builtin",
+  sourceId:rulesProfileId,
+  source:sourceLabel,
+  version:rulesProfileVersion,
+  description:spell.summary,
+  relationships:[],
+  capabilities:[],
+}));
+
+const entries = [...moduleEntries,...spellEntries].sort((a,b) => {
   const categoryDelta = (categoryOrder.get(a.category) ?? 99) - (categoryOrder.get(b.category) ?? 99);
   return categoryDelta || a.id.localeCompare(b.id,"en");
 });
