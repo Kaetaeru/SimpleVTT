@@ -38,6 +38,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify Character library repository and adapter
         run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts
       - name: Verify production build
