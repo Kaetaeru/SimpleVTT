@@ -84,7 +84,7 @@ test("builtin encounter Goblin shortbow materializes from its Definition and exe
   const activity=snapshot.activity[0];
   assert.equal(activity.id,snapshot.resolution?.id);
   assert.ok(activity.detail.some((line)=>line.includes("runtime:combatant-definition:combatant.goblin:action:shortbow:damage")));
-  assert.ok(activity.detail.some((line)=>line.includes("runtime:spatial:scene.ruined-gate:reference-fixture")));
+  assert.ok(activity.detail.some((line)=>line.includes("runtime:spatial:scene.ruined-gate:scene-distance-baseline")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar 임시 HP 5 → 0")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.goblin-a economy.action true → false")));
 
