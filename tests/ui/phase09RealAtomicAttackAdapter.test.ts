@@ -15,7 +15,7 @@ const ACTOR:SceneEntity = {
   id:"char.aelar",name:"Aelar",side:"ally",kind:"character",hp:31,maxHp:42,tempHp:5,ac:18,initiative:17,status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[],
 };
 const TARGET:SceneEntity = {
-  id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,tempHp:0,ac:15,initiative:14,status:[],distance:"999피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[],
+  id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,tempHp:0,ac:15,initiative:14,status:[],distance:"22피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[],
 };
 const ECONOMY = { action:true, bonusAction:true, reaction:true, movement:30, movementMax:30 };
 const SCENE:SceneVm = {
@@ -33,14 +33,26 @@ test("runtime attack provider derives Shortbow damage/range from canonical weapo
   assert.deepEqual(fact.flatDamage,[{ source:"runtime:action:action.shortbow:damage-flat",value:2 }]);
 });
 
-test("runtime targeting provider uses pairwise structured spatial state, not the presentation distance string", () => {
-  const fact=spatialFact();
-  assert.equal(fact.distanceFeet,22,"reference pair is 22 ft even though target presentation text was deliberately changed to 999 ft");
-  assert.equal(fact.visible,true);
-  assert.equal(fact.cover,"none");
-  assert.equal(fact.targetCanSeeAttacker,true);
-  assert.ok(fact.provenance.some((entry)=>entry.includes("runtime:spatial:char.aelar->combatant.goblin-a:distance:22ft")));
-  assert.throws(()=>resolveRuntimeTargetingFact(SCENE,"combatant.unknown",ACTOR.id),/missing pairwise spatial runtime fact/);
+test("runtime targeting provider keeps structured spatial baseline stable across presentation mutation and new Character projection", () => {
+  const scene=structuredClone(SCENE);
+  const seeded=resolveRuntimeTargetingFact(scene,ACTOR.id,TARGET.id);
+  assert.equal(seeded.distanceFeet,22);
+  const target=scene.entities.find((entry)=>entry.id===TARGET.id);
+  assert.ok(target);
+  target.distance="999피트";
+
+  const stable=resolveRuntimeTargetingFact(scene,ACTOR.id,TARGET.id);
+  assert.equal(stable.distanceFeet,22,"structured pair remains 22 ft even after presentation text changes to 999 ft");
+  assert.equal(stable.visible,true);
+  assert.equal(stable.cover,"none");
+  assert.equal(stable.targetCanSeeAttacker,true);
+  assert.ok(stable.provenance.some((entry)=>entry.includes("runtime:spatial:char.aelar->combatant.goblin-a:distance:22ft")));
+
+  const lateActor={ ...structuredClone(ACTOR),id:"char.phase09-late",name:"Late Character" };
+  scene.entities.push(lateActor);
+  const late=resolveRuntimeTargetingFact(scene,lateActor.id,TARGET.id);
+  assert.equal(late.distanceFeet,22,"new Character projection reuses the stable structured scene baseline instead of mutable presentation text");
+  assert.throws(()=>resolveRuntimeTargetingFact(scene,"combatant.unknown",ACTOR.id),/missing pairwise spatial runtime fact/);
 });
 
 test("atomic attack service keeps preview parity, domain events, and doubles only dice on critical", () => {
