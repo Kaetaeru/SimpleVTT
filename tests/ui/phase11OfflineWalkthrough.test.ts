@@ -39,10 +39,10 @@ async function fillCurrentCreationDraft(adapter:MockAdapter) {
     }
 
     const equipment = plan.sections.find((section) => section.id === "class-equipment");
-    if (equipment?.status === "incomplete") {
+    if (equipment) {
       const rangedFighterLoadout=equipment.options.find((option)=>option.id.endsWith("#B"));
       const selected=rangedFighterLoadout ?? equipment.options[0];
-      if (selected) {
+      if (selected && draft.equipmentPreset !== selected.id) {
         await adapter.updateCharacterDraft({type:"set-equipment",value:selected.id});
         changed = true;
       }
