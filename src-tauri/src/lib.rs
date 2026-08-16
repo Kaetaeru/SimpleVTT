@@ -91,6 +91,15 @@ fn send_session_message(
 }
 
 #[tauri::command]
+fn send_session_message_to(
+    state: tauri::State<'_, session_transport::SessionTransportState>,
+    peer: String,
+    message: String,
+) -> Result<usize, String> {
+    state.send_to(&peer, &message)
+}
+
+#[tauri::command]
 fn stop_session_transport(
     app: tauri::AppHandle,
     state: tauri::State<'_, session_transport::SessionTransportState>,
@@ -119,6 +128,7 @@ pub fn run() {
             start_session_host,
             connect_session_client,
             send_session_message,
+            send_session_message_to,
             stop_session_transport,
             get_session_transport_status
         ])
