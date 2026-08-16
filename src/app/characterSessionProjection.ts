@@ -22,6 +22,10 @@ export interface CharacterProjectionContentIdentityV1 {
   category:CatalogEntry["category"];
 }
 
+export interface CharacterProjectionSourceAuthorityV1 {
+  maxHp:number;
+}
+
 export interface CharacterSessionProjectionV1 {
   schemaId:typeof CHARACTER_SESSION_PROJECTION_SCHEMA_ID;
   schemaVersion:typeof CHARACTER_SESSION_PROJECTION_SCHEMA_VERSION;
@@ -30,6 +34,7 @@ export interface CharacterSessionProjectionV1 {
   runtimeRevision:number;
   rulesProfile:RulesProfileRefV1;
   source:CharacterSourceSnapshotV1;
+  sourceAuthority:CharacterProjectionSourceAuthorityV1;
   runtime:CharacterRuntimeDurableSnapshotV1;
   contentIdentities:CharacterProjectionContentIdentityV1[];
 }
@@ -43,10 +48,11 @@ type RequiredContentRef = { label:string; token:string; categories:CatalogEntry[
 
 const PROJECTION_KEYS = new Set([
   "schemaId","schemaVersion","characterId","sourceRevision","runtimeRevision",
-  "rulesProfile","source","runtime","contentIdentities",
+  "rulesProfile","source","sourceAuthority","runtime","contentIdentities",
 ]);
 const IDENTITY_KEYS = new Set(["qualifiedId","contentId","sourceId","version","category"]);
 const RULES_PROFILE_KEYS = new Set(["id","version"]);
+const SOURCE_AUTHORITY_KEYS = new Set(["maxHp"]);
 
 function object(value:unknown):Record<string,unknown>|undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -135,6 +141,9 @@ export function buildCharacterSessionProjectionV1(
   if (!nonNegativeInteger(sourceRevision) || !nonNegativeInteger(runtimeRevision)) {
     throw new Error(`Character revisions must be non-negative integers: ${sheet.id}`);
   }
+  if (!nonNegativeInteger(sheet.maxHp)) {
+    throw new Error(`Character max HP must be a non-negative integer: ${sheet.id}`);
+  }
   const source=projectCharacterSourceV1(sheet);
   const runtime=projectCharacterRuntimeDurableV1(sheet);
   return {
@@ -145,6 +154,7 @@ export function buildCharacterSessionProjectionV1(
     runtimeRevision,
     rulesProfile:clone(source.rulesProfile),
     source,
+    sourceAuthority:{ maxHp:sheet.maxHp },
     runtime,
     contentIdentities:resolveRequiredIdentities(source,catalog),
   };
@@ -178,6 +188,15 @@ function parseRulesProfile(value:unknown):RulesProfileRefV1 {
   if (keyError) throw new Error(keyError);
   if (!nonEmptyString(raw.id) || !nonEmptyString(raw.version)) throw new Error("projection rulesProfile requires id/version");
   return { id:raw.id,version:raw.version };
+}
+
+function parseSourceAuthority(value:unknown):CharacterProjectionSourceAuthorityV1 {
+  const raw=object(value);
+  if (!raw) throw new Error("projection sourceAuthority must be an object");
+  const keyError=exactKeys(raw,SOURCE_AUTHORITY_KEYS,"projection sourceAuthority");
+  if (keyError) throw new Error(keyError);
+  if (!nonNegativeInteger(raw.maxHp)) throw new Error("projection sourceAuthority.maxHp must be a non-negative integer");
+  return { maxHp:raw.maxHp };
 }
 
 function parseSource(value:unknown):CharacterSourceSnapshotV1 {
@@ -223,10 +242,14 @@ export function parseCharacterSessionProjectionV1(
     }
     const rulesProfile=parseRulesProfile(raw.rulesProfile);
     const source=parseSource(raw.source);
+    const sourceAuthority=parseSourceAuthority(raw.sourceAuthority);
     const runtime=parseRuntime(raw.runtime);
     if (source.characterId!==raw.characterId) throw new Error(`projection Character ID drift: ${source.characterId} != ${raw.characterId}`);
     if (source.rulesProfile.id!==rulesProfile.id || source.rulesProfile.version!==rulesProfile.version) {
       throw new Error("projection rules profile does not match Character source");
+    }
+    if (runtime.hp < 0 || runtime.hp > sourceAuthority.maxHp) {
+      throw new Error(`projection runtime HP is outside source-owned max HP: ${runtime.hp}/${sourceAuthority.maxHp}`);
     }
     if (!Array.isArray(raw.contentIdentities)) throw new Error("projection contentIdentities must be an array");
     if (raw.contentIdentities.length>2048) throw new Error("projection content identity list exceeds limit");
@@ -257,6 +280,7 @@ export function parseCharacterSessionProjectionV1(
         runtimeRevision:raw.runtimeRevision,
         rulesProfile,
         source,
+        sourceAuthority,
         runtime,
         contentIdentities:identities.sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en")),
       },
