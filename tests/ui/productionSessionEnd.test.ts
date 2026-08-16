@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
@@ -245,4 +246,11 @@ test("Client receiving session-ended becomes explicitly offline without reconnec
   } finally {
     transport.restore();
   }
+});
+
+test("production Host live UI exposes explicit session end control without debug path",()=>{
+  const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
+  assert.match(source,/snapshot\.session\.lifecycle==="live" \? "세션 종료" : "Host 중지"/);
+  assert.match(source,/stopSession\(\)/);
+  assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
