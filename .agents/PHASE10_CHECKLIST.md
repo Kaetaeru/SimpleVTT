@@ -145,22 +145,62 @@ Verification:
 
 Caveat: materialized-cache dependence still exists for other legacy/non-creation source projections. ItemInstance/spellbook/resource/feature source reconstruction remains a later Phase 10 slice; Step 4 closes the Character Creation edit/revalidation path only.
 
-## Step 5 — ContentCatalog builtin/local/homebrew composition — NEXT
+## Step 5 — Installed ContentCatalog composition and local persistence — CLOSED
 
-- [ ] inventory the current built-in catalog, import preview, source/version/scope fields, and all consumers
-- [ ] define installed ContentCatalog document/identity separate from transient import preview and session content
-- [ ] compose builtin + activated local/homebrew entries deterministically with qualified IDs and source/version provenance
-- [ ] define duplicate/conflict policy without flattening distinct source identities
-- [ ] persist activated local/homebrew installation state with versioned migration/failure semantics
-- [ ] keep session-only content outside permanent local catalog state
-- [ ] deterministic composition/reload/conflict/failure regressions
+Tracking issue: #89
+Draft PR: #90
+Branch: `agent/89-content-catalog-composition`
+Base checkpoint: `3f18c17a4d04d68082b851840edfe12a0c6961bb`
+Verified implementation checkpoint: `d17c260e55d01f4afbdd638573c747dbf0966b3c`
+Documentation checkpoint: `ac055ff8d529d97010f8b84c02dbeb252d8686bb`
+
+- [x] inventoried current builtin catalog, generic import preview/activation, scope/source/version fields, Catalog UI identity consumption, session-content separation, and generated builtin content inputs
+- [x] versioned `simplevtt.installed-content` document/store separated from import preview, session content, builtin product content, and AppSnapshot
+- [x] portable `contentId` kept separate from stable package/source `sourceId` and display `source`
+- [x] deterministic qualified resolved identity `(contentId, sourceId, version)` projected as `CatalogEntry.id` for collision-safe UI keys/selection
+- [x] builtin SRD seed entries resolve under stable source identity `dnd.srd-5.2.1` without duplicating builtin/generated catalogs into the local document
+- [x] builtin + activated local/homebrew entries compose deterministically; session content remains separate
+- [x] exact qualified identity + identical payload is idempotent with no new generation
+- [x] exact qualified identity + different payload is an explicit conflict; same portable ID from different source/version identities coexists
+- [x] local content claiming a builtin qualified identity rejects before persistence
+- [x] generic local import requires stable `sourceId` separate from display source label
+- [x] activation persists before replacing the composed catalog; storage failure/conflict keeps reviewed preview + previous catalog authoritative
+- [x] corrupt-newest recovery / stale-writer reject / newer-schema migration-blocker behavior
+- [x] shared immutable-generation Rust primitive in separate `installed-content` namespace; browser/test store explicitly volatile
+- [x] installed document excludes ContentImportPreview and session-only content
+- [x] deterministic repository/runtime reload/coexistence/idempotency/conflict/builtin-collision/sourceId/failure/session-exclusion regressions
+- [x] focused Character/content persistence application-contract and production build green
+- [x] full UI/creation/progression/Phase09/typecheck/build regression green
+- [x] Windows Rust immutable persistence-store tests green
+- [x] installed ContentCatalog design document
+- [x] Draft PR checkpoint
+
+Verification:
+- Persistence workflow `31933513283` Character/content persistence tests ✅
+- Persistence workflow `31933513283` production build ✅
+- Persistence workflow `31933513283` Windows `cargo test --lib` ✅
+- UI workflow `31933513284` ✅
+
+Caveat: this step composes the application's current builtin Catalog view with durable local entries. It does not claim that every generated SRD catalog has already been normalized into one universal generic Catalog feed, and it deliberately does not implement dependency/range/cycle/replacement graph semantics.
+
+## Step 6 — Module dependency/version/capability/conflict validation — NEXT
+
+- [ ] inventory existing module manifests, content relationships, RulesProfile compatibility metadata, capability checks, and current unsupported-content behavior
+- [ ] define declarative installed source/module manifest identity without introducing executable module loading
+- [ ] validate required dependencies and compatible version ranges before activation
+- [ ] validate required capabilities / RulesProfile compatibility explicitly
+- [ ] validate relationship target existence/category compatibility and dependency ownership
+- [ ] detect dependency/relationship cycles deterministically
+- [ ] validate explicit `replaces` / `extends` semantics and competing replacement conflicts; never use load order as resolution policy
+- [ ] preserve disabled/inspection-only status with actionable validation errors where safe instead of silently deleting content
+- [ ] deterministic dependency/version/capability/cycle/replacement/conflict regressions
 - [ ] production build + full UI + Windows persistence gates
 - [ ] Draft PR checkpoint
 
 ## Follow-up Phase 10 slices
 
-- [ ] module dependency/version/capability/cycle/conflict validation
-- [ ] local homebrew import → validation → review → activation
+- [ ] local homebrew import → full manifest validation → review → activation UX
+- [ ] normalize generated builtin catalogs into the generic catalog feed where required by real consumers
 - [ ] ItemInstance/spellbook/resource/feature source reconstruction without materialized-cache dependence
 - [ ] atomic save failure/recovery end-to-end Windows gate
 
@@ -171,6 +211,8 @@ Caveat: materialized-cache dependence still exists for other legacy/non-creation
 - Draft persistence stores user/source intent, not derived previews or validation results.
 - Confirmed ResolutionEvents write back only explicitly Character-durable state; session-only state stays session-only.
 - Maximum HP stays source/progression-owned until an explicit source-model write-back contract exists.
+- Installed local content persists normalized declarative content, never import preview/session state or executable code.
+- Load order is never conflict resolution; qualified source/version identity remains explicit.
 - Do not silently overwrite corrupt or newer generations.
 - Do not call volatile browser memory/localStorage durable persistence.
 - Core remains map/grid/token/path/LOS free.
