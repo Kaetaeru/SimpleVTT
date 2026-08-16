@@ -15,7 +15,7 @@ type ProjectionMountAdapterState = {
 
 export interface ProjectionResolutionContext {
   previousActiveCharacter:CharacterSheet;
-  previousSelectedActorId?:string;
+  previousSelectedActorId:string;
   previousActionActorOrder:string[];
 }
 
