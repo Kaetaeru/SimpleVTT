@@ -11,6 +11,7 @@ import {
 import { activeRulesProfileCompatibility, validateInstalledContentCandidate } from "./declarativeModuleValidation";
 import { validateInstalledContentPackage } from "./ruleModulePackageValidation";
 import { looksLikeRuleModulePackage, parseRuleModulePackage } from "./ruleModulePackageImport";
+import { ruleModulePackageReviewEntry } from "./ruleModulePackageReviewEntry";
 import { InstalledContentRepository } from "./installedContentPersistence";
 import type { InstalledCatalogEntryV1, InstalledContentDocumentV1, InstalledContentStore } from "./installedContentContracts";
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
@@ -121,6 +122,7 @@ function previewPackage(adapter:MockAdapter,payload:string) {
       validation:validation.issues.map(toValidation),
       unsupportedCapabilities:[],
       package:parsed.preview,
+      entry:ruleModulePackageReviewEntry(parsed),
     };
     for (const entry of parsed.entries) {
       if (collidesWithBuiltin(context,entry.contentId,entry.sourceId,entry.version)) {
