@@ -42,6 +42,19 @@ function isProvenanceArray(value:unknown) {
     &&typeof entry.reason==="string");
 }
 
+function isEconomy(value:unknown) {
+  return isRecord(value)
+    &&typeof value.action==="boolean"
+    &&typeof value.bonusAction==="boolean"
+    &&typeof value.reaction==="boolean"
+    &&typeof value.movement==="number"
+    &&typeof value.movementMax==="number";
+}
+
+function isEconomyMap(value:unknown) {
+  return isRecord(value)&&Object.values(value).every(isEconomy);
+}
+
 function isCharacterRevision(value:unknown) {
   if (!isRecord(value)) return false;
   return isString(value.characterId)&&isCursor(value.sourceRevision)&&isCursor(value.runtimeRevision);
@@ -84,7 +97,10 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
   if (!isString(payload.kind)||!isStringArray(payload.stateChanges)||!isStringArray(payload.provenance)) return false;
   if (payload.kind==="resolution") {
     if (!isString(payload.resolutionId)||!Array.isArray(payload.resolutionEvents)||!payload.resolutionEvents.every(isResolutionEvent)) return false;
-  } else if (!["mode-transition","correction","participant"].includes(payload.kind)) return false;
+  } else if (payload.kind==="mode-transition") {
+    if ((payload.sessionMode!=="freeform"&&payload.sessionMode!=="initiative")
+      ||!isCursor(payload.round)||!isString(payload.currentActorId)||!isEconomyMap(payload.economyByActor)) return false;
+  } else if (payload.kind!=="correction"&&payload.kind!=="participant") return false;
   return (value.requestId===undefined||isString(value.requestId))&&(value.actorId===undefined||isString(value.actorId));
 }
 
