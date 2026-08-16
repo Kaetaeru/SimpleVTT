@@ -3,6 +3,10 @@ name: Phase 13 SessionProjection
 env:
   SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
+concurrency:
+  group: phase13-session-projection-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
