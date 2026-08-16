@@ -44,6 +44,17 @@ export function mountCharacterSessionProjection(
   state.byCharacterId.set(mounted.characterId,structuredClone(mounted));
 }
 
+export function rebindCharacterSessionProjectionPeer(adapter:MockAdapter,characterId:string,peerId:string) {
+  const state=registries.get(adapter);
+  const mounted=state?.byCharacterId.get(characterId);
+  if (!state || !mounted) return undefined;
+  state.byPeerId.delete(mounted.peerId);
+  const rebound={...mounted,peerId};
+  state.byCharacterId.set(characterId,structuredClone(rebound));
+  state.byPeerId.set(peerId,characterId);
+  return structuredClone(rebound);
+}
+
 export function unmountCharacterSessionProjectionForPeer(adapter:MockAdapter,peerId:string) {
   const state=registries.get(adapter);
   if (!state) return;
@@ -78,7 +89,11 @@ export function replaceProjectedCharacterSheet(adapter:MockAdapter,sheet:Charact
   const state=registries.get(adapter);
   const mounted=state?.byCharacterId.get(sheet.id);
   if (!state || !mounted) return false;
-  state.byCharacterId.set(sheet.id,{ ...mounted,sheet:structuredClone(sheet) });
+  state.byCharacterId.set(sheet.id,{
+    ...mounted,
+    runtimeRevision:sheet.runtimeRevision ?? mounted.runtimeRevision,
+    sheet:structuredClone(sheet),
+  });
   return true;
 }
 
