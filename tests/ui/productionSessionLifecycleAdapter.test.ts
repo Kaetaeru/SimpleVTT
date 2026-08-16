@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
@@ -116,4 +117,15 @@ test("Host bind failure returns an actionable offline snapshot instead of a reje
     tauriSessionTransport.startHost=originalStart;
     transport.restore();
   }
+});
+
+test("production UI surfaces preparation status, shareable address, and Host stop without debug controls",()=>{
+  const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
+  assert.match(source,/Host 준비 중/);
+  assert.match(source,/공유 주소/);
+  assert.match(source,/snapshot\.session\.address/);
+  assert.match(source,/snapshot\.session\.participants\.length/);
+  assert.match(source,/Host 중지/);
+  assert.match(source,/stopSession\(\)/);
+  assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
