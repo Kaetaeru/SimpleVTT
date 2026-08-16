@@ -10,6 +10,10 @@ on:
       - "src/app/*AuthoringDraft*"
       - "src/app/*authoringDraft*"
       - "src/app/*resolutionCharacter*"
+      - "src/app/phase09RealRuntimeAttackAdapter.ts"
+      - "src/app/phase09RealAtomicHealingAdapter.ts"
+      - "src/app/phase09RealAtomicItemAdapter.ts"
+      - "src/app/phase09RealAtomicSavingThrowAdapter.ts"
       - "tests/ui/characterLibrary*.test.ts"
       - "tests/ui/authoringDraft*.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
@@ -31,6 +35,10 @@ on:
       - "src/app/*AuthoringDraft*"
       - "src/app/*authoringDraft*"
       - "src/app/*resolutionCharacter*"
+      - "src/app/phase09RealRuntimeAttackAdapter.ts"
+      - "src/app/phase09RealAtomicHealingAdapter.ts"
+      - "src/app/phase09RealAtomicItemAdapter.ts"
+      - "src/app/phase09RealAtomicSavingThrowAdapter.ts"
       - "tests/ui/characterLibrary*.test.ts"
       - "tests/ui/authoringDraft*.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
@@ -55,7 +63,7 @@ jobs:
       - name: Generate content dependencies
         run: npm run generate:content
       - name: Verify Character persistence repositories and adapters
-        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
       - name: Verify production build
         run: npm run build
 
