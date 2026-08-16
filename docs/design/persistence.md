@@ -22,7 +22,11 @@ Phase 10 begins while some current Character source graphs are still represented
 
 That cache is not canonical source data. Revision decisions are made from the separated `source` and `runtime` projections. As ContentCatalog/source reconstruction becomes complete, the cache may be discarded and rebuilt.
 
-Derived totals such as AC, attack modifiers, save DCs, action availability, and presentation labels must not become authoritative merely because they appear in the cache.
+Newly committed Character Creation state now carries an explicit `creationAuthoring` source payload. Existing-character edit reopening uses that payload for rules profile, identity/build selections, ability authoring input and roll-slot identity, skill/spell/class choices, equipment choices, ChoiceDefinition selections, notes, and overrides, then reruns the current creation normalization/plan logic. It does not trust a persisted creation preview, validation result, or derived total.
+
+Records created before this source payload existed remain readable. Their edit path is explicitly marked `legacy-reconstructed` and warns that authoring input was reconstructed from compatibility/materialized data. Such a reconstruction is not silently promoted to canonical source until the owner reviews and commits the edit.
+
+Derived totals such as AC, attack modifiers, save DCs, action availability, and presentation labels must not become authoritative merely because they appear in the cache. Materialized-cache dependence still exists for other legacy/non-creation source projections and is follow-up work; this slice does not claim that the cache can yet be removed globally.
 
 ## 3. Revision model
 
@@ -33,6 +37,8 @@ Each Character record has independent revisions:
 - `storageRevision` belongs to a persisted document generation and changes for every committed file generation.
 
 A stale writer must be rejected rather than overwriting a newer generation.
+
+A source-only Character edit preserves durable runtime state. Current HP is retained subject to the newly derived maximum, Temp HP/life flags are retained, and matching Resource/ItemInstance mutable state is carried forward by stable IDs. Consequently a source-only edit increments `sourceRevision` but does not increment `runtimeRevision` unless the durable runtime projection actually changes.
 
 Maximum HP is currently treated as a source/progression-derived property rather than duplicated into the runtime projection. A future ResolutionEvent that changes maximum HP therefore needs an explicit source-model contract; the runtime write-back path rejects such an event instead of silently changing revision ownership.
 
@@ -112,16 +118,28 @@ Turn-runtime attacks add a revision precheck before Character persistence. If th
 
 Maximum-HP ResolutionEvent write-back is deliberately rejected today. Maximum HP is source/progression-owned in the current Character model; silently placing it in the runtime projection would incorrectly increment both source and runtime revisions during level-up.
 
-## 8. Write-back roadmap
+## 8. Source edit and reconstruction boundary
 
-The Character library, authoring-draft lifecycle, and current event-native Character runtime write-back are now established. Follow-up Phase 10 slices focus on:
+For a newly created Character, the committed `creationAuthoring` payload is the authoritative input for reopening Character Creation editing. Reopen applies those inputs to a fresh/current draft shape and then runs the same ChoiceDefinition normalization and `CharacterCreationPlan` derivation used during authoring. Upstream edits therefore pass through the existing invalidation/revalidation logic instead of retaining an old persisted preview.
 
-1. existing Character source edit/revalidation and reduction of materialized-cache dependence;
-2. real ContentCatalog/local-homebrew installation state;
-3. additional durable state kinds only when their canonical source/runtime ownership is explicit.
+The materialized cache may contain a compatibility copy of authoring metadata, but committed `source.creationAuthoring` wins whenever it exists. Tests deliberately poison the cache copy and verify that edit reopen still uses the committed source payload.
+
+For legacy records with no explicit `creationAuthoring`, hydration derives a deterministic `legacy-reconstructed` compatibility source and edit UI exposes that status. The reconstructed input is reviewable but is not represented as original canonical intent. A successful edit commit records the reviewed current authoring input as explicit source for subsequent reopen.
+
+This boundary intentionally preserves durable runtime state across source-only edits. Source-dependent maxima/definitions are recalculated, while mutable state is retained only where stable identities still match. This keeps source and runtime revisions independent and avoids resetting resources or item usage merely because descriptive/build source changed.
+
+## 9. Phase 10 continuation
+
+The Character library, authoring-draft lifecycle, event-native Character runtime write-back, and canonical creation-source edit/revalidation path are now established. Follow-up Phase 10 slices focus on:
+
+1. real ContentCatalog builtin/local/homebrew composition and installed-source identity;
+2. module dependency/version/capability/cycle/conflict validation;
+3. local homebrew import → validation → review → activation;
+4. ItemInstance/spellbook/resource/feature source reconstruction that further reduces materialized-cache dependence;
+5. additional durable state kinds only when their canonical source/runtime ownership is explicit.
 
 Session-only state remains outside the permanent Character file unless a specific rule and write-back classification says otherwise.
 
-## 9. Movement boundary
+## 10. Movement boundary
 
 Persistence does not add battle-map state to Core. Coordinates, tokens, grids, paths, LOS and external map-module state remain outside the core Character library unless a future optional module defines and owns its own persistence contract.
