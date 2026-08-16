@@ -39,9 +39,13 @@ async function fillCurrentCreationDraft(adapter:MockAdapter) {
     }
 
     const equipment = plan.sections.find((section) => section.id === "class-equipment");
-    if (equipment?.status === "incomplete" && equipment.options[0]) {
-      await adapter.updateCharacterDraft({type:"set-equipment",value:equipment.options[0].id});
-      changed = true;
+    if (equipment?.status === "incomplete") {
+      const rangedFighterLoadout=equipment.options.find((option)=>option.id.endsWith("#B"));
+      const selected=rangedFighterLoadout ?? equipment.options[0];
+      if (selected) {
+        await adapter.updateCharacterDraft({type:"set-equipment",value:selected.id});
+        changed = true;
+      }
     }
 
     const current = await adapter.getSnapshot();
@@ -96,6 +100,7 @@ async function createPersistedProductionFighter(name:string) {
   assert.equal(committed.activeCharacter.saveState,"saved");
   assert.notEqual(characterId,"char.aelar");
   assert.notEqual(characterId,"char.mira");
+  assert.ok(committed.activeCharacter.attacks.some((attack)=>/longbow|장궁/i.test(attack.name)),"production Fighter loadout B must materialize its Longbow attack");
   assert.ok((committed.persistence?.storageRevision ?? 0) >= 1,"production Character must be durably committed");
   return {adapter,store,characterId};
 }
