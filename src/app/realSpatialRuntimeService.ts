@@ -3,13 +3,6 @@ import type { SceneVm } from "./contracts";
 import type { MovementSpatialUpdate } from "./movementRuntimeContracts";
 import { setSpatialRelation, spatialPairKey, type SpatialRelationVm } from "./spatialRuntimeContracts";
 
-const REFERENCE_RELATIONS:Array<Omit<SpatialRelationVm,"provenance">> = [
-  { sourceId:"char.aelar", targetId:"combatant.goblin-a", distanceFeet:22, visible:true, cover:"none", targetCanSeeAttacker:true },
-  { sourceId:"char.aelar", targetId:"combatant.goblin-b", distanceFeet:35, visible:true, cover:"none", targetCanSeeAttacker:true },
-  { sourceId:"char.aelar", targetId:"combatant.wolf", distanceFeet:18, visible:true, cover:"none", targetCanSeeAttacker:true },
-  { sourceId:"char.aelar", targetId:"combatant.training-guardian", distanceFeet:20, visible:true, cover:"none", targetCanSeeAttacker:true },
-];
-
 export interface MovementSpatialPlan {
   actorId:string;
   updates:SpatialRelationVm[];
@@ -17,26 +10,57 @@ export interface MovementSpatialPlan {
   provenance:string[];
 }
 
-function addSymmetricReference(scene:SceneVm,relation:Omit<SpatialRelationVm,"provenance">) {
-  const provenance=`runtime:spatial:${scene.id}:reference-fixture`;
-  const forward={ ...relation, provenance };
-  const reverse={
-    sourceId:relation.targetId,
-    targetId:relation.sourceId,
-    distanceFeet:relation.distanceFeet,
-    visible:relation.visible,
-    cover:relation.cover,
-    targetCanSeeAttacker:relation.targetCanSeeAttacker,
-    provenance,
-  };
-  if (!scene.spatialByPair?.[spatialPairKey(forward.sourceId,forward.targetId)]) setSpatialRelation(scene,forward);
-  if (!scene.spatialByPair?.[spatialPairKey(reverse.sourceId,reverse.targetId)]) setSpatialRelation(scene,reverse);
+function sceneDistanceFeet(distance:string) {
+  const match=distance.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return undefined;
+  const feet=Number(match[1]);
+  return Number.isFinite(feet)&&feet>=0?feet:undefined;
 }
 
+function addSymmetricSceneRelation(scene:SceneVm,sourceId:string,targetId:string,distanceFeet:number) {
+  const provenance=`runtime:spatial:${scene.id}:scene-distance-baseline`;
+  const forward:SpatialRelationVm={
+    sourceId,
+    targetId,
+    distanceFeet,
+    visible:true,
+    cover:"none",
+    targetCanSeeAttacker:true,
+    provenance,
+  };
+  const reverse:SpatialRelationVm={
+    sourceId:targetId,
+    targetId:sourceId,
+    distanceFeet,
+    visible:true,
+    cover:"none",
+    targetCanSeeAttacker:true,
+    provenance,
+  };
+  if (!scene.spatialByPair?.[spatialPairKey(sourceId,targetId)]) setSpatialRelation(scene,forward);
+  if (!scene.spatialByPair?.[spatialPairKey(targetId,sourceId)]) setSpatialRelation(scene,reverse);
+}
+
+/**
+ * The built-in theater-of-mind scene already carries a distance label on each
+ * combatant. Materialize that scene-owned state into the pairwise runtime
+ * contract for every live Character actor instead of binding targeting facts to
+ * reference Character/combatant ids. External movement/map modules can replace
+ * these pairwise facts later without core calculating coordinates, paths, LOS,
+ * or cover.
+ */
 export function ensureReferenceSpatialRuntime(scene:SceneVm) {
   scene.spatialByPair ??={};
   if (scene.id!=="scene.ruined-gate") return scene.spatialByPair;
-  for (const relation of REFERENCE_RELATIONS) addSymmetricReference(scene,relation);
+  const actors=scene.entities.filter((entity)=>entity.kind==="character");
+  const combatants=scene.entities.filter((entity)=>entity.kind==="combatant");
+  for (const actor of actors) {
+    for (const target of combatants) {
+      const distanceFeet=sceneDistanceFeet(target.distance);
+      if (distanceFeet===undefined) continue;
+      addSymmetricSceneRelation(scene,actor.id,target.id,distanceFeet);
+    }
+  }
   return scene.spatialByPair;
 }
 
@@ -109,5 +133,5 @@ export function prepareMovementSpatialUpdates(
 
 export function applyMovementSpatialPlan(scene:SceneVm,plan:MovementSpatialPlan) {
   for (const update of plan.updates) setSpatialRelation(scene,update);
-  return plan;
+  return scene;
 }
