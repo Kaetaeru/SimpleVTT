@@ -1,12 +1,15 @@
-import type { CharacterSheet } from "./contracts";
+import type { CharacterResourceVm, CharacterSheet, ItemInstanceVm } from "./contracts";
 import {
   CHARACTER_LIBRARY_SCHEMA_ID,
   CHARACTER_LIBRARY_SCHEMA_VERSION,
   DEFAULT_RULES_PROFILE,
+  type CharacterItemRuntimeStateV1,
+  type CharacterItemSourceReferenceV1,
   type CharacterLibraryDocumentV1,
   type CharacterLibraryRecordV1,
   type CharacterLibraryStore,
   type CharacterProgressionSelectionsV1,
+  type CharacterResourceRuntimeStateV1,
   type CharacterRuntimeDurableSnapshotV1,
   type CharacterSourceSnapshotV1,
 } from "./persistenceContracts";
@@ -66,6 +69,50 @@ function progressionSelections(sheet:CharacterSheet):CharacterProgressionSelecti
   });
 }
 
+function itemSourceReference(item:ItemInstanceVm):CharacterItemSourceReferenceV1 {
+  return {
+    id:item.id,
+    definitionId:item.definitionId,
+    name:item.name,
+    nameEn:item.nameEn,
+    kind:item.kind,
+    attunementRequired:item.attunementRequired,
+    chargeMaximum:item.charges?.max,
+    passiveEffects:cp(item.passiveEffects),
+    grantedActionIds:cp(item.grantedActionIds),
+    provenance:cp(item.provenance),
+  };
+}
+
+function resourceSourceDefinition(resource:CharacterResourceVm) {
+  return {
+    id:resource.id,
+    label:resource.label,
+    max:resource.max,
+    source:resource.source,
+    recovery:resource.recovery ? cp(resource.recovery) : undefined,
+  };
+}
+
+function itemRuntimeState(item:ItemInstanceVm):CharacterItemRuntimeStateV1 {
+  return {
+    id:item.id,
+    quantity:item.quantity,
+    equipped:item.equipped,
+    wielded:item.wielded,
+    attuned:item.attuned,
+    charges:item.charges ? { current:item.charges.current } : undefined,
+  };
+}
+
+function resourceRuntimeState(resource:CharacterResourceVm):CharacterResourceRuntimeStateV1 {
+  return {
+    id:resource.id,
+    current:resource.current,
+    recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
+  };
+}
+
 export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSnapshotV1 {
   return {
     characterId:sheet.id,
@@ -100,7 +147,9 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
       masteryWeapons:sheet.masteryWeapons ? cp(sheet.masteryWeapons) : undefined,
     },
     progression:progressionSelections(sheet),
-    itemReferences:sheet.items.map((item) => ({ id:item.id, definitionId:item.definitionId, provenance:cp(item.provenance) })),
+    featureGrants:cp(sheet.features),
+    resourceDefinitions:sheet.resources.map(resourceSourceDefinition),
+    itemReferences:sheet.items.map(itemSourceReference),
   };
 }
 
@@ -109,9 +158,31 @@ export function projectCharacterRuntimeDurableV1(sheet:CharacterSheet):Character
     hp:sheet.hp,
     tempHp:sheet.tempHp,
     lifeFlags:sheet.durableLifeFlags ? cp(sheet.durableLifeFlags) : undefined,
-    resources:cp(sheet.resources),
-    items:cp(sheet.items),
+    resources:sheet.resources.map(resourceRuntimeState),
+    items:sheet.items.map(itemRuntimeState),
     goldGp:sheet.goldGp,
+  };
+}
+
+function comparableRuntime(runtime:CharacterRuntimeDurableSnapshotV1):CharacterRuntimeDurableSnapshotV1 {
+  return {
+    hp:runtime.hp,
+    tempHp:runtime.tempHp,
+    lifeFlags:runtime.lifeFlags ? cp(runtime.lifeFlags) : undefined,
+    resources:runtime.resources.map((resource) => ({
+      id:resource.id,
+      current:resource.current,
+      recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
+    })),
+    items:runtime.items.map((item) => ({
+      id:item.id,
+      quantity:item.quantity,
+      equipped:item.equipped,
+      wielded:item.wielded,
+      attuned:item.attuned,
+      charges:item.charges ? { current:item.charges.current } : undefined,
+    })),
+    goldGp:runtime.goldGp,
   };
 }
 
@@ -122,7 +193,7 @@ export function buildCharacterLibraryRecordV1(sheet:CharacterSheet, previous?:Ch
     ? previous.sourceRevision + (same(previous.source,source) ? 0 : 1)
     : Math.max(1,sheet.sourceRevision ?? 1);
   const runtimeRevision = previous
-    ? previous.runtimeRevision + (same(previous.runtime,runtime) ? 0 : 1)
+    ? previous.runtimeRevision + (same(comparableRuntime(previous.runtime),runtime) ? 0 : 1)
     : Math.max(1,sheet.runtimeRevision ?? 1);
   const cached = cp(sheet);
   cached.rulesProfileId = source.rulesProfile.id;
@@ -139,21 +210,128 @@ export function buildCharacterLibraryRecordV1(sheet:CharacterSheet, previous?:Ch
   };
 }
 
+function applyProgressionSource(sheet:CharacterSheet,progression:CharacterProgressionSelectionsV1) {
+  sheet.expertiseSkills=progression.expertiseSkills ? cp(progression.expertiseSkills) : undefined;
+  sheet.expertiseSources=progression.expertiseSources ? cp(progression.expertiseSources) : undefined;
+  sheet.languageSources=progression.languageSources ? cp(progression.languageSources) : undefined;
+  sheet.cantripSources=progression.cantripSources ? cp(progression.cantripSources) : undefined;
+  sheet.preparedSpellSources=progression.preparedSpellSources ? cp(progression.preparedSpellSources) : undefined;
+  sheet.spellbookSpellSources=progression.spellbookSpellSources ? cp(progression.spellbookSpellSources) : undefined;
+  sheet.spellMasterySpellIds=progression.spellMasterySpellIds ? cp(progression.spellMasterySpellIds) : undefined;
+  sheet.spellMasterySources=progression.spellMasterySources ? cp(progression.spellMasterySources) : undefined;
+  sheet.signatureSpellIds=progression.signatureSpellIds ? cp(progression.signatureSpellIds) : undefined;
+  sheet.signatureSpellSources=progression.signatureSpellSources ? cp(progression.signatureSpellSources) : undefined;
+  sheet.metamagicIds=progression.metamagicIds ? cp(progression.metamagicIds) : undefined;
+  sheet.metamagicSources=progression.metamagicSources ? cp(progression.metamagicSources) : undefined;
+  sheet.eldritchInvocationIds=progression.eldritchInvocationIds ? cp(progression.eldritchInvocationIds) : undefined;
+  sheet.eldritchInvocationSources=progression.eldritchInvocationSources ? cp(progression.eldritchInvocationSources) : undefined;
+  sheet.mysticArcanumSpellIds=progression.mysticArcanumSpellIds ? cp(progression.mysticArcanumSpellIds) : undefined;
+  sheet.mysticArcanumSources=progression.mysticArcanumSources ? cp(progression.mysticArcanumSources) : undefined;
+  sheet.persistentFeatureOptionIds=progression.persistentFeatureOptionIds ? cp(progression.persistentFeatureOptionIds) : undefined;
+  sheet.persistentFeatureOptionSources=progression.persistentFeatureOptionSources ? cp(progression.persistentFeatureOptionSources) : undefined;
+  sheet.epicBoonFeatIds=progression.epicBoonFeatIds ? cp(progression.epicBoonFeatIds) : undefined;
+  sheet.epicBoonFeatSources=progression.epicBoonFeatSources ? cp(progression.epicBoonFeatSources) : undefined;
+  sheet.weaponMasteryIds=progression.weaponMasteryIds ? cp(progression.weaponMasteryIds) : undefined;
+  sheet.weaponMasterySources=progression.weaponMasterySources ? cp(progression.weaponMasterySources) : undefined;
+  sheet.fightingStyleFeatIds=progression.fightingStyleFeatIds ? cp(progression.fightingStyleFeatIds) : undefined;
+  sheet.fightingStyleFeatSources=progression.fightingStyleFeatSources ? cp(progression.fightingStyleFeatSources) : undefined;
+  sheet.subclassIds=progression.subclassIds ? cp(progression.subclassIds) : undefined;
+  sheet.subclassSources=progression.subclassSources ? cp(progression.subclassSources) : undefined;
+  sheet.subclassFeatureIds=progression.subclassFeatureIds ? cp(progression.subclassFeatureIds) : undefined;
+  sheet.subclassFeatureSources=progression.subclassFeatureSources ? cp(progression.subclassFeatureSources) : undefined;
+  sheet.bardMagicalDiscoverySpellIds=progression.bardMagicalDiscoverySpellIds ? cp(progression.bardMagicalDiscoverySpellIds) : undefined;
+  sheet.bardMagicalDiscoverySpellSources=progression.bardMagicalDiscoverySpellSources ? cp(progression.bardMagicalDiscoverySpellSources) : undefined;
+  sheet.pactTomeCantripIds=progression.pactTomeCantripIds ? cp(progression.pactTomeCantripIds) : undefined;
+  sheet.pactTomeRitualSpellIds=progression.pactTomeRitualSpellIds ? cp(progression.pactTomeRitualSpellIds) : undefined;
+  sheet.pactTomeSpellSources=progression.pactTomeSpellSources ? cp(progression.pactTomeSpellSources) : undefined;
+}
+
+function applySourceSnapshot(sheet:CharacterSheet,source:CharacterSourceSnapshotV1) {
+  sheet.id=source.characterId;
+  sheet.name=source.name;
+  sheet.className=source.build.className;
+  sheet.subclassName=source.build.subclassName;
+  sheet.level=source.build.level;
+  sheet.species=source.build.species;
+  sheet.background=source.build.background;
+  sheet.abilities=cp(source.build.abilities);
+  sheet.skills=cp(source.build.skills);
+  sheet.classLevels=source.build.classLevels ? cp(source.build.classLevels) : undefined;
+  sheet.hitDiceByDie=source.build.hitDiceByDie ? cp(source.build.hitDiceByDie) : undefined;
+  sheet.size=source.build.size;
+  sheet.languages=source.build.languages ? cp(source.build.languages) : undefined;
+  sheet.toolProficiencies=source.build.toolProficiencies ? cp(source.build.toolProficiencies) : undefined;
+  sheet.creationSelections=cp(source.build.creationSelections);
+  sheet.notes=source.build.notes;
+  sheet.cantrips=source.spellAndFeatureSelections.cantrips ? cp(source.spellAndFeatureSelections.cantrips) : undefined;
+  sheet.preparedSpells=source.spellAndFeatureSelections.preparedSpells ? cp(source.spellAndFeatureSelections.preparedSpells) : undefined;
+  sheet.spellbookSpells=source.spellAndFeatureSelections.spellbookSpells ? cp(source.spellAndFeatureSelections.spellbookSpells) : undefined;
+  sheet.masteryWeapons=source.spellAndFeatureSelections.masteryWeapons ? cp(source.spellAndFeatureSelections.masteryWeapons) : undefined;
+  applyProgressionSource(sheet,source.progression);
+  if (source.featureGrants) sheet.features=cp(source.featureGrants);
+  sheet.rulesProfileId=source.rulesProfile.id;
+  sheet.rulesProfileVersion=source.rulesProfile.version;
+}
+
+function materializeResources(record:CharacterLibraryRecordV1):CharacterResourceVm[] {
+  const definitions=record.source.resourceDefinitions;
+  if (!definitions) return cp(record.runtime.resources as unknown as CharacterResourceVm[]);
+  const runtimeById=new Map(record.runtime.resources.map((resource)=>[resource.id,resource]));
+  return definitions.map((definition)=>{
+    const runtime=runtimeById.get(definition.id);
+    return {
+      id:definition.id,
+      label:definition.label,
+      current:Math.min(runtime?.current ?? definition.max,definition.max),
+      max:definition.max,
+      source:definition.source,
+      recovery:definition.recovery ? cp(definition.recovery) : undefined,
+      recoveryLockouts:runtime?.recoveryLockouts ? cp(runtime.recoveryLockouts) : undefined,
+    };
+  });
+}
+
+function materializeItems(record:CharacterLibraryRecordV1):ItemInstanceVm[] {
+  const runtimeById=new Map(record.runtime.items.map((item)=>[item.id,item]));
+  return record.source.itemReferences.map((reference)=>{
+    const runtime=runtimeById.get(reference.id);
+    const legacy=runtime as unknown as Partial<ItemInstanceVm>|undefined;
+    const maximum=reference.chargeMaximum ?? legacy?.charges?.max;
+    const current=runtime?.charges?.current ?? legacy?.charges?.current;
+    return {
+      id:reference.id,
+      definitionId:reference.definitionId,
+      name:reference.name ?? legacy?.name ?? reference.definitionId,
+      nameEn:reference.nameEn ?? legacy?.nameEn,
+      kind:reference.kind ?? legacy?.kind ?? "equipment",
+      quantity:runtime?.quantity ?? legacy?.quantity ?? 1,
+      equipped:runtime?.equipped ?? legacy?.equipped ?? false,
+      wielded:runtime?.wielded ?? legacy?.wielded,
+      attunementRequired:reference.attunementRequired ?? legacy?.attunementRequired,
+      attuned:runtime?.attuned ?? legacy?.attuned,
+      charges:maximum !== undefined ? { current:Math.min(current ?? maximum,maximum),max:maximum } : undefined,
+      passiveEffects:cp(reference.passiveEffects ?? legacy?.passiveEffects ?? []),
+      grantedActionIds:cp(reference.grantedActionIds ?? legacy?.grantedActionIds ?? []),
+      provenance:cp(reference.provenance),
+    };
+  });
+}
+
 export function materializeCharacterRecordV1(record:CharacterLibraryRecordV1):CharacterSheet {
   const sheet = cp(record.materializedCache.sheet);
-  sheet.id = record.characterId;
-  sheet.name = record.source.name;
+  applySourceSnapshot(sheet,record.source);
   sheet.hp = record.runtime.hp;
   sheet.tempHp = record.runtime.tempHp;
-  sheet.resources = cp(record.runtime.resources);
-  sheet.items = cp(record.runtime.items);
+  sheet.resources = materializeResources(record);
+  sheet.items = materializeItems(record);
+  if (record.source.itemReferences.every((reference)=>typeof reference.name === "string")) {
+    sheet.equipment=sheet.items.map((item)=>item.quantity>1 ? `${item.name} ×${item.quantity}` : item.name);
+  }
   sheet.goldGp = record.runtime.goldGp;
   sheet.durableLifeFlags = record.runtime.lifeFlags ? cp(record.runtime.lifeFlags) : sheet.durableLifeFlags;
   sheet.creationAuthoringSource = record.source.creationAuthoring
     ? cp(record.source.creationAuthoring)
     : reconstructLegacyCreationAuthoringSourceV1(sheet);
-  sheet.rulesProfileId = record.source.rulesProfile.id;
-  sheet.rulesProfileVersion = record.source.rulesProfile.version;
   sheet.sourceRevision = record.sourceRevision;
   sheet.runtimeRevision = record.runtimeRevision;
   return sheet;

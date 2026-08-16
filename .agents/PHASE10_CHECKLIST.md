@@ -219,10 +219,39 @@ Verification:
 
 Note: this slice normalizes only categories with a canonical repository source and a real generic Catalog consumer. It does not fabricate subclass/monster/category data solely for presentation completeness.
 
+## Follow-up B — Character source reconstruction without materialized-cache authority — CLOSED
+
+Tracking issue: #97
+Draft PR: #98
+Branch: `agent/97-character-source-reconstruction`
+Base checkpoint: `5aa094f2c63f780ecd674d0fdde0b98bb623176a`
+Verified implementation checkpoint: `a4d4ddbfc8682512ead7f2e3fb3814c47135e3cd`
+
+- [x] keep Character library schema v1 and make the source/runtime ownership split additive instead of inventing a destructive migration
+- [x] restore existing build, cantrip/prepared/spellbook/mastery selections and progression choice/source maps from `record.source` rather than materialized cache
+- [x] persist ItemInstance definition/presentation/attunement requirement/charge maximum/passive actions/provenance as source-owned state
+- [x] persist ItemInstance quantity/equipped/wielded/attuned/current charges as mutable runtime state
+- [x] persist resource label/max/source/recovery as source-owned definitions and current/recovery lockouts as mutable runtime state
+- [x] persist source-owned feature projection and rebuild covered item/resource/equipment state from source + runtime during hydration
+- [x] normalize legacy v1 full-object runtime payloads before revision comparison so projection-shape migration alone does not advance runtimeRevision
+- [x] retain compatibility fallback for additive fields absent from older v1 records; materialized cache remains a non-authoritative compatibility/derived projection
+- [x] deterministic cache-drift regression corrupts cached class/features/spells/item/resource data and proves source + runtime win on hydration
+- [x] source-only item/resource/feature changes advance sourceRevision without advancing runtimeRevision
+- [x] application persistence contracts, production build, full UI, Contract validation and same-head Windows Rust persistence gate
+- [x] Draft PR checkpoint
+
+Verification:
+- Persistence PR workflow `31937917044` application-contract + production build ✅
+- Persistence push workflow `31937843013` Windows `cargo test --lib` ✅
+- UI PR workflow `31937917041` ✅
+- Contract validation PR workflow `31937917105` ✅
+
+Note: `materializedCache` remains available for legacy/additive fallback and still carries derived or not-yet-source-modeled presentation fields. It is no longer authoritative for the build/spell/progression/item/resource/feature fields covered by this slice.
+
 ## Follow-up Phase 10 slices
 
 - [x] normalize generated builtin catalogs into the generic catalog feed where required by real consumers
-- [ ] ItemInstance/spellbook/resource/feature source reconstruction without materialized-cache dependence
+- [x] ItemInstance/spellbook/resource/feature source reconstruction without materialized-cache dependence
 - [ ] atomic save failure/recovery end-to-end Windows gate
 
 ## Non-negotiable boundaries
