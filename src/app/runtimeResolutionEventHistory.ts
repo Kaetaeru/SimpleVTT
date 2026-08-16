@@ -1,5 +1,6 @@
 import type { MockAdapter } from "./mockAdapter";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 
 export interface RuntimeResolutionEventHistory {
   resolutionId:string;
@@ -13,10 +14,12 @@ export function recordRuntimeResolutionEvents(
   resolutionId:string,
   events:ResolutionEvent[],
 ) {
+  const committed=events.map((event)=>structuredClone(event));
   historyByAdapter.set(adapter,{
     resolutionId,
-    events:events.map((event)=>structuredClone(event)),
+    events:committed,
   });
+  recordCommittedResolutionEvents(resolutionId,committed);
 }
 
 export function runtimeResolutionEventHistory(adapter:MockAdapter) {
