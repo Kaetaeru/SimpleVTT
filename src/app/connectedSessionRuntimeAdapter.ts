@@ -23,6 +23,7 @@ export const CONNECTED_CAPABILITIES=["resolution-event-v1","character-projection
 export interface ConnectedAdapterState {
   role:"player"|"dm";
   connectionState:ConnectionState;
+  sessionMode:AppSnapshot["sessionMode"];
   session:AppSnapshot["session"];
   scene:SceneVm;
   activeCharacter:CharacterSheet;
@@ -84,8 +85,24 @@ async function sendClientHello(adapter:MockAdapter,knownEventCursor:number) {
 }
 
 async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventPayload,event:ConnectedSessionEvent) {
-  if (payload.kind!=="resolution") return { status:"committed" as const };
   const app=connectedInternal(adapter);
+  if (payload.kind==="mode-transition") {
+    app.sessionMode=payload.sessionMode;
+    app.scene.round=payload.round;
+    app.scene.currentActorId=payload.currentActorId;
+    app.scene.economyByActor=structuredClone(payload.economyByActor);
+    app.activity.unshift({
+      id:`connected:${event.eventId}`,
+      time:"지금",
+      actor:"Host",
+      title:"원격 턴 상태 동기화",
+      summary:`${payload.sessionMode} · round ${payload.round} · ${payload.currentActorId}`,
+      detail:[`eventId=${event.eventId}`,...payload.provenance],
+      stateChanges:[...payload.stateChanges],
+    });
+    return { status:"committed" as const };
+  }
+  if (payload.kind!=="resolution") return { status:"committed" as const };
   const projected=applyResolutionEvents(app.scene,payload.resolutionEvents,app.activeCharacter.resources,app.activeCharacter.items);
   if (projected.status==="rejected") return projected;
 
