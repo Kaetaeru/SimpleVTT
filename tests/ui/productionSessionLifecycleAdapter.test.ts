@@ -22,6 +22,7 @@ function installFakeDesktopTransport() {
     stop:tauriSessionTransport.stop,
     onMessage:tauriSessionTransport.onMessage,
     onState:tauriSessionTransport.onState,
+    onPeerLifecycle:tauriSessionTransport.onPeerLifecycle,
   };
   let startCount=0;
   let connectCount=0;
@@ -33,10 +34,11 @@ function installFakeDesktopTransport() {
   tauriSessionTransport.startHost=async()=>({role:"host",state:"connected",address:`127.0.0.1:${3210+startCount++}`,peerCount:0});
   tauriSessionTransport.connectClient=async(address)=>{connectCount+=1;return {role:"client",state:"connected",address,peerCount:1};};
   tauriSessionTransport.send=async(message)=>{sent.push(message);return 1;};
-  tauriSessionTransport.sendTo=async(peer,message)=>{sentTo.push({peer,message});};
+  tauriSessionTransport.sendTo=async(peer,message)=>{sentTo.push({peer,message});return 1;};
   tauriSessionTransport.stop=async()=>({role:null,state:"disconnected",address:"",peerCount:0});
   tauriSessionTransport.onMessage=async(handler)=>{listenerCount+=1;messageHandler=handler;return()=>{};};
   tauriSessionTransport.onState=async()=>()=>{};
+  tauriSessionTransport.onPeerLifecycle=async()=>()=>{};
   return {
     listenerCount:()=>listenerCount,
     connectCount:()=>connectCount,
@@ -57,6 +59,7 @@ function installFakeDesktopTransport() {
       tauriSessionTransport.stop=original.stop;
       tauriSessionTransport.onMessage=original.onMessage;
       tauriSessionTransport.onState=original.onState;
+      tauriSessionTransport.onPeerLifecycle=original.onPeerLifecycle;
     },
   };
 }
