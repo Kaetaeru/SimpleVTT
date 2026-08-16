@@ -1,0 +1,35 @@
+name: Phase 12 Connected Session
+
+on:
+  push:
+    branches:
+      - "agent/103-connected-session-runtime"
+  pull_request:
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "tests/ui/**"
+      - "docs/design/session-runtime.md"
+      - ".agents/PHASE12_CHECKLIST.md"
+      - ".github/workflows/phase12-connected.yml"
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  connected-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate canonical content
+        run: npm run generate:content
+      - name: Verify connected-session authority protocol
+        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts
+      - name: Verify Phase 11 offline walkthrough remains green
+        run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
+      - name: Verify production frontend gate
+        run: npm run build
