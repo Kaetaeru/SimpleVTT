@@ -44,6 +44,8 @@ jobs:
         run: npm run generate:content
       - name: Verify UI named-rule boundary
         run: npm run test:ui-rule-boundary
+      - name: Verify Phase 14 PlaySessionDock hydration and tab context
+        run: npx tsx --test tests/ui/playSessionDockStructure.test.ts
       - name: Verify creation ChoiceDefinition convergence
         run: npx tsx --test tests/ui/characterCreationChoiceDefinition.test.ts tests/ui/characterCreationChoiceDefinitionStructure.test.ts
       - name: Verify progression choice schedule regression
