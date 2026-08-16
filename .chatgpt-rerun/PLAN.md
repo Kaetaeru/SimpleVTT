@@ -16,62 +16,61 @@
 - local projection ownership: `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`; UI `31974455354`; Main `31974455339`.
 - invalid-entry ghost safety: `7ce39fe44b91009cb1fa660b5e45cb8cf54bfc6d`; Phase12 `31974996616`.
 - durable-after-end rehydrate: `b20ecf18015cec15ad3eb26aba5674e5c91013cb`; Phase12 `31975132450`; Main `31975132458`.
-- fresh Character create/save/play/restart baseline: `8b162dd3b45e77f5a742badcdd7f03d613321497`; Persistence `31975560620`; UI `31975560755`; Main `31975560651`.
-- fresh Character Skills: `c835963e918cce94bd535054a6553ead7e786262`; UI `31976028376`; Main `31976028381`.
-- fresh Character attack + Dash/session-economy repair: product boundary `5d48312289e2f01508b3860428ce98e2830d5f26`; UI `31976479248`; Main `31976479264`.
-- persisted non-fixture Inventory use: `c61469c87f6343ff55601e60890d13a58b6a5536`; Persistence `31976901167`; UI `31976901162`; Main `31976901170`.
+- fresh Character create/save/play/restart: `8b162dd3b45e77f5a742badcdd7f03d613321497`; Persistence `31975560620`; UI `31975560755`; Main `31975560651`.
+- fresh Skills: `c835963e918cce94bd535054a6553ead7e786262`; UI `31976028376`; Main `31976028381`.
+- fresh attack + Dash/session-economy: product boundary `5d48312289e2f01508b3860428ce98e2830d5f26`; UI `31976479248`; Main `31976479264`.
+- persisted non-fixture Inventory: `c61469c87f6343ff55601e60890d13a58b6a5536`; Persistence `31976901167`; UI `31976901162`; Main `31976901170`.
+- persisted non-fixture spellcasting: product/final head `868b8e37127ea644444630cb45a84f36664912ed`; UI `31977494408`; Main `31977496228`; Contract `31977496255`; Rules `31977496204`.
 
 Do not manually repeat these gates unless their relevant source boundary changes.
 
-## Latest validated slice — P14.6 persisted non-fixture spellcasting
-Current exact work/product head: `868b8e37127ea644444630cb45a84f36664912ed`.
+## Documentation credit completed this continuation
+- `.agents/PHASE14_CHECKLIST.md` was safely read through the full-blob path and updated documentation-only at `119bf5dd029ab7cd4268c908afa1cf28075d16de`.
+- Product source did not change in that commit, so no green gate was rerun just for checkbox credit.
+- Credit was deliberately conservative: fresh Character actor/action derivation, core P14.3 skill runtime, canonical P14.4 attack/Freeform economy, P14.5 atomic consumable durability, P14.6 real-caster spell authority, local/restart integration, and directly proven automated integration items. Visible-UI/accessibility, concentration, connected spell, broad equipment/attunement and unproven lifecycle wording remain unchecked.
 
-### Test-first failure that identified the product gap
-- `277e2cd84b110a8657a4aa8e5d940131549bc923` added `tests/ui/productionFreshCharacterSpells.test.ts` for a persisted non-fixture Sorcerer (`char.phase14-spell-sorcerer`) with canonical Fire Bolt, Magic Missile, and two level-1 slots.
-- `0da70413261a7662d4a54c644fdfbeb92a4def1d` wired the regression into the canonical Phase14 UI step.
-- UI `31977327303`, frontend `95238662114` failed only the new spell regression; the existing 15 Phase14 tests in the same batch passed. Exact failure: the arbitrary persisted Sorcerer had no spellcasting HUD/runtime caster projection. This confirmed a real product gap rather than a stale-test expectation.
+## Latest validated slice — P14.8 host-unknown remote Inventory authority
+Final validated work head: `00487d6f421a43b15fb5ef77419e87d8182c35d4`.
+Product behavior boundary: `bd4c104eeb9e953ffdc94468f2ae8f502fc724e3`.
+
+### Test-first evidence and product gap
+- `30bb1f51b495b6b21f5b9f334c5f3090b7e30495` added `tests/ui/connectedProjectedCharacterInventoryResolution.test.ts` for a host-unknown persisted Fighter with exact ItemInstance `item.phase14.remote-inventory-fighter.healing-potion` and canonical definition `dnd.srd521.item.gear.potion-of-healing`.
+- `39eadde71371fb5508ded21bebfca2c39424661b` wired it into the canonical Phase12 connected authority batch.
+- Phase12 `31979020855`, connected-protocol `95242770542`: existing 42 connected regressions passed; only the new test failed because Host reconstruction classified the canonical potion as `equipment` instead of `consumable`. This isolated a real SessionProjection reconstruction gap rather than a ledger/apply regression.
 
 ### Product repair
-- Existing `spellcastingRuntimeAdapter` had fixture-era caster/slot projection centered on `char.mira`, while `productionPlayRuntimeAdapter` exposed only a small presentation spell subset. The domain spell kernel already had complete executable mechanics for Fire Bolt and Magic Missile.
-- `6591fca15cd15483a534b529c365ba41220db557` added `productionSpellcasterProjectionAdapter.ts`:
-  - projects arbitrary persisted Character spell sources into `spellcastingByActor[character.id]`;
-  - derives class-appropriate spellcasting ability, attack modifier, save DC and slot maxima;
-  - derives production Fire Bolt and Magic Missile actions from the Character's actual spell ids with `combat-executable` metadata;
-  - does not add fixture Character ids or a second spell-slot store.
-- `29ece514ff6683fdbd6723ce4a9af172f9341a3c` added `productionSpellRuntimeAdapter.ts`; `ead7d9bb525d75125ea0d251e7a5b669caad0e64` corrected Fire Bolt to reuse one authoritative d20 face consistently.
-  - only the supported Fire Bolt/Magic Missile actions are intercepted;
-  - execution reuses the existing `resolveSpellCast` domain kernel, current TurnRuntime state, real caster HUD and target facts;
-  - Fire Bolt uses authoritative attack/damage dice without slot cost;
-  - Magic Missile uses authoritative projectile dice, spends exactly one TurnRuntime slot, and records the slotted-caster turn marker;
-  - committed ResolutionEvents are projected to Activity/event history; rejection remains atomic;
-  - session spell-slot consumption is not serialized into Character Library, avoiding a duplicate durable source of truth.
-- `868b8e37127ea644444630cb45a84f36664912ed` composed the arbitrary spellcaster projection before the Phase09 spell router and production spell execution after production Character projection.
+- `bd4c104eeb9e953ffdc94468f2ae8f502fc724e3` updates `characterSessionProjectionReconstruction.ts` only:
+  - determines consumable ItemInstance kind from the Host-trusted canonical `consumable-definition` mechanic instead of presentation category;
+  - derives the supported Potion of Healing action only from the Host canonical definition/mechanic, including canonical `2d4+2`, bonus-action economy and actual projected ItemInstance id;
+  - does not trust client-provided `grantedActionIds` or presentation strings as mechanics authority;
+  - leaves connected ledger, event application, persistence and replay protocols unchanged.
+- `dfdbceeddef85fc4b0b9b42f1fd1d0b386dee839` adds the new regression to Main Playable's arbitrary SessionProjection gate.
+- The next Phase12 run `31979172287` proved kind reconstruction passed; its only failure was test-only registry misuse (`MountedCharacterSessionProjection` intentionally has no `actions` field). `00487d6f421a43b15fb5ef77419e87d8182c35d4` corrected the test to assert the mounted action from `SceneVm.actionsByActor`; no product behavior changed.
 
-### Exact validation at `868b8e37127ea644444630cb45a84f36664912ed`
-- UI push `31977494408`, frontend `95239056759`: **completed success**. New persisted Sorcerer spell regression passed; existing Phase14 fresh Character lifecycle/skills/actions/inventory tests, legacy authoritative spellcasting, full Phase09 mechanics, TypeScript and production build all passed.
-- Main Playable PR run `31977496228`, playable-contract `95239068920`: **completed success**. Full UI/rules/build + Phase11 + Phase12 + Phase13 all passed. Windows subjob is not human/final release evidence for this slice.
-- Contract validation `31977496255` and Rules Domain `31977496204` also completed success automatically at the same head; they are supplementary, not a reason to rerun unchanged boundaries.
+### Exact validation at `00487d6f421a43b15fb5ef77419e87d8182c35d4`
+- Phase12 `31979232001`, connected-protocol `95243277113`: **completed success** — new remote projected Inventory regression + all existing connected authority tests + Phase11 offline preservation + production frontend build all green.
+- Main Playable `31979231986`, playable-contract `95243277140`: **completed success** — full UI/rules/TypeScript/build + Phase11 + Phase12 + Phase13 arbitrary SessionProjection, including the new remote Inventory regression, all green.
+- Windows subjobs are not used as human/final release acceptance evidence for this slice.
 
-The P14.6 regression proves a persisted non-fixture Sorcerer owns the runtime caster HUD/slot resources, casts Fire Bolt through authoritative attack/damage without spending a slot, cycles initiative, casts Magic Missile through authoritative projectile damage with slot 2 -> 1 and Activity/provenance/turn-marker state, disables a second same-turn slotted cast, and leaves Character Library storage revision unchanged because the slot is session runtime rather than durable Character state.
+The focused regression proves:
+- a host-unknown non-fixture Character's canonical Potion of Healing is reconstructed as a consumable and executable action with its exact projected ItemInstance id;
+- the remote ActionRequest stages/resolves on Host authority, does not spend quantity during preview, then atomically commits healing plus quantity `2 -> 1`;
+- Host restores its own local Character context and permanent Character library remains unchanged;
+- Host broadcasts exactly one ordered committed event batch after commit;
+- owning Client applies HP/item changes, persists them before cursor advancement, rehydrates them from Character Library, and duplicate event/request traffic does not double-apply or create another durable generation.
 
-## Checklist documentation status
-- `.agents/PHASE14_CHECKLIST.md` is 35,919 bytes at blob `0e452a8e800390bf737b660f6e06b5b5c0709151` before any new documentation credit.
-- This continuation discovered a safe full-blob read path with the GitHub blob API, so the earlier truncation limitation can be avoided on the next documentation-only write.
-- Physical checkboxes were deliberately not rewritten after product validation because the checkpoint window had begun. Do not rerun product gates merely to mark documentation.
-- Directly evidence-backed P14.6 credit includes: real Character caster context, real-caster slot derivation, cantrip no-slot behavior, committed slotted spell slot cost, authoritative spell attack/damage, and the P14.6 supported-cantrip + supported-slotted-spell gate. Do not credit concentration or connected remote spell casting from this local slice.
-- Earlier fresh Character/P14.3/P14.4/P14.5 evidence remains eligible for documentation-only credit where the exact statements are directly proven.
+This directly supports P14.8 remote `행동`/Inventory action, committed event batch, owning-client once-only durable apply, replay/idempotency, and host permanent-library isolation. Remote spell and remote skill remain open.
 
 ## Architecture constraints preserved
-- Character Library remains the sole durable Character source; session-only spell slots remain TurnRuntime state.
-- Production spell execution reuses `resolveSpellCast`, TurnRuntime session state, ResolutionEvents, Activity/event-history projection and existing spell-slot selection.
-- Unsupported/partial Vicious Mockery/Thunderwave mechanics were not promoted merely to satisfy the gate; the tested pair is Fire Bolt + Magic Missile, both already `combat-executable` in the domain kernel.
-- No Aelar/Mira product fallback, duplicate Character library, or direct presentation mutation was added.
-- Existing connected Host/SessionProjection/reconnect/end/write-back boundaries were not changed.
-- No tactical map/grid/path/LOS expansion.
+- SessionProjection mechanics are reconstructed from Host canonical content; client source declares identity/runtime values but does not own mechanics.
+- Character Library remains the owning Client's durable source. Host projected Characters stay ephemeral.
+- Existing Host ledger, ResolutionEvent broadcast, client apply-before-cursor, duplicate request/event and reconnect semantics were reused unchanged.
+- No fixture Character fallback, parallel connected protocol, duplicate durable source, or tactical map/grid/path/LOS scope was added.
 
 ## Next Exact Action
-1. Documentation-only first: fetch the exact current checklist blob and safely apply only evidence-backed fresh Character/P14.3/P14.4/P14.5/P14.6 checkbox credit. Do not rerun the corresponding green product gates.
-2. Then begin P14.8 remote-action coverage test-first, focused on a host-unknown persisted Character projection sending a supported spell or inventory action through the existing connected action request -> Host authoritative commit -> committed event batch -> owning Client apply path. Prefer extending existing connected projection/action tests rather than creating a parallel protocol.
-3. Prove Host does not mutate its permanent Character library and owning Client applies durable events once; retain existing replay/idempotency guarantees. Patch product only if this product-realistic regression exposes a real gap.
-4. After that continue remaining P14.7 DM/live-session gaps, P14.10 UX/accessibility, Windows two-instance human acceptance, and final exact-head artifact verification.
-5. PR #109 remains draft/unmerged. No merge is authorized.
+1. Do not rerun the remote Inventory slice, P14.6 spell slice, or prior connected lifecycle gates unless their relevant source boundary changes.
+2. Documentation-only: on the next safe checklist write, credit the P14.8 remote-action statements directly proven by existing `connectedProjectedCharacterResolution.test.ts` plus the new remote Inventory regression; do not credit remote spell/skill yet.
+3. Continue P14.8 test-first with a host-unknown persisted spellcaster projection. Prove one supported spell ActionRequest resolves on Host through canonical SessionProjection/runtime authority, broadcasts committed ResolutionEvents once, and the Client converges without Host permanent-library mutation. Prefer the already-supported Fire Bolt or Magic Missile path and reuse the connected protocol rather than adding a parallel spell message.
+4. Patch product only if that remote-spell regression exposes a real reconstruction/runtime gap; run Phase12 and Main only once for the changed boundary.
+5. Then continue remaining P14.7 DM/live-session gaps, P14.10 UX/accessibility, Windows two-instance human acceptance and final exact-head artifact verification.
+6. PR #109 remains draft/unmerged. No merge is authorized.
