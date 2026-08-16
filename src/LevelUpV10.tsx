@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import "./app/creationContracts";
 import { useSimpleVtt } from "./app/AppProvider";
-import type { CharacterCreationOptionVm, CharacterCreationSection } from "./app/contracts";
+import type { CharacterCreationOptionVm, CharacterCreationSection, CharacterCreationSectionStatus } from "./app/contracts";
 import {
   LEVEL_UP_ABILITIES,
   projectLevelUpClassOptions,
@@ -23,6 +23,16 @@ const SPELL_FILTERS: Array<{ id:SpellUiFilter; label:string }> = [
   { id:"action", label:"행동" },
   { id:"bonus", label:"보너스 행동" },
   { id:"reaction", label:"반응" },
+];
+
+type LevelUpStageId = "class" | "automatic" | "hp" | "choices" | "review";
+
+const LEVEL_UP_STAGES: Array<{ id:LevelUpStageId; label:string }> = [
+  { id:"class", label:"클래스" },
+  { id:"automatic", label:"자동 획득" },
+  { id:"hp", label:"HP" },
+  { id:"choices", label:"선택" },
+  { id:"review", label:"검토" },
 ];
 
 function useLevelUpHost() {
@@ -62,9 +72,20 @@ function selectionCount(selection: ChoiceSelectionValue | undefined) {
   return 1;
 }
 
+function choiceComplete(choice:ChoiceDefinition, selection:ChoiceSelectionValue|undefined) {
+  if (!choice.required) return true;
+  if (choice.status !== "ready") return false;
+  if (choice.kind === "asi-or-feat") {
+    if (selection?.kind !== "asi") return false;
+    if (selection.mode === "feat") return Boolean(selection.featId);
+    if (selection.mode === "plus-two") return Boolean(selection.primary);
+    return Boolean(selection.primary && selection.secondary && selection.primary !== selection.secondary);
+  }
+  return selectionCount(selection) >= choice.count;
+}
+
 function sectionForChoice(choice: ChoiceDefinition, selection: ChoiceSelectionValue | undefined): CharacterCreationSection {
-  const count = selectionCount(selection);
-  const complete = !choice.required || (choice.status === "ready" && count >= choice.count);
+  const complete = choiceComplete(choice,selection);
   return {
     id:choice.id,
     kind:"dynamic-choice",
@@ -166,7 +187,7 @@ function ChoicePanel({ choice, onSelect, selection }: { choice: ChoiceDefinition
     const set = (patch: Partial<Extract<ChoiceSelectionValue, { kind:"asi" }>>) => onSelect({ kind:"asi", mode:asi?.mode ?? "plus-two", primary:asi?.primary, secondary:asi?.secondary, featId:asi?.featId, ...patch });
     const featOptions = choice.options.filter((option) => option.id.startsWith("feat:"));
     return <SectionShell section={section}>
-      <div className="choice-prompt"><strong>능력치 향상 또는 재주</strong><span>{asi ? "선택 중" : "선택 필요"}</span></div>
+      <div className="choice-prompt"><strong>능력치 향상 또는 재주</strong><span>{choiceComplete(choice,selection) ? "완료" : "선택 필요"}</span></div>
       <div className="levelup-segmented">
         <button type="button" className={asi?.mode === "plus-two" ? "active" : ""} onClick={() => set({ mode:"plus-two", secondary:undefined, featId:undefined })}>능력치 +2</button>
         <button type="button" className={asi?.mode === "split" ? "active" : ""} onClick={() => set({ mode:"split", featId:undefined })}>능력치 +1 / +1</button>
@@ -222,6 +243,7 @@ export function LevelUpV10Bridge() {
   const draft = snapshot?.levelUpDraft;
   const character = snapshot?.activeCharacter;
   const [busy, setBusy] = useState(false);
+  const [activeStage,setActiveStage] = useState<LevelUpStageId>("class");
   const classOptions = useMemo(() => character ? projectLevelUpClassOptions(character) : [], [character]);
 
   if (!host || !snapshot || !plan || !draft || !character) return null;
@@ -235,8 +257,11 @@ export function LevelUpV10Bridge() {
   const setHp = (method: "fixed" | "roll", roll?: number) => run(() => adapter.setProgressionHp(method, roll));
   const legacyCancel = () => host.querySelector<HTMLButtonElement>(".builder-screen .builder-top > button:last-child")?.click();
   const legacyCommit = () => host.querySelector<HTMLButtonElement>(".builder-screen .builder-footer button.primary")?.click();
-  const jumpTo = (id:string) => host.querySelector<HTMLElement>(`#${id}`)?.scrollIntoView({ behavior:"smooth", block:"start" });
   const fixedGain = projectLevelUpFixedHpGain(plan);
+  const hpComplete = draft.hpMethod === "fixed" || (Number.isInteger(draft.hpRoll) && Number(draft.hpRoll) >= 1 && Number(draft.hpRoll) <= plan.hp.hitDie);
+  const choicesComplete = plan.choices.every((choice) => choiceComplete(choice,currentSelection(snapshot,choice.id)));
+  const choicesBlocked = plan.choices.some((choice) => choice.status === "catalog-pending");
+  const ready = hpComplete && choicesComplete && plan.blocking.length === 0;
 
   const classSection:CharacterCreationSection = {
     id:"levelup-class",
@@ -267,76 +292,111 @@ export function LevelUpV10Bridge() {
     kind:"dynamic-choice",
     label:"히트 포인트 증가",
     description:`d${plan.hp.hitDie} + 건강 수정치 ${plan.hp.constitutionModifier >= 0 ? "+" : ""}${plan.hp.constitutionModifier}. 고정값 또는 주사위 결과를 선택합니다.`,
-    status:"complete",
+    status:hpComplete ? "complete" : "incomplete",
     required:true,
     dependsOn:[],
     options:[],
     automaticGrants:[],
     validation:[],
   };
+  const reviewSection:CharacterCreationSection = {
+    id:"levelup-review",
+    kind:"review",
+    label:"변경 검토",
+    description:"적용 전에 이번 레벨업으로 바뀌는 Character source와 파생 결과를 확인합니다.",
+    status:ready ? "complete" : "incomplete",
+    required:true,
+    dependsOn:[],
+    options:[],
+    automaticGrants:[],
+    validation:[
+      ...plan.blocking.map((message) => ({ severity:"blocking" as const, message })),
+      ...plan.warnings.map((message) => ({ severity:"warning" as const, message })),
+    ],
+  };
+
+  const stageStatus = (id:LevelUpStageId):CharacterCreationSectionStatus => {
+    if (id === "class" || id === "automatic") return "complete";
+    if (id === "hp") return hpComplete ? "complete" : "incomplete";
+    if (id === "choices") return choicesBlocked ? "blocked" : choicesComplete ? "complete" : "incomplete";
+    return ready ? "complete" : "incomplete";
+  };
+  const currentIndex = LEVEL_UP_STAGES.findIndex((item) => item.id === activeStage);
+  const previous = LEVEL_UP_STAGES[Math.max(0,currentIndex - 1)];
+  const next = LEVEL_UP_STAGES[Math.min(LEVEL_UP_STAGES.length - 1,currentIndex + 1)];
+  const activeLabel = LEVEL_UP_STAGES[currentIndex]?.label ?? "레벨 업";
+
+  const classStage = <SectionShell section={classSection}>
+    <div className="choice-prompt"><strong>현재 클래스 / 멀티클래스</strong><span>선택 · {plan.targetClassName} {plan.targetClassLevel}레벨</span></div>
+    <div className="create-option-grid levelup-class-option-grid">{classOptions.map(({ entry,existing,eligible,reason,currentLevel }) => {
+      const selected = plan.targetClassId === entry.id;
+      const summary = existing ? `현재 ${currentLevel}레벨 → ${currentLevel + 1}레벨` : eligible ? "+ 클래스 추가 · 1레벨" : `선행 조건 미충족 · ${reason || "멀티클래스 요구 조건"}`;
+      const option:CharacterCreationOptionVm = {
+        id:entry.id,
+        name:entry.nameKo,
+        nameEn:entry.nameEn,
+        summary,
+        description:`주요 능력치 · ${entry.primaryAbilitiesText}. 내성 굴림 · ${entry.savingThrowsText}. 히트 다이스 · d${entry.hitDie}.`,
+        detailLines:[existing ? `현재 ${currentLevel}레벨에서 계속 진행` : "새 멀티클래스 트랙 1레벨", ...(entry.multiclassGrants.length ? [`멀티클래스 획득 · ${entry.multiclassGrants.join(", ")}`] : []), ...(!eligible && reason ? [`사용 불가 · ${reason}`] : [])],
+        source:"SRD 5.2.1 클래스 진행",
+        selected,
+        recommended:existing,
+        grants:[],
+        choices:[],
+      };
+      return <OptionCard key={entry.id} option={option} onClick={busy || !eligible ? undefined : () => { void chooseClass(entry.id); }}/>;
+    })}</div>
+  </SectionShell>;
+
+  const automaticStage = <SectionShell section={automaticSection}>
+    <div className="levelup-auto-grid">
+      <article><small>히트 다이스</small><b>+1d{plan.hp.hitDie}</b></article>
+      <article><small>숙련 보너스</small><b>+{plan.proficiencyBefore} → +{plan.proficiencyAfter}</b></article>
+      <article><small>최대 HP</small><b>+{plan.hp.totalGain}</b></article>
+      <article><small>주문 시전자 레벨</small><b>{plan.spellcastingBefore.casterLevel} → {plan.spellcastingAfter.casterLevel}</b></article>
+    </div>
+    {plan.isMulticlass && plan.multiclassGrants.length > 0 && <div className="create-principle-callout levelup-multiclass-grants"><strong>멀티클래스로 얻는 숙련 / 특성</strong><span>{plan.multiclassGrants.join(" · ")}</span></div>}
+  </SectionShell>;
+
+  const hpStage = <SectionShell section={hpSection}>
+    <div className="levelup-segmented"><button type="button" className={draft.hpMethod === "fixed" ? "active" : ""} onClick={() => { void setHp("fixed"); }} disabled={busy}>고정값 · {fixedGain} HP</button><button type="button" className={draft.hpMethod === "roll" ? "active" : ""} onClick={() => { void setHp("roll", draft.hpRoll ?? 1); }} disabled={busy}>d{plan.hp.hitDie} 굴림</button></div>
+    {draft.hpMethod === "roll" && <label className="levelup-roll"><span>d{plan.hp.hitDie} 결과</span><input type="number" min={1} max={plan.hp.hitDie} value={draft.hpRoll ?? ""} onChange={(event) => { void setHp("roll", Number(event.target.value)); }}/></label>}
+    {plan.hp.retroactiveConstitutionGain !== 0 && <div className="create-principle-callout levelup-con-retro"><strong>건강 수정치 소급</strong><span>기존 레벨에도 적용되는 최대 HP 변화 · {plan.hp.retroactiveConstitutionGain > 0 ? "+" : ""}{plan.hp.retroactiveConstitutionGain}</span></div>}
+  </SectionShell>;
+
+  const choicesStage = <div className="levelup-choice-stage">
+    {plan.choices.length === 0 ? <SectionShell section={{ id:"levelup-choices", kind:"review", label:"추가 선택 없음", description:"이 레벨은 자동 획득 항목만 확인하고 검토로 이동할 수 있습니다.", status:"complete", required:false, dependsOn:[], options:[], automaticGrants:[], validation:[] }}><div className="create-principle-callout"><strong>선택 완료</strong><span>이번 레벨에는 추가로 결정할 항목이 없습니다.</span></div></SectionShell> : plan.choices.map((choice) => <ChoicePanel key={choice.id} choice={choice} selection={currentSelection(snapshot,choice.id)} onSelect={(value) => { void choose(choice.id,value); }}/>) }
+  </div>;
+
+  const reviewStage = <SectionShell section={reviewSection}>
+    <div className="create-review-grid levelup-review-grid">
+      <section className="create-review-group"><h3>진행</h3><div className="create-review-row"><span>총 레벨</span><strong>{plan.fromTotalLevel} → {plan.toTotalLevel}</strong></div><div className="create-review-row"><span>클래스</span><strong>{plan.targetClassName} {plan.targetClassLevel}레벨</strong></div><div className="create-review-row"><span>HP 방식</span><strong>{draft.hpMethod === "fixed" ? `고정값 ${fixedGain}` : `d${plan.hp.hitDie} · ${draft.hpRoll ?? "미굴림"}`}</strong></div></section>
+      <section className="create-review-group"><h3>변경 사항</h3>{plan.diffs.map((diff,index) => <div className="create-review-row" key={`${diff.label}-${index}`}><span>{diff.label}</span><strong>{diff.before} → {diff.after}</strong></div>)}</section>
+      <section className="create-review-group"><h3>선택 상태</h3>{plan.choices.length ? plan.choices.map((choice) => <div className="create-review-row" key={choice.id}><span>{choice.label}</span><strong>{choiceComplete(choice,currentSelection(snapshot,choice.id)) ? "완료" : "확인 필요"}</strong></div>) : <span className="review-line">추가 선택 없음</span>}</section>
+    </div>
+  </SectionShell>;
+
+  const stageContent = activeStage === "class" ? classStage : activeStage === "automatic" ? automaticStage : activeStage === "hp" ? hpStage : activeStage === "choices" ? choicesStage : reviewStage;
+  const footerDescription = activeStage === "class" ? classSection.description : activeStage === "automatic" ? automaticSection.description : activeStage === "hp" ? hpSection.description : activeStage === "choices" ? (plan.choices.length ? `${plan.choices.length}개 선택을 생성 화면과 같은 카드/주문 라이브러리에서 처리합니다.` : "추가 선택이 없습니다.") : reviewSection.description;
 
   return createPortal(<div className="levelup-v10 focused-create-shell">
     <header className="focused-create-header levelup-create-header">
-      <div className="focused-create-title"><span>LEVEL UP</span><strong>{character.name}</strong><small>총 레벨 {plan.fromTotalLevel} → {plan.toTotalLevel}</small></div>
-      <nav className="focused-create-tabs levelup-create-tabs" aria-label="레벨업 섹션">
-        <button type="button" className="status-complete" onClick={() => jumpTo("levelup-class")}><i>✓</i><span>클래스</span></button>
-        <button type="button" className="status-complete" onClick={() => jumpTo("levelup-automatic")}><i>✓</i><span>자동 획득</span></button>
-        <button type="button" className="status-complete" onClick={() => jumpTo("levelup-hp")}><i>✓</i><span>HP</span></button>
-        <button type="button" className={plan.blocking.length ? "status-incomplete active" : "status-complete active"} onClick={() => jumpTo("levelup-required")}><i>{plan.blocking.length ? "!" : "✓"}</i><span>선택 {plan.choices.length}</span></button>
+      <div className="focused-create-title"><span>LEVEL UP</span><strong>{character.name}</strong></div>
+      <nav className="focused-create-tabs levelup-create-tabs" aria-label="레벨업 단계">
+        {LEVEL_UP_STAGES.map((item) => { const status = stageStatus(item.id); return <button type="button" key={item.id} className={`${activeStage === item.id ? "active " : ""}status-${status}`} onClick={() => setActiveStage(item.id)}><i>{status === "complete" ? "✓" : status === "warning" ? "!" : "•"}</i><span>{item.label}</span></button>; })}
       </nav>
-      <div className="focused-create-header-actions levelup-create-header-actions"><span>{plan.targetClassName}</span><strong>{plan.targetClassLevel} Lv</strong></div>
+      <div className="focused-create-header-actions levelup-create-header-actions"><span>{plan.targetClassName} {plan.targetClassLevel} Lv</span><button type="button" onClick={legacyCancel}>닫기</button></div>
     </header>
 
     <div className="focused-create-body levelup-create-body">
-      <main className="focused-create-stage levelup-v10-main">
-        <div className="focused-primary-flow levelup-flow">
-          <SectionShell section={classSection}>
-            <div className="choice-prompt"><strong>현재 클래스 / 멀티클래스</strong><span>선택 · {plan.targetClassName} {plan.targetClassLevel}레벨</span></div>
-            <div className="create-option-grid levelup-class-option-grid">{classOptions.map(({ entry,existing,eligible,reason,currentLevel }) => {
-              const selected = plan.targetClassId === entry.id;
-              const summary = existing ? `현재 ${currentLevel}레벨 → ${currentLevel + 1}레벨` : eligible ? "+ 클래스 추가 · 1레벨" : `선행 조건 미충족 · ${reason || "멀티클래스 요구 조건"}`;
-              const option:CharacterCreationOptionVm = {
-                id:entry.id,
-                name:entry.nameKo,
-                nameEn:entry.nameEn,
-                summary,
-                description:`주요 능력치 · ${entry.primaryAbilitiesText}. 내성 굴림 · ${entry.savingThrowsText}. 히트 다이스 · d${entry.hitDie}.`,
-                detailLines:[existing ? `현재 ${currentLevel}레벨에서 계속 진행` : "새 멀티클래스 트랙 1레벨", ...(entry.multiclassGrants.length ? [`멀티클래스 획득 · ${entry.multiclassGrants.join(", ")}`] : []), ...(!eligible && reason ? [`사용 불가 · ${reason}`] : [])],
-                source:"SRD 5.2.1 클래스 진행",
-                selected,
-                recommended:existing,
-                grants:[],
-                choices:[],
-              };
-              return <OptionCard key={entry.id} option={option} onClick={busy || !eligible ? undefined : () => { void chooseClass(entry.id); }}/>;
-            })}</div>
-          </SectionShell>
-
-          <SectionShell section={automaticSection}>
-            <div className="levelup-auto-grid">
-              <article><small>히트 다이스</small><b>+1d{plan.hp.hitDie}</b></article>
-              <article><small>숙련 보너스</small><b>+{plan.proficiencyBefore} → +{plan.proficiencyAfter}</b></article>
-              <article><small>최대 HP</small><b>+{plan.hp.totalGain}</b></article>
-              <article><small>주문 시전자 레벨</small><b>{plan.spellcastingBefore.casterLevel} → {plan.spellcastingAfter.casterLevel}</b></article>
-            </div>
-            {plan.isMulticlass && plan.multiclassGrants.length > 0 && <div className="create-principle-callout levelup-multiclass-grants"><strong>멀티클래스로 얻는 숙련 / 특성</strong><span>{plan.multiclassGrants.join(" · ")}</span></div>}
-          </SectionShell>
-
-          <SectionShell section={hpSection}>
-            <div className="levelup-segmented"><button type="button" className={draft.hpMethod === "fixed" ? "active" : ""} onClick={() => { void setHp("fixed"); }} disabled={busy}>고정값 · {fixedGain} HP</button><button type="button" className={draft.hpMethod === "roll" ? "active" : ""} onClick={() => { void setHp("roll", draft.hpRoll ?? 1); }} disabled={busy}>d{plan.hp.hitDie} 굴림</button></div>
-            {draft.hpMethod === "roll" && <label className="levelup-roll"><span>d{plan.hp.hitDie} 결과</span><input type="number" min={1} max={plan.hp.hitDie} value={draft.hpRoll ?? ""} onChange={(event) => { void setHp("roll", Number(event.target.value)); }}/></label>}
-            {plan.hp.retroactiveConstitutionGain !== 0 && <div className="create-principle-callout levelup-con-retro"><strong>건강 수정치 소급</strong><span>기존 레벨에도 적용되는 최대 HP 변화 · {plan.hp.retroactiveConstitutionGain > 0 ? "+" : ""}{plan.hp.retroactiveConstitutionGain}</span></div>}
-          </SectionShell>
-
-          <div id="levelup-required" className="levelup-required-anchor">
-            {plan.choices.length === 0 ? <section className="create-v09-section"><header><div><span className="create-status-pill complete">완료</span><h2>추가 선택 없음</h2><p>이 레벨은 자동 획득 항목만 확인하고 바로 적용할 수 있습니다.</p></div></header></section> : plan.choices.map((choice) => <ChoicePanel key={choice.id} choice={choice} selection={currentSelection(snapshot,choice.id)} onSelect={(value) => { void choose(choice.id,value); }}/>) }
-          </div>
-        </div>
-      </main>
-
+      <main className="focused-create-stage levelup-v10-main"><div className="focused-primary-flow levelup-flow">{stageContent}</div></main>
       <LevelUpPreview character={character} plan={plan} draft={draft}/>
     </div>
 
-    <footer className="focused-create-footer levelup-v10-footer"><button type="button" onClick={legacyCancel}>취소</button><div><strong>{plan.blocking.length ? `${plan.blocking.length}개 선택을 확인하세요` : "레벨업 적용 준비 완료"}</strong><small>{plan.blocking[0] ?? plan.warnings[0] ?? `${plan.targetClassName} ${plan.targetClassLevel}레벨 변경 사항을 저장합니다.`}</small></div><button type="button" className="primary" disabled={busy || plan.blocking.length > 0} onClick={legacyCommit}>레벨 업</button></footer>
+    <footer className="focused-create-footer levelup-v10-footer">
+      <button type="button" disabled={currentIndex === 0} onClick={() => setActiveStage(previous.id)}>이전</button>
+      <div><span>{activeLabel}</span><small>{footerDescription}</small></div>
+      {activeStage === "review" ? <button type="button" className="primary" disabled={busy || !ready} onClick={legacyCommit}>레벨 업</button> : <button type="button" className="primary" onClick={() => setActiveStage(next.id)}>다음</button>}
+    </footer>
   </div>, host);
 }
