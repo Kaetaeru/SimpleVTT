@@ -4,6 +4,7 @@ import type {
   SessionCompatibilityManifest,
   SessionCompatibilityResult,
 } from "./connectedSessionProtocol";
+import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
 
 export type ConnectedWireMessage =
   | {
@@ -12,6 +13,7 @@ export type ConnectedWireMessage =
       participantId:string;
       participantName:string;
       knownEventCursor:number;
+      projection?:CharacterSessionProjectionV1;
     }
   | {
       type:"hello-ack";
@@ -34,6 +36,20 @@ const isRecord=(value:unknown):value is JsonRecord=>typeof value==="object"&&val
 const isString=(value:unknown):value is string=>typeof value==="string"&&value.length>0;
 const isCursor=(value:unknown):value is number=>Number.isInteger(value)&&Number(value)>=0;
 const isStringArray=(value:unknown):value is string[]=>Array.isArray(value)&&value.every((entry)=>typeof entry==="string");
+
+function isProjectionEnvelope(value:unknown):value is CharacterSessionProjectionV1 {
+  if (!isRecord(value)) return false;
+  return value.schemaId==="simplevtt.character-session-projection"
+    &&value.schemaVersion===1
+    &&isString(value.characterId)
+    &&isCursor(value.sourceRevision)
+    &&isCursor(value.runtimeRevision)
+    &&isRecord(value.rulesProfile)
+    &&isRecord(value.source)
+    &&isRecord(value.sourceAuthority)
+    &&isRecord(value.runtime)
+    &&Array.isArray(value.contentIdentities);
+}
 
 function isProvenanceArray(value:unknown) {
   return Array.isArray(value)&&value.every((entry)=>isRecord(entry)
@@ -125,7 +141,8 @@ function isActionRequest(value:unknown):value is ConnectedActionRequest {
 function validateMessage(value:unknown):ConnectedWireMessage|string {
   if (!isRecord(value)||!isString(value.type)) return "wire message must be an object with a type";
   if (value.type==="hello") {
-    if (!isManifest(value.manifest)||!isString(value.participantId)||!isString(value.participantName)||!isCursor(value.knownEventCursor)) return "invalid hello message";
+    if (!isManifest(value.manifest)||!isString(value.participantId)||!isString(value.participantName)||!isCursor(value.knownEventCursor)
+      ||(value.projection!==undefined&&!isProjectionEnvelope(value.projection))) return "invalid hello message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="hello-ack") {
