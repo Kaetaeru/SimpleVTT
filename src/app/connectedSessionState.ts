@@ -19,6 +19,7 @@ export interface ConnectedRuntimeState {
   peerManifests:Map<string,SessionCompatibilityManifest>;
   reconnectTimer:ReturnType<typeof setTimeout>|null;
   reconnectAttempts:number;
+  reconnectInFlight:boolean;
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -37,6 +38,7 @@ export function connectedStateFor(adapter:MockAdapter) {
       peerManifests:new Map<string,SessionCompatibilityManifest>(),
       reconnectTimer:null,
       reconnectAttempts:0,
+      reconnectInFlight:false,
     };
     states.set(adapter,state);
   }
@@ -55,5 +57,6 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.peerManifests.clear();
   state.reconnectTimer=null;
   state.reconnectAttempts=0;
+  state.reconnectInFlight=false;
   return state;
 }
