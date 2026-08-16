@@ -102,10 +102,13 @@ function matchesToken(entry:ResolvedCatalogEntry,token:string) {
 
 function requiredContentRefs(source:CharacterSourceSnapshotV1):RequiredContentRef[] {
   const refs:RequiredContentRef[]=[
-    { label:"class",token:source.build.className,categories:["class"] },
+    { label:"primary class",token:source.build.className,categories:["class"] },
     { label:"species",token:source.build.species,categories:["species"] },
     { label:"background",token:source.build.background,categories:["background"] },
   ];
+  for (const track of source.build.classLevels ?? []) {
+    refs.push({ label:`class track level ${track.level}`,token:track.classId,categories:["class"] });
+  }
   if (source.build.subclassName?.trim()) refs.push({ label:"subclass",token:source.build.subclassName,categories:["subclass"] });
   for (const spellId of source.spellAndFeatureSelections.cantrips ?? []) refs.push({ label:"cantrip",token:spellId,categories:["spell"] });
   for (const spellId of source.spellAndFeatureSelections.preparedSpells ?? []) refs.push({ label:"prepared spell",token:spellId,categories:["spell"] });
@@ -213,6 +216,16 @@ function parseSource(value:unknown):CharacterSourceSnapshotV1 {
   }
   if (!nonEmptyString(build.className) || !nonEmptyString(build.species) || !nonEmptyString(build.background) || !nonNegativeInteger(build.level)) {
     throw new Error("projection source build identity is invalid");
+  }
+  if (Array.isArray(build.classLevels)) {
+    const tracks=build.classLevels as Array<{classId?:unknown;level?:unknown}>;
+    if (tracks.some((track)=>!nonEmptyString(track.classId) || !Number.isInteger(track.level) || Number(track.level)<=0)) {
+      throw new Error("projection classLevels contains an invalid class track");
+    }
+    const total=tracks.reduce((sum,track)=>sum+Number(track.level),0);
+    if (tracks.length>0 && total!==Number(build.level)) {
+      throw new Error(`projection classLevels total does not match Character level: ${total} != ${String(build.level)}`);
+    }
   }
   return clone(value as CharacterSourceSnapshotV1);
 }
