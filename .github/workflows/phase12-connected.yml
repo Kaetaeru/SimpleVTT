@@ -33,7 +33,7 @@ jobs:
       - name: Generate canonical content
         run: npm run generate:content
       - name: Verify connected-session authority protocol
-        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts
+        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts
       - name: Verify Phase 11 offline walkthrough remains green
         run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
       - name: Verify production frontend gate
@@ -74,10 +74,11 @@ jobs:
             "2. Find the host LAN or Hamachi IPv4 address.",
             "3. On the player machine open Session and Join <HOST_IPV4>:3210.",
             "4. Confirm compatibility is not incompatible and both sides show connected.",
-            "5. Host starts Initiative. Confirm round/current actor/economy synchronize to the player.",
-            "6. Player submits an event-native action such as Second Wind or Shortbow. The host resolves the staged UI; only the committed host ResolutionEvent is broadcast.",
-            "7. Disconnect the client, let the host advance an event, reconnect, and confirm catch-up resumes from the previous event cursor without duplicate HP/resource/economy changes.",
-            "8. Verify offline play still works with no network connection.",
+            "5. Player marks Ready. Host confirms all connected players are Ready, selects Freeform or Initiative, then starts play.",
+            "6. Confirm the authoritative mode/current actor/economy synchronize to the player.",
+            "7. Player submits an event-native action such as Second Wind or a canonical weapon attack. The host resolves the staged UI; only the committed host ResolutionEvent is broadcast.",
+            "8. Disconnect the client, reconnect, mark Ready again when applicable, and confirm catch-up resumes from the previous event cursor without duplicate HP/resource/economy changes.",
+            "9. Verify offline play still works with no network connection.",
             "",
             "Windows Firewall may ask for permission to allow SimpleVTT on private networks when hosting."
           ) | Set-Content -Encoding utf8 "phase12-artifact/REMOTE-WALKTHROUGH.txt"
