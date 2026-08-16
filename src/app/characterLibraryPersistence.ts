@@ -103,7 +103,6 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
 export function projectCharacterRuntimeDurableV1(sheet:CharacterSheet):CharacterRuntimeDurableSnapshotV1 {
   return {
     hp:sheet.hp,
-    maxHp:sheet.maxHp,
     tempHp:sheet.tempHp,
     lifeFlags:sheet.durableLifeFlags ? cp(sheet.durableLifeFlags) : undefined,
     resources:cp(sheet.resources),
@@ -141,7 +140,6 @@ export function materializeCharacterRecordV1(record:CharacterLibraryRecordV1):Ch
   sheet.id = record.characterId;
   sheet.name = record.source.name;
   sheet.hp = record.runtime.hp;
-  sheet.maxHp = record.runtime.maxHp ?? sheet.maxHp;
   sheet.tempHp = record.runtime.tempHp;
   sheet.resources = cp(record.runtime.resources);
   sheet.items = cp(record.runtime.items);
