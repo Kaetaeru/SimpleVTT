@@ -48,9 +48,10 @@
 .levelup-segmented button { min-height:38px; padding:7px 12px; border:1px solid var(--line-strong); border-radius:0; background:var(--surface); }
 .levelup-segmented button:hover,.levelup-segmented button.active { border-color:var(--accent); background:var(--accent-soft); color:var(--text); }
 .levelup-ability-pickers { display:grid; grid-template-columns:repeat(2,minmax(160px,1fr)); gap:8px; margin-top:10px; }
-.levelup-ability-pickers label,.levelup-roll { display:grid; gap:5px; color:var(--muted); font-size:9px; }
-.levelup-ability-pickers select,.levelup-roll input { min-height:38px; padding:6px 9px; border:1px solid var(--line-strong); border-radius:0; background:var(--recess); color:var(--text); }
-.levelup-roll { max-width:260px; margin-top:10px; }
+.levelup-ability-pickers label { display:grid; gap:5px; color:var(--muted); font-size:9px; }
+.levelup-ability-pickers select { min-height:38px; padding:6px 9px; border:1px solid var(--line-strong); border-radius:0; background:var(--recess); color:var(--text); }
+.levelup-hit-die-panel { margin-top:12px; display:grid; gap:9px; max-width:560px; }
+.levelup-roll-button { justify-self:start; min-width:148px; }
 .levelup-con-retro { margin-top:10px; }
 .levelup-feat-grid,.levelup-subclass-grid { margin-top:10px; }
 .levelup-subclass-grid { grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
