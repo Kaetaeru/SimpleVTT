@@ -3,15 +3,16 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch transition: `continue` prepared; publish `control.json` last
+- dispatch transition: `needs_user` prepared; publish `control.json` last
 - repository: `Kaetaeru/SimpleVTT`
-- canonical branch/ref: `main`
-- planned work branch: `agent/108-production-play-session-ux`
+- canonical watcher/baseline branch: `main`
+- active work branch: `agent/108-production-play-session-ux`
 - tracking issue: #108
+- phase checklist: `.agents/PHASE14_CHECKLIST.md` on the work branch
 
 ## Preserved completion history
 
-Sequence 0 / `phase13-closeout-ui-dice-regression` completed successfully and is not reset by this authorization.
+Sequence 0 / `phase13-closeout-ui-dice-regression` remains complete and is not reset by Phase 14.
 
 Preserved verified implementation head: `7c9440970753a370fec7830cfa691832552e1d05`.
 
@@ -27,56 +28,82 @@ Preserved exact-head workflow evidence:
 
 Preserved Phase 13 artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
 
-The later canonical Main Playable workflow was updated on `main` at `0ebc8b7a020b4ec64c2678b398aa5c064de46a93` and produced a green Windows artifact, but subsequent manual product inspection established that those gates did not prove the user-created Character -> actual session/play UI path.
+The later Main Playable workflow at `0ebc8b7a020b4ec64c2678b398aa5c064de46a93` produced a green Windows artifact, but manual product inspection established that those gates did not prove user-created Character -> actual session/play UI. Phase 14 exists specifically to correct that gap.
 
 ## Sequence 1 durable checkpoint
 
-The user explicitly authorized a new phase whose goal is planning through playable Windows build completion. The user specifically requested that play-session UX include in-session inventory/item use and comprehensive skill/action tabs.
+The user authorized planning through actual playable Windows build completion, with special emphasis on in-session Inventory/item use plus comprehensive Skills/Actions UX.
 
-Repository inspection established the concrete production gap:
+The production root cause remains:
 
-1. `src/main.tsx` loads the production adapter composition and connected adapters, but the React application still enters through `AppProvider`.
-2. `AppProvider` delegates the full UI command surface to a singleton `mockAdapter`.
-3. `mockAdapter.ts` seeds Aelar, Mira, goblins, a wolf, a `Reference Mock` guardian, and fixed `actionsByActor` entries.
-4. Character authoring can replace `activeCharacter`, but its finalization path does not build a corresponding live Scene actor/action projection.
-5. Character persistence projects HP/AC into an existing scene entity only when one with the same Character id already exists; otherwise it returns without materializing the Character.
-6. `PlayerSceneScreen` assumes the active Character can be found in `scene.entities`, so a genuinely new Character is not a proven safe production play path.
-7. Existing Phase 11 production-walkthrough tests instantiate `MockAdapter` and directly exercise reference action IDs such as `action.athletics`, `action.healing-potion`, and reference Character IDs; they therefore validate rules/runtime composition but not the real user journey.
-8. Tauri Host/Join, handshake, reconnect, SessionProjection, authoritative ActionRequest/ResolutionEvent routing, and owning-client write-back are real subsystems and should be preserved rather than replaced.
+1. `AppProvider` delegates the visible UI command surface through a singleton `MockAdapter`.
+2. The base adapter is seeded with Aelar/Mira/reference Combatants and fixed action identities.
+3. Character authoring/persistence can replace `activeCharacter`, but the historical normal play path did not prove that a new Character is materialized into Scene + actions.
+4. Persistence previously projected HP/AC only into an already-existing matching Scene entity.
+5. Player Scene assumed an actor exists in `scene.entities`.
+6. Existing Phase 11 walkthroughs primarily used reference ids, so green tests were insufficient evidence of the real user journey.
+7. Tauri Host/Join, handshake, reconnect, SessionProjection, authoritative ActionRequest/ResolutionEvent routing, and owning-client write-back are real subsystems to preserve.
 
-Issue #108 now defines Phase 14 product/UX/acceptance requirements.
+## Current work branch state
 
-## Active implementation strategy
+Current work branch head after checklist expansion:
 
-The implementation should introduce a production Character-to-play projection boundary rather than rewriting the proven rules engine. The work should progressively replace normal-player reliance on reference identities while retaining explicit fixtures for tests/debug only.
+`01cb784f1c64d46c931175126dde6abadc744907`
 
-Priority order:
+The branch is based on the Phase 14-authorized `main` baseline and already contains early unverified implementation from the interrupted prior execution:
 
-1. Materialize/reconcile the actual active persisted Character into Scene state and derived actions.
-2. Make no-session/no-actor UI deliberate and provide a clear Character Sheet -> Play path.
-3. Add in-session `행동 / 기술 / 주문 / 인벤토리` surfaces with stable targeting/turn/session context.
-4. Derive authoritative skill checks and real Character attacks/features/items/spells.
-5. Reuse existing item/equipment/attunement/use and authoritative resolution ports from the play workspace.
-6. Reconcile local session and connected Host/Join onto the same production actor projection.
-7. Add fresh-Character and restart production journey gates that do not rely on Aelar/Mira fixture ids.
-8. Build and verify an exact-head Windows playable artifact.
+- `src/app/productionPlayRuntimeAdapter.ts`
+- `src/app/productionDiceRuntimeAdapter.ts`
+- `src/PlaySessionDock.tsx`
+- outer composition imports in `src/app/offlineRuntimeAdapters.ts`
+- `.agents/PHASE14_CHECKLIST.md`
 
-## Risks to watch
+These files are **not treated as completed product behavior yet**. They require compilation, product-realistic integration tests, UI verification, connected regressions, and human acceptance as defined by the checklist.
 
-- Existing runtime adapters often wrap `MockAdapter.prototype`; changing the base composition carelessly can reorder or bypass authoritative Phase 09-13 behavior.
-- Scene/action derivation must not duplicate mechanics calculations that already have canonical rule/catalog implementations.
-- Connected SessionProjection authority must stay host-reconstructed; a richer UI must not promote client presentation fields to authority.
-- Inventory UX must distinguish immediate equipment/attunement state changes from item actions that require staged authoritative ResolutionEvents.
-- Freeform skills should not consume Initiative action economy; Initiative-only actions must still enforce economy.
+## Final completion checklist created
+
+`.agents/PHASE14_CHECKLIST.md` was expanded at work-branch head `01cb784f1c64d46c931175126dde6abadc744907` into the release-blocking execution contract for Phase 14.
+
+It covers:
+
+- Rerun Side Panel/main coordination and mandatory dispatch protocol
+- Character -> Scene/action materialization
+- Play entry/session information architecture
+- authoritative Skills rolls
+- Actions/attacks/features
+- in-session Inventory/equipment/attunement/item use
+- real Character spellcasting
+- local player + DM live-session flow
+- connected Host/Join with host-unknown Character
+- persistence/restart/data ownership
+- viewport/keyboard/reduced-motion UX quality
+- fresh non-fixture Character integration gates
+- Phase 11/12/13 and rules/persistence/UI/Tauri regression matrix
+- required local and two-instance connected human Windows walkthroughs
+- exact-head Windows artifact metadata and SHA-256 validation
+- merge/main validation and final Rerun closeout
+
+The checklist explicitly forbids claiming “모든 기능을 담은 플레이 가능한 버전” before both automated and human acceptance gates pass.
+
+## Rerun connectivity decision
+
+Chrome Side Panel remains connected to:
+
+- Owner: `Kaetaeru`
+- Repository: `SimpleVTT`
+- Branch: `main`
+- Control: `.chatgpt-rerun/control.json`
+
+The watcher reads coordination from `main`; implementation occurs on the work branch named above. This prevents dispatch/control drift while allowing isolated feature development.
+
+The latest user instruction asks to establish the checklist first. Therefore this checkpoint intentionally pauses further implementation for checklist review instead of allowing the watcher to continue automatically.
 
 ## Next Exact Action
 
-After final `control.json` publication with sequence `1`, task `phase14-production-play-session-ux`, status `continue`:
+After `control.json` is published last with the same run_id, sequence `1`, task_id, and `status: needs_user`:
 
-1. Re-fetch current `main` and create `agent/108-production-play-session-ux` from that exact head.
-2. Create a Phase 14 checklist on the work branch.
-3. Implement the Character -> Scene/action materialization boundary and a regression test using a newly authored non-fixture Character id.
-4. Wire the Character Sheet/Library play entry and deliberate empty/setup state.
-5. Add session console tabs starting with Actions/Skills, then Inventory/Spells.
-6. Run GitHub Actions after coherent slices; fix failures before proceeding.
-7. Keep Rerun STATUS fresh on meaningful milestones and checkpoint by the protocol hard stop if the sequence cannot complete in one execution.
+1. Do not make further Phase 14 source changes until the user approves/resumes the checklist.
+2. Keep Side Panel watcher running if desired; `needs_user` is a polling/waiting state, not Stop.
+3. On user approval, change the same sequence 1 back to `continue` using PLAN -> STATE -> control order.
+4. The first implementation action after reauthorization is **validate the already-present work-branch changes before adding more code**: inspect the current diff, run/trigger TypeScript + relevant UI/integration gates, identify any compile/runtime breakage, and only then continue from checklist P14.1.
+5. Do not repeat Phase 13 validations unless a Phase 14 change touches the boundary they cover.
