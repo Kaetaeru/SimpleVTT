@@ -1,6 +1,11 @@
 import type { AppSnapshot, CharacterSummary, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { broadcastConnectedWire, connectedInternal, publishConnectedSnapshot } from "./connectedSessionRuntimeAdapter";
+import {
+  broadcastConnectedWire,
+  connectedInternal,
+  publishConnectedSnapshot,
+  resetConnectedSessionTransientState,
+} from "./connectedSessionRuntimeAdapter";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
 import { publishConnectedTurnProjection } from "./connectedTurnRoutingAdapter";
 import { projectedCharacterIds } from "./characterSessionProjectionRegistry";
@@ -181,11 +186,19 @@ MockAdapter.prototype.startPreparedSession=async function startProductionPrepare
 
 MockAdapter.prototype.stopSession=async function stopProductionSession() {
   const app=connectedInternal(this);
+  const state=connectedStateFor(this);
   const blocked=stopBlockedReason(this);
   if (blocked) {
     app.session.compatibility="warning";
     app.session.compatibilityMessage=blocked;
     return app.getSnapshot();
+  }
+
+  const wasHost=state.mode==="host";
+  const endedSessionId=wasHost ? state.sessionId : null;
+  const endReason=state.sessionStarted ? "Host ended live play." : "Host closed the preparation lobby.";
+  if (endedSessionId) {
+    await broadcastConnectedWire({type:"session-ended",sessionId:endedSessionId,reason:endReason}).catch(()=>undefined);
   }
 
   try {
@@ -197,14 +210,13 @@ MockAdapter.prototype.stopSession=async function stopProductionSession() {
   }
 
   unmountAllReconstructedCharacterSessionProjections(this);
-  resetConnectedState(this,null);
+  resetConnectedSessionTransientState(
+    this,
+    wasHost
+      ? "Session ended. Start Host to open a fresh preparation lobby."
+      : "Session left. Join or start Host to begin a new connected session.",
+  );
   setLifecycle(this,"offline");
-  app.connectionState="disconnected";
-  app.session.role="offline";
-  app.session.address="";
-  app.session.participants=[];
-  app.session.compatibility="warning";
-  app.session.compatibilityMessage="Session stopped. Start Host to open a fresh preparation lobby.";
   return app.getSnapshot();
 };
 
