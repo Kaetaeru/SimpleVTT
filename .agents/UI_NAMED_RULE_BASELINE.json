@@ -53,10 +53,10 @@
     {
       "file": "src/CharacterSheetV10.tsx",
       "rule": "spellcasting-modifier-arithmetic",
-      "count": 2,
+      "count": 3,
       "classification": "presentation-debt",
       "disposition": "migrate-later",
-      "reason": "Spell save DC/attack display arithmetic remains local presentation debt."
+      "reason": "Existing sheet spell save DC/attack display arithmetic has three textual occurrences (one DC expression and the attack expression repeated in the summary). New occurrences are forbidden."
     },
     {
       "file": "src/CombatSpellHud.tsx",
