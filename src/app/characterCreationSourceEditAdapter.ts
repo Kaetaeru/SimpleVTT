@@ -9,6 +9,7 @@ import {
 import { normalizeCreationV10 } from "./characterCreationV10Plan";
 
 const cp = <T,>(value:T):T => structuredClone(value);
+const LEGACY_RECONSTRUCTION_WARNING = "이 캐릭터는 명시적 생성 source가 없는 이전 기록입니다. materialized 값에서 복구한 입력을 검토한 뒤 저장하세요.";
 
 type State = {
   activeCharacter:CharacterSheet;
@@ -28,6 +29,8 @@ function preserveExistingRuntime(before:CharacterSheet,next:CharacterSheet) {
   next.durableLifeFlags = before.durableLifeFlags ? cp(before.durableLifeFlags) : undefined;
   next.goldGp = before.goldGp;
   next.runtimeRevision = before.runtimeRevision;
+  next.sourceRevision = before.sourceRevision;
+  next.rulesProfileVersion = before.rulesProfileVersion;
 
   const resources = new Map(before.resources.map((resource) => [resource.id,resource]));
   next.resources = next.resources.map((resource) => {
@@ -71,6 +74,25 @@ function projectActiveToScene(state:State) {
   entity.tempHp = state.activeCharacter.tempHp;
   entity.ac = state.activeCharacter.ac;
 }
+
+const oldGetSnapshot = MockAdapter.prototype.getSnapshot;
+MockAdapter.prototype.getSnapshot = async function getSnapshotWithSourceEditStatus() {
+  const snapshot = await oldGetSnapshot.call(this);
+  if (snapshot.createDraft?.authoringSourceCompleteness !== "legacy-reconstructed") return snapshot;
+  const warning = { severity:"warning" as const,message:LEGACY_RECONSTRUCTION_WARNING };
+  if (!snapshot.createDraft.validation.some((entry) => entry.message === warning.message)) {
+    snapshot.createDraft.validation = [...snapshot.createDraft.validation,warning];
+  }
+  if (snapshot.creationPlan && !snapshot.creationPlan.validation.some((entry) => entry.message === warning.message)) {
+    snapshot.creationPlan.validation = [...snapshot.creationPlan.validation,warning];
+    snapshot.creationPlan.summary.warningCount += 1;
+    const review = snapshot.creationPlan.sections.find((section) => section.id === "review");
+    if (review && !review.validation.some((entry) => entry.message === warning.message)) {
+      review.validation = [...review.validation,warning];
+    }
+  }
+  return snapshot;
+};
 
 const oldEditCharacterDraft = MockAdapter.prototype.editCharacterDraft;
 MockAdapter.prototype.editCharacterDraft = async function editCharacterDraftFromSource(characterId:string) {
