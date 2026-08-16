@@ -99,7 +99,7 @@ for (const dirent of readdirSync(modulesDir,{withFileTypes:true}).sort((a,b) => 
     if (allNames.has(entry.id)) throw new Error(`duplicate canonical content id while generating builtin catalog: ${entry.id}`);
     allNames.set(entry.id,presentation);
     const category = genericCategory(entry);
-    if (category) records.push({module,entry,category,presentation});
+    if (category && (category !== "spell" || spellById.has(entry.id))) records.push({module,entry,category,presentation});
   }
 }
 
