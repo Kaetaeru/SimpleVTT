@@ -80,6 +80,7 @@ Verification:
 ## Step 3 — ResolutionEvent Character durable write-back — CLOSED
 
 Tracking issue: #85
+Draft PR: #87
 Branch: `agent/85-resolution-character-writeback`
 Base checkpoint: `29354fdcb3b26e62acbbdf9aeb7cdca9c59f25bd`
 Verified implementation checkpoint: `dd708c5c6f2af231a54200d00aba920bdd1023dc`
@@ -102,7 +103,7 @@ Verified implementation checkpoint: `dd708c5c6f2af231a54200d00aba920bdd1023dc`
 - [x] existing Fighter progression source/runtime revision semantics preserved
 - [x] production build + full UI/Phase09 + Rules Domain + Windows persistence tests green
 - [x] persistence design updated with write-back/Undo/failure/max-HP boundaries
-- [x] Draft PR checkpoint pending only PR creation
+- [x] Draft PR checkpoint
 
 Verification:
 - Persistence workflow `31928471561` application-contract + production build ✅
@@ -111,24 +112,53 @@ Verification:
 - Rules Domain workflow `31928471507` ✅
 - UI named-rule / creation / progression / Phase 09 mechanics / TypeScript / production build ✅
 
-## Step 4 — Canonical Character source edit/revalidation — NEXT
+## Step 4 — Canonical Character source edit/revalidation — CLOSED
 
 Tracking issue: #86
+Draft PR: #88
+Branch: `agent/86-canonical-character-source-edit`
+Base checkpoint: `a6a3e1c9fc7e24978090fe20c7a131c2dfc146a4`
+Verified implementation checkpoint: `ac79e745829d2e5170c533f7617ab79f222747f7`
 
-- [ ] inventory every authoring source field required for exact edit reopen
-- [ ] persist explicit creation-authoring source intent instead of relying on materialized derived fields
-- [ ] reconstruct edit draft from committed Character source document and rerun current application/rules plan
-- [ ] upstream source changes invalidate/revalidate downstream ChoiceDefinition selections
-- [ ] source-only edit increments source revision exactly once and preserves durable runtime revision/state
-- [ ] legacy records without complete authoring intent have explicit deterministic reconstruction/migration status
-- [ ] reduce edit-path dependence on `materializedCache`
-- [ ] deterministic reopen/edit/reload/stale-draft/revision regressions
-- [ ] production build + full UI + persistence gates
+- [x] inventoried authoring source needed for exact Character Creation edit reopen: rules/identity/build, ability method/input + roll identity, skills/spells/class choices, equipment, ChoiceDefinition selections, notes and overrides
+- [x] newly committed Characters persist explicit `creationAuthoring` source intent without derived preview/validation authority
+- [x] explicit edit reopen applies committed source intent and reruns the current normalization / ChoiceDefinition / CharacterCreationPlan derivation
+- [x] explicit reopen no longer falls back to materialized `creationSelections`/notes/build intent; committed source wins over a poisoned cache copy
+- [x] upstream source edits continue through existing ChoiceDefinition normalization/invalidation instead of retaining persisted preview state
+- [x] source-only edit increments `sourceRevision` exactly once and preserves `runtimeRevision` when the durable runtime projection is unchanged
+- [x] source-only edit preserves current HP/Temp HP/life flags and matching Resource/ItemInstance mutable state by stable IDs
+- [x] legacy records without complete authoring intent are marked `legacy-reconstructed` and show an explicit review warning rather than claiming canonical source
+- [x] successful reviewed legacy edit commits explicit authoring source for subsequent reopen
+- [x] Character library v1/schema extension is additive; old records remain readable
+- [x] deterministic exact reopen/cache-authority/source-only revision+runtime/legacy reconstruction regressions
+- [x] focused persistence application-contract and full production build green
+- [x] full UI/Phase09 regression green on source-edit implementation head
+- [x] Windows Rust immutable persistence-store tests green
+- [x] persistence design updated with source-edit/reconstruction/materialized-cache boundaries
+- [x] Draft PR checkpoint
+
+Verification:
+- Persistence workflow `31932522796` focused Character/source tests ✅
+- Persistence workflow `31932522796` production build ✅
+- Persistence workflow `31932522796` Windows `cargo test --lib` ✅
+- UI workflow `31932503877` ✅
+
+Caveat: materialized-cache dependence still exists for other legacy/non-creation source projections. ItemInstance/spellbook/resource/feature source reconstruction remains a later Phase 10 slice; Step 4 closes the Character Creation edit/revalidation path only.
+
+## Step 5 — ContentCatalog builtin/local/homebrew composition — NEXT
+
+- [ ] inventory the current built-in catalog, import preview, source/version/scope fields, and all consumers
+- [ ] define installed ContentCatalog document/identity separate from transient import preview and session content
+- [ ] compose builtin + activated local/homebrew entries deterministically with qualified IDs and source/version provenance
+- [ ] define duplicate/conflict policy without flattening distinct source identities
+- [ ] persist activated local/homebrew installation state with versioned migration/failure semantics
+- [ ] keep session-only content outside permanent local catalog state
+- [ ] deterministic composition/reload/conflict/failure regressions
+- [ ] production build + full UI + Windows persistence gates
 - [ ] Draft PR checkpoint
 
 ## Follow-up Phase 10 slices
 
-- [ ] real ContentCatalog builtin/local/homebrew composition
 - [ ] module dependency/version/capability/cycle/conflict validation
 - [ ] local homebrew import → validation → review → activation
 - [ ] ItemInstance/spellbook/resource/feature source reconstruction without materialized-cache dependence

@@ -2,6 +2,7 @@ import "./creationContracts";
 import "./progressionContracts";
 import type { AbilityScores, CharacterResourceVm, CharacterSheet, ItemInstanceVm } from "./contracts";
 import type { ProgressionClassTrack } from "../domain/progression";
+import type { CharacterCreationAuthoringSourceV1 } from "./characterCreationAuthoringSource";
 
 export const CHARACTER_LIBRARY_SCHEMA_ID = "simplevtt.character-library" as const;
 export const CHARACTER_LIBRARY_SCHEMA_VERSION = 1 as const;
@@ -75,6 +76,7 @@ export interface CharacterSourceSnapshotV1 {
     creationSelections:Record<string,string[]>;
     notes?:string;
   };
+  creationAuthoring?:CharacterCreationAuthoringSourceV1;
   spellAndFeatureSelections:{
     cantrips?:string[];
     preparedSpells?:string[];

@@ -10,6 +10,7 @@ import {
   type CharacterRuntimeDurableSnapshotV1,
   type CharacterSourceSnapshotV1,
 } from "./persistenceContracts";
+import { reconstructLegacyCreationAuthoringSourceV1 } from "./characterCreationAuthoringSource";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -89,6 +90,9 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
       creationSelections:cp(sheet.creationSelections ?? {}),
       notes:sheet.notes,
     },
+    creationAuthoring:sheet.creationAuthoringSource?.completeness === "explicit"
+      ? cp(sheet.creationAuthoringSource)
+      : undefined,
     spellAndFeatureSelections:{
       cantrips:sheet.cantrips ? cp(sheet.cantrips) : undefined,
       preparedSpells:sheet.preparedSpells ? cp(sheet.preparedSpells) : undefined,
@@ -145,6 +149,9 @@ export function materializeCharacterRecordV1(record:CharacterLibraryRecordV1):Ch
   sheet.items = cp(record.runtime.items);
   sheet.goldGp = record.runtime.goldGp;
   sheet.durableLifeFlags = record.runtime.lifeFlags ? cp(record.runtime.lifeFlags) : sheet.durableLifeFlags;
+  sheet.creationAuthoringSource = record.source.creationAuthoring
+    ? cp(record.source.creationAuthoring)
+    : reconstructLegacyCreationAuthoringSourceV1(sheet);
   sheet.rulesProfileId = record.source.rulesProfile.id;
   sheet.rulesProfileVersion = record.source.rulesProfile.version;
   sheet.sourceRevision = record.sourceRevision;
