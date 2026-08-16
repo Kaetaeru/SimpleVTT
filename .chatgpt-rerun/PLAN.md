@@ -3,17 +3,18 @@
 ## Project coordinates
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Canonical baseline: `main`
-- Active work branch: `agent/108-production-play-session-ux` (to be created from current `main` after Rerun authorization is published)
+- Canonical watcher/baseline branch: `main`
+- Active implementation branch: `agent/108-production-play-session-ux`
 - Phase 14 tracking issue: #108 — Production play session composition and in-session UX
+- Phase 14 execution checklist: `.agents/PHASE14_CHECKLIST.md` on the active implementation branch
 - Preserved Phase 13 issue: #104 — completed
 - Preserved Phase 13 implementation checkpoint: `7c9440970753a370fec7830cfa691832552e1d05`
 
 ## Product direction
 
-SimpleVTT must be a genuinely playable desktop application, not a reference fixture shell with production subsystems attached around it. The user must be able to author/persist a Character, enter a real local or connected session with that Character, and use the visible play UI for skills, actions, spells, inventory, combat, authoritative dice, activity history, undo, and connected host resolution.
+SimpleVTT must become a genuinely playable desktop application rather than a reference-fixture shell with production subsystems attached around it. A user must be able to author/persist a Character, enter a real local or connected session with that Character, and use visible production UI for skills, actions, spells, inventory, combat, authoritative dice, activity/undo, and connected host resolution.
 
-`main` remains the canonical baseline. Feature branches start from current `main`; completed work is not stacked on historical Phase branches.
+`main` remains the canonical Rerun watcher coordinate and development baseline. Phase 14 implementation is isolated on `agent/108-production-play-session-ux` until accepted. Rerun dispatch/control remains on `main`; STATE tells each continuation which implementation branch/head to operate on.
 
 ## Preserved completed work — Task 0
 
@@ -29,104 +30,58 @@ This history is preserved and must not be rerun unless Phase 14 changes a releva
 
 **task_id:** `phase14-production-play-session-ux`
 
-**status:** ACTIVE
+**status:** ACTIVE — CHECKLIST REVIEW CHECKPOINT
 
 ### Root cause being corrected
 
-The current production React entrypoint installs many real runtime adapters, but `AppProvider` still operates through a `MockAdapter` whose base state contains Aelar/Mira/reference Combatants and fixed `actionsByActor` fixtures. Character creation/persistence can replace `activeCharacter`, but the production scene path does not reliably materialize a newly authored Character into `SceneVm` or derive a complete playable action surface for that Character. Existing Phase 11 tests primarily exercise the reference fixtures directly, so green CI did not prove the real user journey.
+The production React entrypoint installs many real runtime adapters, but `AppProvider` operates through a `MockAdapter` whose base state contains Aelar/Mira/reference Combatants and fixed `actionsByActor` fixtures. Character creation/persistence can replace `activeCharacter`, but the normal production play path did not prove materialization of a newly authored Character into the live Scene/action surface. Existing Phase 11 tests primarily exercised reference fixtures directly, so green CI did not prove the actual user journey.
 
 ### Goal
 
-Build a production-composed session/play layer where the source of playable actor state is the real persisted Character and session state, while preserving the proven rules/resolution/network subsystems underneath it.
+Build a production-composed session/play layer where the source of playable actor state is the real persisted Character and session state while preserving the proven rules/resolution/network subsystems.
 
-### UX contract
-
-The play workspace must keep the user in one session context. The central play console provides first-class `행동`, `기술`, `주문`, and `인벤토리` tabs/panels. Switching these panels must not discard current session, turn, selected actor, or target context.
-
-- **행동:** attacks, class/feature actions, basic/freeform actions, and other legal actions derived from the active actor.
-- **기술:** rollable ability/skill checks with visible modifier/proficiency/source and authoritative dice resolution.
-- **주문:** available spells with availability/cost/target information and the existing rich presentation where applicable.
-- **인벤토리:** inspect, equip/unequip, attune/unattune, and use legal consumables/charged items during play. Item use stays in session and feeds the authoritative resolution/state-change path.
-- Disabled actions expose a useful reason instead of silently disappearing.
-- The Character Sheet exposes an obvious `플레이` / current-session entry.
-- Missing session/actor state renders a deliberate empty/setup state instead of assuming reference entities exist.
-- DM session UX continues to support Combatant instantiation and actor selection without requiring reference fixtures.
+The in-session workspace must expose first-class `행동`, `기술`, `주문`, and `인벤토리` surfaces while preserving target, turn, session, Resolution, and connection context.
 
 ### Architecture constraints
 
-1. A persisted/newly created Character must materialize to a `SceneEntity` and derived action set from Character source/runtime state.
-2. Reconciliation must occur after creation, edit, level-up, durable hydration, and owning-client connected write-back.
-3. Production-critical paths must not depend on `char.aelar`, `char.mira`, fixed goblin IDs, Ctrl+Shift+D, or reference scenario loading.
-4. Reference fixtures may remain available only as explicit developer/test fixtures, not the default production authority for user play.
-5. Connected Host/Join continues to use host-trusted canonical rules/content and ephemeral SessionProjection for host-unknown remote Characters.
-6. Player permanent Character ownership and host-authoritative shared-session ResolutionEvents remain unchanged.
-7. No tactical map/grid/token/path/LOS expansion in this phase.
+1. Persisted/newly created Character materializes into `SceneEntity` plus derived actions from canonical source/runtime facts.
+2. Reconciliation occurs after hydration, creation, edit, level-up, and owning-client connected write-back.
+3. Product-critical paths do not depend on `char.aelar`, `char.mira`, fixed goblin ids, Ctrl+Shift+D, or reference scenario loading.
+4. Reference fixtures may remain only for explicit tests/debug.
+5. Connected Host/Join retains host-trusted canonical reconstruction and ephemeral SessionProjection for host-unknown Characters.
+6. Permanent Character ownership remains with the player; shared-session ResolutionEvents remain Host-authoritative.
+7. No tactical map/grid/token/path/LOS expansion in Phase 14.
 
-### Delivery slices
+### Authoritative completion checklist
 
-#### P14.1 — Production actor materialization
+The detailed implementation, UX, validation, Rerun, Windows build, human acceptance, merge, and closeout gates are maintained in:
 
-- Add a deterministic Character -> Scene actor/action projection boundary.
-- Reconcile active Character into the local scene after hydration/create/edit/level-up/write-back.
-- Make Player Scene robust when no actor/session exists.
-- Remove reference-character identity assumptions from the normal player route.
+`.agents/PHASE14_CHECKLIST.md` on `agent/108-production-play-session-ux`.
 
-#### P14.2 — In-session action/skill UX
+A checkbox receives completion credit only with evidence at a concrete commit. Source presence alone is not completion. The checklist explicitly blocks the phrase “모든 기능을 담은 플레이 가능한 버전” until fresh-Character local play, in-session Actions/Skills/Spells/Inventory, connected two-instance play, restart/durable state, full regressions, human walkthroughs, and exact-head Windows artifact verification all pass.
 
-- Add play-console tabs with `행동` and `기술` as first-class surfaces.
-- Derive skill checks from Character abilities/proficiencies and route rolls through authoritative resolution/visual dice/activity provenance.
-- Keep targeting and turn economy context stable across tabs.
-
-#### P14.3 — In-session inventory and spells
-
-- Add `인벤토리` panel/drawer available during play.
-- Route item use through existing authoritative item cost/healing/damage/resource mechanisms; equipment/attunement controls update derived state legally.
-- Add `주문` play surface based on the actor's real spell availability rather than reference actor IDs.
-
-#### P14.4 — Real local session flow
-
-- Character Library/Sheet -> play entry -> local session/scene with the selected real Character.
-- Support DM Combatant instantiation into that live scene.
-- Preserve activity, undo, initiative/freeform, conditions/concentration/reactions, DM correction, and visual dice.
-
-#### P14.5 — Connected production flow
-
-- Host/Join uses the same production actor projection.
-- Host-unknown player Character mounts ephemerally and is visible/selectable in the real DM scene.
-- Remote player actions resolve on host and converge through committed events; owning client durable state persists.
-
-#### P14.6 — Product-realistic gates and Windows build
-
-- Add a fresh-Character production integration gate: create -> save -> enter play -> skill roll -> action/item/spell/feature -> state/activity update.
-- Add restart/hydration -> play gate.
-- Add in-session inventory and skills UI structure/behavior gates.
-- Keep relevant Phase 11/12/13 regressions green.
-- Main Playable workflow must build the exact validated head and package `SimpleVTT.exe`, `BUILD.txt`, and an updated local+connected human walkthrough.
-
-### Acceptance criteria
+### Acceptance summary
 
 Task 1 is complete only when all are true:
 
-1. A Character created through production authoring can immediately enter play and appears as the actual scene actor.
-2. Restarted persisted Characters re-enter play with their own HP/resources/items/actions.
-3. `행동`, `기술`, `주문`, `인벤토리` are accessible inside the session workspace without debug tools.
-4. A skill roll uses the real Character modifier and produces authoritative dice/provenance/activity.
-5. A legal inventory item can be used in session and its quantity/charges/state changes follow authoritative event and durable write-back rules.
-6. Real Character attacks/features/spells are derived and usable without fixture actor IDs.
-7. DM can add/use Combatants in the live session and run freeform/initiative flow.
-8. Two production app instances can Host/Join with a host-unknown Character and converge after a real UI-triggered action.
-9. No product-critical flow requires Ctrl+Shift+D/reference scenario fixtures.
-10. Exact-head production build and relevant Phase 11/12/13 regression gates are green.
-11. A Windows playable artifact from that exact head is produced and its digest/build metadata is verified.
+1. A Character created through production authoring can immediately enter play as the actual Scene actor.
+2. Restarted persisted Characters re-enter play with their own durable HP/resources/items/actions.
+3. `행동`, `기술`, `주문`, `인벤토리` are accessible in the session workspace without debug tools.
+4. Skill rolls use the real Character modifier and authoritative dice/provenance/activity.
+5. Legal inventory item use follows authoritative Resolution/cost and durable ownership rules.
+6. Real Character attacks/features/spells work without fixture actor ids.
+7. DM can add/use Combatants and run freeform/initiative/corrections/Undo in the live session.
+8. Two production desktop instances can Host/Join with a host-unknown Character and converge after visible UI actions.
+9. No product-critical flow requires Ctrl+Shift+D/reference scenarios.
+10. Full relevant Phase 11/12/13 and rules/persistence/UI/Tauri regressions are green at the release candidate head.
+11. Local and connected human acceptance walkthroughs pass at that exact head.
+12. Windows playable artifact from that exact head has verified build metadata and SHA-256.
+13. Accepted implementation is present on canonical `main` before final Rerun `complete`.
 
-### Verification method
+## Current checklist-review checkpoint
 
-- New integration tests centered on newly authored/persisted Character identities rather than Aelar/Mira fixtures.
-- UI structure tests for the session tabs, inventory interaction, empty/setup states, and Play entry.
-- Existing rules/domain and production build gates.
-- Phase 11 offline regression where relevant, Phase 12 connected authority, Phase 13 SessionProjection regression.
-- Windows Tauri library tests and exact-head `Main Playable` artifact.
+The work branch already contains early implementation files from the interrupted prior execution, including production play/dice adapters and an in-session play dock. These files are deliberately treated as **implemented but unverified**; no product completion checkbox is granted merely because they exist.
 
-### Current authorization
+The latest user instruction asks to establish the final completion checklist first. Therefore implementation should pause after the checklist and coordination checkpoint. The next dispatch should wait for user review rather than continuing code changes automatically.
 
-The user's latest instruction explicitly authorizes planning through implementation and playable build completion, with special emphasis on session inventory/item use and comprehensive skill/action tabs. Sequence 1 is therefore authorized to proceed once `STATE.md` is reconciled and `control.json` is published last with `status: continue`.
+On user approval, the same sequence may return to `continue`. Resume by reading README -> control -> STATE -> PLAN, then fetch `.agents/PHASE14_CHECKLIST.md` from the work branch and start from STATE `Next Exact Action` without repeating Phase 13 or already evidence-backed Phase 14 work.
