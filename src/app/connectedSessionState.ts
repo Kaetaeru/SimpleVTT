@@ -1,4 +1,4 @@
-import type { ConnectedActionRequest } from "./connectedSessionProtocol";
+import type { ConnectedActionRequest, SessionCompatibilityManifest } from "./connectedSessionProtocol";
 import { ClientSessionReplica, HostSessionLedger } from "./connectedSessionProtocol";
 import type { MockAdapter } from "./mockAdapter";
 
@@ -16,6 +16,7 @@ export interface ConnectedRuntimeState {
   listenersInstalled:boolean;
   pendingRemoteAction:PendingRemoteAction|null;
   publishedResolutionIds:Set<string>;
+  peerManifests:Map<string,SessionCompatibilityManifest>;
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -31,6 +32,7 @@ export function connectedStateFor(adapter:MockAdapter) {
       listenersInstalled:false,
       pendingRemoteAction:null,
       publishedResolutionIds:new Set<string>(),
+      peerManifests:new Map<string,SessionCompatibilityManifest>(),
     };
     states.set(adapter,state);
   }
@@ -45,5 +47,6 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.replica=null;
   state.pendingRemoteAction=null;
   state.publishedResolutionIds.clear();
+  state.peerManifests.clear();
   return state;
 }
