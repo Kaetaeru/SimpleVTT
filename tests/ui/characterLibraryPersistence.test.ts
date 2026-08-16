@@ -3,7 +3,10 @@ import test from "node:test";
 import type { CharacterSheet } from "../../src/app/contracts";
 import {
   CharacterLibraryCorruptError,
+  CharacterLibraryMigrationRequiredError,
   CharacterLibraryRepository,
+  CharacterLibrarySchemaError,
+  decodeCharacterLibrary,
   decodeCharacterLibraryV1,
   encodeCharacterLibraryV1,
 } from "../../src/app/characterLibraryPersistence";
@@ -110,9 +113,38 @@ test("the persisted document excludes transient AppSnapshot/session fields", asy
   const repository = new CharacterLibraryRepository(store);
   const hydration = await repository.hydrate([sheet()],"char.test");
   const encoded = encodeCharacterLibraryV1(hydration.document);
-  const decoded = decodeCharacterLibraryV1(encoded);
+  const decoded = decodeCharacterLibrary(encoded);
   assert.equal(decoded.characters[0].source.rulesProfile.id,"dnd.srd-5.2.1");
+  assert.deepEqual(decoded,decodeCharacterLibraryV1(encoded));
   for (const forbidden of ["scene","resolution","connectionState","queuedD20","sessionMode","combatantDefinitions"]) {
     assert.equal(encoded.includes(`\"${forbidden}\"`),false,forbidden);
   }
+});
+
+test("an unsupported newer schema is an explicit migration blocker, not corruption fallback", async () => {
+  const store = new MemoryCharacterLibraryStore();
+  const writer = new CharacterLibraryRepository(store);
+  const initial = await writer.hydrate([sheet()],"char.test");
+  await writer.commit(initial.sheets,initial.activeCharacterId);
+  const v2 = JSON.stringify({
+    schemaId:"simplevtt.character-library",
+    schemaVersion:2,
+    storageRevision:2,
+    activeCharacterId:"char.test",
+    characters:[],
+  });
+  store.seed(2,v2);
+
+  const reader = new CharacterLibraryRepository(store);
+  await assert.rejects(
+    () => reader.hydrate([sheet()],"char.test"),
+    (error:unknown) => error instanceof CharacterLibraryMigrationRequiredError && error.schemaVersion === 2,
+  );
+});
+
+test("an unrelated schema id is an explicit blocker rather than an older-generation fallback", async () => {
+  const store = new MemoryCharacterLibraryStore();
+  store.seed(1,JSON.stringify({schemaId:"other.app.library",schemaVersion:1}));
+  const repository = new CharacterLibraryRepository(store);
+  await assert.rejects(() => repository.hydrate([sheet()],"char.test"),CharacterLibrarySchemaError);
 });
