@@ -33,7 +33,7 @@ jobs:
       - name: Generate canonical content
         run: npm run generate:content
       - name: Verify connected-session authority protocol
-        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts
+        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionReadyStartSafety.test.ts
       - name: Verify Phase 11 offline walkthrough remains green
         run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
       - name: Verify production frontend gate
