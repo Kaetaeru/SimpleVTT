@@ -101,10 +101,22 @@ async function createPersistedProductionFighter(name:string) {
 }
 
 function liveAction(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,characterId:string,kind:"ability-check"|"attack") {
-  const action = (snapshot.scene.actionsByActor[characterId] ?? []).find((entry) => entry.resolutionKind === kind && (kind !== "attack" || entry.id !== "action.shortbow"));
+  const action = (snapshot.scene.actionsByActor[characterId] ?? []).find((entry) => entry.resolutionKind === kind);
   assert.ok(action,`fresh Character must expose a ${kind} production action`);
   assert.equal(action.actorId,characterId);
   return action;
+}
+
+function legalLiveAttack(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,characterId:string) {
+  const actions=(snapshot.scene.actionsByActor[characterId] ?? []).filter((entry)=>entry.resolutionKind==="attack" && entry.runtimeAttack);
+  const targets=snapshot.scene.entities.filter((entity)=>entity.kind==="combatant" && entity.side==="enemy" && entity.reactions.length===0);
+  for (const action of actions) {
+    for (const target of targets) {
+      const distance=Number(target.distance.match(/(\d+(?:\.\d+)?)/)?.[1]);
+      if (Number.isFinite(distance) && distance <= action.runtimeAttack!.rangeFeet) return {action,target,distance};
+    }
+  }
+  assert.fail("fresh Character must have a derived attack with a legal live combatant target");
 }
 
 test("production offline create/save/restart materializes a fresh non-fixture Character as the local play actor", async () => {
@@ -157,10 +169,9 @@ test("production offline fresh Character spends Initiative Action on its derived
   await adapter.startInitiative();
   await adapter.setCurrentActor(characterId);
   let snapshot = await adapter.getSnapshot();
-  const action = liveAction(snapshot,characterId,"attack");
-  const target = snapshot.scene.entities.find((entity) => entity.kind === "combatant" && entity.side === "enemy" && entity.reactions.length === 0);
-  assert.ok(target,"production Scene must contain a legal combatant target");
+  const {action,target,distance}=legalLiveAttack(snapshot,characterId);
   const hpBefore = target.hp;
+  assert.ok(action.runtimeAttack && distance <= action.runtimeAttack.rangeFeet);
 
   snapshot = await adapter.resolveAction(action.id,[target.id]);
   const resolutionId = snapshot.resolution?.id;
@@ -172,6 +183,8 @@ test("production offline fresh Character spends Initiative Action on its derived
   }
 
   assert.equal(snapshot.resolution?.stage,"complete");
+  assert.doesNotMatch(snapshot.resolution?.finalOutcome ?? "",/적용 거부|missing pairwise spatial runtime fact/i);
+  assert.ok(snapshot.resolution?.provenance.some((line)=>line.includes(`runtime:spatial:${characterId}->${target.id}:distance:${distance}ft`)),"targeting provenance must use the live Character id");
   assert.equal(snapshot.scene.economyByActor[characterId]?.action,false,"committed Initiative attack must spend the live actor Action");
   assert.ok(snapshot.activity.some((entry) => entry.id === resolutionId));
 
