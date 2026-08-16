@@ -1,3 +1,5 @@
+import type { ResolutionEvent } from "../domain/resolutionTypes";
+
 export const CONNECTED_SESSION_PROTOCOL_VERSION = 1 as const;
 
 export interface CharacterProjectionRevision {
@@ -29,12 +31,20 @@ export interface ConnectedActionRequest {
   capabilities:string[];
 }
 
-export interface ConnectedEventPayload {
-  kind:"resolution"|"mode-transition"|"correction"|"participant";
-  resolutionId?:string;
-  stateChanges:string[];
-  provenance:string[];
-}
+export type ConnectedEventPayload =
+  | {
+      kind:"resolution";
+      resolutionId:string;
+      resolutionEvents:ResolutionEvent[];
+      stateChanges:string[];
+      provenance:string[];
+    }
+  | {
+      kind:"mode-transition"|"correction"|"participant";
+      resolutionId?:string;
+      stateChanges:string[];
+      provenance:string[];
+    };
 
 export interface ConnectedSessionEvent {
   sessionId:string;
@@ -59,6 +69,8 @@ export type ClientApplyResult =
   | { status:"applied"; cursor:number }
   | { status:"duplicate"; cursor:number }
   | { status:"rejected"; error:string; cursor:number };
+
+export type ConnectedPayloadApplyResult = void | { status:"committed" } | { status:"rejected"; error:string };
 
 function normalizedCapabilities(values:string[]) {
   return [...new Set(values)].sort();
@@ -152,7 +164,10 @@ export class ClientSessionReplica {
   constructor(sessionId:string) { this.sessionId=sessionId; }
   get cursor() { return this._cursor; }
 
-  apply(event:ConnectedSessionEvent,applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>void):ClientApplyResult {
+  apply(
+    event:ConnectedSessionEvent,
+    applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>ConnectedPayloadApplyResult,
+  ):ClientApplyResult {
     if (event.sessionId !== this.sessionId) {
       return { status:"rejected", error:`session mismatch: expected ${this.sessionId}, received ${event.sessionId}`, cursor:this.cursor };
     }
@@ -165,13 +180,19 @@ export class ClientSessionReplica {
     if (event.sequence !== this.cursor+1) {
       return { status:"rejected", error:`event gap: expected ${this.cursor+1}, received ${event.sequence}`, cursor:this.cursor };
     }
-    applyPayload(structuredClone(event.payload),structuredClone(event));
+    const applied=applyPayload(structuredClone(event.payload),structuredClone(event));
+    if (applied && applied.status === "rejected") {
+      return { status:"rejected", error:`authoritative event apply rejected: ${applied.error}`, cursor:this.cursor };
+    }
     this.appliedEventIds.add(event.eventId);
     this._cursor=event.sequence;
     return { status:"applied", cursor:this.cursor };
   }
 
-  applyBatch(events:ConnectedSessionEvent[],applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>void):ClientApplyResult {
+  applyBatch(
+    events:ConnectedSessionEvent[],
+    applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>ConnectedPayloadApplyResult,
+  ):ClientApplyResult {
     let result:ClientApplyResult={ status:"duplicate", cursor:this.cursor };
     for (const event of events) {
       result=this.apply(event,applyPayload);
