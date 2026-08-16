@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
+import {
+  LEVEL_UP_ABILITIES,
+  projectLevelUpClassOptions,
+  projectLevelUpFixedHpGain,
+} from "./app/levelUpV10Presentation";
 import { mockAdapter } from "./app/mockAdapter";
-import "./app/progressionContracts";
+import type { ChoiceDefinition, ChoiceSelectionValue } from "./app/progressionContracts";
 import type { Phase07AdapterCommands } from "./app/progressionRuntimeAdapter";
-import type { ChoiceDefinition, ChoiceSelectionValue } from "./domain/choiceDefinition";
-import { PROGRESSION_CATALOG, multiclassEligibility } from "./domain/progressionCatalog";
-
-const ABILITIES = [
-  ["str", "근력"], ["dex", "민첩"], ["con", "건강"], ["int", "지능"], ["wis", "지혜"], ["cha", "매력"],
-] as const;
 
 function useLevelUpHost() {
   const [host, setHost] = useState<HTMLElement | null>(null);
@@ -60,8 +59,8 @@ function ChoicePanel({ choice, onSelect, selection }: { choice: ChoiceDefinition
         <button className={asi?.mode === "feat" ? "active" : ""} onClick={() => set({ mode:"feat", primary:undefined, secondary:undefined })}>재주</button>
       </div>
       {asi?.mode !== "feat" && <div className="levelup-ability-pickers">
-        <label><span>{asi?.mode === "split" ? "첫 능력치" : "능력치"}</span><select value={asi?.primary ?? ""} onChange={(event) => set({ primary:(event.target.value || undefined) as typeof ABILITIES[number][0] | undefined })}><option value="">선택</option>{ABILITIES.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-        {asi?.mode === "split" && <label><span>둘째 능력치</span><select value={asi.secondary ?? ""} onChange={(event) => set({ secondary:(event.target.value || undefined) as typeof ABILITIES[number][0] | undefined })}><option value="">선택</option>{ABILITIES.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>}
+        <label><span>{asi?.mode === "split" ? "첫 능력치" : "능력치"}</span><select value={asi?.primary ?? ""} onChange={(event) => set({ primary:(event.target.value || undefined) as typeof LEVEL_UP_ABILITIES[number][0] | undefined })}><option value="">선택</option>{LEVEL_UP_ABILITIES.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+        {asi?.mode === "split" && <label><span>둘째 능력치</span><select value={asi.secondary ?? ""} onChange={(event) => set({ secondary:(event.target.value || undefined) as typeof LEVEL_UP_ABILITIES[number][0] | undefined })}><option value="">선택</option>{LEVEL_UP_ABILITIES.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>}
       </div>}
       {asi?.mode === "feat" && <div className="levelup-option-grid">{featOptions.length ? featOptions.map((option) => {
         const featId = option.id.slice("feat:".length);
@@ -89,15 +88,7 @@ export function LevelUpV10Bridge() {
   const draft = snapshot?.levelUpDraft;
   const character = snapshot?.activeCharacter;
   const [busy, setBusy] = useState(false);
-  const tracks = character?.classLevels ?? [];
-  const classOptions = useMemo(() => {
-    if (!character) return [];
-    return PROGRESSION_CATALOG.classes.map((entry) => {
-      const existing = tracks.some((track) => track.classId === entry.id);
-      const eligibility = existing ? { eligible:true, reason:"" } : multiclassEligibility(character.abilities, tracks, entry.id);
-      return { entry, existing, eligible:eligibility.eligible, reason:eligibility.reason };
-    });
-  }, [character, tracks]);
+  const classOptions = useMemo(() => character ? projectLevelUpClassOptions(character) : [], [character]);
 
   if (!host || !snapshot || !plan || !draft || !character) return null;
 
@@ -113,7 +104,7 @@ export function LevelUpV10Bridge() {
 
   const existingOptions = classOptions.filter((option) => option.existing);
   const addOptions = classOptions.filter((option) => !option.existing);
-  const fixedGain = Math.floor(plan.hp.hitDie / 2) + 1 + plan.hp.constitutionModifier;
+  const fixedGain = projectLevelUpFixedHpGain(plan);
 
   return createPortal(<div className="levelup-v10">
     <header className="levelup-v10-head">
@@ -125,7 +116,7 @@ export function LevelUpV10Bridge() {
       <aside className="levelup-class-picker">
         <span className="eyebrow">클래스 레벨</span>
         <h2>계속할 클래스</h2>
-        <div className="levelup-class-list">{existingOptions.map(({ entry }) => <button key={entry.id} className={plan.targetClassId === entry.id ? "active" : ""} onClick={() => chooseClass(entry.id)} disabled={busy}><b>{entry.nameKo}</b><small>{tracks.find((track) => track.classId === entry.id)?.level ?? 0} → {(tracks.find((track) => track.classId === entry.id)?.level ?? 0) + 1}</small></button>)}</div>
+        <div className="levelup-class-list">{existingOptions.map(({ entry,currentLevel }) => <button key={entry.id} className={plan.targetClassId === entry.id ? "active" : ""} onClick={() => chooseClass(entry.id)} disabled={busy}><b>{entry.nameKo}</b><small>{currentLevel} → {currentLevel+1}</small></button>)}</div>
         <h2>+ 클래스 추가</h2>
         <div className="levelup-class-list add">{addOptions.map(({ entry, eligible, reason }) => <button key={entry.id} className={plan.targetClassId === entry.id ? "active" : ""} disabled={busy || !eligible} title={reason} onClick={() => chooseClass(entry.id)}><b>{entry.nameKo}</b><small>{eligible ? `${entry.nameEn} · 1레벨` : reason || "선행 조건 미충족"}</small></button>)}</div>
       </aside>
@@ -145,7 +136,7 @@ export function LevelUpV10Bridge() {
 
         <section className="levelup-hp-choice">
           <header><div><span className="eyebrow">HP</span><h2>히트 포인트 증가</h2></div><small>d{plan.hp.hitDie} + 건강 수정치 {plan.hp.constitutionModifier >= 0 ? "+" : ""}{plan.hp.constitutionModifier}</small></header>
-          <div className="levelup-segmented"><button className={draft.hpMethod === "fixed" ? "active" : ""} onClick={() => setHp("fixed")} disabled={busy}>고정값 · {Math.max(1, fixedGain)} HP</button><button className={draft.hpMethod === "roll" ? "active" : ""} onClick={() => setHp("roll", draft.hpRoll ?? 1)} disabled={busy}>d{plan.hp.hitDie} 굴림</button></div>
+          <div className="levelup-segmented"><button className={draft.hpMethod === "fixed" ? "active" : ""} onClick={() => setHp("fixed")} disabled={busy}>고정값 · {fixedGain} HP</button><button className={draft.hpMethod === "roll" ? "active" : ""} onClick={() => setHp("roll", draft.hpRoll ?? 1)} disabled={busy}>d{plan.hp.hitDie} 굴림</button></div>
           {draft.hpMethod === "roll" && <label className="levelup-roll"><span>d{plan.hp.hitDie} 결과</span><input type="number" min={1} max={plan.hp.hitDie} value={draft.hpRoll ?? ""} onChange={(event) => setHp("roll", Number(event.target.value))}/></label>}
           {plan.hp.retroactiveConstitutionGain !== 0 && <p className="levelup-con-retro">건강 수정치 변화의 소급 HP: {plan.hp.retroactiveConstitutionGain > 0 ? "+" : ""}{plan.hp.retroactiveConstitutionGain}</p>}
         </section>

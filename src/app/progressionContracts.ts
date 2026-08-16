@@ -68,4 +68,5 @@ declare module "./contracts" {
   }
 }
 
-export {};
+export type { ChoiceDefinition, ChoiceSelectionValue } from "../domain/choiceDefinition";
+export type { ProgressionPlan } from "../domain/progression";
