@@ -15,6 +15,7 @@ import { ruleModulePackageReviewEntry } from "./ruleModulePackageReviewEntry";
 import { InstalledContentRepository } from "./installedContentPersistence";
 import type { InstalledCatalogEntryV1, InstalledContentDocumentV1, InstalledContentStore } from "./installedContentContracts";
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
+import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -58,8 +59,7 @@ async function ensureHydrated(adapter:MockAdapter) {
   if (context.hydration) return context.hydration;
   context.hydration=(async()=>{
     await oldGetSnapshot.call(adapter);
-    const state=stateOf(adapter);
-    context.builtin=cp(state.catalog.filter((entry)=>entry.scope==="builtin"));
+    context.builtin=generatedBuiltinCatalog();
     try {
       const hydration=await context.repository.hydrate();
       applyComposition(adapter);

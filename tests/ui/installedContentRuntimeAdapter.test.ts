@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/builtinCatalogRuntimeAdapter";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
@@ -43,14 +42,14 @@ test("canonical builtin catalog composes before durable local content and reload
   assert.equal(builtin.filter((entry)=>entry.category==="species").length,9);
   assert.equal(builtin.filter((entry)=>entry.category==="background").length,4);
   assert.equal(builtin.filter((entry)=>entry.category==="spell").length,339);
-  assert.ok(builtin.filter((entry)=>entry.category==="feat").length>=17);
-  assert.ok(builtin.filter((entry)=>entry.category==="item").length>=51);
+  assert.equal(builtin.filter((entry)=>entry.category==="feat").length,17);
+  assert.equal(builtin.filter((entry)=>entry.category==="item").length,114);
+  assert.equal(initial.catalog.length,495);
   assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.class.fighter" && entry.nameKo==="파이터" && entry.nameEn==="Fighter" && entry.sourceId==="dnd.srd-5.2.1" && entry.version==="0.1-draft"));
   assert.ok(!builtin.some((entry)=>entry.contentId==="class.fighter"));
   assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.item.weapon.longsword" && entry.category==="item"));
   assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.spell.healing-word" && entry.description.length>0 && !entry.description.includes("DEMO")));
   assert.equal(new Set(builtin.map((entry)=>entry.id)).size,builtin.length);
-  assert.ok(initial.catalog.some((entry)=>entry.scope!=="builtin"),"legacy/session mock entries remain non-builtin instead of being rewritten as product content");
   assert.equal(getInstalledContentPersistenceStateForTests(writer)?.document?.entries.length,0,"builtin product content must not be copied into the installed-content document");
 
   const committed=await previewAndActivate(writer,payload());
