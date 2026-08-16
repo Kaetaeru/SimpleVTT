@@ -4,6 +4,7 @@ import { App } from "./App";
 import { AppProvider } from "./app/AppProvider";
 import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
+import "./app/connectedRoleRoutingAdapter";
 import "./app/connectedActionRoutingAdapter";
 import "./app/connectedTurnRoutingAdapter";
 import "./app/connectedCorrectionRoutingAdapter";
