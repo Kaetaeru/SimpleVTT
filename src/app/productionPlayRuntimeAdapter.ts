@@ -195,7 +195,7 @@ function itemActions(character:CharacterSheet):ActionVm[] {
         eligibleTargetIds:[],
         healing:{dice:"2d4",flat:2,average:7},
         itemCost:{itemId:item.id,quantity:1},
-        details:[detail("대상","자신"),detail("회복","2d4 + 2"),detail("비용",`${item.name} 1개`),...item.provenance.map((source)=>detail("출처",source))],
+        details:[detail("대상","자신"),detail("회복","2d4 + 2"),detail("비용",`${item.name} 1개"),...item.provenance.map((source)=>detail("출처",source))],
       });
       continue;
     }
@@ -297,8 +297,6 @@ function reconcile(adapter:MockAdapter) {
 
   internal.scene.actionsByActor[character.id]=deriveProductionCharacterActions(character);
   internal.scene.economyByActor[character.id]??={action:true,bonusAction:true,reaction:true,movement:character.speed,movementMax:character.speed};
-  internal.scene.economyByActor[character.id].movementMax=character.speed;
-  internal.scene.economyByActor[character.id].movement=Math.min(internal.scene.economyByActor[character.id].movement,character.speed);
 
   if (!internal.scene.entities.some((entity)=>entity.id===internal.scene.currentActorId)) internal.scene.currentActorId=character.id;
   if (!internal.scene.entities.some((entity)=>entity.id===internal.scene.selectedActorId)) internal.scene.selectedActorId=character.id;
