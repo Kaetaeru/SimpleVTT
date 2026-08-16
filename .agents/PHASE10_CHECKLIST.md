@@ -159,18 +159,34 @@ Verification:
 
 Note: dependency versions are exact strings because the current RuleModule contract has exact `{moduleId, version}` references. Semver/range syntax requires explicit schema evolution and is not invented here.
 
-## Step 7 — Local homebrew package import / review / activation UX — NEXT
+## Step 7 — Local homebrew package import / review / activation UX — CLOSED
 
-- [ ] inventory current Catalog JSON textarea/review UI and existing file/path picker capabilities
-- [ ] accept a complete declarative RuleModule package shape using existing `rule-module.schema.json` + `content-entry.schema.json`
-- [ ] keep import package/review transient; do not persist it as installed state before activation
-- [ ] validate package manifest and every contained entry before activation using Step 6 semantics
-- [ ] show module/source/profile/dependency/conflict/capability summary and per-entry validation in review UX
-- [ ] activate the reviewed package atomically as one local installation transaction; never leave a partially installed package
-- [ ] preserve reviewed package on validation/storage failure for correction/retry
-- [ ] deterministic multi-entry package success / invalid entry / dependency / duplicate / atomic failure regressions
-- [ ] production build + full UI + Windows persistence gates
-- [ ] Draft PR checkpoint
+Tracking issue: #93
+Draft PR: #94
+Branch: `agent/93-rule-module-package-import`
+Base checkpoint: `5c8c768b74967a6f4ad6333834e8c5a38ccf9e4c`
+Verified implementation checkpoint: `44c81d1c547e49d3e583394c6251e5835cf19679`
+
+- [x] inventoried the existing Catalog JSON textarea/review UI and kept this slice inside the existing in-app JSON flow without a new desktop file-picker dependency
+- [x] accept a complete declarative RuleModule package shape using existing RuleModule/ContentEntry semantics while preserving legacy flat single-entry imports
+- [x] keep import package/review transient; preview performs no durable installed-content write before activation
+- [x] validate the package manifest and every contained entry as one candidate set using Step 6 profile/dependency/conflict/capability/category/relationship semantics
+- [x] show package/module/source/profile/dependency/conflict/capability summary and per-entry validation through the existing review UX
+- [x] activate the reviewed package atomically with `installMany`; one installed-content generation commits or none do
+- [x] reject duplicate and changed pre-existing qualified identities explicitly before deeper module validation and before persistence
+- [x] preserve the reviewed package on validation or storage failure for correction/retry
+- [x] deterministic multi-entry success / invalid member / unsupported mechanics / duplicate-or-existing identity / storage failure / reload regressions
+- [x] production build + full UI + Windows persistence gates
+- [x] Contract validation gate
+- [x] Draft PR checkpoint
+
+Verification:
+- Persistence workflow `31935767524` application-contract + production build ✅
+- Persistence workflow `31935767524` Windows `cargo test --lib` ✅
+- UI workflow `31935767558` ✅
+- Contract validation workflow `31935874240` ✅
+
+Note: this slice deliberately remains textarea/package-JSON only. It does not add executable module loading, arbitrary code execution, or a new Tauri file-dialog dependency.
 
 ## Follow-up Phase 10 slices
 
