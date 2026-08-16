@@ -46,8 +46,8 @@ jobs:
         run: npm run test:ui-rule-boundary
       - name: Verify Phase 14 PlaySessionDock hydration and tab context
         run: npx tsx --test tests/ui/playSessionDockStructure.test.ts
-      - name: Verify Phase 14 production lifecycle, local projection ownership, and fresh Character skills
-        run: npx tsx --test tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionLocalCharacterSwitch.test.ts tests/ui/characterLibraryProductionPlayIntegration.test.ts tests/ui/productionFreshCharacterSkills.test.ts
+      - name: Verify Phase 14 production lifecycle, local projection ownership, fresh Character skills/actions, and inventory durability
+        run: npx tsx --test tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionLocalCharacterSwitch.test.ts tests/ui/characterLibraryProductionPlayIntegration.test.ts tests/ui/productionFreshCharacterSkills.test.ts tests/ui/productionFreshCharacterInventory.test.ts
       - name: Verify creation ChoiceDefinition convergence
         run: npx tsx --test tests/ui/characterCreationChoiceDefinition.test.ts tests/ui/characterCreationChoiceDefinitionStructure.test.ts
       - name: Verify progression choice schedule regression
