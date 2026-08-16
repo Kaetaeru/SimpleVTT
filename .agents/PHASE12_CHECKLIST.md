@@ -5,8 +5,9 @@ Draft PR: #105
 Branch: `agent/103-connected-session-runtime`
 Base checkpoint: `7176715d0ccab1bb6b3fa05faba96ace09a4af69` (Phase 11 CLOSED)
 Verified implementation checkpoint: `d21c6f91889719031cdc849d844b6eda52204da4`
+Verified exact-head CI checkpoint: `8fd4dda13858122465c9d8099f4c1d91e583649f`
 
-Phase 12 automated code completion closes when the exact implementation head passes the connected authority/offline regression/build gates and produces a retrievable Windows connected-session artifact. Human two-instance Windows acceptance remains a separate owner gate (#106).
+Phase 12 automated code completion closes when the connected authority/offline regression/build gates pass and the Windows connected-session workflow builds the explicitly checked-out source head rather than a synthetic PR merge SHA. Human two-instance Windows acceptance remains a separate owner gate (#106).
 
 ## A. Transport-independent protocol / authority
 
@@ -76,6 +77,7 @@ Arbitrary module/content identity reconstruction for a host-unknown Character re
 - [x] Windows Tauri session-transport + persistence Rust library tests green
 - [x] Windows connected-session Tauri release executable builds
 - [x] CI uploads a Windows connected-session artifact with `SimpleVTT.exe`, `BUILD.txt`, and `REMOTE-WALKTHROUGH.txt`
+- [x] PR workflow explicitly checks out `github.event.pull_request.head.sha || github.sha` and writes that same SHA into `BUILD.txt` / artifact name
 - [x] Draft PR #105 checkpoint
 
 Implementation-head verification (`d21c6f91889719031cdc849d844b6eda52204da4`):
@@ -84,15 +86,20 @@ Implementation-head verification (`d21c6f91889719031cdc849d844b6eda52204da4`):
 - Persistence push workflow `31944394240`: application-contract + production build + Windows atomic storage ✅
 - UI push workflow `31944394283` ✅
 - Contract validation PR workflow `31944600146` ✅
-- Phase 11 Playable PR workflow `31944600186`: offline walkthrough + production build green at checkpoint observation; Windows artifact job is a separate regression/handoff gate and is not required to replace the Phase 12 artifact ✅
+
+Exact-head CI verification (`8fd4dda13858122465c9d8099f4c1d91e583649f`):
+- Phase 12 Connected Session PR workflow `31945403323`: explicit PR-head checkout + connected authority suite + Phase 11 walkthrough 84/84 + full production frontend build + Windows Rust transport/persistence + Windows release executable + artifact upload ✅
+- Windows artifact `9263246789`: `SimpleVTT-Phase12-Windows-8fd4dda13858122465c9d8099f4c1d91e583649f`, 2,955,371 bytes, SHA-256 `cbfc6a51010f28d7426ae5325a18fb06348c549862ff72fc68284b8eb3e6b3b2` ✅
 
 ## F. Product handoff / human acceptance
 
-- [x] implementation-head artifact is retrievable
+- [x] implementation/exact-head CI artifacts are retrievable
 - [x] artifact contains a two-instance LAN/Hamachi walkthrough
+- [x] artifact identity is tied to the explicitly checked-out source SHA, not a synthetic PR merge SHA
 - [x] arbitrary host-unknown Character projection follow-up is tracked explicitly in #104
 - [x] owner two-instance Windows acceptance is tracked separately in #106 and is not misrepresented as an automated CI result
-- [ ] exact documentation-close head must reproduce the Phase 12 Windows artifact before final owner delivery
+
+The documentation-close commit that contains this record is the final handoff candidate. Its CI artifact verification is recorded on issue #103 and Draft PR #105 after the workflow finishes, without creating another source commit.
 
 ## Boundaries
 
