@@ -248,11 +248,35 @@ Verification:
 
 Note: `materializedCache` remains available for legacy/additive fallback and still carries derived or not-yet-source-modeled presentation fields. It is no longer authoritative for the build/spell/progression/item/resource/feature fields covered by this slice.
 
+## Follow-up C — Atomic Character save failure/recovery Windows gate — CLOSED
+
+Tracking issue: #99
+Draft PR: #100
+Branch: `agent/99-atomic-save-recovery`
+Base checkpoint: `29fb5d4c581c85e32a5d311b14df8ca4b5140b62`
+Verified implementation checkpoint: `e39af5649600715429db6503e48913a203f5cecb`
+
+- [x] shared immutable-generation store has test-only fault injection after temp-file sync and before commit rename; production write semantics are unchanged
+- [x] interrupted candidate generation never appears as committed state and the temporary file is removed
+- [x] previous committed Character generation remains readable after interrupted save
+- [x] retry from the last committed generation writes the expected next immutable generation
+- [x] CharacterLibraryRepository failed commit leaves in-memory document/revisions unchanged
+- [x] fresh repository hydration after failure recovers the previous durable Character state, and a later retry survives another restart
+- [x] stale-writer, corrupt/newer generation, retention, and schema semantics remain unchanged
+- [x] application persistence contract and production build gate
+- [x] real `windows-latest` Rust `cargo test --lib` atomic recovery gate
+- [x] Draft PR checkpoint
+
+Verification:
+- Persistence push workflow `31938573625` application-contract ✅
+- Persistence push workflow `31938573625` production build ✅
+- Persistence push workflow `31938573625` Windows `cargo test --lib` / atomic Character recovery ✅
+
 ## Follow-up Phase 10 slices
 
 - [x] normalize generated builtin catalogs into the generic catalog feed where required by real consumers
 - [x] ItemInstance/spellbook/resource/feature source reconstruction without materialized-cache dependence
-- [ ] atomic save failure/recovery end-to-end Windows gate
+- [x] atomic save failure/recovery end-to-end Windows gate
 
 ## Non-negotiable boundaries
 
