@@ -1,6 +1,6 @@
 import "./creationContracts";
 import "./progressionContracts";
-import type { AbilityScores, CharacterResourceVm, CharacterSheet, ItemInstanceVm } from "./contracts";
+import type { AbilityScores, CharacterSheet } from "./contracts";
 import type { ProgressionClassTrack } from "../domain/progression";
 import type { CharacterCreationAuthoringSourceV1 } from "./characterCreationAuthoringSource";
 
@@ -56,6 +56,49 @@ export interface CharacterProgressionSelectionsV1 {
   spellMasterySourcesByLevel?:Record<number,string>;
 }
 
+export interface CharacterItemSourceReferenceV1 {
+  id:string;
+  definitionId:string;
+  name?:string;
+  nameEn?:string;
+  kind?:"equipment"|"consumable"|"magic";
+  attunementRequired?:boolean;
+  chargeMaximum?:number;
+  passiveEffects?:string[];
+  grantedActionIds?:string[];
+  provenance:string[];
+}
+
+export interface CharacterResourceSourceDefinitionV1 {
+  id:string;
+  label:string;
+  max:number;
+  source:string;
+  recovery?: {
+    shortRest?:number|"all";
+    longRest?:number|"all";
+    turnStart?:number|"all";
+  };
+}
+
+export interface CharacterResourceRuntimeStateV1 {
+  id:string;
+  current:number;
+  recoveryLockouts?: {
+    shortRest?:number;
+    longRest?:number;
+  };
+}
+
+export interface CharacterItemRuntimeStateV1 {
+  id:string;
+  quantity:number;
+  equipped:boolean;
+  wielded?:boolean;
+  attuned?:boolean;
+  charges?:{ current:number };
+}
+
 export interface CharacterSourceSnapshotV1 {
   characterId:string;
   name:string;
@@ -84,19 +127,17 @@ export interface CharacterSourceSnapshotV1 {
     masteryWeapons?:string[];
   };
   progression:CharacterProgressionSelectionsV1;
-  itemReferences:Array<{
-    id:string;
-    definitionId:string;
-    provenance:string[];
-  }>;
+  featureGrants?:string[];
+  resourceDefinitions?:CharacterResourceSourceDefinitionV1[];
+  itemReferences:CharacterItemSourceReferenceV1[];
 }
 
 export interface CharacterRuntimeDurableSnapshotV1 {
   hp:number;
   tempHp:number;
   lifeFlags?:CharacterDurableLifeFlagsV1;
-  resources:CharacterResourceVm[];
-  items:ItemInstanceVm[];
+  resources:CharacterResourceRuntimeStateV1[];
+  items:CharacterItemRuntimeStateV1[];
   goldGp?:number;
 }
 
