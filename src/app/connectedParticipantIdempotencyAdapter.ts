@@ -19,10 +19,11 @@ const previousCommitHostEvent=HostSessionLedger.prototype.commitHostEvent;
 
 HostSessionLedger.prototype.commitHostEvent=function commitHostEventIdempotently(candidate:HostEventCandidate):ConnectedSessionEvent {
   if (candidate.payload.kind==="participant") {
+    const participant=candidate.payload;
     const latestForParticipant=this.eventsAfter(0)
       .reverse()
-      .find((event)=>event.payload.kind==="participant"&&event.payload.participantId===candidate.payload.participantId);
-    if (latestForParticipant?.payload.kind==="participant"&&sameParticipantState(latestForParticipant.payload,candidate.payload)) {
+      .find((event)=>event.payload.kind==="participant"&&event.payload.participantId===participant.participantId);
+    if (latestForParticipant?.payload.kind==="participant"&&sameParticipantState(latestForParticipant.payload,participant)) {
       return latestForParticipant;
     }
   }
