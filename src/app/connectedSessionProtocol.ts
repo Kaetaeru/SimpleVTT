@@ -1,3 +1,4 @@
+import type { EconomyVm, SessionMode } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const CONNECTED_SESSION_PROTOCOL_VERSION = 1 as const;
@@ -40,7 +41,16 @@ export type ConnectedEventPayload =
       provenance:string[];
     }
   | {
-      kind:"mode-transition"|"correction"|"participant";
+      kind:"mode-transition";
+      sessionMode:SessionMode;
+      round:number;
+      currentActorId:string;
+      economyByActor:Record<string,EconomyVm>;
+      stateChanges:string[];
+      provenance:string[];
+    }
+  | {
+      kind:"correction"|"participant";
       resolutionId?:string;
       stateChanges:string[];
       provenance:string[];
