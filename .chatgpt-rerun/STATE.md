@@ -3,7 +3,7 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch transition: `continue` prepared; publish `control.json` last
+- dispatch state: `continue`
 - repository: `Kaetaeru/SimpleVTT`
 - canonical watcher/baseline branch: `main`
 - active work branch: `agent/108-production-play-session-ux`
@@ -32,7 +32,7 @@ The later Main Playable workflow at `0ebc8b7a020b4ec64c2678b398aa5c064de46a93` p
 
 ## Sequence 1 durable checkpoint
 
-The user has now reviewed the Phase 14 completion scope and explicitly authorized Rerun to resume from the checklist checkpoint. This is the same run_id / sequence 1 / task; no prior validation history is reset.
+The user has reviewed the Phase 14 completion scope and explicitly authorized Rerun to resume from the checklist checkpoint. This is the same run_id / sequence 1 / task; no prior validation history is reset.
 
 The release scope explicitly includes the complete connected-session lifecycle in addition to the in-session mechanics:
 
@@ -58,19 +58,39 @@ The release scope explicitly includes the complete connected-session lifecycle i
 
 ## Current work branch state
 
-Last recorded work branch head:
+Current work branch head:
 
-`01cb784f1c64d46c931175126dde6abadc744907`
+`eaac9d7de499433f8f6da8e04f16100326facd57`
 
-The branch contains early **unverified** Phase 14 implementation:
+Checklist focus: P14.2 session workspace and P14.11 UI structure/behavior, before broader P14.7/P14.8 lifecycle UX.
 
-- `src/app/productionPlayRuntimeAdapter.ts`
-- `src/app/productionDiceRuntimeAdapter.ts`
-- `src/PlaySessionDock.tsx`
-- outer composition imports in `src/app/offlineRuntimeAdapters.ts`
-- `.agents/PHASE14_CHECKLIST.md`
+### Completed since previous checkpoint
 
-Do not award completion credit from source presence. Validate behavior at concrete commits.
+A narrow source repair was committed in `src/PlaySessionDock.tsx`:
+
+- removed conditionally reached `useMemo` after the `snapshot === null` early return, eliminating the identified React hook-order runtime risk during hydration;
+- tab switching no longer clears `pendingActionId`, preserving pending target/action legal context across the four play tabs as required by P14.2.
+
+This is **not** evidence-backed feature completion yet.
+
+### Validation evidence
+
+- Previous UI/build workflow evidence was inspected and showed the pre-existing Phase 14 source had compiled successfully.
+- That evidence predates `eaac9d7de499433f8f6da8e04f16100326facd57` and therefore does not validate the new source head.
+- No exact-head post-change regression test or UI/TypeScript production gate has run for `eaac9d7...` yet.
+- No Phase 14 checklist checkbox was newly marked complete in this execution.
+
+### Known failures / risks
+
+1. The PlaySessionDock hydration/tab-context repair still needs an exact-head regression proving runtime behavior, not just source inspection.
+2. The Phase 14 checklist has broad Host/Join gates, while the release requirement explicitly includes server startup -> DM preparation/lobby -> player Character selection/join -> Ready/start -> participant lifecycle -> session shutdown. That lifecycle decomposition still needs to be added without removing existing gates.
+3. Production visible Host/Join/lobby/readiness/end-session UX is not yet established. Existing Tauri transport, SessionProjection, host authority, reconnect/catch-up, and owning-client write-back must be reused rather than replaced.
+4. Product-realistic fresh-Character/local/connected gates remain unverified.
+
+### Files / architecture boundaries changed
+
+- `src/PlaySessionDock.tsx` only in this execution slice.
+- No rules, persistence, Tauri transport, SessionProjection, host-authority, or durable write-back boundary was changed.
 
 ## Rerun connectivity
 
@@ -85,12 +105,8 @@ The watcher reads coordination from `main`; implementation occurs on the active 
 
 ## Next Exact Action
 
-After `control.json` is published last with the same run_id, sequence `1`, task_id, and `status: continue`:
+At work head `eaac9d7de499433f8f6da8e04f16100326facd57`, add the smallest focused Phase 14 UI regression proving PlaySessionDock can transition from `snapshot=null` to hydrated state without a hook-order failure and that pending target/action context survives tab switches; then run the exact-head UI/TypeScript production gate before awarding checklist credit or adding broader Host/Join lifecycle UI.
 
-1. Read README -> control -> STATE -> PLAN and re-fetch current `main` plus `agent/108-production-play-session-ux` before writing.
-2. Fetch `.agents/PHASE14_CHECKLIST.md`; reconcile its broad Host/Join and DM sections with the newly explicit server startup -> DM preparation/lobby -> player Character selection/join -> Ready/start -> participant lifecycle -> session shutdown release requirements. Do not remove existing gates.
-3. Validate the already-present work-branch changes **before adding more product code**: inspect the diff, run/trigger TypeScript + production UI/build gates and the smallest relevant product-realistic tests, and identify compile/runtime failures.
-4. Fix validation failures first. Then continue from checklist P14.1 Character -> live Scene/action materialization, followed by visible play entry and session lifecycle UX.
-5. Preserve Phase 09-13 authoritative rules/network/write-back boundaries; do not replace proven transport or SessionProjection authority with UI-owned state.
-6. Record only evidence-backed checklist completion. Do not repeat old validation unless a Phase 14 change touches that boundary.
-7. Maintain STATUS on meaningful milestones and write a durable checkpoint before the Rerun hard stop.
+## Dispatch recommendation
+
+`continue`
