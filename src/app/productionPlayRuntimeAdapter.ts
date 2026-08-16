@@ -1,6 +1,7 @@
 import "./combatantRuntimeContracts";
 import type { AbilityKey, ActionVm, AppRole, AppSnapshot, CharacterSheet, CharacterSummary, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { isEphemeralSessionProjectionCharacter } from "./characterSessionProjectionRegistry";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const SKILLS:Array<{id:string;name:string;ability:AbilityKey}>=[
@@ -53,6 +54,7 @@ const cp=<T,>(value:T):T=>structuredClone(value);
 const mod=(score:number)=>Math.floor((score-10)/2);
 const signed=(value:number)=>value>=0?`+${value}`:`${value}`;
 const detail=(label:string,value:string,source?:string)=>({label,value,...(source?{source}:{})});
+const localProjectionIdByAdapter=new WeakMap<MockAdapter,string>();
 
 function isSheet(value:CharacterSummary):value is CharacterSheet {
   const candidate=value as Partial<CharacterSheet>;
@@ -272,6 +274,17 @@ function reconcile(adapter:MockAdapter) {
   const internal=adapter as unknown as Internal;
   const character=internal.activeCharacter;
   if (!character?.id) return;
+  if (isEphemeralSessionProjectionCharacter(adapter,character.id)) return;
+
+  const previousLocalId=localProjectionIdByAdapter.get(adapter);
+  if (previousLocalId&&previousLocalId!==character.id&&!isEphemeralSessionProjectionCharacter(adapter,previousLocalId)) {
+    internal.scene.entities=internal.scene.entities.filter((entity)=>entity.id!==previousLocalId);
+    delete internal.scene.actionsByActor[previousLocalId];
+    delete internal.scene.economyByActor[previousLocalId];
+    if (internal.scene.currentActorId===previousLocalId) internal.scene.currentActorId=character.id;
+    if (internal.scene.selectedActorId===previousLocalId) internal.scene.selectedActorId=character.id;
+  }
+  localProjectionIdByAdapter.set(adapter,character.id);
 
   const fixtureIds=new Set(["char.aelar","char.mira"]);
   internal.scene.entities=internal.scene.entities.filter((entity)=>entity.kind!=="character"||entity.id===character.id||!fixtureIds.has(entity.id));
