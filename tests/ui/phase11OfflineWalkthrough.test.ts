@@ -43,13 +43,25 @@ test("production offline bootstrap starts a playable local shell without remote 
 
 test("production offline composition resolves a Freeform ability check through the final adapter chain", async () => {
   const adapter = new MockAdapter();
-  await adapter.queueNextD20(14);
-  const snapshot = await adapter.resolveAction("action.athletics", ["char.aelar"]);
+  await adapter.setSessionMode("freeform");
+  await adapter.setQueuedD20(14);
+  await adapter.resolveAction("action.athletics", []);
 
+  let snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.session.mode, "freeform");
+  assert.equal(snapshot.queuedD20, null);
+  assert.equal(snapshot.resolution?.rollKind, "check");
+  assert.equal(snapshot.resolution?.stage, "roll-animation");
+  assert.equal(snapshot.resolution?.rollTotal, 21);
+  assert.equal(snapshot.resolution?.compact, "d20 14 + 7 = 21");
+  assert.deepEqual(snapshot.resolution?.authoritativeDice, [14]);
+  const resolutionId = snapshot.resolution?.id;
+
+  await adapter.advanceResolution();
+  snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage, "complete");
-  assert.match(snapshot.resolution?.compact ?? "", /운동|Athletics/i);
-  assert.ok(snapshot.resolution?.dice.some((die) => die.kind === "d20" && die.value === 14));
+  assert.equal(snapshot.activity[0]?.id, resolutionId);
+  assert.equal(snapshot.activity[0]?.summary, "d20 14 + 7 = 21");
 });
 
 test("production offline composition casts and undoes an initiative spell through authoritative runtime", async () => {
