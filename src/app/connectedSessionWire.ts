@@ -35,6 +35,13 @@ const isString=(value:unknown):value is string=>typeof value==="string"&&value.l
 const isCursor=(value:unknown):value is number=>Number.isInteger(value)&&Number(value)>=0;
 const isStringArray=(value:unknown):value is string[]=>Array.isArray(value)&&value.every((entry)=>typeof entry==="string");
 
+function isProvenanceArray(value:unknown) {
+  return Array.isArray(value)&&value.every((entry)=>isRecord(entry)
+    &&isString(entry.source)
+    &&["applied","suppressed","superseded","failed"].includes(String(entry.status))
+    &&typeof entry.reason==="string");
+}
+
 function isCharacterRevision(value:unknown) {
   if (!isRecord(value)) return false;
   return isString(value.characterId)&&isCursor(value.sourceRevision)&&isCursor(value.runtimeRevision);
@@ -52,7 +59,7 @@ function isCompatibility(value:unknown):value is SessionCompatibilityResult {
 }
 
 function isRuntimeStateChange(value:unknown) {
-  if (!isRecord(value)||!isString(value.kind)||!isString(value.targetId)||!isStringArray(value.provenance)) return false;
+  if (!isRecord(value)||!isString(value.kind)||!isString(value.targetId)||!isProvenanceArray(value.provenance)) return false;
   if (value.lifetime!=="character-durable"&&value.lifetime!=="session-runtime") return false;
   if (value.writeBack!=="character"&&value.writeBack!=="session") return false;
   if (value.kind==="hp") return ["current","maximum","temporary"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
@@ -67,7 +74,7 @@ function isRuntimeStateChange(value:unknown) {
 function isResolutionEvent(value:unknown) {
   if (!isRecord(value)) return false;
   return isString(value.id)&&isString(value.resolutionId)&&isString(value.operationId)&&isString(value.kind)
-    &&isString(value.actorId)&&typeof value.summary==="string"&&Array.isArray(value.provenance)
+    &&isString(value.actorId)&&typeof value.summary==="string"&&isProvenanceArray(value.provenance)
     &&Array.isArray(value.stateChanges)&&value.stateChanges.every(isRuntimeStateChange);
 }
 
