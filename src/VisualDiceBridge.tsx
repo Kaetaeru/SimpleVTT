@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
-import { buildVisualDiceRoll, type VisualDieVm } from "./app/diceVisuals";
+import { buildVisualDiceRoll, type VisualDieSides, type VisualDieVm, type VisualDiceRollVm } from "./app/diceVisuals";
 
 const ANIMATED_STAGES = new Set(["roll-animation","save-animation","damage-animation"]);
 
-function VisualDie({ die, index }: { die:VisualDieVm; index:number }) {
+type RenderDie = Pick<VisualDieVm,"value"|"sides">;
+
+function VisualDie({ die, index, compact = false }: { die:RenderDie; index:number; compact?:boolean }) {
   if (die.sides === null) {
-    return <div className="visual-die-scene visual-die-legacy" aria-label={`집계 결과 ${die.value}`}>
+    return <div className={`visual-die-scene visual-die-legacy ${compact ? "compact" : ""}`} aria-label={`집계 결과 ${die.value}`}>
       <div className="visual-die-legacy-value">{die.value}</div>
       <small>aggregate</small>
     </div>;
   }
 
   const style = { "--die-index":index } as CSSProperties;
-  return <div className={`visual-die-scene visual-die-d${die.sides}`} aria-label={`d${die.sides} 결과 ${die.value}`}>
+  return <div className={`visual-die-scene visual-die-d${die.sides} ${compact ? "compact" : ""}`} aria-label={`d${die.sides} 결과 ${die.value}`}>
     <div className={`visual-die-shell d${die.sides}`} style={style}>
       {Array.from({ length:6 },(_,facet) => <i className={`visual-die-facet f${facet}`} key={facet} aria-hidden="true" />)}
       <span className="visual-die-value">{die.value}</span>
@@ -23,11 +25,38 @@ function VisualDie({ die, index }: { die:VisualDieVm; index:number }) {
   </div>;
 }
 
+export function VisualDiceTray({
+  label,
+  dice,
+  caption = "dice result",
+  compact = false,
+  className = "",
+}: {
+  label:string;
+  dice:Array<{ value:number; sides:VisualDieSides|null }>;
+  caption?:string;
+  compact?:boolean;
+  className?:string;
+}) {
+  return <section className={`visual-dice-stage ${compact ? "compact" : ""} ${className}`.trim()} aria-label={`${label} 주사위`}>
+    <div className="visual-dice-stage-head"><strong>{label}</strong><span>{caption}</span></div>
+    <div className="visual-dice-table" role="img" aria-label={dice.map((die) => die.sides ? `d${die.sides} ${die.value}` : `결과 ${die.value}`).join(", ")}>
+      {dice.map((die,index) => <VisualDie die={die} index={index} compact={compact} key={`${label}:${index}:${die.value}:${die.sides ?? "aggregate"}`} />)}
+    </div>
+  </section>;
+}
+
+type DiceReplay = {
+  key:string;
+  roll:VisualDiceRollVm;
+};
+
 export function VisualDiceBridge() {
   const { snapshot } = useSimpleVtt();
   const resolution = snapshot?.resolution ?? null;
   const animated = Boolean(resolution && ANIMATED_STAGES.has(resolution.stage) && resolution.authoritativeDice.length > 0);
-  const [host,setHost] = useState<HTMLElement|null>(null);
+  const [replay,setReplay] = useState<DiceReplay|null>(null);
+  const timerRef = useRef<number|null>(null);
 
   const action = useMemo(() => {
     if (!snapshot || !resolution) return undefined;
@@ -40,43 +69,33 @@ export function VisualDiceBridge() {
   );
 
   useEffect(() => {
-    if (!animated) {
-      setHost(null);
-      return;
-    }
-    let frame = 0;
-    let mounted:HTMLElement|null = null;
-    const connect = () => {
-      const next = document.querySelector<HTMLElement>(".dice-animation");
-      if (!next) {
-        frame = requestAnimationFrame(connect);
-        return;
-      }
-      mounted = next;
-      next.classList.add("visual-dice-mounted");
-      setHost(next);
-    };
-    frame = requestAnimationFrame(connect);
-    return () => {
-      cancelAnimationFrame(frame);
-      mounted?.classList.remove("visual-dice-mounted");
-      setHost(null);
-    };
-  },[animated,resolution?.id,resolution?.stage]);
+    if (!animated || !roll || !resolution) return;
+    const key = `${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}`;
+    setReplay({ key, roll });
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "reduced";
+    timerRef.current = window.setTimeout(() => {
+      setReplay((current) => current?.key === key ? null : current);
+      timerRef.current = null;
+    }, reduced ? 900 : 1550);
+  },[animated,roll,resolution]);
 
-  if (!animated || !roll || !host) return null;
+  useEffect(() => () => {
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+  },[]);
+
+  if (!replay) return null;
 
   return createPortal(
-    <section className="visual-dice-stage" aria-label={`${roll.label} 3D 주사위`} data-resolution-id={roll.resolutionId}>
-      <div className="visual-dice-stage-head">
-        <strong>{roll.label}</strong>
-        <span>authoritative result · visual replay</span>
-      </div>
-      <div className="visual-dice-table" role="img" aria-label={roll.dice.map((die) => die.sides ? `d${die.sides} ${die.value}` : `결과 ${die.value}`).join(", ")}>
-        {roll.dice.map((die,index) => <VisualDie die={die} index={index} key={`${roll.resolutionId}:${index}:${die.value}`} />)}
-      </div>
-      {roll.legacyAggregate && <small className="visual-dice-legacy-note">개별 면 값이 없는 legacy aggregate는 3D 주사위로 위장하지 않습니다.</small>}
-    </section>,
-    host,
+    <div className="visual-dice-overlay" data-resolution-id={replay.roll.resolutionId}>
+      <VisualDiceTray
+        label={replay.roll.label}
+        dice={replay.roll.dice}
+        caption="authoritative result · visual replay"
+        className="visual-dice-overlay-card"
+      />
+      {replay.roll.legacyAggregate && <small className="visual-dice-legacy-note">개별 면 값이 없는 legacy aggregate는 3D 주사위로 위장하지 않습니다.</small>}
+    </div>,
+    document.body,
   );
 }
