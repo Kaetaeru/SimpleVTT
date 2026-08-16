@@ -35,6 +35,7 @@ test("production offline bootstrap starts a playable local shell without remote 
   const snapshot = await adapter.getSnapshot();
 
   assert.equal(snapshot.session.role, "offline");
+  assert.equal(snapshot.sessionMode, "freeform");
   assert.ok(snapshot.activeCharacter.id);
   assert.ok(snapshot.catalog.length >= 495, "canonical builtin catalog must be available offline");
   assert.ok((snapshot.scene.actionsByActor[snapshot.activeCharacter.id] ?? []).length > 0);
@@ -48,7 +49,7 @@ test("production offline composition resolves a Freeform ability check through t
   await adapter.resolveAction("action.athletics", []);
 
   let snapshot = await adapter.getSnapshot();
-  assert.equal(snapshot.session.mode, "freeform");
+  assert.equal(snapshot.sessionMode, "freeform");
   assert.equal(snapshot.queuedD20, null);
   assert.equal(snapshot.resolution?.rollKind, "check");
   assert.equal(snapshot.resolution?.stage, "roll-animation");
@@ -62,6 +63,36 @@ test("production offline composition resolves a Freeform ability check through t
   assert.equal(snapshot.resolution?.stage, "complete");
   assert.equal(snapshot.activity[0]?.id, resolutionId);
   assert.equal(snapshot.activity[0]?.summary, "d20 14 + 7 = 21");
+});
+
+test("production offline composition records a DM condition correction without turning it into Character source state", async () => {
+  const adapter = new MockAdapter();
+  await adapter.setSessionMode("freeform");
+  await adapter.setQueuedD20(10);
+  await adapter.resolveAction("action.athletics", []);
+
+  let snapshot = await adapter.applyDmAdjudication({
+    type: "condition-add",
+    targetId: "combatant.goblin-a",
+    value: "넘어짐",
+    scope: "scene",
+    reason: "테이블 판정",
+  });
+  const target = snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a");
+  assert.ok(target?.status.includes("넘어짐"));
+  assert.equal(snapshot.resolution?.adjudicated, true);
+  assert.equal(snapshot.resolution?.finalOutcome, "상태 추가 넘어짐");
+  assert.ok(snapshot.activity.some((entry) => entry.correction && entry.ruling === "상태 추가 넘어짐"));
+
+  snapshot = await adapter.applyDmAdjudication({
+    type: "condition-remove",
+    targetId: "combatant.goblin-a",
+    value: "넘어짐",
+    scope: "scene",
+    reason: "테이블 판정 종료",
+  });
+  assert.equal(snapshot.scene.entities.find((entity) => entity.id === "combatant.goblin-a")?.status.includes("넘어짐"), false);
+  assert.ok(snapshot.activity.some((entry) => entry.correction && entry.ruling === "상태 제거 넘어짐"));
 });
 
 test("production offline composition casts and undoes an initiative spell through authoritative runtime", async () => {
