@@ -7,7 +7,7 @@ const previousEndInitiative=MockAdapter.prototype.endInitiative;
 const previousEndTurn=MockAdapter.prototype.endTurn;
 const previousSetCurrentActor=MockAdapter.prototype.setCurrentActor;
 
-async function publishTurnProjection(adapter:MockAdapter,label:string) {
+export async function publishConnectedTurnProjection(adapter:MockAdapter,label:string) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
   if (state.mode!=="host"||!state.ledger) return app.getSnapshot();
@@ -42,7 +42,7 @@ MockAdapter.prototype.startInitiative=async function startConnectedInitiative() 
   if (blockedByRemotePending(this)) return connectedInternal(this).getSnapshot();
   const next=await previousStartInitiative.call(this);
   if (state.mode!=="host") return next;
-  return publishTurnProjection(this,"initiative-start");
+  return publishConnectedTurnProjection(this,"initiative-start");
 };
 
 MockAdapter.prototype.endInitiative=async function endConnectedInitiative() {
@@ -51,7 +51,7 @@ MockAdapter.prototype.endInitiative=async function endConnectedInitiative() {
   if (blockedByRemotePending(this)) return connectedInternal(this).getSnapshot();
   const next=await previousEndInitiative.call(this);
   if (state.mode!=="host") return next;
-  return publishTurnProjection(this,"initiative-end");
+  return publishConnectedTurnProjection(this,"initiative-end");
 };
 
 MockAdapter.prototype.endTurn=async function endConnectedTurn() {
@@ -60,7 +60,7 @@ MockAdapter.prototype.endTurn=async function endConnectedTurn() {
   if (blockedByRemotePending(this)) return connectedInternal(this).getSnapshot();
   const next=await previousEndTurn.call(this);
   if (state.mode!=="host") return next;
-  return publishTurnProjection(this,"turn-end");
+  return publishConnectedTurnProjection(this,"turn-end");
 };
 
 MockAdapter.prototype.setCurrentActor=async function setConnectedCurrentActor(actorId:string) {
@@ -69,5 +69,5 @@ MockAdapter.prototype.setCurrentActor=async function setConnectedCurrentActor(ac
   if (blockedByRemotePending(this)) return connectedInternal(this).getSnapshot();
   const next=await previousSetCurrentActor.call(this,actorId);
   if (state.mode!=="host") return next;
-  return publishTurnProjection(this,"current-actor-set");
+  return publishConnectedTurnProjection(this,"current-actor-set");
 };
