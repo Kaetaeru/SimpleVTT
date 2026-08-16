@@ -4,68 +4,73 @@
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Branch/ref: `main`
-- Tracking issue: #104 — Phase 13 arbitrary player Character SessionProjection reconstruction
-- Historical stacked Draft PR: #107 — `phase13: reconstruct arbitrary Character SessionProjection`
+- Tracking issue: #104 — Phase 13 arbitrary player Character SessionProjection reconstruction — **completed**
+- Historical stacked Draft PR: #107 — `phase13: reconstruct arbitrary Character SessionProjection` — **closed without merge after main promotion**
 - Phase 12 base checkpoint: `a2b1b9cbab0f5aad9eb264d76f4098a58ca1b7c5`
-- Implementation checkpoint immediately before Rerun bootstrap: `7c9440970753a370fec7830cfa691832552e1d05`
+- Verified source-changing implementation checkpoint: `7c9440970753a370fec7830cfa691832552e1d05`
 - Main promotion checkpoint before Rerun branch-coordinate reconciliation: `807670b8fb5b58d9d6fc5e13223df765b645eb1e`
 
 ## Actual project goal
 
 Complete Phase 13 so a player can join a connected session with an arbitrary locally authored Character unknown to the DM host while preserving local Character ownership and DM-host authoritative shared-session resolution.
 
-The host must reconstruct only an **ephemeral SessionProjection** from declarative Character source/runtime data plus exact content identities that the host can validate against its own canonical rules/content. It must not create a second permanent host Character file, trust client presentation mechanics, or accept executable content over the network.
+The host reconstructs only an **ephemeral SessionProjection** from declarative Character source/runtime data plus exact content identities validated against host-trusted canonical rules/content. It does not create a second permanent host Character file, trust client presentation mechanics, or accept executable content over the network.
 
-The current conversation also established a product-quality constraint that must remain green through closeout: **character creation and level-up must use the same UI language and shared interaction primitives**, including rich spell/subclass presentation and the shared visual-dice renderer for creation, level-up HP rolls, and authoritative play resolution.
+The conversation also established a product-quality constraint preserved through closeout: **character creation and level-up use the same UI language and shared interaction primitives**, including rich spell/subclass presentation and the shared visual-dice renderer for creation, level-up HP rolls, and authoritative play resolution.
 
-`main` is now the canonical development baseline. The prior Phase 13 stacked branch was cleanly fast-forwarded into `main` with no divergence; future branches, if any, must start from the then-current `main` unless the user explicitly chooses otherwise.
+`main` is the canonical development baseline. Future branches, if any, must start from the then-current `main` unless the user explicitly chooses otherwise.
 
 ## Task 0
 
 **task_id:** `phase13-closeout-ui-dice-regression`
 
+**status:** **COMPLETE**
+
 ### Intent
 
-Reconcile the current Phase 13 implementation/checklist/CI state at the exact `main` head, prove the recent character-creation/level-up UI and shared-dice changes did not regress Phase 11/12/13 behavior, and close the Phase 13 handoff records if and only if all acceptance gates are supported by current evidence.
+Reconcile the Phase 13 implementation/checklist/CI state, prove the recent character-creation/level-up UI and shared-dice changes did not regress Phase 11/12/13 behavior, and close the Phase 13 handoff records only where supported by evidence.
 
-PR #107 is now historical stacked context, not the development base. Do not attempt to merge it again merely to reproduce the already-promoted code.
+### Acceptance result
 
-### Dependencies
+All Task 0 acceptance criteria are satisfied:
 
-1. Issue #104 and `.agents/PHASE13_CHECKLIST.md` remain the Phase 13 scope contract.
-2. `docs/design/session-runtime.md` and any Phase 13 SessionProjection design document remain authoritative for session ownership/authority boundaries.
-3. Existing canonical content/rules catalogs remain the source of mechanics; presentation fields are never authority.
-4. `main` is the canonical baseline; the Phase 12 and stacked Phase 13 branches are historical ancestry, not the next-work base.
-5. Current `main` GitHub Actions and Windows artifact capability must be available where workflows apply.
-6. Recent UI/dice implementation must preserve the shared `OptionCard`/`SectionShell`/`SpellTile`/visual-dice primitives rather than fork another level-up-only presentation stack.
+- `CharacterSessionProjectionV1` is versioned and declarative; copied materialized sheet authority, executable content, and client-presented derived mechanics are excluded.
+- Host validates exact canonical identities and reconstructs trusted mechanics; unsupported/incompatible mechanics reject explicitly.
+- Host-unknown Characters mount ephemerally and do not create permanent host library records.
+- Connected projected actions use the host-authoritative staged resolution and committed `ResolutionEvent[]` path.
+- Character-durable state writes back only to the owning client; duplicate/reconnect handling remains idempotent.
+- Reconnect preserves host-authoritative runtime rather than replacing it with stale client runtime; new host session clears prior ephemeral projections.
+- Character creation and level-up share the focused flow, option/spell presentation primitives, rich hover/detail behavior, stage scrolling, and common visual-dice presentation.
+- Visual dice cover creation ability rolls, level-up hit-die HP rolls, and authoritative play replay without generating or changing authoritative outcomes.
+- Exact implementation-head Contract, Rules, Persistence, UI, Phase 11, Phase 12, and Phase 13 workflows are green.
+- Windows Tauri transport/persistence tests and the exact implementation-head Phase 13 Windows artifact are green/retrievable.
+- `.agents/PHASE13_CHECKLIST.md` is evidence-based CLOSED on `main`.
+- Issue #104 is closed as completed.
+- Historical Draft PR #107 is closed without merge because the implementation was already promoted to `main` through the user's explicit clean fast-forward.
+- Future development uses `main` as its base.
 
-### Acceptance criteria
+### Verification record
 
-- Phase 13 projection contract is versioned and excludes `materializedCache.sheet`, executable content, and client-presented authoritative ActionVm/stat values.
-- Host validates exact rules/content identities and reconstructs host-trusted mechanics; unsupported or incompatible mechanics reject explicitly.
-- Host-unknown Character mounts ephemerally into the connected session without creating a permanent host Character-library record.
-- Projected ActionRequest flows through existing host-authoritative staged resolution and committed `ResolutionEvent[]` replication.
-- Character-durable host-confirmed mutations write back only to the owning client, with duplicate delivery and reconnect remaining idempotent.
-- Reconnect does not overwrite host-authoritative runtime with stale client projection state; new host session clears prior ephemeral projections safely.
-- Character creation and level-up remain visually/interaction consistent: focused header/stage/preview/footer flow, one active progression stage, shared option cards, shared spell tiles/search/filter/hover details, rich subclass presentation, and usable stage scrolling.
-- Shared visual dice are present for creation ability rolls, level-up HP hit-die rolls, and authoritative combat/check/save/damage/healing replay without changing authoritative results.
-- Current exact-head UI/typecheck/production build gates are green.
-- Current exact-head Phase 11 offline walkthrough remains green.
-- Current exact-head Phase 12 connected-authority regression suite remains green.
-- Current exact-head Phase 13 projection/reconstruction/mount/hello/action/durable-convergence gates remain green.
-- Windows Tauri transport/persistence tests and a retrievable exact-head Windows Phase 13 release artifact are green or are explicitly reconciled to the last implementation head when only coordination-doc commits followed.
-- `.agents/PHASE13_CHECKLIST.md`, issue #104, and historical Draft PR #107 handoff text are reconciled to actual evidence; no unchecked item is marked complete without evidence.
-- Future development work uses `main` as its base.
+Verified source-changing implementation head: `7c9440970753a370fec7830cfa691832552e1d05`.
 
-### Verification method
+Workflow evidence at that exact head:
 
-1. Fetch current `main` head and compare it with any historical stacked branch before making ancestry claims.
-2. Read `.agents/PHASE13_CHECKLIST.md` plus current Phase 13/session design contracts.
-3. Inspect relevant GitHub Actions runs for UI, Phase 11, Phase 12, Phase 13, Persistence/Rules/Contract gates, distinguishing implementation heads from documentation-only reconciliation commits.
-4. Validate Windows artifact metadata and `BUILD.txt` source SHA for the implementation head that produced the artifact.
-5. Inspect the recent level-up/creation/dice source and structure tests if CI evidence is stale or a `main` change touched those paths.
-6. Only after evidence is current, update Phase 13 tracking/checklist/handoff docs. Treat #107 as historical stacked context rather than a future integration target.
+- Contract validation — `31955742556` — success
+- Rules Domain — `31955742577` — success
+- Persistence — `31955742563` — success
+- UI — `31955742530` — success; includes UI named-rule boundary, creation ChoiceDefinition convergence, progression/subclass/spellcasting regressions, TypeScript, and production build
+- Phase 11 Playable — `31955742560` — success; includes production-composed offline walkthrough and Windows playable build
+- Phase 12 Connected Session — `31955742539` — success; includes connected authority protocol, Phase 11 regression, Tauri transport/persistence tests, and Windows connected build
+- Phase 13 SessionProjection — `31955742524` — success; includes projection/reconstruction/mount/hello/authoritative action flow, Phase 12 regression, Phase 11 regression, production frontend, Windows Tauri transport/persistence tests, and Windows projected-character executable
+
+Phase 13 artifact:
+
+- name: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`
+- artifact id: `9266043327`
+- SHA-256: `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`
+
+A compare from `7c944097...` to the pre-closeout `main` head showed 10 commits and only `.chatgpt-rerun/README.md`, `PLAN.md`, `STATE.md`, `STATUS.md`, and `control.json` changed. No source, test, workflow, rules, content, or runtime file changed, so previously verified implementation gates were not redundantly rerun.
 
 ## Later work
 
-No Phase 14 or unrelated feature work is authorized by this run yet. After Task 0 reaches `complete`, wait for the controller/user to set the next task or return control to `continue` with a new authorized objective. Any subsequent implementation must begin from current `main`.
+No Phase 14 or unrelated feature work is authorized by sequence 0. After this task reaches control status `complete`, wait for a new controller/user authorization. Any subsequent implementation must begin from current `main` and must reconcile the Rerun protocol before work starts.
