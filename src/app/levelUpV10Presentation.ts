@@ -147,3 +147,16 @@ export function projectLevelUpClassOptions(character:CharacterSheet) {
 export function projectLevelUpFixedHpGain(plan:ProgressionPlan) {
   return Math.max(1,Math.floor(plan.hp.hitDie/2)+1+plan.hp.constitutionModifier);
 }
+
+export function rollLevelUpHitDie(sides:number) {
+  if (!Number.isInteger(sides) || sides < 2) throw new Error(`invalid hit die d${sides}`);
+  const source = globalThis.crypto;
+  if (source?.getRandomValues) {
+    const range = 0x1_0000_0000;
+    const limit = range - (range % sides);
+    const values = new Uint32Array(1);
+    do source.getRandomValues(values); while (values[0] >= limit);
+    return (values[0] % sides) + 1;
+  }
+  return Math.floor(Math.random() * sides) + 1;
+}
