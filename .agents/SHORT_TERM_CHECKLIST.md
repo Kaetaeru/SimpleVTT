@@ -144,35 +144,60 @@ Verification:
 - TypeScript / production build ✅
 - Rules Domain workflow `31899236207` ✅
 
-Tracking: Issue #77
+Tracking: Issue #77 / Draft PR #78
 Branch: `agent/77-progression-application-service`
 
-### 6. UI named-rule structural gate — IN PROGRESS
+### 6. UI named-rule structural gate — CLOSED
 
-- [ ] UI component named-rule 계산 inventory
-- [ ] React/UI 계층의 허용 presentation-only 계산과 금지 named-rule 계산 분류
-- [ ] domain/application 밖 신규 named-rule 계산 차단 CI gate
-- [ ] 기존 legitimate UI-only formatting false positive 최소화
-- [ ] full UI + TypeScript + production build green
-- [ ] Draft PR checkpoint
+- [x] UI component named-rule 계산 inventory
+- [x] React/UI 계층의 허용 presentation-only 계산과 금지 named-rule 계산 분류
+- [x] LevelUp multiclass eligibility / fixed HP rule facts를 application projection으로 이동
+- [x] V09 ability modifier / standard array / point-buy rule facts를 application projection으로 이동
+- [x] domain/application 밖 신규 named-rule 계산 차단 CI gate
+- [x] scanner blocked/allowed fixture regression
+- [x] 기존 legitimate UI-only formatting false positive 최소화
+- [x] 기존 legacy/presentation debt를 `.agents/UI_NAMED_RULE_BASELINE.json`에 정확히 동결; 새 occurrence 금지
+- [x] canonical `npm run build` 앞단 + UI workflow explicit gate 편입
+- [x] full UI + Phase 09 mechanics + TypeScript + production build green
+- [x] Rules Domain green
+- [x] Draft PR checkpoint
 
-### 7. Optional 3D dice renderer
+Verified implementation checkpoint: `0a4ab92a96e5d8ce41c2a5a3030ef1cb58bebb90`
+
+Verification:
+- UI workflow `31923163173` ✅
+- UI named-rule structural gate ✅
+- creation ChoiceDefinition / progression schedule gates ✅
+- Phase 09 mechanics ✅
+- TypeScript / production build ✅
+- Rules Domain workflow `31900294157` ✅
+
+Tracking: Issue #79 / Draft PR #80
+Branch: `agent/79-ui-named-rule-gate`
+
+### 7. Optional 3D dice renderer — DEFERRED
 
 - [ ] WebGL / physics renderer — optional, 규칙 정확도 작업보다 후순위
+- 현재 CSS 3D/faceted renderer는 authoritative result replay만 담당하고 규칙 결과를 생성/변경하지 않음
 
-### 8. Optional external 2D/3D module loader
+### 8. Optional external 2D/3D module loader — DEFERRED
 
 - [ ] **실제 외부 module 요구가 생길 때만** 설계/구현
-- [ ] Core movement/map/grid/token/path/LOS ownership 금지 유지
+- [x] Core movement/map/grid/token/path/LOS ownership 금지 유지
 
 ## Current cursor
 
 ```text
-Phase 09
-Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb
+Phase 09 mandatory integration
+Step 1: CLOSED @ 1fca7c6050784908a2c9c04155269a13955140fb · PR #70
 Step 2: CLOSED @ ee95adf56a9f6481f754df5dbf5fde277bc18912 · PR #72
 Step 3: CLOSED @ 3b4afb6adfe9de26c83cf5bace672a79af95e7cd · PR #74
 Step 4: CLOSED @ d0bb91a835020cf457c85cd5beede5fc8ffb3303 · PR #76
-Step 5: CLOSED @ 7b0b9e237f0763e2fd2020452594e4fefc501fa8
-Step 6: IN PROGRESS — UI named-rule structural gate
+Step 5: CLOSED @ 7b0b9e237f0763e2fd2020452594e4fefc501fa8 · PR #78
+Step 6: CLOSED @ 0a4ab92a96e5d8ce41c2a5a3030ef1cb58bebb90 · PR #80
+Step 7: DEFERRED — optional visual upgrade
+Step 8: DEFERRED — only if a real external map/module requirement appears
+
+Next: Phase 09 completion audit against CURRENT_WORK completion criterion.
+Owner progression walkthrough remains a separate OPEN acceptance gate and does not permit PR #60 ready/merge until owner verification.
 ```
