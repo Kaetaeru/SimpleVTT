@@ -5,10 +5,10 @@ This directory is the repository-side coordination contract for ChatGPT Rerun on
 ## Repository binding
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Branch/ref: `agent/104-arbitrary-character-session-projection`
+- Branch/ref: `main`
 - Control file: `.chatgpt-rerun/control.json`
 
-The binding above was established from GitHub app activity in the originating ChatGPT conversation. Chrome Side Panel fields are not a source of truth before the user enters and confirms these coordinates.
+The binding above was established from GitHub app activity in the originating ChatGPT conversation. The project was promoted by a clean fast-forward from `agent/104-arbitrary-character-session-projection` to `main`; future work must treat `main` as the canonical baseline unless the user explicitly selects another ref. Chrome Side Panel fields are not a source of truth before the user enters and confirms these coordinates.
 
 ## Mandatory read order
 
@@ -31,7 +31,7 @@ Before executing any task:
 4. Treat `control.json` as the dispatch authorization/status record, `STATE.md` as the durable execution checkpoint, and `PLAN.md` as the intended task/acceptance contract.
 5. Never reset an existing run_id, sequence, task, checkpoint, or validation history merely because a new watcher invocation starts.
 6. If the files disagree in a way that cannot be reconciled safely, do not guess. Record the conflict in STATE/STATUS and use `needs_user` or `blocked` as appropriate.
-7. Re-fetch the branch before writes when concurrent GitHub activity could have advanced it.
+7. Re-fetch `main` before writes when concurrent GitHub activity could have advanced it.
 
 ## Dispatch and watcher semantics
 
