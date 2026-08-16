@@ -45,6 +45,7 @@
           }
         },
         "build": { "type": "object" },
+        "creationAuthoring": { "$ref": "#/$defs/creationAuthoring" },
         "spellAndFeatureSelections": { "type": "object" },
         "progression": { "type": "object" },
         "itemReferences": {
@@ -60,6 +61,24 @@
             }
           }
         }
+      }
+    },
+    "creationAuthoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completeness", "abilityMethod", "abilities", "rolledPool", "rolledAssignments", "selectedSkills", "selectedSpells", "selectedClassChoices", "equipmentPreset", "backgroundEquipmentPreset", "overrides"],
+      "properties": {
+        "completeness": { "const": "explicit" },
+        "abilityMethod": { "enum": ["standard", "rolled", "point-buy", "custom"] },
+        "abilities": { "type": "object" },
+        "rolledPool": { "type": "array" },
+        "rolledAssignments": { "type": "object" },
+        "selectedSkills": { "type": "array", "items": { "type": "string" } },
+        "selectedSpells": { "type": "array", "items": { "type": "string" } },
+        "selectedClassChoices": { "type": "array", "items": { "type": "string" } },
+        "equipmentPreset": { "type": "string" },
+        "backgroundEquipmentPreset": { "type": "string" },
+        "overrides": { "type": "object" }
       }
     },
     "runtime": {
