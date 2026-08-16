@@ -195,7 +195,7 @@ function itemActions(character:CharacterSheet):ActionVm[] {
         eligibleTargetIds:[],
         healing:{dice:"2d4",flat:2,average:7},
         itemCost:{itemId:item.id,quantity:1},
-        details:[detail("대상","자신"),detail("회복","2d4 + 2"),detail("비용",`${item.name} 1개"),...item.provenance.map((source)=>detail("출처",source))],
+        details:[detail("대상","자신"),detail("회복","2d4 + 2"),detail("비용",`${item.name} 1개`),...item.provenance.map((source)=>detail("출처",source))],
       });
       continue;
     }
