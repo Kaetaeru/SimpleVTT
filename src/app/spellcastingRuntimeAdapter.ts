@@ -214,7 +214,7 @@ function syncSceneFromRuntime(bridge: BridgeState, internal: AdapterInternalStat
 
 export function commitFreeformSpellSlot(adapter: MockAdapter, actionId: string, actorId: string): FreeformSpellSlotCommit {
   const metadata = SPELL_META[actionId as keyof typeof SPELL_META];
-  if (!metadata || metadata.runtimeSupport !== "combat-executable" || metadata.baseLevel === 0 || metadata.castSource === "item" || metadata.castSource === "feature") {
+  if (!metadata || metadata.runtimeSupport !== "combat-executable" || metadata.baseLevel === 0) {
     return { status: "not-applicable" };
   }
   const internal = adapter as unknown as AdapterInternalState;
