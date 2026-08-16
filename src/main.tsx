@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppProvider } from "./app/AppProvider";
 import "./app/characterCreationV10Adapter";
+import "./app/characterCreationSourceEditAdapter";
 import "./app/characterSheetV10Runtime";
 import "./app/mockAdapterCompletion";
 import "./app/spellcastingRuntimeAdapter";
