@@ -41,7 +41,6 @@ import "./druidCircleLandSpellRuntimeAdapter";
 import "./restSpellManagementRuntimeAdapter";
 import "./classFeatureSpellRuntimeAdapter";
 import "./phase09SpellcastingRuntimeRouter";
-import "./resolutionEventCommitCaptureAdapter";
 import "./characterLibraryRuntimeAdapter";
 import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";
