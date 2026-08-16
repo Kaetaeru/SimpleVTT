@@ -11,88 +11,103 @@
 - draft PR: #109 — open/draft, not merged
 - phase checklist: `.agents/PHASE14_CHECKLIST.md`
 
-## Preserved evidence
-
-Phase13 remains complete at `7c9440970753a370fec7830cfa691832552e1d05`; preserve its recorded validation/artifact history. Ready/start, exact-peer participant lifecycle, and client reconnect/replay idempotency remain closed at their recorded exact heads and must not be manually repeated unless their relevant boundary changes.
-
 ## Preflight for this continuation
 
-Mandatory files were read from `main` in exact order: README -> control -> STATE -> PLAN. run_id / sequence / task / `continue` reconciled.
+Mandatory files were read from `main` in exact order: README -> control -> STATE -> PLAN. The same run_id / sequence 1 / task_id / `continue` state was reconciled before implementation.
 
-Initial actual state:
+Actual initial state for this invocation:
 
-- main `7449e294259f2e98ccfad04e10e620cb6557177a`
-- work `cf520d35acd1e21a0247fdeb2d3664ae8a334345`
+- main `b71898159d650ec33e81e03ff6f38a904ec0fbec`
+- work `240592cb646bfbbfe9466f94047bc1e2f544dcf9`
 - PR #109 open/draft/unmerged
+
+No verified Ready/start, participant reconnect/idempotency, or session-end gate was manually rerun from an unchanged boundary.
+
+## Preserved evidence
+
+Phase13 remains complete at `7c9440970753a370fec7830cfa691832552e1d05`; preserve its recorded validation/artifact history.
+
+Phase14 preserved slices include:
+
+- Ready/start product `bd1077b9bc61b86c2c0370543a16496c72f840c2`, Phase12 `31971618571`, UI `31971618534`, Main `31971618703`.
+- exact-peer disconnect/live late-join/Host reconnect `84d1d39135c08a2094783fb336a606f294b1cf58`, Phase12 `31972318100`, UI `31972318109`, Main `31972318188`.
+- client reconnect cursor + hello replay idempotency `cf520d35acd1e21a0247fdeb2d3664ae8a334345`, Phase12 `31973034389`, UI `31973034337`, Main `31973034347`.
+- explicit session end/restart product `240592cb646bfbbfe9466f94047bc1e2f544dcf9`, Phase12 `31973878162`, Main `31973878165`.
 
 ## Completed in this continuation
 
-**Exact work head before coordination writes:** `240592cb646bfbbfe9466f94047bc1e2f544dcf9`.
+### Session-end documentation credit
 
-### Participant lifecycle documentation credit
+The prior exact session-end evidence was credited without rerunning its green gates. Checklist head `5c6254a8882782029f31d3400614fd8414b40ccd` now marks as complete:
 
-`8bfaf4dd3a35e2a9da81022d4a7c91bdbaabd9b3` safely updated the full checklist from its exact blob and marked only the four P14.8 participant lifecycle items previously proven at `cf520d35...`: late join policy, disconnect preservation, cursor reconnect without duplication, and duplicate/replayed traffic idempotency. The invalid/ghost participant checkbox remains open.
+- visible Host live-session end control;
+- transient connected participants/Ready/turn/economy/pending Resolution cleanup;
+- Host ephemeral remote SessionProjection removal on end;
+- fresh Host restart from a new authority context while preserving permanent Character library/canonical content;
+- explicit former-client ended/offline UX without reconnect;
+- P14.11 session-end/restart regression.
 
-### Explicit session end / restart implementation
+The owning-player “durable changes remain persisted after session end” checkbox remains deliberately unchecked because only in-memory preservation has been proven; no post-end persisted-storage rehydrate has been run yet.
 
-- `6b0d78868dab5383f731d0e82c28eccc88369f40`: adds `session-ended` wire envelope and validation.
-- `22df2903091f5caef2b3337c4cebee9d61c681c5`: adds `session-end-v1`, shared transient cleanup and client end handling. Client connected mode/sessionId/replica/reconnect timer is cleared before transport stop, so the ensuing disconnect cannot schedule reconnect.
-- Transient cleanup resets connected authority, participants/Ready, session mode, round/current turn, economy and pending Resolution while preserving permanent Character/resource/item/catalog state. Production reconciliation rematerializes only a fresh local active-Character economy when needed.
-- `ca5193b4d94989dd511bf3d3772e48729779e110`: Host broadcasts `session-ended` before transport teardown, then unmounts reconstructed remote SessionProjection actors and resets connected authority.
-- `0082f8d8aaafd4a751cee47abba739005142a751`: visible live Host control says `세션 종료`; preparation retains `Host 중지`.
-- `f9d54edc20d087922ce808ee41225f7ccf377318`: session-end wire roundtrip/rejection tests.
-- `4fc799602d88247c2729a3ec2628efaa068454f0`, `6e3247ab079473623fdff4b920c79395a35d7c73`: focused Host notify-before-stop/cleanup/fresh restart, client ended/no-reconnect, projection removal, permanent resource preservation, and visible-control tests.
-- `a03f1b585b4fa9663e2a1e4aaa8c55613ffb620a`: canonical Phase12 includes `productionSessionEnd.test.ts`.
-- `c39df9d01821b96a3b4f06b28016e8f9956a802e`: Main Playable includes the session-end regression and connected walkthrough end/restart step.
-- Phase12 `31973697477` initially failed only because the new test asserted `economyByActor={}`. Actual product reconciliation correctly created a fresh default economy for the active local Character and removed stale remote/turn economy.
-- `240592cb646bfbbfe9466f94047bc1e2f544dcf9`: corrects that test expectation; no product behavior was weakened.
+### Local active-Character projection ownership repair
+
+Exact validated product source: `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31` (`phase14: replace stale local character projection`).
+
+Changed boundaries:
+
+- `src/app/productionPlayRuntimeAdapter.ts`
+- `tests/ui/productionLocalCharacterSwitch.test.ts`
+- `.github/workflows/ui.yml`
+
+Behavior:
+
+1. `productionPlayRuntimeAdapter.reconcile()` now recognizes registry-backed ephemeral SessionProjection Characters and returns without applying local Character reconciliation while one is temporarily active for remote resolution.
+2. `localProjectionIdByAdapter` tracks only the last local-owned production projection per adapter.
+3. Switching saved local Character A -> B removes A's Scene entity, actions and economy only; if current/selected actor pointed to A they move to B.
+4. Remote ephemeral SessionProjection actor, registry binding, actions and economy remain mounted and authoritative.
+5. After temporary remote projection resolution context is restored, B remains the local active Character and the remote projection remains unchanged.
+
+Focused regression `productionLocalCharacterSwitch.test.ts` exercises two saved non-fixture local Characters plus one remote ephemeral SessionProjection and proves both local replacement and remote authority preservation.
+
+### Checklist credit
+
+Documentation-only commit `5c6254a8882782029f31d3400614fd8414b40ccd` also credits P14.1 “Switching active Character safely removes/replaces the local player projection without corrupting other Scene entities” with exact source/gate evidence.
 
 ## Validation
 
-At exact work head `240592cb646bfbbfe9466f94047bc1e2f544dcf9`:
+At exact product source `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`:
 
-- Phase12 `31973878162` connected-protocol: **success**. Explicit session-end regressions, existing Ready/participant/reconnect authority, Phase11 preservation and production frontend build passed.
-- Main Playable `31973878165` playable-contract: **success**. Full UI/rules/TypeScript/build, Phase11, Phase12 including `productionSessionEnd.test.ts`, and Phase13 passed.
-- UI `31973684409`: **success** at the identical product source boundary before later test/workflow-only commits; TypeScript/build and existing UI regressions passed.
-- Windows jobs were still separate/in progress and are not used as human/final release acceptance evidence here.
+- UI run `31974455354`, frontend job `95231722148`: **completed success**. The new `Verify Phase 14 production lifecycle and local projection ownership` step passed, all historical UI/mechanics regressions passed, and final TypeScript/build passed.
+- Main Playable run `31974455339`, playable-contract job `95231722256`: **completed success**. Full UI/rules/TypeScript/build, Phase11 offline playable, Phase12 connected authority, and Phase13 arbitrary SessionProjection all passed.
+- Windows subjobs are not treated as human/final release acceptance evidence here.
 
-## Evidence-backed session-end status
-
-The following P14.8/P14.11 behaviors are now directly supported and may be credited documentation-only next invocation without rerunning gates:
-
-1. visible Host live-session end control;
-2. Host notifies clients before transport teardown;
-3. Host/client transient participants, Ready, cursor/replica, turn/economy and pending Resolution state do not leak into a fresh session;
-4. Host ephemeral reconstructed SessionProjection actors are removed;
-5. former Client receives an explicit ended/offline state and does not reconnect;
-6. fresh Host restart gets a new session authority context while permanent local Character state remains intact;
-7. canonical Phase12/Main contain the session end/restart regression.
-
-Do **not** credit the checklist statement that owning-player durable changes “remain persisted after session end” yet. Current regression proves in-memory permanent Character state is preserved through end/restart authority cleanup, but does not perform an owner storage restart after ending the session.
+Current work head after documentation credit: `5c6254a8882782029f31d3400614fd8414b40ccd`.
 
 ## Architecture boundaries preserved
 
-- Host ledger/shared-session authority preserved.
-- SessionProjection remains ephemeral Host session authority and is explicitly removed on end.
-- owning-client permanent Character ownership remains unchanged.
-- normal disconnect/reconnect still uses cursor replay; explicit Host end is distinguished by `session-ended`.
-- no tactical map/grid/path/LOS scope and no fixture fallback added.
+- Remote SessionProjection registry is the discriminator for ephemeral Host/session actors; local cleanup never guesses from ids or fixture names.
+- Host/session projection authority remains untouched by local active-Character switching.
+- Owning-client permanent Character data remains separate from transient SessionProjection state.
+- No tactical map/grid/path/LOS scope and no new fixture fallback were introduced.
+
+## Housekeeping
+
+Four accidental refs were created during Git-data commit preparation: `tmp/noop-do-not-use`, `tmp/noop-do-not-use-2`, `tmp/noop-do-not-use-3`, `tmp/noop-do-not-use-4`. They point to the old work head, are outside `agent/**`, do not affect PR #109 or product CI, and must not be used. The connected GitHub connector exposes no delete-ref action and `gh` is not installed in this environment, so they could not be removed here. This is repository housekeeping, not a product blocker.
 
 ## Known remaining work
 
-1. Documentation-only session-end checklist credits listed above.
-2. Stale previous local-owned projection when switching between two saved non-fixture local Characters; repair must not delete remote ephemeral SessionProjection actors.
-3. Owner persistent-storage end/restart proof remains needed before crediting durable-after-end persistence.
-4. Other P14.1–P14.7 checklist/product areas remain incomplete.
-5. Windows two-instance human acceptance/final exact-head release artifact remains later.
-6. PR #109 remains draft and unmerged; no merge authorized.
+1. Final unchecked P14.8 Participant lifecycle safety item: incompatible/invalid entry must be proven not to leave a ghost participant, peer mapping, ledger mutation, or stale projection.
+2. Owning-player durable-after-end storage persistence still lacks an end -> fresh persisted rehydrate proof.
+3. Many P14.1–P14.7 feature/checklist items remain uncredited or incomplete despite some underlying implementation existing; reconcile only with concrete evidence.
+4. Windows two-instance human acceptance and final exact-head release artifact verification remain future work.
+5. PR #109 remains draft/unmerged. No merge is authorized.
 
 ## Next Exact Action
 
-1. Safely mark only the evidence-backed P14.8 session-end/restart + former-client ended UX + P14.11 session-end regression boxes; leave owner durable-after-end persistence unchecked. Documentation-only, no gate rerun.
-2. Inspect `productionPlayRuntimeAdapter` and projection registry ownership around active Character switching.
-3. Reproduce two saved non-fixture local Characters plus one remote ephemeral SessionProjection; switch local active Character and prove only the previous local-owned actor/projection is removed/replaced.
-4. Add a focused regression preserving the remote projected actor/registry binding; run the narrow relevant production/UI gate, then Main only if product source changes.
+1. Inspect the existing Host `hello` compatibility/SessionProjection rejection path and add a focused regression for both incompatible manifest and invalid SessionProjection. Assert no participant, no `peerParticipants`/`peerManifests` entry, no projection registry mount, and no Host ledger event/cursor advancement. Patch product source only if the regression exposes a real mutation-before-rejection bug.
+2. Run Phase12 first. If the work is test-only and existing behavior passes, do not rerun UI/Main. If production source changes, run the affected UI/Main boundary once.
+3. Then build the owner persistent-storage end/restart proof using the existing owning-client write-back/persistence harness: Host-confirmed durable mutation -> explicit session end -> fresh adapter/library rehydrate -> durable change present, transient session state absent.
+4. Credit only evidence-backed checklist items after validation.
 
 ## Dispatch recommendation
 
