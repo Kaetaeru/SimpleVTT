@@ -32,6 +32,7 @@ import "./visualDiceProjection.test";
 
 test("production offline bootstrap starts a playable local shell without remote transport", async () => {
   const adapter = new MockAdapter();
+  await adapter.setSessionMode("freeform");
   const snapshot = await adapter.getSnapshot();
 
   assert.equal(snapshot.session.role, "offline");
