@@ -6,7 +6,7 @@ import "../../src/app/productionSessionLifecycleAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
-import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { mountCharacterSessionProjection, projectedCharacterIds } from "../../src/app/characterSessionProjectionRegistry";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 
@@ -56,7 +56,11 @@ test("Host start enters preparation, stop clears transient authority, and restar
     firstState.publishedResolutionIds.add("resolution.transient");
 
     const remoteSheet={...structuredClone(first.activeCharacter),id:"char.phase14.remote",name:"Phase14 Remote"};
-    const projection=buildCharacterSessionProjectionV1(remoteSheet,first.catalog);
+    const projection={
+      characterId:remoteSheet.id,
+      sourceRevision:remoteSheet.sourceRevision??0,
+      runtimeRevision:remoteSheet.runtimeRevision??0,
+    } as CharacterSessionProjectionV1;
     mountCharacterSessionProjection(adapter,{
       peerId:"peer.remote",
       characterId:remoteSheet.id,
