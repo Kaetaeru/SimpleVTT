@@ -32,8 +32,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate canonical content
         run: npm run generate:content
-      - name: Verify arbitrary Character SessionProjection boundary, reconstruction, mount, and hello handshake
-        run: npx tsx --test tests/ui/characterSessionProjection.test.ts tests/ui/characterSessionProjectionReconstruction.test.ts tests/ui/characterSessionProjectionMount.test.ts tests/ui/connectedCharacterProjectionHandshake.test.ts
+      - name: Verify arbitrary Character SessionProjection boundary, reconstruction, mount, hello, and authoritative action flow
+        run: npx tsx --test tests/ui/characterSessionProjection.test.ts tests/ui/characterSessionProjectionReconstruction.test.ts tests/ui/characterSessionProjectionMount.test.ts tests/ui/connectedCharacterProjectionHandshake.test.ts tests/ui/connectedProjectedCharacterResolution.test.ts
       - name: Verify Phase 12 connected authority remains green
         run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts
       - name: Verify Phase 11 offline walkthrough remains green
