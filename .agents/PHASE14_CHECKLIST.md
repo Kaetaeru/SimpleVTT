@@ -74,8 +74,8 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [x] Phase 14 Rerun sequence 1 created without replacing the Phase 13 run history.
 - [x] Work branch created from canonical `main`.
 - [x] Final-completion checklist created.
-- [ ] Open/update a Draft PR to `main` once the first coherent validated slice is available.
-- [ ] PR body references #108, this checklist, known fixture-removal risk, and exact validation evidence.
+- [x] Open/update a Draft PR to `main` once the first coherent validated slice is available. Draft PR #109 is open.
+- [x] PR body references #108, this checklist, known fixture-removal risk, and exact validation evidence.
 
 **Gate P14.0:** planning records agree; no hidden scope conflict; `main` remains canonical.
 
@@ -267,7 +267,18 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [ ] Initiative can start from the live participant set.
 - [ ] Turn progression uses live actors, not fixture ordering assumptions.
 
-## DM flow
+## DM preparation and lobby
+
+- [ ] DM can hold the session in an explicit preparation/lobby state before play begins.
+- [ ] Session name and current play mode intent are visible/editable in preparation without hidden debug controls.
+- [ ] Rules/content compatibility and active session content are visible before start.
+- [ ] DM can prepare the live Scene and instantiate/remove Combatants before start.
+- [ ] Connected participants and their readiness are visible in the same preparation surface.
+- [ ] Starting play uses the prepared participant/Combatant set rather than fixture ordering assumptions.
+- [ ] DM can choose Freeform or Initiative start from the prepared state.
+- [ ] Play-only controls do not silently activate while the session remains in preparation.
+
+## DM live flow
 
 - [ ] Host/DM role can open a live Scene without reference Characters being required.
 - [ ] Combatant definitions can be instantiated into the live scene.
@@ -276,11 +287,39 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [ ] DM correction/adjudication remains available during live Resolution.
 - [ ] Conditions, typed defenses, reactions, concentration, life state, activity, and Undo remain functional.
 
-**Gate P14.7:** one human walkthrough covers setup -> freeform -> initiative -> combatant action -> DM correction -> Undo.
+**Gate P14.7:** one human walkthrough covers DM preparation/lobby -> prepared participant set -> freeform or initiative start -> combatant action -> DM correction -> Undo without fixture/debug setup.
 
 ---
 
 # P14.8 Connected Host/Join production flow
+
+## Host/server lifecycle
+
+- [ ] DM starts the actual Host transport from visible production UI.
+- [ ] Successful bind/listen state is explicit and displays the shareable address/port returned by the transport.
+- [ ] Bind/port/network failure is shown as an actionable Host startup error without pretending the session is open.
+- [ ] Host stop is explicit, safe, and returns the app to a non-hosting preparation/offline state.
+- [ ] Stopping a Host clears transient connected participants, pending remote action state, stale peer manifests, and ephemeral SessionProjection actors without deleting permanent Characters.
+- [ ] Restarting Host after stop creates a fresh connected session/authority context and does not revive stale participants or projections.
+- [ ] Repeated stop/restart operations are idempotent enough to avoid duplicate listeners or duplicated host authority state.
+
+## Player Character selection, join, and lobby
+
+- [ ] Player selects the persisted Character that will be projected before joining.
+- [ ] Player enters an actual Host address and invokes the production transport without debug controls.
+- [ ] Transport connect and compatibility handshake are presented as distinct progress/error states rather than immediate fake success.
+- [ ] Compatible player reaches the lobby before live play begins.
+- [ ] Player can see the selected Character identity, Host address, compatibility result, and readiness state in the lobby.
+- [ ] Joining with no valid persisted Character produces an explicit setup requirement rather than fixture fallback.
+
+## Ready and start lifecycle
+
+- [ ] Player can mark themselves ready/unready while in the lobby.
+- [ ] Host sees readiness for each compatible participant.
+- [ ] Host start is disabled or rejects explicitly when required preparation/readiness conditions are not satisfied.
+- [ ] Host can start the prepared participant set into Freeform mode.
+- [ ] Host can start the prepared participant set into Initiative mode with authoritative turn state.
+- [ ] Clients converge on the Host-selected started mode without presentation-only mutation.
 
 ## Handshake and projection
 
@@ -291,6 +330,14 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [ ] Host mounts an ephemeral actor visible in the actual DM Scene.
 - [ ] New Host session clears stale ephemeral projections.
 - [ ] Disconnect/reconnect preserves authoritative host runtime for the session.
+
+## Participant lifecycle
+
+- [ ] Late join has an explicit policy for preparation and already-started sessions and never silently corrupts turn/session state.
+- [ ] Disconnect marks the participant unavailable without deleting authoritative session state required for reconnect.
+- [ ] Reconnect resumes from the last accepted event cursor and restores the participant/projection without duplication.
+- [ ] Duplicate/replayed hello/action/event traffic is idempotent according to the existing connected protocol guarantees.
+- [ ] Incompatible or invalid participant entry does not leave a ghost participant or stale projection behind.
 
 ## Remote actions
 
@@ -304,14 +351,24 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 - [ ] Durable Character write-back occurs only on owning Client.
 - [ ] Host permanent Character library is never mutated by ephemeral remote Character projection.
 
+## Session end and restart
+
+- [ ] Host can explicitly end the live session from visible UI.
+- [ ] Session end stops connected transport and clears transient lobby/readiness/turn/pending Resolution state that must not leak into a new session.
+- [ ] Host-side ephemeral remote Character projections are removed at session end.
+- [ ] Owning-player durable Character changes already committed through authoritative events remain persisted after session end.
+- [ ] Starting a new session after end begins from fresh lifecycle state while preserving permanent Character libraries and canonical content.
+
 ## Error UX
 
 - [ ] Incompatible rules/content produces actionable connection error.
 - [ ] Invalid SessionProjection produces explicit rejection.
+- [ ] Host startup/bind failure identifies that hosting never became active and allows correction/retry.
 - [ ] Host busy/pending Resolution state is understandable.
 - [ ] Reconnect state is visible without losing the play workspace.
+- [ ] Session ended/stopped state is explicit to former clients instead of looking like an unexplained transient disconnect.
 
-**Gate P14.8:** two production desktop instances complete Host -> Join with host-unknown Character -> visible action -> Host commit -> Client convergence -> reconnect check.
+**Gate P14.8:** two production desktop instances complete Host bind/start -> DM preparation/lobby -> persisted host-unknown Character selection/join -> compatibility/projection -> Ready -> Host Freeform/Initiative start -> visible Host-authoritative action -> Client convergence -> disconnect/reconnect -> explicit session end -> clean Host restart.
 
 ---
 
@@ -379,10 +436,13 @@ Current branch contains early Phase 14 implementation files (`productionPlayRunt
 ## Connected integration
 
 - [ ] Host-unknown Character projection test uses non-fixture Character identity.
+- [ ] Host start/stop/restart test proves transient connected state is cleared without deleting permanent Character state.
+- [ ] Preparation/lobby/readiness test proves play does not start from an unprepared or unready state.
 - [ ] Action request -> Host authoritative ResolutionEvent -> Client apply/write-back is tested.
 - [ ] Reconnect/idempotency remains tested.
+- [ ] Session end/restart test proves stale projections/readiness/turn state do not leak into the next session.
 
-**Gate P14.11:** product-realistic tests fail if the implementation falls back to Aelar/Mira/reference-only behavior.
+**Gate P14.11:** product-realistic tests fail if the implementation falls back to Aelar/Mira/reference-only behavior or skips the required connected lifecycle.
 
 ---
 
@@ -428,14 +488,18 @@ Automated tests are necessary but not sufficient for the claim “플레이 가�
 ## Connected desktop walkthrough
 
 - [ ] Launch two Windows app instances/machines.
-- [ ] Host opens session.
-- [ ] Client uses a Character not permanently known to Host.
-- [ ] Client joins by actual Host address.
-- [ ] Host sees ephemeral projected Character in live session.
+- [ ] Host starts the actual server/transport and confirms successful bind plus shareable address/port.
+- [ ] Host enters DM preparation/lobby, confirms rules/content state, and prepares Scene/Combatants.
+- [ ] Client selects a persisted Character not permanently known to Host.
+- [ ] Client joins by actual Host address and reaches the compatible lobby.
+- [ ] Host sees the ephemeral projected Character and participant readiness.
+- [ ] Client marks ready and Host starts Freeform or Initiative from the prepared participant set.
 - [ ] Client performs a visible UI action.
 - [ ] Host processes authoritative Resolution.
 - [ ] Both sides converge on committed state.
-- [ ] Client disconnect/reconnect succeeds without stale overwrite.
+- [ ] Client disconnect/reconnect succeeds without stale overwrite or duplicate projection.
+- [ ] Host explicitly ends the session; transient projections/readiness/turn state clear.
+- [ ] Host can start a fresh session without stale participants/projections.
 - [ ] Owning Client durable Character state is correct after restart.
 
 **Gate P14.13:** both walkthroughs are recorded against the exact release candidate head. A build is not called fully playable before this gate.
@@ -490,6 +554,7 @@ Do **not** describe SimpleVTT as “모든 기능을 담은 플레이 가능한 
 - [ ] Item use and skill rolls go through authoritative play resolution as appropriate.
 - [ ] DM live-session flow works with real Combatants/players.
 - [ ] Connected Host/Join works with a host-unknown Character through visible UI.
+- [ ] Connected lifecycle covers Host bind/start, preparation/lobby, Character join, Ready/start, participant reconnect, explicit end, and clean restart.
 - [ ] Durable write-back/restart behavior is proven.
 - [ ] No critical flow requires Debug Dock/reference scenario controls.
 - [ ] Full relevant regression matrix is green at the release candidate head.
