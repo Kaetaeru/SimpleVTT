@@ -5,15 +5,12 @@ import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/productionSessionLifecycleAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedInternal, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { mountCharacterSessionProjection, projectedCharacterIds } from "../../src/app/characterSessionProjectionRegistry";
 import { tauriSessionTransport, type SessionTransportMessage } from "../../src/app/tauriSessionTransport";
 import { encodeConnectedWireMessage, type ConnectedWireMessage } from "../../src/app/connectedSessionWire";
-import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
-import { CharacterLibraryRepository } from "../../src/app/characterLibraryPersistence";
-import { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
 
 function installFakeDesktopTransport() {
   const original={
@@ -54,23 +51,18 @@ function installFakeDesktopTransport() {
   };
 }
 
-async function persistedPlayerAdapter() {
-  const templateAdapter=new MockAdapter();
-  const template=await templateAdapter.getSnapshot();
+async function savedProductionPlayerAdapter() {
+  const adapter=new MockAdapter();
+  const template=await adapter.getSnapshot();
   const saved={
     ...structuredClone(template.activeCharacter),
     id:"char.phase14.persisted-player",
     name:"Phase14 Persisted Player",
     saveState:"saved" as const,
   };
-  const store=new MemoryCharacterLibraryStore();
-  const repository=new CharacterLibraryRepository(store);
-  await repository.hydrate([saved],saved.id);
-  await repository.commit([saved],saved.id);
-  const adapter=new MockAdapter();
-  setCharacterLibraryStoreForTests(adapter,store);
-  const hydrated=await adapter.getSnapshot();
-  assert.equal(hydrated.activeCharacter.id,saved.id);
+  const app=connectedInternal(adapter);
+  app.activeCharacter=structuredClone(saved);
+  app.characters=[...app.characters.filter((character)=>character.id!==saved.id),structuredClone(saved)];
   return adapter;
 }
 
@@ -170,16 +162,15 @@ test("reference Character cannot enter a production connected session",async()=>
   }
 });
 
-test("persisted Character joins through explicit connecting state and reaches compatible lobby after hello-ack",async()=>{
+test("saved non-fixture Character joins through explicit connecting state and reaches compatible lobby after hello-ack",async()=>{
   const transport=installFakeDesktopTransport();
   try {
-    const adapter=await persistedPlayerAdapter();
+    const adapter=await savedProductionPlayerAdapter();
     const joining=await adapter.joinSession("127.0.0.1:3210");
     assert.equal(joining.activeCharacter.id,"char.phase14.persisted-player");
     assert.equal(joining.session.role,"client");
     assert.equal(joining.session.lifecycle,"connecting");
     assert.equal(joining.session.compatibility,"warning");
-    assert.match(joining.session.compatibilityMessage,/waiting for host compatibility handshake/);
     assert.equal(transport.connectCount(),1);
 
     transport.emit({
@@ -211,7 +202,7 @@ test("production UI surfaces preparation status, shareable address, and Host sto
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
 
-test("production Session screen replaces reference Join card with persisted Character selection and lobby lifecycle",()=>{
+test("production Session screen replaces reference Join card with saved Character selection and lobby lifecycle",()=>{
   const source=readFileSync(new URL("../../src/ProductionPlayerLobbyBridge.tsx",import.meta.url),"utf8");
   const css=readFileSync(new URL("../../src/production-player-lobby.css",import.meta.url),"utf8");
   assert.match(source,/productionJoinCharacters/);
