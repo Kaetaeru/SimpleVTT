@@ -46,6 +46,7 @@ import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";
 import "./installedContentRuntimeAdapter";
 // Phase 14 outermost production composition: real Character -> live Scene/actions,
-// followed by production-only random authoritative d20 faces.
+// canonical ItemInstance-backed weapon runtime facts, then production-only random authoritative d20 faces.
 import "./productionPlayRuntimeAdapter";
+import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
