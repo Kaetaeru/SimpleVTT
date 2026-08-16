@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionContracts";
+import "../../src/app/connectedProjectionLifecycleAdapter";
 import type { CatalogEntry, CharacterSheet } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
@@ -90,5 +91,20 @@ test("unmount removes only the ephemeral Scene projection", async () => {
   assert.equal(after.scene.entities.some((entity)=>entity.id==="char.phase13.remote"),false);
   assert.equal(after.scene.actionsByActor["char.phase13.remote"],undefined);
   assert.equal(after.scene.economyByActor["char.phase13.remote"],undefined);
+  assert.equal(projectedCharacterForPeer(adapter,"peer.remote"),undefined);
+});
+
+test("starting a new host session clears prior ephemeral projections but leaves permanent Characters untouched", async () => {
+  const adapter=new MockAdapter();
+  const before=await adapter.getSnapshot();
+  const reconstruction=reconstructCharacterSessionProjectionV1(buildCharacterSessionProjectionV1(projectedSheet(),catalog),catalog);
+  assert.equal(mountReconstructedCharacterSessionProjection(adapter,"peer.remote",reconstruction).status,"accepted");
+  assert.ok((await adapter.getSnapshot()).scene.entities.some((entity)=>entity.id==="char.phase13.remote"));
+
+  const afterHostAttempt=await adapter.hostSession();
+  assert.deepEqual(afterHostAttempt.characters,before.characters);
+  assert.equal(afterHostAttempt.scene.entities.some((entity)=>entity.id==="char.phase13.remote"),false);
+  assert.equal(afterHostAttempt.scene.actionsByActor["char.phase13.remote"],undefined);
+  assert.equal(afterHostAttempt.scene.economyByActor["char.phase13.remote"],undefined);
   assert.equal(projectedCharacterForPeer(adapter,"peer.remote"),undefined);
 });
