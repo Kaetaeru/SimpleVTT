@@ -182,6 +182,32 @@ export function decodeCharacterLibraryV1(payload:string):CharacterLibraryDocumen
   return cp(parsed as unknown as CharacterLibraryDocumentV1);
 }
 
+export class CharacterLibrarySchemaError extends Error {}
+export class CharacterLibraryMigrationRequiredError extends Error {
+  constructor(readonly schemaVersion:unknown) {
+    super(`Character library schema version ${String(schemaVersion)} requires an explicit migration`);
+  }
+}
+
+/**
+ * Version-aware decode entrypoint. Future schema migrations are added here.
+ * Unknown/newer schemas are blockers rather than corruption fallback candidates:
+ * silently loading an older generation and writing v1 over a newer format could lose data.
+ */
+export function decodeCharacterLibrary(payload:string):CharacterLibraryDocumentV1 {
+  const parsed:unknown = JSON.parse(payload);
+  if (!isObject(parsed)) throw new Error("character library must be an object");
+  if (parsed.schemaId !== CHARACTER_LIBRARY_SCHEMA_ID) {
+    throw new CharacterLibrarySchemaError(`unsupported character library schema: ${String(parsed.schemaId)}`);
+  }
+  switch (parsed.schemaVersion) {
+    case CHARACTER_LIBRARY_SCHEMA_VERSION:
+      return decodeCharacterLibraryV1(payload);
+    default:
+      throw new CharacterLibraryMigrationRequiredError(parsed.schemaVersion);
+  }
+}
+
 export function encodeCharacterLibraryV1(document:CharacterLibraryDocumentV1) {
   return JSON.stringify(canonical(document),null,2);
 }
@@ -236,13 +262,14 @@ export class CharacterLibraryRepository {
     for (const generation of generations) {
       if (generation.payload === null) continue;
       try {
-        const document = decodeCharacterLibraryV1(generation.payload);
+        const document = decodeCharacterLibrary(generation.payload);
         if (document.storageRevision !== generation.generation) continue;
         this.document = document;
         this.loadedGeneration = generation.generation;
         return this.result(generation.generation < this.physicalGeneration);
-      } catch {
-        // Try the previous committed generation. Corruption never causes an automatic overwrite.
+      } catch (error) {
+        if (error instanceof CharacterLibraryMigrationRequiredError || error instanceof CharacterLibrarySchemaError) throw error;
+        // Malformed/corrupt generation: try the previous committed generation.
       }
     }
     if (generations.length) throw new CharacterLibraryCorruptError("no valid committed Character library generation remains");
