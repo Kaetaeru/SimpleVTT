@@ -41,5 +41,6 @@ import "./restSpellManagementRuntimeAdapter";
 import "./classFeatureSpellRuntimeAdapter";
 import "./phase09SpellcastingRuntimeRouter";
 import "./characterLibraryRuntimeAdapter";
+import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";
 import "./installedContentRuntimeAdapter";
