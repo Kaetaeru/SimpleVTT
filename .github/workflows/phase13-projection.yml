@@ -68,6 +68,8 @@ jobs:
         run: npx tsx --test tests/ui/productionSessionPreparationMetadata.test.ts
       - name: Verify Phase 14 live DM mechanics continuity
         run: npx tsx --test tests/ui/productionDmLiveMechanicsContinuity.test.ts
+      - name: Verify Phase 14 production play workspace accessibility structure
+        run: npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts
 
   windows-playable:
     runs-on: windows-latest
