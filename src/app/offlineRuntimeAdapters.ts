@@ -53,9 +53,10 @@ import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";
 import "./installedContentRuntimeAdapter";
 // Phase 14 outermost production composition: real Character -> live Scene/actions,
-// authoritative spell execution, canonical ItemInstance-backed weapon runtime facts,
-// then production-only random authoritative d20 faces.
+// authoritative spell execution, explicit DM-authored theater-of-mind spatial facts,
+// canonical ItemInstance-backed weapon runtime facts, then production-only random d20 faces.
 import "./productionPlayRuntimeAdapter";
+import "./theaterOfMindSpatialAdapter";
 import "./productionSpellRuntimeAdapter";
 import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
