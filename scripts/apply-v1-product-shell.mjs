@@ -34,6 +34,12 @@ app = replaceOnce(
   'import { ProductionPlayScreen } from "./ProductionPlayScreen";\nimport { V1HomeScreen } from "./V1HomeScreen";\nimport { V1ContentScreen } from "./V1ContentScreen";\n',
   "v1 screen imports",
 );
+app = replaceOnce(
+  app,
+  'import { V1ContentScreen } from "./V1ContentScreen";\n',
+  'import { V1ContentScreen } from "./V1ContentScreen";\nimport { CharacterCreateScreenV10 } from "./CharacterCreateV10";\n',
+  "explicit CharacterCreateV10 import",
+);
 app = replaceOnce(app, 'const [route, setRoute] = useState<AppRoute>("characters");', 'const [route, setRoute] = useState<AppRoute>("home");', "initial Home route");
 app = replacePattern(
   app,
@@ -92,6 +98,12 @@ app = replaceOnce(
   '          {snapshot.edgeState !== "normal" && <EdgeBanner />}\n',
   '          {snapshot.edgeState !== "normal" && <EdgeBanner />}\n          {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("scene")} />}\n',
   "Home composition",
+);
+app = replaceOnce(
+  app,
+  '          {snapshot.role === "player" && route === "create" && <CharacterCreateScreen onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}\n',
+  '          {snapshot.role === "player" && route === "create" && <CharacterCreateScreenV10 onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}\n',
+  "explicit CharacterCreateV10 route",
 );
 app = replaceOnce(
   app,
