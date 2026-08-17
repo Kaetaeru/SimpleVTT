@@ -34,6 +34,7 @@ import "./combat-spell-hud.css";
 import "./level-up-v10.css";
 import "./focused-layout-fix.css";
 import "./character-sheet-v10-viewport.css";
+import "./production-ux-redesign.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
