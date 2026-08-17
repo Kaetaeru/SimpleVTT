@@ -11,83 +11,67 @@
 - dispatch recommendation: `continue`
 
 ## v1 product goal
-SimpleVTT v1 must launch as a coherent tabletop product rather than a collection of development surfaces. Existing Character persistence, installed-content composition, connected authority, Scene/runtime mechanics, ResolutionEvent history/Undo and reconnect/idempotency remain canonical; the product shell, information architecture and routine UX are being rebuilt around them.
+SimpleVTT v1 launches as one coherent tabletop product. Preserve the canonical Character/content/session/mechanics engines; rebuild launch, global information architecture and routine UX so every production capability is discoverable without repository knowledge or Debug Dock.
 
 Authoritative design:
 - `.agents/V1_PRODUCT_EXPERIENCE.md`
 - `.agents/PHASE14_PLAYER_EXPERIENCE_REDESIGN.md`
 
-## Stable v1 information architecture
-Global destinations:
-1. 홈
-2. 캐릭터
-3. 세션
-4. 콘텐츠
-5. 규칙
-6. 설정
+## Stable global information architecture
+`홈 · 캐릭터 · 세션 · 콘텐츠 · 규칙 · 설정`
 
-Play, Encounter/Combatants, Activity/history, DM correction and image handouts are contextual tools rather than permanent global tabs.
+Play, Encounter/Combatants, Activity/history, DM correction and image handouts are contextual tools, not permanent global destinations.
 
 ## v1 Definition of Done
 One exact source SHA must pass together:
-- first-launch Home/title and first-use guidance;
+- first-launch Home/title/guide and feature reachability;
 - Character create/import/edit/level-up/restart durability;
-- standalone physical-table Sheet with direct ability/save/skill/Initiative/attack/damage/common-die rolls, Hit Dice, spell slots/resources and portrait;
+- standalone physical-table Sheet, direct rolls/resources and durable portrait;
 - declarative addon local-file install/preview/validation/restart composition;
-- named Host/Join/Ready/start/stop/reconnect and empty Encounter preparation;
-- quiet intent-first exploration and contextual Initiative combat;
-- contextual DM adjudication/Combatants/history without permanent debug panels;
-- DM image handout reveal/withdraw + Client dismiss/reopen/reconnect convergence;
-- actual WebGL physics d4/d6/d8/d10/d12/d20 without changing Host-authoritative outcomes;
-- full TypeScript/frontend/mechanics/persistence/connected regression gates;
-- exact-head Windows artifact and human Windows first-launch/sheet/addon/two-instance acceptance;
-- PR stays draft/unmerged until explicit authorization.
+- Host/Join/Ready/start/stop/reconnect and empty Encounter preparation;
+- intent-first exploration and contextual Initiative combat;
+- contextual DM Combatants/adjudication/history and image handout;
+- actual WebGL physics dice without changing authoritative connected outcomes;
+- full frontend/mechanics/persistence/connected/Windows gates;
+- human Windows first-launch/sheet/addon/two-instance acceptance;
+- PR stays draft/unmerged until explicit merge authorization.
 
-## First v1 implementation slice completed in source
-Current source checkpoint: `24a228d3418d1de553fa2b5749351cdf0f2ab3cd`.
+## First v1 source slice
+Current work head: `64cc3b451dfddc40627156db1faa36e109074fa4`.
 
 Implemented:
-- `.agents/V1_PRODUCT_EXPERIENCE.md` with complete v1 IA, reachability matrix and DoD;
-- `V1HomeScreen`: SimpleVTT title/Home, first-use guide, new/open Character, Host/Join, addon and Rules entry points, returning session/content context;
-- stable global shell `홈 · 캐릭터 · 세션 · 콘텐츠 · 규칙 · 설정` with contextual `플레이로 돌아가기`;
-- `V1ContentScreen`: local JSON file picker, 5MB/type guard, existing RuleModule package preview/validation, explicit install, installed-content summary and embedded addon-authoring guide;
-- production `AppRoute` includes Home/Content and launches at Home;
-- production Character Sheet route is explicitly `CharacterSheetPlayScreen`;
-- production Character Create route is explicitly `CharacterCreateScreenV10`;
-- removed the legacy Vite `simplevtt-character-progression-routes` source-string transform so build/runtime composition no longer changes behind the source code;
-- updated progression regression to assert explicit LevelUp host/bridge composition rather than the removed Vite transform;
-- removed the temporary one-shot v1 integration script/workflow after the source patch landed;
-- v1 product-shell structural test is part of UI CI.
+- `.agents/V1_PRODUCT_EXPERIENCE.md` v1 contract;
+- Home/title and dismissible first-use guide;
+- stable global v1 shell/navigation and contextual `플레이로 돌아가기`;
+- first-class Content/Addons screen using the existing RuleModule importer with local JSON picker, 5MB/type guard, preview/validation/install and supported-addon guide;
+- explicit production `CharacterSheetPlayScreen` and `CharacterCreateScreenV10` routes;
+- removed hidden Vite route-string rewriting;
+- updated v1 and progression structure contracts for explicit source composition;
+- temporary shell integration workflow/script removed after source landed.
 
-## Validation evidence and current gate
-Earlier v1 UI runs showed:
-- new v1 product-shell tests green;
-- Phase 14 session/player-experience/mechanics UI suites green through the progression boundary;
-- initial build failure root-caused to the obsolete Vite source-string transform, which has now been removed;
-- the next failure was the old progression regression asserting that obsolete transform; that regression has now been rewritten to the real source-composition contract.
+## Current validation boundary
+Exact source `24a228d3418d1de553fa2b5749351cdf0f2ab3cd`, UI `32037896937` / frontend `95411828599`:
+- v1 shell contract passed;
+- Session, standalone-sheet/physics-dice/intent-play, non-Character UX, Host metadata, live DM continuity, lifecycle/ownership/inventory/spell batch and creation ChoiceDefinition checks passed;
+- `Verify progression choice schedule regression` failed; later TypeScript/build steps were skipped.
 
-A fresh direct-authored exact-head validation was triggered at `24a228d3418d1de553fa2b5749351cdf0f2ab3cd` after deleting the temporary Actions integration workflow, specifically to avoid GitHub `action_required` results on workflow-authored commits.
-
-Do not claim the first slice fully green until that exact-head UI/build run completes successfully.
-
-## Architecture preserved
-- Owning Client Character Library remains the durable Character source; Host projections remain ephemeral.
-- Existing installed-content store/composition and RuleModule validation are the addon engine; no arbitrary executable-plugin engine is introduced.
-- Host remains connected mechanics authority.
-- Existing connected ledger, reconnect/idempotency, Scene runtime, ResolutionEvent history and event-native Undo remain canonical.
-- Fresh Host remains empty-by-default; official Combatants are deliberate and not silently UI-rebalanced.
-- No tactical grid/token/Fog-of-War/path/LOS or cloud-account dependency.
+A temporary diagnostic workflow at current head `64cc3b451dfddc40627156db1faa36e109074fa4` exposed only that its isolated job omitted `npm run generate:content`, producing a missing generated catalog error. That result does **not** explain the normal UI failure because normal UI does generate content first. Do not treat it as product evidence.
 
 ## Next Exact Action
-1. Read exact-head UI run for `24a228d3418d1de553fa2b5749351cdf0f2ab3cd`. If it fails, repair only the reported boundary; if green, record it and continue without repeating unchanged mechanics tests manually.
-2. Reframe Character Library inside the v1 product shell while preserving existing create/import/edit/level-up engines.
-3. Complete standalone Sheet gaps: Initiative direct roll, Hit Dice/spell-slot/resource operation, then durable portrait editor/persistence.
-4. Complete intent-action runtime coverage and remove remaining implementation/debug copy from production Play.
-5. Implement DM image handout presentation state/transport/viewer/reconnect without making it ResolutionEvent state or a permanent panel.
-6. Fold Combatants/Activity/adjudication into contextual DM/session flows and remove their legacy product-global framing.
-7. Rework Rules and Settings to the v1 information hierarchy; Content owns addon installation.
-8. Run targeted tests for each slice, then one exact-head full UI/Main/connected/persistence/Windows validation and human acceptance.
-9. Keep PR #109 draft/unmerged.
+1. Instrument the **normal UI workflow's** `Verify progression choice schedule regression` step to capture the test's assertion output after the existing `Generate content dependencies` step, using the same annotation pattern as the frontend build diagnostic.
+2. Rerun from a direct-authored work head and read that annotation. Fix only the exact failing assertion/fixture. Do not restore the removed Vite source transform.
+3. Delete `.github/workflows/v1-progression-diagnostic.yml` once the normal-workflow diagnostic is available.
+4. Obtain an exact-head green UI TypeScript/production build before broadening the slice.
+5. Continue v1 implementation in order: Character Library framing → Sheet Initiative/Hit Dice/spell slots/resources → portrait → remaining intent runtime/copy → DM handout transport/viewer/reconnect → contextual Combatants/Activity/adjudication → Rules/Settings cleanup.
+6. Targeted test each slice; then one exact-head full UI/Main/connected/persistence/Windows validation and human first-launch + sheet + addon + two-instance acceptance.
+7. Keep PR #109 draft/unmerged.
+
+## Architecture preserved
+- Owning Client Character Library is durable authority; Host projections remain ephemeral.
+- Existing installed-content composition/RuleModule validation is the addon engine.
+- Host remains connected mechanics authority; ledger/reconnect/idempotency/Scene runtime/ResolutionEvent/Undo remain canonical.
+- Fresh Host remains empty; official Combatants are deliberate and not silently rebalanced.
+- No second stores/protocols/mechanics runtime, tactical map/Fog/LOS, or cloud dependency.
 
 ## Dispatch recommendation
 `continue`
