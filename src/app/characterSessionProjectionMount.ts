@@ -1,6 +1,7 @@
 import type { CharacterSheet, CharacterSummary, SceneVm } from "./contracts";
 import type { MockAdapter } from "./mockAdapter";
 import type { CharacterSessionProjectionReconstruction } from "./characterSessionProjectionReconstruction";
+import { deriveCharacterSkillActions } from "./characterSkillActionProjection";
 import {
   mountCharacterSessionProjection,
   projectedCharacterForPeer,
@@ -67,7 +68,9 @@ export function mountReconstructedCharacterSessionProjection(
     sheet:structuredClone(reconstruction.sheet),
   });
   app.scene.entities=[...app.scene.entities.filter((entity)=>entity.id!==characterId),structuredClone(reconstruction.entity)];
-  app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:structuredClone(reconstruction.actions)};
+  const mountedActions=new Map(reconstruction.actions.map((action)=>[action.id,structuredClone(action)]));
+  for (const action of deriveCharacterSkillActions(reconstruction.sheet)) mountedActions.set(action.id,structuredClone(action));
+  app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:[...mountedActions.values()]};
   app.scene.economyByActor={...app.scene.economyByActor,[characterId]:structuredClone(reconstruction.economy)};
   return {status:"accepted" as const,characterId};
 }
