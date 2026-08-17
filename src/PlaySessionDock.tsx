@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ActionVm, SceneEntity } from "./app/contracts";
 import { useSimpleVtt } from "./app/AppProvider";
 import { mockAdapter } from "./app/mockAdapter";
+import { productionJoinCharacters } from "./app/productionSessionLifecycleAdapter";
 import { selectProductionCharacter, startProductionLocalPlay } from "./app/productionPlayRuntimeAdapter";
 
 type PlayTab="actions"|"skills"|"spells"|"inventory";
@@ -33,10 +34,12 @@ export function PlaySessionDock() {
   const [pendingActionId,setPendingActionId]=useState<string|null>(null);
 
   if (!snapshot) return null;
+  const productionCharacters=productionJoinCharacters(mockAdapter);
   const character=snapshot.activeCharacter;
+  const activeProductionCharacter=productionCharacters.some((entry)=>entry.id===character.id);
   const scene=snapshot.scene;
-  const actor=scene.entities.find((entity)=>entity.id===character.id);
-  const actions=scene.actionsByActor[character.id]??[];
+  const actor=activeProductionCharacter ? scene.entities.find((entity)=>entity.id===character.id) : undefined;
+  const actions=activeProductionCharacter ? (scene.actionsByActor[character.id]??[]) : [];
   const pending=actions.find((action)=>action.id===pendingActionId)??null;
   const targets=pending?scene.entities.filter((entity)=>pending.eligibleTargetIds.includes(entity.id)):[];
 
@@ -44,21 +47,23 @@ export function PlaySessionDock() {
     actions:actions.filter((action)=>actionGroup(action)==="actions").length,
     skills:actions.filter((action)=>actionGroup(action)==="skills").length,
     spells:actions.filter((action)=>actionGroup(action)==="spells").length,
-    inventory:character.items.length,
+    inventory:activeProductionCharacter ? character.items.length : 0,
   };
 
   const chooseCharacter=async(id:string)=>{
+    if (!productionCharacters.some((entry)=>entry.id===id)) return;
     await selectProductionCharacter(mockAdapter,id);
     await refresh();
     setPendingActionId(null);
   };
   const startLocal=async()=>{
+    if (!activeProductionCharacter) return;
     await startProductionLocalPlay(mockAdapter,"player");
     await refresh();
     setOpen(true);
   };
   const trigger=async(action:ActionVm)=>{
-    if (!action.available) return;
+    if (!activeProductionCharacter||!action.available) return;
     if (action.target==="none") {
       setPendingActionId(null);
       await resolveAction(action.id,[]);
@@ -83,8 +88,8 @@ export function PlaySessionDock() {
     <header className="play-dock-head">
       <div>
         <span className="eyebrow accent">PRODUCTION PLAY</span>
-        <strong>{character.name}</strong>
-        <small>{character.className} {character.level} · HP {character.hp}/{character.maxHp} · AC {character.ac}</small>
+        <strong>{activeProductionCharacter?character.name:"플레이 Character 선택"}</strong>
+        <small>{activeProductionCharacter?`${character.className} ${character.level} · HP ${character.hp}/${character.maxHp} · AC ${character.ac}`:"저장된 production Character를 선택하세요."}</small>
       </div>
       <div className="play-dock-head-actions">
         <span className={`play-session-state ${snapshot.connectionState}`}>{snapshot.session.role==="offline"?"LOCAL":snapshot.session.role.toUpperCase()} · {snapshot.sessionMode==="initiative"?`R${scene.round}`:"FREE"}</span>
@@ -94,22 +99,27 @@ export function PlaySessionDock() {
 
     <section className="play-dock-session-strip">
       <div className="play-character-switcher" aria-label="플레이 캐릭터 선택">
-        {snapshot.characters.map((entry)=><button type="button" key={entry.id} className={entry.id===character.id?"active":""} onClick={()=>void chooseCharacter(entry.id)}><strong>{entry.name}</strong><small>{entry.className} {entry.level}</small></button>)}
+        {productionCharacters.length===0&&<small>먼저 Character Creation에서 캐릭터를 저장하세요.</small>}
+        {productionCharacters.map((entry)=><button type="button" key={entry.id} className={entry.id===character.id?"active":""} onClick={()=>void chooseCharacter(entry.id)}><strong>{entry.name}</strong><small>{entry.className} {entry.level}</small></button>)}
       </div>
-      <button type="button" className="primary" onClick={()=>void startLocal()}>로컬 플레이 시작</button>
+      <button type="button" className="primary" disabled={!activeProductionCharacter} onClick={()=>void startLocal()}>로컬 플레이 시작</button>
     </section>
 
-    {!actor&&<div className="play-empty-state"><strong>플레이 Actor를 준비하는 중입니다.</strong><span>선택한 Character를 production Scene으로 투영합니다.</span></div>}
+    {!activeProductionCharacter&&<div className="play-empty-state"><strong>플레이할 저장 Character가 필요합니다.</strong><span>Reference Character 대신 위 목록에서 실제 저장된 Character를 선택하세요.</span></div>}
 
-    <nav className="play-dock-tabs" aria-label="플레이 카테고리">
-      {(Object.keys(TAB_LABEL) as PlayTab[]).map((id)=><button type="button" key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}><span>{TAB_LABEL[id]}</span><b>{counts[id]}</b></button>)}
-    </nav>
+    {activeProductionCharacter&&<>
+      {!actor&&<div className="play-empty-state"><strong>플레이 Actor를 준비하는 중입니다.</strong><span>선택한 Character를 production Scene으로 투영합니다.</span></div>}
 
-    <div className="play-dock-body">
-      {tab!=="inventory"&&<ActionSurface actions={actions.filter((action)=>actionGroup(action)===tab)} pendingId={pendingActionId} onTrigger={trigger}/>} 
-      {tab==="inventory"&&<InventorySurface actions={actions} onResolve={trigger} onQuickUse={useItem} onEquip={toggleItemEquipped} onAttune={toggleItemAttunement} />}
-      {pending&&<div className="play-target-picker"><div><strong>{pending.name}</strong><span>대상을 선택하세요.</span></div>{targets.length?targets.map((entity)=><button type="button" key={entity.id} onClick={()=>void chooseTarget(entity)}><span>{entity.name}</span><small>HP {entity.hp}/{entity.maxHp} · AC {entity.ac}</small></button>):<p>현재 유효한 대상이 없습니다.</p>}<button type="button" onClick={()=>setPendingActionId(null)}>취소</button></div>}
-    </div>
+      <nav className="play-dock-tabs" aria-label="플레이 카테고리">
+        {(Object.keys(TAB_LABEL) as PlayTab[]).map((id)=><button type="button" key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}><span>{TAB_LABEL[id]}</span><b>{counts[id]}</b></button>)}
+      </nav>
+
+      <div className="play-dock-body">
+        {tab!=="inventory"&&<ActionSurface actions={actions.filter((action)=>actionGroup(action)===tab)} pendingId={pendingActionId} onTrigger={trigger}/>} 
+        {tab==="inventory"&&<InventorySurface actions={actions} onResolve={trigger} onQuickUse={useItem} onEquip={toggleItemEquipped} onAttune={toggleItemAttunement} />}
+        {pending&&<div className="play-target-picker"><div><strong>{pending.name}</strong><span>대상을 선택하세요.</span></div>{targets.length?targets.map((entity)=><button type="button" key={entity.id} onClick={()=>void chooseTarget(entity)}><span>{entity.name}</span><small>HP {entity.hp}/{entity.maxHp} · AC {entity.ac}</small></button>):<p>현재 유효한 대상이 없습니다.</p>}<button type="button" onClick={()=>setPendingActionId(null)}>취소</button></div>}
+      </div>
+    </>}
 
     <footer className="play-dock-footer">
       <span>{scene.name}</span>
@@ -124,7 +134,7 @@ function ActionSurface({actions,pendingId,onTrigger}:{actions:ActionVm[];pending
   const detail=actions.find((action)=>action.id===hovered)??null;
   if (!actions.length) return <div className="play-empty-state"><strong>사용 가능한 항목이 없습니다.</strong><span>현재 Character source/runtime에서 이 카테고리의 행동을 찾지 못했습니다.</span></div>;
   return <div className="play-action-surface">
-    <div className="play-action-grid">{actions.map((action)=><button type="button" key={action.id} disabled={!action.available} className={pendingId===action.id?"selected":""} onMouseEnter={()=>setHovered(action.id)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(action.id)} onClick={()=>void onTrigger(action)}><b>{action.name}</b><span>{action.summary}</span><small>{action.economy}{action.checkBonus!==undefined?` · ${signed(action.checkBonus)}`:""}</small>{!action.available&&<em>{action.disabledReason??"현재 사용할 수 없습니다."}</em>}</button>)}</div>
+    <div className="play-action-grid">{actions.map((action)=><button type="button" key={action.id} disabled={!action.available} className={pendingId===action.id?"selected":""} onMouseEnter={()=>setHovered(action.id)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(action.id)} onBlur={()=>setHovered(null)} onClick={()=>void onTrigger(action)}><b>{action.name}</b><span>{action.summary}</span><small>{action.economy}{action.checkBonus!==undefined?` · ${signed(action.checkBonus)}`:""}</small>{!action.available&&<em>{action.disabledReason??"현재 사용할 수 없습니다."}</em>}</button>)}</div>
     {detail&&<article className="play-action-detail"><strong>{detail.name}</strong><p>{detail.summary}</p>{detail.details.map((row,index)=><div key={`${row.label}-${index}`}><span>{row.label}</span><b>{row.value}</b>{row.source&&<small>{row.source}</small>}</div>)}</article>}
   </div>;
 }
