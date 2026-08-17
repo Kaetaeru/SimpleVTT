@@ -46,6 +46,8 @@ jobs:
         run: npm run test:ui-rule-boundary
       - name: Verify Phase 14 PlaySessionDock hydration and tab context
         run: npx tsx --test tests/ui/playSessionDockStructure.test.ts
+      - name: Verify Phase 14 production play workspace accessibility structure
+        run: npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts
       - name: Verify Phase 14 Host preparation metadata and active content
         run: npx tsx --test tests/ui/productionSessionPreparationMetadata.test.ts
       - name: Verify Phase 14 live DM mechanics continuity
