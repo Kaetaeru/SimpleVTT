@@ -120,4 +120,14 @@ jobs:
           tests/ui/visualDiceStructure.test.ts
           tests/ui/movementReactionStructure.test.ts
       - name: Typecheck and build
-        run: npm run build
+        shell: bash
+        run: |
+          set +e
+          npm run build > frontend-build.log 2>&1
+          status=$?
+          cat frontend-build.log
+          if [ "$status" -ne 0 ]; then
+            message=$(tail -n 80 frontend-build.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+            echo "::error title=TypeScript and production build::$message"
+            exit "$status"
+          fi
