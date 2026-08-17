@@ -11,6 +11,7 @@ import "./app/connectedActionRoutingAdapter";
 import "./app/connectedTurnRoutingAdapter";
 import "./app/connectedCorrectionRoutingAdapter";
 import "./app/productionSessionLifecycleAdapter";
+import { PlaySessionDock } from "./PlaySessionDock";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
@@ -21,6 +22,7 @@ import { ProductionPlayerLobbyBridge } from "./ProductionPlayerLobbyBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
+import "./play-session-dock.css";
 import "./visual-dice.css";
 import "./movement-reaction.css";
 import "./character-creation-v09.css";
@@ -37,6 +39,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProvider>
       <App />
+      <PlaySessionDock />
       <CombatSpellHudBridge />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
