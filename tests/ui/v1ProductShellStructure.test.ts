@@ -5,6 +5,7 @@ import test from "node:test";
 const app = readFileSync("src/App.tsx", "utf8");
 const contracts = readFileSync("src/app/contracts.ts", "utf8");
 const main = readFileSync("src/main.tsx", "utf8");
+const vite = readFileSync("vite.config.ts", "utf8");
 const home = readFileSync("src/V1HomeScreen.tsx", "utf8");
 const content = readFileSync("src/V1ContentScreen.tsx", "utf8");
 const css = readFileSync("src/v1-product-shell.css", "utf8");
@@ -41,6 +42,15 @@ test("addons have a first-class file-based product flow", () => {
   assert.match(content, /애드온 만드는 방법/);
   assert.match(content, /0\.1-draft/);
   assert.match(content, /MAX_ADDON_BYTES/);
+});
+
+test("production routes are explicit source composition, not a Vite string-rewrite hook", () => {
+  assert.match(app, /import \{ CharacterSheetPlayScreen \}/);
+  assert.match(app, /import \{ CharacterCreateScreenV10 \}/);
+  assert.match(app, /route === "character" && <CharacterSheetPlayScreen/);
+  assert.match(app, /route === "create" && <CharacterCreateScreenV10/);
+  assert.doesNotMatch(vite, /simplevtt-character-progression-routes|legacyCharacterRoute|Expected legacy CharacterSheetScreen route/);
+  assert.match(vite, /plugins:\s*\[react\(\)\]/);
 });
 
 test("the new product shell is imported as production composition", () => {
