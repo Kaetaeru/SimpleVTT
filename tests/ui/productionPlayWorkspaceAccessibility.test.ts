@@ -52,8 +52,10 @@ test("production role surfaces stay scoped and expose routine recovery guidance 
   const lobbyCss=readFileSync(new URL("../../src/production-player-lobby.css",import.meta.url),"utf8");
 
   assert.match(dock,/snapshot\.role\s*!==\s*"player"/);
+  assert.match(dock,/snapshot\.session\.role\s*===\s*"host"/);
   assert.match(lobby,/snapshot\.role\s*!==\s*"player"/);
-  assert.match(host,/snapshot\.role\s*!==\s*"dm"/);
+  assert.match(lobby,/snapshot\.session\.role\s*===\s*"host"/);
+  assert.match(host,/snapshot\.session\.role\s*!==\s*"host"/);
 
   assert.match(lobby,/snapshot\.connectionState\s*===\s*"reconnecting"/);
   assert.match(lobby,/재연결 중/);
