@@ -16,6 +16,7 @@ import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./res
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
+import "./productionCombatantPreparationAdapter";
 import { mockAdapter } from "./mockAdapter";
 import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 
@@ -64,6 +65,7 @@ interface AppContextValue {
   activateCombatantImport(): Promise<void>;
   clearCombatantImport(): Promise<void>;
   instantiateCombatant(definitionId: string): Promise<void>;
+  removeCombatant(combatantId: string): Promise<void>;
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
   stopSession(): Promise<void>;
@@ -183,6 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activateCombatantImport: async () => apply(() => mockAdapter.activateCombatantImport()),
     clearCombatantImport: async () => apply(() => mockAdapter.clearCombatantImport()),
     instantiateCombatant: async (definitionId) => apply(() => mockAdapter.instantiateCombatant(definitionId)),
+    removeCombatant: async (combatantId) => apply(() => mockAdapter.removeCombatant(combatantId)),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
     stopSession: async () => apply(() => mockAdapter.stopSession()),
