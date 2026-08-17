@@ -150,7 +150,7 @@ function matrixState(classId:string,targetLevel:number):MatrixState {
     weaponMasteryIds:[],
     weaponMasterySources:{},
     fightingStyleFeatIds:[],
-    fightingStyleSources:{},
+    fightingStyleFeatSources:{},
     subclassIds:subclassId ? { [classId]:subclassId } : {},
     subclassFeatureIds:[],
     subclassFeatureSources:{},
