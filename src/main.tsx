@@ -12,6 +12,7 @@ import "./app/connectedTurnRoutingAdapter";
 import "./app/connectedCorrectionRoutingAdapter";
 import "./app/productionSessionLifecycleAdapter";
 import "./app/productionSessionEmptyEncounterAdapter";
+import "./app/productionSessionUiStateAdapter";
 import { PlaySessionDock } from "./PlaySessionDock";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
