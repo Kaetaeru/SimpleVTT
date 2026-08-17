@@ -4,6 +4,7 @@ import { CharacterSheetPlayScreen } from "./CharacterSheetPlayScreen";
 import { ProductionPlayScreen } from "./ProductionPlayScreen";
 import { V1HomeScreen } from "./V1HomeScreen";
 import { V1ContentScreen } from "./V1ContentScreen";
+import { CharacterCreateScreenV10 } from "./CharacterCreateV10";
 import type {
   AbilityKey,
   AbilityMethod,
@@ -113,7 +114,7 @@ export function App() {
           {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("scene")} />}
           {snapshot.role === "player" && route === "characters" && <CharacterLibraryScreen onOpen={() => setRoute("character")} onCreate={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "character" && <CharacterSheetPlayScreen onScene={() => setRoute("scene")} onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
-          {snapshot.role === "player" && route === "create" && <CharacterCreateScreen onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}
+          {snapshot.role === "player" && route === "create" && <CharacterCreateScreenV10 onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}
           {snapshot.role === "player" && route === "levelup" && <LevelUpScreen onDone={() => setRoute("character")} onCancel={() => setRoute("character")} />}
           {route === "scene" && <ProductionPlayScreen role={productionRole} />}
           {route === "combatants" && productionRole === "dm" && <CombatantsScreen />}
