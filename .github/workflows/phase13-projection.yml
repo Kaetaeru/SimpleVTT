@@ -64,6 +64,8 @@ jobs:
         run: npx tsx --test tests/ui/productionDmLiveAdjudicationFlow.test.ts
       - name: Verify Phase 14 live Combatant theater-of-mind action
         run: npx tsx --test tests/ui/productionDmLiveCombatantAction.test.ts
+      - name: Verify Phase 14 Host preparation metadata and active content
+        run: npx tsx --test tests/ui/productionSessionPreparationMetadata.test.ts
 
   windows-playable:
     runs-on: windows-latest
