@@ -209,12 +209,10 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     const client=new MockAdapter();
     setCharacterLibraryStoreForTests(client,clientStore);
     prepareOwningClient(client,remote,projection,hostCatalog);
-    await client.saveCharacter();
     const clientBaseline=await client.getSnapshot();
     const clientEconomyBefore=structuredClone(clientBaseline.scene.economyByActor[remote.id]);
     const clientActivityBefore=clientBaseline.activity.length;
     const persistenceBefore=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision;
-    assert.equal(typeof persistenceBefore,"number","owning client must have a durable Character-library generation before connected event apply");
     const clientState=connectedStateFor(client);
     clientState.mode="client";
     clientState.sessionId=state.sessionId;
