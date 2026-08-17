@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SessionMode } from "./app/contracts";
 import type { RuntimeCover } from "./app/spatialRuntimeContracts";
+import "./app/productionSessionLifecycleAdapter";
 import "./app/theaterOfMindSpatialAdapter";
 import { mockAdapter } from "./app/mockAdapter";
 import { useSimpleVtt } from "./app/AppProvider";
@@ -8,12 +9,20 @@ import { useSimpleVtt } from "./app/AppProvider";
 export function ProductionSessionLifecycleBridge() {
   const { snapshot, refresh, stopSession, startPreparedSession, instantiateCombatant, removeCombatant } = useSimpleVtt();
   const [mode,setMode]=useState<SessionMode>("freeform");
+  const [sessionName,setSessionName]=useState("");
   const [relationSourceId,setRelationSourceId]=useState("");
   const [relationTargetId,setRelationTargetId]=useState("");
   const [distanceFeet,setDistanceFeet]=useState("5");
   const [visible,setVisible]=useState(true);
   const [cover,setCover]=useState<RuntimeCover>("none");
   const [targetCanSeeAttacker,setTargetCanSeeAttacker]=useState(true);
+
+  useEffect(()=>{
+    if (snapshot?.session.role==="host"&&["preparing","live"].includes(snapshot.session.lifecycle??"")) {
+      setSessionName(snapshot.session.name);
+    }
+  },[snapshot?.session.role,snapshot?.session.lifecycle,snapshot?.session.name]);
+
   if (!snapshot || snapshot.session.role !== "host" || !["preparing","live"].includes(snapshot.session.lifecycle ?? "")) return null;
 
   const players=snapshot.session.participants.filter((participant)=>participant.id!=="host");
@@ -23,6 +32,11 @@ export function ProductionSessionLifecycleBridge() {
   const canStart=snapshot.session.lifecycle==="preparing"
     &&players.length>0
     &&players.every((participant)=>participant.state==="connected"&&participant.ready===true);
+  const normalizedSessionName=sessionName.trim();
+  const canSaveSessionName=snapshot.session.lifecycle==="preparing"
+    &&normalizedSessionName.length>0
+    &&normalizedSessionName.length<=80
+    &&normalizedSessionName!==snapshot.session.name;
   const parsedDistanceFeet=Number(distanceFeet);
   const canAuthorRelation=snapshot.session.lifecycle==="live"
     &&Boolean(relationSourceId)
@@ -30,6 +44,12 @@ export function ProductionSessionLifecycleBridge() {
     &&relationSourceId!==relationTargetId
     &&Number.isFinite(parsedDistanceFeet)
     &&parsedDistanceFeet>=0;
+
+  const saveSessionName=async()=>{
+    if (!canSaveSessionName) return;
+    await mockAdapter.setPreparedSessionName(sessionName);
+    await refresh();
+  };
 
   const authorSpatialRelation=async()=>{
     if (!canAuthorRelation) return;
@@ -64,10 +84,17 @@ export function ProductionSessionLifecycleBridge() {
         boxShadow: "0 18px 48px rgba(0,0,0,.35)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <div>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ flex:1 }}>
           <span className="eyebrow accent">{snapshot.session.lifecycle==="live" ? "Host 플레이 중" : "Host 준비 중"}</span>
-          <strong style={{ display: "block", marginTop: 4 }}>{snapshot.session.name}</strong>
+          {snapshot.session.lifecycle==="preparing" ? (
+            <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:6,marginTop:4 }}>
+              <input aria-label="세션 이름" maxLength={80} value={sessionName} onChange={(event)=>setSessionName(event.target.value)} />
+              <button type="button" disabled={!canSaveSessionName} onClick={()=>void saveSessionName()}>이름 저장</button>
+            </div>
+          ) : (
+            <strong style={{ display: "block", marginTop: 4 }}>{snapshot.session.name}</strong>
+          )}
         </div>
         <span className={`status-text ${snapshot.connectionState}`}>● 서버 열림</span>
       </div>
@@ -81,6 +108,17 @@ export function ProductionSessionLifecycleBridge() {
         <div><span>Player</span><strong>{players.length}명</strong></div>
         <div><span>Combatant</span><strong>{preparedCombatants.length}개</strong></div>
         <div><span>호환성</span><strong>{snapshot.session.compatibility}</strong></div>
+        <div><span>RulesProfile</span><strong>{snapshot.session.rulesProfileId || "확인 중"}</strong></div>
+      </div>
+      <div style={{ marginTop:12 }}>
+        <strong>활성 콘텐츠</strong>
+        {snapshot.session.sessionContent.length===0 ? (
+          <p style={{ margin:"6px 0",opacity:.72 }}>추가 활성 콘텐츠 없음 · 현재 RulesProfile만 사용합니다.</p>
+        ) : (
+          <ul style={{ margin:"6px 0 0",paddingLeft:20 }}>
+            {snapshot.session.sessionContent.map((entry)=><li key={entry}>{entry}</li>)}
+          </ul>
+        )}
       </div>
       <div style={{ marginTop: 12 }}>
         <strong>참가자 준비 상태</strong>
@@ -145,10 +183,13 @@ export function ProductionSessionLifecycleBridge() {
       )}
       {snapshot.session.lifecycle==="preparing" && (
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:12 }}>
-          <select aria-label="시작 모드" value={mode} onChange={(event)=>setMode(event.target.value as SessionMode)}>
-            <option value="freeform">Freeform</option>
-            <option value="initiative">Initiative</option>
-          </select>
+          <label style={{ display:"grid",gap:4 }}>
+            <span>시작 모드</span>
+            <select aria-label="시작 모드" value={mode} onChange={(event)=>setMode(event.target.value as SessionMode)}>
+              <option value="freeform">Freeform</option>
+              <option value="initiative">Initiative</option>
+            </select>
+          </label>
           <button type="button" className="primary" disabled={!canStart} onClick={()=>void startPreparedSession(mode)}>플레이 시작</button>
         </div>
       )}
