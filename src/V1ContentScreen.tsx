@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 
 const MAX_ADDON_BYTES = 5 * 1024 * 1024;
@@ -13,14 +13,12 @@ export function V1ContentScreen() {
 
   const localEntries = snapshot.catalog.filter((entry) => entry.scope === "local");
   const builtinEntries = snapshot.catalog.filter((entry) => entry.scope === "builtin");
-  const installedGroups = useMemo(() => {
-    const groups = new Map<string, typeof localEntries>();
-    for (const entry of localEntries) {
-      const key = entry.sourceId || entry.source || "로컬 콘텐츠";
-      groups.set(key, [...(groups.get(key) ?? []), entry]);
-    }
-    return [...groups.entries()].map(([id, entries]) => ({ id, entries, source: entries[0]?.source ?? id, version: entries[0]?.version ?? "" }));
-  }, [localEntries]);
+  const groups = new Map<string, typeof localEntries>();
+  for (const entry of localEntries) {
+    const key = entry.sourceId || entry.source || "로컬 콘텐츠";
+    groups.set(key, [...(groups.get(key) ?? []), entry]);
+  }
+  const installedGroups = [...groups.entries()].map(([id, entries]) => ({ id, entries, source: entries[0]?.source ?? id, version: entries[0]?.version ?? "" }));
 
   const preview = snapshot.contentImport;
   const canInstall = Boolean(preview && (preview.entry || preview.package) && !preview.validation.some((item) => item.severity === "blocking"));
