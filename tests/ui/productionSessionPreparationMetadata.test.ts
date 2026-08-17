@@ -47,6 +47,7 @@ test("production Host preparation replaces reference metadata, exposes real rule
       category:"subclass",
       nameKo:"준비 메타데이터 모듈",
       nameEn:"Preparation Metadata Module",
+      sourceId:"phase14.preparation-metadata",
       source:"Phase14 Test",
       version:"1.0",
     }));
