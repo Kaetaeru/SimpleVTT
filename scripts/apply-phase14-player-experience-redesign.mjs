@@ -34,4 +34,5 @@ writeFileSync("src/main.tsx",main);
 
 const pkg=JSON.parse(readFileSync("package.json","utf8"));
 pkg.dependencies={...pkg.dependencies,"cannon-es":"^0.20.0","three":"^0.180.0"};
+pkg.devDependencies={...pkg.devDependencies,"@types/three":"^0.180.0"};
 writeFileSync("package.json",JSON.stringify(pkg,null,2)+"\n");
