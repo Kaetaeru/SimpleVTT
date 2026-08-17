@@ -1,5 +1,21 @@
+.production-session-screen {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
 .production-session-mount {
-  display: block;
+  display: grid;
+  min-height: 100%;
+  align-content: start;
 }
 
 .production-session-workspace {
