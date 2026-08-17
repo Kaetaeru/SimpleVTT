@@ -10,73 +10,53 @@
 - issue: #108
 - PR #109: open/draft/unmerged; no merge authorized
 
-## Reconciliation for this continuation
-Mandatory coordination files were read from `main` in the required order before work:
-1. `.chatgpt-rerun/README.md`
-2. `.chatgpt-rerun/control.json`
-3. `.chatgpt-rerun/STATE.md`
-4. `.chatgpt-rerun/PLAN.md`
+## Current accepted work head
+`706d71ae8675f8b285e582cc48b992141a48d9b9`
 
-Start state:
-- canonical `main`: `e437736f3f63d2afaf617572b82b268ba0e80970`
-- prior accepted work head: `a750ae844c8a0ce831e4c873574d074616eab3c0`
-- control: `needs_user`
-- PR #109 open/draft/unmerged
+## Prior redesign baseline
+The broad non-Character UX redesign was completed and validated at `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`:
+- one state-driven Session workspace;
+- stable offline Host + Join entry after Host stop;
+- session naming propagated to clients;
+- empty production Host encounter instead of reference Goblin/Wolf/Character fixtures;
+- redesigned shell/nav, Player/DM Play, Combatants, Rules, Activity, Settings;
+- Character Library/Sheet/Create/Edit/Level-Up UX frozen;
+- Host authority, connected ledger, Character projection ownership, durable Client Character source, ResolutionEvent/Undo, reconnect/idempotency preserved.
 
-The user's human acceptance feedback supplied the missing failure evidence required to resume: Host-stop recovery could lose the Join/IP form, session naming was inadequate, reference Goblin/Wolf content appeared as production encounter content, and the surrounding non-Character UI/UX required restructuring.
+Prior exact validation:
+- UI `31991827858` / `95276630845`: success.
+- Main Playable `31991830233` / `95276638981`: success.
+- Phase12 connected `31991736009` / `95276378850`: success.
 
-## Information audit completed before implementation
-Created and expanded `.agents/PHASE14_PRODUCTION_UX_REDESIGN.md` before the redesign. It freezes existing Character Library/Sheet/Create-Edit/Level-Up UX and defines primary, conditional, advanced, and removable information for Session, shell/nav, Play, Combatants, Rules, Activity, and Settings.
+## Human-found follow-up defect — Session scrolling
+The user reported that the redesigned Session tab could not scroll downward when the workspace content exceeded the visible viewport. This is valid human acceptance failure evidence at the affected UI layout boundary.
 
-## Final work/PR head
-`f1adaae4f81ef3dd98840189b9c7c606a9133ba7`
+### Root cause
+- `.content` clips overflow.
+- The Session route depended on the generic `.screen { height:100%; overflow:auto }` percentage-height contract rather than owning a definite viewport.
+- In the nested grid/Tauri WebView composition, that was not robust enough for the portal-mounted Session workspace, so content could extend below the visible area without a reliable scroll container.
 
-## Completed product boundary
-### Session
-- One state-driven production Session workspace now owns offline Host/Join entry, Host preparation, Client lobby/live, Host live, reconnect/recovery, stop/leave.
-- Dedicated Session route mount replaces the visible duplicate legacy cards/Host overlay/Player lobby composition.
-- Host stop returns to the normal offline/player shell, so the Join Host-address field remains available.
-- Host setup accepts a session name; connected `hello-ack` carries the Host-selected name to the Client.
-- Host preparation exposes address, participants/Ready, explicit Encounter preparation, mode, Start, and Stop.
+### Test-first repair
+- `c998cbe9181de242c16f5ed2f85f3692c7ece362`: added `production Session screen owns a definite viewport scroll container` to `tests/ui/productionSessionWorkspaceRedesign.test.ts`.
+- The regression requires Session-specific absolute viewport ownership, vertical scrolling, contained overscroll, stable scrollbar gutter, and a full-height start-aligned mount.
+- `706d71ae8675f8b285e582cc48b992141a48d9b9`: updated `production-session-workspace.css` so `.production-session-screen` uses `position:absolute; inset:0; width:auto; height:auto; min-height:0; overflow-y:auto`, plus overscroll containment, stable scrollbar gutter, and touch scrolling; `.production-session-mount` now maintains `min-height:100%` and start alignment.
+- No Session state machine, connected transport, Character UI, mechanics, or storage boundary changed.
 
-### Encounter
-- Fresh production Hosts start empty.
-- Reference `char.aelar`, `char.mira`, Goblin A/B, Wolf, Training Guardian and Host-local automatic Character projection are suppressed on Host production snapshots.
-- Real remote ephemeral Character projections and explicit DM Combatant instances remain on the existing authority/runtime path.
-- DM Play has a safe empty-Encounter state.
+## Exact validation
+UI PR run `31992965044`, frontend job `95279616079`, exact head `706d71ae8675f8b285e582cc48b992141a48d9b9`: **completed success**.
 
-### Non-Character UX
-- Shell/nav: consistent Session destination; live/connection status only when relevant.
-- Player/DM Play: actor/action/target/result hierarchy, fewer duplicate entity panels, empty-state safety.
-- Combatants: searchable library + current Encounter, explicit add/remove, technical/source detail secondary.
-- Rules: search/category-first; metadata under technical disclosure.
-- Activity: readable outcome-first timeline; technical details collapsed.
-- Settings: appearance/accent/accessibility/motion only in the routine surface.
-- Added responsive/focus/reduced-motion styling for redesigned non-Character surfaces.
-- Existing Character Library/Sheet/Create/Edit/Level-Up UI/UX remains outside this redesign.
-
-## Failure-driven evidence
-- Initial empty-Encounter test exposed that the existing production snapshot projection layer re-injected `char.aelar`; the Host projection boundary was corrected while preserving real remote projections and explicit Combatant instances.
-- UI `31991600000` / `95276040404` subsequently passed the unified Session tests and four of five new non-Character UX tests; the only failure was a static test pattern that expected `snapshot.session` and did not accept the safe `snapshot?.session` form. The test contract was corrected, not the product.
-
-## Automated validation
-- Exact-head UI push `31991827858`, frontend job `95276630845`: **success** at `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`.
-  - new unified Session UX
-  - new non-Character UX
-  - existing P14.10 accessibility/PlaySessionDock structure
-  - Host preparation/live mechanics
-  - production lifecycle/ownership/inventory/spell batch
-  - creation/progression/spell regressions
-  - Phase09 mechanics
-  - TypeScript + production build
-- Exact-head Main Playable `31991830233`, playable-contract job `95276638981`: **success**.
-  - full UI/rules/TypeScript build
-  - Phase11 offline
-  - Phase12 connected authority
-  - Phase13 arbitrary Character SessionProjection
-  - prepared Combatant, live DM adjudication/Undo, live Combatant theater-of-mind, Host metadata, live mechanics continuity and P14.10 accessibility
-- Same final product-source boundary also passed Phase12 connected run `31991736009`, job `95276378850`, including its Phase11 and frontend gates.
-- Exact-head Windows job `95276973569` was still running at this checkpoint; it is not a substitute for human two-instance acceptance.
+Passed on the changed head:
+- UI named-rule boundary;
+- PlaySessionDock hydration/tab context;
+- P14.10 production accessibility structure;
+- unified production Session UX including the new scroll viewport regression;
+- non-Character production UX redesign;
+- Host preparation metadata/content;
+- live DM mechanics continuity;
+- Phase14 lifecycle/prepared/live/local ownership/fresh Character/inventory/spell batch;
+- creation/progression/spell regressions;
+- Phase09 mechanics;
+- TypeScript and production frontend build.
 
 ## Architecture preserved
 - Owning Client Character Library remains the durable Character source; Host Character projections remain ephemeral.
@@ -85,24 +65,25 @@ Created and expanded `.agents/PHASE14_PRODUCTION_UX_REDESIGN.md` before the rede
 - Existing production Character selection and installed-content composition are reused.
 - No duplicate protocol, second durable source, second mechanics runtime, tactical-map system, or merge was introduced.
 
-## Why dispatch returns to `needs_user`
-The user's UX failures have been addressed and the changed automated boundaries are green. The next meaningful evidence is visual/interactive human acceptance of the redesigned UI and the required Windows two-instance connected walkthrough. Automated CI cannot truthfully certify visual hierarchy, discoverability, or the complete human two-instance experience.
+## Why dispatch is `needs_user`
+The automated boundary affected by the scroll bug is green. The next meaningful evidence is human confirmation in the Windows viewport that wheel/trackpad/PageDown scrolling reaches the bottom of Session content across offline/preparing/live/stop transitions. CI cannot certify the actual pointer/scroll experience in Tauri WebView.
 
 ## Blocking Next Exact Action
-Human acceptance against exact head `f1adaae4f81ef3dd98840189b9c7c606a9133ba7` unless a human-found issue creates a later fix head:
+Human acceptance against exact head `706d71ae8675f8b285e582cc48b992141a48d9b9` unless another human-found issue creates a later fix head:
 
-1. Session: named Host start, empty preparation, address/participant/Ready clarity, explicit Combatant add/remove, stop -> stable offline Host+Join page with Host-address input, bind/join/reconnect recovery.
-2. Non-Character UI: shell/nav, Player/DM play, Combatants, Rules, Activity, Settings at common/narrow desktop viewport; keyboard/focus/selected/disabled/scroll/detail/reduced-motion behavior.
-3. Windows two-instance: actual Host bind, Host-unknown persisted Client Character join, Ready/start, authoritative action convergence, disconnect/reconnect, explicit end, clean restart, owning-Client durable state.
-4. Record exact SHA and concrete PASS/FAIL notes/screenshots. Failures resume test-first only at the affected boundary.
-5. After human acceptance passes, perform final Windows artifact digest/contents verification.
-6. PR #109 remains draft/unmerged.
+1. Session scroll first: use a viewport where preparation content exceeds the available height; verify wheel/trackpad/PageDown reaches Encounter and Start/Stop controls; repeat after Host state transitions.
+2. Continue named Host/empty Encounter/Host+Join recovery/reconnect UX checks.
+3. Continue non-Character viewport/keyboard checks.
+4. Continue Windows two-instance Host/Client authority and durable-state walkthrough.
+5. Record exact SHA plus PASS/FAIL notes/screenshots. Any failure resumes test-first only at the affected boundary.
+6. After human acceptance passes, perform final exact-head Windows artifact digest/contents verification.
+7. PR #109 remains draft/unmerged; no merge authorized.
 
-## Coordination write batch
-- Pre-write canonical `main` was `e437736f3f63d2afaf617572b82b268ba0e80970`.
-- PLAN written first: commit `8c8ba5bf839acc1a8f71739798bdfdf05b251429`.
+## Current coordination write batch
+- Pre-write canonical `main`: `b9823f3f73e2fc5c11bd9643f8e800c820674630`.
+- PLAN written first: `d7bf3728bd6f255661f004dc849028ed757318e4`.
 - This STATE write is second.
-- `control.json` must be written last with `needs_user`.
+- `control.json` must be written last with status `needs_user`.
 
 ## Dispatch recommendation
 `needs_user`
