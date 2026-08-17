@@ -30,6 +30,9 @@ import "./phase09RealTurnRuntimeAdapter";
 import "./phase09EffectAwareTurnAdapter";
 import "./phase09RealRuntimeStatAdapter";
 import "./phase09RealRuntimeAttackAdapter";
+// Keep post-commit DM HP corrections inside the same canonical ResolutionEvent
+// history so event-native Undo reverses correction then original resolution.
+import "./dmAdjudicationResolutionEventAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./phase09ManualMovementReactionAdapter";
 import "./phase09RealAtomicHealingAdapter";
