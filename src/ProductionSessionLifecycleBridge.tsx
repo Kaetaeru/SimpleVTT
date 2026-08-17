@@ -23,7 +23,36 @@ export function ProductionSessionLifecycleBridge() {
     }
   },[snapshot?.session.role,snapshot?.session.lifecycle,snapshot?.session.name]);
 
-  if (!snapshot || snapshot.session.role !== "host" || !["preparing","live"].includes(snapshot.session.lifecycle ?? "")) return null;
+  if (!snapshot) return null;
+  const hostStartFailed=snapshot.session.role==="offline"
+    &&snapshot.session.compatibility==="incompatible"
+    &&snapshot.session.compatibilityMessage.startsWith("Host start failed:");
+
+  if (hostStartFailed) return (
+    <aside
+      aria-live="assertive"
+      aria-label="Host 시작 실패"
+      style={{
+        position:"fixed",
+        right:18,
+        bottom:18,
+        zIndex:70,
+        width:"min(390px, calc(100vw - 36px))",
+        padding:16,
+        borderRadius:14,
+        border:"1px solid rgba(217,120,120,.55)",
+        background:"rgba(18,20,28,.96)",
+        boxShadow:"0 18px 48px rgba(0,0,0,.35)",
+      }}
+    >
+      <span className="eyebrow accent">HOST RECOVERY</span>
+      <strong style={{display:"block",marginTop:4}}>Host 시작에 실패했습니다.</strong>
+      <p style={{margin:"10px 0"}}>{snapshot.session.compatibilityMessage}</p>
+      <small>주소·포트·네트워크 상태를 확인한 뒤 세션 연결 화면의 `세션 열기`를 다시 선택하세요.</small>
+    </aside>
+  );
+
+  if (snapshot.session.role !== "host" || !["preparing","live"].includes(snapshot.session.lifecycle ?? "")) return null;
 
   const players=snapshot.session.participants.filter((participant)=>participant.id!=="host");
   const preparedCombatants=snapshot.scene.entities.filter((entity)=>
@@ -44,6 +73,11 @@ export function ProductionSessionLifecycleBridge() {
     &&relationSourceId!==relationTargetId
     &&Number.isFinite(parsedDistanceFeet)
     &&parsedDistanceFeet>=0;
+  const hostConnectionLabel=snapshot.connectionState==="connected"
+    ? "● 서버 열림"
+    : snapshot.connectionState==="reconnecting"
+      ? "◌ 연결 확인 중"
+      : "○ 서버 연결 끊김";
 
   const saveSessionName=async()=>{
     if (!canSaveSessionName) return;
@@ -96,7 +130,7 @@ export function ProductionSessionLifecycleBridge() {
             <strong style={{ display: "block", marginTop: 4 }}>{snapshot.session.name}</strong>
           )}
         </div>
-        <span className={`status-text ${snapshot.connectionState}`}>● 서버 열림</span>
+        <span className={`status-text ${snapshot.connectionState}`}>{hostConnectionLabel}</span>
       </div>
       <p style={{ margin: "10px 0 12px" }}>
         {snapshot.session.lifecycle==="live"
