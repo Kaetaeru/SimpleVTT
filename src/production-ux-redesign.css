@@ -1,0 +1,160 @@
+.topbar-meta:empty {
+  display: none;
+}
+
+.production-session-screen,
+.production-session-mount {
+  min-width: 0;
+}
+
+.production-session-screen .session-grid {
+  display: block;
+  grid-template-columns: none;
+}
+
+.play-empty-state,
+.surface-empty {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 8px;
+  min-height: 190px;
+  padding: 28px;
+  border: 1px dashed rgba(255,255,255,.16);
+  border-radius: 16px;
+  background: rgba(255,255,255,.025);
+}
+
+.play-empty-state h2,
+.play-empty-state p,
+.surface-empty strong,
+.surface-empty span {
+  margin: 0;
+}
+
+.play-empty-state p,
+.surface-empty span {
+  max-width: 58ch;
+  opacity: .7;
+  line-height: 1.55;
+}
+
+.focused-scene-layout {
+  grid-template-columns: minmax(190px, 238px) minmax(0, 1fr) minmax(220px, 278px);
+}
+
+.focused-scene-layout .scene-side {
+  min-width: 0;
+}
+
+.focused-scene-layout .scene-center {
+  min-width: 0;
+}
+
+.combatant-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.combatant-toolbar input {
+  width: min(440px, 100%);
+}
+
+.combatant-library-card {
+  align-content: start;
+}
+
+.combatant-library-card > p {
+  margin-top: 0;
+  font-weight: 700;
+}
+
+.combatant-library-card details,
+.catalog-technical {
+  border-top: 1px solid rgba(255,255,255,.09);
+  padding-top: 10px;
+}
+
+.combatant-library-card details summary,
+.catalog-technical summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.combatant-library-card details small {
+  display: block;
+  margin-top: 9px;
+  opacity: .58;
+}
+
+.activity-entry details {
+  margin-top: 10px;
+  opacity: .84;
+}
+
+.activity-entry details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.activity-entry details small {
+  display: block;
+  margin-top: 8px;
+  opacity: .58;
+}
+
+.catalog-technical .review-rows {
+  margin-top: 10px;
+}
+
+.settings-card {
+  max-width: 860px;
+}
+
+.production-session-workspace button:focus-visible,
+.focused-scene-layout button:focus-visible,
+.combatant-grid button:focus-visible,
+.catalog-layout button:focus-visible,
+.activity-list summary:focus-visible,
+.catalog-technical summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+@media (max-width: 1100px) {
+  .focused-scene-layout {
+    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  }
+
+  .focused-scene-layout > .scene-side:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .focused-scene-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .focused-scene-layout > .scene-side:last-child {
+    grid-column: auto;
+  }
+
+  .play-empty-state,
+  .surface-empty {
+    min-height: 150px;
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .play-empty-state,
+  .surface-empty,
+  .focused-scene-layout,
+  .combatant-grid,
+  .catalog-layout,
+  .activity-list {
+    scroll-behavior: auto;
+  }
+}
