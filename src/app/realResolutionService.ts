@@ -2,6 +2,7 @@ import type { ActionVm, ResolutionView } from "./contracts";
 import { resolveD20Test, type ModifierContribution } from "../domain/d20";
 import { resolveOpenD20Roll } from "../domain/openD20";
 import type { RollStateContribution, RulesProfileLike } from "../domain/profileEngine";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const SIMPLEVTT_APP_RULES_PROFILE:RulesProfileLike = {
   profileId:"dnd.srd-5.2.1",
@@ -41,14 +42,11 @@ function provenanceLines(entries:Array<{ source:string; status:string; reason:st
   return entries.map((entry) => `${entry.source} · ${entry.status} · ${entry.reason}`);
 }
 
-export function resolveOpenAbilityCheckResolution(
-  request:OpenAbilityCheckResolutionRequest,
-):ResolutionView {
+function resolveOpenAbilityCheckRoll(request:OpenAbilityCheckResolutionRequest) {
   if (request.action.resolutionKind !== "ability-check") {
     throw new Error(`open ability-check service requires ability-check action: ${request.action.id}`);
   }
-
-  const roll = resolveOpenD20Roll(SIMPLEVTT_APP_RULES_PROFILE,{
+  return resolveOpenD20Roll(SIMPLEVTT_APP_RULES_PROFILE,{
     family:"ability-check",
     modifierContributions:request.modifierContributions,
     rollStateContributions:request.rollStateContributions,
@@ -59,6 +57,12 @@ export function resolveOpenAbilityCheckResolution(
       faces:request.diceFaces,
     },
   });
+}
+
+export function resolveOpenAbilityCheckResolution(
+  request:OpenAbilityCheckResolutionRequest,
+):ResolutionView {
+  const roll = resolveOpenAbilityCheckRoll(request);
   const compact = `d20 ${roll.natural} ${signedModifier(roll.modifier)} = ${roll.total}`;
 
   return {
@@ -82,6 +86,23 @@ export function resolveOpenAbilityCheckResolution(
     adjudicated:false,
     canAdvance:true,
     nextLabel:"결과 적용",
+  };
+}
+
+export function resolveOpenAbilityCheckResolutionEvent(
+  request:OpenAbilityCheckResolutionRequest,
+):ResolutionEvent {
+  const roll=resolveOpenAbilityCheckRoll(request);
+  return {
+    id:`${request.resolutionId}:event:d20`,
+    resolutionId:request.resolutionId,
+    operationId:`op.${request.action.id}.ability-check`,
+    kind:"d20",
+    actorId:request.action.actorId,
+    summary:`${request.checkLabel ?? request.action.name} · d20 ${roll.natural} ${signedModifier(roll.modifier)} = ${roll.total}`,
+    provenance:roll.provenance.map((entry)=>structuredClone(entry)),
+    stateChanges:[],
+    result:structuredClone(roll),
   };
 }
 
