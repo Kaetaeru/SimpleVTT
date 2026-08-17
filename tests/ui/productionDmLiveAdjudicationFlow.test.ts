@@ -36,6 +36,7 @@ type ProductionDmAdapter=MockAdapter&{
 type Internal={
   activeCharacter:CharacterSheet;
   characters:CharacterSummary[];
+  scene:AppSnapshot["scene"];
 };
 
 async function productionDmWithNonFixtureCharacter() {
@@ -81,8 +82,10 @@ test("non-fixture live DM can select real actors, correct a canonical resolution
   assert.equal(snapshot.scene.selectedActorId,character.id);
 
   // Spatial placement is a separate theater-of-mind/map-module concern. Supply an
-  // explicit structured relation here so this regression isolates DM adjudication.
-  setSpatialRelation(snapshot.scene,{
+  // explicit structured relation on the authoritative adapter Scene so this
+  // regression isolates DM adjudication rather than inventing a product default.
+  const scene=(adapter as unknown as Internal).scene;
+  setSpatialRelation(scene,{
     sourceId:character.id,
     targetId:scout.id,
     distanceFeet:5,
@@ -91,7 +94,7 @@ test("non-fixture live DM can select real actors, correct a canonical resolution
     targetCanSeeAttacker:true,
     provenance:"phase14:test:explicit-live-dm-spatial-fact",
   });
-  setSpatialRelation(snapshot.scene,{
+  setSpatialRelation(scene,{
     sourceId:scout.id,
     targetId:character.id,
     distanceFeet:5,
@@ -100,6 +103,7 @@ test("non-fixture live DM can select real actors, correct a canonical resolution
     targetCanSeeAttacker:true,
     provenance:"phase14:test:explicit-live-dm-spatial-fact",
   });
+  snapshot=await adapter.getSnapshot();
 
   const attack=(snapshot.scene.actionsByActor[character.id]??[]).find((action)=>action.resolutionKind==="attack"&&action.runtimeAttack);
   assert.ok(attack,"production Character must expose a canonical runtime attack");
