@@ -12,22 +12,22 @@ function source(path: string) {
 test("PlaySessionDock keeps hook order stable across null-to-hydrated snapshot transition", () => {
   const dock = source("src/PlaySessionDock.tsx");
   const componentStart = dock.indexOf("export function PlaySessionDock()");
-  const guard = dock.indexOf("if (!snapshot) return null;", componentStart);
+  const guard = dock.indexOf("if (!snapshot", componentStart);
   const componentEnd = dock.indexOf("function ActionSurface", guard);
 
   assert.ok(componentStart >= 0, "PlaySessionDock component must exist");
-  assert.ok(guard > componentStart, "snapshot null guard must exist inside PlaySessionDock");
+  assert.ok(guard > componentStart, "snapshot/role guard must exist inside PlaySessionDock");
   assert.ok(componentEnd > guard, "PlaySessionDock component boundary must be discoverable");
 
   const beforeGuard = dock.slice(componentStart, guard);
   const afterGuard = dock.slice(guard, componentEnd);
   const stateHooks = beforeGuard.match(/\buseState(?:<[^>]+>)?\s*\(/g) ?? [];
 
-  assert.equal(stateHooks.length, 3, "PlaySessionDock should establish all local state hooks before the hydration guard");
+  assert.equal(stateHooks.length, 3, "PlaySessionDock should establish all local state hooks before the hydration/role guard");
   assert.doesNotMatch(
     afterGuard,
     /\buse(?:State|Memo|Effect|LayoutEffect|Reducer|Ref|Callback|Context|ImperativeHandle|Transition|DeferredValue|Id|SyncExternalStore)\s*(?:<[^>]+>)?\s*\(/,
-    "no React hook may be conditionally reached only after snapshot hydration",
+    "no React hook may be conditionally reached only after snapshot hydration or role gating",
   );
 });
 
