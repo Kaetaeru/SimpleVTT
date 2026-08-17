@@ -78,3 +78,36 @@ This directly supports P14.8 remote spell authority. Remote skill remains the ne
 4. Patch product only if the remote-skill regression exposes a real gap; run Phase12 and Main once for the changed boundary.
 5. Then continue remaining P14.7 DM/live-session gaps, P14.10 UX/accessibility, Windows two-instance human acceptance and final exact-head artifact verification.
 6. PR #109 remains draft/unmerged. No merge is authorized.
+
+## 2026-08-17 sequence 1 continuation — P14.8 host-unknown remote skill/check authority
+Final validated work head: `8f9dcdd083d15be392da1bdefe1e05a9815651ea`.
+
+### Test-first evidence and exposed product gaps
+- `eb6528f93fdd5d0ac4855f9e823d5c04ae43a8c1` added `tests/ui/connectedProjectedCharacterSkillResolution.test.ts`; `912fff4b3525f77b4fe4530b6c174b3db5bcccb7` wired it into Phase12.
+- Phase12 `31981160990` / connected-protocol `95248062349` exposed real gap #1: a host-unknown projected Character with `skills:["비전"]` did not receive `action.skill.arcana` at Host mount.
+- `e82367d588650a586c25b18ab3939555f3b9281a` added Host-side canonical standard-skill action derivation; `96ef396105f389e46cecbfead49d8eca67b63b83` merged those derived actions into the ephemeral projected Character mount. Mechanics are derived from projected Character ability scores, proficiency bonus and skill proficiency; no client action presentation is trusted.
+- `f9cd772e7daa94b19e055c3aaf32c51db90be103` aligned the regression with the actual Host mount and exposed real gap #2: ability checks completed in the production UI but did not produce canonical ResolutionEvents, so connected routing correctly rejected them as `remote-action-not-event-native`.
+- `6f78d392702810fdb1f341db319ef38776908e88` exposed canonical ability-check ResolutionEvent construction from the same authoritative d20 result; `7c02affe8b555ae2cc2b74b2b8266d5fa8c3ae38` records a successful ability-check completion through the existing runtime ResolutionEvent history/connected commit registry; `afe80f1b5eb5902231023fcaf05a2012ebe49e3b` installs that adapter after the existing production resolution composition.
+- The next Phase12 attempt reached Host event-native commit and then failed only because the regression called nonexistent test-harness API `client.saveCharacter()`. `c9d9e3cb3ac26fd668c09bcffb5cecb03980a673` corrected that test-only assumption while retaining the no-new-persistence-generation assertion.
+- `8f9dcdd083d15be392da1bdefe1e05a9815651ea` wired the remote skill regression into Main Playable's arbitrary SessionProjection gate.
+
+### Exact validation at `8f9dcdd083d15be392da1bdefe1e05a9815651ea`
+- Phase12 `31981974278`, connected-protocol `95250255600`: **completed success** — canonical content, connected authority including the remote Arcana regression, Phase11 offline preservation and production frontend build all green.
+- Main Playable `31981974175`, playable-contract `95250270963`: **completed success** — full UI/rules/TypeScript/build, Phase11, Phase12, and Phase13 arbitrary SessionProjection including the remote Arcana regression all green.
+- Windows automation is not treated as the required human two-instance release acceptance.
+
+### Proven remote skill/check boundary
+- Host mounts standard skill actions for a host-unknown persisted Character from Host-side derived Character facts rather than client-provided mechanics.
+- Arcana for INT 16 with proficiency bonus +2 is resolved as INT +3 + proficiency +2 = **+5**, while STR 18 (+4) is deliberately different, proving the correct ability/proficiency path.
+- Host authoritative queued d20 13 resolves to total **18** and is preserved in the canonical d20 ResolutionEvent/provenance.
+- Freeform preview and commit do not consume Initiative action economy; the committed event has no economy state change.
+- Host commits/broadcasts exactly one ordered event batch, restores its local Character context, and leaves its permanent Character library unchanged.
+- Client applies the Host event once into session Activity without inventing a Character-library persistence generation; duplicate event/request traffic remains idempotent.
+- Existing connected ActionRequest, Host ledger, ResolutionEvent history/registry and client apply path are reused. No skill-specific network protocol or second durable Character source was introduced.
+
+## Next Exact Action after remote skill completion
+1. Do not rerun remote Inventory, remote Fire Bolt, remote Arcana, local P14.6 spell, or unchanged connected lifecycle gates unless their relevant source boundary changes.
+2. Documentation-only, at the next safe checklist write credit P14.8 statements directly proven by the connected projected resolution + Inventory + Spell + Skill regressions; remain conservative on visible UI/accessibility, concentration, broad equipment/attunement and any other unproven wording.
+3. Continue the remaining P14.7 DM/live-session gaps after freshly inspecting the authoritative checklist/state; patch only gaps actually exposed by focused production tests.
+4. Then continue P14.10 UX/accessibility, Windows two-instance human acceptance, and final exact-head artifact verification.
+5. PR #109 remains draft/unmerged. No merge is authorized.
