@@ -128,8 +128,9 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
   assert.ok(arcana,"canonical projection reconstruction must expose Arcana");
   assert.equal(arcana.kind,"ability-check");
   assert.equal(arcana.checkBonus,5,"Arcana must use INT +3 plus level-1 proficiency +2, not STR +4");
-  assert.ok(arcana.details.some((detail)=>detail.includes("지능")));
-  assert.ok(arcana.details.some((detail)=>detail.includes("숙련")));
+  const arcanaDetail=arcana.details.find((detail)=>detail.label==="판정")?.value??"";
+  assert.ok(arcanaDetail.includes("지능"));
+  assert.ok(arcanaDetail.includes("숙련"));
   const freeformEconomy=structuredClone(reconstruction.economy);
 
   const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);
@@ -172,9 +173,8 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.ok(state.pendingRemoteAction);
     assert.equal(preview.activeCharacter.id,remote.id,"remote projection must be the temporary Host resolution context");
     assert.equal(preview.resolution?.rollKind,"check");
-    assert.deepEqual(preview.resolution?.dice,[13],"Host queued d20 must be authoritative");
-    assert.equal(preview.resolution?.modifier,5,"Host must derive canonical Arcana ability/proficiency bonus");
-    assert.equal(preview.resolution?.total,18);
+    assert.deepEqual(preview.resolution?.authoritativeDice,[13],"Host queued d20 must be authoritative");
+    assert.equal(preview.resolution?.rollTotal,18,"Host must apply canonical Arcana INT + proficiency bonus");
     assert.ok(preview.resolution?.provenance.some((entry)=>entry.includes(`${ARCANA_ACTION}:check-bonus:5`)));
     assert.deepEqual(preview.scene.economyByActor[remote.id],freeformEconomy,"Freeform skill preview must not spend Initiative action economy");
 
@@ -212,7 +212,7 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     await client.saveCharacter();
     const clientBaseline=await client.getSnapshot();
     const clientEconomyBefore=structuredClone(clientBaseline.scene.economyByActor[remote.id]);
-    const clientActivityBefore=clientBaseline.scene.activity.length;
+    const clientActivityBefore=clientBaseline.activity.length;
     const persistenceBefore=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision;
     assert.equal(typeof persistenceBefore,"number","owning client must have a durable Character-library generation before connected event apply");
     const clientState=connectedStateFor(client);
@@ -224,7 +224,7 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.equal(applied.status,"applied");
     assert.equal(applied.cursor,1);
     const clientAfter=await client.getSnapshot();
-    assert.equal(clientAfter.scene.activity.length,clientActivityBefore+1,"Client must converge the Host skill event exactly once into session activity");
+    assert.equal(clientAfter.activity.length,clientActivityBefore+1,"Client must converge the Host skill event exactly once into session activity");
     assert.deepEqual(clientAfter.scene.economyByActor[remote.id],clientEconomyBefore,"Freeform skill event must not spend Client Initiative economy");
     assert.ok(clientAfter.activeCharacter.skills.includes("비전"));
     assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,persistenceBefore,"session-only skill check must not create a Character-library generation");
@@ -233,7 +233,7 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.equal(duplicateApply.status,"duplicate");
     assert.equal(duplicateApply.cursor,1);
     const clientAfterDuplicate=await client.getSnapshot();
-    assert.equal(clientAfterDuplicate.scene.activity.length,clientActivityBefore+1,"duplicate Host event must not append skill activity twice");
+    assert.equal(clientAfterDuplicate.activity.length,clientActivityBefore+1,"duplicate Host event must not append skill activity twice");
     assert.deepEqual(clientAfterDuplicate.scene.economyByActor[remote.id],clientEconomyBefore);
     assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,persistenceBefore);
 
