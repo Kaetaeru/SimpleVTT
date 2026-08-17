@@ -8,120 +8,155 @@
 - run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence `1`
 - task_id `phase14-production-play-session-ux`
-- dispatch recommendation: `needs_user`
+- dispatch recommendation: `continue`
 
-## Human acceptance feedback that reopened the UX boundary
-The previous human walkthrough found concrete production UX failures on validated head `a750ae844c8a0ce831e4c873574d074616eab3c0`:
-- after stopping a Host, the Host-address/IP join input could disappear;
-- session/server naming was not presented as a normal Host setup concept;
-- reference Goblin/Wolf/Character fixtures appeared as if they were real production encounter content;
-- the surrounding non-Character product UI exposed too much implementation/reference language and duplicated state.
+## Current product scope
+Phase 14 is now a full player-experience completion pass, not only the earlier non-Character shell cleanup.
 
-This is valid human-gate failure evidence, so the sequence resumed at the affected UI/UX boundary instead of repeating previously validated mechanics/protocol work.
+The target product must support both:
+1. **Physical-table use:** a user can leave only the Character Sheet open and use it as the real play surface, including normal sheet reading, direct rolls and Character portrait.
+2. **Device-native VTT use:** Host/Client session play uses a purpose-built exploration/freeform/combat experience with Host-authoritative mechanics, intent-first actions, physical 3D dice presentation and lightweight DM image handouts.
 
-## Information architecture recorded before implementation
-Authoritative redesign audit: `.agents/PHASE14_PRODUCTION_UX_REDESIGN.md`.
-
-Frozen for this redesign:
-- Character Library
-- Character Sheet
-- Character Create/Edit
-- Level-Up
-
-Redesigned scope:
-- Session entry/lifecycle
-- global shell/navigation
-- Player/DM play workspace
-- Combatants / Encounter preparation
-- Rules Catalog
-- Activity
-- Settings
-
-Primary information rules:
-- show the current task, human-readable session/connection state only when relevant, one clear primary action, user-facing names/results, and recoverable errors with the next action;
-- show Initiative/Ready/Host endpoint/action economy/encounter management only in states where they matter;
-- move provenance/package IDs/event IDs/spatial diagnostics/import detail to progressive disclosure;
-- remove raw role, healthy compatibility internals, RulesProfile/internal IDs, Reference/fixture/adapter/manifest/protocol wording, Definition/Instance jargon, duplicate panels, and routine Debug Dock instructions from the primary production path.
-
-## Completed redesign — prior exact work head
-Prior redesigned work/PR head: `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`.
-
-### Session lifecycle and root-cause repair
-- Replaced the visible legacy Session cards plus separate Host-lifecycle/Player-lobby overlays with one state-driven production Session workspace mounted into a dedicated Session route root.
-- Removed the old CSS replacement trick that hid a legacy Join card while a portal supplied another card.
-- Offline Session always presents both `새 세션 만들기` and `세션 참가하기`, including Host address input.
-- Added explicit session-name input before Host open; Host-selected name is carried to Clients in the connected `hello-ack` handshake.
-- Host preparation now presents session name/address, participant/Ready roster, explicit encounter preparation, mode selection, Start, and Stop.
-- Client lobby/live presents the session/Host/Character summary, Ready, reconnect/recovery guidance, and leave.
-- Connected-session stop now restores the default offline/player shell instead of leaving the app stranded in the previous top-level DM shell.
-
-### Production encounter content
-- Fresh production Host snapshots suppress exact reference fixture actors (`char.aelar`, `char.mira`, Goblin A/B, Wolf, Training Guardian) and the Host's automatic local Character projection.
-- A fresh production Host therefore starts with an empty encounter.
-- Remote ephemeral Character projections and Combatants intentionally instantiated by the DM remain on the existing authoritative runtime path.
-- Empty DM scenes are now a first-class safe UI state rather than assuming at least one entity exists.
-
-### Non-Character UX redesign
-- Global shell/navigation: consistent `세션` destination, connected-session authority determines Host/Player surface, connection/mode metadata is shown only when relevant.
-- Player/DM Play: reduced duplicate entity panels; actor/action/target/result hierarchy is primary; empty encounter is safe; implementation explanation removed from the primary stage.
-- Combatants: `라이브러리` vs `현재 Encounter`, search, explicit `Encounter에 추가/제거`; source/action metadata is secondary detail instead of Definition/Instance jargon.
-- Rules: search/category-first browsing with rule detail; source/scope/content ID/capabilities moved under `기술 정보`.
-- Activity: user-readable `플레이 기록` outcome timeline; technical record details collapsed; no always-visible generic Undo control.
-- Settings: real appearance/accent/accessibility/motion controls only; no Reference/Debug Dock instructions.
-- Added `production-ux-redesign.css` for empty states, focused play layout, details disclosure, responsive behavior, keyboard focus, and reduced-motion safety.
+Authoritative product definition:
+- `.agents/PHASE14_PRODUCTION_UX_REDESIGN.md` — earlier non-Character information architecture audit.
+- `.agents/PHASE14_PLAYER_EXPERIENCE_REDESIGN.md` — reopened player-experience design and final Definition of Done, now including Character/DM image behavior.
 
 ## Preserved architecture
-- Character Library/Sheet/Create/Edit/Level-Up UI/UX was not redesigned.
-- Owning Client Character Library remains the durable Character source; Host Character projections remain ephemeral.
-- Host canonical content/runtime remains mechanics authority.
-- Existing connected ledger, Scene/spatial runtime, ResolutionEvent flow, reconnect/idempotency and event-native Undo remain authoritative.
-- Existing installed-content composition and production Character source are reused.
-- No duplicate session store, durable Character source, mechanics runtime, tactical-map system, or merge was introduced.
+The redesign must not replace validated mechanics/data ownership:
+- owning Client Character Library remains the durable Character source;
+- Host Character projections remain ephemeral;
+- Host canonical runtime remains connected mechanics authority;
+- existing Scene actions/rule services/ResolutionEvent state changes remain the mechanics path;
+- connected replay/reconnect/idempotency and event-native Undo remain canonical;
+- installed content composition remains canonical;
+- no second Character store, combat resolver, mechanics ledger or tactical map/grid/path/LOS subsystem;
+- image assets are presentation data, not rules authority.
 
-## Test-first / failure evidence
-- Initial Session redesign test correctly failed because reference `char.aelar` was re-injected by the existing production snapshot projection layer; the production Host projection boundary was then corrected without suppressing real remote projections or explicit Combatant instances.
-- UI `31991600000` / frontend `95276040404` later showed the Session redesign tests green and failed only a new shell-regression regex that did not recognize the safe optional-chain form `snapshot?.session`; the product behavior was correct and the test contract was corrected.
+## Product pillars
+### 1. Real physics 3D dice
+- WebGL polyhedral d4/d6/d8/d10/d12/d20.
+- gravity/collision/friction/restitution/angular velocity; visible physical settle.
+- one shared renderer for creation/level-up/sheet/runtime-visible rolls.
+- connected authoritative outcome never changes because of visual physics.
+- reduced-motion preserves readable results.
 
-## Prior exact validation
-- UI push `31991827858`, frontend job `95276630845` at exact head `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`: **completed success**.
-- Main Playable `31991830233`, playable-contract job `95276638981` at the same exact head: **completed success**.
-- Connected authority on the final product-source boundary also passed in Phase12 run `31991736009`, job `95276378850`.
+### 2. Character Sheet as standalone tabletop tool
+- identity, AC/HP/temp HP, Speed, Initiative, proficiency, passive perception, abilities, saves, skills, attacks/damage, resources, features, equipment and spells are usable without entering Scene.
+- direct ability/save/skill/Initiative/attack/damage rolls.
+- common d4/d6/d8/d10/d12/d20 tray and Advantage/Normal/Disadvantage for d20 checks.
+- Hit Dice, spell slots and normal resources operable from the sheet.
+- local sheet roll history.
+- no debug/runtime window required for normal table use.
 
-## Human acceptance follow-up — Session tab scrolling defect
-Human validation of the redesigned Windows build found another concrete affected-boundary failure: the Session tab content could not scroll downward when its content exceeded the available viewport.
+### 3. Character Sheet image
+- local PNG/JPEG/WebP selection and preview.
+- portrait integrated into sheet identity/header, not a new permanent manager window.
+- replace/remove plus crop/focal-position adjustment.
+- persists with owning Character and survives offline/restart.
+- safe type/dimension/payload limits and visible recovery for invalid assets.
+- if projected into a session, portrait remains presentation metadata and does not alter Character authority.
+- compact Character/play thumbnails may reuse the same asset; no duplicate image source/editor.
 
-### Root cause
-- The redesigned Session route still relied on the generic `.screen { height:100%; overflow:auto }` contract inside `.content`, while `.content` itself clips overflow.
-- In the nested grid/Tauri WebView layout, that percentage-height contract did not provide a sufficiently robust, definite scroll viewport for the portal-mounted Session workspace.
+### 4. Intent-first exploration/freeform/combat
+Primary action vocabulary follows official action intent rather than exposing every skill as a top-level action:
+- Attack, Dash, Disengage, Dodge, Help, Hide, Influence, Magic, Ready, Search, Study, Utilize.
 
-### Test-first repair
-- `c998cbe9181de242c16f5ed2f85f3692c7ece362` added a Session-specific viewport scrolling regression to `tests/ui/productionSessionWorkspaceRedesign.test.ts`.
-- The regression requires `.production-session-screen` to own a definite `position:absolute; inset:0` viewport with `height:auto`, `min-height:0`, `overflow-y:auto`, contained overscroll, and stable scrollbar gutter; it also requires the Session mount to retain full-height, start-aligned content.
-- `706d71ae8675f8b285e582cc48b992141a48d9b9` implements that contract in `production-session-workspace.css` without changing Session state, connected authority, mechanics, Character UI, or data ownership.
+Required interaction hierarchy:
+- choose intent first;
+- only then choose relevant skill/item/weapon/spell/target if that intent requires it;
+- Influence/Search/Study group their appropriate skills;
+- Hide resolves through Stealth;
+- improvised actions can be described for DM adjudication without introducing a second mechanics engine.
 
-### Exact validation of scrolling repair
-- UI PR run `31992965044`, frontend job `95279616079`, exact head `706d71ae8675f8b285e582cc48b992141a48d9b9`: **completed success**.
-- The changed Session UX/scroll contract, non-Character UX contract, P14.10 accessibility structure, Phase14 lifecycle/ownership/inventory/spell batch, creation/progression/spell regressions, Phase09 mechanics, TypeScript, and production frontend build all passed.
+Exploration/freeform stays visually quiet. Initiative adds round/current turn/compact turn order/action economy/targets only when combat needs them.
 
-## Blocking Next Exact Action — HUMAN acceptance on latest fix head
-Perform the human walkthrough against exact source head `706d71ae8675f8b285e582cc48b992141a48d9b9` unless a later human-found issue creates another test-first fix head:
+### 5. DM image reveal / handout
+- compact contextual `이미지 보여주기` control in DM play, not a permanent side panel.
+- local PNG/JPEG/WebP choose + preview; optional title/caption/alt description.
+- explicit reveal to all connected players and explicit withdraw/hide.
+- player receives a focused handout/lightbox, can close/minimize and reopen the current reveal without leaving the session.
+- fit-to-window plus local zoom/pan.
+- reconnecting Client converges to the currently active reveal.
+- reveal/hide is connected presentation state, not ResolutionEvent/combat Undo state.
+- works through the existing connected-session path without public URL/cloud hosting.
+- bounded/validated/downscaled transfer; malformed/oversize assets fail recoverably.
+- no token placement, grid, fog, distance, pathing or LOS.
 
-1. Session scrolling regression check first:
-   - open Session at a viewport where preparation content exceeds the available height;
-   - verify mouse wheel/trackpad/PageDown can reach the bottom of the Session workspace;
-   - verify Host preparation controls, Encounter list, Start/Stop controls remain reachable;
-   - verify scrolling still works after Host start/stop state transitions.
-2. Continue Session UX walkthrough:
-   - offline page shows both new-Host and Join paths;
-   - enter a session name, open Host, verify address/name/participants/Ready/empty encounter;
-   - deliberately add/remove a Combatant;
-   - stop Host and confirm the same offline page immediately restores both Host and Join, including Host-address input;
-   - verify bind/join/reconnect failures have a visible recovery action.
-3. Non-Character viewport/keyboard walkthrough: shell/nav, Player/DM play, Combatants, Rules, Activity, Settings; keyboard/focus/selected/disabled/scroll/detail/reduced-motion behavior.
-4. Windows two-instance connected walkthrough: actual Host bind -> named session/empty preparation -> persisted Host-unknown Client Character join -> Ready -> Freeform/Initiative start -> authoritative action convergence -> reconnect -> end/restart -> owning Client durable state.
-5. Record exact source SHA plus concrete PASS/FAIL notes/screenshots. Any failure resumes test-first only at the affected boundary.
-6. After human acceptance passes, perform final exact-head Windows artifact digest/contents verification and release decision.
-7. PR #109 remains draft/unmerged. No merge is authorized.
+### 6. Surface reduction
+Routine production play must not restore the old window clutter:
+- no permanently open left entity list in freeform;
+- no permanently open Inspector;
+- no permanently open Activity panel;
+- no permanently open DM image manager;
+- no flat wall of skill-check actions;
+- no routine debug/provenance/internal metadata panels;
+- duplicated Character/target summaries are removed.
+
+## Existing validated baseline that remains relevant
+Earlier broad non-Character redesign at `f1adaae4f81ef3dd98840189b9c7c606a9133ba7` had UI/Main validation green. The later Session scrolling repair at `706d71ae8675f8b285e582cc48b992141a48d9b9` also passed its UI boundary. These are historical evidence only; the reopened player-experience branch now contains later changes and must receive new exact-head validation.
+
+## Current work branch
+At scope-definition time PR #109 head is `81fe7349f45ebe7d48537faeffcecfcfff156e0f`.
+
+Compared with the prior `706d71ae...` baseline, the branch already contains in-progress player-experience work including:
+- `PhysicsDice3D.tsx` and shared VisualDice integration;
+- `CharacterSheetPlayScreen.tsx`;
+- `ProductionPlayScreen.tsx` and intent model;
+- new UI/physics contracts and dependencies;
+- `.agents/PHASE14_PLAYER_EXPERIENCE_REDESIGN.md`.
+
+This current head is **not yet the release acceptance SHA**. The new Character portrait and DM image reveal requirements were defined after the initial player-experience implementation work and must be implemented/tested before completion.
+
+## Definition of Done — one exact source SHA
+Phase 14 is complete only when all of the following are true together:
+
+### A. Sheet-only tabletop acceptance
+- routine Character play is possible with only the Character Sheet visible;
+- ability/save/skill/Initiative/attack/damage/common-die rolls work from the sheet;
+- Hit Dice/spell slots/resources are usable;
+- portrait add/position/replace/remove/persistence works offline and after restart;
+- actual physical 3D dice presentation is readable and accessible.
+
+### B. Exploration/freeform acceptance
+- the surface is materially quieter than combat;
+- skills are secondary choices under player intent, not a top-level action wall;
+- targets/participants/results appear only when relevant;
+- no permanent Inspector/Activity/debug/image panels.
+
+### C. Combat acceptance
+- Initiative adds only combat-specific round/turn/order/economy/target information;
+- official/contextual actions, attacks, spells and explicit target choice drive the existing authoritative runtime;
+- ResolutionEvent/Undo/reconnect/state convergence remain correct.
+
+### D. Image acceptance
+- owning Character portrait is durable and offline-safe;
+- DM can preview/reveal/withdraw a local handout without external hosting;
+- all connected Clients receive the reveal;
+- Clients can dismiss/minimize/reopen it;
+- reconnect restores the active reveal;
+- invalid/oversize asset handling, cleanup, focus/keyboard and bounded network transfer are verified;
+- images never alter mechanics authority/state.
+
+### E. Session/quality acceptance
+- Host/Join/session name/Ready/start/stop/reconnect remain understandable;
+- Session remains scrollable in constrained Windows viewports;
+- fresh Host has no surprise reference Goblin/Wolf/etc.;
+- owning-Client durability/Host ephemeral projection remain intact;
+- TypeScript, production build, UI contracts, mechanics regressions, connected authority tests and exact-head Windows build are green;
+- human Windows validation covers both sheet-only tabletop use and two-instance Host/Client play, including DM image reveal/reconnect behavior.
+
+## Next Exact Action
+Resume on `agent/108-production-play-session-ux` from head `81fe7349f45ebe7d48537faeffcecfcfff156e0f` without repeating validated historical mechanics boundaries:
+
+1. Reconcile current in-progress player-experience source/tests and close any existing TypeScript/build failures first.
+2. Add tests first for Character portrait persistence/ownership/offline restart, image validation/cleanup, and DM reveal/hide/reconnect presentation state.
+3. Implement Character portrait asset storage + sheet-integrated image UX without creating a second Character store.
+4. Implement DM handout presentation transport/state and player lightbox/minimize/reopen UX without using ResolutionEvent or adding a tactical-map system.
+5. Finish remaining standalone-sheet gaps (Initiative, Hit Dice, spell slots/resources) and authoritative intent-action wiring not yet complete.
+6. Remove temporary integration workflow/script after they are no longer needed.
+7. Run targeted tests, then UI/Main/connected exact-head validation and Windows build.
+8. Perform human Windows acceptance on the same exact source SHA; failures resume test-first only at affected boundaries.
+9. PR #109 stays draft/unmerged. No merge is authorized.
 
 ## Dispatch recommendation
-`needs_user`
+`continue`
