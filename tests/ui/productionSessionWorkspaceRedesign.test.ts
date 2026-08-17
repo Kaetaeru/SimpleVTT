@@ -62,6 +62,15 @@ test("production Session page has one stable state-driven workspace",()=>{
   assert.doesNotMatch(css,/session-grid\s*>\s*:not\(\.production-session-workspace\)/);
 });
 
+test("production Session screen owns a definite viewport scroll container",()=>{
+  const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
+  const css=readFileSync(new URL("../../src/production-session-workspace.css",import.meta.url),"utf8");
+  assert.match(app,/className="screen page-dark production-session-screen"/);
+  assert.match(css,/\.production-session-screen\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*height:\s*auto;[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto;/s);
+  assert.match(css,/\.production-session-screen\s*\{[^}]*overscroll-behavior:\s*contain;[^}]*scrollbar-gutter:\s*stable;/s);
+  assert.match(css,/\.production-session-mount\s*\{[^}]*min-height:\s*100%;[^}]*align-content:\s*start;/s);
+});
+
 test("routine Session workspace prioritizes user actions over implementation diagnostics",()=>{
   const session=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
   assert.match(session,/Host 중지/);
