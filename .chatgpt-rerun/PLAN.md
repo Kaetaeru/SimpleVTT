@@ -19,70 +19,94 @@
 - local projection ownership `7f4486ab9520e0e4bb8dc813c6a4a3d967a71b31`; UI `31974455354`; Main `31974455339`.
 - invalid-entry ghost safety `7ce39fe44b91009cb1fa660b5e45cb8cf54bfc6d`; Phase12 `31974996616`.
 - durable-after-end rehydrate `b20ecf18015cec15ad3eb26aba5674e5c91013cb`; Phase12 `31975132450`; Main `31975132458`.
-- fresh Character create/save/play/restart `8b162dd3b45e77f5a742badcdd7f03d613321497`; Persistence `31975560620`; UI `31975560755`; Main `31975560651`.
-- fresh Skills `c835963e918cce94bd535054a6553ead7e786262`; UI `31976028376`; Main `31976028381`.
-- fresh attack + Dash/session economy `5d48312289e2f01508b3860428ce98e2830d5f26`; UI `31976479248`; Main `31976479264`.
-- persisted non-fixture Inventory `c61469c87f6343ff55601e60890d13a58b6a5536`; Persistence `31976901167`; UI `31976901162`; Main `31976901170`.
-- persisted non-fixture spellcasting `868b8e37127ea644444630cb45a84f36664912ed`; UI `31977494408`; Main `31977496228`; Contract `31977496255`; Rules `31977496204`.
-- P14.8 remote Inventory validated `00487d6f421a43b15fb5ef77419e87d8182c35d4`, product repair `bd4c104eeb9e953ffdc94468f2ae8f502fc724e3`; Phase12 `31979232001`; Main `31979231986`.
-- P14.8 remote Fire Bolt `82933a63846dae55fd4183eef15c22ca3836f082`; Phase12 `31980517723` / job `95246365126`; Main `31980517740` / job `95246392981`.
-- P14.8 remote Arcana/skill `8f9dcdd083d15be392da1bdefe1e05a9815651ea`; Phase12 `31981974278` / job `95250255600`; Main `31981974175` / job `95250270963`.
-- P14.7 prepared Combatant final `5462d703bbb2d4d41eab934588d7638cb91f6c3e`; product/test `f9d9a86c5b3b2c09c33863129c87e8b1d2be2175`; UI `31982491883` / job `95251647686`; Main `31982512637` / job `95251703554`.
-- P14.7 live DM adjudication/event-native Undo final `9c93ad064f8da6dc72b0d0701cc6002171ec3975`; product/test `19602c0b0bdd41a3f284698709c96ec21fd9f06b`; UI `31983195850` / job `95253536996`; Main `31983292944` / job `95253811047`.
-- P14.7 live Combatant theater-of-mind action final `e102a82060954f7b3a0fe21054ed8cae4b3daa5b`; product/UI `049102bdaf21a2e9e8771fd4f01274ad9b259eb7`; UI `31984020502` / job `95255760191`; Main `31984131088` / job `95256060739`.
+- fresh Character `8b162dd3b45e77f5a742badcdd7f03d613321497`; Skills `c835963e918cce94bd535054a6553ead7e786262`; attack/Dash `5d48312289e2f01508b3860428ce98e2830d5f26`; Inventory `c61469c87f6343ff55601e60890d13a58b6a5536`; spellcasting `868b8e37127ea644444630cb45a84f36664912ed`, with recorded green gates.
+- P14.8 remote Inventory `00487d6f421a43b15fb5ef77419e87d8182c35d4`; remote Fire Bolt `82933a63846dae55fd4183eef15c22ca3836f082`; remote Arcana/skill `8f9dcdd083d15be392da1bdefe1e05a9815651ea`, with their recorded Phase12/Main jobs.
+- P14.7 prepared Combatant `5462d703bbb2d4d41eab934588d7638cb91f6c3e`; UI `31982491883` / `95251647686`; Main `31982512637` / `95251703554`.
+- P14.7 live DM adjudication/event-native Undo `9c93ad064f8da6dc72b0d0701cc6002171ec3975`; UI `31983195850` / `95253536996`; Main `31983292944` / `95253811047`.
+- P14.7 live Combatant theater-of-mind action `e102a82060954f7b3a0fe21054ed8cae4b3daa5b`; UI `31984020502` / `95255760191`; Main `31984131088` / `95256060739`.
+- P14.7 Host preparation metadata/content `f155943d62efbbd6718f2b4b2b864031232d60cb`; UI `31984703963` / `95257557757`; Main `31984772749` / `95257747960`.
 
 Do not manually repeat these gates unless their relevant source boundary changes.
 
-## Completed this continuation — P14.7 Host preparation metadata/rules-content visibility
-Final work/PR head: `f155943d62efbbd6718f2b4b2b864031232d60cb`.
-Product/test boundary: `bcb101a258ea36d7fbeaae38b2c9621b044463c2`; final commit only adds the focused regression to Main Playable.
+## Completed this continuation — P14.7 live mechanics continuity
+Final mechanics-only work head: `fb94d8014c729be2fa39a55aca5246618fe81214`.
+Test/UI boundary: `f0f12094069b3c11c33a07e3ac2c8da84dd63e37`.
 
-### Investigation and test-first evidence
-- The production Host surface already had an editable start-mode intent selector and visible compatibility/message, but session name was display-only and `sessionContent` was not rendered.
-- The inherited MockAdapter session metadata was reference-only: name `금요일 세션` and session content `Homebrew 0.1 · 철벽 수호자`. Rendering it directly would have leaked fixture metadata into the normal production preparation path.
-- `88df560cdf10fb3383e36f046ed759339d1d3bb4` added `tests/ui/productionSessionPreparationMetadata.test.ts`.
-- `2d8cefab2052eba122930c5cce36fa8e4948d996` added the focused UI workflow step.
-- Test-first UI `31984575423` / frontend job `95257217287` failed only at the new boundary: production Host retained the fixture name instead of `새 플레이 세션`, and the visible Host surface had no `세션 이름` control.
+### Test-first evidence
+- `ac0a2cdd53a7c1230a7881015374dfe046c7b0a1` added `tests/ui/productionDmLiveMechanicsContinuity.test.ts`.
+- The focused regression uses a saved non-fixture Character `char.phase14.mechanics-player` plus imported non-fixture Combatant `combatant.phase14.mechanics-scout` with its real runtime dagger (+5, 5ft, `1d4+3` piercing).
+- It seeds canonical runtime effects for `grappled`, piercing resistance, and concentration; executes the imported Combatant's real dagger as an opportunity reaction; drives the Character to 0 HP; verifies typed damage adjustment, reaction economy, life state, concentration termination, Activity state changes, event-native Undo restoration, then canonical condition removal + Undo restoration.
+- `f0f12094069b3c11c33a07e3ac2c8da84dd63e37` added the regression to UI.
 
-### Product repair
-- `2feda6b8ac280c8a01752cdfc4b886b48a69ea1d` updated `productionSessionLifecycleAdapter.ts`:
-  - adds preparation-only `setPreparedSessionName`, trims input and rejects empty/>80-character names or live-session edits;
-  - replaces the reference/blank Host name with `새 플레이 세션` when opening a production preparation lobby;
-  - exposes the real Host `rulesProfileId` from `connectedManifest`;
-  - derives active session content from the existing composed catalog, excluding known reference fixture local entries instead of copying inherited `sessionContent`;
-  - refreshes this metadata for Host preparing/live snapshots without adding a protocol or persistence source.
-- `bcec41348cb03114febd28f4f856d2977dd89149` updated `ProductionSessionLifecycleBridge.tsx` with visible preparation-only session-name editing, RulesProfile, active-content list/empty state, labeled start-mode intent, and existing compatibility message. Hook order remains stable and existing Combatant/spatial controls are preserved.
-- UI `31984659940` / job `95257442658` then passed the visible-surface assertion; its only remaining failure was test-contract-only because the new installed-content payload lacked the production-required stable `sourceId`.
-- `bcb101a258ea36d7fbeaae38b2c9621b044463c2` corrected only the regression payload to use valid installed-content identity.
-- `f155943d62efbbd6718f2b4b2b864031232d60cb` added `Verify Phase 14 Host preparation metadata and active content` to Main Playable.
-
-### Exact validation
-- UI `31984703963`, frontend job `95257557757` at product/test boundary `bcb101a258ea36d7fbeaae38b2c9621b044463c2`: **completed success**. Focused preparation metadata, existing Phase14 production batch, Phase09 mechanics, named-rule boundary, TypeScript and production build all passed.
-- Main Playable `31984772749`, playable-contract job `95257747960` at final head `f155943d62efbbd6718f2b4b2b864031232d60cb`: **completed success**. Full build plus Phase11, Phase12, Phase13, prepared Combatant, live-DM adjudication/Undo, live Combatant spatial action, and Host preparation metadata all passed.
-- The automatically queued Windows job is not the required human two-instance acceptance and is not used as completion evidence.
+### Outcome
+- No product repair was required. The existing canonical runtime composition already preserved all listed mechanics for non-fixture live actors.
+- UI `31985185688`, frontend job `95258850432` at `f0f12094069b3c11c33a07e3ac2c8da84dd63e37`: **completed success**, including the new regression, existing Phase14 batch, Phase09 mechanics, named-rule boundary and production build.
+- `fb94d8014c729be2fa39a55aca5246618fe81214` added the same focused regression to Main Playable.
+- Main Playable `31985232843`, playable-contract job `95258989930` at `fb94d8014c729be2fa39a55aca5246618fe81214`: **completed success** across build, Phase11/12/13 and all gated Phase14 slices.
+- The Windows job from that run was not human two-instance acceptance and was not used as completion evidence.
 
 ### Proven P14.7 behavior
-- Normal production Host preparation no longer exposes the reference session name or reference local-content fixture metadata.
-- Session name is visible and editable only while preparing; empty names and live-session rename attempts are rejected.
-- Current play-mode intent is visible/editable before start.
-- Real Host RulesProfile, compatibility result/message, and currently composed non-reference local content are visible before start.
-- Existing installed-content catalog persistence remains the source of local content; session metadata is an ephemeral Host preparation projection.
-- No duplicate connected protocol, second content store, fixture fallback, tactical-map scope, or merge was introduced.
+- A non-fixture imported Combatant uses its actual runtime attack as a reaction against a non-fixture real Character.
+- Runtime typed resistance reduces authoritative damage.
+- 0 HP produces authoritative unconscious/not-dead life state.
+- Concentration and its dependent effect terminate authoritatively on the damaging/life-state path.
+- Independent condition state remains intact until explicitly removed.
+- Activity records reaction economy, life-state and concentration state changes.
+- Event-native Undo restores HP, life state, reaction economy, concentration/effects and condition state exactly.
+- No fixture fallback, snapshot rollback, second resolution protocol, or second event history was added.
+
+## Completed this continuation — P14.10 production play workspace accessibility structure
+Final work/PR head: `06d75afc077e6d0d4982a31710015825e4e575b2`.
+Product/UI boundary: `9494bfb1e4813130be72a3bc62e87e4ee54f25ab`; final commit only adds the focused accessibility regression to Main Playable.
+
+### Investigation and test-first evidence
+- `PlaySessionDock.tsx` existed and had semantic buttons, focus-triggered action detail, explicit empty states and disabled reasons, but it was not mounted by `main.tsx`/`App.tsx` at all.
+- No dedicated play-dock CSS existed, so no viewport-bounded workspace/internal-scroll/focus-visible contract existed for the dormant component.
+- Existing reduced-motion CSS already disables dice animation under `prefers-reduced-motion`.
+- `43c046a3ed902cf95da580f505c2cccfe4cbdae3` added `tests/ui/productionPlayWorkspaceAccessibility.test.ts`.
+- `3677cbeec96871bb13c19e900fdb72d4d55d3846` added the focused UI gate.
+- Test-first UI `31985442280` / job `95259543447` failed at the new step because `src/play-session-dock.css` did not exist; preceding named-rule/PlaySessionDock structure checks stayed green.
+- `ffee41654fbf0ef2df90781461e0b61419ce0609` strengthened the regression to require non-reference production Character entry rather than exposing fixture Characters after mount.
+
+### Product repair
+- `9a6fe55019cae664815bc91cbf28f1939afc7d74` added `src/play-session-dock.css`:
+  - fixed, viewport-bounded dock with `max-height: calc(100vh - ...)`;
+  - `minmax(0,1fr)` body row plus internal `overflow-y:auto`;
+  - responsive width/layout rules;
+  - explicit active/selected/disabled states;
+  - explicit `:focus-visible` treatment for buttons/summary/launcher;
+  - internal horizontal scrolling for Character choices and responsive action/inventory layout.
+- `543d62facc1663e2e0ba4d7f473c10842675863b` made `PlaySessionDock` use `productionJoinCharacters` only, prevents reference Character choice/header/action fallback, disables local start until a saved production Character is active, gives explicit no-saved-Character guidance, and clears keyboard action detail on blur.
+- `9494bfb1e4813130be72a3bc62e87e4ee54f25ab` imports/mounts `PlaySessionDock` and its CSS in the real production root composition.
+- UI push run `31985536934`, frontend job `95259805820` at `9494bfb1e4813130be72a3bc62e87e4ee54f25ab`: **completed success**. Accessibility structure, existing P14.7 mechanics, existing Phase14 production batch, Phase09 mechanics, named-rule boundary, TypeScript and production build all passed.
+- `06d75afc077e6d0d4982a31710015825e4e575b2` adds `Verify Phase 14 production play workspace accessibility structure` to Main Playable.
+- Main Playable `31985665543`, playable-contract job `95260172166` at `06d75afc077e6d0d4982a31710015825e4e575b2`: **completed success**. Full build, Phase11, Phase12, Phase13, all currently gated P14.7 slices, and the new P14.10 structure gate passed.
+- Main Windows job `95260427568` was automatically running at checkpoint time. It is not the required human two-instance acceptance and is not used to close P14.10/P14.13.
+
+### Proven P14.10 behavior
+- The real production root now mounts the production Play workspace without Debug Dock access.
+- Reference Aelar/Mira fixtures are not offered as production Play choices by the mounted dock.
+- Saved non-reference Character selection/start guidance is explicit.
+- The dock is bounded to the viewport; long play content scrolls inside the intended body rather than escaping the window.
+- Tabs/actions/targets/close controls remain native keyboard-focusable controls; action hover detail is also focus-accessible and now clears on blur.
+- Selected/active, disabled and focus-visible states have distinct CSS treatment.
+- Existing reduced-motion CSS disables dice animation under the OS reduced-motion preference.
+- Human viewport/interaction acceptance is still required; this automated structural slice does not claim the full P14.10 gate.
 
 ## Architecture constraints preserved
 - Owning Client Character Library remains the durable Character source; Host projected Characters remain ephemeral.
 - Host canonical content/runtime remains connected mechanics authority.
-- Existing connected ledger, ResolutionEvent, client apply-before-cursor, reconnect/idempotency and event-native Undo remain authoritative.
-- Installed content remains owned by the existing installed-content repository/catalog composition; Host preparation only projects metadata from it.
-- No fixture fallback, duplicate durable source, tactical map/grid/path/LOS subsystem, or merge was introduced.
+- Existing Scene/spatial/runtime, ResolutionEvent, turn-runtime effects, ledger, reconnect/idempotency and event-native Undo paths remain authoritative.
+- `productionJoinCharacters` remains the normal no-fixture Character entry policy for the newly mounted Play workspace.
+- No duplicate connected protocol, second durable source, tactical-map subsystem, fixture fallback, or merge was introduced.
 
 ## Checklist documentation note
-`.agents/PHASE14_CHECKLIST.md` remains intentionally conservative because the current connector update path replaces the whole large file. Do not risk truncation. On a safe full-file-preserving edit, credit directly proven P14.7 preparation metadata, prepared/live-DM/spatial-action and P14.8 remote action/Inventory/Spell/Skill wording only; keep broader UX/accessibility, concentration, equipment/attunement and human-acceptance wording open.
+`.agents/PHASE14_CHECKLIST.md` remains intentionally conservative because the connector path replaces the entire large file. Do not risk truncation. A safe full-file-preserving documentation pass may later credit directly proven P14.7 mechanics and P14.10 structural wording. Human viewport/two-instance acceptance stays open.
 
 ## Next Exact Action
-1. Do not rerun remote Inventory/Fire Bolt/Arcana, local P14.6 spell, prepared Combatant, live-DM adjudication/Undo, live Combatant spatial-action, Host preparation metadata, or unchanged lifecycle gates unless their relevant source boundary changes.
-2. Continue P14.7 test-first at the remaining live-DM mechanics boundary: **conditions, typed defenses, reactions, concentration, life state, Activity, and event-native Undo must remain functional for a non-fixture real live Scene/Combatant path**.
-3. Start with a focused regression that reuses existing production/domain services and real non-fixture actors. Prefer the smallest representative chain that can prove multiple listed mechanics without adding a parallel DM/runtime path; patch only gaps the regression exposes.
-4. Validate only the smallest changed UI/Main boundary once.
-5. Then continue P14.10 UX/accessibility, Windows two-instance human acceptance, and final exact-head Windows artifact verification.
+1. Do not rerun remote Inventory/Fire Bolt/Arcana, local P14.6 spell, prepared Combatant, live-DM adjudication/Undo, live Combatant spatial action, Host preparation metadata, live mechanics continuity, or the mounted Play-workspace accessibility gate unless their relevant source boundary changes.
+2. Continue P14.10 test-first on the remaining production UX boundary after mounting the dock: **verify role/surface scoping plus explicit loading/error/reconnecting guidance and routine no-debug operation**, ensuring the player-oriented dock does not intrude on the Host/DM preparation/live surface and all routine paths remain understandable without `Ctrl+Shift+D`.
+3. Reuse existing lifecycle/connection state; patch only a real UX gap. Preserve the already-proven viewport/scroll/focus/reduced-motion behavior.
+4. Record the required human viewport/keyboard interaction walkthrough separately; automated structure evidence is not a substitute for the human P14.10/P14.13 gates.
+5. Then perform Windows two-instance human acceptance and, only after the source head is final, exact-head Windows artifact verification/digest/content inspection.
 6. PR #109 remains draft/unmerged. No merge is authorized.
