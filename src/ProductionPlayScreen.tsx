@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { ActionVm, SceneEntity } from "./app/contracts";
 import { OFFICIAL_PLAY_INTENTS, intentOptions, skillFactByActionId, type PlayIntentId } from "./playerExperienceModel";
@@ -30,7 +30,7 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
     : scene.entities.find((entity)=>entity.id===(snapshot.sessionMode==="initiative"?scene.currentActorId:snapshot.activeCharacter.id))??scene.entities.find((entity)=>entity.id===snapshot.activeCharacter.id);
   const actions=actor?scene.actionsByActor[actor.id]??[]:[];
   const selectedIntent=intent?OFFICIAL_PLAY_INTENTS.find((item)=>item.id===intent):null;
-  const options=useMemo(()=>intent?intentOptions(intent,actions):[],[intent,actions]);
+  const options=intent?intentOptions(intent,actions):[];
   const isCombat=snapshot.sessionMode==="initiative";
   const currentActor=scene.entities.find((entity)=>entity.id===scene.currentActorId);
   const economy=actor?scene.economyByActor[actor.id]:undefined;
