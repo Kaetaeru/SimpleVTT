@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 import type { AppSnapshot, CharacterSheet, CharacterSummary } from "../../src/app/contracts";
 
 const SCOUT_ID="combatant.phase14.live-dm-scout";
@@ -78,6 +79,27 @@ test("non-fixture live DM can select real actors, correct a canonical resolution
   assert.equal(snapshot.scene.selectedActorId,scout.id);
   snapshot=await adapter.selectDmActor(character.id);
   assert.equal(snapshot.scene.selectedActorId,character.id);
+
+  // Spatial placement is a separate theater-of-mind/map-module concern. Supply an
+  // explicit structured relation here so this regression isolates DM adjudication.
+  setSpatialRelation(snapshot.scene,{
+    sourceId:character.id,
+    targetId:scout.id,
+    distanceFeet:5,
+    visible:true,
+    cover:"none",
+    targetCanSeeAttacker:true,
+    provenance:"phase14:test:explicit-live-dm-spatial-fact",
+  });
+  setSpatialRelation(snapshot.scene,{
+    sourceId:scout.id,
+    targetId:character.id,
+    distanceFeet:5,
+    visible:true,
+    cover:"none",
+    targetCanSeeAttacker:true,
+    provenance:"phase14:test:explicit-live-dm-spatial-fact",
+  });
 
   const attack=(snapshot.scene.actionsByActor[character.id]??[]).find((action)=>action.resolutionKind==="attack"&&action.runtimeAttack);
   assert.ok(attack,"production Character must expose a canonical runtime attack");
