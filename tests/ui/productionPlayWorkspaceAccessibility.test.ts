@@ -43,3 +43,28 @@ test("play workspace exposes keyboard focus plus selected and disabled visual st
   assert.match(css,/\.play-dock button:disabled/);
   assert.match(completion,/@media \(prefers-reduced-motion: reduce\)/);
 });
+
+test("production role surfaces stay scoped and expose routine recovery guidance without Debug Dock",()=>{
+  const dock=readFileSync(new URL("../../src/PlaySessionDock.tsx",import.meta.url),"utf8");
+  const lobby=readFileSync(new URL("../../src/ProductionPlayerLobbyBridge.tsx",import.meta.url),"utf8");
+  const host=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
+  const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
+  const lobbyCss=readFileSync(new URL("../../src/production-player-lobby.css",import.meta.url),"utf8");
+
+  assert.match(dock,/snapshot\.role\s*!==\s*"player"/);
+  assert.match(lobby,/snapshot\.role\s*!==\s*"player"/);
+  assert.match(host,/snapshot\.role\s*!==\s*"dm"/);
+
+  assert.match(lobby,/snapshot\.connectionState\s*===\s*"reconnecting"/);
+  assert.match(lobby,/재연결 중/);
+  assert.match(lobby,/snapshot\.connectionState\s*===\s*"disconnected"/);
+  assert.match(lobby,/연결이 끊겼습니다/);
+
+  assert.match(host,/hostStartFailed/);
+  assert.match(host,/Host 시작에 실패했습니다/);
+  assert.match(host,/세션 열기/);
+  assert.match(app,/SimpleVTT 불러오는 중…/);
+  assert.match(lobbyCss,/\.session-grid > article:nth-child\(2\)/);
+
+  for (const source of [dock,lobby,host]) assert.doesNotMatch(source,/Ctrl\+Shift\+D/);
+});
