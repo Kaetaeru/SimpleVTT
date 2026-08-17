@@ -17,6 +17,15 @@ test("production composition mounts PlaySessionDock and bounds it to the viewpor
   assert.match(css,/\.play-dock-body\s*\{[^}]*overflow(?:-y)?:\s*auto/s);
 });
 
+test("play workspace entry never exposes reference Characters as production choices",()=>{
+  const dock=readFileSync(new URL("../../src/PlaySessionDock.tsx",import.meta.url),"utf8");
+  assert.match(dock,/productionJoinCharacters/);
+  assert.match(dock,/productionCharacters\.map/);
+  assert.match(dock,/activeProductionCharacter/);
+  assert.match(dock,/disabled=\{!activeProductionCharacter\}/);
+  assert.doesNotMatch(dock,/snapshot\.characters\.map/);
+});
+
 test("play workspace exposes keyboard focus plus selected and disabled visual states",()=>{
   const dock=readFileSync(new URL("../../src/PlaySessionDock.tsx",import.meta.url),"utf8");
   const css=readFileSync(new URL("../../src/play-session-dock.css",import.meta.url),"utf8");
