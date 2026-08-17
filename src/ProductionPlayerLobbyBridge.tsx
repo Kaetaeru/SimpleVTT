@@ -29,7 +29,7 @@ export function ProductionPlayerLobbyBridge() {
   },[]);
 
   const candidates=useMemo(()=>snapshot ? productionJoinCharacters(mockAdapter) : [],[snapshot]);
-  if (!snapshot||snapshot.role!=="player"||!target) return null;
+  if (!snapshot||snapshot.role!=="player"||snapshot.session.role==="host"||!target) return null;
   const selected=candidates.find((character)=>character.id===snapshot.activeCharacter.id);
   const lifecycle=snapshot.session.lifecycle;
   const joining=lifecycle==="connecting";
