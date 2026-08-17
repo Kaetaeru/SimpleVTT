@@ -58,6 +58,8 @@ jobs:
         run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts tests/ui/productionSessionEnd.test.ts
       - name: Verify Phase 13 arbitrary Character SessionProjection
         run: npx tsx --test tests/ui/characterSessionProjection.test.ts tests/ui/characterSessionProjectionReconstruction.test.ts tests/ui/characterSessionProjectionMount.test.ts tests/ui/connectedCharacterProjectionHandshake.test.ts tests/ui/connectedProjectedCharacterResolution.test.ts tests/ui/connectedProjectedCharacterInventoryResolution.test.ts tests/ui/connectedProjectedCharacterSpellResolution.test.ts tests/ui/connectedProjectedCharacterSkillResolution.test.ts
+      - name: Verify Phase 14 DM prepared Combatant flow
+        run: npx tsx --test tests/ui/productionDmPreparedCombatantFlow.test.ts
 
   windows-playable:
     runs-on: windows-latest
