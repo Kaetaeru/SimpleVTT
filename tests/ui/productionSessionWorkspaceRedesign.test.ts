@@ -38,12 +38,12 @@ function installFakeDesktopHost() {
   }};
 }
 
-test("production Session page is one stable state-driven surface instead of portal overlays",()=>{
+test("production Session page has one stable state-driven workspace",()=>{
   const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
-  const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
-  const session=readFileSync(new URL("../../src/ProductionSessionScreen.tsx",import.meta.url),"utf8");
+  const session=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
+  const css=readFileSync(new URL("../../src/production-session-workspace.css",import.meta.url),"utf8");
 
-  assert.match(app,/ProductionSessionScreen/);
+  assert.match(main,/<ProductionSessionWorkspaceBridge \/>/);
   assert.doesNotMatch(main,/<ProductionSessionLifecycleBridge \/>/);
   assert.doesNotMatch(main,/<ProductionPlayerLobbyBridge \/>/);
   assert.match(session,/새 세션 만들기/);
@@ -54,10 +54,12 @@ test("production Session page is one stable state-driven surface instead of port
   assert.match(session,/snapshot\.session\.role\s*===\s*"host"/);
   assert.match(session,/snapshot\.session\.role\s*===\s*"client"/);
   assert.doesNotMatch(session,/snapshot\.role\s*===\s*"dm"|snapshot\.role\s*!==\s*"player"/);
+  assert.match(css,/session-grid\s*>\s*:not\(\.production-session-workspace\)/);
+  assert.match(css,/screen-head/);
 });
 
-test("routine Session page prioritizes user actions over implementation diagnostics",()=>{
-  const session=readFileSync(new URL("../../src/ProductionSessionScreen.tsx",import.meta.url),"utf8");
+test("routine Session workspace prioritizes user actions over implementation diagnostics",()=>{
+  const session=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
   assert.match(session,/Host 중지/);
   assert.match(session,/플레이 시작/);
   assert.match(session,/Ready/);
