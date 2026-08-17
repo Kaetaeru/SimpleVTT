@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import { CharacterSheetPlayScreen } from "./CharacterSheetPlayScreen";
 import { ProductionPlayScreen } from "./ProductionPlayScreen";
+import { V1HomeScreen } from "./V1HomeScreen";
+import { V1ContentScreen } from "./V1ContentScreen";
 import type {
   AbilityKey,
   AbilityMethod,
@@ -39,7 +41,7 @@ function connectionLabel(state: "connected" | "reconnecting" | "disconnected") {
 
 export function App() {
   const { snapshot, loading } = useSimpleVtt();
-  const [route, setRoute] = useState<AppRoute>("characters");
+  const [route, setRoute] = useState<AppRoute>("home");
   const [debugOpen, setDebugOpen] = useState(false);
   const productionRole: "player" | "dm" = snapshot?.session.role === "host" ? "dm" : snapshot?.session.role === "client" ? "player" : snapshot?.role ?? "player";
 
@@ -66,47 +68,56 @@ export function App() {
 
   if (loading || !snapshot) return <div className="loading-screen">SimpleVTT 불러오는 중…</div>;
 
-  const playerNav: Array<[AppRoute, string, string]> = [
-    ["characters", "캐릭터", "◉"], ["scene", "플레이", "◆"], ["catalog", "규칙", "▤"], ["activity", "기록", "≡"], ["session", "세션", "⌁"], ["settings", "설정", "⚙"],
+  const nav: Array<[AppRoute, string, string]> = [
+    ["home", "홈", "⌂"],
+    ["characters", "캐릭터", "◉"],
+    ["session", "세션", "⌁"],
+    ["content", "콘텐츠", "＋"],
+    ["catalog", "규칙", "▤"],
+    ["settings", "설정", "⚙"],
   ];
-  const dmNav: Array<[AppRoute, string, string]> = [
-    ["scene", "플레이", "◆"], ["combatants", "컴배턴트", "♜"], ["catalog", "규칙", "▤"], ["activity", "기록", "≡"], ["session", "세션", "⌁"], ["settings", "설정", "⚙"],
-  ];
-  const nav = productionRole === "player" ? playerNav : dmNav;
   const connectedSession=snapshot.session.role!=="offline";
   const liveSession=snapshot.session.lifecycle==="live";
 
   return (
-    <div className="app-shell">
-      <aside className="rail">
-        <button className="brand" onClick={() => setRoute(productionRole === "player" ? "characters" : "scene")}>S</button>
-        <nav className="rail-nav">
+    <div className="app-shell v1-shell">
+      <aside className="v1-sidebar">
+        <button className="v1-brand" onClick={() => setRoute("home")} aria-label="SimpleVTT 홈">
+          <span className="v1-brand-mark">S</span>
+          <span className="v1-brand-copy"><strong>SimpleVTT</strong><small>TABLETOP PLAY</small></span>
+        </button>
+        <nav className="v1-nav" aria-label="주요 메뉴">
           {nav.map(([id, label, icon]) => (
-            <button key={id} className={route === id || (id === "characters" && ["character", "create", "levelup"].includes(route)) ? "rail-button active" : "rail-button"} onClick={() => setRoute(id)} title={label}>
-              <span className="rail-icon">{icon}</span><span className="rail-label">{label}</span>
+            <button key={id} className={route === id || (id === "characters" && ["character", "create", "levelup"].includes(route)) ? "active" : ""} onClick={() => setRoute(id)}>
+              <span className="v1-nav-icon">{icon}</span><span>{label}</span>
             </button>
           ))}
         </nav>
-        <div className="rail-spacer" />
-        {connectedSession && <div className={`connection-dot ${snapshot.connectionState}`} title={connectionLabel(snapshot.connectionState)} />}
+        <div className="v1-sidebar-spacer" />
+        <div className="v1-sidebar-context">
+          {liveSession && <button className="primary" onClick={() => setRoute("scene")}>플레이로 돌아가기</button>}
+          {connectedSession && <div className={`v1-sidebar-status ${snapshot.connectionState}`}><i/><span>{connectionLabel(snapshot.connectionState)}</span></div>}
+        </div>
       </aside>
 
       <section className="workspace">
-        <header className="topbar">
-          <div><span className="eyebrow">SimpleVTT</span><strong>{topTitle(route, productionRole)}</strong></div>
-          <div className="topbar-meta">
-            {liveSession && <span>{snapshot.sessionMode === "initiative" ? `이니셔티브 · ${snapshot.scene.round}라운드` : "자유 진행"}</span>}
-            {connectedSession && <span className={`status-text ${snapshot.connectionState}`}>{connectionLabel(snapshot.connectionState)}</span>}
+        <header className="v1-topbar">
+          <div className="v1-topbar-title"><span>SimpleVTT</span><strong>{topTitle(route, productionRole)}</strong></div>
+          <div className="v1-topbar-actions">
+            {liveSession && route !== "scene" && <button className="primary" onClick={() => setRoute("scene")}>플레이로 돌아가기</button>}
+            {liveSession && <small>{snapshot.sessionMode === "initiative" ? `이니셔티브 · ${snapshot.scene.round}라운드` : "자유 진행"}</small>}
           </div>
         </header>
         <main className="content">
           {snapshot.edgeState !== "normal" && <EdgeBanner />}
+          {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("scene")} />}
           {snapshot.role === "player" && route === "characters" && <CharacterLibraryScreen onOpen={() => setRoute("character")} onCreate={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "character" && <CharacterSheetPlayScreen onScene={() => setRoute("scene")} onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "create" && <CharacterCreateScreen onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}
           {snapshot.role === "player" && route === "levelup" && <LevelUpScreen onDone={() => setRoute("character")} onCancel={() => setRoute("character")} />}
           {route === "scene" && <ProductionPlayScreen role={productionRole} />}
           {route === "combatants" && productionRole === "dm" && <CombatantsScreen />}
+          {route === "content" && <V1ContentScreen />}
           {route === "catalog" && <CatalogScreen />}
           {route === "activity" && <ActivityScreen />}
           {route === "session" && <SessionScreen />}
@@ -121,6 +132,7 @@ export function App() {
 }
 
 function topTitle(route: AppRoute, role: "player" | "dm") {
+  if (route === "home") return "홈";
   if (route === "characters") return "캐릭터";
   if (route === "character") return "캐릭터 시트";
   if (route === "create") return "캐릭터 생성 / 편집";
@@ -130,6 +142,7 @@ function topTitle(route: AppRoute, role: "player" | "dm") {
   if (route === "catalog") return "규칙";
   if (route === "activity") return "플레이 기록";
   if (route === "session") return "세션";
+  if (route === "content") return "콘텐츠 · 애드온";
   return "설정";
 }
 

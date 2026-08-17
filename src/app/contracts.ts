@@ -5,6 +5,7 @@ export type EdgeState = "normal" | "save-error" | "unsupported";
 export type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export type AbilityMethod = "standard" | "rolled" | "point-buy" | "custom";
 export type AppRoute =
+  | "home"
   | "characters"
   | "character"
   | "create"
@@ -14,6 +15,7 @@ export type AppRoute =
   | "catalog"
   | "activity"
   | "session"
+  | "content"
   | "settings";
 
 export type AbilityScores = Record<AbilityKey, number>;

@@ -39,6 +39,7 @@ import "./level-up-v10.css";
 import "./focused-layout-fix.css";
 import "./character-sheet-v10-viewport.css";
 import "./production-ux-redesign.css";
+import "./v1-product-shell.css";
 
 void PlaySessionDock;
 void CombatSpellHudBridge;
