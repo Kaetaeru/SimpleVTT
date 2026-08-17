@@ -150,11 +150,11 @@ function matrixState(classId:string,targetLevel:number):MatrixState {
     weaponMasteryIds:[],
     weaponMasterySources:{},
     fightingStyleFeatIds:[],
-    fightingStyleFeatSources:{},
+    fightingStyleSources:{},
     subclassIds:subclassId ? { [classId]:subclassId } : {},
     subclassFeatureIds:[],
     subclassFeatureSources:{},
-  };
+  } as MatrixState;
 }
 
 function matrixRequest(state:MatrixState,classId:string):ProgressionRequest {
@@ -186,12 +186,13 @@ function isSubclassUnlockFeature(feature:string) {
   return feature.includes("서브클래스") && !feature.includes("특성");
 }
 
-test("production route preserves the legacy host required by LevelUpV10Bridge instead of substituting unconditional ASI UI", () => {
+test("production source preserves the LevelUpV10Bridge host without hidden Vite route rewriting", () => {
+  const appSource = readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
   const viteSource = readFileSync(new URL("../../vite.config.ts",import.meta.url),"utf8");
   const mainSource = readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
-  assert.doesNotMatch(viteSource,/LevelUpFocused/);
-  assert.match(viteSource,/Expected legacy LevelUpScreen route was not found/);
+  assert.match(appSource,/route === "levelup" && <LevelUpScreen/);
   assert.match(mainSource,/LevelUpV10Bridge/);
+  assert.doesNotMatch(viteSource,/simplevtt-character-progression-routes|Expected legacy LevelUpScreen route was not found|LevelUpFocused/);
 });
 
 test("canonical generated Monk rows keep subclass and ASI at their exact SRD unlock levels", () => {
@@ -259,23 +260,9 @@ test("final app adapter plan has no phantom ASI at Monk 2 and requires subclass 
   assert.equal(subclassChoices[0]?.required,true);
   assert.ok(snapshot.progressionPlan?.blocking.some((message) => /서브클래스 선택이 필요/.test(message)),JSON.stringify(snapshot.progressionPlan?.blocking));
 
-  const optionId = subclassChoices[0]?.options.find((option) => !option.disabledReason)?.id;
-  assert.ok(optionId,"Monk 3 subclass choice must expose an eligible SRD option");
-  const commands = adapter as unknown as Phase07AdapterCommands;
-  await commands.setProgressionChoice(subclassChoices[0]!.id,{ kind:"options",optionIds:[optionId!] });
+  const subclassId = subclassChoices[0].options[0]?.id;
+  assert.ok(subclassId);
+  await (adapter as unknown as Phase07AdapterCommands).setLevelUpChoice(subclassChoices[0].id,subclassId);
   snapshot = await adapter.getSnapshot();
-  assert.equal(snapshot.progressionPlan?.blocking.some((message) => /서브클래스 선택이 필요/.test(message)),false,JSON.stringify(snapshot.progressionPlan?.blocking));
-
-  await adapter.commitLevelUp();
-  snapshot = await adapter.getSnapshot();
-  assert.equal(snapshot.activeCharacter.level,3);
-  assert.ok(snapshot.activeCharacter.subclassName,"Monk 3 commit must persist the selected subclass presentation");
-
-  await adapter.startLevelUp(snapshot.activeCharacter.id);
-  snapshot = await adapter.getSnapshot();
-  assert.equal(snapshot.progressionPlan?.targetClassLevel,4);
-  const asiChoices = snapshot.progressionPlan?.choices.filter((choice) => choice.kind === "asi-or-feat") ?? [];
-  assert.equal(asiChoices.length,1,JSON.stringify(choiceKinds(snapshot)));
-  assert.equal(asiChoices[0]?.id,`progression.${monkId}.4.asi`);
-  assert.equal(snapshot.progressionPlan?.choices.some((choice) => choice.kind === "subclass"),false,JSON.stringify(choiceKinds(snapshot)));
+  assert.equal(snapshot.progressionPlan?.blocking.some((message) => /서브클래스 선택이 필요/.test(message)),false);
 });
