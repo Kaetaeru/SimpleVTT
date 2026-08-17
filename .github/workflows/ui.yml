@@ -48,6 +48,8 @@ jobs:
         run: npx tsx --test tests/ui/playSessionDockStructure.test.ts
       - name: Verify Phase 14 Host preparation metadata and active content
         run: npx tsx --test tests/ui/productionSessionPreparationMetadata.test.ts
+      - name: Verify Phase 14 live DM mechanics continuity
+        run: npx tsx --test tests/ui/productionDmLiveMechanicsContinuity.test.ts
       - name: Verify Phase 14 production lifecycle, prepared/live DM flows, local projection ownership, fresh Character skills/actions, inventory durability, and spellcasting
         run: npx tsx --test tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionDmPreparedCombatantFlow.test.ts tests/ui/productionDmLiveAdjudicationFlow.test.ts tests/ui/productionDmLiveCombatantAction.test.ts tests/ui/productionLocalCharacterSwitch.test.ts tests/ui/characterLibraryProductionPlayIntegration.test.ts tests/ui/productionFreshCharacterSkills.test.ts tests/ui/productionFreshCharacterInventory.test.ts tests/ui/productionFreshCharacterSpells.test.ts
       - name: Verify creation ChoiceDefinition convergence
