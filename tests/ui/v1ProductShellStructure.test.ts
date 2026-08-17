@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const app = readFileSync("src/App.tsx", "utf8");
+const contracts = readFileSync("src/app/contracts.ts", "utf8");
+const main = readFileSync("src/main.tsx", "utf8");
+const home = readFileSync("src/V1HomeScreen.tsx", "utf8");
+const content = readFileSync("src/V1ContentScreen.tsx", "utf8");
+const css = readFileSync("src/v1-product-shell.css", "utf8");
+const design = readFileSync(".agents/V1_PRODUCT_EXPERIENCE.md", "utf8");
+
+test("v1 launches into a real Home/title surface", () => {
+  assert.match(contracts, /\| "home"/);
+  assert.match(app, /useState<AppRoute>\("home"\)/);
+  assert.match(app, /<V1HomeScreen/);
+  assert.match(home, />SimpleVTT</);
+  assert.match(home, /새 캐릭터 만들기/);
+  assert.match(home, /세션 참가하기|Host \/ Join/);
+  assert.match(home, /애드온 추가/);
+  assert.match(home, /규칙 찾아보기/);
+});
+
+test("v1 global navigation is small and stable", () => {
+  for (const route of ["home", "characters", "session", "content", "catalog", "settings"]) {
+    assert.match(app, new RegExp(`\\[\\"${route}\\"`));
+  }
+  assert.doesNotMatch(app, /const dmNav:[\s\S]*?combatants/);
+  assert.doesNotMatch(app, /const playerNav:[\s\S]*?activity/);
+  assert.match(app, /liveSession[\s\S]*플레이로 돌아가기/);
+  assert.match(css, /\.v1-sidebar/);
+});
+
+test("addons have a first-class file-based product flow", () => {
+  assert.match(contracts, /\| "content"/);
+  assert.match(app, /route === "content" && <V1ContentScreen/);
+  assert.match(content, /type="file"/);
+  assert.match(content, /accept="\.json,application\/json"/);
+  assert.match(content, /previewContentImport/);
+  assert.match(content, /activateContentImport/);
+  assert.match(content, /애드온 만드는 방법/);
+  assert.match(content, /0\.1-draft/);
+  assert.match(content, /MAX_ADDON_BYTES/);
+});
+
+test("the new product shell is imported as production composition", () => {
+  assert.match(app, /import \{ V1HomeScreen \}/);
+  assert.match(app, /import \{ V1ContentScreen \}/);
+  assert.match(main, /v1-product-shell\.css/);
+  assert.match(app, /className="app-shell v1-shell"/);
+  assert.match(app, /className="v1-sidebar"/);
+  assert.match(app, /className="v1-topbar"/);
+});
+
+test("v1 completion contract covers every production entry journey", () => {
+  for (const phrase of ["Fresh-user product walkthrough", "Character/tabletop walkthrough", "Addon/content walkthrough", "Session/connected walkthrough", "Play/DM walkthrough", "Dice and quality gates"]) {
+    assert.match(design, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(design, /Debug Dock/);
+  assert.match(design, /one exact source SHA/);
+});
