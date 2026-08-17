@@ -56,3 +56,6 @@ import "./productionPlayRuntimeAdapter";
 import "./productionSpellRuntimeAdapter";
 import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
+// Record successful open ability checks as canonical ResolutionEvents after all
+// production resolution wrappers have completed, without changing their UI/economy path.
+import "./abilityCheckResolutionEventAdapter";
