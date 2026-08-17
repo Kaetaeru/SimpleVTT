@@ -85,3 +85,50 @@ Product/test boundary is `f9d9a86c5b3b2c09c33863129c87e8b1d2be2175`; final head 
 4. Patch product only if that focused regression exposes a real gap; validate the smallest changed production boundary with UI/Main once.
 5. Then continue remaining P14.7 preparation metadata/rules-content visibility if still open, P14.10 UX/accessibility, Windows two-instance human acceptance, and final exact-head artifact verification.
 6. PR #109 remains draft/unmerged. No merge is authorized.
+
+## 2026-08-17 sequence 1 continuation — P14.7 live DM adjudication and event-native Undo
+Final work/PR head: `9c93ad064f8da6dc72b0d0701cc6002171ec3975`.
+Product/test boundary: `19602c0b0bdd41a3f284698709c96ec21fd9f06b`; final commit only wires the focused regression into Main Playable.
+
+### Test-first progression
+- `dca18fdab2faa5bb726cc2e023c5eb7a2a4f834a` added `tests/ui/productionDmLiveAdjudicationFlow.test.ts` for a non-fixture persisted Character in local production DM play plus an imported runtime Combatant.
+- `9b99b1693d520f1244658b7aa35bc9415b2bb7be` wired it into UI's Phase 14 production batch.
+- UI `31982909260` / job `95252768878` first exposed a test-only stage assumption: the production runtime may complete the atomic attack earlier than the fixed staged sequence expected by the new test. `6c525f0d2132794df749fdfa32228516296918b0` corrected only that test contract.
+- UI `31982959450` / job `95252900407` then showed that a newly instantiated Combatant has no pairwise structured spatial relation, so canonical runtime targeting correctly rejects an attack. This is a separate live placement/spatial-input gap rather than an adjudication gap; no arbitrary product default distance was invented.
+- `ef35ad26d851b19455b5ad346b1fc797c3b6c85d` supplied an explicit 5-foot structured spatial fact in the regression, but initially wrote it to a snapshot clone. UI `31983017304` / job `95253054490` confirmed that test-only mistake.
+- `cfa445c86280522f270c387646e65e4bcfce20bb` applies the explicit structured relation to the authoritative adapter Scene so the regression isolates live-DM adjudication rather than map/placement behavior.
+- UI `31983078395` / job `95253218046` then exposed the real product gap: canonical attack and DM damage correction both committed, but event-native Undo left Combatant HP at `10` instead of restoring `20`. The correction had directly mutated HP outside the runtime resolution event history, so the original attack event saw state drift and refused to reverse.
+
+### Product repair
+- `b21e21ac3ec1cf52923cfdbdd2cb97e97477b3aa` added `src/app/dmAdjudicationResolutionEventAdapter.ts`.
+- For post-commit `damage-correction` / `healing-correction` with a matching runtime resolution history, it preserves the existing adjudication/UI Activity behavior and appends a canonical `dm-correction` ResolutionEvent to the same resolution history.
+- The correction event carries explicit HP before/after and provenance. Combatant HP is session-runtime/session write-back; Character HP is character-durable/character write-back.
+- Existing event-native Undo therefore validates and reverses the correction first, then the original resolution in reverse event order. No snapshot fallback, parallel DM protocol, or second event history was introduced.
+- `19602c0b0bdd41a3f284698709c96ec21fd9f06b` installs the adapter in canonical `offlineRuntimeAdapters` immediately after the real runtime attack adapter.
+- `9c93ad064f8da6dc72b0d0701cc6002171ec3975` adds `Verify Phase 14 live DM adjudication and Undo` to Main Playable.
+
+### Exact validation
+- UI `31983195850`, frontend job `95253536996` at product/test boundary `19602c0b0bdd41a3f284698709c96ec21fd9f06b`: **completed success**. The prepared/live-DM Phase14 production batch, existing production regressions, Phase09 mechanics, TypeScript and production build all passed.
+- Main Playable `31983292944`, playable-contract job `95253811047` at final head `9c93ad064f8da6dc72b0d0701cc6002171ec3975`: **completed success**. Full UI/rules/TypeScript/build, Phase11, Phase12, Phase13, prepared Combatant, and the new live-DM adjudication/Undo step all passed.
+- The automatically started Windows job is not the required human two-instance acceptance and is not used to close this slice.
+
+### Proven P14.7 live-DM boundary
+- Local production DM play does not require reference Aelar/Mira; a non-fixture saved Character is the live player actor.
+- DM can safely select the real player actor and an instantiated non-fixture Combatant.
+- With an explicit authoritative spatial relation supplied, the real Character's canonical runtime attack resolves against the live Combatant and projects Activity.
+- DM post-commit damage correction changes the live Combatant, marks the Resolution adjudicated, and creates correction Activity with the supplied reason/ruling.
+- Event-native Undo now reverses both the DM correction and the original canonical attack back to the exact pre-resolution HP, then records the Resolution Undo Activity.
+- The fix extends the existing canonical runtime ResolutionEvent history rather than bypassing it.
+
+### Explicit remaining gap discovered but not patched in this slice
+- A newly instantiated Combatant does not automatically have a pairwise structured spatial relation to the live Character. Canonical runtime targeting therefore rejects an attack until an authoritative relation is supplied.
+- The regression intentionally supplies a test-only structured 5-foot relation to isolate adjudication. It does **not** establish an arbitrary product distance default and does not add tactical map/grid/path/LOS scope.
+- This gap directly blocks a no-debug live walkthrough in which the instantiated Combatant actually attacks a real Character, so it is the next focused P14.7 boundary.
+
+## Next Exact Action after live-DM adjudication completion
+1. Do not rerun the live-DM adjudication/Undo regression, prepared-Combatant flow, remote Inventory/Fire Bolt/Arcana, local P14.6 spell, or unchanged lifecycle gates unless their relevant source boundary changes.
+2. Continue P14.7 test-first on **live Combatant action placement/targeting without debug setup**. First inspect whether an existing production theater-of-mind distance/spatial-relation input can author the required pairwise relation. If it exists, prove an instantiated non-fixture Combatant can use its actual runtime action against the real live Character through that visible/production path. If no such production path exists, add only the smallest explicit theater-of-mind relation input required for legal targeting; do not invent silent default distances and do not expand into tactical map/grid/path/LOS scope.
+3. In that focused regression also verify the Combatant action uses its imported definition/runtime facts, canonical authoritative attack/damage services, Activity, and event-native Undo. Patch product only for gaps the regression actually exposes.
+4. After that, continue remaining unchecked P14.7 preparation metadata/rules-content visibility and broader conditions/typed-defense/reaction/concentration/life-state coverage as directly required, then P14.10 UX/accessibility, Windows two-instance human acceptance, and final exact-head artifact verification.
+5. When a safe full-file-preserving checklist write is available, credit only P14.7/P14.8 statements directly proven by recorded regressions; keep broader wording unchecked.
+6. PR #109 remains draft/unmerged. No merge is authorized.
