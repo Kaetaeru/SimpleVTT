@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { AbilityKey } from "./app/contracts";
 import { projectOfficialSheet, SHEET_ABILITY_LABELS, signed } from "./app/characterSheetV10Projection";
@@ -31,11 +31,8 @@ export function CharacterSheetPlayScreen({onScene,onLevelUp,onEdit}:{onScene():v
   if (!snapshot) return null;
   const c=snapshot.activeCharacter;
   const view=projectOfficialSheet(c);
-  const skillAbility=useMemo(()=>{
-    const map=new Map<string,AbilityKey>();
-    for (const ability of ABILITIES) for (const skill of view.skillsByAbility[ability]) map.set(skill,ability);
-    return map;
-  },[view]);
+  const skillAbility=new Map<string,AbilityKey>();
+  for (const ability of ABILITIES) for (const skill of view.skillsByAbility[ability]) skillAbility.set(skill,ability);
 
   const publish=(next:LocalRoll)=>{ setRoll(next); setHistory((current)=>[next,...current].slice(0,8)); };
   const d20=(label:string,modifier:number)=>{
