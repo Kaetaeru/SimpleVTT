@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
+import { CharacterSheetPlayScreen } from "./CharacterSheetPlayScreen";
+import { ProductionPlayScreen } from "./ProductionPlayScreen";
 import type {
   AbilityKey,
   AbilityMethod,
@@ -100,10 +102,10 @@ export function App() {
         <main className="content">
           {snapshot.edgeState !== "normal" && <EdgeBanner />}
           {snapshot.role === "player" && route === "characters" && <CharacterLibraryScreen onOpen={() => setRoute("character")} onCreate={() => setRoute("create")} />}
-          {snapshot.role === "player" && route === "character" && <CharacterSheetScreen onScene={() => setRoute("scene")} onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
+          {snapshot.role === "player" && route === "character" && <CharacterSheetPlayScreen onScene={() => setRoute("scene")} onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "create" && <CharacterCreateScreen onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}
           {snapshot.role === "player" && route === "levelup" && <LevelUpScreen onDone={() => setRoute("character")} onCancel={() => setRoute("character")} />}
-          {route === "scene" && (productionRole === "player" ? <PlayerSceneScreen /> : <DmSceneScreen />)}
+          {route === "scene" && <ProductionPlayScreen role={productionRole} />}
           {route === "combatants" && productionRole === "dm" && <CombatantsScreen />}
           {route === "catalog" && <CatalogScreen />}
           {route === "activity" && <ActivityScreen />}
