@@ -33,7 +33,7 @@ export function PlaySessionDock() {
   const [tab,setTab]=useState<PlayTab>("actions");
   const [pendingActionId,setPendingActionId]=useState<string|null>(null);
 
-  if (!snapshot) return null;
+  if (!snapshot||snapshot.role!=="player") return null;
   const productionCharacters=productionJoinCharacters(mockAdapter);
   const character=snapshot.activeCharacter;
   const activeProductionCharacter=productionCharacters.some((entry)=>entry.id===character.id);
@@ -42,6 +42,8 @@ export function PlaySessionDock() {
   const actions=activeProductionCharacter ? (scene.actionsByActor[character.id]??[]) : [];
   const pending=actions.find((action)=>action.id===pendingActionId)??null;
   const targets=pending?scene.entities.filter((entity)=>pending.eligibleTargetIds.includes(entity.id)):[];
+  const reconnecting=snapshot.session.role==="client"&&snapshot.connectionState==="reconnecting";
+  const disconnected=snapshot.session.role==="client"&&snapshot.connectionState==="disconnected";
 
   const counts={
     actions:actions.filter((action)=>actionGroup(action)==="actions").length,
@@ -96,6 +98,9 @@ export function PlaySessionDock() {
         <button type="button" onClick={()=>setOpen(false)} aria-label="플레이 도구 닫기">×</button>
       </div>
     </header>
+
+    {reconnecting&&<div className="play-empty-state" role="status" aria-live="polite"><strong>Host와 재연결 중입니다.</strong><span>마지막 승인 상태를 유지하며 연결 복구를 기다립니다.</span></div>}
+    {disconnected&&<div className="play-empty-state" role="status" aria-live="polite"><strong>Host 연결이 끊겼습니다.</strong><span>{snapshot.session.compatibilityMessage||"세션 연결 상태를 확인한 뒤 복구를 기다리세요."}</span></div>}
 
     <section className="play-dock-session-strip">
       <div className="play-character-switcher" aria-label="플레이 캐릭터 선택">
