@@ -3,6 +3,7 @@ import { MockAdapter } from "./mockAdapter";
 import {
   broadcastConnectedWire,
   connectedInternal,
+  connectedManifest,
   publishConnectedSnapshot,
   resetConnectedSessionTransientState,
 } from "./connectedSessionRuntimeAdapter";
@@ -17,6 +18,7 @@ export type ProductionSessionLifecycle = "offline" | "preparing" | "connecting" 
 declare module "./contracts" {
   interface SessionVm {
     lifecycle?: ProductionSessionLifecycle;
+    rulesProfileId?: string;
   }
 }
 
@@ -24,11 +26,15 @@ declare module "./mockAdapter" {
   interface MockAdapter {
     stopSession():Promise<AppSnapshot>;
     setSessionReady(ready:boolean):Promise<AppSnapshot>;
+    setPreparedSessionName(name:string):Promise<AppSnapshot>;
     startPreparedSession(mode:SessionMode):Promise<AppSnapshot>;
   }
 }
 
 const REFERENCE_CHARACTER_IDS=new Set(["char.aelar","char.mira"]);
+const REFERENCE_SESSION_NAME="금요일 세션";
+const DEFAULT_PRODUCTION_SESSION_NAME="새 플레이 세션";
+const REFERENCE_LOCAL_CONTENT_IDS=new Set(["combatant.goblin","subclass.iron-warden"]);
 const lifecycleByAdapter=new WeakMap<MockAdapter,ProductionSessionLifecycle>();
 const hostPeerObserverInstalled=new WeakSet<MockAdapter>();
 
@@ -43,6 +49,20 @@ export function productionJoinCharacters(adapter:MockAdapter) {
 export function activeCharacterCanJoinProductionSession(adapter:MockAdapter) {
   const app=connectedInternal(adapter);
   return productionJoinCharacters(adapter).some((character)=>character.id===app.activeCharacter.id);
+}
+
+function productionSessionContent(adapter:MockAdapter) {
+  const entries=connectedInternal(adapter).catalog
+    .filter((entry)=>entry.scope!=="builtin"&&!REFERENCE_LOCAL_CONTENT_IDS.has(entry.id))
+    .map((entry)=>`${entry.nameKo} · ${entry.source} ${entry.version}`.trim());
+  return [...new Set(entries)];
+}
+
+function refreshHostSessionMetadata(adapter:MockAdapter) {
+  const app=connectedInternal(adapter);
+  const manifest=connectedManifest(adapter);
+  app.session.rulesProfileId=manifest.rulesProfileId;
+  app.session.sessionContent=productionSessionContent(adapter);
 }
 
 function lifecycleFor(adapter:MockAdapter):ProductionSessionLifecycle {
@@ -139,10 +159,14 @@ function ensureHostPeerObserver(adapter:MockAdapter) {
 
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithProductionSessionLifecycle() {
-  const snapshot=await previousGetSnapshot.call(this);
   const lifecycle=lifecycleFor(this);
+  const app=connectedInternal(this);
+  if (app.session.role==="host"&&(lifecycle==="preparing"||lifecycle==="live")) {
+    refreshHostSessionMetadata(this);
+  }
+  const snapshot=await previousGetSnapshot.call(this);
   snapshot.session.lifecycle=lifecycle;
-  connectedInternal(this).session.lifecycle=lifecycle;
+  app.session.lifecycle=lifecycle;
   return snapshot;
 };
 
@@ -161,6 +185,15 @@ MockAdapter.prototype.setSessionReady=async function setProductionSessionReady(r
   }
   await broadcastConnectedWire({type:"ready-intent",sessionId:state.sessionId,ready});
   app.session.compatibilityMessage=ready ? "Ready sent to Host · waiting for authoritative confirmation." : "Ready cancellation sent to Host.";
+  return app.getSnapshot();
+};
+
+MockAdapter.prototype.setPreparedSessionName=async function setProductionPreparedSessionName(name:string) {
+  const app=connectedInternal(this);
+  if (app.session.role!=="host"||lifecycleFor(this)!=="preparing") return app.getSnapshot();
+  const normalized=name.trim();
+  if (!normalized||normalized.length>80) return app.getSnapshot();
+  app.session.name=normalized;
   return app.getSnapshot();
 };
 
@@ -237,6 +270,10 @@ MockAdapter.prototype.hostSession=async function hostProductionSessionWithLifecy
     }
     ensureHostPeerObserver(this);
     setLifecycle(this,"preparing");
+    if (!app.session.name.trim()||app.session.name===REFERENCE_SESSION_NAME) {
+      app.session.name=DEFAULT_PRODUCTION_SESSION_NAME;
+    }
+    refreshHostSessionMetadata(this);
     app.session.compatibility="compatible";
     app.session.compatibilityMessage=`Host listening at ${started.session.address} · preparation lobby open.`;
     return app.getSnapshot();
