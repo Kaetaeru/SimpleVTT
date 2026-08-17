@@ -92,3 +92,48 @@ This closes the focused P14.8 remote-spell authority gap. Remote skill remains o
 
 ## Dispatch recommendation
 `continue`
+
+## 2026-08-17 sequence 1 continuation — completed host-unknown remote skill/check authority
+Preflight for this continuation again read `.chatgpt-rerun/README.md`, `control.json`, `STATE.md`, and `PLAN.md` from `main` in the required order and reconciled live GitHub state before resuming. Previously validated Inventory/Fire Bolt/local spell/lifecycle boundaries were not independently rerun.
+
+Final validated work/PR head: `8f9dcdd083d15be392da1bdefe1e05a9815651ea`.
+PR #109 remains open/draft/unmerged; no merge was performed or authorized.
+
+### Test-first progression and repairs
+- `eb6528f93fdd5d0ac4855f9e823d5c04ae43a8c1` added the host-unknown remote Arcana regression and `912fff4b3525f77b4fe4530b6c174b3db5bcccb7` wired Phase12.
+- Phase12 `31981160990` / job `95248062349` exposed real gap #1: projected Characters did not receive standard Host-derived skill actions such as `action.skill.arcana`.
+- `e82367d588650a586c25b18ab3939555f3b9281a` added standard Character skill derivation; `96ef396105f389e46cecbfead49d8eca67b63b83` mounts those actions only in the ephemeral projected Scene using Character ability/proficiency facts.
+- `f9cd772e7daa94b19e055c3aaf32c51db90be103` exposed real gap #2: production ability checks were not event-native and the connected ledger correctly rejected remote commit.
+- `6f78d392702810fdb1f341db319ef38776908e88`, `7c02affe8b555ae2cc2b74b2b8266d5fa8c3ae38`, and `afe80f1b5eb5902231023fcaf05a2012ebe49e3b` connect successful open ability-check completion to the existing canonical ResolutionEvent history/connected commit registry without adding a new network protocol or changing Freeform economy semantics.
+- `c9d9e3cb3ac26fd668c09bcffb5cecb03980a673` corrected the remaining test-harness-only persistence assertion after Host event-native commit was already proven.
+- `8f9dcdd083d15be392da1bdefe1e05a9815651ea` added the regression to Main Playable's arbitrary SessionProjection gate.
+
+### Exact final validation
+- Phase12 `31981974278`, connected-protocol `95250255600`: **completed success**. Connected authority including remote Arcana, Phase11 offline preservation, and production frontend build all succeeded at exact final head.
+- Main Playable `31981974175`, playable-contract `95250270963`: **completed success**. Full UI/rules/TypeScript/build, Phase11, Phase12, and Phase13 arbitrary Character SessionProjection including remote Arcana all succeeded at exact final head.
+- Windows automation remains separate from required two-instance human release acceptance.
+
+### What is now proven
+- A host-unknown persisted Character is mounted ephemerally with Host-derived standard skill actions; Host permanent Character library is unchanged.
+- Arcana uses the correct projected facts: INT 16 => +3 and proficiency bonus +2 => total modifier +5, deliberately distinct from STR 18 => +4.
+- Host authoritative d20 13 produces total 18 and a canonical `d20` ResolutionEvent/provenance.
+- Freeform preview/commit does not consume Initiative action economy and produces no shared economy state change.
+- Host emits one ordered committed event batch and restores its own local Character resolution context.
+- Client applies the Host-confirmed skill event exactly once into session Activity; duplicate event/request traffic remains idempotent and session-only skill activity does not create a new Character-library persistence generation.
+- Existing connected ActionRequest, Host ledger, ResolutionEvent registry/history, client apply-before-cursor and duplicate handling are reused; no skill-specific connected protocol or second durable source was introduced.
+
+## Current actual state before this coordination completion
+- validated work branch / PR head: `8f9dcdd083d15be392da1bdefe1e05a9815651ea`
+- PR #109 open/draft/unmerged
+- coordination PLAN commit for this continuation: `ea04d619af99547320c584d2ad6699f1410af7b3`
+- STATE is the second coordination write as required
+
+## Remaining work / Next Exact Action after remote skill completion
+1. Do not rerun remote Inventory, remote Fire Bolt, remote Arcana, local P14.6 spell, or unchanged connected lifecycle gates unless their relevant source boundary changes.
+2. At the next safe documentation-only checklist write, credit only P14.8 statements directly proven by the connected projected action/Inventory/Spell/Skill regressions; keep visible UI/accessibility, concentration, broad equipment/attunement and other unproven wording unchecked.
+3. Continue remaining P14.7 DM/live-session gaps after freshly reading the authoritative checklist/state and add focused production tests only for the next uncovered behavior.
+4. Then continue P14.10 UX/accessibility, Windows two-instance human acceptance and final exact-head artifact verification.
+5. PR #109 remains draft/unmerged; no merge is authorized.
+
+## Dispatch recommendation
+`continue`
