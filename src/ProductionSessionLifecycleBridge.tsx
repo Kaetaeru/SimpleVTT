@@ -3,11 +3,14 @@ import type { SessionMode } from "./app/contracts";
 import { useSimpleVtt } from "./app/AppProvider";
 
 export function ProductionSessionLifecycleBridge() {
-  const { snapshot, stopSession, startPreparedSession } = useSimpleVtt();
+  const { snapshot, stopSession, startPreparedSession, instantiateCombatant, removeCombatant } = useSimpleVtt();
   const [mode,setMode]=useState<SessionMode>("freeform");
   if (!snapshot || snapshot.session.role !== "host" || !["preparing","live"].includes(snapshot.session.lifecycle ?? "")) return null;
 
   const players=snapshot.session.participants.filter((participant)=>participant.id!=="host");
+  const preparedCombatants=snapshot.scene.entities.filter((entity)=>
+    entity.kind==="combatant"&&snapshot.combatantDefinitions.some((definition)=>entity.id.startsWith(`${definition.id}.instance-`)),
+  );
   const canStart=snapshot.session.lifecycle==="preparing"
     &&players.length>0
     &&players.every((participant)=>participant.state==="connected"&&participant.ready===true);
@@ -23,6 +26,8 @@ export function ProductionSessionLifecycleBridge() {
         bottom: 18,
         zIndex: 70,
         width: "min(390px, calc(100vw - 36px))",
+        maxHeight:"calc(100vh - 36px)",
+        overflowY:"auto",
         padding: 16,
         borderRadius: 14,
         border: "1px solid rgba(255,255,255,.18)",
@@ -40,11 +45,12 @@ export function ProductionSessionLifecycleBridge() {
       <p style={{ margin: "10px 0 12px" }}>
         {snapshot.session.lifecycle==="live"
           ? `Host 권위로 ${snapshot.sessionMode} 플레이가 시작되었습니다.`
-          : "아래 주소를 공유하고 참가자의 Ready를 확인한 뒤 플레이를 시작하세요."}
+          : "아래 주소를 공유하고 참가자의 Ready와 준비된 Combatant를 확인한 뒤 플레이를 시작하세요."}
       </p>
       <div className="review-rows">
         <div><span>공유 주소</span><strong>{snapshot.session.address || "주소 확인 중"}</strong></div>
         <div><span>Player</span><strong>{players.length}명</strong></div>
+        <div><span>Combatant</span><strong>{preparedCombatants.length}개</strong></div>
         <div><span>호환성</span><strong>{snapshot.session.compatibility}</strong></div>
       </div>
       <div style={{ marginTop: 12 }}>
@@ -57,6 +63,29 @@ export function ProductionSessionLifecycleBridge() {
           </div>
         ))}
       </div>
+      {snapshot.session.lifecycle==="preparing" && (
+        <div style={{ marginTop:12 }}>
+          <strong>Combatant 준비</strong>
+          {snapshot.combatantDefinitions.length===0 && <p style={{ opacity:.72 }}>사용 가능한 Combatant Definition이 없습니다.</p>}
+          <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginTop:6 }}>
+            {snapshot.combatantDefinitions.map((definition)=>(
+              <button key={definition.id} type="button" onClick={()=>void instantiateCombatant(definition.id)}>
+                + {definition.name}
+              </button>
+            ))}
+          </div>
+          {preparedCombatants.length>0 && (
+            <div style={{ marginTop:8 }}>
+              {preparedCombatants.map((combatant)=>(
+                <div key={combatant.id} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:6 }}>
+                  <span>{combatant.name} · AC {combatant.ac} · HP {combatant.hp}/{combatant.maxHp}</span>
+                  <button type="button" onClick={()=>void removeCombatant(combatant.id)}>제거</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {snapshot.session.lifecycle==="preparing" && (
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:12 }}>
           <select aria-label="시작 모드" value={mode} onChange={(event)=>setMode(event.target.value as SessionMode)}>
