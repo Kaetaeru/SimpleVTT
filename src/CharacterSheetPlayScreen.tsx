@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { AbilityKey } from "./app/contracts";
 import { projectOfficialSheet, SHEET_ABILITY_LABELS, signed } from "./app/characterSheetV10Projection";
+import { sheetAbilityModifier, sheetSaveBonus } from "./app/sheetRollValues";
 import { VisualDiceTray } from "./VisualDiceBridge";
 
 type RollMode="normal"|"advantage"|"disadvantage";
@@ -9,7 +10,6 @@ type DieSides=4|6|8|10|12|20;
 type LocalRoll={id:string;label:string;dice:Array<{value:number;sides:DieSides}>;modifier:number;total:number;note?:string};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
 
-function mod(score:number){ return Math.floor((score-10)/2); }
 function randomDie(sides:number){
   const values=new Uint32Array(1); crypto.getRandomValues(values);
   return (values[0]%sides)+1;
@@ -57,7 +57,7 @@ export function CharacterSheetPlayScreen({onScene,onLevelUp,onEdit}:{onScene():v
     </header>
 
     <div className="sheet-play-statusbar">
-      <div><span>AC</span><strong>{c.ac}</strong></div><div><span>HP</span><strong>{c.hp}/{c.maxHp}</strong>{c.tempHp>0&&<small>+{c.tempHp} 임시</small>}</div><div><span>이동</span><strong>{c.speed} ft</strong></div><div><span>우선권</span><strong>{signed(mod(c.abilities.dex))}</strong></div><div><span>숙련</span><strong>+{c.proficiencyBonus}</strong></div><div><span>수동 지각</span><strong>{view.passivePerception}</strong></div>
+      <div><span>AC</span><strong>{c.ac}</strong></div><div><span>HP</span><strong>{c.hp}/{c.maxHp}</strong>{c.tempHp>0&&<small>+{c.tempHp} 임시</small>}</div><div><span>이동</span><strong>{c.speed} ft</strong></div><div><span>우선권</span><strong>{signed(sheetAbilityModifier(c,"dex"))}</strong></div><div><span>숙련</span><strong>+{c.proficiencyBonus}</strong></div><div><span>수동 지각</span><strong>{view.passivePerception}</strong></div>
       <div className="sheet-roll-mode" role="group" aria-label="d20 굴림 방식"><button className={mode==="advantage"?"active":""} onClick={()=>setMode("advantage")}>유리</button><button className={mode==="normal"?"active":""} onClick={()=>setMode("normal")}>보통</button><button className={mode==="disadvantage"?"active":""} onClick={()=>setMode("disadvantage")}>불리</button></div>
     </div>
 
@@ -66,7 +66,7 @@ export function CharacterSheetPlayScreen({onScene,onLevelUp,onEdit}:{onScene():v
     <main className="sheet-play-layout">
       <section className="sheet-play-abilities" aria-label="능력치 내성 기술">
         {ABILITIES.map((ability)=>{
-          const abilityMod=mod(c.abilities[ability]); const saveProf=view.saveProficiencies.has(ability); const save=abilityMod+(saveProf?c.proficiencyBonus:0);
+          const abilityMod=sheetAbilityModifier(c,ability); const saveProf=view.saveProficiencies.has(ability); const save=sheetSaveBonus(c,view,ability);
           return <article className="sheet-play-ability" key={ability}><header><button onClick={()=>d20(`${SHEET_ABILITY_LABELS[ability]} 판정`,abilityMod)}><span>{SHEET_ABILITY_LABELS[ability]}</span><strong>{signed(abilityMod)}</strong><b>{c.abilities[ability]}</b><small>능력 판정</small></button></header><button className="sheet-play-line save" onClick={()=>d20(`${SHEET_ABILITY_LABELS[ability]} 내성 굴림`,save)}><span>{saveProf?"●":"○"} 내성 굴림</span><strong>{signed(save)}</strong></button>{view.skillsByAbility[ability].map((skill)=><button className="sheet-play-line" key={skill} onClick={()=>d20(skill,view.skillBonus(skill,skillAbility.get(skill)??ability))}><span>{view.skillExpertise(skill)?"◆":view.skillProficient(skill)?"●":"○"} {skill}</span><strong>{signed(view.skillBonus(skill,skillAbility.get(skill)??ability))}</strong></button>)}</article>;
         })}
       </section>
