@@ -16,8 +16,8 @@ function slice(start:string,end:string) {
 
 test("global shell follows connected session authority and keeps Session navigation consistent",()=>{
   const shell=slice("export function App()","function topTitle");
-  assert.match(shell,/snapshot\.session\.role\s*===\s*"host"\s*\?\s*"dm"/);
-  assert.match(shell,/snapshot\.session\.role\s*===\s*"client"\s*\?\s*"player"/);
+  assert.match(shell,/snapshot\?\.session\.role\s*===\s*"host"\s*\?\s*"dm"/);
+  assert.match(shell,/snapshot\?\.session\.role\s*===\s*"client"\s*\?\s*"player"/);
   assert.doesNotMatch(shell,/\["session",\s*"연결"/);
   assert.doesNotMatch(shell,/>플레이어<|>던전 마스터</);
   assert.match(shell,/snapshot\.session\.lifecycle\s*===\s*"live"/);
