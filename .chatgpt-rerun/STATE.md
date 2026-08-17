@@ -92,3 +92,60 @@ Additional P14.8 remote action/Inventory/Spell/Skill credit and the newly proven
 
 ## Dispatch recommendation
 `continue`
+
+## 2026-08-17 sequence 1 continuation — completed P14.7 live DM adjudication + event-native Undo
+This continuation again began by reading `.chatgpt-rerun/README.md`, `control.json`, `STATE.md`, and `PLAN.md` from `main` in the required order after loading the GitHub skill, then reconciling live refs/PR before work. Previously validated remote actions, prepared-Combatant flow and unchanged lifecycle gates were not independently rerun.
+
+Final validated work/PR head: `9c93ad064f8da6dc72b0d0701cc6002171ec3975`.
+Product/test boundary: `19602c0b0bdd41a3f284698709c96ec21fd9f06b`; the final head changes only the Main Playable workflow.
+
+### Focused test-first progression
+- `dca18fdab2faa5bb726cc2e023c5eb7a2a4f834a`: added `productionDmLiveAdjudicationFlow.test.ts` for local production DM with a non-fixture saved Character and imported non-fixture Combatant.
+- `9b99b1693d520f1244658b7aa35bc9415b2bb7be`: wired the regression into the canonical UI Phase14 production batch.
+- UI `31982909260` / `95252768878` first exposed only a test-stage assumption; `6c525f0d2132794df749fdfa32228516296918b0` aligned the regression with the actual production atomic-attack stage contract.
+- UI `31982959450` / `95252900407` exposed a separate targeting prerequisite: a fresh instantiated Combatant has no pairwise structured spatial relation. No arbitrary product default was added because this slice was scoped to adjudication/Undo.
+- `ef35ad26d851b19455b5ad346b1fc797c3b6c85d` attempted to isolate that prerequisite with an explicit 5-foot test relation but wrote it to a snapshot clone; UI `31983017304` / `95253054490` identified that test-only mistake.
+- `cfa445c86280522f270c387646e65e4bcfce20bb` installs the explicit relation on the authoritative adapter Scene. UI `31983078395` / `95253218046` then reached the actual product defect: attack and DM correction committed, but Undo left HP `10` instead of restoring `20`.
+
+### Real product gap and repair
+The real defect was event-history drift. The canonical attack was event-native, but post-commit DM HP correction directly mutated the Scene outside that runtime resolution history. Event-native Undo therefore encountered current HP that no longer matched the attack event's `after` state and correctly refused to reverse it.
+
+- `b21e21ac3ec1cf52923cfdbdd2cb97e97477b3aa` added `dmAdjudicationResolutionEventAdapter.ts`.
+- Post-commit damage/healing corrections now append a canonical `dm-correction` ResolutionEvent to the **same** runtime resolution history when such a history exists.
+- The event records explicit HP before/after and provenance; Combatant HP remains session-runtime/session write-back, Character HP remains character-durable/character write-back.
+- Existing reverse-order event-native Undo now reverses correction first and the original canonical resolution second. Existing correction Activity/UI behavior is preserved.
+- `19602c0b0bdd41a3f284698709c96ec21fd9f06b` installs this adapter in canonical offline production composition directly after the real runtime attack adapter.
+- No snapshot fallback, second event history, special DM network protocol, fixture path or tactical map subsystem was introduced.
+- `9c93ad064f8da6dc72b0d0701cc6002171ec3975` wires the focused live-DM regression into Main Playable.
+
+### Exact validation
+- UI `31983195850`, frontend `95253536996` at `19602c0b0bdd41a3f284698709c96ec21fd9f06b`: **completed success**. The new prepared/live DM batch, all existing UI production regressions, Phase09 mechanics and final TypeScript/build passed.
+- Main Playable `31983292944`, playable-contract `95253811047` at `9c93ad064f8da6dc72b0d0701cc6002171ec3975`: **completed success**. Full build, Phase11, Phase12, Phase13, prepared Combatant and the new `Verify Phase 14 live DM adjudication and Undo` step all passed.
+- The automatic Windows job is not treated as the required human two-instance acceptance.
+
+### Proven behavior
+- Local production DM can run with a non-fixture saved Character and no Aelar/Mira dependency.
+- DM safely selects the real Character and an instantiated non-fixture Combatant.
+- Given an explicit authoritative spatial relation, the real Character resolves its canonical runtime attack against that live Combatant and produces Activity.
+- Post-commit DM damage correction applies to the live Combatant, marks the Resolution adjudicated, and records correction Activity/ruling/reason.
+- Event-native Undo reverses the DM correction plus the original canonical attack back to exact pre-resolution HP and records Undo Activity.
+
+### Separate remaining P14.7 gap discovered
+A newly instantiated Combatant does not yet have a production-authored pairwise structured spatial relation to the live Character. Canonical targeting therefore rejects Combatant/Character attacks until such a relation is supplied. The current focused test uses an explicit **test-only** 5-foot relation solely to isolate adjudication; this is not a product default or completion evidence for no-debug Combatant action.
+
+## Current actual state before this coordination completion
+- validated work branch / PR head: `9c93ad064f8da6dc72b0d0701cc6002171ec3975`
+- PR #109 remains draft/unmerged; no merge performed or authorized
+- PLAN was written first for this continuation as required
+- this STATE write is second
+
+## Remaining work / Next Exact Action after live-DM adjudication
+1. Do not rerun this live-DM adjudication/Undo slice, prepared-Combatant flow, remote Inventory/Fire Bolt/Arcana, local P14.6 spell or unchanged lifecycle gates unless their relevant source boundary changes.
+2. Continue P14.7 test-first on **live Combatant action placement/targeting without debug setup**. Inspect first for an existing production theater-of-mind distance/spatial-relation authoring path. If present, use it to prove an instantiated non-fixture Combatant can execute its actual imported runtime action against the real live Character. If absent, add only the smallest explicit production theater-of-mind relation input needed for legal targeting; never invent silent default distances and do not expand into grid/path/LOS/tactical-map scope.
+3. The focused Combatant-action regression must prove imported action facts, canonical authoritative targeting/attack/damage, Activity and event-native Undo. Patch only gaps it exposes.
+4. Then continue remaining unchecked P14.7 preparation metadata/rules-content visibility and broader conditions/typed-defense/reaction/concentration/life-state coverage, followed by P14.10 UX/accessibility, Windows two-instance human acceptance and final exact-head artifact verification.
+5. Checklist checkbox credit remains deferred until a safe full-file-preserving write is available; credit only directly proven wording.
+6. PR #109 remains draft/unmerged; no merge is authorized.
+
+## Dispatch recommendation
+`continue`
