@@ -4,6 +4,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/productionSessionLifecycleAdapter";
+import "../../src/app/productionCombatantPreparationAdapter";
 import "../../src/app/phase09RealRuntimeAttackAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { connectedInternal, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
