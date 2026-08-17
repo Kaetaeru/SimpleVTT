@@ -74,7 +74,7 @@ test("routine Session workspace prioritizes user actions over implementation dia
   assert.doesNotMatch(session,/Ctrl\+Shift\+D/);
 });
 
-test("starting a production Host clears reference fixture actors from the encounter",async()=>{
+test("starting a production Host clears reference fixture actors and stopping returns to a clean offline shell",async()=>{
   const transport=installFakeDesktopHost();
   try {
     const adapter=new MockAdapter();
@@ -89,6 +89,12 @@ test("starting a production Host clears reference fixture actors from the encoun
       "combatant.training-guardian",
     ]) assert.equal(ids.has(id),false,`${id} must not preload into a production Host encounter`);
     assert.equal(snapshot.scene.entities.length,0,"a fresh production Host encounter should start empty");
+
+    const stopped=await adapter.stopSession();
+    assert.equal(stopped.session.role,"offline");
+    assert.equal(stopped.session.lifecycle,"offline");
+    assert.equal(stopped.role,"player","Host stop must not strand the app in the DM shell");
+    assert.equal(stopped.session.address,"");
   } finally {
     transport.restore();
   }
