@@ -29,11 +29,13 @@ export function ProductionPlayerLobbyBridge() {
   },[]);
 
   const candidates=useMemo(()=>snapshot ? productionJoinCharacters(mockAdapter) : [],[snapshot]);
-  if (!snapshot || !target) return null;
+  if (!snapshot||snapshot.role!=="player"||!target) return null;
   const selected=candidates.find((character)=>character.id===snapshot.activeCharacter.id);
   const lifecycle=snapshot.session.lifecycle;
   const joining=lifecycle==="connecting";
   const joined=lifecycle==="lobby"||lifecycle==="live";
+  const reconnecting=snapshot.session.role==="client"&&snapshot.connectionState==="reconnecting";
+  const disconnected=snapshot.session.role==="client"&&snapshot.connectionState==="disconnected";
   const localParticipant=snapshot.session.participants.find((participant)=>participant.id===`client:${snapshot.activeCharacter.id}`);
   const ready=Boolean(localParticipant?.ready);
   const canReady=lifecycle==="lobby"&&snapshot.connectionState==="connected"&&snapshot.session.compatibility!=="incompatible";
@@ -50,8 +52,10 @@ export function ProductionPlayerLobbyBridge() {
           <span className="eyebrow accent">Player Entry</span>
           <h2>저장 Character로 참가</h2>
         </div>
-        <span className={`status-text ${snapshot.connectionState}`}>{lifecycleLabel(lifecycle)}</span>
+        <span className={`status-text ${snapshot.connectionState}`}>{reconnecting?"재연결 중":lifecycleLabel(lifecycle)}</span>
       </div>
+      {reconnecting&&<p className="production-player-lobby__warning" role="status" aria-live="polite">Host와 재연결 중입니다. 마지막 승인 상태를 유지하며 연결 복구를 기다립니다.</p>}
+      {disconnected&&<p className="production-player-lobby__warning" role="status" aria-live="polite">Host 연결이 끊겼습니다. {snapshot.session.compatibilityMessage||"네트워크 상태를 확인하고 연결 복구를 기다리세요."}</p>}
       <label className="field">
         <span>플레이 Character</span>
         <select value={selected?.id ?? ""} onChange={(event)=>void selectCharacter(event.target.value)} disabled={joining||joined}>
