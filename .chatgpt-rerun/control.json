@@ -2,7 +2,7 @@
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
-  "status": "continue",
+  "status": "needs_user",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-17T10:44:57+09:00"
+  "updated_at": "2026-08-17T10:59:15+09:00"
 }
