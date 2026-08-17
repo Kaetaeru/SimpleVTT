@@ -39,12 +39,13 @@ import "./focused-layout-fix.css";
 import "./character-sheet-v10-viewport.css";
 import "./production-ux-redesign.css";
 
+void PlaySessionDock;
+void CombatSpellHudBridge;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProvider>
       <App />
-      <PlaySessionDock />
-      <CombatSpellHudBridge />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
       <ConcentrationSaveBridge />
