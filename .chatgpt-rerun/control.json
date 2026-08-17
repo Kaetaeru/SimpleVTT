@@ -1,8 +1,8 @@
 {
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
-  "sequence": 1,
+  "sequence": 2,
   "status": "continue",
-  "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-17T17:46:00+09:00"
+  "task_id": "v1-product-experience-overhaul",
+  "updated_at": "2026-08-17T22:58:14+09:00"
 }
