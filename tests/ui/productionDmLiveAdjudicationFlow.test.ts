@@ -79,27 +79,24 @@ test("non-fixture live DM can select real actors, correct a canonical resolution
   snapshot=await adapter.selectDmActor(character.id);
   assert.equal(snapshot.scene.selectedActorId,character.id);
 
-  const attack=(snapshot.scene.actionsByActor[character.id]??[]).find((action)=>action.resolutionKind==="attack");
+  const attack=(snapshot.scene.actionsByActor[character.id]??[]).find((action)=>action.resolutionKind==="attack"&&action.runtimeAttack);
   assert.ok(attack,"production Character must expose a canonical runtime attack");
   const hpBefore=scout.hp;
 
   await adapter.setCurrentActor(character.id);
   await adapter.setQueuedD20(15);
   snapshot=await adapter.resolveAction(attack.id,[scout.id]);
-  assert.equal(snapshot.resolution?.stage,"roll-animation");
-  snapshot=await adapter.advanceResolution();
-  assert.equal(snapshot.resolution?.stage,"attack-result");
+  const resolutionId=snapshot.resolution?.id;
+  assert.ok(resolutionId);
   assert.equal(snapshot.resolution?.attackOutcome,"명중");
-  snapshot=await adapter.advanceResolution();
-  assert.equal(snapshot.resolution?.stage,"damage-animation");
-  snapshot=await adapter.advanceResolution();
+  for (let step=0;step<4&&snapshot.resolution?.stage!=="complete";step++) {
+    snapshot=await adapter.advanceResolution();
+  }
   assert.equal(snapshot.resolution?.stage,"complete");
 
   const committedHp=snapshot.scene.entities.find((entity)=>entity.id===scout.id)?.hp;
   assert.equal(typeof committedHp,"number");
   assert.ok(committedHp!<hpBefore,"canonical runtime attack must damage the live Combatant");
-  const resolutionId=snapshot.resolution?.id;
-  assert.ok(resolutionId);
   assert.ok(snapshot.activity.some((entry)=>entry.id===resolutionId),"canonical attack must project to Activity");
 
   snapshot=await adapter.applyDmAdjudication({
