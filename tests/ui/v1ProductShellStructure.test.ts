@@ -57,6 +57,7 @@ test("the new product shell is imported as production composition", () => {
   assert.match(app, /import \{ V1HomeScreen \}/);
   assert.match(app, /import \{ V1ContentScreen \}/);
   assert.match(main, /v1-product-shell\.css/);
+  assert.match(main, /v1-product-shell-tokens\.css/);
   assert.match(app, /className="app-shell v1-shell"/);
   assert.match(app, /className="v1-sidebar"/);
   assert.match(app, /className="v1-topbar"/);
