@@ -43,8 +43,8 @@ Primary information rules:
 - move provenance/package IDs/event IDs/spatial diagnostics/import detail to progressive disclosure;
 - remove raw role, healthy compatibility internals, RulesProfile/internal IDs, Reference/fixture/adapter/manifest/protocol wording, Definition/Instance jargon, duplicate panels, and routine Debug Dock instructions from the primary production path.
 
-## Completed redesign — exact work head
-Final work/PR head: `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`.
+## Completed redesign — prior exact work head
+Prior redesigned work/PR head: `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`.
 
 ### Session lifecycle and root-cause repair
 - Replaced the visible legacy Session cards plus separate Host-lifecycle/Player-lobby overlays with one state-driven production Session workspace mounted into a dedicated Session route root.
@@ -82,48 +82,46 @@ Final work/PR head: `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`.
 - Initial Session redesign test correctly failed because reference `char.aelar` was re-injected by the existing production snapshot projection layer; the production Host projection boundary was then corrected without suppressing real remote projections or explicit Combatant instances.
 - UI `31991600000` / frontend `95276040404` later showed the Session redesign tests green and failed only a new shell-regression regex that did not recognize the safe optional-chain form `snapshot?.session`; the product behavior was correct and the test contract was corrected.
 
-## Exact validation
+## Prior exact validation
 - UI push `31991827858`, frontend job `95276630845` at exact head `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`: **completed success**.
-  - unified production Session UX contract
-  - non-Character production UX contract
-  - PlaySessionDock/accessibility structure
-  - Host preparation metadata/content
-  - live DM mechanics continuity
-  - existing Phase14 production lifecycle/prepared/live/ownership/inventory/spell batch
-  - creation/progression/spell regressions
-  - Phase09 mechanics
-  - TypeScript and production frontend build
 - Main Playable `31991830233`, playable-contract job `95276638981` at the same exact head: **completed success**.
-  - full production UI/rules/TypeScript build
-  - Phase11 offline playable
-  - Phase12 connected-session authority
-  - Phase13 arbitrary Character SessionProjection
-  - prepared Combatant, live DM adjudication/Undo, live Combatant theater-of-mind, Host metadata, mechanics continuity, P14.10 accessibility
-- Connected authority on the final product-source boundary also passed in Phase12 run `31991736009`, job `95276378850`, including the Phase11 regression and production frontend gate.
-- Exact-head Windows playable job `95276973569` in Main run `31991830233` was still running when this coordination plan was written. Automated Windows success, when available, is a test-build artifact and does not substitute for human acceptance.
+- Connected authority on the final product-source boundary also passed in Phase12 run `31991736009`, job `95276378850`.
 
-## Blocking Next Exact Action — HUMAN acceptance on redesigned head
-Perform the human walkthrough against exact source head `f1adaae4f81ef3dd98840189b9c7c606a9133ba7` (or a later test-first fix head if the walkthrough finds an issue):
+## Human acceptance follow-up — Session tab scrolling defect
+Human validation of the redesigned Windows build found another concrete affected-boundary failure: the Session tab content could not scroll downward when its content exceeded the available viewport.
 
-1. Session UX walkthrough:
+### Root cause
+- The redesigned Session route still relied on the generic `.screen { height:100%; overflow:auto }` contract inside `.content`, while `.content` itself clips overflow.
+- In the nested grid/Tauri WebView layout, that percentage-height contract did not provide a sufficiently robust, definite scroll viewport for the portal-mounted Session workspace.
+
+### Test-first repair
+- `c998cbe9181de242c16f5ed2f85f3692c7ece362` added a Session-specific viewport scrolling regression to `tests/ui/productionSessionWorkspaceRedesign.test.ts`.
+- The regression requires `.production-session-screen` to own a definite `position:absolute; inset:0` viewport with `height:auto`, `min-height:0`, `overflow-y:auto`, contained overscroll, and stable scrollbar gutter; it also requires the Session mount to retain full-height, start-aligned content.
+- `706d71ae8675f8b285e582cc48b992141a48d9b9` implements that contract in `production-session-workspace.css` without changing Session state, connected authority, mechanics, Character UI, or data ownership.
+
+### Exact validation of scrolling repair
+- UI PR run `31992965044`, frontend job `95279616079`, exact head `706d71ae8675f8b285e582cc48b992141a48d9b9`: **completed success**.
+- The changed Session UX/scroll contract, non-Character UX contract, P14.10 accessibility structure, Phase14 lifecycle/ownership/inventory/spell batch, creation/progression/spell regressions, Phase09 mechanics, TypeScript, and production frontend build all passed.
+
+## Blocking Next Exact Action — HUMAN acceptance on latest fix head
+Perform the human walkthrough against exact source head `706d71ae8675f8b285e582cc48b992141a48d9b9` unless a later human-found issue creates another test-first fix head:
+
+1. Session scrolling regression check first:
+   - open Session at a viewport where preparation content exceeds the available height;
+   - verify mouse wheel/trackpad/PageDown can reach the bottom of the Session workspace;
+   - verify Host preparation controls, Encounter list, Start/Stop controls remain reachable;
+   - verify scrolling still works after Host start/stop state transitions.
+2. Continue Session UX walkthrough:
    - offline page shows both new-Host and Join paths;
    - enter a session name, open Host, verify address/name/participants/Ready/empty encounter;
    - deliberately add/remove a Combatant;
    - stop Host and confirm the same offline page immediately restores both Host and Join, including Host-address input;
    - verify bind/join/reconnect failures have a visible recovery action.
-2. Non-Character viewport/keyboard walkthrough:
-   - shell/nav, Player/DM play, Combatants, Rules, Activity, Settings;
-   - common desktop viewport and narrow desktop resizing;
-   - keyboard focus, selected/disabled states, internal scrolling, progressive disclosure, reduced-motion result access;
-   - verify routine flows do not require Debug Dock.
-3. Windows two-instance connected walkthrough:
-   - actual Host bind -> named session/empty preparation -> persisted Host-unknown Client Character join -> Ready -> Freeform/Initiative start;
-   - visible action -> Host-authoritative Resolution -> convergence;
-   - disconnect/reconnect -> no duplicate/stale projection;
-   - explicit end -> clean restart -> owning Client durable state remains correct.
-4. Record exact source SHA plus concrete PASS/FAIL notes/screenshots. Any failure resumes test-first only at the affected boundary.
-5. After human acceptance passes, perform final exact-head Windows artifact digest/contents verification and release decision.
-6. PR #109 remains draft/unmerged. No merge is authorized.
+3. Non-Character viewport/keyboard walkthrough: shell/nav, Player/DM play, Combatants, Rules, Activity, Settings; keyboard/focus/selected/disabled/scroll/detail/reduced-motion behavior.
+4. Windows two-instance connected walkthrough: actual Host bind -> named session/empty preparation -> persisted Host-unknown Client Character join -> Ready -> Freeform/Initiative start -> authoritative action convergence -> reconnect -> end/restart -> owning Client durable state.
+5. Record exact source SHA plus concrete PASS/FAIL notes/screenshots. Any failure resumes test-first only at the affected boundary.
+6. After human acceptance passes, perform final exact-head Windows artifact digest/contents verification and release decision.
+7. PR #109 remains draft/unmerged. No merge is authorized.
 
 ## Dispatch recommendation
 `needs_user`
