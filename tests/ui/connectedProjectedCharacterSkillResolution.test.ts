@@ -124,13 +124,6 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
   const reconstruction=reconstructCharacterSessionProjectionV1(projection,hostCatalog);
   assert.equal(reconstruction.status,"accepted",reconstruction.status==="rejected"?reconstruction.error:undefined);
   if (reconstruction.status!=="accepted") throw new Error(reconstruction.error);
-  const arcana=reconstruction.actions.find((action)=>action.id===ARCANA_ACTION);
-  assert.ok(arcana,"canonical projection reconstruction must expose Arcana");
-  assert.equal(arcana.kind,"ability-check");
-  assert.equal(arcana.checkBonus,5,"Arcana must use INT +3 plus level-1 proficiency +2, not STR +4");
-  const arcanaDetail=arcana.details.find((detail)=>detail.label==="판정")?.value??"";
-  assert.ok(arcanaDetail.includes("지능"));
-  assert.ok(arcanaDetail.includes("숙련"));
   const freeformEconomy=structuredClone(reconstruction.economy);
 
   const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);
@@ -140,6 +133,13 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
   assert.deepEqual(mountedBefore!.sheet.skills,["비전"]);
   assert.equal(mountedBefore!.sheet.abilities.int,16);
   assert.equal(mountedBefore!.sheet.abilities.str,18);
+  const mountedSnapshot=await host.getSnapshot();
+  const arcana=(mountedSnapshot.scene.actionsByActor[remote.id]??[]).find((action)=>action.id===ARCANA_ACTION);
+  assert.ok(arcana,"Host mount must derive canonical Arcana from the projected Character sheet");
+  assert.equal(arcana.resolutionKind,"ability-check");
+  assert.equal(arcana.checkBonus,5,"Arcana must use INT +3 plus level-1 proficiency +2, not STR +4");
+  assert.ok((arcana.details.find((detail)=>detail.label==="판정")?.value??"").includes("지능"));
+  assert.equal(arcana.details.find((detail)=>detail.label==="숙련")?.value,"+2");
 
   await host.setQueuedD20(13);
   const state=connectedStateFor(host);
@@ -175,7 +175,7 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.equal(preview.resolution?.rollKind,"check");
     assert.deepEqual(preview.resolution?.authoritativeDice,[13],"Host queued d20 must be authoritative");
     assert.equal(preview.resolution?.rollTotal,18,"Host must apply canonical Arcana INT + proficiency bonus");
-    assert.ok(preview.resolution?.provenance.some((entry)=>entry.includes(`${ARCANA_ACTION}:check-bonus:5`)));
+    assert.ok(preview.resolution?.provenance.some((entry)=>entry.includes(`action:${ARCANA_ACTION}:check-bonus`)));
     assert.deepEqual(preview.scene.economyByActor[remote.id],freeformEconomy,"Freeform skill preview must not spend Initiative action economy");
 
     await host.advanceResolution();
@@ -194,7 +194,7 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.equal(hostEvent.actorId,remote.id);
     assert.equal(hostEvent.payload.kind,"resolution");
     if (hostEvent.payload.kind!=="resolution") throw new Error("expected Host resolution event");
-    assert.ok(hostEvent.payload.provenance.some((entry)=>entry.includes(`${ARCANA_ACTION}:check-bonus:5`)),"Host event provenance must preserve the canonical Arcana bonus authority");
+    assert.ok(hostEvent.payload.provenance.some((entry)=>entry.includes(`action:${ARCANA_ACTION}:check-bonus`)),"Host event provenance must preserve the canonical Arcana bonus authority");
     assert.equal(hostEvent.payload.stateChanges.length,0,"Freeform skill commit must not spend shared action economy");
     const d20Event=hostEvent.payload.resolutionEvents.find((event)=>event.kind==="d20");
     assert.ok(d20Event,"committed skill resolution must include the canonical d20 ResolutionEvent");
