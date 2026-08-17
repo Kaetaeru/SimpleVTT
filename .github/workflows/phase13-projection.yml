@@ -66,6 +66,8 @@ jobs:
         run: npx tsx --test tests/ui/productionDmLiveCombatantAction.test.ts
       - name: Verify Phase 14 Host preparation metadata and active content
         run: npx tsx --test tests/ui/productionSessionPreparationMetadata.test.ts
+      - name: Verify Phase 14 live DM mechanics continuity
+        run: npx tsx --test tests/ui/productionDmLiveMechanicsContinuity.test.ts
 
   windows-playable:
     runs-on: windows-latest
