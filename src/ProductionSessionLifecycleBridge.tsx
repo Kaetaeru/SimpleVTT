@@ -1,10 +1,19 @@
 import { useState } from "react";
 import type { SessionMode } from "./app/contracts";
+import type { RuntimeCover } from "./app/spatialRuntimeContracts";
+import "./app/theaterOfMindSpatialAdapter";
+import { mockAdapter } from "./app/mockAdapter";
 import { useSimpleVtt } from "./app/AppProvider";
 
 export function ProductionSessionLifecycleBridge() {
-  const { snapshot, stopSession, startPreparedSession, instantiateCombatant, removeCombatant } = useSimpleVtt();
+  const { snapshot, refresh, stopSession, startPreparedSession, instantiateCombatant, removeCombatant } = useSimpleVtt();
   const [mode,setMode]=useState<SessionMode>("freeform");
+  const [relationSourceId,setRelationSourceId]=useState("");
+  const [relationTargetId,setRelationTargetId]=useState("");
+  const [distanceFeet,setDistanceFeet]=useState("5");
+  const [visible,setVisible]=useState(true);
+  const [cover,setCover]=useState<RuntimeCover>("none");
+  const [targetCanSeeAttacker,setTargetCanSeeAttacker]=useState(true);
   if (!snapshot || snapshot.session.role !== "host" || !["preparing","live"].includes(snapshot.session.lifecycle ?? "")) return null;
 
   const players=snapshot.session.participants.filter((participant)=>participant.id!=="host");
@@ -14,6 +23,26 @@ export function ProductionSessionLifecycleBridge() {
   const canStart=snapshot.session.lifecycle==="preparing"
     &&players.length>0
     &&players.every((participant)=>participant.state==="connected"&&participant.ready===true);
+  const parsedDistanceFeet=Number(distanceFeet);
+  const canAuthorRelation=snapshot.session.lifecycle==="live"
+    &&Boolean(relationSourceId)
+    &&Boolean(relationTargetId)
+    &&relationSourceId!==relationTargetId
+    &&Number.isFinite(parsedDistanceFeet)
+    &&parsedDistanceFeet>=0;
+
+  const authorSpatialRelation=async()=>{
+    if (!canAuthorRelation) return;
+    await mockAdapter.setTheaterOfMindSpatialRelation({
+      sourceId:relationSourceId,
+      targetId:relationTargetId,
+      distanceFeet:parsedDistanceFeet,
+      visible,
+      cover,
+      targetCanSeeAttacker,
+    });
+    await refresh();
+  };
 
   return (
     <aside
@@ -84,6 +113,34 @@ export function ProductionSessionLifecycleBridge() {
               ))}
             </div>
           )}
+        </div>
+      )}
+      {snapshot.session.lifecycle==="live" && (
+        <div style={{ marginTop:12 }}>
+          <strong>거리 관계</strong>
+          <p style={{ margin:"6px 0",opacity:.72 }}>그리드 없이 실제 Actor 쌍의 거리·가시성·엄폐를 명시합니다.</p>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6 }}>
+            <select aria-label="거리 기준 Actor" value={relationSourceId} onChange={(event)=>setRelationSourceId(event.target.value)}>
+              <option value="">기준 Actor</option>
+              {snapshot.scene.entities.map((entity)=><option key={entity.id} value={entity.id}>{entity.name}</option>)}
+            </select>
+            <select aria-label="거리 대상 Actor" value={relationTargetId} onChange={(event)=>setRelationTargetId(event.target.value)}>
+              <option value="">대상 Actor</option>
+              {snapshot.scene.entities.map((entity)=><option key={entity.id} value={entity.id}>{entity.name}</option>)}
+            </select>
+            <input aria-label="거리(피트)" type="number" min={0} step={1} value={distanceFeet} onChange={(event)=>setDistanceFeet(event.target.value)} />
+            <select aria-label="엄폐" value={cover} onChange={(event)=>setCover(event.target.value as RuntimeCover)}>
+              <option value="none">엄폐 없음</option>
+              <option value="half">절반 엄폐</option>
+              <option value="three-quarters">3/4 엄폐</option>
+              <option value="total">완전 엄폐</option>
+            </select>
+          </div>
+          <div style={{ display:"flex",flexWrap:"wrap",gap:10,marginTop:6 }}>
+            <label><input type="checkbox" checked={visible} onChange={(event)=>setVisible(event.target.checked)} /> visible · 공격자가 대상을 봄</label>
+            <label><input type="checkbox" checked={targetCanSeeAttacker} onChange={(event)=>setTargetCanSeeAttacker(event.target.checked)} /> targetCanSeeAttacker · 대상이 공격자를 봄</label>
+          </div>
+          <button type="button" disabled={!canAuthorRelation} onClick={()=>void authorSpatialRelation()} style={{ marginTop:8 }}>거리 관계 적용</button>
         </div>
       )}
       {snapshot.session.lifecycle==="preparing" && (
