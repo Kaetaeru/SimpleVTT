@@ -5,6 +5,7 @@ import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/productionSessionLifecycleAdapter";
 import "../../src/app/productionSessionEmptyEncounterAdapter";
+import "../../src/app/productionSessionUiStateAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 
