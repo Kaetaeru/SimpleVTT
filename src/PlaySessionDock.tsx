@@ -33,7 +33,7 @@ export function PlaySessionDock() {
   const [tab,setTab]=useState<PlayTab>("actions");
   const [pendingActionId,setPendingActionId]=useState<string|null>(null);
 
-  if (!snapshot||snapshot.role!=="player") return null;
+  if (!snapshot||snapshot.role!=="player"||snapshot.session.role==="host") return null;
   const productionCharacters=productionJoinCharacters(mockAdapter);
   const character=snapshot.activeCharacter;
   const activeProductionCharacter=productionCharacters.some((entry)=>entry.id===character.id);
