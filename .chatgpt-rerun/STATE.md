@@ -10,79 +10,99 @@
 - issue: #108
 - PR #109: open/draft/unmerged; no merge authorized
 
-## Preflight reconciliation for this continuation
-The GitHub skill was loaded, then the mandatory coordination files were read from `main` in exact order:
+## Reconciliation for this continuation
+Mandatory coordination files were read from `main` in the required order before work:
 1. `.chatgpt-rerun/README.md`
 2. `.chatgpt-rerun/control.json`
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Coordinates matched run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `1`, task `phase14-production-play-session-ux`, status `continue`.
+Start state:
+- canonical `main`: `e437736f3f63d2afaf617572b82b268ba0e80970`
+- prior accepted work head: `a750ae844c8a0ce831e4c873574d074616eab3c0`
+- control: `needs_user`
+- PR #109 open/draft/unmerged
 
-Actual GitHub state at continuation start:
-- `main`: `84eaa3882be97c3d9beaa3f82d92724677988160`
-- work/PR head: `06d75afc077e6d0d4982a31710015825e4e575b2`
-- PR #109 open/draft/unmerged; mergeable observed true
+The user's human acceptance feedback supplied the missing failure evidence required to resume: Host-stop recovery could lose the Join/IP form, session naming was inadequate, reference Goblin/Wolf content appeared as production encounter content, and the surrounding non-Character UI/UX required restructuring.
 
-Previously validated remote Inventory/Fire Bolt/Arcana, fresh Character flows, prepared Combatant, live-DM adjudication/Undo, theater-of-mind spatial action, Host preparation metadata, non-fixture live mechanics continuity, mounted Play-workspace viewport/focus structure, and unchanged connected lifecycle gates were not manually repeated.
+## Information audit completed before implementation
+Created and expanded `.agents/PHASE14_PRODUCTION_UX_REDESIGN.md` before the redesign. It freezes existing Character Library/Sheet/Create-Edit/Level-Up UX and defines primary, conditional, advanced, and removable information for Session, shell/nav, Play, Combatants, Rules, Activity, and Settings.
 
-## Completed this continuation — P14.10 role scoping and recovery UX
-Final validated work/PR head: `a750ae844c8a0ce831e4c873574d074616eab3c0`.
-Final product boundary: `6e424ce156634956af4d9c90a9a5d4bc3f4755f6`.
+## Final work/PR head
+`f1adaae4f81ef3dd98840189b9c7c606a9133ba7`
 
-### Investigation
-- The newly mounted `PlaySessionDock` could render its player launcher while a Host session was active because its only gate was snapshot hydration.
-- `ProductionPlayerLobbyBridge` also lacked explicit non-host scoping and visible reconnect/disconnect recovery guidance.
-- Host bind failure is already represented authoritatively by the production lifecycle adapter as an offline/incompatible snapshot with `compatibilityMessage = "Host start failed: ..."`; however, the Host bridge previously disappeared in that state, leaving the failure without a dedicated production recovery surface.
-- Existing `production-player-lobby.css` already hides the legacy generic Join-by-IP card and reference-flow copy, so the large historical `App.tsx` shell did not need to be rewritten.
-- Base Host authority is `snapshot.session.role === "host"`; top-level `snapshot.role === "dm"` is not an invariant of `hostSession()`. The patch preserves this existing model.
+## Completed product boundary
+### Session
+- One state-driven production Session workspace now owns offline Host/Join entry, Host preparation, Client lobby/live, Host live, reconnect/recovery, stop/leave.
+- Dedicated Session route mount replaces the visible duplicate legacy cards/Host overlay/Player lobby composition.
+- Host stop returns to the normal offline/player shell, so the Join Host-address field remains available.
+- Host setup accepts a session name; connected `hello-ack` carries the Host-selected name to the Client.
+- Host preparation exposes address, participants/Ready, explicit Encounter preparation, mode, Start, and Stop.
 
-### Test-first progression
-- `503ebc3b51846783b74a5cafa2796c46af1f7b1b` expanded `productionPlayWorkspaceAccessibility.test.ts` to require player/non-host surface scoping, explicit reconnect/disconnect guidance, visible Host bind-failure recovery, loading guidance, legacy Join-card suppression, and no `Ctrl+Shift+D` dependency.
-- UI `31986077333`, frontend `95261238226` failed only the new fourth test at the first missing Play-dock role assertion; all three pre-existing P14.10 structure assertions passed.
-- `01e6450e0ff023aa2c1aa3ce5c394101a4e094f9` corrected the new test's Host role assumption after inspecting the actual Host authority contract.
+### Encounter
+- Fresh production Hosts start empty.
+- Reference `char.aelar`, `char.mira`, Goblin A/B, Wolf, Training Guardian and Host-local automatic Character projection are suppressed on Host production snapshots.
+- Real remote ephemeral Character projections and explicit DM Combatant instances remain on the existing authority/runtime path.
+- DM Play has a safe empty-Encounter state.
 
-### Product repair
-- `426c498523b0d29330900f21ce877128a62c63a5` scopes `PlaySessionDock` to top-level player/non-host surfaces and adds explicit client reconnect/disconnect status guidance.
-- `9d394448347bc82c76127498e8869c1d7aeabec2` applies the same player/non-host scoping to `ProductionPlayerLobbyBridge` and adds `aria-live` reconnect/disconnect guidance.
-- `6e424ce156634956af4d9c90a9a5d4bc3f4755f6` adds a visible Host-start-failure recovery card using the existing authoritative compatibility message, and normal Host status now reflects connected/reconnecting/disconnected state.
-- No connected protocol, mechanics runtime, storage ownership, or source-of-truth changed.
+### Non-Character UX
+- Shell/nav: consistent Session destination; live/connection status only when relevant.
+- Player/DM Play: actor/action/target/result hierarchy, fewer duplicate entity panels, empty-state safety.
+- Combatants: searchable library + current Encounter, explicit add/remove, technical/source detail secondary.
+- Rules: search/category-first; metadata under technical disclosure.
+- Activity: readable outcome-first timeline; technical details collapsed.
+- Settings: appearance/accent/accessibility/motion only in the routine surface.
+- Added responsive/focus/reduced-motion styling for redesigned non-Character surfaces.
+- Existing Character Library/Sheet/Create/Edit/Level-Up UI/UX remains outside this redesign.
 
-### Test-contract correction
-- Exact-head UI initially failed the older `playSessionDockStructure.test.ts` because it searched only the literal guard `if (!snapshot) return null;` and therefore could not recognize the new combined hydration/role guard.
-- CI logs showed no Hook-order defect: the same three `useState` hooks remain before the first guard and no hooks occur after it.
-- `a750ae844c8a0ce831e4c873574d074616eab3c0` updates only that structure test to locate the first `if (!snapshot...` guard while retaining the Hook-order invariants.
+## Failure-driven evidence
+- Initial empty-Encounter test exposed that the existing production snapshot projection layer re-injected `char.aelar`; the Host projection boundary was corrected while preserving real remote projections and explicit Combatant instances.
+- UI `31991600000` / `95276040404` subsequently passed the unified Session tests and four of five new non-Character UX tests; the only failure was a static test pattern that expected `snapshot.session` and did not accept the safe `snapshot?.session` form. The test contract was corrected, not the product.
 
-### Exact validation
-- UI push `31986324263`, frontend job `95261871414` at `a750ae844c8a0ce831e4c873574d074616eab3c0`: **completed success**. Named-rule, PlaySessionDock hydration/tab structure, new P14.10 role/recovery accessibility, Host preparation metadata, live mechanics continuity, existing Phase14 production batch, creation/progression/spell regressions, Phase09 mechanics, TypeScript and production build all green.
-- Main Playable `31986326671`, playable-contract job `95261895056` at the same exact head: **completed success**. Full build plus Phase11, Phase12, Phase13, prepared Combatant, live-DM adjudication/Undo, live Combatant theater-of-mind action, Host preparation metadata, live mechanics continuity and P14.10 accessibility structure all green.
-- Main Windows job `95262238417` was automatically in progress after the playable-contract completed. It is not the required human two-instance acceptance and is not completion evidence for P14.10/P14.13.
+## Automated validation
+- Exact-head UI push `31991827858`, frontend job `95276630845`: **success** at `f1adaae4f81ef3dd98840189b9c7c606a9133ba7`.
+  - new unified Session UX
+  - new non-Character UX
+  - existing P14.10 accessibility/PlaySessionDock structure
+  - Host preparation/live mechanics
+  - production lifecycle/ownership/inventory/spell batch
+  - creation/progression/spell regressions
+  - Phase09 mechanics
+  - TypeScript + production build
+- Exact-head Main Playable `31991830233`, playable-contract job `95276638981`: **success**.
+  - full UI/rules/TypeScript build
+  - Phase11 offline
+  - Phase12 connected authority
+  - Phase13 arbitrary Character SessionProjection
+  - prepared Combatant, live DM adjudication/Undo, live Combatant theater-of-mind, Host metadata, live mechanics continuity and P14.10 accessibility
+- Same final product-source boundary also passed Phase12 connected run `31991736009`, job `95276378850`, including its Phase11 and frontend gates.
+- Exact-head Windows job `95276973569` was still running at this checkpoint; it is not a substitute for human two-instance acceptance.
 
 ## Architecture preserved
-- Owning Client Character Library remains the durable Character source; Host projections remain ephemeral.
+- Owning Client Character Library remains the durable Character source; Host Character projections remain ephemeral.
 - Host canonical content/runtime remains mechanics authority.
-- Existing connected ledger, Scene/spatial/runtime, ResolutionEvent, reconnect/idempotency and event-native Undo remain authoritative.
-- `productionJoinCharacters` remains the production no-fixture Character-entry policy.
-- Host scoping remains based on `session.role === "host"`; no false top-level DM invariant was introduced.
-- No fixture fallback, duplicate connected protocol, duplicate durable source, tactical-map subsystem, or merge was introduced.
+- Existing connected ledger, Scene/spatial runtime, ResolutionEvent flow, reconnect/idempotency and event-native Undo remain authoritative.
+- Existing production Character selection and installed-content composition are reused.
+- No duplicate protocol, second durable source, second mechanics runtime, tactical-map system, or merge was introduced.
 
-## Why dispatch is now `needs_user`
-The recorded automated P14.10 boundary is complete. The next required gates are explicitly human desktop acceptance and cannot be truthfully performed by the current GitHub/CI-only environment. Starting more automated source work would either repeat validated boundaries or improperly substitute CI for human acceptance.
+## Why dispatch returns to `needs_user`
+The user's UX failures have been addressed and the changed automated boundaries are green. The next meaningful evidence is visual/interactive human acceptance of the redesigned UI and the required Windows two-instance connected walkthrough. Automated CI cannot truthfully certify visual hierarchy, discoverability, or the complete human two-instance experience.
 
 ## Blocking Next Exact Action
-Human acceptance must be performed against exact work head `a750ae844c8a0ce831e4c873574d074616eab3c0` unless a human-found issue causes a later fix head.
+Human acceptance against exact head `f1adaae4f81ef3dd98840189b9c7c606a9133ba7` unless a human-found issue creates a later fix head:
 
-1. P14.10 human common-viewport/keyboard walkthrough: player/non-host dock scoping, no Host overlap, long-list scrolling, keyboard focus/selected/disabled/focus-visible behavior, focus-accessible detail, reduced-motion result access, reconnect/disconnect guidance, Host bind-failure recovery, and no Debug Dock requirement.
-2. P14.13 Windows two-instance human walkthrough: actual Host bind -> preparation/lobby -> persisted host-unknown Character join -> compatibility/projection -> Ready -> Freeform/Initiative start -> visible action -> Host authoritative Resolution -> convergence -> disconnect/reconnect -> explicit end -> clean restart -> owning Client durable state check.
-3. Record exact source SHA and concrete pass/fail notes. If an issue is found, resume test-first at only that affected boundary.
-4. If both human gates pass, then and only then perform final exact-head Windows artifact verification: executable, BUILD exact SHA/run id, walkthrough contents, artifact `head_sha`, digest/ZIP SHA-256 and ZIP contents.
-5. PR #109 remains draft/unmerged; no merge is authorized.
+1. Session: named Host start, empty preparation, address/participant/Ready clarity, explicit Combatant add/remove, stop -> stable offline Host+Join page with Host-address input, bind/join/reconnect recovery.
+2. Non-Character UI: shell/nav, Player/DM play, Combatants, Rules, Activity, Settings at common/narrow desktop viewport; keyboard/focus/selected/disabled/scroll/detail/reduced-motion behavior.
+3. Windows two-instance: actual Host bind, Host-unknown persisted Client Character join, Ready/start, authoritative action convergence, disconnect/reconnect, explicit end, clean restart, owning-Client durable state.
+4. Record exact SHA and concrete PASS/FAIL notes/screenshots. Failures resume test-first only at the affected boundary.
+5. After human acceptance passes, perform final Windows artifact digest/contents verification.
+6. PR #109 remains draft/unmerged.
 
-## Current coordination write batch
-- `main` was re-fetched immediately before writes and remained `84eaa3882be97c3d9beaa3f82d92724677988160`.
-- PLAN was written first as required: commit `09014263fe47488a6c732c23b23bdf9b0711099b`.
+## Coordination write batch
+- Pre-write canonical `main` was `e437736f3f63d2afaf617572b82b268ba0e80970`.
+- PLAN written first: commit `8c8ba5bf839acc1a8f71739798bdfdf05b251429`.
 - This STATE write is second.
-- `control.json` must be written last with status `needs_user`.
+- `control.json` must be written last with `needs_user`.
 
 ## Dispatch recommendation
 `needs_user`
