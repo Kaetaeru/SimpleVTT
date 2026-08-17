@@ -106,11 +106,11 @@ function buildDie(scene:THREE.Scene,world:CANNON.World,die:PhysicsDie,index:numb
 }
 
 function cleanupGroup(group:THREE.Group) {
-  group.traverse((node)=>{
+  group.traverse((node:THREE.Object3D)=>{
     if (node instanceof THREE.Mesh) {
       node.geometry.dispose();
-      const materials=Array.isArray(node.material)?node.material:[node.material];
-      materials.forEach((material)=>material.dispose());
+      const materials:THREE.Material[]=Array.isArray(node.material)?node.material:[node.material];
+      materials.forEach((material:THREE.Material)=>material.dispose());
     }
     if (node instanceof THREE.Sprite) {
       node.material.map?.dispose();
