@@ -18,6 +18,7 @@ export type ConnectedWireMessage =
   | {
       type:"hello-ack";
       sessionId:string;
+      sessionName?:string;
       compatibility:SessionCompatibilityResult;
       hostCursor:number;
       events:ConnectedSessionEvent[];
@@ -153,7 +154,7 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
     return value as ConnectedWireMessage;
   }
   if (value.type==="hello-ack") {
-    if (!isString(value.sessionId)||!isCompatibility(value.compatibility)||!isCursor(value.hostCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid hello-ack message";
+    if (!isString(value.sessionId)||(value.sessionName!==undefined&&!isString(value.sessionName))||!isCompatibility(value.compatibility)||!isCursor(value.hostCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid hello-ack message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="ready-intent") {

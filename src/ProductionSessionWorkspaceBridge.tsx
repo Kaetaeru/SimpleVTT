@@ -48,7 +48,7 @@ export function ProductionSessionWorkspaceBridge() {
   const [targetCanSeeAttacker,setTargetCanSeeAttacker]=useState(true);
 
   useEffect(()=>{
-    const findTarget=()=>setTarget(document.querySelector<HTMLElement>(".session-grid"));
+    const findTarget=()=>setTarget(document.getElementById("production-session-workspace-root"));
     findTarget();
     const observer=new MutationObserver(findTarget);
     observer.observe(document.body,{childList:true,subtree:true});

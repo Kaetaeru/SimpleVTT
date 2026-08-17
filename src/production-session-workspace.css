@@ -1,13 +1,5 @@
-.screen.page-dark:has(.production-session-workspace) > .screen-head {
-  display: none;
-}
-
-.session-grid:has(.production-session-workspace) {
+.production-session-mount {
   display: block;
-}
-
-.session-grid > :not(.production-session-workspace) {
-  display: none;
 }
 
 .production-session-workspace {

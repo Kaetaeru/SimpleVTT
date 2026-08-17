@@ -252,11 +252,13 @@ function acceptedManifestForParticipant(adapter:MockAdapter,participantId:string
 
 async function rejectLiveHello(adapter:MockAdapter,peer:string,message:string) {
   const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
   const ledger=state.ledger;
   if (!ledger) return;
   await sendConnectedWireTo(peer,{
     type:"hello-ack",
     sessionId:ledger.sessionId,
+    sessionName:app.session.name,
     compatibility:{status:"incompatible",message},
     hostCursor:ledger.cursor,
     events:[],
@@ -331,7 +333,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         events=ledger.eventsAfter(wire.knownEventCursor);
       }
     }
-    await sendConnectedWireTo(message.peer,{type:"hello-ack",sessionId:ledger.sessionId,compatibility,hostCursor:ledger.cursor,events});
+    await sendConnectedWireTo(message.peer,{type:"hello-ack",sessionId:ledger.sessionId,sessionName:app.session.name,compatibility,hostCursor:ledger.cursor,events});
     await publishConnectedSnapshot(adapter);
     return;
   }
@@ -413,6 +415,7 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
   }
   if (wire.type==="hello-ack") {
     state.sessionId=wire.sessionId;
+    if (wire.sessionName) app.session.name=wire.sessionName;
     if (!state.replica || state.replica.sessionId!==wire.sessionId) state.replica=new ClientSessionReplica(wire.sessionId);
     app.session.compatibility=wire.compatibility.status;
     app.session.compatibilityMessage=wire.compatibility.message;
