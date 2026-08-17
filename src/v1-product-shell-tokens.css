@@ -1,0 +1,18 @@
+.v1-shell {
+  --border: var(--line);
+  --bg-panel: var(--recess);
+  --surface-hover: var(--surface-2);
+  --danger: var(--bad);
+  --warning: var(--accent);
+}
+
+.v1-shell .workspace {
+  grid-template-rows: 72px minmax(0, 1fr);
+}
+
+@media (max-width: 720px) {
+  .v1-shell .workspace {
+    height: calc(100% - 61px);
+    grid-template-rows: 58px minmax(0, 1fr);
+  }
+}
