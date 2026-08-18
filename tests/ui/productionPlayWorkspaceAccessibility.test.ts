@@ -32,7 +32,7 @@ test("disabled hotbar capabilities remain focusable and explain why they cannot 
   const css=read("src/v09-production-play.css");
   assert.match(play,/aria-disabled=\{unavailable\}/);
   assert.match(play,/aria-disabled=\{!action\.available\}/);
-  assert.doesNotMatch(play,/renderActionButton[\s\S]{0,500}disabled=\{/);
+  assert.doesNotMatch(play,/renderActionButton[\s\S]{0,500}<button[^>]*\sdisabled=/);
   assert.match(play,/action\.disabledReason\|\|"현재 사용할 수 없습니다\."/);
   assert.match(css,/\.play-v09-action-icon\[aria-disabled="true"\]/);
   assert.match(css,/\.play-v09-action-icon:focus-visible \.play-action-tooltip/);
