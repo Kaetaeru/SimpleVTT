@@ -32,15 +32,14 @@ test("Session route is a dedicated production mount instead of legacy duplicate 
   assert.doesNotMatch(session,/Host Session|Join by IP|RulesProfile|Reference 흐름|sessionContent/);
 });
 
-test("player and DM play surfaces are outcome-first and the empty Host scene is safe",()=>{
-  const player=slice("function PlayerSceneScreen()","function DmSceneScreen()");
-  const dm=slice("function DmSceneScreen()","function ActionConsole(");
-  assert.doesNotMatch(player,/전술 격자 아님|Persistent Resource/);
-  assert.doesNotMatch(player,/<PanelTitle>파티<\/PanelTitle>|<PanelTitle>적<\/PanelTitle>/);
-  assert.match(dm,/selectedActor\?\.id\s*\?\?\s*""/);
-  assert.match(dm,/if \(!selectedActor\|\|!currentActor\)/);
-  assert.match(dm,/Encounter가 비어 있습니다/);
-  assert.doesNotMatch(dm,/RulesProfile|호환 상태|세션 콘텐츠|선택한 Actor와 Current Turn/);
+test("production play owns the scene route and old local scene/sheet/create helpers are gone",()=>{
+  assert.match(app,/route === "scene" && <ProductionPlayScreen role=\{productionRole\} \/>/);
+  for(const legacy of ["CharacterSheetScreen","CharacterCreateScreen","GuidedCreateStep","useTargeting","PlayerSceneScreen","DmSceneScreen","ActionConsole","EntityList","EntityPortrait","Inspector","TargetingOverlay"]) {
+    assert.doesNotMatch(app,new RegExp(`function ${legacy}`));
+  }
+  assert.match(play,/if \(!actor\) return/);
+  assert.match(play,/Encounter가 비어 있습니다/);
+  assert.doesNotMatch(play,/<Inspector|ActionConsole|activity-mini|scene-side/);
 });
 
 test("production DM encounter preparation is contextual and presentation copy avoids mechanics jargon",()=>{
