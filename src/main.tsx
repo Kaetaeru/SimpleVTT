@@ -17,6 +17,7 @@ import { PlaySessionDock } from "./PlaySessionDock";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
+import { CombatVfxBridge } from "./CombatVfxBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
 import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
@@ -26,6 +27,7 @@ import "./completion.css";
 import "./play-session-dock.css";
 import "./visual-dice.css";
 import "./physics-dice.css";
+import "./combat-vfx.css";
 import "./player-experience-redesign.css";
 import "./player-experience-accessibility.css";
 import "./v09-production-play.css";
@@ -52,6 +54,7 @@ createRoot(document.getElementById("root")!).render(
       <App />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
+      <CombatVfxBridge />
       <ConcentrationSaveBridge />
       <MovementReactionBridge />
       <ProductionSessionWorkspaceBridge />
