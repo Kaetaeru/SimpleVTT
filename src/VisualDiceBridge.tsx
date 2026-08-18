@@ -98,10 +98,11 @@ export function VisualDiceBridge() {
   if (!replay) return null;
   const physical=replay.roll.dice.filter((die):die is {value:number;sides:4|6|8|10|12|20}=>die.sides!==null) as PhysicsDie[];
   const tone=resolved?replay.roll.notice.tone:"normal";
+  const reduced=typeof window!=="undefined"&&(window.matchMedia("(prefers-reduced-motion: reduce)").matches||document.documentElement.dataset.motion==="reduced");
 
   return createPortal(
     <div className="visual-dice-overlay v09" data-resolution-id={replay.roll.resolutionId} data-phase={resolved?"resolved":"rolling"}>
-      {physical.length>0&&<PhysicsDice3D key={replay.key} dice={physical} cinematic reducedMotion={false} className="visual-dice-world"/>}
+      {physical.length>0&&<PhysicsDice3D key={replay.key} dice={physical} cinematic reducedMotion={reduced} className="visual-dice-world"/>}
       <div className={`visual-roll-notice ${resolved?"resolved rolling-complete":"rolling"} ${tone}`} role="status" aria-live="polite">
         <div className="visual-roll-notice-core">
           <span className="visual-roll-label">{replay.roll.label}</span>
