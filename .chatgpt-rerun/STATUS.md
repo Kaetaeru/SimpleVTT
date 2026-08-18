@@ -1,6 +1,6 @@
 # Rerun Status
 
-**Connection:** `main` coordination · V0.9 content parity validated
+**Connection:** `main` coordination · V0.9 portrait/handout validated
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Canonical watcher branch: `main`
@@ -11,26 +11,29 @@
 - Control target: `continue`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- Current validated source HEAD: `af19378149db97387e3cd364b38fe17e95078b39`
+- Current validated source HEAD: `28f3700eb92ab93bacb589dd07be792bf228b3a0`
 
 ## Human summary
 
-The V0.9 automatic Host-required declarative content-parity slice is now exact-head validated. The failing Phase 12 job was diagnosed from its actual Actions logs and fixed narrowly without repeating previously validated Play/Dice/VFX/Appearance/dual-Sheet/direct-IP work.
+The Character portrait + DM image handout/reconnect slice is now exact-head validated on the affected Linux/application gates without repeating earlier validated slices.
 
-At `af193781...`:
-- Client hello advertises installed content identity/revision inventory;
-- Host transfers only missing/changed declarative entries before participant acceptance;
-- Client uses the existing validator/repository/catalog-composition authority, then re-handshakes with the installed revision and refreshed Character SessionProjection;
-- invalid/conflicting Host content fails closed and Ready remains blocked;
-- matching reconnect does not re-transfer or rewrite installed content.
+At `28f3700e...`:
+- Character portrait supports bounded local PNG/JPEG/WebP, preview/replace/remove and focal position on both normal Sheet layouts;
+- portrait persists through the owning Client Character Library without changing mechanics source/runtime revision authority;
+- live Host gets contextual `이미지 보여주기` preview/reveal/withdraw;
+- Clients can dismiss/reopen the active reveal;
+- a final compatible reconnect handshake restores the current Host reveal;
+- handouts stay on the existing session channel as presentation state only and do not enter ResolutionEvent/Undo/combat/participant-ledger authority.
 
 Validation:
-- Phase 12 run `32186178904` / connected-protocol `95870203173`: **success**, including all 48 connected/parity tests, offline walkthrough and production frontend gate.
-- UI run `32186178947` / frontend `95870203434`: **success**, including all reported product regressions and Typecheck/production build.
-- Windows connected job `95870544914` for the same exact head is currently in progress and should not be manually rerun on watcher restart.
+- UI run `32187690842` / frontend `95875015492`: **success**, including all reported product regressions and Typecheck/production build.
+- Persistence run `32187690744` / application-contract `95875014950`: **success**, including portrait persistence/restart/revision coverage and production build.
+- Phase 12 run `32187690780` / connected-protocol `95875015147`: **success**, including handout reveal/withdraw/dismiss/reconnect, existing connected/content-parity regression, offline walkthrough and frontend gate.
+- The previous content-parity same-head Windows job `95870544914` is now confirmed **success**.
+- Current-head Phase 12 Windows job `95875316302` and Persistence Windows job `95875014764` are still in progress; do not manually rerun them on watcher restart.
 
-Validated slices now closed unless touched: Production Play, fast Visual Dice, composable Combat VFX, Appearance, dual Character Sheet/Official Spellcasting, direct-IP Session entry, and automatic validated content parity.
+Validated slices now closed unless touched: Production Play, fast Visual Dice, composable Combat VFX, Appearance, dual Character Sheet/Official Spellcasting, direct-IP Session, automatic validated content parity, and Character portrait + DM image handout/reconnect.
 
-Next work is Character portrait + DM image handout/reconnect while preserving owning-Client Character durability and keeping handouts presentation-only. PR #109 remains draft and must not be merged without explicit user authorization.
+Next work is contextual DM/Content/Rules polish plus proven dead-legacy cleanup, after first recording the two pending Windows job results. PR #109 remains draft and must not be merged without explicit user authorization.
 
 `STATUS.md` is human-facing only. Authoritative reconciliation remains README -> control -> STATE -> PLAN.
