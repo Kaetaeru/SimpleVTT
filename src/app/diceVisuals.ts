@@ -56,6 +56,7 @@ function notationFor(dice:VisualDieVm[], fallback:string) {
 
 function noticeFor(resolution:ResolutionView,action:ActionVm|undefined,dice:VisualDieVm[],label:string):VisualDiceNoticeVm {
   const physical=dice.filter((die)=>die.sides!==null);
+  const legacyAggregate=dice.some((die)=>die.sides===null);
   const rawTotal=physical.length?physical.reduce((sum,die)=>sum+die.value,0):resolution.authoritativeDice.reduce((sum,value)=>sum+value,0);
   let modifier=0;
   let knownTotal:number|undefined;
@@ -70,11 +71,11 @@ function noticeFor(resolution:ResolutionView,action:ActionVm|undefined,dice:Visu
     knownTotal=resolution.rollTotal;
     if (knownTotal!==undefined && resolution.authoritativeDice.length===1) modifier=knownTotal-rawTotal;
   } else if (resolution.rollKind==="healing") {
-    modifier=action?.healing?.flat??0;
+    modifier=legacyAggregate?0:action?.healing?.flat??0;
     knownTotal=resolution.rollTotal;
   } else if (resolution.rollKind==="damage") {
-    modifier=action?.damage?.[0]?.flat??0;
-    knownTotal=resolution.rollTotal;
+    // Damage stages can retain an earlier attack rollTotal. Never reuse it as damage total.
+    modifier=legacyAggregate?0:action?.damage?.[0]?.flat??0;
   }
 
   if (knownTotal!==undefined && resolution.authoritativeDice.length===1 && (resolution.rollKind==="attack"||resolution.rollKind==="check")) modifier=knownTotal-rawTotal;
