@@ -3,7 +3,7 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
-- dispatch state: `continue`
+- dispatch state: `blocked`
 - current milestone: **V0.9**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
@@ -12,9 +12,9 @@
 - PR #109: open/draft/unmerged; no merge authorized
 
 ## Current work head
-`04d8af303e4f77eeb62801f8fd99e07146a2e48e`
+`5c70b3028aed70b0fc5ddafafe119f40174df833`
 
-The work branch was advanced by a single non-force fast-forward from `28f3700eb92ab93bacb589dd07be792bf228b3a0` to `04d8af303e4f77eeb62801f8fd99e07146a2e48e`. PR #109 was rechecked immediately before the ref update and remained open/draft/unmerged at the expected old head.
+The work branch was advanced by non-force fast-forward from `04d8af303e4f77eeb62801f8fd99e07146a2e48e` to `5c70b3028aed70b0fc5ddafafe119f40174df833` only after PR #109 was rechecked open/draft/unmerged at the expected old head.
 
 ## Preflight reconciliation for this execution
 Mandatory watcher files were read from `main` in exact protocol order before project work:
@@ -28,82 +28,65 @@ Coordinates reconciled to:
 - sequence `3`
 - task `v1-product-experience-overhaul`
 - dispatch `continue`
-- starting work HEAD `28f3700eb92ab93bacb589dd07be792bf228b3a0`
+- starting work HEAD `04d8af303e4f77eeb62801f8fd99e07146a2e48e`
+- starting canonical `main` HEAD `a4ab6e71f65a745ac03a7bef6052ddb726e9fb1b`
 
-Validated Play/Dice/VFX/Appearance/dual-Sheet/direct-IP/content-parity/portrait-handout work was not repeated.
+Validated slices 1–9 were not reimplemented or manually rerun.
 
-## Prior pending Windows results recovered without rerun
-The two same-head jobs left pending at the previous checkpoint are now both confirmed successful:
-- Persistence run `32187690744` / `tauri-storage` job `95875014764`: **success**.
-- Phase 12 run `32187690780` / `windows-connected-playable` job `95875316302`: **success**.
-  - Tauri transport/persistence verification: success;
-  - Windows connected executable build: success;
-  - artifact staging/upload: success.
+## Recovered prior pending Windows jobs without rerun
+The three jobs left automatic/in-progress at the previous checkpoint are now all confirmed **success**:
+- Persistence `tauri-storage` `95877878039`: success.
+- Phase 12 `windows-connected-playable` `95878210229`: success; Tauri transport/persistence, Windows connected executable, staging/upload all success.
+- Main Playable `windows-playable` `95878131296`: success; Tauri persistence/session transport, Windows playable executable, staging/upload all success.
 
-No manual rerun was requested or performed.
+## Dead-legacy reachability audit and source change
+The current `App.tsx` router was confirmed to use:
+- `CharacterSheetPlayScreen` for Character Sheet;
+- `CharacterCreateScreenV10` for create/edit;
+- `ProductionPlayScreen` for scene/play;
+- current local `LevelUpScreen/LevelStep`;
+- current ResolutionDrawer and non-Character product surfaces.
 
-## Work completed in this execution
-### Contextual DM Encounter preparation
-`src/ProductionPlayScreen.tsx` now reuses the existing `instantiateCombatant` and `removeCombatant` AppProvider APIs directly from the current production play surface.
-- Encounter management is visible only for DM while not in Initiative and while offline or Host lifecycle is `preparing`.
-- An empty DM Encounter now offers in-place `Encounter 준비` buttons using existing `snapshot.combatantDefinitions` instead of directing the user to an unreachable sidebar destination.
-- A non-empty manageable Encounter offers a compact `Encounter 편집` disclosure and can remove the selected Combatant.
-- No new React state store, Character/content authority, network protocol, ResolutionEvent path, or tactical map semantics were introduced.
+The following same-file functions were proven to be obsolete local-only surfaces rather than router targets:
+- old Character sheet/create group: `CharacterSheetScreen`, `InventoryPanel`, `InventoryItem`, `CharacterCreateScreen`, `GuidedCreateStep`, `DerivedStep`, `AbilityBuilder`, `AbilityEditor`, `QuickCreate`, `ImportCreate`, `DuplicateCreate`, `ReviewRows`;
+- old scene group: `useTargeting`, `PlayerSceneScreen`, `DmSceneScreen`, `ActionConsole`, `EntityList`, `EntityPortrait`, `Inspector`, `TargetingOverlay`.
 
-### Product-language cleanup
-- Production Play routine copy no longer exposes `capability` as user-facing terminology; it refers to available choices/actions instead.
-- `V1ContentScreen` explicitly owns addon file review/install and tells the user installed addons become searchable from Rules.
-- Routine addon guidance no longer exposes RuleModule/Capability/generic-Catalog/mechanics/progression jargon while still using the same existing validation/install APIs internally.
+A local clone/static-audit attempt could not reach GitHub because this runtime could not resolve `github.com`; connector source inspection was used instead.
 
-### Proven dead production wiring cleanup
-`src/main.tsx` no longer imports or loads the unmounted legacy `PlaySessionDock` or `play-session-dock.css`.
-- `PlaySessionDock.tsx` itself remains as a reference/history source because tests still intentionally inspect it.
-- `CombatSpellHudBridge` wiring remains untouched because existing tests and behavior still depend on it.
-- Current portrait/handout/session/production bridges remain mounted.
+An initial unreferenced candidate tree contained an accidental unrelated `POINT_COST` typo. It was detected before branch/commit publication and discarded. It never affected the work branch.
 
-### Dead-code audit deferred safely
-The current router proves `App.tsx` production routes use `CharacterSheetPlayScreen`, `CharacterCreateScreenV10`, `ProductionPlayScreen`, and current LevelUp/Session/Content surfaces. The same file still contains older local-only sheet/create/scene helper functions. They appear unreachable, but this execution did not perform a high-risk mass deletion. The next cleanup must prove every helper/import dependency before removing that block.
+The corrected source commit is:
+- `5c70b3028aed70b0fc5ddafafe119f40174df833` — `Remove unreachable legacy App surfaces`
 
-### Source commit
-- `04d8af303e4f77eeb62801f8fd99e07146a2e48e` — `Polish contextual DM and content UX`
+It removes only those obsolete local functions and their now-unused imports/constants/helpers. It preserves the current router, current LevelUp, Resolution/DM adjudication, Combatants, Rules, Activity, Session, Settings and Debug surfaces.
 
-Focused tests updated:
-- `tests/ui/playSessionDockStructure.test.ts`
-- `tests/ui/productionNonCharacterUxRedesign.test.ts`
+`tests/ui/productionNonCharacterUxRedesign.test.ts` now inspects the actual `ProductionPlayScreen` route and asserts the removed legacy helper names do not return.
 
-## Validation evidence for exact head `04d8af30...`
-### UI
-- run `32188621592`
-- frontend job `95877878308`: **success**
-- PlaySessionDock production wiring cleanup: success
-- contextual DM/Content product UX test: success
-- all reported product regressions: success
-- Typecheck and production build: success
+## Validation blocker at exact head `5c70b302...`
+Automatic Actions were started by the branch update.
 
 ### Main Playable
-- run `32188621652`
-- playable-contract job `95877878422`: **success**
-- full UI/rules/TypeScript/frontend: success
-- Phase 11 complete offline walkthrough: success
-- Phase 12 connected authority: success
-- Phase 13 arbitrary Character SessionProjection: success
-- DM prepared Combatant, live adjudication/Undo, live theater-of-mind Combatant action, preparation metadata/content, live mechanics continuity and production accessibility: success
-- windows-playable job `95878131296`: **in progress** at checkpoint time; do not manually rerun on watcher restart.
+- run `32189591188`
+- playable-contract job `95880814298`
+- step 5 `Verify full UI, rules, TypeScript, and production frontend`: **failure**
+- subsequent contract steps were skipped.
 
-### Phase 12 Connected Session
-- run `32188621643`
-- connected-protocol job `95877878129`: **success**
-- connected-session authority protocol: success
-- Phase 11 offline walkthrough: success
-- production frontend gate: success
-- windows-connected-playable job `95878210229`: **in progress** at checkpoint time; do not manually rerun on watcher restart.
+The exact root cause has not been inspected or fixed.
 
-### Persistence
-- run `32188621614`
-- application-contract job `95877878078`: **success**
-- Character/content/module persistence contracts: success
-- production build: success
-- tauri-storage job `95877878039`: **in progress** at checkpoint time; do not manually rerun on watcher restart.
+Per protocol, the installed `gh-fix-ci` skill was invoked before diagnosis. Its required prerequisite check was executed through the container:
+`gh --version && gh auth status`
+
+Result:
+- `gh: not found`
+- exit status `127`
+
+The CI-fix skill explicitly requires authenticated GitHub CLI for Actions log inspection and says the GitHub connector is not a substitute. Therefore no speculative fix was made and connector job logs were not used to infer a patch.
+
+### Other exact-head runs
+- UI `32189591171`: started/in progress when the blocker was established; final result not claimed.
+- Phase 12 `32189591122`: started; final result not claimed.
+- Persistence `32189591129`: started; final result not claimed.
+- Rules Domain `32189591400`, Contract validation `32189591389`, Phase 11 `32189591204`: started; final results not claimed.
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
@@ -114,26 +97,31 @@ Focused tests updated:
 6. Direct-IP Session entry/configuration.
 7. Automatic validated Host-required declarative content parity before Ready.
 8. Character portrait + DM image handout/reconnect.
-9. Contextual DM/Content polish + production dead-wiring cleanup at `04d8af30...` on affected Linux/application gates.
+9. Contextual DM/Content polish + production dead-wiring cleanup at `04d8af30...`, now including complete same-head Windows evidence.
 
-Watcher restart alone is not a reason to rerun any of these boundaries.
+The new `5c70b302...` dead-legacy deletion is **not validated** and must not be added to this list until the observed Main Playable failure is diagnosed/fixed and affected gates are green.
+
+## Technical blocker
+This execution environment lacks GitHub CLI (`gh`). That prevents the required CI-fix workflow from safely reading the failing GitHub Actions log. This is an execution-environment blocker, not a product/design clarification.
 
 ## Next Exact Action
-1. Perform mandatory watcher preflight and trust GitHub if `main`, control, or PR #109 moved.
-2. If work HEAD remains `04d8af30...`, do not repeat any validated slice or this contextual polish audit.
-3. Check jobs `95878210229`, `95878131296`, and `95877878039`; record their final results without manual rerun if complete.
-4. Resume only the remaining dead-legacy cleanup: prove reachability of the older local-only `App.tsx` sheet/create/scene helper block and remove only functions/imports that are demonstrably unreachable from the current router and external tests.
-5. Preserve current ProductionPlay, dual Sheet, V10 Character creation, LevelUp, Session/content/connected authorities and any reference source still required by tests.
-6. Run only affected gates after cleanup.
-7. Then collect one exact-head full automated UI/Main/mechanics/persistence/installed-content/connected/Windows validation set.
-8. Human Windows acceptance remains required for standalone Sheet-at-table use and two-instance Host/Client image reveal/reconnect; do not claim final V0.9 completion before it.
-9. Keep PR #109 draft/unmerged.
+1. Perform mandatory watcher preflight and trust GitHub if `main`, control, work branch or PR #109 moved.
+2. If control remains `blocked`, do not continue source work.
+3. If controller restores `continue` and work HEAD remains `5c70b302...`, do not repeat the legacy reachability audit or validated slices.
+4. Invoke `gh-fix-ci` first; verify `gh --version` and `gh auth status`.
+5. In a gh-capable authenticated environment inspect run `32189591188`, job `95880814298`, step `Verify full UI, rules, TypeScript, and production frontend` and capture the exact failure.
+6. Fix only that observed failure; do not guess.
+7. Recheck PR head immediately before any branch write and use non-force fast-forward only.
+8. Validate affected UI/Main gates at the resulting exact head and observe automatic connected/persistence/Windows gates without rerunning unchanged historical boundaries.
+9. After source convergence, collect one exact-head full automated UI/Main/mechanics/persistence/installed-content/connected/Windows validation set.
+10. Human Windows acceptance remains required for standalone Sheet-at-table and two-instance Host/Client image reveal/reconnect before final V0.9 completion.
+11. Keep PR #109 draft/unmerged.
 
 ## Coordination writes
-- PLAN for this checkpoint was written first on `main` as commit `f08ac70ca2c0ec32708d100f6812725a8ac37700`.
+- PLAN for this checkpoint was written first on `main` as commit `107ba8a0df9bf79a9a876c014db530be54ee9a85`.
 - STATE is this durable checkpoint and is written after PLAN.
-- STATUS may be refreshed next for human visibility.
-- control must be written last with sequence `3`, status `continue`.
+- STATUS may be refreshed next.
+- control must be written last with sequence `3`, status `blocked`.
 
 ## Dispatch recommendation
-`continue`
+`blocked`
