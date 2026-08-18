@@ -19,10 +19,8 @@ Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c
 - Host projections remain ephemeral and Host remains connected mechanics authority;
 - ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
 - installed-content composition/RuleModule validation remain content authority;
-- Freeform does not consume Initiative economy;
-- dice/VFX/images/appearance/sheet-layout preferences are presentation state only;
 - no second Character/content store, resolver, network/content protocol or event ledger;
-- no tactical grid/token/Fog/pathfinding/minimap/LOS/cloud-account dependency;
+- no Host-provided arbitrary JS/native execution;
 - PR #109 must not be merged without explicit user authorization.
 
 ## Exact work HEAD
@@ -40,42 +38,41 @@ Latest source commit: `Add validated session content parity`.
 
 The content-parity source at `2c57c570...` is **not validated yet** and is not a closed boundary.
 
-## Content-parity source now on the work branch
-The current implementation intentionally extends the existing Session handshake rather than creating a parallel protocol:
-- `installedContentRuntimeAdapter` now exposes session-safe inventory, stable canonical content revision, missing/changed comparison, and peer install helpers over the existing hydrated `InstalledContentRepository` and `validateInstalledContentPackage` authority;
-- `sessionContentParityRuntimeAdapter` decorates the existing transport listener/send path so Client `hello` advertises installed declarative content revisions;
-- Host intercepts only when required entries are missing/changed, sends those entries in the existing `hello-ack` envelope, and does not accept the participant before parity completes;
-- Client validates/installs through the existing repository, recomposes the existing catalog, then re-sends the same `hello`;
-- matching reconnects transfer nothing; conflicting same-qualified-identity payloads fail closed;
-- Client Ready is gated until parity state is `ready`;
-- normal compatibility text communicates `콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료`;
-- no Host-provided JS/native execution path, second addon store, resolver or second event/network protocol was added.
-
-Focused coverage was added to `productionHelloReplayIdempotency.test.ts` for successful missing-only transfer, re-handshake, Ready gating, reconnect idempotency, same-identity conflict rejection and malformed Host content rejection.
+## Content-parity source on the work branch
+The current implementation extends the existing Session handshake rather than creating a parallel protocol:
+- installed-content inventory/revision and missing/changed comparison use the existing hydrated installed-content document;
+- Host-required declarative entries are transferred only through the existing `hello / hello-ack` path;
+- Client validation/install uses existing `validateInstalledContentPackage`, `InstalledContentRepository.installMany`, and catalog recomposition;
+- Ready is gated until parity completes;
+- reconnect reuses the same comparison so already-matching content is not retransferred;
+- same-qualified-identity conflict and malformed content fail closed.
 
 ## Validation evidence
-### Previously validated direct-IP head `0b7bce05...`
-- UI workflow `32177587540` / frontend `95842950322`: **success**.
-- Phase 12 Connected Session `32177587541` / connected-protocol `95842949930`: **success**.
-- Its Windows job `95843208485` was still in progress at the latest observation; do not manually rerun it merely because watcher execution restarts.
+### Direct-IP head `0b7bce05...`
+- UI run `32177587540` / frontend `95842950322`: **success**.
+- Phase 12 run `32177587541` / connected-protocol `95842949930`: **success**.
+- Windows connected playable job `95843208485`: **success**, including Tauri session transport/persistence tests, Windows executable build, staging and artifact upload.
 
 ### Current content-parity head `2c57c570...`
-- Phase 12 Connected Session run `32178687847` started automatically.
-- connected-protocol job `95846416201` failed at step `Verify connected-session authority protocol`.
-- The exact failing log/root cause is **not yet inspected**. This execution environment has no `gh` CLI (`gh: not found`), and the GitHub CI-fix workflow requires authenticated `gh` log inspection before changing source. No speculative source fix was made after the failure.
-- UI run `32178687871` had started but was still in progress when the blocker checkpoint was written; do not claim it green.
+- UI run `32178687871` / frontend job `95846416290`: **success**.
+  - all UI/product regression steps completed successfully;
+  - `Typecheck and build`: **success**.
+- Phase 12 run `32178687847` / connected-protocol job `95846416201`: **failure** at `Verify connected-session authority protocol`.
+  - downstream offline walkthrough/frontend steps were skipped;
+  - Windows job `95846508836` was skipped because the connected job failed.
+- Exact failing test/type stack is still uninspected.
 
 ## Technical blocker
-The active execution environment does not provide the required GitHub CLI for the prescribed GitHub Actions failure-inspection workflow. The source remains safely committed and PR #109 remains draft/unmerged, but the failing parity gate must be diagnosed before further source work.
+The active GitHub CI-fix workflow requires authenticated GitHub CLI log inspection before source changes. This execution rechecked the prerequisite and `gh` is still unavailable (`status 127`). Do not guess a fix from the red step alone and do not treat the GitHub app as a substitute for the required `gh` diagnosis path.
 
 ## Next Exact Action
 1. Perform mandatory watcher preflight and trust GitHub if PR #109 or `main` advanced.
-2. If control is re-authorized to `continue` and work HEAD remains `2c57c570...`, do **not** repeat Play/Dice/VFX/Appearance/dual-Sheet/direct-IP work or re-audit the parity design.
-3. In an execution environment with authenticated `gh`, inspect Phase 12 run `32178687847`, connected-protocol job `95846416201` and capture the exact failing test/type error. Do not guess from the red step alone.
-4. Fix only the observed failure in the new content-parity source/tests. Preserve the existing installed-content repository/validator and existing `hello / hello-ack` authority boundaries.
-5. Re-run/observe the affected Phase 12 connected gate and UI TypeScript/production build at one exact head. If the failure is only in focused tests, keep the fix equally narrow.
-6. Content parity becomes a validated boundary only after missing/changed-only transfer, validation/install, Ready blocking, successful re-handshake and reconnect idempotency are green.
-7. After content parity is exact-head green, continue: Character portrait + DM image handout/reconnect; then contextual DM/Content/Rules polish and dead-legacy cleanup.
+2. If control is re-authorized to `continue` and work HEAD remains `2c57c570...`, do **not** repeat validated slices or redo content-parity design/source audit.
+3. In an environment with installed and authenticated `gh`, inspect Phase 12 run `32178687847`, job `95846416201`, and capture the exact failing test/type stack from `Verify connected-session authority protocol`.
+4. Summarize that observed root cause and fix only the failing newly touched parity source/tests unless the log proves another dependency is responsible.
+5. Re-run/observe the affected Phase 12 connected gate and UI TypeScript/production build at the resulting exact head.
+6. Promote content parity to a validated boundary only when missing/changed-only transfer, existing validator/repository install, Ready blocking, re-handshake and reconnect idempotency are green.
+7. Then continue Character portrait + DM image handout/reconnect, contextual DM/Content/Rules polish and dead-legacy cleanup.
 8. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
 9. Keep PR #109 draft/unmerged.
 
