@@ -11,16 +11,16 @@
 - Control: `continue`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- Current validated work HEAD: `e83fc37f60b6f42f0ed7b8c76329465ed55e3644`
+- Current validated work HEAD: `0b7bce05f59bed2335499b89c6357b2431f5987e`
 
 ## Human summary
 
-V0.9 dual Character Sheet presentation is implemented and exact-head validated. `SimpleVTT Sheet` preserves the prior standalone interactive sheet, while `Official sheet layout` adds a true paper-information-arrangement Character page and dedicated level 0–9 Spellcasting page over the same canonical Character/projections. Layout preference is presentation-only and persists independently.
+The V0.9 direct-IP Session entry is implemented and exact-head validated. Offline Host now exposes session name, Bind/Listen IP/interface and port; Join exposes a saved Character plus Host IP/address and port. These controls feed the existing Tauri TCP transport and existing Session lifecycle rather than introducing an invite-code layer or replacement protocol.
 
-UI workflow run `32176685363`, frontend job `95840143821` completed successfully at the exact work HEAD, including the focused tabletop sheet test and TypeScript/production build.
+UI run `32177587540` / frontend `95842950322` succeeded, including the Session workspace checks and TypeScript/production build. Phase 12 Connected Session `connected-protocol` job `95842949930` also succeeded. Its Windows connected playable job was still building at checkpoint time.
 
-Validated slices that should not be repeated unless touched: Production Play, fast Visual Dice, composable Combat VFX, Appearance, and dual Character Sheet/Official Spellcasting.
+Validated slices that should not be repeated unless touched: Production Play, fast Visual Dice, composable Combat VFX, Appearance, dual Character Sheet/Official Spellcasting, and direct-IP Session entry.
 
-Next work is direct-IP Session + automatic validated declarative content parity before Ready. PR #109 remains draft and must not be merged without explicit user authorization.
+Next work is the remaining Session requirement: automatic validated Host-required declarative content parity before Ready, using the existing installed-content repository/validator and existing hello/hello-ack handshake. PR #109 remains draft and must not be merged without explicit user authorization.
 
 `STATUS.md` is human-facing only. Authoritative reconciliation remains README -> control -> STATE -> PLAN.
