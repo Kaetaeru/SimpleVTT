@@ -1,6 +1,6 @@
 # Rerun Status
 
-**Connection:** `main` coordination · V0.9 portrait/handout validated
+**Connection:** `main` coordination · V0.9 contextual product polish validated
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Canonical watcher branch: `main`
@@ -11,29 +11,29 @@
 - Control target: `continue`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- Current validated source HEAD: `28f3700eb92ab93bacb589dd07be792bf228b3a0`
+- Current source HEAD: `04d8af303e4f77eeb62801f8fd99e07146a2e48e`
 
 ## Human summary
 
-The Character portrait + DM image handout/reconnect slice is now exact-head validated on the affected Linux/application gates without repeating earlier validated slices.
+The next V0.9 convergence slice is now green on its affected Linux/application gates without repeating the eight previously validated product slices.
 
-At `28f3700e...`:
-- Character portrait supports bounded local PNG/JPEG/WebP, preview/replace/remove and focal position on both normal Sheet layouts;
-- portrait persists through the owning Client Character Library without changing mechanics source/runtime revision authority;
-- live Host gets contextual `이미지 보여주기` preview/reveal/withdraw;
-- Clients can dismiss/reopen the active reveal;
-- a final compatible reconnect handshake restores the current Host reveal;
-- handouts stay on the existing session channel as presentation state only and do not enter ResolutionEvent/Undo/combat/participant-ledger authority.
+At `04d8af30...`:
+- DM freeform/preparation now exposes a small contextual Encounter preparation/edit flow using the existing Combatant instantiate/remove APIs;
+- an empty Host Encounter no longer points users toward an unreachable sidebar destination;
+- routine Play and Content copy removes implementation-facing capability/module/mechanics jargon;
+- Content is the primary addon review/install surface and explains that installed content is searched from Rules;
+- the unmounted legacy PlaySessionDock and its CSS no longer participate in production `main.tsx` composition, while its reference source remains available for historical tests.
 
 Validation:
-- UI run `32187690842` / frontend `95875015492`: **success**, including all reported product regressions and Typecheck/production build.
-- Persistence run `32187690744` / application-contract `95875014950`: **success**, including portrait persistence/restart/revision coverage and production build.
-- Phase 12 run `32187690780` / connected-protocol `95875015147`: **success**, including handout reveal/withdraw/dismiss/reconnect, existing connected/content-parity regression, offline walkthrough and frontend gate.
-- The previous content-parity same-head Windows job `95870544914` is now confirmed **success**.
-- Current-head Phase 12 Windows job `95875316302` and Persistence Windows job `95875014764` are still in progress; do not manually rerun them on watcher restart.
+- UI `32188621592` / `95877878308`: **success**, including focused cleanup/product tests, all reported UI regressions, Typecheck and production build.
+- Main Playable `32188621652` / `95877878422`: **success**, including full UI/rules/TypeScript/frontend, offline, connected, SessionProjection, DM prepared/live, Undo and accessibility contracts.
+- Phase 12 `32188621643` / `95877878129`: **success**, including connected authority, offline walkthrough and frontend gate.
+- Persistence `32188621614` / `95877878078`: **success**, including persistence contracts and production build.
+- The previous portrait/handout-head Windows jobs `95875316302` and `95875014764` are now confirmed **success** without rerun.
+- Current-head Windows jobs `95878210229`, `95878131296`, and `95877878039` are still automatic/in progress at checkpoint time and must not be manually rerun on watcher restart.
 
-Validated slices now closed unless touched: Production Play, fast Visual Dice, composable Combat VFX, Appearance, dual Character Sheet/Official Spellcasting, direct-IP Session, automatic validated content parity, and Character portrait + DM image handout/reconnect.
+Validated boundaries now closed unless touched: Production Play, Visual Dice, Combat VFX, Appearance, dual Sheet/Official Spellcasting, direct-IP Session, automatic content parity, portrait/DM image handout/reconnect, and contextual DM/Content polish plus production dead-wiring cleanup.
 
-Next work is contextual DM/Content/Rules polish plus proven dead-legacy cleanup, after first recording the two pending Windows job results. PR #109 remains draft and must not be merged without explicit user authorization.
+Next work is only the remaining proven dead-legacy cleanup in the old local-only `App.tsx` sheet/create/scene block, followed by one exact-head full automated validation set. Human Windows acceptance remains required before final V0.9 completion. PR #109 remains draft and must not be merged without explicit user authorization.
 
 `STATUS.md` is human-facing only. Authoritative reconciliation remains README -> control -> STATE -> PLAN.
