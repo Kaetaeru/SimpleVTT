@@ -1,0 +1,74 @@
+.combat-vfx-overlay{
+  --vfx:#d7e4f2;
+  --vfx-2:#ffffff;
+  position:fixed;
+  inset:0;
+  z-index:860;
+  pointer-events:none;
+  overflow:hidden;
+}
+.combat-vfx-shot{
+  position:absolute;
+  left:var(--vfx-sx);
+  top:var(--vfx-sy);
+  width:var(--vfx-distance);
+  height:1px;
+  transform:rotate(var(--vfx-angle));
+  transform-origin:left center;
+}
+.combat-vfx-trail,.combat-vfx-core,.combat-vfx-impact,.combat-vfx-ring,.combat-vfx-particle{position:absolute;display:block;pointer-events:none;will-change:transform,opacity,filter}
+.combat-vfx-trail{left:0;top:-2px;width:100%;height:4px;transform-origin:left center;background:linear-gradient(90deg,transparent,var(--vfx-2),var(--vfx));box-shadow:0 0 8px var(--vfx);animation:vfx-travel 230ms cubic-bezier(.12,.8,.2,1) both}
+.combat-vfx-core{left:0;top:-9px;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 32%,#fff 0 8%,var(--vfx-2) 24%,var(--vfx) 56%,transparent 72%);box-shadow:0 0 10px var(--vfx),0 0 22px color-mix(in srgb,var(--vfx) 62%,transparent);animation:vfx-core-flight 250ms cubic-bezier(.12,.8,.2,1) both}
+.combat-vfx-impact{right:-17px;top:-17px;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle,#fff 0 7%,var(--vfx-2) 21%,var(--vfx) 42%,transparent 72%);opacity:0;animation:vfx-impact 330ms 205ms ease-out both}
+.combat-vfx-ring{right:-16px;top:-16px;width:32px;height:32px;border:3px solid var(--vfx);border-radius:50%;opacity:0;box-shadow:0 0 11px var(--vfx);animation:vfx-ring 360ms 218ms ease-out both}.combat-vfx-ring.r2{animation-delay:270ms;animation-duration:400ms}
+.combat-vfx-particle{right:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:var(--vfx);box-shadow:0 0 7px var(--vfx);opacity:0;animation:vfx-particle 370ms 220ms ease-out both}
+.combat-vfx-particle.p1{--px:46px;--py:-25px}.combat-vfx-particle.p2{--px:37px;--py:31px}.combat-vfx-particle.p3{--px:-34px;--py:36px}.combat-vfx-particle.p4{--px:-44px;--py:-20px}.combat-vfx-particle.p5{--px:8px;--py:-46px}.combat-vfx-particle.p6{--px:-5px;--py:48px}
+
+/* Physical damage controls motion. Elemental damage can recolor the same motion. */
+.combat-vfx-overlay.delivery-slashing .combat-vfx-trail{top:-24px;height:48px;background:none;border-top:4px solid var(--vfx);border-radius:50%;box-shadow:0 -3px 9px color-mix(in srgb,var(--vfx) 70%,transparent);animation:vfx-slash 260ms ease-out both}
+.combat-vfx-overlay.delivery-slashing .combat-vfx-core{display:none}
+.combat-vfx-overlay.delivery-slashing .combat-vfx-impact{clip-path:polygon(0 45%,100% 0,62% 55%,100% 100%);border-radius:0}
+.combat-vfx-overlay.delivery-piercing .combat-vfx-trail{height:2px;top:-1px;background:linear-gradient(90deg,transparent 0 15%,var(--vfx-2) 55%,var(--vfx) 100%)}
+.combat-vfx-overlay.delivery-piercing .combat-vfx-core{width:26px;height:7px;top:-3.5px;border-radius:0;clip-path:polygon(0 40%,75% 0,100% 50%,75% 100%,0 60%)}
+.combat-vfx-overlay.delivery-bludgeoning .combat-vfx-trail{opacity:.28;height:8px;top:-4px;filter:blur(3px)}
+.combat-vfx-overlay.delivery-bludgeoning .combat-vfx-core{width:25px;height:25px;top:-12.5px}
+.combat-vfx-overlay.delivery-bludgeoning .combat-vfx-ring{border-width:4px;animation-duration:470ms}
+.combat-vfx-overlay.delivery-beam .combat-vfx-trail{height:4px;background:linear-gradient(90deg,var(--vfx),#fff,var(--vfx-2));animation:vfx-beam 290ms ease-out both}
+.combat-vfx-overlay.delivery-beam .combat-vfx-core{display:none}
+.combat-vfx-overlay.delivery-wave .combat-vfx-trail{top:-15px;height:30px;border:2px solid var(--vfx);border-radius:50%;background:transparent;filter:blur(.3px);animation:vfx-wave 360ms ease-out both}
+.combat-vfx-overlay.delivery-wave .combat-vfx-core{display:none}
+.combat-vfx-overlay.phase-impact .combat-vfx-trail,.combat-vfx-overlay.phase-impact .combat-vfx-core{display:none}
+.combat-vfx-overlay.phase-impact .combat-vfx-impact{animation-delay:0ms}.combat-vfx-overlay.phase-impact .combat-vfx-ring{animation-delay:25ms}.combat-vfx-overlay.phase-impact .combat-vfx-ring.r2{animation-delay:75ms}.combat-vfx-overlay.phase-impact .combat-vfx-particle{animation-delay:30ms}
+.combat-vfx-overlay.phase-impact.physical-slashing .combat-vfx-impact{width:70px;height:38px;right:-35px;top:-19px;border-radius:50%;background:none;border-top:4px solid var(--vfx);clip-path:none;filter:drop-shadow(0 0 7px var(--vfx))}
+.combat-vfx-overlay.phase-impact.physical-piercing .combat-vfx-impact{width:46px;height:9px;right:-23px;top:-4px;border-radius:0;clip-path:polygon(0 40%,72% 0,100% 50%,72% 100%,0 60%)}
+.combat-vfx-overlay.phase-impact.physical-bludgeoning .combat-vfx-impact{width:52px;height:52px;right:-26px;top:-26px}
+
+/* Element controls semantic color / particle language, never mechanics. */
+.combat-vfx-overlay.element-fire{--vfx:#ff6336;--vfx-2:#ffc34d}
+.combat-vfx-overlay.element-lightning{--vfx:#61c8ff;--vfx-2:#f5fbff}
+.combat-vfx-overlay.element-poison{--vfx:#70c84a;--vfx-2:#c9ff72}
+.combat-vfx-overlay.element-cold{--vfx:#5ddcff;--vfx-2:#e2fcff}
+.combat-vfx-overlay.element-force{--vfx:#ad7cff;--vfx-2:#ead8ff}
+.combat-vfx-overlay.element-acid{--vfx:#b5df39;--vfx-2:#edff72}
+.combat-vfx-overlay.element-radiant{--vfx:#ffd86a;--vfx-2:#fffbd0}
+.combat-vfx-overlay.element-necrotic{--vfx:#8054b2;--vfx-2:#d1a0ff}
+.combat-vfx-overlay.element-thunder{--vfx:#719de5;--vfx-2:#dceaff}
+.combat-vfx-overlay.element-psychic{--vfx:#e277da;--vfx-2:#ffdafa}
+.combat-vfx-overlay.element-slashing,.combat-vfx-overlay.element-piercing{--vfx:#d8e8f7;--vfx-2:#ffffff}
+.combat-vfx-overlay.element-bludgeoning{--vfx:#d9c3a4;--vfx-2:#fff0d7}
+.combat-vfx-overlay.element-poison.phase-impact .combat-vfx-impact,.combat-vfx-overlay.element-acid.phase-impact .combat-vfx-impact,.combat-vfx-overlay.element-necrotic.phase-impact .combat-vfx-impact{filter:blur(3px);transform:scale(1.35);opacity:.75}
+.combat-vfx-overlay.element-cold .combat-vfx-core{border-radius:0;clip-path:polygon(50% 0,100% 42%,74% 100%,24% 88%,0 36%)}
+.combat-vfx-overlay.element-lightning .combat-vfx-trail{filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 9px var(--vfx))}
+.combat-vfx-overlay.element-force .combat-vfx-ring,.combat-vfx-overlay.element-thunder .combat-vfx-ring,.combat-vfx-overlay.element-psychic .combat-vfx-ring{border-radius:50%;transform:scaleY(.55)}
+
+@keyframes vfx-travel{0%{transform:scaleX(0);opacity:0}18%{opacity:1}72%{transform:scaleX(1);opacity:.95}100%{transform:scaleX(1);opacity:0}}
+@keyframes vfx-core-flight{0%{transform:translateX(0) scale(.45);opacity:.2}75%{opacity:1}100%{transform:translateX(calc(var(--vfx-distance) - 18px)) scale(1);opacity:.9}}
+@keyframes vfx-impact{0%{transform:scale(.15);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(1.85);opacity:0}}
+@keyframes vfx-ring{0%{transform:scale(.1);opacity:.9}100%{transform:scale(2.2);opacity:0}}
+@keyframes vfx-particle{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--px),var(--py)) scale(.15);opacity:0}}
+@keyframes vfx-slash{0%{transform:scaleX(.18) rotate(-12deg);opacity:0}30%{opacity:1}100%{transform:scaleX(1) rotate(8deg);opacity:0}}
+@keyframes vfx-beam{0%{transform:scaleX(0);opacity:0}18%{opacity:1}60%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+@keyframes vfx-wave{0%{transform:scaleX(.1) scaleY(.2);opacity:0}35%{opacity:.9}100%{transform:scaleX(1) scaleY(1.25);opacity:0}}
+
+:root[data-motion="reduced"] .combat-vfx-overlay *{animation-duration:90ms!important;animation-delay:0ms!important}
+@media(prefers-reduced-motion:reduce){.combat-vfx-overlay *{animation-duration:90ms!important;animation-delay:0ms!important}}
