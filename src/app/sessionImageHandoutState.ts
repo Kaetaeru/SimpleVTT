@@ -40,7 +40,7 @@ export function subscribeSessionImageHandout(adapter:MockAdapter,listener:Listen
   set.add(listener);
   listeners.set(adapter,set);
   listener(getSessionImageHandoutState(adapter));
-  return ()=>set.delete(listener);
+  return ()=>{ set.delete(listener); };
 }
 
 export function resetSessionImageHandout(adapter:MockAdapter) {
