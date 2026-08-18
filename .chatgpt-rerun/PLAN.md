@@ -17,16 +17,16 @@
 - ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
 - installed-content composition/RuleModule validation remain content authority;
 - no second Character/content store, resolver, mechanics protocol or event ledger;
-- portraits/handouts are presentation state only; no ResolutionEvent/Undo/combat or tactical grid/token/Fog/path/LOS semantics;
-- no cloud/public-URL requirement for local images;
+- portraits/handouts remain presentation state only;
+- no tactical grid/token/Fog/pathfinding/minimap/LOS/cloud dependency;
+- production cleanup must remove only proven unreachable/reference wiring and must not replace canonical runtime authorities;
 - PR #109 must not be merged without explicit user authorization.
 
 ## Exact work HEAD
-`28f3700eb92ab93bacb589dd07be792bf228b3a0`
+`04d8af303e4f77eeb62801f8fd99e07146a2e48e`
 
-Latest source commits:
-- `7fbb5ddb96862d1a696885e37ba064247c61538c` — `Add Character portrait and session image handouts`
-- `28f3700eb92ab93bacb589dd07be792bf228b3a0` — `Fix handout subscription cleanup`
+Latest source commit:
+- `04d8af303e4f77eeb62801f8fd99e07146a2e48e` — `Polish contextual DM and content UX`
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
@@ -36,46 +36,51 @@ Latest source commits:
 5. Dual Character Sheet + Official Spellcasting.
 6. Direct-IP Session entry/configuration.
 7. Automatic validated Host-required declarative content parity before Ready.
-8. **Character portrait + DM image handout/reconnect** at `28f3700e...`:
-   - portrait uses local PNG/JPEG/WebP, max 2 MiB, preview/replace/remove and focal-position controls on both normal Sheet layouts;
-   - portrait persists through the existing owning-Client Character Library materialized record without advancing mechanics source/runtime revisions;
-   - DM handout uses local PNG/JPEG/WebP, max 4 MiB, explicit preview/reveal/withdraw;
-   - Client can dismiss and reopen; a compatible reconnect hello restores the current Host reveal;
-   - handout uses the existing Tauri session channel as a presentation envelope and does not enter the Host ResolutionEvent/participant ledger.
+8. Character portrait + DM image handout/reconnect at `28f3700e...`.
+9. **Contextual DM/Content polish + production dead-wiring cleanup** at `04d8af30...` on affected Linux/application gates:
+   - DM freeform/preparation uses existing `instantiateCombatant`/`removeCombatant` APIs for contextual Encounter preparation; no new store or mechanics path;
+   - empty Host Encounter gives an actionable in-place preparation path instead of pointing to an unreachable sidebar destination;
+   - routine Play copy removes implementation-facing `capability` wording;
+   - Content is the primary addon review/install surface and explains that installed content is then searched from Rules;
+   - user-facing addon guidance removes routine RuleModule/Capability/mechanics/progression jargon while retaining existing validation/install authority;
+   - production `main.tsx` no longer imports or loads the unmounted legacy `PlaySessionDock` or its CSS; the reference source file remains for historical tests and no canonical runtime module was removed.
 
 ## Validation evidence
-### Prior content-parity head `af193781...`
-- Phase 12 run `32186178904` / connected-protocol `95870203173`: success.
-- UI run `32186178947` / frontend `95870203434`: success.
-- Windows connected job `95870544914`: **success**, including Tauri transport/persistence, Windows executable build, staging and artifact upload.
+### Portrait/handout head `28f3700e...`
+- UI `32187690842` / `95875015492`: success.
+- Persistence `32187690744` / application-contract `95875014950`: success.
+- Persistence Windows `95875014764`: **success**.
+- Phase 12 `32187690780` / connected-protocol `95875015147`: success.
+- Phase 12 Windows `95875316302`: **success**, including Tauri transport/persistence, Windows executable build, staging and artifact upload.
 
-### Current portrait/handout head `28f3700e...`
-- UI run `32187690842` / frontend `95875015492`: **success**.
-  - new portrait/handout presentation structure test: success;
-  - all reported product regressions: success;
+### Current polish/cleanup exact head `04d8af30...`
+- UI run `32188621592` / frontend `95877878308`: **success**.
+  - PlaySessionDock production-wiring cleanup test: success;
+  - contextual DM/Content non-Character UX test: success;
+  - all reported UI/product regressions: success;
   - Typecheck and production build: success.
-- Persistence run `32187690744` / application-contract `95875014950`: **success**.
-  - new Character portrait persistence/restart/revision test: success;
-  - existing Character/content/module persistence suite: success;
-  - production build: success.
-- Phase 12 run `32187690780` / connected-protocol `95875015147`: **success**.
-  - new handout reveal/withdraw/dismiss/reconnect integration test plus existing connected/parity suite: success;
+- Main Playable run `32188621652` / playable-contract `95877878422`: **success**.
+  - full UI/rules/TypeScript/frontend: success;
+  - offline walkthrough, connected authority, arbitrary Character SessionProjection, DM prepared/live flows, Undo, theater-of-mind and accessibility: success.
+- Phase 12 run `32188621643` / connected-protocol `95877878129`: **success**.
+  - connected authority suite: success;
   - Phase 11 offline walkthrough: success;
   - production frontend gate: success.
-- Same-head Windows jobs are still automatic/in progress at this checkpoint:
-  - Phase 12 `windows-connected-playable` job `95875316302`;
-  - Persistence `tauri-storage` job `95875014764`.
-  Do not manually rerun them merely because watcher execution restarts; record their eventual result next invocation.
+- Persistence run `32188621614` / application-contract `95877878078`: **success** including persistence contracts and production build.
+- Same-head automatic Windows jobs are still in progress at checkpoint time and must not be manually rerun merely because watcher execution restarts:
+  - Phase 12 `windows-connected-playable` job `95878210229`;
+  - Main Playable `windows-playable` job `95878131296`;
+  - Persistence `tauri-storage` job `95877878039`.
 
 ## Next Exact Action
 1. Perform mandatory watcher preflight and trust GitHub if `main`, control, or PR #109 moved.
-2. If work HEAD remains `28f3700e...`, do not repeat any of the eight validated V0.9 slices.
-3. Check final results of jobs `95875316302` and `95875014764`; record them without manual rerun if already complete.
-4. Resume the remaining V0.9 convergence work: **contextual DM/Content/Rules polish + dead legacy cleanup**.
-5. Keep production surfaces outcome-first; do not restore Inspector/debug/provenance/entity-list/image-manager clutter.
-6. Remove only proven dead legacy paths after confirming no production import/reachability dependency.
-7. Run only affected gates first; preserve exact-head validation boundaries.
-8. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for both standalone Sheet-at-table and two-instance Host/Client image reveal/reconnect.
+2. If work HEAD remains `04d8af30...`, do not repeat any of the nine validated boundaries or the contextual DM/Content audit.
+3. Check jobs `95878210229`, `95878131296`, and `95877878039`; record their final results without manual rerun if already complete.
+4. Resume only the remaining proven dead-legacy cleanup: audit the old local-only `App.tsx` sheet/create/scene functions against the current router/import graph and remove them only if every dependency is demonstrably unreachable from production.
+5. Do not remove the current `ProductionPlayScreen`, dual Sheet router, V10 Character creation, current LevelUp path, connected/session/content authorities, or reference files still required by tests.
+6. Run affected gates after any cleanup; do not rerun unchanged validated slices solely because the watcher restarted.
+7. After source convergence, obtain one exact-head full automated UI/Main/mechanics/persistence/installed-content/connected/Windows validation set.
+8. Human Windows acceptance remains required for standalone Sheet-at-table use and two-instance Host/Client play including image reveal/reconnect; do not claim final V0.9 completion before that acceptance.
 9. Keep PR #109 draft/unmerged.
 
 ## Dispatch recommendation
