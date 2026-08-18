@@ -7,8 +7,9 @@ import {
   type SessionInstalledContentIdentityV1,
 } from "./installedContentRuntimeAdapter";
 import { MockAdapter } from "./mockAdapter";
-import { connectedInternal, publishConnectedSnapshot } from "./connectedSessionRuntimeAdapter";
+import { connectedInternal, connectedManifest, publishConnectedSnapshot } from "./connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "./connectedSessionState";
+import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { decodeConnectedWireMessage, encodeConnectedWireMessage, type ConnectedWireMessage } from "./connectedSessionWire";
 import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSessionTransport";
 
@@ -84,6 +85,17 @@ function compatibilityRecord(value:unknown) {
   if (!entry || typeof entry.status!=="string" || typeof entry.message!=="string") return undefined;
   if (entry.status!=="compatible"&&entry.status!=="warning"&&entry.status!=="incompatible") return undefined;
   return entry as {status:"compatible"|"warning"|"incompatible";message:string};
+}
+
+function refreshedClientHello(adapter:MockAdapter,hello:HelloWire):HelloWire {
+  const app=connectedInternal(adapter);
+  return {
+    ...hello,
+    manifest:connectedManifest(adapter),
+    participantId:`client:${app.activeCharacter.id}`,
+    participantName:app.activeCharacter.name,
+    projection:buildCharacterSessionProjectionV1(app.activeCharacter,app.catalog),
+  };
 }
 
 let parityBaseSend=tauriSessionTransport.send.bind(tauriSessionTransport);
@@ -187,12 +199,13 @@ async function clientParityPreflight(adapter:MockAdapter,message:SessionTranspor
       await installSessionInstalledContent(adapter,requiredContent);
       const hello=lastClientHello.get(adapter);
       if (!hello) throw new Error("재검증에 사용할 Client hello가 없습니다.");
+      const refreshedHello=refreshedClientHello(adapter,hello);
       const checking="콘텐츠 검증 완료 → Host 준비 상태 재확인 중";
       setParity(adapter,"checking",checking);
       app.session.compatibility="warning";
       app.session.compatibilityMessage=checking;
       await publishConnectedSnapshot(adapter).catch(()=>undefined);
-      await tauriSessionTransport.send(encodeConnectedWireMessage(hello));
+      await tauriSessionTransport.send(encodeConnectedWireMessage(refreshedHello));
     } catch(error) {
       const detail=error instanceof Error?error.message:String(error);
       const parityMessage=`콘텐츠 동기화 실패 · Ready 불가: ${detail}`;
