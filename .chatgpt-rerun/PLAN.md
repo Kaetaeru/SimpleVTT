@@ -12,67 +12,81 @@
 - dispatch recommendation: `continue`
 
 ## Authoritative product reference
-Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c99a055f96c6bc5e462a`). Interactive HTML demos remain visual/interaction references only. Production must preserve the canonical React/runtime, Character Library, installed-content, Host-authority, ResolutionEvent/reconnect/idempotency and existing Scene/action boundaries.
+Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c99a055f96c6bc5e462a`). Interactive HTML demos remain references only. Preserve canonical React/runtime architecture, owning-Client Character durability, Host mechanics authority, ResolutionEvent/reconnect/idempotency, installed-content/RuleModule authority and existing Scene/action runtime.
 
 ## Architecture invariants
 - one canonical Character; owning Client Character Library is durable Character authority;
-- Host projections are ephemeral and Host is connected mechanics authority;
+- Host projections remain ephemeral and Host remains connected mechanics authority;
 - ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
-- existing Scene/action runtime is the mechanics path;
 - installed-content composition/RuleModule validation remain content authority;
 - Freeform does not consume Initiative economy;
 - dice/VFX/images/appearance/sheet-layout preferences are presentation state only;
-- no second Character/content store, resolver, protocol or event ledger;
-- no tactical grid/token movement/Fog/pathfinding/minimap/LOS/cloud-account dependency;
+- no second Character/content store, resolver, network/content protocol or event ledger;
+- no tactical grid/token/Fog/pathfinding/minimap/LOS/cloud-account dependency;
 - PR #109 must not be merged without explicit user authorization.
 
 ## Exact work HEAD
-`e83fc37f60b6f42f0ed7b8c76329465ed55e3644`
+`0b7bce05f59bed2335499b89c6357b2431f5987e`
 
-Source commit: `Implement V0.9 dual character sheet layouts`.
+Latest source commit: `Add configurable direct-IP session entry`.
 
 ## Validated V0.9 slices — do not repeat unless touched
-1. **Production Play** — one top Initiative strip, scene theater, no permanent sidebars, bottom actor/resource/hotbar UX, canonical action and Freeform boundaries.
-2. **Fast Visual Dice** — production Three.js/cannon-es path, <=1.5 s cadence, result reel/formula expansion, Natural 20/1 semantic states, no connected reroll.
-3. **Composable Combat VFX** — presentation-only delivery + element projection, no hidden-defense leakage or mechanics mutation.
-4. **Appearance** — independent Dark/Light + persisted curated/custom accent with semantic colors preserved.
-5. **Dual Character Sheet presentation** — exact-head validated at `e83fc37...`:
-   - `SimpleVTT Sheet` remains the previously validated standalone sheet implementation; its exact source blob was retained as `LegacyCharacterSheetPlayScreen.tsx` rather than rewritten;
-   - persisted presentation-only layout preference `simplevtt | official`, default `simplevtt`, safe storage failure;
-   - both modes read the same `snapshot.activeCharacter`;
-   - Official Character page follows the paper information arrangement with six ability blocks, saves, full skills, passive perception, AC/Initiative/Speed, HP/temp HP, Hit Dice, attacks, resources, equipment/currency and feature/roleplay regions;
-   - existing item/edit/level-up and local roll handlers are reused;
-   - Player Name, Alignment, XP and Death Save persistence are explicitly rendered as untracked rather than invented;
-   - dedicated Official Spellcasting page renders Cantrips/level 0 plus levels 1–9, known/prepared state, projected current/max slots, projected Spell Save DC/Attack Bonus and supported local attack/damage controls;
-   - Official presentation reads `projectOfficialSheet`, `sheetAbilityModifier`, `sheetSaveBonus`, `scene.spellcastingByActor` and `scene.actionsByActor`; no second Character store or spell/save mechanics arithmetic was introduced;
-   - original SimpleVTT styling/assets only; no D&D logo/artwork or parchment asset transplant.
+1. Production Play.
+2. Fast production Visual Dice.
+3. Composable Combat VFX.
+4. Appearance preferences.
+5. Dual Character Sheet + Official Spellcasting at `e83fc37...`.
+6. **Direct-IP Session entry** at `0b7bce05...`:
+   - Host offline entry exposes session name, explicit Bind / Listen IP/interface and port;
+   - Join entry exposes saved Character, Host IP/address and port separately;
+   - arbitrary IPv4/IPv6 endpoint composition uses the existing Tauri TCP transport;
+   - a one-shot Host endpoint request decorates existing `tauriSessionTransport.startHost` without replacing Session lifecycle or Rust transport;
+   - existing Host preparation/lobby/live/stop/reconnect UI remains unchanged after connection;
+   - no invite-code abstraction and no networking protocol replacement;
+   - fresh Host empty Encounter behavior is retained.
 
-## Exact-head validation evidence
-At `e83fc37f60b6f42f0ed7b8c76329465ed55e3644`:
-- UI workflow run `32176685363` / frontend job `95840143821`: **success**.
-- Focused `Verify Phase 14 tabletop sheet, physics dice, and intent-first play UX`: **success**; this includes the expanded `characterSheetPlayableUx.test.ts` dual-Sheet contract.
-- UI named-rule boundary, v1 shell, Play structure/accessibility, Combat VFX, session UX, Host metadata, DM mechanics continuity, local Character ownership/inventory/spell regressions, creation/progression regressions, authoritative spellcasting and Phase 09 mechanics services all passed in that same exact-head frontend job.
-- `Typecheck and build`: **success**.
+## Validation evidence
+### Dual Sheet exact head `e83fc37...`
+- UI run `32176685363` / frontend `95840143821`: **success** including dual-Sheet focused test and TypeScript/production build.
 
-Historical exact-head evidence for unchanged earlier slices remains reusable, including UI run `32171564923` / frontend job `95823699460` and Phase 11 offline walkthrough job `95823700000` at `669f867...`. Do not rerun historical unchanged work merely because Rerun restarts.
+### Direct-IP exact head `0b7bce05...`
+- UI workflow run `32177587540` / frontend job `95842950322`: **success**.
+  - `Verify Phase 14 unified production session UX`: success, including direct-IP endpoint/UI tests and existing empty-Encounter lifecycle test;
+  - existing connected/lifecycle/DM/Character regressions in the same frontend job: success;
+  - `Typecheck and build`: success.
+- Phase 12 Connected Session run `32177587541` / `connected-protocol` job `95842949930`: **success**.
+  - connected-session authority protocol: success;
+  - Phase 11 offline walkthrough: success;
+  - production frontend gate: success.
+- The same Phase 12 run's `windows-connected-playable` job `95843208485` was still building at checkpoint time. Record its eventual result next invocation; do not block the next source slice solely on this in-progress artifact build.
+
+Historical evidence for unchanged prior slices remains reusable. Do not rerun unchanged work merely because Rerun restarts.
 
 ## Next Exact Action
-1. Perform mandatory watcher preflight. Trust GitHub if the work branch moved.
-2. If PR #109 still points to `e83fc37...`, do **not** reimplement or revalidate the dual-Sheet slice and do not repeat Play/Dice/VFX/Appearance work.
-3. Resume the next incomplete V0.9 slice: **direct-IP Session + validated automatic content parity**.
-4. Inspect only the current Session networking/content-parity paths needed for this slice: production Session workspace/lifecycle/UI state, Tauri session transport, connected protocol/wire/state, installed-content composition and RuleModule validation. Reuse prior Phase 12/14 validated mechanics/session authority rather than replacing it.
-5. Ensure the normal offline Session surface exposes real Host and Join coordinates:
-   - Host: session name, Bind/Listen IP/interface, port, open/start/stop lifecycle and readable/copyable player address;
-   - Join: Host IP/address, port, saved Character, Connect/Disconnect/Ready;
-   - no fake invite-code replacement.
-6. Before Client Ready, automatically reconcile Host-required supported declarative content through the existing installed-content/RuleModule authority with normal UX: `콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료`.
-7. Reconnect must be idempotent and transfer only missing/changed supported data. Validation/sync failure must block Ready with an actionable reason. Never execute Host-provided JS/native code or create a second addon store/mechanics protocol.
-8. Add focused tests only for direct-IP field reachability, lifecycle wiring, automatic content comparison/transfer/validation, Ready gating and reconnect idempotency. Run affected targeted gates first.
-9. After Session/content parity is exact-head green, continue: Character portrait + DM image handout/reconnect; contextual DM/Content/Rules polish and dead-legacy cleanup.
-10. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
+1. Perform mandatory watcher preflight and trust GitHub if the work branch moved.
+2. If PR #109 still points to `0b7bce05...`, do **not** re-audit/rewrite direct-IP Session, dual Sheet, Play, Dice, VFX or Appearance.
+3. Resume only the remaining half of the current Session slice: **automatic validated Host-required content parity before Ready**.
+4. Reuse the already-audited boundaries:
+   - `installedContentRuntimeAdapter` / `InstalledContentRepository` and `validateInstalledContentPackage` remain the only install/validation authority;
+   - `connectedSessionProtocol` / `connectedSessionWire` existing `hello` / `hello-ack` remain the handshake path;
+   - `productionSessionLifecycleAdapter` remains Ready/start/stop authority.
+5. Add session-safe helpers to snapshot normalized installed declarative entries and install peer-provided entries through the existing repository/validator. Do not create a second addon store.
+6. Extend the existing handshake, not a parallel protocol:
+   - Client `hello` advertises installed supported content identity/revision inventory;
+   - Host compares against its required installed supported content;
+   - `hello-ack` transfers only missing/changed supported declarative entries;
+   - Client validates/installs through existing authority, recomposes the catalog, then re-sends `hello`;
+   - parity is complete only when the next Host ack requires no entries.
+7. Same-identity conflicting/invalid payloads must fail closed and block Ready with an actionable message. Never execute Host-provided JS/native code.
+8. Reconnect uses the same comparison so already-matching content is not transferred again.
+9. Normal Session UX should communicate `콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료`; raw hash/manifest/protocol detail stays troubleshooting-only.
+10. Add focused tests around installed-content helper reuse, hello/ack comparison and transfer, validation failure Ready gating, successful re-handshake and reconnect missing/changed-only behavior. Run only affected UI/connected/installed-content gates first.
+11. After content parity is exact-head green, continue: Character portrait + DM image handout/reconnect; then contextual DM/Content/Rules polish and dead-legacy cleanup.
+12. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
+13. Keep PR #109 draft/unmerged.
 
 ## V0.9 Definition of Done
-One exact source SHA must demonstrate coherent Home/shell reachability; Character create/import/edit/level-up/restart durability; both Sheet layouts over one Character; interactive official level 0–9 Spellcasting; portrait and standalone Sheet rolls/resources; durable Light/Dark + accent; production physics dice; one top Initiative order and icon hotbar; presentation-only composable VFX; direct-IP Host/Join/Ready/start/stop/reconnect; validated Host-required declarative content parity; empty fresh Host Encounter with deliberate official Combatant addition; DM image reveal/withdraw and Client dismiss/reopen/reconnect; exact-head automated gates and human Windows acceptance. PR remains draft/unmerged until explicit merge authorization.
+One exact source SHA must demonstrate coherent shell reachability; durable Character create/import/edit/level-up; both Sheet layouts; Official level 0–9 Spellcasting; portrait and standalone rolls/resources; durable appearance; production physics dice; Initiative/hotbar Play; presentation-only VFX; direct-IP Host/Join/Ready/start/stop/reconnect; validated automatic Host-required declarative content parity; empty fresh Host Encounter; DM image reveal/withdraw and Client dismiss/reopen/reconnect; automated exact-head gates and human Windows acceptance.
 
 ## Dispatch recommendation
 `continue`
