@@ -1,6 +1,6 @@
 # Rerun Status
 
-**Connection:** `main` coordination · V0.9 contextual product polish validated
+**Connection:** `main` coordination · dead-legacy cleanup CI diagnosis blocked
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Canonical watcher branch: `main`
@@ -8,32 +8,21 @@
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Sequence: `3`
 - Task: `v1-product-experience-overhaul`
-- Control target: `continue`
+- Control target: `blocked`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- Current source HEAD: `04d8af303e4f77eeb62801f8fd99e07146a2e48e`
+- Current source HEAD: `5c70b3028aed70b0fc5ddafafe119f40174df833`
 
 ## Human summary
 
-The next V0.9 convergence slice is now green on its affected Linux/application gates without repeating the eight previously validated product slices.
+The remaining old local-only `App.tsx` Sheet/Create/Scene surfaces were audited against the current production router and removed in `5c70b302...`. Current Sheet, V10 Character creation, ProductionPlay, LevelUp, Resolution/DM, Content/Rules and Session authorities were retained. The related structure test now checks the real production play surface and guards against those legacy functions returning.
 
-At `04d8af30...`:
-- DM freeform/preparation now exposes a small contextual Encounter preparation/edit flow using the existing Combatant instantiate/remove APIs;
-- an empty Host Encounter no longer points users toward an unreachable sidebar destination;
-- routine Play and Content copy removes implementation-facing capability/module/mechanics jargon;
-- Content is the primary addon review/install surface and explains that installed content is searched from Rules;
-- the unmounted legacy PlaySessionDock and its CSS no longer participate in production `main.tsx` composition, while its reference source remains available for historical tests.
+The three Windows jobs previously pending at validated head `04d8af30...` are now all confirmed **success** without rerun: Persistence `95877878039`, Phase 12 Windows connected `95878210229`, and Main Windows playable `95878131296`.
 
-Validation:
-- UI `32188621592` / `95877878308`: **success**, including focused cleanup/product tests, all reported UI regressions, Typecheck and production build.
-- Main Playable `32188621652` / `95877878422`: **success**, including full UI/rules/TypeScript/frontend, offline, connected, SessionProjection, DM prepared/live, Undo and accessibility contracts.
-- Phase 12 `32188621643` / `95877878129`: **success**, including connected authority, offline walkthrough and frontend gate.
-- Persistence `32188621614` / `95877878078`: **success**, including persistence contracts and production build.
-- The previous portrait/handout-head Windows jobs `95875316302` and `95875014764` are now confirmed **success** without rerun.
-- Current-head Windows jobs `95878210229`, `95878131296`, and `95877878039` are still automatic/in progress at checkpoint time and must not be manually rerun on watcher restart.
+The new legacy-removal head is **not validated**. Main Playable run `32189591188`, job `95880814298`, failed at `Verify full UI, rules, TypeScript, and production frontend`. No source fix was guessed.
 
-Validated boundaries now closed unless touched: Production Play, Visual Dice, Combat VFX, Appearance, dual Sheet/Official Spellcasting, direct-IP Session, automatic content parity, portrait/DM image handout/reconnect, and contextual DM/Content polish plus production dead-wiring cleanup.
+The required `gh-fix-ci` workflow was invoked, but this execution environment has no GitHub CLI: `gh: not found` (exit 127). That workflow requires authenticated `gh` for Actions log inspection and does not permit the connector to substitute for it, so exact root-cause diagnosis is blocked until a gh-capable authenticated execution environment is available.
 
-Next work is only the remaining proven dead-legacy cleanup in the old local-only `App.tsx` sheet/create/scene block, followed by one exact-head full automated validation set. Human Windows acceptance remains required before final V0.9 completion. PR #109 remains draft and must not be merged without explicit user authorization.
+Validated boundaries 1–9 remain closed unless touched. Next work is only: inspect the exact Main Playable failure log with `gh`, fix the observed failure, then validate the affected exact head. PR #109 remains draft and must not be merged without explicit user authorization.
 
 `STATUS.md` is human-facing only. Authoritative reconciliation remains README -> control -> STATE -> PLAN.
