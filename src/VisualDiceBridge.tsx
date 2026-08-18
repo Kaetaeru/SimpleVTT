@@ -96,7 +96,7 @@ export function VisualDiceBridge() {
   },[]);
 
   if (!replay) return null;
-  const physical=replay.roll.dice.filter((die):die is {value:number;sides:4|6|8|10|12|20}=>die.sides!==null) as PhysicsDie[];
+  const physical=replay.roll.dice.filter((die):die is {value:number;sides:4|6|8|10|12|20;authoritative:true}=>die.sides!==null) as PhysicsDie[];
   const tone=resolved?replay.roll.notice.tone:"normal";
   const reduced=typeof window!=="undefined"&&(window.matchMedia("(prefers-reduced-motion: reduce)").matches||document.documentElement.dataset.motion==="reduced");
 
