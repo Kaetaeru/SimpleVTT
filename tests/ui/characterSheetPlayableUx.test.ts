@@ -1,32 +1,83 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { DEFAULT_SHEET_LAYOUT, SHEET_LAYOUT_STORAGE_KEY, persistSheetLayoutPreference, readSheetLayoutPreference, sanitizeSheetLayoutPreference, type SheetLayoutStorage } from "../../src/app/sheetLayoutPreferences";
 
-const sheet=readFileSync(new URL("../../src/CharacterSheetPlayScreen.tsx",import.meta.url),"utf8");
+const wrapper=readFileSync(new URL("../../src/CharacterSheetPlayScreen.tsx",import.meta.url),"utf8");
+const legacy=readFileSync(new URL("../../src/LegacyCharacterSheetPlayScreen.tsx",import.meta.url),"utf8");
+const official=readFileSync(new URL("../../src/OfficialCharacterSheetPlayScreen.tsx",import.meta.url),"utf8");
+const characterPage=readFileSync(new URL("../../src/OfficialCharacterSheetPage.tsx",import.meta.url),"utf8");
+const spellPage=readFileSync(new URL("../../src/OfficialSpellcastingSheetPage.tsx",import.meta.url),"utf8");
+const sheet=[wrapper,legacy,official,characterPage,spellPage].join("\n");
 const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
+const css=readFileSync(new URL("../../src/character-sheet-layouts.css",import.meta.url),"utf8");
+class MemoryStorage implements SheetLayoutStorage { value=new Map<string,string>(); getItem(key:string){return this.value.get(key)??null;} setItem(key:string,value:string){this.value.set(key,value);} }
 
-test("Character route uses the standalone playable sheet surface",()=>{
-  assert.match(app,/CharacterSheetPlayScreen/);
+test("Character route keeps the validated standalone SimpleVTT sheet and adds a persisted layout router",()=>{
   assert.match(app,/route === "character" && <CharacterSheetPlayScreen/);
-  assert.match(sheet,/TABLE CHARACTER SHEET/);
-  assert.match(sheet,/기기로 플레이/);
+  assert.match(wrapper,/SimpleVttCharacterSheetPlayScreen/);
+  assert.match(wrapper,/OfficialCharacterSheetPlayScreen/);
+  assert.match(legacy,/TABLE CHARACTER SHEET/);
+  assert.match(legacy,/기기로 플레이/);
 });
 
-test("sheet directly rolls ability checks saves skills attacks damage and common dice",()=>{
-  assert.match(sheet,/능력 판정/);
-  assert.match(sheet,/내성 굴림/);
-  assert.match(sheet,/view\.skillsByAbility/);
-  assert.match(sheet,/명중 굴림/);
-  assert.match(sheet,/피해 굴림/);
-  assert.match(sheet,/\[4,6,8,10,12,20\]/);
-  assert.match(sheet,/crypto\.getRandomValues/);
-  assert.match(sheet,/유리/);
-  assert.match(sheet,/불리/);
-  assert.match(sheet,/VisualDiceTray/);
+test("validated SimpleVTT sheet local roll behavior remains unchanged behind the router",()=>{
+  for(const pattern of [/능력 판정/,/내성 굴림/,/view\.skillsByAbility/,/명중 굴림/,/피해 굴림/,/crypto\.getRandomValues/,/유리/,/불리/,/VisualDiceTray/,/최근 굴림/]) assert.match(legacy,pattern);
+  assert.doesNotMatch(legacy,/resolveAction|startInitiative|sessionMode/);
+  assert.match(legacy,/local tabletop physics roll/);
 });
 
-test("tabletop sheet does not require entering a Scene to make local rolls",()=>{
-  assert.doesNotMatch(sheet,/resolveAction|startInitiative|sessionMode/);
-  assert.match(sheet,/local tabletop physics roll/);
-  assert.match(sheet,/최근 굴림/);
+test("dual Sheet preference is presentation-only sanitized and restart-persistent",()=>{
+  const storage=new MemoryStorage();
+  assert.equal(DEFAULT_SHEET_LAYOUT,"simplevtt");
+  assert.equal(readSheetLayoutPreference(storage),"simplevtt");
+  assert.equal(persistSheetLayoutPreference("official",storage),"official");
+  assert.equal(storage.getItem(SHEET_LAYOUT_STORAGE_KEY),"official");
+  assert.equal(readSheetLayoutPreference(storage),"official");
+  assert.equal(sanitizeSheetLayoutPreference("unexpected"),"simplevtt");
+  assert.match(wrapper,/readSheetLayoutPreference/);
+  assert.match(wrapper,/persistSheetLayoutPreference/);
+  const pref=readFileSync(new URL("../../src/app/sheetLayoutPreferences.ts",import.meta.url),"utf8");
+  assert.doesNotMatch(pref,/CharacterSheet|activeCharacter|mockAdapter|ResolutionEvent/);
+});
+
+test("both layouts remain on one canonical activeCharacter authority",()=>{
+  assert.match(legacy,/snapshot\.activeCharacter/);
+  assert.match(official,/const c = snapshot\.activeCharacter/);
+  assert.doesNotMatch([wrapper,official,characterPage,spellPage].join("\n"),/useState<[^>]*Character|localStorage.*Character|new Map<[^>]*Character/i);
+});
+
+test("Official Character page follows paper information arrangement and keeps supported controls interactive",()=>{
+  for (const label of ["Character Name","Class & Level","Background","Player Name","Race / Species","Alignment","Experience Points","Saving Throws","Skills","Passive Wisdom (Perception)","Armor Class","Initiative","Speed","Hit Point Maximum","Temporary Hit Points","Hit Dice","Death Saves","Attacks & Spellcasting","Equipment & Currency","Personality Traits","Ideals","Bonds","Flaws","Features & Traits"]) assert.match(characterPage,new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));
+  assert.match(characterPage,/official-ability-column/);
+  assert.match(characterPage,/toggleItemEquipped/);
+  assert.match(characterPage,/toggleItemAttunement/);
+  assert.match(characterPage,/useItem/);
+  assert.match(characterPage,/rawDie\(hitDie/);
+  assert.match(characterPage,/Player Name" value="미추적"/);
+  assert.match(characterPage,/Alignment" value="미추적"/);
+  assert.match(characterPage,/Experience Points" value="미추적"/);
+  assert.match(characterPage,/official-resource-box/);
+  assert.match(css,/grid-template-columns: 116px 235px minmax\(360px, 1\.35fr\) minmax\(220px, \.85fr\)/);
+  assert.doesNotMatch(css,/parchment|url\(/i);
+});
+
+test("Official Spellcasting page provides levels 0 through 9 shared slots known/prepared state and supported local actions",()=>{
+  assert.match(spellPage,/Array\.from\(\{ length: 10 \}/);
+  assert.match(spellPage,/data-spell-level=\{level\}/);
+  assert.match(spellPage,/spellcasting\?\.slots/);
+  assert.match(spellPage,/spell\.alwaysPrepared \? "◆" : spell\.prepared \? "●" : "○"/);
+  for(const label of ["Spellcasting Class","Spellcasting Ability","Spell Save DC","Spell Attack Bonus"]) assert.match(spellPage,new RegExp(label));
+  assert.match(spellPage,/spellcastingAbilityModifier/);
+  assert.match(spellPage,/candidate\.spellCast\?\.spellId/);
+  assert.match(spellPage,/action!\.attackBonus!/);
+  assert.match(spellPage,/damage\(spell\.name, expression\)/);
+});
+
+test("Official presentation reads existing projections instead of adding spell/save mechanics arithmetic",()=>{
+  assert.doesNotMatch([official,characterPage,spellPage].join("\n"),/8\s*\+\s*c\.proficiencyBonus|Math\.floor\(\(c\.abilities|spellSaveDc\s*=/);
+  assert.match(official,/snapshot\.scene\.spellcastingByActor\?\.\[c\.id\]/);
+  assert.match(official,/projectOfficialSheet\(c\)/);
+  assert.match(characterPage,/sheetAbilityModifier/);
+  assert.match(characterPage,/sheetSaveBonus/);
 });
