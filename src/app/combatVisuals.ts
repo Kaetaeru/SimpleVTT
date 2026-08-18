@@ -54,7 +54,10 @@ function baseDelivery(action:ActionVm,physical:CombatVfxProfile["physical"],elem
 export function buildCombatVfxProfile(resolution:ResolutionView,action:ActionVm|undefined):CombatVfxProfile|null {
   if (!action || !(action.damage?.length)) return null;
   const {physical,element}=damageProfile(action);
-  const impactStage=resolution.stage==="damage-animation"||resolution.stage==="effect-preview";
+  // damage-animation is the post-roll impact phase. effect-preview is the only
+  // pre-apply stage for no-roll damage such as a magic projectile, so it must
+  // retain delivery motion instead of jumping straight to impact.
+  const impactStage=resolution.stage==="damage-animation";
   const delivery=impactStage?"impact":baseDelivery(action,physical,element);
   const semantic=element??physical;
   return {
