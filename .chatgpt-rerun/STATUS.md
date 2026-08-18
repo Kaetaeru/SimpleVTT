@@ -16,14 +16,15 @@
 
 ## Human summary
 
-The incomplete V0.9 Session content-parity source slice has been implemented at `2c57c570...` without repeating previously validated work. It extends the existing `hello / hello-ack` handshake, installed-content repository/validator and Ready lifecycle rather than creating a second content store or network protocol. Host-required declarative content is compared as missing/changed-only, Client installation uses the existing validation/repository/catalog-composition path, reconnect skips already-matching content, and invalid/conflicting content is intended to fail closed before Ready.
+The V0.9 content-parity source remains committed at `2c57c570...` and no additional source changes were made this execution. Previously validated Play/Dice/VFX/Appearance/dual-Sheet/direct-IP work was not repeated.
 
-Automatic Phase 12 Connected Session run `32178687847` started for this exact source head. Its `connected-protocol` job `95846416201` failed at `Verify connected-session authority protocol`. The downstream checks in that job were skipped. UI run `32178687871` had also started but was not yet recorded as green at this checkpoint.
+Current exact-head evidence is now clearer:
+- UI run `32178687871` / frontend `95846416290`: **success**, including TypeScript and production build.
+- Phase 12 run `32178687847` / connected-protocol `95846416201`: **failure** at `Verify connected-session authority protocol`; its Windows job was skipped.
+- The preceding direct-IP Phase 12 run `32177587541` is fully complete: connected-protocol `95842949930` **success** and Windows job `95843208485` **success**.
 
-The exact connected-protocol failure has not been diagnosed because the prescribed GitHub Actions CI-fix workflow requires authenticated GitHub CLI log inspection and this execution environment reports `gh: not found`. No speculative post-failure source change was made.
+The remaining blocker is diagnosis of the exact connected-protocol failure. The prescribed CI-fix workflow requires installed/authenticated GitHub CLI before log inspection; this execution rechecked and `gh` is still unavailable (`status 127`). No speculative fix was made.
 
-Validated slices that remain closed unless touched: Production Play, fast Visual Dice, composable Combat VFX, Appearance, dual Character Sheet/Official Spellcasting, and direct-IP Session entry. The new content-parity source is **not** validated yet.
-
-Next authorized execution should inspect run `32178687847` / job `95846416201` with authenticated `gh`, fix only the observed parity failure, and then revalidate the affected connected/UI exact-head gates. PR #109 remains draft and must not be merged without explicit user authorization.
+Next authorized execution should use an environment with authenticated `gh` to inspect run `32178687847` / job `95846416201`, fix only the observed parity failure, and revalidate the affected connected/UI exact-head gates. PR #109 remains draft and must not be merged without explicit user authorization.
 
 `STATUS.md` is human-facing only. Authoritative reconciliation remains README -> control -> STATE -> PLAN.
