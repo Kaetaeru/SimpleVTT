@@ -88,17 +88,26 @@ test("visual dice projection preserves structured healing and damage die shapes 
   assert.equal(damage.notice.total,6);
 });
 
+test("damage notice never reuses a stale attack rollTotal", () => {
+  const damageAction = action({ resolutionKind:"attack", damage:[{ type:"참격", dice:"1d8", flat:4, average:9 }] });
+  const damage = buildVisualDiceRoll(resolution({ stage:"damage-animation", rollKind:"damage", authoritativeDice:[5], rollTotal:24, attackTotal:24 }),damageAction);
+  assert.equal(damage.notice.rawTotal,5);
+  assert.equal(damage.notice.modifier,4);
+  assert.equal(damage.notice.total,9);
+});
+
 test("visual dice projection never disguises legacy aggregate values as physical dice", () => {
   const thunderwave = action({ resolutionKind:"saving-throw", damage:[{ type:"천둥", dice:"2d8", flat:0, average:9 }] });
-  const legacy = buildVisualDiceRoll(resolution({ stage:"damage-animation", rollKind:"damage", authoritativeDice:[9] }),thunderwave);
+  const legacy = buildVisualDiceRoll(resolution({ stage:"damage-animation", rollKind:"damage", authoritativeDice:[9], rollTotal:99 }),thunderwave);
   assert.equal(legacy.legacyAggregate,true);
   assert.deepEqual(legacy.dice,[{ value:9, sides:null, authoritative:true }]);
   assert.equal(legacy.notice.rawTotal,9);
+  assert.equal(legacy.notice.modifier,0);
   assert.equal(legacy.notice.total,9);
 
   const invalidD4 = action({ resolutionKind:"healing", healing:{ dice:"1d4", flat:4, average:7 } });
   const invalid = buildVisualDiceRoll(resolution({ rollKind:"healing", authoritativeDice:[5] }),invalidD4);
   assert.equal(invalid.legacyAggregate,true);
   assert.equal(invalid.dice[0]?.sides,null);
-  assert.equal(invalid.notice.modifier,4);
+  assert.equal(invalid.notice.modifier,0);
 });
