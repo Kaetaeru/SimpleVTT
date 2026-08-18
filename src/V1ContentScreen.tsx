@@ -48,7 +48,7 @@ export function V1ContentScreen() {
       return;
     }
     if (!file.name.toLowerCase().endsWith(".json") && file.type && file.type !== "application/json") {
-      setFileError("현재 v1 애드온 설치는 JSON RuleModule 패키지를 지원합니다.");
+      setFileError("현재 v1 애드온 설치는 JSON 패키지를 지원합니다.");
       return;
     }
     try {
@@ -65,7 +65,7 @@ export function V1ContentScreen() {
   return (
     <div className="v1-content-screen">
       <header className="v1-page-head">
-        <div><span className="v1-kicker">CONTENTS</span><h1>콘텐츠 · 애드온</h1><p>설치할 파일을 먼저 검토합니다. 기본 규칙과 로컬 애드온은 같은 카탈로그로 합쳐집니다.</p></div>
+        <div><span className="v1-kicker">CONTENTS</span><h1>콘텐츠 · 애드온</h1><p>설치 파일은 이 화면에서 검토하고 승인합니다. 설치된 애드온은 기본 규칙과 같은 카탈로그에 합쳐져 규칙 화면에서 검색됩니다.</p></div>
         <label className="primary v1-file-button">애드온 추가<input type="file" accept=".json,application/json" onChange={chooseFile} /></label>
       </header>
 
@@ -114,16 +114,16 @@ export function V1ContentScreen() {
         <aside className="v1-addon-guide">
           <span className="v1-kicker">ADDON GUIDE</span>
           <h2>애드온 만드는 방법</h2>
-          <p>v1 애드온은 실행 코드를 넣는 플러그인이 아니라, 검증 가능한 선언형 RuleModule JSON입니다.</p>
+          <p>v1 애드온은 실행 코드를 넣는 플러그인이 아니라, 검증 가능한 선언형 JSON 패키지입니다.</p>
           <ol>
             <li><code>schemaVersion</code>은 <code>0.1-draft</code>를 사용합니다.</li>
             <li><code>moduleId</code>, <code>moduleVersion</code>, <code>rulesProfile</code>과 출처 정보를 적습니다.</li>
             <li><code>content</code> 배열에 클래스, 서브클래스, 종족, 배경, 재주, 주문, 아이템, 상태, 전투원 또는 옵션을 넣습니다.</li>
             <li>파일을 여기서 선택하고 검증 결과를 확인한 뒤 설치합니다.</li>
           </ol>
-          <p className="v1-muted">의존성·충돌·Capability도 설치 전에 검사합니다. 현재 generic Catalog가 실행할 수 없는 mechanics/progression 확장은 차단됩니다.</p>
+          <p className="v1-muted">의존성·충돌·지원 범위도 설치 전에 검사합니다. 현재 앱이 안전하게 적용할 수 없는 규칙 확장은 설치 전에 차단됩니다.</p>
           <button onClick={() => setShowAdvanced((value) => !value)}>{showAdvanced ? "직접 입력 닫기" : "고급: JSON 직접 입력"}</button>
-          {showAdvanced && <div className="v1-json-input"><textarea value={payload} onChange={(event) => setPayload(event.target.value)} placeholder="RuleModule JSON을 붙여 넣으세요."/><button onClick={() => void previewPayload()}>JSON 검증</button></div>}
+          {showAdvanced && <div className="v1-json-input"><textarea value={payload} onChange={(event) => setPayload(event.target.value)} placeholder="애드온 JSON을 붙여 넣으세요."/><button onClick={() => void previewPayload()}>JSON 검증</button></div>}
         </aside>
       </div>
     </div>

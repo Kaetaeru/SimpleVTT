@@ -6,12 +6,11 @@ import test from "node:test";
 const root=process.cwd();
 const source=(path:string)=>readFileSync(join(root,path),"utf8");
 
-test("legacy PlaySessionDock stays available for reference but is no longer mounted in production composition",()=>{
+test("legacy PlaySessionDock stays available for reference but no longer participates in production composition",()=>{
   const main=source("src/main.tsx");
   const dock=source("src/PlaySessionDock.tsx");
   assert.match(dock,/export function PlaySessionDock/);
-  assert.match(main,/PlaySessionDock/);
-  assert.doesNotMatch(main,/<PlaySessionDock \/>/);
+  assert.doesNotMatch(main,/PlaySessionDock|play-session-dock\.css/);
 });
 
 test("production Scene route is owned by one V0.9 scene-first hotbar surface",()=>{

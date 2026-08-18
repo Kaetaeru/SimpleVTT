@@ -96,8 +96,8 @@ function IntentTooltip({intent,options}:{intent:PlayIntent; options:ActionVm[]})
   return <span className="play-action-tooltip" role="tooltip">
     <strong>{intent.label}<small>{intent.labelEn}</small></strong>
     <span>{intent.summary}</span>
-    <dl><dt>선택지</dt><dd>{options.length?`${options.length}개 연결됨`:"현재 연결된 capability 없음"}</dd><dt>실행</dt><dd>필요한 무기·기술·주문·대상을 다음 단계에서 선택</dd></dl>
-    {!options.length&&<em>현재 Actor 런타임에서 실행할 수 있는 선택지가 없습니다.</em>}
+    <dl><dt>선택지</dt><dd>{options.length?`${options.length}개 연결됨`:"현재 사용 가능한 선택지 없음"}</dd><dt>실행</dt><dd>필요한 무기·기술·주문·대상을 다음 단계에서 선택</dd></dl>
+    {!options.length&&<em>현재 Actor에서 실행할 수 있는 선택지가 없습니다.</em>}
   </span>;
 }
 
@@ -125,7 +125,7 @@ function ActorCard({entity,current,targetable,selected,onClick}:{entity:SceneEnt
 }
 
 export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
-  const {snapshot,resolveAction,selectDmActor,startInitiative,endInitiative,endTurn}=useSimpleVtt();
+  const {snapshot,resolveAction,selectDmActor,startInitiative,endInitiative,endTurn,instantiateCombatant,removeCombatant}=useSimpleVtt();
   const [tab,setTab]=useState<HotbarTab>("common");
   const [intent,setIntent]=useState<PlayIntentId|null>(null);
   const [chosen,setChosen]=useState<ActionVm|null>(null);
@@ -135,11 +135,13 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
   const scene=snapshot.scene;
   const dm=role==="dm";
   const isCombat=snapshot.sessionMode==="initiative";
+  const canManageEncounter=dm&&!isCombat&&(snapshot.session.role==="offline"||snapshot.session.lifecycle==="preparing");
+  const encounterDefinitions=snapshot.combatantDefinitions;
   const actor=dm
     ? scene.entities.find((entity)=>entity.id===scene.selectedActorId)??scene.entities[0]
     : scene.entities.find((entity)=>entity.id===(isCombat?scene.currentActorId:snapshot.activeCharacter.id))??scene.entities.find((entity)=>entity.id===snapshot.activeCharacter.id);
 
-  if (!actor) return <div className="screen play-redesign-screen"><div className="play-redesign-empty"><span className="eyebrow accent">PLAY</span><h1>{snapshot.session.name||scene.name}</h1><p>{dm?"Encounter가 비어 있습니다. 세션 또는 Combatants에서 참가자를 추가하세요.":"플레이할 Character가 아직 장면에 없습니다."}</p></div></div>;
+  if (!actor) return <div className="screen play-redesign-screen"><div className="play-redesign-empty"><span className="eyebrow accent">PLAY</span><h1>{snapshot.session.name||scene.name}</h1><p>{dm?"Encounter가 비어 있습니다. 필요한 Combatant를 아래에서 추가하거나 세션 참가자를 기다리세요.":"플레이할 Character가 아직 장면에 없습니다."}</p>{dm&&canManageEncounter&&<div className="play-v09-empty-encounter"><strong>Encounter 준비</strong>{encounterDefinitions.length?<div className="play-v09-option-strip">{encounterDefinitions.slice(0,6).map((definition)=><button type="button" key={definition.id} onClick={()=>void instantiateCombatant(definition.id)}><strong>{definition.name}</strong><small>AC {definition.ac} · HP {definition.maxHp}</small></button>)}</div>:<span>사용 가능한 Combatant가 없습니다. 콘텐츠를 먼저 확인해 주세요.</span>}</div>}</div></div>;
 
   const actions=scene.actionsByActor[actor.id]??[];
   const currentActor=scene.entities.find((entity)=>entity.id===scene.currentActorId);
@@ -193,7 +195,7 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
   const renderActionButton=(action:ActionVm)=> <button type="button" key={action.id} className={`play-v09-action-icon ${chosen?.id===action.id?"selected":""}`} aria-label={skillFactByActionId(action.id)?.name??action.name} aria-disabled={!action.available} onClick={()=>{if(action.available)void chooseOption(action);}}>
     <ActionGlyph kind={actionIconKind(action)}/><span className="visually-hidden">{skillFactByActionId(action.id)?.name??action.name}</span><ActionTooltip action={action}/>
   </button>;
-  const renderGroup=(label:string,content:React.ReactNode,empty=false)=> <section className="play-v09-hot-group" key={label}><span className="play-v09-group-label">{label}</span><div className={`play-v09-icon-grid ${empty?"empty":""}`}>{empty?<span>현재 capability 없음</span>:content}</div></section>;
+  const renderGroup=(label:string,content:React.ReactNode,empty=false)=> <section className="play-v09-hot-group" key={label}><span className="play-v09-group-label">{label}</span><div className={`play-v09-icon-grid ${empty?"empty":""}`}>{empty?<span>현재 사용 가능한 항목 없음</span>:content}</div></section>;
 
   const commonGroups=[
     renderGroup("기본 행동",BASIC_INTENTS.map(renderIntentButton)),
@@ -214,6 +216,7 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
       <div className="play-redesign-header-actions">
         {snapshot.session.role!=="offline"&&<span className={`play-v09-connection ${snapshot.connectionState}`}>{snapshot.connectionState==="connected"?"연결됨":snapshot.connectionState==="reconnecting"?"재연결 중":"연결 끊김"}</span>}
         {dm&&<select aria-label="행동할 Actor" value={actor.id} onChange={(event)=>void selectActor(event.target.value)}>{scene.entities.map((entity)=><option key={entity.id} value={entity.id}>{entity.name}</option>)}</select>}
+        {canManageEncounter&&<details className="play-v09-encounter-tools"><summary>Encounter 편집</summary><div className="play-v09-option-strip">{encounterDefinitions.slice(0,6).map((definition)=><button type="button" key={definition.id} onClick={()=>void instantiateCombatant(definition.id)}><strong>{definition.name}</strong><small>Encounter에 추가</small></button>)}</div>{actor.kind==="combatant"&&<button type="button" onClick={()=>void removeCombatant(actor.id)}>선택 Combatant 제거</button>}</details>}
         {dm&&!isCombat&&<button className="primary" onClick={()=>{closeFlow();void startInitiative();}}>이니셔티브 시작</button>}
         {dm&&isCombat&&<button onClick={()=>{closeFlow();void endInitiative();}}>전투 종료</button>}
       </div>
@@ -231,7 +234,7 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
         {sceneActors.length?sceneActors.map((entity)=><ActorCard key={entity.id} entity={entity} current={entity.id===scene.currentActorId||entity.id===actor.id} targetable={Boolean(chosen?.eligibleTargetIds.includes(entity.id))} selected={multiTargets.includes(entity.id)} onClick={()=>void sceneActorClick(entity)}/>):<span className="play-v09-scene-empty">장면의 NPC 또는 Combatant가 여기에 표시됩니다.</span>}
       </div>
       <div className="play-v09-scene-focus" aria-live="polite">
-        {chosen?<><strong>{chosen.name}</strong><span>{chosen.target==="multi-enemy"?`대상을 최대 ${chosen.maxTargets??"여러"}명 선택하세요.`:"장면에서 대상을 선택하세요."}</span></>:<><strong>{actor.name}</strong><span>{isCombat?"행동 HUD에서 capability를 선택하세요.":"자유 진행 · 행동 HUD에서 필요한 행동을 선택하세요."}</span></>}
+        {chosen?<><strong>{chosen.name}</strong><span>{chosen.target==="multi-enemy"?`대상을 최대 ${chosen.maxTargets??"여러"}명 선택하세요.`:"장면에서 대상을 선택하세요."}</span></>:<><strong>{actor.name}</strong><span>{isCombat?"행동 HUD에서 사용할 행동을 선택하세요.":"자유 진행 · 행동 HUD에서 필요한 행동을 선택하세요."}</span></>}
       </div>
       <div className="play-v09-scene-row lower" aria-label="Player와 Party">
         {partyActors.length?partyActors.map((entity)=><ActorCard key={entity.id} entity={entity} current={entity.id===scene.currentActorId||entity.id===actor.id} targetable={Boolean(chosen?.eligibleTargetIds.includes(entity.id))} selected={multiTargets.includes(entity.id)} onClick={()=>void sceneActorClick(entity)}/>):<span className="play-v09-scene-empty">Player Character가 장면에 없습니다.</span>}

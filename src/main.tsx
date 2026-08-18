@@ -17,7 +17,6 @@ import "./app/productionSessionEmptyEncounterAdapter";
 import "./app/productionSessionUiStateAdapter";
 import "./app/sessionImageHandoutRuntimeAdapter";
 import "./app/sessionContentParityRuntimeAdapter";
-import { PlaySessionDock } from "./PlaySessionDock";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
@@ -32,7 +31,6 @@ import { SessionImageHandoutBridge } from "./SessionImageHandoutBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
-import "./play-session-dock.css";
 import "./visual-dice.css";
 import "./physics-dice.css";
 import "./combat-vfx.css";
@@ -56,7 +54,6 @@ import "./appearance-settings.css";
 import "./character-portrait.css";
 import "./session-image-handout.css";
 
-void PlaySessionDock;
 void CombatSpellHudBridge;
 
 initializeAppearancePreference();

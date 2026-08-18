@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
+const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
+const play=readFileSync(new URL("../../src/ProductionPlayScreen.tsx",import.meta.url),"utf8");
+const content=readFileSync(new URL("../../src/V1ContentScreen.tsx",import.meta.url),"utf8");
 const wire=readFileSync(new URL("../../src/app/connectedSessionWire.ts",import.meta.url),"utf8");
 const runtime=readFileSync(new URL("../../src/app/connectedSessionRuntimeAdapter.ts",import.meta.url),"utf8");
 
@@ -38,6 +41,30 @@ test("player and DM play surfaces are outcome-first and the empty Host scene is 
   assert.match(dm,/if \(!selectedActor\|\|!currentActor\)/);
   assert.match(dm,/Encounter가 비어 있습니다/);
   assert.doesNotMatch(dm,/RulesProfile|호환 상태|세션 콘텐츠|선택한 Actor와 Current Turn/);
+});
+
+test("production DM encounter preparation is contextual and presentation copy avoids mechanics jargon",()=>{
+  assert.match(play,/instantiateCombatant/);
+  assert.match(play,/removeCombatant/);
+  assert.match(play,/snapshot\.session\.lifecycle==="preparing"/);
+  assert.match(play,/Encounter 준비/);
+  assert.match(play,/Encounter 편집/);
+  assert.match(play,/선택 Combatant 제거/);
+  assert.doesNotMatch(play,/capability/i);
+  assert.doesNotMatch(play,/ResolutionEvent|Fog|pathfinding|minimap|line of sight/i);
+});
+
+test("Content is the primary addon review/install surface and points users to Rules for lookup",()=>{
+  assert.match(content,/설치 파일은 이 화면에서 검토하고 승인합니다/);
+  assert.match(content,/규칙 화면에서 검색됩니다/);
+  assert.match(content,/검토 완료 · 설치/);
+  assert.doesNotMatch(content,/RuleModule|Capability|generic Catalog|mechanics\/progression/);
+});
+
+test("dead PlaySessionDock production wiring is removed while the current product shell stays mounted",()=>{
+  assert.doesNotMatch(main,/PlaySessionDock|play-session-dock\.css/);
+  assert.match(main,/SessionImageHandoutBridge/);
+  assert.match(main,/CharacterPortraitBridge/);
 });
 
 test("Combatants, Rules, Activity, and Settings hide implementation jargon from the primary path",()=>{
