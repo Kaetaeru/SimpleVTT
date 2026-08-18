@@ -50,6 +50,8 @@ jobs:
         run: npx tsx --test tests/ui/playSessionDockStructure.test.ts
       - name: Verify V0.9 production play workspace accessibility and structure
         run: npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts tests/ui/v09ProductionPlayStructure.test.ts
+      - name: Verify V0.9 combat VFX projection and presentation boundaries
+        run: npx tsx --test tests/ui/combatVfxProjection.test.ts tests/ui/combatVfxStructure.test.ts
       - name: Verify Phase 14 unified production session UX
         run: npx tsx --test tests/ui/productionSessionWorkspaceRedesign.test.ts
       - name: Verify Phase 14 tabletop sheet, physics dice, and intent-first play UX
