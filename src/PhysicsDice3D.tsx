@@ -69,7 +69,7 @@ function numberTexture(value:number) {
   return texture;
 }
 
-function buildDie(scene:THREE.Scene,world:CANNON.World,die:PhysicsDie,index:number,total:number):DieRuntime {
+function buildDie(scene:THREE.Scene,world:CANNON.World,die:PhysicsDie,index:number,total:number,cinematic:boolean):DieRuntime {
   const geometry=dieGeometry(die.sides);
   geometry.computeVertexNormals();
   const material=new THREE.MeshStandardMaterial({
@@ -91,15 +91,21 @@ function buildDie(scene:THREE.Scene,world:CANNON.World,die:PhysicsDie,index:numb
     group.add(sprite);
   });
 
-  const spacing=1.85;
+  const spacing=cinematic?1.45:1.85;
   const x=(index-(total-1)/2)*spacing;
-  group.position.set(x,3.4+index*.24,(index%2?-.3:.3));
+  if (cinematic) group.position.set(x*.55,.75+index*.09,-8.4-index*.36);
+  else group.position.set(x,3.4+index*.24,(index%2?-.3:.3));
   scene.add(group);
 
-  const body=new CANNON.Body({mass:1.1,shape:cannonShape(geometry),linearDamping:.14,angularDamping:.08});
+  const body=new CANNON.Body({mass:1.1,shape:cannonShape(geometry),linearDamping:cinematic?.10:.14,angularDamping:cinematic?.10:.08});
   body.position.set(group.position.x,group.position.y,group.position.z);
-  body.velocity.set((Math.random()-.5)*2.4,-.4,(Math.random()-.5)*2.2);
-  body.angularVelocity.set(8+Math.random()*8,7+Math.random()*10,6+Math.random()*9);
+  if (cinematic) {
+    body.velocity.set((Math.random()-.5)*2.8,-.5-Math.random()*.8,10.4+Math.random()*2.4);
+    body.angularVelocity.set((Math.random()>.5?1:-1)*(18+Math.random()*9),(Math.random()>.5?1:-1)*(17+Math.random()*10),(Math.random()>.5?1:-1)*(16+Math.random()*9));
+  } else {
+    body.velocity.set((Math.random()-.5)*2.4,-.4,(Math.random()-.5)*2.2);
+    body.angularVelocity.set(8+Math.random()*8,7+Math.random()*10,6+Math.random()*9);
+  }
   body.quaternion.setFromEuler(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);
   world.addBody(body);
   return {mesh:group,body,faceNormals,desiredIndex:Math.max(0,Math.min(faceNormals.length-1,die.value-1)),targetQuaternion:null};
@@ -119,7 +125,7 @@ function cleanupGroup(group:THREE.Group) {
   });
 }
 
-export function PhysicsDice3D({dice,compact=false,reducedMotion=false,className=""}:{dice:PhysicsDie[];compact?:boolean;reducedMotion?:boolean;className?:string}) {
+export function PhysicsDice3D({dice,compact=false,reducedMotion=false,cinematic=false,className=""}:{dice:PhysicsDie[];compact?:boolean;reducedMotion?:boolean;cinematic?:boolean;className?:string}) {
   const hostRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const host=hostRef.current;
@@ -129,28 +135,34 @@ export function PhysicsDice3D({dice,compact=false,reducedMotion=false,className=
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.setClearColor(0x000000,0);
     host.replaceChildren(renderer.domElement);
 
     const scene=new THREE.Scene();
-    const camera=new THREE.PerspectiveCamera(34,1,.1,100);
-    camera.position.set(0,5.4,compact?8.6:9.8);
-    camera.lookAt(0,.7,0);
+    const camera=new THREE.PerspectiveCamera(cinematic?38:34,1,.1,100);
+    if (cinematic) {
+      camera.position.set(0,3.15,8.9);
+      camera.lookAt(0,-.45,-1.15);
+    } else {
+      camera.position.set(0,5.4,compact?8.6:9.8);
+      camera.lookAt(0,.7,0);
+    }
     scene.add(new THREE.HemisphereLight(0xffffff,0x18202a,2.15));
     const key=new THREE.DirectionalLight(0xffffff,3.2); key.position.set(-4,7,5); key.castShadow=true; scene.add(key);
 
-    const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(40,24),new THREE.MeshStandardMaterial({color:0x10151d,roughness:.78,metalness:.05,transparent:true,opacity:.96}));
+    const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(40,30),new THREE.MeshStandardMaterial({color:0x10151d,roughness:.78,metalness:.05,transparent:true,opacity:cinematic?.08:.96}));
     floorMesh.rotation.x=-Math.PI/2; floorMesh.position.y=-1.05; floorMesh.receiveShadow=true; scene.add(floorMesh);
 
-    const world=new CANNON.World({gravity:new CANNON.Vec3(0,-18.5,0)});
+    const world=new CANNON.World({gravity:new CANNON.Vec3(0,cinematic?-16.5:-18.5,0)});
     world.allowSleep=true;
     const dieMaterial=new CANNON.Material("dice");
     const floorMaterial=new CANNON.Material("floor");
-    world.addContactMaterial(new CANNON.ContactMaterial(dieMaterial,floorMaterial,{friction:.34,restitution:.42}));
-    world.addContactMaterial(new CANNON.ContactMaterial(dieMaterial,dieMaterial,{friction:.28,restitution:.36}));
+    world.addContactMaterial(new CANNON.ContactMaterial(dieMaterial,floorMaterial,{friction:cinematic?.42:.34,restitution:cinematic?.30:.42}));
+    world.addContactMaterial(new CANNON.ContactMaterial(dieMaterial,dieMaterial,{friction:.28,restitution:cinematic?.26:.36}));
     const floorBody=new CANNON.Body({mass:0,material:floorMaterial,shape:new CANNON.Plane()});
     floorBody.quaternion.setFromEuler(-Math.PI/2,0,0); floorBody.position.y=-1.05; world.addBody(floorBody);
 
-    const runtimes=dice.map((die,index)=>buildDie(scene,world,die,index,dice.length));
+    const runtimes=dice.map((die,index)=>buildDie(scene,world,die,index,dice.length,cinematic));
     runtimes.forEach((runtime)=>runtime.body.material=dieMaterial);
     const resize=()=>{
       const rect=host.getBoundingClientRect();
@@ -176,7 +188,7 @@ export function PhysicsDice3D({dice,compact=false,reducedMotion=false,className=
           runtime.mesh.position.set(runtime.body.position.x,runtime.body.position.y,runtime.body.position.z);
           runtime.mesh.quaternion.set(runtime.body.quaternion.x,runtime.body.quaternion.y,runtime.body.quaternion.z,runtime.body.quaternion.w);
         }
-        const settleAt=reducedMotion?0:1250;
+        const settleAt=reducedMotion?0:cinematic?960:1250;
         if (elapsed>=settleAt && !runtime.targetQuaternion) {
           const normal=runtime.faceNormals[runtime.desiredIndex]??new THREE.Vector3(0,1,0);
           const worldNormal=normal.clone().applyQuaternion(runtime.mesh.quaternion).normalize();
@@ -184,11 +196,12 @@ export function PhysicsDice3D({dice,compact=false,reducedMotion=false,className=
           runtime.targetQuaternion=correction.multiply(runtime.mesh.quaternion.clone()).normalize();
           runtime.body.velocity.setZero(); runtime.body.angularVelocity.setZero(); runtime.body.sleep();
         }
-        if (runtime.targetQuaternion) runtime.mesh.quaternion.slerp(runtime.targetQuaternion,reducedMotion?1:.105);
+        if (runtime.targetQuaternion) runtime.mesh.quaternion.slerp(runtime.targetQuaternion,reducedMotion?1:cinematic?.28:.105);
       });
       renderer.render(scene,camera);
       frame++;
-      if (elapsed<(reducedMotion?700:2350)||frame<3) raf=requestAnimationFrame(animate);
+      const renderUntil=reducedMotion?520:cinematic?1450:2350;
+      if (elapsed<renderUntil||frame<3) raf=requestAnimationFrame(animate);
     };
     raf=requestAnimationFrame(animate);
     return ()=>{
@@ -196,6 +209,6 @@ export function PhysicsDice3D({dice,compact=false,reducedMotion=false,className=
       runtimes.forEach((runtime)=>{world.removeBody(runtime.body);cleanupGroup(runtime.mesh);scene.remove(runtime.mesh);});
       world.removeBody(floorBody); floorMesh.geometry.dispose(); (floorMesh.material as THREE.Material).dispose(); renderer.dispose(); renderer.domElement.remove();
     };
-  },[dice,compact,reducedMotion]);
-  return <div ref={hostRef} className={`physics-dice-canvas ${compact?"compact":""} ${className}`.trim()} role="img" aria-label={dice.map((die)=>`d${die.sides} ${die.value}`).join(", ")}/>;
+  },[dice,compact,reducedMotion,cinematic]);
+  return <div ref={hostRef} className={`physics-dice-canvas ${compact?"compact":""} ${cinematic?"cinematic":""} ${className}`.trim()} role="img" aria-label={dice.map((die)=>`d${die.sides} ${die.value}`).join(", ")}/>;
 }
