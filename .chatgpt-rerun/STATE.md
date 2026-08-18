@@ -12,90 +12,116 @@
 - PR #109: open/draft/unmerged; no merge authorized
 
 ## Current work head
-`669f867d3b8ce1ef94aa513e779e64c51ffa606e`
+`e83fc37f60b6f42f0ed7b8c76329465ed55e3644`
 
-At this execution's final product-branch reconciliation, PR #109 still pointed to that exact SHA and remained open, draft, mergeable and unmerged. No product-branch source commit was made during this watcher window.
+PR #109 was rechecked immediately before the product-branch write at preceding head `669f867d3b8ce1ef94aa513e779e64c51ffa606e`; the new commit was then applied with a non-force fast-forward. Final PR reconciliation shows #109 open, draft, mergeable and unmerged at `e83fc37...`.
 
-## Preflight reconciliation completed
-The mandatory watcher files were read from `main` in protocol order before work:
+## Preflight reconciliation for this execution
+Mandatory files were read from `main` in exact protocol order before project work:
 1. `.chatgpt-rerun/README.md`
 2. `.chatgpt-rerun/control.json`
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-The handed-off `run_id=b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, `sequence=2`, `task_id=v1-product-experience-overhaul`, `status=continue` matched GitHub. GitHub's real PR/work-branch state also matched the checkpoint head `669f867...`, so no stale-source reconciliation was needed.
+GitHub control was `run_id=b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, `sequence=3`, `status=continue`, `task_id=v1-product-experience-overhaul`. `main` resolved to the sequence-3 coordination checkpoint and PR #109 still resolved to `669f867...`, exactly matching the prior STATE. Therefore the completed dual-Sheet source audit and validated Play/Dice/VFX/Appearance slices were not repeated.
 
 ## Work completed in this execution
-### Dual Character Sheet source audit
-`.agents/V0_9_PRODUCT_REFERENCE.md` was re-read from `agent/108-production-play-session-ux`. The next incomplete slice remains dual Character Sheet presentation.
+### Implemented V0.9 dual Character Sheet presentation
+Source commit:
+- `e83fc37f60b6f42f0ed7b8c76329465ed55e3644`
+- message: `Implement V0.9 dual character sheet layouts`
 
-The current production paths were inspected in detail:
-- `src/CharacterSheetPlayScreen.tsx` — current SimpleVTT digital sheet and standalone local roll presentation; uses `snapshot.activeCharacter`.
-- `src/app/characterSheetV10Projection.ts` — canonical sheet presentation projection already provides Hit Die, saving-throw proficiencies, complete skill mapping/bonuses, Passive Perception, class/species/feat/background traits, spells and level 1–9 slot maxima.
-- `src/app/contracts.ts`, `creationContracts.ts`, `progressionContracts.ts` — confirm the Character fields actually persisted/available for Official rendering, including languages/tool proficiencies/gold/notes/Hit Dice/spell-slot maxima.
-- `src/app/spellcastingRuntimeContracts.ts` and `productionSpellcasterProjectionAdapter.ts` — confirm `scene.spellcastingByActor[character.id]` owns runtime spell attack modifier, Save DC and current/max slot state, while `scene.actionsByActor[character.id]` exposes supported spell action metadata.
-- `src/app/AppProvider.tsx` and existing App inventory UI — confirm existing edit/level-up/item mutation handlers must be reused.
-- existing `tests/ui/characterSheetPlayableUx.test.ts` and `.github/workflows/ui.yml` — confirm the affected targeted test already participates in the UI workflow and frontend build gate.
+Changed/added production paths:
+- `src/CharacterSheetPlayScreen.tsx`
+  - small persisted layout router;
+  - choices `SimpleVTT Sheet` and `Official sheet layout`;
+  - presentation preference remains independent of Character state.
+- `src/LegacyCharacterSheetPlayScreen.tsx`
+  - exact prior validated SimpleVTT standalone sheet source blob (`3532b3928f5c1155b487faf70b985df2d72f35b9`) retained unchanged rather than rewritten.
+- `src/app/sheetLayoutPreferences.ts`
+  - storage key `simplevtt.v09.sheet-layout`;
+  - default `simplevtt`;
+  - safe sanitization and non-blocking storage failure;
+  - no Character/mechanics persistence.
+- `src/OfficialCharacterSheetPlayScreen.tsx`
+  - same `snapshot.activeCharacter` and existing AppProvider edit/level-up/item handlers;
+  - local tabletop roll presentation only;
+  - reads canonical Official projection, spellcasting projection and action metadata.
+- `src/OfficialCharacterSheetPage.tsx`
+  - recognizable paper information arrangement as original React UI;
+  - Character identity, six abilities, inspiration/proficiency area, saves, complete skills, passive perception, languages/tools, AC/Initiative/Speed, HP/temp HP, Hit Dice, Death Saves region, attacks, resources, equipment/currency, personality/ideals/bonds/flaws/features regions;
+  - ability/save/skill/Initiative/attack/damage/Hit Die/item interactions use existing handlers/projections;
+  - Player Name, Alignment, XP, unknown Hit Die quantity and Death Save persistence are shown as untracked rather than fabricated.
+- `src/OfficialSpellcastingSheetPage.tsx`
+  - dedicated level 0–9 paper-layout page;
+  - Character/Class, projected spellcasting modifier, Spell Save DC and Spell Attack Bonus;
+  - projected current/max slots;
+  - known/prepared/always-prepared state;
+  - supported local spell attack/damage controls use existing action metadata.
+- `src/character-sheet-layouts.css`
+  - original SimpleVTT layout styling only; no copied D&D logo/artwork or parchment asset URL.
+- `tests/ui/characterSheetPlayableUx.test.ts`
+  - same Character authority;
+  - persisted layout preference;
+  - exact preserved SimpleVTT behavior;
+  - Official page information/interactivity;
+  - spell levels 0–9/current slots/prepared state;
+  - presentation-mechanics separation.
 
-### Important implementation boundaries established
-- Both layouts must receive the same canonical `snapshot.activeCharacter`; no second Character store or duplicated Character persistence.
-- Layout choice is a presentation-only persisted preference with default `SimpleVTT Sheet`.
-- Official Character page is a real React information layout, not a PDF/image and not a parchment reskin.
-- Existing supported ability/save/skill/Initiative/attack/damage/Hit Die/item operations stay on existing presentation handlers/services.
-- Official Spellcasting must read spell attack/Save DC/current slots from existing projections and action metadata; do not recalculate those mechanics in the screen.
-- No canonical stored fields were found for Alignment, XP, Player Name or Death Save state. Official UI must show those as unavailable/untracked, not fabricate values.
+### Architecture preserved
+- no second Character store or persistence path;
+- no new combat/spell resolver or ResolutionEvent path;
+- no new network/content protocol;
+- no mechanics arithmetic for Spell Save DC/Attack Bonus moved into the Official screen;
+- `projectOfficialSheet`, `sheetAbilityModifier`, `sheetSaveBonus`, `scene.spellcastingByActor` and `scene.actionsByActor` remain the projection/mechanics boundary;
+- standalone local dice remain presentation/local tabletop behavior only.
 
-### Local draft status
-A local, uncommitted implementation draft was prepared for:
-- `src/app/sheetLayoutPreferences.ts`;
-- updated `src/CharacterSheetPlayScreen.tsx` with dual layouts and Official Character/Spellcasting pages;
-- `src/character-sheet-layouts.css`;
-- expanded `tests/ui/characterSheetPlayableUx.test.ts`.
+## Validation evidence for exact head `e83fc37...`
+### UI
+- workflow run: `32176685363`
+- frontend job: `95840143821`
+- conclusion: **success**
+- focused dual-Sheet step `Verify Phase 14 tabletop sheet, physics dice, and intent-first play UX`: **success**.
+- `Typecheck and build`: **success**.
+- same exact-head job also passed UI named-rule boundary, shell, Play structure/accessibility, Combat VFX, Session/Host/DM regressions, Character ownership/inventory/spell regressions, creation/progression checks, authoritative spellcasting and Phase 09 mechanics services.
 
-The draft passed TypeScript transpile syntax checks for the TS/TSX files and balanced-brace CSS inspection. However, this execution environment has no `gh` executable and container network access cannot reach GitHub, while the connector write API requires full file contents rather than a mounted local file. The hard 20-minute watcher window reached checkpoint before a safe atomic product source commit could be assembled. Therefore the local draft is **ephemeral and non-authoritative**; the next invocation must not assume it exists. No partial product source was pushed.
+This closes the dual Character Sheet slice as a validated boundary. Do not redo it unless later touched.
 
-One unattached Git blob (`eb27a4cb7f9d1df22ae590ac6ff4f2a763b7404d`) was created while testing connector transfer for the preference module. It is not referenced by any tree/commit/branch and has no product effect; ignore it.
-
-## Validated slices — do not repeat unless touched
-Current exact validated work head remains `669f867d3b8ce1ef94aa513e779e64c51ffa606e`.
-
+## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
 2. Fast production Visual Dice.
 3. Composable Combat VFX.
 4. Appearance preferences.
+5. Dual Character Sheet + Official Spellcasting presentation.
 
-At this exact head, UI run `32171564923` / frontend job `95823699460` succeeded, and Phase 11 offline walkthrough job `95823700000` succeeded. Historical unchanged mechanics/persistence/network evidence remains reusable. Do not rerun these simply because the watcher restarted.
+Historical unchanged evidence remains reusable, including UI run `32171564923` / frontend job `95823699460` and Phase 11 offline walkthrough job `95823700000` at `669f867...`.
 
 ## Next Exact Action
-1. Perform watcher preflight. If PR #109 still points to `669f867...`, do not re-audit the source files listed above.
-2. Implement the dual Character Sheet slice directly on `agent/108-production-play-session-ux` using the audited boundaries:
-   - presentation-only persisted `simplevtt | official` layout preference;
-   - same `snapshot.activeCharacter` for both modes;
-   - preserve current SimpleVTT sheet behavior;
-   - Official Character page with paper-style information arrangement and existing interactive controls;
-   - dedicated Official Spellcasting page with level 0–9 sections, summary, current/max slots, known/prepared state and supported local spell roll controls;
-   - unknown Alignment/XP/Player Name/Death Saves rendered explicitly as untracked;
-   - no new mechanics arithmetic/store/protocol.
-3. Add/extend focused tests in `tests/ui/characterSheetPlayableUx.test.ts` for same Character identity/state, layout persistence, Official interactivity, spell 0–9/current slots and mechanics-presentation separation.
-4. Load new Official layout CSS from the sheet module or current style chain using original SimpleVTT styling only; no copied D&D logos/artwork/parchment assets.
-5. Recheck PR HEAD immediately before write, fast-forward only, then run the affected UI/frontend workflow and inspect the exact-head TypeScript/build result.
-6. After dual Sheet is green, continue: direct-IP Session + validated automatic content parity; portrait + DM handout/reconnect; contextual DM/Content/Rules polish and dead-legacy cleanup.
-7. PR #109 remains draft/unmerged. Never merge without explicit user authorization.
+1. Perform mandatory watcher preflight; trust GitHub if PR #109 has advanced.
+2. If the work head remains `e83fc37...`, do not revalidate or rewrite dual Sheet, Play, Dice, VFX or Appearance.
+3. Resume at **direct-IP Session + validated automatic content parity**.
+4. Inspect only the Session/network/content paths needed for that slice: production Session workspace/lifecycle/UI state, Tauri session transport, connected protocol/wire/state, installed-content composition and RuleModule validation.
+5. Preserve existing Host/session authority. Normal offline Session UX must expose real Host session name + Bind/Listen IP/interface + port + open/start/stop + readable/copyable address, and Join Host IP/address + port + saved Character + Connect/Disconnect/Ready. Do not substitute a fake invite code.
+6. Before Client Ready, automatically reconcile Host-required supported declarative content using the existing installed-content/RuleModule authority with normal wording `콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료`.
+7. Reconnect comparison is idempotent and transfers only missing/changed supported packages. Validation/sync failure blocks Ready with an actionable reason. No Host-provided arbitrary JS/native execution, second addon store or second mechanics/content protocol.
+8. Add focused tests for direct-IP field reachability/lifecycle wiring/content comparison-transfer-validation/Ready gating/reconnect idempotency and run affected gates first.
+9. After Session/content parity is exact-head green, continue Character portrait + DM handout/reconnect, then contextual DM/Content/Rules polish and dead-legacy cleanup.
+10. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
+11. PR #109 remains draft/unmerged. Never merge without explicit user authorization.
 
-## Architecture preserved
-- owning Client Character Library is durable Character authority; Host projections are ephemeral;
+## Architecture invariants
+- owning Client Character Library remains durable Character authority; Host projections remain ephemeral;
 - Host remains connected mechanics authority;
 - ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
-- existing Scene/action runtime remains mechanics path;
 - installed-content composition/RuleModule validation remain content authority;
 - Freeform does not consume Initiative economy;
 - dice/VFX/images/appearance/layout preferences are presentation only;
 - no second store/protocol/resolver/event ledger, tactical map/Fog/path/minimap/LOS or cloud dependency.
 
 ## Coordination writes
-- PLAN checkpoint commit on `main`: `050ae2880e1616fa6359e88a2b28a76192955e76`.
+- PLAN checkpoint commit on `main`: `a5d3b16d68f5248d9124161972150bf1bbe4356e`.
 - STATE is this checkpoint and was written after PLAN.
-- control is written last with `status=continue` and sequence `3`.
+- control must be written last, remain sequence `3`, status `continue`.
 
 ## Dispatch recommendation
 `continue`
