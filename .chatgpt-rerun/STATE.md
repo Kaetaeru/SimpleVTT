@@ -4,6 +4,7 @@
 - sequence: `2`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `continue`
+- current milestone: **V0.9**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
@@ -11,79 +12,129 @@
 - PR #109: open/draft/unmerged; no merge authorized
 
 ## Current work head
-`3a2c83541857591ecb30aa03aa0a6285e23b7677`
+`cde7ec5a8f052aac7072c99a055f96c6bc5e462a`
 
-## Scope
-SimpleVTT v1 is a full product-experience overhaul built on the already validated Character persistence, installed-content composition, Host authority, Scene/runtime mechanics, ResolutionEvent/Undo, reconnect/idempotency and owning-Client Character architecture. Product UX is being rebuilt without replacing those canonical engines.
+PR #109 was rechecked after the planning write and resolves to this head; it remains open, draft, mergeable and unmerged.
 
-## Progress completed this execution
-### Rerun reconciliation
-- Read `.chatgpt-rerun/README.md`, `control.json`, `STATE.md`, `PLAN.md` from `main` in the mandatory order.
-- `run_id`, sequence `2`, task ID and `continue` authorization agree.
-- Reconciled stale STATE head against GitHub. PR #109 remained open/draft/unmerged and the actual starting work head was `571761c169b1f7da0fa4c4fee48435f84cee7a74`.
+## Current scope
+The current sequence now uses **SimpleVTT V0.9** as the product-convergence milestone toward v1. Existing Character persistence, installed-content composition, Host authority, Scene/runtime mechanics, ResolutionEvent/Undo, reconnect/idempotency and owning-Client Character architecture remain canonical.
 
-### Progression CI root cause and repair
-Normal UI workflow logs were inspected rather than repeating validated mechanics tests.
+The interactive HTML prototypes created in the originating ChatGPT conversation are **reference prototypes only**. They define intended visual hierarchy, placement, motion and interaction feel. Their HTML/CSS/JavaScript shell must not be copied wholesale into production and must not replace canonical React/application state, stores, services or runtime authority.
 
-Exact old-head failure:
-- UI run `32050231323`, job `95447587258`.
-- Failing subtest: `final app adapter plan has no phantom ASI at Monk 2 and requires subclass exactly at Monk 3`.
-- Earlier canonical row/choice assertions in the same regression passed.
-- Root cause was an obsolete fixture call to nonexistent `adapter.setLevelUpChoice(...)`, not a progression schedule/runtime defect.
+## New durable V0.9 reference
+Added on the work branch:
 
-Repair:
-- `tests/ui/progressionChoiceScheduleRegression.test.ts` now calls the current adapter contract:
-  `setProgressionChoice(choiceId,{ kind:"options", optionIds:[subclassId] })`.
-- Fix commit: `1d0a132f2941b131451e5a98715a2088d614fd42`.
-- Removed temporary `.github/workflows/v1-progression-diagnostic.yml` after normal-workflow logs supplied the real evidence.
-- Removal commit / clean UI baseline head: `25c767893583da1809aa06bc0c875c14b8602154`.
+- `.agents/V0_9_PRODUCT_REFERENCE.md`
+- commit: `cde7ec5a8f052aac7072c99a055f96c6bc5e462a`
 
-Validation at `25c767893583da1809aa06bc0c875c14b8602154`:
-- UI run `32162614993`, frontend job `95769907698`: success.
-- Progression regression passed.
-- Subsequent progression/spell/runtime UI gates passed.
-- TypeScript and production build passed.
+This is now the detailed V0.9 product-reference contract. It records and reconciles the latest prototype decisions with the existing SimpleVTT product/architecture documents.
 
-### Desktop demo/product guide
-Added repository-durable executable UX reference:
-- `docs/design/v1-desktop-demo/index.html` — commit `3488b7c18f7804164eccf117d6e91710c2b2a2ba`
-- `docs/design/v1-desktop-demo/styles.css` — commit `f935950436d116716dad4e85d4d615b1b11a2e18`
-- `docs/design/v1-desktop-demo/app.js` — commit `3a2c83541857591ecb30aa03aa0a6285e23b7677`
+Rerun PLAN on `main` was rewritten to make V0.9 the active milestone and to reference this document. PLAN commit:
 
-The demo represents:
-- all v1 global destinations;
-- SimpleVTT vs official-sheet-inspired Character Sheet modes with interactive official-style spell sheet;
-- direct Host/Join IP + port;
-- automatic Host manifest sync states `checking → receiving → validating → ready` with Ready gating;
-- top single Initiative card strip;
-- Scene Actors with NPC/hostiles above and party below;
-- icon-only square Hotbar, generated SVG action icons, Common grouping and detailed tooltips;
-- Dark / parchment / Crimson themes;
-- WebGL icosahedron d20 renderer proof while production dice remain the existing PhysicsDice3D authority path.
+- `e09acc2c5c83b3897654e423348bf2f4ee364e80`
 
-Docs-head validation at `3a2c83541857591ecb30aa03aa0a6285e23b7677`:
-- UI run `32163607516`, frontend job `95797936721`: success.
-- Progression regression passed again.
-- TypeScript and production build passed.
-- Contract validation run `32163607702` also completed successfully while the broader docs-head workflows were running.
+## V0.9 decisions now frozen as implementation guidance
+### Product shell
+- stable global nav: `홈 · 캐릭터 · 세션 · 콘텐츠 · 규칙 · 설정`;
+- Play remains contextual and appears as `플레이로 돌아가기` only when a live session exists;
+- Home remains tabletop-first and exposes Character, Host/Join, optional Addons and Rules.
+
+### Play
+- scene-first workspace with no permanent left/right Play sidebars;
+- one top Initiative strip only;
+- Freeform keeps Initiative quiet/collapsed;
+- Initiative becomes the single canonical visible order;
+- Scene Actors: NPC/hostile/scene Actors above, Player/party Actors below;
+- Freeform DM image replaces Actor scene; Combat image is a lightbox over persistent Initiative context;
+- DM operational tools remain contextual.
+
+### Bottom HUD
+- borrow only RVTT/BG3-inspired bottom HUD/actionbar composition;
+- ActiveActorPanel left, combat ResourceRail near hotbar, tabs, grouped two-row square icon Hotbar, contextual chooser, independent End Turn;
+- no RVTT party rail/minimap/tactical map/3D battlefield/LOS/path systems;
+- `공통 · 클래스 · 주문 · 아이템 · 패시브 · 커스텀` presentation tabs;
+- Common groups basic/intent/class/spell/item shelves;
+- action controls are icon-only 1:1 buttons with detailed accessible hover/focus descriptions and disabled reasons;
+- intent-first action semantics remain canonical; skills are secondary choices rather than a top-level wall.
+
+### Visual Dice
+- actual production WebGL polyhedral physics meshes;
+- motion comes from scene depth/back toward the viewer rather than simple top-to-bottom falling;
+- screen plane reads as tabletop/floor;
+- fast initial spin, short bounce/roll, visible deceleration;
+- normal roll-to-result target `1.0–1.4 s`, hard UX ceiling `1.5 s`;
+- upper-middle slot-machine-style raw-result notification while rolling;
+- on settle, reel stops and notification expands right to show modifier/formula/final result;
+- Natural 20 green; Natural 1 red; semantic colors override user accent;
+- connected visuals never change Host-authoritative results.
+
+### Combat VFX
+- presentation only after/with authoritative resolution;
+- composable physical delivery + element/energy profiles;
+- baseline delivery: Slashing / Piercing / Bludgeoning;
+- baseline element: Fire / Lightning / Poison / Cold / Force;
+- architecture should extend to Acid/Radiant/Necrotic/Thunder/Psychic without per-screen hardcoding;
+- delivery and element may compose, e.g. Slashing + Fire;
+- misses/saves/no-effect need honest distinct treatment; reduced-motion supported.
+
+### Appearance
+- old full-product `Dark / parchment / Crimson` presets are superseded;
+- V0.9 uses independent `Dark / Light` mode + user-selectable main/accent color;
+- curated swatches plus custom color picker;
+- persistence and contrast required;
+- accent does not override semantic success/error/hostile/ally/Natural-20/Natural-1 colors;
+- official Character Sheet is a layout mode, not a theme.
+
+### Character Sheets
+- same canonical Character supports SimpleVTT digital Sheet and Official sheet layout;
+- Official mode must reproduce the recognizable **paper Sheet information arrangement**, not merely parchment styling;
+- includes top identity fields, six left Ability blocks, inspiration/proficiency/saves/full skills/passive/languages, central AC/Initiative/Speed/HP/Hit Dice/Death Saves/Attacks/Equipment and right personality/features regions;
+- all supported rolls/resources remain interactive;
+- dedicated official Spellcasting Sheet uses level `0–9` structure with spellcasting summary, slots and known/prepared state.
+
+### Session/content parity
+- Offline Session always exposes direct Host and Join IP + port paths;
+- fresh Host Encounter starts empty; Combatants added intentionally;
+- Client Ready waits for automatic supported declarative content parity;
+- normal UI wording: `콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료`;
+- raw manifest/hash/RulesProfile/protocol metadata is secondary troubleshooting detail;
+- existing RuleModule validation and installed-content authority remain canonical;
+- no arbitrary Host-provided JS/native execution or second addon/mechanics protocol.
+
+## Historical validation preserved
+Do not repeat these unchanged boundaries unless touched:
+- progression fixture repair: `1d0a132f2941b131451e5a98715a2088d614fd42`;
+- clean UI baseline: `25c767893583da1809aa06bc0c875c14b8602154`;
+- UI run `32162614993`, frontend job `95769907698`: progression regression, TypeScript and production build passed;
+- old desktop-guide head `3a2c83541857591ecb30aa03aa0a6285e23b7677`: UI run `32163607516`, frontend job `95797936721` success.
+
+The repository demo at `docs/design/v1-desktop-demo/` is now historical where it conflicts with `.agents/V0_9_PRODUCT_REFERENCE.md`.
 
 ## Next Exact Action
-1. Perform targeted QA of only the new desktop-demo contract, with priority on keyboard accessibility for icon-only/disabled actions, detailed disabled-reason focus behavior, Common grouping, one Initiative order, actor-theater layout, live theme switch, dual Sheet interaction, IP/port fields and manifest-sync Ready gating.
-2. Fix demo-only acceptance issues if found. Do not broaden into already validated mechanics.
-3. After demo acceptance, migrate the Play slice first into production: top single Initiative strip; NPC-above/party-below scene theater; icon-only capability-generated Hotbar; detailed accessible hover/focus descriptions; no permanent Play sidebars; preserve existing authoritative action/initiative APIs and freeform non-consumption semantics.
-4. Add targeted Play structural/behavioral regressions for the new contract.
-5. Continue themes → dual Sheet/spell sheet → direct-IP Session + validated content manifest sync → remaining Sheet resources/portrait → DM handout transport/reconnect → contextual DM tools/Rules cleanup.
-6. PR #109 stays draft/unmerged.
+1. Read `.agents/V0_9_PRODUCT_REFERENCE.md` from `agent/108-production-play-session-ux` before code changes.
+2. Do not transplant demo markup/state logic.
+3. Implement the first V0.9 production slice using canonical React/runtime architecture:
+   - top single Initiative strip;
+   - NPC/hostile-above + party-below Scene Actors theater;
+   - no permanent Play sidebars;
+   - ActiveActorPanel + ResourceRail + tabs + grouped two-row icon Hotbar + contextual chooser + independent End Turn;
+   - preserve `resolveAction`, `selectDmActor`, `startInitiative`, `endInitiative`, `endTurn` and Freeform non-consumption semantics.
+4. Add targeted Play structural/behavioral tests.
+5. Continue in order: fast depth-forward Visual Dice + result notice -> combat VFX -> Dark/Light + accent Settings -> dual Sheet true official layout/spellcasting page -> direct-IP Session + validated addon parity -> portrait/DM handout/reconnect -> contextual DM/Content/Rules cleanup.
+6. Target-test touched slices; do not rerun validated historical mechanics/persistence/network boundaries unless affected.
+7. Later obtain one exact-head V0.9 UI/Main/mechanics/persistence/installed-content/connected/Windows gate and human Windows acceptance.
+8. PR #109 remains draft/unmerged; never merge without explicit user authorization.
 
 ## Architecture preserved
-- Owning Client Character Library remains durable authority; Host projections remain ephemeral.
-- Existing installed-content store/composition and declarative RuleModule validation remain addon authority.
-- Host remains connected mechanics authority; ledger/reconnect/idempotency/Scene runtime/ResolutionEvent/event-native Undo remain canonical.
-- Fresh Host remains empty by default and official Combatants are not silently UI-rebalanced.
-- Freeform actions do not consume Initiative economy; Combat does.
-- Theme and Sheet layout are presentation preferences only.
-- Session addon synchronization may transfer only supported declarative validated packages and may not execute arbitrary Host-provided code.
-- No second store/protocol/mechanics engine, tactical map/Fog/LOS or cloud dependency introduced.
+- owning Client Character Library is durable Character authority; Host projections are ephemeral;
+- Host is connected mechanics authority;
+- ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
+- existing Scene/action runtime remains mechanics path;
+- installed-content composition/RuleModule validation remain content authority;
+- Freeform does not consume Initiative economy;
+- dice/VFX/images are presentation only;
+- fresh Host remains empty and official Combatants are not silently rebalanced;
+- no second store/protocol/resolver/event ledger, tactical map/Fog/path/minimap/LOS or cloud dependency.
 
 ## Dispatch recommendation
 `continue`
