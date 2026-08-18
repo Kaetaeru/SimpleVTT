@@ -86,9 +86,9 @@ function compatibilityRecord(value:unknown) {
   return entry as {status:"compatible"|"warning"|"incompatible";message:string};
 }
 
-const previousSend=tauriSessionTransport.send.bind(tauriSessionTransport);
-const previousSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
-const previousOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
+let parityBaseSend=tauriSessionTransport.send.bind(tauriSessionTransport);
+let parityBaseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
+let parityBaseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
 
 async function sendHelloWithInventory(adapter:MockAdapter,hello:HelloWire) {
   const app=connectedInternal(adapter);
@@ -98,7 +98,7 @@ async function sendHelloWithInventory(adapter:MockAdapter,hello:HelloWire) {
     setParity(adapter,"checking","콘텐츠 확인 중 · Host 설치 콘텐츠와 비교합니다.");
     app.session.compatibility="warning";
     app.session.compatibilityMessage="콘텐츠 확인 중 · Host 설치 콘텐츠와 비교합니다.";
-    return previousSend(JSON.stringify({...hello,installedContent}));
+    return parityBaseSend(JSON.stringify({...hello,installedContent}));
   } catch(error) {
     const message=`콘텐츠 확인 실패 · Ready 불가: ${error instanceof Error?error.message:String(error)}`;
     setParity(adapter,"error",message);
@@ -109,15 +109,15 @@ async function sendHelloWithInventory(adapter:MockAdapter,hello:HelloWire) {
   }
 }
 
-tauriSessionTransport.send=async function sendWithInstalledContentParity(message:string) {
+async function sendWithInstalledContentParity(message:string) {
   const adapter=activeAdapter;
-  if (!adapter) return previousSend(message);
+  if (!adapter) return parityBaseSend(message);
   const decoded=decodeConnectedWireMessage(message);
   if (decoded.status==="ok"&&decoded.message.type==="hello") {
     return sendHelloWithInventory(adapter,decoded.message);
   }
-  return previousSend(message);
-};
+  return parityBaseSend(message);
+}
 
 async function hostParityPreflight(adapter:MockAdapter,message:SessionTransportMessage,raw:RawRecord) {
   const state=connectedStateFor(adapter);
@@ -130,7 +130,7 @@ async function hostParityPreflight(adapter:MockAdapter,message:SessionTransportM
     const inventory=parsePeerInventory(raw.installedContent);
     const requiredContent=await requiredSessionInstalledContent(adapter,inventory);
     if (!requiredContent.length) return message;
-    await previousSendTo(message.peer,JSON.stringify({
+    await parityBaseSendTo(message.peer,JSON.stringify({
       type:"hello-ack",
       sessionId:state.ledger.sessionId,
       sessionName:app.session.name,
@@ -141,7 +141,7 @@ async function hostParityPreflight(adapter:MockAdapter,message:SessionTransportM
     }));
     return null;
   } catch(error) {
-    await previousSendTo(message.peer,encodeConnectedWireMessage({
+    await parityBaseSendTo(message.peer,encodeConnectedWireMessage({
       type:"hello-ack",
       sessionId:state.ledger.sessionId,
       sessionName:app.session.name,
@@ -221,9 +221,9 @@ async function parityPreflight(adapter:MockAdapter,message:SessionTransportMessa
   return message;
 }
 
-tauriSessionTransport.onMessage=async function onMessageWithInstalledContentParity(handler:(message:SessionTransportMessage)=>void) {
+async function onMessageWithInstalledContentParity(handler:(message:SessionTransportMessage)=>void) {
   const adapter=activeAdapter;
-  return previousOnMessage((message)=>{
+  return parityBaseOnMessage((message)=>{
     if (!adapter) { handler(message); return; }
     void parityPreflight(adapter,message)
       .then((next)=>{ if (next) handler(next); })
@@ -237,7 +237,19 @@ tauriSessionTransport.onMessage=async function onMessageWithInstalledContentPari
         await publishConnectedSnapshot(adapter).catch(()=>undefined);
       });
   });
-};
+}
+
+function ensureSessionContentParityTransportDecorators() {
+  parityBaseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
+  if (tauriSessionTransport.send===sendWithInstalledContentParity
+    && tauriSessionTransport.onMessage===onMessageWithInstalledContentParity) return;
+  parityBaseSend=tauriSessionTransport.send.bind(tauriSessionTransport);
+  parityBaseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
+  tauriSessionTransport.send=sendWithInstalledContentParity;
+  tauriSessionTransport.onMessage=onMessageWithInstalledContentParity;
+}
+
+ensureSessionContentParityTransportDecorators();
 
 const previousHostSession=MockAdapter.prototype.hostSession;
 const previousJoinSession=MockAdapter.prototype.joinSession;
@@ -246,12 +258,14 @@ const previousSetSessionReady=MockAdapter.prototype.setSessionReady;
 
 MockAdapter.prototype.hostSession=async function hostSessionWithContentParity() {
   activeAdapter=this;
+  ensureSessionContentParityTransportDecorators();
   setParity(this,"unknown","Host 콘텐츠 parity 대기");
   return previousHostSession.call(this);
 };
 
 MockAdapter.prototype.joinSession=async function joinSessionWithContentParity(address:string) {
   activeAdapter=this;
+  ensureSessionContentParityTransportDecorators();
   lastClientHello.delete(this);
   setParity(this,"unknown","콘텐츠 확인 대기");
   return previousJoinSession.call(this,address);
