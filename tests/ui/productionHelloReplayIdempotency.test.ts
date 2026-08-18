@@ -99,10 +99,27 @@ async function nonFixtureAdapter(id:string,name:string,store=new MemoryInstalled
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,store);
   const template=await adapter.getSnapshot();
+  const canonicalClass=template.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="class");
+  const canonicalSpecies=template.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="species");
+  const canonicalBackground=template.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="background");
+  if (!canonicalClass?.contentId||!canonicalSpecies?.contentId||!canonicalBackground?.contentId) {
+    throw new Error("canonical projection fixture requires builtin class/species/background identities");
+  }
   const character={
     ...structuredClone(template.activeCharacter),
     id,
     name,
+    className:canonicalClass.contentId,
+    subclassName:"",
+    species:canonicalSpecies.contentId,
+    background:canonicalBackground.contentId,
+    classLevels:undefined,
+    items:[],
+    equipment:[],
+    cantrips:[],
+    preparedSpells:[],
+    spellbookSpells:[],
+    masteryWeapons:[],
     saveState:"saved" as const,
   };
   const app=connectedInternal(adapter);
