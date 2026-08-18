@@ -11,72 +11,72 @@
 - current milestone: **V0.9**
 - dispatch recommendation: `continue`
 
-## Authoritative product reference
-Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c99a055f96c6bc5e462a`). Preserve canonical React/runtime architecture, owning-Client Character durability, Host mechanics authority, ResolutionEvent/reconnect/idempotency, installed-content/RuleModule authority and existing Scene/action runtime.
-
 ## Architecture invariants
-- one canonical Character; owning Client Character Library is durable Character authority;
+- one canonical Character; owning Client Character Library remains durable Character authority;
 - Host projections remain ephemeral and Host remains connected mechanics authority;
 - ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
 - installed-content composition/RuleModule validation remain content authority;
-- no second Character/content store, resolver, network/content protocol or event ledger;
-- no Host-provided arbitrary JS/native execution;
-- images/portraits/handouts remain presentation state, not combat/ResolutionEvent authority;
-- no tactical grid/token/Fog/pathfinding/minimap/LOS/cloud-account dependency;
+- no second Character/content store, resolver, mechanics protocol or event ledger;
+- portraits/handouts are presentation state only; no ResolutionEvent/Undo/combat or tactical grid/token/Fog/path/LOS semantics;
+- no cloud/public-URL requirement for local images;
 - PR #109 must not be merged without explicit user authorization.
 
 ## Exact work HEAD
-`af19378149db97387e3cd364b38fe17e95078b39`
+`28f3700eb92ab93bacb589dd07be792bf228b3a0`
 
-Latest source commit: `Use canonical Character in parity handshake test`.
+Latest source commits:
+- `7fbb5ddb96862d1a696885e37ba064247c61538c` — `Add Character portrait and session image handouts`
+- `28f3700eb92ab93bacb589dd07be792bf228b3a0` — `Fix handout subscription cleanup`
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
 2. Fast production Visual Dice.
 3. Composable Combat VFX.
 4. Appearance preferences.
-5. Dual Character Sheet + Official Spellcasting at `e83fc37...`.
-6. Direct-IP Session entry at `0b7bce05...`.
-7. **Automatic validated Host-required declarative content parity before Ready** at `af193781...`:
-   - Client hello advertises installed declarative content identity/revision inventory;
-   - Host transfers only missing/changed installed declarative entries before participant acceptance;
-   - Client validates/installs through existing `validateInstalledContentPackage` + `InstalledContentRepository` + catalog recomposition and re-handshakes;
-   - re-handshake advertises the newly installed revision and refreshes the Character SessionProjection from the recomposed catalog;
-   - same-qualified-identity conflicts and malformed Host payloads fail closed and keep Ready blocked;
-   - matching reconnects do not re-transfer content;
-   - no second content store/protocol/resolver and no Host-provided JS/native execution.
+5. Dual Character Sheet + Official Spellcasting.
+6. Direct-IP Session entry/configuration.
+7. Automatic validated Host-required declarative content parity before Ready.
+8. **Character portrait + DM image handout/reconnect** at `28f3700e...`:
+   - portrait uses local PNG/JPEG/WebP, max 2 MiB, preview/replace/remove and focal-position controls on both normal Sheet layouts;
+   - portrait persists through the existing owning-Client Character Library materialized record without advancing mechanics source/runtime revisions;
+   - DM handout uses local PNG/JPEG/WebP, max 4 MiB, explicit preview/reveal/withdraw;
+   - Client can dismiss and reopen; a compatible reconnect hello restores the current Host reveal;
+   - handout uses the existing Tauri session channel as a presentation envelope and does not enter the Host ResolutionEvent/participant ledger.
 
 ## Validation evidence
-### Direct-IP head `0b7bce05...`
-- UI run `32177587540` / frontend `95842950322`: **success**.
-- Phase 12 run `32177587541` / connected-protocol `95842949930`: **success**.
-- Windows connected playable job `95843208485`: **success**.
+### Prior content-parity head `af193781...`
+- Phase 12 run `32186178904` / connected-protocol `95870203173`: success.
+- UI run `32186178947` / frontend `95870203434`: success.
+- Windows connected job `95870544914`: **success**, including Tauri transport/persistence, Windows executable build, staging and artifact upload.
 
-### Content-parity exact head `af193781...`
-- Phase 12 Connected Session run `32186178904` / connected-protocol job `95870203173`: **success**.
-  - connected-session authority protocol, including all 48 tests and focused parity coverage: success;
+### Current portrait/handout head `28f3700e...`
+- UI run `32187690842` / frontend `95875015492`: **success**.
+  - new portrait/handout presentation structure test: success;
+  - all reported product regressions: success;
+  - Typecheck and production build: success.
+- Persistence run `32187690744` / application-contract `95875014950`: **success**.
+  - new Character portrait persistence/restart/revision test: success;
+  - existing Character/content/module persistence suite: success;
+  - production build: success.
+- Phase 12 run `32187690780` / connected-protocol `95875015147`: **success**.
+  - new handout reveal/withdraw/dismiss/reconnect integration test plus existing connected/parity suite: success;
   - Phase 11 offline walkthrough: success;
   - production frontend gate: success.
-- UI run `32186178947` / frontend job `95870203434`: **success**.
-  - all reported UI/product regressions: success;
-  - `Typecheck and build`: success.
-- Same Phase 12 run Windows job `95870544914` is currently **in progress**. Record its eventual result next invocation; do not manually rerun it merely because watcher execution restarts.
+- Same-head Windows jobs are still automatic/in progress at this checkpoint:
+  - Phase 12 `windows-connected-playable` job `95875316302`;
+  - Persistence `tauri-storage` job `95875014764`.
+  Do not manually rerun them merely because watcher execution restarts; record their eventual result next invocation.
 
 ## Next Exact Action
-1. Perform mandatory watcher preflight and trust GitHub if PR #109 or `main` advanced.
-2. If work HEAD remains `af193781...`, do **not** repeat Play/Dice/VFX/Appearance/dual-Sheet/direct-IP/content-parity validation or design audit.
-3. Check the eventual result of Windows job `95870544914` from Phase 12 run `32186178904`; record it without manually rerunning if already complete.
-4. Resume the next incomplete V0.9 presentation slice: **Character portrait + DM image handout/reconnect**.
-5. Character portrait requirements: local PNG/JPEG/WebP selection, bounded validation, preview, replace/remove, crop/focal preference, owning-Character persistence, offline/restart safety, and no new Character authority/store.
-6. DM handout requirements: contextual `이미지 보여주기`, local validated image preview, explicit reveal/withdraw, connected Client dismiss/minimize/reopen, reconnect restoration of the active reveal, and no public URL/cloud dependency.
-7. Handout state must remain connected presentation state only: no ResolutionEvent/Undo/combat semantics and no tactical map/grid/token/Fog/path/LOS behavior.
-8. Add focused tests around persistence/bounds and reveal/withdraw/dismiss/reopen/reconnect, then run only affected gates first.
-9. After portrait/handout exact-head green, continue contextual DM/Content/Rules polish and dead-legacy cleanup.
-10. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
-11. Keep PR #109 draft/unmerged.
-
-## V0.9 Definition of Done
-One exact source SHA must demonstrate coherent shell reachability; durable Character create/import/edit/level-up; both Sheet layouts; Official level 0–9 Spellcasting; portrait and standalone rolls/resources; durable appearance; production physics dice; Initiative/hotbar Play; presentation-only VFX; direct-IP Host/Join/Ready/start/stop/reconnect; validated automatic Host-required declarative content parity; empty fresh Host Encounter; DM image reveal/withdraw and Client dismiss/reopen/reconnect; automated exact-head gates and human Windows acceptance.
+1. Perform mandatory watcher preflight and trust GitHub if `main`, control, or PR #109 moved.
+2. If work HEAD remains `28f3700e...`, do not repeat any of the eight validated V0.9 slices.
+3. Check final results of jobs `95875316302` and `95875014764`; record them without manual rerun if already complete.
+4. Resume the remaining V0.9 convergence work: **contextual DM/Content/Rules polish + dead legacy cleanup**.
+5. Keep production surfaces outcome-first; do not restore Inspector/debug/provenance/entity-list/image-manager clutter.
+6. Remove only proven dead legacy paths after confirming no production import/reachability dependency.
+7. Run only affected gates first; preserve exact-head validation boundaries.
+8. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for both standalone Sheet-at-table and two-instance Host/Client image reveal/reconnect.
+9. Keep PR #109 draft/unmerged.
 
 ## Dispatch recommendation
 `continue`
