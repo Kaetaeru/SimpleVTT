@@ -205,7 +205,7 @@ async function clientParityPreflight(adapter:MockAdapter,message:SessionTranspor
       app.session.compatibility="warning";
       app.session.compatibilityMessage=checking;
       await publishConnectedSnapshot(adapter).catch(()=>undefined);
-      await tauriSessionTransport.send(encodeConnectedWireMessage(refreshedHello));
+      await sendHelloWithInventory(adapter,refreshedHello);
     } catch(error) {
       const detail=error instanceof Error?error.message:String(error);
       const parityMessage=`콘텐츠 동기화 실패 · Ready 불가: ${detail}`;
