@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
+import type { AppSnapshot } from "./app/contracts";
 import { buildCombatVfxProfile, type CombatVfxProfile } from "./app/combatVisuals";
 
 const VFX_STAGES=new Set(["roll-animation","save-animation","damage-animation","effect-preview"]);
@@ -15,7 +16,7 @@ function centerOf(element:Element|null):Point|null {
   return {x:rect.left+rect.width/2,y:rect.top+rect.height/2};
 }
 
-function actorElement(entityId:string,snapshot:NonNullable<ReturnType<typeof useSimpleVtt>["snapshot"]>) {
+function actorElement(entityId:string,snapshot:AppSnapshot) {
   const entity=snapshot.scene.entities.find((candidate)=>candidate.id===entityId);
   if (!entity) return null;
   const groupSelector=entity.kind==="combatant"?".play-v09-scene-row.upper":".play-v09-scene-row.lower";
