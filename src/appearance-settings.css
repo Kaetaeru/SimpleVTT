@@ -1,0 +1,160 @@
+:root {
+  --accent-base: #c58a2c;
+  --accent: color-mix(in srgb, var(--accent-base) 52%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --line-strong: color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+:root[data-theme="light"] {
+  --accent: color-mix(in srgb, var(--accent-base) 35%, #121212);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --line-strong: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+button.primary {
+  border-color: var(--line-strong);
+  background: linear-gradient(
+    color-mix(in srgb, var(--accent) 22%, var(--surface-2)),
+    color-mix(in srgb, var(--accent) 8%, var(--surface))
+  );
+  color: var(--accent);
+}
+
+.page-dark {
+  background:
+    radial-gradient(circle at 75% -10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 30rem),
+    linear-gradient(var(--bg-2), var(--bg));
+}
+
+:where(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Retire the legacy fixed Theme/Accent controls while keeping the existing motion controls. */
+.settings-card {
+  display: grid;
+}
+.settings-card > .section-title:nth-of-type(-n+2),
+.settings-card > .method-tabs:first-of-type,
+.settings-card > .accent-options {
+  display: none;
+}
+
+.appearance-v09-panel {
+  order: -1;
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--surface-2), var(--surface));
+}
+
+.appearance-v09-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+.appearance-v09-heading h2 { margin: 3px 0 0; }
+.appearance-v09-heading p { margin: 0; color: var(--muted); font-size: 11px; }
+
+.appearance-v09-group { display: grid; gap: 9px; }
+.appearance-v09-group h3 {
+  margin: 0;
+  color: var(--muted);
+  font: 800 10px/1.2 Inter, sans-serif;
+  letter-spacing: .08em;
+}
+
+.appearance-v09-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.appearance-v09-mode button {
+  min-height: 64px;
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 4px;
+  text-align: left;
+}
+.appearance-v09-mode button span { color: var(--muted); font-size: 10px; }
+.appearance-v09-mode button.active {
+  border-color: var(--line-strong);
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-2));
+}
+
+.appearance-v09-swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.appearance-v09-swatch {
+  width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 5px;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+.appearance-v09-swatch > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--appearance-swatch);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.appearance-v09-swatch.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.appearance-v09-custom {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  background: var(--recess);
+}
+.appearance-v09-custom input[type="color"] {
+  width: 32px;
+  height: 28px;
+  min-height: 28px;
+  padding: 1px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.appearance-v09-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+.appearance-v09-preview > i {
+  width: 44px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 5px var(--accent-soft);
+}
+
+@media (max-width: 700px) {
+  .appearance-v09-heading { align-items: start; flex-direction: column; gap: 5px; }
+  .appearance-v09-mode { grid-template-columns: 1fr; }
+}

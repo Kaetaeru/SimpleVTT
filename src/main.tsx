@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppProvider } from "./app/AppProvider";
+import { initializeAppearancePreference } from "./app/appearancePreferences";
 import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
 import "./app/connectedParticipantIdempotencyAdapter";
@@ -18,6 +19,7 @@ import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
 import { CombatVfxBridge } from "./CombatVfxBridge";
+import { AppearanceSettingsBridge } from "./AppearanceSettingsBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
 import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
@@ -44,9 +46,12 @@ import "./character-sheet-v10-viewport.css";
 import "./production-ux-redesign.css";
 import "./v1-product-shell.css";
 import "./v1-product-shell-tokens.css";
+import "./appearance-settings.css";
 
 void PlaySessionDock;
 void CombatSpellHudBridge;
+
+initializeAppearancePreference();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -55,6 +60,7 @@ createRoot(document.getElementById("root")!).render(
       <LevelUpV10Bridge />
       <VisualDiceBridge />
       <CombatVfxBridge />
+      <AppearanceSettingsBridge />
       <ConcentrationSaveBridge />
       <MovementReactionBridge />
       <ProductionSessionWorkspaceBridge />

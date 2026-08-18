@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import {
+  APPEARANCE_STORAGE_KEY,
+  DEFAULT_APPEARANCE,
+  persistAppearancePreference,
+  readAppearancePreference,
+  type AppearanceStorage,
+} from "../../src/app/appearancePreferences";
 
 const app = readFileSync("src/App.tsx", "utf8");
 const contracts = readFileSync("src/app/contracts.ts", "utf8");
@@ -9,6 +16,8 @@ const vite = readFileSync("vite.config.ts", "utf8");
 const home = readFileSync("src/V1HomeScreen.tsx", "utf8");
 const content = readFileSync("src/V1ContentScreen.tsx", "utf8");
 const css = readFileSync("src/v1-product-shell.css", "utf8");
+const appearanceBridge = readFileSync("src/AppearanceSettingsBridge.tsx", "utf8");
+const appearanceCss = readFileSync("src/appearance-settings.css", "utf8");
 const design = readFileSync(".agents/V1_PRODUCT_EXPERIENCE.md", "utf8");
 
 test("v1 launches into a real Home/title surface", () => {
@@ -61,6 +70,34 @@ test("the new product shell is imported as production composition", () => {
   assert.match(app, /className="app-shell v1-shell"/);
   assert.match(app, /className="v1-sidebar"/);
   assert.match(app, /className="v1-topbar"/);
+});
+
+test("V0.9 appearance persists independent mode and accent preferences", () => {
+  const memory = new Map<string, string>();
+  const storage: AppearanceStorage = {
+    getItem: (key) => memory.get(key) ?? null,
+    setItem: (key, value) => { memory.set(key, value); },
+  };
+  const saved = persistAppearancePreference({ mode: "light", accent: "#3478c9" }, storage);
+  assert.deepEqual(saved, { mode: "light", accent: "#3478c9" });
+  assert.deepEqual(readAppearancePreference(storage), saved);
+  memory.set(APPEARANCE_STORAGE_KEY, JSON.stringify({ mode: "light", accent: "javascript:red" }));
+  assert.deepEqual(readAppearancePreference(storage), { mode: "light", accent: DEFAULT_APPEARANCE.accent });
+});
+
+test("V0.9 appearance is applied before render and Settings exposes presets plus a custom color", () => {
+  assert.match(main, /initializeAppearancePreference\(\);[\s\S]*createRoot/);
+  assert.match(main, /<AppearanceSettingsBridge/);
+  assert.match(main, /appearance-settings\.css/);
+  assert.match(appearanceBridge, /APPEARANCE_SWATCHES\.map/);
+  assert.match(appearanceBridge, /type="color"/);
+  assert.match(appearanceBridge, /aria-pressed/);
+  assert.match(appearanceBridge, /mode === "dark" \? "다크" : "라이트"/);
+  assert.doesNotMatch(appearanceBridge, /Parchment|Crimson|양피지/);
+  assert.match(appearanceCss, /--accent-base/);
+  assert.match(appearanceCss, /focus-visible/);
+  assert.match(appearanceCss, /Retire the legacy fixed Theme\/Accent controls/);
+  assert.doesNotMatch(appearanceCss, /--(?:good|bad|info)\s*:/);
 });
 
 test("v1 completion contract covers every production entry journey", () => {
