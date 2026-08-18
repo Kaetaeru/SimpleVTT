@@ -21,12 +21,14 @@ Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c
 - installed-content composition/RuleModule validation remain content authority;
 - no second Character/content store, resolver, network/content protocol or event ledger;
 - no Host-provided arbitrary JS/native execution;
+- images/portraits/handouts remain presentation state, not combat/ResolutionEvent authority;
+- no tactical grid/token/Fog/pathfinding/minimap/LOS/cloud-account dependency;
 - PR #109 must not be merged without explicit user authorization.
 
 ## Exact work HEAD
-`2c57c570b812d9cf42c6c40cb3ff8035ae7c06d7`
+`af19378149db97387e3cd364b38fe17e95078b39`
 
-Latest source commit: `Add validated session content parity`.
+Latest source commit: `Use canonical Character in parity handshake test`.
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
@@ -35,46 +37,43 @@ Latest source commit: `Add validated session content parity`.
 4. Appearance preferences.
 5. Dual Character Sheet + Official Spellcasting at `e83fc37...`.
 6. Direct-IP Session entry at `0b7bce05...`.
-
-The content-parity source at `2c57c570...` is **not validated yet** and is not a closed boundary.
-
-## Content-parity source on the work branch
-The current implementation extends the existing Session handshake rather than creating a parallel protocol:
-- installed-content inventory/revision and missing/changed comparison use the existing hydrated installed-content document;
-- Host-required declarative entries are transferred only through the existing `hello / hello-ack` path;
-- Client validation/install uses existing `validateInstalledContentPackage`, `InstalledContentRepository.installMany`, and catalog recomposition;
-- Ready is gated until parity completes;
-- reconnect reuses the same comparison so already-matching content is not retransferred;
-- same-qualified-identity conflict and malformed content fail closed.
+7. **Automatic validated Host-required declarative content parity before Ready** at `af193781...`:
+   - Client hello advertises installed declarative content identity/revision inventory;
+   - Host transfers only missing/changed installed declarative entries before participant acceptance;
+   - Client validates/installs through existing `validateInstalledContentPackage` + `InstalledContentRepository` + catalog recomposition and re-handshakes;
+   - re-handshake advertises the newly installed revision and refreshes the Character SessionProjection from the recomposed catalog;
+   - same-qualified-identity conflicts and malformed Host payloads fail closed and keep Ready blocked;
+   - matching reconnects do not re-transfer content;
+   - no second content store/protocol/resolver and no Host-provided JS/native execution.
 
 ## Validation evidence
 ### Direct-IP head `0b7bce05...`
 - UI run `32177587540` / frontend `95842950322`: **success**.
 - Phase 12 run `32177587541` / connected-protocol `95842949930`: **success**.
-- Windows connected playable job `95843208485`: **success**, including Tauri session transport/persistence tests, Windows executable build, staging and artifact upload.
+- Windows connected playable job `95843208485`: **success**.
 
-### Current content-parity head `2c57c570...`
-- UI run `32178687871` / frontend job `95846416290`: **success**.
-  - all UI/product regression steps completed successfully;
-  - `Typecheck and build`: **success**.
-- Phase 12 run `32178687847` / connected-protocol job `95846416201`: **failure** at `Verify connected-session authority protocol`.
-  - downstream offline walkthrough/frontend steps were skipped;
-  - Windows job `95846508836` was skipped because the connected job failed.
-- Exact failing test/type stack is still uninspected.
-
-## Known execution precondition
-The current CI-fix workflow requires installed and authenticated GitHub CLI log inspection before source changes. The last execution environment reported `gh` unavailable (`status 127`). The user has explicitly re-authorized the same sequence to `continue`; the next execution should attempt the prescribed CI diagnosis and, if the environment still lacks authenticated `gh`, record that condition rather than guessing a fix.
+### Content-parity exact head `af193781...`
+- Phase 12 Connected Session run `32186178904` / connected-protocol job `95870203173`: **success**.
+  - connected-session authority protocol, including all 48 tests and focused parity coverage: success;
+  - Phase 11 offline walkthrough: success;
+  - production frontend gate: success.
+- UI run `32186178947` / frontend job `95870203434`: **success**.
+  - all reported UI/product regressions: success;
+  - `Typecheck and build`: success.
+- Same Phase 12 run Windows job `95870544914` is currently **in progress**. Record its eventual result next invocation; do not manually rerun it merely because watcher execution restarts.
 
 ## Next Exact Action
 1. Perform mandatory watcher preflight and trust GitHub if PR #109 or `main` advanced.
-2. If work HEAD remains `2c57c570...`, do **not** repeat validated slices or redo content-parity design/source audit.
-3. Use the GitHub plugin `gh-fix-ci` workflow to inspect Phase 12 run `32178687847`, job `95846416201`, and capture the exact failing test/type stack from `Verify connected-session authority protocol`.
-4. Summarize that observed root cause and fix only the failing newly touched parity source/tests unless the log proves another dependency is responsible.
-5. Re-run/observe the affected Phase 12 connected gate and UI TypeScript/production build at the resulting exact head.
-6. Promote content parity to a validated boundary only when missing/changed-only transfer, existing validator/repository install, Ready blocking, re-handshake and reconnect idempotency are green.
-7. Then continue Character portrait + DM image handout/reconnect, contextual DM/Content/Rules polish and dead-legacy cleanup.
-8. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
-9. Keep PR #109 draft/unmerged.
+2. If work HEAD remains `af193781...`, do **not** repeat Play/Dice/VFX/Appearance/dual-Sheet/direct-IP/content-parity validation or design audit.
+3. Check the eventual result of Windows job `95870544914` from Phase 12 run `32186178904`; record it without manually rerunning if already complete.
+4. Resume the next incomplete V0.9 presentation slice: **Character portrait + DM image handout/reconnect**.
+5. Character portrait requirements: local PNG/JPEG/WebP selection, bounded validation, preview, replace/remove, crop/focal preference, owning-Character persistence, offline/restart safety, and no new Character authority/store.
+6. DM handout requirements: contextual `이미지 보여주기`, local validated image preview, explicit reveal/withdraw, connected Client dismiss/minimize/reopen, reconnect restoration of the active reveal, and no public URL/cloud dependency.
+7. Handout state must remain connected presentation state only: no ResolutionEvent/Undo/combat semantics and no tactical map/grid/token/Fog/path/LOS behavior.
+8. Add focused tests around persistence/bounds and reveal/withdraw/dismiss/reopen/reconnect, then run only affected gates first.
+9. After portrait/handout exact-head green, continue contextual DM/Content/Rules polish and dead-legacy cleanup.
+10. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
+11. Keep PR #109 draft/unmerged.
 
 ## V0.9 Definition of Done
 One exact source SHA must demonstrate coherent shell reachability; durable Character create/import/edit/level-up; both Sheet layouts; Official level 0–9 Spellcasting; portrait and standalone rolls/resources; durable appearance; production physics dice; Initiative/hotbar Play; presentation-only VFX; direct-IP Host/Join/Ready/start/stop/reconnect; validated automatic Host-required declarative content parity; empty fresh Host Encounter; DM image reveal/withdraw and Client dismiss/reopen/reconnect; automated exact-head gates and human Windows acceptance.
