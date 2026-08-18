@@ -9,24 +9,26 @@
 - sequence `3`
 - task_id `v1-product-experience-overhaul`
 - current milestone: **V0.9**
-- dispatch recommendation: `continue`
+- dispatch recommendation: `blocked`
 
 ## Architecture invariants
 - one canonical Character; owning Client Character Library remains durable Character authority;
 - Host projections remain ephemeral and Host remains connected mechanics authority;
 - ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
-- installed-content composition/RuleModule validation remain content authority;
+- installed-content composition/validation remain content authority;
 - no second Character/content store, resolver, mechanics protocol or event ledger;
 - portraits/handouts remain presentation state only;
 - no tactical grid/token/Fog/pathfinding/minimap/LOS/cloud dependency;
-- production cleanup must remove only proven unreachable/reference wiring and must not replace canonical runtime authorities;
+- production cleanup removes only proven unreachable UI/reference wiring and must not replace canonical runtime authorities;
 - PR #109 must not be merged without explicit user authorization.
 
 ## Exact work HEAD
-`04d8af303e4f77eeb62801f8fd99e07146a2e48e`
+`5c70b3028aed70b0fc5ddafafe119f40174df833`
 
 Latest source commit:
-- `04d8af303e4f77eeb62801f8fd99e07146a2e48e` — `Polish contextual DM and content UX`
+- `5c70b3028aed70b0fc5ddafafe119f40174df833` — `Remove unreachable legacy App surfaces`
+
+The branch was fast-forwarded non-force from validated polish head `04d8af303e4f77eeb62801f8fd99e07146a2e48e` after rechecking PR #109 at that exact old head.
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
@@ -36,52 +38,62 @@ Latest source commit:
 5. Dual Character Sheet + Official Spellcasting.
 6. Direct-IP Session entry/configuration.
 7. Automatic validated Host-required declarative content parity before Ready.
-8. Character portrait + DM image handout/reconnect at `28f3700e...`.
-9. **Contextual DM/Content polish + production dead-wiring cleanup** at `04d8af30...` on affected Linux/application gates:
-   - DM freeform/preparation uses existing `instantiateCombatant`/`removeCombatant` APIs for contextual Encounter preparation; no new store or mechanics path;
-   - empty Host Encounter gives an actionable in-place preparation path instead of pointing to an unreachable sidebar destination;
-   - routine Play copy removes implementation-facing `capability` wording;
-   - Content is the primary addon review/install surface and explains that installed content is then searched from Rules;
-   - user-facing addon guidance removes routine RuleModule/Capability/mechanics/progression jargon while retaining existing validation/install authority;
-   - production `main.tsx` no longer imports or loads the unmounted legacy `PlaySessionDock` or its CSS; the reference source file remains for historical tests and no canonical runtime module was removed.
+8. Character portrait + DM image handout/reconnect.
+9. Contextual DM/Content polish + production dead-wiring cleanup at `04d8af30...`.
 
-## Validation evidence
-### Portrait/handout head `28f3700e...`
-- UI `32187690842` / `95875015492`: success.
-- Persistence `32187690744` / application-contract `95875014950`: success.
-- Persistence Windows `95875014764`: **success**.
-- Phase 12 `32187690780` / connected-protocol `95875015147`: success.
-- Phase 12 Windows `95875316302`: **success**, including Tauri transport/persistence, Windows executable build, staging and artifact upload.
+## Recovered same-head Windows evidence for `04d8af30...`
+All three jobs previously left automatic/in-progress are now **success**, without manual rerun:
+- Persistence `tauri-storage` job `95877878039`: success.
+- Phase 12 `windows-connected-playable` job `95878210229`: success including Tauri transport/persistence verification, Windows connected executable build, staging and upload.
+- Main Playable `windows-playable` job `95878131296`: success including Tauri persistence/session transport verification, Windows playable executable build, staging and upload.
 
-### Current polish/cleanup exact head `04d8af30...`
-- UI run `32188621592` / frontend `95877878308`: **success**.
-  - PlaySessionDock production-wiring cleanup test: success;
-  - contextual DM/Content non-Character UX test: success;
-  - all reported UI/product regressions: success;
-  - Typecheck and production build: success.
-- Main Playable run `32188621652` / playable-contract `95877878422`: **success**.
-  - full UI/rules/TypeScript/frontend: success;
-  - offline walkthrough, connected authority, arbitrary Character SessionProjection, DM prepared/live flows, Undo, theater-of-mind and accessibility: success.
-- Phase 12 run `32188621643` / connected-protocol `95877878129`: **success**.
-  - connected authority suite: success;
-  - Phase 11 offline walkthrough: success;
-  - production frontend gate: success.
-- Persistence run `32188621614` / application-contract `95877878078`: **success** including persistence contracts and production build.
-- Same-head automatic Windows jobs are still in progress at checkpoint time and must not be manually rerun merely because watcher execution restarts:
-  - Phase 12 `windows-connected-playable` job `95878210229`;
-  - Main Playable `windows-playable` job `95878131296`;
-  - Persistence `tauri-storage` job `95877878039`.
+## Current dead-legacy cleanup candidate
+`5c70b302...` removes only local App surfaces that the current router no longer calls:
+- old `CharacterSheetScreen` / old Character create helpers and their private inventory/ability-builder helpers;
+- old `useTargeting` / `PlayerSceneScreen` / `DmSceneScreen` / `ActionConsole` / entity inspector-targeting helpers;
+- imports/constants/helpers used only by those removed blocks.
+
+Current production routing remains:
+- `CharacterSheetPlayScreen` for Character Sheet;
+- `CharacterCreateScreenV10` for create/edit;
+- `ProductionPlayScreen` for scene/play;
+- current local `LevelUpScreen/LevelStep` retained;
+- current ResolutionDrawer, DM adjudication, Content/Rules/Session/Settings/Debug surfaces retained.
+
+`tests/ui/productionNonCharacterUxRedesign.test.ts` was moved from inspecting obsolete local scene functions to asserting the real `ProductionPlayScreen` route and preventing those legacy functions from returning.
+
+## Current validation status for `5c70b302...`
+Automatic runs started normally.
+
+### Main Playable — blocking failure
+- run `32189591188`
+- job `95880814298` (`playable-contract`)
+- step `Verify full UI, rules, TypeScript, and production frontend`: **failure**
+- downstream steps skipped because of this failure.
+
+The exact failure log/root cause is **not diagnosed**. The required `gh-fix-ci` workflow was invoked, but this execution environment has no GitHub CLI:
+- `gh --version && gh auth status` -> `gh: not found` (exit 127).
+
+Per the installed CI-fix workflow, do not use connector logs as a substitute and do not make speculative source changes without the actual failing log.
+
+### Other same-head runs
+- UI run `32189591171` started; exact final result was not established before blocker checkpoint.
+- Phase 12 run `32189591122` started; exact final result was not established before blocker checkpoint.
+- Persistence run `32189591129` started; exact final result was not established before blocker checkpoint.
+- Other automatic Rules/Contract/Phase11 runs also started; do not claim results without checking.
 
 ## Next Exact Action
-1. Perform mandatory watcher preflight and trust GitHub if `main`, control, or PR #109 moved.
-2. If work HEAD remains `04d8af30...`, do not repeat any of the nine validated boundaries or the contextual DM/Content audit.
-3. Check jobs `95878210229`, `95878131296`, and `95877878039`; record their final results without manual rerun if already complete.
-4. Resume only the remaining proven dead-legacy cleanup: audit the old local-only `App.tsx` sheet/create/scene functions against the current router/import graph and remove them only if every dependency is demonstrably unreachable from production.
-5. Do not remove the current `ProductionPlayScreen`, dual Sheet router, V10 Character creation, current LevelUp path, connected/session/content authorities, or reference files still required by tests.
-6. Run affected gates after any cleanup; do not rerun unchanged validated slices solely because the watcher restarted.
-7. After source convergence, obtain one exact-head full automated UI/Main/mechanics/persistence/installed-content/connected/Windows validation set.
-8. Human Windows acceptance remains required for standalone Sheet-at-table use and two-instance Host/Client play including image reveal/reconnect; do not claim final V0.9 completion before that acceptance.
-9. Keep PR #109 draft/unmerged.
+1. Perform mandatory watcher preflight and trust GitHub if `main`, control, work branch, or PR #109 moved.
+2. While control is `blocked`, do not continue source edits.
+3. When work is re-authorized with `continue`, if work HEAD remains `5c70b302...`, do not repeat the reachability audit or previously validated product slices.
+4. Invoke `gh-fix-ci` before CI diagnosis. Verify `gh --version` and `gh auth status`.
+5. In an environment with authenticated GitHub CLI, inspect run `32189591188`, job `95880814298`, failing step `Verify full UI, rules, TypeScript, and production frontend`; capture the exact failing test/type/build output.
+6. Fix only the observed failure. Do not guess from the source diff.
+7. Recheck PR HEAD immediately before any branch write and use non-force fast-forward only.
+8. Validate affected UI/Main gates at the resulting exact head; observe automatic connected/persistence/Windows gates without manually rerunning unchanged historical boundaries.
+9. After source convergence, obtain one exact-head full automated UI/Main/mechanics/persistence/installed-content/connected/Windows validation set.
+10. Human Windows acceptance remains required for standalone Sheet-at-table use and two-instance Host/Client image reveal/reconnect; do not claim final V0.9 completion before that acceptance.
+11. Keep PR #109 draft/unmerged.
 
 ## Dispatch recommendation
-`continue`
+`blocked`
