@@ -15,6 +15,7 @@ import "./app/connectedCorrectionRoutingAdapter";
 import "./app/productionSessionLifecycleAdapter";
 import "./app/productionSessionEmptyEncounterAdapter";
 import "./app/productionSessionUiStateAdapter";
+import "./app/sessionImageHandoutRuntimeAdapter";
 import "./app/sessionContentParityRuntimeAdapter";
 import { PlaySessionDock } from "./PlaySessionDock";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
@@ -26,6 +27,8 @@ import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
 import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
 import { ProductionSessionDirectNetworkBridge } from "./ProductionSessionDirectNetworkBridge";
+import { CharacterPortraitBridge } from "./CharacterPortraitBridge";
+import { SessionImageHandoutBridge } from "./SessionImageHandoutBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -50,6 +53,8 @@ import "./production-ux-redesign.css";
 import "./v1-product-shell.css";
 import "./v1-product-shell-tokens.css";
 import "./appearance-settings.css";
+import "./character-portrait.css";
+import "./session-image-handout.css";
 
 void PlaySessionDock;
 void CombatSpellHudBridge;
@@ -68,6 +73,8 @@ createRoot(document.getElementById("root")!).render(
       <MovementReactionBridge />
       <ProductionSessionWorkspaceBridge />
       <ProductionSessionDirectNetworkBridge />
+      <CharacterPortraitBridge />
+      <SessionImageHandoutBridge />
     </AppProvider>
   </StrictMode>,
 );

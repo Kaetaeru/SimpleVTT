@@ -55,7 +55,7 @@ jobs:
       - name: Verify Phase 14 unified production session UX
         run: npx tsx --test tests/ui/productionSessionWorkspaceRedesign.test.ts
       - name: Verify Phase 14 tabletop sheet, physics dice, and intent-first play UX
-        run: npx tsx --test tests/ui/physicsDice3DStructure.test.ts tests/ui/characterSheetPlayableUx.test.ts tests/ui/productionPlayIntentUx.test.ts
+        run: npx tsx --test tests/ui/physicsDice3DStructure.test.ts tests/ui/characterSheetPlayableUx.test.ts tests/ui/productionPlayIntentUx.test.ts tests/ui/portraitAndHandoutPresentation.test.ts
       - name: Verify Phase 14 non-Character production UX redesign
         run: npx tsx --test tests/ui/productionNonCharacterUxRedesign.test.ts
       - name: Verify Phase 14 Host preparation metadata and active content
