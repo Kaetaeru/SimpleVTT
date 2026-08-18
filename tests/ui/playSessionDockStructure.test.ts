@@ -14,12 +14,14 @@ test("legacy PlaySessionDock stays available for reference but is no longer moun
   assert.doesNotMatch(main,/<PlaySessionDock \/>/);
 });
 
-test("production Scene route is owned by one intent-first play surface",()=>{
+test("production Scene route is owned by one V0.9 scene-first hotbar surface",()=>{
   const app=source("src/App.tsx");
   const play=source("src/ProductionPlayScreen.tsx");
   assert.match(app,/route === "scene" && <ProductionPlayScreen role=\{productionRole\} \/>/);
-  assert.match(play,/OFFICIAL_PLAY_INTENTS\.map/);
-  assert.doesNotMatch(play,/ActionSurface|play-dock-tabs|pendingActionId/);
+  assert.match(play,/BASIC_INTENTS\.map\(renderIntentButton\)/);
+  assert.match(play,/SITUATIONAL_INTENTS\.map\(renderIntentButton\)/);
+  assert.match(play,/play-v09-hotbar/);
+  assert.doesNotMatch(play,/ActionSurface|play-dock-tabs|pendingActionId|play-intent-grid/);
 });
 
 test("new production play surface establishes local state hooks before hydration guard",()=>{
@@ -29,6 +31,6 @@ test("new production play surface establishes local state hooks before hydration
   assert.ok(start>=0&&guard>start);
   const before=play.slice(start,guard);
   const after=play.slice(guard);
-  assert.equal((before.match(/\buseState(?:<[^>]+>)?\s*\(/g)??[]).length,3);
+  assert.equal((before.match(/\buseState(?:<[^>]+>)?\s*\(/g)??[]).length,4);
   assert.doesNotMatch(after,/\buse(?:State|Memo|Effect|LayoutEffect|Reducer|Ref|Callback|Context|ImperativeHandle|Transition|DeferredValue|Id|SyncExternalStore)\s*(?:<[^>]+>)?\s*\(/);
 });
