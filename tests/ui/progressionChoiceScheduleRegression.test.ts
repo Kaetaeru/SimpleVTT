@@ -262,7 +262,7 @@ test("final app adapter plan has no phantom ASI at Monk 2 and requires subclass 
 
   const subclassId = subclassChoices[0].options[0]?.id;
   assert.ok(subclassId);
-  await (adapter as unknown as Phase07AdapterCommands).setLevelUpChoice(subclassChoices[0].id,subclassId);
+  await (adapter as unknown as Phase07AdapterCommands).setProgressionChoice(subclassChoices[0].id,{ kind:"options", optionIds:[subclassId] });
   snapshot = await adapter.getSnapshot();
   assert.equal(snapshot.progressionPlan?.blocking.some((message) => /서브클래스 선택이 필요/.test(message)),false);
 });
