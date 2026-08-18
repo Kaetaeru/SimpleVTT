@@ -8,6 +8,12 @@ import "../../src/app/productionSessionEmptyEncounterAdapter";
 import "../../src/app/productionSessionUiStateAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import {
+  clearNextSessionHostEndpointForTests,
+  composeSessionEndpoint,
+  configureNextSessionHostEndpoint,
+  consumeNextSessionHostEndpoint,
+} from "../../src/app/sessionEndpointPreferences";
 
 function installFakeDesktopHost() {
   const original={
@@ -82,6 +88,37 @@ test("routine Session workspace prioritizes user actions over implementation dia
   assert.doesNotMatch(session,/RulesProfile/);
   assert.doesNotMatch(session,/Reference 흐름|Reference Host|Reference Join/);
   assert.doesNotMatch(session,/Ctrl\+Shift\+D/);
+});
+
+test("V0.9 direct network entry exposes explicit Host bind and Join address ports",()=>{
+  const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
+  const direct=readFileSync(new URL("../../src/ProductionSessionDirectNetworkBridge.tsx",import.meta.url),"utf8");
+  const runtime=readFileSync(new URL("../../src/app/directNetworkSessionRuntimeAdapter.ts",import.meta.url),"utf8");
+  const css=readFileSync(new URL("../../src/production-session-direct-network.css",import.meta.url),"utf8");
+
+  assert.match(main,/directNetworkSessionRuntimeAdapter/);
+  assert.match(main,/<ProductionSessionDirectNetworkBridge \/>/);
+  assert.match(direct,/Bind \/ Listen IP/);
+  assert.match(direct,/Host IP \/ 주소/);
+  assert.match(direct,/포트/);
+  assert.match(direct,/configureNextSessionHostEndpoint/);
+  assert.match(direct,/composeSessionEndpoint\(joinAddress,joinPort\)/);
+  assert.match(direct,/productionJoinCharacters/);
+  assert.match(runtime,/consumeNextSessionHostEndpoint/);
+  assert.match(runtime,/tauriSessionTransport\.startHost/);
+  assert.match(css,/production-session-entry-grid:not\(\.v09-direct-network-entry\)/);
+  assert.doesNotMatch(direct,/invite code|초대 코드/i);
+});
+
+test("direct network endpoint configuration is validated, explicit, and one-shot",()=>{
+  clearNextSessionHostEndpointForTests();
+  assert.equal(composeSessionEndpoint("192.168.0.42",4321),"192.168.0.42:4321");
+  assert.equal(composeSessionEndpoint("::1",3210),"[::1]:3210");
+  assert.throws(()=>composeSessionEndpoint("",3210),/IP|인터페이스/);
+  assert.throws(()=>composeSessionEndpoint("127.0.0.1",0),/1~65535/);
+  configureNextSessionHostEndpoint({bindAddress:"10.0.0.5",port:4567});
+  assert.equal(consumeNextSessionHostEndpoint("0.0.0.0:3210"),"10.0.0.5:4567");
+  assert.equal(consumeNextSessionHostEndpoint("0.0.0.0:3210"),"0.0.0.0:3210","configured bind applies to one Host start only");
 });
 
 test("starting a production Host clears reference fixture actors and stopping returns to a clean offline shell",async()=>{

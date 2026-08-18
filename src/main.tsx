@@ -5,6 +5,7 @@ import { AppProvider } from "./app/AppProvider";
 import { initializeAppearancePreference } from "./app/appearancePreferences";
 import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
+import "./app/directNetworkSessionRuntimeAdapter";
 import "./app/connectedParticipantIdempotencyAdapter";
 import "./app/connectedProjectionLifecycleAdapter";
 import "./app/connectedRoleRoutingAdapter";
@@ -23,6 +24,7 @@ import { AppearanceSettingsBridge } from "./AppearanceSettingsBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
 import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
+import { ProductionSessionDirectNetworkBridge } from "./ProductionSessionDirectNetworkBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -64,6 +66,7 @@ createRoot(document.getElementById("root")!).render(
       <ConcentrationSaveBridge />
       <MovementReactionBridge />
       <ProductionSessionWorkspaceBridge />
+      <ProductionSessionDirectNetworkBridge />
     </AppProvider>
   </StrictMode>,
 );
