@@ -4,6 +4,7 @@ import test from "node:test";
 
 const physics=readFileSync(new URL("../../src/PhysicsDice3D.tsx",import.meta.url),"utf8");
 const bridge=readFileSync(new URL("../../src/VisualDiceBridge.tsx",import.meta.url),"utf8");
+const projection=readFileSync(new URL("../../src/app/diceVisuals.ts",import.meta.url),"utf8");
 const css=readFileSync(new URL("../../src/visual-dice.css",import.meta.url),"utf8");
 const pkg=JSON.parse(readFileSync(new URL("../../package.json",import.meta.url),"utf8"));
 
@@ -47,8 +48,9 @@ test("authoritative replay drives a slot reel notice and exposes final arithmeti
 });
 
 test("natural d20 extremes have semantic result states independent from user accent color",()=>{
-  assert.match(bridge,/natural-20/);
-  assert.match(bridge,/natural-1/);
+  assert.match(projection,/"natural-20"/);
+  assert.match(projection,/"natural-1"/);
+  assert.match(bridge,/tone=resolved\?replay\.roll\.notice\.tone:"normal"/);
   assert.match(css,/\.visual-roll-notice\.natural-20/);
   assert.match(css,/#48b875/);
   assert.match(css,/\.visual-roll-notice\.natural-1/);
