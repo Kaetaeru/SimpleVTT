@@ -12,9 +12,9 @@
 - PR #109: open/draft/unmerged; no merge authorized
 
 ## Current work head
-`af19378149db97387e3cd364b38fe17e95078b39`
+`28f3700eb92ab93bacb589dd07be792bf228b3a0`
 
-PR #109 was rechecked before each source write. All writes were fast-forward contents commits on `agent/108-production-play-session-ux`; the PR remains open/draft/unmerged.
+The work branch was advanced from `af193781...` by a non-force fast-forward to `7fbb5ddb...`, followed by the narrow cleanup commit `28f3700e...`. PR #109 was rechecked before writes and remains draft/unmerged.
 
 ## Preflight reconciliation for this execution
 Mandatory watcher files were read from `main` in exact protocol order before project work:
@@ -23,70 +23,72 @@ Mandatory watcher files were read from `main` in exact protocol order before pro
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-GitHub control, STATE and PLAN reconciled to:
-- run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence `3`
-- task_id `v1-product-experience-overhaul`
-- dispatch `continue`
-- starting work HEAD `2c57c570b812d9cf42c6c40cb3ff8035ae7c06d7`
+Coordinates reconciled to run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `3`, task `v1-product-experience-overhaul`, dispatch `continue`, starting work HEAD `af19378149db97387e3cd364b38fe17e95078b39`. Validated Play/Dice/VFX/Appearance/dual-Sheet/direct-IP/content-parity work was not repeated.
 
-`main` resolved to coordination commit `9b9f3e8e703deb57c6efb5f63e7190804fe5bba6`. Validated Play/Dice/VFX/Appearance/dual-Sheet/direct-IP work was not repeated and the content-parity architecture audit was not restarted.
+## Prior Windows result recovered
+The pending same-head content-parity Windows job from the previous checkpoint completed successfully:
+- Phase 12 run `32186178904`
+- `windows-connected-playable` job `95870544914`: **success**
+- Tauri transport/persistence verification: success
+- Windows connected executable build: success
+- artifact staging/upload: success
+
+No rerun was requested or performed.
 
 ## Work completed in this execution
-### Diagnosed the exact parity CI failure
-The prescribed GitHub `gh-fix-ci` skill was used. The active container still lacked `gh`; package/download attempts could not obtain it because the container could not reach external package/download hosts. The GitHub plugin available in this conversation exposes a decoded workflow-job log action, so that specific failing Actions job was inspected directly rather than guessing from the red summary.
+### Character portrait
+Added presentation-only portrait support without a second Character store:
+- local PNG/JPEG/WebP only, max 2 MiB;
+- preview/add/replace/remove;
+- horizontal/vertical focal position controls;
+- same bridge appears on both normal Character Sheet layouts;
+- portrait data is stored in the existing owning-Client Character Library materialized Character record;
+- explicit portrait commits use the existing `CharacterLibraryRepository` and rollback/error behavior;
+- portrait/focal changes do not alter mechanics source/runtime projections or Character SessionProjection revisions.
 
-Original content-parity HEAD `2c57c570...`, Phase 12 run `32178687847`, job `95846416201`:
-- 45 existing connected tests passed;
-- only the three newly added parity tests failed;
-- observed failures showed the parity transport decorator was bypassed after the test fake transport replaced `send/onMessage/sendTo`.
+### DM image handout/reconnect
+Added connected presentation state without ResolutionEvent/Undo/combat semantics:
+- local PNG/JPEG/WebP only, max 4 MiB;
+- contextual live-Host `이미지 보여주기` flow with preview and explicit player reveal;
+- explicit withdraw;
+- Client dismiss and reopen;
+- active Host reveal is re-sent immediately after a final compatible reconnect `hello-ack`;
+- uses the existing Tauri session channel as a bounded `presentation-handout` envelope;
+- required-content warning handshake does not reveal the image before compatibility completes;
+- presentation messages are consumed outside the mechanics connected-wire decoder and do not enter the Host ledger.
 
-### Narrow source/test fixes
-1. `fa7a50abbbf8aea06d9c02dc4840e0a694afb71e` — `Rebind content parity transport decorator`
-   - `sessionContentParityRuntimeAdapter` now re-binds its thin transport decorator at Host/Join entry if a runtime/test delegate replacement removed it;
-   - production path remains a no-op when the decorator is already installed;
-   - this fixed the conflict and malformed-content tests, reducing the connected gate from three failures to one.
+### Source commits
+- `7fbb5ddb96862d1a696885e37ba064247c61538c` — `Add Character portrait and session image handouts`
+- `28f3700eb92ab93bacb589dd07be792bf228b3a0` — `Fix handout subscription cleanup`
+  - React subscription cleanup was made explicitly void-returning before final validation.
 
-2. `60d98601a2e2f76316f531f11b2d8b7bbfa50b1a` — `Refresh projection after content parity sync`
-   - after validated installed-content sync/recomposition, the Client re-handshake rebuilds its current compatibility manifest and Character SessionProjection from the recomposed catalog.
+Focused tests added/wired:
+- `tests/ui/characterLibraryPortraitPersistence.test.ts`
+- `tests/ui/portraitAndHandoutPresentation.test.ts`
+- `tests/ui/sessionImageHandoutRuntimeAdapter.test.ts`
 
-3. `f22291a3b38a1451e54a3d76cc4fe068148f31c0` — `Send parity rehello from synced client`
-   - the post-install re-handshake uses the explicit Client adapter already owned by the parity preflight rather than resolving through process-global `activeAdapter` again.
-
-4. `af19378149db97387e3cd364b38fe17e95078b39` — `Use canonical Character in parity handshake test`
-   - the focused test fixture now derives builtin class/species/background identities from the generated catalog and removes old mock-only subclass/item selections;
-   - this isolates content parity from unrelated legacy Mock Character projection incompatibility while retaining the real Character SessionProjection contract.
-
-No validator, repository, Host ledger, ResolutionEvent, Character authority, or transport protocol was replaced.
-
-## Content-parity behavior now validated
-At exact HEAD `af193781...`:
-- Client hello advertises installed declarative content identity/revision inventory;
-- Host compares against its installed declarative content and sends only missing/changed entries;
-- Host does not accept the participant before parity completes;
-- Client validates and installs through existing `validateInstalledContentPackage` + `InstalledContentRepository.installMany` + existing catalog recomposition;
-- Client re-handshake advertises the newly installed revision and a refreshed Character SessionProjection;
-- matching Host inventory produces no second transfer;
-- same-qualified-identity different payload fails closed without overwrite;
-- malformed Host declarative payload fails before install;
-- Ready remains blocked until parity is ready;
-- reconnect/matching replay does not change installed-content storage revision;
-- peer content remains declarative JSON only; no Host-provided JS/native execution path exists.
-
-## Validation evidence for exact head `af193781...`
-### Phase 12 Connected Session
-- run `32186178904`
-- connected-protocol job `95870203173`: **success**
-  - `Verify connected-session authority protocol`: success, including all 48 tests and focused parity cases;
-  - `Verify Phase 11 offline walkthrough remains green`: success;
-  - `Verify production frontend gate`: success.
-- Windows connected playable job `95870544914`: **in progress** at checkpoint time. It has just started; do not rerun it manually on watcher restart. Record its eventual result next invocation.
-
+## Validation evidence for exact head `28f3700e...`
 ### UI
-- run `32186178947`
-- frontend job `95870203434`: **success**
+- run `32187690842`
+- frontend job `95875015492`: **success**
+- portrait/handout presentation structure test: success
 - all reported UI/product regression steps: success
-- `Typecheck and build`: **success**
+- Typecheck and production build: success
+
+### Persistence
+- run `32187690744`
+- application-contract job `95875014950`: **success**
+- Character portrait persistence/restart/revision coverage plus existing persistence contracts: success
+- production build: success
+- tauri-storage job `95875014764`: **in progress** at checkpoint time; no Rust persistence source was changed. Do not manually rerun on watcher restart.
+
+### Phase 12 Connected Session
+- run `32187690780`
+- connected-protocol job `95875015147`: **success**
+- new handout reveal/withdraw/dismiss/reconnect test plus existing connected/content-parity regressions: success
+- Phase 11 offline walkthrough: success
+- production frontend gate: success
+- windows-connected-playable job `95875316302`: **in progress** at checkpoint time. Do not manually rerun on watcher restart.
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
@@ -96,27 +98,25 @@ At exact HEAD `af193781...`:
 5. Dual Character Sheet + Official Spellcasting.
 6. Direct-IP Session entry/configuration.
 7. Automatic validated Host-required declarative content parity before Ready.
+8. Character portrait + DM image handout/reconnect.
 
-Watcher restart alone is not a reason to rerun any of these seven boundaries.
+Watcher restart alone is not a reason to rerun these eight boundaries.
 
 ## Next Exact Action
 1. Perform mandatory preflight and trust GitHub if `main`, control, or PR #109 moved.
-2. If work HEAD remains `af193781...`, do not repeat any validated V0.9 slice or the parity diagnosis.
-3. Check Phase 12 Windows job `95870544914` and record its final result; do not manually rerun it if already complete.
-4. Resume the next incomplete V0.9 presentation slice: **Character portrait + DM image handout/reconnect**.
-5. Preserve owning-Client Character persistence for portrait data and keep handout data connected presentation state only.
-6. Portrait: bounded local PNG/JPEG/WebP, preview, replace/remove, crop/focal preference, durable Character persistence and offline/restart safety.
-7. DM handout: contextual local image preview → explicit reveal → withdraw; Client dismiss/minimize/reopen; reconnect restores current reveal; no cloud/public URL requirement.
-8. Do not introduce ResolutionEvent/Undo/combat state or tactical map/grid/token/Fog/path/LOS semantics for images.
-9. Add focused tests and run only affected gates first.
-10. After portrait/handout exact-head green, continue contextual DM/Content/Rules polish and dead-legacy cleanup.
-11. Later obtain one full exact-head automated validation set plus human Windows acceptance.
-12. Keep PR #109 draft/unmerged.
+2. If work HEAD remains `28f3700e...`, do not repeat any validated slice or portrait/handout audit.
+3. Check jobs `95875316302` and `95875014764`; record final results without manually rerunning if complete.
+4. Resume **contextual DM/Content/Rules polish + dead legacy cleanup**.
+5. Keep routine production surfaces outcome-first and do not restore implementation/debug/provenance clutter.
+6. Confirm legacy paths are genuinely unreachable before removal; preserve canonical Character/content/session authorities.
+7. Run only affected gates first.
+8. Later collect one exact-head full automated validation set and human Windows acceptance for standalone Sheet use and two-instance Host/Client image reveal/reconnect.
+9. Keep PR #109 draft/unmerged.
 
 ## Coordination writes
-- PLAN for this checkpoint was written first on `main` as commit `61dd6787d8ff000d5d21a38a9184fcf74cfa6bb8`.
+- PLAN was written first on `main` as commit `0c9c85e68d389b59d64c6fe0a5556d0787803df5`.
 - STATE is this durable checkpoint and is written after PLAN.
-- STATUS may be refreshed next for human visibility.
+- STATUS may be refreshed next.
 - control must be written last with sequence `3`, status `continue`.
 
 ## Dispatch recommendation
