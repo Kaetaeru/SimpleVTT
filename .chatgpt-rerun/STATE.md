@@ -12,9 +12,9 @@
 - PR #109: open/draft/unmerged; no merge authorized
 
 ## Current work head
-`28f3700eb92ab93bacb589dd07be792bf228b3a0`
+`04d8af303e4f77eeb62801f8fd99e07146a2e48e`
 
-The work branch was advanced from `af193781...` by a non-force fast-forward to `7fbb5ddb...`, followed by the narrow cleanup commit `28f3700e...`. PR #109 was rechecked before writes and remains draft/unmerged.
+The work branch was advanced by a single non-force fast-forward from `28f3700eb92ab93bacb589dd07be792bf228b3a0` to `04d8af303e4f77eeb62801f8fd99e07146a2e48e`. PR #109 was rechecked immediately before the ref update and remained open/draft/unmerged at the expected old head.
 
 ## Preflight reconciliation for this execution
 Mandatory watcher files were read from `main` in exact protocol order before project work:
@@ -23,72 +23,87 @@ Mandatory watcher files were read from `main` in exact protocol order before pro
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Coordinates reconciled to run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `3`, task `v1-product-experience-overhaul`, dispatch `continue`, starting work HEAD `af19378149db97387e3cd364b38fe17e95078b39`. Validated Play/Dice/VFX/Appearance/dual-Sheet/direct-IP/content-parity work was not repeated.
+Coordinates reconciled to:
+- run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
+- sequence `3`
+- task `v1-product-experience-overhaul`
+- dispatch `continue`
+- starting work HEAD `28f3700eb92ab93bacb589dd07be792bf228b3a0`
 
-## Prior Windows result recovered
-The pending same-head content-parity Windows job from the previous checkpoint completed successfully:
-- Phase 12 run `32186178904`
-- `windows-connected-playable` job `95870544914`: **success**
-- Tauri transport/persistence verification: success
-- Windows connected executable build: success
-- artifact staging/upload: success
+Validated Play/Dice/VFX/Appearance/dual-Sheet/direct-IP/content-parity/portrait-handout work was not repeated.
 
-No rerun was requested or performed.
+## Prior pending Windows results recovered without rerun
+The two same-head jobs left pending at the previous checkpoint are now both confirmed successful:
+- Persistence run `32187690744` / `tauri-storage` job `95875014764`: **success**.
+- Phase 12 run `32187690780` / `windows-connected-playable` job `95875316302`: **success**.
+  - Tauri transport/persistence verification: success;
+  - Windows connected executable build: success;
+  - artifact staging/upload: success.
+
+No manual rerun was requested or performed.
 
 ## Work completed in this execution
-### Character portrait
-Added presentation-only portrait support without a second Character store:
-- local PNG/JPEG/WebP only, max 2 MiB;
-- preview/add/replace/remove;
-- horizontal/vertical focal position controls;
-- same bridge appears on both normal Character Sheet layouts;
-- portrait data is stored in the existing owning-Client Character Library materialized Character record;
-- explicit portrait commits use the existing `CharacterLibraryRepository` and rollback/error behavior;
-- portrait/focal changes do not alter mechanics source/runtime projections or Character SessionProjection revisions.
+### Contextual DM Encounter preparation
+`src/ProductionPlayScreen.tsx` now reuses the existing `instantiateCombatant` and `removeCombatant` AppProvider APIs directly from the current production play surface.
+- Encounter management is visible only for DM while not in Initiative and while offline or Host lifecycle is `preparing`.
+- An empty DM Encounter now offers in-place `Encounter 준비` buttons using existing `snapshot.combatantDefinitions` instead of directing the user to an unreachable sidebar destination.
+- A non-empty manageable Encounter offers a compact `Encounter 편집` disclosure and can remove the selected Combatant.
+- No new React state store, Character/content authority, network protocol, ResolutionEvent path, or tactical map semantics were introduced.
 
-### DM image handout/reconnect
-Added connected presentation state without ResolutionEvent/Undo/combat semantics:
-- local PNG/JPEG/WebP only, max 4 MiB;
-- contextual live-Host `이미지 보여주기` flow with preview and explicit player reveal;
-- explicit withdraw;
-- Client dismiss and reopen;
-- active Host reveal is re-sent immediately after a final compatible reconnect `hello-ack`;
-- uses the existing Tauri session channel as a bounded `presentation-handout` envelope;
-- required-content warning handshake does not reveal the image before compatibility completes;
-- presentation messages are consumed outside the mechanics connected-wire decoder and do not enter the Host ledger.
+### Product-language cleanup
+- Production Play routine copy no longer exposes `capability` as user-facing terminology; it refers to available choices/actions instead.
+- `V1ContentScreen` explicitly owns addon file review/install and tells the user installed addons become searchable from Rules.
+- Routine addon guidance no longer exposes RuleModule/Capability/generic-Catalog/mechanics/progression jargon while still using the same existing validation/install APIs internally.
 
-### Source commits
-- `7fbb5ddb96862d1a696885e37ba064247c61538c` — `Add Character portrait and session image handouts`
-- `28f3700eb92ab93bacb589dd07be792bf228b3a0` — `Fix handout subscription cleanup`
-  - React subscription cleanup was made explicitly void-returning before final validation.
+### Proven dead production wiring cleanup
+`src/main.tsx` no longer imports or loads the unmounted legacy `PlaySessionDock` or `play-session-dock.css`.
+- `PlaySessionDock.tsx` itself remains as a reference/history source because tests still intentionally inspect it.
+- `CombatSpellHudBridge` wiring remains untouched because existing tests and behavior still depend on it.
+- Current portrait/handout/session/production bridges remain mounted.
 
-Focused tests added/wired:
-- `tests/ui/characterLibraryPortraitPersistence.test.ts`
-- `tests/ui/portraitAndHandoutPresentation.test.ts`
-- `tests/ui/sessionImageHandoutRuntimeAdapter.test.ts`
+### Dead-code audit deferred safely
+The current router proves `App.tsx` production routes use `CharacterSheetPlayScreen`, `CharacterCreateScreenV10`, `ProductionPlayScreen`, and current LevelUp/Session/Content surfaces. The same file still contains older local-only sheet/create/scene helper functions. They appear unreachable, but this execution did not perform a high-risk mass deletion. The next cleanup must prove every helper/import dependency before removing that block.
 
-## Validation evidence for exact head `28f3700e...`
+### Source commit
+- `04d8af303e4f77eeb62801f8fd99e07146a2e48e` — `Polish contextual DM and content UX`
+
+Focused tests updated:
+- `tests/ui/playSessionDockStructure.test.ts`
+- `tests/ui/productionNonCharacterUxRedesign.test.ts`
+
+## Validation evidence for exact head `04d8af30...`
 ### UI
-- run `32187690842`
-- frontend job `95875015492`: **success**
-- portrait/handout presentation structure test: success
-- all reported UI/product regression steps: success
+- run `32188621592`
+- frontend job `95877878308`: **success**
+- PlaySessionDock production wiring cleanup: success
+- contextual DM/Content product UX test: success
+- all reported product regressions: success
 - Typecheck and production build: success
 
-### Persistence
-- run `32187690744`
-- application-contract job `95875014950`: **success**
-- Character portrait persistence/restart/revision coverage plus existing persistence contracts: success
-- production build: success
-- tauri-storage job `95875014764`: **in progress** at checkpoint time; no Rust persistence source was changed. Do not manually rerun on watcher restart.
+### Main Playable
+- run `32188621652`
+- playable-contract job `95877878422`: **success**
+- full UI/rules/TypeScript/frontend: success
+- Phase 11 complete offline walkthrough: success
+- Phase 12 connected authority: success
+- Phase 13 arbitrary Character SessionProjection: success
+- DM prepared Combatant, live adjudication/Undo, live theater-of-mind Combatant action, preparation metadata/content, live mechanics continuity and production accessibility: success
+- windows-playable job `95878131296`: **in progress** at checkpoint time; do not manually rerun on watcher restart.
 
 ### Phase 12 Connected Session
-- run `32187690780`
-- connected-protocol job `95875015147`: **success**
-- new handout reveal/withdraw/dismiss/reconnect test plus existing connected/content-parity regressions: success
+- run `32188621643`
+- connected-protocol job `95877878129`: **success**
+- connected-session authority protocol: success
 - Phase 11 offline walkthrough: success
 - production frontend gate: success
-- windows-connected-playable job `95875316302`: **in progress** at checkpoint time. Do not manually rerun on watcher restart.
+- windows-connected-playable job `95878210229`: **in progress** at checkpoint time; do not manually rerun on watcher restart.
+
+### Persistence
+- run `32188621614`
+- application-contract job `95877878078`: **success**
+- Character/content/module persistence contracts: success
+- production build: success
+- tauri-storage job `95877878039`: **in progress** at checkpoint time; do not manually rerun on watcher restart.
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
@@ -99,24 +114,25 @@ Focused tests added/wired:
 6. Direct-IP Session entry/configuration.
 7. Automatic validated Host-required declarative content parity before Ready.
 8. Character portrait + DM image handout/reconnect.
+9. Contextual DM/Content polish + production dead-wiring cleanup at `04d8af30...` on affected Linux/application gates.
 
-Watcher restart alone is not a reason to rerun these eight boundaries.
+Watcher restart alone is not a reason to rerun any of these boundaries.
 
 ## Next Exact Action
-1. Perform mandatory preflight and trust GitHub if `main`, control, or PR #109 moved.
-2. If work HEAD remains `28f3700e...`, do not repeat any validated slice or portrait/handout audit.
-3. Check jobs `95875316302` and `95875014764`; record final results without manually rerunning if complete.
-4. Resume **contextual DM/Content/Rules polish + dead legacy cleanup**.
-5. Keep routine production surfaces outcome-first and do not restore implementation/debug/provenance clutter.
-6. Confirm legacy paths are genuinely unreachable before removal; preserve canonical Character/content/session authorities.
-7. Run only affected gates first.
-8. Later collect one exact-head full automated validation set and human Windows acceptance for standalone Sheet use and two-instance Host/Client image reveal/reconnect.
+1. Perform mandatory watcher preflight and trust GitHub if `main`, control, or PR #109 moved.
+2. If work HEAD remains `04d8af30...`, do not repeat any validated slice or this contextual polish audit.
+3. Check jobs `95878210229`, `95878131296`, and `95877878039`; record their final results without manual rerun if complete.
+4. Resume only the remaining dead-legacy cleanup: prove reachability of the older local-only `App.tsx` sheet/create/scene helper block and remove only functions/imports that are demonstrably unreachable from the current router and external tests.
+5. Preserve current ProductionPlay, dual Sheet, V10 Character creation, LevelUp, Session/content/connected authorities and any reference source still required by tests.
+6. Run only affected gates after cleanup.
+7. Then collect one exact-head full automated UI/Main/mechanics/persistence/installed-content/connected/Windows validation set.
+8. Human Windows acceptance remains required for standalone Sheet-at-table use and two-instance Host/Client image reveal/reconnect; do not claim final V0.9 completion before it.
 9. Keep PR #109 draft/unmerged.
 
 ## Coordination writes
-- PLAN was written first on `main` as commit `0c9c85e68d389b59d64c6fe0a5556d0787803df5`.
+- PLAN for this checkpoint was written first on `main` as commit `f08ac70ca2c0ec32708d100f6812725a8ac37700`.
 - STATE is this durable checkpoint and is written after PLAN.
-- STATUS may be refreshed next.
+- STATUS may be refreshed next for human visibility.
 - control must be written last with sequence `3`, status `continue`.
 
 ## Dispatch recommendation
