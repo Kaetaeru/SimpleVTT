@@ -9,7 +9,7 @@
 - sequence `3`
 - task_id `v1-product-experience-overhaul`
 - current milestone: **V0.9**
-- dispatch recommendation: `blocked`
+- dispatch recommendation: `continue`
 
 ## Authoritative product reference
 Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c99a055f96c6bc5e462a`). Preserve canonical React/runtime architecture, owning-Client Character durability, Host mechanics authority, ResolutionEvent/reconnect/idempotency, installed-content/RuleModule authority and existing Scene/action runtime.
@@ -62,13 +62,13 @@ The current implementation extends the existing Session handshake rather than cr
   - Windows job `95846508836` was skipped because the connected job failed.
 - Exact failing test/type stack is still uninspected.
 
-## Technical blocker
-The active GitHub CI-fix workflow requires authenticated GitHub CLI log inspection before source changes. This execution rechecked the prerequisite and `gh` is still unavailable (`status 127`). Do not guess a fix from the red step alone and do not treat the GitHub app as a substitute for the required `gh` diagnosis path.
+## Known execution precondition
+The current CI-fix workflow requires installed and authenticated GitHub CLI log inspection before source changes. The last execution environment reported `gh` unavailable (`status 127`). The user has explicitly re-authorized the same sequence to `continue`; the next execution should attempt the prescribed CI diagnosis and, if the environment still lacks authenticated `gh`, record that condition rather than guessing a fix.
 
 ## Next Exact Action
 1. Perform mandatory watcher preflight and trust GitHub if PR #109 or `main` advanced.
-2. If control is re-authorized to `continue` and work HEAD remains `2c57c570...`, do **not** repeat validated slices or redo content-parity design/source audit.
-3. In an environment with installed and authenticated `gh`, inspect Phase 12 run `32178687847`, job `95846416201`, and capture the exact failing test/type stack from `Verify connected-session authority protocol`.
+2. If work HEAD remains `2c57c570...`, do **not** repeat validated slices or redo content-parity design/source audit.
+3. Use the GitHub plugin `gh-fix-ci` workflow to inspect Phase 12 run `32178687847`, job `95846416201`, and capture the exact failing test/type stack from `Verify connected-session authority protocol`.
 4. Summarize that observed root cause and fix only the failing newly touched parity source/tests unless the log proves another dependency is responsible.
 5. Re-run/observe the affected Phase 12 connected gate and UI TypeScript/production build at the resulting exact head.
 6. Promote content parity to a validated boundary only when missing/changed-only transfer, existing validator/repository install, Ready blocking, re-handshake and reconnect idempotency are green.
@@ -80,4 +80,4 @@ The active GitHub CI-fix workflow requires authenticated GitHub CLI log inspecti
 One exact source SHA must demonstrate coherent shell reachability; durable Character create/import/edit/level-up; both Sheet layouts; Official level 0–9 Spellcasting; portrait and standalone rolls/resources; durable appearance; production physics dice; Initiative/hotbar Play; presentation-only VFX; direct-IP Host/Join/Ready/start/stop/reconnect; validated automatic Host-required declarative content parity; empty fresh Host Encounter; DM image reveal/withdraw and Client dismiss/reopen/reconnect; automated exact-head gates and human Windows acceptance.
 
 ## Dispatch recommendation
-`blocked`
+`continue`
