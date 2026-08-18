@@ -9,10 +9,10 @@
 - sequence `3`
 - task_id `v1-product-experience-overhaul`
 - current milestone: **V0.9**
-- dispatch recommendation: `continue`
+- dispatch recommendation: `blocked`
 
 ## Authoritative product reference
-Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c99a055f96c6bc5e462a`). Interactive HTML demos remain references only. Preserve canonical React/runtime architecture, owning-Client Character durability, Host mechanics authority, ResolutionEvent/reconnect/idempotency, installed-content/RuleModule authority and existing Scene/action runtime.
+Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c99a055f96c6bc5e462a`). Preserve canonical React/runtime architecture, owning-Client Character durability, Host mechanics authority, ResolutionEvent/reconnect/idempotency, installed-content/RuleModule authority and existing Scene/action runtime.
 
 ## Architecture invariants
 - one canonical Character; owning Client Character Library is durable Character authority;
@@ -26,9 +26,9 @@ Use `.agents/V0_9_PRODUCT_REFERENCE.md` (reference commit `cde7ec5a8f052aac7072c
 - PR #109 must not be merged without explicit user authorization.
 
 ## Exact work HEAD
-`0b7bce05f59bed2335499b89c6357b2431f5987e`
+`2c57c570b812d9cf42c6c40cb3ff8035ae7c06d7`
 
-Latest source commit: `Add configurable direct-IP session entry`.
+Latest source commit: `Add validated session content parity`.
 
 ## Validated V0.9 slices — do not repeat unless touched
 1. Production Play.
@@ -36,57 +36,51 @@ Latest source commit: `Add configurable direct-IP session entry`.
 3. Composable Combat VFX.
 4. Appearance preferences.
 5. Dual Character Sheet + Official Spellcasting at `e83fc37...`.
-6. **Direct-IP Session entry** at `0b7bce05...`:
-   - Host offline entry exposes session name, explicit Bind / Listen IP/interface and port;
-   - Join entry exposes saved Character, Host IP/address and port separately;
-   - arbitrary IPv4/IPv6 endpoint composition uses the existing Tauri TCP transport;
-   - a one-shot Host endpoint request decorates existing `tauriSessionTransport.startHost` without replacing Session lifecycle or Rust transport;
-   - existing Host preparation/lobby/live/stop/reconnect UI remains unchanged after connection;
-   - no invite-code abstraction and no networking protocol replacement;
-   - fresh Host empty Encounter behavior is retained.
+6. Direct-IP Session entry at `0b7bce05...`.
+
+The content-parity source at `2c57c570...` is **not validated yet** and is not a closed boundary.
+
+## Content-parity source now on the work branch
+The current implementation intentionally extends the existing Session handshake rather than creating a parallel protocol:
+- `installedContentRuntimeAdapter` now exposes session-safe inventory, stable canonical content revision, missing/changed comparison, and peer install helpers over the existing hydrated `InstalledContentRepository` and `validateInstalledContentPackage` authority;
+- `sessionContentParityRuntimeAdapter` decorates the existing transport listener/send path so Client `hello` advertises installed declarative content revisions;
+- Host intercepts only when required entries are missing/changed, sends those entries in the existing `hello-ack` envelope, and does not accept the participant before parity completes;
+- Client validates/installs through the existing repository, recomposes the existing catalog, then re-sends the same `hello`;
+- matching reconnects transfer nothing; conflicting same-qualified-identity payloads fail closed;
+- Client Ready is gated until parity state is `ready`;
+- normal compatibility text communicates `콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료`;
+- no Host-provided JS/native execution path, second addon store, resolver or second event/network protocol was added.
+
+Focused coverage was added to `productionHelloReplayIdempotency.test.ts` for successful missing-only transfer, re-handshake, Ready gating, reconnect idempotency, same-identity conflict rejection and malformed Host content rejection.
 
 ## Validation evidence
-### Dual Sheet exact head `e83fc37...`
-- UI run `32176685363` / frontend `95840143821`: **success** including dual-Sheet focused test and TypeScript/production build.
+### Previously validated direct-IP head `0b7bce05...`
+- UI workflow `32177587540` / frontend `95842950322`: **success**.
+- Phase 12 Connected Session `32177587541` / connected-protocol `95842949930`: **success**.
+- Its Windows job `95843208485` was still in progress at the latest observation; do not manually rerun it merely because watcher execution restarts.
 
-### Direct-IP exact head `0b7bce05...`
-- UI workflow run `32177587540` / frontend job `95842950322`: **success**.
-  - `Verify Phase 14 unified production session UX`: success, including direct-IP endpoint/UI tests and existing empty-Encounter lifecycle test;
-  - existing connected/lifecycle/DM/Character regressions in the same frontend job: success;
-  - `Typecheck and build`: success.
-- Phase 12 Connected Session run `32177587541` / `connected-protocol` job `95842949930`: **success**.
-  - connected-session authority protocol: success;
-  - Phase 11 offline walkthrough: success;
-  - production frontend gate: success.
-- The same Phase 12 run's `windows-connected-playable` job `95843208485` was still building at checkpoint time. Record its eventual result next invocation; do not block the next source slice solely on this in-progress artifact build.
+### Current content-parity head `2c57c570...`
+- Phase 12 Connected Session run `32178687847` started automatically.
+- connected-protocol job `95846416201` failed at step `Verify connected-session authority protocol`.
+- The exact failing log/root cause is **not yet inspected**. This execution environment has no `gh` CLI (`gh: not found`), and the GitHub CI-fix workflow requires authenticated `gh` log inspection before changing source. No speculative source fix was made after the failure.
+- UI run `32178687871` had started but was still in progress when the blocker checkpoint was written; do not claim it green.
 
-Historical evidence for unchanged prior slices remains reusable. Do not rerun unchanged work merely because Rerun restarts.
+## Technical blocker
+The active execution environment does not provide the required GitHub CLI for the prescribed GitHub Actions failure-inspection workflow. The source remains safely committed and PR #109 remains draft/unmerged, but the failing parity gate must be diagnosed before further source work.
 
 ## Next Exact Action
-1. Perform mandatory watcher preflight and trust GitHub if the work branch moved.
-2. If PR #109 still points to `0b7bce05...`, do **not** re-audit/rewrite direct-IP Session, dual Sheet, Play, Dice, VFX or Appearance.
-3. Resume only the remaining half of the current Session slice: **automatic validated Host-required content parity before Ready**.
-4. Reuse the already-audited boundaries:
-   - `installedContentRuntimeAdapter` / `InstalledContentRepository` and `validateInstalledContentPackage` remain the only install/validation authority;
-   - `connectedSessionProtocol` / `connectedSessionWire` existing `hello` / `hello-ack` remain the handshake path;
-   - `productionSessionLifecycleAdapter` remains Ready/start/stop authority.
-5. Add session-safe helpers to snapshot normalized installed declarative entries and install peer-provided entries through the existing repository/validator. Do not create a second addon store.
-6. Extend the existing handshake, not a parallel protocol:
-   - Client `hello` advertises installed supported content identity/revision inventory;
-   - Host compares against its required installed supported content;
-   - `hello-ack` transfers only missing/changed supported declarative entries;
-   - Client validates/installs through existing authority, recomposes the catalog, then re-sends `hello`;
-   - parity is complete only when the next Host ack requires no entries.
-7. Same-identity conflicting/invalid payloads must fail closed and block Ready with an actionable message. Never execute Host-provided JS/native code.
-8. Reconnect uses the same comparison so already-matching content is not transferred again.
-9. Normal Session UX should communicate `콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료`; raw hash/manifest/protocol detail stays troubleshooting-only.
-10. Add focused tests around installed-content helper reuse, hello/ack comparison and transfer, validation failure Ready gating, successful re-handshake and reconnect missing/changed-only behavior. Run only affected UI/connected/installed-content gates first.
-11. After content parity is exact-head green, continue: Character portrait + DM image handout/reconnect; then contextual DM/Content/Rules polish and dead-legacy cleanup.
-12. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
-13. Keep PR #109 draft/unmerged.
+1. Perform mandatory watcher preflight and trust GitHub if PR #109 or `main` advanced.
+2. If control is re-authorized to `continue` and work HEAD remains `2c57c570...`, do **not** repeat Play/Dice/VFX/Appearance/dual-Sheet/direct-IP work or re-audit the parity design.
+3. In an execution environment with authenticated `gh`, inspect Phase 12 run `32178687847`, connected-protocol job `95846416201` and capture the exact failing test/type error. Do not guess from the red step alone.
+4. Fix only the observed failure in the new content-parity source/tests. Preserve the existing installed-content repository/validator and existing `hello / hello-ack` authority boundaries.
+5. Re-run/observe the affected Phase 12 connected gate and UI TypeScript/production build at one exact head. If the failure is only in focused tests, keep the fix equally narrow.
+6. Content parity becomes a validated boundary only after missing/changed-only transfer, validation/install, Ready blocking, successful re-handshake and reconnect idempotency are green.
+7. After content parity is exact-head green, continue: Character portrait + DM image handout/reconnect; then contextual DM/Content/Rules polish and dead-legacy cleanup.
+8. Later obtain one exact-head full UI/Main/mechanics/persistence/installed-content/connected/Windows validation plus human Windows acceptance for V0.9.
+9. Keep PR #109 draft/unmerged.
 
 ## V0.9 Definition of Done
 One exact source SHA must demonstrate coherent shell reachability; durable Character create/import/edit/level-up; both Sheet layouts; Official level 0–9 Spellcasting; portrait and standalone rolls/resources; durable appearance; production physics dice; Initiative/hotbar Play; presentation-only VFX; direct-IP Host/Join/Ready/start/stop/reconnect; validated automatic Host-required declarative content parity; empty fresh Host Encounter; DM image reveal/withdraw and Client dismiss/reopen/reconnect; automated exact-head gates and human Windows acceptance.
 
 ## Dispatch recommendation
-`continue`
+`blocked`
