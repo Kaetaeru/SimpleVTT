@@ -8,7 +8,8 @@ const workspace = readFileSync(new URL("../../src/CharacterSheetPlayScreen.tsx",
 const css = readFileSync(new URL("../../src/session-utility-panes.css", import.meta.url), "utf8");
 
 test("Rules and Activity are Session utilities instead of route replacements", () => {
-  assert.match(sessionRoot, /"rules" \| "activity"/);
+  assert.match(sessionRoot, /type SessionUtility = [^;]*"rules"/);
+  assert.match(sessionRoot, /type SessionUtility = [^;]*"activity"/);
   assert.match(sessionRoot, /<SessionRulesPane onClose=\{closeUtility\}/);
   assert.match(sessionRoot, /<SessionActivityPane onClose=\{closeUtility\}/);
   assert.match(sessionRoot, /세션 규칙 찾아보기/);
