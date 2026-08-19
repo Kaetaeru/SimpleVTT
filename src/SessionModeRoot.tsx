@@ -3,6 +3,7 @@ import { useSimpleVtt } from "./app/AppProvider";
 import type { ActionVm, SceneEntity } from "./app/contracts";
 import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
+import { VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS } from "./app/diceVisuals";
 import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock } from "./SessionActionDock";
@@ -12,6 +13,8 @@ import "./session-mode.css";
 
 type SessionUtility = "quick-sheet" | "actor" | "rules" | "activity" | null;
 type WorkspaceLayer = "full-sheet" | null;
+
+const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", "damage-animation"]);
 
 function actionDamageSummary(action: ActionVm) {
   if (!action.damage?.length) return action.summary;
@@ -24,6 +27,16 @@ function connectionCopy(state: "connected" | "reconnecting" | "disconnected") {
   if (state === "reconnecting") return "다시 연결하는 중…";
   if (state === "disconnected") return "연결이 끊어졌습니다";
   return "";
+}
+
+function resolutionStageCopy(stage: string) {
+  return ({
+    "attack-result": "명중 결과",
+    interrupt: "반응 대기",
+    "save-result": "내성 결과",
+    "effect-preview": "효과 확인",
+    complete: "완료",
+  } as Record<string, string>)[stage] ?? "판정 중";
 }
 
 export function SessionModeRoot() {
@@ -144,7 +157,7 @@ export function SessionModeRoot() {
       </div>}
       {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
       {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
-      {snapshot.resolution && <SessionResolutionFallback />}
+      {snapshot.resolution && activeUtility !== "activity" && <SessionResolutionLayer onOpenActivity={(button) => toggleUtility("activity", button)} />}
     </div>
   </div>;
 }
@@ -225,24 +238,45 @@ function ActorQuickView({ actor, onClose }: { actor: SceneEntity | null; onClose
   </aside>;
 }
 
-function SessionResolutionFallback() {
+function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTMLButtonElement): void }) {
   const { snapshot, advanceResolution, respondToInterrupt, dismissResolution, undoLastResolution } = useSimpleVtt();
   const resolution = snapshot?.resolution;
-  const animated = resolution ? ["roll-animation", "save-animation", "damage-animation"].includes(resolution.stage) : false;
+  const diceAnimated = Boolean(resolution && ANIMATED_RESOLUTION_STAGES.has(resolution.stage) && resolution.authoritativeDice.length > 0);
 
   useEffect(() => {
-    if (!resolution || !animated || !resolution.canAdvance) return;
+    if (!resolution || !diceAnimated || !resolution.canAdvance) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "reduced";
-    const timer = window.setTimeout(() => void advanceResolution(), reduced ? 80 : 850);
+    const timer = window.setTimeout(
+      () => void advanceResolution(),
+      reduced ? VISUAL_DICE_REDUCED_REPLAY_MS : VISUAL_DICE_REPLAY_MS,
+    );
     return () => window.clearTimeout(timer);
-  }, [resolution?.id, resolution?.stage, resolution?.canAdvance, animated, advanceResolution]);
+  }, [resolution?.id, resolution?.stage, resolution?.canAdvance, diceAnimated, advanceResolution]);
 
-  if (!snapshot || !resolution) return null;
+  if (!snapshot || !resolution || diceAnimated) return null;
 
-  return <section className="session-resolution-fallback" aria-label="판정 결과">
-    <div><span className="eyebrow accent">판정</span><strong>{resolution.actionName}</strong><p>{resolution.compact || resolution.calculatedOutcome}</p></div>
+  const actorName = snapshot.scene.entities.find((entity) => entity.id === resolution.actorId)?.name
+    ?? (snapshot.activeCharacter.id === resolution.actorId ? snapshot.activeCharacter.name : "Actor");
+  const mainOutcome = resolution.interrupt
+    ? `${resolution.interrupt.responderName} · ${resolution.interrupt.optionName}`
+    : resolution.stage === "attack-result" && resolution.attackOutcome
+      ? `${resolution.attackOutcome}${resolution.attackTotal !== undefined ? ` ${resolution.attackTotal}` : ""}${resolution.targetAc !== undefined ? ` vs AC ${resolution.targetAc}` : ""}`
+      : resolution.stage === "save-result" && resolution.saveResults.length > 0
+        ? resolution.saveResults.map((save) => `${save.targetName} ${save.outcome} · ${save.total} vs DC ${save.dc}`).join(" · ")
+        : resolution.stage === "complete"
+          ? resolution.finalOutcome || resolution.compact || resolution.calculatedOutcome
+          : resolution.compact || resolution.calculatedOutcome;
+  const stateSummary = resolution.stage === "complete" ? resolution.stateChanges.slice(0, 2).join(" · ") : "";
+
+  return <section className={`session-resolution-layer ${resolution.stage === "complete" ? "complete" : "step"}`} role="status" aria-label="판정 결과" data-resolution-stage={resolution.stage}>
+    <div className="session-resolution-copy">
+      <span>{actorName} · {resolution.actionName}</span>
+      <strong>{mainOutcome}</strong>
+      {stateSummary && <p>{stateSummary}</p>}
+    </div>
+    <span className="session-resolution-stage">{resolutionStageCopy(resolution.stage)}</span>
     {resolution.interrupt && <div className="session-resolution-actions"><button className="primary" type="button" onClick={() => void respondToInterrupt(true)}>사용</button><button type="button" onClick={() => void respondToInterrupt(false)}>넘기기</button></div>}
-    {!resolution.interrupt && resolution.canAdvance && !animated && <button className="primary" type="button" onClick={() => void advanceResolution()}>{resolution.nextLabel ?? "계속"}</button>}
-    {resolution.stage === "complete" && <div className="session-resolution-actions"><button className="primary" type="button" onClick={() => void dismissResolution()}>결과 닫기</button>{snapshot.session.role === "host" && <button type="button" onClick={() => void undoLastResolution()}>되돌리기</button>}</div>}
+    {!resolution.interrupt && resolution.canAdvance && <button className="primary session-resolution-next" type="button" onClick={() => void advanceResolution()}>{resolution.nextLabel ?? "계속"}</button>}
+    {resolution.stage === "complete" && <div className="session-resolution-actions"><button type="button" onClick={(event) => onOpenActivity(event.currentTarget)}>상세</button>{snapshot.session.role === "host" && <button type="button" onClick={() => void undoLastResolution()}>되돌리기</button>}<button className="primary" type="button" onClick={() => void dismissResolution()}>닫기</button></div>}
   </section>;
 }
