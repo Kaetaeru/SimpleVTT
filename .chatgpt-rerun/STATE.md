@@ -3,7 +3,7 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
-- dispatch state: `blocked`
+- dispatch state: `continue`
 - current milestone: **V0.9**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
@@ -15,6 +15,9 @@
 `5c70b3028aed70b0fc5ddafafe119f40174df833`
 
 The work branch was advanced by non-force fast-forward from `04d8af303e4f77eeb62801f8fd99e07146a2e48e` to `5c70b3028aed70b0fc5ddafafe119f40174df833` only after PR #109 was rechecked open/draft/unmerged at the expected old head.
+
+## Current dispatch reauthorization
+The user explicitly changed the same sequence `3` from `blocked` back to `continue` on 2026-08-19. This is a new work authorization under the rerun protocol; resume from this durable checkpoint without incrementing the sequence and without repeating validated work.
 
 ## User coordination instruction recorded
 The user explicitly changed watcher coordination conventions:
@@ -66,7 +69,7 @@ Automatic Actions started after the branch update.
 - step `Verify full UI, rules, TypeScript, and production frontend`: **failure**
 - subsequent contract steps were skipped.
 
-The exact root cause has not been diagnosed or fixed. The matching GitHub plugin `gh-fix-ci` skill was invoked before diagnosis. That skill reported an unavailable required dependency in this execution environment. Under the newly recorded user instruction, future attempts must still invoke the plugin skill first and must not independently install/invoke `gh` as a replacement workflow. If the skill cannot proceed under its own guardrails, keep the technical blocker rather than guessing.
+The exact root cause has not been diagnosed or fixed. The matching GitHub plugin `gh-fix-ci` skill was invoked before diagnosis. That skill reported an unavailable required dependency in the prior execution environment. Under the recorded user instruction, future attempts must still invoke the plugin skill first and must not independently install/invoke `gh` as a replacement workflow. If the skill cannot proceed under its own guardrails, record the technical blocker rather than guessing.
 
 ### Other exact-head runs
 - UI `32189591171`: started; final result not claimed at blocker checkpoint.
@@ -89,10 +92,10 @@ The new `5c70b302...` dead-legacy deletion is **not validated** and must not be 
 
 ## Next Exact Action
 1. Perform mandatory watcher preflight and trust GitHub if `main`, control, work branch or PR #109 moved.
-2. If control remains `blocked`, do not continue source work.
-3. If controller restores `continue` and work HEAD remains `5c70b302...`, do not repeat the legacy reachability audit or validated slices.
+2. With control re-authorized as `continue`, resume only from this checkpoint.
+3. If work HEAD remains `5c70b302...`, do not repeat the legacy reachability audit or validated slices.
 4. Invoke the GitHub plugin `gh-fix-ci` skill first for the Main Playable failure. Do not independently install or directly invoke `gh` as the primary workflow.
-5. Follow the plugin skill's supported diagnosis path for run `32189591188`, job `95880814298`, step `Verify full UI, rules, TypeScript, and production frontend`. If the plugin skill reports a missing required dependency, keep/record `blocked` rather than bypassing its guardrails.
+5. Follow the plugin skill's supported diagnosis path for run `32189591188`, job `95880814298`, step `Verify full UI, rules, TypeScript, and production frontend`. If the plugin skill reports a missing required dependency, record `blocked` again rather than bypassing its guardrails.
 6. Once exact failure evidence is available, fix only the observed failure; do not guess.
 7. Recheck PR head immediately before any branch write and use non-force fast-forward only.
 8. Validate affected UI/Main gates at the resulting exact head and observe automatic connected/persistence/Windows gates without rerunning unchanged historical boundaries.
@@ -101,10 +104,10 @@ The new `5c70b302...` dead-legacy deletion is **not validated** and must not be 
 11. Keep PR #109 draft/unmerged.
 
 ## Coordination writes
-- PLAN was updated first on `main` to record the Korean-status and plugin-skill-first instructions.
-- STATE is this durable follow-up write.
+- PLAN was written first on `main` to change the same sequence dispatch recommendation to `continue`.
+- STATE is this durable reauthorization checkpoint and is written after PLAN.
 - STATUS will be refreshed in Korean for human visibility.
-- control must be written last with sequence `3`, status `blocked`.
+- control must be written last with sequence `3`, status `continue`.
 
 ## Dispatch recommendation
-`blocked`
+`continue`
