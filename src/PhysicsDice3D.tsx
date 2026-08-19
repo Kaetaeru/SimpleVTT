@@ -13,11 +13,36 @@ type DieRuntime = {
   targetQuaternion:THREE.Quaternion|null;
 };
 
+const DEMO_BRONZE="#c77d38";
+const DEMO_NUMBER="#f7dfae";
+
+function pentagonalBipyramidGeometry() {
+  const radius=.82;
+  const height=1.02;
+  const vertices:number[]=[0,height,0,0,-height,0];
+  for (let i=0;i<5;i++) {
+    const angle=-Math.PI/2+(i*Math.PI*2)/5;
+    vertices.push(Math.cos(angle)*radius,0,Math.sin(angle)*radius);
+  }
+  const indices:number[]=[];
+  for (let i=0;i<5;i++) {
+    const current=2+i;
+    const next=2+((i+1)%5);
+    indices.push(0,current,next);
+    indices.push(1,next,current);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 function dieGeometry(sides:PhysicsDie["sides"]) {
   if (sides===4) return new THREE.TetrahedronGeometry(.82,0);
   if (sides===6) return new THREE.BoxGeometry(1.25,1.25,1.25,1,1,1);
   if (sides===8) return new THREE.OctahedronGeometry(.9,0);
-  if (sides===10) return new THREE.CylinderGeometry(.78,.78,1.22,10,1,false,Math.PI/10);
+  if (sides===10) return pentagonalBipyramidGeometry();
   if (sides===12) return new THREE.DodecahedronGeometry(.88,0);
   return new THREE.IcosahedronGeometry(.9,0);
 }
@@ -31,7 +56,6 @@ function uniqueFaceNormals(source:THREE.BufferGeometry,sides:number) {
     const b=new THREE.Vector3().fromBufferAttribute(position,i+1);
     const c=new THREE.Vector3().fromBufferAttribute(position,i+2);
     const normal=b.clone().sub(a).cross(c.clone().sub(a)).normalize();
-    if (sides===10 && Math.abs(normal.y)>.72) continue;
     if (!normals.some((candidate)=>candidate.dot(normal)>.994)) normals.push(normal);
   }
   geometry.dispose();
@@ -57,12 +81,13 @@ function numberTexture(value:number) {
   canvas.width=128; canvas.height=128;
   const context=canvas.getContext("2d")!;
   context.clearRect(0,0,128,128);
-  context.fillStyle="rgba(12,14,18,.88)";
-  context.beginPath(); context.arc(64,64,35,0,Math.PI*2); context.fill();
-  context.strokeStyle="rgba(255,255,255,.45)"; context.lineWidth=3; context.stroke();
-  context.fillStyle="#fff";
-  context.font="700 48px Georgia, serif";
+  context.font="800 52px Georgia, serif";
   context.textAlign="center"; context.textBaseline="middle";
+  context.lineJoin="round";
+  context.lineWidth=8;
+  context.strokeStyle="rgba(22,12,6,.82)";
+  context.strokeText(String(value),64,67);
+  context.fillStyle=DEMO_NUMBER;
   context.fillText(String(value),64,67);
   const texture=new THREE.CanvasTexture(canvas);
   texture.colorSpace=THREE.SRGBColorSpace;
@@ -73,9 +98,12 @@ function buildDie(scene:THREE.Scene,world:CANNON.World,die:PhysicsDie,index:numb
   const geometry=dieGeometry(die.sides);
   geometry.computeVertexNormals();
   const material=new THREE.MeshStandardMaterial({
-    color:new THREE.Color("#262d38"),
-    roughness:.42,
-    metalness:.18,
+    color:new THREE.Color(DEMO_BRONZE),
+    emissive:new THREE.Color("#211006"),
+    emissiveIntensity:.18,
+    roughness:.3,
+    metalness:.28,
+    flatShading:true,
   });
   const meshCore=new THREE.Mesh(geometry,material);
   meshCore.castShadow=true; meshCore.receiveShadow=true;
@@ -87,7 +115,7 @@ function buildDie(scene:THREE.Scene,world:CANNON.World,die:PhysicsDie,index:numb
     const texture=numberTexture(faceIndex+1);
     const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:true,depthWrite:false}));
     sprite.position.copy(normal).multiplyScalar(die.sides===6?.66:.82);
-    sprite.scale.set(.42,.42,.42);
+    sprite.scale.set(.38,.38,.38);
     group.add(sprite);
   });
 
@@ -147,10 +175,11 @@ export function PhysicsDice3D({dice,compact=false,reducedMotion=false,cinematic=
       camera.position.set(0,5.4,compact?8.6:9.8);
       camera.lookAt(0,.7,0);
     }
-    scene.add(new THREE.HemisphereLight(0xffffff,0x18202a,2.15));
-    const key=new THREE.DirectionalLight(0xffffff,3.2); key.position.set(-4,7,5); key.castShadow=true; scene.add(key);
+    scene.add(new THREE.HemisphereLight(0xffead0,0x18202a,2.15));
+    const key=new THREE.DirectionalLight(0xffd39a,3.4); key.position.set(-4,7,5); key.castShadow=true; scene.add(key);
+    const rim=new THREE.DirectionalLight(0x6f86ad,1.25); rim.position.set(5,3,-4); scene.add(rim);
 
-    const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(40,30),new THREE.MeshStandardMaterial({color:0x10151d,roughness:.78,metalness:.05,transparent:true,opacity:cinematic?.08:.96}));
+    const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(40,30),new THREE.MeshStandardMaterial({color:0x0c1119,roughness:.78,metalness:.05,transparent:true,opacity:cinematic?.08:.96}));
     floorMesh.rotation.x=-Math.PI/2; floorMesh.position.y=-1.05; floorMesh.receiveShadow=true; scene.add(floorMesh);
 
     const world=new CANNON.World({gravity:new CANNON.Vec3(0,cinematic?-16.5:-18.5,0)});
