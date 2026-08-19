@@ -8,6 +8,8 @@ const legacy=readFileSync(new URL("../../src/LegacyCharacterSheetPlayScreen.tsx"
 const official=readFileSync(new URL("../../src/OfficialCharacterSheetPlayScreen.tsx",import.meta.url),"utf8");
 const characterPage=readFileSync(new URL("../../src/OfficialCharacterSheetPage.tsx",import.meta.url),"utf8");
 const spellPage=readFileSync(new URL("../../src/OfficialSpellcastingSheetPage.tsx",import.meta.url),"utf8");
+const libraryBridge=readFileSync(new URL("../../src/CharacterLibraryUxBridge.tsx",import.meta.url),"utf8");
+const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
 const sheet=[wrapper,legacy,official,characterPage,spellPage].join("\n");
 const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
 const css=readFileSync(new URL("../../src/character-sheet-layouts.css",import.meta.url),"utf8");
@@ -19,6 +21,17 @@ test("Character route keeps the validated standalone SimpleVTT sheet and adds a 
   assert.match(wrapper,/OfficialCharacterSheetPlayScreen/);
   assert.match(legacy,/TABLE CHARACTER SHEET/);
   assert.match(legacy,/기기로 플레이/);
+});
+
+test("Character Library exposes the demo-established sheet-style switch before a card is opened",()=>{
+  assert.match(main,/CharacterLibraryUxBridge/);
+  assert.match(main,/<CharacterLibraryUxBridge \/>/);
+  assert.match(libraryBridge,/character-library-grid/);
+  assert.match(libraryBridge,/SimpleVTT 시트/);
+  assert.match(libraryBridge,/공식 시트 스타일/);
+  assert.match(libraryBridge,/persistSheetLayoutPreference/);
+  assert.match(libraryBridge,/snapshot\.characters\[index\]/);
+  assert.match(libraryBridge,/selectProductionCharacter\(character\.id\)/);
 });
 
 test("validated SimpleVTT sheet local roll behavior remains unchanged behind the router",()=>{
