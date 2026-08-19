@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
-import { buildVisualDiceRoll, type VisualDieSides, type VisualDiceRollVm } from "./app/diceVisuals";
+import { buildVisualDiceRoll, VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS, type VisualDieSides, type VisualDiceRollVm } from "./app/diceVisuals";
 import { PhysicsDice3D, type PhysicsDie } from "./PhysicsDice3D";
 
 const ANIMATED_STAGES = new Set(["roll-animation","save-animation","damage-animation"]);
@@ -86,7 +86,7 @@ export function VisualDiceBridge() {
       setReplay((current) => current?.key === key ? null : current);
       setResolved(false);
       hideTimerRef.current=null;
-    },reduced?650:1480);
+    },reduced?VISUAL_DICE_REDUCED_REPLAY_MS:VISUAL_DICE_REPLAY_MS);
   },[animated,roll,resolution]);
 
   useEffect(() => () => {
