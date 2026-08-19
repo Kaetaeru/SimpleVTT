@@ -1,4 +1,4 @@
-# Rerun Plan — SimpleVTT V0.9 convergence
+# Rerun Plan — SimpleVTT V0.9 UI-first replanning
 
 ## Coordinates
 - Repository: `Kaetaeru/SimpleVTT`
@@ -8,97 +8,87 @@
 - run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence `3`
 - task_id `v1-product-experience-overhaul`
-- current milestone: **V0.9**
+- current milestone: **V0.9 UI-first product replanning**
 - dispatch recommendation: `needs_user`
 
 ## Watcher execution conventions
-- `STATUS.md`와 사람에게 보여 주는 watcher 상태 설명은 **한국어로 작성한다**. 정확한 SHA/workflow/job/code 식별자는 원문을 유지할 수 있다.
-- GitHub 작업은 먼저 해당 GitHub 플러그인 스킬을 호출한다. 일반 저장소/PR은 `github`, CI 실패는 `gh-fix-ci`, 리뷰는 `gh-address-comments`, 게시 작업은 `yeet`를 우선한다.
-- CI에서 `gh-fix-ci`가 `gh` 부재/인증 문제로 Actions 로그를 읽지 못하면 사용자 승인에 따라 connector `fetch_workflow_job_logs`와 관련 run/job API를 fallback으로 사용할 수 있다.
+- `STATUS.md`와 사람에게 보여 주는 watcher 상태 설명은 한국어로 작성한다.
+- GitHub 작업은 먼저 해당 GitHub 플러그인 스킬을 호출한다.
+- CI 실패는 `gh-fix-ci` 우선; `gh` 부재/인증 문제 시 사용자 승인된 connector log fallback을 사용할 수 있다.
 - 실제 로그/실제 human repro 없이 추측 수정하지 않는다.
 - PR #109는 명시적 사용자 승인 없이 merge하지 않는다.
 
-## Architecture invariants
-- one canonical Character; owning Client Character Library remains durable Character authority;
-- Host projections remain ephemeral and Host remains connected mechanics authority;
-- ResolutionEvent ledger/reconnect/idempotency/event-native Undo remain canonical;
-- installed-content composition/validation remain content authority;
-- no second Character/content store, resolver, mechanics protocol or event ledger;
-- portraits/handouts remain presentation state only;
-- no tactical grid/token/Fog/pathfinding/minimap/LOS/cloud dependency.
+## Product-planning pivot
+Human Windows acceptance와 후속 소스 확인 결과, 자동 검증 green만으로는 실제 UI 계약을 충분히 보장하지 못했다. 구현을 계속 덧대기 전에 **화면/사용자 행동 흐름을 기준으로 V0.9 기획을 다시 확정**한다.
 
-## Human acceptance failure that reopened this sequence
-The delivered automated-green Windows build at `bed3119c3e7ae5ac8663b29e7202fc0bdbd64994` failed human acceptance with four exact observations:
-1. production dice did not match the UI-demo geometry/visual treatment;
-2. the reference/demo session could not perform an attack;
-3. Character did not visibly expose the official-sheet layout version;
-4. different existing Character cards all opened one same Character.
+새 UI authority 초안:
+- `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
+- work-branch commit `3d1507fafbfdeff27d8986fd26f9d815fb6f41dd`
 
-These observations remain the only reopened product scope. Unrelated previously validated boundaries stay closed unless touched.
+이 문서가 전체 화면별 기획이 확정될 때까지 새로운 UI 구현의 1차 제품 기준이다. 기존 Phase 14 문서는 기술/역사 참고 자료로 유지하되, 새 문서와 충돌하는 UI lifecycle/interaction 가정은 새 문서가 우선한다.
 
-## Current fix HEAD
-`d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+## Newly locked UI decisions
+### 1. Dice presentation
+- standalone Character Sheet roll은 sheet 내부 별도 `VisualDiceTray`/dice frame을 기본 presentation으로 만들지 않는다.
+- 데모에서 합의한 body-level cinematic overlay가 UI 계약이다.
+- 주사위는 화면 깊은 곳/뒤에서 시작해 사용자 쪽으로 날아오며 굴러오는 3D 연출을 사용한다.
+- 결과 overlay는 시트를 밀거나 재배치하지 않는다.
 
-The product fixes landed by `461f4f62de159fe8d0b4e4fadd4a20340efd1db8`; `d942d58a...` is a subsequent **test-only** alignment commit that removed one stale expectation that d10 must use `CylinderGeometry`.
+### 2. Multiplayer / DM session lifecycle
+- `Host preparing -> player lobby -> Ready -> 플레이 시작`을 필수 사용자 lifecycle로 사용하지 않는다.
+- DM이 `세션 열기`를 누르는 순간 세션은 활성 상태이며 DM workspace로 바로 진입한다.
+- player 0명이어도 DM은 즉시 Encounter/Combatant, session state, handout, Initiative 등 DM 도구를 사용하고 세션을 편집할 수 있다.
+- Player Ready를 session activation gate로 사용하지 않는다.
+- 플레이어는 이미 열린 세션에 합류하며 handshake/content sync가 끝나면 현재 session state로 들어간다.
+- reconnect도 lobby/start gate로 되돌아가지 않는다.
 
-### Fix 1 — UI-demo-aligned production dice
-- shared `PhysicsDice3D` uses the prior UI-demo bronze/warm facet language.
-- d10 uses dedicated ten-face polyhedral geometry instead of `CylinderGeometry`.
-- authoritative-result convergence remains presentation-only.
+### 3. Range / spatial semantics
+- SimpleVTT 기본 제품은 tactical grid/token position/pathfinding/LOS/지속적 정확 거리 추적을 기본 제공하지 않는다.
+- **별도 spatial/range module이 연결되지 않은 경우 모든 적절한 대상은 사정거리 이내로 간주한다.**
+- `spatial data 없음`은 `out of range`가 아니다.
+- 근접 공격을 `5 ft 대상 없음`으로 막지 않는다.
+- range/reach/LOS/cover 제약은 해당 module이 authoritative spatial facts를 명시적으로 제공할 때만 적용한다.
 
-### Fix 2 — reference/demo attack is playable
-- reference wolf has a legal 5 ft melee relation for default Aelar.
-- target eligibility reuses existing `runtimeSpatialRelation` visibility/range facts.
-- attack resolution remains on the existing authoritative transaction/resolution path.
+## Previous automated evidence
+Exact source `d942d58a83eb2222ffd722d58b19c67c3dc8de13`에서 UI, Rules Domain, Contract validation, Persistence/Tauri, Main Playable, Phase 11, Phase 12 Connected 및 Windows build/stage/upload는 모두 green이었다.
 
-### Fix 3 — official Character Sheet layout exposure
-- `CharacterLibraryUxBridge` exposes the existing persisted `SimpleVTT 시트 / 공식 시트 스타일` preference before opening a Character.
-- existing `CharacterSheetPlayScreen` / `OfficialCharacterSheetPlayScreen` remain two presentations over one active Character.
+이 증거는 기존 기술 경계가 동작했다는 기록으로 보존한다. 하지만 UI-first 기획과 충돌하는 동작을 제품 완료 증거로 사용하지 않는다.
 
-### Fix 4 — Character cards select their own canonical Character
-- regular Character cards map to their corresponding `snapshot.characters[index].id` and call existing `selectProductionCharacter(character.id)`.
-- reference Mira is materialized as a distinct playable Character in the existing collection; no second store exists.
+## Planning work before implementation resumes
+다음 화면/흐름을 UI 단위로 확정한다.
+1. App 시작 화면 / navigation
+2. Character Library
+3. SimpleVTT Character Sheet
+4. Official-style Character Sheet
+5. Session 열기 / 참가하기
+6. DM session workspace — player 0명, player 합류, live 운영
+7. Player session workspace — 최초 join / reconnect
+8. Freeform intent interaction
+9. Initiative/combat interaction
+10. DM Combatant/Encounter 편집
+11. DM handout/image interaction
+12. Activity/Undo 노출
+13. Settings / appearance / accessibility
+14. 오류/연결 실패/복구
 
-## Focused regression coverage
-- `productionAcceptanceWindowsRegression.test.ts`: legal reference melee attack resolves through authoritative runtime; Mira/Aelar selection is distinct.
-- `productionLocalCharacterSwitch.test.ts`: distinct reference Character selection plus remote SessionProjection preservation.
-- `characterSheetPlayableUx.test.ts`: Character Library official-layout exposure and existing dual-sheet authority.
-- dice structure tests: UI-demo bronze visual language, polyhedral d10, shared WebGL physics renderer, no `CylinderGeometry` regression.
-
-## Exact-head automated validation at `d942d58a...`
-Completed success:
-- UI run `32204865620`, frontend `95926003383`: **success**, including human-acceptance regressions, Character/session integration, Phase 09 mechanics, TypeScript and production build.
-- Rules Domain `32204865592`: **success**.
-- Contract validation `32204865594`: **success**.
-- Persistence `32204865644`: application-contract `95926003457` **success**; tauri-storage `95926003360` **success**.
-- Main Playable run `32204865588`: playable-contract `95926017359` **success**; Windows `95926276820` **success**, including Tauri persistence/session transport, Windows executable build, staging and artifact upload.
-- Phase 11 run `32204865635`: offline-walkthrough `95926003264` **success**; Windows `95926114975` **success**, including executable build/stage/upload.
-- Phase 12 run `32204865632`: connected-protocol `95926003189` **success**; Windows connected `95926150169` **success**, including Tauri session transport/persistence, executable build/stage/upload.
-
-## Exact-head Windows artifact
-Main Playable artifact is available for human acceptance:
-- artifact id: `9348955693`
-- artifact name: `SimpleVTT-Main-Playable-d942d58a83eb2222ffd722d58b19c67c3dc8de13`
-- workflow run: `32204865588`
-- exact head: `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
-- digest: `sha256:441b8eac5a0cea1cf9cbaff6788f2e7e4d0099f07d5d2c6c0deca1a2f3fefc96`
-
-## Previously validated boundaries — do not repeat unless touched
-1. Production Play.
-2. Composable Combat VFX.
-3. Appearance preferences.
-4. Direct-IP Session entry/configuration.
-5. Automatic Host-required declarative content parity before Ready.
-6. Character portrait + DM image handout/reconnect.
-7. Contextual DM/Content polish + production dead-wiring cleanup.
-8. Proven-unreachable legacy `App.tsx` cleanup plus named-rule baseline alignment.
+각 화면은 구현 전 최소한 다음을 정의한다.
+- 화면 목적
+- visible information hierarchy
+- primary action
+- secondary actions
+- 숨겨야 할 내부 정보
+- state transition
+- empty/loading/error state
+- keyboard/responsive behavior
+- human acceptance scenario
 
 ## Next Exact Action
-1. Wait for focused human Windows acceptance on the exact-head Main Playable artifact above.
-2. Human retest must verify exactly the four reopened observations: dice appearance matches the established UI demo; demo attack is executable; official sheet layout is visible/selectable; distinct Character cards open distinct canonical Characters.
-3. If any observation still fails, set the same sequence back to `continue`, record the exact human repro, and fix only the observed failure.
-4. If all four pass, record the human acceptance result before any V0.9 completion decision.
-5. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
+1. 구현/CI 재실행을 시작하지 않는다.
+2. 사용자와 `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`를 화면 단위로 계속 보강한다.
+3. 특히 DM/Player multiplayer 흐름, Character Sheet roll presentation, freeform/combat interaction을 먼저 확정한다.
+4. 전체 UI 기획이 승인되면 구현 slice와 acceptance checklist를 새 문서에서 파생한다.
+5. 그때 같은 sequence를 `continue`로 재승인하고 source work를 재개한다.
+6. PR #109는 draft/unmerged 유지.
 
 ## Dispatch recommendation
 `needs_user`
