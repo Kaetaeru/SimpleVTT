@@ -11,6 +11,8 @@ import {
   withdrawSessionImageHandout,
 } from "./app/sessionImageHandoutRuntimeAdapter";
 
+const PLAYER_HANDOUT_LAUNCHER_ID = "session-player-handout-launcher";
+
 export function useSessionImageHandout() {
   const [handout, setHandout] = useState(() => getSessionImageHandoutState(mockAdapter));
   useEffect(() => subscribeSessionImageHandout(mockAdapter, setHandout), []);
@@ -18,7 +20,8 @@ export function useSessionImageHandout() {
 }
 
 export function dismissCurrentSessionImageHandout() {
-  return dismissSessionImageHandout(mockAdapter);
+  dismissSessionImageHandout(mockAdapter);
+  window.requestAnimationFrame(() => document.getElementById(PLAYER_HANDOUT_LAUNCHER_ID)?.focus());
 }
 
 function imageLabel(asset: LocalImageAssetV1) {
@@ -112,6 +115,7 @@ export function SessionPlayerHandoutRailButton() {
   const handout = useSessionImageHandout();
   if (!handout.asset) return null;
   return <button
+    id={PLAYER_HANDOUT_LAUNCHER_ID}
     type="button"
     className={!handout.dismissed ? "active" : ""}
     aria-pressed={!handout.dismissed}
@@ -126,7 +130,7 @@ export function SessionPlayerHandoutViewer() {
   return <section className="session-handout-viewer" role="dialog" aria-modal="true" aria-label="DM 공유 이미지">
     <header>
       <div><span>DM HANDOUT</span><strong>{imageLabel(handout.asset)}</strong></div>
-      <button type="button" autoFocus onClick={() => dismissSessionImageHandout(mockAdapter)}>닫기</button>
+      <button type="button" autoFocus onClick={dismissCurrentSessionImageHandout}>닫기</button>
     </header>
     <div className="session-handout-viewer-image"><img src={handout.asset.dataUrl} alt="DM이 공유한 이미지" /></div>
   </section>;
