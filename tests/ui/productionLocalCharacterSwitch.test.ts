@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/productionPlayRuntimeAdapter";
+import "../../src/app/productionAcceptanceRuntimeAdapter";
 import type { ActionVm, CharacterSheet, CharacterSummary, SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
@@ -50,6 +50,25 @@ function remoteSentinelAction(actorId:string):ActionVm {
     details:[{label:"authority",value:"remote SessionProjection"}],
   };
 }
+
+test("reference Character cards select distinct canonical Character sheets",async()=>{
+  const adapter=new MockAdapter();
+  const initial=await adapter.getSnapshot();
+  assert.ok(initial.characters.some((character)=>character.id==="char.aelar"));
+  assert.ok(initial.characters.some((character)=>character.id==="char.mira"));
+
+  const mira=await adapter.selectProductionCharacter("char.mira");
+  assert.equal(mira.activeCharacter.id,"char.mira");
+  assert.equal(mira.activeCharacter.name,"Mira");
+  assert.ok(mira.activeCharacter.attacks.length>0,"reference Mira card must materialize a playable Character sheet");
+  assert.ok(mira.scene.entities.some((entity)=>entity.id==="char.mira"));
+
+  const aelar=await adapter.selectProductionCharacter("char.aelar");
+  assert.equal(aelar.activeCharacter.id,"char.aelar");
+  assert.equal(aelar.activeCharacter.name,"Aelar");
+  assert.ok(aelar.scene.entities.some((entity)=>entity.id==="char.aelar"));
+  assert.notEqual(aelar.activeCharacter.id,mira.activeCharacter.id);
+});
 
 test("switching saved local Characters replaces only the prior local projection and preserves remote SessionProjection authority",async()=>{
   const adapter=new MockAdapter();
