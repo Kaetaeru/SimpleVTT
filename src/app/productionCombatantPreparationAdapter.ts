@@ -30,8 +30,8 @@ function isPreparedCombatantInstance(id:string) {
 MockAdapter.prototype.removeCombatant=async function removePreparedCombatant(combatantId:string) {
   const internal=this as unknown as PreparedCombatantState;
   const lifecycle=internal.session.lifecycle;
-  const activeFreeform=(lifecycle==="preparing"||lifecycle==="live")&&internal.sessionMode==="freeform";
-  if (!activeFreeform) {
+  const canRemove=lifecycle==="preparing"||(lifecycle==="live"&&internal.sessionMode==="freeform");
+  if (!canRemove) {
     internal.session.compatibility="warning";
     internal.session.compatibilityMessage="Combatants can be removed during active Freeform after any pending resolution is finished.";
     return internal.getSnapshot();
