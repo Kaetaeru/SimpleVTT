@@ -4,151 +4,122 @@
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `needs_user`
-- current milestone: **V0.9 UI-first product replanning**
+- current milestone: **V0.9 UI-first replanning complete through implementation-facing contracts**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
 - issue: #108
 - PR #109: open/draft/unmerged; no merge authorized
 
-## Current planning checkpoint
-Implementation remains paused. The Session UI is now specified from product philosophy through full scene inventory, interaction contract and low-fidelity visual layout.
+## Current checkpoint
+Source implementation remains paused.
 
-Current planning documents:
+The Session UI is now specified at five levels:
+1. product philosophy;
+2. complete visible scene map;
+3. interaction contract;
+4. low-fidelity visual layout;
+5. implementation-facing architecture/reuse/data/behavior contracts.
+
+Latest planning HEAD:
+`a1ee400d1bcb7b8db3f72d793e7bdefb7782c8e9`
+
+Previous automated-green implementation HEAD:
+`d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+
+No source code or CI was run in this planning turn.
+
+## Current planning documents
 - `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
 - `.agents/V0_9_PLAY_SURFACE_INVENTORY.md`
 - `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md`
 - `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md`
 - `.agents/V0_9_SESSION_INTERACTION_SPEC.md`
 - `.agents/V0_9_SESSION_VISUAL_LAYOUT_CONTRACT.md`
+- `.agents/V0_9_SESSION_UI_ARCHITECTURE_CONTRACT.md`
+- `.agents/V0_9_EXISTING_UI_REUSE_MAP.md`
+- `.agents/V0_9_QUICK_SHEET_INFORMATION_ARCHITECTURE.md`
+- `.agents/V0_9_FULL_SHEET_IN_SESSION_REUSE_CONTRACT.md`
+- `.agents/V0_9_ACTION_DOCK_BEHAVIOR_MATRIX.md`
 
-Latest work-branch planning HEAD:
-`df1da3582f0a43d1ed573eee9d5e40de72874365`
+## Locked architecture decisions
+### App/Session root
+- active Session is app-level `SessionModeRoot`, not one Library route;
+- `SessionModeRoot` contains SessionBar, MainFocus, ActionDock, UtilityRail and LayerHost;
+- Host enters active DM Session immediately after Host succeeds;
+- no Player Lobby / Ready / Play Start visible gate.
 
-Previous automated-green implementation HEAD:
-`d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+### State ownership
+New Session UI state may own only presentation state such as:
+- open tool/layer;
+- intent/detail/selected-target UI step;
+- focus/scroll restoration;
+- responsive pane presentation.
 
-## Locked UX philosophy
-SimpleVTT is an always-on tabletop companion. Once Session Mode starts, the user should remain in one persistent Session Shell for Character reference, Rules, rolls, exploration, combat and DM operation.
+It may not own duplicate Character, Scene, action legality, initiative, participant/session truth, Resolution/Undo, handout or installed-content state.
 
-Player Character access is first-class:
-- Character Identity Chip always visible in Session Bar;
-- one click -> Quick Sheet;
-- one explicit expand action -> Full Sheet;
-- closing restores the previous Session context where still valid.
+`AppProvider` / existing adapters remain the command and projection authority.
 
-## New visual layout decisions
-### Baseline shell
-Desktop reference: `1440 x 900`.
-
-Persistent regions:
-- Session Bar ~52px top;
-- Main Focus takes the majority of remaining area;
-- Action Dock ~64~72px resting at bottom;
-- Utility Rail ~48~56px on the right;
-- Layer Host over the mounted Shell.
-
-### Freeform
-Freeform remains visually quiet.
-
-Not permanent:
-- full Scene Actor/Party board;
-- Initiative order;
-- action economy;
-- full spell/item/class category hotbar;
-- Activity/Inspector/Encounter panels.
-
-Player resting Action Dock default candidates are Attack, Magic, Search, Influence, Help plus `모든 행동`, with compact contextual/recent additions only when useful.
-
-### Player Session identity
-Right side Character Chip contains portrait/name/compact HP.
-- chip click -> Quick Sheet;
-- adjacent expand -> Full Sheet.
-
-### DM Session identity
-Right side acting Actor chip.
-- actor click -> Quick View;
-- switch affordance -> Actor Switcher.
-
-### Utility Rail
-Desktop default is right-side rail.
-
-Player order:
-Sheet, Rules, Activity, active Handout when relevant, Session/connection.
-
-DM order:
-Actor, Rules, Encounter, Participants, Handout, Activity/Undo, Session.
+### Existing UI migration
+Reuse mechanics/data logic from current production screens and Character Sheets, but replace conflicting normal-Session presentation:
+- Library sidebar around active Play;
+- `플레이로 돌아가기` route round-trip;
+- permanent Actor card wall;
+- permanent category hotbar;
+- Freeform action economy;
+- Host lifecycle-gated Encounter editing UX;
+- embedded Sheet dice result/tray.
 
 ### Quick Sheet
-Desktop right pane target width ~360px, allowed ~320~420px.
-
-Priority:
-1. identity;
-2. HP/AC;
-3. Speed/Initiative/Proficiency/Passive Perception;
-4. conditions;
-5. resources;
-6. frequent attacks;
-7. spells/features;
-8. layout switch / Full Sheet.
-
-No embedded dice frame.
+- one-click from Character Identity Chip;
+- canonical `activeCharacter` + Scene/action projections;
+- first viewport prioritizes HP/AC/core stats/status/resources/frequent attacks;
+- no duplicate HP/resource store or generic local setter;
+- routine actions enter authoritative action flow;
+- connected Session rolls must not silently use local randomness as authoritative mechanics.
 
 ### Full Sheet
-Wide desktop default is large centered workspace overlay over the mounted Session Shell, target width ~88~94% viewport.
+- Standalone and Session hosts share one Sheet content family;
+- reuse Official Character/Spellcasting pages and SimpleVTT sections;
+- Session Full Sheet is a LayerHost workspace, not route navigation;
+- layout switch is presentation-only;
+- connected mechanics rolls route through canonical authority;
+- body-level cinematic dice replace Sheet-local tray.
 
-Toolbar includes:
-- `SimpleVTT | 공식 시트 스타일`;
-- Rules;
-- close.
+### Action Dock
+State machine:
+`Resting -> Intent -> Action Detail -> Target if needed -> Pending -> Resolution`.
 
-Close means `시트 닫기`, not `플레이로 돌아가기`.
+- intent grouping uses `OFFICIAL_PLAY_INTENTS` / `intentOptions`;
+- current `ActionVm[]` owns legality/details;
+- `eligibleTargetIds` owns canonical candidates;
+- `resolveAction` owns execution;
+- no second resolver/target engine;
+- no spatial module => canonical target eligibility must treat otherwise-valid targets in range;
+- Freeform hides permanent economy; Initiative adds compact economy/turn context.
 
-### Initiative
-Same Session Shell expands with a compact Initiative Strip (~64~88px) and current-actor economy/turn controls.
+## First source slice after authorization
+Do not start the full redesign at once.
 
-No separate combat page or permanent Actor grid.
+Walking skeleton only:
+1. AppRoot Library vs Session Mode selection;
+2. persistent SessionModeRoot frame;
+3. Session Bar real Player Character / DM Actor identity;
+4. low-noise MainFocus placeholder backed by real snapshot;
+5. minimal UtilityRail + LayerHost;
+6. one-click Quick Sheet open/close using canonical state;
+7. preservation of Session context while Quick Sheet opens/closes.
 
-### Target selection
-Only appears when needed.
-Without spatial module, otherwise-valid targets remain selectable and no fake distance is invented.
-
-### Responsive
-- >=1200px: fixed rail + side panes;
-- 900~1199px: drawer-like panes, two-row Action Dock allowed;
-- <900px/constrained: utility strip, full-height Quick Sheet/Rules drawers, Full Sheet full workspace overlay.
-
-Close/back and primary controls must remain visible in constrained Windows viewports.
-
-### Layer order
-1. Session Shell
-2. quick popover
-3. utility pane/drawer
-4. Full Sheet/large workspace layer
-5. dice/result/handout presentation
-6. blocking recovery/confirmation
-
-Escape closes one top layer/action step only and never exits Session.
-
-## Planning remaining before implementation
-Do not add another broad product-planning layer.
-
-Remaining documents should map 1:1 to implementation:
-1. S-00 Session Shell component/state ownership contract;
-2. Quick Sheet exact information architecture;
-3. Full Sheet in-session component reuse contract;
-4. Freeform Action Dock per-intent behavior table.
-
-After those are accepted, the same sequence may return to `continue` for source work.
+Do not yet add the complete Action Dock, Initiative redesign, Encounter redesign or Handout redesign in the first slice.
 
 ## Validation status
-No source implementation or CI was run for this planning-only checkpoint. Existing `d942d58a...` validation remains historical evidence only.
+No new validation. Historical `d942d58a...` green automation remains regression evidence for unchanged authorities only and does not validate the new UI.
 
 ## Next Exact Action
-1. Keep source implementation paused.
-2. Review `.agents/V0_9_SESSION_VISUAL_LAYOUT_CONTRACT.md` with the user.
-3. If accepted, document S-00 component/state ownership and Quick Sheet information architecture first, then Full Sheet reuse and Action Dock behavior.
-4. Only after those contracts are approved return sequence 3 to `continue` and implement slice-by-slice.
+1. Remain `needs_user` until explicit source implementation authorization.
+2. On authorization, switch the same sequence to `continue` and implement the walking skeleton only.
+3. Add focused tests proving persistent Session Mode, no route round-trip, one-click Quick Sheet and no duplicated authority.
+4. Validate the slice before moving to Full Sheet / Rules / Action Dock.
 5. Keep PR #109 draft/unmerged.
 
 ## Dispatch recommendation
