@@ -42,7 +42,9 @@ test("connected replay uses fast depth-first cinematic motion and completes insi
   assert.match(physics,/18\+Math\.random\(\)\*9/);
   assert.match(physics,/cinematic\?960:1250/);
   assert.match(physics,/cinematic\?1450:2350/);
-  assert.match(bridge,/reduced\?650:1480/);
+  assert.match(projection,/VISUAL_DICE_REPLAY_MS\s*=\s*1480/);
+  assert.match(projection,/VISUAL_DICE_REDUCED_REPLAY_MS\s*=\s*650/);
+  assert.match(bridge,/reduced\?VISUAL_DICE_REDUCED_REPLAY_MS:VISUAL_DICE_REPLAY_MS/);
 });
 
 test("authoritative replay drives a slot reel notice and exposes final arithmetic without becoming mechanics authority",()=>{
