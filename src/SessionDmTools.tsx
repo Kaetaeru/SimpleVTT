@@ -155,8 +155,9 @@ export function SessionParticipantsPane({ onClose }: { onClose(): void }) {
 }
 
 export function SessionSharePane({ onClose }: { onClose(): void }) {
-  const { snapshot } = useSimpleVtt();
+  const { snapshot, stopSession } = useSimpleVtt();
   const [copied, setCopied] = useState(false);
+  const [ending, setEnding] = useState(false);
   if (!snapshot) return null;
 
   const copyAddress = async () => {
@@ -164,6 +165,16 @@ export function SessionSharePane({ onClose }: { onClose(): void }) {
     await navigator.clipboard.writeText(snapshot.session.address);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1400);
+  };
+
+  const endSession = async () => {
+    if (ending) return;
+    setEnding(true);
+    try {
+      await stopSession();
+    } finally {
+      setEnding(false);
+    }
   };
 
   const compatibilityProblem = snapshot.session.compatibility !== "compatible";
@@ -179,6 +190,10 @@ export function SessionSharePane({ onClose }: { onClose(): void }) {
     <section className="session-dm-section">
       <div className="session-dm-section-title"><strong>활성 콘텐츠</strong><span>현재 세션에서 사용하는 추가 콘텐츠입니다.</span></div>
       {snapshot.session.sessionContent.length ? <ul className="session-dm-content-list">{snapshot.session.sessionContent.map((entry) => <li key={entry}>{entry}</li>)}</ul> : <p className="session-dm-empty">추가 활성 콘텐츠가 없습니다.</p>}
+    </section>
+    <section className="session-dm-section session-dm-end-session">
+      <div className="session-dm-section-title"><strong>세션 종료</strong><span>좁은 화면에서도 이 Session 도구에서 세션 종료에 접근할 수 있습니다.</span></div>
+      <button type="button" disabled={ending} onClick={() => void endSession()}>{ending ? "종료 중…" : "세션 종료"}</button>
     </section>
   </aside>;
 }
