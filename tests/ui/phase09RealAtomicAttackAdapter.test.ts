@@ -5,6 +5,7 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import type { ActionVm, SceneEntity, SceneVm } from "../../src/app/contracts";
 import { resolveAtomicAttackTransaction } from "../../src/app/realAttackTransactionService";
 import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "../../src/app/realRuntimeAttackFactProvider";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 
 const SHORTBOW:ActionVm = {
   id:"action.shortbow",actorId:"char.aelar",name:"숏보우",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",
@@ -33,26 +34,27 @@ test("runtime attack provider derives Shortbow damage/range from canonical weapo
   assert.deepEqual(fact.flatDamage,[{ source:"runtime:action:action.shortbow:damage-flat",value:2 }]);
 });
 
-test("runtime targeting provider keeps structured spatial baseline stable across presentation mutation and new Character projection", () => {
+test("runtime targeting is unconstrained without a module fact and consumes explicit module facts when supplied", () => {
   const scene=structuredClone(SCENE);
-  const seeded=resolveRuntimeTargetingFact(scene,ACTOR.id,TARGET.id);
-  assert.equal(seeded.distanceFeet,22);
+  const defaultFact=resolveRuntimeTargetingFact(scene,ACTOR.id,TARGET.id);
+  assert.equal(defaultFact.distanceFeet,0);
+  assert.equal(defaultFact.visible,true);
+  assert.equal(defaultFact.cover,"none");
+  assert.ok(defaultFact.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
+
   const target=scene.entities.find((entry)=>entry.id===TARGET.id);
   assert.ok(target);
   target.distance="999피트";
+  assert.equal(resolveRuntimeTargetingFact(scene,ACTOR.id,TARGET.id).distanceFeet,0,"presentation distance never becomes default range authority");
 
-  const stable=resolveRuntimeTargetingFact(scene,ACTOR.id,TARGET.id);
-  assert.equal(stable.distanceFeet,22,"structured pair remains 22 ft even after presentation text changes to 999 ft");
-  assert.equal(stable.visible,true);
-  assert.equal(stable.cover,"none");
-  assert.equal(stable.targetCanSeeAttacker,true);
-  assert.ok(stable.provenance.some((entry)=>entry.includes("runtime:spatial:char.aelar->combatant.goblin-a:distance:22ft")));
-
-  const lateActor={ ...structuredClone(ACTOR),id:"char.phase09-late",name:"Late Character" };
-  scene.entities.push(lateActor);
-  const late=resolveRuntimeTargetingFact(scene,lateActor.id,TARGET.id);
-  assert.equal(late.distanceFeet,22,"new Character projection reuses the stable structured scene baseline instead of mutable presentation text");
-  assert.throws(()=>resolveRuntimeTargetingFact(scene,"combatant.unknown",ACTOR.id),/missing pairwise spatial runtime fact/);
+  setSpatialRelation(scene,{
+    sourceId:ACTOR.id,targetId:TARGET.id,distanceFeet:90,visible:true,cover:"half",targetCanSeeAttacker:true,
+    provenance:"module:test-grid:spatial:char.aelar",
+  });
+  const constrained=resolveRuntimeTargetingFact(scene,ACTOR.id,TARGET.id);
+  assert.equal(constrained.distanceFeet,90);
+  assert.equal(constrained.cover,"half");
+  assert.ok(constrained.provenance.includes("module:test-grid:spatial:char.aelar"));
 });
 
 test("atomic attack service keeps preview parity, domain events, and doubles only dice on critical", () => {
@@ -76,6 +78,16 @@ test("atomic attack service keeps preview parity, domain events, and doubles onl
   }
 });
 
+test("explicit targeting facts still let the domain reject out-of-range module constraints", () => {
+  const targeting=spatialFact();
+  targeting.distanceFeet=90;
+  const result=resolveAtomicAttackTransaction({
+    resolutionId:"attack.module-out-of-range",action:SHORTBOW,actor:ACTOR,target:TARGET,actorEconomy:ECONOMY,targetEconomy:ECONOMY,initiativeMode:true,
+    attackD20Face:11,effectiveTargetAc:15,attackFact:resolveRuntimeAttackFact(SHORTBOW,phase09DeterministicAttackFaces(SHORTBOW)),targetingFact:targeting,
+  });
+  assert.equal(result.status,"rejected");if(result.status==="rejected") assert.match(result.error,/beyond range 80 ft/);
+});
+
 test("atomic attack rejects preview/domain drift instead of silently applying", () => {
   const result=resolveAtomicAttackTransaction({
     resolutionId:"attack.drift",action:SHORTBOW,actor:ACTOR,target:TARGET,actorEconomy:ECONOMY,targetEconomy:ECONOMY,initiativeMode:true,
@@ -95,12 +107,12 @@ async function hitShortbow(adapter:MockAdapter) {
   await adapter.advanceResolution();return adapter.getSnapshot();
 }
 
-test("MockAdapter Shortbow final apply uses pairwise spatial runtime, event-native Activity, and event-native Undo", async () => {
+test("MockAdapter Shortbow final apply uses unconstrained default targeting, event-native Activity, and event-native Undo", async () => {
   const adapter=new MockAdapter();const snapshot=await hitShortbow(adapter);const goblin=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a");
   assert.equal(snapshot.resolution?.stage,"complete");assert.equal(goblin?.hp,6);assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.equal(snapshot.resolution?.damageComponents[0]?.raw,6);assert.match(snapshot.resolution?.damageComponents[0]?.source??"",/atomic resolveAttack transaction/);
   assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("runtime:weapon:dnd.srd521.item.weapon.shortbow:damage")));
-  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("runtime:spatial:char.aelar->combatant.goblin-a:distance:22ft")));
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
   assert.ok(!snapshot.resolution?.provenance.some((entry)=>entry.includes("phase09:reference-attack")));
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));assert.ok(snapshot.resolution?.stateChanges.includes("고블린 A HP 12 → 6"));
   const activity=snapshot.activity[0];assert.equal(activity.id,snapshot.resolution?.id);assert.ok(activity.detail.some((line)=>line.startsWith("ResolutionEvent ")));
@@ -123,11 +135,12 @@ test("Shortbow miss still commits Action cost atomically and projects the econom
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));assert.ok(snapshot.activity[0]?.detail.some((line)=>line.startsWith("ResolutionEvent ")));
 });
 
-test("runtime Combatant attack with no pairwise spatial relation rejects without spending Action or changing HP", async () => {
+test("runtime Combatant attack with no spatial-module relation stays valid and commits", async () => {
   const adapter=new MockAdapter();await adapter.startInitiative();await adapter.instantiateCombatant("combatant.goblin");
   let snapshot=await adapter.getSnapshot();const actorId="combatant.goblin.instance-1";const shortbow=snapshot.scene.actionsByActor[actorId]?.find((action)=>action.name==="숏보우");assert.ok(shortbow?.runtimeAttack);
   await adapter.setCurrentActor(actorId);await adapter.setQueuedD20(20);await adapter.resolveAction(shortbow!.id,["char.aelar"]);await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"attack-result");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.resolution?.stage,"complete");assert.match(snapshot.resolution?.finalOutcome??"",/missing pairwise spatial runtime fact/);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,31);assert.equal(snapshot.scene.economyByActor[actorId]?.action,true);
+  assert.equal(snapshot.resolution?.stage,"damage-animation");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.tempHp,0);assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,26);assert.equal(snapshot.scene.economyByActor[actorId]?.action,false);
 });
