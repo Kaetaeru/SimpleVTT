@@ -4,7 +4,7 @@
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `continue`
-- current milestone: **DM Encounter / Actor / Participants / Session tools validated; Player reconnect/session utilities are next**
+- current milestone: **Player reconnect/session utilities validated; Initiative expansion is next**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
@@ -94,26 +94,47 @@ CI repair history for Slice 10:
 - intermediate HEAD `d781f986d3d7bf82e49e90dcfc046494f9f85ff8` then reached lifecycle/mechanics and exposed a real regression: the first live-Freeform removal change accidentally required `sessionMode==="freeform"` during historical `preparing` removal too. The adapter was corrected to preserve `preparing` removal and extend removal only to `live && freeform`; Initiative remains blocked.
 - `gh-fix-ci` was invoked before each new CI diagnosis; connector job logs were used as the available Actions log fallback.
 
+### Slice 11 — Player reconnect / Session utilities
+Validated exact source HEAD: `02c55b18a535b0f62bd0daabe0cb83e617324ffc`
+- UI run `32218434349`
+- frontend job `95964214046`
+- conclusion **SUCCESS**
+- Phase 12 connected run `32218434325`, connected-protocol job `95964214025`: connected-session authority protocol step **SUCCESS** (49/49 tests), including `productionClientReconnect.test.ts` accepted-cursor catch-up and idempotent replay.
+
+Validated scope:
+- Player Session utility is part of the persistent `SessionModeRoot`; Player can open it from the Session rail or header connection affordance without leaving play;
+- healthy `connected` state remains visually quiet; reconnecting/disconnected states project an actionable recovery strip over the mounted Session Shell;
+- Player connection pane shows only session identity, Character identity, Host address, connection state, leave, and explicit terminal rejoin choice;
+- reconnecting never calls `joinSession()` from presentation; the existing automatic connected-session retry/cursor authority remains untouched;
+- explicit rejoin is available only from terminal `disconnected` state with an existing Host address;
+- Player leave delegates to existing `stopSession()`; no second lifecycle/session store/protocol exists;
+- opening connection recovery does not replace/unmount Session, Sheet, Rules, Activity, or Action presentation state;
+- connection pane/recovery strip remain responsive overlay layers and sit above Full Sheet/workspace when recovery is needed;
+- UI structure regression is now part of the main UI workflow;
+- TypeScript/production build and all UI/mechanics/Phase09 checks in the UI workflow are green.
+
+Known pre-existing CI baseline unrelated to Slice 11:
+- Phase 11 / Main Playable / Phase 12 workflows already failed at validated Slice 10 HEAD `33b0049a...` on the old `phase11OfflineWalkthrough.test.ts` targeting-provenance assertion after the no-spatial fallback work.
+- The same unrelated assertion still fails at Slice 11 exact HEAD after the Phase 12 connected-authority step passes. It was not modified in this slice to avoid widening scope.
+
 ## Remaining approved implementation order
-1. Player reconnect/session utilities;
-2. Initiative expansion;
-3. Handout integration;
-4. responsive/keyboard/focus pass;
-5. final exact-head automated validation;
-6. Windows human usability acceptance A-J.
+1. Initiative expansion;
+2. Handout integration;
+3. responsive/keyboard/focus pass;
+4. final exact-head automated validation, including resolution of the known stale offline-provenance baseline;
+5. Windows human usability acceptance A-J.
 
 Each slice must replace/disconnect conflicting old normal-Session presentation it supersedes and must not add parallel mechanics authority.
 
 ## Next Exact Action
-1. Reconcile actual PR head; expected validated source HEAD is `33b0049a482cbb65dda771f336dc591ba6d020d0`.
-2. Implement only **Player reconnect/session utilities** inside the persistent Session Shell.
-3. Reuse existing connected-session/reconnect state and commands; do not add another connection/session protocol or durable session store.
-4. Normal connected state stays quiet. Reconnecting/disconnected states must remain visibly actionable without replacing the Session Shell with a technical status page.
-5. Player session utility should expose only player-relevant connection/session identity and leave/reconnect choice; do not expose DM Encounter/Participants/Session administration.
-6. Preserve the current Character, Action flow, Sheet/Rules presentation state, and Session Shell whenever reconnect semantics allow; invalidate only state made impossible by authoritative session changes.
-7. Do not implement final Initiative or Handout in this same slice.
-8. Add focused regression coverage and exact-head validation before moving on.
-9. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
+1. Reconcile actual PR head; expected validated source HEAD is `02c55b18a535b0f62bd0daabe0cb83e617324ffc`.
+2. Implement only **Initiative expansion** as a denser variant of the same persistent Session Shell.
+3. Reuse canonical `sessionMode`, `scene.round`, `scene.currentActorId`, Initiative order/turn/economy projections, `endTurn()`, `startInitiative()`, and `endInitiative()`; do not add a second combat/turn engine.
+4. Freeform must remain quiet. Initiative may add compact round/current-turn/order/action-economy/end-turn/target/status information only while Initiative is active.
+5. Starting/ending Initiative transforms the mounted Session Shell rather than navigating to another route; ending returns to quiet Freeform without resetting valid Session/utility context.
+6. Do not implement Handout or the final responsive/focus sweep in this same slice.
+7. Add focused Initiative structure/behavior regressions and exact-head UI validation before moving on.
+8. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
 `continue`
