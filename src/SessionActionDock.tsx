@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
-import type { ActionVm } from "./app/contracts";
+import type { ActionVm, SceneEntity } from "./app/contracts";
 import { OFFICIAL_PLAY_INTENTS, intentOptions, skillFactByActionId, type PlayIntentId } from "./playerExperienceModel";
 import "./session-action-dock.css";
 
@@ -13,9 +13,7 @@ function signed(value: number | undefined) {
 }
 
 function actionEffect(action: ActionVm) {
-  if (action.damage?.length) {
-    return action.damage.map((part) => `${part.dice}${part.flat ? signed(part.flat) : ""} ${part.type}`).join(" + ");
-  }
+  if (action.damage?.length) return action.damage.map((part) => `${part.dice}${part.flat ? signed(part.flat) : ""} ${part.type}`).join(" + ");
   if (action.healing) return `${action.healing.dice}${action.healing.flat ? signed(action.healing.flat) : ""} 회복`;
   if (action.checkBonus !== undefined) return `${skillFactByActionId(action.id)?.name ?? "판정"} ${signed(action.checkBonus)}`;
   return action.summary;
@@ -30,20 +28,18 @@ function targetCopy(target: ActionVm["target"]) {
   return "대상 선택";
 }
 
-export function SessionActionDock({
-  actorId,
-  suspended,
-  onOpenRules,
-}: {
-  actorId: string | null;
-  suspended: boolean;
-  onOpenRules(button: HTMLButtonElement): void;
-}) {
+function targetMeta(entity: SceneEntity) {
+  const status = entity.status.length ? ` · ${entity.status.join(" · ")}` : "";
+  return `HP ${entity.hp}/${entity.maxHp}${entity.tempHp ? ` +${entity.tempHp} 임시` : ""}${status}`;
+}
+
+export function SessionActionDock({ actorId, suspended, onOpenRules }: { actorId: string | null; suspended: boolean; onOpenRules(button: HTMLButtonElement): void }) {
   const { snapshot, resolveAction } = useSimpleVtt();
   const [intentId, setIntentId] = useState<PlayIntentId | null>(null);
   const [intentReturnToAll, setIntentReturnToAll] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -52,15 +48,17 @@ export function SessionActionDock({
   const options = intentId ? intentOptions(intentId, actions) : [];
   const selectedAction = selectedActionId ? actions.find((action) => action.id === selectedActionId) ?? null : null;
   const resting = snapshot?.sessionMode === "initiative" ? INITIATIVE_RESTING : FREEFORM_RESTING;
-  const actorName = snapshot && actorId
-    ? snapshot.scene.entities.find((entity) => entity.id === actorId)?.name ?? (snapshot.activeCharacter.id === actorId ? snapshot.activeCharacter.name : "Actor")
-    : "Actor";
+  const actorName = snapshot && actorId ? snapshot.scene.entities.find((entity) => entity.id === actorId)?.name ?? (snapshot.activeCharacter.id === actorId ? snapshot.activeCharacter.name : "Actor") : "Actor";
+  const targetCandidates = snapshot && selectedAction ? selectedAction.eligibleTargetIds.map((id) => snapshot.scene.entities.find((entity) => entity.id === id) ?? null).filter((entity): entity is SceneEntity => Boolean(entity)) : [];
+  const multiTarget = selectedAction?.target === "multi-enemy";
+  const maxTargets = selectedAction ? Math.max(1, selectedAction.maxTargets ?? targetCandidates.length || 1) : 1;
 
   const resetFlow = () => {
     setIntentId(null);
     setIntentReturnToAll(false);
     setShowAll(false);
     setSelectedActionId(null);
+    setSelectedTargetIds([]);
     setFeedback(null);
   };
 
@@ -72,9 +70,15 @@ export function SessionActionDock({
   useEffect(() => {
     if (selectedActionId && !actions.some((action) => action.id === selectedActionId)) {
       setSelectedActionId(null);
+      setSelectedTargetIds([]);
       setFeedback("상태가 변경되어 이전 행동 선택을 닫았습니다.");
     }
   }, [actions, selectedActionId]);
+
+  useEffect(() => {
+    if (!selectedAction) return;
+    setSelectedTargetIds((current) => current.filter((id) => selectedAction.eligibleTargetIds.includes(id)).slice(0, maxTargets));
+  }, [selectedAction?.id, selectedAction?.eligibleTargetIds.join("|"), maxTargets]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -82,6 +86,7 @@ export function SessionActionDock({
       if (selectedActionId) {
         event.preventDefault();
         setSelectedActionId(null);
+        setSelectedTargetIds([]);
         setFeedback(null);
         return;
       }
@@ -110,10 +115,11 @@ export function SessionActionDock({
     setIntentReturnToAll(fromAll);
     setShowAll(false);
     setSelectedActionId(null);
+    setSelectedTargetIds([]);
     setFeedback(null);
   };
 
-  const runImmediateAction = async (action: ActionVm, targetIds: string[]) => {
+  const runAction = async (action: ActionVm, targetIds: string[]) => {
     if (pendingActionId) return;
     setPendingActionId(action.id);
     setFeedback(null);
@@ -133,15 +139,29 @@ export function SessionActionDock({
       return;
     }
     if (action.target === "none") {
-      void runImmediateAction(action, []);
+      void runAction(action, []);
       return;
     }
     if (action.target === "self" && actorId) {
-      void runImmediateAction(action, [actorId]);
+      void runAction(action, [actorId]);
       return;
     }
     setSelectedActionId(action.id);
+    setSelectedTargetIds([]);
     setFeedback(null);
+  };
+
+  const chooseTarget = (targetId: string) => {
+    if (!selectedAction || !selectedAction.eligibleTargetIds.includes(targetId) || pendingActionId) return;
+    if (!multiTarget) {
+      void runAction(selectedAction, [targetId]);
+      return;
+    }
+    setSelectedTargetIds((current) => {
+      if (current.includes(targetId)) return current.filter((id) => id !== targetId);
+      if (current.length >= maxTargets) return current;
+      return [...current, targetId];
+    });
   };
 
   const backFromIntent = () => {
@@ -153,7 +173,7 @@ export function SessionActionDock({
 
   const expanded = showAll || Boolean(intentId) || Boolean(selectedActionId);
 
-  return <div className={`session-action-dock-panel ${expanded ? "expanded" : "resting"}`} data-action-dock-state={selectedActionId ? "detail" : intentId ? "intent" : showAll ? "all-intents" : "resting"}>
+  return <div className={`session-action-dock-panel ${expanded ? "expanded" : "resting"}`} data-action-dock-state={selectedActionId ? "target" : intentId ? "intent" : showAll ? "all-intents" : "resting"}>
     {!expanded && <div className="session-action-resting">
       <div className="session-action-actor"><span>{snapshot.sessionMode === "initiative" ? "현재 행동" : "행동"}</span><strong>{actorName}</strong></div>
       <div className="session-action-resting-intents" aria-label="주요 행동 의도">
@@ -190,13 +210,25 @@ export function SessionActionDock({
       {feedback && <p className="session-action-feedback" role="status">{feedback}</p>}
     </div>}
 
-    {selectedAction && <div className="session-action-expanded session-action-detail">
-      <header><button type="button" className="session-action-back" onClick={() => { setSelectedActionId(null); setFeedback(null); }}>←</button><div><strong>{selectedAction.name}</strong><small>{selectedAction.economy} · {targetCopy(selectedAction.target)}</small></div><button type="button" className="session-action-rules" onClick={(event) => onOpenRules(event.currentTarget)}>규칙</button></header>
-      <div className="session-action-detail-body">
-        <div><span>효과</span><strong>{actionEffect(selectedAction)}</strong><p>{selectedAction.summary}</p></div>
-        {selectedAction.details.slice(0, 3).map((detail) => <div key={`${detail.label}:${detail.value}`}><span>{detail.label}</span><strong>{detail.value}</strong></div>)}
-        <div className="session-action-target-next"><span>대상</span><strong>{targetCopy(selectedAction.target)}</strong><p>사용할 대상을 고르면 이 행동을 실행합니다.</p></div>
+    {selectedAction && <div className="session-action-expanded session-action-target">
+      <header><button type="button" className="session-action-back" onClick={() => { setSelectedActionId(null); setSelectedTargetIds([]); setFeedback(null); }}>←</button><div><strong>{selectedAction.name}</strong><small>{selectedAction.economy} · {targetCopy(selectedAction.target)}</small></div><button type="button" className="session-action-rules" onClick={(event) => onOpenRules(event.currentTarget)}>규칙</button></header>
+      <div className="session-action-target-layout">
+        <section className="session-action-detail-summary" aria-label="행동 상세">
+          <div><span>효과</span><strong>{actionEffect(selectedAction)}</strong><p>{selectedAction.summary}</p></div>
+          {selectedAction.details.slice(0, 2).map((detail) => <div key={`${detail.label}:${detail.value}`}><span>{detail.label}</span><strong>{detail.value}</strong></div>)}
+        </section>
+        <section className="session-action-target-picker" aria-label={`${selectedAction.name} 대상 선택`}>
+          <div className="session-action-target-heading"><div><span>대상</span><strong>{multiTarget ? `${selectedTargetIds.length} / ${maxTargets}` : "1명 선택"}</strong></div>{multiTarget && <button type="button" className="primary" disabled={selectedTargetIds.length === 0 || Boolean(pendingActionId)} onClick={() => void runAction(selectedAction, selectedTargetIds)}>실행</button>}</div>
+          <div className="session-action-target-list">
+            {targetCandidates.map((entity) => {
+              const selected = selectedTargetIds.includes(entity.id);
+              return <button type="button" key={entity.id} className={selected ? "selected" : ""} aria-pressed={multiTarget ? selected : undefined} disabled={Boolean(pendingActionId)} onClick={() => chooseTarget(entity.id)}><span className="session-action-target-avatar">{entity.name.slice(0, 1)}</span><span><strong>{entity.name}</strong><small>{targetMeta(entity)}</small></span></button>;
+            })}
+            {targetCandidates.length === 0 && <p className="session-action-empty">현재 사용할 수 있는 대상이 없습니다.</p>}
+          </div>
+        </section>
       </div>
+      {pendingActionId === selectedAction.id && <p className="session-action-pending" role="status">판정을 처리하고 있습니다…</p>}
       {feedback && <p className="session-action-feedback" role="status">{feedback}</p>}
     </div>}
   </div>;
