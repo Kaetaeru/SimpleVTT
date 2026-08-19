@@ -4,7 +4,7 @@
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `continue`
-- current milestone: **Player reconnect/session utilities validated; Initiative expansion is next**
+- current milestone: **Initiative expansion validated; Handout integration is next**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
@@ -69,72 +69,69 @@ Exact source HEAD: `bcb267705ad526e54e6ca70f1193e6f500e4d268`
 Validated: one global/body-level authoritative visual dice replay, approved deep/back -> toward-user physics motion, shared 1480ms/650ms presentation timing, Session waits for cinematic handoff, no second Session dice stage, compact post-roll result, no-roll actions do not fabricate dice, existing Activity/Undo authority preserved.
 
 ### Slice 10 — DM Encounter / Actor / Participants / Session tools
-Validated exact source HEAD: `33b0049a482cbb65dda771f336dc591ba6d020d0`
+Exact source HEAD: `33b0049a482cbb65dda771f336dc591ba6d020d0`
 - UI run `32215938914`
 - frontend job `95957365219`
 - conclusion **SUCCESS**
 
-Validated scope:
-- DM Session rail exposes Actor, Rules, Encounter, Participants, Activity, and Session share as on-demand panes inside the persistent Session Shell;
-- no DM utility requires route replacement or `플레이로 돌아가기`;
-- Actor switching reads `scene.selectedActorId` and delegates only to the existing `selectDmActor()` command; it does not mutate `currentActorId` or Initiative economy;
-- Encounter pane reads existing Scene combatants and `combatantDefinitions`, and delegates to existing `instantiateCombatant()`, `removeCombatant()`, `startInitiative()`, and `endInitiative()` commands;
-- Encounter editing works with zero Players and zero Combatants as normal active-session states;
-- Combatant removal preserves historical preparing behavior and additionally works in live Freeform; Initiative removal remains blocked so turn-runtime state is not silently mutated;
-- a pending resolution referencing a Combatant still blocks removal;
-- Participants pane reads canonical participant connection/Character projection only and does not expose Ready/start gates;
-- Session share pane reads canonical session name/address/connection/content and can copy the existing address as local presentation behavior;
-- UI contains no visible lifecycle/preparing/Ready/start gate in these new DM panes;
-- new DM panes are responsive right-side transient utilities, not permanent dashboards;
-- existing lifecycle/network internals were not replaced and no second Scene/session/combatant authority was introduced;
-- all prior UI/mechanics regressions, live DM continuity, lifecycle/connected regressions, Phase09 services, TypeScript and production build are green.
-
-CI repair history for Slice 10:
-- intermediate HEAD `3463488a6aea91ab3d04d1a64743871301fe127b` failed only two structure assertions: explanatory copy still used the retired word `Ready`, and the old Rules/Activity test assumed those two utility literals were adjacent in the union. The copy and stale test ownership assumption were corrected without mechanics changes.
-- intermediate HEAD `d781f986d3d7bf82e49e90dcfc046494f9f85ff8` then reached lifecycle/mechanics and exposed a real regression: the first live-Freeform removal change accidentally required `sessionMode==="freeform"` during historical `preparing` removal too. The adapter was corrected to preserve `preparing` removal and extend removal only to `live && freeform`; Initiative remains blocked.
-- `gh-fix-ci` was invoked before each new CI diagnosis; connector job logs were used as the available Actions log fallback.
+Validated: on-demand DM Actor/Encounter/Participants/Session panes inside the persistent Session Shell; existing Actor/Combatant/Initiative commands only; zero-Player/zero-Combatant active Freeform; preparing removal preserved and live Freeform removal added while Initiative/pending-resolution removal stays blocked; no visible Ready/start/preparing gates; no second Scene/session/combatant authority.
 
 ### Slice 11 — Player reconnect / Session utilities
-Validated exact source HEAD: `02c55b18a535b0f62bd0daabe0cb83e617324ffc`
+Exact source HEAD: `02c55b18a535b0f62bd0daabe0cb83e617324ffc`
 - UI run `32218434349`
 - frontend job `95964214046`
 - conclusion **SUCCESS**
-- Phase 12 connected run `32218434325`, connected-protocol job `95964214025`: connected-session authority protocol step **SUCCESS** (49/49 tests), including `productionClientReconnect.test.ts` accepted-cursor catch-up and idempotent replay.
+- Phase 12 connected run `32218434325`, connected-protocol job `95964214025`: connected-session authority protocol step **SUCCESS** (49/49 tests), including accepted-cursor reconnect and idempotent replay.
+
+Validated: Player Session utility/recovery strip inside persistent Session Shell; healthy connection quiet; reconnecting uses existing automatic cursor retry without presentation calling new Join; terminal disconnected state offers explicit rejoin only with retained Host address; leave uses existing `stopSession()`; no second connection/session protocol or durable store; Sheet/Rules/Activity/Action context stays mounted.
+
+### Slice 12 — Initiative expansion
+Validated exact source HEAD: `9739da95521206116e9638c0459f541de46fdc31`
+- UI run `32219100733`
+- frontend job `95966108635`
+- conclusion **SUCCESS**
 
 Validated scope:
-- Player Session utility is part of the persistent `SessionModeRoot`; Player can open it from the Session rail or header connection affordance without leaving play;
-- healthy `connected` state remains visually quiet; reconnecting/disconnected states project an actionable recovery strip over the mounted Session Shell;
-- Player connection pane shows only session identity, Character identity, Host address, connection state, leave, and explicit terminal rejoin choice;
-- reconnecting never calls `joinSession()` from presentation; the existing automatic connected-session retry/cursor authority remains untouched;
-- explicit rejoin is available only from terminal `disconnected` state with an existing Host address;
-- Player leave delegates to existing `stopSession()`; no second lifecycle/session store/protocol exists;
-- opening connection recovery does not replace/unmount Session, Sheet, Rules, Activity, or Action presentation state;
-- connection pane/recovery strip remain responsive overlay layers and sit above Full Sheet/workspace when recovery is needed;
-- UI structure regression is now part of the main UI workflow;
-- TypeScript/production build and all UI/mechanics/Phase09 checks in the UI workflow are green.
+- Initiative is a denser row/focus variant of the same mounted `SessionModeRoot`; no combat route/page replacement exists;
+- `SessionInitiativeStrip` reads canonical `scene.round`, `scene.currentActorId`, `scene.entities[].initiative/status`, and `scene.economyByActor[currentActorId]` only;
+- compact initiative order is presentation-sorted by canonical Initiative totals while preserving Scene order for ties, matching the existing runtime ordering shape without owning turn authority;
+- current turn economy shows Action, Bonus Action, Reaction, and Movement only during Initiative;
+- `endTurn()` remains the existing turn command; Player end-turn affordance is limited to the active Character turn, while DM can advance the canonical current turn;
+- DM `이니셔티브 종료` delegates to existing `endInitiative()`; pending Resolution or non-connected state disables turn/Initiative transition controls;
+- the Initiative order is display-only and does not call `selectDmActor()` or mutate `currentActorId`/economy;
+- `SessionMainFocus` Initiative branch now shows only the current Actor's HP/AC/Initiative/movement/status and directs actions to the already-validated Action Dock;
+- the Action Dock keeps its existing Initiative intent set (`Attack/Magic/Dash/Disengage/Dodge/Help`) and existing canonical action/target resolution;
+- Freeform branch remains unchanged and low-noise;
+- responsive Initiative order uses horizontal overflow instead of restoring a permanent Actor wall/dashboard;
+- focused Initiative regressions, all prior Session/DM/reconnect/lifecycle regressions, Phase09 turn/runtime services, TypeScript and production build are green.
 
-Known pre-existing CI baseline unrelated to Slice 11:
-- Phase 11 / Main Playable / Phase 12 workflows already failed at validated Slice 10 HEAD `33b0049a...` on the old `phase11OfflineWalkthrough.test.ts` targeting-provenance assertion after the no-spatial fallback work.
-- The same unrelated assertion still fails at Slice 11 exact HEAD after the Phase 12 connected-authority step passes. It was not modified in this slice to avoid widening scope.
+CI repair history for Slice 12:
+- intermediate HEAD `67702da609ab9a357463a5932ae4a5c8d7796c8a` failed only the older `sessionFreeformMainFocusStructure.test.ts` assertion that forbade `economyByActor` anywhere in the whole `SessionMainFocus.tsx` file.
+- the Freeform UI itself was unchanged; the test was scoped to the Freeform branch so Initiative can read canonical economy without weakening the Freeform low-noise contract. Product behavior was not reverted.
+- `gh-fix-ci` was invoked before diagnosis and connector job logs identified the single stale ownership assertion.
+
+## Known pre-existing CI baseline unrelated to Slices 11–12
+- Phase 11 / Main Playable / Phase 12 workflows already failed at Slice 10 HEAD `33b0049a...` on the old `phase11OfflineWalkthrough.test.ts` targeting-provenance assertion after the no-spatial fallback work.
+- Phase 12 connected-session authority itself passed at Slice 11. The stale offline provenance assertion remains deferred to final automated validation so later UI slices do not widen scope.
 
 ## Remaining approved implementation order
-1. Initiative expansion;
-2. Handout integration;
-3. responsive/keyboard/focus pass;
-4. final exact-head automated validation, including resolution of the known stale offline-provenance baseline;
-5. Windows human usability acceptance A-J.
+1. Handout integration;
+2. responsive/keyboard/focus pass;
+3. final exact-head automated validation, including resolution of the known stale offline-provenance baseline;
+4. Windows human usability acceptance A-J.
 
 Each slice must replace/disconnect conflicting old normal-Session presentation it supersedes and must not add parallel mechanics authority.
 
 ## Next Exact Action
-1. Reconcile actual PR head; expected validated source HEAD is `02c55b18a535b0f62bd0daabe0cb83e617324ffc`.
-2. Implement only **Initiative expansion** as a denser variant of the same persistent Session Shell.
-3. Reuse canonical `sessionMode`, `scene.round`, `scene.currentActorId`, Initiative order/turn/economy projections, `endTurn()`, `startInitiative()`, and `endInitiative()`; do not add a second combat/turn engine.
-4. Freeform must remain quiet. Initiative may add compact round/current-turn/order/action-economy/end-turn/target/status information only while Initiative is active.
-5. Starting/ending Initiative transforms the mounted Session Shell rather than navigating to another route; ending returns to quiet Freeform without resetting valid Session/utility context.
-6. Do not implement Handout or the final responsive/focus sweep in this same slice.
-7. Add focused Initiative structure/behavior regressions and exact-head UI validation before moving on.
-8. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
+1. Reconcile actual PR head; expected validated source HEAD is `9739da95521206116e9638c0459f541de46fdc31`.
+2. Implement only **Handout integration** inside the persistent Session Shell.
+3. Reuse existing `sessionImageHandoutRuntimeAdapter` / `SessionImageHandoutBridge` state and transfer semantics; do not create another image/session protocol or durable image store.
+4. DM reveal/withdraw must be reachable from the Session utility rail without route replacement; Player dismiss/minimize/reopen and reconnect-restored active handout remain presentation behavior over existing state.
+5. Handout viewer/control is transient/on-demand and must not become a permanent image manager or tactical map subsystem.
+6. Preserve Session Shell, Action/Sheet/Rules/Initiative context underneath the handout layer.
+7. Do not perform the final responsive/focus sweep in this same slice.
+8. Add focused Handout integration regression coverage and exact-head UI validation before moving on.
+9. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
 `continue`
