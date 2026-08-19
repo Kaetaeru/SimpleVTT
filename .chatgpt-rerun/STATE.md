@@ -4,103 +4,71 @@
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `needs_user`
-- current milestone: **V0.9**
+- current milestone: **V0.9 UI-first product replanning**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
 - issue: #108
 - PR #109: open/draft/unmerged; no merge authorized
 
-## Current source HEAD
-`d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+## Current planning checkpoint
+새 UI-first 기획 문서를 work branch에 생성했다.
 
-This is the exact-head human-acceptance repair candidate. Automated Windows validation is complete and green. It is not yet human-accepted.
+- document: `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
+- planning commit: `3d1507fafbfdeff27d8986fd26f9d815fb6f41dd`
+- previous automated-green source: `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
 
-## Durable GitHub/watch conventions
-- `STATUS.md` and human-facing watcher status text are Korean.
-- Invoke the matching GitHub plugin skill first; direct `gh` is not the independent/default path.
-- CI failures use `gh-fix-ci` first; when its `gh` dependency blocks log retrieval, the user-authorized connector log fallback may be used.
-- No speculative fixes without exact CI evidence or exact human repro.
-- Never merge PR #109 without explicit user authorization.
+현재 단계는 구현 수정이 아니라 제품 UI 기획 재정립이다. 기존 자동 green evidence는 기술 경계의 기록으로 남기지만, 새 UI 계약과 충돌하는 동작을 제품 완료로 간주하지 않는다.
 
-## Human acceptance defects that reopened sequence 3
-The user tested the prior Windows artifact and reported:
-1. production dice looked completely different from the prior UI-demo form/design;
-2. attack was unavailable in the demo session;
-3. the official Character Sheet layout version was not exposed;
-4. clicking different existing Character cards always entered one same Character.
+## Why implementation is paused
+Human acceptance와 후속 소스 확인에서 여러 UI 계약 누락이 드러났다.
+- 주사위는 데모의 body-level cinematic motion이 아니라 시트 내부 별도 frame으로 렌더링되고 있었다.
+- 기존 multiplayer 기획이 `Host preparing / player lobby / Ready / Start`를 제품 기본 흐름으로 전제했다.
+- 기본 제품이 거리/LOS를 추적하지 않기로 했는데도 demo attack eligibility가 spatial distance fact에 묶였다.
 
-## Implemented fixes
+따라서 화면/행동 흐름을 먼저 확정한 뒤 구현을 재개한다.
+
+## Newly locked product decisions
 ### Dice
-- shared `PhysicsDice3D` now uses the UI-demo bronze/warm facet language.
-- d10 no longer uses `CylinderGeometry`; it uses a ten-face polyhedral helper.
-- Three.js/cannon-es physics and authoritative-result convergence remain presentation-only.
+- standalone sheet roll도 body-level cinematic overlay를 사용한다.
+- 주사위는 화면 뒤/깊은 곳에서 사용자 쪽으로 날아오는 3D motion을 사용한다.
+- 시트 내부에 roll 전용 dice stage/frame을 삽입하지 않는다.
 
-### Demo attack
-- reference offline demo exposes a real 5 ft melee relation for the default Aelar/wolf case.
-- attack target eligibility is projected through existing `runtimeSpatialRelation` visibility/range facts.
-- resolution still uses the existing authoritative attack transaction/resolution services.
+### Multiplayer / DM
+- DM이 세션을 여는 순간 세션은 활성 상태다.
+- 세션 오픈 직후 DM workspace와 DM tools에 바로 접근한다.
+- player 0명이어도 Encounter/Combatant/session editing/handout/Initiative 등 세션 편집이 가능하다.
+- player lobby에서 모두 Ready를 기다린 뒤 `플레이 시작`하는 필수 흐름을 사용하지 않는다.
+- 플레이어는 이미 열린 세션에 합류한다.
+- 내부 handshake/content sync는 필요할 수 있지만 user-facing lobby/start gate로 확장하지 않는다.
 
-### Official layout exposure
-- `CharacterLibraryUxBridge` exposes `SimpleVTT 시트 / 공식 시트 스타일` in the Character Library header using existing persisted sheet-layout preferences.
-- existing `CharacterSheetPlayScreen` and `OfficialCharacterSheetPlayScreen` remain the two presentation layouts over one active Character.
+### Range / spatial fallback
+- 별도 spatial/range module이 없으면 모든 적절한 target은 사정거리 이내로 간주한다.
+- `spatial data 없음`은 `out of range`가 아니다.
+- 근접 공격을 `5 ft 대상 없음`으로 막지 않는다.
+- range/reach/LOS/cover는 module이 authoritative facts를 제공할 때만 constraint로 적용한다.
 
-### Character selection
-- regular Character Library cards now resolve their corresponding `snapshot.characters[index].id` through existing `selectProductionCharacter(character.id)`.
-- reference Mira is a distinct playable sheet in the existing Character collection; no second Character store is introduced.
+## Existing architecture still preserved
+- one canonical Character; owning Client Character Library durable authority
+- Host authoritative connected resolution
+- ephemeral Host projections
+- ResolutionEvent ledger/reconnect/idempotency/Undo
+- installed-content composition/validation
+- no second Character/content store or resolver
+- no built-in tactical grid/token/Fog/pathfinding/minimap/LOS/cloud dependency
 
-## Regression coverage
-- `productionAcceptanceWindowsRegression.test.ts`: legal reference melee attack completes through authoritative runtime; Mira/Aelar selection is distinct.
-- `productionLocalCharacterSwitch.test.ts`: reference selection + existing remote SessionProjection preservation.
-- `characterSheetPlayableUx.test.ts`: Character Library exposes official layout preference and existing dual-sheet authority remains intact.
-- dice structure tests: demo bronze treatment, shared physics renderer, polyhedral d10, no `CylinderGeometry` regression.
+## Previous validation evidence
+`d942d58a...`에서 UI, Rules Domain, Contract validation, Persistence/Tauri, Main Playable, Phase 11, Phase 12 Connected 및 Windows build/stage/upload가 모두 success였다.
 
-## CI diagnosis history
-At `461f4f62de159fe8d0b4e4fadd4a20340efd1db8`, the four new acceptance regressions passed. A later UI step failed only because an older duplicate structural test still required `CylinderGeometry` for d10.
-
-CI handling followed policy:
-1. invoked `gh-fix-ci` first;
-2. `gh` was unavailable;
-3. used the user-authorized connector log fallback;
-4. exact log showed only the stale `visualDiceStructure.test.ts` `/CylinderGeometry/` assertion;
-5. `d942d58a...` changed only that test expectation to the new polyhedral d10 rule.
-
-No product source was changed after `461f4f62...`.
-
-## Exact-head validation evidence at `d942d58a...`
-Completed success:
-- UI `32204865620`, frontend `95926003383`: **success**. Includes human-acceptance regressions, Character/session integration, Phase 09 mechanics suite, TypeScript and production build.
-- Rules Domain `32204865592`: **success**.
-- Contract validation `32204865594`: **success**.
-- Persistence `32204865644`: application-contract `95926003457` **success**; tauri-storage `95926003360` **success**.
-- Main Playable `32204865588`: playable-contract `95926017359` **success**; Main Windows `95926276820` **success** including Tauri persistence/session transport, executable build, staging and upload.
-- Phase 11 `32204865635`: offline-walkthrough `95926003264` **success**; Windows `95926114975` **success** including executable build/stage/upload.
-- Phase 12 `32204865632`: connected-protocol `95926003189` **success**; Windows connected `95926150169` **success** including Tauri session transport/persistence, executable build/stage/upload.
-
-## Exact-head artifact delivered
-- Main Playable artifact id `9348955693`
-- name `SimpleVTT-Main-Playable-d942d58a83eb2222ffd722d58b19c67c3dc8de13`
-- run `32204865588`
-- head `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
-- digest `sha256:441b8eac5a0cea1cf9cbaff6788f2e7e4d0099f07d5d2c6c0deca1a2f3fefc96`
-- downloaded into the current ChatGPT conversation as `SimpleVTT-Main-Playable-d942d58a.zip` for user testing.
-
-## Untouched validated boundaries — do not repeat merely due restart
-- connected authority/reconnect/idempotency/Undo;
-- Direct-IP session entry;
-- content parity before Ready;
-- persistence architecture;
-- portrait and image handout/reconnect;
-- combat VFX;
-- dead-legacy cleanup and named-rule baseline alignment.
+이 evidence는 변경 전 구현의 regression 기록으로만 유지한다. UI-first replanning으로 변경되는 화면/flow는 새 acceptance 기준으로 다시 검증해야 한다.
 
 ## Next Exact Action
-1. Do not rebuild or rerun already-green exact-head gates unless the source changes.
-2. Wait for the user to run the delivered Windows Main Playable artifact.
-3. Human retest exactly: dice appearance; demo attack; official sheet layout; distinct Character-card selection.
-4. If one still fails, reauthorize this same sequence as `continue`, record the exact human repro, and fix only that failure.
-5. If all four pass, record human acceptance before any V0.9 completion decision.
-6. Keep PR #109 draft/unmerged.
+1. source implementation이나 CI를 재개하지 않는다.
+2. 사용자와 `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`를 화면별로 계속 확정한다.
+3. 우선순위는 Session/DM/Player lifecycle, Character Sheet + dice presentation, freeform/combat interaction이다.
+4. 각 화면의 목적, 정보 hierarchy, primary/secondary action, states, errors, responsive/keyboard, human acceptance를 정의한다.
+5. 기획 승인 후에만 같은 sequence를 `continue`로 바꾸고 구현 slice를 시작한다.
+6. PR #109는 draft/unmerged 유지.
 
 ## Dispatch recommendation
 `needs_user`
