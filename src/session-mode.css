@@ -372,27 +372,58 @@
 .session-quick-sheet-abilities span { color: var(--muted); font-size: 10px; }
 .session-quick-sheet-empty { margin: 10px 12px; color: var(--muted); font-size: 12px; }
 
-.session-resolution-fallback {
+.session-resolution-layer {
   pointer-events: auto;
   position: absolute;
   left: 50%;
   bottom: 14px;
   transform: translateX(-50%);
-  width: min(520px, calc(100vw - 90px));
-  display: flex;
+  width: min(640px, calc(100vw - 90px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 12px 14px;
+  gap: 12px;
+  padding: 11px 12px;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 96%, transparent);
   box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
 }
 
-.session-resolution-fallback strong { display: block; }
-.session-resolution-fallback p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.session-resolution-copy { min-width: 0; }
+.session-resolution-copy > span {
+  display: block;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.session-resolution-copy strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.session-resolution-copy p { margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.session-resolution-stage {
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--recess);
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
 .session-resolution-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.session-resolution-next { min-width: 88px; }
 
 @media (max-width: 899px) {
   .session-mode-root { grid-template-rows: 48px minmax(0, 1fr) 60px; }
@@ -425,5 +456,11 @@
   .session-mode-main-copy h1 { font-size: 32px; }
   .session-quick-sheet { width: 100%; }
   .session-quick-sheet-stats { grid-template-columns: repeat(2, 1fr); }
-  .session-resolution-fallback { width: calc(100vw - 24px); align-items: start; flex-direction: column; }
+  .session-resolution-layer {
+    width: calc(100vw - 24px);
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .session-resolution-stage { justify-self: start; }
+  .session-resolution-actions { flex-wrap: wrap; }
 }
