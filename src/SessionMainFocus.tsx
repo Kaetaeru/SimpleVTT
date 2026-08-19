@@ -6,13 +6,24 @@ export function SessionMainFocus({ role, onOpenActivity }: { role: "player" | "d
   if (!snapshot) return null;
 
   if (snapshot.sessionMode === "initiative") {
-    const current = snapshot.scene.entities.find((entity) => entity.id === snapshot.scene.currentActorId);
-    return <section className="session-main-focus-state session-initiative-focus-placeholder" aria-label="이니셔티브 진행">
+    const current = snapshot.scene.entities.find((entity) => entity.id === snapshot.scene.currentActorId) ?? null;
+    const economy = current ? snapshot.scene.economyByActor[current.id] : undefined;
+    return <section className="session-main-focus-state session-initiative-focus" aria-label="이니셔티브 현재 턴">
       <div className="session-focus-heading">
-        <span className="eyebrow accent">INITIATIVE</span>
-        <h1>{snapshot.scene.name || snapshot.session.name || "D&D 세션"}</h1>
-        <p>{snapshot.scene.round}라운드 · 현재 턴 {current?.name ?? "—"}</p>
+        <span className="eyebrow accent">CURRENT TURN</span>
+        <h1>{current?.name ?? "현재 턴 대기"}</h1>
+        <p>{snapshot.scene.round}라운드 · 필요한 행동은 아래 Action Dock에서 선택합니다.</p>
       </div>
+
+      {current && <div className="session-initiative-current-card">
+        <div className="session-initiative-current-vitals">
+          <span><small>HP</small><strong>{current.hp}/{current.maxHp}</strong></span>
+          <span><small>AC</small><strong>{current.ac}</strong></span>
+          <span><small>INIT</small><strong>{current.initiative}</strong></span>
+          {economy && <span><small>이동</small><strong>{economy.movement}/{economy.movementMax} ft</strong></span>}
+        </div>
+        {current.status.length > 0 && <div className="session-initiative-current-status" aria-label="현재 턴 상태">{current.status.map((status) => <span key={status}>{status}</span>)}</div>}
+      </div>}
     </section>;
   }
 
