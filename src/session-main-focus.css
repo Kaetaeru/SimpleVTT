@@ -93,8 +93,50 @@
   font-size: 9px;
 }
 
-.session-initiative-focus-placeholder {
+.session-initiative-focus {
   justify-content: flex-start;
+}
+
+.session-initiative-current-card {
+  width: min(520px, 100%);
+  margin-top: clamp(28px, 6vh, 58px);
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 64%, transparent);
+}
+
+.session-initiative-current-vitals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+.session-initiative-current-vitals > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--recess);
+}
+.session-initiative-current-vitals small { color: var(--quiet); font-size: 8px; font-weight: 800; }
+.session-initiative-current-vitals strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+
+.session-initiative-current-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.session-initiative-current-status span {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 9px;
 }
 
 @media (max-width: 620px) {
@@ -119,4 +161,7 @@
   .session-freeform-recent button {
     align-self: flex-start;
   }
+
+  .session-initiative-current-card { margin-top: 28px; }
+  .session-initiative-current-vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
