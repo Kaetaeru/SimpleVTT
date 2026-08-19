@@ -4,7 +4,7 @@
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `continue`
-- current milestone: **Initiative expansion validated; Handout integration is next**
+- current milestone: **Handout integration validated; responsive/keyboard/focus pass is next**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
@@ -86,7 +86,7 @@ Exact source HEAD: `02c55b18a535b0f62bd0daabe0cb83e617324ffc`
 Validated: Player Session utility/recovery strip inside persistent Session Shell; healthy connection quiet; reconnecting uses existing automatic cursor retry without presentation calling new Join; terminal disconnected state offers explicit rejoin only with retained Host address; leave uses existing `stopSession()`; no second connection/session protocol or durable store; Sheet/Rules/Activity/Action context stays mounted.
 
 ### Slice 12 — Initiative expansion
-Validated exact source HEAD: `9739da95521206116e9638c0459f541de46fdc31`
+Exact source HEAD: `9739da95521206116e9638c0459f541de46fdc31`
 - UI run `32219100733`
 - frontend job `95966108635`
 - conclusion **SUCCESS**
@@ -110,28 +110,51 @@ CI repair history for Slice 12:
 - the Freeform UI itself was unchanged; the test was scoped to the Freeform branch so Initiative can read canonical economy without weakening the Freeform low-noise contract. Product behavior was not reverted.
 - `gh-fix-ci` was invoked before diagnosis and connector job logs identified the single stale ownership assertion.
 
-## Known pre-existing CI baseline unrelated to Slices 11–12
+### Slice 13 — Handout integration
+Exact source HEAD: `9f4d2f64cad008726e318a8ea43cb4f008ae962c`
+- UI run `32219878491`
+- frontend job `95968231474`
+- conclusion **SUCCESS**
+- Phase 12 connected run `32219878487`, connected-protocol job `95968231605`: connected-session authority protocol step **SUCCESS** (49/49 tests), including `DM handout reveal is presentation-only and the current reveal is restored after a compatible reconnect hello`.
+
+Validated scope:
+- existing `sessionImageHandoutRuntimeAdapter` / handout state / transfer semantics remain the only handout authority; no image/session protocol or durable image store was added;
+- runtime decorator import order remains `sessionImageHandoutRuntimeAdapter` before `sessionContentParityRuntimeAdapter`;
+- legacy body-level `SessionImageHandoutBridge` presentation mount was disconnected from `main.tsx`; active-session handout presentation is owned by the persistent `SessionModeRoot`;
+- DM rail exposes `자료` and opens a transient right-side `SessionDmHandoutPane` with existing bounded PNG/JPEG/WebP file validation, preview, explicit reveal, and withdraw;
+- Player receives the current handout as a transient Session layer, can dismiss it, and sees a contextual `자료` reopen affordance only while an active handout exists;
+- Player viewer is top-layer presentation over the mounted Session Shell; opening/dismissing it does not route away or destroy Sheet/Rules/Action/Initiative context;
+- while the Player handout viewer is open, Action Dock input is suspended and `Escape` dismisses only the top handout layer;
+- reconnect restoration remains driven by the existing compatible hello-ack runtime path and passed exact-head connected regression;
+- handout remains presentation-only and does not enter ResolutionEvent/Undo/combat authority or become a permanent image manager/tactical map;
+- focused handout integration tests, prior Session/DM/reconnect/Initiative/UI/mechanics regressions, Phase09 services, TypeScript and production build are green.
+
+CI repair history for Slice 13:
+- intermediate HEAD `6882759faf13e50ea47feffc235ce85edde00d19` failed an old Action Dock structure assertion that hard-coded the previous three suspension sources. The test now includes the legitimate Player handout top layer; product behavior was not reverted.
+- intermediate HEAD `cebf8c8b1debbbda5958a9ce23ecafe4cf860338` then failed an older non-Character UX assertion that expected the obsolete global `SessionImageHandoutBridge` mount in `main.tsx`. The test was updated to verify the runtime adapter remains installed while `SessionModeRoot` owns Handout presentation.
+- `gh-fix-ci` was invoked before the CI diagnoses and connector job logs isolated both stale presentation-ownership assertions.
+
+## Known pre-existing CI baseline unrelated to Slices 11–13
 - Phase 11 / Main Playable / Phase 12 workflows already failed at Slice 10 HEAD `33b0049a...` on the old `phase11OfflineWalkthrough.test.ts` targeting-provenance assertion after the no-spatial fallback work.
-- Phase 12 connected-session authority itself passed at Slice 11. The stale offline provenance assertion remains deferred to final automated validation so later UI slices do not widen scope.
+- At Slice 13 exact HEAD, Phase 12 connected-session authority itself passes 49/49, including handout reconnect restoration; only the same deferred offline targeting-provenance assertion fails afterward.
+- The stale offline provenance assertion remains deferred to final automated validation so the responsive/focus slice does not widen scope.
 
 ## Remaining approved implementation order
-1. Handout integration;
-2. responsive/keyboard/focus pass;
-3. final exact-head automated validation, including resolution of the known stale offline-provenance baseline;
-4. Windows human usability acceptance A-J.
+1. responsive/keyboard/focus pass;
+2. final exact-head automated validation, including resolution of the known stale offline-provenance baseline;
+3. Windows human usability acceptance A-J.
 
 Each slice must replace/disconnect conflicting old normal-Session presentation it supersedes and must not add parallel mechanics authority.
 
 ## Next Exact Action
-1. Reconcile actual PR head; expected validated source HEAD is `9739da95521206116e9638c0459f541de46fdc31`.
-2. Implement only **Handout integration** inside the persistent Session Shell.
-3. Reuse existing `sessionImageHandoutRuntimeAdapter` / `SessionImageHandoutBridge` state and transfer semantics; do not create another image/session protocol or durable image store.
-4. DM reveal/withdraw must be reachable from the Session utility rail without route replacement; Player dismiss/minimize/reopen and reconnect-restored active handout remain presentation behavior over existing state.
-5. Handout viewer/control is transient/on-demand and must not become a permanent image manager or tactical map subsystem.
-6. Preserve Session Shell, Action/Sheet/Rules/Initiative context underneath the handout layer.
-7. Do not perform the final responsive/focus sweep in this same slice.
-8. Add focused Handout integration regression coverage and exact-head UI validation before moving on.
-9. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
+1. Reconcile actual PR head; expected validated source HEAD is `9f4d2f64cad008726e318a8ea43cb4f008ae962c`.
+2. Implement only the **responsive/keyboard/focus pass** across the already-validated persistent Session surfaces.
+3. Audit constrained Windows widths/heights and keyboard-only reachability for Session Bar, Utility Rail, Quick/Full Sheet, Rules/Activity, DM tools, Player reconnect, Initiative strip, Handout, Action Dock, target flow, result/recovery layers.
+4. Preserve the one-layer-at-a-time `Escape` contract and restore focus to the launcher/trigger wherever the existing surface has a meaningful trigger.
+5. Do not redesign mechanics, add new session/content/image authority, or reopen already-validated UX slices except for concrete responsive/focus defects.
+6. Add focused responsive/keyboard/focus regressions and run exact-head UI validation before final broad validation.
+7. Do not fix the known old offline spatial-provenance baseline inside this UI slice unless it directly blocks the new responsive/focus contract; defer it to final automated validation as planned.
+8. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
 `continue`
