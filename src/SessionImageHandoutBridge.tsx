@@ -17,6 +17,10 @@ export function useSessionImageHandout() {
   return handout;
 }
 
+export function dismissCurrentSessionImageHandout() {
+  return dismissSessionImageHandout(mockAdapter);
+}
+
 function imageLabel(asset: LocalImageAssetV1) {
   return asset.fileName ?? "공유 이미지";
 }
@@ -118,20 +122,6 @@ export function SessionPlayerHandoutRailButton() {
 
 export function SessionPlayerHandoutViewer() {
   const handout = useSessionImageHandout();
-  const open = Boolean(handout.asset && !handout.dismissed);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      dismissSessionImageHandout(mockAdapter);
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [open]);
-
   if (!handout.asset || handout.dismissed) return null;
   return <section className="session-handout-viewer" role="dialog" aria-modal="true" aria-label="DM 공유 이미지">
     <header>
