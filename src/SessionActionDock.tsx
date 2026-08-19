@@ -51,7 +51,7 @@ export function SessionActionDock({ actorId, suspended, onOpenRules }: { actorId
   const actorName = snapshot && actorId ? snapshot.scene.entities.find((entity) => entity.id === actorId)?.name ?? (snapshot.activeCharacter.id === actorId ? snapshot.activeCharacter.name : "Actor") : "Actor";
   const targetCandidates = snapshot && selectedAction ? selectedAction.eligibleTargetIds.map((id) => snapshot.scene.entities.find((entity) => entity.id === id) ?? null).filter((entity): entity is SceneEntity => Boolean(entity)) : [];
   const multiTarget = selectedAction?.target === "multi-enemy";
-  const maxTargets = selectedAction ? Math.max(1, selectedAction.maxTargets ?? targetCandidates.length || 1) : 1;
+  const maxTargets = selectedAction ? Math.max(1, selectedAction.maxTargets ?? targetCandidates.length) : 1;
 
   const resetFlow = () => {
     setIntentId(null);
