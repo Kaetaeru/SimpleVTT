@@ -5,6 +5,7 @@ import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
 import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
+import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
 
@@ -89,9 +90,6 @@ export function SessionModeRoot() {
   const dmActor = snapshot.scene.entities.find((entity) => entity.id === snapshot.scene.selectedActorId)
     ?? snapshot.scene.entities[0]
     ?? null;
-  const recentActivity = snapshot.activity[0];
-  const connectedPlayers = snapshot.session.participants.filter((participant) => participant.state === "connected").length;
-  const combatants = snapshot.scene.entities.filter((entity) => entity.kind === "combatant");
   const connectionWarning = connectionCopy(snapshot.connectionState);
 
   return <div className="session-mode-root" data-session-role={role} data-session-mode={snapshot.sessionMode}>
@@ -116,18 +114,7 @@ export function SessionModeRoot() {
 
     <div className="session-mode-body">
       <main className="session-mode-main" aria-label="현재 세션">
-        <div className="session-mode-main-copy">
-          <span className="eyebrow accent">{role === "dm" ? "DM SESSION" : "ACTIVE SESSION"}</span>
-          <h1>{snapshot.scene.name || sessionName}</h1>
-          {recentActivity
-            ? <section className="session-mode-recent" aria-label="최근 결과"><span>최근 결과</span><strong>{recentActivity.title}</strong><p>{recentActivity.summary}</p></section>
-            : <p className="session-mode-quiet-copy">세션의 대화와 탐험을 방해하지 않도록 필요한 정보만 표시합니다.</p>}
-        </div>
-
-        {role === "dm" && <div className="session-mode-dm-context">
-          {connectedPlayers === 0 && <span>연결된 플레이어 없음</span>}
-          {combatants.length === 0 && <span>현재 Encounter가 비어 있습니다.</span>}
-        </div>}
+        <SessionMainFocus role={role} onOpenActivity={(button) => toggleUtility("activity", button)} />
       </main>
 
       <aside className="session-mode-rail" aria-label="세션 도구">
