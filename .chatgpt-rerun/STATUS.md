@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 일시 중단, 전체 UI 씬 기획 완료
+**연결 상태:** `main` coordination · 구현 일시 중단, 세션 상호작용 상세 기획 완료
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - canonical watcher branch: `main`
@@ -11,57 +11,48 @@
 - Control 목표: `needs_user`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- 최신 전체 UI 씬 기획: `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md`
-- 최신 planning HEAD: `afce5407d2a3b243f5b25d74dceb6257099d1ded`
+- 상세 상호작용 명세: `.agents/V0_9_SESSION_INTERACTION_SPEC.md`
+- 최신 planning HEAD: `34477c78c1e85cd24433b578c0f4a405a4b7a824`
 
-## 전체 UI 구조
+## 이번에 추가로 확정한 것
 
-V0.9를 두 개의 큰 모드로 정리했습니다.
+### 세션 중 Character Sheet
+- Player Character identity는 Session Bar에 항상 노출합니다.
+- Character chip 한 번으로 Quick Sheet를 엽니다.
+- 명확한 expand action 한 번으로 Full Sheet를 엽니다.
+- Full Sheet는 세션을 떠나는 route가 아니라 Session Shell 위의 큰 layer/split workspace입니다.
+- 시트를 닫으면 이전 Freeform/Initiative/Actor/유효한 action context로 돌아갑니다.
+- 시트 roll은 별도 dice frame 없이 body-level cinematic dice를 사용합니다.
 
-### Library Mode
-세션 밖에서 Home, Character Library, Character Create/Edit, Standalone Character Sheet, Content, Rules, Settings, Session Entry를 사용합니다.
+### 세션 Utility
+Player는 Sheet, Rules, Activity, active Handout, Session/connection을 고정 Utility에서 바로 엽니다.
 
-### Active Session Mode
-Session이 시작되면 앱 전체가 persistent Session Mode가 되고, Session 종료/Leave까지 같은 Active Session Shell을 유지합니다.
+DM은 Actor, Rules, Encounter, Participants, Handout, Activity/Undo, Session share/settings를 같은 Session 안에서 바로 엽니다.
 
-공용 핵심 씬:
-- Freeform
-- Intent → Detail → Target
-- Resolution
-- Initiative/Combat
-- Quick Character/Actor View
-- in-session Full Character Sheet
-- Rules Lookup
-- Activity
-- Connection/Recovery
-- Cinematic Dice
-- Handout Viewer
+### Layer / Escape
+- Session Shell은 세션 종료 전까지 유지합니다.
+- Quick View → pane/drawer → Full Sheet → transient overlay → confirmation 순의 layer 규칙을 둡니다.
+- Escape는 항상 가장 위 layer/interaction step 하나만 닫습니다.
+- Escape로 Session leave/end가 실행되지 않습니다.
 
-DM 전용:
-- Session Share/Settings
-- Participants
-- Encounter Editor
-- Combatant Picker
-- Actor Switcher
-- Initiative Controls
-- Handout Control
-- Adjudication/Undo
+### Freeform
+- 전체 Scene Actor board 상시 표시 없음
+- category hotbar 상시 표시 없음
+- action economy 상시 표시 없음
+- intent-first Action Dock는 평소 compact 상태
+- target UI는 실제 target이 필요할 때만 노출
 
-Player 전용:
-- My Character session tools
-- Leave/Reconnect
+### 사용성/접근성
+- 버튼을 눌렀는데 무반응인 상태를 허용하지 않습니다.
+- disabled action은 이유를 domain language로 표시합니다.
+- 핵심 기능은 hover-only로 숨기지 않습니다.
+- 좁은 Windows 창에서는 pane을 drawer/full overlay로 바꾸되 close/primary action을 잃지 않습니다.
+- focus는 열린 도구로 이동하고 닫으면 launcher로 복귀합니다.
 
-## 중요한 UI 원칙
+## 실제 Windows human acceptance
+A~J 시나리오를 명세했습니다: Freeform 중 Quick Sheet, Full Sheet roll, action 도중 Rules 확인, DM active Freeform 중 Combatant 추가, Initiative 전환, Sheet/Rules 중첩 닫기, reconnect, player 0명 DM, spatial module 없는 melee targeting, 좁은 viewport 사용성입니다.
 
-- Freeform은 낮은 밀도의 기본 화면입니다.
-- Scene Actor 전체 목록, action category hotbar, action economy를 상시 표시하지 않습니다.
-- Rules/Sheet/Encounter/Activity는 Play를 대체하는 route가 아니라 Session Shell 안의 pane/drawer/overlay입니다.
-- Initiative는 다른 페이지가 아니라 같은 Shell의 확장 상태입니다.
-- Player Lobby/Ready/Play Start gate는 없습니다.
-- 별도 spatial/range module이 없으면 적절한 target은 사거리 내로 봅니다.
-- 주사위는 화면 뒤에서 앞으로 날아오는 body-level cinematic overlay이며 Sheet 내부 dice frame을 만들지 않습니다.
-
-구현/CI는 아직 재개하지 않습니다. 다음 단계는 전체 씬 기획을 사용자와 확인한 뒤 `S-00 Persistent Active Session Shell`의 실제 배치를 구현 가능한 수준으로 확정하는 것입니다.
+구현/CI는 아직 재개하지 않습니다. 다음 단계는 이 interaction 명세를 확인한 뒤 S-00/Quick Sheet/Full Sheet의 실제 visual/layout contract를 확정하는 것입니다.
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
