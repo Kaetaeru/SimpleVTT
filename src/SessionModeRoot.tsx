@@ -8,13 +8,21 @@ import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock } from "./SessionActionDock";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
+import {
+  dismissCurrentSessionImageHandout,
+  SessionDmHandoutPane,
+  SessionPlayerHandoutError,
+  SessionPlayerHandoutRailButton,
+  SessionPlayerHandoutViewer,
+  useSessionImageHandout,
+} from "./SessionImageHandoutBridge";
 import { SessionInitiativeStrip } from "./SessionInitiativeStrip";
 import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionPlayerSession";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
 
-type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "activity" | "session" | "player-session" | null;
+type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | null;
 
 const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", "damage-animation"]);
@@ -44,11 +52,13 @@ function resolutionStageCopy(stage: string) {
 
 export function SessionModeRoot() {
   const { snapshot, stopSession } = useSimpleVtt();
+  const handout = useSessionImageHandout();
   const [activeUtility, setActiveUtility] = useState<SessionUtility>(null);
   const [workspaceLayer, setWorkspaceLayer] = useState<WorkspaceLayer>(null);
   const [workspaceReturnUtility, setWorkspaceReturnUtility] = useState<SessionUtility>(null);
   const lastLauncher = useRef<HTMLButtonElement | null>(null);
   const fullSheetLauncher = useRef<HTMLButtonElement | null>(null);
+  const playerHandoutOpen = snapshot?.session.role === "client" && Boolean(handout.asset && !handout.dismissed);
 
   const closeUtility = () => {
     setActiveUtility(null);
@@ -81,6 +91,11 @@ export function SessionModeRoot() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (playerHandoutOpen) {
+        event.preventDefault();
+        dismissCurrentSessionImageHandout();
+        return;
+      }
       if (workspaceLayer && activeUtility === "rules") {
         event.preventDefault();
         closeUtility();
@@ -98,7 +113,7 @@ export function SessionModeRoot() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeUtility, workspaceLayer, workspaceReturnUtility]);
+  }, [activeUtility, playerHandoutOpen, workspaceLayer, workspaceReturnUtility]);
 
   if (!snapshot) return null;
 
@@ -149,7 +164,9 @@ export function SessionModeRoot() {
         <button type="button" className={activeUtility === "rules" ? "active" : ""} aria-pressed={activeUtility === "rules"} aria-label="세션 규칙 찾아보기" onClick={(event) => toggleUtility("rules", event.currentTarget)}><span>규칙</span></button>
         {role === "dm" && <button type="button" className={activeUtility === "encounter" ? "active" : ""} aria-pressed={activeUtility === "encounter"} aria-label="Encounter 도구 열기" onClick={(event) => toggleUtility("encounter", event.currentTarget)}><span>Encounter</span></button>}
         {role === "dm" && <button type="button" className={activeUtility === "participants" ? "active" : ""} aria-pressed={activeUtility === "participants"} aria-label="참가자 보기" onClick={(event) => toggleUtility("participants", event.currentTarget)}><span>참가자</span></button>}
+        {role === "dm" && <button type="button" className={activeUtility === "handout" ? "active" : ""} aria-pressed={activeUtility === "handout"} aria-label="Handout 도구 열기" onClick={(event) => toggleUtility("handout", event.currentTarget)}><span>자료</span></button>}
         <button type="button" className={activeUtility === "activity" ? "active" : ""} aria-pressed={activeUtility === "activity"} aria-label="최근 세션 결과 보기" onClick={(event) => toggleUtility("activity", event.currentTarget)}><span>기록</span></button>
+        {role === "player" && <SessionPlayerHandoutRailButton />}
         {role === "player" && <button type="button" className={activeUtility === "player-session" ? "active" : ""} aria-pressed={activeUtility === "player-session"} aria-label="Player 세션 연결 열기" onClick={(event) => toggleUtility("player-session", event.currentTarget)}><span>세션</span></button>}
         {role === "dm" && <button type="button" className={activeUtility === "session" ? "active" : ""} aria-pressed={activeUtility === "session"} aria-label="세션 공유 정보 열기" onClick={(event) => toggleUtility("session", event.currentTarget)}><span>세션</span></button>}
       </aside>
@@ -158,7 +175,7 @@ export function SessionModeRoot() {
     <footer className="session-mode-action-dock" aria-label="행동 도구">
       <SessionActionDock
         actorId={actionActorId}
-        suspended={Boolean(activeUtility || workspaceLayer || snapshot.resolution)}
+        suspended={Boolean(activeUtility || workspaceLayer || snapshot.resolution || playerHandoutOpen)}
         onOpenRules={(button) => toggleUtility("rules", button)}
       />
     </footer>
@@ -168,6 +185,7 @@ export function SessionModeRoot() {
       {activeUtility === "actor" && role === "dm" && <SessionDmActorPane onClose={closeUtility} />}
       {activeUtility === "encounter" && role === "dm" && <SessionDmEncounterPane onClose={closeUtility} />}
       {activeUtility === "participants" && role === "dm" && <SessionParticipantsPane onClose={closeUtility} />}
+      {activeUtility === "handout" && role === "dm" && <SessionDmHandoutPane onClose={closeUtility} />}
       {activeUtility === "session" && role === "dm" && <SessionSharePane onClose={closeUtility} />}
       {activeUtility === "player-session" && role === "player" && <SessionPlayerSessionPane onClose={closeUtility} />}
       {role === "player" && <div className="session-full-sheet-layer" hidden={workspaceLayer !== "full-sheet"} aria-hidden={workspaceLayer !== "full-sheet"}>
@@ -177,6 +195,8 @@ export function SessionModeRoot() {
       {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
       {snapshot.resolution && activeUtility !== "activity" && <SessionResolutionLayer onOpenActivity={(button) => toggleUtility("activity", button)} />}
       {role === "player" && activeUtility !== "player-session" && <SessionPlayerRecoveryStrip onOpen={(button) => toggleUtility("player-session", button)} />}
+      {role === "player" && <SessionPlayerHandoutError />}
+      {role === "player" && <SessionPlayerHandoutViewer />}
     </div>
   </div>;
 }
