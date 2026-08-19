@@ -9,7 +9,7 @@
 - sequence `3`
 - task_id `v1-product-experience-overhaul`
 - current milestone: **V0.9**
-- dispatch recommendation: `continue`
+- dispatch recommendation: `needs_user`
 
 ## Watcher execution conventions
 - `STATUS.md`와 사람에게 보여 주는 watcher 상태 설명은 **한국어로 작성한다**. 정확한 SHA/workflow/job/code 식별자는 원문을 유지할 수 있다.
@@ -42,53 +42,46 @@ These observations remain the only reopened product scope. Unrelated previously 
 The product fixes landed by `461f4f62de159fe8d0b4e4fadd4a20340efd1db8`; `d942d58a...` is a subsequent **test-only** alignment commit that removed one stale expectation that d10 must use `CylinderGeometry`.
 
 ### Fix 1 — UI-demo-aligned production dice
-- `src/PhysicsDice3D.tsx` remains the shared Three.js + cannon-es physics renderer used by sheet/runtime presentation.
-- production facets/numerals/light treatment now use the prior UI-demo bronze/warm visual language (`#c77d38`, warm numerals, flat polyhedral facets).
-- d10 no longer uses a cylinder/prism mesh; it uses a dedicated ten-face polyhedral geometry helper.
-- authoritative results, physics replay, reduced-motion and result-convergence behavior remain presentation-only and unchanged in authority.
+- shared `PhysicsDice3D` uses the prior UI-demo bronze/warm facet language.
+- d10 uses dedicated ten-face polyhedral geometry instead of `CylinderGeometry`.
+- authoritative-result convergence remains presentation-only.
 
-### Fix 2 — reference/demo attack is actually playable
-- new outer acceptance projection reuses the existing production runtime and existing `runtimeSpatialRelation` facts.
-- the reference wolf is at a legal 5 ft melee relation in the offline reference scene, so default Aelar has a real legal longsword target.
-- attack `eligibleTargetIds` are projected from existing spatial visibility/range facts rather than presenting out-of-range targets as legal.
-- actual attack resolution still goes through the existing authoritative attack transaction/resolution path.
+### Fix 2 — reference/demo attack is playable
+- reference wolf has a legal 5 ft melee relation for default Aelar.
+- target eligibility reuses existing `runtimeSpatialRelation` visibility/range facts.
+- attack resolution remains on the existing authoritative transaction/resolution path.
 
-### Fix 3 — official Character Sheet layout is exposed from Character Library
-- new `CharacterLibraryUxBridge` mounts into the existing Character Library header.
-- it exposes the existing persisted `SimpleVTT 시트 / 공식 시트 스타일` preference before a Character is opened, matching the UI-demo exposure.
-- it reuses the existing `CharacterSheetPlayScreen` / `OfficialCharacterSheetPlayScreen`; no second Character representation or mechanics path was created.
+### Fix 3 — official Character Sheet layout exposure
+- `CharacterLibraryUxBridge` exposes the existing persisted `SimpleVTT 시트 / 공식 시트 스타일` preference before opening a Character.
+- existing `CharacterSheetPlayScreen` / `OfficialCharacterSheetPlayScreen` remain two presentations over one active Character.
 
 ### Fix 4 — Character cards select their own canonical Character
-- the Character Library bridge maps each rendered regular card to the same-index `snapshot.characters` entry and calls existing `selectProductionCharacter(character.id)`.
-- default legacy Mira fixture data is materialized as a distinct playable Character sheet in the existing adapter Character collection so the existing second card is not just an unusable summary.
-- existing saved full Characters continue through the same canonical selection path; no second Character store was added.
+- regular Character cards map to their corresponding `snapshot.characters[index].id` and call existing `selectProductionCharacter(character.id)`.
+- reference Mira is materialized as a distinct playable Character in the existing collection; no second store exists.
 
 ## Focused regression coverage
-- `tests/ui/productionAcceptanceWindowsRegression.test.ts` verifies the reference demo has a legal melee target and completes the attack through the authoritative runtime, and verifies Mira/Aelar select as distinct Characters.
-- `tests/ui/productionLocalCharacterSwitch.test.ts` verifies distinct reference Character selection plus existing remote SessionProjection preservation.
-- `tests/ui/characterSheetPlayableUx.test.ts` verifies Character Library official-layout exposure while preserving the existing dual-sheet authority.
-- dice structure tests verify the UI-demo bronze visual language, polyhedral d10, shared WebGL physics renderer and no `CylinderGeometry` regression.
-- UI workflow now runs these human-acceptance regressions.
+- `productionAcceptanceWindowsRegression.test.ts`: legal reference melee attack resolves through authoritative runtime; Mira/Aelar selection is distinct.
+- `productionLocalCharacterSwitch.test.ts`: distinct reference Character selection plus remote SessionProjection preservation.
+- `characterSheetPlayableUx.test.ts`: Character Library official-layout exposure and existing dual-sheet authority.
+- dice structure tests: UI-demo bronze visual language, polyhedral d10, shared WebGL physics renderer, no `CylinderGeometry` regression.
 
-## CI evidence at current exact HEAD `d942d58a...`
+## Exact-head automated validation at `d942d58a...`
 Completed success:
-- UI run `32204865620`, frontend job `95926003383`: **success**. This includes the four human-acceptance regressions, Character/session integration, Phase 09 mechanics suite, TypeScript and production build.
+- UI run `32204865620`, frontend `95926003383`: **success**, including human-acceptance regressions, Character/session integration, Phase 09 mechanics, TypeScript and production build.
 - Rules Domain `32204865592`: **success**.
 - Contract validation `32204865594`: **success**.
-- Persistence `32204865644`:
-  - application-contract `95926003457`: **success**;
-  - tauri-storage `95926003360`: **success**.
-- Main Playable `32204865588`, playable-contract `95926017359`: **success**, including full UI/rules/TypeScript/frontend, offline, connected, SessionProjection, DM prepared/live, Undo and accessibility contracts.
-- Phase 11 `32204865635`, offline-walkthrough `95926003264`: **success**.
-- Phase 12 `32204865632`, connected-protocol `95926003189`: **success**.
+- Persistence `32204865644`: application-contract `95926003457` **success**; tauri-storage `95926003360` **success**.
+- Main Playable run `32204865588`: playable-contract `95926017359` **success**; Windows `95926276820` **success**, including Tauri persistence/session transport, Windows executable build, staging and artifact upload.
+- Phase 11 run `32204865635`: offline-walkthrough `95926003264` **success**; Windows `95926114975` **success**, including executable build/stage/upload.
+- Phase 12 run `32204865632`: connected-protocol `95926003189` **success**; Windows connected `95926150169` **success**, including Tauri session transport/persistence, executable build/stage/upload.
 
-Still running at checkpoint; do not restart them merely due watcher continuation:
-- Main Windows `95926276820`: in progress after setup/dependencies, currently Tauri persistence/session transport verification then Windows executable build/stage/upload.
-- Phase 11 Windows `95926114975`: in progress building Windows playable executable.
-- Phase 12 Windows connected `95926150169`: in progress at Tauri session transport/persistence verification before executable build/stage/upload.
-
-### CI diagnosis note
-At intermediate source HEAD `461f4f62...`, all new human-acceptance regressions already passed. UI later failed only because the older `tests/ui/visualDiceStructure.test.ts` still asserted `/CylinderGeometry/`. `gh-fix-ci` was invoked first and the approved connector log fallback proved that single stale assertion. `d942d58a...` changes only that duplicate test expectation to the new polyhedral d10 requirement; current UI is fully green.
+## Exact-head Windows artifact
+Main Playable artifact is available for human acceptance:
+- artifact id: `9348955693`
+- artifact name: `SimpleVTT-Main-Playable-d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+- workflow run: `32204865588`
+- exact head: `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+- digest: `sha256:441b8eac5a0cea1cf9cbaff6788f2e7e4d0099f07d5d2c6c0deca1a2f3fefc96`
 
 ## Previously validated boundaries — do not repeat unless touched
 1. Production Play.
@@ -100,18 +93,12 @@ At intermediate source HEAD `461f4f62...`, all new human-acceptance regressions 
 7. Contextual DM/Content polish + production dead-wiring cleanup.
 8. Proven-unreachable legacy `App.tsx` cleanup plus named-rule baseline alignment.
 
-Dice presentation, demo attack, dual-sheet exposure and Character-card selection were deliberately reopened by human acceptance and are being revalidated at `d942d58a...`.
-
 ## Next Exact Action
-1. Perform mandatory watcher preflight and trust GitHub if `main`, control, work branch or PR #109 moved.
-2. If work HEAD remains `d942d58a...`, **do not repeat source investigation or already-green UI/Linux/application gates**.
-3. Re-fetch the three already-running Windows jobs above; do not manually rerun them.
-4. If any Windows job fails, invoke `gh-fix-ci` first, then use the user-authorized connector log fallback if `gh` is unavailable; fix only the observed failure.
-5. Once Main Windows `95926276820` succeeds with build/stage/upload, fetch run `32204865588` artifact for exact HEAD `d942d58a...`, download it and deliver the executable/ZIP to the user.
-6. Prefer also recording Phase 11/Phase 12 Windows success if they complete in the same exact-head set; they are already running.
-7. Set control to `needs_user` only after the exact-head playable artifact is available, because the four original observations require another human Windows acceptance pass.
-8. On retest, ask the user to verify exactly: dice appearance, demo attack, official sheet layout, and distinct Character-card selection. Do not mark V0.9 complete until that human pass succeeds.
-9. Keep PR #109 draft/unmerged.
+1. Wait for focused human Windows acceptance on the exact-head Main Playable artifact above.
+2. Human retest must verify exactly the four reopened observations: dice appearance matches the established UI demo; demo attack is executable; official sheet layout is visible/selectable; distinct Character cards open distinct canonical Characters.
+3. If any observation still fails, set the same sequence back to `continue`, record the exact human repro, and fix only the observed failure.
+4. If all four pass, record the human acceptance result before any V0.9 completion decision.
+5. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
-`continue`
+`needs_user`
