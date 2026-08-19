@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { ActionVm, SceneEntity } from "./app/contracts";
 import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
 import { sheetAbilityModifier } from "./app/sheetRollValues";
+import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import "./session-mode.css";
 
 type SessionUtility = "quick-sheet" | "actor" | null;
+type WorkspaceLayer = "full-sheet" | null;
 
 function actionDamageSummary(action: ActionVm) {
   if (!action.damage?.length) return action.summary;
@@ -24,7 +26,10 @@ function connectionCopy(state: "connected" | "reconnecting" | "disconnected") {
 export function SessionModeRoot() {
   const { snapshot, stopSession } = useSimpleVtt();
   const [activeUtility, setActiveUtility] = useState<SessionUtility>(null);
+  const [workspaceLayer, setWorkspaceLayer] = useState<WorkspaceLayer>(null);
+  const [workspaceReturnUtility, setWorkspaceReturnUtility] = useState<SessionUtility>(null);
   const lastLauncher = useRef<HTMLButtonElement | null>(null);
+  const fullSheetLauncher = useRef<HTMLButtonElement | null>(null);
 
   const closeUtility = () => {
     setActiveUtility(null);
@@ -36,15 +41,40 @@ export function SessionModeRoot() {
     setActiveUtility((current) => current === utility ? null : utility);
   };
 
+  const openFullSheet = (launcher: HTMLButtonElement) => {
+    fullSheetLauncher.current = launcher;
+    setWorkspaceReturnUtility(activeUtility);
+    setActiveUtility(null);
+    setWorkspaceLayer("full-sheet");
+  };
+
+  const closeFullSheet = () => {
+    setWorkspaceLayer(null);
+    if (workspaceReturnUtility) {
+      setActiveUtility(workspaceReturnUtility);
+      setWorkspaceReturnUtility(null);
+      return;
+    }
+    setWorkspaceReturnUtility(null);
+    window.requestAnimationFrame(() => fullSheetLauncher.current?.focus());
+  };
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || !activeUtility) return;
-      event.preventDefault();
-      closeUtility();
+      if (event.key !== "Escape") return;
+      if (workspaceLayer) {
+        event.preventDefault();
+        closeFullSheet();
+        return;
+      }
+      if (activeUtility) {
+        event.preventDefault();
+        closeUtility();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeUtility]);
+  }, [activeUtility, workspaceLayer, workspaceReturnUtility]);
 
   if (!snapshot) return null;
 
@@ -72,7 +102,7 @@ export function SessionModeRoot() {
 
       <div className="session-mode-role-controls">
         {role === "player"
-          ? <PlayerIdentityButton onOpen={(button) => toggleUtility("quick-sheet", button)} />
+          ? <PlayerIdentityControls onOpenQuick={(button) => toggleUtility("quick-sheet", button)} onOpenFull={openFullSheet} />
           : <DmActorIdentityButton actor={dmActor} onOpen={(button) => toggleUtility("actor", button)} />}
         <button type="button" className="session-mode-exit" onClick={() => void stopSession()}>{role === "dm" ? "세션 종료" : "세션 나가기"}</button>
       </div>
@@ -107,24 +137,30 @@ export function SessionModeRoot() {
     </footer>
 
     <div className="session-mode-layer-host" aria-live="polite">
-      {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} />}
+      {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
       {activeUtility === "actor" && role === "dm" && <ActorQuickView actor={dmActor} onClose={closeUtility} />}
+      {role === "player" && <div className="session-full-sheet-layer" hidden={workspaceLayer !== "full-sheet"} aria-hidden={workspaceLayer !== "full-sheet"}>
+        <CharacterSheetWorkspace hostMode="session" onClose={closeFullSheet} />
+      </div>}
       {snapshot.resolution && <SessionResolutionFallback />}
     </div>
   </div>;
 }
 
-function PlayerIdentityButton({ onOpen }: { onOpen(button: HTMLButtonElement): void }) {
+function PlayerIdentityControls({ onOpenQuick, onOpenFull }: { onOpenQuick(button: HTMLButtonElement): void; onOpenFull(button: HTMLButtonElement): void }) {
   const { snapshot } = useSimpleVtt();
   if (!snapshot) return null;
   const character = snapshot.activeCharacter;
   const portrait = sanitizeCharacterPortrait(character.portrait);
   const initials = character.name.trim().slice(0, 2) || "PC";
 
-  return <button type="button" className="session-mode-character-chip" aria-label={`${character.name} 빠른 캐릭터 시트 열기`} onClick={(event) => onOpen(event.currentTarget)}>
-    <span className="session-mode-avatar">{portrait ? <img src={portrait.asset.dataUrl} alt="" style={{ objectPosition: `${portrait.focalX * 100}% ${portrait.focalY * 100}%` }} /> : initials}</span>
-    <span className="session-mode-chip-copy"><strong>{character.name}</strong><small>HP {character.hp}/{character.maxHp}</small></span>
-  </button>;
+  return <div className="session-mode-player-sheet-controls">
+    <button type="button" className="session-mode-character-chip" aria-label={`${character.name} 빠른 캐릭터 시트 열기`} onClick={(event) => onOpenQuick(event.currentTarget)}>
+      <span className="session-mode-avatar">{portrait ? <img src={portrait.asset.dataUrl} alt="" style={{ objectPosition: `${portrait.focalX * 100}% ${portrait.focalY * 100}%` }} /> : initials}</span>
+      <span className="session-mode-chip-copy"><strong>{character.name}</strong><small>HP {character.hp}/{character.maxHp}</small></span>
+    </button>
+    <button type="button" className="session-mode-full-sheet-launcher" aria-label={`${character.name} 전체 캐릭터 시트 열기`} onClick={(event) => onOpenFull(event.currentTarget)}>전체 시트</button>
+  </div>;
 }
 
 function DmActorIdentityButton({ actor, onOpen }: { actor: SceneEntity | null; onOpen(button: HTMLButtonElement): void }) {
@@ -134,7 +170,7 @@ function DmActorIdentityButton({ actor, onOpen }: { actor: SceneEntity | null; o
   </button>;
 }
 
-function QuickSheet({ onClose }: { onClose(): void }) {
+function QuickSheet({ onClose, onOpenFull }: { onClose(): void; onOpenFull(button: HTMLButtonElement): void }) {
   const { snapshot } = useSimpleVtt();
   if (!snapshot) return null;
   const character = snapshot.activeCharacter;
@@ -152,7 +188,7 @@ function QuickSheet({ onClose }: { onClose(): void }) {
         <span className="session-quick-sheet-portrait">{portrait ? <img src={portrait.asset.dataUrl} alt={`${character.name} 초상화`} style={{ objectPosition: `${portrait.focalX * 100}% ${portrait.focalY * 100}%` }} /> : initials}</span>
         <div><strong>{character.name}</strong><small>{character.className} {character.level}{character.subclassName ? ` · ${character.subclassName}` : ""}</small></div>
       </div>
-      <button type="button" className="session-quick-sheet-close" autoFocus aria-label="빠른 시트 닫기" onClick={onClose}>×</button>
+      <div className="session-quick-sheet-head-actions"><button type="button" className="session-quick-sheet-full" onClick={(event) => onOpenFull(event.currentTarget)}>전체 시트</button><button type="button" className="session-quick-sheet-close" autoFocus aria-label="빠른 시트 닫기" onClick={onClose}>×</button></div>
     </header>
 
     <section className="session-quick-sheet-vitals" aria-label="핵심 수치">
