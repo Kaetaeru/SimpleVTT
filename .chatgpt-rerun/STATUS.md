@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · V0.9 전체 기획 통합 완료, 구현 계속 승인
+**연결 상태:** `main` coordination · 구현 계속 승인 · Full Sheet/Rules/Activity 검증 완료 · Freeform CI 대기
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - 활성 작업 브랜치: `agent/108-production-play-session-ux`
@@ -9,64 +9,53 @@
 - Task: `v1-product-experience-overhaul`
 - Control 목표: `continue`
 - PR: #109 open/draft/unmerged
-- 검증된 source checkpoint: `fbf37144d2ed56272429287419393bf221d83f44`
+- 현재 source HEAD: `377d06f6129502e4be897d633758dda57e57021a`
 
-## V0.9 전체 실행 계획
+## 이번 실행에서 완료된 검증
 
-`.chatgpt-rerun/PLAN.md`에 지금까지 확정한 V0.9 내용을 watcher 실행 명세로 모두 통합했습니다.
+### Full Sheet
+`d1641ae415f12e2b3604c42f34f65b3f0d947338`
 
-포함 범위:
-- 세션 내내 켜두는 tabletop companion 철학
-- Library Mode / persistent Session Mode
-- DM 즉시 활성 세션, Lobby/Ready/Play Start 폐기
-- Player join/reconnect
-- Session Bar/Main Focus/Action Dock/Utility Rail/LayerHost
-- Player/DM 공용 및 고유 UI
-- Quick Sheet / Full Sheet
-- Rules / Activity
-- Freeform / intent-first Action Dock / Target flow
-- spatial module 부재 시 valid target을 사거리 내로 취급
-- Initiative 확장
-- DM Encounter/Actor/Participants/Session 도구
-- cinematic dice / result
-- Handout
-- responsive / keyboard / focus / recovery
-- 기존 authority 재사용 원칙과 금지되는 중복 시스템
-- slice별 구현 순서
-- Windows human acceptance A-J
-- exact-head validation 및 V0.9 완료 기준
+UI run `32212271658` / frontend `95947137481`: **SUCCESS**.
 
-## 현재 완료된 구현
+- 기존 SimpleVTT/Official Sheet를 standalone/session 공용 workspace로 재사용
+- Session Shell을 유지한 채 Full Sheet layer 열기/닫기
+- layout/page presentation state 보존
+- Session에서는 local random roll을 authoritative shared result로 사용하지 않음
+- embedded Sheet dice tray는 standalone 전용
 
-walking skeleton은 이미 구현/검증 완료입니다.
+### Rules / Activity
+`139ebcffcc537572ff198dd0140017a75dc21e97`
 
-- active connected Session -> app-level `SessionModeRoot`
-- persistent Session shell
-- Player Character identity + one-click Quick Sheet
-- DM Actor identity + Quick View
-- zero Player / zero Combatant valid session state
-- canonical snapshot/command authority 유지
-- 기존 Library sidebar / `플레이로 돌아가기` / permanent Actor wall / category hotbar를 새 Session root에서 제거
+UI run `32212781137` / frontend `95948568396`: **SUCCESS**.
 
-GitHub Actions UI run `32211000260` / frontend job `95943502788`: **SUCCESS**.
+- Rules는 `snapshot.catalog` 기반 in-session drawer
+- Activity는 `snapshot.activity` 기반 in-session drawer
+- DM Undo는 기존 `undoLastResolution()` 사용
+- Full Sheet 위 Rules layering 및 Escape 순서 보존
+- TypeScript/build 포함 전체 UI regression green
 
-## 다음 실행
+중간 HEAD `5a981de...`의 build 실패는 Quick Sheet JSX 닫힘 한 줄 누락이었고 `139ebcff...`에서 수정/재검증 완료했습니다.
 
-같은 sequence 3에서 바로 이어서:
+## 현재 구현 완료 · 검증 대기
 
-1. Full Sheet in-session host + shared Sheet extraction/state preservation
-2. Rules/Activity
-3. Freeform convergence
-4. Action Dock
-5. Target/no-spatial fallback
-6. cinematic dice/result
-7. DM tools
-8. reconnect utilities
-9. Initiative
-10. Handout
-11. responsive/focus
-12. exact-head validation
-13. Windows acceptance
+Freeform Main Focus slice:
+`377d06f6129502e4be897d633758dda57e57021a`
+
+- 장면/세션 identity + 조용한 안내
+- 최근 meaningful result 최대 1개
+- 필요할 때 Activity 열기
+- Player 0 / Combatant 0은 정상 DM Freeform 상태로 조용히 표시
+- Actor wall / Activity feed / action economy / action catalog 없음
+
+UI run `32212972447` / frontend `95949109966`: 현재 **queued**.
+
+## 다음
+
+1. 위 exact-head UI run 결과 확인
+2. 실패 시 관측된 실패만 수정
+3. 성공 시 intent-first Action Dock slice 시작
+4. 그 뒤 Detail/Target, dice/result, DM tools, reconnect, Initiative, Handout 순으로 진행
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
