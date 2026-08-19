@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · exact-head Windows 빌드 완료, human 재검수 대기
+**연결 상태:** `main` coordination · 구현 일시 중단, V0.9 UI-first 기획 재정립
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - canonical watcher branch: `main`
@@ -11,37 +11,25 @@
 - Control 목표: `needs_user`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- 현재 수정 HEAD: `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+- 새 UI 기획 문서: `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
+- planning commit: `3d1507fafbfdeff27d8986fd26f9d815fb6f41dd`
 
 ## 현재 상태
 
-이전 Windows human acceptance에서 보고된 네 가지 문제에 대한 수정과 exact-head 자동 검증이 완료됐습니다.
+자동 검증 green 상태에서도 실제 사용자 화면의 interaction 계약이 여러 군데 빠져 있었기 때문에 구현을 더 진행하지 않고 UI 기준으로 V0.9 기획을 다시 잡습니다.
 
-수정 범위:
-1. **주사위:** production 공용 physics renderer를 UI demo의 브론즈/웜 계열 polyhedral 디자인으로 맞추고 d10 원통형 geometry를 제거했습니다.
-2. **demo 공격:** 기본 Aelar가 reference demo에서 실제 공격 가능한 5피트 대상을 가지며 기존 authoritative attack runtime으로 resolve됩니다.
-3. **공식 시트:** Character Library에서 기존 `SimpleVTT 시트 / 공식 시트 스타일`을 바로 선택할 수 있습니다.
-4. **Character 카드:** 서로 다른 카드가 각각 자기 canonical Character ID를 선택합니다.
+이번에 확정해서 문서화한 핵심 결정:
 
-## exact-head 자동 검증
-`d942d58a...`에서 다음이 모두 success입니다.
-- UI `32204865620` / frontend `95926003383`
-- Rules Domain `32204865592`
-- Contract validation `32204865594`
-- Persistence application `95926003457` / Tauri storage `95926003360`
-- Main Playable Linux `95926017359`
-- Main Windows `95926276820`: Tauri persistence/session transport, executable build, stage, upload 모두 success
-- Phase 11 offline `95926003264` / Windows `95926114975`: success
-- Phase 12 connected `95926003189` / Windows connected `95926150169`: success
+1. **주사위 연출** — Character Sheet 내부에 별도 주사위 frame을 만들지 않습니다. 데모에서 합의한 body-level cinematic overlay를 사용하고, 주사위는 화면 뒤/깊은 곳에서 사용자 쪽으로 날아오는 3D 연출을 사용합니다.
+2. **멀티플레이 DM 흐름** — DM이 `세션 열기`를 누르는 순간 세션은 활성 상태이며 DM workspace에 바로 들어갑니다. 플레이어 0명이어도 즉시 Encounter/Combatant/session editing/handout/Initiative 등 DM 도구를 사용할 수 있습니다.
+3. **로비 제거** — 플레이어들을 lobby에서 기다리고 모두 Ready가 된 뒤 `플레이 시작`을 누르는 필수 흐름을 사용하지 않습니다. 플레이어는 이미 열린 세션에 합류합니다.
+4. **사거리 fallback** — 별도 spatial/range module이 없으면 모든 적절한 target을 사정거리 이내로 간주합니다. `spatial data 없음`을 `out of range`로 취급하지 않으며, 기본 제품에서 `5 ft 대상 없음` 때문에 근접 공격을 막지 않습니다.
 
-## 전달 artifact
-- 이름: `SimpleVTT-Main-Playable-d942d58a83eb2222ffd722d58b19c67c3dc8de13`
-- Artifact ID: `9348955693`
-- Workflow run: `32204865588`
-- SHA256: `441b8eac5a0cea1cf9cbaff6788f2e7e4d0099f07d5d2c6c0deca1a2f3fefc96`
-- 현재 대화에 `SimpleVTT-Main-Playable-d942d58a.zip`으로 전달됨
+기존 `PHASE14_PRODUCTION_UX_REDESIGN.md`의 Host preparing/Client lobby/Ready/Start 전제와 기본 spatial-distance 전제는 새 UI-first 문서와 충돌하는 범위에서 더 이상 제품 기준으로 사용하지 않습니다.
 
-이제 다시 빌드할 필요는 없습니다. 사용자 Windows 재검수에서 다음 네 항목만 확인하면 됩니다: 주사위 디자인, demo 공격, 공식 시트 레이아웃, 서로 다른 Character 카드 선택.
+## 다음 단계
+
+구현이나 CI를 바로 재개하지 않습니다. 다음에는 새 문서를 화면 단위로 보강합니다: Session/DM/Player lifecycle, Character Library/Sheet, Freeform/Combat, Handout, Activity/Undo, Settings, error/recovery 순으로 실제 사용자가 보는 정보와 primary action을 먼저 확정합니다.
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
