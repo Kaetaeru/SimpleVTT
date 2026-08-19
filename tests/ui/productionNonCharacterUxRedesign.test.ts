@@ -4,6 +4,7 @@ import test from "node:test";
 
 const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
 const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
+const sessionRoot=readFileSync(new URL("../../src/SessionModeRoot.tsx",import.meta.url),"utf8");
 const play=readFileSync(new URL("../../src/ProductionPlayScreen.tsx",import.meta.url),"utf8");
 const content=readFileSync(new URL("../../src/V1ContentScreen.tsx",import.meta.url),"utf8");
 const wire=readFileSync(new URL("../../src/app/connectedSessionWire.ts",import.meta.url),"utf8");
@@ -60,9 +61,12 @@ test("Content is the primary addon review/install surface and points users to Ru
   assert.doesNotMatch(content,/RuleModule|Capability|generic Catalog|mechanics\/progression/);
 });
 
-test("dead PlaySessionDock production wiring is removed while the current product shell stays mounted",()=>{
+test("dead global production wiring stays removed while current Session presentation owners stay mounted",()=>{
   assert.doesNotMatch(main,/PlaySessionDock|play-session-dock\.css/);
-  assert.match(main,/SessionImageHandoutBridge/);
+  assert.match(main,/sessionImageHandoutRuntimeAdapter/);
+  assert.doesNotMatch(main,/<SessionImageHandoutBridge \/>/);
+  assert.match(sessionRoot,/SessionDmHandoutPane/);
+  assert.match(sessionRoot,/SessionPlayerHandoutViewer/);
   assert.match(main,/CharacterPortraitBridge/);
 });
 
