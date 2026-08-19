@@ -9,10 +9,11 @@ import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock } from "./SessionActionDock";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
 import { SessionMainFocus } from "./SessionMainFocus";
+import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionPlayerSession";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
 
-type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "activity" | "session" | null;
+type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | null;
 
 const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", "damage-animation"]);
@@ -122,9 +123,14 @@ export function SessionModeRoot() {
 
       <div className="session-mode-role-controls">
         {role === "player"
-          ? <PlayerIdentityControls onOpenQuick={(button) => toggleUtility("quick-sheet", button)} onOpenFull={openFullSheet} />
-          : <DmActorIdentityButton actor={dmActor} onOpen={(button) => toggleUtility("actor", button)} />}
-        <button type="button" className="session-mode-exit" onClick={() => void stopSession()}>{role === "dm" ? "세션 종료" : "세션 나가기"}</button>
+          ? <>
+            <PlayerIdentityControls onOpenQuick={(button) => toggleUtility("quick-sheet", button)} onOpenFull={openFullSheet} />
+            <button type="button" className="session-mode-exit" aria-label="Player 세션 연결 열기" onClick={(event) => toggleUtility("player-session", event.currentTarget)}>연결</button>
+          </>
+          : <>
+            <DmActorIdentityButton actor={dmActor} onOpen={(button) => toggleUtility("actor", button)} />
+            <button type="button" className="session-mode-exit" onClick={() => void stopSession()}>세션 종료</button>
+          </>}
       </div>
     </header>
 
@@ -141,6 +147,7 @@ export function SessionModeRoot() {
         {role === "dm" && <button type="button" className={activeUtility === "encounter" ? "active" : ""} aria-pressed={activeUtility === "encounter"} aria-label="Encounter 도구 열기" onClick={(event) => toggleUtility("encounter", event.currentTarget)}><span>Encounter</span></button>}
         {role === "dm" && <button type="button" className={activeUtility === "participants" ? "active" : ""} aria-pressed={activeUtility === "participants"} aria-label="참가자 보기" onClick={(event) => toggleUtility("participants", event.currentTarget)}><span>참가자</span></button>}
         <button type="button" className={activeUtility === "activity" ? "active" : ""} aria-pressed={activeUtility === "activity"} aria-label="최근 세션 결과 보기" onClick={(event) => toggleUtility("activity", event.currentTarget)}><span>기록</span></button>
+        {role === "player" && <button type="button" className={activeUtility === "player-session" ? "active" : ""} aria-pressed={activeUtility === "player-session"} aria-label="Player 세션 연결 열기" onClick={(event) => toggleUtility("player-session", event.currentTarget)}><span>세션</span></button>}
         {role === "dm" && <button type="button" className={activeUtility === "session" ? "active" : ""} aria-pressed={activeUtility === "session"} aria-label="세션 공유 정보 열기" onClick={(event) => toggleUtility("session", event.currentTarget)}><span>세션</span></button>}
       </aside>
     </div>
@@ -159,12 +166,14 @@ export function SessionModeRoot() {
       {activeUtility === "encounter" && role === "dm" && <SessionDmEncounterPane onClose={closeUtility} />}
       {activeUtility === "participants" && role === "dm" && <SessionParticipantsPane onClose={closeUtility} />}
       {activeUtility === "session" && role === "dm" && <SessionSharePane onClose={closeUtility} />}
+      {activeUtility === "player-session" && role === "player" && <SessionPlayerSessionPane onClose={closeUtility} />}
       {role === "player" && <div className="session-full-sheet-layer" hidden={workspaceLayer !== "full-sheet"} aria-hidden={workspaceLayer !== "full-sheet"}>
         <CharacterSheetWorkspace hostMode="session" onClose={closeFullSheet} onOpenRules={(button) => toggleUtility("rules", button)} />
       </div>}
       {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
       {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
       {snapshot.resolution && activeUtility !== "activity" && <SessionResolutionLayer onOpenActivity={(button) => toggleUtility("activity", button)} />}
+      {role === "player" && activeUtility !== "player-session" && <SessionPlayerRecoveryStrip onOpen={(button) => toggleUtility("player-session", button)} />}
     </div>
   </div>;
 }
