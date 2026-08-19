@@ -34,10 +34,9 @@ test("Encounter pane uses canonical Combatant and Initiative commands without li
   assert.doesNotMatch(tools,/lifecycle|preparing|Ready|플레이 시작/);
 });
 
-test("safe Combatant removal is an active Freeform rule at the existing adapter boundary",()=>{
-  assert.match(combatantAdapter,/activeFreeform=.*internal\.sessionMode==="freeform"/);
-  assert.match(combatantAdapter,/lifecycle==="preparing"\|\|lifecycle==="live"/);
-  assert.match(combatantAdapter,/if \(!activeFreeform\)/);
+test("safe Combatant removal preserves preparation and extends only to active live Freeform",()=>{
+  assert.match(combatantAdapter,/canRemove=lifecycle==="preparing"\|\|\(lifecycle==="live"&&internal\.sessionMode==="freeform"\)/);
+  assert.match(combatantAdapter,/if \(!canRemove\)/);
   assert.match(combatantAdapter,/internal\.resolution/);
   assert.match(combatantAdapter,/delete internal\.scene\.actionsByActor\[combatantId\]/);
   assert.match(combatantAdapter,/delete internal\.scene\.economyByActor\[combatantId\]/);
