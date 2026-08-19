@@ -4,123 +4,92 @@
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `needs_user`
-- current milestone: **V0.9 UI-first replanning complete through implementation-facing contracts**
+- current milestone: **persistent Session walking skeleton implemented and UI-validated**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
 - issue: #108
 - PR #109: open/draft/unmerged; no merge authorized
 
-## Current checkpoint
-Source implementation remains paused.
+## Current exact source checkpoint
+`fbf37144d2ed56272429287419393bf221d83f44`
 
-The Session UI is now specified at five levels:
-1. product philosophy;
-2. complete visible scene map;
-3. interaction contract;
-4. low-fidelity visual layout;
-5. implementation-facing architecture/reuse/data/behavior contracts.
+## What changed
+The first approved source slice is complete.
 
-Latest planning HEAD:
-`a1ee400d1bcb7b8db3f72d793e7bdefb7782c8e9`
+### Root mode
+- `ProductRoot` now chooses Library `App` only for `session.role === "offline"`.
+- existing Host/Client session facts immediately select `SessionModeRoot`.
+- active Session is therefore app-level presentation rather than the old `scene` route inside the Library sidebar.
 
-Previous automated-green implementation HEAD:
-`d942d58a83eb2222ffd722d58b19c67c3dc8de13`
+### Persistent Session shell
+`SessionModeRoot` now provides:
+- compact Session Bar;
+- dominant low-noise Main Focus;
+- minimal right Utility Rail;
+- persistent Action Dock shell;
+- ordered LayerHost.
 
-No source code or CI was run in this planning turn.
+### Identity and Quick Sheet
+Player:
+- Character identity chip is always visible;
+- one click opens Quick Sheet;
+- Quick Sheet reads canonical Character/Scene/Action projections only.
 
-## Current planning documents
-- `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
-- `.agents/V0_9_PLAY_SURFACE_INVENTORY.md`
-- `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md`
-- `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md`
-- `.agents/V0_9_SESSION_INTERACTION_SPEC.md`
-- `.agents/V0_9_SESSION_VISUAL_LAYOUT_CONTRACT.md`
-- `.agents/V0_9_SESSION_UI_ARCHITECTURE_CONTRACT.md`
-- `.agents/V0_9_EXISTING_UI_REUSE_MAP.md`
-- `.agents/V0_9_QUICK_SHEET_INFORMATION_ARCHITECTURE.md`
-- `.agents/V0_9_FULL_SHEET_IN_SESSION_REUSE_CONTRACT.md`
-- `.agents/V0_9_ACTION_DOCK_BEHAVIOR_MATRIX.md`
+DM:
+- current Actor identity is always visible;
+- one click opens a compact Actor quick view;
+- Player 0 / Combatant 0 remains a normal active Session state.
 
-## Locked architecture decisions
-### App/Session root
-- active Session is app-level `SessionModeRoot`, not one Library route;
-- `SessionModeRoot` contains SessionBar, MainFocus, ActionDock, UtilityRail and LayerHost;
-- Host enters active DM Session immediately after Host succeeds;
-- no Player Lobby / Ready / Play Start visible gate.
+### Authority preservation
+No new mechanics authority was introduced.
+- Character, Scene, Actions, Session, Resolution and Activity still come from existing `AppProvider` snapshot/adapters.
+- no `mockAdapter` import in the new Session root;
+- no new action resolver, target engine, Character cache or Session lifecycle;
+- existing runtime/network/content/dice/VFX/handout bridges remain mounted in `main.tsx`.
 
-### State ownership
-New Session UI state may own only presentation state such as:
-- open tool/layer;
-- intent/detail/selected-target UI step;
-- focus/scroll restoration;
-- responsive pane presentation.
+### Presentation migration begun
+The new active Session root does not render the old Library sidebar, `플레이로 돌아가기`, permanent Actor card wall or permanent category hotbar.
 
-It may not own duplicate Character, Scene, action legality, initiative, participant/session truth, Resolution/Undo, handout or installed-content state.
+Quick Sheet has no embedded `VisualDiceTray`.
 
-`AppProvider` / existing adapters remain the command and projection authority.
+## Validation
+Exact-head UI run: `32211000260`
+Frontend job: `95943502788`
+Conclusion: **SUCCESS**.
 
-### Existing UI migration
-Reuse mechanics/data logic from current production screens and Character Sheets, but replace conflicting normal-Session presentation:
-- Library sidebar around active Play;
-- `플레이로 돌아가기` route round-trip;
-- permanent Actor card wall;
-- permanent category hotbar;
-- Freeform action economy;
-- Host lifecycle-gated Encounter editing UX;
-- embedded Sheet dice result/tray.
+Verified at this exact HEAD:
+- new persistent Session root structural contract;
+- existing Phase 14 UX regressions;
+- existing lifecycle/live-DM/local projection/spellcasting regressions;
+- Phase 09 mechanics regressions;
+- TypeScript;
+- production build.
 
-### Quick Sheet
-- one-click from Character Identity Chip;
-- canonical `activeCharacter` + Scene/action projections;
-- first viewport prioritizes HP/AC/core stats/status/resources/frequent attacks;
-- no duplicate HP/resource store or generic local setter;
-- routine actions enter authoritative action flow;
-- connected Session rolls must not silently use local randomness as authoritative mechanics.
+Container-local checkout could not be used because the execution container has no external DNS/network access to GitHub. GitHub Actions is the successful validation source for this slice.
 
-### Full Sheet
-- Standalone and Session hosts share one Sheet content family;
-- reuse Official Character/Spellcasting pages and SimpleVTT sections;
-- Session Full Sheet is a LayerHost workspace, not route navigation;
-- layout switch is presentation-only;
-- connected mechanics rolls route through canonical authority;
-- body-level cinematic dice replace Sheet-local tray.
+## Important incompleteness
+This is intentionally only slices 1-3 / walking skeleton.
 
-### Action Dock
-State machine:
-`Resting -> Intent -> Action Detail -> Target if needed -> Pending -> Resolution`.
+Not yet implemented:
+- in-session Full Sheet reuse host;
+- Rules/Activity panes;
+- final Freeform content;
+- intent-first Action Dock behavior and target flow;
+- DM Encounter/Participant controls in the new root;
+- final Initiative expansion;
+- final Handout placement;
+- fresh Windows human acceptance.
 
-- intent grouping uses `OFFICIAL_PLAY_INTENTS` / `intentOptions`;
-- current `ActionVm[]` owns legality/details;
-- `eligibleTargetIds` owns canonical candidates;
-- `resolveAction` owns execution;
-- no second resolver/target engine;
-- no spatial module => canonical target eligibility must treat otherwise-valid targets in range;
-- Freeform hides permanent economy; Initiative adds compact economy/turn context.
-
-## First source slice after authorization
-Do not start the full redesign at once.
-
-Walking skeleton only:
-1. AppRoot Library vs Session Mode selection;
-2. persistent SessionModeRoot frame;
-3. Session Bar real Player Character / DM Actor identity;
-4. low-noise MainFocus placeholder backed by real snapshot;
-5. minimal UtilityRail + LayerHost;
-6. one-click Quick Sheet open/close using canonical state;
-7. preservation of Session context while Quick Sheet opens/closes.
-
-Do not yet add the complete Action Dock, Initiative redesign, Encounter redesign or Handout redesign in the first slice.
-
-## Validation status
-No new validation. Historical `d942d58a...` green automation remains regression evidence for unchanged authorities only and does not validate the new UI.
+The bottom Action Dock is currently only the persistent shell/status region, not the finished action interface.
 
 ## Next Exact Action
-1. Remain `needs_user` until explicit source implementation authorization.
-2. On authorization, switch the same sequence to `continue` and implement the walking skeleton only.
-3. Add focused tests proving persistent Session Mode, no route round-trip, one-click Quick Sheet and no duplicated authority.
-4. Validate the slice before moving to Full Sheet / Rules / Action Dock.
-5. Keep PR #109 draft/unmerged.
+1. Remain `needs_user` at this validated checkpoint.
+2. If the user authorizes continuation, implement **Full Sheet in-session host + shared Sheet extraction/state preservation** next.
+3. Preserve one canonical Character and existing mechanics authority.
+4. Do not introduce Sheet-local dice presentation.
+5. Validate the next slice before moving to Rules/Activity or Action Dock.
+6. Keep PR #109 draft/unmerged.
 
 ## Dispatch recommendation
 `needs_user`
