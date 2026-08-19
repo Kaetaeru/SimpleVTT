@@ -38,7 +38,7 @@ test("turn and Initiative controls delegate to existing authority with player tu
 test("Initiative Main Focus stays compact while Freeform remains the quiet default", () => {
   assert.match(focus, /snapshot\.sessionMode === "initiative"/);
   assert.match(focus, /session-initiative-current-card/);
-  assert.match(focus, /current\.hp\/\{current\.maxHp\}/);
+  assert.match(focus, /\{current\.hp\}\/\{current\.maxHp\}/);
   assert.match(focus, /current\.status\.map/);
   assert.match(focus, /session-freeform-focus/);
   assert.match(focus, /대화와 탐험을 이어가고/);
