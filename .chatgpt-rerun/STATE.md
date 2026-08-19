@@ -3,8 +3,8 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
-- dispatch state: `continue`
-- current milestone: **responsive/keyboard/focus pass validated; final exact-head automated validation is next**
+- dispatch state: `needs_user`
+- current milestone: **final exact-head automated validation complete; Windows human usability acceptance A-J is required next**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
@@ -12,9 +12,9 @@
 - PR #109: open/draft/unmerged; no merge authorized
 
 ## Authorization and planning authority
-The user explicitly authorized this same sequence to continue through the consolidated V0.9 UI-first implementation plan in `.chatgpt-rerun/PLAN.md`.
+The user explicitly authorized this same sequence through the consolidated V0.9 UI-first implementation plan in `.chatgpt-rerun/PLAN.md`.
 
-Resume from this durable checkpoint. Do not redo validated slices solely because rerun restarts.
+All approved source implementation and automated convergence work is now complete on one exact source SHA. The remaining acceptance item is human Windows usability verification. Do not redo already validated slices or make additional source changes merely because rerun restarts.
 
 ## Validated checkpoints — do not repeat unless touched
 
@@ -76,40 +76,75 @@ Exact source HEAD: `9f4d2f64cad008726e318a8ea43cb4f008ae962c`
 
 ### Slice 14 — responsive / keyboard / focus pass
 Exact source HEAD: `ee76aaec6af10fc7b28e939ccfd66eacd4d19384`
-- UI run `32220293621`
-- frontend job `95969371848`
-- conclusion **SUCCESS**
-- Phase 12 connected run `32220293573`: connected-session authority protocol step **SUCCESS**; workflow still stops afterward only on the known deferred Phase 11 offline provenance baseline.
+- UI run `32220293621`, frontend `95969371848`: **SUCCESS**
+- Player Handout dismissal restores focus to contextual `자료` reopen control; utility focus restoration and one-layer Escape order retained.
+- narrow DM session termination remains reachable through the existing `세션` utility pane and canonical `stopSession()`.
+- constrained-height Utility Rail and result layer remain scroll-reachable; Quick Sheet/DM/Handout/Action Dock constrained-width fallbacks retained.
+- all prior UI/mechanics/lifecycle/Phase09 and production build regressions remained green.
 
-Validated scope:
-- audited the already-validated persistent Session surfaces without redesigning mechanics or adding parallel authority;
-- Player Handout dismissal now restores keyboard focus to the contextual `자료` reopen control, including Escape dismissal from an automatically opened handout;
-- existing utility close behavior continues restoring focus to the captured launcher, and one-layer-at-a-time Escape priority remains Handout -> nested Rules/Full Sheet -> workspace -> utility;
-- narrow layout continues hiding the header `.session-mode-exit`, but DM session termination is now also reachable from the existing `세션` utility pane through the canonical `stopSession()` command;
-- constrained-height mobile/tablet Utility Rail now has bounded vertical scrolling/overscroll containment so DM/Player utility buttons do not become unreachable in a short Windows window;
-- transient resolution/result layer now has bounded height plus internal scrolling so action/result controls remain reachable at short viewport heights;
-- Quick Sheet, DM panes, Handout pane, Action Dock detail/target grids retain their existing full-width/single-column constrained-width fallbacks;
-- new `sessionResponsiveKeyboardFocusStructure.test.ts` covers top-layer Escape order, focus restoration, narrow DM session-end reachability, rail/result scrollability, and major constrained-width fallbacks;
-- all prior Session/DM/reconnect/Initiative/Handout/lifecycle/UI/mechanics regressions, Phase09 services, TypeScript and production build remain green.
+### Slice 15 — final exact-head automated convergence
+Exact source HEAD: `67a6a4843415d1a99a67b755cebf6011cd790ab5`
 
-## Known pre-existing CI baseline — final-validation work item
-- Phase 11 / Main Playable / Phase 12 workflows already failed at Slice 10 HEAD `33b0049a...` on the old `phase11OfflineWalkthrough.test.ts` targeting-provenance assertion after the canonical no-spatial fallback work.
-- Slices 11, 13 and 14 confirm the connected-session authority step itself remains green; Slice 13 handout reconnect and Slice 14 connected protocol both pass before the old offline step.
-- This stale offline provenance assertion is now the explicit first item of final automated validation. Do not treat it as a responsive/Handout/Initiative regression.
+Known stale baseline resolved test-only:
+- `phase11OfflineWalkthrough.test.ts` no longer treats presentation `target.distance` as authoritative range state;
+- live target selection now follows canonical `ActionVm.eligibleTargetIds`;
+- no-spatial execution expects `runtime:spatial:<source>-><target>:unconstrained:no-authoritative-module-fact` provenance;
+- the test explicitly rejects fabricated authoritative `runtime:spatial:...:distance:` provenance when no spatial module is installed;
+- no product mechanics/runtime code changed for this convergence.
 
-## Remaining approved implementation order
-1. final exact-head automated validation, beginning with convergence of the known stale offline spatial-provenance assertion to the canonical no-spatial contract;
-2. run/verify the broad exact-head Linux/application/connected/persistence gates and Windows build on one source SHA;
-3. Windows human usability acceptance A-J.
+All exact-head workflows completed **SUCCESS**:
+- UI run `32222240768`, frontend `95974764908` — full Session/UI/mechanics regressions + TypeScript/build
+- Rules Domain run `32222240848`, job `95974764984`
+- Contract validation run `32222240773`, job `95974764787`
+- Persistence run `32222240776`
+  - application-contract `95974765198` — persistence contracts + production build
+  - tauri-storage `95974764893` — immutable persistence stores + atomic Character recovery
+- Phase 11 Playable run `32222240798`
+  - offline-walkthrough `95974764921` — production-composed offline walkthrough + full frontend gate
+  - windows-playable `95974940337` — Windows executable build + artifact upload
+- Main Playable run `32222240805`
+  - playable-contract `95974765297` — UI/Rules/TS/frontend + Phase11/12/13 + DM preparation/adjudication/combat mechanics
+  - windows-playable `95974942440` — Tauri persistence/transport + Windows executable build + artifact upload
+- Phase 12 Connected Session run `32222240777`
+  - connected-protocol `95974764814` — connected authority + Phase11 offline + frontend gate
+  - windows-connected-playable `95974952291` — Tauri transport/persistence + Windows connected-session executable + artifact upload
+
+Windows artifacts for human acceptance:
+- Main playable artifact id `9354472393`
+  - name `SimpleVTT-Main-Playable-67a6a4843415d1a99a67b755cebf6011cd790ab5`
+  - digest `sha256:df80475e789ec8b7688d867cd579e07f9d8191249ae6465f962b7ac118c3975c`
+  - expires `2026-09-02`
+- Phase12 connected artifact id `9354519085`
+  - name `SimpleVTT-Phase12-Windows-67a6a4843415d1a99a67b755cebf6011cd790ab5`
+  - digest `sha256:66099b1c339d0bbd63e59689bfce19a575d89ac9ab856f9d8c88edd0c3ef50f6`
+  - expires `2026-09-02`
+
+## Resolved CI baseline
+The prior Phase11/Main/Phase12 failure on `phase11OfflineWalkthrough.test.ts` spatial provenance is resolved at `67a6a484...`. It was a stale acceptance assumption after the canonical no-spatial fallback and did not require restoring default distance tracking or changing mechanics authority.
+
+## Remaining approved acceptance
+Only **Windows human usability acceptance A-J** remains.
+
+This environment does not provide a real Windows GUI session and therefore cannot honestly certify human usability interactions. Do not mark the task complete from automated evidence alone.
+
+Human acceptance should exercise the existing A-J scenarios, including at minimum:
+- Freeform -> Quick Sheet -> close with context preserved;
+- Full Sheet -> roll -> cinematic dice -> close with context preserved;
+- Rules lookup during an action and return to the same action state;
+- DM Combatant/Encounter operation during active Freeform including zero-player operation;
+- Initiative expansion and return to quiet Freeform;
+- nested Sheet/Rules Escape/focus behavior;
+- reconnect while preserving the persistent Session Shell;
+- melee/attack action without a spatial module;
+- constrained/narrow Windows window access to primary actions, Sheet, utilities and close controls;
+- two-instance Host/Client handout reveal/dismiss/reopen/reconnect restoration.
 
 ## Next Exact Action
-1. Reconcile actual PR head; expected validated source HEAD is `ee76aaec6af10fc7b28e939ccfd66eacd4d19384`.
-2. Begin **final exact-head automated validation** on this source line.
-3. First inspect and correct the known stale `phase11OfflineWalkthrough.test.ts` targeting-provenance assertion so it tests the canonical optional-spatial behavior rather than requiring a spatial provenance line when no spatial module is installed.
-4. The correction should be test/acceptance convergence unless inspection shows a genuine mechanics regression; do not restore default distance tracking or fake spatial provenance.
-5. After that fix, require one new exact source HEAD to pass UI, Phase 11/Main Playable, Phase 12 connected, Persistence/Rules/Contract and Windows build gates. If CI exposes a new failure, invoke `gh-fix-ci` before diagnosis.
-6. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
-7. Windows human usability acceptance follows automated convergence; do not mark complete solely from CI.
+1. Do **not** change source code unless human Windows acceptance finds a concrete defect.
+2. Run Windows human acceptance A-J using exact source/artifact SHA `67a6a4843415d1a99a67b755cebf6011cd790ab5`.
+3. Prefer the Main playable artifact for general single-instance/usability checks and the Phase12 connected artifact for two-instance Host/Client checks.
+4. Record pass/fail evidence for A-J. If any scenario fails, resume this same sequence from the exact failing interaction only and keep all unrelated validated slices untouched.
+5. If all A-J scenarios pass, update STATE/STATUS and publish `control.json` status `complete` last. PR #109 remains draft/unmerged unless the user separately authorizes merge.
 
 ## Dispatch recommendation
-`continue`
+`needs_user`
