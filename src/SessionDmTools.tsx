@@ -142,7 +142,7 @@ export function SessionParticipantsPane({ onClose }: { onClose(): void }) {
   return <aside className="session-dm-pane" aria-label="세션 참가자">
     <PaneHeader eyebrow="PARTICIPANTS" title="참가자" onClose={onClose} />
     <section className="session-dm-section">
-      <div className="session-dm-section-title"><strong>Player {participants.length}명</strong><span>참가자는 열려 있는 세션에 합류합니다. Ready 단계는 없습니다.</span></div>
+      <div className="session-dm-section-title"><strong>Player {participants.length}명</strong><span>참가자는 열려 있는 세션에 바로 합류합니다.</span></div>
       {participants.length ? <div className="session-participant-list">
         {participants.map((participant) => <div key={participant.id}>
           <span className={`session-participant-state ${participant.state}`} aria-hidden="true" />
