@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 계속 승인 · responsive/keyboard/focus pass까지 검증 완료
+**연결 상태:** `main` coordination · 구현 계속 승인 · final exact-head automated validation 진행 중
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - 활성 작업 브랜치: `agent/108-production-play-session-ux`
@@ -9,32 +9,37 @@
 - Task: `v1-product-experience-overhaul`
 - Control 목표: `continue`
 - PR: #109 open/draft/unmerged
-- 검증된 현재 source HEAD: `ee76aaec6af10fc7b28e939ccfd66eacd4d19384`
+- 현재 automated-validation source HEAD: `67a6a4843415d1a99a67b755cebf6011cd790ab5`
 
-## 추가 검증 완료 — responsive / keyboard / focus
+## Final automated validation 진행 상황
 
-UI run `32220293621` / frontend `95969371848`: **SUCCESS**.
+알려진 `phase11OfflineWalkthrough.test.ts` spatial-provenance baseline을 test-only로 canonical no-spatial 계약에 맞게 수렴했습니다.
 
-- Player Handout 닫기/Escape 후 활성 `자료` reopen control로 focus 복귀
-- 기존 utility launcher focus restoration과 top-layer 한 단계 Escape 순서 유지
-- 좁은 화면에서 header 종료 버튼이 숨겨져도 DM `세션` pane에서 기존 `stopSession()`으로 세션 종료 가능
-- 낮은 Windows 창에서 Utility Rail이 세로 스크롤되어 모든 도구 접근 가능
-- result/resolution layer도 높이 제한 + 내부 스크롤로 제어 버튼 접근 가능
-- Quick Sheet / DM pane / Handout / Action Dock target/detail의 기존 constrained-width fallback 유지
-- 새 focused responsive/keyboard/focus 회귀 테스트 통과
-- 기존 Session/DM/reconnect/Initiative/Handout/lifecycle/Phase09, TypeScript, production build 모두 green
+- `target.distance`를 authoritative range fact로 취급하지 않음
+- canonical `ActionVm.eligibleTargetIds`로 live target eligibility 확인
+- spatial module이 없을 때 `unconstrained:no-authoritative-module-fact` provenance 확인
+- 가짜 `runtime:spatial:...:distance:` authoritative provenance를 요구하거나 생성하지 않음
+- 제품 mechanics/runtime 코드는 변경하지 않음
 
-Phase 12 connected workflow도 authority protocol 단계는 green이며, 이후 실패는 이전부터 기록된 `phase11OfflineWalkthrough.test.ts`의 오래된 spatial-provenance assertion 하나뿐입니다.
+같은 exact HEAD `67a6a484...`에서 현재 완료:
+- UI workflow: **SUCCESS**
+- Rules Domain: **SUCCESS**
+- Contract validation: **SUCCESS**
+- Persistence application + Rust/Tauri storage: **SUCCESS**
+- Phase 11 Linux offline/full frontend: **SUCCESS**
+- Phase 11 Windows playable build/artifact: **SUCCESS**
+- Main Playable Linux full contract: **SUCCESS**
+- Main Windows playable build/artifact: **SUCCESS**
+- Phase 12 connected authority + Phase 11 offline + frontend gate: **SUCCESS**
+
+현재 남은 automated gate:
+- Phase 12 `windows-connected-playable`: Tauri session transport/persistence validation은 **SUCCESS**, Windows connected-session executable build가 진행 중
 
 ## 다음
 
-다음 단계는 **final exact-head automated validation**입니다.
-
-1. 오래된 offline spatial-provenance assertion을 canonical no-spatial 계약에 맞게 수렴
-2. 하나의 새 exact source SHA에서 UI / Phase 11 / Main Playable / Phase 12 / Persistence / Rules / Contract / Windows build를 함께 검증
-3. 이후 Windows human usability acceptance A-J
-
-이 단계에서 공간 시스템을 다시 기본 기능으로 복원하거나 가짜 spatial provenance를 만들어 테스트를 통과시키지 않습니다.
+1. Phase 12 Windows connected-session executable/artifact 완료 여부 확인
+2. 모든 exact-head automated gate가 green이면 PLAN/STATE/STATUS/control을 프로토콜 순서로 durable checkpoint 갱신
+3. 이후 남은 단계는 Windows human usability acceptance A-J
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
