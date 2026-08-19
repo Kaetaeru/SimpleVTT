@@ -19,9 +19,10 @@ Current planning documents on the work branch:
 - `.agents/V0_9_PLAY_SURFACE_INVENTORY.md`
 - `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md`
 - `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md`
+- `.agents/V0_9_SESSION_INTERACTION_SPEC.md`
 
 Latest planning HEAD:
-`afce5407d2a3b243f5b25d74dceb6257099d1ded`
+`34477c78c1e85cd24433b578c0f4a405a4b7a824`
 
 Previous automated-green implementation HEAD:
 `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
@@ -41,71 +42,114 @@ Consequences:
 - without an optional spatial/range module, otherwise-valid targets are treated as in range;
 - Character Sheet rolls use body-level cinematic dice entering from screen depth toward the user, not an embedded dice frame.
 
-## Complete UI scene plan now documented
-`.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md` defines the whole product UI as two major modes.
+## Detailed interaction contract now documented
+`.agents/V0_9_SESSION_INTERACTION_SPEC.md` defines implementation-level UX rules.
 
-### Library Mode
-- Home / Launch
-- Character Library
-- Character Create / Edit
-- Standalone Character Sheet
-- Content / Add-on Management
-- Rules Library
-- Settings
-- Session Entry / Open / Join
+### Interaction budget
+Player session tasks that start in one explicit action:
+- Quick Sheet
+- Full Character Sheet
+- Rules search
+- action/intention selection
+- recent result/history
 
-### Active Session Mode — shared core
-- Persistent Active Session Shell
-- Freeform Baseline
-- Intent Choice
-- Action Detail Choice
-- Target Selection
-- Resolution Result
-- Initiative / Combat Expansion
-- Character / Actor Quick View
-- Full Character Sheet in Session
-- Rules Lookup pane
-- Activity / Result History
-- Connection / Recovery
-- Cinematic Dice
-- Handout Viewer
-
-### DM-only tools
-- Session Share / Settings
+DM session tasks that start in one explicit action:
+- acting Actor switch
+- Encounter edit
+- Combatant add flow
 - Participants
-- Encounter Editor
-- Combatant Picker
-- DM Actor Switcher
-- Initiative Controls
-- Handout Control
-- Adjudication / Undo
-- End Session confirmation
+- Initiative controls
+- Handout
+- Rules
+- Activity/Undo
+- Session share/settings
 
-### Player-only tools
-- My Character Session Tools
-- Leave / Reconnect Choice
+### Character Sheet as first-class Session UI
+- Character identity chip is always visible for Player.
+- chip click opens Quick Sheet.
+- explicit adjacent expand action opens Full Sheet.
+- Full Sheet is an in-session workspace layer, not a Character route transition.
+- Quick/Full Sheet open/close preserves Session mode, actor, valid intent/detail/target context and play position where possible.
+- `Escape` closes only the top layer; it never leaves/ends Session.
+- Sheet rolls use the shared body-level cinematic dice overlay.
 
-### Session end
-- End confirmation
-- Session ended / return to Library Mode
-
-## Layout contract for S-00 Persistent Session Shell
-The complete plan reserves five persistent regions:
+### Persistent Session Shell regions
 1. compact Session Bar;
-2. low-noise Main Focus Area;
+2. low-noise Main Focus;
 3. intent-first Action Dock;
 4. in-session Utility Rail;
-5. transient Overlay Stack.
+5. pane/drawer/overlay stack.
 
-Normal Freeform must not permanently show the whole Scene Actor board, full action category hotbar, Initiative order or action economy.
+### Utility Rail
+Player: Sheet, Rules, Activity, active Handout reopen, Session/connection.
+DM: Actor, Rules, Encounter, Participants, Handout, Activity/Undo, Session share/settings.
+
+These are tool launchers over the current Session, not route navigation.
+
+### Layer stack and back behavior
+Order:
+1. Session Shell
+2. quick popover
+3. utility pane/drawer
+4. large workspace layer such as Full Sheet
+5. transient dice/result/handout presentation
+6. blocking recovery/confirmation
+
+`Escape` closes/backtracks one top layer/interaction step only.
+
+### Freeform and action interaction
+- no permanent Scene Actor board;
+- no permanent category hotbar;
+- no Freeform action economy;
+- Action Dock rests compactly and expands after intent selection;
+- all official intents remain reachable within at most one additional step;
+- target UI appears only when target is required;
+- no spatial module => missing distance never filters otherwise-valid targets.
+
+### Feedback and accessibility
+- click/action always produces visible selected/pending/result/error feedback;
+- disabled action shows a domain-language reason instead of silently doing nothing;
+- focus moves into opened tools and returns to launcher on close;
+- critical actions are not hover-only;
+- major click/touch targets target roughly 40~44px minimum;
+- narrow Windows viewports convert panes to drawers/full overlays while preserving context.
+
+### Human usability acceptance scenarios
+The detailed spec defines Windows scenarios A~J covering:
+- Quick Sheet during Freeform;
+- Full Sheet + cinematic roll;
+- Rules lookup during a spell/action flow;
+- DM Combatant addition during active Freeform;
+- Initiative expand/collapse;
+- Sheet/Rules layering and Escape behavior;
+- reconnect without Lobby/Ready;
+- DM zero-player operation;
+- no-spatial-module melee target availability;
+- constrained viewport usability.
+
+## Implementation slice order after UI approval
+1. Persistent Session Shell frame + layer host
+2. Session Bar + Player Character / DM Actor identity control
+3. Quick Sheet one-click access
+4. Full Sheet in-session layer + state preservation
+5. Utility Rail + Rules pane + Activity drawer
+6. low-noise Freeform Main Focus
+7. intent-first Action Dock
+8. Detail / Target flow
+9. Cinematic Dice / Result feedback
+10. DM Encounter / Actor / Participant / Session tools
+11. Player session utilities / reconnect
+12. Initiative expansion
+13. Handout workflow
+14. responsive + keyboard/focus pass
+15. Windows human usability acceptance A~J
 
 ## Next Exact Action
-1. Do not resume implementation or CI yet.
-2. Review `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md` with the user at the whole-scene level.
-3. After the scene map is accepted, detail and approve `S-00 Persistent Active Session Shell` at implementation-ready fidelity: exact region placement, desktop/narrow-window behavior, information density, DM/Player controls and overlay/pane behavior.
-4. Then detail `S-01 Freeform`, followed by Intent → Detail → Target before coding.
-5. Only after the relevant screen contract is approved should the same sequence return to `continue` for source implementation.
-6. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
+1. Do not resume source implementation or CI yet.
+2. Review `.agents/V0_9_SESSION_INTERACTION_SPEC.md` with the user as the detailed interaction authority.
+3. If accepted, turn S-00/Quick Sheet/Full Sheet into implementation-ready visual contracts without changing product principles.
+4. Then reauthorize this same sequence as `continue` and implement the slices in the order above, validating each slice before advancing.
+5. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
 `needs_user`
