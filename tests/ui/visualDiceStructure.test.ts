@@ -38,7 +38,8 @@ test("visual dice renderer uses WebGL physics and actual polyhedral meshes", () 
   assert.match(physics,/friction/);
   assert.match(physics,/restitution/);
   assert.match(physics,/angularVelocity/);
-  for (const geometry of ["TetrahedronGeometry","BoxGeometry","OctahedronGeometry","CylinderGeometry","DodecahedronGeometry","IcosahedronGeometry"]) assert.match(physics,new RegExp(geometry));
+  for (const geometry of ["TetrahedronGeometry","BoxGeometry","OctahedronGeometry","pentagonalBipyramidGeometry","DodecahedronGeometry","IcosahedronGeometry"]) assert.match(physics,new RegExp(geometry));
+  assert.doesNotMatch(physics,/CylinderGeometry/);
   assert.doesNotMatch(bridge,/visual-die-facet|transform-style:preserve-3d/);
 });
 
