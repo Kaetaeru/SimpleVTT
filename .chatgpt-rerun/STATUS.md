@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 일시 중단, 세션 상호작용 상세 기획 완료
+**연결 상태:** `main` coordination · 구현 일시 중단, Session UI 시각 배치 기획 완료
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - canonical watcher branch: `main`
@@ -11,48 +11,65 @@
 - Control 목표: `needs_user`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- 상세 상호작용 명세: `.agents/V0_9_SESSION_INTERACTION_SPEC.md`
-- 최신 planning HEAD: `34477c78c1e85cd24433b578c0f4a405a4b7a824`
+- 새 시각 배치 명세: `.agents/V0_9_SESSION_VISUAL_LAYOUT_CONTRACT.md`
+- 최신 planning HEAD: `df1da3582f0a43d1ed573eee9d5e40de72874365`
 
-## 이번에 추가로 확정한 것
+## 이번에 확정한 화면 골격
 
-### 세션 중 Character Sheet
-- Player Character identity는 Session Bar에 항상 노출합니다.
-- Character chip 한 번으로 Quick Sheet를 엽니다.
-- 명확한 expand action 한 번으로 Full Sheet를 엽니다.
-- Full Sheet는 세션을 떠나는 route가 아니라 Session Shell 위의 큰 layer/split workspace입니다.
-- 시트를 닫으면 이전 Freeform/Initiative/Actor/유효한 action context로 돌아갑니다.
-- 시트 roll은 별도 dice frame 없이 body-level cinematic dice를 사용합니다.
+기준 desktop은 1440x900이며 Session Mode는 다음 다섯 영역으로 고정합니다.
 
-### 세션 Utility
-Player는 Sheet, Rules, Activity, active Handout, Session/connection을 고정 Utility에서 바로 엽니다.
+1. 상단 compact Session Bar 약 52px
+2. 가장 큰 Main Focus
+3. 하단 intent-first Action Dock 약 64~72px resting
+4. 우측 Utility Rail 약 48~56px
+5. 그 위에 pane/drawer/Full Sheet/dice/result를 올리는 Layer Host
 
-DM은 Actor, Rules, Encounter, Participants, Handout, Activity/Undo, Session share/settings를 같은 Session 안에서 바로 엽니다.
+Freeform의 중앙은 계속 조용하게 유지합니다. 전체 Actor/Party board, Initiative order, action economy, 대형 category hotbar, Activity/Inspector는 상시 노출하지 않습니다.
 
-### Layer / Escape
-- Session Shell은 세션 종료 전까지 유지합니다.
-- Quick View → pane/drawer → Full Sheet → transient overlay → confirmation 순의 layer 규칙을 둡니다.
-- Escape는 항상 가장 위 layer/interaction step 하나만 닫습니다.
-- Escape로 Session leave/end가 실행되지 않습니다.
+## Player
 
-### Freeform
-- 전체 Scene Actor board 상시 표시 없음
-- category hotbar 상시 표시 없음
-- action economy 상시 표시 없음
-- intent-first Action Dock는 평소 compact 상태
-- target UI는 실제 target이 필요할 때만 노출
+- Session Bar 오른쪽에 Character portrait/name/compact HP가 항상 보입니다.
+- Character chip 한 번 클릭 -> Quick Sheet
+- 바로 옆 명확한 expand -> Full Sheet
+- Quick Sheet는 desktop 약 360px 우측 pane
+- Full Sheet는 mounted Session Shell 위 약 88~94% 폭의 large workspace overlay
+- Full Sheet toolbar에서 `SimpleVTT | 공식 시트 스타일`, Rules, close를 제공합니다.
+- close는 `플레이로 돌아가기`가 아니라 `시트 닫기`입니다.
 
-### 사용성/접근성
-- 버튼을 눌렀는데 무반응인 상태를 허용하지 않습니다.
-- disabled action은 이유를 domain language로 표시합니다.
-- 핵심 기능은 hover-only로 숨기지 않습니다.
-- 좁은 Windows 창에서는 pane을 drawer/full overlay로 바꾸되 close/primary action을 잃지 않습니다.
-- focus는 열린 도구로 이동하고 닫으면 launcher로 복귀합니다.
+## DM
 
-## 실제 Windows human acceptance
-A~J 시나리오를 명세했습니다: Freeform 중 Quick Sheet, Full Sheet roll, action 도중 Rules 확인, DM active Freeform 중 Combatant 추가, Initiative 전환, Sheet/Rules 중첩 닫기, reconnect, player 0명 DM, spatial module 없는 melee targeting, 좁은 viewport 사용성입니다.
+- Session Bar에 현재 acting Actor identity를 둡니다.
+- actor click -> Quick View
+- switch affordance -> Actor Switcher
+- 우측 Rail은 Actor, Rules, Encounter, Participants, Handout, Activity/Undo, Session 순입니다.
+- Player 0명/Combatant 0명도 정상 Freeform 상태이며 필요한 compact CTA만 제공합니다.
 
-구현/CI는 아직 재개하지 않습니다. 다음 단계는 이 interaction 명세를 확인한 뒤 S-00/Quick Sheet/Full Sheet의 실제 visual/layout contract를 확정하는 것입니다.
+## Action / Combat
+
+Freeform resting Action Dock은 Attack, Magic, Search, Influence, Help + `모든 행동` 같은 작은 intent 집합을 기본으로 하고 필요할 때만 contextual detail로 확장합니다.
+
+Initiative는 새 페이지가 아니라 같은 Shell에 compact order strip/current-turn economy/turn controls를 추가합니다.
+
+Target chooser는 target이 필요한 action을 선택했을 때만 나타납니다. spatial module이 없으면 거리 값을 만들지 않고 otherwise-valid target은 모두 선택 가능합니다.
+
+## Responsive
+
+- >=1200px: fixed right rail + side panes
+- 900~1199px: drawer 성격 강화, Action Dock 2-row 허용
+- <900px/constrained: utility strip, Quick Sheet/Rules full-height drawer, Full Sheet full workspace overlay
+
+좁은 Windows 창에서도 close/back/primary action이 viewport 밖으로 사라지면 안 됩니다.
+
+## 다음 단계
+
+구현/CI는 아직 시작하지 않습니다. 다음 기획은 더 큰 제품 문서가 아니라 구현 slice와 바로 연결되는 네 계약입니다.
+
+1. S-00 Session Shell component/state ownership
+2. Quick Sheet 정확한 정보 구조
+3. Full Sheet in-session component reuse
+4. Freeform Action Dock intent별 behavior table
+
+이 네 가지가 승인된 뒤 같은 sequence를 `continue`로 돌려 구현을 시작합니다.
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
