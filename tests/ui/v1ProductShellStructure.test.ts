@@ -10,6 +10,9 @@ import {
 } from "../../src/app/appearancePreferences";
 
 const app = readFileSync("src/App.tsx", "utf8");
+const productRoot = readFileSync("src/ProductRoot.tsx", "utf8");
+const sessionRoot = readFileSync("src/SessionModeRoot.tsx", "utf8");
+const sessionCss = readFileSync("src/session-mode.css", "utf8");
 const contracts = readFileSync("src/app/contracts.ts", "utf8");
 const main = readFileSync("src/main.tsx", "utf8");
 const vite = readFileSync("vite.config.ts", "utf8");
@@ -39,6 +42,30 @@ test("v1 global navigation is small and stable", () => {
   assert.doesNotMatch(app, /const playerNav:[\s\S]*?activity/);
   assert.match(app, /liveSession[\s\S]*플레이로 돌아가기/);
   assert.match(css, /\.v1-sidebar/);
+});
+
+test("connected sessions switch to the persistent Session root without duplicating mechanics authority", () => {
+  assert.match(main, /<ProductRoot\s*\/>/);
+  assert.match(productRoot, /snapshot\.session\.role !== "offline"/);
+  assert.match(productRoot, /return <SessionModeRoot\s*\/>/);
+  assert.match(productRoot, /return <App\s*\/>/);
+
+  assert.match(sessionRoot, /className="session-mode-root"/);
+  assert.match(sessionRoot, /className="session-mode-bar"/);
+  assert.match(sessionRoot, /className="session-mode-main"/);
+  assert.match(sessionRoot, /className="session-mode-action-dock"/);
+  assert.match(sessionRoot, /className="session-mode-layer-host"/);
+  assert.match(sessionRoot, /빠른 캐릭터 시트 열기/);
+  assert.match(sessionRoot, /snapshot\.activeCharacter/);
+  assert.match(sessionRoot, /snapshot\.scene\.actionsByActor/);
+  assert.match(sessionRoot, /snapshot\.session\.participants/);
+  assert.match(sessionRoot, /stopSession/);
+  assert.doesNotMatch(sessionRoot, /mockAdapter|VisualDiceTray|플레이로 돌아가기|HOTBAR_TABS|SCENE ACTORS/);
+
+  assert.match(sessionCss, /grid-template-rows:\s*52px minmax\(0, 1fr\) 68px/);
+  assert.match(sessionCss, /\.session-mode-rail/);
+  assert.match(sessionCss, /\.session-quick-sheet/);
+  assert.match(sessionCss, /@media \(max-width: 899px\)/);
 });
 
 test("addons have a first-class file-based product flow", () => {
