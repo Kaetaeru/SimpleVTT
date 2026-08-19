@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { ProductRoot } from "./ProductRoot";
 import { AppProvider } from "./app/AppProvider";
 import { initializeAppearancePreference } from "./app/appearancePreferences";
 import "./app/offlineRuntimeAdapters";
@@ -62,7 +62,7 @@ initializeAppearancePreference();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProvider>
-      <App />
+      <ProductRoot />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
       <CombatVfxBridge />
