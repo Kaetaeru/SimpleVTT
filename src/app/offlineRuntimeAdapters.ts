@@ -63,3 +63,7 @@ import "./productionDiceRuntimeAdapter";
 // Record successful open ability checks as canonical ResolutionEvents after all
 // production resolution wrappers have completed, without changing their UI/economy path.
 import "./abilityCheckResolutionEventAdapter";
+// Human-acceptance projection stays outermost: it materializes the remaining legacy
+// reference Character summary, keeps the reference demo melee-playable, and projects
+// runtime spatial legality into targetable attack options without changing mechanics authority.
+import "./productionAcceptanceRuntimeAdapter";
