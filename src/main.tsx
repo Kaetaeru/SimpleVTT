@@ -28,7 +28,6 @@ import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBr
 import { ProductionSessionDirectNetworkBridge } from "./ProductionSessionDirectNetworkBridge";
 import { CharacterPortraitBridge } from "./CharacterPortraitBridge";
 import { CharacterLibraryUxBridge } from "./CharacterLibraryUxBridge";
-import { SessionImageHandoutBridge } from "./SessionImageHandoutBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -73,7 +72,6 @@ createRoot(document.getElementById("root")!).render(
       <ProductionSessionDirectNetworkBridge />
       <CharacterPortraitBridge />
       <CharacterLibraryUxBridge />
-      <SessionImageHandoutBridge />
     </AppProvider>
   </StrictMode>,
 );
