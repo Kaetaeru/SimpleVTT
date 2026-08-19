@@ -9,7 +9,7 @@
 - sequence `3`
 - task_id `v1-product-experience-overhaul`
 - current milestone: **V0.9**
-- dispatch recommendation: `blocked`
+- dispatch recommendation: `continue`
 
 ## Watcher execution conventions
 - `STATUS.md`와 사람에게 보여 주는 watcher 상태 설명은 **한국어로 작성한다**. SHA, workflow/job 이름, 코드 식별자처럼 정확성이 필요한 기술 식별자는 원문을 유지할 수 있다.
@@ -90,8 +90,8 @@ Per the watcher execution conventions above, future CI diagnosis must invoke the
 
 ## Next Exact Action
 1. Perform mandatory watcher preflight and trust GitHub if `main`, control, work branch, or PR #109 moved.
-2. While control is `blocked`, do not continue source edits.
-3. When work is re-authorized with `continue`, if work HEAD remains `5c70b302...`, do not repeat the reachability audit or previously validated product slices.
+2. Control has been re-authorized as `continue` for the same sequence; resume only from the durable checkpoint below.
+3. If work HEAD remains `5c70b302...`, do not repeat the reachability audit or previously validated product slices.
 4. For the Main Playable failure, invoke the GitHub plugin `gh-fix-ci` skill first. Do not independently install or directly invoke `gh` as the primary workflow.
 5. Follow the invoked plugin skill's supported diagnosis path and capture the exact failing test/type/build output for run `32189591188`, job `95880814298`, step `Verify full UI, rules, TypeScript, and production frontend`. If the skill reports an unavailable required dependency, keep the task technically blocked rather than guessing or bypassing its guardrails.
 6. Fix only the observed failure. Do not guess from the source diff.
@@ -102,4 +102,4 @@ Per the watcher execution conventions above, future CI diagnosis must invoke the
 11. Keep PR #109 draft/unmerged.
 
 ## Dispatch recommendation
-`blocked`
+`continue`
