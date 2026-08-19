@@ -2,6 +2,9 @@ import type { ActionVm, ResolutionView } from "./contracts";
 
 export type VisualDieSides = 4 | 6 | 8 | 10 | 12 | 20;
 
+export const VISUAL_DICE_REPLAY_MS = 1480;
+export const VISUAL_DICE_REDUCED_REPLAY_MS = 650;
+
 export interface VisualDieVm {
   value:number;
   sides:VisualDieSides|null;
@@ -27,7 +30,7 @@ export interface VisualDiceRollVm {
 
 const SUPPORTED_SIDES = new Set<VisualDieSides>([4,6,8,10,12,20]);
 
-function parseDiceShape(notation:string|undefined): { count:number; sides:VisualDieSides }|null {
+function parseDiceShape(notation:string|undefined): { count:number;sides:VisualDieSides }|null {
   if (!notation) return null;
   const match = notation.replace(/\s+/g,"").match(/^(\d+)d(\d+)/i);
   if (!match) return null;
