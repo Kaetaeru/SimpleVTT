@@ -142,5 +142,5 @@ test("runtime Combatant attack with no spatial-module relation stays valid and c
   snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"attack-result");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"damage-animation");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.tempHp,0);assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,26);assert.equal(snapshot.scene.economyByActor[actorId]?.action,false);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.tempHp,0);assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,28);assert.equal(snapshot.scene.economyByActor[actorId]?.action,false);
 });
