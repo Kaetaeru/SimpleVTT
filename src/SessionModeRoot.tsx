@@ -8,6 +8,7 @@ import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock } from "./SessionActionDock";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
+import { SessionInitiativeStrip } from "./SessionInitiativeStrip";
 import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionPlayerSession";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
@@ -133,6 +134,8 @@ export function SessionModeRoot() {
           </>}
       </div>
     </header>
+
+    <SessionInitiativeStrip role={role} />
 
     <div className="session-mode-body">
       <main className="session-mode-main" aria-label="현재 세션">
