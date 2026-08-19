@@ -1,0 +1,319 @@
+.session-mode-action-dock {
+  min-width: 0;
+  position: relative;
+  z-index: 45;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.session-action-dock-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 68px;
+  border-top: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  box-shadow: 0 -14px 30px transparent;
+}
+
+.session-action-dock-panel.expanded {
+  min-height: 154px;
+  max-height: min(36vh, 300px);
+  overflow: auto;
+  border-top-color: var(--line-strong);
+  box-shadow: 0 -18px 34px color-mix(in srgb, var(--bg) 24%, transparent);
+}
+
+.session-action-resting {
+  min-height: 67px;
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+}
+
+.session-action-actor {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.session-action-actor span {
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.session-action-actor strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.session-action-resting-intents {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.session-action-resting-intents::-webkit-scrollbar { display: none; }
+
+.session-action-resting-intents button {
+  min-height: 42px;
+  flex: 0 0 auto;
+  padding: 0 13px;
+  background: var(--surface-2);
+}
+
+.session-action-resting-intents button:hover,
+.session-action-resting-intents button:focus-visible {
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
+}
+
+.session-action-all-launcher {
+  color: var(--accent);
+}
+
+.session-action-expanded {
+  min-height: 154px;
+  padding: 10px 14px 14px;
+}
+
+.session-action-expanded > header {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.session-action-expanded > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.session-action-expanded > header strong {
+  font-size: 13px;
+}
+
+.session-action-expanded > header small {
+  color: var(--muted);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-action-back,
+.session-action-rules {
+  min-height: 38px;
+  flex: 0 0 auto;
+}
+
+.session-action-back {
+  width: 40px;
+  padding: 0;
+}
+
+.session-action-rules {
+  margin-left: auto;
+}
+
+.session-action-intent-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.session-action-intent-grid button,
+.session-action-options button {
+  min-width: 0;
+  text-align: left;
+  background: var(--recess);
+}
+
+.session-action-intent-grid button {
+  min-height: 84px;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  padding: 9px 10px;
+}
+
+.session-action-intent-grid button > span,
+.session-action-intent-grid button > small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.session-action-intent-grid button > small {
+  margin-top: auto;
+  color: var(--quiet);
+}
+
+.session-action-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+}
+
+.session-action-options button {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 5px 10px;
+  padding: 9px 10px;
+}
+
+.session-action-options button > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.session-action-options button > div small,
+.session-action-options button > span,
+.session-action-options button > em {
+  font-size: 10px;
+}
+
+.session-action-options button > div small,
+.session-action-options button > span {
+  color: var(--muted);
+}
+
+.session-action-options button > span {
+  text-align: right;
+}
+
+.session-action-options button > em {
+  grid-column: 1 / -1;
+  color: var(--bad);
+  font-style: normal;
+}
+
+.session-action-options button.unavailable {
+  opacity: .68;
+}
+
+.session-action-detail-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.session-action-detail-body > div {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--recess);
+}
+
+.session-action-detail-body span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.session-action-detail-body strong {
+  display: block;
+  font-size: 12px;
+}
+
+.session-action-detail-body p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.session-action-target-next {
+  border-color: var(--line-strong) !important;
+  background: var(--accent-soft) !important;
+}
+
+.session-action-empty,
+.session-action-feedback {
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.session-action-feedback {
+  color: var(--bad);
+}
+
+@media (max-width: 1199px) {
+  .session-action-intent-grid {
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
+  }
+
+  .session-action-detail-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  .session-action-dock-panel {
+    min-height: 60px;
+  }
+
+  .session-action-dock-panel.expanded {
+    max-height: min(46vh, 340px);
+  }
+
+  .session-action-resting {
+    min-height: 59px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 5px 8px;
+  }
+
+  .session-action-actor {
+    display: none;
+  }
+
+  .session-action-resting-intents {
+    justify-content: flex-start;
+  }
+
+  .session-action-resting-intents button {
+    min-height: 42px;
+  }
+
+  .session-action-intent-grid {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .session-action-expanded {
+    padding-inline: 8px;
+  }
+
+  .session-action-intent-grid,
+  .session-action-detail-body {
+    grid-template-columns: 1fr;
+  }
+
+  .session-action-options {
+    grid-template-columns: 1fr;
+  }
+}
