@@ -30,29 +30,39 @@ test("intent options and legality come from canonical ActionVm projections", () 
 test("no-target and self actions use the existing resolveAction command with duplicate pending protection", () => {
   assert.match(dock, /const \{ snapshot, resolveAction \} = useSimpleVtt\(\)/);
   assert.match(dock, /if \(pendingActionId\) return/);
-  assert.match(dock, /action\.target === "none"[\s\S]*runImmediateAction\(action, \[\]\)/);
-  assert.match(dock, /action\.target === "self"[\s\S]*runImmediateAction\(action, \[actorId\]\)/);
+  assert.match(dock, /action\.target === "none"[\s\S]*runAction\(action, \[\]\)/);
+  assert.match(dock, /action\.target === "self"[\s\S]*runAction\(action, \[actorId\]\)/);
   assert.match(dock, /setPendingActionId\(action\.id\)/);
   assert.match(dock, /await resolveAction\(action\.id, targetIds\)/);
 });
 
-test("target-requiring actions stop at detail in this slice without inventing a target engine", () => {
-  assert.match(dock, /setSelectedActionId\(action\.id\)/);
-  assert.match(dock, /data-action-dock-state=\{selectedActionId \? "detail"/);
-  assert.match(dock, /사용할 대상을 고르면 이 행동을 실행합니다/);
-  assert.doesNotMatch(dock, /filter\([^\n]*distance|parseInt\([^\n]*distance|5 ft 내/);
+test("target picker consumes eligibleTargetIds directly and never invents distance legality", () => {
+  assert.match(dock, /selectedAction\.eligibleTargetIds\.map/);
+  assert.match(dock, /selectedAction\.eligibleTargetIds\.includes\(targetId\)/);
+  assert.match(dock, /data-action-dock-state=\{selectedActionId \? "target"/);
+  assert.doesNotMatch(dock, /filter\([^\n]*distance|parseInt\([^\n]*distance|distanceFeet|5 ft 내/);
 });
 
-test("Rules and Sheet overlays suspend Escape while the mounted action flow retains local presentation state", () => {
+test("single target executes immediately while multi-target selection honors canonical maxTargets", () => {
+  assert.match(dock, /if \(!multiTarget\)[\s\S]*runAction\(selectedAction, \[targetId\]\)/);
+  assert.match(dock, /selectedAction\.maxTargets \?\? targetCandidates\.length/);
+  assert.match(dock, /current\.length >= maxTargets/);
+  assert.match(dock, /runAction\(selectedAction, selectedTargetIds\)/);
+  assert.match(dock, />실행</);
+});
+
+test("target selections reconcile against new canonical eligibility while Rules and Sheet overlays preserve the mounted flow", () => {
+  assert.match(dock, /current\.filter\(\(id\) => selectedAction\.eligibleTargetIds\.includes\(id\)\)\.slice\(0, maxTargets\)/);
   assert.match(root, /suspended=\{Boolean\(activeUtility \|\| workspaceLayer \|\| snapshot\.resolution\)\}/);
   assert.match(dock, /event\.key !== "Escape" \|\| suspended/);
   assert.match(dock, /onOpenRules\(event\.currentTarget\)/);
   assert.match(dock, /useEffect\(\(\) => \{[\s\S]*resetFlow\(\);[\s\S]*\}, \[actorId\]\)/);
 });
 
-test("Action Dock expands upward from the fixed Session footer and remains responsive", () => {
+test("Action Dock expands upward from the fixed Session footer and target picker remains responsive", () => {
   assert.match(css, /\.session-action-dock-panel\s*\{[\s\S]*position:\s*absolute;[\s\S]*bottom:\s*0;/);
-  assert.match(css, /\.session-action-dock-panel\.expanded[\s\S]*max-height:\s*min\(36vh, 300px\)/);
+  assert.match(css, /\.session-action-dock-panel\.expanded[\s\S]*max-height:\s*min\(42vh, 360px\)/);
+  assert.match(css, /\.session-action-target-layout/);
   assert.match(css, /@media \(max-width: 899px\)/);
   assert.match(css, /@media \(max-width: 620px\)/);
 });
