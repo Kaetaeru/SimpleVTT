@@ -3,93 +3,103 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
-- dispatch state: `needs_user`
-- current milestone: **persistent Session walking skeleton implemented and UI-validated**
+- dispatch state: `continue`
+- current milestone: **V0.9 complete UI-first implementation authorized**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
 - issue: #108
 - PR #109: open/draft/unmerged; no merge authorized
 
-## Current exact source checkpoint
+## User authorization
+The user explicitly instructed that all V0.9 planning be consolidated into the rerun PLAN and that this same sequence be changed to `continue`.
+
+The watcher is authorized to resume source implementation from the durable validated checkpoint without waiting for another confirmation.
+
+## Consolidated implementation authority
+`.chatgpt-rerun/PLAN.md` now contains the complete V0.9 execution contract needed by rerun, including:
+- always-on tabletop companion product philosophy;
+- canonical architecture invariants;
+- Library Mode vs app-level persistent Session Mode;
+- DM immediate active/editable session with no Host Preparing/Lobby/Ready/Play Start gate;
+- Player join/reconnect behavior;
+- complete persistent Session Shell layout and layer model;
+- shared vs DM-specific vs Player-specific Session surfaces;
+- low-noise Freeform contract;
+- one-click Quick Sheet contract;
+- in-session Full Sheet reuse contract;
+- body/app-level cinematic dice contract;
+- Rules and Activity behavior;
+- intent-first Action Dock state machine and all official intent groupings;
+- no-spatial-module target eligibility fallback;
+- Initiative expansion in the same Shell;
+- DM Encounter/Actor/Participants/Session tools;
+- handout behavior;
+- interaction quality, keyboard/focus and responsive contracts;
+- error/reconnect behavior;
+- explicit anti-patterns and retired assumptions;
+- existing-code reuse/retirement map;
+- implemented walking-skeleton checkpoint;
+- remaining slice-by-slice implementation order;
+- Windows human acceptance scenarios A-J;
+- exact-head validation discipline and V0.9 definition of completion.
+
+The supporting `.agents/V0_9_*` documents remain detailed references, but rerun can continue from PLAN without conversational memory.
+
+## Current exact source checkpoint — validated; do not redo
 `fbf37144d2ed56272429287419393bf221d83f44`
 
-## What changed
-The first approved source slice is complete.
+Implemented:
+- `ProductRoot` switches connected Host/Client facts into app-level `SessionModeRoot`;
+- persistent Session Bar/Main Focus/Utility Rail/LayerHost/Action Dock shell;
+- Player Character identity + one-click Quick Sheet;
+- DM Actor identity + compact Actor Quick View;
+- zero Player / zero Combatant valid active DM state;
+- canonical snapshot/commands preserved;
+- old dominant Library sidebar / `플레이로 돌아가기` / permanent Actor wall / category hotbar absent from new active Session root;
+- Quick Sheet has no embedded dice tray.
 
-### Root mode
-- `ProductRoot` now chooses Library `App` only for `session.role === "offline"`.
-- existing Host/Client session facts immediately select `SessionModeRoot`.
-- active Session is therefore app-level presentation rather than the old `scene` route inside the Library sidebar.
+Validation at this exact head:
+- UI run `32211000260`;
+- frontend job `95943502788`;
+- conclusion **SUCCESS**;
+- persistent Session root structure passed;
+- existing Phase 14 regressions passed;
+- lifecycle/live-DM/local-projection/spellcasting regressions passed;
+- Phase 09 mechanics regressions passed;
+- TypeScript and production build passed.
 
-### Persistent Session shell
-`SessionModeRoot` now provides:
-- compact Session Bar;
-- dominant low-noise Main Focus;
-- minimal right Utility Rail;
-- persistent Action Dock shell;
-- ordered LayerHost.
+Historical pre-replan broad green implementation HEAD remains:
+`d942d58a83eb2222ffd722d58b19c67c3dc8de13`
 
-### Identity and Quick Sheet
-Player:
-- Character identity chip is always visible;
-- one click opens Quick Sheet;
-- Quick Sheet reads canonical Character/Scene/Action projections only.
+Do not repeat already validated work solely due rerun restart unless later source changes touch that boundary.
 
-DM:
-- current Actor identity is always visible;
-- one click opens a compact Actor quick view;
-- Player 0 / Combatant 0 remains a normal active Session state.
+## Active remaining implementation sequence
+1. Full Sheet in-session host + shared Sheet extraction/state preservation.
+2. Utility Rail Rules pane + Activity drawer.
+3. low-noise Freeform Main Focus convergence.
+4. intent-first Action Dock.
+5. Detail/Target flow + canonical no-spatial fallback repair if still required.
+6. cinematic dice/result convergence.
+7. DM Encounter / Actor / Participants / Session tools.
+8. Player reconnect/session utilities.
+9. Initiative expansion.
+10. Handout integration.
+11. responsive/keyboard/focus pass.
+12. exact-head automated validation.
+13. Windows human usability acceptance A-J.
 
-### Authority preservation
-No new mechanics authority was introduced.
-- Character, Scene, Actions, Session, Resolution and Activity still come from existing `AppProvider` snapshot/adapters.
-- no `mockAdapter` import in the new Session root;
-- no new action resolver, target engine, Character cache or Session lifecycle;
-- existing runtime/network/content/dice/VFX/handout bridges remain mounted in `main.tsx`.
-
-### Presentation migration begun
-The new active Session root does not render the old Library sidebar, `플레이로 돌아가기`, permanent Actor card wall or permanent category hotbar.
-
-Quick Sheet has no embedded `VisualDiceTray`.
-
-## Validation
-Exact-head UI run: `32211000260`
-Frontend job: `95943502788`
-Conclusion: **SUCCESS**.
-
-Verified at this exact HEAD:
-- new persistent Session root structural contract;
-- existing Phase 14 UX regressions;
-- existing lifecycle/live-DM/local projection/spellcasting regressions;
-- Phase 09 mechanics regressions;
-- TypeScript;
-- production build.
-
-Container-local checkout could not be used because the execution container has no external DNS/network access to GitHub. GitHub Actions is the successful validation source for this slice.
-
-## Important incompleteness
-This is intentionally only slices 1-3 / walking skeleton.
-
-Not yet implemented:
-- in-session Full Sheet reuse host;
-- Rules/Activity panes;
-- final Freeform content;
-- intent-first Action Dock behavior and target flow;
-- DM Encounter/Participant controls in the new root;
-- final Initiative expansion;
-- final Handout placement;
-- fresh Windows human acceptance.
-
-The bottom Action Dock is currently only the persistent shell/status region, not the finished action interface.
+Each slice must disconnect the conflicting old normal-Session presentation that it replaces; adding a new UI alongside obsolete normal flow is not completion.
 
 ## Next Exact Action
-1. Remain `needs_user` at this validated checkpoint.
-2. If the user authorizes continuation, implement **Full Sheet in-session host + shared Sheet extraction/state preservation** next.
-3. Preserve one canonical Character and existing mechanics authority.
-4. Do not introduce Sheet-local dice presentation.
-5. Validate the next slice before moving to Rules/Activity or Action Dock.
-6. Keep PR #109 draft/unmerged.
+1. Resume from work-branch HEAD `fbf37144d2ed56272429287419393bf221d83f44` after reconciling actual PR head.
+2. Implement **Full Sheet in-session host + shared Sheet extraction/state preservation** only.
+3. Reuse existing SimpleVTT/Official Sheet content and one canonical Character.
+4. Keep Session Shell mounted when Full Sheet opens/closes.
+5. Keep layout choice presentation-only.
+6. Do not create Sheet-local authoritative rolls or embedded dice tray.
+7. Add focused regression coverage and validate the slice at its exact head before moving to Rules/Activity.
+8. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
-`needs_user`
+`continue`
