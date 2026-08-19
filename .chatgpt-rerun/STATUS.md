@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 계속 승인 · cinematic dice/result까지 검증 완료
+**연결 상태:** `main` coordination · 구현 계속 승인 · DM Session tools까지 검증 완료
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - 활성 작업 브랜치: `agent/108-production-play-session-ux`
@@ -9,32 +9,33 @@
 - Task: `v1-product-experience-overhaul`
 - Control 목표: `continue`
 - PR: #109 open/draft/unmerged
-- 검증된 현재 source HEAD: `bcb267705ad526e54e6ca70f1193e6f500e4d268`
+- 검증된 현재 source HEAD: `33b0049a482cbb65dda771f336dc591ba6d020d0`
 
-## 추가 검증 완료 — Cinematic dice / Result
+## 추가 검증 완료 — DM Session tools
 
-UI run `32215116582` / frontend `95955048447`: **SUCCESS**.
+UI run `32215938914` / frontend `95957365219`: **SUCCESS**.
 
-- 기존 body-level `VisualDiceBridge` / `PhysicsDice3D`를 그대로 한 개의 connected dice presentation으로 사용
-- deep/back -> toward-user cinematic motion과 authoritative face convergence 유지
-- shared replay timing 1480ms / reduced 650ms로 Session auto-advance와 overlay handoff 일치
-- animated stage 동안 Session 안에 두 번째 dice/result card를 중첩하지 않음
-- replay 뒤 compact actor/action/outcome result layer 표시
-- DM 상세/Undo는 기존 Activity/Undo authority 재사용
-- no-roll / zero-dice action은 cinematic dice를 강제하지 않음
-- 기존 UI/mechanics/Phase09, TypeScript, production build 모두 green
+- persistent Session Shell 안에 DM Actor / Encounter / Participants / Session share pane 추가
+- Actor 전환은 기존 `selectDmActor()` authority 재사용, Initiative 턴과 분리
+- Encounter add/remove/start/end Initiative는 기존 canonical commands 재사용
+- 0 Player / 0 Combatant 상태에서도 active Freeform 유지
+- Combatant 제거는 기존 preparing 동작 보존 + live Freeform으로 확장, Initiative에서는 안전하게 차단
+- Participants에는 참가자 상태/Character만 표시하고 폐기된 준비 단계나 시작 gate를 노출하지 않음
+- Session share는 기존 세션 주소/연결/활성 콘텐츠 projection만 사용
+- route replacement 및 두 번째 Scene/session/combatant authority 없음
+- 기존 UI/mechanics/connected/Phase09, TypeScript, production build 모두 green
 
-중간 CI 실패는 기존 테스트가 literal `reduced?650:1480` 소스 문자열을 강제한 것이 원인이었습니다. 공용 presentation 상수로 이동한 동일 timing을 검증하도록 테스트만 갱신했고 제품 동작은 되돌리지 않았습니다.
+중간 CI에서는 먼저 오래된 구조 테스트/문구 가정 두 건을 정리했고, 이후 실제 regression 하나를 발견해 preparing 제거를 보존하면서 live Freeform만 확장하도록 adapter 조건을 교정했습니다.
 
 ## 다음
 
-다음 승인 slice는 **DM Encounter / Actor / Participants / Session tools**입니다.
+다음 승인 slice는 **Player reconnect/session utilities**입니다.
 
-- active Freeform 안에서 DM 도구를 1~2 action으로 열기
-- Encounter/Combatant 기존 canonical commands 재사용
-- acting Actor switch는 기존 selected Actor authority 사용
-- Participants/Session share/settings는 on-demand pane
-- Ready/start/preparing 같은 폐기된 visible gate를 되살리지 않음
+- 정상 연결은 조용하게 유지
+- reconnect/disconnected는 Session Shell을 유지하면서 actionable하게 표시
+- Player에게 필요한 연결/세션 identity와 leave/reconnect 선택만 제공
+- DM 관리 기능은 Player에게 노출하지 않음
+- 기존 connected/reconnect authority 재사용
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
