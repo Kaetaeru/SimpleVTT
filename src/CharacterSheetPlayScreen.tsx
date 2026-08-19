@@ -19,7 +19,7 @@ type WorkspaceProps = {
   onLevelUp?: () => void;
   onEdit?: () => void;
   onClose?: () => void;
-  onOpenRules?: () => void;
+  onOpenRules?: (launcher: HTMLButtonElement) => void;
 };
 
 export function CharacterSheetWorkspace({ hostMode, onScene, onLevelUp, onEdit, onClose, onOpenRules }: WorkspaceProps) {
@@ -45,7 +45,7 @@ export function CharacterSheetWorkspace({ hostMode, onScene, onLevelUp, onEdit, 
           <button type="button" className={layout === "simplevtt" ? "active" : ""} aria-pressed={layout === "simplevtt"} onClick={() => selectLayout("simplevtt")}>SimpleVTT</button>
           <button type="button" className={layout === "official" ? "active" : ""} aria-pressed={layout === "official"} onClick={() => selectLayout("official")}>공식 시트 스타일</button>
         </div>
-        {onOpenRules && <button type="button" onClick={onOpenRules}>규칙</button>}
+        {onOpenRules && <button type="button" onClick={(event) => onOpenRules(event.currentTarget)}>규칙</button>}
         <button type="button" className="primary" onClick={onClose} aria-label="전체 캐릭터 시트 닫기">시트 닫기</button>
       </div>
     </header> : <div className="sheet-layout-choice-bar">
