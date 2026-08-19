@@ -12,6 +12,7 @@ import {
 const app = readFileSync("src/App.tsx", "utf8");
 const productRoot = readFileSync("src/ProductRoot.tsx", "utf8");
 const sessionRoot = readFileSync("src/SessionModeRoot.tsx", "utf8");
+const sessionMainFocus = readFileSync("src/SessionMainFocus.tsx", "utf8");
 const sessionCss = readFileSync("src/session-mode.css", "utf8");
 const contracts = readFileSync("src/app/contracts.ts", "utf8");
 const main = readFileSync("src/main.tsx", "utf8");
@@ -58,7 +59,8 @@ test("connected sessions switch to the persistent Session root without duplicati
   assert.match(sessionRoot, /빠른 캐릭터 시트 열기/);
   assert.match(sessionRoot, /snapshot\.activeCharacter/);
   assert.match(sessionRoot, /snapshot\.scene\.actionsByActor/);
-  assert.match(sessionRoot, /snapshot\.session\.participants/);
+  assert.match(sessionRoot, /<SessionMainFocus/);
+  assert.match(sessionMainFocus, /snapshot\.session\.participants/);
   assert.match(sessionRoot, /stopSession/);
   assert.doesNotMatch(sessionRoot, /mockAdapter|VisualDiceTray|플레이로 돌아가기|HOTBAR_TABS|SCENE ACTORS/);
 
