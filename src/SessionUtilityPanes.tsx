@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { CatalogEntry } from "./app/contracts";
 import "./session-utility-panes.css";
@@ -31,11 +31,8 @@ export function SessionRulesPane({ onClose }: { onClose(): void }) {
   if (!snapshot) return null;
 
   const normalized = query.trim().toLowerCase();
-  const results = useMemo(() => {
-    const source = snapshot.catalog.filter((entry) => entry.category !== "combatant");
-    if (!normalized) return source.slice(0, 24);
-    return source.filter((entry) => searchable(entry).includes(normalized)).slice(0, 60);
-  }, [snapshot.catalog, normalized]);
+  const source = snapshot.catalog.filter((entry) => entry.category !== "combatant");
+  const results = (normalized ? source.filter((entry) => searchable(entry).includes(normalized)) : source).slice(0, normalized ? 60 : 24);
   const selected = snapshot.catalog.find((entry) => entry.id === selectedId) ?? null;
 
   return <aside className="session-utility-pane session-rules-pane" aria-label="세션 규칙 찾아보기">
