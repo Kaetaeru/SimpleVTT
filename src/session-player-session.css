@@ -1,6 +1,7 @@
 .session-player-recovery {
   pointer-events: auto;
   position: absolute;
+  z-index: 48;
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
@@ -28,6 +29,7 @@
 .session-player-session-pane {
   pointer-events: auto;
   position: absolute;
+  z-index: 46;
   top: 0;
   right: 0;
   width: min(410px, calc(100vw - 80px));
