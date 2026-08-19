@@ -17,14 +17,28 @@ Implementation remains paused while the user-facing UI contract is rebuilt scree
 Current planning documents on the work branch:
 - `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
 - `.agents/V0_9_PLAY_SURFACE_INVENTORY.md`
+- `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md`
 
 Latest planning HEAD:
-`72220a90e851a74b8cbf66c7038529d283957efc`
+`4c4c07fdbd41ea14f30f00f51f33cec73f4cf482`
 
 Previous automated-green implementation HEAD:
 `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
 
 Existing automated evidence remains historical regression evidence only. Any behavior that conflicts with the new UI contract must be reworked and reaccepted later.
+
+## Core product philosophy — continuous tabletop companion
+The primary UX philosophy is now explicit:
+
+**Once a D&D session is active, the user should be able to keep SimpleVTT open for the entire session and move through conversation, exploration, rules lookup, Character reference, rolls, combat and DM operation without repeatedly leaving the active play context.**
+
+Consequences:
+- an active session is an app-level `Session Mode`, not merely one route among Home/Rules/Character/etc.;
+- normal session tasks should happen inside the persistent Active Session Play Shell through drawers, split panes, overlays or contextual layers;
+- Rules lookup, Character Sheet reference, Encounter/Combatant work and Activity/Undo must not require routine `Play -> other page -> Play로 돌아가기` navigation;
+- Freeform is the low-noise default state in which users spend most of the session;
+- Initiative is a temporary expansion of the same Session Shell, not another page;
+- DM and Player session context must survive utility-tool open/close and reconnect transitions.
 
 ## Locked cross-surface decisions
 ### Dice
@@ -47,44 +61,18 @@ Existing automated evidence remains historical regression evidence only. Any beh
 - exact range/reach/LOS/cover constraints apply only when an installed module supplies authoritative spatial facts.
 
 ## Play surface inventory completed
-`.agents/V0_9_PLAY_SURFACE_INVENTORY.md` now classifies the full play experience into:
+`.agents/V0_9_PLAY_SURFACE_INVENTORY.md` classifies shared play shell/freeform/combat/action-target-result surfaces, transient dice/handout/reconnect/error layers, DM-only session/encounter/initiative/handout/Undo tools, Player-only join/my-character/reconnect tools, and standalone SimpleVTT/Official Character Sheets.
 
-### Shared route-level surfaces
-- Active Session Play Shell
-- Freeform Play Workspace
-- Initiative / Combat Workspace
-- Actor / Character Quick View
-- Intent -> Detail Choice flow
-- Target Selection
-- Resolution Result
+## Continuous-session audit of current production UI
+The current implementation conflicts with the new philosophy in several concrete ways:
+1. App navigation is route-centric and provides `플레이로 돌아가기`, treating Play as one page rather than a persistent mode.
+2. Freeform permanently renders Scene Actor rows, making the actor board rather than conversation/current intent the center of the screen.
+3. A permanent `공통 / 클래스 / 주문 / 아이템 / 패시브 / 커스텀` hotbar dominates the normal play surface.
+4. Freeform continues showing action/bonus/reaction/movement economy as `FREE` even when combat economy is irrelevant.
+5. Encounter editing is gated by offline/preparing lifecycle state rather than by the safety of the specific edit operation.
+6. Full Character Sheet and Rules are route-level destinations instead of in-session reference tools.
 
-### Shared transient layers
-- Cinematic Dice Overlay
-- Handout Viewer
-- Connection/Reconnect layer
-- Error/Recovery layer
-
-### DM-only surfaces/tools
-- Open Session
-- Active DM Play Workspace composition
-- Session Share & Settings
-- Participant drawer
-- Encounter editor
-- Combatant library picker
-- DM actor control
-- Initiative control
-- Handout control
-- Activity / Undo detail
-
-### Player-only surfaces/tools
-- Join Session
-- Active Player Play Workspace composition
-- My Character Quick Sheet
-- Leave / Reconnect choice
-
-### Session-independent play surfaces
-- SimpleVTT Character Sheet
-- Official-Style Character Sheet
+These are planning defects to correct before source implementation resumes.
 
 ## Explicitly forbidden standalone play pages
 Do not reintroduce these as permanent routes/pages:
@@ -103,11 +91,12 @@ Do not reintroduce these as permanent routes/pages:
 
 ## Next Exact Action
 1. Do not resume implementation or CI yet.
-2. Review and refine the play-surface inventory with the user.
-3. Then define each screen one-by-one at implementation-ready fidelity: layout regions, visible data, primary/secondary actions, role differences, state transitions, empty/loading/error, keyboard/responsive, human acceptance.
-4. Start with `C-01 Active Session Play Shell`, then `C-02 Freeform`, then intent/detail/target flow before coding.
-5. Only after the relevant screen contracts are approved should the same sequence return to `continue` for source implementation.
-6. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
+2. Treat `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md` as the upper UX contract when refining the existing surface inventory.
+3. Define `C-01 Active Session Play Shell` at implementation-ready fidelity around a persistent Session Mode: session bar, low-noise main focus area, intent-first action dock, in-session utility rail and transient overlay stack.
+4. Ensure Sheet, Rules, Activity and DM Encounter/Participants/Handout/Session utilities open without replacing the active Session Shell.
+5. Then define `C-02 Freeform` and intent/detail/target flow before coding.
+6. Only after the relevant screen contracts are approved should the same sequence return to `continue` for source implementation.
+7. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
 `needs_user`
