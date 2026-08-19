@@ -51,9 +51,10 @@ test("single target executes immediately while multi-target selection honors can
   assert.match(dock, />실행</);
 });
 
-test("target selections reconcile against new canonical eligibility while Rules and Sheet overlays preserve the mounted flow", () => {
+test("target selections reconcile against new canonical eligibility while overlays preserve the mounted flow", () => {
   assert.match(dock, /current\.filter\(\(id\) => selectedAction\.eligibleTargetIds\.includes\(id\)\)\.slice\(0, maxTargets\)/);
-  assert.match(root, /suspended=\{Boolean\(activeUtility \|\| workspaceLayer \|\| snapshot\.resolution\)\}/);
+  assert.match(root, /suspended=\{Boolean\(activeUtility \|\| workspaceLayer \|\| snapshot\.resolution \|\| playerHandoutOpen\)\}/);
+  assert.match(root, /playerHandoutOpen/);
   assert.match(dock, /event\.key !== "Escape" \|\| suspended/);
   assert.match(dock, /onOpenRules\(event\.currentTarget\)/);
   assert.match(dock, /useEffect\(\(\) => \{[\s\S]*resetFlow\(\);[\s\S]*\}, \[actorId\]\)/);
