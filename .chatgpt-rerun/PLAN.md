@@ -11,6 +11,13 @@
 - current milestone: **V0.9**
 - dispatch recommendation: `blocked`
 
+## Watcher execution conventions
+- `STATUS.md`와 사람에게 보여 주는 watcher 상태 설명은 **한국어로 작성한다**. SHA, workflow/job 이름, 코드 식별자처럼 정확성이 필요한 기술 식별자는 원문을 유지할 수 있다.
+- GitHub 작업은 **직접 `gh` CLI를 독립 실행 경로로 사용하지 말고, 먼저 해당 작업에 맞는 GitHub 플러그인 스킬을 호출한다**.
+- 일반 저장소/PR 작업은 GitHub 플러그인 `github` 스킬, CI 실패는 `gh-fix-ci`, 리뷰 피드백은 `gh-address-comments`, 게시 작업은 `yeet` 등 가장 구체적인 플러그인 스킬을 우선한다.
+- 플러그인 스킬과 connector가 제공하는 경로를 우선 사용하며, 별도로 `gh` 설치/직접 호출을 기본 절차로 두지 않는다.
+- 단, 호출된 플러그인 스킬 자체가 필수 의존성 또는 가드레일을 명시하면 그 스킬 규칙을 따른다. 필요한 의존성이 없어 스킬이 완료될 수 없으면 임의 우회하거나 원인을 추측하지 말고 기술 blocker로 기록한다.
+
 ## Architecture invariants
 - one canonical Character; owning Client Character Library remains durable Character authority;
 - Host projections remain ephemeral and Host remains connected mechanics authority;
@@ -71,10 +78,9 @@ Automatic runs started normally.
 - step `Verify full UI, rules, TypeScript, and production frontend`: **failure**
 - downstream steps skipped because of this failure.
 
-The exact failure log/root cause is **not diagnosed**. The required `gh-fix-ci` workflow was invoked, but this execution environment has no GitHub CLI:
-- `gh --version && gh auth status` -> `gh: not found` (exit 127).
+The exact failure log/root cause is **not diagnosed**. The GitHub plugin `gh-fix-ci` skill was invoked. That skill reported a missing required dependency in the current execution environment, so no speculative source change was made.
 
-Per the installed CI-fix workflow, do not use connector logs as a substitute and do not make speculative source changes without the actual failing log.
+Per the watcher execution conventions above, future CI diagnosis must invoke the matching GitHub plugin skill first rather than independently installing or calling `gh`. If the invoked skill itself cannot proceed because a required dependency is unavailable, record the blocker instead of bypassing the skill.
 
 ### Other same-head runs
 - UI run `32189591171` started; exact final result was not established before blocker checkpoint.
@@ -86,8 +92,8 @@ Per the installed CI-fix workflow, do not use connector logs as a substitute and
 1. Perform mandatory watcher preflight and trust GitHub if `main`, control, work branch, or PR #109 moved.
 2. While control is `blocked`, do not continue source edits.
 3. When work is re-authorized with `continue`, if work HEAD remains `5c70b302...`, do not repeat the reachability audit or previously validated product slices.
-4. Invoke `gh-fix-ci` before CI diagnosis. Verify `gh --version` and `gh auth status`.
-5. In an environment with authenticated GitHub CLI, inspect run `32189591188`, job `95880814298`, failing step `Verify full UI, rules, TypeScript, and production frontend`; capture the exact failing test/type/build output.
+4. For the Main Playable failure, invoke the GitHub plugin `gh-fix-ci` skill first. Do not independently install or directly invoke `gh` as the primary workflow.
+5. Follow the invoked plugin skill's supported diagnosis path and capture the exact failing test/type/build output for run `32189591188`, job `95880814298`, step `Verify full UI, rules, TypeScript, and production frontend`. If the skill reports an unavailable required dependency, keep the task technically blocked rather than guessing or bypassing its guardrails.
 6. Fix only the observed failure. Do not guess from the source diff.
 7. Recheck PR HEAD immediately before any branch write and use non-force fast-forward only.
 8. Validate affected UI/Main gates at the resulting exact head; observe automatic connected/persistence/Windows gates without manually rerunning unchanged historical boundaries.
