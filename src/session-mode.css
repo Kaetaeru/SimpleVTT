@@ -198,26 +198,6 @@
 .session-mode-rail button span { font-size: 9px; font-weight: 800; }
 .session-mode-rail button.active { color: var(--accent); border-color: var(--line-strong); background: var(--accent-soft); }
 
-.session-mode-action-dock {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 18px;
-  border-top: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-}
-
-.session-mode-action-dock span {
-  color: var(--quiet);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.session-mode-action-dock strong { font-size: 13px; }
-
 .session-mode-layer-host {
   position: absolute;
   inset: 52px 52px 68px 0;
