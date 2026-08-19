@@ -20,9 +20,19 @@ test("shared dice renderer uses WebGL polyhedral geometry and a physics world",(
   assert.match(physics,/angularVelocity\.set/);
   assert.match(physics,/new CANNON\.Plane/);
   assert.match(physics,/ConvexPolyhedron/);
-  for(const shape of ["TetrahedronGeometry","BoxGeometry","OctahedronGeometry","CylinderGeometry","DodecahedronGeometry","IcosahedronGeometry"]) assert.match(physics,new RegExp(shape));
+  for(const shape of ["TetrahedronGeometry","BoxGeometry","OctahedronGeometry","pentagonalBipyramidGeometry","DodecahedronGeometry","IcosahedronGeometry"]) assert.match(physics,new RegExp(shape));
+  assert.doesNotMatch(physics,/CylinderGeometry/);
   assert.equal(typeof pkg.dependencies.three,"string");
   assert.equal(typeof pkg.dependencies["cannon-es"],"string");
+});
+
+test("production dice preserve the UI-demo bronze facet language instead of the prior dark generic treatment",()=>{
+  assert.match(physics,/DEMO_BRONZE="#c77d38"/);
+  assert.match(physics,/flatShading:true/);
+  assert.match(physics,/DEMO_NUMBER="#f7dfae"/);
+  assert.match(physics,/HemisphereLight\(0xffead0/);
+  assert.doesNotMatch(physics,/#262d38/);
+  assert.doesNotMatch(physics,/context\.arc\(64,64,35/);
 });
 
 test("connected replay uses fast depth-first cinematic motion and completes inside 1.5 seconds",()=>{
