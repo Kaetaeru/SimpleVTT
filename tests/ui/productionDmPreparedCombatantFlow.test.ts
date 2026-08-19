@@ -67,7 +67,7 @@ function installFakeDesktopTransport() {
   };
 }
 
-test("Host preparation can add/remove a real Combatant and starts Initiative from the prepared Scene set",async()=>{
+test("Host can add/remove Encounter Combatants in active Freeform and Initiative blocks unsafe removal",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
@@ -82,13 +82,10 @@ test("Host preparation can add/remove a real Combatant and starts Initiative fro
     const firstDagger=(snapshot.scene.actionsByActor[first.id]??[]).find((action)=>action.name==="단검");
     assert.equal(firstDagger?.attackBonus,5);
     assert.equal(firstDagger?.damage?.[0]?.dice,"1d4");
-    assert.equal(snapshot.session.lifecycle,"preparing");
 
-    const prepared=adapter as MockAdapter & {removeCombatant(combatantId:string):Promise<typeof snapshot>};
-    snapshot=await prepared.removeCombatant(first.id);
+    const encounter=adapter as MockAdapter & {removeCombatant(combatantId:string):Promise<typeof snapshot>};
+    snapshot=await encounter.removeCombatant(first.id);
     assert.equal(snapshot.scene.entities.some((entity)=>entity.id===first.id),false);
-    assert.equal(snapshot.scene.actionsByActor[first.id],undefined);
-    assert.equal(snapshot.scene.economyByActor[first.id],undefined);
 
     snapshot=await adapter.instantiateCombatant("combatant.phase14.prepared-scout");
     const liveScout=snapshot.scene.entities.find((entity)=>entity.id==="combatant.phase14.prepared-scout.instance-1");
@@ -103,22 +100,32 @@ test("Host preparation can add/remove a real Combatant and starts Initiative fro
       {id:"client:char.phase14.player",name:"Phase14 Player",characterName:"Phase14 Player",state:"connected",ready:true},
     ];
 
-    snapshot=await adapter.startPreparedSession("initiative");
+    snapshot=await adapter.startPreparedSession("freeform");
     assert.equal(snapshot.session.lifecycle,"live");
-    assert.equal(snapshot.sessionMode,"initiative");
-    assert.ok(snapshot.scene.entities.some((entity)=>entity.id===liveScout.id),"prepared Combatant must survive into the live Scene");
-    assert.ok(snapshot.scene.actionsByActor[liveScout.id]?.some((action)=>action.name==="단검"));
-    assert.ok(snapshot.scene.economyByActor[liveScout.id],"prepared Combatant must participate in Initiative economy");
+    assert.equal(snapshot.sessionMode,"freeform");
+    assert.ok(snapshot.scene.entities.some((entity)=>entity.id===liveScout.id));
 
-    const blocked=await prepared.removeCombatant(liveScout.id);
-    assert.ok(blocked.scene.entities.some((entity)=>entity.id===liveScout.id),"preparation removal must not silently mutate a live session");
-    assert.match(blocked.session.compatibilityMessage,/preparation/i);
+    snapshot=await encounter.removeCombatant(liveScout.id);
+    assert.equal(snapshot.scene.entities.some((entity)=>entity.id===liveScout.id),false,"active Freeform removal uses the same Scene authority");
+    assert.equal(snapshot.scene.actionsByActor[liveScout.id],undefined);
+    assert.equal(snapshot.scene.economyByActor[liveScout.id],undefined);
+
+    snapshot=await adapter.instantiateCombatant("combatant.phase14.prepared-scout");
+    const initiativeScout=snapshot.scene.entities.find((entity)=>entity.id==="combatant.phase14.prepared-scout.instance-1");
+    assert.ok(initiativeScout);
+    snapshot=await adapter.startInitiative();
+    assert.equal(snapshot.sessionMode,"initiative");
+    assert.ok(snapshot.scene.economyByActor[initiativeScout.id]);
+
+    const blocked=await encounter.removeCombatant(initiativeScout.id);
+    assert.ok(blocked.scene.entities.some((entity)=>entity.id===initiativeScout.id),"Initiative removal must not silently mutate turn runtime");
+    assert.match(blocked.session.compatibilityMessage,/active Freeform/i);
   } finally {
     transport.restore();
   }
 });
 
-test("production Host preparation bridge exposes Combatant add/remove controls without debug setup",()=>{
+test("legacy Host preparation bridge still exposes the canonical Combatant commands without debug setup",()=>{
   const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
   assert.match(source,/Combatant 준비/);
   assert.match(source,/combatantDefinitions/);
