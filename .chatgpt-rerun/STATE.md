@@ -11,72 +11,103 @@
 - issue: #108
 - PR #109: open/draft/unmerged; no merge authorized
 
-## Current source checkpoint
-`bed3119c3e7ae5ac8663b29e7202fc0bdbd64994`
+## Current source HEAD
+`d942d58a83eb2222ffd722d58b19c67c3dc8de13`
 
-This HEAD remains fully automated-green, but it is **not human-accepted**. The user exercised the delivered Main Playable Windows artifact and found four concrete defects, so the same sequence is re-authorized as `continue`.
+This is the current human-acceptance repair candidate. It is not yet human-accepted. Do not fall back to `bed3119c...`.
 
 ## Durable GitHub/watch conventions
 - `STATUS.md` and human-facing watcher status text are Korean.
-- Invoke the matching GitHub plugin skill first; do not use direct `gh` as the independent/default path.
-- For CI, `gh-fix-ci` first; if its `gh` dependency blocks Actions log inspection, the user-authorized connector log fallback may be used.
-- No speculative fixes without exact logs or exact human repro.
-- Never merge PR #109 without explicit authorization.
+- Invoke the matching GitHub plugin skill first; direct `gh` is not the independent/default path.
+- CI failures use `gh-fix-ci` first; when its `gh` dependency blocks log retrieval, the user-authorized connector log fallback may be used.
+- No speculative fixes without exact CI evidence or exact human repro.
+- Never merge PR #109 without explicit user authorization.
 
-## Mandatory preflight completed for this acceptance-failure execution
-Read from `main` in exact order:
-1. `.chatgpt-rerun/README.md`
-2. `.chatgpt-rerun/control.json`
-3. `.chatgpt-rerun/STATE.md`
-4. `.chatgpt-rerun/PLAN.md`
+## Human acceptance defects that reopened sequence 3
+The user tested the prior Windows artifact and reported:
+1. production dice looked completely different from the prior UI-demo form/design;
+2. attack was unavailable in the demo session;
+3. the official Character Sheet layout version was not exposed;
+4. clicking different existing Character cards always entered one same Character.
 
-Reconciled at start:
-- run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence `3`
-- task `v1-product-experience-overhaul`
-- control at start `needs_user`
-- main `ac7d39421c5e32bf42aab67506e8295942cade4a`
-- PR #109 HEAD `bed3119c3e7ae5ac8663b29e7202fc0bdbd64994`, open/draft/unmerged
+These observations are authoritative acceptance failures even though the prior automated head was green.
 
-## Prior automated evidence at `bed3119c...`
-All automatic workflows completed success:
-- UI `32202359225`
-- Rules Domain `32202359177`
-- Contract validation `32202359173`
-- Persistence `32202359176`, application-contract `95918637454`, tauri-storage `95918637462`
-- Phase 11 `32202359213`, offline `95918637574`, Windows `95918778475`
-- Phase 12 `32202359183`, connected `95918637353`, Windows connected `95918775214`
-- Main Playable `32202359188`, playable-contract `95918637735`, Windows `95918801170`
+## Implemented fixes
+### Dice
+- shared `PhysicsDice3D` now uses the UI-demo bronze/warm facet language.
+- d10 no longer uses `CylinderGeometry`; it uses a ten-face polyhedral helper.
+- Three.js/cannon-es physics and authoritative-result convergence remain presentation-only.
 
-Do not rerun this historical evidence unless touched by the upcoming fixes. Automated green did not catch the human-facing mismatches below.
+### Demo attack
+- reference offline demo exposes a real 5 ft melee relation for the default Aelar/wolf case.
+- attack target eligibility is projected through existing `runtimeSpatialRelation` visibility/range facts.
+- resolution still uses the existing authoritative attack transaction/resolution services.
 
-## Human acceptance failures — exact observed symptoms
-1. **주사위 형태 불일치**: 실제 Windows production에서 보이는 주사위가 이전 UI demo에서 확정했던 형태/디자인이 아니고 완전히 다른 형태로 보임.
-2. **demo session 공격 불가**: demo session에서 공격을 실행할 수 없음.
-3. **공식 시트 레이아웃 부재**: Character에서 이전에 요구/구현한 official sheet layout 버전이 노출되지 않음.
-4. **Character 카드 선택 identity 오류**: 여러 existing Character card 중 어떤 카드를 눌러도 하나의 동일 Character로 진입함.
+### Official layout exposure
+- `CharacterLibraryUxBridge` exposes `SimpleVTT 시트 / 공식 시트 스타일` in the Character Library header using existing persisted sheet-layout preferences.
+- existing `CharacterSheetPlayScreen` and `OfficialCharacterSheetPlayScreen` remain the two presentation layouts over one active Character.
 
-These four observations are sufficient to fail the human acceptance pass. No claim is made yet about root causes.
+### Character selection
+- regular Character Library cards now resolve their corresponding `snapshot.characters[index].id` through existing `selectProductionCharacter(character.id)`.
+- the legacy reference Mira card is materialized into a distinct playable sheet in the adapter's existing Character collection; no second Character store is introduced.
 
-## Reopened scope
-Only behavior directly implicated by the four observations is reopened:
-- production visual dice renderer vs prior UI-demo dice authority;
-- demo-session attack/action gating;
-- dual Character Sheet layout exposure, specifically the official layout;
-- Character Library card -> active canonical Character selection and navigation/session entry.
+## Regression coverage
+- new `productionAcceptanceWindowsRegression.test.ts`: legal reference melee attack completes through authoritative runtime; Mira/Aelar selection is distinct.
+- `productionLocalCharacterSwitch.test.ts`: reference selection + existing remote SessionProjection preservation.
+- `characterSheetPlayableUx.test.ts`: Character Library exposes official layout preference and existing dual-sheet authority remains intact.
+- dice structure tests: demo bronze treatment, shared physics renderer, polyhedral d10, no `CylinderGeometry` regression.
+- UI workflow includes these acceptance regressions.
 
-Unrelated validated session authority, content parity, persistence, image handout, reconnect, Undo, VFX and dead-legacy cleanup remain closed unless a fix actually touches them.
+## Intermediate CI diagnosis
+At `461f4f62de159fe8d0b4e4fadd4a20340efd1db8`, the four new acceptance regressions all passed. A later UI step failed only because an older duplicate structural test still required `CylinderGeometry` for d10.
+
+CI handling followed policy:
+1. invoked `gh-fix-ci` first;
+2. `gh` was unavailable;
+3. used the user-authorized connector log fallback;
+4. exact log showed only the stale `visualDiceStructure.test.ts` `/CylinderGeometry/` assertion;
+5. `d942d58a...` changed only that test expectation to the new polyhedral d10 rule.
+
+No product source was changed after `461f4f62...`.
+
+## Exact-head validation evidence at `d942d58a...`
+Completed success:
+- UI `32204865620`, frontend `95926003383`: **success**. Includes the human-acceptance regressions, Character/session integration, Phase 09 mechanics suite, TypeScript and production build.
+- Rules Domain `32204865592`: **success**.
+- Contract validation `32204865594`: **success**.
+- Persistence `32204865644`:
+  - application-contract `95926003457`: **success**;
+  - tauri-storage `95926003360`: **success**.
+- Main Playable `32204865588`, playable-contract `95926017359`: **success**.
+- Phase 11 `32204865635`, offline-walkthrough `95926003264`: **success**.
+- Phase 12 `32204865632`, connected-protocol `95926003189`: **success**.
+
+Still running when this checkpoint was written:
+- Main Windows `95926276820`: Tauri persistence/session transport verification in progress, then executable build/stage/upload.
+- Phase 11 Windows `95926114975`: Windows playable executable build in progress.
+- Phase 12 Windows connected `95926150169`: Tauri session transport/persistence verification in progress, then executable build/stage/upload.
+
+These jobs were already running. On watcher continuation, **fetch their current results; do not restart them**.
+
+## Untouched validated boundaries — do not repeat merely due restart
+- connected authority/reconnect/idempotency/Undo;
+- Direct-IP session entry;
+- content parity before Ready;
+- persistence architecture;
+- portrait and image handout/reconnect;
+- combat VFX;
+- dead-legacy cleanup and named-rule baseline alignment.
 
 ## Next Exact Action
-1. Inspect prior UI-demo dice implementation/assets and production dice mount to identify the exact divergence.
-2. Trace demo-session attack path from displayed actor/action/target gating through existing authoritative action execution.
-3. Trace official-sheet layout switch/mount and determine why production Character no longer exposes it.
-4. Trace Character card identity through selection and active Character persistence/routing to reproduce why every card opens one Character.
-5. Fix only observed causes; add focused regressions for all four.
-6. Before source writes, recheck PR #109 HEAD and use only non-force fast-forward updates.
-7. Validate affected UI/Main/Character/session/dice gates and collect exact-head Windows evidence after convergence.
-8. Deliver a new Windows artifact for another human acceptance pass.
-9. Keep PR #109 draft/unmerged.
+1. Mandatory watcher preflight in exact README -> control -> STATE -> PLAN order.
+2. Trust GitHub actual state and recheck PR #109 source HEAD.
+3. If HEAD remains `d942d58a...`, do not redo source diagnosis or already-green UI/Linux gates.
+4. Fetch Main Windows `95926276820`, Phase 11 Windows `95926114975`, and Phase 12 Windows connected `95926150169` results.
+5. If a Windows failure is observed, use `gh-fix-ci` first then approved connector logs if needed; fix only that exact failure.
+6. If Main Windows succeeds with executable build/stage/upload, fetch the Main Playable run `32204865588` artifact for exact HEAD `d942d58a...`, download and deliver it to the user.
+7. After artifact delivery, set `needs_user` and require a focused human retest of exactly the four original observations: dice design, demo attack, official layout, distinct Character cards.
+8. V0.9 is not complete until that human retest succeeds.
+9. PR #109 stays draft/unmerged.
 
 ## Dispatch recommendation
 `continue`
