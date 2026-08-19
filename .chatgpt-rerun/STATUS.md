@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 일시 중단, Session UI 시각 배치 기획 완료
+**연결 상태:** `main` coordination · 구현 일시 중단, 구현 직전 UI 계약 완료
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - canonical watcher branch: `main`
@@ -11,66 +11,81 @@
 - Control 목표: `needs_user`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- 새 시각 배치 명세: `.agents/V0_9_SESSION_VISUAL_LAYOUT_CONTRACT.md`
-- 최신 planning HEAD: `df1da3582f0a43d1ed573eee9d5e40de72874365`
+- 최신 planning HEAD: `a1ee400d1bcb7b8db3f72d793e7bdefb7782c8e9`
 
-## 이번에 확정한 화면 골격
+## 이번에 완료한 마지막 구현 직전 기획
 
-기준 desktop은 1440x900이며 Session Mode는 다음 다섯 영역으로 고정합니다.
+### 1. Session UI Architecture
+`.agents/V0_9_SESSION_UI_ARCHITECTURE_CONTRACT.md`
 
-1. 상단 compact Session Bar 약 52px
-2. 가장 큰 Main Focus
-3. 하단 intent-first Action Dock 약 64~72px resting
-4. 우측 Utility Rail 약 48~56px
-5. 그 위에 pane/drawer/Full Sheet/dice/result를 올리는 Layer Host
+- active Session은 Library route가 아니라 app-level Session Mode
+- SessionBar / MainFocus / ActionDock / UtilityRail / LayerHost로 분리
+- 새 UI state는 pane/intent/focus/scroll 같은 presentation state만 소유
+- Character/Scene/Action/Resolution/Session authority는 기존 AppProvider/runtime 그대로 유지
 
-Freeform의 중앙은 계속 조용하게 유지합니다. 전체 Actor/Party board, Initiative order, action economy, 대형 category hotbar, Activity/Inspector는 상시 노출하지 않습니다.
+### 2. Existing UI Reuse Map
+`.agents/V0_9_EXISTING_UI_REUSE_MAP.md`
 
-## Player
+재사용:
+- production action/target command wiring
+- 기존 Character Sheet projection/content
+- Official Character/Spellcasting page
+- layout preference
+- app-level dice/VFX/handout authority
 
-- Session Bar 오른쪽에 Character portrait/name/compact HP가 항상 보입니다.
-- Character chip 한 번 클릭 -> Quick Sheet
-- 바로 옆 명확한 expand -> Full Sheet
-- Quick Sheet는 desktop 약 360px 우측 pane
-- Full Sheet는 mounted Session Shell 위 약 88~94% 폭의 large workspace overlay
-- Full Sheet toolbar에서 `SimpleVTT | 공식 시트 스타일`, Rules, close를 제공합니다.
-- close는 `플레이로 돌아가기`가 아니라 `시트 닫기`입니다.
+교체/퇴역할 정상 Session UI:
+- Library sidebar 안의 Play route
+- `플레이로 돌아가기`
+- 상시 Actor card wall
+- 상시 공통/클래스/주문/아이템/패시브/커스텀 hotbar
+- Freeform action economy
+- lifecycle 기준 Encounter 편집 제한
+- Sheet 내부 dice tray
 
-## DM
+### 3. Quick Sheet IA
+`.agents/V0_9_QUICK_SHEET_INFORMATION_ARCHITECTURE.md`
 
-- Session Bar에 현재 acting Actor identity를 둡니다.
-- actor click -> Quick View
-- switch affordance -> Actor Switcher
-- 우측 Rail은 Actor, Rules, Encounter, Participants, Handout, Activity/Undo, Session 순입니다.
-- Player 0명/Combatant 0명도 정상 Freeform 상태이며 필요한 compact CTA만 제공합니다.
+- Character chip 1-click
+- 첫 화면: identity -> HP/AC -> 핵심 수치 -> 상태 -> 자원 -> 주 공격
+- Spell/Feature/Item은 compact quick access
+- 별도 Character/HP/resource store를 만들지 않음
+- Session action은 canonical ActionVm/resolveAction 경로로 실행
+- connected Session에서 local random roll을 authoritative result처럼 취급하지 않음
 
-## Action / Combat
+### 4. Full Sheet Reuse
+`.agents/V0_9_FULL_SHEET_IN_SESSION_REUSE_CONTRACT.md`
 
-Freeform resting Action Dock은 Attack, Magic, Search, Influence, Help + `모든 행동` 같은 작은 intent 집합을 기본으로 하고 필요할 때만 contextual detail로 확장합니다.
+- Standalone/Session이 같은 Sheet content family 재사용
+- SimpleVTT Sheet section과 Official page를 재사용/분리
+- Session에서는 Full Sheet가 LayerHost workspace
+- `기기로 플레이` route 버튼 제거
+- Rules는 Sheet 위에 열고 독립적으로 닫음
+- Sheet roll presentation은 body-level cinematic dice
 
-Initiative는 새 페이지가 아니라 같은 Shell에 compact order strip/current-turn economy/turn controls를 추가합니다.
+### 5. Action Dock Matrix
+`.agents/V0_9_ACTION_DOCK_BEHAVIOR_MATRIX.md`
 
-Target chooser는 target이 필요한 action을 선택했을 때만 나타납니다. spatial module이 없으면 거리 값을 만들지 않고 otherwise-valid target은 모두 선택 가능합니다.
+`Resting -> Intent -> Detail -> Target -> Pending -> Resolution`
 
-## Responsive
+Attack, Dash, Disengage, Dodge, Help, Hide, Influence, Magic, Ready, Search, Study, Utilize 전체 행동을 intent별로 정의했습니다.
 
-- >=1200px: fixed right rail + side panes
-- 900~1199px: drawer 성격 강화, Action Dock 2-row 허용
-- <900px/constrained: utility strip, Quick Sheet/Rules full-height drawer, Full Sheet full workspace overlay
+UI가 공격/사거리/target legality를 새로 계산하지 않습니다. canonical ActionVm/eligibleTargetIds를 사용하고, spatial module이 없을 때의 `모두 사거리 내` fallback은 canonical target eligibility에서 보장해야 합니다.
 
-좁은 Windows 창에서도 close/back/primary action이 viewport 밖으로 사라지면 안 됩니다.
+## 다음 구현 범위
 
-## 다음 단계
+구현 승인 후 처음부터 전체 UI를 한꺼번에 바꾸지 않습니다.
 
-구현/CI는 아직 시작하지 않습니다. 다음 기획은 더 큰 제품 문서가 아니라 구현 slice와 바로 연결되는 네 계약입니다.
+첫 walking skeleton:
+1. Library / Session Mode root 분리
+2. persistent Session Shell
+3. Player Character / DM Actor identity
+4. low-noise Main Focus
+5. 최소 Utility Rail + LayerHost
+6. Character chip 1-click Quick Sheet
+7. Quick Sheet open/close 시 Session context 보존
 
-1. S-00 Session Shell component/state ownership
-2. Quick Sheet 정확한 정보 구조
-3. Full Sheet in-session component reuse
-4. Freeform Action Dock intent별 behavior table
+이 slice를 실제 검증한 뒤 Full Sheet -> Rules -> Freeform Action Dock 순서로 확장합니다.
 
-이 네 가지가 승인된 뒤 같은 sequence를 `continue`로 돌려 구현을 시작합니다.
-
-PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
+구현/CI는 아직 시작하지 않았습니다. PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
 `STATUS.md`는 사람용 표시입니다. authoritative reconciliation 순서는 `README -> control -> STATE -> PLAN`입니다.
