@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 계속 승인 · Handout integration까지 검증 완료
+**연결 상태:** `main` coordination · 구현 계속 승인 · responsive/keyboard/focus pass까지 검증 완료
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - 활성 작업 브랜치: `agent/108-production-play-session-ux`
@@ -9,37 +9,32 @@
 - Task: `v1-product-experience-overhaul`
 - Control 목표: `continue`
 - PR: #109 open/draft/unmerged
-- 검증된 현재 source HEAD: `9f4d2f64cad008726e318a8ea43cb4f008ae962c`
+- 검증된 현재 source HEAD: `ee76aaec6af10fc7b28e939ccfd66eacd4d19384`
 
-## 추가 검증 완료 — Handout integration
+## 추가 검증 완료 — responsive / keyboard / focus
 
-UI run `32219878491` / frontend `95968231474`: **SUCCESS**.
+UI run `32220293621` / frontend `95969371848`: **SUCCESS**.
 
-Phase 12 connected run `32219878487`의 connected-authority 단계도 49/49 **SUCCESS**이며, 현재 DM handout이 compatible reconnect 후 Player에게 복원되는 기존 runtime 테스트가 포함됩니다.
+- Player Handout 닫기/Escape 후 활성 `자료` reopen control로 focus 복귀
+- 기존 utility launcher focus restoration과 top-layer 한 단계 Escape 순서 유지
+- 좁은 화면에서 header 종료 버튼이 숨겨져도 DM `세션` pane에서 기존 `stopSession()`으로 세션 종료 가능
+- 낮은 Windows 창에서 Utility Rail이 세로 스크롤되어 모든 도구 접근 가능
+- result/resolution layer도 높이 제한 + 내부 스크롤로 제어 버튼 접근 가능
+- Quick Sheet / DM pane / Handout / Action Dock target/detail의 기존 constrained-width fallback 유지
+- 새 focused responsive/keyboard/focus 회귀 테스트 통과
+- 기존 Session/DM/reconnect/Initiative/Handout/lifecycle/Phase09, TypeScript, production build 모두 green
 
-- 기존 handout runtime/state/transfer semantics만 재사용; 새 image/session protocol이나 durable store 없음
-- `main.tsx`의 전역 body-level Handout UI mount 제거, persistent `SessionModeRoot`가 presentation 소유
-- DM Utility Rail의 `자료`에서 로컬 이미지 preview → 공개 → 철회
-- 기존 PNG/JPEG/WebP 및 4 MiB 검증 경로 유지
-- Player는 현재 이미지가 오면 transient Session layer로 보고, 닫은 뒤 활성 이미지가 있을 때만 `자료`로 다시 열기 가능
-- Handout이 열린 동안 Action Dock 입력은 suspend되고 `Escape`는 Handout 한 레이어만 닫음
-- Sheet/Rules/Action/Initiative/Session Shell 문맥은 그대로 mounted 상태로 유지
-- reconnect restore는 기존 hello-ack path를 그대로 사용
-- ResolutionEvent/Undo/combat state와 분리된 presentation-only 상태 유지
-- permanent image manager / tactical map으로 확장하지 않음
-
-중간 CI에서는 두 개의 오래된 presentation-ownership assertion만 교정했습니다. 하나는 Action Dock suspend 조건을 이전 세 레이어로 고정했고, 다른 하나는 `main.tsx`에 전역 `SessionImageHandoutBridge`가 반드시 있어야 한다고 가정했습니다. 둘 다 test-only 수정이며 제품 동작을 되돌리지 않았습니다.
+Phase 12 connected workflow도 authority protocol 단계는 green이며, 이후 실패는 이전부터 기록된 `phase11OfflineWalkthrough.test.ts`의 오래된 spatial-provenance assertion 하나뿐입니다.
 
 ## 다음
 
-다음 승인 slice는 **responsive/keyboard/focus pass**입니다.
+다음 단계는 **final exact-head automated validation**입니다.
 
-- constrained Windows viewport에서 Session Bar/Rail/Quick·Full Sheet/Rules/Activity/DM tools/reconnect/Initiative/Handout/Action Dock/target/result가 모두 도달 가능해야 함
-- keyboard-only 사용과 focus restoration 확인
-- `Escape`는 top layer/interaction step 하나만 닫기
-- 이미 검증된 mechanics/authority나 UX 구조를 재설계하지 않음
+1. 오래된 offline spatial-provenance assertion을 canonical no-spatial 계약에 맞게 수렴
+2. 하나의 새 exact source SHA에서 UI / Phase 11 / Main Playable / Phase 12 / Persistence / Rules / Contract / Windows build를 함께 검증
+3. 이후 Windows human usability acceptance A-J
 
-기존 no-spatial 변경 이후 오래된 offline provenance assertion은 final automated validation 단계에서 정리합니다. 현재 Handout exact HEAD의 connected authority 49/49는 green이고 이 알려진 assertion만 그 이후 단계에서 실패합니다.
+이 단계에서 공간 시스템을 다시 기본 기능으로 복원하거나 가짜 spatial provenance를 만들어 테스트를 통과시키지 않습니다.
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
