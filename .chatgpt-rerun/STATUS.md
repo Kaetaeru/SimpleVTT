@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 일시 중단, 상시 세션 UI 철학 재정립
+**연결 상태:** `main` coordination · 구현 일시 중단, 전체 UI 씬 기획 완료
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - canonical watcher branch: `main`
@@ -11,31 +11,57 @@
 - Control 목표: `needs_user`
 - Issue: #108
 - PR: #109 open/draft/unmerged
-- UI-first 문서: `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
-- 플레이 화면 인벤토리: `.agents/V0_9_PLAY_SURFACE_INVENTORY.md`
-- 상시 세션 UX 원칙: `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md`
-- 최신 planning HEAD: `4c4c07fdbd41ea14f30f00f51f33cec73f4cf482`
+- 최신 전체 UI 씬 기획: `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md`
+- 최신 planning HEAD: `afce5407d2a3b243f5b25d74dceb6257099d1ded`
 
-## 새 핵심 철학
+## 전체 UI 구조
 
-D&D 세션이 활성화된 뒤에는 SimpleVTT를 계속 켜 둔 채 대화, 탐험, Character/규칙 확인, 판정, 전투, DM 운영을 끊김 없이 이어갈 수 있어야 합니다.
+V0.9를 두 개의 큰 모드로 정리했습니다.
 
-따라서 `플레이`는 여러 route 중 하나가 아니라 세션이 끝날 때까지 유지되는 **Session Mode**입니다. Sheet, Rules, Activity, Encounter, Participants, Handout, Session 정보는 정상 세션 중 별도 페이지로 나갔다 돌아오는 방식이 아니라 Session Play Shell 안의 drawer/pane/overlay로 열어야 합니다.
+### Library Mode
+세션 밖에서 Home, Character Library, Character Create/Edit, Standalone Character Sheet, Content, Rules, Settings, Session Entry를 사용합니다.
 
-## 현재 UI 재점검에서 확인한 충돌
+### Active Session Mode
+Session이 시작되면 앱 전체가 persistent Session Mode가 되고, Session 종료/Leave까지 같은 Active Session Shell을 유지합니다.
 
-1. 현재 App shell은 Home/Characters/Session/Content/Rules/Settings route로 workspace를 교체하고 `플레이로 돌아가기`를 제공합니다.
-2. Freeform에서 NPC/Combatant 및 Player/Party Scene Actor row가 항상 화면 중앙을 크게 차지합니다.
-3. `공통/클래스/주문/아이템/패시브/커스텀` hotbar가 상시 노출되어 tabletop companion보다 game HUD에 가깝습니다.
-4. Freeform에서도 action/bonus/reaction/movement economy를 `FREE`로 계속 표시합니다.
-5. Encounter 편집이 active session 운영이 아니라 offline/preparing lifecycle에 묶여 있습니다.
-6. full Character Sheet와 Rules lookup이 session-resident 도구가 아니라 route 단위입니다.
+공용 핵심 씬:
+- Freeform
+- Intent → Detail → Target
+- Resolution
+- Initiative/Combat
+- Quick Character/Actor View
+- in-session Full Character Sheet
+- Rules Lookup
+- Activity
+- Connection/Recovery
+- Cinematic Dice
+- Handout Viewer
 
-이 항목들은 구현 전에 C-01 Active Session Play Shell 설계에서 다시 정의합니다.
+DM 전용:
+- Session Share/Settings
+- Participants
+- Encounter Editor
+- Combatant Picker
+- Actor Switcher
+- Initiative Controls
+- Handout Control
+- Adjudication/Undo
 
-## 다음 단계
+Player 전용:
+- My Character session tools
+- Leave/Reconnect
 
-구현/CI는 아직 재개하지 않습니다. 다음에는 C-01을 persistent session bar, 낮은 밀도의 main focus, intent-first action dock, in-session utility rail, transient overlay stack으로 구체화합니다. 특히 Sheet/Rules/Activity와 DM Encounter/Participants/Handout/Session 도구가 Session Shell을 대체하지 않도록 확정합니다.
+## 중요한 UI 원칙
+
+- Freeform은 낮은 밀도의 기본 화면입니다.
+- Scene Actor 전체 목록, action category hotbar, action economy를 상시 표시하지 않습니다.
+- Rules/Sheet/Encounter/Activity는 Play를 대체하는 route가 아니라 Session Shell 안의 pane/drawer/overlay입니다.
+- Initiative는 다른 페이지가 아니라 같은 Shell의 확장 상태입니다.
+- Player Lobby/Ready/Play Start gate는 없습니다.
+- 별도 spatial/range module이 없으면 적절한 target은 사거리 내로 봅니다.
+- 주사위는 화면 뒤에서 앞으로 날아오는 body-level cinematic overlay이며 Sheet 내부 dice frame을 만들지 않습니다.
+
+구현/CI는 아직 재개하지 않습니다. 다음 단계는 전체 씬 기획을 사용자와 확인한 뒤 `S-00 Persistent Active Session Shell`의 실제 배치를 구현 가능한 수준으로 확정하는 것입니다.
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
