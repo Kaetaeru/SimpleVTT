@@ -7,11 +7,12 @@ import { VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS } from "./app/dice
 import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock } from "./SessionActionDock";
+import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
 import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
 
-type SessionUtility = "quick-sheet" | "actor" | "rules" | "activity" | null;
+type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "activity" | "session" | null;
 type WorkspaceLayer = "full-sheet" | null;
 
 const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", "damage-animation"]);
@@ -135,9 +136,12 @@ export function SessionModeRoot() {
       <aside className="session-mode-rail" aria-label="세션 도구">
         {role === "player"
           ? <button type="button" className={activeUtility === "quick-sheet" ? "active" : ""} aria-pressed={activeUtility === "quick-sheet"} aria-label="빠른 캐릭터 시트 열기" onClick={(event) => toggleUtility("quick-sheet", event.currentTarget)}><span>시트</span></button>
-          : <button type="button" className={activeUtility === "actor" ? "active" : ""} aria-pressed={activeUtility === "actor"} aria-label="현재 Actor 빠른 보기" onClick={(event) => toggleUtility("actor", event.currentTarget)}><span>Actor</span></button>}
+          : <button type="button" className={activeUtility === "actor" ? "active" : ""} aria-pressed={activeUtility === "actor"} aria-label="행동할 Actor 열기" onClick={(event) => toggleUtility("actor", event.currentTarget)}><span>Actor</span></button>}
         <button type="button" className={activeUtility === "rules" ? "active" : ""} aria-pressed={activeUtility === "rules"} aria-label="세션 규칙 찾아보기" onClick={(event) => toggleUtility("rules", event.currentTarget)}><span>규칙</span></button>
+        {role === "dm" && <button type="button" className={activeUtility === "encounter" ? "active" : ""} aria-pressed={activeUtility === "encounter"} aria-label="Encounter 도구 열기" onClick={(event) => toggleUtility("encounter", event.currentTarget)}><span>Encounter</span></button>}
+        {role === "dm" && <button type="button" className={activeUtility === "participants" ? "active" : ""} aria-pressed={activeUtility === "participants"} aria-label="참가자 보기" onClick={(event) => toggleUtility("participants", event.currentTarget)}><span>참가자</span></button>}
         <button type="button" className={activeUtility === "activity" ? "active" : ""} aria-pressed={activeUtility === "activity"} aria-label="최근 세션 결과 보기" onClick={(event) => toggleUtility("activity", event.currentTarget)}><span>기록</span></button>
+        {role === "dm" && <button type="button" className={activeUtility === "session" ? "active" : ""} aria-pressed={activeUtility === "session"} aria-label="세션 공유 정보 열기" onClick={(event) => toggleUtility("session", event.currentTarget)}><span>세션</span></button>}
       </aside>
     </div>
 
@@ -151,7 +155,10 @@ export function SessionModeRoot() {
 
     <div className="session-mode-layer-host" aria-live="polite">
       {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
-      {activeUtility === "actor" && role === "dm" && <ActorQuickView actor={dmActor} onClose={closeUtility} />}
+      {activeUtility === "actor" && role === "dm" && <SessionDmActorPane onClose={closeUtility} />}
+      {activeUtility === "encounter" && role === "dm" && <SessionDmEncounterPane onClose={closeUtility} />}
+      {activeUtility === "participants" && role === "dm" && <SessionParticipantsPane onClose={closeUtility} />}
+      {activeUtility === "session" && role === "dm" && <SessionSharePane onClose={closeUtility} />}
       {role === "player" && <div className="session-full-sheet-layer" hidden={workspaceLayer !== "full-sheet"} aria-hidden={workspaceLayer !== "full-sheet"}>
         <CharacterSheetWorkspace hostMode="session" onClose={closeFullSheet} onOpenRules={(button) => toggleUtility("rules", button)} />
       </div>}
@@ -225,16 +232,6 @@ function QuickSheet({ onClose, onOpenFull }: { onClose(): void; onOpenFull(butto
     <section className="session-quick-sheet-section"><h2>자주 쓰는 공격</h2>{attacks.length ? <div className="session-quick-sheet-attacks">{attacks.map((attack) => <div key={attack.id} className={!attack.available ? "disabled" : ""}><div><strong>{attack.name}</strong><small>{attack.attackBonus !== undefined ? `명중 ${signed(attack.attackBonus)}` : attack.summary}</small></div><span>{actionDamageSummary(attack)}</span>{!attack.available && <em>{attack.disabledReason || "현재 사용할 수 없습니다."}</em>}</div>)}</div> : <p className="session-quick-sheet-empty">현재 표시할 공격이 없습니다.</p>}</section>
 
     <section className="session-quick-sheet-section"><h2>능력치</h2><div className="session-quick-sheet-abilities">{(["str", "dex", "con", "int", "wis", "cha"] as const).map((ability) => <div key={ability}><span>{({ str: "근", dex: "민", con: "건", int: "지", wis: "혜", cha: "매" } as const)[ability]}</span><strong>{signed(sheetAbilityModifier(character, ability))}</strong></div>)}</div></section>
-  </aside>;
-}
-
-function ActorQuickView({ actor, onClose }: { actor: SceneEntity | null; onClose(): void }) {
-  return <aside className="session-quick-sheet session-actor-quick-view" aria-label="현재 Actor 빠른 보기">
-    <header className="session-quick-sheet-head"><div><span className="eyebrow accent">ACTOR</span><strong>{actor?.name ?? "선택된 Actor 없음"}</strong></div><button type="button" autoFocus aria-label="Actor 보기 닫기" onClick={onClose}>×</button></header>
-    {actor ? <>
-      <section className="session-quick-sheet-vitals"><div><span>HP</span><strong>{actor.hp}/{actor.maxHp}</strong>{actor.tempHp > 0 && <small>+{actor.tempHp} 임시</small>}</div><div><span>AC</span><strong>{actor.ac}</strong></div></section>
-      {actor.status.length ? <section className="session-quick-sheet-section"><h2>상태</h2><div className="session-quick-sheet-chips">{actor.status.map((status) => <span key={status}>{status}</span>)}</div></section> : <p className="session-quick-sheet-empty">현재 상태 효과가 없습니다.</p>}
-    </> : <p className="session-quick-sheet-empty">Encounter에 Actor를 추가하면 여기에서 빠르게 확인할 수 있습니다.</p>}
   </aside>;
 }
 
