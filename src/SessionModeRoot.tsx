@@ -5,6 +5,7 @@ import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
 import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
+import { SessionActionDock } from "./SessionActionDock";
 import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
@@ -90,6 +91,7 @@ export function SessionModeRoot() {
   const dmActor = snapshot.scene.entities.find((entity) => entity.id === snapshot.scene.selectedActorId)
     ?? snapshot.scene.entities[0]
     ?? null;
+  const actionActorId = role === "dm" ? dmActor?.id ?? null : snapshot.activeCharacter.id;
   const connectionWarning = connectionCopy(snapshot.connectionState);
 
   return <div className="session-mode-root" data-session-role={role} data-session-mode={snapshot.sessionMode}>
@@ -127,8 +129,11 @@ export function SessionModeRoot() {
     </div>
 
     <footer className="session-mode-action-dock" aria-label="행동 도구">
-      <span>{snapshot.sessionMode === "initiative" ? "현재 턴" : "자유 진행"}</span>
-      <strong>{role === "dm" ? (dmActor?.name ?? "DM") : snapshot.activeCharacter.name}</strong>
+      <SessionActionDock
+        actorId={actionActorId}
+        suspended={Boolean(activeUtility || workspaceLayer || snapshot.resolution)}
+        onOpenRules={(button) => toggleUtility("rules", button)}
+      />
     </footer>
 
     <div className="session-mode-layer-host" aria-live="polite">
