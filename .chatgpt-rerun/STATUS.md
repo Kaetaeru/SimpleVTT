@@ -1,6 +1,6 @@
 # Rerun 상태
 
-**연결 상태:** `main` coordination · 구현 계속 승인 · Player reconnect/session utilities까지 검증 완료
+**연결 상태:** `main` coordination · 구현 계속 승인 · Initiative expansion까지 검증 완료
 
 - 저장소: `Kaetaeru/SimpleVTT`
 - 활성 작업 브랜치: `agent/108-production-play-session-ux`
@@ -9,33 +9,36 @@
 - Task: `v1-product-experience-overhaul`
 - Control 목표: `continue`
 - PR: #109 open/draft/unmerged
-- 검증된 현재 source HEAD: `02c55b18a535b0f62bd0daabe0cb83e617324ffc`
+- 검증된 현재 source HEAD: `9739da95521206116e9638c0459f541de46fdc31`
 
-## 추가 검증 완료 — Player reconnect / Session utilities
+## 추가 검증 완료 — Initiative expansion
 
-UI run `32218434349` / frontend `95964214046`: **SUCCESS**.
-Phase 12 run `32218434325`의 connected-session authority protocol 단계도 49/49 **SUCCESS**이며 accepted-cursor reconnect/idempotent catch-up이 포함됩니다.
+UI run `32219100733` / frontend `95966108635`: **SUCCESS**.
 
-- Player Session utility를 persistent Session Shell 안에 연결
-- 정상 연결은 조용하게 유지하고 reconnect/disconnected에서만 recovery strip 표시
-- reconnecting 중 presentation이 새 `joinSession()`을 시작하지 않음
-- terminal disconnected + 기존 Host 주소에서만 명시적 재참여 제공
-- Player pane은 session/Character/Host/connection/leave 범위만 노출
-- leave는 기존 `stopSession()` 재사용
-- Sheet/Rules/Activity/Action 문맥을 route 교체 없이 유지
-- recovery layer는 Full Sheet 위에서도 확인 가능
-- 두 번째 connection/session protocol 또는 durable store 없음
+- 같은 persistent Session Shell에 compact Initiative row를 확장
+- canonical round/current Actor/initiative/status/economy projection만 읽음
+- 순서는 Initiative total 기준 compact horizontal strip으로 표시하고 별도 turn authority를 만들지 않음
+- 현재 턴 Action/Bonus/Reaction/Movement만 Initiative에서 노출
+- Player는 자신의 현재 턴에서만 기존 `endTurn()` 사용, DM은 기존 authority로 다음 턴 진행
+- DM Initiative 종료는 기존 `endInitiative()` 재사용
+- order display가 Actor selection/currentActor/economy를 직접 변경하지 않음
+- Main Focus는 현재 Actor 핵심 수치/상태만 표시하고 Action Dock은 기존 Initiative intent set 재사용
+- Freeform low-noise 분기는 그대로 유지
+- 기존 Session/DM/reconnect/lifecycle/Phase09, TypeScript, production build 모두 green
 
-기존 Slice 10 HEAD에서도 이미 실패하던 `phase11OfflineWalkthrough.test.ts`의 오래된 spatial provenance assertion은 이번 reconnect 변경과 무관한 baseline으로 기록했습니다. connected authority 자체는 이번 exact HEAD에서 green입니다.
+중간 CI 실패는 Freeform 구조 테스트가 `SessionMainFocus.tsx` 전체에 `economyByActor`가 없다고 가정한 오래된 소유 범위 문제였습니다. Freeform 분기만 검사하도록 테스트를 좁혔고 제품 동작은 되돌리지 않았습니다.
 
 ## 다음
 
-다음 승인 slice는 **Initiative expansion**입니다.
+다음 승인 slice는 **Handout integration**입니다.
 
-- 같은 Session Shell이 Initiative에서만 compact round/current turn/order/economy/end-turn 정보를 확장
-- 기존 turn/Initiative authority 재사용
-- Freeform은 계속 조용하게 유지
-- Initiative 종료 시 같은 mounted Shell의 Freeform으로 복귀
+- 기존 handout runtime/bridge/state/transfer semantics 재사용
+- DM reveal/withdraw를 Session utility 안으로 통합
+- Player dismiss/minimize/reopen 및 reconnect-restored active image 유지
+- Session Shell/Action/Sheet/Rules/Initiative 문맥 위의 transient layer로 처리
+- permanent image manager나 tactical map으로 확장하지 않음
+
+기존 no-spatial 변경 이후 오래된 offline provenance assertion이 남아 있는 것은 final automated validation 단계에서 정리합니다.
 
 PR #109는 계속 draft/unmerged이며 명시적 승인 없이 merge하지 않습니다.
 
