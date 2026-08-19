@@ -1,7 +1,7 @@
 import "./combatantRuntimeContracts";
 import type { ActionVm, SceneVm } from "./contracts";
 import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09ReferenceRulesFacts";
-import { runtimeSpatialRelation } from "./realSpatialRuntimeService";
+import { authoritativeSpatialModuleRelation } from "./realSpatialRuntimeService";
 import { weaponRuleById } from "../domain/weaponRuleCatalog";
 
 export interface RuntimeTargetingFact extends Phase09TargetingFact {
@@ -46,16 +46,8 @@ export function resolveRuntimeAttackFact(action:ActionVm,fixedFaces:number[]):Ph
     return {
       sourceKind:fact.sourceKind,
       rangeFeet:fact.rangeFeet,
-      damageDice:[{
-        source:fact.damageSource,
-        sides:fact.diceSides,
-        count:fact.diceCount,
-        faces:fixedFaces.slice(0,fact.diceCount*2),
-      }],
-      flatDamage:[{
-        source:`runtime:action:${action.id}:damage-flat`,
-        value:actionDamage.flat,
-      }],
+      damageDice:[{ source:fact.damageSource,sides:fact.diceSides,count:fact.diceCount,faces:fixedFaces.slice(0,fact.diceCount*2) }],
+      flatDamage:[{ source:`runtime:action:${action.id}:damage-flat`,value:actionDamage.flat }],
     };
   }
 
@@ -67,21 +59,25 @@ export function resolveRuntimeAttackFact(action:ActionVm,fixedFaces:number[]):Ph
   return {
     sourceKind:"weapon",
     rangeFeet:normalRangeFeet(weapon.properties,weapon.mode),
-    damageDice:[{
-      source:`runtime:weapon:${weapon.id}:damage`,
-      sides:formula.sides,
-      count:formula.count,
-      faces:fixedFaces.slice(0,formula.count * 2),
-    }],
-    flatDamage:[{
-      source:`runtime:action:${action.id}:damage-flat`,
-      value:actionDamage.flat,
-    }],
+    damageDice:[{ source:`runtime:weapon:${weapon.id}:damage`,sides:formula.sides,count:formula.count,faces:fixedFaces.slice(0,formula.count * 2) }],
+    flatDamage:[{ source:`runtime:action:${action.id}:damage-flat`,value:actionDamage.flat }],
   };
 }
 
 export function resolveRuntimeTargetingFact(scene:SceneVm,sourceId:string,targetId:string):RuntimeTargetingFact {
-  const relation=runtimeSpatialRelation(scene,sourceId,targetId);
+  const relation=authoritativeSpatialModuleRelation(scene,sourceId,targetId);
+  if (!relation) {
+    return {
+      distanceFeet:0,
+      visible:true,
+      cover:"none",
+      targetCanSeeAttacker:true,
+      provenance:[
+        `runtime:spatial:${sourceId}->${targetId}:unconstrained:no-authoritative-module-fact`,
+        "SimpleVTT V0.9 · optional spatial module absent for this pair · otherwise-valid target treated in range",
+      ],
+    };
+  }
   return {
     distanceFeet:relation.distanceFeet,
     visible:relation.visible,
