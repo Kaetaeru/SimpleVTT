@@ -5,9 +5,10 @@ import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
 import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
+import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
 
-type SessionUtility = "quick-sheet" | "actor" | null;
+type SessionUtility = "quick-sheet" | "actor" | "rules" | "activity" | null;
 type WorkspaceLayer = "full-sheet" | null;
 
 function actionDamageSummary(action: ActionVm) {
@@ -62,6 +63,11 @@ export function SessionModeRoot() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (workspaceLayer && activeUtility === "rules") {
+        event.preventDefault();
+        closeUtility();
+        return;
+      }
       if (workspaceLayer) {
         event.preventDefault();
         closeFullSheet();
@@ -128,6 +134,8 @@ export function SessionModeRoot() {
         {role === "player"
           ? <button type="button" className={activeUtility === "quick-sheet" ? "active" : ""} aria-pressed={activeUtility === "quick-sheet"} aria-label="빠른 캐릭터 시트 열기" onClick={(event) => toggleUtility("quick-sheet", event.currentTarget)}><span>시트</span></button>
           : <button type="button" className={activeUtility === "actor" ? "active" : ""} aria-pressed={activeUtility === "actor"} aria-label="현재 Actor 빠른 보기" onClick={(event) => toggleUtility("actor", event.currentTarget)}><span>Actor</span></button>}
+        <button type="button" className={activeUtility === "rules" ? "active" : ""} aria-pressed={activeUtility === "rules"} aria-label="세션 규칙 찾아보기" onClick={(event) => toggleUtility("rules", event.currentTarget)}><span>규칙</span></button>
+        <button type="button" className={activeUtility === "activity" ? "active" : ""} aria-pressed={activeUtility === "activity"} aria-label="최근 세션 결과 보기" onClick={(event) => toggleUtility("activity", event.currentTarget)}><span>기록</span></button>
       </aside>
     </div>
 
@@ -140,8 +148,10 @@ export function SessionModeRoot() {
       {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
       {activeUtility === "actor" && role === "dm" && <ActorQuickView actor={dmActor} onClose={closeUtility} />}
       {role === "player" && <div className="session-full-sheet-layer" hidden={workspaceLayer !== "full-sheet"} aria-hidden={workspaceLayer !== "full-sheet"}>
-        <CharacterSheetWorkspace hostMode="session" onClose={closeFullSheet} />
+        <CharacterSheetWorkspace hostMode="session" onClose={closeFullSheet} onOpenRules={(button) => toggleUtility("rules", button)} />
       </div>}
+      {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
+      {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
       {snapshot.resolution && <SessionResolutionFallback />}
     </div>
   </div>;
@@ -209,7 +219,7 @@ function QuickSheet({ onClose, onOpenFull }: { onClose(): void; onOpenFull(butto
 
     <section className="session-quick-sheet-section"><h2>자주 쓰는 공격</h2>{attacks.length ? <div className="session-quick-sheet-attacks">{attacks.map((attack) => <div key={attack.id} className={!attack.available ? "disabled" : ""}><div><strong>{attack.name}</strong><small>{attack.attackBonus !== undefined ? `명중 ${signed(attack.attackBonus)}` : attack.summary}</small></div><span>{actionDamageSummary(attack)}</span>{!attack.available && <em>{attack.disabledReason || "현재 사용할 수 없습니다."}</em>}</div>)}</div> : <p className="session-quick-sheet-empty">현재 표시할 공격이 없습니다.</p>}</section>
 
-    <section className="session-quick-sheet-section"><h2>능력치</h2><div className="session-quick-sheet-abilities">{(["str", "dex", "con", "int", "wis", "cha"] as const).map((ability) => <div key={ability}><span>{({ str: "근", dex: "민", con: "건", int: "지", wis: "혜", cha: "매" } as const)[ability]}</span><strong>{signed(sheetAbilityModifier(character, ability))}</strong></div>)}</div></section>
+    <section className="session-quick-sheet-section"><h2>능력치</h2><div className="session-quick-sheet-abilities">{(["str", "dex", "con", "int", "wis", "cha"] as const).map((ability) => <div key={ability}><span>{({ str: "근", dex: "민", con: "건", int: "지", wis: "혜", cha: "매" } as const)[ability]}</span><strong>{signed(sheetAbilityModifier(character, ability))}</strong></div>)}</section>
   </aside>;
 }
 
