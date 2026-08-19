@@ -379,6 +379,8 @@
   bottom: 14px;
   transform: translateX(-50%);
   width: min(640px, calc(100vw - 90px));
+  max-height: calc(100% - 28px);
+  overflow: auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
@@ -439,6 +441,9 @@
     bottom: 66px;
     z-index: 50;
     min-height: auto;
+    max-height: calc(100% - 82px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 4px;
     border: 1px solid var(--line);
     border-radius: 9px;
