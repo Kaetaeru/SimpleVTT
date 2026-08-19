@@ -12,91 +12,100 @@
 - dispatch recommendation: `needs_user`
 
 ## Planning authority
-Implementation remains paused while the user-facing UI contract is rebuilt screen-by-screen.
+Implementation remains paused while the UI contract is rebuilt before source work resumes.
 
 Current planning documents on the work branch:
 - `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`
 - `.agents/V0_9_PLAY_SURFACE_INVENTORY.md`
 - `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md`
+- `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md`
 
 Latest planning HEAD:
-`4c4c07fdbd41ea14f30f00f51f33cec73f4cf482`
+`afce5407d2a3b243f5b25d74dceb6257099d1ded`
 
 Previous automated-green implementation HEAD:
 `d942d58a83eb2222ffd722d58b19c67c3dc8de13`
 
-Existing automated evidence remains historical regression evidence only. Any behavior that conflicts with the new UI contract must be reworked and reaccepted later.
+Existing automated evidence is historical regression evidence only. New UI scenes must be accepted against the new product contract.
 
-## Core product philosophy — continuous tabletop companion
-The primary UX philosophy is now explicit:
-
-**Once a D&D session is active, the user should be able to keep SimpleVTT open for the entire session and move through conversation, exploration, rules lookup, Character reference, rolls, combat and DM operation without repeatedly leaving the active play context.**
+## Core product philosophy
+SimpleVTT is an always-on tabletop companion. Once a D&D session is active, the app should stay open for conversation, exploration, rules lookup, Character reference, rolls, combat and DM operation without repeated route transitions.
 
 Consequences:
-- an active session is an app-level `Session Mode`, not merely one route among Home/Rules/Character/etc.;
-- normal session tasks should happen inside the persistent Active Session Play Shell through drawers, split panes, overlays or contextual layers;
-- Rules lookup, Character Sheet reference, Encounter/Combatant work and Activity/Undo must not require routine `Play -> other page -> Play로 돌아가기` navigation;
-- Freeform is the low-noise default state in which users spend most of the session;
-- Initiative is a temporary expansion of the same Session Shell, not another page;
-- DM and Player session context must survive utility-tool open/close and reconnect transitions.
+- active session is app-level `Session Mode`;
+- one persistent Active Session Shell remains mounted until Session end/leave;
+- Freeform is the low-noise default;
+- Initiative expands the same Shell;
+- Sheet, Rules, Activity and DM Encounter/Participants/Handout/Session tools open as pane/drawer/overlay layers rather than replacing Play;
+- no mandatory Host Preparing / Player Lobby / Ready / Play Start flow;
+- without an optional spatial/range module, otherwise-valid targets are treated as in range;
+- Character Sheet rolls use body-level cinematic dice entering from screen depth toward the user, not an embedded dice frame.
 
-## Locked cross-surface decisions
-### Dice
-- no sheet-local permanent/temporary dice stage as the primary roll presentation;
-- body/app-level cinematic overlay;
-- dice begin deep/behind the screen and travel toward the user while tumbling in 3D;
-- connected authoritative results remain authoritative; standalone rolls use the same visual language.
+## Complete UI scene plan now documented
+`.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md` defines the whole product UI as two major modes.
 
-### Multiplayer lifecycle
-- opening a Host immediately creates an active DM session and enters the DM play workspace;
-- DM can edit/operate the session with zero players connected;
-- no mandatory Host Preparing -> Player Lobby -> Ready -> Play Start user flow;
-- players join an already-active session after internal connection/content synchronization;
-- reconnect returns to the current active session rather than a lobby/start gate.
+### Library Mode
+- Home / Launch
+- Character Library
+- Character Create / Edit
+- Standalone Character Sheet
+- Content / Add-on Management
+- Rules Library
+- Settings
+- Session Entry / Open / Join
 
-### Range/spatial fallback
-- base SimpleVTT does not provide tactical grid/token position/exact persistent distance/LOS;
-- without an optional spatial/range module, all otherwise-valid targets are treated as in range;
-- missing spatial data is not out-of-range;
-- exact range/reach/LOS/cover constraints apply only when an installed module supplies authoritative spatial facts.
+### Active Session Mode — shared core
+- Persistent Active Session Shell
+- Freeform Baseline
+- Intent Choice
+- Action Detail Choice
+- Target Selection
+- Resolution Result
+- Initiative / Combat Expansion
+- Character / Actor Quick View
+- Full Character Sheet in Session
+- Rules Lookup pane
+- Activity / Result History
+- Connection / Recovery
+- Cinematic Dice
+- Handout Viewer
 
-## Play surface inventory completed
-`.agents/V0_9_PLAY_SURFACE_INVENTORY.md` classifies shared play shell/freeform/combat/action-target-result surfaces, transient dice/handout/reconnect/error layers, DM-only session/encounter/initiative/handout/Undo tools, Player-only join/my-character/reconnect tools, and standalone SimpleVTT/Official Character Sheets.
+### DM-only tools
+- Session Share / Settings
+- Participants
+- Encounter Editor
+- Combatant Picker
+- DM Actor Switcher
+- Initiative Controls
+- Handout Control
+- Adjudication / Undo
+- End Session confirmation
 
-## Continuous-session audit of current production UI
-The current implementation conflicts with the new philosophy in several concrete ways:
-1. App navigation is route-centric and provides `플레이로 돌아가기`, treating Play as one page rather than a persistent mode.
-2. Freeform permanently renders Scene Actor rows, making the actor board rather than conversation/current intent the center of the screen.
-3. A permanent `공통 / 클래스 / 주문 / 아이템 / 패시브 / 커스텀` hotbar dominates the normal play surface.
-4. Freeform continues showing action/bonus/reaction/movement economy as `FREE` even when combat economy is irrelevant.
-5. Encounter editing is gated by offline/preparing lifecycle state rather than by the safety of the specific edit operation.
-6. Full Character Sheet and Rules are route-level destinations instead of in-session reference tools.
+### Player-only tools
+- My Character Session Tools
+- Leave / Reconnect Choice
 
-These are planning defects to correct before source implementation resumes.
+### Session end
+- End confirmation
+- Session ended / return to Library Mode
 
-## Explicitly forbidden standalone play pages
-Do not reintroduce these as permanent routes/pages:
-- Host Preparing
-- Player Lobby
-- Ready
-- Play Start gate
-- permanent dice tray/window
-- standalone target-distance editor
-- tactical map/grid/token page
-- permanent Inspector
-- permanent Activity panel
-- permanent Handout manager
-- protocol/debug dashboard
-- healthy content-parity confirmation page
+## Layout contract for S-00 Persistent Session Shell
+The complete plan reserves five persistent regions:
+1. compact Session Bar;
+2. low-noise Main Focus Area;
+3. intent-first Action Dock;
+4. in-session Utility Rail;
+5. transient Overlay Stack.
+
+Normal Freeform must not permanently show the whole Scene Actor board, full action category hotbar, Initiative order or action economy.
 
 ## Next Exact Action
 1. Do not resume implementation or CI yet.
-2. Treat `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md` as the upper UX contract when refining the existing surface inventory.
-3. Define `C-01 Active Session Play Shell` at implementation-ready fidelity around a persistent Session Mode: session bar, low-noise main focus area, intent-first action dock, in-session utility rail and transient overlay stack.
-4. Ensure Sheet, Rules, Activity and DM Encounter/Participants/Handout/Session utilities open without replacing the active Session Shell.
-5. Then define `C-02 Freeform` and intent/detail/target flow before coding.
-6. Only after the relevant screen contracts are approved should the same sequence return to `continue` for source implementation.
-7. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
+2. Review `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md` with the user at the whole-scene level.
+3. After the scene map is accepted, detail and approve `S-00 Persistent Active Session Shell` at implementation-ready fidelity: exact region placement, desktop/narrow-window behavior, information density, DM/Player controls and overlay/pane behavior.
+4. Then detail `S-01 Freeform`, followed by Intent → Detail → Target before coding.
+5. Only after the relevant screen contract is approved should the same sequence return to `continue` for source implementation.
+6. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
 ## Dispatch recommendation
 `needs_user`
