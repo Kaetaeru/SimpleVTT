@@ -4,7 +4,7 @@
 - sequence: `3`
 - task_id: `v1-product-experience-overhaul`
 - dispatch state: `continue`
-- current milestone: **Cinematic dice/result convergence validated; DM Session tools are next**
+- current milestone: **DM Encounter / Actor / Participants / Session tools validated; Player reconnect/session utilities are next**
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch: `main`
 - work branch: `agent/108-production-play-session-ux`
@@ -58,63 +58,60 @@ Exact source HEAD: `1b0b156b09a6a957f19701dc9a4c53199738f6bd`
 - frontend job `95952727155`
 - conclusion **SUCCESS**
 
-Validated:
-- target picker consumes `ActionVm.eligibleTargetIds` directly;
-- single/multi target execution remains on existing `resolveAction()` authority;
-- selected targets reconcile against canonical eligibility;
-- UI owns no distance/range/LOS/cover legality;
-- only explicit `module:` spatial pair facts constrain routine range/LOS/cover;
-- missing optional spatial module fact yields unconstrained targeting;
-- Rules Domain explicit targeting semantics remain unchanged;
-- Phase09, prior UI/mechanics, TypeScript and production build green.
-
-CI repair history:
-- intermediate `2372a280...` failed one test-only HP expectation (`26` vs valid authoritative `28`); runtime/product behavior was not changed for that repair.
-- a transient wrong-path `src/realSpatialRuntimeService.ts` duplicate was deleted before validation; canonical implementation remains `src/app/realSpatialRuntimeService.ts` only.
+Validated: canonical `eligibleTargetIds` target flow, existing `resolveAction()`, no UI distance/LOS legality, explicit `module:` spatial facts constrain while missing optional spatial facts are unconstrained, domain targeting semantics unchanged.
 
 ### Slice 9 — cinematic dice/result convergence
-Validated exact source HEAD: `bcb267705ad526e54e6ca70f1193e6f500e4d268`
+Exact source HEAD: `bcb267705ad526e54e6ca70f1193e6f500e4d268`
 - UI run `32215116582`
 - frontend job `95955048447`
 - conclusion **SUCCESS**
 
-Validated scope:
-- existing global/body-level `VisualDiceBridge` remains the one connected cinematic dice presentation;
-- `PhysicsDice3D` approved bronze geometry and deep/back -> toward-user travel are unchanged;
-- replay timing is presentation-only and shared through `VISUAL_DICE_REPLAY_MS=1480` / `VISUAL_DICE_REDUCED_REPLAY_MS=650`;
-- Session animated resolution stages wait for the body-level replay duration before canonical `advanceResolution()` rather than racing ahead with a second timer;
-- Session does not render a second dice stage/card underneath the body-level cinematic replay;
-- after the dice handoff, `SessionResolutionLayer` shows a compact actor/action/outcome/result card near the Action Dock;
-- attack result can show total vs AC, save result can show target outcome/DC, complete result can show final outcome and up to two canonical state changes;
-- DM retains existing Undo authority and can open Activity for detail; no second history/Undo system exists;
-- no-roll / effect-preview / zero-authoritative-dice states never force a cinematic dice animation;
-- Full Sheet / Rules / Main Focus stay mounted and do not resize for dice;
-- all prior UI/mechanics regressions, Phase09 services, TypeScript and production build are green.
+Validated: one global/body-level authoritative visual dice replay, approved deep/back -> toward-user physics motion, shared 1480ms/650ms presentation timing, Session waits for cinematic handoff, no second Session dice stage, compact post-roll result, no-roll actions do not fabricate dice, existing Activity/Undo authority preserved.
 
-CI repair history for Slice 9:
-- intermediate source HEAD `b3d58e21f13381c79d534bd76404ae0d0058bb00` failed only an older `physicsDice3DStructure.test.ts` regex that required the literal source text `reduced?650:1480`.
-- `gh-fix-ci` was invoked before diagnosis; job logs showed the behavior/timing remained unchanged and only the constants had moved to a shared presentation module.
-- the stale test was updated to validate the shared constants and bridge usage; product behavior was not reverted.
+### Slice 10 — DM Encounter / Actor / Participants / Session tools
+Validated exact source HEAD: `33b0049a482cbb65dda771f336dc591ba6d020d0`
+- UI run `32215938914`
+- frontend job `95957365219`
+- conclusion **SUCCESS**
+
+Validated scope:
+- DM Session rail exposes Actor, Rules, Encounter, Participants, Activity, and Session share as on-demand panes inside the persistent Session Shell;
+- no DM utility requires route replacement or `플레이로 돌아가기`;
+- Actor switching reads `scene.selectedActorId` and delegates only to the existing `selectDmActor()` command; it does not mutate `currentActorId` or Initiative economy;
+- Encounter pane reads existing Scene combatants and `combatantDefinitions`, and delegates to existing `instantiateCombatant()`, `removeCombatant()`, `startInitiative()`, and `endInitiative()` commands;
+- Encounter editing works with zero Players and zero Combatants as normal active-session states;
+- Combatant removal preserves historical preparing behavior and additionally works in live Freeform; Initiative removal remains blocked so turn-runtime state is not silently mutated;
+- a pending resolution referencing a Combatant still blocks removal;
+- Participants pane reads canonical participant connection/Character projection only and does not expose Ready/start gates;
+- Session share pane reads canonical session name/address/connection/content and can copy the existing address as local presentation behavior;
+- UI contains no visible lifecycle/preparing/Ready/start gate in these new DM panes;
+- new DM panes are responsive right-side transient utilities, not permanent dashboards;
+- existing lifecycle/network internals were not replaced and no second Scene/session/combatant authority was introduced;
+- all prior UI/mechanics regressions, live DM continuity, lifecycle/connected regressions, Phase09 services, TypeScript and production build are green.
+
+CI repair history for Slice 10:
+- intermediate HEAD `3463488a6aea91ab3d04d1a64743871301fe127b` failed only two structure assertions: explanatory copy still used the retired word `Ready`, and the old Rules/Activity test assumed those two utility literals were adjacent in the union. The copy and stale test ownership assumption were corrected without mechanics changes.
+- intermediate HEAD `d781f986d3d7bf82e49e90dcfc046494f9f85ff8` then reached lifecycle/mechanics and exposed a real regression: the first live-Freeform removal change accidentally required `sessionMode==="freeform"` during historical `preparing` removal too. The adapter was corrected to preserve `preparing` removal and extend removal only to `live && freeform`; Initiative remains blocked.
+- `gh-fix-ci` was invoked before each new CI diagnosis; connector job logs were used as the available Actions log fallback.
 
 ## Remaining approved implementation order
-1. DM Encounter / Actor / Participants / Session tools;
-2. Player reconnect/session utilities;
-3. Initiative expansion;
-4. Handout integration;
-5. responsive/keyboard/focus pass;
-6. final exact-head automated validation;
-7. Windows human usability acceptance A-J.
+1. Player reconnect/session utilities;
+2. Initiative expansion;
+3. Handout integration;
+4. responsive/keyboard/focus pass;
+5. final exact-head automated validation;
+6. Windows human usability acceptance A-J.
 
 Each slice must replace/disconnect conflicting old normal-Session presentation it supersedes and must not add parallel mechanics authority.
 
 ## Next Exact Action
-1. Reconcile actual PR head; expected validated source HEAD is `bcb267705ad526e54e6ca70f1193e6f500e4d268`.
-2. Implement only **DM Encounter / Actor / Participants / Session tools** inside the persistent Session Shell.
-3. Reuse existing Encounter/combatant/session/participant commands and projections; do not add a second Scene/session/combatant authority.
-4. DM must be able to open/edit Encounter and add Combatants during active Freeform with zero Players; remove obsolete preparing/lobby lifecycle gating from the visible Session path where the individual operation is otherwise safe.
-5. Add explicit Actor switch affordance distinct from current-turn authority; selecting acting Actor must update the existing canonical selected-Actor command/state rather than a local duplicate.
-6. Participants and Session share/settings are on-demand Session panes, not route replacements or permanent dashboards; do not restore Ready/start gates.
-7. Do not start Player reconnect, final Initiative, or Handout in this same slice.
+1. Reconcile actual PR head; expected validated source HEAD is `33b0049a482cbb65dda771f336dc591ba6d020d0`.
+2. Implement only **Player reconnect/session utilities** inside the persistent Session Shell.
+3. Reuse existing connected-session/reconnect state and commands; do not add another connection/session protocol or durable session store.
+4. Normal connected state stays quiet. Reconnecting/disconnected states must remain visibly actionable without replacing the Session Shell with a technical status page.
+5. Player session utility should expose only player-relevant connection/session identity and leave/reconnect choice; do not expose DM Encounter/Participants/Session administration.
+6. Preserve the current Character, Action flow, Sheet/Rules presentation state, and Session Shell whenever reconnect semantics allow; invalidate only state made impossible by authoritative session changes.
+7. Do not implement final Initiative or Handout in this same slice.
 8. Add focused regression coverage and exact-head validation before moving on.
 9. Keep PR #109 draft/unmerged; never merge without explicit user authorization.
 
