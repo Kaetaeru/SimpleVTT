@@ -47,15 +47,18 @@ Before substantive work, verify structured fields against `MANIFEST.yaml`.
 
 ```text
 [ ] every Decision Card Status is exactly Draft / Selected / Reviewed / Frozen / Superseded
+[ ] every governance-sheet Review Status is exactly Not Started / In Review / Reviewed
 [ ] every Planning Gap Status is exactly Open / Deferred / Resolved
 [ ] every Gap Type and Severity matches the declared enum
-[ ] every Registry Planning / Contract value matches its enum
+[ ] every Registry Planning value matches planning_maturity
+[ ] every Registry Contract value matches contract_readiness
 [ ] every M6 coverage cell is exactly REQ / N/A / TBD / a full contract-or-test ID
 [ ] every structured reference uses a full resolvable ID/path
 [ ] no reference range such as UX-01-04..06 exists
 [ ] no omitted-prefix reference such as ORIGIN-UX-01-26, 28 exists
-[ ] no prose substitute such as destination DM-01 or STATE/A11Y review appears in a structured reference field
+[ ] no prose substitute such as destination DM-01 appears in a structured reference field
 [ ] every Decision Map labeled Complete satisfies T2 Scope / Non-scope / Exit Criteria / table schema
+[ ] Surface/Component/Motion contracts do not invent an undefined independent lifecycle Status
 ```
 
 A human-readable note may contain prose. A structured enum/reference field may not depend on contextual interpretation.
@@ -75,11 +78,14 @@ README gate/current-next status
 README open-gap/status summary
     <-> planning-gaps.md + decisions.md + master-flow.md + registry.md + matrices.md
 
+review-plan.md Review Status
+    <-> actual sequential review progress (not seed coverage or Decision Frozen status)
+
 master-flow.md material behavior/topology
     <-> decisions.md + review-plan.md + planning-gaps.md
 
 registry Planning Maturity
-    <-> decisions.md
+    <-> made decisions for the artifact as a whole
 
 registry Contract Readiness
     <-> active Planning Gaps / required contracts
@@ -93,17 +99,23 @@ templates enums/reference syntax
 
 Fail if a material UX rule exists **only** in `master-flow.md`, Registry, Matrix, or Dashboard with no canonical Decision/Map/Gap/contract source.
 
+A reviewed sub-decision does not automatically promote an entire Registry artifact to `Reviewed` when material behavior/topology remains unresolved.
+
 A stale derived artifact is a maintenance defect, not a new product decision.
 
 AI MAY repair obvious derived drift when framework permissions allow it. AI MUST NOT alter canonical product decisions merely to make summaries agree.
 
 ---
 
-# 4. Authority-domain check
+# 4. Planning truth / implementation reliance / authority-domain check
 
-Do not apply one global precedence list across UI/product and domain/architecture responsibilities.
+First distinguish planning intent from implementation stability.
 
 ```text
+[ ] applicable Selected / Reviewed / Frozen Product/UX Decision Cards are treated as canonical planning intent over current code
+[ ] Draft decisions are not treated as made product intent
+[ ] Superseded decisions are historical only
+[ ] only Frozen Product/UX decisions are treated as stable implementation dependencies unless explicitly authorized otherwise
 [ ] UI/product requirement is within Product/UX authority
 [ ] rules legality/calculation remains domain authority
 [ ] authoritative state/persistence/network/privacy/schema remains domain/architecture authority
@@ -111,7 +123,9 @@ Do not apply one global precedence list across UI/product and domain/architectur
 [ ] any cross-domain contradiction is classified as PLANNING GAP: CONTRACT CONFLICT
 ```
 
-Current implementation is evidence only in both domains.
+Therefore a Reviewed decision may prove that current code is product-planning drift while still being insufficient to authorize implementation.
+
+Current implementation is evidence only in both authority domains.
 
 ---
 
@@ -268,12 +282,16 @@ QA does not redesign: requirement gap -> planning; implementation mismatch -> im
 Fail if AI is about to:
 
 - read source first and infer the UX plan;
-- treat Reviewed as implementation-ready;
+- let current code replace an applicable Selected/Reviewed planning decision merely because it is not Frozen;
+- treat Reviewed as implementation-ready or as stable implementation reliance;
 - store `Reviewed, not Frozen` as a lifecycle Status value;
+- store seed-coverage prose inside governance-sheet Review Status;
+- promote a Registry artifact to Reviewed merely because one sub-decision is Reviewed while material artifact behavior remains unresolved;
 - use a Registry row or Master Flow statement instead of a Decision Card as product authority;
 - choose behavior because a Matrix cell is `TBD`;
 - accept a shorthand/ranged reference that requires prefix inference;
 - mark a Decision Map Complete while required T2 fields are absent;
+- invent an independent Surface/Component/Motion contract Status lifecycle not declared by the framework/Manifest;
 - resolve a canonical conflict by choosing the newest document;
 - use UI precedence to override a domain/network/privacy contract;
 - store an undecided Decision Map in `decisions.md`;
@@ -294,6 +312,8 @@ AI may record:
 PREFLIGHT: PASS
 Schema: PASS
 References: PASS
+Planning truth: PASS
+Implementation reliance: PASS
 Route: <A-H>
 Scope: <sheet / decision / work-order ID>
 Global Planning Gate: PASS / BLOCKED / N/A
