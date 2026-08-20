@@ -39,6 +39,7 @@ If Manifest and actual files disagree, treat it as document drift and repair/rep
 | `PREFLIGHT.md` | start-work consistency/readiness/schema checks |
 | `README.md` | derived current status/next work only |
 | `review-plan.md` | review order, undecided Decision Maps, Global Planning Gate |
+| `owner-review/README.md` + worksheet files | **owner-authored selection input** for predeclared questions; candidate options are scaffolding, not canonical product truth |
 | `decisions.md` | made product/UX Decision Cards only |
 | `master-flow.md` | **derived owner-friendly flow/topology view**; not a second decision store |
 | `planning-gaps.md` | material unknowns AI must not invent |
@@ -58,7 +59,7 @@ Classify the request into one primary route before broad reading.
 
 | Route | Task |
 | --- | --- |
-| `A — Resume Planning` | continue owner UX review from the current complete Decision Map; default to a compact current-sheet question batch |
+| `A — Resume Planning` | reconcile owner selections from the GitHub owner-review worksheets; only ask chat questions when explicitly requested or a real contradiction blocks processing |
 | `B — Show Status` | report current planning/gate/gaps/next work |
 | `C — Change a Decision` | alter or reverse a made UX choice, including a material change expressed through the Master Flow view |
 | `D — Explore Whole Product` | inventory/cross-check all UI, flows, matrices, Decision Maps, coverage |
@@ -75,41 +76,51 @@ For mixed requests, resolve authority first. Example: change + implement = `C ->
 
 **First run Preflight.**
 
-If `Global Planning Gate = BLOCKED`, Route A MUST NOT ask governance questions. Switch to Route D preparation until the gate passes.
+If `Global Planning Gate = BLOCKED`, Route A MUST NOT process/ask governance questions. Switch to Route D preparation until the gate passes.
 
 Only after the Global Planning Gate passes, read:
 
 ```text
 1. README.md
 2. review-plan.md
-3. relevant made Decision Cards in decisions.md
-4. planning-gaps.md entries linked to current sheet
-5. master-flow.md only as a derived visualization when topology/flow context helps
-6. relevant Registry/Matrix rows only when needed to explain consequences
-7. domain/code evidence only when concrete grounding is required
+3. owner-review/README.md
+4. the worksheet file containing the current sheet
+5. relevant made Decision Cards in decisions.md
+6. planning-gaps.md entries linked to the current sheet
+7. master-flow.md only as a derived visualization when topology/flow context helps
+8. relevant Registry/Matrix rows only when needed to explain consequences
+9. domain/code evidence only when concrete grounding is required
 ```
 
-Before presenting the current batch, confirm:
+## Worksheet-first behavior
 
-- current sheet;
-- complete T2 Decision Map exists;
-- every presented ID is predeclared and still unresolved;
-- dependencies are exact full IDs and known;
-- migrated prior decisions do not already answer the item;
-- no blocking gap routes an item elsewhere.
+For the current sheet, scan every block for:
 
-Default interaction:
+```text
+OWNER SELECT: <non-empty>
+AI STATUS: PENDING
+```
 
-1. present the remaining predeclared questions for the current sheet as one compact batch with concise choices where useful;
-2. accept shorthand answers such as `03 A / 04 C / 05 A`;
-3. reconcile answers in dependency order;
-4. preserve explicit owner choices;
-5. resolve only logically implied conditional branches;
-6. if two explicit answers truly cannot coexist, surface that contradiction instead of silently replacing one;
-7. store unanswered questions only in `review-plan.md`, never `decisions.md`;
-8. when the sheet is fully resolved, mark it Reviewed and move to the next declared sheet.
+A filled owner selection is **explicit owner input**. It is not yet a canonical Decision Card, but AI MUST preserve its intent while reconciling it.
 
-The owner may explicitly request one-at-a-time review instead.
+Processing rules:
+
+1. use only question IDs already declared in `review-plan.md`;
+2. process filled selections in dependency order, even if the owner filled later sheets early;
+3. `CUSTOM` means `OWNER NOTE` is the controlling owner instruction;
+4. candidate option text is scaffolding only and has no authority unless selected;
+5. never silently replace a selected option with AI's preferred option;
+6. resolve a conditional question as `N/A` only when its declared parent condition is false;
+7. if two explicit owner entries truly conflict, stop only on the conflicting IDs and report the contradiction;
+8. if a selection conflicts with an existing applicable canonical decision or domain/architecture contract, route the conflict correctly instead of overriding it;
+9. after successful reconciliation, write/update the canonical Decision Card in `decisions.md`, synchronize `review-plan.md` and derived artifacts, then change worksheet `AI STATUS` to `PROCESSED`;
+10. a worksheet edit does not Freeze anything and does not authorize implementation.
+
+## When there are no pending worksheet selections
+
+Default behavior is **not** to invent or repeat the question set in chat. Point the owner to the current worksheet file and current sheet. Only present questions in chat if the owner explicitly asks to review them conversationally.
+
+The owner may fill any later worksheet in advance. Those selections remain pending until their declared dependencies are processed.
 
 ---
 
@@ -119,8 +130,9 @@ Minimal read:
 
 ```text
 1. README.md
-2. planning-gaps.md
-3. review-plan.md if next/gate work is requested
+2. owner-review/README.md when pending owner-input status matters
+3. planning-gaps.md
+4. review-plan.md if next/gate work is requested
 ```
 
 For one surface, then add its Registry row, linked Decision Cards, and relevant M6 coverage.
@@ -140,18 +152,19 @@ Read:
 ```text
 1. README.md
 2. exact Decision Card in decisions.md, OR exact unanswered item in review-plan.md, OR related Planning Gap
-3. review-plan.md for owner sheet/order
-4. master-flow.md as the derived before/after topology view when flow is affected
-5. linked Registry/Matrix rows
-6. planning-gaps.md
-7. domain/architecture contract if authority/rules/persistence/network/privacy semantics are affected
+3. relevant owner-review worksheet block if the owner entered a new selection there
+4. review-plan.md for owner sheet/order
+5. master-flow.md as the derived before/after topology view when flow is affected
+6. linked Registry/Matrix rows
+7. planning-gaps.md
+8. domain/architecture contract if authority/rules/persistence/network/privacy semantics are affected
 ```
 
 Then update the canonical source first, preserve history/supersession when applicable, calculate impact, update derived artifacts including `master-flow.md`, create/reopen gaps if required, and show only material owner consequences.
 
 Do not Freeze automatically. Do not implement unless separately authorized and ready.
 
-Never change product intent by editing only Master Flow, Registry, Matrix, Dashboard, or code.
+Never change product intent by editing only Master Flow, Registry, Matrix, Dashboard, worksheet option text, or code.
 
 ---
 
@@ -194,7 +207,7 @@ Rules:
 - AI MAY add inventory/coverage rows from evidence.
 - AI MAY materialize planned Decision Maps without choosing their answers.
 - AI MAY refresh derived Master Flow from canonical decisions/maps/gaps.
-- AI MUST NOT decide new product behavior while filling Master Flow, Registry, Matrix, or Decision Maps.
+- AI MUST NOT decide new product behavior while filling Master Flow, Registry, Matrix, Decision Maps, or candidate worksheet options.
 - New material choices become Planning Gaps or declared map items.
 - Conflicting current implementation is evidence of drift/gap, not automatic plan replacement.
 - Do not ask new owner questions during this preparation unless the user explicitly changes the task or a truly blocking ambiguity requires a decision.
@@ -242,7 +255,7 @@ Read exactly:
 
 All structured references must resolve exactly before coding.
 
-Implementation MUST NOT treat Reviewed as Frozen, confuse Planning Maturity with Contract Readiness, broaden scope, invent fallback/authority/rules behavior, use a derived view as product authority, or let current code overrule canonical decisions/contracts.
+Implementation MUST NOT treat Reviewed as Frozen, confuse Planning Maturity with Contract Readiness, broaden scope, invent fallback/authority/rules behavior, use a derived view or owner-input worksheet as product authority, or let current code overrule canonical decisions/contracts.
 
 Unexpected material dependency -> stop and route correctly.
 
@@ -280,11 +293,12 @@ Read:
 ```text
 1. framework authority-domain rules
 2. relevant Product/UX Decision Card(s)
-3. relevant canonical domain/architecture contract(s)
-4. applicable detailed contract
-5. current Work Order
-6. current implementation
-7. historical docs / .agents / PR history only to explain origin
+3. relevant owner-review entry if it is newly filled but not yet canonicalized
+4. relevant canonical domain/architecture contract(s)
+5. applicable detailed contract
+6. current Work Order
+7. current implementation
+8. historical docs / .agents / PR history only to explain origin
 ```
 
 Return one of:
@@ -294,9 +308,10 @@ Return one of:
 - `IMPLEMENTATION DRIFT — code differs from canonical requirement`
 - `DERIVED DOCUMENT DRIFT — summary/flow/inventory/coverage is stale`
 - `SCHEMA / REFERENCE DRIFT — structured value is not exactly valid`
+- `OWNER INPUT CONFLICT — two explicit pending owner selections cannot coexist as written`
 - `PLANNING GAP: CONTRACT CONFLICT — Product/UX intent and domain/architecture authority cannot both be satisfied as written`
 
-Never choose a winner merely because a file is newer, a UI decision is Frozen, or code currently behaves that way.
+Never choose a winner merely because a file is newer, a UI decision is Frozen, a candidate option exists, or code currently behaves that way.
 
 ---
 
@@ -308,6 +323,7 @@ Stop expanding document scope when the following applicable facts are known:
 
 - Route/task;
 - current sheet, Global Gate work item, or Work Order;
+- relevant pending owner-review selections;
 - governing exact Decision/Gap/Contract IDs;
 - authority domain and source-of-truth constraints;
 - required state/transition/contract detail for the tier;
@@ -320,8 +336,10 @@ Read more only for a concrete unresolved dependency.
 
 # 12. Authority anti-signals
 
-None of these creates authority by itself:
+None of these creates canonical product authority by itself:
 
+- an unselected worksheet option;
+- worksheet candidate text;
 - official-sounding filename;
 - newer timestamp;
 - longer prose;
@@ -332,7 +350,7 @@ None of these creates authority by itself:
 - existence of a Registry/Matrix/Master Flow statement;
 - Reviewed status without Frozen/Contract Readiness.
 
-Use the framework's authority-domain rules, Manifest, exact IDs, and explicit scope.
+A filled worksheet selection is explicit **owner input** and must be processed faithfully, but canonical made-decision authority is established by the reconciled Decision Card in `decisions.md`.
 
 ---
 
@@ -353,18 +371,18 @@ If a referenced file/ID does not exist or is abbreviated:
 
 This routing system is AI infrastructure, not owner homework.
 
-The owner may say naturally:
+Preferred owner workflow:
+
+> Edit `docs/design/ui-ux/owner-review/` in GitHub, fill `OWNER SELECT` / `OWNER NOTE`, then ask AI to process the worksheet.
+
+The owner may still say naturally:
 
 > "그 전투 타겟팅 결정 바꾸자."
 
-or answer a sheet compactly:
-
-> `03 A / 04 C / 05 A / 06 A`
-
-AI locates the canonical decision/map/gap, reads the minimum dependency set, reconciles the batch without changing explicit choices, updates derived views, and surfaces only material consequences.
+AI locates the canonical decision/map/gap, checks owner worksheet input when relevant, reads the minimum dependency set, reconciles without changing explicit choices, updates derived views, and surfaces only material consequences.
 
 ---
 
 # 15. Final principle
 
-> **Route first. Verify schema and roles. Pass Preflight. Respect authority domains and the Global Planning Gate. Read from canonical intent toward derived views and evidence. Stop when enough is known. Never infer product truth backward from code or a derived document.**
+> **Route first. Verify schema and roles. Pass Preflight. Read pending owner worksheet input before asking questions. Respect authority domains and the Global Planning Gate. Read from canonical intent toward derived views and evidence. Stop when enough is known. Never infer product truth backward from code, a candidate option, or a derived document.**
