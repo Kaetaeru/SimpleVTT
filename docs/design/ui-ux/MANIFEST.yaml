@@ -108,6 +108,8 @@ sources:
     derived: false
     contains_normative_decision_bodies: false
     review_order_change_requires_owner_approval: true
+    batch_current_sheet_review_allowed: true
+    batch_answers_resolved_in_dependency_order: true
     global_planning_gate_owner: true
     review_status_values_must_match_enum_exactly: true
     structured_status_fields: [Current sequence.Review Status]
@@ -189,8 +191,11 @@ planning_gate:
   status: passed
   blocks_individual_review: false
   completed_scope: current_active_runtime_and_planning_snapshot
-  current_review_sheet: UX-02
-  next_allowed_individual_decision: UX-02-03
+  current_review_sheet: UX-03
+  review_interaction: batch_current_sheet_default
+  current_review_batch: [UX-03-01, UX-03-02, UX-03-03, UX-03-04, UX-03-05, UX-03-06, UX-03-07, UX-03-08]
+  next_allowed_individual_decision: UX-03-01
+  next_sheet_after_current_completion: NAV-01
   requirements:
     r1_r9_complete_inventory_cross_check: passed
     m1_m6_material_coverage: passed
@@ -204,6 +209,8 @@ maintenance_rules:
   - undecided_questions_live_in_review_plan_not_decision_ledger
   - decision_bodies_live_in_decision_ledger
   - selected_reviewed_frozen_decisions_are_planning_truth_but_only_frozen_is_stable_for_implementation
+  - current_sheet_questions_may_be_answered_in_batch_when_predeclared
+  - batch_answers_are_reconciled_in_dependency_order_without_replacing_explicit_owner_choices
   - master_flow_is_derived_owner_view_not_second_decision_store
   - registry_and_matrices_reference_canonical_sources_instead_of_copying_them
   - dashboard_is_summary_and_must_not_override_canonical_sources
