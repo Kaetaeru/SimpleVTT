@@ -163,11 +163,11 @@ Every coverage cell MUST be exactly one of:
 - `TBD`
 - a specific full contract/test ID
 
-Explanatory conditions belong in the `Notes / Refs` column, not inside the coverage value.
+Explanatory conditions belong in the human-readable `Notes` column, not inside the coverage value.
 
 ## Core surface grid
 
-| Surface | Normal | Empty | Loading/Pending | Disabled | Error | Keyboard | Narrow | Role variants | Reconnect | Owner walkthrough | Notes / Refs |
+| Surface | Normal | Empty | Loading/Pending | Disabled | Error | Keyboard | Narrow | Role variants | Reconnect | Owner walkthrough | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `R1-HOME` | REQ | TBD | REQ | N/A | REQ | REQ | REQ | TBD | TBD | REQ | Reconnect applies only when a live session exists; role variants depend on `UX-02`. |
 | `R1-CHARACTERS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Role variants depend on `UX-02`. |
@@ -186,7 +186,7 @@ Explanatory conditions belong in the `Notes / Refs` column, not inside the cover
 Before a scope is implementation-ready, AI must convert applicable `TBD` cells that materially affect behavior into either:
 
 - a canonical decision/contract;
-- `N/A` with a reason in `Notes / Refs`; or
+- `N/A` with a reason in `Notes`; or
 - an explicit Planning Gap that blocks implementation at the selected Spec Tier.
 
 The owner should see only material blocking gaps, not every matrix maintenance detail.
