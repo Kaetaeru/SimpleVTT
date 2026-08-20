@@ -21,47 +21,55 @@ If the planning structure makes either goal harder, simplify before adding more 
 
 | Item | Current state |
 | --- | --- |
-| Meta governance baseline | **Stable v1**; bounded 10-scenario validation passed; reopen only for material governance drift/change or explicit owner request |
-| Framework | Canonical planning method active; planning truth vs implementation reliance and Product/UX vs domain/architecture authority separated |
-| AI Reading Guide | Sole canonical task router / reading-order owner active |
+| Meta governance baseline | **Stable v1**; bounded validation passed; batch sheet review explicitly supported |
+| Framework | Canonical planning method active; Product/UX vs domain/architecture authority separated; current-sheet batch answers reconciled in dependency order |
+| AI Reading Guide | Sole canonical task router / reading-order owner; Route A defaults to compact current-sheet question batch |
 | Machine-readable Manifest | Schema v2 active; roles, enums, exact references, derived sources, and Global Planning Gate state declared |
 | Preflight | Active; consistency/readiness/schema/reference/planning-truth gate required before substantive work |
-| Product UI decisions | Partially Reviewed/Selected; not globally Frozen |
+| Product UI decisions | Partially Reviewed; not globally Frozen |
 | `UX-01` | 7 decisions `Reviewed`; none Frozen |
-| Migrated prior decisions | Preserved in destination sheets; `Reviewed`; none Frozen |
-| `UX-02` | **In Review**; `UX-02-01` Selected: Connected Host = DM, Connected Client = Player; `UX-02-02` Selected: Offline/Standalone has no DM/Player role; next `UX-02-03` |
-| `UX-03` through `CONTENT-02` | T2-complete maps; Not Started except Reviewed migrated seeds |
+| `UX-02` | **Reviewed**; connected roles/control/information baseline complete; none Frozen |
+| `UX-03` | **In Review**; current batch is `UX-03-01` through `UX-03-08` |
+| `NAV-01` through `CONTENT-02` | T2-complete maps; Not Started except Reviewed migrated seeds |
 | 27-sheet Review Plan | **All 27 T2 Decision Maps complete** |
 | Master User Flow | Draft **derived owner view**; not a canonical decision store |
 | R1-R9 inventory | **Route D active-runtime/planning cross-check PASS** for current snapshot |
-| M1-M6 matrices | **Material coverage PASS**; connected role mapping and role-free Offline context synchronized; remaining role/control details owned by later UX-02 questions/gaps |
+| M1-M6 matrices | **Material coverage PASS**; reviewed UX-02 role/control model synchronized |
 | Missing / Duplication / Coverage audit | **PASS** |
 | Global Planning Gate | **PASS** |
-| Planning Gaps | `GAP-UX02-ROLE-MODEL` and `GAP-UX02-OFFLINE-ROLE` Resolved; downstream control/authority gaps remain explicit |
+| Planning Gaps | UX-02 role/offline gaps Resolved; downstream feature/domain/architecture gaps remain explicit |
 | Templates | Schema v2 enum/reference rules + canonical Preflight reference aligned |
 | Implementation | **Not authorized** by Gate passage or planning status |
 
-`Stable v1` applies to the governance/meta-document system. `Global Planning Gate: PASS` means sequential owner review may continue; neither status Freezes product decisions or authorizes implementation.
+`Stable v1` applies to the governance/meta-document system. `Global Planning Gate: PASS` means owner review may continue; neither status Freezes product decisions or authorizes implementation.
 
-## Current UX-02 checkpoint
+## UX-02 reviewed checkpoint
 
 ```text
-Selected:
-- UX-02-01 Connected role mapping
-  - Host is always DM.
-  - Client is always Player.
-  - Host/Player and Client/DM are not supported connected-role combinations.
-- UX-02-02 Offline/Standalone role identity
-  - Offline/Standalone has no DM/Player role.
-  - DM/Player are connected-session concepts only.
-  - Local surfaces may expose local capabilities without inventing a hidden role.
+Reviewed:
+- UX-02-01 Connected: Host = DM, Client = Player.
+- UX-02-02 Offline/Standalone: no DM/Player role.
+- UX-02-03 Character ownership establishes baseline control of its Actor.
+- UX-02-04 Player defaults to one Actor; DM may assign additional Actors without transferring ownership.
+- UX-02-05 DM may control any Actor.
+- UX-02-06 No live DM <-> Player role switching.
+- UX-02-07 Shared core Play skeleton; role-specific tools/information may differ.
+- UX-02-08 Unauthorized-information handling is information-specific; existing DM-only/secret authoritative data remains strict non-delivery to Player.
+- UX-02-09 No Spectator / Co-DM / Observer / extra connected roles in v1.
+- UX-02-09A Conditional extra-role permission branch is not applicable in v1.
 
-Resolved gaps:
-- GAP-UX02-ROLE-MODEL
-- GAP-UX02-OFFLINE-ROLE
+Frozen changes: none
 ```
 
-These are **Selected** product decisions, not Frozen implementation reliance.
+## Review interaction
+
+The owner may answer the current sheet in a compact batch, for example:
+
+```text
+01 B / 02 A / 03 C / 04 B
+```
+
+AI uses only predeclared Decision Map IDs, resolves dependencies in order, preserves explicit owner choices, and surfaces only a true contradiction. It does not invent extra questions between batch items.
 
 ## Global Planning Gate — PASS
 
@@ -93,10 +101,9 @@ Future code/planning changes require bounded delta maintenance; they do not reop
 
 ```text
 Route A — Resume Planning
-Current sheet: UX-02 — User & Role Model
-Current Decision ID: UX-02-03
-Question: How does Character ownership relate to actual Actor control?
-Next predeclared ID after resolution: UX-02-04
+Current sheet: UX-03 — Information Hierarchy
+Current batch: UX-03-01 through UX-03-08
+Next sheet after completion: NAV-01
 ```
 
 Do not skip ahead or append spontaneous questions. Newly discovered material choices first update the appropriate declared map or Planning Gap.
@@ -106,15 +113,15 @@ Do not skip ahead or append spontaneous questions. Newly discovered material cho
 | Owner says | AI must do |
 | --- | --- |
 | `현재 상태 보여줘` | Summarize this Dashboard plus material gaps. |
-| `이 결정 바꾸자` | Resolve affected canonical Decision ID, update one Decision Card, calculate impact. |
+| `이 결정 바꾸자` | Resolve affected canonical Decision ID, update the Decision Card, calculate impact. |
 | `이 플로우 바꾸자` | Use `master-flow.md` as readable view, resolve canonical Decision/Map/Gap source first, then refresh derived flow. |
-| `UX-02 질문 전체 보여줘` | Show the complete declared map from `review-plan.md`. |
+| `질문 더미 줘` / `<시트> 질문 전체 보여줘` | Show the remaining predeclared questions for the current/requested complete map as a compact batch. |
 | `이건 확정` / `freeze` | Freeze only explicitly named canonical scope and run impact checks. |
 | `이 화면에 뭐가 남았어?` | Use Registry Planning/Contract status + Matrix coverage. |
 | `구현 준비됐어?` | Check Frozen dependencies, gaps, Contract Readiness, spec tier, contracts, Work Order, and authority-domain compatibility. |
 | `되돌려` | Restore/supersede affected decision with traceability, then refresh derived views. |
 | `전체 플로우 보여줘` | Show `master-flow.md` as derived owner view; do not treat it as independent authority. |
-| `다음에 뭘 정하지?` | Use `review-plan.md`; current answer is `UX-02-03`. |
+| `다음에 뭘 정하지?` | Use `review-plan.md`; current answer is the `UX-03` batch. |
 
 ## Owner-facing files
 
