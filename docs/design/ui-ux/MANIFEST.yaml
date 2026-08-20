@@ -45,13 +45,16 @@ sources:
     authority: canonical
     derived: false
     owner_edit_frequency: rare
+    delegates_reading_order_to: docs/design/ui-ux/AI-READING-GUIDE.md
+    delegates_preflight_to: docs/design/ui-ux/PREFLIGHT.md
 
   ai_reading_guide:
     path: docs/design/ui-ux/AI-READING-GUIDE.md
     role: task_router_and_reading_order
-    authority: canonical
+    authority: canonical_process
     derived: false
     must_read_for_ai_entry: true
+    sole_owner_of_reading_order: true
 
   preflight:
     path: docs/design/ui-ux/PREFLIGHT.md
@@ -59,6 +62,7 @@ sources:
     authority: canonical_process
     derived: false
     must_pass_before_substantive_work: true
+    sole_owner_of_start_work_checks: true
 
   dashboard:
     path: docs/design/ui-ux/README.md
@@ -66,10 +70,16 @@ sources:
     authority: derived_summary
     derived: true
     derived_from:
+      - docs/design/ui-ux/AI-READING-GUIDE.md
+      - docs/design/ui-ux/MANIFEST.yaml
+      - docs/design/ui-ux/PREFLIGHT.md
       - docs/design/ui-ux/review-plan.md
       - docs/design/ui-ux/decisions.md
+      - docs/design/ui-ux/master-flow.md
       - docs/design/ui-ux/planning-gaps.md
       - docs/design/ui-ux/registry.md
+      - docs/design/ui-ux/matrices.md
+      - docs/design/ui-ux/templates.md
     owner_default_entrypoint: true
 
   review_plan:
@@ -78,6 +88,8 @@ sources:
     authority: canonical_for_question_order
     derived: false
     contains_normative_decision_bodies: false
+    review_order_change_requires_owner_approval: true
+    global_planning_gate_owner: true
 
   decisions:
     path: docs/design/ui-ux/decisions.md
@@ -121,6 +133,7 @@ sources:
     role: copy_safe_artifact_templates
     authority: canonical_process_template
     derived: false
+    preflight_source: docs/design/ui-ux/PREFLIGHT.md
 
 optional_families:
   surfaces:
@@ -140,6 +153,17 @@ optional_families:
     role: scoped_ai_implementation_handoffs
     materialize_when: implementation_is_authorized_and_ready
 
+planning_gate:
+  name: global_planning_gate
+  blocks_individual_review: true
+  first_allowed_individual_decision_after_pass: UX-02-01
+  requirements:
+    - r1_r9_complete_inventory_cross_check
+    - m1_m6_material_coverage
+    - all_27_governance_decision_maps_complete
+    - missing_duplication_coverage_audit_pass
+    - owner_whole_product_checkpoint
+
 maintenance_rules:
   - one_normative_fact_one_canonical_home
   - undecided_questions_live_in_review_plan_not_decision_ledger
@@ -150,6 +174,7 @@ maintenance_rules:
   - current_code_is_evidence_not_automatic_product_truth
   - missing_material_policy_returns_planning_gap
   - owner_never_manually_repairs_cross_references
+  - ai_may_propose_review_reorder_but_owner_must_approve
 
 implementation_gate:
   planning_status_alone_authorizes_implementation: false
