@@ -25,7 +25,7 @@ Templates: [`templates.md`](templates.md)
 
 | Order | Sheet | Purpose | Map status | Review status | Notes |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | `UX-01` Product Principles | top-level product experience principles | Complete | **Reviewed, not Frozen** | 7 decisions; no new UX-01 questions |
+| 1 | `UX-01` Product Principles | top-level product experience principles | **Complete** | **Reviewed, not Frozen** | 7 decisions; no new UX-01 questions |
 | 2 | `UX-02` User & Role Model | users, roles, ownership/control, information entitlement | **Complete** | Not started individually | First individual review sheet only after the Global Planning Gate passes |
 | 3 | `UX-03` Information Hierarchy | global/contextual information priority and duplication | **Complete** | Not started | T2 schema normalized below; still blocked by Global Planning Gate |
 | 4 | `NAV-01` Navigation | product destinations, contextual return, hierarchy | Not materialized | Not started | R1/master-flow seed input |
@@ -47,11 +47,45 @@ Templates: [`templates.md`](templates.md)
 | 20 | `DND-02` Roll & Dice UX | dice, result, resolution presentation | Not materialized | **Many seed decisions exist** | ORIGIN-UX-01-22, ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 |
 | 21 | `DND-03` Action UX | capability/hotbar/economy/targeting/execution | Not materialized | **Many seed decisions exist** | UX-01-04, UX-01-05, UX-01-06 plus migrated decisions |
 | 22 | `DND-04` Combat UX | initiative/turn/interrupt combat presentation | Not materialized | Seed decisions exist | ORIGIN-UX-01-14, ORIGIN-UX-01-15 |
-| 23 | `SES-01` Session UX | session lifecycle and Play workspace | Not materialized | Many seed decisions exist | Command Center/Actor Boards/Handout |
+| 23 | `SES-01` Session UX | session lifecycle and Play workspace | Not materialized | Many seed decisions exist | ORIGIN-FLOW-01, ORIGIN-FLOW-02 and Command Center/Actor Board/Handout seeds |
 | 24 | `SES-02` Multiplayer Authority UX | role-scoped delivery/visibility/reconnect authority | Not materialized | Seed decisions + Critical gaps | DM-only roll decisions |
 | 25 | `DM-01` DM Controls | persistent DM controls and management surfaces | Not materialized | Seed decision exists | visibility toggle |
-| 26 | `DM-02` Adjudication & Undo | disclosure, activity, correction, undo | Not materialized | Seed decision + deferred question | old UX-01-30 remains unanswered |
+| 26 | `DM-02` Adjudication & Undo | disclosure, activity, correction, undo | Not materialized | Seed decision + deferred question | historical pre-ledger Activity question remains unanswered |
 | 27 | `CONTENT-02` Rules & Add-on UX | Rules browser, import, validation, add-on management | Not materialized | Not started | R1/R2/R5/R6 seeds exist |
+
+---
+
+# UX-01 — Product Principles
+
+## Scope
+
+Define the top-level experience principles that constrain all later UI/UX planning: product posture, Shell/Play relationship, Play continuity, core capability exposure, context adaptation, discoverability/customization, and Play visual priority.
+
+## Non-scope
+
+Do not define exact navigation topology, role permissions, pixel layout, component styling, individual Hotbar contents, detailed targeting rules, session wire formats, or DM authority implementation here. Those belong to downstream sheets/contracts.
+
+## Exit Criteria
+
+- Standalone Character and Connected VTT product posture is defined.
+- Product Shell and dedicated Play relationship is defined.
+- Leaving/returning to Play continuity principle is defined.
+- Core capability visibility and contextual adaptation principles are defined.
+- Discoverability/customization relationship is defined.
+- Play Workspace co-primary visual anchors are defined.
+- No additional question is appended to UX-01 without explicitly reopening/updating this complete map.
+
+## Decision Map
+
+| ID | Question | Status | Depends On | Conditional? | Destination |
+| --- | --- | --- | --- | --- | --- |
+| `UX-01-01` | What is SimpleVTT's product posture between standalone Character use and connected VTT play? | Reviewed | none | no | `UX-01`, `DND-01`, `SES-01` |
+| `UX-01-02` | How do the common Product Shell and dedicated Play Workspace relate? | Reviewed | `UX-01-01` | no | `UX-01`, `NAV-01`, `SES-01` |
+| `UX-01-03` | What authoritative/session/game state must survive leaving and returning to Play? | Reviewed | `UX-01-02` | no | `UX-01`, `NAV-01`, `SES-01`, `SES-02` |
+| `UX-01-04` | How directly must core capabilities be exposed? | Reviewed | none | no | `UX-01`, `DND-03`, `CMP-01` |
+| `UX-01-05` | How should a stable capability skeleton adapt to canonical context? | Reviewed | `UX-01-04` | no | `UX-01`, `DND-03`, `STATE-01` |
+| `UX-01-06` | How should automatic capability discovery coexist with user Hotbar customization? | Reviewed | `UX-01-04`, `UX-01-05` | no | `UX-01`, `DND-03` |
+| `UX-01-07` | What are the co-primary visual anchors of Play? | Reviewed | `UX-01-02`, `UX-01-04` | no | `UX-01`, `SES-01`, `DND-03`, `DND-04` |
 
 ---
 
