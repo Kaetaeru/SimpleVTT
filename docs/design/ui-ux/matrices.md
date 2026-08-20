@@ -17,6 +17,7 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 - Reference fields MUST follow `MANIFEST.yaml`: complete resolvable IDs/paths only; no ranges, omitted prefixes, or prose aliases.
 - Prefer enums/IDs over free-form prose where practical.
 - Do not copy full Decision Card text into a matrix cell.
+- Current implementation paths may appear as evidence references; they never substitute for a Decision/Gap/contract when behavior is normative.
 
 ---
 
@@ -24,17 +25,8 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 ## Row schema
 
-| Field | Meaning |
-| --- | --- |
-| Capability/Data | What is being viewed/controlled/transmitted |
-| Context | Offline / Host / Client / Play mode |
-| Role | DM / Player / TBD |
-| May See | UI visibility |
-| May Receive | network/data delivery |
-| May Control | command permission |
-| May Disclose | disclosure permission |
-| Source | Full Decision / Review Question / Registry / Contract IDs |
-| Gap | Full Gap ID or `—` |
+| Capability/Data | Context | Role | May See | May Receive | May Control | May Disclose | Source | Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
 ## Seed rows
 
@@ -44,11 +36,19 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 | Public roll projection | Connected | DM | yes | yes | TBD | n/a | ORIGIN-UX-01-26 | GAP-UX02-ROLE-MODEL |
 | DM-only roll details | Connected | Player | no | no | no | no | ORIGIN-UX-01-26, ORIGIN-UX-01-29 | GAP-DM-ONLY-DELIVERY-PROTOCOL |
 | DM-only roll details | Connected | DM | yes | yes | TBD | yes | ORIGIN-UX-01-26, ORIGIN-UX-01-28 | GAP-DM-ROLL-VISIBILITY-PERSISTENCE |
-| Encounter management | Connected Play | Player | TBD | TBD | no | no | R4-ENCOUNTER | GAP-UX02-ROLE-MODEL |
-| Encounter management | Connected Play | DM | yes | TBD | yes | n/a | R4-ENCOUNTER | GAP-UX02-ROLE-MODEL |
+| Encounter management | Connected Play | Player | TBD | TBD | TBD | no | R4-ENCOUNTER | GAP-UX02-ROLE-MODEL |
+| Encounter management | Connected Play | DM | TBD | TBD | TBD | n/a | R4-ENCOUNTER | GAP-UX02-ROLE-MODEL |
+| Participant roster | Connected Play | Player | TBD | TBD | TBD | no | R4-PARTICIPANTS | GAP-UX02-ROLE-MODEL |
+| Participant roster | Connected Play | DM | TBD | TBD | TBD | n/a | R4-PARTICIPANTS | GAP-UX02-ROLE-MODEL |
+| Session share/address/content info | Connected Play | Player | TBD | TBD | TBD | no | R4-SESSION-SHARE | GAP-UX02-ROLE-MODEL |
+| Session share/address/content info | Connected Play | DM | TBD | TBD | TBD | TBD | R4-SESSION-SHARE | GAP-UX02-ROLE-MODEL |
 | Actor control | Any Play | Player/DM | TBD | TBD | TBD | n/a | UX-02-03, UX-02-04, UX-02-05 | GAP-UX02-ROLE-MODEL |
+| Manual movement-reaction declaration | Initiative | Player/DM | TBD | TBD | TBD | n/a | R4-MOVEMENT-REACTION-INPUT | GAP-UX02-ROLE-MODEL |
+| Player connection/rejoin/leave controls | Connected | Player | yes | local/session projection | TBD | n/a | R4-PLAYER-SESSION, UX-01-03 | GAP-UX02-ROLE-MODEL |
+| Handout presentation control | Connected | Player | yes when authorized projection exists | authorized projection only | local dismiss only where reviewed | no | ORIGIN-UX-01-12, ORIGIN-UX-01-13 | GAP-HANDOUT-NETWORK-CONTRACT |
+| Handout presentation control | Connected | DM | yes | yes | TBD | TBD | ORIGIN-UX-01-12 | GAP-HANDOUT-NETWORK-CONTRACT |
 
-Do not expand unresolved role semantics by inference before UX-02 review establishes the role model.
+Do not expand unresolved role semantics by inference before UX-02/SES-02 review establishes the role model and delivery contract.
 
 ---
 
@@ -80,9 +80,23 @@ Do not expand unresolved role semantics by inference before UX-02 review establi
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `M2-SES-001` | Home/Session | Host | valid host setup | Host Setup/Lobby | create/prepare session command | explicit validation error | R2-HOST |
 | `M2-SES-002` | Home/Session | Join | valid join input | Character Select / connecting path | join attempt | remain/recover | R2-JOIN |
-| `M2-SES-003` | Character Select | no valid Character | none | **TBD** | none | Planning Gap | GAP-JOIN-NO-CHARACTER |
+| `M2-SES-003` | Character Select | no valid Character | none | **TBD** | none | explicit Planning Gap | GAP-JOIN-NO-CHARACTER |
 | `M2-SES-004` | Live session | connection lost | network state | Reconnecting | preserve canonical context | explicit unrecoverable branch | UX-01-03, R2-RECONNECT |
 | `M2-SES-005` | Reconnecting | recovered | canonical reconnect accepted | prior live context | reconcile projection | explicit failure branch | UX-01-03 |
+| `M2-SES-006` | Disconnected | rejoin same Host | connection/session authority | Connecting/Reconnecting | submit rejoin | remain disconnected with reason | R4-PLAYER-SESSION, R6-DISCONNECTED |
+| `M2-SES-007` | Connected Play | open session utility | local presentation | same canonical Play + utility open | no gameplay mutation | close/restore focus | R7-SESSION-UTILITY-RAIL |
+| `M2-SES-008` | Session utility open | Escape/close | local presentation | same canonical Play + utility closed | no gameplay mutation | return focus to launcher | R7-SESSION-UTILITY-RAIL, A11Y-01 |
+| `M2-SES-009` | Connected Play | open Full Sheet | local presentation | same canonical Play + Full Sheet layer | no session/game-state reset | close/return context | R4-FULL-SHEET-LAYER, UX-01-03 |
+| `M2-SES-010` | Player handout visible | local dismiss | reviewed Overlay semantics when applicable | same shared handout state + local hidden presentation | local presentation only | reopen from handout launcher | ORIGIN-UX-01-13, R4-PLAYER-HANDOUT-VIEWER |
+
+## Character / content seed
+
+| ID | Current State | Event | Guard / Authority | Next State | Side Effect | Failure / Recovery | Refs / Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `M2-CHR-001` | Home guide open | dismiss | local presentation preference | Home guide closed | persist local preference when available | guide may reopen explicitly | R2-FIRST-USE |
+| `M2-CHR-002` | Character Sheet | switch layout | local presentation preference | same Character Sheet with other layout | persist local preference | fallback to supported layout | R3-SHEET-SIMPLEVTT, R3-SHEET-OFFICIAL |
+| `M2-CONT-001` | Content | choose add-on file | file/read contract | Import Review | parse/preview only | blocking file/read error stays recoverable | R2-CONTENT-INSTALL, R4-IMPORT-REVIEW |
+| `M2-CONT-002` | Import Review | install | validation has no blocking issue | Content | durable/local catalog mutation according to content contract | preserve review/error on failure | R2-CONTENT-INSTALL |
 
 ---
 
@@ -103,19 +117,20 @@ Do not expand unresolved role semantics by inference before UX-02 review establi
 | Dice fine trajectory | local presentation | transient | no | yes | ORIGIN-UX-01-25 |
 | Hotbar custom arrangement | user presentation preference | TBD | normally local | yes when allowed | UX-01-06 |
 | Selected Hotbar tab | UI presentation | transient/local preference TBD | no | yes | UX-01-06 |
+| Character Sheet layout preference | local presentation preference | durable local preference in current implementation | no | yes | R3-SHEET-SIMPLEVTT, R3-SHEET-OFFICIAL, src/CharacterSheetPlayScreen.tsx |
+| Appearance mode/accent | local presentation preference | durable local preference in current implementation | no | yes | R1-SETTINGS, src/AppearanceSettingsBridge.tsx |
+| Home onboarding dismissal | local presentation preference | durable/best-effort local preference in current implementation | no | yes | R2-FIRST-USE, src/V1HomeScreen.tsx |
+| Session utility open/layer state | local presentation | transient | no | yes | R7-SESSION-UTILITY-RAIL, R4-FULL-SHEET-LAYER |
 | Handout presentation mode | intended shared session presentation state | session/reconnect | yes | authorized command only | ORIGIN-UX-01-12, GAP-HANDOUT-NETWORK-CONTRACT |
+| Handout local dismissed/open state | local presentation | current handout/session | no | yes only where reviewed | ORIGIN-UX-01-13, R4-PLAYER-HANDOUT-VIEWER |
+| Portrait asset/focal point | canonical Character presentation data or Character-owned profile data TBD by DND-01 | durable in current implementation | session projection TBD | through Character update command only | R4-PORTRAIT-EDITOR, DND-01 |
 | Tooltip/open popover state | UI presentation | transient | no | yes | INT-02 |
 
-Do not duplicate domain formulas or lifecycle semantics here. Reference their canonical domain/design documents.
+Do not duplicate domain formulas or lifecycle semantics here. Reference their canonical domain/design documents. `TBD` ownership/lifetime values must be resolved by the responsible Decision Map/contract before implementation reliance.
 
 ---
 
 # M4 — Accessibility / Input
-
-## Row schema
-
-| Artifact | Keyboard entry | Focus on open/select | Escape / Cancel | Focus return | Pointer alternative | Semantic/status requirement | Refs / Gap |
-| --- | --- | --- | --- | --- | --- | --- | --- |
 
 ## Seed coverage rows
 
@@ -123,21 +138,23 @@ Do not duplicate domain formulas or lifecycle semantics here. Reference their ca
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `R4-CONFIRM` | required | defined per dialog | safe cancel when valid | invoker/logical next | n/a | dialog/alert-dialog pattern to review | A11Y-01, INT-03 |
 | `R4-ACTOR-CONTEXT` | required equivalent | menu/context entry TBD | close | Actor Card | keyboard equivalent to right-click | exact menu semantics TBD | GAP-ACTOR-CONTEXT-MENU-CONTENTS |
+| `R4-QUICK-SHEET` | required | launcher -> sheet | close/Escape | launcher | all launch controls keyboard reachable | pane/region semantics to review | R4-QUICK-SHEET, A11Y-01 |
+| `R4-FULL-SHEET-LAYER` | required | launcher -> workspace | close/Escape | launcher or prior utility | full sheet functionality keyboard reachable | layer/workspace semantics TBD | R4-FULL-SHEET-LAYER, A11Y-01 |
+| `R4-PLAYER-HANDOUT-VIEWER` | required | open control/viewer close | local close where applicable | handout launcher | reopen equivalent | current modal dialog evidence; final mode semantics vary | ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT |
+| `R4-MOVEMENT-REACTION-INPUT` | required | trigger -> dialog | cancel/Escape requirement TBD | trigger | all fields/actions keyboard reachable | modal dialog evidence; authority semantics TBD | R4-MOVEMENT-REACTION-INPUT, A11Y-01 |
+| `R4-PORTRAIT-EDITOR` | required | portrait control | explicit cancel | portrait control | file/range/buttons keyboard reachable | errors must be announced/readable | R4-PORTRAIT-EDITOR, A11Y-01 |
+| `R4-PLAYER-SESSION` | required | launcher -> pane | close/Escape | launcher | recovery controls keyboard reachable | connection changes announced | R4-PLAYER-SESSION, R5-CONNECTION-RECOVERY |
+| `R7-SESSION-UTILITY-RAIL` | required | all utilities reachable | open utility closes with Escape | exact launcher | pointer and keyboard equivalent | active utility exposed semantically | R7-SESSION-UTILITY-RAIL, A11Y-01 |
 | `R7-ACTOR-CARD` | required | visible focus | context dependent | n/a | click actions need keyboard equivalent | semantic role to decide | INT-01, A11Y-01 |
 | `R7-HOTBAR-SLOT` | required | visible focus | targeting cancel path applicable | logical slot/context | click equivalent | unavailable state/reason accessible | DND-03, A11Y-01 |
 | `R9-DICE-THROW` | no input dependency | must not steal essential focus by default | n/a | n/a | n/a | reduced-motion/result equivalent required | ORIGIN-UX-01-25 |
 | `R5-BANNER` | action-dependent | should not steal focus unless required by pattern | n/a | n/a | action equivalent if actionable | status/alert semantics TBD by severity | STATE-02, A11Y-01 |
 
-Detailed ARIA/semantic decisions are owned by A11Y-01 and component contracts; do not assume a generic role before review.
+Detailed ARIA/semantic decisions are owned by A11Y-01 and component contracts; current ARIA usage is evidence only.
 
 ---
 
 # M5 — Responsive / Layout
-
-## Row schema
-
-| Surface | Wide | Normal | Narrow | MUST remain | MAY collapse/reflow | MUST NOT hide | Refs / Gap |
-| --- | --- | --- | --- | --- | --- | --- | --- |
 
 ## Seed rows
 
@@ -146,7 +163,11 @@ Detailed ARIA/semantic decisions are owned by A11Y-01 and component contracts; d
 | `R1-PLAY` | full Dual Anchor | Dual Anchor | compressed/reflow TBD | Scene/Actor context + Command Center accessibility | secondary metadata pending review | core capabilities solely for cleanliness | UX-01-04, UX-01-07 |
 | `R7-HOTBAR-TABS` | full tabs | full/compact TBD | compact/reflow TBD | capability-page reachability | labels/secondary metadata only if approved | entire Hotbar behind generic drawer by default | ORIGIN-UX-01-07 |
 | `R7-ACTOR-CARD` | full card | compact card TBD | compact/reflow TBD | identity + required interaction/target state | secondary metadata TBD | invalid target existence during targeting | ORIGIN-UX-01-19 |
+| `R7-COMMAND-CENTER` | full command surface | full command surface | reflow/compress TBD | capabilities + economy/resources + current actor context | secondary labels/metadata when approved | command surface entirely behind utility navigation | UX-01-04, UX-01-07, ORIGIN-UX-01-09 |
+| `R7-SESSION-UTILITY-RAIL` | current implementation uses rail | current implementation uses rail | reflow/alternative TBD | reachable contextual utilities when applicable | rail may transform if NAV/PLATFORM approve | core command capabilities | R7-SESSION-UTILITY-RAIL, PLATFORM-01 |
 | `R1-CHAR-SHEET` | multi-column candidate | TBD | stacked/reflow candidate | core Character information/action access | secondary grouping | TBD | DND-01, PLATFORM-01 |
+| `R4-FULL-SHEET-LAYER` | full workspace layer | full workspace layer | stacked/scroll behavior TBD | sheet actions + close/return | layout columns | close/return control | R4-FULL-SHEET-LAYER, PLATFORM-01 |
+| `R4-PLAYER-HANDOUT-VIEWER` | mode-dependent | mode-dependent | mode-dependent TBD | authorized image + required dismissal semantics | image fit/zoom controls | DM-required shared presentation state | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT |
 
 No numeric breakpoint is canonical until PLATFORM-01 / design tokens establish one.
 
@@ -169,17 +190,37 @@ Explanatory conditions belong in the human-readable `Notes` column, not inside t
 
 | Surface | Normal | Empty | Loading/Pending | Disabled | Error | Keyboard | Narrow | Role variants | Reconnect | Owner walkthrough | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `R1-HOME` | REQ | TBD | REQ | N/A | REQ | REQ | REQ | TBD | TBD | REQ | Reconnect applies only when a live session exists; role variants depend on `UX-02`. |
-| `R1-CHARACTERS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Role variants depend on `UX-02`. |
-| `R1-CHAR-SHEET` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Session-linked variants and role behavior depend on downstream review. |
-| `R1-SESSION` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Connected-session first-class surface. |
+| `R1-HOME` | REQ | TBD | REQ | N/A | REQ | REQ | REQ | TBD | TBD | REQ | Reconnect applies only when a live session exists; role variants depend on UX-02. |
+| `R2-FIRST-USE` | REQ | N/A | N/A | N/A | TBD | REQ | REQ | TBD | N/A | REQ | Dismiss/reopen/persistence need explicit onboarding review. |
+| `R1-CHARACTERS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Role variants depend on UX-02. |
+| `R1-CHAR-SHEET` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Standalone/session host modes and layout variants require representative coverage. |
+| `R2-STANDALONE-ROLL` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | N/A | N/A | REQ | Local roll/result/dice path. |
+| `R1-SESSION` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Host/Join/lobby/live/recovery coverage. |
 | `R1-PLAY` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Whole Play workspace requires representative owner walkthrough. |
 | `R3-TARGET-SINGLE` | REQ | N/A | N/A | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Disabled = invalid target; Error = explicit authoritative reject; role authority unresolved. |
 | `R3-TARGET-MULTI` | REQ | N/A | N/A | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Disabled = invalid target; Error = explicit authoritative reject; role authority unresolved. |
-| `R3-INTERRUPT` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Responder authority required; reconnect behavior TBD. |
-| `R3-DICE` | REQ | N/A | REQ | N/A | REQ | REQ | REQ | TBD | N/A | REQ | Error = presentation fallback; Keyboard = no essential keyboard dependency; visibility variant unresolved. |
+| `R3-INTERRUPT` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Responder authority and safe-interaction boundary required. |
+| `R3-DICE` | REQ | N/A | REQ | N/A | REQ | REQ | REQ | TBD | N/A | REQ | Error = presentation fallback; visibility variant unresolved. |
+| `R4-RESOLUTION-DRAWER` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Offline/product-shell resolution path; adjudication/Undo DM variant. |
+| `R4-SESSION-RESOLUTION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Connected Play resolution layer. |
+| `R4-QUICK-SHEET` | REQ | TBD | TBD | TBD | TBD | REQ | REQ | Player | REQ | REQ | Current contextual utility evidence; final topology unreviewed. |
+| `R4-FULL-SHEET-LAYER` | REQ | TBD | REQ | TBD | REQ | REQ | REQ | Player | REQ | REQ | Must preserve session context. |
+| `R4-SESSION-RULES` | REQ | REQ | TBD | TBD | REQ | REQ | REQ | TBD | REQ | REQ | Contextual Rules search/detail. |
+| `R4-ENCOUNTER` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | DM/TBD | REQ | REQ | Exact role model pending UX-02/DM review. |
+| `R4-PARTICIPANTS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | DM/TBD | REQ | REQ | Role entitlement pending. |
+| `R4-SESSION-SHARE` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | DM/TBD | REQ | REQ | Address/content/end-session/compatibility current evidence. |
+| `R4-PLAYER-SESSION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | Player | REQ | REQ | Rejoin/leave/connection state. |
+| `R4-DM-HANDOUT-PANE` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | DM | REQ | REQ | Shared presentation contract blocks readiness. |
+| `R4-PLAYER-HANDOUT-VIEWER` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | Player | REQ | REQ | Must cover Overlay/Upper/Full once contract exists. |
+| `R4-MOVEMENT-REACTION-INPUT` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Current modal evidence; product authority/policy not reviewed. |
+| `R4-PORTRAIT-EDITOR` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | File error/cancel/save/remove/focal controls. |
+| `R4-IMPORT-REVIEW` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Add-on/Character/Combatant variants. |
 | `R4-CONFIRM` | REQ | N/A | TBD | TBD | TBD | REQ | REQ | TBD | N/A | REQ | Action-dependent pending/disabled/error/role cases resolved by downstream contract. |
 | `R5-BANNER` | REQ | N/A | N/A | N/A | TBD | REQ | REQ | TBD | TBD | REQ | Severity semantics and reconnect use depend on STATE/A11Y/SES decisions. |
+| `R5-CONNECTION-RECOVERY` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | Player/TBD | REQ | REQ | Reconnecting and disconnected variants. |
+| `R6-NO-VALID-CHARACTER` | TBD | REQ | N/A | REQ | REQ | REQ | REQ | Player | N/A | REQ | Exact normal/error/recovery semantics blocked by GAP-JOIN-NO-CHARACTER. |
+| `R7-COMMAND-CENTER` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Canonical planned anchor; implementation currently drifts. |
+| `R9-COMBAT-VFX` | REQ | N/A | N/A | N/A | REQ | N/A | REQ | TBD | N/A | REQ | Reduced-motion equivalent belongs to A11Y/DND contracts. |
 
 ## Coverage rule
 
@@ -188,5 +229,7 @@ Before a scope is implementation-ready, AI must convert applicable `TBD` cells t
 - a canonical decision/contract;
 - `N/A` with a reason in `Notes`; or
 - an explicit Planning Gap that blocks implementation at the selected Spec Tier.
+
+Current Route D matrix expansion is deliberately broad enough to prevent newly discovered implementation surfaces from disappearing between governance sheets. It does not approve current code behavior.
 
 The owner should see only material blocking gaps, not every matrix maintenance detail.
