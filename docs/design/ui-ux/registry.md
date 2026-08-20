@@ -57,18 +57,18 @@ A row existing here does not approve its final topology, placement, or behavior.
 
 | ID | Artifact | Planning | Contract | Owner | Refs | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| `R1-HOME` | Home | Draft | None | NAV-01 | UX-01-01, UX-01-02 | Product hub |
+| `R1-HOME` | Home | Draft | Partial | NAV-01 | UX-01-01, UX-01-02, ORIGIN-FLOW-01 | Product hub; direct Session entry reviewed, detailed navigation pending |
 | `R1-CHARACTERS` | Character Library destination | Draft | None | NAV-01 / DND-01 | UX-01-01 | Character management |
 | `R1-CHAR-SHEET` | Character Sheet destination | Draft | Partial | DND-01 | UX-01-01 | Standalone first-class surface |
 | `R1-CHAR-BUILDER` | Character Builder workspace | Draft | None | DND-01 | — | Create/Edit/Import modes |
 | `R1-LEVEL-UP` | Level Up workspace | Draft | None | DND-01 | — | Progression flow |
-| `R1-SESSION` | Session destination | Draft | Partial | NAV-01 / SES-01 | UX-01-01 | Host/Join/session lifecycle hub |
+| `R1-SESSION` | Session destination | Reviewed | Partial | NAV-01 / SES-01 | UX-01-01, ORIGIN-FLOW-01 | Host/Join are direct first-class entry paths; detailed lifecycle pending |
 | `R1-PLAY` | Dedicated Play Workspace | Draft | Partial | SES-01 | UX-01-02, UX-01-07 | Freeform/Initiative share this workspace |
 | `R1-CONTENT` | Content / Add-ons | Draft | None | CONTENT-02 | — | Installed/imported content management |
 | `R1-RULES` | Rules Browser | Draft | None | CONTENT-02 / NAV-01 | — | Reference/search |
 | `R1-SETTINGS` | Settings | Draft | None | NAV-01 | — | Preferences |
 
-Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudication. Their topology remains contextual by current planning direction and requires downstream review.
+Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudication. Their topology remains contextual/candidate coverage until downstream review.
 
 ---
 
@@ -80,8 +80,8 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R2-OPEN-CHAR` | Open saved Character | Draft | None | DND-01 | — | Home/Library -> Sheet |
 | `R2-EDIT-CHAR` | Edit Character | Draft | None | DND-01 | — | Sheet -> Builder -> Sheet |
 | `R2-LEVEL-UP` | Level Up | Draft | None | DND-01 | — | Sheet -> Level Up -> Review -> Sheet |
-| `R2-HOST` | Host Session | Draft | Partial | SES-01 | — | Home/Session -> Host Setup -> Lobby -> Play |
-| `R2-JOIN` | Join Session | Draft | Blocked | SES-01 / UX-02 | GAP-JOIN-NO-CHARACTER | Home/Session -> Join -> Character Select -> Lobby -> Play |
+| `R2-HOST` | Host Session | Reviewed | Partial | SES-01 | ORIGIN-FLOW-01 | Direct Home/Session entry reviewed; setup/lobby details pending |
+| `R2-JOIN` | Join Session | Reviewed | Blocked | SES-01 / UX-02 | ORIGIN-FLOW-01, ORIGIN-FLOW-02, GAP-JOIN-NO-CHARACTER | Direct Join + Character Select reviewed; no-character branch unresolved |
 | `R2-PLAY-ACTION` | Capability -> target -> resolution -> result | Draft | Partial | DND-03 / DND-02 | ORIGIN-UX-01-19, ORIGIN-UX-01-20, ORIGIN-UX-01-21, ORIGIN-UX-01-22, ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 | Core play loop |
 | `R2-INITIATIVE` | Enter/exit Initiative | Draft | Partial | DND-04 | ORIGIN-UX-01-14, ORIGIN-UX-01-15 | Same Play Workspace |
 | `R2-HANDOUT` | DM handout presentation | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT | Overlay / Upper / Full branches |
@@ -97,8 +97,8 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 
 | ID | Artifact | Planning | Contract | Owner | Refs | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| `R3-PLAY-FREEFORM` | Freeform mode | Draft | Partial | SES-01 | ORIGIN-UX-01-10, ORIGIN-UX-01-11 | Shared Play Workspace |
-| `R3-PLAY-INITIATIVE` | Initiative mode | Draft | Partial | DND-04 | ORIGIN-UX-01-14, ORIGIN-UX-01-15 | Adds top tracker |
+| `R3-PLAY-FREEFORM` | Freeform mode | Draft | Partial | SES-01 | ORIGIN-UX-01-10, ORIGIN-UX-01-11, docs/design/session-runtime.md | Shared Play Workspace |
+| `R3-PLAY-INITIATIVE` | Initiative mode | Draft | Partial | DND-04 | ORIGIN-UX-01-14, ORIGIN-UX-01-15, docs/design/session-runtime.md | Adds top tracker |
 | `R3-ACTION-IDLE` | No action selected | Draft | None | DND-03 | — | Baseline Play state |
 | `R3-ACTION-SELECTED` | Capability selected | Draft | Partial | DND-03 | UX-01-04, UX-01-05, UX-01-06 | Awaiting target/resolve path |
 | `R3-TARGET-SINGLE` | Single-target targeting | Draft | Partial | DND-03 | ORIGIN-UX-01-19, ORIGIN-UX-01-20 | Valid click immediate execute |
@@ -132,7 +132,7 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R4-REACTION-PROMPT` | Reaction/Interrupt prompt | Draft | Blocked | DND-04 | R3-INTERRUPT, GAP-RESOLUTION-SAFE-INTERACTIONS | Response surface |
 | `R4-ADJUDICATION` | DM adjudication surface | Draft | None | DM-02 | — | Exact topology TBD |
 | `R4-ACTIVITY-DETAIL` | Activity/resolution detail | Draft | Partial | DM-02 / SES-01 | ORIGIN-UX-01-22 | Durable detail path |
-| `R4-ENCOUNTER` | Encounter Manager | Draft | None | DM-01 / SES-01 | — | Current planning: contextual to Play |
+| `R4-ENCOUNTER` | Encounter Manager | Draft | None | DM-01 / SES-01 | — | Candidate/contextual topology pending review |
 | `R4-FILE-PICKER` | File selection flow | Draft | None | CMP-01 / CONTENT-02 | — | Add-on/portrait/handout uses as applicable |
 
 ---
@@ -168,10 +168,10 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R6-SAVE-FAILURE` | Save failure | Draft | None | STATE-02 | — | Data preservation/retry required |
 | `R6-UNSUPPORTED` | Unsupported content/mechanic | Draft | Partial | STATE-02 | docs/design/README.md | No approximation |
 | `R6-DISCONNECTED` | Disconnected | Draft | None | STATE-02 / SES-02 | — | Connection state |
-| `R6-RECONNECTING` | Reconnecting | Draft | Partial | STATE-02 / SES-02 | UX-01-03 | Preserve canonical context |
+| `R6-RECONNECTING` | Reconnecting | Draft | Partial | STATE-02 / SES-02 | UX-01-03, docs/design/session-runtime.md | Preserve canonical context |
 | `R6-INCOMPATIBLE` | Incompatible session/content | Draft | None | STATE-02 | — | Blocking/recovery TBD |
 | `R6-PERMISSION` | Permission/authority denied | Draft | Partial | STATE-02 / SES-02 | ORIGIN-UX-01-26, ORIGIN-UX-01-29 | Do not leak unauthorized data |
-| `R6-STALE` | Stale/reconciliation state | Draft | None | STATE-02 / SES-02 | — | Canonical resync behavior |
+| `R6-STALE` | Stale/reconciliation state | Draft | None | STATE-02 / SES-02 | docs/design/session-runtime.md | Canonical resync behavior |
 | `R6-REDUCED-MOTION` | Reduced Motion | Draft | Partial | A11Y-01 / R9 | ORIGIN-UX-01-25 | Result-preserving presentation |
 | `R6-NARROW` | Narrow Desktop | Draft | Partial | PLATFORM-01 | UX-01-04, UX-01-07 | Core anchors/capabilities remain reachable |
 
