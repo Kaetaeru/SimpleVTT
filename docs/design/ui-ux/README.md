@@ -18,31 +18,35 @@ If the planning structure makes either goal harder, simplify it before adding mo
 | Framework | `Reviewed / Selected` as planning method |
 | Product UI decisions | Partially reviewed; not globally Frozen |
 | `UX-01` | 7 decisions Reviewed, not Frozen |
-| `UX-02` | Decision Map prepared; individual review paused while the master UI model is materialized |
-| Master User Flow | Draft baseline exists; Home has direct Character / Host / Join / Content / Rules / Settings paths |
-| R1-R9 inventory | **Next AI preparation task** |
-| M1-M6 matrices | Skeleton/coverage to be generated after registry inventory |
+| Migrated prior decisions | Preserved in Decision Ledger with destination sheets; not Frozen |
+| `UX-02` | Complete Decision Map preserved; individual review paused |
+| Master User Flow | Draft canonical planning baseline materialized |
+| R1-R9 inventory | Draft seed inventory materialized; implementation cross-check still required |
+| M1-M6 matrices | Draft seed rows/coverage materialized; expansion follows inventory cross-check |
+| Planning Gaps | Canonical queue active |
+| Templates | Copy-safe Decision/Surface/Transition/Work Order templates available |
 | Implementation | Not authorized by planning status alone |
 
 ## Current rule for what happens next
 
 **Do not resume individual UX questions yet.**
 
-AI should first materialize the complete UI planning inventory so the owner can see the whole product before continuing one-by-one decisions:
+AI should finish the whole-product visibility pass first:
 
 ```text
-1. R1-R9 complete inventory
-2. Master User Flow / Surface Map cross-check
-3. M1-M6 required matrix rows / gaps
-4. 27-sheet Decision Map coverage check
-5. Then resume the predeclared UX-02 sequence
+1. Cross-check R1-R9 against current implementation + master flow + existing decisions
+2. Add missing inventory rows without inventing behavior
+3. Expand only the M1-M6 rows needed for material coverage
+4. Build/check the complete 27-sheet review coverage map
+5. Present owner a concise whole-product planning checkpoint
+6. Then resume the predeclared UX-02 sequence
 ```
 
-Newly discovered questions go to `planning-gaps.md` or the appropriate downstream Decision Map. Do not ask them immediately.
+New material behavior questions go to `planning-gaps.md` or the appropriate downstream Decision Map. Do not ask them immediately.
 
 ## Owner controls — plain language is enough
 
-The owner does **not** need to edit IDs or tables directly. Examples:
+The owner does **not** need to edit IDs or tables directly.
 
 | Owner says | AI must do |
 | --- | --- |
@@ -50,18 +54,27 @@ The owner does **not** need to edit IDs or tables directly. Examples:
 | `이 결정 바꾸자` | Resolve affected Decision ID, update one canonical Decision Card, calculate impact. |
 | `UX-02 질문 전체 보여줘` | Show the complete declared Decision Map before asking anything. |
 | `이건 확정` / `freeze` | Freeze only the explicitly named scope and run impact checks. |
-| `이 화면에 뭐가 남았어?` | Use Surface + Matrix coverage to show unresolved decisions/states. |
-| `구현 준비됐어?` | Check Frozen dependencies, gaps, contracts, and required Work Order. |
+| `이 화면에 뭐가 남았어?` | Use Registry + Matrix coverage to show unresolved decisions/states. |
+| `구현 준비됐어?` | Check Frozen dependencies, gaps, spec tier, contracts, and required Work Order. |
 | `되돌려` | Restore/supersede the affected decision with traceability; do not rewrite unrelated decisions. |
+| `전체 플로우 보여줘` | Use `master-flow.md`; do not reconstruct a different flow from code ad hoc. |
 
-## The owner normally needs only these files
+## Owner-facing files
+
+The owner normally needs only these:
 
 - [`README.md`](README.md) — current dashboard and next work.
 - [`decisions.md`](decisions.md) — canonical Decision Ledger.
-- [`master-flow.md`](master-flow.md) — product flow and surface structure.
-- [`planning-gaps.md`](planning-gaps.md) — unresolved choices/conflicts that AI must not invent.
+- [`master-flow.md`](master-flow.md) — product flow and major surface structure.
+- [`planning-gaps.md`](planning-gaps.md) — unresolved choices/conflicts AI must not invent.
 
-AI maintains registries, matrices, detailed contracts, and work orders when they are materialized.
+Supporting files maintained mainly by AI:
+
+- [`registry.md`](registry.md) — R1-R9 structured UI inventory.
+- [`matrices.md`](matrices.md) — M1-M6 cross-cutting coverage.
+- [`templates.md`](templates.md) — copy-safe planning / implementation templates.
+
+Detailed Surface, Component, Motion, and Work Order files are added only when the selected specification tier requires them.
 
 ## New AI bootstrap — bounded reading order
 
@@ -73,12 +86,32 @@ A new AI continuing UI/UX planning MUST read in this order:
 3. docs/design/ui-ux/decisions.md
 4. docs/design/ui-ux/master-flow.md
 5. docs/design/ui-ux/planning-gaps.md
-6. only then read the current sheet's referenced canonical/domain/code evidence
+6. docs/design/ui-ux/registry.md only for inventory/coverage work
+7. docs/design/ui-ux/matrices.md only for cross-cutting/coverage work
+8. only then read the current sheet's referenced canonical/domain/code evidence
 ```
 
 Do **not** scan all implementation files or all design documents before knowing the current task.
 
-For implementation, use the stricter Work Order reading protocol in the framework.
+For implementation, use the stricter scoped Work Order reading protocol in the framework.
+
+## AI maintenance boundaries
+
+AI MAY without owner approval:
+
+- add an inventory row for an already existing/planned UI artifact;
+- add a matrix coverage row that only references existing decisions/contracts;
+- update cross-references and dashboard counts/status summaries;
+- identify a new Planning Gap;
+- mark derived artifacts `review/update required` after an owner change.
+
+AI MUST NOT without an owner/domain decision:
+
+- decide new product behavior while filling an inventory/matrix;
+- promote a contextual tool into a top-level destination;
+- create authority, visibility, fallback, persistence, or rules semantics;
+- Freeze a decision;
+- treat current implementation as product truth merely because it exists.
 
 ## Status vocabulary
 
@@ -96,9 +129,9 @@ At the end of any meaningful planning update, AI should keep the owner-facing ch
 ```text
 Changed:
 Current status:
-Open gaps:
+Open material gaps:
 Next planned work:
 Frozen changes: none / <IDs>
 ```
 
-The detailed maintenance belongs in canonical files, not in a long conversational recap.
+Detailed registry/matrix maintenance belongs in canonical files, not in a long conversational recap.
