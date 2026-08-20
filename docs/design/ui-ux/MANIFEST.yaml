@@ -47,6 +47,7 @@ reference_rules:
   ranges_forbidden: true
   omitted_prefixes_forbidden: true
   prose_substitutes_for_existing_ids_forbidden: true
+  multi_value_separator: comma
   allowed_reference_kinds:
     - decision_id
     - review_question_id
@@ -123,6 +124,9 @@ sources:
     contains_normative_decision_bodies: false
     review_order_change_requires_owner_approval: true
     global_planning_gate_owner: true
+    structured_reference_fields:
+      - Decision Map.Depends On
+      - Decision Map.Destination
 
   decisions:
     path: docs/design/ui-ux/decisions.md
@@ -131,6 +135,13 @@ sources:
     derived: false
     contains_undecided_question_maps: false
     status_values_must_match_enum_exactly: true
+    structured_reference_fields:
+      - Depends On
+      - Destination
+      - Planning Gap
+      - Affects when ID-based
+      - Supersedes
+      - Superseded By
 
   master_flow:
     path: docs/design/ui-ux/master-flow.md
@@ -155,6 +166,12 @@ sources:
     authority: canonical_for_known_gaps
     derived: false
     status_values_must_match_enum_exactly: true
+    structured_reference_fields:
+      - Owner Sheet
+      - Depends On
+      - Affected Decision
+      - Affected Decisions
+      - Resolved By
 
   registry:
     path: docs/design/ui-ux/registry.md
@@ -166,6 +183,11 @@ sources:
     may_reference_planning_gaps: true
     may_reference_domain_contracts: true
     references_must_follow_reference_rules: true
+    structured_reference_fields:
+      - Refs
+    human_readable_fields_not_parsed_as_reference_lists:
+      - Owner
+      - Note
     status_axes:
       - planning_maturity
       - contract_readiness
@@ -181,6 +203,15 @@ sources:
     may_reference_registry_ids: true
     may_reference_domain_contracts: true
     references_must_follow_reference_rules: true
+    structured_reference_fields:
+      - M1.Source
+      - M1.Gap
+      - M2.Refs / Gap
+      - M3.Refs / Gap
+      - M4.Refs / Gap
+      - M5.Refs / Gap
+      - M6.Surface
+      - M6 exact contract/test ID cells
 
   templates:
     path: docs/design/ui-ux/templates.md
@@ -226,7 +257,7 @@ maintenance_rules:
   - registry_and_matrices_reference_canonical_sources_instead_of_copying_them
   - dashboard_is_summary_and_must_not_override_canonical_sources
   - exact_enum_values_only_in_structured_status_fields
-  - full_stable_references_only_in_reference_fields
+  - full_stable_references_only_in_structured_reference_fields
   - derived_document_drift_must_be_fixed_before_substantive_work
   - current_code_is_evidence_not_automatic_product_truth
   - missing_material_policy_returns_planning_gap
