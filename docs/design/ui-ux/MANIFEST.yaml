@@ -14,6 +14,7 @@ primary_goals:
 
 entrypoints:
   owner: docs/design/ui-ux/README.md
+  owner_review: docs/design/ui-ux/owner-review/README.md
   ai: docs/design/ui-ux/AI-READING-GUIDE.md
   preflight: docs/design/ui-ux/PREFLIGHT.md
   framework: docs/design/ui-ux-planning-framework.md
@@ -28,6 +29,7 @@ status_enums:
   gap_status: [Open, Deferred, Resolved]
   gap_type: [OWNER_DECISION, DOMAIN_CONTRACT, ARCHITECTURE_CONTRACT, IMPLEMENTATION_BLOCKER, DOCUMENT_RECONCILIATION, COVERAGE]
   gap_severity: [Critical, Major, Normal]
+  owner_review_ai_status: [PENDING, PROCESSED]
 
 reference_rules:
   full_ids_required: true
@@ -84,6 +86,27 @@ sources:
     derived: false
     must_pass_before_substantive_work: true
     sole_owner_of_start_work_checks: true
+  owner_review:
+    path: docs/design/ui-ux/owner-review/README.md
+    family_path: docs/design/ui-ux/owner-review/
+    role: owner_selection_input_workspace
+    authority: explicit_owner_input_not_canonical_until_reconciled
+    derived: false
+    owner_editable: true
+    question_source: docs/design/ui-ux/review-plan.md
+    canonicalizes_into: docs/design/ui-ux/decisions.md
+    candidate_options_are_product_truth: false
+    filled_owner_select_is_explicit_owner_input: true
+    ai_reads_before_asking_route_a_questions: true
+    custom_selection_uses_owner_note_as_controlling_instruction: true
+    ai_status_values_must_match_enum_exactly: true
+    worksheet_files:
+      - docs/design/ui-ux/owner-review/01-foundation-navigation-layout.md
+      - docs/design/ui-ux/owner-review/02-states-layering-confirmation.md
+      - docs/design/ui-ux/owner-review/03-visual-components-content.md
+      - docs/design/ui-ux/owner-review/04-accessibility-platform.md
+      - docs/design/ui-ux/owner-review/05-dnd-experience.md
+      - docs/design/ui-ux/owner-review/06-session-authority-dm-content.md
   dashboard:
     path: docs/design/ui-ux/README.md
     role: current_planning_status_and_next_action
@@ -94,6 +117,7 @@ sources:
       - docs/design/ui-ux/MANIFEST.yaml
       - docs/design/ui-ux/PREFLIGHT.md
       - docs/design/ui-ux/review-plan.md
+      - docs/design/ui-ux/owner-review/README.md
       - docs/design/ui-ux/decisions.md
       - docs/design/ui-ux/master-flow.md
       - docs/design/ui-ux/planning-gaps.md
@@ -110,6 +134,7 @@ sources:
     review_order_change_requires_owner_approval: true
     batch_current_sheet_review_allowed: true
     batch_answers_resolved_in_dependency_order: true
+    owner_worksheet_may_capture_answers: true
     global_planning_gate_owner: true
     review_status_values_must_match_enum_exactly: true
     structured_status_fields: [Current sequence.Review Status]
@@ -192,7 +217,8 @@ planning_gate:
   blocks_individual_review: false
   completed_scope: current_active_runtime_and_planning_snapshot
   current_review_sheet: UX-03
-  review_interaction: batch_current_sheet_default
+  review_interaction: github_owner_review_worksheet_default
+  current_review_worksheet: docs/design/ui-ux/owner-review/01-foundation-navigation-layout.md
   current_review_batch: [UX-03-01, UX-03-02, UX-03-03, UX-03-04, UX-03-05, UX-03-06, UX-03-07, UX-03-08]
   next_allowed_individual_decision: UX-03-01
   next_sheet_after_current_completion: NAV-01
@@ -209,6 +235,10 @@ maintenance_rules:
   - undecided_questions_live_in_review_plan_not_decision_ledger
   - decision_bodies_live_in_decision_ledger
   - selected_reviewed_frozen_decisions_are_planning_truth_but_only_frozen_is_stable_for_implementation
+  - filled_owner_review_selection_is_explicit_owner_input_but_not_canonical_until_reconciled
+  - worksheet_candidate_options_do_not_create_product_decisions
+  - owner_custom_selection_preserves_owner_note_as_controlling_instruction
+  - process_owner_worksheet_selections_in_dependency_order
   - current_sheet_questions_may_be_answered_in_batch_when_predeclared
   - batch_answers_are_reconciled_in_dependency_order_without_replacing_explicit_owner_choices
   - master_flow_is_derived_owner_view_not_second_decision_store
@@ -225,6 +255,7 @@ maintenance_rules:
 
 implementation_gate:
   planning_status_alone_authorizes_implementation: false
+  owner_review_selection_alone_authorizes_implementation: false
   requires_scoped_work_order: true
   requires_applicable_frozen_dependencies: true
   requires_no_material_blocking_gap: true
