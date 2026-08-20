@@ -314,7 +314,7 @@ Required preparation:
     [ ] every Registry item has a governing owner;
     [ ] every governance sheet has inventory/Decision-Map coverage;
     [ ] no normative requirement has duplicate canonical authority;
-    [ ] every material unknown is an explicit Planning Gap.
+    [ ] every material unknown is explicitly represented by a Draft Decision Map item or Planning Gap rather than AI inference.
 [ ] Owner receives one concise whole-product coverage checkpoint.
 ```
 
