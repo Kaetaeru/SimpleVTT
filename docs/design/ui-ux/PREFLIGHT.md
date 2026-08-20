@@ -150,7 +150,7 @@ Before Route A may ask an individual question, verify all:
     [ ] every Registry item has a governing owner
     [ ] every governance sheet has inventory / Decision-Map coverage
     [ ] no normative requirement has duplicate canonical authority
-    [ ] all material unknowns are explicit Planning Gaps
+    [ ] every material unknown is explicitly represented by a Draft Decision Map item or Planning Gap rather than AI inference
 [ ] owner has received a concise whole-product coverage checkpoint
 ```
 
