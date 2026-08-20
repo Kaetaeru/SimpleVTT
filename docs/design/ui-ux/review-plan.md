@@ -14,6 +14,9 @@ Templates: [`templates.md`](templates.md)
 
 - Do not ask a sheet's first question until that sheet's complete Decision Map is shown/materialized.
 - A Decision Map is `Complete` only when it satisfies T2: Scope, Non-scope, Exit Criteria, and a full table containing ID, Question, Status, Depends On, Conditional, and Destination.
+- `Review Status` is a sheet-review progress enum only: `Not Started`, `In Review`, or `Reviewed`.
+- Seed decisions, inventory, gaps, or matrices belong in `Notes`; they are not Review Status values.
+- `Review Status: Reviewed` does not imply that every Decision Card in that area is Frozen or implementation-ready.
 - Do not skip an unfinished earlier dependency merely because a later UI area looks interesting.
 - Existing migrated decisions may seed a later Decision Map, but they do not authorize inventing the rest of that map mid-review.
 - New discoveries go to Planning Gaps or a downstream sheet before becoming owner questions.
@@ -23,35 +26,35 @@ Templates: [`templates.md`](templates.md)
 
 ## Current sequence
 
-| Order | Sheet | Purpose | Map status | Review status | Notes |
+| Order | Sheet | Purpose | Map status | Review Status | Notes |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | `UX-01` Product Principles | top-level product experience principles | **Complete** | **Reviewed, not Frozen** | 7 decisions; no new UX-01 questions |
-| 2 | `UX-02` User & Role Model | users, roles, ownership/control, information entitlement | **Complete** | Not started individually | First individual review sheet only after the Global Planning Gate passes |
-| 3 | `UX-03` Information Hierarchy | global/contextual information priority and duplication | **Complete** | Not started | T2 schema normalized below; still blocked by Global Planning Gate |
-| 4 | `NAV-01` Navigation | product destinations, contextual return, hierarchy | Not materialized | Not started | R1/master-flow seed input |
-| 5 | `UI-01` Layout & Grid | global layout primitives | Not materialized | Not started | depends on IA/play topology |
-| 6 | `INT-01` Interaction | click/right-click/selection/target/context interaction | Not materialized | Seed decisions exist | migrated Actor Card decisions |
-| 7 | `STATE-01` UI States | local component/task states | Not materialized | Not started | R5/R6/M6 input |
-| 8 | `STATE-02` System States | loading/error/reconnect/permission/system state | Not materialized | Not started | R6 input |
-| 9 | `INT-02` Layering | modal/nonmodal overlay rules | Not materialized | Not started | R4 input |
-| 10 | `INT-03` Confirmation | destructive/confirmation/cancel grammar | Not materialized | Not started | R4/R8 input |
-| 11 | `UI-02` Typography | type system | Not materialized | Not started | design tokens |
-| 12 | `UI-03` Color & Semantic Color | semantic color system | Not materialized | Not started | state/accessibility dependency |
-| 13 | `UI-04` Iconography | icon language | Not materialized | Not started | component dependency |
-| 14 | `UI-05` Density & Spacing | density/spacing tokens | Not materialized | Not started | responsive/component dependency |
-| 15 | `CMP-01` Core Components | reusable component contracts | Not materialized | Seed inventory exists | R7 input |
-| 16 | `CONTENT-01` UX Writing | labels, error, confirmation, terminology | Not materialized | Seed inventory exists | R8 input |
-| 17 | `A11Y-01` Accessibility | keyboard/focus/semantics/reduced motion | Not materialized | Seed matrix exists | M4 input |
-| 18 | `PLATFORM-01` Desktop Responsive | wide/normal/narrow behavior | Not materialized | Seed matrix exists | M5 input |
-| 19 | `DND-01` Character Presentation | Character Library/Builder/Sheet/Level Up | Not materialized | Not started | R1/R2 seeds exist |
-| 20 | `DND-02` Roll & Dice UX | dice, result, resolution presentation | Not materialized | **Many seed decisions exist** | ORIGIN-UX-01-22, ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 |
-| 21 | `DND-03` Action UX | capability/hotbar/economy/targeting/execution | Not materialized | **Many seed decisions exist** | UX-01-04, UX-01-05, UX-01-06 plus migrated decisions |
-| 22 | `DND-04` Combat UX | initiative/turn/interrupt combat presentation | Not materialized | Seed decisions exist | ORIGIN-UX-01-14, ORIGIN-UX-01-15 |
-| 23 | `SES-01` Session UX | session lifecycle and Play workspace | Not materialized | Many seed decisions exist | ORIGIN-FLOW-01, ORIGIN-FLOW-02 and Command Center/Actor Board/Handout seeds |
-| 24 | `SES-02` Multiplayer Authority UX | role-scoped delivery/visibility/reconnect authority | Not materialized | Seed decisions + Critical gaps | DM-only roll decisions |
-| 25 | `DM-01` DM Controls | persistent DM controls and management surfaces | Not materialized | Seed decision exists | visibility toggle |
-| 26 | `DM-02` Adjudication & Undo | disclosure, activity, correction, undo | Not materialized | Seed decision + deferred question | historical pre-ledger Activity question remains unanswered |
-| 27 | `CONTENT-02` Rules & Add-on UX | Rules browser, import, validation, add-on management | Not materialized | Not started | R1/R2/R5/R6 seeds exist |
+| 1 | `UX-01` Product Principles | top-level product experience principles | **Complete** | **Reviewed** | 7 Decision Cards are Reviewed; none Frozen; no new UX-01 questions |
+| 2 | `UX-02` User & Role Model | users, roles, ownership/control, information entitlement | **Complete** | Not Started | First individual review sheet only after the Global Planning Gate passes |
+| 3 | `UX-03` Information Hierarchy | global/contextual information priority and duplication | **Complete** | Not Started | T2 schema normalized below; blocked by Global Planning Gate |
+| 4 | `NAV-01` Navigation | product destinations, contextual return, hierarchy | Not materialized | Not Started | R1/master-flow seed input |
+| 5 | `UI-01` Layout & Grid | global layout primitives | Not materialized | Not Started | depends on IA/play topology |
+| 6 | `INT-01` Interaction | click/right-click/selection/target/context interaction | Not materialized | Not Started | migrated Actor Card seed decisions exist |
+| 7 | `STATE-01` UI States | local component/task states | Not materialized | Not Started | R5/R6/M6 seed input |
+| 8 | `STATE-02` System States | loading/error/reconnect/permission/system state | Not materialized | Not Started | R6 seed input |
+| 9 | `INT-02` Layering | modal/nonmodal overlay rules | Not materialized | Not Started | R4 seed input |
+| 10 | `INT-03` Confirmation | destructive/confirmation/cancel grammar | Not materialized | Not Started | R4/R8 seed input |
+| 11 | `UI-02` Typography | type system | Not materialized | Not Started | design-token scope pending map |
+| 12 | `UI-03` Color & Semantic Color | semantic color system | Not materialized | Not Started | state/accessibility dependency |
+| 13 | `UI-04` Iconography | icon language | Not materialized | Not Started | component dependency |
+| 14 | `UI-05` Density & Spacing | density/spacing tokens | Not materialized | Not Started | responsive/component dependency |
+| 15 | `CMP-01` Core Components | reusable component contracts | Not materialized | Not Started | R7 seed inventory exists |
+| 16 | `CONTENT-01` UX Writing | labels, error, confirmation, terminology | Not materialized | Not Started | R8 seed inventory exists |
+| 17 | `A11Y-01` Accessibility | keyboard/focus/semantics/reduced motion | Not materialized | Not Started | M4 seed matrix exists |
+| 18 | `PLATFORM-01` Desktop Responsive | wide/normal/narrow behavior | Not materialized | Not Started | M5 seed matrix exists |
+| 19 | `DND-01` Character Presentation | Character Library/Builder/Sheet/Level Up | Not materialized | Not Started | R1/R2 Character seeds exist |
+| 20 | `DND-02` Roll & Dice UX | dice, result, resolution presentation | Not materialized | Not Started | seed decisions: ORIGIN-UX-01-22, ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 |
+| 21 | `DND-03` Action UX | capability/hotbar/economy/targeting/execution | Not materialized | Not Started | seed decisions include UX-01-04, UX-01-05, UX-01-06 and migrated Action decisions |
+| 22 | `DND-04` Combat UX | initiative/turn/interrupt combat presentation | Not materialized | Not Started | seed decisions: ORIGIN-UX-01-14, ORIGIN-UX-01-15 |
+| 23 | `SES-01` Session UX | session lifecycle and Play workspace | Not materialized | Not Started | seeds include ORIGIN-FLOW-01, ORIGIN-FLOW-02, Command Center, Actor Board, Handout decisions |
+| 24 | `SES-02` Multiplayer Authority UX | role-scoped delivery/visibility/reconnect authority | Not materialized | Not Started | DM-only roll seed decisions + Critical architecture gap exist |
+| 25 | `DM-01` DM Controls | persistent DM controls and management surfaces | Not materialized | Not Started | roll-visibility control seed decision exists |
+| 26 | `DM-02` Adjudication & Undo | disclosure, activity, correction, undo | Not materialized | Not Started | disclosure seed decision + deferred Activity question exist |
+| 27 | `CONTENT-02` Rules & Add-on UX | Rules browser, import, validation, add-on management | Not materialized | Not Started | R1/R2/R5/R6 seeds exist |
 
 ---
 
