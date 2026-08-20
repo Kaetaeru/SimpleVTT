@@ -3,6 +3,8 @@
 These templates are designed for **copy-safe AI use**. Use only the lightest template required by the framework's specification tier.
 
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
+Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
+Preflight: [`PREFLIGHT.md`](PREFLIGHT.md)
 
 ## T1 — Decision Card
 
@@ -33,22 +35,22 @@ Change Note:
 ### Decision Card constraints
 
 - One material product decision per card.
-- Keep `Decision` short enough to quote in a review summary.
+- Keep `Decision` concise.
 - Do not include implementation instructions unless the implementation constraint is itself the product decision.
-- Do not copy the same normative text into registry/matrix/work-order files.
+- Do not copy the same normative text into Registry, Matrix, Dashboard, or Work Order files.
 
 ---
 
 ## T2 — Decision Map
 
-Must exist before asking individual questions in a governance sheet.
+Must exist in `review-plan.md` before individual questions for that governance sheet begin.
 
 ```markdown
 # <Sheet ID> — <Sheet Name>
 
 Scope:
 Non-scope:
-Exit criteria:
+Exit Criteria:
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
@@ -70,14 +72,18 @@ Never add an untracked question between declared IDs.
 
 ## T3 — Planning Gap
 
+Use the canonical enums declared in `MANIFEST.yaml` / `planning-gaps.md`.
+
 ```text
 PLANNING GAP
 Gap ID:
+Gap Type: OWNER_DECISION / DOMAIN_CONTRACT / ARCHITECTURE_CONTRACT / IMPLEMENTATION_BLOCKER / DOCUMENT_RECONCILIATION / COVERAGE
+Severity: Critical / Major / Normal
 Owner Sheet / Destination:
-Affected IDs:
+Affected IDs / Surfaces:
 Gap:
 Why AI cannot safely infer it:
-Smallest owner/domain decision needed:
+Smallest owner/domain/contract decision needed:
 Status: Open
 ```
 
@@ -107,7 +113,7 @@ Invariants:
 Forbidden Behavior:
 ```
 
-Optional only when applicable:
+Optional when applicable:
 
 ```text
 Information Priority P0/P1/P2:
@@ -226,23 +232,13 @@ REQUIRED OWNER WALKTHROUGH:
 STOP CONDITIONS:
 ```
 
-### Work Order preflight
+### Work Order preflight authority
 
-Before implementation AI must answer internally/explicitly as required:
+Do **not** maintain a second Work Order checklist here.
 
-```text
-[ ] Every referenced Decision ID exists.
-[ ] Every immutable requirement needed for implementation is Frozen.
-[ ] No open Planning Gap blocks this Spec Tier.
-[ ] Authority/source-of-truth is known.
-[ ] Required states are known.
-[ ] Role/visibility rules are known where applicable.
-[ ] Accessibility/responsive requirements are known where applicable.
-[ ] Legacy path status is known.
-[ ] Tests/evidence required for completion are known.
-```
+Before preparing or executing a Work Order, run the applicable Route `E` / `F` checks in [`PREFLIGHT.md`](PREFLIGHT.md). `PREFLIGHT.md` is the sole canonical owner of implementation-readiness and implementation-start checks.
 
-If a required box cannot be checked, stop with Planning Gap instead of coding.
+If Preflight fails, do not code or invent missing product decisions inside the Work Order.
 
 ---
 
@@ -258,7 +254,7 @@ Next planned work:
 Frozen changes: none / <IDs>
 ```
 
-Do not expose internal registry maintenance unless it changes a product decision or blocks progress.
+Do not expose internal Registry/Matrix maintenance unless it changes a product decision or blocks progress.
 
 ---
 
@@ -284,4 +280,4 @@ New Planning Gaps:
 - none / <IDs>
 ```
 
-Keep this report consequence-focused; do not make the owner manually update each derived artifact.
+Keep the report consequence-focused; AI maintains derived artifacts.
