@@ -128,7 +128,7 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R4-UNSAVED` | Unsaved-change dialog | Draft | None | INT-03 | — | Edit/build flows |
 | `R4-DRAWER` | Drawer pattern | Draft | None | INT-02 | — | Contextual detail, not automatic destination |
 | `R4-POPOVER` | Popover pattern | Draft | None | INT-02 | — | Anchored contextual UI |
-| `R4-ACTOR-CONTEXT` | Actor Context Menu | Reviewed | Blocked | INT-01 | ORIGIN-UX-01-16, GAP-ACTOR-CONTEXT-MENU-CONTENTS | Pattern selected; commands TBD |
+| `R4-ACTOR-CONTEXT` | Actor Context Menu | Draft | Blocked | INT-01 | ORIGIN-UX-01-16, GAP-ACTOR-CONTEXT-MENU-CONTENTS | Context-menu pattern reviewed; command contents remain material TBD |
 | `R4-TOOLTIP` | Tooltip / unavailable reason | Draft | Partial | INT-01 / CMP-01 | ORIGIN-UX-01-19 | Must not be sole carrier of essential info |
 | `R4-HANDOUT-LIGHTBOX` | Handout image lightbox | Draft | Partial | SES-01 / INT-02 | ORIGIN-UX-01-12, ORIGIN-UX-01-13 | Zoom/pan behavior downstream |
 | `R4-REACTION-PROMPT` | Reaction/Interrupt prompt | Draft | Blocked | DND-04 | R3-INTERRUPT, GAP-RESOLUTION-SAFE-INTERACTIONS | Response surface |
