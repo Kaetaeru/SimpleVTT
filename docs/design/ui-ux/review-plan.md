@@ -26,7 +26,7 @@ Templates: [`templates.md`](templates.md)
 | Order | Sheet | Purpose | Map status | Review Status | Notes |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | `UX-01` Product Principles | product posture and top-level experience principles | **Complete** | **Reviewed** | 7 Reviewed Decision Cards; none Frozen |
-| 2 | `UX-02` User & Role Model | roles, ownership/control, information entitlement | **Complete** | **In Review** | `UX-02-01` Selected; next `UX-02-02` |
+| 2 | `UX-02` User & Role Model | roles, ownership/control, information entitlement | **Complete** | **In Review** | `UX-02-01`, `UX-02-02` Selected; next `UX-02-03` |
 | 3 | `UX-03` Information Hierarchy | global/contextual information priority | **Complete** | Not Started | follows UX-02 dependencies |
 | 4 | `NAV-01` Navigation | destinations, return, hierarchy | **Complete** | Not Started | Reviewed direct Session-entry seed retained |
 | 5 | `UI-01` Layout & Grid | global layout primitives | **Complete** | Not Started | Dual Anchor / Actor Board dependencies declared |
@@ -86,7 +86,7 @@ Templates: [`templates.md`](templates.md)
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `UX-02-01` | Separate Play Role and Connection Role, or one role axis? | Selected | none | no | `UX-02`, `SES-02` |
-| `UX-02-02` | Does Offline/Standalone have a DM/Player identity? | Draft | `UX-02-01` | no | `UX-02` |
+| `UX-02-02` | Does Offline/Standalone have a DM/Player identity? | Selected | `UX-02-01` | no | `UX-02` |
 | `UX-02-03` | How does Character ownership relate to actual Actor control? | Draft | `UX-02-01` | no | `UX-02`, `SES-01`, `SES-02` |
 | `UX-02-04` | How many Actors may a Player control? | Draft | `UX-02-03` | no | `UX-02`, `SES-01` |
 | `UX-02-05` | What is the DM Actor-control authority model? | Draft | `UX-02-03` | no | `UX-02`, `DM-01` |
@@ -693,7 +693,7 @@ Route D preparation and audit are complete for the current planning/runtime snap
 [x] Owner whole-product coverage checkpoint is prepared in the Dashboard and delivered with the gate-close update.
 ```
 
-**Current sequential review: `UX-02`. Next decision: `UX-02-02`.**
+**Current sequential review: `UX-02`. Next decision: `UX-02-03`.**
 
 Passing this gate does not Freeze any product decision and does not authorize implementation. It only means the planning corpus is sufficiently covered and internally routed to continue one-at-a-time owner review.
 
