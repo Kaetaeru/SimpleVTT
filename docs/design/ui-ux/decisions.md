@@ -81,20 +81,92 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 ## UX-02-01 — Connected role mapping
 
-- **Status:** Selected
+- **Status:** Reviewed
 - **Applies To:** Connected Session role model
-- **Decision:** Connected play uses a fixed mapping between connection role and play role: **Host is always DM; Client is always Player.** Host/Player and Client/DM combinations are not supported connected-role states. Offline/Standalone role identity is intentionally not decided here and remains `UX-02-02`.
+- **Decision:** Connected play uses a fixed mapping between connection role and play role: **Host is always DM; Client is always Player.** Host/Player and Client/DM combinations are not supported connected-role states.
 - **Why:** Host/Client and DM/Player are not independently combinable in the connected product model; the connection role determines the connected play role.
-- **Affects:** UX-02-02, UX-02-03, UX-02-05, UX-02-06, UX-02-07, UX-02-08, SES-01, SES-02, DM-01
+- **Affects:** UX-02-03, UX-02-05, UX-02-06, UX-02-07, UX-02-08, SES-01, SES-02, DM-01
 
 ## UX-02-02 — Offline/Standalone has no DM/Player role
 
-- **Status:** Selected
+- **Status:** Reviewed
 - **Applies To:** Offline / Standalone use
 - **Decision:** Offline/Standalone use has **no DM/Player role identity**. DM and Player roles exist only in Connected Session contexts under `UX-02-01`. Offline UI may expose local product capabilities appropriate to the current surface, but it must not invent a hidden DM/Player role merely to authorize them.
-- **Why:** Standalone Character/product use is a first-class local context, not a simulated connected session. Applying DM/Player roles offline would add role semantics that do not correspond to an actual connection or multiplayer authority boundary.
+- **Why:** Standalone Character/product use is a first-class local context, not a simulated connected session.
 - **Depends On:** UX-02-01
-- **Affects:** UX-02-03, UX-02-07, UX-02-08, DND-01, SES-02
+- **Affects:** DND-01, SES-02
+
+## UX-02-03 — Character ownership establishes baseline Actor control
+
+- **Status:** Reviewed
+- **Applies To:** Connected Player Character / Actor relationship
+- **Decision:** A Player who owns/selects a Character for the connected session automatically controls that Character's Actor. Character ownership therefore establishes baseline control of its corresponding Actor. Additional Actor control assigned under `UX-02-04` does **not** transfer Character ownership.
+- **Why:** The Player's own Character should not require a second redundant control assignment, while additional temporary/session control must remain distinguishable from durable Character ownership.
+- **Depends On:** UX-02-01
+- **Affects:** UX-02-04, UX-02-05, SES-01, SES-02, DND-04
+
+## UX-02-04 — Player defaults to one Actor; DM may assign more
+
+- **Status:** Reviewed
+- **Applies To:** Connected Player Actor control scope
+- **Decision:** A Player normally controls **one Actor**: the Actor corresponding to the Player's owned/selected Character. The DM may explicitly assign additional Actors for that Player to control. Additional assignment changes session control authority only; it does not change Character ownership.
+- **Why:** One default controlled Actor keeps the normal Player model simple while supporting companions, temporary control, or exceptional session needs without redefining ownership.
+- **Depends On:** UX-02-03
+- **Affects:** SES-01, SES-02, DND-04, INT-01
+
+## UX-02-05 — DM may control every Actor
+
+- **Status:** Reviewed
+- **Applies To:** Connected DM Actor-control authority
+- **Decision:** The DM may control **any Actor in the session**, including Actors normally controlled by Players. Player ownership/control does not remove DM control authority.
+- **Why:** The Host/DM is the authoritative session operator and must be able to operate NPCs, enemies, allies, and Player-linked Actors when adjudication/session control requires it.
+- **Depends On:** UX-02-03
+- **Affects:** DM-01, SES-01, SES-02, DND-04, INT-01
+
+## UX-02-06 — No live DM/Player role switching
+
+- **Status:** Reviewed
+- **Applies To:** Connected live Session
+- **Decision:** A participant cannot switch between DM and Player roles while remaining in the live connection/session role. Host remains DM and Client remains Player for that live connection.
+- **Why:** The fixed connected-role model in `UX-02-01` remains stable during live play and does not require authority reconciliation for role swaps.
+- **Depends On:** UX-02-01
+- **Affects:** SES-02
+
+## UX-02-07 — Shared Play skeleton with role-specific tools and information
+
+- **Status:** Reviewed
+- **Applies To:** Connected DM / Player UI structure
+- **Decision:** DM and Player share the same **core Play Workspace skeleton and interaction grammar**, while role-specific tools, controls, information, and contextual utilities may differ materially where authority or task needs differ. Do not create wholly unrelated DM and Player products/workspaces.
+- **Why:** Shared structure preserves learnability and product coherence while allowing the DM's broader control surface and private information needs.
+- **Depends On:** UX-02-01
+- **Affects:** NAV-01, UI-01, SES-01, SES-02, DM-01
+
+## UX-02-08 — Unauthorized information policy is information-specific
+
+- **Status:** Reviewed
+- **Applies To:** Connected role-scoped information
+- **Decision:** The treatment of information a role is not authorized to know is defined **by information/contract type**, not by one universal hide/deliver rule. However, existing stricter privacy decisions remain binding: information classified as DM-only/secret authoritative data under `ORIGIN-UX-01-26` and `ORIGIN-UX-01-29` is **not delivered to Players at all**, including existence metadata. Other role-specific information may use its explicit domain/session presentation contract; AI must not infer a policy merely from this decision.
+- **Why:** Not every role difference is secret data, but security/privacy-sensitive information requires stronger non-delivery semantics than ordinary role-specific UI differences.
+- **Depends On:** UX-02-03
+- **Affects:** SES-02, STATE-02, CONTENT-01
+
+## UX-02-09 — No extra connected roles in v1
+
+- **Status:** Reviewed
+- **Applies To:** v1 Connected Session roles
+- **Decision:** v1 supports only the connected roles already defined by `UX-02-01`: **Host/DM and Client/Player**. Spectator, Co-DM, Observer, or other additional roles are out of v1 scope.
+- **Why:** The v1 role model stays bounded to the two actual connected authority contexts already selected.
+- **Depends On:** UX-02-01
+- **Affects:** SES-01, SES-02
+
+## UX-02-09A — Extra-role permission branch not applicable in v1
+
+- **Status:** Reviewed
+- **Applies To:** v1 Connected Session roles
+- **Decision:** No extra-role permission matrix is defined for v1 because `UX-02-09` excludes Spectator, Co-DM, Observer, and other additional roles. This conditional branch must be reopened if a future decision adds an extra connected role.
+- **Why:** The conditional question is resolved by the false branch of `UX-02-09`; inventing unused permissions would add unsupported authority semantics.
+- **Depends On:** UX-02-09
+- **Affects:** SES-02
 
 ---
 
