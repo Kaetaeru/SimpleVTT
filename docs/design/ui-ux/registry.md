@@ -13,8 +13,10 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 Registry rows separate two different questions:
 
-1. **Planning Maturity** — how far the product decision has progressed.
+1. **Planning Maturity** — how far the product decision for the artifact as a whole has progressed.
 2. **Contract Readiness** — whether enough explicit contract exists for safe implementation.
+
+A reviewed sub-decision does not automatically make the whole Registry artifact `Reviewed`. Use `Refs`/`Note` to show reviewed aspects while keeping artifact-level Planning Maturity `Draft` when material behavior/topology remains unreviewed.
 
 A `Reviewed` artifact may still be `Blocked` or `Partial` for implementation.
 
@@ -41,7 +43,7 @@ A `Reviewed` artifact may still be `Blocked` or `Partial` for implementation.
 | --- | --- |
 | `ID` | Stable inventory ID |
 | `Artifact` | Human-readable UI artifact |
-| `Planning` | Planning Maturity |
+| `Planning` | Artifact-level Planning Maturity |
 | `Contract` | Contract Readiness |
 | `Owner` | Governance sheet or contract family |
 | `Refs` | Full Decision/Gap/Registry/Contract IDs or repository paths |
@@ -62,7 +64,7 @@ A row existing here does not approve its final topology, placement, or behavior.
 | `R1-CHAR-SHEET` | Character Sheet destination | Draft | Partial | DND-01 | UX-01-01 | Standalone first-class surface |
 | `R1-CHAR-BUILDER` | Character Builder workspace | Draft | None | DND-01 | — | Create/Edit/Import modes |
 | `R1-LEVEL-UP` | Level Up workspace | Draft | None | DND-01 | — | Progression flow |
-| `R1-SESSION` | Session destination | Reviewed | Partial | NAV-01 / SES-01 | UX-01-01, ORIGIN-FLOW-01 | Host/Join are direct first-class entry paths; detailed lifecycle pending |
+| `R1-SESSION` | Session destination | Draft | Partial | NAV-01 / SES-01 | UX-01-01, ORIGIN-FLOW-01 | Direct Host/Join entry reviewed; final destination topology/lifecycle pending |
 | `R1-PLAY` | Dedicated Play Workspace | Draft | Partial | SES-01 | UX-01-02, UX-01-07 | Freeform/Initiative share this workspace |
 | `R1-CONTENT` | Content / Add-ons | Draft | None | CONTENT-02 | — | Installed/imported content management |
 | `R1-RULES` | Rules Browser | Draft | None | CONTENT-02 / NAV-01 | — | Reference/search |
@@ -80,8 +82,8 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R2-OPEN-CHAR` | Open saved Character | Draft | None | DND-01 | — | Home/Library -> Sheet |
 | `R2-EDIT-CHAR` | Edit Character | Draft | None | DND-01 | — | Sheet -> Builder -> Sheet |
 | `R2-LEVEL-UP` | Level Up | Draft | None | DND-01 | — | Sheet -> Level Up -> Review -> Sheet |
-| `R2-HOST` | Host Session | Reviewed | Partial | SES-01 | ORIGIN-FLOW-01 | Direct Home/Session entry reviewed; setup/lobby details pending |
-| `R2-JOIN` | Join Session | Reviewed | Blocked | SES-01 / UX-02 | ORIGIN-FLOW-01, ORIGIN-FLOW-02, GAP-JOIN-NO-CHARACTER | Direct Join + Character Select reviewed; no-character branch unresolved |
+| `R2-HOST` | Host Session | Draft | Partial | SES-01 | ORIGIN-FLOW-01 | Direct Home/Session entry reviewed; setup/lobby/recovery details pending |
+| `R2-JOIN` | Join Session | Draft | Blocked | SES-01 / UX-02 | ORIGIN-FLOW-01, ORIGIN-FLOW-02, GAP-JOIN-NO-CHARACTER | Direct Join + Character Select reviewed; remaining flow and no-character branch unresolved |
 | `R2-PLAY-ACTION` | Capability -> target -> resolution -> result | Draft | Partial | DND-03 / DND-02 | ORIGIN-UX-01-19, ORIGIN-UX-01-20, ORIGIN-UX-01-21, ORIGIN-UX-01-22, ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 | Core play loop |
 | `R2-INITIATIVE` | Enter/exit Initiative | Draft | Partial | DND-04 | ORIGIN-UX-01-14, ORIGIN-UX-01-15 | Same Play Workspace |
 | `R2-HANDOUT` | DM handout presentation | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT | Overlay / Upper / Full branches |
