@@ -4,7 +4,7 @@ Status: canonical planning framework for pre-implementation UI/UX work
 
 This document defines **how** SimpleVTT UI/UX decisions are governed, changed, handed to AI, and verified. It does not freeze any product UI decision by itself.
 
-Document routing and reading order are owned exclusively by [`ui-ux/AI-READING-GUIDE.md`](ui-ux/AI-READING-GUIDE.md). Machine-readable document roles are owned by [`ui-ux/MANIFEST.yaml`](ui-ux/MANIFEST.yaml). Start-work consistency is owned by [`ui-ux/PREFLIGHT.md`](ui-ux/PREFLIGHT.md).
+Document routing and reading order are owned exclusively by [`ui-ux/AI-READING-GUIDE.md`](ui-ux/AI-READING-GUIDE.md). Machine-readable document roles/schema are owned by [`ui-ux/MANIFEST.yaml`](ui-ux/MANIFEST.yaml). Start-work consistency is owned by [`ui-ux/PREFLIGHT.md`](ui-ux/PREFLIGHT.md).
 
 ---
 
@@ -13,15 +13,15 @@ Document routing and reading order are owned exclusively by [`ui-ux/AI-READING-G
 This framework optimizes two things above everything else:
 
 1. **Owner control must stay easy.** The owner should normally change one decision, not maintain a web of documents by hand.
-2. **AI interpretation must stay unambiguous.** AI should use stable IDs and bounded referenced context instead of reconstructing product intent from prose or code.
+2. **AI interpretation must stay unambiguous.** AI should use stable IDs, exact enums, and bounded referenced context instead of reconstructing product intent from prose or code.
 
 If a process makes either side harder, simplify before adding more structure.
 
 ## Golden rule
 
-> **The owner decides product behavior. AI maintains structure, references, impact analysis, derived coverage, contracts, and implementation evidence.**
+> **The owner decides product behavior. AI maintains structure, references, impact analysis, derived views/coverage, contracts, and implementation evidence.**
 
-The owner is never responsible for manually synchronizing Registry, Matrix, Dashboard, contracts, tests, or traceability after changing one decision.
+The owner is never responsible for manually synchronizing Registry, Matrix, Master Flow, Dashboard, contracts, tests, or traceability after changing one decision.
 
 ## Daily workflow
 
@@ -29,7 +29,7 @@ The owner is never responsible for manually synchronizing Registry, Matrix, Dash
 complete Decision Map
     -> one owner decision
     -> Decision Card
-    -> AI updates derived references / impact
+    -> AI updates derived references / views / impact
     -> later scoped Work Order
     -> implementation
     -> verification
@@ -40,56 +40,108 @@ complete Decision Map
 
 - **Decision Map** — what questions exist and in what order.
 - **Decision Card** — the canonical answer to one product/UX question.
-- **Master User Flow / Surface Map** — how the product is navigated and used.
+- **Master User Flow view** — an owner-friendly way to inspect/discuss how the product connects; AI translates material changes back into canonical Decision/Map/Gap sources before refreshing the view.
 
 Everything else is supporting structure maintained by AI unless the owner explicitly wants to edit it.
 
 ---
 
-# 1. Single-source ownership
+# 1. Single-source ownership and exact references
 
 A normative fact has one canonical home.
 
-| Fact type | Canonical owner |
+| Fact type | Owner |
 | --- | --- |
-| Undecided questions / review order | `ui-ux/review-plan.md` |
-| Made product/UX decisions | `ui-ux/decisions.md` |
-| Known material unknowns/blockers | `ui-ux/planning-gaps.md` |
-| Product flow/topology baseline | `ui-ux/master-flow.md` |
-| Document roles/entrypoints | `ui-ux/MANIFEST.yaml` |
-| AI reading/task routing | `ui-ux/AI-READING-GUIDE.md` |
-| Start-work consistency gate | `ui-ux/PREFLIGHT.md` |
+| Undecided questions / review order | `ui-ux/review-plan.md` — canonical |
+| Made product/UX decisions | `ui-ux/decisions.md` — canonical |
+| Known material unknowns/blockers | `ui-ux/planning-gaps.md` — canonical |
+| Owner-friendly product flow/topology visualization | `ui-ux/master-flow.md` — **derived view** |
+| Document roles/schema/entrypoints | `ui-ux/MANIFEST.yaml` — canonical process map |
+| AI reading/task routing | `ui-ux/AI-READING-GUIDE.md` — canonical process |
+| Start-work consistency gate | `ui-ux/PREFLIGHT.md` — canonical process |
 | R1-R9 inventory | `ui-ux/registry.md` — derived |
 | M1-M6 cross-cutting coverage | `ui-ux/matrices.md` — derived |
 | Current-state summary | `ui-ux/README.md` — derived |
 
-Do not copy a normative rule body into multiple files. Derived artifacts reference IDs instead.
+Do not copy a normative rule body into Master Flow, Registry, Matrix, Dashboard, or Work Order as a second source of truth. Derived artifacts summarize/reference canonical IDs.
+
+## Reference syntax
+
+Structured reference fields MUST use complete resolvable IDs/paths according to `ui-ux/MANIFEST.yaml`.
+
+Allowed examples:
+
+```text
+UX-01-04
+ORIGIN-UX-01-26
+GAP-DM-ONLY-DELIVERY-PROTOCOL
+R3-TARGET-SINGLE
+M2-PLY-004
+A11Y-01
+docs/design/session-runtime.md
+```
+
+Forbidden examples:
+
+```text
+UX-01-04..06
+ORIGIN-UX-01-26, 28
+destination DM-01
+STATE/A11Y review
+```
+
+Do not require a later AI to infer omitted prefixes, ranges, or prose aliases.
 
 ---
 
-# 2. Decision lifecycle and authority
+# 2. Decision lifecycle and authority boundaries
 
-## Lifecycle
+## Decision lifecycle
 
 - `Draft` — candidate only; MUST NOT drive implementation.
 - `Selected` — owner selected it; downstream review may still revise it.
 - `Reviewed` — reviewed in context; still not immutable.
-- `Frozen` — implementation may rely on it as stable.
+- `Frozen` — implementation may rely on it as stable within its valid UI/product scope.
 - `Superseded` — retained for traceability but no longer applicable.
+
+`Status` contains exactly one lifecycle enum. `Reviewed, not Frozen` is explanatory prose, not a valid stored Status value.
 
 AI MUST NOT Freeze a decision unless the owner explicitly requests or approves freezing the applicable scope.
 
-## Canonical precedence within the same explicit scope
+## Authority domains — do not use one global precedence ladder across different responsibilities
 
-1. Frozen owner decision in canonical planning artifacts.
-2. Existing canonical product/domain/architecture contract not validly superseded by a compatible Frozen decision.
-3. Approved Surface / Component / Motion contract derived from applicable Frozen decisions.
-4. Approved scoped AI Work Order.
-5. Current implementation.
-6. Historical/non-canonical working notes, including `.agents/`.
-7. AI inference.
+SimpleVTT has different authority domains. **Cross-domain conflicts are not resolved by picking the higher item in a generic list.**
 
-A UI decision is not permission to silently override a domain/network contract. If applicable high-level contracts conflict, return `PLANNING GAP: CONTRACT CONFLICT`.
+### Product / UX authority
+
+Product/UX decisions govern presentation, information hierarchy, interaction grammar, user-visible flow, component behavior, disclosure UX, and other UI/product choices **only where they do not redefine domain/architecture semantics**.
+
+Within the same Product/UX scope, use this precedence:
+
+1. applicable Frozen owner Decision Card;
+2. approved Surface / Component / Motion contract derived from applicable Frozen decisions;
+3. approved scoped AI Work Order;
+4. current implementation;
+5. historical/non-canonical working notes, including `.agents/`;
+6. AI inference.
+
+### Domain / architecture authority
+
+Canonical domain/architecture contracts govern rules calculations, legality, authoritative state, persistence, networking, event projection, privacy/data delivery, schemas, and security boundaries.
+
+A Product/UX Decision Card — even when Frozen — MUST NOT silently supersede a canonical domain/architecture contract outside UI/product authority.
+
+When a requested UX requires domain/architecture behavior that the canonical domain contract does not support or contradicts:
+
+```text
+PLANNING GAP: CONTRACT CONFLICT
+```
+
+The correct action is to reconcile/extend the responsible domain/architecture contract explicitly, not to let UI precedence override it.
+
+### Current implementation
+
+Current source/tests are evidence of what exists. They are never automatic product truth and never override an applicable canonical decision/contract merely because they run today.
 
 ## Normative language
 
@@ -105,14 +157,18 @@ A UI decision is not permission to silently override a domain/network contract. 
 
 ## Decision Map
 
-Before asking any question in a governance sheet, the **complete map for that sheet** must exist with:
+Before asking any question in a governance sheet, the **complete map for that sheet** must exist using T2 in `ui-ux/templates.md`:
 
 - Scope
 - Non-scope
+- Exit Criteria
 - full decision list
+- Status
 - dependencies
 - conditional branches
-- Exit Criteria
+- Destination
+
+A map may be labeled `Complete` only when all required T2 fields exist.
 
 Ask one declared decision at a time. Do not invent the next question from the previous answer.
 
@@ -127,13 +183,13 @@ The canonical made-decision unit is compact:
 ```text
 Decision ID:
 Title:
-Status:
+Status: Draft / Selected / Reviewed / Frozen / Superseded
 Applies To:
 Decision:
 Why:
-Depends On:
+Depends On: none / <full IDs>
 Affects:
-Planning Gap: none / <Gap ID>
+Planning Gap: none / <full Gap IDs>
 ```
 
 Advanced fields are added only when needed:
@@ -146,7 +202,7 @@ Authority / Visibility Note:
 Change Note:
 ```
 
-The owner may change decisions in plain language. AI resolves the affected IDs and maintains downstream structure automatically.
+The owner may change decisions in plain language. AI resolves the affected IDs, updates the canonical Decision Card, and maintains downstream derived structure automatically.
 
 ---
 
@@ -197,7 +253,7 @@ AI SHOULD choose the lowest safe tier. Over-documentation that makes owner chang
 26. `DM-02` Adjudication & Undo
 27. `CONTENT-02` Rules & Add-on UX
 
-Sheets organize review; they do not own duplicate copies of the resulting requirements.
+Sheets organize review; they do not own duplicate copies of resulting made decisions.
 
 ## R1-R9 Registries — what exists
 
@@ -226,7 +282,7 @@ Do not add Accessibility, Authority, Persistence, or Responsive as new registrie
 | `M5` Responsive / Layout | What changes across wide/normal/narrow and what remains? |
 | `M6` Coverage / Acceptance | Which states/roles/devices must be verified? |
 
-Matrices reference Decision/Contract IDs instead of duplicating their normative prose.
+Matrices reference exact IDs/paths instead of duplicating normative prose.
 
 ---
 
@@ -237,9 +293,9 @@ Matrices reference Decision/Contract IDs instead of duplicating their normative 
 Required preparation:
 
 ```text
-[ ] R1-R9 complete Master UI Inventory cross-checked against implementation evidence, master flow, made decisions, and generic non-route patterns.
+[ ] R1-R9 complete Master UI Inventory cross-checked against implementation evidence, derived Master Flow, made decisions, and generic non-route patterns.
 [ ] M1-M6 required coverage materialized for every material Registry item.
-[ ] All 27 governance sheets have complete predeclared Decision Maps: Scope, Non-scope, full decision list, dependencies/conditional branches, Exit Criteria.
+[ ] All 27 governance sheets have complete predeclared T2 Decision Maps: Scope, Non-scope, Exit Criteria, full decision list, Status, dependencies/conditional branches, Destination.
 [ ] Missing / Duplication / Coverage audit passes:
     [ ] every Registry item has a governing owner;
     [ ] every governance sheet has inventory/Decision-Map coverage;
@@ -250,37 +306,25 @@ Required preparation:
 
 Only after this gate passes may sequential owner review resume at the first declared unfinished decision, currently `UX-02-01` unless the owner approves a different review order.
 
-Inventory/matrix preparation may identify artifacts and gaps, but MUST NOT silently decide new product behavior.
+Inventory/matrix/map preparation may identify artifacts and gaps, but MUST NOT silently decide new product behavior.
 
 ---
 
-# 7. Master user flow rules
+# 7. Master User Flow view rules
 
-Master flows are separate from screen/component definitions and show all first-class entry paths.
+`ui-ux/master-flow.md` is a **derived owner view**, not a canonical decision store.
 
-At minimum Home treats these as parallel paths when applicable:
+It should visualize first-class entry paths and major transitions in a way the owner can easily understand and change in natural language.
 
-```text
-Home
-  -> New Character
-  -> My Characters
-  -> Host Session
-  -> Join Session
-  -> Content
-  -> Rules
-  -> Settings
-  -> Return to active Play when a live session exists
-```
+When the owner requests a material flow change, AI MUST:
 
-Character creation/use MUST NOT be modeled as a universal prerequisite for Session entry unless a specific flow explicitly requires Character selection.
+1. resolve whether it changes a made Decision Card, an undecided Decision Map item, or a Planning Gap;
+2. update the canonical source first;
+3. refresh `master-flow.md` from the new canonical state.
 
-Important flows should show:
+The derived view may summarize decisions but MUST NOT introduce independent normative behavior.
 
-```text
-Entry -> happy path -> branch/guard -> failure/recovery -> exit/return
-```
-
-Use M2 for state-heavy transition detail rather than duplicating every transition in flow diagrams.
+Use M2 for state-heavy transition detail rather than embedding every guard/rollback in the owner view.
 
 ---
 
@@ -304,7 +348,7 @@ Required States:
 Authority / Source of Truth:
 Invariants:
 Forbidden Behavior:
-Decision IDs:
+Decision IDs: <full IDs>
 ```
 
 Add when applicable: information priority, secondary actions, modality, feedback, keyboard/focus, responsive, motion/timing, persistence, evidence.
@@ -322,7 +366,7 @@ Responsive behavior:
 Content limits:
 Design tokens:
 Forbidden domain calculations:
-Decision IDs:
+Decision IDs: <full IDs>
 ```
 
 Do not move page/business rules into a component merely because it displays them.
@@ -342,6 +386,7 @@ Completion / cancellation:
 Timeout / auto-dismiss:
 Reduced-motion equivalent:
 Failure fallback:
+Decision IDs: <full IDs>
 ```
 
 Presentation timing MUST NOT become gameplay authority unless a canonical domain contract explicitly requires it.
@@ -356,11 +401,11 @@ Use named tokens for recurring spacing/density, typography, semantic color, bord
 
 This framework deliberately does **not** define a second reading order.
 
-- [`ui-ux/AI-READING-GUIDE.md`](ui-ux/AI-READING-GUIDE.md) is the **sole canonical owner of AI task routing and document reading order**.
-- [`ui-ux/MANIFEST.yaml`](ui-ux/MANIFEST.yaml) is the machine-readable owner of document roles and derived/canonical relationships.
+- [`ui-ux/AI-READING-GUIDE.md`](ui-ux/AI-READING-GUIDE.md) is the sole canonical owner of AI task routing and document reading order.
+- [`ui-ux/MANIFEST.yaml`](ui-ux/MANIFEST.yaml) is the machine-readable owner of document roles, enums, reference syntax, and derived/canonical relationships.
 - [`ui-ux/PREFLIGHT.md`](ui-ux/PREFLIGHT.md) is the sole canonical owner of start-work consistency/readiness checks.
 
-If another planning artifact contains a conflicting reading/preflight sequence, this section and those dedicated files govern; fix the duplicate drift rather than trying to merge both instructions.
+If another planning artifact contains a conflicting reading/preflight/schema rule, fix the duplicate drift rather than merging competing instructions.
 
 ---
 
@@ -368,7 +413,7 @@ If another planning artifact contains a conflicting reading/preflight sequence, 
 
 AI returns a Planning Gap instead of inventing behavior when a required decision/contract is missing, authority cannot be established, UI would need to calculate named rules, a legacy path has unknown authority, a material required state is unspecified for the chosen tier, or a Frozen dependency would be violated.
 
-Canonical gap types and severities are declared in `ui-ux/MANIFEST.yaml` and `ui-ux/planning-gaps.md`.
+Canonical Gap Type, Severity, and Status enums are declared in `ui-ux/MANIFEST.yaml` and `ui-ux/planning-gaps.md`.
 
 Compact failure form:
 
@@ -401,16 +446,16 @@ ALLOWED SIDE EFFECTS:
 OUT OF SCOPE:
 MUST NOT CHANGE:
 
-APPLICABLE DECISION IDS:
-FROZEN DEPENDENCIES:
-AUTHORITATIVE SOURCES:
+APPLICABLE DECISION IDS: <full IDs>
+FROZEN DEPENDENCIES: <full IDs>
+AUTHORITATIVE SOURCES: <full IDs/paths>
 LOCAL PRESENTATION STATE:
 
 ENTRY STATE:
-ALLOWED TRANSITIONS:
+ALLOWED TRANSITIONS: <full IDs>
 EXIT / RETURN:
 
-REQUIRED SURFACES / COMPONENTS:
+REQUIRED SURFACES / COMPONENTS: <full IDs>
 REQUIRED STATES / ROLE VARIANTS:
 REQUIRED ACCESSIBILITY / RESPONSIVE:
 REQUIRED MOTION / TEMPORAL BEHAVIOR:
@@ -442,7 +487,7 @@ When a decision changes, AI:
 1. updates the canonical Decision Card and preserves history/supersession where needed;
 2. finds references/dependencies;
 3. classifies impact as `No Change`, `Review Required`, `Contract Update Required`, `Implementation Update Required`, or `Regression Required`;
-4. updates derived artifacts;
+4. updates derived artifacts, including Master Flow/Registry/Matrix/Dashboard when applicable;
 5. surfaces only material product consequences/new decisions to the owner;
 6. re-runs the smallest safe verification set.
 
@@ -480,6 +525,8 @@ Unless a canonical architecture decision explicitly changes them:
 - Unknown/unsupported mechanics are explicit blockers, not approximations.
 - Current implementation is evidence, not automatic product truth.
 
+When UI/product intent and domain/architecture semantics disagree, use the authority-domain rule in Section 2 and stop with a contract conflict rather than choosing one silently.
+
 ---
 
 # 15. Canonical file layout
@@ -490,12 +537,12 @@ docs/design/
   ui-ux-planning-framework.md       # governance framework
   ui-ux/
     AI-READING-GUIDE.md             # AI task router / reading order
-    MANIFEST.yaml                   # machine-readable document map
+    MANIFEST.yaml                   # machine-readable roles/schema/reference rules
     PREFLIGHT.md                    # consistency/readiness gate
     README.md                       # owner dashboard; derived summary
     review-plan.md                  # review order + undecided Decision Maps
     decisions.md                    # made Decision Cards only
-    master-flow.md                  # product flows / topology baseline
+    master-flow.md                  # derived owner flow/topology view
     planning-gaps.md                # explicit material unknowns
     registry.md                     # R1-R9 derived inventory
     matrices.md                     # M1-M6 derived coverage
@@ -514,11 +561,11 @@ The owner starts at `ui-ux/README.md`. AI starts at `ui-ux/AI-READING-GUIDE.md`.
 
 ## Owner control test
 
-The owner can understand current planning without source code, see full question maps before review, change one decision in natural language, see material consequences only, avoid manual document synchronization, and distinguish Selected/Reviewed/Frozen/Gaps.
+The owner can understand current planning without source code, see full question maps before review, change one decision/flow naturally, see material consequences only, avoid manual document synchronization, and distinguish Selected/Reviewed/Frozen/Gaps.
 
 ## AI interpretation test
 
-A new AI can find the correct task route and IDs quickly, read only bounded context, distinguish owner decisions/domain authority/local presentation state, identify required states/authority/accessibility/responsive/timing, know what it MUST NOT change, and know exactly when to stop.
+A new AI can find the correct task route and IDs quickly, parse exact enums/references without prefix inference, distinguish owner decisions/domain authority/local presentation state, identify required states/authority/accessibility/responsive/timing, know what it MUST NOT change, and know exactly when to stop.
 
 ## Final simplicity rule
 
