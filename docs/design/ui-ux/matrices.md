@@ -23,7 +23,7 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 # M1 — Role / Authority / Visibility / Disclosure
 
-Connected identity invariant from `UX-02-01`: **Host = DM; Client = Player.** Host/Player and Client/DM are not valid connected-role combinations. Offline identity remains `UX-02-02`.
+Connected identity invariant from `UX-02-01`: **Host = DM; Client = Player.** Host/Player and Client/DM are not valid connected-role combinations. Offline/Standalone is explicitly **role-free** under `UX-02-02`; do not assign DM/Player identity to local-only use.
 
 ## Row schema
 
@@ -55,7 +55,7 @@ Connected identity invariant from `UX-02-01`: **Host = DM; Client = Player.** Ho
 | Handout presentation control | Connected Client | Player | yes when authorized projection exists | authorized projection only | local dismiss only where reviewed | no | UX-02-01, ORIGIN-UX-01-12, ORIGIN-UX-01-13 | GAP-HANDOUT-NETWORK-CONTRACT |
 | Handout presentation control | Connected Host | DM | yes | yes | TBD | TBD | UX-02-01, ORIGIN-UX-01-12 | UX-02-05, GAP-HANDOUT-NETWORK-CONTRACT |
 
-Do not infer Actor control, UI divergence, unauthorized-information policy, or Offline identity from the fixed Host/DM and Client/Player mapping. Those remain owned by `UX-02-02` through `UX-02-08` as applicable.
+Do not infer Actor control, UI divergence, or unauthorized-information policy from the fixed Host/DM and Client/Player mapping. Those remain owned by `UX-02-03` through `UX-02-08` as applicable. Offline/Standalone has no DM/Player role under `UX-02-02`.
 
 ---
 
@@ -209,15 +209,15 @@ Explanatory conditions belong in the human-readable `Notes` column, not inside t
 
 | Surface | Normal | Empty | Loading/Pending | Disabled | Error | Keyboard | Narrow | Role variants | Reconnect | Owner walkthrough | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `R1-HOME` | REQ | TBD | REQ | N/A | REQ | REQ | REQ | TBD | TBD | REQ | Reconnect applies only when a live session exists; connected Host/DM and Client/Player mapping is fixed, Offline remains UX-02-02. |
-| `R2-FIRST-USE` | REQ | N/A | N/A | N/A | TBD | REQ | REQ | TBD | N/A | REQ | Dismiss/reopen/persistence need explicit onboarding review. |
-| `R1-CHARACTERS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Offline/session role presentation remains downstream. |
-| `R1-CHAR-BUILDER` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Guided/quick/import/edit mode coverage; unsupported/validation branches required. |
-| `R1-CHAR-SHEET` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Standalone/session contexts and layout variants require representative coverage. |
-| `R1-LEVEL-UP` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Choice-blocked, HP roll, validation, review and commit/cancel branches. |
-| `R2-STANDALONE-ROLL` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | N/A | N/A | REQ | Local roll/result/dice path. |
-| `R1-SESSION` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Host=DM and Client=Player are fixed connected variants; lobby/live/recovery still require coverage. |
-| `R1-PLAY` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Whole Play workspace requires Host/DM and Client/Player representative walkthroughs. |
+| `R1-HOME` | REQ | TBD | REQ | N/A | REQ | REQ | REQ | TBD | TBD | REQ | Reconnect applies only when a live session exists; connected Host/DM and Client/Player mapping is fixed, while Offline/Standalone has no role variant. |
+| `R2-FIRST-USE` | REQ | N/A | N/A | N/A | TBD | REQ | REQ | N/A | N/A | REQ | Offline/Standalone first-use guidance is role-free; dismiss/reopen/persistence need explicit onboarding review. |
+| `R1-CHARACTERS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Offline/Standalone has no role variant; connected Character context may still differ by later UX-02 decisions. |
+| `R1-CHAR-BUILDER` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Guided/quick/import/edit mode coverage; unsupported/validation branches required. Offline use is role-free. |
+| `R1-CHAR-SHEET` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Standalone context is role-free; connected session context and layout variants require representative coverage. |
+| `R1-LEVEL-UP` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Choice-blocked, HP roll, validation, review and commit/cancel branches. Offline use is role-free. |
+| `R2-STANDALONE-ROLL` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | N/A | N/A | REQ | Local roll/result/dice path; no DM/Player role variant. |
+| `R1-SESSION` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Host=DM and Client=Player are fixed connected variants; lobby/live/recovery coverage remains required. |
+| `R1-PLAY` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Whole connected Play workspace requires Host/DM and Client/Player representative walkthroughs. |
 | `R1-CONTENT` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Installed/import/validation/persistence states; active-session policy still downstream. |
 | `R1-RULES` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | REQ | REQ | Product-shell and in-session lookup paths. |
 | `R1-SETTINGS` | REQ | N/A | N/A | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Theme/accent/motion preference coverage; persistence failure policy downstream. |
@@ -225,7 +225,7 @@ Explanatory conditions belong in the human-readable `Notes` column, not inside t
 | `R3-TARGET-MULTI` | REQ | N/A | N/A | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Target authority/control remains UX-02-03/04/05 despite fixed connected roles. |
 | `R3-INTERRUPT` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Responder authority and safe-interaction boundary required. |
 | `R3-DICE` | REQ | N/A | REQ | N/A | REQ | REQ | REQ | TBD | N/A | REQ | Error = presentation fallback; visibility variants remain downstream. |
-| `R4-RESOLUTION-DRAWER` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Offline/product-shell resolution path; adjudication/Undo DM variant. |
+| `R4-RESOLUTION-DRAWER` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | N/A | N/A | REQ | Offline/product-shell resolution path is role-free; adjudication/Undo DM variant belongs to connected Host/DM context. |
 | `R4-SESSION-RESOLUTION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Connected Play resolution layer. |
 | `R4-QUICK-SHEET` | REQ | TBD | TBD | TBD | TBD | REQ | REQ | REQ | REQ | REQ | Client/Player current evidence; exact entitlement/topology unreviewed. |
 | `R4-FULL-SHEET-LAYER` | REQ | TBD | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Client/Player current evidence; must preserve session context. |
