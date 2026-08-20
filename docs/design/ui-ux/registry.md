@@ -139,18 +139,21 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R4-QUICK-SHEET` | In-session Quick Sheet | Draft | None | DND-01 / SES-01 | src/SessionModeRoot.tsx | Current contextual Player utility; topology not reviewed |
 | `R4-FULL-SHEET-LAYER` | In-session Full Character Sheet layer | Draft | None | DND-01 / SES-01 / INT-02 | src/SessionModeRoot.tsx, src/CharacterSheetPlayScreen.tsx | Session remains active behind full sheet |
 | `R4-SESSION-RULES` | In-session Rules pane | Draft | None | CONTENT-02 / SES-01 | src/SessionUtilityPanes.tsx | Current contextual Rules surface |
+| `R4-ACTIVITY` | Activity / Play Record surface | Draft | Blocked | DM-02 / SES-01 | ORIGIN-UX-01-22, DM-02-01, DM-02-09, GAP-DM-PRIVATE-ACTIVITY-PRESENTATION, src/App.tsx, src/SessionUtilityPanes.tsx | Current product-shell and connected utility surfaces; private-event presentation remains deferred |
 | `R4-ACTOR-CONTEXT` | Actor Context Menu | Draft | Blocked | INT-01 | ORIGIN-UX-01-16, GAP-ACTOR-CONTEXT-MENU-CONTENTS | Context-menu pattern reviewed; command contents remain material TBD |
 | `R4-TOOLTIP` | Tooltip / unavailable reason | Draft | Partial | INT-01 / CMP-01 | ORIGIN-UX-01-19, src/ProductionPlayScreen.tsx | Must not be sole carrier of essential info |
 | `R4-DM-HANDOUT-PANE` | DM Handout authoring pane | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, GAP-HANDOUT-NETWORK-CONTRACT, src/SessionImageHandoutBridge.tsx | File select/preview/reveal/withdraw current evidence |
 | `R4-PLAYER-HANDOUT-VIEWER` | Player Handout viewer | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT, src/SessionImageHandoutBridge.tsx | Current modal implementation covers only part of reviewed mode model |
 | `R4-HANDOUT-LIGHTBOX` | Handout image zoom/lightbox pattern | Draft | Partial | SES-01 / INT-02 | ORIGIN-UX-01-12, ORIGIN-UX-01-13 | Zoom/pan behavior downstream |
 | `R4-REACTION-PROMPT` | Reaction/Interrupt prompt | Draft | Blocked | DND-04 | R3-INTERRUPT, GAP-RESOLUTION-SAFE-INTERACTIONS, src/App.tsx, src/SessionModeRoot.tsx | Response surface |
+| `R4-CONCENTRATION-SAVE` | Concentration save input/result surface | Draft | None | DND-02 / STATE-01 | DND-02-09, STATE-01-08, src/ConcentrationSaveBridge.tsx | Current resolution-embedded d20 input/result evidence; exact UX/role handling remains downstream review |
 | `R4-MOVEMENT-REACTION-INPUT` | Manual movement-reaction input dialog | Draft | None | DND-04 / INT-03 | src/MovementReactionBridge.tsx | Current implementation evidence; product role/authority/confirmation policy unreviewed |
 | `R4-PORTRAIT-EDITOR` | Character portrait editor | Draft | None | DND-01 / INT-02 | src/CharacterPortraitBridge.tsx | Local image/focal-point editor attached to Character Sheet |
 | `R4-IMPORT-REVIEW` | Import preview / validation review surface | Draft | None | CONTENT-02 / DND-01 / CMP-01 | src/V1ContentScreen.tsx, src/CharacterCreateV10.tsx, src/App.tsx | Used by add-on, Character and Combatant import implementations |
 | `R4-ADJUDICATION` | DM adjudication surface | Draft | None | DM-02 | src/App.tsx | Current implementation embedded in resolution drawer; final topology/policy TBD |
 | `R4-ACTIVITY-DETAIL` | Activity/resolution detail | Draft | Partial | DM-02 / SES-01 | ORIGIN-UX-01-22, src/SessionUtilityPanes.tsx | Durable detail path |
 | `R4-ENCOUNTER` | Encounter Manager | Draft | None | DM-01 / SES-01 | src/SessionDmTools.tsx, src/App.tsx | Current route/pane evidence; final topology pending review |
+| `R4-DM-SPATIAL-RELATION` | DM spatial relation authoring | Draft | None | DM-01 / SES-01 | DM-01-03, DM-01-08, src/ProductionSessionWorkspaceBridge.tsx | Current live-Host distance/visibility/cover editor evidence; product scope, placement and authority remain unreviewed |
 | `R4-PARTICIPANTS` | DM Participants pane | Draft | None | DM-01 / SES-01 | src/SessionDmTools.tsx | Current connected-session utility evidence |
 | `R4-SESSION-SHARE` | DM Session Share pane | Draft | None | DM-01 / SES-01 | src/SessionDmTools.tsx | Address/content/compatibility/end-session utility evidence |
 | `R4-PLAYER-SESSION` | Player Session/connection pane | Draft | Partial | SES-01 / SES-02 | UX-01-03, src/SessionPlayerSession.tsx | Connection, rejoin and leave utility |
@@ -277,24 +280,30 @@ The following observations are recorded only to prevent current code from being 
 - Current connected `SessionActionDock` is an intent-first funnel that hides the full capability set behind intent/all-action expansion. It must not override `UX-01-04`, `UX-01-06`, `ORIGIN-UX-01-07`, `ORIGIN-UX-01-08`, and `ORIGIN-UX-01-09`. (`src/SessionActionDock.tsx`)
 - Current Player handout implementation is a dismissible modal viewer. It does not satisfy the reviewed Overlay / Upper Scene / Full Scene mode model by itself; `GAP-HANDOUT-NETWORK-CONTRACT` remains blocking. (`src/SessionImageHandoutBridge.tsx`)
 - Current Join UI blocks when no saved Character exists. That behavior remains evidence only because `GAP-JOIN-NO-CHARACTER` is still Open. (`src/ProductionSessionWorkspaceBridge.tsx`, `src/ProductionSessionDirectNetworkBridge.tsx`)
+- Current Product-shell and connected-session Activity surfaces are real user-facing artifacts, but private-event presentation remains governed by `DM-02-01` / `GAP-DM-PRIVATE-ACTIVITY-PRESENTATION`. (`src/App.tsx`, `src/SessionUtilityPanes.tsx`)
+- `ConcentrationSaveBridge` currently inserts a concentration-save d20 input/result surface into the resolution drawer. That existence does not decide its final interaction/role model. (`src/ConcentrationSaveBridge.tsx`)
+- The live Host Session workspace currently exposes an advanced spatial relation editor for Actor-pair distance, visibility, and cover. Its existence does not productize that tool or decide its final authority/placement. (`src/ProductionSessionWorkspaceBridge.tsx`)
+- `CombatSpellHudBridge` is imported by `main.tsx` but is not rendered into the active root; it is excluded from active user-facing inventory until an actual entry path exists. (`src/main.tsx`)
+- Despite its filename, `LegacyCharacterSheetPlayScreen.tsx` is currently the active SimpleVTT sheet-layout implementation selected by `CharacterSheetWorkspace`; filename heuristics must not classify it as inactive. (`src/CharacterSheetPlayScreen.tsx`)
 - Developer `DebugPanel` remains excluded from product UI coverage unless explicitly promoted later. (`src/App.tsx`)
 
 ---
 
 # Inventory completion check
 
-This inventory is not complete until AI cross-checks:
+The Route D inventory cross-check has now covered:
 
-- every active route/surface reachable in the current implementation;
-- every user-facing globally mounted bridge/portal;
-- every item in the derived `master-flow.md` view;
-- every Reviewed Decision Card in `decisions.md`;
-- generic UI patterns required by INT/STATE/CMP/A11Y/PLATFORM sheets;
-- every active gap in `planning-gaps.md`;
-- non-route UI such as confirmations, notifications, validation, permission, reconnect, handout, reaction, import, motion, and focus-return behavior.
+- every active route/surface reachable from the current Product/Session entry graph;
+- every user-facing globally mounted bridge/portal in `main.tsx`;
+- the derived `master-flow.md` topology and all Reviewed Decision Cards;
+- generic INT/STATE/CMP/A11Y/PLATFORM non-route patterns represented by R4-R9;
+- every active Planning Gap with UI/UX impact;
+- user-facing confirmation, notification, validation, permission, reconnect, handout, reaction, import, motion, Activity, concentration-save, and spatial-relation evidence discovered in the active runtime graph.
 
-Current Route D implementation pass has covered the main Product Shell, Home, Character Library/Create/Sheet/Level Up evidence, Session host/join/lobby/play shells, in-session utilities, Content/Rules/Settings, resolution/reaction, handout, appearance, portrait, dice/VFX, and core system-state presentations. Remaining cross-check work should focus on inactive/legacy compatibility surfaces, exact generic-state completeness, and downstream Matrix/Decision-Map coverage rather than reinterpreting current code as product truth.
+Inactive imports, developer-only UI, and historical filenames are classified explicitly rather than treated as product truth.
 
-New rows may be added without owner approval when they only identify an existing/planned artifact. **Adding a row does not decide its product behavior.** Any new material behavior still requires a Decision Card.
+**Route D R1-R9 inventory cross-check: PASS for the current active runtime/planning snapshot.** Future code or planning changes may require a bounded delta audit; they do not keep the current Global Planning Gate blocked.
+
+New rows may be added without owner approval when they only identify an existing/planned artifact. **Adding a row does not decide its product behavior.** Any new material behavior still requires a Decision Card or a declared Draft Decision Map item.
 
 `Contract Readiness` is derived maintenance. AI may downgrade or upgrade `None / Partial / Blocked / Ready` when referenced contracts/gaps change, but MUST NOT change Planning Maturity without the decision lifecycle defined in the framework.
