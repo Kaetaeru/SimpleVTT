@@ -17,7 +17,7 @@ It answers four questions:
 
 ```text
 1. AI-READING-GUIDE.md      -> classify Route A-H
-2. MANIFEST.yaml            -> confirm document roles / authority / derived status
+2. MANIFEST.yaml            -> confirm document roles / enums / reference rules / derived status
 3. PREFLIGHT.md             -> pass consistency/readiness checks for that route
 4. route-specific documents -> read only the bounded set required below
 5. perform work
@@ -33,20 +33,22 @@ If Manifest and actual files disagree, treat it as document drift and repair/rep
 
 | Document | Owns |
 | --- | --- |
-| `../ui-ux-planning-framework.md` | governance, status, specification tiers, source precedence |
+| `../ui-ux-planning-framework.md` | governance, lifecycle, specification tiers, authority-domain rules |
 | `AI-READING-GUIDE.md` | task routing + reading order |
-| `MANIFEST.yaml` | machine-readable roles/entrypoints/derived relationships |
-| `PREFLIGHT.md` | start-work consistency/readiness checks |
+| `MANIFEST.yaml` | machine-readable roles, enums, exact reference syntax, derived relationships |
+| `PREFLIGHT.md` | start-work consistency/readiness/schema checks |
 | `README.md` | derived current status/next work only |
 | `review-plan.md` | review order, undecided Decision Maps, Global Planning Gate |
 | `decisions.md` | made product/UX Decision Cards only |
-| `master-flow.md` | owner-friendly product flow/topology baseline |
+| `master-flow.md` | **derived owner-friendly flow/topology view**; not a second decision store |
 | `planning-gaps.md` | material unknowns AI must not invent |
 | `registry.md` | derived R1-R9 inventory + Planning/Contract status |
 | `matrices.md` | derived M1-M6 coverage |
 | `templates.md` | copy-safe artifact shapes; no duplicate Preflight authority |
 
-Other canonical domain/architecture documents govern only their explicit scopes. Current source/tests are implementation evidence.
+Other canonical domain/architecture documents govern their explicit rules/data/network/persistence/privacy scopes. Current source/tests are implementation evidence.
+
+Structured references MUST be exact full IDs/paths per `MANIFEST.yaml`. Do not infer omitted prefixes or ranges.
 
 ---
 
@@ -58,12 +60,12 @@ Classify the request into one primary route before broad reading.
 | --- | --- |
 | `A — Resume Planning` | continue sequential owner UX review / ask next declared decision |
 | `B — Show Status` | report current planning/gate/gaps/next work |
-| `C — Change a Decision` | alter or reverse a made UX choice |
+| `C — Change a Decision` | alter or reverse a made UX choice, including a material change expressed through the Master Flow view |
 | `D — Explore Whole Product` | inventory/cross-check all UI, flows, matrices, Decision Maps, coverage |
 | `E — Prepare Implementation` | assess readiness / create scoped Work Order |
 | `F — Implement` | modify code from approved Work Order |
 | `G — Verify / QA` | validate implementation against canonical requirements |
-| `H — Resolve Conflict / History` | determine which conflicting source governs |
+| `H — Resolve Conflict / History` | determine which source/scope governs or whether a contract conflict exists |
 
 For mixed requests, resolve authority first. Example: change + implement = `C -> E -> F` only if later gates pass and implementation is authorized.
 
@@ -82,7 +84,7 @@ Only after the Global Planning Gate passes, read:
 2. review-plan.md
 3. relevant made Decision Cards in decisions.md
 4. planning-gaps.md entries linked to current sheet
-5. master-flow.md only if topology/flow matters
+5. master-flow.md only as a derived visualization when topology/flow context helps
 6. relevant Registry/Matrix rows only when needed to explain consequences
 7. domain/code evidence only when concrete grounding is required
 ```
@@ -90,9 +92,9 @@ Only after the Global Planning Gate passes, read:
 Before asking one decision, confirm:
 
 - current sheet;
-- complete Decision Map exists;
+- complete T2 Decision Map exists;
 - next ID is predeclared;
-- dependencies are known;
+- dependencies are exact full IDs and known;
 - migrated prior decisions do not already answer it;
 - no blocking gap routes it elsewhere.
 
@@ -112,31 +114,33 @@ Minimal read:
 
 For one surface, then add its Registry row, linked Decision Cards, and relevant M6 coverage.
 
-Do not load the whole corpus or source code for a status answer.
+For owner flow/topology status, `master-flow.md` may be shown as a **derived view**. If it conflicts with canonical sources, report/repair drift rather than treating the view as authority.
 
-Remember: Dashboard is derived; canonical sources win if it is stale.
+Do not load the whole corpus or source code for a status answer.
 
 ---
 
-# 5. Route C — Change a Decision
+# 5. Route C — Change a Decision / Material Flow Choice
+
+If the owner changes a flow naturally through `master-flow.md`, first identify the canonical source that must change. Never edit only the derived flow view.
 
 Read:
 
 ```text
 1. README.md
-2. exact Decision Card in decisions.md
+2. exact Decision Card in decisions.md, OR exact unanswered item in review-plan.md, OR related Planning Gap
 3. review-plan.md for owner sheet/order
-4. master-flow.md if flow/topology changes
+4. master-flow.md as the derived before/after topology view when flow is affected
 5. linked Registry/Matrix rows
 6. planning-gaps.md
-7. domain/architecture contract if authority/rules/persistence/network semantics are affected
+7. domain/architecture contract if authority/rules/persistence/network/privacy semantics are affected
 ```
 
-Then update one canonical Decision Card, preserve history/supersession, calculate impact, update derived artifacts, create/reopen gaps if required, and show only material owner consequences.
+Then update the canonical source first, preserve history/supersession when applicable, calculate impact, update derived artifacts including `master-flow.md`, create/reopen gaps if required, and show only material owner consequences.
 
 Do not Freeze automatically. Do not implement unless separately authorized and ready.
 
-Never change product intent by editing only Registry, Matrix, Dashboard, or code.
+Never change product intent by editing only Master Flow, Registry, Matrix, Dashboard, or code.
 
 ---
 
@@ -147,14 +151,14 @@ This is the current default planning route while the Global Planning Gate is blo
 Read in layers:
 
 ```text
-Phase 1 — product planning truth
-1. README.md
+Phase 1 — canonical planning truth
+1. README.md for current status only
 2. review-plan.md
 3. decisions.md
-4. master-flow.md
-5. planning-gaps.md
+4. planning-gaps.md
 
-Phase 2 — structured coverage
+Phase 2 — derived product visibility
+5. master-flow.md
 6. registry.md
 7. matrices.md
 
@@ -169,7 +173,7 @@ Route D must complete the Global Planning Gate defined in `review-plan.md`:
 ```text
 R1-R9 complete cross-check
 -> M1-M6 material coverage
--> complete Decision Maps for all 27 governance sheets
+-> complete T2 Decision Maps for all 27 governance sheets
 -> Missing / Duplication / Coverage audit
 -> concise owner whole-product checkpoint
 ```
@@ -178,7 +182,8 @@ Rules:
 
 - AI MAY add inventory/coverage rows from evidence.
 - AI MAY materialize planned Decision Maps without choosing their answers.
-- AI MUST NOT decide new product behavior while filling Registry, Matrix, or Decision Maps.
+- AI MAY refresh derived Master Flow from canonical decisions/maps/gaps.
+- AI MUST NOT decide new product behavior while filling Master Flow, Registry, Matrix, or Decision Maps.
 - New material choices become Planning Gaps or declared map items.
 - Conflicting current implementation is evidence of drift/gap, not automatic plan replacement.
 - Do not ask new owner questions during this preparation unless the user explicitly changes the task or a truly blocking ambiguity requires a decision.
@@ -203,6 +208,8 @@ Read:
 
 Use `PREFLIGHT.md` as the sole readiness checklist.
 
+A Product/UX decision cannot override rules/network/persistence/privacy semantics. If the desired UX conflicts with a canonical domain/architecture contract, return `PLANNING GAP: CONTRACT CONFLICT` rather than choosing a winner.
+
 If requirements are incomplete, return `PLANNING GAP` or `NOT IMPLEMENTATION-READY`. Do not manufacture decisions in a Work Order.
 
 ---
@@ -222,7 +229,9 @@ Read exactly:
 6. current source/tests inside scope
 ```
 
-Implementation MUST NOT treat Reviewed as Frozen, confuse Planning Maturity with Contract Readiness, broaden scope, invent fallback/authority/rules behavior, or let current code overrule canonical decisions.
+All structured references must resolve exactly before coding.
+
+Implementation MUST NOT treat Reviewed as Frozen, confuse Planning Maturity with Contract Readiness, broaden scope, invent fallback/authority/rules behavior, use a derived view as product authority, or let current code overrule canonical decisions/contracts.
 
 Unexpected material dependency -> stop and route correctly.
 
@@ -246,18 +255,21 @@ QA compares implementation to requirements; it does not redesign.
 
 - requirement gap -> planning;
 - implementation mismatch -> implementation;
-- stale derived doc -> maintenance.
+- stale derived doc -> maintenance;
+- schema/reference mismatch -> maintenance/preflight failure.
 
 ---
 
 # 10. Route H — Resolve Conflict / History
 
-Read highest authority downward:
+First classify whether the apparent conflict is **within one authority domain** or **across Product/UX vs domain/architecture authority**.
+
+Read:
 
 ```text
-1. framework precedence
-2. relevant Frozen Decision Card(s)
-3. relevant canonical domain/architecture contract
+1. framework authority-domain rules
+2. relevant Product/UX Decision Card(s)
+3. relevant canonical domain/architecture contract(s)
 4. applicable detailed contract
 5. current Work Order
 6. current implementation
@@ -268,11 +280,12 @@ Return one of:
 
 - `NO CONFLICT — scopes differ`
 - `SUPERSEDED — lower source is historical`
-- `IMPLEMENTATION DRIFT — code differs from canonical plan`
-- `DERIVED DOCUMENT DRIFT — summary/inventory/coverage is stale`
-- `PLANNING GAP: CONTRACT CONFLICT — applicable high-level sources conflict`
+- `IMPLEMENTATION DRIFT — code differs from canonical requirement`
+- `DERIVED DOCUMENT DRIFT — summary/flow/inventory/coverage is stale`
+- `SCHEMA / REFERENCE DRIFT — structured value is not exactly valid`
+- `PLANNING GAP: CONTRACT CONFLICT — Product/UX intent and domain/architecture authority cannot both be satisfied as written`
 
-Never choose a winner just because a file is newer or code currently behaves that way.
+Never choose a winner merely because a file is newer, a UI decision is Frozen, or code currently behaves that way.
 
 ---
 
@@ -284,8 +297,8 @@ Stop expanding document scope when the following applicable facts are known:
 
 - Route/task;
 - current sheet, Global Gate work item, or Work Order;
-- governing Decision IDs;
-- authority/source-of-truth constraints;
+- governing exact Decision/Gap/Contract IDs;
+- authority domain and source-of-truth constraints;
 - required state/transition/contract detail for the tier;
 - relevant Planning Gaps;
 - enough implementation evidence for the requested task.
@@ -305,22 +318,23 @@ None of these creates authority by itself:
 - current implementation behavior;
 - merged old PR;
 - word `final` in prose;
-- existence of a Registry row;
+- existence of a Registry/Matrix/Master Flow statement;
 - Reviewed status without Frozen/Contract Readiness.
 
-Use framework precedence, Manifest, stable IDs, and explicit scope.
+Use the framework's authority-domain rules, Manifest, exact IDs, and explicit scope.
 
 ---
 
-# 13. Missing reference behavior
+# 13. Missing or ambiguous reference behavior
 
-If a referenced file/ID does not exist:
+If a referenced file/ID does not exist or is abbreviated:
 
 1. do not substitute a similarly named source;
-2. do not reconstruct it from code;
-3. check Manifest/Dashboard/Review Plan for intentional non-materialization;
-4. report/repair a maintenance defect or Planning Gap according to permissions;
-5. do not proceed on an invented replacement.
+2. do not infer an omitted prefix/range;
+3. do not reconstruct it from code;
+4. check Manifest/Dashboard/Review Plan for intentional non-materialization;
+5. report/repair a schema/maintenance defect or Planning Gap according to permissions;
+6. do not proceed on an invented replacement.
 
 ---
 
@@ -332,10 +346,14 @@ The owner may say naturally:
 
 > "그 전투 타겟팅 결정 바꾸자."
 
-AI locates the correct decision, reads the minimum dependency set, checks impact, maintains derived structure, and surfaces only material consequences.
+or:
+
+> "이 플로우에서 Join 앞에 한 단계 넣자."
+
+AI locates the canonical decision/map/gap, reads the minimum dependency set, checks impact, updates derived views, and surfaces only material consequences.
 
 ---
 
 # 15. Final principle
 
-> **Route first. Verify roles. Pass Preflight. Respect the Global Planning Gate. Read from canonical intent toward evidence. Stop when enough is known. Never infer product truth backward from code.**
+> **Route first. Verify schema and roles. Pass Preflight. Respect authority domains and the Global Planning Gate. Read from canonical intent toward derived views and evidence. Stop when enough is known. Never infer product truth backward from code or a derived document.**
