@@ -5,7 +5,7 @@ This is the **default starting point for the owner**.
 For AI agents:
 
 1. read [`AI-READING-GUIDE.md`](AI-READING-GUIDE.md);
-2. inspect [`MANIFEST.yaml`](MANIFEST.yaml);
+2. inspect [`MANIFEST.yaml`](MANIFEST.yaml) for schema/roles/reference rules;
 3. pass [`PREFLIGHT.md`](PREFLIGHT.md) before substantive work.
 
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
@@ -21,22 +21,22 @@ If the planning structure makes either goal harder, simplify before adding more 
 
 | Item | Current state |
 | --- | --- |
-| Framework | Canonical planning method active; does not itself Freeze product decisions |
+| Framework | Canonical planning method active; Product/UX and domain/architecture authority separated |
 | AI Reading Guide | Sole canonical task router / reading-order owner active |
-| Machine-readable Manifest | Active; roles, entrypoints, derived sources, global gate declared |
-| Preflight | Active; consistency/readiness gate required before substantive work |
+| Machine-readable Manifest | Schema v2 active; roles, enums, exact reference syntax, derived sources, global gate declared |
+| Preflight | Active; consistency/readiness/schema/reference gate required before substantive work |
 | Product UI decisions | Partially Reviewed; not globally Frozen |
-| `UX-01` | 7 decisions Reviewed, not Frozen |
-| Migrated prior decisions | Preserved with destination sheets; not Frozen |
-| `UX-02` | Complete Decision Map exists; individual review **blocked by Global Planning Gate** |
-| `UX-03` | Baseline Decision Map exists; full-map audit still required |
-| 27-sheet Review Plan | Materialized; most later maps still need complete predeclaration |
-| Master User Flow | Draft canonical planning baseline materialized |
-| R1-R9 inventory | Draft seed inventory materialized; full implementation/master-flow/decision cross-check incomplete |
-| M1-M6 matrices | Draft seed coverage materialized; whole-product coverage incomplete |
+| `UX-01` | 7 decisions have `Status: Reviewed`; none Frozen |
+| Migrated prior decisions | Preserved with destination sheets; `Status: Reviewed`; none Frozen |
+| `UX-02` | T2-complete Decision Map exists; individual review **blocked by Global Planning Gate** |
+| `UX-03` | T2-complete Decision Map exists; individual review **blocked by Global Planning Gate** |
+| 27-sheet Review Plan | Materialized; 24 later maps still need complete predeclaration |
+| Master User Flow | Draft **derived owner view**; not a canonical decision store |
+| R1-R9 inventory | Draft derived seed inventory; full implementation/flow/decision cross-check incomplete |
+| M1-M6 matrices | Draft derived seed coverage; references/M6 values normalized; whole-product coverage incomplete |
 | Global Planning Gate | **NOT PASSED** |
-| Planning Gaps | Typed/severity-classified canonical queue active |
-| Templates | Current Gap schema + canonical Preflight reference aligned |
+| Planning Gaps | Canonical typed/severity/status queue active (`Open / Deferred / Resolved`) |
+| Templates | Schema v2 enum/reference rules + canonical Preflight reference aligned |
 | Implementation | Not authorized by planning status alone |
 
 ## Global Planning Gate — current required work
@@ -46,12 +46,14 @@ If the planning structure makes either goal harder, simplify before adding more 
 ```text
 [ ] R1-R9 complete inventory cross-check
 [ ] M1-M6 material coverage for all material Registry items
-[ ] all 27 governance sheets have complete Decision Maps
+[ ] all 27 governance sheets have complete T2 Decision Maps
     - Scope
     - Non-scope
-    - full decision list
-    - dependencies / conditional branches
     - Exit Criteria
+    - full decision list
+    - Status
+    - full dependency IDs / conditional branches
+    - Destination
 [ ] Missing / Duplication / Coverage audit passes
 [ ] owner receives one concise whole-product coverage checkpoint
 ```
@@ -64,30 +66,31 @@ Canonical gate detail lives in [`review-plan.md`](review-plan.md) and the framew
 1. Run PREFLIGHT for Route D — Explore Whole Product
 2. Complete/cross-check R1-R9 against:
    - current implementation evidence
-   - master-flow.md
+   - derived master-flow.md view
    - existing made Decision Cards
    - generic non-route UI patterns
 3. Expand M1-M6 material coverage; turn material unknown behavior into explicit Planning Gaps instead of guesses
-4. Materialize complete Decision Maps for all remaining governance sheets
+4. Materialize T2-complete Decision Maps for all remaining governance sheets
 5. Run Missing / Duplication / Coverage audit
 6. Present owner whole-product coverage checkpoint
 7. Only then resume sequential review at UX-02-01
 ```
 
-During this preparation AI may identify artifacts, references, gaps, and coverage. It MUST NOT silently make new product decisions.
+During this preparation AI may identify artifacts, exact references, gaps, derived views, and coverage. It MUST NOT silently make new product decisions.
 
 ## Owner controls — plain language is enough
 
 | Owner says | AI must do |
 | --- | --- |
 | `현재 상태 보여줘` | Summarize this Dashboard plus material gaps/gate status. |
-| `이 결정 바꾸자` | Resolve affected Decision ID, update one canonical Decision Card, calculate impact. |
+| `이 결정 바꾸자` | Resolve affected canonical Decision ID, update one Decision Card, calculate impact. |
+| `이 플로우 바꾸자` | Use `master-flow.md` as the readable view, resolve the canonical Decision/Map/Gap source first, then refresh the derived flow. |
 | `UX-02 질문 전체 보여줘` | Show the complete declared map from `review-plan.md`; do not start answering it while Global Gate is blocked. |
-| `이건 확정` / `freeze` | Freeze only explicitly named scope and run impact checks. |
+| `이건 확정` / `freeze` | Freeze only explicitly named canonical scope and run impact checks. |
 | `이 화면에 뭐가 남았어?` | Use Registry Planning/Contract status + Matrix coverage. |
-| `구현 준비됐어?` | Check Frozen dependencies, gaps, Contract Readiness, spec tier, contracts, Work Order. |
-| `되돌려` | Restore/supersede affected decision with traceability. |
-| `전체 플로우 보여줘` | Use `master-flow.md`, not an ad hoc code reconstruction. |
+| `구현 준비됐어?` | Check Frozen dependencies, gaps, Contract Readiness, spec tier, contracts, Work Order, and authority-domain compatibility. |
+| `되돌려` | Restore/supersede affected decision with traceability, then refresh derived views. |
+| `전체 플로우 보여줘` | Show `master-flow.md` as a derived owner view; do not treat it as an independent authority source. |
 | `다음에 뭘 정하지?` | Report Global Gate work first; after it passes, use `review-plan.md`. |
 
 ## Owner-facing files
@@ -95,10 +98,10 @@ During this preparation AI may identify artifacts, references, gaps, and coverag
 The owner normally needs only:
 
 - [`README.md`](README.md) — current dashboard/gate/next work.
-- [`decisions.md`](decisions.md) — made Decision Cards only.
-- [`master-flow.md`](master-flow.md) — product flow/topology.
-- [`planning-gaps.md`](planning-gaps.md) — material unknowns AI must not invent.
-- [`review-plan.md`](review-plan.md) — review order, undecided Decision Maps, Global Planning Gate.
+- [`decisions.md`](decisions.md) — made canonical Decision Cards only.
+- [`master-flow.md`](master-flow.md) — derived readable product flow/topology view.
+- [`planning-gaps.md`](planning-gaps.md) — canonical material unknowns AI must not invent.
+- [`review-plan.md`](review-plan.md) — canonical review order, undecided Decision Maps, Global Planning Gate.
 
 Supporting files maintained mainly by AI:
 
@@ -117,30 +120,41 @@ AI MAY without owner approval:
 
 - identify/add an existing or planned artifact to the Registry;
 - add Matrix coverage referencing existing decisions/contracts;
+- refresh `master-flow.md` from canonical Decision/Map/Gap sources;
 - update Contract Readiness when named gaps/contracts clearly change;
-- maintain cross-references and Dashboard summaries;
+- maintain exact cross-references and Dashboard summaries;
 - identify/classify a Planning Gap;
-- repair obvious derived-document drift.
+- repair obvious derived-document/schema/reference drift.
 
 AI MUST NOT without owner/domain authority:
 
-- decide new product behavior while filling Registry/Matrix/Decision Maps;
+- decide new product behavior while filling Master Flow/Registry/Matrix/Decision Maps;
+- treat `master-flow.md` as a second canonical decision store;
 - change Registry Planning Maturity outside the decision lifecycle;
 - change the declared review order (AI may propose; owner must approve);
 - promote a contextual tool into a top-level destination;
-- create authority, visibility, fallback, persistence, or rules semantics;
+- create authority, visibility, fallback, persistence, rules, network, or privacy semantics;
+- use a Frozen UI decision to override a domain/architecture contract;
 - Freeze a decision;
 - treat current implementation as product truth merely because it exists.
 
-## Status vocabulary
+## Structured vocabularies
 
-Decision maturity:
+Decision Status:
 
-`Draft -> Selected -> Reviewed -> Frozen -> optionally Superseded`
+`Draft / Selected / Reviewed / Frozen / Superseded`
 
-Contract readiness:
+Gap Status:
+
+`Open / Deferred / Resolved`
+
+Contract Readiness:
 
 `None / Partial / Ready / Blocked`
+
+References:
+
+`full stable ID/path only` — no ranges, omitted prefixes, or contextual prose aliases.
 
 - Selected/Reviewed is not Frozen.
 - Reviewed is not Contract Ready.
@@ -155,7 +169,7 @@ Global Planning Gate: PASS / BLOCKED
 Current status:
 Open material gaps:
 Next planned work:
-Frozen changes: none / <IDs>
+Frozen changes: none / <full IDs>
 ```
 
 Internal Registry/Matrix/Manifest/Preflight maintenance should not be dumped on the owner unless it changes product intent or blocks progress.
