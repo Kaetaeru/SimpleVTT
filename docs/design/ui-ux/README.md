@@ -21,10 +21,11 @@ If the planning structure makes either goal harder, simplify before adding more 
 
 | Item | Current state |
 | --- | --- |
-| Framework | Canonical planning method active; Product/UX and domain/architecture authority separated |
+| Meta governance baseline | **Stable v1**; bounded 10-scenario final validation passed; reopen governance only for material drift/change or explicit owner request |
+| Framework | Canonical planning method active; planning truth vs implementation reliance and Product/UX vs domain/architecture authority separated |
 | AI Reading Guide | Sole canonical task router / reading-order owner active |
-| Machine-readable Manifest | Schema v2 active; roles, enums, exact reference syntax, derived sources, global gate declared |
-| Preflight | Active; consistency/readiness/schema/reference gate required before substantive work |
+| Machine-readable Manifest | Schema v2 active; Stable v1 validation marker, roles, enums, exact reference syntax, derived sources, global gate declared |
+| Preflight | Active; consistency/readiness/schema/reference/planning-truth gate required before substantive work |
 | Product UI decisions | Partially Reviewed; not globally Frozen |
 | `UX-01` | 7 decisions have `Status: Reviewed`; none Frozen |
 | Migrated prior decisions | Preserved with destination sheets; `Status: Reviewed`; none Frozen |
@@ -36,8 +37,10 @@ If the planning structure makes either goal harder, simplify before adding more 
 | M1-M6 matrices | Draft derived seed coverage; references/M6 values normalized; whole-product coverage incomplete |
 | Global Planning Gate | **NOT PASSED** |
 | Planning Gaps | Canonical typed/severity/status queue active (`Open / Deferred / Resolved`) |
-| Templates | Schema v2 enum/reference rules + canonical Preflight reference aligned |
+| Templates | Schema v2 enum/reference rules + no independent contract lifecycle + canonical Preflight reference aligned |
 | Implementation | Not authorized by planning status alone |
+
+`Stable v1` applies to the **governance/meta-document system only**. It does not Freeze product decisions, pass the Global Planning Gate, or authorize implementation.
 
 ## Global Planning Gate — current required work
 
@@ -134,15 +137,21 @@ AI MUST NOT without owner/domain authority:
 - change the declared review order (AI may propose; owner must approve);
 - promote a contextual tool into a top-level destination;
 - create authority, visibility, fallback, persistence, rules, network, or privacy semantics;
+- let current implementation replace an applicable Selected/Reviewed/Frozen planning decision;
+- treat Selected/Reviewed as stable implementation reliance;
 - use a Frozen UI decision to override a domain/architecture contract;
 - Freeze a decision;
 - treat current implementation as product truth merely because it exists.
 
 ## Structured vocabularies
 
-Decision Status:
+Decision Status / Registry Planning Maturity:
 
 `Draft / Selected / Reviewed / Frozen / Superseded`
+
+Governance-sheet Review Status:
+
+`Not Started / In Review / Reviewed`
 
 Gap Status:
 
@@ -156,7 +165,8 @@ References:
 
 `full stable ID/path only` — no ranges, omitted prefixes, or contextual prose aliases.
 
-- Selected/Reviewed is not Frozen.
+- Selected/Reviewed/Frozen made decisions are planning truth over current code in their valid Product/UX scope.
+- Only Frozen decisions are stable implementation dependencies by default.
 - Reviewed is not Contract Ready.
 - AI never Freezes automatically.
 - Missing material policy = `PLANNING GAP`, not an AI-created fallback.
