@@ -69,7 +69,7 @@ Do not expand role rows until UX-02 decisions establish the role model.
 | `M2-PLY-006` | `R3-TARGET-MULTI` | Execute | non-empty valid target set | `R3-RESOLVING` | submit authoritative action command | explicit reject / preserve recoverable selection as decided later | ORIGIN-UX-01-20 |
 | `M2-PLY-007` | `R3-RESOLVING` | interrupt required | canonical resolution | `R3-INTERRUPT` | none until response | TBD | GAP-RESOLUTION-SAFE-INTERACTIONS |
 | `M2-PLY-008` | `R3-RESOLVING` | authoritative dice ready | canonical resolution | `R3-DICE` | presentation only | fallback must preserve result | ORIGIN-UX-01-24, 25 |
-| `M2-PLY-009` | `R3-DICE` | presentation reaches reveal point | presentation contract | `R3-RESULT` | result feedback appears | reduced-motion equivalent | GAP-R1-R9-INVENTORY / R9-RESULT-REVEAL |
+| `M2-PLY-009` | `R3-DICE` | presentation reaches reveal point | presentation contract | `R3-RESULT` | result feedback appears | reduced-motion equivalent | R9-RESULT-REVEAL |
 | `M2-PLY-010` | `R3-RESULT` | continue/dismiss as applicable | canonical state committed | appropriate Play state | reflect canonical state | Activity retains detail as applicable | ORIGIN-UX-01-22 |
 
 ## Session seed
