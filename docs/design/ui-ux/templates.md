@@ -117,7 +117,6 @@ Use for S1-S3 only as needed.
 Surface ID:
 Name / Type:
 Spec Tier: S1 / S2 / S3
-Status:
 Purpose:
 Parent / Entry:
 Applicable Roles / Contexts:
@@ -145,6 +144,8 @@ Persistence:
 Required Evidence:
 ```
 
+Surface Contracts do not maintain an independent lifecycle `Status` field. Their applicability/readiness is established by referenced decisions, selected Spec Tier, required contracts, Work Order scope, and Preflight.
+
 ---
 
 ## T5 — Component Contract
@@ -152,7 +153,6 @@ Required Evidence:
 ```text
 Component ID:
 Name:
-Status:
 Purpose:
 Non-purpose:
 Decision IDs: <full IDs>
@@ -167,6 +167,8 @@ Design tokens:
 Forbidden domain calculations:
 Required evidence:
 ```
+
+Component Contracts do not maintain an independent lifecycle `Status` field. Use governing Decision status and implementation-readiness checks rather than inventing a second contract lifecycle.
 
 ---
 
