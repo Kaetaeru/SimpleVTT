@@ -87,6 +87,15 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 - **Why:** Host/Client and DM/Player are not independently combinable in the connected product model; the connection role determines the connected play role.
 - **Affects:** UX-02-02, UX-02-03, UX-02-05, UX-02-06, UX-02-07, UX-02-08, SES-01, SES-02, DM-01
 
+## UX-02-02 — Offline/Standalone has no DM/Player role
+
+- **Status:** Selected
+- **Applies To:** Offline / Standalone use
+- **Decision:** Offline/Standalone use has **no DM/Player role identity**. DM and Player roles exist only in Connected Session contexts under `UX-02-01`. Offline UI may expose local product capabilities appropriate to the current surface, but it must not invent a hidden DM/Player role merely to authorize them.
+- **Why:** Standalone Character/product use is a first-class local context, not a simulated connected session. Applying DM/Player roles offline would add role semantics that do not correspond to an actual connection or multiplayer authority boundary.
+- **Depends On:** UX-02-01
+- **Affects:** UX-02-03, UX-02-07, UX-02-08, DND-01, SES-02
+
 ---
 
 # Migrated reviewed decisions
