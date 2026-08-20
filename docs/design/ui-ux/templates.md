@@ -6,6 +6,18 @@ Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 Preflight: [`PREFLIGHT.md`](PREFLIGHT.md)
 
+## Reference rule for all templates
+
+Any field whose purpose is to reference another artifact MUST use complete resolvable IDs/paths as defined in `MANIFEST.yaml`.
+
+Valid: `UX-01-04, UX-01-05, UX-01-06`
+
+Invalid: `UX-01-04..06`, `ORIGIN-UX-01-26, 28`, `destination DM-01`
+
+Do not rely on omitted prefixes, ID ranges, or contextual prose to reconstruct a reference.
+
+---
+
 ## T1 — Decision Card
 
 Default owner-facing canonical unit.
@@ -17,9 +29,9 @@ Status: Draft / Selected / Reviewed / Frozen / Superseded
 Applies To:
 Decision:
 Why:
-Depends On:
+Depends On: none / <full IDs>
 Affects:
-Planning Gap: none / <Gap ID>
+Planning Gap: none / <full Gap IDs>
 ```
 
 Optional only when needed:
@@ -35,15 +47,18 @@ Change Note:
 ### Decision Card constraints
 
 - One material product decision per card.
+- `Status` contains exactly one enum value; explanatory text belongs in another field/paragraph.
 - Keep `Decision` concise.
 - Do not include implementation instructions unless the implementation constraint is itself the product decision.
-- Do not copy the same normative text into Registry, Matrix, Dashboard, or Work Order files.
+- Do not copy the same normative text into Registry, Matrix, Master Flow, Dashboard, or Work Order files.
 
 ---
 
 ## T2 — Decision Map
 
 Must exist in `review-plan.md` before individual questions for that governance sheet begin.
+
+A map may be labeled `Complete` only when every required field below is present.
 
 ```markdown
 # <Sheet ID> — <Sheet Name>
@@ -54,7 +69,7 @@ Exit Criteria:
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
-| ... | ... | Draft | ... | no | ... |
+| ... | ... | Draft | none / <full IDs> | no | <full sheet/artifact IDs> |
 ```
 
 Conditional branch example:
@@ -84,10 +99,13 @@ Affected IDs / Surfaces:
 Gap:
 Why AI cannot safely infer it:
 Smallest owner/domain/contract decision needed:
-Status: Open
+Status: Open / Deferred / Resolved
+Note: optional free-form timing/context note
 ```
 
-Use this instead of inventing a fallback.
+`Status` contains exactly one enum value. Use `Note` for text such as “deferred to DM-02” rather than embedding it in Status.
+
+Use this template instead of inventing a fallback.
 
 ---
 
@@ -103,7 +121,7 @@ Status:
 Purpose:
 Parent / Entry:
 Applicable Roles / Contexts:
-Decision IDs:
+Decision IDs: <full IDs>
 
 Primary Action:
 Exit / Return:
@@ -137,7 +155,7 @@ Name:
 Status:
 Purpose:
 Non-purpose:
-Decision IDs:
+Decision IDs: <full IDs>
 Semantic role:
 Projected state:
 Local presentation state:
@@ -164,7 +182,7 @@ Next State:
 Side Effect:
 Failure:
 Recovery / Rollback:
-Decision IDs:
+Decision IDs: <full IDs>
 ```
 
 Do not merge UI animation timing into authoritative transition semantics unless timing is actually a canonical guard.
@@ -186,7 +204,7 @@ Cancellation:
 Timeout / auto-dismiss:
 Reduced-motion equivalent:
 Failure fallback:
-Decision IDs:
+Decision IDs: <full IDs>
 ```
 
 Never invent numeric timing simply to fill a field. Use `TBD` / Planning Gap when a number is materially required.
@@ -206,17 +224,17 @@ ALLOWED SIDE EFFECTS:
 OUT OF SCOPE:
 MUST NOT CHANGE:
 
-APPLICABLE DECISION IDS:
-FROZEN DEPENDENCIES:
+APPLICABLE DECISION IDS: <full IDs>
+FROZEN DEPENDENCIES: <full IDs>
 
-AUTHORITATIVE SOURCES:
+AUTHORITATIVE SOURCES: <full IDs/paths>
 LOCAL PRESENTATION STATE:
 
 ENTRY STATE:
-ALLOWED TRANSITIONS:
+ALLOWED TRANSITIONS: <full transition IDs where materialized>
 EXIT / RETURN:
 
-REQUIRED SURFACES / COMPONENTS:
+REQUIRED SURFACES / COMPONENTS: <full IDs>
 REQUIRED STATES / ROLE VARIANTS:
 REQUIRED ACCESSIBILITY / RESPONSIVE:
 REQUIRED MOTION / TEMPORAL BEHAVIOR:
@@ -251,7 +269,7 @@ Changed:
 Current status:
 Open material gaps:
 Next planned work:
-Frozen changes: none / <IDs>
+Frozen changes: none / <full IDs>
 ```
 
 Do not expose internal Registry/Matrix maintenance unless it changes a product decision or blocks progress.
@@ -263,21 +281,21 @@ Do not expose internal Registry/Matrix maintenance unless it changes a product d
 When one existing decision changes:
 
 ```text
-Changed Decision:
+Changed Decision: <full ID>
 Old -> New:
 
 Material owner impact:
 - ...
 
 Derived impact:
-- No Change: <IDs>
-- Review Required: <IDs>
-- Contract Update Required: <IDs>
-- Implementation Update Required: <IDs>
-- Regression Required: <IDs>
+- No Change: <full IDs>
+- Review Required: <full IDs>
+- Contract Update Required: <full IDs>
+- Implementation Update Required: <full IDs>
+- Regression Required: <full IDs>
 
 New Planning Gaps:
-- none / <IDs>
+- none / <full Gap IDs>
 ```
 
 Keep the report consequence-focused; AI maintains derived artifacts.
