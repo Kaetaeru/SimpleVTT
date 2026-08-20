@@ -133,9 +133,9 @@ Do not set exact pixel layout, Actor Board height, Initiative Tracker geometry, 
 AI performs this preparation without asking new product questions unless a genuinely blocking ambiguity requires owner input. Newly discovered material choices are registered as Planning Gaps or placed into the appropriate still-unreviewed Decision Map.
 
 ```text
-[ ] R1-R9 complete Master UI Inventory is cross-checked against current implementation, master-flow.md, existing Decision Cards, and generic non-route UI patterns.
+[ ] R1-R9 complete Master UI Inventory is cross-checked against current implementation, derived master-flow.md, existing Decision Cards, and generic non-route UI patterns.
 [ ] M1-M6 required coverage is materialized for every material Registry item; material TBD behavior is represented by a Decision/Contract, N/A with reason, or explicit Planning Gap.
-[ ] All 27 governance sheets have a complete predeclared Decision Map containing Scope, Non-scope, full decision list, dependencies/conditional branches, and Exit Criteria.
+[ ] All 27 governance sheets have a complete predeclared T2 Decision Map containing Scope, Non-scope, Exit Criteria, full decision list, Status, full dependency IDs/conditional branches, and Destination.
 [ ] Missing / Duplication / Coverage audit passes:
     [ ] every Registry item has at least one governing sheet/contract owner;
     [ ] every governance sheet has inventory/decision-map coverage;
