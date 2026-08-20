@@ -55,17 +55,6 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 # Active gaps
 
-## GAP-UX02-ROLE-MODEL
-
-- **Gap Type:** OWNER_DECISION
-- **Severity:** Major
-- **Owner Sheet:** UX-02
-- **Affected:** Role-aware IA, Session, Play, authority matrices
-- **Gap:** The product has not yet reviewed whether Play Role (`DM / Player`) and Connection Role (`Offline / Host / Client`) are separate axes or one combined role model.
-- **Why AI cannot infer it safely:** Current implementation exposes both role-like concepts, but code shape is evidence rather than product truth.
-- **Smallest decision needed:** `UX-02-01`
-- **Status:** Open
-
 ## GAP-UX02-OFFLINE-ROLE
 
 - **Gap Type:** OWNER_DECISION
@@ -73,7 +62,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Owner Sheet:** UX-02
 - **Depends On:** UX-02-01
 - **Gap:** Whether standalone/offline use carries an explicit DM/Player identity is undecided.
-- **Why AI cannot infer it safely:** Standalone Character use is first-class and should not be forced into a role merely because connected Play uses roles.
+- **Why AI cannot infer it safely:** Connected roles are now fixed by `UX-02-01`, but Standalone/Offline remains a distinct product context whose identity model has not been selected.
 - **Smallest decision needed:** `UX-02-02`
 - **Status:** Open
 
@@ -120,7 +109,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Why AI cannot infer it safely:** This determines auditability, density, and disclosure affordances.
 - **Smallest decision needed:** Ask only when the complete DM-02 Decision Map is active.
 - **Status:** Deferred
-- **Note:** Historical pre-ledger question formerly labeled UX-01-30; non-canonical origin. Deferred to DM-02 sequential review after the Global Planning Gate passes.
+- **Note:** Historical pre-ledger question formerly labeled UX-01-30; non-canonical origin. Deferred to DM-02 sequential review.
 
 ## GAP-ACTOR-CONTEXT-MENU-CONTENTS
 
@@ -182,23 +171,31 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 # Resolved gaps
 
+## GAP-UX02-ROLE-MODEL
+
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Major
+- **Owner Sheet:** UX-02
+- **Affected:** Connected role-aware IA, Session, Play, authority matrices
+- **Resolution:** `UX-02-01` selected a fixed connected mapping: Host is always DM and Client is always Player. Connected Host/Player and Client/DM combinations are not supported role states. Offline/Standalone identity remains separately unresolved in `UX-02-02`.
+- **Resolved By:** UX-02-01
+- **Status:** Resolved
+
 ## GAP-R1-R9-INVENTORY
 
 - **Gap Type:** COVERAGE
 - **Severity:** Major
 - **Owner Sheet:** docs/design/ui-ux-planning-framework.md
 - **Affected:** Whole product
-- **Resolution:** `registry.md` now materializes the R1-R9 seed inventory. It remains Draft and still requires implementation/master-flow/decision cross-check before owner review is complete.
+- **Resolution:** `registry.md` materializes and cross-checks the R1-R9 inventory for the current active runtime/planning snapshot.
 - **Resolved By:** docs/design/ui-ux/registry.md
 - **Status:** Resolved
-- **Note:** Infrastructure is materialized; coverage review continues as normal Global Planning Gate work.
 
 ## GAP-M1-M6-COVERAGE
 
 - **Gap Type:** COVERAGE
 - **Severity:** Major
 - **Owner Sheet:** docs/design/ui-ux-planning-framework.md
-- **Resolution:** `matrices.md` now materializes M1-M6 schemas and seed coverage rows. Individual `TBD` cells may still create specific planning gaps as review proceeds.
+- **Resolution:** `matrices.md` materializes M1-M6 schemas and material coverage. Individual `TBD` cells remain owned by declared Decision Map items or explicit gaps.
 - **Resolved By:** docs/design/ui-ux/matrices.md
 - **Status:** Resolved
-- **Note:** Matrix infrastructure is materialized; expansion continues as derived maintenance.
