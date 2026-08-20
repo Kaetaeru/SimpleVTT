@@ -29,15 +29,15 @@ If the planning structure makes either goal harder, simplify before adding more 
 | Product UI decisions | Partially Reviewed/Selected; not globally Frozen |
 | `UX-01` | 7 decisions `Reviewed`; none Frozen |
 | Migrated prior decisions | Preserved in destination sheets; `Reviewed`; none Frozen |
-| `UX-02` | **In Review**; `UX-02-01` Selected: Connected Host = DM, Connected Client = Player; next `UX-02-02` |
+| `UX-02` | **In Review**; `UX-02-01` Selected: Connected Host = DM, Connected Client = Player; `UX-02-02` Selected: Offline/Standalone has no DM/Player role; next `UX-02-03` |
 | `UX-03` through `CONTENT-02` | T2-complete maps; Not Started except Reviewed migrated seeds |
 | 27-sheet Review Plan | **All 27 T2 Decision Maps complete** |
 | Master User Flow | Draft **derived owner view**; not a canonical decision store |
 | R1-R9 inventory | **Route D active-runtime/planning cross-check PASS** for current snapshot |
-| M1-M6 matrices | **Material coverage PASS**; connected role mapping synchronized; remaining role details owned by later UX-02 questions/gaps |
+| M1-M6 matrices | **Material coverage PASS**; connected role mapping and role-free Offline context synchronized; remaining role/control details owned by later UX-02 questions/gaps |
 | Missing / Duplication / Coverage audit | **PASS** |
 | Global Planning Gate | **PASS** |
-| Planning Gaps | `GAP-UX02-ROLE-MODEL` Resolved; Offline role and downstream behavior gaps remain explicit |
+| Planning Gaps | `GAP-UX02-ROLE-MODEL` and `GAP-UX02-OFFLINE-ROLE` Resolved; downstream control/authority gaps remain explicit |
 | Templates | Schema v2 enum/reference rules + canonical Preflight reference aligned |
 | Implementation | **Not authorized** by Gate passage or planning status |
 
@@ -51,16 +51,17 @@ Selected:
   - Host is always DM.
   - Client is always Player.
   - Host/Player and Client/DM are not supported connected-role combinations.
-  - Offline/Standalone identity is intentionally left to UX-02-02.
+- UX-02-02 Offline/Standalone role identity
+  - Offline/Standalone has no DM/Player role.
+  - DM/Player are connected-session concepts only.
+  - Local surfaces may expose local capabilities without inventing a hidden role.
 
-Resolved gap:
+Resolved gaps:
 - GAP-UX02-ROLE-MODEL
-
-Still open now:
-- GAP-UX02-OFFLINE-ROLE -> UX-02-02
+- GAP-UX02-OFFLINE-ROLE
 ```
 
-This is a **Selected** product decision, not Frozen implementation reliance.
+These are **Selected** product decisions, not Frozen implementation reliance.
 
 ## Global Planning Gate — PASS
 
@@ -78,7 +79,6 @@ Future code/planning changes require bounded delta maintenance; they do not reop
 
 ## Open material gaps
 
-- `GAP-UX02-OFFLINE-ROLE`
 - `GAP-JOIN-NO-CHARACTER`
 - `GAP-MAIN-HAND-CANONICAL-RELATION`
 - `GAP-DM-ROLL-VISIBILITY-PERSISTENCE`
@@ -94,9 +94,9 @@ Future code/planning changes require bounded delta maintenance; they do not reop
 ```text
 Route A — Resume Planning
 Current sheet: UX-02 — User & Role Model
-Current Decision ID: UX-02-02
-Question: Does Offline/Standalone have a DM/Player identity?
-Next predeclared ID after resolution: UX-02-03
+Current Decision ID: UX-02-03
+Question: How does Character ownership relate to actual Actor control?
+Next predeclared ID after resolution: UX-02-04
 ```
 
 Do not skip ahead or append spontaneous questions. Newly discovered material choices first update the appropriate declared map or Planning Gap.
@@ -114,7 +114,7 @@ Do not skip ahead or append spontaneous questions. Newly discovered material cho
 | `구현 준비됐어?` | Check Frozen dependencies, gaps, Contract Readiness, spec tier, contracts, Work Order, and authority-domain compatibility. |
 | `되돌려` | Restore/supersede affected decision with traceability, then refresh derived views. |
 | `전체 플로우 보여줘` | Show `master-flow.md` as derived owner view; do not treat it as independent authority. |
-| `다음에 뭘 정하지?` | Use `review-plan.md`; current answer is `UX-02-02`. |
+| `다음에 뭘 정하지?` | Use `review-plan.md`; current answer is `UX-02-03`. |
 
 ## Owner-facing files
 
