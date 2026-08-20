@@ -1,7 +1,8 @@
 # SimpleVTT UI/UX Planning Dashboard
 
-This is the **default starting point for the owner and for a new AI planning session**.
+This is the **default starting point for the owner**.
 
+For AI agents, the mandatory document router is [`AI-READING-GUIDE.md`](AI-READING-GUIDE.md).
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 
 ## Primary goals
@@ -16,6 +17,7 @@ If the planning structure makes either goal harder, simplify it before adding mo
 | Item | Current state |
 | --- | --- |
 | Framework | `Reviewed / Selected` as planning method |
+| AI Reading Guide | Canonical task router and mandatory reading-order guide active |
 | Product UI decisions | Partially reviewed; not globally Frozen |
 | `UX-01` | 7 decisions Reviewed, not Frozen |
 | Migrated prior decisions | Preserved in Decision Ledger with destination sheets; not Frozen |
@@ -74,31 +76,29 @@ The owner normally needs only these:
 
 Supporting files maintained mainly by AI:
 
+- [`AI-READING-GUIDE.md`](AI-READING-GUIDE.md) — mandatory task router and reading order for AI.
 - [`registry.md`](registry.md) — R1-R9 structured UI inventory.
 - [`matrices.md`](matrices.md) — M1-M6 cross-cutting coverage.
 - [`templates.md`](templates.md) — copy-safe planning / implementation templates.
 
 Detailed Surface, Component, Motion, and Work Order files are added only when the selected specification tier requires them.
 
-## New AI bootstrap — bounded reading order
+## New AI bootstrap
 
-A new AI continuing UI/UX planning MUST read in this order:
+AI agents MUST start with [`AI-READING-GUIDE.md`](AI-READING-GUIDE.md) and follow the route for the actual task.
 
-```text
-1. docs/design/ui-ux-planning-framework.md
-2. docs/design/ui-ux/README.md
-3. docs/design/ui-ux/review-plan.md
-4. docs/design/ui-ux/decisions.md
-5. docs/design/ui-ux/master-flow.md
-6. docs/design/ui-ux/planning-gaps.md
-7. docs/design/ui-ux/registry.md only for inventory/coverage work
-8. docs/design/ui-ux/matrices.md only for cross-cutting/coverage work
-9. only then read the current sheet's referenced canonical/domain/code evidence
-```
+The guide intentionally uses different bounded reading orders for:
 
-Do **not** scan all implementation files or all design documents before knowing the current task.
+- resume planning;
+- show status;
+- change a decision;
+- whole-product inventory;
+- prepare implementation;
+- implement;
+- verify / QA;
+- resolve document conflicts/history.
 
-For implementation, use the stricter scoped Work Order reading protocol in the framework.
+Do **not** use one giant reading list for every task. Do **not** scan all implementation files or all design documents before the task router says they are needed.
 
 ## AI maintenance boundaries
 
