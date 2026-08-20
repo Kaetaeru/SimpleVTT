@@ -58,7 +58,7 @@ Classify the request into one primary route before broad reading.
 
 | Route | Task |
 | --- | --- |
-| `A — Resume Planning` | continue sequential owner UX review / ask next declared decision |
+| `A — Resume Planning` | continue owner UX review from the current complete Decision Map; default to a compact current-sheet question batch |
 | `B — Show Status` | report current planning/gate/gaps/next work |
 | `C — Change a Decision` | alter or reverse a made UX choice, including a material change expressed through the Master Flow view |
 | `D — Explore Whole Product` | inventory/cross-check all UI, flows, matrices, Decision Maps, coverage |
@@ -75,7 +75,7 @@ For mixed requests, resolve authority first. Example: change + implement = `C ->
 
 **First run Preflight.**
 
-If `Global Planning Gate = BLOCKED`, Route A MUST NOT ask any individual governance question, including `UX-02-01`. Switch to Route D preparation until the gate passes.
+If `Global Planning Gate = BLOCKED`, Route A MUST NOT ask governance questions. Switch to Route D preparation until the gate passes.
 
 Only after the Global Planning Gate passes, read:
 
@@ -89,16 +89,27 @@ Only after the Global Planning Gate passes, read:
 7. domain/code evidence only when concrete grounding is required
 ```
 
-Before asking one decision, confirm:
+Before presenting the current batch, confirm:
 
 - current sheet;
 - complete T2 Decision Map exists;
-- next ID is predeclared;
+- every presented ID is predeclared and still unresolved;
 - dependencies are exact full IDs and known;
-- migrated prior decisions do not already answer it;
-- no blocking gap routes it elsewhere.
+- migrated prior decisions do not already answer the item;
+- no blocking gap routes an item elsewhere.
 
-Ask exactly one predeclared decision. Store unanswered questions only in `review-plan.md`, never `decisions.md`.
+Default interaction:
+
+1. present the remaining predeclared questions for the current sheet as one compact batch with concise choices where useful;
+2. accept shorthand answers such as `03 A / 04 C / 05 A`;
+3. reconcile answers in dependency order;
+4. preserve explicit owner choices;
+5. resolve only logically implied conditional branches;
+6. if two explicit answers truly cannot coexist, surface that contradiction instead of silently replacing one;
+7. store unanswered questions only in `review-plan.md`, never `decisions.md`;
+8. when the sheet is fully resolved, mark it Reviewed and move to the next declared sheet.
+
+The owner may explicitly request one-at-a-time review instead.
 
 ---
 
@@ -146,7 +157,7 @@ Never change product intent by editing only Master Flow, Registry, Matrix, Dashb
 
 # 6. Route D — Explore Whole Product / Global Gate preparation
 
-This is the current default planning route while the Global Planning Gate is blocked.
+Use Route D when the Global Planning Gate is blocked or when an explicit whole-product/delta inventory audit is requested.
 
 Read in layers:
 
@@ -168,7 +179,7 @@ Phase 3 — evidence cross-check
 10. historical notes only when needed
 ```
 
-Route D must complete the Global Planning Gate defined in `review-plan.md`:
+Route D completes or revalidates the Global Planning Gate defined in `review-plan.md`:
 
 ```text
 R1-R9 complete cross-check
@@ -346,11 +357,11 @@ The owner may say naturally:
 
 > "그 전투 타겟팅 결정 바꾸자."
 
-or:
+or answer a sheet compactly:
 
-> "이 플로우에서 Join 앞에 한 단계 넣자."
+> `03 A / 04 C / 05 A / 06 A`
 
-AI locates the canonical decision/map/gap, reads the minimum dependency set, checks impact, updates derived views, and surfaces only material consequences.
+AI locates the canonical decision/map/gap, reads the minimum dependency set, reconciles the batch without changing explicit choices, updates derived views, and surfaces only material consequences.
 
 ---
 
