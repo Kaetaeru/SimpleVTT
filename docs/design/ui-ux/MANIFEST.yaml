@@ -21,6 +21,16 @@ status_enums:
     - Reviewed
     - Frozen
     - Superseded
+  planning_maturity:
+    - Draft
+    - Selected
+    - Reviewed
+    - Frozen
+    - Superseded
+  review_status:
+    - Not Started
+    - In Review
+    - Reviewed
   contract_readiness:
     - None
     - Partial
@@ -124,6 +134,9 @@ sources:
     contains_normative_decision_bodies: false
     review_order_change_requires_owner_approval: true
     global_planning_gate_owner: true
+    review_status_values_must_match_enum_exactly: true
+    structured_status_fields:
+      - Current sequence.Review Status
     structured_reference_fields:
       - Decision Map.Depends On
       - Decision Map.Destination
@@ -189,8 +202,12 @@ sources:
       - Owner
       - Note
     status_axes:
-      - planning_maturity
-      - contract_readiness
+      planning:
+        field: Planning
+        enum: planning_maturity
+      contract:
+        field: Contract
+        enum: contract_readiness
 
   matrices:
     path: docs/design/ui-ux/matrices.md
@@ -212,6 +229,8 @@ sources:
       - M5.Refs / Gap
       - M6.Surface
       - M6 exact contract/test ID cells
+    human_readable_fields_not_parsed_as_reference_lists:
+      - M6.Notes
 
   templates:
     path: docs/design/ui-ux/templates.md
@@ -253,6 +272,7 @@ maintenance_rules:
   - one_normative_fact_one_canonical_home
   - undecided_questions_live_in_review_plan_not_decision_ledger
   - decision_bodies_live_in_decision_ledger
+  - selected_reviewed_frozen_decisions_are_planning_truth_but_only_frozen_is_stable_for_implementation
   - master_flow_is_derived_owner_view_not_second_decision_store
   - registry_and_matrices_reference_canonical_sources_instead_of_copying_them
   - dashboard_is_summary_and_must_not_override_canonical_sources
