@@ -2,7 +2,7 @@
 
 Status: active review-order control
 
-This file controls **which governance sheet is being reviewed, which Decision Maps are declared, and which question may be asked next**.
+This file controls **which governance sheet is being reviewed, which Decision Maps are declared, and which question set may be asked next**.
 
 Dashboard: [`README.md`](README.md)
 Decisions: [`decisions.md`](decisions.md)
@@ -18,6 +18,7 @@ Templates: [`templates.md`](templates.md)
 - Reviewed seed decisions are canonical in their owning map and referenced as dependencies elsewhere; do not duplicate the same normative question body across maps.
 - Existing migrated decisions may seed later maps but do not authorize inventing the rest.
 - New discoveries go to a declared Draft map item or Planning Gap before becoming owner questions.
+- The owner MAY answer multiple predeclared questions from the current complete sheet in one batch. AI MUST reconcile the batch in dependency order, preserve explicit choices, resolve only logically implied conditional branches, and surface any true contradiction instead of silently choosing a different answer.
 - AI MAY propose review-order changes; owner approval is required to change the declared order.
 - All structured references use complete stable IDs.
 
@@ -26,8 +27,8 @@ Templates: [`templates.md`](templates.md)
 | Order | Sheet | Purpose | Map status | Review Status | Notes |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | `UX-01` Product Principles | product posture and top-level experience principles | **Complete** | **Reviewed** | 7 Reviewed Decision Cards; none Frozen |
-| 2 | `UX-02` User & Role Model | roles, ownership/control, information entitlement | **Complete** | **In Review** | `UX-02-01`, `UX-02-02` Selected; next `UX-02-03` |
-| 3 | `UX-03` Information Hierarchy | global/contextual information priority | **Complete** | Not Started | follows UX-02 dependencies |
+| 2 | `UX-02` User & Role Model | roles, ownership/control, information entitlement | **Complete** | **Reviewed** | all UX-02 decisions Reviewed; none Frozen |
+| 3 | `UX-03` Information Hierarchy | global/contextual information priority | **Complete** | **In Review** | current sheet; batch review may cover `UX-03-01` through `UX-03-08` |
 | 4 | `NAV-01` Navigation | destinations, return, hierarchy | **Complete** | Not Started | Reviewed direct Session-entry seed retained |
 | 5 | `UI-01` Layout & Grid | global layout primitives | **Complete** | Not Started | Dual Anchor / Actor Board dependencies declared |
 | 6 | `INT-01` Interaction | pointer/keyboard/context interaction | **Complete** | Not Started | Reviewed Actor interaction seed retained |
@@ -85,16 +86,16 @@ Templates: [`templates.md`](templates.md)
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
-| `UX-02-01` | Separate Play Role and Connection Role, or one role axis? | Selected | none | no | `UX-02`, `SES-02` |
-| `UX-02-02` | Does Offline/Standalone have a DM/Player identity? | Selected | `UX-02-01` | no | `UX-02` |
-| `UX-02-03` | How does Character ownership relate to actual Actor control? | Draft | `UX-02-01` | no | `UX-02`, `SES-01`, `SES-02` |
-| `UX-02-04` | How many Actors may a Player control? | Draft | `UX-02-03` | no | `UX-02`, `SES-01` |
-| `UX-02-05` | What is the DM Actor-control authority model? | Draft | `UX-02-03` | no | `UX-02`, `DM-01` |
-| `UX-02-06` | Allow live DM <-> Player role switching? | Draft | `UX-02-01` | no | `UX-02`, `SES-02` |
-| `UX-02-07` | What is the allowed limit of role-specific UI structural divergence? | Draft | `UX-02-01` | no | `UX-02`, `NAV-01` |
-| `UX-02-08` | What is the default principle for information a role is not authorized to know? | Draft | `UX-02-03` | no | `UX-02`, `SES-02` |
-| `UX-02-09` | Include Spectator / Co-DM / Observer in v1? | Draft | `UX-02-01` | no | `UX-02` |
-| `UX-02-09A` | Define extra-role permission boundaries. | Draft | `UX-02-09` | yes; only if extra roles included | `UX-02`, `SES-02` |
+| `UX-02-01` | Separate Play Role and Connection Role, or one role axis? | Reviewed | none | no | `UX-02`, `SES-02` |
+| `UX-02-02` | Does Offline/Standalone have a DM/Player identity? | Reviewed | `UX-02-01` | no | `UX-02` |
+| `UX-02-03` | How does Character ownership relate to actual Actor control? | Reviewed | `UX-02-01` | no | `UX-02`, `SES-01`, `SES-02` |
+| `UX-02-04` | How many Actors may a Player control? | Reviewed | `UX-02-03` | no | `UX-02`, `SES-01` |
+| `UX-02-05` | What is the DM Actor-control authority model? | Reviewed | `UX-02-03` | no | `UX-02`, `DM-01` |
+| `UX-02-06` | Allow live DM <-> Player role switching? | Reviewed | `UX-02-01` | no | `UX-02`, `SES-02` |
+| `UX-02-07` | What is the allowed limit of role-specific UI structural divergence? | Reviewed | `UX-02-01` | no | `UX-02`, `NAV-01` |
+| `UX-02-08` | What is the default principle for information a role is not authorized to know? | Reviewed | `UX-02-03` | no | `UX-02`, `SES-02` |
+| `UX-02-09` | Include Spectator / Co-DM / Observer in v1? | Reviewed | `UX-02-01` | no | `UX-02` |
+| `UX-02-09A` | Define extra-role permission boundaries. | Reviewed | `UX-02-09` | yes; condition false in v1 because extra roles are excluded | `UX-02`, `SES-02` |
 
 ---
 
@@ -604,7 +605,7 @@ Templates: [`templates.md`](templates.md)
 | `SES-02-07` | How are incompatible versions detected and presented before unsafe Play? | Draft | `STATE-02-05` | no | `SES-02`, `R6-INCOMPATIBLE` |
 | `SES-02-08` | How are unauthorized commands rejected without leaking private state? | Draft | `UX-02-08`, `STATE-02-06` | no | `SES-02`, `R6-PERMISSION` |
 | `SES-02-09` | What participant connection/ready/identity information is role-visible/delivered? | Draft | `UX-02-07`, `UX-02-08` | no | `SES-02`, `R4-PARTICIPANTS` |
-| `SES-02-10` | If live role switching is allowed, what reconciliation occurs at switch time? | Draft | `UX-02-06` | yes; only if allowed | `SES-02`, `M1`, `M3` |
+| `SES-02-10` | If live role switching is allowed, what reconciliation occurs at switch time? | Draft | `UX-02-06` | yes; condition false under UX-02-06; no live role switching | `SES-02`, `M1`, `M3` |
 
 ---
 
@@ -693,8 +694,8 @@ Route D preparation and audit are complete for the current planning/runtime snap
 [x] Owner whole-product coverage checkpoint is prepared in the Dashboard and delivered with the gate-close update.
 ```
 
-**Current sequential review: `UX-02`. Next decision: `UX-02-03`.**
+**Current sequential review: `UX-03`. Current batch: `UX-03-01` through `UX-03-08`.**
 
-Passing this gate does not Freeze any product decision and does not authorize implementation. It only means the planning corpus is sufficiently covered and internally routed to continue one-at-a-time owner review.
+Passing this gate does not Freeze any product decision and does not authorize implementation. It only means the planning corpus is sufficiently covered and internally routed to continue owner review.
 
 Do not append spontaneous questions. New material discoveries update the appropriate complete Decision Map or Planning Gap before they can become owner questions.
