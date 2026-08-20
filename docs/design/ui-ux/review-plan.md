@@ -7,6 +7,7 @@ This file controls **which governance sheet is being reviewed, which Decision Ma
 Dashboard: [`README.md`](README.md)
 Decisions: [`decisions.md`](decisions.md)
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
+Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 ## Review-order rule
 
@@ -14,14 +15,16 @@ Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 - Do not skip an unfinished earlier dependency merely because a later UI area looks interesting.
 - Existing migrated decisions may seed a later Decision Map, but they do not authorize inventing the rest of that map mid-review.
 - New discoveries go to Planning Gaps or a downstream sheet before becoming owner questions.
+- AI MAY propose a review-order change when dependency analysis shows a better order.
+- AI MUST NOT change the declared review order without owner approval. Record the approved reason when the order changes.
 
 ## Current sequence
 
 | Order | Sheet | Purpose | Map status | Review status | Notes |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | `UX-01` Product Principles | top-level product experience principles | Complete | **Reviewed, not Frozen** | 7 decisions; no new UX-01 questions |
-| 2 | `UX-02` User & Role Model | users, roles, ownership/control, information entitlement | **Complete** | Not started individually | Next review sheet after whole-product inventory pass |
-| 3 | `UX-03` Information Hierarchy | global/contextual information priority and duplication | **Declared baseline** | Not started | 8 known questions below |
+| 2 | `UX-02` User & Role Model | users, roles, ownership/control, information entitlement | **Complete** | Not started individually | First individual review sheet only after the Global Planning Gate passes |
+| 3 | `UX-03` Information Hierarchy | global/contextual information priority and duplication | **Declared baseline** | Not started | 8 known questions below; map still requires final full-map audit |
 | 4 | `NAV-01` Navigation | product destinations, contextual return, hierarchy | Not materialized | Not started | R1/master-flow seed input |
 | 5 | `UI-01` Layout & Grid | global layout primitives | Not materialized | Not started | depends on IA/play topology |
 | 6 | `INT-01` Interaction | click/right-click/selection/target/context interaction | Not materialized | Seed decisions exist | migrated Actor Card decisions |
@@ -46,8 +49,6 @@ Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 | 25 | `DM-01` DM Controls | persistent DM controls and management surfaces | Not materialized | Seed decision exists | visibility toggle |
 | 26 | `DM-02` Adjudication & Undo | disclosure, activity, correction, undo | Not materialized | Seed decision + deferred question | old UX-01-30 remains unanswered |
 | 27 | `CONTENT-02` Rules & Add-on UX | Rules browser, import, validation, add-on management | Not materialized | Not started | R1/R2/R5/R6 seeds exist |
-
-The exact order after foundational sheets may be adjusted only if dependency analysis shows a better order; record the reason rather than silently jumping around.
 
 ---
 
@@ -99,18 +100,24 @@ UX-03 does not set exact pixel layout, Actor Board height, Initiative Tracker ge
 
 ---
 
-# Next preparation gate before UX-02 resumes
+# Global Planning Gate — required before individual review resumes
 
-AI should complete this checklist without asking new product questions unless a blocking ambiguity truly requires owner input:
+**No individual governance-sheet question, including `UX-02-01`, may resume until every item below is complete.**
+
+AI performs this preparation without asking new product questions unless a genuinely blocking ambiguity requires owner input. Newly discovered material choices are registered as Planning Gaps or placed into the appropriate still-unreviewed Decision Map.
 
 ```text
-[ ] Cross-check current implementation routes/surfaces against R1-R9.
-[ ] Cross-check every reviewed Decision Card against registry rows.
-[ ] Cross-check master-flow branches against R2/R3/R6.
-[ ] Add missing generic overlay/feedback/system-state artifacts.
-[ ] Identify matrix rows needed for authority/state/persistence/accessibility/responsive/coverage.
-[ ] Put every material unresolved behavior into planning-gaps.md.
-[ ] Give owner one concise whole-product coverage checkpoint.
+[ ] R1-R9 complete Master UI Inventory is cross-checked against current implementation, master-flow.md, existing Decision Cards, and generic non-route UI patterns.
+[ ] M1-M6 required coverage is materialized for every material Registry item; material TBD behavior is represented by a Decision/Contract, N/A with reason, or explicit Planning Gap.
+[ ] All 27 governance sheets have a complete predeclared Decision Map containing Scope, Non-scope, full decision list, dependencies/conditional branches, and Exit Criteria.
+[ ] Missing / Duplication / Coverage audit passes:
+    [ ] every Registry item has at least one governing sheet/contract owner;
+    [ ] every governance sheet has inventory/decision-map coverage;
+    [ ] no normative requirement has duplicate canonical authority;
+    [ ] all material unknowns are explicit Planning Gaps rather than AI inference.
+[ ] Owner receives one concise whole-product coverage checkpoint showing what is ready, what is still a gap, and confirming no product decisions were silently added.
 ```
 
-After this gate, resume at `UX-02-01`. Do not create `UX-02-10` or a new sheet question without first updating the declared map.
+Only after this Global Planning Gate passes may the sequential owner review resume at `UX-02-01`.
+
+Do not create `UX-02-10` or any spontaneous new sheet question without first updating the declared Decision Map under the framework rules.
