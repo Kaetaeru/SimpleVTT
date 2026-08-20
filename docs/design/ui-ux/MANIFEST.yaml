@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 system: simplevtt-ui-ux-planning
 status: active
 
@@ -26,6 +26,10 @@ status_enums:
     - Partial
     - Ready
     - Blocked
+  gap_status:
+    - Open
+    - Deferred
+    - Resolved
   gap_type:
     - OWNER_DECISION
     - DOMAIN_CONTRACT
@@ -37,6 +41,35 @@ status_enums:
     - Critical
     - Major
     - Normal
+
+reference_rules:
+  full_ids_required: true
+  ranges_forbidden: true
+  omitted_prefixes_forbidden: true
+  prose_substitutes_for_existing_ids_forbidden: true
+  allowed_reference_kinds:
+    - decision_id
+    - review_question_id
+    - planning_gap_id
+    - registry_id
+    - matrix_id
+    - governance_sheet_id
+    - contract_id
+    - repository_path
+  examples_valid:
+    - UX-01-04
+    - ORIGIN-UX-01-26
+    - GAP-DM-ONLY-DELIVERY-PROTOCOL
+    - R3-TARGET-SINGLE
+    - M2-PLY-004
+    - A11Y-01
+    - docs/design/session-runtime.md
+  examples_invalid:
+    - UX-01-04..06
+    - ORIGIN-UX-01-26, 28
+    - destination DM-01
+    - STATE/A11Y review
+  rule: references_must_be_exactly_resolvable_without_contextual_prefix_inference
 
 sources:
   framework:
@@ -97,19 +130,28 @@ sources:
     authority: canonical_for_made_product_decisions
     derived: false
     contains_undecided_question_maps: false
+    status_values_must_match_enum_exactly: true
 
   master_flow:
     path: docs/design/ui-ux/master-flow.md
-    role: owner_friendly_product_flow_and_surface_topology
-    authority: canonical_planning_baseline
-    derived: false
-    current_status: Draft
+    role: owner_friendly_product_flow_and_surface_topology_view
+    authority: derived_view
+    derived: true
+    derived_from:
+      - docs/design/ui-ux/decisions.md
+      - docs/design/ui-ux/review-plan.md
+      - docs/design/ui-ux/planning-gaps.md
+    may_contain_normative_decision_bodies: false
+    owner_may_request_changes_through_view: true
+    ai_must_translate_material_changes_to_canonical_sources_first: true
+    current_view_status: Draft
 
   planning_gaps:
     path: docs/design/ui-ux/planning-gaps.md
     role: unresolved_material_no_invention_queue
     authority: canonical_for_known_gaps
     derived: false
+    status_values_must_match_enum_exactly: true
 
   registry:
     path: docs/design/ui-ux/registry.md
@@ -117,6 +159,7 @@ sources:
     authority: derived_inventory
     derived: true
     normative_behavior_source: docs/design/ui-ux/decisions.md
+    references_must_follow_reference_rules: true
     status_axes:
       - planning_maturity
       - contract_readiness
@@ -127,6 +170,7 @@ sources:
     authority: derived_coverage
     derived: true
     normative_behavior_source: docs/design/ui-ux/decisions.md
+    references_must_follow_reference_rules: true
 
   templates:
     path: docs/design/ui-ux/templates.md
@@ -168,8 +212,11 @@ maintenance_rules:
   - one_normative_fact_one_canonical_home
   - undecided_questions_live_in_review_plan_not_decision_ledger
   - decision_bodies_live_in_decision_ledger
+  - master_flow_is_derived_owner_view_not_second_decision_store
   - registry_and_matrices_reference_decisions_instead_of_copying_them
   - dashboard_is_summary_and_must_not_override_canonical_sources
+  - exact_enum_values_only_in_structured_status_fields
+  - full_stable_references_only_in_reference_fields
   - derived_document_drift_must_be_fixed_before_substantive_work
   - current_code_is_evidence_not_automatic_product_truth
   - missing_material_policy_returns_planning_gap
