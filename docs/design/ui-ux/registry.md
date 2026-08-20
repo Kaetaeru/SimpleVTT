@@ -7,6 +7,7 @@ This file answers **what UI artifacts exist or are planned**. Normative product 
 Dashboard: [`README.md`](README.md)
 Decisions: [`decisions.md`](decisions.md)
 Gaps: [`planning-gaps.md`](planning-gaps.md)
+Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 ## Two-axis status model
 
@@ -43,8 +44,10 @@ A `Reviewed` artifact may still be `Blocked` or `Partial` for implementation.
 | `Planning` | Planning Maturity |
 | `Contract` | Contract Readiness |
 | `Owner` | Governance sheet or contract family |
-| `Refs` | Decision IDs / gaps / canonical contracts |
+| `Refs` | Full Decision/Gap/Registry/Contract IDs or repository paths |
 | `Note` | Short non-normative description only |
+
+`Refs` MUST follow `MANIFEST.yaml` reference rules: full resolvable IDs/paths only; no ranges, omitted prefixes, or prose substitutes.
 
 A row existing here does not approve its final topology, placement, or behavior.
 
@@ -79,10 +82,10 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R2-LEVEL-UP` | Level Up | Draft | None | DND-01 | — | Sheet -> Level Up -> Review -> Sheet |
 | `R2-HOST` | Host Session | Draft | Partial | SES-01 | — | Home/Session -> Host Setup -> Lobby -> Play |
 | `R2-JOIN` | Join Session | Draft | Blocked | SES-01 / UX-02 | GAP-JOIN-NO-CHARACTER | Home/Session -> Join -> Character Select -> Lobby -> Play |
-| `R2-PLAY-ACTION` | Capability -> target -> resolution -> result | Draft | Partial | DND-03 / DND-02 | ORIGIN-UX-01-19..25 | Core play loop |
+| `R2-PLAY-ACTION` | Capability -> target -> resolution -> result | Draft | Partial | DND-03 / DND-02 | ORIGIN-UX-01-19, ORIGIN-UX-01-20, ORIGIN-UX-01-21, ORIGIN-UX-01-22, ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 | Core play loop |
 | `R2-INITIATIVE` | Enter/exit Initiative | Draft | Partial | DND-04 | ORIGIN-UX-01-14, ORIGIN-UX-01-15 | Same Play Workspace |
 | `R2-HANDOUT` | DM handout presentation | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT | Overlay / Upper / Full branches |
-| `R2-DM-DISCLOSE` | DM-only roll later disclosure | Draft | Blocked | SES-02 / DM-02 | ORIGIN-UX-01-26, 28, 29, GAP-DM-ONLY-DELIVERY-PROTOCOL | Needs authority contract |
+| `R2-DM-DISCLOSE` | DM-only roll later disclosure | Draft | Blocked | SES-02 / DM-02 | ORIGIN-UX-01-26, ORIGIN-UX-01-28, ORIGIN-UX-01-29, GAP-DM-ONLY-DELIVERY-PROTOCOL | Needs authority contract |
 | `R2-CONTENT-INSTALL` | Add-on install | Draft | None | CONTENT-02 | — | File -> Preview -> Validate -> Install |
 | `R2-RECONNECT` | Reconnect / recovery | Draft | Partial | SES-02 / STATE-02 | UX-01-03 | Preserve canonical session context |
 | `R2-LEAVE` | Player leave | Draft | None | SES-01 / INT-03 | — | Consequence/confirmation TBD |
@@ -94,19 +97,19 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 
 | ID | Artifact | Planning | Contract | Owner | Refs | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| `R3-PLAY-FREEFORM` | Freeform mode | Draft | Partial | SES-01 | ORIGIN-UX-01-10, 11 | Shared Play Workspace |
-| `R3-PLAY-INITIATIVE` | Initiative mode | Draft | Partial | DND-04 | ORIGIN-UX-01-14, 15 | Adds top tracker |
+| `R3-PLAY-FREEFORM` | Freeform mode | Draft | Partial | SES-01 | ORIGIN-UX-01-10, ORIGIN-UX-01-11 | Shared Play Workspace |
+| `R3-PLAY-INITIATIVE` | Initiative mode | Draft | Partial | DND-04 | ORIGIN-UX-01-14, ORIGIN-UX-01-15 | Adds top tracker |
 | `R3-ACTION-IDLE` | No action selected | Draft | None | DND-03 | — | Baseline Play state |
-| `R3-ACTION-SELECTED` | Capability selected | Draft | Partial | DND-03 | UX-01-04..06 | Awaiting target/resolve path |
-| `R3-TARGET-SINGLE` | Single-target targeting | Draft | Partial | DND-03 | ORIGIN-UX-01-19, 20 | Valid click immediate execute |
+| `R3-ACTION-SELECTED` | Capability selected | Draft | Partial | DND-03 | UX-01-04, UX-01-05, UX-01-06 | Awaiting target/resolve path |
+| `R3-TARGET-SINGLE` | Single-target targeting | Draft | Partial | DND-03 | ORIGIN-UX-01-19, ORIGIN-UX-01-20 | Valid click immediate execute |
 | `R3-TARGET-MULTI` | Multi-target targeting | Draft | Partial | DND-03 | ORIGIN-UX-01-20 | Explicit Execute |
 | `R3-RESOLVING` | Resolution running | Draft | Blocked | DND-03 / DND-02 | ORIGIN-UX-01-21, GAP-RESOLUTION-SAFE-INTERACTIONS | Selective locking boundary incomplete |
 | `R3-INTERRUPT` | Reaction / interrupt pending | Draft | Blocked | DND-03 / DND-04 | GAP-RESOLUTION-SAFE-INTERACTIONS | Exact interaction boundary TBD |
-| `R3-DICE` | Physical dice presentation | Draft | Partial | DND-02 | ORIGIN-UX-01-22A..25 | Presentation-only authority |
+| `R3-DICE` | Physical dice presentation | Draft | Partial | DND-02 | ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 | Presentation-only authority |
 | `R3-RESULT` | Result presentation | Draft | Partial | DND-02 | ORIGIN-UX-01-22 | Return to current Play context |
-| `R3-HANDOUT-OVERLAY` | Handout Overlay | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, 13, GAP-HANDOUT-NETWORK-CONTRACT | Local dismiss allowed |
-| `R3-HANDOUT-UPPER` | Handout Upper Scene | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, 13, GAP-HANDOUT-NETWORK-CONTRACT | Shared replacement state |
-| `R3-HANDOUT-FULL` | Handout Full Scene | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, 13, GAP-HANDOUT-NETWORK-CONTRACT | Command Center remains |
+| `R3-HANDOUT-OVERLAY` | Handout Overlay | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT | Local dismiss allowed |
+| `R3-HANDOUT-UPPER` | Handout Upper Scene | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT | Shared replacement state |
+| `R3-HANDOUT-FULL` | Handout Full Scene | Draft | Blocked | SES-01 | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT | Command Center remains |
 | `R3-BUILDER-GUIDED` | Guided Character Builder | Draft | None | DND-01 | — | Builder mode |
 | `R3-BUILDER-QUICK` | Quick Character Builder | Draft | None | DND-01 | — | Builder mode |
 | `R3-BUILDER-IMPORT` | Character Import | Draft | None | DND-01 | — | Builder mode |
@@ -125,7 +128,7 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R4-POPOVER` | Popover pattern | Draft | None | INT-02 | — | Anchored contextual UI |
 | `R4-ACTOR-CONTEXT` | Actor Context Menu | Reviewed | Blocked | INT-01 | ORIGIN-UX-01-16, GAP-ACTOR-CONTEXT-MENU-CONTENTS | Pattern selected; commands TBD |
 | `R4-TOOLTIP` | Tooltip / unavailable reason | Draft | Partial | INT-01 / CMP-01 | ORIGIN-UX-01-19 | Must not be sole carrier of essential info |
-| `R4-HANDOUT-LIGHTBOX` | Handout image lightbox | Draft | Partial | SES-01 / INT-02 | ORIGIN-UX-01-12, 13 | Zoom/pan behavior downstream |
+| `R4-HANDOUT-LIGHTBOX` | Handout image lightbox | Draft | Partial | SES-01 / INT-02 | ORIGIN-UX-01-12, ORIGIN-UX-01-13 | Zoom/pan behavior downstream |
 | `R4-REACTION-PROMPT` | Reaction/Interrupt prompt | Draft | Blocked | DND-04 | R3-INTERRUPT, GAP-RESOLUTION-SAFE-INTERACTIONS | Response surface |
 | `R4-ADJUDICATION` | DM adjudication surface | Draft | None | DM-02 | — | Exact topology TBD |
 | `R4-ACTIVITY-DETAIL` | Activity/resolution detail | Draft | Partial | DM-02 / SES-01 | ORIGIN-UX-01-22 | Durable detail path |
@@ -163,11 +166,11 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R6-RECOVERABLE-ERROR` | Recoverable error | Draft | None | STATE-02 | — | Retry/recovery path |
 | `R6-BLOCKING-ERROR` | Blocking error | Draft | None | STATE-02 | — | Explicit blocker |
 | `R6-SAVE-FAILURE` | Save failure | Draft | None | STATE-02 | — | Data preservation/retry required |
-| `R6-UNSUPPORTED` | Unsupported content/mechanic | Draft | Partial | STATE-02 | canonical no-approximation principle | No approximation |
+| `R6-UNSUPPORTED` | Unsupported content/mechanic | Draft | Partial | STATE-02 | docs/design/README.md | No approximation |
 | `R6-DISCONNECTED` | Disconnected | Draft | None | STATE-02 / SES-02 | — | Connection state |
 | `R6-RECONNECTING` | Reconnecting | Draft | Partial | STATE-02 / SES-02 | UX-01-03 | Preserve canonical context |
 | `R6-INCOMPATIBLE` | Incompatible session/content | Draft | None | STATE-02 | — | Blocking/recovery TBD |
-| `R6-PERMISSION` | Permission/authority denied | Draft | Partial | STATE-02 / SES-02 | ORIGIN-UX-01-26, 29 | Do not leak unauthorized data |
+| `R6-PERMISSION` | Permission/authority denied | Draft | Partial | STATE-02 / SES-02 | ORIGIN-UX-01-26, ORIGIN-UX-01-29 | Do not leak unauthorized data |
 | `R6-STALE` | Stale/reconciliation state | Draft | None | STATE-02 / SES-02 | — | Canonical resync behavior |
 | `R6-REDUCED-MOTION` | Reduced Motion | Draft | Partial | A11Y-01 / R9 | ORIGIN-UX-01-25 | Result-preserving presentation |
 | `R6-NARROW` | Narrow Desktop | Draft | Partial | PLATFORM-01 | UX-01-04, UX-01-07 | Core anchors/capabilities remain reachable |
@@ -186,8 +189,8 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R7-SEARCH` | Search input | Draft | None | CMP-01 | — | Rules/content/library use as applicable |
 | `R7-FILTER` | Filter controls | Draft | None | CMP-01 | — | Result-set narrowing |
 | `R7-CHAR-CARD` | Character Card | Draft | None | DND-01 / CMP-01 | — | Library/select uses |
-| `R7-ACTOR-CARD` | Actor Card | Reviewed | Partial | INT-01 / SES-01 | ORIGIN-UX-01-10, 11, 16, 19 | Core scene interaction surface |
-| `R7-HOTBAR-SLOT` | Capability/Hotbar slot | Reviewed | Partial | DND-03 | UX-01-04..06 | Capability execution/discoverability |
+| `R7-ACTOR-CARD` | Actor Card | Reviewed | Partial | INT-01 / SES-01 | ORIGIN-UX-01-10, ORIGIN-UX-01-11, ORIGIN-UX-01-16, ORIGIN-UX-01-19 | Core scene interaction surface |
+| `R7-HOTBAR-SLOT` | Capability/Hotbar slot | Reviewed | Partial | DND-03 | UX-01-04, UX-01-05, UX-01-06 | Capability execution/discoverability |
 | `R7-ECONOMY` | Action-economy indicator | Reviewed | Partial | DND-03 | ORIGIN-UX-01-08 | Fixed economy grammar |
 | `R7-RESOURCE-RAIL` | Dynamic Resource Rail | Reviewed | Partial | DND-03 | ORIGIN-UX-01-08 | Canonical resource projection |
 | `R7-INITIATIVE-ENTRY` | Initiative tracker entry | Reviewed | Partial | DND-04 | ORIGIN-UX-01-15 | Compact current/order info |
@@ -206,8 +209,8 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 | `R8-DESTRUCTIVE-COPY` | Destructive wording | Draft | None | CONTENT-01 / INT-03 | — | Identify affected object/outcome |
 | `R8-ERROR-COPY` | Error anatomy | Draft | None | CONTENT-01 / STATE-02 | — | What failed / impact / recovery |
 | `R8-EMPTY-COPY` | Empty-state copy | Draft | None | CONTENT-01 / STATE-01 | — | Context + valid next action |
-| `R8-DISABLED-REASON` | Unavailable reason | Draft | Partial | CONTENT-01 / DND-03 | ORIGIN-UX-01-18, 19 | Use canonical reason where available |
-| `R8-VISIBILITY` | Public / DM Only terminology | Reviewed | Blocked | SES-02 / CONTENT-01 | ORIGIN-UX-01-26, 27, GAP-DM-ROLL-VISIBILITY-PERSISTENCE | Default/persistence gap remains |
+| `R8-DISABLED-REASON` | Unavailable reason | Draft | Partial | CONTENT-01 / DND-03 | ORIGIN-UX-01-18, ORIGIN-UX-01-19 | Use canonical reason where available |
+| `R8-VISIBILITY` | Public / DM Only terminology | Reviewed | Blocked | SES-02 / CONTENT-01 | ORIGIN-UX-01-26, ORIGIN-UX-01-27, GAP-DM-ROLL-VISIBILITY-PERSISTENCE | Default/persistence gap remains |
 | `R8-RESULT-TERMS` | Roll/result terminology | Draft | None | CONTENT-01 / DND-02 | — | Canonical outcome vocabulary |
 | `R8-CONNECTION` | Connection-state wording | Draft | None | CONTENT-01 / STATE-02 | — | Connected/reconnecting/disconnected |
 
@@ -217,7 +220,7 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 
 | ID | Artifact | Planning | Contract | Owner | Refs | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| `R9-DICE-THROW` | Physical dice throw/roll/settle | Reviewed | Partial | DND-02 | ORIGIN-UX-01-22A..25 | Authoritative result first; physics presentation only |
+| `R9-DICE-THROW` | Physical dice throw/roll/settle | Reviewed | Partial | DND-02 | ORIGIN-UX-01-22A, ORIGIN-UX-01-23, ORIGIN-UX-01-24, ORIGIN-UX-01-25 | Authoritative result first; physics presentation only |
 | `R9-RESULT-REVEAL` | Result reveal timing | Draft | None | DND-02 | ORIGIN-UX-01-22 | Exact reveal point to review |
 | `R9-INTERRUPT-TIMING` | Reaction prompt timing/timeout | Draft | Blocked | DND-04 | GAP-RESOLUTION-SAFE-INTERACTIONS | Do not invent timeout |
 | `R9-TOAST-LIFETIME` | Toast duration/auto-dismiss | Draft | None | STATE-01 | — | Numeric timing not yet approved |
@@ -231,10 +234,10 @@ Not yet promoted to top-level destinations: Activity, Encounter Manager, Adjudic
 This inventory is not complete until AI cross-checks:
 
 - every route/surface in the current implementation;
-- every item in `master-flow.md`;
-- every reviewed Decision Card in `decisions.md`;
+- every item in the derived `master-flow.md` view;
+- every Reviewed Decision Card in `decisions.md`;
 - generic UI patterns required by INT/STATE/CMP/A11Y/PLATFORM sheets;
-- every open gap in `planning-gaps.md`;
+- every active gap in `planning-gaps.md`;
 - non-route UI such as confirmations, notifications, validation, permission, reconnect, and motion.
 
 New rows may be added without owner approval when they only identify an existing/planned artifact. **Adding a row does not decide its product behavior.** Any new material behavior still requires a Decision Card.
