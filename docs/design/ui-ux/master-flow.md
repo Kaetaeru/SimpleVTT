@@ -2,9 +2,9 @@
 
 Status: **Draft derived owner view — not a canonical decision store**
 
-This file is the owner-friendly product flow map. It summarizes made decisions, declared review structure, and known gaps into one readable topology view.
+This file is the owner-friendly product flow map. It summarizes made decisions, declared review structure, known gaps, and relevant canonical domain/design constraints into one readable topology view.
 
-**Normative product behavior does not live here.** When this file conflicts with `decisions.md`, `review-plan.md`, or `planning-gaps.md`, repair this derived view instead of treating it as a second source of truth.
+**Normative product behavior does not live here.** When this file conflicts with `decisions.md`, `review-plan.md`, `planning-gaps.md`, or an applicable canonical domain/architecture contract, repair this derived view instead of treating it as a second source of truth.
 
 Canonical decisions: [`decisions.md`](decisions.md)
 Undecided review structure: [`review-plan.md`](review-plan.md)
@@ -14,7 +14,7 @@ Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 ## Derived-view rules
 
 - The owner may still discuss/change flow naturally through this view.
-- AI translates any material flow change into the appropriate Decision Card, Decision Map item, or Planning Gap first, then refreshes this file.
+- AI translates any material flow change into the appropriate Decision Card, Decision Map item, Planning Gap, or responsible domain/architecture contract first, then refreshes this file.
 - Do not Freeze this file. Freeze the applicable canonical decisions/contracts that produce it.
 - Detailed state machines belong in M2 when needed.
 - This map shows product flow, not final button placement.
@@ -22,10 +22,11 @@ Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 ## Flow rules currently projected from planning
 
 - Character use and Session use are parallel first-class product paths. (`UX-01-01`)
-- A user may go directly from Home to Host or Join without first visiting Character Library. (current derived topology; subject to NAV/SES review)
+- Home exposes direct first-class Host Session and Join Session entry paths; Character is not a universal prerequisite to Session. (`ORIGIN-FLOW-01`)
+- Player Join includes Character Select as a flow-specific step. (`ORIGIN-FLOW-02`)
 - A live session provides a persistent return-to-Play continuity path from the Product Shell. (`UX-01-03`)
-- Freeform and Initiative are modes of the same Play Workspace, not separate applications. (canonical design/session contracts + current planning)
-- DM contextual tools return to the same Play context unless a later decision explicitly promotes one to a standalone destination.
+- Freeform and Initiative are modes of the same Play Workspace, not separate applications. (`docs/design/README.md`, `docs/design/session-runtime.md`)
+- DM contextual tools are shown as contextual candidates in this Draft view until their topology is reviewed by the appropriate downstream Decision Maps.
 
 ---
 
@@ -57,7 +58,7 @@ HOME
     `--> Return to Play -----> Play Workspace   [when live session exists]
 ```
 
-`Return to Play` is contextual continuity, not a separate product destination in this derived view.
+Direct Host/Join entry is projected from `ORIGIN-FLOW-01`. `Return to Play` is contextual continuity projected from `UX-01-03`, not a separate product destination in this derived view.
 
 ---
 
@@ -104,11 +105,13 @@ Character Sheet
    `--> Session -----------------> Session path
 ```
 
-Character Sheet is a first-class standalone tabletop surface, not merely a setup step for VTT Play. See `UX-01-01`.
+Character Sheet is a first-class standalone tabletop surface, not merely a setup step for VTT Play. See `UX-01-01`. Detailed Character navigation remains subject to `DND-01` / `NAV-01` Decision Maps and `docs/design/character-lifecycle.md`.
 
 ---
 
 # 3. Direct Host path
+
+Projected from `ORIGIN-FLOW-01` at the product-entry level; exact Host Setup/Lobby details remain `SES-01` review scope.
 
 ```text
 HOME / Session entry
@@ -131,11 +134,13 @@ HOME / Session entry
           FREEFORM PLAY
 ```
 
-The Host path is currently modeled independently of the Character path. Any new Character requirement for hosting must be introduced through an explicit product decision before this view changes.
+A new Character requirement for hosting would change `ORIGIN-FLOW-01` or its eventual permanent destination decision and therefore must not be introduced only in this view.
 
 ---
 
 # 4. Direct Join path
+
+Direct Join entry is projected from `ORIGIN-FLOW-01`; Character Select is projected from `ORIGIN-FLOW-02`.
 
 ```text
 HOME / Session entry
@@ -164,7 +169,7 @@ HOME / Session entry
           FREEFORM PLAY
 ```
 
-Character selection inside Join is a task-flow requirement in the current planning view, not proof that Character is globally a prerequisite to entering Session.
+Character selection inside Join is flow-specific and does not make Character a product-wide prerequisite for Session. The no-valid-Character branch is explicitly unresolved by `GAP-JOIN-NO-CHARACTER`.
 
 ---
 
@@ -204,13 +209,13 @@ INITIATIVE PLAY
 FREEFORM PLAY
 ```
 
-The current view preserves Actor Boards and adds a compact top Initiative Tracker according to `ORIGIN-UX-01-14` and `ORIGIN-UX-01-15`.
+The current view preserves Actor Boards and adds a compact top Initiative Tracker according to `ORIGIN-UX-01-14` and `ORIGIN-UX-01-15`. Authoritative Freeform/Initiative semantics remain governed by `docs/design/session-runtime.md`.
 
 ---
 
 # 6. Action / targeting / resolution loop
 
-This is a derived conceptual flow. Exact guards/rollback belong in M2.
+This is a derived conceptual flow. Exact guards/rollback belong in M2 and authoritative action/resolution semantics remain domain/application owned.
 
 ```text
 PLAY.NORMAL
@@ -267,7 +272,7 @@ Projected invariants:
 
 # 7. DM contextual Play flow
 
-Current derived topology:
+Current **Draft candidate topology**:
 
 ```text
                          PLAY
@@ -290,7 +295,7 @@ Current derived topology:
                     same PLAY context
 ```
 
-These are contextual candidates in the current planning view. Existing implementation routes do not automatically make them final top-level destinations.
+This section is a coverage visualization, not an approved topology decision. Existing implementation routes do not automatically make these final top-level or contextual destinations; their placement must be resolved by the applicable `NAV-01`, `SES-01`, `DM-01`, and `DM-02` Decision Maps.
 
 ---
 
@@ -313,6 +318,8 @@ Exact shared session/network projection remains blocked by `GAP-HANDOUT-NETWORK-
 ---
 
 # 9. Content / add-on flow
+
+Draft coverage view; exact CONTENT-02 decisions are not yet reviewed.
 
 ```text
 Content
@@ -343,11 +350,13 @@ recover      Install
              Content
 ```
 
-No invalid/unsupported content behavior may be approximated by UI.
+No invalid/unsupported content behavior may be approximated by UI; that boundary is supported by `docs/design/README.md` and applicable rules/content contracts.
 
 ---
 
 # 10. Rules flow
+
+Draft coverage view; exact CONTENT-02/NAV decisions are not yet reviewed.
 
 ```text
 Rules Browser
@@ -377,11 +386,13 @@ RECONNECTING
        `--> unrecoverable --> explicit recovery / leave flow
 ```
 
-Reconnect presentation must not silently reset canonical turn/combat/session state. See `UX-01-03` plus applicable session/runtime contracts.
+Reconnect must preserve authoritative/session/game state according to `UX-01-03`; exact network/session recovery semantics remain governed by `docs/design/session-runtime.md` and future `SES-02` decisions.
 
 ---
 
 # 12. Exit / session-end concept
+
+Draft coverage view; exact confirmation, consequences, and authority are not yet approved.
 
 ```text
 PLAY / SESSION
@@ -391,7 +402,7 @@ PLAY / SESSION
     `--> Host ends session --> explicit destructive flow -> all participants leave live context
 ```
 
-Exact confirmation wording, consequences, and authority rules remain downstream decisions.
+Exact behavior remains downstream `SES-01`, `SES-02`, and `INT-03` decision scope.
 
 ---
 
