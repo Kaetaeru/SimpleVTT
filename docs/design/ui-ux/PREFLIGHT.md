@@ -2,37 +2,37 @@
 
 Status: canonical start-work consistency gate
 
-Run this preflight before substantive UI/UX planning, implementation preparation, implementation, or QA.
+Run this before substantive UI/UX planning, implementation preparation, implementation, or QA.
 
-The purpose is not bureaucracy. It is to catch document drift, wrong reading order, stale status, and accidental AI invention **before** work begins.
+The goal is to catch document drift, wrong reading order, premature review, stale readiness, and accidental AI invention **before** work begins.
+
+This file is the sole canonical owner of start-work checks. Templates and Work Orders reference this file instead of maintaining duplicate checklists.
 
 ---
 
 # 1. Minimal preflight
 
-An AI must be able to answer all items below before proceeding:
+An AI must be able to answer all applicable items:
 
 ```text
-[ ] Task route A-H identified from AI-READING-GUIDE.md
-[ ] Correct entrypoint documents read for that route
+[ ] Task Route A-H identified from AI-READING-GUIDE.md
+[ ] MANIFEST.yaml checked for document roles / canonical-vs-derived status
+[ ] Correct route-specific entry documents read
 [ ] Current review sheet OR exact Work Order identified
-[ ] Next planning Decision ID agrees with review-plan.md, when planning
-[ ] Referenced Decision IDs exist in decisions.md, when they are supposed to be decided
-[ ] No undecided question body is duplicated into decisions.md
 [ ] Relevant Planning Gaps checked
+[ ] Referenced made Decision IDs actually exist in decisions.md
+[ ] No undecided question body is duplicated into decisions.md
 [ ] Registry Planning Maturity is not being mistaken for Contract Readiness
-[ ] Dashboard / Gap / Registry / Matrix summaries are not visibly stale against their canonical sources
+[ ] Dashboard / Gap / Registry / Matrix summaries are not visibly stale
 [ ] Current code is being used as evidence only
-[ ] No missing authority / product behavior / fallback is being inferred
+[ ] No missing authority / behavior / fallback is being inferred
 ```
 
-If every applicable item passes, continue.
-
-If any material item fails, stop with:
+If a material item fails:
 
 ```text
 PREFLIGHT FAILED
-Task route:
+Task Route:
 Failure:
 Affected files / IDs:
 Required maintenance or planning action:
@@ -42,48 +42,77 @@ Required maintenance or planning action:
 
 # 2. Derived-document drift check
 
-Because `README.md`, `registry.md`, and `matrices.md` are derived or summary artifacts, explicitly check for stale statements.
-
-At minimum compare:
+Compare at minimum:
 
 ```text
-README current-next status
-    <-> review-plan.md
+README gate/current-next status
+    <-> review-plan.md + MANIFEST.yaml
 
-README open-gap summary
-    <-> planning-gaps.md
+README open-gap/status summary
+    <-> planning-gaps.md + decisions.md + master-flow.md + registry.md + matrices.md
 
-registry Planning maturity
+registry Planning Maturity
     <-> decisions.md
 
-registry Contract readiness
+registry Contract Readiness
     <-> open Planning Gaps / required contracts
 
 matrices source IDs
     <-> decisions.md / registry.md / planning-gaps.md
+
+templates enums/check references
+    <-> MANIFEST.yaml / planning-gaps.md / this PREFLIGHT.md
 ```
 
 A stale derived artifact is a maintenance defect, not a new product decision.
 
-AI MAY repair obvious derived drift when the framework allows maintenance without owner approval.
-AI MUST NOT alter canonical product decisions merely to make derived documents agree.
+AI MAY repair obvious derived drift when framework permissions allow it. AI MUST NOT alter canonical product decisions merely to make summaries agree.
 
 ---
 
-# 3. Planning-route preflight
+# 3. Global Planning Gate preflight
 
-For routes `A Resume Planning`, `C Change Decision`, or `D Explore Whole Product`:
+Until the current global planning reset is complete, **no individual governance question may resume, including `UX-02-01`**.
+
+Before Route A may ask an individual question, verify all:
 
 ```text
-[ ] review-plan.md contains the current sheet and declared map
-[ ] already-answered items are not being asked again
-[ ] migrated prior decisions are checked before creating new questions
-[ ] current question belongs to the declared sheet/scope
-[ ] new discoveries are routed to Planning Gaps/downstream map instead of asked ad hoc
-[ ] no product behavior will be decided while merely filling Registry/Matrix coverage
+[ ] R1-R9 complete Master UI Inventory cross-check is complete
+[ ] M1-M6 material coverage is complete for all material Registry items
+[ ] all 27 governance sheets have complete predeclared Decision Maps:
+    [ ] Scope
+    [ ] Non-scope
+    [ ] full decision list
+    [ ] dependencies / conditional branches
+    [ ] Exit Criteria
+[ ] Missing / Duplication / Coverage audit passes:
+    [ ] every Registry item has a governing owner
+    [ ] every governance sheet has inventory / Decision-Map coverage
+    [ ] no normative requirement has duplicate canonical authority
+    [ ] all material unknowns are explicit Planning Gaps
+[ ] owner has received a concise whole-product coverage checkpoint
 ```
 
-For a normal next-question turn, the AI should be able to name exactly:
+If any box fails, Route A MUST NOT ask the next UX question. Continue Route D preparation instead.
+
+Canonical gate detail: `review-plan.md`.
+
+---
+
+# 4. Planning-route preflight
+
+For `A — Resume Planning`, `C — Change Decision`, or `D — Explore Whole Product`:
+
+```text
+[ ] review-plan.md contains the relevant sheet/map state
+[ ] already-answered items are not being asked again
+[ ] migrated prior decisions are checked before creating questions
+[ ] new discoveries are routed to Planning Gaps/downstream maps instead of asked ad hoc
+[ ] no product behavior is decided while merely filling Registry/Matrix/coverage
+[ ] AI has not changed declared review order without owner approval
+```
+
+For Route A after Global Gate passes, AI can name exactly:
 
 ```text
 Current sheet:
@@ -93,46 +122,48 @@ Known related gaps:
 Next predeclared ID:
 ```
 
+For Route D, the goal is coverage preparation, not decision review.
+
 ---
 
-# 4. Decision-change preflight
+# 5. Decision-change preflight
 
 Before changing a decision:
 
 ```text
 [ ] Exact canonical Decision Card located
-[ ] Current status known
+[ ] Current maturity/status known
 [ ] Frozen status checked explicitly
-[ ] Dependencies and Affects references identified
-[ ] Relevant master-flow impact checked
-[ ] Relevant gap(s) checked
-[ ] Domain/architecture contract checked if authority/rules/persistence/network semantics are involved
+[ ] Dependencies / Affects references identified
+[ ] master-flow impact checked when applicable
+[ ] relevant gaps checked
+[ ] domain/architecture contract checked when rules/authority/persistence/network semantics are involved
 ```
 
-If the user changed the idea in plain language, AI is responsible for resolving the affected ID. The owner does not need to provide it.
+The owner may describe the change naturally; AI resolves the ID.
 
 ---
 
-# 5. Implementation-readiness preflight
+# 6. Implementation-readiness preflight
 
-Before creating or approving a Work Order:
+Before creating/approving a Work Order:
 
 ```text
 [ ] Spec Tier selected (S0/S1/S2/S3)
-[ ] Applicable stable/Frozen dependencies identified
-[ ] No material blocking Planning Gap remains
-[ ] Required Surface/Component/Motion contracts exist for the tier
-[ ] S2/S3 state transitions are explicit
+[ ] applicable stable/Frozen dependencies identified
+[ ] no material blocking Planning Gap remains
+[ ] required Surface/Component/Motion contracts exist for the tier
+[ ] S2/S3 transitions are explicit
 [ ] S3 authority / visibility / persistence source-of-truth is explicit
-[ ] Required accessibility states are explicit
-[ ] Required responsive states are explicit
-[ ] Required temporal/reduced-motion behavior is explicit when applicable
-[ ] Legacy status is known for touched paths
-[ ] Contract Readiness is Ready for the implementation scope, or the Work Order explicitly contains the remaining approved contract detail
-[ ] Implementation is explicitly authorized; planning status alone is not authorization
+[ ] required accessibility states are explicit
+[ ] required responsive states are explicit
+[ ] required temporal/reduced-motion behavior is explicit when applicable
+[ ] legacy status is known for touched paths
+[ ] Contract Readiness is Ready for the scope, or approved Work Order contains the remaining permitted contract detail
+[ ] implementation is explicitly authorized; planning status alone is not authorization
 ```
 
-If not ready, report:
+If not ready:
 
 ```text
 NOT IMPLEMENTATION-READY
@@ -144,82 +175,85 @@ Do not create missing product decisions inside a Work Order.
 
 ---
 
-# 6. Implementation preflight
+# 7. Implementation preflight
 
-Before modifying code:
+Before code changes:
 
 ```text
 [ ] Exact Work Order identified
-[ ] IN SCOPE / OUT OF SCOPE / MUST NOT CHANGE understood
-[ ] Referenced Decision IDs loaded
-[ ] Referenced contracts loaded
-[ ] Applicable M1-M6 rows loaded
-[ ] Relevant canonical domain/architecture sources loaded
-[ ] Current source/tests inspected only after requirements are known
-[ ] No adjacent cleanup is being smuggled into scope
+[ ] IN SCOPE / ALLOWED SIDE EFFECT / OUT OF SCOPE / MUST NOT CHANGE understood
+[ ] referenced Decision IDs loaded
+[ ] referenced contracts loaded
+[ ] applicable M1-M6 rows loaded
+[ ] relevant canonical domain/architecture sources loaded
+[ ] current source/tests inspected only after requirements are known
+[ ] no adjacent cleanup is being smuggled into scope
 [ ] Stop Conditions are known
 ```
 
-A surprising dependency discovered during implementation is not permission to expand scope. Stop and route it correctly.
+Unexpected material dependency is not permission to expand scope.
 
 ---
 
-# 7. QA preflight
+# 8. QA preflight
 
 Before verification:
 
 ```text
 [ ] Exact Work Order / acceptance scope known
-[ ] Decision IDs and contract IDs known
+[ ] Decision and contract IDs known
 [ ] M6 required coverage known
-[ ] Relevant M1-M5 constraints known
-[ ] Exact implementation revision/diff known
-[ ] Required automated evidence known
-[ ] Required visual evidence known
-[ ] Owner walkthrough requirement known
+[ ] relevant M1-M5 constraints known
+[ ] exact implementation revision/diff known
+[ ] required automated evidence known
+[ ] required visual evidence known
+[ ] owner walkthrough requirement known
 ```
 
-QA does not redesign. A requirement gap returns to planning; an implementation mismatch returns to implementation.
+QA does not redesign: requirement gap -> planning; implementation mismatch -> implementation; stale derived document -> maintenance.
 
 ---
 
-# 8. Preflight anti-patterns
+# 9. Anti-patterns that fail Preflight
 
-Fail preflight if the AI is about to do any of these:
+Fail if AI is about to:
 
-- read source code first and infer the UX plan from it;
-- treat `Reviewed` as equivalent to implementation-ready;
-- use a Registry row as a substitute for a Decision Card;
-- choose a behavior because a matrix cell is `TBD`;
-- silently fix a canonical conflict by selecting the newest document;
-- copy an undecided Decision Map into the Decision Ledger;
+- read source first and infer the UX plan;
+- treat Reviewed as implementation-ready;
+- use a Registry row instead of a Decision Card;
+- choose behavior because a Matrix cell is `TBD`;
+- resolve a canonical conflict by choosing the newest document;
+- store an undecided Decision Map in `decisions.md`;
 - leave a resolved infrastructure gap marked Open;
-- create a Work Order from Selected/Reviewed planning without checking stability and gaps;
-- ask a spontaneous new owner question before adding it to the declared map/gap queue;
-- expand implementation scope because nearby code looks wrong.
+- maintain a second preflight checklist in a template/Work Order;
+- resume UX-02 or any individual sheet before the Global Planning Gate passes;
+- change review order without owner approval;
+- ask a spontaneous owner question before registering it in the map/gap queue;
+- broaden implementation because nearby code looks wrong.
 
 ---
 
-# 9. Preflight completion token
+# 10. Completion token
 
-For internal planning notes or Work Orders, AI may record this compact checkpoint:
+AI may record:
 
 ```text
 PREFLIGHT: PASS
 Route: <A-H>
 Scope: <sheet / decision / work-order ID>
+Global Planning Gate: PASS / BLOCKED / N/A
 Blocking gaps: none / <IDs>
 Contract readiness: N/A / Partial for planning / Ready for implementation
 ```
 
-This is evidence of a check, not a substitute for the underlying documents.
+The token is evidence of a check, not a substitute for source documents.
 
 ---
 
-# 10. Owner simplicity rule
+# 11. Owner simplicity
 
-The owner does not need to run or understand this checklist.
+The owner does not run this checklist.
 
-AI runs it silently as part of its workflow and only surfaces failures that require an owner/product decision.
+AI runs it as infrastructure and only surfaces failures requiring a product/owner decision.
 
-> The owner controls product intent; preflight exists so AI reliably maintains the planning system around that intent.
+> The owner controls product intent; Preflight ensures AI keeps the planning system consistent around that intent.
