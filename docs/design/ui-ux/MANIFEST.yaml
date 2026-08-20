@@ -21,42 +21,13 @@ entrypoints:
 canonical_precedence_reference: docs/design/ui-ux-planning-framework.md
 
 status_enums:
-  decision:
-    - Draft
-    - Selected
-    - Reviewed
-    - Frozen
-    - Superseded
-  planning_maturity:
-    - Draft
-    - Selected
-    - Reviewed
-    - Frozen
-    - Superseded
-  review_status:
-    - Not Started
-    - In Review
-    - Reviewed
-  contract_readiness:
-    - None
-    - Partial
-    - Ready
-    - Blocked
-  gap_status:
-    - Open
-    - Deferred
-    - Resolved
-  gap_type:
-    - OWNER_DECISION
-    - DOMAIN_CONTRACT
-    - ARCHITECTURE_CONTRACT
-    - IMPLEMENTATION_BLOCKER
-    - DOCUMENT_RECONCILIATION
-    - COVERAGE
-  gap_severity:
-    - Critical
-    - Major
-    - Normal
+  decision: [Draft, Selected, Reviewed, Frozen, Superseded]
+  planning_maturity: [Draft, Selected, Reviewed, Frozen, Superseded]
+  review_status: [Not Started, In Review, Reviewed]
+  contract_readiness: [None, Partial, Ready, Blocked]
+  gap_status: [Open, Deferred, Resolved]
+  gap_type: [OWNER_DECISION, DOMAIN_CONTRACT, ARCHITECTURE_CONTRACT, IMPLEMENTATION_BLOCKER, DOCUMENT_RECONCILIATION, COVERAGE]
+  gap_severity: [Critical, Major, Normal]
 
 reference_rules:
   full_ids_required: true
@@ -64,6 +35,7 @@ reference_rules:
   omitted_prefixes_forbidden: true
   prose_substitutes_for_existing_ids_forbidden: true
   multi_value_separator: comma
+  matrix_family_ids: [M1, M2, M3, M4, M5, M6]
   allowed_reference_kinds:
     - decision_id
     - review_question_id
@@ -78,6 +50,7 @@ reference_rules:
     - ORIGIN-UX-01-26
     - GAP-DM-ONLY-DELIVERY-PROTOCOL
     - R3-TARGET-SINGLE
+    - M1
     - M2-PLY-004
     - A11Y-01
     - docs/design/session-runtime.md
@@ -97,7 +70,6 @@ sources:
     owner_edit_frequency: rare
     delegates_reading_order_to: docs/design/ui-ux/AI-READING-GUIDE.md
     delegates_preflight_to: docs/design/ui-ux/PREFLIGHT.md
-
   ai_reading_guide:
     path: docs/design/ui-ux/AI-READING-GUIDE.md
     role: task_router_and_reading_order
@@ -105,7 +77,6 @@ sources:
     derived: false
     must_read_for_ai_entry: true
     sole_owner_of_reading_order: true
-
   preflight:
     path: docs/design/ui-ux/PREFLIGHT.md
     role: start_work_consistency_gate
@@ -113,7 +84,6 @@ sources:
     derived: false
     must_pass_before_substantive_work: true
     sole_owner_of_start_work_checks: true
-
   dashboard:
     path: docs/design/ui-ux/README.md
     role: current_planning_status_and_next_action
@@ -131,7 +101,6 @@ sources:
       - docs/design/ui-ux/matrices.md
       - docs/design/ui-ux/templates.md
     owner_default_entrypoint: true
-
   review_plan:
     path: docs/design/ui-ux/review-plan.md
     role: review_order_and_undecided_decision_maps
@@ -141,12 +110,8 @@ sources:
     review_order_change_requires_owner_approval: true
     global_planning_gate_owner: true
     review_status_values_must_match_enum_exactly: true
-    structured_status_fields:
-      - Current sequence.Review Status
-    structured_reference_fields:
-      - Decision Map.Depends On
-      - Decision Map.Destination
-
+    structured_status_fields: [Current sequence.Review Status]
+    structured_reference_fields: [Decision Map.Depends On, Decision Map.Destination]
   decisions:
     path: docs/design/ui-ux/decisions.md
     role: canonical_decision_ledger
@@ -154,14 +119,7 @@ sources:
     derived: false
     contains_undecided_question_maps: false
     status_values_must_match_enum_exactly: true
-    structured_reference_fields:
-      - Depends On
-      - Destination
-      - Planning Gap
-      - Affects when ID-based
-      - Supersedes
-      - Superseded By
-
+    structured_reference_fields: [Depends On, Destination, Planning Gap, Affects when ID-based, Supersedes, Superseded By]
   master_flow:
     path: docs/design/ui-ux/master-flow.md
     role: owner_friendly_product_flow_and_surface_topology_view
@@ -178,20 +136,13 @@ sources:
     owner_may_request_changes_through_view: true
     ai_must_translate_material_changes_to_canonical_sources_first: true
     current_view_status: Draft
-
   planning_gaps:
     path: docs/design/ui-ux/planning-gaps.md
     role: unresolved_material_no_invention_queue
     authority: canonical_for_known_gaps
     derived: false
     status_values_must_match_enum_exactly: true
-    structured_reference_fields:
-      - Owner Sheet
-      - Depends On
-      - Affected Decision
-      - Affected Decisions
-      - Resolved By
-
+    structured_reference_fields: [Owner Sheet, Depends On, Affected Decision, Affected Decisions, Resolved By]
   registry:
     path: docs/design/ui-ux/registry.md
     role: r1_r9_ui_inventory
@@ -202,19 +153,11 @@ sources:
     may_reference_planning_gaps: true
     may_reference_domain_contracts: true
     references_must_follow_reference_rules: true
-    structured_reference_fields:
-      - Refs
-    human_readable_fields_not_parsed_as_reference_lists:
-      - Owner
-      - Note
+    structured_reference_fields: [Refs]
+    human_readable_fields_not_parsed_as_reference_lists: [Owner, Note]
     status_axes:
-      planning:
-        field: Planning
-        enum: planning_maturity
-      contract:
-        field: Contract
-        enum: contract_readiness
-
+      planning: {field: Planning, enum: planning_maturity}
+      contract: {field: Contract, enum: contract_readiness}
   matrices:
     path: docs/design/ui-ux/matrices.md
     role: m1_m6_cross_cutting_coverage
@@ -226,18 +169,8 @@ sources:
     may_reference_registry_ids: true
     may_reference_domain_contracts: true
     references_must_follow_reference_rules: true
-    structured_reference_fields:
-      - M1.Source
-      - M1.Gap
-      - M2.Refs / Gap
-      - M3.Refs / Gap
-      - M4.Refs / Gap
-      - M5.Refs / Gap
-      - M6.Surface
-      - M6 exact contract/test ID cells
-    human_readable_fields_not_parsed_as_reference_lists:
-      - M6.Notes
-
+    structured_reference_fields: [M1.Source, M1.Gap, M2.Refs / Gap, M3.Refs / Gap, M4.Refs / Gap, M5.Refs / Gap, M6.Surface, M6 exact contract/test ID cells]
+    human_readable_fields_not_parsed_as_reference_lists: [M6.Notes]
   templates:
     path: docs/design/ui-ux/templates.md
     role: copy_safe_artifact_templates
@@ -246,22 +179,10 @@ sources:
     preflight_source: docs/design/ui-ux/PREFLIGHT.md
 
 optional_families:
-  surfaces:
-    path: docs/design/ui-ux/surfaces/
-    role: detailed_surface_contracts
-    materialize_when: spec_tier_requires
-  components:
-    path: docs/design/ui-ux/components/
-    role: reusable_component_contracts
-    materialize_when: spec_tier_requires
-  motion:
-    path: docs/design/ui-ux/motion/
-    role: material_motion_temporal_contracts
-    materialize_when: spec_tier_requires
-  work_orders:
-    path: docs/design/ui-ux/work-orders/
-    role: scoped_ai_implementation_handoffs
-    materialize_when: implementation_is_authorized_and_ready
+  surfaces: {path: docs/design/ui-ux/surfaces/, role: detailed_surface_contracts, materialize_when: spec_tier_requires}
+  components: {path: docs/design/ui-ux/components/, role: reusable_component_contracts, materialize_when: spec_tier_requires}
+  motion: {path: docs/design/ui-ux/motion/, role: material_motion_temporal_contracts, materialize_when: spec_tier_requires}
+  work_orders: {path: docs/design/ui-ux/work-orders/, role: scoped_ai_implementation_handoffs, materialize_when: implementation_is_authorized_and_ready}
 
 planning_gate:
   name: global_planning_gate
