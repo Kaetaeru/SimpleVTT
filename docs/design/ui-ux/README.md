@@ -21,80 +21,106 @@ If the planning structure makes either goal harder, simplify before adding more 
 
 | Item | Current state |
 | --- | --- |
-| Meta governance baseline | **Stable v1**; bounded 10-scenario final validation passed; reopen governance only for material drift/change or explicit owner request |
+| Meta governance baseline | **Stable v1**; bounded 10-scenario validation passed; reopen only for material governance drift/change or explicit owner request |
 | Framework | Canonical planning method active; planning truth vs implementation reliance and Product/UX vs domain/architecture authority separated |
 | AI Reading Guide | Sole canonical task router / reading-order owner active |
-| Machine-readable Manifest | Schema v2 active; Stable v1 validation marker, roles, enums, exact reference syntax, derived sources, global gate declared |
+| Machine-readable Manifest | Schema v2 active; roles, enums, exact references, derived sources, and Global Planning Gate state declared |
 | Preflight | Active; consistency/readiness/schema/reference/planning-truth gate required before substantive work |
 | Product UI decisions | Partially Reviewed; not globally Frozen |
-| `UX-01` | 7 decisions have `Status: Reviewed`; none Frozen |
-| Migrated prior decisions | Preserved with destination sheets; `Status: Reviewed`; none Frozen |
-| `UX-02` | T2-complete Decision Map exists; individual review **blocked by Global Planning Gate** |
-| `UX-03` | T2-complete Decision Map exists; individual review **blocked by Global Planning Gate** |
-| 27-sheet Review Plan | Materialized; 24 later maps still need complete predeclaration |
+| `UX-01` | 7 decisions `Reviewed`; none Frozen |
+| Migrated prior decisions | Preserved in destination sheets; `Reviewed`; none Frozen |
+| `UX-02` | T2-complete map; **next sequential review starts at `UX-02-01`** |
+| `UX-03` through `CONTENT-02` | T2-complete maps; Not Started except Reviewed migrated seeds |
+| 27-sheet Review Plan | **All 27 T2 Decision Maps complete** |
 | Master User Flow | Draft **derived owner view**; not a canonical decision store |
-| R1-R9 inventory | Draft derived seed inventory; full implementation/flow/decision cross-check incomplete |
-| M1-M6 matrices | Draft derived seed coverage; references/M6 values normalized; whole-product coverage incomplete |
-| Global Planning Gate | **NOT PASSED** |
+| R1-R9 inventory | **Route D active-runtime/planning cross-check PASS** for current snapshot |
+| M1-M6 matrices | **Material coverage PASS** for current Registry snapshot; unresolved cells remain owned by Draft map items or explicit gaps |
+| Missing / Duplication / Coverage audit | **PASS**; duplicate `ORIGIN-UX-01-20` map body removed from INT-03 |
+| Global Planning Gate | **PASS** |
 | Planning Gaps | Canonical typed/severity/status queue active (`Open / Deferred / Resolved`) |
-| Templates | Schema v2 enum/reference rules + no independent contract lifecycle + canonical Preflight reference aligned |
-| Implementation | Not authorized by planning status alone |
+| Templates | Schema v2 enum/reference rules + canonical Preflight reference aligned |
+| Implementation | **Not authorized** by Gate passage or planning status |
 
-`Stable v1` applies to the **governance/meta-document system only**. It does not Freeze product decisions, pass the Global Planning Gate, or authorize implementation.
+`Stable v1` applies to the governance/meta-document system. `Global Planning Gate: PASS` means sequential owner review may resume; neither status Freezes product decisions or authorizes implementation.
 
-## Global Planning Gate — current required work
+## Global Planning Gate — PASS
 
-**Do not resume individual UX questions, including `UX-02-01`, until this gate passes.**
+The current planning/runtime snapshot has completed the preparation gate:
 
 ```text
-[ ] R1-R9 complete inventory cross-check
-[ ] M1-M6 material coverage for all material Registry items
-[ ] all 27 governance sheets have complete T2 Decision Maps
-    - Scope
-    - Non-scope
-    - Exit Criteria
-    - full decision list
-    - Status
-    - full dependency IDs / conditional branches
-    - Destination
-[ ] Missing / Duplication / Coverage audit passes
-[ ] owner receives one concise whole-product coverage checkpoint
+[x] R1-R9 complete inventory cross-check
+[x] M1-M6 material coverage for all material Registry areas
+[x] all 27 governance sheets have complete T2 Decision Maps
+[x] Missing / Duplication / Coverage audit passes
+[x] owner whole-product coverage checkpoint prepared/delivered
 ```
 
-Canonical gate detail lives in [`review-plan.md`](review-plan.md) and the framework. This Dashboard is only the current summary.
+Canonical gate detail lives in [`review-plan.md`](review-plan.md). Future code/planning changes require bounded delta maintenance; they do not reopen the completed gate automatically unless the change materially invalidates its coverage.
+
+## Whole-product coverage checkpoint
+
+```text
+Changed:
+- R1-R9 active runtime/planning inventory cross-check completed.
+- Activity, Concentration Save, and DM Spatial Relation active artifacts registered as Draft evidence, without productizing current behavior.
+- M1-M6 expanded through the material Registry surface set.
+- All 27 governance sheets now have complete T2 Decision Maps.
+- Duplicate Reviewed ORIGIN-UX-01-20 map body removed from INT-03; DND-03 remains its canonical map owner.
+
+Global Planning Gate: PASS
+
+Current status:
+- Meta governance: Stable v1
+- UX-01: Reviewed, not Frozen
+- UX-02: map Complete, review Not Started
+- Current implementation drift is recorded as evidence and does not override reviewed planning intent.
+
+Open material gaps:
+- GAP-UX02-ROLE-MODEL
+- GAP-UX02-OFFLINE-ROLE
+- GAP-JOIN-NO-CHARACTER
+- GAP-MAIN-HAND-CANONICAL-RELATION
+- GAP-DM-ROLL-VISIBILITY-PERSISTENCE
+- GAP-ACTOR-CONTEXT-MENU-CONTENTS
+- GAP-RESOLUTION-SAFE-INTERACTIONS
+- GAP-HANDOUT-NETWORK-CONTRACT
+- GAP-DM-ONLY-DELIVERY-PROTOCOL (Critical)
+- GAP-DM-PRIVATE-ACTIVITY-PRESENTATION (Deferred)
+- GAP-CANONICAL-UX-DOC-RECONCILIATION (Deferred)
+
+Next planned work:
+- Resume one-at-a-time owner review at UX-02-01.
+
+Frozen changes: none
+Implementation authorization: none
+```
 
 ## Current next work
 
 ```text
-1. Run PREFLIGHT for Route D — Explore Whole Product
-2. Complete/cross-check R1-R9 against:
-   - current implementation evidence
-   - derived master-flow.md view
-   - existing made Decision Cards
-   - generic non-route UI patterns
-3. Expand M1-M6 material coverage; turn material unknown behavior into explicit Planning Gaps instead of guesses
-4. Materialize T2-complete Decision Maps for all remaining governance sheets
-5. Run Missing / Duplication / Coverage audit
-6. Present owner whole-product coverage checkpoint
-7. Only then resume sequential review at UX-02-01
+Route A — Resume Planning
+Current sheet: UX-02 — User & Role Model
+Current Decision ID: UX-02-01
+Question: Separate Play Role and Connection Role, or one role axis?
+Next predeclared ID after resolution: UX-02-02
 ```
 
-During this preparation AI may identify artifacts, exact references, gaps, derived views, and coverage. It MUST NOT silently make new product decisions.
+Do not skip ahead or append spontaneous questions. Newly discovered material choices first update the appropriate declared map or Planning Gap.
 
 ## Owner controls — plain language is enough
 
 | Owner says | AI must do |
 | --- | --- |
-| `현재 상태 보여줘` | Summarize this Dashboard plus material gaps/gate status. |
+| `현재 상태 보여줘` | Summarize this Dashboard plus material gaps. |
 | `이 결정 바꾸자` | Resolve affected canonical Decision ID, update one Decision Card, calculate impact. |
-| `이 플로우 바꾸자` | Use `master-flow.md` as the readable view, resolve the canonical Decision/Map/Gap source first, then refresh the derived flow. |
-| `UX-02 질문 전체 보여줘` | Show the complete declared map from `review-plan.md`; do not start answering it while Global Gate is blocked. |
+| `이 플로우 바꾸자` | Use `master-flow.md` as the readable view, resolve canonical Decision/Map/Gap source first, then refresh the derived flow. |
+| `UX-02 질문 전체 보여줘` | Show the complete declared map from `review-plan.md`. |
 | `이건 확정` / `freeze` | Freeze only explicitly named canonical scope and run impact checks. |
 | `이 화면에 뭐가 남았어?` | Use Registry Planning/Contract status + Matrix coverage. |
 | `구현 준비됐어?` | Check Frozen dependencies, gaps, Contract Readiness, spec tier, contracts, Work Order, and authority-domain compatibility. |
 | `되돌려` | Restore/supersede affected decision with traceability, then refresh derived views. |
-| `전체 플로우 보여줘` | Show `master-flow.md` as a derived owner view; do not treat it as an independent authority source. |
-| `다음에 뭘 정하지?` | Report Global Gate work first; after it passes, use `review-plan.md`. |
+| `전체 플로우 보여줘` | Show `master-flow.md` as a derived owner view; do not treat it as independent authority. |
+| `다음에 뭘 정하지?` | Use `review-plan.md`; current answer is `UX-02-01`. |
 
 ## Owner-facing files
 
@@ -104,7 +130,7 @@ The owner normally needs only:
 - [`decisions.md`](decisions.md) — made canonical Decision Cards only.
 - [`master-flow.md`](master-flow.md) — derived readable product flow/topology view.
 - [`planning-gaps.md`](planning-gaps.md) — canonical material unknowns AI must not invent.
-- [`review-plan.md`](review-plan.md) — canonical review order, undecided Decision Maps, Global Planning Gate.
+- [`review-plan.md`](review-plan.md) — canonical review order and undecided Decision Maps.
 
 Supporting files maintained mainly by AI:
 
@@ -119,9 +145,9 @@ Detailed Surface/Component/Motion/Work Order files are materialized only when th
 
 ## AI maintenance boundaries
 
-AI MAY without owner approval:
+AI MAY without owner product approval:
 
-- identify/add an existing or planned artifact to the Registry;
+- identify/add an existing or planned artifact to Registry;
 - add Matrix coverage referencing existing decisions/contracts;
 - refresh `master-flow.md` from canonical Decision/Map/Gap sources;
 - update Contract Readiness when named gaps/contracts clearly change;
@@ -132,12 +158,12 @@ AI MAY without owner approval:
 AI MUST NOT without owner/domain authority:
 
 - decide new product behavior while filling Master Flow/Registry/Matrix/Decision Maps;
-- treat `master-flow.md` as a second canonical decision store;
+- treat `master-flow.md` as a second decision store;
 - change Registry Planning Maturity outside the decision lifecycle;
-- change the declared review order (AI may propose; owner must approve);
+- change declared review order without owner approval;
 - promote a contextual tool into a top-level destination;
 - create authority, visibility, fallback, persistence, rules, network, or privacy semantics;
-- let current implementation replace an applicable Selected/Reviewed/Frozen planning decision;
+- let current implementation replace applicable Selected/Reviewed/Frozen planning intent;
 - treat Selected/Reviewed as stable implementation reliance;
 - use a Frozen UI decision to override a domain/architecture contract;
 - Freeze a decision;
@@ -165,11 +191,11 @@ References:
 
 `full stable ID/path only` — no ranges, omitted prefixes, or contextual prose aliases.
 
-- Selected/Reviewed/Frozen made decisions are planning truth over current code in their valid Product/UX scope.
+- Selected/Reviewed/Frozen made decisions are planning truth over current code within valid Product/UX scope.
 - Only Frozen decisions are stable implementation dependencies by default.
 - Reviewed is not Contract Ready.
 - AI never Freezes automatically.
-- Missing material policy = `PLANNING GAP`, not an AI-created fallback.
+- Missing material policy = declared Draft Decision Map item or `PLANNING GAP`, never an AI-created fallback.
 
 ## Owner checkpoint format
 
