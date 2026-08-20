@@ -6,14 +6,17 @@ This file records **known material gaps that AI must not silently invent**. It i
 
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 Dashboard: [`README.md`](README.md)
+Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 ## Gap rules
 
 A gap belongs here when implementation or downstream planning would otherwise require guessing product behavior, authority, visibility, persistence, transition, or required UI state.
 
-Each gap must identify:
+Each gap identifies:
 
 - `Gap ID`
+- `Gap Type`
+- `Severity`
 - `Owner Sheet / Destination`
 - `Affected IDs / Surfaces`
 - `Gap`
@@ -21,12 +24,31 @@ Each gap must identify:
 - `Smallest decision needed`
 - `Status`
 
-Once resolved, move the normative answer into `decisions.md` and mark the gap `Resolved` with the resulting Decision ID.
+### Gap Type enum
+
+- `OWNER_DECISION` — the owner must choose product/UX behavior.
+- `DOMAIN_CONTRACT` — authoritative domain/application data or semantics are missing.
+- `ARCHITECTURE_CONTRACT` — networking, persistence, privacy, schema, or runtime contract is missing.
+- `IMPLEMENTATION_BLOCKER` — planning is clear but implementation cannot safely proceed yet.
+- `DOCUMENT_RECONCILIATION` — canonical/legacy documents conflict or need supersession cleanup.
+- `COVERAGE` — planning infrastructure or systematic coverage is incomplete/stale.
+
+### Severity enum
+
+- `Critical` — privacy/authority/data/game-state corruption or security risk.
+- `Major` — blocks a first-class flow or creates repeated material UX ambiguity.
+- `Normal` — important but localized/deferred and not currently critical.
+
+Once resolved, move the normative answer into `decisions.md` or the appropriate canonical contract and move the gap to **Resolved gaps** with the resulting Decision/Contract ID.
 
 ---
 
+# Open gaps
+
 ## GAP-UX02-ROLE-MODEL
 
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Major
 - **Owner Sheet:** UX-02
 - **Affected:** Role-aware IA, Session, Play, authority matrices
 - **Gap:** The product has not yet reviewed whether Play Role (`DM / Player`) and Connection Role (`Offline / Host / Client`) are separate axes or one combined role model.
@@ -36,6 +58,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-UX02-OFFLINE-ROLE
 
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Normal
 - **Owner Sheet:** UX-02
 - **Depends On:** UX-02-01
 - **Gap:** Whether standalone/offline use carries an explicit DM/Player identity is undecided.
@@ -45,6 +69,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-JOIN-NO-CHARACTER
 
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Major
 - **Owner Sheet:** UX-02 / SES-01
 - **Affected:** Join flow, Character selection
 - **Gap:** What happens when a Player attempts to join but has no valid Character available is undecided.
@@ -54,6 +80,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-MAIN-HAND-CANONICAL-RELATION
 
+- **Gap Type:** DOMAIN_CONTRACT
+- **Severity:** Major
 - **Owner Sheet:** DND-03 / domain dependency
 - **Affected Decision:** ORIGIN-UX-01-17
 - **Gap:** The UI intent assumes a canonical relation from equipped Main Hand to executable attack, but that relation must exist in authoritative application/domain data.
@@ -63,6 +91,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-DM-ROLL-VISIBILITY-PERSISTENCE
 
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Major
 - **Owner Sheet:** DM-01
 - **Affected Decision:** ORIGIN-UX-01-27
 - **Gap:** The initial default for `Public / DM Only` and the exact persistence boundary are not decided.
@@ -72,6 +102,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-DM-PRIVATE-ACTIVITY-PRESENTATION
 
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Normal
 - **Owner Sheet:** DM-02
 - **Origin:** old UX-01-30, unanswered
 - **Gap:** How DM Activity displays private rolls is undecided.
@@ -82,6 +114,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-ACTOR-CONTEXT-MENU-CONTENTS
 
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Normal
 - **Owner Sheet:** INT-01
 - **Affected Decision:** ORIGIN-UX-01-16
 - **Gap:** Exact Actor Context Menu commands are intentionally undecided.
@@ -91,6 +125,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-RESOLUTION-SAFE-INTERACTIONS
 
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Major
 - **Owner Sheet:** DND-03 / INT-01
 - **Affected Decision:** ORIGIN-UX-01-21
 - **Gap:** Resolution keeps the HUD skeleton and locks only conflicting interactions, but the exact safe-vs-conflicting interaction boundary is undecided.
@@ -100,6 +136,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-HANDOUT-NETWORK-CONTRACT
 
+- **Gap Type:** ARCHITECTURE_CONTRACT
+- **Severity:** Major
 - **Owner Sheet:** SES-01 / SES-02
 - **Affected Decisions:** ORIGIN-UX-01-12, ORIGIN-UX-01-13
 - **Gap:** Shared presentation mode and reconnect restoration require a session/network presentation contract that the current handout envelope does not yet express.
@@ -109,6 +147,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-DM-ONLY-DELIVERY-PROTOCOL
 
+- **Gap Type:** ARCHITECTURE_CONTRACT
+- **Severity:** Critical
 - **Owner Sheet:** SES-02
 - **Affected Decisions:** ORIGIN-UX-01-26, ORIGIN-UX-01-28, ORIGIN-UX-01-29
 - **Gap:** The authoritative event/network projection for DM-only adjudication and later disclosure is not yet fully specified.
@@ -118,6 +158,8 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 
 ## GAP-CANONICAL-UX-DOC-RECONCILIATION
 
+- **Gap Type:** DOCUMENT_RECONCILIATION
+- **Severity:** Major
 - **Owner Sheet:** Governance / affected downstream sheets
 - **Affected:** Existing `V1_PRODUCT_EXPERIENCE.md`, `V1_PLAY_SURFACE_REVISION.md`, selected UI planning decisions
 - **Gap:** Existing planning prose contains directions such as tabletop-first/VTT-additional, intent-first compact action UX, and initiative-stage replacement that conflict with newer Reviewed/Selected planning direction.
@@ -125,26 +167,25 @@ Once resolved, move the normative answer into `decisions.md` and mark the gap `R
 - **Smallest decision needed:** After relevant sheets are Reviewed/Frozen, explicitly supersede or revise conflicting legacy planning text by ID/scope.
 - **Status:** Open reconciliation gap
 
-## GAP-R1-R9-INVENTORY
-
-- **Owner Sheet:** Framework execution
-- **Affected:** Whole product
-- **Gap:** The complete R1-R9 inventory is not yet materialized in canonical files.
-- **Why AI cannot infer it safely:** Missing inventory risks skipping non-route UI such as confirmations, notification surfaces, edge states, and motion contracts.
-- **Smallest decision needed:** None from owner yet; AI should prepare the inventory for owner review before resuming UX-02.
-- **Status:** Next preparation task
-
-## GAP-M1-M6-COVERAGE
-
-- **Owner Sheet:** Framework execution
-- **Depends On:** GAP-R1-R9-INVENTORY
-- **Gap:** Required matrix rows have not yet been enumerated for all material surfaces.
-- **Why AI cannot infer it safely:** Authority/accessibility/responsive/state coverage can be missed if not cross-checked systematically.
-- **Smallest decision needed:** None from owner until the generated coverage exposes a material product choice.
-- **Status:** Pending inventory
-
 ---
 
 # Resolved gaps
 
-None recorded yet in this canonical queue.
+## GAP-R1-R9-INVENTORY
+
+- **Gap Type:** COVERAGE
+- **Severity:** Major
+- **Owner Sheet:** Framework execution
+- **Affected:** Whole product
+- **Resolution:** `registry.md` now materializes the R1-R9 seed inventory. It remains Draft and still requires implementation/master-flow/decision cross-check before owner review is complete.
+- **Resolved By:** `registry.md`
+- **Status:** Resolved — infrastructure materialized; coverage review continues as normal dashboard work, not as an open material gap.
+
+## GAP-M1-M6-COVERAGE
+
+- **Gap Type:** COVERAGE
+- **Severity:** Major
+- **Owner Sheet:** Framework execution
+- **Resolution:** `matrices.md` now materializes M1-M6 schemas and seed coverage rows. Individual `TBD` cells may still create specific planning gaps as review proceeds.
+- **Resolved By:** `matrices.md`
+- **Status:** Resolved — matrix infrastructure materialized; expansion continues as derived maintenance.
