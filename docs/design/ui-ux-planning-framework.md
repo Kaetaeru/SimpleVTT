@@ -2,179 +2,167 @@
 
 Status: canonical planning framework for pre-implementation UI/UX work
 
-This document defines how SimpleVTT UI/UX decisions are planned, reviewed, changed, translated into AI implementation work, and verified.
+This document defines **how** SimpleVTT UI/UX is planned, changed, handed to AI, and verified. It does not freeze any product UI decision by itself.
 
-It does **not** freeze any product UI decision by itself. Product decisions remain `Draft`, `Selected`, `Reviewed`, or `Frozen` according to the decision lifecycle below.
+# 0. Read this first
 
-## Primary objective
+## The two primary goals
 
-The planning system optimizes for two equally critical outcomes:
+This framework exists to optimize two things above everything else:
 
-1. **Owner control must stay easy.** The owner must be able to find, understand, change, compare, approve, or revoke a UI decision without reconstructing implementation history.
-2. **AI interpretation must stay unambiguous.** An implementation agent must be able to identify scope, applicable decisions, authority boundaries, required states, forbidden behavior, evidence, and stop conditions without inventing missing policy.
+1. **Owner control must be easy.** The owner should normally change one decision, not maintain a web of documents by hand.
+2. **AI interpretation must be easy and unambiguous.** The AI should normally read a small referenced set of IDs, not infer policy from a large prose corpus.
 
-When these goals conflict, prefer explicit, traceable structure over prose volume. A shorter single-source contract is better than duplicated requirements across many documents.
+If a process makes either side harder, simplify the process before adding more documentation.
 
-## Core operating principles
+## Golden rule
 
-### 1. One fact, one canonical home
+> **The owner decides product behavior. The AI maintains structure, references, impact analysis, derived contracts, and implementation evidence.**
 
-A normative decision is written once in its canonical record. Other artifacts reference its ID instead of copying the rule text.
+The owner must not be required to manually synchronize registries, matrices, contracts, tests, and traceability links after changing a decision.
 
-Do not duplicate the same requirement across review sheets, registries, surface contracts, and work orders. Duplication creates specification drift and conflicting AI instructions.
+## Daily workflow in one line
 
-### 2. Review structure is not authority structure
+```text
+Decision Map -> one owner decision -> AI records Decision Card -> AI updates affected references/contracts -> later generate scoped Work Order -> implement -> verify -> owner accepts
+```
 
-The 27 governance sheets are **review lenses**. They help the owner inspect the product systematically, but they are not separate stores of duplicated product truth.
+## What the owner normally edits
 
-Approved decisions are recorded in the Decision Ledger and linked to the applicable Registry, Matrix, Flow, Surface Contract, Component Contract, or Motion Contract.
+The owner should usually interact with only three things:
 
-### 3. Scope and applicability beat global assumptions
+- **Decision Map** — what questions remain and in what order.
+- **Decision Card** — the canonical answer to one product/UX question.
+- **Master User Flow / Surface Map** — how the product is navigated and used.
 
-SimpleVTT may intentionally have different valid paths for Player/DM, Offline/Host/Client, standalone Character use, and connected Play.
-
-Do not force one global UI authority when multiple context-specific paths are valid. Every rule must state its scope, applicability, responsibility, precedence within that scope, and legacy status where relevant.
-
-### 4. No invention
-
-If a required product, rules, authority, visibility, interaction, or UX decision is missing, the AI must return `PLANNING GAP` rather than inventing a fallback, hidden default, fake rule, or replacement behavior.
-
-### 5. UI never becomes rules or network authority
-
-UI may present canonical data, collect user choices, format information, control local presentation state, and submit commands.
-
-UI must not silently calculate or own named rules, attack legality, target eligibility, AC/DC, proficiency, initiative semantics, resource legality, authoritative outcomes, multiplayer authority, or secret-data disclosure policy.
-
-### 6. State must be explicit
-
-Every important surface must define its normal, empty, loading, pending, disabled, error, role, permission, responsive, focus, reconnect, and other applicable states. An unspecified edge state is not automatically delegated to the implementation agent.
-
-### 7. Human acceptance remains mandatory
-
-Green automation is evidence, not owner acceptance. UI work is complete only when required automated checks, visual evidence, and owner walkthrough gates pass for one exact source revision.
+Everything else is supporting structure maintained by AI unless the owner explicitly wants to edit it.
 
 ---
 
-# A. Control Plane
+# 1. Human-first control model
 
-The Control Plane prevents conflicting instructions and keeps the plan easy to modify.
+## 1.1 Decision Map
 
-## C0 — Canonical Manifest
+Before reviewing a governance sheet, AI MUST show the complete planned question map.
 
-The manifest identifies which artifacts are authoritative and how conflicts are handled.
+Minimum columns:
 
-### Precedence within the same explicit scope
+| ID | Question | Status | Depends On | Destination |
+| --- | --- | --- | --- | --- |
+| `DND-03-014` | What happens on valid single-target click? | Reviewed | `INT-01-006` | `PLY-TARGETING` |
 
-1. Frozen owner decision recorded in canonical planning artifacts.
-2. Existing canonical product/domain/architecture contract for areas not superseded by a compatible Frozen decision.
-3. Approved Surface / Component / Motion contract derived from applicable Frozen decisions.
-4. Approved AI Work Order.
-5. Current implementation.
-6. Historical or non-canonical working notes, including `.agents/` material.
-7. AI interpretation.
+Rules:
 
-This is not permission to silently override a domain contract with a UI decision. If two higher-level artifacts conflict across different scopes, stop and report `PLANNING GAP: CONTRACT CONFLICT` with both IDs/sources.
+- Ask one decision at a time in the declared order.
+- Do not invent the next question from the previous answer.
+- A newly discovered issue becomes a visible `Planning Gap` or a downstream-sheet item before it is asked.
+- Conditional questions must be declared in the map before entering the branch.
 
-### Normative language
+## 1.2 Decision Card — the canonical unit the owner changes
 
-- `MUST` — required for acceptance.
-- `MUST NOT` — prohibited; violation blocks acceptance.
-- `SHOULD` — expected unless an explicit documented exception exists.
-- `SHOULD NOT` — avoid unless an explicit documented exception exists.
-- `MAY` — optional and non-authoritative.
+A decision is stored once using this compact shape:
 
-## C1 — Decision Ledger
+```text
+Decision ID: DND-03-014
+Title: Single-target execution
+Status: Reviewed
+Applies To: Play > Targeting
+Decision: Clicking one valid target immediately executes the selected single-target action.
+Why: Reduces confirmation friction while preserving explicit targeting.
+Depends On: UX-01-04, INT-01-006
+Affects: PLY-TARGETING, CMP-ACTOR-CARD
+Planning Gap: none
+```
 
-Every product/UX decision receives one stable ID and one canonical record.
+Only add advanced fields when they are actually needed:
 
-Required fields:
-
-- `Decision ID`
-- `Title`
-- `Owner Sheet`
-- `Status`
-- `Scope`
-- `Applicability`
-- `Decision`
-- `Rationale`
-- `Dependencies`
+- `Role / Connection Applicability`
 - `Supersedes / Superseded By`
 - `Legacy Status`
-- `Affected Registries / Matrices / Surfaces`
-- `Known Planning Gaps`
-- `Change Notes`
+- `Authority / Visibility Note`
+- `Change Note`
 
-### Decision lifecycle
+The canonical rule body lives here. Other artifacts reference the Decision ID instead of copying the rule text.
 
-- `Draft` — candidate only. Must not drive implementation.
-- `Selected` — owner selected an option; still open to downstream revision.
-- `Reviewed` — reviewed in its governance context; still not immutable.
-- `Frozen` — implementation may rely on it as a stable requirement. Changing it requires impact review.
-- `Superseded` — retained for traceability but no longer applicable.
+## 1.3 Plain-language owner changes
 
-Only `Frozen` decisions may be treated as immutable implementation requirements. `Selected` and `Reviewed` decisions may inform planning but must not silently override Frozen dependencies.
+The owner does not need to know IDs to make a change.
 
-## C2 — Dependency and Traceability Graph
-
-Every implemented UI behavior must be traceable through IDs.
-
-Expected chain:
+Examples that AI must support:
 
 ```text
-Product Principle / Decision
-    -> Registry or Matrix entry
-    -> Surface / Component / Motion Contract
-    -> AI Work Order
-    -> Code change
-    -> Automated / visual evidence
-    -> Owner acceptance
+"단일 타겟도 확인 버튼 넣자"
+"DM Only 판정은 플레이어 Activity에 아무 흔적도 남기지 마"
+"PLY-02는 그대로 두고 결과 표시만 바꿔"
 ```
 
-A missing critical link means the behavior is not fully governed.
+AI MUST:
 
-## C3 — Change Impact Protocol
-
-When the owner changes a `Frozen` decision:
-
-1. Mark the decision as under change; do not silently edit history.
-2. Identify dependent Registry, Matrix, Flow, Surface, Component, Motion, Work Order, test, and documentation IDs.
-3. Classify impact: `No Change`, `Review Required`, `Contract Update Required`, `Implementation Update Required`, `Regression Required`.
-4. Update the canonical decision and affected contracts.
-5. Re-run only the affected review and verification gates plus any required regressions.
-6. Record what was superseded.
-
-The system should make change cheap for the owner without hiding its impact from AI.
-
-## C4 — Planning Gap Protocol
-
-AI must stop and report a planning gap when any of the following is true:
-
-- a required decision is `Draft` or absent;
-- two applicable canonical contracts conflict;
-- an authoritative data source does not expose required information;
-- implementation would require a new named-rule calculation in UI;
-- implementation would require inventing target eligibility, DC, resource legality, authority, disclosure, or fallback semantics;
-- a legacy path's status is unknown;
-- required role, responsive, error, focus, or transition behavior is materially unspecified;
-- implementation would violate a Frozen dependency.
-
-Required response format:
-
-```text
-PLANNING GAP
-Affected IDs:
-Missing or conflicting decision:
-Why implementation cannot safely infer it:
-Smallest decision needed to continue:
-```
+1. resolve the most likely affected Decision/Surface IDs;
+2. show the exact item being changed if ambiguity is material;
+3. update the single canonical Decision Card;
+4. identify downstream impact automatically;
+5. mark affected derived contracts as requiring review/update;
+6. never require the owner to repair cross-references manually.
 
 ---
 
-# B. Product UX Model
+# 2. Decision status and authority
 
-## 27 governance review sheets
+## 2.1 Lifecycle
 
-These are review lenses, not duplicate requirement stores.
+- `Draft` — candidate only; MUST NOT drive implementation.
+- `Selected` — owner chose it; downstream review may still revise it.
+- `Reviewed` — reviewed in its governance context; still not immutable.
+- `Frozen` — implementation may rely on it as stable.
+- `Superseded` — retained only for history/traceability.
+
+AI MUST NOT freeze a decision unless the owner explicitly requests or approves freezing the applicable scope.
+
+## 2.2 Canonical precedence
+
+Within the same explicit scope:
+
+1. Frozen owner decision in canonical planning artifacts.
+2. Existing canonical product/domain/architecture contract not validly superseded by a compatible Frozen decision.
+3. Approved Surface / Component / Motion contract derived from applicable Frozen decisions.
+4. Approved scoped AI Work Order.
+5. Current implementation.
+6. Historical or non-canonical working notes, including `.agents/`.
+7. AI inference.
+
+If two high-level contracts conflict across scopes, AI MUST stop with `PLANNING GAP: CONTRACT CONFLICT`. UI planning is not permission to silently override a domain or network contract.
+
+## 2.3 Normative language
+
+- `MUST` — required.
+- `MUST NOT` — prohibited.
+- `SHOULD` — expected unless an explicit exception exists.
+- `SHOULD NOT` — avoid unless an explicit exception exists.
+- `MAY` — optional.
+
+---
+
+# 3. Progressive specification: document only as deeply as risk requires
+
+Do not require a full Surface Contract, state machine, authority matrix, and Work Order for every small visual choice. Use the lightest specification tier that safely removes ambiguity.
+
+| Tier | Use when | Required planning |
+| --- | --- | --- |
+| `S0 — Cosmetic` | token, spacing, icon, non-semantic visual polish | Decision/reference + design token only |
+| `S1 — Standard UI` | ordinary component or local interaction | Decision + Component/Surface reference + required states/accessibility |
+| `S2 — Stateful Flow` | multi-step flow, modal, targeting, builder, reconnectable UI | Decision + Surface Contract + applicable state transitions + responsive/accessibility |
+| `S3 — Authority Critical` | multiplayer authority, privacy, destructive action, rules boundary, durable mutation, Undo | Decision + Surface Contract + M1/M2/M3 + explicit invariants + scoped Work Order + regression + owner walkthrough |
+
+AI SHOULD choose the lowest safe tier. Over-documentation that makes owner changes expensive is a framework failure.
+
+---
+
+# 4. The product model
+
+## 4.1 27 governance sheets are review lenses
+
+They organize owner review; they are not duplicate stores of product truth.
 
 1. `UX-01` Product Principles
 2. `UX-02` User & Role Model
@@ -204,44 +192,44 @@ These are review lenses, not duplicate requirement stores.
 26. `DM-02` Adjudication & Undo
 27. `CONTENT-02` Rules & Add-on UX
 
-Each sheet must publish its complete Decision Map before asking individual questions. New questions discovered during review are either added visibly to the current Decision Map as a planning gap before continuing, or assigned to the correct downstream sheet. Do not improvise an untracked chain of questions.
+A sheet produces or reviews Decision Cards. It does not own a second copy of the requirement.
 
-## R1-R9 — UI Registries
+## 4.2 R1-R9 UI Registries — what exists
 
-Registries answer **what UI artifacts exist**.
-
-| Registry | Purpose |
+| Registry | Question it answers |
 | --- | --- |
-| `R1` IA & Destination | Where the user can be in the product. |
-| `R2` Task Flow | Goal-oriented steps, branches, entry, exit, recovery. |
-| `R3` Workspace Mode & Interaction State | Major modes/states inside a stable workspace. |
-| `R4` Overlay & Interruptive Surface | Dialogs, alert dialogs, drawers, popovers, context menus, tooltips, lightboxes, prompts. |
-| `R5` Feedback & Notification | Toasts, banners, inline alerts, status, progress, result feedback, durable activity notices. |
-| `R6` System & Edge State | Loading, empty, error, unsupported, disconnected, reconnecting, incompatible, permission, stale data, reduced motion, narrow desktop. |
-| `R7` Component & Control | Buttons, tabs, toggles, inputs, Actor Cards, Hotbar slots, resource indicators, list rows, search, media controls. |
-| `R8` Content & Messaging | Labels, action wording, confirmation copy, disabled reasons, error anatomy, visibility wording, result terminology. |
-| `R9` Motion & Temporal Behavior | Animation, transition, timeout, auto-dismiss, reveal timing, dice physics, reduced-motion equivalents. |
+| `R1` IA & Destination | Where can the user be? |
+| `R2` Task Flow | How does the user accomplish a goal? |
+| `R3` Workspace Mode & Interaction State | What major mode/state is the current workspace in? |
+| `R4` Overlay & Interruptive Surface | What appears over/inside the current context? |
+| `R5` Feedback & Notification | How is status/result communicated? |
+| `R6` System & Edge State | What non-happy-path state exists? |
+| `R7` Component & Control | What reusable controls/objects exist? |
+| `R8` Content & Messaging | What wording/terminology patterns exist? |
+| `R9` Motion & Temporal Behavior | What time-based behavior exists? |
 
-Do not create a new Registry for an orthogonal constraint such as accessibility or authority; use the matrices below.
+Do not add accessibility, authority, persistence, or responsive as new registries; those are orthogonal constraints below.
 
-## M1-M6 — Cross-cutting Matrices
+## 4.3 M1-M6 cross-cutting matrices — how it is constrained
 
-Matrices answer **how every applicable UI artifact is constrained across another dimension**.
-
-| Matrix | Purpose |
+| Matrix | Question it answers |
 | --- | --- |
-| `M1` Role / Authority / Visibility / Disclosure | Who may see, receive, control, disclose, or mutate each capability/data class. |
-| `M2` State Machine & Transition Contract | Current state, event, guard, authority, next state, side effect, failure, rollback/recovery. |
-| `M3` Persistence / Ownership / Source of Truth | Canonical owner, persistence lifetime, network projection, and whether UI may mutate local presentation only. |
-| `M4` Accessibility / Input | Keyboard, focus, pointer alternative, semantics, screen-reader status, reduced-motion requirements. |
-| `M5` Responsive / Layout | Wide/normal/narrow behavior, invariants, allowed collapse, prohibited hiding. |
-| `M6` Coverage / Acceptance | Required normal/empty/error/role/keyboard/responsive/reconnect and other test coverage. |
+| `M1` Role / Authority / Visibility / Disclosure | Who may see, receive, control, disclose, or mutate it? |
+| `M2` State Machine & Transition | From which state, on what event/guard, to which state? |
+| `M3` Persistence / Ownership / Source of Truth | Who owns the data and how long does it live? |
+| `M4` Accessibility / Input | How does keyboard/focus/pointer/assistive access work? |
+| `M5` Responsive / Layout | What changes at wide/normal/narrow sizes, and what MUST remain? |
+| `M6` Coverage / Acceptance | Which states/roles/devices must be verified? |
 
-## Master User Flows
+Matrices contain structured cross-cutting facts. They reference Decision IDs instead of restating product decisions.
 
-Master flows are maintained separately from individual screens and must show all first-class entry paths.
+---
 
-At minimum the Home-level flow must treat these as parallel product paths when applicable:
+# 5. Master user flow rules
+
+Master flows are separate from screen/component definitions and MUST show all first-class entry paths.
+
+At minimum, Home treats these as parallel paths when applicable:
 
 ```text
 Home
@@ -255,99 +243,193 @@ Home
   -> Return to active Play when a live session exists
 ```
 
-Character use must not be modeled as a universal prerequisite for entering Session unless a specific task flow explicitly requires Character selection.
+Character creation/use MUST NOT be modeled as a universal prerequisite for Session entry unless a specific flow explicitly requires Character selection.
+
+Every important flow should show:
+
+```text
+Entry -> main happy path -> branch/guard -> failure/recovery -> exit/return
+```
+
+For state-heavy flows, use M2 rather than trying to encode every state transition only in a diagram.
 
 ---
 
-# C. Design Contracts
+# 6. Contracts — generated detail, not owner busywork
 
-## Surface Contract
+## 6.1 Surface Contract
 
-Every meaningful surface or governed pattern has one contract.
+Use for `S1-S3` surfaces as needed.
 
-Required fields:
+Core fields:
 
-- `Surface ID`
-- `Name`
-- `Surface Type`
-- `Owner Sheet`
-- `Parent Surface`
-- `Applicable Roles / Connection Contexts`
-- `Entry Trigger`
-- `Purpose`
-- `Information Priority (P0/P1/P2)`
-- `Primary Action`
-- `Secondary Actions`
-- `Cancel / Exit / Return Behavior`
-- `Blocking / Modality`
-- `Persistence`
-- `Authority / Source of Truth`
-- `Required States`
-- `Feedback Output`
-- `Keyboard / Focus`
-- `Responsive Contract`
-- `Motion / Temporal Contract`
-- `Invariants`
-- `Forbidden Behavior`
-- `Dependencies`
-- `Required Evidence`
-- `Status`
+```text
+Surface ID:
+Name / Type:
+Purpose:
+Parent / Entry:
+Applicable Roles:
+Primary Action:
+Exit / Return:
+Required States:
+Authority / Source of Truth:
+Invariants:
+Forbidden Behavior:
+Decision IDs:
+```
 
-## Component Contract
+Add only when applicable:
 
-Reusable components must define:
+```text
+Information Priority P0/P1/P2:
+Secondary Actions:
+Blocking / Modality:
+Feedback:
+Keyboard / Focus:
+Responsive:
+Motion / Timing:
+Persistence:
+Required Evidence:
+```
 
-- purpose and non-purpose;
-- semantic role;
-- owned vs projected state;
-- default / hover / pressed / selected / focus / disabled / loading / error states as applicable;
-- keyboard and pointer behavior;
-- responsive behavior;
-- content limits;
-- prohibited domain calculations;
-- design-token references;
-- acceptance evidence.
+## 6.2 Component Contract
 
-## Motion / Temporal Contract
+Reusable components define only behavior that truly belongs to the component:
 
-Time-based behavior must be explicit where it affects comprehension, input, authority, or accessibility.
+```text
+Component ID:
+Purpose / Non-purpose:
+Semantic role:
+Projected vs local state:
+Required interaction states:
+Keyboard / pointer:
+Responsive behavior:
+Content limits:
+Design tokens:
+Forbidden domain calculations:
+Decision IDs:
+```
 
-Required fields where applicable:
+Do not move page/business rules into a component contract merely because the component displays them.
 
-- trigger;
-- start condition;
-- sequence;
-- authoritative state relationship;
-- allowed interaction during motion;
-- reveal point;
-- completion behavior;
-- timeout / auto-dismiss behavior;
-- cancellation behavior;
-- reduced-motion equivalent;
-- failure fallback.
+## 6.3 Motion / Temporal Contract
 
-Presentation timing must never become gameplay authority unless a canonical domain contract explicitly says otherwise.
+Use when timing affects comprehension, input, authority, accessibility, or result sequencing.
 
-## Design Tokens
+```text
+Trigger:
+Start condition:
+Sequence:
+Authoritative-state relationship:
+Interaction allowed during motion:
+Reveal point:
+Completion / cancellation:
+Timeout / auto-dismiss:
+Reduced-motion equivalent:
+Failure fallback:
+```
 
-Layout, spacing, typography, color, radius, elevation, focus treatment, density, and motion values should use named tokens rather than repeated prose or arbitrary component-local values.
+Presentation timing MUST NOT become gameplay authority unless a canonical domain contract explicitly requires it.
 
-AI must reuse existing tokens when an appropriate token exists. Creating a new token requires an explicit design-system need, not ad hoc visual preference.
+## 6.4 Design tokens
+
+Use named tokens for recurring visual values. AI MUST reuse an existing appropriate token before creating a new one.
+
+Token categories include:
+
+- spacing / density;
+- typography;
+- semantic color;
+- borders / radius / elevation;
+- focus treatment;
+- motion duration/easing.
+
+Do not create a new token to avoid using an existing equivalent token.
 
 ---
 
-# D. AI Execution and Verification Plane
+# 7. AI reading protocol — keep context small and deterministic
 
-## AI Implementation Work Order
+AI MUST NOT read or reinterpret the entire UX corpus for every implementation task.
 
-AI implementation must be scoped by a Work Order instead of being told to implement the entire planning corpus at once.
+## Planning task reading order
 
-Required template:
+1. Current governance sheet Decision Map.
+2. Referenced dependency Decision Cards.
+3. Relevant existing canonical domain/design contract only when it materially constrains the decision.
+4. Relevant current implementation only as evidence, never as automatic product truth.
+
+## Implementation task reading order
+
+1. `C0` framework rules in this document.
+2. The exact scoped Work Order.
+3. Every Decision ID referenced by the Work Order.
+4. Only the Surface/Component/Motion contracts referenced by those decisions/work order.
+5. Only applicable M1-M6 rows.
+6. Relevant canonical domain/architecture contracts.
+7. Current source code and tests.
+
+If a required reference cannot be found, AI MUST stop rather than substitute a similarly named rule.
+
+## AI output discipline during planning
+
+For each owner decision turn, keep the visible interaction compact:
+
+```text
+Current: <ID — question>
+Status: <status>
+Why this matters: <one short paragraph>
+Options: A / B / C (or a direct editable proposal)
+Recommendation: <one option + brief reason>
+```
+
+After the owner answers:
+
+```text
+Recorded: <ID> = <decision summary> — Selected/Reviewed, not Frozen.
+Next: <predeclared next ID>
+```
+
+Do not bury the owner in registry/matrix maintenance details unless they affect the product choice.
+
+---
+
+# 8. Planning Gap and Stop protocol
+
+AI MUST return a Planning Gap instead of inventing behavior when:
+
+- a required decision is missing or still `Draft`;
+- two applicable canonical contracts conflict;
+- the authoritative data source does not expose required information;
+- UI implementation would require new named-rule calculations;
+- target eligibility, DC, resource legality, authority, disclosure, fallback, or persistence semantics would have to be guessed;
+- legacy-path status is unknown;
+- a required role/error/focus/responsive/transition behavior is materially unspecified at the chosen specification tier;
+- implementation would violate a Frozen dependency.
+
+Use this exact compact form:
+
+```text
+PLANNING GAP
+Affected IDs:
+Gap:
+Why AI cannot safely infer it:
+Smallest owner/domain decision needed:
+```
+
+Do not turn a planning gap into an improvised UX question in the middle of another sheet. Put it into the visible backlog / destination sheet first.
+
+---
+
+# 9. AI Work Order — implementation handoff
+
+AI implementation is performed from a scoped Work Order, not from the whole planning corpus.
 
 ```text
 WORK ORDER
 ID:
 Objective:
+Spec Tier: S0 / S1 / S2 / S3
 
 IN SCOPE:
 ALLOWED SIDE EFFECTS:
@@ -357,19 +439,16 @@ MUST NOT CHANGE:
 APPLICABLE DECISION IDS:
 FROZEN DEPENDENCIES:
 
-SOURCE OF TRUTH:
-AUTHORITATIVE DATA:
+AUTHORITATIVE SOURCES:
 LOCAL PRESENTATION STATE:
 
 ENTRY STATE:
 ALLOWED TRANSITIONS:
-EXIT STATE:
+EXIT / RETURN:
 
-REQUIRED SURFACES:
-REQUIRED COMPONENT STATES:
-REQUIRED ROLE VARIANTS:
-REQUIRED RESPONSIVE STATES:
-REQUIRED ACCESSIBILITY:
+REQUIRED SURFACES / COMPONENTS:
+REQUIRED STATES / ROLE VARIANTS:
+REQUIRED ACCESSIBILITY / RESPONSIVE:
 REQUIRED MOTION / TEMPORAL BEHAVIOR:
 
 NO-INVENTION RULES:
@@ -383,20 +462,24 @@ REQUIRED OWNER WALKTHROUGH:
 STOP CONDITIONS:
 ```
 
-## Scope lock
+### Work Order rule
 
-Every Work Order must explicitly classify:
+The Work Order SHOULD reference canonical Decision IDs rather than duplicate their normative text. Short summaries may be included for convenience but are non-canonical.
+
+### Scope lock
+
+Every Work Order classifies:
 
 - `IN SCOPE`
 - `ALLOWED SIDE EFFECT`
 - `OUT OF SCOPE`
 - `MUST NOT CHANGE`
 
-An AI agent must not expand scope merely because adjacent code looks outdated or inconsistent.
+AI MUST NOT expand scope because adjacent code appears outdated.
 
-## Legacy containment
+### Legacy containment
 
-Every touched legacy path must be labeled as one of:
+Touched legacy paths are labeled:
 
 - `ACTIVE`
 - `COMPATIBILITY ONLY`
@@ -404,11 +487,33 @@ Every touched legacy path must be labeled as one of:
 - `FORBIDDEN`
 - `DELETE`
 
-Do not leave multiple paths with ambiguous authority.
+Ambiguous parallel authority is a Planning Gap.
 
-## Quality gates
+---
 
-UI implementation quality is checked through these gates as applicable:
+# 10. Change impact — changing one owner decision must stay cheap
+
+When the owner changes a Frozen decision, AI performs the maintenance work.
+
+1. Update the canonical Decision Card and preserve the old decision as superseded/history where needed.
+2. Find references/dependencies automatically.
+3. Classify each affected artifact:
+   - `No Change`
+   - `Review Required`
+   - `Contract Update Required`
+   - `Implementation Update Required`
+   - `Regression Required`
+4. Update derived contracts/references.
+5. Present the owner only the material product consequences and any new decision required.
+6. Re-run the smallest safe set of verification gates.
+
+The owner should not have to manually hunt through multiple documents to make one UX change.
+
+---
+
+# 11. Verification and completion
+
+Quality gates are applied by risk/spec tier:
 
 - `Q1` Accessibility
 - `Q2` Performance / Responsiveness
@@ -417,76 +522,102 @@ UI implementation quality is checked through these gates as applicable:
 - `Q5` Domain / Authority Regression
 - `Q6` Owner Walkthrough
 
-Performance numbers must come from an explicit measured requirement. AI must not invent arbitrary FPS, latency, timeout, or duration budgets.
-
-## Completion rule
+AI MUST NOT invent arbitrary FPS, latency, timeout, breakpoint, or animation-duration budgets. Numeric budgets require an explicit design/engineering requirement or measured baseline.
 
 Implementation is complete only when:
 
-1. all applicable Frozen decisions are satisfied;
+1. applicable Frozen decisions are satisfied;
 2. no applicable Stop Condition remains;
-3. required Surface/Component/Motion contracts are implemented;
-4. required Matrix coverage is represented;
-5. required automated evidence passes;
-6. required visual evidence is attached or reproducible;
-7. required owner walkthrough is completed;
+3. required contracts for the selected Spec Tier are satisfied;
+4. required M1-M6 coverage exists;
+5. automated evidence passes;
+6. required visual evidence is reproducible;
+7. required owner walkthrough passes;
 8. the exact accepted source revision is recorded.
+
+Green automation alone never equals owner UX acceptance.
 
 ---
 
-# Owner-friendly review workflow
+# 12. Source-of-truth and UI boundary rules
 
-The process must remain easy to control manually.
+These constraints are always applicable unless a canonical architecture decision explicitly changes them:
 
-For each review sheet:
+- UI renders canonical/domain/application state and collects user decisions.
+- UI may own local presentation state such as open/closed, selected tab, zoom, hover, or custom layout preferences when explicitly allowed.
+- UI MUST NOT own hidden named-rule calculations, attack legality, target eligibility, AC/DC, proficiency, action outcome, turn semantics, resource legality, multiplayer authority, or secret-data disclosure policy.
+- Visibility is not the same as delivery. Data that a Player is not authorized to receive MUST NOT be sent and merely hidden in UI.
+- Unknown or unsupported mechanics are explicit blockers, not approximate fallbacks.
+- Current implementation is evidence, not automatic product truth.
 
-1. Show the sheet purpose and boundaries.
-2. Show the complete Decision Map before asking questions.
-3. Mark already-decided items and their current status.
-4. Ask one decision at a time in stable order.
-5. Record the owner's choice immediately as `Selected` unless the owner explicitly requests another status.
-6. Do not freeze automatically.
-7. Route newly discovered detail to the correct downstream sheet or Planning Gap instead of derailing the current sequence.
-8. At the end of the sheet, show a concise review summary and unresolved gaps.
-9. Freeze only when the owner explicitly approves freezing the applicable scope.
+---
 
-The owner must be able to change one decision by ID without rewriting the entire plan. The traceability graph determines what downstream artifacts require re-review.
+# 13. Recommended canonical file layout when the plan is materialized
 
-# AI readability rules
+Keep the human entry point shallow and the detailed artifacts separated.
 
-To keep instructions machine-readable and low-ambiguity:
+```text
+docs/design/
+  ui-ux-planning-framework.md        # this framework
+  ui-ux/
+    README.md                        # owner/AI dashboard + current next item
+    decisions.md                     # Decision Ledger; canonical decision bodies
+    master-flow.md                   # product flows / surface map
+    planning-gaps.md                 # explicit unresolved gaps
+    registry.md                      # R1-R9 inventory, references only
+    matrices.md                      # M1-M6 structured rows
+    surfaces/                        # S1-S3 Surface Contracts
+    components/                      # reusable component contracts
+    motion/                          # material temporal contracts
+    work-orders/                     # scoped implementation handoffs
+```
 
-- use stable IDs everywhere;
-- use tables for inventories and matrices;
-- use explicit enums for statuses and legacy state;
-- use `MUST / MUST NOT / SHOULD / MAY` for normative requirements;
-- keep one canonical rule body and reference it by ID elsewhere;
-- distinguish canonical data from local presentation state;
-- distinguish visibility from data delivery;
-- distinguish route/destination, task-flow step, workspace mode, overlay, feedback, system state, component, content, and motion;
-- specify entry, transition, exit, failure, and recovery for stateful interactions;
-- specify role/authority and responsive/accessibility states instead of relying on inference;
-- prefer named design tokens over prose values;
-- preserve provenance from decision to code to evidence;
-- stop on missing authority instead of inventing behavior.
+The owner normally starts at `ui-ux/README.md`, not by reading every file.
 
-# Framework acceptance criteria
+The dashboard should show only:
 
-This planning framework is considered correctly applied only when both primary objectives remain true:
+```text
+Current review sheet:
+Current decision:
+Reviewed / Frozen counts:
+Open Planning Gaps:
+Next owner decision:
+Implementation-ready scopes:
+```
 
-### Owner control
+AI maintains this dashboard as planning changes.
 
-- The owner can locate any meaningful UI decision by stable ID.
-- The owner can see its status, scope, rationale, dependencies, and affected surfaces.
-- The owner can change one decision without manually hunting through duplicated prose.
-- The owner can understand the user flow and UI inventory without reading implementation code.
+---
 
-### AI interpretation
+# 14. Framework success criteria
 
-- The AI can identify exactly which decisions are applicable to a scoped task.
-- The AI can distinguish product decisions from domain authority and local UI state.
-- The AI can determine required states, transitions, role variants, accessibility, responsive behavior, and evidence.
-- The AI has explicit forbidden behavior and stop conditions.
-- The AI is never expected to fill a material planning gap by guessing.
+This framework is successful only if both sides remain easy.
 
-If either side becomes difficult, simplify references and contracts before adding more categories or duplicated documentation.
+## Owner control test
+
+The owner can:
+
+- understand the current UI plan without reading source code;
+- see the full upcoming question map before review starts;
+- change one decision in plain language;
+- immediately see only the material consequences of that change;
+- avoid manually updating traceability, matrices, or derived contracts;
+- know what is Selected, Reviewed, Frozen, Superseded, or still a Planning Gap.
+
+## AI interpretation test
+
+A new AI agent can:
+
+- find the current task and exact applicable IDs quickly;
+- read only a bounded set of referenced documents;
+- distinguish owner product decisions, domain authority, and local presentation state;
+- identify allowed transitions, role/visibility constraints, edge states, accessibility, responsive, and timing requirements when applicable;
+- know what it MUST NOT change;
+- know exactly when to stop with a Planning Gap;
+- produce implementation evidence traceable back to the relevant Decision IDs.
+
+## Final simplicity rule
+
+> If adding a new category, field, matrix, or contract does not materially improve owner control or AI certainty, do not add it.
+
+The framework is intentionally complete enough for high-risk VTT UI work but progressively lightweight for ordinary UI decisions.
