@@ -77,6 +77,18 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 ---
 
+# UX-02 — User & Role Model
+
+## UX-02-01 — Connected role mapping
+
+- **Status:** Selected
+- **Applies To:** Connected Session role model
+- **Decision:** Connected play uses a fixed mapping between connection role and play role: **Host is always DM; Client is always Player.** Host/Player and Client/DM combinations are not supported connected-role states. Offline/Standalone role identity is intentionally not decided here and remains `UX-02-02`.
+- **Why:** Host/Client and DM/Player are not independently combinable in the connected product model; the connection role determines the connected play role.
+- **Affects:** UX-02-02, UX-02-03, UX-02-05, UX-02-06, UX-02-07, UX-02-08, SES-01, SES-02, DM-01
+
+---
+
 # Migrated reviewed decisions
 
 These decisions were selected/reviewed before their final destination sheet maps were materialized. Their content is preserved under stable origin IDs; permanent destination IDs may be assigned later without losing the origin alias.
