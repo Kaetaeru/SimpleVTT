@@ -79,6 +79,7 @@ Use versioned contracts, registries, descriptors, scenario tests, and declarativ
 
 ## Canonical documents
 
+- `docs/design/ui-ux-planning-framework.md` — canonical owner-friendly and AI-readable UI/UX planning, decision, handoff, and verification framework.
 - `docs/rules/README.md` — Common Rule Definition Specification v0.x draft.
 - `docs/rules/content-relationships.md` — normative cross-module `parent` / `extends` / `replaces`, Choice option contribution, and progression contribution semantics.
 - `docs/design/character-lifecycle.md` — Character creation, editing, progression, revision, and local ownership.
