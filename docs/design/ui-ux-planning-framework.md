@@ -116,7 +116,19 @@ SimpleVTT has different authority domains. **Cross-domain conflicts are not reso
 
 Product/UX decisions govern presentation, information hierarchy, interaction grammar, user-visible flow, component behavior, disclosure UX, and other UI/product choices **only where they do not redefine domain/architecture semantics**.
 
-Within the same Product/UX scope, use this precedence:
+#### Planning truth
+
+Within the same Product/UX scope, an active made Decision Card with `Status: Selected`, `Reviewed`, or `Frozen` is canonical planning intent and takes precedence over current implementation, historical notes, and AI inference.
+
+`Draft` is not made product intent. `Superseded` is historical only.
+
+If current implementation conflicts with an applicable `Selected` or `Reviewed` Decision Card, report implementation/planning drift; do **not** treat the code as the preferred product plan merely because the Decision is not Frozen.
+
+#### Implementation reliance
+
+Implementation stability is a separate question from planning truth. Only `Frozen` Product/UX decisions may be treated as stable implementation dependencies unless an explicit scoped authorization says otherwise.
+
+Within the same implementation scope, use this reliance order:
 
 1. applicable Frozen owner Decision Card;
 2. approved Surface / Component / Motion contract derived from applicable Frozen decisions;
@@ -124,6 +136,8 @@ Within the same Product/UX scope, use this precedence:
 4. current implementation;
 5. historical/non-canonical working notes, including `.agents/`;
 6. AI inference.
+
+Therefore `Selected` / `Reviewed` may outrank current code as **planning intent** while still being insufficient to authorize or stabilize implementation.
 
 ### Domain / architecture authority
 
