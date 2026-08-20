@@ -3,10 +3,12 @@
 Canonical decision bodies live here unless a future split gives a decision its own canonical file. Other planning artifacts should reference these IDs rather than copy the normative decision text.
 
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
+Review order and undecided Decision Maps: [`review-plan.md`](review-plan.md)
 
 ## Ledger rules
 
 - `Selected` / `Reviewed` does **not** mean Frozen.
+- This ledger contains **decisions that have actually been made**, plus preserved migrated decisions. Undecided question maps live only in `review-plan.md`.
 - Do not silently renumber historical decisions. If an older origin ID moves to another review sheet, keep the origin as an alias until the destination sheet assigns its permanent ID.
 - If a decision changes, preserve traceability with `Superseded` / `Superseded By` instead of deleting history.
 - Compact entries are intentional. Add advanced fields only when needed for authority, legacy, scope, or change impact.
@@ -225,23 +227,6 @@ These decisions were originally explored under `UX-01` before the review process
 
 ---
 
-# UX-02 — User & Role Model
+# Pending sheets
 
-No UX-02 individual decision is recorded yet. The complete predeclared Decision Map is preserved in planning workflow and should be materialized before review resumes.
-
-Planned sequence:
-
-| ID | Question |
-| --- | --- |
-| `UX-02-01` | Separate Play Role and Connection Role, or use one role axis? |
-| `UX-02-02` | Does Offline/Standalone use have a DM/Player identity? |
-| `UX-02-03` | Relationship between Character ownership and Actor control? |
-| `UX-02-04` | How many Actors may a Player control in one session? |
-| `UX-02-05` | DM Actor-control authority model? |
-| `UX-02-06` | Is live DM <-> Player role switching allowed? |
-| `UX-02-07` | How far may role-specific UI structure diverge? |
-| `UX-02-08` | Default visibility principle for unauthorized information? |
-| `UX-02-09` | Include Spectator / Co-DM / Observer in v1? |
-| `UX-02-09A` | Conditional permission boundaries only if extra roles are included. |
-
-Do not add additional UX-02 questions mid-sheet without first adding them visibly to the Decision Map as a Planning Gap or declared branch.
+No undecided question bodies are stored in this ledger. The canonical review sequence and complete predeclared Decision Maps live in [`review-plan.md`](review-plan.md). When the owner answers a predeclared item, record the resulting Decision Card here.
