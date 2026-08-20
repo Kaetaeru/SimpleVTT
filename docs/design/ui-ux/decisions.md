@@ -79,7 +79,22 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 # Migrated reviewed decisions
 
-These decisions were originally explored under `UX-01` before the review process was corrected. Their content is preserved, but their permanent destination IDs are assigned only when the destination sheet's complete Decision Map is established.
+These decisions were selected/reviewed before their final destination sheet maps were materialized. Their content is preserved under stable origin IDs; permanent destination IDs may be assigned later without losing the origin alias.
+
+## ORIGIN-FLOW-01 — Direct first-class Session entry
+
+- **Status:** Reviewed
+- **Destination:** NAV-01, SES-01
+- **Decision:** Home exposes direct first-class Host Session and Join Session entry paths. Session is not modeled as a child of Character, and visiting/creating a Character is not a universal prerequisite for entering Session.
+- **Depends On:** UX-01-01
+
+## ORIGIN-FLOW-02 — Join includes Character selection
+
+- **Status:** Reviewed
+- **Destination:** SES-01
+- **Decision:** Player Join includes a Character Select step before entering the Player Lobby / live Play path. This flow-specific selection requirement does not make Character a product-wide prerequisite for Session.
+- **Planning Gap:** GAP-JOIN-NO-CHARACTER
+- **Depends On:** ORIGIN-FLOW-01
 
 ## ORIGIN-UX-01-07 — Bottom Action Bar structure
 
