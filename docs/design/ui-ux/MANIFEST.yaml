@@ -1,0 +1,159 @@
+schema_version: 1
+system: simplevtt-ui-ux-planning
+status: active
+
+primary_goals:
+  - owner_control_easy
+  - ai_interpretation_unambiguous
+
+entrypoints:
+  owner: docs/design/ui-ux/README.md
+  ai: docs/design/ui-ux/AI-READING-GUIDE.md
+  preflight: docs/design/ui-ux/PREFLIGHT.md
+  framework: docs/design/ui-ux-planning-framework.md
+
+canonical_precedence_reference: docs/design/ui-ux-planning-framework.md
+
+status_enums:
+  decision:
+    - Draft
+    - Selected
+    - Reviewed
+    - Frozen
+    - Superseded
+  contract_readiness:
+    - None
+    - Partial
+    - Ready
+    - Blocked
+  gap_type:
+    - OWNER_DECISION
+    - DOMAIN_CONTRACT
+    - ARCHITECTURE_CONTRACT
+    - IMPLEMENTATION_BLOCKER
+    - DOCUMENT_RECONCILIATION
+    - COVERAGE
+  gap_severity:
+    - Critical
+    - Major
+    - Normal
+
+sources:
+  framework:
+    path: docs/design/ui-ux-planning-framework.md
+    role: governance_rules
+    authority: canonical
+    derived: false
+    owner_edit_frequency: rare
+
+  ai_reading_guide:
+    path: docs/design/ui-ux/AI-READING-GUIDE.md
+    role: task_router_and_reading_order
+    authority: canonical
+    derived: false
+    must_read_for_ai_entry: true
+
+  preflight:
+    path: docs/design/ui-ux/PREFLIGHT.md
+    role: start_work_consistency_gate
+    authority: canonical_process
+    derived: false
+    must_pass_before_substantive_work: true
+
+  dashboard:
+    path: docs/design/ui-ux/README.md
+    role: current_planning_status_and_next_action
+    authority: derived_summary
+    derived: true
+    derived_from:
+      - docs/design/ui-ux/review-plan.md
+      - docs/design/ui-ux/decisions.md
+      - docs/design/ui-ux/planning-gaps.md
+      - docs/design/ui-ux/registry.md
+    owner_default_entrypoint: true
+
+  review_plan:
+    path: docs/design/ui-ux/review-plan.md
+    role: review_order_and_undecided_decision_maps
+    authority: canonical_for_question_order
+    derived: false
+    contains_normative_decision_bodies: false
+
+  decisions:
+    path: docs/design/ui-ux/decisions.md
+    role: canonical_decision_ledger
+    authority: canonical_for_made_product_decisions
+    derived: false
+    contains_undecided_question_maps: false
+
+  master_flow:
+    path: docs/design/ui-ux/master-flow.md
+    role: owner_friendly_product_flow_and_surface_topology
+    authority: canonical_planning_baseline
+    derived: false
+    current_status: Draft
+
+  planning_gaps:
+    path: docs/design/ui-ux/planning-gaps.md
+    role: unresolved_material_no_invention_queue
+    authority: canonical_for_known_gaps
+    derived: false
+
+  registry:
+    path: docs/design/ui-ux/registry.md
+    role: r1_r9_ui_inventory
+    authority: derived_inventory
+    derived: true
+    normative_behavior_source: docs/design/ui-ux/decisions.md
+    status_axes:
+      - planning_maturity
+      - contract_readiness
+
+  matrices:
+    path: docs/design/ui-ux/matrices.md
+    role: m1_m6_cross_cutting_coverage
+    authority: derived_coverage
+    derived: true
+    normative_behavior_source: docs/design/ui-ux/decisions.md
+
+  templates:
+    path: docs/design/ui-ux/templates.md
+    role: copy_safe_artifact_templates
+    authority: canonical_process_template
+    derived: false
+
+optional_families:
+  surfaces:
+    path: docs/design/ui-ux/surfaces/
+    role: detailed_surface_contracts
+    materialize_when: spec_tier_requires
+  components:
+    path: docs/design/ui-ux/components/
+    role: reusable_component_contracts
+    materialize_when: spec_tier_requires
+  motion:
+    path: docs/design/ui-ux/motion/
+    role: material_motion_temporal_contracts
+    materialize_when: spec_tier_requires
+  work_orders:
+    path: docs/design/ui-ux/work-orders/
+    role: scoped_ai_implementation_handoffs
+    materialize_when: implementation_is_authorized_and_ready
+
+maintenance_rules:
+  - one_normative_fact_one_canonical_home
+  - undecided_questions_live_in_review_plan_not_decision_ledger
+  - decision_bodies_live_in_decision_ledger
+  - registry_and_matrices_reference_decisions_instead_of_copying_them
+  - dashboard_is_summary_and_must_not_override_canonical_sources
+  - derived_document_drift_must_be_fixed_before_substantive_work
+  - current_code_is_evidence_not_automatic_product_truth
+  - missing_material_policy_returns_planning_gap
+  - owner_never_manually_repairs_cross_references
+
+implementation_gate:
+  planning_status_alone_authorizes_implementation: false
+  requires_scoped_work_order: true
+  requires_applicable_frozen_dependencies: true
+  requires_no_material_blocking_gap: true
+  owner_acceptance_required: true
