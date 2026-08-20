@@ -20,6 +20,8 @@ If the planning structure makes either goal harder, simplify it before adding mo
 | `UX-01` | 7 decisions Reviewed, not Frozen |
 | Migrated prior decisions | Preserved in Decision Ledger with destination sheets; not Frozen |
 | `UX-02` | Complete Decision Map preserved; individual review paused |
+| `UX-03` | Baseline Decision Map preserved; not started |
+| 27-sheet Review Plan | Materialized; later maps still pending |
 | Master User Flow | Draft canonical planning baseline materialized |
 | R1-R9 inventory | Draft seed inventory materialized; implementation cross-check still required |
 | M1-M6 matrices | Draft seed rows/coverage materialized; expansion follows inventory cross-check |
@@ -37,7 +39,7 @@ AI should finish the whole-product visibility pass first:
 1. Cross-check R1-R9 against current implementation + master flow + existing decisions
 2. Add missing inventory rows without inventing behavior
 3. Expand only the M1-M6 rows needed for material coverage
-4. Build/check the complete 27-sheet review coverage map
+4. Complete the next missing Decision Maps according to review-plan.md when their turn arrives
 5. Present owner a concise whole-product planning checkpoint
 6. Then resume the predeclared UX-02 sequence
 ```
@@ -58,6 +60,7 @@ The owner does **not** need to edit IDs or tables directly.
 | `구현 준비됐어?` | Check Frozen dependencies, gaps, spec tier, contracts, and required Work Order. |
 | `되돌려` | Restore/supersede the affected decision with traceability; do not rewrite unrelated decisions. |
 | `전체 플로우 보여줘` | Use `master-flow.md`; do not reconstruct a different flow from code ad hoc. |
+| `다음에 뭘 정하지?` | Use `review-plan.md`; do not invent a new review sequence. |
 
 ## Owner-facing files
 
@@ -67,6 +70,7 @@ The owner normally needs only these:
 - [`decisions.md`](decisions.md) — canonical Decision Ledger.
 - [`master-flow.md`](master-flow.md) — product flow and major surface structure.
 - [`planning-gaps.md`](planning-gaps.md) — unresolved choices/conflicts AI must not invent.
+- [`review-plan.md`](review-plan.md) — fixed review order and declared Decision Maps.
 
 Supporting files maintained mainly by AI:
 
@@ -83,12 +87,13 @@ A new AI continuing UI/UX planning MUST read in this order:
 ```text
 1. docs/design/ui-ux-planning-framework.md
 2. docs/design/ui-ux/README.md
-3. docs/design/ui-ux/decisions.md
-4. docs/design/ui-ux/master-flow.md
-5. docs/design/ui-ux/planning-gaps.md
-6. docs/design/ui-ux/registry.md only for inventory/coverage work
-7. docs/design/ui-ux/matrices.md only for cross-cutting/coverage work
-8. only then read the current sheet's referenced canonical/domain/code evidence
+3. docs/design/ui-ux/review-plan.md
+4. docs/design/ui-ux/decisions.md
+5. docs/design/ui-ux/master-flow.md
+6. docs/design/ui-ux/planning-gaps.md
+7. docs/design/ui-ux/registry.md only for inventory/coverage work
+8. docs/design/ui-ux/matrices.md only for cross-cutting/coverage work
+9. only then read the current sheet's referenced canonical/domain/code evidence
 ```
 
 Do **not** scan all implementation files or all design documents before knowing the current task.
