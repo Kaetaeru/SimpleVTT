@@ -24,6 +24,8 @@ Each gap identifies:
 - `Smallest decision needed`
 - `Status`
 
+Structured Owner/Decision/Gap/Dependency references MUST use full stable IDs or repository paths per `MANIFEST.yaml`. Human context belongs in `Affected`, `Gap`, or `Note`.
+
 ### Gap Type enum
 
 - `OWNER_DECISION` — the owner must choose product/UX behavior.
@@ -79,7 +81,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 - **Gap Type:** OWNER_DECISION
 - **Severity:** Major
-- **Owner Sheet:** UX-02 / SES-01
+- **Owner Sheet:** UX-02, SES-01
 - **Affected:** Join flow, Character selection
 - **Gap:** What happens when a Player attempts to join but has no valid Character available is undecided.
 - **Why AI cannot infer it safely:** Automatically creating, importing, spectating, or blocking are materially different product behaviors.
@@ -90,7 +92,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 - **Gap Type:** DOMAIN_CONTRACT
 - **Severity:** Major
-- **Owner Sheet:** DND-03 / domain dependency
+- **Owner Sheet:** DND-03
 - **Affected Decision:** ORIGIN-UX-01-17
 - **Gap:** The UI intent assumes a canonical relation from equipped Main Hand to executable attack, but that relation must exist in authoritative application/domain data.
 - **Why AI cannot infer it safely:** UI choosing a weapon by heuristics would violate the no-invention and UI-not-rules boundaries.
@@ -113,13 +115,12 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Gap Type:** OWNER_DECISION
 - **Severity:** Normal
 - **Owner Sheet:** DM-02
-- **Origin:** old UX-01-30, unanswered
 - **Gap:** How DM Activity displays private rolls is undecided.
 - **Known options from prior review:** one chronological record with DM-only badge; separate private-roll area; one chronology with visibility filter.
 - **Why AI cannot infer it safely:** This determines auditability, density, and disclosure affordances.
 - **Smallest decision needed:** Ask only when the complete DM-02 Decision Map is active.
 - **Status:** Deferred
-- **Note:** Deferred to DM-02 sequential review after the Global Planning Gate passes.
+- **Note:** Historical pre-ledger question formerly labeled UX-01-30; non-canonical origin. Deferred to DM-02 sequential review after the Global Planning Gate passes.
 
 ## GAP-ACTOR-CONTEXT-MENU-CONTENTS
 
@@ -136,7 +137,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 - **Gap Type:** OWNER_DECISION
 - **Severity:** Major
-- **Owner Sheet:** DND-03 / INT-01
+- **Owner Sheet:** DND-03, INT-01
 - **Affected Decision:** ORIGIN-UX-01-21
 - **Gap:** Resolution keeps the HUD skeleton and locks only conflicting interactions, but the exact safe-vs-conflicting interaction boundary is undecided.
 - **Why AI cannot infer it safely:** Allowing a conflicting command can corrupt flow; over-locking violates the reviewed UX direction.
@@ -147,7 +148,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 - **Gap Type:** ARCHITECTURE_CONTRACT
 - **Severity:** Major
-- **Owner Sheet:** SES-01 / SES-02
+- **Owner Sheet:** SES-01, SES-02
 - **Affected Decisions:** ORIGIN-UX-01-12, ORIGIN-UX-01-13
 - **Gap:** Shared presentation mode and reconnect restoration require a session/network presentation contract that the current handout envelope does not yet express.
 - **Why AI cannot infer it safely:** Adding local-only presentation state would violate the reviewed shared-state behavior; changing network schema is an architecture contract decision.
@@ -169,7 +170,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 - **Gap Type:** DOCUMENT_RECONCILIATION
 - **Severity:** Major
-- **Owner Sheet:** Governance / affected downstream sheets
+- **Owner Sheet:** docs/design/ui-ux-planning-framework.md
 - **Affected:** Existing `V1_PRODUCT_EXPERIENCE.md`, `V1_PLAY_SURFACE_REVISION.md`, selected UI planning decisions
 - **Gap:** Existing planning prose contains directions such as tabletop-first/VTT-additional, intent-first compact action UX, and initiative-stage replacement that conflict with newer Reviewed/Selected planning direction.
 - **Why AI cannot infer it safely:** Until applicable product decisions are Frozen and canonical planning docs are reconciled, implementation agents may receive contradictory guidance.
@@ -185,10 +186,10 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 - **Gap Type:** COVERAGE
 - **Severity:** Major
-- **Owner Sheet:** Framework execution
+- **Owner Sheet:** docs/design/ui-ux-planning-framework.md
 - **Affected:** Whole product
 - **Resolution:** `registry.md` now materializes the R1-R9 seed inventory. It remains Draft and still requires implementation/master-flow/decision cross-check before owner review is complete.
-- **Resolved By:** `registry.md`
+- **Resolved By:** docs/design/ui-ux/registry.md
 - **Status:** Resolved
 - **Note:** Infrastructure is materialized; coverage review continues as normal Global Planning Gate work.
 
@@ -196,8 +197,8 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 - **Gap Type:** COVERAGE
 - **Severity:** Major
-- **Owner Sheet:** Framework execution
+- **Owner Sheet:** docs/design/ui-ux-planning-framework.md
 - **Resolution:** `matrices.md` now materializes M1-M6 schemas and seed coverage rows. Individual `TBD` cells may still create specific planning gaps as review proceeds.
-- **Resolved By:** `matrices.md`
+- **Resolved By:** docs/design/ui-ux/matrices.md
 - **Status:** Resolved
 - **Note:** Matrix infrastructure is materialized; expansion continues as derived maintenance.
