@@ -12,7 +12,7 @@ Document routing and reading order are owned exclusively by [`ui-ux/AI-READING-G
 
 This framework optimizes two things above everything else:
 
-1. **Owner control must stay easy.** The owner should normally change one decision, not maintain a web of documents by hand.
+1. **Owner control must stay easy.** The owner should normally change decisions without maintaining a web of documents by hand.
 2. **AI interpretation must stay unambiguous.** AI should use stable IDs, exact enums, and bounded referenced context instead of reconstructing product intent from prose or code.
 
 If a process makes either side harder, simplify before adding more structure.
@@ -21,14 +21,15 @@ If a process makes either side harder, simplify before adding more structure.
 
 > **The owner decides product behavior. AI maintains structure, references, impact analysis, derived views/coverage, contracts, and implementation evidence.**
 
-The owner is never responsible for manually synchronizing Registry, Matrix, Master Flow, Dashboard, contracts, tests, or traceability after changing one decision.
+The owner is never responsible for manually synchronizing Registry, Matrix, Master Flow, Dashboard, contracts, tests, or traceability after changing decisions.
 
 ## Daily workflow
 
 ```text
 complete Decision Map
-    -> one owner decision
-    -> Decision Card
+    -> owner answers one or more predeclared decisions from the active sheet
+    -> AI resolves dependency/conditional consistency
+    -> Decision Cards
     -> AI updates derived references / views / impact
     -> later scoped Work Order
     -> implementation
@@ -184,7 +185,17 @@ Before asking any question in a governance sheet, the **complete map for that sh
 
 A map may be labeled `Complete` only when all required T2 fields exist.
 
-Ask one declared decision at a time. Do not invent the next question from the previous answer.
+By default, present the **remaining predeclared questions for the current sheet as one compact batch** so the owner can answer several IDs at once. The owner may still request one-at-a-time review.
+
+For a batch answer, AI MUST:
+
+1. use only already-declared Decision Map IDs;
+2. interpret explicit selections in dependency order;
+3. preserve the owner's explicit choices rather than replacing them with a preferred option;
+4. reconcile compatible choices with the narrowest wording that makes the combined model coherent;
+5. resolve a conditional question without separately asking it only when its parent answer logically makes that branch inapplicable or uniquely determines the branch;
+6. surface a true contradiction when two explicit answers cannot coexist without changing one of them;
+7. never invent a new question from a prior answer.
 
 New findings become a `Planning Gap` or a declared downstream-map item before they may become owner questions.
 
@@ -302,7 +313,7 @@ Matrices reference exact IDs/paths instead of duplicating normative prose.
 
 # 6. Global Planning Gate
 
-**Individual sheet review MUST NOT resume after the current planning reset until this gate passes. This includes `UX-02-01`.**
+**Individual sheet review MUST NOT resume after a planning reset until this gate passes.**
 
 Required preparation:
 
@@ -318,7 +329,7 @@ Required preparation:
 [ ] Owner receives one concise whole-product coverage checkpoint.
 ```
 
-Only after this gate passes may sequential owner review resume at the first declared unfinished decision, currently `UX-02-01` unless the owner approves a different review order.
+Only after this gate passes may owner review resume at the current declared unfinished sheet/question set in `ui-ux/review-plan.md`.
 
 Inventory/matrix/map preparation may identify artifacts and gaps, but MUST NOT silently decide new product behavior.
 
@@ -575,11 +586,11 @@ The owner starts at `ui-ux/README.md`. AI starts at `ui-ux/AI-READING-GUIDE.md`.
 
 ## Owner control test
 
-The owner can understand current planning without source code, see full question maps before review, change one decision/flow naturally, see material consequences only, avoid manual document synchronization, and distinguish Selected/Reviewed/Frozen/Gaps.
+The owner can understand current planning without source code, see full question maps before review, answer a current sheet in one batch or one-at-a-time, change decisions/flow naturally, see material consequences only, avoid manual document synchronization, and distinguish Selected/Reviewed/Frozen/Gaps.
 
 ## AI interpretation test
 
-A new AI can find the correct task route and IDs quickly, parse exact enums/references without prefix inference, distinguish owner decisions/domain authority/local presentation state, identify required states/authority/accessibility/responsive/timing, know what it MUST NOT change, and know exactly when to stop.
+A new AI can find the correct task route and IDs quickly, parse exact enums/references without prefix inference, distinguish owner decisions/domain authority/local presentation state, reconcile batch answers in dependency order without inventing choices, identify required states/authority/accessibility/responsive/timing, know what it MUST NOT change, and know exactly when to stop.
 
 ## Final simplicity rule
 
