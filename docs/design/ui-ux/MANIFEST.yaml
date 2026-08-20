@@ -141,6 +141,9 @@ sources:
       - docs/design/ui-ux/decisions.md
       - docs/design/ui-ux/review-plan.md
       - docs/design/ui-ux/planning-gaps.md
+      - docs/design/README.md
+      - docs/design/character-lifecycle.md
+      - docs/design/session-runtime.md
     may_contain_normative_decision_bodies: false
     owner_may_request_changes_through_view: true
     ai_must_translate_material_changes_to_canonical_sources_first: true
@@ -158,7 +161,10 @@ sources:
     role: r1_r9_ui_inventory
     authority: derived_inventory
     derived: true
-    normative_behavior_source: docs/design/ui-ux/decisions.md
+    canonical_product_behavior_source: docs/design/ui-ux/decisions.md
+    may_reference_review_questions: true
+    may_reference_planning_gaps: true
+    may_reference_domain_contracts: true
     references_must_follow_reference_rules: true
     status_axes:
       - planning_maturity
@@ -169,7 +175,11 @@ sources:
     role: m1_m6_cross_cutting_coverage
     authority: derived_coverage
     derived: true
-    normative_behavior_source: docs/design/ui-ux/decisions.md
+    canonical_product_behavior_source: docs/design/ui-ux/decisions.md
+    may_reference_review_questions: true
+    may_reference_planning_gaps: true
+    may_reference_registry_ids: true
+    may_reference_domain_contracts: true
     references_must_follow_reference_rules: true
 
   templates:
@@ -213,7 +223,7 @@ maintenance_rules:
   - undecided_questions_live_in_review_plan_not_decision_ledger
   - decision_bodies_live_in_decision_ledger
   - master_flow_is_derived_owner_view_not_second_decision_store
-  - registry_and_matrices_reference_decisions_instead_of_copying_them
+  - registry_and_matrices_reference_canonical_sources_instead_of_copying_them
   - dashboard_is_summary_and_must_not_override_canonical_sources
   - exact_enum_values_only_in_structured_status_fields
   - full_stable_references_only_in_reference_fields
