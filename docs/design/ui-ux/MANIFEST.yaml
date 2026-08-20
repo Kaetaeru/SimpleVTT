@@ -189,7 +189,8 @@ planning_gate:
   status: passed
   blocks_individual_review: false
   completed_scope: current_active_runtime_and_planning_snapshot
-  next_allowed_individual_decision: UX-02-01
+  current_review_sheet: UX-02
+  next_allowed_individual_decision: UX-02-02
   requirements:
     r1_r9_complete_inventory_cross_check: passed
     m1_m6_material_coverage: passed
