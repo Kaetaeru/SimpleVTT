@@ -203,22 +203,22 @@ Explanatory conditions belong in the human-readable `Notes` column, not inside t
 | `R3-DICE` | REQ | N/A | REQ | N/A | REQ | REQ | REQ | TBD | N/A | REQ | Error = presentation fallback; visibility variant unresolved. |
 | `R4-RESOLUTION-DRAWER` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Offline/product-shell resolution path; adjudication/Undo DM variant. |
 | `R4-SESSION-RESOLUTION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Connected Play resolution layer. |
-| `R4-QUICK-SHEET` | REQ | TBD | TBD | TBD | TBD | REQ | REQ | Player | REQ | REQ | Current contextual utility evidence; final topology unreviewed. |
-| `R4-FULL-SHEET-LAYER` | REQ | TBD | REQ | TBD | REQ | REQ | REQ | Player | REQ | REQ | Must preserve session context. |
+| `R4-QUICK-SHEET` | REQ | TBD | TBD | TBD | TBD | REQ | REQ | REQ | REQ | REQ | Player-current implementation; exact role entitlement/topology unreviewed. |
+| `R4-FULL-SHEET-LAYER` | REQ | TBD | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Player-current implementation; must preserve session context. |
 | `R4-SESSION-RULES` | REQ | REQ | TBD | TBD | REQ | REQ | REQ | TBD | REQ | REQ | Contextual Rules search/detail. |
-| `R4-ENCOUNTER` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | DM/TBD | REQ | REQ | Exact role model pending UX-02/DM review. |
-| `R4-PARTICIPANTS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | DM/TBD | REQ | REQ | Role entitlement pending. |
-| `R4-SESSION-SHARE` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | DM/TBD | REQ | REQ | Address/content/end-session/compatibility current evidence. |
-| `R4-PLAYER-SESSION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | Player | REQ | REQ | Rejoin/leave/connection state. |
-| `R4-DM-HANDOUT-PANE` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | DM | REQ | REQ | Shared presentation contract blocks readiness. |
-| `R4-PLAYER-HANDOUT-VIEWER` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | Player | REQ | REQ | Must cover Overlay/Upper/Full once contract exists. |
+| `R4-ENCOUNTER` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Exact role entitlement pending UX-02/DM review. |
+| `R4-PARTICIPANTS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Current DM-only implementation; product role entitlement pending. |
+| `R4-SESSION-SHARE` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Address/content/end-session/compatibility current evidence; role scope pending. |
+| `R4-PLAYER-SESSION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Current Player utility; rejoin/leave/connection state. |
+| `R4-DM-HANDOUT-PANE` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Current DM authoring surface; shared presentation contract blocks readiness. |
+| `R4-PLAYER-HANDOUT-VIEWER` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Current Player viewer; must cover Overlay/Upper/Full once contract exists. |
 | `R4-MOVEMENT-REACTION-INPUT` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Current modal evidence; product authority/policy not reviewed. |
-| `R4-PORTRAIT-EDITOR` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | File error/cancel/save/remove/focal controls. |
+| `R4-PORTRAIT-EDITOR` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | File error/cancel/save/remove/focal controls; role/session projection TBD. |
 | `R4-IMPORT-REVIEW` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Add-on/Character/Combatant variants. |
 | `R4-CONFIRM` | REQ | N/A | TBD | TBD | TBD | REQ | REQ | TBD | N/A | REQ | Action-dependent pending/disabled/error/role cases resolved by downstream contract. |
 | `R5-BANNER` | REQ | N/A | N/A | N/A | TBD | REQ | REQ | TBD | TBD | REQ | Severity semantics and reconnect use depend on STATE/A11Y/SES decisions. |
-| `R5-CONNECTION-RECOVERY` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | Player/TBD | REQ | REQ | Reconnecting and disconnected variants. |
-| `R6-NO-VALID-CHARACTER` | TBD | REQ | N/A | REQ | REQ | REQ | REQ | Player | N/A | REQ | Exact normal/error/recovery semantics blocked by GAP-JOIN-NO-CHARACTER. |
+| `R5-CONNECTION-RECOVERY` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | TBD | REQ | REQ | Reconnecting and disconnected variants; exact role model pending. |
+| `R6-NO-VALID-CHARACTER` | TBD | REQ | N/A | REQ | REQ | REQ | REQ | REQ | N/A | REQ | Exact normal/error/recovery semantics blocked by GAP-JOIN-NO-CHARACTER. |
 | `R7-COMMAND-CENTER` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Canonical planned anchor; implementation currently drifts. |
 | `R9-COMBAT-VFX` | REQ | N/A | N/A | N/A | REQ | N/A | REQ | TBD | N/A | REQ | Reduced-motion equivalent belongs to A11Y/DND contracts. |
 
