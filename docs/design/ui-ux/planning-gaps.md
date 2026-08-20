@@ -39,11 +39,19 @@ Each gap identifies:
 - `Major` — blocks a first-class flow or creates repeated material UX ambiguity.
 - `Normal` — important but localized/deferred and not currently critical.
 
+### Status enum
+
+- `Open` — unresolved and currently actionable when its owner/dependency is active.
+- `Deferred` — unresolved but intentionally waits for a declared downstream sheet/dependency.
+- `Resolved` — no longer blocks inference; retained for traceability.
+
+`Status` MUST contain exactly one enum value. Put timing/context notes in `Note`, not inside Status.
+
 Once resolved, move the normative answer into `decisions.md` or the appropriate canonical contract and move the gap to **Resolved gaps** with the resulting Decision/Contract ID.
 
 ---
 
-# Open gaps
+# Active gaps
 
 ## GAP-UX02-ROLE-MODEL
 
@@ -110,7 +118,8 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Known options from prior review:** one chronological record with DM-only badge; separate private-roll area; one chronology with visibility filter.
 - **Why AI cannot infer it safely:** This determines auditability, density, and disclosure affordances.
 - **Smallest decision needed:** Ask only when the complete DM-02 Decision Map is active.
-- **Status:** Open / deferred to DM-02
+- **Status:** Deferred
+- **Note:** Deferred to DM-02 sequential review after the Global Planning Gate passes.
 
 ## GAP-ACTOR-CONTEXT-MENU-CONTENTS
 
@@ -143,7 +152,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Gap:** Shared presentation mode and reconnect restoration require a session/network presentation contract that the current handout envelope does not yet express.
 - **Why AI cannot infer it safely:** Adding local-only presentation state would violate the reviewed shared-state behavior; changing network schema is an architecture contract decision.
 - **Smallest decision needed:** Specify authoritative handout presentation state fields and reconnect projection when implementation is authorized.
-- **Status:** Open implementation contract gap
+- **Status:** Open
 
 ## GAP-DM-ONLY-DELIVERY-PROTOCOL
 
@@ -154,7 +163,7 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Gap:** The authoritative event/network projection for DM-only adjudication and later disclosure is not yet fully specified.
 - **Why AI cannot infer it safely:** UI-only hiding would be a privacy/authority violation. Existence metadata, Activity events, reconnect ledger, and later reveal all need role-scoped projection semantics.
 - **Smallest decision needed:** Define session event visibility/disclosure contract in SES-02 before implementation.
-- **Status:** Open / Critical
+- **Status:** Open
 
 ## GAP-CANONICAL-UX-DOC-RECONCILIATION
 
@@ -165,7 +174,8 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Gap:** Existing planning prose contains directions such as tabletop-first/VTT-additional, intent-first compact action UX, and initiative-stage replacement that conflict with newer Reviewed/Selected planning direction.
 - **Why AI cannot infer it safely:** Until applicable product decisions are Frozen and canonical planning docs are reconciled, implementation agents may receive contradictory guidance.
 - **Smallest decision needed:** After relevant sheets are Reviewed/Frozen, explicitly supersede or revise conflicting legacy planning text by ID/scope.
-- **Status:** Open reconciliation gap
+- **Status:** Deferred
+- **Note:** Reconciliation waits until the affected product decisions are Reviewed/Frozen enough to supersede legacy planning safely.
 
 ---
 
@@ -179,7 +189,8 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Affected:** Whole product
 - **Resolution:** `registry.md` now materializes the R1-R9 seed inventory. It remains Draft and still requires implementation/master-flow/decision cross-check before owner review is complete.
 - **Resolved By:** `registry.md`
-- **Status:** Resolved — infrastructure materialized; coverage review continues as normal dashboard work, not as an open material gap.
+- **Status:** Resolved
+- **Note:** Infrastructure is materialized; coverage review continues as normal Global Planning Gate work.
 
 ## GAP-M1-M6-COVERAGE
 
@@ -188,4 +199,5 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Owner Sheet:** Framework execution
 - **Resolution:** `matrices.md` now materializes M1-M6 schemas and seed coverage rows. Individual `TBD` cells may still create specific planning gaps as review proceeds.
 - **Resolved By:** `matrices.md`
-- **Status:** Resolved — matrix infrastructure materialized; expansion continues as derived maintenance.
+- **Status:** Resolved
+- **Note:** Matrix infrastructure is materialized; expansion continues as derived maintenance.
