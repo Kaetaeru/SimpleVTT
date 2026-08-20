@@ -55,17 +55,6 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 # Active gaps
 
-## GAP-UX02-OFFLINE-ROLE
-
-- **Gap Type:** OWNER_DECISION
-- **Severity:** Normal
-- **Owner Sheet:** UX-02
-- **Depends On:** UX-02-01
-- **Gap:** Whether standalone/offline use carries an explicit DM/Player identity is undecided.
-- **Why AI cannot infer it safely:** Connected roles are now fixed by `UX-02-01`, but Standalone/Offline remains a distinct product context whose identity model has not been selected.
-- **Smallest decision needed:** `UX-02-02`
-- **Status:** Open
-
 ## GAP-JOIN-NO-CHARACTER
 
 - **Gap Type:** OWNER_DECISION
@@ -177,8 +166,18 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Severity:** Major
 - **Owner Sheet:** UX-02
 - **Affected:** Connected role-aware IA, Session, Play, authority matrices
-- **Resolution:** `UX-02-01` selected a fixed connected mapping: Host is always DM and Client is always Player. Connected Host/Player and Client/DM combinations are not supported role states. Offline/Standalone identity remains separately unresolved in `UX-02-02`.
+- **Resolution:** `UX-02-01` selected a fixed connected mapping: Host is always DM and Client is always Player. Connected Host/Player and Client/DM combinations are not supported role states.
 - **Resolved By:** UX-02-01
+- **Status:** Resolved
+
+## GAP-UX02-OFFLINE-ROLE
+
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Normal
+- **Owner Sheet:** UX-02
+- **Depends On:** UX-02-01
+- **Resolution:** `UX-02-02` selected no DM/Player identity for Offline/Standalone use. DM/Player roles are connected-session concepts only; Offline/Standalone remains a role-free local product context.
+- **Resolved By:** UX-02-02
 - **Status:** Resolved
 
 ## GAP-R1-R9-INVENTORY
