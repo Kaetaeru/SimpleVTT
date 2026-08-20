@@ -186,14 +186,17 @@ optional_families:
 
 planning_gate:
   name: global_planning_gate
-  blocks_individual_review: true
-  first_allowed_individual_decision_after_pass: UX-02-01
+  status: passed
+  blocks_individual_review: false
+  completed_scope: current_active_runtime_and_planning_snapshot
+  next_allowed_individual_decision: UX-02-01
   requirements:
-    - r1_r9_complete_inventory_cross_check
-    - m1_m6_material_coverage
-    - all_27_governance_decision_maps_complete
-    - missing_duplication_coverage_audit_pass
-    - owner_whole_product_checkpoint
+    r1_r9_complete_inventory_cross_check: passed
+    m1_m6_material_coverage: passed
+    all_27_governance_decision_maps_complete: passed
+    missing_duplication_coverage_audit: passed
+    owner_whole_product_checkpoint: passed
+  reopen_condition: material_coverage_invalidated_by_later_change_or_explicit_owner_request
 
 maintenance_rules:
   - one_normative_fact_one_canonical_home
@@ -207,7 +210,7 @@ maintenance_rules:
   - full_stable_references_only_in_structured_reference_fields
   - derived_document_drift_must_be_fixed_before_substantive_work
   - current_code_is_evidence_not_automatic_product_truth
-  - missing_material_policy_returns_planning_gap
+  - missing_material_policy_returns_declared_draft_decision_map_item_or_planning_gap
   - owner_never_manually_repairs_cross_references
   - ai_may_propose_review_reorder_but_owner_must_approve
   - stable_v1_governance_is_reopened_only_for_material_drift_or_explicit_owner_request
