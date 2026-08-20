@@ -1,6 +1,12 @@
 schema_version: 2
 system: simplevtt-ui-ux-planning
 status: active
+governance_maturity: stable_v1
+
+validation:
+  bounded_final_validation: passed
+  scenario_count: 10
+  preventive_meta_revalidation: only_on_material_governance_drift_or_explicit_request
 
 primary_goals:
   - owner_control_easy
@@ -283,6 +289,7 @@ maintenance_rules:
   - missing_material_policy_returns_planning_gap
   - owner_never_manually_repairs_cross_references
   - ai_may_propose_review_reorder_but_owner_must_approve
+  - stable_v1_governance_is_reopened_only_for_material_drift_or_explicit_owner_request
 
 implementation_gate:
   planning_status_alone_authorizes_implementation: false
