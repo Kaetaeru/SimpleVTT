@@ -55,17 +55,6 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 
 # Active gaps
 
-## GAP-JOIN-NO-CHARACTER
-
-- **Gap Type:** OWNER_DECISION
-- **Severity:** Major
-- **Owner Sheet:** UX-02, SES-01
-- **Affected:** Join flow, Character selection
-- **Gap:** What happens when a Player attempts to join but has no valid Character available is undecided.
-- **Why AI cannot infer it safely:** Creating/importing inside Join, allowing Lobby-only connection, or blocking Join are materially different product flows.
-- **Smallest decision needed:** Choose the no-character Join branch in the lightweight owner checkpoint.
-- **Status:** Open
-
 ## GAP-MAIN-HAND-CANONICAL-RELATION
 
 - **Gap Type:** DOMAIN_CONTRACT
@@ -75,28 +64,6 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Gap:** The UI intent assumes a canonical relation from equipped Main Hand to executable attack, but that relation must exist in authoritative application/domain data.
 - **Why AI cannot infer it safely:** UI choosing a weapon by heuristics would violate the no-invention and UI-not-rules boundaries.
 - **Smallest decision needed:** Confirm/provide the canonical main-hand executable-action relation or explicitly block the default-click behavior until available.
-- **Status:** Open
-
-## GAP-DM-ROLL-VISIBILITY-PERSISTENCE
-
-- **Gap Type:** OWNER_DECISION
-- **Severity:** Major
-- **Owner Sheet:** DM-01
-- **Affected Decision:** ORIGIN-UX-01-27
-- **Gap:** The initial default for `Public / DM Only` and the exact persistence boundary are not decided.
-- **Why AI cannot infer it safely:** Per-session or longer-lived defaults create materially different privacy expectations.
-- **Smallest decision needed:** Choose initial value and persistence lifetime in the lightweight owner checkpoint.
-- **Status:** Open
-
-## GAP-DM-PRIVATE-ACTIVITY-PRESENTATION
-
-- **Gap Type:** OWNER_DECISION
-- **Severity:** Normal
-- **Owner Sheet:** DM-02
-- **Gap:** How DM Activity displays private rolls is undecided.
-- **Known options from prior review:** one chronological record with DM-only badge; separate private-roll area; one chronology with visibility filter.
-- **Why AI cannot infer it safely:** This materially changes how the DM reads and later discloses hidden adjudication history.
-- **Smallest decision needed:** Choose the Activity presentation in the lightweight owner checkpoint.
 - **Status:** Open
 
 ## GAP-RESOLUTION-SAFE-INTERACTIONS
@@ -147,6 +114,34 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 ---
 
 # Resolved gaps
+
+## GAP-JOIN-NO-CHARACTER
+
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Major
+- **Owner Sheet:** UX-02, SES-01
+- **Resolution:** `SES-01-04` blocks Join when no valid Character exists and provides Create/Import recovery actions before the user retries Join.
+- **Resolved By:** SES-01-04
+- **Status:** Resolved
+
+## GAP-DM-ROLL-VISIBILITY-PERSISTENCE
+
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Major
+- **Owner Sheet:** DM-01
+- **Affected Decision:** ORIGIN-UX-01-27
+- **Resolution:** `DM-01-01` sets the new-session default to Public and persists the DM's changed visibility value only for the lifetime of that live session.
+- **Resolved By:** DM-01-01
+- **Status:** Resolved
+
+## GAP-DM-PRIVATE-ACTIVITY-PRESENTATION
+
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Normal
+- **Owner Sheet:** DM-02
+- **Resolution:** `DM-02-01` uses one chronological DM Activity history with explicit public/private indicators and visibility filtering; private records remain non-delivered to Players until disclosure.
+- **Resolved By:** DM-02-01
+- **Status:** Resolved
 
 ## GAP-UX02-ROLE-MODEL
 
