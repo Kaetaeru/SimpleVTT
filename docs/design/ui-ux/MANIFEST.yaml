@@ -67,6 +67,8 @@ reference_rules:
 owner_control:
   policy: docs/design/ui-ux/OWNER-CONTROL-POLICY.md
   mode: lightweight_material_checkpoints
+  owner_material_checkpoint_phase: complete
+  required_owner_checkpoint_count: 0
   detailed_review_plan_is_owner_homework: false
   escalation_required_before_new_owner_question: true
   owner_checkpoint_categories:
@@ -93,11 +95,7 @@ owner_control:
     - network_privacy_delivery
     - reconnect_projection
     - persistence_schema_security
-  bundle_acceptance:
-    field: 전체 추천안 사용
-    accepted_value: YES
-    per_question_override_field: OWNER SELECT
-    custom_instruction_field: OWNER NOTE
+  completed_checkpoint_source: docs/design/ui-ux/owner-review/02-key-decisions.md
 
 sources:
   framework:
@@ -129,7 +127,8 @@ sources:
     authority: explicit_owner_input_not_canonical_until_reconciled
     derived: false
     owner_editable: true
-    current_checkpoint_file: docs/design/ui-ux/owner-review/02-key-decisions.md
+    current_checkpoint_file: null
+    completed_checkpoint_file: docs/design/ui-ux/owner-review/02-key-decisions.md
     completed_large_worksheet: docs/design/ui-ux/owner-review/01-foundation-navigation-layout.md
     historical_detail_reference_files:
       - docs/design/ui-ux/owner-review/02-states-layering-confirmation.md
@@ -213,27 +212,29 @@ planning_gate:
   blocks_owner_checkpoint_review: false
   completed_scope: current_active_runtime_and_planning_snapshot
   owner_review_mode: lightweight_material_checkpoints
-  completed_owner_scope:
+  owner_material_checkpoint_phase: complete
+  remaining_owner_checkpoint_count: 0
+  remaining_owner_checkpoint_ids: []
+  completed_owner_decision_ids:
     - UX-01
     - UX-02
     - UX-03
     - NAV-01
     - UI-01
     - INT-01
-  current_owner_checkpoint_file: docs/design/ui-ux/owner-review/02-key-decisions.md
-  remaining_owner_checkpoint_count: 10
-  remaining_owner_checkpoint_ids:
     - PLATFORM-01-01
-    - SES-01-04
     - SES-01-02
+    - SES-01-04
+    - SES-01-05
     - DM-01-01
-    - DM-02-01
     - DM-01-03
+    - DM-02-01
     - DM-02-05
     - CONTENT-02-04
     - CONTENT-02-09
     - CONTENT-02-11
-  detailed_map_rows_not_in_this_list: ai_or_contract_resolution_unless_escalation_rule_triggers
+  next_planning_phase: ai_design_defaults_domain_architecture_contracts_and_reconciliation
+  detailed_map_rows_not_listed_as_owner_decisions: ai_or_contract_resolution_unless_escalation_rule_triggers
   requirements:
     r1_r9_complete_inventory_cross_check: passed
     m1_m6_material_coverage: passed
