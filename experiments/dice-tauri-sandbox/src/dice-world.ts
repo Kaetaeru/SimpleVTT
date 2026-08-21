@@ -237,7 +237,7 @@ export class DiceWorld {
   private readonly boundaryDebug: THREE.LineLoop;
   private readonly dice: DieRuntime[] = [];
   private wallBodies: CANNON.Body[] = [];
-  private bounds: Bounds = { halfWidth: 6, minZ: -6, maxZ: 5 };
+  private bounds: Bounds = { halfWidth: 6.2, minZ: -8.2, maxZ: 6.0 };
   private settings: PhysicsSettings;
   private diceCollision = true;
   private raf = 0;
@@ -259,8 +259,10 @@ export class DiceWorld {
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.setClearColor(0x000000, 0);
 
-    this.camera.position.set(0, 8.8, 10.7);
-    this.camera.lookAt(0, 0.15, -0.6);
+    // The screen is treated as the table view. Keep the optical axis exactly
+    // parallel to the floor instead of looking down at the dice from above.
+    this.camera.position.set(0, 1.25, 10.7);
+    this.camera.lookAt(0, 1.25, -1.5);
 
     const hemisphere = new THREE.HemisphereLight(0xffe6c4, 0x1b2732, 2.05);
     this.scene.add(hemisphere);
@@ -473,27 +475,15 @@ export class DiceWorld {
   };
 
   private rebuildBounds() {
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const intersect = (x: number, y: number) => {
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
-      return raycaster.ray.intersectPlane(plane, new THREE.Vector3());
+    // With a floor-parallel camera, the upper screen rays intentionally never
+    // intersect the floor. Keep invisible physics containment independent of
+    // the camera pitch and scale only its width with the window aspect ratio.
+    const aspectScale = THREE.MathUtils.clamp(this.camera.aspect / 1.6, 0.78, 1.32);
+    this.bounds = {
+      halfWidth: 6.2 * aspectScale,
+      minZ: -8.2,
+      maxZ: 6.0,
     };
-
-    const topLeft = intersect(-0.96, 0.92);
-    const topRight = intersect(0.96, 0.92);
-    const bottomLeft = intersect(-0.96, -0.9);
-    const bottomRight = intersect(0.96, -0.9);
-
-    if (topLeft && topRight && bottomLeft && bottomRight) {
-      const backHalfWidth = Math.min(Math.abs(topLeft.x), Math.abs(topRight.x));
-      const frontHalfWidth = Math.min(Math.abs(bottomLeft.x), Math.abs(bottomRight.x));
-      this.bounds = {
-        halfWidth: Math.max(3.2, Math.min(backHalfWidth, frontHalfWidth) - 0.45),
-        minZ: Math.min(topLeft.z, topRight.z) + 0.5,
-        maxZ: Math.max(bottomLeft.z, bottomRight.z) - 0.55,
-      };
-    }
 
     this.removeWalls();
     const height = 2.8;
