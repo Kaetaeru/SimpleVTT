@@ -1,10 +1,21 @@
 # UI Reference Prototype — Preflight
 
-Status: **REBUILD PRE-FLIGHT — current candidates invalidated**
+Status: **STATIC REVIEW CANDIDATE READY — browser / Owner review pending**
 
-Run this before any new prototype specification work or HTML authoring.
+Run this before materially iterating the active prototype or moving its review state forward.
 
-There is currently **no active review candidate**.
+Active candidate:
+
+```text
+app/integrated-reference.html
+```
+
+Historical candidates remain invalid:
+
+```text
+app/index.html      -> REJECTED / HISTORICAL
+app/final-spec.html -> INVALIDATED / HISTORICAL
+```
 
 ---
 
@@ -32,91 +43,104 @@ There is currently **no active review candidate**.
 15. STATE-MODEL.md
 16. SCENARIO-CATALOG.md
 17. MOCK-DATA-CONTRACT.md
-18. PROTOTYPE-ACCEPTANCE.md
-19. PROTOTYPE-WORK-ORDER.md
+18. INTEGRATED-REFERENCE-VERIFICATION.md
+19. PROTOTYPE-ACCEPTANCE.md
+20. PROTOTYPE-WORK-ORDER.md
 ```
 
-Do not read rejected HTML as the design source before this order.
+Do not use rejected HTML as design authority.
 
-`.agents/*`, old demos, `src/*` and tests may be inspected only as historical/implementation evidence after formal requirements are known.
+`.agents/*`, old demos, `src/*` and tests are historical/implementation evidence after formal requirements are known.
 
 ---
 
-# 2. Current candidate state
+# 2. Candidate state
 
 ```text
-app/index.html      -> REJECTED / HISTORICAL
-app/final-spec.html -> INVALIDATED / HISTORICAL
-ACTIVE ENTRY        -> NONE
+ACTIVE ENTRY                  app/integrated-reference.html
+STATIC VERIFICATION           PASS
+BROWSER VISUAL/INTERACTION QA PENDING
+OWNER ACCEPTANCE              PENDING
+RUNTIME UI                    NOT AUTHORIZED
 ```
 
-The next prototype must be a new/rebased candidate.
+Static verification source:
 
-Do not patch either invalidated entry toward acceptance.
+```text
+INTEGRATED-REFERENCE-VERIFICATION.md
+Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
+```
+
+The available execution container could not resolve GitHub hosts for an exact local Chromium run. Do not upgrade browser/visual items to PASS from static inspection alone.
 
 ---
 
 # 3. Mapless Core gate
 
-Before prototype specification or HTML work:
+Before any prototype iteration:
 
 ```text
-[ ] Core contains no battlemap requirement.
-[ ] `Scene/Table/Stage/Canvas` has been interpreted as mapless context/presentation space.
-[ ] Actor fixture data will contain no tactical x/y coordinates.
-[ ] Actor cards will not become draggable map tokens.
-[ ] no square/hex grid is proposed.
-[ ] no pathfinding/movement trace/collision/fog/LoS map visualization is proposed.
-[ ] Handout is presentation, not tactical terrain.
-[ ] target selection is Actor-card/manual-list based.
-[ ] advanced DM spatial UI is fact-oriented, not coordinate editing.
+[x] Core contains no battlemap requirement.
+[x] Scene/Table/Stage/Canvas is interpreted as context/presentation space, not a map.
+[x] Actor fixture data contains no tactical x/y coordinates.
+[x] Actor cards are not draggable map tokens.
+[x] no square/hex grid is present.
+[x] no pathfinding/movement trace/collision/fog/LoS map visualization is present.
+[x] Handout is presentation, not tactical terrain.
+[x] target selection is Actor-card/manual-list based.
+[x] advanced DM spatial UI is fact-oriented, not coordinate editing.
 ```
 
-Any failure blocks prototype work.
+Any future regression blocks review immediately.
 
 ---
 
 # 4. First-run gate
 
+Static candidate:
+
 ```text
-[ ] Fresh first-run default scenario starts with dedicated Tutorial/Onboarding.
-[ ] Tutorial contains Official-style vs SimpleVTT Sheet selection.
-[ ] Tutorial explains Standalone vs Connected use.
-[ ] Tutorial or immediate orientation exposes Character / Host / Join.
-[ ] Tutorial has a later Settings/Help reopen path.
-[ ] Tutorial completion proceeds to Home.
+[x] Fresh first-run default scenario starts with dedicated Tutorial/Onboarding.
+[x] Tutorial contains Official-style vs SimpleVTT Sheet selection.
+[x] Tutorial explains Standalone vs Connected use.
+[x] Tutorial exposes Character / Host / Join orientation.
+[x] Tutorial has a Settings/Help reopen path.
+[x] Tutorial completion proceeds to Home.
 ```
 
-A Home card alone does not satisfy the first-run Tutorial contract.
+Browser hierarchy/readability remains part of Owner review.
 
 ---
 
 # 5. Standalone Sheet/dice gate
 
 ```text
-[ ] both Official-style and SimpleVTT Sheet references exist.
-[ ] ordinary Sheet rolls leave the current Sheet mounted/visible/stable.
-[ ] dice are transient cinematic presentation over/within the same Sheet viewport.
-[ ] no separate dice/result route/window/modal/drawer/persistent tray is proposed.
-[ ] no Close/Back is required merely to return from a routine roll.
-[ ] fixture/local result authority is separate from physics presentation.
+[x] both Official-style and SimpleVTT Sheet references exist.
+[x] ordinary Sheet rolls leave the current Sheet mounted/visible/stable in source structure.
+[x] dice are transient presentation over/within the same Sheet viewport.
+[x] no separate dice/result route/window/modal/drawer/persistent tray is used.
+[x] no Close/Back is required merely to return from a routine roll.
+[x] fixture/local result authority is separate from physics presentation.
 ```
+
+Visual feel/timing remains browser-review work.
 
 ---
 
 # 6. Connected Play gate
 
 ```text
-[ ] Host=DM and Client=Player.
-[ ] Host opens directly into live Freeform; no Lobby/Ready/Start gate.
-[ ] no-Character Join recovery is represented.
-[ ] upper NPC/Neutral/Hostile Actor Board retained.
-[ ] central region is Mapless Play Context/Tabletop Stage.
-[ ] lower Player/Allied Actor Board retained.
-[ ] persistent Command Center retained.
-[ ] Freeform has no fake turn economy.
-[ ] Initiative adds tracker/economy without replacing Actor Boards.
-[ ] DM/Player share the same core skeleton.
+[x] Host=DM and Client=Player.
+[x] Host opens directly into live Freeform; no Lobby/Ready/Start gate.
+[x] no-Character Join recovery is represented.
+[x] upper NPC/Neutral/Hostile Actor Board retained.
+[x] central region is non-spatial Play Context/Tabletop Stage.
+[x] lower Player/Allied Actor Board retained.
+[x] persistent Command Center retained.
+[x] Freeform has no fake turn economy.
+[x] Initiative adds tracker/economy without replacing Actor Boards.
+[x] DM/Player share the same core skeleton.
+[x] safe Product-shell navigation restores prior connected Host/DM or Client/Player identity.
 ```
 
 ---
@@ -124,16 +148,17 @@ A Home card alone does not satisfy the first-run Tutorial contract.
 # 7. Interaction gate
 
 ```text
-[ ] normal capabilities are directly discoverable per current Hotbar decisions.
-[ ] historical intent-first funnel is not restored as the primary capability access model.
-[ ] selected-action targeting has click priority.
-[ ] all Actor Cards remain visible while targeting.
-[ ] valid/invalid/selected target states come from fixtures.
-[ ] single valid target submits immediately.
-[ ] multi-target uses explicit Execute.
-[ ] area-like targeting is a manual target set, not a map template.
-[ ] Main Hand unavailable selects no fallback.
-[ ] right-click Actor menu is UI/context only.
+[x] normal capabilities are directly discoverable per current Hotbar decisions.
+[x] historical intent-first funnel is not restored as primary capability access.
+[x] selected-action targeting has click priority.
+[x] explicit DM control mode has priority over ordinary hostile-click behavior when no action targets.
+[x] all Actor Cards remain visible while targeting.
+[x] valid/invalid/selected target states come from fixtures.
+[x] single valid target submits immediately.
+[x] multi-target uses explicit Execute.
+[x] area-like targeting is a manual target set, not a map template.
+[x] Main Hand unavailable selects no fallback.
+[x] right-click Actor menu remains UI/context oriented.
 ```
 
 ---
@@ -141,36 +166,30 @@ A Home card alone does not satisfy the first-run Tutorial contract.
 # 8. Resolution / privacy / Handout gate
 
 ```text
-[ ] resolution preserves Play skeleton.
-[ ] reaction/concentration stays in context.
-[ ] connected dice use mapless central presentation space.
-[ ] immediate result stays in Play; Activity holds durable detail.
-[ ] Player fixture receives no DM-only placeholder/existence row.
-[ ] Handout modes are presentation-only and contain no map/token interaction.
+[x] resolution preserves Play skeleton.
+[x] selective locking consumes explicit QA fixture values rather than deriving conflict safety.
+[x] reaction/concentration stays in context.
+[x] connected dice use central presentation space.
+[x] immediate result stays in Play; Activity holds durable detail.
+[x] Player fixture receives no DM-only placeholder/existence row.
+[x] Handout modes are presentation-only and contain no map/token interaction.
+[x] advanced spatial facts are contextual rather than routine top-level Play chrome.
 ```
 
-Open technical gaps may use explicit mock fixtures only; runtime implementation remains blocked.
+Open technical gaps remain explicit runtime blockers.
 
 ---
 
-# 9. Catalog reconciliation gate
-
-Before new HTML authoring, the following prototype specs must be reconciled against the integrated baseline:
+# 9. Catalog / fixture reconciliation gate
 
 ```text
-[ ] DESIGN-DEFAULTS.md explicitly forbids tactical-map interpretation.
-[ ] SURFACE-CATALOG.md names central Play region as mapless context/stage and preserves first-run Tutorial.
-[ ] LAYER-MODEL.md makes Base/Canvas terminology non-spatial/non-map.
-[ ] SCENARIO-CATALOG.md starts first run with Tutorial and makes Play scenarios mapless.
-[ ] MOCK-DATA-CONTRACT.md forbids Actor tactical x/y coordinates.
-[ ] PROTOTYPE-WORK-ORDER.md points to a new candidate entry.
-```
-
-Until all six pass:
-
-```text
-P0 SPECIFICATION: NOT READY
-P1 HTML BUILD: BLOCKED
+[x] DESIGN-DEFAULTS.md carries the tactical-map prohibition.
+[x] SURFACE-CATALOG.md defines central Play as mapless/contextual.
+[x] LAYER-MODEL.md treats Base/Canvas as non-spatial product context.
+[x] SCENARIO-CATALOG.md starts with Tutorial and uses mapless Play scenarios.
+[x] MOCK-DATA-CONTRACT.md forbids Actor tactical x/y coordinates.
+[x] PROTOTYPE-WORK-ORDER.md points to the integrated candidate.
+[x] explicit QA fixture exists for unresolved selective-lock semantics.
 ```
 
 ---
@@ -201,10 +220,10 @@ Forbidden:
 ```text
 INTEGRATED BASELINE: PASS
 MAPLESS CORE INTERPRETATION: PASS
-CURRENT CANDIDATES: INVALIDATED
-PROTOTYPE REBUILD CONTRACT: CREATED
-CATALOG RECONCILIATION: PENDING
-NEW HTML AUTHORING: BLOCKED UNTIL CATALOG RECONCILIATION
-OWNER PROTOTYPE ACCEPTANCE: NOT STARTED
+PROTOTYPE SPECIFICATION: PASS FOR CURRENT REVIEW CANDIDATE
+ACTIVE CANDIDATE: app/integrated-reference.html
+STATIC VERIFICATION: PASS
+BROWSER VISUAL / INTERACTION QA: PENDING
+OWNER PROTOTYPE ACCEPTANCE: PENDING
 RUNTIME SRC IMPLEMENTATION: NOT AUTHORIZED
 ```
