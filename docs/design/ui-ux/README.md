@@ -1,6 +1,6 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → mapless Reference Prototype → Owner Acceptance → 상세 구현 계약 → 첫 Runtime Slice 구현 및 검증**까지 진행되었습니다.
+현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → mapless Reference Prototype → Owner Acceptance → 상세 구현 계약 → WO-UI-001 구현/자동검증/Owner Human QA 완료 → WO-UI-002 구현 준비 완료**까지 진행되었습니다.
 
 UI 작업은 앞으로 다음 기준을 함께 읽습니다:
 
@@ -8,7 +8,7 @@ UI 작업은 앞으로 다음 기준을 함께 읽습니다:
 2. current Product/UX Decisions + `INTEGRATED-PRODUCT-UX-PLAN.md`;
 3. Owner가 승인한 `prototype/app/integrated-reference.html`;
 4. `contracts/`의 상세 implementation contracts;
-5. 해당 Runtime Slice의 Work Order / Scoped Freeze / Implementation Record.
+5. 해당 Runtime Slice의 Work Order / Scoped authorization / Implementation Record / Human QA record.
 
 ---
 
@@ -26,13 +26,14 @@ UI 작업은 앞으로 다음 기준을 함께 읽습니다:
 | Detailed contract set | **완료** |
 | Behavior Scenarios | **48개** |
 | QA Acceptance Matrix | **완료** |
-| WO-UI-001 scoped dependency gate | **PASS** |
-| WO-UI-001 runtime implementation | **완료** |
-| WO-UI-001 bounded local verification | **PASS** |
-| WO-UI-001 full UI CI | **PASS** |
-| WO-UI-001 TypeScript / production build | **PASS** |
-| WO-UI-001 | **VERIFIED COMPLETE** |
-| WO-UI-002 | **미승인 / 미시작** |
+| WO-UI-001 automated verification | **PASS** |
+| WO-UI-001 Owner Human QA | **PASS** |
+| WO-UI-001 | **CLOSED / ACCEPTED** |
+| WO-UI-002 source/test inspection | **완료** |
+| WO-UI-002 Work Order | **PREPARED** |
+| WO-UI-002 Domain/Architecture blocker | **없음 확인** |
+| WO-UI-002 scoped dependency authorization | **아직 없음** |
+| WO-UI-002 runtime implementation | **미승인 / 미시작** |
 | broad future runtime implementation | **자동 승인 아님** |
 
 Accepted prototype:
@@ -46,137 +47,182 @@ Machine-readable current state:
 
 [`contracts/MANIFEST.yaml`](contracts/MANIFEST.yaml)
 
-WO-UI-001 implementation evidence:
+WO-UI-001 final evidence:
 
-[`work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md`](work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md)
+- [`work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md`](work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md)
+- [`work-orders/WO-UI-001-HUMAN-QA.md`](work-orders/WO-UI-001-HUMAN-QA.md)
+
+Current Work Order:
+
+[`work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md`](work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md)
 
 ---
 
-# WO-UI-001 — VERIFIED COMPLETE
+# WO-UI-001 — CLOSED / ACCEPTED
 
 Implemented runtime slice:
 
 **Product Shell + First-run Tutorial + Sheet Presentation Preference**
 
-## Implemented behavior
+Final evidence:
 
 ```text
-Fresh first use
--> dedicated Tutorial before normal Home interaction
--> Standalone / Host / Join orientation
--> required Official-style / SimpleVTT initial Sheet choice
--> Tutorial completion + Sheet presentation persisted locally
--> Home
+bounded local verification: PASS
+full UI CI: PASS
+production TypeScript/build: PASS
+Owner Human QA: PASS
 ```
-
-Returning use:
-
-```text
-App launch
--> Home
-```
-
-Tutorial can be reopened from Settings without clearing Character/session/rules state.
-
-The two Character Sheet layouts remain presentation modes over the **same canonical Character**.
-
-Normal Product navigation is now presented at the top in this order:
-
-```text
-Home -> Characters -> Session -> Content -> Rules -> Settings
-```
-
-The old Home-owned onboarding lifecycle was removed.
-
-The historical `.v1-sidebar` class name remains temporarily in markup for bounded compatibility, but its user-visible layout is no longer a permanent left navigation rail.
-
----
-
-# WO-UI-001 verification
 
 Final successful UI workflow:
 
 ```text
 run_id: 32486454036
-source head SHA: ff3b253c840aa9c46f83ffcdd53374b1b5cd1760
 conclusion: SUCCESS
 ```
 
-Passed in the same run:
-
-- UI named-rule boundary;
-- new first-run preference tests;
-- new Tutorial/Product Shell structural tests;
-- existing Session layer contracts;
-- production Play accessibility/structure;
-- combat VFX boundaries;
-- unified Session UX;
-- tabletop Sheet/dice/intent regressions;
-- non-Character product UX;
-- Host preparation/content;
-- live DM mechanics continuity;
-- connected lifecycle / ownership / Character / inventory / spellcasting regressions;
-- progression and authoritative mechanics suites;
-- TypeScript + production build.
-
-An earlier verification attempt failed because the new navigation-order test searched all of `App.tsx` instead of the actual `nav` declaration. The assertion was corrected; the runtime implementation did not need a behavioral rollback.
+WO-UI-001 acceptance does not authorize adjacent runtime slices.
 
 ---
 
-# Still deliberately deferred
+# WO-UI-002 — PREPARED
 
-WO-UI-001 did **not** modify:
+Runtime slice:
+
+**Connected Product Shell Continuity / Return to Play**
+
+## Current drift
+
+Current production composition is:
 
 ```text
-ProductRoot connected composition
-SessionModeRoot
-ProductionPlayScreen
+src/ProductRoot.tsx
+connected role
+-> SessionModeRoot only
+
+offline
+-> App / Product Shell
+```
+
+That prevents the accepted model where Connected Play is a dedicated workspace **inside the same product identity** and the user can safely inspect Product destinations while the live Session stays authoritative/alive.
+
+There is a second related drift:
+
+```text
+src/App.tsx
+Return to Play
+-> setRoute("scene")
+-> ProductionPlayScreen
+```
+
+Once Product Shell becomes reachable during a live connected Session, that path would create a competing Connected Play presentation instead of returning to the accepted `SessionModeRoot` workspace.
+
+Play also currently lacks the accepted compact persistent Product Shell entry in `SessionModeRoot` chrome.
+
+## Accepted target behavior
+
+```text
+Live Connected Play
+-> compact Open Product Shell
+-> Home / safe Product destination
+-> visible Return to Play
+-> exact same SessionModeRoot live Session
+```
+
+Navigation alone must preserve:
+
+```text
+same Session
+same Host/DM or Client/Player role
+same SessionMode
+same initiative/current turn
+same authoritative controlled Actor where valid
+same PendingResolution/game state
+same connection truth
+```
+
+It must **not**:
+
+- call `stopSession`;
+- start a new Host Session;
+- Join again;
+- reconnect merely because Product Shell opened;
+- create local/fake role or SessionMode state;
+- mount `ProductionPlayScreen` as a second Connected Play implementation.
+
+## Why this can remain a UI-composition Slice
+
+`AppProvider` is mounted above `ProductRoot` and owns the authoritative application snapshot/runtime operations. Therefore ProductRoot can switch the visible **presentation subtree** between Product Shell and Connected Play without moving Session authority into the navigation layer.
+
+No new Domain/Architecture contract is currently required.
+
+## Expected implementation scope after authorization
+
+Primary:
+
+```text
+src/ProductRoot.tsx
+src/App.tsx
+src/SessionModeRoot.tsx
+src/session-mode.css
+
+tests/ui/v1ProductShellStructure.test.ts
+tests/ui/connectedProductShellContinuity.test.ts
+.github/workflows/ui.yml
+```
+
+Conditional/minimal only:
+
+```text
+tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts
+src/v1-product-shell.css
+```
+
+Explicitly out of scope:
+
+```text
+Connected Play topology redesign
 Actor Boards
 Command Center
 targeting / Main Hand
 resolution selective locking
 DM-only privacy
 Handout networking
-Session transport / authority / lifecycle
+Session transport/wire/authority
+Host/Join lifecycle semantics
+Lobby/Ready removal
+Character rules/progression
 map/spatial modules
-Character creation / Level Up rules logic
 ```
-
-This matters because a verified Slice is not permission to expand into adjacent systems.
 
 ---
 
-# Next bounded Slice candidate
+# WO-UI-002 key contract references
 
-## WO-UI-002 — Connected Product Shell Continuity / Return to Play
+Primary behavior:
 
-Known drift:
+- `Scenario 34 — Product navigation during live Host Session`
 
-```text
-src/ProductRoot.tsx
-connected session -> SessionModeRoot only
-```
+Primary QA:
 
-Accepted UX requires a live connected context to preserve Product navigation continuity and expose an explicit **Return to Play** path without resetting authoritative Session state.
+- `QA-NAV-06` — live Return to Play preserves context
+- `QA-SES-09` — Product nav preserves role/session
 
-Likely dependency set includes:
-
-- `UX-01-03` — Play continuity;
-- `UX-03-02` — dedicated Play with persistent return path;
-- `NAV-01-02` — Return to Play;
-- `QA-NAV-06` — connected continuity verification.
-
-**WO-UI-002 has not been authorized or implemented.**
-
-Before touching it, perform the same bounded process:
+Direct Product/UX dependencies include:
 
 ```text
-source/test inspection
--> Work Order
--> applicable scoped dependency gate
--> explicit runtime authorization
--> implementation
--> targeted/regression/build verification
+UX-01-02
+UX-01-03
+UX-02-01
+UX-02-06
+UX-02-07
+UX-03-01
+UX-03-02
+NAV-01-01
+NAV-01-02
+NAV-01-04
+NAV-01-06
+NAV-01-08
+UI-01-01
 ```
 
 ---
@@ -195,6 +241,7 @@ Start with:
 8. [`contracts/IMPLEMENTATION-TRACEABILITY.md`](contracts/IMPLEMENTATION-TRACEABILITY.md)
 9. [`contracts/QA-ACCEPTANCE-MATRIX.md`](contracts/QA-ACCEPTANCE-MATRIX.md)
 10. [`contracts/MANIFEST.yaml`](contracts/MANIFEST.yaml)
+11. [`work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md`](work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md)
 
 Do not substitute generic VTT conventions or historical `.agents/` notes for this accepted hierarchy.
 
@@ -209,6 +256,7 @@ Do not substitute generic VTT conventions or historical `.agents/` notes for thi
 - Standalone dice stay inside the current Character Sheet.
 - Connected Play uses Actor Cards/Boards and a persistent Command Center, not a tactical token map.
 - Host = DM, Client = Player; Offline has no DM/Player role.
+- Product navigation must not create/end/reconnect a Session by itself.
 - Main Hand has no smart fallback.
 - DM-only privacy cannot be implemented as CSS hiding.
 - Handout is image presentation, not a battlemap.
@@ -224,15 +272,19 @@ GAP-HANDOUT-NETWORK-CONTRACT
 GAP-DM-ONLY-DELIVERY-PROTOCOL
 ```
 
-These did not block WO-UI-001 because that Slice explicitly excluded their behaviors.
+They do not block WO-UI-002 because that Slice is bounded to navigation/presentation composition.
 
 ---
 
 # Current next action
 
 ```text
-WO-UI-001: VERIFIED COMPLETE
-WO-UI-002: NOT AUTHORIZED
+WO-UI-001: CLOSED / OWNER ACCEPTED
+WO-UI-002: PREPARED
 ```
 
-The next runtime step, if the owner chooses to continue, is **preparing WO-UI-002**, not silently expanding WO-UI-001.
+Next gate:
+
+**WO-UI-002 scoped dependency authorization**.
+
+No `src/` implementation should begin until that gate is recorded and a separate runtime implementation authorization is given.
