@@ -1,7 +1,7 @@
-schema_version: 3
-phase: runtime_ui_preparation
-status: second_runtime_slice_prepared_not_authorized
-runtime_ui_implementation_allowed: false
+schema_version: 4
+phase: runtime_ui_implementation
+status: third_runtime_slice_implemented_automated_verification_in_progress
+runtime_ui_implementation_allowed: true
 
 accepted_reference:
   entry: docs/design/ui-ux/prototype/app/integrated-reference.html
@@ -31,34 +31,18 @@ mandatory_contract_read_order:
   - docs/design/ui-ux/contracts/MANIFEST.yaml
 
 contracts:
-  readme:
-    path: docs/design/ui-ux/contracts/README.md
-    status: ready
-  implementation_playbook:
-    path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md
-    status: ready
-  glossary:
-    path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md
-    status: ready
-  surfaces:
-    path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
-    status: ready
-  components:
-    path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
-    status: ready
-  interaction_state_motion:
-    path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
-    status: ready
+  readme: { path: docs/design/ui-ux/contracts/README.md, status: ready }
+  implementation_playbook: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md, status: ready }
+  glossary: { path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md, status: ready }
+  surfaces: { path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md, status: ready }
+  components: { path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md, status: ready }
+  interaction_state_motion: { path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md, status: ready }
   behavior_scenarios:
     path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md
     status: ready
     scenario_count: 48
-  implementation_traceability:
-    path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
-    status: ready
-  qa_acceptance_matrix:
-    path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md
-    status: ready
+  implementation_traceability: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md, status: ready }
+  qa_acceptance_matrix: { path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md, status: ready }
 
 interpretation_guards:
   industry_vtt_conventions_may_fill_unspecified_behavior: false
@@ -76,11 +60,9 @@ hard_product_guards:
   grid_path_los_fog_ui_in_core_forbidden: true
   handout_is_not_battlemap: true
   first_run_tutorial_required: true
-  first_run_home_substitute_for_tutorial_forbidden: true
   initial_sheet_presentation_choice_required: true
   official_and_simplevtt_share_same_character_model: true
   standalone_roll_same_sheet_required: true
-  detached_standalone_dice_workflow_forbidden: true
   connected_actor_boards_required: true
   persistent_command_center_required: true
   freeform_fake_turn_economy_forbidden: true
@@ -117,99 +99,114 @@ ui_must_not_authoritatively_calculate:
 open_runtime_blockers:
   - id: GAP-MAIN-HAND-CANONICAL-RELATION
     type: domain_contract
-    blocks:
-      - default_hostile_click_main_hand_runtime_path
+    blocks: [default_hostile_click_main_hand_runtime_path]
   - id: GAP-RESOLUTION-SAFE-INTERACTIONS
     type: domain_contract
-    blocks:
-      - selective_resolution_interaction_locking
+    blocks: [selective_resolution_interaction_locking]
   - id: GAP-HANDOUT-NETWORK-CONTRACT
     type: architecture_contract
-    blocks:
-      - shared_handout_modes
-      - handout_reconnect_projection
+    blocks: [shared_handout_modes, handout_reconnect_projection]
   - id: GAP-DM-ONLY-DELIVERY-PROTOCOL
     type: architecture_contract
     severity: critical
-    blocks:
-      - production_dm_only_adjudication
-      - role_scoped_activity_delivery
-      - later_private_event_disclosure
+    blocks: [production_dm_only_adjudication, role_scoped_activity_delivery, later_private_event_disclosure]
 
-runtime_work_order_requirements:
-  must_name_touched_behavior_scenarios: true
-  must_name_touched_qa_rows: true
-  must_identify_authoritative_state_sources: true
-  must_identify_applicable_frozen_decisions: true
-  must_identify_open_blocking_gaps: true
-  must_not_mark_blocked_qa_as_pass_by_guessing: true
-  must_preserve_accepted_reference_hierarchy: true
-
-previous_runtime_slice:
-  id: WO-UI-001
-  name: product_shell_first_run_tutorial_sheet_preference
-  status: closed_accepted
-  work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
-  scoped_freeze: docs/design/ui-ux/work-orders/WO-UI-001-SCOPED-FREEZE.md
-  implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
-  human_qa_record: docs/design/ui-ux/work-orders/WO-UI-001-HUMAN-QA.md
-  verification:
-    ui_workflow_run_id: 32486454036
-    ui_workflow_conclusion: success
-    production_typescript_build: success
+completed_runtime_slices:
+  - id: WO-UI-001
+    name: product_shell_first_run_tutorial_sheet_preference
+    status: closed_accepted
+    implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
+    human_qa_record: docs/design/ui-ux/work-orders/WO-UI-001-HUMAN-QA.md
     owner_human_qa: pass
+  - id: WO-UI-002
+    name: connected_product_shell_continuity_return_to_play
+    status: closed_accepted
+    work_order: docs/design/ui-ux/work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md
+    authorization: docs/design/ui-ux/work-orders/WO-UI-002-SCOPED-AUTHORIZATION.md
+    implementation_record: docs/design/ui-ux/work-orders/WO-UI-002-IMPLEMENTATION-RECORD.md
+    human_qa_record: docs/design/ui-ux/work-orders/WO-UI-002-HUMAN-QA.md
+    owner_human_qa: pass
+    visual_topology_accepted_by_this_slice: false
 
 selected_runtime_slice:
-  id: WO-UI-002
-  name: connected_product_shell_continuity_return_to_play
-  work_order: docs/design/ui-ux/work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md
-  preparation_status: complete
-  source_test_inspection: complete
-  material_domain_architecture_blocker: none_identified
-  implementation_status: not_authorized
+  id: WO-UI-003
+  name: connected_play_actor_boards_tabletop_stage_persistent_command_center
+  status: implemented_automated_verification_in_progress
+  work_order: docs/design/ui-ux/work-orders/WO-UI-003-connected-play-actor-boards-command-center.md
+  authorization: docs/design/ui-ux/work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md
+  explicit_runtime_implementation_authorization: true
+  authorization_owner_quote: 그래 가자
+  source_candidate_sha: fb007d809ab586ca8d2e135e5813e929772a7f2c
+  accepted_reference: docs/design/ui-ux/prototype/app/integrated-reference.html
   behavior_scenarios:
-    - Scenario 34
-  adjacent_regression_scenarios:
-    - Scenario 07
-    - Scenario 08
     - Scenario 10
     - Scenario 11
+    - Scenario 19
     - Scenario 20
+    - Scenario 23
+    - Scenario 37
+    - Scenario 43
+    - Scenario 44
+    - Scenario 45
+  preserved_targeting_scenarios:
+    - Scenario 12
+    - Scenario 13
+  adjacent_regression_scenarios:
     - Scenario 31
+    - Scenario 32
+    - Scenario 33
+    - Scenario 34
     - Scenario 35
     - Scenario 36
-  qa_rows:
-    - QA-NAV-06
-    - QA-SES-09
-    - QA-NAV-05
-    - QA-SES-03
-    - QA-SES-04
-    - QA-PLAY-06
-    - QA-CONN-01
-    - QA-CONN-02
+  qa_pass_targets:
     - QA-ID-01
     - QA-ID-02
-  decision_dependencies:
-    - UX-01-02
-    - UX-01-03
-    - UX-02-01
-    - UX-02-06
-    - UX-02-07
-    - UX-03-01
-    - UX-03-02
-    - NAV-01-01
-    - NAV-01-02
-    - NAV-01-04
-    - NAV-01-06
-    - NAV-01-08
-    - UI-01-01
-  scoped_dependency_authorization_recorded: false
-  explicit_runtime_implementation_authorization: false
-  runtime_implementation_started: false
-  not_blocked_by_current_domain_architecture_gaps: true
-  blockers:
-    - wo_ui_002_scoped_dependency_authorization
-    - explicit_runtime_implementation_authorization
+    - QA-PLAY-01
+    - QA-PLAY-02
+    - QA-PLAY-03
+    - QA-PLAY-04
+    - QA-PLAY-05
+    - QA-PLAY-06
+    - QA-MODE-01
+    - QA-MODE-02
+    - QA-MODE-03
+    - QA-MODE-04
+    - QA-MODE-05
+    - QA-MODE-06
+    - QA-ACTOR-02
+    - QA-ACTOR-05
+    - QA-ACTOR-06
+    - QA-ACTOR-07
+    - QA-CMD-01
+    - QA-CMD-02
+    - QA-CMD-03
+    - QA-CMD-04
+    - QA-CMD-05
+    - QA-CMD-06
+    - QA-TGT-01
+    - QA-TGT-02
+    - QA-TGT-03
+    - QA-RES-01
+    - QA-RES-07
+  not_claimed_or_blocked:
+    - QA-ACTOR-01
+    - QA-ACTOR-03
+    - QA-ACTOR-04
+    - QA-CLICK-04
+    - QA-TGT-05
+    - QA-RES-02
+    - QA-RES-03
+  runtime_files:
+    - src/SessionModeRoot.tsx
+    - src/SessionActorBoards.tsx
+    - src/session-actor-boards.css
+    - src/session-connected-layout.css
+    - src/SessionActionDock.tsx
+    - src/session-action-dock.css
+  dedicated_test: tests/ui/connectedPlayAcceptedTopology.test.ts
+  ui_workflow_run_id: 32496754716
+  automated_verification: pending
+  owner_human_qa: pending
 
 identified_runtime_drift:
   - id: DRIFT-WO-UI-001-HOME-FIRST
@@ -219,47 +216,32 @@ identified_runtime_drift:
     status: resolved
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-001-SIDEBAR
-    status: resolved_user_visible_layout
+    status: resolved
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-002-CONNECTED-SHELL-BYPASS
-    status: active
-    evidence: src/ProductRoot.tsx returns SessionModeRoot for every non-offline session role and provides no Product-vs-Play presentation choice
+    status: resolved
     resolution: WO-UI-002
   - id: DRIFT-WO-UI-002-DUPLICATE-CONNECTED-PLAY-PATH
-    status: active
-    evidence: src/App.tsx Return-to-Play actions currently use setRoute("scene"), which mounts ProductionPlayScreen instead of the accepted dedicated SessionModeRoot Connected Play workspace
+    status: resolved
     resolution: WO-UI-002
   - id: DRIFT-WO-UI-002-PLAY-TO-PRODUCT-ENTRY
-    status: active
-    evidence: src/SessionModeRoot.tsx has no compact persistent Product Shell entry in Play chrome
+    status: resolved
     resolution: WO-UI-002
-
-legacy_test_reconciliation:
-  stale_for_WO_UI_002:
-    - tests/ui/v1ProductShellStructure.test.ts: connected_session_always_returns_SessionModeRoot assertion
-  add_for_WO_UI_002:
-    - tests/ui/connectedProductShellContinuity.test.ts
-  preserve_or_minimally_extend:
-    - tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts
-  preserve_regression:
-    - tests/ui/productionNonCharacterUxRedesign.test.ts
-    - tests/ui/productionSessionLifecycleAdapter.test.ts
-    - tests/ui/connectedSessionRuntimeAdapter.test.ts
-    - tests/ui/productionSessionWorkspaceRedesign.test.ts
-  ci_gate:
-    workflow: .github/workflows/ui.yml
-    new_test_not_yet_added: tests/ui/connectedProductShellContinuity.test.ts
+  - id: DRIFT-WO-UI-003-CONNECTED-PLAY-TOPOLOGY
+    status: implementation_complete_human_qa_pending
+    evidence: current SessionModeRoot previously lacked accepted dual Actor Boards and persistent direct-capability Command Center
+    resolution: WO-UI-003
 
 implementation_readiness:
   prototype_owner_acceptance: passed
   contracts_ready: true
-  prior_slice_human_qa: passed
+  wo_ui_001: closed_accepted
+  wo_ui_002: closed_accepted
   current_runtime_slice_selected: true
-  current_slice_source_tests_reinspected: true
   current_slice_work_order_exists: true
-  current_slice_material_domain_architecture_blockers: none
-  current_slice_scoped_dependency_authorization: false
-  current_slice_runtime_authorization: false
-  current_slice_implementation_allowed: false
+  current_slice_authorized: true
+  current_slice_source_implemented: true
+  current_slice_automated_verification: pending
+  current_slice_owner_human_qa: pending
 
-next_route: WO_UI_002_SCOPED_DEPENDENCY_AUTHORIZATION
+next_route: WO_UI_003_AUTOMATED_VERIFICATION_THEN_OWNER_HUMAN_QA
