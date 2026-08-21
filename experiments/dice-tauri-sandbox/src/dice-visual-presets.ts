@@ -2,7 +2,11 @@ export type DiceVisualPresetId =
   | "classic-metal"
   | "minimal-blank"
   | "rune-etched"
-  | "obsidian-glow";
+  | "obsidian-glow"
+  | "bone-relic"
+  | "arcane-sigil"
+  | "crystal-core"
+  | "neon-holo";
 
 export type DiceFaceMarkingMode = "number" | "none" | "rune";
 
@@ -16,6 +20,7 @@ export type DiceVisualPreset = {
     emissiveIntensity: number;
     roughness: number;
     metalness: number;
+    opacity: number;
   };
   edge: {
     color: number;
@@ -36,6 +41,10 @@ export const DICE_VISUAL_PRESET_ORDER: DiceVisualPresetId[] = [
   "minimal-blank",
   "rune-etched",
   "obsidian-glow",
+  "bone-relic",
+  "arcane-sigil",
+  "crystal-core",
+  "neon-holo",
 ];
 
 export const DICE_VISUAL_PRESETS: Record<DiceVisualPresetId, DiceVisualPreset> = {
@@ -49,6 +58,7 @@ export const DICE_VISUAL_PRESETS: Record<DiceVisualPresetId, DiceVisualPreset> =
       emissiveIntensity: 0.16,
       roughness: 0.3,
       metalness: 0.33,
+      opacity: 1,
     },
     edge: {
       color: 0x3a1f10,
@@ -73,6 +83,7 @@ export const DICE_VISUAL_PRESETS: Record<DiceVisualPresetId, DiceVisualPreset> =
       emissiveIntensity: 0.04,
       roughness: 0.72,
       metalness: 0.04,
+      opacity: 1,
     },
     edge: {
       color: 0x585d61,
@@ -97,6 +108,7 @@ export const DICE_VISUAL_PRESETS: Record<DiceVisualPresetId, DiceVisualPreset> =
       emissiveIntensity: 0.3,
       roughness: 0.62,
       metalness: 0.08,
+      opacity: 1,
     },
     edge: {
       color: 0x71967d,
@@ -121,6 +133,7 @@ export const DICE_VISUAL_PRESETS: Record<DiceVisualPresetId, DiceVisualPreset> =
       emissiveIntensity: 0.72,
       roughness: 0.18,
       metalness: 0.58,
+      opacity: 1,
     },
     edge: {
       color: 0x41d7ef,
@@ -133,6 +146,106 @@ export const DICE_VISUAL_PRESETS: Record<DiceVisualPresetId, DiceVisualPreset> =
       fontFamily: "Georgia, serif",
       glowColor: "rgba(63, 222, 255, .95)",
       glowBlur: 16,
+    },
+  },
+  "bone-relic": {
+    id: "bone-relic",
+    label: "뼈 유물",
+    description: "상아색 · 오래된 유물",
+    body: {
+      color: 0xd7cfbf,
+      emissive: 0x2f2417,
+      emissiveIntensity: 0.08,
+      roughness: 0.84,
+      metalness: 0.03,
+      opacity: 1,
+    },
+    edge: {
+      color: 0x6b5841,
+      opacity: 0.62,
+    },
+    marking: {
+      mode: "number",
+      fill: "#342617",
+      stroke: "rgba(255, 245, 220, .2)",
+      fontFamily: "Georgia, serif",
+      glowColor: "transparent",
+      glowBlur: 0,
+    },
+  },
+  "arcane-sigil": {
+    id: "arcane-sigil",
+    label: "비전 문양",
+    description: "자색 석재 · 마도 룬",
+    body: {
+      color: 0x261a32,
+      emissive: 0x170c22,
+      emissiveIntensity: 0.42,
+      roughness: 0.44,
+      metalness: 0.14,
+      opacity: 1,
+    },
+    edge: {
+      color: 0xb387ff,
+      opacity: 0.74,
+    },
+    marking: {
+      mode: "rune",
+      fill: "#efe2ff",
+      stroke: "rgba(19, 8, 31, .96)",
+      fontFamily: "'Segoe UI Symbol', 'Noto Sans Symbols', sans-serif",
+      glowColor: "rgba(179, 135, 255, .78)",
+      glowBlur: 12,
+    },
+  },
+  "crystal-core": {
+    id: "crystal-core",
+    label: "수정 코어",
+    description: "반투명 수정 · 차가운 빛",
+    body: {
+      color: 0x9fc7ff,
+      emissive: 0x2b4d6d,
+      emissiveIntensity: 0.32,
+      roughness: 0.08,
+      metalness: 0.12,
+      opacity: 0.58,
+    },
+    edge: {
+      color: 0xe8f3ff,
+      opacity: 0.84,
+    },
+    marking: {
+      mode: "number",
+      fill: "#f5fbff",
+      stroke: "rgba(32, 76, 112, .92)",
+      fontFamily: "Georgia, serif",
+      glowColor: "rgba(200, 235, 255, .72)",
+      glowBlur: 9,
+    },
+  },
+  "neon-holo": {
+    id: "neon-holo",
+    label: "네온 홀로그램",
+    description: "반투명 암면 · 전자광 숫자",
+    body: {
+      color: 0x0b1020,
+      emissive: 0x091425,
+      emissiveIntensity: 0.7,
+      roughness: 0.12,
+      metalness: 0.5,
+      opacity: 0.78,
+    },
+    edge: {
+      color: 0xff4fd8,
+      opacity: 0.94,
+    },
+    marking: {
+      mode: "number",
+      fill: "#7df9ff",
+      stroke: "rgba(6, 10, 24, .98)",
+      fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif",
+      glowColor: "rgba(125, 249, 255, .95)",
+      glowBlur: 18,
     },
   },
 };
