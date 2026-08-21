@@ -1,6 +1,6 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → Reference Prototype 재구축 → Owner Acceptance → 구현 계약 추출 → 상세 해석/시나리오/QA 문서화**까지 완료한 상태입니다.
+현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → Reference Prototype 재구축 → Owner Acceptance → 구현 계약 추출 → 첫 Runtime Slice 구현 준비**까지 진행된 상태입니다.
 
 이제 UI의 기준은 흩어진 과거 문서나 현재 코드가 아니라 다음 네 층을 함께 읽습니다:
 
@@ -33,8 +33,10 @@
 | End-to-end Behavior Scenarios | **48개 작성됨** |
 | Implementation traceability | **작성됨** |
 | QA Acceptance Matrix | **작성됨** |
-| Machine-readable Contract Manifest | **작성됨** |
-| Frozen Product Decisions | **추가 Freeze 없음** |
+| First Runtime Slice | **WO-UI-001 선택 / 준비 완료** |
+| WO-UI-001 src/tests 조사 | **완료** |
+| WO-UI-001 Domain/Architecture blocker | **없음 — 복잡한 Gap 영역은 scope 밖으로 분리** |
+| WO-UI-001 scoped Freeze | **아직 안 함** |
 | Runtime `src/` 구현 | **아직 승인되지 않음** |
 
 Accepted prototype:
@@ -42,6 +44,116 @@ Accepted prototype:
 ```text
 prototype/app/integrated-reference.html
 Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
+```
+
+First Runtime Work Order:
+
+[`work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md`](work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md)
+
+---
+
+# 현재 선택된 첫 Runtime Slice
+
+## WO-UI-001 — Product Shell + First-run Tutorial + Sheet Presentation Preference
+
+이 Slice는 실제 UI 전체를 한 번에 갈아엎지 않습니다.
+
+목표는 다음 일곱 가지로 제한합니다.
+
+```text
+1. Fresh first use -> Home보다 Tutorial이 먼저
+2. Tutorial -> Standalone / Host / Join 설명
+3. Tutorial -> Official-style / SimpleVTT 초기 Sheet 선택
+4. Tutorial 완료 + Sheet preference를 local preference로 저장
+5. Returning launch -> Home
+6. Settings/Help -> Tutorial 다시 열기
+7. Product Shell -> permanent left sidebar가 아닌 accepted top navigation
+```
+
+현재 `src/`와 관련 테스트도 다시 조사했습니다.
+
+확인된 주요 drift:
+
+- `src/App.tsx`는 normal route를 Home부터 시작함;
+- `src/App.tsx` / `src/v1-product-shell.css`가 permanent left sidebar를 primary Product navigation으로 사용함;
+- `src/V1HomeScreen.tsx`의 기존 onboarding은 Home 안의 dismissible guide이며 required initial Sheet choice가 없음;
+- `tests/ui/v1ProductShellStructure.test.ts`가 Home-first와 permanent `.v1-sidebar`를 성공 조건으로 고정하고 있어 현재 accepted contract 기준으로는 부분 stale test임.
+
+재사용 가능한 기반:
+
+- global destination set/order는 이미 거의 맞음;
+- `src/app/sheetLayoutPreferences.ts`는 Sheet presentation을 Character data와 분리해 localStorage로 저장함;
+- `src/CharacterSheetPlayScreen.tsx`는 두 Sheet가 같은 `snapshot.activeCharacter`를 사용함;
+- Character/domain/runtime 테스트의 대부분은 이번 Slice 밖이며 그대로 보존 가능.
+
+---
+
+# 이번 Slice에서 의도적으로 건드리지 않는 것
+
+현재 `src/ProductRoot.tsx`는 connected session에서 Product Shell을 우회하고 `SessionModeRoot`만 렌더합니다.
+
+이건 accepted `Return to Play` 모델과 충돌하는 실제 drift이지만, 첫 Slice에 같이 넣으면 Connected Play composition까지 범위가 커집니다.
+
+따라서 **WO-UI-002 — Connected Product Shell Continuity / Return to Play**로 분리했습니다.
+
+WO-UI-001에서는 다음을 건드리지 않습니다:
+
+```text
+ProductRoot connected composition
+SessionModeRoot
+ProductionPlayScreen
+Actor Boards
+Command Center
+Targeting / Main Hand
+Resolution / selective locking
+DM-only privacy
+Handout networking
+Session authority / transport / lifecycle
+Character creation / Level Up rules
+map/spatial modules
+```
+
+---
+
+# WO-UI-001에 필요한 다음 게이트
+
+현재 Work Order 준비 자체는 끝났지만 구현 준비가 완전히 끝난 것은 아닙니다.
+
+남은 것은 두 가지입니다.
+
+## 1. Scoped Freeze
+
+다음 Reviewed Product/UX dependencies를 **WO-UI-001 구현 범위에 한해서** 안정적인 구현 dependency로 Frozen 처리해야 합니다.
+
+추천 scoped Freeze set:
+
+```text
+UX-01-01
+UX-01-02
+UX-03-01
+UX-03-05
+NAV-01-01
+NAV-01-04
+NAV-01-07
+NAV-01-08
+UI-01-01
+UI-01-07
+```
+
+Freeze는 전체 제품을 영구 고정한다는 뜻이 아니라, 이 Runtime Slice가 작업 중 임의로 요구사항을 재해석하지 못하게 하는 구현 게이트입니다.
+
+현재는 **아직 Freeze하지 않았습니다.**
+
+## 2. Explicit Runtime Implementation Authorization
+
+Freeze/readiness가 끝난 뒤에도 실제 `src/` 수정을 시작하려면 별도의 구현 승인이 필요합니다.
+
+현재:
+
+```text
+WO-UI-001 PREPARATION: COMPLETE
+WO-UI-001 IMPLEMENTATION-READY: NO
+Runtime src changes: NONE in this preparation step
 ```
 
 ---
@@ -150,27 +262,6 @@ Start state
 -> forbidden behavior
 ```
 
-예를 들어:
-
-- Fresh first run;
-- Sheet roll;
-- Host Session;
-- Join no Character;
-- Freeform;
-- Initiative;
-- single/multi/area targeting;
-- Main Hand unavailable;
-- DM control;
-- Reaction/Concentration;
-- Dice/Result;
-- DM-only Activity;
-- Handout;
-- reconnect;
-- narrow desktop;
-- optional future map module boundary;
-
-까지 포함합니다.
-
 ## QA Matrix
 
 [`contracts/QA-ACCEPTANCE-MATRIX.md`](contracts/QA-ACCEPTANCE-MATRIX.md)
@@ -271,7 +362,7 @@ Battlemap으로 사용하지 않습니다.
 
 ---
 
-# 아직 Runtime 구현을 막는 기술 Gap
+# 아직 다른 Runtime Slice를 막는 기술 Gap
 
 ```text
 GAP-MAIN-HAND-CANONICAL-RELATION
@@ -280,6 +371,8 @@ GAP-HANDOUT-NETWORK-CONTRACT
 GAP-DM-ONLY-DELIVERY-PROTOCOL
 ```
 
+이 네 Gap은 **WO-UI-001의 blocker가 아닙니다.** 해당 기능을 첫 Slice 범위에서 제외했기 때문입니다.
+
 상세 매핑:
 
 [`contracts/IMPLEMENTATION-TRACEABILITY.md`](contracts/IMPLEMENTATION-TRACEABILITY.md)
@@ -287,14 +380,6 @@ GAP-DM-ONLY-DELIVERY-PROTOCOL
 ---
 
 # 앞으로 Runtime Work Order가 반드시 포함해야 하는 것
-
-이제 단순히:
-
-```text
-"Prototype대로 구현"
-```
-
-이라고 적는 Work Order는 허용하지 않습니다.
 
 반드시:
 
@@ -315,6 +400,8 @@ GAP-DM-ONLY-DELIVERY-PROTOCOL
 
 를 적어야 합니다.
 
+WO-UI-001은 이 형식으로 작성되었습니다.
+
 ---
 
 # 현재 단계
@@ -324,25 +411,19 @@ Repository-wide audit                     DONE
 Integrated Product/UI plan                DONE
 Mapless Reference Prototype               DONE
 Owner Prototype Acceptance                PASS
-Implementation Playbook                   DONE
-Terminology Guard                         DONE
-Surface Contract                          DONE
-Component Contract                        DONE
-Interaction/State/Layer/Motion Contract   DONE
+Detailed contract set                     DONE
 Behavior Scenarios (48)                   DONE
-Implementation Traceability               DONE
 QA Acceptance Matrix                      DONE
-Machine-readable routing/gates            UPDATED
--> 첫 Runtime Slice 선택
--> 해당 Slice src/tests 재검사
--> blocker Gap 해결/회피가 아닌 scope 분리
--> touched legacy reconciliation
--> 필요한 Decision만 scoped Freeze
--> Runtime Work Order with Scenario + QA IDs
--> 별도 Runtime implementation 승인
--> src 구현
+WO-UI-001 source/test inspection           DONE
+WO-UI-001 Work Order                       DONE
+WO-UI-001 Domain/Architecture blockers      NONE
+-> WO-UI-001 scoped Freeze authorization   NEXT
+-> explicit runtime implementation approval
+-> src implementation
+-> targeted + regression + visual QA
+
+Deferred:
+WO-UI-002 Connected Product Shell continuity / Return to Play
 ```
 
-**지금은 Runtime Preparation 단계입니다. 실제 `src/` UI 구현은 아직 승인되지 않았습니다.**
-
-첫 Runtime Slice 후보는 여전히 `Product Shell + First-run Tutorial + Sheet presentation preference`가 가장 안전합니다.
+**지금도 실제 `src/` UI는 수정하지 않았습니다. 다음 단계는 WO-UI-001의 scoped Freeze입니다.**
