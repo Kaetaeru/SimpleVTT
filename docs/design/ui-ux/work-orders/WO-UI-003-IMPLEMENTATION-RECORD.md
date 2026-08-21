@@ -1,6 +1,6 @@
 # WO-UI-003 — Implementation Record
 
-Status: **ACCEPTED-REFERENCE REWORK IMPLEMENTED — VISUAL/FRONTEND AUTOMATION PASS — OWNER RE-QA PENDING**
+Status: **CLOSED / ACCEPTED AFTER ACCEPTED-REFERENCE REWORK**
 
 Work Order:
 
@@ -42,17 +42,15 @@ UI run: 32496754716
 result: SUCCESS, but structurally insufficient
 ```
 
-Owner Human QA then reported that the Session scene was materially different from the pre-agreed integrated reference. That result is recorded as **FAIL** in `WO-UI-003-HUMAN-QA.md`.
-
-The earlier automation is historical regression evidence only and is not visual acceptance.
+The earlier automation remains historical regression evidence only and is not visual acceptance.
 
 ---
 
-# 2. Rework rule
+# 2. Accepted-reference rework rule
 
 When the accepted prototype already defines the Play scene, prose contracts do not authorize a visually different structural approximation.
 
-Production must follow the accepted scene composition while replacing prototype fixture values with real runtime projections.
+Production follows the accepted scene composition while replacing prototype fixture values with real runtime projections.
 
 Primary reference scenarios:
 
@@ -100,11 +98,11 @@ Hotbar slot             ~62px
 - removes the separate floating Connected Play product-menu visual;
 - accepted Play chrome owns `← Product`;
 - `product | play` remains presentation-only state;
-- Return-to-Play still reuses the same live `SessionModeRoot` and Session authority.
+- Return-to-Play reuses the same live `SessionModeRoot` and Session authority.
 
 ## `src/SessionModeRoot.tsx`
 
-Production Connected Play now follows the accepted render relationship:
+Production Connected Play follows the accepted render relationship:
 
 ```text
 Play chrome
@@ -133,21 +131,20 @@ Persistent Command Center
 
 There is no permanent vertical Session utility rail and no separate 52px identity header.
 
-`Public / DM Only` is visually represented because it exists in the accepted chrome, but DM-only delivery is not faked: production remains Public-only until `GAP-DM-ONLY-DELIVERY-PROTOCOL` is resolved.
+`Public / DM Only` preserves accepted presentation while real DM-only delivery remains blocked by `GAP-DM-ONLY-DELIVERY-PROTOCOL`.
 
-`Spatial Facts` is present as an explicit unavailable control rather than inventing a missing authoritative projection.
+`Spatial Facts` is an explicit unavailable state rather than invented authority.
 
 ## `src/SessionDmTools.tsx`
 
-- DM Handout is no longer a permanent top-chrome button;
-- `Session` pane exposes `이미지 보여주기`, which opens the existing Handout utility;
+- DM Handout is not a permanent top-chrome button;
+- `Session` pane exposes the existing image/Handout path;
 - existing Handout runtime/network owner remains unchanged.
 
 ## `src/SessionInitiativeStrip.tsx`
 
 - compact authoritative order/current-turn tracker only;
-- no economy, End Turn or End Initiative controls in the tracker;
-- Initiative economy and End Turn stay in the Command Center.
+- economy and End Turn remain in Command Center.
 
 ## `src/SessionMainFocus.tsx`
 
@@ -168,8 +165,6 @@ INITIATIVE
 Actor and action context, not a battlemap
 ```
 
-The Stage is no longer a large participant/result dashboard.
-
 ## `src/SessionActionDock.tsx`
 
 Accepted Command Center anatomy:
@@ -185,133 +180,58 @@ lower body
 └─ contextual Cancel / Execute / End Turn / Context
 ```
 
-`Custom` is retained as the accepted presentation page family but does not invent unsupported custom persistence/classification.
-
-Canonical runtime sources remain:
-
-- `SceneVm.actionsByActor`;
-- `SceneVm.economyByActor`;
-- `ActionVm.available` / `disabledReason`;
-- `eligibleTargetIds` / `maxTargets`;
-- active Character resources only for the actual controlled Character;
-- `resolveAction`, `selectDmActor`, `endTurn`.
-
-No visual position becomes gameplay authority.
-
-## CSS
-
-`src/session-integrated-reference-play.css` pins the accepted scene proportions, Actor bands/cards, Stage, Initiative tracker, contextual utility pane, Command Center anatomy, Hotbar density and constrained-desktop behavior.
-
-`src/session-integrated-reference-chrome.css` styles the accepted visibility control family and honest unavailable Spatial Facts state.
+Canonical runtime sources remain authoritative; visual position never becomes gameplay authority.
 
 ---
 
 # 5. Verification gate strengthened
 
-The first structural gate allowed a visually different implementation to pass. That gate has been replaced.
+`tests/ui/connectedPlayAcceptedTopology.test.ts` reads production and accepted prototype source and verifies:
 
-`tests/ui/connectedPlayAcceptedTopology.test.ts` now reads both production source and the accepted prototype source and verifies:
-
-- accepted `renderPlay()` region relationship;
+- accepted render region relationship;
 - `41 / 86 / flexible / 86 / 174` geometry;
 - no vertical utility rail;
-- accepted ActorCard band dimensions;
-- accepted Freeform/Initiative Stage copy and density;
+- ActorCard band dimensions;
+- Freeform/Initiative Stage relationship;
 - compact ~40px Initiative tracker;
-- DM chrome ordering including Public/DM Only and Spatial Facts;
-- no permanent DM Handout chrome button;
+- DM chrome ordering;
+- no permanent non-reference Handout chrome button;
 - Command Center `37px + 240/flex/104` anatomy;
-- `Mixed / Action / Spell / Item / Custom` Hotbar family;
+- `Mixed / Action / Spell / Item / Custom` family;
 - compact ~70px Hotbar slots;
-- 338px contextual right pane and constrained overlay behavior;
-- mapless and authority boundaries.
+- contextual right pane bounds;
+- mapless/authority boundaries.
 
-Related Product continuity, Session utility, Initiative, Command Center, Full Sheet, reconnect, Handout and responsive tests were reconciled to the same reference.
+The previous weak gate can no longer accept a visually unrelated scene simply because similarly named regions exist.
 
 ---
 
 # 6. Exact source verification
 
-Rework source SHA:
+Accepted-reference rework source SHA:
 
 ```text
 acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
 ```
 
-## Accepted-reference / Session UI gate
-
-UI workflow:
+Evidence:
 
 ```text
-run_id: 32500827497
-frontend first job: 96829845409
-frontend rerun job: 96830475155
+UI workflow: 32500827497
+accepted-reference / Session structure gate: PASS
+same gate on rerun: PASS
+
+Main Playable: 32500827476
+full UI / rules / TypeScript / production frontend: PASS
+
+Connected Session: 32500827494
+connected-session authority: PASS
+production frontend gate: PASS
 ```
 
-On both attempts, the following completed successfully before the later unrelated aggregate failure:
+The UI workflow later remains globally red at `Verify Phase 09 real mechanics services` and therefore skips its own final build step.
 
-- UI named-rule boundary;
-- **accepted-reference Connected Play / Product continuity / Session layer contracts**;
-- PlaySessionDock regression;
-- production Play structure/accessibility;
-- production Session UX;
-- tabletop Sheet / physics dice / historical scene regressions;
-- non-Character UX;
-- Host metadata;
-- live DM mechanics continuity;
-- connected lifecycle / late join / connection / inventory / spellcasting;
-- creation/progression suites;
-- authoritative spellcasting.
-
-The accepted-reference Session gate therefore passes on the exact source SHA.
-
-## Full UI / rules / TypeScript / production frontend
-
-On the same source SHA, Main Playable workflow `32500827476` completed:
-
-```text
-Verify full UI, rules, TypeScript, and production frontend: SUCCESS
-Verify Phase 11 offline walkthrough: SUCCESS
-Verify Phase 12 connected-session authority: SUCCESS
-Verify Phase 13 arbitrary Character SessionProjection: SUCCESS
-Verify Phase 14 DM prepared Combatant flow: SUCCESS
-Verify Phase 14 live DM adjudication and Undo: SUCCESS
-Verify Phase 14 live Combatant theater-of-mind action: SUCCESS
-Verify Phase 14 Host metadata/content: SUCCESS
-Verify Phase 14 live DM mechanics continuity: SUCCESS
-Verify Phase 14 production play accessibility structure: SUCCESS
-```
-
-Phase 12 Connected Session workflow `32500827494` also completed its `production frontend gate` successfully on the same source SHA.
-
-## Separate Phase 09 aggregate failure
-
-The UI workflow is **not globally green** because its later step:
-
-```text
-Verify Phase 09 real mechanics services
-```
-
-failed on both attempts; the workflow therefore skipped its own final build step.
-
-This is recorded separately rather than mislabeled as a visual rework failure.
-
-Comparison from the prior green source `fb007d809...` to `acb3f68a...` shows the rework changed only:
-
-- Connected Play UI source/CSS;
-- UI structural tests;
-- UI/UX documentation.
-
-No `src/app` Phase 09 mechanics/runtime service and no Phase 09 test file changed in this rework. The mechanics failure therefore must not be "fixed" speculatively inside WO-UI-003 without identifying its own cause.
-
-Automated status for this work order is therefore:
-
-```text
-ACCEPTED-REFERENCE VISUAL/STRUCTURAL GATE: PASS
-CONNECTED SESSION AUTHORITY: PASS
-FULL UI / RULES / TYPESCRIPT / PRODUCTION FRONTEND: PASS
-UI WORKFLOW GLOBAL RESULT: RED at unrelated Phase 09 aggregate step
-```
+Comparison from the prior green source to the rework shows WO-UI-003 changed Connected Play UI/CSS/UI structural tests/UI docs only; no Phase 09 mechanics service/test file changed. That separate aggregate regression was not speculatively patched inside this visual work order.
 
 ---
 
@@ -332,15 +252,27 @@ Open gaps remain open.
 
 ---
 
-# 8. Current acceptance state
+# 8. Owner acceptance
+
+The first implementation failed Owner visual QA.
+
+After the accepted-reference rework, the Owner performed the requested Session visual check and responded:
+
+> 그래 잘 됐어.
+
+This is recorded as the Human QA PASS for the reworked visual/composition slice.
+
+---
+
+# 9. Final acceptance state
 
 ```text
 FIRST WO-UI-003 VISUAL IMPLEMENTATION: SUPERSEDED
-OWNER HUMAN QA OF FIRST IMPLEMENTATION: FAIL
+FIRST OWNER HUMAN QA: FAIL
 ACCEPTED-REFERENCE REWORK SOURCE: IMPLEMENTED
 ACCEPTED-REFERENCE AUTOMATION: PASS
-OWNER HUMAN RE-QA: PENDING
-WO-UI-003: OPEN
+OWNER HUMAN RE-QA: PASS
+WO-UI-003: CLOSED / ACCEPTED
 ```
 
-Do not close WO-UI-003 until the Owner visually checks the reworked Tauri Connected Play against the integrated reference and explicitly accepts it.
+Later product extensions, including DM Library, must preserve this accepted Connected Play scene unless the Owner explicitly revises it.
