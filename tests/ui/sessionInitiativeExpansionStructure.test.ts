@@ -7,10 +7,14 @@ const strip = readFileSync(new URL("../../src/SessionInitiativeStrip.tsx", impor
 const focus = readFileSync(new URL("../../src/SessionMainFocus.tsx", import.meta.url), "utf8");
 const dock = readFileSync(new URL("../../src/SessionActionDock.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../../src/session-initiative.css", import.meta.url), "utf8");
+const layoutCss = readFileSync(new URL("../../src/session-connected-layout.css", import.meta.url), "utf8");
 
-test("Initiative expands the same persistent Session root instead of navigating to a combat page", () => {
-  assert.match(root, /import \{ SessionInitiativeStrip \} from "\.\/SessionInitiativeStrip"/);
+test("Initiative expands the same persistent Actor Board Stage Command Center skeleton", () => {
+  assert.match(root, /<SessionActorBoard position="upper" role=\{role\} \/>/);
+  assert.match(root, /<section className="session-play-context"/);
   assert.match(root, /<SessionInitiativeStrip role=\{role\} \/>/);
+  assert.match(root, /<SessionActorBoard position="lower" role=\{role\} \/>/);
+  assert.match(root, /aria-label="Command Center"/);
   assert.match(root, /data-session-mode=\{snapshot\.sessionMode\}/);
   assert.doesNotMatch(strip, /setRoute|AppRoute|navigate\(|ProductionPlayScreen/);
 });
@@ -45,9 +49,12 @@ test("Initiative Main Focus stays compact while Freeform remains the quiet defau
   assert.doesNotMatch(focus, /actionsByActor|resolveAction|selectDmActor/);
 });
 
-test("Action Dock keeps its existing Initiative intent set and the strip remains horizontally compact", () => {
-  assert.match(dock, /const INITIATIVE_RESTING: PlayIntentId\[\] = \["attack", "magic", "dash", "disengage", "dodge", "help"\]/);
-  assert.match(css, /\.session-mode-root\[data-session-mode="initiative"\][\s\S]*grid-template-rows: 52px auto minmax\(0, 1fr\) 68px/);
+test("Initiative preserves direct Hotbar discovery and tracker remains horizontally compact", () => {
+  assert.match(dock, /HOTBAR_PAGES/);
+  assert.match(dock, /snapshot\.sessionMode === "initiative" \? snapshot\.scene\.economyByActor\[actorId\]/);
+  assert.doesNotMatch(dock, /INITIATIVE_RESTING|OFFICIAL_PLAY_INTENTS|intentOptions/);
+  assert.match(layoutCss, /\.session-mode-root\[data-session-mode="initiative"\][\s\S]*grid-template-rows:\s*52px minmax\(0, 1fr\) var\(--session-command-height\)/);
+  assert.match(layoutCss, /\.session-mode-root\[data-session-mode="initiative"\] \.session-play-context[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
   assert.match(css, /\.session-initiative-order\s*\{[\s\S]*display: flex;[\s\S]*overflow-x: auto/);
-  assert.match(css, /@media \(max-width: 620px\)/);
+  assert.match(css, /@media \(max-width: 899px\)/);
 });
