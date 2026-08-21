@@ -6,15 +6,22 @@ Owner direction:
 
 > DM은 혼자 액세스 가능한 전용 라이브러리 시스템이 있었어야해. 거기에 이미지와 PC액터와 NPC액터를 미리 모아두고 사용할수 있어야했어.
 
-This document defines the missing durable DM-preparation product concept. It supplements the current UI/UX decision ledger for this domain and must be read with:
+Later live-use correction:
 
+> 세션 내에서는 더 간단하게 액터를 추가하거나 이미지를 볼수있게 했으면 좋겠어.
+
+This document defines the durable DM-preparation product concept and its revised low-friction live-use path.
+
+Read with:
+
+- `docs/design/ui-ux/CORE-SYSTEMS-UX-PLAN.md`;
 - `docs/design/ui-ux/decisions.md`;
 - `docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md`;
-- `docs/design/persistence.md`;
+- `docs/design/dm-library-persistence.md`;
 - `docs/design/session-runtime.md`;
-- `docs/design/ui-ux/prototype/app/integrated-reference.html`.
+- the Owner-accepted Connected Play reference under `prototype/app/integrated-reference.*`.
 
-The existing accepted Connected Play composition remains valid. DM Library adds preparation and invocation flows; it does not replace the accepted Play scene.
+The accepted Connected Play composition remains valid. DM Library adds preparation and invocation flows; it does not replace the accepted Play scene.
 
 ---
 
@@ -22,11 +29,11 @@ The existing accepted Connected Play composition remains valid. DM Library adds 
 
 **DM Library** is a durable local preparation library for the local user who may Host sessions.
 
-It stores reusable material that the user can prepare before play and explicitly bring into a live Session.
+It stores reusable material that can be prepared before play and explicitly brought into a live Session.
 
-The visible product name is `DM Library` because that is the user-facing task model. Architecturally, Offline/Standalone still has no hidden DM/Player role. Before a session is opened, this is local Host-preparation data, not connected-role authority.
+The visible product name is `DM Library` because that is the user-facing task model. Architecturally, Offline/Standalone still has no hidden DM/Player role. Before a Session is opened, this is local Host-preparation data, not connected-role authority.
 
-DM Library is **not**:
+DM Library is not:
 
 - the Player Character Library;
 - the Content/Add-on package catalog;
@@ -39,8 +46,6 @@ DM Library is **not**:
 
 # 2. Required collections
 
-The v1 DM Library has three first-class collections.
-
 ```text
 DM Library
 ├─ Images
@@ -48,9 +53,9 @@ DM Library
 └─ NPC Actor Definitions
 ```
 
-All three collections support durable local organization and reuse.
+All collections support durable local organization and reuse.
 
-Minimum common library affordances:
+Minimum preparation affordances:
 
 - search;
 - folders/collections;
@@ -60,24 +65,17 @@ Minimum common library affordances:
 - create/import where applicable;
 - edit/duplicate/delete;
 - visible validation/problem state;
-- preview/details without adding the entry to a Session.
+- preview/details without adding/revealing anything to a Session.
 
-Exact metadata schema and storage limits remain Architecture concerns, not UI-derived truth.
+Exact schema/storage limits remain Architecture concerns.
 
 ---
 
 # 3. Images
 
-`Images` stores DM-prepared local presentation assets such as:
+`Images` stores local DM-prepared presentation material such as portraits, letters/documents, illustrations, symbols/emblems, location art, and other Handout-like visual assets.
 
-- portraits;
-- letters/documents;
-- illustrations;
-- symbols/emblems;
-- location art;
-- other Handout-like visual material.
-
-A Library image is private local preparation data until the DM explicitly uses it in a live Session.
+A Library image remains private local preparation data until an explicit live Reveal action.
 
 Baseline metadata may include:
 
@@ -89,19 +87,31 @@ Baseline metadata may include:
 - DM-only note;
 - recent-use information.
 
-## 3.1 Live use
-
-The canonical live flow is explicit:
+## 3.1 Preparation flow
 
 ```text
-DM Library / Images
-    -> select image
-    -> preview
-    -> explicit Show to Players / Reveal action
-    -> existing Handout presentation mode
+Session -> DM Library -> Images
+-> organize/search/open
+-> private preview
+-> edit metadata
 ```
 
-Merely opening, previewing, organizing or selecting an image in DM Library does **not** reveal or transmit it.
+No live Session is required.
+
+## 3.2 Live flow — revised primary path
+
+Primary live use is **Quick Search**, not navigating through the full Library.
+
+```text
+Ctrl+K / + Quick
+-> search image
+-> View      = private Host preview
+-> Reveal    = explicit shared Handout action
+```
+
+Selecting a result does not reveal it.
+
+The detailed Session/Handout browser may still open the full Library as a fallback when the DM needs filtering, metadata, or extended management.
 
 Handout remains image presentation only and never becomes a battlemap.
 
@@ -111,7 +121,7 @@ Real cross-network image transfer/reconnect still depends on `GAP-HANDOUT-NETWOR
 
 # 4. NPC Actor Definitions
 
-`NPC Actor Definitions` is the durable reusable DM collection for prepared NPC/monster/creature Actor definitions.
+`NPC Actor Definitions` is the durable reusable collection for prepared NPC/monster/creature Actor definitions.
 
 Examples:
 
@@ -119,7 +129,6 @@ Examples:
 Bandits/
   Nightcrow Archer
   Nightcrow Bruiser
-  Nightcrow Scout
 
 Undead/
   Skeleton
@@ -130,27 +139,13 @@ Named NPC/
   Daren
 ```
 
-A reusable definition may present/reference:
+A reusable definition may present/reference portrait, name, default relation/side presentation, stat block identity/data, HP/AC projections, actions, spells, resources, traits, reactions, tags, DM-only notes, and installed-content/rules source references where applicable.
 
-- portrait;
-- name;
-- default relation/side presentation;
-- stat block identity/data;
-- HP/AC and other derived/readable projections;
-- actions;
-- spells;
-- resources;
-- traits;
-- reactions;
-- tags;
-- DM-only notes;
-- installed content/rules source references where applicable.
-
-UI must not make derived values authoritative merely because they are displayed in the library.
+UI must not make derived values authoritative merely because they are displayed in the Library.
 
 ## 4.1 Instantiation rule
 
-Adding an NPC from the Library to a Session **creates a new Session Actor/Combatant instance**.
+Adding an NPC creates a new independent Session Actor/Combatant instance.
 
 ```text
 Library Definition
@@ -167,45 +162,61 @@ Session Actor C  HP 22
 
 Runtime changes to A/B/C do not mutate the Library definition.
 
-Each Session instance receives its own runtime identity and mutable Session state.
+Deleting/editing the Library source does not silently rewrite already-live Session Actors.
 
-Removing or damaging a Session Actor does not delete/change the Library entry.
+## 4.2 Live flow — revised primary path
 
-Deleting or editing the Library entry after instantiation does not silently rewrite an already-live Session instance.
+Primary:
+
+```text
+Ctrl+K / + Quick
+-> type Nightcrow
+-> Nightcrow Archer [+1]
+```
+
+One `+1` creates one independent Session Actor immediately through the authoritative instantiation path.
+
+Secondary `more` may offer:
+
+- +2;
+- +3;
+- +5;
+- custom quantity;
+- other explicitly authorized spawn options;
+- Open in DM Library.
+
+The older nested flow:
+
+```text
+Encounter -> Add Actor -> From DM Library -> filters -> quantity -> Add
+```
+
+is retained only as a detailed fallback, not the normal live path.
 
 ---
 
 # 5. PC Actor Presets
 
-`PC Actor Presets` are DM-prepared **player-shaped Actor templates/presets** for play situations such as:
+`PC Actor Presets` are DM-prepared player-shaped Actor templates for pregens, temporary allies, companions, one-shots, and substitute/temporary Player-controlled Actors.
 
-- pre-generated guest Characters;
-- temporary allies;
-- companions;
-- one-shot pregens;
-- substitute/temporary Player-controlled Actors.
-
-They are deliberately **not the same durable object as a Player-owned Character**.
+They are deliberately not the same durable object as a Player-owned Character.
 
 A PC Actor Preset does not grant the DM ownership of a Player Character source file.
 
 ## 5.1 Session use
 
-A PC Actor Preset may be instantiated into the Session as an allied/player-shaped Actor.
-
-By default it may remain DM-controlled.
-
-The DM may then explicitly assign Session control to a connected Player under the existing control-assignment model.
-
 ```text
 PC Actor Preset
-    -> instantiate Session Actor
-    -> optional Assign Control to Player
+-> instantiate Session Actor
+-> default DM control
+-> optional Assign Control to Player
 ```
 
 Assigning control changes Session control authority only. It does not transfer durable Character ownership.
 
-The Client receives only the authorized Session projection needed to operate the Actor, not the DM Library entry or its private metadata.
+Quick Search may instantiate a PC Actor Preset with the same `+1` grammar as NPC definitions, while detailed assignment/control remains a Session operation after instantiation.
+
+The Client receives only the authorized Session projection required to operate the Actor, never the private Library entry/notes.
 
 ---
 
@@ -213,9 +224,9 @@ The Client receives only the authorized Session projection needed to operate the
 
 DM Library is private-by-default local preparation data.
 
-Clients must not receive the library catalog merely because a Session exists.
+Clients must not receive the catalog merely because a Session exists.
 
-This includes, unless explicitly required by a later authorized projection:
+This includes, unless explicitly projected later:
 
 - entry names;
 - folders;
@@ -227,8 +238,6 @@ This includes, unless explicitly required by a later authorized projection:
 - unused Actor presets;
 - existence metadata for secret prepared assets.
 
-The rule is:
-
 ```text
 DM Library private source
         ↓ explicit DM action
@@ -239,21 +248,21 @@ Player Client
 
 CSS hiding is never sufficient privacy.
 
+Quick Search is Host-local UI and does not imply that its search index/catalog is sent to Players.
+
 ---
 
 # 7. Product navigation
 
-DM Library does **not** become a new permanent global top-level destination.
+DM Library does not become a permanent top-level destination.
 
-The existing global navigation remains:
+Global navigation remains:
 
 ```text
 Home -> Characters -> Session -> Content -> Rules -> Settings
 ```
 
-The primary offline preparation entry lives under `Session` because it prepares connected Host/DM play.
-
-Recommended Session destination structure:
+Offline preparation entry:
 
 ```text
 Session
@@ -265,51 +274,76 @@ Session
    └─ NPC Actors
 ```
 
-This preserves `Content` for declarative packages/Add-ons rather than mixing packages with personal prepared play material.
+`Content` remains declarative package/catalog management, separate from personal prepared play material.
 
 ---
 
 # 8. Live Connected Play invocation
 
-The accepted Connected Play skeleton is preserved.
-
-DM Library is invoked contextually from the task that needs it.
-
-## 8.1 Encounter
+The accepted Play skeleton remains underneath all DM Library invocation.
 
 ```text
-Encounter
-  -> Add Actor
-     -> From DM Library
-        -> PC Actors | NPC Actors
-        -> search/filter/select
-        -> quantity where applicable
-        -> Add to Session
+Play chrome
+Upper Actor Board
+Mapless Stage
+Lower Actor Board
+Command Center
 ```
 
-Adding does not navigate away from Play and does not replace the Actor Boards / Stage / Command Center skeleton.
+## 8.1 Primary — DM Quick Search
 
-## 8.2 Handout / Session image presentation
+Keyboard:
 
 ```text
-Session / Handout
-  -> Choose Image
-     -> DM Library / Images
-     -> preview
-     -> explicit Reveal
+Ctrl+K
 ```
 
-No reveal occurs merely by choosing a library item.
+Pointer:
 
-## 8.3 Actor detail / control
+```text
+small DM-only + / Quick control in Play chrome
+```
 
-After a PC Actor Preset or NPC Actor Definition is instantiated, all normal control/Encounter/Initiative behavior operates on the **Session Actor**, not on the Library source entry.
+The palette overlays Play and searches authorized Host sources.
+
+DM Library result types use explicit action verbs:
+
+```text
+ACTOR  Nightcrow Archer  [+1] [more]
+IMAGE  Sealed Letter     [View] [Reveal]
+```
+
+The broader cross-system palette may also include Item/Condition/Rule results as defined by `CORE-SYSTEMS-UX-PLAN.md`.
+
+## 8.2 Recent/Favorites first
+
+An empty query shows a small set of Recent/Favorites/currently relevant assets so repeat use can be:
+
+```text
+Ctrl+K -> click
+```
+
+rather than repeated navigation/search.
+
+## 8.3 Detailed fallback
+
+Encounter and Session/Handout panes may still expose `Open DM Library` or a compact detailed picker for management-heavy cases.
+
+They are not the primary path for routine one-off add/reveal actions.
+
+## 8.4 Feedback
+
+Quick successful actions use minimal in-context acknowledgement, for example:
+
+```text
+Nightcrow Archer added   [+1 more] [Undo where canonical]
+```
+
+Do not keep the palette open as a blocking window after a routine single action unless the user intentionally pins/continues it.
 
 ---
 
 # 9. Separation from existing stores
-
-SimpleVTT now has three distinct durable/transient layers that must not be collapsed.
 
 ```text
 PLAYER DURABLE
@@ -322,39 +356,42 @@ DM Library
 ├─ PC Actor Presets
 └─ NPC Actor Definitions
 
+CONTENT DEFINITIONS
+ContentCatalog / packages
+└─ reusable rules/items/spells/conditions/etc.
+
 SESSION TRANSIENT / AUTHORITATIVE
 Current Session
 ├─ Character SessionProjections
 ├─ instantiated PC/NPC Actors
 ├─ active/revealed Handout
-├─ HP / resources / effects
-├─ Initiative / economy
-└─ Resolution / Activity state
+├─ HP/resources/effects
+├─ Initiative/economy
+└─ Resolution/Activity
 ```
 
-`Content` remains a fourth separate concept: installed declarative rules/content packages and their provenance/lifecycle.
+These layers must not be collapsed.
 
 ---
 
-# 10. Organization and usability principles
+# 10. Usability principles
 
-The Library should support a DM preparing a large campaign without becoming a generic file manager.
-
-Required UX principles:
-
-1. **Fast retrieval during play** — search, recent, favorites and compact category filtering are more important than deep filesystem semantics.
-2. **Preparation before play** — all material can be inspected/edited without opening a live Session.
-3. **Explicit publish boundary** — private material never becomes shared merely because it is selected.
-4. **Reusable source vs live instance** — runtime mutation never silently rewrites the prepared definition.
-5. **Batch-friendly Encounter use** — repeated NPCs should be addable without recreating the definition.
-6. **No map semantics** — Images are presentation assets and Actors remain mapless Actor entries/cards in Core.
-7. **Private notes remain private** — a projected Actor can omit DM-only notes/metadata even when the Actor itself is visible to Players.
+1. **Preparation can be deep; live retrieval must be shallow.**
+2. **Quick Search is the DM's live hand; DM Library is the preparation room.**
+3. **Recent/Favorites reduce repeated search.**
+4. **Action verbs are explicit:** `+1`, `View`, `Reveal`, not ambiguous row clicks.
+5. **Private preview is never publish.**
+6. **Reusable source is never live mutable state.**
+7. **Batch add is secondary:** single add stays one click; quantity lives behind `more`.
+8. **No map semantics.**
+9. **Private notes remain private.**
+10. **Full Library remains reachable for management but should rarely interrupt play.**
 
 ---
 
-# 11. Initial visual model
+# 11. Preparation surface visual model
 
-The dedicated DM Library preparation surface uses a three-zone model:
+The full Library still uses the three-zone preparation model:
 
 ```text
 Session / DM Library
@@ -366,105 +403,75 @@ NPC Actors             cards                  actions
 ────────────────────────────────────────────────────────
 ```
 
-Recommended detail actions depend on collection/context:
-
-### Offline preparation
-
-- Preview/Open;
-- Edit;
-- Duplicate;
-- Favorite;
-- Delete;
-- Create/Import.
-
-### Live DM context
-
-Images additionally expose:
-
-- Reveal / Show to Players.
-
-PC/NPC Actors additionally expose:
-
-- Add to Session;
-- quantity for repeated NPC instantiation where appropriate.
-
-The interface must visibly distinguish `Local / Not shared` from `In current Session` / `Revealed` state.
+This surface is optimized for preparation and editing, not live speed.
 
 ---
 
-# 12. Initial acceptance scenarios
-
-The prototype extension must show at minimum:
+# 12. Revised prototype scenarios
 
 ## DMLIB-SCN-01 — Offline Image Library
 
-- Session -> DM Library;
-- Images selected;
 - folders/tags/search;
-- image cards;
 - preview/details;
-- clear `Local · Not shared` state;
-- no reveal button that pretends a Session exists.
+- `Local · Not shared`;
+- no fake Reveal without a live Session.
 
-## DMLIB-SCN-02 — Offline NPC Actor Library
+## DMLIB-SCN-02 — Offline NPC Library
 
-- NPC Actors selected;
 - reusable definition cards;
-- one named NPC and repeated generic NPC examples;
-- content validation/problem example;
-- edit/duplicate flow affordances.
+- named/repeated generic NPC examples;
+- validation/problem example;
+- edit/duplicate affordances.
 
 ## DMLIB-SCN-03 — Offline PC Actor Presets
 
-- PC Actors selected;
-- clear label that these are Host-prepared Actor presets, not Player-owned Characters;
-- edit/duplicate/preview.
+- clearly Host-prepared presets, not Player-owned Characters.
 
-## DMLIB-SCN-04 — Live Encounter: Add from Library
+## DMLIB-SCN-04 — Live Quick Actor add
 
-- accepted DM Play scene remains underneath;
-- Encounter contextual pane open;
-- Add Actor -> From DM Library;
-- PC/NPC tabs/search;
-- choose repeated NPC and quantity;
-- explicit Add to Session;
-- Session Actor appears independently from source definition.
+- accepted DM Play scene underneath;
+- Ctrl+K / Quick open;
+- recent results and text search;
+- `Nightcrow Archer [+1]`;
+- Actor appears independently in the proper Actor Board;
+- `more` exposes quantity only when requested.
 
-## DMLIB-SCN-05 — Live Handout: Reveal from Library
+## DMLIB-SCN-05 — Live Quick Image View/Reveal
 
-- accepted DM Play scene remains underneath;
-- choose DM Library image;
-- private preview first;
-- explicit Reveal;
-- only after Reveal does the shared Handout presentation become active.
+- accepted DM Play scene underneath;
+- Quick image result;
+- `View` private preview;
+- explicit `Reveal` shared Handout;
+- no row-click auto reveal.
 
 ## DMLIB-SCN-06 — Player non-delivery
 
-- Player Play contains no DM Library launcher/catalog;
-- unrevealed image/NPC/preset names do not appear;
-- only authorized Session Actor/Handout projection is visible.
+- no DM Library/Quick private source catalog;
+- no unrevealed asset metadata/existence hints;
+- only authorized Session projection.
+
+The first DM Library candidate demonstrated the heavier nested flow and is now useful as preparation-surface evidence; live invocation review should use the broader Core Systems candidate prototype.
 
 ---
 
-# 13. Runtime blockers / architecture work required before implementation
+# 13. Runtime blockers
 
-Runtime implementation must not begin by inventing these contracts in React.
+Runtime implementation must not invent these contracts in UI code:
 
-Required architecture work:
+- durable DM Library metadata persistence;
+- local image asset storage/lifecycle;
+- Actor definition/preset schema/versioning;
+- definition -> Session Actor instantiation;
+- installed-content dependency validation;
+- private Library -> Session projection boundary;
+- Handout transfer/reconnect;
+- Quick Search aggregation/index privacy/caching boundaries;
+- deletion/orphan/reference behavior for assets.
 
-- durable DM Library metadata persistence contract;
-- local image asset storage/lifecycle contract;
-- Actor preset/definition durable schema and versioning;
-- definition -> Session Actor instantiation contract;
-- installed-content dependency validation at load/instantiate time;
-- private library -> authorized Session projection boundary;
-- Handout transfer/reconnect contract for real connected image reveal;
-- explicit deletion/orphan/reference behavior for stored image assets.
-
-Known existing blockers remain relevant:
+Known relevant gaps include:
 
 - `GAP-HANDOUT-NETWORK-CONTRACT`;
-- `GAP-DM-ONLY-DELIVERY-PROTOCOL` where private connected delivery semantics overlap.
+- `GAP-DM-ONLY-DELIVERY-PROTOCOL` where applicable.
 
 ---
 
@@ -472,23 +479,23 @@ Known existing blockers remain relevant:
 
 This plan does not authorize:
 
-- a battlemap library;
-- map/token placement;
-- storing Scene x/y state;
-- automatic live synchronization from Library definition changes;
+- battlemap assets/placement;
+- Scene x/y storage;
+- automatic synchronization from Library definition edits into live Actors;
 - treating PC Actor Presets as Player-owned Characters;
-- sending the entire Library manifest to Clients;
-- executable plugin/runtime code inside Library entries;
-- implementation of unresolved binary transport/storage details in UI code.
+- sending the Library manifest/index to Clients;
+- executable plugin code inside entries;
+- auto-reveal from selection/search;
+- UI-invented persistence/network semantics.
 
 ---
 
 # 15. Next route
 
-1. Architecture/persistence contract for DM Library.
-2. Prototype extension covering DMLIB-SCN-01 through DMLIB-SCN-06.
-3. Owner visual/flow review of the extension.
-4. Update accepted prototype baseline without invalidating already-accepted unrelated scenes.
-5. Materialize runtime surface/component/interaction contracts.
-6. Create a scoped runtime Work Order.
-7. Only then implement DM Library runtime UI/persistence/network projections.
+1. Review `CORE-SYSTEMS-UX-PLAN.md` and `prototype/app/core-systems-reference.html`.
+2. Owner accepts/changes the unified Quick/Search and system placement grammar.
+3. Reconcile the prior DM Library candidate: retain its preparation surface; supersede its heavy live picker as primary UX.
+4. Materialize missing architecture/runtime contracts.
+5. Update consolidated accepted prototype only after Owner review.
+6. Create/refresh scoped runtime Work Orders.
+7. Runtime implementation remains unauthorized until those gates are complete.
