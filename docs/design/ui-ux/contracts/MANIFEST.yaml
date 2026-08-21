@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 phase: runtime_ui_preparation
 status: contracts_materialized_not_implementation_ready
 runtime_ui_implementation_allowed: false
@@ -18,22 +18,64 @@ mandatory_baseline:
   mapless_core_policy: docs/design/movement-modules.md
   session_runtime: docs/design/session-runtime.md
 
+mandatory_contract_read_order:
+  - docs/design/ui-ux/contracts/README.md
+  - docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md
+  - docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md
+  - docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
+  - docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
+  - docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
+  - docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md
+  - docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
+  - docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md
+  - docs/design/ui-ux/contracts/MANIFEST.yaml
+
 contracts:
   readme:
     path: docs/design/ui-ux/contracts/README.md
     status: ready
+    purpose: entrypoint_authority_and_read_order
+  implementation_playbook:
+    path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md
+    status: ready
+    purpose: human_ai_product_interpretation_and_anti_misread_guide
+  glossary:
+    path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md
+    status: ready
+    purpose: canonical_ui_terminology_guard
   surfaces:
     path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
     status: ready
+    purpose: surface_and_coexistence_contract
   components:
     path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
     status: ready
+    purpose: component_responsibility_and_state_contract
   interaction_state_motion:
     path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
     status: ready
+    purpose: interaction_precedence_state_layer_focus_motion_contract
+  behavior_scenarios:
+    path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md
+    status: ready
+    scenario_count: 48
+    purpose: end_to_end_start_action_expected_forbidden_examples
   implementation_traceability:
     path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
     status: ready
+    purpose: requirement_to_decision_domain_gap_traceability
+  qa_acceptance_matrix:
+    path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md
+    status: ready
+    purpose: pass_fail_blocked_na_runtime_qa_contract
+
+interpretation_guards:
+  industry_vtt_conventions_may_fill_unspecified_behavior: false
+  ambiguous_terms_must_use_project_glossary_and_domain_contracts: true
+  prototype_fixture_is_production_schema: false
+  prototype_visual_similarity_alone_is_acceptance: false
+  current_source_or_test_may_override_accepted_contract: false
+  ui_may_guess_missing_domain_or_architecture_truth: false
 
 hard_product_guards:
   mapless_core: true
@@ -43,7 +85,9 @@ hard_product_guards:
   grid_path_los_fog_ui_in_core_forbidden: true
   handout_is_not_battlemap: true
   first_run_tutorial_required: true
+  first_run_home_substitute_for_tutorial_forbidden: true
   initial_sheet_presentation_choice_required: true
+  official_and_simplevtt_share_same_character_model: true
   standalone_roll_same_sheet_required: true
   detached_standalone_dice_workflow_forbidden: true
   connected_actor_boards_required: true
@@ -51,8 +95,31 @@ hard_product_guards:
   freeform_fake_turn_economy_forbidden: true
   initiative_preserves_play_skeleton: true
   targeting_is_actor_card_or_manual_set: true
+  area_targeting_map_template_in_core_forbidden: true
   main_hand_smart_fallback_forbidden: true
   dm_player_share_core_play_skeleton: true
+  connected_host_is_dm: true
+  connected_client_is_player: true
+  offline_has_no_dm_player_role: true
+  dm_only_css_hide_is_not_privacy: true
+
+interaction_precedence:
+  actor_click:
+    - selected_action_targeting
+    - explicit_dm_control_mode
+    - ordinary_context_selection
+    - default_hostile_main_hand_if_authoritatively_available
+
+ui_must_not_authoritatively_calculate:
+  - rules_legality
+  - target_eligibility
+  - executable_main_hand_relation
+  - resolution_safe_conflicting_interactions
+  - privacy_entitlement_or_delivery
+  - reconnect_truth
+  - content_validation_truth
+  - persistence_semantics
+  - spatial_geometry
 
 open_runtime_blockers:
   - id: GAP-MAIN-HAND-CANONICAL-RELATION
@@ -76,12 +143,25 @@ open_runtime_blockers:
       - role_scoped_activity_delivery
       - later_private_event_disclosure
 
+runtime_work_order_requirements:
+  must_name_touched_behavior_scenarios: true
+  must_name_touched_qa_rows: true
+  must_identify_authoritative_state_sources: true
+  must_identify_applicable_frozen_decisions: true
+  must_identify_open_blocking_gaps: true
+  must_not_mark_blocked_qa_as_pass_by_guessing: true
+  must_preserve_accepted_reference_hierarchy: true
+
 implementation_readiness:
   prototype_owner_acceptance: passed
+  implementation_playbook: ready
+  terminology_guard: ready
   surface_contract: ready
   component_contract: ready
   interaction_state_motion_contract: ready
+  behavior_scenarios: ready
   traceability: ready
+  qa_acceptance_matrix: ready
   applicable_product_dependencies_frozen: false
   runtime_slice_selected: false
   slice_source_tests_reinspected: false
@@ -97,6 +177,19 @@ recommended_first_runtime_slice:
     - low_dependency_on_unresolved_network_privacy_contracts
     - establishes_top_navigation_and_first_use_product_identity
     - prepares_offline_character_entry_without_touching_complex_resolution_authority
+  likely_behavior_scenarios:
+    - Scenario 01
+    - Scenario 02
+    - Scenario 03
+    - Scenario 05
+  likely_qa_rows:
+    - QA-ID-04
+    - QA-ID-05
+    - QA-NAV-01
+    - QA-NAV-02
+    - QA-NAV-03
+    - QA-NAV-04
+    - QA-NAV-05
   still_requires:
     - exact_current_src_test_inspection
     - exact_decision_dependency_list
