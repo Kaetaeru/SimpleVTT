@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const productRoot = readFileSync("src/ProductRoot.tsx", "utf8");
-const productRootCss = readFileSync("src/product-root.css", "utf8");
 const app = readFileSync("src/App.tsx", "utf8");
 const sessionRoot = readFileSync("src/SessionModeRoot.tsx", "utf8");
 const provider = readFileSync("src/app/AppProvider.tsx", "utf8");
@@ -26,37 +25,27 @@ test("ProductRoot separates live Session truth from local Product-vs-Play presen
   assert.doesNotMatch(productRoot, /localStorage|sessionStorage/);
 });
 
-test("Connected Play can open Product Shell without mutating Session lifecycle", () => {
-  assert.match(productRoot, /data-connected-surface="play"/);
-  assert.match(productRoot, /aria-label="제품 메뉴 열기"/);
-  assert.match(productRoot, /SimpleVTT 메뉴/);
-  assert.match(productRoot, /onClick=\{\(\) => setSurface\("product"\)\}/);
+test("accepted Play chrome owns the Product exit without mutating Session lifecycle", () => {
+  assert.match(productRoot, /<SessionModeRoot onOpenProduct=\{\(\) => setSurface\("product"\)\} \/>/);
+  assert.match(sessionRoot, /onOpenProduct\(\): void/);
+  assert.match(sessionRoot, />← Product</);
+  assert.match(sessionRoot, /onClick=\{onOpenProduct\}/);
   assert.doesNotMatch(productRoot, /stopSession|hostSession|joinSession|startPreparedSession|setSessionReady/);
-  assert.match(sessionRoot, /stopSession/);
-  assert.match(sessionRoot, />세션 종료</);
+  assert.doesNotMatch(sessionRoot, /onOpenProduct[\s\S]*stopSession/);
 });
 
-test("live Product Shell Return to Play reuses SessionModeRoot rather than ProductionPlayScreen", () => {
+test("live Product Shell Return to Play reuses the same SessionModeRoot", () => {
   assert.match(app, /플레이로 돌아가기/);
   assert.match(productRoot, /isReturnToConnectedPlayTarget/);
   assert.match(productRoot, /label === "플레이로 돌아가기" \|\| label === "기기로 플레이"/);
   assert.match(productRoot, /event\.preventDefault\(\)/);
   assert.match(productRoot, /event\.stopPropagation\(\)/);
   assert.match(productRoot, /setSurface\("play"\)/);
-  assert.match(productRoot, /<SessionModeRoot\s*\/>/);
+  assert.match(productRoot, /<SessionModeRoot onOpenProduct=/);
   assert.doesNotMatch(productRoot, /ProductionPlayScreen/);
 });
 
-test("connected Product entry stays compact, focus-visible, and responsive", () => {
-  assert.match(productRootCss, /\.connected-product-shell-entry/);
-  assert.match(productRootCss, /position: absolute/);
-  assert.match(productRootCss, /:focus-visible/);
-  assert.match(productRootCss, /@media \(max-width: 899px\)/);
-  assert.match(productRootCss, /@media \(max-width: 620px\)/);
-  assert.doesNotMatch(productRootCss, /display:\s*none/);
-});
-
-test("WO-UI-002 authorization is bounded to navigation composition", () => {
+test("WO-UI-002 authorization remains bounded to continuity while later visual work keeps the same authority separation", () => {
   assert.match(authorization, /ACTIVE FOR WO-UI-002 ONLY/);
   assert.match(authorization, /UX-01-03/);
   assert.match(authorization, /NAV-01-02/);
