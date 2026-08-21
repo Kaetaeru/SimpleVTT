@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SimpleVTT Integrated Mapless Reference Prototype</title>
+  <link rel="stylesheet" href="integrated-reference.css" />
+</head>
+<body>
+  <div class="review-shell">
+    <aside class="review-controls" aria-label="Prototype Controls">
+      <div class="review-brand">
+        <span class="review-kicker">PROTOTYPE CONTROLS · NOT PRODUCT UI</span>
+        <h1>SimpleVTT Integrated Reference</h1>
+        <p>Repository-wide integrated plan 기반의 mapless 제품 검토용 데모입니다.</p>
+      </div>
+
+      <label class="control-field">
+        <span>Scenario</span>
+        <select id="scenarioSelect"></select>
+      </label>
+
+      <div class="control-grid">
+        <label class="control-field"><span>Viewport</span><select id="viewportSelect"><option value="wide">Wide 1600×1000</option><option value="normal" selected>Normal 1366×768</option><option value="narrow">Narrow 960×700</option></select></label>
+        <label class="control-field"><span>View</span><select id="viewSelect"><option value="offline">Offline</option><option value="dm">Host / DM</option><option value="player">Client / Player</option></select></label>
+      </div>
+
+      <div class="control-grid">
+        <label class="control-field"><span>Mode</span><select id="modeSelect"><option value="freeform">Freeform</option><option value="initiative">Initiative</option></select></label>
+        <label class="control-field"><span>Sheet</span><select id="sheetStyleSelect"><option value="official">Official-style</option><option value="simplevtt">SimpleVTT</option></select></label>
+      </div>
+
+      <label class="control-check"><input id="reducedMotionToggle" type="checkbox" /> <span>Reduced Motion</span></label>
+
+      <div class="control-actions">
+        <button data-review-jump="PROTO-SCN-01">Tutorial</button>
+        <button data-review-jump="PROTO-SCN-04">Standalone Roll</button>
+        <button data-review-jump="PROTO-SCN-08">DM Freeform</button>
+        <button data-review-jump="PROTO-SCN-12">Targeting</button>
+      </div>
+
+      <div class="review-rule">
+        <strong>Hard Product Guard</strong>
+        <span>Core Play has no battlemap, Actor coordinates, map tokens, grid, path, Fog of War or LoS geometry.</span>
+      </div>
+    </aside>
+
+    <main class="review-stage">
+      <header class="review-stage__header">
+        <div><span class="review-status-dot"></span><strong id="scenarioTitle">Prototype</strong></div>
+        <div id="scenarioMeta" class="review-stage__meta"></div>
+      </header>
+      <div class="review-stage__scroll">
+        <div id="reviewViewport" class="review-viewport vp-normal">
+          <div id="appRoot" class="app-root" aria-live="polite"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="integrated-reference-fixtures.js"></script>
+  <script src="integrated-reference.js"></script>
+</body>
+</html>
