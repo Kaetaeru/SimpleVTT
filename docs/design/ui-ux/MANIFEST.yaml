@@ -7,11 +7,14 @@ validation:
   bounded_final_validation: passed
   scenario_count: 10
   preventive_meta_revalidation: only_on_material_governance_drift_or_explicit_request
+  repository_wide_product_ux_reconciliation_audit: completed_2026_08_21
+  integrated_cross_source_baseline: active
 
 primary_goals:
   - owner_control_easy
   - ai_interpretation_unambiguous
   - exhaustive_internal_coverage_without_owner_question_overload
+  - broad_ui_must_respect_mapless_core_and_integrated_baseline
 
 entrypoints:
   owner: docs/design/ui-ux/README.md
@@ -20,8 +23,10 @@ entrypoints:
   ai: docs/design/ui-ux/AI-READING-GUIDE.md
   preflight: docs/design/ui-ux/PREFLIGHT.md
   framework: docs/design/ui-ux-planning-framework.md
+  integrated_product_ux: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
 
 canonical_precedence_reference: docs/design/ui-ux-planning-framework.md
+cross_source_interpretation_reference: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
 
 status_enums:
   decision: [Draft, Selected, Reviewed, Frozen, Superseded]
@@ -121,6 +126,15 @@ sources:
     authority: canonical_process
     derived: false
     must_pass_before_substantive_work: true
+  integrated_product_ux_plan:
+    path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+    role: broad_product_ui_cross_source_interpretation_and_reconciliation_baseline
+    authority: canonical_process_interpretation_not_second_decision_store
+    derived: false
+    must_read_for_broad_ui_prototype_qa_runtime_preparation: true
+    cannot_override_domain_architecture_or_decision_ledger: true
+    mapless_core_guard: true
+    historical_agent_docs_are_evidence_only: true
   owner_review:
     path: docs/design/ui-ux/owner-review/README.md
     role: owner_selection_workspace
@@ -139,6 +153,13 @@ sources:
     historical_detail_files_are_required_owner_homework: false
     canonicalizes_into: docs/design/ui-ux/decisions.md
     candidate_options_are_product_truth: false
+  historical_agent_workspace:
+    path: .agents/
+    role: non_canonical_historical_working_context
+    authority: evidence_only
+    derived: false
+    may_override_formal_product_or_domain_docs: false
+    read_when_reconciling_history_or_stale_tests: true
   dashboard:
     path: docs/design/ui-ux/README.md
     role: current_planning_status_and_next_action
@@ -233,7 +254,7 @@ planning_gate:
     - CONTENT-02-04
     - CONTENT-02-09
     - CONTENT-02-11
-  next_planning_phase: ai_design_defaults_domain_architecture_contracts_and_reconciliation
+  next_planning_phase: integrated_baseline_driven_prototype_spec_reconciliation_then_rebuild
   detailed_map_rows_not_listed_as_owner_decisions: ai_or_contract_resolution_unless_escalation_rule_triggers
   requirements:
     r1_r9_complete_inventory_cross_check: passed
@@ -241,6 +262,7 @@ planning_gate:
     all_27_governance_decision_maps_complete: passed
     missing_duplication_coverage_audit: passed
     owner_whole_product_checkpoint: passed
+    integrated_product_ux_cross_source_audit: passed
 
 maintenance_rules:
   - one_normative_fact_one_canonical_home
@@ -251,6 +273,10 @@ maintenance_rules:
   - domain_architecture_truth_is_never_recast_as_owner_preference
   - selected_reviewed_frozen_decisions_are_planning_truth_but_only_frozen_is_stable_for_implementation
   - current_code_is_evidence_not_automatic_product_truth
+  - historical_agent_docs_and_old_tests_are_evidence_not_automatic_product_truth
+  - broad_ui_must_read_integrated_product_ux_plan
+  - scene_table_stage_canvas_words_never_imply_battlemap_semantics_without_explicit_domain_contract
+  - mapless_core_forbids_actor_xy_tokens_grid_pathfinding_fog_and_los_in_default_product_ui
   - owner_never_manually_repairs_cross_references
   - master_flow_is_derived_owner_view_not_second_decision_store
   - registry_and_matrices_reference_canonical_sources_instead_of_copying_them
@@ -259,6 +285,8 @@ maintenance_rules:
 implementation_gate:
   planning_status_alone_authorizes_implementation: false
   owner_checkpoint_selection_alone_authorizes_implementation: false
+  requires_integrated_product_ux_baseline_current: true
+  requires_accepted_reference_prototype: true
   requires_scoped_work_order: true
   requires_applicable_frozen_dependencies: true
   requires_no_material_blocking_gap: true
