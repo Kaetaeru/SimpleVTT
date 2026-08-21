@@ -1,5 +1,10 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import {
+  diceFaceLabel,
+  getDiceVisualPreset,
+  type DiceVisualPresetId,
+} from "./dice-visual-presets";
 
 export type DieSides = 4 | 6 | 8 | 10 | 12 | 20;
 
@@ -48,9 +53,6 @@ type Bounds = {
 
 const DICE_GROUP = 2;
 const SURFACE_GROUP = 1;
-const BRONZE = 0xb87333;
-const BRONZE_DARK = 0x3c1e0d;
-const NUMBER_COLOR = "#f8e2bc";
 const CAMERA_HEIGHT = 18;
 const CAMERA_FOV = 36;
 const MAX_RETAINED_DICE = 48;
@@ -213,22 +215,12 @@ export class DiceWorld {
   private readonly floorMesh: THREE.Mesh;
   private readonly boundaryDebug: THREE.LineLoop;
   private readonly dice: DieRuntime[] = [];
-  private readonly coreMaterial = new THREE.MeshStandardMaterial({
-    color: BRONZE,
-    emissive: BRONZE_DARK,
-    emissiveIntensity: 0.16,
-    roughness: 0.3,
-    metalness: 0.33,
-    flatShading: true,
-  });
-  private readonly edgeMaterial = new THREE.LineBasicMaterial({
-    color: 0x3a1f10,
-    transparent: true,
-    opacity: 0.72,
-  });
-  private readonly numberTextures = new Map<number, THREE.CanvasTexture>();
-  private readonly numberMaterials = new Map<number, THREE.MeshBasicMaterial>();
+  private readonly coreMaterial = new THREE.MeshStandardMaterial({ flatShading: true });
+  private readonly edgeMaterial = new THREE.LineBasicMaterial({ transparent: true });
+  private readonly numberTextures = new Map<string, THREE.CanvasTexture>();
+  private readonly numberMaterials = new Map<string, THREE.MeshBasicMaterial>();
   private readonly labelGeometries = new Map<DieSides, THREE.PlaneGeometry>();
+  private visualPresetId: DiceVisualPresetId = "classic-metal";
   private wallBodies: CANNON.Body[] = [];
   private bounds: Bounds = { halfWidth: 7, minZ: -5.2, maxZ: 5.2 };
   private settings: PhysicsSettings;
@@ -242,6 +234,7 @@ export class DiceWorld {
   constructor(canvas: HTMLCanvasElement, settings: PhysicsSettings) {
     this.canvas = canvas;
     this.settings = { ...settings };
+    this.applyVisualPresetMaterials();
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -356,6 +349,11 @@ export class DiceWorld {
     if (diceContact) diceContact.restitution = Math.min(0.36, this.settings.restitution);
   }
 
+  setVisualPreset(id: DiceVisualPresetId) {
+    this.visualPresetId = id;
+    this.applyVisualPresetMaterials();
+  }
+
   setDiceCollision(enabled: boolean) {
     this.diceCollision = enabled;
     for (const runtime of this.dice) {
@@ -440,6 +438,22 @@ export class DiceWorld {
     this.renderer.dispose();
   }
 
+  private applyVisualPresetMaterials() {
+    const preset = getDiceVisualPreset(this.visualPresetId);
+    this.coreMaterial.color.setHex(preset.body.color);
+    this.coreMaterial.emissive.setHex(preset.body.emissive);
+    this.coreMaterial.emissiveIntensity = preset.body.emissiveIntensity;
+    this.coreMaterial.roughness = preset.body.roughness;
+    this.coreMaterial.metalness = preset.body.metalness;
+    this.coreMaterial.opacity = 1;
+    this.coreMaterial.transparent = false;
+    this.coreMaterial.needsUpdate = true;
+
+    this.edgeMaterial.color.setHex(preset.edge.color);
+    this.edgeMaterial.opacity = preset.edge.opacity;
+    this.edgeMaterial.needsUpdate = true;
+  }
+
   private removeOldest(count: number) {
     for (let index = 0; index < count; index += 1) {
       const runtime = this.dice.shift();
@@ -453,9 +467,12 @@ export class DiceWorld {
   }
 
   private numberTexture(value: number) {
-    const existing = this.numberTextures.get(value);
+    const cacheKey = `${this.visualPresetId}:${value}`;
+    const existing = this.numberTextures.get(cacheKey);
     if (existing) return existing;
 
+    const preset = getDiceVisualPreset(this.visualPresetId);
+    const text = diceFaceLabel(preset, value);
     const canvas = document.createElement("canvas");
     canvas.width = 192;
     canvas.height = 192;
@@ -465,23 +482,27 @@ export class DiceWorld {
     context.clearRect(0, 0, 192, 192);
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.font = value >= 10 ? "800 70px Georgia, serif" : "800 82px Georgia, serif";
+    const fontSize = preset.marking.mode === "rune" ? 84 : value >= 10 ? 70 : 82;
+    context.font = `800 ${fontSize}px ${preset.marking.fontFamily}`;
     context.lineJoin = "round";
     context.lineWidth = 13;
-    context.strokeStyle = "rgba(29, 13, 4, .86)";
-    context.strokeText(String(value), 96, 101);
-    context.fillStyle = NUMBER_COLOR;
-    context.fillText(String(value), 96, 101);
+    context.strokeStyle = preset.marking.stroke;
+    context.shadowColor = preset.marking.glowColor;
+    context.shadowBlur = preset.marking.glowBlur;
+    context.strokeText(text, 96, 101);
+    context.fillStyle = preset.marking.fill;
+    context.fillText(text, 96, 101);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 2;
-    this.numberTextures.set(value, texture);
+    this.numberTextures.set(cacheKey, texture);
     return texture;
   }
 
   private numberMaterial(value: number) {
-    const existing = this.numberMaterials.get(value);
+    const cacheKey = `${this.visualPresetId}:${value}`;
+    const existing = this.numberMaterials.get(cacheKey);
     if (existing) return existing;
     const material = new THREE.MeshBasicMaterial({
       map: this.numberTexture(value),
@@ -490,7 +511,7 @@ export class DiceWorld {
       alphaTest: 0.04,
       side: THREE.FrontSide,
     });
-    this.numberMaterials.set(value, material);
+    this.numberMaterials.set(cacheKey, material);
     return material;
   }
 
@@ -504,6 +525,9 @@ export class DiceWorld {
   }
 
   private attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: DieSides) {
+    const preset = getDiceVisualPreset(this.visualPresetId);
+    if (preset.marking.mode === "none") return;
+
     const forward = new THREE.Vector3(0, 0, 1);
     const geometry = this.labelGeometry(sides);
 
