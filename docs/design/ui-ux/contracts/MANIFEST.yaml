@@ -1,0 +1,107 @@
+schema_version: 1
+phase: runtime_ui_preparation
+status: contracts_materialized_not_implementation_ready
+runtime_ui_implementation_allowed: false
+
+accepted_reference:
+  entry: docs/design/ui-ux/prototype/app/integrated-reference.html
+  candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+  accepted_date: 2026-08-21
+  acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+  verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
+
+mandatory_baseline:
+  integrated_product_ux: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+  decisions: docs/design/ui-ux/decisions.md
+  planning_gaps: docs/design/ui-ux/planning-gaps.md
+  domain_design_canon: docs/design/README.md
+  mapless_core_policy: docs/design/movement-modules.md
+  session_runtime: docs/design/session-runtime.md
+
+contracts:
+  readme:
+    path: docs/design/ui-ux/contracts/README.md
+    status: ready
+  surfaces:
+    path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
+    status: ready
+  components:
+    path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
+    status: ready
+  interaction_state_motion:
+    path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
+    status: ready
+  implementation_traceability:
+    path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
+    status: ready
+
+hard_product_guards:
+  mapless_core: true
+  battlemap_in_core_forbidden: true
+  actor_xy_coordinates_in_core_forbidden: true
+  draggable_map_tokens_in_core_forbidden: true
+  grid_path_los_fog_ui_in_core_forbidden: true
+  handout_is_not_battlemap: true
+  first_run_tutorial_required: true
+  initial_sheet_presentation_choice_required: true
+  standalone_roll_same_sheet_required: true
+  detached_standalone_dice_workflow_forbidden: true
+  connected_actor_boards_required: true
+  persistent_command_center_required: true
+  freeform_fake_turn_economy_forbidden: true
+  initiative_preserves_play_skeleton: true
+  targeting_is_actor_card_or_manual_set: true
+  main_hand_smart_fallback_forbidden: true
+  dm_player_share_core_play_skeleton: true
+
+open_runtime_blockers:
+  - id: GAP-MAIN-HAND-CANONICAL-RELATION
+    type: domain_contract
+    blocks:
+      - default_hostile_click_main_hand_runtime_path
+  - id: GAP-RESOLUTION-SAFE-INTERACTIONS
+    type: domain_contract
+    blocks:
+      - selective_resolution_interaction_locking
+  - id: GAP-HANDOUT-NETWORK-CONTRACT
+    type: architecture_contract
+    blocks:
+      - shared_handout_modes
+      - handout_reconnect_projection
+  - id: GAP-DM-ONLY-DELIVERY-PROTOCOL
+    type: architecture_contract
+    severity: critical
+    blocks:
+      - production_dm_only_adjudication
+      - role_scoped_activity_delivery
+      - later_private_event_disclosure
+
+implementation_readiness:
+  prototype_owner_acceptance: passed
+  surface_contract: ready
+  component_contract: ready
+  interaction_state_motion_contract: ready
+  traceability: ready
+  applicable_product_dependencies_frozen: false
+  runtime_slice_selected: false
+  slice_source_tests_reinspected: false
+  slice_blocking_gaps_resolved: false
+  touched_legacy_reconciled: false
+  runtime_work_order_exists: false
+  explicit_runtime_implementation_authorization: false
+
+recommended_first_runtime_slice:
+  name: product_shell_first_run_tutorial_sheet_preference
+  rationale:
+    - strong_owner_accepted_visual_reference
+    - low_dependency_on_unresolved_network_privacy_contracts
+    - establishes_top_navigation_and_first_use_product_identity
+    - prepares_offline_character_entry_without_touching_complex_resolution_authority
+  still_requires:
+    - exact_current_src_test_inspection
+    - exact_decision_dependency_list
+    - scoped_freeze_authorization_where_required
+    - runtime_work_order
+    - explicit_runtime_implementation_authorization
+
+next_route: E_PREPARE_RUNTIME_IMPLEMENTATION
