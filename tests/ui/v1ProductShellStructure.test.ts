@@ -151,29 +151,36 @@ test("the accepted product shell composition is imported in production", () => {
   assert.match(app, /className="v1-topbar"/);
 });
 
-test("V0.9 appearance persists independent mode and accent preferences", () => {
+test("V0.9 appearance persists independent mode, accent, and personal dice theme preferences", () => {
   const memory = new Map<string, string>();
   const storage: AppearanceStorage = {
     getItem: (key) => memory.get(key) ?? null,
     setItem: (key, value) => { memory.set(key, value); },
   };
-  const saved = persistAppearancePreference({ mode: "light", accent: "#3478c9" }, storage);
-  assert.deepEqual(saved, { mode: "light", accent: "#3478c9" });
+  const saved = persistAppearancePreference({ mode: "light", accent: "#3478c9", diceTheme: "bone-relic" }, storage);
+  assert.deepEqual(saved, { mode: "light", accent: "#3478c9", diceTheme: "bone-relic" });
   assert.deepEqual(readAppearancePreference(storage), saved);
-  memory.set(APPEARANCE_STORAGE_KEY, JSON.stringify({ mode: "light", accent: "javascript:red" }));
-  assert.deepEqual(readAppearancePreference(storage), { mode: "light", accent: DEFAULT_APPEARANCE.accent });
+  memory.set(APPEARANCE_STORAGE_KEY, JSON.stringify({ mode: "light", accent: "javascript:red", diceTheme: "not-a-theme" }));
+  assert.deepEqual(readAppearancePreference(storage), {
+    mode: "light",
+    accent: DEFAULT_APPEARANCE.accent,
+    diceTheme: DEFAULT_APPEARANCE.diceTheme,
+  });
 });
 
-test("V0.9 appearance is applied before render and Settings exposes presets plus a custom color", () => {
+test("V0.9 appearance is applied before render and Settings exposes color plus personal dice presets", () => {
   assert.match(main, /initializeAppearancePreference\(\);[\s\S]*createRoot/);
   assert.match(main, /<AppearanceSettingsBridge/);
   assert.match(main, /appearance-settings\.css/);
   assert.match(appearanceBridge, /APPEARANCE_SWATCHES\.map/);
+  assert.match(appearanceBridge, /DICE_VISUAL_PRESET_ORDER\.map/);
+  assert.match(appearanceBridge, /setDiceTheme/);
   assert.match(appearanceBridge, /type="color"/);
   assert.match(appearanceBridge, /aria-pressed/);
   assert.match(appearanceBridge, /mode === "dark" \? "다크" : "라이트"/);
   assert.doesNotMatch(appearanceBridge, /Parchment|Crimson|양피지/);
   assert.match(appearanceCss, /--accent-base/);
+  assert.match(appearanceCss, /appearance-v09-dice-themes/);
   assert.match(appearanceCss, /focus-visible/);
   assert.doesNotMatch(appearanceCss, /--(?:good|bad|info)\s*:/);
 });
