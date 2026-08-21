@@ -6,9 +6,7 @@ const root = readFileSync(new URL("../../src/SessionModeRoot.tsx", import.meta.u
 const handout = readFileSync(new URL("../../src/SessionImageHandoutBridge.tsx", import.meta.url), "utf8");
 const dm = readFileSync(new URL("../../src/SessionDmTools.tsx", import.meta.url), "utf8");
 const modeCss = readFileSync(new URL("../../src/session-mode.css", import.meta.url), "utf8");
-const layoutCss = readFileSync(new URL("../../src/session-connected-layout.css", import.meta.url), "utf8");
-const actorCss = readFileSync(new URL("../../src/session-actor-boards.css", import.meta.url), "utf8");
-const actionCss = readFileSync(new URL("../../src/session-action-dock.css", import.meta.url), "utf8");
+const referenceCss = readFileSync(new URL("../../src/session-integrated-reference-play.css", import.meta.url), "utf8");
 const handoutCss = readFileSync(new URL("../../src/session-image-handout.css", import.meta.url), "utf8");
 const dmCss = readFileSync(new URL("../../src/session-dm-tools.css", import.meta.url), "utf8");
 
@@ -36,34 +34,34 @@ test("Player Handout dismissal restores keyboard focus to the contextual reopen 
   assert.match(handout, /autoFocus onClick=\{dismissCurrentSessionImageHandout\}/);
 });
 
-test("DM session termination stays reachable when the narrow header action is hidden", () => {
-  assert.match(modeCss, /@media \(max-width: 899px\)[\s\S]*\.session-mode-exit \{ display: none; \}/);
+test("DM session termination remains in the contextual Session pane", () => {
+  assert.match(root, />Session</);
+  assert.match(root, /toggleUtility\(role === "dm" \? "session" : "player-session"/);
   assert.match(dm, /export function SessionSharePane/);
   assert.match(dm, /const \{ snapshot, stopSession \} = useSimpleVtt\(\)/);
   assert.match(dm, /await stopSession\(\)/);
-  assert.match(dm, /session-dm-end-session/);
   assert.match(dm, />세션 종료</);
 });
 
-test("constrained Session utility rail and resolution layer remain scroll-reachable", () => {
-  const narrow = mediaBlock(modeCss, 899);
-  assert.match(narrow, /\.session-mode-rail\s*\{[\s\S]*overflow-y: auto;[\s\S]*overscroll-behavior: contain;/);
+test("constrained desktop overlays the accepted right-side utility instead of restoring a vertical rail", () => {
+  assert.doesNotMatch(root, /session-mode-rail/);
+  const narrow = mediaBlock(referenceCss, 1000);
+  assert.match(narrow, /\.session-reference-utility-host \{ position: absolute; right: 0; top: 0; bottom: 0; width: 308px; max-width: 42%; \}/);
   assert.match(modeCss, /\.session-resolution-layer\s*\{[\s\S]*max-height: calc\(100% - 28px\);[\s\S]*overflow: auto;/);
-  assert.match(mediaBlock(layoutCss, 899), /\.session-play-context \.session-mode-rail[\s\S]*max-height: calc\(100% - 16px\)/);
 });
 
-test("narrow desktop keeps Actor Boards scrollable and Command Center reachable", () => {
-  assert.match(actorCss, /\.session-actor-board-scroll\s*\{[\s\S]*display: flex;[\s\S]*overflow-x: auto/);
-  assert.match(actorCss, /\.session-actor-card\s*\{[\s\S]*min-width: 168px/);
-  assert.match(mediaBlock(actorCss, 899), /\.session-actor-card[\s\S]*min-width: 164px/);
-  assert.match(mediaBlock(layoutCss, 899), /--session-command-height: 154px/);
-  assert.match(actionCss, /\.session-hotbar-slots\s*\{[\s\S]*overflow-x: auto/);
+test("narrow desktop keeps accepted Actor Board and Command Center proportions reachable", () => {
+  const narrow = mediaBlock(referenceCss, 1000);
+  assert.match(referenceCss, /\.session-reference-play-root \.session-actor-board-scroll[\s\S]*overflow-x: auto/);
+  assert.match(referenceCss, /\.session-reference-play-root \.session-actor-card[\s\S]*min-width: 164px/);
+  assert.match(narrow, /--svtt-actor-board-h: 80px; --svtt-command-h: 164px/);
+  assert.match(narrow, /\.session-hotbar-slot \{ flex-basis: 62px; min-width: 62px; \}/);
+  assert.match(referenceCss, /\.session-hotbar-slots[\s\S]*overflow-x: auto/);
 });
 
 test("major Session interaction surfaces retain constrained-width fallbacks", () => {
   assert.match(mediaBlock(modeCss, 620), /\.session-quick-sheet \{ width: 100%; \}/);
-  assert.match(mediaBlock(actionCss, 620), /\.session-command-center[\s\S]*grid-template-columns: 118px minmax\(0, 1fr\)/);
-  assert.match(mediaBlock(actionCss, 620), /\.session-action-target-list,[\s\S]*grid-template-columns: 1fr/);
+  assert.match(mediaBlock(referenceCss, 760), /\.session-command-body \{ grid-template-columns: 150px minmax\(0, 1fr\) 78px; \}/);
   assert.match(mediaBlock(handoutCss, 620), /\.session-handout-pane \{ width: 100%; \}/);
   assert.match(mediaBlock(dmCss, 620), /\.session-dm-pane \{ width: 100%; \}/);
 });
