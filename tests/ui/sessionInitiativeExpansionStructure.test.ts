@@ -6,12 +6,11 @@ const root = readFileSync(new URL("../../src/SessionModeRoot.tsx", import.meta.u
 const strip = readFileSync(new URL("../../src/SessionInitiativeStrip.tsx", import.meta.url), "utf8");
 const focus = readFileSync(new URL("../../src/SessionMainFocus.tsx", import.meta.url), "utf8");
 const dock = readFileSync(new URL("../../src/SessionActionDock.tsx", import.meta.url), "utf8");
-const css = readFileSync(new URL("../../src/session-initiative.css", import.meta.url), "utf8");
-const layoutCss = readFileSync(new URL("../../src/session-connected-layout.css", import.meta.url), "utf8");
+const referenceCss = readFileSync(new URL("../../src/session-integrated-reference-play.css", import.meta.url), "utf8");
 
-test("Initiative expands the same persistent Actor Board Stage Command Center skeleton", () => {
+test("Initiative expands the same accepted Actor Board Stage Command Center skeleton", () => {
   assert.match(root, /<SessionActorBoard position="upper" role=\{role\} \/>/);
-  assert.match(root, /<section className="session-play-context"/);
+  assert.match(root, /session-reference-mapless-stage/);
   assert.match(root, /<SessionInitiativeStrip role=\{role\} \/>/);
   assert.match(root, /<SessionActorBoard position="lower" role=\{role\} \/>/);
   assert.match(root, /aria-label="Command Center"/);
@@ -19,42 +18,40 @@ test("Initiative expands the same persistent Actor Board Stage Command Center sk
   assert.doesNotMatch(strip, /setRoute|AppRoute|navigate\(|ProductionPlayScreen/);
 });
 
-test("Initiative strip reads canonical round current actor order and economy projections", () => {
+test("Initiative tracker is projection-only and stays a compact order strip", () => {
   assert.match(strip, /snapshot\.scene\.round/);
   assert.match(strip, /snapshot\.scene\.currentActorId/);
   assert.match(strip, /snapshot\.scene\.entities/);
   assert.match(strip, /right\.entity\.initiative - left\.entity\.initiative/);
-  assert.match(strip, /snapshot\.scene\.economyByActor\[current\.id\]/);
-  assert.doesNotMatch(strip, /setCurrentActor|selectDmActor|economyByActor\[[^\]]+\]\s*=|currentActorId\s*=/);
+  assert.match(strip, /session-reference-initiative-strip/);
+  assert.doesNotMatch(strip, /economyByActor|endTurn|endInitiative|setCurrentActor|selectDmActor|setSessionMode|startInitiative|localStorage/);
+  assert.match(referenceCss, /\.session-reference-initiative-strip\s*\{[\s\S]*height:\s*40px/);
+  assert.match(referenceCss, /\.session-reference-initiative-strip \.session-initiative-order > div[\s\S]*flex:\s*0 0 65px/);
 });
 
-test("turn and Initiative controls delegate to existing authority with player turn ownership", () => {
-  assert.match(strip, /const \{ snapshot, endTurn, endInitiative \} = useSimpleVtt\(\)/);
-  assert.match(strip, /current\?\.id === snapshot\.activeCharacter\.id/);
-  assert.match(strip, /role === "dm" \|\| playerOwnsTurn/);
-  assert.match(strip, /await endTurn\(\)/);
-  assert.match(strip, /await endInitiative\(\)/);
-  assert.match(strip, /snapshot\.resolution/);
-  assert.match(strip, /snapshot\.connectionState === "connected"/);
-  assert.doesNotMatch(strip, /setSessionMode|startInitiative|new Map|localStorage/);
+test("Initiative economy and End Turn stay in the persistent Command Center", () => {
+  assert.match(dock, /snapshot\.scene\.economyByActor\[actorId\]/);
+  assert.match(dock, /const \{ snapshot, resolveAction, endTurn \} = useSimpleVtt\(\)/);
+  assert.match(dock, /currentActor\?\.id === snapshot\.activeCharacter\.id/);
+  assert.match(dock, /role === "dm" \|\| playerOwnsTurn/);
+  assert.match(dock, /await endTurn\(\)/);
+  assert.match(dock, /snapshot\.connectionState === "connected"/);
+  assert.match(dock, /Action/);
+  assert.match(dock, /Bonus/);
+  assert.match(dock, /Reaction/);
+  assert.match(dock, /Movement/);
 });
 
-test("Initiative Main Focus stays compact while Freeform remains the quiet default", () => {
+test("Stage focus remains presentation-only while Initiative does not replace it", () => {
   assert.match(focus, /snapshot\.sessionMode === "initiative"/);
   assert.match(focus, /session-initiative-current-card/);
-  assert.match(focus, /\{current\.hp\}\/\{current\.maxHp\}/);
-  assert.match(focus, /current\.status\.map/);
   assert.match(focus, /session-freeform-focus/);
-  assert.match(focus, /대화와 탐험을 이어가고/);
   assert.doesNotMatch(focus, /actionsByActor|resolveAction|selectDmActor/);
+  assert.match(referenceCss, /\.session-reference-stage-focus \.session-initiative-current-card \{ display: none; \}/);
 });
 
-test("Initiative preserves direct Hotbar discovery and tracker remains horizontally compact", () => {
-  assert.match(dock, /HOTBAR_PAGES/);
-  assert.match(dock, /snapshot\.sessionMode === "initiative" \? snapshot\.scene\.economyByActor\[actorId\]/);
-  assert.doesNotMatch(dock, /INITIATIVE_RESTING|OFFICIAL_PLAY_INTENTS|intentOptions/);
-  assert.match(layoutCss, /\.session-mode-root\[data-session-mode="initiative"\][\s\S]*grid-template-rows:\s*52px minmax\(0, 1fr\) var\(--session-command-height\)/);
-  assert.match(layoutCss, /\.session-mode-root\[data-session-mode="initiative"\] \.session-play-context[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
-  assert.match(css, /\.session-initiative-order\s*\{[\s\S]*display: flex;[\s\S]*overflow-x: auto/);
-  assert.match(css, /@media \(max-width: 899px\)/);
+test("Initiative keeps the exact accepted Play root proportions", () => {
+  assert.match(referenceCss, /\.session-reference-play-root\.session-mode-root\[data-session-mode="initiative"\][\s\S]*grid-template-rows:\s*41px minmax\(0, 1fr\) var\(--svtt-command-h\)/);
+  assert.match(referenceCss, /--svtt-command-h:\s*174px/);
+  assert.match(referenceCss, /--svtt-actor-board-h:\s*86px/);
 });
