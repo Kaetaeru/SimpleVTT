@@ -1,18 +1,21 @@
 # Prototype App Boundary
 
-Status: **Reserved — HTML prototype not started**
+Status: **Standalone review candidate created**
 
-This directory is reserved for the standalone SimpleVTT UI Reference Prototype.
+This directory contains the SimpleVTT UI Reference Prototype. It is a design/review artifact, not production runtime code.
 
-Expected future files:
+Current files:
 
 ```text
-index.html
-prototype.css
-prototype.js
-fixtures.js
-assets/   # only prototype-created or explicitly safe assets
+index.html          # review entry / Prototype Controls shell
+prototype.css       # main reference visual system
+prototype.js        # mock interaction/surface renderer
+fixtures.js         # synthetic scenario/data fixtures
+review-patch.css    # review-only fixes layered after main CSS
+review-patch.js     # direct Surface navigation + standalone-roll review helpers
 ```
+
+Open `index.html` in a browser with the files kept together in this directory.
 
 Hard rules:
 
@@ -23,4 +26,6 @@ Hard rules:
 - keep Prototype Controls visibly separate from intended product UI;
 - no runtime SimpleVTT implementation belongs here.
 
-The prototype is intentionally not built yet. Build only after explicit owner authorization under `../PROTOTYPE-WORK-ORDER.md`.
+The current candidate is waiting for browser/owner visual and interaction review. Static verification is recorded in `../BUILD-VERIFICATION.md`.
+
+Prototype acceptance is separate and remains pending in `../PROTOTYPE-ACCEPTANCE.md`.
