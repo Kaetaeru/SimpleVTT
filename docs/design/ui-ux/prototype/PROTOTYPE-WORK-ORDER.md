@@ -41,9 +41,11 @@ Active candidate:
 ```text
 app/final-spec.html
 app/final-spec.css
+app/final-spec-coverage.css
 app/final-spec.js
 app/final-spec-fixtures.js
 app/final-spec-stability.js
+app/final-spec-coverage.js
 ```
 
 Controlling explicit owner corrections:
@@ -61,9 +63,10 @@ The Final-Spec candidate must behave as a near-final product reference rather th
 ## Standalone Character
 
 - Official-style and SimpleVTT layouts remain first-class.
-- Every ordinary Standalone roll remains inside the current Character Sheet surface.
+- Every ordinary Standalone roll remains inside the currently mounted Character Sheet surface.
 - Skill / save / attack / damage / feature-style examples use the same in-Sheet Roll Plane pattern.
 - No detached modal/dialog/drawer/result route/window for ordinary Standalone dice.
+- Starting an ordinary roll must not remount/navigate the Character Sheet merely to show dice.
 - Fixture-authoritative dice value; no rules calculation.
 
 ## Connected Play
@@ -96,27 +99,29 @@ Required:
 
 ---
 
-# Supporting Product reference surfaces
+# Supporting Final-Spec reference coverage
 
 The replacement candidate also provides reference UI for:
 
+- First Run / Sheet-style choice;
 - Home / Character Library;
+- Character Builder / Level Up;
 - Session Host / Join / no-Character block;
-- Content / Rules / Settings;
-- Activity;
-- Encounter;
-- Participants;
-- Session Share;
+- Content / Package Import Review / Rules / Settings;
+- Reaction/Interrupt and Concentration response;
+- Quick Sheet / Full Sheet live-session layers;
+- Activity / Encounter / Participants / Session Share;
 - advanced DM spatial authoring;
 - Handout Overlay / Upper / Full;
 - Actor right-click context menu;
 - rich hover/focus explanation;
-- NOTICE/reconnect examples;
+- NOTICE / reconnect / confirmation examples;
+- bounded utility panel resize;
 - Wide / Normal / Narrow desktop;
 - Reduced Motion;
 - Component Gallery.
 
-Additional prototype iteration may fill further catalog examples, but it must never weaken the Final-Spec structural rules above.
+The `final-spec-coverage.*` files extend review coverage without changing the core structural rules in `final-spec.*` or reusing the rejected prototype architecture.
 
 ---
 
@@ -152,6 +157,7 @@ Current state:
 ```text
 Final-Spec candidate file inventory: PASS
 Owner corrections structurally represented: PASS
+Extended review-state coverage: PRESENT
 Prototype/runtime boundary static inspection: PASS
 Browser visual/runtime execution: PENDING
 Owner acceptance: PENDING
@@ -165,10 +171,11 @@ The current execution container cannot resolve GitHub/raw GitHub hosts for local
 
 1. Owner opens `app/final-spec.html`.
 2. Owner reviews Standalone Sheet rolls and Connected Play first.
-3. Owner gives natural-language UI feedback.
-4. AI updates the Final-Spec candidate and the smallest applicable prototype design source.
-5. AI runs `PROTOTYPE-ACCEPTANCE.md`.
-6. Owner explicitly accepts a specific replacement reference revision.
+3. Owner spot-checks the extended scenarios in `PROTOTYPE-ACCEPTANCE.md`.
+4. Owner gives natural-language UI feedback.
+5. AI updates the Final-Spec candidate and the smallest applicable prototype design source.
+6. AI runs `PROTOTYPE-ACCEPTANCE.md`.
+7. Owner explicitly accepts a specific replacement reference revision.
 
 ---
 
