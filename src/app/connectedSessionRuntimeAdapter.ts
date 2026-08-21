@@ -274,10 +274,6 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
   if (wire.type==="hello") {
     const existingParticipant=app.session.participants.find((participant)=>participant.id===wire.participantId);
     const previousManifest=existingParticipant ? acceptedManifestForParticipant(adapter,wire.participantId) : undefined;
-    if (state.sessionStarted&&!existingParticipant) {
-      await rejectLiveHello(adapter,message.peer,"Session is already live; new participants can join the next preparation lobby.");
-      return;
-    }
     if (state.sessionStarted&&existingParticipant) {
       const expectedCharacterId=previousManifest?.character?.characterId;
       const reconnectCharacterId=wire.manifest.character?.characterId;
@@ -320,7 +316,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
             characterName:wire.participantName,
             state:"connected",
             ready:false,
-            stateChanges:[`${wire.participantName} connected · Ready reset`],
+            stateChanges:[`${wire.participantName} connected`],
             provenance:[existingParticipant?"host-authoritative participant reconnect":"host-authoritative participant handshake"],
           },
         });
