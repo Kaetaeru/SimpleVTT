@@ -1,13 +1,15 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: review_candidate
-html_prototype_status: authored_static_verified
+status: final_spec_review_candidate
+html_prototype_status: replacement_authored_static_structural_verified
 prototype_owner_acceptance: not_started
 runtime_ui_implementation_allowed: false
 
 paths:
   root: docs/design/ui-ux/prototype/
   app: docs/design/ui-ux/prototype/app/
+  active_review_entry: docs/design/ui-ux/prototype/app/final-spec.html
+  historical_rejected_entry: docs/design/ui-ux/prototype/app/index.html
 
 source_priority:
   product_ux:
@@ -16,6 +18,8 @@ source_priority:
     - docs/design/ui-ux/master-flow.md
     - docs/design/ui-ux/registry.md
     - docs/design/ui-ux/matrices.md
+  prototype_owner_correction:
+    - docs/design/ui-ux/prototype/OWNER-CORRECTIONS.md
   prototype_detail:
     - docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
     - docs/design/ui-ux/prototype/SURFACE-CATALOG.md
@@ -27,7 +31,7 @@ source_priority:
     - docs/design/ui-ux/prototype/PROTOTYPE-PREFLIGHT.md
     - docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
     - docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
-    - docs/design/ui-ux/prototype/BUILD-VERIFICATION.md
+    - docs/design/ui-ux/prototype/FINAL-SPEC-VERIFICATION.md
   technical_truth:
     - docs/design/README.md
     - docs/design/session-runtime.md
@@ -37,6 +41,10 @@ files:
   readme:
     path: docs/design/ui-ux/prototype/README.md
     role: prototype_phase_governance
+  owner_corrections:
+    path: docs/design/ui-ux/prototype/OWNER-CORRECTIONS.md
+    role: explicit_owner_prototype_corrections
+    authority: explicit_owner_input_for_prototype_and_required_runtime_reconciliation
   design_defaults:
     path: docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
     role: ai_managed_design_defaults
@@ -55,7 +63,7 @@ files:
     role: prototype_visible_state_model
   scenarios:
     path: docs/design/ui-ux/prototype/SCENARIO-CATALOG.md
-    role: prototype_review_scenarios
+    role: prototype_scenario_inventory
   mock_data:
     path: docs/design/ui-ux/prototype/MOCK-DATA-CONTRACT.md
     role: synthetic_non_authoritative_data_contract
@@ -68,12 +76,33 @@ files:
   work_order:
     path: docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
     role: standalone_html_prototype_scope_and_execution_record
-  build_verification:
+  final_spec_verification:
+    path: docs/design/ui-ux/prototype/FINAL-SPEC-VERIFICATION.md
+    role: active_replacement_candidate_static_verification
+  historical_build_verification:
     path: docs/design/ui-ux/prototype/BUILD-VERIFICATION.md
-    role: static_build_verification_record
+    role: superseded_first_candidate_verification_history
   app_boundary:
     path: docs/design/ui-ux/prototype/app/README.md
     role: prototype_runtime_boundary
+
+active_candidate_files:
+  - docs/design/ui-ux/prototype/app/final-spec.html
+  - docs/design/ui-ux/prototype/app/final-spec.css
+  - docs/design/ui-ux/prototype/app/final-spec.js
+  - docs/design/ui-ux/prototype/app/final-spec-fixtures.js
+  - docs/design/ui-ux/prototype/app/final-spec-stability.js
+
+historical_candidate_files:
+  review_status: rejected_superseded
+  files:
+    - docs/design/ui-ux/prototype/app/index.html
+    - docs/design/ui-ux/prototype/app/prototype.css
+    - docs/design/ui-ux/prototype/app/prototype.js
+    - docs/design/ui-ux/prototype/app/fixtures.js
+    - docs/design/ui-ux/prototype/app/review-patch.css
+    - docs/design/ui-ux/prototype/app/review-patch.js
+  rule: never_use_as_active_product_reference_or_runtime_implementation_source
 
 stable_id_prefixes:
   surface: PROTO-SURF-
@@ -94,6 +123,12 @@ prototype_rules:
   mock_semantics_are_product_authority: false
   current_code_is_evidence_only: true
   prototype_controls_are_product_ui: false
+  standalone_roll_must_remain_in_current_character_sheet_surface: true
+  standalone_roll_detached_modal_drawer_route_window_forbidden: true
+  connected_play_must_preserve_reviewed_dual_anchor_topology: true
+  command_center_persistent_during_targeting_resolution_dice_result: true
+  initiative_must_preserve_actor_boards: true
+  dm_player_must_share_core_play_skeleton: true
 
 review_viewports:
   note: prototype_test_presets_not_canonical_product_breakpoints
@@ -105,9 +140,11 @@ phase_gate:
   P0_specification:
     status: passed
   P1_html_build:
-    status: review_candidate
+    status: replacement_review_candidate
     authorization: explicit_owner_go_ahead
-    static_verification: passed
+    first_candidate: rejected_by_owner
+    active_candidate: docs/design/ui-ux/prototype/app/final-spec.html
+    static_structural_verification: passed
     browser_runtime_verification: pending_owner_review_environment
     allowed_write_scope:
       - docs/design/ui-ux/prototype/app/
@@ -116,7 +153,7 @@ phase_gate:
       - src/
   P2_review_iteration:
     status: ready
-    next_action: owner_opens_reference_html_and_gives_natural_language_feedback
+    next_action: owner_opens_final_spec_html_and_gives_natural_language_feedback
   P3_owner_acceptance:
     status: not_started
     requires_explicit_owner_acceptance: true
@@ -124,6 +161,7 @@ phase_gate:
     status: blocked
     requires:
       - prototype_owner_acceptance
+      - owner_corrections_reconciled_into_canonical_runtime_planning
       - applicable_domain_architecture_gaps_resolved_for_scope
       - legacy_ux_reconciliation_for_scope
       - required_surface_component_motion_contracts
@@ -136,3 +174,4 @@ blocking_rule:
   broad_runtime_ui_must_not_start_before_P4: true
   prototype_acceptance_alone_authorizes_runtime: false
   reviewed_decisions_alone_authorize_runtime: false
+  historical_rejected_candidate_must_not_be_used_for_runtime: true
