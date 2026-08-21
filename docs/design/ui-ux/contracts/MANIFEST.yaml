@@ -1,6 +1,6 @@
-schema_version: 6
-phase: runtime_ui_implementation
-status: third_runtime_slice_reference_rework_automated_pass_owner_reqa_pending
+schema_version: 7
+phase: runtime_ui_implementation_and_product_extension_planning
+status: wo_ui_003_closed_accepted_dm_library_prototype_review_pending
 runtime_ui_implementation_allowed: true
 
 accepted_reference:
@@ -13,6 +13,27 @@ accepted_reference:
   acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
   verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
   visual_rule: when_the_accepted_prototype_already_defines_the_scene_do_not_substitute_a_visually_different_structural_approximation
+  accepted_connected_play_runtime_slice: WO-UI-003
+
+active_product_extension:
+  id: WO-UI-004
+  name: dm_library_preparation_and_live_invocation
+  stage: planning_and_prototype_owner_review
+  runtime_implementation_authorized: false
+  owner_direction: DM-only durable preparation library for Images, PC Actor Presets, and NPC Actor Definitions
+  product_plan: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+  architecture_boundary: docs/design/dm-library-persistence.md
+  prototype_spec: docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md
+  prototype_candidate: docs/design/ui-ux/prototype/app/dm-library-reference.html
+  work_order: docs/design/ui-ux/work-orders/WO-UI-004-dm-library-preparation-and-live-invocation.md
+  next_gate: owner_visual_and_flow_review
+  required_scenarios:
+    - DMLIB-SCN-01
+    - DMLIB-SCN-02
+    - DMLIB-SCN-03
+    - DMLIB-SCN-04
+    - DMLIB-SCN-05
+    - DMLIB-SCN-06
 
 mandatory_baseline:
   integrated_product_ux: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
@@ -21,6 +42,8 @@ mandatory_baseline:
   domain_design_canon: docs/design/README.md
   mapless_core_policy: docs/design/movement-modules.md
   session_runtime: docs/design/session-runtime.md
+  active_owner_product_extension: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+  dm_library_architecture: docs/design/dm-library-persistence.md
 
 mandatory_contract_read_order:
   - docs/design/ui-ux/contracts/README.md
@@ -35,15 +58,15 @@ mandatory_contract_read_order:
   - docs/design/ui-ux/contracts/MANIFEST.yaml
 
 contracts:
-  readme: { path: docs/design/ui-ux/contracts/README.md, status: ready }
-  implementation_playbook: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md, status: ready }
-  glossary: { path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md, status: ready }
-  surfaces: { path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md, status: ready }
-  components: { path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md, status: ready }
-  interaction_state_motion: { path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md, status: ready }
-  behavior_scenarios: { path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md, status: ready, scenario_count: 48 }
-  implementation_traceability: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md, status: ready }
-  qa_acceptance_matrix: { path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md, status: ready }
+  readme: { path: docs/design/ui-ux/contracts/README.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  implementation_playbook: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  glossary: { path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  surfaces: { path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  components: { path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  interaction_state_motion: { path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  behavior_scenarios: { path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending, scenario_count: 48 }
+  implementation_traceability: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  qa_acceptance_matrix: { path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
 
 interpretation_guards:
   industry_vtt_conventions_may_fill_unspecified_behavior: false
@@ -53,6 +76,10 @@ interpretation_guards:
   accepted_prototype_visual_composition_may_be_replaced_by_prose_only_approximation: false
   current_source_or_test_may_override_accepted_contract: false
   ui_may_guess_missing_domain_or_architecture_truth: false
+  dm_library_may_be_collapsed_into_player_character_library: false
+  dm_library_may_be_collapsed_into_content_addon_catalog: false
+  dm_library_catalog_may_be_sent_to_player_clients: false
+  session_runtime_may_auto_write_back_to_dm_library_source: false
 
 hard_product_guards:
   mapless_core: true
@@ -79,6 +106,11 @@ hard_product_guards:
   dm_only_css_hide_is_not_privacy: true
   live_product_navigation_must_not_end_or_recreate_session: true
   connected_return_to_play_must_reuse_existing_session_mode_root: true
+  dm_library_is_host_preparation_durable_not_session_runtime: true
+  dm_library_images_are_private_until_explicit_reveal: true
+  dm_library_actor_add_creates_independent_session_instances: true
+  dm_library_pc_actor_preset_is_not_player_owned_character: true
+  dm_library_private_notes_not_delivered_by_default: true
 
 interaction_precedence:
   actor_click:
@@ -97,6 +129,9 @@ ui_must_not_authoritatively_calculate:
   - content_validation_truth
   - persistence_semantics
   - spatial_geometry
+  - dm_library_schema_or_version_migration
+  - dm_library_binary_asset_limits
+  - dm_library_private_projection_fields
 
 open_runtime_blockers:
   - id: GAP-MAIN-HAND-CANONICAL-RELATION
@@ -107,11 +142,24 @@ open_runtime_blockers:
     blocks: [selective_resolution_interaction_locking]
   - id: GAP-HANDOUT-NETWORK-CONTRACT
     type: architecture_contract
-    blocks: [shared_handout_modes, handout_reconnect_projection]
+    blocks: [shared_handout_modes, handout_reconnect_projection, dm_library_connected_image_reveal]
   - id: GAP-DM-ONLY-DELIVERY-PROTOCOL
     type: architecture_contract
     severity: critical
     blocks: [production_dm_only_adjudication, role_scoped_activity_delivery, later_private_event_disclosure]
+  - id: GAP-DM-LIBRARY-METADATA-PERSISTENCE
+    type: architecture_contract
+    blocks: [dm_library_durable_metadata_runtime]
+  - id: GAP-DM-LIBRARY-ASSET-STORAGE
+    type: architecture_contract
+    blocks: [dm_library_image_import_preview_delete_runtime]
+  - id: GAP-DM-LIBRARY-ACTOR-INSTANTIATION
+    type: domain_architecture_contract
+    blocks: [dm_library_npc_pc_preset_to_session_actor_runtime]
+  - id: GAP-DM-LIBRARY-PRIVATE-PROJECTION
+    type: architecture_contract
+    severity: critical
+    blocks: [dm_library_actor_private_notes_projection, dm_library_catalog_non_delivery_verification]
 
 completed_runtime_slices:
   - id: WO-UI-001
@@ -127,94 +175,31 @@ completed_runtime_slices:
     human_qa_record: docs/design/ui-ux/work-orders/WO-UI-002-HUMAN-QA.md
     owner_human_qa: pass
     visual_topology_accepted_by_this_slice: false
-
-selected_runtime_slice:
-  id: WO-UI-003
-  name: connected_play_actor_boards_tabletop_stage_persistent_command_center
-  status: reference_rework_automated_pass_owner_reqa_pending
-  work_order: docs/design/ui-ux/work-orders/WO-UI-003-connected-play-actor-boards-command-center.md
-  authorization: docs/design/ui-ux/work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md
-  implementation_record: docs/design/ui-ux/work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md
-  human_qa_record: docs/design/ui-ux/work-orders/WO-UI-003-HUMAN-QA.md
-  explicit_runtime_implementation_authorization: true
-  authorization_owner_quote: 그래 가자
-  first_owner_human_qa: fail
-  human_qa_failure_kind: visual_composition_drift_from_accepted_integrated_reference
-  first_implementation_source_sha: fb007d809ab586ca8d2e135e5813e929772a7f2c
-  first_implementation_ui_run_id: 32496754716
-  first_implementation_automation: pass_but_superseded_by_owner_visual_fail
-  rework_source_sha: acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
-  rework_owner_human_qa: pending
-  rework_verification:
+  - id: WO-UI-003
+    name: connected_play_actor_boards_tabletop_stage_persistent_command_center
+    status: closed_accepted_after_reference_rework
+    work_order: docs/design/ui-ux/work-orders/WO-UI-003-connected-play-actor-boards-command-center.md
+    authorization: docs/design/ui-ux/work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md
+    implementation_record: docs/design/ui-ux/work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md
+    human_qa_record: docs/design/ui-ux/work-orders/WO-UI-003-HUMAN-QA.md
+    first_owner_human_qa: fail
+    rework_owner_human_qa: pass
+    owner_reqa_quote: 그래 잘 됐어.
+    first_implementation_source_sha: fb007d809ab586ca8d2e135e5813e929772a7f2c
+    first_implementation_automation: pass_but_superseded_by_owner_visual_fail
+    rework_source_sha: acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
     accepted_reference_ui_run_id: 32500827497
     accepted_reference_gate: pass
-    accepted_reference_gate_repeat: pass
     main_playable_run_id: 32500827476
     full_ui_rules_typescript_frontend: pass
     connected_session_run_id: 32500827494
-    connected_session_authority: pass
     production_frontend_gate: pass
-    ui_workflow_global_result: failure
-    ui_workflow_failure_step: Verify Phase 09 real mechanics services
-    ui_workflow_failure_reproduced: true
-    ui_workflow_build_step: skipped_after_phase09_failure
-    phase09_files_changed_by_rework: false
-    phase09_failure_treatment: separate_unresolved_regression_not_speculatively_patched_in_WO_UI_003
-  primary_prototype_scenarios:
-    - PROTO-SCN-08
-    - PROTO-SCN-09
-  accepted_geometry:
-    play_chrome_px: 41
-    upper_actor_board_px: 86
-    lower_actor_board_px: 86
-    command_center_px: 174
-    initiative_tracker_px: 40
-    utility_pane_nominal_px: 338
-    utility_pane_min_px: 288
-    utility_pane_max_px: 455
-    command_body_columns: [240px, flexible, 104px]
-    hotbar_slot_px: 70
-    hotbar_pages: [Mixed, Action, Spell, Item, Custom]
-  constrained_reference:
-    actor_board_px: 80
-    command_center_px: 164
-    utility_overlay_px: 308
-    utility_overlay_max_percent: 42
-    actor_card_px: 150
-    command_body_columns: [190px, flexible, 90px]
-    hotbar_slot_px: 62
-  behavior_scenarios:
-    - Scenario 10
-    - Scenario 11
-    - Scenario 19
-    - Scenario 20
-    - Scenario 23
-    - Scenario 37
-    - Scenario 43
-    - Scenario 44
-    - Scenario 45
-  preserved_targeting_scenarios: [Scenario 12, Scenario 13]
-  adjacent_regression_scenarios: [Scenario 31, Scenario 32, Scenario 33, Scenario 34, Scenario 35, Scenario 36]
-  not_claimed_or_blocked:
-    - QA-ACTOR-01
-    - QA-ACTOR-03
-    - QA-ACTOR-04
-    - QA-CLICK-04
-    - QA-TGT-05
-    - QA-RES-02
-    - QA-RES-03
-  runtime_files:
-    - src/ProductRoot.tsx
-    - src/SessionModeRoot.tsx
-    - src/SessionActorBoards.tsx
-    - src/SessionInitiativeStrip.tsx
-    - src/SessionMainFocus.tsx
-    - src/SessionActionDock.tsx
-    - src/SessionDmTools.tsx
-    - src/session-integrated-reference-play.css
-    - src/session-integrated-reference-chrome.css
-    - src/session-main-focus.css
-  dedicated_test: tests/ui/connectedPlayAcceptedTopology.test.ts
+    repository_phase09_aggregate_regression: unresolved_separate_not_changed_by_wo_ui_003_rework
+
+selected_runtime_slice:
+  id: none
+  status: no_new_runtime_slice_authorized
+  note: WO-UI-004 currently exists only as planning/prototype scope
 
 identified_runtime_drift:
   - id: DRIFT-WO-UI-001-HOME-FIRST
@@ -236,23 +221,22 @@ identified_runtime_drift:
     status: resolved
     resolution: WO-UI-002
   - id: DRIFT-WO-UI-003-CONNECTED-PLAY-TOPOLOGY
-    status: reworked_automated_reference_gate_pass_owner_reqa_pending
-    evidence: exact_integrated_reference_scene_geometry_and_composition_pinned_in_runtime_and_tests
+    status: resolved_after_owner_accepted_reference_rework
+    evidence: exact_integrated_reference_scene_geometry_and_composition_pinned_in_runtime_and_tests_then_owner_reqa_passed
     resolution: WO-UI-003
 
 implementation_readiness:
-  prototype_owner_acceptance: passed
-  contracts_ready: true
+  prototype_owner_acceptance: passed_for_existing_reference
+  contracts_ready: true_for_existing_accepted_scope
   wo_ui_001: closed_accepted
   wo_ui_002: closed_accepted
-  current_runtime_slice_selected: true
-  current_slice_authorized: true
-  current_slice_first_implementation_automation: pass_but_not_accepted
-  current_slice_first_owner_visual_qa: fail
-  current_slice_reference_rework_source_implemented: true
-  current_slice_reference_rework_accepted_reference_automation: pass
-  current_slice_reference_rework_frontend_typescript: pass
-  current_slice_reference_rework_owner_qa: pending
+  wo_ui_003: closed_accepted_after_reference_rework
+  current_runtime_slice_selected: false
+  dm_library_product_direction: recorded
+  dm_library_architecture_boundary: drafted
+  dm_library_prototype_candidate: built
+  dm_library_owner_prototype_review: pending
+  dm_library_runtime_authorized: false
   repository_phase09_aggregate_regression: unresolved_separate
 
-next_route: WO_UI_003_OWNER_VISUAL_REQA
+next_route: DM_LIBRARY_OWNER_PROTOTYPE_REVIEW
