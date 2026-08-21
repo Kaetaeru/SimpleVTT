@@ -1,14 +1,14 @@
 # UI Reference Prototype — Preflight
 
-Status: **Prototype build preflight**
+Status: **Final-Spec prototype build / iteration preflight**
 
-Run this before executing `PROTO-WO-001`.
+Run this before building or materially iterating the active Reference Prototype.
 
-This preflight answers: **is the standalone HTML prototype sufficiently specified to build without inventing product behavior or touching runtime UI?**
+The first prototype candidate was rejected. This preflight therefore includes explicit anti-regression checks from `OWNER-CORRECTIONS.md`.
 
 ---
 
-# 1. Read order
+# 1. Mandatory read order
 
 Before prototype HTML work, read:
 
@@ -20,42 +20,62 @@ Before prototype HTML work, read:
 5. ../master-flow.md
 6. README.md
 7. MANIFEST.yaml
-8. DESIGN-DEFAULTS.md
-9. SURFACE-CATALOG.md
-10. COMPONENT-CATALOG.md
-11. LAYER-MODEL.md
-12. STATE-MODEL.md
-13. SCENARIO-CATALOG.md
-14. MOCK-DATA-CONTRACT.md
-15. PROTOTYPE-ACCEPTANCE.md
-16. PROTOTYPE-WORK-ORDER.md
+8. OWNER-CORRECTIONS.md
+9. DESIGN-DEFAULTS.md
+10. SURFACE-CATALOG.md
+11. COMPONENT-CATALOG.md
+12. LAYER-MODEL.md
+13. STATE-MODEL.md
+14. SCENARIO-CATALOG.md
+15. MOCK-DATA-CONTRACT.md
+16. PROTOTYPE-ACCEPTANCE.md
+17. PROTOTYPE-WORK-ORDER.md
 ```
 
-Load Registry/Matrix/detail maps only as needed for exact coverage or conflict resolution.
+`OWNER-CORRECTIONS.md` is explicit owner input for the prototype rebuild and must not be treated as optional styling advice.
 
 ---
 
-# 2. Product decision checks
+# 2. Product / owner-correction checks
 
 ```text
-[x] Owner-required UI/UX checkpoints are currently complete.
+[x] Owner-required UI/UX checkpoints are complete.
 [x] Reviewed Product/UX decisions are available as planning truth.
-[x] Immediate-live Host flow is canonical.
-[x] No-Character Join behavior is canonical.
-[x] Host=DM / Client=Player role model is canonical.
-[x] Play Dual Anchor / Actor Boards / Command Center direction is canonical.
-[x] Handout three-mode direction is canonical.
-[x] DM privacy/Activity/correction product intent is canonical.
-[x] Add-on package/lifecycle/live-snapshot product intent is canonical.
+[x] Host=DM / Client=Player is fixed.
+[x] Play Dual Anchor / Actor Boards / Command Center direction is reviewed.
+[x] Initiative preserves Actor Boards.
+[x] Dice/result stay integrated into the current task/scene context.
+[x] Owner correction requires all ordinary Standalone rolls to remain inside the current Character Sheet surface.
+[x] Owner correction forbids a detached Standalone roll modal/dialog/drawer/result route/window.
+[x] Owner correction requires Connected Play to preserve exact upper Actor Board -> Scene -> lower Actor Board -> persistent Command Center topology.
+[x] First prototype candidate is rejected/superseded and cannot be used as design authority.
 ```
 
-No Product Decision is Frozen yet. That is acceptable for a non-production reference prototype because prototype HTML is not an implementation dependency.
-
-Runtime implementation still requires later Freeze/readiness.
+No Product Decision is Frozen yet. That is acceptable for the non-production prototype only. Runtime implementation still requires later canonical reconciliation + Freeze/readiness.
 
 ---
 
-# 3. Catalog checks
+# 3. Fail-fast anti-regression checks
+
+Prototype iteration fails preflight if it proposes any of the following:
+
+```text
+[ ] ordinary Standalone roll navigates away from current Character Sheet
+[ ] ordinary Standalone roll opens detached modal/dialog/drawer/result window/card
+[ ] Play removes/replaces the persistent bottom Command Center during normal action/resolution/dice/result
+[ ] Play moves allied/opposing Actor Boards into a permanent side portrait rail
+[ ] Initiative creates a separate combat screen that removes Actor Boards
+[ ] utility pane replaces the core Play skeleton
+[ ] Player receives a placeholder row for a DM-only mock event
+[ ] unavailable Main Hand silently falls back to another action
+[ ] prototype calculates target eligibility/rules/authority instead of reading fixtures
+```
+
+If any would occur, stop and repair the prototype before review.
+
+---
+
+# 4. Catalog / fixture checks
 
 ```text
 [x] Surface Catalog exists.
@@ -66,16 +86,16 @@ Runtime implementation still requires later Freeze/readiness.
 [x] Mock Data Contract exists.
 [x] Acceptance checklist exists.
 [x] Prototype Work Order exists.
-[x] app/ boundary is reserved and explicitly separated from src/.
+[x] explicit Owner Corrections exist.
+[x] active Final-Spec fixture file supplies roll faces/totals, target validity and unavailable reasons.
+[x] app/ remains separated from src/.
 ```
-
-All `PROTO-*` IDs used by HTML should resolve to one catalog/state/scenario entry.
 
 ---
 
-# 4. Technical-gap checks
+# 5. Technical gaps
 
-Current open technical gaps may remain open for prototype presentation only:
+The following may remain open only as explicit mock inputs during prototype review:
 
 - `GAP-MAIN-HAND-CANONICAL-RELATION`
 - `GAP-RESOLUTION-SAFE-INTERACTIONS`
@@ -85,28 +105,27 @@ Current open technical gaps may remain open for prototype presentation only:
 For each:
 
 ```text
-[x] prototype has an explicit fixture/mock strategy;
+[x] fixture strategy is explicit;
 [x] prototype is forbidden from calculating/inventing production semantics;
-[x] runtime implementation remains blocked until real contract exists.
+[x] runtime implementation remains blocked until the real contract exists.
 ```
-
-If a new unresolved Product/UX behavior is discovered that materially changes workflow/capability/authority, this preflight becomes blocked until it is routed through Owner Control Policy.
 
 ---
 
-# 5. Scope checks
+# 6. Scope
 
-Prototype build is permitted only inside:
+Prototype work is permitted only inside:
 
 ```text
 docs/design/ui-ux/prototype/app/
+docs/design/ui-ux/prototype/
 ```
 
-and bounded prototype-document maintenance.
+and bounded derived dashboard/routing maintenance needed to point to the active candidate.
 
-Preflight fails if proposed prototype execution requires:
+Preflight fails if execution requires:
 
-- `src/` edits;
+- production `src/` edits;
 - production dependency changes;
 - backend/network/storage calls;
 - production schema changes;
@@ -114,34 +133,36 @@ Preflight fails if proposed prototype execution requires:
 
 ---
 
-# 6. Review-harness checks
-
-Future HTML must include Prototype Controls for:
+# 7. Active candidate
 
 ```text
-[x] surface switching
-[x] scenario switching
-[x] Host/DM vs Client/Player vs Offline view
-[x] Freeform vs Initiative
-[x] Wide / Normal / Narrow desktop presets
-[x] loading/error/reconnect fixture states
-[x] Handout mode switching
-[x] DM Public / DM Only presentation fixture
-[x] Reduced Motion
-[x] Component Gallery
-[x] Reset Layout
+ACTIVE REVIEW ENTRY: app/final-spec.html
+FIRST CANDIDATE app/index.html: REJECTED / HISTORICAL ONLY
 ```
+
+Current Final-Spec candidate must expose:
+
+- Standalone Character Sheet same-surface rolls;
+- exact reviewed Connected Play topology;
+- DM/Player shared skeleton;
+- target/resolution/dice/result examples;
+- contextual side utilities;
+- privacy fixture split;
+- Wide/Normal/Narrow presets;
+- Reduced Motion;
+- product reference surfaces sufficient for owner review.
 
 ---
 
-# 7. Current preflight result
+# 8. Current preflight result
 
 ```text
-PROTOTYPE SPECIFICATION: PASS
-OWNER PRODUCT CHECKPOINTS: COMPLETE
-OPEN TECHNICAL GAPS: ALLOWED AS EXPLICIT MOCK-ONLY INPUTS
+FINAL-SPEC PROTOTYPE SPECIFICATION: PASS
+OWNER CORRECTIONS: LOADED
+FIRST CANDIDATE: REJECTED / DO NOT USE
 RUNTIME SRC SCOPE: FORBIDDEN
-HTML PROTOTYPE EXECUTION: BLOCKED ONLY UNTIL EXPLICIT OWNER AUTHORIZATION
+FINAL-SPEC ITERATION: AUTHORIZED WITHIN PROTOTYPE SCOPE
+BROWSER OWNER ACCEPTANCE: PENDING
 ```
 
-This result does not itself authorize execution. The owner must explicitly request the Reference Prototype build.
+This preflight never authorizes runtime `src/` implementation.
