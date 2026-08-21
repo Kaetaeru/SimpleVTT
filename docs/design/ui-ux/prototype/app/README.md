@@ -16,18 +16,23 @@ Active files:
 
 ```text
 final-spec.html              # active Final-Spec review entry / prototype-only UI Lab
-final-spec.css               # replacement final-spec visual system
-final-spec.js                # mock product/sheet/play interactions
+final-spec.css               # core final-spec visual system
+final-spec-coverage.css      # extended final-spec review states/layers
+final-spec.js                # mock Character/Play interactions
 final-spec-fixtures.js       # explicit synthetic roll/target/session fixtures
-final-spec-stability.js      # hover/focus + Product Shell reference completion
+final-spec-stability.js      # same-mounted-Sheet roll + hover/focus + Product Shell completion
+final-spec-coverage.js       # First Run/Builder/Level Up/import/interrupt/full-sheet/resize coverage
 ```
 
-The active demo implements the owner corrections in `../OWNER-CORRECTIONS.md`, including:
+The active demo implements `../OWNER-CORRECTIONS.md`, including:
 
-- every Offline/Standalone roll stays inside the current Character Sheet surface;
+- every Offline/Standalone roll stays inside the currently mounted Character Sheet;
+- ordinary Standalone roll does not remount/navigate the Sheet just to show dice;
 - Connected Play preserves upper opposing Actor Board -> central Scene -> lower allied Actor Board -> persistent Command Center;
 - Initiative overlays Scene top edge without replacing Actor Boards;
-- connected dice use the central Scene/Table and results remain scene-integrated.
+- Connected dice use the central Scene/Table and results remain scene-integrated.
+
+The extended Final-Spec layer also includes reference states for First Run, Builder, Level Up, Content Import, Main Hand unavailable, Reaction/Interrupt, Concentration response, Quick Sheet, Full Sheet, reconnect, utility resize and destructive confirmation.
 
 ## Historical rejected candidate
 
