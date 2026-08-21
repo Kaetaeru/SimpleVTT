@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
-import type { ActionVm, SceneEntity } from "./app/contracts";
+import type { ActionVm } from "./app/contracts";
 import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
 import { VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS } from "./app/diceVisuals";
@@ -23,6 +23,7 @@ import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionP
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
 import "./session-connected-layout.css";
+import "./session-integrated-reference-play.css";
 
 type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | null;
@@ -36,24 +37,21 @@ function actionDamageSummary(action: ActionVm) {
     .join(" + ");
 }
 
-function connectionCopy(state: "connected" | "reconnecting" | "disconnected") {
-  if (state === "reconnecting") return "다시 연결하는 중…";
-  if (state === "disconnected") return "연결이 끊어졌습니다";
-  return "";
-}
-
 function resolutionStageCopy(stage: string) {
-  return ({
-    "attack-result": "명중 결과",
-    interrupt: "반응 대기",
-    "save-result": "내성 결과",
-    "effect-preview": "효과 확인",
-    complete: "완료",
-  } as Record<string, string>)[stage] ?? "판정 중";
+  if (stage === "attack-result") return "명중 결과";
+  if (stage === "interrupt") return "반응 대기";
+  if (stage === "save-result") return "내성 결과";
+  if (stage === "effect-preview") return "효과 확인";
+  if (stage === "complete") return "완료";
+  return "판정 중";
 }
 
-export function SessionModeRoot() {
-  const { snapshot, stopSession } = useSimpleVtt();
+function utilityClass(active: SessionUtility, utility: Exclude<SessionUtility, null>) {
+  return active === utility ? "active" : "";
+}
+
+export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
+  const { snapshot } = useSimpleVtt();
   const handout = useSessionImageHandout();
   const [activeUtility, setActiveUtility] = useState<SessionUtility>(null);
   const [workspaceLayer, setWorkspaceLayer] = useState<WorkspaceLayer>(null);
@@ -125,60 +123,56 @@ export function SessionModeRoot() {
     ?? snapshot.scene.entities[0]
     ?? null;
   const actionActorId = role === "dm" ? dmActor?.id ?? null : snapshot.activeCharacter.id;
-  const connectionWarning = connectionCopy(snapshot.connectionState);
+  const connectionLabel = snapshot.connectionState === "connected"
+    ? "Connected"
+    : snapshot.connectionState === "reconnecting"
+      ? "Reconnecting"
+      : "Disconnected";
 
-  return <div className="session-mode-root" data-session-role={role} data-session-mode={snapshot.sessionMode}>
-    <header className="session-mode-bar">
-      <div className="session-mode-identity">
-        <strong>{sessionName}</strong>
-        <span>{snapshot.sessionMode === "initiative" ? `이니셔티브 · ${snapshot.scene.round}라운드` : "자유 진행"}</span>
-      </div>
+  const utilityPane = <>
+    {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
+    {activeUtility === "actor" && role === "dm" && <SessionDmActorPane onClose={closeUtility} />}
+    {activeUtility === "encounter" && role === "dm" && <SessionDmEncounterPane onClose={closeUtility} />}
+    {activeUtility === "participants" && role === "dm" && <SessionParticipantsPane onClose={closeUtility} />}
+    {activeUtility === "handout" && role === "dm" && <SessionDmHandoutPane onClose={closeUtility} />}
+    {activeUtility === "session" && role === "dm" && <SessionSharePane onClose={closeUtility} />}
+    {activeUtility === "player-session" && role === "player" && <SessionPlayerSessionPane onClose={closeUtility} />}
+    {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
+    {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
+  </>;
 
-      <div className="session-mode-status" aria-live="polite">
-        {connectionWarning && <span className={`session-mode-connection ${snapshot.connectionState}`}>{connectionWarning}</span>}
-        {snapshot.sessionMode === "initiative" && snapshot.scene.currentActorId && <span>현재 턴 · {snapshot.scene.entities.find((entity) => entity.id === snapshot.scene.currentActorId)?.name ?? "—"}</span>}
-      </div>
-
-      <div className="session-mode-role-controls">
-        {role === "player"
-          ? <>
-            <PlayerIdentityControls onOpenQuick={(button) => toggleUtility("quick-sheet", button)} onOpenFull={openFullSheet} />
-            <button type="button" className="session-mode-exit" aria-label="Player 세션 연결 열기" onClick={(event) => toggleUtility("player-session", event.currentTarget)}>연결</button>
-          </>
-          : <>
-            <DmActorIdentityButton actor={dmActor} onOpen={(button) => toggleUtility("actor", button)} />
-            <button type="button" className="session-mode-exit" onClick={() => void stopSession()}>세션 종료</button>
-          </>}
-      </div>
+  return <div className="session-mode-root session-reference-play-root" data-session-role={role} data-session-mode={snapshot.sessionMode}>
+    <header className="session-reference-play-chrome">
+      <button type="button" className="session-reference-chrome-button product" onClick={onOpenProduct}>← Product</button>
+      <div className="session-reference-play-title"><strong>{sessionName}</strong><span>{role === "dm" ? "HOST · DM" : "CLIENT · PLAYER"}</span></div>
+      <span className={`session-reference-connection ${snapshot.connectionState}`}>{connectionLabel}</span>
+      <div className="session-reference-play-spacer" />
+      <button type="button" className={utilityClass(activeUtility, role === "player" ? "quick-sheet" : "actor")} onClick={(event) => toggleUtility(role === "player" ? "quick-sheet" : "actor", event.currentTarget)}>Sheet</button>
+      <button type="button" className={utilityClass(activeUtility, "rules")} onClick={(event) => toggleUtility("rules", event.currentTarget)}>Rules</button>
+      <button type="button" className={utilityClass(activeUtility, "activity")} onClick={(event) => toggleUtility("activity", event.currentTarget)}>Activity</button>
+      {role === "dm" && <button type="button" className={utilityClass(activeUtility, "encounter")} onClick={(event) => toggleUtility("encounter", event.currentTarget)}>Encounter</button>}
+      {role === "dm" && <button type="button" className={utilityClass(activeUtility, "participants")} onClick={(event) => toggleUtility("participants", event.currentTarget)}>Participants</button>}
+      {role === "dm" && <button type="button" className={utilityClass(activeUtility, "handout")} onClick={(event) => toggleUtility("handout", event.currentTarget)}>Handout</button>}
+      {role === "player" && <SessionPlayerHandoutRailButton />}
+      <button type="button" className={utilityClass(activeUtility, role === "dm" ? "session" : "player-session")} onClick={(event) => toggleUtility(role === "dm" ? "session" : "player-session", event.currentTarget)}>Session</button>
     </header>
 
-    <div className="session-play-workspace">
-      <SessionActorBoard position="upper" role={role} />
+    <div className={`session-reference-play-main ${activeUtility ? "utility-open" : ""}`}>
+      <div className="session-reference-play-core">
+        <SessionActorBoard position="upper" role={role} />
 
-      <section className="session-play-context" aria-label="Tabletop Stage">
-        <SessionInitiativeStrip role={role} />
-        <div className="session-mode-body">
-          <main className="session-mode-main" aria-label="현재 세션">
+        <section className="session-play-context session-reference-mapless-stage" aria-label="Mapless Play Context">
+          <div className="session-reference-stage-label" aria-hidden="true"><strong>MAPLESS PLAY CONTEXT</strong><span>no grid · no map token · no Actor coordinates</span></div>
+          <SessionInitiativeStrip role={role} />
+          <main className="session-reference-stage-focus" aria-label="현재 세션">
             <SessionMainFocus role={role} onOpenActivity={(button) => toggleUtility("activity", button)} />
           </main>
+        </section>
 
-          <aside className="session-mode-rail" aria-label="세션 도구">
-            {role === "player"
-              ? <button type="button" className={activeUtility === "quick-sheet" ? "active" : ""} aria-pressed={activeUtility === "quick-sheet"} aria-label="빠른 캐릭터 시트 열기" onClick={(event) => toggleUtility("quick-sheet", event.currentTarget)}><span>시트</span></button>
-              : <button type="button" className={activeUtility === "actor" ? "active" : ""} aria-pressed={activeUtility === "actor"} aria-label="행동할 Actor 열기" onClick={(event) => toggleUtility("actor", event.currentTarget)}><span>Actor</span></button>}
-            <button type="button" className={activeUtility === "rules" ? "active" : ""} aria-pressed={activeUtility === "rules"} aria-label="세션 규칙 찾아보기" onClick={(event) => toggleUtility("rules", event.currentTarget)}><span>규칙</span></button>
-            {role === "dm" && <button type="button" className={activeUtility === "encounter" ? "active" : ""} aria-pressed={activeUtility === "encounter"} aria-label="Encounter 도구 열기" onClick={(event) => toggleUtility("encounter", event.currentTarget)}><span>Encounter</span></button>}
-            {role === "dm" && <button type="button" className={activeUtility === "participants" ? "active" : ""} aria-pressed={activeUtility === "participants"} aria-label="참가자 보기" onClick={(event) => toggleUtility("participants", event.currentTarget)}><span>참가자</span></button>}
-            {role === "dm" && <button type="button" className={activeUtility === "handout" ? "active" : ""} aria-pressed={activeUtility === "handout"} aria-label="Handout 도구 열기" onClick={(event) => toggleUtility("handout", event.currentTarget)}><span>자료</span></button>}
-            <button type="button" className={activeUtility === "activity" ? "active" : ""} aria-pressed={activeUtility === "activity"} aria-label="최근 세션 결과 보기" onClick={(event) => toggleUtility("activity", event.currentTarget)}><span>기록</span></button>
-            {role === "player" && <SessionPlayerHandoutRailButton />}
-            {role === "player" && <button type="button" className={activeUtility === "player-session" ? "active" : ""} aria-pressed={activeUtility === "player-session"} aria-label="Player 세션 연결 열기" onClick={(event) => toggleUtility("player-session", event.currentTarget)}><span>세션</span></button>}
-            {role === "dm" && <button type="button" className={activeUtility === "session" ? "active" : ""} aria-pressed={activeUtility === "session"} aria-label="세션 공유 정보 열기" onClick={(event) => toggleUtility("session", event.currentTarget)}><span>세션</span></button>}
-          </aside>
-        </div>
-      </section>
+        <SessionActorBoard position="lower" role={role} />
+      </div>
 
-      <SessionActorBoard position="lower" role={role} />
+      {activeUtility && <aside className="session-reference-utility-host" aria-label="Contextual Session Utility">{utilityPane}</aside>}
     </div>
 
     <footer className="session-mode-action-dock" aria-label="Command Center">
@@ -189,48 +183,16 @@ export function SessionModeRoot() {
       />
     </footer>
 
-    <div className="session-mode-layer-host" aria-live="polite">
-      {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
-      {activeUtility === "actor" && role === "dm" && <SessionDmActorPane onClose={closeUtility} />}
-      {activeUtility === "encounter" && role === "dm" && <SessionDmEncounterPane onClose={closeUtility} />}
-      {activeUtility === "participants" && role === "dm" && <SessionParticipantsPane onClose={closeUtility} />}
-      {activeUtility === "handout" && role === "dm" && <SessionDmHandoutPane onClose={closeUtility} />}
-      {activeUtility === "session" && role === "dm" && <SessionSharePane onClose={closeUtility} />}
-      {activeUtility === "player-session" && role === "player" && <SessionPlayerSessionPane onClose={closeUtility} />}
+    <div className="session-mode-layer-host session-reference-layer-host" aria-live="polite">
       {role === "player" && <div className="session-full-sheet-layer" hidden={workspaceLayer !== "full-sheet"} aria-hidden={workspaceLayer !== "full-sheet"}>
         <CharacterSheetWorkspace hostMode="session" onClose={closeFullSheet} onOpenRules={(button) => toggleUtility("rules", button)} />
       </div>}
-      {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
-      {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
       {snapshot.resolution && activeUtility !== "activity" && <SessionResolutionLayer onOpenActivity={(button) => toggleUtility("activity", button)} />}
       {role === "player" && activeUtility !== "player-session" && <SessionPlayerRecoveryStrip onOpen={(button) => toggleUtility("player-session", button)} />}
       {role === "player" && <SessionPlayerHandoutError />}
       {role === "player" && <SessionPlayerHandoutViewer />}
     </div>
   </div>;
-}
-
-function PlayerIdentityControls({ onOpenQuick, onOpenFull }: { onOpenQuick(button: HTMLButtonElement): void; onOpenFull(button: HTMLButtonElement): void }) {
-  const { snapshot } = useSimpleVtt();
-  if (!snapshot) return null;
-  const character = snapshot.activeCharacter;
-  const portrait = sanitizeCharacterPortrait(character.portrait);
-  const initials = character.name.trim().slice(0, 2) || "PC";
-
-  return <div className="session-mode-player-sheet-controls">
-    <button type="button" className="session-mode-character-chip" aria-label={`${character.name} 빠른 캐릭터 시트 열기`} onClick={(event) => onOpenQuick(event.currentTarget)}>
-      <span className="session-mode-avatar">{portrait ? <img src={portrait.asset.dataUrl} alt="" style={{ objectPosition: `${portrait.focalX * 100}% ${portrait.focalY * 100}%` }} /> : initials}</span>
-      <span className="session-mode-chip-copy"><strong>{character.name}</strong><small>HP {character.hp}/{character.maxHp}</small></span>
-    </button>
-    <button type="button" className="session-mode-full-sheet-launcher" aria-label={`${character.name} 전체 캐릭터 시트 열기`} onClick={(event) => onOpenFull(event.currentTarget)}>전체 시트</button>
-  </div>;
-}
-
-function DmActorIdentityButton({ actor, onOpen }: { actor: SceneEntity | null; onOpen(button: HTMLButtonElement): void }) {
-  return <button type="button" className="session-mode-character-chip" aria-label="현재 Actor 빠른 보기" onClick={(event) => onOpen(event.currentTarget)}>
-    <span className="session-mode-avatar">{actor?.name.trim().slice(0, 2) || "DM"}</span>
-    <span className="session-mode-chip-copy"><strong>{actor?.name ?? "DM"}</strong><small>{actor ? `HP ${actor.hp}/${actor.maxHp}` : "Actor 없음"}</small></span>
-  </button>;
 }
 
 function QuickSheet({ onClose, onOpenFull }: { onClose(): void; onOpenFull(button: HTMLButtonElement): void }) {
