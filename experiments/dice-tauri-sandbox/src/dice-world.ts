@@ -86,8 +86,10 @@ function d10Geometry() {
   for (let index = 0; index < 5; index += 1) {
     const current = 2 + index;
     const next = 2 + ((index + 1) % 5);
-    indices.push(0, current, next);
-    indices.push(1, next, current);
+    // Keep render faces outward-facing. The previous winding made every d10
+    // triangle point inward, so FrontSide culling made the die look hollow.
+    indices.push(0, next, current);
+    indices.push(1, current, next);
   }
 
   const geometry = new THREE.BufferGeometry();
