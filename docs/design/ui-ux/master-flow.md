@@ -24,9 +24,12 @@ Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 - Character use and Session use are parallel first-class product paths. (`UX-01-01`)
 - Home exposes direct first-class Host Session and Join Session entry paths; Character is not a universal prerequisite to Session. (`ORIGIN-FLOW-01`)
 - Player Join includes Character Select as a flow-specific step. (`ORIGIN-FLOW-02`)
-- A live session provides a persistent return-to-Play continuity path from the Product Shell. (`UX-01-03`)
+- If no valid Character exists, Join is blocked with Create/Import recovery actions before retry. (`SES-01-04`)
+- Hosting does not create a waiting/readiness lobby. Opening a session immediately creates the live Play context; Players may join it later. (`SES-01-02`, `SES-01-05`)
+- A live session provides a persistent return-to-Play continuity path from the Product Shell. (`UX-01-03`, `NAV-01-02`)
+- Closing/relaunching the app begins at Home rather than auto-restoring Play. (`NAV-01-08`)
 - Freeform and Initiative are modes of the same Play Workspace, not separate applications. (`docs/design/README.md`, `docs/design/session-runtime.md`)
-- DM contextual tools are shown as contextual candidates in this Draft view until their topology is reviewed by the appropriate downstream Decision Maps.
+- The content configuration captured when a session opens remains fixed for that live session. (`CONTENT-02-11`)
 
 ---
 
@@ -36,7 +39,7 @@ Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 APP START
     |
     v
-Bootstrap / Restore known state
+Bootstrap local product state
     |
     v
 HOME
@@ -55,10 +58,10 @@ HOME
     |
     +--> Settings -----------> Settings
     |
-    `--> Return to Play -----> Play Workspace   [when live session exists]
+    `--> Return to Play -----> Play Workspace   [when live session exists in the running app]
 ```
 
-Direct Host/Join entry is projected from `ORIGIN-FLOW-01`. `Return to Play` is contextual continuity projected from `UX-01-03`, not a separate product destination in this derived view.
+Direct Host/Join entry is projected from `ORIGIN-FLOW-01`. `Return to Play` is contextual continuity, not a separate permanent product destination. A fresh app launch starts at Home according to `NAV-01-08`.
 
 ---
 
@@ -105,13 +108,13 @@ Character Sheet
    `--> Session -----------------> Session path
 ```
 
-Character Sheet is a first-class standalone tabletop surface, not merely a setup step for VTT Play. See `UX-01-01`. Detailed Character navigation remains subject to `DND-01` / `NAV-01` Decision Maps and `docs/design/character-lifecycle.md`.
+Character Sheet is a first-class standalone tabletop surface, not merely a setup step for VTT Play. The product supports both Official-style and SimpleVTT-optimized sheet layouts (`UI-01-07`). Existing Character Builder and Level Up UX remain the accepted baseline (`UI-01-08`).
 
 ---
 
-# 3. Direct Host path
+# 3. Direct Host path — immediate live session
 
-Projected from `ORIGIN-FLOW-01` at the product-entry level; exact Host Setup/Lobby details remain `SES-01` review scope.
+Projected from `ORIGIN-FLOW-01`, `SES-01-02`, and `SES-01-05`.
 
 ```text
 HOME / Session entry
@@ -121,26 +124,23 @@ HOME / Session entry
        |
        +--> validation failure --> remain in Host Setup + explicit recovery
        |
-       v
- Host Lobby / Preparation
-       |
-       +--> participants / encounter preparation / session controls
-       |
-       +--> not ready -----------> remain in Lobby
-       |
-       `--> Start Session
+       `--> Open Session
                 |
                 v
-          FREEFORM PLAY
+          LIVE FREEFORM PLAY
+                |
+                +--> DM may play immediately
+                +--> DM may edit/prepare inside the same live session
+                `--> Players may join later at any time
 ```
 
-A new Character requirement for hosting would change `ORIGIN-FLOW-01` or its eventual permanent destination decision and therefore must not be introduced only in this view.
+There is **no separate Host Lobby / Ready / Start Session gate**. Opening the hosted session is the transition into the live session. Session content is snapshotted at this transition according to `CONTENT-02-11`.
 
 ---
 
-# 4. Direct Join path
+# 4. Direct Join path — join an already-live session
 
-Direct Join entry is projected from `ORIGIN-FLOW-01`; Character Select is projected from `ORIGIN-FLOW-02`.
+Direct Join entry is projected from `ORIGIN-FLOW-01`; Character Select from `ORIGIN-FLOW-02`; the no-Character branch from `SES-01-04`.
 
 ```text
 HOME / Session entry
@@ -153,7 +153,12 @@ HOME / Session entry
        v
  Character Select
        |
-       +--> no valid Character --> GAP-JOIN-NO-CHARACTER
+       +--> no valid Character
+       |       |
+       |       +--> Create Character
+       |       `--> Import Character
+       |               |
+       |               `--> return to product context; retry Join
        |
        v
  Connecting / Handshake
@@ -161,21 +166,19 @@ HOME / Session entry
        +--> recoverable connection loss --> reconnect/retry path
        |
        v
- Player Lobby / Ready
+   JOIN LIVE SESSION
        |
-       `--> Session Start
-                |
-                v
-          FREEFORM PLAY
+       v
+   FREEFORM / CURRENT LIVE MODE
 ```
 
-Character selection inside Join is flow-specific and does not make Character a product-wide prerequisite for Session. The no-valid-Character branch is explicitly unresolved by `GAP-JOIN-NO-CHARACTER`.
+There is **no separate Player Lobby/Ready stage** in v1. Late join is a normal path into an already-live session (`SES-01-05`).
 
 ---
 
 # 5. Play Workspace
 
-See `UX-01-07` and the migrated Play decisions in `decisions.md`.
+See `UX-01-07`, `UI-01`, and the migrated Play decisions in `decisions.md`.
 
 ## Freeform baseline
 
@@ -183,17 +186,21 @@ See `UX-01-07` and the migrated Play decisions in `decisions.md`.
 +---------------------------------------------------+
 | NPC / Neutral / Hostile Actor Board              |
 +---------------------------------------------------+
+| Initiative strip overlays top edge when active   |
 |                                                   |
 |                Scene / Table Context              |
 |                                                   |
 +---------------------------------------------------+
 | Player / Allied Actor Board                       |
 +---------------------------------------------------+
-| Bottom Command Center / Hotbar / Economy          |
+| Action-economy / resource strip                   |
+| Actor status      | Action / Hotbar controls      |
 +---------------------------------------------------+
 ```
 
-This visualization is derived from `UX-01-07`, `ORIGIN-UX-01-09`, `ORIGIN-UX-01-10`, and `ORIGIN-UX-01-11`.
+This visualization is derived from `UX-01-07`, `UI-01-03`, `UI-01-04`, `UI-01-05`, `ORIGIN-UX-01-09`, `ORIGIN-UX-01-10`, and `ORIGIN-UX-01-11`.
+
+Contextual Session/DM utilities open in side panes (`UI-01-06`). Important operational state may also be summarized in persistent NOTICE UI (`INT-01-07`).
 
 ## Initiative transition
 
@@ -209,7 +216,7 @@ INITIATIVE PLAY
 FREEFORM PLAY
 ```
 
-The current view preserves Actor Boards and adds a compact top Initiative Tracker according to `ORIGIN-UX-01-14` and `ORIGIN-UX-01-15`. Authoritative Freeform/Initiative semantics remain governed by `docs/design/session-runtime.md`.
+Actor Boards remain and the compact top Initiative Tracker is added according to `ORIGIN-UX-01-14`, `ORIGIN-UX-01-15`, and `UI-01-04`. Authoritative mode semantics remain governed by `docs/design/session-runtime.md`.
 
 ---
 
@@ -267,12 +274,13 @@ Projected invariants:
 - Multi-target requires explicit Execute. (`ORIGIN-UX-01-20`)
 - Resolution does not globally disable the entire Command Center. (`ORIGIN-UX-01-21`)
 - Physical dice presentation never determines gameplay result. (`ORIGIN-UX-01-24`, `ORIGIN-UX-01-25`)
+- DM correction/reversal never deletes committed history. (`DM-02-05`, `docs/design/session-runtime.md`)
 
 ---
 
 # 7. DM contextual Play flow
 
-Current **Draft candidate topology**:
+Reviewed placement principles plus remaining AI-managed detail:
 
 ```text
                          PLAY
@@ -282,6 +290,8 @@ Current **Draft candidate topology**:
        v                  v                  v
  Actor Context         Encounter          Handout
        |                  |                  |
+       |             Advanced DM tool       |
+       |          distance/visibility/cover |
        +------------------+------------------+
                           |
                  +--------+--------+
@@ -295,7 +305,9 @@ Current **Draft candidate topology**:
                     same PLAY context
 ```
 
-This section is a coverage visualization, not an approved topology decision. Existing implementation routes do not automatically make these final top-level or contextual destinations; their placement must be resolved by the applicable `NAV-01`, `SES-01`, `DM-01`, and `DM-02` Decision Maps.
+These tools remain contextual rather than global destinations (`NAV-01-05`) and use side panes where applicable (`UI-01-06`). Manual spatial-relation editing is an advanced DM tool (`DM-01-03`), not a default always-visible Play control.
+
+DM Activity keeps one chronology with public/private marks and filtering (`DM-02-01`). DM-only records remain non-delivered to Players until explicit authorized disclosure.
 
 ---
 
@@ -319,17 +331,22 @@ Exact shared session/network projection remains blocked by `GAP-HANDOUT-NETWORK-
 
 # 9. Content / add-on flow
 
-Draft coverage view; exact CONTENT-02 decisions are not yet reviewed.
+v1 accepts one official SimpleVTT package format (`CONTENT-02-04`). Exact validation/dependency contracts remain internal/domain work.
 
 ```text
 Content
   |
   +--> Installed Content detail
+  |       |
+  |       +--> Update
+  |       +--> Replace
+  |       +--> Disable / Enable
+  |       `--> Delete / Remove
   |
   `--> Add Content
           |
           v
-      File selection
+   SimpleVTT package file
           |
           v
         Preview
@@ -350,13 +367,27 @@ recover      Install
              Content
 ```
 
-No invalid/unsupported content behavior may be approximated by UI; that boundary is supported by `docs/design/README.md` and applicable rules/content contracts.
+Live-session rule (`CONTENT-02-11`):
+
+```text
+OPEN SESSION
+    |
+    `--> capture content configuration snapshot
+              |
+              v
+         LIVE SESSION
+              |
+              +--> library install/update/replace/disable/delete may be prepared
+              `--> current live-session snapshot does NOT change
+```
+
+Changes apply to later sessions, not the current live session.
 
 ---
 
 # 10. Rules flow
 
-Draft coverage view; exact CONTENT-02/NAV decisions are not yet reviewed.
+Detailed Rules Browser presentation is AI-managed within the declared CONTENT-02 coverage and existing canonical rules/content contracts.
 
 ```text
 Rules Browser
@@ -377,7 +408,7 @@ Rules Browser
 ```text
 LIVE SESSION / PLAY
        |
-       | connection lost
+       | transient connection lost while app remains active
        v
 RECONNECTING
        |
@@ -386,13 +417,11 @@ RECONNECTING
        `--> unrecoverable --> explicit recovery / leave flow
 ```
 
-Reconnect must preserve authoritative/session/game state according to `UX-01-03`; exact network/session recovery semantics remain governed by `docs/design/session-runtime.md` and future `SES-02` decisions.
+Reconnect preserves authoritative/session/game state according to `UX-01-03` and `docs/design/session-runtime.md`. **App process close/relaunch is different:** the relaunched app starts at Home (`NAV-01-08`), from which the user may explicitly rejoin.
 
 ---
 
 # 12. Exit / session-end concept
-
-Draft coverage view; exact confirmation, consequences, and authority are not yet approved.
 
 ```text
 PLAY / SESSION
@@ -402,22 +431,18 @@ PLAY / SESSION
     `--> Host ends session --> explicit destructive flow -> all participants leave live context
 ```
 
-Exact behavior remains downstream `SES-01`, `SES-02`, and `INT-03` decision scope.
+Exact confirmation language and low-level cleanup remain AI-managed/domain-contract detail within the existing authority model.
 
 ---
 
-# 13. Flow coverage still to materialize
+# 13. Remaining non-owner contract work
 
-The Global Planning Gate still requires explicit coverage for at least:
+Owner material checkpoints are complete. Remaining material blockers are technical/domain or document-reconciliation work rather than preference questions:
 
-- first-use/onboarding flow;
-- no-character Join branch;
-- session incompatibility and permission-denied branches;
-- save failure / durable Character write-back recovery;
-- detailed level-up branches;
-- detailed Character import/edit recovery;
-- DM-only roll and later disclosure flow;
-- Undo/adjudication correction flow;
-- narrow desktop and reduced-motion flow invariants where they change interaction sequence.
+- `GAP-MAIN-HAND-CANONICAL-RELATION`
+- `GAP-RESOLUTION-SAFE-INTERACTIONS`
+- `GAP-HANDOUT-NETWORK-CONTRACT`
+- `GAP-DM-ONLY-DELIVERY-PROTOCOL`
+- `GAP-CANONICAL-UX-DOC-RECONCILIATION`
 
-These items are tracked **according to their type** in `registry.md`, `review-plan.md`, `matrices.md`, or `planning-gaps.md`. Do not create a Planning Gap merely because coverage detail is incomplete; create one when safe planning/implementation would otherwise require guessing material behavior or authority.
+Detailed typography, component state, responsive reflow, accessibility, copy, motion, and similar low-risk rows are resolved through AI Design Defaults/contracts under `OWNER-CONTROL-POLICY.md`. They are not owner homework unless the escalation rule is triggered.
