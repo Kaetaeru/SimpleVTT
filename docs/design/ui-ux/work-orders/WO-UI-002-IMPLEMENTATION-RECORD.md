@@ -1,6 +1,6 @@
 # WO-UI-002 — Implementation Record
 
-Status: **IMPLEMENTED — AUTOMATED VERIFICATION PASS — OWNER HUMAN QA PENDING**
+Status: **CLOSED / ACCEPTED — AUTOMATED PASS — OWNER HUMAN QA PASS**
 
 Work Order:
 
@@ -9,6 +9,10 @@ Work Order:
 Scoped authorization:
 
 `WO-UI-002-SCOPED-AUTHORIZATION.md`
+
+Human QA:
+
+`WO-UI-002-HUMAN-QA.md`
 
 Accepted visual/interaction reference:
 
@@ -24,65 +28,45 @@ Accepted candidate code reference:
 
 **Connected Product Shell Continuity / Return to Play**
 
-Current implementation changes:
+Implemented behavior:
 
-- `src/ProductRoot.tsx`
-  - separates authoritative live-session truth from local `product | play` presentation state;
-  - newly-live connected Session enters the dedicated `SessionModeRoot`;
-  - ordinary snapshot refresh does not force a user who intentionally opened Product Shell back into Play;
-  - Session end/offline returns presentation to Product Shell;
-  - Connected Play exposes a compact Product Shell entry;
-  - live Product Shell Return-to-Play controls are captured before the legacy local `scene` route can mount `ProductionPlayScreen` as a second connected Play implementation.
-- `src/product-root.css`
-  - compact keyboard-visible Product Shell entry;
-  - constrained desktop variants without hiding the control.
-- `tests/ui/v1ProductShellStructure.test.ts`
-  - replaces the stale `connected => SessionModeRoot only` structural assumption with Product-vs-Play continuity requirements.
-- `tests/ui/connectedProductShellContinuity.test.ts`
-  - dedicated WO-UI-002 structural gate for authority/presentation separation and Return-to-Play reuse.
-- `.github/workflows/ui.yml`
-  - adds the dedicated continuity test to the UI workflow.
+```text
+Live Connected Play
+-> compact `SimpleVTT 메뉴`
+-> Product Shell / safe Product destination
+-> visible `플레이로 돌아가기`
+-> exact same SessionModeRoot live Session
+```
 
-No Session transport, runtime authority, action mechanics, targeting, privacy, Handout networking, map/spatial, Character rules, or progression code was changed.
+`AppProvider` remains above `ProductRoot`; no second Session store or second connected authority was introduced.
+
+Preserved authoritative state includes:
+
+- Session identity;
+- Host/DM or Client/Player role;
+- SessionMode;
+- Initiative/current turn;
+- controlled Actor where canonical;
+- PendingResolution/game state;
+- connection state;
+- participants;
+- HP/resources/effects/history.
+
+Product navigation does not call Host/Join/stop/reconnect merely because a Product destination is opened.
 
 ---
 
-# Authority preservation
+# Runtime implementation
 
-The implementation intentionally leaves `AppProvider` above `ProductRoot` and does not create a second Session store.
+Primary touched files:
 
-Presentation-only state:
+- `src/ProductRoot.tsx`;
+- `src/product-root.css`;
+- `tests/ui/v1ProductShellStructure.test.ts`;
+- `tests/ui/connectedProductShellContinuity.test.ts`;
+- `.github/workflows/ui.yml`.
 
-```text
-ProductRoot surface = product | play
-```
-
-Authoritative state remains in existing application/runtime projections:
-
-```text
-Session identity
-Host/Client role
-SessionMode
-initiative/current turn
-controlled Actor where canonical
-PendingResolution
-connection state
-participants
-HP/resources/effects
-committed history
-```
-
-Product navigation does not call:
-
-```text
-stopSession
-hostSession
-joinSession
-startPreparedSession
-setSessionReady
-```
-
-Session termination remains an explicit, separate control inside the existing Session workspace.
+The connected return path reuses the same `SessionModeRoot` instead of mounting `ProductionPlayScreen` as a second connected workspace.
 
 ---
 
@@ -90,32 +74,18 @@ Session termination remains an explicit, separate control inside the existing Se
 
 Primary behavior:
 
-- Scenario 34 — Product navigation during live Host Session
+- Scenario 34 — Product navigation during live Host Session.
 
 Primary QA:
 
-- `QA-NAV-06` — live Return to Play preserves context
-- `QA-SES-09` — Product nav preserves role/session
-
-Adjacent regression coverage remains as defined by the Work Order.
+- `QA-NAV-06` — live Return to Play preserves context;
+- `QA-SES-09` — Product navigation preserves role/session.
 
 ---
 
 # Automated verification — PASS
 
-Verified source/runtime implementation commit:
-
-```text
-cd9b514b3169c63d69a42bdfbb4672fe7131d1cd
-```
-
-The documentation-only implementation-record commit then moved the PR head to:
-
-```text
-34671a9c33c855a69b4507805477c9c1973015e7
-```
-
-The exact-head UI workflow for that head completed successfully:
+Verified implementation lineage included exact-head UI workflow:
 
 ```text
 run_id: 32490406078
@@ -123,61 +93,49 @@ job: frontend
 conclusion: success
 ```
 
-Passed in that workflow:
+It covered the dedicated continuity gate, Session layer regressions, connected lifecycle/ownership, authoritative mechanics, TypeScript and production build.
 
-- dependency install / generated content;
-- UI named-rule boundary;
-- **WO-UI-002 connected Product Shell continuity gate**;
-- v1 first-run / Product Shell / Session layer contracts;
-- Session accessibility/responsive/layer regressions;
-- Phase 14 Play/session/tabletop-sheet/physics-dice/non-Character/live-DM regressions;
-- connected lifecycle / Character ownership / inventory / spellcasting regressions;
-- creation/progression representative regressions;
-- authoritative spellcasting;
-- Phase 09 real mechanics services;
-- **TypeScript + production build**.
-
-No automated failure was observed in the UI workflow.
+Subsequent accepted Host lifecycle corrections (`Open -> immediate live Freeform`, zero-Player validity, live late join) were also exercised by exact-head connected/UI automation before Human QA.
 
 ---
 
-# Remaining acceptance gate
+# Owner Human QA — PASS
 
-WO-UI-002 is **not closed yet**.
+The owner manually exercised the bounded continuity flow and reported:
 
-Required next gate:
+> 응 다 잘 됐어. 근데 UI형태가 이상한데 우리가 기획했던 대로의 레이아웃이야?
 
-**Owner Human QA of the bounded navigation flow.**
+The first sentence is the bounded WO-UI-002 PASS verdict. See `WO-UI-002-HUMAN-QA.md`.
 
-Review path:
+The second sentence is explicitly **not** acceptance of the broader Connected Play visual topology.
+
+---
+
+# Visual/topology boundary
+
+WO-UI-002 did not implement or accept:
+
+- Upper opposing Actor Board;
+- Lower allied Actor Board;
+- broad mapless Tabletop Stage composition;
+- persistent Command Center topology;
+- direct Hotbar capability composition.
+
+The owner correctly identified this remaining drift after WO-UI-002 functionality passed.
+
+That separate runtime slice is now:
+
+`WO-UI-003-connected-play-actor-boards-command-center.md`
+
+---
+
+# Final evidence
 
 ```text
-Host or Client enters live Connected Play
--> use `SimpleVTT 메뉴`
--> open Home or Rules while Session remains live
--> use `플레이로 돌아가기`
--> verify the same live Session/role/mode/turn/context is still present
+AUTOMATED VERIFICATION: PASS
+OWNER HUMAN QA — NAVIGATION/CONTINUITY: PASS
+WO-UI-002: CLOSED / ACCEPTED
+CONNECTED PLAY BROAD LAYOUT: NOT ACCEPTED BY WO-UI-002
 ```
 
-Also verify that:
-
-- `SimpleVTT 메뉴` does not end the Session;
-- `세션 종료` / leave remains a separate action;
-- narrow window still exposes the Product entry;
-- Return to Play does not open a visibly different/legacy connected Play screen.
-
-Do not mark WO-UI-002 CLOSED / ACCEPTED until the Owner reports the human result.
-
----
-
-# Remaining scope boundary
-
-Still out of scope and unresolved here:
-
-- Connected Play topology / Actor Boards / Command Center redesign;
-- Main Hand canonical relation;
-- selective Resolution safe-interaction contract;
-- DM-only delivery/privacy protocol;
-- shared Handout network/reconnect contract;
-- map/spatial modules;
-- future Work Orders.
+WO-UI-002 acceptance does not automatically accept or close WO-UI-003.
