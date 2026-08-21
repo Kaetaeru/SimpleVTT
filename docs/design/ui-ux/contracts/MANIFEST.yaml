@@ -1,6 +1,6 @@
 schema_version: 2
 phase: runtime_ui_preparation
-status: contracts_materialized_not_implementation_ready
+status: first_runtime_slice_prepared_not_implementation_ready
 runtime_ui_implementation_allowed: false
 
 accepted_reference:
@@ -163,26 +163,27 @@ implementation_readiness:
   traceability: ready
   qa_acceptance_matrix: ready
   applicable_product_dependencies_frozen: false
-  runtime_slice_selected: false
-  slice_source_tests_reinspected: false
-  slice_blocking_gaps_resolved: false
+  runtime_slice_selected: true
+  slice_source_tests_reinspected: true
+  slice_material_domain_architecture_blockers: none
+  slice_blocking_gaps_resolved: true
+  legacy_reconciliation_plan_ready: true
   touched_legacy_reconciled: false
-  runtime_work_order_exists: false
+  runtime_work_order_exists: true
   explicit_runtime_implementation_authorization: false
 
-recommended_first_runtime_slice:
+selected_runtime_slice:
+  id: WO-UI-001
   name: product_shell_first_run_tutorial_sheet_preference
-  rationale:
-    - strong_owner_accepted_visual_reference
-    - low_dependency_on_unresolved_network_privacy_contracts
-    - establishes_top_navigation_and_first_use_product_identity
-    - prepares_offline_character_entry_without_touching_complex_resolution_authority
-  likely_behavior_scenarios:
+  work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
+  preparation_status: complete
+  implementation_ready: false
+  behavior_scenarios:
     - Scenario 01
     - Scenario 02
     - Scenario 03
     - Scenario 05
-  likely_qa_rows:
+  qa_rows:
     - QA-ID-04
     - QA-ID-05
     - QA-NAV-01
@@ -190,11 +191,63 @@ recommended_first_runtime_slice:
     - QA-NAV-03
     - QA-NAV-04
     - QA-NAV-05
+  decision_dependencies:
+    - UX-01-01
+    - UX-01-02
+    - UX-03-01
+    - UX-03-05
+    - NAV-01-01
+    - NAV-01-04
+    - NAV-01-07
+    - NAV-01-08
+    - UI-01-01
+    - UI-01-07
+  blockers:
+    - scoped_product_dependency_freeze
+    - explicit_runtime_implementation_authorization
+  not_blocked_by_current_domain_architecture_gaps: true
+
+identified_runtime_drift:
+  - id: DRIFT-WO-UI-001-HOME-FIRST
+    evidence: src/App.tsx initializes normal Product route at Home and has no first-run gate
+    resolution: WO-UI-001
+  - id: DRIFT-WO-UI-001-HOME-GUIDE
+    evidence: src/V1HomeScreen.tsx owns legacy Home-embedded guide without required Sheet choice
+    resolution: WO-UI-001
+  - id: DRIFT-WO-UI-001-SIDEBAR
+    evidence: src/App.tsx and src/v1-product-shell.css use permanent left navigation rail
+    resolution: WO-UI-001
+  - id: DRIFT-WO-UI-002-CONNECTED-SHELL-BYPASS
+    evidence: src/ProductRoot.tsx renders SessionModeRoot instead of Product Shell whenever connected
+    resolution: deferred_to_WO-UI-002
+
+legacy_test_reconciliation:
+  stale_for_WO_UI_001:
+    - tests/ui/v1ProductShellStructure.test.ts
+  preserve_or_minimally_reconcile:
+    - tests/ui/productionNonCharacterUxRedesign.test.ts
+  preserve_regression:
+    - tests/ui/characterSheetV10Structure.test.ts
+    - tests/ui/phase11OfflineWalkthrough.test.ts
+  planned_new_tests:
+    - tests/ui/firstRunTutorialPreferences.test.ts
+    - tests/ui/firstRunTutorialStructure.test.ts
+
+recommended_first_runtime_slice:
+  status: selected_as_WO-UI-001
+  name: product_shell_first_run_tutorial_sheet_preference
+  work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
   still_requires:
-    - exact_current_src_test_inspection
-    - exact_decision_dependency_list
-    - scoped_freeze_authorization_where_required
-    - runtime_work_order
+    - scoped_freeze_authorization_for_applicable_product_dependencies
     - explicit_runtime_implementation_authorization
 
-next_route: E_PREPARE_RUNTIME_IMPLEMENTATION
+next_deferred_runtime_slice:
+  id: WO-UI-002
+  name: connected_product_shell_continuity_return_to_play
+  reason: current_ProductRoot_connected_bypass_requires_connected_play_composition_scope
+  key_requirements:
+    - UX-01-03
+    - NAV-01-02
+    - QA-NAV-06
+
+next_route: E_SCOPED_FREEZE_THEN_RUNTIME_AUTHORIZATION
