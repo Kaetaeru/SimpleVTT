@@ -22,6 +22,7 @@ import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
 import { CombatVfxBridge } from "./CombatVfxBridge";
 import { AppearanceSettingsBridge } from "./AppearanceSettingsBridge";
+import { FirstRunTutorialBridge } from "./FirstRunTutorialBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
 import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
@@ -67,6 +68,7 @@ createRoot(document.getElementById("root")!).render(
       <VisualDiceBridge />
       <CombatVfxBridge />
       <AppearanceSettingsBridge />
+      <FirstRunTutorialBridge />
       <ConcentrationSaveBridge />
       <MovementReactionBridge />
       <ProductionSessionWorkspaceBridge />
