@@ -1,107 +1,154 @@
 # UI Reference Prototype — Scenario Catalog
 
-Status: **Required prototype review scenarios**
+Status: **Required prototype review scenarios — reconciled to Integrated Product / UX baseline**
 
-The future HTML Reference Prototype must allow the owner to load these named scenarios from Prototype Controls.
+Baseline: [`../INTEGRATED-PRODUCT-UX-PLAN.md`](../INTEGRATED-PRODUCT-UX-PLAN.md)
+
+Rebuild contract: [`PROTOTYPE-REBUILD-CONTRACT.md`](PROTOTYPE-REBUILD-CONTRACT.md)
 
 A scenario is a deterministic mock state used to review layout and interaction. It does not implement authoritative gameplay/network behavior.
 
 Every future scenario trigger SHOULD use `data-proto-scenario="PROTO-SCN-*"`.
 
+Global rules for every Connected Play scenario:
+
+```text
+MAPLESS CORE
+NO Actor x/y coordinates
+NO map tokens
+NO square/hex grid
+NO path / movement trace / Fog of War / LoS geometry
+NO tactical range/AoE template
+Actor targeting uses Actor Cards/manual target sets
+Handout is presentation, not battlemap
+```
+
 ---
 
 # Core product scenarios
 
-## PROTO-SCN-01 — First launch
+## PROTO-SCN-01 — First launch Tutorial
+
+This is the **default fresh-run scenario and the first meaningful product panel**.
 
 Start:
 
 - fresh local product context;
-- no tutorial preference stored.
+- Tutorial incomplete;
+- initial Sheet presentation unset.
 
 Show:
 
-1. first-run guide;
-2. product purpose/orientation;
-3. initial Character Sheet style choice: Official-style vs SimpleVTT;
-4. dismiss into Home.
+1. dedicated Tutorial / Onboarding window;
+2. SimpleVTT identity and two valid use modes:
+   - Standalone Character Sheet at a physical table;
+   - Connected Host/Join Session;
+3. initial Character Sheet presentation choice:
+   - Official-style;
+   - SimpleVTT;
+4. brief Character / Host / Join orientation;
+5. secondary Content / Rules orientation;
+6. clear explanation that Sheet presentation can be changed later;
+7. Complete -> Home.
 
 Review:
 
-- does onboarding explain product without being a long wizard?
-- can it be reopened later from Settings/help?
+- does the product explain itself before normal Home use?
+- is the Sheet choice unmistakably part of first-run onboarding?
+- is it short enough not to become a long wizard?
+- can Tutorial be reopened later from Settings/Help?
+
+A Home guide card alone does not satisfy this scenario.
 
 ---
 
-## PROTO-SCN-02 — Home with saved Characters
+## PROTO-SCN-02 — Returning Home
+
+Start:
+
+- Tutorial already complete;
+- no live Session.
 
 Show:
 
-- normal global navigation;
-- Characters summary/recent Character example;
-- Host Session and Join Session direct actions;
-- Content/Rules/Settings access.
+- top global navigation;
+- recent/saved Character summary where useful;
+- distinct Host Session action;
+- distinct Join Session action;
+- Content / Rules / Settings access;
+- Tutorial/Help reopen path.
 
-No live session exists, so Return to Play is absent.
+Return to Play is absent because no live Session exists.
 
 ---
 
-## PROTO-SCN-03 — Character Library and two Sheet styles
+## PROTO-SCN-03 — Character Library and two Sheet presentations
 
 Flow:
 
 1. Character Library;
-2. open same mock Character in Official-style Sheet;
-3. switch to SimpleVTT-optimized Sheet;
-4. return to Library.
+2. select an exact mock Character card;
+3. open that same canonical Character in Official-style Sheet;
+4. switch to SimpleVTT Sheet;
+5. return to Library.
 
 Review:
 
+- exact selected Character opens;
 - both layouts feel first-class;
-- same Character identity/data is recognizable;
-- layout switch is obvious but not dominant.
+- both clearly represent the same Character;
+- layout switch is easy to find but not mechanically meaningful.
 
 ---
 
-## PROTO-SCN-04 — Standalone Character roll
+## PROTO-SCN-04 — Standalone Character roll on the current Sheet
 
 Context: Offline/Standalone; no DM/Player role.
 
 Flow:
 
-1. Character Sheet;
-2. activate mock roll control;
-3. central/local dice presentation example;
-4. result shown near Sheet interaction;
-5. return to same Sheet.
+1. Character Sheet is mounted and visible;
+2. activate a skill/save/Initiative/attack/damage/common-die mock control;
+3. temporary cinematic dice appear over/within the **same Sheet viewport**;
+4. dice move from visual depth/back toward the user and settle;
+5. fixture/local result becomes readable in the same Sheet context;
+6. transient dice/result clears automatically;
+7. exact same Sheet remains mounted and usable.
 
-No real dice rules are calculated.
+Must NOT:
+
+- navigate to a Resolution page;
+- open a detached dice/result modal, drawer or window;
+- insert a persistent dice stage that pushes Sheet layout;
+- require Close/Back merely to resume the Sheet.
+
+No real rules are calculated by prototype JavaScript.
 
 ---
 
 # Session entry scenarios
 
-## PROTO-SCN-05 — Host opens immediately-live session
+## PROTO-SCN-05 — Host opens immediately-live Session
 
 Flow:
 
-1. Home -> Host Setup;
+1. Home / Session -> Host Setup;
 2. valid mock setup;
 3. Open Session;
 4. transition directly to Host/DM Freeform Play.
 
 Must NOT show:
 
-- Host Lobby;
-- Ready gate;
-- Start Session button after hosting.
+- Host Preparing waiting state;
+- Player Ready dependency;
+- Start Session gate after hosting.
 
 Show zero connected Players as valid.
 
 Review:
 
-- DM can understand that session is already live;
-- preparation/edit tools feel available without leaving Play.
+- Session is clearly already live;
+- DM can prepare/edit/play from the same live context.
 
 ---
 
@@ -109,60 +156,74 @@ Review:
 
 Flow:
 
-1. Home -> Join;
-2. valid session target entered;
-3. no valid saved Character;
+1. Home / Session -> Join;
+2. valid connection target entered;
+3. no valid local Character;
 4. Join blocked;
-5. clear Create Character / Import Character recovery actions.
+5. Create Character / Import Character recovery actions;
+6. after recovery, user must retry Join.
 
-Must not show a Character-less session/lobby entry.
+Must not enter a Character-less Lobby or live session.
 
 ---
 
-## PROTO-SCN-07 — Player joins mid-session
+## PROTO-SCN-07 — Player joins an already-live Session
 
 Flow:
 
 1. live Host session already exists;
 2. Client Join Setup;
 3. Character Select;
-4. connecting state;
-5. enter current live Player Freeform Play.
+4. connection/content/Character synchronization state when needed;
+5. enter the current live Client/Player state.
 
 Review:
 
-- no all-player Ready ceremony;
-- transition explains current live context;
-- Player identity/controlled Actor is immediately understandable.
+- no Ready ceremony;
+- no Start gate;
+- current Session mode/context is understandable;
+- Player-controlled Character is immediately clear.
 
 ---
 
-# Freeform Play scenarios
+# Mapless Freeform scenarios
 
 ## PROTO-SCN-08 — DM Freeform baseline
 
 Show:
 
-- upper opposing Actor Board;
-- central Scene/Table;
-- lower allied Actor Board;
-- bottom Command Center;
-- DM Public visibility control;
+- compact Play chrome/status;
+- upper NPC/Neutral/Hostile Actor Board;
+- central **Mapless Play Context / Tabletop Stage**;
+- lower Player/Allied Actor Board;
+- persistent bottom Command Center;
+- DM Public/DM Only control where applicable;
 - contextual utility launchers;
-- no utility pane open.
+- no utility pane open;
+- zero Players variant.
 
-Review overall composition at Wide/Normal/Narrow.
+Central context may show subtle tabletop depth/texture, current focus copy or immediate interaction state, but contains:
+
+- no tactical map;
+- no Actor tokens;
+- no Actor positions;
+- no grid/terrain/path/LoS/fog.
+
+Freeform must not show fake per-turn Action/Bonus/Reaction/Movement spend state.
+
+Review at Wide / Normal / Narrow Desktop.
 
 ---
 
 ## PROTO-SCN-09 — Player Freeform baseline
 
-Same core skeleton as DM view, but:
+Same core mapless skeleton as DM view, but:
 
 - no DM-only controls;
-- controlled Character/Actor is clear;
-- Player connection utility exists;
-- only authorized information shown.
+- Player-controlled Character is clear;
+- Player connection/session utility exists;
+- only authorized information shown;
+- no fake Freeform turn economy.
 
 ---
 
@@ -176,86 +237,96 @@ Context:
 
 Show:
 
-- persistent `DM Only` indicator/NOTICE;
-- Activity combined chronology;
-- public and private events visibly distinct;
-- filter controls.
-
-Review whether Scene/Command Center remain usable while Activity is open.
-
----
-
-## PROTO-SCN-11 — Same private event in Player view
-
-Use the same underlying mock session fixture as `PROTO-SCN-10`, but render Client/Player view.
-
-Player must see:
-
-- public events only;
-- **no placeholder or secret-event marker** for DM-only event.
-
-This visually validates the intended privacy UX without implementing network delivery.
+- persistent DM Only indicator/NOTICE;
+- one Activity chronology;
+- public/private events visibly distinct;
+- visibility filters;
+- core Actor Boards / mapless context / Command Center remain usable.
 
 ---
 
-# Action / targeting scenarios
+## PROTO-SCN-11 — Same private event in Player projection
 
-## PROTO-SCN-12 — Capability selected / valid and invalid targets
+Render Client/Player authorized fixture projection.
+
+Player sees:
+
+- authorized public chronology only;
+- no placeholder row;
+- no blank secret marker;
+- no existence hint for undelivered DM-only event.
+
+This validates presentation intent only; real delivery remains an Architecture Gap.
+
+---
+
+# Mapless targeting scenarios
+
+## PROTO-SCN-12 — Capability selected / valid and invalid Actor Cards
 
 Context: Player Initiative.
 
 Show:
 
 - selected Hotbar capability;
-- all Actor Cards visible;
+- all Actor Cards remain visible;
 - two valid targets;
-- one invalid target with supplied reason;
-- rich hover/focus explanation.
+- one invalid target with fixture-provided reason;
+- rich hover/focus explanation;
+- no map-position targeting.
 
 Review:
 
-- valid vs invalid vs selected vs current-turn states are distinct;
+- valid / invalid / selected / current-turn states are distinct;
 - invalid reason is understandable;
 - target mode does not hide unrelated Actors.
 
 ---
 
-## PROTO-SCN-13 — Single-target execute
+## PROTO-SCN-13 — Single-target immediate submit
 
 Flow:
 
-1. single-target action selected;
-2. click mock valid target;
+1. single-target capability selected;
+2. click a valid Actor Card;
 3. transition directly to Resolving.
 
 No extra confirmation.
 
 ---
 
-## PROTO-SCN-14 — Multi-target execute
+## PROTO-SCN-14 — Multi-target / area-like manual target set
 
 Flow:
 
-1. multi-target action selected;
-2. select several valid targets;
-3. explicit Execute appears;
-4. Execute -> Resolving.
+1. multi-target or area-like capability selected;
+2. eligible Actors are represented by Actor Cards/checklist;
+3. select several valid Actors;
+4. explicit Execute appears;
+5. Execute -> Resolving.
+
+Must NOT show:
+
+- AoE map template;
+- radius/cone placement;
+- grid-cell selection;
+- token-position calculation.
 
 ---
 
 ## PROTO-SCN-15 — Default hostile click / Main Hand unavailable
 
-Two toggle variants:
+Two fixture variants:
 
-A. mock canonical Main Hand executable action exists;
-B. mock says Main Hand action unavailable with explicit reason.
+A. canonical Main Hand executable relation supplied;
+B. Main Hand action unavailable with explicit supplied reason.
 
 In B:
 
 - show reason;
-- do not choose offhand/unarmed/spell/cantrip fallback.
+- do not select offhand/unarmed/spell/cantrip fallback.
 
-The prototype does not determine availability; the fixture supplies it.
+Prototype does not infer availability.
 
 ---
 
@@ -265,12 +336,14 @@ The prototype does not determine availability; the fixture supplies it.
 
 Show:
 
+- upper/lower Actor Boards remain;
+- mapless context remains recognizable;
 - Command Center skeleton remains;
 - submitted capability visibly pending/resolving;
-- fixture marks only a small set of controls as conflicting/disabled;
-- unrelated mock-safe controls remain visually usable.
+- fixture marks only declared conflicting controls unavailable;
+- unrelated fixture-safe controls remain visually usable.
 
-Explicitly label this as presentation fixture behavior because real safe-command semantics remain `GAP-RESOLUTION-SAFE-INTERACTIONS`.
+Real conflict semantics remain `GAP-RESOLUTION-SAFE-INTERACTIONS`.
 
 ---
 
@@ -278,34 +351,38 @@ Explicitly label this as presentation fixture behavior because real safe-command
 
 Show:
 
-- Initiative context still visible;
-- reaction prompt gets attention priority;
-- relevant responder Actor context remains visible;
-- no invented countdown unless explicitly set as a visual-only fixture.
+- Initiative context remains visible;
+- reaction/interrupt response receives focus priority;
+- relevant Actor context remains clear;
+- Command Center/boards remain recognizable;
+- no invented countdown unless explicitly provided as presentation-only fixture.
 
 ---
 
 ## PROTO-SCN-18 — Concentration response
 
-Show resolution-embedded mock d20 response/result UI.
+Show:
 
-Review:
-
-- required response is easy to find;
-- Command Center/Scene orientation is preserved;
-- failure/validation example is understandable.
+- resolution-embedded response/input/result presentation;
+- mapless Play orientation retained;
+- no UI-derived DC/modifier/legality;
+- fixture-provided result/reason.
 
 ---
 
-## PROTO-SCN-19 — Dice and result
+## PROTO-SCN-19 — Connected dice and scene-integrated result
 
 Flow:
 
 1. authoritative mock result already exists;
-2. dice visual starts far/back and moves near/front conceptually;
-3. settles to fixture-provided final face;
-4. scene-integrated result strip appears;
-5. Activity detail available.
+2. physical dice appear in the broad **mapless Tabletop Stage**;
+3. dice travel from depth/back toward user/front and settle;
+4. final face/total matches fixture-authoritative result;
+5. immediate result appears in current Play context;
+6. Activity detail path remains available;
+7. Actor Boards and Command Center remain.
+
+Must NOT use Actor positions/map collision as dice gameplay meaning.
 
 Toggle Reduced Motion and verify information/order remains understandable.
 
@@ -317,13 +394,13 @@ Toggle Reduced Motion and verify information/order remains understandable.
 
 Show:
 
-- top Initiative Tracker;
-- current turn;
-- controlled Actor;
-- Command Center economy/resources;
-- End Turn.
-
-Actor Boards remain visible.
+- compact horizontal Initiative Tracker at mapless context top edge;
+- round/current turn;
+- controlled Actor distinction;
+- authoritative Action/Bonus/Reaction/Movement economy;
+- Resource Rail;
+- End Turn;
+- Actor Boards remain.
 
 ---
 
@@ -333,48 +410,63 @@ Show:
 
 - current turn belongs to another Actor;
 - Player-controlled Actor remains distinguishable;
-- mock availability states are fixture-driven;
-- no UI rule inference.
+- fixture-driven capability availability;
+- no UI rule inference;
+- same Play skeleton.
 
 ---
 
-## PROTO-SCN-22 — DM Initiative / Actor control switch
+## PROTO-SCN-22 — DM Initiative / Actor control mode
 
-Show DM switching current controlled Actor context without confusing:
+Show DM control-change behavior without confusing:
 
 - current turn;
-- selected Actor;
-- targeting state.
+- selected/context Actor;
+- targeting state;
+- controlled Actor.
 
-Exact authority is already DM-any-Actor at Product level; detailed command semantics remain external.
+Use explicit DM control mode/fixture authority; do not infer map possession/control from token position.
 
 ---
 
-# Handout scenarios
+# Handout scenarios — presentation, never battlemap
 
 ## PROTO-SCN-23 — Handout Overlay
 
-DM reveals Overlay.
+DM reveals a synthetic letter/portrait/illustration.
 
 Player:
 
-- sees overlay;
+- sees Overlay;
 - locally dismisses/minimizes;
 - can reopen while mock shared mode remains active.
 
----
-
-## PROTO-SCN-24 — Handout Upper Scene
-
-Show how upper Scene presentation changes while Actor Boards/Command Center remain understandable.
-
-Player cannot locally dismiss the shared mode.
+No token/grid/targeting interaction on the Handout.
 
 ---
 
-## PROTO-SCN-25 — Handout Full Scene
+## PROTO-SCN-24 — Handout Upper
 
-Show dominant handout presentation with local zoom/pan and persistent live-session continuity.
+Show reviewed upper presentation mode.
+
+- shared DM-controlled presence;
+- required Play anchors remain understandable;
+- Player cannot locally dismiss shared mode unless the reviewed mode allows only local presentation controls;
+- image remains presentation only.
+
+No tactical floor plan/grid filler.
+
+---
+
+## PROTO-SCN-25 — Handout Full
+
+Show dominant shared image presentation within the live Session frame.
+
+- local zoom/pan;
+- DM-controlled shared presence;
+- no Actor/token placement;
+- no tactical targeting;
+- required Session/Command continuity retained.
 
 Review at Narrow Desktop.
 
@@ -382,18 +474,26 @@ Review at Narrow Desktop.
 
 # DM utility scenarios
 
-## PROTO-SCN-26 — Encounter + advanced spatial relation
+## PROTO-SCN-26 — Encounter + advanced spatial **fact** tool
 
 Flow:
 
 1. DM Freeform;
 2. open Encounter pane;
-3. open advanced spatial relation tool when needed;
-4. select mock Actor pair;
-5. show mock distance/visibility/cover fields;
+3. open advanced spatial fact tool when needed;
+4. choose mock Actor A / Actor B;
+5. show fixture distance / visibility / cover / manual note;
 6. close/return without losing Play context.
 
-The tool is advanced/contextual, not a permanent Play anchor.
+The tool is a form/list fact editor.
+
+Must NOT include:
+
+- x/y coordinates;
+- map/token editor;
+- line drawing;
+- range rings;
+- path/LoS geometry.
 
 ---
 
@@ -404,12 +504,12 @@ Activity contains:
 1. original committed mock event;
 2. later correction/reversal event referencing it.
 
-Must demonstrate:
+Show:
 
 - original remains visible;
-- correction is a new event;
-- relation is understandable;
-- no destructive deletion of history.
+- correction is a new linked event;
+- relationship is understandable;
+- history is not destructively rewritten.
 
 ---
 
@@ -417,18 +517,18 @@ Must demonstrate:
 
 ## PROTO-SCN-28 — Package import validation
 
-Toggle:
+Toggle fixture outcomes:
 
-- valid official SimpleVTT package;
+- valid supported SimpleVTT declarative package;
 - warning;
 - blocking validation;
-- unsupported file/package.
+- unsupported package.
 
-Prototype parses no real package semantics; fixtures provide validation results.
+Prototype parses no real package semantics; fixtures provide validation state.
 
 ---
 
-## PROTO-SCN-29 — Full add-on lifecycle
+## PROTO-SCN-29 — Add-on lifecycle
 
 Show installed package controls:
 
@@ -436,9 +536,9 @@ Show installed package controls:
 - replace;
 - disable/enable;
 - delete/remove;
-- dependency warning example.
+- dependency/conflict warning example.
 
-Confirmation/detail defaults may be AI-designed; domain dependency semantics are fixture-provided.
+Metadata/provenance stays progressive detail rather than primary card content.
 
 ---
 
@@ -446,14 +546,14 @@ Confirmation/detail defaults may be AI-designed; domain dependency semantics are
 
 Context:
 
-- session already live with snapshot `A`;
-- local content library now has update `B`.
+- Session already live with snapshot A;
+- local library now has update B.
 
 Show:
 
-- current session remains on `A`;
-- library may show updated/future state;
-- NOTICE/Session Share explains changes apply to future sessions;
+- current live Session remains on A;
+- local library may show B;
+- NOTICE/Session detail explains change applies to future Session;
 - no live mutation occurs.
 
 ---
@@ -465,43 +565,57 @@ Show:
 Show:
 
 - Full Sheet remains visible;
-- persistent reconnect NOTICE appears;
-- session context is not wiped;
-- recovery controls are understandable.
+- reconnect NOTICE appears;
+- Session context is not wiped;
+- recovery/leave controls understandable;
+- reconnect does not return to a Lobby/Ready state.
 
 ---
 
-## PROTO-SCN-32 — Narrow desktop stress test
+## PROTO-SCN-32 — Narrow Desktop mapless stress
 
-Viewport: 960×700.
+Viewport: 960x700.
 
 Show:
 
 - Player Initiative;
 - many Actor Cards;
-- Activity/utility pane open;
+- contextual utility pane open;
 - Command Center visible;
-- Actor Board horizontal paging/scroll;
-- no generic mobile hamburger replacing core action access.
+- Actor Board horizontal scroll/paging;
+- central mapless context remains useful;
+- no mobile hamburger hiding core capability access;
+- no tactical-map fallback.
 
 ---
 
-## PROTO-SCN-33 — Panel resize stress test
+## PROTO-SCN-33 — Utility panel resize stress
 
 DM Freeform:
 
 - resize Activity/utility pane;
-- observe Scene/Table minimum;
-- observe Actor Board/Command Center behavior;
-- use Reset Layout.
+- preserve minimum useful **mapless Play Context**, not a minimum battlemap size;
+- preserve Actor Board minimum card width/overflow;
+- preserve Command Center usability;
+- Reset Layout.
 
 ---
 
-## PROTO-SCN-34 — Component state gallery
+## PROTO-SCN-34 — Component / state gallery
 
-Prototype-only scene showing common components in all relevant states side by side.
+Prototype-only gallery showing common components/states side by side:
 
-Required for fast visual consistency review.
+- buttons;
+- Actor Card states;
+- Hotbar slots;
+- economy/resource states;
+- NOTICE/error/reconnect;
+- tooltip/rich hover;
+- result/dice visual primitives;
+- Tutorial choice controls;
+- Handout controls.
+
+No component sample may imply map/token functionality.
 
 ---
 
@@ -509,10 +623,14 @@ Required for fast visual consistency review.
 
 A scenario passes only if:
 
-- the intended hierarchy is obvious without reading design docs;
+- intended hierarchy is obvious without reading design docs;
+- first-run Tutorial requirement is honored where applicable;
+- mapless Core is visually obvious in Connected Play;
+- no Actor tactical coordinates/tokens are required;
 - relevant role differences are visible;
 - applicable layer coexistence works;
 - narrow desktop remains usable where required;
 - mock technical truth is clearly fixture-driven rather than calculated;
-- no current production implementation quirk silently overrides Reviewed planning;
-- owner can point to a visible element and describe a change in plain language.
+- Standalone dice never detach the user from the current Sheet;
+- historical `.agents` plans, old demos, current code or stale tests do not silently override current Domain/Decision truth;
+- owner can point to a visible element and describe a change in normal language.
