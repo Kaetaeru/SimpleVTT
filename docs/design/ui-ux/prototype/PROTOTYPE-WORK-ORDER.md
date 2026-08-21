@@ -1,8 +1,8 @@
 # UI Reference Prototype — Work Order
 
-Status: **PROTO-WO-002 AUTHORIZED — MAPLESS INTEGRATED REBUILD**
+Status: **PROTO-WO-002 EXECUTED TO STATIC REVIEW CANDIDATE — BROWSER / OWNER REVIEW PENDING**
 
-This file preserves prior prototype execution history and defines the currently authorized prototype-only rebuild.
+This file preserves prior prototype execution history and records the current prototype-only rebuild result.
 
 Runtime `src/` UI remains out of scope and is not authorized.
 
@@ -66,31 +66,41 @@ Mandatory sources:
 
 ---
 
-# 3. New candidate path
+# 3. Active candidate
 
-The rebuild uses a new entry and must not overwrite either invalidated HTML candidate as if they were current.
-
-Target entry:
+Current review entry:
 
 ```text
 app/integrated-reference.html
 ```
 
-Target support files:
+Current support files:
 
 ```text
 app/integrated-reference.css
-app/integrated-reference.js
 app/integrated-reference-fixtures.js
+app/integrated-reference-qa-fixtures.js
+app/integrated-reference.js
+app/integrated-reference-qa-fixes.js
 ```
 
-Additional bounded support files may be added under `app/` only when they materially improve prototype review coverage.
+Current verification:
+
+```text
+INTEGRATED-REFERENCE-VERIFICATION.md
+Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
+Static verification: PASS
+Browser visual/interaction QA: PENDING
+Owner acceptance: PENDING
+```
+
+The additional `qa-*` files remain prototype-only fixture/presentation hardening. They do not create runtime contracts.
 
 ---
 
 # 4. Required default behavior
 
-Fresh opening of the new prototype defaults to:
+Fresh opening of the active candidate defaults to:
 
 ```text
 PROTO-SCN-01 First launch Tutorial
@@ -98,7 +108,7 @@ PROTO-SCN-01 First launch Tutorial
 
 Inside the product viewport, the first meaningful product panel is Tutorial/Onboarding.
 
-Tutorial must include:
+Tutorial includes:
 
 - Standalone vs Connected explanation;
 - Official-style vs SimpleVTT initial Sheet presentation choice;
@@ -112,7 +122,7 @@ Prototype Controls remain outside the product frame.
 
 # 5. MAPLESS Core hard boundary
 
-The new candidate MUST NOT contain:
+The candidate MUST NOT contain:
 
 - Actor tactical x/y coordinates;
 - Actor map tokens;
@@ -127,7 +137,7 @@ The new candidate MUST NOT contain:
 - minimap/map camera controls;
 - Handout-as-battlemap interaction.
 
-The central Connected Play region is a **Mapless Play Context / Tabletop Stage** used for current interaction, transient dice/result, notices and Handout presentation.
+The central Connected Play region is a **Play Context / Tabletop Stage** used for current interaction, transient dice/result, notices and Handout presentation. `Mapless` is the internal product constraint, not a user-facing feature label that must be repeated throughout product UI.
 
 Actor identity lives in Actor Boards/cards.
 
@@ -183,6 +193,8 @@ Join Setup -> Character Select -> sync if needed -> current live Client/Player s
 
 No valid Character -> Create/Import recovery -> retry Join.
 
+Safe Product-shell navigation during a live session must preserve the existing connected Host/DM or Client/Player identity when the user returns to Play.
+
 ---
 
 # 8. Connected Play scope
@@ -192,7 +204,7 @@ Required skeleton:
 ```text
 Compact Play chrome / status
 Upper NPC / Neutral / Hostile Actor Board
-Mapless Play Context / Tabletop Stage   [contextual side pane]
+Play Context / Tabletop Stage              [contextual side pane]
 Lower Player / Allied Actor Board
 Persistent Command Center
 ```
@@ -221,6 +233,7 @@ Required:
 - automatic discovery + customization concept;
 - rich hover/focus explanation;
 - selected-action targeting priority;
+- explicit DM control mode above ordinary hostile-click behavior when no action is targeting;
 - target validity on Actor Cards/manual target list;
 - single valid target immediate submit;
 - multi-target explicit Execute;
@@ -238,13 +251,15 @@ Required review states:
 - resolving/selective locking;
 - Reaction/Interrupt;
 - Concentration response;
-- connected physical dice on mapless Tabletop Stage;
-- scene-context result + Activity detail;
+- connected physical dice on the broad Tabletop Stage;
+- Play-context result + Activity detail;
 - DM Public/DM Only;
 - Player authorized-only Activity projection;
 - correction/reversal linkage;
 - Handout Overlay / Upper / Full;
 - Handout visibly not a battlemap.
+
+Selective-locking review uses explicit QA fixture lists for conflicting/safe controls. The prototype must not infer conflict safety.
 
 Open technical gaps remain mock-only inputs.
 
@@ -265,7 +280,7 @@ Required:
 - reconnect/recovery;
 - confirmation/layer priority.
 
-Advanced spatial UI uses Actor pair + distance/visibility/cover facts and contains no coordinates/map editor.
+Advanced spatial UI uses Actor pair + distance/visibility/cover facts and contains no coordinates/map editor. It remains contextual rather than a routine primary Play control.
 
 ---
 
@@ -307,26 +322,33 @@ Forbidden:
 
 ---
 
-# 14. Verification requirement
+# 14. Verification result
 
-Before declaring the new candidate ready for Owner browser review:
+Static verification is recorded in:
 
 ```text
-[ ] active entry exists at app/integrated-reference.html
-[ ] default first-run scenario = Tutorial
-[ ] fixture source has no Core tactical x/y fields
-[ ] source contains no real backend/network calls
-[ ] source imports no production src UI
-[ ] Connected Play contains no battlemap/grid/token placement
-[ ] Freeform has no fake turn economy
-[ ] same-Sheet Standalone dice interaction exists
-[ ] Actor-card/manual targeting exists
-[ ] Handout has no tactical map interaction
-[ ] all required scenario families are reachable
-[ ] static verification record updated
+INTEGRATED-REFERENCE-VERIFICATION.md
 ```
 
-Browser/visual interaction review remains required after static verification.
+Current result:
+
+```text
+active entry exists                         PASS
+first-run Tutorial default                  PASS
+no Core Actor tactical x/y fixture fields  PASS
+no battlemap/grid/token central structure  PASS
+Freeform fake turn economy absent           PASS
+same-Sheet Standalone roll path             PASS
+Actor-card/manual targeting                 PASS
+Main Hand no-fallback                       PASS
+selective locking explicit fixture          PASS
+Player private-event placeholder absent     PASS
+Handout/spatial map boundary                PASS
+QA augmentation JS syntax                   PASS
+browser visual/interaction execution        PENDING
+```
+
+The execution container could not resolve GitHub hosts for an exact local Chromium run, so static verification is intentionally not presented as browser acceptance.
 
 ---
 
@@ -334,7 +356,7 @@ Browser/visual interaction review remains required after static verification.
 
 Do not move from this Work Order to production runtime implementation.
 
-If the new prototype reveals:
+If review exposes:
 
 - ordinary visual/layout problem -> fix prototype/default/catalog;
 - material Product workflow/capability change -> reconcile Product Decision/integrated plan;
@@ -346,9 +368,10 @@ If the new prototype reveals:
 
 ```text
 PROTO-WO-001: HISTORICAL / INVALIDATED CANDIDATES
-PROTO-WO-002: AUTHORIZED
-INTEGRATED BASELINE: ACTIVE
-MAPLESS REBUILD SPEC: READY AFTER CATALOG RECONCILIATION
-TARGET NEW ENTRY: app/integrated-reference.html
+PROTO-WO-002: STATIC REVIEW CANDIDATE BUILT
+ACTIVE ENTRY: app/integrated-reference.html
+STATIC VERIFICATION: PASS
+BROWSER VISUAL / INTERACTION QA: PENDING
+OWNER ACCEPTANCE: PENDING
 RUNTIME src IMPLEMENTATION: NOT AUTHORIZED
 ```
