@@ -1,13 +1,14 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: invalidated_rebuild_required
-html_prototype_status: no_active_review_candidate
+status: mapless_rebuild_authorized
+html_prototype_status: new_candidate_build_authorized
 prototype_owner_acceptance: not_started
 runtime_ui_implementation_allowed: false
 
 paths:
   root: docs/design/ui-ux/prototype/
   app: docs/design/ui-ux/prototype/app/
+  target_new_review_entry: docs/design/ui-ux/prototype/app/integrated-reference.html
   active_review_entry: null
   invalidated_latest_entry: docs/design/ui-ux/prototype/app/final-spec.html
   historical_rejected_entry: docs/design/ui-ux/prototype/app/index.html
@@ -39,6 +40,7 @@ source_priority:
     - docs/design/ui-ux/registry.md
     - docs/design/ui-ux/matrices.md
   prototype_detail:
+    - docs/design/ui-ux/prototype/PROTOTYPE-REBUILD-CONTRACT.md
     - docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
     - docs/design/ui-ux/prototype/SURFACE-CATALOG.md
     - docs/design/ui-ux/prototype/COMPONENT-CATALOG.md
@@ -64,6 +66,9 @@ files:
   integrated_plan:
     path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
     role: mandatory_cross_source_baseline
+  rebuild_contract:
+    path: docs/design/ui-ux/prototype/PROTOTYPE-REBUILD-CONTRACT.md
+    role: active_mapless_prototype_execution_contract
   design_defaults:
     path: docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
     role: ai_managed_design_defaults
@@ -73,7 +78,7 @@ files:
     role: prototype_surface_inventory
   components:
     path: docs/design/ui-ux/prototype/COMPONENT-CATALOG.md
-    role: prototype_component_inventory
+    role: reusable_component_inventory
   layers:
     path: docs/design/ui-ux/prototype/LAYER-MODEL.md
     role: prototype_layer_and_coexistence_model
@@ -95,6 +100,7 @@ files:
   work_order:
     path: docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
     role: prototype_scope_and_execution_record
+    active_id: PROTO-WO-002
 
 invalidated_candidates:
   - entry: docs/design/ui-ux/prototype/app/index.html
@@ -133,6 +139,7 @@ prototype_rules:
   initiative_must_preserve_actor_boards: true
   freeform_fake_turn_economy_forbidden: true
   dm_player_must_share_core_play_skeleton: true
+  historical_intent_first_funnel_is_not_primary_capability_access: true
 
 review_viewports:
   note: prototype_test_presets_not_canonical_product_breakpoints
@@ -142,16 +149,19 @@ review_viewports:
 
 phase_gate:
   P0_specification:
-    status: needs_reconciliation
-    required_before_pass:
-      - prototype_catalogs_updated_from_integrated_baseline
-      - mapless_terminology_guards_added
-      - first_run_tutorial_flow_made_primary
-      - standalone_roll_contract_made_explicit
+    status: passed_for_mapless_rebuild
+    evidence:
+      - integrated_product_ux_plan_created
+      - prototype_rebuild_contract_created
+      - design_defaults_reconciled
+      - surface_catalog_reconciled
+      - layer_model_reconciled
+      - scenario_catalog_reconciled
+      - mock_data_contract_reconciled
+      - work_order_PROTO_WO_002_authorized
   P1_html_build:
-    status: blocked_rebuild_required
-    active_candidate: null
-    invalidated_candidate: docs/design/ui-ux/prototype/app/final-spec.html
+    status: authorized_not_yet_verified
+    target_candidate: docs/design/ui-ux/prototype/app/integrated-reference.html
     allowed_write_scope:
       - docs/design/ui-ux/prototype/app/
       - docs/design/ui-ux/prototype/
@@ -159,8 +169,8 @@ phase_gate:
     forbidden_write_scope:
       - src/
   P2_review_iteration:
-    status: blocked
-    next_action: reconcile_prototype_specs_then_build_new_candidate_from_integrated_plan
+    status: blocked_until_new_candidate_static_verification
+    next_action: build_integrated_reference_candidate_then_verify_against_mapless_contract
   P3_owner_acceptance:
     status: not_started
     requires_explicit_owner_acceptance: true
@@ -169,7 +179,6 @@ phase_gate:
     requires:
       - valid_rebuilt_prototype
       - prototype_owner_acceptance
-      - owner_corrections_reconciled_into_canonical_runtime_planning
       - applicable_domain_architecture_gaps_resolved_for_scope
       - legacy_ux_reconciliation_for_scope
       - required_surface_component_motion_contracts
@@ -180,7 +189,8 @@ phase_gate:
 
 blocking_rule:
   invalidated_candidate_must_not_be_reviewed_or_accepted: true
-  prototype_rebuild_must_start_from_integrated_plan: true
+  new_candidate_must_be_derived_from_integrated_plan: true
+  new_candidate_must_pass_mapless_static_and_browser_review: true
   broad_runtime_ui_must_not_start_before_P4: true
   prototype_acceptance_alone_authorizes_runtime: false
   reviewed_decisions_alone_authorize_runtime: false
