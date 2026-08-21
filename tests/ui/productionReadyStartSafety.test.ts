@@ -48,58 +48,50 @@ function installFakeDesktopTransport() {
   };
 }
 
-async function prepareReadyHost(adapter:MockAdapter) {
-  await adapter.hostSession();
-  const state=connectedStateFor(adapter);
-  const app=connectedInternal(adapter);
-  assert.ok(state.sessionId);
-  state.peerManifests.set("peer.player",connectedManifest(adapter));
-  state.peerParticipants.set("peer.player","client:char.phase14.player");
-  app.session.participants=[
-    {id:"host",name:"DM Host",state:"connected",ready:false},
-    {id:"client:char.phase14.player",name:"Phase14 Player",characterName:"Phase14 Player",state:"connected",ready:true},
-  ];
-  return {state,app};
-}
-
-test("Host exact peer disconnect resets only that participant Ready through authoritative events and blocks Start",async()=>{
+test("Host opens live Freeform immediately with zero Players and publishes authoritative mode state",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
-    const {state}=await prepareReadyHost(adapter);
+    const live=await adapter.hostSession();
+    const state=connectedStateFor(adapter);
 
-    transport.emitPeer({peer:"peer.player",state:"disconnected"});
-    await new Promise<void>((resolve)=>setImmediate(resolve));
-    const dropped=await adapter.getSnapshot();
-    const player=dropped.session.participants.find((participant)=>participant.id==="client:char.phase14.player");
-    assert.equal(player?.state,"disconnected");
-    assert.equal(player?.ready,false);
-    assert.match(dropped.session.compatibilityMessage,/Host runtime is preserved for reconnect/);
-    assert.equal(state.peerParticipants.get("peer.player"),"client:char.phase14.player","disconnect must preserve the accepted mapping for reconnect identity");
-    assert.ok(state.ledger?.eventsAfter(0).some((event)=>event.payload.kind==="participant"&&event.payload.state==="disconnected"&&event.payload.ready===false&&event.payload.provenance.some((entry)=>entry.includes("exact transport disconnect: peer.player"))));
-    assert.ok(transport.sent().some((message)=>message.type==="event-batch"&&message.events.some((event)=>event.payload.kind==="participant"&&event.payload.state==="disconnected"&&event.payload.ready===false)));
-
-    const blocked=await adapter.startPreparedSession("initiative");
-    assert.equal(blocked.session.lifecycle,"preparing");
-    assert.equal(state.sessionStarted,false);
-    assert.match(blocked.session.compatibilityMessage,/not connected/);
+    assert.equal(live.session.lifecycle,"live");
+    assert.equal(live.sessionMode,"freeform");
+    assert.equal(state.sessionStarted,true);
+    assert.deepEqual(live.session.participants.map((participant)=>participant.id),["host"]);
+    assert.ok(state.ledger?.eventsAfter(0).some((event)=>event.payload.kind==="mode-transition"&&event.payload.sessionMode==="freeform"));
+    assert.ok(transport.sent().some((message)=>message.type==="event-batch"&&message.events.some((event)=>event.payload.kind==="mode-transition"&&event.payload.sessionMode==="freeform")));
   } finally {
     transport.restore();
   }
 });
 
-test("Host starts a fully Ready prepared participant set into Freeform through the authoritative mode event",async()=>{
+test("Player disconnect during live play preserves Host authority and does not create a Ready/Start gate",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
-    const {state}=await prepareReadyHost(adapter);
-    const live=await adapter.startPreparedSession("freeform");
+    await adapter.hostSession();
+    const state=connectedStateFor(adapter);
+    const app=connectedInternal(adapter);
+    state.peerManifests.set("peer.player",connectedManifest(adapter));
+    state.peerParticipants.set("peer.player","client:char.phase14.player");
+    app.session.participants=[
+      {id:"host",name:"DM Host",state:"connected",ready:false},
+      {id:"client:char.phase14.player",name:"Phase14 Player",characterName:"Phase14 Player",state:"connected",ready:false},
+    ];
 
-    assert.equal(live.session.lifecycle,"live");
-    assert.equal(live.sessionMode,"freeform");
+    transport.emitPeer({peer:"peer.player",state:"disconnected"});
+    await new Promise<void>((resolve)=>setImmediate(resolve));
+    const dropped=await adapter.getSnapshot();
+    const player=dropped.session.participants.find((participant)=>participant.id==="client:char.phase14.player");
+    assert.equal(dropped.session.lifecycle,"live");
+    assert.equal(dropped.sessionMode,"freeform");
     assert.equal(state.sessionStarted,true);
-    assert.ok(state.ledger?.eventsAfter(0).some((event)=>event.payload.kind==="mode-transition"&&event.payload.sessionMode==="freeform"));
-    assert.ok(transport.sent().some((message)=>message.type==="event-batch"&&message.events.some((event)=>event.payload.kind==="mode-transition"&&event.payload.sessionMode==="freeform")));
+    assert.equal(player?.state,"disconnected");
+    assert.match(dropped.session.compatibilityMessage,/Host runtime is preserved for reconnect/);
+    assert.equal(state.peerParticipants.get("peer.player"),"client:char.phase14.player","disconnect must preserve the accepted mapping for reconnect identity");
+    assert.ok(state.ledger?.eventsAfter(0).some((event)=>event.payload.kind==="participant"&&event.payload.state==="disconnected"&&event.payload.provenance.some((entry)=>entry.includes("exact transport disconnect: peer.player"))));
+    assert.ok(transport.sent().some((message)=>message.type==="event-batch"&&message.events.some((event)=>event.payload.kind==="participant"&&event.payload.state==="disconnected")));
   } finally {
     transport.restore();
   }
