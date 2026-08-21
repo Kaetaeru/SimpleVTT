@@ -112,7 +112,7 @@ async function sendHelloWithInventory(adapter:MockAdapter,hello:HelloWire) {
     app.session.compatibilityMessage="콘텐츠 확인 중 · Host 설치 콘텐츠와 비교합니다.";
     return parityBaseSend(JSON.stringify({...hello,installedContent}));
   } catch(error) {
-    const message=`콘텐츠 확인 실패 · Ready 불가: ${error instanceof Error?error.message:String(error)}`;
+    const message=`콘텐츠 확인 실패 · 참가 불가: ${error instanceof Error?error.message:String(error)}`;
     setParity(adapter,"error",message);
     app.session.compatibility="warning";
     app.session.compatibilityMessage=message;
@@ -181,7 +181,7 @@ async function clientParityPreflight(adapter:MockAdapter,message:SessionTranspor
     requiredContent=parseRequiredContent(raw.requiredContent);
   } catch(error) {
     const detail=error instanceof Error?error.message:String(error);
-    const parityMessage=`콘텐츠 검증 실패 · Ready 불가: ${detail}`;
+    const parityMessage=`콘텐츠 검증 실패 · 참가 불가: ${detail}`;
     setParity(adapter,"error",parityMessage);
     app.session.compatibility="warning";
     app.session.compatibilityMessage=parityMessage;
@@ -190,7 +190,7 @@ async function clientParityPreflight(adapter:MockAdapter,message:SessionTranspor
   }
 
   if (requiredContent.length) {
-    const receiving=`필요한 콘텐츠 받기 (${requiredContent.length}) → 검증 중 · Ready 대기`;
+    const receiving=`필요한 콘텐츠 받기 (${requiredContent.length}) → 검증 중 · 연결 대기`;
     setParity(adapter,"syncing",receiving);
     app.session.compatibility="warning";
     app.session.compatibilityMessage=receiving;
@@ -200,7 +200,7 @@ async function clientParityPreflight(adapter:MockAdapter,message:SessionTranspor
       const hello=lastClientHello.get(adapter);
       if (!hello) throw new Error("재검증에 사용할 Client hello가 없습니다.");
       const refreshedHello=refreshedClientHello(adapter,hello);
-      const checking="콘텐츠 검증 완료 → Host 준비 상태 재확인 중";
+      const checking="콘텐츠 검증 완료 → Host 플레이 상태 재확인 중";
       setParity(adapter,"checking",checking);
       app.session.compatibility="warning";
       app.session.compatibilityMessage=checking;
@@ -208,7 +208,7 @@ async function clientParityPreflight(adapter:MockAdapter,message:SessionTranspor
       await sendHelloWithInventory(adapter,refreshedHello);
     } catch(error) {
       const detail=error instanceof Error?error.message:String(error);
-      const parityMessage=`콘텐츠 동기화 실패 · Ready 불가: ${detail}`;
+      const parityMessage=`콘텐츠 동기화 실패 · 참가 불가: ${detail}`;
       setParity(adapter,"error",parityMessage);
       app.session.compatibility="warning";
       app.session.compatibilityMessage=parityMessage;
@@ -243,7 +243,7 @@ async function onMessageWithInstalledContentParity(handler:(message:SessionTrans
       .catch(async(error)=>{
         const app=connectedInternal(adapter);
         const detail=error instanceof Error?error.message:String(error);
-        const parityMessage=`콘텐츠 동기화 실패 · Ready 불가: ${detail}`;
+        const parityMessage=`콘텐츠 동기화 실패 · 참가 불가: ${detail}`;
         setParity(adapter,"error",parityMessage);
         app.session.compatibility="warning";
         app.session.compatibilityMessage=parityMessage;
@@ -297,7 +297,7 @@ MockAdapter.prototype.setSessionReady=async function setSessionReadyAfterContent
     if (parity.status!=="ready") {
       const app=connectedInternal(this);
       app.session.compatibility="warning";
-      app.session.compatibilityMessage=parity.status==="error" ? parity.message : `콘텐츠 확인이 끝날 때까지 Ready할 수 없습니다. ${parity.message}`;
+      app.session.compatibilityMessage=parity.status==="error" ? parity.message : `콘텐츠 확인이 끝날 때까지 참가 준비를 완료할 수 없습니다. ${parity.message}`;
       return app.getSnapshot();
     }
   }
