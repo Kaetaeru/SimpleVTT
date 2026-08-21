@@ -1,5 +1,6 @@
 import { useSimpleVtt } from "./app/AppProvider";
 import "./session-main-focus.css";
+import "./session-integrated-reference-chrome.css";
 
 export function SessionMainFocus({ role, onOpenActivity: _onOpenActivity }: { role: "player" | "dm"; onOpenActivity(button: HTMLButtonElement): void }) {
   const { snapshot } = useSimpleVtt();
