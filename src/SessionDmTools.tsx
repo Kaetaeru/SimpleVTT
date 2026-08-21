@@ -154,7 +154,7 @@ export function SessionParticipantsPane({ onClose }: { onClose(): void }) {
   </aside>;
 }
 
-export function SessionSharePane({ onClose }: { onClose(): void }) {
+export function SessionSharePane({ onClose, onOpenHandout }: { onClose(): void; onOpenHandout(): void }) {
   const { snapshot, stopSession } = useSimpleVtt();
   const [copied, setCopied] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -187,6 +187,10 @@ export function SessionSharePane({ onClose }: { onClose(): void }) {
       <span>연결</span><strong>{connectionLabel(snapshot.connectionState)}</strong>
     </section>
     {compatibilityProblem && <p className="session-dm-warning" role="status">{snapshot.session.compatibilityMessage}</p>}
+    <section className="session-dm-section">
+      <div className="session-dm-section-title"><strong>Handout</strong><span>승인된 Play chrome을 유지하면서 이미지 공유 도구는 Session pane에서 엽니다.</span></div>
+      <button type="button" onClick={onOpenHandout}>이미지 보여주기</button>
+    </section>
     <section className="session-dm-section">
       <div className="session-dm-section-title"><strong>활성 콘텐츠</strong><span>현재 세션에서 사용하는 추가 콘텐츠입니다.</span></div>
       {snapshot.session.sessionContent.length ? <ul className="session-dm-content-list">{snapshot.session.sessionContent.map((entry) => <li key={entry}>{entry}</li>)}</ul> : <p className="session-dm-empty">추가 활성 콘텐츠가 없습니다.</p>}
