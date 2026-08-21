@@ -37,13 +37,15 @@ test("Standalone and Session hosts share one persisted Sheet workspace and canon
   assert.doesNotMatch(workspace, /useState<[^>]*Character|new Map<[^>]*Character/i);
 });
 
-test("Session Sheet never presents local random rolls or an embedded dice tray as shared authority", () => {
+test("Session Sheet never presents local random rolls as shared authority while standalone uses the global dice presentation", () => {
   assert.match(legacy, /if\(hostMode==="session"\)\{ sessionReference\(label\); return; \}/);
   assert.match(official, /if \(hostMode === "session"\) \{ sessionReference\(label\); return; \}/);
-  assert.match(legacy, /hostMode==="standalone"&&roll&&<section className="sheet-roll-result"/);
-  assert.match(official, /hostMode === "standalone" && roll && <section className="sheet-roll-result"/);
-  assert.match(legacy, /VisualDiceTray/);
-  assert.match(official, /VisualDiceTray/);
+  assert.match(legacy, /hostMode==="standalone"&&roll&&<section className="sheet-roll-result compact-result"/);
+  assert.match(official, /hostMode === "standalone" && roll && <section className="sheet-roll-result compact-result"/);
+  assert.match(legacy, /presentLocalDiceRoll\(next\)/);
+  assert.match(official, /presentLocalDiceRoll\(next\)/);
+  assert.doesNotMatch(legacy, /VisualDiceTray/);
+  assert.doesNotMatch(official, /VisualDiceTray/);
   assert.match(legacy, /공유 판정은 Session Action 경로/);
   assert.match(official, /공유 판정은 Session Action 경로/);
 });
