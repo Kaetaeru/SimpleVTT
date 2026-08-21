@@ -9,8 +9,8 @@ const css = readFileSync("src/session-integrated-reference-play.css", "utf8");
 test("Connected Play uses the accepted persistent Command Center with direct Hotbar pages", () => {
   assert.match(root, /aria-label="Command Center"/);
   assert.match(root, /<SessionActionDock/);
-  assert.match(dock, /type HotbarPage = "mixed" \| "action" \| "spell" \| "item"/);
-  for (const label of ["Mixed", "Action", "Spell", "Item"]) assert.match(dock, new RegExp(`label: "${label}"`));
+  assert.match(dock, /type HotbarPage = "mixed" \| "action" \| "spell" \| "item" \| "custom"/);
+  for (const label of ["Mixed", "Action", "Spell", "Item", "Custom"]) assert.match(dock, new RegExp(`label: "${label}"`));
   assert.match(dock, /snapshot\.scene\.actionsByActor\[actorId\]/);
   assert.doesNotMatch(dock, /OFFICIAL_PLAY_INTENTS|intentOptions|FREEFORM_RESTING|INITIATIVE_RESTING|모든 행동/);
 });
@@ -40,6 +40,7 @@ test("Hotbar page filters remain presentation over canonical ActionVm projection
   assert.match(dock, /function pageIncludes\(page: HotbarPage, action: ActionVm\)/);
   assert.match(dock, /page === "spell"[\s\S]*action\.category === "magic"/);
   assert.match(dock, /page === "item"[\s\S]*Boolean\(action\.itemCost\)/);
+  assert.match(dock, /page === "custom"[\s\S]*return false/);
   assert.match(dock, /visibleActions = useMemo\(\(\) => actions\.filter/);
   assert.match(dock, /action\.available/);
   assert.match(dock, /action\.disabledReason/);
