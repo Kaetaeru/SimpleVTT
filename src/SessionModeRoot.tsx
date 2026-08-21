@@ -7,6 +7,7 @@ import { VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS } from "./app/dice
 import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock } from "./SessionActionDock";
+import { SessionActorBoard } from "./SessionActorBoards";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
 import {
   dismissCurrentSessionImageHandout,
@@ -21,6 +22,7 @@ import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionPlayerSession";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
+import "./session-connected-layout.css";
 
 type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | null;
@@ -150,29 +152,36 @@ export function SessionModeRoot() {
       </div>
     </header>
 
-    <SessionInitiativeStrip role={role} />
+    <div className="session-play-workspace">
+      <SessionActorBoard position="upper" role={role} />
 
-    <div className="session-mode-body">
-      <main className="session-mode-main" aria-label="현재 세션">
-        <SessionMainFocus role={role} onOpenActivity={(button) => toggleUtility("activity", button)} />
-      </main>
+      <section className="session-play-context" aria-label="Tabletop Stage">
+        <SessionInitiativeStrip role={role} />
+        <div className="session-mode-body">
+          <main className="session-mode-main" aria-label="현재 세션">
+            <SessionMainFocus role={role} onOpenActivity={(button) => toggleUtility("activity", button)} />
+          </main>
 
-      <aside className="session-mode-rail" aria-label="세션 도구">
-        {role === "player"
-          ? <button type="button" className={activeUtility === "quick-sheet" ? "active" : ""} aria-pressed={activeUtility === "quick-sheet"} aria-label="빠른 캐릭터 시트 열기" onClick={(event) => toggleUtility("quick-sheet", event.currentTarget)}><span>시트</span></button>
-          : <button type="button" className={activeUtility === "actor" ? "active" : ""} aria-pressed={activeUtility === "actor"} aria-label="행동할 Actor 열기" onClick={(event) => toggleUtility("actor", event.currentTarget)}><span>Actor</span></button>}
-        <button type="button" className={activeUtility === "rules" ? "active" : ""} aria-pressed={activeUtility === "rules"} aria-label="세션 규칙 찾아보기" onClick={(event) => toggleUtility("rules", event.currentTarget)}><span>규칙</span></button>
-        {role === "dm" && <button type="button" className={activeUtility === "encounter" ? "active" : ""} aria-pressed={activeUtility === "encounter"} aria-label="Encounter 도구 열기" onClick={(event) => toggleUtility("encounter", event.currentTarget)}><span>Encounter</span></button>}
-        {role === "dm" && <button type="button" className={activeUtility === "participants" ? "active" : ""} aria-pressed={activeUtility === "participants"} aria-label="참가자 보기" onClick={(event) => toggleUtility("participants", event.currentTarget)}><span>참가자</span></button>}
-        {role === "dm" && <button type="button" className={activeUtility === "handout" ? "active" : ""} aria-pressed={activeUtility === "handout"} aria-label="Handout 도구 열기" onClick={(event) => toggleUtility("handout", event.currentTarget)}><span>자료</span></button>}
-        <button type="button" className={activeUtility === "activity" ? "active" : ""} aria-pressed={activeUtility === "activity"} aria-label="최근 세션 결과 보기" onClick={(event) => toggleUtility("activity", event.currentTarget)}><span>기록</span></button>
-        {role === "player" && <SessionPlayerHandoutRailButton />}
-        {role === "player" && <button type="button" className={activeUtility === "player-session" ? "active" : ""} aria-pressed={activeUtility === "player-session"} aria-label="Player 세션 연결 열기" onClick={(event) => toggleUtility("player-session", event.currentTarget)}><span>세션</span></button>}
-        {role === "dm" && <button type="button" className={activeUtility === "session" ? "active" : ""} aria-pressed={activeUtility === "session"} aria-label="세션 공유 정보 열기" onClick={(event) => toggleUtility("session", event.currentTarget)}><span>세션</span></button>}
-      </aside>
+          <aside className="session-mode-rail" aria-label="세션 도구">
+            {role === "player"
+              ? <button type="button" className={activeUtility === "quick-sheet" ? "active" : ""} aria-pressed={activeUtility === "quick-sheet"} aria-label="빠른 캐릭터 시트 열기" onClick={(event) => toggleUtility("quick-sheet", event.currentTarget)}><span>시트</span></button>
+              : <button type="button" className={activeUtility === "actor" ? "active" : ""} aria-pressed={activeUtility === "actor"} aria-label="행동할 Actor 열기" onClick={(event) => toggleUtility("actor", event.currentTarget)}><span>Actor</span></button>}
+            <button type="button" className={activeUtility === "rules" ? "active" : ""} aria-pressed={activeUtility === "rules"} aria-label="세션 규칙 찾아보기" onClick={(event) => toggleUtility("rules", event.currentTarget)}><span>규칙</span></button>
+            {role === "dm" && <button type="button" className={activeUtility === "encounter" ? "active" : ""} aria-pressed={activeUtility === "encounter"} aria-label="Encounter 도구 열기" onClick={(event) => toggleUtility("encounter", event.currentTarget)}><span>Encounter</span></button>}
+            {role === "dm" && <button type="button" className={activeUtility === "participants" ? "active" : ""} aria-pressed={activeUtility === "participants"} aria-label="참가자 보기" onClick={(event) => toggleUtility("participants", event.currentTarget)}><span>참가자</span></button>}
+            {role === "dm" && <button type="button" className={activeUtility === "handout" ? "active" : ""} aria-pressed={activeUtility === "handout"} aria-label="Handout 도구 열기" onClick={(event) => toggleUtility("handout", event.currentTarget)}><span>자료</span></button>}
+            <button type="button" className={activeUtility === "activity" ? "active" : ""} aria-pressed={activeUtility === "activity"} aria-label="최근 세션 결과 보기" onClick={(event) => toggleUtility("activity", event.currentTarget)}><span>기록</span></button>
+            {role === "player" && <SessionPlayerHandoutRailButton />}
+            {role === "player" && <button type="button" className={activeUtility === "player-session" ? "active" : ""} aria-pressed={activeUtility === "player-session"} aria-label="Player 세션 연결 열기" onClick={(event) => toggleUtility("player-session", event.currentTarget)}><span>세션</span></button>}
+            {role === "dm" && <button type="button" className={activeUtility === "session" ? "active" : ""} aria-pressed={activeUtility === "session"} aria-label="세션 공유 정보 열기" onClick={(event) => toggleUtility("session", event.currentTarget)}><span>세션</span></button>}
+          </aside>
+        </div>
+      </section>
+
+      <SessionActorBoard position="lower" role={role} />
     </div>
 
-    <footer className="session-mode-action-dock" aria-label="행동 도구">
+    <footer className="session-mode-action-dock" aria-label="Command Center">
       <SessionActionDock
         actorId={actionActorId}
         suspended={Boolean(activeUtility || workspaceLayer || snapshot.resolution || playerHandoutOpen)}
