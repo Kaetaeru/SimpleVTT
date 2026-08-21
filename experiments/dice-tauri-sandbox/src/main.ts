@@ -1,5 +1,10 @@
 import "./styles.css";
 import { DiceWorld, type DieSides, type PhysicsSettings, type ThrowOptions, type WorldStats } from "./dice-world";
+import {
+  DICE_VISUAL_PRESET_ORDER,
+  getDiceVisualPreset,
+  type DiceVisualPresetId,
+} from "./dice-visual-presets";
 
 const DIE_TYPES: DieSides[] = [4, 6, 8, 10, 12, 20];
 
@@ -58,6 +63,7 @@ function errorText(error: unknown) {
 
 const canvas = element<HTMLCanvasElement>("dice-stage");
 const diceTypeButtons = element<HTMLDivElement>("dice-type-buttons");
+const visualPresetButtons = element<HTMLDivElement>("visual-preset-buttons");
 const countInput = element<HTMLInputElement>("dice-count");
 const countValue = element<HTMLElement>("count-value");
 const presetSelect = element<HTMLSelectElement>("preset-select");
@@ -74,10 +80,12 @@ const hideControlsButton = element<HTMLButtonElement>("hide-controls");
 const showControlsButton = element<HTMLButtonElement>("show-controls");
 
 let selectedSides: DieSides = 6;
+let selectedVisualPreset: DiceVisualPresetId = "classic-metal";
 let settings: PhysicsSettings = { ...PRESETS.default };
 let lastReportedSettle: number | null = null;
 
 const world = new DiceWorld(canvas, settings);
+world.setVisualPreset(selectedVisualPreset);
 
 function renderDiceButtons() {
   diceTypeButtons.replaceChildren();
@@ -92,6 +100,46 @@ function renderDiceButtons() {
       renderDiceButtons();
     });
     diceTypeButtons.append(button);
+  }
+}
+
+function renderVisualPresetButtons() {
+  visualPresetButtons.replaceChildren();
+
+  for (const presetId of DICE_VISUAL_PRESET_ORDER) {
+    const preset = getDiceVisualPreset(presetId);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `visual-preset-card${presetId === selectedVisualPreset ? " active" : ""}`;
+    button.setAttribute("aria-pressed", presetId === selectedVisualPreset ? "true" : "false");
+
+    const swatch = document.createElement("span");
+    swatch.className = "visual-preset-swatch";
+    swatch.dataset.preset = presetId;
+
+    const copy = document.createElement("span");
+    copy.className = "visual-preset-copy";
+
+    const label = document.createElement("strong");
+    label.textContent = preset.label;
+
+    const description = document.createElement("small");
+    description.textContent = preset.description;
+
+    copy.append(label, description);
+    button.append(swatch, copy);
+    button.addEventListener("click", () => {
+      if (selectedVisualPreset === presetId) return;
+      selectedVisualPreset = presetId;
+      world.clear();
+      world.setVisualPreset(presetId);
+      lastReportedSettle = null;
+      statsText.textContent = "주사위 0개";
+      statusText.textContent = `${preset.label} 디자인 적용 · 다음 투척부터 사용`;
+      renderVisualPresetButtons();
+    });
+
+    visualPresetButtons.append(button);
   }
 }
 
@@ -114,14 +162,15 @@ function applyPreset(name: string) {
   settings = { ...preset };
   world.setSettings(settings);
   syncPhysicsControls();
-  statusText.textContent = `${presetSelect.selectedOptions[0]?.textContent ?? "기본"} 프리셋 적용`;
+  statusText.textContent = `${presetSelect.selectedOptions[0]?.textContent ?? "기본"} 물리 프리셋 적용`;
 }
 
 function executeThrow(label: string, options: ThrowOptions) {
   try {
     world.throw(options);
     lastReportedSettle = null;
-    statusText.textContent = `${label} · 물리 body 생성/속도 적용 완료`;
+    const visual = getDiceVisualPreset(selectedVisualPreset);
+    statusText.textContent = `${label} · ${visual.label}`;
   } catch (error) {
     const message = errorText(error);
     statusText.textContent = `투척 오류 · ${message}`;
@@ -239,16 +288,9 @@ window.addEventListener("unhandledrejection", (event) => {
 
 world.onStats(updateStats);
 renderDiceButtons();
+renderVisualPresetButtons();
 syncPhysicsControls();
 world.setDebugBounds(false);
-statusText.textContent = "물리 엔진 준비됨 · d6 자동 진단 투척 대기";
-
-window.setTimeout(() => {
-  executeThrow("자동 진단 d6", {
-    sides: [6],
-    keepPrevious: false,
-    diceCollision: true,
-  });
-}, 700);
+statusText.textContent = "준비됨 · 디자인 프리셋을 고르고 던져보세요";
 
 window.addEventListener("beforeunload", () => world.destroy());
