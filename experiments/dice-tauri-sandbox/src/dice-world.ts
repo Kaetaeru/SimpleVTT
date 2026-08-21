@@ -35,10 +35,10 @@ type FaceDescriptor = {
 };
 
 type DieRuntime = {
-  sides: DieSides;
   group: THREE.Group;
   body: CANNON.Body;
-  faces: FaceDescriptor[];
+  coreGeometry: THREE.BufferGeometry;
+  edgeGeometry: THREE.EdgesGeometry;
 };
 
 type Bounds = {
@@ -54,6 +54,7 @@ const BRONZE_DARK = 0x3c1e0d;
 const NUMBER_COLOR = "#f8e2bc";
 const CAMERA_HEIGHT = 18;
 const CAMERA_FOV = 36;
+const MAX_RETAINED_DICE = 48;
 
 const MASS_BY_SIDES: Record<DieSides, number> = {
   4: 0.82,
@@ -62,6 +63,15 @@ const MASS_BY_SIDES: Record<DieSides, number> = {
   10: 0.96,
   12: 1.04,
   20: 0.98,
+};
+
+const LABEL_SIZE_BY_SIDES: Record<DieSides, number> = {
+  4: 0.46,
+  6: 0.5,
+  8: 0.42,
+  10: 0.38,
+  12: 0.36,
+  20: 0.32,
 };
 
 function d10Geometry() {
@@ -126,59 +136,6 @@ function faceDescriptors(source: THREE.BufferGeometry, expectedCount: number) {
   }));
 }
 
-function numberTexture(value: number) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 192;
-  canvas.height = 192;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("2D canvas context를 만들 수 없습니다.");
-
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.font = value >= 10 ? "800 70px Georgia, serif" : "800 82px Georgia, serif";
-  context.lineJoin = "round";
-  context.lineWidth = 13;
-  context.strokeStyle = "rgba(29, 13, 4, .86)";
-  context.strokeText(String(value), 96, 101);
-  context.fillStyle = NUMBER_COLOR;
-  context.fillText(String(value), 96, 101);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
-  return texture;
-}
-
-function attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: DieSides) {
-  const sizeBySides: Record<DieSides, number> = {
-    4: 0.46,
-    6: 0.5,
-    8: 0.42,
-    10: 0.38,
-    12: 0.36,
-    20: 0.32,
-  };
-  const forward = new THREE.Vector3(0, 0, 1);
-
-  for (const face of faces) {
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(sizeBySides[sides], sizeBySides[sides]),
-      new THREE.MeshBasicMaterial({
-        map: numberTexture(face.value),
-        transparent: true,
-        depthWrite: false,
-        alphaTest: 0.04,
-        side: THREE.FrontSide,
-      }),
-    );
-    const normal = face.normal.clone().normalize();
-    plane.position.copy(face.center).addScaledVector(normal, 0.018);
-    plane.quaternion.setFromUnitVectors(forward, normal);
-    group.add(plane);
-  }
-}
-
 function colliderFor(source: THREE.BufferGeometry, sides: DieSides) {
   if (sides === 6) return new CANNON.Box(new CANNON.Vec3(0.62, 0.62, 0.62));
 
@@ -212,18 +169,6 @@ function colliderFor(source: THREE.BufferGeometry, sides: DieSides) {
   }
 }
 
-function disposeObject(root: THREE.Object3D) {
-  root.traverse((node) => {
-    if (!(node instanceof THREE.Mesh)) return;
-    node.geometry.dispose();
-    const materials = Array.isArray(node.material) ? node.material : [node.material];
-    for (const material of materials) {
-      if (material instanceof THREE.MeshBasicMaterial && material.map) material.map.dispose();
-      material.dispose();
-    }
-  });
-}
-
 export class DiceWorld {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: THREE.WebGLRenderer;
@@ -237,6 +182,22 @@ export class DiceWorld {
   private readonly floorMesh: THREE.Mesh;
   private readonly boundaryDebug: THREE.LineLoop;
   private readonly dice: DieRuntime[] = [];
+  private readonly coreMaterial = new THREE.MeshStandardMaterial({
+    color: BRONZE,
+    emissive: BRONZE_DARK,
+    emissiveIntensity: 0.16,
+    roughness: 0.3,
+    metalness: 0.33,
+    flatShading: true,
+  });
+  private readonly edgeMaterial = new THREE.LineBasicMaterial({
+    color: 0x3a1f10,
+    transparent: true,
+    opacity: 0.72,
+  });
+  private readonly numberTextures = new Map<number, THREE.CanvasTexture>();
+  private readonly numberMaterials = new Map<number, THREE.MeshBasicMaterial>();
+  private readonly labelGeometries = new Map<DieSides, THREE.PlaneGeometry>();
   private wallBodies: CANNON.Body[] = [];
   private bounds: Bounds = { halfWidth: 7, minZ: -5.2, maxZ: 5.2 };
   private settings: PhysicsSettings;
@@ -257,7 +218,9 @@ export class DiceWorld {
       alpha: true,
       powerPreference: "high-performance",
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // 2x DPR plus a 2048 shadow map caused unnecessary GPU pressure in a
+    // throw-heavy test. 1.5x is still sharp in Tauri while avoiding churn.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -265,8 +228,8 @@ export class DiceWorld {
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.setClearColor(0x000000, 0);
 
-    // 화면 자체가 테이블이다. 카메라 화면면과 바닥면을 평행하게 두고
-    // 광축은 테이블에 정확히 수직으로 내려다본다.
+    // 화면 자체가 테이블이다. 화면면과 테이블면은 평행하고 카메라 광축은
+    // 테이블을 정확히 수직으로 내려다본다.
     this.camera.position.set(0, CAMERA_HEIGHT, 0);
     this.camera.up.set(0, 0, -1);
     this.camera.lookAt(0, 0, 0);
@@ -275,7 +238,7 @@ export class DiceWorld {
     const key = new THREE.DirectionalLight(0xffc986, 4.1);
     key.position.set(-5.5, 9, 4.5);
     key.castShadow = true;
-    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.mapSize.set(1024, 1024);
     key.shadow.camera.left = -12;
     key.shadow.camera.right = 12;
     key.shadow.camera.top = 12;
@@ -301,7 +264,7 @@ export class DiceWorld {
     this.world.allowSleep = true;
     this.world.broadphase = new CANNON.SAPBroadphase(this.world);
     const solver = this.world.solver as CANNON.GSSolver;
-    solver.iterations = 14;
+    solver.iterations = 12;
     solver.tolerance = 0.001;
 
     this.floorBody = new CANNON.Body({
@@ -379,6 +342,12 @@ export class DiceWorld {
   throw(options: ThrowOptions) {
     if (!options.keepPrevious) this.clear();
     this.setDiceCollision(options.diceCollision);
+
+    // Keep-previous is a comparison tool, not an unlimited scene allocator.
+    // Remove oldest dice before a large retained set can overload physics/GPU.
+    const overflow = this.dice.length + options.sides.length - MAX_RETAINED_DICE;
+    if (overflow > 0) this.removeOldest(overflow);
+
     this.lastThrowAt = performance.now();
     this.settledAt = null;
 
@@ -397,8 +366,6 @@ export class DiceWorld {
       const forward = this.settings.throwSpeed * (0.91 + Math.random() * 0.17);
       runtime.body.velocity.set(lateral, -2.3 - Math.random() * 1.2, forward);
 
-      // 화면 위->아래(+Z)로 진행하므로 X축 회전이 실제 '구름'을 가장
-      // 확실히 보여준다. 여기에 Y/Z 랜덤 회전을 섞어 기계적이지 않게 한다.
       const rollDirection = Math.random() > 0.5 ? 1 : -1;
       const spin = this.settings.spinSpeed * (0.82 + Math.random() * 0.32);
       runtime.body.angularVelocity.set(
@@ -416,13 +383,7 @@ export class DiceWorld {
   }
 
   clear() {
-    while (this.dice.length > 0) {
-      const runtime = this.dice.pop();
-      if (!runtime) continue;
-      this.world.removeBody(runtime.body);
-      this.scene.remove(runtime.group);
-      disposeObject(runtime.group);
-    }
+    this.removeOldest(this.dice.length);
     this.lastThrowAt = null;
     this.settledAt = null;
   }
@@ -433,11 +394,101 @@ export class DiceWorld {
     this.clear();
     this.removeWalls();
     this.world.removeBody(this.floorBody);
+
     this.floorMesh.geometry.dispose();
     (this.floorMesh.material as THREE.Material).dispose();
     this.boundaryDebug.geometry.dispose();
     (this.boundaryDebug.material as THREE.Material).dispose();
+    this.coreMaterial.dispose();
+    this.edgeMaterial.dispose();
+
+    for (const geometry of this.labelGeometries.values()) geometry.dispose();
+    for (const material of this.numberMaterials.values()) material.dispose();
+    for (const texture of this.numberTextures.values()) texture.dispose();
+    this.labelGeometries.clear();
+    this.numberMaterials.clear();
+    this.numberTextures.clear();
+
+    this.renderer.renderLists.dispose();
     this.renderer.dispose();
+  }
+
+  private removeOldest(count: number) {
+    for (let index = 0; index < count; index += 1) {
+      const runtime = this.dice.shift();
+      if (!runtime) break;
+      this.world.removeBody(runtime.body);
+      this.scene.remove(runtime.group);
+      runtime.coreGeometry.dispose();
+      runtime.edgeGeometry.dispose();
+    }
+    // Ensure WebGL render-list references to removed groups are released now,
+    // rather than waiting for later frames or GC.
+    this.renderer.renderLists.dispose();
+  }
+
+  private numberTexture(value: number) {
+    const existing = this.numberTextures.get(value);
+    if (existing) return existing;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 192;
+    canvas.height = 192;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("2D canvas context를 만들 수 없습니다.");
+
+    context.clearRect(0, 0, 192, 192);
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = value >= 10 ? "800 70px Georgia, serif" : "800 82px Georgia, serif";
+    context.lineJoin = "round";
+    context.lineWidth = 13;
+    context.strokeStyle = "rgba(29, 13, 4, .86)";
+    context.strokeText(String(value), 96, 101);
+    context.fillStyle = NUMBER_COLOR;
+    context.fillText(String(value), 96, 101);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 2;
+    this.numberTextures.set(value, texture);
+    return texture;
+  }
+
+  private numberMaterial(value: number) {
+    const existing = this.numberMaterials.get(value);
+    if (existing) return existing;
+    const material = new THREE.MeshBasicMaterial({
+      map: this.numberTexture(value),
+      transparent: true,
+      depthWrite: false,
+      alphaTest: 0.04,
+      side: THREE.FrontSide,
+    });
+    this.numberMaterials.set(value, material);
+    return material;
+  }
+
+  private labelGeometry(sides: DieSides) {
+    const existing = this.labelGeometries.get(sides);
+    if (existing) return existing;
+    const size = LABEL_SIZE_BY_SIDES[sides];
+    const geometry = new THREE.PlaneGeometry(size, size);
+    this.labelGeometries.set(sides, geometry);
+    return geometry;
+  }
+
+  private attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: DieSides) {
+    const forward = new THREE.Vector3(0, 0, 1);
+    const geometry = this.labelGeometry(sides);
+
+    for (const face of faces) {
+      const label = new THREE.Mesh(geometry, this.numberMaterial(face.value));
+      const normal = face.normal.clone().normalize();
+      label.position.copy(face.center).addScaledVector(normal, 0.018);
+      label.quaternion.setFromUnitVectors(forward, normal);
+      group.add(label);
+    }
   }
 
   private createDie(sides: DieSides, x: number, y: number, z: number) {
@@ -445,26 +496,16 @@ export class DiceWorld {
     geometry.computeVertexNormals();
     const faces = faceDescriptors(geometry, sides);
 
-    const material = new THREE.MeshStandardMaterial({
-      color: BRONZE,
-      emissive: BRONZE_DARK,
-      emissiveIntensity: 0.16,
-      roughness: 0.3,
-      metalness: 0.33,
-      flatShading: true,
-    });
-    const core = new THREE.Mesh(geometry, material);
+    const core = new THREE.Mesh(geometry, this.coreMaterial);
     core.castShadow = true;
     core.receiveShadow = true;
 
+    const edgeGeometry = new THREE.EdgesGeometry(geometry, 18);
+    const edges = new THREE.LineSegments(edgeGeometry, this.edgeMaterial);
+
     const group = new THREE.Group();
-    group.add(core);
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(geometry, 18),
-      new THREE.LineBasicMaterial({ color: 0x3a1f10, transparent: true, opacity: 0.72 }),
-    );
-    group.add(edges);
-    attachFaceNumbers(group, faces, sides);
+    group.add(core, edges);
+    this.attachFaceNumbers(group, faces, sides);
     group.position.set(x, y, z);
     this.scene.add(group);
 
@@ -483,7 +524,12 @@ export class DiceWorld {
     });
     this.world.addBody(body);
 
-    const runtime: DieRuntime = { sides, group, body, faces };
+    const runtime: DieRuntime = {
+      group,
+      body,
+      coreGeometry: geometry,
+      edgeGeometry,
+    };
     this.dice.push(runtime);
     return runtime;
   }
@@ -498,8 +544,6 @@ export class DiceWorld {
   };
 
   private rebuildBounds() {
-    // 탑다운 카메라에서는 바닥에서 보이는 영역을 FOV와 카메라 높이로
-    // 직접 계산할 수 있다. 카메라 변경과 물리 경계를 서로 독립시킨다.
     const halfVisibleZ = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2)) * CAMERA_HEIGHT;
     const halfVisibleX = halfVisibleZ * this.camera.aspect;
     const margin = 0.72;
@@ -562,9 +606,16 @@ export class DiceWorld {
   }
 
   private animate = (now: number) => {
-    const delta = Math.min(0.04, Math.max(0.001, (now - this.lastFrame) / 1000));
+    const rawDelta = Math.max(0, (now - this.lastFrame) / 1000);
     this.lastFrame = now;
-    this.world.step(1 / 60, delta, 5);
+
+    // If WebView/OS briefly stalls, do not ask Cannon to catch up a large time
+    // debt in one frame. One fixed step immediately resumes visual motion.
+    if (rawDelta > 0.1) {
+      this.world.step(1 / 60);
+    } else {
+      this.world.step(1 / 60, Math.max(0.001, Math.min(rawDelta, 1 / 30)), 3);
+    }
 
     let movingCount = 0;
     for (const runtime of this.dice) {
