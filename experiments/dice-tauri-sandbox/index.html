@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SimpleVTT 주사위 물리 테스트</title>
+</head>
+<body>
+  <div id="app">
+    <canvas id="dice-stage" aria-label="3D 주사위 물리 테스트 화면"></canvas>
+
+    <section id="control-panel" class="control-panel" aria-label="주사위 물리 조절">
+      <header class="panel-header">
+        <div>
+          <p class="eyebrow">TAURI PHYSICS LAB</p>
+          <h1>주사위 물리 테스트</h1>
+          <p>화면 전체를 테이블로 보고 실제 rigid-body 투척 감각만 확인합니다.</p>
+        </div>
+        <button id="hide-controls" class="icon-button" type="button" title="컨트롤 숨기기 (H)">×</button>
+      </header>
+
+      <div class="control-group">
+        <span class="control-label">주사위</span>
+        <div id="dice-type-buttons" class="chip-row"></div>
+      </div>
+
+      <div class="control-row two-col">
+        <label>
+          <span>개수 <b id="count-value">2</b></span>
+          <input id="dice-count" type="range" min="1" max="8" step="1" value="2" />
+        </label>
+        <label>
+          <span>프리셋</span>
+          <select id="preset-select">
+            <option value="default">기본</option>
+            <option value="weighty">묵직</option>
+            <option value="bouncy">탄성</option>
+            <option value="fast">빠름</option>
+          </select>
+        </label>
+      </div>
+
+      <details>
+        <summary>세부 물리값</summary>
+        <div class="slider-grid">
+          <label><span>중력 <b data-value-for="gravity"></b></span><input data-physics="gravity" type="range" min="10" max="30" step="0.5" /></label>
+          <label><span>바닥 마찰 <b data-value-for="floorFriction"></b></span><input data-physics="floorFriction" type="range" min="0" max="0.9" step="0.01" /></label>
+          <label><span>반발 <b data-value-for="restitution"></b></span><input data-physics="restitution" type="range" min="0" max="0.8" step="0.01" /></label>
+          <label><span>선형 감쇠 <b data-value-for="linearDamping"></b></span><input data-physics="linearDamping" type="range" min="0" max="0.45" step="0.01" /></label>
+          <label><span>회전 감쇠 <b data-value-for="angularDamping"></b></span><input data-physics="angularDamping" type="range" min="0" max="0.45" step="0.01" /></label>
+          <label><span>투척 속도 <b data-value-for="throwSpeed"></b></span><input data-physics="throwSpeed" type="range" min="7" max="22" step="0.5" /></label>
+          <label><span>회전 속도 <b data-value-for="spinSpeed"></b></span><input data-physics="spinSpeed" type="range" min="5" max="35" step="0.5" /></label>
+          <label><span>시작 높이 <b data-value-for="spawnHeight"></b></span><input data-physics="spawnHeight" type="range" min="1.5" max="5" step="0.1" /></label>
+        </div>
+      </details>
+
+      <div class="toggle-row">
+        <label><input id="dice-collision" type="checkbox" checked /> 주사위끼리 충돌</label>
+        <label><input id="keep-previous" type="checkbox" /> 이전 주사위 유지</label>
+        <label><input id="debug-bounds" type="checkbox" /> 경계 보기</label>
+      </div>
+
+      <div class="action-row">
+        <button id="throw-button" class="primary" type="button">던지기 <kbd>Space</kbd></button>
+        <button id="mixed-button" type="button">6종 혼합 <kbd>M</kbd></button>
+        <button id="clear-button" type="button">정리 <kbd>R</kbd></button>
+      </div>
+
+      <footer class="panel-footer">
+        <span>결과 강제 보정 없음</span>
+        <span>화면 경계 = 보이지 않는 collider</span>
+      </footer>
+    </section>
+
+    <button id="show-controls" class="show-controls" type="button" hidden>컨트롤 열기 <kbd>H</kbd></button>
+
+    <div class="status-bar" aria-live="polite">
+      <span id="status-text">준비됨</span>
+      <span id="stats-text">주사위 0개</span>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
