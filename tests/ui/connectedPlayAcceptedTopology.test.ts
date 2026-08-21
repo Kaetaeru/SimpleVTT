@@ -4,6 +4,7 @@ import test from "node:test";
 
 const root = readFileSync("src/SessionModeRoot.tsx", "utf8");
 const boards = readFileSync("src/SessionActorBoards.tsx", "utf8");
+const focus = readFileSync("src/SessionMainFocus.tsx", "utf8");
 const dock = readFileSync("src/SessionActionDock.tsx", "utf8");
 const initiative = readFileSync("src/SessionInitiativeStrip.tsx", "utf8");
 const runtimeCss = readFileSync("src/session-integrated-reference-play.css", "utf8");
@@ -34,7 +35,8 @@ test("production geometry is pinned to the accepted 41 / 86 / flexible / 86 / 17
 
 test("Play chrome matches the accepted top utility model instead of a separate identity header plus vertical rail", () => {
   for (const label of ["← Product", "Sheet", "Rules", "Activity", "Encounter", "Participants", "Handout", "Session"]) assert.match(root, new RegExp(`>${label}<`));
-  assert.match(runtimeCss, /\.session-reference-play-chrome\s*\{[\s\S]*display:\s*flex;[\s\S]*height:\s*27px|\.session-reference-play-chrome > button[\s\S]*height:\s*27px/);
+  assert.match(runtimeCss, /\.session-reference-play-chrome\s*\{[\s\S]*display:\s*flex/);
+  assert.match(runtimeCss, /\.session-reference-play-chrome > button,[\s\S]*height:\s*27px/);
   assert.doesNotMatch(root, /session-mode-character-chip|session-mode-role-controls|session-mode-bar/);
 });
 
@@ -47,17 +49,24 @@ test("Actor Boards project canonical Scene entities but adopt the accepted card 
   assert.doesNotMatch(boards, /\bx\s*:|\by\s*:|grid|pathfind|lineOfSight|fog|tokenPosition|distanceFeet/);
 });
 
-test("Mapless Stage reproduces the accepted visual role and compact Initiative strip", () => {
+test("Mapless Stage reproduces accepted default focus and compact Initiative strip", () => {
   assert.match(root, /MAPLESS PLAY CONTEXT/);
   assert.match(root, /no grid · no map token · no Actor coordinates/);
   assert.match(runtimeCss, /radial-gradient\(ellipse at 50% 45%/);
   assert.match(runtimeCss, /\.session-reference-stage-focus[\s\S]*place-items:\s*center/);
+  assert.match(focus, />FREEFORM</);
+  assert.match(focus, />Mapless shared play context</);
+  assert.match(focus, /Actors are never placed here as tactical tokens/);
+  assert.match(focus, />INITIATIVE</);
+  assert.match(focus, />Actor and action context, not a battlemap</);
+  assert.match(focus, /Actor context <strong>Boards<\/strong>/);
+  assert.match(focus, /Dice \/ Result <strong>Center Stage<\/strong>/);
   assert.match(initiative, /session-reference-initiative-strip/);
   assert.doesNotMatch(initiative, /session-initiative-economy|session-initiative-controls|endInitiative|endTurn/);
   assert.match(runtimeCss, /\.session-reference-initiative-strip\s*\{[\s\S]*height:\s*40px/);
 });
 
-test("Command Center uses the accepted upper economy/resource rail and 240 / hotbar / 104 lower body", () => {
+test("Command Center uses accepted rail body and five-page Hotbar", () => {
   const top = dock.indexOf('className="session-command-top"');
   const body = dock.indexOf('className="session-command-body"');
   const controlled = dock.indexOf('className="session-controlled-actor"');
@@ -65,10 +74,7 @@ test("Command Center uses the accepted upper economy/resource rail and 240 / hot
   const context = dock.indexOf('className="session-command-context"');
   assert.ok(top >= 0 && body > top && controlled > body && hotbar > controlled && context > hotbar);
   assert.match(dock, /FREEFORM · no turn economy/);
-  assert.match(dock, /Mixed/);
-  assert.match(dock, /Action/);
-  assert.match(dock, /Spell/);
-  assert.match(dock, /Item/);
+  for (const label of ["Mixed", "Action", "Spell", "Item", "Custom"]) assert.match(dock, new RegExp(`label: "${label}"`));
   assert.match(dock, /snapshot\.scene\.actionsByActor\[actorId\]/);
   assert.match(dock, /action\.disabledReason/);
   assert.match(runtimeCss, /\.session-command-body\s*\{[\s\S]*grid-template-columns:\s*240px minmax\(0, 1fr\) 104px/);
