@@ -5,65 +5,65 @@ import test from "node:test";
 const dock = readFileSync("src/SessionActionDock.tsx", "utf8");
 const root = readFileSync("src/SessionModeRoot.tsx", "utf8");
 const css = readFileSync("src/session-action-dock.css", "utf8");
-const model = readFileSync("src/playerExperienceModel.ts", "utf8");
 
-test("Session Action Dock replaces the placeholder footer with a compact intent-first surface", () => {
+test("Connected Play uses a persistent Command Center with direct Hotbar pages", () => {
+  assert.match(root, /aria-label="Command Center"/);
   assert.match(root, /<SessionActionDock/);
-  assert.match(root, /actorId=\{actionActorId\}/);
-  assert.match(dock, /FREEFORM_RESTING[^\n]*\["attack", "magic", "search", "influence", "help"\]/);
-  assert.match(dock, /INITIATIVE_RESTING[^\n]*\["attack", "magic", "dash", "disengage", "dodge", "help"\]/);
-  assert.match(dock, />모든 행동</);
-  assert.match(dock, /OFFICIAL_PLAY_INTENTS\.map/);
-  assert.doesNotMatch(dock, /HOTBAR_TABS|"common"|"spells"|"items"|"passives"|"custom"/);
+  assert.match(dock, /type HotbarPage = "mixed" \| "action" \| "spell" \| "item"/);
+  assert.match(dock, /HOTBAR_PAGES/);
+  for (const label of ["혼합", "행동", "주문", "아이템"]) assert.match(dock, new RegExp(`label: "${label}"`));
+  assert.match(dock, /snapshot\.scene\.actionsByActor\[actorId\]/);
+  assert.doesNotMatch(dock, /OFFICIAL_PLAY_INTENTS|intentOptions|FREEFORM_RESTING|INITIATIVE_RESTING|모든 행동/);
 });
 
-test("intent options and legality come from canonical ActionVm projections", () => {
-  assert.match(dock, /OFFICIAL_PLAY_INTENTS, intentOptions/);
-  assert.match(dock, /snapshot\.scene\.actionsByActor\[actorId\]/);
-  assert.match(dock, /intentOptions\(intentId, actions\)/);
+test("Command Center projects the actual Actor summary resources and Initiative economy without inventing them", () => {
+  assert.match(dock, /snapshot\.scene\.entities\.find\(\(entity\) => entity\.id === actorId\)/);
+  assert.match(dock, /snapshot\.activeCharacter\.id === actorId/);
+  assert.match(dock, /snapshot\.activeCharacter\.resources/);
+  assert.match(dock, /snapshot\.sessionMode === "initiative" \? snapshot\.scene\.economyByActor\[actorId\]/);
+  assert.match(dock, /session-command-resources/);
+  assert.match(dock, /session-command-economy/);
+});
+
+test("Hotbar page filters are presentation over canonical ActionVm projections", () => {
+  assert.match(dock, /function pageIncludes\(page: HotbarPage, action: ActionVm\)/);
+  assert.match(dock, /page === "spell"[\s\S]*action\.category === "magic"/);
+  assert.match(dock, /page === "item"[\s\S]*Boolean\(action\.itemCost\)/);
+  assert.match(dock, /visibleActions = useMemo\(\(\) => actions\.filter/);
   assert.match(dock, /action\.available/);
   assert.match(dock, /action\.disabledReason/);
-  assert.match(model, /export function intentOptions/);
-  assert.doesNotMatch(dock, /economyByActor/);
+  assert.doesNotMatch(dock, /distanceFeet|parseInt\([^\n]*distance|lineOfSight|pathfinding/);
 });
 
 test("no-target and self actions use the existing resolveAction command with duplicate pending protection", () => {
   assert.match(dock, /const \{ snapshot, resolveAction \} = useSimpleVtt\(\)/);
   assert.match(dock, /if \(pendingActionId\) return/);
   assert.match(dock, /action\.target === "none"[\s\S]*runAction\(action, \[\]\)/);
-  assert.match(dock, /action\.target === "self"[\s\S]*runAction\(action, \[actorId\]\)/);
-  assert.match(dock, /setPendingActionId\(action\.id\)/);
+  assert.match(dock, /action\.target === "self" && actorId[\s\S]*runAction\(action, \[actorId\]\)/);
   assert.match(dock, /await resolveAction\(action\.id, targetIds\)/);
 });
 
-test("target picker consumes eligibleTargetIds directly and never invents distance legality", () => {
-  assert.match(dock, /selectedAction\.eligibleTargetIds\.map/);
+test("manual target set consumes eligibleTargetIds directly and preserves immediate single-target execution", () => {
+  assert.match(dock, /selectedAction\.eligibleTargetIds/);
   assert.match(dock, /selectedAction\.eligibleTargetIds\.includes\(targetId\)/);
-  assert.match(dock, /data-action-dock-state=\{selectedActionId \? "target"/);
-  assert.doesNotMatch(dock, /filter\([^\n]*distance|parseInt\([^\n]*distance|distanceFeet|5 ft 내/);
-});
-
-test("single target executes immediately while multi-target selection honors canonical maxTargets", () => {
   assert.match(dock, /if \(!multiTarget\)[\s\S]*runAction\(selectedAction, \[targetId\]\)/);
   assert.match(dock, /selectedAction\.maxTargets \?\? targetCandidates\.length/);
-  assert.match(dock, /current\.length >= maxTargets/);
   assert.match(dock, /runAction\(selectedAction, selectedTargetIds\)/);
   assert.match(dock, />실행</);
 });
 
-test("target selections reconcile against new canonical eligibility while overlays preserve the mounted flow", () => {
+test("target selections reconcile against new canonical eligibility while Session overlays preserve the mounted flow", () => {
   assert.match(dock, /current\.filter\(\(id\) => selectedAction\.eligibleTargetIds\.includes\(id\)\)\.slice\(0, maxTargets\)/);
   assert.match(root, /suspended=\{Boolean\(activeUtility \|\| workspaceLayer \|\| snapshot\.resolution \|\| playerHandoutOpen\)\}/);
   assert.match(root, /playerHandoutOpen/);
-  assert.match(dock, /event\.key !== "Escape" \|\| suspended/);
+  assert.match(dock, /event\.key !== "Escape" \|\| suspended \|\| !selectedActionId/);
   assert.match(dock, /onOpenRules\(event\.currentTarget\)/);
-  assert.match(dock, /useEffect\(\(\) => \{[\s\S]*resetFlow\(\);[\s\S]*\}, \[actorId\]\)/);
 });
 
-test("Action Dock expands upward from the fixed Session footer and target picker remains responsive", () => {
-  assert.match(css, /\.session-action-dock-panel\s*\{[\s\S]*position:\s*absolute;[\s\S]*bottom:\s*0;/);
-  assert.match(css, /\.session-action-dock-panel\.expanded[\s\S]*max-height:\s*min\(42vh, 360px\)/);
-  assert.match(css, /\.session-action-target-layout/);
+test("Command Center stays fixed while targeting expands upward and narrow layouts remain usable", () => {
+  assert.match(css, /\.session-command-center\s*\{[\s\S]*height:\s*100%/);
+  assert.match(css, /\.session-hotbar-slots\s*\{[\s\S]*display:\s*flex;[\s\S]*overflow-x:\s*auto/);
+  assert.match(css, /\.session-action-target-overlay\s*\{[\s\S]*position:\s*absolute;[\s\S]*bottom:\s*100%/);
   assert.match(css, /@media \(max-width: 899px\)/);
   assert.match(css, /@media \(max-width: 620px\)/);
 });
