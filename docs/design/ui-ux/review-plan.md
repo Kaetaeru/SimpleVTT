@@ -1,58 +1,62 @@
 # SimpleVTT UI/UX Review Coverage Plan
 
-Status: active review-order control
+Status: **active detailed coverage catalog — owner material checkpoint phase complete**
 
-This file controls **which governance sheet is being reviewed, which Decision Maps are declared, and which question set may be asked next**.
+This file preserves the **27 complete Decision Maps and detailed coverage/dependency catalog**. It is no longer a list of homework the owner must answer one row at a time.
 
 Dashboard: [`README.md`](README.md)
 Decisions: [`decisions.md`](decisions.md)
+Owner control policy: [`OWNER-CONTROL-POLICY.md`](OWNER-CONTROL-POLICY.md)
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 Templates: [`templates.md`](templates.md)
 
-## Review-order rule
+## Coverage / escalation rule
 
-- Do not ask a sheet's first question until that sheet's complete Decision Map is materialized.
 - A Decision Map is `Complete` only when it has Scope, Non-scope, Exit Criteria, and a full table with ID, Question, Status, Depends On, Conditional, Destination.
 - `Review Status` is exactly `Not Started`, `In Review`, or `Reviewed`.
 - Reviewed seed decisions are canonical in their owning map and referenced as dependencies elsewhere; do not duplicate the same normative question body across maps.
 - Existing migrated decisions may seed later maps but do not authorize inventing the rest.
-- New discoveries go to a declared Draft map item or Planning Gap before becoming owner questions.
-- The owner MAY answer multiple predeclared questions from the current complete sheet in one batch. AI MUST reconcile the batch in dependency order, preserve explicit choices, resolve only logically implied conditional branches, and surface any true contradiction instead of silently choosing a different answer.
-- AI MAY propose review-order changes; owner approval is required to change the declared order.
+- Detailed Draft rows are **internal coverage**, not automatic owner questions.
+- A detailed row may be resolved by a canonical Decision, lightweight Owner Checkpoint, AI Design Default/contract, Domain/Architecture contract, or conditional N/A according to `OWNER-CONTROL-POLICY.md`.
+- Before asking the owner any new question, AI MUST pass the material-escalation rule in `OWNER-CONTROL-POLICY.md`. Multiple acceptable low-risk design solutions are not enough reason to ask.
+- New material discoveries go to the appropriate map/gap/contract before any escalation.
+- AI MAY change internal processing order when dependencies require it. A change that creates/reorders Owner Checkpoints still requires owner approval.
 - All structured references use complete stable IDs.
 
-## Current sequence
+## Current sequence / coverage status
 
 | Order | Sheet | Purpose | Map status | Review Status | Notes |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | `UX-01` Product Principles | product posture and top-level experience principles | **Complete** | **Reviewed** | 7 Reviewed Decision Cards; none Frozen |
 | 2 | `UX-02` User & Role Model | roles, ownership/control, information entitlement | **Complete** | **Reviewed** | all UX-02 decisions Reviewed; none Frozen |
-| 3 | `UX-03` Information Hierarchy | global/contextual information priority | **Complete** | **In Review** | current sheet; batch review may cover `UX-03-01` through `UX-03-08` |
-| 4 | `NAV-01` Navigation | destinations, return, hierarchy | **Complete** | Not Started | Reviewed direct Session-entry seed retained |
-| 5 | `UI-01` Layout & Grid | global layout primitives | **Complete** | Not Started | Dual Anchor / Actor Board dependencies declared |
-| 6 | `INT-01` Interaction | pointer/keyboard/context interaction | **Complete** | Not Started | Reviewed Actor interaction seed retained |
-| 7 | `STATE-01` UI States | local component/task states | **Complete** | Not Started | R5/R6/M6 coverage declared |
-| 8 | `STATE-02` System States | loading/error/reconnect/system state | **Complete** | Not Started | system recovery coverage declared |
-| 9 | `INT-02` Layering | modal/nonmodal layering | **Complete** | Not Started | R4 layer coverage declared |
-| 10 | `INT-03` Confirmation | destructive/confirmation/cancel grammar | **Complete** | Not Started | no-confirm targeting rule referenced from DND-03, not duplicated |
-| 11 | `UI-02` Typography | type system | **Complete** | Not Started | typography coverage declared |
-| 12 | `UI-03` Color & Semantic Color | semantic color system | **Complete** | Not Started | state/target/privacy coverage declared |
-| 13 | `UI-04` Iconography | icon language | **Complete** | Not Started | icon families declared |
-| 14 | `UI-05` Density & Spacing | density/spacing tokens | **Complete** | Not Started | product/play/sheet density coverage declared |
-| 15 | `CMP-01` Core Components | reusable component contracts | **Complete** | Not Started | component families declared |
-| 16 | `CONTENT-01` UX Writing | terminology, labels, error/confirmation copy | **Complete** | Not Started | R8 coverage declared |
-| 17 | `A11Y-01` Accessibility | keyboard/focus/semantics/reduced motion | **Complete** | Not Started | M4/R9 coverage declared |
-| 18 | `PLATFORM-01` Desktop Responsive | wide/normal/narrow behavior | **Complete** | Not Started | M5 coverage declared |
-| 19 | `DND-01` Character Presentation | Library/Builder/Sheet/Level Up | **Complete** | Not Started | active layout/portrait/import evidence covered |
-| 20 | `DND-02` Roll & Dice UX | dice/result/resolution presentation | **Complete** | Not Started | Reviewed roll/dice seeds retained |
-| 21 | `DND-03` Action UX | capability/hotbar/economy/targeting | **Complete** | Not Started | canonical owner of `ORIGIN-UX-01-20` seed |
-| 22 | `DND-04` Combat UX | initiative/turn/interrupt combat presentation | **Complete** | Not Started | Reviewed Initiative seeds retained |
-| 23 | `SES-01` Session UX | lifecycle and Play workspace | **Complete** | Not Started | Reviewed Join/Command Center/Actor Board/Handout seeds retained |
-| 24 | `SES-02` Multiplayer Authority UX | delivery/visibility/reconnect authority | **Complete** | Not Started | Critical private-delivery gap retained |
-| 25 | `DM-01` DM Controls | persistent/contextual DM controls | **Complete** | Not Started | current spatial-relation tool covered by existing Draft DM questions |
-| 26 | `DM-02` Adjudication & Undo | disclosure, Activity, correction, Undo | **Complete** | Not Started | private Activity gap retained |
-| 27 | `CONTENT-02` Rules & Add-on UX | Rules browser and content management | **Complete** | Not Started | import/content coverage declared |
+| 3 | `UX-03` Information Hierarchy | global/contextual information priority | **Complete** | **Reviewed** | all 8 material hierarchy decisions reconciled |
+| 4 | `NAV-01` Navigation | destinations, return, hierarchy | **Complete** | **Reviewed** | all material navigation decisions reconciled |
+| 5 | `UI-01` Layout & Grid | global layout primitives | **Complete** | **Reviewed** | all material region/layout decisions reconciled |
+| 6 | `INT-01` Interaction | pointer/keyboard/context interaction | **Complete** | **Reviewed** | all material interaction decisions reconciled |
+| 7 | `STATE-01` UI States | local component/task states | **Complete** | Not Started | primarily AI Design Default / component-contract coverage |
+| 8 | `STATE-02` System States | loading/error/reconnect/system state | **Complete** | Not Started | AI defaults plus Domain/Architecture recovery contracts |
+| 9 | `INT-02` Layering | modal/nonmodal layering | **Complete** | Not Started | primarily AI Design Default / accessibility contract |
+| 10 | `INT-03` Confirmation | destructive/confirmation/cancel grammar | **Complete** | Not Started | low-risk defaults; destructive semantics remain contract-governed |
+| 11 | `UI-02` Typography | type system | **Complete** | Not Started | AI Design Default |
+| 12 | `UI-03` Color & Semantic Color | semantic color system | **Complete** | Not Started | AI Design Default within reviewed state/privacy constraints |
+| 13 | `UI-04` Iconography | icon language | **Complete** | Not Started | AI Design Default |
+| 14 | `UI-05` Density & Spacing | density/spacing tokens | **Complete** | Not Started | AI Design Default |
+| 15 | `CMP-01` Core Components | reusable component contracts | **Complete** | Not Started | contract-generation coverage |
+| 16 | `CONTENT-01` UX Writing | terminology, labels, error/confirmation copy | **Complete** | Not Started | AI Design Default within canonical terminology |
+| 17 | `A11Y-01` Accessibility | keyboard/focus/semantics/reduced motion | **Complete** | Not Started | standards/defaults plus explicit owner exceptions |
+| 18 | `PLATFORM-01` Desktop Responsive | wide/normal/narrow behavior | **Complete** | In Review | platform scope Reviewed; detailed desktop reflow is AI-managed |
+| 19 | `DND-01` Character Presentation | Library/Builder/Sheet/Level Up | **Complete** | In Review | two Sheet layouts + preservation of Builder/Level Up Reviewed; remaining detail AI/contract |
+| 20 | `DND-02` Roll & Dice UX | dice/result/resolution presentation | **Complete** | In Review | many Reviewed roll/dice seeds; remaining detail AI/contract |
+| 21 | `DND-03` Action UX | capability/hotbar/economy/targeting | **Complete** | In Review | Reviewed action/target seeds; two Domain gaps remain |
+| 22 | `DND-04` Combat UX | initiative/turn/interrupt combat presentation | **Complete** | In Review | Reviewed Initiative seeds; interrupt safety is Domain contract work |
+| 23 | `SES-01` Session UX | lifecycle and Play workspace | **Complete** | In Review | immediate-live Host, no Lobby/Ready, no-Character Join, late join Reviewed |
+| 24 | `SES-02` Multiplayer Authority UX | delivery/visibility/reconnect authority | **Complete** | In Review | Critical private-delivery + Handout network contracts remain |
+| 25 | `DM-01` DM Controls | persistent/contextual DM controls | **Complete** | In Review | visibility default/persistence + advanced spatial tool Reviewed |
+| 26 | `DM-02` Adjudication & Undo | disclosure, Activity, correction, Undo | **Complete** | In Review | private Activity + non-destructive correction history Reviewed |
+| 27 | `CONTENT-02` Rules & Add-on UX | Rules browser and content management | **Complete** | In Review | package format/lifecycle/live-session snapshot Reviewed |
+
+**Owner-required checkpoints remaining: 0.** `In Review` on later sheets means internal AI/contract coverage is still being completed; it does not mean the owner must answer the Draft rows.
 
 ---
 
@@ -109,14 +113,14 @@ Templates: [`templates.md`](templates.md)
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
-| `UX-03-01` | What is the boundary between Global and Contextual destinations? | Draft | `UX-01-02` | no | `NAV-01` |
-| `UX-03-02` | How should Product Shell <-> Live Play continuity behave at the hierarchy level? | Draft | `UX-01-03` | no | `NAV-01`, `SES-01` |
-| `UX-03-03` | What is the principle for Permanent UI vs Contextual UI? | Draft | `UX-01-04`, `UX-01-05` | no | `INT-02` |
-| `UX-03-04` | What information has priority inside Play Workspace? | Draft | `UX-01-07` | no | `SES-01`, `DND-04` |
-| `UX-03-05` | What information has priority on standalone Character Sheet? | Draft | `UX-01-01` | no | `DND-01` |
-| `UX-03-06` | What scope of progressive disclosure is allowed? | Draft | `UX-01-04` | no | `UI-05`, `CONTENT-01` |
-| `UX-03-07` | What is the principle for duplicated information? | Draft | none | no | `CMP-01` |
-| `UX-03-08` | What is the priority of transient result/notification/Activity information? | Draft | none | no | `STATE-01`, `STATE-02`, `DND-02`, `DM-02` |
+| `UX-03-01` | What is the boundary between Global and Contextual destinations? | Reviewed | `UX-01-02` | no | `NAV-01` |
+| `UX-03-02` | How should Product Shell <-> Live Play continuity behave at the hierarchy level? | Reviewed | `UX-01-03` | no | `NAV-01`, `SES-01` |
+| `UX-03-03` | What is the principle for Permanent UI vs Contextual UI? | Reviewed | `UX-01-04`, `UX-01-05` | no | `INT-02` |
+| `UX-03-04` | What information has priority inside Play Workspace? | Reviewed | `UX-01-07` | no | `SES-01`, `DND-04` |
+| `UX-03-05` | What information has priority on standalone Character Sheet? | Reviewed | `UX-01-01` | no | `DND-01` |
+| `UX-03-06` | What scope of progressive disclosure is allowed? | Reviewed | `UX-01-04` | no | `UI-05`, `CONTENT-01` |
+| `UX-03-07` | What is the principle for duplicated information? | Reviewed | none | no | `CMP-01` |
+| `UX-03-08` | What is the priority of transient result/notification/Activity information? | Reviewed | none | no | `STATE-01`, `STATE-02`, `DND-02`, `DM-02` |
 
 ---
 
@@ -124,21 +128,21 @@ Templates: [`templates.md`](templates.md)
 
 **Scope:** stable destinations, Home actions, Product Shell navigation, Return to Play, Character/Session/Rules/Content/Settings hierarchy, contextual tools, onboarding entry.
 
-**Non-scope:** exact sidebar dimensions/art, keyboard focus implementation, network permissions, Play internal layout.
+**Non-scope:** exact navigation dimensions/art, keyboard focus implementation, network permissions, Play internal layout.
 
 **Exit Criteria:** destination set, direct Host/Join, Return to Play, Character/Rules/Content/Settings hierarchy, contextual-tool boundary, onboarding placement are defined.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `ORIGIN-FLOW-01` | Should Home expose direct first-class Host and Join entry while keeping Character non-mandatory for Session entry? | Reviewed | `UX-01-01` | no | `NAV-01`, `SES-01` |
-| `NAV-01-01` | What is the final top-level Product Shell destination set and order? | Draft | `UX-01-01`, `UX-01-02`, `UX-03-01` | no | `NAV-01`, `R1-HOME` |
-| `NAV-01-02` | Where and when does Return to Play appear while a live session exists? | Draft | `UX-01-03`, `UX-03-02` | no | `NAV-01`, `SES-01` |
-| `NAV-01-03` | How do Character Library, Character Sheet, Builder, Edit, and Level Up enter/return within Product Shell? | Draft | `UX-03-05` | no | `NAV-01`, `DND-01` |
-| `NAV-01-04` | How do Rules, Content, and Settings preserve/restore prior Product Shell context? | Draft | `UX-03-01`, `UX-03-02` | no | `NAV-01`, `CONTENT-02` |
-| `NAV-01-05` | Which Activity, Encounter, Adjudication, Session utility, and similar tools remain contextual rather than top-level? | Draft | `UX-03-01`, `UX-03-03` | no | `NAV-01`, `SES-01`, `DM-01`, `DM-02` |
-| `NAV-01-06` | What Back/Close/Return grammar applies across Product Shell and contextual/full-workspace layers? | Draft | `UX-03-02`, `UX-03-03` | no | `NAV-01`, `INT-02` |
-| `NAV-01-07` | Where does first-use guidance live and how can it be reopened after dismissal? | Draft | `UX-03-06` | no | `NAV-01`, `R2-FIRST-USE`, `CONTENT-01` |
-| `NAV-01-08` | Which restored/deep-linked state may reopen directly after app restart, and which returns through Home? | Draft | `UX-01-03` | no | `NAV-01`, `STATE-02` |
+| `NAV-01-01` | What is the final top-level Product Shell destination set and order? | Reviewed | `UX-01-01`, `UX-01-02`, `UX-03-01` | no | `NAV-01`, `R1-HOME` |
+| `NAV-01-02` | Where and when does Return to Play appear while a live session exists? | Reviewed | `UX-01-03`, `UX-03-02` | no | `NAV-01`, `SES-01` |
+| `NAV-01-03` | How do Character Library, Character Sheet, Builder, Edit, and Level Up enter/return within Product Shell? | Reviewed | `UX-03-05` | no | `NAV-01`, `DND-01` |
+| `NAV-01-04` | How do Rules, Content, and Settings preserve/restore prior Product Shell context? | Reviewed | `UX-03-01`, `UX-03-02` | no | `NAV-01`, `CONTENT-02` |
+| `NAV-01-05` | Which Activity, Encounter, Adjudication, Session utility, and similar tools remain contextual rather than top-level? | Reviewed | `UX-03-01`, `UX-03-03` | no | `NAV-01`, `SES-01`, `DM-01`, `DM-02` |
+| `NAV-01-06` | What Back/Close/Return grammar applies across Product Shell and contextual/full-workspace layers? | Reviewed | `UX-03-02`, `UX-03-03` | no | `NAV-01`, `INT-02` |
+| `NAV-01-07` | Where does first-use guidance live and how can it be reopened after dismissal? | Reviewed | `UX-03-06` | no | `NAV-01`, `R2-FIRST-USE`, `CONTENT-01` |
+| `NAV-01-08` | Which restored/deep-linked state may reopen directly after app restart, and which returns through Home? | Reviewed | `UX-01-03` | no | `NAV-01`, `STATE-02` |
 
 ---
 
@@ -152,15 +156,15 @@ Templates: [`templates.md`](templates.md)
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
-| `UI-01-01` | What global region grammar does Product Shell use for primary navigation and content? | Draft | `NAV-01-01` | no | `UI-01`, `R7-PRIMARY-NAV` |
-| `UI-01-02` | What region model realizes the Play Dual Anchor without one anchor dominating the other? | Draft | `UX-01-07` | no | `UI-01`, `SES-01`, `R1-PLAY` |
-| `UI-01-03` | How are upper opposing and lower allied Actor Boards allocated around Scene/Table Context? | Draft | `ORIGIN-UX-01-10`, `ORIGIN-UX-01-11` | no | `UI-01`, `SES-01` |
-| `UI-01-04` | How does the top Initiative Tracker fit without replacing Actor Boards or Command Center? | Draft | `ORIGIN-UX-01-14`, `ORIGIN-UX-01-15` | no | `UI-01`, `DND-04` |
-| `UI-01-05` | What is the major internal region model of the bottom Command Center? | Draft | `ORIGIN-UX-01-08`, `ORIGIN-UX-01-09` | no | `UI-01`, `DND-03`, `R7-COMMAND-CENTER` |
-| `UI-01-06` | Where may contextual Session/DM utilities occupy space without displacing core Play anchors? | Draft | `UX-03-03`, `NAV-01-05` | no | `UI-01`, `SES-01`, `DM-01` |
-| `UI-01-07` | What region model does standalone Character Sheet use? | Draft | `UX-03-05` | no | `UI-01`, `DND-01` |
-| `UI-01-08` | What region model does Character Builder/Level Up use? | Draft | `DND-01-02` | no | `UI-01`, `DND-01` |
-| `UI-01-09` | Which regions own scrolling/sticky behavior on normal desktop? | Draft | `UI-01-01`, `UI-01-02`, `UI-01-07` | no | `UI-01`, `PLATFORM-01` |
+| `UI-01-01` | What global region grammar does Product Shell use for primary navigation and content? | Reviewed | `NAV-01-01` | no | `UI-01`, `R7-PRIMARY-NAV` |
+| `UI-01-02` | What region model realizes the Play Dual Anchor without one anchor dominating the other? | Reviewed | `UX-01-07` | no | `UI-01`, `SES-01`, `R1-PLAY` |
+| `UI-01-03` | How are upper opposing and lower allied Actor Boards allocated around Scene/Table Context? | Reviewed | `ORIGIN-UX-01-10`, `ORIGIN-UX-01-11` | no | `UI-01`, `SES-01` |
+| `UI-01-04` | How does the top Initiative Tracker fit without replacing Actor Boards or Command Center? | Reviewed | `ORIGIN-UX-01-14`, `ORIGIN-UX-01-15` | no | `UI-01`, `DND-04` |
+| `UI-01-05` | What is the major internal region model of the bottom Command Center? | Reviewed | `ORIGIN-UX-01-08`, `ORIGIN-UX-01-09` | no | `UI-01`, `DND-03`, `R7-COMMAND-CENTER` |
+| `UI-01-06` | Where may contextual Session/DM utilities occupy space without displacing core Play anchors? | Reviewed | `UX-03-03`, `NAV-01-05` | no | `UI-01`, `SES-01`, `DM-01` |
+| `UI-01-07` | What region model does standalone Character Sheet use? | Reviewed | `UX-03-05` | no | `UI-01`, `DND-01` |
+| `UI-01-08` | What region model does Character Builder/Level Up use? | Reviewed | `DND-01-02` | no | `UI-01`, `DND-01` |
+| `UI-01-09` | Which regions own scrolling/sticky behavior on normal desktop? | Reviewed | `UI-01-01`, `UI-01-02`, `UI-01-07` | no | `UI-01`, `PLATFORM-01` |
 
 ---
 
@@ -170,18 +174,18 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** rules legality, network authority, animation timing, final styling.
 
-**Exit Criteria:** Actor interaction, context menu, keyboard equivalent, cancellation priority, unavailable-reason access are defined.
+**Exit Criteria:** Actor interaction, context menu, keyboard exception, cancellation priority, unavailable-reason access are defined.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `ORIGIN-UX-01-16` | What is the Actor Card left-click/right-click interaction family? | Reviewed | `UX-01-05` | no | `INT-01`, `DND-03` |
-| `INT-01-01` | When Actor selection, selected-action targeting, and DM actor control overlap, which context has priority? | Draft | `ORIGIN-UX-01-16`, `UX-02-03`, `UX-02-05` | no | `INT-01`, `DND-03`, `DM-01` |
-| `INT-01-02` | What command categories belong in Actor Context Menu without duplicating common Hotbar actions? | Draft | `ORIGIN-UX-01-16` | no | `INT-01`, `R4-ACTOR-CONTEXT` |
-| `INT-01-03` | What keyboard interaction is equivalent to right-click/context-menu access on Actor Cards? | Draft | `INT-01-02` | no | `INT-01`, `A11Y-01` |
-| `INT-01-04` | What is the global Escape/Back priority across targeting, expanded UI, panes, modals, full sheet, and Play? | Draft | `UX-03-03` | no | `INT-01`, `INT-02`, `A11Y-01` |
-| `INT-01-05` | Which common actions are direct controls vs secondary/contextual commands? | Draft | `UX-01-04`, `UX-03-06` | no | `INT-01`, `CMP-01` |
-| `INT-01-06` | How are unavailable/invalid reasons exposed for pointer, keyboard, and focus users? | Draft | `UX-01-05`, `ORIGIN-UX-01-19` | no | `INT-01`, `CONTENT-01`, `A11Y-01` |
-| `INT-01-07` | What selection model distinguishes controlled Actor, current turn, targetable, selected target, contextual focus? | Draft | `UX-02-03`, `ORIGIN-UX-01-19` | no | `INT-01`, `UI-03`, `CMP-01` |
+| `INT-01-01` | When Actor selection, selected-action targeting, and DM actor control overlap, which context has priority? | Reviewed | `ORIGIN-UX-01-16`, `UX-02-03`, `UX-02-05` | no | `INT-01`, `DND-03`, `DM-01` |
+| `INT-01-02` | What command categories belong in Actor Context Menu without duplicating common Hotbar actions? | Reviewed | `ORIGIN-UX-01-16` | no | `INT-01`, `R4-ACTOR-CONTEXT` |
+| `INT-01-03` | What keyboard interaction is equivalent to right-click/context-menu access on Actor Cards? | Reviewed | `INT-01-02` | no | `INT-01`, `A11Y-01` |
+| `INT-01-04` | What is the global Escape/Back priority across targeting, expanded UI, panes, modals, full sheet, and Play? | Reviewed | `UX-03-03` | no | `INT-01`, `INT-02`, `A11Y-01` |
+| `INT-01-05` | Which common actions are direct controls vs secondary/contextual commands? | Reviewed | `UX-01-04`, `UX-03-06` | no | `INT-01`, `CMP-01` |
+| `INT-01-06` | How are unavailable/invalid reasons exposed for pointer, keyboard, and focus users? | Reviewed | `UX-01-05`, `ORIGIN-UX-01-19` | no | `INT-01`, `CONTENT-01`, `A11Y-01` |
+| `INT-01-07` | What selection model distinguishes controlled Actor, current turn, targetable, selected target, contextual focus? | Reviewed | `UX-02-03`, `ORIGIN-UX-01-19` | no | `INT-01`, `UI-03`, `CMP-01` |
 
 ---
 
@@ -394,9 +398,9 @@ Templates: [`templates.md`](templates.md)
 | `CONTENT-01-04` | What information anatomy must empty/no-results messages contain? | Draft | `STATE-01-04` | no | `CONTENT-01`, `R8-EMPTY-COPY` |
 | `CONTENT-01-05` | How are canonical unavailable/disabled reasons phrased? | Draft | `INT-01-06` | no | `CONTENT-01`, `R8-DISABLED-REASON` |
 | `CONTENT-01-06` | What grammar distinguishes normal/destructive confirmation, cancel, retry, close? | Draft | `INT-03-01`, `INT-03-07` | no | `CONTENT-01`, `R8-CONFIRM-COPY`, `R8-DESTRUCTIVE-COPY` |
-| `CONTENT-01-07` | What terms represent Public vs DM Only and later disclosure? | Draft | `ORIGIN-UX-01-26`, `ORIGIN-UX-01-28` | no | `CONTENT-01`, `R8-VISIBILITY` |
-| `CONTENT-01-08` | What vocabulary distinguishes roll, total, outcome, effect, state change, adjudication, Undo? | Draft | `ORIGIN-UX-01-22` | no | `CONTENT-01`, `R8-RESULT-TERMS` |
-| `CONTENT-01-09` | What connection/reconnect/disconnect/rejoin/leave terminology is consistent? | Draft | `STATE-02-04` | no | `CONTENT-01`, `R8-CONNECTION` |
+| `CONTENT-01-07` | What terms represent Public vs DM Only and later disclosure? | Draft | `ORIGIN-UX-01-26`, `ORIGIN-UX-01-28`, `DM-01-01` | no | `CONTENT-01`, `R8-VISIBILITY` |
+| `CONTENT-01-08` | What vocabulary distinguishes roll, total, outcome, effect, state change, adjudication, Undo? | Draft | `ORIGIN-UX-01-22`, `DM-02-05` | no | `CONTENT-01`, `R8-RESULT-TERMS` |
+| `CONTENT-01-09` | What connection/reconnect/disconnect/rejoin/leave terminology is consistent? | Draft | `STATE-02-04`, `SES-01-05`, `NAV-01-08` | no | `CONTENT-01`, `R8-CONNECTION` |
 | `CONTENT-01-10` | What is the tone/scope of first-use guidance? | Draft | `NAV-01-07` | no | `CONTENT-01`, `R8-ONBOARDING` |
 | `CONTENT-01-11` | How are Korean labels, English names, source/provenance, IDs and addresses presented? | Draft | `UI-02-04` | no | `CONTENT-01`, `UI-02` |
 
@@ -408,13 +412,13 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** exact visual token values or domain rules.
 
-**Exit Criteria:** material actions are keyboard reachable; focus/status/targeting/dice/image/zoom accessibility requirements are explicit.
+**Exit Criteria:** material actions are keyboard reachable except explicit reviewed exceptions; focus/status/targeting/dice/image/zoom accessibility requirements are explicit.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `A11Y-01-01` | What product-wide keyboard navigation and visible-focus standard applies? | Draft | none | no | `A11Y-01`, `M4` |
 | `A11Y-01-02` | What focus trap/initial-focus/return rules apply by layer category? | Draft | `INT-02-01`, `INT-02-04` | no | `A11Y-01`, `M4` |
-| `A11Y-01-03` | What semantic/keyboard model applies to Actor Cards, targeting and context menu? | Draft | `INT-01-01`, `INT-01-03`, `INT-01-07` | no | `A11Y-01`, `R7-ACTOR-CARD` |
+| `A11Y-01-03` | What semantic/keyboard model applies to Actor Cards, targeting and context menu, respecting the no-keyboard-open exception for Actor right-click menu? | Draft | `INT-01-01`, `INT-01-03`, `INT-01-07` | no | `A11Y-01`, `R7-ACTOR-CARD` |
 | `A11Y-01-04` | What semantic/keyboard model applies to Hotbar/Command Center and targeting cancel? | Draft | `DND-03-01` | no | `A11Y-01`, `R7-COMMAND-CENTER` |
 | `A11Y-01-05` | Which loading/error/reconnect/result/interrupt changes use status vs alert/live announcements? | Draft | `STATE-01-07`, `STATE-02-04` | no | `A11Y-01`, `STATE-02` |
 | `A11Y-01-06` | What reduced-motion equivalent is required for dice, VFX, overlays and result reveal? | Draft | `ORIGIN-UX-01-25`, `R9-COMBAT-VFX` | no | `A11Y-01`, `R9-REDUCED-MOTION` |
@@ -429,13 +433,13 @@ Templates: [`templates.md`](templates.md)
 
 **Scope:** wide/normal/narrow desktop reflow for Product, Play, Actor Boards, Command Center, utilities, Character, handouts and dice.
 
-**Non-scope:** mobile product scope unless explicitly approved; numeric breakpoints before token/layout review.
+**Non-scope:** mobile/touch-first product scope in v1; numeric breakpoints before token/layout contract work.
 
-**Exit Criteria:** desktop width classes and safe reflow are defined while core anchors/actions remain reachable.
+**Exit Criteria:** supported desktop scope is Reviewed and safe reflow is defined through AI Design Defaults/contracts while core anchors/actions remain reachable.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
-| `PLATFORM-01-01` | What desktop width classes does v1 support, and is mobile/touch-first out of scope? | Draft | none | no | `PLATFORM-01`, `M5` |
+| `PLATFORM-01-01` | What desktop width classes does v1 support, and is mobile/touch-first out of scope? | Reviewed | none | no | `PLATFORM-01`, `M5` |
 | `PLATFORM-01-02` | How does Product Shell primary navigation reflow? | Draft | `NAV-01-01`, `UI-01-01` | no | `PLATFORM-01`, `R7-PRIMARY-NAV` |
 | `PLATFORM-01-03` | How does Play Dual Anchor reflow while keeping both anchors co-primary? | Draft | `UX-01-07`, `UI-01-02` | no | `PLATFORM-01`, `R1-PLAY` |
 | `PLATFORM-01-04` | How do Actor Boards and Initiative Tracker reflow? | Draft | `UI-01-03`, `UI-01-04` | no | `PLATFORM-01`, `DND-04` |
@@ -453,19 +457,19 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** D&D rules calculations, connected Actor authority, Session join policy, final styling.
 
-**Exit Criteria:** Library/Builder/Sheet/roll/portrait/level-up/import/empty states are defined.
+**Exit Criteria:** material layout/flow choices are Reviewed or delegated to the accepted existing flow / AI contract, with rule semantics remaining authoritative-domain owned.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `DND-01-01` | What information/actions must Character Library cards expose? | Draft | `UX-03-05` | no | `DND-01`, `R7-CHAR-CARD` |
-| `DND-01-02` | What Character Builder modes and top-level step structure are first-class? | Draft | `UX-01-01` | no | `DND-01`, `R3-BUILDER-GUIDED`, `R3-BUILDER-QUICK`, `R3-BUILDER-IMPORT`, `R3-BUILDER-EDIT` |
+| `DND-01-02` | What Character Builder modes and top-level step structure are first-class? | Reviewed | `UX-01-01`, `UI-01-08` | no | `DND-01`, `R3-BUILDER-GUIDED`, `R3-BUILDER-QUICK`, `R3-BUILDER-IMPORT`, `R3-BUILDER-EDIT` |
 | `DND-01-03` | How are dependent choices surfaced without hidden rule logic? | Draft | `DND-01-02` | no | `DND-01`, `CMP-01` |
 | `DND-01-04` | What happens when create/edit/import exits with unsaved changes? | Draft | `INT-03-02` | no | `DND-01`, `R4-UNSAVED` |
-| `DND-01-05` | What is the standalone Character Sheet information/action hierarchy? | Draft | `UX-03-05` | no | `DND-01`, `R1-CHAR-SHEET` |
-| `DND-01-06` | Does v1 productize one Sheet layout, multiple selectable layouts, or migration? | Draft | `DND-01-05` | no | `DND-01`, `R3-SHEET-SIMPLEVTT`, `R3-SHEET-OFFICIAL` |
+| `DND-01-05` | What is the standalone Character Sheet information/action hierarchy? | Reviewed | `UX-03-05`, `UI-01-07` | no | `DND-01`, `R1-CHAR-SHEET` |
+| `DND-01-06` | Does v1 productize one Sheet layout, multiple selectable layouts, or migration? | Reviewed | `DND-01-05`, `UI-01-07` | no | `DND-01`, `R3-SHEET-SIMPLEVTT`, `R3-SHEET-OFFICIAL` |
 | `DND-01-07` | What is the standalone Character Sheet roll interaction/result model? | Draft | `UX-01-01` | no | `DND-01`, `DND-02`, `R2-STANDALONE-ROLL` |
 | `DND-01-08` | What portrait add/edit/remove/focal-point experience is supported and where does data belong? | Draft | `DND-01-05` | no | `DND-01`, `R4-PORTRAIT-EDITOR`, `M3` |
-| `DND-01-09` | What Level Up stages, preview, choices, commit and cancel/recovery model are required? | Draft | `DND-01-05` | no | `DND-01`, `R2-LEVEL-UP` |
+| `DND-01-09` | What Level Up stages, preview, choices, commit and cancel/recovery model are required? | Reviewed | `DND-01-05`, `UI-01-08` | no | `DND-01`, `R2-LEVEL-UP` |
 | `DND-01-10` | How does Character import recover from unsupported/missing/invalid fields? | Draft | `STATE-01-05`, `STATE-02-03` | no | `DND-01`, `R4-IMPORT-REVIEW` |
 | `DND-01-11` | What is the empty/no-Character experience outside Join? | Draft | `NAV-01-03` | no | `DND-01`, `STATE-01` |
 | `DND-01-12` | Which Character actions remain available while that Character is linked to an active Session? | Draft | `UX-01-03`, `UX-02-03` | no | `DND-01`, `SES-01` |
@@ -478,7 +482,7 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** rules calculation, RNG authority, DM visibility protocol, arbitrary timing budgets.
 
-**Exit Criteria:** Reviewed dice authority decisions are preserved and remaining result/reveal/fallback/variant behavior is explicit.
+**Exit Criteria:** Reviewed dice authority decisions are preserved and remaining result/reveal/fallback/variant behavior is explicit through AI/Motion/Domain contracts.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
@@ -487,7 +491,7 @@ Templates: [`templates.md`](templates.md)
 | `ORIGIN-UX-01-23` | Is the broad central table/scene the Roll Area? | Reviewed | `ORIGIN-UX-01-22A` | no | `DND-02` |
 | `ORIGIN-UX-01-24` | Does authoritative result exist before dice settle to the final face? | Reviewed | none | no | `DND-02` |
 | `ORIGIN-UX-01-25` | May fine dice trajectories be client-local while canonical dice/result are shared? | Reviewed | `ORIGIN-UX-01-24`, `ORIGIN-UX-01-26` | no | `DND-02`, `SES-02` |
-| `DND-02-01` | What appears in immediate result feedback vs Activity detail? | Draft | `ORIGIN-UX-01-22` | no | `DND-02`, `R5-ROLL-RESULT` |
+| `DND-02-01` | What appears in immediate result feedback vs Activity detail? | Draft | `ORIGIN-UX-01-22`, `DM-02-01` | no | `DND-02`, `R5-ROLL-RESULT` |
 | `DND-02-02` | How should standalone Character rolls differ from connected shared rolls? | Draft | `DND-01-07`, `ORIGIN-UX-01-24` | no | `DND-02`, `R5-STANDALONE-ROLL-RESULT` |
 | `DND-02-03` | What is the reveal sequence from roll start through outcome/state changes? | Draft | `ORIGIN-UX-01-24` | no | `DND-02`, `R9-RESULT-REVEAL` |
 | `DND-02-04` | What visual fallback occurs if 3D dice/VFX cannot render? | Draft | `ORIGIN-UX-01-25` | no | `DND-02`, `STATE-02` |
@@ -505,7 +509,7 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** UI rules calculation or heuristic domain relations.
 
-**Exit Criteria:** Reviewed capability/targeting seeds are preserved and remaining grouping/customization/detail/cancel/contract gaps are resolved or explicit.
+**Exit Criteria:** Reviewed capability/targeting seeds are preserved and remaining AI design detail/domain blockers are explicit.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
@@ -519,7 +523,7 @@ Templates: [`templates.md`](templates.md)
 | `DND-03-01` | What exact capability grouping/page contents appear? | Draft | `ORIGIN-UX-01-07` | no | `DND-03`, `R7-HOTBAR-TABS` |
 | `DND-03-02` | What Hotbar customization operations are supported and what may discovery never overwrite? | Draft | `UX-01-06`, `ORIGIN-UX-01-07` | no | `DND-03`, `R7-HOTBAR-SLOT` |
 | `DND-03-03` | What information is visible on Hotbar Slot vs hover/focus/detail? | Draft | `UX-01-04`, `UX-03-06` | no | `DND-03`, `CMP-01` |
-| `DND-03-04` | How are unavailable actions/resources/costs shown without hiding capability? | Draft | `ORIGIN-UX-01-08`, `ORIGIN-UX-01-18` | no | `DND-03`, `CONTENT-01` |
+| `DND-03-04` | How are unavailable actions/resources/costs shown without hiding capability? | Draft | `ORIGIN-UX-01-08`, `ORIGIN-UX-01-18`, `INT-01-06` | no | `DND-03`, `CONTENT-01` |
 | `DND-03-05` | How does a user cancel selected capability/targeting without losing unrelated context? | Draft | `INT-01-04` | no | `DND-03`, `STATE-01` |
 | `DND-03-06` | What target-selection feedback appears on Actor Cards? | Draft | `ORIGIN-UX-01-19`, `ORIGIN-UX-01-20` | no | `DND-03`, `R7-ACTOR-CARD` |
 | `DND-03-07` | How are no-target/self-target actions executed? | Draft | `ORIGIN-UX-01-20` | no | `DND-03` |
@@ -535,14 +539,14 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** initiative calculation, reaction legality, movement rules, authoritative turn engine.
 
-**Exit Criteria:** Initiative seeds, turn presentation, reactions, combat transitions and VFX relationship are defined.
+**Exit Criteria:** Initiative seeds, turn presentation, reactions, combat transitions and VFX relationship are defined through Reviewed choices and AI/Domain contracts.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `ORIGIN-UX-01-14` | Does Initiative preserve Actor Boards and add a top horizontal tracker? | Reviewed | `UX-01-07` | no | `DND-04` |
 | `ORIGIN-UX-01-15` | What information belongs in compact Initiative Tracker entry? | Reviewed | `ORIGIN-UX-01-14` | no | `DND-04` |
 | `DND-04-01` | How does user enter Initiative and what UI changes immediately? | Draft | `ORIGIN-UX-01-14` | no | `DND-04`, `SES-01` |
-| `DND-04-02` | How are current turn, controlled Actor, order, round and off-turn state distinguished? | Draft | `ORIGIN-UX-01-15`, `UX-02-03` | no | `DND-04`, `UI-03` |
+| `DND-04-02` | How are current turn, controlled Actor, order, round and off-turn state distinguished? | Draft | `ORIGIN-UX-01-15`, `UX-02-03`, `INT-01-07` | no | `DND-04`, `UI-03` |
 | `DND-04-03` | Where/when is End Turn / Next Turn available for Player and DM? | Draft | `UX-02-05` | no | `DND-04`, `SES-02` |
 | `DND-04-04` | What interactions remain available when it is not user's turn? | Draft | `DND-03-09`, `UX-02-03` | no | `DND-04`, `DND-03` |
 | `DND-04-05` | What is the UI model for Reaction/Interrupt prompt, response, timeout/no-timeout and return? | Draft | `R3-INTERRUPT`, `GAP-RESOLUTION-SAFE-INTERACTIONS` | no | `DND-04`, `R4-REACTION-PROMPT` |
@@ -555,32 +559,32 @@ Templates: [`templates.md`](templates.md)
 
 # SES-01 — Session UX
 
-**Scope:** Host/Join, Character Select, lobby/readiness, Play composition, Command Center/Actor Boards, handouts, utilities, identity/status, leave/end/reconnect-visible continuity.
+**Scope:** Host/Join, Character Select, immediate live-session entry, late join, Play composition, Command Center/Actor Boards, handouts, utilities, identity/status, leave/end/reconnect-visible continuity.
 
 **Non-scope:** wire protocol, private-delivery schema, domain combat rules, final DM authority semantics.
 
-**Exit Criteria:** lifecycle/task flows, Reviewed Play/Handout seeds, utility topology, identity, leave/end and reconnect-visible behavior are defined.
+**Exit Criteria:** material lifecycle is Reviewed; remaining utility/presentation detail is AI/contract work and network blockers remain explicit.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
-| `ORIGIN-FLOW-02` | Does Join include Character Select before lobby/live Play without universal Character prerequisite? | Reviewed | `ORIGIN-FLOW-01` | no | `SES-01` |
+| `ORIGIN-FLOW-02` | Does Join include Character Select before entering live Play without universal Character prerequisite? | Reviewed | `ORIGIN-FLOW-01` | no | `SES-01` |
 | `ORIGIN-UX-01-09` | What content belongs in bottom Command Center? | Reviewed | `UX-01-07` | no | `SES-01`, `DND-03` |
 | `ORIGIN-UX-01-10` | Does Freeform use lower Player/Allied Actor Board instead of permanent side portrait rail? | Reviewed | `UX-01-07` | no | `SES-01` |
 | `ORIGIN-UX-01-11` | Does Freeform also use upper NPC/Neutral/Hostile Actor Board? | Reviewed | `ORIGIN-UX-01-10` | no | `SES-01` |
 | `ORIGIN-UX-01-12` | What Handout presentation modes are supported and is mode shared/restored? | Reviewed | `UX-01-03` | no | `SES-01`, `SES-02` |
 | `ORIGIN-UX-01-13` | Which Handout modes may Player dismiss/reopen locally? | Reviewed | `ORIGIN-UX-01-12` | no | `SES-01` |
-| `SES-01-01` | What fields/actions belong in direct Host Setup? | Draft | `ORIGIN-FLOW-01` | no | `SES-01`, `R2-HOST` |
-| `SES-01-02` | What participant/readiness conditions are required before Host starts Play? | Draft | `UX-02-03` | no | `SES-01`, `SES-02` |
-| `SES-01-03` | What fields/actions belong in direct Join Setup and Character Select? | Draft | `ORIGIN-FLOW-02` | no | `SES-01`, `R2-JOIN` |
-| `SES-01-04` | What happens when Join has no valid Character available? | Draft | `ORIGIN-FLOW-02` | no | `SES-01`, `GAP-JOIN-NO-CHARACTER` |
-| `SES-01-05` | What information/actions belong in Player Lobby/Ready? | Draft | `SES-01-02`, `SES-01-03` | no | `SES-01` |
-| `SES-01-06` | What is complete Play Workspace composition in Freeform and Initiative? | Draft | `ORIGIN-UX-01-09`, `ORIGIN-UX-01-10`, `ORIGIN-UX-01-11`, `ORIGIN-UX-01-14` | no | `SES-01`, `UI-01` |
-| `SES-01-07` | Which Quick Sheet, Full Sheet, Rules, Activity, Encounter, Participants, Session Share and connection utilities exist and where launch? | Draft | `NAV-01-05`, `INT-02-05` | no | `SES-01`, `R7-SESSION-UTILITY-RAIL` |
+| `SES-01-01` | What fields/actions belong in direct Host Setup? | Draft | `ORIGIN-FLOW-01`, `SES-01-02` | no | `SES-01`, `R2-HOST` |
+| `SES-01-02` | Does Host opening a valid session create live Play immediately, or require a separate readiness/lobby gate? | Reviewed | `UX-02-01` | no | `SES-01`, `SES-02` |
+| `SES-01-03` | What fields/actions belong in direct Join Setup and Character Select? | Draft | `ORIGIN-FLOW-02`, `SES-01-04`, `SES-01-05` | no | `SES-01`, `R2-JOIN` |
+| `SES-01-04` | What happens when Join has no valid Character available? | Reviewed | `ORIGIN-FLOW-02` | no | `SES-01`, `R6-NO-VALID-CHARACTER` |
+| `SES-01-05` | Does v1 have a separate Player Lobby/Ready stage, or does a valid Player join the already-live session? | Reviewed | `SES-01-02`, `SES-01-03` | no | `SES-01`, `SES-02` |
+| `SES-01-06` | What is complete Play Workspace composition in Freeform and Initiative? | Draft | `ORIGIN-UX-01-09`, `ORIGIN-UX-01-10`, `ORIGIN-UX-01-11`, `ORIGIN-UX-01-14`, `UI-01-02`, `UI-01-03`, `UI-01-04`, `UI-01-05` | no | `SES-01`, `UI-01` |
+| `SES-01-07` | Which Quick Sheet, Full Sheet, Rules, Activity, Encounter, Participants, Session Share and connection utilities exist and where launch? | Draft | `NAV-01-05`, `UI-01-06` | no | `SES-01`, `R7-SESSION-UTILITY-RAIL` |
 | `SES-01-08` | What UI realizes Handout Overlay/Upper/Full including close/reopen/zoom/pan? | Draft | `ORIGIN-UX-01-12`, `ORIGIN-UX-01-13` | no | `SES-01`, `R4-DM-HANDOUT-PANE`, `R4-PLAYER-HANDOUT-VIEWER` |
-| `SES-01-09` | How are Session identity, Character/Actor identity, connection state and current mode presented? | Draft | `UX-02-01`, `UX-02-03` | no | `SES-01`, `R7-SESSION-IDENTITY`, `R7-CONNECTION-STATUS` |
-| `SES-01-10` | What is normal Freeform experience with no connected Players and/or no Combatants? | Draft | `SES-01-06` | no | `SES-01`, `STATE-01` |
+| `SES-01-09` | How are Session identity, Character/Actor identity, connection state and current mode presented? | Draft | `UX-02-01`, `UX-02-03`, `INT-01-07` | no | `SES-01`, `R7-SESSION-IDENTITY`, `R7-CONNECTION-STATUS` |
+| `SES-01-10` | What is normal Freeform experience with no connected Players and/or no Combatants? | Draft | `SES-01-02`, `SES-01-06` | no | `SES-01`, `STATE-01` |
 | `SES-01-11` | What flow applies when Player leaves vs Host ends a session? | Draft | `INT-03-03`, `INT-03-04` | no | `SES-01`, `R2-LEAVE`, `R2-END-SESSION` |
-| `SES-01-12` | What user-visible continuity must be restored after reconnect before interaction resumes? | Draft | `UX-01-03`, `STATE-02-04` | no | `SES-01`, `SES-02` |
+| `SES-01-12` | What user-visible continuity must be restored after reconnect before interaction resumes? | Draft | `UX-01-03`, `STATE-02-04`, `NAV-01-08` | no | `SES-01`, `SES-02` |
 
 ---
 
@@ -604,30 +608,30 @@ Templates: [`templates.md`](templates.md)
 | `SES-02-06` | What session state/event cursor is restored on reconnect and how is stale state reconciled? | Draft | `UX-01-03`, `STATE-02-04`, `STATE-02-07` | no | `SES-02`, `M2`, `M3` |
 | `SES-02-07` | How are incompatible versions detected and presented before unsafe Play? | Draft | `STATE-02-05` | no | `SES-02`, `R6-INCOMPATIBLE` |
 | `SES-02-08` | How are unauthorized commands rejected without leaking private state? | Draft | `UX-02-08`, `STATE-02-06` | no | `SES-02`, `R6-PERMISSION` |
-| `SES-02-09` | What participant connection/ready/identity information is role-visible/delivered? | Draft | `UX-02-07`, `UX-02-08` | no | `SES-02`, `R4-PARTICIPANTS` |
+| `SES-02-09` | What participant connection/identity information is role-visible/delivered for live/late-joining participants? | Draft | `UX-02-07`, `UX-02-08`, `SES-01-05` | no | `SES-02`, `R4-PARTICIPANTS` |
 | `SES-02-10` | If live role switching is allowed, what reconciliation occurs at switch time? | Draft | `UX-02-06` | yes; condition false under UX-02-06; no live role switching | `SES-02`, `M1`, `M3` |
 
 ---
 
 # DM-01 — DM Controls
 
-**Scope:** roll visibility, actor control, Encounter management, participants/session share, Handout, lifecycle controls, DM utility organization including current spatial relation evidence.
+**Scope:** roll visibility, actor control, Encounter management, participants/session share, Handout, lifecycle controls, DM utility organization including advanced spatial relation authoring.
 
 **Non-scope:** adjudication/Undo mechanics, delivery schema, rules calculations.
 
-**Exit Criteria:** privacy toggle, Actor/Encounter/session/Handout controls, persistent indicators and utility organization are defined.
+**Exit Criteria:** material privacy default and advanced spatial-tool scope are Reviewed; remaining detailed controls are AI/contract work.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `ORIGIN-UX-01-27` | Does DM Command Center expose persistent Public/DM Only control with strong indicator and no auto-switching? | Reviewed | `ORIGIN-UX-01-26` | no | `DM-01` |
-| `DM-01-01` | What is initial Public/DM Only value and persistence lifetime? | Draft | `ORIGIN-UX-01-27` | no | `DM-01`, `GAP-DM-ROLL-VISIBILITY-PERSISTENCE` |
+| `DM-01-01` | What is initial Public/DM Only value and persistence lifetime? | Reviewed | `ORIGIN-UX-01-27` | no | `DM-01`, `SES-02` |
 | `DM-01-02` | Where/how does DM switch selected/controlled Actor without confusing turn/target selection? | Draft | `UX-02-05`, `INT-01-01` | no | `DM-01`, `R4-ACTOR-CONTEXT` |
-| `DM-01-03` | What Encounter management controls, including any explicit spatial-relation authoring, are available in preparation/Freeform/Initiative? | Draft | `UX-02-05`, `DND-04-01` | no | `DM-01`, `R4-ENCOUNTER`, `R4-DM-SPATIAL-RELATION` |
+| `DM-01-03` | What Encounter management controls, including explicit spatial-relation authoring, are available in preparation/Freeform/Initiative? | Reviewed | `UX-02-05`, `DND-04-01` | no | `DM-01`, `R4-ENCOUNTER`, `R4-DM-SPATIAL-RELATION` |
 | `DM-01-04` | What participant/session-share controls belong in persistent vs contextual DM utilities? | Draft | `NAV-01-05`, `SES-01-07` | no | `DM-01`, `R4-PARTICIPANTS`, `R4-SESSION-SHARE` |
 | `DM-01-05` | Where does Handout authoring/reveal/withdraw/mode control live? | Draft | `SES-01-08` | no | `DM-01`, `R4-DM-HANDOUT-PANE` |
 | `DM-01-06` | Which lifecycle controls remain accessible during live Play and which require confirmation? | Draft | `SES-01-11` | no | `DM-01`, `INT-03` |
-| `DM-01-07` | What DM-only persistent indicators remain visible while tools are closed? | Draft | `ORIGIN-UX-01-27`, `UX-02-07` | no | `DM-01`, `UI-03`, `UI-04` |
-| `DM-01-08` | How is DM utility surface organized without becoming duplicate Command Center? | Draft | `UX-01-07`, `NAV-01-05` | no | `DM-01`, `UI-01`, `R4-DM-SPATIAL-RELATION` |
+| `DM-01-07` | What DM-only persistent indicators remain visible while tools are closed? | Draft | `ORIGIN-UX-01-27`, `UX-02-07`, `INT-01-07` | no | `DM-01`, `UI-03`, `UI-04` |
+| `DM-01-08` | How is DM utility surface organized without becoming duplicate Command Center? | Draft | `UX-01-07`, `NAV-01-05`, `UI-01-06` | no | `DM-01`, `UI-01`, `R4-DM-SPATIAL-RELATION` |
 
 ---
 
@@ -637,20 +641,20 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** rules calculations, low-level event schema, general DM navigation.
 
-**Exit Criteria:** disclosure seed, private Activity, adjudication operations/scope/reason, Undo/correction and ordering are defined.
+**Exit Criteria:** material private-Activity and correction-history behavior is Reviewed; disclosure/projection and remaining control detail stay explicit or contract-blocked.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `ORIGIN-UX-01-28` | May hidden roll later be disclosed as full adjudication or result-only without reroll? | Reviewed | `ORIGIN-UX-01-26` | no | `DM-02`, `SES-02` |
-| `DM-02-01` | How does DM Activity present private rolls/adjudications before disclosure? | Draft | `ORIGIN-UX-01-26` | no | `DM-02`, `GAP-DM-PRIVATE-ACTIVITY-PRESENTATION`, `R4-ACTIVITY` |
+| `DM-02-01` | How does DM Activity present private rolls/adjudications before disclosure? | Reviewed | `ORIGIN-UX-01-26` | no | `DM-02`, `R4-ACTIVITY` |
 | `DM-02-02` | Which adjudication operation categories are supported? | Draft | none | no | `DM-02`, `R4-ADJUDICATION` |
 | `DM-02-03` | What scope/lifetime choices may adjudication have and how previewed? | Draft | `DM-02-02` | no | `DM-02`, `M3` |
 | `DM-02-04` | Is reason/provenance required, optional or operation-dependent? | Draft | `DM-02-02` | no | `DM-02`, `CONTENT-01` |
-| `DM-02-05` | What may Undo reverse, and what requires corrective adjudication? | Draft | `DM-02-02` | no | `DM-02`, `R2-DM-UNDO` |
-| `DM-02-06` | What confirmation is required for adjudication/Undo by consequence/visibility? | Draft | `INT-03-06` | no | `DM-02`, `INT-03` |
+| `DM-02-05` | What may Undo reverse, and what requires corrective adjudication? | Reviewed | `DM-02-02`, `docs/design/session-runtime.md` | no | `DM-02`, `R2-DM-UNDO` |
+| `DM-02-06` | What confirmation is required for adjudication/Undo by consequence/visibility? | Draft | `INT-03-06`, `DM-02-05` | no | `DM-02`, `INT-03` |
 | `DM-02-07` | Where/how does DM choose full-adjudication vs result-only disclosure? | Draft | `ORIGIN-UX-01-28`, `SES-02-04` | no | `DM-02`, `R2-DM-DISCLOSE` |
 | `DM-02-08` | How is an already disclosed result corrected without erasing audit history? | Draft | `DM-02-05`, `DM-02-07` | no | `DM-02`, `R5-ACTIVITY-EVENT` |
-| `DM-02-09` | What belongs in immediate result controls vs Activity detail for adjudicated/undone events? | Draft | `ORIGIN-UX-01-22` | no | `DM-02`, `R4-ACTIVITY-DETAIL`, `R4-ACTIVITY` |
+| `DM-02-09` | What belongs in immediate result controls vs Activity detail for adjudicated/undone events? | Draft | `ORIGIN-UX-01-22`, `DM-02-01`, `DM-02-05` | no | `DM-02`, `R4-ACTIVITY-DETAIL`, `R4-ACTIVITY` |
 
 ---
 
@@ -660,21 +664,21 @@ Templates: [`templates.md`](templates.md)
 
 **Non-scope:** rules text, executable plugin architecture, domain semantics, general writing style.
 
-**Exit Criteria:** rules lookup and content lifecycle/recovery/update/session policies are defined.
+**Exit Criteria:** material package/lifecycle/live-session policies are Reviewed; remaining lookup/validation/recovery detail is AI/Domain contract work.
 
 | ID | Question | Status | Depends On | Conditional? | Destination |
 | --- | --- | --- | --- | --- | --- |
 | `CONTENT-02-01` | What content categories/source metadata must Rules Browser expose/search? | Draft | none | no | `CONTENT-02`, `R1-RULES` |
 | `CONTENT-02-02` | How do Search, Filter, no-results, Detail, related rules and return-to-results behave? | Draft | `CONTENT-02-01`, `STATE-01-04` | no | `CONTENT-02`, `R4-SESSION-RULES` |
 | `CONTENT-02-03` | How is source/provenance/relationship information presented? | Draft | `CONTENT-02-01`, `UX-03-06` | no | `CONTENT-02`, `CONTENT-01` |
-| `CONTENT-02-04` | What add-on import package/file types and support boundaries are productized? | Draft | none | no | `CONTENT-02`, `R7-FILE-INPUT` |
+| `CONTENT-02-04` | What add-on import package/file types and support boundaries are productized? | Reviewed | none | no | `CONTENT-02`, `R7-FILE-INPUT` |
 | `CONTENT-02-05` | What Preview/Validation information must be shown before install/activation? | Draft | `CONTENT-02-04`, `STATE-01-05` | no | `CONTENT-02`, `R4-IMPORT-REVIEW` |
 | `CONTENT-02-06` | What validation severities block/warn/inform and how are conflicts represented? | Draft | `CONTENT-02-05` | no | `CONTENT-02`, `STATE-01`, `STATE-02` |
-| `CONTENT-02-07` | What happens when imported content requests unsupported mechanics/extensions? | Draft | `STATE-02-03` | no | `CONTENT-02`, `R6-UNSUPPORTED` |
+| `CONTENT-02-07` | What happens when imported content requests unsupported mechanics/extensions? | Draft | `STATE-02-03`, `CONTENT-02-04` | no | `CONTENT-02`, `R6-UNSUPPORTED` |
 | `CONTENT-02-08` | What persistence/recovery applies after install or catalog-save failure? | Draft | `STATE-02-02`, `STATE-02-09` | no | `CONTENT-02`, `M3` |
-| `CONTENT-02-09` | Does v1 support update/replace/remove/disable, and what happens to dependencies? | Draft | `CONTENT-02-08` | no | `CONTENT-02`, `INT-03` |
+| `CONTENT-02-09` | Does v1 support update/replace/remove/disable, and what happens to dependencies? | Reviewed | `CONTENT-02-04`, `CONTENT-02-08` | no | `CONTENT-02`, `INT-03` |
 | `CONTENT-02-10` | How are Combatant imports unified with/distinguished from general Content import? | Draft | `CONTENT-02-04` | no | `CONTENT-02`, `R4-IMPORT-REVIEW` |
-| `CONTENT-02-11` | How is active Session content shown, and which changes are allowed while live? | Draft | `SES-02-07` | no | `CONTENT-02`, `SES-01`, `R4-SESSION-SHARE` |
+| `CONTENT-02-11` | How is active Session content shown, and which changes are allowed while live? | Reviewed | `SES-01-02`, `CONTENT-02-09` | no | `CONTENT-02`, `SES-01`, `R4-SESSION-SHARE` |
 
 ---
 
@@ -684,18 +688,23 @@ Route D preparation and audit are complete for the current planning/runtime snap
 
 ```text
 [x] R1-R9 Master UI Inventory cross-checked against active implementation entry graph, master-flow.md, made Decision Cards, generic non-route patterns, and active Planning Gaps.
-[x] M1-M6 material coverage exists for every material Registry area; unresolved behavior is owned by a declared Draft Decision Map item or explicit Planning Gap rather than AI inference.
+[x] M1-M6 material coverage exists for every material Registry area; unresolved detail is owned by a canonical Decision, AI Design Default/contract, Domain/Architecture contract, conditional N/A, or explicit Planning Gap rather than AI inference outside authority.
 [x] All 27 governance sheets have complete predeclared T2 Decision Maps.
-[x] Missing / Duplication / Coverage audit passes:
-    [x] every Registry item has a governing sheet/contract owner;
-    [x] every governance sheet has inventory/Decision-Map coverage;
-    [x] no normative requirement has duplicate canonical authority;
-    [x] material unresolved behavior is a declared Draft Decision Map item or explicit Planning Gap.
-[x] Owner whole-product coverage checkpoint is prepared in the Dashboard and delivered with the gate-close update.
+[x] Missing / Duplication / Coverage audit passes.
+[x] Owner whole-product coverage checkpoint delivered.
+[x] Lightweight material Owner Checkpoint phase complete.
 ```
 
-**Current sequential review: `UX-03`. Current batch: `UX-03-01` through `UX-03-08`.**
+**Owner-required checkpoints remaining: 0.**
 
-Passing this gate does not Freeze any product decision and does not authorize implementation. It only means the planning corpus is sufficiently covered and internally routed to continue owner review.
+Current planning phase:
 
-Do not append spontaneous questions. New material discoveries update the appropriate complete Decision Map or Planning Gap before they can become owner questions.
+```text
+AI Design Defaults / detailed contracts
++ Domain/Architecture gap resolution
++ legacy planning reconciliation
+```
+
+Passing this gate and completing Owner Checkpoints do not Freeze any product decision and do not authorize implementation.
+
+Do not append or ask spontaneous owner questions. New material discoveries must first be classified under `OWNER-CONTROL-POLICY.md`; only genuine material Owner Checkpoints may be escalated. Low-risk design choices stay AI-managed, and technical truth stays Domain/Architecture-owned.
