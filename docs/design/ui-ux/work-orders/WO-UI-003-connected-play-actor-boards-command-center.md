@@ -1,6 +1,6 @@
 # WO-UI-003 — Connected Play Actor Boards / Tabletop Stage / Persistent Command Center
 
-Status: **AUTHORIZED — IMPLEMENTATION IN PROGRESS**
+Status: **IMPLEMENTED — AUTOMATED VERIFICATION PASS — OWNER HUMAN QA PENDING**
 
 Date: 2026-08-22
 
@@ -15,6 +15,18 @@ Accepted candidate code reference:
 Authorization record:
 
 `WO-UI-003-SCOPED-AUTHORIZATION.md`
+
+Implementation record:
+
+`WO-UI-003-IMPLEMENTATION-RECORD.md`
+
+Verified source:
+
+`fb007d809ab586ca8d2e135e5813e929772a7f2c`
+
+Exact-head UI verification:
+
+`run_id: 32496754716` — **SUCCESS**
 
 ---
 
@@ -36,15 +48,15 @@ Initiative extends this same skeleton; it does not replace it with a Combat rout
 
 ---
 
-# 2. In scope
+# 2. Implemented scope
 
 ## Connected Play topology
 
-- add an Upper Actor Board driven by canonical `SceneVm.entities`;
-- retain a broad mapless Tabletop Stage / Play Context;
-- add a Lower Actor Board driven by canonical `SceneVm.entities`;
-- preserve contextual utilities as panes/layers rather than primary permanent workspace columns;
-- keep a persistent bottom Command Center reachable in Freeform and Initiative.
+- Upper Actor Board driven by canonical `SceneVm.entities`;
+- broad mapless Tabletop Stage / Play Context;
+- Lower Actor Board driven by canonical `SceneVm.entities`;
+- contextual utilities remain panes/layers instead of permanent primary columns;
+- persistent bottom Command Center remains reachable in Freeform and Initiative.
 
 ## Actor Cards / Boards
 
@@ -67,7 +79,7 @@ Full ActorCard target-valid / target-invalid / target-selected interaction styli
 
 ## Command Center
 
-Replace the historical intent-first primary funnel in `SessionActionDock` with persistent direct capability discovery over authoritative `ActionVm[]`.
+The historical intent-first primary funnel in `SessionActionDock` is replaced by persistent direct capability discovery over authoritative `ActionVm[]`.
 
 Baseline page family:
 
@@ -254,18 +266,27 @@ Existing utility, resolution, Quick Sheet, Full Sheet, reconnect and Handout com
 
 ---
 
-# 9. Definition of done
+# 9. Automated verification — PASS
 
-Automated:
+Exact source:
 
-- dedicated topology/Command Center structural checks PASS;
-- stale intent-first structural expectations removed/reconciled;
-- existing Session utility/Initiative/reconnect/Product continuity regressions PASS;
-- TypeScript PASS;
-- production build PASS;
-- broad UI workflow PASS on one exact source head.
+```text
+fb007d809ab586ca8d2e135e5813e929772a7f2c
+```
 
-Human:
+Exact-head UI workflow:
+
+```text
+run_id: 32496754716
+job: frontend
+conclusion: SUCCESS
+```
+
+The workflow passed the dedicated Connected Play topology gate, existing Session/Product continuity regressions, broad Phase 14 runtime/UI regressions, authoritative mechanics, TypeScript and production build.
+
+---
+
+# 10. Remaining definition of done — Human QA
 
 Owner verifies in Tauri Connected Play that:
 
