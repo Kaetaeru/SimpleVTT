@@ -1,8 +1,8 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 **Owner가 직접 답해야 하는 필수 UI/UX 질문은 모두 끝났습니다.**
+현재 **Owner가 직접 답해야 하는 필수 UI/UX 질문은 모두 끝났고**, 실제 runtime UI를 만들기 전에 검토할 **Standalone UI Reference Prototype 후보까지 만들어졌습니다.**
 
-예전처럼 세부 UI 항목을 하나씩 선택할 필요가 없습니다. 앞으로는 AI가 이미 Reviewed된 방향과 [`OWNER-CONTROL-POLICY.md`](OWNER-CONTROL-POLICY.md)에 따라 세부 UX를 설계하고, 제품 사용법을 크게 바꾸는 새 선택이 생길 때만 다시 Owner에게 묻습니다.
+이제 다음 단계는 `src/` 구현이 아니라 **프로토타입을 브라우저에서 보고 자연어로 수정하는 단계**입니다.
 
 ---
 
@@ -13,57 +13,82 @@
 | Meta governance | **Stable v1** |
 | Global Planning Gate | **PASS** |
 | Owner 필수 질문 | **완료 — 0개 남음** |
-| UX-01 / UX-02 | **Reviewed** |
-| UX-03 / NAV-01 / UI-01 / INT-01 | **Reviewed** |
-| 핵심 Owner Checkpoint 10개 | **Reviewed** |
-| 상세 UI 질문 | AI Design Default / contract로 처리 |
+| 핵심 Product/UX 방향 | **Reviewed** |
+| 상세 UI 설계 | AI Design Default + Reference Prototype |
+| Reference Prototype specification | **P0 PASS** |
+| Standalone HTML prototype | **Review Candidate 생성됨** |
+| Static boundary/coverage verification | **PASS** |
+| Browser visual/interaction review | **대기** |
+| Prototype Owner Acceptance | **아직 안 함** |
 | Frozen 결정 | 없음 |
-| 실제 구현 | 아직 승인되지 않음 |
+| Runtime `src/` UI 구현 | **아직 승인되지 않음** |
 
-완료된 핵심 워크시트: [`owner-review/02-key-decisions.md`](owner-review/02-key-decisions.md)
+Prototype 시작 문서: [`prototype/README.md`](prototype/README.md)
 
-Canonical 결정: [`decisions.md`](decisions.md)
+Prototype HTML entry: [`prototype/app/index.html`](prototype/app/index.html)
 
----
+Prototype 검토 체크리스트: [`prototype/PROTOTYPE-ACCEPTANCE.md`](prototype/PROTOTYPE-ACCEPTANCE.md)
 
-# 이번에 추가로 확정된 핵심 방향
-
-## 화면 지원 범위
-
-- v1은 **큰/보통/좁은 데스크톱 창**을 공식 지원합니다.
-- mobile/touch-first 전용 UI는 v1 범위에서 제외합니다.
-
-## 세션 진입 방식
-
-- **별도 대기실/Ready 화면을 만들지 않습니다.**
-- Host가 세션을 열면 곧바로 **live session**이 됩니다.
-- DM은 같은 live session 안에서 플레이와 준비/편집을 동시에 할 수 있습니다.
-- Player는 이미 열린 세션에 **중간 참가**할 수 있습니다.
-- Character가 하나도 없으면 Join을 막고 `Create / Import`를 안내한 뒤 Character를 준비하고 다시 Join합니다.
-
-## DM 굴림 / Activity
-
-- 새 세션에서 DM 굴림 기본값은 **Public**입니다.
-- DM이 바꾼 Public/DM Only 값은 **그 live session 동안만** 유지됩니다.
-- DM Activity는 공개/비공개 기록을 **하나의 시간순 기록**에서 보여주고, 표시와 필터로 구분합니다.
-- DM-only 비밀정보는 기존 원칙대로 Player에게 전달하지 않습니다.
-
-## DM 고급 도구 / 수정 기록
-
-- 거리/시야/엄폐 수동 편집은 v1에 남기되 **고급 DM 도구**로 필요할 때만 엽니다.
-- Undo/판정수정은 기존 기록을 삭제하지 않습니다.
-- 이전 결과는 남기고 **correction/reversal 기록을 새로 추가**합니다.
-
-## Content / Add-on
-
-- v1 공식 import 형식은 **SimpleVTT package format 하나**입니다.
-- v1에서 install / update / replace / disable / delete 전체 lifecycle을 제품 기능으로 지원합니다.
-- live session은 **세션이 열릴 때의 content configuration을 snapshot으로 고정**합니다.
-- live 중 library의 콘텐츠를 변경해도 현재 세션은 바뀌지 않고 이후 세션에만 적용됩니다.
+Canonical Product/UX decisions: [`decisions.md`](decisions.md)
 
 ---
 
-# 이전에 이미 정리된 큰 방향
+# 지금 프로토타입에서 미리 보는 것
+
+현재 Reference Prototype 후보는 실제 backend/rules 없이 mock data만 사용해서 다음을 시각·조작 검토하도록 만들어졌습니다.
+
+- Home / Characters / Session / Content / Rules / Settings
+- First Run 안내
+- Official-style / SimpleVTT Character Sheet
+- 기존 Builder / Level Up reference shell
+- Host Setup -> 즉시 Live Session
+- Join + Character Select + no-Character 차단
+- DM / Player Freeform Play
+- DM / Player Initiative
+- 위쪽 NPC/적 Actor Board + 아래쪽 Player/아군 Actor Board
+- 중앙 Scene/Table
+- 아래 고정 Command Center
+- Hotbar / Action economy / Resource Rail
+- Initiative Tracker
+- Targeting / invalid target / multi-target
+- Main Hand unavailable + no fallback
+- Resolving / Reaction / Concentration / Dice / Result
+- Activity public/private / correction history
+- Encounter / Participants / Session Share / Player Session
+- 고급 DM 거리/시야/엄폐 도구
+- Handout Overlay / Upper Scene / Full Scene
+- Full Sheet layer
+- 우클릭 Actor Context Menu
+- Rich hover explanation
+- NOTICE / reconnect / error / pending
+- 패널 resize / Reset Layout
+- Wide / Normal / Narrow desktop
+- Reduced Motion
+- Component Gallery
+
+Prototype Controls에는 34개 named scenario와 Surface 바로 보기 기능이 있습니다.
+
+---
+
+# 중요한 경계
+
+이 HTML은 **제품 코드가 아닙니다.**
+
+현재 prototype은:
+
+- production `src/` UI를 import하지 않음;
+- real backend/network/storage를 사용하지 않음;
+- D&D 룰/타게팅/권한을 계산하지 않음;
+- fixture가 target valid/unavailable/result 같은 표시값을 직접 제공함;
+- Player 화면에서 DM-only mock event의 placeholder를 만들지 않음.
+
+정적 검증 기록: [`prototype/BUILD-VERIFICATION.md`](prototype/BUILD-VERIFICATION.md)
+
+현재 실행 환경에서는 GitHub raw host DNS를 사용할 수 없어 제가 브라우저/Node runtime까지 직접 실행 검증하지는 못했습니다. 따라서 Prototype Acceptance는 아직 PASS가 아니며, 실제 브라우저 검토가 필요합니다.
+
+---
+
+# 이미 확정된 큰 방향
 
 ## 제품 / 역할
 
@@ -79,83 +104,87 @@ Canonical 결정: [`decisions.md`](decisions.md)
 - 기본 메뉴: **홈 → 캐릭터 → 세션 → 콘텐츠 → 룰 → 설정**
 - Product Shell은 상단 메뉴형
 - Activity/Encounter/판정수정/세션도구는 contextual tool
-- live session 중 `플레이로 돌아가기`를 항상 제공
-- 앱을 완전히 종료했다 다시 켜면 Home에서 시작
-- 첫 실행은 별도 튜토리얼/안내 화면
+- live session 중 `플레이로 돌아가기` 제공
+- fresh app launch는 Home
+- 첫 실행 별도 안내
 
-## 플레이 화면
+## 세션
 
-- Scene/Actor + Command Center + 현재 턴/상태를 최우선 표시
-- Command Center는 화면 아래 고정
-- BG3 계열 구조: 위쪽 action/resource 줄 + 왼쪽 Actor 상태 + 오른쪽 행동/Hotbar
-- 적/NPC Actor Board는 위, Player/아군 Board는 아래
-- 카드가 최소 크기보다 작아질 때 가로 scroll/paging
-- Initiative Tracker는 Scene 상단 edge에 compact overlay
-- Session/DM 도구는 side pane
-- 안전한 범위에서 주요 panel 크기 조절 가능
-- 중요한 현재 상태를 별도 **NOTICE UI**에서도 지속 표시
+- 별도 Lobby / Ready / Start Session 없음
+- Host가 열면 바로 **live session**
+- DM은 같은 live session 안에서 플레이와 준비/편집
+- Player는 진행 중 세션에 중간 참가
+- Character 없으면 Join 차단 + Create / Import 후 다시 Join
 
-## 캐릭터 / 조작
+## 플레이
 
-- Character Library가 캐릭터 관리 hub
-- Official-style Sheet + SimpleVTT Sheet 선택 가능
-- 첫 tutorial에서 기본 sheet style 선택
-- 기존 Character Builder / Level Up UX 유지
-- Actor 우클릭 메뉴는 정보/관리 같은 UI 기능만 사용
-- 공격/주문/아이템은 우클릭 메뉴에 넣지 않음
-- 자주 쓰는 행동은 직접 노출
-- 설명/세부정보는 hover explanation frame을 적극 활용
+- Scene/Actor + Command Center 공동 핵심
+- Command Center 아래 고정
+- 적/NPC Actor Board 위, Player/아군 아래
+- Initiative는 Actor Boards를 유지하고 상단 tracker 추가
+- 자주 쓰는 capability는 직접 노출
+- rich hover explanation 적극 사용
+- 중요 현재 상태는 NOTICE UI 가능
+- 주요 panel은 안전한 범위에서 resize 가능
 
----
+## DM / Activity / Content
 
-# 이제 AI가 알아서 정하는 것
-
-Owner에게 다시 묻지 않고 AI가 설계합니다:
-
-- 글씨 크기, 여백, 색상 token
-- 아이콘과 button variant
-- 일반 Hover / Focus / Pressed 상태
-- 일반 loading / empty / error UI
-- 좁은 desktop에서의 세부 reflow
-- panel 내부 배치
-- 일반 confirmation/copy
-- component 세부 구조
-- animation 세부 timing
-- 접근성의 일반적인 좋은 관행
-
-단, 이런 세부사항이 실제 제품 사용법을 크게 바꾸는 선택으로 커지면 `OWNER-CONTROL-POLICY.md` 기준에 따라 다시 Owner Checkpoint로 올립니다.
+- 새 세션 DM 굴림 기본 Public, 바꾼 값은 live session 동안 유지
+- DM Activity는 public/private 한 chronology + 표시/필터
+- DM-only secret은 Player에게 전달하지 않는 방향
+- 거리/시야/엄폐는 advanced contextual DM tool
+- correction/reversal은 원본 기록을 지우지 않음
+- 공식 SimpleVTT package format 하나
+- add-on install/update/replace/disable/delete 지원
+- live session은 open 시 content snapshot 고정
 
 ---
 
-# 아직 AI도 임의로 정하지 않는 기술/계약 문제
+# 아직 AI도 임의로 정하지 않는 기술 문제
 
-현재 남은 material blocker는 Owner 취향 문제가 아닙니다.
+Prototype은 아래 문제를 mock으로 보여줄 수 있지만 runtime semantics를 해결하지 않습니다.
 
 - `GAP-MAIN-HAND-CANONICAL-RELATION`
-  - 장착 Main Hand와 실행 가능한 기본 공격의 authoritative 관계
 - `GAP-RESOLUTION-SAFE-INTERACTIONS`
-  - 판정 중 어떤 authoritative command가 동시에 안전한지
 - `GAP-HANDOUT-NETWORK-CONTRACT`
-  - Handout shared mode / reconnect projection
 - `GAP-DM-ONLY-DELIVERY-PROTOCOL`
-  - DM-only data를 Player에게 전혀 보내지 않는 network/event contract
 - `GAP-CANONICAL-UX-DOC-RECONCILIATION`
-  - 오래된 planning 문서와 새 Reviewed 방향 정리
 
-이 항목들은 Domain/Architecture 계약 또는 문서 reconciliation로 처리합니다.
+이 항목들은 나중 Runtime 준비 전에 Domain/Architecture 계약 또는 문서 reconciliation로 처리합니다.
 
 ---
 
-# 다음 단계
+# 이제 Owner가 할 일
 
-Owner가 추가로 작성할 필수 워크시트는 없습니다.
+Prototype을 보고 평범하게 말하면 됩니다.
 
-다음 planning 작업은:
+예:
 
-1. 남은 detailed map을 AI Design Default / contract로 정리
-2. 위 Domain/Architecture Gap 해결
-3. legacy UX planning 문서 reconciliation
-4. 구현 준비 시 Surface / Component / Motion contracts 생성
-5. 필요한 범위를 Frozen한 뒤 scoped Work Order 준비
+- `Command Center가 너무 높아.`
+- `이 Actor 카드가 너무 작아.`
+- `Activity를 열면 Scene이 너무 좁아져.`
+- `DM 도구는 오른쪽에서 열자.`
+- `이 정보는 hover 말고 항상 보여줘.`
+- `Handout Full에서 아래 UI가 너무 많이 보여.`
 
-**현재 결정은 Reviewed이며 Frozen이 아닙니다. 구현도 아직 승인되지 않았습니다.**
+AI가 그 피드백을 Design Default / Catalog / Product Decision 중 맞는 곳으로 분류하고 prototype을 다시 맞춥니다.
+
+---
+
+# Runtime으로 가는 순서
+
+```text
+현재 Reviewed 방향
+-> Standalone Reference Prototype  ← 지금 여기
+-> Owner visual/interaction review + 수정
+-> Explicit Prototype Acceptance
+-> Surface / Component / Motion contract 추출
+-> 기술 Gap 해결
+-> legacy UX reconciliation
+-> 필요한 Product Decision scope Freeze
+-> runtime Work Order
+-> 별도 runtime 구현 승인
+-> src/ UI 구현
+```
+
+**따라서 아직 SimpleVTT 실제 UI 구현 단계가 아닙니다.**
