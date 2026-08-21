@@ -44,7 +44,7 @@ button, select, input { accent-color: #c98b46; }
   z-index: 5;
   top: 18px;
   left: 18px;
-  width: min(450px, calc(100vw - 36px));
+  width: min(410px, calc(100vw - 36px));
   max-height: calc(100vh - 72px);
   overflow: auto;
   padding: 16px;
@@ -64,8 +64,6 @@ button, select, input { accent-color: #c98b46; }
 
 .control-group, .control-row, details, .toggle-row, .action-row { margin-top: 14px; }
 .control-label, label > span, summary { color: #c6c9cc; font-size: 11px; font-weight: 700; }
-.control-hint { color: #777f86; font-size: 9px; }
-.section-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
 
 button, select {
@@ -165,10 +163,80 @@ button.primary:hover { background: #c37d35; }
   text-shadow: 0 0 7px rgba(63,222,255,.95);
 }
 
+.visual-preset-swatch[data-preset="bone-relic"] {
+  background: linear-gradient(145deg, #eee6d4 0%, #cfc3aa 58%, #7d6a4d 100%);
+  border-color: rgba(122, 99, 68, .5);
+}
+.visual-preset-swatch[data-preset="bone-relic"]::after {
+  content: "20";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #342617;
+  font: 800 9px Georgia, serif;
+}
+
+.visual-preset-swatch[data-preset="arcane-sigil"] {
+  background: radial-gradient(circle at 38% 30%, #573a75 0%, #2b1938 52%, #120b19 100%);
+  border-color: rgba(179, 135, 255, .46);
+  box-shadow: inset 0 0 8px rgba(179,135,255,.12), 0 0 7px rgba(179,135,255,.12);
+}
+.visual-preset-swatch[data-preset="arcane-sigil"]::after {
+  content: "ᛉ";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #efe2ff;
+  font: 700 15px "Segoe UI Symbol", sans-serif;
+  text-shadow: 0 0 7px rgba(179,135,255,.82);
+}
+
+.visual-preset-swatch[data-preset="crystal-core"] {
+  background: linear-gradient(145deg, rgba(239,249,255,.94), rgba(126,179,232,.72) 48%, rgba(33,76,116,.66));
+  border-color: rgba(220,242,255,.64);
+  box-shadow: inset 0 0 10px rgba(255,255,255,.32), 0 0 8px rgba(145,211,255,.16);
+}
+.visual-preset-swatch[data-preset="crystal-core"]::after {
+  content: "20";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #f5fbff;
+  font: 800 9px Georgia, serif;
+  text-shadow: 0 0 6px rgba(200,235,255,.9);
+}
+
+.visual-preset-swatch[data-preset="neon-holo"] {
+  background: linear-gradient(135deg, #081127 0%, #17122c 48%, #220a27 100%);
+  border-color: rgba(255,79,216,.58);
+  box-shadow: inset 0 0 8px rgba(125,249,255,.14), 0 0 8px rgba(255,79,216,.16);
+}
+.visual-preset-swatch[data-preset="neon-holo"]::before,
+.visual-preset-swatch[data-preset="neon-holo"]::after {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 800 9px "Trebuchet MS", "Segoe UI", sans-serif;
+}
+.visual-preset-swatch[data-preset="neon-holo"]::before {
+  content: "20";
+  color: #ff4fd8;
+  transform: translate(-1px, 1px);
+  opacity: .75;
+}
+.visual-preset-swatch[data-preset="neon-holo"]::after {
+  content: "20";
+  color: #7df9ff;
+  text-shadow: 0 0 7px rgba(125,249,255,.95);
+}
+
 .visual-preset-copy { min-width: 0; display: grid; gap: 2px; }
 .visual-preset-copy strong { color: #e8e8e8; font-size: 10px; line-height: 1.25; }
 .visual-preset-copy small { color: #858d93; font-size: 8px; line-height: 1.3; }
-.visual-preset-card.active .visual-preset-copy strong { color: #ffd9aa; }
 
 kbd {
   display: inline-block;
@@ -246,8 +314,7 @@ details[open] summary::after { content: " −"; }
 }
 
 @media (max-width: 760px) {
-  .control-panel { width: min(370px, calc(100vw - 24px)); top: 12px; left: 12px; padding: 13px; }
-  .visual-preset-grid { grid-template-columns: 1fr; }
+  .control-panel { width: min(360px, calc(100vw - 24px)); top: 12px; left: 12px; padding: 13px; }
   .slider-grid { grid-template-columns: 1fr; }
   .action-row { grid-template-columns: 1fr 1fr; }
   .action-row #clear-button { grid-column: span 2; }
