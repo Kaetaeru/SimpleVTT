@@ -36,17 +36,17 @@ These are fail-fast acceptance conditions.
 ## Standalone / Offline dice
 
 ```text
-[ ] Clicking any Standalone roll keeps the current Character Sheet visible and spatially continuous.
+[ ] Clicking any Standalone roll keeps the current Character Sheet mounted, visible and spatially continuous.
 [ ] Skill, save, attack, damage and other Standalone roll examples all use the same in-Sheet roll behavior.
 [ ] Dice visibly roll inside the current Sheet workspace / in-surface Roll Plane.
 [ ] No Standalone roll opens a modal, dialog, drawer, detached result card, separate route, separate browser-like window or replacement screen.
 [ ] No Back/Close action is required merely to return from an ordinary Standalone roll.
 [ ] Dice visually travel far/back -> near/front -> settle inside the Sheet workspace.
-[ ] Final face/total appears as fixture-authoritative presentation after/with settlement; physics does not decide the value.
-[ ] Reduced Motion preserves the same Sheet surface and result order.
+[ ] Final face/total appears as fixture-authoritative presentation at settlement; physics does not decide the value.
+[ ] Reduced Motion preserves the same mounted Sheet and result order.
 ```
 
-**Any detached Standalone roll surface is an automatic prototype acceptance failure.**
+**Any detached Standalone roll surface or ordinary roll-induced Sheet remount/navigation is an automatic prototype acceptance failure.**
 
 ## Connected Play structural topology
 
@@ -67,14 +67,16 @@ These are fail-fast acceptance conditions.
 
 ---
 
-# 2. Product hierarchy
+# 2. Product hierarchy / character workflows
 
 ```text
 [ ] Home / Characters / Session / Content / Rules / Settings read as one clear global structure.
 [ ] Activity / Encounter / Adjudication / Session utilities feel contextual rather than duplicate global destinations.
-[ ] Return to Play appears only when a live connected context is represented.
+[ ] First Run clearly explains Official-style vs SimpleVTT Sheet choice without making it permanent/irreversible.
 [ ] Character Library feels like the Character-management hub.
 [ ] Official-style and SimpleVTT Sheets both feel first-class.
+[ ] Builder and Level Up reference surfaces keep the accepted workflow family rather than introducing a new product model.
+[ ] Return to Play appears only when a live connected context is represented.
 ```
 
 # 3. Session flow
@@ -102,7 +104,7 @@ These are fail-fast acceptance conditions.
 [ ] Selected-action targeting takes priority over ordinary Actor selection/control focus.
 ```
 
-# 5. Resolution / dice / result in Connected Play
+# 5. Resolution / dice / interrupt / result in Connected Play
 
 ```text
 [ ] Resolution preserves Actor Boards, Scene orientation and Command Center skeleton.
@@ -111,6 +113,8 @@ These are fail-fast acceptance conditions.
 [ ] Dice presentation conveys far/back -> near/front -> impact/roll/settle.
 [ ] Final face/result is visibly fixture-authoritative rather than physics-authoritative.
 [ ] Immediate result stays scene-integrated instead of opening a detached result route/window.
+[ ] Reaction/Interrupt keeps Scene/Actor/Command Center orientation visible.
+[ ] Concentration response keeps Scene/Actor/Command Center orientation visible and does not invent DC/modifier legality.
 [ ] Activity/detail remains the durable history path.
 [ ] Reduced Motion preserves result and comprehension order.
 ```
@@ -132,8 +136,12 @@ These are fail-fast acceptance conditions.
 ```text
 [ ] Activity can coexist with Play without making Scene/Command Center unusable.
 [ ] Encounter and advanced spatial controls feel like contextual DM tools.
+[ ] Utility pane can be resized within useful bounds without destroying the core Play skeleton.
+[ ] Quick Sheet is a lightweight contextual layer and does not replace Play.
+[ ] Full Sheet is a heavier layer but the live session remains clearly behind/continuous.
 [ ] Actor Context Menu contains UI/context management, not duplicate Attack/Spell/Item actions.
 [ ] Rich hover/focus explanation helps dense controls without making essential state hover-only.
+[ ] Destructive confirmation outranks lower contextual layers without being used for ordinary target execution.
 [ ] Right-click Actor Context Menu remains supplementary rather than the only path to essential information/action.
 ```
 
@@ -160,10 +168,11 @@ These are fail-fast acceptance conditions.
 
 Production privacy remains blocked by `GAP-DM-ONLY-DELIVERY-PROTOCOL` until its architecture contract exists.
 
-# 10. Content / Rules / Settings
+# 10. Content / import / Rules / Settings
 
 ```text
 [ ] Official SimpleVTT package lifecycle is understandable from Content reference UI.
+[ ] Package Import Review distinguishes valid/warning/blocking conditions without UI guesswork.
 [ ] Live-session content snapshot is described as stable after local library changes.
 [ ] Rules Browser reads as authoritative-content presentation rather than UI-invented rules logic.
 [ ] Settings contains presentation/accessibility preferences without creating a new product workflow.
@@ -182,7 +191,8 @@ Review at:
 [ ] Scene/Actor context remains usable.
 [ ] Actor Cards stop shrinking and use horizontal overflow/paging when needed.
 [ ] Contextual utility pane remains desktop-oriented and does not turn into a mobile-first product.
-[ ] Character Sheet remains usable while retaining same-surface Roll Plane.
+[ ] Character Sheet remains usable while retaining same-mounted-Sheet Roll Plane.
+[ ] Quick/Full Sheet layers remain usable.
 [ ] Handout remains usable.
 [ ] Long names/resources/Activity text do not destroy hierarchy.
 ```
@@ -216,20 +226,32 @@ Static verification currently records:
 At minimum inspect:
 
 ```text
+FINAL-SCN-FIRST-RUN
 FINAL-SCN-SHEET
 FINAL-SCN-SHEET-ROLL
+FINAL-SCN-BUILDER
+FINAL-SCN-LEVEL-UP
 FINAL-SCN-DM-FREEFORM
 FINAL-SCN-PLAYER-FREEFORM
 FINAL-SCN-PLAYER-TARGET
 FINAL-SCN-MULTI
+FINAL-SCN-MAIN-HAND-UNAVAILABLE
 FINAL-SCN-RESOLVE
 FINAL-SCN-RESULT
+FINAL-SCN-INTERRUPT
+FINAL-SCN-CONCENTRATION
+FINAL-SCN-QUICK-SHEET
+FINAL-SCN-FULL-SHEET
 FINAL-SCN-DM-ACTIVITY
 FINAL-SCN-PLAYER-ACTIVITY
 FINAL-SCN-DM-SPATIAL
 FINAL-SCN-HANDOUT-OVERLAY
 FINAL-SCN-HANDOUT-UPPER
 FINAL-SCN-HANDOUT-FULL
+FINAL-SCN-RECONNECT
+FINAL-SCN-PANEL-RESIZE
+FINAL-SCN-CONFIRM
+FINAL-SCN-CONTENT-IMPORT
 FINAL-SCN-NARROW
 FINAL-SCN-COMPONENTS
 ```
