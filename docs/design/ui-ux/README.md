@@ -1,6 +1,6 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 SimpleVTT UI/UX는 다음 단계까지 진행되었습니다.
+현재 SimpleVTT UI/UX 진행 상태:
 
 ```text
 Repository-wide 통합 기획
@@ -9,7 +9,7 @@ Repository-wide 통합 기획
 -> 상세 runtime contracts
 -> WO-UI-001 CLOSED / ACCEPTED
 -> WO-UI-002 CLOSED / ACCEPTED
--> WO-UI-003 Connected Play topology 구현 중
+-> WO-UI-003 IMPLEMENTED / AUTOMATED PASS / OWNER HUMAN QA PENDING
 ```
 
 UI 작업은 항상 다음 권위 순서를 함께 읽습니다.
@@ -35,7 +35,9 @@ UI 작업은 항상 다음 권위 순서를 함께 읽습니다.
 | QA Acceptance Matrix | **완료** |
 | WO-UI-001 | **CLOSED / ACCEPTED** |
 | WO-UI-002 | **CLOSED / ACCEPTED** |
-| WO-UI-003 | **AUTHORIZED / IMPLEMENTATION IN PROGRESS** |
+| WO-UI-003 implementation | **완료** |
+| WO-UI-003 automated verification | **PASS** |
+| WO-UI-003 Owner Human QA | **대기** |
 | broad later runtime work | **자동 승인 아님** |
 
 Accepted reference:
@@ -61,13 +63,6 @@ Evidence:
 
 - [`work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md`](work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md)
 - [`work-orders/WO-UI-001-HUMAN-QA.md`](work-orders/WO-UI-001-HUMAN-QA.md)
-
-```text
-bounded local verification: PASS
-full UI CI: PASS
-production TypeScript/build: PASS
-Owner Human QA: PASS
-```
 
 ---
 
@@ -96,71 +91,95 @@ Live Connected Play
 
 Owner Human QA: **PASS**.
 
-Important boundary: this acceptance did **not** approve the then-current broad Connected Play layout. The owner explicitly noticed that it did not look like the accepted prototype.
+This acceptance did not approve the then-current broad Connected Play topology; that drift became WO-UI-003.
 
 ---
 
-# WO-UI-003 — ACTIVE
+# WO-UI-003 — IMPLEMENTED / AUTOMATED PASS / HUMAN QA PENDING
 
 Scope:
 
 **Connected Play Actor Boards / Tabletop Stage / Persistent Command Center**
 
-Work Order / authorization:
+Evidence:
 
 - [`work-orders/WO-UI-003-connected-play-actor-boards-command-center.md`](work-orders/WO-UI-003-connected-play-actor-boards-command-center.md)
 - [`work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md`](work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md)
+- [`work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md`](work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md)
 
 Owner authorization:
 
 > 그래 가자
 
-Target production skeleton:
+Implemented production skeleton:
 
 ```text
 Compact Play chrome / connection status
 ────────────────────────────────────────
 Upper opposing Actor Board
 ────────────────────────────────────────
-Shared Play Context / Tabletop Stage   [contextual utility]
+Shared mapless Play Context / Tabletop Stage
 ────────────────────────────────────────
 Lower allied Actor Board
 ────────────────────────────────────────
 Persistent Command Center
 ```
 
-The Command Center follows the accepted direct-capability direction:
+Command Center now uses direct authoritative capability discovery instead of the historical intent-first primary funnel:
 
 ```text
 controlled Actor summary
-+ authoritative Resource Rail where supplied
-+ Initiative economy only in Initiative
++ HP / Temp HP / status
++ authoritative resources where actually projected
++ Initiative economy only during Initiative
 + direct Hotbar pages: Mixed / Action / Spell / Item
-+ contextual targeting/Execute without replacing the skeleton
++ contextual target selection / Execute
 ```
 
-Historical intent-first funnels are not the primary capability entry for this Connected Play runtime slice.
+Actor Boards consume `SceneVm.entities`; Command Center consumes `SceneVm.actionsByActor`, `economyByActor`, `ActionVm.available`, `disabledReason`, and `eligibleTargetIds`. UI does not calculate D&D legality or spatial geometry.
 
-## Authority boundaries
+## Automated verification
 
-WO-UI-003 consumes existing runtime projections and does not invent:
-
-- D&D legality;
-- target range/LoS;
-- Main Hand fallback;
-- reconnect truth;
-- Actor resources for Actors that do not supply them;
-- privacy delivery;
-- map coordinates/grid/pathfinding.
-
-## Known blockers that remain outside this slice
+Verified source:
 
 ```text
-GAP-MAIN-HAND-CANONICAL-RELATION
-GAP-RESOLUTION-SAFE-INTERACTIONS
-GAP-HANDOUT-NETWORK-CONTRACT
-GAP-DM-ONLY-DELIVERY-PROTOCOL
+fb007d809ab586ca8d2e135e5813e929772a7f2c
 ```
+
+Exact-head UI workflow:
+
+```text
+run_id: 32496754716
+job: frontend
+conclusion: SUCCESS
+```
+
+Passed:
+
+- accepted Connected Play topology gate;
+- Product Shell / Return-to-Play continuity;
+- Freeform / Initiative / Command Center / utility / Handout / responsive regressions;
+- connected lifecycle / late join / ownership regressions;
+- broad rules/progression/mechanics regressions;
+- TypeScript;
+- production build.
+
+## Remaining Human QA
+
+Owner should verify the Tauri runtime visually and interactively:
+
+```text
+Host Open -> immediate Freeform
+-> upper/lower Actor Boards visible
+-> broad mapless Stage visible
+-> persistent direct-capability Command Center visible
+-> add/select DM Combatant updates Actor/Command Center
+-> Initiative preserves boards + Command Center and adds tracker/economy
+-> narrow desktop stays usable
+-> SimpleVTT 메뉴 -> Product -> 플레이로 돌아가기 preserves Session
+```
+
+Do not close WO-UI-003 until that Owner Human QA is recorded.
 
 ---
 
@@ -179,6 +198,19 @@ GAP-DM-ONLY-DELIVERY-PROTOCOL
 - Main Hand has no smart fallback.
 - DM-only privacy cannot be implemented as CSS hiding.
 - Handout is presentation, not battlemap.
+
+---
+
+# Open technical contracts for later slices
+
+```text
+GAP-MAIN-HAND-CANONICAL-RELATION
+GAP-RESOLUTION-SAFE-INTERACTIONS
+GAP-HANDOUT-NETWORK-CONTRACT
+GAP-DM-ONLY-DELIVERY-PROTOCOL
+```
+
+WO-UI-003 does not claim these gaps resolved.
 
 ---
 
@@ -202,10 +234,6 @@ Do not substitute generic VTT conventions, current legacy source, or historical 
 
 # Current next gate
 
-```text
-WO-UI-003 automated exact-head verification
--> Tauri Owner visual/interaction Human QA
--> only then WO-UI-003 CLOSED / ACCEPTED
-```
+**WO-UI-003 Owner Human QA.**
 
-Do not automatically begin a later Runtime Slice merely because WO-UI-003 automated checks pass.
+Do not automatically begin a later Runtime Slice merely because automated checks passed.
