@@ -17,7 +17,6 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 - `Depends On`, `Destination`, `Planning Gap`, and ID-based `Affects` references MUST use complete stable IDs. Do not use ranges, omitted prefixes, or prose substitutes where an ID exists.
 
 ---
-
 # UX-01 — Product Principles
 
 ## UX-01-01 — Product posture
@@ -317,7 +316,6 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 - **Affects:** PLATFORM-01
 
 ---
-
 # INT-01 — Interaction
 
 ## INT-01-01 — Targeting outranks DM control mode, then selection
@@ -359,6 +357,74 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 - **Status:** Reviewed
 - **Decision:** Controlled/current-turn information uses persistent status indicators. Targeting, selected-target, and transient interaction selection use an active interaction layer. A separate persistent **NOTICE UI** summarizes important current operational notices/state so the user does not have to infer them from card styling alone.
 - **Affects:** STATE-01, CMP-01, SES-01
+
+---
+
+# Lightweight owner checkpoints — reviewed
+
+## PLATFORM-01-01 — Desktop-width v1 support
+- **Status:** Reviewed
+- **Decision:** v1 officially supports wide, normal, and narrow **desktop-window** layouts. Mobile/touch-first UI is out of v1 scope; ordinary desktop reflow may adapt within the supported window classes.
+- **Affects:** PLATFORM-01, M5
+
+## SES-01-02 — Session opens directly into live Play
+- **Status:** Reviewed
+- **Decision:** Hosting does **not** create a separate waiting/readiness lobby. When the Host opens a session, the live session is immediately active and the DM can play and edit/prep within that same session context. Players may join the already-live session at any time through a mid-session join flow; there is no all-players-ready gate before Play exists.
+- **Why:** The owner explicitly wants a continuously live, editable session rather than a lobby-to-start lifecycle.
+- **Affects:** SES-01-05, SES-01, SES-02, R2-HOST, R2-JOIN
+
+## SES-01-05 — No separate Player Lobby/Ready surface
+- **Status:** Reviewed
+- **Decision:** Because `SES-01-02` makes the hosted session live immediately, v1 has no separate Player Lobby/Ready stage. A joining Player completes connection and Character selection, then enters the already-live session when accepted/valid; late join is a normal session behavior.
+- **Depends On:** SES-01-02
+- **Affects:** SES-01, SES-02
+
+## SES-01-04 — No Character blocks Join
+- **Status:** Reviewed
+- **Decision:** If a Client has no valid Character, Join is blocked. The UI provides clear `Create Character` / `Import Character` actions; after obtaining a valid Character, the user starts Join again rather than entering a Character-less lobby/session state.
+- **Depends On:** ORIGIN-FLOW-02
+- **Affects:** R2-JOIN, R6-NO-VALID-CHARACTER
+
+## DM-01-01 — DM rolls default Public for one session
+- **Status:** Reviewed
+- **Decision:** A newly opened session starts with DM roll visibility set to `Public`. If the DM switches to `DM Only` or back, the selected value persists for that live session only and resets to `Public` for a new session.
+- **Depends On:** ORIGIN-UX-01-27
+- **Affects:** SES-02, DM-01
+
+## DM-02-01 — Private DM Activity stays in one chronology with filters
+- **Status:** Reviewed
+- **Decision:** DM Activity uses one chronological history for public and DM-only adjudication records. Private entries are strongly marked for the DM and the Activity UI provides public/private visibility filtering. Private entries remain absent from Player delivery until explicitly disclosed under existing disclosure rules.
+- **Depends On:** ORIGIN-UX-01-26, ORIGIN-UX-01-29
+- **Affects:** R4-ACTIVITY, SES-02
+
+## DM-01-03 — Spatial relation editor is an advanced DM tool
+- **Status:** Reviewed
+- **Decision:** v1 includes normal Encounter/initiative management and retains manual distance/visibility/cover authoring as an **advanced DM tool** that is opened only when needed rather than occupying the default Play surface.
+- **Depends On:** UX-02-05
+- **Affects:** R4-ENCOUNTER, R4-DM-SPATIAL-RELATION
+
+## DM-02-05 — Correction history is never deleted
+- **Status:** Reviewed
+- **Decision:** DM correction/Undo must not erase prior committed history. A reversal or correction creates a new recorded event that references the prior result; the original calculation/event remains inspectable. Whether state can be cleanly reversed is determined by authoritative domain semantics, not by UI deletion.
+- **Why:** This matches the canonical session-runtime correction/reversal model.
+- **Affects:** R2-DM-UNDO, DM-02
+
+## CONTENT-02-04 — One official SimpleVTT package format in v1
+- **Status:** Reviewed
+- **Decision:** v1 productizes one official **SimpleVTT package format** for add-on/content import. The product does not heuristically accept arbitrary JSON or other undeclared formats as equivalent packages.
+- **Affects:** R7-FILE-INPUT, R4-IMPORT-REVIEW
+
+## CONTENT-02-09 — Full add-on lifecycle is a v1 capability
+- **Status:** Reviewed
+- **Decision:** v1 product scope includes install, update, replace, disable, and delete/remove operations for installed add-on/content packages. Dependency validation, safe replacement/removal semantics, and recovery remain governed by explicit content/domain contracts rather than UI guesswork.
+- **Depends On:** CONTENT-02-04
+- **Affects:** CONTENT-02, INT-03
+
+## CONTENT-02-11 — Live session content is snapshot-fixed
+- **Status:** Reviewed
+- **Decision:** A live session uses the content configuration captured when that session is opened. Installing, updating, disabling, replacing, or deleting content while a session is live prepares changes for later sessions but does not mutate the current session's content snapshot.
+- **Why:** Live authoritative state must not change underneath an active session because the local content library changed.
+- **Affects:** SES-01, SES-02, M3, R4-SESSION-SHARE
 
 ---
 
