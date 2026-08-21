@@ -7,6 +7,7 @@ This file records **known material gaps that AI must not silently invent**. It i
 Framework: [`../ui-ux-planning-framework.md`](../ui-ux-planning-framework.md)
 Dashboard: [`README.md`](README.md)
 Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
+Integrated baseline: [`INTEGRATED-PRODUCT-UX-PLAN.md`](INTEGRATED-PRODUCT-UX-PLAN.md)
 
 ## Gap rules
 
@@ -24,32 +25,30 @@ Each gap identifies:
 - `Smallest decision needed`
 - `Status`
 
-Structured Owner/Decision/Gap/Dependency references MUST use full stable IDs or repository paths per `MANIFEST.yaml`. Human context belongs in `Affected`, `Gap`, or `Note`.
+Structured Owner/Decision/Gap/Dependency references MUST use full stable IDs or repository paths per `MANIFEST.yaml`.
 
 ### Gap Type enum
 
-- `OWNER_DECISION` — the owner must choose material product/UX behavior.
-- `DOMAIN_CONTRACT` — authoritative domain/application data or semantics are missing.
-- `ARCHITECTURE_CONTRACT` — networking, persistence, privacy, schema, or runtime contract is missing.
-- `IMPLEMENTATION_BLOCKER` — planning is clear but implementation cannot safely proceed yet.
-- `DOCUMENT_RECONCILIATION` — canonical/legacy documents conflict or need supersession cleanup.
-- `COVERAGE` — planning infrastructure or systematic coverage is incomplete/stale.
+- `OWNER_DECISION`
+- `DOMAIN_CONTRACT`
+- `ARCHITECTURE_CONTRACT`
+- `IMPLEMENTATION_BLOCKER`
+- `DOCUMENT_RECONCILIATION`
+- `COVERAGE`
 
 ### Severity enum
 
-- `Critical` — privacy/authority/data/game-state corruption or security risk.
-- `Major` — blocks a first-class flow or creates repeated material UX ambiguity.
-- `Normal` — important but localized/deferred and not currently critical.
+- `Critical`
+- `Major`
+- `Normal`
 
 ### Status enum
 
-- `Open` — unresolved and currently actionable when its owner/dependency is active.
-- `Deferred` — unresolved but intentionally waits for a declared downstream sheet/dependency.
-- `Resolved` — no longer blocks inference; retained for traceability.
+- `Open`
+- `Deferred`
+- `Resolved`
 
-`Status` MUST contain exactly one enum value. Put timing/context notes in `Note`, not inside Status.
-
-Once resolved, move the normative answer into `decisions.md` or the appropriate canonical contract and move the gap to **Resolved gaps** with the resulting Decision/Contract ID.
+Once resolved, move the normative answer into `decisions.md` or the appropriate canonical contract and retain the gap under Resolved gaps for traceability.
 
 ---
 
@@ -104,12 +103,12 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Gap Type:** DOCUMENT_RECONCILIATION
 - **Severity:** Major
 - **Owner Sheet:** docs/design/ui-ux-planning-framework.md
-- **Affected:** Existing `V1_PRODUCT_EXPERIENCE.md`, `V1_PLAY_SURFACE_REVISION.md`, selected UI planning decisions
-- **Gap:** Existing planning prose contains directions such as tabletop-first/VTT-additional, intent-first compact action UX, and initiative-stage replacement that conflict with newer Reviewed/Selected planning direction.
-- **Why AI cannot infer it safely:** Until applicable product decisions are Frozen and canonical planning docs are reconciled, implementation agents may receive contradictory guidance.
-- **Smallest decision needed:** After relevant sheets are Reviewed/Frozen, explicitly supersede or revise conflicting legacy planning text by ID/scope.
-- **Status:** Deferred
-- **Note:** Reconciliation waits until the affected product decisions are Reviewed/Frozen enough to supersede legacy planning safely.
+- **Affected:** `.agents/V1_PRODUCT_EXPERIENCE.md`, `.agents/V1_PLAY_SURFACE_REVISION.md`, `.agents/V0_9_PRODUCT_REFERENCE.md`, `.agents/V0_9_CONTINUOUS_SESSION_UI_PRINCIPLES.md`, `.agents/V0_9_UI_FIRST_PRODUCT_PLAN.md`, `.agents/V0_9_COMPLETE_UI_SCENE_PLAN.md`, selected UI planning decisions, current implementation/tests
+- **Gap:** Historical non-canonical planning, derived UI documents and current UI tests contain mutually incompatible directions, including Lobby/Ready lifecycle, intent-first primary actions, Freeform Actor-board visibility, Initiative stage replacement, left-sidebar shell, and older first-run guidance. Some useful historical principles such as mapless Core/tabletop-first remain valid, but the conflicting details must be explicitly classified/superseded so implementation agents cannot combine them arbitrarily.
+- **Why AI cannot infer it safely:** `.agents/` is explicitly non-canonical working context, while current code/tests still encode some of those older directions. Without explicit reconciliation, a future AI can accidentally treat a stale test or historical plan as higher authority than current Domain/Decision truth.
+- **Smallest decision needed:** Use `INTEGRATED-PRODUCT-UX-PLAN.md` as the cross-source interpretation baseline now; before runtime preparation, update/supersede stale formal derived docs/tests and record exact touched-scope legacy disposition.
+- **Status:** Open
+- **Note:** Repository-wide audit and integrated baseline were completed on 2026-08-21. Prototype specs are being reconciled now. Runtime reconciliation remains intentionally open until the accepted rebuilt prototype and scoped runtime preparation identify the exact legacy/tests to update.
 
 ---
 
