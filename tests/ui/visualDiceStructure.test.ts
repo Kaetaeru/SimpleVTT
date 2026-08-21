@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const bridge = readFileSync(new URL("../../src/VisualDiceBridge.tsx",import.meta.url),"utf-8");
 const physics = readFileSync(new URL("../../src/PhysicsDice3D.tsx",import.meta.url),"utf-8");
+const localPresentation = readFileSync(new URL("../../src/app/localDicePresentation.ts",import.meta.url),"utf-8");
 const css = readFileSync(new URL("../../src/visual-dice.css",import.meta.url),"utf-8");
 const diceVisuals = readFileSync(new URL("../../src/app/diceVisuals.ts",import.meta.url),"utf-8");
 const sessionRoot = readFileSync(new URL("../../src/SessionModeRoot.tsx",import.meta.url),"utf-8");
@@ -12,7 +13,7 @@ const main = readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf-8")
 const creationAbilities = readFileSync(new URL("../../src/character-create/V09Abilities.tsx",import.meta.url),"utf-8");
 const levelUp = readFileSync(new URL("../../src/LevelUpV10.tsx",import.meta.url),"utf-8");
 
-test("visual dice bridge keeps authoritative results in a body-level fast physics replay", () => {
+test("visual dice bridge keeps connected authoritative results in a body-level fast physics replay", () => {
   assert.match(bridge,/createPortal/);
   assert.match(bridge,/document\.body/);
   assert.match(bridge,/buildVisualDiceRoll/);
@@ -25,7 +26,15 @@ test("visual dice bridge keeps authoritative results in a body-level fast physic
   assert.match(main,/VisualDiceBridge/);
 });
 
-test("visual dice renderer remains shared by creation, level-up, and runtime replay", () => {
+test("standalone local sheet rolls enter the same body-level replay without using ResolutionEvent authority", () => {
+  assert.match(localPresentation,/LOCAL_DICE_PRESENT_EVENT/);
+  assert.match(localPresentation,/window\.dispatchEvent\(new CustomEvent/);
+  assert.match(bridge,/window\.addEventListener\(LOCAL_DICE_PRESENT_EVENT/);
+  assert.match(bridge,/beginReplay\(localRoll,localRoll\.resolutionId\)/);
+  assert.doesNotMatch(localPresentation,/resolveAction|advanceResolution|ResolutionEvent/);
+});
+
+test("visual dice renderer remains shared by creation and level-up compact surfaces while runtime and standalone use the global replay", () => {
   assert.match(bridge,/export function VisualDiceTray/);
   assert.match(creationAbilities,/import \{ VisualDiceTray \} from "\.\.\/VisualDiceBridge"/);
   assert.match(creationAbilities,/label="능력치 4d6 × 6"/);
@@ -43,15 +52,17 @@ test("visual dice renderer uses WebGL physics and actual polyhedral meshes", () 
   assert.match(physics,/friction/);
   assert.match(physics,/restitution/);
   assert.match(physics,/angularVelocity/);
-  for (const geometry of ["TetrahedronGeometry","BoxGeometry","OctahedronGeometry","pentagonalBipyramidGeometry","DodecahedronGeometry","IcosahedronGeometry"]) assert.match(physics,new RegExp(geometry));
+  for (const geometry of ["TetrahedronGeometry","BoxGeometry","OctahedronGeometry","d10Geometry","DodecahedronGeometry","IcosahedronGeometry"]) assert.match(physics,new RegExp(geometry));
   assert.doesNotMatch(physics,/CylinderGeometry/);
   assert.doesNotMatch(bridge,/visual-die-facet|transform-style:preserve-3d/);
 });
 
-test("runtime replay uses depth travel, a transparent screen-floor treatment, and authoritative result convergence", () => {
+test("runtime replay treats the screen as the table and converges to supplied results", () => {
   assert.match(physics,/cinematic/);
-  assert.match(physics,/-8\.4-index\*\.36/);
-  assert.match(physics,/body\.velocity\.set\([^\n]*10\.4\+Math\.random\(\)\*2\.4/);
+  assert.match(physics,/camera\.position\.set\(0, CINEMATIC_CAMERA_HEIGHT, 0\)/);
+  assert.match(physics,/camera\.lookAt\(0, 0, 0\)/);
+  assert.match(physics,/z = bounds\.minZ \+ 0\.95/);
+  assert.match(physics,/const forward = 13\.5/);
   assert.match(physics,/desiredIndex/);
   assert.match(css,/\.visual-dice-overlay\.v09:after/);
   assert.match(css,/\.visual-dice-world/);
