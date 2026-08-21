@@ -1,25 +1,43 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: final_spec_review_candidate
-html_prototype_status: replacement_authored_static_structural_verified
+status: invalidated_rebuild_required
+html_prototype_status: no_active_review_candidate
 prototype_owner_acceptance: not_started
 runtime_ui_implementation_allowed: false
 
 paths:
   root: docs/design/ui-ux/prototype/
   app: docs/design/ui-ux/prototype/app/
-  active_review_entry: docs/design/ui-ux/prototype/app/final-spec.html
+  active_review_entry: null
+  invalidated_latest_entry: docs/design/ui-ux/prototype/app/final-spec.html
   historical_rejected_entry: docs/design/ui-ux/prototype/app/index.html
 
+required_cross_source_baseline:
+  path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+  status: active
+  must_read_before_prototype_spec_or_build: true
+  mapless_core_guard: true
+
 source_priority:
+  domain_architecture:
+    - docs/design/README.md
+    - docs/design/movement-modules.md
+    - docs/design/session-runtime.md
+    - docs/design/persistence.md
+    - docs/design/character-lifecycle.md
+    - docs/design/character-session-projection.md
+    - docs/design/content-modules-items.md
+    - docs/design/declarative-module-validation.md
+    - docs/design/installed-content-catalog.md
+    - docs/rules/README.md
+    - docs/rules/content-relationships.md
   product_ux:
     - docs/design/ui-ux/decisions.md
     - docs/design/ui-ux/OWNER-CONTROL-POLICY.md
+    - docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
     - docs/design/ui-ux/master-flow.md
     - docs/design/ui-ux/registry.md
     - docs/design/ui-ux/matrices.md
-  prototype_owner_correction:
-    - docs/design/ui-ux/prototype/OWNER-CORRECTIONS.md
   prototype_detail:
     - docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
     - docs/design/ui-ux/prototype/SURFACE-CATALOG.md
@@ -31,20 +49,21 @@ source_priority:
     - docs/design/ui-ux/prototype/PROTOTYPE-PREFLIGHT.md
     - docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
     - docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
+  historical_evidence_only:
+    - .agents/
+    - docs/design/v1-desktop-demo/
+    - docs/design/ui-ux/prototype/BUILD-VERIFICATION.md
     - docs/design/ui-ux/prototype/FINAL-SPEC-VERIFICATION.md
-  technical_truth:
-    - docs/design/README.md
-    - docs/design/session-runtime.md
-    - docs/design/ui-ux/planning-gaps.md
+    - docs/design/ui-ux/prototype/app/index.html
+    - docs/design/ui-ux/prototype/app/final-spec.html
 
 files:
   readme:
     path: docs/design/ui-ux/prototype/README.md
     role: prototype_phase_governance
-  owner_corrections:
-    path: docs/design/ui-ux/prototype/OWNER-CORRECTIONS.md
-    role: explicit_owner_prototype_corrections
-    authority: explicit_owner_input_for_prototype_and_required_runtime_reconciliation
+  integrated_plan:
+    path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+    role: mandatory_cross_source_baseline
   design_defaults:
     path: docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
     role: ai_managed_design_defaults
@@ -75,44 +94,19 @@ files:
     role: prototype_acceptance_gate
   work_order:
     path: docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
-    role: standalone_html_prototype_scope_and_execution_record
-  final_spec_verification:
-    path: docs/design/ui-ux/prototype/FINAL-SPEC-VERIFICATION.md
-    role: active_replacement_candidate_static_verification
-  historical_build_verification:
-    path: docs/design/ui-ux/prototype/BUILD-VERIFICATION.md
-    role: superseded_first_candidate_verification_history
-  app_boundary:
-    path: docs/design/ui-ux/prototype/app/README.md
-    role: prototype_runtime_boundary
+    role: prototype_scope_and_execution_record
 
-active_candidate_files:
-  - docs/design/ui-ux/prototype/app/final-spec.html
-  - docs/design/ui-ux/prototype/app/final-spec.css
-  - docs/design/ui-ux/prototype/app/final-spec-coverage.css
-  - docs/design/ui-ux/prototype/app/final-spec.js
-  - docs/design/ui-ux/prototype/app/final-spec-fixtures.js
-  - docs/design/ui-ux/prototype/app/final-spec-stability.js
-  - docs/design/ui-ux/prototype/app/final-spec-coverage.js
-
-historical_candidate_files:
-  review_status: rejected_superseded
-  files:
-    - docs/design/ui-ux/prototype/app/index.html
-    - docs/design/ui-ux/prototype/app/prototype.css
-    - docs/design/ui-ux/prototype/app/prototype.js
-    - docs/design/ui-ux/prototype/app/fixtures.js
-    - docs/design/ui-ux/prototype/app/review-patch.css
-    - docs/design/ui-ux/prototype/app/review-patch.js
-  rule: never_use_as_active_product_reference_or_runtime_implementation_source
-
-stable_id_prefixes:
-  surface: PROTO-SURF-
-  component: PROTO-CMP-
-  layer: PROTO-LAYER-
-  state: PROTO-STATE-
-  scenario: PROTO-SCN-
-  mock: PROTO-MOCK-
+invalidated_candidates:
+  - entry: docs/design/ui-ux/prototype/app/index.html
+    status: rejected_superseded
+    reason: owner_rejected_first_candidate
+  - entry: docs/design/ui-ux/prototype/app/final-spec.html
+    status: invalidated_by_repository_wide_audit
+    reason: mapless_core_violation_and_fragmented_planning_drift
+    material_evidence:
+      - synthetic_scene_actor_xy_coordinates
+      - battlemap_like_central_scene_interpretation
+      - first_run_and_prior_planning_not_used_as_true_starting_baseline
 
 prototype_rules:
   standalone_from_production_src: true
@@ -124,13 +118,20 @@ prototype_rules:
   unresolved_domain_architecture_may_be_mocked_for_presentation_only: true
   mock_semantics_are_product_authority: false
   current_code_is_evidence_only: true
+  historical_agent_docs_are_evidence_only: true
   prototype_controls_are_product_ui: false
-  standalone_roll_must_remain_in_current_character_sheet_surface: true
-  standalone_roll_must_not_remount_sheet_for_ordinary_roll: true
-  standalone_roll_detached_modal_drawer_route_window_forbidden: true
-  connected_play_must_preserve_reviewed_dual_anchor_topology: true
-  command_center_persistent_during_targeting_resolution_dice_result: true
+  first_run_must_begin_with_tutorial_panel: true
+  initial_sheet_layout_choice_must_be_in_tutorial: true
+  core_play_is_mapless: true
+  core_actor_xy_coordinates_forbidden: true
+  core_map_tokens_forbidden: true
+  core_grid_path_los_fog_forbidden: true
+  handout_is_not_battlemap: true
+  standalone_roll_must_keep_current_sheet_visible_and_stable: true
+  standalone_roll_detached_window_route_panel_forbidden: true
+  connected_play_must_preserve_reviewed_actor_boards_and_command_center: true
   initiative_must_preserve_actor_boards: true
+  freeform_fake_turn_economy_forbidden: true
   dm_player_must_share_core_play_skeleton: true
 
 review_viewports:
@@ -141,28 +142,32 @@ review_viewports:
 
 phase_gate:
   P0_specification:
-    status: passed
+    status: needs_reconciliation
+    required_before_pass:
+      - prototype_catalogs_updated_from_integrated_baseline
+      - mapless_terminology_guards_added
+      - first_run_tutorial_flow_made_primary
+      - standalone_roll_contract_made_explicit
   P1_html_build:
-    status: replacement_review_candidate
-    authorization: explicit_owner_go_ahead
-    first_candidate: rejected_by_owner
-    active_candidate: docs/design/ui-ux/prototype/app/final-spec.html
-    static_structural_verification: passed
-    browser_runtime_verification: pending_owner_review_environment
+    status: blocked_rebuild_required
+    active_candidate: null
+    invalidated_candidate: docs/design/ui-ux/prototype/app/final-spec.html
     allowed_write_scope:
       - docs/design/ui-ux/prototype/app/
       - docs/design/ui-ux/prototype/
+      - bounded_docs_design_ui_ux_routing_maintenance
     forbidden_write_scope:
       - src/
   P2_review_iteration:
-    status: ready
-    next_action: owner_opens_final_spec_html_and_gives_natural_language_feedback
+    status: blocked
+    next_action: reconcile_prototype_specs_then_build_new_candidate_from_integrated_plan
   P3_owner_acceptance:
     status: not_started
     requires_explicit_owner_acceptance: true
   P4_runtime_preparation:
     status: blocked
     requires:
+      - valid_rebuilt_prototype
       - prototype_owner_acceptance
       - owner_corrections_reconciled_into_canonical_runtime_planning
       - applicable_domain_architecture_gaps_resolved_for_scope
@@ -174,7 +179,8 @@ phase_gate:
     status: not_authorized
 
 blocking_rule:
+  invalidated_candidate_must_not_be_reviewed_or_accepted: true
+  prototype_rebuild_must_start_from_integrated_plan: true
   broad_runtime_ui_must_not_start_before_P4: true
   prototype_acceptance_alone_authorizes_runtime: false
   reviewed_decisions_alone_authorize_runtime: false
-  historical_rejected_candidate_must_not_be_used_for_runtime: true
