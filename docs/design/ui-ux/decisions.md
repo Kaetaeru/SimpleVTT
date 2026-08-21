@@ -170,6 +170,198 @@ Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
 
 ---
 
+# UX-03 — Information Hierarchy
+
+## UX-03-01 — Global destinations stay small
+- **Status:** Reviewed
+- **Decision:** Product-level global destinations are Home, Characters, Session, Content, Rules, and Settings. Activity, Encounter, Adjudication, and Session utilities remain contextual tools rather than top-level destinations.
+- **Affects:** NAV-01
+
+## UX-03-02 — Dedicated Play with persistent return path
+- **Status:** Reviewed
+- **Decision:** Play is a dedicated workspace, but a compact persistent entry back to the Product Shell remains available while playing.
+- **Depends On:** UX-01-02
+- **Affects:** NAV-01, SES-01
+
+## UX-03-03 — Core UI persistent; supporting UI contextual
+- **Status:** Reviewed
+- **Decision:** Core anchors and frequently used capabilities stay visible. Detailed information, DM tools, and auxiliary utilities may open contextually when needed.
+- **Depends On:** UX-01-04
+- **Affects:** INT-02, SES-01, DM-01
+
+## UX-03-04 — Turn/status joins the primary Play layer
+- **Status:** Reviewed
+- **Decision:** Scene/Actor Context, the Command Center, and current turn/status information are all first-priority operational information in Play. Utilities and history remain secondary.
+- **Depends On:** UX-01-07
+- **Affects:** UI-01, DND-04, SES-01
+
+## UX-03-05 — Standalone Sheet prioritizes identity and use
+- **Status:** Reviewed
+- **Decision:** Standalone Character Sheet prioritizes Character identity, HP/core stats, and commonly used actions/rolls before lower-priority record detail. The product also supports both an Official-style sheet layout and a SimpleVTT-optimized layout as user-selectable presentation modes.
+- **Affects:** UI-01, DND-01
+
+## UX-03-06 — Hide explanation, not normal capability
+- **Status:** Reviewed
+- **Decision:** Progressive disclosure is used primarily for explanations and detail, not to hide normal capabilities. Where appropriate, hover may open a lightweight pointer-following explanation frame; equivalent non-pointer access can be handled by the relevant accessibility/detail contract without changing this presentation preference.
+- **Depends On:** UX-01-04
+- **Affects:** INT-01, CMP-01, CONTENT-01
+
+## UX-03-07 — Contextual duplication is allowed
+- **Status:** Reviewed
+- **Decision:** The same canonical information may intentionally appear in multiple relevant surfaces when it helps the current task. Duplication is decided contextually per surface and must not create independent competing values.
+- **Why:** The owner explicitly wants this revisitable by context rather than a rigid one-location rule.
+- **Affects:** CMP-01
+
+## UX-03-08 — Feedback follows proximity and persistence
+- **Status:** Reviewed
+- **Decision:** Immediate important results appear near the current task/scene; persistent problems use status/banner treatment; detailed durable history lives in Activity; toast is reserved for brief non-blocking feedback.
+- **Affects:** STATE-01, DND-02, DM-02
+
+---
+
+# NAV-01 — Navigation
+
+## NAV-01-01 — Global menu order
+- **Status:** Reviewed
+- **Decision:** Global navigation order is Home → Characters → Session → Content → Rules → Settings. Exact visual spacing/affordance is AI-managed design detail.
+- **Depends On:** UX-03-01
+
+## NAV-01-02 — Persistent Return to Play
+- **Status:** Reviewed
+- **Decision:** While a live session exists, global navigation always exposes a visible Return to Play entry.
+- **Depends On:** UX-01-03, UX-03-02
+
+## NAV-01-03 — Character Library is the Character hub
+- **Status:** Reviewed
+- **Decision:** Character Library is the Character-management hub. Opening a Character enters its Sheet; create/edit/level-up flows are launched from the Library or Sheet rather than treated as peer global destinations.
+- **Affects:** DND-01
+
+## NAV-01-04 — Utility return restores prior context
+- **Status:** Reviewed
+- **Decision:** Leaving Rules, Content, or Settings returns the user to the prior safe Product context and restores relevant local context where practical.
+
+## NAV-01-05 — Activity/Encounter/Adjudication stay contextual
+- **Status:** Reviewed
+- **Decision:** Activity, Encounter, Adjudication, and Session utilities do not become top-level global navigation destinations; they open from the relevant task/session context.
+- **Depends On:** UX-03-01
+
+## NAV-01-06 — Back, Close, and Return are distinct
+- **Status:** Reviewed
+- **Decision:** Back means previous navigation context, Close dismisses the current contextual layer, and Return explicitly returns to the parent workspace/Play context. Do not collapse these into one ambiguous control.
+- **Affects:** INT-02
+
+## NAV-01-07 — First-run guidance is an overlay
+- **Status:** Reviewed
+- **Decision:** First launch uses a dedicated onboarding/tutorial overlay. The guidance can later be reopened from Settings or Help/Info.
+- **Affects:** CONTENT-01, DND-01
+
+## NAV-01-08 — App restart begins at Home
+- **Status:** Reviewed
+- **Decision:** Closing the application counts as disconnecting from any connected session. A later app launch begins at Home rather than automatically reopening the prior Play workspace. Rejoining/reconnecting is an explicit subsequent action.
+- **Why:** In-app navigation continuity and process-restart behavior are intentionally different.
+- **Affects:** STATE-02, SES-01, SES-02
+
+---
+
+# UI-01 — Layout & Grid
+
+## UI-01-01 — Product Shell uses top navigation
+- **Status:** Reviewed
+- **Decision:** Normal Product Shell surfaces use top navigation/header with the main content beneath it, rather than a permanent left navigation rail.
+- **Depends On:** NAV-01-01
+
+## UI-01-02 — Scene flexes above a fixed Command Center
+- **Status:** Reviewed
+- **Decision:** Play uses the Scene/Table as the flexible central region and keeps the Command Center fixed along the bottom. Play regions/panels may be user-resizable where safe, with minimum usable sizes that preserve core controls and scene access.
+- **Depends On:** UX-01-07
+- **Affects:** PLATFORM-01, CMP-01
+
+## UI-01-03 — Actor Boards fill space, then scroll
+- **Status:** Reviewed
+- **Decision:** Opposing Actor Cards remain in the upper board and allied/player Actor Cards in the lower board. Cards fill available board width; once the minimum usable card size no longer fits, overflow uses horizontal scrolling/paging instead of shrinking cards below that minimum.
+- **Depends On:** ORIGIN-UX-01-10, ORIGIN-UX-01-11
+- **Affects:** PLATFORM-01
+
+## UI-01-04 — Initiative overlays the scene top edge
+- **Status:** Reviewed
+- **Decision:** Initiative Tracker is a compact horizontal strip at the top edge of the scene, visually overlaid while reserving enough safe area not to obscure essential scene content.
+- **Depends On:** ORIGIN-UX-01-14, ORIGIN-UX-01-15
+
+## UI-01-05 — BG3-family Command Center composition
+- **Status:** Reviewed
+- **Decision:** Command Center follows the selected BG3-family composition: a small upper row displays action-economy/resources; the lower-left area carries the controlled Character/Actor status; the larger right/lower area carries the action/hotbar controls. Exact spacing is an AI-managed layout detail.
+- **Depends On:** ORIGIN-UX-01-07, ORIGIN-UX-01-08, ORIGIN-UX-01-09
+- **Affects:** DND-03, SES-01
+
+## UI-01-06 — Session/DM utilities use side panes
+- **Status:** Reviewed
+- **Decision:** Contextual Session/DM utilities open in left/right side panes while the core Scene/Actor/Command Center structure remains present.
+- **Depends On:** UX-03-03
+- **Affects:** INT-02, DM-01, SES-01
+
+## UI-01-07 — Two first-class Character Sheet layouts
+- **Status:** Reviewed
+- **Decision:** Character Sheet supports two selectable presentation layouts: an Official-style layout and a SimpleVTT-optimized layout. The first-run tutorial asks the user which layout to start with. The SimpleVTT layout may be designed freely for stronger UX within canonical Character data/rules boundaries.
+- **Depends On:** UX-03-05, NAV-01-07
+- **Affects:** DND-01
+
+## UI-01-08 — Preserve current Builder and Level Up UX
+- **Status:** Reviewed
+- **Decision:** Existing Character creation/builder and Level Up UX are accepted as the product baseline and are not part of the current redesign. Future work should preserve them unless the owner explicitly reopens that scope.
+- **Why:** The owner explicitly judged the existing flows satisfactory.
+- **Affects:** DND-01
+
+## UI-01-09 — Major regions may scroll independently
+- **Status:** Reviewed
+- **Decision:** Major content regions may own independent scrolling where appropriate, while global navigation/header and the Play Command Center remain fixed/sticky anchors.
+- **Affects:** PLATFORM-01
+
+---
+
+# INT-01 — Interaction
+
+## INT-01-01 — Targeting outranks DM control mode, then selection
+- **Status:** Reviewed
+- **Decision:** When click meanings overlap, selected-action targeting has highest priority. If no targeting action owns the click, an explicitly enabled DM control mode takes priority over ordinary Actor selection/context focus.
+- **Depends On:** ORIGIN-UX-01-16, UX-02-05
+- **Affects:** DM-01, DND-03
+
+## INT-01-02 — Actor Context Menu contains UI/context actions only
+- **Status:** Reviewed
+- **Decision:** Actor right-click Context Menu is for UI/context-management actions such as Details/Inspect and other non-gameplay contextual controls. It must not contain executable gameplay actions such as attacks, spells, items, or duplicate Hotbar capabilities.
+- **Depends On:** ORIGIN-UX-01-16
+- **Affects:** CMP-01
+
+## INT-01-03 — No keyboard equivalent for Actor right-click menu
+- **Status:** Reviewed
+- **Decision:** v1 does not provide a keyboard shortcut/equivalent that opens the Actor right-click Context Menu. Keyboard-accessible routes to material information may exist elsewhere, but they do not need to reproduce this menu.
+- **Why:** Explicit owner choice.
+- **Affects:** A11Y-01
+
+## INT-01-04 — Escape cancels active action/targeting first
+- **Status:** Reviewed
+- **Decision:** Escape/Back first cancels active targeting/command-selection state, then dismisses the topmost applicable layer, and only after those are clear participates in navigation/back behavior.
+- **Affects:** INT-02, DND-03
+
+## INT-01-05 — Frequent actions are directly visible
+- **Status:** Reviewed
+- **Decision:** Frequently used actions should be directly visible whenever practical. Context menus/secondary layers are reserved for genuinely exceptional, rare, or non-core controls.
+- **Depends On:** UX-01-04
+- **Affects:** CMP-01, DND-03
+
+## INT-01-06 — Unavailable reason uses hover/focus; blockers may be inline
+- **Status:** Reviewed
+- **Decision:** Unavailable/invalid reasons are normally accessible through hover/focus explanation treatment; material blockers may additionally show the reason inline near the affected task/control.
+- **Depends On:** UX-03-06
+- **Affects:** STATE-01, CONTENT-01
+
+## INT-01-07 — Persistent status plus interaction selection layer
+- **Status:** Reviewed
+- **Decision:** Controlled/current-turn information uses persistent status indicators. Targeting, selected-target, and transient interaction selection use an active interaction layer. A separate persistent **NOTICE UI** summarizes important current operational notices/state so the user does not have to infer them from card styling alone.
+- **Affects:** STATE-01, CMP-01, SES-01
+
+---
+
 # Migrated reviewed decisions
 
 These decisions were selected/reviewed before their final destination sheet maps were materialized. Their content is preserved under stable origin IDs; permanent destination IDs may be assigned later without losing the origin alias.
@@ -340,4 +532,4 @@ These decisions were selected/reviewed before their final destination sheet maps
 
 # Pending sheets
 
-No undecided question bodies are stored in this ledger. The canonical review sequence and complete predeclared Decision Maps live in [`review-plan.md`](review-plan.md). When the owner answers a predeclared item, record the resulting Decision Card here.
+No undecided question bodies are stored in this ledger. The canonical review sequence and complete predeclared Decision Maps live in [`review-plan.md`](review-plan.md). When the owner answers a material owner-checkpoint item, record the resulting Decision Card here. Lower-risk design details may be resolved by the AI-managed contract/default process defined by the planning framework without creating unnecessary owner Decision Cards.
