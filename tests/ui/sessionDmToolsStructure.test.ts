@@ -5,17 +5,19 @@ import test from "node:test";
 const root=readFileSync(new URL("../../src/SessionModeRoot.tsx",import.meta.url),"utf8");
 const tools=readFileSync(new URL("../../src/SessionDmTools.tsx",import.meta.url),"utf8");
 const css=readFileSync(new URL("../../src/session-dm-tools.css",import.meta.url),"utf8");
+const referenceCss=readFileSync(new URL("../../src/session-integrated-reference-play.css",import.meta.url),"utf8");
 const combatantAdapter=readFileSync(new URL("../../src/app/productionCombatantPreparationAdapter.ts",import.meta.url),"utf8");
 
-test("DM utilities live inside the persistent Session shell instead of route-replacing pages",()=>{
+test("DM utilities launch from accepted Play chrome and render in the contextual right pane",()=>{
   assert.match(root,/SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane/);
   assert.match(root,/activeUtility === "encounter"/);
   assert.match(root,/activeUtility === "participants"/);
   assert.match(root,/activeUtility === "session"/);
-  assert.match(root,/>Encounter<\/span>/);
-  assert.match(root,/>참가자<\/span>/);
-  assert.match(root,/>세션<\/span>/);
-  assert.doesNotMatch(root,/navigate\(|setRoute\(|플레이로 돌아가기/);
+  assert.match(root,/>Encounter<\/button>/);
+  assert.match(root,/>Participants<\/button>/);
+  assert.match(root,/>Session<\/button>/);
+  assert.match(root,/session-reference-utility-host/);
+  assert.doesNotMatch(root,/session-mode-rail|navigate\(|setRoute\(|플레이로 돌아가기/);
 });
 
 test("Actor switch delegates to the existing selected-Actor command and never changes turn authority locally",()=>{
@@ -52,8 +54,10 @@ test("Participants and Session panes are status/share surfaces without Ready or 
   assert.doesNotMatch(tools,/participant\.ready|setSessionReady|startPreparedSession|rulesProfileId/);
 });
 
-test("DM tools remain one responsive right pane and do not become permanent dashboards",()=>{
-  assert.match(css,/\.session-dm-pane\s*\{[\s\S]*position:\s*absolute;[\s\S]*right:\s*0;[\s\S]*width:\s*min\(430px/);
+test("DM pane internals remain responsive while accepted Play owns their right-side geometry",()=>{
+  assert.match(referenceCss,/\.session-reference-utility-host\s*\{[\s\S]*width:\s*338px/);
+  assert.match(referenceCss,/\.session-reference-utility-host > \*[\s\S]*position:\s*absolute !important;[\s\S]*width:\s*100% !important/);
+  assert.match(referenceCss,/@media \(max-width: 1000px\)[\s\S]*width: 308px; max-width: 42%/);
   assert.match(css,/@media \(max-width: 899px\)/);
   assert.match(css,/@media \(max-width: 620px\)/);
 });
