@@ -1,861 +1,809 @@
-# Owner Review — Visual System / Components / Content
+# 3. 글씨 / 색 / 아이콘 / 버튼 / 문구
 
-Sheets: `UI-02`, `UI-03`, `UI-04`, `UI-05`, `CMP-01`, `CONTENT-01`
+이 파일에서는 **화면의 시각적인 규칙과 공통 부품**을 정합니다.
 
-Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and describe the desired behavior in `OWNER NOTE`. Candidate options are scaffolding only. `AI STATUS` is AI-managed.
-
----
-
-# UI-02 — Typography
-
-### UI-02-01 — Product-wide type hierarchy
-
-**질문:** 제품 전체 typography hierarchy는?
-
-**선택지**
-- `A` — Display / Page Title / Section Title / Body / Label / Caption의 명확한 semantic hierarchy.
-- `B` — Heading / Subheading / Body / Caption의 단순 4단계 hierarchy.
-- `C` — Product surfaces와 dense Play HUD가 서로 다른 type family/scale을 쓰되 semantic role 이름은 공유.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-02-02 — Dense Play HUD typography
-
-**질문:** Play HUD/Command Center의 dense information typography는?
-
-**선택지**
-- `A` — compact sans hierarchy + tabular numerals + strong value/label distinction.
-- `B` — readable body type + 강조 숫자/핵심 action만 display/data style로 차별.
-- `C` — labels는 compact sans, 수치/initiative/resource는 별도 data/mono-style 숫자 체계.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-02-03 — Numeric/stat distinction
-
-**질문:** stats, dice notation, modifiers, DC/AC, HP, resources, initiative numbers를 어떻게 구분할 것인가?
-
-**선택지**
-- `A` — semantic label + tabular numeral + weight/size 차이로 구분, 표기법은 일관된 data typography 사용.
-- `B` — 주요 수치를 badge/chip/value block으로 그룹화하고 본문 숫자와 시각적으로 분리.
-- `C` — HP/resources/initiative/dice 등 category별 distinct typography token을 사용하되 과도한 font family 분화는 금지.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-02-04 — Korean / English / provenance coexistence
-
-**질문:** 한국어 label, English original name, source/provenance를 어떻게 함께 보여줄 것인가?
-
-**선택지**
-- `A` — 한국어 user-facing label primary, English original secondary, source/provenance tertiary metadata.
-- `B` — D&D/rules 고유명은 English primary + 한국어 설명 secondary, 일반 UI는 한국어 primary.
-- `C` — user preference에 따라 Korean-first / bilingual을 전환하고 source는 항상 tertiary.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-02-05 — Long-name wrapping/truncation
-
-**질문:** 긴 Character/Actor/action/item/rule 이름은 어떻게 처리할 것인가?
-
-**선택지**
-- `A` — 주요 content surface는 최대 2줄 wrap 후 truncate, compact control은 1줄 ellipsis + full-name tooltip/focus text.
-- `B` — 모든 compact/dense surface는 1줄 ellipsis, detail surface에서만 full wrap.
-- `C` — 이름은 가능한 wrap을 우선하고 실제 공간이 매우 제한된 Hotbar/Tracker만 truncate.
-- `CUSTOM` — surface별 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-02-06 — Narrow-desktop text compaction
-
-**질문:** narrow desktop에서 어떤 text가 축약되어도 되는가?
-
-**선택지**
-- `A` — secondary labels/metadata만 축약; primary action/identity/status meaning은 유지.
-- `B` — 잘 알려진 compact controls는 icon+accessible name으로 전환 가능, 나머지는 text 유지.
-- `C` — 축약보다 wrap/reflow를 우선하고 마지막 단계에서만 secondary text를 숨김.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-02-07 — Critical text emphasis
-
-**질문:** critical error/privacy/result text를 어떻게 더 강하게 강조할 것인가?
-
-**선택지**
-- `A` — semantic color + weight/size + icon/label redundancy.
-- `B` — typography 자체는 일관되게 유지하고 placement/banner/chip으로 severity를 강조.
-- `C` — error/privacy/authoritative result에 별도 emphasis token을 두되 과도한 all-caps/animation은 사용하지 않음.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
+각 질문에서 `A / B / C / CUSTOM` 중 하나를 고르세요.
 
 ---
 
-# UI-03 — Color & Semantic Color
+# UI-02 — 글씨와 숫자 표시
 
-### UI-03-01 — Appearance modes / accent
+## UI-02-01 — 글씨 크기 단계
 
-**질문:** 어떤 appearance mode와 accent customization을 지원할 것인가?
+**쉽게 말하면:** 큰 제목, 작은 제목, 본문, 설명글을 몇 단계로 나눌까요?
 
-**선택지**
-- `A` — System / Light / Dark + 제한된 accent color customization.
-- `B` — Dark-first default + Light optional + accent customization.
-- `C` — System/Light/Dark만 지원하고 accent customization은 v1에서 제외.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-03-02 — Feedback semantic colors
-
-**질문:** Success / Warning / Error / Info / Disabled / Pending의 color semantics는?
-
-**선택지**
-- `A` — 각 semantic state에 독립 color token을 두고 Product 전체에서 동일 의미 유지.
-- `B` — neutral-first palette, Success/Warning/Error만 strong semantic color, Info/Pending/Disabled는 neutral variations.
-- `C` — common semantic core는 공유하되 Play/Character/Product surface별 tone/intensity variant 허용.
-- `CUSTOM` — 직접 정의.
+- `A` — 큰 제목 / 페이지 제목 / 구역 제목 / 본문 / 작은 라벨 / 보조설명처럼 세밀하게 나눈다.
+- `B` — 제목 / 작은 제목 / 본문 / 보조설명의 4단계로 단순하게 간다.
+- `C` — 일반 앱 화면과 전투 HUD는 크기 체계를 조금 다르게 쓰되 역할 이름은 통일한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-03-03 — Focus / selection / turn / control / targeting distinction
+## UI-02-02 — 전투 화면의 글씨
 
-**질문:** focus, selection, current turn, controlled Actor, targetable, selected target를 어떻게 서로 다르게 표시할 것인가?
+**쉽게 말하면:** 정보가 많은 전투 화면에서는 글씨를 어떻게 읽기 쉽게 할까요?
 
-**선택지**
-- `A` — 각 state에 별도 outline/border/badge token을 두고 중첩 가능하게 설계.
-- `B` — Focus는 accessibility ring, Control/Turn은 persistent badge, Targeting은 card border/glow family로 축을 분리.
-- `C` — Authority/turn axis와 targeting/selection axis 두 semantic color family만 두고 icon/shape로 세부 state 구분.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-03-04 — Ally / Neutral / Hostile representation
-
-**질문:** ally/neutral/hostile 관계를 color-only가 되지 않게 어떻게 표현할 것인가?
-
-**선택지**
-- `A` — relationship color + icon/label/border pattern redundancy.
-- `B` — side badge/icon을 primary, color는 secondary reinforcement.
-- `C` — card shape/header marker + text label을 primary로 하고 color는 최소 사용.
-- `CUSTOM` — 직접 정의.
+- `A` — 작은 산세리프 글씨 + 숫자 정렬 + 라벨과 값의 굵기 차이를 명확하게 한다.
+- `B` — 평소 본문 글씨를 쓰고 중요한 숫자/행동만 더 강하게 강조한다.
+- `C` — 일반 글씨와 수치용 글씨를 조금 다르게 써서 숫자를 빠르게 읽게 한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-03-05 — Economy / resource colors
+## UI-02-03 — HP, AC, 주사위 숫자 구분
 
-**질문:** Action / Bonus Action / Reaction / Movement와 dynamic resources의 semantic color는?
+**쉽게 말하면:** HP, AC, 보정치, 주사위식, 자원, 이니셔티브 숫자를 어떻게 한눈에 구분할까요?
 
-**선택지**
-- `A` — 네 fixed economy type은 각각 안정된 distinct token, dynamic resources는 neutral/category accent.
-- `B` — economy는 하나의 visual family + distinct icon/label, color 차이는 최소화.
-- `C` — fixed economy는 distinct token, dynamic resource는 source/class/item이 제공하는 accent를 제한적으로 허용.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-03-06 — Public vs DM Only indicator
-
-**질문:** Public vs DM Only를 지속적이고 모호하지 않게 어떻게 표시할 것인가?
-
-**선택지**
-- `A` — 항상 visible text label + privacy icon + semantic color.
-- `B` — persistent segmented/toggle text + 별도 DM-only badge when private.
-- `C` — Command Center privacy control + DM-only 상태일 때 persistent privacy strip/chip을 추가.
-- `CUSTOM` — 직접 정의. Color-only 표시는 허용하지 않음.
+- `A` — 이름 + 정렬된 숫자 + 크기/굵기 차이로 구분한다.
+- `B` — 중요한 숫자는 배지/작은 상자 안에 넣어 본문 숫자와 분리한다.
+- `C` — HP/자원/이니셔티브처럼 종류별 숫자 표시 규칙을 따로 두되 글꼴 종류를 너무 많이 늘리진 않는다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-03-07 — Result colors
+## UI-02-04 — 한국어 이름과 영어 원문
 
-**질문:** result color가 rules meaning을 임의 생성하지 않으면서 outcome을 어떻게 전달할 것인가?
+**쉽게 말하면:** 주문/기능 이름에서 한국어와 영어 원문을 어떻게 같이 보여줄까요?
 
-**선택지**
-- `A` — canonical outcome classification이 제공될 때만 success/failure/critical semantic color 사용; 그 외 neutral result.
-- `B` — 기본적으로 모든 authoritative result는 neutral, explicit textual outcome만 강조.
-- `C` — roll/result category별 visual treatment를 쓰되 semantic color는 canonical result metadata가 있을 때만 적용.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-03-08 — Contrast / forced colors
-
-**질문:** contrast와 forced/high-contrast mode의 product principle은?
-
-**선택지**
-- `A` — 일반 text/control은 WCAG AA 수준을 기본으로 하고 forced-colors/high-contrast에서도 semantic state가 유지되어야 함.
-- `B` — AA를 최소로 하되 critical text/control은 가능한 범위에서 더 강한 contrast 목표.
-- `C` — OS/system high-contrast mode를 명시 지원하고 custom appearance보다 accessibility mode를 우선.
-- `CUSTOM` — 직접 정의. 정확한 token 값은 later contract에서 결정.
+- `A` — 한국어를 크게, 영어 원문은 작게, 출처는 더 작게 보여준다.
+- `B` — D&D 고유명사는 영어를 먼저 보여주고 한국어 설명을 붙인다. 일반 UI는 한국어 우선.
+- `C` — 사용자가 `한국어 우선 / 한영 병기`를 선택할 수 있게 한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## UI-02-05 — 이름이 너무 길 때
+
+**쉽게 말하면:** 캐릭터나 주문 이름이 너무 길면 어떻게 할까요?
+
+- `A` — 일반 화면은 최대 2줄, 좁은 버튼은 한 줄 `...` 처리 + 마우스를 올리면 전체 이름.
+- `B` — 좁은 화면은 모두 한 줄 `...`, 자세한 화면에서만 전체 이름.
+- `C` — 가능한 한 줄바꿈해서 모두 보여주고 정말 좁은 곳만 `...` 처리.
+- `CUSTOM` — 화면별로 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-02-06 — 화면이 좁아졌을 때 줄여도 되는 글씨
+
+**쉽게 말하면:** 창 폭이 좁을 때 어떤 글씨부터 줄이거나 숨길까요?
+
+- `A` — 보조설명과 부가정보만 줄이고, 행동 이름·캐릭터 이름·상태 의미는 유지한다.
+- `B` — 익숙한 버튼은 아이콘만 남길 수 있다. 접근성 이름은 유지한다.
+- `C` — 숨기기보다 줄바꿈/재배치를 먼저 하고 마지막에만 부가정보를 줄인다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-02-07 — 중요한 오류/비밀/결과 강조
+
+**쉽게 말하면:** 정말 중요한 문장은 어떻게 눈에 띄게 할까요?
+
+- `A` — 색 + 굵기/크기 + 아이콘/라벨을 같이 쓴다.
+- `B` — 글씨 자체는 평범하게 두고 배너/배지/위치로 강조한다.
+- `C` — 오류/DM전용/중요 결과용 별도 강조 규칙을 만든다. 과한 대문자/깜빡임은 쓰지 않는다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# UI-04 — Iconography
+# UI-03 — 색과 의미
 
-### UI-04-01 — Icon visual style
+## UI-03-01 — 라이트/다크 모드와 포인트 색
 
-**질문:** SimpleVTT icon의 기본 visual language는?
+**쉽게 말하면:** 어떤 화면 테마를 지원할까요?
 
-**선택지**
-- `A` — clean tactical/fantasy line icon, compact UI에서 잘 읽히는 단순 silhouette.
-- `B` — filled glyph 중심의 강한 silhouette icon.
-- `C` — navigation/utility는 line, combat/action/status는 filled의 two-family system.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-04-02 — Icon-only vs icon+label
-
-**질문:** 언제 icon-only control을 허용할 것인가?
-
-**선택지**
-- `A` — universally recognizable/space-constrained control만 icon-only; 항상 accessible name, ambiguous control은 label 병행.
-- `B` — primary/destructive/rare actions는 항상 icon+label, navigation/standard utilities만 icon-only 가능.
-- `C` — dense Play에서는 icon-only를 넓게 허용하되 hover/focus tooltip + accessible name 필수.
-- `CUSTOM` — 직접 정의.
+- `A` — 시스템 설정 / 라이트 / 다크 + 제한된 포인트색 선택
+- `B` — 다크모드 기본 + 라이트 선택 + 포인트색 선택
+- `C` — 시스템 / 라이트 / 다크만 지원하고 포인트색 선택은 v1에서 제외
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-04-03 — Economy/resource icon family
+## UI-03-02 — 성공/경고/오류 색
 
-**질문:** Action/Bonus/Reaction/Movement/resources icon family는?
+**쉽게 말하면:** 성공, 경고, 오류, 정보, 비활성, 처리중의 색을 어떻게 쓸까요?
 
-**선택지**
-- `A` — 네 economy type에 고유 symbol, resources는 category/source icon.
-- `B` — geometric token/badge + letter/short label로 economy를 단순화.
-- `C` — D&D/BG3 계열의 의미를 연상시키되 독자적인 original icon family로 구성.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-04-04 — Conditions / status / initiative icons
-
-**질문:** conditions/status/current-turn/initiative 상태 icon은?
-
-**선택지**
-- `A` — condition pictogram + compact badges, current-turn은 별도 turn marker.
-- `B` — monochrome status glyph + tooltip/label, tracker는 portrait/number 중심.
-- `C` — 작은 icon + short text/initial을 병용해 모호성을 낮춤.
-- `CUSTOM` — 직접 정의.
+- `A` — 각 상태마다 고정된 의미 색을 제품 전체에서 똑같이 쓴다.
+- `B` — 성공/경고/오류만 강한 색을 쓰고 정보/처리중/비활성은 중립색 위주로 간다.
+- `C` — 의미는 같게 유지하되 일반 화면과 전투 화면에서 밝기/강도는 조금 다르게 쓸 수 있다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-04-05 — Product / Session / DM utility icons
+## UI-03-03 — 포커스/선택/현재턴/조종/타겟 색
 
-**질문:** Product Shell와 Session/DM utilities icon family는?
+**쉽게 말하면:** 한 카드에 여러 상태가 겹칠 때 어떻게 헷갈리지 않게 할까요?
 
-**선택지**
-- `A` — 동일한 outline/filled 규칙을 공유하는 product-wide utility family.
-- `B` — global navigation은 simple line, DM/session utilities는 stronger filled/context icon.
-- `C` — utility icons는 최대한 단순하게 하고 대부분 label과 함께 사용.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-04-06 — Public / DM Only iconography
-
-**질문:** Public vs DM Only를 text 외에 어떤 icon으로 보강할 것인가?
-
-**선택지**
-- `A` — Public=eye/globe 계열, DM Only=lock/eye-off 계열 + 항상 text.
-- `B` — privacy shield family + Public/DM Only text badge.
-- `C` — icon보다 text badge를 primary로 두고 lock indicator만 DM-only에 추가.
-- `CUSTOM` — 직접 정의.
+- `A` — 각 상태마다 다른 테두리/배지/표시를 둬 동시에 여러 개 보여줄 수 있게 한다.
+- `B` — 키보드 포커스=테두리, 조종/현재턴=배지, 타겟=카드 외곽효과로 역할을 나눈다.
+- `C` — `조종/턴`과 `선택/타겟` 두 색 계열만 쓰고 아이콘/모양으로 세부 상태를 구분한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-04-07 — Custom/add-on action fallback icon
+## UI-03-04 — 아군/중립/적 표시
 
-**질문:** custom/add-on action에 mapped icon이 없을 때 fallback은?
+**쉽게 말하면:** 아군/중립/적을 색맹 사용자도 알 수 있게 어떻게 보여줄까요?
 
-**선택지**
-- `A` — category generic icon + action short label.
-- `B` — generated letter/initial tile + full accessible name.
-- `C` — neutral generic capability glyph + source/category badge.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-04-08 — Tooltip / accessible names for compact icons
-
-**질문:** compact/icon controls의 tooltip과 accessible name 원칙은?
-
-**선택지**
-- `A` — 모든 icon-only control은 accessible name 필수, hover/focus tooltip 제공.
-- `B` — accessible name은 항상 필수, tooltip은 ambiguous/nonstandard icon에만.
-- `C` — critical actions는 visible label을 우선하고 tooltip은 shortcut/detail 보조로 사용.
-- `CUSTOM` — 직접 정의.
+- `A` — 색 + 아이콘/텍스트/테두리 모양을 함께 쓴다.
+- `B` — 배지/아이콘을 주표시로 쓰고 색은 보조로만 쓴다.
+- `C` — 카드 모양/헤더 표시 + 글자를 주로 쓰고 색은 최소한으로 쓴다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## UI-03-05 — 행동/보너스행동/반응/이동 색
+
+**쉽게 말하면:** 행동 자원 종류를 색으로 얼마나 구분할까요?
+
+- `A` — 행동/보너스/반응/이동은 각각 고유 색. 다른 자원은 중립색/종류별 포인트.
+- `B` — 행동 자원은 하나의 비슷한 색 계열을 쓰고 아이콘/라벨로 구분한다.
+- `C` — 네 기본 행동자원은 고정색, 클래스/아이템 자원은 제한적으로 고유 포인트색을 허용한다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-03-06 — 공개 / DM 전용 표시
+
+**쉽게 말하면:** 지금 굴림이 공개인지 DM만 보는지 어떻게 계속 확실하게 보여줄까요?
+
+- `A` — 항상 글자 + 아이콘 + 색을 함께 보여준다.
+- `B` — `공개 / DM 전용` 토글을 계속 보이고 DM전용일 때 별도 배지도 추가한다.
+- `C` — 행동영역의 공개설정 버튼 + DM전용 상태에서는 추가 경고띠/칩을 계속 보여준다.
+- `CUSTOM` — 직접 정한다. 색만으로 표시하는 것은 안 된다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-03-07 — 성공/실패 결과 색
+
+**쉽게 말하면:** 주사위 숫자만 보고 UI가 성공/실패를 추측하지 않도록 결과 색을 어떻게 쓸까요?
+
+- `A` — 게임이 성공/실패/치명 결과를 확실히 알려준 경우에만 해당 색을 쓴다. 아니면 중립색.
+- `B` — 결과는 대부분 중립색이고 글자로 알려준 실제 결과만 강조한다.
+- `C` — 굴림 종류별 디자인은 다르게 할 수 있지만 성공/실패 색은 게임이 실제 결과를 제공했을 때만 쓴다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-03-08 — 고대비 모드
+
+**쉽게 말하면:** 글자와 배경 대비, 윈도우 고대비 모드를 어느 수준으로 지원할까요?
+
+- `A` — 일반적으로 WCAG AA 수준을 지키고 고대비 모드에서도 의미가 유지되게 한다.
+- `B` — AA를 기본으로 하되 중요한 글씨/버튼은 가능한 한 더 강한 대비를 쓴다.
+- `C` — 운영체제 고대비 모드를 명시적으로 지원하고 사용자 꾸미기보다 접근성 모드를 우선한다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# UI-05 — Density & Spacing
+# UI-04 — 아이콘
 
-### UI-05-01 — Density families
+## UI-04-01 — 아이콘 스타일
 
-**질문:** 하나의 density를 쓸지 Product/Play context-specific density를 쓸지?
+**쉽게 말하면:** SimpleVTT 아이콘의 전체 분위기는 어떤 게 좋을까요?
 
-**선택지**
-- `A` — Product/Character는 comfortable, Play/Command Center는 compact의 두 density family.
-- `B` — product-wide 단일 density scale로 최대한 일관성 유지.
-- `C` — comfortable/compact 두 density mode를 공통 token으로 만들고 surface가 지정.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-05-02 — Command Center compaction
-
-**질문:** core capability discoverability를 유지하면서 Command Center에서 무엇을 compact할 수 있는가?
-
-**선택지**
-- `A` — secondary labels/metadata를 축소하고 icon, capability identity, economy/resource values, unavailable state는 유지.
-- `B` — wide/normal에서는 full label, narrow에서는 known actions를 icon+tooltip로 전환.
-- `C` — content를 줄이기보다 Hotbar paging/scroll을 사용하고 visible slot 정보 밀도는 유지.
-- `CUSTOM` — 직접 정의.
+- `A` — 깔끔한 판타지/전술 느낌의 선형 아이콘
+- `B` — 안이 채워진 굵고 잘 보이는 아이콘
+- `C` — 메뉴/도구는 선형, 전투/행동/상태는 채운 아이콘의 두 스타일 혼합
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-05-03 — Actor Card / Initiative compactness
+## UI-04-02 — 아이콘만 써도 되는 버튼
 
-**질문:** Actor Card와 Initiative Entry의 compactness 원칙은?
+**쉽게 말하면:** 글자 없이 아이콘만 있는 버튼을 어디까지 허용할까요?
 
-**선택지**
-- `A` — identity + required state/target/turn info를 minimum으로 고정하고 secondary details만 축소.
-- `B` — full/compact 두 component variant를 명시적으로 사용.
-- `C` — card width에 따라 progressive disclosure하되 identity/interaction state는 항상 유지.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-05-04 — Character surface density relationship
-
-**질문:** Library / Builder / Sheet / Level Up의 density 관계는?
-
-**선택지**
-- `A` — Library compact, Builder/Level Up comfortable, Sheet medium-dense.
-- `B` — Character family 전체에서 동일 comfortable density.
-- `C` — Sheet는 dense reference view, Builder/Level Up은 spacious task view, Library는 responsive card density.
-- `CUSTOM` — 직접 정의.
+- `A` — 누구나 알아보기 쉽거나 공간이 아주 좁은 버튼만 아이콘 단독 허용. 애매하면 글자도 붙인다.
+- `B` — 주요/위험/드문 행동은 항상 아이콘+글자. 기본 메뉴/표준 도구만 아이콘 단독 가능.
+- `C` — 전투 화면에서는 아이콘 단독을 넓게 쓰되 마우스/키보드 설명을 항상 제공한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-05-05 — Spacing token categories
+## UI-04-03 — 행동 자원 아이콘
 
-**질문:** spacing token category는 어떻게 구성할 것인가?
+**쉽게 말하면:** 행동/보너스행동/반응/이동 아이콘은 어떤 스타일로 할까요?
 
-**선택지**
-- `A` — `xs / sm / md / lg / xl`의 제한된 global scale.
-- `B` — `control-gap / group-gap / section-gap / surface-padding` 같은 semantic spacing tokens.
-- `C` — small/medium/large base scale + component semantic aliases.
-- `CUSTOM` — 직접 정의. 정확한 px 값은 later design token contract에서 결정.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-05-06 — Contextual pane/dialog density
-
-**질문:** contextual pane/dialog에서 density와 scanability를 어떻게 균형 잡을 것인가?
-
-**선택지**
-- `A` — 정보는 compact하게, action group/section 경계는 충분한 spacing으로 분리.
-- `B` — Product comfortable density를 그대로 사용해 modal/pane의 읽기 편의 우선.
-- `C` — data-heavy DM/session pane만 compact, confirmation/form dialog는 comfortable.
-- `CUSTOM` — 직접 정의.
+- `A` — 네 종류마다 완전히 다른 상징을 둔다. 다른 자원도 종류/출처에 따라 아이콘을 둔다.
+- `B` — 기하학 모양 + 짧은 글자로 단순하게 표시한다.
+- `C` — D&D/BG3 느낌은 이해되게 가져오되 SimpleVTT만의 새 아이콘으로 만든다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-05-07 — Narrow desktop compaction/reflow
+## UI-04-04 — 상태이상/현재턴 아이콘
 
-**질문:** narrow desktop에서 무엇을 compress/reflow할 수 있는가?
+**쉽게 말하면:** 상태이상과 현재 턴을 어떻게 아이콘으로 보여줄까요?
 
-**선택지**
-- `A` — reflow를 먼저 하고 secondary label/metadata만 compact; touch/pointer target 크기는 유지.
-- `B` — component compact variant로 먼저 전환하고 필요 시 horizontal scroll/paging.
-- `C` — core regions는 유지하고 utilities/secondary columns를 drawer/pane으로 전환.
-- `CUSTOM` — 직접 정의.
+- `A` — 상태이상 그림 아이콘 + 작은 배지, 현재 턴은 별도 표시.
+- `B` — 단색 상태 아이콘 + 툴팁, 이니셔티브는 초상화/숫자 중심.
+- `C` — 작은 아이콘 + 짧은 글자/약어를 같이 써서 헷갈리지 않게 한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## UI-04-05 — 메뉴/DM 도구 아이콘
+
+**쉽게 말하면:** 일반 메뉴 아이콘과 세션/DM 도구 아이콘 스타일을 같게 할까요?
+
+- `A` — 제품 전체가 같은 아이콘 스타일을 쓴다.
+- `B` — 일반 메뉴는 선형, DM/세션 도구는 더 강한 채운 아이콘으로 구분한다.
+- `C` — 아이콘은 최대한 단순하게 하고 대부분 글자와 같이 쓴다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-04-06 — 공개 / DM 전용 아이콘
+
+**쉽게 말하면:** 공개 여부를 글자 외에 어떤 그림으로 표시할까요?
+
+- `A` — 공개=눈/지구, DM전용=자물쇠/눈가림 + 항상 글자도 표시
+- `B` — 방패 계열 아이콘 + `공개/DM전용` 글자 배지
+- `C` — 글자 배지가 기본, DM전용일 때만 자물쇠 아이콘 추가
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-04-07 — 아이콘이 없는 애드온 행동
+
+**쉽게 말하면:** 애드온/사용자 행동에 전용 아이콘이 없으면 무엇을 보여줄까요?
+
+- `A` — 행동 종류를 나타내는 기본 아이콘 + 짧은 이름
+- `B` — 첫 글자를 넣은 타일 + 전체 이름 설명
+- `C` — 중립적인 공통 행동 아이콘 + 출처/종류 배지
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-04-08 — 아이콘 설명
+
+**쉽게 말하면:** 아이콘만 있는 버튼에 설명을 얼마나 붙일까요?
+
+- `A` — 모든 아이콘 버튼에 접근성 이름 + 마우스/키보드 툴팁
+- `B` — 접근성 이름은 항상, 툴팁은 낯선/애매한 아이콘에만
+- `C` — 중요한 행동은 보이는 글자를 우선하고 툴팁은 단축키/세부설명용
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# CMP-01 — Core Components
+# UI-05 — 화면의 빽빽함과 여백
 
-### CMP-01-01 — Button family
+## UI-05-01 — 일반 화면과 전투 화면의 밀도
 
-**질문:** Button family의 variants/states는?
+**쉽게 말하면:** 일반 화면과 전투 화면을 같은 빽빽함으로 만들까요?
 
-**선택지**
-- `A` — Primary / Secondary / Quiet / Destructive / Icon Button + common states.
-- `B` — Primary / Secondary / Destructive의 단순 family, icon은 presentation option.
-- `C` — A + Split/Menu Button을 명시적 variant로 포함.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CMP-01-02 — Tabs / Segmented / Toggle contract
-
-**질문:** tabs/segmented/toggle을 어떤 의미로 분리할 것인가?
-
-**선택지**
-- `A` — Tabs=peer views/navigation, Segmented=작은 exclusive mode choice, Toggle=즉시 boolean state.
-- `B` — Tabs와 Segmented는 동일 component family로 통합하고 semantic role만 다르게 지정.
-- `C` — visual family는 공유하되 keyboard/ARIA/commit behavior는 각 semantic role에 맞게 분리.
-- `CUSTOM` — 직접 정의.
+- `A` — 일반/캐릭터 화면은 여유롭게, 전투/행동영역은 더 촘촘하게.
+- `B` — 제품 전체에서 가능한 한 같은 밀도를 쓴다.
+- `C` — `여유로운 모드 / 촘촘한 모드` 두 규칙을 만들고 화면마다 하나를 선택한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CMP-01-03 — Search / filter / no-results contract
+## UI-05-02 — 행동영역을 좁힐 때 무엇을 줄일지
 
-**질문:** Search, Filter, No Results의 공통 contract는?
+**쉽게 말하면:** 화면이 좁아졌을 때 행동영역에서 무엇부터 줄일까요?
 
-**선택지**
-- `A` — search 즉시/명시적 clear, filter chip/panel, active filter summary, no-results에 reset action.
-- `B` — submit-based search + filter panel, result count/no-results를 한 영역에서 표시.
-- `C` — surface가 instant/submit search를 선택하되 clear/reset/filter-state/no-results grammar는 공통.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CMP-01-04 — Character Card contract
-
-**질문:** reusable Character Card가 어떤 정보/action을 가져야 하는가?
-
-**선택지**
-- `A` — portrait/name/level-class or summary/status + primary Open + secondary overflow actions.
-- `B` — A + key HP/core stat/session-link status를 card에 직접 노출.
-- `C` — identity/summary만 card에 두고 모든 detail/actions는 open 후 Sheet에서 처리.
-- `CUSTOM` — 직접 정의.
+- `A` — 보조글/부가정보부터 줄이고 아이콘, 행동 정체성, 자원값, 사용불가 상태는 유지한다.
+- `B` — 넓을 때는 글자까지, 좁을 때는 익숙한 행동을 아이콘+툴팁으로 바꾼다.
+- `C` — 내용 자체를 없애지 말고 페이지 넘김/스크롤을 사용한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CMP-01-05 — Actor Card contract
+## UI-05-03 — 캐릭터 카드/이니셔티브 카드 크기
 
-**질문:** reusable Actor Card가 어떤 state/interaction contract를 가져야 하는가?
+**쉽게 말하면:** 카드가 작아져도 반드시 남겨야 할 정보는 무엇일까요?
 
-**선택지**
-- `A` — identity/portrait + HP/core status + control/turn/targeting states + left primary/right context interaction.
-- `B` — identity/HP/status만 기본, economy/detail은 Command Center/tooltip에서만.
-- `C` — compact/base/expanded variants를 두되 interaction/targeting semantics는 모두 동일.
-- `CUSTOM` — 직접 정의. 기존 Actor interaction/targeting Reviewed 결정을 유지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CMP-01-06 — Command Center component boundaries
-
-**질문:** Command Center / Hotbar / Economy / Resource Rail의 component boundary는?
-
-**선택지**
-- `A` — Command Center는 layout/orchestration, Hotbar/Economy/Resource Rail/Actor Summary는 독립 reusable child component.
-- `B` — Command Center를 하나의 cohesive composite component로 보고 내부 세부는 private subcomponents.
-- `C` — A처럼 분리하되 extension/add-on capability region을 explicit slot contract로 제공.
-- `CUSTOM` — 직접 정의.
+- `A` — 이름/정체성 + 꼭 필요한 턴/타겟/상태만 고정하고 나머지를 줄인다.
+- `B` — `큰 카드 / 작은 카드` 두 종류를 명시적으로 만든다.
+- `C` — 공간에 따라 점차 내용을 줄이되 이름과 조작상태는 항상 남긴다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CMP-01-07 — Initiative Entry contract
+## UI-05-04 — 캐릭터 관련 화면의 밀도
 
-**질문:** Initiative Entry에 어떤 정보/state를 포함할 것인가?
+**쉽게 말하면:** 캐릭터 목록/생성/시트/레벨업 중 어떤 화면을 더 촘촘하게 만들까요?
 
-**선택지**
-- `A` — portrait + order/initiative + current marker + core condition icons + concise identity.
-- `B` — portrait + initiative/order + current marker만 ultra-compact, conditions는 hover/detail.
-- `C` — compact row with portrait/name/initiative/current/core condition summary.
-- `CUSTOM` — 직접 정의. HP/economy는 tracker의 primary 정보가 아님.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CMP-01-08 — Session/DM utility pane shell
-
-**질문:** Quick Sheet/Rules/Participants 등 utility pane의 공통 shell contract는?
-
-**선택지**
-- `A` — shared header/title/context/close + standard padding/scroll/focus-return.
-- `B` — shared header/focus semantics만 공통, body layout은 utility별 자유.
-- `C` — shared pane shell + optional toolbar/footer slots + role/context badge.
-- `CUSTOM` — 직접 정의.
+- `A` — 목록=촘촘, 생성/레벨업=여유, 시트=중간.
+- `B` — 전부 비슷하게 여유로운 밀도.
+- `C` — 시트=정보가 많은 촘촘한 화면, 생성/레벨업=여유로운 작업화면, 목록=카드 크기를 상황에 맞게.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CMP-01-09 — Status / connection / warning indicators
+## UI-05-05 — 여백 크기 체계
 
-**질문:** status, connection, warning, persistent indicator의 공통 component contract는?
+**쉽게 말하면:** 버튼 사이/그룹 사이/구역 사이 여백을 어떻게 표준화할까요?
 
-**선택지**
-- `A` — 하나의 Status Indicator family에 semantic severity/state/icon/text 규칙 통합.
-- `B` — Connection Status와 Generic Status/Warning의 두 family로 분리.
-- `C` — passive status chip과 actionable persistent banner를 별도 family로 분리.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CMP-01-10 — File input / preview / validation / commit
-
-**질문:** 파일 기반 import/save의 공통 component flow는?
-
-**선택지**
-- `A` — Choose file → Preview → Validate → explicit Install/Save/Import commit.
-- `B` — Drag&Drop/Choose 통합 input → 자동 Preview/Validate → explicit commit.
-- `C` — lightweight file은 choose 후 즉시 parse, issue가 있을 때만 Review; durable mutation 전에는 explicit commit.
-- `CUSTOM` — 직접 정의.
+- `A` — 아주작음 / 작음 / 중간 / 큼 / 아주큼의 단순 5단계.
+- `B` — `버튼 사이 / 그룹 사이 / 구역 사이 / 화면 안쪽 여백`처럼 용도별 이름으로 정한다.
+- `C` — 작은/중간/큰 기본 크기 + 각 부품에 의미있는 별칭을 붙인다.
+- `CUSTOM` — 직접 정한다. 실제 px 숫자는 나중에 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CMP-01-11 — Prevent domain/rules duplication in components
+## UI-05-06 — 패널/확인창의 정보 밀도
 
-**질문:** reusable UI component가 rules/domain 계산을 중복하지 않도록 어떤 boundary를 둘 것인가?
+**쉽게 말하면:** 작은 패널이나 확인창은 얼마나 촘촘하게 만들까요?
 
-**선택지**
-- `A` — component는 canonical/projected view data + command callbacks만 받아 표시/입력만 수행.
-- `B` — typed ViewModel/Presenter layer가 모든 derived display state를 계산하고 component는 순수 rendering.
-- `C` — domain adapter/selectors를 UI boundary에 두고 component 자체에서는 named-rule 계산 금지.
-- `CUSTOM` — architecture contract에 맞춰 직접 정의.
+- `A` — 정보 자체는 촘촘하게, 버튼/구역 사이는 넉넉하게 띄운다.
+- `B` — 일반 앱 화면과 비슷하게 여유로운 간격을 쓴다.
+- `C` — 정보가 많은 DM/세션 패널만 촘촘하게, 확인창/입력폼은 여유롭게.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## UI-05-07 — 좁은 화면에서 재배치
+
+**쉽게 말하면:** 창 폭이 좁을 때 어떻게 공간을 줄일까요?
+
+- `A` — 먼저 줄바꿈/재배치하고 부가정보만 줄인다. 클릭할 수 있는 영역 크기는 유지한다.
+- `B` — 작은 부품 버전으로 전환하고 필요하면 가로 스크롤/페이지 넘김.
+- `C` — 핵심 화면은 유지하고 부가도구/보조열을 서랍/패널로 바꾼다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# CONTENT-01 — UX Writing
+# CMP-01 — 공통 UI 부품
 
-### CONTENT-01-01 — Core product terminology
+## CMP-01-01 — 버튼 종류
 
-**질문:** Character, Actor, Combatant, Player, DM, Session, Scene, Encounter, Play의 user-facing 용어는?
+**쉽게 말하면:** 버튼 디자인을 몇 종류로 나눌까요?
 
-**선택지**
-- `A` — 캐릭터 / 액터 / 전투원 / 플레이어 / DM / 세션 / 장면 / 조우 / 플레이를 고정 용어로 사용.
-- `B` — 캐릭터 / 말(Actor) / 전투 참가자 / 플레이어 / DM / 세션 / 장면 / 조우 / 플레이처럼 더 자연어 중심 번역.
-- `C` — 한국어 primary + 첫 노출/도움말에서 canonical English term을 병기.
-- `CUSTOM` — 용어별 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-01-02 — Primary action verb grammar
-
-**질문:** primary action label의 기본 문법은?
-
-**선택지**
-- `A` — 짧은 명령형 동사 중심: 저장, 참가, 시작, 공격, 공개 등.
-- `B` — object+verb가 필요한 경우 “세션 시작”, “캐릭터 저장”처럼 명확한 구문 사용.
-- `C` — compact Play는 동사, Product/form flow는 object+verb를 사용하는 context-specific grammar.
-- `CUSTOM` — 직접 정의.
+- `A` — 주요 / 보조 / 조용한 버튼 / 위험 버튼 / 아이콘 버튼
+- `B` — 주요 / 보조 / 위험 버튼만 두고 아이콘 여부는 모양 옵션으로 처리
+- `C` — A + 한 버튼에 추가 메뉴가 붙는 버튼까지 공식 지원
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-01-03 — Error message anatomy
+## CMP-01-02 — 탭 / 여러 선택 중 하나 / 켜기끄기
 
-**질문:** error message가 반드시 포함해야 하는 정보는?
+**쉽게 말하면:** 비슷해 보이는 선택 UI의 역할을 어떻게 구분할까요?
 
-**선택지**
-- `A` — 무엇이 실패했는지 + 사용자 영향 + 가능한 recovery action.
-- `B` — 짧은 실패 이유 + primary recovery action, 기술 detail은 expandable.
-- `C` — A + 필요한 경우 source/reference/error code를 secondary detail로 제공.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-01-04 — Empty / no-results message anatomy
-
-**질문:** empty/no-results message가 포함해야 하는 정보는?
-
-**선택지**
-- `A` — 현재 상태 설명 + 왜 비었는지 + 가능한 다음 action.
-- `B` — 짧은 headline + 한 개의 primary CTA.
-- `C` — Empty는 context+CTA, No Results는 query/filter 요약 + clear/reset action으로 분리.
-- `CUSTOM` — 직접 정의.
+- `A` — 탭=화면 전환, 세그먼트=몇 개 중 하나 선택, 토글=켜기/끄기.
+- `B` — 탭과 세그먼트를 같은 디자인 계열로 합치고 역할만 다르게 한다.
+- `C` — 외형은 비슷하게 하되 키보드/접근성/작동방식은 각 역할에 맞게 분리한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-01-05 — Unavailable reason phrasing
+## CMP-01-03 — 검색 / 필터 / 결과 없음
 
-**질문:** unavailable/disabled reason을 어떤 방식으로 표현할 것인가?
+**쉽게 말하면:** 검색화면의 공통 사용법을 어떻게 만들까요?
 
-**선택지**
-- `A` — 현재 막힌 원인 + 가능하면 사용자가 취할 수 있는 다음 행동.
-- `B` — canonical reason을 짧고 직접적으로 표시하고 해결 action은 별도 control.
-- `C` — compact surface는 짧은 reason, detail/focus/help에서는 full explanation.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-01-06 — Confirmation / cancel / retry / close grammar
-
-**질문:** normal/destructive confirmation, cancel, retry, close를 어떤 문구 규칙으로 구분할 것인가?
-
-**선택지**
-- `A` — confirm button은 실제 action 이름 사용, destructive는 object/action 명시, Cancel/Retry/Close는 각각 의미대로 고정.
-- `B` — dialog headline에 consequence를 설명하고 action button은 짧은 동사 사용.
-- `C` — “예/아니오”는 사용하지 않고 모든 버튼을 실제 결과 동사로 표현.
-- `CUSTOM` — 직접 정의.
+- `A` — 입력 즉시 검색 + 필터 + 현재 필터 표시 + 결과 없을 때 초기화 버튼.
+- `B` — 검색 버튼을 눌러 실행 + 필터 패널 + 결과 수/결과없음을 같은 영역에 표시.
+- `C` — 화면마다 즉시검색/버튼검색은 선택할 수 있지만 `지우기/필터/결과없음` 규칙은 통일한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-01-07 — Public / DM Only / disclosure terms
+## CMP-01-04 — 캐릭터 카드에 보일 정보
 
-**질문:** Public, DM Only, later disclosure를 어떤 user-facing 용어로 표현할 것인가?
+**쉽게 말하면:** 캐릭터 목록의 카드에 무엇까지 바로 보여줄까요?
 
-**선택지**
-- `A` — `공개` / `DM 전용` / `전체 판정 공개` / `결과만 공개`.
-- `B` — `Public` / `DM Only` English terms를 UI에 유지하고 한국어 설명 보조.
-- `C` — `전체 공개` / `DM 비공개` / `전체 공개 전환` / `결과만 공개`.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-01-08 — Roll/result/adjudication vocabulary
-
-**질문:** roll, total, outcome, effect, state change, adjudication, Undo를 어떻게 구분해 부를 것인가?
-
-**선택지**
-- `A` — 굴림 / 합계 / 결과 / 효과 / 상태 변경 / 판정 조정 / 되돌리기를 서로 다른 고정 용어로 사용.
-- `B` — “굴림 결과”를 중심으로 단순화하고 adjudication/Undo만 별도 DM 용어로 분리.
-- `C` — D&D/rules 용어는 English canonical term 병기, product operation은 한국어 용어 사용.
-- `CUSTOM` — 용어별 직접 정의.
+- `A` — 초상화/이름/레벨·클래스 요약/상태 + `열기` + 더보기 메뉴
+- `B` — A + HP/핵심 능력치/세션연결 상태까지
+- `C` — 이름/요약 + `열기`만 두고 자세한 내용은 시트에서만
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-01-09 — Connection-state vocabulary
+## CMP-01-05 — 전투 Actor 카드에 보일 정보
 
-**질문:** connected/reconnecting/disconnected/rejoin/leave 용어는?
+**쉽게 말하면:** 적/아군 카드에는 무엇을 기본으로 담을까요?
 
-**선택지**
-- `A` — 연결됨 / 재연결 중 / 연결 끊김 / 다시 참가 / 세션 나가기.
-- `B` — 온라인 / 연결 복구 중 / 오프라인 / 다시 연결 / 나가기.
-- `C` — 상태는 짧은 label, action은 “다시 참가/연결 재시도/세션 나가기”처럼 별도 동사 사용.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-01-10 — First-use guidance tone
-
-**질문:** 첫사용 가이드의 tone과 범위는?
-
-**선택지**
-- `A` — 짧고 task-first: “무엇을 할 수 있는지 + 바로 시작하는 action” 중심.
-- `B` — step-by-step guided tutorial 형태.
-- `C` — 최소한의 welcome/핵심 entry만 보여주고 자세한 도움은 Help/Rules로 분리.
-- `CUSTOM` — 직접 정의.
+- `A` — 이름/초상화 + HP/핵심상태 + 조종/턴/타겟 상태 + 왼쪽클릭/우클릭 규칙
+- `B` — 이름/HP/상태만 카드에 두고 행동자원/자세한 내용은 다른 곳에
+- `C` — 작은/기본/큰 카드 버전을 만들되 클릭/타겟 규칙은 동일하게 유지
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-01-11 — Korean / English / source / IDs presentation
+## CMP-01-06 — Command Center 내부 부품 나누기
 
-**질문:** 한국어 label, English original, source/provenance, ID/address를 어떻게 표시할 것인가?
+**쉽게 말하면:** 아래 행동영역을 하나의 큰 부품으로 만들까요, 작은 부품들로 나눌까요?
 
-**선택지**
-- `A` — 한국어 primary, English original secondary, source tertiary; raw ID/address는 기술적으로 필요할 때만 노출.
-- `B` — rules/content names는 bilingual, 일반 UI는 한국어; provenance는 항상 detail metadata.
-- `C` — user-facing 기본은 한국어만, English/source/ID는 expandable detail/tooltip에서 제공.
-- `CUSTOM` — 직접 정의.
+- `A` — 큰 틀만 Command Center, 행동버튼/행동자원/캐릭터요약은 각각 독립 부품.
+- `B` — Command Center를 하나의 큰 통합 부품으로 보고 내부는 전용 부품으로만 사용.
+- `C` — A처럼 나누되 애드온이 기능을 끼워 넣을 수 있는 정식 공간도 만든다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## CMP-01-07 — 이니셔티브 한 칸에 보일 정보
+
+**쉽게 말하면:** 턴 순서표의 캐릭터 한 칸에는 무엇을 넣을까요?
+
+- `A` — 초상화 + 이름 + 순서/이니셔티브 + 현재턴 표시 + 핵심 상태이상
+- `B` — 초상화 + 순서/이니셔티브 + 현재턴만 아주 작게. 상태는 마우스 올렸을 때.
+- `C` — 초상화/이름/이니셔티브/현재턴/핵심상태를 한 줄에 작게.
+- `CUSTOM` — 직접 정한다. HP/행동자원은 기본 정보가 아니다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CMP-01-08 — 세션/DM 옆 패널의 공통 틀
+
+**쉽게 말하면:** 룰/참가자/빠른시트 같은 옆 패널의 머리부분과 닫기방식을 통일할까요?
+
+- `A` — 제목/현재대상/닫기/여백/스크롤/포커스복귀까지 모두 공통 틀 사용
+- `B` — 제목/닫기/키보드 규칙만 공통, 내용 배치는 각 도구가 자유롭게
+- `C` — 공통 패널 + 필요하면 툴바/하단버튼/역할표시를 끼울 수 있게
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CMP-01-09 — 상태/연결/경고 표시 부품
+
+**쉽게 말하면:** 연결상태와 일반 경고를 같은 부품으로 만들까요?
+
+- `A` — 하나의 상태표시 계열에서 색/아이콘/글자로 모두 처리
+- `B` — `연결상태`와 `일반 상태/경고`를 두 종류로 분리
+- `C` — 작은 상태칩과 행동이 필요한 큰 배너를 별도 종류로 분리
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CMP-01-10 — 파일 가져오기 공통 흐름
+
+**쉽게 말하면:** 캐릭터/콘텐츠 파일을 가져오는 흐름을 어떻게 통일할까요?
+
+- `A` — 파일 선택 → 미리보기 → 검사 → 설치/저장/가져오기
+- `B` — 드래그앤드롭/파일선택 → 자동 미리보기/검사 → 마지막 실행버튼
+- `C` — 가벼운 파일은 바로 읽고 문제가 있을 때만 검토화면을 보여주되 실제 저장 전에는 명시적 실행버튼
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CMP-01-11 — UI가 게임 규칙을 직접 계산하지 않게 하기
+
+**쉽게 말하면:** 버튼/카드 부품이 자체적으로 명중/가능여부 등을 계산하지 않게 구조를 어떻게 잡을까요?
+
+- `A` — UI는 게임이 준 표시용 값과 실행명령만 받아서 보여준다.
+- `B` — 별도 중간 계층이 화면에 필요한 값을 전부 만들어주고 UI는 그리기만 한다.
+- `C` — UI 앞에 전용 변환/선택 계층을 두고 부품 안에서는 규칙 계산을 금지한다.
+- `CUSTOM` — 개발 구조에 맞게 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+---
+
+# CONTENT-01 — 화면 문구
+
+## CONTENT-01-01 — 캐릭터/Actor/Combatant 용어
+
+**쉽게 말하면:** 제품에서 각 대상을 어떤 한국어 이름으로 부를까요?
+
+- `A` — 캐릭터 / 액터 / 전투원 / 플레이어 / DM / 세션 / 장면 / 조우 / 플레이
+- `B` — 캐릭터 / 말(Actor) / 전투 참가자 / 플레이어 / DM / 세션 / 장면 / 조우 / 플레이처럼 더 자연스럽게 번역
+- `C` — 한국어를 기본으로 쓰고 처음 보이거나 도움말에서 영어 원어를 같이 적는다.
+- `CUSTOM` — 용어별로 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-02 — 버튼 문구 스타일
+
+**쉽게 말하면:** 버튼에 `저장`, `시작`, `참가`처럼 짧게 쓸까요, `세션 시작`처럼 대상을 같이 쓸까요?
+
+- `A` — 짧은 동사 중심: 저장, 참가, 시작, 공격, 공개
+- `B` — 필요한 경우 `세션 시작`, `캐릭터 저장`처럼 대상+동사
+- `C` — 전투 화면은 짧은 동사, 일반 작업화면은 대상+동사
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-03 — 오류 메시지 내용
+
+**쉽게 말하면:** 오류문에는 무엇을 꼭 알려줄까요?
+
+- `A` — 무엇이 실패했는지 + 어떤 영향이 있는지 + 어떻게 복구할지
+- `B` — 짧은 실패이유 + 가장 중요한 해결 버튼. 기술정보는 펼쳐보기.
+- `C` — A + 필요하면 출처/오류코드도 작은 세부정보로 제공
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-04 — 빈 화면 문구
+
+**쉽게 말하면:** 데이터가 없거나 검색 결과가 없을 때 어떤 문구를 보여줄까요?
+
+- `A` — 현재 상황 + 왜 비었는지 + 다음에 할 수 있는 행동
+- `B` — 짧은 제목 + 가장 중요한 버튼 하나
+- `C` — 데이터 없음은 설명+생성버튼, 검색결과 없음은 검색/필터 요약+초기화버튼
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-05 — 사용할 수 없는 이유 문구
+
+**쉽게 말하면:** `왜 못 쓰는지`를 어떤 식으로 설명할까요?
+
+- `A` — 막힌 이유 + 가능하면 해결방법까지
+- `B` — 시스템이 준 이유를 짧게 표시하고 해결 행동은 별도 버튼
+- `C` — 좁은 화면은 짧은 이유, 자세한 도움말에서는 전체 설명
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-06 — 확인/취소/재시도/닫기 문구
+
+**쉽게 말하면:** 확인창 버튼 이름을 어떻게 통일할까요?
+
+- `A` — `예/아니오`보다 실제 행동 이름을 쓴다. 예: `삭제`, `세션 종료`, `다시 시도`.
+- `B` — 제목/설명에서 결과를 자세히 설명하고 버튼은 짧은 동사.
+- `C` — `예/아니오`는 아예 사용하지 않고 모든 버튼에 실제 결과 동사를 쓴다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-07 — 공개 / DM전용 용어
+
+**쉽게 말하면:** 굴림 공개범위를 어떤 말로 보여줄까요?
+
+- `A` — `공개` / `DM 전용` / `전체 판정 공개` / `결과만 공개`
+- `B` — `Public` / `DM Only` 영어를 그대로 쓰고 한국어 설명을 보조로
+- `C` — `전체 공개` / `DM 비공개` / `전체 공개 전환` / `결과만 공개`
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-08 — 굴림/결과/효과/되돌리기 용어
+
+**쉽게 말하면:** 비슷한 판정 관련 단어를 어떻게 통일할까요?
+
+- `A` — 굴림 / 합계 / 결과 / 효과 / 상태 변경 / 판정 조정 / 되돌리기를 각각 구분
+- `B` — `굴림 결과`를 중심으로 단순화하고 DM 판정조정/되돌리기만 별도 용어
+- `C` — D&D 규칙용어는 영어 원어 병기, 제품 조작은 한국어
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-09 — 연결 상태 용어
+
+**쉽게 말하면:** 연결됨/재연결/나가기 같은 문구를 어떻게 쓸까요?
+
+- `A` — 연결됨 / 재연결 중 / 연결 끊김 / 다시 참가 / 세션 나가기
+- `B` — 온라인 / 연결 복구 중 / 오프라인 / 다시 연결 / 나가기
+- `C` — 상태는 짧은 단어, 버튼은 `다시 참가 / 연결 재시도 / 세션 나가기`처럼 명확한 동사
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-10 — 첫사용 안내 말투
+
+**쉽게 말하면:** 처음 쓰는 사람에게 얼마나 자세히 설명할까요?
+
+- `A` — 짧고 바로 행동하게: `무엇을 할 수 있는지 + 시작 버튼`
+- `B` — 단계별 튜토리얼
+- `C` — 첫 화면에는 핵심만, 자세한 설명은 Help/Rules로 분리
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-01-11 — 한국어/영어/출처/ID 표시
+
+**쉽게 말하면:** 일반 사용자가 보는 이름과 개발/출처 정보는 어떻게 나눌까요?
+
+- `A` — 한국어 크게, 영어 작게, 출처는 더 작게. 내부 ID/주소는 꼭 필요할 때만.
+- `B` — 규칙/콘텐츠 이름은 한영 병기, 일반 UI는 한국어. 출처는 자세한 정보에.
+- `C` — 기본은 한국어만, 영어/출처/ID는 펼쳐보기나 툴팁에서.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
