@@ -1,75 +1,128 @@
 # UI Reference Prototype — Work Order
 
-Status: **EXECUTED TO REVIEW CANDIDATE — OWNER ACCEPTANCE PENDING**
+Status: **RE-EXECUTED TO FINAL-SPEC REPLACEMENT CANDIDATE — OWNER ACCEPTANCE PENDING**
 
 **ID:** `PROTO-WO-001`
 
-**Objective:** Build a complete interactive standalone HTML/CSS/JS UI reference so the owner can judge SimpleVTT's screens, Scene/Actor composition, Command Center, controls, layers, states and desktop reflow before production UI implementation.
+**Objective:** Build and iterate a complete interactive standalone HTML/CSS/JS UI reference so the owner can judge SimpleVTT's intended final Product/Play experience before production UI implementation.
 
-This Work Order was explicitly authorized by the owner. It authorizes the **Reference Prototype only**, not runtime `src/` UI.
+This Work Order is limited to Reference Prototype artifacts. It does not authorize runtime `src/` UI.
 
 ---
 
-# Scope executed
+# Execution history
 
-Created under:
+## First candidate
+
+Files:
 
 ```text
-docs/design/ui-ux/prototype/app/
+app/index.html
+app/prototype.css
+app/prototype.js
+app/fixtures.js
+app/review-patch.css
+app/review-patch.js
 ```
 
-Current candidate files:
+Result: **REJECTED / SUPERSEDED BY OWNER REVIEW**
+
+Material failures:
+
+- Standalone dice did not read as an in-Character-Sheet interaction.
+- Connected Play did not strictly implement the reviewed Actor Board / Scene / Command Center topology.
+
+These files are historical only and may not be used as runtime reference.
+
+## Final-Spec replacement
+
+Active candidate:
 
 ```text
-index.html
-prototype.css
-prototype.js
-fixtures.js
-review-patch.css
-review-patch.js
-README.md
+app/final-spec.html
+app/final-spec.css
+app/final-spec.js
+app/final-spec-fixtures.js
+app/final-spec-stability.js
 ```
 
-No production `src/` file was changed by this prototype execution.
+Controlling explicit owner corrections:
+
+```text
+OWNER-CORRECTIONS.md
+```
 
 ---
 
-# Candidate coverage
+# Replacement scope
 
-The current prototype candidate includes:
+The Final-Spec candidate must behave as a near-final product reference rather than a loose wireframe.
 
-- Prototype Controls isolated from product UI;
-- direct Surface and 34 Scenario selection;
-- Host/DM, Client/Player and Offline views;
-- Freeform / Initiative;
-- Wide / Normal / Narrow desktop presets;
-- First Run / Home / Character Library;
-- Official-style and SimpleVTT Character Sheets;
-- accepted Character Builder / Level Up reference shells;
-- Host Setup -> immediately live Freeform;
-- Join + Character Select + no-Character blocked recovery;
-- Content lifecycle / package import / Rules / Settings;
-- upper opposing and lower allied Actor Boards;
-- Scene/Table and persistent bottom Command Center;
-- Hotbar / Action economy / Resource Rail;
-- compact Initiative Tracker;
-- targeting, invalid reason, single/multi target examples;
-- Main Hand unavailable fixture with no smart fallback;
-- resolving, interrupt, concentration, dice and result examples;
-- Activity public/private filtering and correction chain;
-- Encounter, Participants, Session Share, Player Session utilities;
-- advanced DM distance/visibility/cover tool;
-- Handout Overlay / Upper / Full modes;
-- Full Sheet layer;
-- Actor context menu, hover explanation, NOTICE/error/reconnect states;
-- panel resizing / Reset Layout;
-- Component Gallery and Reduced Motion.
+## Standalone Character
+
+- Official-style and SimpleVTT layouts remain first-class.
+- Every ordinary Standalone roll remains inside the current Character Sheet surface.
+- Skill / save / attack / damage / feature-style examples use the same in-Sheet Roll Plane pattern.
+- No detached modal/dialog/drawer/result route/window for ordinary Standalone dice.
+- Fixture-authoritative dice value; no rules calculation.
+
+## Connected Play
+
+Exact core skeleton:
+
+```text
+Play chrome/status
+Upper NPC/Neutral/Hostile Actor Board
+Central Scene/Table (+ contextual side utility)
+Lower Player/Allied Actor Board
+Persistent BG3-family Command Center
+```
+
+Required:
+
+- Initiative Tracker overlays Scene top edge.
+- Dice roll on Scene/Table.
+- Result stays Scene-integrated.
+- Command Center persists through targeting/resolution/dice/result.
+- Hotbar remains directly discoverable.
+- Actor Boards remain visible during targeting.
+- valid/invalid/selected target states come from fixtures.
+- single-target valid click submits directly.
+- multi-target requires Execute.
+- no smart fallback for unavailable Main Hand.
+- DM/Player share core skeleton.
+- contextual DM/Session tools use side panes.
+- Player gets no DM-only Activity placeholder.
 
 ---
 
-# Hard boundaries preserved
+# Supporting Product reference surfaces
 
-The prototype MUST NOT and currently intentionally does not implement:
+The replacement candidate also provides reference UI for:
+
+- Home / Character Library;
+- Session Host / Join / no-Character block;
+- Content / Rules / Settings;
+- Activity;
+- Encounter;
+- Participants;
+- Session Share;
+- advanced DM spatial authoring;
+- Handout Overlay / Upper / Full;
+- Actor right-click context menu;
+- rich hover/focus explanation;
+- NOTICE/reconnect examples;
+- Wide / Normal / Narrow desktop;
+- Reduced Motion;
+- Component Gallery.
+
+Additional prototype iteration may fill further catalog examples, but it must never weaken the Final-Spec structural rules above.
+
+---
+
+# Hard boundaries
+
+The prototype MUST NOT implement:
 
 - production UI changes;
 - real backend/session networking;
@@ -82,63 +135,62 @@ The prototype MUST NOT and currently intentionally does not implement:
 - real Handout network/reconnect contract;
 - production schemas.
 
-Those values are represented by fixtures only.
+Those values are represented by explicit fixtures only.
+
+No production `src/` file may be changed under this Work Order.
 
 ---
 
-# Static verification
+# Verification
 
-Recorded in [`BUILD-VERIFICATION.md`](BUILD-VERIFICATION.md).
+Active replacement static verification:
 
-Current result:
+[`FINAL-SPEC-VERIFICATION.md`](FINAL-SPEC-VERIFICATION.md)
+
+Current state:
 
 ```text
-Candidate file inventory: PASS
-34 scenario fixtures present: PASS
-Prototype controls/surface selector present: PASS
-Main prototype JS static search for fetch(: none
-Main prototype JS static search for WebSocket: none
-Main prototype JS static search for src/: none
-Production src writes from this work: none
-Browser visual/runtime verification: PENDING
+Final-Spec candidate file inventory: PASS
+Owner corrections structurally represented: PASS
+Prototype/runtime boundary static inspection: PASS
+Browser visual/runtime execution: PENDING
+Owner acceptance: PENDING
 ```
 
-The execution container could not resolve `raw.githubusercontent.com`, so it was not possible to download and execute the branch there for browser/Node runtime verification. This limitation is explicitly retained rather than presenting static review as browser acceptance.
+The current execution container cannot resolve GitHub/raw GitHub hosts for local browser/Node execution, so static structural verification is not presented as browser acceptance.
 
 ---
 
-# Remaining work under this Work Order
+# Next step under this Work Order
 
-The code-authoring portion is complete enough for Owner review, but the Work Order is **not accepted/closed** yet.
-
-Next:
-
-1. owner opens `app/index.html` in a browser;
-2. owner checks the whole experience using Prototype Controls/scenarios;
-3. defects and design feedback are fixed inside the prototype;
-4. AI runs `PROTOTYPE-ACCEPTANCE.md` against the reviewed candidate;
-5. owner explicitly accepts a specific reference commit.
+1. Owner opens `app/final-spec.html`.
+2. Owner reviews Standalone Sheet rolls and Connected Play first.
+3. Owner gives natural-language UI feedback.
+4. AI updates the Final-Spec candidate and the smallest applicable prototype design source.
+5. AI runs `PROTOTYPE-ACCEPTANCE.md`.
+6. Owner explicitly accepts a specific replacement reference revision.
 
 ---
 
 # Stop boundary
 
-Do not move to runtime implementation during this review.
+Do not move to runtime implementation during prototype review.
 
-If prototype review exposes:
+If review exposes:
 
-- ordinary spacing/density/layer/presentation feedback -> update prototype Design Defaults/catalog directly;
-- a material workflow/capability/authority change -> reconcile the appropriate Product Decision first;
-- a rules/network/privacy/persistence question -> route to Domain/Architecture contract.
+- ordinary layout/density/layer/presentation feedback -> update prototype defaults/catalog/candidate;
+- material workflow/capability/authority change -> reconcile Product Decision / explicit owner correction;
+- rules/network/privacy/persistence truth -> route to Domain/Architecture contract.
 
 ---
 
 # Runtime gate
 
-Even after this prototype is accepted, production UI still requires a separate preparation phase:
+After Final-Spec acceptance:
 
 ```text
-accepted prototype
+accepted Final-Spec prototype
+-> reconcile owner corrections into canonical runtime planning
 -> Surface / Component / Motion contract extraction
 -> applicable technical gap resolution
 -> legacy UX reconciliation
@@ -151,7 +203,7 @@ accepted prototype
 Therefore:
 
 ```text
-PROTO-WO-001: REVIEW CANDIDATE BUILT
+PROTO-WO-001: FINAL-SPEC REPLACEMENT REVIEW CANDIDATE BUILT
 PROTOTYPE OWNER ACCEPTANCE: PENDING
 RUNTIME UI IMPLEMENTATION: NOT AUTHORIZED
 ```
