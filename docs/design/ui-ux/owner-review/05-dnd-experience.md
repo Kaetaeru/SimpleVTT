@@ -1,663 +1,621 @@
-# Owner Review — D&D Experience
+# 5. 캐릭터 / 주사위 / 행동 / 전투
 
-Sheets: `DND-01`, `DND-02`, `DND-03`, `DND-04`
+이 파일에서는 **SimpleVTT를 실제 D&D에서 어떻게 쓰게 할지**를 정합니다.
 
-Existing Reviewed D&D/Play seeds remain binding. These questions only cover the still-Draft details from `review-plan.md`.
-
-Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and describe the desired behavior in `OWNER NOTE`. Candidate options are scaffolding only. `AI STATUS` is AI-managed.
+이미 정해진 큰 방향은 유지하고, 아직 정하지 않은 세부 사용법만 고릅니다.
 
 ---
 
-# DND-01 — Character Presentation
+# DND-01 — 캐릭터 목록 / 생성 / 시트 / 레벨업
 
-### DND-01-01 — Character Library Card contents
+## DND-01-01 — 캐릭터 목록 카드에 보일 정보
 
-**질문:** Character Library card에 어떤 정보/action을 직접 노출할 것인가?
+**쉽게 말하면:** 캐릭터 목록에서 카드를 봤을 때 무엇까지 바로 보여줄까요?
 
-**선택지**
-- `A` — portrait/name + level/class summary + last/session status + primary Open + secondary menu.
-- `B` — A + HP/core stat summary와 quick Roll/Edit/Level Up actions.
-- `C` — identity/summary + Open만 card에 두고 모든 action은 Sheet에서 수행.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-01-02 — Builder modes / step structure
-
-**질문:** Guided / Quick / Import / Edit Builder mode와 top-level step structure는?
-
-**선택지**
-- `A` — Guided / Quick / Import / Edit를 모두 first-class entry로 두고 마지막 Review/Save 구조는 공유.
-- `B` — Guided + Quick을 primary creation mode, Import/Edit은 별도 secondary workflow.
-- `C` — Guided를 기본/주요 mode로 두고 Quick은 expert shortcut, Import/Edit은 existing Character flow에서만 진입.
-- `CUSTOM` — mode/step structure 직접 정의.
+- `A` — 초상화/이름/레벨·클래스 요약/최근 상태 + 열기 + 더보기 메뉴
+- `B` — A + HP/핵심 능력치 + 굴림/편집/레벨업 바로가기
+- `C` — 이름/요약 + 열기만 보여주고 나머지는 시트 안에서
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-01-03 — Dependent choices
+## DND-01-02 — 캐릭터 생성 방식
 
-**질문:** species/class/subclass/feat/spell 등 dependent choice를 UI가 hidden rule logic 없이 어떻게 보여줄 것인가?
+**쉽게 말하면:** `자세히 만들기 / 빠르게 만들기 / 가져오기 / 편집`을 어떻게 제공할까요?
 
-**선택지**
-- `A` — canonical available options만 projection하고 unavailable option은 이유/요건을 함께 표시.
-- `B` — dependency가 생기는 시점에 다음 choice section을 명시적으로 활성화하고 upstream choice 변경 시 affected choices를 review 대상으로 표시.
-- `C` — 모든 relevant section을 보이되 canonical eligibility에 따라 enabled/unavailable state와 reason을 투영.
-- `CUSTOM` — 직접 정의. UI 자체 rule 계산은 금지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-01-04 — Unsaved create/edit/import exit
-
-**질문:** create/edit/import 중 unsaved changes가 있을 때 exit behavior는?
-
-**선택지**
-- `A` — material dirty state에서 workflow 이탈 시 Save/Discard/Cancel confirmation.
-- `B` — recoverable draft/autosave를 유지하고 exit는 허용, 저장 실패/복구 불가일 때만 block.
-- `C` — step 내부 이동은 자유, Character workspace를 완전히 떠날 때만 explicit unsaved confirmation.
-- `CUSTOM` — INT-03 policy와 함께 직접 정의.
+- `A` — 네 방식을 모두 같은 급의 시작방법으로 제공하고 마지막 검토/저장 단계는 공유.
+- `B` — 자세히/빠르게 만들기가 주기능, 가져오기/편집은 보조 흐름.
+- `C` — 자세히 만들기가 기본, 빠른 만들기는 숙련자용, 가져오기/편집은 기존 캐릭터 흐름에서 진입.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-01-05 — Standalone Sheet hierarchy
+## DND-01-03 — 선택에 따라 다음 선택지가 달라질 때
 
-**질문:** Standalone Character Sheet의 information/action hierarchy는?
+**쉽게 말하면:** 종족/클래스/서브클래스/주문처럼 앞에서 뭘 골랐는지에 따라 가능한 선택이 달라지면 어떻게 보여줄까요?
 
-**선택지**
-- `A` — identity/HP/core stats + common actions/rolls를 상단/고정, detailed record를 아래/sections에 배치.
-- `B` — full character record를 중심으로 하고 roll/actions는 각 relevant stat/feature section에 contextual하게 배치.
-- `C` — Summary / Actions / Features / Inventory / Spells 등 major tabs + persistent identity/HP strip.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-01-06 — Sheet layout productization
-
-**질문:** v1에서 Character Sheet layout을 하나로 할지 여러 selectable layout을 둘지?
-
-**선택지**
-- `A` — 하나의 canonical SimpleVTT layout만 productize.
-- `B` — SimpleVTT + Official-style 두 layout을 user-selectable first-class로 productize.
-- `C` — 하나를 canonical v1 layout으로 정하고 다른 layout은 compatibility/migration-only로 유지.
-- `CUSTOM` — 직접 정의.
+- `A` — 현재 가능한 선택만 보여주고, 못 고르는 선택은 이유/조건도 같이 표시.
+- `B` — 앞 선택을 하면 필요한 다음 구역이 열리고, 앞 선택을 바꾸면 영향을 받는 선택을 다시 검토하게 한다.
+- `C` — 관련 선택지는 모두 보이게 두고 가능한 것/불가능한 것을 상태로 구분.
+- `CUSTOM` — 직접 정한다. UI가 D&D 규칙을 스스로 계산하지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-01-07 — Standalone roll interaction/result
+## DND-01-04 — 저장 안 하고 캐릭터 작업에서 나갈 때
 
-**질문:** Standalone Character Sheet에서 roll을 어떻게 실행하고 결과를 어디에 보여줄 것인가?
+**쉽게 말하면:** 캐릭터 생성/편집/가져오기 중 저장하지 않고 나가려 하면 어떻게 할까요?
 
-**선택지**
-- `A` — stat/skill/action control을 직접 클릭 → physical dice → sheet 가까운 compact result panel.
-- `B` — sheet control 클릭 → central/global roll area → result strip + Activity-like local history.
-- `C` — 각 section inline roll affordance + shared physical dice presentation + persistent recent-results rail.
-- `CUSTOM` — 직접 정의. Standalone은 DM/Player role이 없음.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-01-08 — Portrait experience / ownership
-
-**질문:** portrait add/edit/remove/focal-point experience와 data ownership은?
-
-**선택지**
-- `A` — upload/replace/remove + focal point/crop control을 제공하고 Character-owned durable presentation data로 저장.
-- `B` — upload/replace/remove만 v1 제공, crop/focal은 자동 fit 또는 future scope.
-- `C` — portrait는 optional; local Character data에 저장하되 connected session projection은 canonical Character presentation contract가 결정.
-- `CUSTOM` — 직접 정의. network projection semantics가 필요하면 contract gap으로 처리.
+- `A` — 실제 변경이 있으면 `저장 / 버리기 / 취소` 확인.
+- `B` — 임시저장을 믿고 그냥 나갈 수 있게 하며 임시저장이 실패했을 때만 막는다.
+- `C` — 작업 안의 단계 이동은 자유, 캐릭터 작업 자체를 완전히 떠날 때만 확인.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-01-09 — Level Up stages
+## DND-01-05 — 캐릭터 시트 정보 배치
 
-**질문:** Level Up의 stage/preview/choice/commit/cancel 구조는?
+**쉽게 말하면:** 캐릭터 시트에서 무엇을 가장 먼저 보여줄까요?
 
-**선택지**
-- `A` — Eligibility/Summary → Choices → Preview → Commit의 명시적 staged flow.
-- `B` — choice category별 wizard steps + persistent resulting-character preview + final Review/Commit.
-- `C` — one-page choice workspace + sticky before/after preview + explicit Commit/Cancel.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-01-10 — Character import recovery
-
-**질문:** import data에 unsupported/missing/invalid fields가 있으면 어떻게 복구할 것인가?
-
-**선택지**
-- `A` — Import Review에서 valid/missing/unsupported를 분류하고 사용자 mapping/fix가 필요한 항목을 표시; blocking issue 해결 전 commit 금지.
-- `B` — safely importable fields는 preview하고 나머지는 warning/blocking으로 분리; unsupported rules는 추정하지 않음.
-- `C` — strict import: required canonical fields/semantics가 불완전하면 전체 import를 block하고 원인 목록 제공.
-- `CUSTOM` — 직접 정의.
+- `A` — 이름/HP/핵심 능력치 + 자주 쓰는 행동/굴림을 위쪽에, 자세한 기록은 아래에.
+- `B` — 전체 캐릭터 기록이 중심이고 각 능력치/기능 옆에 관련 행동/굴림 버튼 배치.
+- `C` — 요약 / 행동 / 특징 / 장비 / 주문 같은 큰 탭 + 이름/HP는 항상 표시.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-01-11 — Empty / no-Character outside Join
+## DND-01-06 — 공식 스타일 시트와 SimpleVTT 시트
 
-**질문:** 아직 Character가 하나도 없을 때 일반 Product 경험은?
+**쉽게 말하면:** v1에서 캐릭터 시트 레이아웃을 몇 개 제공할까요?
 
-**선택지**
-- `A` — Character Library empty state에서 Create Character / Import Character primary CTAs.
-- `B` — Home과 Character Library 모두 first-character CTA를 제공.
-- `C` — lightweight Getting Started guide + Create/Import 선택을 함께 제공.
-- `CUSTOM` — 직접 정의. Session entry를 universal Character prerequisite로 만들면 안 됨.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-01-12 — Character actions during active Session
-
-**질문:** Character가 active Session에 연결돼 있을 때 어떤 standalone Sheet action을 허용할 것인가?
-
-**선택지**
-- `A` — read/inspect/allowed local presentation/standalone-safe roll만 허용; durable gameplay-affecting edits는 live session 동안 block 또는 session-authoritative flow로 이동.
-- `B` — domain contract가 safe로 선언한 Character edits는 허용하고 즉시 session projection/reconciliation.
-- `C` — connected Character의 gameplay-affecting mutation은 모두 Session/authoritative command를 통해서만 허용, standalone Sheet는 projection/editor shell 역할.
-- `CUSTOM` — domain/session contract와 함께 직접 정의.
+- `A` — SimpleVTT 전용 시트 하나만 공식 지원.
+- `B` — **SimpleVTT 시트 + 공식 시트 스타일 두 가지를 사용자가 선택 가능하게 한다.**
+- `C` — 하나만 공식 v1 시트로 하고 다른 것은 호환/이전용으로만 유지.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## DND-01-07 — 혼자 시트에서 주사위 굴리기
+
+**쉽게 말하면:** 캐릭터 시트에서 능력치/스킬을 눌렀을 때 주사위와 결과를 어디에 보여줄까요?
+
+- `A` — 시트의 능력치/행동 클릭 → 3D 주사위 → 누른 곳 가까이에 작은 결과창.
+- `B` — 클릭 → 화면 중앙 주사위 영역 → 결과줄 + 최근 결과 기록.
+- `C` — 각 구역에 굴림 버튼 + 공통 3D 주사위 + 최근 결과를 계속 볼 수 있는 작은 기록창.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-01-08 — 캐릭터 초상화
+
+**쉽게 말하면:** 초상화를 어디까지 편집할 수 있게 할까요?
+
+- `A` — 추가/교체/삭제 + 중심점/크롭 조절까지 지원하고 캐릭터에 저장.
+- `B` — 추가/교체/삭제만 v1에서 지원. 크롭/중심점은 자동 또는 나중에.
+- `C` — 초상화는 선택사항. 로컬 캐릭터에 저장하고 세션에서 어떻게 공유될지는 별도 규칙에 맡긴다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-01-09 — 레벨업 화면 진행방식
+
+**쉽게 말하면:** 레벨업을 어떤 단계로 진행할까요?
+
+- `A` — 가능여부/요약 → 선택 → 결과 미리보기 → 최종 적용
+- `B` — 선택 종류마다 한 단계씩 진행 + 옆에 최종 캐릭터 모습 계속 미리보기 + 마지막 검토
+- `C` — 한 화면에서 선택 + 변경 전/후 비교를 고정 표시 + 적용/취소
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-01-10 — 캐릭터 파일에 문제가 있을 때
+
+**쉽게 말하면:** 가져온 캐릭터 파일에 빠진 값이나 지원하지 않는 값이 있으면 어떻게 할까요?
+
+- `A` — `정상 / 빠짐 / 지원안됨`을 나눠 보여주고 사용자가 고쳐야 할 항목을 표시. 중요한 문제 해결 전에는 저장 불가.
+- `B` — 가져올 수 있는 값은 미리 보여주고 나머지는 경고/차단. 모르는 규칙은 추측하지 않는다.
+- `C` — 꼭 필요한 정보가 하나라도 불완전하면 전체 가져오기를 막고 문제목록 표시.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-01-11 — 캐릭터가 하나도 없을 때
+
+**쉽게 말하면:** 처음 시작해서 캐릭터가 하나도 없으면 무엇을 보여줄까요?
+
+- `A` — 캐릭터 목록에서 `새 캐릭터 만들기 / 가져오기`를 크게 보여준다.
+- `B` — 홈과 캐릭터 목록 둘 다 첫 캐릭터 만들기 버튼을 보여준다.
+- `C` — 간단한 시작안내 + 만들기/가져오기 선택.
+- `CUSTOM` — 직접 정한다. 캐릭터가 없다고 세션 메뉴 자체를 막지는 않는다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-01-12 — 세션 중 캐릭터 시트 편집
+
+**쉽게 말하면:** 캐릭터가 현재 세션에 들어가 있을 때 시트에서 무엇까지 바꿀 수 있게 할까요?
+
+- `A` — 읽기/확인/개인 화면설정/안전한 굴림만. 게임에 영향을 주는 편집은 막거나 세션 명령으로 처리.
+- `B` — 시스템이 안전하다고 허용한 캐릭터 편집은 가능하고 세션에 바로 반영.
+- `C` — 게임에 영향을 주는 변경은 전부 세션의 권한있는 명령으로만 처리. 시트는 보기/입력 창 역할.
+- `CUSTOM` — 세션 규칙과 맞춰 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# DND-02 — Roll & Dice UX
+# DND-02 — 주사위와 결과
 
-### DND-02-01 — Immediate result vs Activity detail
+## DND-02-01 — 즉시 결과와 자세한 기록
 
-**질문:** immediate result feedback와 Activity detail에 각각 무엇을 보여줄 것인가?
+**쉽게 말하면:** 굴림 직후에는 무엇을 보여주고 Activity에는 무엇을 남길까요?
 
-**선택지**
-- `A` — immediate: actor/action, dice total/outcome, 핵심 state consequence. Activity: formula/components/modifiers/provenance/full detail.
-- `B` — immediate는 total/outcome만 최소 표시, 나머지는 Activity.
-- `C` — immediate에 dice breakdown + outcome + 핵심 effect까지 풍부하게, Activity는 durable audit/history.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-02-02 — Standalone vs connected roll presentation
-
-**질문:** Standalone Character roll과 connected shared roll은 어떻게 달라야 하는가?
-
-**선택지**
-- `A` — dice/result visual grammar는 최대한 동일, connected만 authority/visibility/shared Activity 요소 추가.
-- `B` — standalone은 더 간결한 local result panel, connected는 scene-integrated shared resolution.
-- `C` — 동일 physical dice layer를 쓰되 result destination만 standalone Sheet vs connected Play로 다르게 배치.
-- `CUSTOM` — 직접 정의.
+- `A` — 즉시: 누가/무엇을 했는지 + 합계/결과 + 핵심 변화. Activity: 주사위식/보정/세부값/출처 전체.
+- `B` — 즉시에는 합계/결과만 간단히, 나머지는 Activity.
+- `C` — 즉시 결과도 주사위 상세/결과/핵심효과까지 풍부하게, Activity는 영구 기록.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-02-03 — Reveal sequence
+## DND-02-02 — 혼자 굴림 vs 세션 굴림
 
-**질문:** roll start부터 outcome/state change까지 reveal sequence는?
+**쉽게 말하면:** 캐릭터 시트에서 혼자 굴릴 때와 세션에서 모두에게 보이는 굴림은 얼마나 비슷해야 할까요?
 
-**선택지**
-- `A` — authoritative resolution ready → physical dice presentation → total/outcome reveal → canonical effects/state-change feedback.
-- `B` — dice motion과 compact pending/result shell을 동시에 시작 → settle 시 total/outcome reveal → effects.
-- `C` — result summary shell을 먼저 준비하되 값은 dice settle/reveal point에서 표시 → effects/state update.
-- `CUSTOM` — 직접 정의. Authoritative result는 presentation 이전에 이미 결정될 수 있다는 Reviewed rule 유지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-02-04 — 3D dice/VFX fallback
-
-**질문:** 3D dice/VFX가 렌더되지 않을 때 visual fallback은?
-
-**선택지**
-- `A` — static/2D dice faces + same result reveal.
-- `B` — dice presentation을 skip하고 즉시 canonical result feedback으로 진행.
-- `C` — simplified non-physics motion/2D roll animation 사용.
-- `CUSTOM` — 직접 정의. Gameplay result는 동일.
+- `A` — 주사위/결과 모양은 거의 같고 세션에서만 공개범위/공유기록 등을 추가.
+- `B` — 혼자 굴림은 간단한 시트 결과창, 세션 굴림은 장면 안에서 더 크게 공유.
+- `C` — 같은 3D 주사위 화면을 쓰되 결과가 붙는 위치만 `시트 / 플레이화면`으로 다르게.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-02-05 — Reduced-motion information order
+## DND-02-03 — 굴림 결과가 나타나는 순서
 
-**질문:** reduced motion에서 정보 순서를 어떻게 보존할 것인가?
+**쉽게 말하면:** 버튼을 누른 뒤 주사위 → 합계 → 효과가 어떤 순서로 보일까요?
 
-**선택지**
-- `A` — throw/bounce를 제거하고 die appearance → final face → result → effect 순서를 짧은 fade/state transition으로 유지.
-- `B` — static dice/result를 즉시 표시하되 result/effect ordering은 동일.
-- `C` — physical dice는 최소 settle만 남기고 combat VFX/overlay movement는 static markers로 교체.
-- `CUSTOM` — A11Y policy와 함께 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-02-06 — Natural 20 / Natural 1 treatment
-
-**질문:** natural-20/natural-1/ordinary roll을 rules meaning을 잘못 만들지 않으면서 어떻게 표현할 것인가?
-
-**선택지**
-- `A` — die face 자체의 natural 20/1을 distinct visual flourish로 표시하되 success/failure 의미는 canonical outcome이 따로 제공할 때만 표시.
-- `B` — natural face는 작은 label/icon만 표시하고 결과 styling은 canonical outcome에만 기반.
-- `C` — natural roll marker와 outcome marker를 완전히 분리된 두 visual channel로 사용.
-- `CUSTOM` — 직접 정의.
+- `A` — 실제 결과 결정 → 3D 주사위 → 합계/성공여부 표시 → HP/상태 같은 변화 표시
+- `B` — 주사위가 굴러가는 동안 작은 결과영역을 준비 → 멈추면 값 공개 → 효과 표시
+- `C` — 결과 상자를 먼저 보여주되 숫자는 주사위가 멈추는 시점에 공개 → 효과 표시
+- `CUSTOM` — 직접 정한다. 실제 결과는 애니메이션보다 먼저 이미 정해질 수 있다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-02-07 — Combat VFX vs dice/result sequence
+## DND-02-04 — 3D 주사위가 안 돌아갈 때
 
-**질문:** combat delivery/impact VFX는 dice/result와 어떤 관계를 가질 것인가?
+**쉽게 말하면:** 그래픽 문제로 3D 주사위가 실패하면 무엇으로 대신할까요?
 
-**선택지**
-- `A` — dice/outcome reveal 후 authoritative effect에 맞는 delivery/impact VFX.
-- `B` — delivery VFX는 dice와 병행 가능, impact/result emphasis는 authoritative outcome reveal과 동기화.
-- `C` — VFX는 optional presentation layer로 결과 뒤에 짧게 재생하고 result comprehension을 지연시키지 않음.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-02-08 — Skip / advance / dismiss controls
-
-**질문:** authoritative result를 바꾸지 않으면서 어떤 presentation skip/advance/dismiss control을 허용할 것인가?
-
-**선택지**
-- `A` — local presentation skip 허용; 즉시 authoritative result/result feedback으로 진행.
-- `B` — normal mode에서는 자동 sequence, reduced-motion/accessibility preference에서만 skip/shorten.
-- `C` — dice/VFX는 local skip 가능, blocking required response/result acknowledgement는 해당 contract에 따라 유지.
-- `CUSTOM` — 직접 정의.
+- `A` — 2D/정적인 주사위 눈 + 같은 결과 표시
+- `B` — 주사위 연출을 건너뛰고 바로 실제 결과 표시
+- `C` — 간단한 2D 굴림 애니메이션
+- `CUSTOM` — 직접 정한다. 게임 결과는 절대 바뀌지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-02-09 — Complex dice / save / damage presentation
+## DND-02-05 — 모션 줄이기에서 주사위
 
-**질문:** multiple dice, advantage/disadvantage, saves, concentration, damage components, legacy aggregates는 어떻게 보여줄 것인가?
+**쉽게 말하면:** 움직임 줄이기 설정에서는 굴림 과정을 어떻게 보여줄까요?
 
-**선택지**
-- `A` — authoritative per-die/component metadata를 그룹별로 표시하고 kept/discarded/total/outcome을 명확히 구분.
-- `B` — immediate에는 aggregate/kept result 중심, full per-die/components는 expandable detail/Activity.
-- `C` — roll type별 standardized result card를 사용하되 physical dice는 실제 canonical dice count/type만 표시.
-- `CUSTOM` — 직접 정의. UI가 advantage/damage formula를 자체 계산하지 않음.
+- `A` — 던지고 튀는 움직임 없이 `주사위 등장 → 최종 눈 → 결과 → 효과` 순서를 짧게 보여준다.
+- `B` — 정적인 주사위/결과를 바로 보여주되 결과/효과 순서는 유지.
+- `C` — 주사위의 최소한의 멈춤은 남기고 전투 VFX/창 이동은 정적인 표시로 바꾼다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## DND-02-06 — 자연 20 / 자연 1 표시
+
+**쉽게 말하면:** d20에서 20이나 1이 나왔을 때 어떻게 특별하게 보여줄까요?
+
+- `A` — 주사위 눈 20/1 자체는 특별 연출 가능. 단 성공/실패 의미는 게임이 실제로 알려준 경우에만 표시.
+- `B` — 20/1은 작은 아이콘/글자만, 결과 색은 실제 성공/실패에만 사용.
+- `C` — `주사위가 20/1`이라는 표시와 `실제 성공/실패` 표시를 완전히 따로 둔다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-02-07 — 공격 VFX가 나오는 시점
+
+**쉽게 말하면:** 화살/검격/마법 같은 전투 연출은 주사위와 결과 중 언제 보여줄까요?
+
+- `A` — 주사위/결과 공개 뒤에 실제 효과에 맞는 공격/피격 VFX.
+- `B` — 공격이 날아가는 VFX는 주사위와 같이 가능, 맞는 순간/결과 강조는 실제 결과 공개와 맞춘다.
+- `C` — VFX는 결과 이해를 방해하지 않는 짧은 보조 연출로 결과 뒤에 재생.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-02-08 — 주사위/VFX 건너뛰기
+
+**쉽게 말하면:** 사용자가 연출을 스킵할 수 있게 할까요?
+
+- `A` — 로컬에서 스킵 가능. 바로 실제 결과로 이동.
+- `B` — 평소에는 자동 진행, 접근성/모션줄이기 설정에서만 짧게.
+- `C` — 주사위/VFX는 스킵 가능하지만 반드시 답해야 하는 반응/확인은 유지.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-02-09 — 여러 주사위/이점/피해표시
+
+**쉽게 말하면:** 여러 주사위, 이점/불리점, 내성굴림, 집중내성, 여러 피해종류를 어떻게 보여줄까요?
+
+- `A` — 실제 각 주사위/피해 구성값을 묶음별로 보여주고 사용된 값/버린 값/합계/결과를 명확히 구분.
+- `B` — 즉시 결과에는 실제 사용된 값/합계 중심, 모든 개별 주사위는 자세히보기/Activity.
+- `C` — 굴림 종류별 표준 결과카드를 만들고 3D 주사위는 실제 굴린 개수/종류만 보여준다.
+- `CUSTOM` — 직접 정한다. UI가 이점/피해식을 직접 계산하지 않는다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# DND-03 — Action UX
+# DND-03 — 행동버튼 / 타겟팅
 
-### DND-03-01 — Hotbar page contents
+## DND-03-01 — 행동바 페이지 구성
 
-**질문:** Mixed / Action / Spell / Item + custom pages의 exact grouping은?
+**쉽게 말하면:** `전체 / 행동 / 주문 / 아이템 / 사용자 페이지`에 무엇을 넣을까요?
 
-**선택지**
-- `A` — Mixed=자주/사용자 배치 capability, Action=non-spell actions, Spell=spells/cantrips, Item=usable items, Custom=user pages.
-- `B` — A + Favorites/Recent 개념을 Mixed 안의 자동 section으로 포함.
-- `C` — 기본 category pages는 canonical discovery list, Custom pages만 user-curated execution layout으로 명확히 분리.
-- `CUSTOM` — 기존 최소 page family를 유지하면서 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-03-02 — Hotbar customization operations
-
-**질문:** 어떤 Hotbar customization을 지원하고 discovery가 무엇을 절대 overwrite하면 안 되는가?
-
-**선택지**
-- `A` — assign/remove/reorder/move between slots/pages/create custom page; discovery는 user slot/order를 절대 자동 덮어쓰지 않음.
-- `B` — category pages는 read-only discovered capabilities, Custom pages만 자유롭게 assign/reorder.
-- `C` — default discovered layout + user pin/favorite/reorder; 새 capability는 unassigned/discovery area에만 추가.
-- `CUSTOM` — 직접 정의.
+- `A` — 전체=자주쓰거나 배치한 행동, 행동=비주문 행동, 주문=주문/캔트립, 아이템=사용아이템, 사용자=직접 만든 페이지.
+- `B` — A + 즐겨찾기/최근사용을 `전체` 페이지 안에 자동 구역으로.
+- `C` — 기본 분류 페이지는 자동 발견 목록, 사용자 페이지는 내가 직접 배치한 실행용 공간으로 명확히 분리.
+- `CUSTOM` — 기본 페이지 종류는 유지하면서 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-03-03 — Hotbar Slot information
+## DND-03-02 — 행동바 꾸미기
 
-**질문:** Slot에 직접 보일 정보와 hover/focus/detail에 보낼 정보는?
+**쉽게 말하면:** 사용자가 행동칸을 얼마나 자유롭게 바꿀 수 있을까요?
 
-**선택지**
-- `A` — Slot: icon/name-short/cost or economy marker/availability/charges; detail: full description, range/target/source.
-- `B` — Slot: icon + cost/resource + unavailable marker만, name/detail은 hover/focus.
-- `C` — Slot: icon + short name + resource/count; exact rules detail은 dedicated detail/Rules link.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-03-04 — Unavailable action/resource presentation
-
-**질문:** unavailable actions/resources/cost를 capability를 숨기지 않으면서 어떻게 보여줄 것인가?
-
-**선택지**
-- `A` — slot은 그대로 visible, dim/disabled + canonical reason on hover/focus + cost/resource deficit 표시.
-- `B` — slot visible + lock/unavailable marker, detail panel에서 full reason.
-- `C` — availability state를 slot border/icon/resource token 모두로 중복 표시하고 reason은 focus/tooltip/inline context에 제공.
-- `CUSTOM` — 직접 정의. Smart fallback로 다른 action을 실행하지 않음.
+- `A` — 넣기/빼기/순서변경/페이지이동/사용자페이지 만들기 모두 가능. 새 기능 발견이 내 배치를 덮어쓰면 안 됨.
+- `B` — 기본 분류 페이지는 자동목록으로 고정, 사용자 페이지에서만 자유 배치.
+- `C` — 기본 자동배치 + 즐겨찾기/고정/순서변경. 새 기능은 별도 미배치 영역에만 추가.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-03-05 — Cancel selected capability/targeting
+## DND-03-03 — 행동칸에 직접 보일 정보
 
-**질문:** selected capability/targeting을 unrelated context를 잃지 않고 어떻게 cancel할 것인가?
+**쉽게 말하면:** 행동 버튼 하나에 이름/비용/사거리 등을 어디까지 바로 보여줄까요?
 
-**선택지**
-- `A` — Escape + persistent Cancel control, cancel하면 이전 Play state로 복귀.
-- `B` — Escape / selected Hotbar slot 재클릭 / explicit Cancel 모두 허용.
-- `C` — Escape는 top-priority cancel, Command Center에 contextual Cancel만 추가하고 다른 click은 target/selection semantics 유지.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-03-06 — Target-selection feedback
-
-**질문:** Actor Cards에서 target-selection feedback은?
-
-**선택지**
-- `A` — valid 강조, invalid dim/disabled, selected target distinct border/check, authoritative reason on invalid focus/hover.
-- `B` — A + scene/card 연결 reticle/target marker를 추가.
-- `C` — 모든 cards 유지 + valid/invalid/selected를 icon+border+opacity 세 채널로 구분.
-- `CUSTOM` — 직접 정의. Eligibility는 UI가 계산하지 않음.
+- `A` — 아이콘/짧은이름/행동비용/사용가능/충전횟수. 자세히보기에는 설명/사거리/타겟/출처.
+- `B` — 아이콘 + 비용/자원 + 사용불가 표시만. 이름/자세한 정보는 호버/포커스.
+- `C` — 아이콘 + 짧은 이름 + 자원/횟수. 정확한 규칙은 자세히보기/Rules로.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-03-07 — No-target / self-target execution
+## DND-03-04 — 지금 못 쓰는 행동
 
-**질문:** no-target/self-target action은 어떻게 실행할 것인가?
+**쉽게 말하면:** 자원이 없거나 조건이 안 맞아 못 쓰는 행동도 행동바에 계속 보여줄까요?
 
-**선택지**
-- `A` — valid no-target/self action은 Hotbar click 즉시 authoritative command 실행.
-- `B` — self-target은 actor self state를 짧게 강조한 뒤 즉시 실행, no-target은 즉시 실행.
-- `C` — high-consequence action만 별도 preview/confirm contract가 있을 수 있고, 일반 no-target/self는 즉시 실행.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-03-08 — Canonical Main Hand relation
-
-**질문:** default hostile click이 사용하는 canonical Main Hand executable action relation을 어떤 contract로 제공할 것인가?
-
-**선택지**
-- `A` — Actor/session projection에 explicit `mainHandActionId` 또는 equivalent executable-action reference 제공.
-- `B` — equipped Main Hand item이 canonical executable action reference를 제공하고 Actor projection은 그 relation을 노출.
-- `C` — domain/application selector가 `defaultMainHandAction` projection을 제공하고 UI는 opaque action ID만 사용.
-- `CUSTOM` — architecture/domain contract 방식 직접 정의. UI heuristic derivation은 금지.
+- `A` — 그대로 보이되 흐리게/비활성 + 호버하면 정확한 이유 + 부족한 자원 표시.
+- `B` — 버튼은 보이고 자물쇠/사용불가 표시, 자세히보기에서 이유 설명.
+- `C` — 테두리/아이콘/자원표시를 같이 써서 명확히 하고 이유는 호버/포커스/문장으로.
+- `CUSTOM` — 직접 정한다. 다른 행동으로 자동 대체 실행하지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-03-09 — Safe interactions during resolution/interrupt
+## DND-03-05 — 선택한 행동/타겟팅 취소
 
-**질문:** resolution/interrupt 중 어떤 interaction이 safe이고 어떤 interaction이 conflicting인가?
+**쉽게 말하면:** 공격이나 주문을 골랐다가 취소하려면 어떻게 할까요?
 
-**선택지**
-- `A` — inspect/navigation/local presentation utilities는 유지, 새로운 gameplay command/targeting 등 conflict action만 lock.
-- `B` — read-only Play/Sheet/Rules/Activity는 유지, 모든 새로운 authoritative mutation command는 resolution 완료까지 lock unless interrupt response.
-- `C` — authoritative contract가 command별 conflict capability를 제공하고 UI는 그 projection대로 선택적으로 lock.
-- `CUSTOM` — 직접 정의. Entire HUD blanket disable은 금지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-03-10 — Rules/detail access from action UI
-
-**질문:** action UI에서 Rules/detail에 어떻게 접근할 것인가?
-
-**선택지**
-- `A` — hover/focus detail + explicit `자세히/Rules` link to contextual Rules pane.
-- `B` — Hotbar slot context/detail popover에서 description/source/rules link 제공.
-- `C` — persistent Action Inspector/Detail pane을 선택적으로 열어 현재 capability detail을 표시.
-- `CUSTOM` — 직접 정의.
+- `A` — Esc + 화면에 `취소` 버튼. 취소하면 이전 플레이 상태로.
+- `B` — Esc / 같은 행동버튼 다시 클릭 / 취소 버튼 모두 가능.
+- `C` — Esc가 가장 기본 취소, 행동영역에 상황별 취소버튼도 제공.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## DND-03-06 — 타겟 가능한 캐릭터 표시
+
+**쉽게 말하면:** 공격/주문 대상을 고를 때 가능한 대상과 불가능한 대상을 어떻게 보여줄까요?
+
+- `A` — 가능=강조, 불가=흐림/비활성, 선택됨=별도 테두리/체크, 불가 이유는 호버/포커스.
+- `B` — A + 대상 연결선/조준표시 추가.
+- `C` — 모든 카드는 유지하고 가능/불가/선택을 아이콘+테두리+투명도로 여러 번 구분.
+- `CUSTOM` — 직접 정한다. UI가 가능여부를 계산하지 않는다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-03-07 — 대상이 필요 없는 행동
+
+**쉽게 말하면:** 자기자신 대상이나 대상 없는 행동은 버튼을 누르면 바로 실행할까요?
+
+- `A` — 가능한 행동이면 버튼 클릭 즉시 실행.
+- `B` — 자기대상은 잠깐 자기 카드를 강조하고 즉시 실행, 대상없는 행동은 바로 실행.
+- `C` — 정말 큰 영향이 있는 행동만 별도 확인 규칙 가능, 일반 행동은 즉시 실행.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-03-08 — 기본 무기공격을 어떤 데이터로 찾을지
+
+**쉽게 말하면:** 적을 그냥 클릭했을 때 쓰는 `주 손 무기 기본 공격`을 UI가 추측하지 않고 시스템이 어떻게 알려줄까요? **이 질문은 개발구조에 가까워서 모르겠으면 비워도 됩니다.**
+
+- `A` — 캐릭터 데이터에 `주손 기본행동 ID`를 직접 제공.
+- `B` — 장착된 주손 아이템이 실행 가능한 행동을 직접 가리키고 캐릭터가 그 연결을 제공.
+- `C` — 게임 로직이 `기본 주손 행동`을 계산해서 UI에는 행동 ID만 전달.
+- `CUSTOM` — 개발 구조에 맞춰 직접 정한다. UI가 무기 이름 등을 보고 추측하는 방식은 금지.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-03-09 — 판정 중에도 쓸 수 있는 기능
+
+**쉽게 말하면:** 공격/주문 판정이 진행 중일 때 룰보기나 시트보기 같은 다른 기능을 계속 쓸 수 있을까요?
+
+- `A` — 보기/메뉴이동/개인화면 도구는 사용 가능, 새 게임행동/타겟팅처럼 충돌하는 것만 잠금.
+- `B` — 읽기전용 시트/룰/Activity는 가능, 새로운 게임상태 변경명령은 판정 완료까지 잠금(필수반응 제외).
+- `C` — 시스템이 각 명령이 충돌하는지 알려주고 UI는 그 정보대로 선택적으로 잠근다.
+- `CUSTOM` — 직접 정한다. 전체 HUD를 통째로 비활성화하지 않는다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-03-10 — 행동에서 룰 자세히 보기
+
+**쉽게 말하면:** 행동버튼에서 주문/기능의 자세한 규칙을 어떻게 열까요?
+
+- `A` — 마우스/키보드로 간단설명 + `자세히/Rules` 링크로 옆 룰 패널.
+- `B` — 행동 우클릭/자세히 팝업에서 설명/출처/룰 링크.
+- `C` — 선택한 행동의 정보를 계속 보여주는 별도 `행동 상세 패널`을 선택적으로 연다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# DND-04 — Combat UX
+# DND-04 — 전투 / 이니셔티브 / 반응
 
-### DND-04-01 — Enter Initiative
+## DND-04-01 — 전투 순서 시작
 
-**질문:** Initiative에 어떻게 진입하고 UI가 즉시 어떻게 변하는가?
+**쉽게 말하면:** 이니셔티브 모드를 어떻게 시작하고 화면은 어떻게 바뀔까요?
 
-**선택지**
-- `A` — DM/authoritative command로 진입 → top Initiative Tracker 추가, Actor Boards/Command Center 유지.
-- `B` — canonical runtime이 Initiative mode를 시작하면 UI가 자동 전환; DM control은 그 event를 유발하는 command만 제공.
-- `C` — manual DM Start Initiative와 domain-triggered entry를 모두 지원하고 UI transition은 동일.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-04-02 — Turn/control/order distinction
-
-**질문:** current turn, controlled Actor, order, round, off-turn state를 어떻게 구분할 것인가?
-
-**선택지**
-- `A` — Initiative Tracker가 order/round/current-turn의 primary source, Actor Card/Command Center가 control/current-turn을 mirror.
-- `B` — Actor Cards에서 current-turn/control을 강하게 표시하고 tracker는 order/round 중심.
-- `C` — Tracker=current turn/order, Command Center=controlled actor/actionability, Actor Cards=target/relationship의 세 역할로 분리.
-- `CUSTOM` — 직접 정의.
+- `A` — DM이 시작 → 위쪽 이니셔티브 순서표 추가. Actor 카드/행동영역은 그대로.
+- `B` — 게임 시스템이 전투 시작을 알리면 화면이 자동 전환. DM 버튼은 그 시작명령만 보냄.
+- `C` — DM 수동 시작과 시스템 자동 시작 둘 다 지원하고 화면 변화는 동일.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-04-03 — End Turn / Next Turn controls
+## DND-04-02 — 현재 턴 / 내가 조종하는 캐릭터 / 순서 표시
 
-**질문:** Player와 DM에게 End Turn / Next Turn을 어디서 언제 제공할 것인가?
+**쉽게 말하면:** 전투 중 각 정보가 어디에서 가장 잘 보여야 할까요?
 
-**선택지**
-- `A` — Player는 자신이 제어하는 current-turn Actor일 때 Command Center에 End Turn; DM은 current actor에 관계없이 DM controls에서 Next/End Turn authority.
-- `B` — Player/DM 모두 Command Center에 turn control을 두되 canonical authority에 따라 enabled/action label이 다름.
-- `C` — Player End Turn은 Command Center, DM Next/Turn management는 Initiative Tracker/DM utility에 분리.
-- `CUSTOM` — canonical turn authority contract에 맞춰 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-04-04 — Off-turn interactions
-
-**질문:** 자기 turn이 아닐 때 어떤 interaction을 유지할 것인가?
-
-**선택지**
-- `A` — inspect/navigation/Rules/Activity/allowed local utilities + canonical reactions/interrupt response; normal turn actions unavailable.
-- `B` — canonical service가 legal로 제공한 off-turn capability는 Hotbar에서 그대로 available, 나머지만 unavailable.
-- `C` — off-turn에는 일반 capability selection을 최소화하고 reaction/interrupt prompt와 read-only inspection 중심.
-- `CUSTOM` — 직접 정의. UI가 turn legality를 계산하지 않음.
+- `A` — 위 순서표가 순서/라운드/현재턴의 중심. Actor 카드와 행동영역에도 현재턴/조종정보 반복.
+- `B` — Actor 카드에서 현재턴/조종을 강하게 보여주고 순서표는 순서/라운드 중심.
+- `C` — 순서표=턴/순서, 행동영역=내가 조종하는 캐릭터, Actor 카드=대상/관계로 역할을 분리.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-04-05 — Reaction / Interrupt prompt
+## DND-04-03 — 턴 종료 버튼
 
-**질문:** Reaction/Interrupt prompt의 response/timeout/return model은?
+**쉽게 말하면:** 플레이어와 DM의 `턴 종료/다음 턴` 버튼을 어디에 둘까요?
 
-**선택지**
-- `A` — blocking required-response prompt; Respond/Decline 후 동일 Play context로 복귀. UI 자체 timeout은 없음 unless authoritative contract provides one.
-- `B` — authoritative timeout이 제공될 때 visible countdown + default expiration result를 projection, 그렇지 않으면 no-timeout.
-- `C` — prompt는 Command Center/scene-integrated layer로 표시하고 unrelated safe inspection은 유지.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-04-06 — Manual movement-reaction input
-
-**질문:** manual movement-reaction input을 v1 first-class로 둘지, 누가 호출할 수 있는가?
-
-**선택지**
-- `A` — DM-only advanced adjudication/control tool로 productize.
-- `B` — canonical authority가 허용한 DM 또는 controlling Player가 사용할 수 있는 contextual input.
-- `C` — v1 product UX에서는 제외하고 현재 구현은 legacy/compatibility candidate로 분류.
-- `CUSTOM` — 직접 정의.
+- `A` — 플레이어는 자신의 현재턴일 때 아래 행동영역에 `턴 종료`. DM은 별도 DM도구에서 언제든 다음턴 제어.
+- `B` — 플레이어/DM 모두 행동영역에 턴버튼을 두되 권한에 따라 버튼 상태/이름이 다름.
+- `C` — 플레이어 `턴 종료`는 행동영역, DM 턴관리는 이니셔티브/DM도구로 분리.
+- `CUSTOM` — 실제 턴 권한 규칙에 맞춰 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-04-07 — Combat transition feedback
+## DND-04-04 — 내 턴이 아닐 때
 
-**질문:** combat entry/round/turn transition feedback은?
+**쉽게 말하면:** 다른 사람 턴에도 무엇을 할 수 있게 할까요?
 
-**선택지**
-- `A` — Tracker movement/current marker + compact round/turn status, 불필요한 toast 최소화.
-- `B` — round/turn 시작 시 scene-integrated short banner + tracker update.
-- `C` — tracker/card state를 primary로 하고 transition history는 Activity에 기록.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DND-04-08 — Combat VFX relationship
-
-**질문:** combat VFX가 Actor positions/cards, result reveal, reduced motion과 어떻게 관계하는가?
-
-**선택지**
-- `A` — source Actor/card에서 target Actor/card 방향의 delivery/impact presentation + authoritative result reveal에 맞춤.
-- `B` — scene 중심 VFX보다 Actor Card/target marker emphasis를 우선하고 physical dice/result comprehension을 방해하지 않음.
-- `C` — VFX는 optional enhancement; reduced-motion에서는 static source-target/impact indicator로 교체.
-- `CUSTOM` — 직접 정의.
+- `A` — 살펴보기/룰/기록/안전한 도구 + 실제로 가능한 반응행동. 일반 턴 행동은 사용불가.
+- `B` — 게임이 `지금 가능`하다고 알려준 행동은 행동바에서 그대로 사용 가능하고 나머지만 막는다.
+- `C` — 평소 행동선택은 최소화하고 반응/인터럽트와 읽기전용 정보 중심.
+- `CUSTOM` — 직접 정한다. UI가 턴 규칙을 계산하지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DND-04-09 — Exit Initiative
+## DND-04-05 — 반응행동/인터럽트 질문창
 
-**질문:** Initiative를 어떻게 종료하고 confirmation은 언제 필요한가?
+**쉽게 말하면:** `기회공격 하시겠습니까?` 같은 필수 선택은 어떻게 보여줄까요?
 
-**선택지**
-- `A` — DM explicit End Initiative/Combat + 항상 confirmation, 종료 후 Freeform으로 복귀.
-- `B` — pending resolution/participants/important state가 있을 때만 confirm, otherwise explicit End action 즉시 수행.
-- `C` — canonical runtime event로 자동 종료될 수 있고 DM manual End도 지원; manual high-impact 종료만 confirmation.
-- `CUSTOM` — authoritative combat lifecycle contract에 맞춰 직접 정의.
+- `A` — 반드시 답해야 하는 창. `사용/거절` 후 같은 플레이화면으로 복귀. 시스템이 시간을 주지 않았다면 UI 자체 제한시간 없음.
+- `B` — 시스템이 제한시간을 알려준 경우에만 카운트다운 + 시간이 끝났을 때 결과 표시.
+- `C` — 장면/행동영역에 자연스럽게 붙여 보여주고 관계없는 정보보기는 계속 허용.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## DND-04-06 — 이동 반응 수동 입력
+
+**쉽게 말하면:** 현재 있는 `이동 관련 반응을 수동 입력하는 도구`를 v1 정식 기능으로 둘까요?
+
+- `A` — DM만 쓰는 고급 판정도구로 정식 지원.
+- `B` — 게임이 허용한 DM 또는 해당 Actor를 조종하는 플레이어가 상황에 따라 사용.
+- `C` — v1 정식 UX에서는 제외하고 기존 구현은 호환용 후보로만 남김.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-04-07 — 라운드/턴 전환 알림
+
+**쉽게 말하면:** `전투 시작`, `새 라운드`, `내 턴`을 얼마나 크게 알려줄까요?
+
+- `A` — 순서표 움직임/현재표시 + 작은 라운드/턴 상태. 토스트는 최소.
+- `B` — 라운드/턴 시작 때 장면 안에 짧은 배너 + 순서표 갱신.
+- `C` — 순서표/카드 표시가 중심, 전환 기록은 Activity에 남김.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-04-08 — 전투 VFX가 어느 위치에서 나올지
+
+**쉽게 말하면:** 검격/화살/마법 연출이 캐릭터 카드/장면/결과와 어떻게 이어질까요?
+
+- `A` — 공격자 위치에서 대상 위치 방향으로 날아가고 실제 결과 공개 타이밍과 맞춘다.
+- `B` — 큰 장면 VFX보다 Actor 카드/타겟 강조를 우선해 주사위/결과를 읽기 쉽게 한다.
+- `C` — VFX는 선택적 보조효과. 모션줄이기에서는 정적인 공격자→대상 표시로 대체.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DND-04-09 — 이니셔티브 종료
+
+**쉽게 말하면:** 전투 순서모드를 끝낼 때 어떻게 할까요?
+
+- `A` — DM이 `전투 종료`를 눌러 항상 확인 후 Freeform으로 복귀.
+- `B` — 진행 중 판정 등 중요한 상태가 있을 때만 확인, 평소에는 명시적 종료버튼 즉시 실행.
+- `C` — 시스템 자동종료도 가능하고 DM 수동종료도 지원. 영향 큰 수동종료만 확인.
+- `CUSTOM` — 실제 전투 생명주기 규칙에 맞춰 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
