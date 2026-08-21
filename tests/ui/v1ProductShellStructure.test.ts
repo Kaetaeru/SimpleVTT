@@ -27,6 +27,14 @@ const appearanceCss = readFileSync("src/appearance-settings.css", "utf8");
 const playbook = readFileSync("docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md", "utf8");
 const workOrder = readFileSync("docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md", "utf8");
 
+function globalNavBlock() {
+  const start = app.indexOf("const nav: Array<[AppRoute, string, string]> = [");
+  const end = app.indexOf("  ];", start);
+  assert.ok(start >= 0, "missing global nav declaration");
+  assert.ok(end > start, "missing global nav declaration boundary");
+  return app.slice(start, end);
+}
+
 test("fresh use is gated by the canonical Tutorial before normal Home interaction", () => {
   assert.match(contracts, /\| "home"/);
   assert.match(app, /useState<AppRoute>\("home"\)/);
@@ -44,10 +52,11 @@ test("fresh use is gated by the canonical Tutorial before normal Home interactio
 });
 
 test("v1 global navigation is small, ordered, and top-oriented", () => {
+  const nav = globalNavBlock();
   const order = ["home", "characters", "session", "content", "catalog", "settings"];
   let previous = -1;
   for (const route of order) {
-    const index = app.indexOf(`["${route}"`);
+    const index = nav.indexOf(`["${route}"`);
     assert.ok(index > previous, `${route} must follow accepted global order`);
     previous = index;
   }
