@@ -46,15 +46,7 @@ export function ProductRoot() {
 
   if (liveConnected && surface === "play") {
     return <div className="connected-product-root" data-connected-surface="play">
-      <button
-        type="button"
-        className="connected-product-shell-entry"
-        aria-label="제품 메뉴 열기"
-        onClick={() => setSurface("product")}
-      >
-        SimpleVTT 메뉴
-      </button>
-      <SessionModeRoot />
+      <SessionModeRoot onOpenProduct={() => setSurface("product")} />
     </div>;
   }
 
