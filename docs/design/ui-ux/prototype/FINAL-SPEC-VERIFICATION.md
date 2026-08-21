@@ -18,14 +18,17 @@ Historical `app/index.html` is not an active review/reference candidate.
 
 ## Offline / Standalone dice
 
-Static source inspection confirms the replacement demo models Standalone roll presentation inside the current Character Sheet:
+Static source inspection confirms the replacement demo models Standalone roll presentation inside the currently mounted Character Sheet:
 
 ```text
-[x] final-spec.js renders the Character Sheet and the Standalone roll from the same `sheet-surface`.
-[x] `sheet-roll-plane` is rendered inside `sheet-workspace`.
+[x] Final-Spec Character Sheet stays mounted when an ordinary roll is invoked.
+[x] final-spec-stability.js intercepts Standalone roll activation before the base renderer navigates/remounts anything.
+[x] `sheet-roll-plane` is appended directly inside the existing `.sheet-workspace` DOM.
 [x] ordinary Standalone roll does not navigate to another route/surface.
+[x] ordinary Standalone roll does not open a modal/dialog/drawer/detached result window.
 [x] ordinary Standalone roll does not require a Back/Close action to return to the Sheet.
 [x] multiple fixture roll categories exist: skills, saves, attacks, damage.
+[x] initial in-Sheet presentation shows roll context/notation; fixture total is revealed at settlement.
 [x] roll fixture contains authoritative mock face/total; prototype does not compute rules.
 [x] CSS demonstrates far/back -> near/front -> settle within the Sheet workspace.
 [x] Reduced Motion changes presentation, not surface/result order.
@@ -41,8 +44,10 @@ Static source inspection confirms the replacement demo encodes the reviewed stru
 [x] Play root = compact Play chrome + Play main + persistent bottom Command Center.
 [x] Scene system = upper opposing Actor Board + central Scene/Table + lower allied Actor Board.
 [x] Command Center is outside the Scene system and remains a fixed bottom region.
+[x] Command Center upper row contains economy/resources; lower region separates controlled Actor from larger Hotbar/actions area.
 [x] Initiative Tracker is rendered over the central Scene/Table rather than replacing Actor Boards.
 [x] contextual utilities render as side panes beside the Scene system.
+[x] utility pane has a prototype resize handle with bounded width.
 [x] dice render on the central Scene/Table plane.
 [x] immediate result renders on the central Scene/Table.
 [x] Actor Cards remain visible during targeting.
@@ -52,6 +57,8 @@ Static source inspection confirms the replacement demo encodes the reviewed stru
 [x] no smart fallback is selected when Main Hand fixture is unavailable.
 [x] DM and Player use the same Play skeleton with role-specific controls/information.
 [x] Player Activity filters DM-only fixture events without a placeholder row.
+[x] Reaction/Interrupt and Concentration examples keep the surrounding Play orientation visible.
+[x] Quick Sheet and Full Sheet examples are layers over the live session rather than replacement Product routes.
 ```
 
 ---
@@ -63,9 +70,11 @@ Verified repository paths:
 ```text
 app/final-spec.html
 app/final-spec.css
+app/final-spec-coverage.css
 app/final-spec.js
 app/final-spec-fixtures.js
 app/final-spec-stability.js
+app/final-spec-coverage.js
 ```
 
 Supporting owner correction:
@@ -82,12 +91,15 @@ The previous prototype files remain only as historical evidence and must not be 
 
 The replacement demo includes reference surfaces/interactions for:
 
+- First Run / initial Sheet-style choice;
 - Home / Characters;
+- Character Builder reference;
+- Level Up reference;
 - Session Host and Join entry;
 - Character-less Join block;
-- Content / Rules / Settings;
+- Content / Package Import Review / Rules / Settings;
 - Official-style and SimpleVTT Standalone Character Sheets;
-- in-Sheet rolls for multiple roll types;
+- same-mounted-Sheet rolls for multiple roll types;
 - DM and Player Freeform;
 - Initiative without replacing Actor Boards;
 - upper/lower Actor Boards;
@@ -95,9 +107,16 @@ The replacement demo includes reference surfaces/interactions for:
 - persistent BG3-family Command Center;
 - Hotbar pages, economy and Resource Rail;
 - targeting / invalid target / multi-target Execute;
+- Main Hand unavailable + no fallback;
 - central Scene dice / result;
+- Reaction / Interrupt;
+- Concentration response;
+- Quick Sheet / Full Sheet layers;
 - Activity privacy filtering;
 - Encounter / Participants / Session / advanced spatial side panes;
+- utility panel resize;
+- reconnect state;
+- destructive confirmation layer example;
 - Handout Overlay / Upper / Full examples;
 - right-click Actor context menu;
 - rich hover/focus explanation;
@@ -119,6 +138,7 @@ Repository/code search and static source inspection found no intended production
 [x] roll face/total comes from fixtures.
 [x] Main Hand availability/reason comes from fixtures.
 [x] DM-only history visibility is represented by fixture filtering, not network security implementation.
+[x] Builder/Level Up/Rules/Import examples do not calculate authoritative rules/domain truth.
 ```
 
 These statements are prototype-boundary checks, not proof that the eventual runtime contracts are complete.
