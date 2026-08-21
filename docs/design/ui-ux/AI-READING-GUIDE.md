@@ -25,6 +25,8 @@ Do not reconstruct product intent from current code, old tests, historical demos
 
 **Broad UI/prototype work must not skip the integrated cross-source baseline.**
 
+**After prototype acceptance, broad runtime UI preparation/implementation/QA must not skip the accepted UI contract set under `contracts/`.**
+
 ---
 
 # 1. Source roles
@@ -50,6 +52,16 @@ Do not reconstruct product intent from current code, old tests, historical demos
 | `prototype/PROTOTYPE-PREFLIGHT.md` | HTML prototype build gate |
 | `prototype/PROTOTYPE-ACCEPTANCE.md` | owner-facing prototype acceptance gate |
 | `prototype/PROTOTYPE-WORK-ORDER.md` | standalone HTML prototype scope |
+| `contracts/README.md` | accepted UI contract entry / mandatory read order |
+| `contracts/IMPLEMENTATION-PLAYBOOK.md` | **human/AI whole-product interpretation guide and anti-misread rules** |
+| `contracts/GLOSSARY-AND-TERMINOLOGY.md` | **canonical UI terminology guard** |
+| `contracts/SURFACE-CONTRACT.md` | accepted product surface/coexistence contract |
+| `contracts/COMPONENT-CONTRACT.md` | accepted component responsibility/state contract |
+| `contracts/INTERACTION-STATE-MOTION-CONTRACT.md` | accepted interaction/state/layer/focus/motion contract |
+| `contracts/BEHAVIOR-SCENARIOS.md` | **48 end-to-end behavior examples** |
+| `contracts/IMPLEMENTATION-TRACEABILITY.md` | UI requirement -> Decision/Domain/Gap traceability |
+| `contracts/QA-ACCEPTANCE-MATRIX.md` | **runtime PASS/FAIL/BLOCKED/N/A verification contract** |
+| `contracts/MANIFEST.yaml` | machine-readable accepted-contract/readiness gate |
 | `.agents/*` | **non-canonical historical/working context only**; never outranks formal docs/decisions |
 | `src/*`, `tests/*` | implementation/test evidence only unless a canonical contract explicitly delegates truth there |
 
@@ -117,6 +129,7 @@ After successful reconciliation:
 - resolve/update applicable Planning Gaps;
 - refresh only affected derived docs;
 - refresh `INTEGRATED-PRODUCT-UX-PLAN.md` if the broad cross-source interpretation changes;
+- refresh accepted runtime contracts if an accepted UI behavior/term changes;
 - do not Freeze unless explicitly authorized;
 - do not implement runtime UI unless separately authorized and the prototype/runtime gates pass.
 
@@ -135,6 +148,7 @@ README.md
 INTEGRATED-PRODUCT-UX-PLAN.md when broad UI/prototype status is involved
 prototype/MANIFEST.yaml when prototype status matters
 prototype/PROTOTYPE-ACCEPTANCE.md when owner prototype acceptance matters
+contracts/MANIFEST.yaml when runtime preparation matters
 planning-gaps.md
 exact Decision Cards relevant to the question
 ```
@@ -147,27 +161,29 @@ Always distinguish:
 - integrated cross-source baseline status;
 - Reference Prototype status;
 - Prototype owner acceptance;
+- accepted contract extraction status;
 - runtime implementation readiness/authorization.
 
 ---
 
 # 5. Route C — Change a Decision
 
-Read the exact Decision Card/default/catalog and affected sources only. Read `INTEGRATED-PRODUCT-UX-PLAN.md` when the requested change affects product-wide flow, mapless terminology, first-run/session/Play structure or another cross-source rule.
+Read the exact Decision Card/default/catalog/accepted contract and affected sources only. Read `INTEGRATED-PRODUCT-UX-PLAN.md` when the requested change affects product-wide flow, mapless terminology, first-run/session/Play structure or another cross-source rule.
 
 If the owner changes something in plain language:
 
-1. locate the canonical Decision/default/prototype catalog/contract;
+1. locate the canonical Decision/default/prototype catalog/accepted contract;
 2. preserve/supersede history when needed;
 3. check Product/UX vs Domain/Architecture authority;
 4. update the smallest canonical source;
 5. refresh the integrated plan if its interpretation changes;
-6. refresh affected derived/prototype views;
-7. surface only material consequences.
+6. refresh affected prototype and accepted contract views;
+7. refresh Behavior Scenario / QA rows if behavior changed;
+8. surface only material consequences.
 
 An AI-managed detail may be promoted to a Product Decision when the owner explicitly changes it.
 
-If a Reference Prototype exists, material accepted visual changes should also update it before runtime preparation.
+If an accepted Reference Prototype exists, material accepted visual changes should update it and its extracted contracts before runtime preparation continues.
 
 No automatic Freeze or runtime implementation.
 
@@ -183,6 +199,7 @@ Read in layers:
 Canonical domain/product boundary: docs/design + docs/rules applicable contracts
 Canonical planning: decisions -> gaps -> review-plan
 Cross-source baseline: INTEGRATED-PRODUCT-UX-PLAN.md
+Accepted runtime interpretation: contracts/ when already materialized
 Direct Owner provenance when needed: owner-review/*
 Derived visibility: master-flow -> registry -> matrices
 Prototype visibility: prototype catalogs/models if present
@@ -221,6 +238,8 @@ Use this route for any request to **visually define, mock, prototype, preview, r
 15. prototype/PROTOTYPE-ACCEPTANCE.md
 16. prototype/PROTOTYPE-WORK-ORDER.md
 ```
+
+If a currently accepted runtime contract set exists, consult it as downstream consistency evidence but do not let it override a new explicit Owner/Product change.
 
 If the prototype Manifest says the current candidate is invalidated/rebuild-required, **do not patch or review it as the active reference**. Build a replacement from the integrated baseline and corrected catalogs.
 
@@ -272,68 +291,131 @@ Prototype acceptance does not authorize runtime code.
 
 **Do not enter this route for broad UI work unless the Reference Prototype is accepted.**
 
-Read:
+## Mandatory read order
 
 ```text
-framework
-OWNER-CONTROL-POLICY.md
-INTEGRATED-PRODUCT-UX-PLAN.md
-prototype/MANIFEST.yaml
-prototype/PROTOTYPE-ACCEPTANCE.md
-accepted prototype reference commit
-exact applicable Frozen decisions
-planning-gaps
-required Surface/Component/Motion contracts
-affected M1-M6 rows
-domain/architecture contracts
-current implementation/tests
+1. planning framework
+2. OWNER-CONTROL-POLICY.md
+3. INTEGRATED-PRODUCT-UX-PLAN.md
+4. applicable Domain/Architecture contracts
+5. exact applicable Decision Cards / Freeze status
+6. planning-gaps.md
+7. prototype/MANIFEST.yaml
+8. prototype/PROTOTYPE-ACCEPTANCE.md
+9. accepted prototype reference commit
+10. contracts/README.md
+11. contracts/IMPLEMENTATION-PLAYBOOK.md
+12. contracts/GLOSSARY-AND-TERMINOLOGY.md
+13. contracts/SURFACE-CONTRACT.md
+14. contracts/COMPONENT-CONTRACT.md
+15. contracts/INTERACTION-STATE-MOTION-CONTRACT.md
+16. contracts/BEHAVIOR-SCENARIOS.md
+17. contracts/IMPLEMENTATION-TRACEABILITY.md
+18. contracts/QA-ACCEPTANCE-MATRIX.md
+19. contracts/MANIFEST.yaml
+20. affected M1-M6 rows
+21. current implementation/tests for the bounded runtime slice
 ```
+
+### Required understanding token before a broad runtime Work Order
+
+The preparing agent must be able to state, in its own words:
+
+```text
+Product identity: mapless tabletop companion
+First-run: Tutorial first
+Character: one canonical Character, two Sheet presentations
+Session: Host=DM / Client=Player / immediate-live Host Freeform
+Play skeleton: upper Actor Board / Play Context / lower Actor Board / persistent Command Center
+Freeform vs Initiative difference
+Actor click precedence
+Targeting model
+Standalone dice model
+DM-only delivery boundary
+Handout/spatial boundary
+Touched Behavior Scenario IDs
+Touched QA row IDs
+Open blocking Gap IDs
+```
+
+If any item cannot be stated from the loaded sources, Runtime Preparation is not ready.
 
 Runtime preparation is blocked if:
 
-- the integrated baseline is stale relative to a material Product/Domain change;
+- integrated baseline is stale relative to a material Product/Domain change;
 - prototype is not explicitly accepted for the relevant broad UI scope;
-- applicable Product/UX dependencies are not Frozen as required;
+- accepted contract set is missing/stale for the scope;
+- required Product/UX dependencies are not Frozen as required;
 - a material Domain/Architecture Gap blocks the runtime scope;
 - legacy conflicting UX guidance is not reconciled for the scope;
-- required Surface/Component/Motion contracts are absent;
 - no scoped runtime Work Order exists.
 
 `Reviewed` is planning truth but not a stable runtime implementation dependency.
 
-If a required detail is an AI Design Default, extract/materialize it from the accepted prototype into the appropriate contract/design system; do not create unnecessary owner questions.
+If a required detail is an AI Design Default, materialize it in the accepted contract set rather than asking an unnecessary Owner question.
+
+### Runtime Work Order minimum contents
+
+A broad UI Runtime Work Order MUST list:
+
+```text
+- exact runtime slice
+- accepted prototype reference
+- exact applicable Frozen Decision IDs
+- applicable Domain/Architecture sources
+- touched contract sections
+- touched Behavior Scenario numbers/IDs
+- touched QA Matrix row IDs
+- authoritative state/projection source for every rules/network/privacy-sensitive UI value
+- open blocker Gaps
+- in-scope src/tests
+- out-of-scope behavior
+- stop conditions
+```
+
+Do not create a Work Order that merely says "implement the prototype".
 
 ---
 
 # 9. Route F — Implement Runtime
 
-Runtime implementation starts only from an approved scoped runtime Work Order after Route E readiness.
+Runtime implementation starts only from an approved scoped Runtime Work Order after Route E readiness.
 
-Read exactly the referenced:
+## Mandatory read before code edits
 
-- `INTEGRATED-PRODUCT-UX-PLAN.md` for broad product interpretation;
-- accepted Prototype reference/contract;
+Read the Work Order, then the exact referenced subset of:
+
+- `INTEGRATED-PRODUCT-UX-PLAN.md`;
+- accepted Prototype reference;
+- `contracts/IMPLEMENTATION-PLAYBOOK.md`;
+- `contracts/GLOSSARY-AND-TERMINOLOGY.md`;
+- relevant Surface/Component/Interaction contract sections;
+- named Behavior Scenarios;
+- named QA Matrix rows;
 - Frozen Product/UX decisions;
-- Surface/Component/Motion contracts;
 - Domain/Architecture contracts;
 - in-scope source/tests.
+
+## Implementation rules
 
 Do not:
 
 - broaden scope;
 - infer D&D rules or authority;
 - treat current implementation as product truth;
-- treat the prototype's mock JS as production logic;
+- treat prototype mock JS as production logic;
 - copy Prototype Controls into product UI;
 - treat fixtures as production schemas;
-- treat an AI recommendation as owner approval;
-- use `.agents`, an old worksheet, historical demo or stale test as canonical Product Decision;
-- turn a convenience default into a privacy/network/rules contract;
-- restore tactical-map UI to Core without an explicit compatible Domain/Product change.
+- treat AI recommendation as owner approval;
+- use `.agents`, old worksheet, historical demo or stale test as canonical Product Decision;
+- turn a convenience default into privacy/network/rules contract;
+- restore tactical-map UI to Core;
+- fill a missing projection with industry VTT convention;
+- mark a `BLOCKED` QA row as `PASS` by guessing around the blocker.
 
 Unexpected material dependency -> stop and route correctly.
 
-For broad UI implementation, if no accepted Reference Prototype exists, return to Route P instead of improvising production UI.
+For broad UI implementation, if no accepted Reference Prototype + current accepted contract set exists, return to Route P/E rather than improvising production UI.
 
 ---
 
@@ -351,19 +433,32 @@ Compare prototype against:
 - `PROTOTYPE-ACCEPTANCE.md`;
 - no-invention/runtime-isolation boundary.
 
-A tactical-map interpretation in Core, missing first-run tutorial, detached Standalone roll surface, Lobby/Ready regression or historical intent-funnel restoration is a material prototype mismatch even if the HTML works.
+A tactical-map interpretation in Core, missing first-run Tutorial, detached Standalone roll surface, Lobby/Ready regression or historical intent-funnel restoration is a material prototype mismatch even if HTML works.
 
-## Runtime QA
+## Runtime QA mandatory sources
 
-Compare implementation against:
+```text
+INTEGRATED-PRODUCT-UX-PLAN.md
+accepted prototype reference
+contracts/IMPLEMENTATION-PLAYBOOK.md
+contracts/GLOSSARY-AND-TERMINOLOGY.md
+relevant SURFACE / COMPONENT / INTERACTION contract sections
+named BEHAVIOR-SCENARIOS.md scenarios from Work Order
+named QA-ACCEPTANCE-MATRIX.md rows from Work Order
+applicable Frozen decisions
+Domain/Architecture contracts
+M6 acceptance coverage
+runtime Work Order
+actual implementation revision/diff/tests
+```
 
-- `INTEGRATED-PRODUCT-UX-PLAN.md`;
-- accepted prototype reference where applicable;
-- applicable Frozen decisions;
-- detailed contracts/design defaults extracted from the prototype;
-- authority/domain contracts;
-- M6 acceptance coverage;
-- scoped runtime Work Order.
+Runtime QA must record touched QA rows as:
+
+```text
+PASS / FAIL / BLOCKED / N/A
+```
+
+`BLOCKED` is not failure if the behavior is explicitly out of the approved slice, but it may not be silently implemented with guessed semantics.
 
 Requirement gap -> planning/contract.
 Prototype mismatch -> prototype drift.
@@ -378,7 +473,9 @@ QA does not redesign silently.
 
 Read `INTEGRATED-PRODUCT-UX-PLAN.md` first for broad UI conflicts, then inspect the exact competing authority sources.
 
-Classify the conflict first:
+For terminology conflicts, read `contracts/GLOSSARY-AND-TERMINOLOGY.md` before inferring an industry-standard meaning.
+
+Classify conflict first:
 
 - `OWNER INPUT CONFLICT`
 - `PROTOTYPE DRIFT`
@@ -431,13 +528,23 @@ Owner visual/interaction review + iteration
 Explicit Prototype Acceptance
         |
         v
-Surface / Component / Motion contract extraction
-+ Domain/Architecture gap resolution
+Accepted runtime contract set
+  - Implementation Playbook
+  - Terminology Guard
+  - Surface Contract
+  - Component Contract
+  - Interaction/State/Motion Contract
+  - Behavior Scenarios
+  - Traceability
+  - QA Matrix
+        |
+        v
+Domain/Architecture gap resolution
 + legacy UX reconciliation
 + scoped Freeze/readiness
         |
         v
-Runtime UI Work Order
+Runtime UI Work Order with Scenario + QA IDs
         |
         v
 src/ implementation
@@ -446,10 +553,10 @@ src/ implementation
 QA against integrated baseline + accepted prototype + contracts
 ```
 
-Skipping the integrated cross-source baseline or jumping from Reviewed planning directly to broad runtime UI implementation is not allowed.
+Skipping the integrated cross-source baseline, accepted contract reading order, or jumping from Reviewed planning directly to broad runtime UI implementation is not allowed.
 
 ---
 
 # 14. Final principle
 
-> **Keep owner decisions few, meaningful, and reversible. Read the whole product through its Domain boundaries and integrated cross-source baseline before drawing UI. Use the Reference Prototype to make the whole experience visible before production code. Never let current code, stale tests, historical agent notes, or visual words like Scene/Table smuggle in product behavior that the canonical contracts do not own.**
+> **Keep owner decisions few, meaningful, and reversible. Read the whole product through its Domain boundaries and integrated cross-source baseline before drawing UI. After acceptance, force every runtime agent to understand the product through the Playbook, terminology guard, behavior scenarios and QA matrix before touching code. Never let current code, stale tests, historical agent notes, ordinary VTT conventions, or visual words like Scene/Table smuggle in product behavior that the canonical contracts do not own.**
