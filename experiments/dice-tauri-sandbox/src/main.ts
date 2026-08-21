@@ -1,5 +1,5 @@
 import "./styles.css";
-import { DiceWorld, type DieSides, type PhysicsSettings, type WorldStats } from "./dice-world";
+import { DiceWorld, type DieSides, type PhysicsSettings, type ThrowOptions, type WorldStats } from "./dice-world";
 
 const DIE_TYPES: DieSides[] = [4, 6, 8, 10, 12, 20];
 
@@ -52,6 +52,10 @@ function element<T extends HTMLElement>(id: string) {
   return node as T;
 }
 
+function errorText(error: unknown) {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
 const canvas = element<HTMLCanvasElement>("dice-stage");
 const diceTypeButtons = element<HTMLDivElement>("dice-type-buttons");
 const countInput = element<HTMLInputElement>("dice-count");
@@ -69,7 +73,7 @@ const controlPanel = element<HTMLElement>("control-panel");
 const hideControlsButton = element<HTMLButtonElement>("hide-controls");
 const showControlsButton = element<HTMLButtonElement>("show-controls");
 
-let selectedSides: DieSides = 20;
+let selectedSides: DieSides = 6;
 let settings: PhysicsSettings = { ...PRESETS.default };
 let lastReportedSettle: number | null = null;
 
@@ -113,25 +117,34 @@ function applyPreset(name: string) {
   statusText.textContent = `${presetSelect.selectedOptions[0]?.textContent ?? "기본"} 프리셋 적용`;
 }
 
+function executeThrow(label: string, options: ThrowOptions) {
+  try {
+    world.throw(options);
+    lastReportedSettle = null;
+    statusText.textContent = `${label} · 물리 body 생성/속도 적용 완료`;
+  } catch (error) {
+    const message = errorText(error);
+    statusText.textContent = `투척 오류 · ${message}`;
+    statsText.textContent = "물리 실행 실패";
+    console.error("[Dice Lab] throw failed", error);
+  }
+}
+
 function throwSelected() {
   const count = Number(countInput.value);
-  world.throw({
+  executeThrow(`d${selectedSides} × ${count} 투척`, {
     sides: Array.from({ length: count }, () => selectedSides),
     keepPrevious: keepPreviousInput.checked,
     diceCollision: collisionInput.checked,
   });
-  lastReportedSettle = null;
-  statusText.textContent = `d${selectedSides} × ${count} 투척`;
 }
 
 function throwMixed() {
-  world.throw({
+  executeThrow("d4 · d6 · d8 · d10 · d12 · d20 혼합 투척", {
     sides: [...DIE_TYPES],
     keepPrevious: keepPreviousInput.checked,
     diceCollision: collisionInput.checked,
   });
-  lastReportedSettle = null;
-  statusText.textContent = "d4 · d6 · d8 · d10 · d12 · d20 혼합 투척";
 }
 
 function clearDice() {
@@ -214,9 +227,28 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
+window.addEventListener("error", (event) => {
+  statusText.textContent = `런타임 오류 · ${event.message}`;
+  statsText.textContent = "F12 콘솔에도 기록됨";
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  statusText.textContent = `비동기 오류 · ${errorText(event.reason)}`;
+  statsText.textContent = "F12 콘솔에도 기록됨";
+});
+
 world.onStats(updateStats);
 renderDiceButtons();
 syncPhysicsControls();
 world.setDebugBounds(false);
+statusText.textContent = "물리 엔진 준비됨 · d6 자동 진단 투척 대기";
+
+window.setTimeout(() => {
+  executeThrow("자동 진단 d6", {
+    sides: [6],
+    keepPrevious: false,
+    diceCollision: true,
+  });
+}, 700);
 
 window.addEventListener("beforeunload", () => world.destroy());
