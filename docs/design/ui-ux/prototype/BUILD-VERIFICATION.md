@@ -1,80 +1,35 @@
-# UI Reference Prototype — Build Verification
+# UI Reference Prototype — First Candidate Build Verification (Historical)
 
-Status: **STATIC VERIFICATION PASS — BROWSER OWNER REVIEW PENDING**
+Status: **SUPERSEDED — FIRST CANDIDATE REJECTED BY OWNER**
 
-This record verifies the current standalone Reference Prototype candidate without claiming browser/visual acceptance that has not happened yet.
-
-## Candidate files present
-
-Verified on `agent/108-production-play-session-ux`:
+This file is retained only as verification history for the first prototype candidate based on:
 
 ```text
-docs/design/ui-ux/prototype/app/index.html
-docs/design/ui-ux/prototype/app/prototype.css
-docs/design/ui-ux/prototype/app/prototype.js
-docs/design/ui-ux/prototype/app/fixtures.js
-docs/design/ui-ux/prototype/app/review-patch.css
-docs/design/ui-ux/prototype/app/review-patch.js
-docs/design/ui-ux/prototype/app/README.md
+app/index.html
+app/prototype.css
+app/prototype.js
+app/fixtures.js
+app/review-patch.css
+app/review-patch.js
 ```
 
-## Structural checks
+That candidate is **not** the active product-reference demo and must not be used for runtime implementation.
+
+The owner rejected it because it materially drifted from Reviewed intent:
+
+1. Offline/Standalone dice presentation read as a detached roll surface instead of rolling inside the current Character Sheet.
+2. Connected Play did not strictly preserve the reviewed upper Actor Board -> Scene -> lower Actor Board -> persistent Command Center topology.
+
+The active replacement is:
 
 ```text
-[x] Prototype Controls are outside the product viewport and explicitly labeled NOT PRODUCT UI.
-[x] Scenario selector exists.
-[x] Direct Surface selector exists.
-[x] Host/DM, Client/Player, Offline view selector exists.
-[x] Freeform / Initiative selector exists.
-[x] Wide / Normal / Narrow desktop presets exist.
-[x] Connection, Handout, Public/DM Only, Reduced Motion, Error and Pending controls exist.
-[x] Component Gallery entry exists.
-[x] Reset Layout exists.
-[x] fixtures.js declares PROTO-SCN-01 through PROTO-SCN-34.
-[x] Standalone Character roll has a dedicated review presentation.
-[x] Offline Product Shell review hides Return to Play unless a live connected context is being represented.
+app/final-spec.html
 ```
 
-## Boundary checks
+Use:
 
-Static inspection of the prototype app found:
+- `OWNER-CORRECTIONS.md` for the controlling owner corrections;
+- `FINAL-SPEC-VERIFICATION.md` for current static verification;
+- `PROTOTYPE-ACCEPTANCE.md` for the current acceptance gate.
 
-```text
-[x] no production src/ import/reference in prototype.js
-[x] no fetch( call in prototype.js
-[x] no WebSocket use in prototype.js
-[x] no real backend/network/storage wiring intentionally added
-[x] target validity and unavailable reasons come from fixtures
-[x] DM-only Player view filters private fixture rows instead of showing placeholders
-[x] Main Hand unavailable example does not select a fallback action
-```
-
-All writes in this prototype execution were confined to `docs/design/ui-ux/` and especially `docs/design/ui-ux/prototype/`. No production `src/` file was modified by this work.
-
-## Execution limitation
-
-An attempted local syntax/runtime verification could not download the GitHub branch into the execution container because that container could not resolve `raw.githubusercontent.com`.
-
-Therefore this record does **not** claim:
-
-- browser rendering has been visually inspected;
-- every interaction has been exercised in a real browser;
-- JavaScript runtime errors are impossible;
-- Prototype Acceptance has passed.
-
-Those checks belong to the next Owner/browser review iteration.
-
-## Current result
-
-```text
-P0 PROTOTYPE SPECIFICATION: PASS
-P1 REFERENCE HTML AUTHORING: REVIEW CANDIDATE CREATED
-STATIC BOUNDARY / COVERAGE CHECK: PASS
-BROWSER VISUAL / INTERACTION REVIEW: PENDING
-P2 OWNER REVIEW ITERATION: READY
-P3 OWNER ACCEPTANCE: NOT STARTED
-P4 RUNTIME PREPARATION: BLOCKED
-P5 RUNTIME UI IMPLEMENTATION: NOT AUTHORIZED
-```
-
-Any defect found when opening the HTML should be fixed inside the prototype before Product Decision Freeze/runtime preparation.
+Historical first-candidate verification has no authority to restore its UI behavior.
