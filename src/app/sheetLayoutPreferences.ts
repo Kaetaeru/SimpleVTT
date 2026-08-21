@@ -17,17 +17,26 @@ function storageOrNull(): SheetLayoutStorage | null {
   }
 }
 
+function isSheetLayoutPreference(value: unknown): value is SheetLayoutPreference {
+  return value === "simplevtt" || value === "official";
+}
+
 export function sanitizeSheetLayoutPreference(value: unknown): SheetLayoutPreference {
   return value === "official" ? "official" : DEFAULT_SHEET_LAYOUT;
 }
 
-export function readSheetLayoutPreference(storage: SheetLayoutStorage | null = storageOrNull()): SheetLayoutPreference {
-  if (!storage) return DEFAULT_SHEET_LAYOUT;
+export function readStoredSheetLayoutPreference(storage: SheetLayoutStorage | null = storageOrNull()): SheetLayoutPreference | null {
+  if (!storage) return null;
   try {
-    return sanitizeSheetLayoutPreference(storage.getItem(SHEET_LAYOUT_STORAGE_KEY));
+    const value = storage.getItem(SHEET_LAYOUT_STORAGE_KEY);
+    return isSheetLayoutPreference(value) ? value : null;
   } catch {
-    return DEFAULT_SHEET_LAYOUT;
+    return null;
   }
+}
+
+export function readSheetLayoutPreference(storage: SheetLayoutStorage | null = storageOrNull()): SheetLayoutPreference {
+  return readStoredSheetLayoutPreference(storage) ?? DEFAULT_SHEET_LAYOUT;
 }
 
 export function persistSheetLayoutPreference(
