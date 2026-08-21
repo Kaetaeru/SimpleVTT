@@ -1,8 +1,15 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 **Owner가 직접 답해야 하는 필수 UI/UX 질문은 모두 끝났고**, 실제 runtime UI를 만들기 전에 검토할 **Standalone UI Reference Prototype 후보까지 만들어졌습니다.**
+현재 Owner가 직접 답해야 하는 필수 UI/UX 질문은 모두 끝났습니다.
 
-이제 다음 단계는 `src/` 구현이 아니라 **프로토타입을 브라우저에서 보고 자연어로 수정하는 단계**입니다.
+실제 runtime `src/` UI를 만들기 전 단계로 **Final-Spec UI Reference Demo**를 검토하고 있습니다.
+
+첫 번째 HTML 후보는 Owner 검토에서 탈락했습니다. 이유는 이미 정한 UX를 두 군데에서 어겼기 때문입니다:
+
+1. Offline/Standalone 주사위를 현재 Character Sheet 안에서 굴리지 않고 detached roll surface처럼 표현함.
+2. Connected Session Play를 이미 정한 Actor Board + Scene + Command Center 구조보다 느슨하게 재해석함.
+
+이 두 문제를 기준부터 다시 확인해 새 Final-Spec demo로 교체했습니다.
 
 ---
 
@@ -14,135 +21,145 @@
 | Global Planning Gate | **PASS** |
 | Owner 필수 질문 | **완료 — 0개 남음** |
 | 핵심 Product/UX 방향 | **Reviewed** |
-| 상세 UI 설계 | AI Design Default + Reference Prototype |
-| Reference Prototype specification | **P0 PASS** |
-| Standalone HTML prototype | **Review Candidate 생성됨** |
-| Static boundary/coverage verification | **PASS** |
+| 첫 Prototype 후보 | **Rejected / Superseded** |
+| Final-Spec replacement | **Review Candidate 생성됨** |
+| Final-Spec static structural verification | **PASS** |
 | Browser visual/interaction review | **대기** |
 | Prototype Owner Acceptance | **아직 안 함** |
 | Frozen 결정 | 없음 |
 | Runtime `src/` UI 구현 | **아직 승인되지 않음** |
 
-Prototype 시작 문서: [`prototype/README.md`](prototype/README.md)
+## 지금 열어볼 파일
 
-Prototype HTML entry: [`prototype/app/index.html`](prototype/app/index.html)
+**현재 유일한 review entry:**
 
-Prototype 검토 체크리스트: [`prototype/PROTOTYPE-ACCEPTANCE.md`](prototype/PROTOTYPE-ACCEPTANCE.md)
+```text
+docs/design/ui-ux/prototype/app/final-spec.html
+```
+
+Prototype 설명: [`prototype/README.md`](prototype/README.md)
+
+Owner 교정사항: [`prototype/OWNER-CORRECTIONS.md`](prototype/OWNER-CORRECTIONS.md)
+
+Final-Spec 검증: [`prototype/FINAL-SPEC-VERIFICATION.md`](prototype/FINAL-SPEC-VERIFICATION.md)
+
+검토 체크리스트: [`prototype/PROTOTYPE-ACCEPTANCE.md`](prototype/PROTOTYPE-ACCEPTANCE.md)
 
 Canonical Product/UX decisions: [`decisions.md`](decisions.md)
 
 ---
 
-# 지금 프로토타입에서 미리 보는 것
+# 이번 교정에서 가장 중요한 두 규칙
 
-현재 Reference Prototype 후보는 실제 backend/rules 없이 mock data만 사용해서 다음을 시각·조작 검토하도록 만들어졌습니다.
+## 1. Offline / Standalone 주사위
 
-- Home / Characters / Session / Content / Rules / Settings
-- First Run 안내
-- Official-style / SimpleVTT Character Sheet
-- 기존 Builder / Level Up reference shell
-- Host Setup -> 즉시 Live Session
-- Join + Character Select + no-Character 차단
-- DM / Player Freeform Play
+**어떤 주사위를 굴려도 현재 Character Sheet를 떠나지 않습니다.**
+
+예:
+
+- 능력치/Skill 체크
+- Save
+- Attack
+- Damage
+- Feature roll
+- 그 외 Standalone Character Sheet에서 시작하는 모든 일반 roll
+
+흐름:
+
+```text
+현재 Character Sheet
+-> Roll 클릭
+-> 같은 Sheet 내부 Roll Plane에서 주사위가 굴러감
+-> far/back -> near/front -> impact/roll -> settle
+-> 같은 Sheet 안에서 결과 확인
+-> 그대로 Sheet 사용 계속
+```
+
+금지:
+
+- 별도 modal
+- 별도 drawer
+- 별도 결과창/card
+- 별도 route/screen
+- roll이 끝난 뒤 돌아가기/닫기를 눌러야 하는 흐름
+
+새 Final-Spec demo는 이 구조로 다시 작성했습니다.
+
+## 2. Connected Session Play
+
+Play의 구조는 자유 해석 대상이 아닙니다.
+
+```text
+Compact Play chrome / session status
+────────────────────────────────────
+상단 NPC / Neutral / Hostile Actor Board
+────────────────────────────────────
+중앙 Scene / Table Context       [필요할 때 side utility pane]
+  └ Initiative Tracker = Scene 상단 edge overlay
+  └ Dice = 중앙 Scene/Table에서 굴림
+  └ NOTICE / 즉시 Result = Scene 안에서 표시
+────────────────────────────────────
+하단 Player / Allied Actor Board
+────────────────────────────────────
+고정 BG3-family Command Center
+  ├ 상단 작은 줄: Action / Bonus / Reaction / Movement + Resource Rail
+  ├ 좌하단: Controlled Actor 상태
+  └ 우하단 큰 영역: Hotbar / Actions / contextual Execute·End Turn·Cancel
+```
+
+- Scene/Actor와 Command Center는 공동 핵심입니다.
+- Actor Board를 side portrait rail로 바꾸지 않습니다.
+- Initiative가 별도 전투 화면을 만들지 않습니다.
+- Activity/Encounter/Participants/Session/Advanced DM 도구는 side pane/contextual UI입니다.
+- DM과 Player는 같은 Play skeleton을 씁니다.
+- Targeting 중에도 모든 Actor Card를 유지합니다.
+- Single valid target은 바로 submit, Multi는 Execute.
+- Main Hand가 unavailable이면 다른 행동으로 smart fallback하지 않습니다.
+- Resolution/Dice/Result 중에도 Command Center를 없애지 않습니다.
+
+---
+
+# Final-Spec demo에서 확인 가능한 것
+
+현재 replacement demo에는 다음 reference가 들어 있습니다.
+
+- Home
+- Character Library
+- Official-style Character Sheet
+- SimpleVTT Character Sheet
+- Standalone same-Sheet Skill/Save/Attack/Damage rolls
+- Session Host / Join / no-Character block
+- Content / Rules / Settings
+- DM / Player Freeform
 - DM / Player Initiative
-- 위쪽 NPC/적 Actor Board + 아래쪽 Player/아군 Actor Board
-- 중앙 Scene/Table
-- 아래 고정 Command Center
-- Hotbar / Action economy / Resource Rail
-- Initiative Tracker
-- Targeting / invalid target / multi-target
-- Main Hand unavailable + no fallback
-- Resolving / Reaction / Concentration / Dice / Result
-- Activity public/private / correction history
-- Encounter / Participants / Session Share / Player Session
-- 고급 DM 거리/시야/엄폐 도구
-- Handout Overlay / Upper Scene / Full Scene
-- Full Sheet layer
-- 우클릭 Actor Context Menu
-- Rich hover explanation
-- NOTICE / reconnect / error / pending
-- 패널 resize / Reset Layout
+- 상단 적/NPC Actor Board
+- 중앙 Scene/Table + Actor tokens
+- 하단 Player/아군 Actor Board
+- Persistent Command Center
+- Hotbar pages
+- Action economy / Resource Rail
+- Target valid / invalid / selected
+- Single-target / Multi-target Execute
+- Main Hand fixture behavior / no smart fallback
+- Scene dice / Result
+- DM/Public Activity filtering
+- Player에서 DM-only placeholder 없음
+- Encounter / Participants / Session / Advanced spatial side pane
+- Handout Overlay / Upper / Full
+- Actor right-click context menu
+- Hover/focus explanation
+- NOTICE / reconnect examples
 - Wide / Normal / Narrow desktop
 - Reduced Motion
 - Component Gallery
 
-Prototype Controls에는 34개 named scenario와 Surface 바로 보기 기능이 있습니다.
+Prototype 데이터는 모두 fixture입니다. 룰/권한/네트워크를 실제 계산하지 않습니다.
 
 ---
 
-# 중요한 경계
+# 아직 해결하지 않는 기술 문제
 
-이 HTML은 **제품 코드가 아닙니다.**
-
-현재 prototype은:
-
-- production `src/` UI를 import하지 않음;
-- real backend/network/storage를 사용하지 않음;
-- D&D 룰/타게팅/권한을 계산하지 않음;
-- fixture가 target valid/unavailable/result 같은 표시값을 직접 제공함;
-- Player 화면에서 DM-only mock event의 placeholder를 만들지 않음.
-
-정적 검증 기록: [`prototype/BUILD-VERIFICATION.md`](prototype/BUILD-VERIFICATION.md)
-
-현재 실행 환경에서는 GitHub raw host DNS를 사용할 수 없어 제가 브라우저/Node runtime까지 직접 실행 검증하지는 못했습니다. 따라서 Prototype Acceptance는 아직 PASS가 아니며, 실제 브라우저 검토가 필요합니다.
-
----
-
-# 이미 확정된 큰 방향
-
-## 제품 / 역할
-
-- Standalone Character Sheet와 Connected VTT는 둘 다 핵심 기능
-- Connected: **Host = DM / Client = Player**
-- Offline/Standalone에는 DM/Player 역할 없음
-- Player는 자신의 Character Actor를 기본 조종
-- DM은 추가 Actor 조종권을 줄 수 있고 모든 Actor를 조종 가능
-- v1 Spectator / Co-DM / Observer 없음
-
-## 앱 / 메뉴
-
-- 기본 메뉴: **홈 → 캐릭터 → 세션 → 콘텐츠 → 룰 → 설정**
-- Product Shell은 상단 메뉴형
-- Activity/Encounter/판정수정/세션도구는 contextual tool
-- live session 중 `플레이로 돌아가기` 제공
-- fresh app launch는 Home
-- 첫 실행 별도 안내
-
-## 세션
-
-- 별도 Lobby / Ready / Start Session 없음
-- Host가 열면 바로 **live session**
-- DM은 같은 live session 안에서 플레이와 준비/편집
-- Player는 진행 중 세션에 중간 참가
-- Character 없으면 Join 차단 + Create / Import 후 다시 Join
-
-## 플레이
-
-- Scene/Actor + Command Center 공동 핵심
-- Command Center 아래 고정
-- 적/NPC Actor Board 위, Player/아군 아래
-- Initiative는 Actor Boards를 유지하고 상단 tracker 추가
-- 자주 쓰는 capability는 직접 노출
-- rich hover explanation 적극 사용
-- 중요 현재 상태는 NOTICE UI 가능
-- 주요 panel은 안전한 범위에서 resize 가능
-
-## DM / Activity / Content
-
-- 새 세션 DM 굴림 기본 Public, 바꾼 값은 live session 동안 유지
-- DM Activity는 public/private 한 chronology + 표시/필터
-- DM-only secret은 Player에게 전달하지 않는 방향
-- 거리/시야/엄폐는 advanced contextual DM tool
-- correction/reversal은 원본 기록을 지우지 않음
-- 공식 SimpleVTT package format 하나
-- add-on install/update/replace/disable/delete 지원
-- live session은 open 시 content snapshot 고정
-
----
-
-# 아직 AI도 임의로 정하지 않는 기술 문제
-
-Prototype은 아래 문제를 mock으로 보여줄 수 있지만 runtime semantics를 해결하지 않습니다.
+Prototype은 아래를 모양으로만 보여줄 수 있고 runtime 계약을 해결하지 않습니다.
 
 - `GAP-MAIN-HAND-CANONICAL-RELATION`
 - `GAP-RESOLUTION-SAFE-INTERACTIONS`
@@ -150,41 +167,22 @@ Prototype은 아래 문제를 mock으로 보여줄 수 있지만 runtime semanti
 - `GAP-DM-ONLY-DELIVERY-PROTOCOL`
 - `GAP-CANONICAL-UX-DOC-RECONCILIATION`
 
-이 항목들은 나중 Runtime 준비 전에 Domain/Architecture 계약 또는 문서 reconciliation로 처리합니다.
-
 ---
 
-# 이제 Owner가 할 일
-
-Prototype을 보고 평범하게 말하면 됩니다.
-
-예:
-
-- `Command Center가 너무 높아.`
-- `이 Actor 카드가 너무 작아.`
-- `Activity를 열면 Scene이 너무 좁아져.`
-- `DM 도구는 오른쪽에서 열자.`
-- `이 정보는 hover 말고 항상 보여줘.`
-- `Handout Full에서 아래 UI가 너무 많이 보여.`
-
-AI가 그 피드백을 Design Default / Catalog / Product Decision 중 맞는 곳으로 분류하고 prototype을 다시 맞춥니다.
-
----
-
-# Runtime으로 가는 순서
+# 앞으로 순서
 
 ```text
-현재 Reviewed 방향
--> Standalone Reference Prototype  ← 지금 여기
--> Owner visual/interaction review + 수정
+Final-Spec Reference Demo  ← 지금 여기
+-> Owner browser review + 수정
 -> Explicit Prototype Acceptance
+-> 이번 Owner correction을 canonical runtime planning으로 reconciliation
 -> Surface / Component / Motion contract 추출
 -> 기술 Gap 해결
 -> legacy UX reconciliation
--> 필요한 Product Decision scope Freeze
+-> 필요한 scope만 Freeze
 -> runtime Work Order
 -> 별도 runtime 구현 승인
--> src/ UI 구현
+-> 그제서야 src/ UI 구현
 ```
 
-**따라서 아직 SimpleVTT 실제 UI 구현 단계가 아닙니다.**
+**아직 실제 SimpleVTT runtime UI 구현 단계가 아닙니다.**
