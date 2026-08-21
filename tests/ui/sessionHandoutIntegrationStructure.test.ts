@@ -3,15 +3,19 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const root = readFileSync(new URL("../../src/SessionModeRoot.tsx", import.meta.url), "utf8");
+const dmTools = readFileSync(new URL("../../src/SessionDmTools.tsx", import.meta.url), "utf8");
 const handout = readFileSync(new URL("../../src/SessionImageHandoutBridge.tsx", import.meta.url), "utf8");
 const runtime = readFileSync(new URL("../../src/app/sessionImageHandoutRuntimeAdapter.ts", import.meta.url), "utf8");
 const main = readFileSync(new URL("../../src/main.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../../src/session-image-handout.css", import.meta.url), "utf8");
 
-test("DM Handout is an on-demand Session utility instead of a body-level launcher", () => {
+test("DM Handout stays on-demand but no longer adds a permanent button to the accepted Play chrome", () => {
   assert.match(root, /"handout"/);
-  assert.match(root, /toggleUtility\("handout", event\.currentTarget\)/);
   assert.match(root, /<SessionDmHandoutPane onClose=\{closeUtility\} \/>/);
+  assert.match(root, /<SessionSharePane onClose=\{closeUtility\} onOpenHandout=\{\(\) => setActiveUtility\("handout"\)\} \/>/);
+  assert.doesNotMatch(root, />Handout<\/button>/);
+  assert.match(dmTools, /SessionSharePane\(\{ onClose, onOpenHandout \}/);
+  assert.match(dmTools, />이미지 보여주기<\/button>/);
   assert.match(handout, /이미지 보여주기/);
   assert.match(handout, /플레이어에게 공개/);
   assert.match(handout, /공유 철회/);
@@ -55,7 +59,7 @@ test("Handout file validation and reconnect-restored state remain the existing b
   assert.doesNotMatch(`${runtime}\n${handout}`, /tactical grid|fog of war|public URL|cloud hosting/i);
 });
 
-test("Handout control and viewer use the Session drawer and layer geometry", () => {
+test("Handout control and viewer use contextual pane and Session layer geometry", () => {
   assert.match(css, /\.session-handout-pane\s*\{[\s\S]*position: absolute;[\s\S]*right: 0;[\s\S]*height: 100%/);
   assert.match(css, /\.session-handout-viewer\s*\{[\s\S]*position: absolute;[\s\S]*z-index: 96/);
   assert.match(css, /@media \(max-width: 899px\)/);
