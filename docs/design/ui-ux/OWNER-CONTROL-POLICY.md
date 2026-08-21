@@ -38,7 +38,7 @@ Examples:
 - low-risk confirmation wording and feedback copy;
 - animation timing/polish that does not affect authority, comprehension order, or accessibility.
 
-These details belong in Surface/Component/Motion contracts or the design system, not in the owner Decision Ledger unless the owner explicitly changes them into a product decision.
+These details belong in the prototype/design system and later Surface/Component/Motion contracts, not in the owner Decision Ledger unless the owner explicitly changes them into a product decision.
 
 ### C. Domain / Architecture Contract — never ask the owner to guess technical truth
 
@@ -91,7 +91,7 @@ A detailed map row may be resolved by:
 
 - an existing canonical Decision Card;
 - an Owner Checkpoint;
-- an AI Design Default recorded in an appropriate contract/design system;
+- an AI Design Default recorded in the prototype/design system/appropriate contract;
 - a Domain/Architecture contract;
 - `N/A` when its declared condition is false.
 
@@ -103,10 +103,10 @@ The owner may change any AI-managed detail in plain language at any time.
 
 AI then:
 
-1. identifies the affected contract/default/Decision;
+1. identifies the affected contract/default/prototype catalog/Decision;
 2. checks for conflicts and authority boundaries;
 3. updates the smallest canonical source;
-4. refreshes derived documentation;
+4. refreshes derived documentation and prototype when applicable;
 5. asks follow-up only if a material ambiguity remains.
 
 The owner never needs to repair cross-references manually.
@@ -127,10 +127,57 @@ Ease of owner control is achieved by delegating safe design detail, not by weake
 
 ## 7. Current owner workload
 
-The first large owner worksheet (`UX-03`, `NAV-01`, `UI-01`, `INT-01`) has been completed and reconciled into `decisions.md`.
+The large foundation worksheet and the lightweight 10-item checkpoint have been completed and reconciled into `decisions.md`.
 
-The remaining owner-facing workload is intentionally reduced to the lightweight checkpoint file:
+Current mandatory owner question count:
 
-`docs/design/ui-ux/owner-review/02-key-decisions.md`
+```text
+0
+```
 
-All older detailed worksheet files are retained only as historical/design-question references. They are **not required owner homework**.
+The next owner role is **visual/interaction review of the standalone UI Reference Prototype**, not answering hundreds of detailed Decision Map rows.
+
+Prototype specification lives under:
+
+```text
+docs/design/ui-ux/prototype/
+```
+
+The prototype HTML is not built yet.
+
+## 8. Prototype review should stay easy
+
+When the Reference Prototype is built, the owner should give natural-language product feedback such as:
+
+- "이 패널이 너무 넓어."
+- "이 버튼은 항상 보였으면 좋겠어."
+- "DM 도구는 오른쪽에서 열자."
+- "이 상태는 NOTICE에 계속 보여줘."
+- "좁은 화면에서 Actor 카드가 너무 작아."
+
+AI must not respond by making the owner edit token tables, z-index matrices, component schemas, or every individual state.
+
+Classify feedback:
+
+- low-risk visual/layout detail -> update AI Design Default/prototype directly;
+- material workflow/capability/authority change -> Owner Checkpoint / Decision;
+- technical truth -> Domain/Architecture contract.
+
+This keeps the prototype iterative without recreating the original questionnaire burden.
+
+## 9. Prototype acceptance is a meaningful owner action
+
+The owner should explicitly accept the overall Reference Prototype before broad runtime UI preparation begins.
+
+Prototype acceptance means:
+
+- the owner has seen the whole UI system in an interactive example;
+- the main layout/interaction direction is acceptable enough to extract implementation contracts.
+
+Prototype acceptance does **not** mean:
+
+- all Product Decisions are Frozen;
+- technical gaps are solved;
+- runtime implementation is automatically authorized.
+
+That separation is intentional.
