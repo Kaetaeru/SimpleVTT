@@ -4,9 +4,13 @@
   const root = document.getElementById('appRoot');
   const F = window.SVTT_FINAL_SPEC_FIXTURES;
   const scenarioSelect = document.getElementById('scenarioSelect');
+  const reducedMotionToggle = document.getElementById('reducedMotionToggle');
   if (!root || !F || !scenarioSelect) return;
 
   let tooltip = null;
+  let activeSheetRollLayer = null;
+  let sheetRollSettleTimer = null;
+  let sheetRollClearTimer = null;
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -45,12 +49,51 @@
     scenarioSelect.dispatchEvent(new Event('change',{ bubbles:true }));
   }
 
+  function clearSheetRollLayer() {
+    if (sheetRollSettleTimer) clearTimeout(sheetRollSettleTimer);
+    if (sheetRollClearTimer) clearTimeout(sheetRollClearTimer);
+    sheetRollSettleTimer = sheetRollClearTimer = null;
+    activeSheetRollLayer?.remove();
+    activeSheetRollLayer = null;
+  }
+
+  function runInSheetRoll(rollId) {
+    const roll = F.sheetRolls[rollId];
+    const workspace = root.querySelector('.sheet-workspace');
+    if (!roll || !workspace) return;
+
+    clearSheetRollLayer();
+
+    activeSheetRollLayer = document.createElement('div');
+    activeSheetRollLayer.className = 'sheet-roll-plane';
+    activeSheetRollLayer.dataset.protoId = 'PROTO-SURF-STANDALONE-ROLL-RESULT';
+    activeSheetRollLayer.setAttribute('aria-label','Dice rolling inside the current Character Sheet');
+    activeSheetRollLayer.innerHTML = `
+      <div class="dice-flight"><div class="die">${escapeHtml(roll.faces[0])}</div></div>
+      <div class="sheet-roll-context">
+        <strong>${escapeHtml(roll.label)}</strong>
+        <span>${escapeHtml(roll.notation)} · 현재 Character Sheet 안에서 굴리는 중</span>
+      </div>`;
+    workspace.appendChild(activeSheetRollLayer);
+
+    const reduced = !!reducedMotionToggle?.checked;
+    sheetRollSettleTimer = setTimeout(() => {
+      if (!activeSheetRollLayer) return;
+      activeSheetRollLayer.querySelector('.dice-flight')?.classList.add('settled');
+      const context = activeSheetRollLayer.querySelector('.sheet-roll-context');
+      if (context) context.innerHTML = `<strong>${escapeHtml(roll.label)} · ${escapeHtml(roll.total)}</strong><span>${escapeHtml(roll.notation)} · ${escapeHtml(roll.detail)}</span>`;
+    }, reduced ? 20 : 1050);
+
+    sheetRollClearTimer = setTimeout(() => clearSheetRollLayer(), reduced ? 1800 : 3000);
+  }
+
   function productNav(active) {
     const items = [['home','홈'],['characters','캐릭터'],['session','세션'],['content','콘텐츠'],['rules','룰'],['settings','설정']];
     return `<nav class="product-nav"><div class="product-brand"><div class="product-brand__mark"></div><strong>SimpleVTT</strong></div>${items.map(([id,label]) => `<button class="nav-item ${active===id?'active':''}" data-nav="${id}">${label}</button>`).join('')}<div class="nav-spacer"></div></nav>`;
   }
 
   function shell(active,content) {
+    clearSheetRollLayer();
     return `<div class="product-shell">${productNav(active)}${content}</div>`;
   }
 
@@ -79,6 +122,14 @@
   }
 
   root.addEventListener('click', event => {
+    const sheetRoll = event.target.closest('[data-sheet-roll]');
+    if (sheetRoll) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      runInSheetRoll(sheetRoll.dataset.sheetRoll);
+      return;
+    }
+
     const rootDemoAction = event.target.closest('[data-demo-action]');
     if (rootDemoAction?.dataset.demoAction === 'open-play') {
       event.stopImmediatePropagation();
@@ -140,5 +191,8 @@
     if (event.target.closest('[data-capability]')) clearTooltip();
   }, true);
 
-  window.addEventListener('blur',clearTooltip);
+  window.addEventListener('blur',() => {
+    clearTooltip();
+    clearSheetRollLayer();
+  });
 })();
