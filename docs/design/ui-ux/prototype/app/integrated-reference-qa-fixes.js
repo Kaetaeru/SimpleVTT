@@ -69,6 +69,34 @@
         assignText(span, span.textContent.replace(' · Actor facts only, no map positions.', ' · Actor encounter facts.'));
       }
     });
+
+    // Advanced spatial facts are available contextually (and as a named QA
+    // scenario), but they are not promoted to routine top-level Play chrome.
+    const spatialLauncher = root.querySelector('.play-chrome [data-utility="spatial"]');
+    if (spatialLauncher) spatialLauncher.hidden = true;
+  }
+
+  function replaceResourceRailForMockActor(resourceRail, actorId, hp, conditions) {
+    if (!resourceRail || actorId === 'rowan') return;
+    if (resourceRail.dataset.qaActorId === actorId) return;
+
+    resourceRail.dataset.qaActorId = actorId;
+    resourceRail.replaceChildren();
+
+    const context = document.createElement('div');
+    context.className = 'resource-pill';
+    context.innerHTML = '<span>Actor context</span><strong>fixture projection</strong>';
+    resourceRail.appendChild(context);
+
+    const hpPill = document.createElement('div');
+    hpPill.className = 'resource-pill';
+    hpPill.innerHTML = `<span>Current HP</span><strong>${hp.replace(/^HP\s*/, '')}</strong>`;
+    resourceRail.appendChild(hpPill);
+
+    const resourceState = document.createElement('div');
+    resourceState.className = 'resource-pill';
+    resourceState.innerHTML = `<span>Actor resources</span><strong>${conditions.length ? conditions.join(' · ') : 'not supplied by fixture'}</strong>`;
+    resourceRail.appendChild(resourceState);
   }
 
   function syncControlledActorPanel() {
@@ -77,6 +105,7 @@
     const panel = root.querySelector('.controlled-actor');
     if (!controlledCard || !panel) return;
 
+    const actorId = controlledCard.dataset.actor || '';
     const avatar = controlledCard.querySelector('.actor-avatar')?.textContent?.trim();
     const name = controlledCard.querySelector('.actor-card__body > strong')?.textContent?.trim();
     const meta = [...controlledCard.querySelectorAll('.actor-meta span')].map(el => el.textContent.trim());
@@ -97,6 +126,8 @@
     if (targetBar && sourceBar && targetBar.style.width !== sourceBar.style.width) {
       targetBar.style.width = sourceBar.style.width;
     }
+
+    replaceResourceRailForMockActor(root.querySelector('.resource-rail'), actorId, hp, conditions);
   }
 
   function patchRenderedUi() {
