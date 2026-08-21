@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SimpleVTT Core Systems UX Reference Candidate</title>
+  <link rel="stylesheet" href="integrated-reference.css" />
+  <link rel="stylesheet" href="core-systems-reference.css" />
+</head>
+<body>
+  <div class="review-shell">
+    <aside class="review-controls" aria-label="Prototype Controls">
+      <div class="review-brand">
+        <span class="review-kicker">CANDIDATE EXTENSION · NOT ACCEPTED PRODUCT UI</span>
+        <h1>Core Systems UX</h1>
+        <p>Inventory · Spells · Features · Status · Rest · Party Stash · DM Quick의 위치와 라이브 사용 문법을 검토합니다.</p>
+      </div>
+
+      <label class="control-field">
+        <span>Scenario</span>
+        <select id="scenarioSelect"></select>
+      </label>
+
+      <label class="control-field">
+        <span>Viewport</span>
+        <select id="viewportSelect">
+          <option value="wide">Wide 1600×1000</option>
+          <option value="normal" selected>Normal 1366×768</option>
+          <option value="narrow">Narrow 960×700</option>
+        </select>
+      </label>
+
+      <div class="control-actions systems-jumps">
+        <button data-review-jump="SYS-SCN-00">Position Map</button>
+        <button data-review-jump="SYS-SCN-01">Inventory</button>
+        <button data-review-jump="SYS-SCN-03">Live Player</button>
+        <button data-review-jump="SYS-SCN-04">DM Quick</button>
+        <button data-review-jump="SYS-SCN-05">Party Stash</button>
+        <button data-review-jump="SYS-SCN-06">Rest</button>
+      </div>
+
+      <div class="review-rule">
+        <strong>Interaction Grammar</strong>
+        <span>MANAGE = Sheet/Library · USE = Command Center · STATUS = Actor/Resource · QUICK = command palette.</span>
+      </div>
+
+      <div class="review-rule">
+        <strong>Accepted Play Guard</strong>
+        <span>기존 Actor Boards / Mapless Stage / Command Center 구성은 그대로 유지합니다. 이 후보는 그 위에 시스템 위치만 제안합니다.</span>
+      </div>
+    </aside>
+
+    <main class="review-stage">
+      <header class="review-stage__header">
+        <div><span class="review-status-dot"></span><strong id="scenarioTitle">Core Systems Candidate</strong></div>
+        <div id="scenarioMeta" class="review-stage__meta"></div>
+      </header>
+      <div class="review-stage__scroll">
+        <div id="reviewViewport" class="review-viewport vp-normal">
+          <div id="appRoot" class="app-root" aria-live="polite"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="core-systems-reference.js"></script>
+</body>
+</html>
