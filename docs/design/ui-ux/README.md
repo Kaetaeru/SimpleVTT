@@ -1,6 +1,6 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → mapless Reference Prototype → Owner Acceptance → 상세 구현 계약 → WO-UI-001 구현/자동검증/Owner Human QA 완료 → WO-UI-002 구현 준비 완료**까지 진행되었습니다.
+현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → mapless Reference Prototype → Owner Acceptance → 상세 구현 계약 → WO-UI-001 CLOSED/ACCEPTED → WO-UI-002 구현 및 자동검증 완료**까지 진행되었습니다.
 
 UI 작업은 앞으로 다음 기준을 함께 읽습니다:
 
@@ -30,10 +30,10 @@ UI 작업은 앞으로 다음 기준을 함께 읽습니다:
 | WO-UI-001 Owner Human QA | **PASS** |
 | WO-UI-001 | **CLOSED / ACCEPTED** |
 | WO-UI-002 source/test inspection | **완료** |
-| WO-UI-002 Work Order | **PREPARED** |
-| WO-UI-002 Domain/Architecture blocker | **없음 확인** |
-| WO-UI-002 scoped dependency authorization | **아직 없음** |
-| WO-UI-002 runtime implementation | **미승인 / 미시작** |
+| WO-UI-002 scoped dependency + runtime authorization | **RECORDED** |
+| WO-UI-002 runtime implementation | **완료** |
+| WO-UI-002 automated verification | **PASS** |
+| WO-UI-002 Owner Human QA | **대기** |
 | broad future runtime implementation | **자동 승인 아님** |
 
 Accepted prototype:
@@ -52,9 +52,11 @@ WO-UI-001 final evidence:
 - [`work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md`](work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md)
 - [`work-orders/WO-UI-001-HUMAN-QA.md`](work-orders/WO-UI-001-HUMAN-QA.md)
 
-Current Work Order:
+Current Work Order and evidence:
 
-[`work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md`](work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md)
+- [`work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md`](work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md)
+- [`work-orders/WO-UI-002-SCOPED-AUTHORIZATION.md`](work-orders/WO-UI-002-SCOPED-AUTHORIZATION.md)
+- [`work-orders/WO-UI-002-IMPLEMENTATION-RECORD.md`](work-orders/WO-UI-002-IMPLEMENTATION-RECORD.md)
 
 ---
 
@@ -84,51 +86,25 @@ WO-UI-001 acceptance does not authorize adjacent runtime slices.
 
 ---
 
-# WO-UI-002 — PREPARED
+# WO-UI-002 — IMPLEMENTED / AUTOMATED PASS / HUMAN QA PENDING
 
 Runtime slice:
 
 **Connected Product Shell Continuity / Return to Play**
 
-## Current drift
-
-Current production composition is:
-
-```text
-src/ProductRoot.tsx
-connected role
--> SessionModeRoot only
-
-offline
--> App / Product Shell
-```
-
-That prevents the accepted model where Connected Play is a dedicated workspace **inside the same product identity** and the user can safely inspect Product destinations while the live Session stays authoritative/alive.
-
-There is a second related drift:
-
-```text
-src/App.tsx
-Return to Play
--> setRoute("scene")
--> ProductionPlayScreen
-```
-
-Once Product Shell becomes reachable during a live connected Session, that path would create a competing Connected Play presentation instead of returning to the accepted `SessionModeRoot` workspace.
-
-Play also currently lacks the accepted compact persistent Product Shell entry in `SessionModeRoot` chrome.
-
-## Accepted target behavior
+## Implemented behavior
 
 ```text
 Live Connected Play
--> compact Open Product Shell
--> Home / safe Product destination
--> visible Return to Play
+-> compact `SimpleVTT 메뉴`
+-> Product Shell / safe Product destination
+-> visible `플레이로 돌아가기`
 -> exact same SessionModeRoot live Session
 ```
 
-Navigation alone must preserve:
+Navigation preserves authoritative Session truth rather than creating another Session or Play implementation.
+
+Preserved state includes:
 
 ```text
 same Session
@@ -138,61 +114,64 @@ same initiative/current turn
 same authoritative controlled Actor where valid
 same PendingResolution/game state
 same connection truth
+HP/resources/effects/participants/history
 ```
 
-It must **not**:
+Product navigation does **not**:
 
 - call `stopSession`;
 - start a new Host Session;
 - Join again;
 - reconnect merely because Product Shell opened;
-- create local/fake role or SessionMode state;
-- mount `ProductionPlayScreen` as a second Connected Play implementation.
+- create local/fake role or SessionMode authority;
+- use `ProductionPlayScreen` as a second connected Play implementation.
 
-## Why this can remain a UI-composition Slice
+## Implementation boundary
 
-`AppProvider` is mounted above `ProductRoot` and owns the authoritative application snapshot/runtime operations. Therefore ProductRoot can switch the visible **presentation subtree** between Product Shell and Connected Play without moving Session authority into the navigation layer.
+`AppProvider` remains above `ProductRoot` and owns the authoritative application snapshot/runtime operations.
 
-No new Domain/Architecture contract is currently required.
-
-## Expected implementation scope after authorization
-
-Primary:
+`ProductRoot` owns only local presentation choice:
 
 ```text
-src/ProductRoot.tsx
-src/App.tsx
-src/SessionModeRoot.tsx
-src/session-mode.css
-
-tests/ui/v1ProductShellStructure.test.ts
-tests/ui/connectedProductShellContinuity.test.ts
-.github/workflows/ui.yml
+product | play
 ```
 
-Conditional/minimal only:
+This presentation state is not persisted across process restart.
+
+Connected Play exposes the Product entry as compact chrome; Session termination remains a separate lifecycle action.
+
+## Automated verification
+
+Latest successful UI workflow for the implemented exact head lineage:
 
 ```text
-tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts
-src/v1-product-shell.css
+run_id: 32490406078
+frontend: SUCCESS
 ```
 
-Explicitly out of scope:
+The workflow passed:
+
+- WO-UI-002 dedicated continuity gate;
+- v1 Product Shell / Session layer contracts;
+- Session accessibility/responsive regressions;
+- Phase 14 play/session/tabletop-sheet/physics-dice regressions;
+- connected lifecycle/ownership/inventory/spellcasting regressions;
+- progression and authoritative mechanics regressions;
+- TypeScript + production build.
+
+## Human QA path
+
+WO-UI-002 is not CLOSED yet. Owner verification should cover:
 
 ```text
-Connected Play topology redesign
-Actor Boards
-Command Center
-targeting / Main Hand
-resolution selective locking
-DM-only privacy
-Handout networking
-Session transport/wire/authority
-Host/Join lifecycle semantics
-Lobby/Ready removal
-Character rules/progression
-map/spatial modules
+1. Host or Client enters live Connected Play.
+2. `SimpleVTT 메뉴` opens Product Shell without ending the Session.
+3. Open Home or Rules.
+4. `플레이로 돌아가기` returns to the same connected Play.
+5. Role, Freeform/Initiative state, current turn and current Session context remain intact.
 ```
+
+Also confirm the Product entry remains usable at a narrow desktop width and is clearly distinct from Session End/Leave.
 
 ---
 
@@ -207,7 +186,7 @@ Primary QA:
 - `QA-NAV-06` — live Return to Play preserves context
 - `QA-SES-09` — Product nav preserves role/session
 
-Direct Product/UX dependencies include:
+Direct Product/UX dependencies:
 
 ```text
 UX-01-02
@@ -241,7 +220,7 @@ Start with:
 8. [`contracts/IMPLEMENTATION-TRACEABILITY.md`](contracts/IMPLEMENTATION-TRACEABILITY.md)
 9. [`contracts/QA-ACCEPTANCE-MATRIX.md`](contracts/QA-ACCEPTANCE-MATRIX.md)
 10. [`contracts/MANIFEST.yaml`](contracts/MANIFEST.yaml)
-11. [`work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md`](work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md)
+11. current Work Order + authorization + implementation record.
 
 Do not substitute generic VTT conventions or historical `.agents/` notes for this accepted hierarchy.
 
@@ -272,7 +251,7 @@ GAP-HANDOUT-NETWORK-CONTRACT
 GAP-DM-ONLY-DELIVERY-PROTOCOL
 ```
 
-They do not block WO-UI-002 because that Slice is bounded to navigation/presentation composition.
+They did not block WO-UI-002 because that Slice was bounded to navigation/presentation composition.
 
 ---
 
@@ -280,11 +259,11 @@ They do not block WO-UI-002 because that Slice is bounded to navigation/presenta
 
 ```text
 WO-UI-001: CLOSED / OWNER ACCEPTED
-WO-UI-002: PREPARED
+WO-UI-002: IMPLEMENTED / AUTOMATED PASS / OWNER HUMAN QA PENDING
 ```
 
 Next gate:
 
-**WO-UI-002 scoped dependency authorization**.
+**WO-UI-002 Owner Human QA.**
 
-No `src/` implementation should begin until that gate is recorded and a separate runtime implementation authorization is given.
+Do not close WO-UI-002 or automatically begin a later Runtime Slice until this bounded acceptance gate is recorded.
