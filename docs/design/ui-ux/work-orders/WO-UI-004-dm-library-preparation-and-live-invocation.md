@@ -1,16 +1,18 @@
-# WO-UI-004 — DM Library Preparation + Live Invocation
+# WO-UI-004 — DM Library Preparation + Quick Live Invocation
 
-Status: **PLANNED — PROTOTYPE/ARCHITECTURE REVIEW BEFORE RUNTIME AUTHORIZATION**
+Status: **PLANNED — UPDATED AFTER OWNER LIVE-UX CORRECTION — PROTOTYPE/ARCHITECTURE REVIEW BEFORE RUNTIME AUTHORIZATION**
 
-Owner direction:
+Owner directions:
 
 > DM은 혼자 액세스 가능한 전용 라이브러리 시스템이 있었어야해. 거기에 이미지와 PC액터와 NPC액터를 미리 모아두고 사용할수 있어야했어.
+
+> 세션 내에서는 더 간단하게 액터를 추가하거나 이미지를 볼수있게 했으면 좋겠어.
 
 Planning authorization:
 
 > 그래 바로 가자
 
-This authorization covers the planning/prototype work described below. It does not yet authorize broad runtime persistence/network implementation before the new architecture gaps and prototype acceptance are resolved.
+This Work Order remains planning/prototype-only until the relevant architecture contracts and Owner prototype review are complete.
 
 ---
 
@@ -18,20 +20,23 @@ This authorization covers the planning/prototype work described below. It does n
 
 Required reading:
 
-1. `docs/design/ui-ux/DM-LIBRARY-PLAN.md`
-2. `docs/design/dm-library-persistence.md`
-3. `docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md`
-4. `docs/design/ui-ux/prototype/app/dm-library-reference.html`
-5. existing accepted `docs/design/ui-ux/prototype/app/integrated-reference.html`
-6. `docs/design/persistence.md`
-7. `docs/design/session-runtime.md`
-8. applicable `docs/design/ui-ux/contracts/*`
+1. `docs/design/ui-ux/CORE-SYSTEMS-UX-PLAN.md`
+2. `docs/design/ui-ux/DM-LIBRARY-PLAN.md`
+3. `docs/design/dm-library-persistence.md`
+4. `docs/design/ui-ux/prototype/CORE-SYSTEMS-EXTENSION.md`
+5. `docs/design/ui-ux/prototype/app/core-systems-reference.html`
+6. `docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md` — preparation-surface evidence
+7. `docs/design/ui-ux/prototype/app/dm-library-reference.html` — preparation-surface candidate/history
+8. existing accepted `docs/design/ui-ux/prototype/app/integrated-reference.html`
+9. `docs/design/persistence.md`
+10. `docs/design/session-runtime.md`
+11. applicable `docs/design/ui-ux/contracts/*`
 
 ---
 
 # 2. Goal
 
-Add a durable local DM preparation Library with three collections:
+Provide durable local preparation collections:
 
 ```text
 Images
@@ -39,10 +44,17 @@ PC Actor Presets
 NPC Actor Definitions
 ```
 
-Then allow live Host/DM tasks to invoke that Library without leaving/replacing the accepted Connected Play workspace:
+and make their routine live use shallow:
 
-- Encounter -> Add Actor -> From DM Library;
-- Session/Handout -> Choose Image -> DM Library -> explicit Reveal.
+```text
+Ctrl+K / + Quick
+-> Actor +1 / More
+-> Image View / Reveal
+```
+
+The full DM Library remains the deep preparation/management surface.
+
+The nested Encounter/Handout Library browser remains a detailed fallback, not the primary live path.
 
 Player Clients must not receive the private Library catalog/source metadata.
 
@@ -50,38 +62,51 @@ Player Clients must not receive the private Library catalog/source metadata.
 
 # 3. Runtime implementation phases
 
-Runtime work should be split so unresolved transport/storage does not contaminate UI.
+## Phase A — Local durable preparation
 
-## Phase A — Local durable metadata and preparation UI
-
-- DM Library Product Shell route under Session;
+- DM Library route under Session;
 - structured metadata persistence;
-- Images / PC Actors / NPC Actors collection UX;
+- Images / PC Actors / NPC Actors;
 - search/folder/tag/favorite/recent;
 - local CRUD;
 - local image preview after asset-store contract exists;
 - validation/problem state.
 
-## Phase B — Actor definition/preset instantiation
+## Phase B — Quick Search + Actor instantiation
 
-- validate source against current catalog/session snapshot;
-- create independent Session Actor identities;
-- Add from Library inside Encounter;
-- repeated NPC quantity add;
-- no source write-back from Session mutations;
-- optional existing Session control assignment for PC Actor instances.
+Only after source aggregation/privacy and Actor instantiation contracts exist:
 
-## Phase C — Connected Handout projection
+- small DM-only Quick launcher in accepted Play chrome;
+- `Ctrl+K` keyboard access;
+- Recent/Favorites empty-query state;
+- Actor search result `+1`;
+- secondary `More` for repeated quantity and management;
+- independent Session Actor identities;
+- no Library source write-back from runtime mutations;
+- optional existing control assignment for PC Actor instances;
+- detailed `Open in DM Library` fallback.
+
+## Phase C — Quick Image View / Reveal
 
 Only after `GAP-HANDOUT-NETWORK-CONTRACT` is resolved:
 
-- choose Library image;
-- private preview;
-- explicit reveal;
-- connected delivery;
+- image result `View` = private Host preview;
+- image result `Reveal` = explicit connected Handout projection;
 - withdraw;
 - reconnect restoration;
-- no private catalog delivery.
+- no private catalog/index delivery.
+
+## Phase D — Broader Quick palette integration
+
+Coordinate with the Core Systems plan when authorized:
+
+- Item `Give / Party`;
+- Condition `Apply`;
+- Rule `Open`;
+- source-specific result actions;
+- no cross-source privacy leakage.
+
+WO-UI-004 does not independently authorize Party Stash or unrelated Character-system runtime changes.
 
 ---
 
@@ -92,82 +117,86 @@ Do not implement:
 - battlemap library semantics;
 - Actor coordinates/tokens/grid/path/LoS/fog;
 - DM ownership of Player Character files;
-- PC Actor preset as a Character Library alias;
-- automatic Library source mutation from live Session state;
-- automatic full Library sync to Clients;
+- PC Actor preset as Character Library alias;
+- automatic source mutation from live Session state;
+- automatic Library/index sync to Clients;
 - CSS-only privacy;
-- executable plugin code in entries;
-- UI-invented image limits/schema/versioning;
-- UI-invented Actor legality/derived authority.
+- selection-as-image-reveal;
+- UI-invented persistence/network/schema/legality authority.
 
 ---
 
 # 5. Required prototype acceptance before runtime UI
 
-Candidate review entry:
+Active live-use candidate:
 
-`docs/design/ui-ux/prototype/app/dm-library-reference.html`
+`docs/design/ui-ux/prototype/app/core-systems-reference.html`
 
-Required scenarios:
+Primary review scenario:
 
-- `DMLIB-SCN-01` Offline Images;
-- `DMLIB-SCN-02` Offline NPC Actor Definitions;
-- `DMLIB-SCN-03` Offline PC Actor Presets;
-- `DMLIB-SCN-04` Live Encounter Add from Library;
-- `DMLIB-SCN-05` Live Handout Reveal from Library;
-- `DMLIB-SCN-06` Player non-delivery.
+`SYS-SCN-04 — DM unified Quick Search`
 
-Owner should explicitly accept or request changes before runtime UI is treated as frozen enough for implementation.
+Also inspect:
+
+- `SYS-SCN-00` placement grammar;
+- `SYS-SCN-03` live system density;
+- first DM Library candidate `DMLIB-SCN-01/02/03` for offline preparation layout;
+- Player non-delivery principle from `DMLIB-SCN-06`.
+
+The older heavy live picker in `DMLIB-SCN-04/05` is superseded as the primary live interaction direction. Its privacy/source-instantiation principles remain useful evidence.
+
+Owner must explicitly accept or amend the Quick flow before runtime UI is treated as frozen enough for implementation.
 
 ---
 
 # 6. Architecture blockers
 
-Created/required:
+Required DM Library gaps:
 
 - `GAP-DM-LIBRARY-METADATA-PERSISTENCE`;
 - `GAP-DM-LIBRARY-ASSET-STORAGE`;
 - `GAP-DM-LIBRARY-ACTOR-INSTANTIATION`;
-- `GAP-DM-LIBRARY-PRIVATE-PROJECTION`.
+- `GAP-DM-LIBRARY-PRIVATE-PROJECTION`;
+- Quick Search aggregation/index privacy/caching contract.
 
-Existing blockers still relevant:
+Existing relevant blockers:
 
 - `GAP-HANDOUT-NETWORK-CONTRACT`;
-- `GAP-DM-ONLY-DELIVERY-PROTOCOL`.
-
-These are defined/explained in `docs/design/dm-library-persistence.md`.
+- `GAP-DM-ONLY-DELIVERY-PROTOCOL` where applicable.
 
 ---
 
 # 7. Definition of Done
 
-WO-UI-004 can close only when one accepted/verified runtime source satisfies:
+WO-UI-004 can close only when an accepted/verified runtime source satisfies:
 
-1. DM Library survives app restart using explicit durable storage;
-2. Images / PC Actors / NPC Actors are reusable and searchable;
-3. private Library catalog is not delivered to Players;
-4. NPC definition can instantiate multiple independent Session Actors;
-5. Session runtime changes never silently mutate the source definition;
-6. PC Actor preset can instantiate and use existing control assignment without becoming Player-owned Character source;
-7. Encounter can Add from Library without leaving accepted Play composition;
-8. image preview is private until explicit reveal;
-9. connected Handout reveal/withdraw/reconnect is correct once the network contract exists;
-10. deletion/corruption/missing-content recovery is explicit;
-11. TypeScript/build and dedicated persistence/session/privacy/UI regressions are green;
-12. Owner Human QA passes preparation + live-use + Player non-delivery flows.
+1. DM Library survives restart using explicit durable storage;
+2. Images / PC Actors / NPC Actors are reusable/searchable;
+3. private Library/index metadata is not delivered to Players;
+4. `Ctrl+K` / Quick opens over the accepted Play scene without route replacement;
+5. common Actor add is `search/recent -> +1` without opening Encounter management;
+6. repeated quantity remains available behind secondary detail;
+7. Session Actor instances are independent from source definitions;
+8. PC Actor preset control assignment does not become Character ownership;
+9. Image `View` stays private;
+10. Image `Reveal` is explicit and connected/reconnect-safe after network contract resolution;
+11. full DM Library remains available for preparation/management;
+12. TypeScript/build and dedicated persistence/session/privacy/UI regressions are green;
+13. Owner Human QA passes preparation + Quick live use + Player non-delivery.
 
 ---
 
 # 8. Current route
 
 ```text
-Product direction recorded
--> architecture boundary recorded
--> DM Library prototype candidate built
+DM Library preparation direction
+-> heavy live picker prototype built
+-> Owner requests faster live access
+-> unified Core Systems / DM Quick candidate built
 -> OWNER PROTOTYPE REVIEW
 -> architecture gap materialization/freeze
 -> scoped runtime authorization
--> Phase A/B/C implementation
+-> phased implementation
 ```
 
 Do not begin WO-UI-004 runtime implementation merely because this Work Order exists.
