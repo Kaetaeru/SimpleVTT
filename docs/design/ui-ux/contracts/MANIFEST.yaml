@@ -1,14 +1,18 @@
-schema_version: 4
+schema_version: 5
 phase: runtime_ui_implementation
-status: third_runtime_slice_automated_pass_owner_human_qa_pending
+status: third_runtime_slice_owner_visual_qa_failed_reference_rework_pending_verification
 runtime_ui_implementation_allowed: true
 
 accepted_reference:
   entry: docs/design/ui-ux/prototype/app/integrated-reference.html
+  render_js: docs/design/ui-ux/prototype/app/integrated-reference.js
+  render_css: docs/design/ui-ux/prototype/app/integrated-reference.css
+  fixtures: docs/design/ui-ux/prototype/app/integrated-reference-fixtures.js
   candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
   accepted_date: 2026-08-21
   acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
   verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
+  visual_rule: when_the_accepted_prototype_already_defines_the_scene_do_not_substitute_a_visually_different_structural_approximation
 
 mandatory_baseline:
   integrated_product_ux: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
@@ -37,10 +41,7 @@ contracts:
   surfaces: { path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md, status: ready }
   components: { path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md, status: ready }
   interaction_state_motion: { path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md, status: ready }
-  behavior_scenarios:
-    path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md
-    status: ready
-    scenario_count: 48
+  behavior_scenarios: { path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md, status: ready, scenario_count: 48 }
   implementation_traceability: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md, status: ready }
   qa_acceptance_matrix: { path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md, status: ready }
 
@@ -49,6 +50,7 @@ interpretation_guards:
   ambiguous_terms_must_use_project_glossary_and_domain_contracts: true
   prototype_fixture_is_production_schema: false
   prototype_visual_similarity_alone_is_acceptance: false
+  accepted_prototype_visual_composition_may_be_replaced_by_prose_only_approximation: false
   current_source_or_test_may_override_accepted_contract: false
   ui_may_guess_missing_domain_or_architecture_truth: false
 
@@ -121,8 +123,6 @@ completed_runtime_slices:
   - id: WO-UI-002
     name: connected_product_shell_continuity_return_to_play
     status: closed_accepted
-    work_order: docs/design/ui-ux/work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md
-    authorization: docs/design/ui-ux/work-orders/WO-UI-002-SCOPED-AUTHORIZATION.md
     implementation_record: docs/design/ui-ux/work-orders/WO-UI-002-IMPLEMENTATION-RECORD.md
     human_qa_record: docs/design/ui-ux/work-orders/WO-UI-002-HUMAN-QA.md
     owner_human_qa: pass
@@ -131,14 +131,43 @@ completed_runtime_slices:
 selected_runtime_slice:
   id: WO-UI-003
   name: connected_play_actor_boards_tabletop_stage_persistent_command_center
-  status: implemented_automated_pass_owner_human_qa_pending
+  status: human_visual_qa_failed_reference_rework_pending_verification
   work_order: docs/design/ui-ux/work-orders/WO-UI-003-connected-play-actor-boards-command-center.md
   authorization: docs/design/ui-ux/work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md
   implementation_record: docs/design/ui-ux/work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md
+  human_qa_record: docs/design/ui-ux/work-orders/WO-UI-003-HUMAN-QA.md
   explicit_runtime_implementation_authorization: true
   authorization_owner_quote: 그래 가자
-  source_candidate_sha: fb007d809ab586ca8d2e135e5813e929772a7f2c
-  accepted_reference: docs/design/ui-ux/prototype/app/integrated-reference.html
+  owner_human_qa: fail
+  human_qa_failure_kind: visual_composition_drift_from_accepted_integrated_reference
+  first_implementation_source_sha: fb007d809ab586ca8d2e135e5813e929772a7f2c
+  first_implementation_ui_run_id: 32496754716
+  first_implementation_automation: pass_but_superseded_by_owner_visual_fail
+  rework_source_candidate_sha: f71813de7fa71e09eeb6422915e1e5d2865cd50f
+  rework_automated_verification: pending
+  rework_owner_human_qa: pending
+  primary_prototype_scenarios:
+    - PROTO-SCN-08
+    - PROTO-SCN-09
+  accepted_geometry:
+    play_chrome_px: 41
+    upper_actor_board_px: 86
+    lower_actor_board_px: 86
+    command_center_px: 174
+    initiative_tracker_px: 40
+    utility_pane_nominal_px: 338
+    utility_pane_min_px: 288
+    utility_pane_max_px: 455
+    command_body_columns: [240px, flexible, 104px]
+    hotbar_slot_px: 70
+  constrained_reference:
+    actor_board_px: 80
+    command_center_px: 164
+    utility_overlay_px: 308
+    utility_overlay_max_percent: 42
+    actor_card_px: 150
+    command_body_columns: [190px, flexible, 90px]
+    hotbar_slot_px: 62
   behavior_scenarios:
     - Scenario 10
     - Scenario 11
@@ -149,46 +178,8 @@ selected_runtime_slice:
     - Scenario 43
     - Scenario 44
     - Scenario 45
-  preserved_targeting_scenarios:
-    - Scenario 12
-    - Scenario 13
-  adjacent_regression_scenarios:
-    - Scenario 31
-    - Scenario 32
-    - Scenario 33
-    - Scenario 34
-    - Scenario 35
-    - Scenario 36
-  qa_pass_targets:
-    - QA-ID-01
-    - QA-ID-02
-    - QA-PLAY-01
-    - QA-PLAY-02
-    - QA-PLAY-03
-    - QA-PLAY-04
-    - QA-PLAY-05
-    - QA-PLAY-06
-    - QA-MODE-01
-    - QA-MODE-02
-    - QA-MODE-03
-    - QA-MODE-04
-    - QA-MODE-05
-    - QA-MODE-06
-    - QA-ACTOR-02
-    - QA-ACTOR-05
-    - QA-ACTOR-06
-    - QA-ACTOR-07
-    - QA-CMD-01
-    - QA-CMD-02
-    - QA-CMD-03
-    - QA-CMD-04
-    - QA-CMD-05
-    - QA-CMD-06
-    - QA-TGT-01
-    - QA-TGT-02
-    - QA-TGT-03
-    - QA-RES-01
-    - QA-RES-07
+  preserved_targeting_scenarios: [Scenario 12, Scenario 13]
+  adjacent_regression_scenarios: [Scenario 31, Scenario 32, Scenario 33, Scenario 34, Scenario 35, Scenario 36]
   not_claimed_or_blocked:
     - QA-ACTOR-01
     - QA-ACTOR-03
@@ -198,18 +189,13 @@ selected_runtime_slice:
     - QA-RES-02
     - QA-RES-03
   runtime_files:
+    - src/ProductRoot.tsx
     - src/SessionModeRoot.tsx
     - src/SessionActorBoards.tsx
-    - src/session-actor-boards.css
-    - src/session-connected-layout.css
+    - src/SessionInitiativeStrip.tsx
     - src/SessionActionDock.tsx
-    - src/session-action-dock.css
+    - src/session-integrated-reference-play.css
   dedicated_test: tests/ui/connectedPlayAcceptedTopology.test.ts
-  ui_workflow_run_id: 32496754716
-  ui_workflow_job: frontend
-  automated_verification: pass
-  production_typescript_build: pass
-  owner_human_qa: pending
 
 identified_runtime_drift:
   - id: DRIFT-WO-UI-001-HOME-FIRST
@@ -231,8 +217,8 @@ identified_runtime_drift:
     status: resolved
     resolution: WO-UI-002
   - id: DRIFT-WO-UI-003-CONNECTED-PLAY-TOPOLOGY
-    status: implementation_verified_owner_human_qa_pending
-    evidence: production SessionModeRoot now composes accepted upper board, Stage, lower board and persistent direct-capability Command Center
+    status: rework_pending_verification
+    evidence: owner_rejected_first_approximation_and_required_exact_integrated_reference_scene_basis
     resolution: WO-UI-003
 
 implementation_readiness:
@@ -241,10 +227,11 @@ implementation_readiness:
   wo_ui_001: closed_accepted
   wo_ui_002: closed_accepted
   current_runtime_slice_selected: true
-  current_slice_work_order_exists: true
   current_slice_authorized: true
-  current_slice_source_implemented: true
-  current_slice_automated_verification: pass
-  current_slice_owner_human_qa: pending
+  current_slice_first_implementation_automation: pass_but_not_accepted
+  current_slice_owner_visual_qa: fail
+  current_slice_reference_rework_source_implemented: true
+  current_slice_reference_rework_automation: pending
+  current_slice_reference_rework_owner_qa: pending
 
-next_route: WO_UI_003_OWNER_HUMAN_QA
+next_route: WO_UI_003_REFERENCE_REWORK_AUTOMATION_THEN_OWNER_VISUAL_QA
