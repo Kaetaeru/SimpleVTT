@@ -11,10 +11,12 @@ The owner does not run this checklist. AI runs it before substantive planning, R
 ```text
 [ ] Task Route A-H or P identified from AI-READING-GUIDE.md
 [ ] MANIFEST.yaml checked
+[ ] INTEGRATED-PRODUCT-UX-PLAN.md read for broad Product/UI/Prototype/QA/runtime-preparation work
 [ ] correct bounded sources loaded
 [ ] relevant Planning Gaps checked
 [ ] made Decision IDs actually exist
-[ ] current code is evidence, not product truth
+[ ] applicable Domain/Architecture contracts loaded before interpreting UI terms such as Scene/Table/Stage
+[ ] current code/tests/.agents/history are evidence, not product truth
 [ ] Master Flow / Registry / Matrix are not being used as independent product authority
 [ ] no missing rules/authority/privacy behavior is being inferred
 ```
@@ -31,7 +33,27 @@ Smallest repair:
 
 ---
 
-# 2. Owner-control preflight
+# 2. Cross-source / mapless baseline preflight
+
+For any broad SimpleVTT UI work:
+
+```text
+[ ] docs/design/README.md mapless product boundary respected
+[ ] docs/design/movement-modules.md mapless Core boundary respected
+[ ] INTEGRATED-PRODUCT-UX-PLAN.md terminology normalization respected
+[ ] `Scene`, `Table`, `Stage`, `Canvas` are not being interpreted as tactical-map permission
+[ ] no Core Actor x/y coordinates are being invented
+[ ] no draggable map tokens, grid/hex, pathfinding, movement trace, Fog of War or LoS visualization is being invented
+[ ] Handout/image is not being turned into a battle map
+[ ] target selection uses authoritative Actor eligibility/manual target sets rather than visual map geometry
+[ ] direct Owner first-run Tutorial + initial Official/SimpleVTT Sheet choice has not been omitted
+```
+
+A failure here is a Product/Domain interpretation failure, not a visual-polish issue.
+
+---
+
+# 3. Owner-control preflight
 
 Before asking the owner **any new question**, AI MUST read `OWNER-CONTROL-POLICY.md` and classify the unresolved item.
 
@@ -49,7 +71,7 @@ Detailed rows in `review-plan.md` are internal coverage, not automatic owner hom
 
 ---
 
-# 3. Planning / owner checkpoint preflight
+# 4. Planning / owner checkpoint preflight
 
 For normal owner planning:
 
@@ -57,6 +79,7 @@ For normal owner planning:
 [ ] Global Planning Gate = PASS
 [ ] README.md read
 [ ] OWNER-CONTROL-POLICY.md read
+[ ] integrated baseline read when broad scope is affected
 [ ] explicit owner input preserved
 [ ] no AI recommendation is treated as owner approval without explicit acceptance
 [ ] conflicts checked before canonicalization
@@ -66,7 +89,7 @@ Current required owner-question count may be zero; that does not mean the next s
 
 ---
 
-# 4. Schema / reference preflight
+# 5. Schema / reference preflight
 
 ```text
 [ ] Decision Status is exactly Draft / Selected / Reviewed / Frozen / Superseded
@@ -83,7 +106,7 @@ Do not guess an abbreviated reference.
 
 ---
 
-# 5. Planning truth / implementation reliance
+# 6. Planning truth / implementation reliance
 
 ```text
 [ ] Selected / Reviewed / Frozen Product decisions outrank current code as planning intent
@@ -93,6 +116,9 @@ Do not guess an abbreviated reference.
 [ ] AI Design Defaults do not override explicit owner Decisions
 [ ] rules legality/calculation remains Domain authority
 [ ] persistence/network/privacy/schema/security remains Domain/Architecture authority
+[ ] `.agents/*` is non-canonical historical/working context
+[ ] current tests may be stale relative to newer Reviewed decisions
+[ ] integrated plan cannot override Domain/Architecture or decisions; it reconciles them
 [ ] cross-domain contradiction becomes PLANNING GAP: CONTRACT CONFLICT
 ```
 
@@ -100,7 +126,7 @@ A lighter owner workflow never weakens authority boundaries.
 
 ---
 
-# 6. Global Planning Gate
+# 7. Global Planning Gate
 
 Route A / D / P planning may rely on the completed whole-product gate only when:
 
@@ -110,13 +136,14 @@ Route A / D / P planning may rely on the completed whole-product gate only when:
 [ ] all governance sheets have complete detailed maps for internal coverage
 [ ] Missing / Duplication / Coverage audit passed
 [ ] owner whole-product checkpoint delivered
+[ ] repository-wide cross-source UI/Product reconciliation baseline is current
 ```
 
 Passing this gate does **not** authorize runtime implementation.
 
 ---
 
-# 7. Decision change / reconciliation
+# 8. Decision change / reconciliation
 
 Before changing a made decision:
 
@@ -126,13 +153,14 @@ Before changing a made decision:
 [ ] dependencies/impact known
 [ ] related gaps checked
 [ ] authority-domain contract checked when applicable
+[ ] integrated plan impact checked when broad interpretation changes
 ```
 
-Owner plain-language changes are valid input. AI updates the smallest canonical scope and refreshes affected prototype/derived material.
+Owner plain-language changes are valid input. AI updates the smallest canonical scope and refreshes affected integrated/prototype/derived material.
 
 ---
 
-# 8. AI Design Default preflight
+# 9. AI Design Default preflight
 
 Before resolving a detail without asking the owner:
 
@@ -144,7 +172,8 @@ Before resolving a detail without asking the owner:
 [ ] it does not create destructive/data-loss behavior
 [ ] it does not contradict an existing Decision
 [ ] it does not require guessing rules/network/domain truth
-[ ] chosen default follows accepted UI direction + good UX/accessibility practice
+[ ] it does not smuggle tactical-map semantics into mapless Core
+[ ] chosen default follows integrated baseline + accepted UI direction + good UX/accessibility practice
 [ ] default is recorded in prototype/design/contract material when needed
 ```
 
@@ -152,28 +181,38 @@ If any item fails, escalate to Owner Checkpoint or technical contract as appropr
 
 ---
 
-# 9. Reference Prototype preflight — Route P
+# 10. Reference Prototype preflight — Route P
 
 Broad UI visual definition/rebuild work MUST route through `prototype/` before production `src/` implementation.
 
-Before building/editing the standalone Reference Prototype:
+Before building/editing a standalone Reference Prototype:
 
 ```text
+[ ] INTEGRATED-PRODUCT-UX-PLAN.md read first
+[ ] applicable Domain/Architecture mapless/session/character/rules contracts read
+[ ] exact applicable Product/UX Decision Cards read
 [ ] prototype/README.md read
 [ ] prototype/MANIFEST.yaml read
+[ ] current candidate is not marked invalidated/rebuild-required
 [ ] prototype/PROTOTYPE-PREFLIGHT.md passes for the requested prototype scope
 [ ] prototype Work Order scope is authorized
 [ ] writes stay under docs/design/ui-ux/prototype/ plus bounded prototype-doc maintenance
 [ ] no src/ import/change is required
 [ ] real backend/network/storage is not required
 [ ] D&D/rules/authority/privacy truth is fixture-driven, not calculated
+[ ] first-run Tutorial scenario exists and is first meaningful first-run interaction
+[ ] Standalone rolls keep the current Sheet visible/stable and do not open detached result/dice windows
+[ ] Connected Play is mapless and fixture Actors contain no Core x/y map coordinates
 ```
+
+If the Manifest says the existing candidate is invalidated, **do not patch it toward acceptance**. Reconcile prototype specifications, then build a replacement candidate.
 
 Before marking Prototype Accepted:
 
 ```text
 [ ] browser/visual interaction review occurred
 [ ] PROTOTYPE-ACCEPTANCE.md was checked
+[ ] candidate passed integrated baseline/mapless checks
 [ ] owner explicitly accepted a specific prototype reference
 ```
 
@@ -181,11 +220,12 @@ Static authoring alone is not Prototype Acceptance.
 
 ---
 
-# 10. Runtime implementation readiness
+# 11. Runtime implementation readiness
 
 For **broad UI runtime work**, first require:
 
 ```text
+[ ] integrated baseline is current
 [ ] applicable Reference Prototype status = ACCEPTED
 [ ] accepted prototype reference commit recorded
 ```
@@ -200,7 +240,7 @@ Then require normal runtime readiness:
 [ ] authority/visibility/persistence source of truth is explicit for S3 work
 [ ] accessibility/responsive/temporal requirements are explicit when applicable
 [ ] conflicting legacy UX guidance reconciled for touched scope
-[ ] legacy status known for touched runtime paths
+[ ] legacy/stale-test status known for touched runtime paths
 [ ] scoped runtime Work Order exists
 [ ] runtime implementation explicitly authorized
 ```
@@ -217,11 +257,12 @@ Owner-checkpoint completion, Reviewed Decisions, or a prototype review candidate
 
 ---
 
-# 11. Runtime implementation preflight
+# 12. Runtime implementation preflight
 
 ```text
 [ ] exact runtime Work Order identified
 [ ] IN SCOPE / ALLOWED SIDE EFFECTS / OUT OF SCOPE / MUST NOT CHANGE understood
+[ ] INTEGRATED-PRODUCT-UX-PLAN.md loaded for broad UI scope
 [ ] accepted prototype reference loaded where applicable
 [ ] exact referenced Frozen Decisions/contracts loaded
 [ ] applicable Matrix/domain sources loaded
@@ -229,6 +270,7 @@ Owner-checkpoint completion, Reviewed Decisions, or a prototype review candidate
 [ ] Stop Conditions known
 [ ] prototype fixture/mock code will not be copied as production authority
 [ ] Prototype Controls will not enter product UI
+[ ] historical `.agents` plans/stale tests are not being copied over newer formal planning
 [ ] no adjacent cleanup is being smuggled into scope
 ```
 
@@ -238,25 +280,31 @@ If broad UI work is requested without accepted prototype + P4 readiness, route b
 
 ---
 
-# 12. QA preflight
+# 13. QA preflight
 
 For prototype QA:
 
 ```text
+[ ] integrated baseline/mapless product identity known
 [ ] prototype decisions/defaults/catalogs known
 [ ] scenario coverage known
 [ ] prototype boundary known
 [ ] PROTOTYPE-ACCEPTANCE.md status known
+[ ] no battlemap/token/coordinate drift exists
+[ ] first-run Tutorial + Sheet-choice flow exists
+[ ] Standalone same-Sheet dice behavior exists
 ```
 
 For runtime QA:
 
 ```text
+[ ] integrated baseline known
 [ ] accepted prototype reference known where applicable
 [ ] applicable Frozen Decision/contract IDs known
 [ ] M6 coverage known
 [ ] authority/domain constraints known
 [ ] exact runtime implementation revision/diff known
+[ ] stale historical tests are distinguished from current product requirements
 [ ] automated/visual/owner walkthrough evidence known as applicable
 ```
 
@@ -264,7 +312,7 @@ QA does not redesign silently.
 
 ---
 
-# 13. Anti-patterns
+# 14. Anti-patterns
 
 Fail Preflight if AI is about to:
 
@@ -273,9 +321,17 @@ Fail Preflight if AI is about to:
 - make the owner complete every detailed Decision Map row;
 - silently treat an unaccepted AI recommendation as owner approval;
 - let current code replace a Reviewed product decision;
+- let `.agents` historical planning or an old test override current formal planning;
 - treat Reviewed as runtime-ready/Frozen;
 - **skip from Reviewed planning directly to broad runtime UI implementation**;
+- skip the integrated cross-source baseline for broad UI work;
 - treat a prototype review candidate as accepted without owner review;
+- continue reviewing/patching an invalidated prototype as if it were current;
+- interpret Scene/Table/Stage as permission to add a battle map;
+- invent Actor coordinates/tokens/grid/path/LoS/fog in Core;
+- turn Handout into a tactical map;
+- omit the first-run Tutorial + initial Sheet layout choice;
+- create a detached Standalone dice/result surface;
 - copy prototype fixture/mock logic into production authority code;
 - use a derived doc as product authority;
 - infer a shorthand reference;
@@ -285,17 +341,19 @@ Fail Preflight if AI is about to:
 
 ---
 
-# 14. Completion token
+# 15. Completion token
 
 ```text
 PREFLIGHT: PASS
 Route: <A-H | P>
 Owner-control classification: Owner Checkpoint / AI Design Default / Domain-Architecture / N/A
+Integrated baseline: CURRENT / STALE / N/A
+Mapless Core: PASS / BLOCKED / N/A
 Schema: PASS
 References: PASS
 Planning truth: PASS
 Global Planning Gate: PASS / BLOCKED / N/A
-Prototype status: N/A / SPEC READY / REVIEW CANDIDATE / ACCEPTED / NEEDS CHANGE
+Prototype status: N/A / SPEC READY / REBUILD REQUIRED / REVIEW CANDIDATE / ACCEPTED / NEEDS CHANGE
 Blocking gaps: none / <full IDs>
 Runtime implementation readiness: N/A / NOT READY / READY
 ```
@@ -304,6 +362,6 @@ The token is evidence of a check, not a substitute for source documents.
 
 ---
 
-# 15. Owner simplicity
+# 16. Owner simplicity
 
-> **The owner controls meaningful product intent and reviews the whole UI visually before runtime code. AI carries the exhaustive design/detail burden.**
+> **The owner controls meaningful product intent and reviews the whole UI visually before runtime code. AI carries the exhaustive design/detail/reconciliation burden, including protecting mapless Core and prior Owner decisions from fragmented-document drift.**
