@@ -1,0 +1,134 @@
+schema_version: 1
+phase: ui_reference_prototype
+status: spec_materializing
+html_prototype_status: not_started
+prototype_owner_acceptance: not_started
+runtime_ui_implementation_allowed: false
+
+paths:
+  root: docs/design/ui-ux/prototype/
+  app: docs/design/ui-ux/prototype/app/
+
+source_priority:
+  product_ux:
+    - docs/design/ui-ux/decisions.md
+    - docs/design/ui-ux/OWNER-CONTROL-POLICY.md
+    - docs/design/ui-ux/master-flow.md
+    - docs/design/ui-ux/registry.md
+    - docs/design/ui-ux/matrices.md
+  prototype_detail:
+    - docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
+    - docs/design/ui-ux/prototype/SURFACE-CATALOG.md
+    - docs/design/ui-ux/prototype/COMPONENT-CATALOG.md
+    - docs/design/ui-ux/prototype/LAYER-MODEL.md
+    - docs/design/ui-ux/prototype/STATE-MODEL.md
+    - docs/design/ui-ux/prototype/SCENARIO-CATALOG.md
+    - docs/design/ui-ux/prototype/MOCK-DATA-CONTRACT.md
+    - docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+  technical_truth:
+    - docs/design/README.md
+    - docs/design/session-runtime.md
+    - docs/design/ui-ux/planning-gaps.md
+
+files:
+  readme:
+    path: docs/design/ui-ux/prototype/README.md
+    role: prototype_phase_governance
+  design_defaults:
+    path: docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
+    role: ai_managed_design_defaults
+    authority: prototype_detail_only
+  surfaces:
+    path: docs/design/ui-ux/prototype/SURFACE-CATALOG.md
+    role: prototype_surface_inventory
+  components:
+    path: docs/design/ui-ux/prototype/COMPONENT-CATALOG.md
+    role: prototype_component_inventory
+  layers:
+    path: docs/design/ui-ux/prototype/LAYER-MODEL.md
+    role: prototype_layer_and_coexistence_model
+  states:
+    path: docs/design/ui-ux/prototype/STATE-MODEL.md
+    role: prototype_visible_state_model
+  scenarios:
+    path: docs/design/ui-ux/prototype/SCENARIO-CATALOG.md
+    role: prototype_review_scenarios
+  mock_data:
+    path: docs/design/ui-ux/prototype/MOCK-DATA-CONTRACT.md
+    role: synthetic_non_authoritative_data_contract
+  acceptance:
+    path: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+    role: prototype_acceptance_gate
+  work_order:
+    path: docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
+    role: prepared_html_prototype_scope
+  app_boundary:
+    path: docs/design/ui-ux/prototype/app/README.md
+    role: prototype_runtime_boundary
+
+stable_id_prefixes:
+  surface: PROTO-SURF-
+  component: PROTO-CMP-
+  layer: PROTO-LAYER-
+  state: PROTO-STATE-
+  scenario: PROTO-SCN-
+  mock: PROTO-MOCK-
+
+prototype_rules:
+  standalone_from_production_src: true
+  may_import_src_runtime_code: false
+  may_call_real_backend: false
+  may_use_real_network: false
+  may_mutate_real_data: false
+  may_calculate_domain_rules: false
+  unresolved_domain_architecture_may_be_mocked_for_presentation_only: true
+  mock_semantics_are_product_authority: false
+  current_code_is_evidence_only: true
+  prototype_controls_are_product_ui: false
+
+review_viewports:
+  note: prototype_test_presets_not_canonical_product_breakpoints
+  wide: 1600x1000
+  normal: 1366x768
+  narrow: 960x700
+
+phase_gate:
+  P0_specification:
+    status: materializing
+    requires:
+      - surface_catalog
+      - component_catalog
+      - layer_model
+      - state_model
+      - scenario_catalog
+      - mock_data_contract
+      - acceptance_checklist
+      - prepared_prototype_work_order
+  P1_html_build:
+    status: blocked_until_explicit_owner_authorization
+    allowed_write_scope:
+      - docs/design/ui-ux/prototype/app/
+      - docs/design/ui-ux/prototype/
+    forbidden_write_scope:
+      - src/
+  P2_review_iteration:
+    status: not_started
+  P3_owner_acceptance:
+    status: not_started
+    requires_explicit_owner_acceptance: true
+  P4_runtime_preparation:
+    status: blocked
+    requires:
+      - prototype_owner_acceptance
+      - applicable_domain_architecture_gaps_resolved_for_scope
+      - legacy_ux_reconciliation_for_scope
+      - required_surface_component_motion_contracts
+      - applicable_frozen_product_dependencies
+      - scoped_runtime_work_order
+  P5_runtime_ui_implementation:
+    status: not_authorized
+
+blocking_rule:
+  broad_runtime_ui_must_not_start_before_P4: true
+  prototype_acceptance_alone_authorizes_runtime: false
+  reviewed_decisions_alone_authorize_runtime: false
