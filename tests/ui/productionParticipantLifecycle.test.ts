@@ -61,7 +61,7 @@ function assertNoRejectedPeerGhost(adapter:MockAdapter,peer:string,participantId
   assert.equal(Boolean(app.scene.economyByActor[characterId]),false,"rejected Character must not leave Host economy");
 }
 
-test("preparation Host rejects incompatible hello without ghost participant, peer, ledger, or projection state",async()=>{
+test("Host rejects incompatible hello without ghost participant, peer, ledger, or projection state",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
@@ -95,7 +95,7 @@ test("preparation Host rejects incompatible hello without ghost participant, pee
   }
 });
 
-test("preparation Host rejects invalid SessionProjection before creating ghost state",async()=>{
+test("Host rejects invalid SessionProjection before creating ghost state",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
@@ -163,7 +163,7 @@ test("preparation Host rejects invalid SessionProjection before creating ghost s
   }
 });
 
-test("live Host rejects genuinely new participant before mutating accepted participant or ledger state",async()=>{
+test("live Host accepts a genuinely new participant and returns current authoritative history",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
@@ -172,26 +172,43 @@ test("live Host rejects genuinely new participant before mutating accepted parti
     const app=connectedInternal(adapter);
     assert.ok(state.ledger);
     state.sessionStarted=true;
+    const manifest=connectedManifest(adapter);
+    const characterId=manifest.character?.characterId;
+    assert.ok(characterId);
+    const participantId=`client:${characterId}`;
+    const modeEvent=state.ledger.commitHostEvent({
+      payload:{
+        kind:"mode-transition",
+        sessionMode:"initiative",
+        round:4,
+        currentActorId:characterId,
+        economyByActor:{},
+        stateChanges:["live late-join baseline"],
+        provenance:["Scenario 08 live join test"],
+      },
+    });
     const cursorBefore=state.ledger.cursor;
 
     transport.emitFrom("peer.late",{
       type:"hello",
-      manifest:connectedManifest(adapter),
-      participantId:"client:char.phase14.late",
+      manifest,
+      participantId,
       participantName:"Late Player",
       knownEventCursor:0,
     });
     await new Promise<void>((resolve)=>setImmediate(resolve));
 
-    assert.equal(state.ledger.cursor,cursorBefore,"live late join must not commit participant state");
-    assert.equal(state.peerParticipants.has("peer.late"),false);
-    assert.equal(app.session.participants.some((participant)=>participant.id==="client:char.phase14.late"),false);
-    const ack=transport.sentTo().find((entry)=>entry.peer==="peer.late")?.message;
+    assert.equal(state.ledger.cursor,cursorBefore+1,"accepted live join commits a participant event");
+    assert.equal(state.peerParticipants.get("peer.late"),participantId);
+    assert.equal(state.peerManifests.get("peer.late")?.character?.characterId,characterId);
+    assert.equal(app.session.participants.find((participant)=>participant.id===participantId)?.state,"connected");
+    const ack=transport.sentTo().find((entry)=>entry.peer==="peer.late"&&entry.message.type==="hello-ack")?.message;
     assert.equal(ack?.type,"hello-ack");
-    if (ack?.type!=="hello-ack") throw new Error("expected live late-join hello-ack rejection");
-    assert.equal(ack.compatibility.status,"incompatible");
-    assert.match(ack.compatibility.message,/already live/);
-    assert.deepEqual(ack.events,[]);
+    if (ack?.type!=="hello-ack") throw new Error("expected live late-join hello-ack");
+    assert.notEqual(ack.compatibility.status,"incompatible");
+    assert.equal(ack.hostCursor,state.ledger.cursor);
+    assert.ok(ack.events.some((event)=>event.eventId===modeEvent.eventId&&event.payload.kind==="mode-transition"));
+    assert.ok(ack.events.some((event)=>event.payload.kind==="participant"&&event.payload.participantId===participantId));
   } finally {
     transport.restore();
   }
