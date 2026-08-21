@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
-import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 export type DieSides = 4 | 6 | 8 | 10 | 12 | 20;
 
@@ -139,31 +138,61 @@ function faceDescriptors(source: THREE.BufferGeometry, expectedCount: number) {
 function colliderFor(source: THREE.BufferGeometry, sides: DieSides) {
   if (sides === 6) return new CANNON.Box(new CANNON.Vec3(0.62, 0.62, 0.62));
 
-  const geometry = mergeVertices(source.clone(), 1e-4);
+  // Build the physics hull from positions only. Three.js polyhedral render
+  // geometries duplicate vertices per face because normals/UVs differ. Passing
+  // those disconnected triangles straight to Cannon makes a formally broken
+  // ConvexPolyhedron and is especially unstable for d20 contact solving.
+  const geometry = source.index ? source.toNonIndexed() : source.clone();
   const position = geometry.getAttribute("position");
-  const index = geometry.index;
-  if (!index) {
-    geometry.dispose();
-    return new CANNON.Sphere(0.78);
-  }
-
   const vertices: CANNON.Vec3[] = [];
-  for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
-    vertices.push(new CANNON.Vec3(
-      position.getX(vertexIndex),
-      position.getY(vertexIndex),
-      position.getZ(vertexIndex),
-    ));
-  }
-
+  const vertexLookup = new Map<string, number>();
   const faces: number[][] = [];
-  for (let faceIndex = 0; faceIndex < index.count; faceIndex += 3) {
-    faces.push([index.getX(faceIndex), index.getX(faceIndex + 1), index.getX(faceIndex + 2)]);
+
+  const vertexIndexFor = (vertex: THREE.Vector3) => {
+    const precision = 100000;
+    const key = `${Math.round(vertex.x * precision)},${Math.round(vertex.y * precision)},${Math.round(vertex.z * precision)}`;
+    const existing = vertexLookup.get(key);
+    if (existing !== undefined) return existing;
+
+    const index = vertices.length;
+    vertices.push(new CANNON.Vec3(vertex.x, vertex.y, vertex.z));
+    vertexLookup.set(key, index);
+    return index;
+  };
+
+  for (let offset = 0; offset < position.count; offset += 3) {
+    const a = new THREE.Vector3().fromBufferAttribute(position, offset);
+    const b = new THREE.Vector3().fromBufferAttribute(position, offset + 1);
+    const c = new THREE.Vector3().fromBufferAttribute(position, offset + 2);
+
+    const ia = vertexIndexFor(a);
+    let ib = vertexIndexFor(b);
+    let ic = vertexIndexFor(c);
+
+    // Cannon requires outward-facing winding. All dice are centered around the
+    // origin, so an outward triangle normal must point in the same hemisphere
+    // as its face centroid.
+    const normal = b.clone().sub(a).cross(c.clone().sub(a));
+    const centroid = a.clone().add(b).add(c).multiplyScalar(1 / 3);
+    if (normal.dot(centroid) < 0) {
+      const swap = ib;
+      ib = ic;
+      ic = swap;
+    }
+
+    faces.push([ia, ib, ic]);
   }
   geometry.dispose();
 
   try {
-    return new CANNON.ConvexPolyhedron({ vertices, faces });
+    const hull = new CANNON.ConvexPolyhedron({ vertices, faces });
+    // The canonical d20 should be 12 shared vertices / 20 triangular faces.
+    // If future render geometry changes break that assumption, fail safe to a
+    // sphere instead of feeding malformed topology into the solver.
+    if (sides === 20 && (vertices.length !== 12 || faces.length !== 20)) {
+      return new CANNON.Sphere(0.78);
+    }
+    return hull;
   } catch {
     return new CANNON.Sphere(0.78);
   }
@@ -218,8 +247,6 @@ export class DiceWorld {
       alpha: true,
       powerPreference: "high-performance",
     });
-    // 2x DPR plus a 2048 shadow map caused unnecessary GPU pressure in a
-    // throw-heavy test. 1.5x is still sharp in Tauri while avoiding churn.
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
@@ -343,8 +370,6 @@ export class DiceWorld {
     if (!options.keepPrevious) this.clear();
     this.setDiceCollision(options.diceCollision);
 
-    // Keep-previous is a comparison tool, not an unlimited scene allocator.
-    // Remove oldest dice before a large retained set can overload physics/GPU.
     const overflow = this.dice.length + options.sides.length - MAX_RETAINED_DICE;
     if (overflow > 0) this.removeOldest(overflow);
 
@@ -422,8 +447,6 @@ export class DiceWorld {
       runtime.coreGeometry.dispose();
       runtime.edgeGeometry.dispose();
     }
-    // Ensure WebGL render-list references to removed groups are released now,
-    // rather than waiting for later frames or GC.
     this.renderer.renderLists.dispose();
   }
 
@@ -609,8 +632,6 @@ export class DiceWorld {
     const rawDelta = Math.max(0, (now - this.lastFrame) / 1000);
     this.lastFrame = now;
 
-    // If WebView/OS briefly stalls, do not ask Cannon to catch up a large time
-    // debt in one frame. One fixed step immediately resumes visual motion.
     if (rawDelta > 0.1) {
       this.world.step(1 / 60);
     } else {
