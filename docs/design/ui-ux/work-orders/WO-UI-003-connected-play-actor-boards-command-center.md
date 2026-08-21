@@ -1,6 +1,6 @@
 # WO-UI-003 — Connected Play Actor Boards / Tabletop Stage / Persistent Command Center
 
-Status: **IMPLEMENTED — AUTOMATED VERIFICATION PASS — OWNER HUMAN QA PENDING**
+Status: **CLOSED / ACCEPTED AFTER ACCEPTED-REFERENCE REWORK**
 
 Date: 2026-08-22
 
@@ -20,282 +20,192 @@ Implementation record:
 
 `WO-UI-003-IMPLEMENTATION-RECORD.md`
 
-Verified source:
+Human QA record:
 
-`fb007d809ab586ca8d2e135e5813e929772a7f2c`
+`WO-UI-003-HUMAN-QA.md`
 
-Exact-head UI verification:
+Accepted-reference rework source evidence:
 
-`run_id: 32496754716` — **SUCCESS**
+`acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f`
 
 ---
 
 # 1. Goal
 
-Reconcile the production Connected Play workspace with the Owner-accepted mapless layout contract without changing Session authority, combat rules, transport, persistence, or Character rules.
+Reconcile production Connected Play with the Owner-accepted mapless layout contract without changing Session authority, rules, transport, persistence or Character rules.
 
-Required stable production composition:
+Accepted production composition:
 
 ```text
-Compact Play chrome / connection status
+Compact Play chrome / Session status
 Upper opposing Actor Board
-Shared Play Context / Tabletop Stage      [contextual utility]
+Mapless Play Context / Tabletop Stage      [contextual utility]
 Lower allied Actor Board
 Persistent Command Center
 ```
 
-Initiative extends this same skeleton; it does not replace it with a Combat route.
+Initiative extends this skeleton; it does not replace it with another route/workspace.
 
 ---
 
-# 2. Implemented scope
+# 2. First implementation — rejected
 
-## Connected Play topology
+The first implementation used the right broad nouns but materially diverged from the accepted scene.
 
-- Upper Actor Board driven by canonical `SceneVm.entities`;
-- broad mapless Tabletop Stage / Play Context;
-- Lower Actor Board driven by canonical `SceneVm.entities`;
-- contextual utilities remain panes/layers instead of permanent primary columns;
-- persistent bottom Command Center remains reachable in Freeform and Initiative.
+Historical source/run:
 
-## Actor Cards / Boards
+```text
+source: fb007d809ab586ca8d2e135e5813e929772a7f2c
+UI run: 32496754716
+result: SUCCESS, but structural gate was insufficient
+```
 
-This slice establishes the production Actor Board/Card presentation anchor and directly covers:
+Owner Human QA rejected that visual implementation and required the runtime to follow the concrete accepted `integrated-reference.html/js/css` scene rather than a prose-only approximation.
 
-- Actor identity;
-- ally/enemy relation supplied by `SceneEntity.side`;
-- HP / Temp HP;
-- compact status;
-- AC;
-- Initiative current-turn emphasis when supplied;
-- actual DM controlled Actor emphasis through `selectedActorId`;
-- Player owning Character emphasis;
-- intentional empty boards;
-- useful minimum card width + horizontal overflow.
+That implementation is superseded and is not the accepted visual result.
 
-The current runtime relation schema contains `ally | enemy`; this slice does not invent a new `neutral` domain relation. The Upper Board therefore presents current opposing runtime Actors honestly from existing projections.
+---
 
-Full ActorCard target-valid / target-invalid / target-selected interaction styling is not invented here. Existing action targeting continues to use the already-authoritative manual eligible Actor set in the Command Center. A later targeting-specific slice may promote that projection onto ActorCard states once its exact interaction scope is selected.
+# 3. Accepted-reference rework
 
-## Command Center
+The rework directly pins the production scene to the accepted reference relationship and geometry:
 
-The historical intent-first primary funnel in `SessionActionDock` is replaced by persistent direct capability discovery over authoritative `ActionVm[]`.
+```text
+Play chrome             41px
+Upper Actor Board       86px
+Mapless Stage           flexible remainder
+Lower Actor Board       86px
+Command Center          174px
+Initiative tracker      ~40px at Stage top
+Contextual utility      338px nominal / 288–455px bounds
+Command body            240px / flexible Hotbar / 104px
+Hotbar slot             ~70px
+ActorCard               ~164–258px, 73px high
+```
 
-Baseline page family:
+Constrained desktop follows the accepted prototype family rather than inventing a different information architecture.
+
+Material corrections include:
+
+- removed the separate 52px Connected Play identity header;
+- removed the permanent vertical Session utility rail;
+- restored compact accepted Play chrome;
+- restored full-width horizontal Actor Board bands/card density;
+- made the central Stage broad/quiet/mapless;
+- reduced Initiative to the compact tracker role;
+- kept economy/End Turn in Command Center;
+- restored accepted Command Center anatomy and compact Hotbar density;
+- aligned Session/Encounter/Activity/etc. to contextual utility behavior;
+- preserved Product Return-to-Play session continuity.
+
+---
+
+# 4. Command Center
+
+The accepted primary capability model is direct/persistent rather than the historical intent-first funnel.
+
+Baseline accepted page family:
 
 - Mixed;
 - Action;
 - Spell;
-- Item.
+- Item;
+- Custom presentation family.
 
-The Command Center includes:
+Canonical runtime sources remain authoritative:
 
-- current controlled/action Actor summary;
-- HP / Temp HP / important status where supplied;
-- Resource Rail only from actual owning Character projection;
-- honest empty resource presentation for Actors without projected resources;
-- Initiative economy only while Initiative is active;
-- direct Hotbar slots from canonical `actionsByActor[actorId]`;
-- unavailable reasons from `ActionVm.disabledReason`;
-- existing direct action/target submission path.
-
-Automatic capability discovery is in scope. User-persisted Hotbar customization is not introduced because this slice has no canonical customization persistence contract.
-
----
-
-# 3. Behavior scenarios
-
-Primary:
-
-- Scenario 10 — Connected Freeform baseline;
-- Scenario 11 — Start Initiative;
-- Scenario 19 — DM control changes Command Center;
-- Scenario 20 — Resolving action, limited to persistent-anchor structure (selective locking remains blocked);
-- Scenario 23 — Connected dice/result, limited to persistent-anchor structure;
-- Scenario 37 — Narrow desktop;
-- Scenario 43 — Empty Actor Board;
-- Scenario 44 — Many Actors;
-- Scenario 45 — Long names / many resources.
-
-Preserved existing targeting flow regression:
-
-- Scenario 12 — direct single-target action uses supplied eligible set;
-- Scenario 13 — multi-target manual set + explicit Execute.
-
-Adjacent regression:
-
-- Scenario 31 — Rules lookup during live Session;
-- Scenario 32 — Quick Sheet;
-- Scenario 33 — Full Sheet in live Session;
-- Scenario 34 — Product navigation during live Host Session;
-- Scenario 35/36 — reconnect/disconnect context preservation.
-
-Scenario 15 ActorCard invalid-state presentation and Scenario 16/17 Main Hand default hostile click are not claimed by this slice.
-
----
-
-# 4. QA rows
-
-Primary pass targets:
-
-```text
-QA-ID-01
-QA-ID-02
-QA-PLAY-01
-QA-PLAY-02
-QA-PLAY-03
-QA-PLAY-04
-QA-PLAY-05
-QA-PLAY-06
-QA-MODE-01
-QA-MODE-02
-QA-MODE-03
-QA-MODE-04
-QA-MODE-05
-QA-MODE-06
-QA-ACTOR-02
-QA-ACTOR-05
-QA-ACTOR-06
-QA-ACTOR-07
-QA-CMD-01
-QA-CMD-02
-QA-CMD-03
-QA-CMD-04
-QA-CMD-05
-QA-CMD-06
-QA-TGT-01
-QA-TGT-02
-QA-TGT-03
-QA-RES-01
-QA-RES-07
-```
-
-Not claimed by this slice:
-
-- `QA-ACTOR-01/03/04` full targeting-state semantics on ActorCard;
-- `QA-CLICK-04` / `QA-TGT-05` default Main Hand relation;
-- `QA-RES-02/03` selective resolution locking.
-
-`QA-RES-02/03` remain BLOCKED by `GAP-RESOLUTION-SAFE-INTERACTIONS`.
-
-`QA-CLICK-04` / `QA-TGT-05` remain blocked for exact runtime behavior by `GAP-MAIN-HAND-CANONICAL-RELATION`.
-
----
-
-# 5. Product decision dependencies
-
-Use the reviewed decisions as the implementation baseline for this bounded slice:
-
-```text
-UX-01-04
-UX-01-05
-UX-01-06
-UX-01-07
-UX-02-01
-UX-02-07
-UX-03-03
-UX-03-04
-UI-01-02
-UI-01-03
-UI-01-04
-UI-01-05
-UI-01-06
-UI-01-09
-ORIGIN-UX-01-09
-ORIGIN-UX-01-10
-ORIGIN-UX-01-11
-ORIGIN-UX-01-15
-```
-
-This scoped authorization does not globally freeze unrelated decisions.
-
----
-
-# 6. Authoritative state sources
-
-UI reads, but does not replace, these existing sources:
-
-- `AppProvider` snapshot/runtime operations;
-- `AppSnapshot.session` and `connectionState`;
-- `AppSnapshot.sessionMode`;
-- `SceneVm.entities`;
 - `SceneVm.actionsByActor`;
 - `SceneVm.economyByActor`;
-- `SceneVm.currentActorId` / `selectedActorId`;
-- `ActionVm.available`, `disabledReason`, `eligibleTargetIds`, `maxTargets`, resource/item cost;
-- owning local `activeCharacter` only when it is the actual Player action Actor;
+- `ActionVm.available` / `disabledReason`;
+- `eligibleTargetIds` / `maxTargets`;
+- owning Character resources only for the actual controlled Character;
 - existing `resolveAction`, `selectDmActor`, Initiative/Session operations.
 
-The UI must not calculate D&D legality, target range/LoS, resource truth, Main Hand substitution, reconnect truth, privacy delivery, or spatial geometry.
+UI does not calculate rules legality, target range/LoS, Main Hand fallback, privacy delivery, reconnect truth or spatial geometry.
 
 ---
 
-# 7. Explicit exclusions
+# 5. Actor Boards
 
-Not authorized by this Work Order:
+This slice establishes production Actor Boards/Cards for:
 
-- battlemap, Actor x/y, grid, pathfinding, Fog of War, LoS geometry, AoE map templates;
-- new transport/network protocol;
-- Session lifecycle redesign beyond preserving current accepted behavior;
-- default hostile click -> Main Hand implementation;
+- identity;
+- current runtime relation/side;
+- HP / Temp HP;
+- compact status;
+- AC;
+- current turn/control emphasis where supplied;
+- intentional empty boards;
+- minimum useful card width + horizontal overflow.
+
+The existing runtime relation schema remains authoritative; this slice does not invent new relation/domain states.
+
+Full future target-valid/invalid/selected ActorCard behavior is not silently claimed beyond current authoritative targeting projection.
+
+---
+
+# 6. Verification
+
+Accepted-reference rework source:
+
+```text
+acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
+```
+
+Evidence:
+
+- strengthened accepted-reference Connected Play structural/geometry gate: **PASS**;
+- Main Playable `Verify full UI, rules, TypeScript, and production frontend`: **PASS**;
+- Connected Session production frontend gate: **PASS**;
+- existing connected/session/character/spellcasting regressions reached/passed before the separate Phase 09 aggregate red in the UI workflow.
+
+The UI workflow's separate `Phase 09 real mechanics services` aggregate remained red, but compare evidence showed this rework changed UI/CSS/UI tests/UI docs only and did not modify Phase 09 mechanics service/test files. It is recorded as a separate regression concern rather than misclassified as a WO-UI-003 visual failure.
+
+The strengthened gate reads the accepted prototype source and pins concrete relationships/geometry so the previously rejected visual approximation can no longer pass merely by containing similarly named regions.
+
+---
+
+# 7. Owner Human QA — PASS
+
+The first visual implementation was rejected.
+
+After the accepted-reference rework, the Owner performed the requested Session visual check and responded:
+
+> 그래 잘 됐어.
+
+This closes the WO-UI-003 visual/composition slice as **ACCEPTED**.
+
+See `WO-UI-003-HUMAN-QA.md` for the full fail -> rework -> pass provenance.
+
+---
+
+# 8. Explicit exclusions still open
+
+WO-UI-003 acceptance does not resolve:
+
+- battlemap/grid/Actor coordinates/path/LoS/fog;
+- default hostile click -> Main Hand relation;
 - smart action fallback;
 - selective resolution-safe interaction calculation;
-- new DM-only/private delivery protocol;
-- Handout networking/reconnect architecture;
-- Character rules/progression changes;
-- invented neutral-relation domain schema;
-- invented Hotbar persistence/customization schema;
-- full targeting-state promotion onto Actor Cards.
+- DM-only/private delivery protocol;
+- Handout network/reconnect architecture;
+- authoritative Spatial Facts projection;
+- Character rules/progression;
+- new neutral-relation domain schema;
+- Hotbar persistence/customization schema.
+
+Those remain separate scope/gaps.
 
 ---
 
-# 8. Touched runtime files
-
-Primary:
-
-- `src/SessionModeRoot.tsx`;
-- `src/SessionActorBoards.tsx`;
-- `src/session-actor-boards.css`;
-- `src/session-connected-layout.css`;
-- `src/SessionActionDock.tsx`;
-- `src/session-action-dock.css`;
-- Session UI structural tests;
-- `.github/workflows/ui.yml`.
-
-Existing utility, resolution, Quick Sheet, Full Sheet, reconnect and Handout components remain their existing authority owners; composition changes keep them inside the same live Session skeleton.
-
----
-
-# 9. Automated verification — PASS
-
-Exact source:
+# 9. Final state
 
 ```text
-fb007d809ab586ca8d2e135e5813e929772a7f2c
+FIRST IMPLEMENTATION: SUPERSEDED / OWNER QA FAIL
+ACCEPTED-REFERENCE REWORK: IMPLEMENTED
+ACCEPTED-REFERENCE AUTOMATION: PASS
+OWNER RE-QA: PASS
+WO-UI-003: CLOSED / ACCEPTED
 ```
 
-Exact-head UI workflow:
-
-```text
-run_id: 32496754716
-job: frontend
-conclusion: SUCCESS
-```
-
-The workflow passed the dedicated Connected Play topology gate, existing Session/Product continuity regressions, broad Phase 14 runtime/UI regressions, authoritative mechanics, TypeScript and production build.
-
----
-
-# 10. Remaining definition of done — Human QA
-
-Owner verifies in Tauri Connected Play that:
-
-1. the visual skeleton visibly matches the accepted reference direction;
-2. upper opposing Actors and lower allied Actors are board/card regions;
-3. central Stage remains mapless and broad;
-4. Command Center is persistent and directly exposes capabilities;
-5. Initiative adds tracker/economy without replacing the skeleton;
-6. narrow desktop remains usable;
-7. Product Shell Return-to-Play still preserves the same session.
-
-Do not close WO-UI-003 until Owner Human QA is recorded.
+Next product work must treat the accepted Connected Play composition as the baseline rather than reopen it implicitly.
