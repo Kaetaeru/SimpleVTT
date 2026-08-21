@@ -1,6 +1,6 @@
 # WO-UI-002 — Implementation Record
 
-Status: **IMPLEMENTED — EXACT-HEAD AUTOMATED VERIFICATION PENDING**
+Status: **IMPLEMENTED — AUTOMATED VERIFICATION PASS — OWNER HUMAN QA PENDING**
 
 Work Order:
 
@@ -101,24 +101,72 @@ Adjacent regression coverage remains as defined by the Work Order.
 
 ---
 
-# Verification state
+# Automated verification — PASS
 
-Current exact implementation head before this record:
+Verified source/runtime implementation commit:
 
 ```text
 cd9b514b3169c63d69a42bdfbb4672fe7131d1cd
 ```
 
-UI workflow:
+The documentation-only implementation-record commit then moved the PR head to:
 
 ```text
-run_id: 32490366407
-status at record creation: queued
+34671a9c33c855a69b4507805477c9c1973015e7
 ```
 
-Other exact-head PR workflows were also queued/pending at that checkpoint.
+The exact-head UI workflow for that head completed successfully:
 
-Do not mark WO-UI-002 closed until exact-head automated verification has completed successfully and any required Owner Human QA is recorded.
+```text
+run_id: 32490406078
+job: frontend
+conclusion: success
+```
+
+Passed in that workflow:
+
+- dependency install / generated content;
+- UI named-rule boundary;
+- **WO-UI-002 connected Product Shell continuity gate**;
+- v1 first-run / Product Shell / Session layer contracts;
+- Session accessibility/responsive/layer regressions;
+- Phase 14 Play/session/tabletop-sheet/physics-dice/non-Character/live-DM regressions;
+- connected lifecycle / Character ownership / inventory / spellcasting regressions;
+- creation/progression representative regressions;
+- authoritative spellcasting;
+- Phase 09 real mechanics services;
+- **TypeScript + production build**.
+
+No automated failure was observed in the UI workflow.
+
+---
+
+# Remaining acceptance gate
+
+WO-UI-002 is **not closed yet**.
+
+Required next gate:
+
+**Owner Human QA of the bounded navigation flow.**
+
+Review path:
+
+```text
+Host or Client enters live Connected Play
+-> use `SimpleVTT 메뉴`
+-> open Home or Rules while Session remains live
+-> use `플레이로 돌아가기`
+-> verify the same live Session/role/mode/turn/context is still present
+```
+
+Also verify that:
+
+- `SimpleVTT 메뉴` does not end the Session;
+- `세션 종료` / leave remains a separate action;
+- narrow window still exposes the Product entry;
+- Return to Play does not open a visibly different/legacy connected Play screen.
+
+Do not mark WO-UI-002 CLOSED / ACCEPTED until the Owner reports the human result.
 
 ---
 
