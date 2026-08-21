@@ -1,6 +1,6 @@
 # WO-UI-001 — Runtime Implementation Record
 
-Status: **IMPLEMENTED — VERIFICATION IN PROGRESS**
+Status: **VERIFIED COMPLETE**
 
 Owner runtime authorization: **explicitly approved in conversation on 2026-08-21**
 
@@ -20,7 +20,7 @@ Accepted visual/interaction reference:
 
 # 1. Implemented behavior
 
-The WO-UI-001 runtime slice now implements:
+The WO-UI-001 runtime slice implements:
 
 1. a dedicated first-run Tutorial that appears before normal Home interaction when the new completion marker is absent;
 2. Tutorial orientation for Standalone Character, Host Session, and Join Session;
@@ -145,7 +145,7 @@ Updated CI:
 .github/workflows/ui.yml
 ```
 
-The UI workflow now runs both first-run tests together with the v1 Product Shell / Session layer contract tests.
+The UI workflow runs both first-run tests together with the v1 Product Shell / Session layer contract tests.
 
 `tests/ui/productionNonCharacterUxRedesign.test.ts` did not require modification because this implementation intentionally preserved the `App.tsx` function/surface boundaries that its unrelated regression assertions inspect.
 
@@ -155,31 +155,31 @@ The UI workflow now runs both first-run tests together with the v1 Product Shell
 
 ## Required WO rows
 
-- `QA-ID-04` — implemented; verification pending full UI workflow
-- `QA-ID-05` — implemented using existing shared `snapshot.activeCharacter`; verification pending full UI workflow
-- `QA-NAV-01` — implemented; Tutorial overlay blocks normal shell interaction on fresh first use
-- `QA-NAV-02` — implemented; initial Sheet choice required
-- `QA-NAV-03` — implemented; Standalone / Host / Join orientation present
-- `QA-NAV-04` — implemented; Settings reopen entry present
-- `QA-NAV-05` — implemented; global order preserved and normal layout moved to top navigation
+- `QA-ID-04` — **PASS** — fresh first use is gated by the dedicated Tutorial
+- `QA-ID-05` — **PASS** — both Sheet presentations preserve the existing shared `snapshot.activeCharacter`
+- `QA-NAV-01` — **PASS** — Tutorial is the first meaningful fresh-use interaction
+- `QA-NAV-02` — **PASS** — Tutorial requires an initial Sheet presentation choice
+- `QA-NAV-03` — **PASS** — Standalone / Host / Join orientation is present
+- `QA-NAV-04` — **PASS** — Settings can reopen the canonical Tutorial
+- `QA-NAV-05` — **PASS** — global order is preserved and normal Product navigation is top-oriented
 
 ## Regression rows
 
-- `QA-CHAR-01` — untouched Character opening/domain path
-- `QA-CHAR-02` — existing presentation-only Sheet router preserved
-- `QA-A11Y-01` — explicit focus-visible styling added for Tutorial and Product navigation
-- `QA-A11Y-03` — Sheet selection uses text + `aria-pressed`, not color alone
+- `QA-CHAR-01` — **PASS by unchanged regression path**
+- `QA-CHAR-02` — **PASS** — existing presentation-only Sheet router preserved
+- `QA-A11Y-01` — **PASS** — visible focus styling is present and CI structure checks are green
+- `QA-A11Y-03` — **PASS** — Sheet selection uses text + `aria-pressed`, not color alone
 
 ## Explicitly deferred
 
 - `QA-NAV-06` — deferred to WO-UI-002
-- Connected Session / Play / targeting / resolution / privacy / Handout QA rows — untouched
+- Connected Session / Play / targeting / resolution / privacy / Handout redesign rows — untouched by this Work Order
 
 ---
 
-# 6. Local verification completed
+# 6. Bounded local verification
 
-Because the current GitHub Actions runner remains queued, bounded local verification was also performed:
+Before full CI completed, bounded verification also passed:
 
 ```text
 PASS — TypeScript strict check for:
@@ -196,25 +196,39 @@ PASS — executed preference behavior checks:
   invalid stored Sheet value does not become an explicit selection
 ```
 
-These bounded checks do not replace repository-wide UI CI or production build verification.
-
 ---
 
 # 7. GitHub Actions verification
 
-Latest UI workflow after adding the new tests:
+Final successful UI workflow:
 
 ```text
-run_id: 32485913472
-head_sha: b5b408293229bc7eaeeff7b7e044c86222f8f30d
-status at record creation: queued
+run_id: 32486454036
+source head_sha: ff3b253c840aa9c46f83ffcdd53374b1b5cd1760
+conclusion: success
 ```
 
-The workflow includes TypeScript/production build and broad UI regressions.
+The run passed all executed UI steps, including:
 
-Final runtime verification remains **PENDING** until the runner executes.
+```text
+PASS — UI named-rule boundary
+PASS — first-run / Product Shell / Session layer contract tests
+PASS — PlaySessionDock regressions
+PASS — production Play accessibility/structure
+PASS — combat VFX boundaries
+PASS — unified production Session UX
+PASS — tabletop Sheet / dice / intent / acceptance regressions
+PASS — non-Character product UX regressions
+PASS — Host preparation / content regressions
+PASS — live DM mechanics continuity
+PASS — connected lifecycle / ownership / Character / inventory / spellcasting regressions
+PASS — creation/progression regressions
+PASS — authoritative spellcasting
+PASS — Phase 09 mechanics services
+PASS — TypeScript + production build
+```
 
-Do not mark this Work Order fully verified merely from the local bounded checks.
+An earlier CI attempt failed only because two newly added navigation-order tests searched the entire `App.tsx` string and found unrelated earlier `characters` text. The assertions were corrected to inspect the actual global-nav declaration block; the implementation itself did not require a behavioral change for that failure.
 
 ---
 
@@ -243,13 +257,14 @@ Character creation / Level Up rules logic
 
 # 9. Completion gate
 
-Current:
-
 ```text
 RUNTIME IMPLEMENTATION AUTHORIZATION: USED / RECORDED
 WO-UI-001 CODE: IMPLEMENTED
 BOUNDED LOCAL CHECKS: PASS
-FULL UI CI / PRODUCTION BUILD: QUEUED / PENDING
-WO-UI-001 VERIFIED COMPLETE: NO — waiting on actual CI result
+FULL UI CI: PASS
+PRODUCTION TYPESCRIPT / BUILD: PASS
+WO-UI-001 VERIFIED COMPLETE: YES
 WO-UI-002: NOT AUTHORIZED
 ```
+
+WO-UI-001 is closed as a verified runtime slice. Any next runtime slice requires its own bounded Work Order / dependency gate / authorization.
