@@ -144,7 +144,8 @@ test("Host ends live play by notifying clients before teardown, clears transient
     const app=connectedInternal(adapter);
     assert.ok(state.sessionId);
     const firstSessionId=state.sessionId;
-    state.sessionStarted=true;
+    assert.equal(first.session.lifecycle,"live");
+    assert.equal(state.sessionStarted,true);
     app.sessionMode="initiative";
     app.scene.round=4;
     app.scene.currentActorId="combatant.goblin-a";
@@ -192,9 +193,10 @@ test("Host ends live play by notifying clients before teardown, clears transient
     const restarted=await adapter.hostSession();
     const restartedState=connectedStateFor(adapter);
     assert.equal(restarted.session.role,"host");
-    assert.equal(restarted.session.lifecycle,"preparing");
+    assert.equal(restarted.session.lifecycle,"live");
     assert.ok(restartedState.sessionId);
     assert.notEqual(restartedState.sessionId,firstSessionId);
+    assert.equal(restartedState.sessionStarted,true);
     assert.deepEqual(restarted.session.participants.map((participant)=>participant.id),["host"]);
     assert.deepEqual(projectedCharacterIds(adapter),[]);
     assert.equal(restarted.sessionMode,"freeform");
@@ -354,7 +356,7 @@ test("owning Client persists a Host-confirmed durable event across explicit sess
 
 test("production Host live UI exposes explicit session end control without debug path",()=>{
   const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
-  assert.match(source,/snapshot\.session\.lifecycle==="live" \? "세션 종료" : "Host 중지"/);
+  assert.match(source,/세션 종료/);
   assert.match(source,/stopSession\(\)/);
-  assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
+  assert.doesNotMatch(source,/Host 중지|setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
