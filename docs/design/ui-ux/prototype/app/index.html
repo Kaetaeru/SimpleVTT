@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SimpleVTT UI Reference Prototype</title>
   <link rel="stylesheet" href="prototype.css" />
+  <link rel="stylesheet" href="review-patch.css" />
 </head>
 <body>
   <div class="proto-app">
@@ -18,6 +19,11 @@
       <section class="proto-control-group">
         <label for="scenarioSelect">검토 시나리오</label>
         <select id="scenarioSelect"></select>
+      </section>
+
+      <section class="proto-control-group">
+        <label for="surfaceSelect">화면 / Surface 바로 보기</label>
+        <select id="surfaceSelect"></select>
       </section>
 
       <section class="proto-control-grid">
@@ -112,5 +118,6 @@
 
   <script src="fixtures.js"></script>
   <script src="prototype.js"></script>
+  <script src="review-patch.js"></script>
 </body>
 </html>
