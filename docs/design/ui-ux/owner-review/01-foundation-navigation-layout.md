@@ -160,7 +160,7 @@
 - `C` — 홈이나 세션 화면에서만 돌아갈 수 있게 하고 다른 화면에는 별도 버튼을 두지 않는다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -175,7 +175,7 @@
 - `C` — **캐릭터 시트가 중심.** 캐릭터 목록은 캐릭터를 고르는 곳이고, 편집/레벨업은 시트에서 들어간다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -190,7 +190,7 @@
 - `C` — 현재 화면 위에 보조 작업창처럼 열고, 닫으면 정확히 원래 화면으로 돌아간다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -205,7 +205,7 @@
 - `C` — Activity + Encounter는 기본 메뉴에서도 열 수 있고, 판정수정/세션도구는 필요할 때만 연다.
 - `CUSTOM` — 도구별로 직접 적는다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -220,7 +220,7 @@
 - `C` — 상위 화면으로 가는 명시적인 메뉴/경로를 중심으로 하고, 브라우저식 뒤로가기는 보조로만 쓴다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -235,7 +235,7 @@
 - `C` — 별도 `시작하기` 페이지를 두고 홈에는 짧은 링크만 둔다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -250,9 +250,9 @@
 - `C` — 안전하게 복원할 수 있는 화면은 최대한 그대로 다시 열고, 복원하기 위험한 작업만 홈/상위 화면으로 보낸다.
 - `CUSTOM` — 화면별로 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `CUSTOM`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `앱이 닫히면 접속이 튕긴걸로 판정해야지. 다시 돌아가는게 아니라 반드시 홈에서 시작해야한다고 생각해`
 
 <!-- AI STATUS: PENDING -->
 
@@ -269,7 +269,7 @@
 - `C` — 작은 왼쪽 메뉴 + 필요할 때 보조 칸 + 큰 본문
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -284,9 +284,9 @@
 - `C` — 장면과 행동버튼 영역을 아예 위/아래 두 구역으로 나눈다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `그리고 창 크기를 플레이어가 조절 가능하게 했으면 좋겠어.`
 
 <!-- AI STATUS: PENDING -->
 
@@ -299,9 +299,9 @@
 - `C` — 위/아래 구조는 유지하고 카드가 많아지면 가로 스크롤/페이지로 넘긴다.
 - `CUSTOM` — 직접 정한다. 영구적인 왼쪽 파티 초상화줄로 바꾸는 것은 기존 방향과 맞지 않는다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `C`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `기본 화면은 있는 카드로 채우고, 존재하는 최소 카드 크기에 화면 크기가 부족해지면 스크롤로 넘기는걸로 하자.`
 
 <!-- AI STATUS: PENDING -->
 
@@ -314,7 +314,7 @@
 - `C` — 플레이 화면의 상단 헤더 안에 작게 넣는다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -329,9 +329,9 @@
 - `C` — 2줄 구조. 위: 캐릭터/행동자원/상태, 아래: 넓은 행동버튼줄
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `CUSTOM`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `발더스 게이트식으로 해야지. 위에 행동자원들을 나열한 작은 줄을 보여주고, 왼쪽에 캐릭터 상태 중하단과 오른쪽에 행동버튼들을 나열하는 방식으로 가자.`
 
 <!-- AI STATUS: PENDING -->
 
@@ -344,7 +344,7 @@
 - `C` — 움직이거나 크기를 조절할 수 있는 작은 도구창으로 띄운다.
 - `CUSTOM` — 도구마다 다르게 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -359,9 +359,9 @@
 - `C` — 능력치/행동/주문/장비 같은 큰 탭으로 나누고 캐릭터 요약은 계속 보이게 한다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `CUSTOM`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `기본 공식 시트 레이아웃 버전과 SVTT버전을 선택할수있고 그걸 맨 처음 튜토리얼에서 정하게 하자. SVTT버전은 자유롭게 UX를 고려해서 잘 만들어줘`
 
 <!-- AI STATUS: PENDING -->
 
@@ -374,9 +374,9 @@
 - `C` — 입력폼과 실시간 미리보기를 나란히 두고, 위쪽에 현재 단계를 보여준다.
 - `CUSTOM` — 생성과 레벨업을 서로 다르게 정해도 된다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `CUSTOM`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `생성과 레벨업은 이미 만든걸 그대로 사용하자. 그건 문제없고 완벽해`
 
 <!-- AI STATUS: PENDING -->
 
@@ -389,7 +389,7 @@
 - `C` — 일반 화면은 페이지 전체 스크롤, 플레이 화면은 거의 고정하고 내부 목록만 스크롤한다.
 - `CUSTOM` — 화면별로 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -408,7 +408,7 @@
 - `C` — 왼쪽 클릭은 대상 선택/일반 선택용으로 두고, DM 조종 변경은 우클릭 메뉴나 별도 버튼으로만 하여 충돌을 없앤다.
 - `CUSTOM` — 직접 정한다. 선택된 행동의 대상 클릭이 우선이라는 기존 원칙은 유지한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -423,9 +423,9 @@
 - `C` — 공통 `상세/조종` 메뉴 + DM에게만 추가 `DM 도구` 구역을 보여준다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `CUSTOM`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `잘 이해가 안돼 상대 액터를 우클릭 헀을 경우를 물어본거라면, 액션이 아닌 유저 인터페이스적인 행동들만 나오게 해줘. 해당 크리처의 정보를 보여주는 자세히 라던지 그런것말이야`
 
 <!-- AI STATUS: PENDING -->
 
@@ -438,9 +438,9 @@
 - `C` — A와 B 둘 다 지원
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `CUSTOM`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `지원 안함`
 
 <!-- AI STATUS: PENDING -->
 
@@ -453,7 +453,7 @@
 - `C` — 현재 가장 위에 열린 창/상태를 먼저 닫고, 앱 전체 뒤로가기는 별도 버튼으로 둔다.
 - `CUSTOM` — 순서를 직접 적는다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -468,7 +468,7 @@
 - `C` — 자주 쓰는 행동은 가능한 한 많이 직접 보여주고 정말 드문 것만 메뉴 안에 넣는다.
 - `CUSTOM` — 직접 정한다. 핵심 행동 자체를 숨기는 방식은 기존 방향과 맞지 않는다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `C`
 
 **OWNER NOTE:** ``
 
@@ -483,7 +483,7 @@
 - `C` — 좁은 화면은 툴팁/포커스 설명, 작업을 막는 중요한 문제는 화면에 직접 표시한다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -498,8 +498,8 @@
 - `C` — 두 종류로 나눈다: ① 조종권/턴 상태 ② 선택/타겟 상태. 키보드 포커스는 별도 테두리로 처리한다.
 - `CUSTOM` — 직접 정한다.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `별도의 NOTICE UI를 만들어서 거기에 상시 표시되게 하자`
 
 <!-- AI STATUS: PENDING -->
