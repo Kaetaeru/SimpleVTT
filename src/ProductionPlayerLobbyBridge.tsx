@@ -9,14 +9,14 @@ import "./production-player-lobby.css";
 function lifecycleLabel(lifecycle:string|undefined) {
   switch (lifecycle) {
     case "connecting": return "호환성 확인 중";
-    case "lobby": return "로비 참가 완료";
+    case "lobby": return "Host 플레이 상태 동기화 중";
     case "live": return "플레이 중";
     default: return "오프라인";
   }
 }
 
 export function ProductionPlayerLobbyBridge() {
-  const { snapshot, joinSession, setSessionReady }=useSimpleVtt();
+  const { snapshot, joinSession }=useSimpleVtt();
   const [target,setTarget]=useState<HTMLElement|null>(null);
   const [address,setAddress]=useState("192.168.0.10:3210");
 
@@ -32,13 +32,10 @@ export function ProductionPlayerLobbyBridge() {
   if (!snapshot||snapshot.role!=="player"||snapshot.session.role==="host"||!target) return null;
   const selected=candidates.find((character)=>character.id===snapshot.activeCharacter.id);
   const lifecycle=snapshot.session.lifecycle;
-  const joining=lifecycle==="connecting";
-  const joined=lifecycle==="lobby"||lifecycle==="live";
+  const joining=lifecycle==="connecting"||lifecycle==="lobby";
+  const joined=lifecycle==="live";
   const reconnecting=snapshot.session.role==="client"&&snapshot.connectionState==="reconnecting";
   const disconnected=snapshot.session.role==="client"&&snapshot.connectionState==="disconnected";
-  const localParticipant=snapshot.session.participants.find((participant)=>participant.id===`client:${snapshot.activeCharacter.id}`);
-  const ready=Boolean(localParticipant?.ready);
-  const canReady=lifecycle==="lobby"&&snapshot.connectionState==="connected"&&snapshot.session.compatibility!=="incompatible";
 
   async function selectCharacter(characterId:string) {
     if (!characterId) return;
@@ -46,7 +43,7 @@ export function ProductionPlayerLobbyBridge() {
   }
 
   return createPortal(
-    <article className="panel-card production-player-lobby" aria-label="Production player lobby">
+    <article className="panel-card production-player-lobby" aria-label="Production player connection">
       <div className="production-player-lobby__head">
         <div>
           <span className="eyebrow accent">Player Entry</span>
@@ -69,18 +66,12 @@ export function ProductionPlayerLobbyBridge() {
         <input value={address} onChange={(event)=>setAddress(event.target.value)} placeholder="192.168.0.10:3210" disabled={joining||joined}/>
       </label>
       <button className="primary" disabled={!selected || joining || joined || !address.trim()} onClick={()=>void joinSession(address)}>
-        {joining ? "Host 호환성 확인 중…" : joined ? "로비 참가 완료" : "선택 Character로 참가"}
+        {lifecycle==="connecting" ? "Host 호환성 확인 중…" : lifecycle==="lobby" ? "현재 플레이 상태 동기화 중…" : joined ? "플레이 연결됨" : "선택 Character로 참가"}
       </button>
-      {lifecycle==="lobby" && (
-        <button className={ready ? "secondary" : "primary"} disabled={!canReady} onClick={()=>void setSessionReady(!ready)}>
-          {ready ? "Ready 취소" : "Ready"}
-        </button>
-      )}
       <div className={`compatibility ${snapshot.session.compatibility}`}>
         <strong>{snapshot.session.compatibility}</strong>
         <span>{snapshot.session.compatibilityMessage}</span>
       </div>
-      {localParticipant && lifecycle==="lobby" && <small>Host 확인 상태 · {ready ? "Ready" : "대기 중"}</small>}
       {selected && <small>선택됨 · {selected.name} · {selected.id}</small>}
     </article>,
     target,
