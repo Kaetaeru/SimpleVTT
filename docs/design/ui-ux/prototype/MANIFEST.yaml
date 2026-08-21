@@ -1,7 +1,7 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: spec_ready
-html_prototype_status: not_started
+status: prototype_building
+html_prototype_status: in_progress
 prototype_owner_acceptance: not_started
 runtime_ui_implementation_allowed: false
 
@@ -111,7 +111,8 @@ phase_gate:
       - acceptance_checklist
       - prepared_prototype_work_order
   P1_html_build:
-    status: blocked_until_explicit_owner_authorization
+    status: in_progress
+    authorization: explicit_owner_go_ahead
     allowed_write_scope:
       - docs/design/ui-ux/prototype/app/
       - docs/design/ui-ux/prototype/
