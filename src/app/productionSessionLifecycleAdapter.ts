@@ -94,26 +94,6 @@ function stopBlockedReason(adapter:MockAdapter) {
   return undefined;
 }
 
-function startBlockedReason(adapter:MockAdapter) {
-  const app=connectedInternal(adapter);
-  const state=connectedStateFor(adapter);
-  const ledger=state.ledger;
-  if (state.mode!=="host"||!ledger||app.session.role!=="host") return "Only an active Host can start prepared play.";
-  if (state.sessionStarted) return "The connected session is already live.";
-  const players=app.session.participants.filter((participant)=>participant.id!=="host");
-  if (players.length===0) return "At least one compatible player must join before play can start.";
-  for (const participant of players) {
-    if (participant.state!=="connected") return `${participant.name} is not connected.`;
-    if (!participant.ready) return `${participant.name} is not Ready.`;
-    const peer=[...state.peerParticipants.entries()].find(([,participantId])=>participantId===participant.id)?.[0];
-    const manifest=peer ? state.peerManifests.get(peer) : undefined;
-    if (!peer||!manifest||ledger.handshake(manifest).status==="incompatible") {
-      return `${participant.name} does not have a compatible accepted handshake.`;
-    }
-  }
-  return undefined;
-}
-
 async function markHostPeerDisconnected(adapter:MockAdapter,event:SessionTransportPeerLifecycle) {
   const state=connectedStateFor(adapter);
   const ledger=state.ledger;
@@ -133,7 +113,7 @@ async function markHostPeerDisconnected(adapter:MockAdapter,event:SessionTranspo
       characterName:participant.characterName,
       state:"disconnected",
       ready:false,
-      stateChanges:[`${participant.name} disconnected · Ready reset`],
+      stateChanges:[`${participant.name} disconnected`],
       provenance:[`host-authoritative exact transport disconnect: ${event.peer}`],
     },
   });
@@ -175,7 +155,7 @@ MockAdapter.prototype.setSessionReady=async function setProductionSessionReady(r
   const state=connectedStateFor(this);
   if (state.mode!=="client"||!state.sessionId||app.session.role!=="client"||lifecycleFor(this)!=="lobby") {
     app.session.compatibility="warning";
-    app.session.compatibilityMessage="Ready can only change from a compatible player lobby.";
+    app.session.compatibilityMessage="Ready is only supported by legacy pre-live lobbies; current Host sessions open directly into play.";
     return app.getSnapshot();
   }
   if (app.connectionState!=="connected"||app.session.compatibility==="incompatible") {
@@ -184,13 +164,14 @@ MockAdapter.prototype.setSessionReady=async function setProductionSessionReady(r
     return app.getSnapshot();
   }
   await broadcastConnectedWire({type:"ready-intent",sessionId:state.sessionId,ready});
-  app.session.compatibilityMessage=ready ? "Ready sent to Host · waiting for authoritative confirmation." : "Ready cancellation sent to Host.";
+  app.session.compatibilityMessage=ready ? "Ready sent to legacy Host lobby." : "Ready cancellation sent to legacy Host lobby.";
   return app.getSnapshot();
 };
 
 MockAdapter.prototype.setPreparedSessionName=async function setProductionPreparedSessionName(name:string) {
   const app=connectedInternal(this);
-  if (app.session.role!=="host"||lifecycleFor(this)!=="preparing") return app.getSnapshot();
+  const lifecycle=lifecycleFor(this);
+  if (app.session.role!=="host"||(lifecycle!=="preparing"&&lifecycle!=="live")) return app.getSnapshot();
   const normalized=name.trim();
   if (!normalized||normalized.length>80) return app.getSnapshot();
   app.session.name=normalized;
@@ -200,21 +181,23 @@ MockAdapter.prototype.setPreparedSessionName=async function setProductionPrepare
 MockAdapter.prototype.startPreparedSession=async function startProductionPreparedSession(mode:SessionMode) {
   const app=connectedInternal(this);
   const state=connectedStateFor(this);
-  const blocked=startBlockedReason(this);
-  if (blocked) {
+  if (state.mode!=="host"||!state.ledger||app.session.role!=="host") {
     app.session.compatibility="warning";
-    app.session.compatibilityMessage=blocked;
+    app.session.compatibilityMessage="Only an active Host can change connected play mode.";
+    return app.getSnapshot();
+  }
+  if (state.sessionStarted) {
+    if (mode==="initiative"&&app.sessionMode!=="initiative") return this.startInitiative();
+    if (mode==="freeform"&&app.sessionMode==="initiative") return this.endInitiative();
     return app.getSnapshot();
   }
   state.sessionStarted=true;
   setLifecycle(this,"live");
   app.session.compatibility="compatible";
-  app.session.compatibilityMessage=`Host starting ${mode} play.`;
-  if (mode==="initiative") {
-    return this.startInitiative();
-  }
+  if (mode==="initiative") return this.startInitiative();
   await this.setSessionMode("freeform");
-  return publishConnectedTurnProjection(this,"session-start-freeform");
+  app.session.compatibilityMessage="Host live Freeform play is active.";
+  return publishConnectedTurnProjection(this,"legacy-session-start-freeform");
 };
 
 MockAdapter.prototype.stopSession=async function stopProductionSession() {
@@ -229,7 +212,7 @@ MockAdapter.prototype.stopSession=async function stopProductionSession() {
 
   const wasHost=state.mode==="host";
   const endedSessionId=wasHost ? state.sessionId : null;
-  const endReason=state.sessionStarted ? "Host ended live play." : "Host closed the preparation lobby.";
+  const endReason=state.sessionStarted ? "Host ended live play." : "Host ended the connected session.";
   if (endedSessionId) {
     await broadcastConnectedWire({type:"session-ended",sessionId:endedSessionId,reason:endReason}).catch(()=>undefined);
   }
@@ -246,7 +229,7 @@ MockAdapter.prototype.stopSession=async function stopProductionSession() {
   resetConnectedSessionTransientState(
     this,
     wasHost
-      ? "Session ended. Start Host to open a fresh preparation lobby."
+      ? "Session ended. Start Host to open a fresh live session."
       : "Session left. Join or start Host to begin a new connected session.",
   );
   setLifecycle(this,"offline");
@@ -269,14 +252,17 @@ MockAdapter.prototype.hostSession=async function hostProductionSessionWithLifecy
       return app.getSnapshot();
     }
     ensureHostPeerObserver(this);
-    setLifecycle(this,"preparing");
     if (!app.session.name.trim()||app.session.name===REFERENCE_SESSION_NAME) {
       app.session.name=DEFAULT_PRODUCTION_SESSION_NAME;
     }
     refreshHostSessionMetadata(this);
+    const liveState=connectedStateFor(this);
+    liveState.sessionStarted=true;
+    setLifecycle(this,"live");
+    await this.setSessionMode("freeform");
     app.session.compatibility="compatible";
-    app.session.compatibilityMessage=`Host listening at ${started.session.address} · preparation lobby open.`;
-    return app.getSnapshot();
+    app.session.compatibilityMessage=`Host live Freeform play opened at ${started.session.address}. Players may join now or later.`;
+    return publishConnectedTurnProjection(this,"session-open-freeform");
   } catch(error) {
     await tauriSessionTransport.stop().catch(()=>undefined);
     resetConnectedState(this,null);
