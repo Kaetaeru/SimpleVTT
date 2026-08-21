@@ -1,6 +1,6 @@
 schema_version: 2
-phase: runtime_ui_verification
-status: first_runtime_slice_implemented_verification_in_progress
+phase: runtime_ui_slice_complete
+status: first_runtime_slice_verified_complete
 runtime_ui_implementation_allowed: false
 
 accepted_reference:
@@ -175,7 +175,7 @@ implementation_readiness:
   explicit_runtime_implementation_authorization: true
   runtime_slice_implementation_complete: true
   bounded_local_verification: passed
-  full_ui_ci_and_production_build_verification: in_progress
+  full_ui_ci_and_production_build_verification: passed
 
 selected_runtime_slice:
   id: WO-UI-001
@@ -184,21 +184,26 @@ selected_runtime_slice:
   scoped_freeze: docs/design/ui-ux/work-orders/WO-UI-001-SCOPED-FREEZE.md
   implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
   preparation_status: complete
-  implementation_status: implemented_verification_in_progress
-  verified_complete: false
+  implementation_status: verified_complete
+  verified_complete: true
+  verification:
+    ui_workflow_run_id: 32486454036
+    source_head_sha: ff3b253c840aa9c46f83ffcdd53374b1b5cd1760
+    ui_workflow_conclusion: success
+    production_typescript_build: success
   behavior_scenarios:
     - Scenario 01
     - Scenario 02
     - Scenario 03
     - Scenario 05
   qa_rows:
-    - QA-ID-04
-    - QA-ID-05
-    - QA-NAV-01
-    - QA-NAV-02
-    - QA-NAV-03
-    - QA-NAV-04
-    - QA-NAV-05
+    QA-ID-04: pass
+    QA-ID-05: pass
+    QA-NAV-01: pass
+    QA-NAV-02: pass
+    QA-NAV-03: pass
+    QA-NAV-04: pass
+    QA-NAV-05: pass
   decision_dependencies:
     - UX-01-01
     - UX-01-02
@@ -210,8 +215,7 @@ selected_runtime_slice:
     - NAV-01-08
     - UI-01-01
     - UI-01-07
-  completion_blockers:
-    - full_ui_ci_and_production_build_verification
+  completion_blockers: []
   not_blocked_by_current_domain_architecture_gaps: true
 
 identified_runtime_drift:
@@ -221,7 +225,7 @@ identified_runtime_drift:
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-001-HOME-GUIDE
     status: resolved
-    evidence: src/V1HomeScreen.tsx no longer owns the historical Home-embedded onboarding lifecycle
+    evidence: src/V1HomeScreen.tsx no longer owns the historical Home-embedded guide lifecycle
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-001-SIDEBAR
     status: resolved_user_visible_layout
@@ -246,14 +250,15 @@ legacy_test_reconciliation:
   ci_gate:
     workflow: .github/workflows/ui.yml
     tests_included: true
+    final_run_id: 32486454036
+    conclusion: success
 
 recommended_first_runtime_slice:
-  status: WO-UI-001_implemented_verification_in_progress
+  status: WO-UI-001_verified_complete
   name: product_shell_first_run_tutorial_sheet_preference
   work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
   implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
-  still_requires:
-    - full_ui_ci_and_production_build_verification
+  still_requires: []
 
 next_deferred_runtime_slice:
   id: WO-UI-002
@@ -265,4 +270,4 @@ next_deferred_runtime_slice:
     - QA-NAV-06
   authorization: not_granted
 
-next_route: E_VERIFY_WO_UI_001
+next_route: E_PREPARE_WO_UI_002_ONLY_IF_OWNER_AUTHORIZES
