@@ -11,27 +11,30 @@ Repository-wide 통합 기획
 -> WO-UI-002 CLOSED / ACCEPTED
 -> WO-UI-003 first implementation automated PASS
 -> Owner visual QA FAIL
--> accepted integrated-reference exact-scene rework IN PROGRESS
+-> accepted integrated-reference exact-scene rework IMPLEMENTED
+-> accepted-reference automation PASS
+-> Owner visual re-QA PENDING
 ```
 
 ---
 
-# 권위 순서
-
-UI 작업은 항상 다음 순서로 읽습니다.
+# UI 구현 권위 순서
 
 1. canonical Domain/Architecture truth;
 2. current Product/UX Decisions;
 3. `INTEGRATED-PRODUCT-UX-PLAN.md`;
-4. **Owner가 실제로 승인한 `prototype/app/integrated-reference.html`과 그 렌더 구현 (`integrated-reference.js/css`)**;
+4. **Owner가 승인한 실제 reference render**:
+   - `prototype/app/integrated-reference.html`
+   - `prototype/app/integrated-reference.js`
+   - `prototype/app/integrated-reference.css`;
 5. `contracts/` implementation contracts;
-6. 현재 Work Order / authorization / Implementation Record / Human QA.
+6. current Work Order / authorization / implementation / Human QA record.
 
-중요:
+핵심 규칙:
 
-**Accepted prototype가 실제 장면을 이미 정의한 경우, prose contract의 큰 구조만 만족하는 시각적으로 다른 화면을 대체안으로 만들지 않는다.**
+> Accepted prototype가 실제 장면을 이미 정의한 경우, prose contract의 큰 구조만 만족하는 시각적으로 다른 화면을 대체안으로 만들지 않는다.
 
-Prototype fixture 데이터는 production authority가 아니지만, accepted scene의 composition / density / spatial relationship은 visual reference다.
+Prototype fixture 값은 production authority가 아니지만, accepted scene의 **composition / proportions / density / visual relationship**은 production UI의 reference다.
 
 ---
 
@@ -40,194 +43,155 @@ Prototype fixture 데이터는 production authority가 아니지만, accepted sc
 | 항목 | 상태 |
 | --- | --- |
 | Core spatial model | **MAPLESS** |
-| Accepted prototype | **`integrated-reference.html` — OWNER ACCEPTED** |
+| Accepted prototype | **OWNER ACCEPTED** |
 | Accepted candidate ref | `4c12084bef603866b9b69f1bfd8f363146920184` |
 | WO-UI-001 | **CLOSED / ACCEPTED** |
 | WO-UI-002 | **CLOSED / ACCEPTED** |
-| WO-UI-003 first automated gate | **PASS, later judged insufficient** |
-| WO-UI-003 Owner visual QA | **FAIL** |
-| WO-UI-003 accepted-reference rework | **IMPLEMENTED SOURCE CANDIDATE / AUTOMATION PENDING** |
-| WO-UI-003 new Owner re-test | **PENDING** |
+| WO-UI-003 first visual implementation | **SUPERSEDED** |
+| WO-UI-003 first Owner visual QA | **FAIL** |
+| WO-UI-003 reference rework source | `acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f` |
+| Accepted-reference structural/UI gate | **PASS** |
+| Full UI / Rules / TypeScript / production frontend | **PASS** |
+| Connected Session authority/frontend gate | **PASS** |
+| UI workflow global result | **RED — separate Phase 09 aggregate step** |
+| WO-UI-003 new Owner visual QA | **PENDING** |
 | PR #109 | **DRAFT / UNMERGED** |
 
-Accepted visual source set:
+---
 
-```text
-docs/design/ui-ux/prototype/app/integrated-reference.html
-docs/design/ui-ux/prototype/app/integrated-reference.js
-docs/design/ui-ux/prototype/app/integrated-reference.css
-docs/design/ui-ux/prototype/app/integrated-reference-fixtures.js
-```
+# Accepted Connected Play scene
 
-Primary Connected Play reference scenarios:
+Primary reference scenarios:
 
 ```text
 PROTO-SCN-08 — DM Freeform mapless
 PROTO-SCN-09 — Player Freeform mapless
 ```
 
----
-
-# WO-UI-001 — CLOSED / ACCEPTED
-
-Scope:
-
-**Product Shell + First-run Tutorial + Sheet Presentation Preference**
-
-Evidence:
-
-- `work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md`
-- `work-orders/WO-UI-001-HUMAN-QA.md`
-
----
-
-# WO-UI-002 — CLOSED / ACCEPTED
-
-Scope:
-
-**Connected Product Shell Continuity / Return to Play**
-
-Accepted behavior:
-
-```text
-Live Connected Play
--> Product destination
--> Return to Play
--> same live Session / role / mode / context
-```
-
-This slice accepted continuity only. It did not accept the broad Connected Play visual layout.
-
-Evidence:
-
-- `work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md`
-- `work-orders/WO-UI-002-SCOPED-AUTHORIZATION.md`
-- `work-orders/WO-UI-002-IMPLEMENTATION-RECORD.md`
-- `work-orders/WO-UI-002-HUMAN-QA.md`
-
----
-
-# WO-UI-003 — HUMAN QA FAIL / REWORK ACTIVE
-
-Scope:
-
-**Connected Play Actor Boards / Mapless Stage / Persistent Command Center**
-
-Owner authorization:
-
-> 그래 가자
-
-Owner visual rejection of first implementation:
-
-> 세션이 우리가 미리 상의했던 씬대로여야하잖아. ... 여기 만들어둔 html를 기준으로 다시 작성한걸 기준으로 기록해둔 기획서를 기준으로 UI작업을 해야지. 완전 다르잖아
-
-The rejection is recorded in:
-
-`work-orders/WO-UI-003-HUMAN-QA.md`
-
-## Why the first implementation failed
-
-The first runtime reproduced only the **names/order of the broad regions**, not the accepted scene itself.
-
-Examples:
-
-```text
-first runtime                          accepted integrated reference
-───────────────────────────────────    ──────────────────────────────────
-52px identity header                   41px compact Play chrome
-vertical utility rail                  chrome controls + right utility pane
-Actor Board label gutter               full horizontal Actor band
-large Initiative control area          ~40px compact Stage-top tracker
-different Command Center anatomy       37px rail + 240/flex/104 body
-large Hotbar cards                     ~70px compact capability slots
-```
-
-Therefore the old automated result:
-
-```text
-source fb007d809ab586ca8d2e135e5813e929772a7f2c
-UI run 32496754716: SUCCESS
-```
-
-is historical regression evidence only and **not visual acceptance**.
-
-## Current exact-reference rework
-
-Production Connected Play is being pinned to the actual accepted render:
+Wide/normal desktop:
 
 ```text
 41px Play chrome
-────────────────────────────────────
+────────────────────────────────────────
 86px Upper Actor Board
-────────────────────────────────────
+────────────────────────────────────────
 flexible Mapless Play Context
-  centered focus / dice / result
+  centered context / dice / result
   ~40px Initiative tracker when active
   contextual right utility pane
-────────────────────────────────────
+────────────────────────────────────────
 86px Lower Actor Board
-────────────────────────────────────
+────────────────────────────────────────
 174px Persistent Command Center
   37px economy/resource rail
-  240px controlled Actor | Hotbar | 104px context
+  240px controlled Actor | flexible Hotbar | 104px context
 ```
 
-Narrow desktop follows the accepted prototype family:
+Hotbar:
 
 ```text
-80px boards
+Mixed | Action | Spell | Item | Custom
+~70px slots
+```
+
+Constrained desktop follows the prototype family:
+
+```text
+80px Actor Boards
 164px Command Center
-308px contextual overlay pane (max 42%)
+308px contextual overlay pane, max 42%
 150px ActorCard basis
-190 / flex / 90 Command body
+190px / flexible / 90px Command body
 62px Hotbar slots
 ```
 
-Runtime source remains authoritative for Actor/action/resource/session truth. Prototype fixture values are not copied into production.
+---
 
-## Rework files
+# WO-UI-003 rework
 
-Primary:
+The Owner rejected the first implementation because it reproduced the region names but not the accepted scene.
 
-- `src/ProductRoot.tsx`
-- `src/SessionModeRoot.tsx`
-- `src/SessionInitiativeStrip.tsx`
-- `src/SessionActionDock.tsx`
-- `src/session-integrated-reference-play.css`
+The rejected implementation used, among other differences:
 
-Strengthened gates:
+- a 52px separate identity header;
+- a vertical utility rail;
+- Actor Board label gutters;
+- an oversized Stage dashboard;
+- a large Initiative control area;
+- a different Command Center anatomy;
+- oversized Hotbar slots.
 
-- `tests/ui/connectedPlayAcceptedTopology.test.ts`
-- `tests/ui/connectedProductShellContinuity.test.ts`
-- `tests/ui/sessionInitiativeExpansionStructure.test.ts`
-- `tests/ui/sessionActionDockStructure.test.ts`
-- `tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts`
+The rework now pins the actual accepted reference:
 
-The topology test now reads the accepted prototype JS/CSS directly and pins concrete composition/proportions rather than accepting a structural approximation.
+- compact 41px Play chrome;
+- full-width Actor bands;
+- restrained radial mapless Stage;
+- compact Initiative order strip;
+- right contextual utility pane;
+- accepted Command Center anatomy;
+- five-page compact Hotbar.
+
+DM chrome follows the accepted order. Features whose authority contracts remain unresolved are not faked:
+
+- `Public / DM Only` visually preserves the accepted chrome, but DM-only delivery remains unavailable until `GAP-DM-ONLY-DELIVERY-PROTOCOL` resolves;
+- `Spatial Facts` is shown as explicitly unavailable when no authoritative projection exists;
+- DM Handout remains available through the Session contextual pane instead of adding a permanent non-reference chrome button.
+
+---
+
+# Automated evidence
+
+Rework source:
+
+```text
+acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
+```
+
+Accepted-reference UI workflow:
+
+```text
+run: 32500827497
+accepted-reference / Session structure gate: PASS
+same gate on rerun: PASS
+```
+
+Main Playable workflow on the same source:
+
+```text
+run: 32500827476
+full UI / rules / TypeScript / production frontend: PASS
+connected authority and Phase 14 playable regressions: PASS
+```
+
+Connected Session workflow on the same source:
+
+```text
+run: 32500827494
+connected-session authority: PASS
+production frontend gate: PASS
+```
+
+The UI workflow remains globally red because its later `Verify Phase 09 real mechanics services` aggregate step fails and prevents that workflow's final build step from running.
+
+Comparison against the prior green source shows the accepted-reference rework changed only Connected Play UI/CSS, UI structural tests and UI/UX docs; no Phase 09 `src/app` mechanics service or Phase 09 test file changed. That separate regression is therefore not being speculatively patched inside WO-UI-003.
 
 ---
 
 # Product invariants
 
-- SimpleVTT Core has **no battlemap**.
-- No Core Actor x/y, grid, pathfinding, Fog of War, LoS geometry or draggable tactical token.
-- Actor Cards remain board/list objects.
-- Central Stage is presentation/context/dice/result space, not a battlefield.
-- First use starts with Tutorial.
-- Official-style and SimpleVTT Sheets share one canonical Character.
-- Standalone dice stay on the current Sheet.
-- Connected Host = DM; Client = Player.
-- Freeform has no fake per-turn economy.
+- Core remains **mapless**.
+- No Actor x/y, grid, pathfinding, Fog of War, LoS geometry or tactical token field.
+- Actor Cards/Boards are the Connected Play Actor representation.
+- Stage is context/dice/result/Handout presentation, not a battlefield.
+- Freeform has no fake turn economy.
 - Initiative extends the same Play scene.
-- Normal capabilities stay directly discoverable through the Hotbar.
-- Product navigation does not end/recreate a Session.
+- Host = DM; Client = Player.
+- Product navigation does not end or recreate the Session.
 - Main Hand has no smart fallback.
-- DM-only privacy cannot be CSS hiding.
+- DM-only privacy cannot be implemented by CSS hiding.
 - Handout is presentation, not battlemap.
 
----
-
-# Open technical contracts
+Open technical contracts remain:
 
 ```text
 GAP-MAIN-HAND-CANONICAL-RELATION
@@ -236,15 +200,12 @@ GAP-HANDOUT-NETWORK-CONTRACT
 GAP-DM-ONLY-DELIVERY-PROTOCOL
 ```
 
-WO-UI-003 does not claim these resolved.
-
 ---
 
 # Current next gate
 
 ```text
-accepted-reference rework exact-head automation
--> Owner Tauri visual re-test against integrated-reference
+Owner Tauri visual re-QA against integrated-reference
 ```
 
-Do not close WO-UI-003 or begin a later visual slice until the Owner accepts the reworked production scene.
+WO-UI-003 remains **OPEN** until the Owner confirms that the production Connected Play scene now matches the accepted reference direction.
