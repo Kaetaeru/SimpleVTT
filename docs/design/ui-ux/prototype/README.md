@@ -1,192 +1,171 @@
 # SimpleVTT UI Reference Prototype
 
-Status: **INTEGRATED REFERENCE STATIC REVIEW CANDIDATE — browser / Owner review pending**
+Status: **INTEGRATED REFERENCE OWNER ACCEPTED — runtime preparation handoff complete**
 
-The prior prototype candidates are historical only:
+Historical candidates remain ineligible:
 
 ```text
 app/index.html      -> REJECTED / HISTORICAL
-app/final-spec.html -> INVALIDATED BY REPOSITORY-WIDE AUDIT
+app/final-spec.html -> INVALIDATED / HISTORICAL
 ```
 
-Current active review candidate:
+Accepted reference:
 
 ```text
 app/integrated-reference.html
+Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
+Accepted by Owner: 2026-08-21
+```
+
+Acceptance record:
+
+```text
+PROTOTYPE-ACCEPTANCE.md
 ```
 
 Static verification:
 
 ```text
 INTEGRATED-REFERENCE-VERIFICATION.md
-Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
 ```
 
-Browser visual/interaction review and explicit Owner acceptance remain pending. Runtime `src/` implementation is not authorized.
+The accepted prototype is now the visual/interaction reference for runtime-preparation contracts. It does not authorize production `src/` implementation and does not Freeze Product Decisions by itself.
 
 ---
 
-# Mandatory baseline before any prototype work
+# Mandatory baseline
 
-Read first:
+Broad UI work reads:
 
 ```text
 ../INTEGRATED-PRODUCT-UX-PLAN.md
 ```
 
-Then read exact applicable Domain/Architecture contracts and Product Decisions before the prototype catalogs.
+before interpreting prototype detail.
 
-The integrated plan is the cross-source interpretation baseline. It does not replace Domain/Architecture truth or `decisions.md`.
-
----
-
-# Current prototype state
-
-```text
-Integrated product/UI audit: DONE
-Prototype specification reconciliation: DONE
-Active review entry: app/integrated-reference.html
-Static mapless verification: PASS
-Browser/visual interaction QA: PENDING
-Prototype Acceptance: PENDING
-Runtime preparation: BLOCKED
-Runtime src implementation: NOT AUTHORIZED
-```
-
-Do not open either historical candidate for product acceptance.
+Domain/Architecture contracts and `../decisions.md` remain higher authority for their respective domains.
 
 ---
 
-# Why the old `final-spec.html` is invalid
-
-Material violations:
-
-1. Actor fixtures introduced `sceneX/sceneY` as if Core owned spatial positions.
-2. The central Play area visually became a battlemap-like field.
-3. `Scene/Table` wording was read without the higher-authority mapless Core contract.
-4. The prototype process reacted to local feedback instead of first rebuilding from the whole repository plan.
-
-The active candidate was rebuilt instead of patching this structure toward acceptance.
-
----
-
-# Current candidate invariants
+# Accepted prototype invariants
 
 ## First launch
 
-The first meaningful first-run panel is the dedicated Tutorial/Onboarding window.
+First meaningful fresh-run panel:
 
-It includes:
+```text
+Tutorial / Onboarding
+-> Standalone vs Connected orientation
+-> Official-style vs SimpleVTT Sheet choice
+-> Character / Host / Join orientation
+-> Home
+```
 
-- Standalone vs Connected orientation;
-- initial Official-style vs SimpleVTT Character Sheet choice;
-- Character / Host / Join orientation;
-- later reopen path from Settings/Help.
+Tutorial can be reopened later.
 
 ## Mapless Core
 
-Connected Play contains no Core battlemap.
+Connected Play has no Core:
 
-Forbidden:
-
-- Actor x/y coordinates;
+- Actor x/y tactical coordinates;
 - draggable map tokens;
 - square/hex grid;
-- movement paths/traces;
-- range rings/templates derived from a map;
+- tactical movement/path UI;
 - Fog of War;
-- LoS rays/geometry;
-- collision/pathfinding UI;
-- Handout used as a tactical map.
-
-`Scene`, `Tabletop Stage` and `Roll Area` are presentation/context terms only.
+- LoS geometry;
+- map range/AoE templates;
+- Handout-as-map interaction.
 
 ## Connected Play skeleton
 
 ```text
 Compact Play chrome/status
 Upper NPC / Neutral / Hostile Actor Board
-Play Context / Tabletop Stage              [contextual utility pane]
+Shared Play Context / Tabletop Stage      [contextual utility]
 Lower Player / Allied Actor Board
 Persistent Command Center
 ```
 
-Initiative adds compact tracker/economy to the same structure.
+Freeform uses no fake turn economy.
 
-Freeform does not fake turn economy.
+Initiative adds tracker/turn economy to the same skeleton.
 
 ## Standalone dice
 
-Any ordinary roll keeps the current Character Sheet visible and spatially stable.
+Routine Character rolls stay on the current Sheet with transient dice/result presentation over/within the same viewport.
 
-Dice use transient presentation over/within the current Sheet viewport; no detached dice/result route/window/panel and no required Close/Back merely to resume the Sheet.
+No detached dice/result route/window/panel and no mandatory Close/Back.
 
 ## Targeting
 
-Target through Actor Cards/manual target sets supplied by authoritative/mock eligibility.
+Actor Cards/manual target sets only.
 
-No map-position targeting or Core AoE template.
+Single valid target submits directly; multi-target uses Execute; no Core AoE map template.
 
-## DM control / role continuity
+## Role/control continuity
 
-- selected-action targeting keeps priority;
-- explicit DM control mode outranks ordinary hostile-click behavior when no action is targeting;
-- Command Center controlled-Actor identity follows the DM-controlled Actor;
-- safe Product-shell navigation restores the prior Host/DM or Client/Player connected identity on Return to Play.
+- Host remains DM; Client remains Player;
+- selected-action targeting has priority;
+- explicit DM control mode outranks default hostile-click behavior when no action is targeting;
+- controlled-Actor summary follows actual controlled Actor;
+- Return to Play restores the existing connected role/context.
 
-## Handout / spatial
+## Handout / spatial facts
 
-Handout is shared presentation, not map state.
+Handout is presentation, not tactical map state.
 
-Advanced spatial UI is a contextual Actor-pair fact editor; it is not a map editor and is not promoted as a routine primary Play control.
+Advanced spatial UI is a contextual Actor-pair fact editor, not a coordinate editor.
 
 ---
 
-# Prototype scope boundary
+# Runtime-preparation handoff
 
-Prototype work remains confined to:
+Accepted prototype requirements have been materialized into:
 
 ```text
-docs/design/ui-ux/prototype/app/
-docs/design/ui-ux/prototype/
+../contracts/README.md
+../contracts/SURFACE-CONTRACT.md
+../contracts/COMPONENT-CONTRACT.md
+../contracts/INTERACTION-STATE-MOTION-CONTRACT.md
+../contracts/IMPLEMENTATION-TRACEABILITY.md
 ```
 
-plus bounded routing/derived-doc maintenance under `docs/design/ui-ux/`.
+Implementation agents should use those contracts rather than reverse-engineering prototype HTML/CSS/fixtures.
 
-It MUST NOT:
-
-- modify production `src/` UI;
-- call real backend/network/storage;
-- implement rules/authority/privacy semantics;
-- copy fixture data models into production contracts;
-- treat `.agents`, old demos or current tests as higher authority than formal Product/Domain sources.
+Prototype fixture objects are review data, not production schemas.
 
 ---
 
-# Verification and review sequence
+# Remaining technical gaps
+
+Runtime work still cannot guess:
+
+```text
+GAP-MAIN-HAND-CANONICAL-RELATION
+GAP-RESOLUTION-SAFE-INTERACTIONS
+GAP-HANDOUT-NETWORK-CONTRACT
+GAP-DM-ONLY-DELIVERY-PROTOCOL
+```
+
+The accepted UI may demonstrate these with fixtures, but production implementation requires the owning Domain/Architecture contract.
+
+---
+
+# Current phase
 
 ```text
 Integrated Product / UI / UX Plan          DONE
-Prototype catalog/default/layer reconcile  DONE
+Prototype specification reconciliation    DONE
 Integrated Reference build                 DONE
-Static mapless verification                PASS
--> Browser / visual interaction review     PENDING
--> Owner natural-language iteration
--> Explicit Prototype Acceptance
--> contract extraction / technical-gap resolution / legacy reconciliation
--> scoped Freeze/readiness
--> separate runtime Work Order + authorization
--> src implementation
+Static verification                        PASS
+Owner visual/interaction review             PASS
+Prototype Owner Acceptance                  PASS
+Surface Contract                            DONE
+Component Contract                          DONE
+Interaction/State/Layer/Motion Contract     DONE
+Implementation Traceability                 DONE
+Runtime Preparation                         IN PROGRESS / NOT READY
+Runtime src Implementation                  NOT AUTHORIZED
 ```
 
-Acceptance gate:
-
-```text
-PROTOTYPE-ACCEPTANCE.md
-```
-
-Current verification:
-
-```text
-INTEGRATED-REFERENCE-VERIFICATION.md
-```
+The next step is to choose a bounded runtime implementation slice, resolve only its blocking technical gaps, reconcile touched legacy code/tests, identify exact Product Decision dependencies, obtain scoped Freeze authorization where needed, and then write a separate runtime Work Order.
