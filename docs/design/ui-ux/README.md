@@ -1,6 +1,6 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → Reference Prototype 재구축 → Owner Acceptance → 구현 계약 추출 → 첫 Runtime Slice 구현 준비**까지 진행된 상태입니다.
+현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → Reference Prototype 재구축 → Owner Acceptance → 구현 계약 추출 → 첫 Runtime Slice 구현 준비 → WO-UI-001 scoped Freeze**까지 진행된 상태입니다.
 
 이제 UI의 기준은 흩어진 과거 문서나 현재 코드가 아니라 다음 네 층을 함께 읽습니다:
 
@@ -36,7 +36,7 @@
 | First Runtime Slice | **WO-UI-001 선택 / 준비 완료** |
 | WO-UI-001 src/tests 조사 | **완료** |
 | WO-UI-001 Domain/Architecture blocker | **없음 — 복잡한 Gap 영역은 scope 밖으로 분리** |
-| WO-UI-001 scoped Freeze | **아직 안 함** |
+| WO-UI-001 scoped Freeze | **ACTIVE — 10개 dependency를 이 Work Order 범위에서 고정** |
 | Runtime `src/` 구현 | **아직 승인되지 않음** |
 
 Accepted prototype:
@@ -49,6 +49,10 @@ Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
 First Runtime Work Order:
 
 [`work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md`](work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md)
+
+Scoped Freeze record:
+
+[`work-orders/WO-UI-001-SCOPED-FREEZE.md`](work-orders/WO-UI-001-SCOPED-FREEZE.md)
 
 ---
 
@@ -115,17 +119,9 @@ map/spatial modules
 
 ---
 
-# WO-UI-001에 필요한 다음 게이트
+# WO-UI-001 scoped Freeze
 
-현재 Work Order 준비 자체는 끝났지만 구현 준비가 완전히 끝난 것은 아닙니다.
-
-남은 것은 두 가지입니다.
-
-## 1. Scoped Freeze
-
-다음 Reviewed Product/UX dependencies를 **WO-UI-001 구현 범위에 한해서** 안정적인 구현 dependency로 Frozen 처리해야 합니다.
-
-추천 scoped Freeze set:
+Owner 승인에 따라 다음 10개 Reviewed Product/UX dependencies를 **WO-UI-001 구현 범위에 한해서** 안정적 implementation dependency로 고정했습니다.
 
 ```text
 UX-01-01
@@ -140,20 +136,30 @@ UI-01-01
 UI-01-07
 ```
 
-Freeze는 전체 제품을 영구 고정한다는 뜻이 아니라, 이 Runtime Slice가 작업 중 임의로 요구사항을 재해석하지 못하게 하는 구현 게이트입니다.
+이 scoped Freeze는 `docs/design/ui-ux-planning-framework.md`의 explicit scoped authorization 예외를 사용합니다. 전역 Decision lifecycle을 임의로 변경하지 않으며, **WO-UI-001 안에서만** 구현자가 이 10개 결정을 안정적인 의존성으로 재해석 없이 사용할 수 있습니다.
 
-현재는 **아직 Freeze하지 않았습니다.**
+기록:
 
-## 2. Explicit Runtime Implementation Authorization
+[`work-orders/WO-UI-001-SCOPED-FREEZE.md`](work-orders/WO-UI-001-SCOPED-FREEZE.md)
 
-Freeze/readiness가 끝난 뒤에도 실제 `src/` 수정을 시작하려면 별도의 구현 승인이 필요합니다.
+---
+
+# WO-UI-001에 남은 마지막 게이트
+
+## Explicit Runtime Implementation Authorization
+
+Work Order, source/test inspection, Domain/Architecture blocker 확인, scoped Freeze까지 모두 끝났습니다.
+
+하지만 실제 `src/`와 runtime test를 수정하려면 **별도의 명시적 구현 승인**이 여전히 필요합니다.
 
 현재:
 
 ```text
 WO-UI-001 PREPARATION: COMPLETE
-WO-UI-001 IMPLEMENTATION-READY: NO
-Runtime src changes: NONE in this preparation step
+WO-UI-001 SCOPED FREEZE: ACTIVE
+WO-UI-001 DOMAIN/ARCHITECTURE BLOCKER: NONE
+WO-UI-001 IMPLEMENTATION AUTHORIZED: NO
+Runtime src changes: NONE in preparation/freeze steps
 ```
 
 ---
@@ -386,7 +392,7 @@ GAP-DM-ONLY-DELIVERY-PROTOCOL
 ```text
 - exact runtime slice
 - accepted prototype reference
-- Frozen Decision IDs
+- Frozen Decision IDs or explicit scoped dependency authorization
 - Domain/Architecture sources
 - touched contract sections
 - touched Behavior Scenario IDs
@@ -407,18 +413,18 @@ WO-UI-001은 이 형식으로 작성되었습니다.
 # 현재 단계
 
 ```text
-Repository-wide audit                     DONE
-Integrated Product/UI plan                DONE
-Mapless Reference Prototype               DONE
-Owner Prototype Acceptance                PASS
-Detailed contract set                     DONE
-Behavior Scenarios (48)                   DONE
-QA Acceptance Matrix                      DONE
-WO-UI-001 source/test inspection           DONE
-WO-UI-001 Work Order                       DONE
-WO-UI-001 Domain/Architecture blockers      NONE
--> WO-UI-001 scoped Freeze authorization   NEXT
--> explicit runtime implementation approval
+Repository-wide audit                      DONE
+Integrated Product/UI plan                 DONE
+Mapless Reference Prototype                DONE
+Owner Prototype Acceptance                 PASS
+Detailed contract set                      DONE
+Behavior Scenarios (48)                    DONE
+QA Acceptance Matrix                       DONE
+WO-UI-001 source/test inspection            DONE
+WO-UI-001 Work Order                        DONE
+WO-UI-001 Domain/Architecture blockers       NONE
+WO-UI-001 scoped dependency freeze           ACTIVE
+-> explicit runtime implementation approval NEXT
 -> src implementation
 -> targeted + regression + visual QA
 
@@ -426,4 +432,4 @@ Deferred:
 WO-UI-002 Connected Product Shell continuity / Return to Play
 ```
 
-**지금도 실제 `src/` UI는 수정하지 않았습니다. 다음 단계는 WO-UI-001의 scoped Freeze입니다.**
+**실제 `src/` UI는 아직 수정하지 않았습니다. 다음 단계는 WO-UI-001의 explicit Runtime implementation 승인입니다.**
