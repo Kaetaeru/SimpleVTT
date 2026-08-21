@@ -1,6 +1,6 @@
-schema_version: 2
-phase: runtime_ui_slice_complete
-status: first_runtime_slice_verified_complete
+schema_version: 3
+phase: runtime_ui_preparation
+status: second_runtime_slice_prepared_not_authorized
 runtime_ui_implementation_allowed: false
 
 accepted_reference:
@@ -34,40 +34,31 @@ contracts:
   readme:
     path: docs/design/ui-ux/contracts/README.md
     status: ready
-    purpose: entrypoint_authority_and_read_order
   implementation_playbook:
     path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md
     status: ready
-    purpose: human_ai_product_interpretation_and_anti_misread_guide
   glossary:
     path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md
     status: ready
-    purpose: canonical_ui_terminology_guard
   surfaces:
     path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
     status: ready
-    purpose: surface_and_coexistence_contract
   components:
     path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
     status: ready
-    purpose: component_responsibility_and_state_contract
   interaction_state_motion:
     path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
     status: ready
-    purpose: interaction_precedence_state_layer_focus_motion_contract
   behavior_scenarios:
     path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md
     status: ready
     scenario_count: 48
-    purpose: end_to_end_start_action_expected_forbidden_examples
   implementation_traceability:
     path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
     status: ready
-    purpose: requirement_to_decision_domain_gap_traceability
   qa_acceptance_matrix:
     path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md
     status: ready
-    purpose: pass_fail_blocked_na_runtime_qa_contract
 
 interpretation_guards:
   industry_vtt_conventions_may_fill_unspecified_behavior: false
@@ -102,6 +93,8 @@ hard_product_guards:
   connected_client_is_player: true
   offline_has_no_dm_player_role: true
   dm_only_css_hide_is_not_privacy: true
+  live_product_navigation_must_not_end_or_recreate_session: true
+  connected_return_to_play_must_reuse_existing_session_mode_root: true
 
 interaction_precedence:
   actor_click:
@@ -152,122 +145,121 @@ runtime_work_order_requirements:
   must_not_mark_blocked_qa_as_pass_by_guessing: true
   must_preserve_accepted_reference_hierarchy: true
 
-implementation_readiness:
-  prototype_owner_acceptance: passed
-  implementation_playbook: ready
-  terminology_guard: ready
-  surface_contract: ready
-  component_contract: ready
-  interaction_state_motion_contract: ready
-  behavior_scenarios: ready
-  traceability: ready
-  qa_acceptance_matrix: ready
-  applicable_product_dependencies_frozen: true
-  scoped_dependency_authorization_recorded: true
-  scoped_freeze_record: docs/design/ui-ux/work-orders/WO-UI-001-SCOPED-FREEZE.md
-  runtime_slice_selected: true
-  slice_source_tests_reinspected: true
-  slice_material_domain_architecture_blockers: none
-  slice_blocking_gaps_resolved: true
-  legacy_reconciliation_plan_ready: true
-  touched_legacy_reconciled: true
-  runtime_work_order_exists: true
-  explicit_runtime_implementation_authorization: true
-  runtime_slice_implementation_complete: true
-  bounded_local_verification: passed
-  full_ui_ci_and_production_build_verification: passed
-
-selected_runtime_slice:
+previous_runtime_slice:
   id: WO-UI-001
   name: product_shell_first_run_tutorial_sheet_preference
+  status: closed_accepted
   work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
   scoped_freeze: docs/design/ui-ux/work-orders/WO-UI-001-SCOPED-FREEZE.md
   implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
-  preparation_status: complete
-  implementation_status: verified_complete
-  verified_complete: true
+  human_qa_record: docs/design/ui-ux/work-orders/WO-UI-001-HUMAN-QA.md
   verification:
     ui_workflow_run_id: 32486454036
-    source_head_sha: ff3b253c840aa9c46f83ffcdd53374b1b5cd1760
     ui_workflow_conclusion: success
     production_typescript_build: success
+    owner_human_qa: pass
+
+selected_runtime_slice:
+  id: WO-UI-002
+  name: connected_product_shell_continuity_return_to_play
+  work_order: docs/design/ui-ux/work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md
+  preparation_status: complete
+  source_test_inspection: complete
+  material_domain_architecture_blocker: none_identified
+  implementation_status: not_authorized
   behavior_scenarios:
-    - Scenario 01
-    - Scenario 02
-    - Scenario 03
-    - Scenario 05
+    - Scenario 34
+  adjacent_regression_scenarios:
+    - Scenario 07
+    - Scenario 08
+    - Scenario 10
+    - Scenario 11
+    - Scenario 20
+    - Scenario 31
+    - Scenario 35
+    - Scenario 36
   qa_rows:
-    QA-ID-04: pass
-    QA-ID-05: pass
-    QA-NAV-01: pass
-    QA-NAV-02: pass
-    QA-NAV-03: pass
-    QA-NAV-04: pass
-    QA-NAV-05: pass
+    - QA-NAV-06
+    - QA-SES-09
+    - QA-NAV-05
+    - QA-SES-03
+    - QA-SES-04
+    - QA-PLAY-06
+    - QA-CONN-01
+    - QA-CONN-02
+    - QA-ID-01
+    - QA-ID-02
   decision_dependencies:
-    - UX-01-01
     - UX-01-02
+    - UX-01-03
+    - UX-02-01
+    - UX-02-06
+    - UX-02-07
     - UX-03-01
-    - UX-03-05
+    - UX-03-02
     - NAV-01-01
+    - NAV-01-02
     - NAV-01-04
-    - NAV-01-07
+    - NAV-01-06
     - NAV-01-08
     - UI-01-01
-    - UI-01-07
-  completion_blockers: []
+  scoped_dependency_authorization_recorded: false
+  explicit_runtime_implementation_authorization: false
+  runtime_implementation_started: false
   not_blocked_by_current_domain_architecture_gaps: true
+  blockers:
+    - wo_ui_002_scoped_dependency_authorization
+    - explicit_runtime_implementation_authorization
 
 identified_runtime_drift:
   - id: DRIFT-WO-UI-001-HOME-FIRST
     status: resolved
-    evidence: fresh use is covered by FirstRunTutorialBridge before normal Home interaction while returning route remains Home
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-001-HOME-GUIDE
     status: resolved
-    evidence: src/V1HomeScreen.tsx no longer owns the historical Home-embedded guide lifecycle
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-001-SIDEBAR
     status: resolved_user_visible_layout
-    evidence: src/v1-product-shell.css renders the existing global nav markup as a horizontal top Product navigation baseline; historical class naming is retained only for bounded compatibility
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-002-CONNECTED-SHELL-BYPASS
-    status: deferred
-    evidence: src/ProductRoot.tsx still renders SessionModeRoot instead of Product Shell whenever connected
-    resolution: deferred_to_WO-UI-002
+    status: active
+    evidence: src/ProductRoot.tsx returns SessionModeRoot for every non-offline session role and provides no Product-vs-Play presentation choice
+    resolution: WO-UI-002
+  - id: DRIFT-WO-UI-002-DUPLICATE-CONNECTED-PLAY-PATH
+    status: active
+    evidence: src/App.tsx Return-to-Play actions currently use setRoute("scene"), which mounts ProductionPlayScreen instead of the accepted dedicated SessionModeRoot Connected Play workspace
+    resolution: WO-UI-002
+  - id: DRIFT-WO-UI-002-PLAY-TO-PRODUCT-ENTRY
+    status: active
+    evidence: src/SessionModeRoot.tsx has no compact persistent Product Shell entry in Play chrome
+    resolution: WO-UI-002
 
 legacy_test_reconciliation:
-  reconciled_for_WO_UI_001:
-    - tests/ui/v1ProductShellStructure.test.ts
-  preserve_or_minimally_reconcile:
-    - tests/ui/productionNonCharacterUxRedesign.test.ts
+  stale_for_WO_UI_002:
+    - tests/ui/v1ProductShellStructure.test.ts: connected_session_always_returns_SessionModeRoot assertion
+  add_for_WO_UI_002:
+    - tests/ui/connectedProductShellContinuity.test.ts
+  preserve_or_minimally_extend:
+    - tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts
   preserve_regression:
-    - tests/ui/characterSheetV10Structure.test.ts
-    - tests/ui/phase11OfflineWalkthrough.test.ts
-  added_tests:
-    - tests/ui/firstRunTutorialPreferences.test.ts
-    - tests/ui/firstRunTutorialStructure.test.ts
+    - tests/ui/productionNonCharacterUxRedesign.test.ts
+    - tests/ui/productionSessionLifecycleAdapter.test.ts
+    - tests/ui/connectedSessionRuntimeAdapter.test.ts
+    - tests/ui/productionSessionWorkspaceRedesign.test.ts
   ci_gate:
     workflow: .github/workflows/ui.yml
-    tests_included: true
-    final_run_id: 32486454036
-    conclusion: success
+    new_test_not_yet_added: tests/ui/connectedProductShellContinuity.test.ts
 
-recommended_first_runtime_slice:
-  status: WO-UI-001_verified_complete
-  name: product_shell_first_run_tutorial_sheet_preference
-  work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
-  implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
-  still_requires: []
+implementation_readiness:
+  prototype_owner_acceptance: passed
+  contracts_ready: true
+  prior_slice_human_qa: passed
+  current_runtime_slice_selected: true
+  current_slice_source_tests_reinspected: true
+  current_slice_work_order_exists: true
+  current_slice_material_domain_architecture_blockers: none
+  current_slice_scoped_dependency_authorization: false
+  current_slice_runtime_authorization: false
+  current_slice_implementation_allowed: false
 
-next_deferred_runtime_slice:
-  id: WO-UI-002
-  name: connected_product_shell_continuity_return_to_play
-  reason: current_ProductRoot_connected_bypass_requires_connected_play_composition_scope
-  key_requirements:
-    - UX-01-03
-    - NAV-01-02
-    - QA-NAV-06
-  authorization: not_granted
-
-next_route: E_PREPARE_WO_UI_002_ONLY_IF_OWNER_AUTHORIZES
+next_route: WO_UI_002_SCOPED_DEPENDENCY_AUTHORIZATION
