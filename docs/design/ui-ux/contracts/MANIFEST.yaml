@@ -1,6 +1,6 @@
 schema_version: 2
 phase: runtime_ui_preparation
-status: first_runtime_slice_prepared_not_implementation_ready
+status: first_runtime_slice_scoped_freeze_recorded_not_implementation_authorized
 runtime_ui_implementation_allowed: false
 
 accepted_reference:
@@ -162,7 +162,9 @@ implementation_readiness:
   behavior_scenarios: ready
   traceability: ready
   qa_acceptance_matrix: ready
-  applicable_product_dependencies_frozen: false
+  applicable_product_dependencies_frozen: true
+  scoped_dependency_authorization_recorded: true
+  scoped_freeze_record: docs/design/ui-ux/work-orders/WO-UI-001-SCOPED-FREEZE.md
   runtime_slice_selected: true
   slice_source_tests_reinspected: true
   slice_material_domain_architecture_blockers: none
@@ -176,6 +178,7 @@ selected_runtime_slice:
   id: WO-UI-001
   name: product_shell_first_run_tutorial_sheet_preference
   work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
+  scoped_freeze: docs/design/ui-ux/work-orders/WO-UI-001-SCOPED-FREEZE.md
   preparation_status: complete
   implementation_ready: false
   behavior_scenarios:
@@ -203,7 +206,6 @@ selected_runtime_slice:
     - UI-01-01
     - UI-01-07
   blockers:
-    - scoped_product_dependency_freeze
     - explicit_runtime_implementation_authorization
   not_blocked_by_current_domain_architecture_gaps: true
 
@@ -238,7 +240,6 @@ recommended_first_runtime_slice:
   name: product_shell_first_run_tutorial_sheet_preference
   work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
   still_requires:
-    - scoped_freeze_authorization_for_applicable_product_dependencies
     - explicit_runtime_implementation_authorization
 
 next_deferred_runtime_slice:
@@ -250,4 +251,4 @@ next_deferred_runtime_slice:
     - NAV-01-02
     - QA-NAV-06
 
-next_route: E_SCOPED_FREEZE_THEN_RUNTIME_AUTHORIZATION
+next_route: E_RUNTIME_IMPLEMENTATION_AUTHORIZATION
