@@ -135,7 +135,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     {activeUtility === "encounter" && role === "dm" && <SessionDmEncounterPane onClose={closeUtility} />}
     {activeUtility === "participants" && role === "dm" && <SessionParticipantsPane onClose={closeUtility} />}
     {activeUtility === "handout" && role === "dm" && <SessionDmHandoutPane onClose={closeUtility} />}
-    {activeUtility === "session" && role === "dm" && <SessionSharePane onClose={closeUtility} />}
+    {activeUtility === "session" && role === "dm" && <SessionSharePane onClose={closeUtility} onOpenHandout={() => setActiveUtility("handout")} />}
     {activeUtility === "player-session" && role === "player" && <SessionPlayerSessionPane onClose={closeUtility} />}
     {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
     {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
@@ -149,12 +149,13 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       <div className="session-reference-play-spacer" />
       <button type="button" className={utilityClass(activeUtility, role === "player" ? "quick-sheet" : "actor")} onClick={(event) => toggleUtility(role === "player" ? "quick-sheet" : "actor", event.currentTarget)}>Sheet</button>
       <button type="button" className={utilityClass(activeUtility, "rules")} onClick={(event) => toggleUtility("rules", event.currentTarget)}>Rules</button>
+      {role === "dm" && <div className="session-reference-visibility" aria-label="Public / DM Only 전달 프로토콜은 아직 production contract가 없어 Public 상태만 표시됩니다." title="DM Only 전달은 GAP-DM-ONLY-DELIVERY-PROTOCOL 해결 전까지 사용할 수 없습니다."><span className="active">Public</span><span>DM Only</span></div>}
       <button type="button" className={utilityClass(activeUtility, "activity")} onClick={(event) => toggleUtility("activity", event.currentTarget)}>Activity</button>
       {role === "dm" && <button type="button" className={utilityClass(activeUtility, "encounter")} onClick={(event) => toggleUtility("encounter", event.currentTarget)}>Encounter</button>}
       {role === "dm" && <button type="button" className={utilityClass(activeUtility, "participants")} onClick={(event) => toggleUtility("participants", event.currentTarget)}>Participants</button>}
-      {role === "dm" && <button type="button" className={utilityClass(activeUtility, "handout")} onClick={(event) => toggleUtility("handout", event.currentTarget)}>Handout</button>}
       {role === "player" && <SessionPlayerHandoutRailButton />}
       <button type="button" className={utilityClass(activeUtility, role === "dm" ? "session" : "player-session")} onClick={(event) => toggleUtility(role === "dm" ? "session" : "player-session", event.currentTarget)}>Session</button>
+      {role === "dm" && <span className="session-reference-unavailable-control" role="button" aria-disabled="true" tabIndex={0} title="권위 있는 Spatial Facts projection이 아직 이 runtime slice에 연결되지 않았습니다.">Spatial Facts</span>}
     </header>
 
     <div className={`session-reference-play-main ${activeUtility ? "utility-open" : ""}`}>
