@@ -52,7 +52,7 @@ export function ProductionSessionDirectNetworkBridge() {
     }
     await hostSession();
     const current=await mockAdapter.getSnapshot();
-    if (current.session.role!=="host"||current.session.lifecycle!=="preparing") return;
+    if (current.session.role!=="host"||current.session.lifecycle!=="live") return;
     publishExternalAdapterSnapshot(await mockAdapter.setPreparedSessionName(requestedName));
   }
 
