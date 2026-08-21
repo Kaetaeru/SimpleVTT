@@ -28,7 +28,7 @@ Structured Owner/Decision/Gap/Dependency references MUST use full stable IDs or 
 
 ### Gap Type enum
 
-- `OWNER_DECISION` — the owner must choose product/UX behavior.
+- `OWNER_DECISION` — the owner must choose material product/UX behavior.
 - `DOMAIN_CONTRACT` — authoritative domain/application data or semantics are missing.
 - `ARCHITECTURE_CONTRACT` — networking, persistence, privacy, schema, or runtime contract is missing.
 - `IMPLEMENTATION_BLOCKER` — planning is clear but implementation cannot safely proceed yet.
@@ -62,8 +62,8 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Owner Sheet:** UX-02, SES-01
 - **Affected:** Join flow, Character selection
 - **Gap:** What happens when a Player attempts to join but has no valid Character available is undecided.
-- **Why AI cannot infer it safely:** Automatically creating, importing, spectating, or blocking are materially different product behaviors.
-- **Smallest decision needed:** Define the allowed no-character Join branch.
+- **Why AI cannot infer it safely:** Creating/importing inside Join, allowing Lobby-only connection, or blocking Join are materially different product flows.
+- **Smallest decision needed:** Choose the no-character Join branch in the lightweight owner checkpoint.
 - **Status:** Open
 
 ## GAP-MAIN-HAND-CANONICAL-RELATION
@@ -84,8 +84,8 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Owner Sheet:** DM-01
 - **Affected Decision:** ORIGIN-UX-01-27
 - **Gap:** The initial default for `Public / DM Only` and the exact persistence boundary are not decided.
-- **Why AI cannot infer it safely:** Per-session, per-device, per-scene, or persistent-user preference produce different privacy behavior.
-- **Smallest decision needed:** Decide initial value and persistence lifetime.
+- **Why AI cannot infer it safely:** Per-session or longer-lived defaults create materially different privacy expectations.
+- **Smallest decision needed:** Choose initial value and persistence lifetime in the lightweight owner checkpoint.
 - **Status:** Open
 
 ## GAP-DM-PRIVATE-ACTIVITY-PRESENTATION
@@ -95,31 +95,19 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Owner Sheet:** DM-02
 - **Gap:** How DM Activity displays private rolls is undecided.
 - **Known options from prior review:** one chronological record with DM-only badge; separate private-roll area; one chronology with visibility filter.
-- **Why AI cannot infer it safely:** This determines auditability, density, and disclosure affordances.
-- **Smallest decision needed:** Ask only when the complete DM-02 Decision Map is active.
-- **Status:** Deferred
-- **Note:** Historical pre-ledger question formerly labeled UX-01-30; non-canonical origin. Deferred to DM-02 sequential review.
-
-## GAP-ACTOR-CONTEXT-MENU-CONTENTS
-
-- **Gap Type:** OWNER_DECISION
-- **Severity:** Normal
-- **Owner Sheet:** INT-01
-- **Affected Decision:** ORIGIN-UX-01-16
-- **Gap:** Exact Actor Context Menu commands are intentionally undecided.
-- **Why AI cannot infer it safely:** The menu must not become a duplicate Hotbar and DM-specific commands require authority decisions.
-- **Smallest decision needed:** Define context-menu command categories during INT-01 review.
+- **Why AI cannot infer it safely:** This materially changes how the DM reads and later discloses hidden adjudication history.
+- **Smallest decision needed:** Choose the Activity presentation in the lightweight owner checkpoint.
 - **Status:** Open
 
 ## GAP-RESOLUTION-SAFE-INTERACTIONS
 
-- **Gap Type:** OWNER_DECISION
+- **Gap Type:** DOMAIN_CONTRACT
 - **Severity:** Major
-- **Owner Sheet:** DND-03, INT-01
+- **Owner Sheet:** DND-03
 - **Affected Decision:** ORIGIN-UX-01-21
-- **Gap:** Resolution keeps the HUD skeleton and locks only conflicting interactions, but the exact safe-vs-conflicting interaction boundary is undecided.
-- **Why AI cannot infer it safely:** Allowing a conflicting command can corrupt flow; over-locking violates the reviewed UX direction.
-- **Smallest decision needed:** Define the interaction lock matrix for each material resolution/interrupt stage.
+- **Gap:** Resolution keeps the HUD skeleton and locks only conflicting interactions, but the authoritative safe-vs-conflicting command boundary is not yet represented as a usable contract/projection.
+- **Why AI cannot infer it safely:** This is command-conflict legality/safety, not a preference the owner should manually enumerate. UI must not guess which authoritative mutations may overlap.
+- **Smallest decision needed:** Domain/application contract must expose or define conflict/safe interaction semantics; UI then applies the reviewed selective-locking behavior.
 - **Status:** Open
 
 ## GAP-HANDOUT-NETWORK-CONTRACT
@@ -180,6 +168,16 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Resolved By:** UX-02-02
 - **Status:** Resolved
 
+## GAP-ACTOR-CONTEXT-MENU-CONTENTS
+
+- **Gap Type:** OWNER_DECISION
+- **Severity:** Normal
+- **Owner Sheet:** INT-01
+- **Affected Decision:** ORIGIN-UX-01-16
+- **Resolution:** `INT-01-02` limits Actor Context Menu content to UI/context-management actions such as Details/Inspect and excludes executable gameplay actions/Hotbar duplication. Exact low-risk menu composition is AI-managed design detail within that boundary.
+- **Resolved By:** INT-01-02
+- **Status:** Resolved
+
 ## GAP-R1-R9-INVENTORY
 
 - **Gap Type:** COVERAGE
@@ -195,6 +193,6 @@ Once resolved, move the normative answer into `decisions.md` or the appropriate 
 - **Gap Type:** COVERAGE
 - **Severity:** Major
 - **Owner Sheet:** docs/design/ui-ux-planning-framework.md
-- **Resolution:** `matrices.md` materializes M1-M6 schemas and material coverage. Individual `TBD` cells remain owned by declared Decision Map items or explicit gaps.
+- **Resolution:** `matrices.md` materializes M1-M6 schemas and material coverage. Individual `TBD` cells remain owned by declared Decision Map items, AI-managed detail contracts, or explicit gaps.
 - **Resolved By:** docs/design/ui-ux/matrices.md
 - **Status:** Resolved
