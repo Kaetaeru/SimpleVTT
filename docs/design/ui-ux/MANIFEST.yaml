@@ -11,10 +11,12 @@ validation:
 primary_goals:
   - owner_control_easy
   - ai_interpretation_unambiguous
+  - exhaustive_internal_coverage_without_owner_question_overload
 
 entrypoints:
   owner: docs/design/ui-ux/README.md
   owner_review: docs/design/ui-ux/owner-review/README.md
+  owner_control_policy: docs/design/ui-ux/OWNER-CONTROL-POLICY.md
   ai: docs/design/ui-ux/AI-READING-GUIDE.md
   preflight: docs/design/ui-ux/PREFLIGHT.md
   framework: docs/design/ui-ux-planning-framework.md
@@ -29,7 +31,6 @@ status_enums:
   gap_status: [Open, Deferred, Resolved]
   gap_type: [OWNER_DECISION, DOMAIN_CONTRACT, ARCHITECTURE_CONTRACT, IMPLEMENTATION_BLOCKER, DOCUMENT_RECONCILIATION, COVERAGE]
   gap_severity: [Critical, Major, Normal]
-  owner_review_ai_status: [PENDING, PROCESSED]
 
 reference_rules:
   full_ids_required: true
@@ -63,88 +64,105 @@ reference_rules:
     - STATE/A11Y review
   rule: references_must_be_exactly_resolvable_without_contextual_prefix_inference
 
+owner_control:
+  policy: docs/design/ui-ux/OWNER-CONTROL-POLICY.md
+  mode: lightweight_material_checkpoints
+  detailed_review_plan_is_owner_homework: false
+  escalation_required_before_new_owner_question: true
+  owner_checkpoint_categories:
+    - major_user_workflow_or_mental_model
+    - material_capability_scope
+    - authority_privacy_or_disclosure
+    - destructive_or_data_loss_behavior
+    - material_platform_scope
+    - materially_different_product_feel
+  ai_design_default_categories:
+    - typography_and_spacing
+    - routine_component_states
+    - iconography
+    - ordinary_loading_empty_error_ui
+    - ordinary_focus_and_keyboard_behavior
+    - routine_responsive_reflow
+    - low_risk_copy_and_confirmation_wording
+    - component_internal_structure
+    - non_authoritative_motion_polish
+  never_owner_preference_categories:
+    - rules_legality_or_calculation
+    - canonical_main_hand_relation
+    - authoritative_command_conflict_semantics
+    - network_privacy_delivery
+    - reconnect_projection
+    - persistence_schema_security
+  bundle_acceptance:
+    field: 전체 추천안 사용
+    accepted_value: YES
+    per_question_override_field: OWNER SELECT
+    custom_instruction_field: OWNER NOTE
+
 sources:
   framework:
     path: docs/design/ui-ux-planning-framework.md
     role: governance_rules
     authority: canonical
     derived: false
-    owner_edit_frequency: rare
-    delegates_reading_order_to: docs/design/ui-ux/AI-READING-GUIDE.md
-    delegates_preflight_to: docs/design/ui-ux/PREFLIGHT.md
+  owner_control_policy:
+    path: docs/design/ui-ux/OWNER-CONTROL-POLICY.md
+    role: owner_question_escalation_and_ai_default_policy
+    authority: canonical_process
+    derived: false
+    must_read_before_new_owner_question: true
   ai_reading_guide:
     path: docs/design/ui-ux/AI-READING-GUIDE.md
     role: task_router_and_reading_order
     authority: canonical_process
     derived: false
     must_read_for_ai_entry: true
-    sole_owner_of_reading_order: true
   preflight:
     path: docs/design/ui-ux/PREFLIGHT.md
     role: start_work_consistency_gate
     authority: canonical_process
     derived: false
     must_pass_before_substantive_work: true
-    sole_owner_of_start_work_checks: true
   owner_review:
     path: docs/design/ui-ux/owner-review/README.md
-    family_path: docs/design/ui-ux/owner-review/
-    role: owner_selection_input_workspace
+    role: owner_selection_workspace
     authority: explicit_owner_input_not_canonical_until_reconciled
     derived: false
     owner_editable: true
-    question_source: docs/design/ui-ux/review-plan.md
-    canonicalizes_into: docs/design/ui-ux/decisions.md
-    candidate_options_are_product_truth: false
-    filled_owner_select_is_explicit_owner_input: true
-    ai_reads_before_asking_route_a_questions: true
-    custom_selection_uses_owner_note_as_controlling_instruction: true
-    ai_status_values_must_match_enum_exactly: true
-    worksheet_files:
-      - docs/design/ui-ux/owner-review/01-foundation-navigation-layout.md
+    current_checkpoint_file: docs/design/ui-ux/owner-review/02-key-decisions.md
+    completed_large_worksheet: docs/design/ui-ux/owner-review/01-foundation-navigation-layout.md
+    historical_detail_reference_files:
       - docs/design/ui-ux/owner-review/02-states-layering-confirmation.md
       - docs/design/ui-ux/owner-review/03-visual-components-content.md
       - docs/design/ui-ux/owner-review/04-accessibility-platform.md
       - docs/design/ui-ux/owner-review/05-dnd-experience.md
       - docs/design/ui-ux/owner-review/06-session-authority-dm-content.md
+    historical_detail_files_are_required_owner_homework: false
+    canonicalizes_into: docs/design/ui-ux/decisions.md
+    candidate_options_are_product_truth: false
   dashboard:
     path: docs/design/ui-ux/README.md
     role: current_planning_status_and_next_action
     authority: derived_summary
     derived: true
-    derived_from:
-      - docs/design/ui-ux/AI-READING-GUIDE.md
-      - docs/design/ui-ux/MANIFEST.yaml
-      - docs/design/ui-ux/PREFLIGHT.md
-      - docs/design/ui-ux/review-plan.md
-      - docs/design/ui-ux/owner-review/README.md
-      - docs/design/ui-ux/decisions.md
-      - docs/design/ui-ux/master-flow.md
-      - docs/design/ui-ux/planning-gaps.md
-      - docs/design/ui-ux/registry.md
-      - docs/design/ui-ux/matrices.md
-      - docs/design/ui-ux/templates.md
-    owner_default_entrypoint: true
   review_plan:
     path: docs/design/ui-ux/review-plan.md
-    role: review_order_and_undecided_decision_maps
-    authority: canonical_for_question_order
+    role: detailed_coverage_maps_and_dependency_catalog
+    authority: canonical_for_detailed_question_coverage
     derived: false
-    contains_normative_decision_bodies: false
-    review_order_change_requires_owner_approval: true
-    batch_current_sheet_review_allowed: true
-    batch_answers_resolved_in_dependency_order: true
-    owner_worksheet_may_capture_answers: true
-    global_planning_gate_owner: true
-    review_status_values_must_match_enum_exactly: true
-    structured_status_fields: [Current sequence.Review Status]
-    structured_reference_fields: [Decision Map.Depends On, Decision Map.Destination]
+    detailed_rows_are_owner_homework: false
+    row_resolution_may_come_from:
+      - canonical_decision
+      - lightweight_owner_checkpoint
+      - ai_design_default_contract
+      - domain_or_architecture_contract
+      - conditional_not_applicable
+    review_order_change_requires_owner_approval_when_owner_checkpoints_are_affected: true
   decisions:
     path: docs/design/ui-ux/decisions.md
     role: canonical_decision_ledger
     authority: canonical_for_made_product_decisions
     derived: false
-    contains_undecided_question_maps: false
     status_values_must_match_enum_exactly: true
     structured_reference_fields: [Depends On, Destination, Planning Gap, Affects when ID-based, Supersedes, Superseded By]
   master_flow:
@@ -152,17 +170,7 @@ sources:
     role: owner_friendly_product_flow_and_surface_topology_view
     authority: derived_view
     derived: true
-    derived_from:
-      - docs/design/ui-ux/decisions.md
-      - docs/design/ui-ux/review-plan.md
-      - docs/design/ui-ux/planning-gaps.md
-      - docs/design/README.md
-      - docs/design/character-lifecycle.md
-      - docs/design/session-runtime.md
     may_contain_normative_decision_bodies: false
-    owner_may_request_changes_through_view: true
-    ai_must_translate_material_changes_to_canonical_sources_first: true
-    current_view_status: Draft
   planning_gaps:
     path: docs/design/ui-ux/planning-gaps.md
     role: unresolved_material_no_invention_queue
@@ -175,11 +183,6 @@ sources:
     role: r1_r9_ui_inventory
     authority: derived_inventory
     derived: true
-    canonical_product_behavior_source: docs/design/ui-ux/decisions.md
-    may_reference_review_questions: true
-    may_reference_planning_gaps: true
-    may_reference_domain_contracts: true
-    references_must_follow_reference_rules: true
     structured_reference_fields: [Refs]
     human_readable_fields_not_parsed_as_reference_lists: [Owner, Note]
     status_axes:
@@ -190,12 +193,6 @@ sources:
     role: m1_m6_cross_cutting_coverage
     authority: derived_coverage
     derived: true
-    canonical_product_behavior_source: docs/design/ui-ux/decisions.md
-    may_reference_review_questions: true
-    may_reference_planning_gaps: true
-    may_reference_registry_ids: true
-    may_reference_domain_contracts: true
-    references_must_follow_reference_rules: true
     structured_reference_fields: [M1.Source, M1.Gap, M2.Refs / Gap, M3.Refs / Gap, M4.Refs / Gap, M5.Refs / Gap, M6.Surface, M6 exact contract/test ID cells]
     human_readable_fields_not_parsed_as_reference_lists: [M6.Notes]
   templates:
@@ -203,7 +200,6 @@ sources:
     role: copy_safe_artifact_templates
     authority: canonical_process_template
     derived: false
-    preflight_source: docs/design/ui-ux/PREFLIGHT.md
 
 optional_families:
   surfaces: {path: docs/design/ui-ux/surfaces/, role: detailed_surface_contracts, materialize_when: spec_tier_requires}
@@ -214,48 +210,54 @@ optional_families:
 planning_gate:
   name: global_planning_gate
   status: passed
-  blocks_individual_review: false
+  blocks_owner_checkpoint_review: false
   completed_scope: current_active_runtime_and_planning_snapshot
-  current_review_sheet: UX-03
-  review_interaction: github_owner_review_worksheet_default
-  current_review_worksheet: docs/design/ui-ux/owner-review/01-foundation-navigation-layout.md
-  current_review_batch: [UX-03-01, UX-03-02, UX-03-03, UX-03-04, UX-03-05, UX-03-06, UX-03-07, UX-03-08]
-  next_allowed_individual_decision: UX-03-01
-  next_sheet_after_current_completion: NAV-01
+  owner_review_mode: lightweight_material_checkpoints
+  completed_owner_scope:
+    - UX-01
+    - UX-02
+    - UX-03
+    - NAV-01
+    - UI-01
+    - INT-01
+  current_owner_checkpoint_file: docs/design/ui-ux/owner-review/02-key-decisions.md
+  remaining_owner_checkpoint_count: 10
+  remaining_owner_checkpoint_ids:
+    - PLATFORM-01-01
+    - SES-01-04
+    - SES-01-02
+    - DM-01-01
+    - DM-02-01
+    - DM-01-03
+    - DM-02-05
+    - CONTENT-02-04
+    - CONTENT-02-09
+    - CONTENT-02-11
+  detailed_map_rows_not_in_this_list: ai_or_contract_resolution_unless_escalation_rule_triggers
   requirements:
     r1_r9_complete_inventory_cross_check: passed
     m1_m6_material_coverage: passed
     all_27_governance_decision_maps_complete: passed
     missing_duplication_coverage_audit: passed
     owner_whole_product_checkpoint: passed
-  reopen_condition: material_coverage_invalidated_by_later_change_or_explicit_owner_request
 
 maintenance_rules:
   - one_normative_fact_one_canonical_home
-  - undecided_questions_live_in_review_plan_not_decision_ledger
-  - decision_bodies_live_in_decision_ledger
+  - keep_owner_questions_few_material_and_reversible
+  - detailed_review_plan_is_coverage_not_owner_homework
+  - ai_must_name_owner_control_escalation_reason_before_asking_new_question
+  - ai_design_defaults_must_stay_within_reviewed_decisions_and_authority_boundaries
+  - domain_architecture_truth_is_never_recast_as_owner_preference
   - selected_reviewed_frozen_decisions_are_planning_truth_but_only_frozen_is_stable_for_implementation
-  - filled_owner_review_selection_is_explicit_owner_input_but_not_canonical_until_reconciled
-  - worksheet_candidate_options_do_not_create_product_decisions
-  - owner_custom_selection_preserves_owner_note_as_controlling_instruction
-  - process_owner_worksheet_selections_in_dependency_order
-  - current_sheet_questions_may_be_answered_in_batch_when_predeclared
-  - batch_answers_are_reconciled_in_dependency_order_without_replacing_explicit_owner_choices
+  - current_code_is_evidence_not_automatic_product_truth
+  - owner_never_manually_repairs_cross_references
   - master_flow_is_derived_owner_view_not_second_decision_store
   - registry_and_matrices_reference_canonical_sources_instead_of_copying_them
-  - dashboard_is_summary_and_must_not_override_canonical_sources
-  - exact_enum_values_only_in_structured_status_fields
   - full_stable_references_only_in_structured_reference_fields
-  - derived_document_drift_must_be_fixed_before_substantive_work
-  - current_code_is_evidence_not_automatic_product_truth
-  - missing_material_policy_returns_declared_draft_decision_map_item_or_planning_gap
-  - owner_never_manually_repairs_cross_references
-  - ai_may_propose_review_reorder_but_owner_must_approve
-  - stable_v1_governance_is_reopened_only_for_material_drift_or_explicit_owner_request
 
 implementation_gate:
   planning_status_alone_authorizes_implementation: false
-  owner_review_selection_alone_authorizes_implementation: false
+  owner_checkpoint_selection_alone_authorizes_implementation: false
   requires_scoped_work_order: true
   requires_applicable_frozen_dependencies: true
   requires_no_material_blocking_gap: true
