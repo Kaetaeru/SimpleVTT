@@ -1,0 +1,268 @@
+schema_version: 8
+phase: runtime_ui_implementation_and_product_extension_planning
+status: wo_ui_003_closed_core_systems_owner_accepted_contract_materialization_pending
+runtime_ui_implementation_allowed: true
+
+accepted_reference:
+  entry: docs/design/ui-ux/prototype/app/integrated-reference.html
+  render_js: docs/design/ui-ux/prototype/app/integrated-reference.js
+  render_css: docs/design/ui-ux/prototype/app/integrated-reference.css
+  fixtures: docs/design/ui-ux/prototype/app/integrated-reference-fixtures.js
+  candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+  accepted_date: 2026-08-21
+  acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+  verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
+  visual_rule: when_the_accepted_prototype_already_defines_the_scene_do_not_substitute_a_visually_different_structural_approximation
+  accepted_connected_play_runtime_slice: WO-UI-003
+
+accepted_product_extension:
+  id: CORE-SYSTEMS-UX
+  name: korean_first_extensible_core_systems_and_quick_live_use
+  stage: owner_accepted_product_ux_contract_materialization_pending
+  runtime_implementation_authorized: false
+  owner_acceptance_record: docs/design/ui-ux/prototype/CORE-SYSTEMS-ACCEPTANCE.md
+  product_plan: docs/design/ui-ux/CORE-SYSTEMS-UX-PLAN.md
+  extensibility_localization_contract: docs/design/ui-ux/EXTENSIBILITY-KOREAN-FIRST.md
+  prototype_spec: docs/design/ui-ux/prototype/CORE-SYSTEMS-EXTENSION.md
+  prototype_reference: docs/design/ui-ux/prototype/app/core-systems-reference.html
+  next_gate: domain_architecture_contract_materialization
+  product_defaults:
+    user_facing_locale: ko-KR
+    stable_internal_ids_language_neutral: true
+    registry_provider_descriptor_extension_preferred: true
+    primary_live_dm_library_access: quick_search
+
+retained_product_extension:
+  id: WO-UI-004
+  name: dm_library_preparation_and_live_invocation
+  stage: product_direction_retained_live_invocation_revised_by_core_systems_acceptance
+  runtime_implementation_authorized: false
+  product_plan: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+  architecture_boundary: docs/design/dm-library-persistence.md
+  prototype_spec: docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md
+  preparation_prototype_candidate: docs/design/ui-ux/prototype/app/dm-library-reference.html
+  accepted_live_direction: docs/design/ui-ux/prototype/app/core-systems-reference.html
+  work_order: docs/design/ui-ux/work-orders/WO-UI-004-dm-library-preparation-and-live-invocation.md
+  heavy_nested_picker_primary: false
+  detailed_picker_fallback_allowed: true
+
+mandatory_baseline:
+  integrated_product_ux: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+  decisions: docs/design/ui-ux/decisions.md
+  planning_gaps: docs/design/ui-ux/planning-gaps.md
+  domain_design_canon: docs/design/README.md
+  mapless_core_policy: docs/design/movement-modules.md
+  session_runtime: docs/design/session-runtime.md
+  dm_library_product: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+  dm_library_architecture: docs/design/dm-library-persistence.md
+  core_systems_product: docs/design/ui-ux/CORE-SYSTEMS-UX-PLAN.md
+  extensibility_localization: docs/design/ui-ux/EXTENSIBILITY-KOREAN-FIRST.md
+  core_systems_owner_acceptance: docs/design/ui-ux/prototype/CORE-SYSTEMS-ACCEPTANCE.md
+
+mandatory_contract_read_order:
+  - docs/design/ui-ux/contracts/README.md
+  - docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md
+  - docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md
+  - docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
+  - docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
+  - docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
+  - docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md
+  - docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
+  - docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md
+  - docs/design/ui-ux/contracts/MANIFEST.yaml
+
+contracts:
+  readme: { path: docs/design/ui-ux/contracts/README.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  implementation_playbook: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  glossary: { path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  surfaces: { path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  components: { path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  interaction_state_motion: { path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  behavior_scenarios: { path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending, scenario_count: 48 }
+  implementation_traceability: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  qa_acceptance_matrix: { path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+
+interpretation_guards:
+  industry_vtt_conventions_may_fill_unspecified_behavior: false
+  ambiguous_terms_must_use_project_glossary_and_domain_contracts: true
+  prototype_fixture_is_production_schema: false
+  prototype_visual_similarity_alone_is_acceptance: false
+  accepted_prototype_visual_composition_may_be_replaced_by_prose_only_approximation: false
+  current_source_or_test_may_override_accepted_contract: false
+  ui_may_guess_missing_domain_or_architecture_truth: false
+  visible_label_may_be_used_as_persistence_or_network_identity: false
+  korean_first_means_internal_ids_are_korean_strings: false
+  untyped_json_is_valid_domain_contract: false
+  dm_library_may_be_collapsed_into_player_character_library: false
+  dm_library_may_be_collapsed_into_content_addon_catalog: false
+  dm_library_catalog_may_be_sent_to_player_clients: false
+  session_runtime_may_auto_write_back_to_dm_library_source: false
+  party_stash_policy_may_define_three_incompatible_storage_models: false
+  heavy_nested_dm_library_picker_is_primary_live_path: false
+
+hard_product_guards:
+  mapless_core: true
+  battlemap_in_core_forbidden: true
+  actor_xy_coordinates_in_core_forbidden: true
+  draggable_map_tokens_in_core_forbidden: true
+  grid_path_los_fog_ui_in_core_forbidden: true
+  handout_is_not_battlemap: true
+  first_run_tutorial_required: true
+  initial_sheet_presentation_choice_required: true
+  official_and_simplevtt_share_same_character_model: true
+  standalone_roll_same_sheet_required: true
+  connected_actor_boards_required: true
+  persistent_command_center_required: true
+  freeform_fake_turn_economy_forbidden: true
+  initiative_preserves_play_skeleton: true
+  targeting_is_actor_card_or_manual_set: true
+  area_targeting_map_template_in_core_forbidden: true
+  main_hand_smart_fallback_forbidden: true
+  dm_player_share_core_play_skeleton: true
+  connected_host_is_dm: true
+  connected_client_is_player: true
+  offline_has_no_dm_player_role: true
+  dm_only_css_hide_is_not_privacy: true
+  live_product_navigation_must_not_end_or_recreate_session: true
+  connected_return_to_play_must_reuse_existing_session_mode_root: true
+  dm_library_is_host_preparation_durable_not_session_runtime: true
+  dm_library_images_are_private_until_explicit_reveal: true
+  dm_library_actor_add_creates_independent_session_instances: true
+  dm_library_pc_actor_preset_is_not_player_owned_character: true
+  dm_library_private_notes_not_delivered_by_default: true
+  primary_live_dm_library_access_is_quick_search: true
+  korean_first_user_facing_ui: true
+  internal_identity_language_neutral: true
+  registry_provider_descriptor_extensions_preferred: true
+  inventory_management_is_not_item_hotbar: true
+  spellbook_management_is_not_spell_hotbar: true
+  passive_features_do_not_automatically_fill_hotbar: true
+  party_stash_storage_separate_from_permission_policy: true
+  rest_is_preview_choice_commit_workflow: true
+
+interaction_precedence:
+  actor_click:
+    - selected_action_targeting
+    - explicit_dm_control_mode
+    - ordinary_context_selection
+    - default_hostile_main_hand_if_authoritatively_available
+
+ui_must_not_authoritatively_calculate:
+  - rules_legality
+  - target_eligibility
+  - executable_main_hand_relation
+  - resolution_safe_conflicting_interactions
+  - privacy_entitlement_or_delivery
+  - reconnect_truth
+  - content_validation_truth
+  - persistence_semantics
+  - spatial_geometry
+  - dm_library_schema_or_version_migration
+  - dm_library_binary_asset_limits
+  - dm_library_private_projection_fields
+  - party_stash_ownership_or_lifetime
+  - durable_item_transfer_write_back
+  - rest_recovery_semantics
+  - condition_effect_fast_apply_legality
+  - quick_search_private_source_delivery
+
+open_runtime_blockers:
+  - id: GAP-MAIN-HAND-CANONICAL-RELATION
+    type: domain_contract
+    blocks: [default_hostile_click_main_hand_runtime_path]
+  - id: GAP-RESOLUTION-SAFE-INTERACTIONS
+    type: domain_contract
+    blocks: [selective_resolution_interaction_locking]
+  - id: GAP-HANDOUT-NETWORK-CONTRACT
+    type: architecture_contract
+    blocks: [shared_handout_modes, handout_reconnect_projection, dm_library_connected_image_reveal]
+  - id: GAP-DM-ONLY-DELIVERY-PROTOCOL
+    type: architecture_contract
+    severity: critical
+    blocks: [production_dm_only_adjudication, role_scoped_activity_delivery, later_private_event_disclosure]
+  - id: GAP-DM-LIBRARY-METADATA-PERSISTENCE
+    type: architecture_contract
+    blocks: [dm_library_durable_metadata_runtime]
+  - id: GAP-DM-LIBRARY-ASSET-STORAGE
+    type: architecture_contract
+    blocks: [dm_library_image_import_preview_delete_runtime]
+  - id: GAP-DM-LIBRARY-ACTOR-INSTANTIATION
+    type: domain_architecture_contract
+    blocks: [dm_library_npc_pc_preset_to_session_actor_runtime]
+  - id: GAP-DM-LIBRARY-PRIVATE-PROJECTION
+    type: architecture_contract
+    severity: critical
+    blocks: [dm_library_actor_private_notes_projection, dm_library_catalog_non_delivery_verification]
+  - id: GAP-QUICK-SEARCH-SOURCE-AGGREGATION
+    type: domain_architecture_contract
+    blocks: [quick_search_runtime_provider_registry, role_scoped_source_indexing]
+  - id: GAP-PARTY-STASH-OWNERSHIP-PERSISTENCE
+    type: domain_architecture_contract
+    blocks: [party_stash_runtime, party_policy_runtime]
+  - id: GAP-DURABLE-ITEM-TRANSFER-GRANT
+    type: domain_architecture_contract
+    blocks: [party_to_character_transfer, dm_quick_item_grant]
+  - id: GAP-REST-PREVIEW-COMMIT
+    type: domain_contract
+    blocks: [rest_activity_runtime]
+  - id: GAP-CONDITION-FAST-APPLY
+    type: domain_contract
+    blocks: [dm_quick_condition_apply]
+  - id: GAP-HOTBAR-CUSTOMIZATION-PERSISTENCE
+    type: persistence_contract
+    blocks: [real_custom_hotbar_pages]
+
+completed_runtime_slices:
+  - id: WO-UI-001
+    name: product_shell_first_run_tutorial_sheet_preference
+    status: closed_accepted
+    implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
+    human_qa_record: docs/design/ui-ux/work-orders/WO-UI-001-HUMAN-QA.md
+    owner_human_qa: pass
+  - id: WO-UI-002
+    name: connected_product_shell_continuity_return_to_play
+    status: closed_accepted
+    implementation_record: docs/design/ui-ux/work-orders/WO-UI-002-IMPLEMENTATION-RECORD.md
+    human_qa_record: docs/design/ui-ux/work-orders/WO-UI-002-HUMAN-QA.md
+    owner_human_qa: pass
+    visual_topology_accepted_by_this_slice: false
+  - id: WO-UI-003
+    name: connected_play_actor_boards_tabletop_stage_persistent_command_center
+    status: closed_accepted_after_reference_rework
+    work_order: docs/design/ui-ux/work-orders/WO-UI-003-connected-play-actor-boards-command-center.md
+    authorization: docs/design/ui-ux/work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md
+    implementation_record: docs/design/ui-ux/work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md
+    human_qa_record: docs/design/ui-ux/work-orders/WO-UI-003-HUMAN-QA.md
+    first_owner_human_qa: fail
+    rework_owner_human_qa: pass
+    owner_reqa_quote: 그래 잘 됐어.
+    rework_source_sha: acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
+    accepted_reference_ui_run_id: 32500827497
+    accepted_reference_gate: pass
+    main_playable_run_id: 32500827476
+    full_ui_rules_typescript_frontend: pass
+    connected_session_run_id: 32500827494
+    production_frontend_gate: pass
+    repository_phase09_aggregate_regression: unresolved_separate_not_changed_by_wo_ui_003_rework
+
+selected_runtime_slice:
+  id: none
+  status: no_new_runtime_slice_authorized
+  note: Core Systems is Owner-accepted product/UX direction; runtime work requires contract materialization and explicit scoped authorization.
+
+implementation_readiness:
+  prototype_owner_acceptance: passed_for_existing_reference_and_core_systems_extension
+  contracts_ready: true_for_existing_accepted_scope_only
+  wo_ui_001: closed_accepted
+  wo_ui_002: closed_accepted
+  wo_ui_003: closed_accepted_after_reference_rework
+  current_runtime_slice_selected: false
+  core_systems_product_direction: owner_accepted
+  korean_first_extensibility_contract: active
+  dm_library_product_direction: retained_and_revised_for_quick_live_use
+  dm_library_architecture_boundary: drafted
+  core_systems_runtime_contracts: materialization_pending
+  core_systems_runtime_authorized: false
+  repository_phase09_aggregate_regression: unresolved_separate
+
+next_route: CORE_SYSTEMS_DOMAIN_ARCHITECTURE_CONTRACT_MATERIALIZATION

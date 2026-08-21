@@ -16,6 +16,7 @@ import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./res
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
+import "./productionCombatantPreparationAdapter";
 import { mockAdapter } from "./mockAdapter";
 import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 
@@ -64,8 +65,12 @@ interface AppContextValue {
   activateCombatantImport(): Promise<void>;
   clearCombatantImport(): Promise<void>;
   instantiateCombatant(definitionId: string): Promise<void>;
+  removeCombatant(combatantId: string): Promise<void>;
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
+  stopSession(): Promise<void>;
+  setSessionReady(ready:boolean):Promise<void>;
+  startPreparedSession(mode:SessionMode):Promise<void>;
   debug: {
     setRole(role: AppRole): Promise<void>;
     setMode(mode: SessionMode): Promise<void>;
@@ -180,8 +185,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activateCombatantImport: async () => apply(() => mockAdapter.activateCombatantImport()),
     clearCombatantImport: async () => apply(() => mockAdapter.clearCombatantImport()),
     instantiateCombatant: async (definitionId) => apply(() => mockAdapter.instantiateCombatant(definitionId)),
+    removeCombatant: async (combatantId) => apply(() => mockAdapter.removeCombatant(combatantId)),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
+    stopSession: async () => apply(() => mockAdapter.stopSession()),
+    setSessionReady: async (ready) => apply(() => mockAdapter.setSessionReady(ready)),
+    startPreparedSession: async (mode) => apply(() => mockAdapter.startPreparedSession(mode)),
     debug: {
       setRole: async (role) => apply(() => mockAdapter.setReferenceRole(role)),
       setMode: async (mode) => apply(() => mockAdapter.setSessionMode(mode)),

@@ -1,0 +1,195 @@
+.session-main-focus-state {
+  width: min(760px, 100%);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.session-focus-heading {
+  max-width: 680px;
+}
+
+.session-focus-heading h1 {
+  margin: 7px 0 8px;
+  font-size: clamp(30px, 4vw, 54px);
+}
+
+.session-focus-heading p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.session-freeform-recent {
+  width: min(520px, 100%);
+  margin-top: clamp(34px, 7vh, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 64%, transparent);
+}
+
+.session-freeform-recent > div {
+  min-width: 0;
+}
+
+.session-freeform-recent span,
+.session-freeform-recent strong,
+.session-freeform-recent p {
+  display: block;
+}
+
+.session-freeform-recent span {
+  color: var(--quiet);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.session-freeform-recent strong {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.session-freeform-recent p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-freeform-recent button {
+  min-height: 38px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  background: transparent;
+}
+
+.session-freeform-dm-notes {
+  margin-top: auto;
+  padding-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.session-freeform-dm-notes span {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  color: var(--quiet);
+  font-size: 9px;
+}
+
+.session-initiative-focus {
+  justify-content: flex-start;
+}
+
+.session-initiative-current-card {
+  width: min(520px, 100%);
+  margin-top: clamp(28px, 6vh, 58px);
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 64%, transparent);
+}
+
+.session-initiative-current-vitals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+.session-initiative-current-vitals > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--recess);
+}
+.session-initiative-current-vitals small { color: var(--quiet); font-size: 8px; font-weight: 800; }
+.session-initiative-current-vitals strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+
+.session-initiative-current-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.session-initiative-current-status span {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.session-reference-stage-chips {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.session-reference-stage-chips > span {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border: 1px solid #3b4852;
+  border-radius: 2px;
+  background: rgba(15, 21, 26, .74);
+  color: #7f8b96;
+  font-size: 8px;
+}
+
+.session-reference-stage-chips strong {
+  color: #d7e0e6;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .session-focus-heading h1 {
+    font-size: 32px;
+  }
+
+  .session-focus-heading p {
+    max-width: 330px;
+  }
+
+  .session-freeform-recent {
+    align-items: stretch;
+    flex-direction: column;
+    margin-top: 34px;
+  }
+
+  .session-freeform-recent p {
+    white-space: normal;
+  }
+
+  .session-freeform-recent button {
+    align-self: flex-start;
+  }
+
+  .session-initiative-current-card { margin-top: 28px; }
+  .session-initiative-current-vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .session-reference-stage-chips { max-width: 330px; }
+}

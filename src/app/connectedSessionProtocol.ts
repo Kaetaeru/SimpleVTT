@@ -64,6 +64,11 @@ export type ConnectedEventPayload =
     }
   | {
       kind:"participant";
+      participantId:string;
+      participantName:string;
+      characterName?:string;
+      state:"connected"|"reconnecting"|"disconnected";
+      ready:boolean;
       stateChanges:string[];
       provenance:string[];
     };

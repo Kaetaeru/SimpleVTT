@@ -1,0 +1,332 @@
+schema_version: 3
+system: simplevtt-ui-ux-planning
+status: active
+governance_maturity: stable_v1
+
+validation:
+  bounded_final_validation: passed
+  scenario_count: 10
+  preventive_meta_revalidation: only_on_material_governance_drift_or_explicit_request
+  repository_wide_product_ux_reconciliation_audit: completed_2026_08_21
+  integrated_cross_source_baseline: active
+  accepted_reference_prototype: accepted_2026_08_21
+  accepted_runtime_contract_set: materialized_2026_08_21
+  detailed_behavior_scenario_count: 48
+
+primary_goals:
+  - owner_control_easy
+  - ai_interpretation_unambiguous
+  - exhaustive_internal_coverage_without_owner_question_overload
+  - broad_ui_must_respect_mapless_core_and_integrated_baseline
+  - accepted_ui_must_be_explainable_without_reading_prototype_source
+  - runtime_work_orders_must_trace_to_behavior_scenarios_and_qa_rows
+
+entrypoints:
+  owner: docs/design/ui-ux/README.md
+  owner_review: docs/design/ui-ux/owner-review/README.md
+  owner_control_policy: docs/design/ui-ux/OWNER-CONTROL-POLICY.md
+  ai: docs/design/ui-ux/AI-READING-GUIDE.md
+  preflight: docs/design/ui-ux/PREFLIGHT.md
+  framework: docs/design/ui-ux-planning-framework.md
+  integrated_product_ux: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+  accepted_prototype: docs/design/ui-ux/prototype/app/integrated-reference.html
+  accepted_contracts: docs/design/ui-ux/contracts/README.md
+  accepted_contract_manifest: docs/design/ui-ux/contracts/MANIFEST.yaml
+
+canonical_precedence_reference: docs/design/ui-ux-planning-framework.md
+cross_source_interpretation_reference: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+accepted_ui_interpretation_reference: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md
+accepted_ui_terminology_reference: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md
+
+status_enums:
+  decision: [Draft, Selected, Reviewed, Frozen, Superseded]
+  planning_maturity: [Draft, Selected, Reviewed, Frozen, Superseded]
+  review_status: [Not Started, In Review, Reviewed]
+  contract_readiness: [None, Partial, Ready, Blocked]
+  gap_status: [Open, Deferred, Resolved]
+  gap_type: [OWNER_DECISION, DOMAIN_CONTRACT, ARCHITECTURE_CONTRACT, IMPLEMENTATION_BLOCKER, DOCUMENT_RECONCILIATION, COVERAGE]
+  gap_severity: [Critical, Major, Normal]
+  runtime_qa_status: [PASS, FAIL, BLOCKED, N/A]
+
+reference_rules:
+  full_ids_required: true
+  ranges_forbidden: true
+  omitted_prefixes_forbidden: true
+  prose_substitutes_for_existing_ids_forbidden: true
+  multi_value_separator: comma
+  matrix_family_ids: [M1, M2, M3, M4, M5, M6]
+  allowed_reference_kinds:
+    - decision_id
+    - review_question_id
+    - planning_gap_id
+    - registry_id
+    - matrix_id
+    - governance_sheet_id
+    - contract_id
+    - behavior_scenario_id
+    - qa_row_id
+    - repository_path
+  examples_valid:
+    - UX-01-04
+    - ORIGIN-UX-01-26
+    - GAP-DM-ONLY-DELIVERY-PROTOCOL
+    - R3-TARGET-SINGLE
+    - M1
+    - M2-PLY-004
+    - A11Y-01
+    - QA-NAV-01
+    - docs/design/session-runtime.md
+  examples_invalid:
+    - UX-01-04..06
+    - ORIGIN-UX-01-26, 28
+    - destination DM-01
+    - STATE/A11Y review
+  rule: references_must_be_exactly_resolvable_without_contextual_prefix_inference
+
+owner_control:
+  policy: docs/design/ui-ux/OWNER-CONTROL-POLICY.md
+  mode: lightweight_material_checkpoints
+  owner_material_checkpoint_phase: complete
+  required_owner_checkpoint_count: 0
+  detailed_review_plan_is_owner_homework: false
+  escalation_required_before_new_owner_question: true
+  owner_checkpoint_categories:
+    - major_user_workflow_or_mental_model
+    - material_capability_scope
+    - authority_privacy_or_disclosure
+    - destructive_or_data_loss_behavior
+    - material_platform_scope
+    - materially_different_product_feel
+  ai_design_default_categories:
+    - typography_and_spacing
+    - routine_component_states
+    - iconography
+    - ordinary_loading_empty_error_ui
+    - ordinary_focus_and_keyboard_behavior
+    - routine_responsive_reflow
+    - low_risk_copy_and_confirmation_wording
+    - component_internal_structure
+    - non_authoritative_motion_polish
+  never_owner_preference_categories:
+    - rules_legality_or_calculation
+    - canonical_main_hand_relation
+    - authoritative_command_conflict_semantics
+    - network_privacy_delivery
+    - reconnect_projection
+    - persistence_schema_security
+  completed_checkpoint_source: docs/design/ui-ux/owner-review/02-key-decisions.md
+
+sources:
+  framework:
+    path: docs/design/ui-ux-planning-framework.md
+    role: governance_rules
+    authority: canonical
+    derived: false
+  owner_control_policy:
+    path: docs/design/ui-ux/OWNER-CONTROL-POLICY.md
+    role: owner_question_escalation_and_ai_default_policy
+    authority: canonical_process
+    derived: false
+    must_read_before_new_owner_question: true
+  ai_reading_guide:
+    path: docs/design/ui-ux/AI-READING-GUIDE.md
+    role: task_router_and_reading_order
+    authority: canonical_process
+    derived: false
+    must_read_for_ai_entry: true
+  preflight:
+    path: docs/design/ui-ux/PREFLIGHT.md
+    role: start_work_consistency_gate
+    authority: canonical_process
+    derived: false
+    must_pass_before_substantive_work: true
+  integrated_product_ux_plan:
+    path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+    role: broad_product_ui_cross_source_interpretation_and_reconciliation_baseline
+    authority: canonical_process_interpretation_not_second_decision_store
+    derived: false
+    must_read_for_broad_ui_prototype_qa_runtime_preparation: true
+    cannot_override_domain_architecture_or_decision_ledger: true
+    mapless_core_guard: true
+    historical_agent_docs_are_evidence_only: true
+  accepted_prototype:
+    path: docs/design/ui-ux/prototype/app/integrated-reference.html
+    role: owner_accepted_visual_interaction_reference
+    authority: accepted_visual_interaction_reference_not_rules_or_network_authority
+    accepted_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+    acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+  accepted_contracts:
+    path: docs/design/ui-ux/contracts/
+    role: implementation_facing_accepted_ui_contract_set
+    authority: derived_from_accepted_prototype_and_canonical_sources
+    derived: true
+    may_override_domain_architecture_or_decisions: false
+    mandatory_after_prototype_acceptance_for_broad_runtime_work: true
+    read_order_manifest: docs/design/ui-ux/contracts/MANIFEST.yaml
+    key_files:
+      - docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md
+      - docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md
+      - docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
+      - docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
+      - docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
+      - docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md
+      - docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
+      - docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md
+  owner_review:
+    path: docs/design/ui-ux/owner-review/README.md
+    role: owner_selection_workspace
+    authority: explicit_owner_input_not_canonical_until_reconciled
+    derived: false
+    owner_editable: true
+    current_checkpoint_file: null
+    completed_checkpoint_file: docs/design/ui-ux/owner-review/02-key-decisions.md
+    completed_large_worksheet: docs/design/ui-ux/owner-review/01-foundation-navigation-layout.md
+    historical_detail_reference_files:
+      - docs/design/ui-ux/owner-review/02-states-layering-confirmation.md
+      - docs/design/ui-ux/owner-review/03-visual-components-content.md
+      - docs/design/ui-ux/owner-review/04-accessibility-platform.md
+      - docs/design/ui-ux/owner-review/05-dnd-experience.md
+      - docs/design/ui-ux/owner-review/06-session-authority-dm-content.md
+    historical_detail_files_are_required_owner_homework: false
+    canonicalizes_into: docs/design/ui-ux/decisions.md
+    candidate_options_are_product_truth: false
+  historical_agent_workspace:
+    path: .agents/
+    role: non_canonical_historical_working_context
+    authority: evidence_only
+    derived: false
+    may_override_formal_product_or_domain_docs: false
+    read_when_reconciling_history_or_stale_tests: true
+  dashboard:
+    path: docs/design/ui-ux/README.md
+    role: current_planning_status_and_next_action
+    authority: derived_summary
+    derived: true
+  review_plan:
+    path: docs/design/ui-ux/review-plan.md
+    role: detailed_coverage_maps_and_dependency_catalog
+    authority: canonical_for_detailed_question_coverage
+    derived: false
+    detailed_rows_are_owner_homework: false
+    row_resolution_may_come_from:
+      - canonical_decision
+      - lightweight_owner_checkpoint
+      - ai_design_default_contract
+      - domain_or_architecture_contract
+      - conditional_not_applicable
+  decisions:
+    path: docs/design/ui-ux/decisions.md
+    role: canonical_decision_ledger
+    authority: canonical_for_made_product_decisions
+    derived: false
+    status_values_must_match_enum_exactly: true
+  master_flow:
+    path: docs/design/ui-ux/master-flow.md
+    role: owner_friendly_product_flow_and_surface_topology_view
+    authority: derived_view
+    derived: true
+  planning_gaps:
+    path: docs/design/ui-ux/planning-gaps.md
+    role: unresolved_material_no_invention_queue
+    authority: canonical_for_known_gaps
+    derived: false
+    status_values_must_match_enum_exactly: true
+  registry:
+    path: docs/design/ui-ux/registry.md
+    role: r1_r9_ui_inventory
+    authority: derived_inventory
+    derived: true
+  matrices:
+    path: docs/design/ui-ux/matrices.md
+    role: m1_m6_cross_cutting_coverage
+    authority: derived_coverage
+    derived: true
+  templates:
+    path: docs/design/ui-ux/templates.md
+    role: copy_safe_artifact_templates
+    authority: canonical_process_template
+    derived: false
+
+optional_families:
+  surfaces: {path: docs/design/ui-ux/surfaces/, role: detailed_surface_contracts, materialize_when: spec_tier_requires}
+  components: {path: docs/design/ui-ux/components/, role: reusable_component_contracts, materialize_when: spec_tier_requires}
+  motion: {path: docs/design/ui-ux/motion/, role: material_motion_temporal_contracts, materialize_when: spec_tier_requires}
+  work_orders: {path: docs/design/ui-ux/work-orders/, role: scoped_ai_implementation_handoffs, materialize_when: implementation_is_authorized_and_ready}
+
+planning_gate:
+  name: global_planning_gate
+  status: passed
+  blocks_owner_checkpoint_review: false
+  completed_scope: current_active_runtime_and_planning_snapshot
+  owner_review_mode: lightweight_material_checkpoints
+  owner_material_checkpoint_phase: complete
+  remaining_owner_checkpoint_count: 0
+  remaining_owner_checkpoint_ids: []
+  completed_owner_decision_ids:
+    - UX-01
+    - UX-02
+    - UX-03
+    - NAV-01
+    - UI-01
+    - INT-01
+    - PLATFORM-01-01
+    - SES-01-02
+    - SES-01-04
+    - SES-01-05
+    - DM-01-01
+    - DM-01-03
+    - DM-02-01
+    - DM-02-05
+    - CONTENT-02-04
+    - CONTENT-02-09
+    - CONTENT-02-11
+  next_planning_phase: runtime_preparation_from_accepted_contract_set
+  detailed_map_rows_not_listed_as_owner_decisions: ai_or_contract_resolution_unless_escalation_rule_triggers
+  requirements:
+    r1_r9_complete_inventory_cross_check: passed
+    m1_m6_material_coverage: passed
+    all_27_governance_decision_maps_complete: passed
+    missing_duplication_coverage_audit: passed
+    owner_whole_product_checkpoint: passed
+    integrated_product_ux_cross_source_audit: passed
+    reference_prototype_owner_acceptance: passed
+    accepted_runtime_contract_set_materialized: passed
+
+maintenance_rules:
+  - one_normative_fact_one_canonical_home
+  - keep_owner_questions_few_material_and_reversible
+  - detailed_review_plan_is_coverage_not_owner_homework
+  - ai_must_name_owner_control_escalation_reason_before_asking_new_question
+  - ai_design_defaults_must_stay_within_reviewed_decisions_and_authority_boundaries
+  - domain_architecture_truth_is_never_recast_as_owner_preference
+  - selected_reviewed_frozen_decisions_are_planning_truth_but_only_frozen_is_stable_for_implementation
+  - current_code_is_evidence_not_automatic_product_truth
+  - historical_agent_docs_and_old_tests_are_evidence_not_automatic_product_truth
+  - broad_ui_must_read_integrated_product_ux_plan
+  - broad_runtime_ui_after_prototype_acceptance_must_read_accepted_contract_set
+  - accepted_contracts_must_include_playbook_glossary_behavior_scenarios_and_qa_matrix
+  - runtime_work_orders_must_name_touched_behavior_scenarios_and_qa_rows
+  - industry_vtt_convention_must_not_fill_unspecified_behavior
+  - scene_table_stage_canvas_words_never_imply_battlemap_semantics_without_explicit_domain_contract
+  - mapless_core_forbids_actor_xy_tokens_grid_pathfinding_fog_and_los_in_default_product_ui
+  - owner_never_manually_repairs_cross_references
+  - master_flow_is_derived_owner_view_not_second_decision_store
+  - registry_and_matrices_reference_canonical_sources_instead_of_copying_them
+  - full_stable_references_only_in_structured_reference_fields
+
+implementation_gate:
+  planning_status_alone_authorizes_implementation: false
+  owner_checkpoint_selection_alone_authorizes_implementation: false
+  accepted_prototype_alone_authorizes_implementation: false
+  accepted_contracts_alone_authorize_implementation: false
+  requires_integrated_product_ux_baseline_current: true
+  requires_accepted_reference_prototype: true
+  requires_accepted_contract_set_current: true
+  requires_contract_understanding_preflight_pass: true
+  requires_scoped_work_order: true
+  requires_work_order_behavior_scenario_ids: true
+  requires_work_order_qa_row_ids: true
+  requires_applicable_frozen_dependencies: true
+  requires_no_material_blocking_gap_for_slice: true
+  owner_acceptance_required: true
+  explicit_runtime_implementation_authorization_required: true

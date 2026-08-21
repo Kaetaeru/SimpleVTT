@@ -217,3 +217,91 @@ MockAdapter.prototype.clearContentImport=async function clearInstalledContentPre
 
 export function setInstalledContentStoreForTests(adapter:MockAdapter,store:InstalledContentStore) { injectedStores.set(adapter,store); contexts.delete(adapter); }
 export function getInstalledContentPersistenceStateForTests(adapter:MockAdapter) { const context=contexts.get(adapter); return context?{...cp(context.vm),document:context.repository.snapshot()}:null; }
+
+export interface SessionInstalledContentIdentityV1 {
+  contentId:string;
+  sourceId:string;
+  version:string;
+  revision:string;
+}
+
+function canonicalSessionContent(value:unknown):unknown {
+  if (Array.isArray(value)) return value.map(canonicalSessionContent);
+  if (value && typeof value==="object") {
+    return Object.fromEntries(Object.entries(value as Record<string,unknown>)
+      .sort(([a],[b])=>a.localeCompare(b))
+      .map(([key,item])=>[key,canonicalSessionContent(item)]));
+  }
+  return value;
+}
+
+export function sessionInstalledContentRevision(entry:InstalledCatalogEntryV1) {
+  const text=JSON.stringify(canonicalSessionContent(entry));
+  let hash=14695981039346656037n;
+  const prime=1099511628211n;
+  for (let index=0;index<text.length;index+=1) {
+    hash^=BigInt(text.charCodeAt(index));
+    hash=BigInt.asUintN(64,hash*prime);
+  }
+  return `fnv1a64:${hash.toString(16).padStart(16,"0")}`;
+}
+
+function sessionIdentityKey(identity:{contentId:string;sourceId:string;version:string}) {
+  return catalogQualifiedId(identity.contentId,identity.sourceId,identity.version);
+}
+
+export async function snapshotSessionInstalledContent(adapter:MockAdapter):Promise<SessionInstalledContentIdentityV1[]> {
+  await ensureHydrated(adapter);
+  const document=contextFor(adapter).repository.snapshot();
+  if (!document) throw new Error("installed content repository is not hydrated");
+  return document.entries.map((entry)=>({
+    contentId:entry.contentId,
+    sourceId:entry.sourceId,
+    version:entry.version,
+    revision:sessionInstalledContentRevision(entry),
+  })).sort((a,b)=>sessionIdentityKey(a).localeCompare(sessionIdentityKey(b),"en"));
+}
+
+export async function requiredSessionInstalledContent(
+  adapter:MockAdapter,
+  peerInventory:SessionInstalledContentIdentityV1[],
+):Promise<InstalledCatalogEntryV1[]> {
+  await ensureHydrated(adapter);
+  const document=contextFor(adapter).repository.snapshot();
+  if (!document) throw new Error("installed content repository is not hydrated");
+  const peerById=new Map<string,string>();
+  for (const identity of peerInventory) {
+    const key=sessionIdentityKey(identity);
+    const existing=peerById.get(key);
+    if (existing!==undefined && existing!==identity.revision) throw new Error(`peer content inventory has conflicting revisions for ${key}`);
+    peerById.set(key,identity.revision);
+  }
+  return document.entries
+    .filter((entry)=>peerById.get(sessionIdentityKey(entry))!==sessionInstalledContentRevision(entry))
+    .map(cp);
+}
+
+export async function installSessionInstalledContent(adapter:MockAdapter,entries:InstalledCatalogEntryV1[]) {
+  await ensureHydrated(adapter);
+  const context=contextFor(adapter);
+  if (!entries.length) return {changed:false,storageRevision:context.repository.snapshot()?.storageRevision ?? 0};
+  const validation=validateInstalledContentPackage(validationDocument(context),entries);
+  const blocking=validation.issues.filter((issue)=>issue.severity==="blocking");
+  if (blocking.length) throw new Error(`콘텐츠 검증 실패: ${blocking.map(issueMessage).join(" | ")}`);
+  for (const entry of entries) {
+    if (collidesWithBuiltin(context,entry.contentId,entry.sourceId,entry.version)) {
+      throw new Error(builtinCollisionMessage(entry.contentId,entry.sourceId,entry.version));
+    }
+  }
+  try {
+    const result=await context.repository.installMany(entries.map(cp));
+    if (result.status==="conflict") throw new Error(result.error);
+    applyComposition(adapter);
+    context.vm={durability:context.repository.durability,status:"ready",storageRevision:result.hydration.document.storageRevision};
+    return {changed:result.hydration.changed,storageRevision:result.hydration.document.storageRevision};
+  } catch(error) {
+    const message=error instanceof Error?error.message:String(error);
+    context.vm={durability:context.repository.durability,status:"error",storageRevision:context.repository.snapshot()?.storageRevision ?? 0,message};
+    throw error;
+  }
+}

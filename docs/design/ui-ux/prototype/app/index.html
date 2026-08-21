@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SimpleVTT UI Reference Prototype</title>
+  <link rel="stylesheet" href="prototype.css" />
+  <link rel="stylesheet" href="review-patch.css" />
+</head>
+<body>
+  <div class="proto-app">
+    <aside class="proto-controls" aria-label="Prototype Controls">
+      <div class="proto-controls__brand">
+        <div class="proto-kicker">PROTOTYPE CONTROLS</div>
+        <h1>SimpleVTT UI Lab</h1>
+        <p>제품 UI가 아닙니다. 씬·상태·역할을 빠르게 전환하는 검토용 패널입니다.</p>
+      </div>
+
+      <section class="proto-control-group">
+        <label for="scenarioSelect">검토 시나리오</label>
+        <select id="scenarioSelect"></select>
+      </section>
+
+      <section class="proto-control-group">
+        <label for="surfaceSelect">화면 / Surface 바로 보기</label>
+        <select id="surfaceSelect"></select>
+      </section>
+
+      <section class="proto-control-grid">
+        <label>
+          <span>View</span>
+          <select id="viewSelect">
+            <option value="dm">Host / DM</option>
+            <option value="player">Client / Player</option>
+            <option value="offline">Offline</option>
+          </select>
+        </label>
+        <label>
+          <span>Mode</span>
+          <select id="modeSelect">
+            <option value="freeform">Freeform</option>
+            <option value="initiative">Initiative</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="proto-control-grid">
+        <label>
+          <span>Viewport</span>
+          <select id="viewportSelect">
+            <option value="wide">Wide 1600×1000</option>
+            <option value="normal" selected>Normal 1366×768</option>
+            <option value="narrow">Narrow 960×700</option>
+          </select>
+        </label>
+        <label>
+          <span>Connection</span>
+          <select id="connectionSelect">
+            <option value="connected">Connected</option>
+            <option value="reconnecting">Reconnecting</option>
+            <option value="disconnected">Disconnected</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="proto-control-grid">
+        <label>
+          <span>Handout</span>
+          <select id="handoutSelect">
+            <option value="none">None</option>
+            <option value="overlay">Overlay</option>
+            <option value="upper">Upper Scene</option>
+            <option value="full">Full Scene</option>
+          </select>
+        </label>
+        <label>
+          <span>DM Roll</span>
+          <select id="visibilitySelect">
+            <option value="public">Public</option>
+            <option value="dm-only">DM Only</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="proto-control-group proto-checks">
+        <label><input type="checkbox" id="reducedMotionToggle" /> Reduced Motion</label>
+        <label><input type="checkbox" id="errorToggle" /> Error example</label>
+        <label><input type="checkbox" id="loadingToggle" /> Loading / Pending</label>
+      </section>
+
+      <section class="proto-control-actions">
+        <button class="proto-btn proto-btn--secondary" data-proto-command="components">Component Gallery</button>
+        <button class="proto-btn proto-btn--quiet" data-proto-command="reset">Reset Layout</button>
+      </section>
+
+      <div class="proto-note">
+        <strong>Boundary</strong>
+        <span>Mock data only · no backend · no rules calculation · no production src import</span>
+      </div>
+    </aside>
+
+    <main class="proto-stage">
+      <div class="proto-stage__topbar">
+        <div>
+          <span class="proto-status-dot"></span>
+          <strong id="scenarioTitle">Loading prototype…</strong>
+        </div>
+        <div id="scenarioMeta" class="proto-stage__meta"></div>
+      </div>
+
+      <div class="proto-viewport-scroll">
+        <div id="prototypeViewport" class="prototype-viewport vp-normal" data-proto-viewport="normal">
+          <div id="productRoot" class="product-root" aria-live="polite"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="fixtures.js"></script>
+  <script src="prototype.js"></script>
+  <script src="review-patch.js"></script>
+</body>
+</html>

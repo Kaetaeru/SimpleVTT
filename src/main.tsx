@@ -1,23 +1,43 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { ProductRoot } from "./ProductRoot";
 import { AppProvider } from "./app/AppProvider";
+import { initializeAppearancePreference } from "./app/appearancePreferences";
 import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
+import "./app/directNetworkSessionRuntimeAdapter";
+import "./app/connectedParticipantIdempotencyAdapter";
 import "./app/connectedProjectionLifecycleAdapter";
 import "./app/connectedRoleRoutingAdapter";
 import "./app/connectedActionRoutingAdapter";
 import "./app/connectedTurnRoutingAdapter";
 import "./app/connectedCorrectionRoutingAdapter";
+import "./app/productionSessionLifecycleAdapter";
+import "./app/productionSessionEmptyEncounterAdapter";
+import "./app/productionSessionUiStateAdapter";
+import "./app/sessionImageHandoutRuntimeAdapter";
+import "./app/sessionContentParityRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
+import { CombatVfxBridge } from "./CombatVfxBridge";
+import { AppearanceSettingsBridge } from "./AppearanceSettingsBridge";
+import { FirstRunTutorialBridge } from "./FirstRunTutorialBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
+import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
+import { ProductionSessionDirectNetworkBridge } from "./ProductionSessionDirectNetworkBridge";
+import { CharacterPortraitBridge } from "./CharacterPortraitBridge";
+import { CharacterLibraryUxBridge } from "./CharacterLibraryUxBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
 import "./visual-dice.css";
+import "./physics-dice.css";
+import "./combat-vfx.css";
+import "./player-experience-redesign.css";
+import "./player-experience-accessibility.css";
+import "./v09-production-play.css";
 import "./movement-reaction.css";
 import "./character-creation-v09.css";
 import "./character-creation-v10.css";
@@ -28,16 +48,33 @@ import "./combat-spell-hud.css";
 import "./level-up-v10.css";
 import "./focused-layout-fix.css";
 import "./character-sheet-v10-viewport.css";
+import "./production-ux-redesign.css";
+import "./v1-product-shell.css";
+import "./v1-product-shell-tokens.css";
+import "./first-run-tutorial.css";
+import "./appearance-settings.css";
+import "./character-portrait.css";
+import "./session-image-handout.css";
+
+void CombatSpellHudBridge;
+
+initializeAppearancePreference();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProvider>
-      <App />
-      <CombatSpellHudBridge />
+      <ProductRoot />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
+      <CombatVfxBridge />
+      <AppearanceSettingsBridge />
+      <FirstRunTutorialBridge />
       <ConcentrationSaveBridge />
       <MovementReactionBridge />
+      <ProductionSessionWorkspaceBridge />
+      <ProductionSessionDirectNetworkBridge />
+      <CharacterPortraitBridge />
+      <CharacterLibraryUxBridge />
     </AppProvider>
   </StrictMode>,
 );

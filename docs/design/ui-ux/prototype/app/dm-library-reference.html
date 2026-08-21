@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SimpleVTT DM Library Reference Candidate</title>
+  <link rel="stylesheet" href="integrated-reference.css" />
+  <link rel="stylesheet" href="dm-library-reference.css" />
+</head>
+<body>
+  <div class="review-shell">
+    <aside class="review-controls" aria-label="Prototype Controls">
+      <div class="review-brand">
+        <span class="review-kicker">CANDIDATE EXTENSION · NOT ACCEPTED YET</span>
+        <h1>SimpleVTT DM Library</h1>
+        <p>기존 accepted Integrated Reference를 유지하면서 DM 준비 Library와 live invocation만 검토하는 후보 화면입니다.</p>
+      </div>
+
+      <label class="control-field">
+        <span>Scenario</span>
+        <select id="scenarioSelect"></select>
+      </label>
+
+      <label class="control-field">
+        <span>Viewport</span>
+        <select id="viewportSelect">
+          <option value="wide">Wide 1600×1000</option>
+          <option value="normal" selected>Normal 1366×768</option>
+          <option value="narrow">Narrow 960×700</option>
+        </select>
+      </label>
+
+      <div class="control-actions">
+        <button data-review-jump="DMLIB-SCN-01">Images</button>
+        <button data-review-jump="DMLIB-SCN-02">NPC Actors</button>
+        <button data-review-jump="DMLIB-SCN-04">Encounter</button>
+        <button data-review-jump="DMLIB-SCN-05">Handout</button>
+      </div>
+
+      <div class="review-rule">
+        <strong>Private Source Guard</strong>
+        <span>Library 목록은 로컬 준비 자료입니다. 명시적 Add/Reveal 전에는 Session/Player projection이 아닙니다.</span>
+      </div>
+
+      <div class="review-rule">
+        <strong>Ownership Guard</strong>
+        <span>PC Actor Preset은 Player-owned Character가 아닙니다. Session control assignment도 Character ownership을 이전하지 않습니다.</span>
+      </div>
+
+      <div class="review-rule">
+        <strong>Mapless Guard</strong>
+        <span>Images는 Handout/presentation 자산이며 battlemap/token/grid 기능을 암시하지 않습니다.</span>
+      </div>
+    </aside>
+
+    <main class="review-stage">
+      <header class="review-stage__header">
+        <div><span class="review-status-dot"></span><strong id="scenarioTitle">DM Library Candidate</strong></div>
+        <div id="scenarioMeta" class="review-stage__meta"></div>
+      </header>
+      <div class="review-stage__scroll">
+        <div id="reviewViewport" class="review-viewport vp-normal">
+          <div id="appRoot" class="app-root" aria-live="polite"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="dm-library-reference.js"></script>
+</body>
+</html>

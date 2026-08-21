@@ -3,6 +3,7 @@
 // Keep order aligned with the dependency layering below: authoring/progression,
 // Phase 09 rules/runtime/event adapters, then Phase 10 durable persistence/content.
 import "./characterCreationV10Adapter";
+import "./characterCreationWeaponAttackAdapter";
 import "./characterCreationSourceEditAdapter";
 import "./characterSheetV10Runtime";
 import "./mockAdapterCompletion";
@@ -29,6 +30,9 @@ import "./phase09RealTurnRuntimeAdapter";
 import "./phase09EffectAwareTurnAdapter";
 import "./phase09RealRuntimeStatAdapter";
 import "./phase09RealRuntimeAttackAdapter";
+// Keep post-commit DM HP corrections inside the same canonical ResolutionEvent
+// history so event-native Undo reverses correction then original resolution.
+import "./dmAdjudicationResolutionEventAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./phase09ManualMovementReactionAdapter";
 import "./phase09RealAtomicHealingAdapter";
@@ -39,8 +43,27 @@ import "./pactTomeRuntimeAdapter";
 import "./druidCircleLandSpellRuntimeAdapter";
 import "./restSpellManagementRuntimeAdapter";
 import "./classFeatureSpellRuntimeAdapter";
+// Project persisted arbitrary Character spell facts before the Phase 09 router captures
+// its underlying snapshot function, so the existing authoritative HUD/slot bridge can
+// seed TurnRuntime resources without any fixture-only caster registry.
+import "./productionSpellcasterProjectionAdapter";
 import "./phase09SpellcastingRuntimeRouter";
 import "./characterLibraryRuntimeAdapter";
 import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";
 import "./installedContentRuntimeAdapter";
+// Phase 14 outermost production composition: real Character -> live Scene/actions,
+// authoritative spell execution, explicit DM-authored theater-of-mind spatial facts,
+// canonical ItemInstance-backed weapon runtime facts, then production-only random d20 faces.
+import "./productionPlayRuntimeAdapter";
+import "./theaterOfMindSpatialAdapter";
+import "./productionSpellRuntimeAdapter";
+import "./productionWeaponRuntimeFactAdapter";
+import "./productionDiceRuntimeAdapter";
+// Record successful open ability checks as canonical ResolutionEvents after all
+// production resolution wrappers have completed, without changing their UI/economy path.
+import "./abilityCheckResolutionEventAdapter";
+// Human-acceptance projection stays outermost: it materializes the remaining legacy
+// reference Character summary, keeps the reference demo melee-playable, and projects
+// runtime spatial legality into targetable attack options without changing mechanics authority.
+import "./productionAcceptanceRuntimeAdapter";

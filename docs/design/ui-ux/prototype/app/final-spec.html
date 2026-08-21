@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SimpleVTT Final-Spec UI Reference Demo</title>
+  <link rel="stylesheet" href="final-spec.css" />
+  <link rel="stylesheet" href="final-spec-coverage.css" />
+</head>
+<body>
+  <div class="demo-shell">
+    <aside class="demo-lab" aria-label="Prototype Controls">
+      <div class="demo-lab__brand">
+        <div class="demo-kicker">FINAL-SPEC REFERENCE</div>
+        <h1>SimpleVTT UI Lab</h1>
+        <p>검토 전용 패널입니다. 제품 UI가 아닙니다.</p>
+      </div>
+
+      <div class="demo-lab__warning">
+        <strong>중요</strong>
+        <span>이 데모는 mock data만 사용합니다. 룰·네트워크·권한을 계산하지 않습니다.</span>
+      </div>
+
+      <label class="lab-field">
+        <span>Scenario</span>
+        <select id="scenarioSelect"></select>
+      </label>
+
+      <div class="lab-grid">
+        <label class="lab-field"><span>View</span><select id="viewSelect"><option value="dm">Host / DM</option><option value="player">Client / Player</option><option value="offline">Offline</option></select></label>
+        <label class="lab-field"><span>Mode</span><select id="modeSelect"><option value="freeform">Freeform</option><option value="initiative">Initiative</option></select></label>
+      </div>
+
+      <div class="lab-grid">
+        <label class="lab-field"><span>Viewport</span><select id="viewportSelect"><option value="wide">Wide · 1600×1000</option><option value="normal" selected>Normal · 1366×768</option><option value="narrow">Narrow · 960×700</option></select></label>
+        <label class="lab-field"><span>Sheet</span><select id="sheetStyleSelect"><option value="official">Official-style</option><option value="svtt">SimpleVTT</option></select></label>
+      </div>
+
+      <div class="lab-grid">
+        <label class="lab-field"><span>Utility</span><select id="utilitySelect"><option value="none">None</option><option value="activity">Activity</option><option value="encounter">Encounter</option><option value="participants">Participants</option><option value="session">Session Share</option><option value="spatial">DM Spatial</option></select></label>
+        <label class="lab-field"><span>Handout</span><select id="handoutSelect"><option value="none">None</option><option value="overlay">Overlay</option><option value="upper">Upper Scene</option><option value="full">Full Scene</option></select></label>
+      </div>
+
+      <div class="lab-grid">
+        <label class="lab-field"><span>DM Roll</span><select id="visibilitySelect"><option value="public">Public</option><option value="dm-only">DM Only</option></select></label>
+        <label class="lab-field"><span>Connection</span><select id="connectionSelect"><option value="connected">Connected</option><option value="reconnecting">Reconnecting</option><option value="disconnected">Disconnected</option></select></label>
+      </div>
+
+      <label class="lab-check"><input type="checkbox" id="reducedMotionToggle" /> <span>Reduced Motion</span></label>
+
+      <div class="lab-actions">
+        <button class="lab-btn" data-demo-action="open-sheet">Standalone Sheet</button>
+        <button class="lab-btn" data-demo-action="open-play">Session Play</button>
+        <button class="lab-btn lab-btn--quiet" data-demo-action="components">Component Gallery</button>
+        <button class="lab-btn lab-btn--quiet" data-demo-action="reset">Reset Demo</button>
+      </div>
+
+      <div class="lab-footnote">
+        <strong>Canonical corrections applied</strong>
+        <span>Standalone dice stay inside the current Sheet. Connected Play uses the reviewed Actor Board → Scene → Actor Board → Command Center topology.</span>
+      </div>
+    </aside>
+
+    <main class="demo-stage">
+      <header class="demo-stage__header">
+        <div>
+          <span class="demo-status-dot"></span>
+          <strong id="scenarioTitle">Final-Spec Demo</strong>
+        </div>
+        <div id="scenarioMeta" class="demo-stage__meta"></div>
+      </header>
+      <div class="demo-stage__scroll">
+        <div id="demoViewport" class="demo-viewport vp-normal" data-viewport="normal">
+          <div id="appRoot" class="app-root" aria-live="polite"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="final-spec-fixtures.js"></script>
+  <script src="final-spec.js"></script>
+  <script src="final-spec-stability.js"></script>
+  <script src="final-spec-coverage.js"></script>
+</body>
+</html>

@@ -79,6 +79,11 @@ Use versioned contracts, registries, descriptors, scenario tests, and declarativ
 
 ## Canonical documents
 
+For UI/UX work, AI should discover the reading order from the dedicated router instead of scanning the canon ad hoc.
+
+- `docs/design/ui-ux/AI-READING-GUIDE.md` — canonical task router and mandatory reading order for UI/UX planning, changes, implementation, QA, and conflict resolution.
+- `docs/design/ui-ux-planning-framework.md` — canonical owner-friendly and AI-readable UI/UX planning, decision, handoff, and verification framework.
+- `docs/design/ui-ux/README.md` — current UI/UX planning dashboard and owner entrypoint.
 - `docs/rules/README.md` — Common Rule Definition Specification v0.x draft.
 - `docs/rules/content-relationships.md` — normative cross-module `parent` / `extends` / `replaces`, Choice option contribution, and progression contribution semantics.
 - `docs/design/character-lifecycle.md` — Character creation, editing, progression, revision, and local ownership.

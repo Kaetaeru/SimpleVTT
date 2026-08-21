@@ -55,9 +55,21 @@ jobs:
       - name: Verify Phase 11 complete offline playable walkthrough
         run: npx tsx --test tests/ui/phase11OfflineWalkthrough.test.ts
       - name: Verify Phase 12 connected-session authority
-        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts
+        run: npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedAttackEventCapture.test.ts tests/ui/productionSessionEnd.test.ts
       - name: Verify Phase 13 arbitrary Character SessionProjection
-        run: npx tsx --test tests/ui/characterSessionProjection.test.ts tests/ui/characterSessionProjectionReconstruction.test.ts tests/ui/characterSessionProjectionMount.test.ts tests/ui/connectedCharacterProjectionHandshake.test.ts tests/ui/connectedProjectedCharacterResolution.test.ts
+        run: npx tsx --test tests/ui/characterSessionProjection.test.ts tests/ui/characterSessionProjectionReconstruction.test.ts tests/ui/characterSessionProjectionMount.test.ts tests/ui/connectedCharacterProjectionHandshake.test.ts tests/ui/connectedProjectedCharacterResolution.test.ts tests/ui/connectedProjectedCharacterInventoryResolution.test.ts tests/ui/connectedProjectedCharacterSpellResolution.test.ts tests/ui/connectedProjectedCharacterSkillResolution.test.ts
+      - name: Verify Phase 14 DM prepared Combatant flow
+        run: npx tsx --test tests/ui/productionDmPreparedCombatantFlow.test.ts
+      - name: Verify Phase 14 live DM adjudication and Undo
+        run: npx tsx --test tests/ui/productionDmLiveAdjudicationFlow.test.ts
+      - name: Verify Phase 14 live Combatant theater-of-mind action
+        run: npx tsx --test tests/ui/productionDmLiveCombatantAction.test.ts
+      - name: Verify Phase 14 Host preparation metadata and active content
+        run: npx tsx --test tests/ui/productionSessionPreparationMetadata.test.ts
+      - name: Verify Phase 14 live DM mechanics continuity
+        run: npx tsx --test tests/ui/productionDmLiveMechanicsContinuity.test.ts
+      - name: Verify Phase 14 production play workspace accessibility structure
+        run: npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts
 
   windows-playable:
     runs-on: windows-latest
@@ -101,7 +113,7 @@ jobs:
             "6. For connected play, start Host on one Windows instance and Join from another using <HOST_IPV4>:3210.",
             "7. Join with a locally saved Character unknown to the host and confirm it mounts as an ephemeral SessionProjection without creating a permanent host Character copy.",
             "8. Resolve a Character-durable action remotely, confirm host/client convergence, reconnect idempotently, and verify durable state persists only in the owning client's Character library.",
-            "9. Start a new Host session and confirm previous ephemeral projections are cleared while permanent local Characters remain intact."
+            "9. Explicitly end the connected session, confirm former clients become ended/offline without reconnecting, then start a fresh Host session with no stale participants/projections/turn state."
           ) | Set-Content -Encoding utf8 "playable-artifact/PLAYABLE-WALKTHROUGH.txt"
       - name: Upload Windows playable artifact
         uses: actions/upload-artifact@v4

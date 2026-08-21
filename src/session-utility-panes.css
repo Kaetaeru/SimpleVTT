@@ -1,0 +1,230 @@
+.session-utility-pane {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 34;
+  width: min(440px, calc(100vw - 80px));
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border-left: 1px solid var(--line-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.session-activity-pane {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.session-utility-pane-head {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+}
+
+.session-utility-pane-head strong,
+.session-utility-pane-head small {
+  display: block;
+}
+
+.session-utility-pane-head small {
+  margin-top: 2px;
+  font-size: 9px;
+}
+
+.session-utility-pane-head > button {
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  font-size: 20px;
+}
+
+.session-rules-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-rule-results,
+.session-activity-list,
+.session-rule-detail {
+  min-height: 0;
+  overflow: auto;
+}
+
+.session-rule-results {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 10px 12px 18px;
+}
+
+.session-rule-results > button {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  padding: 9px 10px;
+  text-align: left;
+  background: var(--recess);
+}
+
+.session-rule-results > button > div strong,
+.session-rule-results > button > div small {
+  display: block;
+}
+
+.session-rule-results > button > div small,
+.session-rule-results > button > span,
+.session-rule-results > button > p {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.session-rule-results > button > span {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.session-rule-results > button > p {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.session-rule-detail {
+  grid-row: 3;
+  padding: 14px 16px 24px;
+}
+
+.session-rule-back {
+  margin-bottom: 16px;
+}
+
+.session-rule-detail h2 {
+  margin: 5px 0 2px;
+}
+
+.session-rule-detail > p {
+  margin-top: 16px;
+  color: var(--muted);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.session-rule-related {
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.session-rule-related > strong {
+  font-size: 11px;
+}
+
+.session-rule-related button {
+  text-align: left;
+}
+
+.session-activity-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--accent-soft);
+}
+
+.session-activity-undo strong,
+.session-activity-undo small {
+  display: block;
+}
+
+.session-activity-undo small {
+  margin-top: 2px;
+  font-size: 8px;
+}
+
+.session-activity-undo button {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.session-activity-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px 12px 18px;
+}
+
+.session-activity-list article {
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--recess);
+}
+
+.session-activity-list article.reversed {
+  opacity: .55;
+}
+
+.session-activity-list article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  color: var(--quiet);
+  font-size: 8px;
+}
+
+.session-activity-list article > strong {
+  display: block;
+  font-size: 11px;
+}
+
+.session-activity-list article > p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.session-activity-list article > small {
+  font-size: 8px;
+}
+
+.session-utility-empty {
+  margin: 18px 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 899px) {
+  .session-utility-pane {
+    width: min(100%, 460px);
+  }
+}
+
+@media (max-width: 620px) {
+  .session-utility-pane {
+    width: 100%;
+  }
+
+  .session-activity-undo {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

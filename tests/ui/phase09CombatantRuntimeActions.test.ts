@@ -84,7 +84,7 @@ test("builtin encounter Goblin shortbow materializes from its Definition and exe
   const activity=snapshot.activity[0];
   assert.equal(activity.id,snapshot.resolution?.id);
   assert.ok(activity.detail.some((line)=>line.includes("runtime:combatant-definition:combatant.goblin:action:shortbow:damage")));
-  assert.ok(activity.detail.some((line)=>line.includes("runtime:spatial:scene.ruined-gate:reference-fixture")));
+  assert.ok(activity.detail.some((line)=>line.includes("unconstrained:no-authoritative-module-fact")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar 임시 HP 5 → 0")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.goblin-a economy.action true → false")));
 
@@ -96,7 +96,7 @@ test("builtin encounter Goblin shortbow materializes from its Definition and exe
   assert.equal(snapshot.resolution,null);
 });
 
-test("imported Combatant attack consumes structured Definition facts plus an explicitly supplied pairwise spatial fact", async () => {
+test("imported Combatant attack consumes an explicitly supplied authoritative spatial-module fact when present", async () => {
   const adapter=new MockAdapter();
   const scout=await instantiateScout(adapter);
   const scene=internalScene(adapter);
@@ -107,7 +107,7 @@ test("imported Combatant attack consumes structured Definition facts plus an exp
     visible:true,
     cover:"none",
     targetCanSeeAttacker:true,
-    provenance:"manual:test:combatant-runtime-spatial",
+    provenance:"module:test-grid:spatial:combatant-runtime",
   });
   await adapter.setCurrentActor(scout.id);
   let snapshot=await adapter.getSnapshot();
@@ -128,7 +128,7 @@ test("imported Combatant attack consumes structured Definition facts plus an exp
   const activity=snapshot.activity[0];
   assert.equal(activity.id,snapshot.resolution?.id);
   assert.ok(activity.detail.some((line)=>line.includes("runtime:combatant-definition:combatant.local-scout:action:dagger:damage")));
-  assert.ok(activity.detail.some((line)=>line.includes("manual:test:combatant-runtime-spatial")));
+  assert.ok(activity.detail.some((line)=>line.includes("module:test-grid:spatial:combatant-runtime")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("char.mira HP 24 → 19")));
   assert.ok(activity.stateChanges.some((line)=>line.includes(`${scout.id} economy.action true → false`)));
 
@@ -139,7 +139,7 @@ test("imported Combatant attack consumes structured Definition facts plus an exp
   assert.equal(snapshot.resolution,null);
 });
 
-test("Combatant runtime attack with no pairwise spatial fact rejects without guessing from presentation distance", async () => {
+test("Combatant runtime attack without a spatial-module fact is unconstrained and still commits", async () => {
   const adapter=new MockAdapter();
   const scout=await instantiateScout(adapter);
   await adapter.setCurrentActor(scout.id);
@@ -149,14 +149,8 @@ test("Combatant runtime attack with no pairwise spatial fact rejects without gue
 
   await adapter.setQueuedD20(15);
   await adapter.resolveAction(dagger!.id,["char.mira"]);
-  await adapter.advanceResolution();
-  snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.resolution?.stage,"attack-result");
-  await adapter.advanceResolution();
-  snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.resolution?.stage,"complete");
-  assert.match(snapshot.resolution?.finalOutcome ?? "",/missing pairwise spatial runtime fact/);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.mira")?.hp,24);
-  assert.equal(snapshot.scene.economyByActor[scout.id]?.action,true);
-  assert.deepEqual(snapshot.resolution?.stateChanges,[]);
+  snapshot=await commitAttack(adapter);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.mira")?.hp,19);
+  assert.equal(snapshot.scene.economyByActor[scout.id]?.action,false);
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
 });

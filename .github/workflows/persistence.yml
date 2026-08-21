@@ -30,6 +30,7 @@ on:
       - "tests/ui/declarativeModuleValidation.test.ts"
       - "tests/ui/ruleModulePackage*.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
+      - "tests/ui/productionFreshCharacterInventory.test.ts"
       - "schemas/**"
       - "rules/profiles/**"
       - "docs/design/**"
@@ -68,6 +69,7 @@ on:
       - "tests/ui/declarativeModuleValidation.test.ts"
       - "tests/ui/ruleModulePackage*.test.ts"
       - "tests/ui/resolutionCharacter*.test.ts"
+      - "tests/ui/productionFreshCharacterInventory.test.ts"
       - "schemas/**"
       - "rules/profiles/**"
       - "docs/design/**"
@@ -89,7 +91,7 @@ jobs:
       - name: Generate content dependencies
         run: npm run generate:content
       - name: Verify Character, content, module and package persistence contracts
-        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryFailureRecovery.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/declarativeModuleValidation.test.ts tests/ui/ruleModulePackageImport.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
+        run: npx tsx --test tests/ui/characterLibraryPersistence.test.ts tests/ui/characterLibraryPortraitPersistence.test.ts tests/ui/characterLibraryFailureRecovery.test.ts tests/ui/characterLibraryRuntimeAdapter.test.ts tests/ui/characterLibraryProductionPlayIntegration.test.ts tests/ui/productionFreshCharacterInventory.test.ts tests/ui/characterSourceEditPersistence.test.ts tests/ui/authoringDraftPersistence.test.ts tests/ui/authoringDraftRuntimeAdapter.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/declarativeModuleValidation.test.ts tests/ui/ruleModulePackageImport.test.ts tests/ui/resolutionCharacterDurableProjection.test.ts tests/ui/resolutionCharacterWriteBack.test.ts
       - name: Verify production build
         run: npm run build
 

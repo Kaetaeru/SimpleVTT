@@ -1,0 +1,131 @@
+.session-mode-root[data-session-mode="initiative"] {
+  grid-template-rows: 52px auto minmax(0, 1fr) 68px;
+}
+
+.session-initiative-strip {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 74px;
+  padding: 8px 10px 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--recess) 88%, transparent);
+}
+
+.session-initiative-round {
+  min-width: 120px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 7px;
+}
+.session-initiative-round > span {
+  color: var(--accent);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+.session-initiative-round > strong { font-size: 20px; }
+.session-initiative-round > div { grid-column: 1 / -1; min-width: 0; display: flex; gap: 5px; align-items: baseline; }
+.session-initiative-round small { color: var(--quiet); font-size: 9px; }
+.session-initiative-round b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+
+.session-initiative-order {
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding: 1px 0 3px;
+}
+.session-initiative-order > div {
+  flex: 0 0 auto;
+  min-width: 132px;
+  max-width: 190px;
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.session-initiative-order > div.current {
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
+}
+.session-initiative-avatar {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--recess);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+}
+.session-initiative-actor { min-width: 0; }
+.session-initiative-actor strong,
+.session-initiative-actor small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-initiative-actor strong { font-size: 10px; }
+.session-initiative-actor small { margin-top: 2px; color: var(--muted); font-size: 8px; }
+.session-initiative-score { color: var(--quiet); font-size: 12px; }
+.session-initiative-order > div.current .session-initiative-score { color: var(--accent); }
+
+.session-initiative-economy {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 4px 10px;
+  padding: 4px 10px;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+.session-initiative-economy > span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; white-space: nowrap; }
+.session-initiative-economy small { color: var(--quiet); font-size: 8px; }
+.session-initiative-economy strong { font-size: 9px; }
+
+.session-initiative-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.session-initiative-controls button { min-height: 36px; white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .session-initiative-strip { grid-template-columns: auto minmax(180px, 1fr) auto; }
+  .session-initiative-economy { display: none; }
+}
+
+@media (max-width: 899px) {
+  .session-mode-root[data-session-mode="initiative"] {
+    grid-template-rows: 48px auto minmax(0, 1fr) 60px;
+  }
+  .session-initiative-strip {
+    min-height: 66px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 6px 8px 6px 10px;
+  }
+  .session-initiative-round { min-width: 96px; }
+  .session-initiative-order > div { min-width: 116px; min-height: 48px; }
+  .session-initiative-controls button:not(.primary) { display: none; }
+}
+
+@media (max-width: 620px) {
+  .session-initiative-strip {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "round controls" "order order";
+  }
+  .session-initiative-round { grid-area: round; }
+  .session-initiative-order { grid-area: order; }
+  .session-initiative-controls { grid-area: controls; }
+  .session-initiative-controls button { min-height: 32px; padding-inline: 9px; }
+}

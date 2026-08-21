@@ -13,6 +13,7 @@ import type {
   SceneVm,
 } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { sanitizeCharacterPortrait } from "./characterPortraitContracts";
 import { CharacterLibraryRepository, projectCharacterRuntimeDurableV1, projectCharacterSourceV1 } from "./characterLibraryPersistence";
 import type { CharacterLibraryStore } from "./persistenceContracts";
 import { createPlatformCharacterLibraryStore } from "./tauriCharacterLibraryStore";
@@ -285,7 +286,7 @@ installCharacterResolutionWriteBackHandler(async (adapter,events,direction) => {
     };
     return { status:"committed" as const,changed:true };
   } catch(error) {
-    const message=error instanceof Error ? error.message : String(error);
+    const message=error instanceof Error ? error.message:String(error);
     context.vm={
       durability:context.repository.durability,
       status:"error",
@@ -344,6 +345,31 @@ const oldConfigureCircleLandRest = MockAdapter.prototype.configureCircleLandRest
 MockAdapter.prototype.configureCircleLandRest = async function configureCircleLandRestWithPersistence(landType:CircleLandType) {
   return durableMutation(this,() => oldConfigureCircleLandRest.call(this,landType));
 };
+
+export async function updateActiveCharacterPortrait(adapter:MockAdapter,portrait:CharacterSheet["portrait"]|null) {
+  await ensureHydrated(adapter);
+  const normalized=portrait===null?undefined:sanitizeCharacterPortrait(portrait);
+  if (portrait!==null&&!normalized) throw new Error("Character portrait payload is invalid or exceeds the 2 MiB limit.");
+  const state=stateOf(adapter);
+  const context=contextFor(adapter);
+  const before=capture(state);
+  const next=cp(state.activeCharacter);
+  if (normalized) next.portrait=cp(normalized);
+  else delete next.portrait;
+  state.activeCharacter=next;
+  state.characters=state.characters.map((character)=>character.id===next.id?{...character,...cp(next)}:character);
+  try {
+    const hydration=await context.repository.commit(collectPersistableSheets(state),next.id);
+    applyHydration(state,hydration.sheets,hydration.activeCharacterId);
+    context.vm={durability:context.repository.durability,status:"ready",storageRevision:hydration.document.storageRevision};
+    return adapter.getSnapshot();
+  } catch(error) {
+    restore(state,before);
+    const message=error instanceof Error?error.message:String(error);
+    context.vm={durability:context.repository.durability,status:"error",storageRevision:context.repository.snapshot()?.storageRevision??0,message};
+    throw error;
+  }
+}
 
 export function setCharacterLibraryStoreForTests(adapter:MockAdapter,store:CharacterLibraryStore) {
   injectedStores.set(adapter,store);

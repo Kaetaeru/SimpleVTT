@@ -18,13 +18,16 @@ export type ConnectedWireMessage =
   | {
       type:"hello-ack";
       sessionId:string;
+      sessionName?:string;
       compatibility:SessionCompatibilityResult;
       hostCursor:number;
       events:ConnectedSessionEvent[];
     }
+  | { type:"ready-intent"; sessionId:string; ready:boolean }
   | { type:"action-request"; request:ConnectedActionRequest }
   | { type:"catchup-request"; sessionId:string; afterCursor:number }
   | { type:"event-batch"; sessionId:string; afterCursor:number; events:ConnectedSessionEvent[] }
+  | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number };
 
 export type DecodeWireResult =
@@ -127,7 +130,12 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
   } else if (payload.kind==="correction") {
     if (typeof payload.ruling!=="string"||!Array.isArray(payload.changes)||!payload.changes.every(isCorrectionChange)) return false;
     if (payload.resolutionId!==undefined&&!isString(payload.resolutionId)) return false;
-  } else if (payload.kind!=="participant") return false;
+  } else if (payload.kind==="participant") {
+    if (!isString(payload.participantId)||!isString(payload.participantName)
+      ||(payload.characterName!==undefined&&!isString(payload.characterName))
+      ||!["connected","reconnecting","disconnected"].includes(String(payload.state))
+      ||typeof payload.ready!=="boolean") return false;
+  } else return false;
   return (value.requestId===undefined||isString(value.requestId))&&(value.actorId===undefined||isString(value.actorId));
 }
 
@@ -146,7 +154,11 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
     return value as ConnectedWireMessage;
   }
   if (value.type==="hello-ack") {
-    if (!isString(value.sessionId)||!isCompatibility(value.compatibility)||!isCursor(value.hostCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid hello-ack message";
+    if (!isString(value.sessionId)||(value.sessionName!==undefined&&!isString(value.sessionName))||!isCompatibility(value.compatibility)||!isCursor(value.hostCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid hello-ack message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="ready-intent") {
+    if (!isString(value.sessionId)||typeof value.ready!=="boolean") return "invalid ready-intent message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="action-request") {
@@ -159,6 +171,10 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if (value.type==="event-batch") {
     if (!isString(value.sessionId)||!isCursor(value.afterCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid event-batch message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="session-ended") {
+    if (!isString(value.sessionId)||!isString(value.reason)) return "invalid session-ended message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="error") {

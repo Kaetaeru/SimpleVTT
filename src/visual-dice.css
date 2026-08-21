@@ -37,6 +37,65 @@
 .visual-dice-overlay-card .visual-dice-stage-head strong { font-size:12px; }
 .visual-dice-overlay-card .visual-dice-stage-head span { font-size:9px; }
 
+/* V0.9 connected roll presentation: transparent world + upper-center result reel. */
+.visual-dice-overlay.v09{
+  display:block;
+  padding:0;
+  background:transparent;
+  animation:none;
+  overflow:hidden;
+}
+.visual-dice-overlay.v09:after{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:50%;
+  top:72%;
+  width:min(340px,32vw);
+  height:66px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.30),rgba(0,0,0,.11) 44%,transparent 72%);
+  filter:blur(8px);
+  opacity:.58;
+}
+.visual-dice-world{position:absolute!important;inset:0!important;z-index:1!important}
+.visual-roll-notice{
+  position:absolute;
+  z-index:4;
+  left:50%;
+  top:18px;
+  transform:translateX(-50%) translateY(-8px);
+  min-height:58px;
+  display:flex;
+  align-items:stretch;
+  border:1px solid var(--line-strong);
+  background:color-mix(in srgb,var(--surface) 96%,black);
+  box-shadow:0 16px 46px rgba(0,0,0,.34);
+  opacity:0;
+  animation:visual-roll-notice-in 120ms ease-out forwards;
+  overflow:hidden;
+  backdrop-filter:blur(10px);
+}
+.visual-roll-notice-core{min-width:184px;height:58px;display:grid;grid-template-columns:minmax(70px,1fr) 42px 52px;align-items:center;gap:6px;padding:7px 9px}
+.visual-roll-label{max-width:82px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:6px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.visual-roll-die{height:34px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface-2);color:var(--accent);font-size:7px;font-weight:900}
+.visual-roll-reel{position:relative;height:40px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);background:linear-gradient(180deg,#05070a,#151c26 48%,#05070a)}
+.visual-roll-reel:before,.visual-roll-reel:after{content:"";position:absolute;z-index:1;left:0;right:0;height:10px;pointer-events:none}.visual-roll-reel:before{top:0;background:linear-gradient(#05070a,transparent)}.visual-roll-reel:after{bottom:0;background:linear-gradient(transparent,#05070a)}
+.visual-roll-reel b{font:900 22px ui-monospace,SFMono-Regular,Consolas,monospace;color:#fff}
+.visual-roll-notice.rolling .visual-roll-reel b{animation:visual-roll-reel-jitter 90ms linear infinite}
+.visual-roll-notice.rolling-complete .visual-roll-reel b{animation:none}
+.visual-roll-notice-extension{width:0;opacity:0;display:grid;grid-template-columns:205px 22px 64px;align-items:center;border-left:1px solid transparent;overflow:hidden;transition:width 170ms cubic-bezier(.2,.82,.2,1),opacity 100ms,border-color 120ms}
+.visual-roll-notice.resolved .visual-roll-notice-extension{width:292px;opacity:1;border-left-color:var(--line)}
+.visual-roll-formula{padding:7px 10px;display:grid;gap:3px;white-space:nowrap}.visual-roll-formula b{font:800 10px ui-monospace,SFMono-Regular,Consolas,monospace}.visual-roll-formula small{font-size:6px;color:var(--muted)}
+.visual-roll-equals{color:var(--quiet);font-size:15px;text-align:center}.visual-roll-total{font:900 25px ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--accent);text-align:center}
+.visual-roll-natural{position:absolute;left:8px;bottom:-1px;font-size:5px;font-weight:950;letter-spacing:.12em}
+.visual-roll-notice.natural-20{border-color:#48b875;box-shadow:0 0 0 1px rgba(72,184,117,.22),0 16px 52px rgba(31,132,74,.24)}
+.visual-roll-notice.natural-20 .visual-roll-die{border-color:#48b875;color:#79e5a4}.visual-roll-notice.natural-20 .visual-roll-reel{border-color:#48b875;background:linear-gradient(180deg,#06120b,#0d2b19 48%,#06120b)}.visual-roll-notice.natural-20 .visual-roll-reel b,.visual-roll-notice.natural-20 .visual-roll-total,.visual-roll-notice.natural-20 .visual-roll-natural{color:#79e5a4}
+.visual-roll-notice.natural-1{border-color:#d85359;box-shadow:0 0 0 1px rgba(216,83,89,.22),0 16px 52px rgba(152,33,39,.27)}
+.visual-roll-notice.natural-1 .visual-roll-die{border-color:#d85359;color:#ff8f94}.visual-roll-notice.natural-1 .visual-roll-reel{border-color:#d85359;background:linear-gradient(180deg,#170506,#390c10 48%,#170506)}.visual-roll-notice.natural-1 .visual-roll-reel b,.visual-roll-notice.natural-1 .visual-roll-total,.visual-roll-notice.natural-1 .visual-roll-natural{color:#ff8f94}
+.visual-dice-legacy-note.overlay-note{position:absolute;z-index:5;left:50%;top:86px;transform:translateX(-50%);padding:4px 7px;border:1px dashed var(--line);background:var(--surface);font-size:6px}
+
 .visual-dice-stage.compact { gap:6px; padding:8px; border:1px solid var(--line); background:var(--recess); }
 .visual-dice-stage.compact .visual-dice-stage-head { font-size:8px; }
 .visual-dice-stage.compact .visual-dice-stage-head strong { font-size:9px; }
@@ -63,7 +122,10 @@
   82% { opacity:1; transform:scale(1); }
   100% { opacity:0; transform:scale(1.01); }
 }
+@keyframes visual-roll-notice-in{to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes visual-roll-reel-jitter{0%{transform:translateY(-4px);filter:blur(.3px)}50%{transform:translateY(4px);filter:blur(.7px)}100%{transform:translateY(-4px);filter:blur(.3px)}}
 :root[data-motion="reduced"] .visual-die-shell { animation:none; transform:none; }
-:root[data-motion="reduced"] .visual-dice-overlay { animation:none; }
-@media (prefers-reduced-motion: reduce) { .visual-die-shell { animation:none; transform:none; }.visual-dice-overlay { animation:none; } }
-@media (max-width:700px) { .visual-dice-table { gap:10px; }.visual-die-scene { width:70px; transform:scale(.9); }.visual-dice-overlay-card { width:calc(100vw - 24px); padding:14px 10px; } }
+:root[data-motion="reduced"] .visual-dice-overlay:not(.v09) { animation:none; }
+:root[data-motion="reduced"] .visual-roll-notice.rolling .visual-roll-reel b{animation:none}
+@media (prefers-reduced-motion: reduce) { .visual-die-shell { animation:none; transform:none; }.visual-dice-overlay:not(.v09) { animation:none; }.visual-roll-notice.rolling .visual-roll-reel b{animation:none} }
+@media (max-width:700px) { .visual-dice-table { gap:10px; }.visual-die-scene { width:70px; transform:scale(.9); }.visual-dice-overlay-card { width:calc(100vw - 24px); padding:14px 10px; }.visual-roll-notice{top:10px;max-width:calc(100vw - 16px)}.visual-roll-notice-core{min-width:162px;grid-template-columns:minmax(58px,1fr) 38px 46px}.visual-roll-notice.resolved .visual-roll-notice-extension{width:250px;grid-template-columns:172px 18px 58px}.visual-roll-formula{padding-left:7px;padding-right:7px} }

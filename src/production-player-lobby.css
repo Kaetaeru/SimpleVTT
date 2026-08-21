@@ -1,0 +1,31 @@
+.screen.page-dark:has(.session-grid) > .screen-head p,
+.session-grid > article:first-child > p,
+.session-grid > article:nth-child(2) {
+  display: none;
+}
+
+.production-player-lobby {
+  display: grid;
+  gap: 12px;
+}
+
+.production-player-lobby__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.production-player-lobby__head h2 {
+  margin: 4px 0 0;
+}
+
+.production-player-lobby__warning {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.production-player-lobby select,
+.production-player-lobby input {
+  width: 100%;
+}

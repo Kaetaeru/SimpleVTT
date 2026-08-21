@@ -1,0 +1,122 @@
+.session-mode-root {
+  --session-command-height: 176px;
+  grid-template-rows: 52px minmax(0, 1fr) var(--session-command-height);
+}
+
+.session-mode-root.session-mode-root[data-session-mode="initiative"] {
+  grid-template-rows: 52px minmax(0, 1fr) var(--session-command-height);
+}
+
+.session-play-workspace {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(82px, auto) minmax(0, 1fr) minmax(82px, auto);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.session-play-context {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--surface-2) 52%, transparent), transparent 54%),
+    var(--bg);
+}
+
+.session-mode-root[data-session-mode="initiative"] .session-play-context {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.session-play-context .session-initiative-strip {
+  min-height: 64px;
+  border-top: 0;
+}
+
+.session-play-context .session-mode-body {
+  min-height: 0;
+  height: 100%;
+}
+
+.session-play-context .session-mode-main {
+  padding: clamp(20px, 3.4vw, 48px);
+  align-content: center;
+  background: transparent;
+}
+
+.session-play-context .session-mode-main-copy {
+  max-width: 680px;
+}
+
+.session-play-context .session-mode-main-copy h1 {
+  font-size: clamp(28px, 3.2vw, 44px);
+}
+
+.session-mode-layer-host {
+  inset: 52px 0 var(--session-command-height) 0;
+}
+
+.session-mode-action-dock {
+  min-height: var(--session-command-height);
+  height: var(--session-command-height);
+}
+
+@media (max-height: 780px) and (min-width: 900px) {
+  .session-mode-root { --session-command-height: 160px; }
+  .session-play-workspace { grid-template-rows: 76px minmax(0, 1fr) 76px; }
+  .session-play-context .session-initiative-strip { min-height: 58px; }
+  .session-play-context .session-mode-main { padding-block: 18px; }
+}
+
+@media (max-width: 899px) {
+  .session-mode-root,
+  .session-mode-root.session-mode-root[data-session-mode="initiative"] {
+    --session-command-height: 154px;
+    grid-template-rows: 48px minmax(0, 1fr) var(--session-command-height);
+  }
+
+  .session-play-workspace {
+    grid-template-rows: 74px minmax(0, 1fr) 74px;
+  }
+
+  .session-play-context .session-mode-main {
+    padding: 22px 18px;
+  }
+
+  .session-play-context .session-mode-rail {
+    bottom: 8px;
+    max-height: calc(100% - 16px);
+  }
+
+  .session-mode-layer-host {
+    inset: 48px 0 var(--session-command-height) 0;
+  }
+
+  .session-mode-action-dock {
+    min-height: var(--session-command-height);
+    height: var(--session-command-height);
+  }
+}
+
+@media (max-width: 620px) {
+  .session-mode-root,
+  .session-mode-root.session-mode-root[data-session-mode="initiative"] {
+    --session-command-height: 148px;
+  }
+
+  .session-play-workspace {
+    grid-template-rows: 70px minmax(0, 1fr) 70px;
+  }
+
+  .session-play-context .session-initiative-strip {
+    min-height: 60px;
+  }
+
+  .session-play-context .session-mode-main {
+    padding: 18px 14px;
+  }
+}

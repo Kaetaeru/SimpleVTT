@@ -1,0 +1,24 @@
+.production-session-workspace:has(> .v09-direct-network-entry) > .production-session-entry-grid:not(.v09-direct-network-entry) {
+  display: none;
+}
+
+.v09-direct-network-entry {
+  margin-top: 18px;
+}
+
+.v09-session-endpoint-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(104px, 0.32fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.v09-session-port-field input {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .v09-session-endpoint-fields {
+    grid-template-columns: 1fr;
+  }
+}

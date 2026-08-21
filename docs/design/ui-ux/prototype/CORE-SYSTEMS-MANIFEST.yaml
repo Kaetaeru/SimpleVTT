@@ -1,0 +1,70 @@
+schema_version: 1
+extension: core_systems_ux
+status: owner_review_pending
+runtime_implementation_allowed: false
+
+planning:
+  core_systems_plan: docs/design/ui-ux/CORE-SYSTEMS-UX-PLAN.md
+  dm_library_plan: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+  dm_library_architecture: docs/design/dm-library-persistence.md
+
+accepted_base_reference:
+  entry: docs/design/ui-ux/prototype/app/integrated-reference.html
+  status: owner_accepted
+  candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+  invalidated_by_this_extension: false
+
+candidate:
+  entry: docs/design/ui-ux/prototype/app/core-systems-reference.html
+  css: docs/design/ui-ux/prototype/app/core-systems-reference.css
+  js: docs/design/ui-ux/prototype/app/core-systems-reference.js
+  review_doc: docs/design/ui-ux/prototype/CORE-SYSTEMS-EXTENSION.md
+  status: built_owner_review_pending
+
+interaction_grammar:
+  manage: Character Sheet / DM Library / Party Stash detail
+  use: Command Center
+  status: Actor Card / controlled Actor summary / Resource Rail / current response
+  quick: Ctrl+K / small DM Quick launcher
+
+scenarios:
+  - SYS-SCN-00
+  - SYS-SCN-01
+  - SYS-SCN-02
+  - SYS-SCN-03
+  - SYS-SCN-04
+  - SYS-SCN-05
+  - SYS-SCN-06
+  - SYS-SCN-07
+
+dm_library_candidate_disposition:
+  preparation_surface: retain_for_review
+  heavy_live_picker_as_primary: superseded
+  active_live_invocation_candidate: SYS-SCN-04
+
+hard_guards:
+  preserve_accepted_play_scene: true
+  mapless_core: true
+  full_management_does_not_replace_play: true
+  inventory_is_not_item_hotbar: true
+  spellbook_is_not_spell_hotbar: true
+  passive_feature_does_not_auto_occupy_hotbar: true
+  private_image_view_is_not_reveal: true
+  quick_selection_does_not_auto_reveal: true
+  dm_private_sources_not_delivered_to_players: true
+  ui_must_not_invent_rules_or_persistence_authority: true
+
+runtime_gaps:
+  - dm_library_metadata_persistence
+  - dm_library_asset_storage
+  - dm_library_actor_instantiation
+  - dm_library_private_projection
+  - quick_search_source_aggregation_and_privacy
+  - handout_network_reconnect
+  - party_stash_ownership_persistence_lifetime
+  - item_transfer_and_durable_grant_semantics
+  - rest_preview_commit_projection
+  - condition_effect_fast_apply_authoritative_path
+  - hotbar_customization_persistence
+
+next_gate: owner_visual_and_flow_review

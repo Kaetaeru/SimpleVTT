@@ -10,7 +10,7 @@ import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessio
 import { reconstructCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjectionReconstruction";
 import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
 import { projectedCharacterById } from "../../src/app/characterSessionProjectionRegistry";
-import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { applyConnectedClientEvents, connectedManifest, CONNECTED_CAPABILITIES } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import {
   ClientSessionReplica,
@@ -79,7 +79,7 @@ function manifest(sheet:CharacterSheet):SessionCompatibilityManifest {
   return {
     protocolVersion:1,
     rulesProfileId:"dnd.srd-5.2.1",
-    capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1"],
+    capabilities:[...CONNECTED_CAPABILITIES],
     character:{characterId:sheet.id,sourceRevision:sheet.sourceRevision??0,runtimeRevision:sheet.runtimeRevision??0},
   };
 }
@@ -149,7 +149,7 @@ test("host-unknown projected Fighter resolves through host authority and converg
       targetIds:[remote.id],
       knownEventCursor:0,
       character:remoteManifest.character,
-      capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1"],
+      capabilities:[...CONNECTED_CAPABILITIES],
     };
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
     const afterRoute=await host.getSnapshot();

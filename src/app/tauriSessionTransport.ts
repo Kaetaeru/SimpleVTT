@@ -13,6 +13,11 @@ export interface SessionTransportMessage {
   message:string;
 }
 
+export interface SessionTransportPeerLifecycle {
+  peer:string;
+  state:"disconnected";
+}
+
 function hasTauriRuntime() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
@@ -58,6 +63,11 @@ export class TauriSessionTransport {
   async onState(handler:(status:SessionTransportStatus)=>void):Promise<UnlistenFn> {
     if (!this.available()) return () => {};
     return listen<SessionTransportStatus>("session-transport-state",(event)=>handler(event.payload));
+  }
+
+  async onPeerLifecycle(handler:(event:SessionTransportPeerLifecycle)=>void):Promise<UnlistenFn> {
+    if (!this.available()) return () => {};
+    return listen<SessionTransportPeerLifecycle>("session-transport-peer-lifecycle",(event)=>handler(event.payload));
   }
 }
 

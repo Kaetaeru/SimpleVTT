@@ -1,0 +1,283 @@
+# SimpleVTT M1-M6 Cross-cutting Matrices
+
+Status: **Draft structured coverage — not Frozen**
+
+These matrices answer questions that cut across many UI artifacts. They reference exact Decision, Review Question, Gap, Registry, Matrix, Sheet, Contract IDs, or repository paths instead of duplicating normative product prose.
+
+Dashboard: [`README.md`](README.md)
+Registry: [`registry.md`](registry.md)
+Decisions: [`decisions.md`](decisions.md)
+Gaps: [`planning-gaps.md`](planning-gaps.md)
+Manifest: [`MANIFEST.yaml`](MANIFEST.yaml)
+
+## Matrix rules
+
+- A row may be created by AI for coverage without creating a new product decision.
+- If a row exposes an undecided product behavior, link a Planning Gap or declared Draft Decision Map item instead of guessing.
+- Reference fields MUST follow `MANIFEST.yaml`: complete resolvable IDs/paths only; no ranges, omitted prefixes, or prose aliases.
+- Prefer enums/IDs over free-form prose where practical.
+- Do not copy full Decision Card text into a matrix cell.
+- Current implementation paths may appear as evidence references; they never substitute for a Decision/Gap/contract when behavior is normative.
+
+---
+
+# M1 — Role / Authority / Visibility / Disclosure
+
+Reviewed UX-02 invariants:
+
+- `UX-02-01`: connected Host = DM; connected Client = Player; no Host/Player or Client/DM state.
+- `UX-02-02`: Offline/Standalone has no DM/Player role.
+- `UX-02-03`: Player Character ownership establishes baseline control of that Character's Actor.
+- `UX-02-04`: Player defaults to one Actor; DM may explicitly assign additional Actor control without transferring ownership.
+- `UX-02-05`: DM may control any Actor.
+- `UX-02-06`: no live DM/Player role switching.
+- `UX-02-07`: DM/Player share the core Play skeleton; role-specific tools/information may differ.
+- `UX-02-08`: unauthorized-information treatment is information-specific, while DM-only/secret authoritative data remains strict non-delivery to Players.
+- `UX-02-09`: no extra connected roles in v1.
+
+## Row schema
+
+| Capability/Data | Context | Role | May See | May Receive | May Control | May Disclose | Source | Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+## Seed rows
+
+| Capability/Data | Context | Role | May See | May Receive | May Control | May Disclose | Source | Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Public roll projection | Connected Client | Player | yes | yes | n/a | n/a | UX-02-01, ORIGIN-UX-01-26 | — |
+| Public roll projection | Connected Host | DM | yes | yes | visibility mode control | n/a | UX-02-01, ORIGIN-UX-01-26, DM-01-01 | — |
+| DM-only roll details | Connected Client | Player | no | no | no | no | UX-02-01, UX-02-08, ORIGIN-UX-01-26, ORIGIN-UX-01-29 | GAP-DM-ONLY-DELIVERY-PROTOCOL |
+| DM-only roll details | Connected Host | DM | yes | yes | visibility mode control | yes | UX-02-01, UX-02-08, ORIGIN-UX-01-26, ORIGIN-UX-01-28, DM-01-01 | — |
+| Activity / play record | Connected Client | Player | authorized public/disclosed records only | authorized projection only | no direct history mutation | no | UX-02-07, UX-02-08, R4-ACTIVITY, DM-02-01 | GAP-DM-ONLY-DELIVERY-PROTOCOL |
+| Activity / play record | Connected Host | DM | yes | yes | correction/adjudication commands only | authorized disclosure only | UX-02-05, UX-02-07, UX-02-08, R4-ACTIVITY, ORIGIN-UX-01-28, DM-02-01, DM-02-05 | DM-02-07 |
+| Encounter management | Connected Client Play | Player | authorized projection only | authorized projection only | assigned Actor control only; no DM encounter-authoring authority | no | UX-02-03, UX-02-04, UX-02-07, UX-02-08, R4-ENCOUNTER, DM-01-03 | SES-02-02 |
+| Encounter management | Connected Host Play | DM | yes subject to domain projection | yes | DM encounter controls | n/a | UX-02-05, UX-02-07, R4-ENCOUNTER, DM-01-03 | — |
+| DM spatial relation authoring | Connected Client Play | Player | authorized resulting projection only | authorized resulting projection only | no | no | UX-02-04, UX-02-07, UX-02-08, R4-DM-SPATIAL-RELATION, DM-01-03 | SES-02-02 |
+| DM spatial relation authoring | Connected Host Play | DM | yes | session/domain projection TBD | advanced authoring control | n/a | UX-02-05, UX-02-07, R4-DM-SPATIAL-RELATION, DM-01-03 | SES-02-02 |
+| Participant roster | Connected Client Play | Player | TBD by information type | TBD by information type | no roster authority implied | no | UX-02-07, UX-02-08, R4-PARTICIPANTS | SES-02-09 |
+| Participant roster | Connected Host Play | DM | TBD by information type | TBD by information type | TBD | n/a | UX-02-05, UX-02-07, UX-02-08, R4-PARTICIPANTS | SES-02-09, DM-01-04 |
+| Session share/address/content info | Connected Client Play | Player | TBD by information type | TBD by information type | no Host utility authority implied | no | UX-02-07, UX-02-08, R4-SESSION-SHARE, CONTENT-02-11 | SES-02-09 |
+| Session share/address/content info | Connected Host Play | DM | yes subject to information contract | yes | session/share controls | TBD | UX-02-05, UX-02-07, UX-02-08, R4-SESSION-SHARE, CONTENT-02-11 | DM-01-04 |
+| Actor control | Connected Client Play | Player | assigned Actor context | assigned Actor projection | owned/selected Character Actor + additional Actors explicitly assigned by DM | n/a | UX-02-01, UX-02-03, UX-02-04 | INT-01-01 |
+| Actor control | Connected Host Play | DM | all Actor context subject to information contracts | all authorized session projection | any Actor | n/a | UX-02-01, UX-02-05 | INT-01-01, DM-01-02 |
+| Manual movement-reaction declaration | Initiative | Player | TBD | TBD | only for Player-controlled Actor if feature permits | n/a | UX-02-03, UX-02-04, R4-MOVEMENT-REACTION-INPUT | DND-04-06 |
+| Manual movement-reaction declaration | Initiative | DM | TBD | TBD | any Actor if feature permits | n/a | UX-02-05, R4-MOVEMENT-REACTION-INPUT | DND-04-06 |
+| Concentration save response | Resolution | Player | TBD | authoritative resolution projection | only for Player-controlled Actor if response contract permits | n/a | UX-02-03, UX-02-04, R4-CONCENTRATION-SAVE, DND-02-09 | DND-02-09 |
+| Concentration save response | Resolution | DM | TBD | authoritative resolution projection | any Actor if response contract permits | n/a | UX-02-05, R4-CONCENTRATION-SAVE, DND-02-09 | DND-02-09 |
+| Player connection/rejoin/leave controls | Connected Client | Player | yes | local/session projection | own connection/session participation controls | n/a | UX-02-01, UX-02-07, R4-PLAYER-SESSION, UX-01-03, SES-01-05 | SES-01-11, SES-02-06 |
+| Handout presentation control | Connected Client | Player | yes when authorized projection exists | authorized projection only | local dismiss only where reviewed | no | UX-02-01, UX-02-08, ORIGIN-UX-01-12, ORIGIN-UX-01-13 | GAP-HANDOUT-NETWORK-CONTRACT |
+| Handout presentation control | Connected Host | DM | yes | yes | yes under reviewed Handout mode/reveal decisions; exact network command contract TBD | yes | UX-02-01, UX-02-05, ORIGIN-UX-01-12 | GAP-HANDOUT-NETWORK-CONTRACT |
+
+`UX-02-08` does not authorize AI to choose an information policy. Each information family still needs its explicit SES/DM/domain contract. The existing DM-only decisions remain stricter and require no Player delivery/existence metadata.
+
+---
+
+# M2 — State Machine & Transition
+
+## Row schema
+
+| ID | Current State | Event | Guard / Authority | Next State | Side Effect | Failure / Recovery | Refs / Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+## Play action seed
+
+| ID | Current State | Event | Guard / Authority | Next State | Side Effect | Failure / Recovery | Refs / Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `M2-PLY-001` | `R3-ACTION-IDLE` | select capability | canonical capability available | `R3-ACTION-SELECTED` or direct resolve path | local selection only until command | unavailable reason / stay | UX-01-04, UX-01-05, UX-01-06 |
+| `M2-PLY-002` | `R3-ACTION-SELECTED` | target required | action target contract | `R3-TARGET-SINGLE` or `R3-TARGET-MULTI` | project target eligibility | explicit blocker if target contract missing | ORIGIN-UX-01-19 |
+| `M2-PLY-003` | `R3-TARGET-SINGLE` | click invalid Actor | not eligible | same | no gameplay mutation | show canonical reason | ORIGIN-UX-01-19 |
+| `M2-PLY-004` | `R3-TARGET-SINGLE` | click valid Actor | eligible | `R3-RESOLVING` | submit authoritative action command | explicit reject / remain recoverable | ORIGIN-UX-01-20 |
+| `M2-PLY-005` | `R3-TARGET-MULTI` | select valid Actor | eligible, maxTargets not exceeded | same | local target-set change | invalid selection rejected | ORIGIN-UX-01-20 |
+| `M2-PLY-006` | `R3-TARGET-MULTI` | Execute | non-empty valid target set | `R3-RESOLVING` | submit authoritative action command | explicit reject / preserve recoverable selection as decided later | ORIGIN-UX-01-20 |
+| `M2-PLY-007` | `R3-RESOLVING` | interrupt required | canonical resolution | `R3-INTERRUPT` | none until response | TBD | GAP-RESOLUTION-SAFE-INTERACTIONS |
+| `M2-PLY-008` | `R3-RESOLVING` | authoritative dice ready | canonical resolution | `R3-DICE` | presentation only | fallback must preserve result | ORIGIN-UX-01-24, ORIGIN-UX-01-25 |
+| `M2-PLY-009` | `R3-DICE` | presentation reaches reveal point | presentation contract | `R3-RESULT` | result feedback appears | reduced-motion equivalent | R9-RESULT-REVEAL |
+| `M2-PLY-010` | `R3-RESULT` | continue/dismiss as applicable | canonical state committed | appropriate Play state | reflect canonical state | Activity retains detail as applicable | ORIGIN-UX-01-22 |
+| `M2-PLY-011` | `R3-RESOLVING` | concentration save response required | authoritative resolution requests response | `R4-CONCENTRATION-SAVE` within resolving context | no final commit until accepted response | invalid/unavailable response remains explicit | R4-CONCENTRATION-SAVE, DND-02-09 |
+
+## Session seed
+
+| ID | Current State | Event | Guard / Authority | Next State | Side Effect | Failure / Recovery | Refs / Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `M2-SES-001` | Home/Session | Host / Open Session | valid host setup; connected Host maps to DM | Live Freeform session | create authoritative live session + capture content snapshot | explicit validation error stays in Host Setup | UX-02-01, SES-01-02, CONTENT-02-11, R2-HOST |
+| `M2-SES-002` | Home/Session | Join | valid join input; connected Client maps to Player | Character Select / connecting path | join attempt | remain/recover | UX-02-01, R2-JOIN |
+| `M2-SES-003` | Character Select | no valid Character | none | Join blocked | no session join mutation | Create/Import Character, then retry Join | SES-01-04 |
+| `M2-SES-004` | Live session | connection lost | network state | Reconnecting | preserve canonical context | explicit unrecoverable branch | UX-01-03, R2-RECONNECT |
+| `M2-SES-005` | Reconnecting | recovered | canonical reconnect accepted | prior live context | reconcile projection | explicit failure branch | UX-01-03 |
+| `M2-SES-006` | Disconnected | rejoin same Host | connection/session authority | Connecting/Reconnecting | submit rejoin | remain disconnected with reason | R4-PLAYER-SESSION, R6-DISCONNECTED |
+| `M2-SES-007` | Connected Play | open session utility | local presentation | same canonical Play + utility open | no gameplay mutation | close/restore focus | R7-SESSION-UTILITY-RAIL |
+| `M2-SES-008` | Session utility open | Escape/close | local presentation | same canonical Play + utility closed | no gameplay mutation | return focus to launcher | R7-SESSION-UTILITY-RAIL, A11Y-01 |
+| `M2-SES-009` | Connected Play | open Full Sheet | local presentation | same canonical Play + Full Sheet layer | no session/game-state reset | close/return context | R4-FULL-SHEET-LAYER, UX-01-03 |
+| `M2-SES-010` | Player handout visible | local dismiss | reviewed Overlay semantics when applicable | same shared handout state + local hidden presentation | local presentation only | reopen from handout launcher | ORIGIN-UX-01-13, R4-PLAYER-HANDOUT-VIEWER |
+| `M2-SES-011` | Live session | valid Client joins | Host-authoritative session is already live; valid Character selected | current live session mode | add participant/Actor projection according to session contract | explicit connection/compatibility rejection | SES-01-05, UX-02-01, UX-02-03 |
+
+## Character / content seed
+
+| ID | Current State | Event | Guard / Authority | Next State | Side Effect | Failure / Recovery | Refs / Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `M2-CHR-001` | Home guide open | dismiss | local presentation preference | Home guide closed | persist local preference when available | guide may reopen explicitly | R2-FIRST-USE |
+| `M2-CHR-002` | Character Sheet | switch layout | local presentation preference | same Character Sheet with other layout | persist local preference | fallback to supported layout | R3-SHEET-SIMPLEVTT, R3-SHEET-OFFICIAL |
+| `M2-CONT-001` | Content | choose add-on file | official SimpleVTT package format | Import Review | parse/preview only | unsupported format remains explicit | CONTENT-02-04, R2-CONTENT-INSTALL, R4-IMPORT-REVIEW |
+| `M2-CONT-002` | Import Review | install | validation has no blocking issue | Content | durable/local catalog mutation according to content contract | preserve review/error on failure | CONTENT-02-04, CONTENT-02-09, R2-CONTENT-INSTALL |
+| `M2-CONT-003` | Live session | local content library changes | session already owns captured content snapshot | same live session snapshot | update/replace/disable/delete affects later-session library state only | surface dependency/validation error without mutating live snapshot | CONTENT-02-09, CONTENT-02-11 |
+
+---
+
+# M3 — Persistence / Ownership / Source of Truth
+
+## Row schema
+
+| State/Data | Owner / Source | Lifetime | Network projection | UI may mutate directly? | Refs / Gap |
+| --- | --- | --- | --- | --- | --- |
+
+## Seed rows
+
+| State/Data | Owner / Source | Lifetime | Network projection | UI may mutate directly? | Refs / Gap |
+| --- | --- | --- | --- | --- | --- |
+| Permanent Character ownership/data | canonical Character/domain storage | durable | session projection as applicable | no rules mutation; submit canonical commands | UX-02-03, docs/design/README.md, docs/design/character-lifecycle.md |
+| Session Actor control assignment | host/runtime authority | session | role-scoped | only through authorized session control assignment | UX-02-03, UX-02-04, UX-02-05, docs/design/session-runtime.md |
+| Shared session state | host/runtime authority | session | role-scoped | no; submit commands | docs/design/session-runtime.md |
+| Live-session content configuration | host/session snapshot captured on open | live session | shared/session authoritative | no direct mutation from local library changes | CONTENT-02-11, docs/design/session-runtime.md |
+| Resolution outcome/dice values | authoritative resolution/runtime | event/session/history as defined | visibility-scoped | no | ORIGIN-UX-01-24, ORIGIN-UX-01-25, ORIGIN-UX-01-26, ORIGIN-UX-01-28, ORIGIN-UX-01-29 |
+| Concentration save input/result | authoritative resolution/runtime | resolution/event | visibility/authority scoped | response only through resolution command | R4-CONCENTRATION-SAVE, DND-02-09 |
+| Activity event history | authoritative activity/session history | event/session/history as defined | visibility/disclosure scoped | no direct history mutation; correction/reversal appends events | R4-ACTIVITY, UX-02-08, ORIGIN-UX-01-22, DM-02-01, DM-02-05, docs/design/session-runtime.md |
+| DM-authored spatial relation | authoritative spatial/session relation source TBD by domain/session contract | session/current relation lifetime TBD | session projection TBD | only through authorized advanced DM relation command | R4-DM-SPATIAL-RELATION, DM-01-03, SES-02-02 |
+| Dice fine trajectory | local presentation | transient | no | yes | ORIGIN-UX-01-25 |
+| Hotbar custom arrangement | user presentation preference | TBD | normally local | yes when allowed | UX-01-06 |
+| Selected Hotbar tab | UI presentation | transient/local preference TBD | no | yes | UX-01-06 |
+| Character Sheet layout preference | local presentation preference | durable local preference in current implementation | no | yes | R3-SHEET-SIMPLEVTT, R3-SHEET-OFFICIAL, src/CharacterSheetPlayScreen.tsx |
+| Appearance mode/accent | local presentation preference | durable local preference in current implementation | no | yes | R1-SETTINGS, src/AppearanceSettingsBridge.tsx |
+| Home onboarding dismissal | local presentation preference | durable/best-effort local preference in current implementation | no | yes | R2-FIRST-USE, src/V1HomeScreen.tsx |
+| Session utility open/layer state | local presentation | transient | no | yes | R7-SESSION-UTILITY-RAIL, R4-FULL-SHEET-LAYER |
+| Handout presentation mode | intended shared session presentation state | session/reconnect | yes | authorized command only | ORIGIN-UX-01-12, GAP-HANDOUT-NETWORK-CONTRACT |
+| Handout local dismissed/open state | local presentation | current handout/session | no | yes only where reviewed | ORIGIN-UX-01-13, R4-PLAYER-HANDOUT-VIEWER |
+| Portrait asset/focal point | canonical Character presentation data or Character-owned profile data TBD by DND-01 | durable in current implementation | session projection TBD | through Character update command only | R4-PORTRAIT-EDITOR, DND-01 |
+| Tooltip/open popover state | UI presentation | transient | no | yes | INT-02 |
+
+Do not duplicate domain formulas or lifecycle semantics here. Reference their canonical domain/design documents. `TBD` ownership/lifetime values must be resolved by the responsible Decision Map/contract before implementation reliance.
+
+---
+
+# M4 — Accessibility / Input
+
+## Seed coverage rows
+
+| Artifact | Keyboard entry | Focus on open/select | Escape / Cancel | Focus return | Pointer alternative | Semantic/status requirement | Refs / Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `R4-CONFIRM` | required | defined per dialog | safe cancel when valid | invoker/logical next | n/a | dialog/alert-dialog pattern to review | A11Y-01, INT-03 |
+| `R4-ACTOR-CONTEXT` | not required for the right-click menu itself in v1 | pointer context entry | close | Actor Card | material information/actions must have other accessible routes when required | menu is supplementary UI/context management only | INT-01-02, INT-01-03 |
+| `R4-QUICK-SHEET` | required | launcher -> sheet | close/Escape | launcher | all launch controls keyboard reachable | pane/region semantics to review | R4-QUICK-SHEET, A11Y-01 |
+| `R4-FULL-SHEET-LAYER` | required | launcher -> workspace | close/Escape | launcher or prior utility | full sheet functionality keyboard reachable | layer/workspace semantics TBD | R4-FULL-SHEET-LAYER, A11Y-01 |
+| `R4-ACTIVITY` | required | launcher/route -> record list | close/return by host context | launcher/logical prior route | record/detail/filter actions keyboard reachable | public/private visibility must be exposed semantically | R4-ACTIVITY, DM-02-01, A11Y-01 |
+| `R4-PLAYER-HANDOUT-VIEWER` | required | open control/viewer close | local close where applicable | handout launcher | reopen equivalent | current modal dialog evidence; final mode semantics vary | ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT |
+| `R4-CONCENTRATION-SAVE` | required | resolution prompt -> d20 input | cancellation policy TBD by resolution | resolution context | number input/submit keyboard reachable | required response/result announcement semantics TBD | R4-CONCENTRATION-SAVE, A11Y-01 |
+| `R4-MOVEMENT-REACTION-INPUT` | required | trigger -> dialog | cancel/Escape requirement TBD | trigger | all fields/actions keyboard reachable | modal dialog evidence; authority semantics TBD | R4-MOVEMENT-REACTION-INPUT, A11Y-01 |
+| `R4-DM-SPATIAL-RELATION` | required | advanced DM utility entry | collapse/return | invoking utility context | selects/inputs/checks keyboard reachable | relation field state must not rely on pointer only | R4-DM-SPATIAL-RELATION, DM-01-03, A11Y-01 |
+| `R4-PORTRAIT-EDITOR` | required | portrait control | explicit cancel | portrait control | file/range/buttons keyboard reachable | errors must be announced/readable | R4-PORTRAIT-EDITOR, A11Y-01 |
+| `R4-PLAYER-SESSION` | required | launcher -> pane | close/Escape | launcher | recovery controls keyboard reachable | connection changes announced | R4-PLAYER-SESSION, R5-CONNECTION-RECOVERY |
+| `R7-SESSION-UTILITY-RAIL` | required | all utilities reachable | open utility closes with Escape | exact launcher | pointer and keyboard equivalent | active utility exposed semantically | R7-SESSION-UTILITY-RAIL, A11Y-01 |
+| `R7-ACTOR-CARD` | required | visible focus | context dependent | n/a | primary/material card actions need keyboard-accessible routes | semantic role to decide | INT-01, A11Y-01 |
+| `R7-HOTBAR-SLOT` | required | visible focus | targeting cancel path applicable | logical slot/context | click equivalent | unavailable state/reason accessible | DND-03, A11Y-01 |
+| `R9-DICE-THROW` | no input dependency | must not steal essential focus by default | n/a | n/a | n/a | reduced-motion/result equivalent required | ORIGIN-UX-01-25 |
+| `R5-BANNER` | action-dependent | should not steal focus unless required by pattern | n/a | n/a | action equivalent if actionable | status/alert semantics TBD by severity | STATE-02, A11Y-01 |
+
+Detailed ARIA/semantic decisions are owned by A11Y-01 and component contracts; current ARIA usage is evidence only.
+
+---
+
+# M5 — Responsive / Layout
+
+Reviewed platform boundary: `PLATFORM-01-01` supports wide, normal, and narrow desktop windows in v1; mobile/touch-first is out of scope.
+
+## Seed rows
+
+| Surface | Wide | Normal | Narrow | MUST remain | MAY collapse/reflow | MUST NOT hide | Refs / Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `R1-PLAY` | full Dual Anchor | Dual Anchor | desktop reflow/compaction | Scene/Actor context + Command Center accessibility | secondary metadata/pane geometry | core capabilities solely for cleanliness | UX-01-04, UX-01-07, PLATFORM-01-01 |
+| `R7-HOTBAR-TABS` | full tabs | full/compact | desktop compact/reflow | capability-page reachability | labels/secondary metadata | entire Hotbar behind generic drawer by default | ORIGIN-UX-01-07, PLATFORM-01-01 |
+| `R7-ACTOR-CARD` | full card | compact card | min-size then horizontal overflow/reflow | identity + required interaction/target state | secondary metadata | invalid target existence during targeting | UI-01-03, ORIGIN-UX-01-19, PLATFORM-01-01 |
+| `R7-COMMAND-CENTER` | full command surface | full command surface | desktop reflow/compress within safe minimums | capabilities + economy/resources + current actor context | secondary labels/metadata | command surface entirely behind utility navigation | UX-01-04, UX-01-07, ORIGIN-UX-01-09, UI-01-02, PLATFORM-01-01 |
+| `R7-SESSION-UTILITY-RAIL` | side-pane utilities | side-pane utilities | side pane may compress/reflow | reachable contextual utilities when applicable | pane width/grouping | core command capabilities | UI-01-06, PLATFORM-01-01 |
+| `R1-CHAR-SHEET` | multi-column as appropriate | optimized layout | desktop stacked/reflow allowed | core Character information/action access | secondary grouping/columns | selected sheet layout's core actions | UI-01-07, PLATFORM-01-01 |
+| `R1-CHAR-BUILDER` | accepted existing layout | accepted existing layout | preserve accepted existing UX with safe desktop reflow | progress + active work + primary actions | preview/step presentation | validation/commit/cancel access | UI-01-08, PLATFORM-01-01 |
+| `R1-LEVEL-UP` | accepted existing layout | accepted existing layout | preserve accepted existing UX with safe desktop reflow | current stage + preview + commit/cancel | secondary detail | blocking validation and primary actions | UI-01-08, PLATFORM-01-01 |
+| `R4-FULL-SHEET-LAYER` | full workspace layer | full workspace layer | desktop stacked/scroll behavior | sheet actions + close/return | layout columns | close/return control | R4-FULL-SHEET-LAYER, PLATFORM-01-01 |
+| `R4-ACTIVITY` | list/detail as space allows | list/detail | desktop stacked/detail reflow | event chronology + visibility filter/state | technical detail/provenance | correction/disclosure state | R4-ACTIVITY, DM-02-01, PLATFORM-01-01 |
+| `R4-PLAYER-HANDOUT-VIEWER` | mode-dependent | mode-dependent | desktop mode-dependent reflow | authorized image + required dismissal semantics | image fit/zoom controls | DM-required shared presentation state | ORIGIN-UX-01-12, ORIGIN-UX-01-13, GAP-HANDOUT-NETWORK-CONTRACT, PLATFORM-01-01 |
+| `R4-CONCENTRATION-SAVE` | resolution-embedded | resolution-embedded | desktop reflow within resolution | prompt/result + submit when required | secondary explanation | authoritative required response | R4-CONCENTRATION-SAVE, PLATFORM-01-01 |
+| `R4-DM-SPATIAL-RELATION` | advanced side-pane control | advanced side-pane control | desktop stacked/reflow | required relation fields | labels/grouping | submit/recovery state | R4-DM-SPATIAL-RELATION, DM-01-03, PLATFORM-01-01 |
+
+No numeric breakpoint is canonical until design tokens/contracts establish one. The supported product scope is desktop-width classes, not mobile/touch-first layout.
+
+---
+
+# M6 — Coverage / Acceptance
+
+## Coverage values
+
+Every coverage cell MUST be exactly one of:
+
+- `REQ`
+- `N/A`
+- `TBD`
+- a specific full contract/test ID
+
+Explanatory conditions belong in the human-readable `Notes` column, not inside the coverage value.
+
+## Core surface grid
+
+| Surface | Normal | Empty | Loading/Pending | Disabled | Error | Keyboard | Narrow | Role variants | Reconnect | Owner walkthrough | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `R1-HOME` | REQ | TBD | REQ | N/A | REQ | REQ | REQ | TBD | TBD | REQ | Fresh app launch begins at Home; live-session return exists only within the running app context. |
+| `R2-FIRST-USE` | REQ | N/A | N/A | N/A | TBD | REQ | REQ | N/A | N/A | REQ | First-run tutorial overlay includes initial Character Sheet layout choice and may be reopened later. |
+| `R1-CHARACTERS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Offline/Standalone has no role variant; connected Character presentation may still differ by context under reviewed shared-skeleton rules. |
+| `R1-CHAR-BUILDER` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Existing Builder UX is accepted baseline; unsupported/validation branches still require coverage. |
+| `R1-CHAR-SHEET` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Official-style and SimpleVTT layout variants both require representative desktop coverage. |
+| `R1-LEVEL-UP` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | Existing Level Up UX is accepted baseline; validation/review/commit branches remain covered. |
+| `R2-STANDALONE-ROLL` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | N/A | N/A | REQ | Local roll/result/dice path; no DM/Player role variant. |
+| `R1-SESSION` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | No Lobby/Ready gate: Host opens directly into live session; valid Clients may join mid-session. |
+| `R1-PLAY` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Shared core Play skeleton with Host/DM and Client/Player role-specific tools/information. |
+| `R1-CONTENT` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | Official SimpleVTT package format; install/update/replace/disable/delete; live session snapshot must remain unchanged by library edits. |
+| `R1-RULES` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | TBD | REQ | REQ | Product-shell and in-session lookup paths. |
+| `R1-SETTINGS` | REQ | N/A | N/A | TBD | REQ | REQ | REQ | TBD | N/A | REQ | Theme/accent/motion preference coverage; persistence failure policy downstream. |
+| `R3-TARGET-SINGLE` | REQ | N/A | N/A | REQ | REQ | REQ | REQ | REQ | N/A | REQ | Player baseline/extra assigned Actor control and DM any-Actor control are Reviewed. |
+| `R3-TARGET-MULTI` | REQ | N/A | N/A | REQ | REQ | REQ | REQ | REQ | N/A | REQ | Same Reviewed Actor-control model; multi-target interaction details remain DND-03. |
+| `R3-INTERRUPT` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Authoritative safe-interaction boundary remains a Domain contract blocker. |
+| `R3-DICE` | REQ | N/A | REQ | N/A | REQ | REQ | REQ | TBD | N/A | REQ | Error = presentation fallback; DM-only delivery remains contract-governed. |
+| `R4-RESOLUTION-DRAWER` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | N/A | N/A | REQ | Offline/product-shell resolution path is role-free; correction/reversal preserves history. |
+| `R4-SESSION-RESOLUTION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Connected Play resolution layer under reviewed role/control baseline. |
+| `R4-QUICK-SHEET` | REQ | TBD | TBD | TBD | TBD | REQ | REQ | REQ | REQ | REQ | Shared-skeleton rule applies; exact entitlement/topology may be AI-managed/contracted. |
+| `R4-FULL-SHEET-LAYER` | REQ | TBD | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Must preserve session context; exact role-specific access remains downstream. |
+| `R4-SESSION-RULES` | REQ | REQ | TBD | TBD | REQ | REQ | REQ | TBD | REQ | REQ | Contextual Rules search/detail. |
+| `R4-ACTIVITY` | REQ | REQ | TBD | TBD | REQ | REQ | REQ | REQ | REQ | REQ | DM view uses one chronology with public/private indicators and filter; Player never receives undisclosed DM-only records. |
+| `R4-ENCOUNTER` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Encounter controls remain contextual; Host/DM owns management operations. |
+| `R4-DM-SPATIAL-RELATION` | REQ | N/A | TBD | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Productized as an advanced DM-only tool; authoritative projection still needs session/domain contract detail. |
+| `R4-PARTICIPANTS` | REQ | REQ | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Mid-session join requires participant-list delta coverage. |
+| `R4-SESSION-SHARE` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Must show live session's fixed content snapshot separately from later library changes. |
+| `R4-PLAYER-SESSION` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Connected Client/Player utility; late join/rejoin/leave covered; no live role switching. |
+| `R4-DM-HANDOUT-PANE` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Connected Host/DM authoring surface; shared presentation contract blocks readiness. |
+| `R4-PLAYER-HANDOUT-VIEWER` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Connected Client/Player viewer; must cover Overlay/Upper/Full once contract exists. |
+| `R4-CONCENTRATION-SAVE` | REQ | N/A | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Actor-control baseline Reviewed; exact response contract remains DND-02-09. |
+| `R4-MOVEMENT-REACTION-INPUT` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | REQ | Actor-control baseline Reviewed; feature invocation policy remains DND-04-06. |
+| `R4-PORTRAIT-EDITOR` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | TBD | REQ | File error/cancel/save/remove/focal controls; role/session projection TBD. |
+| `R4-IMPORT-REVIEW` | REQ | REQ | REQ | REQ | REQ | REQ | REQ | TBD | N/A | REQ | SimpleVTT package + Character/Combatant import variants as applicable. |
+| `R4-CONFIRM` | REQ | N/A | TBD | TBD | TBD | REQ | REQ | TBD | N/A | REQ | Action-dependent pending/disabled/error/role cases resolved by downstream contract. |
+| `R5-BANNER` | REQ | N/A | N/A | N/A | TBD | REQ | REQ | TBD | TBD | REQ | Severity semantics and reconnect use depend on STATE/A11Y/SES decisions. |
+| `R5-CONNECTION-RECOVERY` | REQ | N/A | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | Connected Client/Player recovery is known; app process relaunch begins at Home. |
+| `R6-NO-VALID-CHARACTER` | REQ | REQ | N/A | REQ | REQ | REQ | REQ | REQ | N/A | REQ | Join is blocked; Create/Import recovery is offered, then user retries Join (`SES-01-04`). |
+| `R7-COMMAND-CENTER` | REQ | TBD | REQ | REQ | REQ | REQ | REQ | REQ | REQ | REQ | Shared BG3-family core skeleton; role-specific tools/information may differ. |
+| `R9-COMBAT-VFX` | REQ | N/A | N/A | N/A | REQ | N/A | REQ | TBD | N/A | REQ | Reduced-motion equivalent belongs to A11Y/DND contracts. |
+
+## Coverage rule
+
+Before a scope is implementation-ready, AI must convert applicable `TBD` cells that materially affect behavior into either:
+
+- a canonical decision/contract;
+- `N/A` with a reason in `Notes`; or
+- an explicit Planning Gap that blocks implementation at the selected Spec Tier.
+
+The current Global Planning Gate requires **material coverage to exist**, not every future `TBD` to be decided before planning can continue. A `TBD` is acceptable when it is owned by a declared Decision Map item, AI Design Default contract, or explicit Planning Gap and is not being inferred beyond its authority domain.
+
+**Route D M1-M6 material coverage: PASS for the current Registry snapshot.** Future Registry/code/planning deltas require bounded coverage maintenance rather than keeping the current gate open indefinitely.
+
+The owner should see only material blocking gaps, not every matrix maintenance detail.

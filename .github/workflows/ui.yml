@@ -44,6 +44,26 @@ jobs:
         run: npm run generate:content
       - name: Verify UI named-rule boundary
         run: npm run test:ui-rule-boundary
+      - name: Verify v1 shell, connected topology, continuity, and Session layer contracts
+        run: npx tsx --test tests/ui/firstRunTutorialPreferences.test.ts tests/ui/firstRunTutorialStructure.test.ts tests/ui/v1ProductShellStructure.test.ts tests/ui/connectedProductShellContinuity.test.ts tests/ui/connectedPlayAcceptedTopology.test.ts tests/ui/sessionFullSheetWorkspaceStructure.test.ts tests/ui/sessionUtilityPanesStructure.test.ts tests/ui/sessionFreeformMainFocusStructure.test.ts tests/ui/sessionActionDockStructure.test.ts tests/ui/sessionDmToolsStructure.test.ts tests/ui/sessionPlayerReconnectStructure.test.ts tests/ui/sessionInitiativeExpansionStructure.test.ts tests/ui/sessionHandoutIntegrationStructure.test.ts tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts
+      - name: Verify Phase 14 PlaySessionDock hydration and tab context
+        run: npx tsx --test tests/ui/playSessionDockStructure.test.ts
+      - name: Verify V0.9 production play workspace accessibility and structure
+        run: npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts tests/ui/v09ProductionPlayStructure.test.ts
+      - name: Verify V0.9 combat VFX projection and presentation boundaries
+        run: npx tsx --test tests/ui/combatVfxProjection.test.ts tests/ui/combatVfxStructure.test.ts
+      - name: Verify Phase 14 unified production session UX
+        run: npx tsx --test tests/ui/productionSessionWorkspaceRedesign.test.ts
+      - name: Verify Phase 14 tabletop sheet, physics dice, historical scene UI, and human-acceptance regressions
+        run: npx tsx --test tests/ui/physicsDice3DStructure.test.ts tests/ui/characterSheetPlayableUx.test.ts tests/ui/productionPlayIntentUx.test.ts tests/ui/portraitAndHandoutPresentation.test.ts tests/ui/productionAcceptanceWindowsRegression.test.ts
+      - name: Verify Phase 14 non-Character production UX redesign
+        run: npx tsx --test tests/ui/productionNonCharacterUxRedesign.test.ts
+      - name: Verify Phase 14 Host live metadata and active content
+        run: npx tsx --test tests/ui/productionSessionPreparationMetadata.test.ts
+      - name: Verify Phase 14 live DM mechanics continuity
+        run: npx tsx --test tests/ui/productionDmLiveMechanicsContinuity.test.ts
+      - name: Verify Phase 14 live lifecycle, late join, connection safety, DM flows, local projection ownership, fresh Character skills/actions, inventory durability, and spellcasting
+        run: npx tsx --test tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionReadyStartSafety.test.ts tests/ui/productionDmPreparedCombatantFlow.test.ts tests/ui/productionDmLiveAdjudicationFlow.test.ts tests/ui/productionDmLiveCombatantAction.test.ts tests/ui/productionLocalCharacterSwitch.test.ts tests/ui/characterLibraryProductionPlayIntegration.test.ts tests/ui/productionFreshCharacterSkills.test.ts tests/ui/productionFreshCharacterInventory.test.ts tests/ui/productionFreshCharacterSpells.test.ts
       - name: Verify creation ChoiceDefinition convergence
         run: npx tsx --test tests/ui/characterCreationChoiceDefinition.test.ts tests/ui/characterCreationChoiceDefinitionStructure.test.ts
       - name: Verify progression choice schedule regression
@@ -102,4 +122,14 @@ jobs:
           tests/ui/visualDiceStructure.test.ts
           tests/ui/movementReactionStructure.test.ts
       - name: Typecheck and build
-        run: npm run build
+        shell: bash
+        run: |
+          set +e
+          npm run build > frontend-build.log 2>&1
+          status=$?
+          cat frontend-build.log
+          if [ "$status" -ne 0 ]; then
+            message=$(tail -n 80 frontend-build.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+            echo "::error title=TypeScript and production build::$message"
+            exit "$status"
+          fi

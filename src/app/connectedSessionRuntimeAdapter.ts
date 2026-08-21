@@ -21,7 +21,11 @@ import { tauriSessionTransport, type SessionTransportMessage, type SessionTransp
 import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "./connectedCharacterProjectionHandshake";
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","character-projection-v1","event-cursor-v1"];
+declare module "./contracts" {
+  interface SessionParticipantVm { ready?:boolean; }
+}
+
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","character-projection-v1","event-cursor-v1","ready-intent-v1","session-end-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -29,6 +33,7 @@ export interface ConnectedAdapterState {
   sessionMode:AppSnapshot["sessionMode"];
   session:AppSnapshot["session"];
   scene:SceneVm;
+  resolution:AppSnapshot["resolution"];
   activeCharacter:CharacterSheet;
   characters:CharacterSummary[];
   catalog:CatalogEntry[];
@@ -59,13 +64,31 @@ export async function publishConnectedSnapshot(adapter:MockAdapter) {
   publishExternalAdapterSnapshot(await connectedInternal(adapter).getSnapshot());
 }
 
+export function resetConnectedSessionTransientState(adapter:MockAdapter,message:string) {
+  const app=connectedInternal(adapter);
+  resetConnectedState(adapter,null);
+  app.sessionMode="freeform";
+  app.scene.round=0;
+  const localActorId=app.scene.entities.some((entity)=>entity.id===app.activeCharacter.id) ? app.activeCharacter.id : "";
+  app.scene.currentActorId=localActorId;
+  app.scene.selectedActorId=localActorId;
+  app.scene.economyByActor={};
+  app.resolution=null;
+  app.connectionState="disconnected";
+  app.session.role="offline";
+  app.session.address="";
+  app.session.participants=[];
+  app.session.compatibility="warning";
+  app.session.compatibilityMessage=message;
+}
+
 function setTransportStatus(adapter:MockAdapter,status:SessionTransportStatus) {
   const app=connectedInternal(adapter);
   app.connectionState=status.state;
   if (status.address) app.session.address=status.address;
   if (status.role) app.session.role=status.role;
   if (status.state==="disconnected") {
-    app.session.participants=app.session.participants.map((participant)=>({ ...participant,state:"disconnected" as const }));
+    app.session.participants=app.session.participants.map((participant)=>({ ...participant,state:"disconnected" as const,ready:false }));
   }
 }
 
@@ -96,9 +119,26 @@ async function sendClientHello(adapter:MockAdapter,knownEventCursor:number) {
   }));
 }
 
+function applyParticipantPayload(adapter:MockAdapter,payload:Extract<ConnectedEventPayload,{kind:"participant"}>) {
+  const app=connectedInternal(adapter);
+  const participant={
+    id:payload.participantId,
+    name:payload.participantName,
+    characterName:payload.characterName,
+    state:payload.state,
+    ready:payload.ready,
+  };
+  const existing=app.session.participants.some((entry)=>entry.id===participant.id);
+  app.session.participants=existing
+    ? app.session.participants.map((entry)=>entry.id===participant.id ? participant : entry)
+    : [...app.session.participants,participant];
+}
+
 async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventPayload,event:ConnectedSessionEvent) {
   const app=connectedInternal(adapter);
+  const state=connectedStateFor(adapter);
   if (payload.kind==="mode-transition") {
+    state.sessionStarted=true;
     app.sessionMode=payload.sessionMode;
     app.scene.round=payload.round;
     app.scene.currentActorId=payload.currentActorId;
@@ -112,6 +152,10 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       detail:[`eventId=${event.eventId}`,...payload.provenance],
       stateChanges:[...payload.stateChanges],
     });
+    return { status:"committed" as const };
+  }
+  if (payload.kind==="participant") {
+    applyParticipantPayload(adapter,payload);
     return { status:"committed" as const };
   }
   if (payload.kind==="correction") {
@@ -169,7 +213,7 @@ function scheduleClientReconnect(adapter:MockAdapter) {
   const app=connectedInternal(adapter);
   if (state.mode!=="client"||!state.sessionId||!app.session.address||state.reconnectTimer||state.reconnectInFlight) return;
   app.connectionState="reconnecting";
-  app.session.participants=app.session.participants.map((participant)=>({ ...participant,state:"reconnecting" as const }));
+  app.session.participants=app.session.participants.map((participant)=>({ ...participant,state:"reconnecting" as const,ready:false }));
   const delay=Math.min(1000*(2**Math.min(state.reconnectAttempts,3)),8000);
   app.session.compatibility="warning";
   app.session.compatibilityMessage=`Connection lost · retrying from event cursor ${state.replica?.cursor ?? 0}.`;
@@ -196,6 +240,31 @@ function scheduleClientReconnect(adapter:MockAdapter) {
   void publishConnectedSnapshot(adapter);
 }
 
+function acceptedManifestForParticipant(adapter:MockAdapter,participantId:string) {
+  const state=connectedStateFor(adapter);
+  for (const [peer,mappedParticipantId] of state.peerParticipants.entries()) {
+    if (mappedParticipantId!==participantId) continue;
+    const manifest=state.peerManifests.get(peer);
+    if (manifest) return manifest;
+  }
+  return undefined;
+}
+
+async function rejectLiveHello(adapter:MockAdapter,peer:string,message:string) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  const ledger=state.ledger;
+  if (!ledger) return;
+  await sendConnectedWireTo(peer,{
+    type:"hello-ack",
+    sessionId:ledger.sessionId,
+    sessionName:app.session.name,
+    compatibility:{status:"incompatible",message},
+    hostCursor:ledger.cursor,
+    events:[],
+  });
+}
+
 async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMessage,wire:ConnectedWireMessage) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
@@ -203,10 +272,21 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
   if (!ledger) return;
 
   if (wire.type==="hello") {
+    const existingParticipant=app.session.participants.find((participant)=>participant.id===wire.participantId);
+    const previousManifest=existingParticipant ? acceptedManifestForParticipant(adapter,wire.participantId) : undefined;
+    if (state.sessionStarted&&existingParticipant) {
+      const expectedCharacterId=previousManifest?.character?.characterId;
+      const reconnectCharacterId=wire.manifest.character?.characterId;
+      if (!previousManifest||expectedCharacterId!==reconnectCharacterId) {
+        await rejectLiveHello(adapter,message.peer,"Live reconnect must use the previously accepted participant and Character identity.");
+        return;
+      }
+    }
+
     let compatibility=ledger.handshake(wire.manifest);
     let events:ConnectedSessionEvent[]=[];
     if (compatibility.status!=="incompatible") {
-      try { events=ledger.eventsAfter(wire.knownEventCursor); }
+      try { ledger.eventsAfter(wire.knownEventCursor); }
       catch(error) {
         await sendConnectedWireTo(message.peer,{type:"error",code:"invalid-event-cursor",message:error instanceof Error?error.message:String(error),hostCursor:ledger.cursor});
         return;
@@ -215,28 +295,80 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
       const projectionAcceptance=acceptHostCharacterSessionProjection(adapter,message.peer,wire.manifest,wire.projection);
       if (projectionAcceptance.status==="rejected") {
         compatibility={status:"incompatible",message:`Character SessionProjection rejected: ${projectionAcceptance.error}`};
-        events=[];
       } else {
         const characterId=wire.manifest.character?.characterId;
         if (characterId) {
           for (const [peer,manifest] of state.peerManifests.entries()) {
-            if (peer!==message.peer&&manifest.character?.characterId===characterId) state.peerManifests.delete(peer);
+            if (peer!==message.peer&&manifest.character?.characterId===characterId) {
+              state.peerManifests.delete(peer);
+              state.peerParticipants.delete(peer);
+            }
           }
         }
         state.peerManifests.set(message.peer,structuredClone(wire.manifest));
-        const existing=app.session.participants.find((entry)=>entry.id===wire.participantId);
-        const participant={
-          id:wire.participantId,
-          name:wire.participantName,
-          characterName:wire.manifest.character?.characterId,
-          state:"connected" as const,
-        };
-        app.session.participants=existing
-          ? app.session.participants.map((entry)=>entry.id===participant.id ? participant : entry)
-          : [...app.session.participants,participant];
+        state.peerParticipants.set(message.peer,wire.participantId);
+        const participantEvent=ledger.commitHostEvent({
+          actorId:wire.participantId,
+          payload:{
+            kind:"participant",
+            participantId:wire.participantId,
+            participantName:wire.participantName,
+            characterName:wire.participantName,
+            state:"connected",
+            ready:false,
+            stateChanges:[`${wire.participantName} connected`],
+            provenance:[existingParticipant?"host-authoritative participant reconnect":"host-authoritative participant handshake"],
+          },
+        });
+        applyParticipantPayload(adapter,participantEvent.payload as Extract<ConnectedEventPayload,{kind:"participant"}>);
+        for (const peer of state.peerParticipants.keys()) {
+          if (peer!==message.peer) {
+            await sendConnectedWireTo(peer,{type:"event-batch",sessionId:ledger.sessionId,afterCursor:participantEvent.sequence-1,events:[participantEvent]}).catch(()=>undefined);
+          }
+        }
+        events=ledger.eventsAfter(wire.knownEventCursor);
       }
     }
-    await sendConnectedWireTo(message.peer,{type:"hello-ack",sessionId:ledger.sessionId,compatibility,hostCursor:ledger.cursor,events});
+    await sendConnectedWireTo(message.peer,{type:"hello-ack",sessionId:ledger.sessionId,sessionName:app.session.name,compatibility,hostCursor:ledger.cursor,events});
+    await publishConnectedSnapshot(adapter);
+    return;
+  }
+
+  if (wire.type==="ready-intent") {
+    if (wire.sessionId!==ledger.sessionId) {
+      await sendConnectedWireTo(message.peer,{type:"error",code:"session-mismatch",message:`expected ${ledger.sessionId}, received ${wire.sessionId}`,hostCursor:ledger.cursor});
+      return;
+    }
+    if (state.sessionStarted) {
+      await sendConnectedWireTo(message.peer,{type:"error",code:"session-live",message:"Ready can only change before the Host starts play.",hostCursor:ledger.cursor});
+      return;
+    }
+    const participantId=state.peerParticipants.get(message.peer);
+    const manifest=state.peerManifests.get(message.peer);
+    const participant=participantId ? app.session.participants.find((entry)=>entry.id===participantId) : undefined;
+    if (!participantId||!manifest||!participant||participant.state!=="connected") {
+      await sendConnectedWireTo(message.peer,{type:"error",code:"ready-not-authorized",message:"Ready intent requires an accepted connected participant handshake.",hostCursor:ledger.cursor});
+      return;
+    }
+    if (ledger.handshake(manifest).status==="incompatible") {
+      await sendConnectedWireTo(message.peer,{type:"error",code:"ready-incompatible",message:"Incompatible participants cannot become Ready.",hostCursor:ledger.cursor});
+      return;
+    }
+    const event=ledger.commitHostEvent({
+      actorId:participantId,
+      payload:{
+        kind:"participant",
+        participantId,
+        participantName:participant.name,
+        characterName:participant.characterName,
+        state:"connected",
+        ready:wire.ready,
+        stateChanges:[`${participant.name} Ready = ${wire.ready}`],
+        provenance:["host-authoritative ready intent"],
+      },
+    });
+    applyParticipantPayload(adapter,event.payload as Extract<ConnectedEventPayload,{kind:"participant"}>);
+    await broadcastConnectedWire({type:"event-batch",sessionId:ledger.sessionId,afterCursor:event.sequence-1,events:[event]});
     await publishConnectedSnapshot(adapter);
     return;
   }
@@ -265,8 +397,21 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
 async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
+  if (wire.type==="session-ended") {
+    if (!state.sessionId||wire.sessionId!==state.sessionId) {
+      app.session.compatibility="warning";
+      app.session.compatibilityMessage=`Ignored session end for another session: ${wire.sessionId}.`;
+      await publishConnectedSnapshot(adapter);
+      return;
+    }
+    resetConnectedSessionTransientState(adapter,`Session ended by Host · ${wire.reason}`);
+    await tauriSessionTransport.stop().catch(()=>undefined);
+    await publishConnectedSnapshot(adapter);
+    return;
+  }
   if (wire.type==="hello-ack") {
     state.sessionId=wire.sessionId;
+    if (wire.sessionName) app.session.name=wire.sessionName;
     if (!state.replica || state.replica.sessionId!==wire.sessionId) state.replica=new ClientSessionReplica(wire.sessionId);
     app.session.compatibility=wire.compatibility.status;
     app.session.compatibilityMessage=wire.compatibility.message;
@@ -277,6 +422,13 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
       await publishConnectedSnapshot(adapter);
       return;
     }
+    const localId=`client:${app.activeCharacter.id}`;
+    const preserved=app.session.participants.filter((entry)=>entry.id!=="host"&&entry.id!==localId);
+    app.session.participants=[
+      {id:"host",name:"DM Host",state:"connected",ready:false},
+      ...preserved,
+      {id:localId,name:"Local Player",characterName:app.activeCharacter.name,state:"connected",ready:false},
+    ];
     const applied=await applyConnectedClientEvents(adapter,wire.events);
     if (applied.status==="rejected") {
       app.session.compatibility="warning";
@@ -284,10 +436,6 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
     } else {
       app.connectionState="connected";
       state.reconnectAttempts=0;
-      app.session.participants=[
-        {id:"host",name:"DM Host",state:"connected"},
-        {id:`client:${app.activeCharacter.id}`,name:"Local Player",characterName:app.activeCharacter.name,state:"connected"},
-      ];
     }
     await publishConnectedSnapshot(adapter);
     return;
@@ -379,7 +527,7 @@ MockAdapter.prototype.hostSession=async function hostConnectedSession() {
   app.session.role="host";
   app.session.compatibility="compatible";
   app.session.compatibilityMessage="Host authority active · waiting for compatible clients.";
-  app.session.participants=[{id:"host",name:"DM Host",state:"connected"}];
+  app.session.participants=[{id:"host",name:"DM Host",state:"connected",ready:false}];
   return app.getSnapshot();
 };
 
