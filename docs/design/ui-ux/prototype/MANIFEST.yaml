@@ -1,14 +1,15 @@
-schema_version: 1
+schema_version: 2
 phase: ui_reference_prototype
-status: owner_accepted
-html_prototype_status: integrated_reference_accepted
-prototype_owner_acceptance: accepted_2026_08_21
+status: owner_accepted_reference_with_pending_dm_library_extension
+html_prototype_status: integrated_reference_accepted_dm_library_extension_candidate
+prototype_owner_acceptance: accepted_2026_08_21_for_existing_reference
 runtime_ui_implementation_allowed: false
 
 paths:
   root: docs/design/ui-ux/prototype/
   app: docs/design/ui-ux/prototype/app/
   accepted_review_entry: docs/design/ui-ux/prototype/app/integrated-reference.html
+  dm_library_candidate_entry: docs/design/ui-ux/prototype/app/dm-library-reference.html
   invalidated_latest_entry: docs/design/ui-ux/prototype/app/final-spec.html
   historical_rejected_entry: docs/design/ui-ux/prototype/app/index.html
   runtime_contracts: docs/design/ui-ux/contracts/
@@ -19,12 +20,39 @@ accepted_reference:
   accepted_date: 2026-08-21
   acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
   verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
+  scope_note: existing accepted scenes remain valid; newly requested DM Library was not present in this candidate
+
+pending_extensions:
+  dm_library:
+    status: owner_direct_candidate_visual_flow_acceptance_pending
+    requested_date: 2026-08-22
+    owner_direction: DM-only durable preparation library for Images, PC Actor Presets, and NPC Actor Definitions
+    product_plan: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+    architecture_boundary: docs/design/dm-library-persistence.md
+    prototype_spec: docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md
+    candidate_entry: docs/design/ui-ux/prototype/app/dm-library-reference.html
+    candidate_css: docs/design/ui-ux/prototype/app/dm-library-reference.css
+    candidate_js: docs/design/ui-ux/prototype/app/dm-library-reference.js
+    work_order: docs/design/ui-ux/work-orders/WO-UI-004-dm-library-preparation-and-live-invocation.md
+    required_scenarios:
+      - DMLIB-SCN-01
+      - DMLIB-SCN-02
+      - DMLIB-SCN-03
+      - DMLIB-SCN-04
+      - DMLIB-SCN-05
+      - DMLIB-SCN-06
+    existing_accepted_scenes_invalidated: false
+    runtime_implementation_allowed: false
+    next_gate: owner_visual_and_flow_review
 
 required_cross_source_baseline:
   path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
   status: active
   must_read_before_prototype_spec_or_build: true
   mapless_core_guard: true
+  active_owner_extension:
+    path: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+    status: owner_direct_reviewed_direction
 
 source_priority:
   domain_architecture:
@@ -32,6 +60,7 @@ source_priority:
     - docs/design/movement-modules.md
     - docs/design/session-runtime.md
     - docs/design/persistence.md
+    - docs/design/dm-library-persistence.md
     - docs/design/character-lifecycle.md
     - docs/design/character-session-projection.md
     - docs/design/content-modules-items.md
@@ -43,6 +72,7 @@ source_priority:
     - docs/design/ui-ux/decisions.md
     - docs/design/ui-ux/OWNER-CONTROL-POLICY.md
     - docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
+    - docs/design/ui-ux/DM-LIBRARY-PLAN.md
     - docs/design/ui-ux/master-flow.md
     - docs/design/ui-ux/registry.md
     - docs/design/ui-ux/matrices.md
@@ -65,6 +95,7 @@ source_priority:
     - docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
     - docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
     - docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
+    - docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md
   historical_evidence_only:
     - .agents/
     - docs/design/v1-desktop-demo/
@@ -80,6 +111,18 @@ files:
   integrated_plan:
     path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
     role: mandatory_cross_source_baseline
+  dm_library_plan:
+    path: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+    role: active_owner_direct_product_extension
+  dm_library_architecture:
+    path: docs/design/dm-library-persistence.md
+    role: durable_preparation_persistence_privacy_session_projection_boundary
+  dm_library_extension:
+    path: docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md
+    role: pending_prototype_extension_spec
+  dm_library_candidate:
+    path: docs/design/ui-ux/prototype/app/dm-library-reference.html
+    role: owner_review_candidate_extension
   rebuild_contract:
     path: docs/design/ui-ux/prototype/PROTOTYPE-REBUILD-CONTRACT.md
     role: accepted_prototype_execution_history_and_build_contract
@@ -89,7 +132,7 @@ files:
     authority: prototype_detail_only
   surfaces:
     path: docs/design/ui-ux/prototype/SURFACE-CATALOG.md
-    role: prototype_surface_inventory
+    role: prototype_surface_inventory_for_existing_accepted_reference
   components:
     path: docs/design/ui-ux/prototype/COMPONENT-CATALOG.md
     role: reusable_component_inventory
@@ -101,7 +144,7 @@ files:
     role: prototype_visible_state_model
   scenarios:
     path: docs/design/ui-ux/prototype/SCENARIO-CATALOG.md
-    role: prototype_scenario_inventory
+    role: prototype_scenario_inventory_for_existing_accepted_reference
   mock_data:
     path: docs/design/ui-ux/prototype/MOCK-DATA-CONTRACT.md
     role: synthetic_non_authoritative_data_contract
@@ -114,7 +157,7 @@ files:
     candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
   acceptance:
     path: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
-    role: accepted_prototype_record
+    role: accepted_existing_prototype_record
   work_order:
     path: docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
     role: prototype_scope_and_execution_record
@@ -161,6 +204,12 @@ prototype_rules:
   freeform_fake_turn_economy_forbidden: true
   dm_player_must_share_core_play_skeleton: true
   historical_intent_first_funnel_is_not_primary_capability_access: true
+  dm_library_is_private_local_preparation_source: true
+  dm_library_must_not_be_sent_as_catalog_to_players: true
+  dm_library_actor_add_creates_independent_session_instance: true
+  dm_library_session_runtime_must_not_auto_write_back_to_source: true
+  dm_library_image_preview_is_not_reveal: true
+  dm_library_pc_actor_preset_is_not_player_owned_character: true
 
 review_viewports:
   note: prototype_test_presets_not_canonical_product_breakpoints
@@ -170,38 +219,50 @@ review_viewports:
 
 phase_gate:
   P0_specification:
-    status: passed_for_mapless_rebuild
+    status: passed_for_existing_mapless_reference_dm_library_extension_spec_added
   P1_html_build:
-    status: passed_static_and_owner_review
+    status: passed_for_existing_reference_dm_library_candidate_built_pending_review
     accepted_candidate: docs/design/ui-ux/prototype/app/integrated-reference.html
-    candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+    accepted_candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+    dm_library_candidate: docs/design/ui-ux/prototype/app/dm-library-reference.html
     verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
   P2_review_iteration:
-    status: completed
+    status: completed_for_existing_reference_reopened_for_dm_library_extension
   P3_owner_acceptance:
-    status: passed
+    status: passed_for_existing_reference_dm_library_extension_pending
     accepted_date: 2026-08-21
     acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+    dm_library_next_gate: owner_visual_and_flow_review
   P4_runtime_preparation:
-    status: in_progress_not_ready
+    status: in_progress_not_ready_for_dm_library
     completed:
-      - prototype_owner_acceptance
-      - surface_contract_materialized
-      - component_contract_materialized
-      - interaction_state_layer_motion_contract_materialized
-      - implementation_traceability_materialized
+      - existing_prototype_owner_acceptance
+      - existing_surface_contract_materialized
+      - existing_component_contract_materialized
+      - existing_interaction_state_layer_motion_contract_materialized
+      - existing_implementation_traceability_materialized
+      - dm_library_product_plan_materialized
+      - dm_library_architecture_boundary_drafted
+      - dm_library_prototype_candidate_built
     blocked_or_pending:
-      - applicable_domain_architecture_gaps_for_selected_runtime_scope
-      - legacy_ux_reconciliation_for_selected_runtime_scope
+      - dm_library_owner_prototype_acceptance
+      - GAP-DM-LIBRARY-METADATA-PERSISTENCE
+      - GAP-DM-LIBRARY-ASSET-STORAGE
+      - GAP-DM-LIBRARY-ACTOR-INSTANTIATION
+      - GAP-DM-LIBRARY-PRIVATE-PROJECTION
+      - GAP-HANDOUT-NETWORK-CONTRACT_for_connected_image_reveal
       - applicable_frozen_product_dependencies
-      - scoped_runtime_work_order
+      - scoped_runtime_authorization_after_review
   P5_runtime_ui_implementation:
-    status: not_authorized
+    status: not_authorized_for_dm_library
 
 blocking_rule:
   invalidated_candidate_must_not_be_reviewed_or_accepted: true
   accepted_candidate_must_remain_derived_from_integrated_plan: true
   accepted_prototype_does_not_freeze_product_decisions: true
   accepted_prototype_does_not_authorize_runtime_implementation: true
+  existing_accepted_scenes_remain_valid_while_extension_is_pending: true
+  dm_library_extension_must_pass_owner_review_before_acceptance: true
+  dm_library_runtime_requires_architecture_gaps_and_scoped_authorization: true
   runtime_work_requires_scoped_gap_resolution_and_freeze_readiness: true
   broad_runtime_ui_must_not_start_before_P4_ready: true
