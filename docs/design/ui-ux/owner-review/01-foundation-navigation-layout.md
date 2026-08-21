@@ -1,533 +1,505 @@
-# Owner Review — Foundation / Navigation / Layout / Interaction
+# 1. 화면 구조 / 메뉴 / 배치 / 기본 조작
 
-Sheets: `UX-03`, `NAV-01`, `UI-01`, `INT-01`
+이 파일에서는 **앱의 큰 구조와 화면 배치**를 정합니다.
 
-Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and describe the desired behavior in `OWNER NOTE`. Candidate options are scaffolding only. `AI STATUS` is AI-managed.
+어렵게 생각하지 않아도 됩니다. 각 질문에서 가장 마음에 드는 보기를 골라 `OWNER SELECT`에 적으면 됩니다.
+
+- `OWNER SELECT` → `A`, `B`, `C`, `CUSTOM`
+- `OWNER NOTE` → 추가 의견이 있으면 자유롭게 작성
+- `CUSTOM` → 보기 대신 내가 원하는 방식을 직접 작성
 
 ---
 
-# UX-03 — Information Hierarchy
+# UX-03 — 화면에서 무엇을 더 중요하게 보여줄지
 
-### UX-03-01 — Global destination vs Contextual tool boundary
+## UX-03-01 — 기본 메뉴에 항상 보일 항목
 
-**질문:** 어떤 영역을 Product-level Global destination으로 두고, 어떤 영역을 현재 작업/세션에 붙는 Contextual tool로 둘 것인가?
+**쉽게 말하면:** 앱의 기본 메뉴에 어떤 화면들을 항상 넣을까요?
 
-**선택지**
-- `A` — Home / Characters / Session / Content / Rules / Settings만 Global. Activity / Encounter / Adjudication / Session utilities는 Contextual.
-- `B` — A와 같되 Activity는 Global history destination으로 승격.
-- `C` — Home / Characters / Session만 핵심 Global로 두고 Content / Rules / Settings도 secondary/contextual 진입으로 축소.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** `A`
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UX-03-02 — Product Shell ↔ Live Play hierarchy
-
-**질문:** Product Shell과 Live Play 사이를 계층적으로 어떻게 연결할 것인가?
-
-**선택지**
-- `A` — Play에서도 Product Shell navigation을 완전히 계속 노출.
-- `B` — Play는 전용 workspace로 전환하지만 Global로 돌아갈 compact persistent entry는 유지.
-- `C` — Play는 거의 독립된 full workspace이며 명시적 Exit/Return control로만 Product Shell에 복귀.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** `B`
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UX-03-03 — Permanent UI vs Contextual UI
-
-**질문:** 어떤 UI를 항상 보이는 Permanent UI로 두고, 어떤 UI를 상황에 따라 여는 Contextual UI로 둘 것인가?
-
-**선택지**
-- `A` — 핵심 anchors/capabilities는 Permanent, task/role/detail utilities는 Contextual.
-- `B` — 핵심 anchors + 자주 쓰는 Session/DM utilities까지 Permanent.
-- `C` — 핵심 anchors만 Permanent, 나머지는 최대한 Contextual.
-- `CUSTOM` — 직접 정의.
+- `A` — 홈 / 캐릭터 / 세션 / 콘텐츠 / 룰 / 설정만 기본 메뉴에 둔다. 활동기록·조우·DM 판정도구 등은 필요할 때만 연다.
+- `B` — A와 같지만 **활동기록(Activity)**도 기본 메뉴에서 언제든 들어갈 수 있게 한다.
+- `C` — 홈 / 캐릭터 / 세션만 가장 중요한 기본 메뉴로 두고, 콘텐츠 / 룰 / 설정도 보조 메뉴처럼 한 단계 뒤에 둔다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UX-03-04 — Play Workspace information priority
+## UX-03-02 — 플레이 중 다른 화면으로 나가는 방법
 
-**질문:** Play Workspace에서 어떤 정보가 가장 높은 시각/정보 우선순위를 가져야 하는가?
+**쉽게 말하면:** 실제 세션 플레이 화면에 들어간 뒤에도 홈·캐릭터·설정 같은 기본 메뉴를 얼마나 쉽게 열 수 있어야 할까요?
 
-**선택지**
-- `A` — Scene/Actor Context + Command Center 공동 1순위 → current turn/resolution/status 2순위 → utilities/history 3순위.
-- `B` — Scene/Actor Context + Command Center + turn/status를 모두 1순위 operational layer로 취급.
-- `C` — 공통 anchors는 유지하되 DM/Player 역할별 operational information을 동급 1순위까지 올릴 수 있음.
-- `CUSTOM` — 직접 정의.
+- `A` — 플레이 중에도 앱의 기본 메뉴를 계속 그대로 보여준다.
+- `B` — 플레이 화면은 전용 화면으로 쓰되, **앱 기본 화면으로 돌아가는 작은 버튼은 항상 남겨둔다.**
+- `C` — 플레이 화면은 거의 독립된 화면으로 쓰고, 명시적인 `나가기/돌아가기` 버튼으로만 기본 화면에 복귀한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UX-03-05 — Standalone Character Sheet priority
+## UX-03-03 — 항상 보여줄 UI vs 필요할 때만 보여줄 UI
 
-**질문:** Standalone Character Sheet에서 가장 먼저 읽히고 접근되어야 하는 정보/행동은 무엇인가?
+**쉽게 말하면:** 화면에 항상 남겨둘 것과, 눌렀을 때만 열릴 것을 어떻게 나눌까요?
 
-**선택지**
-- `A` — Character identity / HP / core stats + 자주 쓰는 actions/rolls 우선, 상세 record는 아래 계층.
-- `B` — Character record의 완전한 열람을 최우선으로 하고 actions/rolls는 그 안의 주요 영역.
-- `C` — actions/rolls를 최우선 operational layer로 두고 Character record는 secondary detail.
-- `CUSTOM` — 직접 정의.
+- `A` — 자주 쓰는 핵심 기능은 항상 보이고, 세부정보·DM도구·부가기능은 필요할 때 연다.
+- `B` — 핵심 기능뿐 아니라 자주 쓰는 세션/DM 도구도 항상 보이게 한다.
+- `C` — 정말 핵심인 것만 항상 보이고 나머지는 대부분 필요할 때 연다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** `A`
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UX-03-04 — 플레이 화면에서 가장 눈에 띄어야 하는 것
+
+**쉽게 말하면:** 실제 플레이 화면에서 무엇을 가장 중요하게 보여줄까요?
+
+- `A` — **장면/캐릭터 상황 + 아래 행동버튼(Command Center)**이 가장 중요하다. 턴/판정/상태는 그다음, 기록/도구는 더 뒤에 둔다.
+- `B` — 장면/캐릭터 + 행동버튼 + 현재 턴/상태를 모두 최우선으로 보여준다.
+- `C` — 기본 구조는 유지하되 DM과 플레이어가 각자 자주 쓰는 역할별 정보도 최우선 영역까지 올라올 수 있다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** `B`
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UX-03-05 — 캐릭터 시트에서 가장 먼저 보일 것
+
+**쉽게 말하면:** 혼자 캐릭터 시트를 열었을 때 가장 먼저 보여야 하는 것은 무엇일까요?
+
+- `A` — 이름/초상화, HP, 핵심 능력치, 자주 쓰는 행동과 굴림을 먼저 보여주고 자세한 기록은 아래에 둔다.
+- `B` — 캐릭터의 전체 정보를 보기 좋게 정리하는 것을 가장 중요하게 하고, 행동/굴림은 그 안에 배치한다.
+- `C` — 행동/굴림을 가장 앞에 두고 자세한 캐릭터 정보는 보조 영역으로 둔다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** `A`
 
 **OWNER NOTE:** `이건 공식 시트 레이아웃 버전과 SVTT버전을 선택할수있게 하는게 좋겠어.`
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UX-03-06 — Progressive disclosure scope
+## UX-03-06 — 자주 안 쓰는 기능을 숨겨도 되는 범위
 
-**질문:** Progressive disclosure를 어디까지 허용할 것인가?
+**쉽게 말하면:** 화면을 깔끔하게 하기 위해 자주 안 쓰는 정보나 도구를 접어두어도 될까요?
 
-**선택지**
-- `A` — 보조 설명/세부정보에만 허용. 기능 자체는 거의 숨기지 않음.
-- `B` — 보조정보 + advanced/rare tools는 contextual하게 숨길 수 있음. Core capabilities는 항상 직접 노출.
-- `C` — Progressive disclosure를 최소 사용하고 대부분의 정보/도구를 한 화면에 직접 노출.
-- `CUSTOM` — 직접 정의. Core capability direct exposure에 대한 기존 Reviewed 결정은 유지해야 함.
+- `A` — 설명이나 세부정보만 접는다. 기능 자체는 가능한 한 바로 보이게 한다.
+- `B` — 설명 + 고급/드물게 쓰는 도구는 접어둘 수 있다. **자주 쓰는 핵심 기능은 항상 바로 보이게 한다.**
+- `C` — 접는 방식을 거의 쓰지 않고 가능한 한 한 화면에 직접 보여준다.
+- `CUSTOM` — 직접 정한다. 단, 핵심 기능을 메뉴 속에 숨기는 방식은 기존 방향과 맞지 않는다.
 
 **OWNER SELECT:** `A`
 
 **OWNER NOTE:** `장소에 따라 다르겠지만 웬만해선 마우스 호버링을 하면 마우스를 따라오는 프레임에서 설명이 가능하면 좋겠어.`
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UX-03-07 — Duplicate information principle
+## UX-03-07 — 같은 정보를 여러 곳에 보여줘도 되는가
 
-**질문:** 같은 canonical 정보를 여러 surface에 반복 표시하는 것을 어떤 원칙으로 허용할 것인가?
+**쉽게 말하면:** 예를 들어 HP나 현재 상태를 여러 화면에 동시에 보여줘도 될까요?
 
-**선택지**
-- `A` — 가능한 한 한 위치만 표시하고 중복을 최소화.
-- `B` — 동일 canonical source를 사용한다면 현재 task에서 중요한 정보는 관련 surface에 의도적으로 반복 가능.
-- `C` — 각 surface가 독립적으로 필요하면 폭넓게 반복 가능하되 값은 canonical projection만 사용.
-- `CUSTOM` — 직접 정의.
+- `A` — 같은 정보는 가능한 한 한 곳에서만 보여준다.
+- `B` — 같은 실제 값을 쓰는 한, 현재 상황에서 중요하다면 여러 관련 위치에 반복해서 보여줘도 된다.
+- `C` — 각 화면에서 필요하다면 넓게 반복해서 보여줘도 된다. 단 실제 값의 출처는 하나여야 한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** `B`
 
 **OWNER NOTE:** `이건 나중에도 계속 이야기 해봐야할것같아. 상황에 따라 달라질테니까`
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UX-03-08 — Result / Notification / Activity priority
+## UX-03-08 — 결과 / 알림 / 활동기록의 역할
 
-**질문:** 즉시 결과, notification, persistent status, Activity history를 어떤 우선순위로 배치할 것인가?
+**쉽게 말하면:** 굴림 결과나 오류, 알림, 지난 기록을 어디에서 보여주는 게 좋을까요?
 
-**선택지**
-- `A` — 즉시 중요한 결과는 현재 Scene/Task 가까이 → 지속 문제는 Status/Banner → 상세 이력은 Activity → Toast는 짧은 비차단 피드백.
-- `B` — 대부분의 이벤트를 Activity 중심으로 기록/표시하고 현재 Scene에서는 최소 요약만 보여줌.
-- `C` — Toast/event-feed 중심으로 즉시 이벤트를 적극적으로 보여주고 Activity는 장기 history 역할.
-- `CUSTOM` — 직접 정의.
+- `A` — 지금 중요한 결과는 현재 작업 근처에서 보여준다. 오래 지속되는 문제는 배너, 자세한 기록은 Activity, 짧은 알림만 Toast로 보여준다.
+- `B` — 대부분의 이벤트를 Activity에 모으고 현재 화면에서는 간단한 요약만 보여준다.
+- `C` — 짧은 팝업/이벤트 피드를 적극적으로 사용하고 Activity는 장기 기록용으로 둔다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# NAV-01 — Navigation
+# NAV-01 — 메뉴와 화면 이동
 
-### NAV-01-01 — Top-level Product Shell destinations
+## NAV-01-01 — 앱의 기본 메뉴 순서
 
-**질문:** 최종 Product Shell의 top-level destination set과 order는 무엇인가?
+**쉽게 말하면:** 왼쪽 메뉴나 상단 메뉴의 큰 항목을 어떤 순서로 둘까요?
 
-**선택지**
-- `A` — Home → Characters → Session → Content → Rules → Settings.
-- `B` — Home → Characters → Session → Rules/Content Library 통합 → Settings.
-- `C` — Home → Characters → Session을 primary로, Content / Rules / Settings는 secondary global group으로 분리.
-- `CUSTOM` — 직접 destination set/order 정의.
+- `A` — 홈 → 캐릭터 → 세션 → 콘텐츠 → 룰 → 설정
+- `B` — 홈 → 캐릭터 → 세션 → 룰/콘텐츠 통합 → 설정
+- `C` — 홈 → 캐릭터 → 세션을 가장 앞에 두고, 콘텐츠 / 룰 / 설정은 보조 묶음으로 둔다.
+- `CUSTOM` — 메뉴 항목과 순서를 직접 적는다.
 
 **OWNER SELECT:** `A`
 
 **OWNER NOTE:** `편하게 해줘`
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### NAV-01-02 — Return to Play entry
+## NAV-01-02 — 세션 중 `플레이로 돌아가기` 버튼
 
-**질문:** live session이 있을 때 Return to Play는 어디에 어떻게 노출할 것인가?
+**쉽게 말하면:** 세션이 진행 중인데 다른 화면을 보고 있을 때, 플레이 화면으로 돌아가는 버튼을 어디에 둘까요?
 
-**선택지**
-- `A` — Product Shell top-level navigation에 항상 보이는 Return to Play destination/badge.
-- `B` — live session일 때만 나타나는 compact persistent Return to Play control.
-- `C` — Home/Session destination에서만 Return to Play를 제공하고 다른 global surface에는 별도 persistent control 없음.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### NAV-01-03 — Character navigation family
-
-**질문:** Character Library / Sheet / Builder / Edit / Level Up의 진입과 복귀 관계는?
-
-**선택지**
-- `A` — Library가 hub. Sheet는 full destination/workspace, Builder/Edit/Level Up은 Sheet/Library에서 들어가는 task flow.
-- `B` — Library / Sheet / Builder / Level Up을 각각 route-level destination으로 명시.
-- `C` — Sheet가 Character 중심 hub이고 Library는 Character switcher/manager 역할. Builder/Level Up은 Sheet에서만 진입.
-- `CUSTOM` — 직접 정의.
+- `A` — 기본 메뉴에 `플레이로 돌아가기`를 항상 보이게 한다.
+- `B` — 세션이 진행 중일 때만 작은 `플레이로 돌아가기` 버튼이 계속 보이게 한다.
+- `C` — 홈이나 세션 화면에서만 돌아갈 수 있게 하고 다른 화면에는 별도 버튼을 두지 않는다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### NAV-01-04 — Rules / Content / Settings context return
+## NAV-01-03 — 캐릭터 관련 화면 이동
 
-**질문:** Rules / Content / Settings에 갔다가 돌아올 때 이전 Product Shell context를 어떻게 복원할 것인가?
+**쉽게 말하면:** 캐릭터 목록, 캐릭터 시트, 생성/편집, 레벨업 화면을 어떻게 이어놓을까요?
 
-**선택지**
-- `A` — 진입 전 global destination과 해당 surface의 local context를 가능한 범위에서 복원.
-- `B` — 각 utility를 독립 destination으로 보고 닫기/뒤로가기는 항상 Home 또는 고정 parent로 복귀.
-- `C` — global destination은 유지하되 Rules/Content/Settings를 secondary workspace layer처럼 열고 닫으면 정확히 이전 context로 복귀.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### NAV-01-05 — Contextual tools vs top-level tools
-
-**질문:** Activity / Encounter / Adjudication / Session utilities 중 무엇을 contextual로 유지할 것인가?
-
-**선택지**
-- `A` — 전부 contextual. 필요한 Play/Session/Result context에서만 launch.
-- `B` — Activity만 global/history 접근 허용, Encounter/Adjudication/Session utilities는 contextual.
-- `C` — Activity + Encounter를 global로 접근 가능하게 하고 Adjudication/Session utilities만 contextual.
-- `CUSTOM` — 도구별로 직접 정의.
+- `A` — **캐릭터 목록이 중심.** 캐릭터를 열면 시트로 가고, 생성/편집/레벨업은 목록이나 시트에서 들어간다.
+- `B` — 목록 / 시트 / 생성 / 레벨업을 각각 독립된 큰 화면처럼 다룬다.
+- `C` — **캐릭터 시트가 중심.** 캐릭터 목록은 캐릭터를 고르는 곳이고, 편집/레벨업은 시트에서 들어간다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### NAV-01-06 — Back / Close / Return grammar
+## NAV-01-04 — 룰/콘텐츠/설정에서 돌아오기
 
-**질문:** Product Shell, contextual layer, full workspace에서 Back / Close / Return을 어떻게 구분할 것인가?
+**쉽게 말하면:** 룰·콘텐츠·설정을 보고 닫았을 때 어디로 돌아가야 할까요?
 
-**선택지**
-- `A` — Back=내부 navigation history, Close=contextual layer 종료, Return=상위 workspace/Play 복귀로 명확히 분리.
-- `B` — 가능한 한 하나의 Back grammar로 통합하고 modal/contextual surface만 Close 사용.
-- `C` — explicit breadcrumb/parent navigation을 중심으로 하고 Back은 보조 history 기능으로 사용.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### NAV-01-07 — First-use guidance location
-
-**질문:** 첫사용 가이드는 어디에 있고, 닫은 뒤 어디서 다시 열 수 있는가?
-
-**선택지**
-- `A` — Home inline/onboarding card + Help/Info에서 재열기.
-- `B` — 최초 launch overlay + Settings/Help에서 재열기.
-- `C` — 별도 Getting Started destination/guide를 두고 Home에는 짧은 진입점만 표시.
-- `CUSTOM` — 직접 정의.
+- `A` — 들어가기 직전에 보고 있던 화면과 위치를 가능한 한 그대로 복원한다.
+- `B` — 각각 독립된 화면으로 보고, 나갈 때는 항상 홈이나 정해진 상위 화면으로 돌아간다.
+- `C` — 현재 화면 위에 보조 작업창처럼 열고, 닫으면 정확히 원래 화면으로 돌아간다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### NAV-01-08 — Restart / deep-link restore policy
+## NAV-01-05 — 기본 메뉴에 넣지 않을 도구
 
-**질문:** app restart/deep link 시 어떤 상태는 직접 복구하고, 어떤 상태는 Home을 거쳐야 하는가?
+**쉽게 말하면:** Activity, Encounter, 판정수정, 세션도구 중 어떤 것을 기본 메뉴에서 빼고 필요할 때만 열까요?
 
-**선택지**
-- `A` — live session/reconnect context만 직접 복구, 일반 Product surface는 Home에서 시작.
-- `B` — 안전하게 복원 가능한 마지막 global destination까지 복구, live session은 Play/reconnect로 직접 복귀.
-- `C` — 가능한 모든 addressable safe state를 직접 복구하고 위험/불완전 task만 parent/Home으로 fallback.
-- `CUSTOM` — surface별 직접 정의.
+- `A` — 전부 필요할 때만 연다.
+- `B` — Activity만 기본 메뉴에서 언제든 볼 수 있고, 나머지는 필요할 때만 연다.
+- `C` — Activity + Encounter는 기본 메뉴에서도 열 수 있고, 판정수정/세션도구는 필요할 때만 연다.
+- `CUSTOM` — 도구별로 직접 적는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## NAV-01-06 — 뒤로가기 / 닫기 / 돌아가기
+
+**쉽게 말하면:** `뒤로`, `닫기`, `플레이로 돌아가기` 같은 버튼의 역할을 어떻게 구분할까요?
+
+- `A` — 뒤로=이전 화면, 닫기=현재 창만 닫기, 돌아가기=상위 작업공간으로 복귀처럼 역할을 명확히 나눈다.
+- `B` — 가능한 한 `뒤로` 하나로 단순화하고 팝업/창에만 `닫기`를 쓴다.
+- `C` — 상위 화면으로 가는 명시적인 메뉴/경로를 중심으로 하고, 브라우저식 뒤로가기는 보조로만 쓴다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## NAV-01-07 — 처음 사용하는 사람을 위한 안내
+
+**쉽게 말하면:** 처음 실행했을 때 도움말을 어디에 보여주고, 나중에 어디서 다시 열까요?
+
+- `A` — 홈 화면에 간단한 시작 안내를 보여주고 Help/정보에서 다시 열 수 있게 한다.
+- `B` — 첫 실행 때 별도 안내창을 띄우고 설정/Help에서 다시 열 수 있게 한다.
+- `C` — 별도 `시작하기` 페이지를 두고 홈에는 짧은 링크만 둔다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## NAV-01-08 — 앱을 다시 켰을 때 어디서 시작할지
+
+**쉽게 말하면:** 앱을 종료했다 다시 켰을 때 마지막 화면을 얼마나 복원할까요?
+
+- `A` — 진행 중인 세션만 바로 복원하고, 평소에는 홈에서 시작한다.
+- `B` — 안전한 경우 마지막에 보고 있던 기본 화면까지 복원한다. 진행 중인 세션은 바로 플레이/재연결 화면으로 돌아간다.
+- `C` — 안전하게 복원할 수 있는 화면은 최대한 그대로 다시 열고, 복원하기 위험한 작업만 홈/상위 화면으로 보낸다.
+- `CUSTOM` — 화면별로 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# UI-01 — Layout & Grid
+# UI-01 — 화면의 큰 배치
 
-### UI-01-01 — Product Shell region grammar
+## UI-01-01 — 기본 앱 화면 구조
 
-**질문:** Product Shell의 primary navigation과 content 영역을 어떤 큰 레이아웃으로 구성할 것인가?
+**쉽게 말하면:** 홈/캐릭터/룰 같은 일반 화면은 어떤 큰 틀로 만들까요?
 
-**선택지**
-- `A` — 고정/축소 가능한 left navigation rail + main content.
-- `B` — top navigation/header + full-width main content.
-- `C` — compact left rail + optional secondary context column + main content.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-01-02 — Play Dual Anchor layout
-
-**질문:** Scene/Actor Context와 bottom Command Center를 모두 co-primary로 유지하는 region model은?
-
-**선택지**
-- `A` — Scene/Table이 flexible center를 차지하고 Command Center는 fixed bottom band.
-- `B` — Scene/Table full canvas + Command Center가 bottom overlay/dock으로 겹치되 scene safe-area를 보장.
-- `C` — Scene/Table + Command Center를 명시적 two-region split로 두고 Command Center 높이는 content에 따라 제한적으로 변동.
-- `CUSTOM` — 직접 정의.
+- `A` — 왼쪽 메뉴 + 오른쪽 본문
+- `B` — 위쪽 메뉴 + 아래 전체 본문
+- `C` — 작은 왼쪽 메뉴 + 필요할 때 보조 칸 + 큰 본문
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-01-03 — Actor Board placement
+## UI-01-02 — 플레이 화면의 장면과 행동버튼 배치
 
-**질문:** upper opposing / lower allied Actor Boards를 Scene/Table 주변에 어떻게 배치할 것인가?
+**쉽게 말하면:** 중앙의 장면과 아래 행동버튼 영역을 어떻게 배치할까요?
 
-**선택지**
-- `A` — 상단/하단 고정 horizontal board bands.
-- `B` — scene 상/하 edge에 overlay-style card rows, 필요한 safe-area 확보.
-- `C` — 상/하 board zones는 유지하되 card overflow 시 horizontal scroll/paging.
-- `CUSTOM` — 직접 정의. Permanent side portrait rail로 대체하는 선택은 기존 Reviewed 방향과 충돌.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-01-04 — Initiative Tracker placement
-
-**질문:** top horizontal Initiative Tracker를 Actor Boards/Command Center를 대체하지 않으면서 어디에 배치할 것인가?
-
-**선택지**
-- `A` — upper Actor Board 위/앞의 dedicated top strip.
-- `B` — scene top edge overlay strip with reserved safe-area.
-- `C` — Play workspace top header row 안에 compact tracker를 통합.
-- `CUSTOM` — 직접 정의.
+- `A` — 장면이 남는 공간을 쓰고, 행동버튼 영역은 화면 아래에 고정한다.
+- `B` — 장면을 넓게 깔고 행동버튼 영역을 아래쪽에 겹쳐 띄우되 중요한 장면을 가리지 않게 공간을 확보한다.
+- `C` — 장면과 행동버튼 영역을 아예 위/아래 두 구역으로 나눈다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-01-05 — Command Center internal regions
+## UI-01-03 — 아군/적 캐릭터 카드 위치
 
-**질문:** bottom Command Center 내부의 큰 영역 구성을 어떻게 할 것인가?
+**쉽게 말하면:** 적/NPC 카드와 플레이어/아군 카드를 장면 주변 어디에 둘까요?
 
-**선택지**
-- `A` — left Actor summary / center Hotbar / right economy+resources+context actions.
-- `B` — left Actor+economy / center Hotbar / right contextual controls+resources.
-- `C` — two-row model: top actor/economy/resources/status, bottom full-width Hotbar + contextual controls.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-01-06 — Session/DM utility placement
-
-**질문:** core Play anchors를 밀어내지 않으면서 contextual Session/DM utilities는 어디를 사용해야 하는가?
-
-**선택지**
-- `A` — 좌/우 contextual side pane. 열려도 Command Center와 핵심 Actor/Scene 영역은 유지.
-- `B` — drawer/overlay layer. 일시적으로 scene 일부를 덮지만 core command controls는 유지.
-- `C` — floating/resizable utility panels with bounded placement.
-- `CUSTOM` — utility별 직접 정의.
+- `A` — 적/NPC 카드는 위쪽 줄, 아군/플레이어 카드는 아래쪽 줄에 고정한다.
+- `B` — 장면 위·아래 가장자리에 카드줄을 살짝 겹쳐 띄운다.
+- `C` — 위/아래 구조는 유지하고 카드가 많아지면 가로 스크롤/페이지로 넘긴다.
+- `CUSTOM` — 직접 정한다. 영구적인 왼쪽 파티 초상화줄로 바꾸는 것은 기존 방향과 맞지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-01-07 — Standalone Character Sheet regions
+## UI-01-04 — 이니셔티브 순서표 위치
 
-**질문:** Standalone Character Sheet의 큰 region model은?
+**쉽게 말하면:** 전투 순서표를 어디에 둘까요?
 
-**선택지**
-- `A` — identity/summary header + multi-column main record + sticky/common actions.
-- `B` — central sheet/document + contextual side detail/actions.
-- `C` — tabbed major sections + persistent identity/summary strip.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### UI-01-08 — Builder / Level Up regions
-
-**질문:** Character Builder와 Level Up의 큰 region model은?
-
-**선택지**
-- `A` — step/progress rail + main work area + persistent preview/summary.
-- `B` — single-column wizard + optional preview drawer/panel.
-- `C` — split form/work area + live preview, progress는 top stepper.
-- `CUSTOM` — Builder와 Level Up을 서로 다르게 정의해도 됨.
+- `A` — 화면 맨 위에 별도 가로줄로 둔다.
+- `B` — 장면 위 가장자리에 겹쳐 띄우되 공간을 따로 확보한다.
+- `C` — 플레이 화면의 상단 헤더 안에 작게 넣는다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### UI-01-09 — Scroll / sticky ownership
+## UI-01-05 — 아래 행동영역(Command Center) 구성
 
-**질문:** normal desktop에서 어떤 region이 scroll하고 어떤 region이 sticky/fixed여야 하는가?
+**쉽게 말하면:** 화면 아래 행동영역을 크게 어떻게 나눌까요?
 
-**선택지**
-- `A` — Product main content만 주 scroll; primary nav sticky. Play는 scene/boards/context별 내부 scroll, Command Center fixed.
-- `B` — 각 major region이 독립 scroll 가능. Header/nav/Command Center만 sticky.
-- `C` — Product는 page-level scroll, Play는 거의 fixed viewport + 내부 pane/card overflow만 scroll.
-- `CUSTOM` — surface별 직접 정의.
+- `A` — 왼쪽: 현재 캐릭터 / 가운데: 행동버튼 / 오른쪽: 행동자원·기타 조작
+- `B` — 왼쪽: 캐릭터+행동자원 / 가운데: 행동버튼 / 오른쪽: 상황별 조작+기타 자원
+- `C` — 2줄 구조. 위: 캐릭터/행동자원/상태, 아래: 넓은 행동버튼줄
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## UI-01-06 — 세션/DM 부가도구 위치
+
+**쉽게 말하면:** 참가자 목록, 조우 관리, 세션 공유 같은 부가도구는 어디에 열까요?
+
+- `A` — 왼쪽이나 오른쪽 옆 패널로 연다. 핵심 플레이 영역은 그대로 유지한다.
+- `B` — 필요할 때 화면 위에 서랍/오버레이처럼 연다. 핵심 행동버튼은 계속 보이게 한다.
+- `C` — 움직이거나 크기를 조절할 수 있는 작은 도구창으로 띄운다.
+- `CUSTOM` — 도구마다 다르게 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-01-07 — 캐릭터 시트의 큰 구조
+
+**쉽게 말하면:** 캐릭터 시트는 어떤 모양이 좋을까요?
+
+- `A` — 위에 캐릭터 요약, 아래에 여러 칸으로 자세한 정보, 자주 쓰는 행동은 계속 보이게 한다.
+- `B` — 가운데에 시트 본문, 옆에 선택한 정보/행동을 보여주는 보조칸을 둔다.
+- `C` — 능력치/행동/주문/장비 같은 큰 탭으로 나누고 캐릭터 요약은 계속 보이게 한다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-01-08 — 캐릭터 생성 / 레벨업 화면 구조
+
+**쉽게 말하면:** 캐릭터 생성과 레벨업 화면은 어떤 식으로 진행하는 게 좋을까요?
+
+- `A` — 왼쪽에 단계 목록, 가운데 작업, 옆에 현재 결과 미리보기를 계속 보여준다.
+- `B` — 한 단계씩 앞으로 가는 단순한 마법사형 화면 + 필요할 때 미리보기 열기.
+- `C` — 입력폼과 실시간 미리보기를 나란히 두고, 위쪽에 현재 단계를 보여준다.
+- `CUSTOM` — 생성과 레벨업을 서로 다르게 정해도 된다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## UI-01-09 — 스크롤되는 곳과 고정되는 곳
+
+**쉽게 말하면:** 어떤 부분은 화면에 고정하고 어떤 부분은 스크롤되게 할까요?
+
+- `A` — 일반 화면은 본문만 스크롤하고 메뉴는 고정. 플레이에서는 행동영역을 고정하고 필요한 카드/패널만 각각 스크롤한다.
+- `B` — 큰 영역마다 따로 스크롤할 수 있게 하고 메뉴/헤더/행동영역만 고정한다.
+- `C` — 일반 화면은 페이지 전체 스크롤, 플레이 화면은 거의 고정하고 내부 목록만 스크롤한다.
+- `CUSTOM` — 화면별로 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# INT-01 — Interaction
+# INT-01 — 마우스/키보드 기본 조작
 
-### INT-01-01 — Overlapping interaction priority
+## INT-01-01 — 여러 조작이 겹칠 때 클릭 우선순위
 
-**질문:** Actor selection, selected-action targeting, DM Actor control이 겹칠 때 어떤 interaction context가 우선하는가?
+**쉽게 말하면:** 캐릭터를 선택하려는 클릭, 공격 대상을 고르는 클릭, DM이 조종대상을 바꾸는 클릭이 겹치면 무엇을 먼저 처리할까요?
 
-**선택지**
-- `A` — selected-action targeting 우선 → explicit DM control/takeover action → ordinary Actor selection/context focus.
-- `B` — selected-action targeting 우선 → explicit DM control mode가 켜져 있으면 그 mode → ordinary selection.
-- `C` — targeting은 항상 left-click 우선, DM control은 context menu/별도 control로만 수행하여 click-mode 충돌 자체를 제거.
-- `CUSTOM` — 직접 정의. Selected action target override에 대한 기존 Reviewed 규칙은 유지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### INT-01-02 — Actor Context Menu command categories
-
-**질문:** Hotbar common actions를 중복하지 않으면서 Actor Context Menu에는 어떤 command category를 넣을 것인가?
-
-**선택지**
-- `A` — Inspect/Details + control/selection + role-specific DM/session utilities + uncommon contextual actions.
-- `B` — Inspect/Details + control/selection만 두고 DM/session utilities는 별도 utility surface에 유지.
-- `C` — 공통 Inspect/Control section + DM에게만 추가 DM Tools section.
-- `CUSTOM` — category를 직접 정의. Common Hotbar action duplication은 금지.
+- `A` — 공격/행동의 대상 선택이 최우선 → DM의 명시적 조종 변경 → 일반 캐릭터 선택 순서.
+- `B` — 대상 선택이 최우선 → DM이 별도 `조종 모드`를 켠 경우 그 모드 → 일반 선택.
+- `C` — 왼쪽 클릭은 대상 선택/일반 선택용으로 두고, DM 조종 변경은 우클릭 메뉴나 별도 버튼으로만 하여 충돌을 없앤다.
+- `CUSTOM` — 직접 정한다. 선택된 행동의 대상 클릭이 우선이라는 기존 원칙은 유지한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### INT-01-03 — Keyboard equivalent for context menu
+## INT-01-02 — 캐릭터 우클릭 메뉴에 넣을 것
 
-**질문:** Actor Card right-click/context menu의 keyboard equivalent는?
+**쉽게 말하면:** 캐릭터를 우클릭했을 때 어떤 메뉴가 나와야 할까요? 자주 쓰는 행동버튼은 여기 중복하지 않습니다.
 
-**선택지**
-- `A` — 표준 `Shift+F10` / Context Menu key 지원.
-- `B` — Actor Card focus 상태에서 전용 shortcut 또는 explicit “More” key/button 제공.
-- `C` — A+B 모두 지원하고 동일 menu를 연다.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### INT-01-04 — Escape / Back priority
-
-**질문:** targeting, expanded UI, pane, modal, full sheet, Play가 겹칠 때 Escape/Back의 우선순위는?
-
-**선택지**
-- `A` — innermost modal/interrupt → targeting/selection mode → contextual pane/popover → full sheet/workspace layer → global navigation.
-- `B` — active targeting/command mode를 항상 가장 먼저 cancel → 그다음 topmost layer → navigation.
-- `C` — topmost semantic layer가 항상 우선하며 targeting은 그 layer 안에서만 cancel; global Back은 별도 control.
-- `CUSTOM` — 직접 priority stack 정의.
+- `A` — 상세보기 + 선택/조종 관련 기능 + DM/세션용 특수 기능 + 드물게 쓰는 상황별 기능
+- `B` — 상세보기 + 선택/조종만 넣고 DM/세션 기능은 별도 도구창에 둔다.
+- `C` — 공통 `상세/조종` 메뉴 + DM에게만 추가 `DM 도구` 구역을 보여준다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### INT-01-05 — Direct vs contextual actions
+## INT-01-03 — 우클릭 메뉴의 키보드 사용법
 
-**질문:** 어떤 common action을 직접 control로 보여주고 어떤 action을 secondary/contextual로 보낼 것인가?
+**쉽게 말하면:** 마우스 우클릭을 못 쓰는 사람은 키보드로 어떻게 같은 메뉴를 열까요?
 
-**선택지**
-- `A` — 자주 쓰고 reversible/low-risk인 primary actions는 direct, rare/role-specific/destructive actions는 contextual.
-- `B` — 한 surface당 한두 개의 primary action만 direct, 나머지는 context/detail layer.
-- `C` — Actor/Card/Command Center에서 가능한 한 여러 frequent action을 direct로 노출하고 contextual은 truly exceptional actions에만 사용.
-- `CUSTOM` — 직접 정의. Core capability direct exposure는 기존 Reviewed 결정 유지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### INT-01-06 — Unavailable / invalid reason access
-
-**질문:** unavailable/invalid reason을 pointer, keyboard, focus 사용자에게 어떻게 보여줄 것인가?
-
-**선택지**
-- `A` — disabled/unavailable control 근처의 tooltip/focus help + accessible description. Material blocker는 inline text도 허용.
-- `B` — 모든 material unavailable state에 inline reason을 직접 표시하고 tooltip은 보조.
-- `C` — compact surface는 tooltip/focus help, workflow/blocking surface는 inline reason으로 severity에 따라 분리.
-- `CUSTOM` — 직접 정의.
+- `A` — 표준 `Shift+F10` 또는 키보드의 메뉴 키 사용
+- `B` — 카드에 포커스를 둔 뒤 별도 단축키/`더보기` 버튼 사용
+- `C` — A와 B 둘 다 지원
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### INT-01-07 — Selection state model
+## INT-01-04 — Esc/뒤로가기를 눌렀을 때 무엇부터 닫을지
 
-**질문:** controlled Actor, current turn, targetable, selected target, contextual focus를 어떻게 구분할 것인가?
+**쉽게 말하면:** 여러 창과 선택상태가 겹쳐 있을 때 Esc를 누르면 무엇부터 취소해야 할까요?
 
-**선택지**
-- `A` — 모두 별도 orthogonal state로 유지하고 동시에 여러 indicator가 공존 가능.
-- `B` — control/current-turn은 persistent badges, targeting/selected-target/context-focus는 하나의 active interaction selection layer로 단순화.
-- `C` — 두 축으로 분리: authority/turn axis + interaction/target axis. Focus는 accessibility-only visual state로 별도 처리.
-- `CUSTOM` — 직접 정의.
+- `A` — 확인창/필수응답 → 대상선택/행동선택 → 작은 패널/팝업 → 전체 시트 → 화면 이동 순서
+- `B` — 행동/대상선택을 항상 가장 먼저 취소 → 그다음 맨 위 창 → 마지막에 화면 이동
+- `C` — 현재 가장 위에 열린 창/상태를 먼저 닫고, 앱 전체 뒤로가기는 별도 버튼으로 둔다.
+- `CUSTOM` — 순서를 직접 적는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## INT-01-05 — 바로 보일 버튼 vs 메뉴 안에 넣을 기능
+
+**쉽게 말하면:** 어떤 행동은 화면에 바로 버튼으로 보여주고, 어떤 행동은 우클릭/더보기 안에 넣을까요?
+
+- `A` — 자주 쓰고 위험이 낮은 행동은 바로 보이고, 드물거나 역할 전용/위험한 행동은 메뉴 안에 넣는다.
+- `B` — 한 화면에 가장 중요한 1~2개 행동만 바로 보여주고 나머지는 세부 메뉴로 보낸다.
+- `C` — 자주 쓰는 행동은 가능한 한 많이 직접 보여주고 정말 드문 것만 메뉴 안에 넣는다.
+- `CUSTOM` — 직접 정한다. 핵심 행동 자체를 숨기는 방식은 기존 방향과 맞지 않는다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## INT-01-06 — 사용할 수 없는 버튼의 이유 보여주기
+
+**쉽게 말하면:** 버튼을 지금 사용할 수 없다면 이유를 어떻게 알려줄까요?
+
+- `A` — 마우스를 올리거나 키보드로 선택했을 때 이유를 보여주고, 중요한 막힘은 화면에 직접 문장으로도 표시한다.
+- `B` — 중요한 사용불가 이유는 항상 버튼 근처에 문장으로 직접 표시한다.
+- `C` — 좁은 화면은 툴팁/포커스 설명, 작업을 막는 중요한 문제는 화면에 직접 표시한다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## INT-01-07 — 한 캐릭터에 여러 상태표시가 겹칠 때
+
+**쉽게 말하면:** `내가 조종 중`, `현재 턴`, `공격 가능`, `선택한 대상`, `키보드 포커스`를 어떻게 구분할까요?
+
+- `A` — 전부 서로 다른 표시로 만들고 여러 상태가 동시에 보일 수 있게 한다.
+- `B` — `조종 중/현재 턴`은 계속 보이는 배지, `대상 선택/선택됨/포커스`는 현재 조작 상태 표시로 단순화한다.
+- `C` — 두 종류로 나눈다: ① 조종권/턴 상태 ② 선택/타겟 상태. 키보드 포커스는 별도 테두리로 처리한다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
