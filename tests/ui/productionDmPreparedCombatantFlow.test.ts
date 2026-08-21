@@ -7,8 +7,6 @@ import "../../src/app/productionSessionLifecycleAdapter";
 import "../../src/app/productionCombatantPreparationAdapter";
 import "../../src/app/phase09RealRuntimeAttackAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { connectedInternal, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
-import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 
 const SCOUT_PAYLOAD=JSON.stringify({
@@ -67,12 +65,14 @@ function installFakeDesktopTransport() {
   };
 }
 
-test("Host can add/remove Encounter Combatants in active Freeform and Initiative blocks unsafe removal",async()=>{
+test("Host can add/remove Encounter Combatants after Open in active Freeform and Initiative blocks unsafe removal",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
     let snapshot=await adapter.hostSession();
-    assert.equal(snapshot.session.lifecycle,"preparing");
+    assert.equal(snapshot.session.lifecycle,"live");
+    assert.equal(snapshot.sessionMode,"freeform");
+    assert.deepEqual(snapshot.session.participants.map((participant)=>participant.id),["host"]);
 
     await adapter.previewCombatantImport(SCOUT_PAYLOAD);
     await adapter.activateCombatantImport();
@@ -90,20 +90,6 @@ test("Host can add/remove Encounter Combatants in active Freeform and Initiative
     snapshot=await adapter.instantiateCombatant("combatant.phase14.prepared-scout");
     const liveScout=snapshot.scene.entities.find((entity)=>entity.id==="combatant.phase14.prepared-scout.instance-1");
     assert.ok(liveScout);
-
-    const state=connectedStateFor(adapter);
-    const app=connectedInternal(adapter);
-    state.peerManifests.set("peer.player",connectedManifest(adapter));
-    state.peerParticipants.set("peer.player","client:char.phase14.player");
-    app.session.participants=[
-      {id:"host",name:"DM Host",state:"connected",ready:false},
-      {id:"client:char.phase14.player",name:"Phase14 Player",characterName:"Phase14 Player",state:"connected",ready:true},
-    ];
-
-    snapshot=await adapter.startPreparedSession("freeform");
-    assert.equal(snapshot.session.lifecycle,"live");
-    assert.equal(snapshot.sessionMode,"freeform");
-    assert.ok(snapshot.scene.entities.some((entity)=>entity.id===liveScout.id));
 
     snapshot=await encounter.removeCombatant(liveScout.id);
     assert.equal(snapshot.scene.entities.some((entity)=>entity.id===liveScout.id),false,"active Freeform removal uses the same Scene authority");
@@ -125,11 +111,14 @@ test("Host can add/remove Encounter Combatants in active Freeform and Initiative
   }
 });
 
-test("legacy Host preparation bridge still exposes the canonical Combatant commands without debug setup",()=>{
-  const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
-  assert.match(source,/Combatant 준비/);
+test("live DM Encounter pane owns Combatant add/remove instead of a pre-start preparation gate",()=>{
+  const source=readFileSync(new URL("../../src/SessionDmTools.tsx",import.meta.url),"utf8");
+  const lifecycleSource=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
+  assert.match(source,/SessionDmEncounterPane/);
   assert.match(source,/combatantDefinitions/);
   assert.match(source,/instantiateCombatant/);
   assert.match(source,/removeCombatant/);
+  assert.match(source,/0 Combatant도 정상적인 활성 세션 상태입니다/);
+  assert.doesNotMatch(lifecycleSource,/Combatant 준비|플레이 시작/);
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
