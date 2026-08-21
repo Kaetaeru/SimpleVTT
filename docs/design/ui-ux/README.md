@@ -1,12 +1,13 @@
 # SimpleVTT UI/UX — 사용자 대시보드
 
-현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → Reference Prototype 재구축 → Owner Acceptance → 구현 계약 추출**까지 완료한 상태입니다.
+현재 SimpleVTT UI/UX는 **Repository-wide 통합 기획 → Reference Prototype 재구축 → Owner Acceptance → 구현 계약 추출 → 상세 해석/시나리오/QA 문서화**까지 완료한 상태입니다.
 
-이제 UI의 기준은 흩어진 과거 문서나 현재 코드가 아니라 다음 세 층을 함께 읽습니다:
+이제 UI의 기준은 흩어진 과거 문서나 현재 코드가 아니라 다음 네 층을 함께 읽습니다:
 
 1. canonical Domain/Architecture truth;
 2. current Product/UX Decisions + `INTEGRATED-PRODUCT-UX-PLAN.md`;
-3. Owner가 승인한 `integrated-reference.html`에서 추출한 구현 계약.
+3. Owner가 승인한 `integrated-reference.html`;
+4. Accepted Prototype에서 추출한 상세 implementation contract set.
 
 ---
 
@@ -23,18 +24,18 @@
 | `prototype/app/index.html` | **Rejected / Historical** |
 | `prototype/app/final-spec.html` | **Invalidated / Historical** |
 | `prototype/app/integrated-reference.html` | **OWNER ACCEPTED** |
-| Prototype static verification | **PASS** |
 | Prototype Owner Acceptance | **PASS — 2026-08-21** |
+| Implementation Playbook | **작성됨** |
+| Terminology Guard | **작성됨** |
 | Runtime Surface contract | **작성됨** |
 | Runtime Component contract | **작성됨** |
 | Interaction/State/Layer/Motion contract | **작성됨** |
+| End-to-end Behavior Scenarios | **48개 작성됨** |
 | Implementation traceability | **작성됨** |
+| QA Acceptance Matrix | **작성됨** |
+| Machine-readable Contract Manifest | **작성됨** |
 | Frozen Product Decisions | **추가 Freeze 없음** |
 | Runtime `src/` 구현 | **아직 승인되지 않음** |
-
-Accepted prototype record:
-
-[`prototype/PROTOTYPE-ACCEPTANCE.md`](prototype/PROTOTYPE-ACCEPTANCE.md)
 
 Accepted prototype:
 
@@ -45,41 +46,179 @@ Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
 
 ---
 
-# 가장 먼저 읽을 문서
+# 구현자가 가장 먼저 읽어야 하는 문서
 
-## 1. 통합 제품/UI 기획
+## 전체 제품 설명 / 오해 방지
 
-[`INTEGRATED-PRODUCT-UX-PLAN.md`](INTEGRATED-PRODUCT-UX-PLAN.md)
+[`contracts/IMPLEMENTATION-PLAYBOOK.md`](contracts/IMPLEMENTATION-PLAYBOOK.md)
 
-저장소 전체의 Product/Domain/Owner/history/code evidence를 한 기준으로 해석하는 cross-source baseline입니다.
+처음 SimpleVTT를 보는 사람/AI가 가장 먼저 읽는 설명서입니다.
 
-## 2. Accepted UI/UX implementation contracts
+여기에는:
 
-[`contracts/README.md`](contracts/README.md)
+- SimpleVTT가 무엇인지;
+- 무엇이 아닌지;
+- battlemap이 왜 없는지;
+- Tutorial-first;
+- same-Sheet dice;
+- Connected Play 구조;
+- Host/Join;
+- Freeform/Initiative;
+- Actor click 우선순위;
+- Main Hand no-fallback;
+- privacy;
+- Handout/spatial;
+- 흔한 오해/잘못된 구현 예;
 
-구현자가 Prototype HTML을 직접 해석하지 않고도 작업할 수 있도록 Accepted Prototype을 다음 계약으로 분해했습니다.
+가 한 번에 정리되어 있습니다.
 
-- [`contracts/SURFACE-CONTRACT.md`](contracts/SURFACE-CONTRACT.md)
-- [`contracts/COMPONENT-CONTRACT.md`](contracts/COMPONENT-CONTRACT.md)
-- [`contracts/INTERACTION-STATE-MOTION-CONTRACT.md`](contracts/INTERACTION-STATE-MOTION-CONTRACT.md)
-- [`contracts/IMPLEMENTATION-TRACEABILITY.md`](contracts/IMPLEMENTATION-TRACEABILITY.md)
+## 용어사전
+
+[`contracts/GLOSSARY-AND-TERMINOLOGY.md`](contracts/GLOSSARY-AND-TERMINOLOGY.md)
+
+특히 아래 단어를 일반 VTT 의미로 함부로 해석하지 않게 합니다:
+
+```text
+Scene
+Play Context
+Tabletop Stage
+Actor
+ActorCard
+Control
+Selected
+Target
+Freeform
+Initiative
+DM Only
+Handout
+Spatial Fact
+```
+
+각 용어마다 `뜻 / 뜻하지 않는 것`을 적었습니다.
 
 ---
 
-# 1. 제품 정체성
+# 상세 구현 계약 세트
 
-SimpleVTT는 **local-first D&D tabletop companion**입니다.
+진입점:
 
-두 경험이 동등한 핵심입니다.
+[`contracts/README.md`](contracts/README.md)
+
+필수 읽기 순서:
 
 ```text
-Standalone Character
-Connected Session
+1. IMPLEMENTATION-PLAYBOOK.md
+2. GLOSSARY-AND-TERMINOLOGY.md
+3. SURFACE-CONTRACT.md
+4. COMPONENT-CONTRACT.md
+5. INTERACTION-STATE-MOTION-CONTRACT.md
+6. BEHAVIOR-SCENARIOS.md
+7. IMPLEMENTATION-TRACEABILITY.md
+8. QA-ACCEPTANCE-MATRIX.md
+9. MANIFEST.yaml
 ```
 
-Core에는 battlemap이 없습니다.
+## Surface
 
-금지되는 기본 Core 개념:
+[`contracts/SURFACE-CONTRACT.md`](contracts/SURFACE-CONTRACT.md)
+
+화면 구조와 공존 관계.
+
+## Component
+
+[`contracts/COMPONENT-CONTRACT.md`](contracts/COMPONENT-CONTRACT.md)
+
+ActorCard, ActorBoard, Command Center, Hotbar, Activity, Dice 등 각 UI의 책임.
+
+## Interaction / State / Layer / Motion
+
+[`contracts/INTERACTION-STATE-MOTION-CONTRACT.md`](contracts/INTERACTION-STATE-MOTION-CONTRACT.md)
+
+클릭 우선순위, targeting, resolution, layer, focus, Reduced Motion 등.
+
+## 실제 사용자 시나리오 48개
+
+[`contracts/BEHAVIOR-SCENARIOS.md`](contracts/BEHAVIOR-SCENARIOS.md)
+
+형식:
+
+```text
+Start state
+-> User action
+-> Expected UI
+-> preserved state
+-> forbidden behavior
+```
+
+예를 들어:
+
+- Fresh first run;
+- Sheet roll;
+- Host Session;
+- Join no Character;
+- Freeform;
+- Initiative;
+- single/multi/area targeting;
+- Main Hand unavailable;
+- DM control;
+- Reaction/Concentration;
+- Dice/Result;
+- DM-only Activity;
+- Handout;
+- reconnect;
+- narrow desktop;
+- optional future map module boundary;
+
+까지 포함합니다.
+
+## QA Matrix
+
+[`contracts/QA-ACCEPTANCE-MATRIX.md`](contracts/QA-ACCEPTANCE-MATRIX.md)
+
+Runtime slice마다 각 행을:
+
+```text
+PASS / FAIL / BLOCKED / N/A
+```
+
+로 검증합니다.
+
+`BLOCKED`인 기술 계약을 UI가 임의 구현해서 `PASS`로 만드는 것은 금지했습니다.
+
+---
+
+# 제품을 한 장으로 보면
+
+```text
+Fresh App
+-> Tutorial
+-> Home
+
+Home
+├ Characters -> Library -> Sheet / Create / Level Up
+├ Host -> immediately live Host/DM Freeform
+├ Join -> Character Select -> current live Client/Player state
+├ Content
+├ Rules
+└ Settings
+
+Connected Play
+├ Compact Play chrome/status
+├ Upper NPC/Neutral/Hostile Actor Board
+├ Play Context / Tabletop Stage        [contextual utility]
+├ Lower Player/Allied Actor Board
+└ Persistent Command Center
+```
+
+중앙 `Play Context`는 battlemap이 아닙니다.
+
+---
+
+# 가장 중요한 불변조건
+
+## 1. Battlemap 없음
+
+Core에서 금지:
 
 ```text
 Actor x/y tactical position
@@ -90,177 +229,49 @@ movement trace
 Fog of War
 LoS geometry
 range ring / tactical AoE map template
-3D battlefield
 ```
 
-필요한 거리/visibility/cover는 Domain/모듈/DM fact에서 공급될 수 있지만 UI가 지도 배치로 만들어내지 않습니다.
+## 2. First Run = Tutorial
 
----
+Home보다 Tutorial이 먼저입니다.
 
-# 2. 첫 실행
+Tutorial 안에서 Official-style / SimpleVTT Sheet presentation을 고릅니다.
 
-Fresh first run의 첫 의미 있는 패널은 **Tutorial / Onboarding**입니다.
+## 3. 같은 Character, 두 Sheet presentation
 
-```text
-App boot
--> Tutorial
-   -> Standalone / Connected 설명
-   -> Official-style / SimpleVTT Sheet 초기 선택
-   -> Character / Host / Join 방향 안내
-   -> 완료
--> Home
-```
+Sheet를 바꿔도 Character가 바뀌지 않습니다.
 
-Returning user는 Home에서 시작합니다.
+## 4. Standalone Roll은 Sheet 안에서
 
-Tutorial은 Settings/Help에서 다시 열 수 있습니다.
+별도 Dice window/modal/page가 없습니다.
 
----
+## 5. Host=DM / Client=Player
 
-# 3. Product Shell
+Offline은 DM/Player 역할이 없습니다.
 
-Top-level navigation:
+## 6. Freeform과 Initiative는 같은 Play
 
-```text
-Home -> Characters -> Session -> Content -> Rules -> Settings
-```
+Initiative는 같은 화면에 tracker/turn/economy를 추가합니다.
 
-Play는 별도 live workspace이며 top-level peer navigation destination이 아닙니다.
+## 7. Targeting은 ActorCard/manual set
 
-Live Session 중 Product 화면을 보더라도 `Return to Play`가 있고, 연결 역할과 authoritative session state는 유지됩니다.
+map position으로 target을 고르지 않습니다.
 
----
+## 8. Main Hand smart fallback 없음
 
-# 4. Standalone Character
+불가능하면 이유를 보여주고 멈춥니다.
 
-Official-style / SimpleVTT는 같은 canonical Character를 보여주는 두 presentation입니다.
+## 9. DM Only는 CSS hide가 아님
 
-모든 일반 Roll은 현재 Sheet를 떠나지 않습니다.
+Player에게 private event 존재 자체를 보내지 않는 architecture가 필요합니다.
 
-```text
-현재 Sheet 유지
--> Roll
--> 같은 Sheet viewport 안/위 transient physical dice
--> 결과
--> transient layer 소멸
--> 같은 Sheet 그대로 계속
-```
-
-별도 dice page/modal/drawer/result window는 만들지 않습니다.
-
----
-
-# 5. Session lifecycle
-
-Host:
-
-```text
-Host Setup
--> Open Session
--> 즉시 live Host / DM Freeform
-```
-
-Join:
-
-```text
-Join Setup
--> local Character 선택
--> 필요한 sync
--> 현재 live Client / Player state
-```
-
-기본 lifecycle에 Lobby / Ready / Start Session gate는 없습니다.
-
-Player 0명인 live DM Session도 정상입니다.
-
----
-
-# 6. Connected Play
-
-Accepted skeleton:
-
-```text
-Compact Play chrome / status
-────────────────────────────────────────
-Upper NPC / Neutral / Hostile Actor Board
-────────────────────────────────────────
-Shared Play Context / Tabletop Stage    [contextual utility]
-────────────────────────────────────────
-Lower Player / Allied Actor Board
-────────────────────────────────────────
-Persistent Command Center
-```
-
-중앙은 battlemap이 아니라 action / targeting guidance / resolution / dice / result / NOTICE / Handout presentation 공간입니다.
-
-Actor는 중앙 x/y token이 아니라 Actor Board의 Card입니다.
-
----
-
-# 7. Freeform / Initiative
-
-Freeform:
-
-- 같은 Play skeleton;
-- fake turn economy 없음;
-- normal capabilities는 Command Center/Hotbar에서 직접 발견 가능.
-
-Initiative:
-
-- 같은 Play skeleton;
-- compact Initiative Tracker 추가;
-- authoritative Action/Bonus/Reaction/Movement economy 추가;
-- End Turn 추가;
-- Actor Boards와 Command Center 유지.
-
----
-
-# 8. Targeting / Resolution
-
-Targeting은 Actor Card/manual target set 기반입니다.
-
-- valid/invalid/selected는 authoritative projection에서 받음;
-- single valid target은 즉시 submit;
-- multi-target은 explicit Execute;
-- area-like action도 Core에서는 manual Actor set;
-- no map AoE template.
-
-Default hostile click은 canonical Main Hand relation만 사용할 수 있고 smart fallback은 없습니다.
-
-Resolution 중에도 Actor Boards / Play Context / Command Center skeleton을 유지합니다.
-
----
-
-# 9. Handout / Activity / DM tools
-
-Handout은 image presentation입니다.
-
-```text
-Overlay
-Upper
-Full
-```
+## 10. Handout은 image presentation
 
 Battlemap으로 사용하지 않습니다.
 
-DM contextual utilities:
-
-- Activity;
-- Encounter;
-- Participants;
-- Session;
-- Rules lookup;
-- Quick/Full Sheet;
-- advanced spatial facts;
-- correction/adjudication.
-
-Spatial tool은 Actor pair + distance/visibility/cover 같은 fact editor이지 coordinate editor가 아닙니다.
-
 ---
 
-# 10. 아직 Runtime 구현을 막는 기술 Gap
-
-UI 모양은 승인됐지만 다음은 UI가 임의로 구현할 수 없습니다.
+# 아직 Runtime 구현을 막는 기술 Gap
 
 ```text
 GAP-MAIN-HAND-CANONICAL-RELATION
@@ -269,35 +280,69 @@ GAP-HANDOUT-NETWORK-CONTRACT
 GAP-DM-ONLY-DELIVERY-PROTOCOL
 ```
 
-특히 DM Only는 Player에게 secret event의 존재 자체를 보내지 않는 Architecture contract가 먼저 필요합니다.
-
 상세 매핑:
 
 [`contracts/IMPLEMENTATION-TRACEABILITY.md`](contracts/IMPLEMENTATION-TRACEABILITY.md)
 
 ---
 
-# 11. 현재 단계
+# 앞으로 Runtime Work Order가 반드시 포함해야 하는 것
+
+이제 단순히:
+
+```text
+"Prototype대로 구현"
+```
+
+이라고 적는 Work Order는 허용하지 않습니다.
+
+반드시:
+
+```text
+- exact runtime slice
+- accepted prototype reference
+- Frozen Decision IDs
+- Domain/Architecture sources
+- touched contract sections
+- touched Behavior Scenario IDs
+- touched QA Matrix row IDs
+- authoritative state/projection sources
+- open blocker Gaps
+- exact src/tests
+- out-of-scope
+- stop conditions
+```
+
+를 적어야 합니다.
+
+---
+
+# 현재 단계
 
 ```text
 Repository-wide audit                     DONE
 Integrated Product/UI plan                DONE
 Mapless Reference Prototype               DONE
 Owner Prototype Acceptance                PASS
+Implementation Playbook                   DONE
+Terminology Guard                         DONE
 Surface Contract                          DONE
 Component Contract                        DONE
 Interaction/State/Layer/Motion Contract   DONE
+Behavior Scenarios (48)                   DONE
 Implementation Traceability               DONE
--> 첫 Runtime 구현 Slice 선택
--> 해당 Slice의 src/tests 재검사
--> 해당 Slice를 막는 기술 Gap 해결
--> touched legacy docs/tests reconciliation
+QA Acceptance Matrix                      DONE
+Machine-readable routing/gates            UPDATED
+-> 첫 Runtime Slice 선택
+-> 해당 Slice src/tests 재검사
+-> blocker Gap 해결/회피가 아닌 scope 분리
+-> touched legacy reconciliation
 -> 필요한 Decision만 scoped Freeze
--> Runtime Work Order
+-> Runtime Work Order with Scenario + QA IDs
 -> 별도 Runtime implementation 승인
 -> src 구현
 ```
 
 **지금은 Runtime Preparation 단계입니다. 실제 `src/` UI 구현은 아직 승인되지 않았습니다.**
 
-다음 단계에서 가장 안전한 첫 구현 Slice는 `Product Shell + First-run Tutorial + Sheet presentation preference`입니다. DM-only privacy, Handout networking, selective resolution locking처럼 Architecture Gap이 큰 영역보다 먼저 진행하기 적합합니다.
+첫 Runtime Slice 후보는 여전히 `Product Shell + First-run Tutorial + Sheet presentation preference`가 가장 안전합니다.
