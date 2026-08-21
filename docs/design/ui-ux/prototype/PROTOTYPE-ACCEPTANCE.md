@@ -1,25 +1,33 @@
 # UI Reference Prototype — Acceptance
 
-Status: **BLOCKED — NO ACTIVE REVIEW CANDIDATE**
+Status: **IN REVIEW — INTEGRATED REFERENCE STATICALLY VERIFIED; BROWSER / OWNER REVIEW PENDING**
 
-The previous candidates are not eligible for acceptance:
+Historical candidates remain ineligible for acceptance:
 
 ```text
 app/index.html      -> REJECTED / HISTORICAL
 app/final-spec.html -> INVALIDATED BY REPOSITORY-WIDE PRODUCT/UX AUDIT
 ```
 
-Current mandatory baseline:
+Current active review candidate:
+
+```text
+app/integrated-reference.html
+```
+
+Current mandatory baseline and verification:
 
 ```text
 ../INTEGRATED-PRODUCT-UX-PLAN.md
+INTEGRATED-REFERENCE-VERIFICATION.md
+Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
 ```
 
-A new candidate must be built from the reconciled prototype specification before this acceptance gate can return to `IN REVIEW`.
+Static verification passed. Browser visual/interaction review and explicit Owner acceptance are still pending. Do not interpret the unchecked acceptance items below as failures; they are the browser/Owner review checklist that must be completed before acceptance.
 
 ---
 
-# 1. Fail-fast acceptance conditions for the next candidate
+# 1. Fail-fast acceptance conditions
 
 Any one of the following is an automatic failure.
 
@@ -41,7 +49,7 @@ Any one of the following is an automatic failure.
 [ ] Historical `.agents` planning, old demos or stale implementation tests are treated as current Product authority.
 ```
 
-The boxes above describe failure cases: the next candidate passes only when every listed failure is absent.
+The boxes above describe failure cases: the candidate passes only when every listed failure is absent in browser/Owner review.
 
 ---
 
@@ -113,7 +121,7 @@ The boxes above describe failure cases: the next candidate passes only when ever
 [ ] Lower Player/Allied Actor Board is present.
 [ ] Actor Cards are list/board objects, not map tokens.
 [ ] Card minimum width is preserved and overflow/paging handles density.
-[ ] Central region reads as Mapless Play Context / Tabletop Stage, not a battlefield.
+[ ] Central region reads as Play Context / Tabletop Stage, not a battlefield.
 [ ] Central region contains no grid, terrain, positional token layout, movement path or tactical spatial affordance.
 [ ] Persistent bottom Command Center remains available through targeting/resolution/dice/result.
 [ ] DM and Player share the same core skeleton with role-specific tools/information.
@@ -126,7 +134,7 @@ The boxes above describe failure cases: the next candidate passes only when ever
 ```text
 [ ] Freeform remains the same Play workspace and contains no fake turn economy.
 [ ] Normal capabilities remain directly discoverable through the Reviewed Command Center/Hotbar direction.
-[ ] Initiative adds one compact horizontal tracker at the top edge of the mapless Play Context.
+[ ] Initiative adds one compact horizontal tracker at the top edge of the Play Context.
 [ ] Initiative adds authoritative turn economy only when Initiative is active.
 [ ] Actor Boards remain during Initiative.
 [ ] End Turn appears only where meaningful.
@@ -144,6 +152,7 @@ The boxes above describe failure cases: the next candidate passes only when ever
 [ ] Mixed/Action/Spell/Item/custom organization is understandable.
 [ ] Rich hover/focus explanations work without making essential state hover-only.
 [ ] Selected-action targeting has click priority.
+[ ] Explicit DM control mode has priority over ordinary hostile-click behavior when no action is targeting.
 [ ] All Actor Cards remain visible during targeting.
 [ ] Valid/invalid/selected target states are distinct and invalid reason comes from fixture/authority input.
 [ ] Single valid target submits immediately.
@@ -156,11 +165,12 @@ The boxes above describe failure cases: the next candidate passes only when ever
 # 9. Resolution / reaction / dice / result
 
 ```text
-[ ] Resolution preserves Actor Boards, mapless context and Command Center skeleton.
+[ ] Resolution preserves Actor Boards, Play Context and Command Center skeleton.
 [ ] Only fixture-declared conflicting interactions are shown locked.
+[ ] Fixture-declared safe interactions remain available in the selective-lock scenario.
 [ ] Reaction/Interrupt explains the response inside the current Play context.
 [ ] Concentration response stays in current context and does not invent rules values.
-[ ] Connected physical dice use the broad mapless Tabletop Stage as presentation space.
+[ ] Connected physical dice use the broad Tabletop Stage as presentation space.
 [ ] Dice physics/trajectory cannot alter authoritative connected results.
 [ ] Immediate result stays integrated into Play.
 [ ] Durable detail/history is reachable through Activity.
@@ -209,7 +219,7 @@ Review at:
 ```text
 [ ] Core controls remain reachable at all three review sizes.
 [ ] Actor Boards overflow instead of collapsing below useful card size.
-[ ] Contextual utilities do not destroy the mapless Play skeleton.
+[ ] Contextual utilities do not destroy the Play skeleton.
 [ ] Quick/Full Sheet and Handout remain usable.
 [ ] Long names/resources/Activity text preserve hierarchy.
 [ ] Keyboard focus is visible.
@@ -238,13 +248,13 @@ Review at:
 # 14. Current gate
 
 ```text
-ACTIVE REVIEW CANDIDATE: NONE
-SPEC RECONCILIATION: REQUIRED
-PROTOTYPE REBUILD: REQUIRED
-BROWSER REVIEW: BLOCKED
-OWNER ACCEPTANCE: NOT STARTED
+ACTIVE REVIEW CANDIDATE: app/integrated-reference.html
+STATIC VERIFICATION: PASS — INTEGRATED-REFERENCE-VERIFICATION.md
+CANDIDATE CODE REFERENCE: 4c12084bef603866b9b69f1bfd8f363146920184
+BROWSER VISUAL / INTERACTION REVIEW: PENDING
+OWNER ACCEPTANCE: PENDING
 RUNTIME PREPARATION: BLOCKED
 RUNTIME UI IMPLEMENTATION: NOT AUTHORIZED
 ```
 
-Do not fill an acceptance record until a new candidate exists and the owner explicitly accepts a specific reference revision.
+Do not fill an Owner acceptance record until browser review occurs and the owner explicitly accepts a specific reference revision.
