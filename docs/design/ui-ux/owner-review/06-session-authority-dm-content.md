@@ -1,825 +1,775 @@
-# Owner Review — Session / Authority / DM / Rules & Add-ons
+# 6. 세션 / DM 권한 / 판정 수정 / 콘텐츠
 
-Sheets: `SES-01`, `SES-02`, `DM-01`, `DM-02`, `CONTENT-02`
+이 파일에서는 **세션에 들어가는 흐름**, **DM과 플레이어가 볼 수 있는 것**, **DM 전용 도구**, **콘텐츠/애드온 관리**를 정합니다.
 
-Existing role/privacy/Handout Reviewed decisions remain binding. Candidate options never authorize Player delivery of DM-only secret data or UI-side authority/rules inference.
-
-Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and describe the desired behavior in `OWNER NOTE`. Candidate options are scaffolding only. `AI STATUS` is AI-managed.
+권한/네트워크 쪽 질문은 개발 구조에 가까운 것도 있습니다. 이해하기 어렵다면 비워두거나 `OWNER NOTE`에 원하는 실제 사용경험만 적어도 됩니다.
 
 ---
 
-# SES-01 — Session UX
+# SES-01 — 세션에 들어가고 플레이하는 흐름
 
-### SES-01-01 — Direct Host Setup
+## SES-01-01 — 세션 만들기 화면
 
-**질문:** direct Host Setup에 어떤 fields/actions가 필요한가?
+**쉽게 말하면:** DM이 `세션 만들기`를 눌렀을 때 무엇을 입력하게 할까요?
 
-**선택지**
-- `A` — Session name/basic identity + network/address setup + active content summary + Create/Host action.
-- `B` — 최소 session identity + Create first, network/share/content settings는 Lobby에서 조정.
-- `C` — Host Setup을 Basics / Content / Connection의 짧은 staged flow로 구성.
-- `CUSTOM` — 실제 required fields를 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-01-02 — Host start readiness
-
-**질문:** Host가 Play를 시작하기 전에 어떤 participant/readiness 조건이 필요한가?
-
-**선택지**
-- `A` — 모든 connected Player가 Character 선택 + Ready여야 Start 가능.
-- `B` — Host는 언제든 Start 가능하되 준비되지 않은 Player가 있으면 명확한 warning/summary 표시.
-- `C` — 최소 한 명의 valid Player/Character가 준비되면 Start 가능, 나머지는 join/rejoin 가능.
-- `CUSTOM` — readiness 조건 직접 정의. UI가 domain legality를 계산하지 않음.
+- `A` — 세션 이름 + 연결정보 + 사용할 콘텐츠 요약 + 세션 만들기
+- `B` — 세션 이름 정도만 먼저 정하고 바로 만든 뒤, 연결/콘텐츠 설정은 대기실에서
+- `C` — 기본정보 → 콘텐츠 → 연결의 짧은 3단계
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-01-03 — Direct Join Setup / Character Select
+## SES-01-02 — DM이 플레이를 시작할 수 있는 조건
 
-**질문:** direct Join Setup과 Character Select에 어떤 fields/actions가 필요한가?
+**쉽게 말하면:** 모두 준비하지 않아도 DM이 세션을 시작할 수 있을까요?
 
-**선택지**
-- `A` — Host address/session code → connection validation → Character Select → Join/Ready.
-- `B` — connection target + Character Select를 한 화면에서 구성하고 Connect/Join 한 번으로 진행.
-- `C` — Join target 입력 → handshake/compatibility → Character Select → Player Lobby의 staged flow.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-01-04 — Join with no valid Character
-
-**질문:** Join 시 valid Character가 하나도 없으면 어떻게 할 것인가?
-
-**선택지**
-- `A` — Join flow 안에서 Create / Import Character로 이동하고 완료 후 같은 Join context로 복귀.
-- `B` — Player Lobby까지 연결은 허용하되 Play 참여 전 Character 생성/선택을 요구.
-- `C` — no-Character 상태에서 Join은 block하고 명확한 Create/Import CTA + 완료 후 Join resume.
-- `CUSTOM` — 직접 정의. Spectator 역할로 자동 전환하는 선택은 v1 role 결정과 충돌.
+- `A` — 접속한 모든 플레이어가 캐릭터 선택 + 준비완료여야 시작 가능.
+- `B` — DM은 언제든 시작 가능하지만 준비 안 된 사람이 있으면 강한 경고를 보여준다.
+- `C` — 최소 한 명의 플레이어/캐릭터가 준비되면 시작 가능. 나머지는 나중에 참가 가능.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-01-05 — Player Lobby / Ready contents
+## SES-01-03 — 세션 참가 화면
 
-**질문:** Player Lobby/Ready에 어떤 정보/action을 보여줄 것인가?
+**쉽게 말하면:** 플레이어가 `참가`를 눌렀을 때 어떤 순서로 진행할까요?
 
-**선택지**
-- `A` — Session/Host identity + own Character + participant roster/ready + compatibility/content status + Ready/Leave.
-- `B` — own Character/connection/Ready만 primary, participant roster/content detail은 secondary.
-- `C` — roster-centric lobby + own Character card + readiness/connection status, Rules/content summary는 contextual.
-- `CUSTOM` — role-visible 정보 범위에 맞춰 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-01-06 — Complete Play Workspace composition
-
-**질문:** Freeform/Initiative의 완전한 Play Workspace composition은?
-
-**선택지**
-- `A` — top tracker when Initiative + upper opposing Actor Board + central Scene/Table + lower allied Actor Board + bottom Command Center + contextual utility launchers.
-- `B` — A + role/status strip를 top/edge에 persistent하게 추가.
-- `C` — Reviewed core topology는 A와 동일하되 utilities/identity/status를 Command Center와 scene edge에 더 통합.
-- `CUSTOM` — 기존 Reviewed Actor Board/Dual Anchor/Initiative decisions를 유지하며 직접 정의.
+- `A` — 주소/코드 입력 → 연결 확인 → 캐릭터 선택 → 참가/준비
+- `B` — 연결정보와 캐릭터 선택을 한 화면에서 하고 한 번에 참가
+- `C` — 연결정보 → 호환성 확인 → 캐릭터 선택 → 플레이어 대기실
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-01-07 — Session utilities / launch points
+## SES-01-04 — 참가할 캐릭터가 하나도 없을 때
 
-**질문:** Quick Sheet, Full Sheet, Rules, Activity, Encounter, Participants, Session Share, Connection utilities 중 무엇이 존재하고 어디서 여는가?
+**쉽게 말하면:** 캐릭터가 없는 플레이어가 세션 참가를 누르면 어떻게 할까요?
 
-**선택지**
-- `A` — common utility rail/launcher에서 역할에 따라 available utilities를 열고 contextual pane/full layer로 표시.
-- `B` — Player utilities는 Command Center/identity에서, DM utilities는 별도 DM Tools launcher에서 분리.
-- `C` — common launcher family는 공유하되 Character/Rules/Activity는 common, Encounter/Participants/Share는 DM role-specific group.
-- `CUSTOM` — utility별 존재/launch point 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-01-08 — Handout Overlay / Upper / Full UI
-
-**질문:** Handout 세 mode의 close/reopen/zoom/pan UI는?
-
-**선택지**
-- `A` — Overlay=local close/minimize+reopen launcher, Upper/Full=DM withdraw 전까지 유지; 모든 mode에서 local zoom/pan.
-- `B` — Overlay=modal-like viewer, Upper=scene upper replacement, Full=full workspace; common Handout toolbar에서 zoom/pan/status.
-- `C` — mode별 layout은 다르지만 동일 Handout controller/toolbar를 공유하고 Player dismissibility는 기존 Reviewed rule 그대로 적용.
-- `CUSTOM` — 직접 정의. Mode를 UI가 임의 변경하면 안 됨.
+- `A` — 참가 흐름 안에서 `새 캐릭터 만들기 / 가져오기`로 이동하고 끝나면 같은 참가 흐름으로 돌아온다.
+- `B` — 대기실까지는 접속 가능하지만 실제 플레이 참가 전에는 캐릭터를 만들거나 골라야 한다.
+- `C` — 참가 자체를 막고 `만들기/가져오기`를 먼저 안내한 뒤 완료하면 참가를 이어간다.
+- `CUSTOM` — 직접 정한다. v1에는 관전자 역할이 없으므로 자동 관전자 전환은 안 된다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-01-09 — Session / Character / Actor / connection / mode identity
+## SES-01-05 — 플레이어 대기실에 보일 것
 
-**질문:** Session identity, Character/Actor identity, connection state, current mode를 어디에 어떻게 보여줄 것인가?
+**쉽게 말하면:** 세션 시작 전 플레이어가 무엇을 확인할 수 있어야 할까요?
 
-**선택지**
-- `A` — compact persistent session/status strip + Command Center actor identity.
-- `B` — top workspace header에 session/connection/mode, Command Center에 controlled Actor/Character.
-- `C` — connection/session은 utility/status control, controlled Actor/mode는 scene/Command Center에 contextually 표시.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-01-10 — Freeform with no Players / no Combatants
-
-**질문:** connected Player나 Combatant가 없을 때 normal Freeform은 어떻게 보여야 하는가?
-
-**선택지**
-- `A` — Play Workspace skeleton은 유지하고 relevant Actor Board에 empty-state CTA/DM setup guidance 표시.
-- `B` — Scene/Table + Command Center/DM tools는 유지, 비어 있는 Actor Board는 collapse 가능한 empty placeholder.
-- `C` — DM preparation-style empty state를 scene 안에 표시하되 Play topology는 유지.
-- `CUSTOM` — 직접 정의.
+- `A` — 세션/호스트 + 내 캐릭터 + 참가자/준비상태 + 콘텐츠/호환성 + 준비/나가기
+- `B` — 내 캐릭터/연결/준비가 중심. 참가자/콘텐츠 상세는 보조.
+- `C` — 참가자 목록 중심 + 내 캐릭터 카드 + 준비/연결. 룰/콘텐츠는 필요할 때 열기.
+- `CUSTOM` — 공개 가능한 정보 범위에 맞춰 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-01-11 — Player Leave vs Host End
+## SES-01-06 — 플레이 화면 전체 구성
 
-**질문:** Player Leave와 Host End Session의 user-visible flow는 어떻게 다른가?
+**쉽게 말하면:** Freeform과 전투에서 플레이 화면의 기본 구성은 무엇일까요?
 
-**선택지**
-- `A` — Player Leave=자기 연결만 종료 후 Home/Session으로 복귀; Host End=모든 participant에 종료 projection 후 Product Shell로 이동.
-- `B` — Player Leave는 rejoin affordance를 남기고, Host End는 session closed state와 summary를 보여준 뒤 exit.
-- `C` — 둘 다 consequence review/confirm을 거치되 Host End는 stronger destructive flow와 participant impact summary.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-01-12 — Reconnect-visible continuity
-
-**질문:** reconnect 후 interaction을 재개하기 전에 어떤 user-visible context가 복원되어야 하는가?
-
-**선택지**
-- `A` — same Session/Play mode + controlled Actor + Initiative/turn + Handout shared mode + authoritative resolution state를 복원, ephemeral popovers/hover는 reset 가능.
-- `B` — canonical session state 전부 복원 후 local utilities/presentation은 닫힌 기본 상태로 시작.
-- `C` — A + reconnect summary를 잠깐 보여주고 reconciliation 완료 후 interaction enable.
-- `CUSTOM` — 직접 정의. Canonical game/session state의 silent reset은 금지.
+- `A` — 전투 중 맨 위 이니셔티브 + 위쪽 적/NPC 카드 + 중앙 장면 + 아래쪽 아군 카드 + 맨 아래 Command Center + 필요한 도구버튼.
+- `B` — A + 역할/연결상태를 보여주는 작은 상태줄을 계속 표시.
+- `C` — 핵심 구조는 A와 같고, 신원/상태/도구를 Command Center와 장면 가장자리에 더 자연스럽게 합친다.
+- `CUSTOM` — 기존 Actor Board / Dual Anchor 방향을 유지하면서 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## SES-01-07 — 플레이 중 사용할 보조도구
+
+**쉽게 말하면:** 빠른 시트, 전체 시트, 룰, Activity, Encounter, 참가자, 세션공유 같은 도구를 어디서 열까요?
+
+- `A` — 공통 도구버튼줄에서 역할에 따라 가능한 도구를 열고 패널/전체화면으로 표시.
+- `B` — 플레이어 도구는 Command Center/캐릭터 쪽, DM 도구는 별도 `DM Tools`에서 분리.
+- `C` — 캐릭터/룰/Activity는 공통, Encounter/참가자/공유는 DM 전용 묶음.
+- `CUSTOM` — 도구별로 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-01-08 — DM이 보여주는 이미지 자료(Handout)
+
+**쉽게 말하면:** Overlay / 화면 위쪽 / 전체화면 Handout에서 플레이어의 닫기와 확대를 어떻게 할까요?
+
+- `A` — Overlay는 플레이어가 닫기/최소화 후 다시 열기 가능. 위쪽/전체화면은 DM이 거둘 때까지 유지. 모든 모드에서 확대/이동 가능.
+- `B` — Overlay=팝업, Upper=장면 위쪽 대체, Full=전체화면. 공통 툴바에서 확대/이동/상태 표시.
+- `C` — 세 모드 배치는 다르지만 같은 Handout 툴바를 공유하고 닫기 규칙은 이미 정한 원칙 유지.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-01-09 — 세션/캐릭터/연결상태 표시 위치
+
+**쉽게 말하면:** `어느 세션인지`, `누굴 조종 중인지`, `연결상태`, `Freeform/전투`를 어디에 보여줄까요?
+
+- `A` — 작은 세션/상태줄을 계속 표시 + Command Center에 현재 Actor.
+- `B` — 화면 위 헤더에 세션/연결/모드, Command Center에 현재 캐릭터/Actor.
+- `C` — 연결/세션은 상태버튼, 현재 Actor/모드는 장면과 Command Center에 상황별 표시.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-01-10 — 플레이어/전투원이 하나도 없을 때
+
+**쉽게 말하면:** DM 혼자 세션을 열었거나 장면에 아무 전투원도 없으면 화면이 어떻게 보여야 할까요?
+
+- `A` — 플레이 화면 구조는 그대로 두고 비어 있는 Actor Board에 `추가/설정` 안내.
+- `B` — 장면과 DM도구는 유지하고 빈 Actor Board는 작게 접을 수 있는 빈자리로.
+- `C` — 장면 안에 준비용 안내를 보여주되 플레이 화면 구조 자체는 유지.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-01-11 — 플레이어 나가기 vs DM 세션 종료
+
+**쉽게 말하면:** 한 플레이어가 나가는 것과 DM이 세션 전체를 끝내는 것을 어떻게 다르게 보여줄까요?
+
+- `A` — 플레이어 나가기=자기 연결만 종료 후 앱으로. DM 종료=모두에게 종료 알림 후 앱으로.
+- `B` — 플레이어는 다시 참가 버튼이 남고, DM 종료는 `세션이 종료됨` 요약을 보여준 뒤 나간다.
+- `C` — 둘 다 결과확인/확인을 거치되 DM 종료는 더 강한 경고와 참가자 영향 요약.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-01-12 — 재연결 후 어디까지 복원할지
+
+**쉽게 말하면:** 연결이 끊겼다가 돌아왔을 때 무엇이 그대로 살아 있어야 할까요?
+
+- `A` — 같은 세션/모드 + 조종 Actor + 이니셔티브/턴 + Handout + 진행중 판정까지 복원. 잠깐 열었던 팝업은 닫혀도 됨.
+- `B` — 실제 게임/세션 상태는 전부 복원하고 개인적으로 열어둔 도구/팝업은 닫힌 기본상태로 시작.
+- `C` — A + `재연결 완료/변경된 내용`을 짧게 보여준 뒤 조작 가능.
+- `CUSTOM` — 직접 정한다. 게임 상태를 조용히 초기화하면 안 된다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# SES-02 — Multiplayer Authority UX
+# SES-02 — 멀티플레이 권한과 비밀정보
 
-### SES-02-01 — Effective authority context
+> 이 구역은 개발구조에 가까운 질문이 많습니다. 원하는 사용경험만 이해되면 됩니다.
 
-**질문:** fixed Host=DM / Client=Player와 Actor-control assignment를 effective authority context로 어떻게 표현할 것인가?
+## SES-02-01 — 실제 권한을 구성하는 정보
 
-**선택지**
-- `A` — Connection Role이 Play Role을 고정 결정하고 별도 Actor-control assignment가 command scope를 추가하는 단순 모델.
-- `B` — explicit authority context object를 사용: connection role + play role + controlled Actor IDs + session permissions.
-- `C` — role은 fixed identity, 각 command/data projection은 capability/permission set으로 authorized scope를 제공.
-- `CUSTOM` — architecture contract에 맞춰 직접 정의. Offline은 role-free.
+**쉽게 말하면:** `호스트=DM / 클라이언트=플레이어`에 더해 누가 어떤 Actor를 조종하는지 시스템이 어떻게 관리할까요?
 
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-02-02 — Player vs DM command/data permission model
-
-**질문:** Player/DM이 무엇을 see/receive/control/mutate할 수 있는지 어떤 contract로 정의할 것인가?
-
-**선택지**
-- `A` — explicit role/Actor-control permission matrix + data visibility/delivery matrix.
-- `B` — server/runtime가 role-scoped capability/data projection을 제공하고 UI는 available projection만 렌더.
-- `C` — A의 audit matrix를 planning/verification에 유지하고 runtime은 B처럼 capability projection으로 실행.
-- `CUSTOM` — 직접 정의.
+- `A` — 연결 역할이 DM/플레이어를 정하고, 별도로 `이 플레이어가 조종 가능한 Actor` 목록만 더한다.
+- `B` — 역할 + 조종 Actor 목록 + 세션 권한을 하나의 명시적인 권한정보로 관리.
+- `C` — 역할은 신분만 정하고, 각 행동/데이터마다 현재 사용자가 할 수 있는 권한 목록을 시스템이 내려준다.
+- `CUSTOM` — 개발구조에 맞춰 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-02-03 — DM-only zero-leakage event/projection contract
+## SES-02-02 — DM/플레이어가 볼 수 있고 바꿀 수 있는 것
 
-**질문:** DM-only roll/adjudication을 Player에게 existence metadata도 전달하지 않고 어떻게 projection할 것인가?
+**쉽게 말하면:** 권한표를 어떤 방식으로 관리할까요?
 
-**선택지**
-- `A` — authoritative private event/state는 Host/DM scope에만 존재하고 Client projection에는 생성 자체를 하지 않음; disclosure 시 별도 public projection 생성.
-- `B` — private host-only channel/projection과 public session projection을 구조적으로 분리.
-- `C` — event store는 authoritative visibility scope를 갖고 Client별 projector가 unauthorized event를 완전히 제외.
-- `CUSTOM` — architecture 방식 직접 정의. Client로 secret payload를 보내고 숨기는 방식은 금지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-02-04 — Later disclosure projection
-
-**질문:** full-adjudication reveal vs result-only reveal은 어떤 public projection으로 나갈 것인가?
-
-**선택지**
-- `A` — original private event를 변경하지 않고 disclosure event가 new public projection을 생성; mode가 full/result-only를 지정.
-- `B` — sanitized disclosure snapshot을 새 public Activity/result event로 생성하고 original private provenance를 DM side에만 유지.
-- `C` — shared disclosure record가 original event ID를 참조하고 authorized public fields만 projection.
-- `CUSTOM` — 직접 정의. Reroll이 아니라 원 adjudication의 disclosure여야 함.
+- `A` — 역할/Actor조종 권한표 + 데이터 공개범위표를 명시적으로 유지.
+- `B` — 서버가 현재 사용자에게 허용된 기능/데이터만 내려주고 UI는 그것만 보여줌.
+- `C` — 설계/테스트용 권한표는 A처럼 유지하고 실제 실행은 B처럼 서버가 허용된 기능만 내려줌.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-02-05 — Shared Handout state contract
+## SES-02-03 — DM전용 비밀 굴림을 플레이어에게 완전히 숨기기
 
-**질문:** Handout image/mode/reconnect를 어떤 shared state/projection으로 표현할 것인가?
+**쉽게 말하면:** 플레이어에게 `비밀 굴림이 있었다는 사실`조차 보내지 않으려면 구조를 어떻게 할까요?
 
-**선택지**
-- `A` — session Handout state object: asset/reference + mode + revision/status; reconnect snapshot에 포함.
-- `B` — reveal/change-mode/withdraw events + current Handout projection을 runtime이 유지.
-- `C` — B의 event history + A의 current-state snapshot을 함께 사용.
-- `CUSTOM` — architecture contract에 맞춰 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-02-06 — Reconnect cursor / reconciliation
-
-**질문:** reconnect 시 어떤 state/event cursor를 복원하고 stale state를 어떻게 reconcile할 것인가?
-
-**선택지**
-- `A` — authoritative session snapshot + event/revision cursor, 이후 missed events를 적용.
-- `B` — fresh authoritative full snapshot으로 교체하고 local ephemeral state만 별도 복원.
-- `C` — last acknowledged cursor 기반 incremental replay, mismatch 시 full snapshot fallback.
-- `CUSTOM` — runtime architecture에 맞춰 직접 정의.
+- `A` — 비밀 이벤트/결과는 DM 쪽에만 만들고 플레이어 쪽 데이터에는 아예 생성하지 않는다. 나중에 공개할 때 새 공개정보를 만든다.
+- `B` — DM전용 데이터 통로와 모두에게 공개되는 데이터 통로를 구조적으로 분리한다.
+- `C` — 모든 이벤트에 공개범위를 붙이고 사용자별로 허용되지 않은 이벤트는 전송 대상에서 완전히 제외한다.
+- `CUSTOM` — 개발방식 직접 정의. 비밀값을 플레이어에게 보내놓고 CSS로 숨기는 방식은 금지.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-02-07 — Version/content incompatibility gate
+## SES-02-04 — 비밀 판정을 나중에 공개할 때
 
-**질문:** unsafe Play 전에 incompatible version/content를 어떻게 판정/표시할 것인가?
+**쉽게 말하면:** DM이 나중에 `전체 판정 공개` 또는 `결과만 공개`를 누르면 데이터를 어떻게 공개할까요?
 
-**선택지**
-- `A` — handshake가 required protocol/product/content compatibility를 판정하고 mismatch면 Join/Play block + remediation 표시.
-- `B` — capability/feature compatibility negotiation을 사용해 critical mismatch만 block하고 safe differences는 warning.
-- `C` — required session manifest/version contract와 Client manifest를 비교하는 explicit compatibility gate.
-- `CUSTOM` — architecture contract에 맞춰 직접 정의. UI가 호환성을 추측하지 않음.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### SES-02-08 — Unauthorized command rejection
-
-**질문:** unauthorized command를 private information leakage 없이 어떻게 reject할 것인가?
-
-**선택지**
-- `A` — generic authorization failure + safe public recovery action만 반환.
-- `B` — canonical public-safe reason code가 있을 때만 구체 reason, 그 외 generic denial.
-- `C` — command family별 public-safe error contract를 정의하고 secret state/reason은 Host/DM log에만 남김.
-- `CUSTOM` — 직접 정의.
+- `A` — 원래 비밀기록은 그대로 두고 새로운 `공개 이벤트`를 만들어 공개방식을 지정.
+- `B` — 공개 가능한 내용만 담은 새 Activity/결과 기록을 만들고 원래 상세정보는 DM에게만 남김.
+- `C` — 공개기록이 원래 이벤트를 참조하되 공개 허용 필드만 플레이어에게 전달.
+- `CUSTOM` — 직접 정한다. 새로 굴리는 것이 아니라 기존 판정을 공개하는 것.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-02-09 — Participant information visibility
+## SES-02-05 — Handout 공유 상태 저장방식
 
-**질문:** participant connection/ready/identity 정보는 role별로 어디까지 보이는가?
+**쉽게 말하면:** 현재 DM이 보여주는 이미지와 표시모드를 재연결 후에도 복원하려면 어떻게 저장할까요?
 
-**선택지**
-- `A` — DM은 full participant/connection/ready/Character assignment, Player는 public roster + ready/connection summary.
-- `B` — DM은 full, Player는 자기 정보 + 다른 Player의 public display name/ready 정도만.
-- `C` — roster field별 visibility contract를 두고 session setup/privacy policy가 공개 범위를 결정.
-- `CUSTOM` — 직접 정의.
+- `A` — 세션에 `현재 이미지 + 모드 + 버전/상태`를 하나의 현재값으로 저장.
+- `B` — `보이기/모드변경/거두기` 이벤트를 기록하고 시스템이 현재상태를 만들어냄.
+- `C` — 이벤트 기록 + 현재상태 저장을 둘 다 사용.
+- `CUSTOM` — 개발구조에 맞춰 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### SES-02-10 — Live role-switch reconciliation
+## SES-02-06 — 재연결할 때 데이터 맞추기
 
-**질문:** live role switching이 허용될 때 reconciliation은?
+**쉽게 말하면:** 연결이 끊겼던 동안 바뀐 내용을 어떻게 따라잡을까요?
 
-**선택지**
-- `N/A` — `UX-02-06`에서 live DM↔Player role switching을 금지했으므로 v1 condition false.
-- `CUSTOM` — UX-02-06을 명시적으로 다시 열고 역할 전환을 허용하기로 변경하는 경우에만 작성.
+- `A` — 현재 전체 상태 + 마지막 이벤트 번호를 받고 그 뒤 빠진 이벤트만 추가.
+- `B` — 최신 전체 상태를 새로 받아 갈아끼우고 개인 화면상태만 따로 복원.
+- `C` — 마지막으로 받은 지점부터 이벤트를 다시 받다가 어긋나면 전체 상태를 다시 받음.
+- `CUSTOM` — 현재 네트워크 구조에 맞춰 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-02-07 — 버전/콘텐츠 호환성 검사
+
+**쉽게 말하면:** 서로 호환되지 않는 클라이언트가 안전하지 않은 세션에 들어가지 못하게 어떻게 검사할까요?
+
+- `A` — 접속할 때 필수 버전/콘텐츠를 검사하고 맞지 않으면 참가를 막으며 해결방법 표시.
+- `B` — 기능별 호환성을 검사해 정말 중요한 차이만 차단하고 안전한 차이는 경고.
+- `C` — 세션이 요구하는 버전/콘텐츠 목록과 클라이언트 목록을 명시적으로 비교.
+- `CUSTOM` — 개발구조에 맞춰 직접 정한다. UI가 추측하지 않는다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-02-08 — 권한 없는 명령 거절
+
+**쉽게 말하면:** 권한 없는 행동을 서버가 거절할 때 어떤 이유까지 사용자에게 알려줄까요?
+
+- `A` — 안전한 일반 오류 + 가능한 다음 행동만.
+- `B` — 공개해도 안전한 원인코드가 있을 때만 자세히, 아니면 일반 오류.
+- `C` — 행동종류마다 공개 가능한 오류문구를 미리 정하고 비밀 이유는 DM 로그에만.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-02-09 — 다른 참가자 정보 공개범위
+
+**쉽게 말하면:** 플레이어가 다른 플레이어의 연결/준비/캐릭터 정보를 어디까지 볼 수 있을까요?
+
+- `A` — DM은 전체 정보, 플레이어는 공개 참가자목록 + 준비/연결 요약.
+- `B` — DM은 전체, 플레이어는 자기정보 + 다른 사람의 표시이름/준비 정도만.
+- `C` — 참가자 정보 항목마다 공개범위를 따로 정하고 세션설정/개인정보 정책에 따라 결정.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## SES-02-10 — 세션 중 DM↔플레이어 역할 전환
+
+**쉽게 말하면:** 이건 이미 결정됐습니다. v1에서는 세션 중 역할전환을 하지 않습니다.
+
+- `N/A` — 이미 확정: 호스트는 DM, 클라이언트는 플레이어이며 세션 중 역할 변경 없음.
+- `CUSTOM` — 이 결정을 다시 열고 싶을 때만 작성.
 
 **OWNER SELECT:** `N/A`
 
 **OWNER NOTE:** `UX-02-06 condition false in v1.`
 
-**AI STATUS:** `PROCESSED`
+<!-- AI STATUS: PROCESSED -->
 
 ---
 
-# DM-01 — DM Controls
+# DM-01 — DM 전용 조작
 
-### DM-01-01 — Public / DM Only default and persistence
+## DM-01-01 — 기본 굴림 공개범위
 
-**질문:** roll visibility의 initial value와 persistence lifetime은?
+**쉽게 말하면:** 새 세션을 시작했을 때 기본 굴림상태를 `공개`와 `DM전용` 중 무엇으로 둘까요?
 
-**선택지**
-- `A` — 새 session은 Public default, DM이 바꾼 값은 해당 session 동안 유지.
-- `B` — 새 session은 DM Only default, 변경값은 session 동안 유지.
-- `C` — session creation/default preference가 initial value를 정하고 live session에서는 마지막 DM 선택을 유지.
-- `CUSTOM` — default/persistence 직접 정의. Context에 따른 자동 switching은 금지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-01-02 — DM switches controlled Actor
-
-**질문:** DM이 selected/controlled Actor를 어떻게 바꿀 것인가?
-
-**선택지**
-- `A` — Actor Card context menu의 `Control/Take Control` + Command Center에서 현재 controlled Actor 표시.
-- `B` — dedicated DM Actor picker/selector + Actor Card click은 일반 selection/targeting semantics 유지.
-- `C` — Actor Card context action과 compact controlled-Actor switcher를 둘 다 제공.
-- `CUSTOM` — 직접 정의. Targeting과 ordinary selection을 혼동하지 않아야 함.
+- `A` — 기본 공개. DM이 바꾼 값은 그 세션 동안 유지.
+- `B` — 기본 DM전용. DM이 바꾼 값은 세션 동안 유지.
+- `C` — 세션 생성설정/DM 개인설정으로 초기값을 정하고 세션 중에는 마지막 선택 유지.
+- `CUSTOM` — 직접 정한다. 상황에 따라 자동으로 몰래 바꾸는 것은 안 된다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DM-01-03 — Encounter management / spatial relation controls
+## DM-01-02 — DM이 조종할 Actor 바꾸기
 
-**질문:** preparation/Freeform/Initiative에서 어떤 Encounter management controls를 productize할 것인가?
+**쉽게 말하면:** DM이 현재 직접 조종할 캐릭터/적을 어떻게 선택할까요?
 
-**선택지**
-- `A` — Combatant add/remove/side/initiative setup + canonical status controls + explicit spatial relation authoring을 advanced DM tool로 포함.
-- `B` — Encounter roster/initiative/control만 productize하고 current spatial relation editor는 v1에서 제외.
-- `C` — 기본 Encounter controls + spatial relation은 contextual advanced section으로 유지, domain support가 없는 relation은 노출하지 않음.
-- `CUSTOM` — control categories 직접 정의. UI가 rules relation을 계산하지 않음.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-01-04 — Participants / Session Share organization
-
-**질문:** participant/session-share controls를 persistent vs contextual DM utilities에 어떻게 배치할 것인가?
-
-**선택지**
-- `A` — Participants와 Session Share를 별도 contextual DM panes로 제공.
-- `B` — 하나의 Session Management pane 안에 Participants / Share / Compatibility / End Session sections.
-- `C` — compact persistent participant/connection indicator + 상세 controls는 contextual Session Management pane.
-- `CUSTOM` — 직접 정의.
+- `A` — Actor 우클릭 `조종하기` + Command Center에 현재 조종대상 표시.
+- `B` — 별도 DM Actor 선택기에서 고르고 일반 클릭은 타겟/선택에만 사용.
+- `C` — 우클릭 `조종하기`와 작은 Actor 전환기를 둘 다 제공.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DM-01-05 — Handout authoring/control location
+## DM-01-03 — Encounter 관리와 거리/가시성 도구
 
-**질문:** Handout file/preview/reveal/withdraw/mode control은 어디에 둘 것인가?
+**쉽게 말하면:** DM이 전투원 추가/삭제/편 배정/이니셔티브 준비 외에 `거리·가시성·엄폐를 직접 입력하는 고급 도구`도 v1에 넣을까요?
 
-**선택지**
-- `A` — dedicated DM Handout contextual pane.
-- `B` — DM utility launcher → Handout pane, live handout 중에는 persistent mode/status chip/control을 추가.
-- `C` — scene/DM toolbar에서 Reveal/Withdraw/Mode primary controls, asset selection/preview는 pane.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-01-06 — Live lifecycle controls
-
-**질문:** live Play 중 어떤 lifecycle control을 항상 접근 가능하게 하고 무엇을 confirmation 뒤에 둘 것인가?
-
-**선택지**
-- `A` — Session/Participants/Share access는 항상 available, End Session은 contextual destructive control + confirm.
-- `B` — lifecycle controls를 Session Management pane에 모으고 connection/status entry만 persistent.
-- `C` — common session menu에서 share/reconnect/status/end를 제공하되 destructive controls는 분리된 section.
-- `CUSTOM` — 직접 정의.
+- `A` — 기본 Encounter 관리 + 거리/가시성/엄폐 수동설정도 고급 DM도구로 정식 지원.
+- `B` — 전투원/이니셔티브 관리만 정식 지원하고 현재 거리관계 편집기는 v1에서 제외.
+- `C` — 기본 Encounter 관리 + 거리관계는 고급 구역으로 제공하되 시스템이 지원하는 관계만 보여준다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DM-01-07 — Persistent DM-only indicators
+## DM-01-04 — 참가자 / 세션공유 도구 배치
 
-**질문:** DM tools가 닫혀 있어도 어떤 DM-only state를 persistent하게 보여야 하는가?
+**쉽게 말하면:** 참가자 목록, 주소/세션공유, 호환성, 세션종료를 어떻게 묶을까요?
 
-**선택지**
-- `A` — Public/DM Only visibility + currently controlled Actor + session connection/problem status.
-- `B` — privacy state만 반드시 persistent, 나머지 DM state는 contextual.
-- `C` — privacy + active Handout + current controlled Actor/Encounter mode를 compact status group으로 표시.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-01-08 — DM utility surface organization
-
-**질문:** DM utility가 Command Center를 중복하지 않도록 어떤 조직 구조를 사용할 것인가?
-
-**선택지**
-- `A` — dedicated contextual DM Tools pane with Encounter / Participants / Handout / Session sections.
-- `B` — compact DM utility rail + 각 tool의 별도 pane, Command Center에는 gameplay actions/현재 Actor만 유지.
-- `C` — role-specific utility launcher group + task-specific panes; persistent Command Center는 공통 skeleton 유지.
-- `CUSTOM` — 직접 정의.
+- `A` — `참가자`와 `세션공유`를 별도 DM 패널로.
+- `B` — 하나의 `세션 관리` 패널 안에 참가자/공유/호환성/종료 구역.
+- `C` — 작은 참가자/연결 표시를 계속 보이고 자세한 기능은 세션관리 패널에서.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## DM-01-05 — Handout을 여는 곳
+
+**쉽게 말하면:** DM이 이미지 선택/미리보기/공개/거두기/모드변경을 어디서 할까요?
+
+- `A` — 전용 Handout DM 패널.
+- `B` — DM도구 → Handout 패널. 현재 보여주는 중에는 작은 상태/모드 버튼도 계속 표시.
+- `C` — 장면/DM툴바에 `공개/거두기/모드`를 바로 두고 이미지선택/미리보기만 패널.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DM-01-06 — 세션 종료 같은 관리버튼 위치
+
+**쉽게 말하면:** 플레이 중에도 세션 관리 기능을 얼마나 쉽게 열 수 있게 할까요?
+
+- `A` — 참가자/공유/세션정보는 언제든 접근, `세션 종료`는 위험한 별도 버튼 + 확인.
+- `B` — 관리기능은 세션관리 패널에 모으고 연결/상태 버튼만 계속 보이게.
+- `C` — 공통 세션메뉴에 공유/재연결/상태/종료를 두되 위험기능은 따로 분리.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DM-01-07 — 도구를 닫아도 계속 보여야 할 DM 상태
+
+**쉽게 말하면:** DM 패널을 닫아도 무엇은 화면에 계속 남겨둘까요?
+
+- `A` — 공개/DM전용 + 현재 조종 Actor + 연결/문제상태
+- `B` — 공개/DM전용만 반드시 계속 표시, 나머지는 필요할 때
+- `C` — 공개상태 + 현재 Handout + 현재 조종 Actor/Encounter 모드를 작은 상태묶음으로
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DM-01-08 — DM 도구 전체 구성
+
+**쉽게 말하면:** DM도구가 아래 행동영역과 겹치지 않도록 어떻게 정리할까요?
+
+- `A` — 하나의 DM Tools 패널에 Encounter / 참가자 / Handout / 세션 구역.
+- `B` — 작은 DM 도구버튼줄 + 각 기능별 별도 패널. Command Center는 게임행동/현재 Actor 중심.
+- `C` — 역할별 도구버튼 묶음 + 작업별 패널. 아래 행동영역의 공통 구조는 DM/플레이어 모두 유지.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# DM-02 — Adjudication & Undo
+# DM-02 — DM 판정 수정 / 되돌리기 / 공개
 
-### DM-02-01 — Private Activity before disclosure
+## DM-02-01 — 비밀 판정을 DM Activity에 보여주는 방법
 
-**질문:** private roll/adjudication을 disclosure 전 DM Activity에서 어떻게 보여줄 것인가?
+**쉽게 말하면:** 아직 플레이어에게 공개하지 않은 비밀 굴림을 DM 기록에서는 어떻게 볼까요?
 
-**선택지**
-- `A` — DM Activity에 명확한 DM-only/private entries로 정상 chronology 안에 표시.
-- `B` — Activity 안의 별도 Private section/filter에 표시하고 public chronology와 구분.
-- `C` — 하나의 Activity list를 유지하되 visibility badge/filter로 private/public을 구분; Player projection에는 private entry 자체가 없음.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-02-02 — Adjudication operation categories
-
-**질문:** 어떤 adjudication operation category를 v1에서 지원할 것인가?
-
-**선택지**
-- `A` — canonical state correction + roll/result correction/override + visibility/disclosure correction의 기본 category.
-- `B` — state/resource/condition/HP 등 domain-supported state adjustment + result/disclosure control을 별도 category로 제공.
-- `C` — generic canonical adjudication command framework를 사용하고 UI는 domain이 제공하는 supported operation catalog만 렌더.
-- `CUSTOM` — supported category 직접 정의. UI가 unsupported mutation을 발명하지 않음.
+- `A` — 일반 시간순 기록 안에 `DM전용` 표시를 붙여 함께 보여준다.
+- `B` — Activity 안에 별도 `비공개` 구역/필터로 나눈다.
+- `C` — 하나의 목록을 쓰되 공개범위 배지/필터로 구분. 플레이어 Activity에는 비밀 항목 자체가 없음.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DM-02-03 — Adjudication scope / lifetime / preview
+## DM-02-02 — DM이 수정할 수 있는 종류
 
-**질문:** adjudication의 scope/lifetime 선택과 preview는?
+**쉽게 말하면:** DM 판정조정에서 어떤 종류의 수정 기능을 v1에 넣을까요?
 
-**선택지**
-- `A` — operation마다 affected Actor/event/state + before/after preview + one-time/persistent scope를 explicit하게 표시.
-- `B` — current resolution/event correction과 durable state correction을 두 major scope로 분리.
-- `C` — domain command가 scope/lifetime choices를 제공하고 UI는 선택/preview만 수행.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-02-04 — Reason / provenance requirement
-
-**질문:** adjudication reason/provenance를 required/optional로 할 것인가?
-
-**선택지**
-- `A` — public/durable/high-impact adjudication은 reason required, private/reversible low-impact는 optional.
-- `B` — 모든 adjudication에 short reason required.
-- `C` — reason은 optional이지만 UI가 항상 입력칸을 제공하고 system provenance는 자동 기록.
-- `CUSTOM` — operation별 직접 정의.
+- `A` — 게임상태 수정 + 굴림/결과 수정 + 공개범위/나중공개 수정의 기본 세 종류.
+- `B` — HP/자원/상태 등 게임이 지원하는 값 수정 + 결과/공개 조정을 별도 종류로.
+- `C` — 게임 시스템이 `현재 지원하는 수정 목록`을 내려주고 UI는 그 목록만 보여준다.
+- `CUSTOM` — 직접 정한다. UI가 지원하지 않는 수정기능을 임의로 만들지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DM-02-05 — Undo vs corrective adjudication
+## DM-02-03 — 수정 전/후 미리보기와 적용범위
 
-**질문:** 무엇을 Undo할 수 있고 무엇은 correction event로 처리할 것인가?
+**쉽게 말하면:** DM이 값을 바꾸기 전에 무엇이 바뀌는지 얼마나 자세히 보여줄까요?
 
-**선택지**
-- `A` — 아직 외부 dependency/disclosure가 없는 recent reversible event만 Undo; 이미 공개/연쇄된 결과는 corrective adjudication.
-- `B` — domain event가 reversible flag를 제공하면 어느 시점이든 explicit Undo 가능, 불가하면 correction.
-- `C` — destructive history deletion형 Undo는 사용하지 않고 모든 변경을 compensating/correction event로 기록.
-- `CUSTOM` — authoritative event model에 맞춰 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-02-06 — Adjudication / Undo confirmation
-
-**질문:** consequence/visibility에 따라 어떤 confirmation이 필요한가?
-
-**선택지**
-- `A` — public/durable/multi-Actor impact는 confirm, private/reversible low-impact는 direct with feedback.
-- `B` — 모든 adjudication/Undo에 explicit confirm.
-- `C` — 항상 preview, confirm은 domain-provided consequence level에 따라 요구.
-- `CUSTOM` — 직접 정의.
+- `A` — 어떤 Actor/기록/상태가 바뀌는지 + 변경 전/후 + 일회성/지속성 여부를 명확히.
+- `B` — `현재 판정만 수정`과 `지속 상태 수정` 두 큰 종류로 나눈다.
+- `C` — 게임 시스템이 가능한 범위/기간을 제공하고 UI는 선택과 미리보기만.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DM-02-07 — Disclosure control location
+## DM-02-04 — 수정 이유를 꼭 적을지
 
-**질문:** full-adjudication vs result-only disclosure를 어디서 선택할 것인가?
+**쉽게 말하면:** DM이 판정을 바꿀 때 `왜 바꿨는지` 메모를 의무로 할까요?
 
-**선택지**
-- `A` — private Activity entry의 `공개` action에서 mode 선택.
-- `B` — current Result/Adjudication panel에서 primary disclosure control 제공, Activity에서도 later disclosure 가능.
-- `C` — disclosure는 Activity를 canonical user-facing control surface로 두고 immediate result에는 shortcut만 제공.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### DM-02-08 — Correct already-disclosed result
-
-**질문:** 이미 공개된 결과를 audit history를 지우지 않고 어떻게 수정할 것인가?
-
-**선택지**
-- `A` — original event 유지 + new correction event 추가 + UI에서 “corrected” link/relationship 표시.
-- `B` — original을 superseded/corrected로 표시하고 latest correction을 current truth로 강조.
-- `C` — immutable history + compensating adjudication event; Activity가 before/after chain을 보여줌.
-- `CUSTOM` — event/history contract에 맞춰 직접 정의.
+- `A` — 공개되거나 오래 남거나 영향 큰 수정은 이유 필수, 작은 비공개 수정은 선택.
+- `B` — 모든 판정수정에 짧은 이유 필수.
+- `C` — 이유는 선택이지만 항상 입력칸을 보여주고 시스템 정보는 자동 기록.
+- `CUSTOM` — 수정종류별로 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### DM-02-09 — Immediate controls vs Activity detail
+## DM-02-05 — Undo와 새 수정기록의 차이
 
-**질문:** adjudicated/undone event에서 immediate result control과 Activity detail을 어떻게 나눌 것인가?
+**쉽게 말하면:** 이미 일어난 일을 언제 `되돌리기`하고 언제 `새 수정`으로 기록할까요?
 
-**선택지**
-- `A` — immediate: current outcome + 필요한 DM action/visibility control. Activity: reason/provenance/history/corrections/full detail.
-- `B` — immediate에는 result summary만, 모든 adjudication/Undo/disclosure control은 Activity에서 수행.
-- `C` — current resolution에는 active controls, 완료된 후에는 Activity가 유일한 durable management surface.
-- `CUSTOM` — 직접 정의.
+- `A` — 아직 다른 결과에 영향이 없고 공개되지 않은 최근 행동만 Undo. 이미 퍼진 결과는 새 수정기록으로.
+- `B` — 게임 시스템이 `되돌릴 수 있음`이라고 알려준 이벤트는 언제든 Undo, 아니면 새 수정.
+- `C` — 과거기록을 지우는 Undo는 쓰지 않고 모든 되돌림을 새로운 보정/수정 기록으로 남긴다.
+- `CUSTOM` — 실제 이벤트 구조에 맞춰 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## DM-02-06 — 판정수정/Undo 확인창
+
+**쉽게 말하면:** DM 수정은 언제 한 번 더 확인할까요?
+
+- `A` — 공개/지속/여러 Actor에 영향이 있으면 확인, 작은 비공개 수정은 바로 실행.
+- `B` — 모든 수정/Undo에 확인.
+- `C` — 항상 변경 미리보기, 실제 추가확인은 게임이 큰 영향이라고 알려준 경우.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DM-02-07 — 비밀 결과 공개 버튼 위치
+
+**쉽게 말하면:** `전체 판정 공개 / 결과만 공개`를 어디서 누를까요?
+
+- `A` — 비밀 Activity 항목의 `공개` 버튼에서 선택.
+- `B` — 현재 판정/조정 패널에서 바로 공개 가능 + Activity에서도 나중에 공개 가능.
+- `C` — 실제 공개 관리는 Activity에서만 하고 현재 결과에는 Activity로 가는 바로가기만.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DM-02-08 — 이미 공개한 결과를 나중에 고칠 때
+
+**쉽게 말하면:** 과거 결과를 지우지 않고 `정정됨`을 어떻게 보여줄까요?
+
+- `A` — 원래 기록을 남기고 새 수정기록을 추가, 둘 사이 연결을 표시.
+- `B` — 원래 기록에 `정정됨` 표시, 최신 수정값을 현재 정답으로 강조.
+- `C` — 과거기록은 절대 수정하지 않고 새 보정이벤트를 추가해 Activity에서 전/후 흐름을 보여준다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## DM-02-09 — 현재 판정 화면 vs Activity
+
+**쉽게 말하면:** 현재 결과화면과 Activity에 각각 어떤 DM 기능을 둘까요?
+
+- `A` — 현재화면=현재 결과 + 지금 필요한 수정/공개 버튼. Activity=이유/출처/과거수정/전체상세.
+- `B` — 현재화면=결과 요약만, 모든 수정/Undo/공개는 Activity에서.
+- `C` — 진행중 판정은 현재화면에서 수정, 끝난 뒤부터는 Activity가 관리 중심.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# CONTENT-02 — Rules & Add-on UX
+# CONTENT-02 — 룰 검색 / 콘텐츠 / 애드온
 
-### CONTENT-02-01 — Rules Browser categories / metadata
+## CONTENT-02-01 — 룰 검색에서 분류할 항목
 
-**질문:** Rules Browser가 어떤 content category와 source metadata를 검색/노출할 것인가?
+**쉽게 말하면:** Rules 화면에서 어떤 종류로 찾아볼 수 있게 할까요?
 
-**선택지**
-- `A` — Rules / Actions / Spells / Features / Conditions / Items 등 canonical categories + source/provenance.
-- `B` — category보다 unified search 중심, result마다 type/source badge만 제공.
-- `C` — canonical category navigation + unified search를 함께 제공.
-- `CUSTOM` — categories/source metadata 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-02-02 — Rules search/filter/detail flow
-
-**질문:** Search, Filter, No Results, Detail, related rules, return-to-results flow는?
-
-**선택지**
-- `A` — search/filter list + side/detail pane, detail 닫으면 query/scroll 그대로 복귀.
-- `B` — search results route → full detail route → Back으로 exact results context 복원.
-- `C` — Product Rules는 master-detail, in-session Rules는 contextual compact search/detail로 두 presentation 사용.
-- `CUSTOM` — 직접 정의.
+- `A` — 규칙 / 행동 / 주문 / 특징 / 상태이상 / 아이템 등 분류 + 출처.
+- `B` — 분류메뉴보다 통합검색 중심, 결과마다 종류/출처 배지만.
+- `C` — 분류메뉴 + 통합검색 둘 다 제공.
+- `CUSTOM` — 분류/출처를 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-02-03 — Source / provenance / relationships
+## CONTENT-02-02 — 룰 검색 → 상세보기 → 돌아오기
 
-**질문:** source/provenance/relationship 정보를 어떻게 보여줄 것인가?
+**쉽게 말하면:** 검색결과에서 하나를 열었다 닫을 때 이전 검색상태를 어떻게 유지할까요?
 
-**선택지**
-- `A` — title/type 아래 source/add-on/version metadata + related rule/content links.
-- `B` — source는 compact badge, full provenance/version/relationships는 expandable detail.
-- `C` — official/local/add-on provenance를 명확히 구분하고 dependency/override relationship이 있으면 별도 section.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-02-04 — Productized add-on file/package support
-
-**질문:** v1에서 어떤 add-on import package/file boundary를 productize할 것인가?
-
-**선택지**
-- `A` — 하나의 canonical SimpleVTT package format만 공식 지원.
-- `B` — canonical package + documented JSON/data import 형식 몇 가지를 공식 지원.
-- `C` — internal canonical package로 변환 가능한 import adapters를 허용하되 각 adapter는 명시적 supported format이어야 함.
-- `CUSTOM` — 지원 format 직접 정의. 임의 파일 추측 parsing은 하지 않음.
+- `A` — 검색목록 + 옆 상세패널. 닫으면 검색어/스크롤 그대로.
+- `B` — 검색결과 화면 → 전체 상세화면 → 뒤로가면 정확히 이전 검색결과로.
+- `C` — 일반 Rules 화면은 목록+상세, 세션 중 Rules는 작은 패널형 검색/상세.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-02-05 — Preview / Validation before install
+## CONTENT-02-03 — 출처/애드온/관계 표시
 
-**질문:** install/activation 전에 Preview/Validation에서 무엇을 보여줄 것인가?
+**쉽게 말하면:** 이 주문/규칙이 어디서 왔는지 얼마나 보여줄까요?
 
-**선택지**
-- `A` — package identity/source/version + content counts/categories + warnings/errors/unsupported + conflicts/dependencies + final Install action.
-- `B` — compact summary + blocking/warning list, 상세 item diff는 expandable.
-- `C` — full change preview: new/replaced/conflicting/unsupported items를 category별로 표시.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-02-06 — Validation severity / conflicts
-
-**질문:** validation severity와 conflict representation은?
-
-**선택지**
-- `A` — Info / Warning / Blocking Error. Conflict는 affected items와 resolution requirement를 별도 표시.
-- `B` — Warning / Error 두 단계, Error만 install block.
-- `C` — Validation / Compatibility / Conflict를 category로 분리하고 각 category에 blocking 여부를 canonical validator가 제공.
-- `CUSTOM` — 직접 정의.
+- `A` — 제목 아래 출처/애드온/버전 + 관련 규칙 링크.
+- `B` — 출처는 작은 배지, 전체 버전/관계는 펼쳐보기.
+- `C` — 공식/로컬/애드온을 확실히 구분하고 의존성/덮어쓰기 관계가 있으면 별도 구역.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-02-07 — Unsupported mechanics/extensions
+## CONTENT-02-04 — 어떤 애드온 파일 형식을 공식 지원할지
 
-**질문:** imported content가 unsupported mechanic/extension을 요구하면 어떻게 할 것인가?
+**쉽게 말하면:** v1에서 파일 가져오기를 어디까지 공식 지원할까요? **개발구조 질문이라 모르겠으면 비워도 됩니다.**
 
-**선택지**
-- `A` — unsupported 부분이 material하면 install block; 안전하게 분리 가능한 supported data만 별도 import 가능하다고 명시.
-- `B` — package에 unsupported required mechanic이 하나라도 있으면 전체 install reject.
-- `C` — content를 disabled/read-only state로 import할 수 있지만 unsupported mechanic은 실행 불가로 명확히 표시.
-- `CUSTOM` — 직접 정의. Rule approximation은 금지.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-02-08 — Install/catalog save failure recovery
-
-**질문:** install/catalog save 실패 후 persistence/recovery는?
-
-**선택지**
-- `A` — staged package/preview를 보존하고 Retry/Cancel, durable catalog는 성공 전 변경되지 않음.
-- `B` — atomic install/rollback을 요구하고 실패 시 이전 catalog로 완전 복귀.
-- `C` — recoverable local import snapshot을 저장해 app restart 후 다시 Review/Retry 가능.
-- `CUSTOM` — storage architecture에 맞춰 직접 정의.
+- `A` — SimpleVTT 전용 공식 패키지 형식 하나만.
+- `B` — 공식 패키지 + 문서화된 JSON/데이터 형식 몇 개.
+- `C` — 내부 공식형식으로 변환할 수 있는 여러 가져오기 어댑터를 허용하되 지원목록을 명확히.
+- `CUSTOM` — 직접 지원형식을 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-02-09 — Update / replace / remove / disable
+## CONTENT-02-05 — 설치 전 미리보기
 
-**질문:** v1에서 add-on lifecycle action을 어디까지 지원할 것인가?
+**쉽게 말하면:** 애드온 설치 전에 무엇을 확인하게 할까요?
 
-**선택지**
-- `A` — Install / Update / Replace / Disable / Remove 모두 지원, dependency/conflict preview 필수.
-- `B` — v1은 Install / Remove만 공식 지원, update/replace/disable은 future.
-- `C` — Install / Update / Disable 지원, destructive Remove/Replace는 제한적으로 또는 future.
-- `CUSTOM` — lifecycle action 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### CONTENT-02-10 — Combatant import relationship
-
-**질문:** Combatant import를 general Content import와 어떻게 통합/구분할 것인가?
-
-**선택지**
-- `A` — 같은 parsing/preview/validation pipeline 사용, Combatant-specific review/commit destination만 다름.
-- `B` — Combatant import는 Encounter/DM contextual flow로 별도 productize, general Content import와 UX 분리.
-- `C` — Content import가 Combatant-containing package를 인식하고 install 후 Encounter에서 사용할 수 있게 함; ad-hoc Combatant import는 DM flow에서 별도 shortcut.
-- `CUSTOM` — 직접 정의.
+- `A` — 이름/출처/버전 + 들어있는 콘텐츠 수/종류 + 경고/오류/지원안됨 + 충돌/의존성 + 설치버튼
+- `B` — 짧은 요약 + 중요한 경고목록, 자세한 변경은 펼쳐보기
+- `C` — 새로 추가/교체/충돌/지원안됨을 종류별로 자세히 비교
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### CONTENT-02-11 — Active Session content changes
+## CONTENT-02-06 — 설치 검사 결과 단계
 
-**질문:** live Session 중 active content를 어떻게 보여주고 어떤 변경을 허용할 것인가?
+**쉽게 말하면:** 애드온 검사문제를 몇 단계로 나눌까요?
 
-**선택지**
-- `A` — active content manifest는 Session Share에서 보이지만 live 중 install/update/remove는 금지; 다음 session에 적용.
-- `B` — DM이 nonbreaking/additive content를 canonical compatibility check 후 live 추가 가능, replace/remove는 금지.
-- `C` — live session content set은 immutable snapshot으로 고정하고 모든 변경은 staged for next session.
-- `CUSTOM` — session/content authority contract에 맞춰 직접 정의.
+- `A` — 안내 / 경고 / 설치차단 오류. 충돌은 영향항목과 해결필요여부를 따로 표시.
+- `B` — 경고 / 오류 두 단계. 오류만 설치차단.
+- `C` — `데이터 검사 / 호환성 / 충돌` 종류로 나누고 시스템이 각각 차단여부를 알려줌.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-02-07 — 애드온이 지원하지 않는 규칙을 요구할 때
+
+**쉽게 말하면:** SimpleVTT가 실행할 수 없는 특수 규칙이 애드온에 들어 있으면 어떻게 할까요?
+
+- `A` — 중요한 부분이면 설치를 막되 안전하게 분리 가능한 데이터만 따로 가져올 수 있다고 안내.
+- `B` — 필수 지원안됨 기능이 하나라도 있으면 전체 설치 거절.
+- `C` — 읽기전용/비활성 상태로 가져올 수 있지만 해당 기능은 실행 불가라고 명확히 표시.
+- `CUSTOM` — 직접 정한다. 비슷한 규칙으로 임의 대체하지 않는다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-02-08 — 설치 저장 실패
+
+**쉽게 말하면:** 애드온 설치/목록저장 중 실패하면 어떻게 복구할까요?
+
+- `A` — 미리보기 상태를 보존하고 `다시시도/취소`, 성공 전에는 실제 목록을 바꾸지 않는다.
+- `B` — 설치 전체를 한 번에 처리하고 실패하면 이전 상태로 완전 복구.
+- `C` — 복구용 임시본을 저장해 앱을 껐다 켜도 다시 검토/재시도 가능.
+- `CUSTOM` — 저장구조에 맞춰 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-02-09 — 애드온 업데이트/삭제 기능
+
+**쉽게 말하면:** v1에서 설치 후 관리기능을 어디까지 넣을까요?
+
+- `A` — 설치 / 업데이트 / 교체 / 끄기 / 삭제 모두 지원. 영향 미리보기 필수.
+- `B` — v1은 설치 / 삭제만. 업데이트/교체/끄기는 나중에.
+- `C` — 설치 / 업데이트 / 끄기 지원. 위험한 삭제/교체는 제한하거나 나중에.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-02-10 — 전투원 가져오기와 일반 콘텐츠 가져오기
+
+**쉽게 말하면:** 몬스터/전투원 JSON 가져오기를 일반 애드온 가져오기와 같은 시스템으로 만들까요?
+
+- `A` — 파일 읽기/미리보기/검사는 같은 시스템, 마지막 저장위치/검토화면만 전투원용.
+- `B` — 전투원 가져오기는 DM/Encounter 전용 기능으로 완전히 분리.
+- `C` — 일반 콘텐츠 패키지 안의 전투원도 지원하고, DM은 빠른 전투원 가져오기 단축기능도 사용.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## CONTENT-02-11 — 세션 중 콘텐츠 변경
+
+**쉽게 말하면:** 플레이가 진행 중일 때 DM이 애드온/콘텐츠를 추가하거나 바꿀 수 있을까요?
+
+- `A` — 현재 콘텐츠 목록은 볼 수 있지만 세션 중 설치/업데이트/삭제는 금지. 다음 세션부터 적용.
+- `B` — 시스템이 안전하다고 확인한 추가형 콘텐츠만 세션 중 추가 가능. 교체/삭제는 금지.
+- `C` — 세션 시작 순간의 콘텐츠 구성을 완전히 고정하고 모든 변경은 다음 세션용으로 예약.
+- `CUSTOM` — 세션 권한/콘텐츠 구조에 맞춰 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
