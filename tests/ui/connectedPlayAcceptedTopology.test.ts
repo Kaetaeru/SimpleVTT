@@ -8,6 +8,7 @@ const focus = readFileSync("src/SessionMainFocus.tsx", "utf8");
 const dock = readFileSync("src/SessionActionDock.tsx", "utf8");
 const initiative = readFileSync("src/SessionInitiativeStrip.tsx", "utf8");
 const runtimeCss = readFileSync("src/session-integrated-reference-play.css", "utf8");
+const chromeCss = readFileSync("src/session-integrated-reference-chrome.css", "utf8");
 const prototypeJs = readFileSync("docs/design/ui-ux/prototype/app/integrated-reference.js", "utf8");
 const prototypeCss = readFileSync("docs/design/ui-ux/prototype/app/integrated-reference.css", "utf8");
 
@@ -33,10 +34,23 @@ test("production geometry is pinned to the accepted 41 / 86 / flexible / 86 / 17
   assert.match(runtimeCss, /grid-template-rows:\s*var\(--svtt-actor-board-h\) minmax\(0, 1fr\) var\(--svtt-actor-board-h\)/);
 });
 
-test("Play chrome matches the accepted top utility model instead of a separate identity header plus vertical rail", () => {
-  for (const label of ["← Product", "Sheet", "Rules", "Activity", "Encounter", "Participants", "Handout", "Session"]) assert.match(root, new RegExp(`>${label}<`));
+test("DM Play chrome mirrors accepted utility order while blocked authority stays visibly unavailable", () => {
+  for (const label of ["← Product", "Sheet", "Rules", "Public", "DM Only", "Activity", "Encounter", "Participants", "Session", "Spatial Facts"]) assert.match(root, new RegExp(`>${label}<`));
+  assert.doesNotMatch(root, />Handout<\/button>/);
+  const rules = root.indexOf('>Rules</button>');
+  const visibility = root.indexOf('className="session-reference-visibility"');
+  const activity = root.indexOf('>Activity</button>');
+  const encounter = root.indexOf('>Encounter</button>');
+  const participants = root.indexOf('>Participants</button>');
+  const session = root.indexOf('>Session</button>');
+  const spatial = root.indexOf('>Spatial Facts</span>');
+  assert.ok(rules >= 0 && visibility > rules && activity > visibility && encounter > activity && participants > encounter && session > participants && spatial > session);
+  assert.match(root, /GAP-DM-ONLY-DELIVERY-PROTOCOL/);
+  assert.match(root, /aria-disabled="true"[\s\S]*Spatial Facts/);
   assert.match(runtimeCss, /\.session-reference-play-chrome\s*\{[\s\S]*display:\s*flex/);
   assert.match(runtimeCss, /\.session-reference-play-chrome > button,[\s\S]*height:\s*27px/);
+  assert.match(chromeCss, /\.session-reference-visibility/);
+  assert.match(chromeCss, /\.session-reference-unavailable-control/);
   assert.doesNotMatch(root, /session-mode-character-chip|session-mode-role-controls|session-mode-bar/);
 });
 
