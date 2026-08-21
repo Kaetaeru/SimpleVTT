@@ -89,9 +89,11 @@ files:
 active_candidate_files:
   - docs/design/ui-ux/prototype/app/final-spec.html
   - docs/design/ui-ux/prototype/app/final-spec.css
+  - docs/design/ui-ux/prototype/app/final-spec-coverage.css
   - docs/design/ui-ux/prototype/app/final-spec.js
   - docs/design/ui-ux/prototype/app/final-spec-fixtures.js
   - docs/design/ui-ux/prototype/app/final-spec-stability.js
+  - docs/design/ui-ux/prototype/app/final-spec-coverage.js
 
 historical_candidate_files:
   review_status: rejected_superseded
@@ -124,6 +126,7 @@ prototype_rules:
   current_code_is_evidence_only: true
   prototype_controls_are_product_ui: false
   standalone_roll_must_remain_in_current_character_sheet_surface: true
+  standalone_roll_must_not_remount_sheet_for_ordinary_roll: true
   standalone_roll_detached_modal_drawer_route_window_forbidden: true
   connected_play_must_preserve_reviewed_dual_anchor_topology: true
   command_center_persistent_during_targeting_resolution_dice_result: true
