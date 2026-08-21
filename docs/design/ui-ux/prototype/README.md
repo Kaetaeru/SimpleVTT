@@ -43,18 +43,19 @@ The replacement Final-Spec demo treats these as hard requirements rather than st
 
 ## Offline / Standalone
 
-Every ordinary Character roll stays in the current Sheet:
+Every ordinary Character roll stays in the currently mounted Sheet:
 
 ```text
 Current Character Sheet
   -> click Skill / Save / Attack / Damage / other roll
-  -> dice animate inside the Sheet workspace
-  -> die settles to fixture-authoritative face
-  -> result is read inside the same Sheet
-  -> Sheet never navigates away
+  -> append in-surface Roll Plane inside the same Sheet workspace
+  -> far/back -> near/front -> impact/roll -> settle
+  -> reveal fixture-authoritative result in that same Sheet
+  -> remove temporary Roll Plane
+  -> continue using the same mounted Sheet
 ```
 
-No modal, drawer, detached result window, replacement route or separate Close/Back cycle is allowed for ordinary Standalone rolls.
+No modal, drawer, detached result window, replacement route, Sheet remount or separate Close/Back cycle is allowed for ordinary Standalone rolls.
 
 ## Connected Play
 
@@ -83,16 +84,34 @@ DM and Player share this skeleton. Role-specific tools/information may differ, b
 
 ---
 
+# Active Final-Spec app files
+
+```text
+app/final-spec.html
+app/final-spec.css
+app/final-spec-coverage.css
+app/final-spec.js
+app/final-spec-fixtures.js
+app/final-spec-stability.js
+app/final-spec-coverage.js
+```
+
+The base files establish the final structure and interactions. The coverage layer adds additional review states without reverting to the rejected prototype architecture.
+
+---
+
 # Final-Spec candidate capabilities
 
 The active candidate demonstrates:
 
 - prototype-only UI Lab clearly outside the intended product frame;
+- First Run and initial Sheet-style choice;
 - Home and Character Library;
+- Character Builder and Level Up reference surfaces;
 - Official-style and SimpleVTT Standalone Character Sheets;
-- same-Sheet dice rolls for skill/save/attack/damage fixture examples;
+- same-mounted-Sheet dice rolls for skill/save/attack/damage fixture examples;
 - Session Host / Join / no-Character block references;
-- Content / Rules / Settings reference surfaces;
+- Content / Package Import Review / Rules / Settings reference surfaces;
 - DM and Player Freeform;
 - DM and Player Initiative using the same skeleton;
 - upper opposing and lower allied Actor Boards with minimum card width + overflow;
@@ -104,12 +123,15 @@ The active candidate demonstrates:
 - canonical Main Hand fixture behavior with no smart fallback;
 - resolution dice on the Scene/Table;
 - scene-integrated result;
+- Reaction/Interrupt and Concentration response examples;
+- Quick Sheet and Full Sheet live-session layers;
 - Activity public/private filtering with no Player placeholder for DM-only fixture entries;
 - Encounter / Participants / Session / advanced DM spatial side panes;
+- utility panel resizing within bounded desktop widths;
 - Handout Overlay / Upper / Full examples inside Play;
 - Actor right-click context menu limited to UI/context management;
 - rich hover/focus explanations;
-- NOTICE/reconnect state examples;
+- NOTICE/reconnect and confirmation examples;
 - Wide / Normal / Narrow desktop presets;
 - Reduced Motion;
 - Component Gallery.
@@ -120,17 +142,7 @@ All game/network-looking values are synthetic fixtures. The demo does not calcul
 
 # Prototype runtime boundary
 
-Active Final-Spec app files:
-
-```text
-app/final-spec.html
-app/final-spec.css
-app/final-spec.js
-app/final-spec-fixtures.js
-app/final-spec-stability.js
-```
-
-They MUST NOT:
+The Final-Spec files MUST NOT:
 
 - import or modify production `src/` UI;
 - call a real backend/network/storage system;
