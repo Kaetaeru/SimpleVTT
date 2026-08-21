@@ -11,10 +11,9 @@ import {
 
 const app = readFileSync("src/App.tsx", "utf8");
 const productRoot = readFileSync("src/ProductRoot.tsx", "utf8");
-const productRootCss = readFileSync("src/product-root.css", "utf8");
 const sessionRoot = readFileSync("src/SessionModeRoot.tsx", "utf8");
 const sessionMainFocus = readFileSync("src/SessionMainFocus.tsx", "utf8");
-const sessionCss = readFileSync("src/session-mode.css", "utf8");
+const referencePlayCss = readFileSync("src/session-integrated-reference-play.css", "utf8");
 const contracts = readFileSync("src/app/contracts.ts", "utf8");
 const main = readFileSync("src/main.tsx", "utf8");
 const vite = readFileSync("vite.config.ts", "utf8");
@@ -71,7 +70,7 @@ test("v1 global navigation is small, ordered, and top-oriented", () => {
   assert.doesNotMatch(css, /\.v1-nav\{display:flex;flex-direction:column/);
 });
 
-test("live connected sessions separate authority truth from Product-vs-Play presentation", () => {
+test("live connected sessions preserve Product-vs-Play continuity while using the accepted integrated-reference Play scene", () => {
   assert.match(main, /<ProductRoot\s*\/>/);
   assert.match(productRoot, /type ProductSurface = "product" \| "play"/);
   assert.match(productRoot, /snapshot\.session\.role !== "offline"/);
@@ -79,9 +78,8 @@ test("live connected sessions separate authority truth from Product-vs-Play pres
   assert.match(productRoot, /useState<ProductSurface>\("product"\)/);
   assert.match(productRoot, /if \(!wasLiveConnected\.current\)[\s\S]*setSurface\("play"\)/);
   assert.match(productRoot, /liveConnected && surface === "play"/);
-  assert.match(productRoot, /<SessionModeRoot\s*\/>/);
+  assert.match(productRoot, /<SessionModeRoot onOpenProduct=\{\(\) => setSurface\("product"\)\} \/>/);
   assert.match(productRoot, /<App\s*\/>/);
-  assert.match(productRoot, /SimpleVTT 메뉴/);
   assert.match(productRoot, /setSurface\("product"\)/);
   assert.match(productRoot, /setSurface\("play"\)/);
   assert.doesNotMatch(productRoot, /stopSession|hostSession|joinSession|reconnect/);
@@ -93,32 +91,29 @@ test("live connected sessions separate authority truth from Product-vs-Play pres
   assert.match(productRoot, /event\.preventDefault\(\)/);
   assert.match(productRoot, /event\.stopPropagation\(\)/);
 
-  assert.match(productRootCss, /\.connected-product-shell-entry/);
-  assert.match(productRootCss, /:focus-visible/);
-  assert.match(productRootCss, /@media \(max-width: 899px\)/);
   assert.match(continuityWorkOrder, /Scenario 34/);
   assert.match(continuityWorkOrder, /QA-NAV-06/);
   assert.match(continuityWorkOrder, /QA-SES-09/);
   assert.match(continuityAuthorization, /ACTIVE FOR WO-UI-002 ONLY/);
   assert.match(continuityAuthorization, /explicitly approved in conversation on 2026-08-21/);
 
-  assert.match(sessionRoot, /className="session-mode-root"/);
-  assert.match(sessionRoot, /className="session-mode-bar"/);
-  assert.match(sessionRoot, /className="session-mode-main"/);
-  assert.match(sessionRoot, /className="session-mode-action-dock"/);
-  assert.match(sessionRoot, /className="session-mode-layer-host"/);
-  assert.match(sessionRoot, /빠른 캐릭터 시트 열기/);
-  assert.match(sessionRoot, /snapshot\.activeCharacter/);
-  assert.match(sessionRoot, /snapshot\.scene\.actionsByActor/);
+  assert.match(sessionRoot, /className="session-mode-root session-reference-play-root"/);
+  assert.match(sessionRoot, /className="session-reference-play-chrome"/);
+  assert.match(sessionRoot, /className="session-reference-play-core"/);
+  assert.match(sessionRoot, /session-reference-mapless-stage/);
+  assert.match(sessionRoot, /<SessionActorBoard position="upper"/);
+  assert.match(sessionRoot, /<SessionActorBoard position="lower"/);
+  assert.match(sessionRoot, /aria-label="Command Center"/);
+  assert.match(sessionRoot, />← Product</);
   assert.match(sessionRoot, /<SessionMainFocus/);
   assert.match(sessionMainFocus, /snapshot\.session\.participants/);
-  assert.match(sessionRoot, /stopSession/);
-  assert.doesNotMatch(sessionRoot, /mockAdapter|VisualDiceTray|플레이로 돌아가기|HOTBAR_TABS|SCENE ACTORS/);
+  assert.doesNotMatch(sessionRoot, /session-mode-rail|session-mode-bar|mockAdapter|VisualDiceTray|HOTBAR_TABS|SCENE ACTORS/);
 
-  assert.match(sessionCss, /grid-template-rows:\s*52px minmax\(0, 1fr\) 68px/);
-  assert.match(sessionCss, /\.session-mode-rail/);
-  assert.match(sessionCss, /\.session-quick-sheet/);
-  assert.match(sessionCss, /@media \(max-width: 899px\)/);
+  assert.match(referencePlayCss, /--svtt-actor-board-h:\s*86px/);
+  assert.match(referencePlayCss, /--svtt-command-h:\s*174px/);
+  assert.match(referencePlayCss, /grid-template-rows:\s*41px minmax\(0, 1fr\) var\(--svtt-command-h\)/);
+  assert.match(referencePlayCss, /\.session-reference-utility-host/);
+  assert.match(referencePlayCss, /@media \(max-width: 1000px\)/);
 });
 
 test("addons have a first-class file-based product flow", () => {
