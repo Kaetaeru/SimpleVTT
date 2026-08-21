@@ -18,10 +18,11 @@ test("Session Full Sheet is a mounted workspace layer over the persistent Sessio
   assert.doesNotMatch(sessionRoot, /route\s*=|setRoute|플레이로 돌아가기/);
 });
 
-test("Player can open Full Sheet directly or expand from Quick Sheet in one explicit action", () => {
-  assert.match(sessionRoot, /전체 캐릭터 시트 열기/);
-  assert.match(sessionRoot, />전체 시트<\/button>/);
+test("accepted Sheet chrome opens contextual Sheet and Quick Sheet expands to Full Sheet in one action", () => {
+  assert.match(sessionRoot, />Sheet<\/button>/);
+  assert.match(sessionRoot, /toggleUtility\(role === "player" \? "quick-sheet" : "actor"/);
   assert.match(sessionRoot, /QuickSheet onClose=\{closeUtility\} onOpenFull=\{openFullSheet\}/);
+  assert.match(sessionRoot, />전체 시트<\/button>/);
 });
 
 test("Standalone and Session hosts share one persisted Sheet workspace and canonical Character", () => {
@@ -47,7 +48,7 @@ test("Session Sheet never presents local random rolls or an embedded dice tray a
   assert.match(official, /공유 판정은 Session Action 경로/);
 });
 
-test("Full Sheet uses overlay geometry without replacing the Session layout", () => {
+test("Full Sheet uses overlay geometry without replacing the accepted Play scene", () => {
   assert.match(css, /\.session-full-sheet-layer \{/);
   assert.match(css, /position: absolute/);
   assert.match(css, /width: min\(94vw, 1560px\)/);
