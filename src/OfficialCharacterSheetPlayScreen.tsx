@@ -4,7 +4,7 @@ import "./app/creationContracts";
 import "./app/progressionContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
 import { sheetAbilityModifier } from "./app/sheetRollValues";
-import { VisualDiceTray } from "./VisualDiceBridge";
+import { presentLocalDiceRoll } from "./app/localDicePresentation";
 import { OfficialCharacterSheetPage } from "./OfficialCharacterSheetPage";
 import { OfficialSpellcastingSheetPage } from "./OfficialSpellcastingSheetPage";
 import type { CharacterSheetHostMode } from "./CharacterSheetPlayScreen";
@@ -55,7 +55,10 @@ export function OfficialCharacterSheetPlayScreen({ hostMode = "standalone", onSc
   const sessionReference = (label: string) => {
     setSessionNotice(`${label} · 연결된 세션의 공유 판정은 Session Action 경로에서 실행합니다.`);
   };
-  const publish = (next: SheetLocalRoll) => setRoll(next);
+  const publish = (next: SheetLocalRoll) => {
+    setRoll(next);
+    presentLocalDiceRoll(next);
+  };
   const d20 = (label: string, modifier: number) => {
     if (hostMode === "session") { sessionReference(label); return; }
     const first = randomDie(20);
@@ -98,7 +101,7 @@ export function OfficialCharacterSheetPlayScreen({ hostMode = "standalone", onSc
     </div>
 
     {hostMode === "session" && <div className="session-sheet-roll-policy" role="status"><strong>세션 시트</strong><span>{sessionNotice || "수치·주문·장비는 같은 canonical Character를 표시합니다. 공유 판정은 Session Action 경로를 사용합니다."}</span></div>}
-    {hostMode === "standalone" && roll && <section className="sheet-roll-result" aria-live="polite"><div className="sheet-roll-result-head"><div><span>ROLL</span><strong>{roll.label}</strong>{roll.note && <small>{roll.note}</small>}</div><div className="sheet-roll-total"><span>{roll.modifier ? `주사위 ${roll.modifier > 0 ? "+" : ""}${roll.modifier}` : "결과"}</span><strong>{roll.total}</strong></div><button onClick={() => setRoll(null)} aria-label="굴림 결과 닫기">×</button></div><VisualDiceTray label={roll.label} dice={roll.dice} caption="local tabletop physics roll" /></section>}
+    {hostMode === "standalone" && roll && <section className="sheet-roll-result compact-result" aria-live="polite"><div className="sheet-roll-result-head"><div><span>ROLL</span><strong>{roll.label}</strong>{roll.note && <small>{roll.note}</small>}</div><div className="sheet-roll-total"><span>{roll.modifier ? `주사위 ${roll.modifier > 0 ? "+" : ""}${roll.modifier}` : "결과"}</span><strong>{roll.total}</strong></div><button onClick={() => setRoll(null)} aria-label="굴림 결과 닫기">×</button></div></section>}
 
     <div className="official-sheet-page-tabs" role="tablist" aria-label="Official sheet pages"><button role="tab" aria-selected={page === "character"} className={page === "character" ? "active" : ""} onClick={() => setPage("character")}>Character Sheet</button><button role="tab" aria-selected={page === "spells"} className={page === "spells" ? "active" : ""} onClick={() => setPage("spells")}>Spellcasting</button></div>
     {page === "character" ? <OfficialCharacterSheetPage character={c} view={view} d20={d20} rawDie={rawDie} damage={damage} toggleItemEquipped={toggleItemEquipped} toggleItemAttunement={toggleItemAttunement} useItem={useItem} /> : <OfficialSpellcastingSheetPage character={c} view={view} spellcasting={spellcasting} actions={actions} d20={d20} damage={damage} />}
