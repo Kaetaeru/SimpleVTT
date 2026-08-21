@@ -35,10 +35,8 @@ type FaceDescriptor = {
 };
 
 type DieRuntime = {
-  sides: DieSides;
   group: THREE.Group;
   body: CANNON.Body;
-  faces: FaceDescriptor[];
 };
 
 type Bounds = {
@@ -103,7 +101,7 @@ function geometryFor(sides: DieSides) {
 function faceDescriptors(source: THREE.BufferGeometry, expectedCount: number) {
   const geometry = source.toNonIndexed();
   const position = geometry.getAttribute("position");
-  const clusters: Array<{ normal: THREE.Vector3; centerSum: THREE.Vector3; count: number }> = [];
+  const clusters: Array<{ normal: THREE.Vector3; center: THREE.Vector3; count: number }> = [];
 
   for (let index = 0; index < position.count; index += 3) {
     const a = new THREE.Vector3().fromBufferAttribute(position, index);
@@ -113,21 +111,19 @@ function faceDescriptors(source: THREE.BufferGeometry, expectedCount: number) {
     const center = a.clone().add(b).add(c).multiplyScalar(1 / 3);
     const existing = clusters.find((cluster) => cluster.normal.dot(normal) > 0.994);
     if (existing) {
-      existing.centerSum.add(center);
+      existing.center.add(center);
       existing.count += 1;
     } else {
-      clusters.push({ normal, centerSum: center, count: 1 });
+      clusters.push({ normal, center, count: 1 });
     }
   }
   geometry.dispose();
 
-  return clusters
-    .slice(0, expectedCount)
-    .map((cluster, index) => ({
-      normal: cluster.normal.clone(),
-      center: cluster.centerSum.clone().multiplyScalar(1 / cluster.count),
-      value: index + 1,
-    }));
+  return clusters.slice(0, expectedCount).map((cluster, index) => ({
+    normal: cluster.normal.clone(),
+    center: cluster.center.clone().multiplyScalar(1 / cluster.count),
+    value: index + 1,
+  }));
 }
 
 function numberTexture(value: number) {
@@ -137,7 +133,7 @@ function numberTexture(value: number) {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("2D canvas context를 만들 수 없습니다.");
 
-  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.clearRect(0, 0, 192, 192);
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.font = value >= 10 ? "800 70px Georgia, serif" : "800 82px Georgia, serif";
@@ -166,7 +162,7 @@ function attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: D
   const forward = new THREE.Vector3(0, 0, 1);
 
   for (const face of faces) {
-    const plane = new THREE.Mesh(
+    const label = new THREE.Mesh(
       new THREE.PlaneGeometry(sizeBySides[sides], sizeBySides[sides]),
       new THREE.MeshBasicMaterial({
         map: numberTexture(face.value),
@@ -177,9 +173,9 @@ function attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: D
       }),
     );
     const normal = face.normal.clone().normalize();
-    plane.position.copy(face.center).addScaledVector(normal, 0.018);
-    plane.quaternion.setFromUnitVectors(forward, normal);
-    group.add(plane);
+    label.position.copy(face.center).addScaledVector(normal, 0.018);
+    label.quaternion.setFromUnitVectors(forward, normal);
+    group.add(label);
   }
 }
 
@@ -198,6 +194,7 @@ function colliderFor(source: THREE.BufferGeometry, sides: DieSides) {
   for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
     vertices.push(new CANNON.Vec3(position.getX(vertexIndex), position.getY(vertexIndex), position.getZ(vertexIndex)));
   }
+
   const faces: number[][] = [];
   for (let faceIndex = 0; faceIndex < index.count; faceIndex += 3) {
     faces.push([index.getX(faceIndex), index.getX(faceIndex + 1), index.getX(faceIndex + 2)]);
@@ -237,7 +234,7 @@ export class DiceWorld {
   private readonly boundaryDebug: THREE.LineLoop;
   private readonly dice: DieRuntime[] = [];
   private wallBodies: CANNON.Body[] = [];
-  private bounds: Bounds = { halfWidth: 6.2, minZ: -8.2, maxZ: 6.0 };
+  private bounds: Bounds = { halfWidth: 5, minZ: -5, maxZ: 5 };
   private settings: PhysicsSettings;
   private diceCollision = true;
   private raf = 0;
@@ -259,14 +256,14 @@ export class DiceWorld {
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.setClearColor(0x000000, 0);
 
-    // The screen is treated as the table view. Keep the optical axis exactly
-    // parallel to the floor instead of looking down at the dice from above.
-    this.camera.position.set(0, 1.25, 10.7);
-    this.camera.lookAt(0, 1.25, -1.5);
+    // Screen plane == table plane. The camera looks straight down at the
+    // tabletop; there is no 45-degree or side-view pitch. Perspective is kept
+    // only so dice above the table retain a small amount of depth scaling.
+    this.camera.position.set(0, 18, 0);
+    this.camera.up.set(0, 0, -1);
+    this.camera.lookAt(0, 0, 0);
 
-    const hemisphere = new THREE.HemisphereLight(0xffe6c4, 0x1b2732, 2.05);
-    this.scene.add(hemisphere);
-
+    this.scene.add(new THREE.HemisphereLight(0xffe6c4, 0x1b2732, 2.05));
     const key = new THREE.DirectionalLight(0xffc986, 4.1);
     key.position.set(-5.5, 9, 4.5);
     key.castShadow = true;
@@ -276,7 +273,6 @@ export class DiceWorld {
     key.shadow.camera.top = 12;
     key.shadow.camera.bottom = -12;
     this.scene.add(key);
-
     const rim = new THREE.DirectionalLight(0x7d96bf, 1.35);
     rim.position.set(6, 5, -7);
     this.scene.add(rim);
@@ -369,13 +365,13 @@ export class DiceWorld {
 
     const total = options.sides.length;
     const spread = Math.min(this.bounds.halfWidth * 1.1, Math.max(1.4, total * 0.72));
-    const startZ = this.bounds.minZ + 0.95;
+    const startZ = this.bounds.minZ + 0.8;
 
     options.sides.forEach((sides, index) => {
       const normalized = total <= 1 ? 0 : index / (total - 1) - 0.5;
       const x = normalized * spread + (Math.random() - 0.5) * 0.52;
       const y = this.settings.spawnHeight + Math.random() * 0.36 + index * 0.035;
-      const z = startZ - Math.random() * 0.25;
+      const z = startZ + Math.random() * 0.2;
       const runtime = this.createDie(sides, x, y, z);
 
       const lateral = (Math.random() - 0.5) * 3.2;
@@ -436,11 +432,10 @@ export class DiceWorld {
 
     const group = new THREE.Group();
     group.add(core);
-    const edges = new THREE.LineSegments(
+    group.add(new THREE.LineSegments(
       new THREE.EdgesGeometry(geometry, 18),
       new THREE.LineBasicMaterial({ color: 0x3a1f10, transparent: true, opacity: 0.72 }),
-    );
-    group.add(edges);
+    ));
     attachFaceNumbers(group, faces, sides);
     group.position.set(x, y, z);
     this.scene.add(group);
@@ -460,7 +455,7 @@ export class DiceWorld {
     });
     this.world.addBody(body);
 
-    const runtime: DieRuntime = { sides, group, body, faces };
+    const runtime: DieRuntime = { group, body };
     this.dice.push(runtime);
     return runtime;
   }
@@ -475,26 +470,36 @@ export class DiceWorld {
   };
 
   private rebuildBounds() {
-    // With a floor-parallel camera, the upper screen rays intentionally never
-    // intersect the floor. Keep invisible physics containment independent of
-    // the camera pitch and scale only its width with the window aspect ratio.
-    const aspectScale = THREE.MathUtils.clamp(this.camera.aspect / 1.6, 0.78, 1.32);
-    this.bounds = {
-      halfWidth: 6.2 * aspectScale,
-      minZ: -8.2,
-      maxZ: 6.0,
+    const tablePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hit = (x: number, y: number) => {
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+      return raycaster.ray.intersectPlane(tablePlane, new THREE.Vector3());
     };
 
+    const topLeft = hit(-0.94, 0.94);
+    const topRight = hit(0.94, 0.94);
+    const bottomLeft = hit(-0.94, -0.94);
+    const bottomRight = hit(0.94, -0.94);
+
+    if (topLeft && topRight && bottomLeft && bottomRight) {
+      this.bounds = {
+        halfWidth: Math.max(3, Math.min(Math.abs(topLeft.x), Math.abs(topRight.x), Math.abs(bottomLeft.x), Math.abs(bottomRight.x)) - 0.4),
+        minZ: Math.min(topLeft.z, topRight.z, bottomLeft.z, bottomRight.z) + 0.45,
+        maxZ: Math.max(topLeft.z, topRight.z, bottomLeft.z, bottomRight.z) - 0.45,
+      };
+    }
+
     this.removeWalls();
-    const height = 2.8;
-    const thickness = 0.28;
+    const wallHalfHeight = 2.6;
+    const thickness = 0.25;
     const depth = this.bounds.maxZ - this.bounds.minZ;
     const centerZ = (this.bounds.maxZ + this.bounds.minZ) / 2;
 
-    this.addWall(new CANNON.Vec3(thickness, height, depth / 2 + thickness), new CANNON.Vec3(-this.bounds.halfWidth - thickness, height, centerZ));
-    this.addWall(new CANNON.Vec3(thickness, height, depth / 2 + thickness), new CANNON.Vec3(this.bounds.halfWidth + thickness, height, centerZ));
-    this.addWall(new CANNON.Vec3(this.bounds.halfWidth + thickness, height, thickness), new CANNON.Vec3(0, height, this.bounds.minZ - thickness));
-    this.addWall(new CANNON.Vec3(this.bounds.halfWidth + thickness, height, thickness), new CANNON.Vec3(0, height, this.bounds.maxZ + thickness));
+    this.addWall(new CANNON.Vec3(thickness, wallHalfHeight, depth / 2 + thickness), new CANNON.Vec3(-this.bounds.halfWidth - thickness, wallHalfHeight, centerZ));
+    this.addWall(new CANNON.Vec3(thickness, wallHalfHeight, depth / 2 + thickness), new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, centerZ));
+    this.addWall(new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, thickness), new CANNON.Vec3(0, wallHalfHeight, this.bounds.minZ - thickness));
+    this.addWall(new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, thickness), new CANNON.Vec3(0, wallHalfHeight, this.bounds.maxZ + thickness));
 
     const points = [
       new THREE.Vector3(-this.bounds.halfWidth, 0.018, this.bounds.minZ),
