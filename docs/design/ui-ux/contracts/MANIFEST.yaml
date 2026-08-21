@@ -1,6 +1,6 @@
-schema_version: 7
+schema_version: 8
 phase: runtime_ui_implementation_and_product_extension_planning
-status: wo_ui_003_closed_accepted_dm_library_prototype_review_pending
+status: wo_ui_003_closed_core_systems_owner_accepted_contract_materialization_pending
 runtime_ui_implementation_allowed: true
 
 accepted_reference:
@@ -15,25 +15,36 @@ accepted_reference:
   visual_rule: when_the_accepted_prototype_already_defines_the_scene_do_not_substitute_a_visually_different_structural_approximation
   accepted_connected_play_runtime_slice: WO-UI-003
 
-active_product_extension:
+accepted_product_extension:
+  id: CORE-SYSTEMS-UX
+  name: korean_first_extensible_core_systems_and_quick_live_use
+  stage: owner_accepted_product_ux_contract_materialization_pending
+  runtime_implementation_authorized: false
+  owner_acceptance_record: docs/design/ui-ux/prototype/CORE-SYSTEMS-ACCEPTANCE.md
+  product_plan: docs/design/ui-ux/CORE-SYSTEMS-UX-PLAN.md
+  extensibility_localization_contract: docs/design/ui-ux/EXTENSIBILITY-KOREAN-FIRST.md
+  prototype_spec: docs/design/ui-ux/prototype/CORE-SYSTEMS-EXTENSION.md
+  prototype_reference: docs/design/ui-ux/prototype/app/core-systems-reference.html
+  next_gate: domain_architecture_contract_materialization
+  product_defaults:
+    user_facing_locale: ko-KR
+    stable_internal_ids_language_neutral: true
+    registry_provider_descriptor_extension_preferred: true
+    primary_live_dm_library_access: quick_search
+
+retained_product_extension:
   id: WO-UI-004
   name: dm_library_preparation_and_live_invocation
-  stage: planning_and_prototype_owner_review
+  stage: product_direction_retained_live_invocation_revised_by_core_systems_acceptance
   runtime_implementation_authorized: false
-  owner_direction: DM-only durable preparation library for Images, PC Actor Presets, and NPC Actor Definitions
   product_plan: docs/design/ui-ux/DM-LIBRARY-PLAN.md
   architecture_boundary: docs/design/dm-library-persistence.md
   prototype_spec: docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md
-  prototype_candidate: docs/design/ui-ux/prototype/app/dm-library-reference.html
+  preparation_prototype_candidate: docs/design/ui-ux/prototype/app/dm-library-reference.html
+  accepted_live_direction: docs/design/ui-ux/prototype/app/core-systems-reference.html
   work_order: docs/design/ui-ux/work-orders/WO-UI-004-dm-library-preparation-and-live-invocation.md
-  next_gate: owner_visual_and_flow_review
-  required_scenarios:
-    - DMLIB-SCN-01
-    - DMLIB-SCN-02
-    - DMLIB-SCN-03
-    - DMLIB-SCN-04
-    - DMLIB-SCN-05
-    - DMLIB-SCN-06
+  heavy_nested_picker_primary: false
+  detailed_picker_fallback_allowed: true
 
 mandatory_baseline:
   integrated_product_ux: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
@@ -42,8 +53,11 @@ mandatory_baseline:
   domain_design_canon: docs/design/README.md
   mapless_core_policy: docs/design/movement-modules.md
   session_runtime: docs/design/session-runtime.md
-  active_owner_product_extension: docs/design/ui-ux/DM-LIBRARY-PLAN.md
+  dm_library_product: docs/design/ui-ux/DM-LIBRARY-PLAN.md
   dm_library_architecture: docs/design/dm-library-persistence.md
+  core_systems_product: docs/design/ui-ux/CORE-SYSTEMS-UX-PLAN.md
+  extensibility_localization: docs/design/ui-ux/EXTENSIBILITY-KOREAN-FIRST.md
+  core_systems_owner_acceptance: docs/design/ui-ux/prototype/CORE-SYSTEMS-ACCEPTANCE.md
 
 mandatory_contract_read_order:
   - docs/design/ui-ux/contracts/README.md
@@ -58,15 +72,15 @@ mandatory_contract_read_order:
   - docs/design/ui-ux/contracts/MANIFEST.yaml
 
 contracts:
-  readme: { path: docs/design/ui-ux/contracts/README.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
-  implementation_playbook: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
-  glossary: { path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
-  surfaces: { path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
-  components: { path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
-  interaction_state_motion: { path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
-  behavior_scenarios: { path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending, scenario_count: 48 }
-  implementation_traceability: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
-  qa_acceptance_matrix: { path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md, status: ready_for_existing_accepted_scope_dm_library_extension_pending }
+  readme: { path: docs/design/ui-ux/contracts/README.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  implementation_playbook: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  glossary: { path: docs/design/ui-ux/contracts/GLOSSARY-AND-TERMINOLOGY.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  surfaces: { path: docs/design/ui-ux/contracts/SURFACE-CONTRACT.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  components: { path: docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  interaction_state_motion: { path: docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  behavior_scenarios: { path: docs/design/ui-ux/contracts/BEHAVIOR-SCENARIOS.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending, scenario_count: 48 }
+  implementation_traceability: { path: docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
+  qa_acceptance_matrix: { path: docs/design/ui-ux/contracts/QA-ACCEPTANCE-MATRIX.md, status: ready_for_existing_accepted_scope_core_systems_extension_materialization_pending }
 
 interpretation_guards:
   industry_vtt_conventions_may_fill_unspecified_behavior: false
@@ -76,10 +90,15 @@ interpretation_guards:
   accepted_prototype_visual_composition_may_be_replaced_by_prose_only_approximation: false
   current_source_or_test_may_override_accepted_contract: false
   ui_may_guess_missing_domain_or_architecture_truth: false
+  visible_label_may_be_used_as_persistence_or_network_identity: false
+  korean_first_means_internal_ids_are_korean_strings: false
+  untyped_json_is_valid_domain_contract: false
   dm_library_may_be_collapsed_into_player_character_library: false
   dm_library_may_be_collapsed_into_content_addon_catalog: false
   dm_library_catalog_may_be_sent_to_player_clients: false
   session_runtime_may_auto_write_back_to_dm_library_source: false
+  party_stash_policy_may_define_three_incompatible_storage_models: false
+  heavy_nested_dm_library_picker_is_primary_live_path: false
 
 hard_product_guards:
   mapless_core: true
@@ -111,6 +130,15 @@ hard_product_guards:
   dm_library_actor_add_creates_independent_session_instances: true
   dm_library_pc_actor_preset_is_not_player_owned_character: true
   dm_library_private_notes_not_delivered_by_default: true
+  primary_live_dm_library_access_is_quick_search: true
+  korean_first_user_facing_ui: true
+  internal_identity_language_neutral: true
+  registry_provider_descriptor_extensions_preferred: true
+  inventory_management_is_not_item_hotbar: true
+  spellbook_management_is_not_spell_hotbar: true
+  passive_features_do_not_automatically_fill_hotbar: true
+  party_stash_storage_separate_from_permission_policy: true
+  rest_is_preview_choice_commit_workflow: true
 
 interaction_precedence:
   actor_click:
@@ -132,6 +160,11 @@ ui_must_not_authoritatively_calculate:
   - dm_library_schema_or_version_migration
   - dm_library_binary_asset_limits
   - dm_library_private_projection_fields
+  - party_stash_ownership_or_lifetime
+  - durable_item_transfer_write_back
+  - rest_recovery_semantics
+  - condition_effect_fast_apply_legality
+  - quick_search_private_source_delivery
 
 open_runtime_blockers:
   - id: GAP-MAIN-HAND-CANONICAL-RELATION
@@ -160,6 +193,24 @@ open_runtime_blockers:
     type: architecture_contract
     severity: critical
     blocks: [dm_library_actor_private_notes_projection, dm_library_catalog_non_delivery_verification]
+  - id: GAP-QUICK-SEARCH-SOURCE-AGGREGATION
+    type: domain_architecture_contract
+    blocks: [quick_search_runtime_provider_registry, role_scoped_source_indexing]
+  - id: GAP-PARTY-STASH-OWNERSHIP-PERSISTENCE
+    type: domain_architecture_contract
+    blocks: [party_stash_runtime, party_policy_runtime]
+  - id: GAP-DURABLE-ITEM-TRANSFER-GRANT
+    type: domain_architecture_contract
+    blocks: [party_to_character_transfer, dm_quick_item_grant]
+  - id: GAP-REST-PREVIEW-COMMIT
+    type: domain_contract
+    blocks: [rest_activity_runtime]
+  - id: GAP-CONDITION-FAST-APPLY
+    type: domain_contract
+    blocks: [dm_quick_condition_apply]
+  - id: GAP-HOTBAR-CUSTOMIZATION-PERSISTENCE
+    type: persistence_contract
+    blocks: [real_custom_hotbar_pages]
 
 completed_runtime_slices:
   - id: WO-UI-001
@@ -185,8 +236,6 @@ completed_runtime_slices:
     first_owner_human_qa: fail
     rework_owner_human_qa: pass
     owner_reqa_quote: 그래 잘 됐어.
-    first_implementation_source_sha: fb007d809ab586ca8d2e135e5813e929772a7f2c
-    first_implementation_automation: pass_but_superseded_by_owner_visual_fail
     rework_source_sha: acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
     accepted_reference_ui_run_id: 32500827497
     accepted_reference_gate: pass
@@ -199,44 +248,21 @@ completed_runtime_slices:
 selected_runtime_slice:
   id: none
   status: no_new_runtime_slice_authorized
-  note: WO-UI-004 currently exists only as planning/prototype scope
-
-identified_runtime_drift:
-  - id: DRIFT-WO-UI-001-HOME-FIRST
-    status: resolved
-    resolution: WO-UI-001
-  - id: DRIFT-WO-UI-001-HOME-GUIDE
-    status: resolved
-    resolution: WO-UI-001
-  - id: DRIFT-WO-UI-001-SIDEBAR
-    status: resolved
-    resolution: WO-UI-001
-  - id: DRIFT-WO-UI-002-CONNECTED-SHELL-BYPASS
-    status: resolved
-    resolution: WO-UI-002
-  - id: DRIFT-WO-UI-002-DUPLICATE-CONNECTED-PLAY-PATH
-    status: resolved
-    resolution: WO-UI-002
-  - id: DRIFT-WO-UI-002-PLAY-TO-PRODUCT-ENTRY
-    status: resolved
-    resolution: WO-UI-002
-  - id: DRIFT-WO-UI-003-CONNECTED-PLAY-TOPOLOGY
-    status: resolved_after_owner_accepted_reference_rework
-    evidence: exact_integrated_reference_scene_geometry_and_composition_pinned_in_runtime_and_tests_then_owner_reqa_passed
-    resolution: WO-UI-003
+  note: Core Systems is Owner-accepted product/UX direction; runtime work requires contract materialization and explicit scoped authorization.
 
 implementation_readiness:
-  prototype_owner_acceptance: passed_for_existing_reference
-  contracts_ready: true_for_existing_accepted_scope
+  prototype_owner_acceptance: passed_for_existing_reference_and_core_systems_extension
+  contracts_ready: true_for_existing_accepted_scope_only
   wo_ui_001: closed_accepted
   wo_ui_002: closed_accepted
   wo_ui_003: closed_accepted_after_reference_rework
   current_runtime_slice_selected: false
-  dm_library_product_direction: recorded
+  core_systems_product_direction: owner_accepted
+  korean_first_extensibility_contract: active
+  dm_library_product_direction: retained_and_revised_for_quick_live_use
   dm_library_architecture_boundary: drafted
-  dm_library_prototype_candidate: built
-  dm_library_owner_prototype_review: pending
-  dm_library_runtime_authorized: false
+  core_systems_runtime_contracts: materialization_pending
+  core_systems_runtime_authorized: false
   repository_phase09_aggregate_regression: unresolved_separate
 
-next_route: DM_LIBRARY_OWNER_PROTOTYPE_REVIEW
+next_route: CORE_SYSTEMS_DOMAIN_ARCHITECTURE_CONTRACT_MATERIALIZATION
