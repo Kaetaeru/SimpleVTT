@@ -1,6 +1,6 @@
 # SimpleVTT UI Reference Prototype
 
-Status: **Prototype specification prepared; HTML prototype not started**
+Status: **Prototype specification READY; HTML prototype not started**
 
 This directory defines the non-production **UI Reference Prototype** phase that must happen before any broad runtime UI rebuild.
 
@@ -86,6 +86,7 @@ A prototype is never allowed to silently resolve a Domain/Architecture Gap.
 | `STATE-MODEL.md` | user-visible state vocabulary and presentation priorities |
 | `SCENARIO-CATALOG.md` | exact review scenarios the HTML must be able to demonstrate |
 | `MOCK-DATA-CONTRACT.md` | safe synthetic data model for the prototype |
+| `PROTOTYPE-PREFLIGHT.md` | mandatory check before HTML build |
 | `PROTOTYPE-ACCEPTANCE.md` | visual/interaction acceptance checklist |
 | `PROTOTYPE-WORK-ORDER.md` | prepared but not-yet-executed HTML prototype work order |
 | `app/README.md` | boundary for the future standalone HTML application |
@@ -104,10 +105,11 @@ Required:
 - prototype Surface/Component/Layer/State catalogs exist;
 - mock-data boundary exists;
 - review scenarios exist;
+- prototype preflight exists;
 - acceptance criteria exist;
 - prototype Work Order exists.
 
-**Current status: PASS after this package is fully materialized.**
+**Current status: PASS.**
 
 ## P1 — HTML prototype build
 
@@ -116,6 +118,8 @@ Starts only when the owner explicitly authorizes building the Reference Prototyp
 Allowed scope is only `docs/design/ui-ux/prototype/app/` plus bounded updates to prototype documentation.
 
 Runtime `src/` UI remains untouched.
+
+Before execution, run `PROTOTYPE-PREFLIGHT.md`.
 
 ## P2 — Prototype review and iteration
 
@@ -156,14 +160,16 @@ The eventual HTML prototype SHOULD include a clearly labeled **Prototype Control
 It exists only to let the owner instantly switch:
 
 - Home / Character / Content / Rules / Settings / Session surfaces;
-- Host-DM vs Client-Player view;
+- Host-DM vs Client-Player vs Offline view;
 - Freeform vs Initiative;
 - normal / targeting / resolving / interrupt / result state;
 - Public vs DM Only examples;
 - Handout Overlay / Upper / Full modes;
 - connected / reconnecting / disconnected examples;
 - wide / normal / narrow desktop viewport presets;
-- normal / empty / loading / disabled / error variants.
+- normal / empty / loading / disabled / error variants;
+- Reduced Motion;
+- Component Gallery.
 
 Prototype Controls MUST be visually separated from the product frame and MUST NOT be copied into production UI.
 
@@ -206,8 +212,9 @@ The owner does not need to edit component IDs, layer tables, state matrices, or 
 
 ```text
 OWNER PRODUCT CHECKPOINTS: COMPLETE
-REFERENCE PROTOTYPE SPEC: BEING MATERIALIZED
+REFERENCE PROTOTYPE SPEC: READY / P0 PASS
 HTML PROTOTYPE: NOT STARTED
+HTML BUILD AUTHORIZATION: NOT YET GIVEN
 PROTOTYPE OWNER ACCEPTANCE: NOT STARTED
 RUNTIME UI IMPLEMENTATION: NOT AUTHORIZED
 FROZEN PRODUCT DECISIONS: NONE
