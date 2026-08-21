@@ -1,45 +1,57 @@
 # UI Reference Prototype — Layer Model
 
-Status: **AI Design Default / prototype interaction contract**
+Status: **AI Design Default / prototype interaction contract — mapless reconciled**
 
-This document defines how major UI surfaces stack and coexist in the standalone Reference Prototype. It does not define network authority or D&D rules.
+Baseline: [`../INTEGRATED-PRODUCT-UX-PLAN.md`](../INTEGRATED-PRODUCT-UX-PLAN.md)
 
-The goal is to prevent ad-hoc z-index behavior and to make the owner able to see what happens when multiple surfaces compete for attention.
+This document defines how major prototype surfaces stack/coexist. It does not define rules/network authority.
+
+---
+
+# 0. Terminology guard
+
+`Base`, `Canvas`, `Stage`, `Scene` and `Tabletop` are UI/presentation terms only.
+
+They never imply a battlemap, Actor coordinates, grid, tokens, pathing, Fog of War or LoS geometry.
+
+The Connected Play base region is the **Mapless Play Context / Tabletop Stage**.
 
 ---
 
 # 1. Layer families
 
-## PROTO-LAYER-0 — Base canvas
+## PROTO-LAYER-0 — Base product/workspace surface
 
-Contains the current Product Shell page or Play Workspace canvas.
+Contains the current Product Shell page, Character Sheet or Connected Play workspace.
 
 Examples:
 
-- Home page content;
-- Character page content;
-- central Play Scene/Table.
+- Tutorial-underlying Product frame;
+- Home;
+- Character Library/Sheet;
+- Connected Mapless Play Context.
 
-Never modal.
+Never tactical-map authority.
 
 ## PROTO-LAYER-1 — Persistent product/play anchors
 
-Always-on structural UI belonging to the current experience.
+Always-on structural UI of the current experience.
 
 Examples:
 
-- global navigation/header;
-- Actor Boards;
-- Command Center;
-- Initiative Tracker;
-- persistent NOTICE UI;
-- persistent connection/visibility indicator.
+- Product top navigation/header;
+- Play chrome/status;
+- upper/lower Actor Boards;
+- persistent Command Center;
+- Initiative Tracker when Initiative is active;
+- persistent NOTICE state;
+- persistent connection/visibility indicators when needed.
 
-These are not overlays merely because they sit visually above the Scene.
+These are not overlays merely because they visually sit above the mapless central background.
 
 ## PROTO-LAYER-2 — Contextual utility panes
 
-Nonmodal contextual tools that coexist with current canonical context.
+Nonmodal tools that coexist with the current canonical context.
 
 Examples:
 
@@ -47,245 +59,285 @@ Examples:
 - Encounter;
 - Participants;
 - Session Share;
-- Rules pane;
-- Player Session pane;
-- advanced DM spatial relation tool;
+- Rules lookup;
+- Player Session utility;
+- advanced DM **spatial fact** tool;
 - Quick Sheet.
 
-Default behavior:
+Defaults:
 
-- one primary utility pane visible per side/dock region;
-- switching utility normally replaces the previous pane in that region rather than stacking many panes;
-- the pane may resize within defined minimum Scene/Play bounds;
-- canonical Play/session state remains active behind it.
+- one primary utility pane per dock region;
+- switching replaces the prior pane rather than stacking many panes;
+- pane may resize within bounded desktop widths;
+- core Play/session context remains active;
+- advanced spatial pane is forms/rows, never coordinate canvas.
 
 ## PROTO-LAYER-3 — Anchored transient UI
 
 Examples:
 
 - tooltip;
-- rich hover explanation frame;
+- rich hover/focus explanation;
 - Actor Context Menu;
-- small popover;
-- local select/listbox popup.
+- small popover/listbox.
 
 Rules:
 
-- anchored to an invoker/context;
-- does not block unrelated product interaction;
-- closes on Escape where keyboard-reachable;
-- pointer context menu may close on outside click;
-- richer explanation may remain while pointer/focus moves inside it when usable.
+- anchored to invoker/context;
+- does not block unrelated interaction;
+- closes on Escape where applicable;
+- Context Menu may close outside-click;
+- right-click Actor menu contains UI/context actions, not Attack/Spell/Item duplication.
 
-## PROTO-LAYER-4 — Full workspace / scene presentation
+## PROTO-LAYER-4 — Major contextual presentation
 
-Used when a surface temporarily dominates a major region without destroying the underlying session context.
+Temporarily dominates a large region without destroying underlying session context.
 
 Examples:
 
 - Full Character Sheet layer;
-- Handout Full Scene;
-- Handout Upper Scene as a Scene-region replacement.
+- Handout Upper presentation;
+- Handout Full presentation.
 
 Rules:
 
-- underlying authoritative/session context is preserved;
-- close/return returns to the prior context;
-- only the replaced region is visually displaced unless a reviewed Decision says otherwise;
-- Command Center/required session anchors are preserved when the reviewed mode requires them.
+- authoritative/session context preserved;
+- return/close restores prior context;
+- only intended region visually displaced;
+- required Command Center/session anchors remain according to Reviewed mode;
+- Handout remains image presentation, not tactical terrain.
 
-## PROTO-LAYER-5 — Resolution / interrupt presentation
+## PROTO-LAYER-5 — Resolution / response / dice presentation
 
-Used for gameplay-resolution presentation that has higher attention priority than ordinary contextual utilities.
-
-Examples:
+Higher-attention gameplay presentation:
 
 - resolving state;
-- reaction/interrupt prompt;
-- concentration-save response;
-- dice/result presentation.
+- reaction/interrupt;
+- concentration response;
+- physical dice;
+- immediate result.
 
 Rules:
 
-- Command Center skeleton remains visible according to `ORIGIN-UX-01-21`;
-- only explicitly mock-declared conflicting controls are disabled in the prototype;
-- no production safe-interaction semantics are inferred;
-- interrupt/reaction presentation may visually suppress lower-priority transient popovers but should preserve orientation to Actor/Scene context.
+- Actor Boards / mapless context orientation / Command Center skeleton remain recognizable;
+- only fixture-declared conflicting controls lock;
+- UI does not infer safe-command semantics;
+- connected dice use the mapless Tabletop Stage as visual space, not a battlemap;
+- Standalone dice use a transient layer over/within the currently mounted Character Sheet viewport, not a separate dice window.
 
 ## PROTO-LAYER-6 — Confirmation / destructive decision
 
 Examples:
 
-- destructive confirmation;
+- destructive Session-end confirmation;
 - unsaved-change confirmation;
-- authoritative correction confirmation when required by eventual contract.
+- correction confirmation if the eventual contract requires it.
 
-Default:
+Defaults:
 
-- modal;
-- blocks interaction with lower layers until resolved;
-- visible Cancel unless the operation genuinely has no safe cancel state;
-- focus contained inside the modal;
-- closes only through explicit valid action or safe Escape/Cancel.
+- modal/focused;
+- lower layers blocked while unresolved;
+- Cancel when safe;
+- focus contained;
+- routine valid target execution does **not** use this layer.
 
 ## PROTO-LAYER-7 — System blocker
 
-Rare highest-priority user-facing blocker.
+Rare highest-priority state:
 
-Examples:
+- incompatible Session/content state;
+- app/session cannot continue safely;
+- explicit recovery/exit required.
 
-- app/session state cannot continue safely;
-- incompatible state requiring exit/recovery.
-
-This should not be used for ordinary validation or recoverable task errors.
+Do not use for ordinary validation.
 
 ---
 
-# 2. Handout layering
+# 2. First-run Tutorial layering
 
-Handout is special because its three reviewed modes are not interchangeable generic modals.
+On fresh first run, Tutorial/Onboarding is the first meaningful product panel.
+
+It may sit as a focused product layer over the hydrated Product Shell, but normal Home interaction is not the primary experience until Tutorial completion.
+
+Tutorial includes:
+
+- Standalone/Connected orientation;
+- Official-style vs SimpleVTT initial Sheet choice;
+- Character/Host/Join orientation.
+
+After completion, Tutorial layer closes and Home becomes the active base surface.
+
+Reopened Tutorial from Settings/Help uses the same content family without resetting product authority/state.
+
+---
+
+# 3. Standalone dice layering
+
+Standalone roll is **not** a new surface in the navigation stack.
+
+```text
+L0 current Character Sheet
+ + transient L5 dice/result presentation over/within same Sheet viewport
+ -> L5 clears
+ -> same L0 Sheet remains
+```
+
+Hard rules:
+
+- no layout-pushing persistent dice frame;
+- no separate modal workflow;
+- no route replacement;
+- no mandatory Close/Back merely to continue using the Sheet;
+- local history may remain as normal Sheet content.
+
+---
+
+# 4. Handout layering — image presentation only
+
+Handout modes are not generic interchangeable modals.
 
 ## Overlay
 
-- lives above Scene/Table content but below confirmation/system blockers;
-- may cover a large part of Scene;
-- Player can locally dismiss/minimize and reopen;
-- DM shared handout mock state remains active.
+- above mapless Play Context;
+- Player local dismiss/minimize/reopen;
+- shared fixture state may remain active;
+- no Actor token/grid interaction on the image.
 
-## Upper Scene
+## Upper
 
-- replaces/occupies the upper Scene presentation region;
-- is not locally dismissible by Player as a shared mode;
-- persists until DM withdraws/changes mode;
-- lower allied Actor Board and Command Center remain available according to reviewed Play structure.
+- occupies the reviewed upper presentation region;
+- shared DM-controlled mode;
+- cannot turn into a tactical map;
+- remaining Play anchors stay according to Reviewed structure.
 
-## Full Scene
+## Full
 
-- becomes dominant Scene presentation;
-- remains inside live Play context rather than becoming a Product route;
-- DM controls shared presence/mode;
-- local zoom/pan is allowed;
-- Command Center and required session continuity controls remain available unless later owner feedback changes the visual composition.
+- dominant image presentation inside live-session frame;
+- DM-controlled shared mode;
+- local zoom/pan only;
+- no Actor map placement/targeting;
+- Command Center/session continuity retained as required.
 
 Network/reconnect implementation remains mock-only until `GAP-HANDOUT-NETWORK-CONTRACT` is resolved.
 
 ---
 
-# 3. Resolution coexistence rules
+# 5. Resolution coexistence
 
-During `Resolving` / `Interrupt` / `Dice` / `Result`:
+During Resolving / Interrupt / Concentration / Dice / Result:
 
-- persistent Actor/Scene orientation should remain recognizable;
+- upper/lower Actor Boards remain unless a reviewed Handout mode explicitly changes presentation;
+- central mapless context remains recognizable;
 - Command Center skeleton remains;
-- a selected action/target state may visually freeze or transition to a submitted state;
-- ordinary hover explanations may close;
-- unrelated utility pane may remain visible if it does not conflict in the mock scenario;
-- a modal confirmation always takes priority over normal utility panes;
-- Prototype Controls may force combinations for QA even if they are not normal production sequences.
+- selected action/target state may transition to submitted/frozen representation;
+- ordinary hover frames may close;
+- compatible contextual utility may remain visible if fixture says it is safe;
+- modal confirmation outranks utility panes;
+- no tactical spatial visualization is created for resolution.
 
-The prototype uses explicit mock flags such as `conflictsDuringResolution: true/false`; it must not derive conflict legality itself.
-
----
-
-# 4. Full Sheet coexistence
-
-Opening Full Character Sheet during a live session:
-
-- keeps connection/session state alive;
-- uses `PROTO-LAYER-4`;
-- does not reset turn/Actor/resolution state;
-- may visually cover most Scene content;
-- preserves an obvious return/close control;
-- on close, returns focus/context to the invoking location when practical.
-
-If a higher-priority reaction/interrupt is triggered while Full Sheet is open, the prototype must demonstrate at least one reviewed-safe presentation where the interrupt becomes visible without losing the user's place.
-
-The exact production command semantics remain domain/contract work.
+Fixture supplies conflict/safe flags; prototype does not derive legality.
 
 ---
 
-# 5. Context menu / hover interaction
+# 6. Full Sheet coexistence
+
+During live Session:
+
+- Full Sheet uses Layer 4;
+- connection/session state remains alive;
+- turn/Actor/resolution authoritative state is not reset;
+- obvious return/close exists;
+- close restores invoking context/focus when practical.
+
+If a higher-priority reaction/required response occurs while Full Sheet is open, prototype must show a safe way for the required response to become visible without losing the user's Sheet place.
+
+Exact production command semantics remain Domain/Architecture work.
+
+---
+
+# 7. Context menu / hover
 
 Actor Context Menu:
 
-- right-click pointer entry;
-- above Actor Cards and normal panes;
-- below modal/interrupt/system blockers;
-- closes on outside click or selecting a command;
-- does not contain ordinary Attack/Spell/Item commands.
+- pointer right-click entry;
+- above Actor Cards/panes;
+- below required response/modal/system blockers;
+- outside-click/command closes;
+- ordinary gameplay actions are excluded.
 
-Hover Explanation Frame:
+Rich Hover Explanation:
 
-- may overlap nearby controls but should avoid covering the active target/critical state when possible;
-- may flip left/right/up/down based on available viewport space;
-- closes when pointer/focus leaves after a small grace period;
-- essential unavailable reason must also be discoverable through non-hover presentation when needed.
+- may flip placement to avoid clipping;
+- does not cover the active critical state when practical;
+- keyboard focus receives equivalent detail access;
+- essential unavailable reason is also accessible without pointer-only hover when needed.
 
 ---
 
-# 6. NOTICE UI priority
+# 8. NOTICE priority
 
-NOTICE UI belongs to persistent Layer 1, not the modal stack.
-
-It should surface important current conditions while allowing work to continue.
+NOTICE belongs to persistent Layer 1, not modal stack.
 
 Examples:
 
 - reconnecting;
 - DM Only active;
-- current session content snapshot differs from local library after a library update;
-- current task has an important persistent warning.
+- live content snapshot differs from local library;
+- persistent warning affecting current task.
 
-A NOTICE may link/open a contextual Layer-2 detail surface.
+NOTICE may open Layer-2 detail.
 
-It should not obscure Action Bar/Actor Cards or behave like a toast queue.
+Do not turn NOTICE into a permanent Activity feed.
 
 ---
 
-# 7. Focus / dismissal defaults
+# 9. Focus / dismissal defaults
 
 | Layer | Escape | Outside click | Focus trap | Return focus |
 | --- | --- | --- | --- | --- |
-| L2 contextual pane | closes pane when safe | normally no | no | launcher |
-| L3 tooltip | closes/clears | n/a | no | unchanged |
-| L3 popover/menu | closes | yes by default | no | invoker |
-| L4 Full Sheet | closes/returns when safe | no | workspace-contained rather than modal trap | launcher/prior context |
-| L4 Handout Upper/Full | Player Escape does not dismiss shared mode | no | no generic trap | local controls only |
-| L5 interrupt/required response | only if contract allows cancel | no | may contain required-response focus | resolution context |
-| L6 modal confirm | Cancel when allowed | normally no | yes | invoker/logical next |
-| L7 system blocker | only explicit recovery/exit | no | yes | recovery-defined |
+| L2 contextual pane | close when safe | normally no | no | launcher |
+| L3 tooltip | clear | n/a | no | unchanged |
+| L3 popover/menu | close | yes by default | no | invoker |
+| L4 Full Sheet | return when safe | no | workspace-contained | launcher/prior context |
+| L4 Handout Upper/Full | Player Escape does not dismiss shared mode | no | no generic trap | local controls |
+| L5 required response | only if contract allows cancel | no | may focus required response | resolution context |
+| L6 confirmation | Cancel when allowed | normally no | yes | invoker/logical next |
+| L7 blocker | explicit recovery/exit only | no | yes | recovery-defined |
 
-These are AI defaults. A canonical Product Decision or Domain/Architecture contract overrides them.
+Canonical Decision/Domain contract overrides these defaults.
 
 ---
 
-# 8. Narrow-desktop transformation
+# 10. Narrow Desktop transformation
 
-At the 960×700 prototype preset:
+At 960x700:
 
-- contextual utility pane may become an overlay-like side sheet while remaining desktop-oriented;
-- Actor Board keeps cards at/above minimum readable width, using horizontal scroll/paging before shrinking below usability;
+- utility pane may become narrower/overlay-like while desktop-oriented;
+- Actor cards keep minimum useful width then scroll/page;
 - Command Center remains directly reachable;
-- Full Sheet becomes single-column/stacked as necessary;
-- Handout controls compact but shared mode semantics do not change;
-- confirmation modal stays centered/contained within viewport;
-- hover/popover placement must avoid clipping outside viewport.
+- mapless central context can shrink but remains useful for current interaction/dice/result;
+- Full Sheet can stack/reflow;
+- Handout controls compact without changing shared semantics;
+- confirmation stays contained;
+- tooltip/popover stays inside viewport.
+
+No mobile/tactical-map fallback.
 
 ---
 
-# 9. Prototype QA combinations
+# 11. Required QA combinations
 
-The HTML prototype must intentionally test at least these combinations:
+1. Fresh first run + Tutorial + Sheet selection.
+2. Standalone Sheet + transient dice while Sheet remains visible.
+3. DM Freeform mapless + Activity pane + DM Only NOTICE.
+4. Player Freeform mapless + Handout Overlay + local dismiss/reopen.
+5. Player Initiative + Actor-card targeting + invalid reason.
+6. DM Initiative + advanced spatial **fact** pane.
+7. Full Sheet + reconnect NOTICE.
+8. Resolving + Reaction/Interrupt.
+9. Resolving + Concentration response.
+10. Connected dice/result + Actor Boards/Command Center retained.
+11. Narrow Desktop + utility pane + horizontal Actor overflow.
+12. Destructive confirmation above contextual DM pane.
 
-1. DM Play + Activity pane + DM Only NOTICE.
-2. Player Play + Handout Overlay + local dismiss/reopen.
-3. Player Initiative + targeting + invalid Actor explanation.
-4. DM Initiative + advanced spatial pane.
-5. Full Sheet open + connection NOTICE.
-6. Resolving + reaction prompt.
-7. Resolving + concentration response.
-8. Result + Activity detail path.
-9. Narrow desktop + utility pane + Command Center.
-10. Destructive confirmation above a contextual DM pane.
-
-Layer conflicts discovered in these scenarios are prototype/design issues; they should be fixed here before runtime implementation.
+Layer failures discovered here must be repaired before a new candidate can be accepted.
