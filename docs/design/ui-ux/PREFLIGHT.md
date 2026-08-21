@@ -1,229 +1,184 @@
 # SimpleVTT UI/UX Preflight
 
-Status: canonical start-work consistency gate
+Status: canonical start-work consistency/readiness gate
 
-Run this before substantive UI/UX planning, implementation preparation, implementation, or QA.
-
-The goal is to catch document drift, wrong reading order, premature review, stale readiness, schema/reference errors, and accidental AI invention **before** work begins.
-
-This file is the sole canonical owner of start-work checks. Templates and Work Orders reference this file instead of maintaining duplicate checklists.
+The owner does not run this checklist. AI runs it before substantive planning, implementation preparation, implementation, or QA.
 
 ---
 
 # 1. Minimal preflight
 
-An AI must be able to answer all applicable items:
-
 ```text
 [ ] Task Route A-H identified from AI-READING-GUIDE.md
-[ ] MANIFEST.yaml checked for document roles / canonical-vs-derived status / schema version
-[ ] Correct route-specific entry documents read
-[ ] Current review sheet OR exact Work Order identified
-[ ] Relevant Planning Gaps checked
-[ ] Referenced made Decision IDs actually exist in decisions.md
-[ ] No undecided question body is duplicated into decisions.md
-[ ] Registry Planning Maturity is not being mistaken for Contract Readiness
-[ ] Master Flow is being treated as a derived owner view, not as a second decision store
-[ ] Dashboard / Master Flow / Gap / Registry / Matrix summaries are not visibly stale
-[ ] Current code is being used as evidence only
-[ ] No missing authority / behavior / fallback is being inferred
+[ ] MANIFEST.yaml checked
+[ ] correct bounded sources loaded
+[ ] relevant Planning Gaps checked
+[ ] made Decision IDs actually exist
+[ ] current code is evidence, not product truth
+[ ] Master Flow / Registry / Matrix are not being used as independent product authority
+[ ] no missing rules/authority/privacy behavior is being inferred
 ```
 
 If a material item fails:
 
 ```text
 PREFLIGHT FAILED
-Task Route:
+Route:
 Failure:
-Affected files / IDs:
-Required maintenance or planning action:
+Affected IDs/files:
+Smallest repair:
 ```
 
 ---
 
-# 2. Schema and exact-reference check
+# 2. Owner-control preflight
 
-Before substantive work, verify structured fields against `MANIFEST.yaml`.
+Before asking the owner **any new question**, AI MUST read `OWNER-CONTROL-POLICY.md` and classify the unresolved item.
 
 ```text
-[ ] every Decision Card Status is exactly Draft / Selected / Reviewed / Frozen / Superseded
-[ ] every governance-sheet Review Status is exactly Not Started / In Review / Reviewed
-[ ] every Planning Gap Status is exactly Open / Deferred / Resolved
-[ ] every Gap Type and Severity matches the declared enum
-[ ] every Registry Planning value matches planning_maturity
-[ ] every Registry Contract value matches contract_readiness
-[ ] every M6 coverage cell is exactly REQ / N/A / TBD / a full contract-or-test ID
-[ ] every structured reference uses a full resolvable ID/path
-[ ] no reference range such as UX-01-04..06 exists
-[ ] no omitted-prefix reference such as ORIGIN-UX-01-26, 28 exists
-[ ] no prose substitute such as destination DM-01 appears in a structured reference field
-[ ] every Decision Map labeled Complete satisfies T2 Scope / Non-scope / Exit Criteria / table schema
-[ ] Surface/Component/Motion contracts do not invent an undefined independent lifecycle Status
+[ ] Is this actually an Owner Checkpoint?
+[ ] Can AI state which escalation criterion makes it material?
+[ ] Is the question already covered by an existing Decision?
+[ ] Can it instead be handled as an AI Design Default?
+[ ] Does it actually belong to Domain/Architecture rather than owner preference?
+[ ] Is it already one of the lightweight checkpoints in owner-review/02-key-decisions.md?
 ```
 
-A human-readable note may contain prose. A structured enum/reference field may not depend on contextual interpretation.
+If AI cannot name a material escalation reason, **do not ask the owner**.
 
-If exact resolution is impossible, fail Preflight rather than guessing the intended prefix/ID.
+Detailed rows in `review-plan.md` are internal coverage, not automatic owner homework.
+
+They may be resolved by:
+
+- canonical Decision Card;
+- lightweight Owner Checkpoint;
+- AI Design Default in a Surface/Component/Motion/design-system contract;
+- Domain/Architecture contract;
+- declared `N/A` condition.
 
 ---
 
-# 3. Derived-document drift check
+# 3. Lightweight Route A preflight
 
-Compare at minimum:
+For normal owner planning:
 
 ```text
-README gate/current-next status
-    <-> review-plan.md + MANIFEST.yaml
-
-README open-gap/status summary
-    <-> planning-gaps.md + decisions.md + master-flow.md + registry.md + matrices.md
-
-review-plan.md Review Status
-    <-> actual sequential review progress (not seed coverage or Decision Frozen status)
-
-master-flow.md material behavior/topology
-    <-> decisions.md + review-plan.md + planning-gaps.md
-
-registry Planning Maturity
-    <-> made decisions for the artifact as a whole
-
-registry Contract Readiness
-    <-> active Planning Gaps / required contracts
-
-matrices source/ref IDs
-    <-> decisions.md / review-plan.md / registry.md / planning-gaps.md / canonical paths
-
-templates enums/reference syntax
-    <-> MANIFEST.yaml / planning-gaps.md / this PREFLIGHT.md
+[ ] Global Planning Gate = PASS
+[ ] README.md read
+[ ] OWNER-CONTROL-POLICY.md read
+[ ] owner-review/02-key-decisions.md checked
+[ ] explicit per-question owner overrides preserved
+[ ] if `전체 추천안 사용: YES`, unanswered checkpoints use their stated AI recommendation
+[ ] no recommendation is treated as owner approval without explicit bundle/per-question acceptance
+[ ] conflicts checked before canonicalization
 ```
 
-Fail if a material UX rule exists **only** in `master-flow.md`, Registry, Matrix, or Dashboard with no canonical Decision/Map/Gap/contract source.
-
-A reviewed sub-decision does not automatically promote an entire Registry artifact to `Reviewed` when material behavior/topology remains unresolved.
-
-A stale derived artifact is a maintenance defect, not a new product decision.
-
-AI MAY repair obvious derived drift when framework permissions allow it. AI MUST NOT alter canonical product decisions merely to make summaries agree.
+Do not send the owner back to the historical long worksheets unless they explicitly ask to inspect them.
 
 ---
 
-# 4. Planning truth / implementation reliance / authority-domain check
-
-First distinguish planning intent from implementation stability.
+# 4. Schema / reference preflight
 
 ```text
-[ ] applicable Selected / Reviewed / Frozen Product/UX Decision Cards are treated as canonical planning intent over current code
-[ ] Draft decisions are not treated as made product intent
-[ ] Superseded decisions are historical only
-[ ] only Frozen Product/UX decisions are treated as stable implementation dependencies unless explicitly authorized otherwise
-[ ] UI/product requirement is within Product/UX authority
-[ ] rules legality/calculation remains domain authority
-[ ] authoritative state/persistence/network/privacy/schema remains domain/architecture authority
-[ ] no Frozen UI decision is being used to silently override a domain/architecture contract
-[ ] any cross-domain contradiction is classified as PLANNING GAP: CONTRACT CONFLICT
+[ ] Decision Status is exactly Draft / Selected / Reviewed / Frozen / Superseded
+[ ] Gap Status is exactly Open / Deferred / Resolved
+[ ] Gap Type and Severity match MANIFEST enums
+[ ] Registry Planning/Contract values use declared enums
+[ ] M6 coverage cells are REQ / N/A / TBD / exact contract-or-test ID
+[ ] structured references use complete resolvable IDs/paths
+[ ] no ranged/omitted-prefix/prose-substitute reference is used in structured fields
+[ ] Complete Decision Maps still satisfy required T2 structure
 ```
 
-Therefore a Reviewed decision may prove that current code is product-planning drift while still being insufficient to authorize implementation.
-
-Current implementation is evidence only in both authority domains.
+Do not guess an abbreviated reference.
 
 ---
 
-# 5. Global Planning Gate preflight
-
-Until the current global planning reset is complete, **no individual governance question may resume, including `UX-02-01`**.
-
-Before Route A may ask an individual question, verify all:
+# 5. Planning truth / implementation reliance
 
 ```text
-[ ] R1-R9 complete Master UI Inventory cross-check is complete
-[ ] M1-M6 material coverage is complete for all material Registry items
-[ ] all 27 governance sheets have complete predeclared T2 Decision Maps:
-    [ ] Scope
-    [ ] Non-scope
-    [ ] Exit Criteria
-    [ ] full decision list
-    [ ] Status
-    [ ] full dependency IDs / conditional branches
-    [ ] Destination
-[ ] Missing / Duplication / Coverage audit passes:
-    [ ] every Registry item has a governing owner
-    [ ] every governance sheet has inventory / Decision-Map coverage
-    [ ] no normative requirement has duplicate canonical authority
-    [ ] every material unknown is explicitly represented by a Draft Decision Map item or Planning Gap rather than AI inference
-[ ] owner has received a concise whole-product coverage checkpoint
+[ ] Selected / Reviewed / Frozen Product decisions outrank current code as planning intent
+[ ] Draft is not made product intent
+[ ] Superseded is historical only
+[ ] only Frozen decisions are stable implementation dependencies by default
+[ ] AI Design Defaults do not override explicit owner Decisions
+[ ] AI Design Defaults stay inside approved Product/UX authority
+[ ] rules legality/calculation remains Domain authority
+[ ] persistence/network/privacy/schema/security remains Domain/Architecture authority
+[ ] cross-domain contradiction becomes PLANNING GAP: CONTRACT CONFLICT
 ```
 
-If any box fails, Route A MUST NOT ask the next UX question. Continue Route D preparation instead.
-
-Canonical gate detail: `review-plan.md`.
+A lighter owner workflow never weakens authority boundaries.
 
 ---
 
-# 6. Planning-route preflight
+# 6. Global Planning Gate
 
-For `A — Resume Planning`, `C — Change Decision`, or `D — Explore Whole Product`:
+The whole-product preparation gate is already defined by `review-plan.md` and `MANIFEST.yaml`.
 
-```text
-[ ] review-plan.md contains the relevant sheet/map state
-[ ] already-answered items are not being asked again
-[ ] migrated prior decisions are checked before creating questions
-[ ] new discoveries are routed to Planning Gaps/downstream maps instead of asked ad hoc
-[ ] no product behavior is decided while merely filling Registry/Matrix/coverage
-[ ] AI has not changed declared review order without owner approval
-[ ] material owner flow changes are translated to canonical Decision/Map/Gap sources before refreshing master-flow.md
-```
-
-For Route A after Global Gate passes, AI can name exactly:
+Route A may run only when:
 
 ```text
-Current sheet:
-Current Decision ID:
-Dependencies:
-Known related gaps:
-Next predeclared ID:
+[ ] R1-R9 inventory cross-check passed
+[ ] M1-M6 material coverage passed
+[ ] all governance sheets have complete detailed maps for internal coverage
+[ ] Missing / Duplication / Coverage audit passed
+[ ] owner whole-product checkpoint delivered
 ```
 
-For Route D, the goal is coverage preparation, not decision review.
+**Passing this gate does not mean every detailed row must be answered by the owner.**
 
 ---
 
-# 7. Decision-change preflight
+# 7. Decision change / reconciliation
 
-Before changing a decision:
+Before changing a made decision:
 
 ```text
-[ ] Exact canonical Decision Card located
-[ ] Current exact lifecycle Status known
-[ ] Frozen status checked explicitly
-[ ] Dependencies identified with full IDs
-[ ] impact scope identified
-[ ] derived master-flow impact checked when applicable
-[ ] relevant gaps checked
-[ ] domain/architecture contract checked when rules/authority/persistence/network semantics are involved
+[ ] exact Decision Card located
+[ ] lifecycle status known
+[ ] dependencies/impact known
+[ ] related gaps checked
+[ ] authority-domain contract checked when applicable
 ```
 
-The owner may describe the change naturally; AI resolves the ID.
+Owner plain-language changes are valid input. AI resolves the exact source and updates the smallest canonical scope.
 
 ---
 
-# 8. Implementation-readiness preflight
+# 8. AI Design Default preflight
 
-Before creating/approving a Work Order:
+Before resolving a detail without asking the owner:
 
 ```text
-[ ] Spec Tier selected (S0/S1/S2/S3)
-[ ] applicable stable/Frozen dependencies identified with full IDs
-[ ] no material blocking Planning Gap remains
-[ ] required Surface/Component/Motion contracts exist for the tier
-[ ] S2/S3 transitions are explicit
-[ ] S3 authority / visibility / persistence source-of-truth is explicit
-[ ] required accessibility states are explicit
-[ ] required responsive states are explicit
-[ ] required temporal/reduced-motion behavior is explicit when applicable
-[ ] legacy status is known for touched paths
-[ ] Contract Readiness is Ready for the scope, or approved Work Order contains the remaining permitted contract detail
-[ ] implementation is explicitly authorized; planning status alone is not authorization
+[ ] detail is explicitly permitted by OWNER-CONTROL-POLICY.md
+[ ] it does not add/remove a material capability
+[ ] it does not materially alter workflow/mental model
+[ ] it does not change DM/Player authority/privacy/disclosure
+[ ] it does not create destructive/data-loss behavior
+[ ] it does not contradict an existing Decision
+[ ] it does not require guessing rules/network/domain truth
+[ ] chosen default follows accepted UI direction + good UX/accessibility practice
+[ ] default will be recorded in the appropriate design/contract artifact when implementation needs it
+```
+
+If any item fails, escalate to Owner Checkpoint or technical contract as appropriate.
+
+---
+
+# 9. Implementation readiness
+
+Before a Work Order or code change:
+
+```text
+[ ] Spec Tier selected
+[ ] applicable Frozen dependencies identified
+[ ] no material blocking gap remains
+[ ] required detailed contracts/defaults are materialized
+[ ] authority/visibility/persistence source of truth is explicit for S3 work
+[ ] accessibility/responsive/temporal requirements are explicit when applicable
+[ ] legacy status known for touched paths
+[ ] implementation explicitly authorized
 ```
 
 If not ready:
@@ -234,101 +189,77 @@ Blocked by:
 Smallest action needed:
 ```
 
-Do not create missing product decisions inside a Work Order.
+Planning or owner-checkpoint completion alone never authorizes implementation.
 
 ---
 
-# 9. Implementation preflight
-
-Before code changes:
+# 10. Implementation preflight
 
 ```text
-[ ] Exact Work Order identified
-[ ] IN SCOPE / ALLOWED SIDE EFFECT / OUT OF SCOPE / MUST NOT CHANGE understood
-[ ] referenced Decision IDs loaded and exactly resolvable
-[ ] referenced contracts loaded
-[ ] applicable M1-M6 rows loaded
-[ ] relevant canonical domain/architecture sources loaded
-[ ] current source/tests inspected only after requirements are known
+[ ] exact Work Order identified
+[ ] IN SCOPE / ALLOWED SIDE EFFECTS / OUT OF SCOPE / MUST NOT CHANGE understood
+[ ] exact referenced Decisions/contracts loaded
+[ ] applicable Matrix/domain sources loaded
+[ ] source/tests inspected only after requirements are known
+[ ] Stop Conditions known
 [ ] no adjacent cleanup is being smuggled into scope
-[ ] Stop Conditions are known
 ```
 
-Unexpected material dependency is not permission to expand scope.
+Unexpected material dependency is not permission to broaden scope.
 
 ---
 
-# 10. QA preflight
-
-Before verification:
+# 11. QA preflight
 
 ```text
-[ ] Exact Work Order / acceptance scope known
-[ ] Decision and contract IDs known and exactly resolvable
-[ ] M6 required coverage known
-[ ] relevant M1-M5 constraints known
+[ ] acceptance scope known
+[ ] Decision/default/contract IDs known
+[ ] M6 coverage known
+[ ] authority/domain constraints known
 [ ] exact implementation revision/diff known
-[ ] required automated evidence known
-[ ] required visual evidence known
-[ ] owner walkthrough requirement known
+[ ] automated/visual/owner walkthrough evidence known as applicable
 ```
 
-QA does not redesign: requirement gap -> planning; implementation mismatch -> implementation; stale derived document -> maintenance.
+QA does not redesign.
 
 ---
 
-# 11. Anti-patterns that fail Preflight
+# 12. Anti-patterns
 
-Fail if AI is about to:
+Fail Preflight if AI is about to:
 
-- read source first and infer the UX plan;
-- let current code replace an applicable Selected/Reviewed planning decision merely because it is not Frozen;
-- treat Reviewed as implementation-ready or as stable implementation reliance;
-- store `Reviewed, not Frozen` as a lifecycle Status value;
-- store seed-coverage prose inside governance-sheet Review Status;
-- promote a Registry artifact to Reviewed merely because one sub-decision is Reviewed while material artifact behavior remains unresolved;
-- use a Registry row or Master Flow statement instead of a Decision Card as product authority;
-- choose behavior because a Matrix cell is `TBD`;
-- accept a shorthand/ranged reference that requires prefix inference;
-- mark a Decision Map Complete while required T2 fields are absent;
-- invent an independent Surface/Component/Motion contract Status lifecycle not declared by the framework/Manifest;
-- resolve a canonical conflict by choosing the newest document;
-- use UI precedence to override a domain/network/privacy contract;
-- store an undecided Decision Map in `decisions.md`;
-- leave a resolved infrastructure gap marked Open;
-- maintain a second preflight checklist in a template/Work Order;
-- resume UX-02 or any individual sheet before the Global Planning Gate passes;
-- change review order without owner approval;
-- ask a spontaneous owner question before registering it in the map/gap queue;
-- broaden implementation because nearby code looks wrong.
+- ask the owner a low-risk typography/spacing/icon/component-detail question;
+- ask the owner to decide rules/network/privacy truth;
+- make the owner complete every detailed Decision Map row;
+- silently treat an unaccepted AI recommendation as owner approval;
+- let current code replace a Reviewed product decision;
+- treat Reviewed as implementation-ready/Frozen;
+- use a derived doc as product authority;
+- infer a shorthand reference;
+- use UI precedence to override Domain/Architecture;
+- invent behavior because a Matrix cell is TBD;
+- broaden implementation scope because nearby code looks wrong.
 
 ---
 
-# 12. Completion token
-
-AI may record:
+# 13. Completion token
 
 ```text
 PREFLIGHT: PASS
+Route: <A-H>
+Owner-control classification: Owner Checkpoint / AI Design Default / Domain-Architecture / N/A
 Schema: PASS
 References: PASS
 Planning truth: PASS
-Implementation reliance: PASS
-Route: <A-H>
-Scope: <sheet / decision / work-order ID>
 Global Planning Gate: PASS / BLOCKED / N/A
 Blocking gaps: none / <full IDs>
-Contract readiness: N/A / Partial for planning / Ready for implementation
+Implementation readiness: N/A / NOT READY / READY
 ```
 
 The token is evidence of a check, not a substitute for source documents.
 
 ---
 
-# 13. Owner simplicity
+# 14. Owner simplicity
 
-The owner does not run this checklist.
-
-AI runs it as infrastructure and only surfaces failures requiring a product/owner decision.
-
-> The owner controls product intent; Preflight ensures AI keeps the planning system consistent around that intent.
+> **The owner controls meaningful product intent. AI carries the exhaustive detail burden.**
