@@ -1,317 +1,296 @@
-# Owner Review — Accessibility / Desktop Responsive
+# 4. 키보드 접근성 / 화면 폭 변화
 
-Sheets: `A11Y-01`, `PLATFORM-01`
-
-Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and describe the desired behavior in `OWNER NOTE`. Candidate options are scaffolding only. `AI STATUS` is AI-managed.
+이 파일에서는 **마우스 없이도 쓸 수 있게 하는 법**과 **창이 좁아졌을 때 화면을 어떻게 바꿀지**를 정합니다.
 
 ---
 
-# A11Y-01 — Accessibility
+# A11Y-01 — 접근성
 
-### A11Y-01-01 — Product-wide keyboard / focus standard
+## A11Y-01-01 — 키보드로 모든 중요한 기능 사용
 
-**질문:** 제품 전체 keyboard navigation과 visible focus의 기본 standard는?
+**쉽게 말하면:** 마우스 없이 키보드만으로 어디까지 쓸 수 있어야 할까요?
 
-**선택지**
-- `A` — 모든 material action keyboard reachable, 논리적 Tab order, 항상 visible focus indicator.
-- `B` — A + composite controls(Hotbar/Grid/Menu)는 arrow-key roving focus를 표준으로 사용.
-- `C` — B + 주요 Play action에 optional shortcut layer를 제공하되 shortcut은 유일한 접근 방식이 아님.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### A11Y-01-02 — Layer focus management
-
-**질문:** layer category별 focus trap / initial focus / return rule은?
-
-**선택지**
-- `A` — Modal/required interrupt는 focus trap, Pane/Drawer는 non-trapping, Close 후 invoker/logical next로 focus return.
-- `B` — Full Workspace도 내부 focus scope를 만들되 session/global status shortcut은 유지.
-- `C` — trap 여부는 layer contract가 선언하고 initial/return focus 규칙만 product-wide로 강제.
-- `CUSTOM` — 직접 정의.
+- `A` — 중요한 모든 기능을 Tab/키보드로 사용할 수 있고 현재 선택 위치가 항상 보이게 한다.
+- `B` — A + 행동바/메뉴처럼 묶인 곳은 방향키로 이동하는 방식을 표준으로 쓴다.
+- `C` — B + 자주 쓰는 전투 행동에는 단축키도 제공한다. 단축키만이 유일한 방법은 아니다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### A11Y-01-03 — Actor Card / targeting / context-menu semantics
+## A11Y-01-02 — 팝업이 열렸을 때 키보드 포커스
 
-**질문:** Actor Card, targeting, context menu의 keyboard/semantic model은?
+**쉽게 말하면:** 확인창이나 옆 패널을 열었을 때 키보드 선택 위치를 어떻게 관리할까요?
 
-**선택지**
-- `A` — Actor Card 자체가 focusable composite; Enter/Space는 현재 primary interaction, Shift+F10/Menu key는 context menu.
-- `B` — Card는 focusable selection surface + 내부 explicit action controls를 별도 Tab/arrow navigation.
-- `C` — Card container는 semantic group/article, primary/context actions는 명시적 내부 buttons로만 제공.
-- `CUSTOM` — 직접 정의. Pointer-only interaction은 허용하지 않음.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### A11Y-01-04 — Hotbar / Command Center keyboard model
-
-**질문:** Hotbar/Command Center와 targeting cancel의 keyboard model은?
-
-**선택지**
-- `A` — Hotbar를 toolbar/grid composite로 보고 arrow navigation + Enter/Space activate + Escape cancel targeting.
-- `B` — Hotbar page는 tablist, 각 page slot은 grid/list navigation, contextual controls는 일반 Tab order.
-- `C` — 모든 slot/control을 단순 Tab order로 유지하고 optional shortcut 숫자키만 보조 제공.
-- `CUSTOM` — 직접 정의.
+- `A` — 확인창/필수응답은 그 창 안에서만 이동, 일반 패널은 뒤 화면도 이동 가능. 닫으면 원래 버튼으로 돌아간다.
+- `B` — 전체 캐릭터 시트 같은 큰 작업화면도 내부에 포커스를 가두되 세션 상태 같은 중요한 전역기능은 접근 가능.
+- `C` — 각 창이 가둘지 직접 정하고, 처음 선택될 위치와 닫은 뒤 돌아갈 위치만 공통 규칙으로 정한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### A11Y-01-05 — Status / alert / live announcements
+## A11Y-01-03 — Actor 카드의 키보드 조작
 
-**질문:** loading/error/reconnect/result/interrupt 변화를 어떻게 screen-reader announcement로 구분할 것인가?
+**쉽게 말하면:** 캐릭터 카드를 키보드로 선택/타겟/우클릭하려면 어떻게 할까요?
 
-**선택지**
-- `A` — nonurgent status/result는 status/polite, blocking error/required interrupt는 alert/assertive.
-- `B` — only blocking/error/interrupt만 자동 announce하고 일반 result/status는 focusable text로 제공.
-- `C` — 상태 category별 live-region policy를 정의: connection/pending=polite, authoritative required response=assertive, repeated roll feed는 deduplicated polite.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### A11Y-01-06 — Reduced-motion equivalents
-
-**질문:** dice/VFX/overlay/result reveal의 reduced-motion equivalent는?
-
-**선택지**
-- `A` — motion path/bounce를 제거하고 짧은 fade/state transition으로 동일한 정보 순서를 유지.
-- `B` — physical dice/VFX를 static result representation으로 대체하되 authoritative result/reveal order는 유지.
-- `C` — per-category reduced motion: dice는 guided settle 최소화, combat VFX는 static impact marker, overlays는 no-slide/fade.
-- `CUSTOM` — 직접 정의. 결과 자체는 절대 변경하지 않음.
+- `A` — 카드 자체에 포커스. Enter/Space=현재 기본 행동, Shift+F10/메뉴키=우클릭 메뉴.
+- `B` — 카드 자체 선택 + 카드 안의 개별 행동버튼을 따로 이동.
+- `C` — 카드는 정보 묶음으로만 두고 실제 행동은 카드 안의 명시적인 버튼으로만 한다.
+- `CUSTOM` — 직접 정한다. 마우스만 가능한 조작은 두지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### A11Y-01-07 — Non-color semantic redundancy
+## A11Y-01-04 — 행동바 키보드 조작
 
-**질문:** target/side/status/DM-only 등의 state를 color 외 무엇으로 중복 전달할 것인가?
+**쉽게 말하면:** 아래 행동버튼을 키보드로 어떻게 빠르게 고를까요?
 
-**선택지**
-- `A` — icon + text/badge + border/shape를 상황에 맞게 조합.
-- `B` — persistent text/badge를 primary, color/icon은 secondary.
-- `C` — compact Play에서는 icon/shape, detail/hover/focus에서는 text label을 추가.
-- `CUSTOM` — state별 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### A11Y-01-08 — Portrait / handout alternative text and zoom
-
-**질문:** portrait/handout image의 alt/description 및 zoom/pan 접근성은?
-
-**선택지**
-- `A` — Character portrait는 identity name과 중복되지 않게 처리, Handout은 DM-provided title/description field를 지원; zoom/pan controls keyboard accessible.
-- `B` — 모든 meaningful image에 explicit description field를 제공, decorative portrait는 empty alt 가능.
-- `C` — Handout description은 optional but strongly surfaced; image 내용이 gameplay-essential이면 DM이 text description을 제공하도록 요구.
-- `CUSTOM` — 직접 정의.
+- `A` — 방향키로 행동칸 이동 + Enter/Space 실행 + Esc로 대상선택 취소.
+- `B` — 행동 종류 탭을 먼저 고르고 그 안의 행동칸을 방향키로 이동한다.
+- `C` — 모든 버튼을 일반 Tab 순서로 이동하고 숫자 단축키는 보조기능으로 둔다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### A11Y-01-09 — Text scaling / zoom
+## A11Y-01-05 — 화면읽기 프로그램에 상태 변화 알리기
 
-**질문:** Product/Sheet/Play가 text scaling/browser/app zoom에서 무엇을 보장해야 하는가?
+**쉽게 말하면:** 로딩/오류/재연결/결과/반응요청을 음성으로 얼마나 자동 안내할까요?
 
-**선택지**
-- `A` — 일반 desktop zoom/text scaling에서도 primary content/actions가 clipping 없이 reflow하고 horizontal page scroll을 최소화.
-- `B` — OS/browser zoom 지원 + app 자체 text-size preference 제공.
-- `C` — product-wide zoom은 system/browser에 맡기되 narrow-responsive layout이 확대 시에도 core anchors/actions를 보존.
-- `CUSTOM` — 정확한 test 범위는 later acceptance contract에서 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### A11Y-01-10 — Compact/icon control labeling
-
-**질문:** 어떤 compact/icon controls가 visible label, accessible name, discoverable help를 요구하는가?
-
-**선택지**
-- `A` — 모든 icon-only control은 accessible name; ambiguous/rare control은 tooltip/help; critical action은 visible label 우선.
-- `B` — primary/destructive/privacy controls는 visible label 필수, standard navigation/utilities는 icon-only 가능.
-- `C` — dense Play에서는 icon-only를 넓게 허용하되 first-use/help 및 hover/focus label을 항상 제공.
-- `CUSTOM` — 직접 정의.
+- `A` — 일반 상태/결과는 조용히 안내, 중요한 오류/필수반응은 즉시 안내.
+- `B` — 정말 중요한 오류/필수반응만 자동 안내하고 일반 결과는 사용자가 읽게 한다.
+- `C` — 연결/처리중=조용한 안내, 반드시 답해야 하는 요청=즉시 안내, 반복되는 굴림은 과하게 반복하지 않는다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## A11Y-01-06 — 모션 줄이기 옵션
+
+**쉽게 말하면:** 화면 움직임을 줄이는 설정을 켰을 때 주사위/VFX/창 애니메이션을 어떻게 바꿀까요?
+
+- `A` — 튀고 움직이는 애니메이션을 없애고 짧은 페이드로 같은 정보 순서를 보여준다.
+- `B` — 3D 주사위/VFX를 정적인 결과표시로 바꾼다. 결과 자체는 같다.
+- `C` — 주사위는 최소한의 움직임, 전투 VFX는 정적 표시, 창 이동은 페이드로 종류별 대체.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## A11Y-01-07 — 색 없이도 상태 구분
+
+**쉽게 말하면:** 적/아군/타겟/DM전용 같은 상태를 색을 못 봐도 알 수 있게 무엇을 같이 쓸까요?
+
+- `A` — 아이콘 + 글자/배지 + 테두리/모양을 적절히 섞는다.
+- `B` — 글자/배지를 가장 확실한 표시로 하고 색/아이콘은 보조로 쓴다.
+- `C` — 전투 화면은 아이콘/모양, 자세한 설명이나 마우스/키보드 포커스에서는 글자도 보여준다.
+- `CUSTOM` — 상태별로 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## A11Y-01-08 — 초상화/핸드아웃 이미지 설명
+
+**쉽게 말하면:** 이미지를 볼 수 없는 사용자에게 초상화나 DM 자료를 어떻게 설명할까요?
+
+- `A` — 캐릭터 초상화는 이름과 중복설명을 피하고, Handout에는 DM이 제목/설명을 적을 수 있게 한다. 확대/이동 버튼은 키보드 지원.
+- `B` — 의미 있는 모든 이미지에 설명칸을 제공하고 장식용 이미지는 설명 없음 허용.
+- `C` — Handout 설명은 선택사항이지만 게임 진행에 꼭 필요한 그림이면 DM이 글 설명도 제공하도록 한다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## A11Y-01-09 — 화면 확대/글자 확대
+
+**쉽게 말하면:** 브라우저/앱 확대를 했을 때 화면이 어떻게 버텨야 할까요?
+
+- `A` — 일반 확대에서도 중요한 내용/버튼이 잘리지 않고 재배치되게 한다.
+- `B` — 시스템 확대 지원 + 앱 안에 별도 글자크기 설정도 제공.
+- `C` — 확대는 시스템/브라우저에 맡기되 좁은 화면 레이아웃이 핵심 기능을 보존하게 한다.
+- `CUSTOM` — 정확한 테스트 범위는 나중에 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## A11Y-01-10 — 아이콘 버튼에 글자가 필요한 경우
+
+**쉽게 말하면:** 어떤 버튼은 아이콘만, 어떤 버튼은 글자까지 보여줄까요?
+
+- `A` — 모든 아이콘 버튼에 숨은 접근성 이름. 낯선 버튼은 툴팁, 중요한 행동은 보이는 글자 우선.
+- `B` — 주요/위험/공개범위 버튼은 반드시 글자 표시, 익숙한 메뉴/도구는 아이콘 가능.
+- `C` — 전투 화면은 아이콘을 넓게 쓰되 처음사용 안내와 마우스/키보드 설명을 항상 제공.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
 
 ---
 
-# PLATFORM-01 — Desktop Responsive
+# PLATFORM-01 — 창이 넓거나 좁을 때
 
-### PLATFORM-01-01 — Supported width classes / mobile scope
+## PLATFORM-01-01 — v1이 공식 지원할 화면 크기
 
-**질문:** v1이 지원할 desktop width class와 mobile/touch-first scope는?
+**쉽게 말하면:** v1에서 스마트폰까지 신경쓸까요?
 
-**선택지**
-- `A` — Wide / Normal / Narrow Desktop만 공식 지원. Mobile/touch-first는 v1 out of scope.
-- `B` — Wide / Normal / Narrow Desktop + tablet-like landscape width까지 지원, phone/mobile는 out of scope.
-- `C` — desktop-first이지만 touch-capable narrow layout까지 고려, 별도 mobile IA는 만들지 않음.
-- `CUSTOM` — 직접 정의. 정확한 breakpoint 숫자는 later token/layout contract에서 결정.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### PLATFORM-01-02 — Product Shell navigation reflow
-
-**질문:** width가 좁아질 때 Product Shell primary navigation은 어떻게 변형되는가?
-
-**선택지**
-- `A` — full left rail → compact icon rail.
-- `B` — wide left rail → narrow top/header navigation.
-- `C` — full rail → compact rail → 필요 시 explicit navigation drawer.
-- `CUSTOM` — UI-01/NAV 선택에 맞춰 직접 정의.
+- `A` — 넓은/보통/좁은 **데스크톱 화면만 공식 지원**. 모바일은 v1 제외.
+- `B` — 데스크톱 + 가로 태블릿 정도까지. 휴대폰은 제외.
+- `C` — 데스크톱 중심이지만 터치 가능한 좁은 화면까지 고려. 별도 모바일 앱 구조는 만들지 않는다.
+- `CUSTOM` — 직접 정한다. 정확한 픽셀 기준은 나중에 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### PLATFORM-01-03 — Play Dual Anchor reflow
+## PLATFORM-01-02 — 기본 메뉴가 좁아졌을 때
 
-**질문:** narrow desktop에서도 Scene/Actor Context와 Command Center를 co-primary로 어떻게 유지할 것인가?
+**쉽게 말하면:** 왼쪽 메뉴 공간이 부족해지면 어떻게 바꿀까요?
 
-**선택지**
-- `A` — Command Center는 bottom fixed, Scene은 남은 영역 사용; Actor Boards/card metadata만 compact/reflow.
-- `B` — Scene + Actor Boards를 upper region, Command Center를 더 높은 two-row bottom region으로 재배치.
-- `C` — Scene은 full center를 유지하고 Command Center 내부 content를 paging/compact variant로 바꿔 height 증가를 제한.
-- `CUSTOM` — 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### PLATFORM-01-04 — Actor Boards / Initiative reflow
-
-**질문:** Actor Boards와 top Initiative Tracker를 narrow desktop에서 어떻게 유지할 것인가?
-
-**선택지**
-- `A` — horizontal scroll/paging을 사용하고 card/entry의 essential identity/state는 유지.
-- `B` — full card → compact card variant로 바꾸고 한 줄 structure 유지.
-- `C` — Actor Boards는 compact rows, Initiative는 separate compact top strip로 서로 다른 reflow 전략 사용.
-- `CUSTOM` — 직접 정의.
+- `A` — 글자 있는 왼쪽 메뉴 → 아이콘만 있는 좁은 왼쪽 메뉴
+- `B` — 왼쪽 메뉴 → 위쪽 메뉴
+- `C` — 큰 왼쪽 메뉴 → 작은 아이콘 메뉴 → 더 좁으면 햄버거/서랍 메뉴
+- `CUSTOM` — 앞에서 고른 메뉴 구조에 맞춰 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### PLATFORM-01-05 — Command Center / Hotbar reachability
+## PLATFORM-01-03 — 좁은 플레이 화면
 
-**질문:** 좁은 폭에서 Command Center/Hotbar/Economy/Resource Rail의 reachability를 어떻게 보장할 것인가?
+**쉽게 말하면:** 창이 좁아져도 장면과 아래 행동영역을 둘 다 중요하게 유지하려면?
 
-**선택지**
-- `A` — bottom Command Center 유지 + Hotbar page/paging + economy/resources persistent compact strip.
-- `B` — Hotbar horizontal scroll, economy/resources는 별도 fixed sub-row.
-- `C` — two-row responsive Command Center: essential actor/economy top, capability pages bottom.
-- `CUSTOM` — 직접 정의. Core capability를 generic drawer 뒤로 숨기지 않음.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### PLATFORM-01-06 — Contextual utility reflow
-
-**질문:** Session/DM utility rail/pane은 narrow desktop에서 어떻게 변형되는가?
-
-**선택지**
-- `A` — side pane → overlay drawer, 한 번에 하나만 open.
-- `B` — side pane → full-height contextual panel that overlays scene but leaves Command Center visible.
-- `C` — utility launcher만 compact rail로 유지하고 실제 pane은 mode별 bounded overlay/full-height panel.
-- `CUSTOM` — 직접 정의.
+- `A` — 행동영역은 아래 고정, 장면은 남는 공간. Actor 카드 내용만 간단하게 줄인다.
+- `B` — 장면/Actor 카드를 위쪽, 행동영역을 더 높은 2줄 구조로 아래에 배치.
+- `C` — 장면 크기를 최대한 유지하고 행동영역 안에서 페이지/작은버전을 써 높이가 너무 커지지 않게 한다.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### PLATFORM-01-07 — Character surfaces reflow
+## PLATFORM-01-04 — 좁은 화면의 Actor 카드와 이니셔티브
 
-**질문:** Character Sheet/Builder/Level Up/Full Sheet는 narrow desktop에서 어떻게 reflow하는가?
+**쉽게 말하면:** 카드가 많고 창이 좁으면 어떻게 할까요?
 
-**선택지**
-- `A` — multi-column → single/stacked columns, sticky summary/action region 유지.
-- `B` — major sections를 tabs/accordion으로 전환해 vertical density 제어.
-- `C` — Sheet는 tabbed/stacked, Builder/Level Up은 one-column wizard, Full Sheet는 single scroll workspace로 각각 최적화.
-- `CUSTOM` — surface별 직접 정의.
-
-**OWNER SELECT:** ``
-
-**OWNER NOTE:** ``
-
-**AI STATUS:** `PENDING`
-
-### PLATFORM-01-08 — Handout modes on narrow desktop
-
-**질문:** Overlay/Upper/Full Handout mode와 zoom/pan을 narrow desktop에서 어떻게 유지할 것인가?
-
-**선택지**
-- `A` — 각 mode의 의미는 그대로 유지하고 image fit/controls만 responsive하게 재배치.
-- `B` — Overlay는 larger bounded viewer, Upper는 scene upper region 재할당, Full은 full workspace; zoom/pan controls 공통.
-- `C` — mode별 minimum usable region을 정의하고 좁으면 scroll/pan을 허용하되 다른 mode로 자동 대체하지 않음.
-- `CUSTOM` — 직접 정의. UI가 mode를 임의 변경하면 안 됨.
+- `A` — 가로 스크롤/페이지 넘김. 이름/핵심상태는 유지.
+- `B` — 큰 카드에서 작은 카드로 바꾸되 한 줄 구조는 유지.
+- `C` — Actor 카드는 작은 줄, 이니셔티브는 별도 작은 위쪽 줄로 각각 다르게 처리.
+- `CUSTOM` — 직접 정한다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
 
-### PLATFORM-01-09 — Dice/result on narrow desktop
+## PLATFORM-01-05 — 좁은 행동영역
 
-**질문:** physical dice/result presentation이 essential action을 가리지 않도록 narrow desktop에서 어떻게 적응하는가?
+**쉽게 말하면:** 공간이 좁아도 행동버튼과 행동자원을 어떻게 계속 쉽게 쓰게 할까요?
 
-**선택지**
-- `A` — dice scale/throw distance를 줄이고 central safe roll area를 유지, result는 same sequence.
-- `B` — 3D dice는 가능한 범위에서 축소하고 공간이 부족하면 approved static/reduced presentation fallback 사용.
-- `C` — scene 안에 bounded roll zone을 명확히 두고 Command Center/Actor Boards와 overlap 금지.
-- `CUSTOM` — 직접 정의. Authoritative result는 presentation과 무관하게 동일.
+- `A` — 아래 행동영역 유지 + 행동 페이지 넘김 + 행동자원은 작은 고정줄.
+- `B` — 행동버튼은 가로 스크롤, 행동자원은 별도 고정줄.
+- `C` — 위줄=캐릭터/행동자원, 아래줄=행동버튼의 2줄 반응형 구조.
+- `CUSTOM` — 직접 정한다. 핵심 행동을 일반 메뉴 뒤로 숨기지 않는다.
 
 **OWNER SELECT:** ``
 
 **OWNER NOTE:** ``
 
-**AI STATUS:** `PENDING`
+<!-- AI STATUS: PENDING -->
+
+## PLATFORM-01-06 — 좁은 화면의 세션/DM 도구
+
+**쉽게 말하면:** 옆 패널을 펼칠 공간이 없으면 어떻게 열까요?
+
+- `A` — 옆 패널을 화면 위 서랍으로 바꾸고 한 번에 하나만 연다.
+- `B` — 장면 일부를 덮는 세로 패널로 열되 아래 행동영역은 계속 보이게 한다.
+- `C` — 작은 도구버튼줄만 남기고 실제 내용은 도구마다 서랍/큰 패널로 연다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## PLATFORM-01-07 — 좁은 캐릭터 시트/생성/레벨업
+
+**쉽게 말하면:** 여러 열로 된 화면을 좁게 만들 때 어떻게 바꿀까요?
+
+- `A` — 여러 칸 → 세로 한 줄/쌓기. 중요한 요약/버튼은 고정.
+- `B` — 큰 구역을 탭/접기 방식으로 바꿔 세로 길이를 줄인다.
+- `C` — 시트는 탭/세로, 생성/레벨업은 한 단계씩, 전체 시트는 긴 한 화면처럼 각각 다르게 최적화.
+- `CUSTOM` — 화면별로 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## PLATFORM-01-08 — 좁은 화면의 Handout
+
+**쉽게 말하면:** DM이 보여주는 자료의 Overlay/위쪽/전체화면 모드를 좁은 창에서도 그대로 유지할까요?
+
+- `A` — 세 모드의 의미는 그대로 두고 이미지 크기/버튼 위치만 맞춘다.
+- `B` — Overlay는 큰 팝업, Upper는 화면 윗부분, Full은 전체화면으로 각각 최적화.
+- `C` — 각 모드의 최소 공간을 정하고 부족하면 스크롤/이동을 허용하되 다른 모드로 자동 변경하지 않는다.
+- `CUSTOM` — 직접 정한다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
+
+## PLATFORM-01-09 — 좁은 화면의 3D 주사위
+
+**쉽게 말하면:** 주사위 애니메이션이 행동버튼을 가리지 않게 어떻게 줄일까요?
+
+- `A` — 주사위 크기/이동거리를 줄이고 중앙의 안전한 굴림 영역을 유지한다.
+- `B` — 가능한 한 3D를 축소하고 공간이 너무 부족하면 승인된 2D/정적 결과표시를 사용한다.
+- `C` — 장면 안에 주사위 전용 영역을 명확히 두고 행동영역/Actor 카드를 절대 덮지 않게 한다.
+- `CUSTOM` — 직접 정한다. 실제 게임 결과는 표시 방식과 무관하게 같다.
+
+**OWNER SELECT:** ``
+
+**OWNER NOTE:** ``
+
+<!-- AI STATUS: PENDING -->
