@@ -1,120 +1,190 @@
-# SimpleVTT UI/UX 설계 — 사용자 대시보드
+# SimpleVTT UI/UX — 사용자 대시보드
 
-여기서는 **SimpleVTT의 화면과 사용법을 하나씩 결정**합니다.
+여기서는 **SimpleVTT 사용법을 크게 바꾸는 결정만** 직접 고릅니다.
 
-개발 문서를 직접 관리할 필요는 없습니다. 아래 워크시트에서 원하는 보기를 고르고, 다 작성한 뒤 ChatGPT에 `워크시트 반영해`라고 말하면 됩니다.
+예전처럼 수백 개의 세부 UI 질문을 하나씩 답할 필요는 없습니다.
 
-## 지금 할 일
+---
 
-현재는 **1번 워크시트**를 작성하고 있습니다.
+# 지금 할 일
 
-➡️ [`owner-review/01-foundation-navigation-layout.md`](owner-review/01-foundation-navigation-layout.md)
+첫 번째 큰 설계 묶음은 모두 정리됐습니다.
 
-여기에는 다음 내용이 들어 있습니다.
+이제 남은 사용자 결정은 **핵심 10개**입니다.
 
-- 화면에서 무엇을 가장 중요하게 보여줄지
-- 기본 메뉴 구조
-- 캐릭터/세션 화면 이동
-- 플레이 화면의 큰 배치
-- 마우스/키보드 기본 조작
+➡️ [`owner-review/02-key-decisions.md`](owner-review/02-key-decisions.md)
 
-이미 작성한 답은 그대로 보존되어 있고, **아직 실제 제품 결정 문서에는 반영하지 않았습니다.**
-
-## 작성 방법
-
-질문마다 아래 두 칸만 보면 됩니다.
+가장 쉬운 방법은 파일 맨 위에:
 
 ```text
-OWNER SELECT: A
-OWNER NOTE: 필요하면 추가 의견 작성
+전체 추천안 사용: YES
 ```
 
-- `A / B / C` → 마음에 드는 보기 선택
-- `CUSTOM` → 보기 대신 원하는 방식을 직접 작성
-- `OWNER NOTE` → 추가 설명이 있으면 자유롭게 작성
-- 모르는 질문 → 그냥 비워두기
+만 적는 것입니다.
 
-내부 AI 처리상태는 주석으로 숨겨져 있으므로 신경 쓰지 않아도 됩니다.
+그러면 AI 추천안을 전부 사용하고, 마음에 안 드는 질문만 따로 바꾸면 됩니다.
 
-## 전체 워크시트
+---
 
-1. [`01-foundation-navigation-layout.md`](owner-review/01-foundation-navigation-layout.md) — **화면 구조 / 메뉴 / 배치 / 기본 조작**
-2. [`02-states-layering-confirmation.md`](owner-review/02-states-layering-confirmation.md) — **로딩 / 오류 / 창 겹침 / 확인창**
-3. [`03-visual-components-content.md`](owner-review/03-visual-components-content.md) — **글씨 / 색 / 아이콘 / 버튼 / 문구**
-4. [`04-accessibility-platform.md`](owner-review/04-accessibility-platform.md) — **키보드 접근성 / 좁은 화면 대응**
-5. [`05-dnd-experience.md`](owner-review/05-dnd-experience.md) — **캐릭터 / 주사위 / 행동 / 전투**
-6. [`06-session-authority-dm-content.md`](owner-review/06-session-authority-dm-content.md) — **세션 / DM 권한 / 판정 수정 / 콘텐츠**
+# 지금까지 정리된 것
 
-처음 안내가 필요하면 [`owner-review/README.md`](owner-review/README.md)를 보면 됩니다.
+## 제품의 큰 방향
 
-## 작성이 끝나면
+- Standalone 캐릭터 시트와 Connected VTT는 둘 다 핵심 기능
+- Connected에서는 Host=DM, Client=Player
+- Offline/Standalone에는 DM/Player 역할 없음
+- Player는 자신의 Character Actor를 기본 조종
+- DM은 추가 Actor 조종권을 줄 수 있고 모든 Actor를 조종 가능
+- v1 추가 역할(Spectator/Co-DM 등) 없음
 
-ChatGPT에 한마디만 하면 됩니다.
+## 앱/메뉴
 
-> **워크시트 반영해**
+- 기본 메뉴: **홈 → 캐릭터 → 세션 → 콘텐츠 → 룰 → 설정**
+- Product Shell은 **상단 메뉴형**
+- Activity/Encounter/판정수정/세션도구는 기본 메뉴가 아니라 필요할 때 여는 도구
+- 라이브 세션 중에는 `플레이로 돌아가기`가 항상 보임
+- 앱을 완전히 종료했다 다시 켜면 자동 복귀하지 않고 **Home에서 시작**
+- 첫 실행은 별도 튜토리얼/안내 화면
 
-그러면 AI가 자동으로:
+## 플레이 화면
 
-1. 작성한 답을 읽고,
-2. 서로 충돌하는 답이 있는지 확인하고,
-3. 확정된 내용을 정식 결정 문서에 옮기고,
-4. 관련 설계 문서를 맞춰 정리하고,
-5. 아직 답하지 않은 질문은 그대로 남깁니다.
+- Scene/Actor + Command Center + 현재 턴/상태를 가장 중요하게 표시
+- Command Center는 화면 아래 고정
+- BG3 계열 구성: 위쪽 작은 행동자원 줄 + 왼쪽 캐릭터 상태 + 오른쪽 행동버튼
+- 적/NPC Actor Board는 위, Player/아군 Board는 아래
+- 카드가 최소 크기보다 작아질 상황이면 가로 스크롤
+- Initiative Tracker는 장면 위쪽에 겹쳐 표시하되 중요한 장면을 가리지 않음
+- 세션/DM 부가도구는 좌우 Side Pane
+- 큰 영역은 필요하면 독립 스크롤 가능
+- 사용자가 안전한 범위에서 플레이 영역/패널 크기를 조절 가능
 
-제가 다른 설계 문서를 직접 수정할 필요는 없습니다.
+## 캐릭터
 
-## 현재 진행상태
+- Character Library가 캐릭터 관리의 중심
+- **Official-style 시트 + SimpleVTT 시트**를 선택 가능
+- 첫 튜토리얼에서 기본 시트 스타일 선택
+- SimpleVTT 시트는 UX를 우선해서 새로 설계
+- 현재 Character 생성/Level Up UI는 그대로 유지
+
+## 기본 조작
+
+- 타겟팅 중이면 대상 선택 클릭이 최우선
+- DM은 별도 조종 모드에서 Actor 제어
+- Actor 우클릭 메뉴는 `자세히/정보/관리` 같은 UI 기능만 사용
+- 공격/주문/아이템 같은 실제 게임 행동은 우클릭 메뉴에 넣지 않음
+- v1에서는 Actor 우클릭 메뉴를 여는 키보드 단축키는 제공하지 않음
+- Esc는 행동/타겟팅 취소를 먼저 처리
+- 자주 쓰는 행동은 가능한 한 직접 보이게 함
+- 사용불가 이유는 호버/포커스 설명을 기본으로 하고 중요한 막힘은 직접 표시
+- 중요한 현재 상태를 별도 **NOTICE UI**에서도 계속 보여줌
+- 설명/세부정보는 마우스 호버 시 가벼운 따라오는 설명 프레임을 적극 활용
+
+이 내용은 [`decisions.md`](decisions.md)에 Reviewed 결정으로 정리되어 있습니다. **Frozen은 아닙니다.**
+
+---
+
+# 앞으로 직접 고를 것은 왜 10개뿐인가?
+
+새 규칙은 간단합니다.
+
+### 직접 묻는 것
+
+- 제품 사용 흐름을 크게 바꾸는 것
+- 기능을 넣을지 뺄지
+- DM/Player 권한이나 비밀정보
+- 되돌리기/데이터 손실처럼 결과가 큰 것
+- 플랫폼 범위처럼 개발 범위가 크게 달라지는 것
+
+### AI가 알아서 정하는 것
+
+- 글씨 크기/여백
+- 버튼/아이콘 스타일
+- 평범한 Hover/Focus/Pressed 상태
+- 일반적인 로딩/오류/빈 화면
+- 반응형 세부 배치
+- 패널 내부 정렬
+- 일반 확인창/문구
+- 컴포넌트 세부 구조
+- 애니메이션 세부 타이밍
+- 접근성의 일반적인 좋은 관행
+
+단, AI가 정하는 세부사항이라도 **실제 사용법이 크게 달라지는 선택으로 커지면 그때만 다시 사용자에게 올립니다.**
+
+기준: [`OWNER-CONTROL-POLICY.md`](OWNER-CONTROL-POLICY.md)
+
+---
+
+# AI도 추측하지 않는 것
+
+다음은 사용자 취향이 아니라 기술적으로 정확해야 해서 별도 계약으로 해결합니다.
+
+- D&D 룰 계산/공격 가능 여부
+- 주 손 기본공격의 canonical relation
+- 판정 중 어떤 authoritative command가 동시에 안전한지
+- DM 비밀 데이터 전송
+- Handout 공유/재연결 네트워크 상태
+- 저장/스키마/보안
+
+---
+
+# 현재 진행상태
 
 | 항목 | 상태 |
 | --- | --- |
-| 전체 UI/UX 질문 목록 | 준비 완료 |
-| 전체 화면/기능 누락 조사 | 완료 |
-| UX-01 — 제품의 큰 방향 | 검토 완료 |
-| UX-02 — DM/플레이어 역할과 조작권 | 검토 완료 |
-| UX-03 — 정보 우선순위 | **워크시트 입력 중** |
-| 그 이후 설계 질문 | 워크시트 준비 완료 |
-| 실제 UI 구현 | 아직 시작하지 않음 |
+| Meta governance | Stable v1 |
+| Global Planning Gate | PASS |
+| UX-01 | Reviewed |
+| UX-02 | Reviewed |
+| UX-03 | Reviewed |
+| NAV-01 | Reviewed |
+| UI-01 | Reviewed |
+| INT-01 | Reviewed |
+| 첫 번째 Owner Worksheet | **완료 및 반영됨** |
+| 남은 Owner Checkpoints | **10개** |
+| 상세 UI 질문 | AI 내부 coverage/default 대상으로 전환 |
+| 구현 | 아직 승인되지 않음 |
 
-### 이미 정해진 역할 원칙
+## 아직 Owner가 직접 정할 큰 항목
 
-- 연결 세션에서 **Host는 항상 DM**입니다.
-- 연결 세션에서 **Client는 항상 Player**입니다.
-- 혼자 사용하는 Offline/Standalone에는 DM/Player 역할이 없습니다.
-- 플레이어는 자신의 캐릭터 Actor를 기본적으로 조종합니다.
-- DM은 필요하면 플레이어에게 추가 Actor 조종권을 줄 수 있습니다.
-- DM은 모든 Actor를 조종할 수 있습니다.
-- 세션 도중 DM과 Player 역할을 서로 바꾸지는 않습니다.
-- v1에는 Spectator / Co-DM / Observer 역할을 넣지 않습니다.
-- DM전용 비밀정보는 플레이어에게 보내놓고 숨기는 방식이 아니라, **애초에 플레이어에게 전달하지 않는 방식**을 유지합니다.
+[`owner-review/02-key-decisions.md`](owner-review/02-key-decisions.md)에만 있습니다.
 
-이 결정들은 검토된 제품 방향이지만 아직 `Frozen` 상태는 아니며, 이것만으로 구현을 시작하지 않습니다.
+1. 공식 지원 화면 크기 범위
+2. Character 없는 Join
+3. 준비 안 된 Player가 있을 때 Host Start
+4. DM 굴림 Public/DM Only 기본값
+5. DM 비공개 Activity 표시
+6. 거리/시야/엄폐 고급 DM 도구
+7. Undo/판정수정 기록 방식
+8. 공식 Add-on 파일 형식
+9. Add-on lifecycle 범위
+10. Live Session 중 Content 변경
 
-## 아직 나중에 해결해야 하는 큰 문제
+---
 
-아래는 질문을 잘못 만든 것이 아니라, 별도 규칙/구현 계약이 필요한 부분입니다.
+# 아직 남은 기술/계약 문제
 
-- 캐릭터가 하나도 없는 플레이어가 세션 참가를 누르면 어떻게 할지
-- 적을 그냥 클릭했을 때 사용할 `주 손 기본공격`을 시스템이 어떻게 정확히 알려줄지
-- DM전용 굴림의 기본 공개상태와 저장범위
-- Actor 우클릭 메뉴의 최종 기능 목록
-- 판정 진행 중 어떤 조작까지 안전하게 허용할지
-- Handout 공유/재연결 구조
-- DM전용 비밀 판정 데이터를 플레이어에게 전혀 보내지 않는 네트워크 구조
-- DM Activity에서 비공개 기록을 보여주는 최종 방식
+- `GAP-MAIN-HAND-CANONICAL-RELATION`
+- `GAP-RESOLUTION-SAFE-INTERACTIONS` — 이제 Owner 질문이 아니라 Domain contract 문제
+- `GAP-HANDOUT-NETWORK-CONTRACT`
+- `GAP-DM-ONLY-DELIVERY-PROTOCOL`
+- `GAP-CANONICAL-UX-DOC-RECONCILIATION` — legacy planning reconciliation
 
-이런 것은 해당 워크시트와 기술 계약 단계에서 하나씩 해결합니다.
+Owner Checkpoint로 남아 있는 Gap은 핵심 10개 파일에 포함되어 있습니다.
 
-## 참고: AI용 문서
+---
 
-아래 문서들은 주로 AI가 사용하는 내부 설계 문서입니다. **직접 읽거나 수정할 필요 없습니다.**
+# 다음 사용법
 
-- [`AI-READING-GUIDE.md`](AI-READING-GUIDE.md)
-- [`MANIFEST.yaml`](MANIFEST.yaml)
-- [`PREFLIGHT.md`](PREFLIGHT.md)
-- [`review-plan.md`](review-plan.md)
-- [`decisions.md`](decisions.md)
-- [`registry.md`](registry.md)
-- [`matrices.md`](matrices.md)
-- [`planning-gaps.md`](planning-gaps.md)
+핵심 10개를 직접 고른 뒤:
 
-원하는 UI/UX를 결정할 때는 기본적으로 **`owner-review/` 폴더만 보면 됩니다.**
+> **핵심 결정 반영해**
+
+라고 하면 됩니다.
+
+또는 추천이 전반적으로 마음에 들면:
+
+> **추천안 전체로 가자**
+
+라고 해도 됩니다.
+
+그 뒤에는 AI가 나머지 세부 UX를 정리하고, 사용자 판단이 정말 필요한 큰 선택이 생길 때만 다시 질문합니다.
