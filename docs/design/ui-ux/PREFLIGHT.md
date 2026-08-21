@@ -119,6 +119,7 @@ Do not guess an abbreviated reference.
 [ ] `.agents/*` is non-canonical historical/working context
 [ ] current tests may be stale relative to newer Reviewed decisions
 [ ] integrated plan cannot override Domain/Architecture or decisions; it reconciles them
+[ ] accepted runtime contracts cannot override higher authority; they interpret accepted UI for implementation
 [ ] cross-domain contradiction becomes PLANNING GAP: CONTRACT CONFLICT
 ```
 
@@ -154,9 +155,10 @@ Before changing a made decision:
 [ ] related gaps checked
 [ ] authority-domain contract checked when applicable
 [ ] integrated plan impact checked when broad interpretation changes
+[ ] accepted runtime contract impact checked when a previously accepted UI behavior changes
 ```
 
-Owner plain-language changes are valid input. AI updates the smallest canonical scope and refreshes affected integrated/prototype/derived material.
+Owner plain-language changes are valid input. AI updates the smallest canonical scope and refreshes affected integrated/prototype/contract/derived material.
 
 ---
 
@@ -210,7 +212,7 @@ If the Manifest says the existing candidate is invalidated, **do not patch it to
 Before marking Prototype Accepted:
 
 ```text
-[ ] browser/visual interaction review occurred
+[ ] browser/visual interaction review occurred or owner explicitly accepted the actual candidate being reviewed
 [ ] PROTOTYPE-ACCEPTANCE.md was checked
 [ ] candidate passed integrated baseline/mapless checks
 [ ] owner explicitly accepted a specific prototype reference
@@ -220,7 +222,46 @@ Static authoring alone is not Prototype Acceptance.
 
 ---
 
-# 11. Runtime implementation readiness
+# 11. Accepted-contract interpretation preflight
+
+For any broad runtime UI preparation, implementation or QA after Prototype Acceptance:
+
+```text
+[ ] contracts/MANIFEST.yaml read
+[ ] contracts/README.md read
+[ ] contracts/IMPLEMENTATION-PLAYBOOK.md read
+[ ] contracts/GLOSSARY-AND-TERMINOLOGY.md read
+[ ] relevant SURFACE-CONTRACT.md sections read
+[ ] relevant COMPONENT-CONTRACT.md sections read
+[ ] relevant INTERACTION-STATE-MOTION-CONTRACT.md sections read
+[ ] relevant BEHAVIOR-SCENARIOS.md scenarios identified
+[ ] IMPLEMENTATION-TRACEABILITY.md checked
+[ ] relevant QA-ACCEPTANCE-MATRIX.md rows identified
+```
+
+The agent MUST be able to explain all of the following before broad runtime work:
+
+```text
+Product identity: mapless tabletop companion
+Fresh first-run: Tutorial first
+Character: one canonical Character, two Sheet presentations
+Session: Host=DM / Client=Player / Host opens directly to live Freeform
+Offline: no DM/Player identity
+Play skeleton: upper Actor Board / Play Context / lower Actor Board / persistent Command Center
+Freeform vs Initiative semantic difference
+Actor click precedence
+Targeting model
+Main Hand no-fallback rule
+Standalone dice model
+DM-only non-delivery boundary
+Handout/spatial fact boundary
+```
+
+If any item cannot be explained from sources, **PREFLIGHT FAILED — accepted contract not understood**.
+
+---
+
+# 12. Runtime implementation readiness — Route E
 
 For **broad UI runtime work**, first require:
 
@@ -228,19 +269,23 @@ For **broad UI runtime work**, first require:
 [ ] integrated baseline is current
 [ ] applicable Reference Prototype status = ACCEPTED
 [ ] accepted prototype reference commit recorded
+[ ] accepted contract set = MATERIALIZED and current
+[ ] Interpretation Playbook / Glossary / Behavior Scenarios / QA Matrix exist and are loaded
 ```
 
 Then require normal runtime readiness:
 
 ```text
 [ ] Spec Tier selected
+[ ] exact runtime slice selected
 [ ] applicable Frozen Product/UX dependencies identified
-[ ] no material blocking technical gap remains for the scope
-[ ] required Surface / Component / Motion contracts extracted/materialized
-[ ] authority/visibility/persistence source of truth is explicit for S3 work
+[ ] no material blocking technical gap remains for the slice
+[ ] authority/visibility/persistence source of truth is explicit for every sensitive UI value
 [ ] accessibility/responsive/temporal requirements are explicit when applicable
 [ ] conflicting legacy UX guidance reconciled for touched scope
 [ ] legacy/stale-test status known for touched runtime paths
+[ ] touched Behavior Scenario IDs listed
+[ ] touched QA Matrix row IDs listed
 [ ] scoped runtime Work Order exists
 [ ] runtime implementation explicitly authorized
 ```
@@ -253,34 +298,59 @@ Blocked by:
 Smallest action needed:
 ```
 
-Owner-checkpoint completion, Reviewed Decisions, or a prototype review candidate never authorize runtime implementation by themselves.
+Owner-checkpoint completion, Reviewed Decisions, accepted Prototype or extracted contracts alone never authorize runtime implementation.
 
 ---
 
-# 12. Runtime implementation preflight
+# 13. Runtime Work Order quality gate
+
+A broad UI Runtime Work Order MUST contain:
 
 ```text
-[ ] exact runtime Work Order identified
+[ ] exact accepted prototype reference
+[ ] exact runtime slice and user-visible goal
+[ ] exact applicable Frozen Decision IDs
+[ ] exact Domain/Architecture sources
+[ ] exact accepted contract sections
+[ ] touched Behavior Scenario numbers/IDs
+[ ] touched QA Matrix row IDs
+[ ] state/projection source for rules/network/privacy-sensitive values
+[ ] named open blocker Gaps
+[ ] exact in-scope source/tests
+[ ] explicit out-of-scope areas
+[ ] stop conditions
+```
+
+A Work Order that only says `implement the accepted prototype` fails.
+
+---
+
+# 14. Runtime implementation preflight — Route F
+
+```text
+[ ] exact approved runtime Work Order identified
 [ ] IN SCOPE / ALLOWED SIDE EFFECTS / OUT OF SCOPE / MUST NOT CHANGE understood
-[ ] INTEGRATED-PRODUCT-UX-PLAN.md loaded for broad UI scope
+[ ] INTEGRATED-PRODUCT-UX-PLAN.md loaded
 [ ] accepted prototype reference loaded where applicable
+[ ] accepted contract reading order completed
+[ ] named Behavior Scenarios loaded
+[ ] named QA Matrix rows loaded
 [ ] exact referenced Frozen Decisions/contracts loaded
-[ ] applicable Matrix/domain sources loaded
+[ ] applicable Domain sources loaded
 [ ] source/tests inspected only after requirements are known
 [ ] Stop Conditions known
 [ ] prototype fixture/mock code will not be copied as production authority
 [ ] Prototype Controls will not enter product UI
 [ ] historical `.agents` plans/stale tests are not being copied over newer formal planning
 [ ] no adjacent cleanup is being smuggled into scope
+[ ] no `BLOCKED` QA behavior is being guessed into PASS
 ```
 
 Unexpected material dependency is not permission to broaden scope.
 
-If broad UI work is requested without accepted prototype + P4 readiness, route back to `P — Reference Prototype` rather than improvising runtime UI.
-
 ---
 
-# 13. QA preflight
+# 15. QA preflight — Route G
 
 For prototype QA:
 
@@ -299,20 +369,26 @@ For runtime QA:
 
 ```text
 [ ] integrated baseline known
-[ ] accepted prototype reference known where applicable
-[ ] applicable Frozen Decision/contract IDs known
-[ ] M6 coverage known
+[ ] accepted prototype reference known
+[ ] accepted contract reading order completed
+[ ] exact runtime Work Order loaded
+[ ] named Behavior Scenarios loaded
+[ ] named QA Matrix rows loaded
+[ ] applicable Frozen Decision IDs known
 [ ] authority/domain constraints known
 [ ] exact runtime implementation revision/diff known
-[ ] stale historical tests are distinguished from current product requirements
+[ ] stale historical tests distinguished from current requirements
 [ ] automated/visual/owner walkthrough evidence known as applicable
+[ ] each touched QA row classified PASS / FAIL / BLOCKED / N/A with evidence
 ```
 
 QA does not redesign silently.
 
+`BLOCKED` must not be converted to `PASS` by inventing a missing Domain/Architecture contract.
+
 ---
 
-# 14. Anti-patterns
+# 16. Anti-patterns
 
 Fail Preflight if AI is about to:
 
@@ -323,25 +399,35 @@ Fail Preflight if AI is about to:
 - let current code replace a Reviewed product decision;
 - let `.agents` historical planning or an old test override current formal planning;
 - treat Reviewed as runtime-ready/Frozen;
-- **skip from Reviewed planning directly to broad runtime UI implementation**;
+- skip from Reviewed planning directly to broad runtime UI implementation;
 - skip the integrated cross-source baseline for broad UI work;
-- treat a prototype review candidate as accepted without owner review;
-- continue reviewing/patching an invalidated prototype as if it were current;
-- interpret Scene/Table/Stage as permission to add a battle map;
+- skip the accepted runtime contract set after Prototype Acceptance;
+- read only Surface Contract without Playbook/Glossary/Behavior/QA context;
+- treat a prototype review candidate as accepted without owner acceptance;
+- continue reviewing/patching an invalidated prototype as if current;
+- interpret Scene/Table/Stage as permission to add battlemap;
 - invent Actor coordinates/tokens/grid/path/LoS/fog in Core;
 - turn Handout into a tactical map;
-- omit the first-run Tutorial + initial Sheet layout choice;
-- create a detached Standalone dice/result surface;
+- omit first-run Tutorial + initial Sheet choice;
+- create detached Standalone dice/result surface;
+- treat Official/SimpleVTT as separate Character models;
+- restore Lobby/Ready/Start gate;
+- show fake turn economy in Freeform;
+- use map position for target eligibility;
+- smart-fallback from unavailable Main Hand;
+- implement DM-only privacy as CSS hiding/placeholder;
+- calculate selective-lock safety in UI;
 - copy prototype fixture/mock logic into production authority code;
 - use a derived doc as product authority;
-- infer a shorthand reference;
+- infer shorthand reference;
 - use UI precedence to override Domain/Architecture;
-- invent behavior because a Matrix cell is TBD;
-- broaden implementation scope because nearby code looks wrong.
+- invent behavior because Matrix cell is TBD;
+- broaden implementation scope because nearby code looks wrong;
+- mark a blocked technical behavior as done without resolving its Gap.
 
 ---
 
-# 15. Completion token
+# 17. Completion token
 
 ```text
 PREFLIGHT: PASS
@@ -349,12 +435,15 @@ Route: <A-H | P>
 Owner-control classification: Owner Checkpoint / AI Design Default / Domain-Architecture / N/A
 Integrated baseline: CURRENT / STALE / N/A
 Mapless Core: PASS / BLOCKED / N/A
+Accepted prototype: N/A / ACCEPTED / NOT ACCEPTED
+Accepted contract understanding: N/A / PASS / FAIL
 Schema: PASS
 References: PASS
 Planning truth: PASS
 Global Planning Gate: PASS / BLOCKED / N/A
-Prototype status: N/A / SPEC READY / REBUILD REQUIRED / REVIEW CANDIDATE / ACCEPTED / NEEDS CHANGE
 Blocking gaps: none / <full IDs>
+Touched behavior scenarios: N/A / <IDs>
+Touched QA rows: N/A / <IDs>
 Runtime implementation readiness: N/A / NOT READY / READY
 ```
 
@@ -362,6 +451,6 @@ The token is evidence of a check, not a substitute for source documents.
 
 ---
 
-# 16. Owner simplicity
+# 18. Owner simplicity
 
-> **The owner controls meaningful product intent and reviews the whole UI visually before runtime code. AI carries the exhaustive design/detail/reconciliation burden, including protecting mapless Core and prior Owner decisions from fragmented-document drift.**
+> **The owner controls meaningful product intent and accepts the whole UI visually. AI carries exhaustive interpretation, contract extraction, terminology protection, scenario coverage and QA traceability so a later implementation agent cannot casually reinterpret the product.**
