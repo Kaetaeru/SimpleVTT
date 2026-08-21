@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
 import { buildVisualDiceRoll, VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS, type VisualDieSides, type VisualDiceRollVm } from "./app/diceVisuals";
+import { LOCAL_DICE_PRESENT_EVENT } from "./app/localDicePresentation";
 import { PhysicsDice3D, type PhysicsDie } from "./PhysicsDice3D";
 
 const ANIMATED_STAGES = new Set(["roll-animation","save-animation","damage-animation"]);
@@ -57,18 +58,16 @@ export function VisualDiceBridge() {
 
   const roll = useMemo(() => resolution ? buildVisualDiceRoll(resolution,action) : null,[resolution,action]);
 
-  useEffect(() => {
-    if (!animated || !roll || !resolution) return;
-    const key = `${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}`;
+  const beginReplay = (nextRoll: VisualDiceRollVm, key: string) => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "reduced";
-    const physical=roll.dice.filter((die)=>die.sides!==null);
-    const upper=Math.max(2,physical.reduce((sum,die)=>sum+(die.sides??0),0)||Math.max(2,roll.notice.rawTotal));
+    const physical=nextRoll.dice.filter((die)=>die.sides!==null);
+    const upper=Math.max(2,physical.reduce((sum,die)=>sum+(die.sides??0),0)||Math.max(2,nextRoll.notice.rawTotal));
 
     if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
     if (settleTimerRef.current !== null) window.clearTimeout(settleTimerRef.current);
     if (reelTimerRef.current !== null) window.clearInterval(reelTimerRef.current);
 
-    setReplay({ key, roll });
+    setReplay({ key, roll:nextRoll });
     setResolved(false);
     setReelValue(null);
     reelTimerRef.current=window.setInterval(()=>setReelValue(1+Math.floor(Math.random()*upper)),42);
@@ -77,7 +76,7 @@ export function VisualDiceBridge() {
     settleTimerRef.current=window.setTimeout(()=>{
       if (reelTimerRef.current !== null) window.clearInterval(reelTimerRef.current);
       reelTimerRef.current=null;
-      setReelValue(roll.notice.rawTotal);
+      setReelValue(nextRoll.notice.rawTotal);
       setResolved(true);
       settleTimerRef.current=null;
     },settleAt);
@@ -87,7 +86,23 @@ export function VisualDiceBridge() {
       setResolved(false);
       hideTimerRef.current=null;
     },reduced?VISUAL_DICE_REDUCED_REPLAY_MS:VISUAL_DICE_REPLAY_MS);
+  };
+
+  useEffect(() => {
+    if (!animated || !roll || !resolution) return;
+    const key = `${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}`;
+    beginReplay(roll,key);
   },[animated,roll,resolution]);
+
+  useEffect(() => {
+    const onLocalRoll = (event: Event) => {
+      const localRoll = (event as CustomEvent<VisualDiceRollVm>).detail;
+      if (!localRoll?.dice?.length) return;
+      beginReplay(localRoll,localRoll.resolutionId);
+    };
+    window.addEventListener(LOCAL_DICE_PRESENT_EVENT,onLocalRoll);
+    return () => window.removeEventListener(LOCAL_DICE_PRESENT_EVENT,onLocalRoll);
+  },[]);
 
   useEffect(() => () => {
     if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
