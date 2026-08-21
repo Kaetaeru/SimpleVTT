@@ -1,8 +1,11 @@
+import { isDiceVisualPresetId, type DiceVisualPresetId } from "./diceVisualPresets";
+
 export type AppearanceMode = "dark" | "light";
 
 export interface AppearancePreference {
   mode: AppearanceMode;
   accent: string;
+  diceTheme: DiceVisualPresetId;
 }
 
 export interface AppearanceStorage {
@@ -23,6 +26,7 @@ export const APPEARANCE_SWATCHES = [
 export const DEFAULT_APPEARANCE: AppearancePreference = {
   mode: "dark",
   accent: APPEARANCE_SWATCHES[0].value,
+  diceTheme: "classic-metal",
 };
 
 function storageOrNull(): AppearanceStorage | null {
@@ -44,6 +48,7 @@ export function sanitizeAppearancePreference(value: unknown): AppearancePreferen
   return {
     mode: candidate.mode === "light" ? "light" : "dark",
     accent: isAppearanceAccent(candidate.accent) ? candidate.accent.toLowerCase() : DEFAULT_APPEARANCE.accent,
+    diceTheme: isDiceVisualPresetId(candidate.diceTheme) ? candidate.diceTheme : DEFAULT_APPEARANCE.diceTheme,
   };
 }
 
@@ -73,6 +78,7 @@ export function applyAppearancePreference(preference: AppearancePreference, root
   const target = root ?? (typeof document !== "undefined" ? document.documentElement : null);
   if (!target) return safe;
   target.dataset.theme = safe.mode;
+  target.dataset.diceTheme = safe.diceTheme;
   target.style.setProperty("--accent-base", safe.accent);
   return safe;
 }
