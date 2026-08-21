@@ -1,6 +1,6 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: spec_materializing
+status: spec_ready
 html_prototype_status: not_started
 prototype_owner_acceptance: not_started
 runtime_ui_implementation_allowed: false
@@ -24,7 +24,9 @@ source_priority:
     - docs/design/ui-ux/prototype/STATE-MODEL.md
     - docs/design/ui-ux/prototype/SCENARIO-CATALOG.md
     - docs/design/ui-ux/prototype/MOCK-DATA-CONTRACT.md
+    - docs/design/ui-ux/prototype/PROTOTYPE-PREFLIGHT.md
     - docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+    - docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
   technical_truth:
     - docs/design/README.md
     - docs/design/session-runtime.md
@@ -56,6 +58,9 @@ files:
   mock_data:
     path: docs/design/ui-ux/prototype/MOCK-DATA-CONTRACT.md
     role: synthetic_non_authoritative_data_contract
+  preflight:
+    path: docs/design/ui-ux/prototype/PROTOTYPE-PREFLIGHT.md
+    role: prototype_build_readiness_gate
   acceptance:
     path: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
     role: prototype_acceptance_gate
@@ -94,7 +99,7 @@ review_viewports:
 
 phase_gate:
   P0_specification:
-    status: materializing
+    status: passed
     requires:
       - surface_catalog
       - component_catalog
@@ -102,6 +107,7 @@ phase_gate:
       - state_model
       - scenario_catalog
       - mock_data_contract
+      - prototype_preflight
       - acceptance_checklist
       - prepared_prototype_work_order
   P1_html_build:
