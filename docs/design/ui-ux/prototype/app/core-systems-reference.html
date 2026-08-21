@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SimpleVTT Core Systems UX Reference Candidate</title>
+  <title>SimpleVTT 핵심 시스템 UX 후보</title>
   <link rel="stylesheet" href="integrated-reference.css" />
   <link rel="stylesheet" href="core-systems-reference.css" />
   <style>
@@ -19,76 +19,81 @@
 </head>
 <body>
   <div class="review-shell">
-    <aside class="review-controls" aria-label="Prototype Controls">
+    <aside class="review-controls" aria-label="프로토타입 검토 도구">
       <div class="review-brand">
-        <span class="review-kicker">CANDIDATE EXTENSION · NOT ACCEPTED PRODUCT UI</span>
-        <h1>Core Systems UX</h1>
-        <p>Inventory · Spells · Features · Status · Rest · Party Stash · DM Quick의 위치와 라이브 사용 문법을 검토합니다.</p>
+        <span class="review-kicker">확장 후보 · 아직 승인된 제품 UI 아님</span>
+        <h1>핵심 시스템 UX</h1>
+        <p>인벤토리 · 주문 · 특성 · 상태 · 휴식 · 파티 보관함 · DM 빠른 검색의 위치와 사용 문법을 검토합니다.</p>
       </div>
 
       <label class="control-field">
-        <span>Scenario</span>
+        <span>시나리오</span>
         <select id="scenarioSelect">
-          <option value="SYS-SCN-00">SYS-SCN-00 · Product placement map</option>
-          <option value="SYS-SCN-01">SYS-SCN-01 · Character Inventory management</option>
-          <option value="SYS-SCN-02">SYS-SCN-02 · Spellbook + Features management</option>
-          <option value="SYS-SCN-03">SYS-SCN-03 · Player live Quick Use</option>
-          <option value="SYS-SCN-04">SYS-SCN-04 · DM unified Quick Search</option>
-          <option value="SYS-SCN-05">SYS-SCN-05 · Party Stash / loot transfer</option>
-          <option value="SYS-SCN-06">SYS-SCN-06 · Rest preview / commit</option>
-          <option value="SYS-SCN-07">SYS-SCN-07 · Condition / concentration response</option>
+          <option value="SYS-SCN-00">SYS-SCN-00 · 전체 시스템 위치</option>
+          <option value="SYS-SCN-01">SYS-SCN-01 · 캐릭터 인벤토리 관리</option>
+          <option value="SYS-SCN-02">SYS-SCN-02 · 주문과 특성 관리</option>
+          <option value="SYS-SCN-03">SYS-SCN-03 · 플레이어 실시간 사용</option>
+          <option value="SYS-SCN-04">SYS-SCN-04 · DM 빠른 검색</option>
+          <option value="SYS-SCN-05">SYS-SCN-05 · 파티 보관함과 분배</option>
+          <option value="SYS-SCN-06">SYS-SCN-06 · 휴식 미리보기와 적용</option>
+          <option value="SYS-SCN-07">SYS-SCN-07 · 상태와 집중 대응</option>
         </select>
       </label>
 
       <div class="systems-scenario-help">
         <strong>시나리오 선택</strong><br />
-        위 드롭다운 또는 화면 상단의 바로가기 버튼으로 전환할 수 있습니다.
+        위 드롭다운 또는 화면 상단 바로가기 버튼으로 전환할 수 있습니다.
       </div>
 
       <label class="control-field">
-        <span>Viewport</span>
+        <span>화면 크기</span>
         <select id="viewportSelect">
-          <option value="wide">Wide 1600×1000</option>
-          <option value="normal" selected>Normal 1366×768</option>
-          <option value="narrow">Narrow 960×700</option>
+          <option value="wide">넓게 1600×1000</option>
+          <option value="normal" selected>기본 1366×768</option>
+          <option value="narrow">좁게 960×700</option>
         </select>
       </label>
 
       <div class="control-actions systems-jumps">
-        <button data-review-jump="SYS-SCN-00">Position Map</button>
-        <button data-review-jump="SYS-SCN-01">Inventory</button>
-        <button data-review-jump="SYS-SCN-02">Spells + Features</button>
-        <button data-review-jump="SYS-SCN-03">Live Player</button>
-        <button data-review-jump="SYS-SCN-04">DM Quick</button>
-        <button data-review-jump="SYS-SCN-05">Party Stash</button>
-        <button data-review-jump="SYS-SCN-06">Rest</button>
-        <button data-review-jump="SYS-SCN-07">Status</button>
+        <button data-review-jump="SYS-SCN-00">전체 위치</button>
+        <button data-review-jump="SYS-SCN-01">인벤토리</button>
+        <button data-review-jump="SYS-SCN-02">주문 + 특성</button>
+        <button data-review-jump="SYS-SCN-03">플레이어</button>
+        <button data-review-jump="SYS-SCN-04">DM 빠른 검색</button>
+        <button data-review-jump="SYS-SCN-05">파티 보관함</button>
+        <button data-review-jump="SYS-SCN-06">휴식</button>
+        <button data-review-jump="SYS-SCN-07">상태</button>
       </div>
 
       <div class="review-rule">
-        <strong>Interaction Grammar</strong>
-        <span>MANAGE = Sheet/Library · USE = Command Center · STATUS = Actor/Resource · QUICK = command palette.</span>
+        <strong>공통 UX 문법</strong>
+        <span>관리 = 시트/라이브러리 · 사용 = 커맨드 센터 · 상태 = 액터/자원 · 빠른 검색 = 명령 팔레트.</span>
       </div>
 
       <div class="review-rule">
-        <strong>Accepted Play Guard</strong>
-        <span>기존 Actor Boards / Mapless Stage / Command Center 구성은 그대로 유지합니다. 이 후보는 그 위에 시스템 위치만 제안합니다.</span>
+        <strong>확장성 기준</strong>
+        <span>시나리오·시트 섹션·단축바 페이지·빠른 검색 결과·파티 보관 정책은 등록형 데이터로 추가할 수 있게 구성합니다.</span>
+      </div>
+
+      <div class="review-rule">
+        <strong>기존 승인 Play 보호</strong>
+        <span>기존 액터 보드 / 맵리스 스테이지 / 커맨드 센터 구성은 유지하고, 이 후보는 그 위에 시스템 위치와 상호작용만 제안합니다.</span>
       </div>
     </aside>
 
     <main class="review-stage">
       <header class="review-stage__header">
-        <div><span class="review-status-dot"></span><strong id="scenarioTitle">Core Systems Candidate</strong></div>
-        <div class="systems-scenario-strip" aria-label="Scenario shortcuts">
-          <span>SCENARIOS</span>
-          <button data-review-jump="SYS-SCN-00">Map</button>
-          <button data-review-jump="SYS-SCN-01">Inventory</button>
-          <button data-review-jump="SYS-SCN-02">Spells</button>
-          <button data-review-jump="SYS-SCN-03">Live</button>
-          <button data-review-jump="SYS-SCN-04">DM Quick</button>
-          <button data-review-jump="SYS-SCN-05">Party</button>
-          <button data-review-jump="SYS-SCN-06">Rest</button>
-          <button data-review-jump="SYS-SCN-07">Status</button>
+        <div><span class="review-status-dot"></span><strong id="scenarioTitle">핵심 시스템 후보</strong></div>
+        <div class="systems-scenario-strip" aria-label="시나리오 바로가기">
+          <span>시나리오</span>
+          <button data-review-jump="SYS-SCN-00">전체</button>
+          <button data-review-jump="SYS-SCN-01">인벤토리</button>
+          <button data-review-jump="SYS-SCN-02">주문</button>
+          <button data-review-jump="SYS-SCN-03">플레이</button>
+          <button data-review-jump="SYS-SCN-04">DM 빠른 검색</button>
+          <button data-review-jump="SYS-SCN-05">파티</button>
+          <button data-review-jump="SYS-SCN-06">휴식</button>
+          <button data-review-jump="SYS-SCN-07">상태</button>
         </div>
         <div id="scenarioMeta" class="review-stage__meta"></div>
       </header>
@@ -100,6 +105,6 @@
     </main>
   </div>
 
-  <script src="core-systems-reference.js?v=ca0c6302"></script>
+  <script src="core-systems-reference-ko.js?v=2f5c2e3b"></script>
 </body>
 </html>
