@@ -1,12 +1,28 @@
 # SimpleVTT UI Reference Prototype
 
-Status: **CURRENT CANDIDATE INVALIDATED — SPEC RECONCILIATION / REBUILD REQUIRED**
+Status: **INTEGRATED REFERENCE STATIC REVIEW CANDIDATE — browser / Owner review pending**
 
-The previously named Final-Spec prototype is **not** an active review candidate.
+The prior prototype candidates are historical only:
 
-Repository-wide Product/UX reconciliation found that it interpreted `Scene/Table` as a battlemap-like field and introduced synthetic Actor `sceneX/sceneY` coordinates. This conflicts with the canonical mapless Core boundary in `docs/design/README.md` and `docs/design/movement-modules.md`.
+```text
+app/index.html      -> REJECTED / HISTORICAL
+app/final-spec.html -> INVALIDATED BY REPOSITORY-WIDE AUDIT
+```
 
-It also demonstrated why broad prototype work must not read only the local prototype documents: direct Owner first-run Tutorial requirements and historical product decisions were spread across formal UI planning, owner-review provenance and non-canonical `.agents` working history.
+Current active review candidate:
+
+```text
+app/integrated-reference.html
+```
+
+Static verification:
+
+```text
+INTEGRATED-REFERENCE-VERIFICATION.md
+Candidate code reference: 4c12084bef603866b9b69f1bfd8f363146920184
+```
+
+Browser visual/interaction review and explicit Owner acceptance remain pending. Runtime `src/` implementation is not authorized.
 
 ---
 
@@ -27,24 +43,21 @@ The integrated plan is the cross-source interpretation baseline. It does not rep
 # Current prototype state
 
 ```text
-First candidate app/index.html: REJECTED / HISTORICAL
-Later candidate app/final-spec.html: INVALIDATED BY REPOSITORY-WIDE AUDIT
-Active review entry: NONE
-Prototype specification: NEEDS RECONCILIATION
-Prototype rebuild: REQUIRED
-Browser/Owner review: BLOCKED UNTIL NEW CANDIDATE EXISTS
-Prototype Acceptance: NOT STARTED
+Integrated product/UI audit: DONE
+Prototype specification reconciliation: DONE
+Active review entry: app/integrated-reference.html
+Static mapless verification: PASS
+Browser/visual interaction QA: PENDING
+Prototype Acceptance: PENDING
 Runtime preparation: BLOCKED
 Runtime src implementation: NOT AUTHORIZED
 ```
 
-Do not open either old candidate for product acceptance.
-
-They may be inspected only as historical evidence of what failed.
+Do not open either historical candidate for product acceptance.
 
 ---
 
-# Why `final-spec.html` is invalid
+# Why the old `final-spec.html` is invalid
 
 Material violations:
 
@@ -53,11 +66,11 @@ Material violations:
 3. `Scene/Table` wording was read without the higher-authority mapless Core contract.
 4. The prototype process reacted to local feedback instead of first rebuilding from the whole repository plan.
 
-The next candidate must be a new/rebased build, not incremental acceptance of this structure.
+The active candidate was rebuilt instead of patching this structure toward acceptance.
 
 ---
 
-# Non-negotiable rebuild rules
+# Current candidate invariants
 
 ## First launch
 
@@ -65,14 +78,14 @@ The first meaningful first-run panel is the dedicated Tutorial/Onboarding window
 
 It includes:
 
-- Standalone vs Connected product explanation;
+- Standalone vs Connected orientation;
 - initial Official-style vs SimpleVTT Character Sheet choice;
-- basic Character / Host / Join orientation;
+- Character / Host / Join orientation;
 - later reopen path from Settings/Help.
 
 ## Mapless Core
 
-Connected Play contains **no Core battlemap**.
+Connected Play contains no Core battlemap.
 
 Forbidden:
 
@@ -90,35 +103,42 @@ Forbidden:
 
 ## Connected Play skeleton
 
-Retain current Reviewed Product structure:
-
 ```text
 Compact Play chrome/status
 Upper NPC / Neutral / Hostile Actor Board
-Mapless Play Context / Tabletop Stage      [contextual utility pane]
+Play Context / Tabletop Stage              [contextual utility pane]
 Lower Player / Allied Actor Board
 Persistent Command Center
 ```
 
-Initiative adds a compact tracker/economy to the same structure.
+Initiative adds compact tracker/economy to the same structure.
 
-Freeform must not fake turn economy.
+Freeform does not fake turn economy.
 
 ## Standalone dice
 
 Any ordinary roll keeps the current Character Sheet visible and spatially stable.
 
-Dice use a transient cinematic presentation over/within the current Sheet viewport; no detached dice/result route/window/panel and no required Close/Back just to return to the Sheet.
+Dice use transient presentation over/within the current Sheet viewport; no detached dice/result route/window/panel and no required Close/Back merely to resume the Sheet.
 
 ## Targeting
 
-Target through Actor Cards/manual target lists supplied by authoritative/mock eligibility.
+Target through Actor Cards/manual target sets supplied by authoritative/mock eligibility.
 
 No map-position targeting or Core AoE template.
 
-## Handout
+## DM control / role continuity
+
+- selected-action targeting keeps priority;
+- explicit DM control mode outranks ordinary hostile-click behavior when no action is targeting;
+- Command Center controlled-Actor identity follows the DM-controlled Actor;
+- safe Product-shell navigation restores the prior Host/DM or Client/Player connected identity on Return to Play.
+
+## Handout / spatial
 
 Handout is shared presentation, not map state.
+
+Advanced spatial UI is a contextual Actor-pair fact editor; it is not a map editor and is not promoted as a routine primary Play control.
 
 ---
 
@@ -143,19 +163,30 @@ It MUST NOT:
 
 ---
 
-# Next sequence
+# Verification and review sequence
 
 ```text
 Integrated Product / UI / UX Plan          DONE
--> prototype catalog/default/layer/scenario reconciliation
--> new mapless Reference Prototype build
--> static + browser/visual QA
--> Owner iteration
--> explicit Prototype Acceptance
+Prototype catalog/default/layer reconcile  DONE
+Integrated Reference build                 DONE
+Static mapless verification                PASS
+-> Browser / visual interaction review     PENDING
+-> Owner natural-language iteration
+-> Explicit Prototype Acceptance
 -> contract extraction / technical-gap resolution / legacy reconciliation
 -> scoped Freeze/readiness
 -> separate runtime Work Order + authorization
 -> src implementation
 ```
 
-Until a new candidate exists, `PROTOTYPE-ACCEPTANCE.md` is blocked rather than reviewable.
+Acceptance gate:
+
+```text
+PROTOTYPE-ACCEPTANCE.md
+```
+
+Current verification:
+
+```text
+INTEGRATED-REFERENCE-VERIFICATION.md
+```
