@@ -1,15 +1,14 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: mapless_rebuild_authorized
-html_prototype_status: new_candidate_build_authorized
-prototype_owner_acceptance: not_started
+status: static_review_candidate
+html_prototype_status: integrated_reference_static_verified
+prototype_owner_acceptance: pending_browser_owner_review
 runtime_ui_implementation_allowed: false
 
 paths:
   root: docs/design/ui-ux/prototype/
   app: docs/design/ui-ux/prototype/app/
-  target_new_review_entry: docs/design/ui-ux/prototype/app/integrated-reference.html
-  active_review_entry: null
+  active_review_entry: docs/design/ui-ux/prototype/app/integrated-reference.html
   invalidated_latest_entry: docs/design/ui-ux/prototype/app/final-spec.html
   historical_rejected_entry: docs/design/ui-ux/prototype/app/index.html
 
@@ -49,6 +48,7 @@ source_priority:
     - docs/design/ui-ux/prototype/SCENARIO-CATALOG.md
     - docs/design/ui-ux/prototype/MOCK-DATA-CONTRACT.md
     - docs/design/ui-ux/prototype/PROTOTYPE-PREFLIGHT.md
+    - docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
     - docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
     - docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
   historical_evidence_only:
@@ -94,6 +94,10 @@ files:
   preflight:
     path: docs/design/ui-ux/prototype/PROTOTYPE-PREFLIGHT.md
     role: prototype_build_readiness_gate
+  verification:
+    path: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
+    role: current_integrated_reference_static_verification
+    candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
   acceptance:
     path: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
     role: prototype_acceptance_gate
@@ -160,8 +164,10 @@ phase_gate:
       - mock_data_contract_reconciled
       - work_order_PROTO_WO_002_authorized
   P1_html_build:
-    status: authorized_not_yet_verified
-    target_candidate: docs/design/ui-ux/prototype/app/integrated-reference.html
+    status: static_verified_browser_pending
+    active_candidate: docs/design/ui-ux/prototype/app/integrated-reference.html
+    candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+    verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
     allowed_write_scope:
       - docs/design/ui-ux/prototype/app/
       - docs/design/ui-ux/prototype/
@@ -169,10 +175,10 @@ phase_gate:
     forbidden_write_scope:
       - src/
   P2_review_iteration:
-    status: blocked_until_new_candidate_static_verification
-    next_action: build_integrated_reference_candidate_then_verify_against_mapless_contract
+    status: owner_browser_review_ready
+    next_action: owner_review_integrated_reference_candidate
   P3_owner_acceptance:
-    status: not_started
+    status: pending
     requires_explicit_owner_acceptance: true
   P4_runtime_preparation:
     status: blocked
@@ -189,8 +195,9 @@ phase_gate:
 
 blocking_rule:
   invalidated_candidate_must_not_be_reviewed_or_accepted: true
-  new_candidate_must_be_derived_from_integrated_plan: true
-  new_candidate_must_pass_mapless_static_and_browser_review: true
+  active_candidate_must_be_derived_from_integrated_plan: true
+  active_candidate_static_verification_required_before_owner_review: true
+  browser_visual_review_required_before_acceptance: true
   broad_runtime_ui_must_not_start_before_P4: true
   prototype_acceptance_alone_authorizes_runtime: false
   reviewed_decisions_alone_authorize_runtime: false
