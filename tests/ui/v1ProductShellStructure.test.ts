@@ -11,6 +11,7 @@ import {
 
 const app = readFileSync("src/App.tsx", "utf8");
 const productRoot = readFileSync("src/ProductRoot.tsx", "utf8");
+const productRootCss = readFileSync("src/product-root.css", "utf8");
 const sessionRoot = readFileSync("src/SessionModeRoot.tsx", "utf8");
 const sessionMainFocus = readFileSync("src/SessionMainFocus.tsx", "utf8");
 const sessionCss = readFileSync("src/session-mode.css", "utf8");
@@ -26,6 +27,8 @@ const appearanceBridge = readFileSync("src/AppearanceSettingsBridge.tsx", "utf8"
 const appearanceCss = readFileSync("src/appearance-settings.css", "utf8");
 const playbook = readFileSync("docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md", "utf8");
 const workOrder = readFileSync("docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md", "utf8");
+const continuityWorkOrder = readFileSync("docs/design/ui-ux/work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md", "utf8");
+const continuityAuthorization = readFileSync("docs/design/ui-ux/work-orders/WO-UI-002-SCOPED-AUTHORIZATION.md", "utf8");
 
 function globalNavBlock() {
   const start = app.indexOf("const nav: Array<[AppRoute, string, string]> = [");
@@ -68,11 +71,36 @@ test("v1 global navigation is small, ordered, and top-oriented", () => {
   assert.doesNotMatch(css, /\.v1-nav\{display:flex;flex-direction:column/);
 });
 
-test("connected sessions still switch to the existing persistent Session root without duplicating mechanics authority", () => {
+test("live connected sessions separate authority truth from Product-vs-Play presentation", () => {
   assert.match(main, /<ProductRoot\s*\/>/);
+  assert.match(productRoot, /type ProductSurface = "product" \| "play"/);
   assert.match(productRoot, /snapshot\.session\.role !== "offline"/);
-  assert.match(productRoot, /return <SessionModeRoot\s*\/>/);
-  assert.match(productRoot, /return <App\s*\/>/);
+  assert.match(productRoot, /snapshot\.session\.lifecycle === "live"/);
+  assert.match(productRoot, /useState<ProductSurface>\("product"\)/);
+  assert.match(productRoot, /if \(!wasLiveConnected\.current\)[\s\S]*setSurface\("play"\)/);
+  assert.match(productRoot, /liveConnected && surface === "play"/);
+  assert.match(productRoot, /<SessionModeRoot\s*\/>/);
+  assert.match(productRoot, /<App\s*\/>/);
+  assert.match(productRoot, /SimpleVTT 메뉴/);
+  assert.match(productRoot, /setSurface\("product"\)/);
+  assert.match(productRoot, /setSurface\("play"\)/);
+  assert.doesNotMatch(productRoot, /stopSession|hostSession|joinSession|reconnect/);
+  assert.doesNotMatch(productRoot, /localStorage|sessionStorage/);
+
+  assert.match(productRoot, /isReturnToConnectedPlayTarget/);
+  assert.match(productRoot, /플레이로 돌아가기/);
+  assert.match(productRoot, /기기로 플레이/);
+  assert.match(productRoot, /event\.preventDefault\(\)/);
+  assert.match(productRoot, /event\.stopPropagation\(\)/);
+
+  assert.match(productRootCss, /\.connected-product-shell-entry/);
+  assert.match(productRootCss, /:focus-visible/);
+  assert.match(productRootCss, /@media \(max-width: 899px\)/);
+  assert.match(continuityWorkOrder, /Scenario 34/);
+  assert.match(continuityWorkOrder, /QA-NAV-06/);
+  assert.match(continuityWorkOrder, /QA-SES-09/);
+  assert.match(continuityAuthorization, /ACTIVE FOR WO-UI-002 ONLY/);
+  assert.match(continuityAuthorization, /explicitly approved in conversation on 2026-08-21/);
 
   assert.match(sessionRoot, /className="session-mode-root"/);
   assert.match(sessionRoot, /className="session-mode-bar"/);
