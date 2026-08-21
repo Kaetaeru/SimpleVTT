@@ -42,12 +42,13 @@ test("Initiative economy and End Turn stay in the persistent Command Center", ()
   assert.match(dock, /Movement/);
 });
 
-test("Stage focus remains presentation-only while Initiative does not replace it", () => {
+test("Stage focus remains presentation-only and matches the accepted Initiative context", () => {
   assert.match(focus, /snapshot\.sessionMode === "initiative"/);
-  assert.match(focus, /session-initiative-current-card/);
+  assert.match(focus, />INITIATIVE</);
+  assert.match(focus, />Actor and action context, not a battlemap</);
+  assert.match(focus, /Actor identity and targets remain in the boards above and below/);
   assert.match(focus, /session-freeform-focus/);
-  assert.doesNotMatch(focus, /actionsByActor|resolveAction|selectDmActor/);
-  assert.match(referenceCss, /\.session-reference-stage-focus \.session-initiative-current-card \{ display: none; \}/);
+  assert.doesNotMatch(focus, /currentActorId|current\.hp|economyByActor|actionsByActor|resolveAction|selectDmActor/);
 });
 
 test("Initiative keeps the exact accepted Play root proportions", () => {
