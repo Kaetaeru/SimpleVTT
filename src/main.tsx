@@ -50,6 +50,7 @@ import "./character-sheet-v10-viewport.css";
 import "./production-ux-redesign.css";
 import "./v1-product-shell.css";
 import "./v1-product-shell-tokens.css";
+import "./first-run-tutorial.css";
 import "./appearance-settings.css";
 import "./character-portrait.css";
 import "./session-image-handout.css";
