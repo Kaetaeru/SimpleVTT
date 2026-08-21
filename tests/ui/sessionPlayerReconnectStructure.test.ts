@@ -5,12 +5,15 @@ import test from "node:test";
 const root = readFileSync(new URL("../../src/SessionModeRoot.tsx", import.meta.url), "utf8");
 const playerSession = readFileSync(new URL("../../src/SessionPlayerSession.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../../src/session-player-session.css", import.meta.url), "utf8");
+const referenceCss = readFileSync(new URL("../../src/session-integrated-reference-play.css", import.meta.url), "utf8");
 
-test("Player connection utility lives inside the persistent Session shell", () => {
+test("Player connection utility launches from accepted Session chrome inside persistent Play", () => {
   assert.match(root, /SessionPlayerRecoveryStrip, SessionPlayerSessionPane/);
   assert.match(root, /"player-session"/);
-  assert.match(root, /Player 세션 연결 열기/);
+  assert.match(root, /toggleUtility\(role === "dm" \? "session" : "player-session"/);
+  assert.match(root, />Session<\/button>/);
   assert.match(root, /<SessionPlayerSessionPane onClose=\{closeUtility\}/);
+  assert.match(root, /session-reference-utility-host/);
   assert.doesNotMatch(playerSession, /setRoute|AppRoute|플레이로 돌아가기/);
 });
 
@@ -35,8 +38,9 @@ test("Player session pane exposes only player-relevant identity connection and l
   assert.doesNotMatch(playerSession, /instantiateCombatant|removeCombatant|selectDmActor|startInitiative|participants\.map/);
 });
 
-test("Player reconnect utility is a responsive overlay rather than a replacement page", () => {
-  assert.match(css, /\.session-player-session-pane\s*\{[\s\S]*position:\s*absolute;[\s\S]*right:\s*0;[\s\S]*width:\s*min\(410px/);
+test("Player reconnect pane internals remain responsive while accepted Play owns contextual right-pane geometry", () => {
+  assert.match(referenceCss, /\.session-reference-utility-host\s*\{[\s\S]*width:\s*338px/);
+  assert.match(referenceCss, /\.session-reference-utility-host > \*[\s\S]*width:\s*100% !important/);
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*\.session-player-session-pane \{ width: 100%; \}/);
   assert.match(css, /\.session-player-recovery\s*\{[\s\S]*position:\s*absolute;/);
 });
