@@ -1,16 +1,24 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: static_review_candidate
-html_prototype_status: integrated_reference_static_verified
-prototype_owner_acceptance: pending_browser_owner_review
+status: owner_accepted
+html_prototype_status: integrated_reference_accepted
+prototype_owner_acceptance: accepted_2026_08_21
 runtime_ui_implementation_allowed: false
 
 paths:
   root: docs/design/ui-ux/prototype/
   app: docs/design/ui-ux/prototype/app/
-  active_review_entry: docs/design/ui-ux/prototype/app/integrated-reference.html
+  accepted_review_entry: docs/design/ui-ux/prototype/app/integrated-reference.html
   invalidated_latest_entry: docs/design/ui-ux/prototype/app/final-spec.html
   historical_rejected_entry: docs/design/ui-ux/prototype/app/index.html
+  runtime_contracts: docs/design/ui-ux/contracts/
+
+accepted_reference:
+  entry: docs/design/ui-ux/prototype/app/integrated-reference.html
+  candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
+  accepted_date: 2026-08-21
+  acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
+  verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
 
 required_cross_source_baseline:
   path: docs/design/ui-ux/INTEGRATED-PRODUCT-UX-PLAN.md
@@ -38,6 +46,12 @@ source_priority:
     - docs/design/ui-ux/master-flow.md
     - docs/design/ui-ux/registry.md
     - docs/design/ui-ux/matrices.md
+  accepted_runtime_preparation_contracts:
+    - docs/design/ui-ux/contracts/README.md
+    - docs/design/ui-ux/contracts/SURFACE-CONTRACT.md
+    - docs/design/ui-ux/contracts/COMPONENT-CONTRACT.md
+    - docs/design/ui-ux/contracts/INTERACTION-STATE-MOTION-CONTRACT.md
+    - docs/design/ui-ux/contracts/IMPLEMENTATION-TRACEABILITY.md
   prototype_detail:
     - docs/design/ui-ux/prototype/PROTOTYPE-REBUILD-CONTRACT.md
     - docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
@@ -68,7 +82,7 @@ files:
     role: mandatory_cross_source_baseline
   rebuild_contract:
     path: docs/design/ui-ux/prototype/PROTOTYPE-REBUILD-CONTRACT.md
-    role: active_mapless_prototype_execution_contract
+    role: accepted_prototype_execution_history_and_build_contract
   design_defaults:
     path: docs/design/ui-ux/prototype/DESIGN-DEFAULTS.md
     role: ai_managed_design_defaults
@@ -96,15 +110,18 @@ files:
     role: prototype_build_readiness_gate
   verification:
     path: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
-    role: current_integrated_reference_static_verification
+    role: accepted_integrated_reference_static_verification
     candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
   acceptance:
     path: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
-    role: prototype_acceptance_gate
+    role: accepted_prototype_record
   work_order:
     path: docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
     role: prototype_scope_and_execution_record
     active_id: PROTO-WO-002
+  runtime_contracts:
+    path: docs/design/ui-ux/contracts/README.md
+    role: accepted_prototype_to_runtime_contract_handoff
 
 invalidated_candidates:
   - entry: docs/design/ui-ux/prototype/app/index.html
@@ -154,40 +171,28 @@ review_viewports:
 phase_gate:
   P0_specification:
     status: passed_for_mapless_rebuild
-    evidence:
-      - integrated_product_ux_plan_created
-      - prototype_rebuild_contract_created
-      - design_defaults_reconciled
-      - surface_catalog_reconciled
-      - layer_model_reconciled
-      - scenario_catalog_reconciled
-      - mock_data_contract_reconciled
-      - work_order_PROTO_WO_002_authorized
   P1_html_build:
-    status: static_verified_browser_pending
-    active_candidate: docs/design/ui-ux/prototype/app/integrated-reference.html
+    status: passed_static_and_owner_review
+    accepted_candidate: docs/design/ui-ux/prototype/app/integrated-reference.html
     candidate_code_reference: 4c12084bef603866b9b69f1bfd8f363146920184
     verification: docs/design/ui-ux/prototype/INTEGRATED-REFERENCE-VERIFICATION.md
-    allowed_write_scope:
-      - docs/design/ui-ux/prototype/app/
-      - docs/design/ui-ux/prototype/
-      - bounded_docs_design_ui_ux_routing_maintenance
-    forbidden_write_scope:
-      - src/
   P2_review_iteration:
-    status: owner_browser_review_ready
-    next_action: owner_review_integrated_reference_candidate
+    status: completed
   P3_owner_acceptance:
-    status: pending
-    requires_explicit_owner_acceptance: true
+    status: passed
+    accepted_date: 2026-08-21
+    acceptance_record: docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
   P4_runtime_preparation:
-    status: blocked
-    requires:
-      - valid_rebuilt_prototype
+    status: in_progress_not_ready
+    completed:
       - prototype_owner_acceptance
-      - applicable_domain_architecture_gaps_resolved_for_scope
-      - legacy_ux_reconciliation_for_scope
-      - required_surface_component_motion_contracts
+      - surface_contract_materialized
+      - component_contract_materialized
+      - interaction_state_layer_motion_contract_materialized
+      - implementation_traceability_materialized
+    blocked_or_pending:
+      - applicable_domain_architecture_gaps_for_selected_runtime_scope
+      - legacy_ux_reconciliation_for_selected_runtime_scope
       - applicable_frozen_product_dependencies
       - scoped_runtime_work_order
   P5_runtime_ui_implementation:
@@ -195,9 +200,8 @@ phase_gate:
 
 blocking_rule:
   invalidated_candidate_must_not_be_reviewed_or_accepted: true
-  active_candidate_must_be_derived_from_integrated_plan: true
-  active_candidate_static_verification_required_before_owner_review: true
-  browser_visual_review_required_before_acceptance: true
-  broad_runtime_ui_must_not_start_before_P4: true
-  prototype_acceptance_alone_authorizes_runtime: false
-  reviewed_decisions_alone_authorize_runtime: false
+  accepted_candidate_must_remain_derived_from_integrated_plan: true
+  accepted_prototype_does_not_freeze_product_decisions: true
+  accepted_prototype_does_not_authorize_runtime_implementation: true
+  runtime_work_requires_scoped_gap_resolution_and_freeze_readiness: true
+  broad_runtime_ui_must_not_start_before_P4_ready: true
