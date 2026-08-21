@@ -4,7 +4,8 @@
   const root = document.getElementById('appRoot');
   const viewSelect = document.getElementById('viewSelect');
   const scenarioSelect = document.getElementById('scenarioSelect');
-  if (!root || !viewSelect || !scenarioSelect) return;
+  const F = window.SVTT_INTEGRATED_FIXTURES;
+  if (!root || !viewSelect || !scenarioSelect || !F) return;
 
   let lastSessionRole = 'player';
   let patchScheduled = false;
@@ -70,8 +71,7 @@
       }
     });
 
-    // Advanced spatial facts are available contextually (and as a named QA
-    // scenario), but they are not promoted to routine top-level Play chrome.
+    // Advanced spatial facts remain contextual, not routine top-level Play chrome.
     const spatialLauncher = root.querySelector('.play-chrome [data-utility="spatial"]');
     if (spatialLauncher) spatialLauncher.hidden = true;
   }
@@ -130,11 +130,42 @@
     replaceResourceRailForMockActor(root.querySelector('.resource-rail'), actorId, hp, conditions);
   }
 
+  function applyResolutionSafetyFixture() {
+    if (scenarioSelect.value !== 'PROTO-SCN-16') return;
+    const safety = F.resolutionSafety;
+    if (!safety) return;
+
+    root.querySelectorAll('[data-capability]').forEach(button => {
+      const id = button.dataset.capability;
+      if (safety.conflictingControlIds.includes(id)) {
+        button.disabled = true;
+        button.classList.add('unavailable');
+        button.dataset.qaConflictLocked = 'true';
+        button.title = 'Fixture: locked because this control conflicts with the active resolution.';
+      } else if (safety.safeControlIds.includes(id)) {
+        button.dataset.qaSafeDuringResolution = 'true';
+        button.title = 'Fixture: remains available during this resolution.';
+      }
+    });
+
+    const focus = root.querySelector('.stage-focus');
+    if (focus && !focus.querySelector('[data-qa-resolution-safety]')) {
+      const note = document.createElement('div');
+      note.dataset.qaResolutionSafety = 'true';
+      note.className = 'stage-chip';
+      note.style.margin = '10px auto 0';
+      note.style.width = 'fit-content';
+      note.textContent = 'Fixture: only declared conflicting controls are locked';
+      focus.appendChild(note);
+    }
+  }
+
   function patchRenderedUi() {
     patchScheduled = false;
     rememberSessionRole();
     cleanProductCopy();
     syncControlledActorPanel();
+    applyResolutionSafetyFixture();
   }
 
   function schedulePatch() {
@@ -143,8 +174,7 @@
     queueMicrotask(patchRenderedUi);
   }
 
-  // Preserve the connected Host/DM or Client/Player role while the user visits
-  // Product Shell pages during a live session. Return to Play restores it.
+  // Preserve connected Host/DM or Client/Player role across safe Product pages.
   root.addEventListener('click', event => {
     const nav = event.target.closest('[data-nav]');
     if (!nav) return;
