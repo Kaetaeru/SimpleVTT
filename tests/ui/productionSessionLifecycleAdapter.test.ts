@@ -7,6 +7,7 @@ import "../../src/app/productionSessionLifecycleAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { connectedInternal, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
+import { HostSessionLedger } from "../../src/app/connectedSessionProtocol";
 import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { mountCharacterSessionProjection, projectedCharacterIds } from "../../src/app/characterSessionProjectionRegistry";
 import { tauriSessionTransport, type SessionTransportMessage } from "../../src/app/tauriSessionTransport";
@@ -47,9 +48,6 @@ function installFakeDesktopTransport() {
     emit(message:ConnectedWireMessage) {
       messageHandler?.({peer:"host",message:encodeConnectedWireMessage(message)});
     },
-    emitFrom(peer:string,message:ConnectedWireMessage) {
-      messageHandler?.({peer,message:encodeConnectedWireMessage(message)});
-    },
     restore() {
       tauriSessionTransport.available=original.available;
       tauriSessionTransport.startHost=original.startHost;
@@ -79,21 +77,25 @@ async function savedProductionPlayerAdapter() {
   return adapter;
 }
 
-test("Host start enters preparation, stop clears transient authority, and restart creates fresh authority", async()=>{
+test("Host Open becomes live Freeform with zero Players, stop clears authority, and restart creates fresh live authority", async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=new MockAdapter();
     const first=await adapter.hostSession();
     assert.equal(first.session.role,"host");
-    assert.equal(first.session.lifecycle,"preparing");
+    assert.equal(first.session.lifecycle,"live");
+    assert.equal(first.sessionMode,"freeform");
     assert.equal(first.connectionState,"connected");
-    assert.match(first.session.compatibilityMessage,/preparation lobby open/);
+    assert.match(first.session.compatibilityMessage,/live Freeform play opened/);
     assert.deepEqual(first.session.participants.map((participant)=>participant.id),["host"]);
 
     const firstState=connectedStateFor(adapter);
     const firstLedger=firstState.ledger;
+    assert.equal(firstState.sessionStarted,true);
     assert.ok(firstState.sessionId);
     assert.ok(firstLedger);
+    assert.ok(firstLedger.eventsAfter(0).some((event)=>event.payload.kind==="mode-transition"&&event.payload.sessionMode==="freeform"));
+    assert.ok(transport.sent().map((raw)=>JSON.parse(raw) as ConnectedWireMessage).some((message)=>message.type==="event-batch"));
     firstState.peerManifests.set("peer.remote",connectedManifest(adapter));
     firstState.publishedResolutionIds.add("resolution.transient");
 
@@ -133,7 +135,8 @@ test("Host start enters preparation, stop clears transient authority, and restar
     const restarted=await adapter.hostSession();
     const restartedState=connectedStateFor(adapter);
     assert.equal(restarted.session.role,"host");
-    assert.equal(restarted.session.lifecycle,"preparing");
+    assert.equal(restarted.session.lifecycle,"live");
+    assert.equal(restarted.sessionMode,"freeform");
     assert.ok(restartedState.ledger);
     assert.notEqual(restartedState.ledger,firstLedger);
     assert.deepEqual(restarted.session.participants.map((participant)=>participant.id),["host"]);
@@ -177,7 +180,7 @@ test("reference Character cannot enter a production connected session",async()=>
   }
 });
 
-test("saved non-fixture Character joins through explicit connecting state and reaches compatible lobby after hello-ack",async()=>{
+test("saved Character joins a live Host and opens the authoritative current mode without Ready",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const adapter=await savedProductionPlayerAdapter();
@@ -185,92 +188,64 @@ test("saved non-fixture Character joins through explicit connecting state and re
     assert.equal(joining.activeCharacter.id,"char.phase14.persisted-player");
     assert.equal(joining.session.role,"client");
     assert.equal(joining.session.lifecycle,"connecting");
-    assert.equal(joining.session.compatibility,"warning");
     assert.equal(transport.connectCount(),1);
 
+    const ledger=new HostSessionLedger("session.phase14.live",connectedManifest(adapter));
+    const modeEvent=ledger.commitHostEvent({
+      payload:{
+        kind:"mode-transition",
+        sessionMode:"initiative",
+        round:3,
+        currentActorId:"char.phase14.persisted-player",
+        economyByActor:{},
+        stateChanges:["late join current mode"],
+        provenance:["Scenario 08 test"],
+      },
+    });
     transport.emit({
       type:"hello-ack",
-      sessionId:"session.phase14.player-lobby",
-      compatibility:{status:"compatible",message:"Compatible production lobby."},
-      hostCursor:0,
-      events:[],
+      sessionId:ledger.sessionId,
+      sessionName:"Live Adventure",
+      compatibility:{status:"compatible",message:"Compatible live session."},
+      hostCursor:ledger.cursor,
+      events:[modeEvent],
     });
     await new Promise<void>((resolve)=>setImmediate(resolve));
-    const lobby=await adapter.getSnapshot();
-    assert.equal(lobby.session.lifecycle,"lobby");
-    assert.equal(lobby.session.compatibility,"compatible");
-    assert.equal(lobby.connectionState,"connected");
-    assert.ok(lobby.session.participants.some((participant)=>participant.id==="client:char.phase14.persisted-player"));
-
-    await adapter.setSessionReady(true);
-    const readyWire=transport.sent().map((raw)=>JSON.parse(raw) as ConnectedWireMessage).find((message)=>message.type==="ready-intent");
-    assert.deepEqual(readyWire,{type:"ready-intent",sessionId:"session.phase14.player-lobby",ready:true});
-  } finally {
-    transport.restore();
-  }
-});
-
-test("Host authoritatively confirms Ready and rejects Start until all accepted players are Ready",async()=>{
-  const transport=installFakeDesktopTransport();
-  try {
-    const adapter=new MockAdapter();
-    await adapter.hostSession();
-    const state=connectedStateFor(adapter);
-    const app=connectedInternal(adapter);
-    assert.ok(state.sessionId);
-    state.peerManifests.set("peer.player",connectedManifest(adapter));
-    state.peerParticipants.set("peer.player","client:char.phase14.player");
-    app.session.participants=[
-      {id:"host",name:"DM Host",state:"connected",ready:false},
-      {id:"client:char.phase14.player",name:"Phase14 Player",characterName:"Phase14 Player",state:"connected",ready:false},
-    ];
-
-    const blocked=await adapter.startPreparedSession("initiative");
-    assert.equal(blocked.session.lifecycle,"preparing");
-    assert.equal(state.sessionStarted,false);
-    assert.match(blocked.session.compatibilityMessage,/not Ready/);
-
-    transport.emitFrom("peer.player",{type:"ready-intent",sessionId:state.sessionId!,ready:true});
-    await new Promise<void>((resolve)=>setImmediate(resolve));
-    const ready=await adapter.getSnapshot();
-    assert.equal(ready.session.participants.find((participant)=>participant.id==="client:char.phase14.player")?.ready,true);
-    assert.ok(transport.sent().map((raw)=>JSON.parse(raw) as ConnectedWireMessage).some((message)=>message.type==="event-batch"));
-
-    const live=await adapter.startPreparedSession("initiative");
+    const live=await adapter.getSnapshot();
     assert.equal(live.session.lifecycle,"live");
     assert.equal(live.sessionMode,"initiative");
-    assert.equal(state.sessionStarted,true);
-    assert.ok(state.ledger?.eventsAfter(0).some((event)=>event.payload.kind==="participant"&&event.payload.ready));
-    assert.ok(state.ledger?.eventsAfter(0).some((event)=>event.payload.kind==="mode-transition"&&event.payload.sessionMode==="initiative"));
+    assert.equal(live.scene.round,3);
+    assert.equal(live.session.name,"Live Adventure");
+    assert.equal(live.connectionState,"connected");
+    assert.ok(live.session.participants.some((participant)=>participant.id==="client:char.phase14.persisted-player"));
+    assert.equal(transport.sent().map((raw)=>JSON.parse(raw) as ConnectedWireMessage).some((message)=>message.type==="ready-intent"),false);
   } finally {
     transport.restore();
   }
 });
 
-test("production UI surfaces preparation status, participant Ready roster, mode Start gate, and Host stop without debug controls",()=>{
+test("production Host UI exposes live share state and zero-Player validity without Ready or a second Start gate",()=>{
   const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
-  assert.match(source,/Host 준비 중/);
+  assert.match(source,/Host 플레이 중/);
   assert.match(source,/공유 주소/);
   assert.match(source,/snapshot\.session\.address/);
-  assert.match(source,/participant\.ready/);
-  assert.match(source,/startPreparedSession\(mode\)/);
-  assert.match(source,/플레이 시작/);
-  assert.match(source,/Host 중지/);
+  assert.match(source,/Host 혼자서도 플레이할 수 있습니다/);
+  assert.match(source,/세션 종료/);
   assert.match(source,/stopSession\(\)/);
+  assert.doesNotMatch(source,/participant\.ready|startPreparedSession|플레이 시작|Ready여야/);
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
 
-test("production Session screen replaces reference Join card with saved Character selection, lobby lifecycle, and visible Ready",()=>{
+test("production Player entry joins and syncs directly without exposing a Ready lobby action",()=>{
   const source=readFileSync(new URL("../../src/ProductionPlayerLobbyBridge.tsx",import.meta.url),"utf8");
   const css=readFileSync(new URL("../../src/production-player-lobby.css",import.meta.url),"utf8");
   assert.match(source,/productionJoinCharacters/);
   assert.match(source,/selectProductionCharacter/);
   assert.match(source,/Host 주소/);
   assert.match(source,/connecting/);
-  assert.match(source,/lobby/);
+  assert.match(source,/현재 플레이 상태 동기화 중/);
   assert.match(source,/joinSession\(address\)/);
-  assert.match(source,/setSessionReady\(!ready\)/);
-  assert.match(source,/Ready 취소/);
+  assert.doesNotMatch(source,/setSessionReady|Ready 취소|>Ready</);
   assert.match(css,/article:nth-child\(2\)/);
   assert.match(css,/screen-head p/);
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
