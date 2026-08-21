@@ -106,7 +106,10 @@ test("live connected sessions preserve Product-vs-Play continuity while using th
   assert.match(sessionRoot, /aria-label="Command Center"/);
   assert.match(sessionRoot, />← Product</);
   assert.match(sessionRoot, /<SessionMainFocus/);
-  assert.match(sessionMainFocus, /snapshot\.session\.participants/);
+  assert.match(sessionMainFocus, />Mapless shared play context</);
+  assert.match(sessionMainFocus, /Actor context <strong>Boards<\/strong>/);
+  assert.match(sessionMainFocus, /Dice \/ Result <strong>Center Stage<\/strong>/);
+  assert.doesNotMatch(sessionMainFocus, /snapshot\.session\.participants|snapshot\.activity\.map|scene\.entities\.map/);
   assert.doesNotMatch(sessionRoot, /session-mode-rail|session-mode-bar|mockAdapter|VisualDiceTray|HOTBAR_TABS|SCENE ACTORS/);
 
   assert.match(referencePlayCss, /--svtt-actor-board-h:\s*86px/);
