@@ -1,6 +1,6 @@
 # WO-UI-003 — Implementation Record
 
-Status: **IMPLEMENTED — AUTOMATED VERIFICATION IN PROGRESS — OWNER HUMAN QA PENDING**
+Status: **IMPLEMENTED — AUTOMATED VERIFICATION PASS — OWNER HUMAN QA PENDING**
 
 Work Order:
 
@@ -178,13 +178,18 @@ Relevant open gaps remain unchanged.
 
 ---
 
-# Automated verification evidence
+# Automated verification — PASS
 
-First full source candidate with the new dedicated topology gate:
+Final verified source candidate:
 
 ```text
-source: 4f5421215b8fce91365d0fe2082b92dd8b580a7a
-UI run_id: 32496223736
+fb007d809ab586ca8d2e135e5813e929772a7f2c
+```
+
+Exact-head UI workflow:
+
+```text
+run_id: 32496754716
 job: frontend
 conclusion: SUCCESS
 ```
@@ -192,36 +197,22 @@ conclusion: SUCCESS
 This exact run passed:
 
 - UI named-rule boundary;
-- accepted Connected Play topology gate;
+- **accepted Connected Play topology gate**;
 - Product Shell / Return-to-Play continuity;
 - Session utility / Freeform / Command Center / Initiative / Handout / responsive regressions;
 - broad Phase 14 UI/runtime regressions;
-- authoritative mechanics regressions;
-- TypeScript;
-- production build.
+- connected lifecycle / late-join / ownership / inventory / spellcasting regressions;
+- creation/progression regressions;
+- authoritative spellcasting and Phase 09 mechanics regressions;
+- **TypeScript + production build**.
 
-A subsequent source-only CSS specificity guard produced final source candidate:
-
-```text
-fb007d809ab586ca8d2e135e5813e929772a7f2c
-```
-
-Its exact-head UI run is:
-
-```text
-run_id: 32496754716
-status: queued / pending final confirmation at time of this record
-```
-
-An intermediate source run containing the new runtime topology also passed Connected Session authority, Phase 11 offline walkthrough, and production frontend gate.
-
-Do not mark automated verification final until the final source candidate exact-head UI workflow completes successfully.
+An earlier full source candidate also passed the same broad UI gate (`run_id: 32496223736`), and an intermediate runtime source passed Connected Session authority, the Phase 11 offline walkthrough, and the production frontend gate. The final exact-head run above is the acceptance automation source of record.
 
 ---
 
 # Human QA pending
 
-After automated exact-head verification is final, Owner should test Tauri Connected Play:
+Owner should now test Tauri Connected Play:
 
 1. Host Open enters live Freeform immediately;
 2. Upper opposing Actor Board is visibly present;
