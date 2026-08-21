@@ -1,280 +1,250 @@
 # UI Reference Prototype — Acceptance
 
-Status: **IN REVIEW — Final-Spec replacement candidate; explicit owner acceptance not yet given**
+Status: **BLOCKED — NO ACTIVE REVIEW CANDIDATE**
 
-This checklist determines when the replacement Final-Spec Reference Demo is accepted as the visual/interaction reference for later runtime preparation.
-
-Active review entry:
+The previous candidates are not eligible for acceptance:
 
 ```text
-docs/design/ui-ux/prototype/app/final-spec.html
+app/index.html      -> REJECTED / HISTORICAL
+app/final-spec.html -> INVALIDATED BY REPOSITORY-WIDE PRODUCT/UX AUDIT
 ```
 
-The previous `app/index.html` candidate was rejected by the owner and is historical only.
-
-Current state:
+Current mandatory baseline:
 
 ```text
-FIRST CANDIDATE: REJECTED / SUPERSEDED
-FINAL-SPEC CANDIDATE: CREATED
-FINAL-SPEC STATIC STRUCTURAL VERIFICATION: PASS
-BROWSER / VISUAL / INTERACTION REVIEW: PENDING OWNER
-OWNER ACCEPTANCE: NOT STARTED
-RUNTIME UI PREPARATION: BLOCKED
+../INTEGRATED-PRODUCT-UX-PLAN.md
 ```
 
-Owner corrections: [`OWNER-CORRECTIONS.md`](OWNER-CORRECTIONS.md)
-
-Final-Spec static verification: [`FINAL-SPEC-VERIFICATION.md`](FINAL-SPEC-VERIFICATION.md)
+A new candidate must be built from the reconciled prototype specification before this acceptance gate can return to `IN REVIEW`.
 
 ---
 
-# 1. Non-negotiable owner-correction checks
+# 1. Fail-fast acceptance conditions for the next candidate
 
-These are fail-fast acceptance conditions.
-
-## Standalone / Offline dice
+Any one of the following is an automatic failure.
 
 ```text
-[ ] Clicking any Standalone roll keeps the current Character Sheet mounted, visible and spatially continuous.
-[ ] Skill, save, attack, damage and other Standalone roll examples all use the same in-Sheet roll behavior.
-[ ] Dice visibly roll inside the current Sheet workspace / in-surface Roll Plane.
-[ ] No Standalone roll opens a modal, dialog, drawer, detached result card, separate route, separate browser-like window or replacement screen.
-[ ] No Back/Close action is required merely to return from an ordinary Standalone roll.
-[ ] Dice visually travel far/back -> near/front -> settle inside the Sheet workspace.
-[ ] Final face/total appears as fixture-authoritative presentation at settlement; physics does not decide the value.
-[ ] Reduced Motion preserves the same mounted Sheet and result order.
+[ ] Core Play contains a battlemap/tactical grid.
+[ ] Core Actors are positioned with x/y map coordinates or draggable tokens.
+[ ] Core UI contains pathfinding/movement traces/Fog of War/LoS/range-map geometry.
+[ ] A Handout is treated as a tactical map.
+[ ] First run does not begin with the dedicated Tutorial/Onboarding panel.
+[ ] Initial Official-style vs SimpleVTT Sheet choice is missing from first-run Tutorial.
+[ ] An ordinary Standalone Sheet roll opens a detached dice/result window, modal workflow, route or persistent separate dice stage.
+[ ] Standalone roll displaces/replaces the current Character Sheet rather than presenting transient dice over/within it.
+[ ] Connected Play loses the Reviewed upper opposing Actor Board / lower allied Actor Board / persistent Command Center skeleton.
+[ ] Initiative replaces the whole Play IA instead of adding tracker/economy to the same structure.
+[ ] Freeform presents fake per-turn Action/Bonus/Reaction/Movement spend state.
+[ ] Targeting relies on map positions instead of Actor Cards/manual authoritative target sets.
+[ ] Main Hand unavailable silently falls back to another action.
+[ ] Player UI contains a placeholder/existence marker for an undelivered DM-only event.
+[ ] Historical `.agents` planning, old demos or stale implementation tests are treated as current Product authority.
 ```
 
-**Any detached Standalone roll surface or ordinary roll-induced Sheet remount/navigation is an automatic prototype acceptance failure.**
-
-## Connected Play structural topology
-
-```text
-[ ] Compact Play chrome/session status remains above the live workspace.
-[ ] NPC/Neutral/Hostile Actor Board is a dedicated upper board.
-[ ] Scene/Table is the flexible central region.
-[ ] Player/Allied Actor Board is a dedicated lower board directly above Command Center.
-[ ] Persistent BG3-family Command Center remains at the bottom.
-[ ] Command Center upper row shows economy/resources; lower-left shows controlled Actor; larger lower/right region shows Hotbar/actions.
-[ ] Initiative Tracker overlays the Scene top edge and does not replace either Actor Board.
-[ ] Opening Activity/Encounter/Participants/Session/Advanced DM utility preserves the core Play skeleton and uses contextual side-pane behavior.
-[ ] DM and Player use the same core structural skeleton; only role-specific tools/information differ.
-[ ] Actor Boards switch to horizontal overflow/paging instead of shrinking below useful card size.
-```
-
-**Losing this topology or replacing it with a generic dashboard/HUD is an automatic prototype acceptance failure.**
+The boxes above describe failure cases: the next candidate passes only when every listed failure is absent.
 
 ---
 
-# 2. Product hierarchy / character workflows
+# 2. First-run / Product Shell
 
 ```text
-[ ] Home / Characters / Session / Content / Rules / Settings read as one clear global structure.
-[ ] Activity / Encounter / Adjudication / Session utilities feel contextual rather than duplicate global destinations.
-[ ] First Run clearly explains Official-style vs SimpleVTT Sheet choice without making it permanent/irreversible.
-[ ] Character Library feels like the Character-management hub.
-[ ] Official-style and SimpleVTT Sheets both feel first-class.
-[ ] Builder and Level Up reference surfaces keep the accepted workflow family rather than introducing a new product model.
-[ ] Return to Play appears only when a live connected context is represented.
+[ ] Tutorial/Onboarding is the first meaningful first-run panel.
+[ ] Tutorial explains Standalone and Connected modes.
+[ ] Tutorial asks Official-style vs SimpleVTT initial Sheet layout.
+[ ] Tutorial explains the preference can be changed later.
+[ ] Tutorial or immediate orientation exposes Character / Host / Join basics.
+[ ] Tutorial can be reopened from Settings/Help.
+[ ] Completion proceeds to Home.
+[ ] Product Shell uses the Reviewed top-navigation model.
+[ ] Home exposes distinct Host Session and Join Session actions.
+[ ] Global order is Home / Characters / Session / Content / Rules / Settings.
+[ ] Live context provides Return to Play without making Play a permanent global destination.
 ```
 
-# 3. Session flow
+---
+
+# 3. Character workflows
 
 ```text
-[ ] Host Session clearly opens directly into an already-live Freeform session.
-[ ] No Lobby / Ready / Start Session stage remains.
-[ ] DM can understand Play + preparation/edit inside the same live session.
-[ ] Mid-session Player Join is understandable.
-[ ] No-Character Join clearly blocks and offers Create / Import before retry.
-[ ] Host=DM and Client=Player presentation is unambiguous.
-[ ] No Spectator / Co-DM / Observer UI is accidentally exposed.
+[ ] Character Library is the Character-management hub.
+[ ] Opening a Character opens the exact selected canonical Character.
+[ ] Official-style and SimpleVTT Sheets are both first-class views of the same Character.
+[ ] Character Create/Edit follows the existing canonical dynamic CharacterCreationPlan flow rather than an invented replacement wizard.
+[ ] Level Up follows the existing canonical progression flow rather than a new UX model.
+[ ] Required long-screen scroll behavior is usable at desktop review sizes.
 ```
 
-# 4. Play targeting / action UX
+---
+
+# 4. Standalone Sheet / dice
 
 ```text
-[ ] All Actor Cards remain visible while targeting.
-[ ] Valid / invalid / selected target states are visually distinct.
-[ ] Invalid target keeps its Actor visible and exposes a fixture-provided reason.
-[ ] Single-target valid click proceeds to submitted/resolving without an extra confirmation screen.
-[ ] Multi-target selection exposes explicit Execute.
-[ ] No selected action + valid hostile click uses fixture-provided canonical Main Hand only.
-[ ] Main Hand unavailable shows the fixture reason and chooses no fallback action.
-[ ] Selected-action targeting takes priority over ordinary Actor selection/control focus.
+[ ] The Sheet alone is clearly usable at a physical table.
+[ ] Ability/save/skill/Initiative/attack/damage/common-die examples are directly reachable.
+[ ] Current Sheet remains mounted/visible/stable while dice animate.
+[ ] Dice enter from visual depth/back, roll/settle quickly and do not create a separate product surface.
+[ ] Result is readable without opening/closing a detached result panel.
+[ ] User continues on the exact same Sheet after the transient presentation clears.
+[ ] Local history does not recreate a permanent dice frame.
+[ ] Reduced Motion preserves the same information/result order.
 ```
 
-# 5. Resolution / dice / interrupt / result in Connected Play
+---
+
+# 5. Session entry / continuity
 
 ```text
-[ ] Resolution preserves Actor Boards, Scene orientation and Command Center skeleton.
-[ ] Only fixture-declared conflicting interactions appear locked; the whole workspace is not replaced.
-[ ] Connected dice use the broad central Scene/Table as Roll Area.
-[ ] Dice presentation conveys far/back -> near/front -> impact/roll/settle.
-[ ] Final face/result is visibly fixture-authoritative rather than physics-authoritative.
-[ ] Immediate result stays scene-integrated instead of opening a detached result route/window.
-[ ] Reaction/Interrupt keeps Scene/Actor/Command Center orientation visible.
-[ ] Concentration response keeps Scene/Actor/Command Center orientation visible and does not invent DC/modifier legality.
-[ ] Activity/detail remains the durable history path.
-[ ] Reduced Motion preserves result and comprehension order.
+[ ] Host and Join are distinct flows.
+[ ] Open Session enters an already-live Host/DM Freeform session immediately.
+[ ] There is no normal Host Preparing / Lobby / Ready / Start gate.
+[ ] Zero connected Players is a valid live DM session state.
+[ ] Join selects a valid local Character, synchronizes as needed, then enters the current live state.
+[ ] No-Character Join blocks with Create/Import recovery and a new Join attempt.
+[ ] Reconnect returns to current authoritative live context without a Ready/Start loop.
 ```
 
-# 6. Command Center
+---
+
+# 6. Mapless Connected Play
 
 ```text
-[ ] Controlled Actor portrait/name/HP/Temp/status are readable.
-[ ] Hotbar page structure remains understandable.
-[ ] Actions remain directly discoverable; no intent-first hidden capability funnel returns.
-[ ] Action / Bonus / Reaction / Movement indicators are readable.
-[ ] Dynamic Resource Rail remains readable with multiple resources.
-[ ] Selected / unavailable / pending / resolving states are distinct.
-[ ] End Turn / Execute / Cancel controls appear contextually without replacing normal Hotbar structure.
+[ ] Compact Play chrome/session status is present.
+[ ] Upper NPC/Neutral/Hostile Actor Board is present.
+[ ] Lower Player/Allied Actor Board is present.
+[ ] Actor Cards are list/board objects, not map tokens.
+[ ] Card minimum width is preserved and overflow/paging handles density.
+[ ] Central region reads as Mapless Play Context / Tabletop Stage, not a battlefield.
+[ ] Central region contains no grid, terrain, positional token layout, movement path or tactical spatial affordance.
+[ ] Persistent bottom Command Center remains available through targeting/resolution/dice/result.
+[ ] DM and Player share the same core skeleton with role-specific tools/information.
 ```
 
-# 7. Layers and contextual tools
+---
+
+# 7. Freeform / Initiative
 
 ```text
-[ ] Activity can coexist with Play without making Scene/Command Center unusable.
-[ ] Encounter and advanced spatial controls feel like contextual DM tools.
-[ ] Utility pane can be resized within useful bounds without destroying the core Play skeleton.
-[ ] Quick Sheet is a lightweight contextual layer and does not replace Play.
-[ ] Full Sheet is a heavier layer but the live session remains clearly behind/continuous.
-[ ] Actor Context Menu contains UI/context management, not duplicate Attack/Spell/Item actions.
-[ ] Rich hover/focus explanation helps dense controls without making essential state hover-only.
-[ ] Destructive confirmation outranks lower contextual layers without being used for ordinary target execution.
-[ ] Right-click Actor Context Menu remains supplementary rather than the only path to essential information/action.
+[ ] Freeform remains the same Play workspace and contains no fake turn economy.
+[ ] Normal capabilities remain directly discoverable through the Reviewed Command Center/Hotbar direction.
+[ ] Initiative adds one compact horizontal tracker at the top edge of the mapless Play Context.
+[ ] Initiative adds authoritative turn economy only when Initiative is active.
+[ ] Actor Boards remain during Initiative.
+[ ] End Turn appears only where meaningful.
 ```
 
-# 8. Handout
+---
+
+# 8. Command Center / targeting
 
 ```text
-[ ] Overlay / Upper Scene / Full Scene are clearly different.
-[ ] Player can locally dismiss/reopen Overlay.
-[ ] Upper/Full remain DM-controlled shared-presentation examples.
-[ ] Full Scene still feels like live Play rather than a separate Product route.
-[ ] Zoom/pan reads as local presentation.
-[ ] Mock Handout state is not mistaken for a completed network contract.
+[ ] Command Center uses BG3-family information architecture without importing tactical-map UI.
+[ ] Economy/resources occupy a compact upper row when applicable.
+[ ] Controlled Actor status is clear.
+[ ] Hotbar/action region is larger and directly discoverable.
+[ ] Mixed/Action/Spell/Item/custom organization is understandable.
+[ ] Rich hover/focus explanations work without making essential state hover-only.
+[ ] Selected-action targeting has click priority.
+[ ] All Actor Cards remain visible during targeting.
+[ ] Valid/invalid/selected target states are distinct and invalid reason comes from fixture/authority input.
+[ ] Single valid target submits immediately.
+[ ] Multi-target selection uses explicit Execute.
+[ ] Area-like action is represented as manual target-set selection, not an AoE map template.
 ```
 
-# 9. Privacy / Activity / correction
+---
+
+# 9. Resolution / reaction / dice / result
 
 ```text
-[ ] DM Only state is continuously clear to DM.
-[ ] DM Activity shows public/private items in one chronology with filtering.
-[ ] Player view contains no placeholder/existence row for fixture DM-only events.
-[ ] Later disclosure reads as a projection, not a reroll/recalculation.
-[ ] Correction/reversal leaves the original history visible and adds a related event.
+[ ] Resolution preserves Actor Boards, mapless context and Command Center skeleton.
+[ ] Only fixture-declared conflicting interactions are shown locked.
+[ ] Reaction/Interrupt explains the response inside the current Play context.
+[ ] Concentration response stays in current context and does not invent rules values.
+[ ] Connected physical dice use the broad mapless Tabletop Stage as presentation space.
+[ ] Dice physics/trajectory cannot alter authoritative connected results.
+[ ] Immediate result stays integrated into Play.
+[ ] Durable detail/history is reachable through Activity.
 ```
 
-Production privacy remains blocked by `GAP-DM-ONLY-DELIVERY-PROTOCOL` until its architecture contract exists.
+---
 
-# 10. Content / import / Rules / Settings
+# 10. DM / Activity / privacy / Handout
 
 ```text
-[ ] Official SimpleVTT package lifecycle is understandable from Content reference UI.
-[ ] Package Import Review distinguishes valid/warning/blocking conditions without UI guesswork.
-[ ] Live-session content snapshot is described as stable after local library changes.
-[ ] Rules Browser reads as authoritative-content presentation rather than UI-invented rules logic.
-[ ] Settings contains presentation/accessibility preferences without creating a new product workflow.
+[ ] Encounter/Participants/Session/Activity/advanced spatial tools are contextual panes/layers.
+[ ] Advanced spatial tool is fact-oriented; it is not a coordinate/map editor.
+[ ] DM Activity shows public/private chronology and filters.
+[ ] Player receives no placeholder for fixture DM-only events.
+[ ] Correction/reversal preserves original history and appends linkage.
+[ ] Handout Overlay / Upper / Full are clearly presentation modes.
+[ ] Handout is visibly not a battlemap and has no token/grid interactions.
+[ ] Player local dismiss/reopen of Overlay is distinct from DM shared withdraw/state.
 ```
 
-# 11. Desktop responsive review
+Runtime privacy and Handout reconnect semantics remain blocked by their declared Architecture Gaps.
+
+---
+
+# 11. Content / Rules / Settings
+
+```text
+[ ] Content uses the supported declarative SimpleVTT package model honestly.
+[ ] Import preview distinguishes valid/warning/blocking/unsupported conditions.
+[ ] Install/update/replace/disable/delete lifecycle is understandable.
+[ ] Live-session content snapshot is not visually mutated by local library changes.
+[ ] Rules browse/lookup reads authoritative composed content rather than UI-invented rules.
+[ ] Settings contains real appearance/accessibility/product preferences, including Sheet presentation and Reduced Motion.
+```
+
+---
+
+# 12. Desktop / accessibility / layers
 
 Review at:
 
-- Wide 1600×1000
-- Normal 1366×768
-- Narrow Desktop 960×700
+- Wide 1600x1000
+- Normal 1366x768
+- Narrow Desktop 960x700
 
 ```text
-[ ] Command Center remains directly reachable at Narrow Desktop.
-[ ] Scene/Actor context remains usable.
-[ ] Actor Cards stop shrinking and use horizontal overflow/paging when needed.
-[ ] Contextual utility pane remains desktop-oriented and does not turn into a mobile-first product.
-[ ] Character Sheet remains usable while retaining same-mounted-Sheet Roll Plane.
-[ ] Quick/Full Sheet layers remain usable.
-[ ] Handout remains usable.
-[ ] Long names/resources/Activity text do not destroy hierarchy.
-```
-
-# 12. Accessibility / state clarity
-
-```text
-[ ] Common actionable controls are keyboard reachable unless an explicit reviewed exception exists.
-[ ] Visible focus is clear.
-[ ] Hotbar hover explanation also has focus behavior.
+[ ] Core controls remain reachable at all three review sizes.
+[ ] Actor Boards overflow instead of collapsing below useful card size.
+[ ] Contextual utilities do not destroy the mapless Play skeleton.
+[ ] Quick/Full Sheet and Handout remain usable.
+[ ] Long names/resources/Activity text preserve hierarchy.
+[ ] Keyboard focus is visible.
+[ ] Hover explanation has a keyboard/focus path where required.
 [ ] State meaning does not rely on color alone.
+[ ] Escape/cancel behavior follows the interaction stack.
 [ ] Reduced Motion can be reviewed.
-[ ] Compact pointer targets remain practically usable.
-```
-
-# 13. Prototype boundary
-
-Static verification currently records:
-
-```text
-[x] Active Final-Spec files are confined to docs/design/ui-ux/prototype/app/.
-[x] Target validity/unavailable reasons/results are fixture inputs.
-[x] Final-Spec design contains no intended real backend/network/storage integration.
-[x] Final-Spec design does not import production `src/` UI.
-[x] Prototype Controls are visibly separate from intended product UI.
-[ ] Browser review confirms the Final-Spec entry loads and interactions work as intended.
-```
-
-# 14. Required Final-Spec scenario spot-check
-
-At minimum inspect:
-
-```text
-FINAL-SCN-FIRST-RUN
-FINAL-SCN-SHEET
-FINAL-SCN-SHEET-ROLL
-FINAL-SCN-BUILDER
-FINAL-SCN-LEVEL-UP
-FINAL-SCN-DM-FREEFORM
-FINAL-SCN-PLAYER-FREEFORM
-FINAL-SCN-PLAYER-TARGET
-FINAL-SCN-MULTI
-FINAL-SCN-MAIN-HAND-UNAVAILABLE
-FINAL-SCN-RESOLVE
-FINAL-SCN-RESULT
-FINAL-SCN-INTERRUPT
-FINAL-SCN-CONCENTRATION
-FINAL-SCN-QUICK-SHEET
-FINAL-SCN-FULL-SHEET
-FINAL-SCN-DM-ACTIVITY
-FINAL-SCN-PLAYER-ACTIVITY
-FINAL-SCN-DM-SPATIAL
-FINAL-SCN-HANDOUT-OVERLAY
-FINAL-SCN-HANDOUT-UPPER
-FINAL-SCN-HANDOUT-FULL
-FINAL-SCN-RECONNECT
-FINAL-SCN-PANEL-RESIZE
-FINAL-SCN-CONFIRM
-FINAL-SCN-CONTENT-IMPORT
-FINAL-SCN-NARROW
-FINAL-SCN-COMPONENTS
 ```
 
 ---
 
-# Owner acceptance record
-
-Do not fill this until the owner explicitly accepts the replacement Final-Spec candidate.
+# 13. Prototype boundary
 
 ```text
-Prototype Status: <IN REVIEW | NEEDS CHANGE | ACCEPTED>
-Accepted By: <blank until explicit acceptance>
-Accepted Reference: <blank until explicit acceptance>
-Acceptance Note: <optional>
+[ ] Candidate files are confined to prototype scope.
+[ ] No production src UI import/change.
+[ ] No real backend/network/storage.
+[ ] No rules/target/privacy calculation in prototype JavaScript.
+[ ] Target eligibility/result/unavailable reasons are explicit fixture inputs.
+[ ] Fixture Actors contain no Core tactical x/y positions.
+[ ] Prototype Controls remain visibly outside intended product UI.
 ```
 
-Until explicit acceptance exists:
+---
+
+# 14. Current gate
 
 ```text
-P3 OWNER ACCEPTANCE: NOT PASSED
-P4 RUNTIME PREPARATION: BLOCKED
-P5 RUNTIME UI IMPLEMENTATION: NOT AUTHORIZED
+ACTIVE REVIEW CANDIDATE: NONE
+SPEC RECONCILIATION: REQUIRED
+PROTOTYPE REBUILD: REQUIRED
+BROWSER REVIEW: BLOCKED
+OWNER ACCEPTANCE: NOT STARTED
+RUNTIME PREPARATION: BLOCKED
+RUNTIME UI IMPLEMENTATION: NOT AUTHORIZED
 ```
 
-After acceptance, next phase is contract extraction + technical-gap resolution + legacy reconciliation + owner-correction canonical reconciliation + scoped Freeze/readiness. It is not immediate `src/` implementation.
+Do not fill an acceptance record until a new candidate exists and the owner explicitly accepts a specific reference revision.
