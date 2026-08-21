@@ -3,7 +3,7 @@
   grid-template-rows: 52px minmax(0, 1fr) var(--session-command-height);
 }
 
-.session-mode-root[data-session-mode="initiative"] {
+.session-mode-root.session-mode-root[data-session-mode="initiative"] {
   grid-template-rows: 52px minmax(0, 1fr) var(--session-command-height);
 }
 
@@ -74,7 +74,7 @@
 
 @media (max-width: 899px) {
   .session-mode-root,
-  .session-mode-root[data-session-mode="initiative"] {
+  .session-mode-root.session-mode-root[data-session-mode="initiative"] {
     --session-command-height: 154px;
     grid-template-rows: 48px minmax(0, 1fr) var(--session-command-height);
   }
@@ -104,7 +104,7 @@
 
 @media (max-width: 620px) {
   .session-mode-root,
-  .session-mode-root[data-session-mode="initiative"] {
+  .session-mode-root.session-mode-root[data-session-mode="initiative"] {
     --session-command-height: 148px;
   }
 
