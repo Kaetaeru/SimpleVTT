@@ -18,7 +18,7 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — Home / Characters / Session만 핵심 Global로 두고 Content / Rules / Settings도 secondary/contextual 진입으로 축소.
 - `CUSTOM` — 직접 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -34,7 +34,7 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — Play는 거의 독립된 full workspace이며 명시적 Exit/Return control로만 Product Shell에 복귀.
 - `CUSTOM` — 직접 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -50,7 +50,7 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — 핵심 anchors만 Permanent, 나머지는 최대한 Contextual.
 - `CUSTOM` — 직접 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -66,7 +66,7 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — 공통 anchors는 유지하되 DM/Player 역할별 operational information을 동급 1순위까지 올릴 수 있음.
 - `CUSTOM` — 직접 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
 **OWNER NOTE:** ``
 
@@ -82,9 +82,9 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — actions/rolls를 최우선 operational layer로 두고 Character record는 secondary detail.
 - `CUSTOM` — 직접 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `이건 공식 시트 레이아웃 버전과 SVTT버전을 선택할수있게 하는게 좋겠어.`
 
 **AI STATUS:** `PENDING`
 
@@ -98,9 +98,9 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — Progressive disclosure를 최소 사용하고 대부분의 정보/도구를 한 화면에 직접 노출.
 - `CUSTOM` — 직접 정의. Core capability direct exposure에 대한 기존 Reviewed 결정은 유지해야 함.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `장소에 따라 다르겠지만 웬만해선 마우스 호버링을 하면 마우스를 따라오는 프레임에서 설명이 가능하면 좋겠어.`
 
 **AI STATUS:** `PENDING`
 
@@ -114,9 +114,9 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — 각 surface가 독립적으로 필요하면 폭넓게 반복 가능하되 값은 canonical projection만 사용.
 - `CUSTOM` — 직접 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `B`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `이건 나중에도 계속 이야기 해봐야할것같아. 상황에 따라 달라질테니까`
 
 **AI STATUS:** `PENDING`
 
@@ -130,7 +130,7 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — Toast/event-feed 중심으로 즉시 이벤트를 적극적으로 보여주고 Activity는 장기 history 역할.
 - `CUSTOM` — 직접 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
 **OWNER NOTE:** ``
 
@@ -150,9 +150,9 @@ Instructions: choose one candidate code in `OWNER SELECT`, or use `CUSTOM` and d
 - `C` — Home → Characters → Session을 primary로, Content / Rules / Settings는 secondary global group으로 분리.
 - `CUSTOM` — 직접 destination set/order 정의.
 
-**OWNER SELECT:** ``
+**OWNER SELECT:** `A`
 
-**OWNER NOTE:** ``
+**OWNER NOTE:** `편하게 해줘`
 
 **AI STATUS:** `PENDING`
 
