@@ -9,6 +9,8 @@ const official=readFileSync(new URL("../../src/OfficialCharacterSheetPlayScreen.
 const characterPage=readFileSync(new URL("../../src/OfficialCharacterSheetPage.tsx",import.meta.url),"utf8");
 const spellPage=readFileSync(new URL("../../src/OfficialSpellcastingSheetPage.tsx",import.meta.url),"utf8");
 const libraryBridge=readFileSync(new URL("../../src/CharacterLibraryUxBridge.tsx",import.meta.url),"utf8");
+const localDicePresentation=readFileSync(new URL("../../src/app/localDicePresentation.ts",import.meta.url),"utf8");
+const visualDiceBridge=readFileSync(new URL("../../src/VisualDiceBridge.tsx",import.meta.url),"utf8");
 const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
 const sheet=[wrapper,legacy,official,characterPage,spellPage].join("\n");
 const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
@@ -34,10 +36,18 @@ test("Character Library exposes the demo-established sheet-style switch before a
   assert.match(libraryBridge,/selectProductionCharacter\(character\.id\)/);
 });
 
-test("validated SimpleVTT sheet local roll behavior remains unchanged behind the router",()=>{
-  for(const pattern of [/능력 판정/,/내성 굴림/,/view\.skillsByAbility/,/명중 굴림/,/피해 굴림/,/crypto\.getRandomValues/,/유리/,/불리/,/VisualDiceTray/,/최근 굴림/]) assert.match(legacy,pattern);
+test("Standalone local rolls keep validated mechanics but present through the shared full-screen dice overlay",()=>{
+  for(const pattern of [/능력 판정/,/내성 굴림/,/view\.skillsByAbility/,/명중 굴림/,/피해 굴림/,/crypto\.getRandomValues/,/유리/,/불리/,/최근 굴림/]) assert.match(legacy,pattern);
+  assert.match(legacy,/presentLocalDiceRoll\(next\)/);
+  assert.match(official,/presentLocalDiceRoll\(next\)/);
+  assert.doesNotMatch(legacy,/VisualDiceTray/);
+  assert.doesNotMatch(official,/VisualDiceTray/);
+  assert.match(localDicePresentation,/LOCAL_DICE_PRESENT_EVENT/);
+  assert.match(localDicePresentation,/window\.dispatchEvent\(new CustomEvent/);
+  assert.match(visualDiceBridge,/window\.addEventListener\(LOCAL_DICE_PRESENT_EVENT/);
+  assert.match(visualDiceBridge,/createPortal\(/);
+  assert.match(visualDiceBridge,/document\.body/);
   assert.doesNotMatch(legacy,/resolveAction|startInitiative|sessionMode/);
-  assert.match(legacy,/local tabletop physics roll/);
 });
 
 test("dual Sheet preference is presentation-only sanitized and restart-persistent",()=>{
