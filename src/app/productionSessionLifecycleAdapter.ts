@@ -195,9 +195,10 @@ MockAdapter.prototype.startPreparedSession=async function startProductionPrepare
   setLifecycle(this,"live");
   app.session.compatibility="compatible";
   if (mode==="initiative") return this.startInitiative();
-  await this.setSessionMode("freeform");
+  if (app.sessionMode==="initiative") await this.endInitiative();
+  else await publishConnectedTurnProjection(this,"legacy-session-start-freeform");
   app.session.compatibilityMessage="Host live Freeform play is active.";
-  return publishConnectedTurnProjection(this,"legacy-session-start-freeform");
+  return app.getSnapshot();
 };
 
 MockAdapter.prototype.stopSession=async function stopProductionSession() {
@@ -259,10 +260,11 @@ MockAdapter.prototype.hostSession=async function hostProductionSessionWithLifecy
     const liveState=connectedStateFor(this);
     liveState.sessionStarted=true;
     setLifecycle(this,"live");
-    await this.setSessionMode("freeform");
+    if (app.sessionMode==="initiative") await this.endInitiative();
+    else await publishConnectedTurnProjection(this,"session-open-freeform");
     app.session.compatibility="compatible";
     app.session.compatibilityMessage=`Host live Freeform play opened at ${started.session.address}. Players may join now or later.`;
-    return publishConnectedTurnProjection(this,"session-open-freeform");
+    return app.getSnapshot();
   } catch(error) {
     await tauriSessionTransport.stop().catch(()=>undefined);
     resetConnectedState(this,null);
