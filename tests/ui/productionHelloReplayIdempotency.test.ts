@@ -132,11 +132,15 @@ test("accepted participant hello replay does not advance Host ledger or duplicat
   const transport=installFakeDesktopTransport();
   try {
     const adapter=await nonFixtureAdapter("char.phase14.hello-replay","Hello Replay Character");
-    await adapter.hostSession();
+    const opened=await adapter.hostSession();
     const state=connectedStateFor(adapter);
     const app=connectedInternal(adapter);
     assert.ok(state.ledger);
+    assert.equal(opened.session.lifecycle,"live");
+    assert.equal(opened.sessionMode,"freeform");
     assert.equal(transport.handlerCount(),1);
+    const openCursor=state.ledger.cursor;
+    assert.equal(openCursor,1,"Host Open publishes exactly one initial live Freeform projection");
 
     const manifest=connectedManifest(adapter);
     const characterId=manifest.character?.characterId;
@@ -153,34 +157,35 @@ test("accepted participant hello replay does not advance Host ledger or duplicat
 
     transport.emitFrom(0,peer,hello(0));
     await flushAsync();
-    assert.equal(state.ledger.cursor,1);
+    const acceptedCursor=openCursor+1;
+    assert.equal(state.ledger.cursor,acceptedCursor);
     assert.equal(app.session.participants.filter((participant)=>participant.id===participantId).length,1);
     assert.equal(state.peerParticipants.get(peer),participantId);
     assert.equal(state.peerManifests.size,1);
 
-    transport.emitFrom(0,peer,hello(1));
+    transport.emitFrom(0,peer,hello(acceptedCursor));
     await flushAsync();
-    assert.equal(state.ledger.cursor,1,"same accepted hello must not create another participant ledger event");
+    assert.equal(state.ledger.cursor,acceptedCursor,"same accepted hello must not create another participant ledger event");
     assert.equal(app.session.participants.filter((participant)=>participant.id===participantId).length,1);
     assert.equal(state.peerManifests.size,1);
     const currentAck=transport.sentTo().filter((entry)=>entry.peer===peer&&entry.message.type==="hello-ack").at(-1)?.message;
     assert.equal(currentAck?.type,"hello-ack");
-    assert.equal(currentAck?.hostCursor,1);
+    assert.equal(currentAck?.hostCursor,acceptedCursor);
     assert.deepEqual(currentAck?.events,[],"up-to-date replay must not synthesize a new connected event");
 
     transport.emitFrom(0,peer,hello(0));
     await flushAsync();
-    assert.equal(state.ledger.cursor,1,"stale replay must still leave Host history unchanged");
+    assert.equal(state.ledger.cursor,acceptedCursor,"stale replay must still leave Host history unchanged");
     const staleAck=transport.sentTo().filter((entry)=>entry.peer===peer&&entry.message.type==="hello-ack").at(-1)?.message;
     assert.equal(staleAck?.type,"hello-ack");
-    assert.equal(staleAck?.hostCursor,1);
-    assert.equal(Array.isArray(staleAck?.events)?staleAck.events.length:0,1,"stale replay should receive the existing catch-up event only");
+    assert.equal(staleAck?.hostCursor,acceptedCursor);
+    assert.equal(Array.isArray(staleAck?.events)?staleAck.events.length:0,acceptedCursor,"stale replay receives the existing live-mode and participant history only");
   } finally {
     transport.restore();
   }
 });
 
-test("Host-required declarative content transfers before participant acceptance, validates through installed-content authority, and becomes Ready-idempotent",async()=>{
+test("Host-required declarative content transfers before participant acceptance, validates through installed-content authority, and enters live play without Ready",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const hostStore=new MemoryInstalledContentStore();
@@ -189,7 +194,8 @@ test("Host-required declarative content transfers before participant acceptance,
     const client=await nonFixtureAdapter("char.phase14.parity-client","Parity Client",clientStore);
     await previewAndActivate(host,parityPayload());
 
-    await host.hostSession();
+    const hostOpened=await host.hostSession();
+    assert.equal(hostOpened.session.lifecycle,"live");
     await client.joinSession("127.0.0.1:3210");
     assert.equal(transport.handlerCount(),2);
 
@@ -227,11 +233,8 @@ test("Host-required declarative content transfers before participant acceptance,
     const joined=await client.getSnapshot();
     assert.equal(getSessionContentParityStateForTests(client).status,"ready");
     assert.match(joined.session.compatibilityMessage,/콘텐츠 확인.*준비 완료/);
-
-    const readyBefore=transport.sent().filter((entry)=>entry.message.type==="ready-intent").length;
-    await client.setSessionReady(true);
-    const readyAfter=transport.sent().filter((entry)=>entry.message.type==="ready-intent").length;
-    assert.equal(readyAfter,readyBefore+1,"Ready should reach the existing lifecycle only after content parity is ready");
+    assert.equal(joined.session.lifecycle,"live","content-compatible hello catch-up should enter the Host's current live play directly");
+    assert.equal(transport.sent().filter((entry)=>entry.message.type==="ready-intent").length,0,"direct live join must not emit Ready intent");
 
     const reconnectHello={...secondHello.message,knownEventCursor:connectedStateFor(client).replica?.cursor ?? 0};
     const revisionBefore=getInstalledContentPersistenceStateForTests(client)?.storageRevision;
@@ -246,7 +249,7 @@ test("Host-required declarative content transfers before participant acceptance,
   }
 });
 
-test("same qualified identity with a different payload fails closed and blocks Ready",async()=>{
+test("same qualified identity with a different payload fails closed and blocks live join",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const host=await nonFixtureAdapter("char.phase14.conflict-host","Conflict Host",new MemoryInstalledContentStore());
@@ -266,21 +269,17 @@ test("same qualified identity with a different payload fails closed and blocks R
     await flushAsync();
     const parity=getSessionContentParityStateForTests(client);
     assert.equal(parity.status,"error");
-    assert.match(parity.message,/Ready 불가/);
+    assert.match(parity.message,/참가 불가/);
     assert.match(parity.message,/conflict|충돌|검증 실패/i);
     assert.equal(getInstalledContentPersistenceStateForTests(client)?.document?.entries[0]?.description,"Client conflicting payload","conflicting Host payload must not overwrite Client content");
-
-    const before=transport.sent().filter((entry)=>entry.message.type==="ready-intent").length;
-    const blocked=await client.setSessionReady(true);
-    const after=transport.sent().filter((entry)=>entry.message.type==="ready-intent").length;
-    assert.equal(after,before);
-    assert.match(blocked.session.compatibilityMessage,/Ready 불가/);
+    assert.notEqual((await client.getSnapshot()).session.lifecycle,"live");
+    assert.equal(transport.sent().filter((entry)=>entry.message.type==="ready-intent").length,0);
   } finally {
     transport.restore();
   }
 });
 
-test("malformed Host declarative content is rejected before install and keeps Ready blocked",async()=>{
+test("malformed Host declarative content is rejected before install and blocks live join",async()=>{
   const transport=installFakeDesktopTransport();
   try {
     const client=await nonFixtureAdapter("char.phase14.invalid-client","Invalid Client",new MemoryInstalledContentStore());
@@ -299,12 +298,10 @@ test("malformed Host declarative content is rejected before install and keeps Re
 
     const parity=getSessionContentParityStateForTests(client);
     assert.equal(parity.status,"error");
-    assert.match(parity.message,/검증 실패.*Ready 불가/);
+    assert.match(parity.message,/검증 실패.*참가 불가/);
     assert.equal(getInstalledContentPersistenceStateForTests(client)?.storageRevision,0);
-    const before=transport.sent().filter((entry)=>entry.message.type==="ready-intent").length;
-    await client.setSessionReady(true);
-    const after=transport.sent().filter((entry)=>entry.message.type==="ready-intent").length;
-    assert.equal(after,before);
+    assert.notEqual((await client.getSnapshot()).session.lifecycle,"live");
+    assert.equal(transport.sent().filter((entry)=>entry.message.type==="ready-intent").length,0);
   } finally {
     transport.restore();
   }
