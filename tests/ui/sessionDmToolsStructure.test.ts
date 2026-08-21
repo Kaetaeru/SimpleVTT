@@ -7,15 +7,17 @@ const tools=readFileSync(new URL("../../src/SessionDmTools.tsx",import.meta.url)
 const css=readFileSync(new URL("../../src/session-dm-tools.css",import.meta.url),"utf8");
 const referenceCss=readFileSync(new URL("../../src/session-integrated-reference-play.css",import.meta.url),"utf8");
 const combatantAdapter=readFileSync(new URL("../../src/app/productionCombatantPreparationAdapter.ts",import.meta.url),"utf8");
+const quick=readFileSync(new URL("../../src/SessionQuickPalette.tsx",import.meta.url),"utf8");
 
 test("DM utilities launch from accepted Play chrome and render in the contextual right pane",()=>{
   assert.match(root,/SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane/);
   assert.match(root,/activeUtility === "encounter"/);
   assert.match(root,/activeUtility === "participants"/);
   assert.match(root,/activeUtility === "session"/);
-  assert.match(root,/>Encounter<\/button>/);
-  assert.match(root,/>Participants<\/button>/);
-  assert.match(root,/>Session<\/button>/);
+  assert.match(root,/>인카운터<\/button>/);
+  assert.match(root,/>세션<\/button>/);
+  assert.match(quick,/destination:"participants"/);
+  assert.match(quick,/label:"참가자"/);
   assert.match(root,/session-reference-utility-host/);
   assert.doesNotMatch(root,/session-mode-rail|navigate\(|setRoute\(|플레이로 돌아가기/);
 });

@@ -4,6 +4,8 @@ export type VisualDieSides = 4 | 6 | 8 | 10 | 12 | 20;
 
 export const VISUAL_DICE_REPLAY_MS = 1480;
 export const VISUAL_DICE_REDUCED_REPLAY_MS = 650;
+export const VISUAL_DICE_RESULT_HOLD_MS = 4000;
+export const VISUAL_DICE_RESULT_FADE_MS = 420;
 
 export interface VisualDieVm {
   value:number;

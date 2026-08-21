@@ -596,6 +596,114 @@ These decisions were selected/reviewed before their final destination sheet maps
 
 ---
 
+## ORIGIN-UX-01-30 — Compact configurable icon Hotbar
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-03 / CMP-01
+- **Decision:** Connected Play uses small 1:1 icon slots in a two-row default matrix. The Player may set 2–4 rows; row density is local presentation persistence, while capability ordering and Custom-page persistence remain separate canonical gaps. Detailed action information appears on hover/focus.
+
+## ORIGIN-UX-01-31 — Pointer-tether Actor targeting
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-03 / INT-01
+- **Decision:** Selecting a targeted capability draws a cursor-following arrow from the acting Actor's mounted scene card. The initiating Hotbar icon is only a geometry fallback when that Actor Card is absent. The user chooses targets directly from upper/lower Actor Cards; no detached target-selection window is used. Single-target click executes immediately and multi-target retains explicit Execute.
+
+## ORIGIN-UX-01-32 — Portrait-only damage-frame Actors
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** INT-01 / SES-01
+- **Decision:** Resting Actor Cards show illustration/portrait only. Missing HP fills a translucent red damage frame from the bottom; identity, HP/Temp HP, AC, state, and status appear on hover/focus. Eligibility, control, current turn, and selection remain visible as frame states.
+
+## ORIGIN-UX-01-33 — Explicit Main Hand equipment relation
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-03 / SES-01
+- **Decision:** Attack entry uses only an equipped/wielded ItemInstance explicitly marked `main-hand` and its matching action. Missing data has no first/strongest/offhand/unarmed/cantrip/spell fallback.
+
+## ORIGIN-UX-01-34 — Centered tall Actor portraits
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** INT-01 / SES-01
+- **Decision:** Upper/lower Actor Boards center portrait frames when they fit and use a taller combat-card proportion. Horizontal overflow remains reachable.
+
+## ORIGIN-UX-01-35 — Last rolling Actor on an empty Freeform stage
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-02 / SES-01
+- **Decision:** When Freeform has no active presented content, the central stage shows the illustration of the last Actor observed in a resolution roll. No Actor match produces a quiet empty state.
+
+## ORIGIN-UX-01-36 — Six-family capability taxonomy and grouped Mixed page
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-03 / CMP-01
+- **Decision:** Use Mixed, Action, Class including magic, Item, Special, and Custom. Mixed visibly separates category matrices. Players may persist local category section order; authoritative capability order and Custom data remain unchanged.
+
+## ORIGIN-UX-01-37 — Session/Home shell theme convergence
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** CMP-01 / SES-01
+- **Decision:** Connected Play consumes the same semantic surface, line, text, accent, shadow, rounded-control, and heading language as Home. Session-specific interaction state remains, but a separate demo palette is not maintained.
+
+## ORIGIN-UX-01-38 — Controlled portrait damage frame
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-03 / INT-01
+- **Decision:** The controlled Actor portrait at the left of the Action Bar repeats the Actor Card's red missing-HP fill and uses an opaque dark-red inner frame. Exact HP remains textual and authoritative.
+
+## ORIGIN-UX-01-39 — Hover health and target rejection reason
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** INT-01 / CONTENT-01
+- **Decision:** Actor hover/focus detail includes exact HP, a compact HP bar, AC, and current state. During targeting, an excluded Actor remains inspectable and shows the authoritative rejection reason; presentation does not recompute eligibility.
+
+## ORIGIN-UX-01-40 — Exact Actor-card VFX geometry
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-02 / R9-COMBAT-VFX
+- **Decision:** Combat delivery and impact VFX resolve source and target geometry by exact mounted Actor IDs. Visual order, side grouping, and legacy list indices are not identity.
+
+## ORIGIN-UX-01-41 — Current Actor initiative focus
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** SES-01 / DND-02
+- **Decision:** Initiative keeps the compact order strip and uses the central stage for the authoritative current Actor illustration plus round label. Economy and turn controls remain in the Command Center.
+
+## ORIGIN-UX-01-42 — Reference melee legality remains authoritative
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-03 / STATE-01
+- **Decision:** The reference Aelar Longsword remains a 5-foot melee action. Targets at 20+ feet are rejected; the UI explains the projected distance/range mismatch instead of widening range or bypassing authority.
+
+## ORIGIN-UX-01-43 — Inventory is durable management, not live execution
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-01 / DND-03 / CMP-01
+- **Decision:** Character Inventory lives inside the Character Sheet and is shared by both Sheet presentation modes. It manages canonical owned ItemInstance state. Live Item effects execute from the Command Center and consume quantity/charges atomically with the effect.
+
+## ORIGIN-UX-01-44 — Inventory exposes only materialized item facts
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-01 / STATE-01
+- **Decision:** The initial Inventory presents identity, quantity, equipped/wielded/hand state, attunement, charges, passive summary, provenance, GP, and granted Action availability. Weight, containers, stack operations, transfer, Party Stash, and durable grants are not inferred from React-local state.
+
+## ORIGIN-UX-01-45 — Semantic Action Bar icon priority
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** DND-03 / CMP-01
+- **Decision:** Every Action Bar capability uses a semantic vector icon. Magic actions prefer their authoritative damage type; when no damage property is available, a canonical spell uses its school icon. Remaining actions derive their icon from represented effect, physical damage type, item cost, or resolution kind. Names and ad-hoc string identity never choose mechanics or eligibility.
+
+## ORIGIN-UX-01-46 — Quick menu is a non-modal right pane
+
+- **Status:** Owner-directed / implemented; QA pending
+- **Destination:** SES-01 / NAV-01 / CMP-01
+- **Decision:** The live Session Quick menu opens in the existing contextual right utility-pane slot. It does not dim or replace the scene, create a modal focus trap, or block the Command Center. Choosing a result replaces the Quick menu in that same pane with the selected utility.
+
+## ORIGIN-UX-01-47 — Item and currency exchange is an authoritative transfer transaction
+
+- **Status:** Owner-directed foundation / runtime pending
+- **Destination:** DND-01 / SES-02 / STATE-01
+- **Decision:** Session item and currency exchange is modeled as one validated, idempotent transaction between explicit inventory/wallet endpoints. Character ownership, Actor control, Party Stash policy, and DM grant authority remain distinct. Source debit, destination credit, persistence/write-back, and activity history commit atomically; React-local inventory mutation is not permitted.
+
 # Pending sheets
 
 No undecided question bodies are stored in this ledger. The canonical review sequence and complete predeclared Decision Maps live in [`review-plan.md`](review-plan.md). When the owner answers a material owner-checkpoint item, record the resulting Decision Card here. Lower-risk design details may be resolved by the AI-managed contract/default process defined by the planning framework without creating unnecessary owner Decision Cards.

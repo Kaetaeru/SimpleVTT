@@ -211,4 +211,56 @@ export function useSimpleVtt() {
   return value;
 }
 
+export type SessionDebugPreviewRole = "dm" | "player";
+
+export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
+  children: ReactNode;
+  role: SessionDebugPreviewRole;
+  mode: SessionMode;
+  onExit(): void;
+}) {
+  const parent = useSimpleVtt();
+  const previewSnapshot = useMemo<AppSnapshot | null>(() => {
+    if (!parent.snapshot) return null;
+    const activeCharacter = parent.snapshot.activeCharacter;
+    const hasCurrentActor=parent.snapshot.scene.entities.some((entity)=>entity.id===parent.snapshot!.scene.currentActorId);
+    const previewCurrentActorId=mode==="initiative"&&!hasCurrentActor
+      ? [...parent.snapshot.scene.entities].sort((left,right)=>right.initiative-left.initiative)[0]?.id??parent.snapshot.scene.currentActorId
+      : parent.snapshot.scene.currentActorId;
+    return {
+      ...parent.snapshot,
+      role: role === "dm" ? "dm" : "player",
+      sessionMode: mode,
+      connectionState: "connected",
+      session: {
+        ...parent.snapshot.session,
+        role: role === "dm" ? "host" : "client",
+        lifecycle: "live",
+        name: "브라우저 세션 UI 미리보기",
+        address: "debug://browser-preview",
+        compatibility: "compatible",
+        compatibilityMessage: "표시 확인 전용 · 실제 네트워크 연결과 권위 상태를 변경하지 않습니다.",
+        participants: [
+          { id: "host", name: "미리보기 DM", state: "connected", ready: true },
+          { id: `client:${activeCharacter.id}`, name: "미리보기 Player", characterName: activeCharacter.name, state: "connected", ready: true },
+        ],
+      },
+      scene: previewCurrentActorId===parent.snapshot.scene.currentActorId?parent.snapshot.scene:{...parent.snapshot.scene,currentActorId:previewCurrentActorId},
+    };
+  }, [mode, parent.snapshot, role]);
+
+  const value = useMemo<AppContextValue>(() => ({
+    ...parent,
+    snapshot: previewSnapshot,
+    loading: false,
+    hostSession: async () => undefined,
+    joinSession: async () => undefined,
+    stopSession: async () => onExit(),
+    setSessionReady: async () => undefined,
+    startPreparedSession: async () => undefined,
+  }), [onExit, parent, previewSnapshot]);
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
 export type { AdjudicationScope };

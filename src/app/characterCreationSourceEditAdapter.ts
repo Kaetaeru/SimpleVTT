@@ -48,6 +48,7 @@ function preserveExistingRuntime(before:CharacterSheet,next:CharacterSheet) {
       quantity:previous.quantity,
       equipped:previous.equipped,
       wielded:previous.wielded,
+      wieldSlot:previous.wieldSlot,
       attuned:previous.attuned,
     };
     if (item.charges) {

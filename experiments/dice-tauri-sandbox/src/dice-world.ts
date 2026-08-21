@@ -17,6 +17,7 @@ export type PhysicsSettings = {
 
 export type ThrowOptions = {
   sides: DieSides[];
+  authoritativeValues: number[];
   keepPrevious: boolean;
   diceCollision: boolean;
 };
@@ -26,6 +27,8 @@ export type WorldStats = {
   movingCount: number;
   elapsedMs: number | null;
   settledMs: number | null;
+  phase: "idle" | "rolling" | "converging" | "resolved";
+  authoritativeValues: number[];
 };
 
 type FaceDescriptor = {
@@ -39,6 +42,12 @@ type DieRuntime = {
   group: THREE.Group;
   body: CANNON.Body;
   faces: FaceDescriptor[];
+  authoritativeValue: number;
+  guidanceQuaternion: THREE.Quaternion | null;
+  displayStartQuaternion: THREE.Quaternion | null;
+  convergenceProgress: number;
+  enteredTable: boolean;
+  resolved: boolean;
 };
 
 type Bounds = {
@@ -52,6 +61,14 @@ const SURFACE_GROUP = 1;
 const BRONZE = 0xb87333;
 const BRONZE_DARK = 0x3c1e0d;
 const NUMBER_COLOR = "#f8e2bc";
+const GUIDANCE_START_MS = 680;
+const CONVERGENCE_LOCK_MS = 980;
+const CONVERGENCE_DURATION_MS = 220;
+const CONVERGENCE_STAGGER_MS = 18;
+const CAMERA_LAUNCH_OFFSET = 1.55;
+const CAMERA_LAUNCH_GATE = 0.35;
+const CAMERA_LAUNCH_SCALE = 1.45;
+const CAMERA_LAUNCH_SCALE_MS = 320;
 const MASS_BY_SIDES: Record<DieSides, number> = {
   4: 0.82,
   6: 1.08,
@@ -73,8 +90,8 @@ function d10Geometry() {
   for (let index = 0; index < 5; index += 1) {
     const current = 2 + index;
     const next = 2 + ((index + 1) % 5);
-    indices.push(0, current, next);
-    indices.push(1, next, current);
+    indices.push(0, next, current);
+    indices.push(1, current, next);
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
@@ -101,7 +118,7 @@ function geometryFor(sides: DieSides) {
 }
 
 function faceDescriptors(source: THREE.BufferGeometry, expectedCount: number) {
-  const geometry = source.toNonIndexed();
+  const geometry = source.index ? source.toNonIndexed() : source.clone();
   const position = geometry.getAttribute("position");
   const clusters: Array<{ normal: THREE.Vector3; centerSum: THREE.Vector3; count: number }> = [];
 
@@ -186,7 +203,15 @@ function attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: D
 function colliderFor(source: THREE.BufferGeometry, sides: DieSides) {
   if (sides === 6) return new CANNON.Box(new CANNON.Vec3(0.62, 0.62, 0.62));
 
-  const geometry = mergeVertices(source.clone(), 1e-4);
+  // Merge by position only. PolyhedronGeometry keeps separate vertices per face
+  // because their normals differ, which produces disconnected Cannon faces and
+  // can crash convex-vs-convex collision (most visibly with two d20s).
+  const colliderSource = source.clone();
+  for (const attribute of Object.keys(colliderSource.attributes)) {
+    if (attribute !== "position") colliderSource.deleteAttribute(attribute);
+  }
+  const geometry = mergeVertices(colliderSource, 1e-4);
+  colliderSource.dispose();
   const position = geometry.getAttribute("position");
   const index = geometry.index;
   if (!index) {
@@ -236,6 +261,7 @@ export class DiceWorld {
   private readonly floorMesh: THREE.Mesh;
   private readonly boundaryDebug: THREE.LineLoop;
   private readonly dice: DieRuntime[] = [];
+  private currentThrow: DieRuntime[] = [];
   private wallBodies: CANNON.Body[] = [];
   private bounds: Bounds = { halfWidth: 6, minZ: -6, maxZ: 5 };
   private settings: PhysicsSettings;
@@ -259,8 +285,11 @@ export class DiceWorld {
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.setClearColor(0x000000, 0);
 
-    this.camera.position.set(0, 8.8, 10.7);
-    this.camera.lookAt(0, 0.15, -0.6);
+    // The camera sensor is parallel to the table: screen space is the table.
+    // Screen-down maps to the player/camera side (+Z), where throws enter.
+    this.camera.position.set(0, 16, 0);
+    this.camera.up.set(0, 0, -1);
+    this.camera.lookAt(0, 0, 0);
 
     const hemisphere = new THREE.HemisphereLight(0xffe6c4, 0x1b2732, 2.05);
     this.scene.add(hemisphere);
@@ -350,7 +379,8 @@ export class DiceWorld {
   setDiceCollision(enabled: boolean) {
     this.diceCollision = enabled;
     for (const runtime of this.dice) {
-      runtime.body.collisionFilterMask = SURFACE_GROUP | (enabled ? DICE_GROUP : 0);
+      if (runtime.resolved) continue;
+      runtime.body.collisionFilterMask = (runtime.enteredTable ? SURFACE_GROUP : 0) | (enabled ? DICE_GROUP : 0);
       runtime.body.wakeUp();
     }
   }
@@ -360,25 +390,34 @@ export class DiceWorld {
   }
 
   throw(options: ThrowOptions) {
+    if (options.authoritativeValues.length !== options.sides.length) {
+      throw new Error("권위 결과 개수와 주사위 개수가 일치해야 합니다.");
+    }
     if (!options.keepPrevious) this.clear();
     this.setDiceCollision(options.diceCollision);
+    this.currentThrow = [];
     this.lastThrowAt = performance.now();
     this.settledAt = null;
 
     const total = options.sides.length;
     const spread = Math.min(this.bounds.halfWidth * 1.1, Math.max(1.4, total * 0.72));
-    const startZ = this.bounds.minZ + 0.95;
+    const startZ = this.bounds.maxZ + CAMERA_LAUNCH_OFFSET;
 
     options.sides.forEach((sides, index) => {
+      const authoritativeValue = options.authoritativeValues[index];
+      if (!Number.isInteger(authoritativeValue) || authoritativeValue < 1 || authoritativeValue > sides) {
+        throw new Error(`d${sides} 권위 결과가 범위를 벗어났습니다.`);
+      }
       const normalized = total <= 1 ? 0 : index / (total - 1) - 0.5;
       const x = normalized * spread + (Math.random() - 0.5) * 0.52;
       const y = this.settings.spawnHeight + Math.random() * 0.36 + index * 0.035;
-      const z = startZ - Math.random() * 0.25;
-      const runtime = this.createDie(sides, x, y, z);
+      const z = startZ + Math.random() * 0.2;
+      const runtime = this.createDie(sides, authoritativeValue, x, y, z);
+      this.currentThrow.push(runtime);
 
       const lateral = (Math.random() - 0.5) * 3.2;
       const forward = this.settings.throwSpeed * (0.91 + Math.random() * 0.17);
-      runtime.body.velocity.set(lateral, -2.4 - Math.random() * 1.4, forward);
+      runtime.body.velocity.set(lateral, -2.4 - Math.random() * 1.4, -forward);
 
       const axis = new CANNON.Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
       if (axis.lengthSquared() < 0.01) axis.set(1, 0.7, 0.3);
@@ -398,6 +437,7 @@ export class DiceWorld {
       this.scene.remove(runtime.group);
       disposeObject(runtime.group);
     }
+    this.currentThrow = [];
     this.lastThrowAt = null;
     this.settledAt = null;
   }
@@ -415,7 +455,7 @@ export class DiceWorld {
     this.renderer.dispose();
   }
 
-  private createDie(sides: DieSides, x: number, y: number, z: number) {
+  private createDie(sides: DieSides, authoritativeValue: number, x: number, y: number, z: number) {
     const geometry = geometryFor(sides);
     geometry.computeVertexNormals();
     const faces = faceDescriptors(geometry, sides);
@@ -441,6 +481,7 @@ export class DiceWorld {
     group.add(edges);
     attachFaceNumbers(group, faces, sides);
     group.position.set(x, y, z);
+    group.scale.setScalar(CAMERA_LAUNCH_SCALE);
     this.scene.add(group);
 
     const body = new CANNON.Body({
@@ -454,11 +495,22 @@ export class DiceWorld {
       sleepSpeedLimit: 0.22,
       sleepTimeLimit: 0.24,
       collisionFilterGroup: DICE_GROUP,
-      collisionFilterMask: SURFACE_GROUP | (this.diceCollision ? DICE_GROUP : 0),
+      collisionFilterMask: this.diceCollision ? DICE_GROUP : 0,
     });
     this.world.addBody(body);
 
-    const runtime: DieRuntime = { sides, group, body, faces };
+    const runtime: DieRuntime = {
+      sides,
+      group,
+      body,
+      faces,
+      authoritativeValue,
+      guidanceQuaternion: null,
+      displayStartQuaternion: null,
+      convergenceProgress: 0,
+      enteredTable: false,
+      resolved: false,
+    };
     this.dice.push(runtime);
     return runtime;
   }
@@ -539,22 +591,107 @@ export class DiceWorld {
     this.lastFrame = now;
     this.world.step(1 / 60, delta, 5);
 
+    const elapsed = this.lastThrowAt === null ? null : now - this.lastThrowAt;
     let movingCount = 0;
-    for (const runtime of this.dice) {
-      runtime.group.position.set(runtime.body.position.x, runtime.body.position.y, runtime.body.position.z);
-      runtime.group.quaternion.set(runtime.body.quaternion.x, runtime.body.quaternion.y, runtime.body.quaternion.z, runtime.body.quaternion.w);
-      if (runtime.body.sleepState !== CANNON.Body.SLEEPING) movingCount += 1;
+    let converging = false;
+    const up = new THREE.Vector3(0, 1, 0);
+
+    for (const [index, runtime] of this.currentThrow.entries()) {
+      const guidanceAt = GUIDANCE_START_MS + index * CONVERGENCE_STAGGER_MS;
+      const lockAt = CONVERGENCE_LOCK_MS + index * CONVERGENCE_STAGGER_MS;
+
+      if (!runtime.displayStartQuaternion) {
+        runtime.group.position.set(runtime.body.position.x, runtime.body.position.y, runtime.body.position.z);
+        runtime.group.quaternion.set(runtime.body.quaternion.x, runtime.body.quaternion.y, runtime.body.quaternion.z, runtime.body.quaternion.w);
+      }
+
+      if (!runtime.enteredTable && runtime.body.position.z <= this.bounds.maxZ - CAMERA_LAUNCH_GATE) {
+        runtime.enteredTable = true;
+        runtime.body.collisionFilterMask = SURFACE_GROUP | (this.diceCollision ? DICE_GROUP : 0);
+        runtime.body.wakeUp();
+      }
+
+      if (elapsed !== null) {
+        const launchProgress = Math.min(1, Math.max(0, elapsed / CAMERA_LAUNCH_SCALE_MS));
+        const launchEase = launchProgress * launchProgress * (3 - 2 * launchProgress);
+        runtime.group.scale.setScalar(CAMERA_LAUNCH_SCALE + (1 - CAMERA_LAUNCH_SCALE) * launchEase);
+      }
+
+      if (elapsed !== null && elapsed >= guidanceAt && !runtime.guidanceQuaternion) {
+        const desiredFace = runtime.faces.find((face) => face.value === runtime.authoritativeValue) ?? runtime.faces[0];
+        const localNormal = desiredFace?.normal ?? up;
+        const worldNormal = localNormal.clone().applyQuaternion(runtime.group.quaternion).normalize();
+        const correction = new THREE.Quaternion().setFromUnitVectors(worldNormal, up);
+        runtime.guidanceQuaternion = correction.multiply(runtime.group.quaternion.clone()).normalize();
+      }
+
+      if (elapsed !== null && elapsed >= guidanceAt && elapsed < lockAt && runtime.guidanceQuaternion) {
+        converging = true;
+        runtime.body.linearDamping = Math.max(this.settings.linearDamping, 0.3);
+        runtime.body.angularDamping = Math.max(this.settings.angularDamping, 0.36);
+
+        const current = new THREE.Quaternion(runtime.body.quaternion.x, runtime.body.quaternion.y, runtime.body.quaternion.z, runtime.body.quaternion.w);
+        const error = runtime.guidanceQuaternion.clone().multiply(current.invert()).normalize();
+        if (error.w < 0) error.set(-error.x, -error.y, -error.z, -error.w);
+        const halfSin = Math.sqrt(error.x * error.x + error.y * error.y + error.z * error.z);
+        if (halfSin > 1e-4) {
+          const angle = 2 * Math.atan2(halfSin, Math.max(1e-4, error.w));
+          const speed = Math.min(9, angle * 7.5);
+          const desiredX = (error.x / halfSin) * speed;
+          const desiredY = (error.y / halfSin) * speed;
+          const desiredZ = (error.z / halfSin) * speed;
+          runtime.body.angularVelocity.x += (desiredX - runtime.body.angularVelocity.x) * 0.2;
+          runtime.body.angularVelocity.y += (desiredY - runtime.body.angularVelocity.y) * 0.2;
+          runtime.body.angularVelocity.z += (desiredZ - runtime.body.angularVelocity.z) * 0.2;
+          runtime.body.wakeUp();
+        }
+      }
+
+      if (elapsed !== null && elapsed >= lockAt && runtime.guidanceQuaternion && !runtime.displayStartQuaternion) {
+        runtime.displayStartQuaternion = runtime.group.quaternion.clone();
+        runtime.body.velocity.setZero();
+        runtime.body.angularVelocity.setZero();
+        runtime.body.quaternion.set(
+          runtime.guidanceQuaternion.x,
+          runtime.guidanceQuaternion.y,
+          runtime.guidanceQuaternion.z,
+          runtime.guidanceQuaternion.w,
+        );
+        runtime.body.collisionFilterMask = 0;
+        runtime.body.sleep();
+      }
+
+      if (elapsed !== null && runtime.displayStartQuaternion && runtime.guidanceQuaternion) {
+        const rawProgress = Math.min(1, Math.max(0, (elapsed - lockAt) / CONVERGENCE_DURATION_MS));
+        const eased = rawProgress * rawProgress * (3 - 2 * rawProgress);
+        runtime.convergenceProgress = rawProgress;
+        runtime.group.quaternion.slerpQuaternions(runtime.displayStartQuaternion, runtime.guidanceQuaternion, eased);
+        runtime.resolved = rawProgress >= 1;
+        if (!runtime.resolved) converging = true;
+      }
+
+      if (!runtime.resolved) movingCount += 1;
     }
 
-    if (this.lastThrowAt !== null && movingCount === 0 && this.dice.length > 0 && this.settledAt === null) {
+    if (this.lastThrowAt !== null && this.currentThrow.length > 0 && this.currentThrow.every((runtime) => runtime.resolved) && this.settledAt === null) {
       this.settledAt = now;
     }
+
+    const phase: WorldStats["phase"] = this.lastThrowAt === null
+      ? "idle"
+      : this.settledAt !== null
+        ? "resolved"
+        : converging
+          ? "converging"
+          : "rolling";
 
     this.statsCallback?.({
       diceCount: this.dice.length,
       movingCount,
-      elapsedMs: this.lastThrowAt === null ? null : now - this.lastThrowAt,
+      elapsedMs: elapsed,
       settledMs: this.lastThrowAt === null || this.settledAt === null ? null : this.settledAt - this.lastThrowAt,
+      phase,
+      authoritativeValues: this.currentThrow.map((runtime) => runtime.authoritativeValue),
     });
 
     this.renderer.render(this.scene, this.camera);

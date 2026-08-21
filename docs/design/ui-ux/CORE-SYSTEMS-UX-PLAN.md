@@ -1,6 +1,6 @@
 # SimpleVTT Core Systems UX Plan
 
-Status: **OWNER-DIRECT REVIEWED PRODUCT DIRECTION — PROTOTYPE CANDIDATE — RUNTIME NOT YET AUTHORIZED**
+Status: **OWNER-DIRECT REVIEWED PRODUCT DIRECTION — CHARACTER INVENTORY SLICE IMPLEMENTED — REMAINING RUNTIME GAPS STAY CONTRACT-GATED**
 
 Owner direction:
 
@@ -337,7 +337,7 @@ Discoverable pointer baseline:
 small DM-only + / Quick control in Play chrome
 ```
 
-Opening Quick Search overlays the current accepted Play scene without replacing it.
+Opening Quick Search uses the contextual right utility pane. It narrows or, on narrow desktop, overlays only the right edge according to the existing utility-pane contract; it does not dim the scene, create a modal focus trap, or replace Play. The Command Center remains operable while this retrieval pane is open.
 
 ## 9.1 Unified result types
 
@@ -443,6 +443,8 @@ Custom
 - user-curated slots/pages only when canonical customization persistence exists
 ```
 
+Connected Play may persist the 2–4 row Hotbar density as a local presentation preference. This does not authorize capability ordering, slot assignment, Custom-page content, or cross-device/session canonical Hotbar persistence.
+
 Resource Rail shows current operational resources; it does not replace Inventory/Spellbook/Feature details.
 
 ---
@@ -531,6 +533,7 @@ The system-position prototype must show at least:
 
 - accepted DM Play scene preserved;
 - Ctrl+K / small Quick launcher;
+- contextual right pane, not a centered popup;
 - Actor/Image/Item/Condition/Rule typed results;
 - direct action verbs.
 
@@ -579,7 +582,7 @@ Planning/prototype may proceed, but runtime implementation needs explicit domain
 - Handout network/reconnect;
 - canonical condition/effect fast-apply/adjudication path where not already represented;
 - rest preview/commit projection if current runtime does not expose it;
-- user Hotbar customization persistence where Custom becomes real.
+- user Hotbar ordering/slot/custom-page persistence where Custom becomes real (row density alone is implemented presentation state);
 
 Do not solve these gaps by inventing React-local authority.
 

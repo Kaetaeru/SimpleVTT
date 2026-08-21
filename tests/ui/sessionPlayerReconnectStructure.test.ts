@@ -11,7 +11,7 @@ test("Player connection utility launches from accepted Session chrome inside per
   assert.match(root, /SessionPlayerRecoveryStrip, SessionPlayerSessionPane/);
   assert.match(root, /"player-session"/);
   assert.match(root, /toggleUtility\(role === "dm" \? "session" : "player-session"/);
-  assert.match(root, />Session<\/button>/);
+  assert.match(root, />세션<\/button>/);
   assert.match(root, /<SessionPlayerSessionPane onClose=\{closeUtility\}/);
   assert.match(root, /session-reference-utility-host/);
   assert.doesNotMatch(playerSession, /setRoute|AppRoute|플레이로 돌아가기/);

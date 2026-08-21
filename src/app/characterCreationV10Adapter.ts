@@ -49,6 +49,7 @@ const clearChoicePrefix = (draft: CharacterCreateDraft, prefix: string) => {
 
 function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
   const loadout = classAndBackgroundLoadout(draft);
+  let mainHandAssigned=false;
   return loadout.items.map((item, index) => {
     const armor = itemMechanic(item.entry, "armor-definition") as { ac?: { base?: number } } | undefined;
     const shield = itemMechanic(item.entry, "shield-definition") as { acBonus?: number } | undefined;
@@ -59,6 +60,8 @@ function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
       weapon?.damage ? `${weapon.damage} ${weapon.damageType ?? ""}`.trim() : "",
     ].filter(Boolean);
     const equipped = ["armor", "shield", "weapon", "focus"].includes(item.entry.category);
+    const wieldSlot=item.entry.category === "weapon"&&!mainHandAssigned?"main-hand":item.entry.category === "shield"?"off-hand":undefined;
+    if (wieldSlot==="main-hand") mainHandAssigned=true;
     return {
       id:`item.created.${index}.${item.id}${item.variant ? `.${item.variant}` : ""}`,
       definitionId:item.id,
@@ -68,6 +71,7 @@ function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
       quantity:item.quantity,
       equipped,
       wielded:item.entry.category === "weapon" || item.entry.category === "shield",
+      wieldSlot,
       passiveEffects:effects,
       grantedActionIds:[],
       provenance:["SRD 5.2.1 · Character Creation", item.id, ...(item.variant ? [`variant:${item.variant}`] : [])],

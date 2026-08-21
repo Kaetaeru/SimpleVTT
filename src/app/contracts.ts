@@ -56,6 +56,7 @@ export interface ItemInstanceVm {
   quantity: number;
   equipped: boolean;
   wielded?: boolean;
+  wieldSlot?: "main-hand" | "off-hand" | "two-hand";
   attunementRequired?: boolean;
   attuned?: boolean;
   charges?: { current: number; max: number };
@@ -272,6 +273,7 @@ export interface ActionVm {
   available: boolean;
   disabledReason?: string;
   eligibleTargetIds: string[];
+  eligibleTargetReasons?: Record<string,string>;
   maxTargets?: number;
   attackBonus?: number;
   checkBonus?: number;

@@ -53,6 +53,12 @@ Korean-first / extensibility contract:
 EXTENSIBILITY-KOREAN-FIRST.md
 ```
 
+Item/currency transfer foundation:
+
+```text
+ITEM-CURRENCY-TRANSFER-FOUNDATION.md
+```
+
 Core rule:
 
 > Accepted prototype가 실제 장면을 이미 정의한 경우, prose contract의 큰 구조만 만족하는 시각적으로 다른 화면을 대체안으로 만들지 않는다.
@@ -79,6 +85,8 @@ The Core Systems extension extends the accepted Play scene; it does not replace 
 | Korean-first product UI | **ACTIVE BASELINE** |
 | Extensible registry/provider direction | **ACTIVE BASELINE** |
 | Party Stash UX concept | **OWNER ACCEPTED PRODUCT DIRECTION / RUNTIME CONTRACT PENDING** |
+| Item/currency transfer foundation | **RECORDED / RUNTIME PENDING** |
+| Session Quick menu | **NON-MODAL RIGHT PANE IMPLEMENTED / OWNER QA PENDING** |
 | WO-UI-004 runtime implementation | **NOT YET AUTHORIZED** |
 | PR #109 | **DRAFT / UNMERGED** |
 

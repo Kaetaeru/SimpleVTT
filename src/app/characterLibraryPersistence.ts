@@ -100,6 +100,7 @@ function itemRuntimeState(item:ItemInstanceVm):CharacterItemRuntimeStateV1 {
     quantity:item.quantity,
     equipped:item.equipped,
     wielded:item.wielded,
+    wieldSlot:item.wieldSlot,
     attuned:item.attuned,
     charges:item.charges ? { current:item.charges.current } : undefined,
   };
@@ -179,6 +180,7 @@ function comparableRuntime(runtime:CharacterRuntimeDurableSnapshotV1):CharacterR
       quantity:item.quantity,
       equipped:item.equipped,
       wielded:item.wielded,
+      wieldSlot:item.wieldSlot,
       attuned:item.attuned,
       charges:item.charges ? { current:item.charges.current } : undefined,
     })),
@@ -307,6 +309,7 @@ function materializeItems(record:CharacterLibraryRecordV1):ItemInstanceVm[] {
       quantity:runtime?.quantity ?? legacy?.quantity ?? 1,
       equipped:runtime?.equipped ?? legacy?.equipped ?? false,
       wielded:runtime?.wielded ?? legacy?.wielded,
+      wieldSlot:runtime?.wieldSlot ?? legacy?.wieldSlot,
       attunementRequired:reference.attunementRequired ?? legacy?.attunementRequired,
       attuned:runtime?.attuned ?? legacy?.attuned,
       charges:maximum !== undefined ? { current:Math.min(current ?? maximum,maximum),max:maximum } : undefined,

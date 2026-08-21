@@ -14,7 +14,7 @@
         <div>
           <p class="eyebrow">TAURI PHYSICS LAB</p>
           <h1>주사위 물리 테스트</h1>
-          <p>화면 전체를 테이블로 보고 실제 rigid-body 투척 감각만 확인합니다.</p>
+          <p>화면 전체를 테이블로 보고 물리 투척과 권위 결과 수렴을 함께 확인합니다.</p>
         </div>
         <button id="hide-controls" class="icon-button" type="button" title="컨트롤 숨기기 (H)">×</button>
       </header>
@@ -37,6 +37,21 @@
             <option value="bouncy">탄성</option>
             <option value="fast">빠름</option>
           </select>
+        </label>
+      </div>
+
+      <div class="result-config-grid">
+        <label>
+          <span>굴림명</span>
+          <input id="roll-label" type="text" value="능력 판정" maxlength="30" />
+        </label>
+        <label>
+          <span>수정치</span>
+          <input id="roll-modifier" type="number" value="3" min="-99" max="99" />
+        </label>
+        <label class="authority-field">
+          <span>권위 면값 <small>비우면 안전 난수 · 쉼표로 구분</small></span>
+          <input id="authoritative-values" type="text" inputmode="numeric" placeholder="예: 20, 7" />
         </label>
       </div>
 
@@ -67,12 +82,27 @@
       </div>
 
       <footer class="panel-footer">
-        <span>결과 강제 보정 없음</span>
+        <span>권위 결과 수렴 ON</span>
+        <span>자연 물리 → 감속 유도 → 면 정렬</span>
         <span>화면 경계 = 보이지 않는 collider</span>
       </footer>
     </section>
 
     <button id="show-controls" class="show-controls" type="button" hidden>컨트롤 열기 <kbd>H</kbd></button>
+
+    <section id="result-presentation" class="result-presentation" data-phase="rolling" data-tone="normal" role="status" aria-live="polite" hidden>
+      <div class="result-core">
+        <span id="result-label" class="result-label">능력 판정</span>
+        <span id="result-notation" class="result-notation">d20</span>
+        <span class="result-reel" aria-label="권위 주사위 결과"><b id="result-reel">—</b></span>
+      </div>
+      <div class="result-extension">
+        <span class="result-formula"><b id="result-formula">권위 결과 대기 중</b><small id="result-modifier">물리 연출 수렴 중</small></span>
+        <span class="result-equals">=</span>
+        <strong id="result-total" class="result-total">—</strong>
+      </div>
+      <span id="result-natural" class="result-natural"></span>
+    </section>
 
     <div class="status-bar" aria-live="polite">
       <span id="status-text">준비됨</span>

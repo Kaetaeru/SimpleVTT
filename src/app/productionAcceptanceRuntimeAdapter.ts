@@ -77,15 +77,23 @@ function projectReferenceAttackEligibility(snapshot:AppSnapshot) {
   for (const actions of Object.values(snapshot.scene.actionsByActor)) {
     for (const action of actions) {
       if (action.resolutionKind!=="attack"||!action.runtimeAttack) continue;
+      const reasons:Record<string,string>={};
       const legal=action.eligibleTargetIds.filter((targetId)=>{
         try {
           const relation=runtimeSpatialRelation(snapshot.scene,action.actorId,targetId);
-          return relation.visible&&relation.distanceFeet<=action.runtimeAttack!.rangeFeet;
+          if (!relation.visible) { reasons[targetId]="현재 권위 투영에서 보이지 않는 대상입니다."; return false; }
+          if (relation.distanceFeet>action.runtimeAttack!.rangeFeet) {
+            reasons[targetId]=`거리 ${relation.distanceFeet}피트 · 무기 사거리 ${action.runtimeAttack!.rangeFeet}피트 밖`;
+            return false;
+          }
+          return true;
         } catch {
+          reasons[targetId]="권위 있는 공간 관계가 없습니다.";
           return false;
         }
       });
       action.eligibleTargetIds=legal;
+      action.eligibleTargetReasons=reasons;
       if (action.available&&legal.length===0) {
         action.available=false;
         action.disabledReason=`사거리 ${action.runtimeAttack.rangeFeet}피트 안에 공격 가능한 대상이 없습니다.`;

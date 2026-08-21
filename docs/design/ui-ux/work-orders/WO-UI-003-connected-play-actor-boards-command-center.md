@@ -209,3 +209,7 @@ WO-UI-003: CLOSED / ACCEPTED
 ```
 
 Next product work must treat the accepted Connected Play composition as the baseline rather than reopen it implicitly.
+
+## 10. Bounded supersession
+
+WO-UI-005 retains this accepted global composition but supersedes the internal `~70px` named Hotbar slot, detached target-picker overlay, and metadata-heavy Actor Card presentation. It also closes the presentation/runtime portion of the Main Hand relation gap through an explicit persisted `ItemInstanceVm.wieldSlot`; records without that relation still receive no inferred fallback.

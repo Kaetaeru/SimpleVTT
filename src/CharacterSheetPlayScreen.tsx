@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CharacterSheetPlayScreen as SimpleVttCharacterSheetPlayScreen } from "./LegacyCharacterSheetPlayScreen";
 import { OfficialCharacterSheetPlayScreen } from "./OfficialCharacterSheetPlayScreen";
+import { CharacterInventoryView } from "./CharacterInventoryView";
 import { useSimpleVtt } from "./app/AppProvider";
 import {
   persistSheetLayoutPreference,
@@ -25,6 +26,7 @@ type WorkspaceProps = {
 export function CharacterSheetWorkspace({ hostMode, onScene, onLevelUp, onEdit, onClose, onOpenRules }: WorkspaceProps) {
   const { snapshot } = useSimpleVtt();
   const [layout, setLayout] = useState<SheetLayoutPreference>(() => readSheetLayoutPreference());
+  const [section,setSection]=useState<"sheet"|"inventory">("sheet");
 
   const selectLayout = (next: SheetLayoutPreference) => {
     setLayout(persistSheetLayoutPreference(next));
@@ -60,8 +62,13 @@ export function CharacterSheetWorkspace({ hostMode, onScene, onLevelUp, onEdit, 
       </div>
     </div>}
 
+    <nav className="character-sheet-system-tabs" role="tablist" aria-label="캐릭터 관리 섹션">
+      <button type="button" role="tab" aria-selected={section==="sheet"} className={section==="sheet"?"active":""} onClick={()=>setSection("sheet")}>개요 / 시트</button>
+      <button type="button" role="tab" aria-selected={section==="inventory"} className={section==="inventory"?"active":""} onClick={()=>setSection("inventory")}>인벤토리</button>
+    </nav>
+
     <div className="character-sheet-workspace-content">
-      {layout === "simplevtt"
+      {section==="inventory"?<CharacterInventoryView hostMode={hostMode}/>:layout === "simplevtt"
         ? <SimpleVttCharacterSheetPlayScreen hostMode={hostMode} onScene={onScene} onLevelUp={onLevelUp} onEdit={onEdit} />
         : <OfficialCharacterSheetPlayScreen hostMode={hostMode} onScene={onScene} onLevelUp={onLevelUp} onEdit={onEdit} />}
     </div>

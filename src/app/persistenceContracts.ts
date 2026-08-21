@@ -95,6 +95,7 @@ export interface CharacterItemRuntimeStateV1 {
   quantity:number;
   equipped:boolean;
   wielded?:boolean;
+  wieldSlot?:"main-hand"|"off-hand"|"two-hand";
   attuned?:boolean;
   charges?:{ current:number };
 }

@@ -13,6 +13,7 @@ test("reference demo exposes a legal melee attack and resolves it through the au
   assert.ok(attack,"reference Character must expose a melee attack");
   assert.equal(attack.available,true);
   assert.ok(attack.eligibleTargetIds.includes("combatant.wolf"),"reference demo must expose at least one legal melee target");
+  assert.match(Object.values(attack.eligibleTargetReasons??{}).join(" · "),/거리 22피트 · 무기 사거리 5피트 밖/);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.wolf")?.distance,"5피트");
 
   snapshot=await adapter.resolveAction(attack.id,["combatant.wolf"]);

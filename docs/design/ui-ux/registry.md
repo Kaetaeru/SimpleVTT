@@ -107,7 +107,7 @@ Activity, Encounter Manager, and Adjudication remain contextual tools rather tha
 | `R3-PLAY-INITIATIVE` | Initiative mode | Draft | Partial | DND-04 | ORIGIN-UX-01-14, ORIGIN-UX-01-15, UI-01-04, docs/design/session-runtime.md, src/SessionInitiativeStrip.tsx | Adds compact top tracker without replacing Actor Boards |
 | `R3-ACTION-IDLE` | No action selected | Draft | None | DND-03 | src/SessionActionDock.tsx | Baseline Play state |
 | `R3-ACTION-SELECTED` | Capability selected | Draft | Partial | DND-03 | UX-01-04, UX-01-05, UX-01-06 | Awaiting target/resolve path |
-| `R3-TARGET-SINGLE` | Single-target targeting | Draft | Partial | DND-03 | ORIGIN-UX-01-19, ORIGIN-UX-01-20 | Valid click immediate execute |
+| `R3-TARGET-SINGLE` | Single-target targeting | Reviewed | Implemented | DND-03 | ORIGIN-UX-01-19, ORIGIN-UX-01-20, ORIGIN-UX-01-31 | Pointer tether; Actor Card click immediate execute |
 | `R3-TARGET-MULTI` | Multi-target targeting | Draft | Partial | DND-03 | ORIGIN-UX-01-20 | Explicit Execute |
 | `R3-RESOLVING` | Resolution running | Draft | Blocked | DND-03 / DND-02 | ORIGIN-UX-01-21, GAP-RESOLUTION-SAFE-INTERACTIONS | Selective locking behavior reviewed; command-conflict semantics require Domain contract |
 | `R3-INTERRUPT` | Reaction / interrupt pending | Draft | Blocked | DND-03 / DND-04 | GAP-RESOLUTION-SAFE-INTERACTIONS, src/App.tsx, src/SessionModeRoot.tsx | Exact safe interaction boundary is authoritative-domain work |
@@ -215,19 +215,20 @@ Developer-only `DebugPanel` is intentionally excluded from product UI Registry c
 | `R7-PRIMARY-NAV` | Product Shell primary navigation | Reviewed | Partial | NAV-01 / CMP-01 | NAV-01-01, UI-01-01, src/App.tsx | Top navigation/header with Reviewed global destination order; current sidebar code is drift evidence |
 | `R7-BUTTON` | Button family | Draft | None | CMP-01 | — | AI-managed design-system variants |
 | `R7-TABS` | Standard tabs | Draft | None | CMP-01 | — | AI-managed peer-content navigation |
-| `R7-HOTBAR-TABS` | Hotbar page tabs | Reviewed | Partial | DND-03 / CMP-01 | ORIGIN-UX-01-07 | Mixed/Action/Spell/Item + custom baseline |
+| `R7-HOTBAR-TABS` | Hotbar page tabs | Reviewed | Implemented | DND-03 / CMP-01 | ORIGIN-UX-01-07, ORIGIN-UX-01-36 | Mixed/Action/Class+Magic/Item/Special/Custom |
 | `R7-TOGGLE` | Toggle | Draft | None | CMP-01 | — | AI-managed immediate boolean control |
 | `R7-SEGMENTED` | Segmented mode control | Draft | None | CMP-01 | — | AI-managed small exclusive set |
 | `R7-SEARCH` | Search input | Draft | None | CMP-01 | src/App.tsx, src/SessionUtilityPanes.tsx | Rules/content/library use as applicable |
 | `R7-FILTER` | Filter controls | Draft | None | CMP-01 | DM-02-01, src/App.tsx, src/LevelUpV10.tsx | Includes Activity public/private filter when applicable |
 | `R7-CHAR-CARD` | Character Card | Draft | None | DND-01 / CMP-01 | NAV-01-03, src/App.tsx | Library/select uses |
-| `R7-ACTOR-CARD` | Actor Card | Reviewed | Partial | INT-01 / SES-01 | ORIGIN-UX-01-10, ORIGIN-UX-01-11, ORIGIN-UX-01-16, ORIGIN-UX-01-19, INT-01-02 | Core scene interaction surface |
+| `R7-ACTOR-CARD` | Actor Card | Reviewed | Implemented | INT-01 / SES-01 | ORIGIN-UX-01-10, ORIGIN-UX-01-11, ORIGIN-UX-01-16, ORIGIN-UX-01-19, ORIGIN-UX-01-32, INT-01-02 | Portrait-only, damage frame, hover detail |
 | `R7-COMMAND-CENTER` | Bottom Command Center container | Reviewed | Partial | SES-01 / DND-03 | UX-01-07, UI-01-05, ORIGIN-UX-01-09 | BG3-family co-primary bottom command surface |
-| `R7-HOTBAR-SLOT` | Capability/Hotbar slot | Reviewed | Partial | DND-03 | UX-01-04, UX-01-05, UX-01-06 | Capability execution/discoverability |
+| `R7-HOTBAR-SLOT` | Capability/Hotbar slot | Reviewed | Implemented | DND-03 | UX-01-04, UX-01-05, UX-01-06, ORIGIN-UX-01-30 | 1:1 icons, 2–4 local rows, hover detail |
 | `R7-ECONOMY` | Action-economy indicator | Reviewed | Partial | DND-03 | UI-01-05, ORIGIN-UX-01-08 | Fixed economy grammar |
 | `R7-RESOURCE-RAIL` | Dynamic Resource Rail | Reviewed | Partial | DND-03 | UI-01-05, ORIGIN-UX-01-08 | Canonical resource projection |
 | `R7-INITIATIVE-ENTRY` | Initiative tracker entry | Reviewed | Partial | DND-04 | UI-01-04, ORIGIN-UX-01-15, src/SessionInitiativeStrip.tsx | Compact current/order info |
 | `R7-SESSION-UTILITY-RAIL` | In-session utility rail / side-pane launchers | Draft | Partial | SES-01 / NAV-01 / CMP-01 | NAV-01-05, UI-01-06, src/SessionModeRoot.tsx | Contextual utilities use side panes; exact launcher detail AI-managed |
+| `R7-SESSION-QUICK-PANE` | In-session Quick Search/menu pane | Reviewed | Implemented | SES-01 / NAV-01 / CMP-01 | ORIGIN-UX-01-46, src/SessionQuickPalette.tsx | Non-modal right pane; preserves Scene and operable Command Center |
 | `R7-SHEET-LAYOUT-SWITCH` | Character Sheet layout switch | Reviewed | Partial | DND-01 / CMP-01 | UI-01-07, NAV-01-07, src/CharacterSheetPlayScreen.tsx, src/CharacterLibraryUxBridge.tsx | Official-style / SimpleVTT layout preference, initially chosen during onboarding |
 | `R7-PORTRAIT` | Character portrait control | Draft | None | DND-01 / CMP-01 | src/CharacterPortraitBridge.tsx | Current image/focal-point UI evidence |
 | `R7-CONNECTION-STATUS` | Session connection status indicator | Draft | Partial | SES-02 / CMP-01 | UX-01-03, INT-01-07, src/SessionModeRoot.tsx, src/SessionPlayerSession.tsx | Connected/reconnecting/disconnected projection; important state may feed NOTICE UI |

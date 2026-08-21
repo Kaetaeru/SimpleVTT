@@ -101,6 +101,7 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
       quantity:runtime.quantity,
       equipped:runtime.equipped,
       wielded:runtime.wielded,
+      wieldSlot:runtime.wieldSlot,
       attunementRequired:source.attunementRequired === true,
       attuned:runtime.attuned,
       charges:maxCharges!==undefined ? { current:runtime.charges?.current ?? maxCharges,max:maxCharges } : undefined,

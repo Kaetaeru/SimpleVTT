@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ProductRoot } from "./ProductRoot";
 import { AppProvider } from "./app/AppProvider";
 import { initializeAppearancePreference } from "./app/appearancePreferences";
+import { initializeMotionPreference } from "./app/motionPreferences";
 import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
 import "./app/directNetworkSessionRuntimeAdapter";
@@ -59,6 +60,7 @@ import "./session-image-handout.css";
 void CombatSpellHudBridge;
 
 initializeAppearancePreference();
+initializeMotionPreference();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

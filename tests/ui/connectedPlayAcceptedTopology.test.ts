@@ -11,42 +11,44 @@ const runtimeCss = readFileSync("src/session-integrated-reference-play.css", "ut
 const chromeCss = readFileSync("src/session-integrated-reference-chrome.css", "utf8");
 const prototypeJs = readFileSync("docs/design/ui-ux/prototype/app/integrated-reference.js", "utf8");
 const prototypeCss = readFileSync("docs/design/ui-ux/prototype/app/integrated-reference.css", "utf8");
+const coreSystems = readFileSync("docs/design/ui-ux/prototype/app/core-systems-reference.js", "utf8");
 
 test("production Play DOM follows the accepted integrated-reference scene, not a structural approximation", () => {
   const chrome = root.indexOf('className="session-reference-play-chrome"');
   const main = root.indexOf('className={`session-reference-play-main');
   const core = root.indexOf('className="session-reference-play-core"');
-  const upper = root.indexOf('<SessionActorBoard position="upper" role={role} />');
+  const upper = root.indexOf('<SessionActorBoard position="upper" role={role}');
   const stage = root.indexOf('className="session-play-context session-reference-mapless-stage"');
-  const lower = root.indexOf('<SessionActorBoard position="lower" role={role} />');
+  const lower = root.indexOf('<SessionActorBoard position="lower" role={role}');
   const command = root.indexOf('aria-label="Command Center"');
   assert.ok(chrome >= 0 && main > chrome && core > main && upper > core && stage > upper && lower > stage && command > lower);
   assert.match(prototypeJs, /renderPlayChrome\(\)[\s\S]*renderActorBoard\('opposing'\)[\s\S]*renderMaplessStage\(\)[\s\S]*renderActorBoard\('allied'\)[\s\S]*renderCommandCenter\(\)/);
   assert.doesNotMatch(root, /session-mode-rail/);
 });
 
-test("production geometry is pinned to the accepted 41 / 86 / flexible / 86 / 174 composition", () => {
+test("production retains topology while WO-UI-006 uses tall boards and adaptive command height", () => {
   assert.match(prototypeCss, /--actor-board-h:86px;[\s\S]*--command-h:174px/);
   assert.match(prototypeCss, /\.play-root\{[^}]*grid-template-rows:41px 1fr var\(--command-h\)/);
-  assert.match(runtimeCss, /--svtt-actor-board-h:\s*86px/);
-  assert.match(runtimeCss, /--svtt-command-h:\s*174px/);
+  assert.match(runtimeCss, /--svtt-actor-board-h:\s*112px/);
+  assert.match(runtimeCss, /--svtt-command-h:\s*max\(174px/);
   assert.match(runtimeCss, /grid-template-rows:\s*41px minmax\(0, 1fr\) var\(--svtt-command-h\)/);
   assert.match(runtimeCss, /grid-template-rows:\s*var\(--svtt-actor-board-h\) minmax\(0, 1fr\) var\(--svtt-actor-board-h\)/);
 });
 
-test("DM Play chrome mirrors accepted utility order while blocked authority stays visibly unavailable", () => {
-  for (const label of ["← Product", "Sheet", "Rules", "Public", "DM Only", "Activity", "Encounter", "Participants", "Session", "Spatial Facts"]) assert.match(root, new RegExp(`>${label}<`));
+test("DM Play chrome keeps accepted geometry while the Core Systems pass lowers utility density", () => {
+  for (const label of ["← 제품", "시트", "규칙", "Public", "DM Only", "기록", "인카운터", "＋ 빠른 메뉴", "세션"]) assert.match(root, new RegExp(`>${label}<`));
   assert.doesNotMatch(root, />Handout<\/button>/);
-  const rules = root.indexOf('>Rules</button>');
+  const rules = root.indexOf('>규칙</button>');
   const visibility = root.indexOf('className="session-reference-visibility"');
-  const activity = root.indexOf('>Activity</button>');
-  const encounter = root.indexOf('>Encounter</button>');
-  const participants = root.indexOf('>Participants</button>');
-  const session = root.indexOf('>Session</button>');
-  const spatial = root.indexOf('>Spatial Facts</span>');
-  assert.ok(rules >= 0 && visibility > rules && activity > visibility && encounter > activity && participants > encounter && session > participants && spatial > session);
+  const activity = root.indexOf('>기록</button>');
+  const encounter = root.indexOf('>인카운터</button>');
+  const quick = root.indexOf('>＋ 빠른 메뉴</button>');
+  const session = root.indexOf('>세션</button>');
+  assert.ok(rules >= 0 && visibility > rules && activity > visibility && encounter > activity && quick > encounter && session > quick);
   assert.match(root, /GAP-DM-ONLY-DELIVERY-PROTOCOL/);
-  assert.match(root, /aria-disabled="true"[\s\S]*Spatial Facts/);
+  assert.doesNotMatch(root, /session-reference-unavailable-control|Spatial Facts/);
+  assert.match(coreSystems,/data-action="toggle-quick"/);
+  assert.match(root,/SessionQuickPalette/);
   assert.match(runtimeCss, /\.session-reference-play-chrome\s*\{[\s\S]*display:\s*flex/);
   assert.match(runtimeCss, /\.session-reference-play-chrome > button,[\s\S]*height:\s*27px/);
   assert.match(chromeCss, /\.session-reference-visibility/);
@@ -54,45 +56,44 @@ test("DM Play chrome mirrors accepted utility order while blocked authority stay
   assert.doesNotMatch(root, /session-mode-character-chip|session-mode-role-controls|session-mode-bar/);
 });
 
-test("Actor Boards project canonical Scene entities but adopt the accepted card bands", () => {
-  assert.match(boards, /snapshot\.scene\.entities\.filter\(\(entity\) => entity\.side === wantedSide\)/);
+test("Actor Boards project canonical Scene entities as portrait combat frames", () => {
+  assert.match(boards, /snapshot\.scene\.entities\.filter\(\(entity\)=>entity\.side===wantedSide\)/);
   assert.match(boards, /await selectDmActor\(entity\.id\)/);
   assert.match(runtimeCss, /\.session-reference-play-root \.session-actor-board-label \{ display: none; \}/);
-  assert.match(runtimeCss, /\.session-reference-play-root \.session-actor-card\s*\{[\s\S]*flex:\s*1 0 164px;[\s\S]*max-width:\s*258px;[\s\S]*height:\s*73px/);
+  assert.match(runtimeCss, /\.session-reference-play-root \.session-actor-card\s*\{[\s\S]*flex-basis:\s*70px;[\s\S]*max-width:\s*70px;[\s\S]*height:\s*98px/);
+  assert.match(runtimeCss, /justify-content:\s*safe center/);
   assert.match(runtimeCss, /overflow-x:\s*auto/);
-  assert.doesNotMatch(boards, /\bx\s*:|\by\s*:|grid|pathfind|lineOfSight|fog|tokenPosition|distanceFeet/);
+  assert.doesNotMatch(boards, /pathfind|lineOfSight|fog|tokenPosition|distanceFeet|actorCoordinate/);
 });
 
-test("Mapless Stage reproduces accepted default focus and compact Initiative strip", () => {
-  assert.match(root, /MAPLESS PLAY CONTEXT/);
-  assert.match(root, /no grid · no map token · no Actor coordinates/);
+test("Mapless Stage uses last-roll art in Freeform and current-turn art with compact Initiative strip", () => {
+  assert.match(root, /테이블 플레이 공간/);
+  assert.match(root, /지도 없이 현재 맥락과 결과만 표시/);
   assert.match(runtimeCss, /radial-gradient\(ellipse at 50% 45%/);
   assert.match(runtimeCss, /\.session-reference-stage-focus[\s\S]*place-items:\s*center/);
-  assert.match(focus, />FREEFORM</);
-  assert.match(focus, />Mapless shared play context</);
-  assert.match(focus, /Actors are never placed here as tactical tokens/);
-  assert.match(focus, />INITIATIVE</);
-  assert.match(focus, />Actor and action context, not a battlemap</);
-  assert.match(focus, /Actor context <strong>Boards<\/strong>/);
-  assert.match(focus, /Dice \/ Result <strong>Center Stage<\/strong>/);
+  assert.match(focus, /session-last-roll-actor/);
+  assert.match(focus, /LAST ROLL/);
+  assert.match(focus, /session-current-turn-actor/);
+  assert.match(focus, /CURRENT TURN · ROUND/);
   assert.match(initiative, /session-reference-initiative-strip/);
   assert.doesNotMatch(initiative, /session-initiative-economy|session-initiative-controls|endInitiative|endTurn/);
   assert.match(runtimeCss, /\.session-reference-initiative-strip\s*\{[\s\S]*height:\s*40px/);
 });
 
-test("Command Center uses accepted rail body and five-page Hotbar", () => {
+test("Command Center uses accepted rail body and six-page grouped Hotbar", () => {
   const top = dock.indexOf('className="session-command-top"');
   const body = dock.indexOf('className="session-command-body"');
   const controlled = dock.indexOf('className="session-controlled-actor"');
   const hotbar = dock.indexOf('className="session-hotbar"');
   const context = dock.indexOf('className="session-command-context"');
   assert.ok(top >= 0 && body > top && controlled > body && hotbar > controlled && context > hotbar);
-  assert.match(dock, /FREEFORM · no turn economy/);
-  for (const label of ["Mixed", "Action", "Spell", "Item", "Custom"]) assert.match(dock, new RegExp(`label: "${label}"`));
+  assert.match(dock, /자유 진행 · 턴 자원 없음/);
+  for (const label of ["통합", "행동", "직업", "아이템", "특수", "커스텀"]) assert.match(dock, new RegExp(`label:\\s*"${label}"`));
+  assert.match(dock,/session-hotbar-unified/);
   assert.match(dock, /snapshot\.scene\.actionsByActor\[actorId\]/);
   assert.match(dock, /action\.disabledReason/);
-  assert.match(runtimeCss, /\.session-command-body\s*\{[\s\S]*grid-template-columns:\s*240px minmax\(0, 1fr\) 104px/);
-  assert.match(runtimeCss, /\.session-hotbar-slot\s*\{[\s\S]*flex:\s*0 0 70px/);
+  assert.match(runtimeCss, /\.session-reference-command-center \.session-command-body \{ grid-template-columns:\s*178px minmax\(0,1fr\) 104px/);
+  assert.match(runtimeCss, /\.session-reference-command-center \.session-hotbar-slot\s*\{[\s\S]*width:\s*42px;[\s\S]*height:\s*42px/);
   assert.doesNotMatch(dock, /OFFICIAL_PLAY_INTENTS|intentOptions|intentId|모든 행동/);
 });
 
@@ -104,6 +105,6 @@ test("contextual utilities use the accepted right-side pane relationship", () =>
 
 test("accepted scene still respects mapless and blocked-authority boundaries", () => {
   assert.doesNotMatch(boards, /resolveAction|Main Hand|mainHand/);
-  assert.doesNotMatch(dock, /smart fallback|mainHand|default hostile/);
+  assert.match(dock, /wieldSlot==="main-hand"/);
   assert.doesNotMatch(dock, /distanceFeet|lineOfSight|pathfinding|coverFromMap|actorCoordinate/);
 });

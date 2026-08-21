@@ -16,6 +16,9 @@ test("Combat VFX is a mounted presentation bridge and only replays in Initiative
   assert.match(bridge,/document\.body/);
   assert.match(bridge,/snapshot\.sessionMode!=="initiative"/);
   assert.match(bridge,/buildCombatVfxProfile/);
+  assert.match(bridge,/\.session-actor-card\[data-actor-id\]/);
+  assert.match(bridge,/element\.dataset\.actorId===entityId/);
+  assert.doesNotMatch(bridge,/\.play-v09-scene-row|\.play-v09-actor/);
 });
 
 test("VFX presentation reads public Action damage metadata but never target defenses or mechanics mutators",()=>{

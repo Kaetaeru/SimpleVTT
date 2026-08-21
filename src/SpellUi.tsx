@@ -29,7 +29,7 @@ function tooltipPosition(rect: DOMRect): TooltipPosition {
   return { top, left, width };
 }
 
-function iconShape(key: SpellVisualKey) {
+export function spellIconShape(key: SpellVisualKey) {
   if (key === "fire") return <path d="M13 2c1 4-2 5-1 8 1-2 3-2 4-4 3 4 4 8 2 12-2 4-9 5-12 1-3-4-1-9 3-12 0 3 2 4 3 5 0-4 2-7 4-10Z"/>;
   if (key === "cold") return <><path d="M12 2v20M4 6l16 12M20 6 4 18"/><path d="m12 2-2 3m2-3 2 3m-2 17-2-3m2 3 2-3"/></>;
   if (key === "lightning") return <path d="m13 2-7 12h6l-1 8 7-12h-6l1-8Z"/>;
@@ -57,7 +57,7 @@ function iconShape(key: SpellVisualKey) {
 export function SpellGlyph({ spell, size = "md" }: { spell:SpellPresentation; size?:"xs" | "sm" | "md" | "lg" }) {
   const visual = spellVisual(spell);
   return <span className={`spell-glyph spell-glyph-${size} visual-${visual.key.replace(":", "-")}`} title={`${visual.label} ${visual.source === "school" ? "학파" : "속성"}`} aria-label={`${visual.label} ${visual.source === "school" ? "학파" : "속성"}`}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{iconShape(visual.key)}</svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{spellIconShape(visual.key)}</svg>
   </span>;
 }
 

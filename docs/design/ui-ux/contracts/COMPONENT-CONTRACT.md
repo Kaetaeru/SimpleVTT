@@ -284,6 +284,14 @@ Must be able to show:
 
 HotbarSlot must not calculate legality or choose a smart substitute action.
 
+Its semantic icon projection uses this priority:
+
+1. magic damage property;
+2. canonical spell school when no damage property exists;
+3. represented healing, physical weapon damage, Item use, or resolution kind.
+
+The same spell property/school vocabulary is shared with Spellbook presentation. Capability names are not an icon-selection contract.
+
 Normal capabilities must remain directly discoverable; historical intent-first funnels are not the primary default interaction.
 
 ---

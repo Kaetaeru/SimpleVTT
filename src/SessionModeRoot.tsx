@@ -4,10 +4,12 @@ import type { ActionVm } from "./app/contracts";
 import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectOfficialSheet, signed } from "./app/characterSheetV10Projection";
 import { VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS } from "./app/diceVisuals";
+import { isReducedMotionPreferred } from "./app/motionPreferences";
 import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
-import { SessionActionDock } from "./SessionActionDock";
+import { SessionActionDock, type SessionActionTargeting } from "./SessionActionDock";
 import { SessionActorBoard } from "./SessionActorBoards";
+import { SessionTargetingCursor, type TargetingAnchor } from "./SessionTargetingCursor";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
 import {
   dismissCurrentSessionImageHandout,
@@ -20,6 +22,7 @@ import {
 import { SessionInitiativeStrip } from "./SessionInitiativeStrip";
 import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionPlayerSession";
+import { SessionQuickPalette, type SessionQuickDestination } from "./SessionQuickPalette";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import "./session-mode.css";
 import "./session-connected-layout.css";
@@ -51,22 +54,59 @@ function utilityClass(active: SessionUtility, utility: Exclude<SessionUtility, n
 }
 
 export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
-  const { snapshot } = useSimpleVtt();
+  const { snapshot, resolveAction } = useSimpleVtt();
   const handout = useSessionImageHandout();
   const [activeUtility, setActiveUtility] = useState<SessionUtility>(null);
+  const [quickOpen,setQuickOpen]=useState(false);
   const [workspaceLayer, setWorkspaceLayer] = useState<WorkspaceLayer>(null);
   const [workspaceReturnUtility, setWorkspaceReturnUtility] = useState<SessionUtility>(null);
+  const [targetingActionId,setTargetingActionId]=useState<string|null>(null);
+  const [targetingAnchor,setTargetingAnchor]=useState<TargetingAnchor|null>(null);
+  const [selectedTargetIds,setSelectedTargetIds]=useState<string[]>([]);
+  const [targetingPending,setTargetingPending]=useState(false);
+  const [targetingFeedback,setTargetingFeedback]=useState<string|null>(null);
+  const [lastRollActorId,setLastRollActorId]=useState<string|null>(null);
   const lastLauncher = useRef<HTMLButtonElement | null>(null);
   const fullSheetLauncher = useRef<HTMLButtonElement | null>(null);
+  const quickLauncher = useRef<HTMLButtonElement | null>(null);
   const playerHandoutOpen = snapshot?.session.role === "client" && Boolean(handout.asset && !handout.dismissed);
+
+  useEffect(()=>{
+    setTargetingActionId(null);
+    setTargetingAnchor(null);
+    setSelectedTargetIds([]);
+    setTargetingFeedback(null);
+  },[snapshot?.session.role,snapshot?.scene.selectedActorId,snapshot?.activeCharacter.id]);
+
+  useEffect(()=>{
+    if (!snapshot) return;
+    if (snapshot.resolution?.actorId) { setLastRollActorId(snapshot.resolution.actorId); return; }
+    setLastRollActorId((current)=>{
+      if (current&&snapshot.scene.entities.some((entity)=>entity.id===current)) return current;
+      const activityActor=snapshot.activity.find((entry)=>snapshot.scene.entities.some((entity)=>entity.name===entry.actor))?.actor;
+      return snapshot.scene.entities.find((entity)=>entity.name===activityActor)?.id??null;
+    });
+  },[snapshot?.resolution?.id,snapshot?.scene.id,snapshot?.activity]);
 
   const closeUtility = () => {
     setActiveUtility(null);
     window.requestAnimationFrame(() => lastLauncher.current?.focus());
   };
 
+  const closeQuick=()=>{
+    setQuickOpen(false);
+    window.requestAnimationFrame(()=>quickLauncher.current?.focus());
+  };
+
+  const chooseQuick=(destination:SessionQuickDestination)=>{
+    lastLauncher.current=quickLauncher.current;
+    setQuickOpen(false);
+    setActiveUtility(destination);
+  };
+
   const toggleUtility = (utility: Exclude<SessionUtility, null>, launcher: HTMLButtonElement) => {
     lastLauncher.current = launcher;
+    setQuickOpen(false);
     setActiveUtility((current) => current === utility ? null : utility);
   };
 
@@ -90,10 +130,30 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey||event.metaKey)&&event.key.toLocaleLowerCase()==="k") {
+        if (snapshot?.session.role!=="host") return;
+        event.preventDefault();
+        setActiveUtility(null);
+        setQuickOpen((current)=>!current);
+        return;
+      }
       if (event.key !== "Escape") return;
       if (playerHandoutOpen) {
         event.preventDefault();
         dismissCurrentSessionImageHandout();
+        return;
+      }
+      if (quickOpen) {
+        event.preventDefault();
+        closeQuick();
+        return;
+      }
+      if (targetingActionId) {
+        event.preventDefault();
+        setTargetingActionId(null);
+        setTargetingAnchor(null);
+        setSelectedTargetIds([]);
+        setTargetingFeedback(null);
         return;
       }
       if (workspaceLayer && activeUtility === "rules") {
@@ -113,7 +173,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeUtility, playerHandoutOpen, workspaceLayer, workspaceReturnUtility]);
+  }, [activeUtility, playerHandoutOpen, quickOpen, snapshot?.session.role, targetingActionId, workspaceLayer, workspaceReturnUtility]);
 
   if (!snapshot) return null;
 
@@ -123,11 +183,35 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     ?? snapshot.scene.entities[0]
     ?? null;
   const actionActorId = role === "dm" ? dmActor?.id ?? null : snapshot.activeCharacter.id;
+  const actionList=actionActorId?snapshot.scene.actionsByActor[actionActorId]??[]:[];
+  const targetingAction=targetingActionId?actionList.find((action)=>action.id===targetingActionId)??null:null;
+  const targeting:SessionActionTargeting|null=targetingAction?{action:targetingAction,selectedTargetIds,pending:targetingPending,feedback:targetingFeedback}:null;
+  const cancelTargeting=()=>{setTargetingActionId(null);setTargetingAnchor(null);setSelectedTargetIds([]);setTargetingFeedback(null);};
+  const beginTargeting=(action:ActionVm,fallbackAnchor:TargetingAnchor)=>{
+    const actorCard=[...document.querySelectorAll<HTMLElement>(".session-actor-card[data-actor-id]")].find((element)=>element.dataset.actorId===action.actorId);
+    const rect=actorCard?.getBoundingClientRect();
+    setTargetingActionId(action.id);
+    setTargetingAnchor(rect?{x:rect.left+rect.width/2,y:rect.top+rect.height/2}:fallbackAnchor);
+    setSelectedTargetIds([]);setTargetingFeedback(null);
+  };
+  const runTargeting=async(targetIds:string[])=>{
+    if (!targetingAction||targetingPending) return;
+    setTargetingPending(true);setTargetingFeedback(null);
+    try { await resolveAction(targetingAction.id,targetIds); cancelTargeting(); }
+    catch { setTargetingFeedback("행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요."); }
+    finally { setTargetingPending(false); }
+  };
+  const chooseActorTarget=(entityId:string)=>{
+    if (!targetingAction||targetingPending||!targetingAction.eligibleTargetIds.includes(entityId)) return;
+    if (targetingAction.target!=="multi-enemy") { void runTargeting([entityId]); return; }
+    const max=Math.max(1,targetingAction.maxTargets??targetingAction.eligibleTargetIds.length);
+    setSelectedTargetIds((current)=>current.includes(entityId)?current.filter((id)=>id!==entityId):current.length>=max?current:[...current,entityId]);
+  };
   const connectionLabel = snapshot.connectionState === "connected"
-    ? "Connected"
+    ? "연결됨"
     : snapshot.connectionState === "reconnecting"
-      ? "Reconnecting"
-      : "Disconnected";
+      ? "재연결 중"
+      : "연결 끊김";
 
   const utilityPane = <>
     {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
@@ -143,44 +227,46 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
 
   return <div className="session-mode-root session-reference-play-root" data-session-role={role} data-session-mode={snapshot.sessionMode}>
     <header className="session-reference-play-chrome">
-      <button type="button" className="session-reference-chrome-button product" onClick={onOpenProduct}>← Product</button>
-      <div className="session-reference-play-title"><strong>{sessionName}</strong><span>{role === "dm" ? "HOST · DM" : "CLIENT · PLAYER"}</span></div>
+      <button type="button" className="session-reference-chrome-button product" onClick={onOpenProduct}>← 제품</button>
+      <div className="session-reference-play-title"><strong>{sessionName}</strong><span>{role === "dm" ? "호스트 · DM" : "클라이언트 · 플레이어"}</span></div>
       <span className={`session-reference-connection ${snapshot.connectionState}`}>{connectionLabel}</span>
       <div className="session-reference-play-spacer" />
-      <button type="button" className={utilityClass(activeUtility, role === "player" ? "quick-sheet" : "actor")} onClick={(event) => toggleUtility(role === "player" ? "quick-sheet" : "actor", event.currentTarget)}>Sheet</button>
-      <button type="button" className={utilityClass(activeUtility, "rules")} onClick={(event) => toggleUtility("rules", event.currentTarget)}>Rules</button>
+      <button type="button" className={utilityClass(activeUtility, role === "player" ? "quick-sheet" : "actor")} onClick={(event) => toggleUtility(role === "player" ? "quick-sheet" : "actor", event.currentTarget)}>시트</button>
+      <button type="button" className={utilityClass(activeUtility, "rules")} onClick={(event) => toggleUtility("rules", event.currentTarget)}>규칙</button>
       {role === "dm" && <div className="session-reference-visibility" aria-label="Public / DM Only 전달 프로토콜은 아직 production contract가 없어 Public 상태만 표시됩니다." title="DM Only 전달은 GAP-DM-ONLY-DELIVERY-PROTOCOL 해결 전까지 사용할 수 없습니다."><span className="active">Public</span><span>DM Only</span></div>}
-      <button type="button" className={utilityClass(activeUtility, "activity")} onClick={(event) => toggleUtility("activity", event.currentTarget)}>Activity</button>
-      {role === "dm" && <button type="button" className={utilityClass(activeUtility, "encounter")} onClick={(event) => toggleUtility("encounter", event.currentTarget)}>Encounter</button>}
-      {role === "dm" && <button type="button" className={utilityClass(activeUtility, "participants")} onClick={(event) => toggleUtility("participants", event.currentTarget)}>Participants</button>}
+      <button type="button" className={utilityClass(activeUtility, "activity")} onClick={(event) => toggleUtility("activity", event.currentTarget)}>기록</button>
+      {role === "dm" && <button type="button" className={utilityClass(activeUtility, "encounter")} onClick={(event) => toggleUtility("encounter", event.currentTarget)}>인카운터</button>}
+      {role === "dm" && <button ref={quickLauncher} type="button" className={quickOpen?"active session-reference-quick-button":"session-reference-quick-button"} aria-expanded={quickOpen} aria-controls="session-quick-panel" onClick={()=>{setActiveUtility(null);setQuickOpen((current)=>!current);}}>＋ 빠른 메뉴</button>}
       {role === "player" && <SessionPlayerHandoutRailButton />}
-      <button type="button" className={utilityClass(activeUtility, role === "dm" ? "session" : "player-session")} onClick={(event) => toggleUtility(role === "dm" ? "session" : "player-session", event.currentTarget)}>Session</button>
-      {role === "dm" && <span className="session-reference-unavailable-control" role="button" aria-disabled="true" tabIndex={0} title="권위 있는 Spatial Facts projection이 아직 이 runtime slice에 연결되지 않았습니다.">Spatial Facts</span>}
+      <button type="button" className={utilityClass(activeUtility, role === "dm" ? "session" : "player-session")} onClick={(event) => toggleUtility(role === "dm" ? "session" : "player-session", event.currentTarget)}>세션</button>
     </header>
 
-    <div className={`session-reference-play-main ${activeUtility ? "utility-open" : ""}`}>
+    <div className={`session-reference-play-main ${activeUtility||quickOpen ? "utility-open" : ""}`}>
       <div className="session-reference-play-core">
-        <SessionActorBoard position="upper" role={role} />
+        <SessionActorBoard position="upper" role={role} targetingAction={targetingAction} selectedTargetIds={selectedTargetIds} targetingPending={targetingPending} onTarget={chooseActorTarget} />
 
         <section className="session-play-context session-reference-mapless-stage" aria-label="Mapless Play Context">
-          <div className="session-reference-stage-label" aria-hidden="true"><strong>MAPLESS PLAY CONTEXT</strong><span>no grid · no map token · no Actor coordinates</span></div>
+          <div className="session-reference-stage-label" aria-hidden="true"><strong>테이블 플레이 공간</strong><span>지도 없이 현재 맥락과 결과만 표시</span></div>
           <SessionInitiativeStrip role={role} />
           <main className="session-reference-stage-focus" aria-label="현재 세션">
-            <SessionMainFocus role={role} onOpenActivity={(button) => toggleUtility("activity", button)} />
+            <SessionMainFocus role={role} lastRollActorId={lastRollActorId} onOpenActivity={(button) => toggleUtility("activity", button)} />
           </main>
         </section>
 
-        <SessionActorBoard position="lower" role={role} />
+        <SessionActorBoard position="lower" role={role} targetingAction={targetingAction} selectedTargetIds={selectedTargetIds} targetingPending={targetingPending} onTarget={chooseActorTarget} />
       </div>
 
-      {activeUtility && <aside className="session-reference-utility-host" aria-label="Contextual Session Utility">{utilityPane}</aside>}
+      {(activeUtility||quickOpen) && <aside id="session-quick-panel" className="session-reference-utility-host" aria-label={quickOpen?"세션 빠른 메뉴 패널":"Contextual Session Utility"}>{quickOpen?<SessionQuickPalette role={role} onClose={closeQuick} onChoose={chooseQuick}/>:utilityPane}</aside>}
     </div>
 
     <footer className="session-mode-action-dock" aria-label="Command Center">
       <SessionActionDock
         actorId={actionActorId}
         suspended={Boolean(activeUtility || workspaceLayer || snapshot.resolution || playerHandoutOpen)}
-        onOpenRules={(button) => toggleUtility("rules", button)}
+        targeting={targeting}
+        onBeginTargeting={beginTargeting}
+        onCancelTargeting={cancelTargeting}
+        onExecuteTargeting={()=>void runTargeting(selectedTargetIds)}
       />
     </footer>
 
@@ -193,6 +279,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       {role === "player" && <SessionPlayerHandoutError />}
       {role === "player" && <SessionPlayerHandoutViewer />}
     </div>
+    {targetingAction&&targetingAnchor&&<SessionTargetingCursor anchor={targetingAnchor} label={targetingAction.name}/>}
   </div>;
 }
 
@@ -246,7 +333,7 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
 
   useEffect(() => {
     if (!resolution || !diceAnimated || !resolution.canAdvance) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "reduced";
+    const reduced = isReducedMotionPreferred();
     const timer = window.setTimeout(
       () => void advanceResolution(),
       reduced ? VISUAL_DICE_REDUCED_REPLAY_MS : VISUAL_DICE_REPLAY_MS,

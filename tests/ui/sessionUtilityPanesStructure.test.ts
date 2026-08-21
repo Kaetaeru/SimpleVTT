@@ -13,8 +13,8 @@ test("Rules and Activity launch from accepted Play chrome into contextual utilit
   assert.match(sessionRoot, /type SessionUtility = [^;]*"activity"/);
   assert.match(sessionRoot, /<SessionRulesPane onClose=\{closeUtility\}/);
   assert.match(sessionRoot, /<SessionActivityPane onClose=\{closeUtility\}/);
-  assert.match(sessionRoot, />Rules</);
-  assert.match(sessionRoot, />Activity</);
+  assert.match(sessionRoot, />규칙</);
+  assert.match(sessionRoot, />기록</);
   assert.match(sessionRoot, /session-reference-utility-host/);
   assert.doesNotMatch(sessionRoot, /session-mode-rail/);
   assert.doesNotMatch(panes, /setRoute|AppRoute|플레이로 돌아가기/);

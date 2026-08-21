@@ -35,7 +35,7 @@ test("Player Handout dismissal restores keyboard focus to the contextual reopen 
 });
 
 test("DM session termination remains in the contextual Session pane", () => {
-  assert.match(root, />Session</);
+  assert.match(root, />세션</);
   assert.match(root, /toggleUtility\(role === "dm" \? "session" : "player-session"/);
   assert.match(dm, /export function SessionSharePane/);
   assert.match(dm, /const \{ snapshot, stopSession \} = useSimpleVtt\(\)/);

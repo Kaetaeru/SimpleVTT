@@ -3,7 +3,7 @@ import { useSimpleVtt } from "./app/AppProvider";
 import type { AbilityKey } from "./app/contracts";
 import { projectOfficialSheet, SHEET_ABILITY_LABELS, signed } from "./app/characterSheetV10Projection";
 import { sheetAbilityModifier, sheetSaveBonus } from "./app/sheetRollValues";
-import { VisualDiceTray } from "./VisualDiceBridge";
+import { StandaloneDicePresentation } from "./VisualDiceBridge";
 import type { CharacterSheetHostMode } from "./CharacterSheetPlayScreen";
 
 type RollMode="normal"|"advantage"|"disadvantage";
@@ -71,7 +71,7 @@ export function CharacterSheetPlayScreen({hostMode="standalone",onScene,onLevelU
     </div>
 
     {hostMode==="session"&&<div className="session-sheet-roll-policy" role="status"><strong>세션 시트</strong><span>{sessionNotice||"수치와 장비는 같은 canonical Character를 표시합니다. 공유 판정은 Session Action 경로를 사용합니다."}</span></div>}
-    {hostMode==="standalone"&&roll&&<section className="sheet-roll-result" aria-live="polite"><div className="sheet-roll-result-head"><div><span>ROLL</span><strong>{roll.label}</strong>{roll.note&&<small>{roll.note}</small>}</div><div className="sheet-roll-total"><span>{roll.modifier?`주사위 ${roll.modifier>0?"+":""}${roll.modifier}`:"결과"}</span><strong>{roll.total}</strong></div><button onClick={()=>setRoll(null)} aria-label="굴림 결과 닫기">×</button></div><VisualDiceTray label={roll.label} dice={roll.dice} caption="local tabletop physics roll"/></section>}
+    {hostMode==="standalone"&&roll&&<StandaloneDicePresentation roll={roll} onFinished={()=>setRoll(null)}/>}
 
     <main className="sheet-play-layout">
       <section className="sheet-play-abilities" aria-label="능력치 내성 기술">

@@ -169,6 +169,7 @@ test("source and runtime reconstruct item/spell/resource/feature state when the 
     quantity:1,
     equipped:false,
     wielded:true,
+    wieldSlot:undefined,
     attunementRequired:false,
     attuned:undefined,
     charges:undefined,

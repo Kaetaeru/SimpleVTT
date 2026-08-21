@@ -45,6 +45,7 @@
   animation:none;
   overflow:hidden;
 }
+.visual-dice-overlay.v09.is-fading{animation:visual-dice-result-out 420ms ease-in forwards}
 .visual-dice-overlay.v09:after{
   content:"";
   position:absolute;
@@ -124,6 +125,7 @@
 }
 @keyframes visual-roll-notice-in{to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes visual-roll-reel-jitter{0%{transform:translateY(-4px);filter:blur(.3px)}50%{transform:translateY(4px);filter:blur(.7px)}100%{transform:translateY(-4px);filter:blur(.3px)}}
+@keyframes visual-dice-result-out{from{opacity:1}to{opacity:0}}
 :root[data-motion="reduced"] .visual-die-shell { animation:none; transform:none; }
 :root[data-motion="reduced"] .visual-dice-overlay:not(.v09) { animation:none; }
 :root[data-motion="reduced"] .visual-roll-notice.rolling .visual-roll-reel b{animation:none}

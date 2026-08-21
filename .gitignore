@@ -8,4 +8,4 @@ target/
 !.env.example
 .vscode/
 .idea/
-src/generated/spellPresentationCatalog.generated.json
+src/generated/

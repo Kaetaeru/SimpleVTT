@@ -215,6 +215,19 @@ Uses a digital optimized hierarchy around identity, current state, direct rolls/
 
 Both must work without a connected Session.
 
+## Character management sections
+
+Both presentations share canonical Character management sections rather than duplicating owned state per layout. The implemented baseline includes:
+
+```text
+Overview / Sheet
+Inventory
+```
+
+Inventory reads the durable `ItemInstance` projection and may mutate only supported equipped/attuned state through existing adapter commands. It presents quantity, charges, wield/hand relation, provenance, and granted live Action availability. Executing an Item effect remains a Command Center/Resolution responsibility so effect plus quantity/charge cost commits atomically.
+
+Weight, containers, stack operations, transfer, durable grant, and Party Stash must remain absent or explicitly unavailable until their listed Domain/Architecture contracts exist.
+
 ## Same-Sheet roll contract
 
 Any ordinary roll launched from the Standalone Sheet stays on the current Sheet.
@@ -432,6 +445,9 @@ Required structure:
 ## Larger action region
 
 - Hotbar pages/slots;
+- 1:1 icon slots in a locally remembered 2–4 row matrix;
+- hover/focus detail rather than permanent slot labels;
+- semantic vector icons for every capability, with magic damage property before canonical spell school;
 - normal capability discovery;
 - selected/unavailable/resolving presentation;
 - contextual Execute / End Turn / Cancel controls.
@@ -440,9 +456,12 @@ Baseline page family:
 
 - Mixed;
 - Action;
-- Spell;
+- Class, including magic;
 - Item;
+- Special;
 - custom pages where supported.
+
+Mixed separates these families into visible icon sections. Local section order and 2–4 row density may persist as presentation preferences; they do not mutate authoritative action order or create Custom capability data.
 
 Historical intent-first taxonomy is not the normal primary capability entry.
 
@@ -451,6 +470,10 @@ Historical intent-first taxonomy is not the normal primary capability entry.
 # 14. Targeting / resolution states
 
 Targeting occurs through Actor Cards/manual eligible Actor sets.
+
+The ordinary Connected Play target surface is the portrait Actor Board itself. Selecting a targeted capability creates a cursor-following arrow/tether from the originating Hotbar icon; it does not open a detached target-selection window.
+
+Resting upper/lower Actor collections center their taller portrait frames when space allows. In Freeform, the empty stage presents the most recent rolling Actor illustration; active resolution/Handout/context content takes precedence.
 
 ## Single target
 
@@ -475,6 +498,8 @@ Do not create a tactical AoE template.
 ## Default hostile click
 
 When no action is targeting, combat hostile-click may invoke only the canonical Main Hand executable relation supplied by authoritative application/domain state.
+
+The relation is represented by an equipped/wielded ItemInstance with `wieldSlot = main-hand` and its matching executable action. Missing or ambiguous relations remain unavailable.
 
 No smart fallback.
 

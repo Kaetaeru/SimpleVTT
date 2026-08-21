@@ -45,12 +45,16 @@
   display: none;
 }
 
+.session-mode-layer-host:has(> .session-full-sheet-layer:not([hidden])) {
+  pointer-events: auto;
+}
+
 .session-full-sheet-layer .character-sheet-workspace {
   width: min(94vw, 1560px);
   height: min(94%, 980px);
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--line-strong);
@@ -106,6 +110,9 @@
 }
 
 .character-sheet-workspace[data-sheet-host="session"] .character-sheet-workspace-content > .screen {
+  position: relative !important;
+  inset: auto !important;
+  width: 100%;
   height: 100%;
   padding: 14px 16px 28px;
   overflow: auto;

@@ -68,10 +68,35 @@ const statsText = element<HTMLElement>("stats-text");
 const controlPanel = element<HTMLElement>("control-panel");
 const hideControlsButton = element<HTMLButtonElement>("hide-controls");
 const showControlsButton = element<HTMLButtonElement>("show-controls");
+const rollLabelInput = element<HTMLInputElement>("roll-label");
+const modifierInput = element<HTMLInputElement>("roll-modifier");
+const authoritativeInput = element<HTMLInputElement>("authoritative-values");
+const resultPresentation = element<HTMLElement>("result-presentation");
+const resultLabel = element<HTMLElement>("result-label");
+const resultNotation = element<HTMLElement>("result-notation");
+const resultReel = element<HTMLElement>("result-reel");
+const resultFormula = element<HTMLElement>("result-formula");
+const resultModifier = element<HTMLElement>("result-modifier");
+const resultTotal = element<HTMLElement>("result-total");
+const resultNatural = element<HTMLElement>("result-natural");
 
 let selectedSides: DieSides = 20;
 let settings: PhysicsSettings = { ...PRESETS.default };
 let lastReportedSettle: number | null = null;
+let lastPhase: WorldStats["phase"] = "idle";
+let reelTimer: number | null = null;
+
+type ResultPresentation = {
+  sides: DieSides[];
+  values: number[];
+  notation: string;
+  rawTotal: number;
+  modifier: number;
+  total: number;
+  tone: "normal" | "natural-20" | "natural-1";
+};
+
+let pendingResult: ResultPresentation | null = null;
 
 const world = new DiceWorld(canvas, settings);
 
@@ -113,30 +138,128 @@ function applyPreset(name: string) {
   statusText.textContent = `${presetSelect.selectedOptions[0]?.textContent ?? "기본"} 프리셋 적용`;
 }
 
+function secureDieRoll(sides: DieSides) {
+  const sample = new Uint32Array(1);
+  const range = 0x1_0000_0000;
+  const limit = Math.floor(range / sides) * sides;
+  do crypto.getRandomValues(sample); while ((sample[0] ?? 0) >= limit);
+  return ((sample[0] ?? 0) % sides) + 1;
+}
+
+function authoritativeValuesFor(sides: DieSides[]) {
+  const source = authoritativeInput.value.trim();
+  if (!source) return sides.map(secureDieRoll);
+  const values = source.split(/[\s,]+/).filter(Boolean).map(Number);
+  if (values.length !== sides.length) {
+    statusText.textContent = `권위 면값은 주사위 ${sides.length}개와 같은 개수여야 합니다.`;
+    authoritativeInput.focus();
+    return null;
+  }
+  const invalidIndex = values.findIndex((value, index) => !Number.isInteger(value) || value < 1 || value > (sides[index] ?? 0));
+  if (invalidIndex >= 0) {
+    statusText.textContent = `${invalidIndex + 1}번째 권위 면값은 d${sides[invalidIndex]} 범위여야 합니다.`;
+    authoritativeInput.focus();
+    return null;
+  }
+  return values;
+}
+
+function notationFor(sides: DieSides[]) {
+  const first = sides[0];
+  if (first && sides.every((side) => side === first)) return `${sides.length === 1 ? "" : sides.length}d${first}`;
+  return sides.map((side) => `d${side}`).join(" + ");
+}
+
+function beginResultPresentation(sides: DieSides[], values: number[]) {
+  if (reelTimer !== null) window.clearInterval(reelTimer);
+  const modifier = Number.isFinite(Number(modifierInput.value)) ? Number(modifierInput.value) : 0;
+  const rawTotal = values.reduce((sum, value) => sum + value, 0);
+  const natural = sides.length === 1 && sides[0] === 20 ? values[0] : null;
+  pendingResult = {
+    sides,
+    values,
+    notation: notationFor(sides),
+    rawTotal,
+    modifier,
+    total: rawTotal + modifier,
+    tone: natural === 20 ? "natural-20" : natural === 1 ? "natural-1" : "normal",
+  };
+
+  resultPresentation.hidden = false;
+  resultPresentation.dataset.phase = "rolling";
+  resultPresentation.dataset.tone = "normal";
+  resultLabel.textContent = rollLabelInput.value.trim() || "테스트 판정";
+  resultNotation.textContent = pendingResult.notation;
+  resultReel.textContent = "—";
+  resultFormula.textContent = "권위 결과 대기 중";
+  resultModifier.textContent = "물리 연출 수렴 중";
+  resultTotal.textContent = "—";
+  resultNatural.textContent = "";
+
+  const upper = Math.max(2, sides.reduce((sum, side) => sum + side, 0));
+  reelTimer = window.setInterval(() => {
+    resultReel.textContent = String(1 + Math.floor(Math.random() * upper));
+  }, 42);
+}
+
+function resolveResultPresentation() {
+  if (!pendingResult || resultPresentation.dataset.phase === "resolved") return;
+  if (reelTimer !== null) window.clearInterval(reelTimer);
+  reelTimer = null;
+  resultPresentation.dataset.phase = "resolved";
+  resultPresentation.dataset.tone = pendingResult.tone;
+  resultReel.textContent = String(pendingResult.rawTotal);
+  resultFormula.textContent = `${pendingResult.notation} · 원시 합 ${pendingResult.rawTotal}`;
+  resultModifier.textContent = `${pendingResult.modifier >= 0 ? "+" : "−"} ${Math.abs(pendingResult.modifier)} 수정치`;
+  resultTotal.textContent = String(pendingResult.total);
+  resultNatural.textContent = pendingResult.tone === "natural-20" ? "NATURAL 20" : pendingResult.tone === "natural-1" ? "NATURAL 1" : "";
+}
+
+function hideResultPresentation() {
+  if (reelTimer !== null) window.clearInterval(reelTimer);
+  reelTimer = null;
+  pendingResult = null;
+  resultPresentation.hidden = true;
+}
+
 function throwSelected() {
   const count = Number(countInput.value);
+  const sides = Array.from({ length: count }, () => selectedSides);
+  const authoritativeValues = authoritativeValuesFor(sides);
+  if (!authoritativeValues) return;
   world.throw({
-    sides: Array.from({ length: count }, () => selectedSides),
+    sides,
+    authoritativeValues,
     keepPrevious: keepPreviousInput.checked,
     diceCollision: collisionInput.checked,
   });
+  beginResultPresentation(sides, authoritativeValues);
   lastReportedSettle = null;
-  statusText.textContent = `d${selectedSides} × ${count} 투척`;
+  lastPhase = "rolling";
+  statusText.textContent = `d${selectedSides} × ${count} · 권위 결과 수신 후 물리 투척`;
 }
 
 function throwMixed() {
+  const sides = [...DIE_TYPES];
+  const authoritativeValues = authoritativeValuesFor(sides);
+  if (!authoritativeValues) return;
   world.throw({
-    sides: [...DIE_TYPES],
+    sides,
+    authoritativeValues,
     keepPrevious: keepPreviousInput.checked,
     diceCollision: collisionInput.checked,
   });
+  beginResultPresentation(sides, authoritativeValues);
   lastReportedSettle = null;
-  statusText.textContent = "d4 · d6 · d8 · d10 · d12 · d20 혼합 투척";
+  lastPhase = "rolling";
+  statusText.textContent = "6종 혼합 · 권위 결과 수신 후 물리 투척";
 }
 
 function clearDice() {
   world.clear();
   lastReportedSettle = null;
+  lastPhase = "idle";
+  hideResultPresentation();
   statusText.textContent = "테이블 정리됨";
   statsText.textContent = "주사위 0개";
 }
@@ -154,15 +277,21 @@ function updateStats(stats: WorldStats) {
   }
 
   if (stats.settledMs !== null) {
-    statsText.textContent = `주사위 ${stats.diceCount}개 · 정지 ${(stats.settledMs / 1000).toFixed(2)}초`;
+    statsText.textContent = `주사위 ${stats.diceCount}개 · 수렴 ${(stats.settledMs / 1000).toFixed(2)}초`;
     if (lastReportedSettle !== stats.settledMs) {
       lastReportedSettle = stats.settledMs;
-      statusText.textContent = `자연 정지 ${(stats.settledMs / 1000).toFixed(2)}초 · 결과 강제 보정 없음`;
+      resolveResultPresentation();
+      statusText.textContent = `권위 면 ${stats.authoritativeValues.join(", ")} 수렴 완료 · ${(stats.settledMs / 1000).toFixed(2)}초`;
     }
     return;
   }
 
-  statsText.textContent = `주사위 ${stats.diceCount}개${moving} · ${(stats.elapsedMs / 1000).toFixed(2)}초`;
+  if (stats.phase === "converging" && lastPhase !== "converging") {
+    statusText.textContent = "자연 물리 감속 → 권위 면 수렴 중";
+  }
+  lastPhase = stats.phase;
+  const phaseText = stats.phase === "converging" ? " · 수렴 중" : "";
+  statsText.textContent = `주사위 ${stats.diceCount}개${moving}${phaseText} · ${(stats.elapsedMs / 1000).toFixed(2)}초`;
 }
 
 countInput.addEventListener("input", () => {
@@ -210,7 +339,7 @@ window.addEventListener("keydown", (event) => {
   } else if (event.key.toLowerCase() === "r") {
     clearDice();
   } else if (event.key.toLowerCase() === "h") {
-    setControlsVisible(controlPanel.hidden);
+    setControlsVisible(controlPanel.hidden !== false);
   }
 });
 
@@ -219,4 +348,7 @@ renderDiceButtons();
 syncPhysicsControls();
 world.setDebugBounds(false);
 
-window.addEventListener("beforeunload", () => world.destroy());
+window.addEventListener("beforeunload", () => {
+  hideResultPresentation();
+  world.destroy();
+});

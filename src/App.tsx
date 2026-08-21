@@ -5,6 +5,7 @@ import { ProductionPlayScreen } from "./ProductionPlayScreen";
 import { V1HomeScreen } from "./V1HomeScreen";
 import { V1ContentScreen } from "./V1ContentScreen";
 import { CharacterCreateScreenV10 } from "./CharacterCreateV10";
+import { applyMotionPreference, isReducedMotionPreferred, persistMotionPreference, readMotionPreference, type MotionPreference } from "./app/motionPreferences";
 import type {
   AbilityKey,
   AdjudicationScope,
@@ -28,7 +29,7 @@ function connectionLabel(state: "connected" | "reconnecting" | "disconnected") {
   return "○ 연결 끊김";
 }
 
-export function App() {
+export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm" | "player"): void } = {}) {
   const { snapshot, loading } = useSimpleVtt();
   const [route, setRoute] = useState<AppRoute>("home");
   const [debugOpen, setDebugOpen] = useState(false);
@@ -109,7 +110,7 @@ export function App() {
           {route === "content" && <V1ContentScreen />}
           {route === "catalog" && <CatalogScreen />}
           {route === "activity" && <ActivityScreen />}
-          {route === "session" && <SessionScreen />}
+          {route === "session" && <SessionScreen onOpenSessionPreview={onOpenSessionPreview} />}
           {route === "settings" && <SettingsScreen />}
         </main>
       </section>
@@ -190,7 +191,7 @@ function ResolutionDrawer() {
   const animated = ["roll-animation", "save-animation", "damage-animation"].includes(r.stage);
   useEffect(() => {
     if (!animated || !r.canAdvance) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "reduced";
+    const reduced = isReducedMotionPreferred();
     const timer = window.setTimeout(() => { void advanceResolution(); }, reduced ? 80 : 850);
     return () => window.clearTimeout(timer);
   }, [r.id, r.stage, r.canAdvance, animated, advanceResolution]);
@@ -249,18 +250,44 @@ function ActivityScreen() {
   return <div className="screen page-dark"><ScreenHead kicker="ACTIVITY" title="플레이 기록" description="누가 무엇을 했고 결과가 어떻게 바뀌었는지 시간순으로 확인합니다."/>{snapshot.activity.length===0?<div className="surface-empty"><strong>아직 기록이 없습니다.</strong><span>플레이를 시작하면 행동과 결과가 여기에 쌓입니다.</span></div>:<div className="activity-list">{snapshot.activity.map((entry) => <article key={entry.id} className={`${entry.correction ? "activity-entry correction" : "activity-entry"} ${entry.reversed ? "reversed" : ""}`}><time>{entry.time}</time><div><span className="badge">{entry.actor}</span>{entry.correction && <span className="badge warning">DM 수정</span>}{entry.reversed && <span className="badge warning">되돌림</span>}<h3>{entry.title}</h3><p>{entry.summary}</p>{entry.ruling && <p>DM 판단 · {entry.ruling}</p>}<details><summary>기술 정보</summary>{entry.detail.map((line) => <div key={line}>{line}</div>)}{entry.stateChanges.map((line) => <div key={line}>상태 변화 · {line}</div>)}<small>기록 ID · {entry.id}</small></details></div></article>)}</div>}</div>;
 }
 
-function SessionScreen() {
-  return <div className="screen page-dark production-session-screen"><div id="production-session-workspace-root" className="session-grid production-session-mount" /></div>;
+function SessionScreen({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm" | "player"): void }) {
+  return <div className="screen page-dark production-session-screen">
+    {onOpenSessionPreview && <section className="browser-session-preview-card" aria-label="브라우저 세션 UI 미리보기">
+      <div><strong>연결 없이 세션 화면 확인</strong><span>실제 Host나 저장 상태를 건드리지 않고 DM·Player 화면을 브라우저에서 확인합니다.</span></div>
+      <div className="browser-session-preview-actions">
+        <button type="button" onClick={() => onOpenSessionPreview("dm")}>DM 화면 미리보기</button>
+        <button type="button" onClick={() => onOpenSessionPreview("player")}>Player 화면 미리보기</button>
+      </div>
+    </section>}
+    <div id="production-session-workspace-root" className="session-grid production-session-mount" />
+  </div>;
 }
 
 function SettingsScreen() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [accent, setAccent] = useState<"gold" | "blue" | "green">("gold");
-  const [motion, setMotion] = useState<"normal" | "reduced">("normal");
+  const [motion, setMotion] = useState<MotionPreference>(()=>readMotionPreference());
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => { document.documentElement.dataset.accent = accent; }, [accent]);
-  useEffect(() => { document.documentElement.dataset.motion = motion; }, [motion]);
-  return <div className="screen page-dark"><ScreenHead kicker="SETTINGS" title="환경 설정" description="표시 방식과 움직임을 내 환경에 맞게 조정합니다."/><div className="settings-card"><SectionTitle>화면 테마</SectionTitle><div className="method-tabs"><button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}><strong>다크</strong><span>어두운 배경</span></button><button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}><strong>라이트</strong><span>밝은 배경</span></button></div><SectionTitle>강조 색상</SectionTitle><div className="accent-options">{(["gold", "blue", "green"] as const).map((value) => <button key={value} className={accent === value ? `accent-swatch ${value} active` : `accent-swatch ${value}`} onClick={() => setAccent(value)} aria-label={`${value} 강조 색상`}/>)}</div><SectionTitle>접근성 · 움직임</SectionTitle><div className="method-tabs"><button className={motion === "normal" ? "active" : ""} onClick={() => setMotion("normal")}><strong>기본 움직임</strong><span>전환과 주사위 애니메이션 사용</span></button><button className={motion === "reduced" ? "active" : ""} onClick={() => setMotion("reduced")}><strong>움직임 줄이기</strong><span>결과는 유지하고 애니메이션만 최소화</span></button></div></div></div>;
+  useEffect(() => { applyMotionPreference(motion); persistMotionPreference(motion); }, [motion]);
+  return <div className="screen page-dark">
+    <ScreenHead kicker="SETTINGS" title="환경 설정" description="표시 방식과 움직임을 내 환경에 맞게 조정합니다."/>
+    <div className="settings-card">
+      <SectionTitle>화면 테마</SectionTitle>
+      <div className="method-tabs">
+        <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}><strong>다크</strong><span>어두운 배경</span></button>
+        <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}><strong>라이트</strong><span>밝은 배경</span></button>
+      </div>
+      <SectionTitle>강조 색상</SectionTitle>
+      <div className="accent-options">{(["gold", "blue", "green"] as const).map((value) => <button key={value} className={accent === value ? `accent-swatch ${value} active` : `accent-swatch ${value}`} onClick={() => setAccent(value)} aria-label={`${value} 강조 색상`}/>)}</div>
+      <SectionTitle>접근성 · 움직임</SectionTitle>
+      <div className="method-tabs">
+        <button className={motion === "system" ? "active" : ""} onClick={() => setMotion("system")}><strong>시스템 설정</strong><span>운영체제의 움직임 설정을 따릅니다</span></button>
+        <button className={motion === "full" ? "active" : ""} onClick={() => setMotion("full")}><strong>전체 움직임</strong><span>투척과 전환 애니메이션을 모두 사용</span></button>
+        <button className={motion === "reduced" ? "active" : ""} onClick={() => setMotion("reduced")}><strong>움직임 줄이기</strong><span>결과는 유지하고 애니메이션만 최소화</span></button>
+      </div>
+    </div>
+  </div>;
 }
 
 function DebugPanel({ onClose }: { onClose(): void }) {

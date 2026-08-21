@@ -14,27 +14,26 @@ test("Session root delegates the dominant mapless center to the accepted Main Fo
   assert.doesNotMatch(root, /SCENE ACTORS|HOTBAR_TABS|공통.*클래스.*주문.*아이템/s);
 });
 
-test("Freeform matches the accepted restrained Stage focus rather than a dashboard", () => {
+test("Freeform resting stage shows the last rolling Actor illustration", () => {
   assert.match(focus, /snapshot\.sessionMode === "initiative"/);
-  assert.match(focus, />FREEFORM</);
-  assert.match(focus, />Mapless shared play context</);
-  assert.match(focus, /Current interaction, notices, dice, result and Handout presentation use this space/);
-  assert.match(focus, /Actor context <strong>Boards<\/strong>/);
-  assert.match(focus, /Dice \/ Result <strong>Center Stage<\/strong>/);
-  assert.doesNotMatch(focus, /snapshot\.activity\[0\]|snapshot\.activity\.map|scene\.entities\.map|economyByActor|actionsByActor/);
+  assert.match(root, /snapshot\.resolution\?\.actorId/);
+  assert.match(root, /lastRollActorId=\{lastRollActorId\}/);
+  assert.match(focus, /session-last-roll-actor/);
+  assert.match(focus, /LAST ROLL/);
+  assert.match(focus, /첫 굴림을 기다리는 중/);
+  assert.doesNotMatch(focus, /economyByActor|actionsByActor/);
 });
 
-test("Initiative changes only Stage context copy while Actor and economy detail stay elsewhere", () => {
-  assert.match(focus, />INITIATIVE</);
-  assert.match(focus, />Actor and action context, not a battlemap</);
-  assert.match(focus, /Actor identity and targets remain in the boards above and below/);
-  assert.doesNotMatch(focus, /currentActorId|current\.hp|current\.maxHp|economyByActor/);
+test("Initiative centers the current Actor illustration while economy detail stays elsewhere", () => {
+  assert.match(focus, /snapshot\.scene\.currentActorId/);
+  assert.match(focus, /session-current-turn-actor/);
+  assert.match(focus, /CURRENT TURN · ROUND/);
+  assert.doesNotMatch(focus, /current\.hp|current\.maxHp|economyByActor|actionsByActor/);
 });
 
-test("Stage focus geometry stays centered and compact inside the accepted mapless field", () => {
+test("Stage focus geometry centers a product-themed illustration", () => {
   assert.match(referenceCss, /\.session-reference-stage-focus[\s\S]*place-items:\s*center/);
-  assert.match(referenceCss, /\.session-reference-stage-focus \.session-main-focus-state[\s\S]*width:\s*min\(650px, 72%\)/);
-  assert.match(referenceCss, /\.session-reference-stage-focus \.session-focus-heading h1[\s\S]*font-size:\s*22px/);
-  assert.match(css, /\.session-reference-stage-chips/);
-  assert.match(css, /justify-content:\s*center/);
+  assert.match(referenceCss, /\.session-last-roll-actor[\s\S]*place-items:\s*center/);
+  assert.match(referenceCss, /\.session-last-roll-art[\s\S]*border-radius:\s*24px/);
+  assert.match(referenceCss, /var\(--shadow\)/);
 });
