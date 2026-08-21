@@ -1,7 +1,7 @@
 schema_version: 1
 phase: ui_reference_prototype
-status: prototype_building
-html_prototype_status: in_progress
+status: review_candidate
+html_prototype_status: authored_static_verified
 prototype_owner_acceptance: not_started
 runtime_ui_implementation_allowed: false
 
@@ -27,6 +27,7 @@ source_priority:
     - docs/design/ui-ux/prototype/PROTOTYPE-PREFLIGHT.md
     - docs/design/ui-ux/prototype/PROTOTYPE-ACCEPTANCE.md
     - docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
+    - docs/design/ui-ux/prototype/BUILD-VERIFICATION.md
   technical_truth:
     - docs/design/README.md
     - docs/design/session-runtime.md
@@ -66,7 +67,10 @@ files:
     role: prototype_acceptance_gate
   work_order:
     path: docs/design/ui-ux/prototype/PROTOTYPE-WORK-ORDER.md
-    role: prepared_html_prototype_scope
+    role: standalone_html_prototype_scope_and_execution_record
+  build_verification:
+    path: docs/design/ui-ux/prototype/BUILD-VERIFICATION.md
+    role: static_build_verification_record
   app_boundary:
     path: docs/design/ui-ux/prototype/app/README.md
     role: prototype_runtime_boundary
@@ -100,26 +104,19 @@ review_viewports:
 phase_gate:
   P0_specification:
     status: passed
-    requires:
-      - surface_catalog
-      - component_catalog
-      - layer_model
-      - state_model
-      - scenario_catalog
-      - mock_data_contract
-      - prototype_preflight
-      - acceptance_checklist
-      - prepared_prototype_work_order
   P1_html_build:
-    status: in_progress
+    status: review_candidate
     authorization: explicit_owner_go_ahead
+    static_verification: passed
+    browser_runtime_verification: pending_owner_review_environment
     allowed_write_scope:
       - docs/design/ui-ux/prototype/app/
       - docs/design/ui-ux/prototype/
     forbidden_write_scope:
       - src/
   P2_review_iteration:
-    status: not_started
+    status: ready
+    next_action: owner_opens_reference_html_and_gives_natural_language_feedback
   P3_owner_acceptance:
     status: not_started
     requires_explicit_owner_acceptance: true
