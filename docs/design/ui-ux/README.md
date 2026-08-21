@@ -8,11 +8,11 @@ Repository-wide 통합 기획
 -> Owner Acceptance
 -> WO-UI-001 / 002 / 003 CLOSED / ACCEPTED
 -> DM Library product + persistence planning
--> first DM Library preparation/live candidate built
--> Owner correction: live add/reveal must be much faster
--> unified Core Systems UX plan
--> DM Quick + Inventory/Spell/Feature/Status/Rest/Party candidate BUILT
--> OWNER CORE SYSTEMS PROTOTYPE REVIEW PENDING
+-> Owner correction: live add/reveal must be faster
+-> unified Core Systems UX plan + Korean-first extensibility contract
+-> Korean Core Systems demo BUILT
+-> OWNER CORE SYSTEMS DIRECTION ACCEPTED
+-> NEXT: runtime/domain contracts materialization without hard-coding future systems
 ```
 
 ---
@@ -22,10 +22,10 @@ Repository-wide 통합 기획
 1. canonical Domain/Architecture truth;
 2. current Product/UX decisions/directions;
 3. `INTEGRATED-PRODUCT-UX-PLAN.md`;
-4. active direct Owner product extensions;
+4. active Owner-accepted product extensions;
 5. Owner-accepted visual references;
 6. `contracts/` implementation contracts;
-7. current Work Order / authorization / implementation / Human QA record.
+7. current Work Order / scoped authorization / implementation / Human QA.
 
 Existing Connected Play visual reference:
 
@@ -35,11 +35,29 @@ prototype/app/integrated-reference.js
 prototype/app/integrated-reference.css
 ```
 
+Accepted Core Systems extension review entry:
+
+```text
+prototype/app/core-systems-reference.html
+```
+
+Owner acceptance record:
+
+```text
+prototype/CORE-SYSTEMS-ACCEPTANCE.md
+```
+
+Korean-first / extensibility contract:
+
+```text
+EXTENSIBILITY-KOREAN-FIRST.md
+```
+
 Core rule:
 
 > Accepted prototype가 실제 장면을 이미 정의한 경우, prose contract의 큰 구조만 만족하는 시각적으로 다른 화면을 대체안으로 만들지 않는다.
 
-The new Core Systems candidate extends this scene; it does not replace it.
+The Core Systems extension extends the accepted Play scene; it does not replace it.
 
 ---
 
@@ -55,11 +73,12 @@ The new Core Systems candidate extends this scene; it does not replace it.
 | WO-UI-003 | **CLOSED / ACCEPTED** |
 | DM Library product direction | **RECORDED / REVISED FOR QUICK LIVE USE** |
 | DM Library architecture boundary | **DRAFTED** |
-| First DM Library prototype | **BUILT — PREPARATION SURFACE STILL RELEVANT** |
+| Full DM Library preparation surface | **RETAINED FOR PREPARATION / DETAIL** |
 | Heavy nested live picker | **SUPERSEDED AS PRIMARY LIVE UX** |
-| Core Systems UX plan | **RECORDED** |
-| Core Systems candidate prototype | **BUILT** |
-| Core Systems Owner visual/flow review | **PENDING** |
+| Core Systems UX direction | **OWNER ACCEPTED** |
+| Korean-first product UI | **ACTIVE BASELINE** |
+| Extensible registry/provider direction | **ACTIVE BASELINE** |
+| Party Stash UX concept | **OWNER ACCEPTED PRODUCT DIRECTION / RUNTIME CONTRACT PENDING** |
 | WO-UI-004 runtime implementation | **NOT YET AUTHORIZED** |
 | PR #109 | **DRAFT / UNMERGED** |
 
@@ -67,7 +86,7 @@ The new Core Systems candidate extends this scene; it does not replace it.
 
 # Accepted Connected Play scene
 
-Primary accepted reference scenarios:
+Primary accepted reference scenarios remain:
 
 ```text
 PROTO-SCN-08 — DM Freeform mapless
@@ -89,43 +108,32 @@ flexible Mapless Play Context
 86px Lower Actor Board
 ────────────────────────────────────────
 174px Persistent Command Center
-  37px economy/resource rail
-  240px controlled Actor | flexible Hotbar | 104px context
 ```
 
-Hotbar:
+Hotbar family remains:
 
 ```text
-Mixed | Action | Spell | Item | Custom
-~70px slots
+혼합 | 행동 | 주문 | 아이템 | 사용자 지정
 ```
 
-Owner re-tested and accepted the reference rework:
-
-> 그래 잘 됐어.
+The underlying stable IDs may remain language-neutral; Korean is the default visible v1 presentation.
 
 ---
 
-# Unified Core Systems UX
-
-Canonical planning entry:
-
-`CORE-SYSTEMS-UX-PLAN.md`
-
-The shared grammar is:
+# Accepted Core Systems grammar
 
 ```text
-MANAGE
--> Character Sheet / DM Library / Party Stash detail
+관리
+-> 캐릭터 시트 / DM 라이브러리 / 파티 보관함 상세
 
-USE
--> Command Center
+사용
+-> 커맨드 센터
 
-STATUS
--> Actor Card / controlled Actor summary / Resource Rail / current response
+상태
+-> 액터 카드 / 자원 표시줄 / 현재 대응
 
-QUICK
--> Ctrl+K / small + Quick launcher
+빠른 검색
+-> Ctrl+K / + 빠른 검색
 ```
 
 Hard interpretation:
@@ -137,41 +145,39 @@ Feature list != executable Feature slots
 DM Library != live Quick palette
 ```
 
-Full management is allowed to be deep. Routine live use should be shallow.
+Full management may be deep. Routine live use should be shallow.
 
 ---
 
-# System placement
+# 한국어 우선 + 확장 가능 구조
+
+v1 user-facing product language is Korean (`ko-KR`) by default.
+
+Visible menus, buttons, tabs, system names, state/error/help text, tutorials and accessibility labels are Korean-first.
+
+Internal identity remains stable and language-neutral:
 
 ```text
-PRODUCT SHELL
-Characters
-  -> Character Sheet
-     -> Inventory
-     -> Spells
-     -> Features
-     -> Status
-
-Session
-  -> Host / Join
-  -> DM Library          [offline preparation]
-  -> Party Stash         [shared inventory candidate]
-
-Content
-  -> reusable definitions/packages
-
-Rules
-  -> authoritative browse/search
-
-CONNECTED PLAY
-Play chrome
-  -> DM + Quick / Ctrl+K
-Actor Boards
-Mapless Stage
-Command Center
-  -> Mixed / Action / Spell / Item / Custom
-  -> Resource Rail
+stable id
++ validated capability/domain contract
++ registry/provider/descriptor
++ localized presentation metadata
+-> shared renderer
 ```
+
+The goal is not to predict every future feature. The goal is to let new systems join stable extension points without rebuilding the core UI.
+
+Initial extension points include:
+
+- Character Sheet sections;
+- Hotbar pages/capabilities;
+- Quick Search providers/actions;
+- Party Stash permission-policy presets;
+- Rest activity descriptors;
+- status/effect presentation descriptors;
+- inventory presentation grouping where canonical metadata supports it.
+
+Untyped JSON, visible-string identity, giant future-type switches, and CSS-only privacy are not accepted substitutes for proper domain contracts.
 
 ---
 
@@ -179,44 +185,53 @@ Command Center
 
 Inventory is the full owned-item management surface and uses canonical ItemInstance/Activation/quantity/resource state.
 
-Command Center `Item` only receives executable item capabilities.
+Command Center `아이템` receives executable item capabilities only.
 
-Spellbook contains complete known/prepared/configured spell records; `Spell` Hotbar only receives current executable spells.
+Spellbook contains complete known/prepared/configured records; `주문` Hotbar receives current executable spells only.
 
-Feature list contains passive and executable features. Passive traits do not occupy Hotbar slots merely because they exist.
+Feature list contains passive and executable capabilities. Passive traits do not occupy Hotbar slots merely because they exist.
 
-Conditions and Concentration are compact live status until a response/detail is actually needed.
+Conditions and Concentration remain compact live state until a response/detail is actually needed.
 
 Rest is an Activity workflow:
 
 ```text
-Choose Rest
+휴식 선택
 -> authoritative preview
--> ask only real choices
--> explicit Complete
+-> 필요한 실제 선택만 입력
+-> 명시적 완료
 -> commit
 ```
 
-No blind UI-defined reset semantics.
+UI does not invent recovery semantics from the visible label.
 
 ---
 
-# Party Stash candidate
+# Party Stash accepted product direction
 
-Party Stash is proposed as a shared inventory/loot surface separate from one Player Character inventory.
+`파티 보관함` is a shared inventory concept separate from one Character inventory.
+
+Storage/ownership and operation policy are separate concepts.
+
+Initial policy presets:
 
 ```text
-Party Stash Potion x4
--> Give Rowan x2
--> validated transfer
--> Party x2 / Rowan x2
+공유 관리
+DM 승인형
+DM 관리형
 ```
 
-Its ownership/persistence/write-back contract is not yet frozen. Prototype presentation does not authorize runtime semantics.
+These are initial configurable presets over one Party Stash concept, not three incompatible storage models.
+
+Future permission policies should be addable through a capability/policy descriptor.
+
+Exact persistence, lifetime, transfer/write-back and durable ownership semantics remain runtime/domain contracts to materialize.
+
+Unknown/unrevealed DM loot must not be hidden inside Player-delivered Party Stash state.
 
 ---
 
-# DM Library + revised live Quick UX
+# DM Library + accepted live Quick direction
 
 DM Library remains durable local Host preparation data:
 
@@ -227,85 +242,29 @@ DM Library
 └─ NPC Actor Definitions
 ```
 
-Full Library is the preparation room.
+Full Library = preparation/detail.
 
-Primary live access is now:
+Primary live path = Quick Search:
 
 ```text
-Ctrl+K / + Quick
+Ctrl+K / + 빠른 검색
 
-ACTOR      Nightcrow Archer       [+1] [More]
-IMAGE      봉인된 편지             [View] [Reveal]
-ITEM       Potion of Healing      [Give] [Party]
-CONDITION  Poisoned               [Apply]
-RULE       Poisoned               [Open]
+액터      나이트크로우 궁수       [+1 추가] [더 보기]
+이미지    봉인된 편지             [미리보기] [공개]
+아이템    회복 물약                [지급] [파티 보관함]
+상태      중독                     [적용]
+규칙      중독                     [열기]
 ```
 
 Key rules:
 
-- Actor `+1` is the common single-add path;
-- quantity is secondary under `More`;
-- Image `View` is private preview;
-- Image `Reveal` is explicit shared presentation;
-- result selection itself never reveals;
-- empty Quick query prefers Recent/Favorites;
-- Player never receives DM Library/private Quick source catalog;
-- full Encounter/Library picker remains a detailed fallback only.
-
----
-
-# Active prototype candidate
-
-Review entry:
-
-```text
-docs/design/ui-ux/prototype/app/core-systems-reference.html
-```
-
-Supporting files:
-
-```text
-docs/design/ui-ux/prototype/app/core-systems-reference.css
-docs/design/ui-ux/prototype/app/core-systems-reference.js
-docs/design/ui-ux/prototype/CORE-SYSTEMS-EXTENSION.md
-```
-
-Scenarios:
-
-```text
-SYS-SCN-00 — Product placement map
-SYS-SCN-01 — Character Inventory management
-SYS-SCN-02 — Spellbook + Features management
-SYS-SCN-03 — Player live Quick Use
-SYS-SCN-04 — DM unified Quick Search
-SYS-SCN-05 — Party Stash / loot transfer
-SYS-SCN-06 — Rest preview / commit
-SYS-SCN-07 — Condition / concentration response
-```
-
-The candidate reuses the accepted Play visual family for all live scenarios.
-
----
-
-# First DM Library prototype disposition
-
-The earlier candidate remains at:
-
-```text
-docs/design/ui-ux/prototype/app/dm-library-reference.html
-```
-
-Keep it as evidence/review for the **offline preparation Library** layout.
-
-Its heavier live flow:
-
-```text
-Encounter -> Add Actor -> Library picker -> quantity -> Add
-```
-
-is no longer the primary intended live UX after Owner feedback.
-
-For live invocation review, use `core-systems-reference.html`.
+- Actor common path is one-click `+1 추가` after retrieval;
+- quantity/batch controls are secondary;
+- image preview and reveal are distinct;
+- selecting a result never reveals an image by itself;
+- empty Quick query favors recent/favorite/relevant results;
+- Player never receives the DM Library/private Quick source catalog;
+- full Encounter/Library picker remains a detailed fallback.
 
 ---
 
@@ -351,14 +310,20 @@ UI must not manufacture these semantics locally.
 - DM-only privacy cannot be implemented by CSS hiding.
 - Handout is presentation, not battlemap.
 - Full management surfaces do not replace the Command Center during routine Play.
+- User-facing v1 UI is Korean-first while internal IDs remain language-neutral.
+- New recurring systems should prefer stable registry/provider/capability extension points over hard-coded future-type branches.
 
 ---
 
 # Current next gate
 
 ```text
-Open prototype/app/core-systems-reference.html
--> review SYS-SCN-00 through SYS-SCN-07
--> Owner accept/change system placement + DM Quick + Inventory/Party/Rest grammar
--> only then consolidate accepted reference / materialize runtime contracts
+Core Systems product/UX direction OWNER ACCEPTED
+-> materialize missing domain/architecture contracts
+-> define scoped runtime slice(s)
+-> explicit runtime authorization
+-> implementation + tests
+-> Human QA
 ```
+
+Do not infer runtime authorization merely from prototype/product acceptance.
