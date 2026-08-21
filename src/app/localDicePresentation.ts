@@ -28,7 +28,7 @@ export function buildLocalDiceVisualRoll(roll: LocalDicePresentation): VisualDic
   return {
     resolutionId: `local:${roll.id}`,
     label: roll.label,
-    dice: roll.dice.map((die) => ({ ...die, authoritative: true })),
+    dice: roll.dice.map((die) => ({ ...die, authoritative: true as const })),
     legacyAggregate: false,
     notice: {
       notation: notationFor(roll.dice),
