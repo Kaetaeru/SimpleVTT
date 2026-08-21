@@ -35,8 +35,10 @@ type FaceDescriptor = {
 };
 
 type DieRuntime = {
+  sides: DieSides;
   group: THREE.Group;
   body: CANNON.Body;
+  faces: FaceDescriptor[];
 };
 
 type Bounds = {
@@ -50,6 +52,9 @@ const SURFACE_GROUP = 1;
 const BRONZE = 0xb87333;
 const BRONZE_DARK = 0x3c1e0d;
 const NUMBER_COLOR = "#f8e2bc";
+const CAMERA_HEIGHT = 18;
+const CAMERA_FOV = 36;
+
 const MASS_BY_SIDES: Record<DieSides, number> = {
   4: 0.82,
   6: 1.08,
@@ -67,6 +72,7 @@ function d10Geometry() {
     const angle = -Math.PI / 2 + (index * Math.PI * 2) / 5;
     vertices.push(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
   }
+
   const indices: number[] = [];
   for (let index = 0; index < 5; index += 1) {
     const current = 2 + index;
@@ -74,6 +80,7 @@ function d10Geometry() {
     indices.push(0, current, next);
     indices.push(1, next, current);
   }
+
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setIndex(indices);
@@ -82,26 +89,18 @@ function d10Geometry() {
 }
 
 function geometryFor(sides: DieSides) {
-  switch (sides) {
-    case 4:
-      return new THREE.TetrahedronGeometry(0.9, 0);
-    case 6:
-      return new THREE.BoxGeometry(1.24, 1.24, 1.24);
-    case 8:
-      return new THREE.OctahedronGeometry(0.94, 0);
-    case 10:
-      return d10Geometry();
-    case 12:
-      return new THREE.DodecahedronGeometry(0.91, 0);
-    case 20:
-      return new THREE.IcosahedronGeometry(0.94, 0);
-  }
+  if (sides === 4) return new THREE.TetrahedronGeometry(0.9, 0);
+  if (sides === 6) return new THREE.BoxGeometry(1.24, 1.24, 1.24);
+  if (sides === 8) return new THREE.OctahedronGeometry(0.94, 0);
+  if (sides === 10) return d10Geometry();
+  if (sides === 12) return new THREE.DodecahedronGeometry(0.91, 0);
+  return new THREE.IcosahedronGeometry(0.94, 0);
 }
 
 function faceDescriptors(source: THREE.BufferGeometry, expectedCount: number) {
   const geometry = source.toNonIndexed();
   const position = geometry.getAttribute("position");
-  const clusters: Array<{ normal: THREE.Vector3; center: THREE.Vector3; count: number }> = [];
+  const clusters: Array<{ normal: THREE.Vector3; centerSum: THREE.Vector3; count: number }> = [];
 
   for (let index = 0; index < position.count; index += 3) {
     const a = new THREE.Vector3().fromBufferAttribute(position, index);
@@ -110,18 +109,19 @@ function faceDescriptors(source: THREE.BufferGeometry, expectedCount: number) {
     const normal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
     const center = a.clone().add(b).add(c).multiplyScalar(1 / 3);
     const existing = clusters.find((cluster) => cluster.normal.dot(normal) > 0.994);
+
     if (existing) {
-      existing.center.add(center);
+      existing.centerSum.add(center);
       existing.count += 1;
     } else {
-      clusters.push({ normal, center, count: 1 });
+      clusters.push({ normal, centerSum: center, count: 1 });
     }
   }
-  geometry.dispose();
 
+  geometry.dispose();
   return clusters.slice(0, expectedCount).map((cluster, index) => ({
     normal: cluster.normal.clone(),
-    center: cluster.center.clone().multiplyScalar(1 / cluster.count),
+    center: cluster.centerSum.clone().multiplyScalar(1 / cluster.count),
     value: index + 1,
   }));
 }
@@ -133,7 +133,7 @@ function numberTexture(value: number) {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("2D canvas context를 만들 수 없습니다.");
 
-  context.clearRect(0, 0, 192, 192);
+  context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.font = value >= 10 ? "800 70px Georgia, serif" : "800 82px Georgia, serif";
@@ -162,7 +162,7 @@ function attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: D
   const forward = new THREE.Vector3(0, 0, 1);
 
   for (const face of faces) {
-    const label = new THREE.Mesh(
+    const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(sizeBySides[sides], sizeBySides[sides]),
       new THREE.MeshBasicMaterial({
         map: numberTexture(face.value),
@@ -173,9 +173,9 @@ function attachFaceNumbers(group: THREE.Group, faces: FaceDescriptor[], sides: D
       }),
     );
     const normal = face.normal.clone().normalize();
-    label.position.copy(face.center).addScaledVector(normal, 0.018);
-    label.quaternion.setFromUnitVectors(forward, normal);
-    group.add(label);
+    plane.position.copy(face.center).addScaledVector(normal, 0.018);
+    plane.quaternion.setFromUnitVectors(forward, normal);
+    group.add(plane);
   }
 }
 
@@ -192,7 +192,11 @@ function colliderFor(source: THREE.BufferGeometry, sides: DieSides) {
 
   const vertices: CANNON.Vec3[] = [];
   for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
-    vertices.push(new CANNON.Vec3(position.getX(vertexIndex), position.getY(vertexIndex), position.getZ(vertexIndex)));
+    vertices.push(new CANNON.Vec3(
+      position.getX(vertexIndex),
+      position.getY(vertexIndex),
+      position.getZ(vertexIndex),
+    ));
   }
 
   const faces: number[][] = [];
@@ -224,7 +228,7 @@ export class DiceWorld {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
-  private readonly camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  private readonly camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
   private readonly world = new CANNON.World({ gravity: new CANNON.Vec3(0, -20, 0) });
   private readonly diceMaterial = new CANNON.Material("dice");
   private readonly floorMaterial = new CANNON.Material("floor");
@@ -234,7 +238,7 @@ export class DiceWorld {
   private readonly boundaryDebug: THREE.LineLoop;
   private readonly dice: DieRuntime[] = [];
   private wallBodies: CANNON.Body[] = [];
-  private bounds: Bounds = { halfWidth: 5, minZ: -5, maxZ: 5 };
+  private bounds: Bounds = { halfWidth: 7, minZ: -5.2, maxZ: 5.2 };
   private settings: PhysicsSettings;
   private diceCollision = true;
   private raf = 0;
@@ -247,7 +251,12 @@ export class DiceWorld {
     this.canvas = canvas;
     this.settings = { ...settings };
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
@@ -256,10 +265,9 @@ export class DiceWorld {
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.setClearColor(0x000000, 0);
 
-    // Screen plane == table plane. The camera looks straight down at the
-    // tabletop; there is no 45-degree or side-view pitch. Perspective is kept
-    // only so dice above the table retain a small amount of depth scaling.
-    this.camera.position.set(0, 18, 0);
+    // 화면 자체가 테이블이다. 카메라 화면면과 바닥면을 평행하게 두고
+    // 광축은 테이블에 정확히 수직으로 내려다본다.
+    this.camera.position.set(0, CAMERA_HEIGHT, 0);
     this.camera.up.set(0, 0, -1);
     this.camera.lookAt(0, 0, 0);
 
@@ -273,13 +281,18 @@ export class DiceWorld {
     key.shadow.camera.top = 12;
     key.shadow.camera.bottom = -12;
     this.scene.add(key);
+
     const rim = new THREE.DirectionalLight(0x7d96bf, 1.35);
     rim.position.set(6, 5, -7);
     this.scene.add(rim);
 
     this.floorMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 80),
-      new THREE.MeshStandardMaterial({ color: 0x171b1f, roughness: 0.91, metalness: 0.02 }),
+      new THREE.MeshStandardMaterial({
+        color: 0x171b1f,
+        roughness: 0.91,
+        metalness: 0.02,
+      }),
     );
     this.floorMesh.rotation.x = -Math.PI / 2;
     this.floorMesh.receiveShadow = true;
@@ -287,8 +300,9 @@ export class DiceWorld {
 
     this.world.allowSleep = true;
     this.world.broadphase = new CANNON.SAPBroadphase(this.world);
-    this.world.solver.iterations = 14;
-    this.world.solver.tolerance = 0.001;
+    const solver = this.world.solver as CANNON.GSSolver;
+    solver.iterations = 14;
+    solver.tolerance = 0.001;
 
     this.floorBody = new CANNON.Body({
       mass: 0,
@@ -300,18 +314,21 @@ export class DiceWorld {
     this.floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
     this.world.addBody(this.floorBody);
 
-    this.world.addContactMaterial(new CANNON.ContactMaterial(this.diceMaterial, this.floorMaterial, {
-      friction: this.settings.floorFriction,
-      restitution: this.settings.restitution,
-    }));
-    this.world.addContactMaterial(new CANNON.ContactMaterial(this.diceMaterial, this.wallMaterial, {
-      friction: 0.24,
-      restitution: Math.min(0.42, this.settings.restitution + 0.05),
-    }));
-    this.world.addContactMaterial(new CANNON.ContactMaterial(this.diceMaterial, this.diceMaterial, {
-      friction: 0.26,
-      restitution: Math.min(0.36, this.settings.restitution),
-    }));
+    this.world.addContactMaterial(new CANNON.ContactMaterial(
+      this.diceMaterial,
+      this.floorMaterial,
+      { friction: this.settings.floorFriction, restitution: this.settings.restitution },
+    ));
+    this.world.addContactMaterial(new CANNON.ContactMaterial(
+      this.diceMaterial,
+      this.wallMaterial,
+      { friction: 0.24, restitution: Math.min(0.42, this.settings.restitution + 0.05) },
+    ));
+    this.world.addContactMaterial(new CANNON.ContactMaterial(
+      this.diceMaterial,
+      this.diceMaterial,
+      { friction: 0.26, restitution: Math.min(0.36, this.settings.restitution) },
+    ));
 
     this.boundaryDebug = new THREE.LineLoop(
       new THREE.BufferGeometry(),
@@ -332,10 +349,12 @@ export class DiceWorld {
   setSettings(next: PhysicsSettings) {
     this.settings = { ...next };
     this.world.gravity.set(0, -this.settings.gravity, 0);
+
     for (const runtime of this.dice) {
       runtime.body.linearDamping = this.settings.linearDamping;
       runtime.body.angularDamping = this.settings.angularDamping;
     }
+
     const floorContact = this.world.getContactMaterial(this.diceMaterial, this.floorMaterial);
     if (floorContact) {
       floorContact.friction = this.settings.floorFriction;
@@ -364,26 +383,34 @@ export class DiceWorld {
     this.settledAt = null;
 
     const total = options.sides.length;
-    const spread = Math.min(this.bounds.halfWidth * 1.1, Math.max(1.4, total * 0.72));
-    const startZ = this.bounds.minZ + 0.8;
+    const spread = Math.min(this.bounds.halfWidth * 1.05, Math.max(1.4, total * 0.72));
+    const startZ = this.bounds.minZ + 0.95;
 
     options.sides.forEach((sides, index) => {
       const normalized = total <= 1 ? 0 : index / (total - 1) - 0.5;
       const x = normalized * spread + (Math.random() - 0.5) * 0.52;
-      const y = this.settings.spawnHeight + Math.random() * 0.36 + index * 0.035;
-      const z = startZ + Math.random() * 0.2;
+      const y = this.settings.spawnHeight + Math.random() * 0.3 + index * 0.035;
+      const z = startZ + Math.random() * 0.18;
       const runtime = this.createDie(sides, x, y, z);
 
-      const lateral = (Math.random() - 0.5) * 3.2;
+      const lateral = (Math.random() - 0.5) * 2.8;
       const forward = this.settings.throwSpeed * (0.91 + Math.random() * 0.17);
-      runtime.body.velocity.set(lateral, -2.4 - Math.random() * 1.4, forward);
+      runtime.body.velocity.set(lateral, -2.3 - Math.random() * 1.2, forward);
 
-      const axis = new CANNON.Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
-      if (axis.lengthSquared() < 0.01) axis.set(1, 0.7, 0.3);
-      axis.normalize();
-      const spin = this.settings.spinSpeed * (0.78 + Math.random() * 0.42);
-      runtime.body.angularVelocity.set(axis.x * spin, axis.y * spin, axis.z * spin);
-      runtime.body.quaternion.setFromEuler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      // 화면 위->아래(+Z)로 진행하므로 X축 회전이 실제 '구름'을 가장
+      // 확실히 보여준다. 여기에 Y/Z 랜덤 회전을 섞어 기계적이지 않게 한다.
+      const rollDirection = Math.random() > 0.5 ? 1 : -1;
+      const spin = this.settings.spinSpeed * (0.82 + Math.random() * 0.32);
+      runtime.body.angularVelocity.set(
+        rollDirection * spin,
+        (Math.random() - 0.5) * spin * 0.55,
+        (Math.random() - 0.5) * spin * 0.4,
+      );
+      runtime.body.quaternion.setFromEuler(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+      );
       runtime.body.wakeUp();
     });
   }
@@ -432,10 +459,11 @@ export class DiceWorld {
 
     const group = new THREE.Group();
     group.add(core);
-    group.add(new THREE.LineSegments(
+    const edges = new THREE.LineSegments(
       new THREE.EdgesGeometry(geometry, 18),
       new THREE.LineBasicMaterial({ color: 0x3a1f10, transparent: true, opacity: 0.72 }),
-    ));
+    );
+    group.add(edges);
     attachFaceNumbers(group, faces, sides);
     group.position.set(x, y, z);
     this.scene.add(group);
@@ -455,7 +483,7 @@ export class DiceWorld {
     });
     this.world.addBody(body);
 
-    const runtime: DieRuntime = { group, body };
+    const runtime: DieRuntime = { sides, group, body, faces };
     this.dice.push(runtime);
     return runtime;
   }
@@ -470,36 +498,40 @@ export class DiceWorld {
   };
 
   private rebuildBounds() {
-    const tablePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const hit = (x: number, y: number) => {
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
-      return raycaster.ray.intersectPlane(tablePlane, new THREE.Vector3());
+    // 탑다운 카메라에서는 바닥에서 보이는 영역을 FOV와 카메라 높이로
+    // 직접 계산할 수 있다. 카메라 변경과 물리 경계를 서로 독립시킨다.
+    const halfVisibleZ = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2)) * CAMERA_HEIGHT;
+    const halfVisibleX = halfVisibleZ * this.camera.aspect;
+    const margin = 0.72;
+
+    this.bounds = {
+      halfWidth: Math.max(3.2, halfVisibleX - margin),
+      minZ: -Math.max(3.2, halfVisibleZ - margin),
+      maxZ: Math.max(3.2, halfVisibleZ - margin),
     };
 
-    const topLeft = hit(-0.94, 0.94);
-    const topRight = hit(0.94, 0.94);
-    const bottomLeft = hit(-0.94, -0.94);
-    const bottomRight = hit(0.94, -0.94);
-
-    if (topLeft && topRight && bottomLeft && bottomRight) {
-      this.bounds = {
-        halfWidth: Math.max(3, Math.min(Math.abs(topLeft.x), Math.abs(topRight.x), Math.abs(bottomLeft.x), Math.abs(bottomRight.x)) - 0.4),
-        minZ: Math.min(topLeft.z, topRight.z, bottomLeft.z, bottomRight.z) + 0.45,
-        maxZ: Math.max(topLeft.z, topRight.z, bottomLeft.z, bottomRight.z) - 0.45,
-      };
-    }
-
     this.removeWalls();
-    const wallHalfHeight = 2.6;
-    const thickness = 0.25;
+    const wallHalfHeight = 3.2;
+    const thickness = 0.28;
     const depth = this.bounds.maxZ - this.bounds.minZ;
     const centerZ = (this.bounds.maxZ + this.bounds.minZ) / 2;
 
-    this.addWall(new CANNON.Vec3(thickness, wallHalfHeight, depth / 2 + thickness), new CANNON.Vec3(-this.bounds.halfWidth - thickness, wallHalfHeight, centerZ));
-    this.addWall(new CANNON.Vec3(thickness, wallHalfHeight, depth / 2 + thickness), new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, centerZ));
-    this.addWall(new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, thickness), new CANNON.Vec3(0, wallHalfHeight, this.bounds.minZ - thickness));
-    this.addWall(new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, thickness), new CANNON.Vec3(0, wallHalfHeight, this.bounds.maxZ + thickness));
+    this.addWall(
+      new CANNON.Vec3(thickness, wallHalfHeight, depth / 2 + thickness),
+      new CANNON.Vec3(-this.bounds.halfWidth - thickness, wallHalfHeight, centerZ),
+    );
+    this.addWall(
+      new CANNON.Vec3(thickness, wallHalfHeight, depth / 2 + thickness),
+      new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, centerZ),
+    );
+    this.addWall(
+      new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, thickness),
+      new CANNON.Vec3(0, wallHalfHeight, this.bounds.minZ - thickness),
+    );
+    this.addWall(
+      new CANNON.Vec3(this.bounds.halfWidth + thickness, wallHalfHeight, thickness),
+      new CANNON.Vec3(0, wallHalfHeight, this.bounds.maxZ + thickness),
+    );
 
     const points = [
       new THREE.Vector3(-this.bounds.halfWidth, 0.018, this.bounds.minZ),
@@ -530,18 +562,32 @@ export class DiceWorld {
   }
 
   private animate = (now: number) => {
-    const delta = Math.min(0.04, (now - this.lastFrame) / 1000);
+    const delta = Math.min(0.04, Math.max(0.001, (now - this.lastFrame) / 1000));
     this.lastFrame = now;
     this.world.step(1 / 60, delta, 5);
 
     let movingCount = 0;
     for (const runtime of this.dice) {
-      runtime.group.position.set(runtime.body.position.x, runtime.body.position.y, runtime.body.position.z);
-      runtime.group.quaternion.set(runtime.body.quaternion.x, runtime.body.quaternion.y, runtime.body.quaternion.z, runtime.body.quaternion.w);
+      runtime.group.position.set(
+        runtime.body.position.x,
+        runtime.body.position.y,
+        runtime.body.position.z,
+      );
+      runtime.group.quaternion.set(
+        runtime.body.quaternion.x,
+        runtime.body.quaternion.y,
+        runtime.body.quaternion.z,
+        runtime.body.quaternion.w,
+      );
       if (runtime.body.sleepState !== CANNON.Body.SLEEPING) movingCount += 1;
     }
 
-    if (this.lastThrowAt !== null && movingCount === 0 && this.dice.length > 0 && this.settledAt === null) {
+    if (
+      this.lastThrowAt !== null
+      && movingCount === 0
+      && this.dice.length > 0
+      && this.settledAt === null
+    ) {
       this.settledAt = now;
     }
 
@@ -549,7 +595,9 @@ export class DiceWorld {
       diceCount: this.dice.length,
       movingCount,
       elapsedMs: this.lastThrowAt === null ? null : now - this.lastThrowAt,
-      settledMs: this.lastThrowAt === null || this.settledAt === null ? null : this.settledAt - this.lastThrowAt,
+      settledMs: this.lastThrowAt === null || this.settledAt === null
+        ? null
+        : this.settledAt - this.lastThrowAt,
     });
 
     this.renderer.render(this.scene, this.camera);
