@@ -48,19 +48,22 @@ Initiative extends this same skeleton; it does not replace it with a Combat rout
 
 ## Actor Cards / Boards
 
-Cards may render only already-supplied runtime facts such as:
+This slice establishes the production Actor Board/Card presentation anchor and directly covers:
 
 - Actor identity;
 - ally/enemy relation supplied by `SceneEntity.side`;
 - HP / Temp HP;
-- status;
+- compact status;
 - AC;
-- Initiative/current-turn state when present;
-- selected/controlled context where canonical state exists.
+- Initiative current-turn emphasis when supplied;
+- actual DM controlled Actor emphasis through `selectedActorId`;
+- Player owning Character emphasis;
+- intentional empty boards;
+- useful minimum card width + horizontal overflow.
 
-Board density must use horizontal scrolling before card collapse.
+The current runtime relation schema contains `ally | enemy`; this slice does not invent a new `neutral` domain relation. The Upper Board therefore presents current opposing runtime Actors honestly from existing projections.
 
-The current runtime relation schema contains `ally | enemy`; this slice does not invent a new `neutral` domain relation. The Upper Board therefore presents current opposing/non-allied runtime Actors honestly from existing projections.
+Full ActorCard target-valid / target-invalid / target-selected interaction styling is not invented here. Existing action targeting continues to use the already-authoritative manual eligible Actor set in the Command Center. A later targeting-specific slice may promote that projection onto ActorCard states once its exact interaction scope is selected.
 
 ## Command Center
 
@@ -73,36 +76,39 @@ Baseline page family:
 - Spell;
 - Item.
 
-The Command Center must include:
+The Command Center includes:
 
 - current controlled/action Actor summary;
 - HP / Temp HP / important status where supplied;
-- Resource Rail only from actual Actor/Character projection;
+- Resource Rail only from actual owning Character projection;
+- honest empty resource presentation for Actors without projected resources;
 - Initiative economy only while Initiative is active;
 - direct Hotbar slots from canonical `actionsByActor[actorId]`;
 - unavailable reasons from `ActionVm.disabledReason`;
 - existing direct action/target submission path.
 
-Automatic capability discovery is in scope. User-persisted Hotbar customization is not introduced unless an existing canonical persistence contract is found during implementation.
+Automatic capability discovery is in scope. User-persisted Hotbar customization is not introduced because this slice has no canonical customization persistence contract.
 
 ---
 
-# 3. Primary behavior scenarios
+# 3. Behavior scenarios
 
-Directly touched:
+Primary:
 
 - Scenario 10 — Connected Freeform baseline;
 - Scenario 11 — Start Initiative;
-- Scenario 12 — Select an action and target one Actor;
-- Scenario 13 — Multi-target action;
-- Scenario 15 — Invalid target;
 - Scenario 19 — DM control changes Command Center;
-- Scenario 20 — Resolving action;
-- Scenario 23 — Connected dice and result;
+- Scenario 20 — Resolving action, limited to persistent-anchor structure (selective locking remains blocked);
+- Scenario 23 — Connected dice/result, limited to persistent-anchor structure;
 - Scenario 37 — Narrow desktop;
 - Scenario 43 — Empty Actor Board;
 - Scenario 44 — Many Actors;
 - Scenario 45 — Long names / many resources.
+
+Preserved existing targeting flow regression:
+
+- Scenario 12 — direct single-target action uses supplied eligible set;
+- Scenario 13 — multi-target manual set + explicit Execute.
 
 Adjacent regression:
 
@@ -112,11 +118,13 @@ Adjacent regression:
 - Scenario 34 — Product navigation during live Host Session;
 - Scenario 35/36 — reconnect/disconnect context preservation.
 
+Scenario 15 ActorCard invalid-state presentation and Scenario 16/17 Main Hand default hostile click are not claimed by this slice.
+
 ---
 
 # 4. QA rows
 
-Primary:
+Primary pass targets:
 
 ```text
 QA-ID-01
@@ -133,9 +141,7 @@ QA-MODE-03
 QA-MODE-04
 QA-MODE-05
 QA-MODE-06
-QA-ACTOR-01
 QA-ACTOR-02
-QA-ACTOR-03
 QA-ACTOR-05
 QA-ACTOR-06
 QA-ACTOR-07
@@ -152,9 +158,15 @@ QA-RES-01
 QA-RES-07
 ```
 
-`QA-RES-02` / `QA-RES-03` remain BLOCKED by `GAP-RESOLUTION-SAFE-INTERACTIONS`; this Work Order must not claim them PASS.
+Not claimed by this slice:
 
-`QA-TGT-05` / default hostile Main Hand behavior remains outside this slice because `GAP-MAIN-HAND-CANONICAL-RELATION` is unresolved.
+- `QA-ACTOR-01/03/04` full targeting-state semantics on ActorCard;
+- `QA-CLICK-04` / `QA-TGT-05` default Main Hand relation;
+- `QA-RES-02/03` selective resolution locking.
+
+`QA-RES-02/03` remain BLOCKED by `GAP-RESOLUTION-SAFE-INTERACTIONS`.
+
+`QA-CLICK-04` / `QA-TGT-05` remain blocked for exact runtime behavior by `GAP-MAIN-HAND-CANONICAL-RELATION`.
 
 ---
 
@@ -199,10 +211,10 @@ UI reads, but does not replace, these existing sources:
 - `SceneVm.economyByActor`;
 - `SceneVm.currentActorId` / `selectedActorId`;
 - `ActionVm.available`, `disabledReason`, `eligibleTargetIds`, `maxTargets`, resource/item cost;
-- owning local `activeCharacter` where that Character is the actual controlled Player Actor;
+- owning local `activeCharacter` only when it is the actual Player action Actor;
 - existing `resolveAction`, `selectDmActor`, Initiative/Session operations.
 
-The UI must not calculate D&D legality, target range/LoS, resource truth, Main Hand substitution, reconnect truth, or privacy delivery.
+The UI must not calculate D&D legality, target range/LoS, resource truth, Main Hand substitution, reconnect truth, privacy delivery, or spatial geometry.
 
 ---
 
@@ -220,23 +232,25 @@ Not authorized by this Work Order:
 - Handout networking/reconnect architecture;
 - Character rules/progression changes;
 - invented neutral-relation domain schema;
-- invented Hotbar persistence/customization schema.
+- invented Hotbar persistence/customization schema;
+- full targeting-state promotion onto Actor Cards.
 
 ---
 
-# 8. Expected touched runtime files
+# 8. Touched runtime files
 
-Primary candidates:
+Primary:
 
 - `src/SessionModeRoot.tsx`;
-- `src/session-mode.css`;
-- new/reused Actor Board presentation component(s);
+- `src/SessionActorBoards.tsx`;
+- `src/session-actor-boards.css`;
+- `src/session-connected-layout.css`;
 - `src/SessionActionDock.tsx`;
 - `src/session-action-dock.css`;
 - Session UI structural tests;
-- `.github/workflows/ui.yml` if a new dedicated gate is added.
+- `.github/workflows/ui.yml`.
 
-Existing utility, resolution, Quick Sheet, Full Sheet, reconnect and Handout surfaces should be preserved unless minimal composition changes are necessary to keep the accepted skeleton visible.
+Existing utility, resolution, Quick Sheet, Full Sheet, reconnect and Handout components remain their existing authority owners; composition changes keep them inside the same live Session skeleton.
 
 ---
 
@@ -245,11 +259,11 @@ Existing utility, resolution, Quick Sheet, Full Sheet, reconnect and Handout sur
 Automated:
 
 - dedicated topology/Command Center structural checks PASS;
-- stale intent-first structural expectations removed or reconciled;
+- stale intent-first structural expectations removed/reconciled;
 - existing Session utility/Initiative/reconnect/Product continuity regressions PASS;
 - TypeScript PASS;
 - production build PASS;
-- broad UI workflow PASS on one exact head.
+- broad UI workflow PASS on one exact source head.
 
 Human:
 
