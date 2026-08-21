@@ -1,6 +1,6 @@
-schema_version: 5
+schema_version: 6
 phase: runtime_ui_implementation
-status: third_runtime_slice_owner_visual_qa_failed_reference_rework_pending_verification
+status: third_runtime_slice_reference_rework_automated_pass_owner_reqa_pending
 runtime_ui_implementation_allowed: true
 
 accepted_reference:
@@ -131,21 +131,35 @@ completed_runtime_slices:
 selected_runtime_slice:
   id: WO-UI-003
   name: connected_play_actor_boards_tabletop_stage_persistent_command_center
-  status: human_visual_qa_failed_reference_rework_pending_verification
+  status: reference_rework_automated_pass_owner_reqa_pending
   work_order: docs/design/ui-ux/work-orders/WO-UI-003-connected-play-actor-boards-command-center.md
   authorization: docs/design/ui-ux/work-orders/WO-UI-003-SCOPED-AUTHORIZATION.md
   implementation_record: docs/design/ui-ux/work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md
   human_qa_record: docs/design/ui-ux/work-orders/WO-UI-003-HUMAN-QA.md
   explicit_runtime_implementation_authorization: true
   authorization_owner_quote: 그래 가자
-  owner_human_qa: fail
+  first_owner_human_qa: fail
   human_qa_failure_kind: visual_composition_drift_from_accepted_integrated_reference
   first_implementation_source_sha: fb007d809ab586ca8d2e135e5813e929772a7f2c
   first_implementation_ui_run_id: 32496754716
   first_implementation_automation: pass_but_superseded_by_owner_visual_fail
-  rework_source_candidate_sha: f71813de7fa71e09eeb6422915e1e5d2865cd50f
-  rework_automated_verification: pending
+  rework_source_sha: acb3f68a2e985f2abb8cdf2a5b241a3d275aa08f
   rework_owner_human_qa: pending
+  rework_verification:
+    accepted_reference_ui_run_id: 32500827497
+    accepted_reference_gate: pass
+    accepted_reference_gate_repeat: pass
+    main_playable_run_id: 32500827476
+    full_ui_rules_typescript_frontend: pass
+    connected_session_run_id: 32500827494
+    connected_session_authority: pass
+    production_frontend_gate: pass
+    ui_workflow_global_result: failure
+    ui_workflow_failure_step: Verify Phase 09 real mechanics services
+    ui_workflow_failure_reproduced: true
+    ui_workflow_build_step: skipped_after_phase09_failure
+    phase09_files_changed_by_rework: false
+    phase09_failure_treatment: separate_unresolved_regression_not_speculatively_patched_in_WO_UI_003
   primary_prototype_scenarios:
     - PROTO-SCN-08
     - PROTO-SCN-09
@@ -160,6 +174,7 @@ selected_runtime_slice:
     utility_pane_max_px: 455
     command_body_columns: [240px, flexible, 104px]
     hotbar_slot_px: 70
+    hotbar_pages: [Mixed, Action, Spell, Item, Custom]
   constrained_reference:
     actor_board_px: 80
     command_center_px: 164
@@ -193,8 +208,12 @@ selected_runtime_slice:
     - src/SessionModeRoot.tsx
     - src/SessionActorBoards.tsx
     - src/SessionInitiativeStrip.tsx
+    - src/SessionMainFocus.tsx
     - src/SessionActionDock.tsx
+    - src/SessionDmTools.tsx
     - src/session-integrated-reference-play.css
+    - src/session-integrated-reference-chrome.css
+    - src/session-main-focus.css
   dedicated_test: tests/ui/connectedPlayAcceptedTopology.test.ts
 
 identified_runtime_drift:
@@ -217,8 +236,8 @@ identified_runtime_drift:
     status: resolved
     resolution: WO-UI-002
   - id: DRIFT-WO-UI-003-CONNECTED-PLAY-TOPOLOGY
-    status: rework_pending_verification
-    evidence: owner_rejected_first_approximation_and_required_exact_integrated_reference_scene_basis
+    status: reworked_automated_reference_gate_pass_owner_reqa_pending
+    evidence: exact_integrated_reference_scene_geometry_and_composition_pinned_in_runtime_and_tests
     resolution: WO-UI-003
 
 implementation_readiness:
@@ -229,9 +248,11 @@ implementation_readiness:
   current_runtime_slice_selected: true
   current_slice_authorized: true
   current_slice_first_implementation_automation: pass_but_not_accepted
-  current_slice_owner_visual_qa: fail
+  current_slice_first_owner_visual_qa: fail
   current_slice_reference_rework_source_implemented: true
-  current_slice_reference_rework_automation: pending
+  current_slice_reference_rework_accepted_reference_automation: pass
+  current_slice_reference_rework_frontend_typescript: pass
   current_slice_reference_rework_owner_qa: pending
+  repository_phase09_aggregate_regression: unresolved_separate
 
-next_route: WO_UI_003_REFERENCE_REWORK_AUTOMATION_THEN_OWNER_VISUAL_QA
+next_route: WO_UI_003_OWNER_VISUAL_REQA
