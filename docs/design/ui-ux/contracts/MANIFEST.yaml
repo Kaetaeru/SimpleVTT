@@ -1,6 +1,6 @@
 schema_version: 2
-phase: runtime_ui_preparation
-status: first_runtime_slice_scoped_freeze_recorded_not_implementation_authorized
+phase: runtime_ui_verification
+status: first_runtime_slice_implemented_verification_in_progress
 runtime_ui_implementation_allowed: false
 
 accepted_reference:
@@ -170,17 +170,22 @@ implementation_readiness:
   slice_material_domain_architecture_blockers: none
   slice_blocking_gaps_resolved: true
   legacy_reconciliation_plan_ready: true
-  touched_legacy_reconciled: false
+  touched_legacy_reconciled: true
   runtime_work_order_exists: true
-  explicit_runtime_implementation_authorization: false
+  explicit_runtime_implementation_authorization: true
+  runtime_slice_implementation_complete: true
+  bounded_local_verification: passed
+  full_ui_ci_and_production_build_verification: in_progress
 
 selected_runtime_slice:
   id: WO-UI-001
   name: product_shell_first_run_tutorial_sheet_preference
   work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
   scoped_freeze: docs/design/ui-ux/work-orders/WO-UI-001-SCOPED-FREEZE.md
+  implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
   preparation_status: complete
-  implementation_ready: false
+  implementation_status: implemented_verification_in_progress
+  verified_complete: false
   behavior_scenarios:
     - Scenario 01
     - Scenario 02
@@ -205,42 +210,50 @@ selected_runtime_slice:
     - NAV-01-08
     - UI-01-01
     - UI-01-07
-  blockers:
-    - explicit_runtime_implementation_authorization
+  completion_blockers:
+    - full_ui_ci_and_production_build_verification
   not_blocked_by_current_domain_architecture_gaps: true
 
 identified_runtime_drift:
   - id: DRIFT-WO-UI-001-HOME-FIRST
-    evidence: src/App.tsx initializes normal Product route at Home and has no first-run gate
+    status: resolved
+    evidence: fresh use is covered by FirstRunTutorialBridge before normal Home interaction while returning route remains Home
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-001-HOME-GUIDE
-    evidence: src/V1HomeScreen.tsx owns legacy Home-embedded guide without required Sheet choice
+    status: resolved
+    evidence: src/V1HomeScreen.tsx no longer owns the historical Home-embedded onboarding lifecycle
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-001-SIDEBAR
-    evidence: src/App.tsx and src/v1-product-shell.css use permanent left navigation rail
+    status: resolved_user_visible_layout
+    evidence: src/v1-product-shell.css renders the existing global nav markup as a horizontal top Product navigation baseline; historical class naming is retained only for bounded compatibility
     resolution: WO-UI-001
   - id: DRIFT-WO-UI-002-CONNECTED-SHELL-BYPASS
-    evidence: src/ProductRoot.tsx renders SessionModeRoot instead of Product Shell whenever connected
+    status: deferred
+    evidence: src/ProductRoot.tsx still renders SessionModeRoot instead of Product Shell whenever connected
     resolution: deferred_to_WO-UI-002
 
 legacy_test_reconciliation:
-  stale_for_WO_UI_001:
+  reconciled_for_WO_UI_001:
     - tests/ui/v1ProductShellStructure.test.ts
   preserve_or_minimally_reconcile:
     - tests/ui/productionNonCharacterUxRedesign.test.ts
   preserve_regression:
     - tests/ui/characterSheetV10Structure.test.ts
     - tests/ui/phase11OfflineWalkthrough.test.ts
-  planned_new_tests:
+  added_tests:
     - tests/ui/firstRunTutorialPreferences.test.ts
     - tests/ui/firstRunTutorialStructure.test.ts
+  ci_gate:
+    workflow: .github/workflows/ui.yml
+    tests_included: true
 
 recommended_first_runtime_slice:
-  status: selected_as_WO-UI-001
+  status: WO-UI-001_implemented_verification_in_progress
   name: product_shell_first_run_tutorial_sheet_preference
   work_order: docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md
+  implementation_record: docs/design/ui-ux/work-orders/WO-UI-001-IMPLEMENTATION-RECORD.md
   still_requires:
-    - explicit_runtime_implementation_authorization
+    - full_ui_ci_and_production_build_verification
 
 next_deferred_runtime_slice:
   id: WO-UI-002
@@ -250,5 +263,6 @@ next_deferred_runtime_slice:
     - UX-01-03
     - NAV-01-02
     - QA-NAV-06
+  authorization: not_granted
 
-next_route: E_RUNTIME_IMPLEMENTATION_AUTHORIZATION
+next_route: E_VERIFY_WO_UI_001
