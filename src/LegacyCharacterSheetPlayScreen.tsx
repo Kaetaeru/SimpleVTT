@@ -3,7 +3,7 @@ import { useSimpleVtt } from "./app/AppProvider";
 import type { AbilityKey } from "./app/contracts";
 import { projectOfficialSheet, SHEET_ABILITY_LABELS, signed } from "./app/characterSheetV10Projection";
 import { sheetAbilityModifier, sheetSaveBonus } from "./app/sheetRollValues";
-import { VisualDiceTray } from "./VisualDiceBridge";
+import { presentLocalDiceRoll } from "./app/localDicePresentation";
 import type { CharacterSheetHostMode } from "./CharacterSheetPlayScreen";
 
 type RollMode="normal"|"advantage"|"disadvantage";
@@ -40,7 +40,11 @@ export function CharacterSheetPlayScreen({hostMode="standalone",onScene,onLevelU
   const sessionReference=(label:string)=>{
     setSessionNotice(`${label} · 연결된 세션의 공유 판정은 Session Action 경로에서 실행합니다.`);
   };
-  const publish=(next:LocalRoll)=>{ setRoll(next); setHistory((current)=>[next,...current].slice(0,8)); };
+  const publish=(next:LocalRoll)=>{
+    setRoll(next);
+    setHistory((current)=>[next,...current].slice(0,8));
+    presentLocalDiceRoll(next);
+  };
   const d20=(label:string,modifier:number)=>{
     if(hostMode==="session"){ sessionReference(label); return; }
     const first=randomDie(20); const second=mode==="normal"?null:randomDie(20);
@@ -71,7 +75,7 @@ export function CharacterSheetPlayScreen({hostMode="standalone",onScene,onLevelU
     </div>
 
     {hostMode==="session"&&<div className="session-sheet-roll-policy" role="status"><strong>세션 시트</strong><span>{sessionNotice||"수치와 장비는 같은 canonical Character를 표시합니다. 공유 판정은 Session Action 경로를 사용합니다."}</span></div>}
-    {hostMode==="standalone"&&roll&&<section className="sheet-roll-result" aria-live="polite"><div className="sheet-roll-result-head"><div><span>ROLL</span><strong>{roll.label}</strong>{roll.note&&<small>{roll.note}</small>}</div><div className="sheet-roll-total"><span>{roll.modifier?`주사위 ${roll.modifier>0?"+":""}${roll.modifier}`:"결과"}</span><strong>{roll.total}</strong></div><button onClick={()=>setRoll(null)} aria-label="굴림 결과 닫기">×</button></div><VisualDiceTray label={roll.label} dice={roll.dice} caption="local tabletop physics roll"/></section>}
+    {hostMode==="standalone"&&roll&&<section className="sheet-roll-result compact-result" aria-live="polite"><div className="sheet-roll-result-head"><div><span>ROLL</span><strong>{roll.label}</strong>{roll.note&&<small>{roll.note}</small>}</div><div className="sheet-roll-total"><span>{roll.modifier?`주사위 ${roll.modifier>0?"+":""}${roll.modifier}`:"결과"}</span><strong>{roll.total}</strong></div><button onClick={()=>setRoll(null)} aria-label="굴림 결과 닫기">×</button></div></section>}
 
     <main className="sheet-play-layout">
       <section className="sheet-play-abilities" aria-label="능력치 내성 기술">
@@ -93,7 +97,7 @@ export function CharacterSheetPlayScreen({hostMode="standalone",onScene,onLevelU
         {hostMode==="standalone"&&<article className="sheet-play-card"><header><div><span className="eyebrow accent">DICE</span><h2>주사위</h2></div></header><div className="sheet-common-dice">{([4,6,8,10,12,20] as DieSides[]).map((sides)=><button key={sides} onClick={()=>rawDie(sides)}>d{sides}</button>)}</div></article>}
         <article className="sheet-play-card"><header><div><span className="eyebrow accent">EQUIPMENT</span><h2>장비</h2></div></header><div className="sheet-simple-list">{c.equipment.map((item)=><span key={item}>{item}</span>)}</div></article>
         <article className="sheet-play-card"><header><div><span className="eyebrow accent">SPELLS</span><h2>주문</h2></div></header><div className="sheet-simple-list">{view.spells.map((spell)=><span key={spell.id}>{spell.name}<small>{spell.level===0?"소마법":`${spell.level}레벨`}{spell.prepared?" · 준비됨":""}</small></span>)}{!view.spells.length&&<p>주문 없음</p>}</div></article>
-        {hostMode==="standalone"&&history.length>0&&<article className="sheet-play-card"><header><div><span className="eyebrow accent">HISTORY</span><h2>최근 굴림</h2></div></header><div className="sheet-roll-history">{history.map((entry)=><button key={entry.id} onClick={()=>setRoll(entry)}><span>{entry.label}</span><strong>{entry.total}</strong></button>)}</div></article>}
+        {hostMode==="standalone"&&history.length>0&&<article className="sheet-play-card"><header><div><span className="eyebrow accent">HISTORY</span><h2>최근 굴림</h2></div></header><div className="sheet-roll-history">{history.map((entry)=><button key={entry.id} onClick={()=>{setRoll(entry);presentLocalDiceRoll(entry);}}><span>{entry.label}</span><strong>{entry.total}</strong></button>)}</div></article>}
       </aside>
     </main>
   </div>;
