@@ -1,0 +1,49 @@
+/* Review-only additions layered after prototype.css. */
+body.proto-view-offline .return-play,
+body.proto-entry-setup .return-play { display: none !important; }
+
+.standalone-roll-layer {
+  position: absolute;
+  inset: 52px 0 0;
+  z-index: 45;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 55%, rgba(214,173,98,.08), transparent 24%);
+}
+
+.standalone-roll-card {
+  pointer-events: auto;
+  width: min(420px, 72%);
+  padding: 16px;
+  border: 1px solid #6c5c34;
+  border-radius: 9px;
+  background: rgba(19,24,29,.96);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.standalone-roll-die {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 95% 25%, 82% 83%, 50% 100%, 18% 83%, 5% 25%);
+  background: #efe0bd;
+  color: #1d1c18;
+  font-size: 20px;
+  font-weight: 800;
+  filter: drop-shadow(0 12px 12px rgba(0,0,0,.42));
+  animation: diceIn 760ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.standalone-roll-card strong { color: #f0d294; }
+.standalone-roll-card p { margin: 6px 0 12px; color: var(--text-secondary); font-size: 10px; line-height: 1.5; }
+
+.surface-direct-note {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
