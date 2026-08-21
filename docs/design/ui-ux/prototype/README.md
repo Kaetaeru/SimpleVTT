@@ -1,217 +1,161 @@
 # SimpleVTT UI Reference Prototype
 
-Status: **FINAL-SPEC REPLACEMENT REVIEW CANDIDATE — owner browser review pending**
+Status: **CURRENT CANDIDATE INVALIDATED — SPEC RECONCILIATION / REBUILD REQUIRED**
 
-This directory contains the non-production UI Reference Prototype that must be reviewed before broad runtime UI implementation.
+The previously named Final-Spec prototype is **not** an active review candidate.
 
-The first prototype candidate was rejected during owner review because it drifted from already-reviewed Product/UX intent. It is no longer the active reference.
+Repository-wide Product/UX reconciliation found that it interpreted `Scene/Table` as a battlemap-like field and introduced synthetic Actor `sceneX/sceneY` coordinates. This conflicts with the canonical mapless Core boundary in `docs/design/README.md` and `docs/design/movement-modules.md`.
+
+It also demonstrated why broad prototype work must not read only the local prototype documents: direct Owner first-run Tutorial requirements and historical product decisions were spread across formal UI planning, owner-review provenance and non-canonical `.agents` working history.
 
 ---
 
-# Active review entry
+# Mandatory baseline before any prototype work
 
-Open:
+Read first:
 
 ```text
-docs/design/ui-ux/prototype/app/final-spec.html
+../INTEGRATED-PRODUCT-UX-PLAN.md
 ```
 
-Do **not** use the historical `app/index.html` candidate as a product-reference or runtime implementation source.
+Then read exact applicable Domain/Architecture contracts and Product Decisions before the prototype catalogs.
 
-Owner corrections that control the rebuild:
-
-[`OWNER-CORRECTIONS.md`](OWNER-CORRECTIONS.md)
-
-Final-Spec static verification:
-
-[`FINAL-SPEC-VERIFICATION.md`](FINAL-SPEC-VERIFICATION.md)
+The integrated plan is the cross-source interpretation baseline. It does not replace Domain/Architecture truth or `decisions.md`.
 
 ---
 
-# Why the first candidate was rejected
-
-Two material drifts were identified:
-
-1. Offline/Standalone dice were presented through a detached-looking roll layer/card instead of rolling naturally inside the current Character Sheet surface.
-2. Connected Play approximated the intended HUD instead of strictly preserving the reviewed Dual-Anchor topology.
-
-The replacement Final-Spec demo treats these as hard requirements rather than styling suggestions.
-
----
-
-# Final-Spec hard structure
-
-## Offline / Standalone
-
-Every ordinary Character roll stays in the currently mounted Sheet:
+# Current prototype state
 
 ```text
-Current Character Sheet
-  -> click Skill / Save / Attack / Damage / other roll
-  -> append in-surface Roll Plane inside the same Sheet workspace
-  -> far/back -> near/front -> impact/roll -> settle
-  -> reveal fixture-authoritative result in that same Sheet
-  -> remove temporary Roll Plane
-  -> continue using the same mounted Sheet
+First candidate app/index.html: REJECTED / HISTORICAL
+Later candidate app/final-spec.html: INVALIDATED BY REPOSITORY-WIDE AUDIT
+Active review entry: NONE
+Prototype specification: NEEDS RECONCILIATION
+Prototype rebuild: REQUIRED
+Browser/Owner review: BLOCKED UNTIL NEW CANDIDATE EXISTS
+Prototype Acceptance: NOT STARTED
+Runtime preparation: BLOCKED
+Runtime src implementation: NOT AUTHORIZED
 ```
 
-No modal, drawer, detached result window, replacement route, Sheet remount or separate Close/Back cycle is allowed for ordinary Standalone rolls.
+Do not open either old candidate for product acceptance.
 
-## Connected Play
+They may be inspected only as historical evidence of what failed.
 
-The core product skeleton is:
+---
+
+# Why `final-spec.html` is invalid
+
+Material violations:
+
+1. Actor fixtures introduced `sceneX/sceneY` as if Core owned spatial positions.
+2. The central Play area visually became a battlemap-like field.
+3. `Scene/Table` wording was read without the higher-authority mapless Core contract.
+4. The prototype process reacted to local feedback instead of first rebuilding from the whole repository plan.
+
+The next candidate must be a new/rebased build, not incremental acceptance of this structure.
+
+---
+
+# Non-negotiable rebuild rules
+
+## First launch
+
+The first meaningful first-run panel is the dedicated Tutorial/Onboarding window.
+
+It includes:
+
+- Standalone vs Connected product explanation;
+- initial Official-style vs SimpleVTT Character Sheet choice;
+- basic Character / Host / Join orientation;
+- later reopen path from Settings/Help.
+
+## Mapless Core
+
+Connected Play contains **no Core battlemap**.
+
+Forbidden:
+
+- Actor x/y coordinates;
+- draggable map tokens;
+- square/hex grid;
+- movement paths/traces;
+- range rings/templates derived from a map;
+- Fog of War;
+- LoS rays/geometry;
+- collision/pathfinding UI;
+- Handout used as a tactical map.
+
+`Scene`, `Tabletop Stage` and `Roll Area` are presentation/context terms only.
+
+## Connected Play skeleton
+
+Retain current Reviewed Product structure:
 
 ```text
-Compact Play chrome / session status
-────────────────────────────────────
+Compact Play chrome/status
 Upper NPC / Neutral / Hostile Actor Board
-────────────────────────────────────
-Central Scene / Table Context       [contextual side utility]
-  └ Initiative Tracker overlays Scene top edge
-  └ Dice roll on the Scene/Table plane
-  └ NOTICE / immediate result stay scene-integrated
-────────────────────────────────────
+Mapless Play Context / Tabletop Stage      [contextual utility pane]
 Lower Player / Allied Actor Board
-────────────────────────────────────
-Persistent BG3-family Command Center
-  upper row: Action / Bonus / Reaction / Movement + Resource Rail
-  lower-left: controlled Actor status
-  lower/right: Hotbar / actions
-  contextual: End Turn / Execute / Cancel as applicable
+Persistent Command Center
 ```
 
-DM and Player share this skeleton. Role-specific tools/information may differ, but the workspace does not become two unrelated products.
+Initiative adds a compact tracker/economy to the same structure.
+
+Freeform must not fake turn economy.
+
+## Standalone dice
+
+Any ordinary roll keeps the current Character Sheet visible and spatially stable.
+
+Dice use a transient cinematic presentation over/within the current Sheet viewport; no detached dice/result route/window/panel and no required Close/Back just to return to the Sheet.
+
+## Targeting
+
+Target through Actor Cards/manual target lists supplied by authoritative/mock eligibility.
+
+No map-position targeting or Core AoE template.
+
+## Handout
+
+Handout is shared presentation, not map state.
 
 ---
 
-# Active Final-Spec app files
+# Prototype scope boundary
+
+Prototype work remains confined to:
 
 ```text
-app/final-spec.html
-app/final-spec.css
-app/final-spec-coverage.css
-app/final-spec.js
-app/final-spec-fixtures.js
-app/final-spec-stability.js
-app/final-spec-coverage.js
+docs/design/ui-ux/prototype/app/
+docs/design/ui-ux/prototype/
 ```
 
-The base files establish the final structure and interactions. The coverage layer adds additional review states without reverting to the rejected prototype architecture.
+plus bounded routing/derived-doc maintenance under `docs/design/ui-ux/`.
+
+It MUST NOT:
+
+- modify production `src/` UI;
+- call real backend/network/storage;
+- implement rules/authority/privacy semantics;
+- copy fixture data models into production contracts;
+- treat `.agents`, old demos or current tests as higher authority than formal Product/Domain sources.
 
 ---
 
-# Final-Spec candidate capabilities
-
-The active candidate demonstrates:
-
-- prototype-only UI Lab clearly outside the intended product frame;
-- First Run and initial Sheet-style choice;
-- Home and Character Library;
-- Character Builder and Level Up reference surfaces;
-- Official-style and SimpleVTT Standalone Character Sheets;
-- same-mounted-Sheet dice rolls for skill/save/attack/damage fixture examples;
-- Session Host / Join / no-Character block references;
-- Content / Package Import Review / Rules / Settings reference surfaces;
-- DM and Player Freeform;
-- DM and Player Initiative using the same skeleton;
-- upper opposing and lower allied Actor Boards with minimum card width + overflow;
-- central Scene/Table with Actor tokens;
-- persistent bottom Command Center;
-- Hotbar pages / Economy / Resource Rail;
-- valid / invalid / selected target states;
-- single-target immediate submission and multi-target explicit Execute;
-- canonical Main Hand fixture behavior with no smart fallback;
-- resolution dice on the Scene/Table;
-- scene-integrated result;
-- Reaction/Interrupt and Concentration response examples;
-- Quick Sheet and Full Sheet live-session layers;
-- Activity public/private filtering with no Player placeholder for DM-only fixture entries;
-- Encounter / Participants / Session / advanced DM spatial side panes;
-- utility panel resizing within bounded desktop widths;
-- Handout Overlay / Upper / Full examples inside Play;
-- Actor right-click context menu limited to UI/context management;
-- rich hover/focus explanations;
-- NOTICE/reconnect and confirmation examples;
-- Wide / Normal / Narrow desktop presets;
-- Reduced Motion;
-- Component Gallery.
-
-All game/network-looking values are synthetic fixtures. The demo does not calculate rules or implement real privacy/network semantics.
-
----
-
-# Prototype runtime boundary
-
-The Final-Spec files MUST NOT:
-
-- import or modify production `src/` UI;
-- call a real backend/network/storage system;
-- calculate D&D legality, target eligibility, authority or outcomes;
-- invent missing privacy/reconnect/network contracts;
-- become a production schema or hidden alternate runtime.
-
----
-
-# Historical first candidate
-
-These files remain only for traceability:
+# Next sequence
 
 ```text
-app/index.html
-app/prototype.css
-app/prototype.js
-app/fixtures.js
-app/review-patch.css
-app/review-patch.js
+Integrated Product / UI / UX Plan          DONE
+-> prototype catalog/default/layer/scenario reconciliation
+-> new mapless Reference Prototype build
+-> static + browser/visual QA
+-> Owner iteration
+-> explicit Prototype Acceptance
+-> contract extraction / technical-gap resolution / legacy reconciliation
+-> scoped Freeze/readiness
+-> separate runtime Work Order + authorization
+-> src implementation
 ```
 
-Status: **REJECTED / SUPERSEDED FOR REVIEW**
-
-No future runtime Work Order may cite them as the intended product UI.
-
----
-
-# Current phase
-
-```text
-P0 Prototype specification: PASS
-First prototype candidate: REJECTED
-P1 Final-Spec replacement: REVIEW CANDIDATE CREATED
-Final-Spec static structural verification: PASS
-P2 Owner visual/interaction review: READY
-P3 Explicit Prototype Acceptance: NOT STARTED
-P4 Runtime contract/Freeze preparation: BLOCKED
-P5 Runtime UI implementation: NOT AUTHORIZED
-Frozen Product Decisions: NONE
-```
-
-The current execution environment cannot perform a real browser run of the GitHub-hosted files, so browser interaction/visual acceptance is deliberately still pending.
-
----
-
-# Technical gaps remain technical
-
-The demo may visualize these through fixtures but does not solve them:
-
-- `GAP-MAIN-HAND-CANONICAL-RELATION`
-- `GAP-RESOLUTION-SAFE-INTERACTIONS`
-- `GAP-HANDOUT-NETWORK-CONTRACT`
-- `GAP-DM-ONLY-DELIVERY-PROTOCOL`
-
-They remain runtime blockers for affected scopes.
-
----
-
-# Runtime gate
-
-Even after prototype acceptance, runtime UI work still requires:
-
-1. reconcile explicit owner corrections into applicable canonical runtime planning;
-2. extract Surface / Component / Motion contracts;
-3. resolve applicable Domain/Architecture gaps;
-4. reconcile conflicting legacy UX docs;
-5. Freeze only the implementation dependencies explicitly approved for the runtime scope;
-6. prepare a scoped runtime Work Order;
-7. obtain separate runtime implementation authorization.
-
-Therefore the next step is **browser review of `app/final-spec.html`**, not production `src/` implementation.
+Until a new candidate exists, `PROTOTYPE-ACCEPTANCE.md` is blocked rather than reviewable.
