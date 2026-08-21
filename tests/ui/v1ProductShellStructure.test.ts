@@ -144,9 +144,9 @@ test("V0.9 appearance is applied before render and Settings exposes presets plus
 });
 
 test("formal accepted contracts, not historical agent notes, define the current shell slice", () => {
-  for (const phrase of ["battlemap", "Tutorial", "same Character", "Main Hand"]) {
-    assert.match(playbook, new RegExp(phrase, "i"));
-  }
+  assert.match(playbook, /SimpleVTT는 \*\*배틀맵 VTT가 아니다\.\*\*/);
+  assert.match(playbook, /ActorCard/);
+  assert.match(playbook, /Host\/Join/);
   assert.match(workOrder, /Scenario 01/);
   assert.match(workOrder, /QA-NAV-01/);
   assert.match(workOrder, /Product Shell \+ First-run Tutorial \+ Sheet Presentation Preference/);
