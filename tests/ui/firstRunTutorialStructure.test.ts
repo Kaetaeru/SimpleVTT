@@ -13,6 +13,14 @@ const app = readFileSync("src/App.tsx", "utf8");
 const shellCss = readFileSync("src/v1-product-shell.css", "utf8");
 const tutorialCss = readFileSync("src/first-run-tutorial.css", "utf8");
 
+function globalNavBlock() {
+  const start = app.indexOf("const nav: Array<[AppRoute, string, string]> = [");
+  const end = app.indexOf("  ];", start);
+  assert.ok(start >= 0, "missing global nav declaration");
+  assert.ok(end > start, "missing global nav declaration boundary");
+  return app.slice(start, end);
+}
+
 test("fresh first-use Tutorial is mounted outside product/domain state", () => {
   assert.match(main, /<FirstRunTutorialBridge\s*\/>/);
   assert.match(tutorialBridge, /readFirstRunCompletion\(\) \? null : "first-run"/);
@@ -55,10 +63,11 @@ test("Settings can reopen the canonical Tutorial without resetting runtime state
 });
 
 test("global product navigation order stays exact and renders as a top horizontal baseline", () => {
+  const nav = globalNavBlock();
   const expected = ["home", "characters", "session", "content", "catalog", "settings"];
   let last = -1;
   for (const route of expected) {
-    const index = app.indexOf(`["${route}"`);
+    const index = nav.indexOf(`["${route}"`);
     assert.ok(index > last, `${route} must follow accepted global order`);
     last = index;
   }
