@@ -6,6 +6,16 @@
   <title>SimpleVTT Core Systems UX Reference Candidate</title>
   <link rel="stylesheet" href="integrated-reference.css" />
   <link rel="stylesheet" href="core-systems-reference.css" />
+  <style>
+    .systems-scenario-strip{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:thin}
+    .systems-scenario-strip>span{flex:0 0 auto;font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--accent)}
+    .systems-scenario-strip button{flex:0 0 auto;height:27px;padding:0 7px;border:1px solid #3c4852;border-radius:3px;background:#151d24;color:var(--text-2);font-size:8px}
+    .systems-scenario-strip button:hover{border-color:#6c5938;background:#251f16;color:var(--accent-2)}
+    .systems-scenario-help{margin-top:8px;padding:8px 9px;border:1px solid #5d4d32;background:#211b13;color:#e8d2a8;font-size:9px;line-height:1.45}
+    .review-stage__header{gap:10px}
+    .review-stage__header .systems-scenario-strip{flex:1;justify-content:center}
+    @media (max-width:1200px){.review-stage__header .systems-scenario-strip button:nth-of-type(n+6){display:none}}
+  </style>
 </head>
 <body>
   <div class="review-shell">
@@ -18,8 +28,22 @@
 
       <label class="control-field">
         <span>Scenario</span>
-        <select id="scenarioSelect"></select>
+        <select id="scenarioSelect">
+          <option value="SYS-SCN-00">SYS-SCN-00 · Product placement map</option>
+          <option value="SYS-SCN-01">SYS-SCN-01 · Character Inventory management</option>
+          <option value="SYS-SCN-02">SYS-SCN-02 · Spellbook + Features management</option>
+          <option value="SYS-SCN-03">SYS-SCN-03 · Player live Quick Use</option>
+          <option value="SYS-SCN-04">SYS-SCN-04 · DM unified Quick Search</option>
+          <option value="SYS-SCN-05">SYS-SCN-05 · Party Stash / loot transfer</option>
+          <option value="SYS-SCN-06">SYS-SCN-06 · Rest preview / commit</option>
+          <option value="SYS-SCN-07">SYS-SCN-07 · Condition / concentration response</option>
+        </select>
       </label>
+
+      <div class="systems-scenario-help">
+        <strong>시나리오 선택</strong><br />
+        위 드롭다운 또는 화면 상단의 바로가기 버튼으로 전환할 수 있습니다.
+      </div>
 
       <label class="control-field">
         <span>Viewport</span>
@@ -33,10 +57,12 @@
       <div class="control-actions systems-jumps">
         <button data-review-jump="SYS-SCN-00">Position Map</button>
         <button data-review-jump="SYS-SCN-01">Inventory</button>
+        <button data-review-jump="SYS-SCN-02">Spells + Features</button>
         <button data-review-jump="SYS-SCN-03">Live Player</button>
         <button data-review-jump="SYS-SCN-04">DM Quick</button>
         <button data-review-jump="SYS-SCN-05">Party Stash</button>
         <button data-review-jump="SYS-SCN-06">Rest</button>
+        <button data-review-jump="SYS-SCN-07">Status</button>
       </div>
 
       <div class="review-rule">
@@ -53,6 +79,17 @@
     <main class="review-stage">
       <header class="review-stage__header">
         <div><span class="review-status-dot"></span><strong id="scenarioTitle">Core Systems Candidate</strong></div>
+        <div class="systems-scenario-strip" aria-label="Scenario shortcuts">
+          <span>SCENARIOS</span>
+          <button data-review-jump="SYS-SCN-00">Map</button>
+          <button data-review-jump="SYS-SCN-01">Inventory</button>
+          <button data-review-jump="SYS-SCN-02">Spells</button>
+          <button data-review-jump="SYS-SCN-03">Live</button>
+          <button data-review-jump="SYS-SCN-04">DM Quick</button>
+          <button data-review-jump="SYS-SCN-05">Party</button>
+          <button data-review-jump="SYS-SCN-06">Rest</button>
+          <button data-review-jump="SYS-SCN-07">Status</button>
+        </div>
         <div id="scenarioMeta" class="review-stage__meta"></div>
       </header>
       <div class="review-stage__scroll">
