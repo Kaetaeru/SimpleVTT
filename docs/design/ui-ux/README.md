@@ -6,17 +6,13 @@
 Repository-wide 통합 기획
 -> mapless Integrated Reference Prototype
 -> Owner Acceptance
--> 상세 runtime contracts
--> WO-UI-001 CLOSED / ACCEPTED
--> WO-UI-002 CLOSED / ACCEPTED
--> WO-UI-003 first visual implementation REJECTED
--> accepted-reference exact-scene rework
--> accepted-reference automation PASS
--> Owner visual re-QA PASS
--> WO-UI-003 CLOSED / ACCEPTED
--> DM Library product/architecture planning
--> DM Library candidate prototype BUILT
--> OWNER DM LIBRARY PROTOTYPE REVIEW PENDING
+-> WO-UI-001 / 002 / 003 CLOSED / ACCEPTED
+-> DM Library product + persistence planning
+-> first DM Library preparation/live candidate built
+-> Owner correction: live add/reveal must be much faster
+-> unified Core Systems UX plan
+-> DM Quick + Inventory/Spell/Feature/Status/Rest/Party candidate BUILT
+-> OWNER CORE SYSTEMS PROTOTYPE REVIEW PENDING
 ```
 
 ---
@@ -26,12 +22,12 @@ Repository-wide 통합 기획
 1. canonical Domain/Architecture truth;
 2. current Product/UX decisions/directions;
 3. `INTEGRATED-PRODUCT-UX-PLAN.md`;
-4. active direct Owner product extensions where present;
+4. active direct Owner product extensions;
 5. Owner-accepted visual references;
 6. `contracts/` implementation contracts;
 7. current Work Order / authorization / implementation / Human QA record.
 
-For existing Connected Play, the visual reference is:
+Existing Connected Play visual reference:
 
 ```text
 prototype/app/integrated-reference.html
@@ -43,7 +39,7 @@ Core rule:
 
 > Accepted prototype가 실제 장면을 이미 정의한 경우, prose contract의 큰 구조만 만족하는 시각적으로 다른 화면을 대체안으로 만들지 않는다.
 
-Prototype fixture values are not runtime authority, but accepted composition/proportions/density/visual relationships are the production visual reference.
+The new Core Systems candidate extends this scene; it does not replace it.
 
 ---
 
@@ -56,14 +52,15 @@ Prototype fixture values are not runtime authority, but accepted composition/pro
 | Accepted candidate ref | `4c12084bef603866b9b69f1bfd8f363146920184` |
 | WO-UI-001 | **CLOSED / ACCEPTED** |
 | WO-UI-002 | **CLOSED / ACCEPTED** |
-| WO-UI-003 first visual implementation | **SUPERSEDED / OWNER QA FAIL** |
-| WO-UI-003 accepted-reference rework | **OWNER RE-QA PASS** |
 | WO-UI-003 | **CLOSED / ACCEPTED** |
-| DM Library product direction | **RECORDED** |
+| DM Library product direction | **RECORDED / REVISED FOR QUICK LIVE USE** |
 | DM Library architecture boundary | **DRAFTED** |
-| DM Library candidate prototype | **BUILT** |
-| DM Library Owner visual/flow review | **PENDING** |
-| DM Library runtime implementation | **NOT YET AUTHORIZED** |
+| First DM Library prototype | **BUILT — PREPARATION SURFACE STILL RELEVANT** |
+| Heavy nested live picker | **SUPERSEDED AS PRIMARY LIVE UX** |
+| Core Systems UX plan | **RECORDED** |
+| Core Systems candidate prototype | **BUILT** |
+| Core Systems Owner visual/flow review | **PENDING** |
+| WO-UI-004 runtime implementation | **NOT YET AUTHORIZED** |
 | PR #109 | **DRAFT / UNMERGED** |
 
 ---
@@ -103,122 +100,239 @@ Mixed | Action | Spell | Item | Custom
 ~70px slots
 ```
 
-The Owner re-tested this rework and accepted it with:
+Owner re-tested and accepted the reference rework:
 
 > 그래 잘 됐어.
 
-See:
-
-- `work-orders/WO-UI-003-HUMAN-QA.md`;
-- `work-orders/WO-UI-003-IMPLEMENTATION-RECORD.md`.
-
 ---
 
-# New product extension — DM Library
-
-Owner direction:
-
-> DM은 혼자 액세스 가능한 전용 라이브러리 시스템이 있었어야해. 거기에 이미지와 PC액터와 NPC액터를 미리 모아두고 사용할수 있어야했어.
+# Unified Core Systems UX
 
 Canonical planning entry:
 
-`DM-LIBRARY-PLAN.md`
+`CORE-SYSTEMS-UX-PLAN.md`
 
-Architecture boundary:
-
-`../dm-library-persistence.md`
-
-The new durable model is:
+The shared grammar is:
 
 ```text
-PLAYER DURABLE
-Character Library
-└─ Player-owned Characters
+MANAGE
+-> Character Sheet / DM Library / Party Stash detail
 
-LOCAL HOST PREPARATION DURABLE
+USE
+-> Command Center
+
+STATUS
+-> Actor Card / controlled Actor summary / Resource Rail / current response
+
+QUICK
+-> Ctrl+K / small + Quick launcher
+```
+
+Hard interpretation:
+
+```text
+Inventory != Item Hotbar
+Spellbook != Spell Hotbar
+Feature list != executable Feature slots
+DM Library != live Quick palette
+```
+
+Full management is allowed to be deep. Routine live use should be shallow.
+
+---
+
+# System placement
+
+```text
+PRODUCT SHELL
+Characters
+  -> Character Sheet
+     -> Inventory
+     -> Spells
+     -> Features
+     -> Status
+
+Session
+  -> Host / Join
+  -> DM Library          [offline preparation]
+  -> Party Stash         [shared inventory candidate]
+
+Content
+  -> reusable definitions/packages
+
+Rules
+  -> authoritative browse/search
+
+CONNECTED PLAY
+Play chrome
+  -> DM + Quick / Ctrl+K
+Actor Boards
+Mapless Stage
+Command Center
+  -> Mixed / Action / Spell / Item / Custom
+  -> Resource Rail
+```
+
+---
+
+# Inventory / Spell / Feature direction
+
+Inventory is the full owned-item management surface and uses canonical ItemInstance/Activation/quantity/resource state.
+
+Command Center `Item` only receives executable item capabilities.
+
+Spellbook contains complete known/prepared/configured spell records; `Spell` Hotbar only receives current executable spells.
+
+Feature list contains passive and executable features. Passive traits do not occupy Hotbar slots merely because they exist.
+
+Conditions and Concentration are compact live status until a response/detail is actually needed.
+
+Rest is an Activity workflow:
+
+```text
+Choose Rest
+-> authoritative preview
+-> ask only real choices
+-> explicit Complete
+-> commit
+```
+
+No blind UI-defined reset semantics.
+
+---
+
+# Party Stash candidate
+
+Party Stash is proposed as a shared inventory/loot surface separate from one Player Character inventory.
+
+```text
+Party Stash Potion x4
+-> Give Rowan x2
+-> validated transfer
+-> Party x2 / Rowan x2
+```
+
+Its ownership/persistence/write-back contract is not yet frozen. Prototype presentation does not authorize runtime semantics.
+
+---
+
+# DM Library + revised live Quick UX
+
+DM Library remains durable local Host preparation data:
+
+```text
 DM Library
 ├─ Images
 ├─ PC Actor Presets
 └─ NPC Actor Definitions
-
-SESSION TRANSIENT / AUTHORITATIVE
-Current Session
-├─ Character SessionProjections
-├─ instantiated Library Actors
-├─ active/revealed Handout
-├─ HP/resources/effects
-├─ Initiative/economy
-└─ Resolution/Activity
 ```
 
-Hard rules:
+Full Library is the preparation room.
 
-- DM Library is private local preparation data;
-- Player Clients do not receive the Library catalog merely because a Session exists;
-- image preview is not reveal;
-- explicit Reveal creates the shared Handout projection;
-- NPC/PC source entry -> new independent Session Actor instance;
-- Session HP/resources/effects do not automatically write back to the Library source;
-- PC Actor Preset is not a Player-owned Character;
-- assigning Session control does not transfer Character ownership;
-- Images remain presentation/Handout assets, not battlemaps;
-- DM Library stays under Session rather than becoming a new permanent global navigation destination;
-- Content/Add-ons remains a separate package/catalog concept.
+Primary live access is now:
+
+```text
+Ctrl+K / + Quick
+
+ACTOR      Nightcrow Archer       [+1] [More]
+IMAGE      봉인된 편지             [View] [Reveal]
+ITEM       Potion of Healing      [Give] [Party]
+CONDITION  Poisoned               [Apply]
+RULE       Poisoned               [Open]
+```
+
+Key rules:
+
+- Actor `+1` is the common single-add path;
+- quantity is secondary under `More`;
+- Image `View` is private preview;
+- Image `Reveal` is explicit shared presentation;
+- result selection itself never reveals;
+- empty Quick query prefers Recent/Favorites;
+- Player never receives DM Library/private Quick source catalog;
+- full Encounter/Library picker remains a detailed fallback only.
 
 ---
 
-# DM Library prototype candidate
+# Active prototype candidate
 
 Review entry:
 
 ```text
-docs/design/ui-ux/prototype/app/dm-library-reference.html
+docs/design/ui-ux/prototype/app/core-systems-reference.html
 ```
 
 Supporting files:
 
 ```text
-docs/design/ui-ux/prototype/app/dm-library-reference.css
-docs/design/ui-ux/prototype/app/dm-library-reference.js
-docs/design/ui-ux/prototype/DM-LIBRARY-EXTENSION.md
+docs/design/ui-ux/prototype/app/core-systems-reference.css
+docs/design/ui-ux/prototype/app/core-systems-reference.js
+docs/design/ui-ux/prototype/CORE-SYSTEMS-EXTENSION.md
 ```
 
-Review scenarios:
+Scenarios:
 
 ```text
-DMLIB-SCN-01 — Offline Images
-DMLIB-SCN-02 — Offline NPC Actor Definitions
-DMLIB-SCN-03 — Offline PC Actor Presets
-DMLIB-SCN-04 — Live Encounter Add from Library
-DMLIB-SCN-05 — Live Handout private preview -> Reveal
-DMLIB-SCN-06 — Player non-delivery
+SYS-SCN-00 — Product placement map
+SYS-SCN-01 — Character Inventory management
+SYS-SCN-02 — Spellbook + Features management
+SYS-SCN-03 — Player live Quick Use
+SYS-SCN-04 — DM unified Quick Search
+SYS-SCN-05 — Party Stash / loot transfer
+SYS-SCN-06 — Rest preview / commit
+SYS-SCN-07 — Condition / concentration response
 ```
 
-The existing accepted Integrated Reference remains accepted for its existing scenes. DM Library is a **new candidate extension** and needs separate Owner visual/flow acceptance before it is promoted into the consolidated accepted reference.
+The candidate reuses the accepted Play visual family for all live scenarios.
 
 ---
 
-# DM Library architecture gaps before runtime implementation
+# First DM Library prototype disposition
+
+The earlier candidate remains at:
+
+```text
+docs/design/ui-ux/prototype/app/dm-library-reference.html
+```
+
+Keep it as evidence/review for the **offline preparation Library** layout.
+
+Its heavier live flow:
+
+```text
+Encounter -> Add Actor -> Library picker -> quantity -> Add
+```
+
+is no longer the primary intended live UX after Owner feedback.
+
+For live invocation review, use `core-systems-reference.html`.
+
+---
+
+# Runtime gaps before implementation
+
+Existing DM Library gaps:
 
 ```text
 GAP-DM-LIBRARY-METADATA-PERSISTENCE
 GAP-DM-LIBRARY-ASSET-STORAGE
 GAP-DM-LIBRARY-ACTOR-INSTANTIATION
 GAP-DM-LIBRARY-PRIVATE-PROJECTION
+GAP-HANDOUT-NETWORK-CONTRACT
 ```
 
-Existing relevant gaps:
+Additional Core Systems contracts to materialize where absent:
 
 ```text
-GAP-HANDOUT-NETWORK-CONTRACT
-GAP-DM-ONLY-DELIVERY-PROTOCOL
+Quick Search source aggregation/index privacy
+Party Stash ownership/persistence/lifetime
+Durable item transfer/grant semantics
+Rest preview/commit projection
+Condition/effect fast-apply authoritative path
+Hotbar customization persistence
 ```
 
-Work Order planning record:
-
-`work-orders/WO-UI-004-dm-library-preparation-and-live-invocation.md`
-
-WO-UI-004 runtime implementation is **not yet authorized**. First review the candidate prototype, then freeze/materialize the needed architecture/runtime contracts.
+UI must not manufacture these semantics locally.
 
 ---
 
@@ -226,8 +340,8 @@ WO-UI-004 runtime implementation is **not yet authorized**. First review the can
 
 - Core remains **mapless**.
 - No Actor x/y, grid, pathfinding, Fog of War, LoS geometry or tactical token field.
-- Actor Cards/Boards are Connected Play Actor representation.
-- Stage is context/dice/result/Handout presentation, not a battlefield.
+- Actor Cards/Boards remain Connected Play Actor representation.
+- Stage remains context/dice/result/Handout presentation, not battlefield.
 - Freeform has no fake turn economy.
 - Initiative extends the same Play scene.
 - Host = DM; Client = Player.
@@ -236,13 +350,15 @@ WO-UI-004 runtime implementation is **not yet authorized**. First review the can
 - Main Hand has no smart fallback.
 - DM-only privacy cannot be implemented by CSS hiding.
 - Handout is presentation, not battlemap.
+- Full management surfaces do not replace the Command Center during routine Play.
 
 ---
 
 # Current next gate
 
 ```text
-Open prototype/app/dm-library-reference.html
--> review DMLIB-SCN-01 through DMLIB-SCN-06
--> Owner accept/change DM Library preparation + live invocation UX
+Open prototype/app/core-systems-reference.html
+-> review SYS-SCN-00 through SYS-SCN-07
+-> Owner accept/change system placement + DM Quick + Inventory/Party/Rest grammar
+-> only then consolidate accepted reference / materialize runtime contracts
 ```
