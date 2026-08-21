@@ -3,13 +3,14 @@ import { useSimpleVtt } from "./app/AppProvider";
 import type { ActionVm, SceneEntity } from "./app/contracts";
 import "./session-action-dock.css";
 
-type HotbarPage = "mixed" | "action" | "spell" | "item";
+type HotbarPage = "mixed" | "action" | "spell" | "item" | "custom";
 
 const HOTBAR_PAGES: Array<{ id: HotbarPage; label: string }> = [
   { id: "mixed", label: "Mixed" },
   { id: "action", label: "Action" },
   { id: "spell", label: "Spell" },
   { id: "item", label: "Item" },
+  { id: "custom", label: "Custom" },
 ];
 
 function signed(value: number | undefined) {
@@ -42,6 +43,7 @@ function pageIncludes(page: HotbarPage, action: ActionVm) {
   if (page === "mixed") return true;
   if (page === "spell") return action.category === "magic";
   if (page === "item") return Boolean(action.itemCost);
+  if (page === "custom") return false;
   return action.category !== "magic" && !action.itemCost;
 }
 
