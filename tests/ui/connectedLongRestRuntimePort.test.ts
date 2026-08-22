@@ -46,7 +46,7 @@ function remoteCharacter():CharacterSheet {
     id:"char.remote-rest",name:"Remote Rest",className:"파이터",level:1,species:"인간",background:"군인",
     hp:5,maxHp:12,tempHp:3,ac:12,speed:30,proficiencyBonus:2,saveState:"saved",
     abilities:{str:16,dex:14,con:14,int:10,wis:12,cha:8},saves:[],skills:["운동"],features:["Second Wind"],equipment:[],items:[],
-    resources:[{id:"resource.second-wind",label:"재기의 바람",current:0,max:2,source:"SRD Fighter",recovery:{longRest:"all"}}],attacks:[],
+    resources:[{id:"resource.second-wind",label:"재기의 바람",current:0,max:2,source:"SRD Fighter"}],attacks:[],
     rulesProfileId:"dnd.srd-5.2.1",rulesProfileVersion:"0.1-draft",sourceRevision:4,runtimeRevision:6,
     classLevels:[{classId:"dnd.srd521.class.fighter",level:1}],
   };
@@ -73,8 +73,8 @@ async function setupPair() {
   const client=new MockAdapter();
   const sheet=remoteCharacter();
   (host as unknown as {catalog:CatalogEntry[]}).catalog=structuredClone(catalog);
-  (client as unknown as {catalog:CatalogEntry[];activeCharacter:CharacterSheet;characters:CharacterSheet[];scene:{entities:SceneEntity[];currentActorId:string;selectedActorId:string}}).catalog=structuredClone(catalog);
-  const clientState=client as unknown as {activeCharacter:CharacterSheet;characters:CharacterSheet[];scene:{entities:SceneEntity[];currentActorId:string;selectedActorId:string}};
+  const clientState=client as unknown as {catalog:CatalogEntry[];activeCharacter:CharacterSheet;characters:CharacterSheet[];scene:{entities:SceneEntity[];currentActorId:string;selectedActorId:string}};
+  clientState.catalog=structuredClone(catalog);
   clientState.activeCharacter=structuredClone(sheet);
   clientState.characters=[structuredClone(sheet)];
   clientState.scene.entities=[entity(sheet)];
