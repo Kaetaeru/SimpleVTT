@@ -37,6 +37,12 @@ function reorderActionsByActor(actions:SceneVm["actionsByActor"],preferredOrder:
   return next;
 }
 
+function projectedActions(reconstruction:Extract<CharacterSessionProjectionReconstruction,{status:"accepted"}>) {
+  const actions=new Map(reconstruction.actions.map((action)=>[action.id,structuredClone(action)]));
+  for (const action of deriveCharacterSkillActions(reconstruction.sheet)) actions.set(action.id,structuredClone(action));
+  return [...actions.values()];
+}
+
 export function mountReconstructedCharacterSessionProjection(
   adapter:MockAdapter,
   peerId:string,
@@ -68,11 +74,60 @@ export function mountReconstructedCharacterSessionProjection(
     sheet:structuredClone(reconstruction.sheet),
   });
   app.scene.entities=[...app.scene.entities.filter((entity)=>entity.id!==characterId),structuredClone(reconstruction.entity)];
-  const mountedActions=new Map(reconstruction.actions.map((action)=>[action.id,structuredClone(action)]));
-  for (const action of deriveCharacterSkillActions(reconstruction.sheet)) mountedActions.set(action.id,structuredClone(action));
-  app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:[...mountedActions.values()]};
+  app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:projectedActions(reconstruction)};
   app.scene.economyByActor={...app.scene.economyByActor,[characterId]:structuredClone(reconstruction.economy)};
   return {status:"accepted" as const,characterId};
+}
+
+/**
+ * Replaces the durable portion of an already-mounted remote Character after its
+ * owning client has committed a new Character generation. Session-local turn
+ * economy, initiative, status labels and distance facts remain Host-owned.
+ */
+export function refreshReconstructedCharacterSessionProjection(
+  adapter:MockAdapter,
+  peerId:string,
+  reconstruction:CharacterSessionProjectionReconstruction,
+) {
+  if (reconstruction.status==="rejected") return reconstruction;
+  const app=internal(adapter);
+  const mounted=projectedCharacterForPeer(adapter,peerId);
+  if(!mounted) return {status:"rejected" as const,error:`peer has no mounted Character SessionProjection: ${peerId}`};
+  if(mounted.characterId!==reconstruction.sheet.id){
+    return {status:"rejected" as const,error:`projected Character identity changed during durable refresh: ${mounted.characterId} != ${reconstruction.sheet.id}`};
+  }
+  if(reconstruction.projection.sourceRevision!==mounted.sourceRevision){
+    return {status:"rejected" as const,error:`projected Character source revision changed during durable refresh: ${mounted.sourceRevision} != ${reconstruction.projection.sourceRevision}`};
+  }
+  if(reconstruction.projection.runtimeRevision<mounted.runtimeRevision){
+    return {status:"rejected" as const,error:`projected Character runtime revision moved backwards: ${mounted.runtimeRevision} -> ${reconstruction.projection.runtimeRevision}`};
+  }
+
+  const currentEntity=app.scene.entities.find((entity)=>entity.id===mounted.characterId);
+  if(!currentEntity) return {status:"rejected" as const,error:`projected Character Scene entity is missing: ${mounted.characterId}`};
+
+  mountCharacterSessionProjection(adapter,{
+    peerId,
+    characterId:mounted.characterId,
+    sourceRevision:reconstruction.projection.sourceRevision,
+    runtimeRevision:reconstruction.projection.runtimeRevision,
+    projection:structuredClone(reconstruction.projection),
+    sheet:structuredClone(reconstruction.sheet),
+  });
+
+  const durableEntity=structuredClone(reconstruction.entity);
+  const refreshed={
+    ...durableEntity,
+    initiative:currentEntity.initiative,
+    status:[...currentEntity.status],
+    distance:currentEntity.distance,
+  };
+  app.scene.entities=app.scene.entities.map((entity)=>entity.id===mounted.characterId?refreshed:entity);
+  app.scene.actionsByActor={...app.scene.actionsByActor,[mounted.characterId]:projectedActions(reconstruction)};
+  if(!app.scene.economyByActor[mounted.characterId]){
+    app.scene.economyByActor={...app.scene.economyByActor,[mounted.characterId]:structuredClone(reconstruction.economy)};
+  }
+  return {status:"accepted" as const,characterId:mounted.characterId};
 }
 
 export function activateProjectedCharacterResolutionContext(
