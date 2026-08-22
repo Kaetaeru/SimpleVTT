@@ -14,7 +14,7 @@ function roundTrip(message:ConnectedLongRestWireMessage) {
   if (decoded.status==="ok") assert.deepEqual(decoded.message,message);
 }
 
-test("connected Long Rest wire round-trips offer, owner decision, prepare, global commit, materialization, and abort", () => {
+test("connected Long Rest wire round-trips offer, owner decision, Host prepare authorization, prepare, global commit, materialization, and abort", () => {
   roundTrip({
     type:"long-rest-offer",
     offer:{
@@ -35,6 +35,18 @@ test("connected Long Rest wire round-trips offer, owner decision, prepare, globa
       ownerParticipantId:"player.remote",
       character,
       accepted:true,
+    },
+  });
+  roundTrip({
+    type:"long-rest-prepare-authorized",
+    preflight:{
+      transactionId:"long-rest.remote.1",
+      sessionId:"session.connected",
+      campaignId:"campaign.live",
+      expectedCampaignRevision:11,
+      ownerParticipantId:"player.remote",
+      character,
+      options:{advanceMinutes:480,consumeRations:true},
     },
   });
   roundTrip({
@@ -85,6 +97,18 @@ test("connected Long Rest wire rejects malformed distributed-transaction inputs 
       ownerParticipantId:"player.remote",
       character,
       accepted:"yes",
+    },
+  })).status,"rejected");
+  assert.equal(decodeConnectedLongRestWireMessage(JSON.stringify({
+    type:"long-rest-prepare-authorized",
+    preflight:{
+      transactionId:"long-rest.remote.1",
+      sessionId:"session.connected",
+      campaignId:"campaign.live",
+      expectedCampaignRevision:-1,
+      ownerParticipantId:"player.remote",
+      character,
+      options:{advanceMinutes:480,consumeRations:true},
     },
   })).status,"rejected");
   assert.equal(decodeConnectedLongRestWireMessage(JSON.stringify({type:"long-rest-abort",transactionId:"long-rest.remote.1",reason:""})).status,"rejected");
