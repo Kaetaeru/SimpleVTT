@@ -54,18 +54,18 @@ if (Test-RustToolchain) {
 
 $osArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
 switch ($osArch) {
-  ([System.Runtime.InteropServices.Architecture]::Arm64) { $host = 'aarch64-pc-windows-msvc' }
-  default { $host = 'x86_64-pc-windows-msvc' }
+  ([System.Runtime.InteropServices.Architecture]::Arm64) { $rustHostTriple = 'aarch64-pc-windows-msvc' }
+  default { $rustHostTriple = 'x86_64-pc-windows-msvc' }
 }
 
-$baseUrl = "https://static.rust-lang.org/rustup/dist/$host"
+$baseUrl = "https://static.rust-lang.org/rustup/dist/$rustHostTriple"
 $installerUrl = "$baseUrl/rustup-init.exe"
 $shaUrl = "$installerUrl.sha256"
 $installerPath = Join-Path $downloads 'rustup-init.exe'
 $shaPath = Join-Path $downloads 'rustup-init.exe.sha256'
 
 Write-Host '[SimpleVTT Live] Installing a private Rust toolchain for Tauri...'
-Write-Host "[SimpleVTT Live] Host target: $host"
+Write-Host "[SimpleVTT Live] Host target: $rustHostTriple"
 Write-Host '[SimpleVTT Live] Rust will stay under .live-dev/runtime/rust and will not modify system PATH.'
 
 Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
@@ -85,7 +85,7 @@ $oldRustupHome = $env:RUSTUP_HOME
 try {
   $env:CARGO_HOME = $cargoHome
   $env:RUSTUP_HOME = $rustupHome
-  & $installerPath -y --no-modify-path --profile minimal --default-host $host --default-toolchain stable
+  & $installerPath -y --no-modify-path --profile minimal --default-host $rustHostTriple --default-toolchain stable
   if ($LASTEXITCODE -ne 0) {
     throw "rustup-init exited with code $LASTEXITCODE."
   }
