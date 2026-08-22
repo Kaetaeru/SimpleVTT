@@ -113,6 +113,32 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
   roundTrip({ type:"error",code:"stale-cursor",message:"client is behind",hostCursor:3 });
 });
 
+test("connected wire accepts canonical recovery lockout metadata and rejects malformed lockouts", () => {
+  const lockoutEvent=structuredClone(event) as unknown as {
+    payload:{resolutionEvents:Array<{stateChanges:Array<Record<string,unknown>>}>};
+  };
+  lockoutEvent.payload.resolutionEvents[0].stateChanges=[{
+    kind:"resource",
+    targetId:"char.aelar",
+    resourceId:"feature.locked",
+    before:0,
+    after:0,
+    recoveryLockouts:{before:{longRest:2},after:{longRest:1}},
+    provenance:[],
+    lifetime:"character-durable",
+    writeBack:"character",
+  }];
+  assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"event-batch",sessionId:"session.test",afterCursor:0,events:[lockoutEvent]})).status,"ok");
+
+  const negative=structuredClone(lockoutEvent);
+  (negative.payload.resolutionEvents[0].stateChanges[0].recoveryLockouts as {after:{longRest:number}}).after.longRest=-1;
+  assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"event-batch",sessionId:"session.test",afterCursor:0,events:[negative]})).status,"rejected");
+
+  const malformed=structuredClone(lockoutEvent);
+  malformed.payload.resolutionEvents[0].stateChanges[0].recoveryLockouts={before:{longRest:2},after:{rests:"one"}};
+  assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"event-batch",sessionId:"session.test",afterCursor:0,events:[malformed]})).status,"rejected");
+});
+
 test("connected wire rejects malformed JSON, unknown message types, invalid cursors, malformed readiness, and malformed session end", () => {
   assert.equal(decodeConnectedWireMessage("{").status,"rejected");
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"mystery"})).status,"rejected");
