@@ -96,9 +96,11 @@ function isOwnerPrepared(value:unknown):value is ConnectedLongRestOwnerPrepared 
 }
 
 function isGlobalCommit(value:unknown):value is ConnectedLongRestGlobalCommit {
-  return isRecord(value)
-    &&isString(value.transactionId)
-    &&isString(value.campaignCommitId);
+  if(!isRecord(value)||!isString(value.transactionId)||!isString(value.campaignCommitId)) return false;
+  const recovery=[value.ownerParticipantId,value.character,value.preparationId];
+  const hasRecovery=recovery.some((entry)=>entry!==undefined);
+  if(!hasRecovery) return true;
+  return isString(value.ownerParticipantId)&&isCharacterRevision(value.character)&&isString(value.preparationId);
 }
 
 function isOwnerMaterialized(value:unknown):value is ConnectedLongRestOwnerMaterialized {
