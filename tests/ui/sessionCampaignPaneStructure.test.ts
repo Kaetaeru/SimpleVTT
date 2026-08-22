@@ -47,6 +47,9 @@ test("Session Campaign pane grants XP with a default target and opens the canoni
   assert.match(pane,/setSelectedRosterIds\(projection\?\.roster\.filter\(\(member\)=>member\.active\)/);
   assert.match(pane,/grantCampaignAdvancement/);
   assert.match(pane,/XP를 지급했습니다/);
+  assert.match(pane,/session-campaign-xp-entry/);
+  assert.match(pane,/지급할 XP/);
+  assert.match(pane,/inputMode="numeric"/);
   assert.match(pane,/바로 레벨업 가능/);
   assert.match(pane,/세션에서 레벨업/);
   assert.match(root,/openSessionLevelUp/);

@@ -65,9 +65,12 @@ export function SessionCampaignPane({role,onClose,onOpenLevelUp}:{role:"dm"|"pla
             })}
           </div>
           {role==="dm"&&<div className="session-campaign-xp-actions">
-            <div><input aria-label="지급할 경험치" type="number" min={1} step={1} value={xpAmount} onChange={(event)=>setXpAmount(event.target.value)}/>{[50,100,250,500].map((value)=><button type="button" key={value} onClick={()=>setXpAmount(String(value))}>+{value}</button>)}</div>
-            <button type="button" disabled={busy||!selectedRosterIds.length||!Number.isInteger(Number(xpAmount))||Number(xpAmount)<=0} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"xp",amount:Number(xpAmount),levels:Object.fromEntries(projection.roster.map((member)=>[member.rosterMemberId,member.level??1]))}),selectedRosterIds.length+"명에게 "+Number(xpAmount).toLocaleString()+" XP를 지급했습니다.")}>선택 캐릭터에 XP 지급</button>
-            <button type="button" className="primary" disabled={busy||!selectedRosterIds.length} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"level-up-credit",amount:1}),selectedRosterIds.length+"명에게 레벨업 권한을 부여했습니다.")}>바로 레벨업 가능</button>
+            <label className="session-campaign-xp-entry"><span>지급할 XP</span><div><input aria-label="지급할 경험치" type="number" min={1} step={1} inputMode="numeric" value={xpAmount} onChange={(event)=>setXpAmount(event.target.value)} placeholder="예: 300"/><em>XP</em></div></label>
+            <div className="session-campaign-xp-presets" aria-label="경험치 빠른 입력">{[50,100,250,500].map((value)=><button type="button" key={value} onClick={()=>setXpAmount(String(value))}>+{value}</button>)}</div>
+            <div className="session-campaign-xp-commit">
+              <button type="button" disabled={busy||!selectedRosterIds.length||!Number.isInteger(Number(xpAmount))||Number(xpAmount)<=0} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"xp",amount:Number(xpAmount),levels:Object.fromEntries(projection.roster.map((member)=>[member.rosterMemberId,member.level??1]))}),selectedRosterIds.length+"명에게 "+Number(xpAmount).toLocaleString()+" XP를 지급했습니다.")}>선택 캐릭터에 XP 지급</button>
+              <button type="button" className="primary" disabled={busy||!selectedRosterIds.length} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"level-up-credit",amount:1}),selectedRosterIds.length+"명에게 레벨업 권한을 부여했습니다.")}>바로 레벨업 가능</button>
+            </div>
           </div>}
         </section>}
       </section>
