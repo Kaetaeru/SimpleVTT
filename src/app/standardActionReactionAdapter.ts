@@ -85,20 +85,39 @@ function readyTriggerAction(config:ReadyActionConfiguration,prepared:ActionVm|un
   };
 }
 
+function withoutReadyTrigger(actions:ActionVm[]) {
+  return actions.filter((action)=>action.id!==READY_TRIGGER_ID);
+}
+
+function upsertReadyTrigger(actions:ActionVm[],trigger:ActionVm) {
+  const existing=actions.findIndex((action)=>action.id===READY_TRIGGER_ID);
+  if (existing>=0) actions[existing]=trigger;
+  else actions.push(trigger);
+}
+
 function projectReadyTriggers(adapter:MockAdapter,internal:ReadyReactionState,snapshot:AppSnapshot) {
+  for (const [actorId,actions] of Object.entries(internal.scene.actionsByActor)) {
+    internal.scene.actionsByActor[actorId]=withoutReadyTrigger(actions);
+  }
+  for (const [actorId,actions] of Object.entries(snapshot.scene.actionsByActor)) {
+    snapshot.scene.actionsByActor[actorId]=withoutReadyTrigger(actions);
+  }
+
   for (const config of readyActionConfigurationsFor(adapter)) {
     const actor=snapshot.scene.entities.find((entity)=>entity.id===config.actorId);
     if (!actor?.status.includes("준비 행동")) continue;
-    const actions=snapshot.scene.actionsByActor[config.actorId]??=[];
+    const runtimeActions=internal.scene.actionsByActor[config.actorId]??[];
     const prepared=config.actionId===READY_MOVEMENT_ACTION_ID
       ? undefined
-      : actions.find((action)=>action.id===config.actionId&&action.id!==READY_TRIGGER_ID);
+      : runtimeActions.find((action)=>action.id===config.actionId&&action.id!==READY_TRIGGER_ID);
     if (config.actionId!==READY_MOVEMENT_ACTION_ID&&!prepared) continue;
     const projected=readyTriggerAction(config,prepared,readyReactionAvailable(internal,config.actorId));
-    const existing=actions.findIndex((action)=>action.id===READY_TRIGGER_ID);
-    if (existing>=0) actions[existing]=projected;
-    else actions.push(projected);
-    snapshot.scene.actionsByActor[config.actorId]=actions;
+    upsertReadyTrigger(runtimeActions,projected);
+    internal.scene.actionsByActor[config.actorId]=runtimeActions;
+
+    const snapshotActions=snapshot.scene.actionsByActor[config.actorId]??[];
+    upsertReadyTrigger(snapshotActions,structuredClone(projected));
+    snapshot.scene.actionsByActor[config.actorId]=snapshotActions;
   }
 }
 
