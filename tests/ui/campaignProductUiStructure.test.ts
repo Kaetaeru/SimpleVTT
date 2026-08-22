@@ -36,6 +36,14 @@ test("Campaign screen covers empty list create dashboard archive and Session set
   assert.match(screen,/activeCampaignId/);
 });
 
+test("Campaign archive is an explicit confirmed destructive operation",()=>{
+  assert.match(screen,/archiveTarget/);
+  assert.match(screen,/캠페인 보관 확인/);
+  assert.match(screen,/보관하면 세션 시작이 비활성화/);
+  assert.match(screen,/archiveCampaign\(archiveTarget\.campaignId\)/);
+  assert.doesNotMatch(screen,/onArchive=\{\(\)=>perform\(\(\)=>archiveCampaign\(/);
+});
+
 test("Session setup exposes immutable Campaign identity and optional rule toggles",()=>{
   assert.match(screen,/세션 달력 사용/);
   assert.match(screen,/식량 규칙 사용/);
