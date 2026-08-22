@@ -5,6 +5,7 @@ import test from "node:test";
 const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
 const home=readFileSync(new URL("../../src/V1HomeScreen.tsx",import.meta.url),"utf8");
 const screen=readFileSync(new URL("../../src/CampaignScreen.tsx",import.meta.url),"utf8");
+const campaignStyles=readFileSync(new URL("../../src/campaign-screen.css",import.meta.url),"utf8");
 const provider=readFileSync(new URL("../../src/app/AppProvider.tsx",import.meta.url),"utf8");
 const session=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
 const directSession=readFileSync(new URL("../../src/ProductionSessionDirectNetworkBridge.tsx",import.meta.url),"utf8");
@@ -18,6 +19,12 @@ test("Campaign is a first-class product route reachable from navigation and Home
   assert.match(app,/import \{ CampaignScreen \}/);
   assert.match(home,/onCampaigns/);
   assert.match(home,/>캠페인 열기</);
+});
+
+test("Campaign owns vertical scrolling inside the product content viewport",()=>{
+  assert.match(campaignStyles,/\.campaign-screen\{[^}]*height:100%/);
+  assert.match(campaignStyles,/\.campaign-screen\{[^}]*min-height:0/);
+  assert.match(campaignStyles,/\.campaign-screen\{[^}]*overflow-y:auto/);
 });
 
 test("Campaign screen covers empty list create dashboard archive and Session setup",()=>{
