@@ -110,6 +110,10 @@ test("compact creation choices and official sheet chrome remain structurally pre
   assert.match(sheet, /\.official-bottom-traits/);
   assert.match(sheet, /\.official-spell-list/);
   assert.match(viewport, /\.official-sheet-screen/);
+  assert.match(viewport, /\.character-sheet-workspace\[data-sheet-host="standalone"\]/);
+  assert.match(viewport, /\.character-sheet-workspace-content > \.screen/);
   assert.match(viewport, /overflow-y:\s*auto\s*!important/);
   assert.match(viewport, /position:\s*absolute\s*!important/);
+  assert.match(viewport, /@media \(min-width: 1600px\) and \(min-height: 900px\)/);
+  assert.match(viewport, /width:\s*min\(1560px, 100%\)/);
 });

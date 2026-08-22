@@ -927,6 +927,21 @@
 .session-hotbar-tabs { gap:4px; }
 .session-hotbar-tabs button { min-width:auto; padding-inline:10px; border-color:transparent; border-radius:7px; background:transparent; color:var(--quiet); font-size:9px; }
 .session-hotbar-tabs button.active { border-color:var(--line-strong); background:var(--accent-soft); color:var(--accent); }
+.session-hotbar-tabs .session-hotbar-menu-trigger {
+  position: relative;
+  padding-inline: 12px;
+  border-color: color-mix(in srgb,var(--accent) 28%,var(--line));
+  background: color-mix(in srgb,var(--accent) 7%,var(--recess));
+  color: var(--text);
+  font-weight: 800;
+}
+.session-hotbar-tabs .session-hotbar-menu-trigger::after { content:"⌄"; margin-left:6px; color:var(--accent); }
+.session-hotbar-tabs .session-hotbar-menu-trigger.standard {
+  border-color: color-mix(in srgb,var(--good) 26%,var(--line));
+  background: color-mix(in srgb,var(--good) 6%,var(--recess));
+}
+.session-hotbar-tabs .session-hotbar-menu-trigger.standard::after { color:var(--good); }
+.session-hotbar-tabs .session-hotbar-menu-trigger.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
 .session-hotbar-row-control { border-color:var(--line); border-radius:7px; background:var(--recess); overflow:hidden; }
 .session-reference-command-center .session-hotbar-slot { border-color:var(--line); border-radius:9px; background:radial-gradient(circle at 45% 35%,var(--surface-3),var(--recess) 72%); }
 .session-reference-command-center .session-hotbar-slot:hover:not(:disabled) { border-color:var(--line-strong); background:var(--surface-2); }
@@ -944,6 +959,70 @@
 .session-hotbar-category-slots { display:grid; grid-template-rows:repeat(var(--session-hotbar-rows),42px); grid-auto-flow:column; grid-auto-columns:42px; gap:4px; }
 .session-hotbar-category-empty { width:42px; height:42px; display:grid; place-items:center; border:1px dashed var(--line); border-radius:9px; color:var(--quiet); font-size:7px; }
 .session-hotbar-tooltip,.session-actor-tooltip { border-color:var(--line-strong); border-radius:10px; background:color-mix(in srgb,var(--surface) 97%,transparent); box-shadow:var(--shadow); color:var(--text); }
+
+/* The two dense rule catalogs live above the dock, leaving the everyday hotbar calm. */
+.session-action-library {
+  position: absolute;
+  z-index: 80;
+  left: 198px;
+  right: 118px;
+  bottom: calc(100% - 38px);
+  max-height: min(58vh,560px);
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px 16px 8px 8px;
+  background: color-mix(in srgb,var(--surface) 98%,transparent);
+  box-shadow: 0 -18px 54px rgba(0,0,0,.42), var(--shadow);
+  color: var(--text);
+}
+.session-action-library > header {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(110deg,color-mix(in srgb,var(--accent) 10%,var(--surface-2)),var(--surface));
+}
+.session-action-library > header > div { min-width:0; display:grid; grid-template-columns:auto 1fr; align-items:baseline; gap:2px 10px; }
+.session-action-library > header span { color:var(--accent); font-size:8px; font-weight:900; letter-spacing:.16em; }
+.session-action-library > header strong { font:600 16px Georgia,"Noto Serif KR",serif; }
+.session-action-library > header small { grid-column:1 / -1; color:var(--muted); font-size:9px; }
+.session-action-library > header button { width:30px; min-width:30px; height:30px; padding:0; border-color:var(--line); border-radius:9px; background:var(--recess); color:var(--muted); font-size:18px; }
+.session-action-library > header button:hover { border-color:var(--line-strong); color:var(--text); }
+.session-ability-check-groups,
+.session-standard-action-grid { min-height:0; overflow:auto; padding:12px; scrollbar-gutter:stable; }
+.session-ability-check-groups { display:grid; grid-template-columns:repeat(5,minmax(128px,1fr)); gap:8px; }
+.session-ability-check-groups > section,
+.session-standard-action-grid > section { min-width:0; border:1px solid var(--line); border-radius:11px; background:var(--recess); }
+.session-ability-check-groups > section > strong { display:block; padding:8px 9px 6px; color:var(--accent); font-size:9px; letter-spacing:.08em; }
+.session-ability-check-groups > section > div { display:grid; gap:3px; padding:0 6px 6px; }
+.session-action-library section > div > button {
+  min-width:0;
+  display:grid;
+  justify-items:start;
+  gap:2px;
+  padding:7px 8px;
+  border-color:transparent;
+  border-radius:7px;
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+}
+.session-action-library section > div > button:hover:not(:disabled) { border-color:var(--line); background:var(--surface-2); }
+.session-action-library section > div > button:disabled { opacity:.42; }
+.session-action-library section > div > button strong { font-size:10px; }
+.session-action-library section > div > button small { overflow:hidden; color:var(--muted); font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
+.session-standard-action-grid { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:8px; }
+.session-standard-action-grid > section { display:grid; grid-template-rows:auto minmax(0,1fr); }
+.session-standard-action-grid > section > header { min-height:48px; display:grid; align-content:center; gap:2px; padding:7px 9px; border-bottom:1px solid var(--line); }
+.session-standard-action-grid > section > header strong { color:var(--text); font-size:10px; }
+.session-standard-action-grid > section > header small { color:var(--quiet); font-size:8px; line-height:1.35; }
+.session-standard-action-grid > section > div { display:grid; align-content:start; gap:3px; padding:5px; }
+.session-standard-action-grid > section > div > span { padding:7px; color:var(--quiet); font-size:8px; }
 
 /* WO-UI-007 — card-anchored combat feedback and readable health affordances */
 .session-reference-play-root .session-actor-card[aria-disabled="true"] { cursor: default; }
@@ -1028,4 +1107,7 @@
   .session-reference-play-root { --svtt-actor-board-h:104px; }
   .session-reference-play-root .session-actor-card { flex-basis:64px; min-width:64px; max-width:64px; width:64px; min-height:90px; height:90px; }
   .session-hotbar-tabs button { padding-inline:7px; }
+  .session-action-library { left:8px; right:8px; max-height:62vh; }
+  .session-ability-check-groups { grid-template-columns:repeat(2,minmax(130px,1fr)); }
+  .session-standard-action-grid { grid-template-columns:repeat(2,minmax(160px,1fr)); }
 }

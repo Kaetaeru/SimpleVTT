@@ -65,6 +65,10 @@ function hasSkill(character:CharacterSheet,name:string) {
   return character.skills.some((entry)=>entry===name||entry.startsWith(`${name} `)||entry.startsWith(`${name}+`));
 }
 
+function skillBonus(character:CharacterSheet,name:string,ability:AbilityKey) {
+  return mod(character.abilities[ability])+(hasSkill(character,name)?character.proficiencyBonus:0);
+}
+
 function parseDamage(raw:string) {
   const match=raw.match(/(\d+)d(\d+)\s*(?:\+\s*(-?\d+))?\s*([^\d+]*)/i);
   if (!match) return { dice:"1d4",count:1,sides:4,flat:0,type:"타격",average:3 };
@@ -117,7 +121,7 @@ function skillActions(character:CharacterSheet):ActionVm[] {
   return SKILLS.map((skill)=>{
     const proficient=hasSkill(character,skill.name);
     const abilityBonus=mod(character.abilities[skill.ability]);
-    const total=abilityBonus+(proficient?character.proficiencyBonus:0);
+    const total=skillBonus(character,skill.name,skill.ability);
     return {
       id:`action.skill.${skill.id}`,
       actorId:character.id,
@@ -141,6 +145,8 @@ function skillActions(character:CharacterSheet):ActionVm[] {
 }
 
 function featureActions(character:CharacterSheet):ActionVm[] {
+  const standardEffect=(id:string,name:string,target:ActionVm["target"],summary:string,details:ActionVm["details"]):ActionVm=>({id:`action.standard.${id}`,actorId:character.id,name,category:"basic",target,economy:"행동",resolutionKind:"no-roll",summary,available:true,eligibleTargetIds:[],details});
+  const standardCheck=(group:string,id:string,name:string,skill:string,ability:AbilityKey):ActionVm=>({id:`action.standard.${group}.${id}`,actorId:character.id,name,category:"basic",target:"none",economy:"행동",resolutionKind:"ability-check",summary:`${ABILITY_LABEL[ability]}(${skill}) ${signed(skillBonus(character,skill,ability))}`,available:true,eligibleTargetIds:[],checkBonus:skillBonus(character,skill,ability),details:[detail("기본 행동",group),detail("판정",`${ABILITY_LABEL[ability]}(${skill})`),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Action")]});
   const actions:ActionVm[]=[{
     id:"action.dash",
     actorId:character.id,
@@ -153,7 +159,17 @@ function featureActions(character:CharacterSheet):ActionVm[] {
     available:true,
     eligibleTargetIds:[],
     details:[detail("효과",`이동 가능량 +${character.speed}피트`),detail("비용","행동 1")],
-  }];
+  },
+  standardEffect("disengage","이탈","self","이번 턴 이동이 기회 공격을 유발하지 않습니다.",[detail("효과","이번 턴 기회 공격 유발 안 함"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Disengage")]),
+  standardEffect("dodge","회피","self","다음 턴 시작까지 자신을 향한 공격에 불리, 민첩 내성에 유리.",[detail("효과","공격에 불리 · 민첩 내성에 유리"),detail("종료","자신의 다음 턴 시작"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Dodge")]),
+  standardEffect("help","도움","ally","아군의 다음 판정 또는 공격을 돕습니다.",[detail("대상","아군 1명"),detail("효과","다음 적격 판정 또는 공격에 유리"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Help")]),
+  standardCheck("hide","stealth","숨기","은신","dex"),
+  ...([{"id":"animal-handling","skill":"동물 조련","ability":"wis"},{"id":"deception","skill":"기만","ability":"cha"},{"id":"intimidation","skill":"위협","ability":"cha"},{"id":"performance","skill":"공연","ability":"cha"},{"id":"persuasion","skill":"설득","ability":"cha"}] as const).map((entry)=>standardCheck("influence",entry.id,`영향 주기 · ${entry.skill}`,entry.skill,entry.ability)),
+  standardEffect("ready","준비","self","선언한 트리거에 반응해 행동하거나 이동합니다.",[detail("선언","감지 가능한 트리거와 반응 행동/이동"),detail("비용","행동 1 · 발동 시 반응 1"),detail("출처","SRD 5.2.1 · Ready")]),
+  ...([{"id":"insight","skill":"통찰"},{"id":"medicine","skill":"의학"},{"id":"perception","skill":"지각"},{"id":"survival","skill":"생존"}] as const).map((entry)=>standardCheck("search",entry.id,`탐색 · ${entry.skill}`,entry.skill,"wis")),
+  ...([{"id":"arcana","skill":"비전"},{"id":"history","skill":"역사"},{"id":"investigation","skill":"조사"},{"id":"nature","skill":"자연"},{"id":"religion","skill":"종교"}] as const).map((entry)=>standardCheck("study",entry.id,`연구 · ${entry.skill}`,entry.skill,"int")),
+  standardEffect("utilize","물체 사용","self","비마법 물체를 사용합니다.",[detail("효과","비마법 물체 사용"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Utilize")]),
+  ];
   const secondWind=character.resources.find((resource)=>/second-wind/i.test(resource.id)||/세컨드 윈드|재기의 바람/.test(resource.label));
   if (secondWind) {
     actions.push({

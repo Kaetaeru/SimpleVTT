@@ -349,6 +349,25 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
   const action = internal.action(resolution.actionId);
   if (!action) return oldAdvanceResolution.call(this);
 
+  if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&action.id==="action.standard.hide.stealth"&&(resolution.rollTotal??0)>=15) {
+    const actor=internal.entity(action.actorId);
+    if(actor&&!actor.status.includes("숨음")){actor.status.push("숨음");resolution.stateChanges.push(`${actor.name} 숨음 상태 적용 · DC 15 충족`);resolution.finalOutcome=`${resolution.rollTotal} · 숨기 성공`;}
+  }
+
+  if (resolution.stage==="effect-preview"&&action.resolutionKind==="no-roll"&&action.id.startsWith("action.standard.")) {
+    const actor=internal.entity(action.actorId);
+    const target=internal.entity(resolution.targetIds[0]??action.actorId);
+    const applyStatus=(entity:SceneEntity|undefined,status:string)=>{if(entity&&!entity.status.includes(status)){entity.status.push(status);resolution.stateChanges.push(`${entity.name} 상태 추가: ${status}`);}};
+    if(action.id==="action.standard.disengage"){applyStatus(actor,"이탈");resolution.finalOutcome="이번 턴 기회 공격을 유발하지 않음";}
+    else if(action.id==="action.standard.dodge"){applyStatus(actor,"회피");resolution.finalOutcome="다음 턴 시작까지 회피";}
+    else if(action.id==="action.standard.help"){applyStatus(target,"도움 받음");resolution.finalOutcome=`${target?.name??"아군"} 지원`;}
+    else if(action.id==="action.standard.ready"){applyStatus(actor,"준비 행동");resolution.finalOutcome="트리거와 반응 행동 준비";}
+    else if(action.id==="action.standard.utilize"){resolution.stateChanges.push(`${actor?.name??action.actorId} 비마법 물체 사용 선언`);resolution.finalOutcome="물체 사용";}
+    resolution.compact=resolution.finalOutcome;
+    internal.commit(action);
+    return internal.getSnapshot();
+  }
+
   if (atomicAttackAction(action) && !resolution.adjudicated && resolution.stage === "attack-result") {
     const transaction = buildAtomicAttack(internal,action,resolution);
     if (transaction.status === "rejected") {
