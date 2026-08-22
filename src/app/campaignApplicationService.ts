@@ -1,5 +1,6 @@
 import { CampaignLibraryRepository, CampaignStaleRevisionError, createCampaignRecordV1 } from "./campaignPersistence";
-import type { CampaignMutationContext, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignMutationContext, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 
 const cp=<T,>(value:T):T=>structuredClone(value);
 const bounded=<T,>(values:T[],limit=128)=>values.slice(-limit);
@@ -83,6 +84,7 @@ export class CampaignApplicationService {
       if(!providerId) throw new Error("Calendar provider is required");
       campaign.calendar.capability={...campaign.calendar.capability,enabled:context.enabled,providerId,settingsRevision:campaign.calendar.capability.settingsRevision+1};
       campaign.calendar.state.providerId=providerId;
+      campaign.calendar.state.displayAnchor=projectCampaignCalendar(providerId,campaign.calendar.state.absoluteMinute,campaign.calendar.state.displayAnchor.era);
       campaign.sessionDefaults.calendarEnabled=context.enabled;
       campaign.sessionDefaults.revision+=1;
     });
@@ -94,7 +96,7 @@ export class CampaignApplicationService {
       if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
       const before=campaign.calendar.state.absoluteMinute;const after=before+context.deltaMinutes;
       campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;
-      campaign.calendar.state.displayAnchor.day=Math.floor(after/1440)+1;
+      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
       if(context.note!==undefined) campaign.calendar.state.currentNote=context.note.trim()||undefined;
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"advance",deltaMinutes:context.deltaMinutes,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note,provenance:[context.initiatedByParticipantId]}]);
     });
@@ -107,13 +109,25 @@ export class CampaignApplicationService {
       if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
       const before=campaign.calendar.state.absoluteMinute;const after=context.absoluteMinute;
       campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.currentNote=context.note.trim();
-      campaign.calendar.state.displayAnchor.day=Math.floor(after/1440)+1;
+      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"correction",deltaMinutes:after-before,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note.trim(),provenance:[context.initiatedByParticipantId]}]);
     });
   }
 
   setCalendarNote(context:CampaignMutationContext&{note:string}){
     return this.mutateCampaign(context,(campaign)=>{campaign.calendar.state.currentNote=context.note.trim()||undefined;campaign.calendar.state.revision+=1;});
+  }
+
+  correctCalendarDateTime(context:CampaignMutationContext&{dateTime:CampaignCalendarDateTime;note:string}){
+    if(!context.note.trim()) throw new Error("Calendar correction note is required");
+    return this.mutateCampaign(context,(campaign)=>{
+      if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
+      const before=campaign.calendar.state.absoluteMinute;
+      const after=campaignDateTimeToAbsoluteMinute(campaign.calendar.state.providerId,context.dateTime);
+      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.currentNote=context.note.trim();
+      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,context.dateTime.era);
+      campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"correction",deltaMinutes:after-before,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note.trim(),provenance:[context.initiatedByParticipantId]}]);
+    });
   }
 
   undoRecentCalendar(context:CampaignMutationContext){
@@ -124,7 +138,7 @@ export class CampaignApplicationService {
       const before=campaign.calendar.state.absoluteMinute;
       if(before!==source.afterAbsoluteMinute) throw new Error("이후 달력 변경이 있어 안전하게 되돌릴 수 없습니다.");
       const after=source.beforeAbsoluteMinute;
-      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor.day=Math.floor(after/1440)+1;
+      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"undo",deltaMinutes:after-before,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,revertsTransactionId:source.transactionId,provenance:[context.initiatedByParticipantId]}]);
     });
   }
@@ -175,7 +189,7 @@ export class CampaignApplicationService {
     return this.mutateCampaign(context,(campaign)=>{
       if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
       const before=campaign.calendar.state.absoluteMinute;const after=before+1440;
-      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor.day=Math.floor(after/1440)+1;
+      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:`${context.requestId}.calendar`,kind:"advance",deltaMinutes:1440,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note,provenance:[context.requestId,context.initiatedByParticipantId]}]);
       if(context.consumeRations&&campaign.rations.capability.enabled){
         const preview=previewCampaignDailyRations(campaign,context.requiredUnits);const balance=preview.availableUnits-preview.consumedUnits;

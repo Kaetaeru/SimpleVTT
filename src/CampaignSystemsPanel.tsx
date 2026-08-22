@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { previewCampaignDailyRations } from "./app/campaignApplicationService";
+import { formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_MONTHS } from "./app/campaignCalendar";
 import type { CampaignRecordV1, CampaignRosterMember } from "./app/campaignPersistenceContracts";
 import { useSimpleVtt } from "./app/AppProvider";
 
 function rosterId(){return `roster.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
-function timeLabel(absoluteMinute:number){const day=Math.floor(absoluteMinute/1440)+1;const minute=absoluteMinute%1440;return `Day ${day} · ${String(Math.floor(minute/60)).padStart(2,"0")}:${String(minute%60).padStart(2,"0")}`;}
 
 export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   const api=useSimpleVtt();
@@ -13,12 +13,21 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   const [characterId,setCharacterId]=useState("");
   const [rationUnits,setRationUnits]=useState("1");
   const [calendarNote,setCalendarNote]=useState(campaign.calendar.state.currentNote??"");
-  const [correctionMinute,setCorrectionMinute]=useState(String(campaign.calendar.state.absoluteMinute));
+  const [calendarEra,setCalendarEra]=useState(campaign.calendar.state.displayAnchor.era??"서력");
+  const [calendarYear,setCalendarYear]=useState(String(campaign.calendar.state.displayAnchor.year??1));
+  const [calendarMonth,setCalendarMonth]=useState(campaign.calendar.state.displayAnchor.monthId??"1");
+  const [calendarDay,setCalendarDay]=useState(String(campaign.calendar.state.displayAnchor.day??1));
+  const [calendarHour,setCalendarHour]=useState(String(campaign.calendar.state.displayAnchor.hour??0));
+  const [calendarMinute,setCalendarMinute]=useState(String(campaign.calendar.state.displayAnchor.minute??0));
   const [rationAdjustment,setRationAdjustment]=useState("1");
   const [consumeWithDay,setConsumeWithDay]=useState(campaign.rations.capability.enabled);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
   const rationPreview=useMemo(()=>previewCampaignDailyRations(campaign),[campaign]);
+  useEffect(()=>{
+    const anchor=campaign.calendar.state.displayAnchor;
+    setCalendarEra(anchor.era??"서력");setCalendarYear(String(anchor.year??1));setCalendarMonth(anchor.monthId??"1");setCalendarDay(String(anchor.day??1));setCalendarHour(String(anchor.hour??0));setCalendarMinute(String(anchor.minute??0));
+  },[campaign.campaignId,campaign.calendar.state.providerId,campaign.calendar.state.absoluteMinute]);
   const perform=async(operation:()=>Promise<void>)=>{setBusy(true);setError(null);try{await operation();}catch(reason){setError(reason instanceof Error?reason.message:"작업을 완료하지 못했습니다.");}finally{setBusy(false);}};
   const updateMember=(member:CampaignRosterMember,patch:Partial<CampaignRosterMember>)=>perform(()=>api.upsertCampaignRosterMember(campaign.campaignId,{...member,...patch}));
   const addMember=()=>perform(async()=>{
@@ -56,13 +65,22 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
 
     <div className="campaign-system-columns">
       <section className="campaign-system-panel" aria-labelledby="campaign-calendar-title">
-        <header><div><span>WORLD TIME</span><h3 id="campaign-calendar-title">세션 달력</h3></div><strong>{timeLabel(campaign.calendar.state.absoluteMinute)}</strong></header>
+        <header><div><span>WORLD TIME</span><h3 id="campaign-calendar-title">세션 달력</h3></div><strong>{formatCampaignCalendarDateTime(campaign.calendar.state.providerId,campaign.calendar.state.displayAnchor)}</strong></header>
         <div className="campaign-provider-row"><label><input type="checkbox" checked={campaign.calendar.capability.enabled} onChange={(event)=>void perform(()=>api.configureCampaignCalendar(campaign.campaignId,{enabled:event.target.checked,providerId:campaign.calendar.capability.providerId}))}/> 사용</label><select aria-label="달력 공급자" value={campaign.calendar.capability.providerId} onChange={(event)=>void perform(()=>api.configureCampaignCalendar(campaign.campaignId,{enabled:campaign.calendar.capability.enabled,providerId:event.target.value}))}><option value="builtin.simple-day">Simple Day</option><option value="builtin.gregorian">Gregorian</option><option value="module.calendar-profile" disabled>모듈 프로필 · 설치 필요</option></select></div>
         {!campaign.calendar.capability.enabled?<p className="campaign-off-note">달력이 꺼져 있습니다. 저장된 {campaign.calendar.state.absoluteMinute}분은 유지되며 세션·휴식·행동을 막지 않습니다.</p>:<>
-          <div className="campaign-action-row"><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:10,note:calendarNote||undefined}))}>+10분</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:60,note:calendarNote||undefined}))}>+1시간</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:1440,note:calendarNote||undefined}))}>+1일</button></div>
+          <div className="campaign-calendar-facts"><div><span>연호</span><strong>{campaign.calendar.state.displayAnchor.era??"—"}</strong></div><div><span>날짜</span><strong>{campaign.calendar.state.providerId==="builtin.gregorian"?`${campaign.calendar.state.displayAnchor.year}년 ${campaign.calendar.state.displayAnchor.monthLabel} ${campaign.calendar.state.displayAnchor.day}일`:`Day ${campaign.calendar.state.displayAnchor.day}`}</strong></div><div><span>시간</span><strong>{String(campaign.calendar.state.displayAnchor.hour??0).padStart(2,"0")}:{String(campaign.calendar.state.displayAnchor.minute??0).padStart(2,"0")}</strong></div></div>
+          <div className="campaign-action-row"><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:10,note:calendarNote||undefined}))}>+10분</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:30,note:calendarNote||undefined}))}>+30분</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:60,note:calendarNote||undefined}))}>+1시간</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:360,note:calendarNote||undefined}))}>+6시간</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(campaign.campaignId,{deltaMinutes:1440,note:calendarNote||undefined}))}>+1일</button></div>
           <label className="campaign-wide-field"><span>현재 메모</span><input value={calendarNote} onChange={(event)=>setCalendarNote(event.target.value)} placeholder="여행, 야영 등"/><button disabled={busy} onClick={()=>void perform(()=>api.setCampaignCalendarNote(campaign.campaignId,calendarNote))}>메모 저장</button></label>
           <div className="campaign-compound-action"><div><strong>다음 날로 진행</strong><small>시간과 선택한 식량 소비를 하나의 저장으로 처리합니다.</small></div><label><input type="checkbox" checked={consumeWithDay&&campaign.rations.capability.enabled} disabled={!campaign.rations.capability.enabled} onChange={(event)=>setConsumeWithDay(event.target.checked)}/> 식량 {rationPreview.requiredUnits}식 함께 소비</label><button className="primary" disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignDay(campaign.campaignId,{consumeRations:consumeWithDay&&campaign.rations.capability.enabled,note:calendarNote||undefined}))}>미리보기대로 적용</button></div>
-          <details><summary>DM 시간 수정</summary><div className="campaign-correction-row"><label><span>절대 시간(분)</span><input type="number" min={0} step={1} value={correctionMinute} onChange={(event)=>setCorrectionMinute(event.target.value)}/></label><label><span>수정 사유</span><input value={calendarNote} onChange={(event)=>setCalendarNote(event.target.value)} placeholder="필수"/></label><button disabled={busy||!calendarNote.trim()} onClick={()=>void perform(()=>api.correctCampaignCalendar(campaign.campaignId,{absoluteMinute:Number(correctionMinute),note:calendarNote}))}>수정 적용</button></div></details>
+          <details className="campaign-date-time-editor"><summary>날짜와 시간 직접 설정</summary><div className="campaign-date-time-fields">
+            <label><span>연호</span><input value={calendarEra} onChange={(event)=>setCalendarEra(event.target.value)} placeholder="예: 왕국력"/></label>
+            {campaign.calendar.state.providerId==="builtin.gregorian"&&<><label><span>연도</span><input type="number" min={1} step={1} value={calendarYear} onChange={(event)=>setCalendarYear(event.target.value)}/></label><label><span>월</span><select value={calendarMonth} onChange={(event)=>setCalendarMonth(event.target.value)}>{GREGORIAN_CALENDAR_MONTHS.map((month)=><option key={month.id} value={month.id}>{month.label}</option>)}</select></label></>}
+            <label><span>{campaign.calendar.state.providerId==="builtin.gregorian"?"일":"Day"}</span><input type="number" min={1} step={1} value={calendarDay} onChange={(event)=>setCalendarDay(event.target.value)}/></label>
+            <label><span>시</span><input type="number" min={0} max={23} step={1} value={calendarHour} onChange={(event)=>setCalendarHour(event.target.value)}/></label><label><span>분</span><input type="number" min={0} max={59} step={1} value={calendarMinute} onChange={(event)=>setCalendarMinute(event.target.value)}/></label>
+            <label className="campaign-date-time-note"><span>수정 사유</span><input value={calendarNote} onChange={(event)=>setCalendarNote(event.target.value)} placeholder="필수"/></label>
+            <button disabled={busy||!calendarEra.trim()||!calendarNote.trim()} onClick={()=>void perform(()=>api.correctCampaignCalendarDateTime(campaign.campaignId,{dateTime:{era:calendarEra,year:Number(calendarYear),monthId:calendarMonth,day:Number(calendarDay),hour:Number(calendarHour),minute:Number(calendarMinute)},note:calendarNote}))}>날짜·시간 적용</button>
+          </div><small>날짜 문자열을 계산에 사용하지 않고 검증된 값을 절대 시간(분)으로 변환해 저장합니다.</small></details>
+          {campaign.calendar.state.history.length>0&&<div className="campaign-calendar-history"><strong>최근 변경</strong>{campaign.calendar.state.history.slice(-4).reverse().map((entry)=><span key={entry.transactionId}>{entry.kind} · {entry.deltaMinutes>0?"+":""}{entry.deltaMinutes}분{entry.note?` · ${entry.note}`:""}</span>)}</div>}
           <button disabled={busy||!campaign.calendar.state.history.length} onClick={()=>void perform(()=>api.undoCampaignCalendar(campaign.campaignId))}>최근 시간 변경 되돌리기</button>
         </>}
       </section>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { CampaignRecordV1 } from "./app/campaignPersistenceContracts";
 import { CampaignSystemsPanel } from "./CampaignSystemsPanel";
+import { formatCampaignCalendarDateTime } from "./app/campaignCalendar";
 
 function campaignId(name:string){
   const slug=name.trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,"-").replace(/^-|-$/g,"").slice(0,32)||"campaign";
@@ -82,7 +83,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
           <header className="campaign-dashboard-head"><div><span>캠페인 대시보드</span><h2>{activeCampaign.name}</h2><p>{activeCampaign.description||"설명 없음"}</p></div><button className="primary" disabled={activeCampaign.status==="archived"} onClick={()=>setSetupOpen(true)}>세션 시작</button></header>
           <div className="campaign-system-grid">
             <article><span>PARTY</span><h3>파티</h3><strong>{activeCampaign.roster.filter((member)=>member.active).length}명</strong><p>식량 계산과 보관함 권한에 사용할 명단입니다.</p></article>
-            <article><span>CALENDAR</span><h3>달력</h3><strong>{activeCampaign.calendar.capability.enabled?`Day ${activeCampaign.calendar.state.displayAnchor.day??1}`:"꺼짐"}</strong><p>현재 절대 시간 {activeCampaign.calendar.state.absoluteMinute}분</p></article>
+            <article><span>CALENDAR</span><h3>달력</h3><strong>{activeCampaign.calendar.capability.enabled?formatCampaignCalendarDateTime(activeCampaign.calendar.state.providerId,activeCampaign.calendar.state.displayAnchor):"꺼짐"}</strong><p>현재 절대 시간 {activeCampaign.calendar.state.absoluteMinute}분</p></article>
             <article><span>RATIONS</span><h3>식량</h3><strong>{activeCampaign.rations.ledger.balances.ration}식</strong><p>{activeCampaign.rations.capability.enabled?"추적 중":"규칙 꺼짐 · 기록 보존"}</p></article>
             <article><span>STASH</span><h3>파티 보관함</h3><strong>{activeCampaign.partyStash.wallet.gp} GP</strong><p>아이템 {activeCampaign.partyStash.itemReferences.length}개 · {activeCampaign.partyStash.policy}</p></article>
             <article><span>PRIVATE</span><h3>DM 라이브러리</h3><strong>{activeCampaign.dmLibrary.entries.length}개</strong><p>이 캠페인에서만 검색되는 비공개 준비물입니다.</p></article>

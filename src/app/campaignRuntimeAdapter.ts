@@ -1,7 +1,7 @@
 import type { AppSnapshot, SessionMode } from "./contracts";
 import { CampaignApplicationService } from "./campaignApplicationService";
 import { CampaignLibraryRepository } from "./campaignPersistence";
-import type { CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { MockAdapter } from "./mockAdapter";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
 
@@ -52,6 +52,7 @@ declare module "./mockAdapter" {
     configureCampaignCalendar(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<AppSnapshot>;
     advanceCampaignCalendar(campaignId:string,input:{deltaMinutes:number;note?:string}):Promise<AppSnapshot>;
     correctCampaignCalendar(campaignId:string,input:{absoluteMinute:number;note:string}):Promise<AppSnapshot>;
+    correctCampaignCalendarDateTime(campaignId:string,input:{dateTime:CampaignCalendarDateTime;note:string}):Promise<AppSnapshot>;
     setCampaignCalendarNote(campaignId:string,note:string):Promise<AppSnapshot>;
     undoCampaignCalendar(campaignId:string):Promise<AppSnapshot>;
     configureCampaignRations(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<AppSnapshot>;
@@ -136,6 +137,7 @@ MockAdapter.prototype.prepareCampaignSessionSnapshot=async function prepareCampa
     spatialProviderId:campaign.contentLoadout.spatialProviderId,
     spatialProviderVersion:campaign.contentLoadout.spatialProviderVersion,
     calendarAbsoluteMinuteAtStart:campaign.calendar.state.absoluteMinute,
+    calendarEraAtStart:campaign.calendar.state.displayAnchor.era,
     rationBalanceAtStart:campaign.rations.ledger.balances.ration??0,
     stashRevisionAtStart:campaign.partyStash.revision,
     startedAt:now,
@@ -162,6 +164,10 @@ MockAdapter.prototype.advanceCampaignCalendar=async function advanceCampaignCale
 MockAdapter.prototype.correctCampaignCalendar=async function correctCampaignCalendarRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
   await service.correctCalendar({...mutationContext(campaignId,"calendar-correct",campaign.revision),...input});return this.getSnapshot();
+};
+MockAdapter.prototype.correctCampaignCalendarDateTime=async function correctCampaignCalendarDateTimeRuntime(campaignId,input){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
+  await service.correctCalendarDateTime({...mutationContext(campaignId,"calendar-correct-date-time",campaign.revision),...input});return this.getSnapshot();
 };
 MockAdapter.prototype.setCampaignCalendarNote=async function setCampaignCalendarNoteRuntime(campaignId,note){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);

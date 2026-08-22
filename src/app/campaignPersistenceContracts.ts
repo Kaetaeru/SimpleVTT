@@ -34,7 +34,7 @@ export interface CampaignCalendarState {
   providerId:string;
   revision:number;
   absoluteMinute:number;
-  displayAnchor:{era?:string;year?:number;monthId?:string;day?:number};
+  displayAnchor:{era?:string;year?:number;monthId?:string;monthLabel?:string;day?:number;hour?:number;minute?:number};
   timeZoneLabel?:string;
   currentNote?:string;
   history:Array<{
@@ -48,6 +48,15 @@ export interface CampaignCalendarState {
     revertsTransactionId?:string;
     provenance:string[];
   }>;
+}
+
+export interface CampaignCalendarDateTime {
+  era:string;
+  year:number;
+  monthId:string;
+  day:number;
+  hour:number;
+  minute:number;
 }
 
 export interface CampaignSupplyTransactionSummary {
@@ -145,6 +154,7 @@ export interface CampaignSessionSnapshot {
   spatialProviderId?:string;
   spatialProviderVersion?:string;
   calendarAbsoluteMinuteAtStart:number;
+  calendarEraAtStart?:string;
   rationBalanceAtStart:number;
   stashRevisionAtStart:number;
   startedAt:string;

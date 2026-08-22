@@ -1,10 +1,8 @@
 import { clearCampaignSessionSnapshot } from "./campaignRuntimeAdapter";
 import { MockAdapter } from "./mockAdapter";
+import { formatCampaignCalendarDateTime, projectCampaignCalendar } from "./campaignCalendar";
 
-function campaignTimeLabel(absoluteMinute:number){
-  const day=Math.floor(absoluteMinute/1440)+1;const minute=absoluteMinute%1440;
-  return `Day ${day} ${String(Math.floor(minute/60)).padStart(2,"0")}:${String(minute%60).padStart(2,"0")}`;
-}
+function campaignTimeLabel(providerId:string,absoluteMinute:number,era?:string){return formatCampaignCalendarDateTime(providerId,projectCampaignCalendar(providerId,absoluteMinute,era));}
 
 const previousStopSession=MockAdapter.prototype.stopSession;
 MockAdapter.prototype.stopSession=async function stopSessionWithCampaignSummary(){
@@ -22,8 +20,8 @@ MockAdapter.prototype.stopSession=async function stopSessionWithCampaignSummary(
     startedAt:captured.startedAt,
     endedAt:new Date().toISOString(),
     participantLabels,
-    calendarBefore:captured.calendar.enabled?campaignTimeLabel(captured.calendarAbsoluteMinuteAtStart):undefined,
-    calendarAfter:captured.calendar.enabled?campaignTimeLabel(campaign.calendar.state.absoluteMinute):undefined,
+    calendarBefore:captured.calendar.enabled?campaignTimeLabel(captured.calendar.providerId,captured.calendarAbsoluteMinuteAtStart,captured.calendarEraAtStart):undefined,
+    calendarAfter:captured.calendar.enabled?campaignTimeLabel(campaign.calendar.state.providerId,campaign.calendar.state.absoluteMinute,campaign.calendar.state.displayAnchor.era):undefined,
     rationDelta:captured.rations.enabled?(campaign.rations.ledger.balances.ration??0)-captured.rationBalanceAtStart:undefined,
     stashTransactionCount:Math.max(0,campaign.partyStash.revision-captured.stashRevisionAtStart),
   });

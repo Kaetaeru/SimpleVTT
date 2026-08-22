@@ -58,12 +58,18 @@ test("Host start requires a selected Campaign and exposes its captured capabilit
 
 test("Campaign systems UI exposes roster calendar ration compound and bounded history workflows",()=>{
   for(const pattern of [/파티 명단/,/Character 파일이나 소유권/,/Player Character 참조/,/식량 계산/,/보관함 권한/]) assert.match(systems,pattern);
-  for(const pattern of [/세션 달력/,/Simple Day/,/Gregorian/,/\+10분/,/\+1시간/,/\+1일/,/DM 시간 수정/,/최근 시간 변경 되돌리기/]) assert.match(systems,pattern);
+  for(const pattern of [/세션 달력/,/Simple Day/,/Gregorian/,/\+10분/,/\+1시간/,/\+1일/,/날짜와 시간 직접 설정/,/최근 시간 변경 되돌리기/]) assert.match(systems,pattern);
   for(const pattern of [/하루 필요량/,/식량이/,/피해나 소진을 자동 적용하지 않습니다/,/하루치 소비/,/최근 소비 되돌리기/]) assert.match(systems,pattern);
   assert.match(systems,/advanceCampaignDay/);
   assert.match(systems,/시간과 선택한 식량 소비를 하나의 저장/);
   assert.match(systems,/세션 기록/);
   assert.doesNotMatch(systems,/applyDamage|exhaustionLevel|readyState|initiativeOrder/);
+});
+
+test("Campaign calendar exposes structured era date and 24-hour time editing",()=>{
+  for(const pattern of [/연호/,/연도/,/>월</,/\?"일":"Day"/,/>시</,/>분</,/날짜와 시간 직접 설정/,/correctCampaignCalendarDateTime/,/GREGORIAN_CALENDAR_MONTHS/,/절대 시간\(분\)으로 변환/]) assert.match(systems,pattern);
+  assert.match(systems,/\+30분/);
+  assert.match(systems,/\+6시간/);
 });
 
 test("successful Host end appends only a bounded Campaign summary projection",()=>{

@@ -15,7 +15,7 @@ import type {
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
-import type { CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./productionCombatantPreparationAdapter";
@@ -83,6 +83,7 @@ interface AppContextValue {
   configureCampaignCalendar(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<void>;
   advanceCampaignCalendar(campaignId:string,input:{deltaMinutes:number;note?:string}):Promise<void>;
   correctCampaignCalendar(campaignId:string,input:{absoluteMinute:number;note:string}):Promise<void>;
+  correctCampaignCalendarDateTime(campaignId:string,input:{dateTime:CampaignCalendarDateTime;note:string}):Promise<void>;
   setCampaignCalendarNote(campaignId:string,note:string):Promise<void>;
   undoCampaignCalendar(campaignId:string):Promise<void>;
   configureCampaignRations(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<void>;
@@ -225,6 +226,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     configureCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.configureCampaignCalendar(campaignId,input)),
     advanceCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.advanceCampaignCalendar(campaignId,input)),
     correctCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.correctCampaignCalendar(campaignId,input)),
+    correctCampaignCalendarDateTime: async (campaignId,input) => apply(() => mockAdapter.correctCampaignCalendarDateTime(campaignId,input)),
     setCampaignCalendarNote: async (campaignId,note) => apply(() => mockAdapter.setCampaignCalendarNote(campaignId,note)),
     undoCampaignCalendar: async (campaignId) => apply(() => mockAdapter.undoCampaignCalendar(campaignId)),
     configureCampaignRations: async (campaignId,input) => apply(() => mockAdapter.configureCampaignRations(campaignId,input)),

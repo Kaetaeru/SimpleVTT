@@ -3,6 +3,7 @@ import test from "node:test";
 import { CampaignApplicationService, previewCampaignDailyRations } from "../../src/app/campaignApplicationService";
 import { CampaignLibraryRepository } from "../../src/app/campaignPersistence";
 import { MemoryCampaignLibraryStore } from "../../src/app/memoryCampaignLibraryStore";
+import { campaignDateTimeToAbsoluteMinute, formatCampaignCalendarDateTime, isGregorianLeapYear, projectCampaignCalendar } from "../../src/app/campaignCalendar";
 
 const now="2026-08-22T12:00:00.000Z";
 const envelope=(campaignRevision:number,requestId:string)=>({requestId,campaignId:"campaign.systems",expectedCampaignRevision:campaignRevision,initiatedByParticipantId:"dm.local",now});
@@ -37,6 +38,24 @@ test("Calendar stores absolute minutes and undo is a compensating transaction",a
   assert.equal(campaign.calendar.state.history.length,2);
   assert.equal(campaign.calendar.state.history[1].revertsTransactionId,"calendar.advance");
   await assert.rejects(()=>service.undoRecentCalendar(envelope(4,"calendar.undo-again")),/Undo 가능한 달력 변경/);
+});
+
+test("Gregorian Campaign calendar records era year month day hour minute across leap and month boundaries",async()=>{
+  assert.equal(isGregorianLeapYear(2000),true);
+  assert.equal(isGregorianLeapYear(1900),false);
+  const start=campaignDateTimeToAbsoluteMinute("builtin.gregorian",{era:"왕국력",year:2024,monthId:"2",day:28,hour:23,minute:30});
+  let projected=projectCampaignCalendar("builtin.gregorian",start+60,"왕국력");
+  assert.deepEqual(projected,{era:"왕국력",year:2024,monthId:"2",monthLabel:"2월",day:29,hour:0,minute:30});
+  projected=projectCampaignCalendar("builtin.gregorian",start+60+1440,"왕국력");
+  assert.equal(formatCampaignCalendarDateTime("builtin.gregorian",projected),"왕국력 2024년 3월 1일 · 00:30");
+  assert.throws(()=>campaignDateTimeToAbsoluteMinute("builtin.gregorian",{era:"왕국력",year:2023,monthId:"2",day:29,hour:0,minute:0}),/28일까지/);
+
+  const {service}=await setup();
+  await service.configureCalendar({...envelope(1,"calendar.on"),enabled:true,providerId:"builtin.gregorian"});
+  await service.correctCalendarDateTime({...envelope(2,"calendar.date-time"),dateTime:{era:"제국력",year:1492,monthId:"12",day:31,hour:23,minute:45},note:"캠페인 시작 시각"});
+  await service.advanceCalendar({...envelope(3,"calendar.new-year"),deltaMinutes:30});
+  const campaign=service.getCampaign("campaign.systems")!;
+  assert.deepEqual(campaign.calendar.state.displayAnchor,{era:"제국력",year:1493,monthId:"1",monthLabel:"1월",day:1,hour:0,minute:15});
 });
 
 test("Ration consumption records shortage as warning data and never invents Character consequences",async()=>{
