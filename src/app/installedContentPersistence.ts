@@ -6,6 +6,7 @@ import {
   type InstalledContentStore,
 } from "./installedContentContracts";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
+import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -36,6 +37,7 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   const categories=["class","subclass","species","background","feat","spell","item","condition","combatant","option"];
   if (!categories.includes(String(value.category))) throw new Error(`installed content category is invalid: ${String(value.category)}`);
   if (!Array.isArray(value.relationships) || !Array.isArray(value.capabilities)) throw new Error("installed content collections are invalid");
+  if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);
 }
 
 function sortedEntries(entries:InstalledCatalogEntryV1[]) {
