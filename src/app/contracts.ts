@@ -84,7 +84,8 @@ export type DmInventoryAdjustmentCommand =
 export type PartyStashTransferCommand =
   | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash";asset:"item";itemId:string;definitionId:string;quantity:number;forceUnequip?:boolean}
   | {requestId:string;campaignId:string;actorId:string;direction:"stash-to-character";asset:"item";definitionId:string;catalogEntryId:string;quantity:number}
-  | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash"|"stash-to-character";asset:"currency";amount:number};
+  | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash";asset:"currency";amount:number}
+  | {requestId:string;campaignId:string;actorId:string;direction:"stash-to-character";asset:"currency";amount:number};
 
 export interface CharacterSheet extends CharacterSummary {
   proficiencyBonus: number;

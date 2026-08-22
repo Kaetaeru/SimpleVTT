@@ -123,3 +123,20 @@ test("Party stash transfer compensates Character inventory when Campaign persist
   assert.equal(retried.sessionCharacterInventories?.[inventory.characterId].items.find((candidate)=>candidate.id===item.id)?.quantity??0,item.quantity-1);
   assert.equal(retried.campaignSessionSystems?.partyStash.itemReferences[0].quantity,1);
 });
+
+test("connected stash deposit commits only the Campaign aggregate after the client owns its inventory mutation",async()=>{
+  const adapter=new MockAdapter();
+  setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
+  await adapter.getSnapshot();
+  await adapter.createCampaign({campaignId:"campaign.client-deposit",name:"Client Deposit"});
+  const before=await adapter.getSnapshot();
+  const inventory=Object.values(before.sessionCharacterInventories??{})[0];
+  const item=inventory.items[0];
+  const after=await adapter.commitConnectedPartyStashDeposit({requestId:"client.deposit.item",campaignId:"campaign.client-deposit",actorId:inventory.characterId,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1});
+  assert.equal(after.campaignSessionSystems?.partyStash.itemReferences[0].quantity,1);
+  assert.equal(after.sessionCharacterInventories?.[inventory.characterId].items.find((candidate)=>candidate.id===item.id)?.quantity,item.quantity);
+  const entry=after.catalog.find((candidate)=>candidate.category==="item"&&(candidate.contentId===item.definitionId||candidate.id===item.definitionId))??after.catalog.find((candidate)=>candidate.category==="item")!;
+  const returned=await adapter.commitConnectedPartyStashDeposit({requestId:"client.withdraw.item",campaignId:"campaign.client-deposit",actorId:inventory.characterId,direction:"stash-to-character",asset:"item",definitionId:item.definitionId,catalogEntryId:entry.id,quantity:1});
+  assert.deepEqual(returned.campaignSessionSystems?.partyStash.itemReferences,[]);
+  assert.equal(returned.sessionCharacterInventories?.[inventory.characterId].items.find((candidate)=>candidate.id===item.id)?.quantity,item.quantity);
+});

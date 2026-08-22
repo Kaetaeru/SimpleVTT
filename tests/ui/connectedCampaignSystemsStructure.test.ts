@@ -31,10 +31,23 @@ test("Host restores projection after compatible hello and broadcasts every Campa
   assert.match(runtime,/upsertCampaignRosterMember=broadcastAfter/);
   assert.match(runtime,/removeCampaignRosterMember=broadcastAfter/);
   assert.match(runtime,/grantCampaignAdvancement=broadcastAfter/);
-  assert.match(runtime,/transferPartyStash=broadcastAfter/);
+  assert.match(runtime,/hostTransferPartyStash=broadcastAfter/);
   assert.match(runtime,/campaign-level-up-complete/);
   assert.match(runtime,/hostConsumeCampaignLevelUp/);
   assert.match(runtime,/manifest\?\.characterId===levelUpRequest\.characterId/);
+});
+
+test("connected Players can move only their own Character assets with host acknowledgement",()=>{
+  assert.match(runtime,/campaign-stash-deposit/);
+  assert.match(runtime,/manifest\?\.characterId!==stashRequest\.command\.actorId/);
+  assert.match(runtime,/stashPermission==="request"\|\|member\.stashPermission==="manage"/);
+  assert.match(runtime,/commitConnectedPartyStashDeposit/);
+  assert.match(runtime,/command\.direction!=="character-to-stash"&&command\.direction!=="stash-to-character"/);
+  assert.match(runtime,/command\.actorId!==snapshot\.activeCharacter\.id/);
+  assert.match(runtime,/undoLastDmInventoryAdjustment/);
+  assert.match(runtime,/이동 응답 시간이 초과/);
+  assert.match(runtime,/hostAccepted&&!localFirst/);
+  assert.match(runtime,/\.compensate/);
 });
 
 test("connected Player snapshots cannot receive the Campaign aggregate or hidden ration amounts",()=>{

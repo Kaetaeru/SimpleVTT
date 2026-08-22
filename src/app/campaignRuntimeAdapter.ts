@@ -65,6 +65,7 @@ declare module "./mockAdapter" {
     grantCampaignAdvancement(campaignId:string,input:{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}):Promise<AppSnapshot>;
     consumeCampaignLevelUpCredit(campaignId:string,rosterMemberId:string,level?:number):Promise<AppSnapshot>;
     transferPartyStash(command:PartyStashTransferCommand):Promise<AppSnapshot>;
+    commitConnectedPartyStashDeposit(command:PartyStashTransferCommand):Promise<AppSnapshot>;
   }
 }
 
@@ -266,6 +267,15 @@ MockAdapter.prototype.transferPartyStash=async function transferPartyStashRuntim
       throw error;
     }
   }
+  return this.getSnapshot();
+};
+MockAdapter.prototype.commitConnectedPartyStashDeposit=async function commitConnectedPartyStashDepositRuntime(command){
+  const service=await ensureHydrated(this);
+  const campaign=service.getCampaign(command.campaignId);
+  if(!campaign) throw new Error("Campaign not found: "+command.campaignId);
+  const context={requestId:command.requestId,campaignId:command.campaignId,expectedCampaignRevision:campaign.revision,initiatedByParticipantId:command.actorId,now:new Date().toISOString(),direction:command.direction};
+  if(command.asset==="currency")await service.transferPartyStash({...context,asset:"currency",amount:command.amount});
+  else await service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity});
   return this.getSnapshot();
 };
 
