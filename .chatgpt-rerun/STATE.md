@@ -7,82 +7,83 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T03:41:00+09:00`
+- checkpointed_at: `2026-08-23T04:03:00+09:00`
 
 ## Run continuity
 
-This is the existing active Rerun run. Do not create a new run_id, reset sequence, or replace task_id.
-
-Sequence 0 / `phase13-closeout-ui-dice-regression` remains completed. Preserve its exact-head evidence and artifact history recorded in PLAN and earlier STATE versions. Existing Ready/connected implementation and two-instance tooling are also not to be reimplemented merely because this watcher dispatch restarted.
+This is the existing active Rerun run. Do not create a new run_id, reset sequence, or replace task_id. Preserve prior exact-head Phase 13 evidence, Ready/connected work, and V1-11 Campaign lifecycle implementation/validation history.
 
 ## Active V1 contract
 
 - Finish all intended V1 functionality through real production paths.
-- Preserve the current visible SimpleVTT UI structure/style as the V1 baseline.
+- Preserve the current visible SimpleVTT UI structure/style/navigation as the V1 baseline.
 - Prefer authority/persistence/runtime wiring behind existing screens over redesign.
 - Do not run a comprehensive Codex audit per slice.
 - Freeze one exact pre-V1 canonical SHA only after implementation is complete, then run the comprehensive Codex audit.
 
-## Completed in this dispatch
+## Preflight for this dispatch
 
-Selected continuation: `V1-11 Campaign product UI` lifecycle completion from the previous checkpoint.
+- Read mandatory Rerun files in order: README -> control -> STATE -> PLAN.
+- Reconciled `continue`, sequence `1`, task `phase14-production-play-session-ux`.
+- Confirmed `work/v1-composite` remains canonical.
+- Re-read V1 handoff/checklist and Campaign provider design.
+- Did not repeat V1-11 or previous Ready/Phase 13 work.
 
-### Preflight
+## Completed in this dispatch — V1-12 declarative provider core/runtime
 
-- Mandatory Rerun order read: README -> control -> STATE -> PLAN.
-- `control.json` reconciled as run `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `1`, task `phase14-production-play-session-ux`, status `continue`.
-- `work/v1-composite` branch resolves and remains canonical.
-- Re-read `CANONICAL_ROOT.md`, current V1 handoff, master checklist, and Campaign lifecycle design contract.
-- Did not repeat previously verified Phase 13 or Ready work.
+Reused the existing declarative RuleModule / InstalledContent / Catalog stack rather than creating a second plugin system.
 
-### Campaign duplicate/delete production path
+### Provider contracts and safety
 
-Inspection found that `CampaignApplicationService.duplicateCampaign()` and `deleteCampaign()` already existed. They were therefore reused rather than reimplemented.
+- `4d14cd8` — focused parser/calendar roundtrip contract.
+- `3e364dd` — installed-content Calendar/Ration profile types.
+- `b2244d5` — strict data-only provider parser and stable provider identities.
+- Unexpected fields such as arbitrary run/script hooks are rejected; month/leap/ration values are bounded and validated.
 
-New work:
+### Calendar authority
 
-- `4487ebf` — added runtime lifecycle failing contract for duplicate/delete.
-- `dbad5bc` — added UI ownership/destructive confirmation structure contract.
-- `24957b4` — exposed `duplicateCampaign`/`deleteCampaign` through the production `MockAdapter` Campaign runtime.
-  - duplicate uses the existing durable service and source revision.
-  - delete uses the existing durable service.
-  - delete rejects a Campaign currently captured by an active Session.
-- `3c53424` — added thin `campaignLifecycleCommands.ts` UI command facade; no persistence arithmetic in presentation code.
-- `d66b26b` — exposed duplicate/delete from the existing Campaign card/overlay UI without layout/navigation redesign.
-  - duplicate confirmation explicitly states copied Campaign-owned continuity and excluded Player-owned Character files, installed-content ownership, Session history, and transient Session state.
-  - duplicate re-names stash/DM Library/loadout namespaces through the existing service behavior.
-  - delete confirmation states irreversible Campaign-owned deletion and preservation of external Character/content stores.
-- `477250b` — canonical UI workflow now triggers on `work/v1-composite` and includes focused Campaign persistence/runtime/product/startup/lifecycle tests plus normal TypeScript/build gate.
+- `ad2eb02` — custom declarative calendar profiles now convert authoritative absolute minutes to and from era/year/month/day/time, including bounded leap-cycle rules.
 
-### V1-11 status
+### RuleModule / InstalledContent boundary
 
-Production implementation gaps identified in the prior checkpoint are now connected in code: archive confirmation, startup migration/corruption blocker UI, duplicate, and explicit delete.
+- `e686d9e` / `29e6ee9` — import validation contracts.
+- `d1977e1` — RuleModule package import preserves `campaignProvider` data.
+- `fc5229f` — provider content must be category `option` and its module must declare the matching `campaign.calendar-profile` or `campaign.ration-profile` capability.
+- `a2974b6` — persisted installed-content generations revalidate provider payloads on decode/restart.
+- `2f99068` / `abee49f` — provider metadata is projected read-only through the existing Catalog; no duplicate provider repository was introduced.
 
-Do **not** mark V1-11 DONE yet because exact-head workflow results have not been retrieved in this execution. The connector did not provide a push-run result, so no green claim is made.
+### Campaign authority/runtime
 
-Current product handoff is `.agents/V1_CURRENT_HANDOFF.md` at commit `ef9f39a`.
+- `412047f` — Campaign application service accepts validated optional profiles, pins `providerVersion`, performs custom calendar projection/correction/undo/day advance, and applies ration defaults inside the authoritative Campaign mutation.
+- Explicit roster ration override remains highest priority; provider kind default/global default follow; builtin fallback is 1.
+- Shortage remains warning/ledger only; no automatic damage/exhaustion.
+- `c97a3d0` — Catalog provider descriptor lookup.
+- `386814a` — production Campaign runtime resolves installed providerId/providerVersion and supplies profiles to authoritative mutations.
+- Missing custom provider does not make `getSnapshot()` fail; only provider-specific mutations fail explicitly.
+- `dacb1fd` — production runtime contract covers RuleModule install -> Campaign selection -> version pin -> custom calendar correction -> ration consumption plus restart with the provider missing.
 
-## Validation evidence
+## Validation status
 
-- Deterministic focused tests were authored with the implementation.
-- Canonical UI workflow wiring now includes those tests and `npm run build`.
-- Push-run success has not been observed through the available connector, so validation remains pending.
-- Comprehensive Codex audit intentionally not started.
+- Focused deterministic tests are present in source.
+- These new provider tests are not yet wired into the canonical UI workflow in this checkpoint.
+- Exact-head TypeScript/build/Actions result has not been observed; do not claim green/DONE.
+- Comprehensive Codex audit remains intentionally deferred until all V1 implementation is complete.
 
-## Remaining risks
+## Current functional boundary
 
-- Release checklist status text is stale relative to recent Campaign/Ready source; do not trust TODO/PARTIAL labels without source reconciliation.
-- Human Windows two-instance and visual dice acceptance remains a final/pre-release evidence task, not an implementation blocker.
-- Campaign duplicate currently intentionally copies Campaign-owned continuity while clearing Session history; UI states this exact scope.
+V1-12 provider **core/runtime is implemented, but the user path is still incomplete** because `CampaignSystemsPanel` still shows the old disabled module-provider placeholders.
+
+No broad UI changes were made in this dispatch.
 
 ## Next Exact Action
 
-Implement `V1-12` declarative Calendar/Ration provider support without changing the established Campaign UI structure.
+Finish the V1-12 provider user path inside the current Campaign UI.
 
-1. Read current Content/RuleModule manifest and validation contracts before creating any new schema.
-2. Reuse existing declarative module validation/capability machinery where possible.
-3. Implement validated `module.calendar-profile` projection without executable plugin code.
-4. Implement the equivalent ration declarative provider boundary.
-5. Missing/invalid providers must fail open to OFF/builtin behavior and must never block ordinary Session/Rest/Action flow.
-6. Populate the existing provider selectors only when compatible installed profiles exist.
-7. Add focused deterministic tests; do not start the final Codex audit.
+1. Derive installed Calendar/Ration provider descriptors from `snapshot.catalog`.
+2. Keep the existing provider `<select>` controls; append compatible installed provider options and keep the disabled placeholder only when none exist.
+3. If multiple versions of the same provider are installed, display/use the same newest-version selection rule as runtime and persist the selected version.
+4. For custom Calendar, keep the existing date editor but use profile months and show year/month/day rather than Simple Day fields.
+5. For custom Rations, make the preview use profile defaults; show shortage consequences as explanatory suggestions only, never automatic damage/exhaustion.
+6. If a currently selected provider is unavailable, show a clear unavailable state but do not block the Campaign screen, Session, Rest, or unrelated actions.
+7. Add `campaignDeclarativeProviderProfile`, `campaignDeclarativeProviderImport`, and `campaignDeclarativeProviderRuntime` to canonical UI workflow and obtain focused TypeScript/build evidence when available.
+8. After provider UI is complete, continue V1-12 with authoritative Long Rest + optional Campaign time advance + optional ration consumption compound write.
