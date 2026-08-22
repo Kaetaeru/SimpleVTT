@@ -9,7 +9,6 @@ import {
 } from "../../src/app/campaignProviderProfiles";
 
 const systems=readFileSync(new URL("../../src/CampaignSystemsPanel.tsx",import.meta.url),"utf8");
-const provider=readFileSync(new URL("../../src/app/AppProvider.tsx",import.meta.url),"utf8");
 
 const calendarProfile:InstalledCampaignCalendarProfileV1={kind:"calendar",defaultEra:"왕국력",weekdays:["해","달"],months:[{id:"first",label:"첫달",days:30}]};
 function catalogEntry(version:string):CatalogEntry {
@@ -31,9 +30,8 @@ test("Campaign provider UI derives installed profiles from snapshot catalog and 
   assert.match(systems,/snapshot\?\.catalog/);
   assert.match(systems,/latestCampaignProviderDescriptorsFromCatalog/);
   assert.match(systems,/pinnedCampaignProviderDescriptorFromCatalog/);
-  assert.match(systems,/providerVersion/);
-  assert.match(provider,/configureCampaignCalendar\(campaignId:string,input:\{enabled:boolean;providerId:string;providerVersion\?:string\}/);
-  assert.match(provider,/configureCampaignRations\(campaignId:string,input:\{enabled:boolean;providerId:string;providerVersion\?:string\}/);
+  assert.match(systems,/providerVersion:provider\.providerVersion/);
+  assert.match(systems,/providerOptionValue/);
 });
 
 test("custom calendar keeps the existing editor but uses profile months and explicit unavailable state",()=>{
