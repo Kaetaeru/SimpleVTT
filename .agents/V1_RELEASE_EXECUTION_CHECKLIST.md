@@ -244,6 +244,15 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 - [x] shortage는 warning/pending adjudication; 기본 제품이 damage/Exhaustion 발명 금지.
 - [x] OFF 상태에서 counter/automation/blocker 없음; 저장값 유지.
 
+### Session integration
+
+- [x] Session utility rail과 quick palette에서 Campaign 달력·식량 현황 진입.
+- [x] DM은 분/시간/일 진행, 직접 날짜·시간 수정, 메모, Undo, 식량 조정·소비·Undo 수행.
+- [x] Player는 동일한 Campaign 시간을 읽기 전용으로 확인하고 DM 조작 command를 받지 않음.
+- [x] Session setup의 식량 공개 정책에 따라 Player projection에서 잔량·필요량·부족량 제거.
+- [x] 연결 Session은 sessionId/revision envelope로 projection을 전송하고 compatible reconnect 뒤 재전송.
+- [ ] Windows 2-instance에서 DM 변경 → Player 반영, reconnect 복구, 숨김 식량 비노출 수동 검증.
+
 ### Compound behavior
 
 - [ ] Long Rest + optional time advance + optional ration consumption을 하나의 preview/batch로 처리.
@@ -258,11 +267,11 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 
 ```text
 EVIDENCE
-head: 417715e
-tests: Campaign suites (28 pass, 0 fail); Campaign/product shell regression (47 pass, 0 fail); tsc --noEmit (pass); vite build (421 modules, pass)
-human: browser-campaign-calendar-era-new-year-boundary-2026-08-22
+head: 59fb6ba
+tests: focused Campaign/Session/connected projection suites (37 pass, 0 fail); Session structure suites (8 pass, 0 fail); tsc --noEmit (pass); vite build (424 modules, pass)
+human: browser-session-campaign-pane-dm-player-role-projection-2026-08-22
 artifact: dist/ development production bundle; Windows artifact N/A
-notes: Player Character reference/host preset/companion roster, 연호·연월일·24시간 Gregorian calendar와 윤년/연도 경계, compensating undo, integer ration ledger, shortage warning-only behavior, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Join projection의 roster 편입, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
+notes: Player Character reference/host preset/companion roster, 연호·연월일·24시간 Gregorian calendar, compensating undo, integer ration ledger, Session DM 조작/Player 읽기 전용/식량 공개 정책, reconnect projection protocol, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Windows 2-instance acceptance, Join roster 편입, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
 ```
 
 ## V1-13 Party Stash / Campaign DM Library — TODO
