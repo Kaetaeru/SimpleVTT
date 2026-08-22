@@ -6,6 +6,7 @@ const root=readFileSync(new URL("../../src/SessionModeRoot.tsx",import.meta.url)
 const pane=readFileSync(new URL("../../src/SessionCampaignPane.tsx",import.meta.url),"utf8");
 const palette=readFileSync(new URL("../../src/SessionQuickPalette.tsx",import.meta.url),"utf8");
 const provider=readFileSync(new URL("../../src/app/AppProvider.tsx",import.meta.url),"utf8");
+const chromeStyles=readFileSync(new URL("../../src/session-integrated-reference-play.css",import.meta.url),"utf8");
 
 test("Session shell exposes Campaign status through the canonical utility rail and quick palette",()=>{
   assert.match(root,/"campaign"/);
@@ -13,6 +14,28 @@ test("Session shell exposes Campaign status through the canonical utility rail a
   assert.match(root,/>캠페인<\/button>/);
   assert.match(palette,/캠페인 달력 · 식량/);
   assert.match(palette,/캠페인 현황/);
+});
+
+test("Campaign time and detailed day period remain visible in the Session chrome",()=>{
+  assert.match(root,/session-reference-campaign-clock/);
+  assert.match(root,/campaignDayPeriod/);
+  assert.match(root,/campaignClockTime/);
+  assert.match(root,/Campaign 시간/);
+  assert.match(root,/toggleUtility\("campaign"/);
+  assert.match(root,/role==="dm"&&campaignCalendar\?\.enabled/);
+  assert.match(root,/type="time"/);
+  assert.match(root,/correctCampaignCalendarDateTime/);
+  assert.match(root,/세션 상단 시계 직접 수정/);
+  assert.match(root,/campaignClockBusy/);
+  assert.match(provider,/previewCalendarOverride/);
+  assert.match(provider,/correctCampaignCalendarDateTime: async/);
+  assert.match(provider,/campaignDateTimeToAbsoluteMinute/);
+  assert.match(provider,/setPreviewCalendarOverride/);
+  assert.match(pane,/dayPeriod\?\.label/);
+  assert.match(chromeStyles,/\.session-reference-play-chrome \.session-reference-campaign-clock/);
+  assert.match(chromeStyles,/\.session-reference-campaign-clock-wrap:hover \.session-reference-campaign-clock-editor/);
+  assert.match(chromeStyles,/\.session-reference-campaign-clock-wrap:focus-within \.session-reference-campaign-clock-editor/);
+  for(const period of ["deep-night","dawn","morning","midday","afternoon","sunset","evening","night"])assert.match(chromeStyles,new RegExp(`session-reference-campaign-clock\\.${period}`));
 });
 
 test("DM Session Campaign pane can operate calendar and rations",()=>{

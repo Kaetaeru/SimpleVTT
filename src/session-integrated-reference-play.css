@@ -95,6 +95,38 @@
   color: #efb4b7;
 }
 
+.session-reference-campaign-clock-wrap { position: relative; flex: 0 0 auto; }
+.session-reference-play-chrome .session-reference-campaign-clock {
+  --campaign-period-color: #8794a3;
+  min-width: 94px;
+  height: 31px;
+  min-height: 31px;
+  display: grid;
+  grid-template-columns: 7px auto auto;
+  align-items: center;
+  gap: 5px;
+  padding-inline: 8px;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 8px;
+  border-color: color-mix(in srgb, var(--campaign-period-color) 42%, var(--svtt-play-line));
+  background: color-mix(in srgb, var(--campaign-period-color) 8%, #172029);
+  color: #d7dee5;
+  font-variant-numeric: tabular-nums;
+}
+.session-reference-play-chrome .session-reference-campaign-clock:hover,.session-reference-play-chrome .session-reference-campaign-clock.active{border-color:var(--campaign-period-color);background:color-mix(in srgb,var(--campaign-period-color) 14%,var(--surface-2))}
+.session-reference-campaign-clock i { width: 7px; height: 7px; border-radius: 50%; background: var(--campaign-period-color); box-shadow: 0 0 8px color-mix(in srgb,var(--campaign-period-color) 65%,transparent); }
+.session-reference-campaign-clock span { color: var(--campaign-period-color); font-size: 8px; font-weight: 800; }
+.session-reference-campaign-clock strong { font-size: 10px; }
+.session-reference-campaign-clock.deep-night,.session-reference-campaign-clock.night { --campaign-period-color: #8aa8dc; }
+.session-reference-campaign-clock.dawn { --campaign-period-color: #c59aca; }
+.session-reference-campaign-clock.morning,.session-reference-campaign-clock.late-morning { --campaign-period-color: #e6c984; }
+.session-reference-campaign-clock.midday { --campaign-period-color: #f0dc83; }
+.session-reference-campaign-clock.afternoon { --campaign-period-color: #dcb66f; }
+.session-reference-campaign-clock.sunset { --campaign-period-color: #e49367; }
+.session-reference-campaign-clock.evening { --campaign-period-color: #b690c6; }
+.session-reference-campaign-clock-editor{position:absolute;z-index:120;top:calc(100% + 7px);left:50%;width:196px;transform:translateX(-50%) translateY(-4px);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;padding:10px;border:1px solid var(--line-strong);border-radius:10px;background:var(--surface);box-shadow:var(--shadow);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease}.session-reference-campaign-clock-wrap:hover .session-reference-campaign-clock-editor,.session-reference-campaign-clock-wrap:focus-within .session-reference-campaign-clock-editor{opacity:1;visibility:visible;pointer-events:auto;transform:translateX(-50%) translateY(0)}.session-reference-campaign-clock-editor label{display:grid;gap:4px}.session-reference-campaign-clock-editor label span{color:var(--muted);font-size:8px}.session-reference-campaign-clock-editor input{min-width:0;height:30px;padding:0 7px;font-variant-numeric:tabular-nums}.session-reference-campaign-clock-editor>button{align-self:end;height:30px;min-height:30px;padding:0 9px}.session-reference-campaign-clock-editor>small{grid-column:1/-1;color:var(--bad);font-size:8px;line-height:1.4}
+
 .session-reference-play-spacer { flex: 1; }
 
 .session-reference-play-main {
@@ -687,6 +719,9 @@
   .session-reference-play-chrome { gap: 4px; overflow-x: auto; }
   .session-reference-play-title { min-width: 140px; }
   .session-reference-play-chrome > button { flex: 0 0 auto; }
+  .session-reference-campaign-clock-wrap { position: sticky; left: 0; z-index: 2; }
+  .session-reference-campaign-clock-editor { position:fixed;top:44px;left:8px;transform:translateY(-4px); }
+  .session-reference-campaign-clock-wrap:hover .session-reference-campaign-clock-editor,.session-reference-campaign-clock-wrap:focus-within .session-reference-campaign-clock-editor { transform:translateY(0); }
   .session-command-body { grid-template-columns: 150px minmax(0, 1fr) 78px; }
   .session-controlled-actor { grid-template-columns: 42px minmax(0, 1fr); }
   .session-command-resources { scrollbar-width: thin; }

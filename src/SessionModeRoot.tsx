@@ -26,6 +26,7 @@ import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionP
 import { SessionQuickPalette, type SessionQuickDestination } from "./SessionQuickPalette";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import { SessionCampaignPane } from "./SessionCampaignPane";
+import { campaignDayPeriod, formatCampaignCalendarDateTime } from "./app/campaignCalendar";
 import "./session-mode.css";
 import "./session-connected-layout.css";
 import "./session-integrated-reference-play.css";
@@ -56,7 +57,7 @@ function utilityClass(active: SessionUtility, utility: Exclude<SessionUtility, n
 }
 
 export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
-  const { snapshot, resolveAction } = useSimpleVtt();
+  const { snapshot, resolveAction, correctCampaignCalendarDateTime } = useSimpleVtt();
   const handout = useSessionImageHandout();
   const [activeUtility, setActiveUtility] = useState<SessionUtility>(null);
   const [quickOpen,setQuickOpen]=useState(false);
@@ -68,6 +69,9 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
   const [targetingPending,setTargetingPending]=useState(false);
   const [targetingFeedback,setTargetingFeedback]=useState<string|null>(null);
   const [lastRollActorId,setLastRollActorId]=useState<string|null>(null);
+  const [campaignClockDraft,setCampaignClockDraft]=useState("00:00");
+  const [campaignClockBusy,setCampaignClockBusy]=useState(false);
+  const [campaignClockError,setCampaignClockError]=useState<string|null>(null);
   const lastLauncher = useRef<HTMLButtonElement | null>(null);
   const fullSheetLauncher = useRef<HTMLButtonElement | null>(null);
   const quickLauncher = useRef<HTMLButtonElement | null>(null);
@@ -79,6 +83,13 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     setSelectedTargetIds([]);
     setTargetingFeedback(null);
   },[snapshot?.session.role,snapshot?.scene.selectedActorId,snapshot?.activeCharacter.id]);
+
+  useEffect(()=>{
+    const anchor=snapshot?.campaignSessionSystems?.calendar.displayAnchor;
+    if(!anchor)return;
+    setCampaignClockDraft(`${String(anchor.hour??0).padStart(2,"0")}:${String(anchor.minute??0).padStart(2,"0")}`);
+    setCampaignClockError(null);
+  },[snapshot?.campaignSessionSystems?.campaignId,snapshot?.campaignSessionSystems?.calendar.absoluteMinute]);
 
   useEffect(()=>{
     if (!snapshot) return;
@@ -214,6 +225,22 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     : snapshot.connectionState === "reconnecting"
       ? "재연결 중"
       : "연결 끊김";
+  const campaignCalendar=snapshot.campaignSessionSystems?.calendar;
+  const campaignClockAnchor=campaignCalendar?.displayAnchor;
+  const campaignClockPeriod=campaignCalendar?.enabled&&campaignClockAnchor?campaignDayPeriod(campaignClockAnchor.hour??0):null;
+  const campaignClockTime=campaignClockAnchor?`${String(campaignClockAnchor.hour??0).padStart(2,"0")}:${String(campaignClockAnchor.minute??0).padStart(2,"0")}`:"--:--";
+  const campaignClockFull=campaignCalendar&&campaignClockAnchor?formatCampaignCalendarDateTime(campaignCalendar.providerId,campaignClockAnchor):"연결된 Campaign 달력 없음";
+  const applyCampaignClock=async()=>{
+    const projection=snapshot.campaignSessionSystems;
+    const anchor=projection?.calendar.displayAnchor;
+    if(role!=="dm"||!projection||!projection.calendar.enabled||!anchor)return;
+    const [hour,minute]=campaignClockDraft.split(":").map(Number);
+    setCampaignClockBusy(true);setCampaignClockError(null);
+    try{
+      await correctCampaignCalendarDateTime(projection.campaignId,{dateTime:{era:anchor.era??"서력",year:anchor.year??1,monthId:anchor.monthId??"1",day:anchor.day??1,hour,minute},note:"세션 상단 시계 직접 수정"});
+    }catch(error){setCampaignClockError(error instanceof Error?error.message:"시간을 수정하지 못했습니다.");}
+    finally{setCampaignClockBusy(false);}
+  };
 
   const utilityPane = <>
     {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
@@ -235,6 +262,14 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       <button type="button" className="session-reference-chrome-button product" onClick={onOpenProduct}>← 제품</button>
       <div className="session-reference-play-title"><strong>{sessionName}</strong><span>{role === "dm" ? "호스트 · DM" : "클라이언트 · 플레이어"}</span></div>
       <span className={`session-reference-connection ${snapshot.connectionState}`}>{connectionLabel}</span>
+      <div className="session-reference-campaign-clock-wrap">
+        <button type="button" className={`session-reference-campaign-clock ${campaignClockPeriod?.id??"disabled"} ${utilityClass(activeUtility,"campaign")}`} aria-label={`Campaign 시간 · ${campaignClockPeriod?.label??"추적 꺼짐"} · ${campaignClockFull}`} title={role==="dm"?`${campaignClockFull} · 마우스를 올려 시간 수정`:campaignClockFull} onClick={(event)=>toggleUtility("campaign",event.currentTarget)}><i/><span>{campaignClockPeriod?.label??"시간 OFF"}</span><strong>{campaignCalendar?.enabled?campaignClockTime:"--:--"}</strong></button>
+        {role==="dm"&&campaignCalendar?.enabled&&<div className="session-reference-campaign-clock-editor" aria-label="Campaign 시계 빠른 수정">
+          <label><span>시간 직접 수정</span><input type="time" step={60} value={campaignClockDraft} onChange={(event)=>setCampaignClockDraft(event.target.value)} aria-label="Campaign 시간"/></label>
+          <button type="button" disabled={campaignClockBusy||!campaignClockDraft} onClick={()=>void applyCampaignClock()}>{campaignClockBusy?"저장 중":"적용"}</button>
+          {campaignClockError&&<small role="alert">{campaignClockError}</small>}
+        </div>}
+      </div>
       <div className="session-reference-play-spacer" />
       <button type="button" className={utilityClass(activeUtility, role === "player" ? "quick-sheet" : "actor")} onClick={(event) => toggleUtility(role === "player" ? "quick-sheet" : "actor", event.currentTarget)}>시트</button>
       <button type="button" className={utilityClass(activeUtility, "inventory")} onClick={(event) => toggleUtility("inventory", event.currentTarget)}>{role === "dm" ? "아이템" : "인벤토리"}</button>

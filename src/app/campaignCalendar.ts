@@ -8,6 +8,22 @@ const GREGORIAN_MONTHS=[
 ] as const;
 
 export const GREGORIAN_CALENDAR_MONTHS=GREGORIAN_MONTHS.map((month)=>({...month}));
+export type CampaignDayPeriodId="deep-night"|"dawn"|"morning"|"late-morning"|"midday"|"afternoon"|"sunset"|"evening"|"night";
+const CAMPAIGN_DAY_PERIODS:Array<{startHour:number;id:CampaignDayPeriodId;label:string}>=[
+  {startHour:0,id:"deep-night",label:"심야"},
+  {startHour:4,id:"dawn",label:"새벽"},
+  {startHour:6,id:"morning",label:"아침"},
+  {startHour:9,id:"late-morning",label:"오전"},
+  {startHour:12,id:"midday",label:"한낮"},
+  {startHour:14,id:"afternoon",label:"오후"},
+  {startHour:17,id:"sunset",label:"해질녘"},
+  {startHour:19,id:"evening",label:"저녁"},
+  {startHour:22,id:"night",label:"밤"},
+];
+export function campaignDayPeriod(hour:number){
+  if(!Number.isInteger(hour)||hour<0||hour>23) throw new Error("시간대 계산은 0시부터 23시 사이여야 합니다.");
+  return {...[...CAMPAIGN_DAY_PERIODS].reverse().find((period)=>hour>=period.startHour)!};
+}
 export function isGregorianLeapYear(year:number){return year%4===0&&(year%100!==0||year%400===0);}
 export function gregorianMonthDays(year:number,month:number){
   if(month<1||month>12||!Number.isInteger(month)) throw new Error("월은 1월부터 12월 사이여야 합니다.");

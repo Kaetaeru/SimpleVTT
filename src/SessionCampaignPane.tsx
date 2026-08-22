@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_MONTHS } from "./app/campaignCalendar";
+import { campaignDayPeriod, formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_MONTHS } from "./app/campaignCalendar";
 import { useSimpleVtt } from "./app/AppProvider";
 import "./session-campaign-pane.css";
 
@@ -7,6 +7,7 @@ export function SessionCampaignPane({role,onClose}:{role:"dm"|"player";onClose()
   const api=useSimpleVtt();
   const projection=api.snapshot?.campaignSessionSystems??null;
   const anchor=projection?.calendar.displayAnchor;
+  const dayPeriod=projection?.calendar.enabled&&anchor?campaignDayPeriod(anchor.hour??0):null;
   const [era,setEra]=useState(anchor?.era??"서력");
   const [year,setYear]=useState(String(anchor?.year??1));
   const [month,setMonth]=useState(anchor?.monthId??"1");
@@ -38,7 +39,7 @@ export function SessionCampaignPane({role,onClose}:{role:"dm"|"player";onClose()
       <section className="session-campaign-block" aria-labelledby="session-campaign-calendar">
         <header><div><span>WORLD TIME</span><h2 id="session-campaign-calendar">달력</h2></div>{projection.calendar.enabled&&<strong>{formatCampaignCalendarDateTime(projection.calendar.providerId,projection.calendar.displayAnchor)}</strong>}</header>
         {!projection.calendar.enabled?<p className="session-campaign-muted">이번 세션에서는 달력을 사용하지 않습니다. 저장된 Campaign 시간은 유지됩니다.</p>:<>
-          <div className="session-campaign-date"><span>{projection.calendar.displayAnchor.era??"—"}</span><strong>{projection.calendar.providerId==="builtin.gregorian"?`${projection.calendar.displayAnchor.year}년 ${projection.calendar.displayAnchor.monthLabel} ${projection.calendar.displayAnchor.day}일`:`Day ${projection.calendar.displayAnchor.day}`}</strong><em>{String(projection.calendar.displayAnchor.hour??0).padStart(2,"0")}:{String(projection.calendar.displayAnchor.minute??0).padStart(2,"0")}</em></div>
+          <div className="session-campaign-date"><span>{projection.calendar.displayAnchor.era??"—"}</span><strong>{projection.calendar.providerId==="builtin.gregorian"?`${projection.calendar.displayAnchor.year}년 ${projection.calendar.displayAnchor.monthLabel} ${projection.calendar.displayAnchor.day}일`:`Day ${projection.calendar.displayAnchor.day}`}</strong><em><small>{dayPeriod?.label}</small>{String(projection.calendar.displayAnchor.hour??0).padStart(2,"0")}:{String(projection.calendar.displayAnchor.minute??0).padStart(2,"0")}</em></div>
           {projection.calendar.currentNote&&<p className="session-campaign-note">{projection.calendar.currentNote}</p>}
           {role==="dm"&&<>
             <div className="session-campaign-actions"><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(projection.campaignId,{deltaMinutes:10,note:note||undefined}))}>+10분</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(projection.campaignId,{deltaMinutes:30,note:note||undefined}))}>+30분</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(projection.campaignId,{deltaMinutes:60,note:note||undefined}))}>+1시간</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(projection.campaignId,{deltaMinutes:360,note:note||undefined}))}>+6시간</button><button disabled={busy} onClick={()=>void perform(()=>api.advanceCampaignCalendar(projection.campaignId,{deltaMinutes:1440,note:note||undefined}))}>+1일</button></div>

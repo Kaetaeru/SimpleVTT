@@ -15,7 +15,8 @@ import type {
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
-import type { CampaignCalendarDateTime, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./productionCombatantPreparationAdapter";
@@ -269,6 +270,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
   onExit(): void;
 }) {
   const parent = useSimpleVtt();
+  const [previewCalendarOverride,setPreviewCalendarOverride]=useState<{campaignId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"]}|null>(null);
   const previewSnapshot = useMemo<AppSnapshot | null>(() => {
     if (!parent.snapshot) return null;
     const activeCharacter = parent.snapshot.activeCharacter;
@@ -276,7 +278,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
     const previewCurrentActorId=mode==="initiative"&&!hasCurrentActor
       ? [...parent.snapshot.scene.entities].sort((left,right)=>right.initiative-left.initiative)[0]?.id??parent.snapshot.scene.currentActorId
       : parent.snapshot.scene.currentActorId;
-    const baseCampaign=parent.snapshot.campaignSessionSystems??{
+    const sourceCampaign=parent.snapshot.campaignSessionSystems??{
       campaignId:"campaign.browser-preview",
       campaignName:"브라우저 미리보기 캠페인",
       campaignRevision:1,
@@ -284,6 +286,10 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       calendar:{enabled:true,providerId:"builtin.gregorian",absoluteMinute:600,displayAnchor:{era:"왕국력",year:312,monthId:"4",monthLabel:"4월",day:7,hour:10,minute:0},currentNote:"Player 합류 직후"},
       rations:{enabled:true,visibleToPlayers:true,balance:8,dailyRequired:0,shortage:0},
     };
+    const baseCampaign=previewCalendarOverride?.campaignId===sourceCampaign.campaignId?{
+      ...sourceCampaign,
+      calendar:{...sourceCampaign.calendar,absoluteMinute:previewCalendarOverride.absoluteMinute,displayAnchor:previewCalendarOverride.displayAnchor},
+    }:sourceCampaign;
     const previewRosterMemberId=`connected:${activeCharacter.id}`;
     const hasPreviewMember=baseCampaign.roster.some((member)=>member.rosterMemberId===previewRosterMemberId);
     const roster=(hasPreviewMember?baseCampaign.roster.map((member)=>member.rosterMemberId===previewRosterMemberId?{...member,connectionState:"connected" as const}:member):[
@@ -323,7 +329,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       scene: previewCurrentActorId===parent.snapshot.scene.currentActorId?parent.snapshot.scene:{...parent.snapshot.scene,currentActorId:previewCurrentActorId},
       campaignSessionSystems,
     };
-  }, [mode, parent.snapshot, role]);
+  }, [mode, parent.snapshot, previewCalendarOverride, role]);
 
   const value = useMemo<AppContextValue>(() => ({
     ...parent,
@@ -334,6 +340,12 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
     stopSession: async () => onExit(),
     setSessionReady: async () => undefined,
     startPreparedSession: async () => undefined,
+    correctCampaignCalendarDateTime: async(campaignId,input)=>{
+      const calendar=previewSnapshot?.campaignSessionSystems?.calendar;
+      if(!calendar||previewSnapshot?.campaignSessionSystems?.campaignId!==campaignId)return;
+      const absoluteMinute=campaignDateTimeToAbsoluteMinute(calendar.providerId,input.dateTime);
+      setPreviewCalendarOverride({campaignId,absoluteMinute,displayAnchor:projectCampaignCalendar(calendar.providerId,absoluteMinute,input.dateTime.era)});
+    },
   }), [onExit, parent, previewSnapshot]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

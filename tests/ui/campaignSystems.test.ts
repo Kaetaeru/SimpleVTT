@@ -3,7 +3,7 @@ import test from "node:test";
 import { CampaignApplicationService, previewCampaignDailyRations } from "../../src/app/campaignApplicationService";
 import { CampaignLibraryRepository } from "../../src/app/campaignPersistence";
 import { MemoryCampaignLibraryStore } from "../../src/app/memoryCampaignLibraryStore";
-import { campaignDateTimeToAbsoluteMinute, formatCampaignCalendarDateTime, isGregorianLeapYear, projectCampaignCalendar } from "../../src/app/campaignCalendar";
+import { campaignDateTimeToAbsoluteMinute, campaignDayPeriod, formatCampaignCalendarDateTime, isGregorianLeapYear, projectCampaignCalendar } from "../../src/app/campaignCalendar";
 
 const now="2026-08-22T12:00:00.000Z";
 const envelope=(campaignRevision:number,requestId:string)=>({requestId,campaignId:"campaign.systems",expectedCampaignRevision:campaignRevision,initiatedByParticipantId:"dm.local",now});
@@ -15,6 +15,12 @@ async function setup(){
   await service.createCampaign({campaignId:"campaign.systems",name:"Systems",now});
   return {service,store};
 }
+
+test("Campaign clock divides the full day into detailed Korean play periods",()=>{
+  assert.deepEqual([0,4,6,9,12,14,17,19,22].map((hour)=>campaignDayPeriod(hour).label),["심야","새벽","아침","오전","한낮","오후","해질녘","저녁","밤"]);
+  assert.equal(campaignDayPeriod(23).label,"밤");
+  assert.throws(()=>campaignDayPeriod(24),/0시부터 23시/);
+});
 
 test("Campaign roster drives integer daily ration preview without owning Character files",async()=>{
   const {service}=await setup();
