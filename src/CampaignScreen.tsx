@@ -3,6 +3,7 @@ import { useSimpleVtt } from "./app/AppProvider";
 import type { CampaignRecordV1 } from "./app/campaignPersistenceContracts";
 import { CampaignSystemsPanel } from "./CampaignSystemsPanel";
 import { formatCampaignCalendarDateTime } from "./app/campaignCalendar";
+import { deleteCampaign, duplicateCampaign } from "./app/campaignLifecycleCommands";
 
 function campaignId(name:string){
   const slug=name.trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,"-").replace(/^-|-$/g,"").slice(0,32)||"campaign";
@@ -14,18 +15,21 @@ function dateLabel(value:string|undefined){
   try{return new Intl.DateTimeFormat("ko-KR",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value));}catch{return value;}
 }
 
-function CampaignCard({campaign,active,onOpen,onArchive,onRestore}:{campaign:CampaignRecordV1;active:boolean;onOpen():void;onArchive():void;onRestore():void}){
+function CampaignCard({campaign,active,onOpen,onArchive,onRestore,onDuplicate,onDelete}:{campaign:CampaignRecordV1;active:boolean;onOpen():void;onArchive():void;onRestore():void;onDuplicate():void;onDelete():void}){
   return <article className={active?"campaign-list-card active":"campaign-list-card"}>
     <button className="campaign-card-open" onClick={onOpen}>
       <span className="campaign-card-monogram">{campaign.name.trim().slice(0,1)||"C"}</span>
       <span><small>{campaign.status==="archived"?"보관됨":active?"현재 캠페인":"캠페인"}</small><strong>{campaign.name}</strong><em>{campaign.description||"설명이 없습니다."}</em></span>
     </button>
-    <footer><span>최근 열기 · {dateLabel(campaign.lastOpenedAt)}</span>{campaign.status==="archived"?<button onClick={onRestore}>복원</button>:<button onClick={onArchive}>보관</button>}</footer>
+    <footer>
+      <span>최근 열기 · {dateLabel(campaign.lastOpenedAt)}</span>
+      <span className="campaign-card-actions"><button onClick={onDuplicate}>복제</button>{campaign.status==="archived"?<button onClick={onRestore}>복원</button>:<button onClick={onArchive}>보관</button>}<button className="danger-action" onClick={onDelete}>삭제</button></span>
+    </footer>
   </article>;
 }
 
 export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
-  const {snapshot,createCampaign,openCampaign,archiveCampaign,restoreCampaign,configureCampaignSessionDefaults}=useSimpleVtt();
+  const {snapshot,refresh,createCampaign,openCampaign,archiveCampaign,restoreCampaign,configureCampaignSessionDefaults}=useSimpleVtt();
   const [creating,setCreating]=useState(false);
   const [setupOpen,setSetupOpen]=useState(false);
   const [name,setName]=useState("");
@@ -33,6 +37,9 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   const [error,setError]=useState<string|null>(null);
   const [pending,setPending]=useState(false);
   const [archiveTarget,setArchiveTarget]=useState<CampaignRecordV1|null>(null);
+  const [duplicateTarget,setDuplicateTarget]=useState<CampaignRecordV1|null>(null);
+  const [duplicateName,setDuplicateName]=useState("");
+  const [deleteTarget,setDeleteTarget]=useState<CampaignRecordV1|null>(null);
   const campaigns=snapshot?.campaigns??[];
   const activeCampaign=campaigns.find((campaign)=>campaign.campaignId===snapshot?.activeCampaignId)??null;
   const recent=useMemo(()=>campaigns.filter((campaign)=>campaign.status==="active").sort((a,b)=>(b.lastOpenedAt??b.updatedAt).localeCompare(a.lastOpenedAt??a.updatedAt)),[campaigns]);
@@ -57,14 +64,30 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   const submitCreate=()=>perform(async()=>{if(!name.trim()) throw new Error("캠페인 이름을 입력하세요.");await createCampaign({campaignId:campaignId(name),name:name.trim(),description:description.trim()||undefined});setName("");setDescription("");setCreating(false);});
   const confirmArchive=()=>{
     if(!archiveTarget) return;
-    const campaignId=archiveTarget.campaignId;
-    void perform(async()=>{await archiveCampaign(campaignId);setArchiveTarget(null);});
+    const targetId=archiveTarget.campaignId;
+    void perform(async()=>{await archiveCampaign(targetId);setArchiveTarget(null);});
+  };
+  const beginDuplicate=(campaign:CampaignRecordV1)=>{setDuplicateTarget(campaign);setDuplicateName(`${campaign.name} 복사본`);setArchiveTarget(null);setDeleteTarget(null);};
+  const confirmDuplicate=()=>{
+    if(!duplicateTarget) return;
+    const newName=duplicateName.trim();
+    if(!newName){setError("복제할 캠페인 이름을 입력하세요.");return;}
+    const sourceId=duplicateTarget.campaignId;
+    void perform(async()=>{await duplicateCampaign(sourceId,{newCampaignId:campaignId(newName),newName});await refresh();setDuplicateTarget(null);setDuplicateName("");});
+  };
+  const beginDelete=(campaign:CampaignRecordV1)=>{setDeleteTarget(campaign);setArchiveTarget(null);setDuplicateTarget(null);setDuplicateName("");};
+  const confirmDelete=()=>{
+    if(!deleteTarget) return;
+    const targetId=deleteTarget.campaignId;
+    void perform(async()=>{await deleteCampaign(targetId);await refresh();setDeleteTarget(null);setSetupOpen(false);});
   };
   const continueToSession=()=>perform(async()=>{
     if(!activeCampaign) throw new Error("세션을 시작할 캠페인을 선택하세요.");
     await configureCampaignSessionDefaults(activeCampaign.campaignId,{sessionNameTemplate:sessionName.trim()||activeCampaign.name,startingMode,calendarEnabled,rationsEnabled,rationsVisibleToPlayers});
     onOpenSession();
   });
+
+  const card=(campaign:CampaignRecordV1,active:boolean)=><CampaignCard key={campaign.campaignId} campaign={campaign} active={active} onOpen={()=>void perform(()=>openCampaign(campaign.campaignId))} onArchive={()=>setArchiveTarget(campaign)} onRestore={()=>void perform(()=>restoreCampaign(campaign.campaignId))} onDuplicate={()=>beginDuplicate(campaign)} onDelete={()=>beginDelete(campaign)}/>;
 
   return <div className="campaign-screen">
     <header className="campaign-page-head">
@@ -82,8 +105,8 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
 
     {!campaigns.length&&!creating?<section className="campaign-empty"><span>첫 장을 펼칠 준비가 됐습니다.</span><h2>아직 캠페인이 없습니다.</h2><p>캠페인을 만들면 달력·식량·파티 보관함·DM 라이브러리를 하나의 장기 플레이에 묶을 수 있습니다.</p><button className="primary" onClick={()=>setCreating(true)}>새 캠페인 만들기</button></section>:<div className="campaign-layout">
       <aside className="campaign-library">
-        <section><h2>최근 캠페인</h2>{recent.length?recent.map((campaign)=><CampaignCard key={campaign.campaignId} campaign={campaign} active={campaign.campaignId===activeCampaign?.campaignId} onOpen={()=>perform(()=>openCampaign(campaign.campaignId))} onArchive={()=>setArchiveTarget(campaign)} onRestore={()=>perform(()=>restoreCampaign(campaign.campaignId))}/>):<p className="campaign-list-empty">활성 캠페인이 없습니다.</p>}</section>
-        {archived.length>0&&<section><h2>보관된 캠페인</h2>{archived.map((campaign)=><CampaignCard key={campaign.campaignId} campaign={campaign} active={false} onOpen={()=>perform(()=>openCampaign(campaign.campaignId))} onArchive={()=>setArchiveTarget(campaign)} onRestore={()=>perform(()=>restoreCampaign(campaign.campaignId))}/>)}</section>}
+        <section><h2>최근 캠페인</h2>{recent.length?recent.map((campaign)=>card(campaign,campaign.campaignId===activeCampaign?.campaignId)):<p className="campaign-list-empty">활성 캠페인이 없습니다.</p>}</section>
+        {archived.length>0&&<section><h2>보관된 캠페인</h2>{archived.map((campaign)=>card(campaign,false))}</section>}
       </aside>
 
       <main className="campaign-dashboard">
@@ -92,6 +115,21 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
           <div className="campaign-identity-lock"><span>캠페인</span><strong>{archiveTarget.name}</strong><small>Campaign ID · {archiveTarget.campaignId}</small></div>
           <div className="campaign-capability-note"><span>보관 동작</span><strong>캠페인 데이터는 삭제하지 않습니다.</strong><p>보관하면 세션 시작이 비활성화되고 보관된 캠페인 목록으로 이동합니다. Character 파일, 설치 콘텐츠, 달력·식량·보관함·DM 라이브러리 기록은 그대로 유지됩니다.</p></div>
           <footer><button disabled={pending} onClick={()=>setArchiveTarget(null)}>취소</button><button className="primary" disabled={pending} onClick={confirmArchive}>{pending?"보관 중…":"캠페인 보관"}</button></footer>
+        </section>}
+        {duplicateTarget&&<section className="campaign-session-setup" role="dialog" aria-modal="true" aria-label="캠페인 복제 확인">
+          <header><div><span>DUPLICATE CAMPAIGN</span><h2>캠페인 복제</h2></div><button disabled={pending} onClick={()=>{setDuplicateTarget(null);setDuplicateName("");}}>닫기</button></header>
+          <div className="campaign-identity-lock"><span>원본 캠페인</span><strong>{duplicateTarget.name}</strong><small>Campaign ID · {duplicateTarget.campaignId}</small></div>
+          <label><span>새 캠페인 이름</span><input autoFocus value={duplicateName} onChange={(event)=>setDuplicateName(event.target.value)} /></label>
+          <div className="campaign-capability-note"><span>복제되는 Campaign-owned continuity</span><strong>현재 준비 상태를 새 Campaign namespace로 복사합니다.</strong><p>파티 명단의 Character 참조, 세션 기본값, 달력과 식량 상태·기록, 파티 보관함, DM 라이브러리, 콘텐츠 loadout을 복제합니다. 새 보관함·DM 라이브러리·loadout ID를 사용합니다.</p></div>
+          <div className="campaign-capability-note"><span>복제하지 않는 외부/세션 데이터</span><strong>Player 소유 데이터와 과거 Session은 복사하지 않습니다.</strong><p>Player 소유 Character 파일과 설치 콘텐츠 자체·소유권은 복제하지 않습니다. 파티 명단에는 Character 참조만 유지됩니다. 과거 세션 기록과 실행 중 Session transient state도 새 Campaign으로 복사하지 않습니다.</p></div>
+          <footer><button disabled={pending} onClick={()=>{setDuplicateTarget(null);setDuplicateName("");}}>취소</button><button className="primary" disabled={pending||!duplicateName.trim()} onClick={confirmDuplicate}>{pending?"복제 중…":"캠페인 복제"}</button></footer>
+        </section>}
+        {deleteTarget&&<section className="campaign-session-setup" role="dialog" aria-modal="true" aria-label="캠페인 삭제 확인">
+          <header><div><span>DELETE CAMPAIGN</span><h2>캠페인을 정말 삭제할까요?</h2></div><button disabled={pending} onClick={()=>setDeleteTarget(null)}>닫기</button></header>
+          <div className="campaign-identity-lock"><span>삭제 대상</span><strong>{deleteTarget.name}</strong><small>Campaign ID · {deleteTarget.campaignId}</small></div>
+          <div className="campaign-capability-note"><span>삭제 범위</span><strong>이 Campaign이 소유한 기록만 영구 삭제합니다.</strong><p>캠페인 설정, 파티 참조, 달력·식량, 파티 보관함, DM 라이브러리와 세션 요약이 삭제됩니다. Player 소유 Character 파일과 설치 콘텐츠 자체는 삭제하지 않습니다. 진행 중인 Session이 이 Campaign에 묶여 있으면 삭제를 거부합니다.</p></div>
+          <div className="campaign-error" role="alert">이 작업은 되돌릴 수 없습니다.</div>
+          <footer><button disabled={pending} onClick={()=>setDeleteTarget(null)}>취소</button><button className="danger-action" disabled={pending} onClick={confirmDelete}>{pending?"삭제 중…":"캠페인 삭제"}</button></footer>
         </section>}
         {activeCampaign?<>
           <header className="campaign-dashboard-head"><div><span>캠페인 대시보드</span><h2>{activeCampaign.name}</h2><p>{activeCampaign.description||"설명 없음"}</p></div><button className="primary" disabled={activeCampaign.status==="archived"} onClick={()=>setSetupOpen(true)}>세션 시작</button></header>
