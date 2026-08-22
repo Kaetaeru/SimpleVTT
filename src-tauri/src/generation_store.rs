@@ -16,7 +16,7 @@ pub(crate) struct StoredGenerationDto {
     pub read_error: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WriteGenerationRequest {
     pub expected_generation: u64,
@@ -58,6 +58,17 @@ fn committed_paths(dir: &Path, file_prefix: &str, label: &str) -> Result<Vec<(u6
     Ok(committed)
 }
 
+pub(crate) fn latest_generation_at(dir: &Path, file_prefix: &str, label: &str) -> Result<u64, String> {
+    Ok(committed_paths(dir, file_prefix, label)?
+        .first()
+        .map(|(generation, _)| *generation)
+        .unwrap_or(0))
+}
+
+pub(crate) fn generation_path(dir: &Path, file_prefix: &str, generation: u64) -> PathBuf {
+    dir.join(format!("{file_prefix}{generation}{FILE_SUFFIX}"))
+}
+
 pub(crate) fn read_generations_at(
     dir: &Path,
     file_prefix: &str,
@@ -81,7 +92,7 @@ pub(crate) fn read_generations_at(
     }).collect()
 }
 
-fn prune_old_generations(dir: &Path, file_prefix: &str, label: &str) {
+pub(crate) fn prune_old_generations(dir: &Path, file_prefix: &str, label: &str) {
     let Ok(committed) = committed_paths(dir, file_prefix, label) else {
         return;
     };
@@ -116,7 +127,7 @@ fn write_generation_at_impl(
         ));
     }
 
-    let final_path = dir.join(format!("{file_prefix}{}{FILE_SUFFIX}", request.next_generation));
+    let final_path = generation_path(dir, file_prefix, request.next_generation);
     if final_path.exists() {
         return Err(format!("{label} generation already exists: {}", request.next_generation));
     }
