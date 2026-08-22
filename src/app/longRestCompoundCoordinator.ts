@@ -46,6 +46,10 @@ export interface LongRestCompoundInput {
   now:string;
   advanceMinutes?:number;
   consumeRations?:boolean;
+  /** Effective Session capability. Falls back to durable Campaign capability when omitted. */
+  calendarEnabled?:boolean;
+  /** Effective Session capability. Falls back to durable Campaign capability when omitted. */
+  rationsEnabled?:boolean;
   note?:string;
   effects?:EffectInstance[];
   deathSaves?:{successes:number;failures:number};
@@ -128,7 +132,7 @@ async function projectCampaignCandidate(
   }
 
   if(requestedMinutes>0){
-    const sessionEnabled=currentCampaign.calendar.capability.enabled;
+    const sessionEnabled=input.calendarEnabled??currentCampaign.calendar.capability.enabled;
     const providerAvailable=builtinCalendarProvider(currentCampaign.calendar.capability.providerId)||Boolean(input.calendarProfile);
     if(!sessionEnabled){
       warnings.push("달력이 꺼져 있어 휴식 시간 진행은 적용하지 않았습니다.");
@@ -152,7 +156,7 @@ async function projectCampaignCandidate(
 
   if(input.consumeRations){
     const source=service.getCampaign(input.campaignId)!;
-    const sessionEnabled=source.rations.capability.enabled;
+    const sessionEnabled=input.rationsEnabled??source.rations.capability.enabled;
     const providerAvailable=builtinRationProvider(source.rations.capability.providerId)||Boolean(input.rationProfile);
     if(!sessionEnabled){
       warnings.push("식량 규칙이 꺼져 있어 휴식 식량 소비는 적용하지 않았습니다.");
