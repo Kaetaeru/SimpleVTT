@@ -1,5 +1,6 @@
 import { CampaignLibraryRepository, CampaignStaleRevisionError, createCampaignRecordV1 } from "./campaignPersistence";
 import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import { HANDOUT_IMAGE_MAX_BYTES, isLocalImageAssetV1 } from "./localImageAsset";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 
 const cp=<T,>(value:T):T=>structuredClone(value);
@@ -150,6 +151,12 @@ export class CampaignApplicationService {
     const entry=cp(context.entry);entry.entryId=entry.entryId.trim();entry.label=entry.label.trim();
     if(!entry.entryId||!entry.label)throw new Error("DM Library entry id and label are required");
     if(entry.kind==="custom-item"&&(!entry.definitionId?.trim()||!entry.itemTemplate))throw new Error("Custom item definition and template are required");
+    if(entry.kind==="image"&&!isLocalImageAssetV1(entry.imageAsset,HANDOUT_IMAGE_MAX_BYTES))throw new Error("DM Library image must be PNG, JPEG, or WebP up to 4 MiB");
+    if(entry.kind==="npc-definition"){
+      const npc=entry.npcDefinition;
+      if(!entry.definitionId?.trim()||!npc||npc.definitionId!==entry.definitionId||!npc.name.trim())throw new Error("NPC definition id and name are required");
+      if(!Number.isInteger(npc.ac)||npc.ac<0||!Number.isInteger(npc.maxHp)||npc.maxHp<1)throw new Error("NPC AC and HP are invalid");
+    }
     entry.tags=[...new Set((entry.tags??[]).map((tag)=>tag.trim()).filter(Boolean))];entry.updatedAt=context.now;
     return this.mutateCampaign(context,(campaign)=>{const index=campaign.dmLibrary.entries.findIndex((value)=>value.entryId===entry.entryId);if(index>=0)campaign.dmLibrary.entries[index]=entry;else campaign.dmLibrary.entries.push(entry);campaign.dmLibrary.revision+=1;});
   }

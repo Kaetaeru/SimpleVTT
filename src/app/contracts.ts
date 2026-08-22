@@ -588,6 +588,8 @@ export interface SimpleVttAdapter {
   upsertCampaignDmLibraryEntry(campaignId:string,entry:CampaignDmLibraryEntry):Promise<AppSnapshot>;
   removeCampaignDmLibraryEntry(campaignId:string,entryId:string):Promise<AppSnapshot>;
   grantCampaignDmLibraryItem(campaignId:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},quantity:number):Promise<AppSnapshot>;
+  revealCampaignDmLibraryImage(campaignId:string,entryId:string):Promise<AppSnapshot>;
+  instantiateCampaignDmLibraryNpc(campaignId:string,entryId:string):Promise<AppSnapshot>;
   hostSession(): Promise<AppSnapshot>;
   joinSession(address: string): Promise<AppSnapshot>;
   setReferenceRole(role: AppRole): Promise<AppSnapshot>;

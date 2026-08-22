@@ -169,3 +169,12 @@ test("DM Library grants a Campaign custom item to a Character or Party Stash",as
   assert.equal(snapshot.campaignSessionSystems?.partyStash.itemReferences.find((item)=>item.definitionId===template.definitionId)?.quantity,1);
   assert.equal(snapshot.campaigns?.find((campaign)=>campaign.campaignId==="campaign.library")?.dmLibrary.recentEntryIds[0],"entry.moon-key");
 });
+
+test("DM Library materializes a Campaign NPC definition into the live Encounter",async()=>{
+  const adapter=new MockAdapter();setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());await adapter.getSnapshot();await adapter.createCampaign({campaignId:"campaign.npc-library",name:"NPC Library"});
+  const definition={definitionId:"local.campaign.npc-library.npc.bandit-captain",name:"산적 대장",nameEn:"Bandit Captain",ac:15,maxHp:42,actions:["장검","단검"],statusImmunities:[],source:"Campaign DM Library · NPC Library",version:"1"};
+  await adapter.upsertCampaignDmLibraryEntry("campaign.npc-library",{entryId:"entry.bandit-captain",kind:"npc-definition",label:definition.name,definitionId:definition.definitionId,npcDefinition:definition,tags:["산적"]});
+  const snapshot=await adapter.instantiateCampaignDmLibraryNpc("campaign.npc-library","entry.bandit-captain");
+  assert.ok(snapshot.scene.entities.some((entity)=>entity.kind==="combatant"&&entity.name.startsWith("산적 대장")));
+  assert.equal(snapshot.campaigns?.find((campaign)=>campaign.campaignId==="campaign.npc-library")?.dmLibrary.recentEntryIds[0],"entry.bandit-captain");
+});

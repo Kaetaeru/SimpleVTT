@@ -33,12 +33,15 @@ function imageSize(asset: LocalImageAssetV1) {
 }
 
 export function SessionDmHandoutPane({ onClose }: { onClose(): void }) {
-  const { snapshot } = useSimpleVtt();
+  const { snapshot, revealCampaignDmLibraryImage } = useSimpleVtt();
   const handout = useSessionImageHandout();
   const [draft, setDraft] = useState<LocalImageAssetV1 | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   if (!snapshot || snapshot.session.role !== "host") return null;
+  const campaignId=snapshot.campaignSessionSnapshot?.campaignId??snapshot.activeCampaignId??null;
+  const campaign=snapshot.campaigns?.find((entry)=>entry.campaignId===campaignId);
+  const libraryImages=(campaign?.dmLibrary.entries??[]).filter((entry)=>entry.kind==="image"&&entry.imageAsset).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
 
   const choose = async (file: File | undefined) => {
     if (!file) return;
@@ -77,6 +80,7 @@ export function SessionDmHandoutPane({ onClose }: { onClose(): void }) {
       setPending(false);
     }
   };
+  const revealLibrary=async(entryId:string)=>{if(!campaignId||pending)return;setPending(true);try{await revealCampaignDmLibraryImage(campaignId,entryId);setError("");}catch(reason){setError(reason instanceof Error?reason.message:String(reason));}finally{setPending(false);}};
 
   const preview = draft ?? handout.asset;
   const previewKind = draft ? "공유 전 미리보기" : "현재 플레이어에게 공유 중";
@@ -89,6 +93,8 @@ export function SessionDmHandoutPane({ onClose }: { onClose(): void }) {
 
     <div className="session-handout-pane-body">
       <p className="session-handout-copy">로컬 이미지를 미리 본 뒤 현재 세션에 공개합니다. 새로 참가하거나 재연결한 Player에게도 현재 공유 이미지가 복원됩니다.</p>
+
+      {campaign&&<section className="session-handout-library"><strong>캠페인 DM 라이브러리</strong>{libraryImages.length?<div>{libraryImages.map((entry)=><button type="button" key={entry.entryId} disabled={pending} onClick={()=>void revealLibrary(entry.entryId)}><img src={entry.imageAsset!.dataUrl} alt=""/><span>{entry.favorite?"★ ":""}{entry.label}</span></button>)}</div>:<small>저장된 이미지가 없습니다. 캠페인 탭에서 이미지를 추가할 수 있습니다.</small>}</section>}
 
       <label className="session-handout-file">
         <span>PNG / JPEG / WebP 선택 · 최대 4 MiB</span>

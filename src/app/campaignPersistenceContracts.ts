@@ -1,3 +1,5 @@
+import type { LocalImageAssetV1 } from "./localImageAsset";
+
 export const CAMPAIGN_LIBRARY_SCHEMA_ID="simplevtt.campaign-library" as const;
 export const CAMPAIGN_LIBRARY_SCHEMA_VERSION=1 as const;
 
@@ -131,7 +133,21 @@ export interface CampaignDmLibraryEntry {
   favorite?:boolean;
   tags?:string[];
   itemTemplate?:CampaignPartyStashItemTemplate;
+  imageAsset?:LocalImageAssetV1;
+  npcDefinition?:CampaignNpcActorDefinition;
   updatedAt?:string;
+}
+
+export interface CampaignNpcActorDefinition {
+  definitionId:string;
+  name:string;
+  nameEn?:string;
+  ac:number;
+  maxHp:number;
+  actions:string[];
+  statusImmunities:string[];
+  source:string;
+  version:string;
 }
 
 export interface CampaignDmLibraryState {

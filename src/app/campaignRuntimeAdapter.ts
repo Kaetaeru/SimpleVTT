@@ -1,10 +1,11 @@
-import type { AppSnapshot, PartyStashTransferCommand, SessionMode } from "./contracts";
+import type { AppSnapshot, CombatantDefinitionVm, PartyStashTransferCommand, SessionMode } from "./contracts";
 import { CampaignApplicationService, previewCampaignDailyRations } from "./campaignApplicationService";
 import { CampaignLibraryRepository } from "./campaignPersistence";
 import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { MockAdapter } from "./mockAdapter";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
 import { registerConnectedCampaignRosterHandler } from "./connectedCampaignRosterPort";
+import { revealSessionImageHandout } from "./sessionImageHandoutRuntimeAdapter";
 
 interface CampaignRuntimeContext {
   service:CampaignApplicationService;
@@ -69,6 +70,8 @@ declare module "./mockAdapter" {
     upsertCampaignDmLibraryEntry(campaignId:string,entry:CampaignDmLibraryEntry):Promise<AppSnapshot>;
     removeCampaignDmLibraryEntry(campaignId:string,entryId:string):Promise<AppSnapshot>;
     grantCampaignDmLibraryItem(campaignId:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},quantity:number):Promise<AppSnapshot>;
+    revealCampaignDmLibraryImage(campaignId:string,entryId:string):Promise<AppSnapshot>;
+    instantiateCampaignDmLibraryNpc(campaignId:string,entryId:string):Promise<AppSnapshot>;
   }
 }
 
@@ -297,6 +300,21 @@ MockAdapter.prototype.grantCampaignDmLibraryItem=async function grantCampaignDmL
   const entry=campaign.dmLibrary.entries.find((value)=>value.entryId===entryId&&value.kind==="custom-item");if(!entry?.itemTemplate||!entry.definitionId)throw new Error("Custom item not found: "+entryId);
   if(target.kind==="character")await this.adjustDmInventory({requestId:requestId("dm-library-grant"),actorId:target.actorId,operation:"grant-item-template",itemTemplate:entry.itemTemplate,quantity});
   else await service.transferPartyStash({...mutationContext(campaignId,"dm-library-stash",campaign.revision),direction:"character-to-stash",asset:"item",definitionId:entry.definitionId,quantity,itemTemplate:entry.itemTemplate});
+  campaign=service.getCampaign(campaignId)!;await service.touchDmLibraryEntry({...mutationContext(campaignId,"dm-library-recent",campaign.revision),entryId});return this.getSnapshot();
+};
+MockAdapter.prototype.revealCampaignDmLibraryImage=async function revealCampaignDmLibraryImageRuntime(campaignId,entryId){
+  const service=await ensureHydrated(this);let campaign=service.getCampaign(campaignId);if(!campaign)throw new Error("Campaign not found: "+campaignId);
+  const entry=campaign.dmLibrary.entries.find((value)=>value.entryId===entryId&&value.kind==="image");if(!entry?.imageAsset)throw new Error("DM Library image not found: "+entryId);
+  await revealSessionImageHandout(this,entry.imageAsset);
+  await service.touchDmLibraryEntry({...mutationContext(campaignId,"dm-library-recent",campaign.revision),entryId});return this.getSnapshot();
+};
+MockAdapter.prototype.instantiateCampaignDmLibraryNpc=async function instantiateCampaignDmLibraryNpcRuntime(campaignId,entryId){
+  const service=await ensureHydrated(this);let campaign=service.getCampaign(campaignId);if(!campaign)throw new Error("Campaign not found: "+campaignId);
+  const entry=campaign.dmLibrary.entries.find((value)=>value.entryId===entryId&&value.kind==="npc-definition");if(!entry?.npcDefinition)throw new Error("DM Library NPC not found: "+entryId);
+  const definitions=(this as unknown as {combatantDefinitions:CombatantDefinitionVm[]}).combatantDefinitions;
+  const definition=entry.npcDefinition;const materialized:CombatantDefinitionVm={id:definition.definitionId,name:definition.name,nameEn:definition.nameEn,ac:definition.ac,maxHp:definition.maxHp,source:definition.source,version:definition.version,actions:[...definition.actions],statusImmunities:[...definition.statusImmunities]};
+  const index=definitions.findIndex((value)=>value.id===materialized.id);if(index>=0)definitions[index]=materialized;else definitions.push(materialized);
+  await this.instantiateCombatant(materialized.id);
   campaign=service.getCampaign(campaignId)!;await service.touchDmLibraryEntry({...mutationContext(campaignId,"dm-library-recent",campaign.revision),entryId});return this.getSnapshot();
 };
 

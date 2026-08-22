@@ -36,6 +36,13 @@
   gap: 12px;
   padding: 12px;
 }
+.session-handout-library { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+.session-handout-library > strong { font-size: 11px; }
+.session-handout-library > small { color: var(--muted); line-height: 1.4; }
+.session-handout-library > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.session-handout-library button { min-width: 0; padding: 6px; display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 7px; align-items: center; text-align: left; }
+.session-handout-library button img { width: 44px; height: 36px; object-fit: cover; border-radius: 5px; }
+.session-handout-library button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-handout-copy { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .session-handout-file {
   display: grid;

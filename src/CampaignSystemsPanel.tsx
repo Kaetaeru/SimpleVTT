@@ -3,6 +3,7 @@ import { previewCampaignDailyRations } from "./app/campaignApplicationService";
 import { formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_MONTHS } from "./app/campaignCalendar";
 import type { CampaignDmLibraryEntry, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignRosterMember } from "./app/campaignPersistenceContracts";
 import { useSimpleVtt } from "./app/AppProvider";
+import { HANDOUT_IMAGE_MAX_BYTES, LOCAL_IMAGE_ACCEPT, readLocalImageFile, type LocalImageAssetV1 } from "./app/localImageAsset";
 
 function rosterId(){return `roster.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
 function libraryId(){return `dm-item.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
@@ -25,12 +26,17 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
   const [libraryQuery,setLibraryQuery]=useState("");
+  const [libraryKind,setLibraryKind]=useState<"custom-item"|"image"|"npc-definition">("custom-item");
   const [editingLibraryId,setEditingLibraryId]=useState<string|null>(null);
   const [itemName,setItemName]=useState("");
   const [itemNameEn,setItemNameEn]=useState("");
   const [itemDefinitionId,setItemDefinitionId]=useState("");
   const [itemKind,setItemKind]=useState<CampaignPartyStashItemTemplate["kind"]>("equipment");
   const [itemTags,setItemTags]=useState("");
+  const [imageAsset,setImageAsset]=useState<LocalImageAssetV1|null>(null);
+  const [npcAc,setNpcAc]=useState("12");
+  const [npcHp,setNpcHp]=useState("10");
+  const [npcActions,setNpcActions]=useState("기본 공격");
   const rationPreview=useMemo(()=>previewCampaignDailyRations(campaign),[campaign]);
   useEffect(()=>{
     const anchor=campaign.calendar.state.displayAnchor;
@@ -45,16 +51,27 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
     await api.upsertCampaignRosterMember(campaign.campaignId,{rosterMemberId:rosterId(),label:memberLabel.trim(),kind:memberKind,characterRef:memberKind==="player-character-ref"?{characterId:characterId.trim()}:undefined,active:true,countsForRations:true,rationUnitsPerDay:units,stashPermission:"request"});
     setMemberLabel("");setCharacterId("");setRationUnits("1");
   });
-  const resetLibraryForm=()=>{setEditingLibraryId(null);setItemName("");setItemNameEn("");setItemDefinitionId("");setItemKind("equipment");setItemTags("");};
-  const editLibrary=(entry:CampaignDmLibraryEntry)=>{setEditingLibraryId(entry.entryId);setItemName(entry.label);setItemNameEn(entry.itemTemplate?.nameEn??"");setItemDefinitionId(entry.definitionId??"");setItemKind(entry.itemTemplate?.kind??"equipment");setItemTags((entry.tags??[]).join(", "));};
+  const resetLibraryForm=(kind=libraryKind)=>{setLibraryKind(kind);setEditingLibraryId(null);setItemName("");setItemNameEn("");setItemDefinitionId("");setItemKind("equipment");setItemTags("");setImageAsset(null);setNpcAc("12");setNpcHp("10");setNpcActions("기본 공격");};
+  const editLibrary=(entry:CampaignDmLibraryEntry)=>{if(entry.kind!=="custom-item"&&entry.kind!=="image"&&entry.kind!=="npc-definition")return;setLibraryKind(entry.kind);setEditingLibraryId(entry.entryId);setItemName(entry.label);setItemNameEn(entry.itemTemplate?.nameEn??entry.npcDefinition?.nameEn??"");setItemDefinitionId(entry.definitionId??"");setItemKind(entry.itemTemplate?.kind??"equipment");setItemTags((entry.tags??[]).join(", "));setImageAsset(entry.imageAsset??null);setNpcAc(String(entry.npcDefinition?.ac??12));setNpcHp(String(entry.npcDefinition?.maxHp??10));setNpcActions(entry.npcDefinition?.actions.join(", ")??"기본 공격");};
+  const chooseLibraryImage=async(file:File|undefined)=>{if(!file)return;try{setImageAsset(await readLocalImageFile(file,HANDOUT_IMAGE_MAX_BYTES));setError(null);}catch(reason){setImageAsset(null);setError(reason instanceof Error?reason.message:"이미지를 읽지 못했습니다.");}};
   const saveLibrary=()=>perform(async()=>{
-    if(!itemName.trim())throw new Error("아이템 이름을 입력하세요.");
-    const definitionId=itemDefinitionId.trim()||`local.${campaign.campaignId}.item.${itemName.trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,"-")}`;
+    if(!itemName.trim())throw new Error("이름을 입력하세요.");
+    const slug=itemName.trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,"-");
+    const definitionId=itemDefinitionId.trim()||`local.${campaign.campaignId}.${libraryKind}.${slug}`;
     const previous=campaign.dmLibrary.entries.find((entry)=>entry.entryId===editingLibraryId);
-    await api.upsertCampaignDmLibraryEntry(campaign.campaignId,{entryId:editingLibraryId??libraryId(),kind:"custom-item",label:itemName.trim(),definitionId,favorite:previous?.favorite??false,tags:itemTags.split(",").map((tag)=>tag.trim()).filter(Boolean),itemTemplate:{definitionId,name:itemName.trim(),nameEn:itemNameEn.trim()||undefined,kind:itemKind,passiveEffects:previous?.itemTemplate?.passiveEffects??[],grantedActionIds:previous?.itemTemplate?.grantedActionIds??[],provenance:[`Campaign DM Library · ${campaign.name}`]}});
+    const common={entryId:editingLibraryId??libraryId(),kind:libraryKind,label:itemName.trim(),definitionId,favorite:previous?.favorite??false,tags:itemTags.split(",").map((tag)=>tag.trim()).filter(Boolean)};
+    if(libraryKind==="custom-item")await api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...common,kind:"custom-item",itemTemplate:{definitionId,name:itemName.trim(),nameEn:itemNameEn.trim()||undefined,kind:itemKind,passiveEffects:previous?.itemTemplate?.passiveEffects??[],grantedActionIds:previous?.itemTemplate?.grantedActionIds??[],provenance:[`Campaign DM Library · ${campaign.name}`]}});
+    else if(libraryKind==="image"){
+      if(!imageAsset)throw new Error("이미지 파일을 선택하세요.");
+      await api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...common,kind:"image",definitionId:undefined,imageAsset});
+    }else{
+      const ac=Number(npcAc),maxHp=Number(npcHp);if(!Number.isInteger(ac)||ac<0||!Number.isInteger(maxHp)||maxHp<1)throw new Error("NPC AC와 HP를 확인하세요.");
+      await api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...common,kind:"npc-definition",npcDefinition:{definitionId,name:itemName.trim(),nameEn:itemNameEn.trim()||undefined,ac,maxHp,actions:npcActions.split(",").map((action)=>action.trim()).filter(Boolean),statusImmunities:previous?.npcDefinition?.statusImmunities??[],source:`Campaign DM Library · ${campaign.name}`,version:"1"}});
+    }
     resetLibraryForm();
   });
-  const visibleLibrary=campaign.dmLibrary.entries.filter((entry)=>entry.kind==="custom-item"&&(!libraryQuery.trim()||`${entry.label} ${entry.definitionId??""} ${(entry.tags??[]).join(" ")}`.toLocaleLowerCase("ko-KR").includes(libraryQuery.trim().toLocaleLowerCase("ko-KR")))).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
+  const visibleLibrary=campaign.dmLibrary.entries.filter((entry)=>entry.kind===libraryKind&&(!libraryQuery.trim()||`${entry.label} ${entry.definitionId??""} ${(entry.tags??[]).join(" ")}`.toLocaleLowerCase("ko-KR").includes(libraryQuery.trim().toLocaleLowerCase("ko-KR")))).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
+  const duplicateLibrary=(entry:CampaignDmLibraryEntry)=>{const definitionId=entry.definitionId?`${entry.definitionId}.copy.${Date.now()}`:undefined;return api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,entryId:libraryId(),definitionId,npcDefinition:entry.npcDefinition&&definitionId?{...entry.npcDefinition,definitionId}:undefined,label:entry.label+" 복사본",favorite:false});};
 
   return <div className="campaign-system-workspace">
     {error&&<div className="campaign-error" role="alert">{error}</div>}
@@ -117,19 +134,27 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
 
     <section className="campaign-system-panel campaign-dm-library-panel" aria-labelledby="campaign-dm-library-title">
       <header><div><span>PRIVATE LIBRARY</span><h3 id="campaign-dm-library-title">DM 라이브러리</h3></div><strong>{campaign.dmLibrary.entries.length}개 · Campaign 전용</strong></header>
-      <p className="campaign-panel-copy">플레이어에게 투영되지 않는 캠페인 전용 아이템입니다. 세션 DM 아이템 패널에서 캐릭터나 파티 보관함으로 바로 지급할 수 있습니다.</p>
-      <div className="campaign-dm-library-toolbar"><input value={libraryQuery} onChange={(event)=>setLibraryQuery(event.target.value)} placeholder="이름·태그·Definition 검색" aria-label="DM 라이브러리 검색"/><button onClick={resetLibraryForm}>새 커스텀 아이템</button></div>
+      <p className="campaign-panel-copy">플레이어에게 원본이 투영되지 않는 캠페인 전용 준비물입니다. 아이템 지급, 이미지 공개, NPC Encounter 추가에 사용합니다.</p>
+      <div className="campaign-dm-library-kinds" role="tablist" aria-label="DM 라이브러리 종류">
+        <button role="tab" aria-selected={libraryKind==="custom-item"} className={libraryKind==="custom-item"?"active":""} onClick={()=>resetLibraryForm("custom-item")}>아이템 <b>{campaign.dmLibrary.entries.filter((entry)=>entry.kind==="custom-item").length}</b></button>
+        <button role="tab" aria-selected={libraryKind==="image"} className={libraryKind==="image"?"active":""} onClick={()=>resetLibraryForm("image")}>이미지 <b>{campaign.dmLibrary.entries.filter((entry)=>entry.kind==="image").length}</b></button>
+        <button role="tab" aria-selected={libraryKind==="npc-definition"} className={libraryKind==="npc-definition"?"active":""} onClick={()=>resetLibraryForm("npc-definition")}>NPC 액터 <b>{campaign.dmLibrary.entries.filter((entry)=>entry.kind==="npc-definition").length}</b></button>
+      </div>
+      <div className="campaign-dm-library-toolbar"><input value={libraryQuery} onChange={(event)=>setLibraryQuery(event.target.value)} placeholder="이름·태그·Definition 검색" aria-label="DM 라이브러리 검색"/><button onClick={()=>resetLibraryForm()}>{libraryKind==="custom-item"?"새 아이템":libraryKind==="image"?"새 이미지":"새 NPC 액터"}</button></div>
       <div className="campaign-dm-library-form">
         <label><span>이름</span><input value={itemName} onChange={(event)=>setItemName(event.target.value)} placeholder="예: 별빛 부적"/></label>
-        <label><span>영문명</span><input value={itemNameEn} onChange={(event)=>setItemNameEn(event.target.value)} placeholder="선택"/></label>
-        <label><span>Definition ID</span><input value={itemDefinitionId} onChange={(event)=>setItemDefinitionId(event.target.value)} placeholder="비우면 자동 생성"/></label>
-        <label><span>종류</span><select value={itemKind} onChange={(event)=>setItemKind(event.target.value as CampaignPartyStashItemTemplate["kind"])}><option value="equipment">장비</option><option value="consumable">소모품</option><option value="magic">마법 아이템</option></select></label>
+        {libraryKind!=="image"&&<label><span>영문명</span><input value={itemNameEn} onChange={(event)=>setItemNameEn(event.target.value)} placeholder="선택"/></label>}
+        {libraryKind!=="image"&&<label><span>Definition ID</span><input value={itemDefinitionId} onChange={(event)=>setItemDefinitionId(event.target.value)} placeholder="비우면 자동 생성"/></label>}
+        {libraryKind==="custom-item"&&<label><span>종류</span><select value={itemKind} onChange={(event)=>setItemKind(event.target.value as CampaignPartyStashItemTemplate["kind"])}><option value="equipment">장비</option><option value="consumable">소모품</option><option value="magic">마법 아이템</option></select></label>}
+        {libraryKind==="image"&&<label className="campaign-library-file"><span>PNG / JPEG / WebP · 최대 4 MiB</span><input type="file" accept={LOCAL_IMAGE_ACCEPT} onChange={(event)=>void chooseLibraryImage(event.target.files?.[0])}/></label>}
+        {libraryKind==="npc-definition"&&<><label><span>AC</span><input type="number" min={0} step={1} value={npcAc} onChange={(event)=>setNpcAc(event.target.value)}/></label><label><span>최대 HP</span><input type="number" min={1} step={1} value={npcHp} onChange={(event)=>setNpcHp(event.target.value)}/></label><label><span>행동 · 쉼표 구분</span><input value={npcActions} onChange={(event)=>setNpcActions(event.target.value)} placeholder="단검, 숏보우"/></label></>}
         <label><span>태그</span><input value={itemTags} onChange={(event)=>setItemTags(event.target.value)} placeholder="보물, 회복, 퀘스트"/></label>
-        <button className="primary" disabled={busy||!itemName.trim()} onClick={()=>void saveLibrary()}>{editingLibraryId?"아이템 수정":"아이템 만들기"}</button>
+        <button className="primary" disabled={busy||!itemName.trim()||(libraryKind==="image"&&!imageAsset)} onClick={()=>void saveLibrary()}>{editingLibraryId?"수정 저장":"라이브러리에 추가"}</button>
       </div>
+      {libraryKind==="image"&&imageAsset&&<figure className="campaign-library-image-preview"><img src={imageAsset.dataUrl} alt="DM 라이브러리 이미지 미리보기"/><figcaption>{imageAsset.fileName??itemName} · {(imageAsset.byteLength/1024).toFixed(0)} KiB</figcaption></figure>}
       <div className="campaign-dm-library-list">
-        {visibleLibrary.map((entry)=><article key={entry.entryId}><button className={entry.favorite?"favorite active":"favorite"} aria-label={`${entry.label} 즐겨찾기`} onClick={()=>void perform(()=>api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,favorite:!entry.favorite}))}>★</button><div><strong>{entry.label}</strong><small>{entry.itemTemplate?.kind??entry.kind} · {entry.definitionId}{entry.tags?.length?` · ${entry.tags.join(" · ")}`:""}</small></div><button onClick={()=>editLibrary(entry)}>수정</button><button onClick={()=>void perform(()=>api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,entryId:libraryId(),label:entry.label+" 복사본",favorite:false}))}>복제</button><button className="danger-action" onClick={()=>void perform(()=>api.removeCampaignDmLibraryEntry(campaign.campaignId,entry.entryId))}>삭제</button></article>)}
-        {!visibleLibrary.length&&<p className="campaign-inline-empty">검색되는 커스텀 아이템이 없습니다.</p>}
+        {visibleLibrary.map((entry)=><article key={entry.entryId}><span className="campaign-library-thumb">{entry.imageAsset?<img src={entry.imageAsset.dataUrl} alt=""/>:<b>{entry.kind==="npc-definition"?"NPC":"IT"}</b>}</span><button className={entry.favorite?"favorite active":"favorite"} aria-label={`${entry.label} 즐겨찾기`} onClick={()=>void perform(()=>api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,favorite:!entry.favorite}))}>★</button><div><strong>{entry.label}</strong><small>{entry.kind==="npc-definition"?`AC ${entry.npcDefinition?.ac} · HP ${entry.npcDefinition?.maxHp}`:entry.imageAsset?`${(entry.imageAsset.byteLength/1024).toFixed(0)} KiB`:entry.itemTemplate?.kind??entry.kind}{entry.definitionId?` · ${entry.definitionId}`:""}{entry.tags?.length?` · ${entry.tags.join(" · ")}`:""}</small></div><button onClick={()=>editLibrary(entry)}>수정</button><button onClick={()=>void perform(()=>duplicateLibrary(entry))}>복제</button><button className="danger-action" onClick={()=>void perform(()=>api.removeCampaignDmLibraryEntry(campaign.campaignId,entry.entryId))}>삭제</button></article>)}
+        {!visibleLibrary.length&&<p className="campaign-inline-empty">이 종류에 저장된 항목이 없습니다.</p>}
       </div>
     </section>
 

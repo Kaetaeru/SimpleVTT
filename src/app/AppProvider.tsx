@@ -79,6 +79,8 @@ interface AppContextValue {
   upsertCampaignDmLibraryEntry(campaignId:string,entry:CampaignDmLibraryEntry):Promise<void>;
   removeCampaignDmLibraryEntry(campaignId:string,entryId:string):Promise<void>;
   grantCampaignDmLibraryItem(campaignId:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},quantity:number):Promise<void>;
+  revealCampaignDmLibraryImage(campaignId:string,entryId:string):Promise<void>;
+  instantiateCampaignDmLibraryNpc(campaignId:string,entryId:string):Promise<void>;
   createCampaign(input:{campaignId:string;name:string;description?:string}):Promise<void>;
   openCampaign(campaignId:string):Promise<void>;
   updateCampaign(campaignId:string,payload:{name?:string;description?:string}):Promise<void>;
@@ -228,6 +230,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     upsertCampaignDmLibraryEntry: async (campaignId,entry) => apply(() => mockAdapter.upsertCampaignDmLibraryEntry(campaignId,entry)),
     removeCampaignDmLibraryEntry: async (campaignId,entryId) => apply(() => mockAdapter.removeCampaignDmLibraryEntry(campaignId,entryId)),
     grantCampaignDmLibraryItem: async (campaignId,entryId,target,quantity) => apply(() => mockAdapter.grantCampaignDmLibraryItem(campaignId,entryId,target,quantity)),
+    revealCampaignDmLibraryImage: async (campaignId,entryId) => apply(() => mockAdapter.revealCampaignDmLibraryImage(campaignId,entryId)),
+    instantiateCampaignDmLibraryNpc: async (campaignId,entryId) => apply(() => mockAdapter.instantiateCampaignDmLibraryNpc(campaignId,entryId)),
     createCampaign: async (input) => apply(() => mockAdapter.createCampaign(input)),
     openCampaign: async (campaignId) => apply(() => mockAdapter.openCampaign(campaignId)),
     updateCampaign: async (campaignId,payload) => apply(() => mockAdapter.updateCampaign(campaignId,payload)),

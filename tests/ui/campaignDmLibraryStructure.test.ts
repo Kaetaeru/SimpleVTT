@@ -4,11 +4,18 @@ import test from "node:test";
 
 const campaign=readFileSync(new URL("../../src/CampaignSystemsPanel.tsx",import.meta.url),"utf8");
 const session=readFileSync(new URL("../../src/SessionInventoryPane.tsx",import.meta.url),"utf8");
+const handout=readFileSync(new URL("../../src/SessionImageHandoutBridge.tsx",import.meta.url),"utf8");
+const encounter=readFileSync(new URL("../../src/SessionDmTools.tsx",import.meta.url),"utf8");
 const connected=readFileSync(new URL("../../src/app/connectedCampaignSystemsRuntimeAdapter.ts",import.meta.url),"utf8");
 
 test("Campaign dashboard exposes private custom item CRUD search favorite and duplication",()=>{
-  for(const label of ["DM 라이브러리 검색","아이템 만들기","아이템 수정","즐겨찾기","복제","삭제"])assert.match(campaign,new RegExp(label));
+  for(const label of ["DM 라이브러리 검색","아이템","이미지","NPC 액터","라이브러리에 추가","즐겨찾기","복제","삭제"])assert.match(campaign,new RegExp(label));
   assert.match(campaign,/upsertCampaignDmLibraryEntry/);assert.match(campaign,/removeCampaignDmLibraryEntry/);
+});
+
+test("Campaign image and NPC entries have live Session quick actions",()=>{
+  assert.match(handout,/revealCampaignDmLibraryImage/);assert.match(handout,/캠페인 DM 라이브러리/);
+  assert.match(encounter,/instantiateCampaignDmLibraryNpc/);assert.match(encounter,/비공개 NPC 액터 정의/);
 });
 
 test("Session DM quick grant targets either selected Character or Party Stash",()=>{
