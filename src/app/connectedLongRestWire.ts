@@ -1,4 +1,5 @@
 import type {
+  ConnectedLongRestCommitPreflight,
   ConnectedLongRestOffer,
   ConnectedLongRestOwnerDecision,
 } from "./connectedLongRestPreflight";
@@ -11,6 +12,7 @@ import type {
 export type ConnectedLongRestWireMessage =
   | { type:"long-rest-offer"; offer:ConnectedLongRestOffer }
   | { type:"long-rest-decision"; decision:ConnectedLongRestOwnerDecision }
+  | { type:"long-rest-prepare-authorized"; preflight:ConnectedLongRestCommitPreflight }
   | { type:"long-rest-owner-prepared"; prepared:ConnectedLongRestOwnerPrepared }
   | { type:"long-rest-global-commit"; commit:ConnectedLongRestGlobalCommit }
   | { type:"long-rest-owner-materialized"; materialized:ConnectedLongRestOwnerMaterialized }
@@ -59,6 +61,17 @@ function isDecision(value:unknown):value is ConnectedLongRestOwnerDecision {
     &&typeof value.accepted==="boolean";
 }
 
+function isPreflight(value:unknown):value is ConnectedLongRestCommitPreflight {
+  return isRecord(value)
+    &&isString(value.transactionId)
+    &&isString(value.sessionId)
+    &&isString(value.campaignId)
+    &&isRevision(value.expectedCampaignRevision)
+    &&isString(value.ownerParticipantId)
+    &&isCharacterRevision(value.character)
+    &&isOptions(value.options);
+}
+
 function isOwnerPrepared(value:unknown):value is ConnectedLongRestOwnerPrepared {
   return isRecord(value)
     &&isString(value.transactionId)
@@ -89,6 +102,10 @@ export function validateConnectedLongRestWireMessage(value:unknown):ConnectedLon
   }
   if (value.type==="long-rest-decision") {
     if (!isDecision(value.decision)) return "invalid long-rest-decision message";
+    return value as ConnectedLongRestWireMessage;
+  }
+  if (value.type==="long-rest-prepare-authorized") {
+    if (!isPreflight(value.preflight)) return "invalid long-rest-prepare-authorized message";
     return value as ConnectedLongRestWireMessage;
   }
   if (value.type==="long-rest-owner-prepared") {
