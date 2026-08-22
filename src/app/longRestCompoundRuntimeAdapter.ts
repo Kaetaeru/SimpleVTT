@@ -24,7 +24,13 @@ import {
   type CampaignLibraryStore,
 } from "./campaignPersistenceContracts";
 import { pinnedCampaignProviderDescriptorFromCatalog } from "./campaignProviderProfiles";
-import { executeLongRestCompound, type LongRestCompoundResult } from "./longRestCompoundCoordinator";
+import {
+  executeLongRestCompound,
+  previewLongRestCompound,
+  type LongRestCompoundInput,
+  type LongRestCompoundPreview,
+  type LongRestCompoundResult,
+} from "./longRestCompoundCoordinator";
 import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 
 const cp=<T,>(value:T):T=>structuredClone(value);
@@ -36,13 +42,17 @@ export interface ProductionLongRestOptions {
   note?:string;
 }
 
+export interface ProductionLongRestPreview extends LongRestCompoundPreview {
+  snapshot:AppSnapshot;
+}
+
 export interface ProductionLongRestResult extends LongRestCompoundResult {
   snapshot:AppSnapshot;
 }
 
-function transactionId(){
+function transactionId(prefix="long-rest"){
   const id=globalThis.crypto?.randomUUID?.()??`${Date.now()}.${Math.floor(Math.random()*1_000_000)}`;
-  return `long-rest.${id}`;
+  return `${prefix}.${id}`;
 }
 
 function campaignDocumentFromSnapshot(snapshot:AppSnapshot):CampaignDocumentV1 {
@@ -91,6 +101,44 @@ function effectiveCapabilities(snapshot:AppSnapshot,campaignId:string){
   };
 }
 
+function inputFor(
+  snapshot:AppSnapshot,
+  campaignId:string,
+  options:ProductionLongRestOptions,
+  prefix="long-rest",
+):LongRestCompoundInput {
+  const profiles=exactProviderProfiles(snapshot,campaignId);
+  const capabilities=effectiveCapabilities(snapshot,campaignId);
+  return {
+    transactionId:options.transactionId?.trim()||transactionId(prefix),
+    campaignId,
+    activeCharacterId:snapshot.activeCharacter.id,
+    initiatedByParticipantId:"dm.local",
+    now:new Date().toISOString(),
+    advanceMinutes:options.advanceMinutes,
+    consumeRations:options.consumeRations,
+    note:options.note,
+    calendarEnabled:capabilities.calendarEnabled,
+    rationsEnabled:capabilities.rationsEnabled,
+    calendarProfile:profiles.calendarProfile,
+    rationProfile:profiles.rationProfile,
+  };
+}
+
+export async function previewProductionLongRest(
+  adapter:MockAdapter,
+  options:ProductionLongRestOptions={},
+):Promise<ProductionLongRestPreview> {
+  const snapshot=await adapter.getSnapshot();
+  const campaignDocument=campaignDocumentFromSnapshot(snapshot);
+  const campaignId=campaignDocument.activeCampaignId!;
+  const preview=await previewLongRestCompound(inputFor(snapshot,campaignId,options,"long-rest-preview"),{
+    characterSheets:[snapshot.activeCharacter],
+    campaignDocument,
+  });
+  return {...preview,snapshot};
+}
+
 /**
  * Production bridge for one authoritative Long Rest transaction.
  * It deliberately prepares both stores outside the existing single-store mutation
@@ -131,22 +179,7 @@ export async function performProductionLongRest(
     writer=new MemoryCharacterCampaignCompoundWriter(volatileCharacterStore,volatileCampaignStore);
   }
 
-  const profiles=exactProviderProfiles(before,campaignId);
-  const capabilities=effectiveCapabilities(before,campaignId);
-  const result=await executeLongRestCompound({
-    transactionId:options.transactionId?.trim()||transactionId(),
-    campaignId,
-    activeCharacterId:before.activeCharacter.id,
-    initiatedByParticipantId:"dm.local",
-    now:new Date().toISOString(),
-    advanceMinutes:options.advanceMinutes,
-    consumeRations:options.consumeRations,
-    note:options.note,
-    calendarEnabled:capabilities.calendarEnabled,
-    rationsEnabled:capabilities.rationsEnabled,
-    calendarProfile:profiles.calendarProfile,
-    rationProfile:profiles.rationProfile,
-  },{
+  const result=await executeLongRestCompound(inputFor(before,campaignId,options),{
     characterDocument,
     characterSheets:[before.activeCharacter],
     characterStore,
