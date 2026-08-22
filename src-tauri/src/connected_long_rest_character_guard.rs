@@ -5,6 +5,7 @@ const MARKER_PREFIX: &str = "connected-long-rest.";
 const MARKER_SUFFIX: &str = ".json";
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct MarkerIdentity {
     transaction_id: String,
 }
@@ -52,7 +53,7 @@ mod tests{
         let dir=test_dir("prepared");
         fs::create_dir_all(&dir).expect("dir");
         let base=dir.join("connected-long-rest.74682e31.json");
-        fs::write(&base,r#"{"transaction_id":"tx.1"}"#).expect("marker");
+        fs::write(&base,r#"{"transactionId":"tx.1"}"#).expect("marker");
         assert!(assert_no_prepared_at(&dir).expect_err("prepared must lock").contains("tx.1"));
         fs::write(base.with_file_name("connected-long-rest.74682e31.json.aborted"),"aborted").expect("phase");
         assert_no_prepared_at(&dir).expect("aborted unlocks");
