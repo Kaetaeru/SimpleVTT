@@ -4,7 +4,7 @@ import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { advanceTurnRuntimeLifecycle } from "./realTurnLifecycleService";
 import { projectTurnRuntimeToScene, synchronizeTurnRuntimeFromScene } from "./realTurnRuntimeService";
-import { clearReadyActionConfiguration, readyActionConfigurationFor } from "./standardActionReadyState";
+import { clearReadyActionConfiguration, readyActionConfigurationFor, readyActionConfigurationsFor } from "./standardActionReadyState";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 
 interface EffectAwareTurnAdapterState {
@@ -28,8 +28,9 @@ function clearStatuses(entity:SceneEntity|undefined,statuses:readonly string[]) 
 }
 
 function readyExpiresAtTurnStart(adapter:MockAdapter,entity:SceneEntity|undefined) {
-  const ready=readyActionConfigurationFor(adapter);
-  return Boolean(ready&&entity&&ready.actorId===entity.id&&entity.status.includes("준비 행동"));
+  if (!entity) return false;
+  const ready=readyActionConfigurationFor(adapter,entity.id);
+  return Boolean(ready&&entity.status.includes("준비 행동"));
 }
 
 function eventId() {
@@ -65,7 +66,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
     ...clearStatuses(endingActor,END_OF_TURN_STATUSES),
     ...clearStatuses(next,START_OF_TURN_STATUSES),
   ];
-  if (readyExpires) clearReadyActionConfiguration(this);
+  if (readyExpires&&next) clearReadyActionConfiguration(this,next.id);
   const activity=projectRuntimeEventsToActivity({
     id:eventId(),
     actorName:"시스템",
@@ -81,9 +82,9 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
 
 MockAdapter.prototype.endInitiative=async function endInitiativeClearingStandardActionStatuses() {
   const internal=this as unknown as EffectAwareTurnAdapterState;
-  const ready=readyActionConfigurationFor(this);
+  const hadReady=readyActionConfigurationsFor(this).length>0;
   const changes=internal.scene.entities.flatMap((entity)=>clearStatuses(entity,[...END_OF_TURN_STATUSES,...START_OF_TURN_STATUSES]));
-  if (ready) clearReadyActionConfiguration(this);
+  if (hadReady) clearReadyActionConfiguration(this);
   const snapshot=await previousEndInitiative.call(this);
   if (changes.length>0) {
     const entry=internal.activity[0];
