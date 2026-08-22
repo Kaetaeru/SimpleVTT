@@ -58,6 +58,8 @@ Impact: not an identified duplicate ledger today, but a high-risk boundary for C
 
 `cargo` and `rustc` are not installed or bundled in the current environment. Rust generation-store and transport tests exist in `src-tauri/src`, but `cargo test --manifest-path src-tauri/Cargo.toml` and `npm run tauri:build` cannot be executed here yet.
 
+An isolated rustup installation was attempted under `work/rust-toolchain` after permission was granted. Both PowerShell and curl failed at the Windows TLS credential layer, and the Windows certificate downloader was denied by the execution environment. No global installation or PATH change occurred.
+
 V1-01 remains PARTIAL until a Rust toolchain is available and those tests pass. No global tool installation was attempted.
 
 ## Required closeout

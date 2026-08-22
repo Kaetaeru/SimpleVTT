@@ -106,7 +106,8 @@ V1-40 + V1-41 + V1-42
 | --- | --- | --- |
 | V1-00 Git baseline | DONE | remote 개발 계보와 로컬 Session Inventory 변경을 `work/v1-composite`에 보존하고 exact-head 검증 완료 |
 | V1-01 Foundation audit | PARTIAL | build/domain/persistence/connected tests 다수 존재, canonical head 재검증 필요 |
-| V1-10~13 Campaign systems | TODO | 설계만 존재; runtime/store/UI 없음 |
+| V1-10 Campaign persistence | PARTIAL | aggregate/repository/application service/Tauri command와 10개 TS 테스트 존재; Rust 실행 증거 대기 |
+| V1-11~13 Campaign product/systems | TODO | Campaign UI, 달력/식량 command, 보관함/DM Library workflow 미구현 |
 | V1-20 Real Character local play | PARTIAL | production Character/skill/spell/inventory tests 존재 |
 | V1-21 Complete local loop | PARTIAL | visible browser path와 전체 human walkthrough 미완료 |
 | V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart adapters/tests 존재 |
@@ -169,17 +170,26 @@ notes: remote branch agent/108-production-play-session-ux@5618c7b diverges befor
 
 계약: `docs/design/campaign-runtime.md`, `docs/design/campaign-systems.md`
 
-## V1-10 Campaign persistence — TODO
+## V1-10 Campaign persistence — PARTIAL
 
 `depends_on: V1-01`
 
-- [ ] `CampaignRecord` schema/version/revision 계약.
-- [ ] Campaign aggregate에 roster, session defaults, calendar, supply ledger, stash refs, DM Library namespace, summaries 포함.
-- [ ] immutable-generation local store 및 Tauri store command.
-- [ ] create/read/update/archive/restore/duplicate/delete application service.
-- [ ] stale writer reject, corrupt-newest recovery, newer-schema blocker, atomic failure rollback.
-- [ ] Campaign A/B namespace isolation tests.
-- [ ] Character Library와 Installed Content store를 복사하거나 소유하지 않음.
+- [x] `CampaignRecord` schema/version/revision 계약.
+- [x] Campaign aggregate에 roster, session defaults, calendar, supply ledger, stash refs, DM Library namespace, summaries 포함.
+- [x] immutable-generation local store 및 Tauri store command 소스.
+- [x] create/read/update/archive/restore/duplicate/delete application service.
+- [x] stale writer reject, corrupt-newest recovery, newer-schema blocker, atomic failure rollback.
+- [x] Campaign A/B namespace isolation tests.
+- [x] Character Library와 Installed Content store를 복사하거나 소유하지 않음.
+
+```text
+EVIDENCE
+head: 2384edc6d93efb893fc6b1ad1d17df5b1aa02219
+tests: campaignPersistence + campaignFailureRecovery + campaignIsolation + campaignTauriStoreStructure (10 pass, 0 fail); tsc --noEmit (pass); vite build (410 modules, pass)
+human: N/A
+artifact: dist/ development production bundle; Windows artifact N/A
+notes: Rust campaign generation-store tests are implemented but cargo/rustc are unavailable. V1-10 remains PARTIAL until cargo test passes.
+```
 
 **Required tests:** `campaignPersistence`, `campaignFailureRecovery`, `campaignIsolation`, Tauri generation-store tests.
 
