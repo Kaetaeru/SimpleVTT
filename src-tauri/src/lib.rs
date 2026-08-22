@@ -5,6 +5,7 @@ mod installed_content;
 mod campaign_library;
 mod character_campaign_compound;
 mod connected_long_rest_character;
+mod connected_long_rest_character_guard;
 mod connected_long_rest_host;
 mod session_transport;
 
@@ -57,7 +58,9 @@ fn write_character_library_generation(
     let _guard = lock_character_campaign_persistence(&persistence)?;
     let root = local_data_root(&app)?;
     character_campaign_compound::recover_at(&root)?;
-    character_library::write_generation_at(&root.join("character-library"), &request)
+    let character_dir = root.join("character-library");
+    connected_long_rest_character_guard::assert_no_prepared_at(&character_dir)?;
+    character_library::write_generation_at(&character_dir, &request)
 }
 
 #[tauri::command]
@@ -196,6 +199,8 @@ fn write_character_campaign_compound(
 ) -> Result<(), String> {
     let _guard = lock_character_campaign_persistence(&persistence)?;
     let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_long_rest_character_guard::assert_no_prepared_at(&root.join("character-library"))?;
     character_campaign_compound::write_at(&root, &request)
 }
 
