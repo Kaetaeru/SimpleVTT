@@ -4,6 +4,15 @@ cd /d "%~dp0"
 
 title SimpleVTT Live Development
 
+rem Git reserves environment names such as GIT_DIR and GIT_WORK_TREE.
+rem Clear inherited values so Git always discovers this worktree normally.
+set "GIT_DIR="
+set "GIT_WORK_TREE="
+set "GIT_INDEX_FILE="
+set "GIT_COMMON_DIR="
+set "GIT_OBJECT_DIRECTORY="
+set "GIT_ALTERNATE_OBJECT_DIRECTORIES="
+
 set "GIT_EXE="
 for /f "delims=" %%I in ('where git 2^>nul') do if not defined GIT_EXE set "GIT_EXE=%%~fI"
 if not defined GIT_EXE if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
@@ -14,8 +23,8 @@ if not defined GIT_EXE (
   pause
   exit /b 1
 )
-for %%I in ("%GIT_EXE%") do set "GIT_DIR=%%~dpI"
-set "PATH=%GIT_DIR%;%PATH%"
+for %%I in ("%GIT_EXE%") do set "GIT_BIN_DIR=%%~dpI"
+set "PATH=%GIT_BIN_DIR%;%PATH%"
 
 set "NODE_EXE="
 set "NPM_CMD="
