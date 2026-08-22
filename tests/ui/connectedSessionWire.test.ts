@@ -87,6 +87,7 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
       sessionId:"session.test",requestId:"request.1",actorId:"char.aelar",actionId:"action.shortbow",
       targetIds:["combatant.goblin-a"],knownEventCursor:0,capabilities:["resolution-event-v1"],
       character:{characterId:"char.aelar",sourceRevision:2,runtimeRevision:5},
+      readyConfiguration:{actorId:"char.aelar",actionId:"action.shortbow",trigger:"고블린이 문을 통과하면"},
     },
   });
   roundTrip({ type:"catchup-request",sessionId:"session.test",afterCursor:1 });
@@ -101,6 +102,10 @@ test("connected wire rejects malformed JSON, unknown message types, invalid curs
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"catchup-request",sessionId:"session.test",afterCursor:-1})).status,"rejected");
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"ready-intent",sessionId:"session.test",ready:"yes"})).status,"rejected");
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"session-ended",sessionId:"session.test",reason:""})).status,"rejected");
+  assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"action-request",request:{
+    sessionId:"session.test",requestId:"request.1",actorId:"char.aelar",actionId:"action.standard.ready",
+    targetIds:["char.aelar"],knownEventCursor:0,capabilities:[],readyConfiguration:{actorId:"char.aelar",actionId:"action.shortbow",trigger:42},
+  }})).status,"rejected");
   const malformedParticipant=structuredClone(readyEvent) as unknown as {payload:{ready:unknown}};
   malformedParticipant.payload.ready="yes";
   assert.equal(decodeConnectedWireMessage(JSON.stringify({type:"event-batch",sessionId:"session.test",afterCursor:1,events:[malformedParticipant]})).status,"rejected");

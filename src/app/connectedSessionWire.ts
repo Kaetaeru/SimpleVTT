@@ -141,9 +141,11 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
 
 function isActionRequest(value:unknown):value is ConnectedActionRequest {
   if (!isRecord(value)) return false;
+  const ready=value.readyConfiguration;
+  const validReady=ready===undefined||(isRecord(ready)&&isString(ready.actorId)&&isString(ready.actionId)&&isString(ready.trigger));
   return isString(value.sessionId)&&isString(value.requestId)&&isString(value.actorId)&&isString(value.actionId)
     &&isStringArray(value.targetIds)&&isCursor(value.knownEventCursor)&&isStringArray(value.capabilities)
-    &&(value.character===undefined||isCharacterRevision(value.character));
+    &&(value.character===undefined||isCharacterRevision(value.character))&&validReady;
 }
 
 function validateMessage(value:unknown):ConnectedWireMessage|string {

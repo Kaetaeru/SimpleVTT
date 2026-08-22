@@ -1,5 +1,6 @@
 import type { EconomyVm, SessionMode } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import type { ReadyActionConfiguration } from "./standardActionReadyState";
 
 export const CONNECTED_SESSION_PROTOCOL_VERSION = 1 as const;
 
@@ -30,6 +31,7 @@ export interface ConnectedActionRequest {
   knownEventCursor:number;
   character?:CharacterProjectionRevision;
   capabilities:string[];
+  readyConfiguration?:ReadyActionConfiguration;
 }
 
 export type ConnectedCorrectionChange =
