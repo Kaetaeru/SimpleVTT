@@ -3,170 +3,84 @@
 ## Project coordinates
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Canonical repository URL: `https://github.com/Kaetaeru/SimpleVTT`
-- Canonical baseline / active product branch: `work/v1-composite`
-- Rerun control path: `.chatgpt-rerun/control.json`
-- Existing run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- Existing sequence: `1`
-- Existing task_id: `phase14-production-play-session-ux`
-- Canonical V1 routing authority: `CANONICAL_ROOT.md`
-- Current V1 execution router: `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`
-- Current implementation checkpoint: `.agents/V1_CURRENT_HANDOFF.md`
+- Canonical branch/ref: `work/v1-composite`
+- Control path: `.chatgpt-rerun/control.json`
+- run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
+- sequence: `1`
+- task_id: `phase14-production-play-session-ux`
+- dispatch: `continue`
 
-## Run continuity
+This remains the same active V1-completion run. Do not reset run identity, repeat already source-connected work merely for validation, route implementation to `main`, or start the comprehensive Codex audit before the pre-release boundary.
 
-This is the same active Rerun run. Do not create a new run_id, reset sequence/task identity, discard the preserved Phase 13 exact-head evidence, or route V1 implementation back to `main`.
+## Preserved completed/source-connected foundation
 
-The current sequence is the durable V1-completion umbrella: implement every remaining intended V1 function through the real production path while preserving the established UI, then perform one comprehensive Codex audit only at the frozen pre-release boundary.
+Preserve the established Phase 13 connected Character SessionProjection/reconnect/write-back foundation, Ready lifecycle, V1-11 Campaign lifecycle, declarative Calendar/Ration providers, canonical `resolveLongRest()` Character authority, local Long Rest compound coordinator/preview/UI, Character+Campaign prepared-generation foundation, and Memory/Tauri compound persistence/recovery.
 
-## Primary V1 contract
+The local active-Character Long Rest path remains **SOURCE-CONNECTED / VALIDATION PENDING**. No green claim is authorized without observed exact-head execution evidence.
 
-### Functional completion, not checkbox completion
+## 2026-08-23 reconciliation result
 
-A file, test, adapter, or checklist mark is not sufficient by itself. V1 requires the intended behavior to be reachable from the production UI and to preserve authority, persistence, session/transient boundaries, error handling, reconnect semantics, and cross-system consistency.
+The prior handoff recorded local Long Rest head `7e85dc1`, but the actual canonical branch had advanced to `193a4a3fba1384c90addc94596352c7536669eae` before this execution. Those intervening commits already added:
 
-Do not add unrelated post-V1 features. Do not treat fixture-only/debug-only behavior as production completion.
+- `connectedLongRestPreflight.ts` with exact owner/Character/Campaign revision approval gating;
+- `connectedLongRestTransactionState.ts` with approved -> owner-prepared -> committed -> complete/aborted phases and post-commit recovery semantics;
+- durable Character write-back support for canonical recovery-lockout changes;
+- related deterministic tests and `test:campaign-rest` wiring.
 
-### Preserve the current UI baseline
+Therefore those pieces must not be reimplemented.
 
-The current SimpleVTT screen structure, navigation, panel placement, hierarchy, spacing/style language, and existing controls are the V1 visual baseline.
+## Connected Long Rest scope decision
 
-- Prefer domain/application/persistence/network fixes behind the current UI.
-- Do not redesign, reshuffle, rename, restyle, or replace existing major UI merely to simplify implementation.
-- Missing intended V1 behavior may add the smallest compatible control/state presentation required to expose it.
-- Empty/loading/error/disabled states are allowed when functionally required.
-- Final acceptance includes UI-structure preservation as well as behavior.
+`docs/design/campaign-systems.md` makes connected Long Rest part of V1 rather than an optional expansion. The contract requires Character-by-Character preview, DM/owner decisions, validation, and one authoritative compound commit with no Campaign-only or Character-only durable partial success.
 
-## Preserved completed work — Task 0
+Character ownership remains on the owning Player store. A Host-unknown remote Character may be represented by SessionProjection/roster reference, but must not be copied into the Host Character library merely to reuse the local compound coordinator.
 
-**task_id:** `phase13-closeout-ui-dice-regression`  
-**status:** COMPLETE
+## Completed in this execution
 
-Preserve the existing Phase 13 arbitrary Character SessionProjection, connected host authority, reconnect/write-back, creation/level-up UX convergence, shared visual dice, and exact-head evidence.
+Starting from actual GitHub state, this execution added the transport contract required to continue the distributed flow:
 
-Preserved implementation checkpoint: `7c9440970753a370fec7830cfa691832552e1d05`.
+- `d5239f6` — `src/app/connectedLongRestWire.ts`
+  - messages: `long-rest-offer`, `long-rest-decision`, `long-rest-owner-prepared`, `long-rest-global-commit`, `long-rest-owner-materialized`, `long-rest-abort`;
+  - validates non-empty transaction/session/campaign/owner/preparation IDs, non-negative revisions/advance minutes, and boolean owner/ration decisions.
+- `f8a9da1` — `tests/ui/connectedLongRestWire.test.ts`
+  - deterministic round-trip coverage for all distributed phases;
+  - malformed/negative/non-boolean input rejection.
+- `b5fa9a7` — existing `connectedSessionWire.ts` now admits and validates the `long-rest-*` messages through the canonical Session transport codec.
 
-Preserved artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
-
-## Task 1 — sequence 1 V1 completion umbrella
-
-**task_id:** `phase14-production-play-session-ux`  
-**status:** ACTIVE / CONTINUE AUTHORIZED
-
-Historical Phase 14 intent remains preserved, but current implementation priority comes from the canonical V1 handoff/checklist, not the old Phase 14 branch text.
-
-### Preserved implementation state
-
-Do not reimplement the following merely to obtain new validation:
-
-- Ready/connected lifecycle, reconnect/reset cleanup, `ready-action-v1`, isolated acceptance-pair tooling;
-- V1-11 Campaign lifecycle production paths;
-- declarative Calendar/Ration provider schema/parser/catalog/runtime/UI paths;
-- canonical Character Long Rest domain projection;
-- Character/Campaign prepared immutable-generation foundation;
-- Memory two-participant compound preflight/apply;
-- Tauri cross-store durable staging + single commit marker + committed-interruption recovery;
-- Tauri Character/Campaign shared persistence mutex/recovery fence and TS compound writer.
-
-## Current checkpoint — local authoritative Long Rest user path
-
-The previously missing local production coordinator/UI has now been source-connected.
-
-### Authority and preview
-
-- `longRestCompoundCoordinator.ts` owns the compound preview/commit orchestration.
-- Character recovery is delegated to `projectCharacterLongRest` / canonical `resolveLongRest`.
-- Campaign Calendar/Ration candidates are calculated through an isolated `CampaignApplicationService`; React does not own rule arithmetic.
-- Calendar advance and Ration consumption are independent opt-in effects.
-- effective Session OFF state or unavailable custom provider skips only that optional effect and returns a warning; Rest itself remains valid.
-- master `transactionId` is stamped into Campaign `recentRequestIds` so a retried compound Rest is a no-write duplicate before Character Rest can be applied twice.
-- `previewLongRestCompound` and commit use the same candidate calculation.
-
-### Production runtime bridge
-
-- `longRestCompoundRuntimeAdapter.ts` prepares both stores outside the existing single-store mutation methods.
-- Tauri uses `TauriCharacterCampaignCompoundWriter`; volatile development/test mode seeds paired memory stores and uses `MemoryCharacterCampaignCompoundWriter`.
-- Runtime Character/Campaign persistence contexts are replaced/re-hydrated only after the compound writer succeeds.
-- the post-commit Character hydrate refreshes the existing Scene entity HP/life projection; no UI/Scene state is mutated before successful compound persistence.
-- exact pinned installed Calendar/Ration profiles are resolved from the existing Catalog helper.
-
-### Existing UI integration
-
-The current `SessionCampaignPane` structure is preserved. A single DM Long Rest block was inserted without moving the existing Party/Calendar/Ration surfaces.
-
-It provides:
-
-- authoritative HP/Temporary HP preview;
-- optional `+8시간` Campaign time checkbox, default OFF;
-- optional daily Ration consumption checkbox, default OFF;
-- authoritative resulting Calendar/Ration preview when selected;
-- disabled optional controls when that Session capability is OFF;
-- warnings from unavailable provider/capability projection;
-- one `장기 휴식 적용` action.
-
-### Deterministic contracts authored
-
-Focused source tests now cover:
-
-- Character canonical Long Rest projection;
-- prepared generation no-write behavior and Memory two-participant atomicity;
-- Rest-only compound success;
-- Calendar-only and Ration-only selection;
-- both optional effects;
-- effective Session disabled behavior;
-- missing custom providers;
-- master request idempotency / no-write duplicate;
-- compound writer rejection leaving both production stores unchanged;
-- preview no-write behavior and preview/commit candidate parity;
-- production volatile runtime rehydrate including Scene HP projection;
-- production Rest defaulting to no Campaign side effects.
-
-`npm run test:campaign-rest` now contains this focused set and `npm run build` invokes it after TypeScript/rules/creation suites.
+Current exact product head at checkpoint: `b5fa9a7002c0cefafba9e6a7f6d217f7fe379121`.
 
 ## Validation status
 
-No TypeScript, focused test, Rust test, build, or Windows execution result for the new Long Rest head was observed in this dispatch.
+No green claim.
 
-- direct commit combined status returned no statuses;
-- commit-associated workflow run lookup returned no runs;
-- the connector did not expose a usable direct-push Actions-run listing endpoint.
+Before the new commits, exact head `193a4a3` had no combined commit statuses and no commit-associated workflow runs. A direct container clone could not run because the execution container could not resolve `github.com`, so no local `tsx`, `tsc`, `npm run build`, `cargo test`, Tauri build, or Windows result was observed.
 
-Therefore the local Long Rest path is **SOURCE-CONNECTED / VALIDATION PENDING**, not green/DONE.
+The newly added `connectedLongRestWire.test.ts` is authored but has not yet been added to `test:campaign-rest`, and no execution result has been observed.
 
-Comprehensive Codex audit remains deferred until all pre-release implementation gaps are closed.
+## Remaining V1-12 implementation gap
 
-## Remaining behavioral questions before V1-12 can be called functionally complete
+The existing source now has the approval gate, transaction phase model, and transport message codec, but not the production distributed coordinator that makes those phases real.
 
-The new UI/coordinator operates on the currently active persisted Character in the local/host runtime. Before marking V1-12 DONE, reconcile the Campaign Rest contract against connected play:
+The next implementation must reuse existing connected ownership/reconnect/write-back seams and must provide, in order:
 
-- determine whether V1 requires one DM Rest command to include remote/host-unknown connected Character owners in the same compound decision/preview;
-- if yes, reuse existing connected Character projection/write-back and host authority rather than copying a remote Character into the host durable Character library;
-- preserve `DM/각 소유자` decision/ownership semantics from `docs/design/campaign-systems.md`;
-- Session-only effect expiry output from canonical Rest must remain transient; do not invent new durable Scene effect storage merely for this slice.
-
-Do not weaken these questions into a local-only assumption without checking the current connected/session contracts.
-
-## Execution strategy until pre-release
-
-1. Mandatory reconciliation order remains README -> control -> STATE -> PLAN.
-2. Confirm `work/v1-composite` and current exact head before edits.
-3. Re-read canonical handoff/checklist and reconcile stale checklist statuses against actual source.
-4. Do not reimplement source-connected slices solely because validation evidence is unavailable.
-5. Complete the next real production functionality gap in dependency order while preserving UI/authority boundaries.
-6. Add focused deterministic tests with each implementation slice.
-7. Keep STATE/handoff/checklist current enough for no-rediscovery resume.
-8. Reach a single pre-release exact SHA.
-9. Only then run the comprehensive Codex/full-regression/Windows/release audit.
+1. Host creates an offer from the current mounted remote Character SessionProjection and exact Campaign revision.
+2. Owning Client previews canonical Long Rest and explicitly accepts/declines the exact Character revision.
+3. On acceptance, the owner prepares a durable next Character generation without exposing it as committed state and returns a preparation ID.
+4. Host prepares/commits the Campaign optional effects only after owner prepare succeeds, using a durable global commit identity/idempotency record.
+5. After the global commit point, the owner materializes the already-prepared Character generation; interruption after that point must recover by resending/replaying commit rather than compensating Campaign state.
+6. Host/Client projection and Campaign snapshot update only after the relevant durable phase succeeds.
+7. Reconnect/retry must be idempotent for offer, prepare, global commit, and materialization.
+8. Session-only Rest effect expiry remains transient; do not invent Host-owned durable effect storage.
 
 ## Current Next Exact Action contract
 
 On the next Rerun dispatch:
 
-1. Reconcile the same run/sequence/task and `work/v1-composite` head.
-2. Check whether actual validation evidence has become observable for the current Long Rest head. Preferred focused evidence is `npm run test:campaign-rest`, `tsc --noEmit`/`npm run build`, and Rust tests covering `character_campaign_compound`. If results are not observable, record that fact and continue implementation rather than redoing the slice.
-3. Audit the existing connected Session Character authority/reconnect/write-back path against the Campaign Long Rest contract, specifically remote/host-unknown Character participation and owner decision semantics.
-4. If connected Long Rest is required for V1-12, implement it through existing connected projection/host authority and the compound transaction boundary. Do not persist a remote Character as a host-owned Character merely to reuse the local coordinator.
-5. If current contracts establish local/active-Character Rest as sufficient for V1-12, record that determination with source evidence and reconcile V1-12 status rather than adding scope.
-6. Then reconcile V1-13 Party Stash / Campaign DM Library before writing code: the release checklist still labels it TODO/PARTIAL, but current `campaignRuntimeAdapter`, `SessionCampaignPane`, inventory transfer paths, and DM Library methods already contain substantial implementation. Identify the real missing production behavior first and do not duplicate existing work.
-7. Preserve the existing UI baseline and do not start the final Codex audit.
-8. Before the next checkpoint, durably record implementation/validation evidence, remaining gaps, and the next exact action.
+1. Reconcile README -> control -> STATE -> PLAN and the actual `work/v1-composite` head.
+2. Check for exact-head validation evidence. If unavailable, do not redo source-connected slices.
+3. Add `tests/ui/connectedLongRestWire.test.ts` to `test:campaign-rest` and add canonical Session-wire coverage for at least one valid and one malformed `long-rest-*` envelope.
+4. Inspect `characterLibraryPersistence` / Character write-back ports for an existing no-visibility prepared-generation primitive. Reuse it if it exists; do not simulate prepare by committing and rolling back.
+5. Implement the smallest owner-side durable prepare/materialize port for connected Long Rest, with deterministic idempotency/recovery tests.
+6. Then implement Host distributed coordinator/runtime routing using the existing `preflightConnectedLongRest` and `connectedLongRestTransactionState` state machine; do not persist remote Characters in the Host library.
+7. Preserve current UI structure. Add only the minimum owner decision/progress state necessary for the existing Long Rest surface.
+8. Keep V1-13 and the comprehensive Codex audit deferred until V1-12 distributed durability is source-connected and checkpointed.
