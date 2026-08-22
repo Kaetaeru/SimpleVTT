@@ -7,153 +7,119 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T08:32:00+09:00`
+- checkpointed_at: `2026-08-23T08:56:00+09:00`
 
 ## Preflight reconciliation
 
-This dispatch read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the required order and reconciled the same run/sequence/task with `continue` authorization.
+This dispatch read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order before product work. All records reconciled to run `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `1`, task `phase14-production-play-session-ux`, status `continue`.
 
-`work/v1-composite` was still canonical. Pre-execution HEAD was `8ed0199296333188a69dd08e62e3940b82b53b5e`. GitHub returned no combined statuses and no commit-associated workflow runs for that head.
+`CANONICAL_ROOT.md` reconfirmed `work/v1-composite`. Pre-execution HEAD was `ef73d7f847b87324f3323defe351febe5364c66f`. No source-connected prior Long Rest slice was rebuilt.
 
-No source-connected Long Rest foundation from prior dispatches was rebuilt.
+`docs/design/campaign-systems.md` was rechecked. Its compound Long Rest contract forbids durable Campaign-only / Character-only success and explicitly places connected replay/idempotency/privacy before V1 acceptance. Host/owner process-restart recovery is therefore a V1-12 transaction requirement, not optional polish.
 
 ## Preserved foundation
 
 Keep intact:
 
-- local canonical Long Rest domain/application/UI path;
-- Character+Campaign local compound persistence and Tauri recovery;
-- connected Character SessionProjection / Host authority / reconnect / owner ResolutionEvent write-back;
-- connected Long Rest exact owner/Character/Campaign preflight;
-- connected transaction state machine;
-- connected owner Tauri durable invisible prepare/materialize/abort marker;
-- TS owner preparation/persistence ports and deterministic tests.
-
-Connected Long Rest remains required by the Campaign V1 contract; remote Character durable ownership remains on the owning Player store.
+- canonical Character Long Rest rules/projection;
+- local Character+Campaign compound Rest preview/commit and current DM UI;
+- Memory/Tauri Character+Campaign compound persistence/recovery;
+- connected SessionProjection ownership, Host authority, action/reconnect/event replay, roster references;
+- connected Long Rest preflight, phase state machine, prepare-authorization wire, owner durable invisible staging, Host Campaign participant commit, distributed runtime/transport;
+- remote Character ownership remains on Player; Host never creates a durable Character copy.
 
 ## Completed in this dispatch
 
-### Wire contract tightened
+### 1. Visible connected Long Rest user path
 
-- `978107b` — added explicit `long-rest-prepare-authorized` envelope carrying exact Host-approved preflight.
-- `919b423` — prepare-authorization codec tests.
-- `229d44b` — `long-rest-owner-materialized` now carries the owner's fresh `CharacterSessionProjectionV1`.
-- `25323d4` — projection envelope/mismatch tests.
+- `95a464d363b7810008bc4b4de67ac15a39423eae` — `ConnectedLongRestCampaignControls.tsx`.
+  - live Host filters connected remote Player Character roster refs;
+  - reuses existing DM `+8시간` / ration selections;
+  - sends production `startConnectedLongRest` offer;
+  - Player shows exact HP/temp-HP preview, options, accept/decline, and immutable progress phase.
+- `00209e602c36a862631e99c84b2d97ba53c9f209` — controls mounted inside existing `SessionCampaignPane` REST section / Player Campaign pane; no new route or full-screen UX.
+- `5f9b3a6a61565e56f9f1ae7192deae48e1d7c83f` — UI structure contract.
+- `27040256d73524e80745149946fb6a0ec65d99da` — UI structure contract wired into `test:campaign-rest`.
 
-Owner staging can no longer be ordered directly from a raw owner `accepted=true`; Host must revalidate current authority first.
+### 2. Stable Campaign global commit identity
 
-### Campaign participant/global commit extracted
+- `c7f346d64fc2331daad90bfb63ca599f83452ad3` — connected Campaign global commit id is now `<transactionId>:campaign-commit-v1`; later Campaign revisions cannot change recovery identity.
+- `860052ff9c88d6c150038e7f386f214648a9ecfd` — authored retry-after-later-Campaign-mutation test proving duplicate converges to the same commit id.
 
-- `271e915` — `previewLongRestCampaignParticipant()` extracted from the local compound coordinator so connected play reuses existing Calendar/Ration/provider/master-idempotency authority independently of Character ownership.
-- `f7be7ea` — added Host Campaign participant persistence.
-- `3e10ccd` — authored commit/duplicate/stale Campaign participant tests.
-- `f030d40`, `ab833d5` — hardened the irreversible global commit boundary: after `writeGeneration()` succeeds, runtime projection/rehydration failure is a recovery warning, never an abortable transaction result.
+### 3. Windows-safe owner Character preparation markers
 
-### Remote durable projection refresh
+Source review found the previous phase update used `fs::rename(temp, existing_marker)`; replacing an existing destination is not a safe Windows assumption.
 
-- `69929c5` — added refresh for an already mounted remote Character. New owner durable HP/resources/life/actions replace only durable projection data; Host initiative/status/distance/current turn economy stay Session-authoritative.
+- `454c16d7dea3c4d8263722355539cb108b6ba3d8` — owner preparation base marker is now immutable. `materialized` and `aborted` are separate immutable sidecars. A crash after Character generation write but before materialized sidecar remains recoverable by exact payload verification + sidecar creation.
 
-### Distributed runtime coordinator
+### 4. Durable Host process-restart coordinator
 
-- `2c94132` initial runtime phase port.
-- `5f13ada` hardened owner prompt values, immutable owner decision, capability requirement, idempotent repeated owner-prepared/global state handling, and post-global no-abort semantics.
+- `fa4c4af20b27d17fae77b56e4907988141ce9484` was an immediately superseded first draft; do not restore it.
+- `f0155bfbe05cb4ebc1f09ca0773dd80cdebec2e9` — current Host coordinator Rust store uses append-only immutable version files, avoiding Windows overwrite rename and retaining latest record per transaction.
+- `a6ef94bcabfb341ccd87db23510e6eb18f2f187c` — Tauri read/write/delete coordinator commands under shared persistence mutex + compound recovery fence.
+- `5c84a4e4f0bf95de4fc2e5b87278ac65539f947d` — Memory/Tauri TS coordinator store port.
+- `f1afa9955830bf35732731d90dc5076905abcfee` — Host runtime persists `owner-prepared` before Campaign global commit, persists committed phase afterward, reconstructs `owner-prepared -> committed/aborted` from Campaign idempotency on restart, and binds recovered owner by participant identity rather than old peer socket.
+- `10eb0b92e09f2e1ad314887b7a0363b99618efb6` — Host session hydrates durable coordinator state and async owner-materialization completion is awaited.
+- `c4f2d66a0dedf5763486672848332d7b341b6e84` — deterministic Host restart contracts authored for both already-committed and never-committed Campaign cases.
 
-`connectedLongRestRuntimePort.ts` now source-models:
+### 5. Player process-restart post-global recovery
 
-1. Host offer from mounted remote Character + Campaign revision;
-2. owner canonical preview and accept/decline;
-3. Host current-authority re-preflight;
-4. explicit prepare authorization;
-5. owner durable invisible Character prepare;
-6. Host Campaign global commit;
-7. owner materialization and rehydrate;
-8. fresh owner SessionProjection;
-9. Host remote durable refresh and transaction completion;
-10. precommit abort;
-11. same-process phase replay messages.
+- `fb217de3c4e4c0f1c087c683958b0767eee3f2cd`, `316286e54362bd35c84cc77ecde04a8620ef6109` — global commit can carry owner/preparation identity and transaction abort state retains preparation identity when available.
+- `3390e258e92dcc034438b1fab596ee63443a649e` — wire validator accepts restart recovery identity only as a complete owner+Character+preparation tuple.
+- `308a26fb0f14bc1aa3739801987410a20cad48bd` — Tauri owner restart recovery materializes the durable staged Character without in-memory offer/decision state, rehydrates Character library, and rebuilds fresh SessionProjection.
+- `71d405766687e109fe318866517de745f9024e3e` — normal global commit delivery includes owner/preparation identity; Host reconnect replay enriches committed messages from durable coordinator; Client falls back to restart materialization when ClientRecord is gone.
+- `75d922204cb667d4fdadbc5ea61af74b89754b7c` — restart-safe global commit wire test authored.
+- `be33707fbe8f553f35f2a97868001a004adedabc` — existing distributed runtime test corrected to await async Host materialization completion.
 
-### Production transport integration
+### 6. Prepared Character write barrier
 
-- `1503f97` — added dedicated `connectedLongRestSessionAdapter.ts` using a second Tauri message listener rather than rewriting the canonical connected dispatcher.
-- `b2b36ef` — corrected typed canonical-wire routing.
-- `1eb8674` — production main entry loads the Long Rest adapter after canonical connected-session runtime.
+A new atomicity hole was found: owner prepare was durable/invisible, but unrelated normal Character writes could still advance the generation before Campaign global commit, making owner materialization fail after Campaign commit.
 
-Production behavior:
+- `bb240dfbae9f9f035b63752b115b1ac0b5dc6e3c`, corrected by `8c1e0b357d19954ed4320e239d8d6dcad0f8c656` — Rust guard detects a live prepared connected Long Rest base marker unless `.materialized` or `.aborted` sidecar exists.
+- `45729f71a690ad7260c17209266f7bb5b0c61e11` — normal Tauri `write_character_library_generation` and `write_character_campaign_compound` now reject while prepared. Connected Rest materialize/abort intentionally bypass this guard so they can close the transaction.
 
-- mutates the existing exported capability array once to advertise `connected-long-rest-v1` before Host/Join manifests are built;
-- Host routes decision -> prepare authorization -> owner prepared -> Campaign global commit -> owner materialized/complete;
-- Client routes offer -> owner prompt -> authorized prepare -> global commit materialization -> owner projection acknowledgement;
-- precommit Host failure sends `long-rest-abort`;
-- post-global failures only surface recovery warnings;
-- delayed `hello` / `hello-ack` replay resends phase-appropriate messages after the canonical listener reconciles identity;
-- new Session Host/Join resets old Long Rest transient records;
-- `AppSnapshot.connectedLongRest.ownerPrompts` exposes owner decision/progress projection;
-- adapter methods `startConnectedLongRest()` and `respondConnectedLongRest()` are source-connected.
-
-### Distributed deterministic tests
-
-- `e7d4816` — full runtime phase tests authored.
-- `3c14aeb` — test fixture corrected to public Character resource shape.
-- `868e777` — Campaign participant + distributed runtime tests added to `npm run test:campaign-rest`.
-
-Contracts assert:
-
-- owner prepare remains invisible;
-- Host Campaign time/rations commit after owner prepare and before Character materialization;
-- owner Character HP/temp HP changes only after global commit;
-- fresh runtime revision returns to Host;
-- Host remote HP/temp HP updates while initiative/status/economy remain Session-owned;
-- remote Character never appears in Host Character library;
-- stale Campaign before global commit aborts and owner stays unchanged;
-- recovery messages correspond to current phase.
-
-Exact product-code head before Rerun docs: `3c14aebff0e5983204eaae8ae552c674d726826c`.
+Exact product-code HEAD before checkpoint docs: `8c1e0b357d19954ed4320e239d8d6dcad0f8c656`.
 
 ## Validation status
 
 **NO GREEN CLAIM.**
 
-Observed:
+Exact product head `8c1e0b3` returned:
 
-- GitHub combined statuses: none at dispatch preflight;
-- GitHub commit-associated workflow runs: none at dispatch preflight;
-- direct canonical clone attempted again with:
-  `git clone --branch work/v1-composite --depth 1 https://github.com/Kaetaeru/SimpleVTT.git /tmp/SimpleVTT`
-- result: `Could not resolve host: github.com`.
+- combined commit statuses: none;
+- commit-associated workflow runs: none.
 
-Therefore no observed `tsx`, `tsc`, `npm run test:campaign-rest`, `npm run build`, `cargo test`, Tauri build, or Windows result exists for this exact implementation. Source-authored tests are validation pending.
+No observed `tsx`, `tsc --noEmit`, `npm run test:campaign-rest`, `npm run build`, `cargo test`, Tauri build, or Windows execution result exists for this head. Source-authored tests are not execution evidence.
 
-## Remaining exact gaps
+## Current durability assessment
 
-### Production UI is not yet connected
+Source-connected now:
 
-The runtime now exposes `startConnectedLongRest(...)`, `respondConnectedLongRest(...)`, and `snapshot.connectedLongRest.ownerPrompts`, but no React control calls them.
+1. owner exact preview/decision;
+2. Host exact preflight/prepare authorization;
+3. durable owner no-visibility prepare;
+4. prepared-generation normal-write fence in production Tauri;
+5. durable Host owner-prepared record before Campaign global commit;
+6. stable/idempotent Campaign global commit;
+7. post-global Host restart recovery;
+8. post-global Player restart materialization recovery;
+9. owner materialized SessionProjection acknowledgement and Host remote projection refresh;
+10. visible DM/Player control path in existing Campaign pane.
 
-Required minimal UI:
+One smaller precommit restart cleanup gap remains: if Host and owner both restart after owner prepare but before Campaign global commit, Host reconstructs `aborted`, but the current abort wire has no durable preparation identity and a restarted owner has no ClientRecord. The prepared Character generation remains invisible and the write barrier remains active until explicitly cleaned, so this must be closed before implementation-complete status.
 
-- DM existing Campaign/Rest surface: connected remote Character offer action, reusing current optional +8h / ration selections;
-- Player: exact HP/temp-HP preview plus Accept/Decline for `offered` prompt;
-- accepted/prepared/committed/complete/aborted progress display with no decision mutation after submission.
-
-Preserve the current Session layout; do not build a new full-screen workflow.
-
-### Host process-restart durability remains unresolved
-
-Same-process reconnect has phase replay, but Host transaction records are still transient `WeakMap` state. If Host process dies after Campaign global commit, durable Campaign `recentRequestIds` proves the transaction committed but does not contain enough preflight/preparation/owner identity to safely reconstruct and resend global commit.
-
-Do not call V1-12 durable-complete until this boundary is either implemented with a small durable Host coordinator marker or explicitly excluded by a source-backed V1 contract decision.
-
-### Exact-head execution evidence
-
-Still pending.
+Also, `tests/ui/connectedLongRestHostRestartRecovery.test.ts` is authored but has not yet been added to `test:campaign-rest`.
 
 ## Next Exact Action
 
-1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` head.
-2. Check newly observable exact-head validation. If unavailable, do not redo current source-connected work.
-3. Source-review the newly added runtime/transport/Campaign code for compile contract issues before further feature work.
-4. Add minimal visible UI for DM remote Rest offer and Player owner decision/progress using existing Session Campaign visual language.
-5. Add UI structure/runtime tests proving visible controls call the production adapter methods and current layout is preserved.
-6. Audit Host process-restart recovery against the V1 compound-transaction contract. If required, add a durable Host coordinator marker containing exact transaction/preflight/preparation/global-commit identity and recovery phase. Never compensate after Campaign global commit.
-7. Then reconcile V1-12 status/evidence. Proceed to V1-13 only after distributed Long Rest is user-reachable and its required recovery boundary is source-complete.
-8. Keep final comprehensive Codex audit deferred.
+1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` HEAD.
+2. Check exact-head validation evidence; do not duplicate implementation above.
+3. Close precommit double-restart cleanup:
+   - replace the current durable Host aborted-record placeholder preparation id with the retained real `state.preparationId` when present;
+   - extend/enrich abort recovery with exact owner/preparation identity;
+   - on a restarted Tauri owner, abort the durable Character preparation directly when no ClientRecord exists;
+   - verify no Character generation becomes visible and the write barrier clears.
+4. Add `connectedLongRestHostRestartRecovery.test.ts` plus new abort/write-barrier structure contracts to `npm run test:campaign-rest`.
+5. Source-review `connectedLongRestSessionAdapter.ts` / Host coordinator types for concrete TypeScript regressions only.
+6. If executable evidence becomes available, run focused campaign-rest + TypeScript/build + Rust tests before adding further V1-12 scope.
+7. Keep V1-13 and final comprehensive Codex audit deferred.
