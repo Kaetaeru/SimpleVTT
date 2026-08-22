@@ -2,13 +2,22 @@
 
 Status: **CANONICAL AI EXECUTION ROUTER**
 Target: **실제 로컬/연결 세션을 처음부터 끝까지 플레이할 수 있는 Windows V1**
-Updated: 2026-08-22
+Updated: 2026-08-23
 
 이 문서는 작업 AI가 다음 구현 작업, 의존성, 검증 및 출시 차단 조건을 빠르게 결정하기 위한 단일 마스터 체크리스트다.
 
+- 현재 exact head, 활성 구현 작업 및 바로 다음 체크박스는 `.agents/V1_CURRENT_HANDOFF.md`를 먼저 읽는다.
 - `.agents/PHASE14_CHECKLIST.md`는 과거 구현/CI 증거 원장이다. 다음 작업 선택에는 이 문서를 우선한다.
 - `.agents/CURRENT_WORK.md`와 `.agents/SHORT_TERM_CHECKLIST.md`의 Phase 09 표시는 역사적 문맥이다.
 - 제품 계약은 `docs/design/` 문서가 우선하며, 이 체크리스트가 제품 계약을 재정의하지 않는다.
+
+## 2026-08-23 exact-head delta
+
+- Recorded head: `dc4bca6 feat(session): project ready lifecycle events`
+- V1-21/V1-31/V1-32: 기본 행동 수명주기, Ready 설정/반응, connected 요청 전달, Host `ready-action` lifecycle event와 Client projection까지 구현됨.
+- Immediate NEXT: 다음 자기 턴 시작과 initiative 종료로 발생하는 Ready 해제를 Host event로 전파하고 reconnect replay까지 검증.
+- Structural follow-up: Ready 설정 actor별 저장, session reset 정리, capability 협상, two-instance 증거.
+- V1-13: 기존 `TODO` 표시는 최근 Party Stash/DM Library 구현보다 오래되었다. exact-head 회귀와 walkthrough 증거를 확보한 뒤 상태를 정식 조정한다.
 
 ---
 
@@ -632,7 +641,7 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 유일한 다음 작업:
 
 ```text
-V1-01 Foundation audit
+V1-31/V1-32 Ready expiration network propagation
 ```
 
-Canonical Git 기준선이 복구되었다. Campaign runtime 구현 전에 exact-head 전체 foundation 회귀, Tauri 테스트, fixture/authority 중복 감사를 완료한다.
+다음 자기 턴 시작과 initiative 종료로 발생하는 Ready 해제를 Host의 `ready-action: cleared` 이벤트로 전파하고, Client projection 및 reconnect replay를 검증한다. 세부 완료 조건과 후속 구조 보강 순서는 `.agents/V1_CURRENT_HANDOFF.md`를 따른다.

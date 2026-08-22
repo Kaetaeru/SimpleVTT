@@ -22,3 +22,5 @@ Rules:
 5. `main` is a landing/reference branch until the V1 composite history is deliberately promoted; this declaration does not imply that its older code is canonical.
 
 The checkpoint above records when this declaration was introduced. The branch head can advance beyond it; use `git log -1 --oneline work/v1-composite` to find the latest canonical commit.
+
+For the exact active implementation slice, completed work, remaining checklist, and validation commands, read `.agents/V1_CURRENT_HANDOFF.md` before editing code.

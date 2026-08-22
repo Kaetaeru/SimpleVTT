@@ -7,8 +7,11 @@ This directory is reserved for user/operator instructions and agent-only working
 When resuming work on a branch, inspect the agent workspace before choosing the next implementation slice.
 
 1. Read `DEFERRED_FIXES.md` first when it exists. Active owner-playtest regressions and explicit blocking queues there take priority over planned work in `CURRENT_WORK.md`.
-2. Then read `CURRENT_WORK.md` for the current phase, completed checkpoints, and planned implementation order.
-3. Read `UX_STRUCTURE_GATES.md` when the task touches a previously deferred owner walkthrough, UX acceptance, or structure gate.
+2. Read `V1_CURRENT_HANDOFF.md` for the exact canonical head, active implementation slice, immediate next task, validation commands, and known limitations.
+3. Use `V1_RELEASE_EXECUTION_CHECKLIST.md` as the full V1 dependency and release-gate router.
+4. Read `UX_STRUCTURE_GATES.md` when the task touches a previously deferred owner walkthrough, UX acceptance, or structure gate.
+
+`CURRENT_WORK.md` and `SHORT_TERM_CHECKLIST.md` retain historical Phase 09 context. Do not treat their old `NEXT` sections as the current implementation pointer when `V1_CURRENT_HANDOFF.md` exists.
 
 Do not resume a later feature slice merely because automated CI is green when `DEFERRED_FIXES.md` records an unresolved owner-playtest gate.
 
