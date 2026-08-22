@@ -140,6 +140,15 @@ function applyCommand(inventory:SessionCharacterInventoryVm,command:DmInventoryA
       inventory.items.push(template);
       changes.push(`${template.name} 0 → ${command.quantity}`);
     }
+  } else if(command.operation==="grant-item-template"){
+    if(!Number.isInteger(command.quantity)||command.quantity<1)throw new Error("지급 수량은 1 이상이어야 합니다.");
+    const source=command.itemTemplate;
+    const existing=inventory.items.find((item)=>compatibleDefinitionId(item.definitionId)===compatibleDefinitionId(source.definitionId)&&!item.charges&&!item.attunementRequired);
+    if(existing){const before=existing.quantity;existing.quantity+=command.quantity;changes.push(`${existing.name} ${before} → ${existing.quantity}`);}
+    else{
+      inventory.items.push({id:`item.session.${inventory.characterId}.${Date.now()}.${Math.floor(Math.random()*10000)}`,...cp(source),quantity:command.quantity,equipped:false,wielded:false,attuned:false});
+      changes.push(`${source.name} 0 → ${command.quantity}`);
+    }
   } else if (command.operation==="revoke-item") {
     if (!Number.isInteger(command.quantity)||command.quantity<1) throw new Error("회수 수량은 1 이상이어야 합니다.");
     const item=inventory.items.find((candidate)=>candidate.id===command.itemId);

@@ -405,18 +405,19 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
         item.quantity-=command.quantity;
         if(item.quantity===0)inventory.items=inventory.items.filter((candidate)=>candidate.id!==item.id);
         const existing=stash.itemReferences.find((candidate)=>candidate.definitionId===command.definitionId);
-        if(existing)existing.quantity+=command.quantity;
-        else stash.itemReferences.push({instanceId:"stash."+command.definitionId,definitionId:command.definitionId,quantity:command.quantity});
+        if(existing){existing.quantity+=command.quantity;if(command.itemTemplate&&!existing.itemTemplate)existing.itemTemplate=structuredClone(command.itemTemplate);}
+        else stash.itemReferences.push({instanceId:"stash."+command.definitionId,definitionId:command.definitionId,quantity:command.quantity,...(command.itemTemplate?{itemTemplate:structuredClone(command.itemTemplate)}:{})});
       }else{
         const stored=stash.itemReferences.find((candidate)=>candidate.definitionId===command.definitionId);
         if(!stored||stored.quantity<command.quantity)throw new Error("파티 보관함의 아이템 수량이 부족합니다.");
         stored.quantity-=command.quantity;
         if(stored.quantity===0)stash.itemReferences=stash.itemReferences.filter((candidate)=>candidate.instanceId!==stored.instanceId);
         const entry=previewSnapshot.catalog.find((candidate)=>candidate.id===command.catalogEntryId&&candidate.category==="item");
-        if(!entry)throw new Error("현재 활성 카탈로그에서 아이템을 찾지 못했습니다.");
-        const existing=inventory.items.find((candidate)=>candidate.definitionId===command.definitionId&&!candidate.charges&&!candidate.attunementRequired);
+        const template=command.itemTemplate??(entry?{definitionId:command.definitionId,name:entry.nameKo,nameEn:entry.nameEn,kind:/potion|물약|consumable/i.test(entry.nameKo+" "+entry.nameEn)?"consumable" as const:"equipment" as const,passiveEffects:[],grantedActionIds:[],provenance:[entry.source+" · v"+entry.version]}:null);
+        if(!template)throw new Error("공유 보관함 아이템 원본 정보를 찾지 못했습니다.");
+        const existing=inventory.items.find((candidate)=>candidate.definitionId===command.definitionId&&!candidate.charges&&!candidate.attunementRequired&&!template.charges&&!template.attunementRequired);
         if(existing)existing.quantity+=command.quantity;
-        else inventory.items.push({id:"item.preview."+command.actorId+"."+Date.now(),definitionId:command.definitionId,name:entry.nameKo,nameEn:entry.nameEn,kind:/potion|물약|consumable/i.test(entry.nameKo+" "+entry.nameEn)?"consumable":"equipment",quantity:command.quantity,equipped:false,passiveEffects:[],grantedActionIds:[],provenance:[entry.source+" · v"+entry.version]});
+        else inventory.items.push({id:"item.preview."+command.actorId+"."+Date.now(),...structuredClone(template),quantity:command.quantity,equipped:false,wielded:false,attuned:false});
       }
       inventory.revision+=1;stash.revision+=1;
       setPreviewInventoryOverrides((current)=>({...current,[inventory.characterId]:inventory}));

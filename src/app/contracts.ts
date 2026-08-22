@@ -1,4 +1,4 @@
-import type { CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
+import type { CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -78,12 +78,13 @@ export interface SessionCharacterInventoryVm {
 
 export type DmInventoryAdjustmentCommand =
   | { requestId: string; actorId: string; operation: "grant-item"; catalogEntryId: string; quantity: number }
+  | { requestId: string; actorId: string; operation: "grant-item-template"; itemTemplate: CampaignPartyStashItemTemplate; quantity: number }
   | { requestId: string; actorId: string; operation: "revoke-item"; itemId: string; quantity: number; forceUnequip?: boolean }
   | { requestId: string; actorId: string; operation: "grant-currency" | "revoke-currency"; amount: number };
 
 export type PartyStashTransferCommand =
-  | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash";asset:"item";itemId:string;definitionId:string;quantity:number;forceUnequip?:boolean}
-  | {requestId:string;campaignId:string;actorId:string;direction:"stash-to-character";asset:"item";definitionId:string;catalogEntryId:string;quantity:number}
+  | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash";asset:"item";itemId:string;definitionId:string;quantity:number;itemTemplate?:CampaignPartyStashItemTemplate;forceUnequip?:boolean}
+  | {requestId:string;campaignId:string;actorId:string;direction:"stash-to-character";asset:"item";definitionId:string;catalogEntryId?:string;itemTemplate?:CampaignPartyStashItemTemplate;quantity:number}
   | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash";asset:"currency";amount:number}
   | {requestId:string;campaignId:string;actorId:string;direction:"stash-to-character";asset:"currency";amount:number};
 

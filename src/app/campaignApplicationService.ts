@@ -1,5 +1,5 @@
 import { CampaignLibraryRepository, CampaignStaleRevisionError, createCampaignRecordV1 } from "./campaignPersistence";
-import type { CampaignCalendarDateTime, CampaignMutationContext, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 
 const cp=<T,>(value:T):T=>structuredClone(value);
@@ -116,7 +116,7 @@ export class CampaignApplicationService {
 
   transferPartyStash(context:CampaignMutationContext&(
     | {direction:"character-to-stash"|"stash-to-character";asset:"currency";amount:number}
-    | {direction:"character-to-stash"|"stash-to-character";asset:"item";definitionId:string;quantity:number}
+    | {direction:"character-to-stash"|"stash-to-character";asset:"item";definitionId:string;quantity:number;itemTemplate?:CampaignPartyStashItemTemplate}
   )){
     const amount=context.asset==="currency"?context.amount:context.quantity;
     assertPositiveInteger(amount,"party stash transfer amount");
@@ -135,10 +135,11 @@ export class CampaignApplicationService {
         assertNonNegativeInteger(after,"party stash item quantity");
         if(existing){
           existing.quantity=after;
+          if(context.itemTemplate&&!existing.itemTemplate)existing.itemTemplate=cp(context.itemTemplate);
           if(after===0) campaign.partyStash.itemReferences=campaign.partyStash.itemReferences.filter((item)=>item.instanceId!==existing.instanceId);
         }else{
           if(sign<0) throw new Error("Party stash item is unavailable");
-          campaign.partyStash.itemReferences.push({instanceId:"stash."+definitionId,definitionId,quantity:after});
+          campaign.partyStash.itemReferences.push({instanceId:"stash."+definitionId,definitionId,quantity:after,...(context.itemTemplate?{itemTemplate:cp(context.itemTemplate)}:{})});
         }
       }
       campaign.partyStash.revision+=1;

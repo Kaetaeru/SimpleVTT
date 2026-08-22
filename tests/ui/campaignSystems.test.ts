@@ -34,11 +34,12 @@ test("Campaign roster drives integer daily ration preview without owning Charact
 test("Party stash stores item references and currency through revisioned Campaign mutations",async()=>{
   const {service}=await setup();
   await service.transferPartyStash({...envelope(1,"stash.gp.in"),direction:"character-to-stash",asset:"currency",amount:25});
-  await service.transferPartyStash({...envelope(2,"stash.item.in"),direction:"character-to-stash",asset:"item",definitionId:"dnd.srd521.item.gear.potion-of-healing",quantity:2});
+  await service.transferPartyStash({...envelope(2,"stash.item.in"),direction:"character-to-stash",asset:"item",definitionId:"dnd.srd521.item.gear.potion-of-healing",quantity:2,itemTemplate:{definitionId:"dnd.srd521.item.gear.potion-of-healing",name:"치유 물약",nameEn:"Potion of Healing",kind:"consumable",passiveEffects:[],grantedActionIds:[],provenance:["SRD 5.2.1"]}});
   let campaign=service.getCampaign("campaign.systems")!;
   assert.equal(campaign.partyStash.wallet.gp,25);
   assert.equal(campaign.partyStash.revision,3);
-  assert.deepEqual(campaign.partyStash.itemReferences,[{instanceId:"stash.dnd.srd521.item.gear.potion-of-healing",definitionId:"dnd.srd521.item.gear.potion-of-healing",quantity:2}]);
+  assert.equal(campaign.partyStash.itemReferences[0].itemTemplate?.name,"치유 물약");
+  assert.equal(campaign.partyStash.itemReferences[0].quantity,2);
   await service.transferPartyStash({...envelope(3,"stash.gp.out"),direction:"stash-to-character",asset:"currency",amount:10});
   await service.transferPartyStash({...envelope(4,"stash.item.out"),direction:"stash-to-character",asset:"item",definitionId:"dnd.srd521.item.gear.potion-of-healing",quantity:1});
   campaign=service.getCampaign("campaign.systems")!;

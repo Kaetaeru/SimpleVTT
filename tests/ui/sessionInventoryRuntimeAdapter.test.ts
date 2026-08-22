@@ -47,3 +47,13 @@ test("equipped items require explicit forceUnequip before DM revocation",async()
   const after=await adapter.getSnapshot();
   assert.equal(after.sessionCharacterInventories?.["char.aelar"].items.some((item)=>item.id===dagger.id),false);
 });
+
+test("catalog-less custom item templates can be restored from the party stash",async()=>{
+  const adapter=new MockAdapter();
+  await adapter.adjustDmInventory({requestId:"custom-template",actorId:"char.aelar",operation:"grant-item-template",quantity:1,itemTemplate:{definitionId:"local.item.no-catalog",name:"별빛 부적",nameEn:"Starlight Charm",kind:"magic",attunementRequired:true,passiveEffects:["빛"],grantedActionIds:[],provenance:["Custom library"]}});
+  const snapshot=await adapter.getSnapshot();
+  const item=snapshot.sessionCharacterInventories?.["char.aelar"].items.find((candidate)=>candidate.definitionId==="local.item.no-catalog");
+  assert.equal(item?.name,"별빛 부적");
+  assert.equal(item?.attunementRequired,true);
+  assert.equal(item?.equipped,false);
+});

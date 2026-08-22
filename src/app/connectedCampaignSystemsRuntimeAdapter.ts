@@ -44,7 +44,7 @@ export function decodeCampaignSystemsEnvelope(raw:string):CampaignSystemsEnvelop
 }
 function compatibleHelloAck(raw:string){try{const value=object(JSON.parse(raw));const compatibility=object(value?.compatibility);return value?.type==="hello-ack"&&typeof value.sessionId==="string"&&compatibility?.status==="compatible"?value.sessionId:null;}catch{return null;}}
 function decodeLevelUpCompleteRequest(raw:string):CampaignLevelUpCompleteRequest|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-level-up-complete"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.campaignId!=="string"||typeof value.rosterMemberId!=="string"||typeof value.characterId!=="string"||!Number.isInteger(value.level)||Number(value.level)<2)return null;return value as unknown as CampaignLevelUpCompleteRequest;}catch{return null;}}
-function decodeStashDepositRequest(raw:string):CampaignStashDepositRequest|null{try{const value=object(JSON.parse(raw));const command=object(value?.command);if(value?.type!=="campaign-stash-deposit"||typeof value.sessionId!=="string"||typeof command?.requestId!=="string"||typeof command.campaignId!=="string"||typeof command.actorId!=="string"||(command.direction!=="character-to-stash"&&command.direction!=="stash-to-character"))return null;if(command.asset==="currency"){if(!Number.isInteger(command.amount)||Number(command.amount)<1)return null;}else if(command.asset==="item"){if(typeof command.definitionId!=="string"||!Number.isInteger(command.quantity)||Number(command.quantity)<1)return null;if(command.direction==="character-to-stash"&&typeof command.itemId!=="string")return null;if(command.direction==="stash-to-character"&&typeof command.catalogEntryId!=="string")return null;}else return null;return value as unknown as CampaignStashDepositRequest;}catch{return null;}}
+function decodeStashDepositRequest(raw:string):CampaignStashDepositRequest|null{try{const value=object(JSON.parse(raw));const command=object(value?.command);if(value?.type!=="campaign-stash-deposit"||typeof value.sessionId!=="string"||typeof command?.requestId!=="string"||typeof command.campaignId!=="string"||typeof command.actorId!=="string"||(command.direction!=="character-to-stash"&&command.direction!=="stash-to-character"))return null;if(command.asset==="currency"){if(!Number.isInteger(command.amount)||Number(command.amount)<1)return null;}else if(command.asset==="item"){if(typeof command.definitionId!=="string"||!Number.isInteger(command.quantity)||Number(command.quantity)<1)return null;if(command.direction==="character-to-stash"&&typeof command.itemId!=="string")return null;if(command.direction==="stash-to-character"&&typeof command.catalogEntryId!=="string"&&!object(command.itemTemplate))return null;}else return null;return value as unknown as CampaignStashDepositRequest;}catch{return null;}}
 function decodeStashDepositResult(raw:string):CampaignStashDepositResult|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-stash-deposit-result"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.accepted!=="boolean"||(value.error!==undefined&&typeof value.error!=="string"))return null;return value as unknown as CampaignStashDepositResult;}catch{return null;}}
 async function envelopeFor(adapter:MockAdapter):Promise<CampaignSystemsEnvelope|null>{
   const state=connectedStateFor(adapter);if(state.mode!=="host"||!state.sessionId) return null;
@@ -155,7 +155,9 @@ MockAdapter.prototype.transferPartyStash=async function transferConnectedPartySt
     ? {requestId:command.requestId,actorId:command.actorId,operation:command.direction==="character-to-stash"?"revoke-currency" as const:"grant-currency" as const,amount:command.amount}
     : command.direction==="character-to-stash"
       ? {requestId:command.requestId,actorId:command.actorId,operation:"revoke-item" as const,itemId:command.itemId,quantity:command.quantity,forceUnequip:command.forceUnequip}
-      : {requestId:command.requestId,actorId:command.actorId,operation:"grant-item" as const,catalogEntryId:command.catalogEntryId,quantity:command.quantity};
+      : command.itemTemplate
+        ? {requestId:command.requestId,actorId:command.actorId,operation:"grant-item-template" as const,itemTemplate:command.itemTemplate,quantity:command.quantity}
+        : {requestId:command.requestId,actorId:command.actorId,operation:"grant-item" as const,catalogEntryId:command.catalogEntryId!,quantity:command.quantity};
   const localFirst=command.direction==="character-to-stash";
   if(localFirst)await this.adjustDmInventory(inventoryCommand);
   const waitForHost=new Promise<void>((resolve,reject)=>{
@@ -170,7 +172,7 @@ MockAdapter.prototype.transferPartyStash=async function transferConnectedPartySt
     if(hostAccepted&&!localFirst){
       const compensation:PartyStashDepositCommand=command.asset==="currency"
         ? {...command,requestId:command.requestId+".compensate",direction:"character-to-stash"}
-        : {requestId:command.requestId+".compensate",campaignId:command.campaignId,actorId:command.actorId,direction:"character-to-stash",asset:"item",itemId:"compensate."+command.definitionId,definitionId:command.definitionId,quantity:command.quantity};
+        : {requestId:command.requestId+".compensate",campaignId:command.campaignId,actorId:command.actorId,direction:"character-to-stash",asset:"item",itemId:"compensate."+command.definitionId,definitionId:command.definitionId,quantity:command.quantity,itemTemplate:command.itemTemplate};
       await tauriSessionTransport.send(JSON.stringify({type:"campaign-stash-deposit",sessionId:state.sessionId,command:compensation} satisfies CampaignStashDepositRequest)).catch(()=>undefined);
     }
     throw error;

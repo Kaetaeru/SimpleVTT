@@ -243,13 +243,15 @@ MockAdapter.prototype.transferPartyStash=async function transferPartyStashRuntim
     const context={requestId:command.requestId,campaignId:command.campaignId,expectedCampaignRevision:campaign!.revision,initiatedByParticipantId:"dm.local",now:new Date().toISOString(),direction:command.direction};
     return command.asset==="currency"
       ? service.transferPartyStash({...context,asset:"currency",amount:command.amount})
-      : service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity});
+      : service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity,...(command.direction==="character-to-stash"&&command.itemTemplate?{itemTemplate:command.itemTemplate}:{})});
   };
   const inventoryCommand=command.asset==="currency"
     ? {requestId:command.requestId,actorId:command.actorId,operation:command.direction==="character-to-stash"?"revoke-currency" as const:"grant-currency" as const,amount:command.amount}
     : command.direction==="character-to-stash"
       ? {requestId:command.requestId,actorId:command.actorId,operation:"revoke-item" as const,itemId:command.itemId,quantity:command.quantity,forceUnequip:command.forceUnequip}
-      : {requestId:command.requestId,actorId:command.actorId,operation:"grant-item" as const,catalogEntryId:command.catalogEntryId,quantity:command.quantity};
+      : command.itemTemplate
+        ? {requestId:command.requestId,actorId:command.actorId,operation:"grant-item-template" as const,itemTemplate:command.itemTemplate,quantity:command.quantity}
+        : {requestId:command.requestId,actorId:command.actorId,operation:"grant-item" as const,catalogEntryId:command.catalogEntryId!,quantity:command.quantity};
   if(command.direction==="character-to-stash"){
     await this.adjustDmInventory(inventoryCommand);
     try{await campaignTransfer();}
@@ -262,7 +264,7 @@ MockAdapter.prototype.transferPartyStash=async function transferPartyStashRuntim
       if(campaign){
         const context={requestId:command.requestId+".compensate",campaignId:command.campaignId,expectedCampaignRevision:campaign.revision,initiatedByParticipantId:"dm.local",now:new Date().toISOString(),direction:"character-to-stash" as const};
         if(command.asset==="currency") await service.transferPartyStash({...context,asset:"currency",amount:command.amount});
-        else await service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity});
+        else await service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity,...(command.itemTemplate?{itemTemplate:command.itemTemplate}:{})});
       }
       throw error;
     }
@@ -275,7 +277,7 @@ MockAdapter.prototype.commitConnectedPartyStashDeposit=async function commitConn
   if(!campaign) throw new Error("Campaign not found: "+command.campaignId);
   const context={requestId:command.requestId,campaignId:command.campaignId,expectedCampaignRevision:campaign.revision,initiatedByParticipantId:command.actorId,now:new Date().toISOString(),direction:command.direction};
   if(command.asset==="currency")await service.transferPartyStash({...context,asset:"currency",amount:command.amount});
-  else await service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity});
+  else await service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity,...(command.direction==="character-to-stash"&&command.itemTemplate?{itemTemplate:command.itemTemplate}:{})});
   return this.getSnapshot();
 };
 

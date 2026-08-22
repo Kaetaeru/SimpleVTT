@@ -140,3 +140,21 @@ test("connected stash deposit commits only the Campaign aggregate after the clie
   assert.deepEqual(returned.campaignSessionSystems?.partyStash.itemReferences,[]);
   assert.equal(returned.sessionCharacterInventories?.[inventory.characterId].items.find((candidate)=>candidate.id===item.id)?.quantity,item.quantity);
 });
+
+test("party stash returns a catalog-less charged item from its stored template",async()=>{
+  const adapter=new MockAdapter();
+  setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
+  await adapter.getSnapshot();
+  await adapter.createCampaign({campaignId:"campaign.template-stash",name:"Template Stash"});
+  let snapshot=await adapter.getSnapshot();
+  const inventory=snapshot.sessionCharacterInventories?.["char.aelar"]!;
+  const item=inventory.items.find((candidate)=>candidate.definitionId==="item.wand-of-magic-missiles")!;
+  const itemTemplate={definitionId:item.definitionId,name:item.name,nameEn:item.nameEn,kind:item.kind,charges:item.charges,passiveEffects:item.passiveEffects,grantedActionIds:item.grantedActionIds,provenance:item.provenance};
+  snapshot=await adapter.transferPartyStash({requestId:"template.in",campaignId:"campaign.template-stash",actorId:inventory.characterId,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1,itemTemplate,forceUnequip:true});
+  assert.equal(snapshot.campaignSessionSystems?.partyStash.itemReferences[0].itemTemplate?.name,"마법 미사일 완드");
+  snapshot=await adapter.transferPartyStash({requestId:"template.out",campaignId:"campaign.template-stash",actorId:inventory.characterId,direction:"stash-to-character",asset:"item",definitionId:item.definitionId,itemTemplate,quantity:1});
+  const restored=snapshot.sessionCharacterInventories?.[inventory.characterId].items.find((candidate)=>candidate.definitionId===item.definitionId);
+  assert.equal(restored?.name,"마법 미사일 완드");
+  assert.deepEqual(restored?.charges,{current:7,max:7});
+  assert.equal(snapshot.campaignSessionSystems?.partyStash.itemReferences.length,0);
+});

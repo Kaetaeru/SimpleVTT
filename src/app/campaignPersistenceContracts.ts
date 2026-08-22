@@ -101,7 +101,26 @@ export interface CampaignPartyStashState {
   revision:number;
   policy:"shared"|"dm-approval"|"dm-managed";
   wallet:{gp:number;sp:number;cp:number};
-  itemReferences:Array<{instanceId:string;definitionId:string;quantity:number}>;
+  itemReferences:CampaignPartyStashItemReference[];
+}
+
+export interface CampaignPartyStashItemTemplate {
+  definitionId:string;
+  name:string;
+  nameEn?:string;
+  kind:"equipment"|"consumable"|"magic";
+  attunementRequired?:boolean;
+  charges?:{current:number;max:number};
+  passiveEffects:string[];
+  grantedActionIds:string[];
+  provenance:string[];
+}
+
+export interface CampaignPartyStashItemReference {
+  instanceId:string;
+  definitionId:string;
+  quantity:number;
+  itemTemplate?:CampaignPartyStashItemTemplate;
 }
 
 export interface CampaignDmLibraryEntry {
