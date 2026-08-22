@@ -7,74 +7,85 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T04:14:00+09:00`
+- checkpointed_at: `2026-08-23T04:29:00+09:00`
 
 ## Run continuity
 
-This is the existing active Rerun run. Do not create a new run_id, reset sequence, or replace task_id. Preserve prior exact-head Phase 13 evidence, Ready/connected work, V1-11 Campaign lifecycle history, and the V1-12 declarative provider core/runtime checkpoint.
+This is the existing active Rerun run. Do not create a new run_id, reset sequence, or replace task_id. Preserve prior exact-head Phase 13 evidence, Ready/connected work, V1-11 Campaign lifecycle history, and the V1-12 declarative provider implementation. Comprehensive Codex audit remains deferred until all V1 pre-release implementation is complete.
 
 ## Preflight for this dispatch
 
 - Mandatory Rerun order read: README -> control -> STATE -> PLAN.
 - Reconciled `continue`, sequence `1`, task `phase14-production-play-session-ux`.
-- Confirmed `work/v1-composite` remains canonical through `CANONICAL_ROOT.md`.
-- Re-read current V1 handoff, release checklist, and Campaign systems provider/Rest contract.
-- Did not repeat provider core/runtime or older Ready/Campaign lifecycle work.
+- Confirmed `work/v1-composite` remains canonical.
+- Re-read current V1 handoff, release checklist, Campaign Rest contract, existing rest/domain/runtime/persistence sources.
+- Did not repeat the completed provider core/UI work.
 
-## Completed in this dispatch — V1-12 declarative provider production UI
+## Preserved prior checkpoint — declarative providers
 
-### Installed-provider selection
+Calendar/Ration declarative provider core/runtime/UI is code-connected. Provider exact-head validation is still pending because direct-push Actions results are not exposed by the current connector. Do not reopen that implementation merely to obtain validation.
 
-- `47de9a2` — added latest-per-providerId and exact-pinned descriptor helpers using the same numeric-aware version ordering as Campaign runtime.
-- `de40e7b` — connected `CampaignSystemsPanel` to provider descriptors derived from the existing `snapshot.catalog`.
-- Calendar/Ration selects retain their current visual/control structure.
-- Compatible installed profiles are selectable; the latest installed version per providerId is the normal option.
-- Selecting a custom provider submits both providerId and providerVersion so Campaign persistence pins the selected version.
-- A still-installed older pinned version is shown as current while the latest version remains selectable.
-- A removed/invalid pinned version is shown as explicitly unavailable without blocking the Campaign screen or unrelated play.
+## Completed in this dispatch — Long Rest compound prerequisites
 
-### Calendar / ration projection
+### Existing authority reconciliation
 
-- Custom Calendar uses the existing direct date editor with the selected profile's months and structured year/month/day display.
-- Simple Day/Gregorian behavior remains intact.
-- Custom Ration preview now calls the authoritative provider-aware `previewCampaignDailyRations` path.
-- `shortageConsequences` render only as `DM 판정 제안`; no automatic damage, Exhaustion, or Character mutation was added.
-- If the selected custom ration provider is missing, the UI does not silently fall back to builtin ration arithmetic.
+Source inspection established that there is no generic production Long Rest command today. Existing `configureWizardLongRest`, `configurePactTomeRest`, and `configureCircleLandRest` are class-specific rest configuration commands, not Rest resolution.
 
-### Focused contract / workflow
+The canonical domain authority **does** already exist and must be reused:
 
-- `3284e93` / `b624a48` — added/aligned `campaignDeclarativeProviderUiStructure.test.ts` for latest-version dedupe, pinned lookup, UI Catalog projection, custom calendar months, unavailable state, and advisory ration consequences.
-- `a285f2f` — canonical UI workflow Campaign step now includes:
-  - `campaignDeclarativeProviderProfile.test.ts`
-  - `campaignDeclarativeProviderImport.test.ts`
-  - `campaignDeclarativeProviderRuntime.test.ts`
-  - `campaignDeclarativeProviderUiStructure.test.ts`
-- `.agents/V1_CURRENT_HANDOFF.md` updated at `8c79b9f`.
+- `resolveLongRest()` in `src/domain/rest.ts` handles HP/Temporary HP, life/death-save reset, Hit Dice, declarative long-rest resources, rest-expired effects, and one Exhaustion level.
+- `resolutionRestOps.ts` already exposes canonical `kind:"long-rest"` resolution behavior and state changes.
+- `resources.ts` already owns `recovery.longRest`, recovery lockout, and temporary maximum semantics.
+
+No duplicate Campaign/UI rest arithmetic should be introduced.
+
+### Durable Character projection
+
+- `98b2de9` — added `characterLongRestProjection.test.ts` contract.
+- `aeb65c1` — added `characterLongRestProjection.ts`, a pure application projection over domain `resolveLongRest()`.
+- It updates only Character-owned durable HP/Temporary HP/life flags/resources plus optional Session effects output.
+- It intentionally does not change Campaign time/rations.
+- A dead/0-HP Character is rejected rather than resurrected.
+
+### Cross-store compound staging foundation
+
+Existing Character and Campaign repositories each commit independent immutable generations. Sequential repository commits cannot satisfy the V1 no-partial-success requirement.
+
+Added a staging layer without changing existing repository `commit()` semantics:
+
+- `a7aa126` / `5c7ebbe` — `characterCampaignCompoundPersistence.test.ts` contracts preparation, participant-failure atomicity, and successful dual generation visibility.
+- `55b70c7` — `characterCampaignCompoundPersistence.ts`:
+  - `prepareCharacterLibraryGeneration()` builds the next Character generation payload without writing.
+  - `prepareCampaignLibraryGeneration()` builds the next Campaign generation payload without writing.
+  - both use the actual physical generation head, so recovery from an older valid generation does not accidentally reuse a generation number.
+  - defines the `CharacterCampaignCompoundWriter` contract.
+  - provides `MemoryCharacterCampaignCompoundWriter` for deterministic test/development atomicity.
+- `b0f5095` — Memory Character store now separates all failure/stale checks into `preflightCompoundWrite()` and has a non-failing apply step; normal single writes use the same path.
+- `b4056e5` — Memory Campaign store uses the same preflight/apply structure.
+
+Memory/test atomicity is now structurally possible: both participants are preflighted before either generation is applied.
 
 ## Validation status
 
-Current judgment: **provider production user path implementation complete; exact-head validation pending**.
-
-- GitHub combined status for `a285f2f` exposed no status entries at this checkpoint.
-- The available commit-workflow wrapper is PR-triggered only and returned no run for this direct canonical branch push.
-- A separate read-only clone/test attempt could not start because the execution container could not resolve `github.com`; no repository files were cloned and no test command ran.
-- Therefore the DNS failure is not a product test failure, but it also provides no pass evidence.
-- Do not claim Actions green, build pass, or V1-12 DONE from this checkpoint.
-- Comprehensive Codex audit remains intentionally deferred.
+- New focused tests were authored but their execution result was not observed in this dispatch.
+- No GitHub Actions green claim is made.
+- No comprehensive Codex audit was started.
+- Current work is a prerequisite foundation, not V1-12 DONE.
 
 ## Current functional boundary
 
-The V1-12 Calendar/Ration **declarative provider core + production UI path is code-connected**. The remaining V1-12 implementation gap from the canonical checklist is the authoritative Long Rest compound transaction.
+The remaining blocker before production Long Rest UI/runtime can be safely wired is **Windows/Tauri cross-store atomic generation persistence**. Existing Tauri Character/Campaign generation commands are independently atomic only within their own store.
 
 ## Next Exact Action
 
-Implement authoritative **Long Rest + optional Campaign time advance + optional ration consumption** without redesigning the existing Rest UI.
+Implement the production `CharacterCampaignCompoundWriter` on Tauri, then wire the Long Rest compound user path.
 
-1. Read the current authoritative Long Rest command/runtime/write-back implementation before adding any new rest logic.
-2. Reconcile it with `docs/design/campaign-systems.md` and Campaign repository transaction boundaries.
-3. Add deterministic failing contracts for preview, optional side effects, idempotency, and failure atomicity.
-4. Reuse existing Character rest authority; do not duplicate spell/resource recovery rules in Campaign code or UI.
-5. Optional Calendar/Ration effects must be user-selected. OFF or missing providers must not block Long Rest itself.
-6. If Character durable write-back or Campaign generation commit fails, no partial successful compound result may remain.
-7. Time advance alone must not trigger Rest, and Rest alone must not force time/ration advancement.
-8. If provider UI CI evidence becomes visible later, record it without reopening implemented provider work.
+1. Extend the Tauri generation-store layer with a Character+Campaign compound transaction.
+2. Preflight both expected/next generations before any visible commit.
+3. Durably stage/fsync both payloads before creating a transaction commit point.
+4. Add startup/read recovery for a committed-but-not-fully-materialized transaction so one store is never exposed as the successful final state while the other remains old.
+5. Add Rust deterministic tests for pre-commit failure and committed interruption recovery.
+6. Expose `write_character_campaign_compound` through `src-tauri/src/lib.rs` and a TS platform writer.
+7. Then add production Long Rest coordinator: domain Rest projection + optional Calendar advance + optional Ration consume -> prepare both generations -> one compound write -> rehydrate/project only after success.
+8. Add only minimal preview/options/action to the existing Rest surface; do not redesign UI.
+9. Calendar/Rations OFF or missing provider disable only those optional side effects; they must not block Rest itself.
