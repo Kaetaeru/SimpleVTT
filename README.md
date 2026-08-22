@@ -1,5 +1,10 @@
 # SimpleVTT
 
+> [!IMPORTANT]
+> **Canonical V1 development root:** `work/v1-composite`
+>
+> All current V1 implementation, builds, previews, tests, and follow-up AI work must use this branch. `main` and `work/v1-latest` are historical/landing references and must not be treated as the latest playable build. See [CANONICAL_ROOT.md](./CANONICAL_ROOT.md).
+
 SimpleVTT is a local-first desktop companion for lightweight D&D play. The repository contains executable D&D SRD 5.2.1 rule/content contracts, a Korean-first application shell, and the current rules-engine integration work.
 
 ## Current development gate
