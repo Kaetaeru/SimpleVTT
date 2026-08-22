@@ -19,7 +19,7 @@ export function campaignHydrationIssue(){
 
 export function subscribeCampaignHydrationIssue(listener:Listener){
   listeners.add(listener);
-  return ()=>listeners.delete(listener);
+  return ()=>{listeners.delete(listener);};
 }
 
 function publish(issue:CampaignHydrationIssue|null){
