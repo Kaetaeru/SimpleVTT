@@ -1,24 +1,25 @@
 # Rerun Status
 
-**Connection:** `main` · Phase 14 authorized
+**Connection:** `work/v1-composite` · existing run reconciled · V1 completion authorized
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Canonical branch: `main`
-- Planned work branch: `agent/108-production-play-session-ux`
+- Canonical repository URL: `https://github.com/Kaetaeru/SimpleVTT`
+- Canonical branch/ref: `work/v1-composite`
+- Control path: `.chatgpt-rerun/control.json`
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
-- Control transition: `continue` pending final authoritative write
-- Tracking issue: #108
+- Control status: `continue`
+- Reconciled: `2026-08-23T03:26:00+09:00`
 
 ## Human summary
 
-Phase 14 is now the active product-completion phase. Its goal is to replace the reference-fixture-dependent production play path with a genuine persisted Character -> session -> Scene actor/actions flow and carry that through to an exact-head Windows playable build.
+This is not a new Rerun run. The existing run/sequence/task and historical Phase 13/14 validation records are preserved.
 
-The user specifically requires strong in-session UX: a single play workspace with first-class `행동`, `기술`, `주문`, and `인벤토리` surfaces. Skills must roll through authoritative dice/provenance, and inventory items must be inspectable/usable during the session without leaving play.
+The old Rerun binding to `main` was stale. Actual GitHub activity in this ChatGPT conversation and the repository's `CANONICAL_ROOT.md` establish `work/v1-composite` as the current canonical V1 branch, so the same active run is now reconciled to that ref.
 
-The discovered root cause is that `AppProvider` still delegates through a reference-seeded `MockAdapter`; newly authored Characters are persisted but are not reliably materialized as live Scene actors with their own derived action surface. Existing green Phase 11 tests exercised reference ids and therefore did not prove the real user journey.
+The current user goal is to continue implementing the remaining V1 release checklist through the pre-release boundary **without stopping for a Codex comprehensive audit after each slice**. Once the V1 implementation checklist is complete, one exact canonical SHA will be frozen for the comprehensive Codex total audit. Audit findings will be fixed and the final audit repeated as needed before human acceptance/release evidence.
 
-Phase 13 network authority and durable write-back subsystems remain preserved. Phase 14 will reconcile the actual Character into those proven runtime boundaries rather than replacing them.
+Current product handoff records recent Ready lifecycle/actor ownership/capability work and isolated two-instance tooling. The next watcher dispatch must re-read the V1 handoff and master release checklist, reconcile stale statuses against current code, and continue the next unblocked implementation slice rather than starting the final Codex audit.
 
-`STATUS.md` is human-facing only; dispatch/reconciliation remains README → control → STATE → PLAN.
+`STATUS.md` is a human-facing projection only. Dispatch/reconciliation source order remains README -> control -> STATE -> PLAN.
