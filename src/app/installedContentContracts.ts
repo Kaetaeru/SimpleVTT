@@ -96,6 +96,8 @@ declare module "./contracts" {
     contentId?:string;
     /** Stable module/source identity; distinct from display source. */
     sourceId?:string;
+    /** Read-only data-only Campaign provider projection from installed content. */
+    campaignProvider?:InstalledCampaignProviderProfileV1;
   }
 
   interface AppSnapshot {
