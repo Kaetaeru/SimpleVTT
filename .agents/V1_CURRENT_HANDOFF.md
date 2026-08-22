@@ -3,7 +3,8 @@
 Status: **CURRENT CANONICAL HANDOFF**  
 Updated: **2026-08-23 Asia/Seoul**  
 Canonical branch: **`work/v1-composite`**  
-Recorded product code head: **`f3ca88d feat(session): negotiate Ready Action capability`**
+Recorded code head: **`c77d630 dev(session): isolate acceptance instance data`**  
+Recorded acceptance tooling head: **`39930d4 ci(session): guard two-instance acceptance tooling`**
 
 이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 단일 인수인계 문서다. 전체 출시 작업의 우선순위와 완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 실제 제품 계약은 `docs/design/`, 작업 루트 판정은 저장소 루트의 `CANONICAL_ROOT.md`가 우선한다.
 
@@ -51,9 +52,9 @@ Recorded product code head: **`f3ca88d feat(session): negotiate Ready Action cap
 
 - `ready-intent-v1`은 lobby Ready 의미이며 Ready Action과 별개다.
 - **`ready-action-v1`**을 `CONNECTED_CAPABILITIES`의 required capability로 추가했다.
-- protocol version은 **v1 유지**다. 기존 `compareSessionCompatibility`가 Host의 required capability가 Client에 없으면 incompatible로 거부하므로 별도 protocol bump가 필요하지 않다.
+- protocol version은 **v1 유지**다. 기존 `compareSessionCompatibility`가 Host의 required capability가 Client에 없으면 incompatible로 거부한다.
 - ActionRequest도 동일한 `CONNECTED_CAPABILITIES` 목록을 보내며 Host가 required capability 누락을 거부한다.
-- wire decoder는 capability를 일반 `string[]`로 검증하므로 새 wire schema version은 필요하지 않다.
+- wire decoder는 capability를 일반 `string[]`로 검증하므로 wire schema bump는 필요하지 않다.
 
 ## 3. 이번 Ready 슬라이스 핵심 커밋
 
@@ -78,39 +79,59 @@ Focused tests:
 - `fd04021` — required Ready capability compatibility
 - `ba9e964` — runtime manifest advertises Ready capability
 
-CI wiring:
+## 4. Two-instance acceptance tooling — 구현 완료
 
-- canonical `work/v1-composite` push is included in `.github/workflows/phase12-connected.yml`.
-- focused connected suite includes Ready lifecycle, actor-specific state, protocol/session, reconnect and production connected tests.
-- this session's GitHub connector does not expose push-triggered Actions check-run results, so **do not record exact-head CI as green without separate run evidence**.
+수동 검증을 반복 가능하게 만들기 위해 다음 도구를 추가했다.
 
-## 4. 바로 다음 작업 — 실제 두 인스턴스 Ready acceptance
+- `src-tauri/src/lib.rs`
+  - `SIMPLEVTT_LOCAL_DATA_ROOT`: acceptance instance별 persistence root override.
+  - `SIMPLEVTT_INSTANCE_LABEL`: 창 제목에 instance label 추가.
+  - 환경변수가 없으면 production 동작과 경로는 그대로다.
+- `Start SimpleVTT Acceptance Pair.cmd`
+  - 더블클릭 entrypoint.
+- `scripts/start-acceptance-pair.ps1`
+  - 현재 `src-tauri/target/debug/simplevtt.exe`를 Host/Client 두 프로세스로 실행.
+  - `.live-dev/acceptance/host/data`, `.live-dev/acceptance/client/data`를 각각 사용한다.
+  - `Acceptance Host`, `Acceptance Client` 창 제목을 사용한다.
+  - Vite `127.0.0.1:1420`이 살아 있어야 실행한다.
+  - 기존 Host port `3210` 점유를 사전 차단한다.
+  - 기본은 isolated acceptance 데이터를 재사용하고 `-Fresh`일 때만 해당 acceptance 데이터만 삭제한다.
+- `tests/ui/twoInstanceAcceptanceLauncherStructure.test.ts`
+  - 데이터 격리/env/label/port preflight 구조를 고정한다.
+- canonical Phase 12 workflow가 launcher 파일 변경도 감시하고 위 구조 테스트를 포함한다.
 
-코드/프로토콜 구조 보강은 완료했다. 이제 실제 Windows Host/Client 두 앱에서 아래를 증명한다.
+관련 커밋:
 
+- `c77d630` — isolate acceptance instance data
+- `b05318d` — add isolated pair PowerShell launcher
+- `d212d47` — add double-click pair entrypoint
+- `9df94fa` — preflight Vite/Host ports
+- `517bf84` — launcher structure regression test
+- `39930d4` — canonical CI coverage for acceptance tooling
+
+## 5. 바로 다음 작업 — 실제 두 인스턴스 Ready acceptance
+
+코드/프로토콜/실행 도구 보강은 완료했다. 다음에는 실제 Windows UI에서 증거를 확보한다.
+
+- [x] actor-specific Ready state/config/economy architecture
+- [x] turn/initiative lifecycle Ready clear propagation
+- [x] session start/end/reset cleanup
+- [x] `ready-action-v1` required capability negotiation
+- [x] isolated two-instance acceptance launcher
+- [ ] `Start SimpleVTT Acceptance Pair.cmd`로 Host/Client 두 창이 실제 열린다.
 - [ ] Host와 Client가 `ready-action-v1` manifest로 compatible handshake한다.
 - [ ] remote Player가 Ready 설정 → Host와 Client 양쪽에서 같은 actor/config/status/economy를 본다.
 - [ ] Host local actor와 remote Player가 동시에 Ready를 보유할 수 있다.
 - [ ] 한 actor만 trigger했을 때 그 actor만 Reaction 소비 + Ready clear되고 다른 actor Ready는 유지된다.
 - [ ] trigger 없이 다음 자기 턴이 오면 `next-turn-start` clear가 양쪽에 동일하게 적용된다.
 - [ ] initiative 종료 시 남은 모든 Ready가 deterministic clear된다.
-- [ ] Client 연결을 끊고 reconnect하면 cursor catch-up 후 Ready config/status/economy가 Host와 동일하다.
-- [ ] 같은 catch-up event 재수신이 상태를 두 번 변경하지 않는다.
-- [ ] explicit session end/restart 후 이전 Ready config/status가 남지 않는다.
+- [ ] reconnect/catch-up 후 Ready config/status/economy가 Host와 동일하다.
+- [ ] duplicate catch-up event가 상태를 두 번 변경하지 않는다.
+- [ ] explicit session end/restart 후 이전 Ready가 남지 않는다.
 
-권장 다음 구현/증거 파일:
+주의: 같은 PC의 pair launcher는 baseline Host/Client UI 검증에는 유용하지만, **실제 네트워크 단절 후 in-process reconnect** 증거는 별도 transport interruption 또는 두 머신/LAN 검증이 더 적합하다.
 
-- `src/app/tauriSessionTransport.ts`
-- `src/app/connectedSessionRuntimeAdapter.ts`
-- `src/app/connectedActionRoutingAdapter.ts`
-- `tests/ui/productionClientReconnect.test.ts`
-- `tests/ui/productionHelloReplayIdempotency.test.ts`
-- `tests/ui/connectedReadyActionProjection.test.ts`
-- `.github/workflows/phase12-connected.yml`
-
-가능하면 수동 반복을 줄이기 위해 two-instance acceptance launcher 또는 deterministic desktop smoke harness를 먼저 만든다.
-
-## 5. 전체 V1 요약
+## 6. 전체 V1 요약
 
 | 묶음 | 현재 판단 | 다음 증거/작업 |
 | --- | --- | --- |
@@ -119,21 +140,21 @@ CI wiring:
 | V1-10~12 Campaign systems | PARTIAL | exact-head 회귀 + 저장/재실행 walkthrough 필요 |
 | V1-13 Stash/DM Library | IMPLEMENTED, CHECKLIST STALE | exact-head 검증 후 checklist 갱신 |
 | V1-20~21 Local play | PARTIAL | Ready mechanics 구현; 전체 session walkthrough 필요 |
-| V1-30~32 Connected play | PARTIAL, ACTIVE | Ready code/capability 완료; two-instance/reconnect 증거 필요 |
+| V1-30~32 Connected play | PARTIAL, ACTIVE | Ready code/capability/tooling 완료; two-instance/reconnect 증거 필요 |
 | V1-40 DM live operation | PARTIAL | Campaign 연동 통합 검증 필요 |
 | V1-41 Mapless/module | PARTIAL | provider lifecycle/stale fact 검증 필요 |
 | V1-42 Dice | PARTIAL | 최종 human acceptance 필요 |
 | V1-50+ Release | TODO | 전체 회귀, Windows artifact, acceptance, promotion |
 
-## 6. 환경/검증 메모
+## 7. 환경/검증 메모
 
 - 2026-08-23 Windows 사용자 환경에서 `Start SimpleVTT Live.cmd`가 private Node/npm, private Rust/Cargo, MSVC Build Tools를 준비하고 `tauri dev`를 실행하는 것까지 확인했다.
 - `.live-dev/**`는 Git/Vite watch에서 제외되어 runtime bootstrap이 auto-sync/HMR을 오염시키지 않는다.
 - `src-tauri/Cargo.lock`은 현재 저장소 정책상 local generated file로 ignore한다.
 - Phase 12 workflow는 Ubuntu connected protocol/build gate + Windows cargo/Tauri build gate를 가진다.
-- connector가 Actions run을 노출하지 않는 한 코드 존재와 test source만으로 green/DONE을 주장하지 않는다.
+- 이 세션의 GitHub connector는 push-triggered Actions run 상태를 노출하지 않았다. 별도 run evidence 없이 exact-head CI green을 주장하지 않는다.
 
-## 7. 설계 주의점
+## 8. 설계 주의점
 
 - Ready는 Character/Campaign durable state가 아니라 Session transient state다.
 - `ready-action-v1`과 lobby `ready-intent-v1`을 혼동하지 않는다.
