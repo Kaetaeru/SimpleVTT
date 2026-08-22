@@ -1,6 +1,7 @@
 import type { CharacterSheet } from "./contracts";
 import type { CharacterDurableLifeFlagsV1 } from "./persistenceContracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import type { ResourceRecoveryLockouts } from "../domain/resources";
 import type { LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
 import type { HpStateChange } from "../domain/stateChange";
 
@@ -10,6 +11,7 @@ export type CharacterWriteBackProjection =
   | { status:"rejected"; error:string };
 
 type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange;
+type DurableCharacterResource=CharacterSheet["resources"][number]&{recoveryLockouts?:ResourceRecoveryLockouts};
 
 const ITEM_PREFIX="phase09:item:";
 
@@ -35,6 +37,14 @@ function lifeFlags(sheet:CharacterSheet,fallback?:CharacterDurableLifeFlagsV1):C
   return structuredClone(sheet.durableLifeFlags ?? fallback ?? { stable:false,unconscious:false,dead:false });
 }
 
+function lockoutSnapshot(value:ResourceRecoveryLockouts|undefined):ResourceRecoveryLockouts|null {
+  return value ? structuredClone(value) : null;
+}
+
+function sameLockouts(left:ResourceRecoveryLockouts|null,right:ResourceRecoveryLockouts|null) {
+  return left?.shortRest===right?.shortRest&&left?.longRest===right?.longRest;
+}
+
 function applyChange(
   sheet:CharacterSheet,
   change:CharacterDurableStateChange,
@@ -56,6 +66,7 @@ function applyChange(
     const after=direction==="forward" ? change.after : change.before;
     const pseudo=itemResource(change.resourceId);
     if (pseudo) {
+      if (change.recoveryLockouts) return `Character write-back item resource cannot carry recovery lockouts: ${change.resourceId}`;
       const item=sheet.items.find((entry)=>entry.id===pseudo.itemId);
       if (!item) return `Character write-back item is missing: ${pseudo.itemId}`;
       const current=pseudo.field==="quantity" ? item.quantity : item.charges?.current;
@@ -65,9 +76,19 @@ function applyChange(
       else if (item.charges) item.charges.current=after;
       return;
     }
-    const resource=sheet.resources.find((entry)=>entry.id===change.resourceId);
+    const resource=sheet.resources.find((entry)=>entry.id===change.resourceId) as DurableCharacterResource|undefined;
     if (!resource) return `Character write-back resource is missing: ${change.resourceId}`;
     if (resource.current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${resource.current}`;
+    if (change.recoveryLockouts) {
+      const expected=direction==="forward" ? change.recoveryLockouts.before : change.recoveryLockouts.after;
+      const next=direction==="forward" ? change.recoveryLockouts.after : change.recoveryLockouts.before;
+      const current=lockoutSnapshot(resource.recoveryLockouts);
+      if (!sameLockouts(current,expected)) {
+        return `Character write-back drift for ${change.targetId}/${label(change)}.recoveryLockouts`;
+      }
+      if (next) resource.recoveryLockouts=structuredClone(next);
+      else delete resource.recoveryLockouts;
+    }
     resource.current=after;
     return;
   }
