@@ -17,6 +17,7 @@ import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./res
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
+import { campaignXpThresholdForLevel } from "./campaignApplicationService";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./productionCombatantPreparationAdapter";
@@ -93,6 +94,7 @@ interface AppContextValue {
   undoCampaignRationConsumption(campaignId:string):Promise<void>;
   advanceCampaignDay(campaignId:string,input:{consumeRations:boolean;requiredUnits?:number;note?:string}):Promise<void>;
   appendCampaignSessionSummary(campaignId:string,summary:CampaignSessionSummary):Promise<void>;
+  grantCampaignAdvancement(campaignId:string,input:{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}):Promise<void>;
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
   stopSession(): Promise<void>;
@@ -236,6 +238,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     undoCampaignRationConsumption: async (campaignId) => apply(() => mockAdapter.undoCampaignRationConsumption(campaignId)),
     advanceCampaignDay: async (campaignId,input) => apply(() => mockAdapter.advanceCampaignDay(campaignId,input)),
     appendCampaignSessionSummary: async (campaignId,summary) => apply(() => mockAdapter.appendCampaignSessionSummary(campaignId,summary)),
+    grantCampaignAdvancement: async (campaignId,input) => apply(() => mockAdapter.grantCampaignAdvancement(campaignId,input)),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
     stopSession: async () => apply(() => mockAdapter.stopSession()),
@@ -271,6 +274,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
 }) {
   const parent = useSimpleVtt();
   const [previewCalendarOverride,setPreviewCalendarOverride]=useState<{campaignId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"]}|null>(null);
+  const [previewAdvancementOverride,setPreviewAdvancementOverride]=useState<Record<string,{xp:number;levelUpCredits:number}>>({});
   const previewSnapshot = useMemo<AppSnapshot | null>(() => {
     if (!parent.snapshot) return null;
     const activeCharacter = parent.snapshot.activeCharacter;
@@ -294,16 +298,17 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
     const hasPreviewMember=baseCampaign.roster.some((member)=>member.rosterMemberId===previewRosterMemberId);
     const roster=(hasPreviewMember?baseCampaign.roster.map((member)=>member.rosterMemberId===previewRosterMemberId?{...member,connectionState:"connected" as const}:member):[
       ...baseCampaign.roster,
-      {rosterMemberId:previewRosterMemberId,label:activeCharacter.name,kind:"player-character-ref" as const,active:true,countsForRations:true,rationUnitsPerDay:1,stashPermission:"request" as const,connectionState:"connected" as const},
+      {rosterMemberId:previewRosterMemberId,label:activeCharacter.name,kind:"player-character-ref" as const,active:true,countsForRations:true,rationUnitsPerDay:1,stashPermission:"request" as const,connectionState:"connected" as const,level:activeCharacter.level,advancement:{xp:campaignXpThresholdForLevel(activeCharacter.level),levelUpCredits:0}},
     ]);
+    const advancementRoster=roster.map((member)=>({...member,level:member.level??(member.rosterMemberId===previewRosterMemberId?activeCharacter.level:1),advancement:previewAdvancementOverride[member.rosterMemberId]??member.advancement??{xp:0,levelUpCredits:0}}));
     const dailyRequired=(baseCampaign.rations.dailyRequired??0)+(hasPreviewMember?0:1);
     const balance=baseCampaign.rations.balance??0;
     const previewRations={...baseCampaign.rations,dailyRequired,shortage:Math.max(0,dailyRequired-balance)};
     const campaignSessionSystems={
       ...baseCampaign,
       roster:role==="player"&&!previewRations.visibleToPlayers
-        ? roster.map(({countsForRations:_,rationUnitsPerDay:__,...member})=>member)
-        : roster,
+        ? advancementRoster.map(({countsForRations:_,rationUnitsPerDay:__,...member})=>member)
+        : advancementRoster,
       rations:role==="player"&&!previewRations.visibleToPlayers
         ? {enabled:previewRations.enabled,visibleToPlayers:false as const}
         : previewRations,
@@ -329,7 +334,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       scene: previewCurrentActorId===parent.snapshot.scene.currentActorId?parent.snapshot.scene:{...parent.snapshot.scene,currentActorId:previewCurrentActorId},
       campaignSessionSystems,
     };
-  }, [mode, parent.snapshot, previewCalendarOverride, role]);
+  }, [mode, parent.snapshot, previewAdvancementOverride, previewCalendarOverride, role]);
 
   const value = useMemo<AppContextValue>(() => ({
     ...parent,
@@ -345,6 +350,18 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       if(!calendar||previewSnapshot?.campaignSessionSystems?.campaignId!==campaignId)return;
       const absoluteMinute=campaignDateTimeToAbsoluteMinute(calendar.providerId,input.dateTime);
       setPreviewCalendarOverride({campaignId,absoluteMinute,displayAnchor:projectCampaignCalendar(calendar.providerId,absoluteMinute,input.dateTime.era)});
+    },
+    grantCampaignAdvancement: async(campaignId,input)=>{
+      if(previewSnapshot?.campaignSessionSystems?.campaignId!==campaignId)return;
+      setPreviewAdvancementOverride((current)=>{
+        const next={...current};
+        for(const rosterMemberId of input.rosterMemberIds){
+          const projected=previewSnapshot.campaignSessionSystems?.roster.find((member)=>member.rosterMemberId===rosterMemberId)?.advancement??{xp:0,levelUpCredits:0};
+          const value=next[rosterMemberId]??projected;
+          next[rosterMemberId]=input.kind==="xp"?{...value,xp:value.xp+input.amount}:{...value,levelUpCredits:value.levelUpCredits+input.amount};
+        }
+        return next;
+      });
     },
   }), [onExit, parent, previewSnapshot]);
 

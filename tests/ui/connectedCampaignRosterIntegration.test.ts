@@ -102,6 +102,7 @@ test("accepted remote Character becomes one durable Campaign roster reference ac
       label:"Remote Hero",
       kind:"player-character-ref",
       characterRef:{ownerHint:"client:char.connected.campaign",characterId:"char.connected.campaign"},
+      level:5,
       active:true,
       countsForRations:true,
       rationUnitsPerDay:1,

@@ -62,6 +62,7 @@ declare module "./mockAdapter" {
     undoCampaignRationConsumption(campaignId:string):Promise<AppSnapshot>;
     advanceCampaignDay(campaignId:string,input:{consumeRations:boolean;requiredUnits?:number;note?:string}):Promise<AppSnapshot>;
     appendCampaignSessionSummary(campaignId:string,summary:CampaignSessionSummary):Promise<AppSnapshot>;
+    grantCampaignAdvancement(campaignId:string,input:{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}):Promise<AppSnapshot>;
   }
 }
 
@@ -82,6 +83,8 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
       rosterMemberId:member.rosterMemberId,label:member.label,kind:member.kind,active:member.active,
       countsForRations:member.countsForRations,rationUnitsPerDay:member.rationUnitsPerDay,stashPermission:member.stashPermission,
       connectionState:member.characterRef?.ownerHint?snapshot.session.participants.find((participant)=>participant.id===member.characterRef?.ownerHint)?.state:undefined,
+      level:member.level??(member.characterRef?.characterId===snapshot.activeCharacter.id?snapshot.activeCharacter.level:undefined),
+      advancement:clone(campaign.advancement?.members[member.rosterMemberId]??{xp:0,levelUpCredits:0}),
     })),
     calendar:{enabled:captured?.calendar.enabled??campaign.calendar.capability.enabled,providerId:campaign.calendar.state.providerId,absoluteMinute:campaign.calendar.state.absoluteMinute,displayAnchor:clone(campaign.calendar.state.displayAnchor),currentNote:campaign.calendar.state.currentNote},
     rations:{enabled:captured?.rations.enabled??campaign.rations.capability.enabled,visibleToPlayers:rationsVisible,...(mayProjectRations?{balance:campaign.rations.ledger.balances.ration??0,dailyRequired:rationPreview?.requiredUnits??0,shortage:rationPreview?.shortageUnits??0}:{})},
@@ -219,6 +222,10 @@ MockAdapter.prototype.appendCampaignSessionSummary=async function appendCampaign
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
   await service.appendSessionSummary({...mutationContext(campaignId,"session-summary",campaign.revision),summary});return this.getSnapshot();
 };
+MockAdapter.prototype.grantCampaignAdvancement=async function grantCampaignAdvancementRuntime(campaignId,input){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error("Campaign not found: "+campaignId);
+  await service.grantAdvancement({...mutationContext(campaignId,"advancement-grant",campaign.revision),...input});return this.getSnapshot();
+};
 
 export function setCampaignLibraryStoreForTests(adapter:MockAdapter,store:CampaignLibraryStore){
   injectedStores.set(adapter,store);contexts.delete(adapter);
@@ -240,12 +247,14 @@ registerConnectedCampaignRosterHandler(async(adapter,candidate)=>{
       ...existing,
       label:candidate.participantName,
       characterRef:{...existing.characterRef,ownerHint:candidate.participantId,characterId:candidate.characterId},
+      level:candidate.level??existing.level,
       active:true,
     }:{
       rosterMemberId,
       label:candidate.participantName,
       kind:"player-character-ref",
       characterRef:{ownerHint:candidate.participantId,characterId:candidate.characterId},
+      level:candidate.level,
       active:true,
       countsForRations:true,
       rationUnitsPerDay:1,

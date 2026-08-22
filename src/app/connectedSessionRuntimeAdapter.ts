@@ -305,6 +305,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
           participantId:wire.participantId,
           participantName:wire.participantName,
           characterId,
+          level:wire.projection?.source.build.level,
         }):{status:"ignored" as const,reason:"hello has no Character identity"};
         if(rosterResult.status==="rejected"){
           if(projectionAcceptance.mode==="mounted") unmountReconstructedCharacterSessionProjection(adapter,message.peer);

@@ -127,7 +127,7 @@ export class CampaignLibraryRepository {
 export function createCampaignRecordV1(input:{campaignId:string;name:string;description?:string;now:string}):CampaignRecordV1 {
   const {campaignId,name,description,now}=input;
   return {
-    campaignId,name,description,status:"active",createdAt:now,updatedAt:now,revision:1,roster:[],
+    campaignId,name,description,status:"active",createdAt:now,updatedAt:now,revision:1,roster:[],advancement:{revision:1,members:{},history:[]},
     sessionDefaults:{revision:1,sessionNameTemplate:name,startingMode:"freeform",calendarEnabled:false,rationsEnabled:false,rationsVisibleToPlayers:true,stashPolicy:"dm-approval",dmLibraryEnabled:true,contentLoadoutId:`${campaignId}.loadout.default`},
     calendar:{capability:{enabled:false,providerId:"builtin.gregorian",providerVersion:"1",settingsRevision:1},state:{providerId:"builtin.gregorian",revision:1,absoluteMinute:0,displayAnchor:{era:"서력",year:1,monthId:"1",monthLabel:"1월",day:1,hour:0,minute:0},history:[]}},
     rations:{capability:{enabled:false,providerId:"builtin.tracking-only",providerVersion:"1",settingsRevision:1},ledger:{revision:1,balances:{ration:0},consumptionHistory:[]}},

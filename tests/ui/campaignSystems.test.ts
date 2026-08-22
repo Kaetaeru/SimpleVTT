@@ -31,6 +31,21 @@ test("Campaign roster drives integer daily ration preview without owning Charact
   assert.deepEqual(campaign.roster[0].characterRef,{ownerHint:"player.remote",characterId:"character.remote"});
 });
 
+test("DM can grant XP or immediate level-up credits to multiple roster members without a reason field",async()=>{
+  const {service}=await setup();
+  await service.upsertRosterMember({...envelope(1,"roster.a"),member:{rosterMemberId:"a",label:"A",kind:"player-character-ref",level:5,active:true,countsForRations:false}});
+  await service.upsertRosterMember({...envelope(2,"roster.b"),member:{rosterMemberId:"b",label:"B",kind:"host-preset",active:true,countsForRations:false}});
+  await service.grantAdvancement({...envelope(3,"xp.party"),rosterMemberIds:["a","b"],kind:"xp",amount:300});
+  await service.grantAdvancement({...envelope(4,"level.a"),rosterMemberIds:["a"],kind:"level-up-credit",amount:1});
+  const campaign=service.getCampaign("campaign.systems")!;
+  assert.deepEqual(campaign.advancement?.members,{a:{xp:6800,levelUpCredits:1},b:{xp:300,levelUpCredits:0}});
+  assert.equal(campaign.advancement?.history.length,2);
+  assert.deepEqual(campaign.advancement?.history[0].rosterMemberIds,["a","b"]);
+  assert.equal("note" in campaign.advancement!.history[0],false);
+  await assert.rejects(()=>service.grantAdvancement({...envelope(5,"xp.missing"),rosterMemberIds:["missing"],kind:"xp",amount:10}),/not found/);
+  assert.equal(service.getCampaign("campaign.systems")?.revision,5);
+});
+
 test("Calendar stores absolute minutes and undo is a compensating transaction",async()=>{
   const {service}=await setup();
   await service.configureCalendar({...envelope(1,"calendar.on"),enabled:true,providerId:"builtin.gregorian"});

@@ -13,10 +13,26 @@ export interface CampaignRosterMember {
   label:string;
   kind:"player-character-ref"|"host-preset"|"companion";
   characterRef?:{ownerHint?:string;characterId:string};
+  level?:number;
   active:boolean;
   countsForRations:boolean;
   rationUnitsPerDay?:number;
   stashPermission?:"none"|"view"|"request"|"manage";
+}
+
+export interface CampaignAdvancementTransaction {
+  transactionId:string;
+  kind:"xp"|"level-up-credit";
+  rosterMemberIds:string[];
+  amount:number;
+  committedAt:string;
+  initiatedByParticipantId:string;
+}
+
+export interface CampaignAdvancementState {
+  revision:number;
+  members:Record<string,{xp:number;levelUpCredits:number}>;
+  history:CampaignAdvancementTransaction[];
 }
 
 export interface CampaignSessionDefaults {
@@ -175,6 +191,8 @@ export interface CampaignSessionSystemsProjection {
     rationUnitsPerDay?:number;
     stashPermission?:CampaignRosterMember["stashPermission"];
     connectionState?:"connected"|"reconnecting"|"disconnected";
+    level?:number;
+    advancement:{xp:number;levelUpCredits:number};
   }>;
   calendar:{enabled:boolean;providerId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"];currentNote?:string};
   rations:{enabled:boolean;visibleToPlayers:boolean;balance?:number;dailyRequired?:number;shortage?:number};
@@ -191,6 +209,7 @@ export interface CampaignRecordV1 {
   lastSessionId?:string;
   revision:number;
   roster:CampaignRosterMember[];
+  advancement?:CampaignAdvancementState;
   sessionDefaults:CampaignSessionDefaults;
   calendar:{capability:OptionalCampaignCapability;state:CampaignCalendarState};
   rations:{capability:OptionalCampaignCapability;ledger:CampaignSupplyLedger};

@@ -4,6 +4,7 @@ export interface ConnectedCampaignRosterCandidate {
   participantId:string;
   participantName:string;
   characterId:string;
+  level?:number;
 }
 
 export type ConnectedCampaignRosterResult=

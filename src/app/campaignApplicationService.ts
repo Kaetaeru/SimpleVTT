@@ -4,6 +4,8 @@ import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./cam
 
 const cp=<T,>(value:T):T=>structuredClone(value);
 const bounded=<T,>(values:T[],limit=128)=>values.slice(-limit);
+const DEFAULT_XP_THRESHOLDS=[0,0,300,900,2700,6500,14000,23000,34000,48000,64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000];
+export function campaignXpThresholdForLevel(level:number){return DEFAULT_XP_THRESHOLDS[Math.max(1,Math.min(20,level))];}
 
 function assertNonNegativeInteger(value:number,label:string){if(!Number.isInteger(value)||value<0) throw new Error(`${label} must be a non-negative integer`);}
 function assertPositiveInteger(value:number,label:string){if(!Number.isInteger(value)||value<=0) throw new Error(`${label} must be a positive integer`);}
@@ -76,6 +78,29 @@ export class CampaignApplicationService {
 
   removeRosterMember(context:CampaignMutationContext&{rosterMemberId:string}){
     return this.mutateCampaign(context,(campaign)=>{campaign.roster=campaign.roster.filter((member)=>member.rosterMemberId!==context.rosterMemberId);});
+  }
+
+  grantAdvancement(context:CampaignMutationContext&{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}){
+    assertPositiveInteger(context.amount,"advancement amount");
+    const rosterMemberIds=[...new Set(context.rosterMemberIds)];
+    if(!rosterMemberIds.length) throw new Error("At least one roster member is required");
+    return this.mutateCampaign(context,(campaign)=>{
+      const missing=rosterMemberIds.filter((id)=>!campaign.roster.some((member)=>member.rosterMemberId===id));
+      if(missing.length) throw new Error("Campaign roster member not found: "+missing.join(", "));
+      const state=campaign.advancement??{revision:0,members:{},history:[]};
+      for(const rosterMemberId of rosterMemberIds){
+        const member=campaign.roster.find((item)=>item.rosterMemberId===rosterMemberId)!;
+        const level=context.levels?.[rosterMemberId]??member.level??1;
+        if(member.level===undefined) member.level=level;
+        const current=state.members[rosterMemberId]??{xp:campaignXpThresholdForLevel(level),levelUpCredits:0};
+        state.members[rosterMemberId]=context.kind==="xp"
+          ? {...current,xp:current.xp+context.amount}
+          : {...current,levelUpCredits:current.levelUpCredits+context.amount};
+      }
+      state.revision+=1;
+      state.history=bounded([...state.history,{transactionId:context.requestId,kind:context.kind,rosterMemberIds,amount:context.amount,committedAt:context.now??campaign.updatedAt,initiatedByParticipantId:context.initiatedByParticipantId}]);
+      campaign.advancement=state;
+    });
   }
 
   configureCalendar(context:CampaignMutationContext&{enabled:boolean;providerId:string}){
