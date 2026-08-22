@@ -5,10 +5,15 @@ import process from "node:process";
 
 const BRANCH = process.env.SIMPLEVTT_LIVE_BRANCH || "work/v1-composite";
 const REMOTE = process.env.SIMPLEVTT_LIVE_REMOTE || "origin";
-const POLL_MS = Math.max(3000, Number(process.env.SIMPLEVTT_LIVE_POLL_MS || 7000));
+const POLL_MS = Math.max(2000, Number(process.env.SIMPLEVTT_LIVE_POLL_MS || 4000));
 const ROOT = process.cwd();
 const STATE_DIR = path.join(ROOT, ".live-dev");
 const STATUS_FILE = path.join(STATE_DIR, "status.json");
+const SAFE_GENERATED_PATHS = [
+  ".live-dev/",
+  "src/generated/",
+  "src-tauri/Cargo.lock",
+];
 
 // Git treats these names as repository overrides. Live Development must always
 // discover the repository from ROOT instead of inheriting an unrelated shell value.
@@ -28,6 +33,7 @@ let appProcess = null;
 let stopping = false;
 let syncInProgress = false;
 let lastStateKey = "";
+let lastIgnoredNoiseKey = "";
 
 function stamp() {
   return new Date().toLocaleTimeString("en-GB", { hour12: false });
@@ -96,7 +102,7 @@ function writeStatus(state) {
 }
 
 function publishState(kind, detail, extra = {}) {
-  const key = JSON.stringify([kind, detail, extra.localSha, extra.remoteSha]);
+  const key = JSON.stringify([kind, detail, extra.localSha, extra.remoteSha, extra.dirtyEntries]);
   if (key !== lastStateKey) {
     log(`[SYNC] ${detail}`);
     lastStateKey = key;
@@ -194,6 +200,39 @@ function needsAppRestart(files) {
     || files.some((file) => file.startsWith("src-tauri/src/"));
 }
 
+function statusEntries() {
+  const output = git(["status", "--porcelain", "--untracked-files=normal"]).stdout;
+  return output ? output.split(/\r?\n/).filter(Boolean) : [];
+}
+
+function statusPath(entry) {
+  let value = entry.length > 3 ? entry.slice(3).trim() : entry.trim();
+  const renameIndex = value.lastIndexOf(" -> ");
+  if (renameIndex >= 0) value = value.slice(renameIndex + 4);
+  return value.replaceAll("\\", "/").replace(/^"|"$/g, "");
+}
+
+function isSafeGeneratedEntry(entry) {
+  const file = statusPath(entry);
+  return SAFE_GENERATED_PATHS.some((safe) => safe.endsWith("/") ? file.startsWith(safe) : file === safe);
+}
+
+function partitionStatus(entries) {
+  return {
+    ignored: entries.filter(isSafeGeneratedEntry),
+    blocking: entries.filter((entry) => !isSafeGeneratedEntry(entry)),
+  };
+}
+
+function remoteHeadSha() {
+  const result = git(["ls-remote", "--heads", REMOTE, `refs/heads/${BRANCH}`], { allowFailure: true });
+  if (result.status !== 0) return { status:"error", error:result.stderr || result.stdout || "unknown Git error" };
+  const firstLine = result.stdout.split(/\r?\n/).find(Boolean);
+  const sha = firstLine?.split(/\s+/)[0];
+  if (!sha) return { status:"error", error:`Remote branch ${REMOTE}/${BRANCH} was not found.` };
+  return { status:"ok", sha };
+}
+
 async function afterFastForward(files) {
   if (needsDependencyRefresh(files)) {
     await stopApp("dependencies changed");
@@ -226,9 +265,36 @@ async function syncOnce() {
       return;
     }
 
-    const dirty = git(["status", "--porcelain", "--untracked-files=normal"]).stdout;
-    if (dirty) {
-      publishState("paused", "Local changes detected. Automatic Git sync is paused to protect your work.");
+    const localSha = git(["rev-parse", "HEAD"]).stdout;
+    const remoteProbe = remoteHeadSha();
+    if (remoteProbe.status !== "ok") {
+      publishState("offline", `Remote check failed: ${remoteProbe.error}`, { localSha });
+      return;
+    }
+    const advertisedRemoteSha = remoteProbe.sha;
+
+    const status = partitionStatus(statusEntries());
+    const ignoredKey = status.ignored.join("\n");
+    if (ignoredKey && ignoredKey !== lastIgnoredNoiseKey) {
+      log(`[SYNC] Ignoring generated local noise: ${status.ignored.join(" | ")}`);
+      lastIgnoredNoiseKey = ignoredKey;
+    }
+    if (!ignoredKey) lastIgnoredNoiseKey = "";
+
+    if (status.blocking.length > 0) {
+      const remoteNote = advertisedRemoteSha === localSha
+        ? `Remote is still ${advertisedRemoteSha.slice(0, 7)}.`
+        : `Remote ${advertisedRemoteSha.slice(0, 7)} is newer than local ${localSha.slice(0, 7)}.`;
+      publishState(
+        "paused",
+        `Local work is protected; merge paused. ${remoteNote} Blocking changes: ${status.blocking.join(" | ")}`,
+        { localSha, remoteSha:advertisedRemoteSha, dirtyEntries:status.blocking },
+      );
+      return;
+    }
+
+    if (localSha === advertisedRemoteSha) {
+      publishState("watching", `Up to date at ${localSha.slice(0, 7)}. Watching ${REMOTE}/${BRANCH}.`, { localSha, remoteSha:advertisedRemoteSha });
       return;
     }
 
@@ -236,22 +302,16 @@ async function syncOnce() {
     const fetchRefspec = `+refs/heads/${BRANCH}:${remoteRef}`;
     const fetchResult = git(["fetch", "--quiet", REMOTE, fetchRefspec], { allowFailure: true });
     if (fetchResult.status !== 0) {
-      publishState("offline", `Fetch failed: ${fetchResult.stderr || fetchResult.stdout || "unknown Git error"}`);
+      publishState("offline", `Fetch failed: ${fetchResult.stderr || fetchResult.stdout || "unknown Git error"}`, { localSha, remoteSha:advertisedRemoteSha });
       return;
     }
 
-    const localSha = git(["rev-parse", "HEAD"]).stdout;
     const remoteShaResult = git(["rev-parse", "--verify", `${REMOTE}/${BRANCH}`], { allowFailure: true });
     if (remoteShaResult.status !== 0 || !remoteShaResult.stdout) {
-      publishState("blocked", `Remote tracking ref '${REMOTE}/${BRANCH}' is unavailable.`, { localSha });
+      publishState("blocked", `Remote tracking ref '${REMOTE}/${BRANCH}' is unavailable.`, { localSha, remoteSha:advertisedRemoteSha });
       return;
     }
     const remoteSha = remoteShaResult.stdout;
-
-    if (localSha === remoteSha) {
-      publishState("watching", `Up to date at ${localSha.slice(0, 7)}. Watching ${REMOTE}/${BRANCH}.`, { localSha, remoteSha });
-      return;
-    }
 
     const mergeBase = git(["merge-base", localSha, remoteSha], { allowFailure: true });
     if (mergeBase.status !== 0 || mergeBase.stdout !== localSha) {
@@ -302,7 +362,7 @@ log(`[LIVE] Branch : ${BRANCH}`);
 log(`[LIVE] Local  : ${startSha}`);
 log(`[LIVE] Remote : ${remoteUrl}`);
 log(`[LIVE] Poll   : ${POLL_MS} ms`);
-log("[LIVE] Local edits pause auto-sync; only fast-forward updates are allowed.");
+log("[LIVE] Remote is always checked; only unsafe local edits pause fast-forward merges.");
 startApp();
 await syncOnce();
 
