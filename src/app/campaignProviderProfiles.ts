@@ -143,6 +143,19 @@ export function campaignProviderDescriptorsFromCatalog(catalog:CatalogEntry[],ki
   }).sort((a,b)=>a.label.localeCompare(b.label,"ko-KR")||a.providerId.localeCompare(b.providerId,"en"));
 }
 
+export function latestCampaignProviderDescriptorsFromCatalog(catalog:CatalogEntry[],kind:InstalledCampaignProviderProfileV1["kind"]){
+  const latest=new Map<string,InstalledCampaignProviderDescriptorV1>();
+  for(const provider of campaignProviderDescriptorsFromCatalog(catalog,kind)){
+    const current=latest.get(provider.providerId);
+    if(!current||provider.providerVersion.localeCompare(current.providerVersion,"en",{numeric:true,sensitivity:"base"})>0) latest.set(provider.providerId,provider);
+  }
+  return [...latest.values()].sort((a,b)=>a.label.localeCompare(b.label,"ko-KR")||a.providerId.localeCompare(b.providerId,"en"));
+}
+
+export function pinnedCampaignProviderDescriptorFromCatalog(catalog:CatalogEntry[],kind:InstalledCampaignProviderProfileV1["kind"],providerId:string,providerVersion:string){
+  return campaignProviderDescriptorsFromCatalog(catalog,kind).find((provider)=>provider.providerId===providerId&&provider.providerVersion===providerVersion)??null;
+}
+
 export function requiredCapabilityForCampaignProvider(profile:InstalledCampaignProviderProfileV1){
   return profile.kind==="calendar"?CAMPAIGN_CALENDAR_PROFILE_CAPABILITY:CAMPAIGN_RATION_PROFILE_CAPABILITY;
 }
