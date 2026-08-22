@@ -1,5 +1,5 @@
 import { requireCombatant } from "./combatState";
-import { gainResource, spendResource } from "./resources";
+import { gainResource, spendResource, type ResourceRecoveryLockouts } from "./resources";
 import { resolveLongRest, resolveShortRest } from "./rest";
 import { hpStateChanges } from "./stateChange";
 import {
@@ -15,6 +15,14 @@ import type { ResolutionOperation } from "./resolutionTypes";
 
 type ShortRestOp = Extract<ResolutionOperation, { kind:"short-rest" }>;
 type LongRestOp = Extract<ResolutionOperation, { kind:"long-rest" }>;
+
+function lockoutSnapshot(value:ResourceRecoveryLockouts|undefined):ResourceRecoveryLockouts|null {
+  return value ? structuredClone(value) : null;
+}
+
+function sameLockouts(left:ResourceRecoveryLockouts|null,right:ResourceRecoveryLockouts|null) {
+  return left?.shortRest===right?.shortRest&&left?.longRest===right?.longRest;
+}
 
 function executeRest(
   ctx:ResolutionExecutionContext,
@@ -35,7 +43,7 @@ function executeRest(
 
   const beforeLife = structuredClone(actor.life);
   const beforeHp = { ...beforeLife.hp };
-  const beforeResources = actor.resources.map((pool) => ({ ...pool }));
+  const beforeResources = actor.resources.map((pool) => structuredClone(pool));
   actor.life = resolved.next.life;
   actor.resources = resolved.next.resources;
   actor.hitDice = resolved.next.hitDice;
@@ -100,7 +108,11 @@ function executeRest(
   ];
   for (const before of beforeResources) {
     const after = actor.resources.find((pool) => pool.id === before.id);
-    if (after && after.current !== before.current) {
+    if (!after) continue;
+    const beforeLockouts=lockoutSnapshot(before.recoveryLockouts);
+    const afterLockouts=lockoutSnapshot(after.recoveryLockouts);
+    const lockoutsChanged=!sameLockouts(beforeLockouts,afterLockouts);
+    if (after.current !== before.current || lockoutsChanged) {
       changes.push(
         resourceStateChange(
           operation.targetId,
@@ -108,6 +120,7 @@ function executeRest(
           before.current,
           after.current,
           provenance,
+          lockoutsChanged ? { before:beforeLockouts, after:afterLockouts } : undefined,
         ),
       );
     }
