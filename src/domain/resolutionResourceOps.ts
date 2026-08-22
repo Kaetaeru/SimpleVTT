@@ -55,6 +55,17 @@ export function executeSetResourceRecoveryLockout(
   const before = actor.resources[index];
   const resolved = setResourceRecoveryLockout(before,operation.trigger,operation.rests,ctx.pending.sourceId);
   actor.resources[index] = resolved.next;
+  const changes=[resourceStateChange(
+    actorId,
+    operation.resourceId,
+    before.current,
+    resolved.next.current,
+    resolved.provenance,
+    {
+      before:before.recoveryLockouts?structuredClone(before.recoveryLockouts):null,
+      after:resolved.next.recoveryLockouts?structuredClone(resolved.next.recoveryLockouts):null,
+    },
+  )];
   return {
     result:resolved,
     event:makeEvent(
@@ -63,7 +74,7 @@ export function executeSetResourceRecoveryLockout(
       `${operation.resourceId} ${operation.trigger} recovery locked for ${operation.rests} rests`,
       resolved,
       resolved.provenance,
-      [],
+      changes,
       actorId,
     ),
   };
