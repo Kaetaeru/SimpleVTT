@@ -7,83 +7,74 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T04:03:00+09:00`
+- checkpointed_at: `2026-08-23T04:14:00+09:00`
 
 ## Run continuity
 
-This is the existing active Rerun run. Do not create a new run_id, reset sequence, or replace task_id. Preserve prior exact-head Phase 13 evidence, Ready/connected work, and V1-11 Campaign lifecycle implementation/validation history.
-
-## Active V1 contract
-
-- Finish all intended V1 functionality through real production paths.
-- Preserve the current visible SimpleVTT UI structure/style/navigation as the V1 baseline.
-- Prefer authority/persistence/runtime wiring behind existing screens over redesign.
-- Do not run a comprehensive Codex audit per slice.
-- Freeze one exact pre-V1 canonical SHA only after implementation is complete, then run the comprehensive Codex audit.
+This is the existing active Rerun run. Do not create a new run_id, reset sequence, or replace task_id. Preserve prior exact-head Phase 13 evidence, Ready/connected work, V1-11 Campaign lifecycle history, and the V1-12 declarative provider core/runtime checkpoint.
 
 ## Preflight for this dispatch
 
-- Read mandatory Rerun files in order: README -> control -> STATE -> PLAN.
+- Mandatory Rerun order read: README -> control -> STATE -> PLAN.
 - Reconciled `continue`, sequence `1`, task `phase14-production-play-session-ux`.
-- Confirmed `work/v1-composite` remains canonical.
-- Re-read V1 handoff/checklist and Campaign provider design.
-- Did not repeat V1-11 or previous Ready/Phase 13 work.
+- Confirmed `work/v1-composite` remains canonical through `CANONICAL_ROOT.md`.
+- Re-read current V1 handoff, release checklist, and Campaign systems provider/Rest contract.
+- Did not repeat provider core/runtime or older Ready/Campaign lifecycle work.
 
-## Completed in this dispatch — V1-12 declarative provider core/runtime
+## Completed in this dispatch — V1-12 declarative provider production UI
 
-Reused the existing declarative RuleModule / InstalledContent / Catalog stack rather than creating a second plugin system.
+### Installed-provider selection
 
-### Provider contracts and safety
+- `47de9a2` — added latest-per-providerId and exact-pinned descriptor helpers using the same numeric-aware version ordering as Campaign runtime.
+- `de40e7b` — connected `CampaignSystemsPanel` to provider descriptors derived from the existing `snapshot.catalog`.
+- Calendar/Ration selects retain their current visual/control structure.
+- Compatible installed profiles are selectable; the latest installed version per providerId is the normal option.
+- Selecting a custom provider submits both providerId and providerVersion so Campaign persistence pins the selected version.
+- A still-installed older pinned version is shown as current while the latest version remains selectable.
+- A removed/invalid pinned version is shown as explicitly unavailable without blocking the Campaign screen or unrelated play.
 
-- `4d14cd8` — focused parser/calendar roundtrip contract.
-- `3e364dd` — installed-content Calendar/Ration profile types.
-- `b2244d5` — strict data-only provider parser and stable provider identities.
-- Unexpected fields such as arbitrary run/script hooks are rejected; month/leap/ration values are bounded and validated.
+### Calendar / ration projection
 
-### Calendar authority
+- Custom Calendar uses the existing direct date editor with the selected profile's months and structured year/month/day display.
+- Simple Day/Gregorian behavior remains intact.
+- Custom Ration preview now calls the authoritative provider-aware `previewCampaignDailyRations` path.
+- `shortageConsequences` render only as `DM 판정 제안`; no automatic damage, Exhaustion, or Character mutation was added.
+- If the selected custom ration provider is missing, the UI does not silently fall back to builtin ration arithmetic.
 
-- `ad2eb02` — custom declarative calendar profiles now convert authoritative absolute minutes to and from era/year/month/day/time, including bounded leap-cycle rules.
+### Focused contract / workflow
 
-### RuleModule / InstalledContent boundary
-
-- `e686d9e` / `29e6ee9` — import validation contracts.
-- `d1977e1` — RuleModule package import preserves `campaignProvider` data.
-- `fc5229f` — provider content must be category `option` and its module must declare the matching `campaign.calendar-profile` or `campaign.ration-profile` capability.
-- `a2974b6` — persisted installed-content generations revalidate provider payloads on decode/restart.
-- `2f99068` / `abee49f` — provider metadata is projected read-only through the existing Catalog; no duplicate provider repository was introduced.
-
-### Campaign authority/runtime
-
-- `412047f` — Campaign application service accepts validated optional profiles, pins `providerVersion`, performs custom calendar projection/correction/undo/day advance, and applies ration defaults inside the authoritative Campaign mutation.
-- Explicit roster ration override remains highest priority; provider kind default/global default follow; builtin fallback is 1.
-- Shortage remains warning/ledger only; no automatic damage/exhaustion.
-- `c97a3d0` — Catalog provider descriptor lookup.
-- `386814a` — production Campaign runtime resolves installed providerId/providerVersion and supplies profiles to authoritative mutations.
-- Missing custom provider does not make `getSnapshot()` fail; only provider-specific mutations fail explicitly.
-- `dacb1fd` — production runtime contract covers RuleModule install -> Campaign selection -> version pin -> custom calendar correction -> ration consumption plus restart with the provider missing.
+- `3284e93` / `b624a48` — added/aligned `campaignDeclarativeProviderUiStructure.test.ts` for latest-version dedupe, pinned lookup, UI Catalog projection, custom calendar months, unavailable state, and advisory ration consequences.
+- `a285f2f` — canonical UI workflow Campaign step now includes:
+  - `campaignDeclarativeProviderProfile.test.ts`
+  - `campaignDeclarativeProviderImport.test.ts`
+  - `campaignDeclarativeProviderRuntime.test.ts`
+  - `campaignDeclarativeProviderUiStructure.test.ts`
+- `.agents/V1_CURRENT_HANDOFF.md` updated at `8c79b9f`.
 
 ## Validation status
 
-- Focused deterministic tests are present in source.
-- These new provider tests are not yet wired into the canonical UI workflow in this checkpoint.
-- Exact-head TypeScript/build/Actions result has not been observed; do not claim green/DONE.
-- Comprehensive Codex audit remains intentionally deferred until all V1 implementation is complete.
+Current judgment: **provider production user path implementation complete; exact-head validation pending**.
+
+- GitHub combined status for `a285f2f` exposed no status entries at this checkpoint.
+- The available commit-workflow wrapper is PR-triggered only and returned no run for this direct canonical branch push.
+- A separate read-only clone/test attempt could not start because the execution container could not resolve `github.com`; no repository files were cloned and no test command ran.
+- Therefore the DNS failure is not a product test failure, but it also provides no pass evidence.
+- Do not claim Actions green, build pass, or V1-12 DONE from this checkpoint.
+- Comprehensive Codex audit remains intentionally deferred.
 
 ## Current functional boundary
 
-V1-12 provider **core/runtime is implemented, but the user path is still incomplete** because `CampaignSystemsPanel` still shows the old disabled module-provider placeholders.
-
-No broad UI changes were made in this dispatch.
+The V1-12 Calendar/Ration **declarative provider core + production UI path is code-connected**. The remaining V1-12 implementation gap from the canonical checklist is the authoritative Long Rest compound transaction.
 
 ## Next Exact Action
 
-Finish the V1-12 provider user path inside the current Campaign UI.
+Implement authoritative **Long Rest + optional Campaign time advance + optional ration consumption** without redesigning the existing Rest UI.
 
-1. Derive installed Calendar/Ration provider descriptors from `snapshot.catalog`.
-2. Keep the existing provider `<select>` controls; append compatible installed provider options and keep the disabled placeholder only when none exist.
-3. If multiple versions of the same provider are installed, display/use the same newest-version selection rule as runtime and persist the selected version.
-4. For custom Calendar, keep the existing date editor but use profile months and show year/month/day rather than Simple Day fields.
-5. For custom Rations, make the preview use profile defaults; show shortage consequences as explanatory suggestions only, never automatic damage/exhaustion.
-6. If a currently selected provider is unavailable, show a clear unavailable state but do not block the Campaign screen, Session, Rest, or unrelated actions.
-7. Add `campaignDeclarativeProviderProfile`, `campaignDeclarativeProviderImport`, and `campaignDeclarativeProviderRuntime` to canonical UI workflow and obtain focused TypeScript/build evidence when available.
-8. After provider UI is complete, continue V1-12 with authoritative Long Rest + optional Campaign time advance + optional ration consumption compound write.
+1. Read the current authoritative Long Rest command/runtime/write-back implementation before adding any new rest logic.
+2. Reconcile it with `docs/design/campaign-systems.md` and Campaign repository transaction boundaries.
+3. Add deterministic failing contracts for preview, optional side effects, idempotency, and failure atomicity.
+4. Reuse existing Character rest authority; do not duplicate spell/resource recovery rules in Campaign code or UI.
+5. Optional Calendar/Ration effects must be user-selected. OFF or missing providers must not block Long Rest itself.
+6. If Character durable write-back or Campaign generation commit fails, no partial successful compound result may remain.
+7. Time advance alone must not trigger Rest, and Rest alone must not force time/ration advancement.
+8. If provider UI CI evidence becomes visible later, record it without reopening implemented provider work.
