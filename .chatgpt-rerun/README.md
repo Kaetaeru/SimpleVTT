@@ -5,10 +5,13 @@ This directory is the repository-side coordination contract for ChatGPT Rerun on
 ## Repository binding
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Branch/ref: `main`
+- Canonical repository URL: `https://github.com/Kaetaeru/SimpleVTT`
+- Branch/ref: `work/v1-composite`
 - Control file: `.chatgpt-rerun/control.json`
 
-The binding above was established from GitHub app activity in the originating ChatGPT conversation. The project was promoted by a clean fast-forward from `agent/104-arbitrary-character-session-projection` to `main`; future work must treat `main` as the canonical baseline unless the user explicitly selects another ref. Chrome Side Panel fields are not a source of truth before the user enters and confirms these coordinates.
+This binding was reconciled on 2026-08-23 from actual GitHub app/tool activity in the current ChatGPT conversation and the repository routing authority in `CANONICAL_ROOT.md`. The earlier Rerun documents bound this run to `main`; that binding is historical and is superseded by the repository's current V1 canonical declaration. `main` and `work/v1-latest` remain historical/landing references until deliberate V1 promotion.
+
+Chrome Side Panel fields are not a source of truth before the user enters and confirms these coordinates.
 
 ## Mandatory read order
 
@@ -21,17 +24,25 @@ Every Rerun dispatch must read these files in exactly this order before doing pr
 
 `STATUS.md` is a human-facing projection only. It is never the reconciliation source of truth.
 
+After the mandatory Rerun read order, V1 product work must also read:
+
+1. `CANONICAL_ROOT.md`
+2. `.agents/V1_CURRENT_HANDOFF.md`
+3. `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`
+4. relevant `docs/design/` contracts for the selected V1 item
+
 ## Preflight reconciliation
 
 Before executing any task:
 
-1. Fetch the current configured repository and branch/ref from GitHub and confirm they still resolve.
+1. Fetch the configured repository and branch/ref from GitHub and confirm they still resolve.
 2. Read the mandatory files in order.
 3. Reconcile `run_id`, `sequence`, and `task_id` across control, STATE, and PLAN before changing code.
 4. Treat `control.json` as the dispatch authorization/status record, `STATE.md` as the durable execution checkpoint, and `PLAN.md` as the intended task/acceptance contract.
-5. Never reset an existing run_id, sequence, task, checkpoint, or validation history merely because a new watcher invocation starts.
+5. Never reset an existing run_id, sequence, task, checkpoint, completion record, or validation history merely because a new watcher invocation starts.
 6. If the files disagree in a way that cannot be reconciled safely, do not guess. Record the conflict in STATE/STATUS and use `needs_user` or `blocked` as appropriate.
-7. Re-fetch `main` before writes when concurrent GitHub activity could have advanced it.
+7. Re-fetch `work/v1-composite` before writes when concurrent GitHub activity could have advanced it.
+8. Before product edits, verify the active product ref is `work/v1-composite`; do not silently route work back to `main`.
 
 ## Dispatch and watcher semantics
 
@@ -43,13 +54,23 @@ Chrome Side Panel **Start/Stop controls the tab watcher only**. It is independen
 - If a terminal/waiting status later becomes `continue` with the **same sequence**, that transition is a new work authorization. The watcher must automatically resume from the durable STATE checkpoint rather than requiring a sequence increment.
 - A sequence change means the controller has intentionally advanced dispatch state; reconcile task identity before acting.
 
+## Current V1 execution policy
+
+The current user goal is to finish implementation of the V1 release checklist before doing the comprehensive Codex audit.
+
+- Continue implementing the remaining V1 checklist slices in dependency order on `work/v1-composite`.
+- Add implementation-level deterministic tests/fixtures when they are part of the feature, but do not stop after each slice for a separate Codex total audit.
+- Do not treat the current `.agents/CODEX_VALIDATION_QUEUE.md` per-slice queue as a release gate; it is historical/superseded by the user's final-audit instruction unless explicitly re-authorized.
+- When implementation reaches the V1 pre-release boundary, freeze one exact canonical SHA and only then run the comprehensive Codex audit/full regression against that SHA.
+- Fix audit findings, repeat the final audit as needed, then proceed to human acceptance/release evidence.
+
 ## Execution checkpoint discipline
 
 A single active execution has a **20 minute hard stop**. By approximately **18 minutes**, write a durable checkpoint rather than starting another risky or long operation.
 
-Before the hard stop, STATE must capture what changed, validation evidence, unresolved risks, and a concrete `Next Exact Action`. Do not claim asynchronous/background continuation.
+Before the hard stop, STATE must capture what changed, validation evidence available so far, unresolved risks, and a concrete `Next Exact Action`. Do not claim asynchronous/background continuation.
 
-For long active executions, keep `STATUS.md` reasonably fresh (target about every 5 minutes), and update it immediately for meaningful state changes such as validation success/failure, a newly discovered blocker, task completion, or a user decision requirement.
+For long active executions, keep `STATUS.md` reasonably fresh (target about every 5 minutes), and update it immediately for meaningful state changes such as a completed implementation slice, a newly discovered blocker, task completion, or a user decision requirement.
 
 ## Authoritative write order
 
@@ -59,7 +80,7 @@ When task/plan/state/control need to change, publish them in this order:
 2. `STATE.md`
 3. `control.json` — **last authoritative write**
 
-`STATUS.md` may be refreshed for people before or after STATE as needed, but it cannot authorize work and cannot resolve a conflict between PLAN, STATE, and control.
+`README.md` protocol reconciliation may be published before PLAN. `STATUS.md` may be refreshed for people before or after STATE as needed, but it cannot authorize work and cannot resolve a conflict between PLAN, STATE, and control.
 
 Never publish `control.json` first and then attempt to make PLAN/STATE catch up. The last control write is the dispatch-visible commitment that prior durable records are ready.
 
