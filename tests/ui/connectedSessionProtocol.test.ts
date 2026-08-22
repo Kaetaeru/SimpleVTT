@@ -48,6 +48,18 @@ test("connected session handshake rejects protocol/rules/capability drift explic
   assert.equal(compareSessionCompatibility(hostManifest,{...hostManifest,capabilities:[...hostManifest.capabilities,"future-client-feature"]}).status,"warning");
 });
 
+test("Ready Action lifecycle is negotiated as a required capability without bumping protocol v1",()=>{
+  const readyHost:SessionCompatibilityManifest={
+    ...hostManifest,
+    capabilities:[...hostManifest.capabilities,"ready-action-v1"],
+  };
+  const missing=compareSessionCompatibility(readyHost,{...hostManifest});
+  assert.equal(missing.status,"incompatible");
+  assert.match(missing.message,/ready-action-v1/);
+  assert.equal(CONNECTED_SESSION_PROTOCOL_VERSION,1);
+  assert.equal(compareSessionCompatibility(readyHost,{...readyHost}).status,"compatible");
+});
+
 test("host allocates ordered events once and duplicate ActionRequest is idempotent", () => {
   const host=new HostSessionLedger("session.test",hostManifest);
   const first=host.commitActionRequest(request(),{actorId:"char.aelar",payload:payload("hp 31 -> 25")});
