@@ -20,6 +20,9 @@ import { routeConnectedActionRequest } from "./connectedActionRequestPort";
 import { tauriSessionTransport, type SessionTransportMessage, type SessionTransportStatus } from "./tauriSessionTransport";
 import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "./connectedCharacterProjectionHandshake";
+import { syncConnectedCampaignRoster } from "./connectedCampaignRosterPort";
+import { projectedCharacterById, rebindCharacterSessionProjectionPeer } from "./characterSessionProjectionRegistry";
+import { unmountReconstructedCharacterSessionProjection } from "./characterSessionProjectionMount";
 
 declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
@@ -292,11 +295,24 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         return;
       }
 
+      const characterId=wire.manifest.character?.characterId;
+      const previousProjectionPeer=characterId?projectedCharacterById(adapter,characterId)?.peerId:undefined;
       const projectionAcceptance=acceptHostCharacterSessionProjection(adapter,message.peer,wire.manifest,wire.projection);
       if (projectionAcceptance.status==="rejected") {
         compatibility={status:"incompatible",message:`Character SessionProjection rejected: ${projectionAcceptance.error}`};
       } else {
-        const characterId=wire.manifest.character?.characterId;
+        const rosterResult=characterId?await syncConnectedCampaignRoster(adapter,{
+          participantId:wire.participantId,
+          participantName:wire.participantName,
+          characterId,
+        }):{status:"ignored" as const,reason:"hello has no Character identity"};
+        if(rosterResult.status==="rejected"){
+          if(projectionAcceptance.mode==="mounted") unmountReconstructedCharacterSessionProjection(adapter,message.peer);
+          if(projectionAcceptance.mode==="rebound"&&previousProjectionPeer) rebindCharacterSessionProjectionPeer(adapter,characterId!,previousProjectionPeer);
+          compatibility={status:"incompatible",message:`Campaign roster reference rejected: ${rosterResult.error}`};
+        }
+      }
+      if(compatibility.status!=="incompatible"&&projectionAcceptance.status==="accepted"){
         if (characterId) {
           for (const [peer,manifest] of state.peerManifests.entries()) {
             if (peer!==message.peer&&manifest.character?.characterId===characterId) {

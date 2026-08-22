@@ -26,6 +26,10 @@ test("Host restores projection after compatible hello and broadcasts every Campa
   for(const method of ["advanceCampaignCalendar","correctCampaignCalendar","correctCampaignCalendarDateTime","setCampaignCalendarNote","undoCampaignCalendar","adjustCampaignRations","consumeCampaignDailyRations","undoCampaignRationConsumption","advanceCampaignDay"]){
     assert.match(runtime,new RegExp(`MockAdapter\\.prototype\\.${method}=broadcastAfter`));
   }
+  assert.match(runtime,/connectedStateFor\(adapter\)\.peerParticipants\.keys\(\)/);
+  assert.match(runtime,/baseSendTo\(peer,message\)/);
+  assert.match(runtime,/upsertCampaignRosterMember=broadcastAfter/);
+  assert.match(runtime,/removeCampaignRosterMember=broadcastAfter/);
 });
 
 test("connected Player snapshots cannot receive the Campaign aggregate or hidden ration amounts",()=>{

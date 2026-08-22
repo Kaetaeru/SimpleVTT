@@ -34,7 +34,12 @@ async function envelopeFor(adapter:MockAdapter):Promise<CampaignSystemsEnvelope|
   const snapshot=await adapter.getSnapshot();if(!snapshot.campaignSessionSystems) return null;
   return {type:"campaign-systems-projection",sessionId:state.sessionId,revision:snapshot.campaignSessionSystems.campaignRevision,projection:safeProjection(snapshot.campaignSessionSystems)};
 }
-async function broadcastProjection(adapter:MockAdapter){const envelope=await envelopeFor(adapter);if(envelope) await tauriSessionTransport.send(JSON.stringify(envelope));}
+async function broadcastProjection(adapter:MockAdapter){
+  const envelope=await envelopeFor(adapter);if(!envelope)return;
+  const message=JSON.stringify(envelope);
+  const peers=[...connectedStateFor(adapter).peerParticipants.keys()];
+  await Promise.all(peers.map((peer)=>baseSendTo(peer,message)));
+}
 async function sendToWithCampaignSystems(peer:string,message:string){
   const result=await baseSendTo(peer,message);const sessionId=compatibleHelloAck(message);const host=activeHostAdapter;
   if(!host||!sessionId) return result;const envelope=await envelopeFor(host);if(envelope&&envelope.sessionId===sessionId) await baseSendTo(peer,JSON.stringify(envelope));return result;
@@ -74,3 +79,5 @@ MockAdapter.prototype.adjustCampaignRations=broadcastAfter(MockAdapter.prototype
 MockAdapter.prototype.consumeCampaignDailyRations=broadcastAfter(MockAdapter.prototype.consumeCampaignDailyRations);
 MockAdapter.prototype.undoCampaignRationConsumption=broadcastAfter(MockAdapter.prototype.undoCampaignRationConsumption);
 MockAdapter.prototype.advanceCampaignDay=broadcastAfter(MockAdapter.prototype.advanceCampaignDay);
+MockAdapter.prototype.upsertCampaignRosterMember=broadcastAfter(MockAdapter.prototype.upsertCampaignRosterMember);
+MockAdapter.prototype.removeCampaignRosterMember=broadcastAfter(MockAdapter.prototype.removeCampaignRosterMember);

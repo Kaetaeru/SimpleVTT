@@ -4,6 +4,7 @@ import { CampaignLibraryRepository } from "./campaignPersistence";
 import type { CampaignCalendarDateTime, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { MockAdapter } from "./mockAdapter";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
+import { registerConnectedCampaignRosterHandler } from "./connectedCampaignRosterPort";
 
 interface CampaignRuntimeContext {
   service:CampaignApplicationService;
@@ -217,5 +218,44 @@ MockAdapter.prototype.appendCampaignSessionSummary=async function appendCampaign
 export function setCampaignLibraryStoreForTests(adapter:MockAdapter,store:CampaignLibraryStore){
   injectedStores.set(adapter,store);contexts.delete(adapter);
 }
+
+registerConnectedCampaignRosterHandler(async(adapter,candidate)=>{
+  const captured=sessionSnapshots.get(adapter);
+  if(!captured) return {status:"ignored",reason:"Host Session has no captured Campaign"};
+  try{
+    const service=await ensureHydrated(adapter);
+    const campaign=service.getCampaign(captured.campaignId);
+    if(!campaign) return {status:"rejected",error:`Captured Campaign not found: ${captured.campaignId}`};
+    const existing=campaign.roster.find((member)=>member.kind==="player-character-ref"&&member.characterRef?.characterId===candidate.characterId);
+    const rosterMemberId=existing?.rosterMemberId??`connected:${candidate.characterId}`;
+    if(!existing&&campaign.roster.some((member)=>member.rosterMemberId===rosterMemberId)){
+      return {status:"rejected",error:`Connected roster member id collides with another Campaign member: ${rosterMemberId}`};
+    }
+    const member:CampaignRosterMember=existing?{
+      ...existing,
+      label:candidate.participantName,
+      characterRef:{...existing.characterRef,ownerHint:candidate.participantId,characterId:candidate.characterId},
+      active:true,
+    }:{
+      rosterMemberId,
+      label:candidate.participantName,
+      kind:"player-character-ref",
+      characterRef:{ownerHint:candidate.participantId,characterId:candidate.characterId},
+      active:true,
+      countsForRations:true,
+      rationUnitsPerDay:1,
+      stashPermission:"request",
+    };
+    const unchanged=existing
+      && existing.label===candidate.participantName
+      && existing.active
+      && existing.characterRef?.ownerHint===candidate.participantId;
+    if(unchanged) return {status:"committed",campaignId:campaign.campaignId,rosterMemberId};
+    await adapter.upsertCampaignRosterMember(campaign.campaignId,member);
+    return {status:"committed",campaignId:campaign.campaignId,rosterMemberId};
+  }catch(error){
+    return {status:"rejected",error:error instanceof Error?error.message:String(error)};
+  }
+});
 
 export function clearCampaignSessionSnapshot(adapter:MockAdapter){sessionSnapshots.delete(adapter);}
