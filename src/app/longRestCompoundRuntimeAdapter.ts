@@ -10,13 +10,18 @@ import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore"
 import { TauriCharacterCampaignCompoundWriter } from "./tauriCharacterCampaignCompoundWriter";
 import { MemoryCharacterLibraryStore } from "./memoryCharacterLibraryStore";
 import { MemoryCampaignLibraryStore } from "./memoryCampaignLibraryStore";
-import { MemoryCharacterCampaignCompoundWriter } from "./characterCampaignCompoundPersistence";
+import {
+  MemoryCharacterCampaignCompoundWriter,
+  type CharacterCampaignCompoundWriter,
+} from "./characterCampaignCompoundPersistence";
 import { encodeCharacterLibraryV1 } from "./characterLibraryPersistence";
+import type { CharacterLibraryStore } from "./persistenceContracts";
 import { encodeCampaignDocumentV1 } from "./campaignPersistence";
 import {
   CAMPAIGN_LIBRARY_SCHEMA_ID,
   CAMPAIGN_LIBRARY_SCHEMA_VERSION,
   type CampaignDocumentV1,
+  type CampaignLibraryStore,
 } from "./campaignPersistenceContracts";
 import { pinnedCampaignProviderDescriptorFromCatalog } from "./campaignProviderProfiles";
 import { executeLongRestCompound, type LongRestCompoundResult } from "./longRestCompoundCoordinator";
@@ -103,9 +108,9 @@ export async function performProductionLongRest(
   const characterDocument=characterState?.document;
   if(!characterDocument) throw new Error("Long Rest requires a hydrated Character library");
 
-  let characterStore;
-  let campaignStore;
-  let writer;
+  let characterStore:CharacterLibraryStore;
+  let campaignStore:CampaignLibraryStore;
+  let writer:CharacterCampaignCompoundWriter;
 
   if(isTauriCharacterLibraryRuntime()){
     characterStore=createPlatformCharacterLibraryStore();
