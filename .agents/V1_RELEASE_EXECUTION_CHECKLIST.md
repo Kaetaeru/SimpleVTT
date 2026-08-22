@@ -1,0 +1,583 @@
+# SimpleVTT V1 Release Execution Checklist
+
+Status: **CANONICAL AI EXECUTION ROUTER**
+Target: **실제 로컬/연결 세션을 처음부터 끝까지 플레이할 수 있는 Windows V1**
+Updated: 2026-08-22
+
+이 문서는 작업 AI가 다음 구현 작업, 의존성, 검증 및 출시 차단 조건을 빠르게 결정하기 위한 단일 마스터 체크리스트다.
+
+- `.agents/PHASE14_CHECKLIST.md`는 과거 구현/CI 증거 원장이다. 다음 작업 선택에는 이 문서를 우선한다.
+- `.agents/CURRENT_WORK.md`와 `.agents/SHORT_TERM_CHECKLIST.md`의 Phase 09 표시는 역사적 문맥이다.
+- 제품 계약은 `docs/design/` 문서가 우선하며, 이 체크리스트가 제품 계약을 재정의하지 않는다.
+
+---
+
+# 0. AI 실행 규칙
+
+## 상태 문법
+
+- `DONE`: 현재 canonical Git head에서 코드와 검증 증거가 모두 존재한다.
+- `PARTIAL`: 코드/테스트 일부는 있으나 전체 사용자 경로, 연결 경계 또는 현재 head 증거가 부족하다.
+- `TODO`: 구현 또는 검증이 시작되지 않았다.
+- `BLOCKED`: 선행 조건 없이는 완료 판정을 할 수 없다.
+
+현재 workspace는 `.git`이 없는 source snapshot이다. 따라서 기존 테스트/코드는 `workspace evidence`일 뿐 `DONE` 출시 증거가 아니다. G0 완료 전에는 어떤 항목도 최종 release credit으로 승격하지 않는다.
+
+## 작업 단위 규칙
+
+AI는 한 번에 하나의 `V1-*` 작업을 선택한다.
+
+1. `depends_on`이 모두 DONE인지 확인한다.
+2. 계약 문서를 읽는다.
+3. deterministic failing test 또는 acceptance fixture를 먼저 만든다.
+4. UI에 rules/authority/persistence 계산을 넣지 않는다.
+5. 대상 gate의 focused tests를 실행한다.
+6. 관련 회귀를 실행한다.
+7. 체크박스에는 exact Git SHA, 명령, 결과를 기록한다.
+8. 다음 unblocked 작업을 `NEXT`에 한 개만 기록한다.
+
+## 완료 증거 형식
+
+```text
+EVIDENCE
+head: <exact SHA>
+tests: <exact commands and pass counts>
+human: <walkthrough id or N/A>
+artifact: <workflow/run/digest or N/A>
+notes: <known limitation; empty only when none>
+```
+
+코드 존재, 오래된 CI run, 브랜치가 다른 test result, 브라우저 preview만으로 DONE 처리하지 않는다.
+
+---
+
+# 1. V1 Definition of Playable
+
+V1은 아래 사용자 여정이 한 exact Git SHA 및 그 SHA의 Windows artifact에서 모두 성공해야 한다.
+
+| Journey | 필수 결과 |
+| --- | --- |
+| J1 First run / Character | 새 사용자가 Character 생성·저장·재실행·시트 사용 |
+| J2 Campaign preparation | DM이 Campaign 생성/열기, 파티/달력/식량/보관함/DM Library 준비 |
+| J3 Local session | 실제 Character로 Freeform/Initiative, 행동·기술·주문·인벤토리 사용 |
+| J4 Connected session | 두 앱 Host/Join, Host-unknown Character, Ready, authoritative action, reconnect |
+| J5 DM live operation | Combatant, 지급/회수, 보관함, 달력/식량, 판정/Undo, handout |
+| J6 Persistence | Character와 Campaign durable state는 보존되고 Session transient state는 제거 |
+| J7 Mapless/module behavior | 모듈 없이는 거리 blocker 없음; provider facts만 적용; 제거 시 stale facts 무효화 |
+| J8 Dice/presentation | 실제 WebGL physics dice, 뒤에서 날아와 굴러감, 결과 권위 불변 |
+| J9 Release | exact-head 전체 회귀, Windows build, digest, human acceptance, canonical main |
+
+---
+
+# 2. 의존성 그래프
+
+```text
+V1-00 Git baseline
+  └─ V1-01 Foundation audit
+      ├─ V1-10 Campaign persistence
+      │   └─ V1-11 Campaign product UI
+      │       └─ V1-12 Calendar / Rations / Roster / History
+      │           └─ V1-13 Party Stash / Campaign DM Library
+      ├─ V1-20 Real Character local play
+      │   └─ V1-21 Complete local play loop
+      └─ V1-30 Session lifecycle / authority
+          └─ V1-31 Connected projection and actions
+              └─ V1-32 Connected durable write-back / reconnect
+
+V1-12 + V1-13 + V1-21 + V1-32
+  └─ V1-40 Complete DM live operation
+
+V1-21 + V1-31
+  ├─ V1-41 Spatial capability fallback
+  └─ V1-42 Dice presentation
+
+V1-40 + V1-41 + V1-42
+  └─ V1-50 UX/error/accessibility
+      └─ V1-60 Full regression
+          └─ V1-70 Windows two-instance acceptance
+              └─ V1-80 Release artifact / main
+```
+
+---
+
+# 3. 현재 상태 요약
+
+| Workstream | 현재 판단 | 이유 |
+| --- | --- | --- |
+| V1-00 Git baseline | BLOCKED | 현재 directory에 `.git` 없음; 최신 unmerged dev provenance 확인 불가 |
+| V1-01 Foundation audit | PARTIAL | build/domain/persistence/connected tests 다수 존재, canonical head 재검증 필요 |
+| V1-10~13 Campaign systems | TODO | 설계만 존재; runtime/store/UI 없음 |
+| V1-20 Real Character local play | PARTIAL | production Character/skill/spell/inventory tests 존재 |
+| V1-21 Complete local loop | PARTIAL | visible browser path와 전체 human walkthrough 미완료 |
+| V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart adapters/tests 존재 |
+| V1-31~32 Connected play | PARTIAL | protocol/projection/action tests 존재하나 exact-head two-instance proof 없음 |
+| V1-40 DM live operation | PARTIAL | DM combatant/adjudication 및 local inventory grant 일부 존재; Campaign 연동 없음 |
+| V1-41 Spatial fallback | PARTIAL | module host contract 존재; production 기본 거리/fixture facts 제거 필요 |
+| V1-42 Dice | PARTIAL | Three/Cannon 구조 존재; 뒤에서 진입해 실제로 굴러가는 human proof 필요 |
+| V1-50~80 Quality/release | TODO | Campaign/connected 경로 완료 뒤 수행 |
+
+---
+
+# G0. Canonical source baseline
+
+## V1-00 Git baseline — BLOCKED
+
+`depends_on: none`
+
+- [ ] 실제 `Kaetaeru/SimpleVTT` Git clone을 확보한다.
+- [ ] bundled Git 또는 설치 Git으로 remote URL, branches, tags, commit graph를 확인한다.
+- [ ] owner가 지목한 오늘 새벽 개발 commit을 포함한 최신 unmerged branch를 식별한다.
+- [ ] 현재 snapshot의 변경분(주사위 수정, Session Inventory, Campaign docs)을 patch로 추출한다.
+- [ ] 최신 개발 branch에 변경분을 충돌 없이 적용한다.
+- [ ] `git status --short`, `git branch --show-current`, `git rev-parse HEAD`, `git log -1 --date=iso`를 기록한다.
+- [ ] 이후 모든 evidence가 이 canonical work branch의 SHA를 사용하게 한다.
+
+**Exit:** source provenance가 복구되고 현재 작업이 실제 최신 개발 계보 위에 존재한다.
+
+---
+
+# G1. Foundation and contract audit
+
+## V1-01 Foundation audit — PARTIAL
+
+`depends_on: V1-00`
+
+- [ ] `npm install`/lockfile 상태가 canonical source와 일치한다.
+- [ ] `npm run build`가 통과한다.
+- [ ] `cargo test --manifest-path src-tauri/Cargo.toml`가 통과한다.
+- [ ] Character immutable-generation persistence 및 corruption/stale-writer tests가 통과한다.
+- [ ] installed content/addon validation/persistence tests가 통과한다.
+- [ ] Rules Domain과 UI named-rule boundary가 통과한다.
+- [ ] existing connected protocol/projection suites가 통과한다.
+- [ ] Debug/reference fixture가 production authority로 주입되는 경로를 목록화한다.
+- [ ] 중복 store/resolver/protocol/event ledger가 없는지 확인한다.
+
+**Exit:** 새 Campaign/session 작업을 올릴 수 있는 깨끗한 exact-head baseline.
+
+---
+
+# G2. Campaign durable foundation
+
+계약: `docs/design/campaign-runtime.md`, `docs/design/campaign-systems.md`
+
+## V1-10 Campaign persistence — TODO
+
+`depends_on: V1-01`
+
+- [ ] `CampaignRecord` schema/version/revision 계약.
+- [ ] Campaign aggregate에 roster, session defaults, calendar, supply ledger, stash refs, DM Library namespace, summaries 포함.
+- [ ] immutable-generation local store 및 Tauri store command.
+- [ ] create/read/update/archive/restore/duplicate/delete application service.
+- [ ] stale writer reject, corrupt-newest recovery, newer-schema blocker, atomic failure rollback.
+- [ ] Campaign A/B namespace isolation tests.
+- [ ] Character Library와 Installed Content store를 복사하거나 소유하지 않음.
+
+**Required tests:** `campaignPersistence`, `campaignFailureRecovery`, `campaignIsolation`, Tauri generation-store tests.
+
+## V1-11 Campaign product UI — TODO
+
+`depends_on: V1-10`
+
+- [ ] Home/global navigation에서 Campaign 접근.
+- [ ] Campaign 목록: recent/active/archived/create.
+- [ ] Campaign dashboard: party, calendar, rations, stash, DM Library, session history.
+- [ ] Campaign 선택 없이는 Host start 불가; Player Join은 계속 가능.
+- [ ] `세션 시작` 설정 화면과 Campaign identity 고정.
+- [ ] empty/loading/error/corrupt/migration/destructive confirmation 상태.
+- [ ] Debug Dock 없이 전 경로 접근.
+
+## V1-12 Roster / Calendar / Rations / Session history — TODO
+
+`depends_on: V1-11`
+
+### Roster
+
+- [ ] Character ref/host preset/companion 구성원.
+- [ ] active, countsForRations, unitsPerDay, stash permission.
+- [ ] Host-unknown connected Character를 소유권 이전 없이 roster reference로 추가.
+
+### Calendar
+
+- [ ] provider: off/simple-day/Gregorian/declarative module profile.
+- [ ] absoluteMinute canonical storage; display string을 계산 입력으로 사용하지 않음.
+- [ ] advance minute/hour/day, next day, DM correction, note, safe recent undo.
+- [ ] OFF 상태가 Rest/Action/Session 진행을 막지 않고 저장값 유지.
+- [ ] Campaign clock과 Session effect clock을 무조건 결합하지 않음.
+
+### Rations
+
+- [ ] provider: off/tracking-only/declarative module profile.
+- [ ] integer ration balance와 consumption history.
+- [ ] roster 기반 daily consumption preview, 예외 수정, commit, undo.
+- [ ] shortage는 warning/pending adjudication; 기본 제품이 damage/Exhaustion 발명 금지.
+- [ ] OFF 상태에서 counter/automation/blocker 없음; 저장값 유지.
+
+### Compound behavior
+
+- [ ] Long Rest + optional time advance + optional ration consumption을 하나의 preview/batch로 처리.
+- [ ] 어느 Character/Campaign write-back 실패 시 partial success 없음.
+- [ ] 시간 진행만으로 Rest 회복 금지; Rest만으로 날짜 진행 강제 금지.
+
+### Session history
+
+- [ ] end 시 bounded summary 작성.
+- [ ] calendar before/after, ration delta, stash transaction count, participant labels, DM note.
+- [ ] full ResolutionEvent ledger, Ready, Initiative, projection, active handout 저장 금지.
+
+## V1-13 Party Stash / Campaign DM Library — TODO
+
+`depends_on: V1-12`
+
+### Party Stash
+
+- [ ] Campaign-owned ItemInstances/wallet/revision/policy.
+- [ ] shared/dm-approval/dm-managed 정책.
+- [ ] Character ↔ stash item/GP atomic transfer.
+- [ ] partial stack/unique item/provenance/idempotency/stale revision.
+- [ ] equipped/wielded/attuned transfer explicit reject 또는 compound unequip flow.
+- [ ] Session 종료/재시작 후 committed state 유지, pending reservation 정리.
+- [ ] compatible food ItemInstance → ration ledger 명시적 전환 transaction.
+
+### Campaign DM Library
+
+- [ ] Images, PC presets, NPC definitions, Custom Item definitions CRUD.
+- [ ] folders/tags/favorites/recents/search.
+- [ ] installed rulebook definitions와 Campaign custom definition 출처 구분.
+- [ ] Quick actions: Actor +1, Item 지급/회수/보관함, Image preview/reveal.
+- [ ] Campaign 간 암묵적 공유 금지; 명시적 duplicate/import만 허용.
+- [ ] Client payload에 private index/note/existence metadata 없음.
+- [ ] definition 삭제가 materialized Actor/ItemInstance를 소급 삭제하지 않음.
+
+**Exit G2:** Campaign을 만들고 닫고 다시 열어 모든 Campaign durable state를 독립적으로 복구할 수 있다.
+
+---
+
+# G3. Real Character local session
+
+## V1-20 Real Character materialization — PARTIAL
+
+`depends_on: V1-01`
+
+Workspace evidence:
+
+- `characterLibraryProductionPlayIntegration.test.ts`
+- `productionFreshCharacterSkills.test.ts`
+- `productionFreshCharacterInventory.test.ts`
+- `productionFreshCharacterSpells.test.ts`
+- `sessionInventoryRuntimeAdapter.test.ts`
+
+Release credit requirements:
+
+- [ ] production UI에서 persisted Character를 선택해 local Session 진입.
+- [ ] identity/portrait/HP/temp HP/AC/speed/resources/items/spells/features projection.
+- [ ] fixture Aelar/Mira identity 또는 fixture distance가 production path에 없음.
+- [ ] Character 전환 시 이전 actor transient state가 누수되지 않음.
+- [ ] restart 후 같은 Character와 durable runtime 복구.
+
+## V1-21 Complete local play loop — PARTIAL
+
+`depends_on: V1-20`
+
+### Session lifecycle
+
+- [ ] Campaign에서 local Session preparation 시작.
+- [ ] Freeform 시작/종료.
+- [ ] live actor set으로 Initiative 시작, turn advance, Initiative 종료.
+- [ ] Session end 후 Campaign dashboard 복귀.
+
+### Player operations
+
+- [ ] 행동: attack, representative feature action, common action intents.
+- [ ] 기술: modifier/proficiency 표시, ability/skill roll, advantage state.
+- [ ] 주문: cantrip + slotted spell, target/cost/save/attack/concentration/disabled reason.
+- [ ] 인벤토리: 읽기, use, equip/unequip, attune/unattune where canonical, quantity/charges.
+- [ ] full Character sheet를 Session 안에서 read/open.
+- [ ] result/activity/provenance 및 safe Undo.
+- [ ] unsupported mechanic은 explicit reason이며 dead button이 아님.
+
+### Durable boundary
+
+- [ ] authoritative commit 전 preview가 durable Character를 변경하지 않음.
+- [ ] HP/resource/item/spell-slot durable write-back exactly once.
+- [ ] target/Initiative/pending Resolution은 Character source에 저장하지 않음.
+
+**Exit G3:** 한 Windows 앱에서 새 Character로 최소 한 번의 탐험 판정과 한 라운드 전투를 UI만으로 완료하고 재실행 후 상태가 맞다.
+
+---
+
+# G4. Session lifecycle and connected authority
+
+## V1-30 Host / preparation / Ready / end — PARTIAL
+
+`depends_on: V1-01, V1-11`
+
+- [ ] 실제 Tauri transport bind/start/stop UI.
+- [ ] shareable address/port 및 actionable bind error.
+- [ ] Campaign/content/session snapshot 표시.
+- [ ] connected participant + selected Character + Ready 상태.
+- [ ] unready/incompatible/pending 상태에서 Start reject.
+- [ ] prepared actor/combatant set으로 Freeform/Initiative 시작.
+- [ ] explicit end가 모든 Client에 전달.
+- [ ] Host restart가 stale participant/projection/turn/pending state를 되살리지 않음.
+
+## V1-31 Connected Character projection and actions — PARTIAL
+
+`depends_on: V1-30, V1-20`
+
+Existing workspace tests to reconcile, not automatically credit:
+
+- `connectedCharacterProjectionHandshake.test.ts`
+- `characterSessionProjectionReconstruction.test.ts`
+- `connectedProjectedCharacterSkillResolution.test.ts`
+- `connectedProjectedCharacterInventoryResolution.test.ts`
+- `connectedProjectedCharacterSpellResolution.test.ts`
+- `connectedTwoPeerResolution.test.ts`
+
+- [ ] Client가 Host에 영구 저장되지 않은 persisted Character 선택.
+- [ ] manifest/compatible projection handshake.
+- [ ] Host는 필요한 ephemeral projection만 재구성.
+- [ ] Client intent → Host authoritative validate/resolve/commit → ordered event.
+- [ ] skill/action/spell/item/target/turn requests가 같은 authority path 사용.
+- [ ] Host와 Client가 committed revision/result에 수렴.
+- [ ] private Character source 및 DM private Campaign data 과다 전송 금지.
+
+## V1-32 Connected durable write-back / reconnect — PARTIAL
+
+`depends_on: V1-31`
+
+- [ ] committed request/event idempotency.
+- [ ] duplicate/reordered/replayed packet 안전.
+- [ ] disconnect 중 durable overwrite 금지.
+- [ ] reconnect hello/projection/event replay 후 정확한 수렴.
+- [ ] owning Client만 Character durable write-back.
+- [ ] Host Campaign store만 Campaign durable write-back.
+- [ ] 어느 durable side 실패 시 explicit failure 및 partial commit 금지.
+- [ ] Session end/restart 후 stale projection/Ready/turn 없음.
+
+**Exit G4:** 두 실제 Windows app instance가 Host-unknown Character로 Join하고 action/item/spell 중 하나를 commit한 뒤 reconnect/restart까지 정확히 수렴한다.
+
+---
+
+# G5. Complete DM live operation
+
+## V1-40 DM play loop — PARTIAL
+
+`depends_on: V1-13, V1-21, V1-32`
+
+### Preparation
+
+- [ ] Campaign roster와 실제 participants 대응.
+- [ ] NPC/PC preset 검색 및 Combatant instantiate/remove.
+- [ ] empty-by-default Encounter.
+- [ ] session mode/content/calendar/ration/stash policy review.
+
+### Live
+
+- [ ] Combatant action, target, HP/status, turn control.
+- [ ] DM adjudication/correction and event-native Undo.
+- [ ] Campaign custom/rulebook Item 검색 후 Player에게 +N/-N 지급/회수.
+- [ ] item 지급/회수가 connected authority와 owning-client write-back 사용.
+- [ ] Party Stash 입출고/승인.
+- [ ] calendar advance/ration consumption preview/commit.
+- [ ] handout private preview/reveal/withdraw/reconnect convergence.
+- [ ] Activity는 공개/DM-only/private detail을 구분.
+
+Workspace local inventory evidence:
+
+- `SessionInventoryPane.tsx`
+- `sessionInventoryRuntimeAdapter.ts`
+- local item/GP grant/revoke/undo tests
+
+남은 핵심: Campaign catalog/store, connected protocol, owner-client durable write-back.
+
+**Exit G5:** DM이 한 Campaign 세션에서 Combatant를 추가하고, 플레이어에게 아이템을 지급하고, 식량/시간/보관함을 갱신하고, 판정을 Undo한 뒤 세션을 끝낼 수 있다.
+
+---
+
+# G6. Spatial module safety
+
+## V1-41 Mapless fallback / provider lifecycle — PARTIAL
+
+`depends_on: V1-21, V1-31`
+
+Existing foundation:
+
+- `movementRuntimeContracts.ts`
+- `phase09RealTurnRuntimeAdapter.ts`
+- `docs/design/movement-modules.md`
+
+Required cleanup:
+
+- [ ] `realSpatialRuntimeService`가 presentation label/fixture distance를 authoritative fact로 생성하지 않음.
+- [ ] `ProductionSessionWorkspaceBridge` / `ProductionSessionLifecycleBridge`의 기본 `5ft` 입력 제거 또는 explicit manual provider로 이동.
+- [ ] `productionAcceptanceRuntimeAdapter`가 active provider/manual fact에만 range/visibility/cover blocker 적용.
+- [ ] provider 없음: unknown distance/visibility/cover, target selectable, 관련 disabled reason 없음.
+- [ ] provider capability가 일부이면 제공되지 않은 capability는 unknown 유지.
+- [ ] facts에 provider id/version/generation provenance.
+- [ ] unmount/disconnect/failure 시 provider facts 즉시 invalidation.
+- [ ] stale provider facts가 action legality에 사용되지 않음.
+
+Required tests:
+
+- [ ] no provider + ranged attack target remains eligible.
+- [ ] active provider + out-of-range fact disables target.
+- [ ] provider removal restores eligibility immediately.
+- [ ] distance-only provider does not invent visibility/cover.
+
+**Exit G6:** Core는 완전히 mapless로 플레이 가능하고 모듈이 있을 때만 그 모듈이 제공한 공간 사실을 사용한다.
+
+---
+
+# G7. Dice and combat presentation
+
+## V1-42 WebGL physics dice — PARTIAL
+
+`depends_on: V1-21, V1-31`
+
+- [ ] d4/d6/d8/d10/d12/d20 actual mesh + Cannon physics.
+- [ ] 카메라 뒤/화면 바깥에서 앞으로 날아와 표면에 충돌하고 굴러가는 trajectory.
+- [ ] 단순 spawn/pop 또는 CSS pseudo-3D fallback이 정상 모드에 나타나지 않음.
+- [ ] translation, rotation, bounce, friction, settling이 눈에 보임.
+- [ ] authoritative face/result는 animation이 변경하지 않음.
+- [ ] local sheet roll은 local result 생성 가능; connected dice는 committed result만 표현.
+- [ ] multi-die roll, repeated roll, resize, WebGL context recovery.
+- [ ] reduced motion은 짧은 대체 연출과 즉시 읽을 수 있는 결과 제공.
+- [ ] sandbox와 실제 Character/Session 경로에서 같은 renderer 사용.
+- [ ] automated structure/result-projection tests + human motion recording.
+
+**Exit G7:** 사용자가 주사위가 뒤에서 날아와 실제로 굴러 정지한다고 확인하고, 표시 결과가 authoritative event와 일치한다.
+
+---
+
+# G8. Product UX, errors, accessibility
+
+## V1-50 Production-quality pass — TODO
+
+`depends_on: V1-40, V1-41, V1-42`
+
+- [ ] Home에서 Character/Campaign/Host/Join/Content/Rules/Settings 접근.
+- [ ] routine flow에 Debug Dock, query preview route, fixture selector 불필요.
+- [ ] loading/empty/disabled/error/reconnecting/ended/migration states에 recovery action.
+- [ ] Host bind, incompatible content, stale revision, durable write failure, asset failure가 구체적.
+- [ ] keyboard focus, tab order, dialog/drawer close, focus restore.
+- [ ] constrained Windows viewport에서 주요 action/scroll 접근 가능.
+- [ ] selected/focus/disabled/warning/error가 색상만으로 구분되지 않음.
+- [ ] reduced motion과 OS preference.
+- [ ] Korean-first 용어 일관성.
+- [ ] private DM data가 Player UI/ARIA/live region에도 누수되지 않음.
+
+**Exit G8:** UI structure/accessibility tests와 사람의 100%/125% scaling walkthrough가 모두 통과한다.
+
+---
+
+# G9. Automated release candidate
+
+## V1-60 Full regression — TODO
+
+`depends_on: V1-50`
+
+한 exact SHA에서 실행:
+
+- [ ] `npm run build`
+- [ ] focused Campaign persistence/domain/UI tests
+- [ ] focused calendar/ration/stash/DM Library tests
+- [ ] local production Character play tests
+- [ ] connected protocol/projection/action/reconnect tests
+- [ ] spatial provider lifecycle tests
+- [ ] dice structure/result tests
+- [ ] addon/content install/validation/persistence tests
+- [ ] Character create/edit/level-up/persistence tests
+- [ ] `cargo test --manifest-path src-tauri/Cargo.toml`
+- [ ] `npm run tauri:build`
+
+Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-out SHA를 `BUILD.txt`에 기록한다.
+
+**Exit G9:** failure/skip 없이 전체 행렬 green; flaky retry로 숨긴 실패 없음.
+
+---
+
+# G10. Human Windows acceptance
+
+## V1-70 Two-instance end-to-end — TODO
+
+`depends_on: V1-60`
+
+### Clean first-run / local
+
+- [ ] 깨끗한 앱 데이터로 launch.
+- [ ] Character 생성, portrait, 저장.
+- [ ] Campaign 생성, roster, calendar/ration toggle, custom item, stash 준비.
+- [ ] local Session 시작.
+- [ ] skill/action/item/spell 수행.
+- [ ] Initiative 한 round, dice 확인, Undo.
+- [ ] Session 종료, app restart, Character/Campaign durable state 확인.
+
+### Connected
+
+- [ ] Windows app 두 instance 실행.
+- [ ] Host가 Campaign에서 bind/start.
+- [ ] Client가 Host-unknown persisted Character로 Join/Ready.
+- [ ] Host가 start; Client action commit; 양측 수렴.
+- [ ] DM item/GP grant/revoke; Client inventory/write-back 확인.
+- [ ] Party Stash transfer 및 calendar/ration commit.
+- [ ] Client reconnect; duplicate 없음.
+- [ ] Handout reveal/withdraw.
+- [ ] explicit end; transient clear; 새 Session restart.
+- [ ] 앱 재실행 후 owning Character와 Host Campaign 상태 확인.
+
+### Spatial / dice
+
+- [ ] provider 없이 distance blocker 없음.
+- [ ] test provider mount/unmount 시 fact 적용/무효화.
+- [ ] 주사위가 뒤에서 날아와 굴러가며 authoritative result와 일치.
+
+**Exit G10:** 화면 녹화/스크린샷, exact SHA, artifact digest, 실행 환경이 기록된다.
+
+---
+
+# G11. Release and canonical main
+
+## V1-80 Artifact / merge / release — TODO
+
+`depends_on: V1-70`
+
+- [ ] release candidate branch가 최신 `main`과 reconcile됨.
+- [ ] user가 요청한 merge 전략과 명시적 승인 확인.
+- [ ] accepted source가 canonical `main`에 존재.
+- [ ] merge로 SHA가 바뀌면 exact-main G9/G10 증거 재확인.
+- [ ] Windows artifact에 `SimpleVTT.exe`, `BUILD.txt`, walkthrough 문서 포함.
+- [ ] artifact metadata head SHA와 `BUILD.txt` SHA 일치.
+- [ ] ZIP SHA-256/digest 확인 및 contents 검사.
+- [ ] version/tag/release notes에 V1 scope와 non-goals 명시.
+- [ ] known critical blocker 0.
+
+**V1 COMPLETE:** V1-80까지 DONE이고 같은 SHA의 artifact가 사람 검증을 통과했을 때만 선언한다.
+
+---
+
+# 4. Hard invariants — 모든 작업에서 재검증
+
+- [ ] Core는 built-in tactical map/token/grid/pathfinding/LOS를 소유하지 않는다.
+- [ ] missing spatial fact는 negative/out-of-range fact가 아니다.
+- [ ] UI는 named rule arithmetic 또는 authority 결정을 소유하지 않는다.
+- [ ] Character ownership과 Session Actor control은 분리된다.
+- [ ] Campaign ownership과 Player Character write-back은 분리된다.
+- [ ] DM Library private source는 Client catalog로 전달되지 않는다.
+- [ ] Session은 Campaign/Character의 두 번째 durable source가 아니다.
+- [ ] connected retries/reconnect는 exactly-once/idempotent다.
+- [ ] preview/animation은 authoritative result를 변경하지 않는다.
+- [ ] disabled optional system은 저장 데이터를 삭제하거나 일반 플레이를 막지 않는다.
+- [ ] unsupported mechanic/capability는 추측하지 않고 명시한다.
+- [ ] 모든 persisted contract 변경은 schema/version/migration/recovery test를 동반한다.
+
+---
+
+# 5. NEXT
+
+현재 유일한 다음 작업:
+
+```text
+V1-00 Git baseline
+```
+
+실제 Git 계보를 복구하기 전에는 Campaign runtime 구현을 시작하지 않는다. 현재 source snapshot에서 추가 구현하면 최신 unmerged branch와 다시 충돌하거나 이미 더 최신인 코드를 덮을 위험이 있다.

@@ -44,7 +44,7 @@ type AssetEndpointRef =
 ```
 
 - `character` is durable player-owned inventory/wallet state.
-- `party-stash` is shared party/session inventory with a separate policy descriptor.
+- `party-stash` is Campaign-owned durable shared inventory/wallet state with a separate policy descriptor; a live Session receives only its authorized projection.
 - `session-loot` is already revealed/acquired session-owned loot; it is not a hiding place for unrevealed DM preparation.
 - `dm-grant-source` can instantiate a known ItemDefinition but is never delivered to Players as a browsable private catalog.
 
@@ -57,6 +57,7 @@ One request may carry item and currency lines so a trade can commit as one unit:
 ```ts
 interface AssetTransferRequest {
   requestId: string;              // idempotency key
+  campaignId: string;
   sessionId: string;
   initiatedByParticipantId: string;
   mode: "direct" | "offer" | "stash" | "dm-grant";
@@ -142,6 +143,7 @@ encounter
 ```
 
 - Durable Character-to-Character exchange writes both Character revisions atomically.
+- Campaign Party Stash assets remain in Host-owned Campaign durability across Session end/restart.
 - Session-only assets remain in Session authority and disappear according to the declared lifetime.
 - A session asset never becomes permanent merely because it entered a Character-shaped Actor projection.
 - Moving a session asset into a durable Character requires an explicit durable-grant/write-back capability.
@@ -221,7 +223,7 @@ An authorized ItemDefinition result may offer `지급` or `파티 보관함` onl
 Recommended sequence:
 
 1. Add pure transfer contracts, endpoint capability projection, and validation result types.
-2. Materialize Party Stash state with one `shared` policy fixture and GP-only wallet.
+2. Materialize Campaign-owned Party Stash state with one `shared` policy fixture and GP-only wallet.
 3. Implement local atomic Character ↔ Party Stash item/currency transfer service with idempotency and revision tests.
 4. Project the `거래 · 보관함` right pane and Character Inventory `주기` workflow.
 5. Add Player offer/accept and `dm-approval` state machine.
@@ -239,6 +241,8 @@ Recommended sequence:
 - accept/reject/cancel a Player offer and release reservation;
 - enforce all three Party Stash policy presets;
 - reconnect after commit and receive exactly one transaction;
+- end/restart a Session and retain the Campaign Party Stash without retaining transient Session state;
+- prove two Campaigns cannot read or mutate each other's Party Stash;
 - fail durable destination write-back and leave both sides unchanged;
 - prove that private/unrevealed DM loot never reaches Player payloads.
 

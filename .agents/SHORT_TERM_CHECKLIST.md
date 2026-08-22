@@ -1,5 +1,7 @@
 # Phase 09 Short-Term Checklist
 
+> Historical checklist. 현재 V1 실행 router는 `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`다. 새 V1 작업은 이 문서의 오래된 `current` 표기를 사용하지 않는다.
+
 이 문서는 현재 작업 순서를 빠르게 추적하기 위한 **단기 실행 체크리스트**다.
 
 - Long-term / canonical working context: `.agents/CURRENT_WORK.md`

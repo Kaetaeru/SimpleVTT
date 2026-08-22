@@ -380,3 +380,17 @@ export function getCharacterLibraryPersistenceStateForTests(adapter:MockAdapter)
   const context = contexts.get(adapter);
   return context ? { ...cp(context.vm),document:context.repository.snapshot() } : null;
 }
+
+export async function mutateActiveCharacterDurably(
+  adapter:MockAdapter,
+  mutation:(character:CharacterSheet)=>void,
+) {
+  return durableMutation(adapter,async () => {
+    const state=stateOf(adapter);
+    mutation(state.activeCharacter);
+    state.characters=state.characters.map((character)=>character.id===state.activeCharacter.id
+      ? { ...character,...cp(state.activeCharacter) }
+      : character);
+    return adapter.getSnapshot();
+  });
+}

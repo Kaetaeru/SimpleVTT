@@ -1,8 +1,10 @@
 # 현재 작업 체크리스트
 
+> V1 실제 플레이/출시 작업의 canonical 실행 순서와 gate는 `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`를 따른다. 이 문서의 Phase 09 표기와 PR stack은 역사적 구현 문맥이며 현재 V1 다음 작업을 결정하지 않는다.
+
 이 문서는 에이전트가 현재 우선순위와 다음 구현 Gate를 빠르게 파악하기 위한 비공식 작업 문서다. 공식 제품/아키텍처 계약은 `docs/`, `rules/`, `content/`, `schemas/`, `templates/`, `examples/`에 둔다.
 
-## 현재 상태
+## 역사적 상태
 
 - [x] Rules Engine Phase 01-08 — executable rules foundation + canonical catalog/class mechanics
 - [ ] Rules Engine Phase 09 — real mechanics integration / RealAdapter ← **current**

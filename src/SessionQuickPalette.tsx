@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import "./session-quick-palette.css";
 
-export type SessionQuickDestination = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session";
+export type SessionQuickDestination = "quick-sheet" | "actor" | "inventory" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session";
 
 type QuickEntry = {
   destination: SessionQuickDestination;
@@ -12,6 +12,7 @@ type QuickEntry = {
 };
 
 const DM_ENTRIES: QuickEntry[] = [
+  { destination:"inventory",glyph:"템",label:"아이템 · 재화",description:"선택한 플레이어에게 빠르게 지급하거나 회수합니다.",keywords:"item inventory gold give take 지급 회수 재화" },
   { destination:"actor",glyph:"액",label:"액터 전환",description:"조작할 세션 액터를 선택합니다.",keywords:"actor 캐릭터 조작" },
   { destination:"encounter",glyph:"인",label:"인카운터",description:"전투원과 이니셔티브를 관리합니다.",keywords:"encounter 전투원 이니셔티브" },
   { destination:"participants",glyph:"참",label:"참가자",description:"플레이어 연결 상태를 확인합니다.",keywords:"participants player 연결" },
@@ -22,6 +23,7 @@ const DM_ENTRIES: QuickEntry[] = [
 ];
 
 const PLAYER_ENTRIES: QuickEntry[] = [
+  { destination:"inventory",glyph:"템",label:"내 인벤토리",description:"현재 캐릭터의 아이템과 재화를 확인합니다.",keywords:"item inventory gold 아이템 재화" },
   { destination:"quick-sheet",glyph:"시",label:"빠른 시트",description:"현재 캐릭터의 핵심 수치를 확인합니다.",keywords:"sheet character 캐릭터" },
   { destination:"activity",glyph:"기",label:"활동 기록",description:"공개된 판정과 세션 기록을 확인합니다.",keywords:"activity log 기록 판정" },
   { destination:"rules",glyph:"규",label:"규칙 찾기",description:"활성 규칙과 콘텐츠를 검색합니다.",keywords:"rules search 규칙 검색" },

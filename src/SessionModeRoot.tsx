@@ -20,6 +20,7 @@ import {
   useSessionImageHandout,
 } from "./SessionImageHandoutBridge";
 import { SessionInitiativeStrip } from "./SessionInitiativeStrip";
+import { SessionDmInventoryPane, SessionPlayerInventoryPane } from "./SessionInventoryPane";
 import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionPlayerSession";
 import { SessionQuickPalette, type SessionQuickDestination } from "./SessionQuickPalette";
@@ -28,7 +29,7 @@ import "./session-mode.css";
 import "./session-connected-layout.css";
 import "./session-integrated-reference-play.css";
 
-type SessionUtility = "quick-sheet" | "actor" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
+type SessionUtility = "quick-sheet" | "actor" | "inventory" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | null;
 
 const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", "damage-animation"]);
@@ -216,6 +217,8 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
   const utilityPane = <>
     {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
     {activeUtility === "actor" && role === "dm" && <SessionDmActorPane onClose={closeUtility} />}
+    {activeUtility === "inventory" && role === "dm" && <SessionDmInventoryPane onClose={closeUtility} />}
+    {activeUtility === "inventory" && role === "player" && <SessionPlayerInventoryPane onClose={closeUtility} onOpenFull={openFullSheet} />}
     {activeUtility === "encounter" && role === "dm" && <SessionDmEncounterPane onClose={closeUtility} />}
     {activeUtility === "participants" && role === "dm" && <SessionParticipantsPane onClose={closeUtility} />}
     {activeUtility === "handout" && role === "dm" && <SessionDmHandoutPane onClose={closeUtility} />}
@@ -232,6 +235,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       <span className={`session-reference-connection ${snapshot.connectionState}`}>{connectionLabel}</span>
       <div className="session-reference-play-spacer" />
       <button type="button" className={utilityClass(activeUtility, role === "player" ? "quick-sheet" : "actor")} onClick={(event) => toggleUtility(role === "player" ? "quick-sheet" : "actor", event.currentTarget)}>시트</button>
+      <button type="button" className={utilityClass(activeUtility, "inventory")} onClick={(event) => toggleUtility("inventory", event.currentTarget)}>{role === "dm" ? "아이템" : "인벤토리"}</button>
       <button type="button" className={utilityClass(activeUtility, "rules")} onClick={(event) => toggleUtility("rules", event.currentTarget)}>규칙</button>
       {role === "dm" && <div className="session-reference-visibility" aria-label="Public / DM Only 전달 프로토콜은 아직 production contract가 없어 Public 상태만 표시됩니다." title="DM Only 전달은 GAP-DM-ONLY-DELIVERY-PROTOCOL 해결 전까지 사용할 수 없습니다."><span className="active">Public</span><span>DM Only</span></div>}
       <button type="button" className={utilityClass(activeUtility, "activity")} onClick={(event) => toggleUtility("activity", event.currentTarget)}>기록</button>

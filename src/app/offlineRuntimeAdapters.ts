@@ -56,6 +56,7 @@ import "./installedContentRuntimeAdapter";
 // authoritative spell execution, explicit DM-authored theater-of-mind spatial facts,
 // canonical ItemInstance-backed weapon runtime facts, then production-only random d20 faces.
 import "./productionPlayRuntimeAdapter";
+import "./sessionInventoryRuntimeAdapter";
 import "./theaterOfMindSpatialAdapter";
 import "./productionSpellRuntimeAdapter";
 import "./productionWeaponRuntimeFactAdapter";

@@ -6,6 +6,7 @@ import type {
   CharacterCreateDraft,
   CharacterDraftCommand,
   ConnectionState,
+  DmInventoryAdjustmentCommand,
   DmAdjudicationCommand,
   EdgeState,
   LevelUpCommand,
@@ -66,6 +67,8 @@ interface AppContextValue {
   clearCombatantImport(): Promise<void>;
   instantiateCombatant(definitionId: string): Promise<void>;
   removeCombatant(combatantId: string): Promise<void>;
+  adjustDmInventory(command:DmInventoryAdjustmentCommand):Promise<void>;
+  undoLastDmInventoryAdjustment():Promise<void>;
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
   stopSession(): Promise<void>;
@@ -186,6 +189,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     clearCombatantImport: async () => apply(() => mockAdapter.clearCombatantImport()),
     instantiateCombatant: async (definitionId) => apply(() => mockAdapter.instantiateCombatant(definitionId)),
     removeCombatant: async (combatantId) => apply(() => mockAdapter.removeCombatant(combatantId)),
+    adjustDmInventory: async (command) => apply(() => mockAdapter.adjustDmInventory(command)),
+    undoLastDmInventoryAdjustment: async () => apply(() => mockAdapter.undoLastDmInventoryAdjustment()),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
     stopSession: async () => apply(() => mockAdapter.stopSession()),

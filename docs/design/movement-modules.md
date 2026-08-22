@@ -84,8 +84,12 @@ Without a movement/map module:
 - no pathfinding or grid calculations occur;
 - `SimpleVttAdapter` exposes no default movement command;
 - the current-turn controller may explicitly input movement-triggered reaction attacks;
-- existing/imported/manual spatial facts may still be used by rules resolution;
-- if a rule requires a spatial fact that is unavailable, resolution rejects explicitly rather than inventing distance or cover.
+- distance/visibility/cover labels and related disabled reasons are not fabricated;
+- missing distance is `unknown`, never `out-of-range`, and otherwise valid manual targets remain selectable;
+- only current, explicitly entered manual facts or facts from an active validated provider may be used by rules resolution;
+- a rule that fundamentally requires a module-owned operation is inactive/unsupported with a capability reason instead of approximating that operation.
+
+If a provider disconnects, fails capability validation, or is disabled, all live facts whose provenance belongs to that provider are invalidated. Stale module distance, visibility, cover, or path facts must not continue to filter targets or block actions.
 
 ## Relationship to RuleModule
 
@@ -99,9 +103,10 @@ A future executable module/plugin system may host 2D/3D presentation capabilitie
 2. 2D and 3D modules use the same coordinate-agnostic host contract.
 3. A visual/spatial module cannot silently change rules formulas.
 4. Rules code never parses presentation-only distance labels.
-5. Missing spatial facts reject explicitly.
+5. Missing spatial facts do not become negative facts: unknown range/visibility/cover cannot disable an otherwise valid manual target.
 6. Module-supplied spatial facts carry module provenance.
 7. Initiative movement legality remains authoritative in the rules domain when a movement module asks core to enforce it.
 8. Core does not persist or assume a particular coordinate system.
 9. Core never auto-detects an opportunity attack without authoritative movement-trigger input.
 10. Manual and module-originated movement reaction attacks converge on the same authoritative Reaction + attack transaction.
+11. Provider removal invalidates its live spatial facts and restores mapless fallback immediately.

@@ -89,6 +89,8 @@ For UI/UX work, AI should discover the reading order from the dedicated router i
 - `docs/design/character-lifecycle.md` — Character creation, editing, progression, revision, and local ownership.
 - `docs/design/content-modules-items.md` — RuleModule, ContentCatalog, RuleSource import, inventory, ItemDefinition, and ItemInstance.
 - `docs/design/session-runtime.md` — state lifetimes, authority, Freeform/Initiative, targeting, ResolutionEvent, EffectInstance, and DM adjudication.
+- `docs/design/campaign-runtime.md` — v1 Campaign-owned continuity, optional Session calendar/ration rules, Party Stash, Campaign-scoped DM Library, and spatial capability fallback.
+- `docs/design/campaign-systems.md` — detailed V1 Campaign subsystem specification: roster, Session snapshot, calendar, rations, stash, DM Library, history, capability loadout, compound transactions, and UI.
 - `docs/design/combat-ux.md` — action-first player UX, authoritative dice presentation, activity log, breakdowns, and Undo.
 - `docs/design/extensibility-testing.md` — extension seams, capabilities, compatibility, migration, and golden-scenario testing.
 - `docs/design/movement-modules.md` — canonical mapless-Core policy, optional 2D/3D movement-module seam, and current-turn-controller manual movement-triggered reaction policy.

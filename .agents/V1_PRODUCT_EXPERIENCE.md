@@ -19,7 +19,7 @@ The stable top-level product navigation is deliberately small:
 
 - **홈** — title, first-run guide, Character/session/addon entry points and current-context shortcuts.
 - **캐릭터** — Character Library, create/import/edit/level-up, standalone sheet.
-- **세션** — create Host, join, Ready/preparation/lifecycle/reconnect.
+- **캠페인·세션** — DM Campaign create/open, Campaign-based Host start, join, Ready/preparation/lifecycle/reconnect.
 - **콘텐츠** — installed content and addon installation/review.
 - **규칙** — browse/search the composed installed rules catalog.
 - **설정** — appearance, accessibility and product preferences.
@@ -95,13 +95,20 @@ Rules browsing is separate from installation: `콘텐츠` manages what is instal
 
 ## Session lifecycle
 ### Offline
-One Session screen always exposes both:
-- `새 세션 만들기`: session name and Host start;
+One Campaign/Session screen always exposes:
+- `캠페인 만들기` / recent Campaign open for DM preparation;
+- `세션 만들기`: select/open a Campaign, review Session settings and start Host;
 - `세션 참가하기`: Host address and local Character selection.
+
+The Campaign is the DM's durable continuity root. Its Party Stash, calendar/ration state, Session history and private DM Library survive individual Sessions and remain isolated from other Campaigns. See `docs/design/campaign-runtime.md`.
+
+The Campaign dashboard also owns the durable party roster used for ration participation and stash policy. This roster references Player Characters without copying or taking ownership of their Character files. Detailed subsystem behavior is defined in `docs/design/campaign-systems.md`.
 
 ### Host preparation
 Show only:
+- selected Campaign identity;
 - session name/address;
+- optional `세션 달력 사용` and `식량 규칙 사용` settings captured for this Session;
 - connected participants and Ready state;
 - empty-by-default Encounter preparation;
 - deliberate Combatant add/remove;
@@ -157,7 +164,12 @@ DM controls are opened from the live play context, not global navigation:
 - Encounter/Combatant access;
 - adjudication/correction and safe Undo/history as progressive disclosure;
 - participant/Ready state where relevant;
+- Campaign calendar, rations and Party Stash only when enabled/authorized;
+- Campaign-scoped DM Library quick search/grant/reveal;
 - `이미지 보여주기` handout/reveal.
+
+### Mapless fallback and module capability
+V1 prepares the coordinate-agnostic spatial extension seam but does not ship a battle map. Without an active compatible module, distance/visibility/cover UI and related disabled reasons are inactive. Missing distance is never interpreted as `out-of-range`; otherwise valid manual targets remain selectable. Stale facts from a removed or failed module cannot continue to block play.
 
 ## Images
 ### Character image
@@ -186,6 +198,10 @@ A v1 user must be able to reach these without Debug Dock or repository knowledge
 | Addon install / validation | Content -> Add addon |
 | Installed rules browsing | Rules |
 | Host / Join / Ready / reconnect | Session |
+| Campaign create/open and Campaign-based Host start | Campaign / Session |
+| Calendar/ration optional rules | Session setup / contextual DM tools when enabled |
+| Campaign Party Stash | Campaign / contextual Session utility |
+| Campaign-scoped DM Library | Campaign preparation / DM Quick Search |
 | Empty Encounter preparation | Host Session |
 | Combatant library/add/remove | Host preparation / contextual DM tools |
 | Exploration/freeform intents | Play |
@@ -208,7 +224,9 @@ A v1 user must be able to reach these without Debug Dock or repository knowledge
 - Technical metadata is available when useful but never required for ordinary play.
 
 ## Non-goals for v1
-- tactical grid/map movement, token placement, Fog of War, pathfinding or LOS;
+- built-in tactical grid/map movement, token placement, Fog of War, pathfinding or LOS; v1 provides only the optional module capability seam and safe mapless fallback;
+- full fictional-calendar authoring, automatic travel/weather/hunting/nutrition simulation or detailed encumbrance;
+- cloud Campaign sync, multi-DM concurrent Campaign editing or implicit cross-Campaign DM Library sharing;
 - cloud account/backend dependency;
 - arbitrary executable third-party plugins;
 - a second Character store, content catalog, combat resolver, connected-session protocol or event ledger;
@@ -239,10 +257,11 @@ SimpleVTT v1 UX is complete only when **one exact source SHA** passes all of the
 6. Invalid/dependency/conflict/unsupported packages fail visibly and recoverably.
 
 ### Session/connected walkthrough
-1. Host a named empty session and independently Join from another Windows instance.
+1. Create/open a Campaign, configure optional calendar/ration rules, Host a named empty Session from it and independently Join from another Windows instance.
 2. Select a persisted Host-unknown Client Character, Ready and start freeform/initiative.
 3. Validate authoritative actions, convergence, reconnect/idempotency, explicit end/restart and owning-Client durability.
-4. Session scrolling and recovery controls remain usable at constrained viewport heights.
+4. Validate Campaign Party Stash/calendar/ration continuity exactly once across Session restart while transient participants/readiness/Initiative clear.
+5. Session scrolling and recovery controls remain usable at constrained viewport heights.
 
 ### Play/DM walkthrough
 1. Exploration is visually quiet and intent-first; skills are secondary choices.
@@ -250,6 +269,8 @@ SimpleVTT v1 UX is complete only when **one exact source SHA** passes all of the
 3. Existing attack/save/damage/healing/item/spell/concentration/reaction/effect/turn mechanics remain authoritative.
 4. DM can prepare official Combatants deliberately, adjudicate/recover without permanent debug panels and safely use existing event-native Undo.
 5. DM can reveal/withdraw an image; Client can dismiss/reopen it; reconnect converges to the active reveal.
+6. Without a spatial module, missing distance/visibility/cover never produces an out-of-range-style blocker; with a validated provider, only its current authoritative facts affect legality.
+7. Campaign-scoped DM Library search/grant does not leak private catalog data or entries from another Campaign.
 
 ### Dice and quality gates
 1. d4/d6/d8/d10/d12/d20 are actual WebGL physics meshes and connected visuals never alter authoritative results.

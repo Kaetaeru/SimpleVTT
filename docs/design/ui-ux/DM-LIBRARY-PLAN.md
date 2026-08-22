@@ -27,9 +27,9 @@ The accepted Connected Play composition remains valid. DM Library adds preparati
 
 # 1. Product definition
 
-**DM Library** is a durable local preparation library for the local user who may Host sessions.
+**DM Library** is a Campaign-scoped durable local preparation library for the local user who may Host sessions.
 
-It stores reusable material that can be prepared before play and explicitly brought into a live Session.
+It stores reusable material for one Campaign that can be prepared before play and explicitly brought into a live Session launched from that Campaign. V1 does not implicitly share private entries, recents, favorites, notes, or search results across Campaigns.
 
 The visible product name is `DM Library` because that is the user-facing task model. Architecturally, Offline/Standalone still has no hidden DM/Player role. Before a Session is opened, this is local Host-preparation data, not connected-role authority.
 
@@ -351,10 +351,13 @@ Character Library
 └─ Player-owned canonical Characters
 
 LOCAL HOST PREPARATION DURABLE
-DM Library
-├─ Images
-├─ PC Actor Presets
-└─ NPC Actor Definitions
+Campaign
+├─ Party Stash / calendar / ration state
+└─ DM Library namespace
+   ├─ Images
+   ├─ PC Actor Presets
+   ├─ NPC Actor Definitions
+   └─ Custom Item Definitions
 
 CONTENT DEFINITIONS
 ContentCatalog / packages
@@ -459,6 +462,7 @@ The first DM Library candidate demonstrated the heavier nested flow and is now u
 Runtime implementation must not invent these contracts in UI code:
 
 - durable DM Library metadata persistence;
+- Campaign identity, namespace isolation, and explicit duplicate/import behavior;
 - local image asset storage/lifecycle;
 - Actor definition/preset schema/versioning;
 - definition -> Session Actor instantiation;

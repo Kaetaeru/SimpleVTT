@@ -1,5 +1,7 @@
 # Phase 14 Checklist — Production Play Session to Final Playable Build
 
+> Evidence ledger / historical detailed checklist. 작업 AI의 canonical gate 순서와 다음 작업 선택은 `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`를 따른다. 이 문서의 체크 수나 오래된 CI 증거만으로 V1 완료를 판정하지 않는다.
+
 Tracking issue: #108
 Canonical baseline: `main`
 Work branch: `agent/108-production-play-session-ux`
@@ -13,7 +15,7 @@ SimpleVTT is complete for this phase only when a normal user can create or resto
 
 The in-session workspace must support the full normal play loop: `행동`, `기술`, `주문`, `인벤토리`, targeting, freeform/initiative, authoritative dice, ResolutionEvent/activity/undo, DM combatants/corrections, connected Host/Join, reconnect, and owning-client durable write-back.
 
-This phase does **not** add tactical map/grid/token/pathfinding/LOS. Existing host-authority, Character ownership, canonical rules/content validation, creation/level-up UX, and visual-dice invariants remain mandatory.
+This phase does **not** add a built-in tactical map/grid/token/pathfinding/LOS implementation. It does require the optional spatial-module seam and safe mapless fallback: absent/stale module facts cannot become range/visibility/cover blockers. Campaign-owned continuity, optional Session calendar/ration rules, Party Stash, and Campaign-scoped DM Library follow `docs/design/campaign-runtime.md`.
 
 ---
 
@@ -271,6 +273,31 @@ Evidence: exact product head `868b8e37127ea644444630cb45a84f36664912ed`; UI `319
 
 # P14.7 Local session and DM live-session flow
 
+## Campaign-based Host setup and continuity
+
+- [ ] DM can create/open a Campaign and start a Session only from an explicit selected Campaign.
+- [ ] Campaign roster tracks durable party references, ration participation, and stash policy without taking ownership of Player Character files.
+- [ ] Session setup captures Campaign identity plus `세션 달력 사용` and `식량 규칙 사용` toggles.
+- [ ] Session setup captures one exact content/capability loadout and does not hot-apply later Campaign/default package changes.
+- [ ] Disabled calendar/ration capabilities hide or disable their UI/automation without deleting saved Campaign state or blocking ordinary play.
+- [ ] Calendar advance and ration adjust/consume commands are authoritative, idempotent, provenance-visible, and durable to the owning Campaign.
+- [ ] Calendar supports off, simple-day, Gregorian, and validated declarative profile providers without executing package code.
+- [ ] Builtin ration behavior is tracking-only; shortage warns but does not invent Character damage/Exhaustion or block rest/session progression.
+- [ ] Long Rest + optional calendar advance + optional ration consumption previews and commits as one compound transaction with no partial success.
+- [ ] Party Stash is Campaign-owned durable state projected into the Session, not Session-owned transient state.
+- [ ] DM Library search, custom items, recents, favorites, notes, and quick actions are scoped to the selected Campaign.
+- [ ] Session end writes a bounded Campaign summary without persisting transient Ready/Initiative/projection/handout state or duplicating the ResolutionEvent ledger.
+- [ ] Two Campaigns remain isolated across restart; no stash, calendar, ration, DM Library, or Session-summary leakage occurs.
+
+## Optional spatial capability and mapless fallback
+
+- [ ] Product play no longer materializes authoritative distance from presentation labels or fixture defaults in `realSpatialRuntimeService`.
+- [ ] Default distance editors in `ProductionSessionWorkspaceBridge` / `ProductionSessionLifecycleBridge` are removed from ordinary mapless play or shown only as an explicit manual spatial-fact tool.
+- [ ] `productionAcceptanceRuntimeAdapter` applies range/visibility/cover disabled reasons only to current facts from an active validated provider or an explicit current manual fact.
+- [ ] With no provider/fact, target eligibility does not emit `거리 밖`, `시야 없음`, or cover blockers and does not require a fabricated distance.
+- [ ] Provider unmount/failure invalidates facts with that provider provenance and recomputes target eligibility immediately.
+- [ ] Regression covers no-provider valid target, provider-supplied out-of-range target, and provider removal restoring mapless eligibility.
+
 ## Local player flow
 
 - [x] Fresh Character -> Play creates/joins a local scene with the actual Character.
@@ -394,6 +421,11 @@ Evidence for session end/restart: exact session-end product source `240592cb646b
 
 # P14.9 Persistence, restart, and data ownership
 
+- [ ] Campaign aggregate has stable id, schema version, revision, migration/corruption recovery, and atomic persistence.
+- [ ] Ending a Session persists authorized Campaign calendar/ration/stash changes exactly once while clearing participants, readiness, projections, Initiative, pending resolutions, and active handouts.
+- [ ] Connected reconnect/retry cannot duplicate Campaign mutations.
+- [ ] Player-owned Character durability and Host-owned Campaign durability remain separate write-back authorities.
+
 - [x] Newly created Character is persisted before restart test.
 - [x] Active Character identity restores correctly.
 - [x] HP/resource/item durable changes from play restore correctly after restart.
@@ -515,6 +547,7 @@ Automated tests are necessary but not sufficient for the claim “플레이 가�
 
 - [ ] Launch two Windows app instances/machines.
 - [ ] Host starts the actual server/transport and confirms successful bind plus shareable address/port.
+- [ ] Host selects a persisted Campaign, reviews calendar/ration toggles, Party Stash and Campaign-scoped DM Library, then starts the Session.
 - [ ] Host enters DM preparation/lobby, confirms rules/content state, and prepares Scene/Combatants.
 - [ ] Client selects a persisted Character not permanently known to Host.
 - [ ] Client joins by actual Host address and reaches the compatible lobby.
@@ -527,6 +560,9 @@ Automated tests are necessary but not sufficient for the claim “플레이 가�
 - [ ] Host explicitly ends the session; transient projections/readiness/turn state clear.
 - [ ] Host can start a fresh session without stale participants/projections.
 - [ ] Owning Client durable Character state is correct after restart.
+- [ ] Host Campaign calendar/ration/stash changes are correct after Session restart and entries from another Campaign were never visible.
+- [ ] With no spatial module active, an otherwise valid target is not disabled for unknown distance/visibility/cover.
+- [ ] If a test spatial provider is mounted then removed, only current provider facts affect legality and stale facts stop blocking immediately.
 
 **Gate P14.13:** both walkthroughs are recorded against the exact release candidate head. A build is not called fully playable before this gate.
 
@@ -581,6 +617,9 @@ Do **not** describe SimpleVTT as “모든 기능을 담은 플레이 가능한 
 - [ ] DM live-session flow works with real Combatants/players.
 - [ ] Connected Host/Join works with a host-unknown Character through visible UI.
 - [ ] Connected lifecycle covers Host bind/start, preparation/lobby, Character join, Ready/start, participant reconnect, explicit end, and clean restart.
+- [ ] DM can create/open a Campaign and Host a Session from it with optional calendar/ration rules.
+- [ ] Campaign Party Stash, calendar/ration state, Session summaries, and private DM Library are durable and isolated between Campaigns.
+- [ ] Missing or stale spatial-module facts never become out-of-range/visibility/cover blockers.
 - [ ] Durable write-back/restart behavior is proven.
 - [ ] No critical flow requires Debug Dock/reference scenario controls.
 - [ ] Full relevant regression matrix is green at the release candidate head.

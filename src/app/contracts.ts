@@ -65,6 +65,19 @@ export interface ItemInstanceVm {
   provenance: string[];
 }
 
+export interface SessionCharacterInventoryVm {
+  characterId: string;
+  characterName: string;
+  revision: number;
+  goldGp: number;
+  items: ItemInstanceVm[];
+}
+
+export type DmInventoryAdjustmentCommand =
+  | { requestId: string; actorId: string; operation: "grant-item"; catalogEntryId: string; quantity: number }
+  | { requestId: string; actorId: string; operation: "revoke-item"; itemId: string; quantity: number; forceUnequip?: boolean }
+  | { requestId: string; actorId: string; operation: "grant-currency" | "revoke-currency"; amount: number };
+
 export interface CharacterSheet extends CharacterSummary {
   proficiencyBonus: number;
   speed: number;
@@ -490,6 +503,7 @@ export interface AppSnapshot {
   activity: ActivityEntry[];
   resolution: ResolutionView | null;
   session: SessionVm;
+  sessionCharacterInventories?: Record<string, SessionCharacterInventoryVm>;
 }
 
 export interface CharacterDraftCommand {
@@ -554,6 +568,8 @@ export interface SimpleVttAdapter {
   activateCombatantImport(): Promise<AppSnapshot>;
   clearCombatantImport(): Promise<AppSnapshot>;
   instantiateCombatant(definitionId: string): Promise<AppSnapshot>;
+  adjustDmInventory(command: DmInventoryAdjustmentCommand): Promise<AppSnapshot>;
+  undoLastDmInventoryAdjustment(): Promise<AppSnapshot>;
   hostSession(): Promise<AppSnapshot>;
   joinSession(address: string): Promise<AppSnapshot>;
   setReferenceRole(role: AppRole): Promise<AppSnapshot>;
