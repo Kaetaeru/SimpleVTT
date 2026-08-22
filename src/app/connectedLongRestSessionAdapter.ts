@@ -9,6 +9,8 @@ import {
 import { decodeConnectedWireMessage, type ConnectedWireMessage } from "./connectedSessionWire";
 import { connectedStateFor } from "./connectedSessionState";
 import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSessionTransport";
+import { createConnectedLongRestHostCoordinatorStore } from "./connectedLongRestHostCoordinatorStore";
+import { recoverRestartedConnectedLongRestOwnerAfterGlobalCommit } from "./connectedLongRestOwnerRestartRecovery";
 import {
   abortConnectedLongRestOwner,
   authorizeConnectedLongRestHostDecision,
@@ -60,12 +62,35 @@ async function warn(adapter:MockAdapter,message:string) {
   await publishConnectedSnapshot(adapter);
 }
 
+async function enrichHostRecoveryMessages(adapter:MockAdapter,peer:string) {
+  const state=connectedStateFor(adapter);
+  const participantId=state.peerParticipants.get(peer);
+  let durable:Awaited<ReturnType<ReturnType<typeof createConnectedLongRestHostCoordinatorStore>["readAll"]>>=[];
+  try{durable=await createConnectedLongRestHostCoordinatorStore().readAll();}catch{durable=[];}
+  return connectedLongRestHostRecoveryMessages(adapter,peer).map((message)=>{
+    if(message.type!=="long-rest-global-commit"||message.commit.preparationId) return message;
+    const record=durable.find((candidate)=>candidate.phase==="committed"
+      &&candidate.preflight.transactionId===message.commit.transactionId
+      &&candidate.preflight.ownerParticipantId===participantId);
+    if(!record) return message;
+    return {
+      type:"long-rest-global-commit" as const,
+      commit:{
+        ...message.commit,
+        ownerParticipantId:record.preflight.ownerParticipantId,
+        character:structuredClone(record.preflight.character),
+        preparationId:record.preparationId,
+      },
+    };
+  });
+}
+
 function scheduleHostRecovery(adapter:MockAdapter,peer:string) {
   globalThis.setTimeout(()=>{
     void (async()=>{
       const state=connectedStateFor(adapter);
       if(state.mode!=="host"||!state.peerParticipants.has(peer)||!state.peerManifests.has(peer)) return;
-      for(const recovery of connectedLongRestHostRecoveryMessages(adapter,peer)){
+      for(const recovery of await enrichHostRecoveryMessages(adapter,peer)){
         await sendConnectedWireTo(peer,recovery).catch(()=>undefined);
       }
     })();
@@ -99,7 +124,15 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
     const result=await recordConnectedLongRestHostOwnerPrepared(adapter,message.peer,wire.prepared);
     if(result.status==="committed"){
       if(result.projectionWarning) await warn(adapter,result.projectionWarning);
-      await sendConnectedWireTo(message.peer,{type:"long-rest-global-commit",commit:result.commit});
+      await sendConnectedWireTo(message.peer,{
+        type:"long-rest-global-commit",
+        commit:{
+          ...result.commit,
+          ownerParticipantId:wire.prepared.ownerParticipantId,
+          character:structuredClone(wire.prepared.character),
+          preparationId:wire.prepared.preparationId,
+        },
+      });
     }else{
       await sendConnectedWireTo(message.peer,{type:"long-rest-abort",transactionId:result.transactionId,reason:result.reason});
     }
@@ -121,6 +154,16 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
   }
 }
 
+async function materializeClientGlobalCommit(adapter:MockAdapter,wire:Extract<ConnectedWireMessage,{type:"long-rest-global-commit"}>) {
+  try{
+    return await materializeConnectedLongRestOwnerAfterGlobalCommit(adapter,wire.commit);
+  }catch(error){
+    const message=error instanceof Error?error.message:String(error);
+    if(!message.includes("owner preparation is missing for global commit")) throw error;
+    return recoverRestartedConnectedLongRestOwnerAfterGlobalCommit(adapter,wire.commit);
+  }
+}
+
 async function handleClientLongRest(adapter:MockAdapter,wire:ConnectedWireMessage) {
   if(wire.type==="long-rest-offer"){
     receiveConnectedLongRestOwnerOffer(adapter,wire.offer);
@@ -139,7 +182,7 @@ async function handleClientLongRest(adapter:MockAdapter,wire:ConnectedWireMessag
   }
   if(wire.type==="long-rest-global-commit"){
     try{
-      const result=await materializeConnectedLongRestOwnerAfterGlobalCommit(adapter,wire.commit);
+      const result=await materializeClientGlobalCommit(adapter,wire);
       await broadcastConnectedWire({type:"long-rest-owner-materialized",materialized:result.materialized,projection:result.projection});
       await publishConnectedSnapshot(adapter);
     }catch(error){
