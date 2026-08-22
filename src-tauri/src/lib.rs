@@ -5,6 +5,7 @@ mod installed_content;
 mod campaign_library;
 mod character_campaign_compound;
 mod connected_long_rest_character;
+mod connected_long_rest_host;
 mod session_transport;
 
 use std::sync::Mutex;
@@ -93,6 +94,41 @@ fn abort_connected_long_rest_character_generation(
     let root = local_data_root(&app)?;
     character_campaign_compound::recover_at(&root)?;
     connected_long_rest_character::abort_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn read_connected_long_rest_host_records(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+) -> Result<Vec<connected_long_rest_host::ConnectedLongRestHostRecordDto>, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_long_rest_host::read_all_at(&root)
+}
+
+#[tauri::command]
+fn write_connected_long_rest_host_record(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_long_rest_host::WriteConnectedLongRestHostRecordRequest,
+) -> Result<(), String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_long_rest_host::write_at(&root, &request)
+}
+
+#[tauri::command]
+fn delete_connected_long_rest_host_record(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_long_rest_host::DeleteConnectedLongRestHostRecordRequest,
+) -> Result<(), String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_long_rest_host::delete_at(&root, &request)
 }
 
 #[tauri::command]
@@ -235,6 +271,9 @@ pub fn run() {
             prepare_connected_long_rest_character_generation,
             materialize_connected_long_rest_character_generation,
             abort_connected_long_rest_character_generation,
+            read_connected_long_rest_host_records,
+            write_connected_long_rest_host_record,
+            delete_connected_long_rest_host_record,
             read_authoring_draft_generations,
             write_authoring_draft_generation,
             read_installed_content_generations,
