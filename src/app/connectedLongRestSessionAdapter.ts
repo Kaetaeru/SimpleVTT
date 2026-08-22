@@ -22,6 +22,7 @@ import {
   prepareAuthorizedConnectedLongRestOwner,
   receiveConnectedLongRestOwnerOffer,
   recordConnectedLongRestHostOwnerPrepared,
+  recoverConnectedLongRestHostTransactions,
   resetConnectedLongRestRuntime,
 } from "./connectedLongRestRuntimePort";
 
@@ -107,7 +108,7 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
   }
   if(wire.type==="long-rest-owner-materialized"){
     try{
-      completeConnectedLongRestHostOwnerMaterialization(adapter,message.peer,wire.materialized,wire.projection);
+      await completeConnectedLongRestHostOwnerMaterialization(adapter,message.peer,wire.materialized,wire.projection);
       await publishConnectedSnapshot(adapter);
     }catch(error){
       await sendConnectedWireTo(message.peer,{
@@ -211,6 +212,7 @@ MockAdapter.prototype.hostSession=async function hostSessionWithConnectedLongRes
   resetConnectedLongRestRuntime(this);
   const snapshot=await previousHostSession.call(this);
   await ensureLongRestListener(this);
+  await recoverConnectedLongRestHostTransactions(this);
   return snapshot;
 };
 
@@ -225,7 +227,7 @@ MockAdapter.prototype.joinSession=async function joinSessionWithConnectedLongRes
 MockAdapter.prototype.startConnectedLongRest=async function startConnectedLongRestRuntime(input){
   await ensureLongRestListener(this);
   const started=await beginConnectedLongRestHostOffer(this,input);
-  await sendConnectedWireTo(started.peer,{type:"long-rest-offer",offer:started.offer});
+  await sendConnectedWireTo(started.peer!,{type:"long-rest-offer",offer:started.offer});
   return this.getSnapshot();
 };
 
