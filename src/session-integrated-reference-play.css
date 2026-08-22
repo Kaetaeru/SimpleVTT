@@ -1019,6 +1019,34 @@
 .session-standard-action-grid > section > div { display:grid; align-content:start; gap:3px; padding:5px; }
 .session-standard-action-grid > section > div > span { padding:7px; color:var(--quiet); font-size:8px; }
 
+.session-standard-skill-picker {
+  position: absolute;
+  z-index: 82;
+  left: 198px;
+  bottom: calc(100% - 38px);
+  width: min(460px,calc(100% - 316px));
+  max-height: min(48vh,390px);
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb,var(--surface) 98%,transparent);
+  box-shadow: 0 -16px 48px rgba(0,0,0,.44),var(--shadow);
+  color: var(--text);
+}
+.session-standard-skill-picker > header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 11px; border-bottom:1px solid var(--line); background:linear-gradient(110deg,color-mix(in srgb,var(--accent) 9%,var(--surface-2)),var(--surface)); }
+.session-standard-skill-picker > header > div { min-width:0; display:grid; grid-template-columns:auto 1fr; align-items:baseline; gap:2px 8px; }
+.session-standard-skill-picker > header span { color:var(--accent); font-size:7px; font-weight:900; letter-spacing:.14em; }
+.session-standard-skill-picker > header strong { font:600 14px Georgia,"Noto Serif KR",serif; }
+.session-standard-skill-picker > header small { grid-column:1 / -1; color:var(--muted); font-size:8px; }
+.session-standard-skill-picker > header button { width:28px; min-width:28px; height:28px; min-height:28px; padding:0; border-color:var(--line); border-radius:8px; background:var(--recess); color:var(--muted); }
+.session-standard-skill-picker > div { min-height:0; display:grid; gap:4px; overflow:auto; padding:7px; }
+.session-standard-skill-picker > div > button { min-width:0; display:grid; justify-items:start; gap:2px; padding:8px 9px; border-color:transparent; border-radius:8px; background:var(--recess); color:var(--text); text-align:left; }
+.session-standard-skill-picker > div > button:hover:not(:disabled) { border-color:var(--line-strong); background:var(--surface-2); }
+.session-standard-skill-picker > div > button strong { font-size:10px; }
+.session-standard-skill-picker > div > button small { color:var(--muted); font-size:8px; }
+
 
 /* WO-UI-007 — card-anchored combat feedback and readable health affordances */
 .session-reference-play-root .session-actor-card[aria-disabled="true"] { cursor: default; }
@@ -1104,6 +1132,7 @@
   .session-reference-play-root .session-actor-card { flex-basis:64px; min-width:64px; max-width:64px; width:64px; min-height:90px; height:90px; }
   .session-hotbar-tabs button { padding-inline:7px; }
   .session-action-library { left:8px; right:8px; max-height:62vh; }
+  .session-standard-skill-picker { left:8px; width:calc(100% - 16px); }
   .session-ability-check-groups { grid-template-columns:repeat(2,minmax(130px,1fr)); }
   .session-standard-action-grid { grid-template-columns:repeat(2,minmax(160px,1fr)); }
 }

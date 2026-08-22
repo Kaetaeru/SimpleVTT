@@ -105,10 +105,19 @@ test("ability checks use one catalog while official actions remain normal action
   assert.match(dock,/ABILITY_CHECK_GROUPS/);
   assert.match(dock,/session-action-library ability/);
   assert.match(dock,/!action\.id\.startsWith\("action\.skill\."\)/);
-  assert.match(dock,/action\.id==="action\.dash"\|\|action\.id\.startsWith\("action\.standard\."\)/);
-  assert.match(dock,/const dockActions=useMemo\(\(\)=>actions\.filter\(\(action\)=>!action\.id\.startsWith\("action\.skill\."\)\)/);
+  assert.match(dock,/action\.id==="action\.dash"\|\|action\.id\.startsWith\("action\.standard\."\)\|\|action\.id\.startsWith\("ui\.action\.standard\."\)/);
   assert.match(css,/\.session-ability-check-groups/);
-  assert.doesNotMatch(dock,/session-standard-action-strip|standardPicker|chooseStandard/);
+  assert.doesNotMatch(dock,/session-standard-action-strip/);
+});
+
+test("Influence, Search, and Study are one action slot each with skill-roll pickers",()=>{
+  for(const id of ["influence","search","study"]) assert.match(dock,new RegExp(`id:"${id}"`));
+  assert.match(dock,/groupedStandardActions/);
+  assert.match(dock,/ui\.action\.standard\.\$\{group\.id\}/);
+  assert.match(dock,/STANDARD_SKILL_GROUPS\.some/);
+  assert.match(dock,/session-standard-skill-picker/);
+  assert.match(dock,/action\.id\.startsWith\(`action\.standard\.\$\{standardSkillPicker\}\.\`\)/);
+  assert.match(css,/\.session-standard-skill-picker/);
 });
 
 test("174px is the two-row minimum and 3-4 rows expand the command center",()=>{
