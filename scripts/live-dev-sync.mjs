@@ -9,7 +9,6 @@ const POLL_MS = Math.max(3000, Number(process.env.SIMPLEVTT_LIVE_POLL_MS || 7000
 const ROOT = process.cwd();
 const STATE_DIR = path.join(ROOT, ".live-dev");
 const STATUS_FILE = path.join(STATE_DIR, "status.json");
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const gitEnv = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
 
 let appProcess = null;
@@ -48,6 +47,26 @@ function run(command, args, options = {}) {
     stdout: (result.stdout || "").trim(),
     stderr: (result.stderr || "").trim(),
   };
+}
+
+function npmInvocation(args) {
+  if (process.platform === "win32") {
+    return {
+      command: process.env.ComSpec || "cmd.exe",
+      args: ["/d", "/s", "/c", ["npm", ...args].join(" ")],
+    };
+  }
+  return { command: "npm", args };
+}
+
+function runNpm(args, options = {}) {
+  const invocation = npmInvocation(args);
+  return run(invocation.command, invocation.args, options);
+}
+
+function spawnNpm(args, options = {}) {
+  const invocation = npmInvocation(args);
+  return spawn(invocation.command, invocation.args, options);
 }
 
 function git(args, options = {}) {
@@ -97,14 +116,14 @@ function hasDependencies() {
 function installDependencies() {
   if (hasDependencies()) return;
   log("[SETUP] node_modules is missing or incomplete. Running npm ci...");
-  run(npmCommand, ["ci"], { inherit: true });
+  runNpm(["ci"], { inherit: true });
   log("[SETUP] Dependencies are ready.");
 }
 
 function startApp() {
   if (appProcess || stopping) return;
   log("[APP] Starting Tauri + Vite development mode...");
-  appProcess = spawn(npmCommand, ["run", "tauri:dev"], {
+  appProcess = spawnNpm(["run", "tauri:dev"], {
     cwd: ROOT,
     env: process.env,
     stdio: "inherit",
@@ -166,7 +185,7 @@ async function afterFastForward(files) {
   if (needsDependencyRefresh(files)) {
     await stopApp("dependencies changed");
     log("[SETUP] package files changed. Running npm ci...");
-    run(npmCommand, ["ci"], { inherit: true });
+    runNpm(["ci"], { inherit: true });
     log("[SETUP] Dependencies refreshed.");
     startApp();
     return;
@@ -174,7 +193,7 @@ async function afterFastForward(files) {
 
   if (needsContentGeneration(files)) {
     log("[GEN] Content/rules changed. Regenerating generated content...");
-    run(npmCommand, ["run", "generate:content"], { inherit: true });
+    runNpm(["run", "generate:content"], { inherit: true });
     log("[GEN] Generated content refreshed; Vite will apply the local file changes.");
   }
 
