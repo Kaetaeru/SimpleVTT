@@ -1,4 +1,4 @@
-import type { CampaignRecordV1, CampaignSessionSnapshot } from "./campaignPersistenceContracts";
+import type { CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -510,6 +510,7 @@ export interface AppSnapshot {
   campaigns?: CampaignRecordV1[];
   activeCampaignId?: string | null;
   campaignSessionSnapshot?: CampaignSessionSnapshot | null;
+  campaignSessionSystems?: CampaignSessionSystemsProjection | null;
 }
 
 export interface CharacterDraftCommand {

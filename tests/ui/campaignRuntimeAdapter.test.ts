@@ -54,3 +54,23 @@ test("Session preparation captures an immutable Campaign settings snapshot",asyn
   assert.equal(snapshot.campaignSessionSnapshot?.calendar.enabled,true);
   assert.equal(snapshot.campaignSessionSnapshot?.rations.enabled,true);
 });
+
+test("Campaign runtime projects live Session calendar and ration state without duplicating the aggregate",async()=>{
+  const adapter=new MockAdapter();
+  setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
+  await adapter.getSnapshot();
+  await adapter.createCampaign({campaignId:"campaign.session-systems",name:"Session Systems"});
+  await adapter.upsertCampaignRosterMember("campaign.session-systems",{rosterMemberId:"member.one",label:"One",kind:"host-preset",active:true,countsForRations:true,rationUnitsPerDay:2});
+  await adapter.configureCampaignCalendar("campaign.session-systems",{enabled:true,providerId:"builtin.gregorian"});
+  await adapter.configureCampaignRations("campaign.session-systems",{enabled:true,providerId:"builtin.tracking-only"});
+  await adapter.adjustCampaignRations("campaign.session-systems",{amount:3});
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.campaignSessionSystems?.campaignName,"Session Systems");
+  assert.equal(snapshot.campaignSessionSystems?.calendar.displayAnchor.year,1);
+  assert.equal(snapshot.campaignSessionSystems?.rations.balance,3);
+  assert.equal(snapshot.campaignSessionSystems?.rations.dailyRequired,2);
+  await adapter.advanceCampaignCalendar("campaign.session-systems",{deltaMinutes:90});
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.campaignSessionSystems?.calendar.displayAnchor.hour,1);
+  assert.equal(snapshot.campaignSessionSystems?.calendar.displayAnchor.minute,30);
+});

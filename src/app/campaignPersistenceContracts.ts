@@ -25,6 +25,7 @@ export interface CampaignSessionDefaults {
   startingMode:"freeform"|"initiative";
   calendarEnabled:boolean;
   rationsEnabled:boolean;
+  rationsVisibleToPlayers:boolean;
   stashPolicy:"shared"|"dm-approval"|"dm-managed";
   dmLibraryEnabled:boolean;
   contentLoadoutId:string;
@@ -149,6 +150,7 @@ export interface CampaignSessionSnapshot {
   startingMode:"freeform"|"initiative";
   calendar:OptionalCampaignCapability;
   rations:OptionalCampaignCapability;
+  rationsVisibleToPlayers:boolean;
   stashPolicy:"shared"|"dm-approval"|"dm-managed";
   contentLoadoutId:string;
   spatialProviderId?:string;
@@ -158,6 +160,14 @@ export interface CampaignSessionSnapshot {
   rationBalanceAtStart:number;
   stashRevisionAtStart:number;
   startedAt:string;
+}
+
+export interface CampaignSessionSystemsProjection {
+  campaignId:string;
+  campaignName:string;
+  campaignRevision:number;
+  calendar:{enabled:boolean;providerId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"];currentNote?:string};
+  rations:{enabled:boolean;visibleToPlayers:boolean;balance?:number;dailyRequired?:number;shortage?:number};
 }
 
 export interface CampaignRecordV1 {

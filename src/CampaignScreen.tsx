@@ -40,6 +40,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   const [startingMode,setStartingMode]=useState<"freeform"|"initiative">("freeform");
   const [calendarEnabled,setCalendarEnabled]=useState(false);
   const [rationsEnabled,setRationsEnabled]=useState(false);
+  const [rationsVisibleToPlayers,setRationsVisibleToPlayers]=useState(true);
 
   useEffect(()=>{
     if(!activeCampaign) return;
@@ -47,6 +48,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
     setStartingMode(activeCampaign.sessionDefaults.startingMode);
     setCalendarEnabled(activeCampaign.sessionDefaults.calendarEnabled);
     setRationsEnabled(activeCampaign.sessionDefaults.rationsEnabled);
+    setRationsVisibleToPlayers(activeCampaign.sessionDefaults.rationsVisibleToPlayers??true);
   },[activeCampaign?.campaignId,activeCampaign?.revision]);
 
   if(!snapshot) return null;
@@ -54,7 +56,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   const submitCreate=()=>perform(async()=>{if(!name.trim()) throw new Error("캠페인 이름을 입력하세요.");await createCampaign({campaignId:campaignId(name),name:name.trim(),description:description.trim()||undefined});setName("");setDescription("");setCreating(false);});
   const continueToSession=()=>perform(async()=>{
     if(!activeCampaign) throw new Error("세션을 시작할 캠페인을 선택하세요.");
-    await configureCampaignSessionDefaults(activeCampaign.campaignId,{sessionNameTemplate:sessionName.trim()||activeCampaign.name,startingMode,calendarEnabled,rationsEnabled});
+    await configureCampaignSessionDefaults(activeCampaign.campaignId,{sessionNameTemplate:sessionName.trim()||activeCampaign.name,startingMode,calendarEnabled,rationsEnabled,rationsVisibleToPlayers});
     onOpenSession();
   });
 
@@ -98,6 +100,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
             <div className="campaign-option-list">
               <label><input type="checkbox" checked={calendarEnabled} onChange={(event)=>setCalendarEnabled(event.target.checked)}/><span><strong>세션 달력 사용</strong><small>{calendarEnabled?"현재 Campaign 시간을 세션에서 추적합니다.":"기록은 보존되며 이번 Session에서 UI와 자동 규칙만 비활성화됩니다."}</small></span></label>
               <label><input type="checkbox" checked={rationsEnabled} onChange={(event)=>setRationsEnabled(event.target.checked)}/><span><strong>식량 규칙 사용</strong><small>{rationsEnabled?`현재 ${activeCampaign.rations.ledger.balances.ration}식 · 추적 전용`:"기록은 보존되며 이번 Session에서 UI와 자동 규칙만 비활성화됩니다."}</small></span></label>
+              {rationsEnabled&&<label><input type="checkbox" checked={rationsVisibleToPlayers} onChange={(event)=>setRationsVisibleToPlayers(event.target.checked)}/><span><strong>플레이어에게 식량 공개</strong><small>{rationsVisibleToPlayers?"Player가 현재 잔량과 하루 필요량을 확인할 수 있습니다.":"식량 정보는 DM에게만 표시됩니다."}</small></span></label>}
             </div>
             <div className="campaign-capability-note"><span>전투맵/공간</span><strong>감지된 모듈 없음</strong><p>거리·시야·엄폐 판정이 비활성화됩니다. 일반 세션 진행은 막지 않습니다.</p></div>
             <footer><button onClick={()=>setSetupOpen(false)}>취소</button><button className="primary" disabled={pending} onClick={continueToSession}>준비 화면으로</button></footer>

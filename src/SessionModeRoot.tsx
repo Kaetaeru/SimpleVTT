@@ -25,11 +25,12 @@ import { SessionMainFocus } from "./SessionMainFocus";
 import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionPlayerSession";
 import { SessionQuickPalette, type SessionQuickDestination } from "./SessionQuickPalette";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
+import { SessionCampaignPane } from "./SessionCampaignPane";
 import "./session-mode.css";
 import "./session-connected-layout.css";
 import "./session-integrated-reference-play.css";
 
-type SessionUtility = "quick-sheet" | "actor" | "inventory" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
+type SessionUtility = "quick-sheet" | "actor" | "inventory" | "campaign" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | null;
 
 const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", "damage-animation"]);
@@ -226,6 +227,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     {activeUtility === "player-session" && role === "player" && <SessionPlayerSessionPane onClose={closeUtility} />}
     {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
     {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
+    {activeUtility === "campaign" && <SessionCampaignPane role={role} onClose={closeUtility} />}
   </>;
 
   return <div className="session-mode-root session-reference-play-root" data-session-role={role} data-session-mode={snapshot.sessionMode}>
@@ -236,6 +238,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       <div className="session-reference-play-spacer" />
       <button type="button" className={utilityClass(activeUtility, role === "player" ? "quick-sheet" : "actor")} onClick={(event) => toggleUtility(role === "player" ? "quick-sheet" : "actor", event.currentTarget)}>시트</button>
       <button type="button" className={utilityClass(activeUtility, "inventory")} onClick={(event) => toggleUtility("inventory", event.currentTarget)}>{role === "dm" ? "아이템" : "인벤토리"}</button>
+      <button type="button" className={utilityClass(activeUtility, "campaign")} onClick={(event) => toggleUtility("campaign", event.currentTarget)}>캠페인</button>
       <button type="button" className={utilityClass(activeUtility, "rules")} onClick={(event) => toggleUtility("rules", event.currentTarget)}>규칙</button>
       {role === "dm" && <div className="session-reference-visibility" aria-label="Public / DM Only 전달 프로토콜은 아직 production contract가 없어 Public 상태만 표시됩니다." title="DM Only 전달은 GAP-DM-ONLY-DELIVERY-PROTOCOL 해결 전까지 사용할 수 없습니다."><span className="active">Public</span><span>DM Only</span></div>}
       <button type="button" className={utilityClass(activeUtility, "activity")} onClick={(event) => toggleUtility("activity", event.currentTarget)}>기록</button>

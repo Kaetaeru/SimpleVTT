@@ -1,5 +1,5 @@
 import type { AppSnapshot, SessionMode } from "./contracts";
-import { CampaignApplicationService } from "./campaignApplicationService";
+import { CampaignApplicationService, previewCampaignDailyRations } from "./campaignApplicationService";
 import { CampaignLibraryRepository } from "./campaignPersistence";
 import type { CampaignCalendarDateTime, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { MockAdapter } from "./mockAdapter";
@@ -45,7 +45,7 @@ declare module "./mockAdapter" {
     updateCampaign(campaignId:string,payload:{name?:string;description?:string}):Promise<AppSnapshot>;
     archiveCampaign(campaignId:string):Promise<AppSnapshot>;
     restoreCampaign(campaignId:string):Promise<AppSnapshot>;
-    configureCampaignSessionDefaults(campaignId:string,input:{sessionNameTemplate:string;startingMode:SessionMode;calendarEnabled:boolean;rationsEnabled:boolean}):Promise<AppSnapshot>;
+    configureCampaignSessionDefaults(campaignId:string,input:{sessionNameTemplate:string;startingMode:SessionMode;calendarEnabled:boolean;rationsEnabled:boolean;rationsVisibleToPlayers?:boolean}):Promise<AppSnapshot>;
     prepareCampaignSessionSnapshot(campaignId:string,input?:{sessionName?:string;startingMode?:SessionMode}):Promise<AppSnapshot>;
     upsertCampaignRosterMember(campaignId:string,member:CampaignRosterMember):Promise<AppSnapshot>;
     removeCampaignRosterMember(campaignId:string,rosterMemberId:string):Promise<AppSnapshot>;
@@ -69,7 +69,18 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
   const service=await ensureHydrated(this);
   const snapshot=await previousGetSnapshot.call(this);
   const campaigns=service.listCampaigns();
-  return {...snapshot,campaigns,activeCampaignId:service.snapshot()?.activeCampaignId??null,campaignSessionSnapshot:clone(sessionSnapshots.get(this)??null)};
+  const activeCampaignId=service.snapshot()?.activeCampaignId??null;
+  const captured=sessionSnapshots.get(this)??null;
+  const campaign=campaigns.find((item)=>item.campaignId===(captured?.campaignId??activeCampaignId))??null;
+  const rationPreview=campaign?previewCampaignDailyRations(campaign):null;
+  const rationsVisible=captured?.rationsVisibleToPlayers??campaign?.sessionDefaults.rationsVisibleToPlayers??true;
+  const mayProjectRations=snapshot.session.role!=="client"||rationsVisible;
+  const campaignSessionSystems=campaign?{
+    campaignId:campaign.campaignId,campaignName:campaign.name,campaignRevision:campaign.revision,
+    calendar:{enabled:captured?.calendar.enabled??campaign.calendar.capability.enabled,providerId:campaign.calendar.state.providerId,absoluteMinute:campaign.calendar.state.absoluteMinute,displayAnchor:clone(campaign.calendar.state.displayAnchor),currentNote:campaign.calendar.state.currentNote},
+    rations:{enabled:captured?.rations.enabled??campaign.rations.capability.enabled,visibleToPlayers:rationsVisible,...(mayProjectRations?{balance:campaign.rations.ledger.balances.ration??0,dailyRequired:rationPreview?.requiredUnits??0,shortage:rationPreview?.shortageUnits??0}:{})},
+  }:null;
+  return {...snapshot,campaigns,activeCampaignId,campaignSessionSnapshot:clone(captured),campaignSessionSystems:clone(campaignSessionSystems)};
 };
 
 MockAdapter.prototype.createCampaign=async function createCampaignRuntime(input){
@@ -132,6 +143,7 @@ MockAdapter.prototype.prepareCampaignSessionSnapshot=async function prepareCampa
     startingMode:input.startingMode??campaign.sessionDefaults.startingMode,
     calendar:campaign.calendar.capability,
     rations:campaign.rations.capability,
+    rationsVisibleToPlayers:campaign.sessionDefaults.rationsVisibleToPlayers??true,
     stashPolicy:campaign.sessionDefaults.stashPolicy,
     contentLoadoutId:campaign.sessionDefaults.contentLoadoutId,
     spatialProviderId:campaign.contentLoadout.spatialProviderId,

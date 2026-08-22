@@ -76,7 +76,7 @@ interface AppContextValue {
   updateCampaign(campaignId:string,payload:{name?:string;description?:string}):Promise<void>;
   archiveCampaign(campaignId:string):Promise<void>;
   restoreCampaign(campaignId:string):Promise<void>;
-  configureCampaignSessionDefaults(campaignId:string,input:{sessionNameTemplate:string;startingMode:SessionMode;calendarEnabled:boolean;rationsEnabled:boolean}):Promise<void>;
+  configureCampaignSessionDefaults(campaignId:string,input:{sessionNameTemplate:string;startingMode:SessionMode;calendarEnabled:boolean;rationsEnabled:boolean;rationsVisibleToPlayers?:boolean}):Promise<void>;
   prepareCampaignSessionSnapshot(campaignId:string,input?:{sessionName?:string;startingMode?:SessionMode}):Promise<void>;
   upsertCampaignRosterMember(campaignId:string,member:CampaignRosterMember):Promise<void>;
   removeCampaignRosterMember(campaignId:string,rosterMemberId:string):Promise<void>;
@@ -295,6 +295,12 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
         ],
       },
       scene: previewCurrentActorId===parent.snapshot.scene.currentActorId?parent.snapshot.scene:{...parent.snapshot.scene,currentActorId:previewCurrentActorId},
+      campaignSessionSystems:parent.snapshot.campaignSessionSystems?{
+        ...parent.snapshot.campaignSessionSystems,
+        rations:role==="player"&&!parent.snapshot.campaignSessionSystems.rations.visibleToPlayers
+          ? {enabled:parent.snapshot.campaignSessionSystems.rations.enabled,visibleToPlayers:false}
+          : parent.snapshot.campaignSessionSystems.rations,
+      }:null,
     };
   }, [mode, parent.snapshot, role]);
 
