@@ -34,7 +34,14 @@ test("client projects host ready-action arm and clear events in sequence",async(
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.equal(readyActionConfigurationFor(adapter)?.trigger,"문이 열리면");
 
-  assert.equal((await applyConnectedClientEvents(adapter,[readyEvent(2,"cleared")])).status,"applied");
+  const clear=readyEvent(2,"cleared");
+  assert.equal((await applyConnectedClientEvents(adapter,[clear])).status,"applied");
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.equal(readyActionConfigurationFor(adapter),undefined);
+
+  assert.equal((await applyConnectedClientEvents(adapter,[clear])).status,"duplicate");
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
