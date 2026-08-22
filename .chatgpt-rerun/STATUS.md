@@ -9,31 +9,27 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control status: `continue`
-- Checkpoint: `2026-08-23T04:03:00+09:00`
-- Current provider runtime/test head: `dacb1fd`
-- Current handoff commit: `0cce695`
+- Checkpoint: `2026-08-23T04:14:00+09:00`
+- Provider production UI/gate head: `a285f2f`
+- Current handoff commit: `8c79b9f`
 
 ## Human summary
 
-This dispatch resumed from V1-11 without repeating previously implemented or verified work and moved into `V1-12` declarative Calendar/Ration providers.
+V1-12 declarative Calendar/Ration providers are now connected through the real Campaign UI without redesigning it.
 
-The provider core/runtime is now code-connected through the existing architecture rather than a new plugin subsystem:
+- existing Calendar/Ration selects now list compatible installed declarative profiles from `snapshot.catalog`;
+- only the latest installed version of each provider is offered as the normal choice, while Campaigns pinned to an older installed version keep that exact state visible;
+- selecting a custom provider pins both providerId and providerVersion;
+- missing pinned providers are shown as unavailable but do not block the Campaign screen, Session, Rest, or unrelated actions;
+- custom Calendar profiles feed their month definitions into the existing year/month/day editor;
+- custom Ration profiles drive the daily preview through the existing authoritative calculation;
+- shortage consequences are shown only as DM adjudication suggestions and never auto-apply damage or Exhaustion;
+- focused provider profile/import/runtime/UI tests are now wired into the canonical UI workflow.
 
-- RuleModule entries may carry strictly validated data-only Campaign Calendar/Ration profiles.
-- unexpected executable-style fields are rejected;
-- modules must declare the matching Campaign provider capability;
-- installed provider data is persisted and revalidated on restart;
-- provider metadata flows through the existing Catalog projection;
-- custom calendars round-trip authoritative absolute minutes with declared months/leap cycles;
-- Campaign capabilities pin provider version;
-- ration profiles can provide roster-kind/default daily units while explicit member overrides remain authoritative;
-- shortage remains a warning/proposed consequence only and never auto-applies damage/exhaustion;
-- removing a custom provider does not break Campaign hydration; only commands that require that provider fail explicitly.
-
-Focused profile/import/runtime tests were added. Exact-head CI/build results have not yet been observed, so no green/DONE claim is made. The comprehensive Codex audit is still deferred until all V1 implementation is complete.
+Exact-head green validation has not been observed. The GitHub connector did not expose a push-triggered workflow result, and an independent temporary clone could not start because the execution environment could not resolve github.com. No pass or failure is inferred from that network limitation.
 
 ## Next implementation
 
-Finish the provider **production UI path** without redesigning Campaign UI: populate the existing Calendar/Ration selectors from installed catalog profiles, use custom Calendar months in the existing date editor, apply custom ration defaults to the preview, show unavailable/shortage guidance without blocking unrelated play, and wire the new focused tests into the canonical UI workflow.
+Continue V1-12 with the remaining authoritative compound behavior: Long Rest plus optional Campaign time advance plus optional ration consumption, with no partial Character/Campaign success if either durable write fails. Reuse the existing Long Rest authority and preserve the current Rest UI.
 
 `STATUS.md` is human-facing only. Reconciliation source order remains README -> control -> STATE -> PLAN.
