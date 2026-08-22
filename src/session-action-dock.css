@@ -480,3 +480,10 @@
   .session-action-target-list,
   .session-action-detail-summary { grid-template-columns: 1fr; }
 }
+.session-ready-config { position:fixed; z-index:45; left:50%; top:50%; width:min(460px,calc(100vw - 24px)); transform:translate(-50%,-50%); display:grid; gap:12px; padding:14px; border:1px solid var(--line-strong); border-radius:12px; background:var(--surface); box-shadow:0 22px 70px rgba(0,0,0,.58); }
+.session-ready-config header { display:flex; justify-content:space-between; gap:12px; }
+.session-ready-config header span,.session-ready-config header small,.session-ready-config label span { display:block; color:var(--quiet); font-size:9px; }
+.session-ready-config header strong { display:block; margin:2px 0; font:600 16px Georgia,"Noto Serif KR",serif; }
+.session-ready-config label { display:grid; gap:5px; }
+.session-ready-config select,.session-ready-config input { width:100%; min-height:36px; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:var(--recess); color:var(--text); }
+.session-ready-config footer { display:flex; justify-content:flex-end; gap:7px; }

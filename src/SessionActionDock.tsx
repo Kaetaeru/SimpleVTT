@@ -51,7 +51,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   actorId:string|null; suspended:boolean; targeting:SessionActionTargeting|null;
   onBeginTargeting(action:ActionVm,anchor:TargetingAnchor):void; onCancelTargeting():void; onExecuteTargeting():void;
 }) {
-  const {snapshot,resolveAction,endTurn}=useSimpleVtt();
+  const {snapshot,resolveAction,configureReadyAction,endTurn}=useSimpleVtt();
   const [page,setPage]=useState<HotbarPage>("mixed");
   const [rows,setRows]=useState<SessionHotbarRows>(()=>typeof window==="undefined"?DEFAULT_SESSION_HOTBAR_ROWS:readSessionHotbarRows());
   const [categoryOrder,setCategoryOrder]=useState<SessionHotbarCategory[]>(()=>typeof window==="undefined"?["action","class","item","special","custom"]:readSessionHotbarCategoryOrder());
@@ -61,6 +61,9 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const [tooltip,setTooltip]=useState<{action:ActionVm;x:number;y:number;mainHand:boolean}|null>(null);
   const [actionMenu,setActionMenu]=useState<"ability"|null>(null);
   const [standardSkillPicker,setStandardSkillPicker]=useState<typeof STANDARD_SKILL_GROUPS[number]["id"]|null>(null);
+  const [readyOpen,setReadyOpen]=useState(false);
+  const [readyActionId,setReadyActionId]=useState("");
+  const [readyTrigger,setReadyTrigger]=useState("");
   const actions=snapshot&&actorId?snapshot.scene.actionsByActor[actorId]??[]:[];
   const abilityActions=useMemo(()=>actions.filter((action)=>action.id.startsWith("action.skill.")),[actions]);
   const groupedStandardActions=useMemo(()=>STANDARD_SKILL_GROUPS.flatMap((group)=>{
@@ -90,8 +93,9 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const playerOwnsTurn=Boolean(snapshot&&role==="player"&&currentActor?.id===snapshot.activeCharacter.id);
   const canEndTurn=Boolean(snapshot&&snapshot.sessionMode==="initiative"&&currentActor&&snapshot.connectionState==="connected"&&!snapshot.resolution&&(role==="dm"||playerOwnsTurn));
   const multiTarget=targeting?.action.target==="multi-enemy";
+  const readyOptions=useMemo(()=>actions.filter((action)=>action.available&&!action.id.startsWith("action.standard.ready")&&!action.id.startsWith("ui.action.standard.")),[actions]);
 
-  useEffect(()=>{ setPage("mixed"); setFeedback(null); setPendingActionId(null); setTooltip(null); setActionMenu(null); setStandardSkillPicker(null); },[actorId]);
+  useEffect(()=>{ setPage("mixed"); setFeedback(null); setPendingActionId(null); setTooltip(null); setActionMenu(null); setStandardSkillPicker(null); setReadyOpen(false); },[actorId]);
   useEffect(()=>{ if (!targeting) setTooltip(null); },[targeting?.action.id]);
   useEffect(()=>{
     const root=document.querySelector<HTMLElement>(".session-reference-play-root");
@@ -110,6 +114,9 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const chooseAction=(action:ActionVm,button:HTMLButtonElement)=>{
     if (suspended||targeting?.pending) return;
     if (!action.available) { setFeedback(action.disabledReason||"현재 사용할 수 없습니다."); return; }
+    if(action.id==="action.standard.ready"){
+      setReadyActionId(readyOptions[0]?.id??"");setReadyTrigger("");setReadyOpen(true);setTooltip(null);return;
+    }
     const grouped=STANDARD_SKILL_GROUPS.find((group)=>action.id===`ui.action.standard.${group.id}`);
     if(grouped){setActionMenu(null);setStandardSkillPicker((open)=>open===grouped.id?null:grouped.id);setFeedback(null);setTooltip(null);return;}
     if (action.target==="none") { void runImmediate(action,[]); return; }
@@ -129,6 +136,13 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   };
   const showTooltip=(action:ActionVm,button:HTMLButtonElement)=>{ const rect=button.getBoundingClientRect(); setTooltip({action,x:Math.min(window.innerWidth-280,Math.max(8,rect.left)),y:Math.max(8,rect.top-10),mainHand:isMainHand(action)}); };
   const finishTurn=async()=>{ if (!canEndTurn||pendingTurn) return; setPendingTurn(true); try { await endTurn(); } finally { setPendingTurn(false); } };
+  const prepareReady=async()=>{
+    if(!actorId||!readyActionId||!readyTrigger.trim()||pendingActionId)return;
+    setPendingActionId("action.standard.ready");setFeedback(null);
+    try{await configureReadyAction({actorId,actionId:readyActionId,trigger:readyTrigger});setReadyOpen(false);}
+    catch{setFeedback("준비 행동을 설정하지 못했습니다.");}
+    finally{setPendingActionId(null);}
+  };
   const renderSlot=(action:ActionVm)=>{
     const unavailable=!action.available; const selected=action.id===targeting?.action.id; const mainHand=isMainHand(action);
     return <button type="button" role="listitem" key={action.id} className={`session-hotbar-slot ${selected?"selected":""} ${unavailable?"unavailable":""} ${mainHand?"main-hand":""}`} aria-label={`${action.name} · ${action.summary}${mainHand?" · 장착 주무기":""}`} aria-pressed={selected} aria-disabled={unavailable||Boolean(pendingActionId)||suspended||targeting?.pending} onPointerEnter={(event)=>showTooltip(action,event.currentTarget)} onPointerLeave={()=>setTooltip(null)} onFocus={(event)=>showTooltip(action,event.currentTarget)} onBlur={()=>setTooltip(null)} onClick={(event)=>chooseAction(action,event.currentTarget)}><ActionIcon action={action}/>{mainHand&&<span className="session-hotbar-main-hand">M</span>}<span className="session-hotbar-cost">{action.itemCost?"I":action.economy.slice(0,1)}</span></button>;
@@ -165,6 +179,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
     </div>
     {actionMenu==="ability"&&<aside className="session-action-library ability" aria-label="능력 판정 선택"><header><div><span>D20 TEST</span><strong>능력 판정</strong><small>기술을 선택하면 캐릭터 수정치와 숙련을 적용해 굴립니다.</small></div><button type="button" aria-label="능력 판정 닫기" onClick={()=>setActionMenu(null)}>×</button></header><div className="session-ability-check-groups">{ABILITY_CHECK_GROUPS.map((group)=><section key={group.label}><strong>{group.label}</strong><div>{group.ids.map((id)=>abilityActions.find((action)=>action.id===`action.skill.${id}`)).filter((action):action is ActionVm=>Boolean(action)).map(menuActionButton)}</div></section>)}</div></aside>}
     {standardSkillPicker&&<aside className="session-standard-skill-picker" aria-label={`${STANDARD_SKILL_GROUPS.find((group)=>group.id===standardSkillPicker)?.name??"기본 행동"} 기술 선택`}><header><div><span>SKILL CHECK</span><strong>{STANDARD_SKILL_GROUPS.find((group)=>group.id===standardSkillPicker)?.name}</strong><small>{STANDARD_SKILL_GROUPS.find((group)=>group.id===standardSkillPicker)?.summary}</small></div><button type="button" aria-label="기술 선택 닫기" onClick={()=>setStandardSkillPicker(null)}>×</button></header><div>{actions.filter((action)=>action.id.startsWith(`action.standard.${standardSkillPicker}.`)).map(menuActionButton)}</div></aside>}
+    {readyOpen&&<aside className="session-ready-config" aria-label="준비 행동 설정"><header><div><span>READY ACTION</span><strong>행동과 트리거 준비</strong><small>트리거가 발생하면 선택한 행동을 반응으로 실행합니다.</small></div><button type="button" aria-label="준비 행동 설정 닫기" onClick={()=>setReadyOpen(false)}>×</button></header><label><span>예약할 행동</span><select value={readyActionId} onChange={(event)=>setReadyActionId(event.target.value)}>{readyOptions.map((action)=><option key={action.id} value={action.id}>{action.name} · {action.summary}</option>)}</select></label><label><span>감지 가능한 트리거</span><input value={readyTrigger} onChange={(event)=>setReadyTrigger(event.target.value)} placeholder="예: 고블린이 문을 통과하면"/></label><footer><button type="button" onClick={()=>setReadyOpen(false)}>취소</button><button type="button" className="primary" disabled={!readyActionId||!readyTrigger.trim()||Boolean(pendingActionId)} onClick={()=>void prepareReady()}>준비하기</button></footer></aside>}
     {(feedback||targeting?.feedback)&&<p className="session-action-feedback session-command-feedback" role="status">{feedback||targeting?.feedback}</p>}
     {tooltip&&createPortal(<aside className="session-hotbar-tooltip" role="tooltip" style={{left:tooltip.x,top:tooltip.y,transform:"translateY(-100%)"}}><small>{tooltip.mainHand?"장착 주무기 · ":""}{actionIconDescriptor(tooltip.action).label} · {targetCopy(tooltip.action.target)} · {tooltip.action.economy}</small><strong>{tooltip.action.name}</strong><b>{actionEffect(tooltip.action)}</b><p>{tooltip.action.summary}</p>{!tooltip.action.available&&<em>{tooltip.action.disabledReason||"현재 사용할 수 없음"}</em>}</aside>,document.body)}
   </section>;

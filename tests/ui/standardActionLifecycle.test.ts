@@ -164,8 +164,11 @@ test("Ready exposes an off-turn trigger that spends Reaction and clears the prep
   const adapter=new MockAdapter();
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
+  const initial=await adapter.getSnapshot();
+  const prepared=initial.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.resolutionKind==="ability-check");
+  assert.ok(prepared,"ready test requires an ability-check action");
 
-  await adapter.resolveAction("action.standard.ready",["char.aelar"]);
+  await adapter.configureReadyAction({actorId:"char.aelar",actionId:prepared.id,trigger:"고블린이 문을 통과하면"});
   let snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),true);
   assert.ok(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.id==="action.standard.ready.trigger"));
@@ -175,7 +178,8 @@ test("Ready exposes an off-turn trigger that spends Reaction and clears the prep
   const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.standard.ready.trigger");
   assert.equal(trigger?.available,true,"prepared reaction must remain executable off turn");
 
-  await adapter.resolveAction("action.standard.ready.trigger",["char.aelar"]);
+  assert.match(trigger?.summary??"",/고블린이 문을 통과하면/);
+  await adapter.resolveAction("action.standard.ready.trigger",[]);
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);

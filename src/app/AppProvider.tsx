@@ -15,6 +15,7 @@ import type {
   SessionMode,
 } from "./contracts";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
+import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignDmLibraryEntry, CampaignRosterMember, CampaignSessionSummary, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
@@ -58,6 +59,7 @@ interface AppContextValue {
   endInitiative(): Promise<void>;
   endTurn(): Promise<void>;
   declareManualMovementReaction(command:ManualMovementReactionCommand):Promise<void>;
+  configureReadyAction(command:ReadyActionConfiguration):Promise<void>;
   resolveAction(actionId: string, targetIds: string[]): Promise<void>;
   advanceResolution(): Promise<void>;
   submitConcentrationSaveD20(face:number):Promise<void>;
@@ -209,6 +211,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     endInitiative: async () => apply(() => mockAdapter.endInitiative()),
     endTurn: async () => apply(() => mockAdapter.endTurn()),
     declareManualMovementReaction: async (command) => apply(() => mockAdapter.declareManualMovementReaction(command)),
+    configureReadyAction: async (command) => apply(() => mockAdapter.configureReadyAction(command)),
     resolveAction: async (actionId, targetIds) => apply(() => mockAdapter.resolveAction(actionId, targetIds)),
     advanceResolution: async () => apply(() => mockAdapter.advanceResolution()),
     submitConcentrationSaveD20: async (face) => apply(() => mockAdapter.submitConcentrationSaveD20(face)),

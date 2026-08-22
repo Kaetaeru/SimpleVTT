@@ -2,6 +2,7 @@ import "./combatantRuntimeContracts";
 import type { AbilityKey, ActionVm, AppRole, AppSnapshot, CharacterSheet, CharacterSummary, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { isEphemeralSessionProjectionCharacter } from "./characterSessionProjectionRegistry";
+import { readyActionConfigurationFor } from "./standardActionReadyState";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const SKILLS:Array<{id:string;name:string;ability:AbilityKey}>=[
@@ -192,20 +193,22 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   return actions;
 }
 
-function readyTriggerAction(character:CharacterSheet):ActionVm {
+function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:string):ActionVm {
   return {
     id:"action.standard.ready.trigger",
     actorId:character.id,
-    name:"준비 행동 발동",
+    name:`발동 · ${prepared.name}`,
     category:"basic",
-    target:"self",
+    target:prepared.target,
     economy:"반응",
     resolutionKind:"no-roll",
-    summary:"선언한 트리거가 발생해 준비한 행동을 발동합니다.",
+    summary:`${trigger} → ${prepared.name}`,
     available:true,
-    eligibleTargetIds:[character.id],
+    eligibleTargetIds:[...prepared.eligibleTargetIds],
+    maxTargets:prepared.maxTargets,
     details:[
-      detail("효과","준비한 행동 또는 이동 발동"),
+      detail("트리거",trigger),
+      detail("예약 행동",prepared.name),
       detail("비용","반응 1"),
       detail("출처","SRD 5.2.1 · Ready"),
     ],
@@ -332,8 +335,10 @@ function reconcile(adapter:MockAdapter) {
   } else internal.scene.entities.unshift(projected);
 
   const actions=deriveProductionCharacterActions(character);
-  if (internal.scene.entities.find((entity)=>entity.id===character.id)?.status.includes("준비 행동")) {
-    actions.push(readyTriggerAction(character));
+  const ready=readyActionConfigurationFor(adapter);
+  const prepared=ready?.actorId===character.id?actions.find((action)=>action.id===ready.actionId):undefined;
+  if (prepared&&internal.scene.entities.find((entity)=>entity.id===character.id)?.status.includes("준비 행동")) {
+    actions.push(readyTriggerAction(character,prepared,ready!.trigger));
   }
   internal.scene.actionsByActor[character.id]=actions;
   internal.scene.economyByActor[character.id]??={action:true,bonusAction:true,reaction:true,movement:character.speed,movementMax:character.speed};
