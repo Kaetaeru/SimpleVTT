@@ -106,7 +106,7 @@ That implementation history remains part of the current V1 source and must not b
 
 ### Current canonical implementation state
 
-According to `.agents/V1_CURRENT_HANDOFF.md`, recent canonical work has moved beyond the original Phase 14 slice into V1 convergence, including actor-specific Ready configuration, Ready lifecycle network propagation, `ready-action-v1` capability negotiation, connected reset cleanup, Live Development tooling, and isolated two-instance acceptance tooling.
+According to `.agents/V1_CURRENT_HANDOFF.md`, recent canonical work has moved beyond the original Phase 14 slice into V1 convergence, including actor-specific Ready configuration, Ready lifecycle network propagation, `ready-action-v1` capability negotiation, connected reset cleanup, Live Development tooling, isolated two-instance acceptance tooling, declarative Campaign providers, and the V1-12 Long Rest compound persistence foundation.
 
 The next implementation decision must therefore come from the current V1 handoff/checklist, not the old Phase 14 next-action text.
 
@@ -186,10 +186,19 @@ At V1 pre-release freeze:
 
 On the next Rerun dispatch after reconciliation:
 
-1. Confirm `control.json` still authorizes sequence `1`, task `phase14-production-play-session-ux`, status `continue`.
-2. Confirm `work/v1-composite` still resolves and re-fetch the current canonical head.
-3. Read `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`.
-4. Reconcile current code against the V1 router and identify the next **real functional implementation gap** that can be completed without a user-only acceptance step.
-5. Before editing, identify the existing UI surface involved and explicitly preserve its current structure/style unless the missing function requires a minimal compatible addition.
-6. Implement that V1 slice end-to-end through the production path; do not merely satisfy a stale checkbox and do not start the final Codex audit yet.
-7. Before the 18-minute checkpoint, durably record completed functionality, remaining behavioral gaps, any unavoidable UI-visible change, evidence available so far, and the next exact implementation action.
+1. Confirm `control.json` still authorizes sequence `1`, task `phase14-production-play-session-ux`, status `continue` and `work/v1-composite` remains canonical.
+2. Preserve the completed Long Rest foundations: canonical domain projection, prepared Character/Campaign immutable generations, memory two-participant preflight/apply, and Tauri commit-marker recovery transaction. Do not reimplement them.
+3. Inspect/continue from `AppProvider -> campaignRuntimeAdapter -> CampaignApplicationService` and the Character persistence runtime boundary. The production compound coordinator belongs behind the current UI, not inside React arithmetic.
+4. Add the production Long Rest compound coordinator so it:
+   - resolves Character Rest through `projectCharacterLongRest` / canonical domain `resolveLongRest`;
+   - applies optional Calendar advance only when selected, through Campaign application authority;
+   - applies optional Ration consumption only when selected, through Campaign application authority;
+   - prepares one next Character generation and one next Campaign generation;
+   - uses `TauriCharacterCampaignCompoundWriter` in Tauri and the memory compound writer in non-Tauri/test mode;
+   - advances/re-hydrates adapter/repository state only after the compound writer succeeds;
+   - leaves no projected Scene/Activity/Character/Campaign partial success when the compound writer rejects.
+5. Calendar/Rations OFF or unavailable provider must make only that optional side effect unavailable. Long Rest itself remains valid; Rest alone must not advance time or consume rations.
+6. Add deterministic coordinator contracts for Rest-only success, selected optional side effects, unavailable-provider behavior, duplicate/idempotent request behavior, and writer failure atomicity.
+7. Add the smallest compatible Long Rest preview/options/action block to the existing Session Campaign pane (`SessionCampaignPane`); there is no current generic Rest surface in `PlaySessionDock`, `SessionActionDock`, `SessionDmTools`, or `SessionCampaignPane`, so do not redesign or relocate surrounding controls.
+8. Run/observe focused TypeScript and Rust checks when available. Do not claim green without observed evidence and do not begin the comprehensive Codex audit yet.
+9. Before the 18-minute checkpoint, durably record completed functionality, remaining behavioral gaps, any unavoidable UI-visible change, evidence available so far, and the next exact implementation action.
