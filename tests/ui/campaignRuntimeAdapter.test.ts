@@ -66,6 +66,8 @@ test("Campaign runtime projects live Session calendar and ration state without d
   await adapter.adjustCampaignRations("campaign.session-systems",{amount:3});
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.campaignSessionSystems?.campaignName,"Session Systems");
+  assert.equal(snapshot.campaignSessionSystems?.roster[0].label,"One");
+  assert.equal(snapshot.campaignSessionSystems?.roster[0].countsForRations,true);
   assert.equal(snapshot.campaignSessionSystems?.calendar.displayAnchor.year,1);
   assert.equal(snapshot.campaignSessionSystems?.rations.balance,3);
   assert.equal(snapshot.campaignSessionSystems?.rations.dailyRequired,2);

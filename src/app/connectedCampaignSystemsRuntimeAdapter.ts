@@ -15,7 +15,10 @@ const baseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
 function object(value:unknown):Raw|undefined{return value&&typeof value==="object"&&!Array.isArray(value)?value as Raw:undefined;}
 function safeProjection(projection:CampaignSessionSystemsProjection):CampaignSessionSystemsProjection{
   const copy=structuredClone(projection);
-  if(!copy.rations.visibleToPlayers) copy.rations={enabled:copy.rations.enabled,visibleToPlayers:false};
+  if(!copy.rations.visibleToPlayers){
+    copy.rations={enabled:copy.rations.enabled,visibleToPlayers:false};
+    copy.roster=copy.roster.map(({countsForRations:_,rationUnitsPerDay:__,...member})=>member);
+  }
   return copy;
 }
 export function decodeCampaignSystemsEnvelope(raw:string):CampaignSystemsEnvelope|null{
@@ -23,6 +26,7 @@ export function decodeCampaignSystemsEnvelope(raw:string):CampaignSystemsEnvelop
   const record=object(value);const projection=object(record?.projection);const calendar=object(projection?.calendar);const rations=object(projection?.rations);
   if(record?.type!=="campaign-systems-projection"||typeof record.sessionId!=="string"||!record.sessionId||!Number.isInteger(record.revision)||Number(record.revision)<1) return null;
   if(typeof projection?.campaignId!=="string"||typeof projection.campaignName!=="string"||!Number.isInteger(projection.campaignRevision)) return null;
+  if(!Array.isArray(projection.roster)||projection.roster.some((value)=>{const member=object(value);return typeof member?.rosterMemberId!=="string"||typeof member.label!=="string"||typeof member.kind!=="string"||typeof member.active!=="boolean";})) return null;
   if(typeof calendar?.enabled!=="boolean"||typeof calendar.providerId!=="string"||!Number.isInteger(calendar.absoluteMinute)||!object(calendar.displayAnchor)) return null;
   if(typeof rations?.enabled!=="boolean"||typeof rations.visibleToPlayers!=="boolean") return null;
   for(const key of ["balance","dailyRequired","shortage"] as const) if(rations[key]!==undefined&&(!Number.isInteger(rations[key])||Number(rations[key])<0)) return null;

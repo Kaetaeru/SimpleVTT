@@ -20,11 +20,23 @@ test("DM Session Campaign pane can operate calendar and rations",()=>{
   for(const pattern of [/\+10분/,/\+30분/,/\+1시간/,/\+6시간/,/\+1일/,/날짜·시간 직접 설정/,/하루치 소비/]) assert.match(pane,pattern);
 });
 
+test("Session Campaign pane shows persisted party references and browser preview always mounts a connected Player",()=>{
+  assert.match(pane,/파티 명단/);
+  assert.match(pane,/projection\.roster\.map/);
+  assert.match(pane,/Player Character 참조/);
+  assert.match(pane,/접속 중/);
+  assert.match(pane,/role==="dm"&&<small className="session-campaign-roster-policy"/);
+  assert.match(provider,/campaign\.browser-preview/);
+  assert.match(provider,/previewRosterMemberId=`connected:\$\{activeCharacter\.id\}`/);
+  assert.match(provider,/connectionState:"connected"/);
+});
+
 test("Player pane is read-only and hidden ration values are removed from preview projection",()=>{
   assert.match(pane,/Player 읽기 전용/);
   assert.match(pane,/role==="player"&&!projection\.rations\.visibleToPlayers/);
   assert.match(pane,/식량 현황은 DM에게만 공개됩니다/);
-  assert.match(provider,/role==="player"&&!parent\.snapshot\.campaignSessionSystems\.rations\.visibleToPlayers/);
+  assert.match(provider,/role==="player"&&!previewRations\.visibleToPlayers/);
+  assert.match(provider,/roster\.map\(\(\{countsForRations:_,rationUnitsPerDay:__/);
   assert.match(provider,/visibleToPlayers:false/);
   assert.doesNotMatch(pane,/role==="player"[\s\S]{0,120}advanceCampaignCalendar/);
 });

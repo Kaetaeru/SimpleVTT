@@ -78,6 +78,11 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
   const mayProjectRations=snapshot.session.role!=="client"||rationsVisible;
   const campaignSessionSystems=campaign?{
     campaignId:campaign.campaignId,campaignName:campaign.name,campaignRevision:campaign.revision,
+    roster:campaign.roster.map((member)=>({
+      rosterMemberId:member.rosterMemberId,label:member.label,kind:member.kind,active:member.active,
+      countsForRations:member.countsForRations,rationUnitsPerDay:member.rationUnitsPerDay,stashPermission:member.stashPermission,
+      connectionState:member.characterRef?.ownerHint?snapshot.session.participants.find((participant)=>participant.id===member.characterRef?.ownerHint)?.state:undefined,
+    })),
     calendar:{enabled:captured?.calendar.enabled??campaign.calendar.capability.enabled,providerId:campaign.calendar.state.providerId,absoluteMinute:campaign.calendar.state.absoluteMinute,displayAnchor:clone(campaign.calendar.state.displayAnchor),currentNote:campaign.calendar.state.currentNote},
     rations:{enabled:captured?.rations.enabled??campaign.rations.capability.enabled,visibleToPlayers:rationsVisible,...(mayProjectRations?{balance:campaign.rations.ledger.balances.ration??0,dailyRequired:rationPreview?.requiredUnits??0,shortage:rationPreview?.shortageUnits??0}:{})},
   }:null;

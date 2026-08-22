@@ -276,6 +276,32 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
     const previewCurrentActorId=mode==="initiative"&&!hasCurrentActor
       ? [...parent.snapshot.scene.entities].sort((left,right)=>right.initiative-left.initiative)[0]?.id??parent.snapshot.scene.currentActorId
       : parent.snapshot.scene.currentActorId;
+    const baseCampaign=parent.snapshot.campaignSessionSystems??{
+      campaignId:"campaign.browser-preview",
+      campaignName:"브라우저 미리보기 캠페인",
+      campaignRevision:1,
+      roster:[],
+      calendar:{enabled:true,providerId:"builtin.gregorian",absoluteMinute:600,displayAnchor:{era:"왕국력",year:312,monthId:"4",monthLabel:"4월",day:7,hour:10,minute:0},currentNote:"Player 합류 직후"},
+      rations:{enabled:true,visibleToPlayers:true,balance:8,dailyRequired:0,shortage:0},
+    };
+    const previewRosterMemberId=`connected:${activeCharacter.id}`;
+    const hasPreviewMember=baseCampaign.roster.some((member)=>member.rosterMemberId===previewRosterMemberId);
+    const roster=(hasPreviewMember?baseCampaign.roster.map((member)=>member.rosterMemberId===previewRosterMemberId?{...member,connectionState:"connected" as const}:member):[
+      ...baseCampaign.roster,
+      {rosterMemberId:previewRosterMemberId,label:activeCharacter.name,kind:"player-character-ref" as const,active:true,countsForRations:true,rationUnitsPerDay:1,stashPermission:"request" as const,connectionState:"connected" as const},
+    ]);
+    const dailyRequired=(baseCampaign.rations.dailyRequired??0)+(hasPreviewMember?0:1);
+    const balance=baseCampaign.rations.balance??0;
+    const previewRations={...baseCampaign.rations,dailyRequired,shortage:Math.max(0,dailyRequired-balance)};
+    const campaignSessionSystems={
+      ...baseCampaign,
+      roster:role==="player"&&!previewRations.visibleToPlayers
+        ? roster.map(({countsForRations:_,rationUnitsPerDay:__,...member})=>member)
+        : roster,
+      rations:role==="player"&&!previewRations.visibleToPlayers
+        ? {enabled:previewRations.enabled,visibleToPlayers:false as const}
+        : previewRations,
+    };
     return {
       ...parent.snapshot,
       role: role === "dm" ? "dm" : "player",
@@ -295,12 +321,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
         ],
       },
       scene: previewCurrentActorId===parent.snapshot.scene.currentActorId?parent.snapshot.scene:{...parent.snapshot.scene,currentActorId:previewCurrentActorId},
-      campaignSessionSystems:parent.snapshot.campaignSessionSystems?{
-        ...parent.snapshot.campaignSessionSystems,
-        rations:role==="player"&&!parent.snapshot.campaignSessionSystems.rations.visibleToPlayers
-          ? {enabled:parent.snapshot.campaignSessionSystems.rations.enabled,visibleToPlayers:false}
-          : parent.snapshot.campaignSessionSystems.rations,
-      }:null,
+      campaignSessionSystems,
     };
   }, [mode, parent.snapshot, role]);
 

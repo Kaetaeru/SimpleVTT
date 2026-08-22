@@ -24,6 +24,17 @@ export function SessionCampaignPane({role,onClose}:{role:"dm"|"player";onClose()
     <header className="session-utility-pane-head"><div><strong>캠페인 현황</strong><small>{projection?.campaignName??"연결된 캠페인 없음"} · {role==="dm"?"DM 조작":"Player 읽기 전용"}</small></div><button type="button" autoFocus aria-label="캠페인 현황 닫기" onClick={onClose}>×</button></header>
     {!projection?<div className="session-campaign-empty"><strong>세션 캠페인이 없습니다.</strong><p>DM이 캠페인에서 세션을 시작하면 달력과 식량 현황이 여기에 표시됩니다.</p></div>:<div className="session-campaign-scroll">
       {error&&<div className="session-campaign-error" role="alert">{error}</div>}
+      <section className="session-campaign-block" aria-labelledby="session-campaign-roster">
+        <header><div><span>PARTY</span><h2 id="session-campaign-roster">파티 명단</h2></div><strong>{projection.roster.filter((member)=>member.active).length}명 활성</strong></header>
+        {!projection.roster.length?<p className="session-campaign-muted">Campaign 파티에 등록된 구성원이 없습니다.</p>:<div className="session-campaign-roster">
+          {projection.roster.map((member)=><article key={member.rosterMemberId} className={member.active?"":"inactive"}>
+            <span className="session-campaign-avatar">{member.label.trim().slice(0,1)||"?"}</span>
+            <div><strong>{member.label}</strong><small>{member.kind==="player-character-ref"?"Player Character 참조":member.kind==="host-preset"?"Host 프리셋":"동료"}</small></div>
+            <span className={`session-campaign-connection ${member.connectionState??"saved"}`}>{member.connectionState==="connected"?"접속 중":member.connectionState==="reconnecting"?"재연결":member.connectionState==="disconnected"?"연결 끊김":"저장됨"}</span>
+            {role==="dm"&&<small className="session-campaign-roster-policy">{member.countsForRations?`식량 ${member.rationUnitsPerDay??1}/일`:"식량 계산 제외"} · 보관함 {member.stashPermission==="manage"?"관리":member.stashPermission==="request"?"요청":member.stashPermission==="view"?"보기":"없음"}</small>}
+          </article>)}
+        </div>}
+      </section>
       <section className="session-campaign-block" aria-labelledby="session-campaign-calendar">
         <header><div><span>WORLD TIME</span><h2 id="session-campaign-calendar">달력</h2></div>{projection.calendar.enabled&&<strong>{formatCampaignCalendarDateTime(projection.calendar.providerId,projection.calendar.displayAnchor)}</strong>}</header>
         {!projection.calendar.enabled?<p className="session-campaign-muted">이번 세션에서는 달력을 사용하지 않습니다. 저장된 Campaign 시간은 유지됩니다.</p>:<>

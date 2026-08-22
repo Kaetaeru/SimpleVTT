@@ -166,6 +166,16 @@ export interface CampaignSessionSystemsProjection {
   campaignId:string;
   campaignName:string;
   campaignRevision:number;
+  roster:Array<{
+    rosterMemberId:string;
+    label:string;
+    kind:CampaignRosterMember["kind"];
+    active:boolean;
+    countsForRations?:boolean;
+    rationUnitsPerDay?:number;
+    stashPermission?:CampaignRosterMember["stashPermission"];
+    connectionState?:"connected"|"reconnecting"|"disconnected";
+  }>;
   calendar:{enabled:boolean;providerId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"];currentNote?:string};
   rations:{enabled:boolean;visibleToPlayers:boolean;balance?:number;dailyRequired?:number;shortage?:number};
 }

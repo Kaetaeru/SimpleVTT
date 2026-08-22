@@ -33,7 +33,11 @@ test("Host restores projection after compatible hello and broadcasts every Campa
 });
 
 test("connected Player snapshots cannot receive the Campaign aggregate or hidden ration amounts",()=>{
-  assert.match(runtime,/if\(!copy\.rations\.visibleToPlayers\) copy\.rations=\{enabled:copy\.rations\.enabled,visibleToPlayers:false\}/);
+  assert.match(runtime,/if\(!copy\.rations\.visibleToPlayers\)/);
+  assert.match(runtime,/copy\.rations=\{enabled:copy\.rations\.enabled,visibleToPlayers:false\}/);
+  assert.match(runtime,/copy\.roster=copy\.roster\.map/);
+  assert.match(runtime,/countsForRations:_/);
+  assert.match(runtime,/rationUnitsPerDay:__/);
   assert.match(runtime,/campaignSessionSystems:structuredClone\(remoteProjections\.get\(this\)\?\.projection\?\?null\)/);
   assert.match(runtime,/campaignSessionSnapshot:null/);
 });
