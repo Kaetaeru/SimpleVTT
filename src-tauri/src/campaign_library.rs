@@ -1,8 +1,8 @@
 use crate::generation_store::{self, StoredGenerationDto, WriteGenerationRequest};
 use std::path::Path;
 
-const FILE_PREFIX: &str = "campaign-library.";
-const LABEL: &str = "Campaign library";
+pub(crate) const FILE_PREFIX: &str = "campaign-library.";
+pub(crate) const LABEL: &str = "Campaign library";
 
 pub(crate) type CampaignLibraryGenerationDto = StoredGenerationDto;
 pub(crate) type WriteCampaignLibraryGenerationRequest = WriteGenerationRequest;
