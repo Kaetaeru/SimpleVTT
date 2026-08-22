@@ -12,9 +12,9 @@ use tauri::Manager;
 #[derive(Default)]
 struct CharacterCampaignPersistenceState(Mutex<()>);
 
-fn lock_character_campaign_persistence(
-    state: &tauri::State<'_, CharacterCampaignPersistenceState>,
-) -> Result<std::sync::MutexGuard<'_, ()>, String> {
+fn lock_character_campaign_persistence<'a>(
+    state: &'a tauri::State<'_, CharacterCampaignPersistenceState>,
+) -> Result<std::sync::MutexGuard<'a, ()>, String> {
     state.0.lock().map_err(|_| "Character/Campaign persistence lock is poisoned".to_owned())
 }
 
