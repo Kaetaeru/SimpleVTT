@@ -1,3 +1,4 @@
+import type { CatalogEntry } from "./contracts";
 import type {
   InstalledCampaignCalendarProfileV1,
   InstalledCampaignProviderProfileV1,
@@ -112,19 +113,34 @@ export interface InstalledCampaignProviderDescriptorV1 {
   profile:InstalledCampaignProviderProfileV1;
 }
 
-export function campaignProviderDescriptorForEntry(entry:InstalledCatalogEntryV1):InstalledCampaignProviderDescriptorV1|null {
-  if(!entry.campaignProvider) return null;
-  const profile=parseInstalledCampaignProviderProfile(entry.campaignProvider);
+function descriptor(input:{campaignProvider?:InstalledCampaignProviderProfileV1;sourceId?:string;contentId?:string;version:string;nameKo:string;source:string}):InstalledCampaignProviderDescriptorV1|null {
+  if(!input.campaignProvider||!input.sourceId||!input.contentId) return null;
+  const profile=parseInstalledCampaignProviderProfile(input.campaignProvider);
   return {
-    providerId:providerIdForInstalledCampaignProfile(entry.sourceId,entry.contentId,profile),
-    providerVersion:entry.version,
+    providerId:providerIdForInstalledCampaignProfile(input.sourceId,input.contentId,profile),
+    providerVersion:input.version,
     kind:profile.kind,
-    label:entry.nameKo,
-    source:entry.source,
-    sourceId:entry.sourceId,
-    contentId:entry.contentId,
+    label:input.nameKo,
+    source:input.source,
+    sourceId:input.sourceId,
+    contentId:input.contentId,
     profile,
   };
+}
+
+export function campaignProviderDescriptorForEntry(entry:InstalledCatalogEntryV1):InstalledCampaignProviderDescriptorV1|null {
+  return descriptor(entry);
+}
+
+export function campaignProviderDescriptorForCatalogEntry(entry:CatalogEntry):InstalledCampaignProviderDescriptorV1|null {
+  return descriptor(entry);
+}
+
+export function campaignProviderDescriptorsFromCatalog(catalog:CatalogEntry[],kind?:InstalledCampaignProviderProfileV1["kind"]){
+  return catalog.flatMap((entry)=>{
+    const value=campaignProviderDescriptorForCatalogEntry(entry);
+    return value&&(!kind||value.kind===kind)?[value]:[];
+  }).sort((a,b)=>a.label.localeCompare(b.label,"ko-KR")||a.providerId.localeCompare(b.providerId,"en"));
 }
 
 export function requiredCapabilityForCampaignProvider(profile:InstalledCampaignProviderProfileV1){
