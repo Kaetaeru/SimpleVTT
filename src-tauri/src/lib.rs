@@ -3,39 +3,59 @@ mod character_library;
 mod authoring_drafts;
 mod installed_content;
 mod campaign_library;
+mod character_campaign_compound;
 mod session_transport;
 
+use std::sync::Mutex;
 use tauri::Manager;
 
-fn local_data_child(app: &tauri::AppHandle, child: &str) -> Result<std::path::PathBuf, String> {
+#[derive(Default)]
+struct CharacterCampaignPersistenceState(Mutex<()>);
+
+fn lock_character_campaign_persistence(
+    state: &tauri::State<'_, CharacterCampaignPersistenceState>,
+) -> Result<std::sync::MutexGuard<'_, ()>, String> {
+    state.0.lock().map_err(|_| "Character/Campaign persistence lock is poisoned".to_owned())
+}
+
+fn local_data_root(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     if let Ok(root) = std::env::var("SIMPLEVTT_LOCAL_DATA_ROOT") {
         let root = root.trim();
         if !root.is_empty() {
-            return Ok(std::path::PathBuf::from(root).join(child));
+            return Ok(std::path::PathBuf::from(root));
         }
     }
 
     app.path()
         .app_local_data_dir()
-        .map(|path| path.join(child))
         .map_err(|error| format!("failed to resolve SimpleVTT local data directory: {error}"))
+}
+
+fn local_data_child(app: &tauri::AppHandle, child: &str) -> Result<std::path::PathBuf, String> {
+    Ok(local_data_root(app)?.join(child))
 }
 
 #[tauri::command]
 fn read_character_library_generations(
     app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
 ) -> Result<Vec<character_library::CharacterLibraryGenerationDto>, String> {
-    let dir = local_data_child(&app, "character-library")?;
-    character_library::read_generations_at(&dir)
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    character_library::read_generations_at(&root.join("character-library"))
 }
 
 #[tauri::command]
 fn write_character_library_generation(
     app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
     request: character_library::WriteCharacterLibraryGenerationRequest,
 ) -> Result<(), String> {
-    let dir = local_data_child(&app, "character-library")?;
-    character_library::write_generation_at(&dir, &request)
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    character_library::write_generation_at(&root.join("character-library"), &request)
 }
 
 #[tauri::command]
@@ -75,18 +95,35 @@ fn write_installed_content_generation(
 #[tauri::command]
 fn read_campaign_library_generations(
     app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
 ) -> Result<Vec<campaign_library::CampaignLibraryGenerationDto>, String> {
-    let dir = local_data_child(&app, "campaign-library")?;
-    campaign_library::read_generations_at(&dir)
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    campaign_library::read_generations_at(&root.join("campaign-library"))
 }
 
 #[tauri::command]
 fn write_campaign_library_generation(
     app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
     request: campaign_library::WriteCampaignLibraryGenerationRequest,
 ) -> Result<(), String> {
-    let dir = local_data_child(&app, "campaign-library")?;
-    campaign_library::write_generation_at(&dir, &request)
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    campaign_library::write_generation_at(&root.join("campaign-library"), &request)
+}
+
+#[tauri::command]
+fn write_character_campaign_compound(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: character_campaign_compound::CharacterCampaignCompoundRequest,
+) -> Result<(), String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::write_at(&root, &request)
 }
 
 #[tauri::command]
@@ -153,6 +190,7 @@ pub fn run() {
             }
             Ok(())
         })
+        .manage(CharacterCampaignPersistenceState::default())
         .manage(session_transport::SessionTransportState::default())
         .invoke_handler(tauri::generate_handler![
             read_character_library_generations,
@@ -163,6 +201,7 @@ pub fn run() {
             write_installed_content_generation,
             read_campaign_library_generations,
             write_campaign_library_generation,
+            write_character_campaign_compound,
             start_session_host,
             connect_session_client,
             send_session_message,
