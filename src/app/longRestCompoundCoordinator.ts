@@ -69,13 +69,16 @@ export interface LongRestCompoundDependencies extends LongRestCompoundPreviewDep
   writer:CharacterCampaignCompoundWriter;
 }
 
-export interface LongRestCompoundPreview {
+export interface LongRestCampaignParticipantPreview {
   status:"ready"|"duplicate";
   transactionId:string;
-  character:CharacterLongRestProjection|null;
   campaignDocument:CampaignDocumentV1;
   applied:{calendar:boolean;rations:boolean};
   warnings:string[];
+}
+
+export interface LongRestCompoundPreview extends LongRestCampaignParticipantPreview {
+  character:CharacterLongRestProjection|null;
 }
 
 export interface LongRestCompoundResult {
@@ -208,6 +211,36 @@ async function projectCampaignCandidate(
 }
 
 /**
+ * Resolves only the Campaign participant of a Long Rest transaction. This is
+ * used by connected play after the remote Character owner has durably prepared
+ * its own Character generation; it performs no production-store write.
+ */
+export async function previewLongRestCampaignParticipant(
+  input:LongRestCompoundInput,
+  campaignDocument:CampaignDocumentV1,
+):Promise<LongRestCampaignParticipantPreview> {
+  const normalized=normalizeInput(input);
+  const currentCampaign=requireCampaign(campaignDocument,normalized.campaignId);
+  if(hasMasterRequest(currentCampaign,normalized.transactionId)){
+    return {
+      status:"duplicate",
+      transactionId:normalized.transactionId,
+      campaignDocument:cp(campaignDocument),
+      applied:{calendar:false,rations:false},
+      warnings:[],
+    };
+  }
+  const campaign=await projectCampaignCandidate(normalized,campaignDocument);
+  return {
+    status:"ready",
+    transactionId:normalized.transactionId,
+    campaignDocument:campaign.document,
+    applied:campaign.applied,
+    warnings:campaign.warnings,
+  };
+}
+
+/**
  * Resolves the exact Character/Campaign candidates that a commit would publish,
  * but performs no production-store writes and mutates no runtime projection.
  */
@@ -216,15 +249,11 @@ export async function previewLongRestCompound(
   dependencies:LongRestCompoundPreviewDependencies,
 ):Promise<LongRestCompoundPreview> {
   const normalized=normalizeInput(input);
-  const currentCampaign=requireCampaign(dependencies.campaignDocument,normalized.campaignId);
-  if(hasMasterRequest(currentCampaign,normalized.transactionId)){
+  const campaign=await previewLongRestCampaignParticipant(normalized,dependencies.campaignDocument);
+  if(campaign.status==="duplicate"){
     return {
-      status:"duplicate",
-      transactionId:normalized.transactionId,
+      ...campaign,
       character:null,
-      campaignDocument:cp(dependencies.campaignDocument),
-      applied:{calendar:false,rations:false},
-      warnings:[],
     };
   }
 
@@ -233,14 +262,9 @@ export async function previewLongRestCompound(
     effects:normalized.effects,
     deathSaves:normalized.deathSaves,
   });
-  const campaign=await projectCampaignCandidate(normalized,dependencies.campaignDocument);
   return {
-    status:"ready",
-    transactionId:normalized.transactionId,
+    ...campaign,
     character,
-    campaignDocument:campaign.document,
-    applied:campaign.applied,
-    warnings:campaign.warnings,
   };
 }
 
