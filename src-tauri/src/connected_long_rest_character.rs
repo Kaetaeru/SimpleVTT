@@ -55,6 +55,18 @@ fn marker_path(dir: &Path, transaction_id: &str) -> PathBuf {
     dir.join(format!("{MARKER_PREFIX}{}{MARKER_SUFFIX}", marker_key(transaction_id)))
 }
 
+fn phase_path(marker: &Path, phase: &str) -> Result<PathBuf, String> {
+    let name = marker.file_name().and_then(|value| value.to_str())
+        .ok_or_else(|| "connected Long Rest Character marker filename is invalid".to_owned())?;
+    Ok(marker.with_file_name(format!("{name}.{phase}")))
+}
+
+fn temp_path(path: &Path) -> Result<PathBuf, String> {
+    let name = path.file_name().and_then(|value| value.to_str())
+        .ok_or_else(|| "connected Long Rest Character marker filename is invalid".to_owned())?;
+    Ok(path.with_file_name(format!("{name}.tmp")))
+}
+
 fn same_write(left: &generation_store::WriteGenerationRequest, right: &generation_store::WriteGenerationRequest) -> bool {
     left.expected_generation == right.expected_generation
         && left.next_generation == right.next_generation
@@ -77,33 +89,61 @@ fn read_marker(path: &Path) -> Result<Option<PreparationMarker>, String> {
     }
     let raw = fs::read_to_string(path)
         .map_err(|error| format!("failed to read connected Long Rest Character preparation: {error}"))?;
-    serde_json::from_str(&raw)
-        .map(Some)
-        .map_err(|error| format!("failed to decode connected Long Rest Character preparation: {error}"))
+    let mut marker:PreparationMarker = serde_json::from_str(&raw)
+        .map_err(|error| format!("failed to decode connected Long Rest Character preparation: {error}"))?;
+    if phase_path(path, "materialized")?.exists() {
+        marker.phase = "materialized".to_owned();
+    } else if phase_path(path, "aborted")?.exists() {
+        marker.phase = "aborted".to_owned();
+    } else {
+        marker.phase = "prepared".to_owned();
+    }
+    Ok(Some(marker))
 }
 
-fn write_marker(path: &Path, marker: &PreparationMarker) -> Result<(), String> {
-    let parent = path.parent().ok_or_else(|| "connected Long Rest Character preparation path has no parent".to_owned())?;
+fn write_new_file(path: &Path, payload: &[u8], label: &str) -> Result<(), String> {
+    if path.exists() {
+        return Err(format!("{label} already exists"));
+    }
+    let parent = path.parent().ok_or_else(|| format!("{label} path has no parent"))?;
     fs::create_dir_all(parent)
         .map_err(|error| format!("failed to create Character library directory: {error}"))?;
-    let temp = path.with_extension("json.tmp");
+    let temp = temp_path(path)?;
+    let write_result = (|| -> Result<(), String> {
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&temp)
+            .map_err(|error| format!("failed to open {label} temp file: {error}"))?;
+        use std::io::Write;
+        file.write_all(payload)
+            .map_err(|error| format!("failed to write {label}: {error}"))?;
+        file.sync_all()
+            .map_err(|error| format!("failed to flush {label}: {error}"))?;
+        drop(file);
+        fs::rename(&temp, path)
+            .map_err(|error| format!("failed to commit {label}: {error}"))?;
+        Ok(())
+    })();
+    if write_result.is_err() {
+        let _ = fs::remove_file(&temp);
+    }
+    write_result
+}
+
+fn write_initial_marker(path: &Path, marker: &PreparationMarker) -> Result<(), String> {
     let payload = serde_json::to_vec(marker)
         .map_err(|error| format!("failed to encode connected Long Rest Character preparation: {error}"))?;
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(&temp)
-        .map_err(|error| format!("failed to open connected Long Rest Character preparation temp file: {error}"))?;
-    use std::io::Write;
-    file.write_all(&payload)
-        .map_err(|error| format!("failed to write connected Long Rest Character preparation: {error}"))?;
-    file.sync_all()
-        .map_err(|error| format!("failed to flush connected Long Rest Character preparation: {error}"))?;
-    drop(file);
-    fs::rename(&temp, path)
-        .map_err(|error| format!("failed to commit connected Long Rest Character preparation marker: {error}"))?;
-    Ok(())
+    write_new_file(path, &payload, "connected Long Rest Character preparation marker")
+}
+
+fn write_phase(path: &Path, phase: &str) -> Result<(), String> {
+    let phase_path = phase_path(path, phase)?;
+    if phase_path.exists() {
+        return Ok(());
+    }
+    write_new_file(&phase_path, phase.as_bytes(), "connected Long Rest Character phase marker")
 }
 
 fn committed_payload(dir: &Path, generation: u64) -> Result<Option<String>, String> {
@@ -172,7 +212,7 @@ pub(crate) fn prepare_at(
         phase: "prepared".to_owned(),
         write: request.write.clone(),
     };
-    write_marker(&path, &marker)?;
+    write_initial_marker(&path, &marker)?;
     Ok(dto(&marker))
 }
 
@@ -207,8 +247,8 @@ pub(crate) fn materialize_at(
             marker.write.expected_generation, marker.write.next_generation, current
         ));
     }
+    write_phase(&path, "materialized")?;
     marker.phase = "materialized".to_owned();
-    write_marker(&path, &marker)?;
     Ok(dto(&marker))
 }
 
@@ -238,8 +278,8 @@ pub(crate) fn abort_at(
             marker.write.expected_generation, current
         ));
     }
+    write_phase(&path, "aborted")?;
     marker.phase = "aborted".to_owned();
-    write_marker(&path, &marker)?;
     Ok(dto(&marker))
 }
 
@@ -280,6 +320,7 @@ mod tests {
         let materialized = materialize_at(&dir, &identity).expect("materialize succeeds");
         assert_eq!(materialized.phase, "materialized");
         assert_eq!(character_library::read_generations_at(&dir).expect("read generations")[0].payload.as_deref(), Some("candidate"));
+        assert!(phase_path(&marker_path(&dir, &request.transaction_id), "materialized").expect("phase path").exists());
         let repeated = materialize_at(&dir, &identity).expect("materialize retry is idempotent");
         assert_eq!(repeated.phase, "materialized");
         let _ = fs::remove_dir_all(dir);
@@ -296,6 +337,7 @@ mod tests {
         };
         let aborted = abort_at(&dir, &identity).expect("abort succeeds");
         assert_eq!(aborted.phase, "aborted");
+        assert!(phase_path(&marker_path(&dir, &request.transaction_id), "aborted").expect("phase path").exists());
         assert!(materialize_at(&dir, &identity).is_err());
         assert!(character_library::read_generations_at(&dir).expect("read generations").is_empty());
         let _ = fs::remove_dir_all(dir);
