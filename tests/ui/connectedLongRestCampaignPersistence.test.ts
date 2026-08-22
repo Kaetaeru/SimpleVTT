@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { commitConnectedLongRestCampaignParticipant } from "../../src/app/connectedLongRestCampaignPersistence";
+import {
+  commitConnectedLongRestCampaignParticipant,
+  connectedLongRestCampaignCommitId,
+} from "../../src/app/connectedLongRestCampaignPersistence";
 import type { ConnectedLongRestCommitPreflight } from "../../src/app/connectedLongRestPreflight";
 
 async function configuredAdapter() {
@@ -39,19 +42,21 @@ test("connected Long Rest Campaign participant commits optional effects only aft
   assert.equal(result.snapshot.campaignSessionSystems?.rations.balance,4);
   const committed=result.snapshot.campaigns?.find((item)=>item.campaignId==="campaign.connected-rest");
   assert.ok(committed?.recentRequestIds.includes("long-rest.connected.campaign.1"));
-  assert.equal(result.campaignCommitId,`long-rest.connected.campaign.1:campaign-revision:${committed?.revision}`);
+  assert.equal(result.campaignCommitId,connectedLongRestCampaignCommitId("long-rest.connected.campaign.1"));
 });
 
-test("connected Long Rest Campaign participant retry is an idempotent duplicate",async()=>{
+test("connected Long Rest Campaign participant retry keeps one restart-stable global commit identity",async()=>{
   const {adapter,campaign}=await configuredAdapter();
   const approved=preflight(campaign.revision);
   const first=await commitConnectedLongRestCampaignParticipant(adapter,approved);
+  await adapter.adjustCampaignRations("campaign.connected-rest",{amount:1,note:"later mutation"});
   const second=await commitConnectedLongRestCampaignParticipant(adapter,approved);
 
   assert.equal(second.status,"duplicate");
   assert.equal(second.campaignCommitId,first.campaignCommitId);
+  assert.equal(second.campaignCommitId,"long-rest.connected.campaign.1:campaign-commit-v1");
   assert.equal(second.snapshot.campaignSessionSystems?.calendar.absoluteMinute,480);
-  assert.equal(second.snapshot.campaignSessionSystems?.rations.balance,4);
+  assert.equal(second.snapshot.campaignSessionSystems?.rations.balance,5);
 });
 
 test("connected Long Rest Campaign participant rejects revision drift before the global commit point",async()=>{
