@@ -9,30 +9,28 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control status: `continue`
-- Checkpoint: `2026-08-23T04:43:00+09:00`
-- Tauri compound transaction: `908d7e1`
-- Tauri recovery/command wiring: `ae42e81`
-- Mutex lifetime fix: `fed7ed7`
-- TS compound writer: `88cc8a7`
+- Checkpoint: `2026-08-23T05:02:00+09:00`
+- Long Rest coordinator/preview: `c1664db`
+- Production runtime bridge/preview: `7e0e5ce`
+- Session Campaign pane integration: `b99bb4c`
+- Focused build wiring: `7e85dc1`
 
 ## Human summary
 
-V1-12 authoritative Long Rest work advanced past the production persistence blocker.
+The local active-Character Long Rest path is now source-connected end-to-end through the existing Session Campaign pane.
 
-Character and Campaign no longer need to be committed as two unrelated Tauri writes for the future compound Rest flow. The new transaction layer:
+The implementation reuses the existing canonical Character Rest rules rather than calculating recovery in React. Calendar advance and Ration consumption are separate opt-in side effects, default OFF, and are computed through Campaign application authority. Preview and commit use the same candidate calculation.
 
-- preflights both immutable generation heads;
-- durably stages both payloads;
-- creates one commit marker only after both stages are synced;
-- treats that marker as the commit point;
-- completes/materializes both generations after commit;
-- preserves the marker across committed interruption so the next Character/Campaign read/write recovers both sides before normal access resumes;
-- shares one process mutex across normal Character/Campaign persistence and the compound command.
+Character and Campaign candidates are prepared without first mutating their production repositories. Tauri commits both through the existing recoverable Character+Campaign compound writer; volatile browser/test mode uses the Memory compound writer. Runtime Character/Campaign contexts and the existing Scene Character projection are refreshed only after that compound writer succeeds.
 
-A Tauri TypeScript writer now calls `write_character_campaign_compound`. Deterministic Rust fault tests and the existing Tauri structure regression were authored/updated, but no Rust/TypeScript execution result was observed, so this is not reported as green yet.
+The DM now has one minimal Long Rest block inside the existing `SessionCampaignPane`: authoritative HP/Temporary HP preview, optional +8-hour Campaign time, optional daily Ration consumption, resulting Calendar/Ration preview, warnings, and one apply action. Existing Party, Advancement, Calendar, and Ration layout was preserved.
 
-Production UI inspection also established that there is no generic Long Rest control today. The minimum compatible V1 surface is a small Long Rest preview/options/action block inside the existing `SessionCampaignPane`, not a new screen or redesign.
+Focused deterministic tests were authored for Rest-only/options/disabled or missing provider/idempotency/writer failure/preview parity/runtime rehydrate. `npm run test:campaign-rest` now groups them, and `npm run build` includes that suite.
 
-Next work is the production coordinator behind that UI: reuse canonical Character Long Rest resolution plus CampaignApplicationService's provider-aware Calendar/Ration authority, prepare both next generations, invoke the compound writer once, and update runtime projections only after success. OFF/missing Calendar/Ration must disable only those optional side effects and never block Rest itself.
+This is **not reported green yet**. The GitHub connector exposed no commit statuses or workflow runs for the current direct-push head, and no TypeScript/Rust/Tauri/Windows execution result was observed in this dispatch.
+
+The remaining V1-12 question is connected Character ownership: the Campaign design contract mentions per-Character preview and DM/owner decisions, while the new bridge correctly operates on the locally persisted active Character and does not copy host-unknown remote Characters into the host library. The next dispatch should reconcile that requirement against the existing connected projection/reconnect/write-back authority before adding any connected Rest scope.
+
+After V1-12 scope reconciliation, inspect V1-13 Party Stash / DM Library against current source before coding; substantial implementation already exists despite the stale checklist label.
 
 `STATUS.md` is human-facing only. Reconciliation source order remains README -> control -> STATE -> PLAN.
