@@ -1,5 +1,6 @@
 import { CampaignLibraryRepository, CampaignStaleRevisionError, createCampaignRecordV1 } from "./campaignPersistence";
 import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { InstalledCampaignCalendarProfileV1, InstalledCampaignRationProfileV1 } from "./installedContentContracts";
 import { HANDOUT_IMAGE_MAX_BYTES, isLocalImageAssetV1 } from "./localImageAsset";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 
@@ -10,10 +11,12 @@ export function campaignXpThresholdForLevel(level:number){return DEFAULT_XP_THRE
 
 function assertNonNegativeInteger(value:number,label:string){if(!Number.isInteger(value)||value<0) throw new Error(`${label} must be a non-negative integer`);}
 function assertPositiveInteger(value:number,label:string){if(!Number.isInteger(value)||value<=0) throw new Error(`${label} must be a positive integer`);}
+function builtinCalendarProvider(providerId:string){return providerId==="builtin.simple-day"||providerId==="builtin.gregorian";}
+function builtinRationProvider(providerId:string){return providerId==="builtin.tracking-only";}
 
-export function previewCampaignDailyRations(campaign:CampaignRecordV1,overrideUnits?:number):CampaignRationPreview {
+export function previewCampaignDailyRations(campaign:CampaignRecordV1,overrideUnits?:number,profile?:InstalledCampaignRationProfileV1):CampaignRationPreview {
   const memberUnits=campaign.roster.filter((member)=>member.active&&member.countsForRations).map((member)=>({
-    rosterMemberId:member.rosterMemberId,label:member.label,units:member.rationUnitsPerDay??1,
+    rosterMemberId:member.rosterMemberId,label:member.label,units:member.rationUnitsPerDay??profile?.unitsByRosterKind?.[member.kind]??profile?.defaultUnitsPerDay??1,
   }));
   memberUnits.forEach((member)=>assertNonNegativeInteger(member.units,`ration units for ${member.label}`));
   const rosterRequired=memberUnits.reduce((sum,member)=>sum+member.units,0);
@@ -169,38 +172,46 @@ export class CampaignApplicationService {
     return this.mutateCampaign(context,(campaign)=>{if(!campaign.dmLibrary.entries.some((entry)=>entry.entryId===context.entryId))throw new Error("DM Library entry not found");campaign.dmLibrary.recentEntryIds=[context.entryId,...campaign.dmLibrary.recentEntryIds.filter((id)=>id!==context.entryId)].slice(0,12);campaign.dmLibrary.revision+=1;});
   }
 
-  configureCalendar(context:CampaignMutationContext&{enabled:boolean;providerId:string}){
+  configureCalendar(context:CampaignMutationContext&{enabled:boolean;providerId:string;providerVersion?:string;calendarProfile?:InstalledCampaignCalendarProfileV1}){
     return this.mutateCampaign(context,(campaign)=>{
       const providerId=context.providerId.trim();
       if(!providerId) throw new Error("Calendar provider is required");
-      campaign.calendar.capability={...campaign.calendar.capability,enabled:context.enabled,providerId,settingsRevision:campaign.calendar.capability.settingsRevision+1};
+      if(context.enabled&&!builtinCalendarProvider(providerId)&&!context.calendarProfile) throw new Error(`Installed calendar provider is unavailable: ${providerId}`);
+      const providerVersion=builtinCalendarProvider(providerId)?"1":context.providerVersion?.trim()||campaign.calendar.capability.providerVersion;
+      if(context.enabled&&!providerVersion) throw new Error("Calendar provider version is required");
+      campaign.calendar.capability={...campaign.calendar.capability,enabled:context.enabled,providerId,providerVersion,settingsRevision:campaign.calendar.capability.settingsRevision+1};
       campaign.calendar.state.providerId=providerId;
-      campaign.calendar.state.displayAnchor=projectCampaignCalendar(providerId,campaign.calendar.state.absoluteMinute,campaign.calendar.state.displayAnchor.era);
+      if(builtinCalendarProvider(providerId)||context.calendarProfile){
+        const era=campaign.calendar.state.displayAnchor.era??context.calendarProfile?.defaultEra??"서력";
+        campaign.calendar.state.displayAnchor=projectCampaignCalendar(providerId,campaign.calendar.state.absoluteMinute,era,context.calendarProfile);
+      }
       campaign.sessionDefaults.calendarEnabled=context.enabled;
       campaign.sessionDefaults.revision+=1;
     });
   }
 
-  advanceCalendar(context:CampaignMutationContext&{deltaMinutes:number;note?:string}){
+  advanceCalendar(context:CampaignMutationContext&{deltaMinutes:number;note?:string;calendarProfile?:InstalledCampaignCalendarProfileV1}){
     assertPositiveInteger(context.deltaMinutes,"calendar deltaMinutes");
     return this.mutateCampaign(context,(campaign)=>{
       if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
+      if(!builtinCalendarProvider(campaign.calendar.state.providerId)&&!context.calendarProfile) throw new Error(`Installed calendar provider is unavailable: ${campaign.calendar.state.providerId}`);
       const before=campaign.calendar.state.absoluteMinute;const after=before+context.deltaMinutes;
       campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;
-      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
+      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era,context.calendarProfile);
       if(context.note!==undefined) campaign.calendar.state.currentNote=context.note.trim()||undefined;
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"advance",deltaMinutes:context.deltaMinutes,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note,provenance:[context.initiatedByParticipantId]}]);
     });
   }
 
-  correctCalendar(context:CampaignMutationContext&{absoluteMinute:number;note:string}){
+  correctCalendar(context:CampaignMutationContext&{absoluteMinute:number;note:string;calendarProfile?:InstalledCampaignCalendarProfileV1}){
     assertNonNegativeInteger(context.absoluteMinute,"calendar absoluteMinute");
     if(!context.note.trim()) throw new Error("Calendar correction note is required");
     return this.mutateCampaign(context,(campaign)=>{
       if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
+      if(!builtinCalendarProvider(campaign.calendar.state.providerId)&&!context.calendarProfile) throw new Error(`Installed calendar provider is unavailable: ${campaign.calendar.state.providerId}`);
       const before=campaign.calendar.state.absoluteMinute;const after=context.absoluteMinute;
       campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.currentNote=context.note.trim();
-      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
+      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era,context.calendarProfile);
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"correction",deltaMinutes:after-before,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note.trim(),provenance:[context.initiatedByParticipantId]}]);
     });
   }
@@ -209,35 +220,40 @@ export class CampaignApplicationService {
     return this.mutateCampaign(context,(campaign)=>{campaign.calendar.state.currentNote=context.note.trim()||undefined;campaign.calendar.state.revision+=1;});
   }
 
-  correctCalendarDateTime(context:CampaignMutationContext&{dateTime:CampaignCalendarDateTime;note:string}){
+  correctCalendarDateTime(context:CampaignMutationContext&{dateTime:CampaignCalendarDateTime;note:string;calendarProfile?:InstalledCampaignCalendarProfileV1}){
     if(!context.note.trim()) throw new Error("Calendar correction note is required");
     return this.mutateCampaign(context,(campaign)=>{
       if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
+      if(!builtinCalendarProvider(campaign.calendar.state.providerId)&&!context.calendarProfile) throw new Error(`Installed calendar provider is unavailable: ${campaign.calendar.state.providerId}`);
       const before=campaign.calendar.state.absoluteMinute;
-      const after=campaignDateTimeToAbsoluteMinute(campaign.calendar.state.providerId,context.dateTime);
+      const after=campaignDateTimeToAbsoluteMinute(campaign.calendar.state.providerId,context.dateTime,context.calendarProfile);
       campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.currentNote=context.note.trim();
-      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,context.dateTime.era);
+      campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,context.dateTime.era,context.calendarProfile);
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"correction",deltaMinutes:after-before,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note.trim(),provenance:[context.initiatedByParticipantId]}]);
     });
   }
 
-  undoRecentCalendar(context:CampaignMutationContext){
+  undoRecentCalendar(context:CampaignMutationContext&{calendarProfile?:InstalledCampaignCalendarProfileV1}){
     return this.mutateCampaign(context,(campaign)=>{
+      if(!builtinCalendarProvider(campaign.calendar.state.providerId)&&!context.calendarProfile) throw new Error(`Installed calendar provider is unavailable: ${campaign.calendar.state.providerId}`);
       const reverted=new Set(campaign.calendar.state.history.flatMap((entry)=>entry.revertsTransactionId?[entry.revertsTransactionId]:[]));
       const source=[...campaign.calendar.state.history].reverse().find((entry)=>entry.kind!=="undo"&&!reverted.has(entry.transactionId));
       if(!source) throw new Error("Undo 가능한 달력 변경이 없습니다.");
       const before=campaign.calendar.state.absoluteMinute;
       if(before!==source.afterAbsoluteMinute) throw new Error("이후 달력 변경이 있어 안전하게 되돌릴 수 없습니다.");
       const after=source.beforeAbsoluteMinute;
-      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
+      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era,context.calendarProfile);
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:context.requestId,kind:"undo",deltaMinutes:after-before,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,revertsTransactionId:source.transactionId,provenance:[context.initiatedByParticipantId]}]);
     });
   }
 
-  configureRations(context:CampaignMutationContext&{enabled:boolean;providerId:string}){
+  configureRations(context:CampaignMutationContext&{enabled:boolean;providerId:string;providerVersion?:string;rationProfile?:InstalledCampaignRationProfileV1}){
     return this.mutateCampaign(context,(campaign)=>{
       const providerId=context.providerId.trim();if(!providerId) throw new Error("Ration provider is required");
-      campaign.rations.capability={...campaign.rations.capability,enabled:context.enabled,providerId,settingsRevision:campaign.rations.capability.settingsRevision+1};
+      if(context.enabled&&!builtinRationProvider(providerId)&&!context.rationProfile) throw new Error(`Installed ration provider is unavailable: ${providerId}`);
+      const providerVersion=builtinRationProvider(providerId)?"1":context.providerVersion?.trim()||campaign.rations.capability.providerVersion;
+      if(context.enabled&&!providerVersion) throw new Error("Ration provider version is required");
+      campaign.rations.capability={...campaign.rations.capability,enabled:context.enabled,providerId,providerVersion,settingsRevision:campaign.rations.capability.settingsRevision+1};
       campaign.sessionDefaults.rationsEnabled=context.enabled;campaign.sessionDefaults.revision+=1;
     });
   }
@@ -253,10 +269,11 @@ export class CampaignApplicationService {
     });
   }
 
-  consumeDailyRations(context:CampaignMutationContext&{requiredUnits?:number;note?:string}){
+  consumeDailyRations(context:CampaignMutationContext&{requiredUnits?:number;note?:string;rationProfile?:InstalledCampaignRationProfileV1}){
     return this.mutateCampaign(context,(campaign)=>{
       if(!campaign.rations.capability.enabled) throw new Error("Ration capability is disabled");
-      const preview=previewCampaignDailyRations(campaign,context.requiredUnits);
+      if(!builtinRationProvider(campaign.rations.capability.providerId)&&!context.rationProfile) throw new Error(`Installed ration provider is unavailable: ${campaign.rations.capability.providerId}`);
+      const preview=previewCampaignDailyRations(campaign,context.requiredUnits,context.rationProfile);
       const after=preview.availableUnits-preview.consumedUnits;
       campaign.rations.ledger.balances.ration=after;campaign.rations.ledger.revision+=1;
       campaign.rations.ledger.lastConsumptionAtAbsoluteMinute=campaign.calendar.state.absoluteMinute;
@@ -276,14 +293,16 @@ export class CampaignApplicationService {
     });
   }
 
-  advanceDayWithOptionalRations(context:CampaignMutationContext&{consumeRations:boolean;requiredUnits?:number;note?:string}){
+  advanceDayWithOptionalRations(context:CampaignMutationContext&{consumeRations:boolean;requiredUnits?:number;note?:string;calendarProfile?:InstalledCampaignCalendarProfileV1;rationProfile?:InstalledCampaignRationProfileV1}){
     return this.mutateCampaign(context,(campaign)=>{
       if(!campaign.calendar.capability.enabled) throw new Error("Calendar capability is disabled");
+      if(!builtinCalendarProvider(campaign.calendar.state.providerId)&&!context.calendarProfile) throw new Error(`Installed calendar provider is unavailable: ${campaign.calendar.state.providerId}`);
+      if(context.consumeRations&&campaign.rations.capability.enabled&&!builtinRationProvider(campaign.rations.capability.providerId)&&!context.rationProfile) throw new Error(`Installed ration provider is unavailable: ${campaign.rations.capability.providerId}`);
       const before=campaign.calendar.state.absoluteMinute;const after=before+1440;
-      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era);
+      campaign.calendar.state.absoluteMinute=after;campaign.calendar.state.revision+=1;campaign.calendar.state.displayAnchor=projectCampaignCalendar(campaign.calendar.state.providerId,after,campaign.calendar.state.displayAnchor.era,context.calendarProfile);
       campaign.calendar.state.history=bounded([...campaign.calendar.state.history,{transactionId:`${context.requestId}.calendar`,kind:"advance",deltaMinutes:1440,beforeAbsoluteMinute:before,afterAbsoluteMinute:after,committedAt:context.now??campaign.updatedAt,note:context.note,provenance:[context.requestId,context.initiatedByParticipantId]}]);
       if(context.consumeRations&&campaign.rations.capability.enabled){
-        const preview=previewCampaignDailyRations(campaign,context.requiredUnits);const balance=preview.availableUnits-preview.consumedUnits;
+        const preview=previewCampaignDailyRations(campaign,context.requiredUnits,context.rationProfile);const balance=preview.availableUnits-preview.consumedUnits;
         campaign.rations.ledger.balances.ration=balance;campaign.rations.ledger.revision+=1;campaign.rations.ledger.lastConsumptionAtAbsoluteMinute=after;
         campaign.rations.ledger.consumptionHistory=bounded([...campaign.rations.ledger.consumptionHistory,{transactionId:`${context.requestId}.rations`,kind:"consume",amount:-preview.consumedUnits,requiredAmount:preview.requiredUnits,shortage:preview.shortageUnits,balanceAfter:balance,committedAt:context.now??campaign.updatedAt,note:context.note,provenance:[context.requestId,context.initiatedByParticipantId,...preview.memberUnits.map((member)=>member.rosterMemberId)]}]);
       }
