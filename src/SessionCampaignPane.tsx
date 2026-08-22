@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { campaignXpThresholdForLevel } from "./app/campaignApplicationService";
 import { campaignDayPeriod, formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_MONTHS } from "./app/campaignCalendar";
 import { useSimpleVtt } from "./app/AppProvider";
+import { mockAdapter } from "./app/mockAdapter";
+import { performProductionLongRest } from "./app/longRestCompoundRuntimeAdapter";
 import "./session-campaign-pane.css";
 
 function xpProgress(level:number|undefined,xp:number){
@@ -25,13 +27,30 @@ export function SessionCampaignPane({role,onClose,onOpenLevelUp}:{role:"dm"|"pla
   const [rationAdjustment,setRationAdjustment]=useState("1");
   const [xpAmount,setXpAmount]=useState("100");
   const [selectedRosterIds,setSelectedRosterIds]=useState<string[]>([]);
+  const [restAdvanceTime,setRestAdvanceTime]=useState(false);
+  const [restConsumeRations,setRestConsumeRations]=useState(false);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
   const [feedback,setFeedback]=useState<string|null>(null);
   useEffect(()=>{if(!anchor)return;setEra(anchor.era??"서력");setYear(String(anchor.year??1));setMonth(anchor.monthId??"1");setDay(String(anchor.day??1));setHour(String(anchor.hour??0));setMinute(String(anchor.minute??0));},[projection?.campaignId,projection?.calendar.providerId,projection?.calendar.absoluteMinute]);
-  useEffect(()=>{setSelectedRosterIds(projection?.roster.filter((member)=>member.active).map((member)=>member.rosterMemberId)??[]);},[projection?.campaignId]);
-  useEffect(()=>{if(!projection)return;setSelectedRosterIds((current)=>current.filter((id)=>projection.roster.some((member)=>member.rosterMemberId===id)));},[projection?.campaignRevision]);
+  useEffect(()=>{setSelectedRosterIds(projection?.roster.filter((member)=>member.active).map((member)=>member.rosterMemberId)??[]);setRestAdvanceTime(false);setRestConsumeRations(false);},[projection?.campaignId]);
+  useEffect(()=>{if(!projection)return;setSelectedRosterIds((current)=>current.filter((id)=>projection.roster.some((member)=>member.rosterMemberId===id)));if(!projection.calendar.enabled)setRestAdvanceTime(false);if(!projection.rations.enabled)setRestConsumeRations(false);},[projection?.campaignRevision]);
   const perform=async(operation:()=>Promise<void>,success?:string)=>{setBusy(true);setError(null);setFeedback(null);try{await operation();if(success)setFeedback(success);}catch(reason){setError(reason instanceof Error?reason.message:"작업을 완료하지 못했습니다.");}finally{setBusy(false);}};
+  const performLongRest=async()=>{
+    setBusy(true);setError(null);setFeedback(null);
+    try{
+      const result=await performProductionLongRest(mockAdapter,{
+        advanceMinutes:restAdvanceTime?480:undefined,
+        consumeRations:restConsumeRations,
+        note:"장기 휴식",
+      });
+      const applied=[result.applied.calendar?"시간 +8시간":null,result.applied.rations?"식량 소비":null].filter(Boolean).join(" · ");
+      const warning=result.warnings.length?` · ${result.warnings.join(" ")}`:"";
+      setFeedback(`장기 휴식을 적용했습니다${applied?` · ${applied}`:""}${warning}`);
+    }catch(reason){
+      setError(reason instanceof Error?reason.message:"장기 휴식을 완료하지 못했습니다.");
+    }finally{setBusy(false);}
+  };
 
   return <aside className="session-utility-pane session-campaign-pane" aria-label="세션 캠페인 현황">
     <header className="session-utility-pane-head"><div><strong>캠페인 현황</strong><small>{projection?.campaignName??"연결된 캠페인 없음"} · {role==="dm"?"DM 조작":"Player 읽기 전용"}</small></div><button type="button" autoFocus aria-label="캠페인 현황 닫기" onClick={onClose}>×</button></header>
@@ -74,6 +93,20 @@ export function SessionCampaignPane({role,onClose,onOpenLevelUp}:{role:"dm"|"pla
           </div>}
         </section>}
       </section>
+
+      {role==="dm"&&<section className="session-campaign-block" aria-labelledby="session-campaign-long-rest">
+        <header><div><span>REST</span><h2 id="session-campaign-long-rest">장기 휴식</h2></div><strong>{api.snapshot?.activeCharacter.name??"활성 캐릭터"}</strong></header>
+        <p className="session-campaign-muted">활성 캐릭터의 장기 휴식 회복을 적용합니다. 캠페인 시간과 식량은 아래에서 선택한 경우에만 같은 transaction에 포함됩니다.</p>
+        <div className="session-campaign-editor">
+          <div>
+            <label><span>캠페인 시간 +8시간</span><input aria-label="장기 휴식과 함께 캠페인 시간 8시간 진행" type="checkbox" checked={restAdvanceTime} disabled={busy||!projection.calendar.enabled} onChange={(event)=>setRestAdvanceTime(event.target.checked)}/></label>
+            <label><span>하루치 식량 소비</span><input aria-label="장기 휴식과 함께 하루치 식량 소비" type="checkbox" checked={restConsumeRations} disabled={busy||!projection.rations.enabled} onChange={(event)=>setRestConsumeRations(event.target.checked)}/></label>
+            <button type="button" className="primary" disabled={busy||(api.snapshot?.activeCharacter.hp??0)<=0} onClick={()=>void performLongRest()}>장기 휴식 적용</button>
+          </div>
+          <small>{!projection.calendar.enabled?"달력 OFF · 시간 진행 선택 불가":restAdvanceTime?"시간 진행 포함":"시간 진행 안 함"} · {!projection.rations.enabled?"식량 OFF · 소비 선택 불가":restConsumeRations?"식량 소비 포함":"식량 소비 안 함"}</small>
+        </div>
+      </section>}
+
       <section className="session-campaign-block" aria-labelledby="session-campaign-calendar">
         <header><div><span>WORLD TIME</span><h2 id="session-campaign-calendar">달력</h2></div>{projection.calendar.enabled&&<strong>{formatCampaignCalendarDateTime(projection.calendar.providerId,projection.calendar.displayAnchor)}</strong>}</header>
         {!projection.calendar.enabled?<p className="session-campaign-muted">이번 세션에서는 달력을 사용하지 않습니다. 저장된 Campaign 시간은 유지됩니다.</p>:<>
