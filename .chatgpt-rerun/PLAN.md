@@ -9,196 +9,164 @@
 - Existing run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Existing sequence: `1`
 - Existing task_id: `phase14-production-play-session-ux`
-- Historical Phase 14 branch/issue: `agent/108-production-play-session-ux`, issue #108
 - Canonical V1 routing authority: `CANONICAL_ROOT.md`
 - Current V1 execution router: `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`
 - Current implementation checkpoint: `.agents/V1_CURRENT_HANDOFF.md`
 
-## Reconciliation note — 2026-08-23
+## Run continuity
 
-This is an **existing active Rerun run**, not a new run. The run_id, sequence, task identity, preserved completion history, and validation history are retained.
+This is the same active Rerun run. Do not create a new run_id, reset sequence/task identity, discard the preserved Phase 13 exact-head evidence, or route V1 implementation back to `main`.
 
-Earlier Rerun documents treated `main` as canonical. Actual GitHub work in the current ChatGPT conversation and the repository's `CANONICAL_ROOT.md` now establish `work/v1-composite` as the canonical V1 implementation/build/test/release-preparation branch. Rerun therefore resumes this same run on `work/v1-composite`; it must not recreate the historical Phase 14 branch or route new V1 work back to `main`.
+The current sequence is the durable V1-completion umbrella: implement every remaining intended V1 function through the real production path while preserving the established UI, then perform one comprehensive Codex audit only at the frozen pre-release boundary.
 
-The user's current goal has broadened beyond the original Phase 14 slice: **implement all remaining V1 checklist work through the pre-release boundary first, make every intended V1 feature actually work end-to-end while preserving the current UI, then perform one comprehensive Codex audit immediately before V1 acceptance/release.** The existing task_id is preserved for continuity; this sequence now acts as the durable V1-completion umbrella rather than resetting task identity.
+## Primary V1 contract
 
-# Primary V1 contract
+### Functional completion, not checkbox completion
 
-The following two rules are the highest-priority product contract for this Rerun sequence.
+A file, test, adapter, or checklist mark is not sufficient by itself. V1 requires the intended behavior to be reachable from the production UI and to preserve authority, persistence, session/transient boundaries, error handling, reconnect semantics, and cross-system consistency.
 
-## 1. V1 means functional completion, not checklist completion
+Do not add unrelated post-V1 features. Do not treat fixture-only/debug-only behavior as production completion.
 
-A checkbox, file, adapter, test, or partial implementation is not sufficient by itself.
+### Preserve the current UI baseline
 
-V1 is reached only when **all functionality already intended for V1 behaves correctly in the real user-facing application path**. For every checklist item, Rerun must distinguish between:
+The current SimpleVTT screen structure, navigation, panel placement, hierarchy, spacing/style language, and existing controls are the V1 visual baseline.
 
-- code that merely exists;
-- code that passes a narrow fixture test;
-- functionality that is actually reachable from the production UI;
-- functionality that correctly preserves authority, persistence, session state, and error behavior;
-- functionality that works together with the rest of the V1 product without requiring debug fixtures or manual repository intervention.
-
-When a checklist item is marked implemented but the real workflow is incomplete, inconsistent, fixture-dependent, visually inaccessible, non-persistent when it should persist, persistent when it should be transient, or otherwise not usable as intended, **the item remains unfinished and must be corrected before V1 freeze**.
-
-Do not add unrelated post-V1 features merely to improve completeness. The target is to make the **already intended V1 product** complete and reliable.
-
-## 2. Preserve the current UI as the product baseline
-
-The **current visible SimpleVTT UI is the UI baseline for V1 and must be preserved** while functionality is completed.
-
-Rerun must not perform a broad redesign, visual refresh, navigation rewrite, panel reshuffle, component replacement, layout overhaul, typography restyle, color-system change, or aesthetic reinterpretation simply because implementation work touches that area.
-
-Rules for UI-facing work:
-
-1. Keep the current screen structure, navigation model, panel placement, visual hierarchy, component styling, spacing language, and interaction pattern unless a concrete functional defect makes a minimal change unavoidable.
-2. Prefer fixing adapters, state flow, domain/application logic, persistence, routing, authority, and event propagation **behind the existing UI** rather than changing the UI to fit the implementation.
-3. Existing controls that are intended to work must be wired to real behavior instead of being replaced with a different UX.
-4. Do not remove, rename, relocate, or restyle an existing user-facing control merely to simplify implementation.
-5. When a missing V1 capability truly requires an additional control or state presentation, add the **smallest compatible UI element** inside the existing component system and visual language.
-6. Empty/loading/error/disabled states may be added where required for correctness, but they should look like natural extensions of the current UI rather than a redesign.
-7. Debug/reference fixtures may be removed from production authority, but their removal must not be used as an excuse to redesign the surrounding screen.
-8. If current UI behavior and an internal implementation shortcut conflict, preserve the intended current UI behavior and fix the implementation instead.
-9. Any unavoidable visible change must be narrowly scoped, functionally justified, and recorded in STATE/handoff.
-10. Final V1 acceptance includes a regression check that existing major screens still visually and structurally resemble the current product baseline while their intended functions now work correctly.
-
-# Product direction
-
-SimpleVTT must reach a genuinely playable Windows V1 where the same canonical exact head supports the complete local and connected user journeys defined by `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, **using the current UI as the visible product shell**:
-
-- first-run Character creation, persistence, restart and sheet use;
-- Campaign preparation including roster, calendar/rations, Party Stash and DM Library;
-- real Character local play with freeform/initiative, actions, skills, spells and inventory;
-- connected Host/Join with host-unknown Character projection, Ready lifecycle, authoritative actions and reconnect;
-- complete DM live operation, corrections/Undo, handouts and Campaign integration;
-- durable Character/Campaign state with Session transient cleanup;
-- mapless/module fallback correctness;
-- final dice/presentation behavior;
-- UX/error/accessibility closeout **without redesigning the established UI**;
-- release packaging.
-
-The V1 implementation router and its dependency order are authoritative. Historical phase checklists are evidence/context only when they conflict with the current V1 router.
+- Prefer domain/application/persistence/network fixes behind the current UI.
+- Do not redesign, reshuffle, rename, restyle, or replace existing major UI merely to simplify implementation.
+- Missing intended V1 behavior may add the smallest compatible control/state presentation required to expose it.
+- Empty/loading/error/disabled states are allowed when functionally required.
+- Final acceptance includes UI-structure preservation as well as behavior.
 
 ## Preserved completed work — Task 0
 
-**task_id:** `phase13-closeout-ui-dice-regression`
-
+**task_id:** `phase13-closeout-ui-dice-regression`  
 **status:** COMPLETE
 
-Phase 13 arbitrary Character SessionProjection, connected host authority, reconnect/write-back, creation/level-up UX convergence, and shared visual dice were closed with exact-head green Contract/Rules/Persistence/UI/Phase11/Phase12/Phase13 workflows.
+Preserve the existing Phase 13 arbitrary Character SessionProjection, connected host authority, reconnect/write-back, creation/level-up UX convergence, shared visual dice, and exact-head evidence.
 
 Preserved implementation checkpoint: `7c9440970753a370fec7830cfa691832552e1d05`.
 
-Preserved Phase 13 artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
+Preserved artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
 
-This history must not be erased or relabeled by the current V1 work.
+## Task 1 — sequence 1 V1 completion umbrella
 
-## Task 1 — existing sequence 1, reconciled V1 completion umbrella
-
-**task_id:** `phase14-production-play-session-ux`
-
+**task_id:** `phase14-production-play-session-ux`  
 **status:** ACTIVE / CONTINUE AUTHORIZED
 
-### Preserved Phase 14 intent
+Historical Phase 14 intent remains preserved, but current implementation priority comes from the canonical V1 handoff/checklist, not the old Phase 14 branch text.
 
-The original task corrected the reference-fixture-dependent production play path and required a real persisted Character -> session -> Scene actor/actions flow, with in-session `행동`, `기술`, `주문`, and `인벤토리` surfaces and preserved Phase 09-13 authority/network boundaries.
+### Preserved implementation state
 
-That implementation history remains part of the current V1 source and must not be redone merely because Rerun is being reconnected.
+Do not reimplement the following merely to obtain new validation:
 
-### Current canonical implementation state
+- Ready/connected lifecycle, reconnect/reset cleanup, `ready-action-v1`, isolated acceptance-pair tooling;
+- V1-11 Campaign lifecycle production paths;
+- declarative Calendar/Ration provider schema/parser/catalog/runtime/UI paths;
+- canonical Character Long Rest domain projection;
+- Character/Campaign prepared immutable-generation foundation;
+- Memory two-participant compound preflight/apply;
+- Tauri cross-store durable staging + single commit marker + committed-interruption recovery;
+- Tauri Character/Campaign shared persistence mutex/recovery fence and TS compound writer.
 
-According to `.agents/V1_CURRENT_HANDOFF.md`, recent canonical work has moved beyond the original Phase 14 slice into V1 convergence, including actor-specific Ready configuration, Ready lifecycle network propagation, `ready-action-v1` capability negotiation, connected reset cleanup, Live Development tooling, isolated two-instance acceptance tooling, declarative Campaign providers, and the V1-12 Long Rest compound persistence foundation.
+## Current checkpoint — local authoritative Long Rest user path
 
-The next implementation decision must therefore come from the current V1 handoff/checklist, not the old Phase 14 next-action text.
+The previously missing local production coordinator/UI has now been source-connected.
 
-### Execution strategy from now until V1 pre-release
+### Authority and preview
 
-1. Read `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` after the mandatory Rerun files.
-2. Reconcile stale checklist statuses against current code before choosing work; do not reimplement already-present slices.
-3. For each apparently completed item, check whether its **intended real production behavior** is actually complete; do not trust code presence or stale checkmarks alone.
-4. Select the next unblocked **implementation/functionality gap** in V1 dependency order.
-5. Implement coherent slices directly on `work/v1-composite`, preserving existing authority/persistence/module boundaries and the current UI baseline.
-6. Prefer internal wiring and correctness fixes behind existing screens. Do not redesign the UI as part of implementation cleanup.
-7. Add deterministic feature-level tests/fixtures as part of implementation when needed, but **do not stop after each slice for a separate Codex comprehensive audit**.
-8. Keep `.agents/V1_CURRENT_HANDOFF.md` and the release checklist current enough that the next execution can resume without rediscovery.
-9. Continue until every intended V1 feature works through the real application path and no pre-release implementation gap remains.
-10. Reach one single pre-release candidate exact SHA while retaining the current UI structure/visual identity.
-11. Only at that boundary, freeze the candidate SHA and perform the comprehensive Codex audit/full regression across TypeScript, UI, domain, persistence, connected play, Rust/Tauri, Windows build, structural checks, and release metadata.
-12. Fix all audit findings without broad UI redesign and rerun the final audit as necessary.
-13. After the final Codex audit is green, perform remaining human acceptance/evidence and release promotion steps.
+- `longRestCompoundCoordinator.ts` owns the compound preview/commit orchestration.
+- Character recovery is delegated to `projectCharacterLongRest` / canonical `resolveLongRest`.
+- Campaign Calendar/Ration candidates are calculated through an isolated `CampaignApplicationService`; React does not own rule arithmetic.
+- Calendar advance and Ration consumption are independent opt-in effects.
+- effective Session OFF state or unavailable custom provider skips only that optional effect and returns a warning; Rest itself remains valid.
+- master `transactionId` is stamped into Campaign `recentRequestIds` so a retried compound Rest is a no-write duplicate before Character Rest can be applied twice.
+- `previewLongRestCompound` and commit use the same candidate calculation.
 
-### Codex audit policy
+### Production runtime bridge
 
-The user explicitly does **not** want a per-slice Codex total-validation queue to interrupt implementation.
+- `longRestCompoundRuntimeAdapter.ts` prepares both stores outside the existing single-store mutation methods.
+- Tauri uses `TauriCharacterCampaignCompoundWriter`; volatile development/test mode seeds paired memory stores and uses `MemoryCharacterCampaignCompoundWriter`.
+- Runtime Character/Campaign persistence contexts are replaced/re-hydrated only after the compound writer succeeds.
+- the post-commit Character hydrate refreshes the existing Scene entity HP/life projection; no UI/Scene state is mutated before successful compound persistence.
+- exact pinned installed Calendar/Ration profiles are resolved from the existing Catalog helper.
 
-- `.agents/CODEX_VALIDATION_QUEUE.md` created during the current conversation is not the active execution gate unless the user later re-authorizes it.
-- Final audit input is one exact pre-V1 canonical SHA, not a rolling series of feature SHAs.
-- Implementation may still contain normal focused tests and CI guards; those are engineering safety nets, not the final Codex audit.
-- The final Codex audit must assess both **functional completeness** and regression against the established UI structure; passing tests alone does not authorize a redesigned or behaviorally incomplete V1.
+### Existing UI integration
 
-### V1 acceptance contract
+The current `SessionCampaignPane` structure is preserved. A single DM Long Rest block was inserted without moving the existing Party/Calendar/Ration surfaces.
 
-Implementation phase is ready for the final Codex audit only when the V1 release checklist has no remaining implementation gaps that should be fixed before audit **and every intended V1 function is reachable and behaves correctly in the production UI path**.
+It provides:
 
-At minimum the final candidate must cover the nine V1 user journeys recorded in `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`: J1 First run/Character, J2 Campaign preparation, J3 Local session, J4 Connected session, J5 DM live operation, J6 Persistence, J7 Mapless/module behavior, J8 Dice/presentation, and J9 Release.
+- authoritative HP/Temporary HP preview;
+- optional `+8시간` Campaign time checkbox, default OFF;
+- optional daily Ration consumption checkbox, default OFF;
+- authoritative resulting Calendar/Ration preview when selected;
+- disabled optional controls when that Session capability is OFF;
+- warnings from unavailable provider/capability projection;
+- one `장기 휴식 적용` action.
 
-Additional acceptance constraints:
+### Deterministic contracts authored
 
-1. No intended V1 feature may depend on fixture-only IDs, debug controls, manual data surgery, or repository commands in normal use.
-2. Character/Campaign durable data must survive restart where intended.
-3. Session-only state must clear where intended.
-4. Local and connected authority paths must converge correctly.
-5. Error, loading, incompatible, empty, and disabled states must fail clearly rather than silently.
-6. Existing major UI screens and interaction structure must remain recognizably the same as the current baseline.
-7. Broad visual redesign is explicitly **out of scope** for this V1 completion run.
-8. New UI elements are allowed only when required to expose an intended missing V1 capability and must match the existing component/style language.
+Focused source tests now cover:
 
-### Verification method
+- Character canonical Long Rest projection;
+- prepared generation no-write behavior and Memory two-participant atomicity;
+- Rest-only compound success;
+- Calendar-only and Ration-only selection;
+- both optional effects;
+- effective Session disabled behavior;
+- missing custom providers;
+- master request idempotency / no-write duplicate;
+- compound writer rejection leaving both production stores unchanged;
+- preview no-write behavior and preview/commit candidate parity;
+- production volatile runtime rehydrate including Scene HP projection;
+- production Rest defaulting to no Campaign side effects.
 
-During implementation:
+`npm run test:campaign-rest` now contains this focused set and `npm run build` invokes it after TypeScript/rules/creation suites.
 
-- deterministic focused tests for changed behavior where practical;
-- TypeScript/build or Rust checks when a slice materially changes those boundaries;
-- Live Development/manual checks when functional or visual behavior needs direct inspection;
-- current canonical CI may provide additional evidence but does not replace the final audit;
-- visible UI changes should be treated as regressions unless they are narrowly required for a missing intended function.
+## Validation status
 
-At V1 pre-release freeze:
+No TypeScript, focused test, Rust test, build, or Windows execution result for the new Long Rest head was observed in this dispatch.
 
-- comprehensive Codex audit on the exact candidate SHA;
-- full relevant TypeScript/domain/UI/persistence/connected regression suite;
-- `npm run build` / TypeScript compile checks;
-- Rust/Tauri library/build checks;
-- Windows two-instance connected acceptance and restart/persistence evidence;
-- release artifact/digest/build metadata checks;
-- final human acceptance for visual/interaction behaviors that automation cannot prove;
-- explicit UI-preservation review comparing the V1 candidate against the current established screens/layouts to ensure functionality was completed without unintended redesign.
+- direct commit combined status returned no statuses;
+- commit-associated workflow run lookup returned no runs;
+- the connector did not expose a usable direct-push Actions-run listing endpoint.
 
-## Dependencies
+Therefore the local Long Rest path is **SOURCE-CONNECTED / VALIDATION PENDING**, not green/DONE.
 
-- Work only from `work/v1-composite` unless the repository's canonical routing authority is deliberately changed by the user.
-- Do not promote to `main` until the release checklist explicitly reaches that step.
-- Preserve authoritative domain/rules/persistence/network boundaries documented under `docs/design/`.
-- Keep map/tactical provider behavior optional; V1 core remains usable without a battlemap provider.
-- Do not silently convert Session transient state into Character/Campaign durable state.
-- Treat the current UI implementation as a protected V1 baseline; functionality work must integrate into it rather than replace it.
+Comprehensive Codex audit remains deferred until all pre-release implementation gaps are closed.
+
+## Remaining behavioral questions before V1-12 can be called functionally complete
+
+The new UI/coordinator operates on the currently active persisted Character in the local/host runtime. Before marking V1-12 DONE, reconcile the Campaign Rest contract against connected play:
+
+- determine whether V1 requires one DM Rest command to include remote/host-unknown connected Character owners in the same compound decision/preview;
+- if yes, reuse existing connected Character projection/write-back and host authority rather than copying a remote Character into the host durable Character library;
+- preserve `DM/각 소유자` decision/ownership semantics from `docs/design/campaign-systems.md`;
+- Session-only effect expiry output from canonical Rest must remain transient; do not invent new durable Scene effect storage merely for this slice.
+
+Do not weaken these questions into a local-only assumption without checking the current connected/session contracts.
+
+## Execution strategy until pre-release
+
+1. Mandatory reconciliation order remains README -> control -> STATE -> PLAN.
+2. Confirm `work/v1-composite` and current exact head before edits.
+3. Re-read canonical handoff/checklist and reconcile stale checklist statuses against actual source.
+4. Do not reimplement source-connected slices solely because validation evidence is unavailable.
+5. Complete the next real production functionality gap in dependency order while preserving UI/authority boundaries.
+6. Add focused deterministic tests with each implementation slice.
+7. Keep STATE/handoff/checklist current enough for no-rediscovery resume.
+8. Reach a single pre-release exact SHA.
+9. Only then run the comprehensive Codex/full-regression/Windows/release audit.
 
 ## Current Next Exact Action contract
 
-On the next Rerun dispatch after reconciliation:
+On the next Rerun dispatch:
 
-1. Confirm `control.json` still authorizes sequence `1`, task `phase14-production-play-session-ux`, status `continue` and `work/v1-composite` remains canonical.
-2. Preserve the completed Long Rest foundations: canonical domain projection, prepared Character/Campaign immutable generations, memory two-participant preflight/apply, and Tauri commit-marker recovery transaction. Do not reimplement them.
-3. Inspect/continue from `AppProvider -> campaignRuntimeAdapter -> CampaignApplicationService` and the Character persistence runtime boundary. The production compound coordinator belongs behind the current UI, not inside React arithmetic.
-4. Add the production Long Rest compound coordinator so it:
-   - resolves Character Rest through `projectCharacterLongRest` / canonical domain `resolveLongRest`;
-   - applies optional Calendar advance only when selected, through Campaign application authority;
-   - applies optional Ration consumption only when selected, through Campaign application authority;
-   - prepares one next Character generation and one next Campaign generation;
-   - uses `TauriCharacterCampaignCompoundWriter` in Tauri and the memory compound writer in non-Tauri/test mode;
-   - advances/re-hydrates adapter/repository state only after the compound writer succeeds;
-   - leaves no projected Scene/Activity/Character/Campaign partial success when the compound writer rejects.
-5. Calendar/Rations OFF or unavailable provider must make only that optional side effect unavailable. Long Rest itself remains valid; Rest alone must not advance time or consume rations.
-6. Add deterministic coordinator contracts for Rest-only success, selected optional side effects, unavailable-provider behavior, duplicate/idempotent request behavior, and writer failure atomicity.
-7. Add the smallest compatible Long Rest preview/options/action block to the existing Session Campaign pane (`SessionCampaignPane`); there is no current generic Rest surface in `PlaySessionDock`, `SessionActionDock`, `SessionDmTools`, or `SessionCampaignPane`, so do not redesign or relocate surrounding controls.
-8. Run/observe focused TypeScript and Rust checks when available. Do not claim green without observed evidence and do not begin the comprehensive Codex audit yet.
-9. Before the 18-minute checkpoint, durably record completed functionality, remaining behavioral gaps, any unavoidable UI-visible change, evidence available so far, and the next exact implementation action.
+1. Reconcile the same run/sequence/task and `work/v1-composite` head.
+2. Check whether actual validation evidence has become observable for the current Long Rest head. Preferred focused evidence is `npm run test:campaign-rest`, `tsc --noEmit`/`npm run build`, and Rust tests covering `character_campaign_compound`. If results are not observable, record that fact and continue implementation rather than redoing the slice.
+3. Audit the existing connected Session Character authority/reconnect/write-back path against the Campaign Long Rest contract, specifically remote/host-unknown Character participation and owner decision semantics.
+4. If connected Long Rest is required for V1-12, implement it through existing connected projection/host authority and the compound transaction boundary. Do not persist a remote Character as a host-owned Character merely to reuse the local coordinator.
+5. If current contracts establish local/active-Character Rest as sufficient for V1-12, record that determination with source evidence and reconcile V1-12 status rather than adding scope.
+6. Then reconcile V1-13 Party Stash / Campaign DM Library before writing code: the release checklist still labels it TODO/PARTIAL, but current `campaignRuntimeAdapter`, `SessionCampaignPane`, inventory transfer paths, and DM Library methods already contain substantial implementation. Identify the real missing production behavior first and do not duplicate existing work.
+7. Preserve the existing UI baseline and do not start the final Codex audit.
+8. Before the next checkpoint, durably record implementation/validation evidence, remaining gaps, and the next exact action.
