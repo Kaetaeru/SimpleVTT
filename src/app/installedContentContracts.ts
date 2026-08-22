@@ -30,6 +30,28 @@ export interface InstalledContentRelationshipV1 {
   extensionPoint?:string;
 }
 
+export interface InstalledCampaignCalendarProfileV1 {
+  kind:"calendar";
+  defaultEra:string;
+  weekdays:string[];
+  months:Array<{id:string;label:string;days:number}>;
+  leapYear?:{
+    cycle:number;
+    remainders:number[];
+    monthId:string;
+    extraDays:number;
+  };
+}
+
+export interface InstalledCampaignRationProfileV1 {
+  kind:"ration";
+  defaultUnitsPerDay:number;
+  unitsByRosterKind?:Partial<Record<"player-character-ref"|"host-preset"|"companion",number>>;
+  shortageConsequences?:string[];
+}
+
+export type InstalledCampaignProviderProfileV1 = InstalledCampaignCalendarProfileV1 | InstalledCampaignRationProfileV1;
+
 export interface InstalledCatalogEntryV1 {
   contentId:string;
   category:CatalogEntry["category"];
@@ -45,6 +67,8 @@ export interface InstalledCatalogEntryV1 {
   semanticRelationships?:InstalledContentRelationshipV1[];
   extensionPoints?:InstalledModuleExtensionPointV1[];
   module?:InstalledModuleManifestV1;
+  /** Data-only optional Campaign capability profile. Never executable code. */
+  campaignProvider?:InstalledCampaignProviderProfileV1;
 }
 
 export interface InstalledContentDocumentV1 {
