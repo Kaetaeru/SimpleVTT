@@ -13,7 +13,7 @@ import {
   type CampaignDocumentV1,
   type CampaignLibraryStore,
 } from "./campaignPersistenceContracts";
-import { encodeCampaignDocumentV1 } from "./campaignPersistence";
+import { decodeCampaignDocumentV1, encodeCampaignDocumentV1 } from "./campaignPersistence";
 import { MemoryCampaignLibraryStore } from "./memoryCampaignLibraryStore";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
 import { isTauriCharacterLibraryRuntime } from "./tauriCharacterLibraryStore";
@@ -27,6 +27,7 @@ export interface ConnectedLongRestCampaignCommitResult {
   campaignCommitId:string;
   preview:LongRestCampaignParticipantPreview;
   snapshot:AppSnapshot;
+  projectionWarning?:string;
 }
 
 function campaignDocumentFromSnapshot(snapshot:AppSnapshot):CampaignDocumentV1 {
@@ -89,8 +90,8 @@ function memoryStoreFor(document:CampaignDocumentV1) {
 /**
  * Host-side global commit point for a connected Long Rest. This runs only after
  * the Character owner has acknowledged a durable invisible prepare. Once this
- * Campaign generation commits, the transaction must finish by owner
- * materialization/recovery rather than by compensating Campaign state.
+ * Campaign generation commits, later projection failures are recovery work and
+ * MUST NOT be reported as an abortable pre-commit failure.
  */
 export async function commitConnectedLongRestCampaignParticipant(
   adapter:MockAdapter,
@@ -140,18 +141,38 @@ export async function commitConnectedLongRestCampaignParticipant(
   const write=await prepareCampaignLibraryGeneration(store,preview.campaignDocument);
   await store.writeGeneration(write.expectedGeneration,write.nextGeneration,write.payload);
 
-  // The global Campaign commit is complete at this point. Rebinding the runtime
-  // context only projects the already-committed generation into the current UI.
-  setCampaignLibraryStoreForTests(adapter,store);
-  const snapshot=await adapter.getSnapshot();
-  const committedCampaign=snapshot.campaigns?.find((item)=>item.campaignId===preflight.campaignId);
+  // Global commit point has passed. Derive the authoritative commit identity
+  // from the exact payload that was written, independent of runtime projection.
+  const committedDocument=decodeCampaignDocumentV1(write.payload);
+  const committedCampaign=committedDocument.campaigns.find((item)=>item.campaignId===preflight.campaignId);
   if(!committedCampaign||!committedCampaign.recentRequestIds.includes(preflight.transactionId)){
-    throw new Error("connected Long Rest Campaign commit did not rehydrate the transaction id");
+    throw new Error("connected Long Rest committed Campaign payload is missing the transaction id");
   }
-  return {
-    status:"committed",
-    campaignCommitId:commitId(preflight.transactionId,committedCampaign.revision),
-    preview,
-    snapshot,
-  };
+  const campaignCommitId=commitId(preflight.transactionId,committedCampaign.revision);
+
+  // Runtime rebind/rehydrate is projection only. Failure here cannot undo or
+  // reclassify the durable global commit; recovery will retry projection later.
+  try{
+    setCampaignLibraryStoreForTests(adapter,store);
+    const snapshot=await adapter.getSnapshot();
+    const projected=snapshot.campaigns?.find((item)=>item.campaignId===preflight.campaignId);
+    const projectionWarning=!projected?.recentRequestIds.includes(preflight.transactionId)
+      ?"connected Long Rest Campaign committed, but runtime projection has not observed the transaction yet"
+      :undefined;
+    return {
+      status:"committed",
+      campaignCommitId,
+      preview,
+      snapshot,
+      projectionWarning,
+    };
+  }catch(error){
+    return {
+      status:"committed",
+      campaignCommitId,
+      preview,
+      snapshot:before,
+      projectionWarning:`connected Long Rest Campaign committed; runtime projection recovery required: ${error instanceof Error?error.message:String(error)}`,
+    };
+  }
 }
