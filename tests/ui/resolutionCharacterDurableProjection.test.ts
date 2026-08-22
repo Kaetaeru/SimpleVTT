@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { CharacterSheet } from "../../src/app/contracts";
 import { projectResolutionCharacterWriteBack } from "../../src/app/resolutionCharacterDurableProjection";
+import type { ResourceRecoveryLockouts } from "../../src/domain/resources";
 import type { ResolutionEvent } from "../../src/domain/resolutionTypes";
 import type { RuntimeStateChange } from "../../src/domain/runtimeStateChange";
 
@@ -19,6 +20,7 @@ function sheet():CharacterSheet {
   };
 }
 
+type LockedResource=CharacterSheet["resources"][number]&{recoveryLockouts?:ResourceRecoveryLockouts};
 const hp=(targetId:string,field:"current"|"maximum"|"temporary",before:number,after:number):RuntimeStateChange=>({kind:"hp",targetId,field,before,after,provenance:[],lifetime:"character-durable",writeBack:"character"});
 const resource=(targetId:string,resourceId:string,before:number,after:number):RuntimeStateChange=>({kind:"resource",targetId,resourceId,before,after,provenance:[],lifetime:"character-durable",writeBack:"character"});
 const life=(targetId:string,field:"stable"|"unconscious"|"dead",before:boolean,after:boolean):RuntimeStateChange=>({kind:"life",targetId,field,before,after,provenance:[],lifetime:"character-durable",writeBack:"character"});
@@ -51,6 +53,32 @@ test("Character ResolutionEvent projection persists HP/resource/item/life in eve
   assert.equal(result.sheet.items[0].quantity,1);
   assert.equal(result.sheet.items[1].charges?.current,6);
   assert.deepEqual(result.sheet.durableLifeFlags,{stable:false,unconscious:true,dead:false});
+});
+
+test("resource recovery lockout metadata is drift-safe and reversible for Character write-back", () => {
+  const original=sheet();
+  (original.resources[0] as LockedResource).recoveryLockouts={longRest:2};
+  const lockoutChange:RuntimeStateChange={
+    kind:"resource",targetId:"char.hero",resourceId:"resource.second-wind",before:1,after:1,
+    recoveryLockouts:{before:{longRest:2},after:{longRest:1}},
+    provenance:[],lifetime:"character-durable",writeBack:"character",
+  };
+  const events=[event(lockoutChange)];
+  const forward=projectResolutionCharacterWriteBack(original,events,"forward");
+  assert.equal(forward.status,"committed");
+  if (forward.status!=="committed") return;
+  assert.deepEqual((forward.sheet.resources[0] as LockedResource).recoveryLockouts,{longRest:1});
+
+  const inverse=projectResolutionCharacterWriteBack(forward.sheet,events,"inverse");
+  assert.equal(inverse.status,"committed");
+  if (inverse.status!=="committed") return;
+  assert.deepEqual((inverse.sheet.resources[0] as LockedResource).recoveryLockouts,{longRest:2});
+
+  const drifted=structuredClone(original);
+  (drifted.resources[0] as LockedResource).recoveryLockouts={longRest:3};
+  const rejected=projectResolutionCharacterWriteBack(drifted,events,"forward");
+  assert.equal(rejected.status,"rejected");
+  if (rejected.status==="rejected") assert.match(rejected.error,/recoveryLockouts/);
 });
 
 test("inverse Character write-back is drift-safe and restores the exact durable projection", () => {
