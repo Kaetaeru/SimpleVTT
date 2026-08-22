@@ -3,15 +3,14 @@
 Status: **CURRENT CANONICAL HANDOFF**  
 Updated: **2026-08-23 Asia/Seoul**  
 Canonical branch: **`work/v1-composite`**  
-Recorded product head: **`d66b26b feat(campaign): expose duplicate delete confirmations`**  
-Recorded UI gate head: **`477250b ci(ui): validate canonical campaign lifecycle`**
+Recorded provider runtime head: **`dacb1fd test(campaign): cover declarative provider runtime path`**
 
 이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 단일 인수인계 문서다. 전체 출시 작업의 우선순위와 완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 실제 제품 계약은 `docs/design/`, 작업 루트 판정은 저장소 루트의 `CANONICAL_ROOT.md`가 우선한다.
 
 ## 1. 재개 절차
 
 1. `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md`를 먼저 reconcile한다.
-2. `git branch --show-current`/GitHub ref가 `work/v1-composite`인지 확인한다.
+2. GitHub ref가 `work/v1-composite`인지 확인한다.
 3. 이 문서와 `V1_RELEASE_EXECUTION_CHECKLIST.md`에서 실제 production 기능 gap을 선택한다.
 4. 현재 UI를 V1 baseline으로 보존하고 내부 wiring/authority/persistence를 우선 수정한다.
 5. 이미 구현/검증된 작업은 반복하지 않는다.
@@ -25,103 +24,91 @@ Recorded UI gate head: **`477250b ci(ui): validate canonical campaign lifecycle`
 - 기능 하나마다 Codex 총검사로 멈추지 않는다.
 - 모든 pre-release 구현이 끝난 하나의 exact canonical SHA를 동결한 뒤 V1 직전에 한 번 comprehensive Codex audit를 수행한다.
 
-## 3. Ready / connected lifecycle 구현 상태
+## 3. 보존된 완료 구현
 
-Ready 구조 구현은 완료 상태이며 human/two-instance release evidence는 후반 acceptance에서 수행한다.
+### Ready / connected lifecycle
 
-- actor별 Ready configuration.
-- 다음 자기 턴/initiative 종료 만료.
-- Host authoritative `ready-action` lifecycle ledger.
-- Client actor별 config/status/economy projection.
-- Host-local trigger clear broadcast.
-- session start/end/reset transient cleanup.
-- reconnect ledger catch-up + idempotent replay.
-- `ready-action-v1` required capability.
-- isolated `Start SimpleVTT Acceptance Pair.cmd` tooling.
+구조 구현 완료. actor별 Ready, 다음 자기 턴/initiative 종료 만료, Host authoritative ledger, Client projection, reconnect replay, session reset cleanup, `ready-action-v1`, isolated acceptance-pair tooling이 존재한다. Human/two-instance evidence는 후반 acceptance에서 수행한다.
 
-핵심 기존 커밋: `c92093f`, `05a0ed0`, `bd13475`, `e95ef7c`, `98091e4`, `f6867c8`, `45e1c10`, `330c4cf`, `463fb6e`, `989060b`, `f3ca88d`.
+### V1-11 Campaign lifecycle
 
-## 4. V1-11 Campaign lifecycle — production 구현 완료, exact-head validation 대기
+Production 구현은 완료됐고 exact-head validation evidence만 남아 있다.
 
-### 이전 checkpoint
+- archive confirmation + startup migration/schema/corruption blocker.
+- durable duplicate/delete service를 재사용한 production runtime path.
+- current Campaign card/overlay visual language 안의 duplicate/delete confirmations.
+- duplicate는 Campaign-owned continuity와 Character **참조**만 복제하며 Player-owned Character 파일/installed-content ownership/과거 Session history/transient Session은 복제하지 않는다.
+- delete는 Campaign record만 삭제하며 현재 captured Session의 Campaign 삭제는 거부한다.
+- canonical UI workflow에 focused Campaign lifecycle tests가 연결돼 있다.
 
-- `66ca74d` / `36eecfc`: archive 즉시 mutation을 제거하고 기존 Campaign overlay 안에서 명시적 확인 추가.
-- `b8c5eab` / `ba40608` / `25a435f` / `a1d50d6` / `b2ec43f`: Campaign schema/migration/corruption startup blocker를 자동 삭제 없이 명시적으로 표시하고 재시도만 허용.
+핵심 최근 커밋: `24957b4`, `3c53424`, `d66b26b`, `477250b`.
 
-### 이번 재개에서 완료
+## 4. 2026-08-23 Rerun checkpoint — V1-12 declarative Calendar/Ration provider core
 
-Canonical `campaign-systems.md`의 lifecycle contract를 재확인했다. `CampaignApplicationService`에는 이미 durable `duplicateCampaign`/`deleteCampaign` 구현이 존재했으므로 이를 재작성하지 않았다.
+Canonical `docs/design/campaign-systems.md`와 기존 RuleModule/installed-content 구조를 재확인했다. 새 plugin runtime을 만들지 않고 기존 **declarative RuleModule -> InstalledContent -> Catalog -> Campaign authority** 경계를 재사용했다.
 
-1. **runtime duplicate/delete 경로** — `24957b4`
-   - `MockAdapter` production Campaign runtime에 `duplicateCampaign`과 `deleteCampaign`을 노출했다.
-   - 기존 `CampaignApplicationService`를 그대로 authority로 사용한다.
-   - duplicate는 source Campaign revision을 검증하고 새 Campaign namespace를 선택한다.
-   - delete는 durable Campaign record만 제거한다.
-   - 현재 captured Session이 삭제 대상 Campaign에 묶여 있으면 삭제를 거부한다.
+### 이번 실행에서 구현 완료
 
-2. **UI command facade** — `3c53424`
-   - `campaignLifecycleCommands.ts`가 production singleton adapter의 lifecycle command를 얇게 노출한다.
-   - UI에 persistence 계산이나 aggregate mutation 로직을 넣지 않는다.
+1. **선언형 provider schema / strict parser**
+   - `3e364dd`: installed-content contract에 `InstalledCampaignCalendarProfileV1`, `InstalledCampaignRationProfileV1`, union provider payload 추가.
+   - `b2244d5`: `campaignProviderProfiles.ts` 추가.
+   - 허용 필드 allowlist, month/day/leap/unit 범위, unique ids/remainders를 검증한다.
+   - arbitrary `run`, `script` 같은 예상 밖 필드는 unsupported field로 거부한다.
+   - capability는 `campaign.calendar-profile` / `campaign.ration-profile`로 분리한다.
+   - stable providerId는 `module.calendar-profile:<sourceId>:<contentId>` / `module.ration-profile:<sourceId>:<contentId>`이며 version은 별도 `providerVersion`으로 pin한다.
 
-3. **Campaign duplicate/delete UI** — `d66b26b`
-   - 기존 Campaign card footer에 `복제`, `삭제` secondary action을 최소 추가했다.
-   - 새 layout/navigation/style 체계를 만들지 않고 기존 `campaign-session-setup` overlay를 재사용한다.
-   - duplicate 확인 화면은 실제 복제 범위를 명시한다:
-     - 복제: 파티의 Character **참조**, 세션 기본값, 달력/식량 상태와 기록, Party Stash, Campaign DM Library, content loadout.
-     - 새 stash/library/loadout namespace ID 사용.
-     - 복제 안 함: Player-owned Character 파일, installed content 자체/소유권, 과거 Session history, running Session transient state.
-   - delete 확인은 irreversible임을 명시하고 Campaign-owned 설정/continuity만 삭제한다고 설명한다.
-   - Player-owned Character와 installed content는 삭제하지 않는다.
+2. **custom calendar authoritative arithmetic**
+   - `ad2eb02`: `campaignCalendar.ts`가 validated custom profile을 optional 입력으로 받아 absolute minute <-> era/year/month/day/time 왕복을 수행한다.
+   - variable month length와 bounded leap cycle/remainders를 지원한다.
+   - profile이 없는 unknown provider는 mutation 역변환에서 명시적으로 실패한다.
 
-4. **focused deterministic contracts**
-   - `4487ebf`: `campaignLifecycleRuntime.test.ts` — duplicate continuity/new namespace/session-history reset + delete/fallback projection 계약.
-   - `dbad5bc`: `campaignLifecycleUiStructure.test.ts` — duplicate/delete/ownership/destructive confirmation 구조 계약.
+3. **RuleModule import / validation / persistence boundary**
+   - `d1977e1`: RuleModule `content[].campaignProvider`를 parser가 validated installed payload로 보존한다.
+   - `fc5229f`: provider entry는 `option` category여야 하며 module manifest가 matching provider capability를 선언해야 한다.
+   - `a2974b6`: persisted installed-content generation decode 시 provider payload도 다시 strict validation한다. 손상 payload를 restart에서 신뢰하지 않는다.
+   - `2f99068` / `abee49f`: installed provider metadata를 read-only `CatalogEntry.campaignProvider` projection으로 전달한다. 별도 provider 저장소/registry를 만들지 않는다.
 
-5. **canonical UI validation wiring** — `477250b`
-   - `.github/workflows/ui.yml`의 push branch에 `work/v1-composite`를 추가했다.
-   - Campaign persistence/runtime/product/startup/lifecycle focused tests를 하나의 Campaign lifecycle step에 연결했다.
-   - 이 connector에서는 push run 결과를 직접 확인하지 못했으므로 **green으로 기록하지 않는다**.
+4. **Campaign application authority**
+   - `412047f`: Campaign application service가 optional validated profiles를 받아 providerVersion을 durable capability에 저장하고 custom calendar projection/correction/undo/day advance와 ration daily calculation/consumption을 같은 Campaign generation 안에서 수행한다.
+   - custom ration은 `rationUnitsPerDay` explicit override를 최우선으로 하고, 없을 때 provider의 roster-kind default -> provider global default -> builtin 1 순으로 계산한다.
+   - shortage는 기존대로 warning/ledger만 생성하며 피해/소진을 자동 적용하지 않는다.
+   - enabled custom provider가 unavailable이면 해당 provider-specific mutation은 명시적으로 실패한다. disabled state는 저장값을 보존할 수 있다.
 
-### V1-11 판단
+5. **Production runtime provider resolution**
+   - `c97a3d0`: installed catalog에서 provider descriptor를 조회할 수 있는 helper 추가.
+   - `386814a`: Campaign runtime이 `providerId + providerVersion` exact match를 우선 사용하고, 새 선택 시 설치된 동일 provider의 최신 version을 결정해 pin한다.
+   - calendar/ration configure, calendar advance/correct/date-time/undo, ration consume, compound day advance에 profile을 application service로 전달한다.
+   - custom provider가 제거된 Campaign도 `getSnapshot()` 자체는 정상 hydrate/project한다. provider-specific mutation에서만 unavailable error가 발생한다.
 
-기존 checklist의 production 기능 gap이었던 empty/error/migration/destructive lifecycle UX와 canonical design의 duplicate/delete user path는 코드상 연결됐다.
+### focused deterministic contracts
 
-단, `DONE`은 exact-head test/build evidence가 있어야 하므로 현재 판단은 **IMPLEMENTATION COMPLETE / VALIDATION PENDING**이며 release checklist의 공식 상태 문법상 아직 PARTIAL로 유지한다.
+- `4d14cd8`: `campaignDeclarativeProviderProfile.test.ts` — parser safety + calendar roundtrip.
+- `e686d9e` / `29e6ee9`: `campaignDeclarativeProviderImport.test.ts` — package payload preservation, category/capability boundary, ration profile.
+- `dacb1fd`: `campaignDeclarativeProviderRuntime.test.ts` — RuleModule install -> Campaign provider selection -> providerVersion -> custom calendar correction -> ration consumption, plus restart with missing provider behavior.
 
-## 5. 알려진 다음 V1-12 구현 gap
+### 검증 상태 / 주의
 
-Human-only Windows two-instance/visual acceptance는 독립 구현을 막지 않는다. 다음 코드 작업은 Campaign systems의 실제 미구현 provider 계약으로 이동한다.
+- 위 tests는 코드로 추가했지만 이 checkpoint에서는 comprehensive Codex audit를 실행하지 않았다.
+- 새 provider tests를 canonical UI workflow에 연결하고 exact-head TypeScript/build 결과를 확인하는 작업은 아직 남아 있다.
+- 이번 checkpoint에서는 GitHub Actions green을 주장하지 않는다.
+- `CampaignSystemsPanel` UI는 아직 기존 disabled placeholder를 사용한다. 따라서 **provider core/runtime은 구현됐지만 V1-12 provider user path는 아직 미완료**다.
 
-현재 production UI에서 확인된 gap:
+## 5. Next Exact Action
 
-- Calendar provider select에는 `module.calendar-profile`이 `설치 필요` disabled placeholder로만 존재한다.
-- Ration system도 declarative module provider contract가 V1 설계에 있으나 production validation/activation 경로가 없다.
-- V1은 executable calendar/ration plugin이 아니라 **검증된 declarative profile**만 허용한다.
+**현재 Campaign UI를 유지한 채 installed declarative provider를 Calendar/Ration select에 노출한다.**
 
-그 이후 별도 큰 gap:
-
-- authoritative Long Rest + optional Campaign time advance + optional ration consumption compound write; Character/Campaign 어느 write-back이라도 실패하면 partial success 금지.
-- V1-13 Party Stash / DM Library는 최근 코드에 구현이 있으므로 stale TODO를 그대로 재구현하지 말고 current source를 먼저 reconcile.
-- V1-40 Campaign-linked DM live operation.
-- V1-41 spatial provider lifecycle/stale fact cleanup.
-- V1-50 이후 quality/release gates.
+1. `CampaignSystemsPanel`에서 `snapshot.catalog`의 validated provider descriptors를 읽는다.
+2. 같은 providerId의 여러 installed version은 runtime 선택 규칙과 일치하게 최신 version 하나만 표시한다.
+3. 기존 `<select>` 구조를 유지하고 builtin option 뒤에 installed Calendar/Ration provider options를 추가한다. 설치된 provider가 없을 때만 현재 `모듈 프로필 · 설치 필요` disabled placeholder를 유지한다.
+4. custom Calendar를 선택하면 기존 직접 날짜 편집 UI에서 profile months를 사용하고 `연도/월/일`을 표시한다. Simple Day UI는 그대로 유지한다.
+5. ration preview는 선택된 ration profile의 defaults를 사용하고 shortageConsequences는 **제안/설명 텍스트**로만 표시한다. 자동 피해/소진 금지.
+6. installed provider가 사라진 현재 선택값은 명시적인 unavailable 상태로 표시하되 Campaign screen/session/rest/action 전체를 막지 않는다.
+7. `campaignDeclarativeProviderProfile`, `campaignDeclarativeProviderImport`, `campaignDeclarativeProviderRuntime` tests를 canonical UI workflow에 추가하고 TypeScript/build evidence를 확인한다.
+8. UI provider path가 닫힌 뒤 V1-12의 다음 큰 gap인 authoritative Long Rest + optional time/rations compound write를 선택한다.
 
 ## 6. 검증 정책
 
-- 기존 Phase 13 exact-head green evidence는 보존한다.
-- 이번 Campaign lifecycle slice에는 deterministic tests와 canonical UI workflow wiring이 존재한다.
-- push workflow 결과가 확인되지 않은 상태에서 pass/green을 주장하지 않는다.
-- comprehensive Codex audit는 아직 실행하지 않는다.
-- V1 전체 implementation이 끝난 exact SHA에서만 final Codex audit를 수행한다.
-
-## 7. Next Exact Action
-
-**V1-12 declarative Calendar/Ration provider contract를 구현한다.**
-
-1. `docs/design/campaign-systems.md`의 provider 문법과 현재 Content/RuleModule manifest 계약을 읽는다.
-2. 이미 존재하는 module/content validation 구조를 재사용할 수 있는지 먼저 확인한다.
-3. `module.calendar-profile`을 실행 코드 없는 선언형 profile로 validate/project한다.
-4. ration declarative provider도 같은 capability boundary를 사용하고 arbitrary executable plugin을 허용하지 않는다.
-5. provider가 없거나 invalid면 기존 OFF/builtin 경로가 정상 동작하며 session/rest/action을 막지 않아야 한다.
-6. 현재 Campaign UI의 provider select 구조를 보존하고, 설치된 compatible profile이 있을 때만 선택 가능하게 한다.
-7. deterministic focused tests를 함께 추가하되 comprehensive Codex audit는 시작하지 않는다.
+- 기존 exact-head green evidence는 보존하고 반복하지 않는다.
+- focused deterministic tests는 기능과 함께 작성한다.
+- push run/result를 실제 확인하기 전 green/DONE을 주장하지 않는다.
+- comprehensive Codex audit는 V1 전체 implementation이 끝난 frozen exact SHA에서만 수행한다.
