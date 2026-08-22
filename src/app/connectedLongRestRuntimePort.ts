@@ -169,7 +169,10 @@ function currentCampaign(snapshot:AppSnapshot,campaignId:string) {
 function durableRecord(state:ConnectedLongRestTransactionState):ConnectedLongRestHostDurableRecord {
   if(state.phase==="owner-prepared") return {version:1,phase:"owner-prepared",preflight:cp(state.preflight),preparationId:state.preparationId};
   if(state.phase==="committed") return {version:1,phase:"committed",preflight:cp(state.preflight),preparationId:state.preparationId,campaignCommitId:state.campaignCommitId};
-  if(state.phase==="aborted") return {version:1,phase:"aborted",preflight:cp(state.preflight),preparationId:"aborted-before-or-after-prepare",reason:state.reason};
+  if(state.phase==="aborted") {
+    if(!state.preparationId) throw new Error("connected Long Rest durable abort is missing owner preparation identity");
+    return {version:1,phase:"aborted",preflight:cp(state.preflight),preparationId:state.preparationId,reason:state.reason};
+  }
   throw new Error(`connected Long Rest Host phase is not durable: ${state.phase}`);
 }
 
@@ -431,7 +434,13 @@ export async function recordConnectedLongRestHostOwnerPrepared(adapter:MockAdapt
     return {
       status:"committed" as const,
       peer,
-      commit:{transactionId:record.transaction.preflight.transactionId,campaignCommitId:record.transaction.campaignCommitId},
+      commit:{
+        transactionId:record.transaction.preflight.transactionId,
+        campaignCommitId:record.transaction.campaignCommitId,
+        ownerParticipantId:record.transaction.preflight.ownerParticipantId,
+        character:cp(record.transaction.preflight.character),
+        preparationId:record.transaction.preparationId,
+      },
       snapshot:await adapter.getSnapshot(),
     };
   }
@@ -454,7 +463,13 @@ export async function recordConnectedLongRestHostOwnerPrepared(adapter:MockAdapt
 
   try{
     const campaign=await commitConnectedLongRestCampaignParticipant(adapter,ownerPrepared.preflight);
-    const commit:ConnectedLongRestGlobalCommit={transactionId:prepared.transactionId,campaignCommitId:campaign.campaignCommitId};
+    const commit:ConnectedLongRestGlobalCommit={
+      transactionId:prepared.transactionId,
+      campaignCommitId:campaign.campaignCommitId,
+      ownerParticipantId:prepared.ownerParticipantId,
+      character:cp(prepared.character),
+      preparationId:prepared.preparationId,
+    };
     record.transaction=commitConnectedLongRestTransaction(record.transaction,commit);
     let persistenceWarning:string|undefined;
     try{await store.write(durableRecord(record.transaction));}
@@ -504,12 +519,13 @@ export async function materializeConnectedLongRestOwnerAfterGlobalCommit(adapter
 export async function abortConnectedLongRestOwner(adapter:MockAdapter,transaction:string,reason:string) {
   const id=required(transaction,"connected Long Rest transaction id");
   const record=clientMap(adapter).get(id);
-  if(!record) return;
+  if(!record) return false;
   if(record.globalCommit||record.materialized) throw new Error("committed connected Long Rest owner transaction cannot be aborted");
   record.abortedReason=required(reason,"connected Long Rest abort reason");
   if(record.prepared&&record.preparationStore){
     await abortConnectedLongRestOwnerCandidate(record.preparationStore,record.prepared);
   }
+  return true;
 }
 
 export async function completeConnectedLongRestHostOwnerMaterialization(
@@ -556,9 +572,27 @@ export function connectedLongRestHostRecoveryMessages(adapter:MockAdapter,peer:s
     if(record.transaction.phase==="approved"){
       messages.push({type:"long-rest-prepare-authorized",preflight:cp(record.transaction.preflight)});
     }else if(record.transaction.phase==="committed"){
-      messages.push({type:"long-rest-global-commit",commit:{transactionId:record.transaction.preflight.transactionId,campaignCommitId:record.transaction.campaignCommitId}});
+      messages.push({
+        type:"long-rest-global-commit",
+        commit:{
+          transactionId:record.transaction.preflight.transactionId,
+          campaignCommitId:record.transaction.campaignCommitId,
+          ownerParticipantId:record.transaction.preflight.ownerParticipantId,
+          character:cp(record.transaction.preflight.character),
+          preparationId:record.transaction.preparationId,
+        },
+      });
     }else if(record.transaction.phase==="aborted"){
-      messages.push({type:"long-rest-abort",transactionId:record.transaction.preflight.transactionId,reason:record.transaction.reason});
+      messages.push({
+        type:"long-rest-abort",
+        transactionId:record.transaction.preflight.transactionId,
+        reason:record.transaction.reason,
+        ...(record.transaction.preparationId?{
+          ownerParticipantId:record.transaction.preflight.ownerParticipantId,
+          character:cp(record.transaction.preflight.character),
+          preparationId:record.transaction.preparationId,
+        }:{}),
+      });
     }
   }
   return messages;
