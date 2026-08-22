@@ -4,6 +4,7 @@ import { formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_MONTHS } from "./app
 import type { CampaignDmLibraryEntry, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignRosterMember } from "./app/campaignPersistenceContracts";
 import { useSimpleVtt } from "./app/AppProvider";
 import { HANDOUT_IMAGE_MAX_BYTES, LOCAL_IMAGE_ACCEPT, readLocalImageFile, type LocalImageAssetV1 } from "./app/localImageAsset";
+import { CAMPAIGN_DM_LIBRARY_JSON_EXAMPLE, parseCampaignDmLibraryJson } from "./app/campaignDmLibraryImport";
 
 function rosterId(){return `roster.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
 function libraryId(){return `dm-item.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
@@ -37,6 +38,10 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   const [npcAc,setNpcAc]=useState("12");
   const [npcHp,setNpcHp]=useState("10");
   const [npcActions,setNpcActions]=useState("기본 공격");
+  const [jsonImportOpen,setJsonImportOpen]=useState(false);
+  const [jsonPayload,setJsonPayload]=useState(CAMPAIGN_DM_LIBRARY_JSON_EXAMPLE);
+  const [jsonPreview,setJsonPreview]=useState<CampaignDmLibraryEntry[]|null>(null);
+  const [jsonError,setJsonError]=useState<string|null>(null);
   const rationPreview=useMemo(()=>previewCampaignDailyRations(campaign),[campaign]);
   useEffect(()=>{
     const anchor=campaign.calendar.state.displayAnchor;
@@ -72,6 +77,8 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   });
   const visibleLibrary=campaign.dmLibrary.entries.filter((entry)=>entry.kind===libraryKind&&(!libraryQuery.trim()||`${entry.label} ${entry.definitionId??""} ${(entry.tags??[]).join(" ")}`.toLocaleLowerCase("ko-KR").includes(libraryQuery.trim().toLocaleLowerCase("ko-KR")))).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
   const duplicateLibrary=(entry:CampaignDmLibraryEntry)=>{const definitionId=entry.definitionId?`${entry.definitionId}.copy.${Date.now()}`:undefined;return api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,entryId:libraryId(),definitionId,npcDefinition:entry.npcDefinition&&definitionId?{...entry.npcDefinition,definitionId}:undefined,label:entry.label+" 복사본",favorite:false});};
+  const previewLibraryJson=()=>{try{const entries=parseCampaignDmLibraryJson(jsonPayload,{campaignId:campaign.campaignId,campaignName:campaign.name,createEntryId:libraryId}).map((entry)=>{const existing=campaign.dmLibrary.entries.find((value)=>value.definitionId===entry.definitionId);return existing?{...entry,entryId:existing.entryId,favorite:entry.favorite||existing.favorite}:entry;});setJsonPreview(entries);setJsonError(null);}catch(reason){setJsonPreview(null);setJsonError(reason instanceof Error?reason.message:"JSON을 검증하지 못했습니다.");}};
+  const importLibraryJson=()=>perform(async()=>{if(!jsonPreview)throw new Error("먼저 JSON을 검토하세요.");for(const entry of jsonPreview)await api.upsertCampaignDmLibraryEntry(campaign.campaignId,entry);setLibraryKind(jsonPreview[0].kind==="npc-definition"?"npc-definition":"custom-item");setJsonImportOpen(false);setJsonPreview(null);setJsonError(null);});
 
   return <div className="campaign-system-workspace">
     {error&&<div className="campaign-error" role="alert">{error}</div>}
@@ -140,7 +147,8 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
         <button role="tab" aria-selected={libraryKind==="image"} className={libraryKind==="image"?"active":""} onClick={()=>resetLibraryForm("image")}>이미지 <b>{campaign.dmLibrary.entries.filter((entry)=>entry.kind==="image").length}</b></button>
         <button role="tab" aria-selected={libraryKind==="npc-definition"} className={libraryKind==="npc-definition"?"active":""} onClick={()=>resetLibraryForm("npc-definition")}>NPC 액터 <b>{campaign.dmLibrary.entries.filter((entry)=>entry.kind==="npc-definition").length}</b></button>
       </div>
-      <div className="campaign-dm-library-toolbar"><input value={libraryQuery} onChange={(event)=>setLibraryQuery(event.target.value)} placeholder="이름·태그·Definition 검색" aria-label="DM 라이브러리 검색"/><button onClick={()=>resetLibraryForm()}>{libraryKind==="custom-item"?"새 아이템":libraryKind==="image"?"새 이미지":"새 NPC 액터"}</button></div>
+      <div className="campaign-dm-library-toolbar"><input value={libraryQuery} onChange={(event)=>setLibraryQuery(event.target.value)} placeholder="이름·태그·Definition 검색" aria-label="DM 라이브러리 검색"/><button onClick={()=>resetLibraryForm()}>{libraryKind==="custom-item"?"새 아이템":libraryKind==="image"?"새 이미지":"새 NPC 액터"}</button><button onClick={()=>{setJsonImportOpen((open)=>!open);setJsonPreview(null);setJsonError(null);}}>JSON 가져오기</button></div>
+      {jsonImportOpen&&<section className="campaign-library-json-import" aria-label="DM 라이브러리 JSON 가져오기"><div><strong>JSON 가져오기</strong><small>단일 객체 또는 최대 100개의 배열 · 아이템과 NPC 액터 지원</small></div><textarea aria-label="DM 라이브러리 JSON" value={jsonPayload} onChange={(event)=>{setJsonPayload(event.target.value);setJsonPreview(null);setJsonError(null);}} spellCheck={false}/><div className="campaign-library-json-actions"><button disabled={busy} onClick={previewLibraryJson}>JSON 검토</button><button className="primary" disabled={busy||!jsonPreview} onClick={()=>void importLibraryJson()}>검토한 항목 저장</button></div>{jsonError&&<p className="campaign-library-json-error" role="alert">{jsonError}</p>}{jsonPreview&&<div className="campaign-library-json-preview"><strong>{jsonPreview.length}개 항목 검증 완료</strong>{jsonPreview.map((entry)=><article key={entry.entryId}><span>{entry.kind==="custom-item"?"아이템":"NPC"}</span><div><b>{entry.label}</b><small>{entry.definitionId}</small></div>{entry.itemTemplate&&<small>{entry.itemTemplate.kind}{entry.itemTemplate.attunementRequired?" · 조율 필요":""}{entry.itemTemplate.charges?` · 충전 ${entry.itemTemplate.charges.current}/${entry.itemTemplate.charges.max}`:""}{` · 특성 ${entry.itemTemplate.passiveEffects.length} · 행동 ${entry.itemTemplate.grantedActionIds.length}`}</small>}{entry.npcDefinition&&<small>AC {entry.npcDefinition.ac} · HP {entry.npcDefinition.maxHp} · 행동 {entry.npcDefinition.actions.length}</small>}</article>)}</div>}</section>}
       <div className="campaign-dm-library-form">
         <label><span>이름</span><input value={itemName} onChange={(event)=>setItemName(event.target.value)} placeholder="예: 별빛 부적"/></label>
         {libraryKind!=="image"&&<label><span>영문명</span><input value={itemNameEn} onChange={(event)=>setItemNameEn(event.target.value)} placeholder="선택"/></label>}

@@ -11,6 +11,7 @@ const connected=readFileSync(new URL("../../src/app/connectedCampaignSystemsRunt
 test("Campaign dashboard exposes private custom item CRUD search favorite and duplication",()=>{
   for(const label of ["DM 라이브러리 검색","아이템","이미지","NPC 액터","라이브러리에 추가","즐겨찾기","복제","삭제"])assert.match(campaign,new RegExp(label));
   assert.match(campaign,/upsertCampaignDmLibraryEntry/);assert.match(campaign,/removeCampaignDmLibraryEntry/);
+  assert.match(campaign,/JSON 가져오기/);assert.match(campaign,/parseCampaignDmLibraryJson/);assert.match(campaign,/검토한 항목 저장/);
 });
 
 test("Campaign image and NPC entries have live Session quick actions",()=>{
