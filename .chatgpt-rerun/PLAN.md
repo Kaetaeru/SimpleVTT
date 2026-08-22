@@ -3,17 +3,40 @@
 ## Project coordinates
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Canonical baseline: `main`
-- Active work branch: `agent/108-production-play-session-ux` (to be created from current `main` after Rerun authorization is published)
-- Phase 14 tracking issue: #108 — Production play session composition and in-session UX
-- Preserved Phase 13 issue: #104 — completed
-- Preserved Phase 13 implementation checkpoint: `7c9440970753a370fec7830cfa691832552e1d05`
+- Canonical repository URL: `https://github.com/Kaetaeru/SimpleVTT`
+- Canonical baseline / active product branch: `work/v1-composite`
+- Rerun control path: `.chatgpt-rerun/control.json`
+- Existing run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
+- Existing sequence: `1`
+- Existing task_id: `phase14-production-play-session-ux`
+- Historical Phase 14 branch/issue: `agent/108-production-play-session-ux`, issue #108
+- Canonical V1 routing authority: `CANONICAL_ROOT.md`
+- Current V1 execution router: `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`
+- Current implementation checkpoint: `.agents/V1_CURRENT_HANDOFF.md`
+
+## Reconciliation note — 2026-08-23
+
+This is an **existing active Rerun run**, not a new run. The run_id, sequence, task identity, preserved completion history, and validation history are retained.
+
+Earlier Rerun documents treated `main` as canonical. Actual GitHub work in the current ChatGPT conversation and the repository's `CANONICAL_ROOT.md` now establish `work/v1-composite` as the canonical V1 implementation/build/test/release-preparation branch. Rerun therefore resumes this same run on `work/v1-composite`; it must not recreate the historical Phase 14 branch or route new V1 work back to `main`.
+
+The user's current goal has also broadened beyond the original Phase 14 slice: **implement all remaining V1 checklist work through the pre-release boundary first, then perform one comprehensive Codex audit immediately before V1 acceptance/release.** The existing task_id is preserved for continuity; this sequence now acts as the durable V1-completion umbrella rather than resetting task identity.
 
 ## Product direction
 
-SimpleVTT must be a genuinely playable desktop application, not a reference fixture shell with production subsystems attached around it. The user must be able to author/persist a Character, enter a real local or connected session with that Character, and use the visible play UI for skills, actions, spells, inventory, combat, authoritative dice, activity history, undo, and connected host resolution.
+SimpleVTT must reach a genuinely playable Windows V1 where the same canonical exact head supports the complete local and connected user journeys defined by `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`:
 
-`main` remains the canonical baseline. Feature branches start from current `main`; completed work is not stacked on historical Phase branches.
+- first-run Character creation, persistence, restart and sheet use;
+- Campaign preparation including roster, calendar/rations, Party Stash and DM Library;
+- real Character local play with freeform/initiative, actions, skills, spells and inventory;
+- connected Host/Join with host-unknown Character projection, Ready lifecycle, authoritative actions and reconnect;
+- complete DM live operation, corrections/Undo, handouts and Campaign integration;
+- durable Character/Campaign state with Session transient cleanup;
+- mapless/module fallback correctness;
+- final dice/presentation behavior;
+- UX/error/accessibility closeout and release packaging.
+
+The V1 implementation router and its dependency order are authoritative. Historical phase checklists are evidence/context only when they conflict with the current V1 router.
 
 ## Preserved completed work — Task 0
 
@@ -21,112 +44,93 @@ SimpleVTT must be a genuinely playable desktop application, not a reference fixt
 
 **status:** COMPLETE
 
-Phase 13 arbitrary Character SessionProjection, connected host authority, reconnect/write-back, creation/level-up UX convergence, and shared visual dice were closed with exact-head green Contract/Rules/Persistence/UI/Phase11/Phase12/Phase13 workflows. The exact Phase 13 artifact was `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
+Phase 13 arbitrary Character SessionProjection, connected host authority, reconnect/write-back, creation/level-up UX convergence, and shared visual dice were closed with exact-head green Contract/Rules/Persistence/UI/Phase11/Phase12/Phase13 workflows.
 
-This history is preserved and must not be rerun unless Phase 14 changes a relevant boundary.
+Preserved implementation checkpoint: `7c9440970753a370fec7830cfa691832552e1d05`.
 
-## Task 1 — Phase 14 production play composition
+Preserved Phase 13 artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
+
+This history must not be erased or relabeled by the current V1 work.
+
+## Task 1 — existing sequence 1, reconciled V1 completion umbrella
 
 **task_id:** `phase14-production-play-session-ux`
 
-**status:** ACTIVE
+**status:** ACTIVE / CONTINUE AUTHORIZED
 
-### Root cause being corrected
+### Preserved Phase 14 intent
 
-The current production React entrypoint installs many real runtime adapters, but `AppProvider` still operates through a `MockAdapter` whose base state contains Aelar/Mira/reference Combatants and fixed `actionsByActor` fixtures. Character creation/persistence can replace `activeCharacter`, but the production scene path does not reliably materialize a newly authored Character into `SceneVm` or derive a complete playable action surface for that Character. Existing Phase 11 tests primarily exercise the reference fixtures directly, so green CI did not prove the real user journey.
+The original task corrected the reference-fixture-dependent production play path and required a real persisted Character -> session -> Scene actor/actions flow, with in-session `행동`, `기술`, `주문`, and `인벤토리` surfaces and preserved Phase 09-13 authority/network boundaries.
 
-### Goal
+That implementation history remains part of the current V1 source and must not be redone merely because Rerun is being reconnected.
 
-Build a production-composed session/play layer where the source of playable actor state is the real persisted Character and session state, while preserving the proven rules/resolution/network subsystems underneath it.
+### Current canonical implementation state
 
-### UX contract
+According to `.agents/V1_CURRENT_HANDOFF.md`, recent canonical work has moved beyond the original Phase 14 slice into V1 convergence, including actor-specific Ready configuration, Ready lifecycle network propagation, `ready-action-v1` capability negotiation, connected reset cleanup, Live Development tooling, and isolated two-instance acceptance tooling.
 
-The play workspace must keep the user in one session context. The central play console provides first-class `행동`, `기술`, `주문`, and `인벤토리` tabs/panels. Switching these panels must not discard current session, turn, selected actor, or target context.
+The next implementation decision must therefore come from the current V1 handoff/checklist, not the old Phase 14 next-action text.
 
-- **행동:** attacks, class/feature actions, basic/freeform actions, and other legal actions derived from the active actor.
-- **기술:** rollable ability/skill checks with visible modifier/proficiency/source and authoritative dice resolution.
-- **주문:** available spells with availability/cost/target information and the existing rich presentation where applicable.
-- **인벤토리:** inspect, equip/unequip, attune/unattune, and use legal consumables/charged items during play. Item use stays in session and feeds the authoritative resolution/state-change path.
-- Disabled actions expose a useful reason instead of silently disappearing.
-- The Character Sheet exposes an obvious `플레이` / current-session entry.
-- Missing session/actor state renders a deliberate empty/setup state instead of assuming reference entities exist.
-- DM session UX continues to support Combatant instantiation and actor selection without requiring reference fixtures.
+### Execution strategy from now until V1 pre-release
 
-### Architecture constraints
+1. Read `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` after the mandatory Rerun files.
+2. Reconcile stale checklist statuses against current code before choosing work; do not reimplement already-present slices.
+3. Select the next unblocked **implementation** item in V1 dependency order.
+4. Implement coherent slices directly on `work/v1-composite`, preserving existing authority/persistence/module boundaries.
+5. Add deterministic feature-level tests/fixtures as part of implementation when needed, but **do not stop after each slice for a separate Codex comprehensive audit**.
+6. Keep `.agents/V1_CURRENT_HANDOFF.md` and the release checklist current enough that the next execution can resume without rediscovery.
+7. Continue until all implementation work needed for V1 is present and the repository reaches a single pre-release candidate exact SHA.
+8. Only at that boundary, freeze the candidate SHA and perform the comprehensive Codex audit/full regression across TypeScript, UI, domain, persistence, connected play, Rust/Tauri, Windows build, structural checks, and release metadata.
+9. Fix all audit findings and rerun the final audit as necessary.
+10. After the final Codex audit is green, perform remaining human acceptance/evidence and release promotion steps.
 
-1. A persisted/newly created Character must materialize to a `SceneEntity` and derived action set from Character source/runtime state.
-2. Reconciliation must occur after creation, edit, level-up, durable hydration, and owning-client connected write-back.
-3. Production-critical paths must not depend on `char.aelar`, `char.mira`, fixed goblin IDs, Ctrl+Shift+D, or reference scenario loading.
-4. Reference fixtures may remain available only as explicit developer/test fixtures, not the default production authority for user play.
-5. Connected Host/Join continues to use host-trusted canonical rules/content and ephemeral SessionProjection for host-unknown remote Characters.
-6. Player permanent Character ownership and host-authoritative shared-session ResolutionEvents remain unchanged.
-7. No tactical map/grid/token/path/LOS expansion in this phase.
+### Codex audit policy
 
-### Delivery slices
+The user explicitly does **not** want a per-slice Codex total-validation queue to interrupt implementation.
 
-#### P14.1 — Production actor materialization
+- `.agents/CODEX_VALIDATION_QUEUE.md` created during the current conversation is not the active execution gate unless the user later re-authorizes it.
+- Final audit input is one exact pre-V1 canonical SHA, not a rolling series of feature SHAs.
+- Implementation may still contain normal focused tests and CI guards; those are engineering safety nets, not the final Codex audit.
 
-- Add a deterministic Character -> Scene actor/action projection boundary.
-- Reconcile active Character into the local scene after hydration/create/edit/level-up/write-back.
-- Make Player Scene robust when no actor/session exists.
-- Remove reference-character identity assumptions from the normal player route.
+### V1 acceptance contract
 
-#### P14.2 — In-session action/skill UX
+Implementation phase is ready for the final Codex audit only when the V1 release checklist has no remaining implementation gaps that should be fixed before audit. The final release remains gated by the checklist's exact-head evidence requirements.
 
-- Add play-console tabs with `행동` and `기술` as first-class surfaces.
-- Derive skill checks from Character abilities/proficiencies and route rolls through authoritative resolution/visual dice/activity provenance.
-- Keep targeting and turn economy context stable across tabs.
-
-#### P14.3 — In-session inventory and spells
-
-- Add `인벤토리` panel/drawer available during play.
-- Route item use through existing authoritative item cost/healing/damage/resource mechanisms; equipment/attunement controls update derived state legally.
-- Add `주문` play surface based on the actor's real spell availability rather than reference actor IDs.
-
-#### P14.4 — Real local session flow
-
-- Character Library/Sheet -> play entry -> local session/scene with the selected real Character.
-- Support DM Combatant instantiation into that live scene.
-- Preserve activity, undo, initiative/freeform, conditions/concentration/reactions, DM correction, and visual dice.
-
-#### P14.5 — Connected production flow
-
-- Host/Join uses the same production actor projection.
-- Host-unknown player Character mounts ephemerally and is visible/selectable in the real DM scene.
-- Remote player actions resolve on host and converge through committed events; owning client durable state persists.
-
-#### P14.6 — Product-realistic gates and Windows build
-
-- Add a fresh-Character production integration gate: create -> save -> enter play -> skill roll -> action/item/spell/feature -> state/activity update.
-- Add restart/hydration -> play gate.
-- Add in-session inventory and skills UI structure/behavior gates.
-- Keep relevant Phase 11/12/13 regressions green.
-- Main Playable workflow must build the exact validated head and package `SimpleVTT.exe`, `BUILD.txt`, and an updated local+connected human walkthrough.
-
-### Acceptance criteria
-
-Task 1 is complete only when all are true:
-
-1. A Character created through production authoring can immediately enter play and appears as the actual scene actor.
-2. Restarted persisted Characters re-enter play with their own HP/resources/items/actions.
-3. `행동`, `기술`, `주문`, `인벤토리` are accessible inside the session workspace without debug tools.
-4. A skill roll uses the real Character modifier and produces authoritative dice/provenance/activity.
-5. A legal inventory item can be used in session and its quantity/charges/state changes follow authoritative event and durable write-back rules.
-6. Real Character attacks/features/spells are derived and usable without fixture actor IDs.
-7. DM can add/use Combatants in the live session and run freeform/initiative flow.
-8. Two production app instances can Host/Join with a host-unknown Character and converge after a real UI-triggered action.
-9. No product-critical flow requires Ctrl+Shift+D/reference scenario fixtures.
-10. Exact-head production build and relevant Phase 11/12/13 regression gates are green.
-11. A Windows playable artifact from that exact head is produced and its digest/build metadata is verified.
+At minimum the final candidate must cover the nine V1 user journeys recorded in `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`: J1 First run/Character, J2 Campaign preparation, J3 Local session, J4 Connected session, J5 DM live operation, J6 Persistence, J7 Mapless/module behavior, J8 Dice/presentation, and J9 Release.
 
 ### Verification method
 
-- New integration tests centered on newly authored/persisted Character identities rather than Aelar/Mira fixtures.
-- UI structure tests for the session tabs, inventory interaction, empty/setup states, and Play entry.
-- Existing rules/domain and production build gates.
-- Phase 11 offline regression where relevant, Phase 12 connected authority, Phase 13 SessionProjection regression.
-- Windows Tauri library tests and exact-head `Main Playable` artifact.
+During implementation:
 
-### Current authorization
+- deterministic focused tests for changed behavior where practical;
+- TypeScript/build or Rust checks when a slice materially changes those boundaries;
+- Live Development/manual visual checks when UI behavior needs direct inspection;
+- current canonical CI may provide additional evidence but does not replace the final audit.
 
-The user's latest instruction explicitly authorizes planning through implementation and playable build completion, with special emphasis on session inventory/item use and comprehensive skill/action tabs. Sequence 1 is therefore authorized to proceed once `STATE.md` is reconciled and `control.json` is published last with `status: continue`.
+At V1 pre-release freeze:
+
+- comprehensive Codex audit on the exact candidate SHA;
+- full relevant TypeScript/domain/UI/persistence/connected regression suite;
+- `npm run build` / TypeScript compile checks;
+- Rust/Tauri library/build checks;
+- Windows two-instance connected acceptance and restart/persistence evidence;
+- release artifact/digest/build metadata checks;
+- final human acceptance for visual/interaction behaviors that automation cannot prove.
+
+## Dependencies
+
+- Work only from `work/v1-composite` unless the repository's canonical routing authority is deliberately changed by the user.
+- Do not promote to `main` until the release checklist explicitly reaches that step.
+- Preserve authoritative domain/rules/persistence/network boundaries documented under `docs/design/`.
+- Keep map/tactical provider behavior optional; V1 core remains usable without a battlemap provider.
+- Do not silently convert Session transient state into Character/Campaign durable state.
+
+## Current Next Exact Action contract
+
+On the next Rerun dispatch after reconciliation:
+
+1. Confirm `control.json` still authorizes sequence `1`, task `phase14-production-play-session-ux`, status `continue`.
+2. Confirm `work/v1-composite` still resolves and re-fetch the current canonical head.
+3. Read `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`.
+4. Reconcile the handoff's current Ready/two-instance state against the V1 router and identify the next **implementation** gap that can be completed without a user-only acceptance step.
+5. Implement that V1 slice; do not start the final Codex audit yet.
+6. Before the 18-minute checkpoint, durably record completed work, evidence available so far, and the next exact implementation action.
