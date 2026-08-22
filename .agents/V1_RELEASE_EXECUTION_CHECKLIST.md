@@ -253,6 +253,7 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 - [x] Player는 동일한 Campaign 시간을 읽기 전용으로 확인하고 DM 조작 command를 받지 않음.
 - [x] Session setup의 식량 공개 정책에 따라 Player projection에서 잔량·필요량·부족량 제거.
 - [x] 연결 Session은 sessionId/revision envelope로 projection을 전송하고 compatible reconnect 뒤 재전송.
+- [x] Session Campaign 패널과 브라우저 DM/Player 미리보기에서 roster 참조·접속 상태 표시.
 - [ ] Windows 2-instance에서 DM 변경 → Player 반영, reconnect 복구, 숨김 식량 비노출 수동 검증.
 
 ### Compound behavior
@@ -269,11 +270,11 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 
 ```text
 EVIDENCE
-head: 6da35de
-tests: Campaign/Session/connected roster focused suites (25 pass, 0 fail); connected roster integration (2 pass, 0 fail); tsc --noEmit (pass); vite build (425 modules, pass)
+head: 0b109dc
+tests: Campaign/Session roster preview focused suites (15 pass, 0 fail); Session/connected projection structure (9 pass, 0 fail); tsc --noEmit (pass); vite build (425 modules, pass)
 human: browser-session-campaign-pane-dm-player-role-projection-2026-08-22
 artifact: dist/ development production bundle; Windows artifact N/A
-notes: Host-unknown Join Character의 reference-only roster 편입, reconnect idempotency, DM 식량/보관함 정책 보존, write 실패 시 Join/projection rollback, 연호·연월일·24시간 Gregorian calendar, Session DM 조작/Player 읽기 전용/식량 공개 정책, reconnect projection protocol, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Windows 2-instance acceptance, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
+notes: Host-unknown Join Character의 reference-only roster 편입, reconnect idempotency, DM 식량/보관함 정책 보존, Session Campaign 패널 및 독립 브라우저 미리보기의 파티/접속 상태, write 실패 시 Join/projection rollback, 연호·연월일·24시간 Gregorian calendar, Player 식량 공개 정책, reconnect projection protocol, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Windows 2-instance acceptance, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
 ```
 
 ## V1-13 Party Stash / Campaign DM Library — TODO
