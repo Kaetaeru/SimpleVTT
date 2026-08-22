@@ -1,4 +1,5 @@
 import type { CampaignCalendarDateTime, CampaignCalendarState } from "./campaignPersistenceContracts";
+import type { InstalledCampaignCalendarProfileV1 } from "./installedContentContracts";
 
 const GREGORIAN_MONTHS=[
   {id:"1",label:"1월",days:31},{id:"2",label:"2월",days:28},{id:"3",label:"3월",days:31},
@@ -35,17 +36,77 @@ function assertClock(hour:number,minute:number){
   if(!Number.isInteger(minute)||minute<0||minute>59) throw new Error("분은 0분부터 59분 사이여야 합니다.");
 }
 
-export function campaignDateTimeToAbsoluteMinute(providerId:string,input:CampaignCalendarDateTime){
+function profileLeap(profile:InstalledCampaignCalendarProfileV1,year:number){
+  const leap=profile.leapYear;
+  if(!leap) return false;
+  const remainder=((year%leap.cycle)+leap.cycle)%leap.cycle;
+  return leap.remainders.includes(remainder);
+}
+function profileMonthDays(profile:InstalledCampaignCalendarProfileV1,year:number,monthId:string){
+  const month=profile.months.find((candidate)=>candidate.id===monthId);
+  if(!month) throw new Error(`지원되지 않는 달력 월입니다: ${monthId}`);
+  return month.days+(profile.leapYear?.monthId===monthId&&profileLeap(profile,year)?profile.leapYear.extraDays:0);
+}
+function profileBaseYearDays(profile:InstalledCampaignCalendarProfileV1){return profile.months.reduce((sum,month)=>sum+month.days,0);}
+function profileDaysInYear(profile:InstalledCampaignCalendarProfileV1,year:number){return profileBaseYearDays(profile)+(profileLeap(profile,year)?profile.leapYear?.extraDays??0:0);}
+function profileDaysBeforeYear(profile:InstalledCampaignCalendarProfileV1,year:number){
+  const completeYears=year-1;
+  if(completeYears<=0) return 0;
+  const leap=profile.leapYear;
+  if(!leap) return completeYears*profileBaseYearDays(profile);
+  const cycleDays=profileBaseYearDays(profile)*leap.cycle+leap.remainders.length*leap.extraDays;
+  const fullCycles=Math.floor(completeYears/leap.cycle);
+  let days=fullCycles*cycleDays;
+  const startYear=fullCycles*leap.cycle+1;
+  for(let offset=0;offset<completeYears%leap.cycle;offset+=1) days+=profileDaysInYear(profile,startYear+offset);
+  return days;
+}
+function profileDateFromDayIndex(profile:InstalledCampaignCalendarProfileV1,dayIndex:number){
+  const leap=profile.leapYear;
+  let year=1;
+  let remaining=dayIndex;
+  if(leap){
+    const cycleDays=profileBaseYearDays(profile)*leap.cycle+leap.remainders.length*leap.extraDays;
+    const completeCycles=Math.floor(remaining/cycleDays);
+    year+=completeCycles*leap.cycle;
+    remaining-=completeCycles*cycleDays;
+  }else{
+    const yearDays=profileBaseYearDays(profile);
+    const completeYears=Math.floor(remaining/yearDays);
+    year+=completeYears;
+    remaining-=completeYears*yearDays;
+  }
+  while(remaining>=profileDaysInYear(profile,year)){remaining-=profileDaysInYear(profile,year);year+=1;}
+  let month=profile.months[0];
+  for(const candidate of profile.months){
+    const days=profileMonthDays(profile,year,candidate.id);
+    if(remaining<days){month=candidate;break;}
+    remaining-=days;
+  }
+  return {year,month,day:remaining+1};
+}
+
+export function campaignDateTimeToAbsoluteMinute(providerId:string,input:CampaignCalendarDateTime,profile?:InstalledCampaignCalendarProfileV1){
   if(!input.era.trim()) throw new Error("연호를 입력하세요.");
   if(!Number.isInteger(input.year)||input.year<1) throw new Error("연도는 1 이상의 정수여야 합니다.");
   if(!Number.isInteger(input.day)||input.day<1) throw new Error("날짜는 1 이상의 정수여야 합니다.");
   assertClock(input.hour,input.minute);
   if(providerId==="builtin.simple-day") return (input.day-1)*1440+input.hour*60+input.minute;
-  if(providerId!=="builtin.gregorian") throw new Error(`지원되지 않는 달력 공급자입니다: ${providerId}`);
-  const month=Number(input.monthId);const maxDay=gregorianMonthDays(input.year,month);
-  if(input.day>maxDay) throw new Error(`${input.year}년 ${month}월은 ${maxDay}일까지입니다.`);
-  let days=daysBeforeGregorianYear(input.year);
-  for(let current=1;current<month;current+=1) days+=gregorianMonthDays(input.year,current);
+  if(providerId==="builtin.gregorian"){
+    const month=Number(input.monthId);const maxDay=gregorianMonthDays(input.year,month);
+    if(input.day>maxDay) throw new Error(`${input.year}년 ${month}월은 ${maxDay}일까지입니다.`);
+    let days=daysBeforeGregorianYear(input.year);
+    for(let current=1;current<month;current+=1) days+=gregorianMonthDays(input.year,current);
+    days+=input.day-1;
+    return days*1440+input.hour*60+input.minute;
+  }
+  if(!profile) throw new Error(`설치된 달력 프로필을 찾을 수 없습니다: ${providerId}`);
+  const monthIndex=profile.months.findIndex((month)=>month.id===input.monthId);
+  if(monthIndex<0) throw new Error(`지원되지 않는 달력 월입니다: ${input.monthId}`);
+  const maxDay=profileMonthDays(profile,input.year,input.monthId);
+  if(input.day>maxDay) throw new Error(`${input.year}년 ${profile.months[monthIndex].label}은 ${maxDay}일까지입니다.`);
+  let days=profileDaysBeforeYear(profile,input.year);
+  for(let index=0;index<monthIndex;index+=1) days+=profileMonthDays(profile,input.year,profile.months[index].id);
   days+=input.day-1;
   return days*1440+input.hour*60+input.minute;
 }
@@ -59,14 +120,18 @@ function gregorianDateFromDayIndex(dayIndex:number){
   return {year,month,day:remaining+1};
 }
 
-export function projectCampaignCalendar(providerId:string,absoluteMinute:number,era="서력"):CampaignCalendarState["displayAnchor"]{
+export function projectCampaignCalendar(providerId:string,absoluteMinute:number,era="서력",profile?:InstalledCampaignCalendarProfileV1):CampaignCalendarState["displayAnchor"]{
   if(!Number.isInteger(absoluteMinute)||absoluteMinute<0) throw new Error("절대 시간은 0 이상의 정수 분이어야 합니다.");
   const dayIndex=Math.floor(absoluteMinute/1440);const minuteOfDay=absoluteMinute%1440;
   const hour=Math.floor(minuteOfDay/60);const minute=minuteOfDay%60;
   if(providerId==="builtin.simple-day") return {era,year:1,monthId:"day",monthLabel:"Day",day:dayIndex+1,hour,minute};
-  if(providerId!=="builtin.gregorian") return {era,year:1,monthId:"1",day:dayIndex+1,hour,minute};
-  const date=gregorianDateFromDayIndex(dayIndex);
-  return {era,year:date.year,monthId:String(date.month),monthLabel:GREGORIAN_MONTHS[date.month-1].label,day:date.day,hour,minute};
+  if(providerId==="builtin.gregorian"){
+    const date=gregorianDateFromDayIndex(dayIndex);
+    return {era,year:date.year,monthId:String(date.month),monthLabel:GREGORIAN_MONTHS[date.month-1].label,day:date.day,hour,minute};
+  }
+  if(!profile) return {era,year:1,monthId:"1",day:dayIndex+1,hour,minute};
+  const date=profileDateFromDayIndex(profile,dayIndex);
+  return {era:era.trim()||profile.defaultEra,year:date.year,monthId:date.month.id,monthLabel:date.month.label,day:date.day,hour,minute};
 }
 
 export function formatCampaignCalendarDateTime(providerId:string,anchor:CampaignCalendarState["displayAnchor"]){
