@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseRuleModulePackage } from "../../src/app/ruleModulePackageImport";
 import { validateInstalledContentPackage } from "../../src/app/ruleModulePackageValidation";
-import { emptyInstalledContentDocument } from "../../src/app/installedContentPersistence";
+import { INSTALLED_CONTENT_SCHEMA_ID, INSTALLED_CONTENT_SCHEMA_VERSION, type InstalledContentDocumentV1 } from "../../src/app/installedContentContracts";
 import { CAMPAIGN_CALENDAR_PROFILE_CAPABILITY, CAMPAIGN_RATION_PROFILE_CAPABILITY } from "../../src/app/campaignProviderProfiles";
+
+function emptyDocument():InstalledContentDocumentV1 {
+  return {schemaId:INSTALLED_CONTENT_SCHEMA_ID,schemaVersion:INSTALLED_CONTENT_SCHEMA_VERSION,storageRevision:0,entries:[]};
+}
 
 function providerPackage(capability:string,content:Record<string,unknown>){
   return JSON.stringify({
@@ -27,7 +31,7 @@ test("RuleModule import preserves a validated declarative Campaign provider prof
   }));
   const entry=parsed.entries[0];
   assert.deepEqual(entry.campaignProvider,calendarProvider);
-  const validation=validateInstalledContentPackage(emptyInstalledContentDocument(),parsed.entries);
+  const validation=validateInstalledContentPackage(emptyDocument(),parsed.entries);
   assert.equal(validation.issues.some((issue)=>issue.severity==="blocking"),false,JSON.stringify(validation.issues));
 });
 
@@ -35,12 +39,12 @@ test("Campaign provider entry must be option category and module must declare th
   const wrongCategory=parseRuleModulePackage(providerPackage(CAMPAIGN_CALENDAR_PROFILE_CAPABILITY,{
     id:"calendar.kingdom",category:"item",presentation,campaignProvider:calendarProvider,
   }));
-  assert.ok(validateInstalledContentPackage(emptyInstalledContentDocument(),wrongCategory.entries).issues.some((issue)=>/category/i.test(issue.message)));
+  assert.ok(validateInstalledContentPackage(emptyDocument(),wrongCategory.entries).issues.some((issue)=>/category/i.test(issue.message)));
 
   const missingCapability=parseRuleModulePackage(providerPackage("unrelated.capability",{
     id:"calendar.kingdom",category:"option",presentation,campaignProvider:calendarProvider,
   }));
-  assert.ok(validateInstalledContentPackage(emptyInstalledContentDocument(),missingCapability.entries).issues.some((issue)=>/capability/i.test(issue.message)));
+  assert.ok(validateInstalledContentPackage(emptyDocument(),missingCapability.entries).issues.some((issue)=>/capability/i.test(issue.message)));
 });
 
 test("ration provider uses its own declared capability and remains data-only",()=>{
@@ -48,7 +52,7 @@ test("ration provider uses its own declared capability and remains data-only",()
     id:"ration.gritty",category:"option",presentation:{...presentation,originalName:"Gritty Rations"},
     campaignProvider:{kind:"ration",defaultUnitsPerDay:1,unitsByRosterKind:{companion:2},shortageConsequences:["DM 경고"]},
   }));
-  const validation=validateInstalledContentPackage(emptyInstalledContentDocument(),parsed.entries);
+  const validation=validateInstalledContentPackage(emptyDocument(),parsed.entries);
   assert.equal(validation.issues.some((issue)=>issue.severity==="blocking"),false,JSON.stringify(validation.issues));
   assert.equal(parsed.entries[0].campaignProvider?.kind,"ration");
 });
