@@ -5,7 +5,7 @@ import type { SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { resolveSavingThrowResolution } from "../../src/app/realSavingThrowService";
 import type { ActionVm } from "../../src/app/contracts";
-import { READY_MOVEMENT_ACTION_ID } from "../../src/app/standardActionReadyState";
+import { READY_MOVEMENT_ACTION_ID, readyActionConfigurationFor, setReadyActionConfiguration } from "../../src/app/standardActionReadyState";
 
 type MutableAdapter={scene:SceneVm};
 
@@ -78,12 +78,14 @@ test("turn boundaries expire Disengage at turn end and Dodge or Ready at next tu
   await adapter.setCurrentActor("char.aelar");
   const actor=entity(adapter,"char.aelar");
   actor.status.push("이탈","회피","준비 행동");
+  setReadyActionConfiguration(adapter,{actorId:"char.aelar",actionId:"action.test.ready",trigger:"다음 자기 턴 전"});
 
   let snapshot=await adapter.endTurn();
   let projected=snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")!;
   assert.equal(projected.status.includes("이탈"),false);
   assert.equal(projected.status.includes("회피"),true);
   assert.equal(projected.status.includes("준비 행동"),true);
+  assert.equal(readyActionConfigurationFor(adapter)?.actorId,"char.aelar");
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("이탈")));
 
   for (let guard=0;snapshot.scene.currentActorId!=="char.aelar"&&guard<20;guard+=1) {
@@ -93,6 +95,7 @@ test("turn boundaries expire Disengage at turn end and Dodge or Ready at next tu
   projected=snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")!;
   assert.equal(projected.status.includes("회피"),false);
   assert.equal(projected.status.includes("준비 행동"),false);
+  assert.equal(readyActionConfigurationFor(adapter),undefined);
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("회피")));
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("준비 행동")));
 });
@@ -101,12 +104,14 @@ test("ending initiative clears every remaining turn-bound standard-action status
   const adapter=new MockAdapter();
   await adapter.startInitiative();
   entity(adapter,"char.aelar").status.push("이탈","회피","준비 행동");
+  setReadyActionConfiguration(adapter,{actorId:"char.aelar",actionId:"action.test.ready",trigger:"이니셔티브 종료 전"});
   const snapshot=await adapter.endInitiative();
   const actor=snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")!;
   assert.equal(snapshot.sessionMode,"freeform");
   assert.equal(actor.status.includes("이탈"),false);
   assert.equal(actor.status.includes("회피"),false);
   assert.equal(actor.status.includes("준비 행동"),false);
+  assert.equal(readyActionConfigurationFor(adapter),undefined);
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("준비 행동")));
 });
 
@@ -185,6 +190,7 @@ test("Ready exposes an off-turn trigger that spends Reaction and clears the prep
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.equal(readyActionConfigurationFor(adapter),undefined);
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("반응 사용")));
   assert.equal(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.id==="action.standard.ready.trigger"),false);
 });
