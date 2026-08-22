@@ -1,5 +1,6 @@
 import profile from "../../rules/profiles/dnd.srd-5.2.1.profile.json";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
+import { parseInstalledCampaignProviderProfile, requiredCapabilityForCampaignProvider } from "./campaignProviderProfiles";
 import type {
   InstalledCatalogEntryV1,
   InstalledContentDocumentV1,
@@ -144,6 +145,17 @@ export function validateInstalledContentCandidate(
   }
   if (!ACTIVE_PROFILE.contentCategories.has(candidate.category)) {
     issues.push({severity:"blocking",code:"content.category.unsupported",message:`RulesProfile ${ACTIVE_PROFILE.id} does not allow content category ${candidate.category}`});
+  }
+
+  if(candidate.campaignProvider){
+    try{
+      const provider=parseInstalledCampaignProviderProfile(candidate.campaignProvider);
+      const required=requiredCapabilityForCampaignProvider(provider);
+      if(candidate.category!=="option") issues.push({severity:"blocking",code:"campaign-provider.category",message:`Campaign provider ${candidate.contentId} category must be option`});
+      if(!module.capabilities.includes(required)) issues.push({severity:"blocking",code:"campaign-provider.capability",message:`Campaign provider ${candidate.contentId} requires module capability ${required}`});
+    }catch(error){
+      issues.push({severity:"blocking",code:"campaign-provider.invalid",message:error instanceof Error?error.message:String(error)});
+    }
   }
 
   let modules:Map<string,InstalledModuleManifestV1>;
