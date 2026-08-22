@@ -20,6 +20,10 @@ export interface ConnectedLongRestOwnerPrepared {
 export interface ConnectedLongRestGlobalCommit {
   transactionId:string;
   campaignCommitId:string;
+  /** Present on production/recovery messages so a restarted owner can locate its durable preparation. */
+  ownerParticipantId?:string;
+  character?:ConnectedLongRestCharacterRevision;
+  preparationId?:string;
 }
 
 export interface ConnectedLongRestOwnerMaterialized {
@@ -90,6 +94,9 @@ export function commitConnectedLongRestTransaction(
 ):ConnectedLongRestTransactionState {
   if (state.phase!=="owner-prepared") throw new Error(`Long Rest global commit requires owner-prepared state, received ${state.phase}`);
   if (required(commit.transactionId,"Long Rest transactionId")!==state.preflight.transactionId) throw new Error("Long Rest transaction mismatch");
+  if(commit.ownerParticipantId!==undefined&&required(commit.ownerParticipantId,"Long Rest ownerParticipantId")!==state.preflight.ownerParticipantId) throw new Error("Long Rest global commit owner mismatch");
+  if(commit.character!==undefined&&!sameCharacter(commit.character,state.preflight.character)) throw new Error("Long Rest global commit Character revision mismatch");
+  if(commit.preparationId!==undefined&&required(commit.preparationId,"Long Rest preparationId")!==state.preparationId) throw new Error("Long Rest global commit preparation mismatch");
   return {
     phase:"committed",
     preflight:structuredClone(state.preflight),
