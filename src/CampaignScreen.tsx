@@ -32,6 +32,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   const [description,setDescription]=useState("");
   const [error,setError]=useState<string|null>(null);
   const [pending,setPending]=useState(false);
+  const [archiveTarget,setArchiveTarget]=useState<CampaignRecordV1|null>(null);
   const campaigns=snapshot?.campaigns??[];
   const activeCampaign=campaigns.find((campaign)=>campaign.campaignId===snapshot?.activeCampaignId)??null;
   const recent=useMemo(()=>campaigns.filter((campaign)=>campaign.status==="active").sort((a,b)=>(b.lastOpenedAt??b.updatedAt).localeCompare(a.lastOpenedAt??a.updatedAt)),[campaigns]);
@@ -54,6 +55,11 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   if(!snapshot) return null;
   const perform=async(operation:()=>Promise<void>)=>{setPending(true);setError(null);try{await operation();}catch(reason){setError(reason instanceof Error?reason.message:"작업을 완료하지 못했습니다.");}finally{setPending(false);}};
   const submitCreate=()=>perform(async()=>{if(!name.trim()) throw new Error("캠페인 이름을 입력하세요.");await createCampaign({campaignId:campaignId(name),name:name.trim(),description:description.trim()||undefined});setName("");setDescription("");setCreating(false);});
+  const confirmArchive=()=>{
+    if(!archiveTarget) return;
+    const campaignId=archiveTarget.campaignId;
+    void perform(async()=>{await archiveCampaign(campaignId);setArchiveTarget(null);});
+  };
   const continueToSession=()=>perform(async()=>{
     if(!activeCampaign) throw new Error("세션을 시작할 캠페인을 선택하세요.");
     await configureCampaignSessionDefaults(activeCampaign.campaignId,{sessionNameTemplate:sessionName.trim()||activeCampaign.name,startingMode,calendarEnabled,rationsEnabled,rationsVisibleToPlayers});
@@ -76,11 +82,17 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
 
     {!campaigns.length&&!creating?<section className="campaign-empty"><span>첫 장을 펼칠 준비가 됐습니다.</span><h2>아직 캠페인이 없습니다.</h2><p>캠페인을 만들면 달력·식량·파티 보관함·DM 라이브러리를 하나의 장기 플레이에 묶을 수 있습니다.</p><button className="primary" onClick={()=>setCreating(true)}>새 캠페인 만들기</button></section>:<div className="campaign-layout">
       <aside className="campaign-library">
-        <section><h2>최근 캠페인</h2>{recent.length?recent.map((campaign)=><CampaignCard key={campaign.campaignId} campaign={campaign} active={campaign.campaignId===activeCampaign?.campaignId} onOpen={()=>perform(()=>openCampaign(campaign.campaignId))} onArchive={()=>perform(()=>archiveCampaign(campaign.campaignId))} onRestore={()=>perform(()=>restoreCampaign(campaign.campaignId))}/>):<p className="campaign-list-empty">활성 캠페인이 없습니다.</p>}</section>
-        {archived.length>0&&<section><h2>보관된 캠페인</h2>{archived.map((campaign)=><CampaignCard key={campaign.campaignId} campaign={campaign} active={false} onOpen={()=>perform(()=>openCampaign(campaign.campaignId))} onArchive={()=>perform(()=>archiveCampaign(campaign.campaignId))} onRestore={()=>perform(()=>restoreCampaign(campaign.campaignId))}/>)}</section>}
+        <section><h2>최근 캠페인</h2>{recent.length?recent.map((campaign)=><CampaignCard key={campaign.campaignId} campaign={campaign} active={campaign.campaignId===activeCampaign?.campaignId} onOpen={()=>perform(()=>openCampaign(campaign.campaignId))} onArchive={()=>setArchiveTarget(campaign)} onRestore={()=>perform(()=>restoreCampaign(campaign.campaignId))}/>):<p className="campaign-list-empty">활성 캠페인이 없습니다.</p>}</section>
+        {archived.length>0&&<section><h2>보관된 캠페인</h2>{archived.map((campaign)=><CampaignCard key={campaign.campaignId} campaign={campaign} active={false} onOpen={()=>perform(()=>openCampaign(campaign.campaignId))} onArchive={()=>setArchiveTarget(campaign)} onRestore={()=>perform(()=>restoreCampaign(campaign.campaignId))}/>)}</section>}
       </aside>
 
       <main className="campaign-dashboard">
+        {archiveTarget&&<section className="campaign-session-setup" role="dialog" aria-modal="true" aria-label="캠페인 보관 확인">
+          <header><div><span>ARCHIVE CAMPAIGN</span><h2>캠페인 보관 확인</h2></div><button disabled={pending} onClick={()=>setArchiveTarget(null)}>닫기</button></header>
+          <div className="campaign-identity-lock"><span>캠페인</span><strong>{archiveTarget.name}</strong><small>Campaign ID · {archiveTarget.campaignId}</small></div>
+          <div className="campaign-capability-note"><span>보관 동작</span><strong>캠페인 데이터는 삭제하지 않습니다.</strong><p>보관하면 세션 시작이 비활성화되고 보관된 캠페인 목록으로 이동합니다. Character 파일, 설치 콘텐츠, 달력·식량·보관함·DM 라이브러리 기록은 그대로 유지됩니다.</p></div>
+          <footer><button disabled={pending} onClick={()=>setArchiveTarget(null)}>취소</button><button className="primary" disabled={pending} onClick={confirmArchive}>{pending?"보관 중…":"캠페인 보관"}</button></footer>
+        </section>}
         {activeCampaign?<>
           <header className="campaign-dashboard-head"><div><span>캠페인 대시보드</span><h2>{activeCampaign.name}</h2><p>{activeCampaign.description||"설명 없음"}</p></div><button className="primary" disabled={activeCampaign.status==="archived"} onClick={()=>setSetupOpen(true)}>세션 시작</button></header>
           <div className="campaign-system-grid">
