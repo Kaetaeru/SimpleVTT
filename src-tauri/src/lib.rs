@@ -8,6 +8,13 @@ mod session_transport;
 use tauri::Manager;
 
 fn local_data_child(app: &tauri::AppHandle, child: &str) -> Result<std::path::PathBuf, String> {
+    if let Ok(root) = std::env::var("SIMPLEVTT_LOCAL_DATA_ROOT") {
+        let root = root.trim();
+        if !root.is_empty() {
+            return Ok(std::path::PathBuf::from(root).join(child));
+        }
+    }
+
     app.path()
         .app_local_data_dir()
         .map(|path| path.join(child))
@@ -135,6 +142,17 @@ fn get_session_transport_status(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            if let Ok(label) = std::env::var("SIMPLEVTT_INSTANCE_LABEL") {
+                let label = label.trim();
+                if !label.is_empty() {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.set_title(&format!("SimpleVTT - {label}"));
+                    }
+                }
+            }
+            Ok(())
+        })
         .manage(session_transport::SessionTransportState::default())
         .invoke_handler(tauri::generate_handler![
             read_character_library_generations,
