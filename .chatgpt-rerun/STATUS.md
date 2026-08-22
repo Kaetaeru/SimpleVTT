@@ -9,27 +9,30 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control status: `continue`
-- Checkpoint: `2026-08-23T04:29:00+09:00`
-- Long Rest durable projection head: `aeb65c1`
-- Memory compound persistence head: `b4056e5`
-- Current handoff commit: `0ba4aeb`
+- Checkpoint: `2026-08-23T04:43:00+09:00`
+- Tauri compound transaction: `908d7e1`
+- Tauri recovery/command wiring: `ae42e81`
+- Mutex lifetime fix: `fed7ed7`
+- TS compound writer: `88cc8a7`
 
 ## Human summary
 
-V1-12 Long Rest compound work has started without reopening completed provider work.
+V1-12 authoritative Long Rest work advanced past the production persistence blocker.
 
-Source reconciliation found that the repository already has the canonical **domain** Long Rest resolver, but not a generic production Long Rest command. The existing Wizard/Pact Tome/Circle Land rest methods are configuration flows rather than full Rest resolution.
+Character and Campaign no longer need to be committed as two unrelated Tauri writes for the future compound Rest flow. The new transaction layer:
 
-This dispatch therefore built the prerequisites instead of inventing new Rest rules:
+- preflights both immutable generation heads;
+- durably stages both payloads;
+- creates one commit marker only after both stages are synced;
+- treats that marker as the commit point;
+- completes/materializes both generations after commit;
+- preserves the marker across committed interruption so the next Character/Campaign read/write recovers both sides before normal access resumes;
+- shares one process mutex across normal Character/Campaign persistence and the compound command.
 
-- Character Long Rest projection now delegates to the existing domain resolver for HP, Temporary HP, durable life flags, and declared long-rest resources;
-- Campaign time/rations remain separate optional effects and are not implied by Rest;
-- Character and Campaign immutable generation payloads can now be prepared without writing;
-- memory Character/Campaign stores support a two-participant preflight/apply protocol;
-- deterministic compound persistence contracts require the second participant failure to leave neither new generation visible.
+A Tauri TypeScript writer now calls `write_character_campaign_compound`. Deterministic Rust fault tests and the existing Tauri structure regression were authored/updated, but no Rust/TypeScript execution result was observed, so this is not reported as green yet.
 
-The production Windows/Tauri stores are still independently atomic, so the Long Rest UI/runtime must **not** be connected to sequential Character/Campaign commits yet. Next work is a Tauri cross-store transaction with durable staging/commit recovery, followed by the production Long Rest coordinator and minimal existing-UI preview controls.
+Production UI inspection also established that there is no generic Long Rest control today. The minimum compatible V1 surface is a small Long Rest preview/options/action block inside the existing `SessionCampaignPane`, not a new screen or redesign.
 
-Focused tests were authored but no exact-head execution result was observed, so no green/DONE claim is made. Final Codex audit remains deferred until all V1 implementation is complete.
+Next work is the production coordinator behind that UI: reuse canonical Character Long Rest resolution plus CampaignApplicationService's provider-aware Calendar/Ration authority, prepare both next generations, invoke the compound writer once, and update runtime projections only after success. OFF/missing Calendar/Ration must disable only those optional side effects and never block Rest itself.
 
 `STATUS.md` is human-facing only. Reconciliation source order remains README -> control -> STATE -> PLAN.
