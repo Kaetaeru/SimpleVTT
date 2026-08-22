@@ -73,10 +73,10 @@ test("Ready lifecycle clear is sequenced after the authoritative turn projection
     },
   } as unknown as AppSnapshot;
 
-  const events=commitConnectedTurnProjectionEvents(host,snapshot,"turn-end",{
+  const events=commitConnectedTurnProjectionEvents(host,snapshot,"turn-end",[{
     actorId:"char.aelar",
     reason:"next-turn-start",
-  });
+  }]);
 
   assert.deepEqual(events.map((event)=>event.sequence),[1,2]);
   assert.deepEqual(events.map((event)=>event.payload.kind),["mode-transition","ready-action"]);
@@ -88,4 +88,34 @@ test("Ready lifecycle clear is sequenced after the authoritative turn projection
   assert.deepEqual(clear.payload.economy,readyEconomy);
   assert.ok(clear.payload.stateChanges.includes("ready-lifecycle=next-turn-start"));
   assert.deepEqual(host.eventsAfter(0).map((event)=>event.eventId),events.map((event)=>event.eventId));
+});
+
+test("multiple Ready lifecycle clears are deterministic and actor-specific",()=>{
+  const host=ledger();
+  const snapshot={
+    sessionMode:"freeform",
+    scene:{
+      round:0,
+      currentActorId:"char.aelar",
+      economyByActor:{
+        "char.aelar":{...economy,reaction:true},
+        "combatant.goblin-a":{...economy,reaction:false},
+      },
+    },
+  } as unknown as AppSnapshot;
+
+  const events=commitConnectedTurnProjectionEvents(host,snapshot,"initiative-end",[
+    {actorId:"combatant.goblin-a",reason:"initiative-ended"},
+    {actorId:"char.aelar",reason:"initiative-ended"},
+  ]);
+
+  assert.deepEqual(events.map((event)=>event.sequence),[1,2,3]);
+  assert.deepEqual(events.map((event)=>event.payload.kind),["mode-transition","ready-action","ready-action"]);
+  assert.deepEqual(events.slice(1).map((event)=>event.actorId),["char.aelar","combatant.goblin-a"]);
+  for (const event of events.slice(1)) {
+    assert.equal(event.payload.kind,"ready-action");
+    if (event.payload.kind!=="ready-action") assert.fail("expected ready-action clear event");
+    assert.equal(event.payload.transition,"cleared");
+    assert.ok(event.payload.stateChanges.includes("ready-lifecycle=initiative-ended"));
+  }
 });
