@@ -1,5 +1,5 @@
 import { CampaignLibraryRepository, CampaignStaleRevisionError, createCampaignRecordV1 } from "./campaignPersistence";
-import type { CampaignCalendarDateTime, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 
 const cp=<T,>(value:T):T=>structuredClone(value);
@@ -144,6 +144,22 @@ export class CampaignApplicationService {
       }
       campaign.partyStash.revision+=1;
     });
+  }
+
+  upsertDmLibraryEntry(context:CampaignMutationContext&{entry:CampaignDmLibraryEntry}){
+    const entry=cp(context.entry);entry.entryId=entry.entryId.trim();entry.label=entry.label.trim();
+    if(!entry.entryId||!entry.label)throw new Error("DM Library entry id and label are required");
+    if(entry.kind==="custom-item"&&(!entry.definitionId?.trim()||!entry.itemTemplate))throw new Error("Custom item definition and template are required");
+    entry.tags=[...new Set((entry.tags??[]).map((tag)=>tag.trim()).filter(Boolean))];entry.updatedAt=context.now;
+    return this.mutateCampaign(context,(campaign)=>{const index=campaign.dmLibrary.entries.findIndex((value)=>value.entryId===entry.entryId);if(index>=0)campaign.dmLibrary.entries[index]=entry;else campaign.dmLibrary.entries.push(entry);campaign.dmLibrary.revision+=1;});
+  }
+
+  removeDmLibraryEntry(context:CampaignMutationContext&{entryId:string}){
+    return this.mutateCampaign(context,(campaign)=>{if(!campaign.dmLibrary.entries.some((entry)=>entry.entryId===context.entryId))throw new Error("DM Library entry not found");campaign.dmLibrary.entries=campaign.dmLibrary.entries.filter((entry)=>entry.entryId!==context.entryId);campaign.dmLibrary.recentEntryIds=campaign.dmLibrary.recentEntryIds.filter((id)=>id!==context.entryId);campaign.dmLibrary.revision+=1;});
+  }
+
+  touchDmLibraryEntry(context:CampaignMutationContext&{entryId:string}){
+    return this.mutateCampaign(context,(campaign)=>{if(!campaign.dmLibrary.entries.some((entry)=>entry.entryId===context.entryId))throw new Error("DM Library entry not found");campaign.dmLibrary.recentEntryIds=[context.entryId,...campaign.dmLibrary.recentEntryIds.filter((id)=>id!==context.entryId)].slice(0,12);campaign.dmLibrary.revision+=1;});
   }
 
   configureCalendar(context:CampaignMutationContext&{enabled:boolean;providerId:string}){

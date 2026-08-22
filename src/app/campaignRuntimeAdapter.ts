@@ -1,7 +1,7 @@
 import type { AppSnapshot, PartyStashTransferCommand, SessionMode } from "./contracts";
 import { CampaignApplicationService, previewCampaignDailyRations } from "./campaignApplicationService";
 import { CampaignLibraryRepository } from "./campaignPersistence";
-import type { CampaignCalendarDateTime, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { MockAdapter } from "./mockAdapter";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
 import { registerConnectedCampaignRosterHandler } from "./connectedCampaignRosterPort";
@@ -66,6 +66,9 @@ declare module "./mockAdapter" {
     consumeCampaignLevelUpCredit(campaignId:string,rosterMemberId:string,level?:number):Promise<AppSnapshot>;
     transferPartyStash(command:PartyStashTransferCommand):Promise<AppSnapshot>;
     commitConnectedPartyStashDeposit(command:PartyStashTransferCommand):Promise<AppSnapshot>;
+    upsertCampaignDmLibraryEntry(campaignId:string,entry:CampaignDmLibraryEntry):Promise<AppSnapshot>;
+    removeCampaignDmLibraryEntry(campaignId:string,entryId:string):Promise<AppSnapshot>;
+    grantCampaignDmLibraryItem(campaignId:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},quantity:number):Promise<AppSnapshot>;
   }
 }
 
@@ -279,6 +282,22 @@ MockAdapter.prototype.commitConnectedPartyStashDeposit=async function commitConn
   if(command.asset==="currency")await service.transferPartyStash({...context,asset:"currency",amount:command.amount});
   else await service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity,...(command.direction==="character-to-stash"&&command.itemTemplate?{itemTemplate:command.itemTemplate}:{})});
   return this.getSnapshot();
+};
+MockAdapter.prototype.upsertCampaignDmLibraryEntry=async function upsertCampaignDmLibraryEntryRuntime(campaignId,entry){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign)throw new Error("Campaign not found: "+campaignId);
+  await service.upsertDmLibraryEntry({...mutationContext(campaignId,"dm-library-upsert",campaign.revision),entry});return this.getSnapshot();
+};
+MockAdapter.prototype.removeCampaignDmLibraryEntry=async function removeCampaignDmLibraryEntryRuntime(campaignId,entryId){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign)throw new Error("Campaign not found: "+campaignId);
+  await service.removeDmLibraryEntry({...mutationContext(campaignId,"dm-library-remove",campaign.revision),entryId});return this.getSnapshot();
+};
+MockAdapter.prototype.grantCampaignDmLibraryItem=async function grantCampaignDmLibraryItemRuntime(campaignId,entryId,target,quantity){
+  if(!Number.isInteger(quantity)||quantity<1)throw new Error("지급 수량은 1 이상이어야 합니다.");
+  const service=await ensureHydrated(this);let campaign=service.getCampaign(campaignId);if(!campaign)throw new Error("Campaign not found: "+campaignId);
+  const entry=campaign.dmLibrary.entries.find((value)=>value.entryId===entryId&&value.kind==="custom-item");if(!entry?.itemTemplate||!entry.definitionId)throw new Error("Custom item not found: "+entryId);
+  if(target.kind==="character")await this.adjustDmInventory({requestId:requestId("dm-library-grant"),actorId:target.actorId,operation:"grant-item-template",itemTemplate:entry.itemTemplate,quantity});
+  else await service.transferPartyStash({...mutationContext(campaignId,"dm-library-stash",campaign.revision),direction:"character-to-stash",asset:"item",definitionId:entry.definitionId,quantity,itemTemplate:entry.itemTemplate});
+  campaign=service.getCampaign(campaignId)!;await service.touchDmLibraryEntry({...mutationContext(campaignId,"dm-library-recent",campaign.revision),entryId});return this.getSnapshot();
 };
 
 export function setCampaignLibraryStoreForTests(adapter:MockAdapter,store:CampaignLibraryStore){

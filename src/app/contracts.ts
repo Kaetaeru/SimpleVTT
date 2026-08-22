@@ -1,4 +1,4 @@
-import type { CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
+import type { CampaignDmLibraryEntry, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -585,6 +585,9 @@ export interface SimpleVttAdapter {
   adjustDmInventory(command: DmInventoryAdjustmentCommand): Promise<AppSnapshot>;
   undoLastDmInventoryAdjustment(): Promise<AppSnapshot>;
   transferPartyStash(command:PartyStashTransferCommand):Promise<AppSnapshot>;
+  upsertCampaignDmLibraryEntry(campaignId:string,entry:CampaignDmLibraryEntry):Promise<AppSnapshot>;
+  removeCampaignDmLibraryEntry(campaignId:string,entryId:string):Promise<AppSnapshot>;
+  grantCampaignDmLibraryItem(campaignId:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},quantity:number):Promise<AppSnapshot>;
   hostSession(): Promise<AppSnapshot>;
   joinSession(address: string): Promise<AppSnapshot>;
   setReferenceRole(role: AppRole): Promise<AppSnapshot>;

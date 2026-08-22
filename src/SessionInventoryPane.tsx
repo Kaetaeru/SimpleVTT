@@ -116,7 +116,7 @@ function sourceLabel(entry:CatalogEntry) {
 }
 
 export function SessionDmInventoryPane({onClose}:{onClose():void}) {
-  const {snapshot,selectDmActor,adjustDmInventory,undoLastDmInventoryAdjustment,transferPartyStash}=useSimpleVtt();
+  const {snapshot,selectDmActor,adjustDmInventory,undoLastDmInventoryAdjustment,transferPartyStash,grantCampaignDmLibraryItem}=useSimpleVtt();
   const [query,setQuery]=useState("");
   const [quantity,setQuantity]=useState(1);
   const [gold,setGold]=useState(10);
@@ -129,6 +129,8 @@ export function SessionDmInventoryPane({onClose}:{onClose():void}) {
   const inventory=selected ? snapshot.sessionCharacterInventories?.[selected.id] : undefined;
   const campaign=snapshot.campaignSessionSystems;
   const stash=campaign?.partyStash;
+  const campaignRecord=snapshot.campaigns?.find((entry)=>entry.campaignId===campaign?.campaignId);
+  const libraryItems=(campaignRecord?.dmLibrary.entries??[]).filter((entry)=>entry.kind==="custom-item"&&entry.itemTemplate).filter((entry)=>!query.trim()||`${entry.label} ${entry.definitionId??""} ${(entry.tags??[]).join(" ")}`.toLocaleLowerCase("ko-KR").includes(query.trim().toLocaleLowerCase("ko-KR"))).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
   const normalized=query.trim().toLocaleLowerCase("ko-KR");
   const catalogItems=useMemo(()=>snapshot.catalog
     .filter((entry)=>entry.category==="item")
@@ -156,6 +158,12 @@ export function SessionDmInventoryPane({onClose}:{onClose():void}) {
     } catch(error) {
       setFeedback({kind:"error",message:error instanceof Error?error.message:"파티 보관함을 변경하지 못했습니다."});
     } finally { setPending(null); }
+  };
+  const runLibrary=async(key:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},success:string)=>{
+    if(pending||!campaign)return;setPending(key);setFeedback(null);
+    try{await grantCampaignDmLibraryItem(campaign.campaignId,entryId,target,quantity);setFeedback({kind:"success",message:success});}
+    catch(error){setFeedback({kind:"error",message:error instanceof Error?error.message:"DM 라이브러리 아이템을 지급하지 못했습니다."});}
+    finally{setPending(null);}
   };
 
   const undo=async()=>{
@@ -201,6 +209,14 @@ export function SessionDmInventoryPane({onClose}:{onClose():void}) {
             <button type="button" className="primary" disabled={Boolean(pending)} title="선택 캐릭터에게 1개 이동" onClick={()=>void runStash("stash-out:"+item.instanceId,{requestId:requestId(),campaignId:campaign.campaignId,actorId:selected.id,direction:"stash-to-character",asset:"item",definitionId:item.definitionId,catalogEntryId:entry?.id,itemTemplate:template,quantity:1},"파티 보관함에서 "+selected.name+"에게 "+template.name+" 1개를 옮겼습니다.")}>지급</button>
           </article>;})}
           {!stash.itemReferences.length&&<p className="session-inventory-empty">파티 보관함에 아이템이 없습니다. 아래 소지품에서 먼저 옮겨보세요.</p>}
+        </div>
+      </section>}
+
+      {campaign&&<section className="session-inventory-section session-dm-library-quick">
+        <div className="session-inventory-section-title"><strong>캠페인 DM 라이브러리</strong><span>이 캠페인의 비공개 커스텀 아이템을 빠르게 지급합니다.</span></div>
+        <div className="session-owned-item-list manage">
+          {libraryItems.map((entry)=><article key={entry.entryId}><div><strong>{entry.favorite?"★ ":""}{entry.label}</strong><small>{entry.tags?.join(" · ")||entry.definitionId}</small></div><button type="button" className="primary" disabled={Boolean(pending)} onClick={()=>void runLibrary("library-character:"+entry.entryId,entry.entryId,{kind:"character",actorId:selected.id},selected.name+"에게 "+entry.label+" "+quantity+"개를 지급했습니다.")}>캐릭터</button><button type="button" disabled={Boolean(pending)} onClick={()=>void runLibrary("library-stash:"+entry.entryId,entry.entryId,{kind:"stash"},entry.label+" "+quantity+"개를 파티 보관함에 넣었습니다.")}>보관함</button></article>)}
+          {!libraryItems.length&&<p className="session-inventory-empty">검색되는 캠페인 커스텀 아이템이 없습니다.</p>}
         </div>
       </section>}
 

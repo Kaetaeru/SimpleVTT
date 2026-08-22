@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { previewCampaignDailyRations } from "./app/campaignApplicationService";
 import { formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_MONTHS } from "./app/campaignCalendar";
-import type { CampaignRecordV1, CampaignRosterMember } from "./app/campaignPersistenceContracts";
+import type { CampaignDmLibraryEntry, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignRosterMember } from "./app/campaignPersistenceContracts";
 import { useSimpleVtt } from "./app/AppProvider";
 
 function rosterId(){return `roster.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
+function libraryId(){return `dm-item.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
 
 export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   const api=useSimpleVtt();
@@ -23,6 +24,13 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   const [consumeWithDay,setConsumeWithDay]=useState(campaign.rations.capability.enabled);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
+  const [libraryQuery,setLibraryQuery]=useState("");
+  const [editingLibraryId,setEditingLibraryId]=useState<string|null>(null);
+  const [itemName,setItemName]=useState("");
+  const [itemNameEn,setItemNameEn]=useState("");
+  const [itemDefinitionId,setItemDefinitionId]=useState("");
+  const [itemKind,setItemKind]=useState<CampaignPartyStashItemTemplate["kind"]>("equipment");
+  const [itemTags,setItemTags]=useState("");
   const rationPreview=useMemo(()=>previewCampaignDailyRations(campaign),[campaign]);
   useEffect(()=>{
     const anchor=campaign.calendar.state.displayAnchor;
@@ -37,6 +45,16 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
     await api.upsertCampaignRosterMember(campaign.campaignId,{rosterMemberId:rosterId(),label:memberLabel.trim(),kind:memberKind,characterRef:memberKind==="player-character-ref"?{characterId:characterId.trim()}:undefined,active:true,countsForRations:true,rationUnitsPerDay:units,stashPermission:"request"});
     setMemberLabel("");setCharacterId("");setRationUnits("1");
   });
+  const resetLibraryForm=()=>{setEditingLibraryId(null);setItemName("");setItemNameEn("");setItemDefinitionId("");setItemKind("equipment");setItemTags("");};
+  const editLibrary=(entry:CampaignDmLibraryEntry)=>{setEditingLibraryId(entry.entryId);setItemName(entry.label);setItemNameEn(entry.itemTemplate?.nameEn??"");setItemDefinitionId(entry.definitionId??"");setItemKind(entry.itemTemplate?.kind??"equipment");setItemTags((entry.tags??[]).join(", "));};
+  const saveLibrary=()=>perform(async()=>{
+    if(!itemName.trim())throw new Error("아이템 이름을 입력하세요.");
+    const definitionId=itemDefinitionId.trim()||`local.${campaign.campaignId}.item.${itemName.trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,"-")}`;
+    const previous=campaign.dmLibrary.entries.find((entry)=>entry.entryId===editingLibraryId);
+    await api.upsertCampaignDmLibraryEntry(campaign.campaignId,{entryId:editingLibraryId??libraryId(),kind:"custom-item",label:itemName.trim(),definitionId,favorite:previous?.favorite??false,tags:itemTags.split(",").map((tag)=>tag.trim()).filter(Boolean),itemTemplate:{definitionId,name:itemName.trim(),nameEn:itemNameEn.trim()||undefined,kind:itemKind,passiveEffects:previous?.itemTemplate?.passiveEffects??[],grantedActionIds:previous?.itemTemplate?.grantedActionIds??[],provenance:[`Campaign DM Library · ${campaign.name}`]}});
+    resetLibraryForm();
+  });
+  const visibleLibrary=campaign.dmLibrary.entries.filter((entry)=>entry.kind==="custom-item"&&(!libraryQuery.trim()||`${entry.label} ${entry.definitionId??""} ${(entry.tags??[]).join(" ")}`.toLocaleLowerCase("ko-KR").includes(libraryQuery.trim().toLocaleLowerCase("ko-KR")))).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
 
   return <div className="campaign-system-workspace">
     {error&&<div className="campaign-error" role="alert">{error}</div>}
@@ -96,6 +114,24 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
         </>}
       </section>
     </div>
+
+    <section className="campaign-system-panel campaign-dm-library-panel" aria-labelledby="campaign-dm-library-title">
+      <header><div><span>PRIVATE LIBRARY</span><h3 id="campaign-dm-library-title">DM 라이브러리</h3></div><strong>{campaign.dmLibrary.entries.length}개 · Campaign 전용</strong></header>
+      <p className="campaign-panel-copy">플레이어에게 투영되지 않는 캠페인 전용 아이템입니다. 세션 DM 아이템 패널에서 캐릭터나 파티 보관함으로 바로 지급할 수 있습니다.</p>
+      <div className="campaign-dm-library-toolbar"><input value={libraryQuery} onChange={(event)=>setLibraryQuery(event.target.value)} placeholder="이름·태그·Definition 검색" aria-label="DM 라이브러리 검색"/><button onClick={resetLibraryForm}>새 커스텀 아이템</button></div>
+      <div className="campaign-dm-library-form">
+        <label><span>이름</span><input value={itemName} onChange={(event)=>setItemName(event.target.value)} placeholder="예: 별빛 부적"/></label>
+        <label><span>영문명</span><input value={itemNameEn} onChange={(event)=>setItemNameEn(event.target.value)} placeholder="선택"/></label>
+        <label><span>Definition ID</span><input value={itemDefinitionId} onChange={(event)=>setItemDefinitionId(event.target.value)} placeholder="비우면 자동 생성"/></label>
+        <label><span>종류</span><select value={itemKind} onChange={(event)=>setItemKind(event.target.value as CampaignPartyStashItemTemplate["kind"])}><option value="equipment">장비</option><option value="consumable">소모품</option><option value="magic">마법 아이템</option></select></label>
+        <label><span>태그</span><input value={itemTags} onChange={(event)=>setItemTags(event.target.value)} placeholder="보물, 회복, 퀘스트"/></label>
+        <button className="primary" disabled={busy||!itemName.trim()} onClick={()=>void saveLibrary()}>{editingLibraryId?"아이템 수정":"아이템 만들기"}</button>
+      </div>
+      <div className="campaign-dm-library-list">
+        {visibleLibrary.map((entry)=><article key={entry.entryId}><button className={entry.favorite?"favorite active":"favorite"} aria-label={`${entry.label} 즐겨찾기`} onClick={()=>void perform(()=>api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,favorite:!entry.favorite}))}>★</button><div><strong>{entry.label}</strong><small>{entry.itemTemplate?.kind??entry.kind} · {entry.definitionId}{entry.tags?.length?` · ${entry.tags.join(" · ")}`:""}</small></div><button onClick={()=>editLibrary(entry)}>수정</button><button onClick={()=>void perform(()=>api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,entryId:libraryId(),label:entry.label+" 복사본",favorite:false}))}>복제</button><button className="danger-action" onClick={()=>void perform(()=>api.removeCampaignDmLibraryEntry(campaign.campaignId,entry.entryId))}>삭제</button></article>)}
+        {!visibleLibrary.length&&<p className="campaign-inline-empty">검색되는 커스텀 아이템이 없습니다.</p>}
+      </div>
+    </section>
 
     <section className="campaign-system-panel" aria-labelledby="campaign-history-title">
       <header><div><span>JOURNAL</span><h3 id="campaign-history-title">세션 기록</h3></div><strong>최근 {campaign.sessionHistory.length}회</strong></header>

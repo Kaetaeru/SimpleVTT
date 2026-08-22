@@ -67,6 +67,21 @@ test("DM can grant XP or immediate level-up credits to multiple roster members w
   assert.equal(service.getCampaign("campaign.systems")?.revision,6);
 });
 
+test("Campaign DM Library supports isolated custom item CRUD and recent usage",async()=>{
+  const {service,store}=await setup();
+  const itemTemplate={definitionId:"local.campaign.star-charm",name:"별빛 부적",nameEn:"Starlight Charm",kind:"magic" as const,passiveEffects:["빛"],grantedActionIds:[],provenance:["Campaign DM Library"]};
+  await service.upsertDmLibraryEntry({...envelope(1,"library.create"),entry:{entryId:"entry.star",kind:"custom-item",label:"별빛 부적",definitionId:itemTemplate.definitionId,favorite:true,tags:["보물","보물"],itemTemplate}});
+  await service.touchDmLibraryEntry({...envelope(2,"library.recent"),entryId:"entry.star"});
+  let campaign=service.getCampaign("campaign.systems")!;
+  assert.equal(campaign.dmLibrary.entries[0].itemTemplate?.name,"별빛 부적");
+  assert.deepEqual(campaign.dmLibrary.entries[0].tags,["보물"]);
+  assert.deepEqual(campaign.dmLibrary.recentEntryIds,["entry.star"]);
+  const reloaded=new CampaignApplicationService(new CampaignLibraryRepository(store));await reloaded.hydrate();
+  assert.equal(reloaded.getCampaign("campaign.systems")?.dmLibrary.entries[0].label,"별빛 부적");
+  await reloaded.removeDmLibraryEntry({...envelope(3,"library.remove"),entryId:"entry.star"});
+  campaign=reloaded.getCampaign("campaign.systems")!;assert.deepEqual(campaign.dmLibrary.entries,[]);assert.deepEqual(campaign.dmLibrary.recentEntryIds,[]);
+});
+
 test("Calendar stores absolute minutes and undo is a compensating transaction",async()=>{
   const {service}=await setup();
   await service.configureCalendar({...envelope(1,"calendar.on"),enabled:true,providerId:"builtin.gregorian"});

@@ -130,6 +130,8 @@ export interface CampaignDmLibraryEntry {
   definitionId?:string;
   favorite?:boolean;
   tags?:string[];
+  itemTemplate?:CampaignPartyStashItemTemplate;
+  updatedAt?:string;
 }
 
 export interface CampaignDmLibraryState {

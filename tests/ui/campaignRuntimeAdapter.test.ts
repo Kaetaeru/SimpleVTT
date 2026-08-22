@@ -158,3 +158,14 @@ test("party stash returns a catalog-less charged item from its stored template",
   assert.deepEqual(restored?.charges,{current:7,max:7});
   assert.equal(snapshot.campaignSessionSystems?.partyStash.itemReferences.length,0);
 });
+
+test("DM Library grants a Campaign custom item to a Character or Party Stash",async()=>{
+  const adapter=new MockAdapter();setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());await adapter.getSnapshot();await adapter.createCampaign({campaignId:"campaign.library",name:"Library"});
+  const template={definitionId:"local.library.moon-key",name:"달빛 열쇠",nameEn:"Moon Key",kind:"magic" as const,passiveEffects:[],grantedActionIds:[],provenance:["Campaign DM Library"]};
+  await adapter.upsertCampaignDmLibraryEntry("campaign.library",{entryId:"entry.moon-key",kind:"custom-item",label:"달빛 열쇠",definitionId:template.definitionId,itemTemplate:template,favorite:true,tags:["퀘스트"]});
+  let snapshot=await adapter.grantCampaignDmLibraryItem("campaign.library","entry.moon-key",{kind:"character",actorId:"char.aelar"},2);
+  assert.equal(snapshot.sessionCharacterInventories?.["char.aelar"].items.find((item)=>item.definitionId===template.definitionId)?.quantity,2);
+  snapshot=await adapter.grantCampaignDmLibraryItem("campaign.library","entry.moon-key",{kind:"stash"},1);
+  assert.equal(snapshot.campaignSessionSystems?.partyStash.itemReferences.find((item)=>item.definitionId===template.definitionId)?.quantity,1);
+  assert.equal(snapshot.campaigns?.find((campaign)=>campaign.campaignId==="campaign.library")?.dmLibrary.recentEntryIds[0],"entry.moon-key");
+});

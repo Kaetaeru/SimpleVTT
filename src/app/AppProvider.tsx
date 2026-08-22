@@ -17,7 +17,7 @@ import type {
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
-import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignRosterMember, CampaignSessionSummary, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignDmLibraryEntry, CampaignRosterMember, CampaignSessionSummary, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 import { campaignXpThresholdForLevel } from "./campaignApplicationService";
 import "./restSpellManagementRuntimeAdapter";
@@ -76,6 +76,9 @@ interface AppContextValue {
   adjustDmInventory(command:DmInventoryAdjustmentCommand):Promise<void>;
   undoLastDmInventoryAdjustment():Promise<void>;
   transferPartyStash(command:PartyStashTransferCommand):Promise<void>;
+  upsertCampaignDmLibraryEntry(campaignId:string,entry:CampaignDmLibraryEntry):Promise<void>;
+  removeCampaignDmLibraryEntry(campaignId:string,entryId:string):Promise<void>;
+  grantCampaignDmLibraryItem(campaignId:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},quantity:number):Promise<void>;
   createCampaign(input:{campaignId:string;name:string;description?:string}):Promise<void>;
   openCampaign(campaignId:string):Promise<void>;
   updateCampaign(campaignId:string,payload:{name?:string;description?:string}):Promise<void>;
@@ -222,6 +225,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     adjustDmInventory: async (command) => apply(() => mockAdapter.adjustDmInventory(command)),
     undoLastDmInventoryAdjustment: async () => apply(() => mockAdapter.undoLastDmInventoryAdjustment()),
     transferPartyStash: async (command) => apply(() => mockAdapter.transferPartyStash(command)),
+    upsertCampaignDmLibraryEntry: async (campaignId,entry) => apply(() => mockAdapter.upsertCampaignDmLibraryEntry(campaignId,entry)),
+    removeCampaignDmLibraryEntry: async (campaignId,entryId) => apply(() => mockAdapter.removeCampaignDmLibraryEntry(campaignId,entryId)),
+    grantCampaignDmLibraryItem: async (campaignId,entryId,target,quantity) => apply(() => mockAdapter.grantCampaignDmLibraryItem(campaignId,entryId,target,quantity)),
     createCampaign: async (input) => apply(() => mockAdapter.createCampaign(input)),
     openCampaign: async (campaignId) => apply(() => mockAdapter.openCampaign(campaignId)),
     updateCampaign: async (campaignId,payload) => apply(() => mockAdapter.updateCampaign(campaignId,payload)),
