@@ -1,0 +1,127 @@
+import type {
+  ConnectedLongRestOffer,
+  ConnectedLongRestOwnerDecision,
+} from "./connectedLongRestPreflight";
+import type {
+  ConnectedLongRestGlobalCommit,
+  ConnectedLongRestOwnerMaterialized,
+  ConnectedLongRestOwnerPrepared,
+} from "./connectedLongRestTransactionState";
+
+export type ConnectedLongRestWireMessage =
+  | { type:"long-rest-offer"; offer:ConnectedLongRestOffer }
+  | { type:"long-rest-decision"; decision:ConnectedLongRestOwnerDecision }
+  | { type:"long-rest-owner-prepared"; prepared:ConnectedLongRestOwnerPrepared }
+  | { type:"long-rest-global-commit"; commit:ConnectedLongRestGlobalCommit }
+  | { type:"long-rest-owner-materialized"; materialized:ConnectedLongRestOwnerMaterialized }
+  | { type:"long-rest-abort"; transactionId:string; reason:string };
+
+export type DecodeConnectedLongRestWireResult =
+  | { status:"ok"; message:ConnectedLongRestWireMessage }
+  | { status:"rejected"; error:string };
+
+type JsonRecord=Record<string,unknown>;
+
+const isRecord=(value:unknown):value is JsonRecord=>typeof value==="object"&&value!==null&&!Array.isArray(value);
+const isString=(value:unknown):value is string=>typeof value==="string"&&value.trim().length>0;
+const isRevision=(value:unknown):value is number=>Number.isInteger(value)&&Number(value)>=0;
+
+function isCharacterRevision(value:unknown) {
+  return isRecord(value)
+    &&isString(value.characterId)
+    &&isRevision(value.sourceRevision)
+    &&isRevision(value.runtimeRevision);
+}
+
+function isOptions(value:unknown) {
+  return isRecord(value)
+    &&isRevision(value.advanceMinutes)
+    &&typeof value.consumeRations==="boolean";
+}
+
+function isOffer(value:unknown):value is ConnectedLongRestOffer {
+  return isRecord(value)
+    &&isString(value.transactionId)
+    &&isString(value.sessionId)
+    &&isString(value.campaignId)
+    &&isRevision(value.campaignRevision)
+    &&isString(value.ownerParticipantId)
+    &&isCharacterRevision(value.character)
+    &&isOptions(value.options);
+}
+
+function isDecision(value:unknown):value is ConnectedLongRestOwnerDecision {
+  return isRecord(value)
+    &&isString(value.transactionId)
+    &&isString(value.sessionId)
+    &&isString(value.ownerParticipantId)
+    &&isCharacterRevision(value.character)
+    &&typeof value.accepted==="boolean";
+}
+
+function isOwnerPrepared(value:unknown):value is ConnectedLongRestOwnerPrepared {
+  return isRecord(value)
+    &&isString(value.transactionId)
+    &&isString(value.ownerParticipantId)
+    &&isCharacterRevision(value.character)
+    &&isString(value.preparationId);
+}
+
+function isGlobalCommit(value:unknown):value is ConnectedLongRestGlobalCommit {
+  return isRecord(value)
+    &&isString(value.transactionId)
+    &&isString(value.campaignCommitId);
+}
+
+function isOwnerMaterialized(value:unknown):value is ConnectedLongRestOwnerMaterialized {
+  return isRecord(value)
+    &&isString(value.transactionId)
+    &&isString(value.ownerParticipantId)
+    &&isCharacterRevision(value.character)
+    &&isString(value.preparationId);
+}
+
+export function validateConnectedLongRestWireMessage(value:unknown):ConnectedLongRestWireMessage|string {
+  if (!isRecord(value)||!isString(value.type)) return "connected Long Rest wire message must be an object with a type";
+  if (value.type==="long-rest-offer") {
+    if (!isOffer(value.offer)) return "invalid long-rest-offer message";
+    return value as ConnectedLongRestWireMessage;
+  }
+  if (value.type==="long-rest-decision") {
+    if (!isDecision(value.decision)) return "invalid long-rest-decision message";
+    return value as ConnectedLongRestWireMessage;
+  }
+  if (value.type==="long-rest-owner-prepared") {
+    if (!isOwnerPrepared(value.prepared)) return "invalid long-rest-owner-prepared message";
+    return value as ConnectedLongRestWireMessage;
+  }
+  if (value.type==="long-rest-global-commit") {
+    if (!isGlobalCommit(value.commit)) return "invalid long-rest-global-commit message";
+    return value as ConnectedLongRestWireMessage;
+  }
+  if (value.type==="long-rest-owner-materialized") {
+    if (!isOwnerMaterialized(value.materialized)) return "invalid long-rest-owner-materialized message";
+    return value as ConnectedLongRestWireMessage;
+  }
+  if (value.type==="long-rest-abort") {
+    if (!isString(value.transactionId)||!isString(value.reason)) return "invalid long-rest-abort message";
+    return value as ConnectedLongRestWireMessage;
+  }
+  return `unknown connected Long Rest wire message type: ${value.type}`;
+}
+
+export function encodeConnectedLongRestWireMessage(message:ConnectedLongRestWireMessage) {
+  return JSON.stringify(message);
+}
+
+export function decodeConnectedLongRestWireMessage(raw:string):DecodeConnectedLongRestWireResult {
+  let value:unknown;
+  try {
+    value=JSON.parse(raw);
+  } catch(error) {
+    return {status:"rejected",error:`invalid connected Long Rest JSON: ${error instanceof Error?error.message:String(error)}`};
+  }
+  const validated=validateConnectedLongRestWireMessage(value);
+  if (typeof validated==="string") return {status:"rejected",error:validated};
+  return {status:"ok",message:validated};
+}
