@@ -3,18 +3,19 @@
 Status: **CURRENT CANONICAL HANDOFF**  
 Updated: **2026-08-23 Asia/Seoul**  
 Canonical branch: **`work/v1-composite`**  
-Recorded code head: **`b2ec43f fix(campaign): use void hydration listener cleanup`**
+Recorded product head: **`d66b26b feat(campaign): expose duplicate delete confirmations`**  
+Recorded UI gate head: **`477250b ci(ui): validate canonical campaign lifecycle`**
 
 이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 단일 인수인계 문서다. 전체 출시 작업의 우선순위와 완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 실제 제품 계약은 `docs/design/`, 작업 루트 판정은 저장소 루트의 `CANONICAL_ROOT.md`가 우선한다.
 
 ## 1. 재개 절차
 
-1. `git branch --show-current`가 `work/v1-composite`인지 확인한다.
-2. `git status --short`로 사용자 변경 사항을 먼저 확인한다.
-3. `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md`를 먼저 reconcile한다.
-4. 이 문서와 `V1_RELEASE_EXECUTION_CHECKLIST.md`에서 **실제 production 기능 gap**을 선택한다.
-5. 현재 UI를 V1 baseline으로 보존하고 내부 wiring/authority/persistence를 우선 수정한다.
-6. V1 구현을 모두 끝내기 전에는 comprehensive Codex audit를 시작하지 않는다.
+1. `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md`를 먼저 reconcile한다.
+2. `git branch --show-current`/GitHub ref가 `work/v1-composite`인지 확인한다.
+3. 이 문서와 `V1_RELEASE_EXECUTION_CHECKLIST.md`에서 실제 production 기능 gap을 선택한다.
+4. 현재 UI를 V1 baseline으로 보존하고 내부 wiring/authority/persistence를 우선 수정한다.
+5. 이미 구현/검증된 작업은 반복하지 않는다.
+6. 모든 V1 pre-release 구현이 끝나기 전 comprehensive Codex audit를 시작하지 않는다.
 
 ## 2. 사용자 고정 목표
 
@@ -26,98 +27,101 @@ Recorded code head: **`b2ec43f fix(campaign): use void hydration listener cleanu
 
 ## 3. Ready / connected lifecycle 구현 상태
 
-Ready 코드 구조는 구현 완료 상태이며 human/two-instance release evidence는 후반 acceptance에서 수행한다.
+Ready 구조 구현은 완료 상태이며 human/two-instance release evidence는 후반 acceptance에서 수행한다.
 
-- Ready configuration은 actor별 Map으로 저장한다.
-- Ready는 다음 자기 턴 시작 또는 initiative 종료에 만료된다.
-- Host는 `ready-action` armed/cleared lifecycle event를 authoritative ledger에 기록한다.
-- Client는 actor별 config/status/economy를 투영한다.
-- A actor clear가 B actor Ready를 제거하지 않는다.
-- Host UI에서 직접 trigger해도 clear event가 broadcast된다.
-- session start/end/reset은 Ready transient state를 제거한다.
-- reconnect는 ledger catch-up을 authority로 사용한다.
-- `ready-action-v1`은 required connected capability다.
-- `Start SimpleVTT Acceptance Pair.cmd`와 isolated Host/Client data roots가 구현돼 있다.
+- actor별 Ready configuration.
+- 다음 자기 턴/initiative 종료 만료.
+- Host authoritative `ready-action` lifecycle ledger.
+- Client actor별 config/status/economy projection.
+- Host-local trigger clear broadcast.
+- session start/end/reset transient cleanup.
+- reconnect ledger catch-up + idempotent replay.
+- `ready-action-v1` required capability.
+- isolated `Start SimpleVTT Acceptance Pair.cmd` tooling.
 
-핵심 커밋: `c92093f`, `05a0ed0`, `bd13475`, `e95ef7c`, `98091e4`, `f6867c8`, `45e1c10`, `330c4cf`, `463fb6e`, `989060b`, `f3ca88d`.
+핵심 기존 커밋: `c92093f`, `05a0ed0`, `bd13475`, `e95ef7c`, `98091e4`, `f6867c8`, `45e1c10`, `330c4cf`, `463fb6e`, `989060b`, `f3ca88d`.
 
-## 4. 2026-08-23 Rerun checkpoint — Campaign lifecycle UX
+## 4. V1-11 Campaign lifecycle — production 구현 완료, exact-head validation 대기
 
-선택한 V1 gap: `V1-11 Campaign product UI`의 lifecycle/error/destructive 상태.
+### 이전 checkpoint
 
-### 구현 완료
+- `66ca74d` / `36eecfc`: archive 즉시 mutation을 제거하고 기존 Campaign overlay 안에서 명시적 확인 추가.
+- `b8c5eab` / `ba40608` / `25a435f` / `a1d50d6` / `b2ec43f`: Campaign schema/migration/corruption startup blocker를 자동 삭제 없이 명시적으로 표시하고 재시도만 허용.
 
-1. **보관 destructive confirmation**
-   - 기존 Campaign 카드의 `보관` 버튼이 즉시 `archiveCampaign()`을 호출하지 않는다.
-   - `archiveTarget`을 설정하고 기존 `campaign-session-setup` overlay 스타일 안에서 명시적 확인을 요구한다.
-   - 확인 화면은 Character/installed content/Campaign continuity data를 삭제하지 않고 archive 상태로만 전환한다는 의미를 설명한다.
-   - 취소/닫기는 mutation 없이 종료한다.
-   - UI 레이아웃/카드 구조/스타일 체계는 변경하지 않았다.
+### 이번 재개에서 완료
 
-2. **Campaign startup hydration blocker UI**
-   - 새 `campaignHydrationIssueAdapter.ts`가 Campaign runtime `getSnapshot` 바깥에서 다음 오류만 분류한다.
-     - `CampaignMigrationRequiredError` -> `migration-required`
-     - `CampaignSchemaError` -> `schema-unsupported`
-     - `CampaignCorruptError` -> `corrupt`
-   - 오류를 자동 삭제/reset/write 하지 않고 원래 오류를 다시 throw한다. 데이터 보존 우선이다.
-   - `CampaignStartupRecoveryBridge.tsx`가 기존 `loading-screen` + `campaign-empty` UI 언어로 명시적인 blocker를 표시한다.
-   - `다시 시도`는 AppProvider `refresh()`만 다시 실행한다. 자동 마이그레이션/초기화는 하지 않는다.
-   - guard는 `main.tsx`에서 `AppProvider`보다 먼저 import하며, guard 자체가 `campaignRuntimeAdapter`를 먼저 설치한 뒤 wrapping한다.
+Canonical `campaign-systems.md`의 lifecycle contract를 재확인했다. `CampaignApplicationService`에는 이미 durable `duplicateCampaign`/`deleteCampaign` 구현이 존재했으므로 이를 재작성하지 않았다.
 
-### 관련 커밋
+1. **runtime duplicate/delete 경로** — `24957b4`
+   - `MockAdapter` production Campaign runtime에 `duplicateCampaign`과 `deleteCampaign`을 노출했다.
+   - 기존 `CampaignApplicationService`를 그대로 authority로 사용한다.
+   - duplicate는 source Campaign revision을 검증하고 새 Campaign namespace를 선택한다.
+   - delete는 durable Campaign record만 제거한다.
+   - 현재 captured Session이 삭제 대상 Campaign에 묶여 있으면 삭제를 거부한다.
 
-- `66ca74d` — destructive archive confirmation structure test
-- `36eecfc` — archive confirmation implementation
-- `b8c5eab` — Campaign startup recovery structure test
-- `ba40608` — hydration issue guard
-- `25a435f` — explicit startup recovery bridge
-- `a1d50d6` — install guard/bridge in production entry
-- `b2ec43f` — React-safe void subscription cleanup
+2. **UI command facade** — `3c53424`
+   - `campaignLifecycleCommands.ts`가 production singleton adapter의 lifecycle command를 얇게 노출한다.
+   - UI에 persistence 계산이나 aggregate mutation 로직을 넣지 않는다.
 
-### 검증 상태
+3. **Campaign duplicate/delete UI** — `d66b26b`
+   - 기존 Campaign card footer에 `복제`, `삭제` secondary action을 최소 추가했다.
+   - 새 layout/navigation/style 체계를 만들지 않고 기존 `campaign-session-setup` overlay를 재사용한다.
+   - duplicate 확인 화면은 실제 복제 범위를 명시한다:
+     - 복제: 파티의 Character **참조**, 세션 기본값, 달력/식량 상태와 기록, Party Stash, Campaign DM Library, content loadout.
+     - 새 stash/library/loadout namespace ID 사용.
+     - 복제 안 함: Player-owned Character 파일, installed content 자체/소유권, 과거 Session history, running Session transient state.
+   - delete 확인은 irreversible임을 명시하고 Campaign-owned 설정/continuity만 삭제한다고 설명한다.
+   - Player-owned Character와 installed content는 삭제하지 않는다.
 
-- deterministic structure tests는 코드로 추가했다.
-- 이 Rerun 실행에서는 comprehensive Codex audit를 의도적으로 실행하지 않았다.
-- GitHub combined-status API는 `36eecfc`에 status/check 결과를 노출하지 않았다. 따라서 green이라고 기록하지 않는다.
-- Live Development가 canonical branch를 따라가면 위 변경은 기존 UI shell 안에서 반영된다.
+4. **focused deterministic contracts**
+   - `4487ebf`: `campaignLifecycleRuntime.test.ts` — duplicate continuity/new namespace/session-history reset + delete/fallback projection 계약.
+   - `dbad5bc`: `campaignLifecycleUiStructure.test.ts` — duplicate/delete/ownership/destructive confirmation 구조 계약.
 
-## 5. V1-11에서 아직 남은 실제 기능 gap
+5. **canonical UI validation wiring** — `477250b`
+   - `.github/workflows/ui.yml`의 push branch에 `work/v1-composite`를 추가했다.
+   - Campaign persistence/runtime/product/startup/lifecycle focused tests를 하나의 Campaign lifecycle step에 연결했다.
+   - 이 connector에서는 push run 결과를 직접 확인하지 못했으므로 **green으로 기록하지 않는다**.
 
-Canonical design `docs/design/campaign-systems.md`의 Campaign lifecycle DM 작업에는 **복제와 명시적 삭제**도 포함되어 있다. 현재 production Campaign screen은 create/open/archive/restore는 노출하지만 duplicate/delete는 아직 사용자 경로에 없다.
+### V1-11 판단
 
-따라서 V1-11을 functional-complete로 닫기 전에 다음이 필요하다.
+기존 checklist의 production 기능 gap이었던 empty/error/migration/destructive lifecycle UX와 canonical design의 duplicate/delete user path는 코드상 연결됐다.
 
-- Campaign duplicate command/application/runtime path.
-- 복제 범위를 명시하는 confirmation UI. 최소 V1에서는 Character 파일은 복제하지 않으며 Campaign-owned continuity state 복제 여부를 명확히 해야 한다.
-- explicit Campaign delete command with confirmation.
-- delete가 player-owned Character/installed content를 절대 삭제하지 않음.
-- active Campaign 삭제/보관 후 activeCampaignId가 유효한 상태로 정리됨.
-- 저장 실패/stale revision에서 partial lifecycle mutation 없음.
+단, `DONE`은 exact-head test/build evidence가 있어야 하므로 현재 판단은 **IMPLEMENTATION COMPLETE / VALIDATION PENDING**이며 release checklist의 공식 상태 문법상 아직 PARTIAL로 유지한다.
 
-현재 UI baseline을 유지하고 Campaign 카드의 secondary action/기존 overlay 패턴 안에서 최소 추가한다.
+## 5. 알려진 다음 V1-12 구현 gap
 
-## 6. 그 이후 주요 구현 축
+Human-only Windows two-instance/visual acceptance는 독립 구현을 막지 않는다. 다음 코드 작업은 Campaign systems의 실제 미구현 provider 계약으로 이동한다.
 
-V1-11 lifecycle을 닫은 뒤 stale checklist를 현재 코드와 reconcile하고 다음 unblocked implementation gap을 선택한다.
+현재 production UI에서 확인된 gap:
 
-현재 알려진 코드 gap:
+- Calendar provider select에는 `module.calendar-profile`이 `설치 필요` disabled placeholder로만 존재한다.
+- Ration system도 declarative module provider contract가 V1 설계에 있으나 production validation/activation 경로가 없다.
+- V1은 executable calendar/ration plugin이 아니라 **검증된 declarative profile**만 허용한다.
 
-- V1-12 declarative `module.calendar-profile` / ration provider profile (현재 UI에서 설치 필요 disabled 상태).
-- V1-12 authoritative Long Rest + optional time advance + optional ration consumption compound write.
-- V1-13 Party Stash / DM Library는 최근 코드에 구현이 존재하므로 TODO 표기를 그대로 믿고 재구현하지 말고 source와 current behavior를 먼저 reconcile한다.
+그 이후 별도 큰 gap:
+
+- authoritative Long Rest + optional Campaign time advance + optional ration consumption compound write; Character/Campaign 어느 write-back이라도 실패하면 partial success 금지.
+- V1-13 Party Stash / DM Library는 최근 코드에 구현이 있으므로 stale TODO를 그대로 재구현하지 말고 current source를 먼저 reconcile.
 - V1-40 Campaign-linked DM live operation.
-- V1-41 provider lifecycle/stale spatial fact cleanup.
+- V1-41 spatial provider lifecycle/stale fact cleanup.
 - V1-50 이후 quality/release gates.
 
-Human-only two-instance/dice visual acceptance는 독립 구현을 막지 않으며 pre-release/final acceptance에 모아서 수행한다.
+## 6. 검증 정책
+
+- 기존 Phase 13 exact-head green evidence는 보존한다.
+- 이번 Campaign lifecycle slice에는 deterministic tests와 canonical UI workflow wiring이 존재한다.
+- push workflow 결과가 확인되지 않은 상태에서 pass/green을 주장하지 않는다.
+- comprehensive Codex audit는 아직 실행하지 않는다.
+- V1 전체 implementation이 끝난 exact SHA에서만 final Codex audit를 수행한다.
 
 ## 7. Next Exact Action
 
-**V1-11 Campaign lifecycle의 duplicate/delete production path를 구현한다.**
+**V1-12 declarative Calendar/Ration provider contract를 구현한다.**
 
-1. `docs/design/campaign-runtime.md`와 `campaign-systems.md` lifecycle contract를 다시 확인한다.
-2. `CampaignApplicationService`, `CampaignLibraryRepository`/contracts, `campaignRuntimeAdapter`, `AppProvider`, `CampaignScreen`의 기존 lifecycle command 흐름을 따라 duplicate/delete command를 추가한다.
-3. duplicate는 Character 파일/installed content ownership을 복사하지 않는다.
-4. delete는 명시적 confirmation 뒤에만 실행하고 Campaign-owned record만 제거한다.
-5. current Campaign 화면/card/overlay 시각 구조를 그대로 유지한다.
-6. deterministic tests를 기능과 함께 추가하되 final Codex audit는 시작하지 않는다.
+1. `docs/design/campaign-systems.md`의 provider 문법과 현재 Content/RuleModule manifest 계약을 읽는다.
+2. 이미 존재하는 module/content validation 구조를 재사용할 수 있는지 먼저 확인한다.
+3. `module.calendar-profile`을 실행 코드 없는 선언형 profile로 validate/project한다.
+4. ration declarative provider도 같은 capability boundary를 사용하고 arbitrary executable plugin을 허용하지 않는다.
+5. provider가 없거나 invalid면 기존 OFF/builtin 경로가 정상 동작하며 session/rest/action을 막지 않아야 한다.
+6. 현재 Campaign UI의 provider select 구조를 보존하고, 설치된 compatible profile이 있을 때만 선택 가능하게 한다.
+7. deterministic focused tests를 함께 추가하되 comprehensive Codex audit는 시작하지 않는다.
