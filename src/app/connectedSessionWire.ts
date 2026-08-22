@@ -5,6 +5,10 @@ import type {
   SessionCompatibilityResult,
 } from "./connectedSessionProtocol";
 import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
+import {
+  validateConnectedLongRestWireMessage,
+  type ConnectedLongRestWireMessage,
+} from "./connectedLongRestWire";
 
 export type ConnectedWireMessage =
   | {
@@ -28,7 +32,8 @@ export type ConnectedWireMessage =
   | { type:"catchup-request"; sessionId:string; afterCursor:number }
   | { type:"event-batch"; sessionId:string; afterCursor:number; events:ConnectedSessionEvent[] }
   | { type:"session-ended"; sessionId:string; reason:string }
-  | { type:"error"; code:string; message:string; hostCursor?:number };
+  | { type:"error"; code:string; message:string; hostCursor?:number }
+  | ConnectedLongRestWireMessage;
 
 export type DecodeWireResult =
   | { status:"ok"; message:ConnectedWireMessage }
@@ -205,6 +210,10 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   if (value.type==="error") {
     if (!isString(value.code)||!isString(value.message)||(value.hostCursor!==undefined&&!isCursor(value.hostCursor))) return "invalid error message";
     return value as ConnectedWireMessage;
+  }
+  if (value.type.startsWith("long-rest-")) {
+    const validated=validateConnectedLongRestWireMessage(value);
+    return typeof validated==="string" ? validated : validated;
   }
   return `unknown wire message type: ${value.type}`;
 }
