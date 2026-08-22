@@ -1,8 +1,8 @@
 use crate::generation_store::{self, StoredGenerationDto, WriteGenerationRequest};
 use std::path::Path;
 
-const FILE_PREFIX: &str = "character-library.";
-const LABEL: &str = "Character library";
+pub(crate) const FILE_PREFIX: &str = "character-library.";
+pub(crate) const LABEL: &str = "Character library";
 
 pub(crate) type CharacterLibraryGenerationDto = StoredGenerationDto;
 pub(crate) type WriteCharacterLibraryGenerationRequest = WriteGenerationRequest;
