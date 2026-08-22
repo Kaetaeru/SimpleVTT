@@ -229,6 +229,8 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 ### Calendar
 
 - [ ] provider: off/simple-day/Gregorian/declarative module profile.
+- [x] 연호, 연, 월, 일, 시, 분의 구조화 입력과 한국어 표시.
+- [x] Gregorian 월별 일수, 윤년, 자정/월/연도 경계 계산.
 - [x] absoluteMinute canonical storage; display string을 계산 입력으로 사용하지 않음.
 - [x] advance minute/hour/day, next day, DM correction, note, safe recent undo.
 - [x] OFF 상태가 Rest/Action/Session 진행을 막지 않고 저장값 유지.
@@ -256,11 +258,11 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 
 ```text
 EVIDENCE
-head: 6b5ec6f
-tests: Campaign suites (26 pass, 0 fail); Campaign/product shell regression (45 pass, 0 fail); tsc --noEmit (pass); vite build (420 modules, pass)
-human: browser-campaign-roster-calendar-rations-compound-2026-08-22
+head: 417715e
+tests: Campaign suites (28 pass, 0 fail); Campaign/product shell regression (47 pass, 0 fail); tsc --noEmit (pass); vite build (421 modules, pass)
+human: browser-campaign-calendar-era-new-year-boundary-2026-08-22
 artifact: dist/ development production bundle; Windows artifact N/A
-notes: Player Character reference/host preset/companion roster, absolute-minute calendar, compensating undo, integer ration ledger, shortage warning-only behavior, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Join projection의 roster 편입, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
+notes: Player Character reference/host preset/companion roster, 연호·연월일·24시간 Gregorian calendar와 윤년/연도 경계, compensating undo, integer ration ledger, shortage warning-only behavior, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Join projection의 roster 편입, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
 ```
 
 ## V1-13 Party Stash / Campaign DM Library — TODO
