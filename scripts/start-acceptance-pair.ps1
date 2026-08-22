@@ -12,8 +12,37 @@ $acceptanceRoot = Join-Path $rootPath '.live-dev\acceptance'
 $hostData = Join-Path $acceptanceRoot 'host\data'
 $clientData = Join-Path $acceptanceRoot 'client\data'
 
+function Test-TcpPort {
+  param(
+    [Parameter(Mandatory = $true)][string]$HostName,
+    [Parameter(Mandatory = $true)][int]$Port,
+    [int]$TimeoutMs = 900
+  )
+
+  $tcp = New-Object System.Net.Sockets.TcpClient
+  try {
+    $task = $tcp.ConnectAsync($HostName,$Port)
+    if (-not $task.Wait($TimeoutMs)) { return $false }
+    return $tcp.Connected
+  }
+  catch {
+    return $false
+  }
+  finally {
+    $tcp.Dispose()
+  }
+}
+
 if (-not (Test-Path -LiteralPath $appPath)) {
   throw "Debug SimpleVTT executable was not found at $appPath. Start 'Start SimpleVTT Live.cmd' first and wait for the app to finish compiling."
+}
+
+if (-not (Test-TcpPort -HostName '127.0.0.1' -Port 1420)) {
+  throw "Vite dev server is not reachable on 127.0.0.1:1420. Keep 'Start SimpleVTT Live.cmd' running before launching the acceptance pair."
+}
+
+if (Test-TcpPort -HostName '127.0.0.1' -Port 3210) {
+  throw 'Port 3210 is already in use. Stop the previous SimpleVTT Host acceptance instance before launching a new pair.'
 }
 
 if ($Fresh) {
