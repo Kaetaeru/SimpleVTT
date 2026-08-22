@@ -53,6 +53,13 @@ test("a three-Long-Rest lockout suppresses the first two recoveries and recovers
   pool = first.state.combatants.hero.resources.find((entry) => entry.id === "feature:locked");
   assert.equal(pool?.current,0);
   assert.deepEqual(pool?.recoveryLockouts,{ longRest:2 });
+  const firstResourceChange=first.events[0].stateChanges.find((change)=>change.kind==="resource"&&change.resourceId==="feature:locked");
+  assert.ok(firstResourceChange&&firstResourceChange.kind==="resource","lockout-only rest must still emit a durable resource state change");
+  if (firstResourceChange?.kind==="resource") {
+    assert.equal(firstResourceChange.before,0);
+    assert.equal(firstResourceChange.after,0);
+    assert.deepEqual(firstResourceChange.recoveryLockouts,{before:{longRest:3},after:{longRest:2}});
+  }
 
   const second = longRest(first.state,2,"lockout.rest.2");
   assert.equal(second.status,"committed");
@@ -67,6 +74,11 @@ test("a three-Long-Rest lockout suppresses the first two recoveries and recovers
   pool = third.state.combatants.hero.resources.find((entry) => entry.id === "feature:locked");
   assert.equal(pool?.current,1,"finishing the third required Long Rest both completes the lockout and permits normal recovery");
   assert.equal(pool?.recoveryLockouts,undefined);
+  const thirdResourceChange=third.events[0].stateChanges.find((change)=>change.kind==="resource"&&change.resourceId==="feature:locked");
+  assert.ok(thirdResourceChange&&thirdResourceChange.kind==="resource");
+  if (thirdResourceChange?.kind==="resource") {
+    assert.deepEqual(thirdResourceChange.recoveryLockouts,{before:{longRest:1},after:null});
+  }
 });
 
 test("short- and Long-Rest lockouts are independent", () => {
