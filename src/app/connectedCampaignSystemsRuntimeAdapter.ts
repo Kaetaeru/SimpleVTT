@@ -5,12 +5,14 @@ import { MockAdapter } from "./mockAdapter";
 import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSessionTransport";
 
 interface CampaignSystemsEnvelope {type:"campaign-systems-projection";sessionId:string;revision:number;projection:CampaignSessionSystemsProjection;}
+interface CampaignLevelUpCompleteRequest {type:"campaign-level-up-complete";sessionId:string;requestId:string;campaignId:string;rosterMemberId:string;characterId:string;level:number;}
 type Raw=Record<string,unknown>;
 const remoteProjections=new WeakMap<MockAdapter,{sessionId:string;revision:number;projection:CampaignSessionSystemsProjection}>();
 let activeHostAdapter:MockAdapter|null=null;
 let registeringClientAdapter:MockAdapter|null=null;
 const baseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
 const baseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
+const handledLevelUpRequests=new Set<string>();
 
 function object(value:unknown):Raw|undefined{return value&&typeof value==="object"&&!Array.isArray(value)?value as Raw:undefined;}
 function safeProjection(projection:CampaignSessionSystemsProjection):CampaignSessionSystemsProjection{
@@ -33,6 +35,7 @@ export function decodeCampaignSystemsEnvelope(raw:string):CampaignSystemsEnvelop
   return {type:"campaign-systems-projection",sessionId:record.sessionId,revision:Number(record.revision),projection:structuredClone(projection) as unknown as CampaignSessionSystemsProjection};
 }
 function compatibleHelloAck(raw:string){try{const value=object(JSON.parse(raw));const compatibility=object(value?.compatibility);return value?.type==="hello-ack"&&typeof value.sessionId==="string"&&compatibility?.status==="compatible"?value.sessionId:null;}catch{return null;}}
+function decodeLevelUpCompleteRequest(raw:string):CampaignLevelUpCompleteRequest|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-level-up-complete"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.campaignId!=="string"||typeof value.rosterMemberId!=="string"||typeof value.characterId!=="string"||!Number.isInteger(value.level)||Number(value.level)<2)return null;return value as unknown as CampaignLevelUpCompleteRequest;}catch{return null;}}
 async function envelopeFor(adapter:MockAdapter):Promise<CampaignSystemsEnvelope|null>{
   const state=connectedStateFor(adapter);if(state.mode!=="host"||!state.sessionId) return null;
   const snapshot=await adapter.getSnapshot();if(!snapshot.campaignSessionSystems) return null;
@@ -51,6 +54,25 @@ async function sendToWithCampaignSystems(peer:string,message:string){
 async function onMessageWithCampaignSystems(handler:(message:SessionTransportMessage)=>void){
   const client=registeringClientAdapter;
   return baseOnMessage((message)=>{
+    const levelUpRequest=decodeLevelUpCompleteRequest(message.message);
+    const host=activeHostAdapter;
+    if(levelUpRequest){
+      if(host){
+        const state=connectedStateFor(host);
+        const manifest=state.peerManifests.get(message.peer)?.character;
+        const key=levelUpRequest.sessionId+":"+levelUpRequest.requestId;
+        if(state.sessionId===levelUpRequest.sessionId&&manifest?.characterId===levelUpRequest.characterId&&!handledLevelUpRequests.has(key)){
+          void (async()=>{
+            const snapshot=await host.getSnapshot();
+            const member=snapshot.campaignSessionSystems?.roster.find((item)=>item.rosterMemberId===levelUpRequest.rosterMemberId);
+            if(!member||member.characterId!==levelUpRequest.characterId||levelUpRequest.level!==(member.level??1)+1)return;
+            await hostConsumeCampaignLevelUp.call(host,levelUpRequest.campaignId,levelUpRequest.rosterMemberId,levelUpRequest.level);
+            handledLevelUpRequests.add(key);
+          })().catch(()=>undefined);
+        }
+      }
+      return;
+    }
     if(client){const decoded=decodeCampaignSystemsEnvelope(message.message);if(decoded){
       const state=connectedStateFor(client);if(state.sessionId&&state.sessionId!==decoded.sessionId) return;
       const current=remoteProjections.get(client);if(!current||current.sessionId!==decoded.sessionId||decoded.revision>=current.revision){remoteProjections.set(client,{sessionId:decoded.sessionId,revision:decoded.revision,projection:decoded.projection});void publishConnectedSnapshot(client).catch(()=>undefined);}return;
@@ -85,3 +107,16 @@ MockAdapter.prototype.undoCampaignRationConsumption=broadcastAfter(MockAdapter.p
 MockAdapter.prototype.advanceCampaignDay=broadcastAfter(MockAdapter.prototype.advanceCampaignDay);
 MockAdapter.prototype.upsertCampaignRosterMember=broadcastAfter(MockAdapter.prototype.upsertCampaignRosterMember);
 MockAdapter.prototype.removeCampaignRosterMember=broadcastAfter(MockAdapter.prototype.removeCampaignRosterMember);
+MockAdapter.prototype.grantCampaignAdvancement=broadcastAfter(MockAdapter.prototype.grantCampaignAdvancement);
+const hostConsumeCampaignLevelUp=broadcastAfter(MockAdapter.prototype.consumeCampaignLevelUpCredit);
+MockAdapter.prototype.consumeCampaignLevelUpCredit=async function consumeConnectedCampaignLevelUpCredit(campaignId,rosterMemberId,level){
+  const state=connectedStateFor(this);
+  if(state.mode!=="client") return hostConsumeCampaignLevelUp.call(this,campaignId,rosterMemberId,level);
+  if(!state.sessionId||level===undefined) return this.getSnapshot();
+  const snapshot=await this.getSnapshot();
+  const member=snapshot.campaignSessionSystems?.roster.find((item)=>item.rosterMemberId===rosterMemberId);
+  if(!member?.characterId||member.characterId!==snapshot.activeCharacter.id) return snapshot;
+  const requestId=globalThis.crypto?.randomUUID?.()??String(Date.now());
+  await tauriSessionTransport.send(JSON.stringify({type:"campaign-level-up-complete",sessionId:state.sessionId,requestId,campaignId,rosterMemberId,characterId:member.characterId,level} satisfies CampaignLevelUpCompleteRequest));
+  return this.getSnapshot();
+};

@@ -168,7 +168,7 @@ function CharacterLibraryScreen({ onOpen, onCreate }: { onOpen(): void; onCreate
   </div>;
 }
 
-function LevelUpScreen({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
+export function LevelUpScreen({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
   const { snapshot, startLevelUp, updateLevelUp, commitLevelUp } = useSimpleVtt();
   const c = snapshot?.activeCharacter;
   const d = snapshot?.levelUpDraft;

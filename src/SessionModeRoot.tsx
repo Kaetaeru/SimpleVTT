@@ -26,13 +26,14 @@ import { SessionPlayerRecoveryStrip, SessionPlayerSessionPane } from "./SessionP
 import { SessionQuickPalette, type SessionQuickDestination } from "./SessionQuickPalette";
 import { SessionActivityPane, SessionRulesPane } from "./SessionUtilityPanes";
 import { SessionCampaignPane } from "./SessionCampaignPane";
+import { LevelUpScreen } from "./App";
 import { campaignDayPeriod, formatCampaignCalendarDateTime } from "./app/campaignCalendar";
 import "./session-mode.css";
 import "./session-connected-layout.css";
 import "./session-integrated-reference-play.css";
 
 type SessionUtility = "quick-sheet" | "actor" | "inventory" | "campaign" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
-type WorkspaceLayer = "full-sheet" | null;
+type WorkspaceLayer = "full-sheet" | "level-up" | null;
 
 const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", "damage-animation"]);
 
@@ -57,12 +58,13 @@ function utilityClass(active: SessionUtility, utility: Exclude<SessionUtility, n
 }
 
 export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
-  const { snapshot, resolveAction, correctCampaignCalendarDateTime } = useSimpleVtt();
+  const { snapshot, resolveAction, correctCampaignCalendarDateTime, startLevelUp, consumeCampaignLevelUpCredit } = useSimpleVtt();
   const handout = useSessionImageHandout();
   const [activeUtility, setActiveUtility] = useState<SessionUtility>(null);
   const [quickOpen,setQuickOpen]=useState(false);
   const [workspaceLayer, setWorkspaceLayer] = useState<WorkspaceLayer>(null);
   const [workspaceReturnUtility, setWorkspaceReturnUtility] = useState<SessionUtility>(null);
+  const [levelUpRosterMemberId,setLevelUpRosterMemberId]=useState<string|null>(null);
   const [targetingActionId,setTargetingActionId]=useState<string|null>(null);
   const [targetingAnchor,setTargetingAnchor]=useState<TargetingAnchor|null>(null);
   const [selectedTargetIds,setSelectedTargetIds]=useState<string[]>([]);
@@ -242,6 +244,30 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     finally{setCampaignClockBusy(false);}
   };
 
+  const openSessionLevelUp=async(rosterMemberId:string)=>{
+    setWorkspaceReturnUtility(activeUtility);
+    setActiveUtility(null);
+    setLevelUpRosterMemberId(rosterMemberId);
+    await startLevelUp(snapshot!.activeCharacter.id);
+    setWorkspaceLayer("level-up");
+  };
+
+  const closeSessionLevelUp=()=>{
+    setWorkspaceLayer(null);
+    setLevelUpRosterMemberId(null);
+    if(workspaceReturnUtility){setActiveUtility(workspaceReturnUtility);setWorkspaceReturnUtility(null);}
+  };
+
+  const finishSessionLevelUp=()=>{
+    const projection=snapshot!.campaignSessionSystems;
+    const rosterMemberId=levelUpRosterMemberId;
+    const nextLevel=snapshot!.activeCharacter.level+1;
+    setWorkspaceLayer(null);
+    setLevelUpRosterMemberId(null);
+    setWorkspaceReturnUtility(null);
+    if(projection&&rosterMemberId) void consumeCampaignLevelUpCredit(projection.campaignId,rosterMemberId,nextLevel);
+  };
+
   const utilityPane = <>
     {activeUtility === "quick-sheet" && role === "player" && <QuickSheet onClose={closeUtility} onOpenFull={openFullSheet} />}
     {activeUtility === "actor" && role === "dm" && <SessionDmActorPane onClose={closeUtility} />}
@@ -254,7 +280,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     {activeUtility === "player-session" && role === "player" && <SessionPlayerSessionPane onClose={closeUtility} />}
     {activeUtility === "rules" && <SessionRulesPane onClose={closeUtility} />}
     {activeUtility === "activity" && <SessionActivityPane onClose={closeUtility} />}
-    {activeUtility === "campaign" && <SessionCampaignPane role={role} onClose={closeUtility} />}
+    {activeUtility === "campaign" && <SessionCampaignPane role={role} onClose={closeUtility} onOpenLevelUp={(rosterMemberId)=>void openSessionLevelUp(rosterMemberId)} />}
   </>;
 
   return <div className="session-mode-root session-reference-play-root" data-session-role={role} data-session-mode={snapshot.sessionMode}>
@@ -316,6 +342,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       {role === "player" && <div className="session-full-sheet-layer" hidden={workspaceLayer !== "full-sheet"} aria-hidden={workspaceLayer !== "full-sheet"}>
         <CharacterSheetWorkspace hostMode="session" onClose={closeFullSheet} onOpenRules={(button) => toggleUtility("rules", button)} />
       </div>}
+      {workspaceLayer==="level-up"&&<div className="session-levelup-layer content" aria-label="세션 내 레벨업"><LevelUpScreen onDone={finishSessionLevelUp} onCancel={closeSessionLevelUp}/></div>}
       {snapshot.resolution && activeUtility !== "activity" && <SessionResolutionLayer onOpenActivity={(button) => toggleUtility("activity", button)} />}
       {role === "player" && activeUtility !== "player-session" && <SessionPlayerRecoveryStrip onOpen={(button) => toggleUtility("player-session", button)} />}
       {role === "player" && <SessionPlayerHandoutError />}

@@ -30,6 +30,10 @@ test("Host restores projection after compatible hello and broadcasts every Campa
   assert.match(runtime,/baseSendTo\(peer,message\)/);
   assert.match(runtime,/upsertCampaignRosterMember=broadcastAfter/);
   assert.match(runtime,/removeCampaignRosterMember=broadcastAfter/);
+  assert.match(runtime,/grantCampaignAdvancement=broadcastAfter/);
+  assert.match(runtime,/campaign-level-up-complete/);
+  assert.match(runtime,/hostConsumeCampaignLevelUp/);
+  assert.match(runtime,/manifest\?\.characterId===levelUpRequest\.characterId/);
 });
 
 test("connected Player snapshots cannot receive the Campaign aggregate or hidden ration amounts",()=>{

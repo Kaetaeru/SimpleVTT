@@ -103,6 +103,17 @@ export class CampaignApplicationService {
     });
   }
 
+  consumeLevelUpCredit(context:CampaignMutationContext&{rosterMemberId:string;level?:number}){
+    return this.mutateCampaign(context,(campaign)=>{
+      const rosterMember=campaign.roster.find((member)=>member.rosterMemberId===context.rosterMemberId);
+      if(context.level!==undefined&&rosterMember) rosterMember.level=context.level;
+      const current=campaign.advancement?.members[context.rosterMemberId];
+      if(!current||current.levelUpCredits<1) return;
+      current.levelUpCredits-=1;
+      campaign.advancement!.revision+=1;
+    });
+  }
+
   configureCalendar(context:CampaignMutationContext&{enabled:boolean;providerId:string}){
     return this.mutateCampaign(context,(campaign)=>{
       const providerId=context.providerId.trim();

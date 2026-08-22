@@ -10,7 +10,7 @@ function xpProgress(level:number|undefined,xp:number){
   return {currentLevel,next,ready:next!==undefined&&xp>=next,remaining:next===undefined?0:Math.max(0,next-xp)};
 }
 
-export function SessionCampaignPane({role,onClose}:{role:"dm"|"player";onClose():void}){
+export function SessionCampaignPane({role,onClose,onOpenLevelUp}:{role:"dm"|"player";onClose():void;onOpenLevelUp?(rosterMemberId:string):void}){
   const api=useSimpleVtt();
   const projection=api.snapshot?.campaignSessionSystems??null;
   const anchor=projection?.calendar.displayAnchor;
@@ -27,14 +27,17 @@ export function SessionCampaignPane({role,onClose}:{role:"dm"|"player";onClose()
   const [selectedRosterIds,setSelectedRosterIds]=useState<string[]>([]);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
+  const [feedback,setFeedback]=useState<string|null>(null);
   useEffect(()=>{if(!anchor)return;setEra(anchor.era??"서력");setYear(String(anchor.year??1));setMonth(anchor.monthId??"1");setDay(String(anchor.day??1));setHour(String(anchor.hour??0));setMinute(String(anchor.minute??0));},[projection?.campaignId,projection?.calendar.providerId,projection?.calendar.absoluteMinute]);
-  useEffect(()=>{if(!projection)return;setSelectedRosterIds((current)=>current.filter((id)=>projection.roster.some((member)=>member.rosterMemberId===id)));},[projection?.campaignId,projection?.campaignRevision]);
-  const perform=async(operation:()=>Promise<void>)=>{setBusy(true);setError(null);try{await operation();}catch(reason){setError(reason instanceof Error?reason.message:"작업을 완료하지 못했습니다.");}finally{setBusy(false);}};
+  useEffect(()=>{setSelectedRosterIds(projection?.roster.filter((member)=>member.active).map((member)=>member.rosterMemberId)??[]);},[projection?.campaignId]);
+  useEffect(()=>{if(!projection)return;setSelectedRosterIds((current)=>current.filter((id)=>projection.roster.some((member)=>member.rosterMemberId===id)));},[projection?.campaignRevision]);
+  const perform=async(operation:()=>Promise<void>,success?:string)=>{setBusy(true);setError(null);setFeedback(null);try{await operation();if(success)setFeedback(success);}catch(reason){setError(reason instanceof Error?reason.message:"작업을 완료하지 못했습니다.");}finally{setBusy(false);}};
 
   return <aside className="session-utility-pane session-campaign-pane" aria-label="세션 캠페인 현황">
     <header className="session-utility-pane-head"><div><strong>캠페인 현황</strong><small>{projection?.campaignName??"연결된 캠페인 없음"} · {role==="dm"?"DM 조작":"Player 읽기 전용"}</small></div><button type="button" autoFocus aria-label="캠페인 현황 닫기" onClick={onClose}>×</button></header>
     {!projection?<div className="session-campaign-empty"><strong>세션 캠페인이 없습니다.</strong><p>DM이 캠페인에서 세션을 시작하면 달력과 식량 현황이 여기에 표시됩니다.</p></div>:<div className="session-campaign-scroll">
       {error&&<div className="session-campaign-error" role="alert">{error}</div>}
+      {feedback&&<div className="session-campaign-feedback" role="status">{feedback}</div>}
       <section className="session-campaign-block" aria-labelledby="session-campaign-roster">
         <header><div><span>PARTY</span><h2 id="session-campaign-roster">파티 명단</h2></div><strong>{projection.roster.filter((member)=>member.active).length}명 활성</strong></header>
         {!projection.roster.length?<p className="session-campaign-muted">Campaign 파티에 등록된 구성원이 없습니다.</p>:<div className="session-campaign-roster">
@@ -52,17 +55,19 @@ export function SessionCampaignPane({role,onClose}:{role:"dm"|"player";onClose()
               const advancement=member.advancement??{xp:0,levelUpCredits:0};
               const progress=xpProgress(member.level,advancement.xp);
               const ready=advancement.levelUpCredits>0||progress.ready;
-              return <label key={member.rosterMemberId} data-ready={ready}>
-                {role==="dm"&&<input type="checkbox" checked={selectedRosterIds.includes(member.rosterMemberId)} onChange={(event)=>setSelectedRosterIds((current)=>event.target.checked?[...current,member.rosterMemberId]:current.filter((id)=>id!==member.rosterMemberId))}/>}
+              const canOpenLevelUp=ready&&member.characterId===api.snapshot?.activeCharacter.id&&Boolean(onOpenLevelUp);
+              return <div className="session-campaign-xp-member" key={member.rosterMemberId} data-ready={ready}>
+                {role==="dm"&&<input type="checkbox" aria-label={member.label+" 경험치 지급 대상"} checked={selectedRosterIds.includes(member.rosterMemberId)} onChange={(event)=>setSelectedRosterIds((current)=>event.target.checked?[...current,member.rosterMemberId]:current.filter((id)=>id!==member.rosterMemberId))}/>}
                 <span><strong>{member.label}</strong><small>{"Lv."+progress.currentLevel+" · "+advancement.xp.toLocaleString()+" XP"+(progress.next!==undefined?" / "+progress.next.toLocaleString():"")}</small></span>
                 <b>{advancement.levelUpCredits>0?"레벨업 가능 ×"+advancement.levelUpCredits:progress.ready?"XP 달성":"다음까지 "+progress.remaining.toLocaleString()}</b>
-              </label>;
+                {canOpenLevelUp&&<button type="button" className="session-campaign-levelup-open" onClick={()=>onOpenLevelUp?.(member.rosterMemberId)}>세션에서 레벨업</button>}
+              </div>;
             })}
           </div>
           {role==="dm"&&<div className="session-campaign-xp-actions">
             <div><input aria-label="지급할 경험치" type="number" min={1} step={1} value={xpAmount} onChange={(event)=>setXpAmount(event.target.value)}/>{[50,100,250,500].map((value)=><button type="button" key={value} onClick={()=>setXpAmount(String(value))}>+{value}</button>)}</div>
-            <button type="button" disabled={busy||!selectedRosterIds.length||!Number.isInteger(Number(xpAmount))||Number(xpAmount)<=0} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"xp",amount:Number(xpAmount),levels:Object.fromEntries(projection.roster.map((member)=>[member.rosterMemberId,member.level??1]))}))}>선택 캐릭터에 XP 지급</button>
-            <button type="button" className="primary" disabled={busy||!selectedRosterIds.length} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"level-up-credit",amount:1}))}>바로 레벨업 가능</button>
+            <button type="button" disabled={busy||!selectedRosterIds.length||!Number.isInteger(Number(xpAmount))||Number(xpAmount)<=0} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"xp",amount:Number(xpAmount),levels:Object.fromEntries(projection.roster.map((member)=>[member.rosterMemberId,member.level??1]))}),selectedRosterIds.length+"명에게 "+Number(xpAmount).toLocaleString()+" XP를 지급했습니다.")}>선택 캐릭터에 XP 지급</button>
+            <button type="button" className="primary" disabled={busy||!selectedRosterIds.length} onClick={()=>void perform(()=>api.grantCampaignAdvancement(projection.campaignId,{rosterMemberIds:selectedRosterIds,kind:"level-up-credit",amount:1}),selectedRosterIds.length+"명에게 레벨업 권한을 부여했습니다.")}>바로 레벨업 가능</button>
           </div>}
         </section>}
       </section>

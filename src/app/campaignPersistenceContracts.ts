@@ -191,6 +191,7 @@ export interface CampaignSessionSystemsProjection {
     rationUnitsPerDay?:number;
     stashPermission?:CampaignRosterMember["stashPermission"];
     connectionState?:"connected"|"reconnecting"|"disconnected";
+    characterId?:string;
     level?:number;
     advancement:{xp:number;levelUpCredits:number};
   }>;

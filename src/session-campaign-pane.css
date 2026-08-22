@@ -6,12 +6,14 @@
 .session-campaign-advancement>header span{color:var(--accent);font-size:7px;font-weight:900;letter-spacing:.12em}
 .session-campaign-advancement button{min-height:28px}
 .session-campaign-xp-list{display:grid;gap:5px}
-.session-campaign-xp-list label{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid var(--line);border-radius:9px;background:var(--recess)}
-.session-campaign-xp-list label[data-ready="true"]{border-color:color-mix(in srgb,var(--good) 48%,var(--line))}
-.session-campaign-xp-list label>span{display:grid;gap:2px}
-.session-campaign-xp-list label small{color:var(--muted);font-size:8px}
-.session-campaign-xp-list label b{color:var(--quiet);font-size:8px}
-.session-campaign-xp-list label[data-ready="true"] b{color:var(--good)}
+.session-campaign-xp-member{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px;border:1px solid var(--line);border-radius:9px;background:var(--recess)}
+.session-campaign-xp-member[data-ready="true"]{border-color:color-mix(in srgb,var(--good) 48%,var(--line))}
+.session-campaign-xp-member>span{display:grid;gap:2px}
+.session-campaign-xp-member small{color:var(--muted);font-size:8px}
+.session-campaign-xp-member b{color:var(--quiet);font-size:8px}
+.session-campaign-xp-member[data-ready="true"] b{color:var(--good)}
+.session-campaign-levelup-open{color:var(--good)}
+.session-campaign-feedback{padding:9px 10px;border:1px solid color-mix(in srgb,var(--good) 55%,var(--line));border-radius:8px;color:var(--good);font-size:10px}
 .session-campaign-xp-actions{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px}
 .session-campaign-xp-actions>div{display:flex;gap:4px}
 .session-campaign-xp-actions input{min-width:72px;width:100%;min-height:32px}

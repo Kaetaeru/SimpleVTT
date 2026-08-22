@@ -42,8 +42,11 @@ test("DM can grant XP or immediate level-up credits to multiple roster members w
   assert.equal(campaign.advancement?.history.length,2);
   assert.deepEqual(campaign.advancement?.history[0].rosterMemberIds,["a","b"]);
   assert.equal("note" in campaign.advancement!.history[0],false);
-  await assert.rejects(()=>service.grantAdvancement({...envelope(5,"xp.missing"),rosterMemberIds:["missing"],kind:"xp",amount:10}),/not found/);
-  assert.equal(service.getCampaign("campaign.systems")?.revision,5);
+  await service.consumeLevelUpCredit({...envelope(5,"level.complete"),rosterMemberId:"a",level:6});
+  assert.deepEqual(service.getCampaign("campaign.systems")?.advancement?.members.a,{xp:6800,levelUpCredits:0});
+  assert.equal(service.getCampaign("campaign.systems")?.roster.find((member)=>member.rosterMemberId==="a")?.level,6);
+  await assert.rejects(()=>service.grantAdvancement({...envelope(6,"xp.missing"),rosterMemberIds:["missing"],kind:"xp",amount:10}),/not found/);
+  assert.equal(service.getCampaign("campaign.systems")?.revision,6);
 });
 
 test("Calendar stores absolute minutes and undo is a compensating transaction",async()=>{

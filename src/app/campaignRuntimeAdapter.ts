@@ -63,6 +63,7 @@ declare module "./mockAdapter" {
     advanceCampaignDay(campaignId:string,input:{consumeRations:boolean;requiredUnits?:number;note?:string}):Promise<AppSnapshot>;
     appendCampaignSessionSummary(campaignId:string,summary:CampaignSessionSummary):Promise<AppSnapshot>;
     grantCampaignAdvancement(campaignId:string,input:{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}):Promise<AppSnapshot>;
+    consumeCampaignLevelUpCredit(campaignId:string,rosterMemberId:string,level?:number):Promise<AppSnapshot>;
   }
 }
 
@@ -83,6 +84,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
       rosterMemberId:member.rosterMemberId,label:member.label,kind:member.kind,active:member.active,
       countsForRations:member.countsForRations,rationUnitsPerDay:member.rationUnitsPerDay,stashPermission:member.stashPermission,
       connectionState:member.characterRef?.ownerHint?snapshot.session.participants.find((participant)=>participant.id===member.characterRef?.ownerHint)?.state:undefined,
+      characterId:member.characterRef?.characterId,
       level:member.level??(member.characterRef?.characterId===snapshot.activeCharacter.id?snapshot.activeCharacter.level:undefined),
       advancement:clone(campaign.advancement?.members[member.rosterMemberId]??{xp:0,levelUpCredits:0}),
     })),
@@ -225,6 +227,10 @@ MockAdapter.prototype.appendCampaignSessionSummary=async function appendCampaign
 MockAdapter.prototype.grantCampaignAdvancement=async function grantCampaignAdvancementRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error("Campaign not found: "+campaignId);
   await service.grantAdvancement({...mutationContext(campaignId,"advancement-grant",campaign.revision),...input});return this.getSnapshot();
+};
+MockAdapter.prototype.consumeCampaignLevelUpCredit=async function consumeCampaignLevelUpCreditRuntime(campaignId,rosterMemberId,level){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error("Campaign not found: "+campaignId);
+  await service.consumeLevelUpCredit({...mutationContext(campaignId,"advancement-consume",campaign.revision),rosterMemberId,level});return this.getSnapshot();
 };
 
 export function setCampaignLibraryStoreForTests(adapter:MockAdapter,store:CampaignLibraryStore){
