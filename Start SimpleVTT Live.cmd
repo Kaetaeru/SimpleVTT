@@ -112,6 +112,47 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem Tauri on Windows requires the Microsoft C++ linker and Windows SDK environment.
+set "VS_ARCH=amd64"
+if /I "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "VS_ARCH=arm64"
+call :activate_msvc
+where link.exe >nul 2>nul
+if errorlevel 1 (
+  echo.
+  echo [SimpleVTT Live] Microsoft C++ Build Tools are required by Tauri, but link.exe is not available.
+  echo [SimpleVTT Live] This is a one-time Windows system prerequisite and may require several GB of disk space.
+  echo.
+  choice /C YN /N /M "[SimpleVTT Live] Install the official Microsoft C++ Build Tools now? [Y/N] "
+  if errorlevel 2 (
+    echo.
+    echo [SimpleVTT Live] Build Tools installation was skipped. The Git sync runner cannot start Tauri until it is installed.
+    pause
+    exit /b 1
+  )
+
+  powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\bootstrap-live-msvc.ps1" -Root "%CD%"
+  if errorlevel 1 (
+    echo.
+    echo [SimpleVTT Live] Microsoft C++ Build Tools setup failed or was cancelled.
+    echo Check the installer output above, then run this launcher again.
+    pause
+    exit /b 1
+  )
+
+  call :activate_msvc
+  where link.exe >nul 2>nul
+  if errorlevel 1 (
+    echo.
+    echo [SimpleVTT Live] Build Tools were installed, but link.exe is still unavailable in this process.
+    echo Restart Windows if the installer requested it, then run this launcher again.
+    pause
+    exit /b 1
+  )
+)
+
+set "LINK_EXE="
+for /f "delims=" %%I in ('where link.exe 2^>nul') do if not defined LINK_EXE set "LINK_EXE=%%~fI"
+
 for /f "delims=" %%V in ('"%NODE_EXE%" --version 2^>nul') do set "NODE_VERSION=%%V"
 for /f "delims=" %%V in ('call "%NPM_CMD%" --version 2^>nul') do set "NPM_VERSION=%%V"
 for /f "delims=" %%V in ('"%CARGO_EXE%" --version 2^>nul') do set "CARGO_VERSION=%%V"
@@ -122,6 +163,7 @@ echo [SimpleVTT Live] Node  : %NODE_EXE%  %NODE_VERSION%
 echo [SimpleVTT Live] npm   : %NPM_CMD%  %NPM_VERSION%
 echo [SimpleVTT Live] Cargo : %CARGO_EXE%  %CARGO_VERSION%
 echo [SimpleVTT Live] rustc : %RUSTC_EXE%  %RUSTC_VERSION%
+echo [SimpleVTT Live] MSVC  : %LINK_EXE%
 echo.
 
 rem Surface any existing local edits before the sync loop starts.
@@ -143,6 +185,19 @@ if not "%LIVE_EXIT%"=="0" (
 )
 
 exit /b %LIVE_EXIT%
+
+:activate_msvc
+where link.exe >nul 2>nul
+if not errorlevel 1 goto :eof
+set "VSWHERE_EXE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE_EXE%" set "VSWHERE_EXE=%ProgramFiles%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE_EXE%" goto :eof
+set "VS_INSTALL="
+for /f "delims=" %%I in ('"%VSWHERE_EXE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul') do if not defined VS_INSTALL set "VS_INSTALL=%%I"
+if not defined VS_INSTALL goto :eof
+if not exist "%VS_INSTALL%\Common7\Tools\VsDevCmd.bat" goto :eof
+call "%VS_INSTALL%\Common7\Tools\VsDevCmd.bat" -no_logo -arch=%VS_ARCH% -host_arch=%VS_ARCH% >nul 2>nul
+goto :eof
 
 :try_pair
 if defined NODE_EXE goto :eof
