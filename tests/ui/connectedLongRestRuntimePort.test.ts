@@ -152,7 +152,7 @@ test("connected Long Rest commits Campaign before owner materialization and refr
   assert.equal(owner.projection.runtimeRevision,7);
   assert.equal(connectedLongRestClientRecoveryMessages(client)[0]?.type,"long-rest-owner-materialized");
 
-  const complete=completeConnectedLongRestHostOwnerMaterialization(host,PEER,owner.materialized,owner.projection);
+  const complete=await completeConnectedLongRestHostOwnerMaterialization(host,PEER,owner.materialized,owner.projection);
   assert.equal(complete.phase,"complete");
   assert.equal(projectedCharacterById(host,sheet.id)?.sheet.hp,12);
   const hostSnapshot=await host.getSnapshot();
