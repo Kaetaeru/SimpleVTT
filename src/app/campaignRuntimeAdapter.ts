@@ -1,7 +1,8 @@
 import type { AppSnapshot, CombatantDefinitionVm, PartyStashTransferCommand, SessionMode } from "./contracts";
 import { CampaignApplicationService, previewCampaignDailyRations } from "./campaignApplicationService";
 import { CampaignLibraryRepository } from "./campaignPersistence";
-import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignLibraryStore, CampaignRecordV1, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import { campaignProviderDescriptorsFromCatalog, type InstalledCampaignProviderDescriptorV1 } from "./campaignProviderProfiles";
 import { MockAdapter } from "./mockAdapter";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
 import { registerConnectedCampaignRosterHandler } from "./connectedCampaignRosterPort";
@@ -17,6 +18,8 @@ const contexts=new WeakMap<MockAdapter,CampaignRuntimeContext>();
 const sessionSnapshots=new WeakMap<MockAdapter,CampaignSessionSnapshot>();
 
 function clone<T>(value:T):T{return structuredClone(value);}
+function builtinCalendarProvider(providerId:string){return providerId==="builtin.simple-day"||providerId==="builtin.gregorian";}
+function builtinRationProvider(providerId:string){return providerId==="builtin.tracking-only";}
 
 function contextFor(adapter:MockAdapter){
   let context=contexts.get(adapter);
@@ -53,13 +56,13 @@ declare module "./mockAdapter" {
     prepareCampaignSessionSnapshot(campaignId:string,input?:{sessionName?:string;startingMode?:SessionMode}):Promise<AppSnapshot>;
     upsertCampaignRosterMember(campaignId:string,member:CampaignRosterMember):Promise<AppSnapshot>;
     removeCampaignRosterMember(campaignId:string,rosterMemberId:string):Promise<AppSnapshot>;
-    configureCampaignCalendar(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<AppSnapshot>;
+    configureCampaignCalendar(campaignId:string,input:{enabled:boolean;providerId:string;providerVersion?:string}):Promise<AppSnapshot>;
     advanceCampaignCalendar(campaignId:string,input:{deltaMinutes:number;note?:string}):Promise<AppSnapshot>;
     correctCampaignCalendar(campaignId:string,input:{absoluteMinute:number;note:string}):Promise<AppSnapshot>;
     correctCampaignCalendarDateTime(campaignId:string,input:{dateTime:CampaignCalendarDateTime;note:string}):Promise<AppSnapshot>;
     setCampaignCalendarNote(campaignId:string,note:string):Promise<AppSnapshot>;
     undoCampaignCalendar(campaignId:string):Promise<AppSnapshot>;
-    configureCampaignRations(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<AppSnapshot>;
+    configureCampaignRations(campaignId:string,input:{enabled:boolean;providerId:string;providerVersion?:string}):Promise<AppSnapshot>;
     adjustCampaignRations(campaignId:string,input:{amount:number;note?:string}):Promise<AppSnapshot>;
     consumeCampaignDailyRations(campaignId:string,input?:{requiredUnits?:number;note?:string}):Promise<AppSnapshot>;
     undoCampaignRationConsumption(campaignId:string):Promise<AppSnapshot>;
@@ -78,6 +81,30 @@ declare module "./mockAdapter" {
 }
 
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
+
+function selectProvider(snapshot:AppSnapshot,kind:"calendar"|"ration",providerId:string,providerVersion?:string,required=true):InstalledCampaignProviderDescriptorV1|null {
+  const matches=campaignProviderDescriptorsFromCatalog(snapshot.catalog,kind).filter((provider)=>provider.providerId===providerId);
+  const exact=providerVersion?matches.find((provider)=>provider.providerVersion===providerVersion):undefined;
+  if(exact) return exact;
+  if(providerVersion&&matches.length&&required) throw new Error(`설치된 ${kind} 공급자 버전을 찾을 수 없습니다: ${providerId}@${providerVersion}`);
+  if(matches.length){
+    return [...matches].sort((left,right)=>right.providerVersion.localeCompare(left.providerVersion,"en",{numeric:true,sensitivity:"base"}))[0];
+  }
+  if(required) throw new Error(`설치된 ${kind} 공급자를 찾을 수 없습니다: ${providerId}`);
+  return null;
+}
+async function providerSnapshot(adapter:MockAdapter){return previousGetSnapshot.call(adapter);}
+async function currentCalendarProfile(adapter:MockAdapter,campaign:CampaignRecordV1,required=true){
+  if(builtinCalendarProvider(campaign.calendar.capability.providerId)) return undefined;
+  const provider=selectProvider(await providerSnapshot(adapter),"calendar",campaign.calendar.capability.providerId,campaign.calendar.capability.providerVersion,required);
+  return provider?.profile.kind==="calendar"?provider.profile:undefined;
+}
+async function currentRationProfile(adapter:MockAdapter,campaign:CampaignRecordV1,required=true){
+  if(builtinRationProvider(campaign.rations.capability.providerId)) return undefined;
+  const provider=selectProvider(await providerSnapshot(adapter),"ration",campaign.rations.capability.providerId,campaign.rations.capability.providerVersion,required);
+  return provider?.profile.kind==="ration"?provider.profile:undefined;
+}
+
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
   const service=await ensureHydrated(this);
   const snapshot=await previousGetSnapshot.call(this);
@@ -85,7 +112,9 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
   const activeCampaignId=service.snapshot()?.activeCampaignId??null;
   const captured=sessionSnapshots.get(this)??null;
   const campaign=campaigns.find((item)=>item.campaignId===(captured?.campaignId??activeCampaignId))??null;
-  const rationPreview=campaign?previewCampaignDailyRations(campaign):null;
+  const rationProvider=campaign&&!builtinRationProvider(campaign.rations.capability.providerId)?selectProvider(snapshot,"ration",campaign.rations.capability.providerId,campaign.rations.capability.providerVersion,false):null;
+  const rationProfile=rationProvider?.profile.kind==="ration"?rationProvider.profile:undefined;
+  const rationPreview=campaign?previewCampaignDailyRations(campaign,undefined,rationProfile):null;
   const rationsVisible=captured?.rationsVisibleToPlayers??campaign?.sessionDefaults.rationsVisibleToPlayers??true;
   const mayProjectRations=snapshot.session.role!=="client"||rationsVisible;
   const campaignSessionSystems=campaign?{
@@ -208,19 +237,23 @@ MockAdapter.prototype.removeCampaignRosterMember=async function removeCampaignRo
 };
 MockAdapter.prototype.configureCampaignCalendar=async function configureCampaignCalendarRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.configureCalendar({...mutationContext(campaignId,"calendar-configure",campaign.revision),...input});return this.getSnapshot();
+  const builtin=builtinCalendarProvider(input.providerId);
+  const version=input.providerVersion??(campaign.calendar.capability.providerId===input.providerId?campaign.calendar.capability.providerVersion:undefined);
+  const provider=builtin?null:selectProvider(await providerSnapshot(this),"calendar",input.providerId,version,input.enabled);
+  const calendarProfile=provider?.profile.kind==="calendar"?provider.profile:undefined;
+  await service.configureCalendar({...mutationContext(campaignId,"calendar-configure",campaign.revision),...input,providerVersion:builtin?"1":provider?.providerVersion??version,calendarProfile});return this.getSnapshot();
 };
 MockAdapter.prototype.advanceCampaignCalendar=async function advanceCampaignCalendarRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.advanceCalendar({...mutationContext(campaignId,"calendar-advance",campaign.revision),...input});return this.getSnapshot();
+  await service.advanceCalendar({...mutationContext(campaignId,"calendar-advance",campaign.revision),...input,calendarProfile:await currentCalendarProfile(this,campaign)});return this.getSnapshot();
 };
 MockAdapter.prototype.correctCampaignCalendar=async function correctCampaignCalendarRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.correctCalendar({...mutationContext(campaignId,"calendar-correct",campaign.revision),...input});return this.getSnapshot();
+  await service.correctCalendar({...mutationContext(campaignId,"calendar-correct",campaign.revision),...input,calendarProfile:await currentCalendarProfile(this,campaign)});return this.getSnapshot();
 };
 MockAdapter.prototype.correctCampaignCalendarDateTime=async function correctCampaignCalendarDateTimeRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.correctCalendarDateTime({...mutationContext(campaignId,"calendar-correct-date-time",campaign.revision),...input});return this.getSnapshot();
+  await service.correctCalendarDateTime({...mutationContext(campaignId,"calendar-correct-date-time",campaign.revision),...input,calendarProfile:await currentCalendarProfile(this,campaign)});return this.getSnapshot();
 };
 MockAdapter.prototype.setCampaignCalendarNote=async function setCampaignCalendarNoteRuntime(campaignId,note){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
@@ -228,11 +261,15 @@ MockAdapter.prototype.setCampaignCalendarNote=async function setCampaignCalendar
 };
 MockAdapter.prototype.undoCampaignCalendar=async function undoCampaignCalendarRuntime(campaignId){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.undoRecentCalendar(mutationContext(campaignId,"calendar-undo",campaign.revision));return this.getSnapshot();
+  await service.undoRecentCalendar({...mutationContext(campaignId,"calendar-undo",campaign.revision),calendarProfile:await currentCalendarProfile(this,campaign)});return this.getSnapshot();
 };
 MockAdapter.prototype.configureCampaignRations=async function configureCampaignRationsRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.configureRations({...mutationContext(campaignId,"rations-configure",campaign.revision),...input});return this.getSnapshot();
+  const builtin=builtinRationProvider(input.providerId);
+  const version=input.providerVersion??(campaign.rations.capability.providerId===input.providerId?campaign.rations.capability.providerVersion:undefined);
+  const provider=builtin?null:selectProvider(await providerSnapshot(this),"ration",input.providerId,version,input.enabled);
+  const rationProfile=provider?.profile.kind==="ration"?provider.profile:undefined;
+  await service.configureRations({...mutationContext(campaignId,"rations-configure",campaign.revision),...input,providerVersion:builtin?"1":provider?.providerVersion??version,rationProfile});return this.getSnapshot();
 };
 MockAdapter.prototype.adjustCampaignRations=async function adjustCampaignRationsRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
@@ -240,7 +277,7 @@ MockAdapter.prototype.adjustCampaignRations=async function adjustCampaignRations
 };
 MockAdapter.prototype.consumeCampaignDailyRations=async function consumeCampaignDailyRationsRuntime(campaignId,input={}){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.consumeDailyRations({...mutationContext(campaignId,"rations-consume",campaign.revision),...input});return this.getSnapshot();
+  await service.consumeDailyRations({...mutationContext(campaignId,"rations-consume",campaign.revision),...input,rationProfile:await currentRationProfile(this,campaign)});return this.getSnapshot();
 };
 MockAdapter.prototype.undoCampaignRationConsumption=async function undoCampaignRationConsumptionRuntime(campaignId){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
@@ -248,7 +285,7 @@ MockAdapter.prototype.undoCampaignRationConsumption=async function undoCampaignR
 };
 MockAdapter.prototype.advanceCampaignDay=async function advanceCampaignDayRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
-  await service.advanceDayWithOptionalRations({...mutationContext(campaignId,"day-advance",campaign.revision),...input});return this.getSnapshot();
+  await service.advanceDayWithOptionalRations({...mutationContext(campaignId,"day-advance",campaign.revision),...input,calendarProfile:await currentCalendarProfile(this,campaign),rationProfile:input.consumeRations&&campaign.rations.capability.enabled?await currentRationProfile(this,campaign):undefined});return this.getSnapshot();
 };
 MockAdapter.prototype.appendCampaignSessionSummary=async function appendCampaignSessionSummaryRuntime(campaignId,summary){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
