@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
-import "../../src/app/connectedSessionRuntimeAdapter";
+import { CONNECTED_CAPABILITIES, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 
- test("production Host does not fake a connected session when desktop transport is unavailable", async () => {
+test("connected runtime advertises the Ready Action lifecycle capability",()=>{
+  const adapter=new MockAdapter();
+  assert.ok(CONNECTED_CAPABILITIES.includes("ready-action-v1"));
+  assert.ok(connectedManifest(adapter).capabilities.includes("ready-action-v1"));
+});
+
+test("production Host does not fake a connected session when desktop transport is unavailable", async () => {
   const adapter=new MockAdapter();
   const snapshot=await adapter.hostSession();
   assert.equal(snapshot.session.role,"offline");
