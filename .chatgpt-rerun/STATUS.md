@@ -6,28 +6,35 @@
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
-- Control status: `continue`
-- Checkpoint: `2026-08-23T08:31:00+09:00`
-- Current product head before checkpoint docs: `49271f768f51bee12caa0f30a7a33f63c716bdcb`
+- Control: `continue`
+- Exact product-code checkpoint: `3c14aebff0e5983204eaae8ae552c674d726826c`
 
-## Human summary
+## Current result
 
-Connected Long Rest remains the active V1-12 gap. This execution resumed from the existing transport/preflight/state-machine checkpoint without redoing local Long Rest, SessionProjection, reconnect, or Character/Campaign compound work.
+Connected Long Rest has advanced from transport/staging primitives to a source-connected distributed runtime path:
 
-Completed source work:
+- Host offer from a mounted remote Character revision + exact Campaign revision;
+- owner canonical Rest preview and explicit decision;
+- Host re-preflight before explicit prepare authorization;
+- owner durable invisible Character generation prepare;
+- Host Campaign-only global commit with Calendar/Ration options and durable transaction idempotency;
+- owner materialization only after global commit;
+- fresh owner SessionProjection returned to Host;
+- Host remote durable Character projection refreshed without copying it into the Host Character library;
+- Session-owned initiative/status/economy preserved during that durable refresh;
+- same-process reconnect/retry replay messages for offer/decision/prepare/global commit/materialization;
+- `connected-long-rest-v1` capability advertised by the production runtime adapter.
 
-- canonical Session wire regression now covers valid/malformed `long-rest-*` envelopes;
-- `connectedLongRestWire.test.ts` is included in `npm run test:campaign-rest`;
-- added a real owner-side Character preparation store boundary;
-- browser/test Memory preparation keeps the candidate generation invisible until materialization and enforces idempotent prepare/materialize plus precommit abort;
-- Tauri now has durable `prepare`, `materialize`, and `abort` commands backed by a fsynced preparation marker under the Character library;
-- Tauri preparation uses the shared Character/Campaign persistence mutex and runs compound recovery before normal work;
-- after global commit, materialization writes the prepared immutable Character generation; retry after an interruption verifies the already-written generation payload before marking the preparation materialized;
-- canonical owner Long Rest preparation projects Character recovery through `projectCharacterLongRest`, prepares the next Character-library generation, and does not expose it before global commit;
-- focused tests were authored for visibility, idempotency, stale revision/generation rejection, abort behavior, and canonical Rest candidate materialization.
+The new distributed tests are wired into `npm run test:campaign-rest`.
 
-No green claim is made. GitHub exposed no exact-head statuses/workflow runs and no local TypeScript/Rust/Tauri execution result was observed. The new Rust and TS tests are source-authored only.
+## Validation
 
-Remaining next gap: connect this owner preparation/materialization port to actual Host/Client `connectedSessionRuntimeAdapter` routing and the Host Campaign global commit/idempotency path. Do not copy a remote Character into the Host Character library.
+**NO GREEN CLAIM.** GitHub exposed no exact-head commit statuses/workflow runs at preflight. A direct canonical clone was attempted again and failed because the execution container could not resolve `github.com`, so no `tsx`, `tsc`, `npm run build`, `cargo test`, Tauri build, or Windows execution was observed.
 
-`STATUS.md` is human-facing only. Reconciliation source order remains README -> control -> STATE -> PLAN.
+## Still incomplete
+
+1. No production UI currently calls `startConnectedLongRest` / `respondConnectedLongRest`. The runtime projects owner prompts into `AppSnapshot.connectedLongRest`, but DM offer controls and Player accept/decline controls remain to be added without redesigning the Session UI.
+2. Same-process reconnect is represented, but Host distributed transaction records are still transient `WeakMap` state. A Host process restart after the Campaign global commit cannot yet reconstruct the exact preflight/preparation relationship from durable state alone. This must be solved or explicitly bounded by the V1 recovery contract before V1-12 can be DONE.
+3. Exact-head execution evidence remains pending.
+
+`STATUS.md` is human-facing only. Reconciliation authority remains README -> control -> STATE -> PLAN.
