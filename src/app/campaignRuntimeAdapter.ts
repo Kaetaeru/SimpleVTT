@@ -47,6 +47,8 @@ declare module "./mockAdapter" {
     updateCampaign(campaignId:string,payload:{name?:string;description?:string}):Promise<AppSnapshot>;
     archiveCampaign(campaignId:string):Promise<AppSnapshot>;
     restoreCampaign(campaignId:string):Promise<AppSnapshot>;
+    duplicateCampaign(campaignId:string,input:{newCampaignId:string;newName:string}):Promise<AppSnapshot>;
+    deleteCampaign(campaignId:string):Promise<AppSnapshot>;
     configureCampaignSessionDefaults(campaignId:string,input:{sessionNameTemplate:string;startingMode:SessionMode;calendarEnabled:boolean;rationsEnabled:boolean;rationsVisibleToPlayers?:boolean}):Promise<AppSnapshot>;
     prepareCampaignSessionSnapshot(campaignId:string,input?:{sessionName?:string;startingMode?:SessionMode}):Promise<AppSnapshot>;
     upsertCampaignRosterMember(campaignId:string,member:CampaignRosterMember):Promise<AppSnapshot>;
@@ -134,6 +136,25 @@ MockAdapter.prototype.restoreCampaign=async function restoreCampaignRuntime(camp
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);
   if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
   await service.restoreCampaign({requestId:requestId("restore"),campaignId,expectedCampaignRevision:campaign.revision,initiatedByParticipantId:"dm.local",now:new Date().toISOString()});
+  return this.getSnapshot();
+};
+
+MockAdapter.prototype.duplicateCampaign=async function duplicateCampaignRuntime(campaignId,input){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);
+  if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
+  const newName=input.newName.trim();
+  const newCampaignId=input.newCampaignId.trim();
+  if(!newName||!newCampaignId) throw new Error("복제할 캠페인의 이름과 ID가 필요합니다.");
+  await service.duplicateCampaign({...mutationContext(campaignId,"duplicate",campaign.revision),newCampaignId,newName});
+  return this.getSnapshot();
+};
+
+MockAdapter.prototype.deleteCampaign=async function deleteCampaignRuntime(campaignId){
+  const captured=sessionSnapshots.get(this);
+  if(captured?.campaignId===campaignId) throw new Error("진행 중인 세션의 캠페인은 삭제할 수 없습니다. 세션을 종료한 뒤 다시 시도하세요.");
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);
+  if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
+  await service.deleteCampaign(mutationContext(campaignId,"delete",campaign.revision));
   return this.getSnapshot();
 };
 
