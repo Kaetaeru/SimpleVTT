@@ -74,6 +74,21 @@ function isEconomyMap(value:unknown) {
   return isRecord(value)&&Object.values(value).every(isEconomy);
 }
 
+function isRecoveryLockouts(value:unknown) {
+  if (value===null) return true;
+  if (!isRecord(value)) return false;
+  if (!Object.keys(value).every((key)=>key==="shortRest"||key==="longRest")) return false;
+  return (value.shortRest===undefined||isCursor(value.shortRest))
+    &&(value.longRest===undefined||isCursor(value.longRest));
+}
+
+function isRecoveryLockoutChange(value:unknown) {
+  return isRecord(value)
+    &&Object.keys(value).every((key)=>key==="before"||key==="after")
+    &&isRecoveryLockouts(value.before)
+    &&isRecoveryLockouts(value.after);
+}
+
 function isCorrectionChange(value:unknown) {
   if (!isRecord(value)||!isString(value.kind)||!isString(value.targetId)) return false;
   if (value.kind==="hp") return typeof value.before==="number"&&typeof value.after==="number";
@@ -104,7 +119,10 @@ function isRuntimeStateChange(value:unknown) {
   if (value.writeBack!=="character"&&value.writeBack!=="session") return false;
   if (value.kind==="hp") return ["current","maximum","temporary"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
   if (value.kind==="economy") return ["action","bonusAction","reaction","movement","movementMaximum","extraActions"].includes(String(value.field))&&value.before!==undefined&&value.after!==undefined;
-  if (value.kind==="resource") return isString(value.resourceId)&&typeof value.before==="number"&&typeof value.after==="number";
+  if (value.kind==="resource") return isString(value.resourceId)
+    &&typeof value.before==="number"
+    &&typeof value.after==="number"
+    &&(value.recoveryLockouts===undefined||isRecoveryLockoutChange(value.recoveryLockouts));
   if (value.kind==="life") return ["stable","unconscious","dead"].includes(String(value.field))&&typeof value.before==="boolean"&&typeof value.after==="boolean";
   if (value.kind==="effect") return isString(value.effectId)&&["added","updated","removed"].includes(String(value.operation));
   if (value.kind==="concentration"||value.kind==="spellcasting-turn") return true;
