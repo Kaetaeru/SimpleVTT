@@ -38,7 +38,7 @@ function restoreProjectedContext(adapter:MockAdapter) {
   return true;
 }
 
-async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnapshot) {
+async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnapshot,readyClearedActorId?:string) {
   const state=connectedStateFor(adapter);
   if (state.mode!=="host"||!state.ledger) return snapshot ?? connectedInternal(adapter).getSnapshot();
   const current=snapshot ?? await connectedInternal(adapter).getSnapshot();
@@ -50,7 +50,7 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   const events=takeCommittedResolutionEvents(resolution.id);
   const readyConfig=readyActionConfigurationFor(adapter,resolution.actorId);
   const readyArmed=resolution.actionId==="action.standard.ready"&&readyConfig;
-  const readyCleared=pending?.request.actionId==="action.standard.ready.trigger";
+  const readyCleared=readyClearedActorId===resolution.actorId||pending?.request.actionId==="action.standard.ready.trigger";
   if (!events?.length&&(readyArmed||readyCleared)) {
     const actorId=resolution.actorId;
     const economy=current.scene.economyByActor[actorId];
@@ -255,8 +255,11 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
 MockAdapter.prototype.advanceResolution=async function advanceConnectedResolution() {
   const state=connectedStateFor(this);
   if (state.mode==="client") return connectedInternal(this).getSnapshot();
+  const current=connectedInternal(this).resolution;
+  const readyBefore=state.mode==="host"&&current?readyActionConfigurationFor(this,current.actorId):undefined;
   const next=await previousAdvanceResolution.call(this);
-  return publishCommittedResolution(this,next);
+  const readyClearedActorId=readyBefore&&!readyActionConfigurationFor(this,readyBefore.actorId)?readyBefore.actorId:undefined;
+  return publishCommittedResolution(this,next,readyClearedActorId);
 };
 
 MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrupt(accept:boolean) {
