@@ -2,6 +2,7 @@ mod generation_store;
 mod character_library;
 mod authoring_drafts;
 mod installed_content;
+mod campaign_library;
 mod session_transport;
 
 use tauri::Manager;
@@ -65,6 +66,23 @@ fn write_installed_content_generation(
 }
 
 #[tauri::command]
+fn read_campaign_library_generations(
+    app: tauri::AppHandle,
+) -> Result<Vec<campaign_library::CampaignLibraryGenerationDto>, String> {
+    let dir = local_data_child(&app, "campaign-library")?;
+    campaign_library::read_generations_at(&dir)
+}
+
+#[tauri::command]
+fn write_campaign_library_generation(
+    app: tauri::AppHandle,
+    request: campaign_library::WriteCampaignLibraryGenerationRequest,
+) -> Result<(), String> {
+    let dir = local_data_child(&app, "campaign-library")?;
+    campaign_library::write_generation_at(&dir, &request)
+}
+
+#[tauri::command]
 fn start_session_host(
     app: tauri::AppHandle,
     state: tauri::State<'_, session_transport::SessionTransportState>,
@@ -125,6 +143,8 @@ pub fn run() {
             write_authoring_draft_generation,
             read_installed_content_generations,
             write_installed_content_generation,
+            read_campaign_library_generations,
+            write_campaign_library_generation,
             start_session_host,
             connect_session_client,
             send_session_message,
