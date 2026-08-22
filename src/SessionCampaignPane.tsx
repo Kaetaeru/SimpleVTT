@@ -4,6 +4,7 @@ import { campaignDayPeriod, formatCampaignCalendarDateTime, GREGORIAN_CALENDAR_M
 import { useSimpleVtt } from "./app/AppProvider";
 import { mockAdapter } from "./app/mockAdapter";
 import { performProductionLongRest, previewProductionLongRest, type ProductionLongRestPreview } from "./app/longRestCompoundRuntimeAdapter";
+import { ConnectedLongRestDmControls, ConnectedLongRestPlayerControls } from "./ConnectedLongRestCampaignControls";
 import "./session-campaign-pane.css";
 
 function xpProgress(level:number|undefined,xp:number){
@@ -121,7 +122,10 @@ export function SessionCampaignPane({role,onClose,onOpenLevelUp}:{role:"dm"|"pla
           </div>
           <small>{!projection.calendar.enabled?"달력 OFF · 시간 진행 선택 불가":restAdvanceTime?"시간 진행 포함":"시간 진행 안 함"} · {!projection.rations.enabled?"식량 OFF · 소비 선택 불가":restConsumeRations?"식량 소비 포함":"식량 소비 안 함"}</small>
         </div>
+        <ConnectedLongRestDmControls advanceTime={restAdvanceTime} consumeRations={restConsumeRations} disabled={busy}/>
       </section>}
+
+      {role==="player"&&<ConnectedLongRestPlayerControls/>}
 
       <section className="session-campaign-block" aria-labelledby="session-campaign-calendar">
         <header><div><span>WORLD TIME</span><h2 id="session-campaign-calendar">달력</h2></div>{projection.calendar.enabled&&<strong>{formatCampaignCalendarDateTime(projection.calendar.providerId,projection.calendar.displayAnchor)}</strong>}</header>
