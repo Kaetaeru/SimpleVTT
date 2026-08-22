@@ -46,6 +46,13 @@ test("a three-Long-Rest lockout suppresses the first two recoveries and recovers
   if (locked.status !== "committed") return;
   let pool = locked.state.combatants.hero.resources.find((entry) => entry.id === "feature:locked");
   assert.deepEqual(pool?.recoveryLockouts,{ longRest:3 });
+  const setResourceChange=locked.events[0].stateChanges.find((change)=>change.kind==="resource"&&change.resourceId==="feature:locked");
+  assert.ok(setResourceChange&&setResourceChange.kind==="resource","setting a lockout must emit a durable resource event");
+  if (setResourceChange?.kind==="resource") {
+    assert.equal(setResourceChange.before,0);
+    assert.equal(setResourceChange.after,0);
+    assert.deepEqual(setResourceChange.recoveryLockouts,{before:null,after:{longRest:3}});
+  }
 
   const first = longRest(locked.state,1,"lockout.rest.1");
   assert.equal(first.status,"committed");
