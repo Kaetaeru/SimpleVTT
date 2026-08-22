@@ -49,22 +49,23 @@ test("multiple actors keep independent Ready configurations and projected trigge
   assert.match(snapshot.scene.actionsByActor[goblinId]?.find((action)=>action.id==="action.standard.ready.trigger")?.summary??"",/Aelar가 주문을 쓰면/);
 
   clearReadyActionConfiguration(adapter,aelarId);
-  mutableScene(adapter).entities.find((entry)=>entry.id===aelarId)!.status=mutableScene(adapter).entities.find((entry)=>entry.id===aelarId)!.status.filter((status)=>status!=="준비 행동");
   snapshot=await adapter.getSnapshot();
   assert.equal(readyActionConfigurationFor(adapter,aelarId),undefined);
   assert.equal(readyActionConfigurationFor(adapter,goblinId)?.trigger,"Aelar가 주문을 쓰면");
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===aelarId)?.status.includes("준비 행동"),false);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===goblinId)?.status.includes("준비 행동"),true);
   assert.equal(snapshot.scene.actionsByActor[aelarId]?.some((action)=>action.id==="action.standard.ready.trigger"),false);
   assert.equal(snapshot.scene.actionsByActor[goblinId]?.some((action)=>action.id==="action.standard.ready.trigger"),true);
 });
 
-test("connected session transient reset clears every actor Ready configuration",async()=>{
+test("connected session transient reset clears every actor Ready configuration and visible status",async()=>{
   const adapter=new MockAdapter();
   const snapshot=await adapter.getSnapshot();
   const aelarAction=snapshot.scene.actionsByActor["char.aelar"]?.[0];
   const goblinAction=snapshot.scene.actionsByActor["combatant.goblin-a"]?.[0];
   assert.ok(aelarAction&&goblinAction);
-  setReadyActionConfiguration(adapter,{actorId:"char.aelar",actionId:aelarAction.id,trigger:"A"});
-  setReadyActionConfiguration(adapter,{actorId:"combatant.goblin-a",actionId:goblinAction.id,trigger:"B"});
+  armFixtureReady(adapter,"char.aelar",aelarAction.id,"A");
+  armFixtureReady(adapter,"combatant.goblin-a",goblinAction.id,"B");
   assert.equal(readyActionConfigurationsFor(adapter).length,2);
 
   resetConnectedSessionTransientState(adapter,"test reset");
@@ -72,4 +73,6 @@ test("connected session transient reset clears every actor Ready configuration",
   assert.equal(readyActionConfigurationsFor(adapter).length,0);
   assert.equal(readyActionConfigurationFor(adapter,"char.aelar"),undefined);
   assert.equal(readyActionConfigurationFor(adapter,"combatant.goblin-a"),undefined);
+  assert.equal(mutableScene(adapter).entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
+  assert.equal(mutableScene(adapter).entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.includes("준비 행동"),false);
 });
