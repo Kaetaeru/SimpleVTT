@@ -2,7 +2,7 @@ import "./combatantRuntimeContracts";
 import type { AbilityKey, ActionVm, AppRole, AppSnapshot, CharacterSheet, CharacterSummary, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { isEphemeralSessionProjectionCharacter } from "./characterSessionProjectionRegistry";
-import { readyActionConfigurationFor } from "./standardActionReadyState";
+import { readyActionConfigurationFor, READY_MOVEMENT_ACTION_ID } from "./standardActionReadyState";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const SKILLS:Array<{id:string;name:string;ability:AbilityKey}>=[
@@ -215,6 +215,22 @@ function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:s
   };
 }
 
+function preparedMovementAction(character:CharacterSheet):ActionVm {
+  return {
+    id:READY_MOVEMENT_ACTION_ID,
+    actorId:character.id,
+    name:"이동",
+    category:"basic",
+    target:"self",
+    economy:"반응",
+    resolutionKind:"no-roll",
+    summary:`최대 ${character.speed}피트 이동 선언`,
+    available:true,
+    eligibleTargetIds:[character.id],
+    details:[detail("효과",`최대 ${character.speed}피트 이동`),detail("경계","위치 적용은 전투맵 모듈이 담당")],
+  };
+}
+
 function itemActions(character:CharacterSheet):ActionVm[] {
   const actions:ActionVm[]=[];
   for (const item of character.items) {
@@ -336,7 +352,9 @@ function reconcile(adapter:MockAdapter) {
 
   const actions=deriveProductionCharacterActions(character);
   const ready=readyActionConfigurationFor(adapter);
-  const prepared=ready?.actorId===character.id?actions.find((action)=>action.id===ready.actionId):undefined;
+  const prepared=ready?.actorId===character.id
+    ? ready.actionId===READY_MOVEMENT_ACTION_ID?preparedMovementAction(character):actions.find((action)=>action.id===ready.actionId)
+    : undefined;
   if (prepared&&internal.scene.entities.find((entity)=>entity.id===character.id)?.status.includes("준비 행동")) {
     actions.push(readyTriggerAction(character,prepared,ready!.trigger));
   }

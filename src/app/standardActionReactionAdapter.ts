@@ -1,6 +1,6 @@
 import type { ActionVm, AppRole, AppSnapshot, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { clearReadyActionConfiguration, readyActionConfigurationFor, setReadyActionConfiguration, type ReadyActionConfiguration } from "./standardActionReadyState";
+import { clearReadyActionConfiguration, readyActionConfigurationFor, READY_MOVEMENT_ACTION_ID, setReadyActionConfiguration, type ReadyActionConfiguration } from "./standardActionReadyState";
 
 type ReadyReactionState={
   role:AppRole;
@@ -27,7 +27,8 @@ declare module "./mockAdapter" {
 MockAdapter.prototype.configureReadyAction=async function configureReadyAction(command:ReadyActionConfiguration) {
   const internal=this as unknown as ReadyReactionState;
   const prepared=internal.action(command.actionId);
-  if (!prepared||prepared.actorId!==command.actorId||prepared.id.startsWith("action.standard.ready")) return internal.getSnapshot();
+  const movement=command.actionId===READY_MOVEMENT_ACTION_ID;
+  if ((!movement&&(!prepared||prepared.actorId!==command.actorId||prepared.id.startsWith("action.standard.ready")))||!internal.entity(command.actorId)) return internal.getSnapshot();
   setReadyActionConfiguration(this,{...command,trigger:command.trigger.trim()||"DM이 선언한 트리거"});
   return this.resolveAction("action.standard.ready",[command.actorId]);
 };
@@ -55,7 +56,9 @@ MockAdapter.prototype.resolveAction=async function resolveReadyActionAsReaction(
   const internal=this as unknown as ReadyReactionState;
   const trigger=Object.values(internal.scene.actionsByActor).flat().find((action)=>action.id===READY_TRIGGER_ID);
   const config=readyActionConfigurationFor(this);
-  const prepared=config?internal.action(config.actionId):undefined;
+  const prepared=config?.actionId===READY_MOVEMENT_ACTION_ID
+    ? internal.action(READY_TRIGGER_ID)
+    : config?internal.action(config.actionId):undefined;
   if (!trigger||!config||!prepared||!readyReactionAvailable(internal,trigger.actorId)) return internal.getSnapshot();
 
   // The core player-turn gate normally rejects every off-turn action. A prepared
@@ -65,7 +68,7 @@ MockAdapter.prototype.resolveAction=async function resolveReadyActionAsReaction(
   try {
     const previousEconomy=prepared.economy;
     prepared.economy="반응";
-    try { await previousResolveAction.call(this,prepared.id,targetIds); }
+    try { await previousResolveAction.call(this,prepared.id,config.actionId===READY_MOVEMENT_ACTION_ID?[config.actorId]:targetIds); }
     finally { prepared.economy=previousEconomy; }
   } finally {
     internal.role=previousRole;
@@ -78,7 +81,9 @@ MockAdapter.prototype.advanceResolution=async function advancePreparedActionAsRe
   const internal=this as unknown as ReadyReactionState;
   const pending=pendingReadyResolution.get(this);
   if (!pending||internal.resolution?.id!==pending.resolutionId) return previousAdvanceResolution.call(this);
-  const prepared=internal.action(pending.config.actionId);
+  const prepared=pending.config.actionId===READY_MOVEMENT_ACTION_ID
+    ? internal.action(READY_TRIGGER_ID)
+    : internal.action(pending.config.actionId);
   if (!prepared) return previousAdvanceResolution.call(this);
   const previousEconomy=prepared.economy;
   prepared.economy="반응";
@@ -86,6 +91,11 @@ MockAdapter.prototype.advanceResolution=async function advancePreparedActionAsRe
   if (!pending.started&&actor?.status.includes("준비 행동")) {
     actor.status=actor.status.filter((status)=>status!=="준비 행동");
     internal.resolution.stateChanges.push(`${actor.name} 상태 제거: 준비 행동 · ${pending.config.trigger} 발생`);
+    if (pending.config.actionId===READY_MOVEMENT_ACTION_ID) {
+      internal.resolution.stateChanges.push(`${actor.name} 이동 실행 선언 · 전투맵 모듈 미연결 시 위치 변화 없음`);
+      internal.resolution.finalOutcome="준비한 이동을 반응으로 선언";
+      internal.resolution.compact=internal.resolution.finalOutcome;
+    }
     pending.started=true;
     clearReadyActionConfiguration(this);
   }

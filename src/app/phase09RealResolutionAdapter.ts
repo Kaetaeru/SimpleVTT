@@ -427,7 +427,7 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     else if(action.id==="action.standard.ready"){applyStatus(actor,READY_STATUS);resolution.finalOutcome="트리거와 반응 행동 준비";}
     else if(action.id==="action.standard.ready.trigger"){
       if(removeStatus(actor,READY_STATUS)) resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${READY_STATUS} · 반응 발동`);
-      resolution.finalOutcome="준비한 행동을 반응으로 발동";
+      resolution.finalOutcome=action.summary.includes("→ 이동")?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동";
     }
     else if(action.id==="action.standard.utilize"){resolution.stateChanges.push(`${actor?.name??action.actorId} 비마법 물체 사용 선언`);resolution.finalOutcome="물체 사용";}
     resolution.compact=resolution.finalOutcome;

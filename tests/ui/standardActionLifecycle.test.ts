@@ -5,6 +5,7 @@ import type { SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { resolveSavingThrowResolution } from "../../src/app/realSavingThrowService";
 import type { ActionVm } from "../../src/app/contracts";
+import { READY_MOVEMENT_ACTION_ID } from "../../src/app/standardActionReadyState";
 
 type MutableAdapter={scene:SceneVm};
 
@@ -186,4 +187,28 @@ test("Ready exposes an off-turn trigger that spends Reaction and clears the prep
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("반응 사용")));
   assert.equal(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.id==="action.standard.ready.trigger"),false);
+});
+
+test("Ready movement spends Reaction but leaves coordinates to an installed map module",async()=>{
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const spatialBefore=structuredClone((await adapter.getSnapshot()).scene.spatialByPair);
+
+  await adapter.configureReadyAction({
+    actorId:"char.aelar",
+    actionId:READY_MOVEMENT_ACTION_ID,
+    trigger:"용이 착지하면",
+  });
+  let snapshot=await adapter.advanceResolution();
+  assert.ok(snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.standard.ready.trigger")?.summary.includes("→ 이동"));
+  await adapter.endTurn();
+  await adapter.resolveAction("action.standard.ready.trigger",["char.aelar"]);
+  snapshot=await adapter.advanceResolution();
+
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.deepEqual(snapshot.scene.spatialByPair,spatialBefore,"core must not invent map coordinates");
+  assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("이동 실행 선언")));
+  assert.match(snapshot.resolution?.finalOutcome??"",/준비한 이동/);
 });

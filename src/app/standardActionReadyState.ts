@@ -6,6 +6,8 @@ export interface ReadyActionConfiguration {
   trigger:string;
 }
 
+export const READY_MOVEMENT_ACTION_ID="ready.movement";
+
 const configurations=new WeakMap<MockAdapter,ReadyActionConfiguration>();
 
 export function readyActionConfigurationFor(adapter:MockAdapter) {
