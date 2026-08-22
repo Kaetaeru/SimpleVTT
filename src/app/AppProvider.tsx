@@ -10,12 +10,14 @@ import type {
   DmAdjudicationCommand,
   EdgeState,
   LevelUpCommand,
+  PartyStashTransferCommand,
+  SessionCharacterInventoryVm,
   SessionMode,
 } from "./contracts";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
-import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignRosterMember, CampaignSessionSummary, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 import { campaignXpThresholdForLevel } from "./campaignApplicationService";
 import "./restSpellManagementRuntimeAdapter";
@@ -73,6 +75,7 @@ interface AppContextValue {
   removeCombatant(combatantId: string): Promise<void>;
   adjustDmInventory(command:DmInventoryAdjustmentCommand):Promise<void>;
   undoLastDmInventoryAdjustment():Promise<void>;
+  transferPartyStash(command:PartyStashTransferCommand):Promise<void>;
   createCampaign(input:{campaignId:string;name:string;description?:string}):Promise<void>;
   openCampaign(campaignId:string):Promise<void>;
   updateCampaign(campaignId:string,payload:{name?:string;description?:string}):Promise<void>;
@@ -218,6 +221,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeCombatant: async (combatantId) => apply(() => mockAdapter.removeCombatant(combatantId)),
     adjustDmInventory: async (command) => apply(() => mockAdapter.adjustDmInventory(command)),
     undoLastDmInventoryAdjustment: async () => apply(() => mockAdapter.undoLastDmInventoryAdjustment()),
+    transferPartyStash: async (command) => apply(() => mockAdapter.transferPartyStash(command)),
     createCampaign: async (input) => apply(() => mockAdapter.createCampaign(input)),
     openCampaign: async (campaignId) => apply(() => mockAdapter.openCampaign(campaignId)),
     updateCampaign: async (campaignId,payload) => apply(() => mockAdapter.updateCampaign(campaignId,payload)),
@@ -277,6 +281,8 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
   const parent = useSimpleVtt();
   const [previewCalendarOverride,setPreviewCalendarOverride]=useState<{campaignId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"]}|null>(null);
   const [previewAdvancementOverride,setPreviewAdvancementOverride]=useState<Record<string,{xp:number;levelUpCredits:number}>>({});
+  const [previewStashOverride,setPreviewStashOverride]=useState<{campaignId:string;stash:CampaignSessionSystemsProjection["partyStash"]}|null>(null);
+  const [previewInventoryOverrides,setPreviewInventoryOverrides]=useState<Record<string,SessionCharacterInventoryVm>>({});
   const previewSnapshot = useMemo<AppSnapshot | null>(() => {
     if (!parent.snapshot) return null;
     const activeCharacter = parent.snapshot.activeCharacter;
@@ -291,11 +297,13 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       roster:[],
       calendar:{enabled:true,providerId:"builtin.gregorian",absoluteMinute:600,displayAnchor:{era:"왕국력",year:312,monthId:"4",monthLabel:"4월",day:7,hour:10,minute:0},currentNote:"Player 합류 직후"},
       rations:{enabled:true,visibleToPlayers:true,balance:8,dailyRequired:0,shortage:0},
+      partyStash:{revision:1,policy:"dm-approval" as const,wallet:{gp:120,sp:0,cp:0},itemReferences:[]},
     };
-    const baseCampaign=previewCalendarOverride?.campaignId===sourceCampaign.campaignId?{
+    const calendarCampaign=previewCalendarOverride?.campaignId===sourceCampaign.campaignId?{
       ...sourceCampaign,
       calendar:{...sourceCampaign.calendar,absoluteMinute:previewCalendarOverride.absoluteMinute,displayAnchor:previewCalendarOverride.displayAnchor},
     }:sourceCampaign;
+    const baseCampaign=previewStashOverride?.campaignId===sourceCampaign.campaignId?{...calendarCampaign,partyStash:previewStashOverride.stash}:calendarCampaign;
     const previewRosterMemberId=`connected:${activeCharacter.id}`;
     const hasPreviewMember=baseCampaign.roster.some((member)=>member.rosterMemberId===previewRosterMemberId);
     const roster=(hasPreviewMember?baseCampaign.roster.map((member)=>member.rosterMemberId===previewRosterMemberId?{...member,connectionState:"connected" as const}:member):[
@@ -315,6 +323,8 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
         ? {enabled:previewRations.enabled,visibleToPlayers:false as const}
         : previewRations,
     };
+    const sessionCharacterInventories={...parent.snapshot.sessionCharacterInventories,...previewInventoryOverrides};
+    const activeInventory=sessionCharacterInventories[activeCharacter.id];
     return {
       ...parent.snapshot,
       role: role === "dm" ? "dm" : "player",
@@ -333,10 +343,12 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
           { id: `client:${activeCharacter.id}`, name: "미리보기 Player", characterName: activeCharacter.name, state: "connected", ready: true },
         ],
       },
+      activeCharacter:activeInventory?{...activeCharacter,goldGp:activeInventory.goldGp,items:activeInventory.items}:activeCharacter,
       scene: previewCurrentActorId===parent.snapshot.scene.currentActorId?parent.snapshot.scene:{...parent.snapshot.scene,currentActorId:previewCurrentActorId},
+      sessionCharacterInventories,
       campaignSessionSystems,
     };
-  }, [mode, parent.snapshot, previewAdvancementOverride, previewCalendarOverride, role]);
+  }, [mode, parent.snapshot, previewAdvancementOverride, previewCalendarOverride, previewInventoryOverrides, previewStashOverride, role]);
 
   const value = useMemo<AppContextValue>(() => ({
     ...parent,
@@ -372,6 +384,43 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
         const value=current[rosterMemberId]??projected;
         return {...current,[rosterMemberId]:{...value,levelUpCredits:Math.max(0,value.levelUpCredits-1)}};
       });
+    },
+    transferPartyStash: async(command)=>{
+      const campaign=previewSnapshot?.campaignSessionSystems;
+      const sourceInventory=previewSnapshot?.sessionCharacterInventories?.[command.actorId];
+      if(!campaign||campaign.campaignId!==command.campaignId||!sourceInventory)return;
+      const inventory:SessionCharacterInventoryVm={...sourceInventory,items:sourceInventory.items.map((item)=>({...item,passiveEffects:[...item.passiveEffects],grantedActionIds:[...item.grantedActionIds],provenance:[...item.provenance]}))};
+      const stash:CampaignSessionSystemsProjection["partyStash"]={...campaign.partyStash,wallet:{...campaign.partyStash.wallet},itemReferences:campaign.partyStash.itemReferences.map((item)=>({...item}))};
+      if(command.asset==="currency"){
+        if(command.direction==="character-to-stash"){
+          if(inventory.goldGp<command.amount)throw new Error("캐릭터가 보유한 GP가 부족합니다.");
+          inventory.goldGp-=command.amount;stash.wallet.gp+=command.amount;
+        }else{
+          if(stash.wallet.gp<command.amount)throw new Error("파티 보관함의 GP가 부족합니다.");
+          stash.wallet.gp-=command.amount;inventory.goldGp+=command.amount;
+        }
+      }else if(command.direction==="character-to-stash"){
+        const item=inventory.items.find((candidate)=>candidate.id===command.itemId);
+        if(!item||item.quantity<command.quantity)throw new Error("캐릭터가 보유한 아이템 수량이 부족합니다.");
+        item.quantity-=command.quantity;
+        if(item.quantity===0)inventory.items=inventory.items.filter((candidate)=>candidate.id!==item.id);
+        const existing=stash.itemReferences.find((candidate)=>candidate.definitionId===command.definitionId);
+        if(existing)existing.quantity+=command.quantity;
+        else stash.itemReferences.push({instanceId:"stash."+command.definitionId,definitionId:command.definitionId,quantity:command.quantity});
+      }else{
+        const stored=stash.itemReferences.find((candidate)=>candidate.definitionId===command.definitionId);
+        if(!stored||stored.quantity<command.quantity)throw new Error("파티 보관함의 아이템 수량이 부족합니다.");
+        stored.quantity-=command.quantity;
+        if(stored.quantity===0)stash.itemReferences=stash.itemReferences.filter((candidate)=>candidate.instanceId!==stored.instanceId);
+        const entry=previewSnapshot.catalog.find((candidate)=>candidate.id===command.catalogEntryId&&candidate.category==="item");
+        if(!entry)throw new Error("현재 활성 카탈로그에서 아이템을 찾지 못했습니다.");
+        const existing=inventory.items.find((candidate)=>candidate.definitionId===command.definitionId&&!candidate.charges&&!candidate.attunementRequired);
+        if(existing)existing.quantity+=command.quantity;
+        else inventory.items.push({id:"item.preview."+command.actorId+"."+Date.now(),definitionId:command.definitionId,name:entry.nameKo,nameEn:entry.nameEn,kind:/potion|물약|consumable/i.test(entry.nameKo+" "+entry.nameEn)?"consumable":"equipment",quantity:command.quantity,equipped:false,passiveEffects:[],grantedActionIds:[],provenance:[entry.source+" · v"+entry.version]});
+      }
+      inventory.revision+=1;stash.revision+=1;
+      setPreviewInventoryOverrides((current)=>({...current,[inventory.characterId]:inventory}));
+      setPreviewStashOverride({campaignId:command.campaignId,stash});
     },
   }), [onExit, parent, previewSnapshot]);
 

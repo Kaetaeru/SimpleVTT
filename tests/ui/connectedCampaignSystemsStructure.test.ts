@@ -31,6 +31,7 @@ test("Host restores projection after compatible hello and broadcasts every Campa
   assert.match(runtime,/upsertCampaignRosterMember=broadcastAfter/);
   assert.match(runtime,/removeCampaignRosterMember=broadcastAfter/);
   assert.match(runtime,/grantCampaignAdvancement=broadcastAfter/);
+  assert.match(runtime,/transferPartyStash=broadcastAfter/);
   assert.match(runtime,/campaign-level-up-complete/);
   assert.match(runtime,/hostConsumeCampaignLevelUp/);
   assert.match(runtime,/manifest\?\.characterId===levelUpRequest\.characterId/);

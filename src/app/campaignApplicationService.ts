@@ -114,6 +114,37 @@ export class CampaignApplicationService {
     });
   }
 
+  transferPartyStash(context:CampaignMutationContext&(
+    | {direction:"character-to-stash"|"stash-to-character";asset:"currency";amount:number}
+    | {direction:"character-to-stash"|"stash-to-character";asset:"item";definitionId:string;quantity:number}
+  )){
+    const amount=context.asset==="currency"?context.amount:context.quantity;
+    assertPositiveInteger(amount,"party stash transfer amount");
+    return this.mutateCampaign(context,(campaign)=>{
+      const sign=context.direction==="character-to-stash"?1:-1;
+      if(context.asset==="currency"){
+        const after=campaign.partyStash.wallet.gp+sign*context.amount;
+        assertNonNegativeInteger(after,"party stash GP");
+        campaign.partyStash.wallet.gp=after;
+      }else{
+        const definitionId=context.definitionId.trim();
+        if(!definitionId) throw new Error("Party stash item definition is required");
+        const existing=campaign.partyStash.itemReferences.find((item)=>item.definitionId===definitionId);
+        const before=existing?.quantity??0;
+        const after=before+sign*context.quantity;
+        assertNonNegativeInteger(after,"party stash item quantity");
+        if(existing){
+          existing.quantity=after;
+          if(after===0) campaign.partyStash.itemReferences=campaign.partyStash.itemReferences.filter((item)=>item.instanceId!==existing.instanceId);
+        }else{
+          if(sign<0) throw new Error("Party stash item is unavailable");
+          campaign.partyStash.itemReferences.push({instanceId:"stash."+definitionId,definitionId,quantity:after});
+        }
+      }
+      campaign.partyStash.revision+=1;
+    });
+  }
+
   configureCalendar(context:CampaignMutationContext&{enabled:boolean;providerId:string}){
     return this.mutateCampaign(context,(campaign)=>{
       const providerId=context.providerId.trim();

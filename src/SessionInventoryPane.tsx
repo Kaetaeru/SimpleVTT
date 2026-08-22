@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
-import type { CatalogEntry, DmInventoryAdjustmentCommand, ItemInstanceVm } from "./app/contracts";
+import type { CatalogEntry, DmInventoryAdjustmentCommand, ItemInstanceVm, PartyStashTransferCommand } from "./app/contracts";
 import "./session-inventory-pane.css";
 
 const requestId=()=>globalThis.crypto?.randomUUID?.()??`dm-inventory.${Date.now()}.${Math.random()}`;
@@ -21,10 +21,21 @@ function itemState(item:ItemInstanceVm) {
   return states.join(" · ")||"보관 중";
 }
 
+function catalogItemForDefinition(catalog:CatalogEntry[],definitionId:string) {
+  const legacyAliases:Record<string,string>={
+    "item.chain-mail":"dnd.srd521.item.armor.chain-mail",
+    "item.shield":"dnd.srd521.item.shield",
+    "item.potion-of-healing":"dnd.srd521.item.gear.potion-of-healing",
+  };
+  const compatibleDefinitionId=legacyAliases[definitionId]??definitionId;
+  return catalog.find((entry)=>entry.category==="item"&&(entry.contentId===compatibleDefinitionId||entry.id===compatibleDefinitionId));
+}
+
 export function SessionPlayerInventoryPane({onClose,onOpenFull}:{onClose():void;onOpenFull(button:HTMLButtonElement):void}) {
   const {snapshot}=useSimpleVtt();
   if (!snapshot) return null;
   const character=snapshot.activeCharacter;
+  const stash=snapshot.campaignSessionSystems?.partyStash;
   return <aside className="session-inventory-pane" aria-label={`${character.name} 세션 인벤토리`}>
     <PaneHeader eyebrow="MY CHARACTER" title="내 인벤토리" onClose={onClose} action={<button type="button" className="quiet" onClick={(event)=>onOpenFull(event.currentTarget)}>전체 시트</button>}/>
     <section className="session-inventory-owner">
@@ -41,6 +52,14 @@ export function SessionPlayerInventoryPane({onClose,onOpenFull}:{onClose():void;
         {!character.items.length&&<p className="session-inventory-empty">소지한 아이템이 없습니다.</p>}
       </div>
     </section>
+    {stash&&<section className="session-inventory-section session-party-stash-view">
+      <div className="session-inventory-section-title"><strong>파티 보관함</strong><span>DM 승인형 공유 자산 · 이 화면에서는 확인만 가능합니다.</span></div>
+      <div className="session-party-stash-wallet"><span>공유 재화</span><strong>{stash.wallet.gp} GP</strong></div>
+      <div className="session-owned-item-list">
+        {stash.itemReferences.map((item)=>{const entry=catalogItemForDefinition(snapshot.catalog,item.definitionId);return <article key={item.instanceId}><div><strong>{entry?.nameKo??item.definitionId}</strong><small>{entry?.source??"캠페인 공유 보관함"}</small></div><b>×{item.quantity}</b></article>;})}
+        {!stash.itemReferences.length&&<p className="session-inventory-empty">파티 보관함에 아이템이 없습니다.</p>}
+      </div>
+    </section>}
   </aside>;
 }
 
@@ -51,7 +70,7 @@ function sourceLabel(entry:CatalogEntry) {
 }
 
 export function SessionDmInventoryPane({onClose}:{onClose():void}) {
-  const {snapshot,selectDmActor,adjustDmInventory,undoLastDmInventoryAdjustment}=useSimpleVtt();
+  const {snapshot,selectDmActor,adjustDmInventory,undoLastDmInventoryAdjustment,transferPartyStash}=useSimpleVtt();
   const [query,setQuery]=useState("");
   const [quantity,setQuantity]=useState(1);
   const [gold,setGold]=useState(10);
@@ -62,6 +81,8 @@ export function SessionDmInventoryPane({onClose}:{onClose():void}) {
   const characters=snapshot.scene.entities.filter((entity)=>entity.kind==="character"&&entity.side==="ally");
   const selected=characters.find((entity)=>entity.id===snapshot.scene.selectedActorId)??characters[0]??null;
   const inventory=selected ? snapshot.sessionCharacterInventories?.[selected.id] : undefined;
+  const campaign=snapshot.campaignSessionSystems;
+  const stash=campaign?.partyStash;
   const normalized=query.trim().toLocaleLowerCase("ko-KR");
   const catalogItems=useMemo(()=>snapshot.catalog
     .filter((entry)=>entry.category==="item")
@@ -77,6 +98,17 @@ export function SessionDmInventoryPane({onClose}:{onClose():void}) {
       setFeedback({kind:"success",message:success,undo:true});
     } catch(error) {
       setFeedback({kind:"error",message:error instanceof Error?error.message:"소지품을 변경하지 못했습니다."});
+    } finally { setPending(null); }
+  };
+
+  const runStash=async(key:string,command:PartyStashTransferCommand,success:string)=>{
+    if (pending) return;
+    setPending(key);setFeedback(null);
+    try {
+      await transferPartyStash(command);
+      setFeedback({kind:"success",message:success});
+    } catch(error) {
+      setFeedback({kind:"error",message:error instanceof Error?error.message:"파티 보관함을 변경하지 못했습니다."});
     } finally { setPending(null); }
   };
 
@@ -106,6 +138,26 @@ export function SessionDmInventoryPane({onClose}:{onClose():void}) {
 
       {feedback&&<div className={`session-inventory-feedback ${feedback.kind}`} role="status"><span>{feedback.message}</span>{feedback.undo&&<button type="button" disabled={Boolean(pending)} onClick={()=>void undo()}>실행 취소</button>}</div>}
 
+      {campaign&&stash&&<section className="session-inventory-section session-party-stash-manage">
+        <div className="session-inventory-section-title"><strong>파티 보관함</strong><span>{selected.name}과 캠페인 공유 자산을 바로 이동합니다.</span></div>
+        <div className="session-party-stash-transfer">
+          <div><span>캐릭터</span><strong>{inventory.goldGp} GP</strong></div>
+          <div><span>보관함</span><strong>{stash.wallet.gp} GP</strong></div>
+          <input type="number" min="1" step="1" value={gold} aria-label="보관함 이동 GP" onChange={(event)=>setGold(Math.max(1,Math.floor(Number(event.target.value)||1)))}/>
+          <div className="session-party-stash-wallet-actions">
+            <button type="button" disabled={Boolean(pending||inventory.goldGp<gold)} onClick={()=>void runStash("stash-gold-in",{requestId:requestId(),campaignId:campaign.campaignId,actorId:selected.id,direction:"character-to-stash",asset:"currency",amount:gold},selected.name+"의 "+gold+" GP를 파티 보관함으로 옮겼습니다.")}>보관함으로</button>
+            <button type="button" className="primary" disabled={Boolean(pending||stash.wallet.gp<gold)} onClick={()=>void runStash("stash-gold-out",{requestId:requestId(),campaignId:campaign.campaignId,actorId:selected.id,direction:"stash-to-character",asset:"currency",amount:gold},"파티 보관함에서 "+selected.name+"에게 "+gold+" GP를 옮겼습니다.")}>캐릭터에게</button>
+          </div>
+        </div>
+        <div className="session-owned-item-list manage session-party-stash-items">
+          {stash.itemReferences.map((item)=>{const entry=catalogItemForDefinition(snapshot.catalog,item.definitionId);return <article key={item.instanceId}>
+            <div><strong>{entry?.nameKo??item.definitionId}</strong><small>{entry?.source??"캠페인 공유 보관함"}</small></div><b>×{item.quantity}</b>
+            <button type="button" className="primary" disabled={Boolean(pending||!entry)} title={entry?"선택 캐릭터에게 1개 이동":"활성 카탈로그에서 원본 아이템을 찾을 수 없습니다."} onClick={()=>entry&&void runStash("stash-out:"+item.instanceId,{requestId:requestId(),campaignId:campaign.campaignId,actorId:selected.id,direction:"stash-to-character",asset:"item",definitionId:item.definitionId,catalogEntryId:entry.id,quantity:1},"파티 보관함에서 "+selected.name+"에게 "+(entry.nameKo||item.definitionId)+" 1개를 옮겼습니다.")}>지급</button>
+          </article>;})}
+          {!stash.itemReferences.length&&<p className="session-inventory-empty">파티 보관함에 아이템이 없습니다. 아래 소지품에서 먼저 옮겨보세요.</p>}
+        </div>
+      </section>}
+
       <section className="session-inventory-section">
         <div className="session-inventory-section-title"><strong>빠른 지급</strong><span>룰북 모듈과 커스텀 아이템을 함께 검색합니다.</span></div>
         <div className="session-inventory-search">
@@ -130,6 +182,7 @@ export function SessionDmInventoryPane({onClose}:{onClose():void}) {
             return <article key={item.id}>
               <div><strong>{item.name}</strong><small>{itemState(item)} · {item.provenance[0]||"출처 없음"}</small></div>
               <b>×{item.quantity}</b>
+              {campaign&&stash&&<button type="button" className="stash" disabled={Boolean(pending)} aria-label={`${item.name} 1개 파티 보관함으로 이동`} title={active?"장착·조율을 해제하고 파티 보관함으로 옮깁니다.":"파티 보관함으로 1개 이동"} onClick={()=>void runStash("stash-in:"+item.id,{requestId:requestId(),campaignId:campaign.campaignId,actorId:selected.id,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1,forceUnequip:active},selected.name+"의 "+item.name+" 1개를 파티 보관함으로 옮겼습니다.")}>보관함</button>}
               <button type="button" disabled={Boolean(pending)} aria-label={`${item.name} 1개 회수`} title={active?"장착·조율을 해제하고 1개 회수합니다.":"1개 회수"} onClick={()=>void run(`take:${item.id}`,{requestId:requestId(),actorId:selected.id,operation:"revoke-item",itemId:item.id,quantity:1,forceUnequip:active},`${selected.name}에게서 ${item.name} 1개를 회수했습니다.`)}>{pending===`take:${item.id}`?"…":active?"해제·−1":"−1"}</button>
             </article>;
           })}

@@ -28,6 +28,7 @@ type InventoryContext = {
   inventories:Map<string,SessionCharacterInventoryVm>;
   requestIds:Set<string>;
   lastUndo:null|{
+    requestId:string;
     activityId:string;
     actorId:string;
     before:SessionCharacterInventoryVm;
@@ -211,7 +212,7 @@ MockAdapter.prototype.adjustDmInventory=async function adjustDmInventory(command
   }
   context.inventories.set(command.actorId,draft);
   context.requestIds.add(command.requestId);
-  context.lastUndo={activityId:activity.id,actorId:command.actorId,before};
+  context.lastUndo={requestId:command.requestId,activityId:activity.id,actorId:command.actorId,before};
   return this.getSnapshot();
 };
 
@@ -245,6 +246,7 @@ MockAdapter.prototype.undoLastDmInventoryAdjustment=async function undoLastDmInv
     state.activity.unshift(undoActivity);
   }
   context.inventories.set(undo.actorId,restore);
+  context.requestIds.delete(undo.requestId);
   context.lastUndo=null;
   return this.getSnapshot();
 };

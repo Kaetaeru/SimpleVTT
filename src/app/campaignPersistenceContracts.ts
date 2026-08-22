@@ -197,6 +197,7 @@ export interface CampaignSessionSystemsProjection {
   }>;
   calendar:{enabled:boolean;providerId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"];currentNote?:string};
   rations:{enabled:boolean;visibleToPlayers:boolean;balance?:number;dailyRequired?:number;shortage?:number};
+  partyStash:{revision:number;policy:CampaignPartyStashState["policy"];wallet:CampaignPartyStashState["wallet"];itemReferences:CampaignPartyStashState["itemReferences"]};
 }
 
 export interface CampaignRecordV1 {

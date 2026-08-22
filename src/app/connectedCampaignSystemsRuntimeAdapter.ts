@@ -25,13 +25,16 @@ function safeProjection(projection:CampaignSessionSystemsProjection):CampaignSes
 }
 export function decodeCampaignSystemsEnvelope(raw:string):CampaignSystemsEnvelope|null{
   let value:unknown;try{value=JSON.parse(raw);}catch{return null;}
-  const record=object(value);const projection=object(record?.projection);const calendar=object(projection?.calendar);const rations=object(projection?.rations);
+  const record=object(value);const projection=object(record?.projection);const calendar=object(projection?.calendar);const rations=object(projection?.rations);const partyStash=object(projection?.partyStash);const stashWallet=object(partyStash?.wallet);
   if(record?.type!=="campaign-systems-projection"||typeof record.sessionId!=="string"||!record.sessionId||!Number.isInteger(record.revision)||Number(record.revision)<1) return null;
   if(typeof projection?.campaignId!=="string"||typeof projection.campaignName!=="string"||!Number.isInteger(projection.campaignRevision)) return null;
   if(!Array.isArray(projection.roster)||projection.roster.some((value)=>{const member=object(value);return typeof member?.rosterMemberId!=="string"||typeof member.label!=="string"||typeof member.kind!=="string"||typeof member.active!=="boolean";})) return null;
   if(typeof calendar?.enabled!=="boolean"||typeof calendar.providerId!=="string"||!Number.isInteger(calendar.absoluteMinute)||!object(calendar.displayAnchor)) return null;
   if(typeof rations?.enabled!=="boolean"||typeof rations.visibleToPlayers!=="boolean") return null;
   for(const key of ["balance","dailyRequired","shortage"] as const) if(rations[key]!==undefined&&(!Number.isInteger(rations[key])||Number(rations[key])<0)) return null;
+  if(!Number.isInteger(partyStash?.revision)||Number(partyStash?.revision)<1||typeof partyStash?.policy!=="string"||!stashWallet||!Array.isArray(partyStash?.itemReferences)) return null;
+  for(const key of ["gp","sp","cp"] as const) if(!Number.isInteger(stashWallet?.[key])||Number(stashWallet[key])<0) return null;
+  if(partyStash.itemReferences.some((value)=>{const item=object(value);return typeof item?.instanceId!=="string"||typeof item.definitionId!=="string"||!Number.isInteger(item.quantity)||Number(item.quantity)<1;})) return null;
   return {type:"campaign-systems-projection",sessionId:record.sessionId,revision:Number(record.revision),projection:structuredClone(projection) as unknown as CampaignSessionSystemsProjection};
 }
 function compatibleHelloAck(raw:string){try{const value=object(JSON.parse(raw));const compatibility=object(value?.compatibility);return value?.type==="hello-ack"&&typeof value.sessionId==="string"&&compatibility?.status==="compatible"?value.sessionId:null;}catch{return null;}}
@@ -108,6 +111,7 @@ MockAdapter.prototype.advanceCampaignDay=broadcastAfter(MockAdapter.prototype.ad
 MockAdapter.prototype.upsertCampaignRosterMember=broadcastAfter(MockAdapter.prototype.upsertCampaignRosterMember);
 MockAdapter.prototype.removeCampaignRosterMember=broadcastAfter(MockAdapter.prototype.removeCampaignRosterMember);
 MockAdapter.prototype.grantCampaignAdvancement=broadcastAfter(MockAdapter.prototype.grantCampaignAdvancement);
+MockAdapter.prototype.transferPartyStash=broadcastAfter(MockAdapter.prototype.transferPartyStash);
 const hostConsumeCampaignLevelUp=broadcastAfter(MockAdapter.prototype.consumeCampaignLevelUpCredit);
 MockAdapter.prototype.consumeCampaignLevelUpCredit=async function consumeConnectedCampaignLevelUpCredit(campaignId,rosterMemberId,level){
   const state=connectedStateFor(this);

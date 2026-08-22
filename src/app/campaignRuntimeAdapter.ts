@@ -1,4 +1,4 @@
-import type { AppSnapshot, SessionMode } from "./contracts";
+import type { AppSnapshot, PartyStashTransferCommand, SessionMode } from "./contracts";
 import { CampaignApplicationService, previewCampaignDailyRations } from "./campaignApplicationService";
 import { CampaignLibraryRepository } from "./campaignPersistence";
 import type { CampaignCalendarDateTime, CampaignLibraryStore, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
@@ -64,6 +64,7 @@ declare module "./mockAdapter" {
     appendCampaignSessionSummary(campaignId:string,summary:CampaignSessionSummary):Promise<AppSnapshot>;
     grantCampaignAdvancement(campaignId:string,input:{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}):Promise<AppSnapshot>;
     consumeCampaignLevelUpCredit(campaignId:string,rosterMemberId:string,level?:number):Promise<AppSnapshot>;
+    transferPartyStash(command:PartyStashTransferCommand):Promise<AppSnapshot>;
   }
 }
 
@@ -90,6 +91,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
     })),
     calendar:{enabled:captured?.calendar.enabled??campaign.calendar.capability.enabled,providerId:campaign.calendar.state.providerId,absoluteMinute:campaign.calendar.state.absoluteMinute,displayAnchor:clone(campaign.calendar.state.displayAnchor),currentNote:campaign.calendar.state.currentNote},
     rations:{enabled:captured?.rations.enabled??campaign.rations.capability.enabled,visibleToPlayers:rationsVisible,...(mayProjectRations?{balance:campaign.rations.ledger.balances.ration??0,dailyRequired:rationPreview?.requiredUnits??0,shortage:rationPreview?.shortageUnits??0}:{})},
+    partyStash:clone({revision:campaign.partyStash.revision,policy:campaign.partyStash.policy,wallet:campaign.partyStash.wallet,itemReferences:campaign.partyStash.itemReferences}),
   }:null;
   return {...snapshot,campaigns,activeCampaignId,campaignSessionSnapshot:clone(captured),campaignSessionSystems:clone(campaignSessionSystems)};
 };
@@ -231,6 +233,40 @@ MockAdapter.prototype.grantCampaignAdvancement=async function grantCampaignAdvan
 MockAdapter.prototype.consumeCampaignLevelUpCredit=async function consumeCampaignLevelUpCreditRuntime(campaignId,rosterMemberId,level){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error("Campaign not found: "+campaignId);
   await service.consumeLevelUpCredit({...mutationContext(campaignId,"advancement-consume",campaign.revision),rosterMemberId,level});return this.getSnapshot();
+};
+MockAdapter.prototype.transferPartyStash=async function transferPartyStashRuntime(command){
+  const service=await ensureHydrated(this);
+  let campaign=service.getCampaign(command.campaignId);
+  if(!campaign) throw new Error("Campaign not found: "+command.campaignId);
+  const campaignTransfer=()=>{
+    const context={requestId:command.requestId,campaignId:command.campaignId,expectedCampaignRevision:campaign!.revision,initiatedByParticipantId:"dm.local",now:new Date().toISOString(),direction:command.direction};
+    return command.asset==="currency"
+      ? service.transferPartyStash({...context,asset:"currency",amount:command.amount})
+      : service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity});
+  };
+  const inventoryCommand=command.asset==="currency"
+    ? {requestId:command.requestId,actorId:command.actorId,operation:command.direction==="character-to-stash"?"revoke-currency" as const:"grant-currency" as const,amount:command.amount}
+    : command.direction==="character-to-stash"
+      ? {requestId:command.requestId,actorId:command.actorId,operation:"revoke-item" as const,itemId:command.itemId,quantity:command.quantity,forceUnequip:command.forceUnequip}
+      : {requestId:command.requestId,actorId:command.actorId,operation:"grant-item" as const,catalogEntryId:command.catalogEntryId,quantity:command.quantity};
+  if(command.direction==="character-to-stash"){
+    await this.adjustDmInventory(inventoryCommand);
+    try{await campaignTransfer();}
+    catch(error){await this.undoLastDmInventoryAdjustment();throw error;}
+  }else{
+    await campaignTransfer();
+    try{await this.adjustDmInventory(inventoryCommand);}
+    catch(error){
+      campaign=service.getCampaign(command.campaignId);
+      if(campaign){
+        const context={requestId:command.requestId+".compensate",campaignId:command.campaignId,expectedCampaignRevision:campaign.revision,initiatedByParticipantId:"dm.local",now:new Date().toISOString(),direction:"character-to-stash" as const};
+        if(command.asset==="currency") await service.transferPartyStash({...context,asset:"currency",amount:command.amount});
+        else await service.transferPartyStash({...context,asset:"item",definitionId:command.definitionId,quantity:command.quantity});
+      }
+      throw error;
+    }
+  }
+  return this.getSnapshot();
 };
 
 export function setCampaignLibraryStoreForTests(adapter:MockAdapter,store:CampaignLibraryStore){

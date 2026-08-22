@@ -81,6 +81,11 @@ export type DmInventoryAdjustmentCommand =
   | { requestId: string; actorId: string; operation: "revoke-item"; itemId: string; quantity: number; forceUnequip?: boolean }
   | { requestId: string; actorId: string; operation: "grant-currency" | "revoke-currency"; amount: number };
 
+export type PartyStashTransferCommand =
+  | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash";asset:"item";itemId:string;definitionId:string;quantity:number;forceUnequip?:boolean}
+  | {requestId:string;campaignId:string;actorId:string;direction:"stash-to-character";asset:"item";definitionId:string;catalogEntryId:string;quantity:number}
+  | {requestId:string;campaignId:string;actorId:string;direction:"character-to-stash"|"stash-to-character";asset:"currency";amount:number};
+
 export interface CharacterSheet extends CharacterSummary {
   proficiencyBonus: number;
   speed: number;
@@ -577,6 +582,7 @@ export interface SimpleVttAdapter {
   instantiateCombatant(definitionId: string): Promise<AppSnapshot>;
   adjustDmInventory(command: DmInventoryAdjustmentCommand): Promise<AppSnapshot>;
   undoLastDmInventoryAdjustment(): Promise<AppSnapshot>;
+  transferPartyStash(command:PartyStashTransferCommand):Promise<AppSnapshot>;
   hostSession(): Promise<AppSnapshot>;
   joinSession(address: string): Promise<AppSnapshot>;
   setReferenceRole(role: AppRole): Promise<AppSnapshot>;

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "../../src/app/sessionInventoryRuntimeAdapter";
 import "../../src/app/campaignRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryCampaignLibraryStore } from "../../src/app/memoryCampaignLibraryStore";
@@ -75,4 +76,50 @@ test("Campaign runtime projects live Session calendar and ration state without d
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.campaignSessionSystems?.calendar.displayAnchor.hour,1);
   assert.equal(snapshot.campaignSessionSystems?.calendar.displayAnchor.minute,30);
+});
+
+test("Session party stash transfers keep Character inventory and Campaign aggregate in sync",async()=>{
+  const adapter=new MockAdapter();
+  setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
+  await adapter.getSnapshot();
+  await adapter.createCampaign({campaignId:"campaign.stash",name:"Stash Campaign"});
+  let snapshot=await adapter.getSnapshot();
+  const inventory=Object.values(snapshot.sessionCharacterInventories??{})[0];
+  const actorId=inventory.characterId;
+  const entry=snapshot.catalog.find((candidate)=>candidate.category==="item")!;
+  assert.ok(entry);
+  await adapter.adjustDmInventory({requestId:"stash.runtime.seed",actorId,operation:"grant-item",catalogEntryId:entry.id,quantity:2});
+  snapshot=await adapter.getSnapshot();
+  const item=snapshot.sessionCharacterInventories?.[actorId].items.find((candidate)=>candidate.definitionId===(entry.contentId||entry.id))!;
+  assert.ok(item);
+  const beforeQuantity=item.quantity;
+  const beforeGold=inventory.goldGp;
+  snapshot=await adapter.transferPartyStash({requestId:"stash.runtime.item.in",campaignId:"campaign.stash",actorId,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1,forceUnequip:Boolean(item.equipped||item.wielded||item.attuned)});
+  assert.equal(snapshot.sessionCharacterInventories?.[actorId].items.find((candidate)=>candidate.id===item.id)?.quantity??0,beforeQuantity-1);
+  assert.equal(snapshot.campaignSessionSystems?.partyStash.itemReferences[0].quantity,1);
+  snapshot=await adapter.transferPartyStash({requestId:"stash.runtime.gold.in",campaignId:"campaign.stash",actorId,direction:"character-to-stash",asset:"currency",amount:5});
+  assert.equal(snapshot.sessionCharacterInventories?.[actorId].goldGp,beforeGold-5);
+  assert.equal(snapshot.campaignSessionSystems?.partyStash.wallet.gp,5);
+  snapshot=await adapter.transferPartyStash({requestId:"stash.runtime.item.out",campaignId:"campaign.stash",actorId,direction:"stash-to-character",asset:"item",definitionId:item.definitionId,catalogEntryId:entry.id,quantity:1});
+  assert.equal(snapshot.campaignSessionSystems?.partyStash.itemReferences.length,0);
+  assert.equal(snapshot.sessionCharacterInventories?.[actorId].items.find((candidate)=>candidate.definitionId===item.definitionId)?.quantity,beforeQuantity);
+});
+
+test("Party stash transfer compensates Character inventory when Campaign persistence fails",async()=>{
+  const adapter=new MockAdapter();
+  const store=new MemoryCampaignLibraryStore();
+  setCampaignLibraryStoreForTests(adapter,store);
+  await adapter.getSnapshot();
+  await adapter.createCampaign({campaignId:"campaign.stash-failure",name:"Stash Failure"});
+  const before=await adapter.getSnapshot();
+  const inventory=Object.values(before.sessionCharacterInventories??{})[0];
+  const item=inventory.items[0];
+  store.failNextWrite("stash disk unavailable");
+  await assert.rejects(()=>adapter.transferPartyStash({requestId:"stash.runtime.failed",campaignId:"campaign.stash-failure",actorId:inventory.characterId,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1,forceUnequip:Boolean(item.equipped||item.wielded||item.attuned)}),/stash disk unavailable/);
+  const after=await adapter.getSnapshot();
+  assert.equal(after.sessionCharacterInventories?.[inventory.characterId].items.find((candidate)=>candidate.id===item.id)?.quantity,item.quantity);
+  assert.deepEqual(after.campaignSessionSystems?.partyStash.itemReferences,[]);
+  const retried=await adapter.transferPartyStash({requestId:"stash.runtime.failed",campaignId:"campaign.stash-failure",actorId:inventory.characterId,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1,forceUnequip:Boolean(item.equipped||item.wielded||item.attuned)});
+  assert.equal(retried.sessionCharacterInventories?.[inventory.characterId].items.find((candidate)=>candidate.id===item.id)?.quantity??0,item.quantity-1);
+  assert.equal(retried.campaignSessionSystems?.partyStash.itemReferences[0].quantity,1);
 });
