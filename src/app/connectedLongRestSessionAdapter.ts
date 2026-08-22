@@ -10,7 +10,10 @@ import { decodeConnectedWireMessage, type ConnectedWireMessage } from "./connect
 import { connectedStateFor } from "./connectedSessionState";
 import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSessionTransport";
 import { createConnectedLongRestHostCoordinatorStore } from "./connectedLongRestHostCoordinatorStore";
-import { recoverRestartedConnectedLongRestOwnerAfterGlobalCommit } from "./connectedLongRestOwnerRestartRecovery";
+import {
+  recoverRestartedConnectedLongRestOwnerAbort,
+  recoverRestartedConnectedLongRestOwnerAfterGlobalCommit,
+} from "./connectedLongRestOwnerRestartRecovery";
 import {
   abortConnectedLongRestOwner,
   authorizeConnectedLongRestHostDecision,
@@ -134,7 +137,14 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
         },
       });
     }else{
-      await sendConnectedWireTo(message.peer,{type:"long-rest-abort",transactionId:result.transactionId,reason:result.reason});
+      await sendConnectedWireTo(message.peer,{
+        type:"long-rest-abort",
+        transactionId:result.transactionId,
+        reason:result.reason,
+        ownerParticipantId:wire.prepared.ownerParticipantId,
+        character:structuredClone(wire.prepared.character),
+        preparationId:wire.prepared.preparationId,
+      });
     }
     await publishConnectedSnapshot(adapter);
     return;
@@ -194,7 +204,10 @@ async function handleClientLongRest(adapter:MockAdapter,wire:ConnectedWireMessag
   }
   if(wire.type==="long-rest-abort"){
     try{
-      await abortConnectedLongRestOwner(adapter,wire.transactionId,wire.reason);
+      const handled=await abortConnectedLongRestOwner(adapter,wire.transactionId,wire.reason);
+      if(!handled&&wire.ownerParticipantId&&wire.character&&wire.preparationId){
+        await recoverRestartedConnectedLongRestOwnerAbort(adapter,wire);
+      }
       await publishConnectedSnapshot(adapter);
     }catch(error){
       await warn(adapter,`Connected Long Rest abort could not be applied locally: ${error instanceof Error?error.message:String(error)}`);
