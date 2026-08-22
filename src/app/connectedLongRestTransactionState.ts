@@ -8,7 +8,7 @@ export type ConnectedLongRestTransactionState =
   | {phase:"owner-prepared";preflight:ConnectedLongRestCommitPreflight;preparationId:string}
   | {phase:"committed";preflight:ConnectedLongRestCommitPreflight;preparationId:string;campaignCommitId:string}
   | {phase:"complete";preflight:ConnectedLongRestCommitPreflight;preparationId:string;campaignCommitId:string}
-  | {phase:"aborted";preflight:ConnectedLongRestCommitPreflight;reason:string};
+  | {phase:"aborted";preflight:ConnectedLongRestCommitPreflight;reason:string;preparationId?:string};
 
 export interface ConnectedLongRestOwnerPrepared {
   transactionId:string;
@@ -85,6 +85,7 @@ export function abortConnectedLongRestTransaction(
     phase:"aborted",
     preflight:structuredClone(state.preflight),
     reason:required(reason,"Long Rest abort reason"),
+    ...(state.phase==="owner-prepared"?{preparationId:state.preparationId}:{}),
   };
 }
 
