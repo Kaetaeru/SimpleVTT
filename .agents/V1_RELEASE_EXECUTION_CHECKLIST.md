@@ -21,7 +21,7 @@ Updated: 2026-08-22
 - `TODO`: 구현 또는 검증이 시작되지 않았다.
 - `BLOCKED`: 선행 조건 없이는 완료 판정을 할 수 없다.
 
-현재 workspace는 `.git`이 없는 source snapshot이다. 따라서 기존 테스트/코드는 `workspace evidence`일 뿐 `DONE` 출시 증거가 아니다. G0 완료 전에는 어떤 항목도 최종 release credit으로 승격하지 않는다.
+Canonical workspace는 Git worktree `work/SimpleVTT-v1`, branch `work/v1-composite`다. 원본 source snapshot은 비교/복구 증거로만 유지하며 이후 release evidence는 canonical worktree의 SHA를 사용한다.
 
 ## 작업 단위 규칙
 
@@ -104,7 +104,7 @@ V1-40 + V1-41 + V1-42
 
 | Workstream | 현재 판단 | 이유 |
 | --- | --- | --- |
-| V1-00 Git baseline | BLOCKED | 현재 directory에 `.git` 없음; 최신 unmerged dev provenance 확인 불가 |
+| V1-00 Git baseline | DONE | remote 개발 계보와 로컬 Session Inventory 변경을 `work/v1-composite`에 보존하고 exact-head 검증 완료 |
 | V1-01 Foundation audit | PARTIAL | build/domain/persistence/connected tests 다수 존재, canonical head 재검증 필요 |
 | V1-10~13 Campaign systems | TODO | 설계만 존재; runtime/store/UI 없음 |
 | V1-20 Real Character local play | PARTIAL | production Character/skill/spell/inventory tests 존재 |
@@ -120,17 +120,26 @@ V1-40 + V1-41 + V1-42
 
 # G0. Canonical source baseline
 
-## V1-00 Git baseline — BLOCKED
+## V1-00 Git baseline — DONE
 
 `depends_on: none`
 
-- [ ] 실제 `Kaetaeru/SimpleVTT` Git clone을 확보한다.
-- [ ] bundled Git 또는 설치 Git으로 remote URL, branches, tags, commit graph를 확인한다.
-- [ ] owner가 지목한 오늘 새벽 개발 commit을 포함한 최신 unmerged branch를 식별한다.
-- [ ] 현재 snapshot의 변경분(주사위 수정, Session Inventory, Campaign docs)을 patch로 추출한다.
-- [ ] 최신 개발 branch에 변경분을 충돌 없이 적용한다.
-- [ ] `git status --short`, `git branch --show-current`, `git rev-parse HEAD`, `git log -1 --date=iso`를 기록한다.
-- [ ] 이후 모든 evidence가 이 canonical work branch의 SHA를 사용하게 한다.
+- [x] 실제 `Kaetaeru/SimpleVTT` Git clone을 확보한다.
+- [x] bundled Git으로 remote URL, branches, tags, commit graph를 확인한다.
+- [x] 오늘 새벽 개발 commit과 이후 integration commit의 분기 관계를 확인한다.
+- [x] 현재 snapshot의 실질 변경분(Session Inventory, Campaign docs)을 line-ending noise 없이 추출한다.
+- [x] 최신 통합 개발 head `518210bb29b3dd2050a2554ca12bd6f9bb3411c1` 위에 변경분을 적용한다.
+- [x] canonical branch `work/v1-composite`와 baseline commit을 기록한다.
+- [x] 이후 모든 evidence가 canonical worktree의 SHA를 사용하게 한다.
+
+```text
+EVIDENCE
+head: 9b81ae8d058a78bc39ba49843c30ae5b5ba4c939
+tests: tsc --noEmit (pass); node -r ./tests/tsx-os-userinfo-bootstrap.cjs --import tsx --test tests/ui/{browserSessionDebugPreviewStructure,sessionQuickPaletteStructure,sessionFullSheetWorkspace,sessionInventoryRuntimeAdapter,physicsDice3DStructure,visualDiceProjection,visualDiceStructure}.test.ts (40 pass, 0 fail); vite build (410 modules, pass)
+human: browser-session-preview-dm-inventory-2026-08-22
+artifact: dist/ development production bundle; release artifact N/A
+notes: remote branch agent/108-production-play-session-ux@5618c7b diverges before dice-presentation-integration@518210b; composite baseline intentionally uses 518210b plus recovered local changes. Full G1 regression and Windows artifact remain pending.
+```
 
 **Exit:** source provenance가 복구되고 현재 작업이 실제 최신 개발 계보 위에 존재한다.
 
@@ -577,7 +586,7 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 유일한 다음 작업:
 
 ```text
-V1-00 Git baseline
+V1-01 Foundation audit
 ```
 
-실제 Git 계보를 복구하기 전에는 Campaign runtime 구현을 시작하지 않는다. 현재 source snapshot에서 추가 구현하면 최신 unmerged branch와 다시 충돌하거나 이미 더 최신인 코드를 덮을 위험이 있다.
+Canonical Git 기준선이 복구되었다. Campaign runtime 구현 전에 exact-head 전체 foundation 회귀, Tauri 테스트, fixture/authority 중복 감사를 완료한다.
