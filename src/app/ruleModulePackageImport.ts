@@ -1,4 +1,5 @@
 import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./contracts";
+import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 import type {
   InstalledCatalogEntryV1,
   InstalledContentRelationshipV1,
@@ -136,6 +137,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
     if (Array.isArray(value.mechanics) && value.mechanics.length) throw new Error(`content[${index}].mechanics cannot be activated by the generic Catalog yet`);
     if (Array.isArray(value.progressionContributions) && value.progressionContributions.length) throw new Error(`content[${index}].progressionContributions cannot be activated by the generic Catalog yet`);
+    const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {
       contentId,category,nameKo:present.nameKo,nameEn:present.nameEn,
       sourceId:moduleId,source:sourceDocument,version:moduleVersion,description:present.description,
@@ -144,6 +146,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
       semanticRelationships:relations,
       extensionPoints:extensionPoints(value.extensionPoints,`content[${index}].extensionPoints`),
       module:cp(module),
+      ...(campaignProvider?{campaignProvider}:{}),
     } satisfies InstalledCatalogEntryV1;
   });
   const duplicateIds=new Set<string>();
