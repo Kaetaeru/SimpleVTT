@@ -9,27 +9,27 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control status: `continue`
-- Checkpoint: `2026-08-23T04:14:00+09:00`
-- Provider production UI/gate head: `a285f2f`
-- Current handoff commit: `8c79b9f`
+- Checkpoint: `2026-08-23T04:29:00+09:00`
+- Long Rest durable projection head: `aeb65c1`
+- Memory compound persistence head: `b4056e5`
+- Current handoff commit: `0ba4aeb`
 
 ## Human summary
 
-V1-12 declarative Calendar/Ration providers are now connected through the real Campaign UI without redesigning it.
+V1-12 Long Rest compound work has started without reopening completed provider work.
 
-- existing Calendar/Ration selects now list compatible installed declarative profiles from `snapshot.catalog`;
-- only the latest installed version of each provider is offered as the normal choice, while Campaigns pinned to an older installed version keep that exact state visible;
-- selecting a custom provider pins both providerId and providerVersion;
-- missing pinned providers are shown as unavailable but do not block the Campaign screen, Session, Rest, or unrelated actions;
-- custom Calendar profiles feed their month definitions into the existing year/month/day editor;
-- custom Ration profiles drive the daily preview through the existing authoritative calculation;
-- shortage consequences are shown only as DM adjudication suggestions and never auto-apply damage or Exhaustion;
-- focused provider profile/import/runtime/UI tests are now wired into the canonical UI workflow.
+Source reconciliation found that the repository already has the canonical **domain** Long Rest resolver, but not a generic production Long Rest command. The existing Wizard/Pact Tome/Circle Land rest methods are configuration flows rather than full Rest resolution.
 
-Exact-head green validation has not been observed. The GitHub connector did not expose a push-triggered workflow result, and an independent temporary clone could not start because the execution environment could not resolve github.com. No pass or failure is inferred from that network limitation.
+This dispatch therefore built the prerequisites instead of inventing new Rest rules:
 
-## Next implementation
+- Character Long Rest projection now delegates to the existing domain resolver for HP, Temporary HP, durable life flags, and declared long-rest resources;
+- Campaign time/rations remain separate optional effects and are not implied by Rest;
+- Character and Campaign immutable generation payloads can now be prepared without writing;
+- memory Character/Campaign stores support a two-participant preflight/apply protocol;
+- deterministic compound persistence contracts require the second participant failure to leave neither new generation visible.
 
-Continue V1-12 with the remaining authoritative compound behavior: Long Rest plus optional Campaign time advance plus optional ration consumption, with no partial Character/Campaign success if either durable write fails. Reuse the existing Long Rest authority and preserve the current Rest UI.
+The production Windows/Tauri stores are still independently atomic, so the Long Rest UI/runtime must **not** be connected to sequential Character/Campaign commits yet. Next work is a Tauri cross-store transaction with durable staging/commit recovery, followed by the production Long Rest coordinator and minimal existing-UI preview controls.
+
+Focused tests were authored but no exact-head execution result was observed, so no green/DONE claim is made. Final Codex audit remains deferred until all V1 implementation is complete.
 
 `STATUS.md` is human-facing only. Reconciliation source order remains README -> control -> STATE -> PLAN.
