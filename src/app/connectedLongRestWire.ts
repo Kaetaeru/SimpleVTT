@@ -1,3 +1,4 @@
+import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
 import type {
   ConnectedLongRestCommitPreflight,
   ConnectedLongRestOffer,
@@ -15,7 +16,7 @@ export type ConnectedLongRestWireMessage =
   | { type:"long-rest-prepare-authorized"; preflight:ConnectedLongRestCommitPreflight }
   | { type:"long-rest-owner-prepared"; prepared:ConnectedLongRestOwnerPrepared }
   | { type:"long-rest-global-commit"; commit:ConnectedLongRestGlobalCommit }
-  | { type:"long-rest-owner-materialized"; materialized:ConnectedLongRestOwnerMaterialized }
+  | { type:"long-rest-owner-materialized"; materialized:ConnectedLongRestOwnerMaterialized; projection:CharacterSessionProjectionV1 }
   | { type:"long-rest-abort"; transactionId:string; reason:string };
 
 export type DecodeConnectedLongRestWireResult =
@@ -33,6 +34,20 @@ function isCharacterRevision(value:unknown) {
     &&isString(value.characterId)
     &&isRevision(value.sourceRevision)
     &&isRevision(value.runtimeRevision);
+}
+
+function isProjectionEnvelope(value:unknown):value is CharacterSessionProjectionV1 {
+  return isRecord(value)
+    &&value.schemaId==="simplevtt.character-session-projection"
+    &&value.schemaVersion===1
+    &&isString(value.characterId)
+    &&isRevision(value.sourceRevision)
+    &&isRevision(value.runtimeRevision)
+    &&isRecord(value.rulesProfile)
+    &&isRecord(value.source)
+    &&isRecord(value.sourceAuthority)
+    &&isRecord(value.runtime)
+    &&Array.isArray(value.contentIdentities);
 }
 
 function isOptions(value:unknown) {
@@ -117,7 +132,8 @@ export function validateConnectedLongRestWireMessage(value:unknown):ConnectedLon
     return value as ConnectedLongRestWireMessage;
   }
   if (value.type==="long-rest-owner-materialized") {
-    if (!isOwnerMaterialized(value.materialized)) return "invalid long-rest-owner-materialized message";
+    if (!isOwnerMaterialized(value.materialized)||!isProjectionEnvelope(value.projection)) return "invalid long-rest-owner-materialized message";
+    if (value.projection.characterId!==value.materialized.character.characterId) return "long-rest-owner-materialized projection Character mismatch";
     return value as ConnectedLongRestWireMessage;
   }
   if (value.type==="long-rest-abort") {
