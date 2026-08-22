@@ -23,6 +23,7 @@ import { acceptHostCharacterSessionProjection } from "./connectedCharacterProjec
 import { syncConnectedCampaignRoster } from "./connectedCampaignRosterPort";
 import { projectedCharacterById, rebindCharacterSessionProjectionPeer } from "./characterSessionProjectionRegistry";
 import { unmountReconstructedCharacterSessionProjection } from "./characterSessionProjectionMount";
+import { clearReadyActionConfiguration, setReadyActionConfiguration } from "./standardActionReadyState";
 
 declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
@@ -160,6 +161,20 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   if (payload.kind==="participant") {
     applyParticipantPayload(adapter,payload);
     return { status:"committed" as const };
+  }
+  if (payload.kind==="ready-action") {
+    const actor=app.scene.entities.find((entity)=>entity.id===payload.actorId);
+    if (!actor) return {status:"rejected" as const,error:`ready-action actor is missing: ${payload.actorId}`};
+    app.scene.economyByActor[payload.actorId]={...payload.economy};
+    if (payload.transition==="armed"&&payload.configuration) {
+      setReadyActionConfiguration(adapter,payload.configuration);
+      if (!actor.status.includes("준비 행동")) actor.status.push("준비 행동");
+    } else {
+      clearReadyActionConfiguration(adapter);
+      actor.status=actor.status.filter((status)=>status!=="준비 행동");
+    }
+    app.activity.unshift({id:`connected:${event.eventId}`,time:"지금",actor:actor.name,title:payload.transition==="armed"?"원격 준비 행동 설정":"원격 준비 행동 해제",summary:payload.configuration?.trigger??`Host event #${event.sequence}`,detail:[`eventId=${event.eventId}`,...payload.provenance],stateChanges:[...payload.stateChanges]});
+    return {status:"committed" as const};
   }
   if (payload.kind==="correction") {
     const corrected=applyConnectedCorrections(app.scene,app.activeCharacter.resources,payload.changes);

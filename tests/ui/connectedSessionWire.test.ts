@@ -69,6 +69,22 @@ const readyEvent:ConnectedSessionEvent={
   },
 };
 
+const readyActionEvent:ConnectedSessionEvent={
+  sessionId:"session.test",
+  eventId:"session.test:event:3",
+  sequence:3,
+  actorId:"char.aelar",
+  payload:{
+    kind:"ready-action",
+    actorId:"char.aelar",
+    transition:"armed",
+    configuration:{actorId:"char.aelar",actionId:"action.shortbow",trigger:"고블린이 문을 통과하면"},
+    economy:{action:false,bonusAction:true,reaction:true,movement:30,movementMax:30},
+    stateChanges:["Aelar 상태 추가: 준비 행동"],
+    provenance:["host-authoritative ready-action lifecycle"],
+  },
+};
+
 function roundTrip(message:ConnectedWireMessage) {
   const decoded=decodeConnectedWireMessage(encodeConnectedWireMessage(message));
   assert.equal(decoded.status,"ok");
@@ -92,6 +108,7 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
   });
   roundTrip({ type:"catchup-request",sessionId:"session.test",afterCursor:1 });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:1,events:[readyEvent] });
+  roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:2,events:[readyActionEvent] });
   roundTrip({ type:"session-ended",sessionId:"session.test",reason:"Host ended live play." });
   roundTrip({ type:"error",code:"stale-cursor",message:"client is behind",hostCursor:3 });
 });

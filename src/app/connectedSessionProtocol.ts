@@ -73,6 +73,15 @@ export type ConnectedEventPayload =
       ready:boolean;
       stateChanges:string[];
       provenance:string[];
+    }
+  | {
+      kind:"ready-action";
+      actorId:string;
+      transition:"armed"|"cleared";
+      configuration?:ReadyActionConfiguration;
+      economy:EconomyVm;
+      stateChanges:string[];
+      provenance:string[];
     };
 
 export interface ConnectedSessionEvent {

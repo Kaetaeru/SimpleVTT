@@ -48,6 +48,24 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   const pending=state.pendingRemoteAction;
   const isRemotePending=pending?.resolutionId===resolution.id;
   const events=takeCommittedResolutionEvents(resolution.id);
+  const readyConfig=readyActionConfigurationFor(adapter);
+  const readyArmed=resolution.actionId==="action.standard.ready"&&readyConfig;
+  const readyCleared=pending?.request.actionId==="action.standard.ready.trigger";
+  if (!events?.length&&(readyArmed||readyCleared)) {
+    const actorId=resolution.actorId;
+    const economy=current.scene.economyByActor[actorId];
+    if (!economy) return current;
+    const candidate={actorId,payload:{kind:"ready-action" as const,actorId,transition:(readyArmed?"armed":"cleared") as "armed"|"cleared",configuration:readyArmed?readyConfig:undefined,economy:{...economy},stateChanges:[...resolution.stateChanges],provenance:["host-authoritative ready-action lifecycle"]}};
+    const committed=isRemotePending&&pending
+      ? state.ledger.commitReservedActionRequest(pending.request.requestId,candidate)
+      : {status:"committed" as const,event:state.ledger.commitHostEvent(candidate)};
+    if (committed.status==="rejected") return current;
+    state.publishedResolutionIds.add(resolution.id);
+    if (isRemotePending) state.pendingRemoteAction=null;
+    await broadcastConnectedWire({type:"event-batch",sessionId:state.ledger.sessionId,afterCursor:committed.event.sequence-1,events:[committed.event]});
+    if (isRemotePending&&restoreProjectedContext(adapter)) return connectedInternal(adapter).getSnapshot();
+    return current;
+  }
   if (!events?.length) {
     if (isRemotePending&&pending) {
       state.ledger.cancelReservedActionRequest(pending.request.requestId);
@@ -90,13 +108,18 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   }
 
   const event=committed.event;
+  const outbound=[event];
+  if (readyCleared) {
+    const economy=current.scene.economyByActor[resolution.actorId];
+    if (economy) outbound.push(state.ledger.commitHostEvent({actorId:resolution.actorId,payload:{kind:"ready-action",actorId:resolution.actorId,transition:"cleared",economy:{...economy},stateChanges:[`${resolution.actorId} 준비 행동 해제`],provenance:["host-authoritative ready-action trigger"]}}));
+  }
   state.publishedResolutionIds.add(resolution.id);
   if (isRemotePending) state.pendingRemoteAction=null;
   await broadcastConnectedWire({
     type:"event-batch",
     sessionId:state.ledger.sessionId,
     afterCursor:event.sequence-1,
-    events:[event],
+    events:outbound,
   });
   if (isRemotePending&&restoreProjectedContext(adapter)) return connectedInternal(adapter).getSnapshot();
   return current;
@@ -168,7 +191,10 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
   try {
     const next=await previousResolveAction.call(adapter,request.actionId,request.targetIds);
     const resolution=next.resolution;
-    if (!resolution||resolution.actorId!==request.actorId||resolution.actionId!==request.actionId) {
+    const expectedActionId=request.actionId==="action.standard.ready.trigger"
+      ? readyActionConfigurationFor(adapter)?.actionId
+      : request.actionId;
+    if (!resolution||resolution.actorId!==request.actorId||resolution.actionId!==expectedActionId) {
       ledger.cancelReservedActionRequest(request.requestId);
       if (request.readyConfiguration) clearReadyActionConfiguration(adapter);
       restoreProjectedContext(adapter);
