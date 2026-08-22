@@ -84,6 +84,7 @@ export function installedEntryFromPreview(entry:CatalogEntry):InstalledCatalogEn
     description:entry.description,
     relationships:entry.relationships,
     capabilities:entry.capabilities,
+    ...(entry.campaignProvider?{campaignProvider:entry.campaignProvider}:{}),
   });
 }
 
@@ -113,6 +114,7 @@ export function resolvedCatalogEntryFromInstalled(entry:InstalledCatalogEntryV1)
     description:entry.description,
     relationships:cp(entry.relationships),
     capabilities:cp(entry.capabilities),
+    ...(entry.campaignProvider?{campaignProvider:cp(entry.campaignProvider)}:{}),
   };
 }
 
