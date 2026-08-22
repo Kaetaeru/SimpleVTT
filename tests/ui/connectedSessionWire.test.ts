@@ -160,3 +160,33 @@ test("connected wire rejects a malformed authoritative ResolutionEvent before st
   const decoded=decodeConnectedWireMessage(JSON.stringify({type:"event-batch",sessionId:"session.test",afterCursor:0,events:[malformed]}));
   assert.equal(decoded.status,"rejected");
 });
+
+test("connected session wire round-trips Long Rest distributed transaction envelopes and rejects malformed input", () => {
+  roundTrip({
+    type:"long-rest-offer",
+    offer:{
+      transactionId:"long-rest.remote.1",
+      sessionId:"session.test",
+      campaignId:"campaign.live",
+      campaignRevision:11,
+      ownerParticipantId:"player.aelar",
+      character:{characterId:"char.aelar",sourceRevision:2,runtimeRevision:5},
+      options:{advanceMinutes:480,consumeRations:true},
+    },
+  });
+  roundTrip({
+    type:"long-rest-global-commit",
+    commit:{transactionId:"long-rest.remote.1",campaignCommitId:"campaign.commit.12"},
+  });
+  const malformed=decodeConnectedWireMessage(JSON.stringify({
+    type:"long-rest-decision",
+    decision:{
+      transactionId:"long-rest.remote.1",
+      sessionId:"session.test",
+      ownerParticipantId:"player.aelar",
+      character:{characterId:"char.aelar",sourceRevision:2,runtimeRevision:-1},
+      accepted:true,
+    },
+  }));
+  assert.equal(malformed.status,"rejected");
+});
