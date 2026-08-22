@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { AppSnapshot } from "../../src/app/contracts";
 import { ClientSessionReplica, CONNECTED_SESSION_PROTOCOL_VERSION, HostSessionLedger } from "../../src/app/connectedSessionProtocol";
+import { commitConnectedTurnProjectionEvents } from "../../src/app/connectedTurnRoutingAdapter";
 
 const economy={ action:true,bonusAction:true,reaction:true,movement:30,movementMax:30 };
 
@@ -57,4 +59,33 @@ test("reconnect replays ordered host turn projections without double-applying th
   assert.equal(view.economyByActor["char.aelar"]?.action,true);
   assert.equal(client.apply(roundTwo,apply).status,"duplicate");
   assert.equal(applyCount,3);
+});
+
+test("Ready lifecycle clear is sequenced after the authoritative turn projection",()=>{
+  const host=ledger();
+  const readyEconomy={...economy,action:false,reaction:true};
+  const snapshot={
+    sessionMode:"initiative",
+    scene:{
+      round:2,
+      currentActorId:"char.aelar",
+      economyByActor:{"char.aelar":readyEconomy,"combatant.goblin-a":economy},
+    },
+  } as unknown as AppSnapshot;
+
+  const events=commitConnectedTurnProjectionEvents(host,snapshot,"turn-end",{
+    actorId:"char.aelar",
+    reason:"next-turn-start",
+  });
+
+  assert.deepEqual(events.map((event)=>event.sequence),[1,2]);
+  assert.deepEqual(events.map((event)=>event.payload.kind),["mode-transition","ready-action"]);
+  const clear=events[1];
+  assert.equal(clear.actorId,"char.aelar");
+  assert.equal(clear.payload.kind,"ready-action");
+  if (clear.payload.kind!=="ready-action") assert.fail("expected ready-action clear event");
+  assert.equal(clear.payload.transition,"cleared");
+  assert.deepEqual(clear.payload.economy,readyEconomy);
+  assert.ok(clear.payload.stateChanges.includes("ready-lifecycle=next-turn-start"));
+  assert.deepEqual(host.eventsAfter(0).map((event)=>event.eventId),events.map((event)=>event.eventId));
 });
