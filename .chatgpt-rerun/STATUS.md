@@ -3,34 +3,31 @@
 **Connection:** `work/v1-composite` · existing run · V1 completion continuing
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Canonical branch/ref: `work/v1-composite`
-- Control path: `.chatgpt-rerun/control.json`
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control status: `continue`
-- Checkpoint: `2026-08-23T05:02:00+09:00`
-- Long Rest coordinator/preview: `c1664db`
-- Production runtime bridge/preview: `7e0e5ce`
-- Session Campaign pane integration: `b99bb4c`
-- Focused build wiring: `7e85dc1`
+- Checkpoint: `2026-08-23T08:31:00+09:00`
+- Current product head before checkpoint docs: `49271f768f51bee12caa0f30a7a33f63c716bdcb`
 
 ## Human summary
 
-The local active-Character Long Rest path is now source-connected end-to-end through the existing Session Campaign pane.
+Connected Long Rest remains the active V1-12 gap. This execution resumed from the existing transport/preflight/state-machine checkpoint without redoing local Long Rest, SessionProjection, reconnect, or Character/Campaign compound work.
 
-The implementation reuses the existing canonical Character Rest rules rather than calculating recovery in React. Calendar advance and Ration consumption are separate opt-in side effects, default OFF, and are computed through Campaign application authority. Preview and commit use the same candidate calculation.
+Completed source work:
 
-Character and Campaign candidates are prepared without first mutating their production repositories. Tauri commits both through the existing recoverable Character+Campaign compound writer; volatile browser/test mode uses the Memory compound writer. Runtime Character/Campaign contexts and the existing Scene Character projection are refreshed only after that compound writer succeeds.
+- canonical Session wire regression now covers valid/malformed `long-rest-*` envelopes;
+- `connectedLongRestWire.test.ts` is included in `npm run test:campaign-rest`;
+- added a real owner-side Character preparation store boundary;
+- browser/test Memory preparation keeps the candidate generation invisible until materialization and enforces idempotent prepare/materialize plus precommit abort;
+- Tauri now has durable `prepare`, `materialize`, and `abort` commands backed by a fsynced preparation marker under the Character library;
+- Tauri preparation uses the shared Character/Campaign persistence mutex and runs compound recovery before normal work;
+- after global commit, materialization writes the prepared immutable Character generation; retry after an interruption verifies the already-written generation payload before marking the preparation materialized;
+- canonical owner Long Rest preparation projects Character recovery through `projectCharacterLongRest`, prepares the next Character-library generation, and does not expose it before global commit;
+- focused tests were authored for visibility, idempotency, stale revision/generation rejection, abort behavior, and canonical Rest candidate materialization.
 
-The DM now has one minimal Long Rest block inside the existing `SessionCampaignPane`: authoritative HP/Temporary HP preview, optional +8-hour Campaign time, optional daily Ration consumption, resulting Calendar/Ration preview, warnings, and one apply action. Existing Party, Advancement, Calendar, and Ration layout was preserved.
+No green claim is made. GitHub exposed no exact-head statuses/workflow runs and no local TypeScript/Rust/Tauri execution result was observed. The new Rust and TS tests are source-authored only.
 
-Focused deterministic tests were authored for Rest-only/options/disabled or missing provider/idempotency/writer failure/preview parity/runtime rehydrate. `npm run test:campaign-rest` now groups them, and `npm run build` includes that suite.
-
-This is **not reported green yet**. The GitHub connector exposed no commit statuses or workflow runs for the current direct-push head, and no TypeScript/Rust/Tauri/Windows execution result was observed in this dispatch.
-
-The remaining V1-12 question is connected Character ownership: the Campaign design contract mentions per-Character preview and DM/owner decisions, while the new bridge correctly operates on the locally persisted active Character and does not copy host-unknown remote Characters into the host library. The next dispatch should reconcile that requirement against the existing connected projection/reconnect/write-back authority before adding any connected Rest scope.
-
-After V1-12 scope reconciliation, inspect V1-13 Party Stash / DM Library against current source before coding; substantial implementation already exists despite the stale checklist label.
+Remaining next gap: connect this owner preparation/materialization port to actual Host/Client `connectedSessionRuntimeAdapter` routing and the Host Campaign global commit/idempotency path. Do not copy a remote Character into the Host Character library.
 
 `STATUS.md` is human-facing only. Reconciliation source order remains README -> control -> STATE -> PLAN.
