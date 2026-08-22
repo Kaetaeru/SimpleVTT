@@ -57,13 +57,25 @@ export interface LongRestCompoundInput {
   rationProfile?:InstalledCampaignRationProfileV1;
 }
 
-export interface LongRestCompoundDependencies {
-  characterDocument:CharacterLibraryDocumentV1;
+export interface LongRestCompoundPreviewDependencies {
   characterSheets:CharacterSheet[];
-  characterStore:CharacterLibraryStore;
   campaignDocument:CampaignDocumentV1;
+}
+
+export interface LongRestCompoundDependencies extends LongRestCompoundPreviewDependencies {
+  characterDocument:CharacterLibraryDocumentV1;
+  characterStore:CharacterLibraryStore;
   campaignStore:CampaignLibraryStore;
   writer:CharacterCampaignCompoundWriter;
+}
+
+export interface LongRestCompoundPreview {
+  status:"ready"|"duplicate";
+  transactionId:string;
+  character:CharacterLongRestProjection|null;
+  campaignDocument:CampaignDocumentV1;
+  applied:{calendar:boolean;rations:boolean};
+  warnings:string[];
 }
 
 export interface LongRestCompoundResult {
@@ -74,6 +86,16 @@ export interface LongRestCompoundResult {
   applied:{calendar:boolean;rations:boolean};
   warnings:string[];
   write?:CharacterCampaignCompoundWrite;
+}
+
+function normalizeInput(input:LongRestCompoundInput){
+  const transactionId=input.transactionId.trim();
+  if(!transactionId) throw new Error("Long Rest transactionId is required");
+  const campaignId=input.campaignId.trim();
+  if(!campaignId) throw new Error("Long Rest campaignId is required");
+  const activeCharacterId=input.activeCharacterId.trim();
+  if(!activeCharacterId) throw new Error("Long Rest activeCharacterId is required");
+  return {...input,transactionId,campaignId,activeCharacterId};
 }
 
 function requireCampaign(document:CampaignDocumentV1,campaignId:string):CampaignRecordV1 {
@@ -186,6 +208,43 @@ async function projectCampaignCandidate(
 }
 
 /**
+ * Resolves the exact Character/Campaign candidates that a commit would publish,
+ * but performs no production-store writes and mutates no runtime projection.
+ */
+export async function previewLongRestCompound(
+  input:LongRestCompoundInput,
+  dependencies:LongRestCompoundPreviewDependencies,
+):Promise<LongRestCompoundPreview> {
+  const normalized=normalizeInput(input);
+  const currentCampaign=requireCampaign(dependencies.campaignDocument,normalized.campaignId);
+  if(hasMasterRequest(currentCampaign,normalized.transactionId)){
+    return {
+      status:"duplicate",
+      transactionId:normalized.transactionId,
+      character:null,
+      campaignDocument:cp(dependencies.campaignDocument),
+      applied:{calendar:false,rations:false},
+      warnings:[],
+    };
+  }
+
+  const currentSheet=requireActiveCharacter(dependencies.characterSheets,normalized.activeCharacterId);
+  const character=projectCharacterLongRest(currentSheet,{
+    effects:normalized.effects,
+    deathSaves:normalized.deathSaves,
+  });
+  const campaign=await projectCampaignCandidate(normalized,dependencies.campaignDocument);
+  return {
+    status:"ready",
+    transactionId:normalized.transactionId,
+    character,
+    campaignDocument:campaign.document,
+    applied:campaign.applied,
+    warnings:campaign.warnings,
+  };
+}
+
+/**
  * Builds both durable candidates without mutating either production repository,
  * then publishes them through exactly one Character+Campaign compound writer.
  * Runtime adapters must only rehydrate/project the returned committed state after
@@ -195,47 +254,35 @@ export async function executeLongRestCompound(
   input:LongRestCompoundInput,
   dependencies:LongRestCompoundDependencies,
 ):Promise<LongRestCompoundResult> {
-  const transactionId=input.transactionId.trim();
-  if(!transactionId) throw new Error("Long Rest transactionId is required");
-  const campaignId=input.campaignId.trim();
-  if(!campaignId) throw new Error("Long Rest campaignId is required");
-  const activeCharacterId=input.activeCharacterId.trim();
-  if(!activeCharacterId) throw new Error("Long Rest activeCharacterId is required");
-
-  const currentCampaign=requireCampaign(dependencies.campaignDocument,campaignId);
-  if(hasMasterRequest(currentCampaign,transactionId)){
+  const normalized=normalizeInput(input);
+  const preview=await previewLongRestCompound(normalized,dependencies);
+  if(preview.status==="duplicate"){
     return {
       status:"duplicate",
-      transactionId,
+      transactionId:preview.transactionId,
       character:null,
-      campaignDocument:cp(dependencies.campaignDocument),
-      applied:{calendar:false,rations:false},
-      warnings:[],
+      campaignDocument:preview.campaignDocument,
+      applied:preview.applied,
+      warnings:preview.warnings,
     };
   }
 
-  const currentSheet=requireActiveCharacter(dependencies.characterSheets,activeCharacterId);
-  const character=projectCharacterLongRest(currentSheet,{
-    effects:input.effects,
-    deathSaves:input.deathSaves,
-  });
-  const campaign=await projectCampaignCandidate({...input,transactionId,campaignId,activeCharacterId},dependencies.campaignDocument);
-  const characterSheets=dependencies.characterSheets.map((sheet)=>sheet.id===activeCharacterId?character.sheet:sheet);
-
+  const character=preview.character!;
+  const characterSheets=dependencies.characterSheets.map((sheet)=>sheet.id===normalized.activeCharacterId?character.sheet:sheet);
   const [characterWrite,campaignWrite]=await Promise.all([
     prepareCharacterLibraryGeneration(
       dependencies.characterDocument,
       dependencies.characterStore,
       characterSheets,
-      activeCharacterId,
+      normalized.activeCharacterId,
     ),
     prepareCampaignLibraryGeneration(
       dependencies.campaignStore,
-      campaign.document,
+      preview.campaignDocument,
     ),
   ]);
   const write:CharacterCampaignCompoundWrite={
-    transactionId,
+    transactionId:normalized.transactionId,
     character:characterWrite,
     campaign:campaignWrite,
   };
@@ -244,11 +291,11 @@ export async function executeLongRestCompound(
 
   return {
     status:"committed",
-    transactionId,
+    transactionId:normalized.transactionId,
     character,
-    campaignDocument:campaign.document,
-    applied:campaign.applied,
-    warnings:campaign.warnings,
+    campaignDocument:preview.campaignDocument,
+    applied:preview.applied,
+    warnings:preview.warnings,
     write,
   };
 }
