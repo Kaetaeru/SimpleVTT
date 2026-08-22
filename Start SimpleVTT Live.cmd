@@ -78,13 +78,60 @@ for %%I in ("%NPM_CMD%") do set "NPM_DIR=%%~dpI"
 set "PATH=%NPM_DIR%;%NODE_DIR%;%PATH%"
 set "SIMPLEVTT_NPM_CMD=%NPM_CMD%"
 
+rem Tauri requires Rust/Cargo. Keep Rust private to SimpleVTT Live just like Node.
+set "CARGO_HOME=%CD%\.live-dev\runtime\rust\cargo"
+set "RUSTUP_HOME=%CD%\.live-dev\runtime\rust\rustup"
+set "CARGO_EXE=%CARGO_HOME%\bin\cargo.exe"
+set "RUSTC_EXE=%CARGO_HOME%\bin\rustc.exe"
+
+if not exist "%CARGO_EXE%" (
+  echo [SimpleVTT Live] Rust/Cargo was not found for this workspace.
+  echo [SimpleVTT Live] Preparing a private Rust toolchain under .live-dev\runtime\rust ...
+  echo.
+  powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\bootstrap-live-rust.ps1" -Root "%CD%"
+  if errorlevel 1 (
+    echo.
+    echo [SimpleVTT Live] Automatic Rust toolchain setup failed.
+    echo Check the error above, then run this launcher again.
+    pause
+    exit /b 1
+  )
+)
+
+set "PATH=%CARGO_HOME%\bin;%PATH%"
+"%CARGO_EXE%" --version >nul 2>nul
+if errorlevel 1 (
+  echo [SimpleVTT Live] Cargo exists but could not run from the private Rust runtime.
+  pause
+  exit /b 1
+)
+"%RUSTC_EXE%" --version >nul 2>nul
+if errorlevel 1 (
+  echo [SimpleVTT Live] rustc exists but could not run from the private Rust runtime.
+  pause
+  exit /b 1
+)
+
 for /f "delims=" %%V in ('"%NODE_EXE%" --version 2^>nul') do set "NODE_VERSION=%%V"
 for /f "delims=" %%V in ('call "%NPM_CMD%" --version 2^>nul') do set "NPM_VERSION=%%V"
+for /f "delims=" %%V in ('"%CARGO_EXE%" --version 2^>nul') do set "CARGO_VERSION=%%V"
+for /f "delims=" %%V in ('"%RUSTC_EXE%" --version 2^>nul') do set "RUSTC_VERSION=%%V"
 
-echo [SimpleVTT Live] Git  : %GIT_EXE%
-echo [SimpleVTT Live] Node : %NODE_EXE%  %NODE_VERSION%
-echo [SimpleVTT Live] npm  : %NPM_CMD%  %NPM_VERSION%
+echo [SimpleVTT Live] Git   : %GIT_EXE%
+echo [SimpleVTT Live] Node  : %NODE_EXE%  %NODE_VERSION%
+echo [SimpleVTT Live] npm   : %NPM_CMD%  %NPM_VERSION%
+echo [SimpleVTT Live] Cargo : %CARGO_EXE%  %CARGO_VERSION%
+echo [SimpleVTT Live] rustc : %RUSTC_EXE%  %RUSTC_VERSION%
 echo.
+
+rem Surface any existing local edits before the sync loop starts.
+set "DIRTY_SEEN="
+for /f "delims=" %%I in ('"%GIT_EXE%" status --porcelain --untracked-files=normal 2^>nul') do if not defined DIRTY_SEEN (
+  set "DIRTY_SEEN=1"
+  echo [SimpleVTT Live] Local Git changes are present; automatic sync will pause until they are resolved:
+  "%GIT_EXE%" status --short
+  echo.
+)
 
 "%NODE_EXE%" scripts\live-dev-sync.mjs
 set "LIVE_EXIT=%ERRORLEVEL%"
