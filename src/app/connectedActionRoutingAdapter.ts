@@ -48,7 +48,7 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   const pending=state.pendingRemoteAction;
   const isRemotePending=pending?.resolutionId===resolution.id;
   const events=takeCommittedResolutionEvents(resolution.id);
-  const readyConfig=readyActionConfigurationFor(adapter);
+  const readyConfig=readyActionConfigurationFor(adapter,resolution.actorId);
   const readyArmed=resolution.actionId==="action.standard.ready"&&readyConfig;
   const readyCleared=pending?.request.actionId==="action.standard.ready.trigger";
   if (!events?.length&&(readyArmed||readyCleared)) {
@@ -192,11 +192,11 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     const next=await previousResolveAction.call(adapter,request.actionId,request.targetIds);
     const resolution=next.resolution;
     const expectedActionId=request.actionId==="action.standard.ready.trigger"
-      ? readyActionConfigurationFor(adapter)?.actionId
+      ? readyActionConfigurationFor(adapter,request.actorId)?.actionId
       : request.actionId;
     if (!resolution||resolution.actorId!==request.actorId||resolution.actionId!==expectedActionId) {
       ledger.cancelReservedActionRequest(request.requestId);
-      if (request.readyConfiguration) clearReadyActionConfiguration(adapter);
+      if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
       restoreProjectedContext(adapter);
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:"host production resolution path rejected the requested actor/action/targets",hostCursor:ledger.cursor});
       return;
@@ -208,7 +208,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     ledger.cancelReservedActionRequest(request.requestId);
     state.pendingRemoteAction=null;
     restoreProjectedContext(adapter);
-    if (request.readyConfiguration) clearReadyActionConfiguration(adapter);
+    if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
     await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-resolution-error",message:error instanceof Error?error.message:String(error),hostCursor:ledger.cursor});
   }
 });
@@ -224,7 +224,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     }
     const character=connectedManifest(this).character;
     if (!character) return app.getSnapshot();
-    const readyConfiguration=actionId==="action.standard.ready"?readyActionConfigurationFor(this):undefined;
+    const readyConfiguration=actionId==="action.standard.ready"?readyActionConfigurationFor(this,character.characterId):undefined;
     await tauriSessionTransport.send(JSON.stringify({
       type:"action-request",
       request:{
