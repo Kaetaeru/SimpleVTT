@@ -10,3 +10,4 @@ target/
 .idea/
 src/generated/
 .live-dev/
+src-tauri/Cargo.lock
