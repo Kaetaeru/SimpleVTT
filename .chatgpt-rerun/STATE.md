@@ -8,21 +8,13 @@
 - canonical repository URL: `https://github.com/Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- reconciled_at: `2026-08-23T03:26:00+09:00`
+- checkpointed_at: `2026-08-23T03:32:00+09:00`
 
-## Reconciliation decision
+## Run continuity
 
-This is an existing active Rerun run. **Do not create a new run_id, do not reset sequence, and do not replace the existing task_id.**
+This is the existing active Rerun run. **Do not create a new run_id, reset sequence, or replace the task_id.** Sequence 0 / `phase13-closeout-ui-dice-regression` remains completed and its historical validation evidence is preserved.
 
-The previous Rerun state named `main` as canonical and planned `agent/108-production-play-session-ux`. That routing is now historical. Actual GitHub tool activity in the current ChatGPT conversation and `CANONICAL_ROOT.md` establish `work/v1-composite` as the current V1 canonical implementation/build/test/release-preparation branch.
-
-The existing task identity is retained for durable continuity, but the user's current authorized goal is broader: **finish implementation of the full V1 checklist through the pre-release boundary, then run one comprehensive Codex audit immediately before V1 acceptance/release.** Per-slice Codex total audits are not the current gate.
-
-## Preserved completion history
-
-Sequence 0 / `phase13-closeout-ui-dice-regression` completed successfully and is not reset by this reconciliation.
-
-Preserved verified implementation head: `7c9440970753a370fec7830cfa691832552e1d05`.
+Preserved verified Phase 13 implementation head: `7c9440970753a370fec7830cfa691832552e1d05`.
 
 Preserved exact-head workflow evidence:
 
@@ -36,77 +28,82 @@ Preserved exact-head workflow evidence:
 
 Preserved Phase 13 artifact: `SimpleVTT-Phase13-Windows-7c9440970753a370fec7830cfa691832552e1d05`, artifact id `9266043327`, SHA-256 `242f65162d35df3c0ceb9a0bee138427835a000b5f3272e358d16239c12fadd8`.
 
-A later `main` playable workflow produced a green Windows artifact, but subsequent product inspection established that those gates did not prove the real user-created Character -> actual session/play UI path. That historical finding remains valid context.
+## Current product contract
 
-## Preserved sequence 1 history
+The active sequence is the V1-completion umbrella on `work/v1-composite`.
 
-The original sequence 1 authorization was Phase 14 production play/session UX. It identified a real production gap where reference-seeded MockAdapter state did not by itself prove a fresh persisted Character -> live Scene/action user journey.
+- Finish all intended V1 functionality through real production paths.
+- Preserve the current visible UI structure/style as the V1 baseline.
+- Do not perform broad redesign while filling implementation gaps.
+- Do not run a comprehensive Codex audit after every slice.
+- After all pre-release implementation is present, freeze one exact canonical SHA and run the comprehensive Codex audit once at the V1 boundary.
 
-The original strategy included:
+## Completed in this execution
 
-1. materialize/reconcile the actual persisted Character into Scene state and derived actions;
-2. provide deliberate no-session/no-actor UI and Character Sheet -> Play entry;
-3. add in-session `행동 / 기술 / 주문 / 인벤토리` surfaces;
-4. derive real Character skills/attacks/features/items/spells;
-5. preserve authoritative item/equipment/attunement/use resolution paths;
-6. converge local and connected play on the same production actor projection;
-7. add fresh-Character and restart production journey gates;
-8. produce an exact-head Windows playable artifact.
+Selected implementation gap: `V1-11 Campaign product UI` lifecycle/error/destructive behavior.
 
-This history is preserved and must not be reimplemented solely because the Rerun binding changed.
+### Campaign archive confirmation
 
-## Current canonical product checkpoint
+- Added deterministic structure coverage in `tests/ui/campaignProductUiStructure.test.ts`.
+- `CampaignScreen` no longer calls `archiveCampaign()` directly from the card secondary action.
+- `archiveTarget` opens a confirmation overlay using the existing `campaign-session-setup` visual pattern.
+- Confirmation explicitly states that archive does not delete Character files, installed content, or Campaign continuity data.
+- Cancel/close performs no mutation.
+- Confirm performs the existing authoritative archive command.
+- No broad layout/style/navigation change was made.
 
-The current canonical handoff has advanced beyond the original Phase 14 checkpoint. Recent canonical work includes:
+Commits:
 
-- actor-specific Ready configuration instead of one adapter-global Ready value;
-- Ready expiration at next own turn / initiative end;
-- Host authoritative `ready-action: cleared` propagation and deterministic ordering;
-- Client actor-specific Ready config/status/economy projection and idempotent replay;
-- session start/end/reset cleanup of Ready state;
-- `ready-action-v1` required connected capability negotiation;
-- Host-local Ready trigger clear broadcast;
-- isolated two-instance acceptance tooling;
-- Windows Live Development bootstrap for Node/npm, Rust/Cargo and MSVC;
-- near-live Git fast-forward/HMR development loop.
+- `66ca74d` — require destructive archive confirmation in structure test
+- `36eecfc` — confirm archive before mutation
 
-The current handoff still records connected two-instance/reconnect evidence as incomplete, while the master V1 release checklist also contains additional Campaign, DM, mapless/module, dice, quality/regression and release work that must be reconciled and completed before V1.
+### Campaign startup hydration blockers
 
-## Current user execution policy
+- Added `campaignHydrationIssueAdapter.ts` around the Campaign runtime snapshot boundary.
+- It classifies only canonical Campaign persistence blockers:
+  - `CampaignMigrationRequiredError`
+  - `CampaignSchemaError`
+  - `CampaignCorruptError`
+- It never auto-deletes, resets, clears generations, or writes replacement data.
+- It rethrows the original error after publishing an explicit UI issue.
+- Added `CampaignStartupRecoveryBridge.tsx`, rendered inside the existing AppProvider shell.
+- The bridge reuses existing `loading-screen` and `campaign-empty` UI language and offers `다시 시도` via `refresh()` only.
+- `main.tsx` installs the guard before AppProvider module evaluation; the guard imports `campaignRuntimeAdapter` first so it wraps the Campaign snapshot boundary rather than the base MockAdapter method.
+- React subscription cleanup is explicitly void-safe.
 
-- Implement the remaining V1 checklist first.
-- Do not stop after every feature for a Codex comprehensive audit.
-- Normal focused tests/CI can still be written/run as implementation safety nets.
-- `.agents/CODEX_VALIDATION_QUEUE.md` is not an active per-slice release gate unless the user explicitly re-authorizes it.
-- When all pre-release implementation work is present, freeze one exact canonical SHA.
-- Run the comprehensive Codex audit against that exact SHA.
-- Fix findings and rerun the final audit as needed.
-- Only after final audit success proceed to remaining human acceptance/release evidence and deliberate promotion.
+Commits:
 
-## Risks to watch
+- `b8c5eab` — startup recovery structure contract
+- `ba40608` — hydration blocker classification guard
+- `25a435f` — explicit startup recovery bridge
+- `a1d50d6` — production entry integration
+- `b2ec43f` — void cleanup fix
 
-- Prototype-composed runtime adapters are order-sensitive; avoid bypassing Phase 09-13 authority behavior.
-- Rules/authority/persistence calculations must remain in canonical application/domain services, not UI presentation code.
-- Connected SessionProjection authority remains host-reconstructed; client presentation data must not become authority.
-- Session-transient state such as Ready must not leak into durable Character/Campaign state.
-- Core V1 must remain mapless-capable; battlemap/provider integration is optional and must fail open without stale spatial blockers.
-- Release checklist statuses may be stale relative to newer code; inspect before reimplementing a supposedly TODO item.
-- User-only acceptance steps should not block implementation of other independent V1 slices.
+### Documentation checkpoint
 
-## Validation policy
+- `.agents/V1_CURRENT_HANDOFF.md` updated at `a4b6012` with the exact current implementation and next action.
 
-Preserve all historical validation evidence above. New final release evidence must come from the exact pre-V1 candidate SHA.
+## Validation evidence available in this execution
 
-During implementation, focused deterministic tests and build checks are allowed when useful, but the **comprehensive Codex total audit is deferred until V1 implementation is complete.**
+- Deterministic structure tests were authored alongside the feature changes.
+- GitHub combined status for `36eecfc` returned no status/check entries; **do not record this slice as CI green**.
+- Comprehensive Codex audit was intentionally not started because the user requires it only after all V1 implementation is complete.
+- No previously verified work was rerun.
+
+## Current known functional gap
+
+`docs/design/campaign-systems.md` defines Campaign lifecycle DM operations including create/open/**duplicate/archive/restore/delete**. Production Campaign UI currently exposes create/open/archive/restore but still lacks duplicate/delete user paths.
+
+V1-11 therefore remains functionally incomplete even though archive/error states improved.
 
 ## Next Exact Action
 
-On the next authorized watcher dispatch:
+Implement **Campaign duplicate + explicit delete lifecycle** without redesigning the Campaign screen.
 
-1. Read `.chatgpt-rerun/README.md` -> `control.json` -> `STATE.md` -> `PLAN.md` in mandatory order.
-2. Confirm repository `Kaetaeru/SimpleVTT`, branch `work/v1-composite`, run_id `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `1`, task_id `phase14-production-play-session-ux`, status `continue` still reconcile.
-3. Read `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` and relevant `docs/design/` contracts.
-4. Reconcile stale checklist status against current source and choose the next unblocked **implementation** gap that does not require immediate user-only acceptance.
-5. Continue V1 implementation on `work/v1-composite`; do **not** start the comprehensive Codex audit yet.
-6. Update product handoff/checklist for meaningful implementation progress.
-7. By approximately 18 minutes, stop starting long work and write the durable Rerun checkpoint; hard-stop before 20 minutes.
+1. Re-read lifecycle sections in `docs/design/campaign-runtime.md` and `docs/design/campaign-systems.md`.
+2. Follow existing Campaign command flow through `CampaignApplicationService`, persistence contracts/repository, `campaignRuntimeAdapter`, AppProvider and `CampaignScreen`.
+3. Add duplicate semantics that do not copy player-owned Character files or installed content ownership.
+4. Add explicit delete command that removes only the Campaign-owned record and leaves external Character/content stores untouched.
+5. Reconcile `activeCampaignId` safely when the active Campaign is archived/deleted.
+6. Use existing Campaign card/overlay visual language for confirmation and duplicate options; no broad UI redesign.
+7. Add deterministic focused tests as part of implementation; do not start the final Codex audit.
