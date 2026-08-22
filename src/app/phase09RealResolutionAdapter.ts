@@ -69,6 +69,12 @@ const freeformSpellSlotHistories = new WeakMap<MockAdapter,FreeformSpellSlotHist
 const REAL_HEALING_ACTION_IDS = new Set(["action.second-wind","action.healing-word","action.healing-potion"]);
 const HELPED_STATUS = "도움 받음";
 const HIDDEN_STATUS = "숨음";
+const DODGING_STATUS = "회피";
+const READY_STATUS = "준비 행동";
+
+function isDexteritySave(action:ActionVm) {
+  return ["dex","dexterity","민첩"].includes(String(action.saveAbility??"").toLowerCase());
+}
 
 function removeStatus(entity:SceneEntity|undefined,status:string) {
   if (!entity?.status.includes(status)) return false;
@@ -295,19 +301,31 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
     internal.capture();
     const actor=internal.entity(action.actorId);
     const revealed=removeStatus(actor,HIDDEN_STATUS);
+    const helped=removeStatus(actor,HELPED_STATUS);
+    const dodging=target.status.includes(DODGING_STATUS);
+    const rollStateContributions=[
+      ...(helped ? [{ source:"action:standard.help",state:"advantage" as const }] : []),
+      ...(dodging ? [{ source:`condition:${DODGING_STATUS}:target`,state:"disadvantage" as const }] : []),
+    ];
     internal.resolution = resolveAttackRollResolution({
       resolutionId:resolutionId(),
       action,
       target,
-      diceFaces:[internal.d20(action.id)],
+      diceFaces:rollStateContributions.length>0
+        ? [internal.d20(action.id),internal.d20(`${action.id}:roll-state`,1)]
+        : [internal.d20(action.id)],
       modifierContributions:[{
         source:`action:${action.id}:attack-bonus`,
         value:action.attackBonus ?? 0,
       }],
+      rollStateContributions,
     });
     if (revealed) {
       internal.resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HIDDEN_STATUS} · 공격 선언`);
       internal.resolution.provenance.push("condition:hidden · applied · attack declaration ends hidden state");
+    }
+    if (helped) {
+      internal.resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HELPED_STATUS} · 공격 판정에 유리점 적용`);
     }
     return internal.getSnapshot();
   }
@@ -317,15 +335,28 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
       const target = internal.entity(id);
       if (!target) return undefined;
       const fact = phase09ReferenceSaveModifier(id,action.saveAbility ?? "내성");
-      return { id, name:target.name, modifier:fact.modifier, modifierSource:fact.source };
+      return {
+        id,
+        name:target.name,
+        modifier:fact.modifier,
+        modifierSource:fact.source,
+        rollStateContributions:isDexteritySave(action)&&target.status.includes(DODGING_STATUS)
+          ? [{ source:`condition:${DODGING_STATUS}:dexterity-save`,state:"advantage" as const }]
+          : undefined,
+      };
     });
     if (targets.some((target) => target === undefined)) return internal.getSnapshot();
     internal.capture();
+    const primaryFaces=targetIds.map((_,index) => internal.d20(action.id,index));
+    const typedTargets=targets as Array<{id:string; rollStateContributions?:unknown[]}>;
     internal.resolution = resolveSavingThrowResolution({
       resolutionId:resolutionId(),
       action,
       targets:targets as Array<{ id:string; name:string; modifier:number; modifierSource:string }>,
-      diceFaces:targetIds.map((_,index) => internal.d20(action.id,index)),
+      diceFaces:primaryFaces,
+      diceFacesByTarget:Object.fromEntries(typedTargets.flatMap((target,index)=>target.rollStateContributions?.length
+        ? [[target.id,[primaryFaces[index],internal.d20(`${action.id}:dodge-save`,index)]]]
+        : [])),
     });
     return internal.getSnapshot();
   }
@@ -393,7 +424,11 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     if(action.id==="action.standard.disengage"){applyStatus(actor,"이탈");resolution.finalOutcome="이번 턴 기회 공격을 유발하지 않음";}
     else if(action.id==="action.standard.dodge"){applyStatus(actor,"회피");resolution.finalOutcome="다음 턴 시작까지 회피";}
     else if(action.id==="action.standard.help"){applyStatus(target,"도움 받음");resolution.finalOutcome=`${target?.name??"아군"} 지원`;}
-    else if(action.id==="action.standard.ready"){applyStatus(actor,"준비 행동");resolution.finalOutcome="트리거와 반응 행동 준비";}
+    else if(action.id==="action.standard.ready"){applyStatus(actor,READY_STATUS);resolution.finalOutcome="트리거와 반응 행동 준비";}
+    else if(action.id==="action.standard.ready.trigger"){
+      if(removeStatus(actor,READY_STATUS)) resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${READY_STATUS} · 반응 발동`);
+      resolution.finalOutcome="준비한 행동을 반응으로 발동";
+    }
     else if(action.id==="action.standard.utilize"){resolution.stateChanges.push(`${actor?.name??action.actorId} 비마법 물체 사용 선언`);resolution.finalOutcome="물체 사용";}
     resolution.compact=resolution.finalOutcome;
     internal.commit(action);

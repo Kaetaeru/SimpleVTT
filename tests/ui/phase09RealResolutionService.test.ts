@@ -82,6 +82,21 @@ test("Phase 09 attack projection uses domain natural-1 and natural-20 semantics 
   assert.ok(naturalTwenty.provenance.some((entry) => entry.includes("attack-natural-20")));
 });
 
+test("attack projection keeps the selected disadvantage face first for downstream transactions",()=>{
+  const resolution=resolveAttackRollResolution({
+    resolutionId:"phase09.attack.dodge",
+    action:ATTACK_ACTION,
+    target:{ id:"target",name:"Target",ac:15 },
+    diceFaces:[18,4],
+    modifierContributions:[{ source:"test:attack-bonus",value:7 }],
+    rollStateContributions:[{ source:"condition:회피:target",state:"disadvantage" }],
+  });
+  assert.deepEqual(resolution.authoritativeDice,[4,18]);
+  assert.equal(resolution.attackTotal,11);
+  assert.equal(resolution.attackOutcome,"빗나감");
+  assert.ok(resolution.provenance.some((entry)=>entry.includes("condition:회피:target")));
+});
+
 test("Phase 09 typed damage service delegates defenses and Temporary HP ordering to the domain", () => {
   const base = {
     id:"guardian",

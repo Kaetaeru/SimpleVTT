@@ -3,6 +3,8 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import type { SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { resolveSavingThrowResolution } from "../../src/app/realSavingThrowService";
+import type { ActionVm } from "../../src/app/contracts";
 
 type MutableAdapter={scene:SceneVm};
 
@@ -105,4 +107,79 @@ test("ending initiative clears every remaining turn-bound standard-action status
   assert.equal(actor.status.includes("회피"),false);
   assert.equal(actor.status.includes("준비 행동"),false);
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("준비 행동")));
+});
+
+test("Dodge imposes attack disadvantage and grants Dexterity save advantage",async()=>{
+  const adapter=new MockAdapter();
+  await adapter.setSessionMode("freeform");
+  const before=await adapter.getSnapshot();
+  const actorId=before.activeCharacter.id;
+  const attack=before.scene.actionsByActor[actorId]?.find((entry)=>entry.resolutionKind==="attack");
+  assert.ok(attack,"active production character requires an attack action");
+  const targetId=attack.eligibleTargetIds?.[0];
+  assert.ok(targetId,"attack requires an eligible target");
+  entity(adapter,targetId).status.push("회피");
+
+  await adapter.setQueuedD20(18);
+  const preview=await adapter.resolveAction(attack.id,[targetId]);
+  assert.deepEqual(preview.resolution?.authoritativeDice,[12,18]);
+  assert.equal(preview.resolution?.attackTotal,12+(attack.attackBonus??0));
+  assert.ok(preview.resolution?.provenance.some((entry)=>entry.includes("condition:회피:target")));
+
+  const dexteritySave:ActionVm={
+    id:"action.test.dex-save",
+    actorId:"caster",
+    name:"민첩 내성 테스트",
+    category:"magic",
+    target:"enemy",
+    economy:"없음",
+    resolutionKind:"saving-throw",
+    summary:"민첩 내성 DC 15",
+    available:true,
+    eligibleTargetIds:["target"],
+    saveAbility:"민첩",
+    saveDc:15,
+    details:[],
+  };
+  const save=resolveSavingThrowResolution({
+    resolutionId:"save.dodge",
+    action:dexteritySave,
+    targets:[{
+      id:"target",
+      name:"회피 중인 대상",
+      modifier:2,
+      modifierSource:"test:dexterity",
+      rollStateContributions:[{ source:"condition:회피:dexterity-save",state:"advantage" }],
+    }],
+    diceFaces:[5],
+    diceFacesByTarget:{target:[5,17]},
+  });
+  assert.equal(save.saveResults[0]?.d20,17);
+  assert.equal(save.saveResults[0]?.total,19);
+  assert.equal(save.saveResults[0]?.outcome,"성공");
+  assert.ok(save.provenance.some((entry)=>entry.includes("condition:회피:dexterity-save")));
+});
+
+test("Ready exposes an off-turn trigger that spends Reaction and clears the prepared state",async()=>{
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  await adapter.resolveAction("action.standard.ready",["char.aelar"]);
+  let snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),true);
+  assert.ok(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.id==="action.standard.ready.trigger"));
+
+  snapshot=await adapter.endTurn();
+  assert.notEqual(snapshot.scene.currentActorId,"char.aelar");
+  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.standard.ready.trigger");
+  assert.equal(trigger?.available,true,"prepared reaction must remain executable off turn");
+
+  await adapter.resolveAction("action.standard.ready.trigger",["char.aelar"]);
+  snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("반응 사용")));
+  assert.equal(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.id==="action.standard.ready.trigger"),false);
 });

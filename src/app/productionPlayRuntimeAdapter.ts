@@ -192,6 +192,26 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   return actions;
 }
 
+function readyTriggerAction(character:CharacterSheet):ActionVm {
+  return {
+    id:"action.standard.ready.trigger",
+    actorId:character.id,
+    name:"준비 행동 발동",
+    category:"basic",
+    target:"self",
+    economy:"반응",
+    resolutionKind:"no-roll",
+    summary:"선언한 트리거가 발생해 준비한 행동을 발동합니다.",
+    available:true,
+    eligibleTargetIds:[character.id],
+    details:[
+      detail("효과","준비한 행동 또는 이동 발동"),
+      detail("비용","반응 1"),
+      detail("출처","SRD 5.2.1 · Ready"),
+    ],
+  };
+}
+
 function itemActions(character:CharacterSheet):ActionVm[] {
   const actions:ActionVm[]=[];
   for (const item of character.items) {
@@ -311,7 +331,11 @@ function reconcile(adapter:MockAdapter) {
     internal.scene.entities[index]={...previous,...projected,status:[...previous.status],reactions:[...previous.reactions],resistances:[...previous.resistances],immunities:[...previous.immunities],vulnerabilities:[...previous.vulnerabilities]};
   } else internal.scene.entities.unshift(projected);
 
-  internal.scene.actionsByActor[character.id]=deriveProductionCharacterActions(character);
+  const actions=deriveProductionCharacterActions(character);
+  if (internal.scene.entities.find((entity)=>entity.id===character.id)?.status.includes("준비 행동")) {
+    actions.push(readyTriggerAction(character));
+  }
+  internal.scene.actionsByActor[character.id]=actions;
   internal.scene.economyByActor[character.id]??={action:true,bonusAction:true,reaction:true,movement:character.speed,movementMax:character.speed};
 
   if (!internal.scene.entities.some((entity)=>entity.id===internal.scene.currentActorId)) internal.scene.currentActorId=character.id;

@@ -131,6 +131,8 @@ export function resolveAttackRollResolution(
   });
   const outcome = roll.outcome === "success" ? "명중" : "빗나감";
   const compact = `${roll.total} vs AC ${request.target.ac} — ${outcome}`;
+  const selectedIndex=roll.dice.selectedIndexes[0]??0;
+  const authoritativeDice=[roll.natural,...roll.dice.faces.filter((_,index)=>index!==selectedIndex)];
 
   return {
     id:request.resolutionId,
@@ -140,7 +142,8 @@ export function resolveAttackRollResolution(
     actionName:request.action.name,
     rollKind:"attack",
     stage:"roll-animation",
-    authoritativeDice:[...roll.dice.faces],
+    // Attack transaction consumers use index 0 as the selected natural face.
+    authoritativeDice,
     rollTotal:roll.total,
     attackTotal:roll.total,
     targetAc:request.target.ac,

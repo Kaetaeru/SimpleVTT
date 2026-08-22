@@ -1,12 +1,14 @@
 import type { ActionVm, ResolutionView } from "./contracts";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { resolveD20Test } from "../domain/d20";
+import type { RollStateContribution } from "../domain/profileEngine";
 
 export interface SavingThrowResolutionTarget {
   id:string;
   name:string;
   modifier:number;
   modifierSource:string;
+  rollStateContributions?:RollStateContribution[];
 }
 
 export interface SavingThrowResolutionRequest {
@@ -14,6 +16,7 @@ export interface SavingThrowResolutionRequest {
   action:ActionVm;
   targets:SavingThrowResolutionTarget[];
   diceFaces:number[];
+  diceFacesByTarget?:Record<string,number[]>;
 }
 
 export function resolveSavingThrowResolution(request:SavingThrowResolutionRequest):ResolutionView {
@@ -27,16 +30,18 @@ export function resolveSavingThrowResolution(request:SavingThrowResolutionReques
   }
   const ability = request.action.saveAbility ?? "내성";
   const results = request.targets.map((target,index) => {
+    const faces=request.diceFacesByTarget?.[target.id]??[request.diceFaces[index]];
     const roll = resolveD20Test(SIMPLEVTT_APP_RULES_PROFILE,{
       family:"saving-throw",
       target:dc!,
       targetSource:`action:${request.action.id}:save-dc`,
       modifierContributions:[{ source:target.modifierSource, value:target.modifier }],
+      rollStateContributions:target.rollStateContributions,
       dice:{
         id:`${request.resolutionId}:${target.id}:d20`,
         purpose:`${request.action.name} · ${target.name} ${ability} 내성`,
         sides:20,
-        faces:[request.diceFaces[index]],
+        faces,
       },
     });
     return {

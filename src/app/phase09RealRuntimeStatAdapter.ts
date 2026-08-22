@@ -17,6 +17,12 @@ interface Phase09RuntimeStatAdapterState {
   getSnapshot():Promise<AppSnapshot>;
 }
 
+const DODGING_STATUS="회피";
+
+function isDexteritySave(action:ActionVm) {
+  return ["dex","dexterity","민첩"].includes(String(action.saveAbility??"").toLowerCase());
+}
+
 function resolutionId() {
   return `resolution.phase09.runtime-stats.${Date.now()}.${Math.floor(Math.random() * 1000)}`;
 }
@@ -72,14 +78,26 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRuntimeSav
       const target = internal.entity(id);
       if (!target) throw new Error(`missing runtime target entity: ${id}`);
       const stat = resolveRuntimeSaveModifier(target,internal.activeCharacter,ability,internal.combatantDefinitions);
-      return { id, name:target.name, modifier:stat.modifier, modifierSource:stat.source };
+      return {
+        id,
+        name:target.name,
+        modifier:stat.modifier,
+        modifierSource:stat.source,
+        rollStateContributions:isDexteritySave(action)&&target.status.includes(DODGING_STATUS)
+          ? [{ source:`condition:${DODGING_STATUS}:dexterity-save`,state:"advantage" as const }]
+          : undefined,
+      };
     });
     internal.capture();
+    const primaryFaces=targetIds.map((_,index) => internal.d20(action.id,index));
     internal.resolution = resolveSavingThrowResolution({
       resolutionId:resolutionId(),
       action,
       targets,
-      diceFaces:targetIds.map((_,index) => internal.d20(action.id,index)),
+      diceFaces:primaryFaces,
+      diceFacesByTarget:Object.fromEntries(targets.flatMap((target,index)=>target.rollStateContributions?.length
+        ? [[target.id,[primaryFaces[index],internal.d20(`${action.id}:dodge-save`,index)]]]
+        : [])),
     });
   } catch (error) {
     rejectMissingRuntimeStat(internal,action,targetIds,error instanceof Error ? error.message : String(error));
