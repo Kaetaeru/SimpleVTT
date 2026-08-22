@@ -7,34 +7,23 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control: `continue`
-- Exact product-code checkpoint: `3c14aebff0e5983204eaae8ae552c674d726826c`
+- Exact product-code checkpoint: `8c1e0b357d19954ed4320e239d8d6dcad0f8c656`
 
 ## Current result
 
-Connected Long Rest has advanced from transport/staging primitives to a source-connected distributed runtime path:
+Connected Long Rest now has a visible DM/Player path in the existing Session Campaign pane and a source-connected process-restart recovery foundation.
 
-- Host offer from a mounted remote Character revision + exact Campaign revision;
-- owner canonical Rest preview and explicit decision;
-- Host re-preflight before explicit prepare authorization;
-- owner durable invisible Character generation prepare;
-- Host Campaign-only global commit with Calendar/Ration options and durable transaction idempotency;
-- owner materialization only after global commit;
-- fresh owner SessionProjection returned to Host;
-- Host remote durable Character projection refreshed without copying it into the Host Character library;
-- Session-owned initiative/status/economy preserved during that durable refresh;
-- same-process reconnect/retry replay messages for offer/decision/prepare/global commit/materialization;
-- `connected-long-rest-v1` capability advertised by the production runtime adapter.
+- DM can offer the current Rest options to connected remote Character owners without copying those Characters into the Host library.
+- Player sees exact HP/Temporary HP preview and accepts or declines from the same Campaign pane.
+- Host persists owner-prepared/committed coordinator state as append-only Tauri records.
+- Campaign global commit identity is stable across later Campaign revisions and Host restart.
+- A restarted Host reconstructs committed vs precommit-aborted state from durable coordinator + Campaign idempotency.
+- Global-commit wire messages can carry owner/preparation identity so a restarted Player can materialize the already-prepared Character generation directly from its durable marker.
+- Owner Character preparation markers use immutable phase sidecars instead of overwrite rename, avoiding the Windows destination-replace problem.
+- Tauri normal Character and Character+Campaign writes are blocked while a connected Long Rest Character generation is prepared, preventing generation drift before global commit.
 
-The new distributed tests are wired into `npm run test:campaign-rest`.
+This is still **not green**. Exact HEAD `8c1e0b3` has no combined statuses and no commit-associated workflow runs. No observed `tsx`, `tsc`, `npm run build`, `cargo test`, Tauri build, or Windows two-instance result exists for this checkpoint.
 
-## Validation
+Remaining source gap: precommit abort after both processes restart still needs an explicit owner-side durable abort cleanup path; the prepared Character remains invisible, so this is not a durable partial-success case, but the preparation marker should be closed deterministically. The new Host restart test also still needs to be wired into the focused `test:campaign-rest` command before validation.
 
-**NO GREEN CLAIM.** GitHub exposed no exact-head commit statuses/workflow runs at preflight. A direct canonical clone was attempted again and failed because the execution container could not resolve `github.com`, so no `tsx`, `tsc`, `npm run build`, `cargo test`, Tauri build, or Windows execution was observed.
-
-## Still incomplete
-
-1. No production UI currently calls `startConnectedLongRest` / `respondConnectedLongRest`. The runtime projects owner prompts into `AppSnapshot.connectedLongRest`, but DM offer controls and Player accept/decline controls remain to be added without redesigning the Session UI.
-2. Same-process reconnect is represented, but Host distributed transaction records are still transient `WeakMap` state. A Host process restart after the Campaign global commit cannot yet reconstruct the exact preflight/preparation relationship from durable state alone. This must be solved or explicitly bounded by the V1 recovery contract before V1-12 can be DONE.
-3. Exact-head execution evidence remains pending.
-
-`STATUS.md` is human-facing only. Reconciliation authority remains README -> control -> STATE -> PLAN.
+`STATUS.md` is human-facing only. Reconciliation remains README -> control -> STATE -> PLAN.
