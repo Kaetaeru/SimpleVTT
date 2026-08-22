@@ -9,6 +9,19 @@ const POLL_MS = Math.max(3000, Number(process.env.SIMPLEVTT_LIVE_POLL_MS || 7000
 const ROOT = process.cwd();
 const STATE_DIR = path.join(ROOT, ".live-dev");
 const STATUS_FILE = path.join(STATE_DIR, "status.json");
+
+// Git treats these names as repository overrides. Live Development must always
+// discover the repository from ROOT instead of inheriting an unrelated shell value.
+for (const name of [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_COMMON_DIR",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+]) {
+  delete process.env[name];
+}
 const gitEnv = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
 
 let appProcess = null;
