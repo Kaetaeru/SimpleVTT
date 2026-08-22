@@ -2,7 +2,13 @@ import type { ConcentrationState } from "./concentration";
 import type { EffectInstance } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
+import type { ResourceRecoveryLockouts } from "./resources";
 import type { StateChange } from "./stateChange";
+
+export interface ResourceRecoveryLockoutStateChange {
+  before:ResourceRecoveryLockouts|null;
+  after:ResourceRecoveryLockouts|null;
+}
 
 export interface ResourceStateChange {
   kind:"resource";
@@ -10,6 +16,7 @@ export interface ResourceStateChange {
   resourceId:string;
   before:number;
   after:number;
+  recoveryLockouts?:ResourceRecoveryLockoutStateChange;
   provenance:ProvenanceRecord[];
   lifetime:"character-durable";
   writeBack:"character";
@@ -71,8 +78,25 @@ export type RuntimeStateChange =
   | SpellcastingTurnStateChange
   | LifeFlagStateChange;
 
-export function resourceStateChange(targetId:string, resourceId:string, before:number, after:number, provenance:ProvenanceRecord[]): ResourceStateChange {
-  return { kind:"resource", targetId, resourceId, before, after, provenance, lifetime:"character-durable", writeBack:"character" };
+export function resourceStateChange(
+  targetId:string,
+  resourceId:string,
+  before:number,
+  after:number,
+  provenance:ProvenanceRecord[],
+  recoveryLockouts?:ResourceRecoveryLockoutStateChange,
+): ResourceStateChange {
+  return {
+    kind:"resource",
+    targetId,
+    resourceId,
+    before,
+    after,
+    ...(recoveryLockouts ? { recoveryLockouts:structuredClone(recoveryLockouts) } : {}),
+    provenance,
+    lifetime:"character-durable",
+    writeBack:"character",
+  };
 }
 
 export function effectStateChange(
