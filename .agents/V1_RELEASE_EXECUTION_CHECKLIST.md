@@ -107,7 +107,8 @@ V1-40 + V1-41 + V1-42
 | V1-00 Git baseline | DONE | remote 개발 계보와 로컬 Session Inventory 변경을 `work/v1-composite`에 보존하고 exact-head 검증 완료 |
 | V1-01 Foundation audit | PARTIAL | build/domain/persistence/connected tests 다수 존재, canonical head 재검증 필요 |
 | V1-10 Campaign persistence | PARTIAL | aggregate/repository/application service/Tauri command와 10개 TS 테스트 존재; Rust 실행 증거 대기 |
-| V1-11~13 Campaign product/systems | TODO | Campaign UI, 달력/식량 command, 보관함/DM Library workflow 미구현 |
+| V1-11 Campaign product UI | PARTIAL | Campaign route/dashboard/session binding 완료; recovery/destructive UX 대기 |
+| V1-12~13 Campaign systems | TODO | 달력/식량 command, roster/history, 보관함/DM Library workflow 미구현 |
 | V1-20 Real Character local play | PARTIAL | production Character/skill/spell/inventory tests 존재 |
 | V1-21 Complete local loop | PARTIAL | visible browser path와 전체 human walkthrough 미완료 |
 | V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart adapters/tests 존재 |
@@ -193,17 +194,26 @@ notes: Rust campaign generation-store tests are implemented but cargo/rustc are 
 
 **Required tests:** `campaignPersistence`, `campaignFailureRecovery`, `campaignIsolation`, Tauri generation-store tests.
 
-## V1-11 Campaign product UI — TODO
+## V1-11 Campaign product UI — PARTIAL
 
 `depends_on: V1-10`
 
-- [ ] Home/global navigation에서 Campaign 접근.
-- [ ] Campaign 목록: recent/active/archived/create.
-- [ ] Campaign dashboard: party, calendar, rations, stash, DM Library, session history.
-- [ ] Campaign 선택 없이는 Host start 불가; Player Join은 계속 가능.
-- [ ] `세션 시작` 설정 화면과 Campaign identity 고정.
+- [x] Home/global navigation에서 Campaign 접근.
+- [x] Campaign 목록: recent/active/archived/create.
+- [x] Campaign dashboard: party, calendar, rations, stash, DM Library, session history.
+- [x] Campaign 선택 없이는 Host start 불가; Player Join은 계속 가능.
+- [x] `세션 시작` 설정 화면과 Campaign identity 고정.
 - [ ] empty/loading/error/corrupt/migration/destructive confirmation 상태.
-- [ ] Debug Dock 없이 전 경로 접근.
+- [x] Debug Dock 없이 전 경로 접근.
+
+```text
+EVIDENCE
+head: 2e812bb
+tests: campaignRuntimeAdapter + campaignProductUiStructure (8 pass, 0 fail); product shell regression (29 pass, 0 fail); tsc --noEmit (pass); vite build (418 modules, pass)
+human: browser-campaign-create-calendar-rations-session-binding-2026-08-22
+artifact: dist/ development production bundle; Windows artifact N/A
+notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup, 직접 네트워크 Host의 Campaign 필수 조건, immutable CampaignSessionSnapshot을 검증했다. loading/corrupt/migration/destructive confirmation UX가 남아 PARTIAL이다.
+```
 
 ## V1-12 Roster / Calendar / Rations / Session history — TODO
 
