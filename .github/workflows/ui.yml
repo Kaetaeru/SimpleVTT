@@ -17,6 +17,7 @@ on:
   push:
     branches:
       - "agent/**"
+      - "work/v1-composite"
     paths:
       - "src/**"
       - "tests/ui/**"
@@ -44,6 +45,8 @@ jobs:
         run: npm run generate:content
       - name: Verify UI named-rule boundary
         run: npm run test:ui-rule-boundary
+      - name: Verify Campaign lifecycle persistence runtime and UI
+        run: npx tsx --test tests/ui/campaignPersistence.test.ts tests/ui/campaignRuntimeAdapter.test.ts tests/ui/campaignProductUiStructure.test.ts tests/ui/campaignStartupRecoveryStructure.test.ts tests/ui/campaignLifecycleRuntime.test.ts tests/ui/campaignLifecycleUiStructure.test.ts
       - name: Verify v1 shell, connected topology, continuity, and Session layer contracts
         run: npx tsx --test tests/ui/firstRunTutorialPreferences.test.ts tests/ui/firstRunTutorialStructure.test.ts tests/ui/v1ProductShellStructure.test.ts tests/ui/connectedProductShellContinuity.test.ts tests/ui/connectedPlayAcceptedTopology.test.ts tests/ui/sessionFullSheetWorkspaceStructure.test.ts tests/ui/sessionUtilityPanesStructure.test.ts tests/ui/sessionFreeformMainFocusStructure.test.ts tests/ui/sessionActionDockStructure.test.ts tests/ui/sessionDmToolsStructure.test.ts tests/ui/sessionPlayerReconnectStructure.test.ts tests/ui/sessionInitiativeExpansionStructure.test.ts tests/ui/sessionHandoutIntegrationStructure.test.ts tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts
       - name: Verify Phase 14 PlaySessionDock hydration and tab context
