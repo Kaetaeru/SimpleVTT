@@ -101,20 +101,18 @@ test("no-target and self actions still use the existing resolver",()=>{
   assert.match(dock,/await resolveAction\(action\.id,targetIds\)/);
 });
 
-test("ability checks and the twelve SRD actions use dedicated compact catalogs",()=>{
+test("ability checks use one catalog while official actions remain normal action-category slots",()=>{
   assert.match(dock,/ABILITY_CHECK_GROUPS/);
   assert.match(dock,/session-action-library ability/);
   assert.match(dock,/!action\.id\.startsWith\("action\.skill\."\)/);
-  for (const label of ["공격","질주","이탈","회피","도움","숨기","영향 주기","마법","준비","탐색","연구","물체 사용"]) assert.match(dock,new RegExp(`label:"${label}"`));
+  assert.match(dock,/action\.id==="action\.dash"\|\|action\.id\.startsWith\("action\.standard\."\)/);
+  assert.match(dock,/const dockActions=useMemo\(\(\)=>actions\.filter\(\(action\)=>!action\.id\.startsWith\("action\.skill\."\)\)/);
   assert.match(css,/\.session-ability-check-groups/);
-  assert.match(dock,/session-standard-action-strip/);
-  assert.match(dock,/chooseStandard/);
-  assert.match(css,/\.session-standard-action-strip/);
-  assert.match(css,/\.session-standard-action-picker/);
+  assert.doesNotMatch(dock,/session-standard-action-strip|standardPicker|chooseStandard/);
 });
 
-test("204px is the two-row minimum and 3-4 rows expand the command center",()=>{
-  assert.match(css,/--svtt-command-h:\s*max\(204px, calc\(107px \+ var\(--session-hotbar-rows-active, 2\) \* 46px\)\)/);
+test("174px is the two-row minimum and 3-4 rows expand the command center",()=>{
+  assert.match(css,/--svtt-command-h:\s*max\(174px, calc\(77px \+ var\(--session-hotbar-rows-active, 2\) \* 46px\)\)/);
   assert.match(dock,/--session-hotbar-rows-active/);
   assert.match(css,/overflow-x:\s*auto/);
 });

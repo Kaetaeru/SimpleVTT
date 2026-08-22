@@ -15,9 +15,6 @@ const CATEGORY_LABEL:Record<SessionHotbarCategory,string>={action:"행동",class
 const ABILITY_CHECK_GROUPS=[
   {label:"근력",ids:["athletics"]},{label:"민첩",ids:["acrobatics","sleight-of-hand","stealth"]},{label:"지능",ids:["arcana","history","investigation","nature","religion"]},{label:"지혜",ids:["animal-handling","insight","medicine","perception","survival"]},{label:"매력",ids:["deception","intimidation","performance","persuasion"]},
 ] as const;
-const STANDARD_ACTIONS=[
-  {id:"attack",label:"공격",copy:"무기 또는 비무장 공격"},{id:"dash",label:"질주",copy:"이동 가능량 추가"},{id:"disengage",label:"이탈",copy:"기회 공격을 유발하지 않음"},{id:"dodge",label:"회피",copy:"공격에 불리 · 민첩 내성 유리"},{id:"help",label:"도움",copy:"아군의 판정 또는 공격 지원"},{id:"hide",label:"숨기",copy:"민첩(은신) DC 15"},{id:"influence",label:"영향 주기",copy:"태도를 바꾸는 지혜/매력 판정"},{id:"magic",label:"마법",copy:"주문·마법 아이템·마법 기능"},{id:"ready",label:"준비",copy:"트리거에 반응할 행동 준비"},{id:"search",label:"탐색",copy:"지혜 기반 탐색 판정"},{id:"study",label:"연구",copy:"지능 기반 지식 판정"},{id:"utilize",label:"물체 사용",copy:"비마법 물체 사용"},
-] as const;
 
 export interface SessionActionTargeting { action:ActionVm; selectedTargetIds:string[]; pending:boolean; feedback:string|null }
 
@@ -39,7 +36,7 @@ function targetCopy(target:ActionVm["target"]) {
 function actionCategory(action:ActionVm):SessionHotbarCategory {
   if (action.itemCost) return "item";
   if (action.category==="magic"||action.resourceCost) return "class";
-  if (action.category==="weapon"||action.resolutionKind==="attack"||action.resolutionKind==="ability-check") return "action";
+  if (action.id==="action.dash"||action.id.startsWith("action.standard.")||action.category==="weapon"||action.resolutionKind==="attack"||action.resolutionKind==="ability-check") return "action";
   return "special";
 }
 function pageIncludes(page:HotbarPage,action:ActionVm) {
@@ -58,11 +55,9 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const [feedback,setFeedback]=useState<string|null>(null);
   const [tooltip,setTooltip]=useState<{action:ActionVm;x:number;y:number;mainHand:boolean}|null>(null);
   const [actionMenu,setActionMenu]=useState<"ability"|null>(null);
-  const [standardPicker,setStandardPicker]=useState<typeof STANDARD_ACTIONS[number]["id"]|null>(null);
   const actions=snapshot&&actorId?snapshot.scene.actionsByActor[actorId]??[]:[];
   const abilityActions=useMemo(()=>actions.filter((action)=>action.id.startsWith("action.skill.")),[actions]);
-  const standardRuntimeActions=useMemo(()=>actions.filter((action)=>action.id==="action.dash"||action.id.startsWith("action.standard.")),[actions]);
-  const dockActions=useMemo(()=>actions.filter((action)=>!action.id.startsWith("action.skill.")&&!action.id.startsWith("action.standard.")&&action.id!=="action.dash"),[actions]);
+  const dockActions=useMemo(()=>actions.filter((action)=>!action.id.startsWith("action.skill.")),[actions]);
   const ownsCharacter=Boolean(snapshot&&actorId&&snapshot.activeCharacter.id===actorId);
   const mainHandItem=ownsCharacter&&snapshot?snapshot.activeCharacter.items.find((item)=>item.equipped&&item.wielded&&item.wieldSlot==="main-hand")??null:null;
   const isMainHand=(action:ActionVm)=>Boolean(mainHandItem&&(mainHandItem.grantedActionIds.includes(action.id)||mainHandItem.name===action.name||mainHandItem.nameEn===action.name));
@@ -82,7 +77,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const canEndTurn=Boolean(snapshot&&snapshot.sessionMode==="initiative"&&currentActor&&snapshot.connectionState==="connected"&&!snapshot.resolution&&(role==="dm"||playerOwnsTurn));
   const multiTarget=targeting?.action.target==="multi-enemy";
 
-  useEffect(()=>{ setPage("mixed"); setFeedback(null); setPendingActionId(null); setTooltip(null); setActionMenu(null); setStandardPicker(null); },[actorId]);
+  useEffect(()=>{ setPage("mixed"); setFeedback(null); setPendingActionId(null); setTooltip(null); setActionMenu(null); },[actorId]);
   useEffect(()=>{ if (!targeting) setTooltip(null); },[targeting?.action.id]);
   useEffect(()=>{
     const root=document.querySelector<HTMLElement>(".session-reference-play-root");
@@ -123,19 +118,6 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
     return <button type="button" role="listitem" key={action.id} className={`session-hotbar-slot ${selected?"selected":""} ${unavailable?"unavailable":""} ${mainHand?"main-hand":""}`} aria-label={`${action.name} · ${action.summary}${mainHand?" · 장착 주무기":""}`} aria-pressed={selected} aria-disabled={unavailable||Boolean(pendingActionId)||suspended||targeting?.pending} onPointerEnter={(event)=>showTooltip(action,event.currentTarget)} onPointerLeave={()=>setTooltip(null)} onFocus={(event)=>showTooltip(action,event.currentTarget)} onBlur={()=>setTooltip(null)} onClick={(event)=>chooseAction(action,event.currentTarget)}><ActionIcon action={action}/>{mainHand&&<span className="session-hotbar-main-hand">M</span>}<span className="session-hotbar-cost">{action.itemCost?"I":action.economy.slice(0,1)}</span></button>;
   };
   const menuActionButton=(action:ActionVm)=><button type="button" key={action.id} disabled={!action.available||Boolean(pendingActionId)||suspended||targeting?.pending} onClick={(event)=>{setActionMenu(null);chooseAction(action,event.currentTarget);}}><strong>{action.name}</strong><small>{action.summary}</small></button>;
-  const standardOptions=(id:typeof STANDARD_ACTIONS[number]["id"])=>{
-    if(id==="attack")return actions.filter((action)=>action.resolutionKind==="attack"&&!action.id.startsWith("action.standard."));
-    if(id==="magic")return actions.filter((action)=>action.category==="magic"&&!action.id.startsWith("action.standard."));
-    if(id==="dash")return standardRuntimeActions.filter((action)=>action.id==="action.dash");
-    return standardRuntimeActions.filter((action)=>action.id===`action.standard.${id}`||action.id.startsWith(`action.standard.${id}.`));
-  };
-  const chooseStandard=(id:typeof STANDARD_ACTIONS[number]["id"],button:HTMLButtonElement)=>{
-    const options=standardOptions(id);
-    setActionMenu(null);
-    if(options.length===1){setStandardPicker(null);chooseAction(options[0],button);return;}
-    if(!options.length){setFeedback("현재 캐릭터에 사용 가능한 항목이 없습니다.");setStandardPicker(null);return;}
-    setStandardPicker((open)=>open===id?null:id);
-  };
 
   return <section className="session-command-center session-reference-command-center" data-action-dock-state={targeting?"target":"hotbar"}>
     <div className="session-command-top">
@@ -151,8 +133,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
         <div className="session-controlled-info"><strong>{actorName}</strong><p>HP {actorHp}/{actorMaxHp}<br/>{mainHandItem?`주무기 · ${mainHandItem.name}`:"명시된 주무기 없음"}</p></div>
       </div>
       <div className="session-hotbar">
-        <div className="session-hotbar-tabs" role="tablist" aria-label="핫바 분류"><button type="button" className={`session-hotbar-menu-trigger ${actionMenu==="ability"?"active":""}`} aria-expanded={actionMenu==="ability"} onClick={()=>{setStandardPicker(null);setActionMenu((open)=>open==="ability"?null:"ability");}}>능력 판정</button>{HOTBAR_PAGES.map((entry)=><button type="button" role="tab" key={entry.id} aria-selected={page===entry.id} className={page===entry.id?"active":""} onClick={()=>{setPage(entry.id);setActionMenu(null);setStandardPicker(null);onCancelTargeting();}}>{entry.label}</button>)}<span className="session-hotbar-row-control" aria-label="핫바 줄 수"><button type="button" aria-label="핫바 줄 줄이기" disabled={rows===2} onClick={()=>changeRows(rows-1)}>−</button><b>{rows}줄</b><button type="button" aria-label="핫바 줄 늘리기" disabled={rows===4} onClick={()=>changeRows(rows+1)}>＋</button></span></div>
-        <div className="session-standard-action-strip" role="toolbar" aria-label="D&D 기본 행동 12종">{STANDARD_ACTIONS.map((entry)=>{const options=standardOptions(entry.id);return <button type="button" key={entry.id} className={standardPicker===entry.id?"active":""} aria-expanded={options.length>1?standardPicker===entry.id:undefined} disabled={!options.length||Boolean(pendingActionId)||suspended||targeting?.pending} title={entry.copy} onClick={(event)=>chooseStandard(entry.id,event.currentTarget)}><strong>{entry.label}</strong>{options.length>1&&<span>⌄</span>}</button>;})}</div>
+        <div className="session-hotbar-tabs" role="tablist" aria-label="핫바 분류"><button type="button" className={`session-hotbar-menu-trigger ${actionMenu==="ability"?"active":""}`} aria-expanded={actionMenu==="ability"} onClick={()=>setActionMenu((open)=>open==="ability"?null:"ability")}>능력 판정</button>{HOTBAR_PAGES.map((entry)=><button type="button" role="tab" key={entry.id} aria-selected={page===entry.id} className={page===entry.id?"active":""} onClick={()=>{setPage(entry.id);setActionMenu(null);onCancelTargeting();}}>{entry.label}</button>)}<span className="session-hotbar-row-control" aria-label="핫바 줄 수"><button type="button" aria-label="핫바 줄 줄이기" disabled={rows===2} onClick={()=>changeRows(rows-1)}>−</button><b>{rows}줄</b><button type="button" aria-label="핫바 줄 늘리기" disabled={rows===4} onClick={()=>changeRows(rows+1)}>＋</button></span></div>
         {page==="mixed"?<div className="session-hotbar-unified" style={{"--session-hotbar-rows":rows} as CSSProperties} aria-label="통합 행동 카테고리">
           {groupedActions.map((group,index)=><section className="session-hotbar-category" data-category={group.category} key={group.category}><header><strong>{CATEGORY_LABEL[group.category]}</strong><span><button type="button" aria-label={`${CATEGORY_LABEL[group.category]} 왼쪽으로 이동`} disabled={index===0} onClick={()=>moveCategory(group.category,-1)}>‹</button><button type="button" aria-label={`${CATEGORY_LABEL[group.category]} 오른쪽으로 이동`} disabled={index===groupedActions.length-1} onClick={()=>moveCategory(group.category,1)}>›</button></span></header><div className="session-hotbar-category-slots" role="list">{group.actions.map(renderSlot)}{!group.actions.length&&<span className="session-hotbar-category-empty">비어 있음</span>}</div></section>)}
         </div>:<div className="session-hotbar-slots" style={{"--session-hotbar-rows":rows} as CSSProperties} role="list" aria-label={`${HOTBAR_PAGES.find((entry)=>entry.id===page)?.label??"핫바"} 사용 가능 행동`}>
@@ -167,7 +148,6 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
       </div>
     </div>
     {actionMenu==="ability"&&<aside className="session-action-library ability" aria-label="능력 판정 선택"><header><div><span>D20 TEST</span><strong>능력 판정</strong><small>기술을 선택하면 캐릭터 수정치와 숙련을 적용해 굴립니다.</small></div><button type="button" aria-label="능력 판정 닫기" onClick={()=>setActionMenu(null)}>×</button></header><div className="session-ability-check-groups">{ABILITY_CHECK_GROUPS.map((group)=><section key={group.label}><strong>{group.label}</strong><div>{group.ids.map((id)=>abilityActions.find((action)=>action.id===`action.skill.${id}`)).filter((action):action is ActionVm=>Boolean(action)).map(menuActionButton)}</div></section>)}</div></aside>}
-    {standardPicker&&<aside className="session-standard-action-picker" aria-label={`${STANDARD_ACTIONS.find((entry)=>entry.id===standardPicker)?.label??"기본 행동"} 세부 선택`}><header><strong>{STANDARD_ACTIONS.find((entry)=>entry.id===standardPicker)?.label}</strong><small>{STANDARD_ACTIONS.find((entry)=>entry.id===standardPicker)?.copy}</small><button type="button" aria-label="기본 행동 세부 선택 닫기" onClick={()=>setStandardPicker(null)}>×</button></header><div>{standardOptions(standardPicker).map(menuActionButton)}</div></aside>}
     {(feedback||targeting?.feedback)&&<p className="session-action-feedback session-command-feedback" role="status">{feedback||targeting?.feedback}</p>}
     {tooltip&&createPortal(<aside className="session-hotbar-tooltip" role="tooltip" style={{left:tooltip.x,top:tooltip.y,transform:"translateY(-100%)"}}><small>{tooltip.mainHand?"장착 주무기 · ":""}{actionIconDescriptor(tooltip.action).label} · {targetCopy(tooltip.action.target)} · {tooltip.action.economy}</small><strong>{tooltip.action.name}</strong><b>{actionEffect(tooltip.action)}</b><p>{tooltip.action.summary}</p>{!tooltip.action.available&&<em>{tooltip.action.disabledReason||"현재 사용할 수 없음"}</em>}</aside>,document.body)}
   </section>;
