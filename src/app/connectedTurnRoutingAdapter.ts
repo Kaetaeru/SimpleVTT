@@ -3,7 +3,7 @@ import { MockAdapter } from "./mockAdapter";
 import { HostSessionLedger } from "./connectedSessionProtocol";
 import { connectedStateFor } from "./connectedSessionState";
 import { broadcastConnectedWire, connectedInternal } from "./connectedSessionRuntimeAdapter";
-import { readyActionConfigurationFor, type ReadyActionConfiguration } from "./standardActionReadyState";
+import { readyActionConfigurationsFor, type ReadyActionConfiguration } from "./standardActionReadyState";
 
 const previousStartInitiative=MockAdapter.prototype.startInitiative;
 const previousEndInitiative=MockAdapter.prototype.endInitiative;
@@ -21,11 +21,13 @@ export function commitConnectedTurnProjectionEvents(
   ledger:HostSessionLedger,
   snapshot:AppSnapshot,
   label:string,
-  readyClear?:ConnectedReadyLifecycleClear,
+  readyClears:ConnectedReadyLifecycleClear[] = [],
 ) {
-  const readyEconomy=readyClear?snapshot.scene.economyByActor[readyClear.actorId]:undefined;
-  if (readyClear&&!readyEconomy) {
-    throw new Error(`Ready lifecycle clear requires projected economy for ${readyClear.actorId}`);
+  const orderedReadyClears=[...readyClears].sort((left,right)=>left.actorId.localeCompare(right.actorId));
+  for (const readyClear of orderedReadyClears) {
+    if (!snapshot.scene.economyByActor[readyClear.actorId]) {
+      throw new Error(`Ready lifecycle clear requires projected economy for ${readyClear.actorId}`);
+    }
   }
 
   const events=[ledger.commitHostEvent({
@@ -40,7 +42,8 @@ export function commitConnectedTurnProjectionEvents(
     },
   })];
 
-  if (readyClear&&readyEconomy) {
+  for (const readyClear of orderedReadyClears) {
+    const readyEconomy=snapshot.scene.economyByActor[readyClear.actorId]!;
     events.push(ledger.commitHostEvent({
       actorId:readyClear.actorId,
       payload:{
@@ -60,13 +63,13 @@ export function commitConnectedTurnProjectionEvents(
 export async function publishConnectedTurnProjection(
   adapter:MockAdapter,
   label:string,
-  readyClear?:ConnectedReadyLifecycleClear,
+  readyClears:ConnectedReadyLifecycleClear[] = [],
 ) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
   if (state.mode!=="host"||!state.ledger) return app.getSnapshot();
   const snapshot=await app.getSnapshot();
-  const events=commitConnectedTurnProjectionEvents(state.ledger,snapshot,label,readyClear);
+  const events=commitConnectedTurnProjectionEvents(state.ledger,snapshot,label,readyClears);
   await broadcastConnectedWire({
     type:"event-batch",
     sessionId:state.ledger.sessionId,
@@ -85,13 +88,15 @@ function blockedByRemotePending(adapter:MockAdapter) {
   return true;
 }
 
-function readyLifecycleClear(
-  before:ReadyActionConfiguration|undefined,
-  after:ReadyActionConfiguration|undefined,
+function readyLifecycleClears(
+  before:ReadyActionConfiguration[],
+  after:ReadyActionConfiguration[],
   reason:ConnectedReadyLifecycleReason,
-):ConnectedReadyLifecycleClear|undefined {
-  if (!before||after) return undefined;
-  return {actorId:before.actorId,reason};
+):ConnectedReadyLifecycleClear[] {
+  const remainingActors=new Set(after.map((configuration)=>configuration.actorId));
+  return before
+    .filter((configuration)=>!remainingActors.has(configuration.actorId))
+    .map((configuration)=>({actorId:configuration.actorId,reason}));
 }
 
 MockAdapter.prototype.startInitiative=async function startConnectedInitiative() {
@@ -107,22 +112,22 @@ MockAdapter.prototype.endInitiative=async function endConnectedInitiative() {
   const state=connectedStateFor(this);
   if (state.mode==="client") return connectedInternal(this).getSnapshot();
   if (blockedByRemotePending(this)) return connectedInternal(this).getSnapshot();
-  const readyBefore=state.mode==="host"?readyActionConfigurationFor(this):undefined;
+  const readyBefore=state.mode==="host"?readyActionConfigurationsFor(this):[];
   const next=await previousEndInitiative.call(this);
   if (state.mode!=="host") return next;
-  const readyClear=readyLifecycleClear(readyBefore,readyActionConfigurationFor(this),"initiative-ended");
-  return publishConnectedTurnProjection(this,"initiative-end",readyClear);
+  const readyClears=readyLifecycleClears(readyBefore,readyActionConfigurationsFor(this),"initiative-ended");
+  return publishConnectedTurnProjection(this,"initiative-end",readyClears);
 };
 
 MockAdapter.prototype.endTurn=async function endConnectedTurn() {
   const state=connectedStateFor(this);
   if (state.mode==="client") return connectedInternal(this).getSnapshot();
   if (blockedByRemotePending(this)) return connectedInternal(this).getSnapshot();
-  const readyBefore=state.mode==="host"?readyActionConfigurationFor(this):undefined;
+  const readyBefore=state.mode==="host"?readyActionConfigurationsFor(this):[];
   const next=await previousEndTurn.call(this);
   if (state.mode!=="host") return next;
-  const readyClear=readyLifecycleClear(readyBefore,readyActionConfigurationFor(this),"next-turn-start");
-  return publishConnectedTurnProjection(this,"turn-end",readyClear);
+  const readyClears=readyLifecycleClears(readyBefore,readyActionConfigurationsFor(this),"next-turn-start");
+  return publishConnectedTurnProjection(this,"turn-end",readyClears);
 };
 
 MockAdapter.prototype.setCurrentActor=async function setConnectedCurrentActor(actorId:string) {
