@@ -3,7 +3,7 @@
 Status: **CURRENT CANONICAL HANDOFF**  
 Updated: **2026-08-23 Asia/Seoul**  
 Canonical branch: **`work/v1-composite`**  
-Recorded Long Rest foundation head: **`aeb65c1 feat(rest): project domain long rest into durable Character state`**
+Recorded Tauri compound persistence head: **`fed7ed7 fix(persistence): bind compound lock guard lifetime explicitly`**
 
 이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 단일 인수인계 문서다. 전체 출시 작업의 우선순위와 완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 실제 제품 계약은 `docs/design/`, 작업 루트 판정은 저장소 루트의 `CANONICAL_ROOT.md`가 우선한다.
 
@@ -16,7 +16,7 @@ Recorded Long Rest foundation head: **`aeb65c1 feat(rest): project domain long r
 5. 이미 구현/검증된 작업은 반복하지 않는다.
 6. 모든 V1 pre-release 구현이 끝나기 전 comprehensive Codex audit를 시작하지 않는다.
 
-## 2. 보존된 완료 구현
+## 2. 보존된 완료/구현 상태
 
 ### Ready / connected lifecycle
 
@@ -26,110 +26,148 @@ Recorded Long Rest foundation head: **`aeb65c1 feat(rest): project domain long r
 
 Production 구현은 완료됐고 exact-head validation evidence만 남아 있다. archive/startup recovery/duplicate/delete 경로가 기존 Campaign UI와 durable application service를 통해 연결돼 있다.
 
-## 3. V1-12 declarative Calendar/Ration provider
+### V1-12 declarative Calendar/Ration provider
 
-새 executable plugin runtime을 만들지 않고 기존 **RuleModule -> InstalledContent -> Catalog -> Campaign authority** 경계를 재사용했다.
+RuleModule -> InstalledContent -> Catalog -> Campaign authority 경계를 재사용한 data-only declarative provider core/runtime/UI는 code-connected다.
 
-- `3e364dd` / `b2244d5`: data-only Calendar/Ration provider schema, strict allowlist parser, stable providerId.
-- `ad2eb02`: custom calendar absolute minute <-> era/year/month/day/time 왕복과 bounded leap cycle.
-- `d1977e1` / `fc5229f`: RuleModule payload 보존 + option category/matching capability validation.
-- `a2974b6`: restart decode 때 persisted provider payload 재검증.
-- `2f99068` / `abee49f`: installed provider metadata를 기존 Catalog로 read-only projection.
-- `412047f`: Campaign application service가 providerVersion을 pin하고 custom calendar/ration 계산을 authoritative Campaign mutation 안에서 수행.
-- `386814a`: runtime이 providerId + providerVersion exact match를 우선 해석하고 missing provider는 provider-specific command에서만 실패.
-- `47de9a2`: latest-per-providerId + exact pinned descriptor helpers.
-- `de40e7b`: 기존 Calendar/Ration select UI에 installed provider를 연결하고 custom month/ration preview/unavailable 상태를 투영.
-- `3284e93` / `b624a48`: provider UI structure contract.
-- `a285f2f`: canonical UI workflow에 provider profile/import/runtime/UI tests 연결.
+주요 보존 head:
 
-기본 원칙은 유지된다: 식량 부족은 warning/pending DM adjudication일 뿐 자동 damage/Exhaustion을 적용하지 않는다. OFF/missing provider는 unrelated Session/Rest/Action을 막지 않는다.
+- `3e364dd` / `b2244d5`: provider schema/parser/stable ID.
+- `ad2eb02`: custom calendar round-trip/leap cycle.
+- `d1977e1` / `fc5229f` / `a2974b6`: RuleModule 보존/검증/restart decode.
+- `2f99068` / `abee49f`: Catalog projection.
+- `412047f` / `386814a`: provider-aware Campaign authority and exact version resolution.
+- `47de9a2` / `de40e7b`: installed provider selection and existing Campaign UI connection.
+- `3284e93` / `b624a48` / `a285f2f`: provider UI contracts/canonical workflow wiring.
 
-현재 판단: **declarative provider user path IMPLEMENTATION COMPLETE / EXACT-HEAD VALIDATION PENDING**. Direct canonical push의 Actions 결과는 현재 connector에서 관찰되지 않았으므로 green/DONE을 주장하지 않는다.
+식량 부족은 warning/pending DM adjudication일 뿐 자동 damage/Exhaustion을 적용하지 않는다. OFF/missing provider는 unrelated Session/Rest/Action을 막지 않는다.
 
-## 4. 이번 Rerun — authoritative Long Rest compound foundation
+현재 판단: **provider user path IMPLEMENTATION COMPLETE / EXACT-HEAD VALIDATION PENDING**. 이미 구현된 provider 코드를 validation을 얻기 위해 반복하지 않는다.
 
-### 기존 Rest authority 재확인
+## 3. Long Rest canonical authority — 보존
 
-소스 감사 결과 `docs/design/campaign-systems.md`의 “기존 authoritative rest command” 문구는 production UI/runtime 관점에서는 오래된 가정이었다.
+Production generic Long Rest surface는 아직 없지만 domain authority는 이미 존재한다.
 
-- 기존 `configureWizardLongRest`, `configurePactTomeRest`, `configureCircleLandRest`는 Long Rest 자체 해결이 아니라 휴식 시 주문/선택 구성을 저장하는 class-specific command다.
-- 그러나 domain authority는 이미 존재한다.
-  - `src/domain/rest.ts::resolveLongRest()`는 HP 최대 회복, Temporary HP 제거, death-save/life flag reset, Hit Dice 회복, declarative `longRest` resource recovery, Rest 만료 effect, Exhaustion 1단계 제거를 처리한다.
-  - `src/domain/resolutionRestOps.ts`는 이를 canonical Resolution operation `kind:"long-rest"`로 실행하고 HP/resource/life/effect/concentration state changes를 생성한다.
-  - `src/domain/resources.ts`는 `recovery.longRest`, recovery lockout, temporary maximum normalization을 이미 선언형으로 처리한다.
-- 따라서 Campaign/runtime/UI에서 별도 Long Rest 규칙을 발명하지 않는다.
+- `src/domain/rest.ts::resolveLongRest()`가 HP 최대 회복, Temporary HP 제거, death-save/life flag reset, Hit Dice, declarative `longRest` resource recovery, rest-expired effects, Exhaustion 1단계 제거를 담당한다.
+- `resolutionRestOps.ts`는 canonical `kind:"long-rest"` operation/state changes를 제공한다.
+- `resources.ts`가 recovery lockout/temporary maximum까지 소유한다.
+- 기존 `configureWizardLongRest`, `configurePactTomeRest`, `configureCircleLandRest`는 Rest 전체 해결이 아니라 class-specific rest configuration이다.
 
-### Character durable Long Rest projection
+따라서 Campaign/UI에서 별도 회복 규칙을 만들면 안 된다.
 
-- `98b2de9`: `characterLongRestProjection.test.ts` failing contract 추가.
-- `aeb65c1`: `characterLongRestProjection.ts` 추가.
-  - canonical `resolveLongRest()`를 호출한다.
-  - Character HP/Temporary HP/life flags와 `recovery.longRest`를 가진 durable resources를 결과 Character sheet에 투영한다.
-  - dead/0 HP Character를 자동 부활시키지 않는다.
-  - Campaign time/ration은 의도적으로 이 helper에 포함하지 않는다. Rest만으로 날짜/식량 진행을 강제하지 않기 위함이다.
-  - Session effects를 optional input/output으로 유지해 이후 production coordinator가 existing domain expiry를 재사용할 수 있다.
+### Character durable projection
 
-### Character + Campaign immutable-generation compound staging
+- `98b2de9`: focused contract.
+- `aeb65c1`: `characterLongRestProjection.ts`.
 
-Character와 Campaign은 서로 다른 immutable generation store를 사용하고 기존 repository `commit()`은 각 store를 독립적으로 write한다. 따라서 단순 `Character commit -> Campaign commit`은 두 번째 write 실패 때 partial durable success를 남긴다.
+이 helper는 domain Rest authority를 호출해 Character-owned HP/Temporary HP/life flags/resources를 투영하고 Session effects output을 반환한다. Campaign time/rations는 의도적으로 포함하지 않는다. dead/0 HP Character를 자동 부활시키지 않는다.
 
-이를 피하기 위한 기반을 추가했다.
+## 4. Character + Campaign compound generation foundation — 보존
 
-- `a7aa126` / `5c7ebbe`: `characterCampaignCompoundPersistence.test.ts` 계약.
-  - preparation은 repository head/store를 변경하지 않는다.
-  - 두 번째 participant preflight 실패 시 어느 새 generation도 visible하지 않아야 한다.
-  - 성공 시 두 generation을 함께 노출한 뒤 repository rehydrate로 새 head를 읽는다.
-- `55b70c7`: `characterCampaignCompoundPersistence.ts` 추가.
-  - `prepareCharacterLibraryGeneration()`은 current durable document와 실제 physical generation을 기준으로 next Character payload를 write 없이 생성한다.
-  - `prepareCampaignLibraryGeneration()`도 next Campaign generation payload를 write 없이 생성한다.
-  - recovered older generation 상황에서도 `storageRevision`은 실제 physical head + 1을 사용한다.
-  - `CharacterCampaignCompoundWriter` 계약을 정의한다.
-  - `MemoryCharacterCampaignCompoundWriter`는 두 store preflight가 모두 성공한 뒤에만 apply한다.
-- `b0f5095`: Memory Character store의 실패/stale/next-generation 검사를 `preflightCompoundWrite()`로 분리하고 기존 단일 `writeGeneration()`도 동일 경로를 사용한다.
-- `b4056e5`: Memory Campaign store도 동일하게 preflight/apply를 분리한다.
-- 기존 단일-store persistence API와 repository `commit()` semantics는 변경하지 않았다.
+### TypeScript / memory
 
-### 중요한 원자성 경계
+- `a7aa126` / `5c7ebbe`: prepared generation + participant failure atomicity contracts.
+- `55b70c7`: `characterCampaignCompoundPersistence.ts` — Character/Campaign next immutable generation payload를 write 없이 준비하고 compound writer contract를 정의.
+- `b0f5095` / `b4056e5`: Memory Character/Campaign store가 preflight/apply를 분리하며 normal single-store write도 같은 검증 경로 사용.
 
-메모리/test 환경의 failure atomicity 기반은 구현됐지만 **Windows/Tauri cross-store writer는 아직 구현하지 않았다**. Tauri의 기존 Character/Campaign commands는 서로 다른 generation directory에 독립적으로 temp+fsync+rename한다. 따라서 production Long Rest coordinator를 연결하기 전에 cross-store transaction command가 필요하다.
+Memory writer는 두 participant가 모두 preflight된 뒤에만 apply한다.
 
-Tauri writer는 다음 원칙을 따라야 한다.
+## 5. 이번 Rerun — production Tauri cross-store transaction
 
-1. Character/Campaign expected/next generation을 모두 preflight한다.
-2. 두 payload를 모두 durable staging/fsync한 뒤에만 transaction commit point를 만든다.
-3. commit point 전 실패는 두 새 generation 모두 invisible이어야 한다.
-4. commit point 후 crash/interruption은 다음 read/startup recovery가 둘 다 materialize하거나 명시적 blocker를 반환해야 하며 한쪽만 정상 상태로 노출하면 안 된다.
-5. 기존 single-store generation retention/corruption recovery를 깨지 않는다.
-6. 단순 순차 repository commit + 추측성 보상으로 구현하지 않는다.
+기존 Tauri Character/Campaign generation store가 각자 독립 temp+fsync+rename을 수행하므로 순차 commit으로는 V1 no-partial-success 요구를 만족할 수 없었다. 이번 dispatch에서 recoverable cross-store commit point를 추가했다.
 
-## 5. 검증 상태
+### generation metadata/primitives
 
-- 새 deterministic tests는 source에 추가했으나 이 checkpoint에서 실행 결과를 관찰하지 못했다.
-- GitHub direct-push Actions status는 connector에서 여전히 노출되지 않았다.
-- comprehensive Codex audit는 V1 전체 구현 완료 전이므로 실행하지 않는다.
-- 따라서 이번 Long Rest foundation을 green/DONE으로 주장하지 않는다.
+- `cec4030`: shared generation store가 serializable `WriteGenerationRequest`, latest physical generation, final path, pruning primitive를 compound layer에 제공한다. 기존 single-store semantics는 유지된다.
+- `ce7e944`: Character generation prefix/label 공개.
+- `fb8c609`: Campaign generation prefix/label 공개.
 
-## 6. Next Exact Action
+### `character_campaign_compound.rs`
 
-**Tauri Character+Campaign cross-store compound generation writer를 구현한 뒤 production Long Rest coordinator를 연결한다.**
+- `908d7e1`: 신규 transaction module.
 
-1. `src-tauri/src/generation_store.rs`의 기존 temp+fsync+rename semantics를 재사용/확장한다.
-2. transaction staging + commit marker + recovery를 추가하고 Character/Campaign read 전에 committed transaction recovery를 수행한다.
-3. 새 Tauri command `write_character_campaign_compound`와 TS `CharacterCampaignCompoundWriter` platform implementation을 연결한다.
-4. pre-commit injected failure에서는 두 generation 모두 invisible, committed-interruption recovery에서는 두 generation 모두 최종 상태가 되는 Rust deterministic tests를 추가한다.
-5. 그 뒤 production Long Rest coordinator가:
-   - canonical domain Long Rest를 resolve;
-   - optional Calendar advance를 사용자 선택 시에만 계산;
-   - optional Ration consumption을 사용자 선택 시에만 계산;
-   - Character/Campaign prepared generations를 단일 compound writer로 commit;
-   - 성공 후 repository/adapter state를 rehydrate/project;
-   - 실패 시 Scene/Activity/Character/Campaign 어느 쪽에도 partial success를 남기지 않도록 한다.
-6. 기존 Rest surface 안에 최소 preview/checkbox/action만 추가하고 현재 UI 구조를 재설계하지 않는다.
-7. Calendar/Rations OFF 또는 provider unavailable이면 해당 optional side effect만 비활성화하고 Long Rest 자체는 계속 가능해야 한다.
+Commit protocol:
 
-## 7. 검증 정책
+1. pending committed transaction recovery.
+2. Character/Campaign expected/next generation 모두 preflight.
+3. 두 payload를 normal reader가 무시하는 `.compound.tmp`로 write + `sync_all()`.
+4. 두 participant 재-preflight.
+5. full request/payload를 가진 marker temp를 write+sync하고 `character-campaign-compound.commit.json`으로 rename. **이 marker rename이 compound commit point다.**
+6. Character/Campaign staged payload를 각 immutable generation final path로 materialize.
+7. final payload가 marker와 정확히 같은지 검증.
+8. retention prune.
+9. 두 participant가 모두 완료된 뒤에만 marker 제거.
+
+Commit point 전 실패는 staging을 제거하고 기존 두 generation만 visible하다. Commit point 후 interruption은 compensation이 아니라 recovery 대상으로 취급한다.
+
+Recovery는 한 participant가 이미 final generation으로 materialize돼 있으면 marker payload와 exact equality를 검증하고 나머지 participant를 완성한다. 불일치/복구 불가능 상태는 명시적 error로 막는다.
+
+### deterministic Rust contracts authored
+
+동일 module에 fault points/tests를 추가했다.
+
+- before marker failure => 두 next generation 모두 invisible.
+- immediately after marker interruption => recovery가 둘 다 next generation으로 완성.
+- after Character materialization interruption => raw disk의 일시적 half-materialized 상태는 marker를 보존하고 recovery가 Campaign까지 완성.
+
+테스트 실행 결과는 아직 관찰하지 못했으므로 pass를 주장하지 않는다.
+
+### Tauri command / recovery fence
+
+- `ae42e81`: `src-tauri/src/lib.rs`
+  - Character/Campaign persistence용 shared process mutex 추가.
+  - normal Character read/write와 Campaign read/write가 모두 같은 mutex를 잡고 pending compound `recover_at(root)`를 먼저 수행.
+  - `write_character_campaign_compound` command 등록.
+- `fed7ed7`: mutex guard 반환 lifetime을 explicit하게 만들어 Rust lifetime ambiguity 위험을 제거.
+- `88cc8a7`: `TauriCharacterCampaignCompoundWriter` TS bridge 추가.
+- `b931cdc`: existing Campaign Tauri structure regression을 새 compound/recovery boundary에 맞춤.
+
+중요: source wiring만 확인했다. Rust/TS build/test green evidence는 아직 없다.
+
+## 6. Production wiring inspection
+
+Generic Rest control은 현재 다음 Session surfaces 어디에도 없다.
+
+- `PlaySessionDock`
+- `SessionActionDock`
+- `SessionDmTools`
+- `SessionCampaignPane`
+
+따라서 V1 UI baseline을 보존하려면 새 별도 screen/redesign이 아니라 **기존 `SessionCampaignPane` 내부의 최소 Long Rest preview/options/action block**이 적합하다.
+
+실제 authority 경계:
+
+`AppProvider -> MockAdapter runtime patches -> CampaignApplicationService / Character persistence -> repositories`
+
+- `AppProvider`는 `campaignRuntimeAdapter`를 import하고 MockAdapter Campaign API를 그대로 UI에 노출한다.
+- `CampaignApplicationService`가 provider-aware Calendar/Ration mutation과 preview arithmetic을 소유한다.
+- `characterLibraryRuntimeAdapter`는 private Character repository context를 소유하며 기존 durable mutation/write-back을 담당한다.
+- `campaignRuntimeAdapter`는 private Campaign service context를 소유한다.
+- 둘 다 테스트 store injection helper는 있지만 compound coordinator가 두 prepared generations를 동시에 만들고 성공 후 두 runtime head를 반영할 수 있는 production seam은 아직 없다.
+
+React에서 Calendar/Ration 계산을 복제하거나 public single-store mutation 두 개를 순차 호출하지 않는다.
+
+## 7. Current Next Exact Action
+
+**Production Long Rest compound coordinator + minimal SessionCampaignPane control을 구현한다.**
+
+1. Character/Campaign runtime adapter private contexts에 최소 explicit seam/registered port를 추가해 한 coordinator가 두 hydrated durable heads를 다룰 수 있게 한다. 기존 single-store paths는 유지한다.
+2. preview/input 계약을 만든다:
+   - Rest는 실행 대상.
+   - Calendar advance는 user-selected optional effect.
+   - Ration consumption도 independently optional.
+3. Character candidate는 `projectCharacterLongRest`를 통해 계산한다.
+4. Campaign candidate는 `CampaignApplicationService`의 provider-aware authority를 재사용해 만든다. UI 계산 금지.
+5. exactly one next Character generation + exactly one next Campaign generation을 prepare한 뒤 platform compound writer 하나만 호출한다.
+6. writer 성공 후에만 두 repository/runtime state를 accept/rehydrate/project한다. 실패 시 Character/Campaign/Scene/Activity partial success가 남지 않아야 한다.
+7. Calendar/Rations OFF 또는 provider unavailable이면 그 optional selection만 disabled/unavailable이고 Rest 자체는 계속 실행 가능해야 한다.
+8. deterministic tests: Rest-only, time only, rations only, both, unavailable provider, duplicate/idempotent request, compound writer failure.
+9. existing `SessionCampaignPane`에 최소 preview/checkbox/action만 추가한다. 주변 Campaign/Session UI는 재배치/재설계하지 않는다.
+10. focused Rust/TypeScript checks를 실제 관찰한 뒤에만 green을 기록한다.
+
+## 8. 검증 정책
 
 - 기존 exact-head evidence는 보존하고 반복하지 않는다.
-- focused deterministic tests는 기능 구현과 함께 작성한다.
-- 실제 결과를 관찰하기 전 green/DONE을 주장하지 않는다.
+- 새 source-authored tests는 실행 증거가 없으면 green으로 간주하지 않는다.
+- declarative-provider exact-head CI 증거가 나중에 보이면 기록하되 이미 구현된 provider 코드를 재개하지 않는다.
 - comprehensive Codex audit는 V1 전체 implementation이 끝난 frozen exact SHA에서만 수행한다.
