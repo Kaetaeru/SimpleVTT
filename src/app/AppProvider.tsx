@@ -15,6 +15,7 @@ import type {
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
+import type { CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./productionCombatantPreparationAdapter";
@@ -77,6 +78,19 @@ interface AppContextValue {
   restoreCampaign(campaignId:string):Promise<void>;
   configureCampaignSessionDefaults(campaignId:string,input:{sessionNameTemplate:string;startingMode:SessionMode;calendarEnabled:boolean;rationsEnabled:boolean}):Promise<void>;
   prepareCampaignSessionSnapshot(campaignId:string,input?:{sessionName?:string;startingMode?:SessionMode}):Promise<void>;
+  upsertCampaignRosterMember(campaignId:string,member:CampaignRosterMember):Promise<void>;
+  removeCampaignRosterMember(campaignId:string,rosterMemberId:string):Promise<void>;
+  configureCampaignCalendar(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<void>;
+  advanceCampaignCalendar(campaignId:string,input:{deltaMinutes:number;note?:string}):Promise<void>;
+  correctCampaignCalendar(campaignId:string,input:{absoluteMinute:number;note:string}):Promise<void>;
+  setCampaignCalendarNote(campaignId:string,note:string):Promise<void>;
+  undoCampaignCalendar(campaignId:string):Promise<void>;
+  configureCampaignRations(campaignId:string,input:{enabled:boolean;providerId:string}):Promise<void>;
+  adjustCampaignRations(campaignId:string,input:{amount:number;note?:string}):Promise<void>;
+  consumeCampaignDailyRations(campaignId:string,input?:{requiredUnits?:number;note?:string}):Promise<void>;
+  undoCampaignRationConsumption(campaignId:string):Promise<void>;
+  advanceCampaignDay(campaignId:string,input:{consumeRations:boolean;requiredUnits?:number;note?:string}):Promise<void>;
+  appendCampaignSessionSummary(campaignId:string,summary:CampaignSessionSummary):Promise<void>;
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
   stopSession(): Promise<void>;
@@ -206,6 +220,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     restoreCampaign: async (campaignId) => apply(() => mockAdapter.restoreCampaign(campaignId)),
     configureCampaignSessionDefaults: async (campaignId,input) => apply(() => mockAdapter.configureCampaignSessionDefaults(campaignId,input)),
     prepareCampaignSessionSnapshot: async (campaignId,input) => apply(() => mockAdapter.prepareCampaignSessionSnapshot(campaignId,input)),
+    upsertCampaignRosterMember: async (campaignId,member) => apply(() => mockAdapter.upsertCampaignRosterMember(campaignId,member)),
+    removeCampaignRosterMember: async (campaignId,rosterMemberId) => apply(() => mockAdapter.removeCampaignRosterMember(campaignId,rosterMemberId)),
+    configureCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.configureCampaignCalendar(campaignId,input)),
+    advanceCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.advanceCampaignCalendar(campaignId,input)),
+    correctCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.correctCampaignCalendar(campaignId,input)),
+    setCampaignCalendarNote: async (campaignId,note) => apply(() => mockAdapter.setCampaignCalendarNote(campaignId,note)),
+    undoCampaignCalendar: async (campaignId) => apply(() => mockAdapter.undoCampaignCalendar(campaignId)),
+    configureCampaignRations: async (campaignId,input) => apply(() => mockAdapter.configureCampaignRations(campaignId,input)),
+    adjustCampaignRations: async (campaignId,input) => apply(() => mockAdapter.adjustCampaignRations(campaignId,input)),
+    consumeCampaignDailyRations: async (campaignId,input) => apply(() => mockAdapter.consumeCampaignDailyRations(campaignId,input)),
+    undoCampaignRationConsumption: async (campaignId) => apply(() => mockAdapter.undoCampaignRationConsumption(campaignId)),
+    advanceCampaignDay: async (campaignId,input) => apply(() => mockAdapter.advanceCampaignDay(campaignId,input)),
+    appendCampaignSessionSummary: async (campaignId,summary) => apply(() => mockAdapter.appendCampaignSessionSummary(campaignId,summary)),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
     stopSession: async () => apply(() => mockAdapter.stopSession()),

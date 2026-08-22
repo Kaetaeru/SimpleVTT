@@ -37,7 +37,17 @@ export interface CampaignCalendarState {
   displayAnchor:{era?:string;year?:number;monthId?:string;day?:number};
   timeZoneLabel?:string;
   currentNote?:string;
-  history:Array<{transactionId:string;deltaMinutes:number;beforeAbsoluteMinute:number;afterAbsoluteMinute:number;committedAt:string;provenance:string[]}>;
+  history:Array<{
+    transactionId:string;
+    kind:"advance"|"correction"|"undo";
+    deltaMinutes:number;
+    beforeAbsoluteMinute:number;
+    afterAbsoluteMinute:number;
+    committedAt:string;
+    note?:string;
+    revertsTransactionId?:string;
+    provenance:string[];
+  }>;
 }
 
 export interface CampaignSupplyTransactionSummary {
@@ -45,6 +55,10 @@ export interface CampaignSupplyTransactionSummary {
   kind:"adjust"|"consume"|"undo"|"convert";
   amount:number;
   balanceAfter:number;
+  requiredAmount?:number;
+  shortage?:number;
+  note?:string;
+  revertsTransactionId?:string;
   committedAt:string;
   provenance:string[];
 }
@@ -82,11 +96,30 @@ export interface CampaignDmLibraryState {
 
 export interface CampaignSessionSummary {
   sessionId:string;
-  name:string;
+  title:string;
+  /** Read compatibility for pre-V1-12 local summaries. */
+  name?:string;
   startedAt:string;
   endedAt:string;
-  participantCount:number;
+  participantLabels:string[];
+  /** Read compatibility for pre-V1-12 local summaries. */
+  participantCount?:number;
+  calendarBefore?:string;
+  calendarAfter?:string;
+  rationDelta?:number;
+  stashTransactionCount:number;
+  dmNote?:string;
+  /** Read compatibility for pre-V1-12 local summaries. */
   summary?:string;
+}
+
+export interface CampaignRationPreview {
+  memberCount:number;
+  requiredUnits:number;
+  availableUnits:number;
+  consumedUnits:number;
+  shortageUnits:number;
+  memberUnits:Array<{rosterMemberId:string;label:string;units:number}>;
 }
 
 export interface CampaignContentLoadout {
@@ -111,6 +144,9 @@ export interface CampaignSessionSnapshot {
   contentLoadoutId:string;
   spatialProviderId?:string;
   spatialProviderVersion?:string;
+  calendarAbsoluteMinuteAtStart:number;
+  rationBalanceAtStart:number;
+  stashRevisionAtStart:number;
   startedAt:string;
 }
 

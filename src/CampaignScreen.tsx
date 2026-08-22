@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { CampaignRecordV1 } from "./app/campaignPersistenceContracts";
+import { CampaignSystemsPanel } from "./CampaignSystemsPanel";
 
 function campaignId(name:string){
   const slug=name.trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,"-").replace(/^-|-$/g,"").slice(0,32)||"campaign";
@@ -87,6 +88,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
             <article><span>PRIVATE</span><h3>DM 라이브러리</h3><strong>{activeCampaign.dmLibrary.entries.length}개</strong><p>이 캠페인에서만 검색되는 비공개 준비물입니다.</p></article>
             <article><span>HISTORY</span><h3>세션 기록</h3><strong>{activeCampaign.sessionHistory.length}회</strong><p>최근 세션 요약만 보존합니다.</p></article>
           </div>
+          <CampaignSystemsPanel campaign={activeCampaign}/>
           {setupOpen&&<section className="campaign-session-setup" aria-label="세션 시작 설정">
             <header><div><span>SESSION SETUP</span><h2>세션 시작</h2></div><button onClick={()=>setSetupOpen(false)}>닫기</button></header>
             <div className="campaign-identity-lock"><span>캠페인</span><strong>{activeCampaign.name}</strong><small>이번 세션은 이 Campaign ID와 revision을 기준으로 시작합니다.</small></div>

@@ -18,6 +18,7 @@ import "./app/productionSessionEmptyEncounterAdapter";
 import "./app/productionSessionUiStateAdapter";
 import "./app/sessionImageHandoutRuntimeAdapter";
 import "./app/sessionContentParityRuntimeAdapter";
+import "./app/campaignSessionHistoryRuntimeAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";

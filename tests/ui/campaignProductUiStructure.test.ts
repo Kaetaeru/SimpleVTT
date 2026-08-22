@@ -8,6 +8,9 @@ const screen=readFileSync(new URL("../../src/CampaignScreen.tsx",import.meta.url
 const provider=readFileSync(new URL("../../src/app/AppProvider.tsx",import.meta.url),"utf8");
 const session=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
 const directSession=readFileSync(new URL("../../src/ProductionSessionDirectNetworkBridge.tsx",import.meta.url),"utf8");
+const systems=readFileSync(new URL("../../src/CampaignSystemsPanel.tsx",import.meta.url),"utf8");
+const historyRuntime=readFileSync(new URL("../../src/app/campaignSessionHistoryRuntimeAdapter.ts",import.meta.url),"utf8");
+const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
 
 test("Campaign is a first-class product route reachable from navigation and Home",()=>{
   assert.match(app,/\["campaigns", "캠페인",/);
@@ -51,4 +54,20 @@ test("Host start requires a selected Campaign and exposes its captured capabilit
     assert.match(source,/식량 \{activeCampaign\.rations\.capability\.enabled/);
     assert.match(source,/공간 모듈/);
   }
+});
+
+test("Campaign systems UI exposes roster calendar ration compound and bounded history workflows",()=>{
+  for(const pattern of [/파티 명단/,/Character 파일이나 소유권/,/Player Character 참조/,/식량 계산/,/보관함 권한/]) assert.match(systems,pattern);
+  for(const pattern of [/세션 달력/,/Simple Day/,/Gregorian/,/\+10분/,/\+1시간/,/\+1일/,/DM 시간 수정/,/최근 시간 변경 되돌리기/]) assert.match(systems,pattern);
+  for(const pattern of [/하루 필요량/,/식량이/,/피해나 소진을 자동 적용하지 않습니다/,/하루치 소비/,/최근 소비 되돌리기/]) assert.match(systems,pattern);
+  assert.match(systems,/advanceCampaignDay/);
+  assert.match(systems,/시간과 선택한 식량 소비를 하나의 저장/);
+  assert.match(systems,/세션 기록/);
+  assert.doesNotMatch(systems,/applyDamage|exhaustionLevel|readyState|initiativeOrder/);
+});
+
+test("successful Host end appends only a bounded Campaign summary projection",()=>{
+  assert.match(main,/campaignSessionHistoryRuntimeAdapter/);
+  for(const pattern of [/previousStopSession/,/appendCampaignSessionSummary/,/participantLabels/,/calendarBefore/,/calendarAfter/,/rationDelta/,/stashTransactionCount/]) assert.match(historyRuntime,pattern);
+  assert.doesNotMatch(historyRuntime,/resolution|ready|initiative|handout/i);
 });
