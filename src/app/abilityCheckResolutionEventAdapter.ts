@@ -19,6 +19,7 @@ MockAdapter.prototype.advanceResolution=async function advanceAbilityCheckWithCa
   }
 
   const checkLabel=action.details.find((entry)=>entry.label==="판정")?.value ?? action.name;
+  const helped=resolution.provenance.some((entry)=>entry.startsWith("action:standard.help ·"));
   const event=resolveOpenAbilityCheckResolutionEvent({
     resolutionId:resolution.id,
     action,
@@ -27,6 +28,9 @@ MockAdapter.prototype.advanceResolution=async function advanceAbilityCheckWithCa
       source:`action:${action.id}:check-bonus`,
       value:action.checkBonus ?? 0,
     }],
+    rollStateContributions:helped
+      ? [{ source:"action:standard.help",state:"advantage" }]
+      : undefined,
     checkLabel,
   });
   const completed=await previousAdvanceResolution.call(this);

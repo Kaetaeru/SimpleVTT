@@ -1,5 +1,5 @@
 import "./phase09RealTurnRuntimeAdapter";
-import type { ActivityEntry, AppSnapshot, SceneVm, SessionMode } from "./contracts";
+import type { ActivityEntry, AppSnapshot, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { advanceTurnRuntimeLifecycle } from "./realTurnLifecycleService";
@@ -14,6 +14,17 @@ interface EffectAwareTurnAdapterState {
 }
 
 const previousEndTurn=MockAdapter.prototype.endTurn;
+const previousEndInitiative=MockAdapter.prototype.endInitiative;
+
+const END_OF_TURN_STATUSES=["이탈"] as const;
+const START_OF_TURN_STATUSES=["회피","준비 행동"] as const;
+
+function clearStatuses(entity:SceneEntity|undefined,statuses:readonly string[]) {
+  if (!entity) return [];
+  const removed=statuses.filter((status)=>entity.status.includes(status));
+  if (removed.length>0) entity.status=entity.status.filter((status)=>!removed.includes(status));
+  return removed.map((status)=>`${entity.name} 상태 제거: ${status}`);
+}
 
 function eventId() {
   return `phase09.turn-lifecycle.${Date.now()}.${Math.floor(Math.random()*1000)}`;
@@ -24,6 +35,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   const session=turnRuntimeSessions.get(this);
   if (internal.sessionMode!=="initiative" || !session) return previousEndTurn.call(this);
 
+  const endingActor=internal.scene.entities.find((entity)=>entity.id===internal.scene.currentActorId);
   synchronizeTurnRuntimeFromScene(session,internal.scene);
   const advanced=advanceTurnRuntimeLifecycle(session);
   if (advanced.status==="rejected") {
@@ -42,6 +54,10 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
 
   projectTurnRuntimeToScene(session,internal.scene);
   const next=internal.scene.entities.find((entity)=>entity.id===advanced.activeActorId);
+  const standardActionChanges=[
+    ...clearStatuses(endingActor,END_OF_TURN_STATUSES),
+    ...clearStatuses(next,START_OF_TURN_STATUSES),
+  ];
   const activity=projectRuntimeEventsToActivity({
     id:eventId(),
     actorName:"시스템",
@@ -50,6 +66,18 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
     events:advanced.events,
   });
   activity.detail.push(`RulesRuntimeState revision ${session.state.revision}`);
+  activity.stateChanges.push(...standardActionChanges);
   internal.activity.unshift(activity);
   return internal.getSnapshot();
+};
+
+MockAdapter.prototype.endInitiative=async function endInitiativeClearingStandardActionStatuses() {
+  const internal=this as unknown as EffectAwareTurnAdapterState;
+  const changes=internal.scene.entities.flatMap((entity)=>clearStatuses(entity,[...END_OF_TURN_STATUSES,...START_OF_TURN_STATUSES]));
+  const snapshot=await previousEndInitiative.call(this);
+  if (changes.length>0) {
+    const entry=internal.activity[0];
+    if (entry?.title==="이니셔티브 종료") entry.stateChanges.push(...changes);
+  }
+  return changes.length>0 ? internal.getSnapshot() : snapshot;
 };

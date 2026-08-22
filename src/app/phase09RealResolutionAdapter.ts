@@ -67,6 +67,14 @@ interface FreeformSpellSlotHistory {
 const pendingAtomicAttacks = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
 const freeformSpellSlotHistories = new WeakMap<MockAdapter,FreeformSpellSlotHistory>();
 const REAL_HEALING_ACTION_IDS = new Set(["action.second-wind","action.healing-word","action.healing-potion"]);
+const HELPED_STATUS = "도움 받음";
+const HIDDEN_STATUS = "숨음";
+
+function removeStatus(entity:SceneEntity|undefined,status:string) {
+  if (!entity?.status.includes(status)) return false;
+  entity.status=entity.status.filter((entry)=>entry!==status);
+  return true;
+}
 
 function resolutionId() {
   return `resolution.phase09.${Date.now()}.${Math.floor(Math.random() * 1000)}`;
@@ -285,6 +293,8 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
     const target = internal.entity(targetIds[0]);
     if (!target) return internal.getSnapshot();
     internal.capture();
+    const actor=internal.entity(action.actorId);
+    const revealed=removeStatus(actor,HIDDEN_STATUS);
     internal.resolution = resolveAttackRollResolution({
       resolutionId:resolutionId(),
       action,
@@ -295,6 +305,10 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
         value:action.attackBonus ?? 0,
       }],
     });
+    if (revealed) {
+      internal.resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HIDDEN_STATUS} · 공격 선언`);
+      internal.resolution.provenance.push("condition:hidden · applied · attack declaration ends hidden state");
+    }
     return internal.getSnapshot();
   }
 
@@ -328,17 +342,27 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
   }
 
   internal.capture();
+  const actor=internal.entity(action.actorId);
+  const helped=removeStatus(actor,HELPED_STATUS);
   const checkLabel = action.details.find((entry) => entry.label === "판정")?.value ?? action.name;
   internal.resolution = resolveOpenAbilityCheckResolution({
     resolutionId:resolutionId(),
     action,
-    diceFaces:[internal.d20(action.id)],
+    diceFaces:helped
+      ? [internal.d20(action.id),internal.d20(`${action.id}:help`,1)]
+      : [internal.d20(action.id)],
     modifierContributions:[{
       source:`action:${action.id}:check-bonus`,
       value:action.checkBonus ?? 0,
     }],
+    rollStateContributions:helped
+      ? [{ source:"action:standard.help",state:"advantage" }]
+      : undefined,
     checkLabel,
   });
+  if (helped) {
+    internal.resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HELPED_STATUS} · 능력 판정에 유리점 적용`);
+  }
   return internal.getSnapshot();
 };
 
@@ -349,9 +373,17 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
   const action = internal.action(resolution.actionId);
   if (!action) return oldAdvanceResolution.call(this);
 
-  if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&action.id==="action.standard.hide.stealth"&&(resolution.rollTotal??0)>=15) {
+  if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&action.id==="action.standard.hide.stealth") {
     const actor=internal.entity(action.actorId);
-    if(actor&&!actor.status.includes("숨음")){actor.status.push("숨음");resolution.stateChanges.push(`${actor.name} 숨음 상태 적용 · DC 15 충족`);resolution.finalOutcome=`${resolution.rollTotal} · 숨기 성공`;}
+    const succeeded=(resolution.rollTotal??0)>=15;
+    if(succeeded&&actor&&!actor.status.includes(HIDDEN_STATUS)) {
+      actor.status.push(HIDDEN_STATUS);
+      resolution.stateChanges.push(`${actor.name} 상태 추가: ${HIDDEN_STATUS} · DC 15 충족`);
+    } else if(!succeeded&&removeStatus(actor,HIDDEN_STATUS)) {
+      resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HIDDEN_STATUS} · 숨기 실패`);
+    }
+    resolution.finalOutcome=`${resolution.rollTotal} · 숨기 ${succeeded ? "성공" : "실패"}`;
+    resolution.compact=resolution.finalOutcome;
   }
 
   if (resolution.stage==="effect-preview"&&action.resolutionKind==="no-roll"&&action.id.startsWith("action.standard.")) {
