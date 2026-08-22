@@ -17,7 +17,15 @@ export type ConnectedLongRestWireMessage =
   | { type:"long-rest-owner-prepared"; prepared:ConnectedLongRestOwnerPrepared }
   | { type:"long-rest-global-commit"; commit:ConnectedLongRestGlobalCommit }
   | { type:"long-rest-owner-materialized"; materialized:ConnectedLongRestOwnerMaterialized; projection:CharacterSessionProjectionV1 }
-  | { type:"long-rest-abort"; transactionId:string; reason:string };
+  | {
+      type:"long-rest-abort";
+      transactionId:string;
+      reason:string;
+      /** Present after owner prepare so a restarted owner can close its durable marker. */
+      ownerParticipantId?:string;
+      character?:ConnectedLongRestOffer["character"];
+      preparationId?:string;
+    };
 
 export type DecodeConnectedLongRestWireResult =
   | { status:"ok"; message:ConnectedLongRestWireMessage }
@@ -111,6 +119,13 @@ function isOwnerMaterialized(value:unknown):value is ConnectedLongRestOwnerMater
     &&isString(value.preparationId);
 }
 
+function hasValidAbortRecoveryIdentity(value:JsonRecord) {
+  const recovery=[value.ownerParticipantId,value.character,value.preparationId];
+  const hasRecovery=recovery.some((entry)=>entry!==undefined);
+  if(!hasRecovery) return true;
+  return isString(value.ownerParticipantId)&&isCharacterRevision(value.character)&&isString(value.preparationId);
+}
+
 export function validateConnectedLongRestWireMessage(value:unknown):ConnectedLongRestWireMessage|string {
   if (!isRecord(value)||!isString(value.type)) return "connected Long Rest wire message must be an object with a type";
   if (value.type==="long-rest-offer") {
@@ -139,7 +154,7 @@ export function validateConnectedLongRestWireMessage(value:unknown):ConnectedLon
     return value as ConnectedLongRestWireMessage;
   }
   if (value.type==="long-rest-abort") {
-    if (!isString(value.transactionId)||!isString(value.reason)) return "invalid long-rest-abort message";
+    if (!isString(value.transactionId)||!isString(value.reason)||!hasValidAbortRecoveryIdentity(value)) return "invalid long-rest-abort message";
     return value as ConnectedLongRestWireMessage;
   }
   return `unknown connected Long Rest wire message type: ${value.type}`;
