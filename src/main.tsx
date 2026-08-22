@@ -7,6 +7,7 @@ import { initializeAppearancePreference } from "./app/appearancePreferences";
 import { initializeMotionPreference } from "./app/motionPreferences";
 import "./app/offlineRuntimeAdapters";
 import "./app/connectedSessionRuntimeAdapter";
+import "./app/connectedLongRestSessionAdapter";
 import "./app/directNetworkSessionRuntimeAdapter";
 import "./app/connectedParticipantIdempotencyAdapter";
 import "./app/connectedProjectionLifecycleAdapter";
