@@ -13,7 +13,7 @@ import {
   type CampaignDocumentV1,
   type CampaignLibraryStore,
 } from "./campaignPersistenceContracts";
-import { decodeCampaignDocumentV1, encodeCampaignDocumentV1 } from "./campaignPersistence";
+import { encodeCampaignDocumentV1 } from "./campaignPersistence";
 import { MemoryCampaignLibraryStore } from "./memoryCampaignLibraryStore";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
 import { isTauriCharacterLibraryRuntime } from "./tauriCharacterLibraryStore";
@@ -132,6 +132,12 @@ export async function commitConnectedLongRestCampaignParticipant(
     };
   }
 
+  const candidateCampaign=preview.campaignDocument.campaigns.find((item)=>item.campaignId===preflight.campaignId);
+  if(!candidateCampaign||!candidateCampaign.recentRequestIds.includes(preflight.transactionId)){
+    throw new Error("connected Long Rest Campaign candidate is missing the transaction id");
+  }
+  const campaignCommitId=commitId(preflight.transactionId,candidateCampaign.revision);
+
   let store:CampaignLibraryStore;
   if(isTauriCharacterLibraryRuntime()){
     store=createPlatformCampaignLibraryStore();
@@ -141,17 +147,8 @@ export async function commitConnectedLongRestCampaignParticipant(
   const write=await prepareCampaignLibraryGeneration(store,preview.campaignDocument);
   await store.writeGeneration(write.expectedGeneration,write.nextGeneration,write.payload);
 
-  // Global commit point has passed. Derive the authoritative commit identity
-  // from the exact payload that was written, independent of runtime projection.
-  const committedDocument=decodeCampaignDocumentV1(write.payload);
-  const committedCampaign=committedDocument.campaigns.find((item)=>item.campaignId===preflight.campaignId);
-  if(!committedCampaign||!committedCampaign.recentRequestIds.includes(preflight.transactionId)){
-    throw new Error("connected Long Rest committed Campaign payload is missing the transaction id");
-  }
-  const campaignCommitId=commitId(preflight.transactionId,committedCampaign.revision);
-
-  // Runtime rebind/rehydrate is projection only. Failure here cannot undo or
-  // reclassify the durable global commit; recovery will retry projection later.
+  // Global commit point has passed. Runtime rebind/rehydrate below is projection
+  // only; failures cannot undo or reclassify the durable Campaign commit.
   try{
     setCampaignLibraryStoreForTests(adapter,store);
     const snapshot=await adapter.getSnapshot();
