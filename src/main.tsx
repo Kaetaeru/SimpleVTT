@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import "./app/campaignHydrationIssueAdapter";
 import { ProductRoot } from "./ProductRoot";
 import { AppProvider } from "./app/AppProvider";
 import { initializeAppearancePreference } from "./app/appearancePreferences";
@@ -32,6 +33,7 @@ import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBr
 import { ProductionSessionDirectNetworkBridge } from "./ProductionSessionDirectNetworkBridge";
 import { CharacterPortraitBridge } from "./CharacterPortraitBridge";
 import { CharacterLibraryUxBridge } from "./CharacterLibraryUxBridge";
+import { CampaignStartupRecoveryBridge } from "./CampaignStartupRecoveryBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -80,6 +82,7 @@ createRoot(document.getElementById("root")!).render(
       <ProductionSessionDirectNetworkBridge />
       <CharacterPortraitBridge />
       <CharacterLibraryUxBridge />
+      <CampaignStartupRecoveryBridge />
     </AppProvider>
   </StrictMode>,
 );
