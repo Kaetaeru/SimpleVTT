@@ -3,33 +3,36 @@
 **Connection:** `work/v1-composite` · existing run · V1 completion continuing
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Canonical repository URL: `https://github.com/Kaetaeru/SimpleVTT`
 - Canonical branch/ref: `work/v1-composite`
 - Control path: `.chatgpt-rerun/control.json`
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control status: `continue`
-- Checkpoint: `2026-08-23T03:32:00+09:00`
-- Current implementation head: `b2ec43f`
-- Current handoff head: `a4b6012`
+- Checkpoint: `2026-08-23T03:41:00+09:00`
+- Product implementation head: `d66b26b`
+- Canonical UI gate head: `477250b`
+- Current handoff commit: `ef9f39a`
 
 ## Human summary
 
-The active Rerun sequence resumed from the current canonical V1 state without repeating previously verified Phase 13/Ready work.
+The current Rerun dispatch resumed from the durable V1 checkpoint without repeating Phase 13 or Ready work.
 
-This execution addressed a real `V1-11 Campaign product UI` lifecycle gap while preserving the current UI baseline:
+`V1-11 Campaign lifecycle` production gaps are now code-connected while preserving the current UI:
 
-- Campaign `보관` now requires an explicit confirmation overlay instead of mutating immediately.
-- The confirmation clarifies that Campaign continuity data is archived, not deleted, and external Character/installed-content ownership is untouched.
-- Campaign persistence migration/schema/corruption blockers are now classified explicitly at startup.
-- A recovery bridge uses the existing loading/empty visual language to explain the blocker and offers a retry without auto-deleting or rewriting data.
-- No broad UI redesign, navigation change, or panel reshuffle was introduced.
+- archive requires explicit confirmation;
+- Campaign migration/schema/corruption startup blockers are explicit and never auto-delete data;
+- Campaign duplicate is available from the existing Campaign card and reuses the already-existing durable application service;
+- the duplicate confirmation states exactly what Campaign-owned continuity is copied and that Player-owned Character files, installed-content ownership, Session history, and transient Session state are not copied;
+- explicit Campaign delete is available with an irreversible confirmation and preserves external Character/installed-content stores;
+- deleting a Campaign currently captured by a running Session is rejected;
+- focused runtime/UI contracts were added;
+- canonical `work/v1-composite` pushes now trigger the UI workflow, which includes Campaign lifecycle tests and the TypeScript/build gate.
 
-Focused structure tests were added with the implementation. GitHub status APIs did not expose a green check result for the slice, so this STATUS does not claim CI success. The comprehensive Codex audit remains deferred until all V1 implementation is complete, as requested.
+No push-run success was visible through the available GitHub connector, so this status does not claim exact-head green validation. Comprehensive Codex audit remains deferred until all V1 implementation is present.
 
 ## Next implementation
 
-`V1-11` still lacks the Campaign lifecycle operations specified by the canonical design for **duplicate** and **explicit delete**. The next Rerun dispatch should implement those operations through the existing Campaign service/runtime/UI command flow, including confirmation and safe `activeCampaignId` reconciliation, while preserving the current Campaign screen structure.
+Move to `V1-12` declarative Calendar/Ration provider support. Reuse the existing Content/RuleModule capability validation rather than inventing an executable plugin path. The current Campaign provider selector UI must remain structurally unchanged; compatible installed declarative profiles should become selectable, while missing/invalid providers fail open and do not block normal play.
 
 `STATUS.md` is human-facing only. Reconciliation source order remains README -> control -> STATE -> PLAN.
