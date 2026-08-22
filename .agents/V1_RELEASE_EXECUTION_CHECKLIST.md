@@ -108,7 +108,8 @@ V1-40 + V1-41 + V1-42
 | V1-01 Foundation audit | PARTIAL | build/domain/persistence/connected tests 다수 존재, canonical head 재검증 필요 |
 | V1-10 Campaign persistence | PARTIAL | aggregate/repository/application service/Tauri command와 10개 TS 테스트 존재; Rust 실행 증거 대기 |
 | V1-11 Campaign product UI | PARTIAL | Campaign route/dashboard/session binding 완료; recovery/destructive UX 대기 |
-| V1-12~13 Campaign systems | TODO | 달력/식량 command, roster/history, 보관함/DM Library workflow 미구현 |
+| V1-12 Campaign systems | PARTIAL | roster/calendar/rations/history 기본 workflow 완료; Join roster 편입·Long Rest compound·module profile 대기 |
+| V1-13 Stash/DM Library | TODO | 보관함/DM Library workflow 미구현 |
 | V1-20 Real Character local play | PARTIAL | production Character/skill/spell/inventory tests 존재 |
 | V1-21 Complete local loop | PARTIAL | visible browser path와 전체 human walkthrough 미완료 |
 | V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart adapters/tests 존재 |
@@ -215,43 +216,52 @@ artifact: dist/ development production bundle; Windows artifact N/A
 notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup, 직접 네트워크 Host의 Campaign 필수 조건, immutable CampaignSessionSnapshot을 검증했다. loading/corrupt/migration/destructive confirmation UX가 남아 PARTIAL이다.
 ```
 
-## V1-12 Roster / Calendar / Rations / Session history — TODO
+## V1-12 Roster / Calendar / Rations / Session history — PARTIAL
 
 `depends_on: V1-11`
 
 ### Roster
 
-- [ ] Character ref/host preset/companion 구성원.
-- [ ] active, countsForRations, unitsPerDay, stash permission.
+- [x] Character ref/host preset/companion 구성원.
+- [x] active, countsForRations, unitsPerDay, stash permission.
 - [ ] Host-unknown connected Character를 소유권 이전 없이 roster reference로 추가.
 
 ### Calendar
 
 - [ ] provider: off/simple-day/Gregorian/declarative module profile.
-- [ ] absoluteMinute canonical storage; display string을 계산 입력으로 사용하지 않음.
-- [ ] advance minute/hour/day, next day, DM correction, note, safe recent undo.
-- [ ] OFF 상태가 Rest/Action/Session 진행을 막지 않고 저장값 유지.
-- [ ] Campaign clock과 Session effect clock을 무조건 결합하지 않음.
+- [x] absoluteMinute canonical storage; display string을 계산 입력으로 사용하지 않음.
+- [x] advance minute/hour/day, next day, DM correction, note, safe recent undo.
+- [x] OFF 상태가 Rest/Action/Session 진행을 막지 않고 저장값 유지.
+- [x] Campaign clock과 Session effect clock을 무조건 결합하지 않음.
 
 ### Rations
 
 - [ ] provider: off/tracking-only/declarative module profile.
-- [ ] integer ration balance와 consumption history.
-- [ ] roster 기반 daily consumption preview, 예외 수정, commit, undo.
-- [ ] shortage는 warning/pending adjudication; 기본 제품이 damage/Exhaustion 발명 금지.
-- [ ] OFF 상태에서 counter/automation/blocker 없음; 저장값 유지.
+- [x] integer ration balance와 consumption history.
+- [x] roster 기반 daily consumption preview, 예외 수정, commit, undo.
+- [x] shortage는 warning/pending adjudication; 기본 제품이 damage/Exhaustion 발명 금지.
+- [x] OFF 상태에서 counter/automation/blocker 없음; 저장값 유지.
 
 ### Compound behavior
 
 - [ ] Long Rest + optional time advance + optional ration consumption을 하나의 preview/batch로 처리.
 - [ ] 어느 Character/Campaign write-back 실패 시 partial success 없음.
-- [ ] 시간 진행만으로 Rest 회복 금지; Rest만으로 날짜 진행 강제 금지.
+- [x] 시간 진행만으로 Rest 회복 금지; Rest만으로 날짜 진행 강제 금지.
 
 ### Session history
 
-- [ ] end 시 bounded summary 작성.
-- [ ] calendar before/after, ration delta, stash transaction count, participant labels, DM note.
-- [ ] full ResolutionEvent ledger, Ready, Initiative, projection, active handout 저장 금지.
+- [x] end 시 bounded summary 작성.
+- [x] calendar before/after, ration delta, stash transaction count, participant labels, DM note.
+- [x] full ResolutionEvent ledger, Ready, Initiative, projection, active handout 저장 금지.
+
+```text
+EVIDENCE
+head: 6b5ec6f
+tests: Campaign suites (26 pass, 0 fail); Campaign/product shell regression (45 pass, 0 fail); tsc --noEmit (pass); vite build (420 modules, pass)
+human: browser-campaign-roster-calendar-rations-compound-2026-08-22
+artifact: dist/ development production bundle; Windows artifact N/A
+notes: Player Character reference/host preset/companion roster, absolute-minute calendar, compensating undo, integer ration ledger, shortage warning-only behavior, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Join projection의 roster 편입, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
+```
 
 ## V1-13 Party Stash / Campaign DM Library — TODO
 
