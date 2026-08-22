@@ -33,7 +33,7 @@ import {
 import { MemoryCharacterLibraryStore } from "./memoryCharacterLibraryStore";
 import { createPlatformCharacterLibraryStore, isTauriCharacterLibraryRuntime } from "./tauriCharacterLibraryStore";
 import { encodeCharacterLibraryV1 } from "./characterLibraryPersistence";
-import type { CharacterLibraryStore } from "./persistenceContracts";
+import type { CharacterLibraryDocumentV1, CharacterLibraryStore } from "./persistenceContracts";
 import {
   getCharacterLibraryPersistenceStateForTests,
   setCharacterLibraryStoreForTests,
@@ -56,6 +56,8 @@ type HostRecord={
 type ClientRecord={
   offer:ConnectedLongRestOffer;
   preview:CharacterLongRestProjection;
+  beforeHp:number;
+  beforeTempHp:number;
   decision?:ConnectedLongRestOwnerDecision;
   preflight?:ConnectedLongRestCommitPreflight;
   prepared?:ConnectedLongRestOwnerPrepared;
@@ -143,20 +145,21 @@ export interface ConnectedLongRestOwnerPrompt {
   hp:{before:number;after:number};
   tempHp:{before:number;after:number};
   accepted?:boolean;
-  phase:"offered"|"accepted"|"prepared"|"committed"|"complete"|"aborted";
+  phase:"offered"|"declined"|"accepted"|"prepared"|"committed"|"complete"|"aborted";
   error?:string;
 }
 
 export function connectedLongRestOwnerPrompts(adapter:MockAdapter):ConnectedLongRestOwnerPrompt[] {
   return [...clientMap(adapter).values()].map((record)=>({
     offer:cp(record.offer),
-    hp:{before:record.preview.sheet.id===record.offer.character.characterId?record.preview.sheet.maxHp-record.preview.sheet.maxHp+0:0,after:record.preview.sheet.hp},
-    tempHp:{before:0,after:record.preview.sheet.tempHp},
+    hp:{before:record.beforeHp,after:record.preview.sheet.hp},
+    tempHp:{before:record.beforeTempHp,after:record.preview.sheet.tempHp},
     accepted:record.decision?.accepted,
     phase:record.abortedReason?"aborted"
       :record.materialized?"complete"
       :record.globalCommit?"committed"
       :record.prepared?"prepared"
+      :record.decision?.accepted===false?"declined"
       :record.decision?.accepted?"accepted"
       :"offered",
     error:record.abortedReason,
@@ -176,6 +179,8 @@ export async function beginConnectedLongRestHostOffer(adapter:MockAdapter,input:
   if(!mounted) throw new Error(`connected Long Rest requires a mounted remote Character: ${characterId}`);
   const participantId=state.peerParticipants.get(mounted.peerId);
   if(!participantId) throw new Error(`connected Long Rest Character owner is not an accepted participant: ${characterId}`);
+  const manifest=state.peerManifests.get(mounted.peerId);
+  if(!manifest?.capabilities.includes("connected-long-rest-v1")) throw new Error("connected Long Rest owner does not advertise connected-long-rest-v1");
   const snapshot=await adapter.getSnapshot();
   const systems=snapshot.campaignSessionSystems;
   if(!systems) throw new Error("connected Long Rest requires an active Campaign session");
@@ -219,7 +224,12 @@ export function receiveConnectedLongRestOwnerOffer(adapter:MockAdapter,offer:Con
     return cp(existing.preview);
   }
   const preview=projectCharacterLongRest(app.activeCharacter);
-  clientMap(adapter).set(offer.transactionId,{offer:cp(offer),preview:cp(preview)});
+  clientMap(adapter).set(offer.transactionId,{
+    offer:cp(offer),
+    preview:cp(preview),
+    beforeHp:app.activeCharacter.hp,
+    beforeTempHp:app.activeCharacter.tempHp,
+  });
   return preview;
 }
 
@@ -233,6 +243,7 @@ export function decideConnectedLongRestOwnerOffer(adapter:MockAdapter,transactio
     ||record.offer.character.runtimeRevision!==(app.activeCharacter.runtimeRevision??0)){
     throw new Error("connected Long Rest Character changed before owner decision");
   }
+  if(record.decision&&record.decision.accepted!==accepted) throw new Error("connected Long Rest owner decision cannot change after submission");
   const decision:ConnectedLongRestOwnerDecision={
     transactionId:id,
     sessionId:record.offer.sessionId,
@@ -266,11 +277,15 @@ export async function authorizeConnectedLongRestHostDecision(adapter:MockAdapter
     return result;
   }
   if(result.status==="rejected") return result;
+  if(record.transaction){
+    if(record.transaction.preflight.transactionId!==result.preflight.transactionId) return {status:"rejected" as const,error:"connected Long Rest Host transaction identity changed"};
+    return result;
+  }
   record.transaction=beginConnectedLongRestTransaction(result.preflight);
   return result;
 }
 
-function memoryCharacterStore(document:NonNullable<ReturnType<typeof getCharacterLibraryPersistenceStateForTests>>["document"]>) {
+function memoryCharacterStore(document:CharacterLibraryDocumentV1) {
   const store=new MemoryCharacterLibraryStore();
   store.seed(document.storageRevision,encodeCharacterLibraryV1(document));
   return store;
@@ -314,13 +329,32 @@ export async function prepareAuthorizedConnectedLongRestOwner(adapter:MockAdapte
 export async function recordConnectedLongRestHostOwnerPrepared(adapter:MockAdapter,peer:string,prepared:ConnectedLongRestOwnerPrepared) {
   const record=hostMap(adapter).get(prepared.transactionId);
   if(!record||record.peer!==peer||!record.transaction) throw new Error("connected Long Rest owner prepare is not authorized by this Host transaction");
-  const ownerPrepared=recordConnectedLongRestOwnerPrepared(record.transaction,prepared);
+  if(record.transaction.phase==="committed"||record.transaction.phase==="complete"){
+    return {
+      status:"committed" as const,
+      peer:record.peer,
+      commit:{transactionId:record.transaction.preflight.transactionId,campaignCommitId:record.transaction.campaignCommitId},
+      snapshot:await adapter.getSnapshot(),
+    };
+  }
+  if(record.transaction.phase==="aborted"){
+    return {status:"aborted" as const,peer:record.peer,transactionId:prepared.transactionId,reason:record.transaction.reason};
+  }
+  const ownerPrepared=record.transaction.phase==="owner-prepared"
+    ?record.transaction
+    :recordConnectedLongRestOwnerPrepared(record.transaction,prepared);
   record.transaction=ownerPrepared;
   try{
     const campaign=await commitConnectedLongRestCampaignParticipant(adapter,ownerPrepared.preflight);
     const commit:ConnectedLongRestGlobalCommit={transactionId:prepared.transactionId,campaignCommitId:campaign.campaignCommitId};
     record.transaction=commitConnectedLongRestTransaction(record.transaction,commit);
-    return {status:"committed" as const,peer:record.peer,commit,snapshot:campaign.snapshot};
+    return {
+      status:"committed" as const,
+      peer:record.peer,
+      commit,
+      snapshot:campaign.snapshot,
+      projectionWarning:campaign.projectionWarning,
+    };
   }catch(error){
     const reason=error instanceof Error?error.message:String(error);
     record.transaction=abortConnectedLongRestTransaction(record.transaction,reason);
@@ -336,11 +370,11 @@ export async function materializeConnectedLongRestOwnerAfterGlobalCommit(adapter
   if(record.globalCommit&&record.globalCommit.campaignCommitId!==commit.campaignCommitId){
     throw new Error("connected Long Rest global commit identity changed during retry");
   }
+  record.globalCommit=cp(commit);
   if(record.materialized&&record.projection){
     return {materialized:cp(record.materialized),projection:cp(record.projection),snapshot:await adapter.getSnapshot()};
   }
   await materializeConnectedLongRestOwnerCandidate(record.preparationStore,record.prepared);
-  record.globalCommit=cp(commit);
   setCharacterLibraryStoreForTests(adapter,record.characterStore);
   const snapshot=await adapter.getSnapshot();
   const projection=buildCharacterSessionProjectionV1(snapshot.activeCharacter,snapshot.catalog);
@@ -359,8 +393,9 @@ export async function abortConnectedLongRestOwner(adapter:MockAdapter,transactio
   const id=required(transaction,"connected Long Rest transaction id");
   const record=clientMap(adapter).get(id);
   if(!record) return;
+  if(record.globalCommit||record.materialized) throw new Error("committed connected Long Rest owner transaction cannot be aborted");
   record.abortedReason=required(reason,"connected Long Rest abort reason");
-  if(record.prepared&&record.preparationStore&&!record.materialized){
+  if(record.prepared&&record.preparationStore){
     await abortConnectedLongRestOwnerCandidate(record.preparationStore,record.prepared);
   }
 }
@@ -419,7 +454,7 @@ export function connectedLongRestHostRecoveryMessages(adapter:MockAdapter,peer:s
 export function connectedLongRestClientRecoveryMessages(adapter:MockAdapter):ConnectedLongRestWireMessage[] {
   const messages:ConnectedLongRestWireMessage[]=[];
   for(const record of clientMap(adapter).values()){
-    if(record.abortedReason) continue;
+    if(record.abortedReason||record.decision?.accepted===false) continue;
     if(record.materialized&&record.projection){
       messages.push({type:"long-rest-owner-materialized",materialized:cp(record.materialized),projection:cp(record.projection)});
     }else if(record.prepared){
