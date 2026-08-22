@@ -78,8 +78,11 @@ function inputFor(snapshot:AppSnapshot,preflight:ConnectedLongRestCommitPrefligh
   };
 }
 
-function commitId(transactionId:string,campaignRevision:number) {
-  return `${transactionId}:campaign-revision:${campaignRevision}`;
+/** Stable across later Campaign revisions so a Host restart can recover a commit from the durable transaction id. */
+export function connectedLongRestCampaignCommitId(transactionId:string) {
+  const normalized=transactionId.trim();
+  if(!normalized) throw new Error("connected Long Rest transaction id is required");
+  return `${normalized}:campaign-commit-v1`;
 }
 
 function memoryStoreFor(document:CampaignDocumentV1) {
@@ -101,6 +104,7 @@ export async function commitConnectedLongRestCampaignParticipant(
   const document=campaignDocumentFromSnapshot(before);
   const campaign=document.campaigns.find((item)=>item.campaignId===preflight.campaignId);
   if(!campaign) throw new Error(`Campaign not found: ${preflight.campaignId}`);
+  const campaignCommitId=connectedLongRestCampaignCommitId(preflight.transactionId);
 
   if(campaign.recentRequestIds.includes(preflight.transactionId)){
     const preview:LongRestCampaignParticipantPreview={
@@ -112,7 +116,7 @@ export async function commitConnectedLongRestCampaignParticipant(
     };
     return {
       status:"duplicate",
-      campaignCommitId:commitId(preflight.transactionId,campaign.revision),
+      campaignCommitId,
       preview,
       snapshot:before,
     };
@@ -123,10 +127,9 @@ export async function commitConnectedLongRestCampaignParticipant(
 
   const preview=await previewLongRestCampaignParticipant(inputFor(before,preflight),document);
   if(preview.status==="duplicate"){
-    const duplicateCampaign=preview.campaignDocument.campaigns.find((item)=>item.campaignId===preflight.campaignId)!;
     return {
       status:"duplicate",
-      campaignCommitId:commitId(preflight.transactionId,duplicateCampaign.revision),
+      campaignCommitId,
       preview,
       snapshot:before,
     };
@@ -136,7 +139,6 @@ export async function commitConnectedLongRestCampaignParticipant(
   if(!candidateCampaign||!candidateCampaign.recentRequestIds.includes(preflight.transactionId)){
     throw new Error("connected Long Rest Campaign candidate is missing the transaction id");
   }
-  const campaignCommitId=commitId(preflight.transactionId,candidateCampaign.revision);
 
   let store:CampaignLibraryStore;
   if(isTauriCharacterLibraryRuntime()){
