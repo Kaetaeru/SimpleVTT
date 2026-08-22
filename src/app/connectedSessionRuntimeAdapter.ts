@@ -70,6 +70,7 @@ export async function publishConnectedSnapshot(adapter:MockAdapter) {
 
 export function resetConnectedSessionTransientState(adapter:MockAdapter,message:string) {
   const app=connectedInternal(adapter);
+  clearReadyActionConfiguration(adapter);
   resetConnectedState(adapter,null);
   app.sessionMode="freeform";
   app.scene.round=0;
@@ -170,7 +171,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       setReadyActionConfiguration(adapter,payload.configuration);
       if (!actor.status.includes("준비 행동")) actor.status.push("준비 행동");
     } else {
-      clearReadyActionConfiguration(adapter);
+      clearReadyActionConfiguration(adapter,payload.actorId);
       actor.status=actor.status.filter((status)=>status!=="준비 행동");
     }
     app.activity.unshift({id:`connected:${event.eventId}`,time:"지금",actor:actor.name,title:payload.transition==="armed"?"원격 준비 행동 설정":"원격 준비 행동 해제",summary:payload.configuration?.trigger??`Host event #${event.sequence}`,detail:[`eventId=${event.eventId}`,...payload.provenance],stateChanges:[...payload.stateChanges]});
@@ -549,6 +550,7 @@ MockAdapter.prototype.hostSession=async function hostConnectedSession() {
   }
   await ensureListeners(this);
   const status=await tauriSessionTransport.startHost("0.0.0.0:3210");
+  clearReadyActionConfiguration(this);
   resetConnectedState(this,"host");
   const nextState=connectedStateFor(this);
   nextState.listenersInstalled=true;
@@ -583,6 +585,7 @@ MockAdapter.prototype.joinSession=async function joinConnectedSession(address:st
   }
   await ensureListeners(this);
   const status=await tauriSessionTransport.connectClient(target);
+  clearReadyActionConfiguration(this);
   resetConnectedState(this,"client");
   const nextState=connectedStateFor(this);
   nextState.listenersInstalled=true;
