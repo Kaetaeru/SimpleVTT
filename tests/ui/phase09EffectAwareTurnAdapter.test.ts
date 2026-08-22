@@ -16,10 +16,10 @@ function runtimeOf(adapter:MockAdapter) {
   return runtime!;
 }
 
-test("production main wires the effect-aware turn lifecycle overlay after the base turn adapter", () => {
-  const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
-  const base=main.indexOf('import "./app/phase09RealTurnRuntimeAdapter";');
-  const overlay=main.indexOf('import "./app/phase09EffectAwareTurnAdapter";');
+test("production offline adapter root wires the effect-aware turn lifecycle overlay after the base turn adapter", () => {
+  const root=readFileSync(new URL("../../src/app/offlineRuntimeAdapters.ts",import.meta.url),"utf8");
+  const base=root.indexOf('import "./phase09RealTurnRuntimeAdapter";');
+  const overlay=root.indexOf('import "./phase09EffectAwareTurnAdapter";');
   assert.ok(base>=0,"base turn runtime adapter import is required");
   assert.ok(overlay>base,"effect-aware overlay must load after the base turn runtime adapter");
 });

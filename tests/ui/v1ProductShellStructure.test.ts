@@ -79,7 +79,7 @@ test("live connected sessions preserve Product-vs-Play continuity while using th
   assert.match(productRoot, /if \(!wasLiveConnected\.current\)[\s\S]*setSurface\("play"\)/);
   assert.match(productRoot, /liveConnected && surface === "play"/);
   assert.match(productRoot, /<SessionModeRoot onOpenProduct=\{\(\) => setSurface\("product"\)\} \/>/);
-  assert.match(productRoot, /<App\s*\/>/);
+  assert.match(productRoot, /<App onOpenSessionPreview=/);
   assert.match(productRoot, /setSurface\("product"\)/);
   assert.match(productRoot, /setSurface\("play"\)/);
   assert.doesNotMatch(productRoot, /stopSession|hostSession|joinSession|reconnect/);
@@ -104,11 +104,11 @@ test("live connected sessions preserve Product-vs-Play continuity while using th
   assert.match(sessionRoot, /<SessionActorBoard position="upper"/);
   assert.match(sessionRoot, /<SessionActorBoard position="lower"/);
   assert.match(sessionRoot, /aria-label="Command Center"/);
-  assert.match(sessionRoot, />← Product</);
+  assert.match(sessionRoot, />← 제품</);
   assert.match(sessionRoot, /<SessionMainFocus/);
-  assert.match(sessionMainFocus, />Mapless shared play context</);
-  assert.match(sessionMainFocus, /Actor context <strong>Boards<\/strong>/);
-  assert.match(sessionMainFocus, /Dice \/ Result <strong>Center Stage<\/strong>/);
+  assert.match(sessionMainFocus, /snapshot\.sessionMode === "initiative"/);
+  assert.match(sessionMainFocus, /session-current-turn-actor/);
+  assert.match(sessionMainFocus, /session-last-roll-actor/);
   assert.doesNotMatch(sessionMainFocus, /snapshot\.session\.participants|snapshot\.activity\.map|scene\.entities\.map/);
   assert.doesNotMatch(sessionRoot, /session-mode-rail|session-mode-bar|mockAdapter|VisualDiceTray|HOTBAR_TABS|SCENE ACTORS/);
 

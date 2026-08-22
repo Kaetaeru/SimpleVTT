@@ -19,7 +19,7 @@ function slice(start:string,end:string) {
 }
 
 test("global shell follows connected session authority and keeps Session navigation consistent",()=>{
-  const shell=slice("export function App()","function topTitle");
+  const shell=slice("export function App(","function topTitle");
   assert.match(shell,/snapshot\?\.session\.role\s*===\s*"host"\s*\?\s*"dm"/);
   assert.match(shell,/snapshot\?\.session\.role\s*===\s*"client"\s*\?\s*"player"/);
   assert.doesNotMatch(shell,/\["session",\s*"연결"/);
@@ -28,7 +28,7 @@ test("global shell follows connected session authority and keeps Session navigat
 });
 
 test("Session route is a dedicated production mount instead of legacy duplicate cards",()=>{
-  const session=slice("function SessionScreen()","function SettingsScreen()");
+  const session=slice("function SessionScreen(","function SettingsScreen()");
   assert.match(session,/production-session-workspace-root/);
   assert.doesNotMatch(session,/Host Session|Join by IP|RulesProfile|Reference 흐름|sessionContent/);
 });
@@ -73,7 +73,7 @@ test("dead global production wiring stays removed while current Session presenta
 test("Combatants, Rules, Activity, and Settings hide implementation jargon from the primary path",()=>{
   const combatants=slice("function CombatantsScreen()","function CatalogScreen()");
   const catalog=slice("function CatalogScreen()","function ImportPanel(");
-  const activity=slice("function ActivityScreen()","function SessionScreen()");
+  const activity=slice("function ActivityScreen()","function SessionScreen(");
   const settings=slice("function SettingsScreen()","function DebugPanel(");
 
   assert.match(combatants,/Encounter에 추가/);

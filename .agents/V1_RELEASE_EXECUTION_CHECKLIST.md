@@ -154,12 +154,12 @@ notes: remote branch agent/108-production-play-session-ux@5618c7b diverges befor
 - [ ] `npm install`/lockfile 상태가 canonical source와 일치한다.
 - [ ] `npm run build`가 통과한다.
 - [ ] `cargo test --manifest-path src-tauri/Cargo.toml`가 통과한다.
-- [ ] Character immutable-generation persistence 및 corruption/stale-writer tests가 통과한다.
-- [ ] installed content/addon validation/persistence tests가 통과한다.
-- [ ] Rules Domain과 UI named-rule boundary가 통과한다.
-- [ ] existing connected protocol/projection suites가 통과한다.
-- [ ] Debug/reference fixture가 production authority로 주입되는 경로를 목록화한다.
-- [ ] 중복 store/resolver/protocol/event ledger가 없는지 확인한다.
+- [x] Character immutable-generation persistence 및 corruption/stale-writer tests가 통과한다.
+- [x] installed content/addon validation/persistence tests가 통과한다.
+- [x] Rules Domain과 UI named-rule boundary가 통과한다.
+- [x] existing connected protocol/projection suites가 통과한다.
+- [x] Debug/reference fixture가 production authority로 주입되는 경로를 `.agents/V1_FOUNDATION_AUDIT.md`에 목록화한다.
+- [x] 중복 store/resolver/protocol/event ledger를 감사하고 현재 소유권 및 prototype composition 위험을 `.agents/V1_FOUNDATION_AUDIT.md`에 기록한다.
 
 **Exit:** 새 Campaign/session 작업을 올릴 수 있는 깨끗한 exact-head baseline.
 

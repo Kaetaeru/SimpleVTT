@@ -35,9 +35,9 @@ test("Character Library exposes the demo-established sheet-style switch before a
 });
 
 test("validated SimpleVTT sheet local roll behavior remains unchanged behind the router",()=>{
-  for(const pattern of [/능력 판정/,/내성 굴림/,/view\.skillsByAbility/,/명중 굴림/,/피해 굴림/,/crypto\.getRandomValues/,/유리/,/불리/,/VisualDiceTray/,/최근 굴림/]) assert.match(legacy,pattern);
+  for(const pattern of [/능력 판정/,/내성 굴림/,/view\.skillsByAbility/,/명중 굴림/,/피해 굴림/,/crypto\.getRandomValues/,/유리/,/불리/,/StandaloneDicePresentation/,/최근 굴림/]) assert.match(legacy,pattern);
   assert.doesNotMatch(legacy,/resolveAction|startInitiative|sessionMode/);
-  assert.match(legacy,/local tabletop physics roll/);
+  assert.match(legacy,/hostMode==="standalone"&&roll&&<StandaloneDicePresentation/);
 });
 
 test("dual Sheet preference is presentation-only sanitized and restart-persistent",()=>{

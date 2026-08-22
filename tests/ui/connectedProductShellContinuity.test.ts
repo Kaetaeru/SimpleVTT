@@ -28,7 +28,7 @@ test("ProductRoot separates live Session truth from local Product-vs-Play presen
 test("accepted Play chrome owns the Product exit without mutating Session lifecycle", () => {
   assert.match(productRoot, /<SessionModeRoot onOpenProduct=\{\(\) => setSurface\("product"\)\} \/>/);
   assert.match(sessionRoot, /onOpenProduct\(\): void/);
-  assert.match(sessionRoot, />← Product</);
+  assert.match(sessionRoot, />← 제품</);
   assert.match(sessionRoot, /onClick=\{onOpenProduct\}/);
   assert.doesNotMatch(productRoot, /stopSession|hostSession|joinSession|startPreparedSession|setSessionReady/);
   assert.doesNotMatch(sessionRoot, /onOpenProduct[\s\S]*stopSession/);
