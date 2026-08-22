@@ -235,6 +235,7 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 - [x] Gregorian 월별 일수, 윤년, 자정/월/연도 경계 계산.
 - [x] absoluteMinute canonical storage; display string을 계산 입력으로 사용하지 않음.
 - [x] advance minute/hour/day, next day, DM correction, note, safe recent undo.
+- [x] 24시간을 심야/새벽/아침/오전/한낮/오후/해질녘/저녁/밤으로 결정론적 projection.
 - [x] OFF 상태가 Rest/Action/Session 진행을 막지 않고 저장값 유지.
 - [x] Campaign clock과 Session effect clock을 무조건 결합하지 않음.
 
@@ -254,6 +255,7 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 - [x] Session setup의 식량 공개 정책에 따라 Player projection에서 잔량·필요량·부족량 제거.
 - [x] 연결 Session은 sessionId/revision envelope로 projection을 전송하고 compatible reconnect 뒤 재전송.
 - [x] Session Campaign 패널과 브라우저 DM/Player 미리보기에서 roster 참조·접속 상태 표시.
+- [x] Session chrome에 Campaign 시간/시간대를 상시 표시하고 DM hover/focus 직접 수정 제공.
 - [ ] Windows 2-instance에서 DM 변경 → Player 반영, reconnect 복구, 숨김 식량 비노출 수동 검증.
 
 ### Compound behavior
@@ -270,11 +272,11 @@ notes: Home/전역 Campaign 진입, 목록·생성·대시보드, Session setup,
 
 ```text
 EVIDENCE
-head: 0b109dc
-tests: Campaign/Session roster preview focused suites (15 pass, 0 fail); Session/connected projection structure (9 pass, 0 fail); tsc --noEmit (pass); vite build (425 modules, pass)
+head: 0defe4e
+tests: Campaign clock/Session chrome focused suites (18 pass, 0 fail); Session clock structure (6 pass, 0 fail); tsc --noEmit (pass); vite build (425 modules, pass)
 human: browser-session-campaign-pane-dm-player-role-projection-2026-08-22
 artifact: dist/ development production bundle; Windows artifact N/A
-notes: Host-unknown Join Character의 reference-only roster 편입, reconnect idempotency, DM 식량/보관함 정책 보존, Session Campaign 패널 및 독립 브라우저 미리보기의 파티/접속 상태, write 실패 시 Join/projection rollback, 연호·연월일·24시간 Gregorian calendar, Player 식량 공개 정책, reconnect projection protocol, OFF preservation, next-day+optional-ration atomic commit, bounded Session-end summary를 검증했다. 실제 Windows 2-instance acceptance, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
+notes: Host-unknown Join Character의 reference-only roster 편입, reconnect idempotency, Session 상시 Campaign 시계와 9단계 시간대, DM hover/focus 직접 시·분 수정, preview-local 시계 반영, 파티/접속 상태, write 실패 시 Join/projection rollback, 연호·연월일·24시간 Gregorian calendar, Player 식량 공개 정책, reconnect projection protocol, OFF preservation, next-day+optional-ration atomic commit을 검증했다. 실제 Windows 2-instance acceptance, declarative module profile validation, authoritative Long Rest compound가 남아 PARTIAL이다.
 ```
 
 ## V1-13 Party Stash / Campaign DM Library — TODO
