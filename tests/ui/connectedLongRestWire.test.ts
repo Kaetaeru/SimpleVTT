@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import {
   decodeConnectedLongRestWireMessage,
   encodeConnectedLongRestWireMessage,
@@ -7,6 +8,18 @@ import {
 } from "../../src/app/connectedLongRestWire";
 
 const character={characterId:"char.remote",sourceRevision:3,runtimeRevision:7};
+const projection={
+  schemaId:"simplevtt.character-session-projection",
+  schemaVersion:1,
+  characterId:"char.remote",
+  sourceRevision:3,
+  runtimeRevision:8,
+  rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+  source:{characterId:"char.remote"},
+  sourceAuthority:{maxHp:12},
+  runtime:{hp:12,tempHp:0,resources:[],items:[]},
+  contentIdentities:[],
+} as unknown as CharacterSessionProjectionV1;
 
 function roundTrip(message:ConnectedLongRestWireMessage) {
   const decoded=decodeConnectedLongRestWireMessage(encodeConnectedLongRestWireMessage(message));
@@ -70,6 +83,7 @@ test("connected Long Rest wire round-trips offer, owner decision, Host prepare a
       character,
       preparationId:"character-stage.12",
     },
+    projection,
   });
   roundTrip({type:"long-rest-abort",transactionId:"long-rest.remote.1",reason:"Host cancelled before commit"});
 });
@@ -110,6 +124,11 @@ test("connected Long Rest wire rejects malformed distributed-transaction inputs 
       character,
       options:{advanceMinutes:480,consumeRations:true},
     },
+  })).status,"rejected");
+  assert.equal(decodeConnectedLongRestWireMessage(JSON.stringify({
+    type:"long-rest-owner-materialized",
+    materialized:{transactionId:"long-rest.remote.1",ownerParticipantId:"player.remote",character,preparationId:"character-stage.12"},
+    projection:{...projection,characterId:"char.other"},
   })).status,"rejected");
   assert.equal(decodeConnectedLongRestWireMessage(JSON.stringify({type:"long-rest-abort",transactionId:"long-rest.remote.1",reason:""})).status,"rejected");
 });
