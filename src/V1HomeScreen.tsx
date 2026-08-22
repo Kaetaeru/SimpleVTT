@@ -3,6 +3,7 @@ import { useSimpleVtt } from "./app/AppProvider";
 export function V1HomeScreen({
   onCharacters,
   onCreateCharacter,
+  onCampaigns,
   onSession,
   onContent,
   onRules,
@@ -10,6 +11,7 @@ export function V1HomeScreen({
 }: {
   onCharacters(): void;
   onCreateCharacter(): void;
+  onCampaigns(): void;
   onSession(): void;
   onContent(): void;
   onRules(): void;
@@ -56,6 +58,13 @@ export function V1HomeScreen({
             <button className="primary" onClick={onCharacters}>캐릭터 보기</button>
             <button onClick={startCharacter}>새로 만들기</button>
           </div>
+        </article>
+
+        <article className="v1-start-card">
+          <span className="v1-kicker">CAMPAIGN</span>
+          <h2>캠페인 관리</h2>
+          <p>DM 세션의 파티, 달력, 식량, 공동 보관함과 비공개 준비물을 캠페인별로 이어갑니다.</p>
+          <div className="v1-card-actions"><button onClick={onCampaigns}>캠페인 열기</button></div>
         </article>
 
         <article className="v1-start-card">

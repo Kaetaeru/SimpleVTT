@@ -97,6 +97,23 @@ export interface CampaignContentLoadout {
   spatialProviderVersion?:string;
 }
 
+export interface CampaignSessionSnapshot {
+  sessionId:string;
+  campaignId:string;
+  campaignName:string;
+  campaignRevisionAtStart:number;
+  settingsRevision:number;
+  sessionName:string;
+  startingMode:"freeform"|"initiative";
+  calendar:OptionalCampaignCapability;
+  rations:OptionalCampaignCapability;
+  stashPolicy:"shared"|"dm-approval"|"dm-managed";
+  contentLoadoutId:string;
+  spatialProviderId?:string;
+  spatialProviderVersion?:string;
+  startedAt:string;
+}
+
 export interface CampaignRecordV1 {
   campaignId:string;
   name:string;

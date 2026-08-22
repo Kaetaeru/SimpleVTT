@@ -5,6 +5,7 @@ import { ProductionPlayScreen } from "./ProductionPlayScreen";
 import { V1HomeScreen } from "./V1HomeScreen";
 import { V1ContentScreen } from "./V1ContentScreen";
 import { CharacterCreateScreenV10 } from "./CharacterCreateV10";
+import { CampaignScreen } from "./CampaignScreen";
 import { applyMotionPreference, isReducedMotionPreferred, persistMotionPreference, readMotionPreference, type MotionPreference } from "./app/motionPreferences";
 import type {
   AbilityKey,
@@ -61,6 +62,7 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
   const nav: Array<[AppRoute, string, string]> = [
     ["home", "홈", "⌂"],
     ["characters", "캐릭터", "◉"],
+    ["campaigns", "캠페인", "◇"],
     ["session", "세션", "⌁"],
     ["content", "콘텐츠", "＋"],
     ["catalog", "규칙", "▤"],
@@ -100,7 +102,8 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
         </header>
         <main className="content">
           {snapshot.edgeState !== "normal" && <EdgeBanner />}
-          {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("scene")} />}
+          {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onCampaigns={() => setRoute("campaigns")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("scene")} />}
+          {route === "campaigns" && <CampaignScreen onOpenSession={() => setRoute("session")} />}
           {snapshot.role === "player" && route === "characters" && <CharacterLibraryScreen onOpen={() => setRoute("character")} onCreate={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "character" && <CharacterSheetPlayScreen onScene={() => setRoute("scene")} onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "create" && <CharacterCreateScreenV10 onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}
@@ -124,6 +127,7 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
 function topTitle(route: AppRoute, role: "player" | "dm") {
   if (route === "home") return "홈";
   if (route === "characters") return "캐릭터";
+  if (route === "campaigns") return "캠페인";
   if (route === "character") return "캐릭터 시트";
   if (route === "create") return "캐릭터 생성 / 편집";
   if (route === "levelup") return "레벨 업";

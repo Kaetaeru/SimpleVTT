@@ -13,7 +13,7 @@ import {
 import "./production-session-direct-network.css";
 
 export function ProductionSessionDirectNetworkBridge() {
-  const { snapshot, hostSession, joinSession }=useSimpleVtt();
+  const { snapshot, prepareCampaignSessionSnapshot, hostSession, joinSession }=useSimpleVtt();
   const [target,setTarget]=useState<HTMLElement|null>(null);
   const [sessionName,setSessionName]=useState("새 플레이 세션");
   const [bindAddress,setBindAddress]=useState(DEFAULT_SESSION_BIND_ADDRESS);
@@ -31,6 +31,13 @@ export function ProductionSessionDirectNetworkBridge() {
   },[]);
 
   const candidates=useMemo(()=>snapshot ? productionJoinCharacters(mockAdapter) : [],[snapshot]);
+  const activeCampaign=useMemo(()=>(snapshot?.campaigns??[]).find((campaign)=>campaign.campaignId===snapshot?.activeCampaignId)??null,[snapshot?.campaigns,snapshot?.activeCampaignId]);
+
+  useEffect(()=>{
+    if (!snapshot||snapshot.session.role!=="offline"||!activeCampaign) return;
+    setSessionName(activeCampaign.sessionDefaults.sessionNameTemplate);
+  },[snapshot?.session.role,activeCampaign?.campaignId,activeCampaign?.sessionDefaults.revision]);
+
   if (!snapshot||!target||snapshot.session.role!=="offline") return null;
   const selected=candidates.find((character)=>character.id===snapshot.activeCharacter.id);
   const actionableError=snapshot.session.compatibility==="incompatible" ? snapshot.session.compatibilityMessage : "";
@@ -42,6 +49,7 @@ export function ProductionSessionDirectNetworkBridge() {
 
   async function openHost() {
     setFormError("");
+    if (!activeCampaign) { setFormError("먼저 캠페인을 선택하고 세션 설정을 완료하세요."); return; }
     const requestedName=sessionName.trim();
     if (!requestedName) { setFormError("세션 이름이 필요합니다."); return; }
     try {
@@ -50,6 +58,7 @@ export function ProductionSessionDirectNetworkBridge() {
       setFormError(error instanceof Error?error.message:String(error));
       return;
     }
+    await prepareCampaignSessionSnapshot(activeCampaign.campaignId,{sessionName:requestedName,startingMode:activeCampaign.sessionDefaults.startingMode});
     await hostSession();
     const current=await mockAdapter.getSnapshot();
     if (current.session.role!=="host"||current.session.lifecycle!=="live") return;
@@ -73,8 +82,18 @@ export function ProductionSessionDirectNetworkBridge() {
       <article className="production-session-card primary-card">
         <div className="production-session-card__title">
           <span className="production-session-step">HOST</span>
-          <div><h2>새 세션 만들기</h2><p>이 PC의 지정한 IP/인터페이스와 포트에서 직접 Host를 엽니다.</p></div>
+          <div><h2>캠페인에서 세션 만들기</h2><p>선택한 캠페인의 상태와 규칙을 이어서 직접 Host를 엽니다.</p></div>
         </div>
+        {activeCampaign ? (
+          <div className="production-session-campaign" data-campaign-id={activeCampaign.campaignId}>
+            <div><span>캠페인</span><strong>{activeCampaign.name}</strong></div>
+            <div className="production-session-capabilities" aria-label="캠페인 규칙">
+              <span className={activeCampaign.calendar.capability.enabled?"enabled":"disabled"}>달력 {activeCampaign.calendar.capability.enabled?"사용":"미사용"}</span>
+              <span className={activeCampaign.rations.capability.enabled?"enabled":"disabled"}>식량 {activeCampaign.rations.capability.enabled?"사용":"미사용"}</span>
+              <span className={activeCampaign.contentLoadout.spatialProviderId?"enabled":"disabled"}>공간 모듈 {activeCampaign.contentLoadout.spatialProviderId?"사용":"없음"}</span>
+            </div>
+          </div>
+        ) : <p className="production-session-hint warning">Host 세션을 열려면 먼저 캠페인 탭에서 캠페인을 선택하고 세션 설정을 완료하세요.</p>}
         <label className="field">
           <span>세션 이름</span>
           <input maxLength={80} value={sessionName} onChange={(event)=>setSessionName(event.target.value)} placeholder="예: 금요일 저녁 모험" />
@@ -90,7 +109,7 @@ export function ProductionSessionDirectNetworkBridge() {
           </label>
         </div>
         <small className="production-session-hint">0.0.0.0은 모든 로컬 인터페이스에서 수신합니다. 특정 인터페이스만 쓰려면 해당 IP를 입력하세요.</small>
-        <button type="button" className="primary production-session-primary-action" disabled={!sessionName.trim()||!bindAddress.trim()||!hostPort} onClick={()=>void openHost()}>
+        <button type="button" className="primary production-session-primary-action" disabled={!activeCampaign||!sessionName.trim()||!bindAddress.trim()||!hostPort} onClick={()=>void openHost()}>
           세션 열기
         </button>
       </article>

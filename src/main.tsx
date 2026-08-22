@@ -55,6 +55,7 @@ import "./v1-product-shell-tokens.css";
 import "./first-run-tutorial.css";
 import "./appearance-settings.css";
 import "./character-portrait.css";
+import "./campaign-screen.css";
 import "./session-image-handout.css";
 
 void CombatSpellHudBridge;

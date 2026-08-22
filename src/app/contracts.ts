@@ -1,3 +1,5 @@
+import type { CampaignRecordV1, CampaignSessionSnapshot } from "./campaignPersistenceContracts";
+
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
 export type ConnectionState = "connected" | "reconnecting" | "disconnected";
@@ -6,6 +8,7 @@ export type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export type AbilityMethod = "standard" | "rolled" | "point-buy" | "custom";
 export type AppRoute =
   | "home"
+  | "campaigns"
   | "characters"
   | "character"
   | "create"
@@ -504,6 +507,9 @@ export interface AppSnapshot {
   resolution: ResolutionView | null;
   session: SessionVm;
   sessionCharacterInventories?: Record<string, SessionCharacterInventoryVm>;
+  campaigns?: CampaignRecordV1[];
+  activeCampaignId?: string | null;
+  campaignSessionSnapshot?: CampaignSessionSnapshot | null;
 }
 
 export interface CharacterDraftCommand {

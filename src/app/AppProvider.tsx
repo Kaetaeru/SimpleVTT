@@ -18,6 +18,7 @@ import type { CircleLandType } from "../domain/druidCircleLandRecovery";
 import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./productionCombatantPreparationAdapter";
+import "./campaignRuntimeAdapter";
 import { mockAdapter } from "./mockAdapter";
 import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 
@@ -69,6 +70,13 @@ interface AppContextValue {
   removeCombatant(combatantId: string): Promise<void>;
   adjustDmInventory(command:DmInventoryAdjustmentCommand):Promise<void>;
   undoLastDmInventoryAdjustment():Promise<void>;
+  createCampaign(input:{campaignId:string;name:string;description?:string}):Promise<void>;
+  openCampaign(campaignId:string):Promise<void>;
+  updateCampaign(campaignId:string,payload:{name?:string;description?:string}):Promise<void>;
+  archiveCampaign(campaignId:string):Promise<void>;
+  restoreCampaign(campaignId:string):Promise<void>;
+  configureCampaignSessionDefaults(campaignId:string,input:{sessionNameTemplate:string;startingMode:SessionMode;calendarEnabled:boolean;rationsEnabled:boolean}):Promise<void>;
+  prepareCampaignSessionSnapshot(campaignId:string,input?:{sessionName?:string;startingMode?:SessionMode}):Promise<void>;
   hostSession(): Promise<void>;
   joinSession(address: string): Promise<void>;
   stopSession(): Promise<void>;
@@ -191,6 +199,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeCombatant: async (combatantId) => apply(() => mockAdapter.removeCombatant(combatantId)),
     adjustDmInventory: async (command) => apply(() => mockAdapter.adjustDmInventory(command)),
     undoLastDmInventoryAdjustment: async () => apply(() => mockAdapter.undoLastDmInventoryAdjustment()),
+    createCampaign: async (input) => apply(() => mockAdapter.createCampaign(input)),
+    openCampaign: async (campaignId) => apply(() => mockAdapter.openCampaign(campaignId)),
+    updateCampaign: async (campaignId,payload) => apply(() => mockAdapter.updateCampaign(campaignId,payload)),
+    archiveCampaign: async (campaignId) => apply(() => mockAdapter.archiveCampaign(campaignId)),
+    restoreCampaign: async (campaignId) => apply(() => mockAdapter.restoreCampaign(campaignId)),
+    configureCampaignSessionDefaults: async (campaignId,input) => apply(() => mockAdapter.configureCampaignSessionDefaults(campaignId,input)),
+    prepareCampaignSessionSnapshot: async (campaignId,input) => apply(() => mockAdapter.prepareCampaignSessionSnapshot(campaignId,input)),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
     stopSession: async () => apply(() => mockAdapter.stopSession()),

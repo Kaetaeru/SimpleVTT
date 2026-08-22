@@ -27,6 +27,7 @@ function lifecycleLabel(role:string,lifecycle:string|undefined) {
 export function ProductionSessionWorkspaceBridge() {
   const {
     snapshot,
+    prepareCampaignSessionSnapshot,
     hostSession,
     joinSession,
     stopSession,
@@ -60,6 +61,14 @@ export function ProductionSessionWorkspaceBridge() {
     if (snapshot.session.role==="host"&&snapshot.session.name.trim()) setSessionName(snapshot.session.name);
     if (snapshot.session.role==="client"&&snapshot.session.address.trim()) setAddress(snapshot.session.address);
   },[snapshot?.session.role,snapshot?.session.name,snapshot?.session.address]);
+
+  const activeCampaign=useMemo(()=>(snapshot?.campaigns??[]).find((campaign)=>campaign.campaignId===snapshot?.activeCampaignId)??null,[snapshot?.campaigns,snapshot?.activeCampaignId]);
+
+  useEffect(()=>{
+    if (!snapshot||snapshot.session.role!=="offline"||!activeCampaign) return;
+    setSessionName(activeCampaign.sessionDefaults.sessionNameTemplate);
+    setMode(activeCampaign.sessionDefaults.startingMode);
+  },[snapshot?.session.role,activeCampaign?.campaignId,activeCampaign?.sessionDefaults.revision]);
 
   const candidates=useMemo(()=>snapshot ? productionJoinCharacters(mockAdapter) : [],[snapshot]);
   if (!snapshot||!target) return null;
@@ -95,7 +104,9 @@ export function ProductionSessionWorkspaceBridge() {
   }
 
   async function openHost() {
+    if (!activeCampaign) return;
     const requestedName=sessionName.trim()||"새 플레이 세션";
+    await prepareCampaignSessionSnapshot(activeCampaign.campaignId,{sessionName:requestedName,startingMode:mode});
     await hostSession();
     const current=await mockAdapter.getSnapshot();
     if (current.session.role!=="host"||current.session.lifecycle!=="preparing") return;
@@ -155,13 +166,23 @@ export function ProductionSessionWorkspaceBridge() {
           <article className="production-session-card primary-card">
             <div className="production-session-card__title">
               <span className="production-session-step">HOST</span>
-              <div><h2>새 세션 만들기</h2><p>이 PC를 Host로 열고 플레이어를 초대합니다.</p></div>
+              <div><h2>캠페인에서 세션 만들기</h2><p>선택한 캠페인의 상태와 규칙을 이어서 Host를 엽니다.</p></div>
             </div>
+            {activeCampaign ? (
+              <div className="production-session-campaign" data-campaign-id={activeCampaign.campaignId}>
+                <div><span>캠페인</span><strong>{activeCampaign.name}</strong></div>
+                <div className="production-session-capabilities" aria-label="캠페인 규칙">
+                  <span className={activeCampaign.calendar.capability.enabled?"enabled":"disabled"}>달력 {activeCampaign.calendar.capability.enabled?"사용":"미사용"}</span>
+                  <span className={activeCampaign.rations.capability.enabled?"enabled":"disabled"}>식량 {activeCampaign.rations.capability.enabled?"사용":"미사용"}</span>
+                  <span className={activeCampaign.contentLoadout.spatialProviderId?"enabled":"disabled"}>공간 모듈 {activeCampaign.contentLoadout.spatialProviderId?"사용":"없음"}</span>
+                </div>
+              </div>
+            ) : <p className="production-session-hint warning">Host 세션을 열려면 먼저 캠페인 탭에서 캠페인을 선택하고 세션 설정을 완료하세요.</p>}
             <label className="field">
               <span>세션 이름</span>
               <input maxLength={80} value={sessionName} onChange={(event)=>setSessionName(event.target.value)} placeholder="예: 금요일 저녁 모험" />
             </label>
-            <button type="button" className="primary production-session-primary-action" disabled={!sessionName.trim()} onClick={()=>void openHost()}>
+            <button type="button" className="primary production-session-primary-action" disabled={!activeCampaign||!sessionName.trim()} onClick={()=>void openHost()}>
               세션 열기
             </button>
           </article>

@@ -68,3 +68,4 @@ import "./abilityCheckResolutionEventAdapter";
 // reference Character summary, keeps the reference demo melee-playable, and projects
 // runtime spatial legality into targetable attack options without changing mechanics authority.
 import "./productionAcceptanceRuntimeAdapter";
+import "./campaignRuntimeAdapter";

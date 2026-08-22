@@ -6,6 +6,7 @@ const cp=<T,>(value:T):T=>structuredClone(value);
 export class CampaignApplicationService {
   constructor(private readonly repository:CampaignLibraryRepository){}
   async hydrate(){return this.repository.hydrate();}
+  snapshot(){return this.repository.snapshot();}
   listCampaigns(){return this.repository.snapshot()?.campaigns??[];}
   getCampaign(campaignId:string){return this.listCampaigns().find((campaign)=>campaign.campaignId===campaignId)??null;}
 
@@ -44,6 +45,22 @@ export class CampaignApplicationService {
   }
   archiveCampaign(context:CampaignMutationContext){return this.mutateCampaign(context,(campaign)=>{campaign.status="archived";});}
   restoreCampaign(context:CampaignMutationContext){return this.mutateCampaign(context,(campaign)=>{campaign.status="active";});}
+
+  async openCampaign(context:CampaignMutationContext){
+    const document=this.repository.snapshot();
+    if(!document) throw new Error("Campaign service must hydrate before open");
+    const index=document.campaigns.findIndex((campaign)=>campaign.campaignId===context.campaignId);
+    if(index<0) throw new Error(`Campaign not found: ${context.campaignId}`);
+    const current=document.campaigns[index];
+    if(current.recentRequestIds.includes(context.requestId)&&document.activeCampaignId===context.campaignId) return cp(current);
+    if(current.revision!==context.expectedCampaignRevision) throw new CampaignStaleRevisionError(`stale Campaign revision: expected ${context.expectedCampaignRevision}, current ${current.revision}`);
+    const next=cp(current);
+    next.revision=current.revision+1;next.updatedAt=context.now??current.updatedAt;next.lastOpenedAt=context.now??current.updatedAt;
+    next.recentRequestIds=[...current.recentRequestIds,context.requestId].slice(-128);
+    const campaigns=[...document.campaigns];campaigns[index]=next;
+    await this.repository.commit({...document,activeCampaignId:context.campaignId,campaigns});
+    return cp(next);
+  }
 
   async duplicateCampaign(context:CampaignMutationContext&{newCampaignId:string;newName:string}){
     const existing=this.getCampaign(context.newCampaignId);
