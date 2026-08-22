@@ -4,6 +4,7 @@ mod authoring_drafts;
 mod installed_content;
 mod campaign_library;
 mod character_campaign_compound;
+mod connected_long_rest_character;
 mod session_transport;
 
 use std::sync::Mutex;
@@ -56,6 +57,42 @@ fn write_character_library_generation(
     let root = local_data_root(&app)?;
     character_campaign_compound::recover_at(&root)?;
     character_library::write_generation_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn prepare_connected_long_rest_character_generation(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_long_rest_character::PrepareConnectedLongRestCharacterRequest,
+) -> Result<connected_long_rest_character::ConnectedLongRestCharacterPreparationDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_long_rest_character::prepare_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn materialize_connected_long_rest_character_generation(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_long_rest_character::ConnectedLongRestCharacterIdentityRequest,
+) -> Result<connected_long_rest_character::ConnectedLongRestCharacterPreparationDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_long_rest_character::materialize_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn abort_connected_long_rest_character_generation(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_long_rest_character::ConnectedLongRestCharacterIdentityRequest,
+) -> Result<connected_long_rest_character::ConnectedLongRestCharacterPreparationDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_long_rest_character::abort_at(&root.join("character-library"), &request)
 }
 
 #[tauri::command]
@@ -195,6 +232,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_character_library_generations,
             write_character_library_generation,
+            prepare_connected_long_rest_character_generation,
+            materialize_connected_long_rest_character_generation,
+            abort_connected_long_rest_character_generation,
             read_authoring_draft_generations,
             write_authoring_draft_generation,
             read_installed_content_generations,
