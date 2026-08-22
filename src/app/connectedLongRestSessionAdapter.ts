@@ -6,7 +6,7 @@ import {
   publishConnectedSnapshot,
   sendConnectedWireTo,
 } from "./connectedSessionRuntimeAdapter";
-import { decodeConnectedWireMessage } from "./connectedSessionWire";
+import { decodeConnectedWireMessage, type ConnectedWireMessage } from "./connectedSessionWire";
 import { connectedStateFor } from "./connectedSessionState";
 import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSessionTransport";
 import {
@@ -59,7 +59,7 @@ async function warn(adapter:MockAdapter,message:string) {
   await publishConnectedSnapshot(adapter);
 }
 
-async function scheduleHostRecovery(adapter:MockAdapter,peer:string) {
+function scheduleHostRecovery(adapter:MockAdapter,peer:string) {
   globalThis.setTimeout(()=>{
     void (async()=>{
       const state=connectedStateFor(adapter);
@@ -71,7 +71,7 @@ async function scheduleHostRecovery(adapter:MockAdapter,peer:string) {
   },50);
 }
 
-async function scheduleClientRecovery(adapter:MockAdapter) {
+function scheduleClientRecovery(adapter:MockAdapter) {
   globalThis.setTimeout(()=>{
     void (async()=>{
       const state=connectedStateFor(adapter);
@@ -83,8 +83,7 @@ async function scheduleClientRecovery(adapter:MockAdapter) {
   },50);
 }
 
-async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMessage,wire:ReturnType<typeof decodeConnectedWireMessage> extends {status:"ok";message:infer T}?T:never) {
-  if(typeof wire!=="object"||wire===null||!("type" in wire)) return;
+async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMessage,wire:ConnectedWireMessage) {
   if(wire.type==="long-rest-decision"){
     const result=await authorizeConnectedLongRestHostDecision(adapter,message.peer,wire.decision);
     if(result.status==="ready"){
@@ -121,8 +120,7 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
   }
 }
 
-async function handleClientLongRest(adapter:MockAdapter,wire:ReturnType<typeof decodeConnectedWireMessage> extends {status:"ok";message:infer T}?T:never) {
-  if(typeof wire!=="object"||wire===null||!("type" in wire)) return;
+async function handleClientLongRest(adapter:MockAdapter,wire:ConnectedWireMessage) {
   if(wire.type==="long-rest-offer"){
     receiveConnectedLongRestOwnerOffer(adapter,wire.offer);
     await publishConnectedSnapshot(adapter);
@@ -168,11 +166,11 @@ async function handleLongRestTransportMessage(adapter:MockAdapter,message:Sessio
   // The canonical connected-session listener is registered first. Defer replay
   // until it has accepted/rebound the participant and updated session identity.
   if(decoded.message.type==="hello"&&state.mode==="host"){
-    await scheduleHostRecovery(adapter,message.peer);
+    scheduleHostRecovery(adapter,message.peer);
     return;
   }
   if(decoded.message.type==="hello-ack"&&state.mode==="client"){
-    await scheduleClientRecovery(adapter);
+    scheduleClientRecovery(adapter);
     return;
   }
   if(decoded.message.type==="session-ended"){
