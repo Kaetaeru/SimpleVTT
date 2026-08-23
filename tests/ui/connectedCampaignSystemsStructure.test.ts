@@ -44,10 +44,24 @@ test("connected Players can move only their own Character assets with host ackno
   assert.match(runtime,/commitConnectedPartyStashDeposit/);
   assert.match(runtime,/command\.direction!=="character-to-stash"&&command\.direction!=="stash-to-character"/);
   assert.match(runtime,/command\.actorId!==snapshot\.activeCharacter\.id/);
-  assert.match(runtime,/undoLastDmInventoryAdjustment/);
+  assert.match(runtime,/undoDmInventoryAdjustment\(command\.requestId\)/);
   assert.match(runtime,/이동 응답 시간이 초과/);
   assert.match(runtime,/hostAccepted&&!localFirst/);
   assert.match(runtime,/\.compensate/);
+});
+
+test("Host DM inventory mutations for mounted remote Characters execute on the owning Client and refresh the Host projection",()=>{
+  assert.match(runtime,/campaign-owner-inventory/);
+  assert.match(runtime,/projectedCharacterById/);
+  assert.match(runtime,/command\.actorId!==snapshot\.activeCharacter\.id/);
+  assert.match(runtime,/client\.adjustDmInventory\(ownerRequest\.command\)/);
+  assert.match(runtime,/client\.undoDmInventoryAdjustment\(ownerRequest\.requestId\)/);
+  assert.match(runtime,/buildCharacterSessionProjectionV1/);
+  assert.match(runtime,/reconstructCharacterSessionProjectionV1/);
+  assert.match(runtime,/refreshReconstructedCharacterSessionProjection/);
+  assert.match(runtime,/refreshSessionCharacterInventoryProjection/);
+  assert.match(runtime,/state\.peerManifests\.set/);
+  assert.match(runtime,/remoteOwnerMutationRoutes/);
 });
 
 test("connected Player snapshots cannot receive the Campaign aggregate or hidden ration amounts",()=>{
