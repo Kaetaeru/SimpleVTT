@@ -91,7 +91,14 @@ test("connected Long Rest wire round-trips offer, owner decision, Host prepare a
     },
     projection,
   });
-  roundTrip({type:"long-rest-abort",transactionId:"long-rest.remote.1",reason:"Host cancelled before commit"});
+  roundTrip({
+    type:"long-rest-abort",
+    transactionId:"long-rest.remote.1",
+    reason:"Host restarted before commit",
+    ownerParticipantId:"player.remote",
+    character,
+    preparationId:"character-stage.12",
+  });
 });
 
 test("connected Long Rest wire rejects malformed distributed-transaction inputs before runtime handling", () => {
@@ -134,6 +141,12 @@ test("connected Long Rest wire rejects malformed distributed-transaction inputs 
   assert.equal(decodeConnectedLongRestWireMessage(JSON.stringify({
     type:"long-rest-global-commit",
     commit:{transactionId:"long-rest.remote.1",campaignCommitId:"commit",ownerParticipantId:"player.remote"},
+  })).status,"rejected");
+  assert.equal(decodeConnectedLongRestWireMessage(JSON.stringify({
+    type:"long-rest-abort",
+    transactionId:"long-rest.remote.1",
+    reason:"restart",
+    ownerParticipantId:"player.remote",
   })).status,"rejected");
   assert.equal(decodeConnectedLongRestWireMessage(JSON.stringify({
     type:"long-rest-owner-materialized",
