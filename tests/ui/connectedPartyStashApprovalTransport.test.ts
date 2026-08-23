@@ -98,12 +98,17 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
 
   try{
     await import("../../src/app/connectedSessionRuntimeAdapter");
+    await import("../../src/app/productionSessionLifecycleAdapter");
     await import("../../src/app/connectedPartyStashHostPolicyAdapter");
     await import("../../src/app/connectedCampaignSystemsRuntimeAdapter");
     await import("../../src/app/connectedPartyStashClientPolicyAdapter");
     const approvalRuntime=await import("../../src/app/connectedPartyStashApprovalRuntimeAdapter");
 
-    const character=(await client.getSnapshot()).activeCharacter;
+    const initialCharacter=(await client.getSnapshot()).activeCharacter;
+    const character:CharacterSheet={...structuredClone(initialCharacter),id:"char.connected-stash-transport-player",name:"Connected Stash Transport Player",saveState:"saved"};
+    const mutableClient=client as unknown as {activeCharacter:CharacterSheet;characters:CharacterSheet[]};
+    mutableClient.activeCharacter=structuredClone(character);
+    mutableClient.characters=[structuredClone(character)];
     await configureCampaign(client,character);
     await configureCampaign(host,character);
 
@@ -193,11 +198,12 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
     assert.equal(queue.lookup(cancelCommand.requestId)?.state,"cancelled");
     assert.equal(queue.active().length,1,"only the original pending request should remain active before Session stop");
 
+    unmountAllCharacterSessionProjections(host);
     await host.stopSession();
     hostStopped=true;
     assert.equal(queue.active().length,0,"Session stop must clear pending Party Stash approval state");
   }finally{
-    if(!hostStopped)await host.stopSession().catch(()=>undefined);
+    if(!hostStopped){unmountAllCharacterSessionProjections(host);await host.stopSession().catch(()=>undefined);}
     await client.stopSession().catch(()=>undefined);
     unmountAllCharacterSessionProjections(host);
     tauriSessionTransport.available=original.available;
