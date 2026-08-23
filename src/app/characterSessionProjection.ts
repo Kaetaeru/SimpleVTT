@@ -100,6 +100,7 @@ function matchesToken(entry:ResolvedCatalogEntry,token:string) {
     || entry.nameEn===normalized;
 }
 
+/** Content that can change executable Character mechanics must always resolve on Host and Client. */
 function requiredContentRefs(source:CharacterSourceSnapshotV1):RequiredContentRef[] {
   const refs:RequiredContentRef[]=[
     { label:"primary class",token:source.build.className,categories:["class"] },
@@ -113,7 +114,6 @@ function requiredContentRefs(source:CharacterSourceSnapshotV1):RequiredContentRe
   for (const spellId of source.spellAndFeatureSelections.cantrips ?? []) refs.push({ label:"cantrip",token:spellId,categories:["spell"] });
   for (const spellId of source.spellAndFeatureSelections.preparedSpells ?? []) refs.push({ label:"prepared spell",token:spellId,categories:["spell"] });
   for (const spellId of source.spellAndFeatureSelections.spellbookSpells ?? []) refs.push({ label:"spellbook spell",token:spellId,categories:["spell"] });
-  for (const item of source.itemReferences) refs.push({ label:`item ${item.id}`,token:item.definitionId,categories:["item"] });
   for (const weapon of source.spellAndFeatureSelections.masteryWeapons ?? []) refs.push({ label:"mastery weapon",token:weapon,categories:["item"] });
   return refs.filter((ref)=>ref.token.trim().length>0);
 }
@@ -128,6 +128,32 @@ function resolveRequiredIdentities(source:CharacterSourceSnapshotV1,catalog:Cata
     const identity=entryIdentity(matches[0]);
     identities.set(identity.qualifiedId,identity);
   }
+  return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
+}
+
+/**
+ * Inventory entries are different from class/spell mechanics. If the definition is
+ * installed in the catalog we pin its qualified identity. If no definition exists,
+ * the Character source snapshot itself may carry an inert item description; Host
+ * reconstruction must not turn that embedded metadata into executable mechanics.
+ */
+function resolveKnownItemIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
+  const resolvedCatalog=catalog as ResolvedCatalogEntry[];
+  const identities=new Map<string,CharacterProjectionContentIdentityV1>();
+  for (const item of source.itemReferences) {
+    if (!item.definitionId.trim()) throw new Error(`projection item ${item.id} is missing definitionId`);
+    const matches=resolvedCatalog.filter((entry)=>entry.category==="item" && matchesToken(entry,item.definitionId));
+    if (matches.length>1) throw new Error(`ambiguous canonical content for item ${item.id}: ${item.definitionId}`);
+    if (matches.length===0) continue;
+    const identity=entryIdentity(matches[0]);
+    identities.set(identity.qualifiedId,identity);
+  }
+  return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
+}
+
+function resolveProjectionIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
+  const identities=new Map<string,CharacterProjectionContentIdentityV1>();
+  for(const identity of [...resolveRequiredIdentities(source,catalog),...resolveKnownItemIdentities(source,catalog)]) identities.set(identity.qualifiedId,identity);
   return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
 }
 
@@ -159,7 +185,7 @@ export function buildCharacterSessionProjectionV1(
     source,
     sourceAuthority:{ maxHp:sheet.maxHp },
     runtime,
-    contentIdentities:resolveRequiredIdentities(source,catalog),
+    contentIdentities:resolveProjectionIdentities(source,catalog),
   };
 }
 
@@ -279,7 +305,7 @@ export function parseCharacterSessionProjectionV1(
         throw new Error(`host content identity mismatch: ${identity.qualifiedId}`);
       }
     }
-    const required=resolveRequiredIdentities(source,hostCatalog);
+    const required=[...resolveRequiredIdentities(source,hostCatalog),...resolveKnownItemIdentities(source,hostCatalog)];
     for (const identity of required) {
       if (!ids.has(identity.qualifiedId)) throw new Error(`projection omitted required content identity: ${identity.qualifiedId}`);
     }
