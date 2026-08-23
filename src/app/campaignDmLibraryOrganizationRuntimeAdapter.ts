@@ -60,6 +60,11 @@ CampaignApplicationService.prototype.upsertDmLibraryEntry=function upsertDmLibra
     if(!entry.definitionId?.trim()||!entry.pcPreset)throw new Error("PC preset definition is required");
     assertPreset(entry.pcPreset,entry.definitionId);
   }
+  if(entry.kind==="note"){
+    const noteText=entry.noteText?.trim();
+    if(!noteText)throw new Error("DM Library note text is required");
+    entry.noteText=noteText;
+  }
   return previousUpsertDmLibraryEntry.call(this,context);
 };
 
