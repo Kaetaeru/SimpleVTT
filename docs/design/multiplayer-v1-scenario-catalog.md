@@ -1,6 +1,8 @@
 # SimpleVTT V1 Multiplayer Completion Scenario Catalog
 
-Status: planning baseline; implementation is not authorized by this document.
+Status: **CANONICAL FINAL V1 OBJECTIVE**
+
+Owner decision: 2026-08-23. The scenarios in this catalog are required V1 release scope, not an optional post-V1 follow-up.
 
 This document is the canonical, implementation-facing scenario inventory for declaring SimpleVTT V1 multiplayer complete. It supplements, but does not replace, `session-runtime.md`, `combat-ux.md`, `DICE-PRESENTATION.md`, the UI behavior contracts, and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`.
 
@@ -33,6 +35,7 @@ Every shared mutation or presentation must satisfy all applicable invariants.
 10. **Durability**: Acknowledgement loss, process restart, and partial persistence failure recover or compensate without item/GP/resource duplication.
 11. **Accessibility**: Reduced Motion changes motion, not the authoritative result or information. Text results remain available without relying on 3D dice.
 12. **Explicit failure**: Incompatible content, stale revision, invalid ownership, missing capability, and persistence failure produce actionable terminal or retryable UI instead of silent divergence.
+13. **One presentation pipeline**: Local, Host, acting Client, and observing Client reuse the same shared dice and combat-VFX projection/rendering paths. Network code transports authoritative presentation data; it does not introduce a second VFX implementation or per-spell hardcoded renderer.
 
 ## 3. Shared presentation contract
 
@@ -51,6 +54,8 @@ A committed shared resolution needs an immutable presentation envelope in additi
 - reduced-motion-compatible timing data, not simulation-derived mechanics.
 
 Catch-up must normally apply final state and Activity without replaying old full-screen dice as if they just occurred. A reconnect that happens during an active presentation may resume at a bounded current stage or collapse directly to the committed result; it must never reroll.
+
+The shared combat VFX path is `buildCombatVfxProfile` -> `CombatVfxBridge` -> the common renderer/styles. Multiplayer work must feed this path from the authoritative presentation envelope. Replacing the renderer must replace it for local, Host, acting Client, and observing Client together.
 
 ## 4. Scenario catalog
 
@@ -281,14 +286,19 @@ The blocking gap for a complete multiplayer claim is that a remote Client curren
 - comprehensive real Windows H+P1+P2 acceptance: **pending**;
 - V1 multiplayer overall: **not complete**.
 
-## 8. Change-control rule
+## 8. Final V1 execution lock
 
-Before implementation begins:
+Owner-approved state:
 
-1. Owner reviews this catalog and adds/corrects intended behavior.
-2. The epic and issue set are created on `Kaetaeru/SimpleVTT`.
-3. MP-01 freezes the presentation/privacy/reconnect semantics.
-4. Implementation proceeds in issue order with small commits and scenario-linked tests.
+- [x] Owner designated the full catalog as the final V1 objective.
+- [x] GitHub Epic `#110` and implementation issues `#111` through `#122` were created.
+- [x] Documentation PR `#123` was created against `work/v1-composite`.
+- [ ] Merge documentation PR `#123`.
+- [ ] Complete MP-01 and freeze presentation/privacy/reconnect semantics.
+- [ ] Complete MP-02 through MP-10 in dependency order.
+- [ ] Complete MP-11 automated H+P1+P2 acceptance.
+- [ ] Complete MP-12 Windows H+P1+P2 acceptance.
+- [ ] Complete the release gates in `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` on one exact SHA.
 
 Any newly discovered multiplayer behavior must first receive a scenario ID and acceptance rule here or in the epic before code is changed.
 
