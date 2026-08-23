@@ -10,50 +10,45 @@
 - task_id: `phase14-production-play-session-ux`
 - dispatch: `continue`
 
-Preserve all already source-connected V1-12/V1-13 durability, recovery, Campaign authority, DM Library materialization, Party Stash policy enforcement, and Session UI work. Do not route to `main`, repeat validated source work, or begin the comprehensive Codex audit before implementation freeze.
+Preserve all already source-connected V1-12/V1-13 durability, recovery, Campaign authority, DM Library materialization, Party Stash policy/approval flow, and Session UI work. Do not repeat validated source work, route to `main`, or begin the comprehensive Codex audit before implementation freeze.
 
 ## Reconciled source boundary
 
-This watcher execution started from coordination head `745b9509e4cba9484134b4c75edd75697a59d510`. Mandatory README -> control -> STATE -> PLAN reconciliation showed the branch was identical to that checkpoint before new work began.
+This watcher execution started from coordination head `3ae07a7865ccb08f2c2c9b3c09d9d006ddf640ac`. Mandatory `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` reconciliation and a branch compare showed `work/v1-composite` was identical to that checkpoint before new work began.
 
-Current exact product/test head before coordination checkpoint writes: `d8f14a74a8cbfffcbcbd2ac4771308fea412368c`.
+Current exact product/test head before coordination checkpoint writes: `918b0f5e43d2c57caaab441eb4de811c3cc2ae6f`.
 
 ## Completed in this execution
 
-- `ae3852fec9b3b734a3b056bc6b324e37b9329d48` — added a user-reachable Campaign Party Stash policy selector.
-- `a5908833a7538131391d46793198648d140031db` — added source-level selector/no-mutation UI contracts.
-- `a9edaaf565dfed58c86314c88546ea9e30931ec6` — approval queue now exposes active pending/approved records and preserves approved transfer failures for retry/cancel.
-- `194f18c27bdc1f8303bce84046330699ebfb68c8` — added connected Player -> Host approval-request transport and Host approval application methods.
-- `77e71cb061c3080f0a46c8cbfc06e86e24dcd1c9` — installed the connected approval runtime after existing Host/connected/client policy adapters.
-- `5336310c5d4fe8501ba2eb23d4da2a643bd5c81f` — Player `dm-approval` withdrawals now submit approval requests; DM UI exposes approve/reject/cancel and approved transfer retry.
-- `b79a4ce0b1de68ab2cbd32de48a5e6a89022be2e` — added source contracts for connected approval UX and commit ordering.
-- `b260edbd61a53de74eeee84d420e91364445469b` — approval revalidates current Host/session, policy, roster permission, and connected Character owner before state transition; policy/ownership failure before first approval remains pending, while post-approval transfer failures remain recoverable.
-- `3db625d43b9a6e1e017f78253668fd2f587db1f0` — corrected Campaign UI to call the existing `configureCampaignPartyStashPolicy` runtime API and derive the policy type from `CampaignRecordV1`.
-- `e0e0d21c34f29d7d09ba62cefc4239fc851e5371` — aligned the Campaign policy UI source test with the actual runtime API.
-- `d8f14a74a8cbfffcbcbd2ac4771308fea412368c` — expanded queue tests for active approved records, recoverable transfer failure, cleanup, and error clearing on terminal settlement.
-
-The approval path reuses the existing authoritative `transferPartyStash` transaction. Pending request submission does not mutate assets. DM approval revalidates authority, marks `approved`, calls the existing transfer, and marks `committed` only after that transfer succeeds. Session stop clears transient approval memory.
+- Located the established connected-session test pattern in `tests/ui/connectedProjectedCharacterResolution.test.ts` via commit `615b3a329a19ad6a458a83eb65a0d53b3f12becc`: tests directly configure `connectedStateFor`, mount projected Characters, and replace transport methods when exercising authoritative connected flows.
+- `9bc8af2f48eb1cc1c235d3225531dad473fbc4f7` added `tests/ui/connectedPartyStashApprovalRuntime.test.ts` for runtime-level Party Stash approval authority sequencing.
+- Static type reinspection found that the first test draft read progression-augmented Character fields without importing the augmentation. `918b0f5e43d2c57caaab441eb4de811c3cc2ae6f` corrected the test to stay on the base `CharacterSheet` contract using explicit test manifest revisions.
+- The new runtime test source covers:
+  1. Host approval delegates to the existing `transferPartyStash` method before the queue may become `committed`;
+  2. an authoritative transfer failure leaves the request `approved` with the error, visible and retryable, and a later successful retry may commit it;
+  3. Party Stash policy change before approval is revalidated and leaves the request `pending`;
+  4. connected participant/Character ownership change before approval is revalidated and leaves the request `pending`.
+- No production asset mutation path was added or replaced. The approval runtime still reuses the existing authoritative `transferPartyStash` transaction.
 
 ## Validation status
 
-**NO GREEN CLAIM.** GitHub reports no combined statuses and no workflow runs for the new exact-head commits. The current environment still has no runnable checked-out repository, so authored tests have not been executed locally. No TypeScript build, npm test, Rust/Tauri, or Windows two-instance result is claimed.
+**NO GREEN CLAIM.** `get_commit_combined_status` returned no statuses and exact-head workflow lookup returned no workflow runs for `918b0f5e43d2c57caaab441eb4de811c3cc2ae6f`. The environment still does not provide a runnable checked-out repository, so the new Node/TypeScript test source has not been executed. No `npm`, TypeScript, build, Tauri, or Windows two-instance result is claimed.
 
-Static source inspection caught and corrected one Campaign policy API/type mismatch before checkpoint, but static inspection is not a substitute for compiler/test evidence.
+The test was statically checked against `SessionCompatibilityManifest`, `CharacterSheet`, connected state, and projection-registry contracts; this is not executable evidence.
 
 ## Remaining V1-13 work
 
-1. Execute exact-head TypeScript/unit/UI regression as soon as a runnable checkout or CI run is available; fix any wrapper/type/import-order failures before calling the slice green.
-2. Add deterministic runtime tests, not only source-structure assertions, for connected Player request -> Host queue -> DM approve -> owner-side transfer -> commit.
-3. Exercise duplicate request/reconnect behavior against the actual transport wrapper stack. Request identity is queue-idempotent and approval now revalidates the currently connected owner, but this still needs executable proof.
-4. Exercise policy/permission/owner changes while pending and approved transfer failures. Pre-approval validation failure must stay pending; post-approval transfer failure must stay approved and retryable/cancellable.
-5. Verify Session end clears pending and approved-but-uncommitted requests in the real lifecycle path.
-6. Decide/implement Player-facing final approval/rejection status if production UX requires more than the current “request accepted by Host queue” acknowledgement. Asset changes after approval already travel through the existing connected owner path, but explicit rejection feedback is not yet sent back to the Player.
-7. Re-audit V1-13 against the release checklist, then continue the next unblocked V1 implementation slice. Comprehensive Codex audit remains deferred until implementation freeze.
+1. Exercise the actual Player request transport wrapper: Player `dm-approval` request -> Host queue acknowledgement, including duplicate request identity and reconnect behavior.
+2. Extend deterministic runtime coverage for roster permission changes, reject/cancel application methods, and real Session lifecycle cleanup of pending and approved-but-uncommitted requests.
+3. Add an end-to-end connected harness case where DM approval traverses the existing owner-side transfer/compensation stack rather than substituting a test `transferPartyStash` method.
+4. Run exact-head TypeScript/unit/UI regression as soon as a runnable checkout or CI path is available and fix any wrapper/import-order/type failures before calling V1-13 green.
+5. Decide whether Player-facing final approve/reject/cancel status is required beyond current Host-queue acknowledgement; if added, use only the established connected transport and never a second asset mutation path.
+6. Re-audit V1-13 against the release checklist, then continue the next unblocked V1 implementation slice. Windows two-instance acceptance and comprehensive Codex audit remain later release evidence.
 
 ## Next Exact Action
 
-1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` HEAD; preserve product/test commits through `d8f14a74a8cbfffcbcbd2ac4771308fea412368c` unless GitHub has advanced.
-2. Inspect the connected approval adapter together with existing connected-session test harnesses and add executable deterministic tests for request transport, duplicate/reconnect identity, policy/permission changes, owner reconnect, successful commit, transfer failure retry/cancel, and Session cleanup.
-3. Run exact-head TypeScript/tests if an execution path becomes available; do not infer green from authored source tests.
-4. Add Player final approve/reject/cancel feedback only through the established connected transport; do not create a second asset mutation channel.
-5. Re-audit V1-13 after executable validation, then continue the next V1 implementation slice. Keep the comprehensive Codex audit deferred until implementation freeze.
+1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` HEAD; preserve product/test commits through `918b0f5e43d2c57caaab441eb4de811c3cc2ae6f` unless GitHub advanced.
+2. Reuse the existing connected-session test harness pattern to exercise the approval request transport itself: establish test Host/Client listener state, send a `dm-approval` withdrawal request, assert one Host pending record and no asset mutation, and prove duplicate/reconnect identity behavior.
+3. Add real lifecycle tests for permission/policy/owner changes, reject/cancel, and Session stop cleanup; retain the new runtime authority-sequencing tests rather than duplicating them.
+4. Run exact-head TypeScript/tests if an execution path becomes available; authored test source alone is not green evidence.
+5. Re-audit V1-13 after executable validation. Keep the comprehensive Codex audit deferred until implementation freeze.
