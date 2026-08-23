@@ -7,30 +7,37 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control: `continue`
-- Exact product/test checkpoint: `e299cf876b97a6d056a10bf702ddd67888c16570`
+- Exact product/test checkpoint: `cbf20abf4870807348443728c6fd6022113ef14c`
 
 ## Current result
 
 V1-12 Connected Long Rest remains source-complete / validation pending and was not repeated.
 
-V1-13 connected Party Stash now has both owner-side and Host-side restart durability at the source level:
+V1-13 this dispatch closed additional real source gaps:
 
-- durable owner inventory journal and request-scoped compensation;
-- Host durable Party Stash coordinator before remote cross-store mutation;
-- Campaign `recentRequestIds` reconciliation after Host restart/reconnect;
-- Player self-service Stash checkpoint before Host Campaign commit plus owner-complete acknowledgement;
-- duplicate/lost recovery messages converge through durable owner journal + retained Host coordinator;
-- canonical item membership can advance sourceRevision only with non-inventory source unchanged;
-- Campaign custom items can project as inert embedded items without gaining untrusted executable mechanics.
+- DM Library ItemInstance materialization is no longer rolled back merely because later private `recentEntryIds` metadata persistence fails;
+- committed connected remote grants are not exposed as retryable failures solely because owner-finalize acknowledgement/cleanup was lost;
+- private DM Library data remains out of connected Campaign projections;
+- deleting a DM Library definition leaves already granted Character items and provenance intact;
+- Player Party Stash writes now enforce both roster permission and Campaign policy;
+- `dm-managed` is inspect-only for Players;
+- `dm-approval` allows deposit but denies direct withdrawal pending a real approval flow;
+- `shared` retains authorized direct transfers;
+- Player UI shows/blocks actions according to policy;
+- malformed or policy-denied Player requests are rejected before a durable Host recovery coordinator is written.
 
 Host still does not own or persist a remote Player Character in its Character library.
 
 ## Remaining V1-13 work
 
-V1-13 is still implementation-in-progress. Next audit is Host-process crash ordering for Campaign DM Library -> remote Character grant, followed by DM Library privacy/isolation/delete/provenance and Session-visible policy/quick-action acceptance.
+V1-13 is still implementation-in-progress. The next concrete product gap is no longer authority bypass: it is the missing user-reachable policy configuration and real `dm-approval` queue.
+
+- Campaign UI currently only displays `partyStash.policy`; it cannot select `shared`, `dm-approval`, or `dm-managed`.
+- `dm-approval` has no Player pending withdrawal request -> DM approve/reject/cancel workflow yet.
+- Approved requests must reuse the existing durable Stash transfer path and pending requests must not mutate assets before approval.
 
 ## Validation
 
-**NO GREEN CLAIM.** Exact product/test head `e299cf876b97a6d056a10bf702ddd67888c16570` has no combined statuses and no commit-associated workflow runs. No observed execution exists for the new focused tests, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library recovery.
+**NO GREEN CLAIM.** Exact product/test head `cbf20abf4870807348443728c6fd6022113ef14c` has no combined statuses and no commit-associated workflow runs. No observed execution exists for the new focused tests, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library scenarios.
 
 `STATUS.md` is human-facing only. Reconciliation remains README -> control -> STATE -> PLAN.
