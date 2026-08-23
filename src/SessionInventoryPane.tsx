@@ -59,8 +59,18 @@ export function SessionPlayerInventoryPane({onClose,onOpenFull}:{onClose():void;
   const stash=campaign?.partyStash;
   const member=campaign?.roster.find((entry)=>entry.characterId===character.id);
   const canTransfer=member?.stashPermission==="request"||member?.stashPermission==="manage";
+  const canDeposit=Boolean(stash&&canTransfer&&stash.policy!=="dm-managed");
+  const canWithdraw=Boolean(stash&&canTransfer&&stash.policy==="shared");
+  const policyHint=!canTransfer
+    ?"이 캐릭터에는 공유 보관함 이동 권한이 없습니다."
+    :stash?.policy==="dm-managed"
+      ?"DM 전용 관리 정책입니다. Player는 조회만 할 수 있습니다."
+      :stash?.policy==="dm-approval"
+        ?"입고는 가능하며 출고는 DM 승인이 필요합니다."
+        :"직접 입고·출고할 수 있습니다.";
   const move=async(key:string,command:PartyStashTransferCommand,success:string)=>{
-    if(pending||!canTransfer)return;
+    const allowed=command.direction==="character-to-stash"?canDeposit:canWithdraw;
+    if(pending||!allowed)return;
     setPending(key);setFeedback(null);
     try{await transferPartyStash(command);setFeedback({kind:"success",message:success});}
     catch(error){setFeedback({kind:"error",message:error instanceof Error?error.message:"파티 보관함 자산을 옮기지 못했습니다."});}
@@ -73,15 +83,15 @@ export function SessionPlayerInventoryPane({onClose,onOpenFull}:{onClose():void;
         <div><span>내 골드</span><strong>{character.goldGp??0} GP</strong></div>
         <div className="amount"><span>옮길 금액</span><input type="number" min="1" step="1" value={gold} aria-label="옮길 GP" onChange={(event)=>setGold(Math.max(1,Math.floor(Number(event.target.value)||1)))}/></div>
         <div><span>공유 골드</span><strong>{stash.wallet.gp} GP</strong></div>
-        <button type="button" aria-label={`${gold} GP 내 인벤토리로 이동`} disabled={Boolean(pending||!canTransfer||stash.wallet.gp<gold)} onClick={()=>void move("player-stash-gold-out",{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"stash-to-character",asset:"currency",amount:gold},gold+" GP를 내 인벤토리로 옮겼습니다.")}>가져오기 →</button>
-        <button type="button" className="primary" aria-label={`${gold} GP 공유 보관함으로 이동`} disabled={Boolean(pending||!canTransfer||(character.goldGp??0)<gold)} onClick={()=>void move("player-stash-gold-in",{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"character-to-stash",asset:"currency",amount:gold},gold+" GP를 공유 보관함으로 옮겼습니다.")}>← 보관하기</button>
+        <button type="button" aria-label={`${gold} GP 내 인벤토리로 이동`} disabled={Boolean(pending||!canWithdraw||stash.wallet.gp<gold)} title={!canWithdraw?policyHint:undefined} onClick={()=>void move("player-stash-gold-out",{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"stash-to-character",asset:"currency",amount:gold},gold+" GP를 내 인벤토리로 옮겼습니다.")}>가져오기 →</button>
+        <button type="button" className="primary" aria-label={`${gold} GP 공유 보관함으로 이동`} disabled={Boolean(pending||!canDeposit||(character.goldGp??0)<gold)} title={!canDeposit?policyHint:undefined} onClick={()=>void move("player-stash-gold-in",{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"character-to-stash",asset:"currency",amount:gold},gold+" GP를 공유 보관함으로 옮겼습니다.")}>← 보관하기</button>
       </section>
       {feedback&&<div className={`session-inventory-feedback ${feedback.kind}`} role="status"><span>{feedback.message}</span></div>}
       <section className="session-inventory-section">
-        <div className="session-inventory-section-title"><strong>공유 소지품 {stash.itemReferences.length}</strong><span>{canTransfer?"→ 버튼으로 내 인벤토리에 1개씩 옮깁니다.":"이 캐릭터에는 공유 보관함 이동 권한이 없습니다."}</span></div>
+        <div className="session-inventory-section-title"><strong>공유 소지품 {stash.itemReferences.length}</strong><span>{policyHint}</span></div>
         <div className="session-owned-item-list manage shared-cards">
           {stash.itemReferences.map((item)=>{const entry=catalogItemForDefinition(snapshot.catalog,item.definitionId);const template=templateForStashReference(item,snapshot.catalog);return <article key={item.instanceId}>
-            <button type="button" className="move-arrow" aria-label={`${template.name} 내 인벤토리로 이동`} disabled={Boolean(pending||!canTransfer)} title="내 인벤토리로 1개 이동" onClick={()=>void move("player-stash-item-out:"+item.instanceId,{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"stash-to-character",asset:"item",definitionId:item.definitionId,catalogEntryId:entry?.id,itemTemplate:template,quantity:1},template.name+" 1개를 내 인벤토리로 옮겼습니다.")}>→</button>
+            <button type="button" className="move-arrow" aria-label={`${template.name} 내 인벤토리로 이동`} disabled={Boolean(pending||!canWithdraw)} title={canWithdraw?"내 인벤토리로 1개 이동":policyHint} onClick={()=>void move("player-stash-item-out:"+item.instanceId,{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"stash-to-character",asset:"item",definitionId:item.definitionId,catalogEntryId:entry?.id,itemTemplate:template,quantity:1},template.name+" 1개를 내 인벤토리로 옮겼습니다.")}>→</button>
             <div><strong>{template.name}</strong><small>{template.provenance[0]??"캠페인 공유 보관함"}</small></div><b>×{item.quantity}</b>
           </article>;})}
           {!stash.itemReferences.length&&<p className="session-inventory-empty">공유 보관함에 아이템이 없습니다.</p>}
@@ -100,7 +110,7 @@ export function SessionPlayerInventoryPane({onClose,onOpenFull}:{onClose():void;
         {character.items.map((item)=><article key={item.id}>
           <div><strong>{item.name}</strong><small>{item.nameEn||item.kind} · {itemState(item)}</small></div>
           <b>×{item.quantity}</b>
-          {stashOpen&&campaign&&stash&&<button type="button" className="move-arrow" aria-label={`${item.name} 공유 보관함으로 이동`} disabled={Boolean(pending||!canTransfer)} title="공유 보관함으로 1개 이동" onClick={()=>{const active=Boolean(item.equipped||item.wielded||item.attuned);void move("player-stash-item-in:"+item.id,{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1,itemTemplate:stashTemplateFromItem(item),forceUnequip:active},item.name+" 1개를 공유 보관함으로 옮겼습니다.");}}>←</button>}
+          {stashOpen&&campaign&&stash&&<button type="button" className="move-arrow" aria-label={`${item.name} 공유 보관함으로 이동`} disabled={Boolean(pending||!canDeposit)} title={canDeposit?"공유 보관함으로 1개 이동":policyHint} onClick={()=>{const active=Boolean(item.equipped||item.wielded||item.attuned);void move("player-stash-item-in:"+item.id,{requestId:requestId(),campaignId:campaign.campaignId,actorId:character.id,direction:"character-to-stash",asset:"item",itemId:item.id,definitionId:item.definitionId,quantity:1,itemTemplate:stashTemplateFromItem(item),forceUnequip:active},item.name+" 1개를 공유 보관함으로 옮겼습니다.");}}>←</button>}
         </article>)}
         {!character.items.length&&<p className="session-inventory-empty">소지한 아이템이 없습니다.</p>}
       </div>
