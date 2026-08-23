@@ -5,6 +5,7 @@ import "./app/campaignRationConversionRuntimeAdapter";
 import type { CampaignRationConversionRuntimePreview } from "./app/campaignRationConversionRuntimeAdapter";
 import { mockAdapter } from "./app/mockAdapter";
 import { CampaignDmLibraryOrganizationPanel } from "./CampaignDmLibraryOrganizationPanel";
+import { CampaignDmLibraryNotePanel } from "./CampaignDmLibraryNotePanel";
 
 function requestId(){return globalThis.crypto?.randomUUID?.()??`campaign.ration-convert.${Date.now()}.${Math.floor(Math.random()*1_000_000)}`;}
 
@@ -59,5 +60,6 @@ export function CampaignRationConversionPanel({campaign}:{campaign:CampaignRecor
       {error&&<div className="campaign-error" role="alert">{error}</div>}
     </section>
     <CampaignDmLibraryOrganizationPanel campaign={campaign}/>
+    <CampaignDmLibraryNotePanel campaign={campaign}/>
   </>;
 }
