@@ -117,6 +117,19 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
     clientState.mode="client";
     clientState.sessionId=hostState.sessionId;
 
+    const hostCampaign=(await host.getSnapshot()).campaignSessionSystems;
+    assert.ok(hostCampaign,"Host Campaign projection must exist before Player approval requests");
+    listeners[1]({
+      peer:"host",
+      message:JSON.stringify({
+        type:"campaign-systems-projection",
+        sessionId:hostState.sessionId,
+        revision:1,
+        projection:hostCampaign,
+      }),
+    });
+    assert.equal((await client.getSnapshot()).campaignSessionSystems?.partyStash.policy,"dm-approval","Client must consume the Host Campaign projection through the connected listener stack");
+
     const manifest={
       protocolVersion:1,
       rulesProfileId:"dnd.srd-5.2.1",
