@@ -13,6 +13,7 @@ test("Party Stash approval queue is idempotent for the same pending request",()=
   assert.equal(first.state,"pending");
   assert.deepEqual(duplicate,first);
   assert.equal(queue.pending().length,1);
+  assert.equal(queue.active().length,1);
 });
 
 test("Party Stash approval queue rejects requestId payload drift",()=>{
@@ -30,11 +31,29 @@ test("Party Stash approval queue requires approval before authoritative commit",
   const approved=queue.approve(command.requestId);
   assert.equal(approved.state,"approved");
   assert.deepEqual(queue.approve(command.requestId),approved);
+  assert.equal(queue.active().length,1);
 
   const committed=queue.settle(command.requestId,"committed");
   assert.equal(committed.state,"committed");
   assert.equal(queue.pending().length,0);
+  assert.equal(queue.active().length,0);
   assert.deepEqual(queue.submit(structuredClone(request)),committed);
+});
+
+test("approved transfer failure remains recoverable until commit or cancel",()=>{
+  const queue=new PartyStashApprovalQueue();
+  queue.submit(request);
+  queue.approve(command.requestId);
+  const failed=queue.recordApprovedFailure(command.requestId,"owner unavailable");
+  assert.equal(failed.state,"approved");
+  assert.equal(failed.error,"owner unavailable");
+  assert.equal(queue.active().length,1);
+  assert.deepEqual(queue.approve(command.requestId),failed);
+
+  const committed=queue.settle(command.requestId,"committed");
+  assert.equal(committed.state,"committed");
+  assert.equal(committed.error,undefined);
+  assert.equal(queue.active().length,0);
 });
 
 test("Party Stash approval queue permits rejection while pending and cancellation before commit",()=>{
@@ -51,7 +70,10 @@ test("Party Stash approval queue permits rejection while pending and cancellatio
   const approvedCancelQueue=new PartyStashApprovalQueue();
   approvedCancelQueue.submit(request);
   approvedCancelQueue.approve(command.requestId);
-  assert.equal(approvedCancelQueue.settle(command.requestId,"cancelled").state,"cancelled");
+  approvedCancelQueue.recordApprovedFailure(command.requestId,"retry later");
+  const cancelled=approvedCancelQueue.settle(command.requestId,"cancelled");
+  assert.equal(cancelled.state,"cancelled");
+  assert.equal(cancelled.error,undefined);
 });
 
 test("Party Stash approval queue rejects invalid terminal transitions",()=>{
@@ -63,10 +85,12 @@ test("Party Stash approval queue rejects invalid terminal transitions",()=>{
   assert.throws(()=>queue.settle(command.requestId,"cancelled"),/already settled differently|cannot be cancelled/);
 });
 
-test("Session cleanup clears pending and settled approval memory",()=>{
+test("Session cleanup clears pending and approved approval memory",()=>{
   const queue=new PartyStashApprovalQueue();
   queue.submit(request);
+  queue.approve(command.requestId);
   queue.clear();
   assert.deepEqual(queue.pending(),[]);
+  assert.deepEqual(queue.active(),[]);
   assert.equal(queue.lookup(command.requestId),undefined);
 });
