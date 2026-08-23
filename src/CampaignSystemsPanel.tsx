@@ -142,7 +142,7 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
           <label><input type="checkbox" checked={member.active} onChange={(event)=>void updateMember(member,{active:event.target.checked})}/> 활성</label>
           <label><input type="checkbox" checked={member.countsForRations} onChange={(event)=>void updateMember(member,{countsForRations:event.target.checked})}/> 식량 계산</label>
           <label className="compact-field"><span>하루</span><input aria-label={`${member.label} 하루 식량`} type="number" min={0} step={1} value={member.rationUnitsPerDay??1} onChange={(event)=>void updateMember(member,{rationUnitsPerDay:Number(event.target.value)})}/></label>
-          <select aria-label={`${member.label} 보관함 권한`} value={member.stashPermission??"none"} onChange={(event)=>void updateMember(member,{stashPermission:event.target.value as CampaignRosterMember["stashPermission"])}><option value="none">권한 없음</option><option value="view">조회</option><option value="request">요청</option><option value="manage">관리</option></select>
+          <select aria-label={`${member.label} 보관함 권한`} value={member.stashPermission??"none"} onChange={(event)=>void updateMember(member,{stashPermission:event.target.value as CampaignRosterMember["stashPermission"]})}><option value="none">권한 없음</option><option value="view">조회</option><option value="request">요청</option><option value="manage">관리</option></select>
           <button className="danger-action" disabled={busy} onClick={()=>void perform(()=>api.removeCampaignRosterMember(campaign.campaignId,member.rosterMemberId))}>제거</button>
         </article>)}
         {!campaign.roster.length&&<p className="campaign-inline-empty">아직 파티 구성원이 없습니다.</p>}
