@@ -3,166 +3,82 @@
 Status: **CURRENT CANONICAL HANDOFF**  
 Updated: **2026-08-23 Asia/Seoul**  
 Canonical branch: **`work/v1-composite`**  
-Recorded V1-13 product source head: **`45c6dae test(campaign): include exact owner compensation contract`**
+Recorded V1-13 product/test head: **`e299cf8 test(campaign): cover Player Stash Host restart checkpoint`**
 
-이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 인수인계 문서다. 실행 우선순위와 완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 제품 계약은 `docs/design/`, 작업 루트는 `CANONICAL_ROOT.md`, 현재 Rerun 실행 지점은 `.chatgpt-rerun/STATE.md`가 우선한다.
+이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 인수인계 문서다. 실행 우선순위/완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 제품 계약은 `docs/design/`, 작업 루트는 `CANONICAL_ROOT.md`, 현재 실행 지점은 `.chatgpt-rerun/STATE.md`가 우선한다.
 
-## 1. 재개 절차
+## Resume rules
 
 1. `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md`를 먼저 reconcile한다.
 2. GitHub ref가 `work/v1-composite`인지 확인한다.
-3. V1-12 또는 이미 source-connected된 V1-13 owner routing/journal을 validation만 얻기 위해 다시 구현하지 않는다.
-4. 현재 Session UI, Player-owned remote Character durability, Host Campaign ownership을 보존한다.
-5. comprehensive Codex audit는 모든 V1 implementation slice가 source-connected된 뒤 exact SHA에서 수행한다.
+3. 이미 source-connected된 V1-12, owner journal, Host/Player Stash recovery, item projection을 validation만 얻기 위해 다시 구현하지 않는다.
+4. Player-owned remote Character durability와 Host-owned Campaign/Session authority를 유지한다. Host Character library에 remote Character를 복사하지 않는다.
+5. comprehensive Codex audit는 V1 implementation freeze 뒤 exact SHA에서 수행한다.
 
-## 2. V1-12 보존 상태
+## V1-12 preserved
 
-Connected Long Rest는 normal durable-storage path 기준 **source implementation complete / validation pending**이다.
+Connected Long Rest normal durable-storage path는 **source implementation complete / validation pending**이다. Owner invisible prepare, Tauri write barrier, Host durable coordinator, stable Campaign commit, Host/Player restart recovery, exact abort cleanup/ack, fresh remote projection refresh를 보존한다. 실행 증거가 없으므로 release checklist V1-12는 `PARTIAL` 유지다.
 
-보존할 핵심:
+## V1-13 current source boundary
 
-- owner invisible durable Character prepare;
-- Tauri prepared-generation write barrier;
-- Host durable coordinator before Campaign global commit;
-- stable Campaign commit identity;
-- post-global Host/Player restart recovery;
-- pre-global double-restart exact abort recovery;
-- owner-aborted acknowledgement cleanup/idempotency;
-- fresh owner SessionProjection -> Host remote durable refresh;
-- Host는 remote Character를 자기 Character library에 저장하지 않음.
+Release checklist의 `TODO` 표시는 stale하다. 기존 Party Stash/DM Library runtime/UI 위에 다음 ownership/durability 경계가 source-connected됐다.
 
-Executable/release evidence가 없으므로 V1-12 checklist는 `PARTIAL` 유지다.
+### Owner Character durability
 
-## 3. V1-13 기존 기반
+- Host remote inventory apply/undo는 owning Client로 라우팅한다.
+- owner가 Character library를 durable write하고 fresh `CharacterSessionProjectionV1`을 반환한다.
+- request-id scoped delta compensation과 durable owner journal(`applied`, `undoing`, `undone`, `finalized`)이 owner restart/lost ack를 회수한다.
+- unsafe later divergence는 blind overwrite 대신 reject한다.
 
-Release checklist의 `TODO` 표시는 실제 source보다 오래됐다. 기존 source에는 이미 다음이 있다.
+### Party Stash Host restart
 
-- Campaign-owned Party Stash items/wallet/revision/policy;
-- local Character <-> Stash item/GP movement + Campaign persistence compensation;
-- connected Player self-service Stash request -> Host Campaign commit;
-- custom/charged item Stash round-trip;
-- Campaign DM Library custom-item Character/Stash grant, NPC instantiate, image reveal 기반;
-- local deterministic Stash/DM Library tests.
+- Host-originated remote Stash는 owner/Campaign mutation 전에 Tauri Host coordinator를 durable write한다.
+- coordinator identity: requestId + Campaign + Character + owner participant + full transfer command.
+- reconnect recovery uses Campaign `recentRequestIds`:
+  - original request committed, no `.compensate` => owner `applied`;
+  - original absent or `.compensate` committed => owner `undone`.
+- owner applies/undoes idempotently through its durable journal, finalizes, returns fresh Character projection, and only then Host removes coordinator.
+- lost recovery/finalize acknowledgement leaves coordinator for another reconnect.
 
-새 시스템을 복제하지 않는다.
+### Player self-service Stash Host restart
 
-## 4. V1-13 owner durability — 현재 source-connected 경계
+- incoming `campaign-stash-deposit` is checkpointed before the existing Host Campaign handler.
+- compensation messages reuse the original coordinator rather than creating a second transaction.
+- Client sends `campaign-party-stash-owner-complete` only after owner-side transfer/journal finalization.
+- Host deletes coordinator only when Campaign idempotency agrees with Client outcome.
+- this covers both Character->Stash and Stash->Character Host-crash orderings at source level.
 
-### Remote Character ownership
+### Remote item projection
 
-Host의 mounted remote Character inventory 변경은 owner Client로 라우팅한다.
+- Character item membership may legitimately advance `sourceRevision`; Host accepts a forward revision only if all non-inventory Character source/rules identities remain unchanged.
+- canonical/known item identities remain pinned to Host catalog content.
+- unknown Campaign custom items may travel as embedded **inert** item metadata.
+- inert custom item can preserve name/kind/charges/display passive text/provenance, but embedded `grantedActionIds` are discarded and an item without trusted Host mechanics is rejected if equipped, wielded, or attuned.
 
-- owner Client가 자기 Character library에 durable write;
-- fresh `CharacterSessionProjectionV1`을 Host에 반환;
-- Host는 projection/session inventory/accepted manifest revision만 refresh;
-- Host Character library에는 remote Character copy 없음.
+Focused source tests for owner restart, Host restart, self-service checkpointing, exact compensation, inventory-only source refresh, and inert custom item reconstruction are imported through the existing `npm run test:campaign-rest` restart module.
 
-### Request-scoped compensation
+## Validation status
 
-- `undoDmInventoryAdjustment(requestId)`;
-- request별 before/after;
-- whole snapshot restore가 아닌 exact item/GP delta compensation;
-- later unrelated mutation은 가능한 한 보존;
-- unsafe divergence는 overwrite 대신 reject.
-
-### Durable owner inventory journal
-
-Tauri Character-library 디렉터리에 append-only journal이 추가됐다.
-
-- base `connected-owner-inventory.<hex(requestId)>.json` — request/actor/command/before;
-- `.applied` — exact after state;
-- `.undoing` — exact beforeUndo + afterUndo;
-- `.undone`;
-- `.finalized` — `applied` 또는 `undone`.
-
-Source:
-- `src-tauri/src/connected_owner_inventory.rs`
-- `src/app/connectedOwnerInventoryJournalStore.ts`
-- `src/app/connectedOwnerInventoryJournalAdapter.ts`
-
-Safety behavior:
-
-1. journal base marker를 Character mutation 전에 기록한다.
-2. Character apply 후 ack/`.applied` 전에 owner가 죽으면, 재시작 시 before/current + exact command delta로 이미 apply됐는지 판별한다.
-3. 이미 apply됐으면 다시 적용하지 않고 `.applied`만 복구한다.
-4. undo 전에 `.undoing`에 beforeUndo/afterUndo를 기록한다.
-5. undo commit 후 `.undone` 전에 죽어도 재시작 시 current==afterUndo를 확인해 double undo 없이 `.undone`만 기록한다.
-6. 이전 process의 in-memory undo record가 없어도 journal의 exact target으로 durable compensation 가능하다.
-7. duplicate undo/finalize는 idempotent하다.
-
-### Compound finalization
-
-Host/owner finalize request/result가 추가됐다.
-
-- direct remote DM inventory mutation은 owner ack 뒤 finalize;
-- Party Stash/DM Library Character action은 Campaign-side 작업이 끝날 때까지 finalize를 defer;
-- 성공 => owner journal `applied` finalize;
-- compensation 성공 => `undone` finalize;
-- DM Library Character grant 뒤 Campaign recents write가 실패하면 exact owner compensation을 시도한다.
-
-### Exact Host Stash compensation
-
-`connectedOwnerInventoryExactCompensationAdapter.ts`가 connected Host `transferPartyStash(command)` 실행 동안 정확한 `command.requestId`를 bind한다.
-
-기존 Campaign runtime이 compatibility `undoLastDmInventoryAdjustment()`를 호출해도 connected Host에서는 `undoDmInventoryAdjustment(activeRequestId)`로 강제된다. 다른 request의 global last-undo를 잘못 취소하지 않는다.
-
-## 5. Focused source contracts
-
-새 source contracts:
-
-- `connectedOwnerInventoryJournal.test.ts` — durable phase/idempotency;
-- `connectedOwnerInventoryJournalStructure.test.ts` — production/Tauri wiring;
-- `connectedOwnerInventoryRestart.test.ts` — apply-before-ack restart, restart undo, undo-before-sidecar restart;
-- `connectedOwnerInventoryExactCompensationStructure.test.ts` — exact Host Stash request binding.
-
-이 테스트들은 `connectedLongRestRestartDurabilityStructure.test.ts`를 통해 기존 `npm run test:campaign-rest` focused suite에 source-wired됐다.
-
-Exact product/test head: `45c6dae19f2f6721e0fe012079cb6436f80b0938`.
-
-## 6. Critical remaining V1-13 gap — Host process restart
-
-**Connected Party Stash cross-store atomicity를 완료했다고 표시하지 않는다.**
-
-Owner process restart/lost owner ack는 journal로 source-covered됐지만, 다음 Host crash window는 남아 있다.
-
-1. owner journal/Character apply가 durable 성공;
-2. Host Party Stash Campaign request가 아직 commit되지 않았거나, commit 여부를 Host가 durable하게 기억하지 못함;
-3. Host process가 undo/finalize 전에 종료;
-4. restarted Host에는 해당 owner request를 finalize할지 undo할지 판단할 coordinator가 없음.
-
-Campaign request가 commit되지 않았다면 Character-only durable success가 남을 수 있다.
-
-다음 구현은 durable Host coordinator 또는 owner-journal reconnect synchronization으로 이 상태를 회수해야 한다. Campaign idempotency(`recentRequestIds`)를 authoritative evidence로 사용한다.
-
-- Campaign request 있음 => owner `applied` finalize;
-- Campaign request 없음 => owner undo -> `undone` finalize.
-
-Duplicate recovery/finalize delivery와 finalize-ack loss도 idempotent해야 한다.
-
-## 7. Validation status
-
-**NO GREEN CLAIM.**
-
-Exact product head `45c6dae19f2f6721e0fe012079cb6436f80b0938` 기준:
+**NO GREEN CLAIM.** Exact product/test head `e299cf876b97a6d056a10bf702ddd67888c16570` was verified as current branch head before coordination docs and has:
 
 - combined commit statuses: none;
 - commit-associated workflow runs: none.
 
-관찰되지 않은 실행 증거:
+No observed execution exists for the new tests, `npm run test:campaign-rest`, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library recovery.
 
-- `npm run test:campaign-rest`;
-- `tsc --noEmit` / `npm run build`;
-- Rust/Tauri build/tests;
-- Windows two-instance Stash/DM Library restart/reconnect acceptance.
+## Remaining V1-13 work
 
-Source-authored tests는 실행 증거가 아니다.
+Do not mark V1-13 complete yet.
 
-## 8. Next Exact Action
+1. Audit Host-originated Campaign DM Library -> remote Character grant for Host-process crash ordering. Normal-process compensation/finalize exists, but decide whether Campaign recent-entry update is part of the required atomic transaction and add durable recovery if necessary.
+2. Audit DM Library privacy/isolation: DM-only definitions/images before reveal, Campaign namespace isolation, delete/provenance behavior.
+3. Audit Session-visible Stash/DM Library quick actions and shared/request/DM-managed policy denial UX against current acceptance.
+4. Review malformed connected Stash request checkpoint validation so invalid remote input cannot strand a coordinator.
 
-1. Rerun mandatory files와 actual `work/v1-composite` HEAD를 reconcile한다.
-2. exact-head 실행 증거가 없으면 V1-12와 owner journal/restart slice를 반복하지 않는다.
-3. connected Party Stash Host process restart recovery를 구현한다.
-4. Campaign idempotency로 `finalize applied` 대 `undo + finalize undone`을 결정한다.
-5. Host restart/reconnect, duplicate recovery, finalize-ack loss deterministic tests를 추가한다.
-6. 그 뒤 남은 V1-13 DM Library privacy/isolation/user-reachable UI audit를 진행한다.
-7. comprehensive Codex audit는 implementation freeze 뒤 수행한다.
+## Next Exact Action
+
+1. Reconcile Rerun mandatory files and actual `work/v1-composite` HEAD.
+2. If no executable evidence appeared, preserve all source-connected slices above.
+3. Audit `grantCampaignDmLibraryItem` and its connected wrapper for Host-crash atomicity; implement only the smallest real durable gap.
+4. Then finish V1-13 DM Library privacy/isolation/delete/provenance/user-visible UI audit with deterministic tests.
+5. Keep later V1 slices behind real V1-13 gaps and keep comprehensive Codex audit deferred until implementation freeze.
