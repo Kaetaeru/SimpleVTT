@@ -7,122 +7,157 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T09:58:00+09:00`
+- checkpointed_at: `2026-08-23T10:18:00+09:00`
 
 ## Preflight reconciliation
 
 This dispatch read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order. All records reconciled to run `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `1`, task `phase14-production-play-session-ux`, status `continue`.
 
-`CANONICAL_ROOT.md` and the current V1 handoff reconfirmed `work/v1-composite`. The starting coordination head was `4b6f737a359d9dcbe6f777173a2b3ec6b59466a8`. Exact prior product head `05eb679` still had no combined statuses or workflow runs, so V1-12 and the already source-connected normal V1-13 owner routing were preserved rather than repeated.
+`CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, the release checklist, `docs/design/campaign-systems.md`, and `docs/design/ui-ux/ITEM-CURRENCY-TRANSFER-FOUNDATION.md` were rechecked. Starting coordination head was `c876a3451cfd075213e867b574a5146ef06b127f`; prior product head `45c6dae...` had no combined status and no workflow runs. Existing V1-12 and owner-journal work was preserved rather than repeated.
 
 ## Preserved foundation
 
 Keep intact:
 
 - V1-12 connected Long Rest source-complete normal durable-storage path / validation pending;
-- Player-owned remote Character durable storage and Host SessionProjection refresh;
-- Campaign-owned Party Stash persistence and current local/connected runtime/UI;
-- request-scoped/delta-safe inventory compensation from the prior V1-13 slice;
-- Host -> owner Client `campaign-owner-inventory` apply/undo and fresh projection acknowledgement;
-- no Host durable copy of remote Player Character;
+- Player-owned remote Character durable storage; Host never copies a remote Character into its Character library;
+- Campaign-owned Party Stash and existing local compensation/idempotency;
+- connected owner apply/undo routing with fresh Character projection acknowledgement;
+- durable owner inventory journal and restart-safe compensation;
+- exact request-scoped Host Stash compensation;
 - comprehensive Codex audit remains deferred until implementation freeze.
 
 ## Completed in this dispatch
 
-### 1. Durable owner inventory journal
+### 1. Durable Host Party Stash coordinator
 
-- `2363b542f55010031b949462924ac4e021a7dddf` — Rust append-only owner journal in the Character library directory.
-- `d88e1cddc99356e4a8f52070167abfd2e22916c0` — Memory/Tauri journal store abstraction.
-- `20b6f54a21752825d9d58355fbbead48c0fafab5` — connected owner journal runtime/restart reconciliation.
-- `cde391eb9ae52b6e56e71923d06eb14cebbd2cb6` — Tauri journal commands registered under the existing Character/Campaign persistence mutex.
-- `727cddcd686a3358c8fc5d4e31358cd6b0873893` — production installs owner journal after connected Campaign systems.
+Commits:
 
-Durable files:
+- `a6d4df43590adee29bfdf5ee84feba46109d457e` — deterministic Host-recovery contract authored first.
+- `d10d2801fca9389edeed86559b83909ca0290ddc` — Memory/Tauri Host coordinator store.
+- `2b47ba2dc467eeeb55785094894aaa1534dcc4bf` — Rust create-once Host coordinator persistence.
+- `4d5d1ea272bc3a51c122ba478470588d27150939` — Tauri commands registered under the existing Character/Campaign persistence mutex.
 
-- base `connected-owner-inventory.<hex(requestId)>.json` with request/actor/command/before state;
-- immutable `.applied` with exact after state;
-- immutable `.undoing` with exact beforeUndo + afterUndo;
-- immutable `.undone`;
-- immutable `.finalized` with final outcome `applied` or `undone`.
+Coordinator record identity:
 
-The owner writes the base marker before its normal durable Character mutation. If process death occurs after Character commit but before `.applied`, replay compares durable current inventory with the before state and exact command delta, then records applied without reapplying.
+- `requestId`;
+- `campaignId`;
+- `actorId`;
+- exact `ownerParticipantId`;
+- full immutable `PartyStashTransferCommand`.
 
-Undo writes the exact before/after compensation target to `.undoing` before changing Character durability. On restart:
+Tauri record path is request-id keyed under `connected-party-stash-host`. Repeated identical writes and deletes are idempotent; a different payload under the same requestId is rejected.
 
-- current == afterUndo => compensation already committed; only mark undone;
-- current == beforeUndo => perform the stored compensation target, then mark undone;
-- divergent current state => reject rather than blind overwrite.
+### 2. Host-originated remote Stash restart/reconnect recovery
 
-### 2. Compound finalization
+Commits:
 
-The journal adapter wraps the existing normal owner wire rather than replacing ownership semantics.
+- `5fd5b7f04225512091a1038c23fdea7305969316` — recovery runtime/wire.
+- `27325d3e182f727e5b76c7a2376ca954741de7fb` — Host remote Stash writes coordinator before entering transfer runtime.
+- `9bbeb52da5d49539172891eeeb1e579659433557` / `2fc679ed3ad1a2d73ca1b9f9a1e525716ab93035` — structure contracts and focused-suite wiring.
 
-- Host direct remote inventory changes finalize immediately after owner acknowledgement.
-- Party Stash and DM Library Character operations defer finalize while the Campaign-side operation is unresolved.
-- Stash success finalizes owner journal `applied`.
-- Stash compensation finalizes `undone`.
-- DM Library Character grant compensates the remote owner request if the later Campaign recent-entry mutation rejects, then finalizes `undone`.
-- finalize request/result is explicit and duplicate finalize is journal-idempotent.
+Normal Host-originated remote Stash ordering is now:
 
-### 3. Exact Host Stash compensation identity
+1. identify mounted remote Character and accepted owner participant;
+2. durably write Host coordinator;
+3. run existing owner/Campaign transfer path;
+4. owner journal settles/finalizes;
+5. only after the outer transfer returns successfully may Host delete the coordinator.
 
-- `4cdeb0c6696e4cf939c52094f38afdba0462344f` — connected Host Stash binds the active `command.requestId` around the existing Campaign runtime.
-- `54e8c7e33f97671afc29075b927f6270571ec286` — exact compensation adapter installed after the journal adapter.
+If Host dies before step 5, compatible reconnect triggers recovery after the base handshake has already registered `peerParticipants` and peer manifest.
 
-When the underlying Campaign runtime invokes its compatibility `undoLastDmInventoryAdjustment()`, connected Host Stash now routes it to `undoDmInventoryAdjustment(activeRequestId)`. This removes the normal connected Host dependency on whichever unrelated inventory change happened to be globally “last”. Concurrent nested Stash compensation with another requestId is explicitly rejected.
+Recovery uses Campaign idempotency as the durable decision:
 
-### 4. Deterministic source contracts
+- `recentRequestIds` contains original request and not `<request>.compensate` => desired owner outcome `applied`;
+- original request absent => desired owner outcome `undone`;
+- original and `<request>.compensate` both present => desired owner outcome `undone`.
 
-- `46281f7d4a37faff2e64233b2d4c9bb0641fb1b0` — journal phase/idempotency tests.
-- `3e72fcf43d1f3ea7e3fd4da065b1d00e895c3544` — production/Tauri structure coverage.
-- `99bb17663962d741fa73502c5e6b0074c70cd3b5` — Memory Character store restart scenarios:
-  - apply committed before lost ack / no double apply;
-  - owner restart then undo with no prior in-memory undo record;
-  - undo committed before `.undone` sidecar / no double undo.
-- `73a7302377a215b70a8ed135e3c1fe5c9c29d556` — owner journal tests wired through existing focused restart suite.
-- `819647214a34c427725848b18331a12897151798` — exact Host compensation structure contract.
-- `45c6dae19f2f6721e0fe012079cb6436f80b0938` — exact compensation contract wired into the focused suite.
+Host sends the exact reconstructed owner inventory command. Owner journal apply/undo is restart-idempotent, owner finalizes the desired outcome, returns a fresh Character projection, Host refreshes mounted durable Character facts/session inventory/manifest revision, then Host deletes the coordinator. Lost recovery result leaves the coordinator for another reconnect.
 
-Exact product-code/test head before Rerun coordination docs: `45c6dae19f2f6721e0fe012079cb6436f80b0938`.
+### 3. Player self-service Stash Host-crash window
 
-## Current V1-13 assessment
+Commit `da50921bde128ed28ad7183fd12cf9fe1fd66427` extends the same coordinator to incoming `campaign-stash-deposit` requests.
 
-V1-13 remains **IMPLEMENTATION IN PROGRESS / VALIDATION PENDING**.
+- Host checkpoints a valid owner/participant request before delegating to the existing Campaign handler.
+- `.compensate` requests do not create a second coordinator; the original coordinator remains the transaction identity.
+- Client sends `campaign-party-stash-owner-complete` only after the client transfer returns and its owner journal has finalized.
+- Host deletes the coordinator only when current Campaign idempotency agrees with the Client-reported `applied`/`undone` outcome.
+- lost owner-complete acknowledgement leaves the coordinator for reconnect recovery.
 
-Owner process restart and lost owner acknowledgement are now source-covered by durable journal state, but full distributed Stash atomicity is **not** source-complete because Host restart recovery is still missing.
+This covers both transfer directions at the source level:
 
-### Remaining Host restart window
+- Character -> Stash: owner mutation happens first; Host crash before Campaign commit recovers to owner undo, after commit recovers to applied.
+- Stash -> Character: Campaign commit happens first; Host crash before Client apply recovers by applying the exact owner command; later compensation is recognized through `<request>.compensate`.
 
-Failure case still open:
+`e299cf876b97a6d056a10bf702ddd67888c16570` updates source-structure coverage for this self-service ordering.
 
-1. owner durable journal/Character apply succeeds;
-2. Host has not yet durably committed the matching Party Stash request, or has committed it but has not finalized owner state;
-3. Host process dies;
-4. restarted Host has no durable coordinator telling it which owner request must be finalized versus undone.
+### 4. Inventory-only sourceRevision refresh
 
-This can leave Character-only durable success if Campaign request did not commit. Owner journal contains enough durable truth to reconcile, but there is not yet reconnect synchronization / Host coordinator logic to consume it.
+Source audit found that adding or fully removing an item changes Character `source.itemReferences`, which can advance `sourceRevision`. The previous Host refresh rejected any sourceRevision change, so item transfer could fail even though GP transfer worked.
 
-A finalize request/ack loss after both sides committed is retry-idempotent. Current owner journal does not act as a global Character write lock, so a stale finalized-needed record is cleanup debt rather than an orphan write barrier. If same inventory state diverges before a needed compensation, the delta-safe recovery rejects instead of corrupting later state; therefore Host reconciliation should occur promptly.
+Commits:
+
+- `5108064af99000d06125fe033d0b4696d8235b7e` — deterministic item-only source refresh contract.
+- `0ba836dce893cd73c012b59e75cdfcb0d5fdfbd1` — Host projection refresh now permits a forward sourceRevision only when non-inventory source/rules/content identity remains unchanged; backward revision and non-inventory drift reject.
+- `61d17e19711f9b883a2846a1fad7a7a0abcc3784` — normal connected owner result precheck changed from equality to backward-only before the stricter mount-layer comparison.
+- `2e5477dc6d8f620ff957d1cd2265e087fdd7807f` — Host-recovery precheck aligned to the same rule.
+- `c76b34c86c319098bd92317a7a492219c72dacdf` — focused suite includes the contract.
+
+This permits canonical item membership changes without allowing an inventory acknowledgement to mutate class/species/background/rules authority.
+
+### 5. Campaign custom item SessionProjection
+
+Source audit also found that a Campaign DM Library custom item may not exist in either side's installed rule catalog. Requiring a qualified content identity for every inventory item prevented such an item from being returned in a connected Character projection.
+
+Commits:
+
+- `eec1237744c049adcb2f4217464fe5dbaa7bd803` — inert custom-item projection contract.
+- `1fc60332a51864c7323eb63d2aaec3cb14fafb0d` — projection identities remain mandatory for executable class/spell/build content and for inventory definitions that Host actually knows, but an unknown inventory definition can travel as embedded item source metadata.
+- `e71edd1430f71749cc71d155bf75482cc28635a0` — reconstruction preserves custom item display metadata/charges/provenance but discards `grantedActionIds`; custom item with no trusted Host mechanics is rejected if equipped, wielded, or attuned.
+- `9e5bd437c102518969c4d85c795f96293f8af64a` — custom item contract wired into focused suite.
+
+This is deliberately an **inert item** boundary. Embedded Client metadata does not become executable mechanics.
+
+## Exact product/test head
+
+`e299cf876b97a6d056a10bf702ddd67888c16570`
+
+The branch was verified identical to that SHA before coordination writes.
 
 ## Validation status
 
-**NO GREEN CLAIM.** Exact product head `45c6dae19f2f6721e0fe012079cb6436f80b0938` returned:
+**NO GREEN CLAIM.** Exact product/test head `e299cf876b97a6d056a10bf702ddd67888c16570` returned:
 
 - combined commit statuses: none;
 - commit-associated workflow runs: none.
 
-No observed execution exists for the new owner journal/restart contracts, `npm run test:campaign-rest`, `tsc --noEmit`, `npm run build`, Rust/Tauri build, or Windows two-instance Stash/DM Library acceptance.
+No observed execution exists for:
+
+- the new Host-recovery/self-service tests;
+- item-only source refresh/custom item tests;
+- `npm run test:campaign-rest`;
+- `tsc --noEmit` / `npm run build`;
+- Rust/Tauri build;
+- Windows two-instance Party Stash/DM Library acceptance.
 
 Source-authored tests are not execution evidence.
+
+## Current V1-13 assessment
+
+V1-13 remains **IMPLEMENTATION IN PROGRESS / VALIDATION PENDING**. Connected Party Stash owner/Host process restart and the canonical/custom item projection boundaries are now source-connected, but the remaining DM Library and acceptance audit has not been closed.
+
+Important next questions:
+
+- Host-originated Campaign DM Library -> remote Character grant currently has normal-process owner compensation/finalize behavior, but its Host-process crash ordering must be audited separately if Campaign `recentEntryIds` mutation is part of the atomic grant contract.
+- DM-only definitions/images must remain private before explicit reveal/materialization.
+- Campaign isolation/delete/provenance and Session-visible policy/quick-action UX still need an explicit current-source audit.
+- malformed connected Stash payload checkpoint validation should be hardened/reviewed so invalid remote input cannot strand a useless coordinator record.
 
 ## Next Exact Action
 
 1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` HEAD.
-2. Check exact-head executable evidence; if none, do not repeat V1-12 or the owner journal/restart implementation.
-3. Close the connected Party Stash **Host process restart** window using durable Host coordinator state or owner-journal reconnect synchronization.
-4. On recovery, use Campaign idempotency to distinguish:
-   - matching Campaign request committed => finalize owner `applied`;
-   - matching Campaign request absent => owner undo + finalize `undone`.
-5. Add deterministic Host-restart/reconnect tests, including duplicate recovery/finalize delivery and finalize-ack loss.
-6. Then continue remaining V1-13 DM Library privacy/isolation/user-reachable UI audit.
-7. Keep comprehensive Codex audit deferred until implementation freeze.
+2. Check exact-head executable evidence; if none, preserve V1-12 and the source-connected owner/Host Stash recovery instead of repeating it.
+3. Audit `grantCampaignDmLibraryItem` + connected owner journal wrapper for Host-process crash ordering and implement the smallest durable recovery change only if the Campaign-side update is transactionally required.
+4. Audit DM Library privacy/isolation/delete/provenance and Session-visible quick actions/policy denial states against V1-13 acceptance; add deterministic tests for concrete gaps.
+5. Only after the real V1-13 gaps are source-connected should later V1 implementation slices advance.
+6. Keep comprehensive Codex audit deferred until implementation freeze; final evidence still requires exact-head regression and Windows two-instance acceptance.
