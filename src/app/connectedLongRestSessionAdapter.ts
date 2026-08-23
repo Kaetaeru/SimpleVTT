@@ -18,6 +18,7 @@ import {
   abortConnectedLongRestOwner,
   authorizeConnectedLongRestHostDecision,
   beginConnectedLongRestHostOffer,
+  completeConnectedLongRestHostOwnerAbort,
   completeConnectedLongRestHostOwnerMaterialization,
   connectedLongRestClientRecoveryMessages,
   connectedLongRestHostRecoveryMessages,
@@ -149,6 +150,19 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
     await publishConnectedSnapshot(adapter);
     return;
   }
+  if(wire.type==="long-rest-owner-aborted"){
+    try{
+      await completeConnectedLongRestHostOwnerAbort(adapter,message.peer,wire.aborted);
+      await publishConnectedSnapshot(adapter);
+    }catch(error){
+      await sendConnectedWireTo(message.peer,{
+        type:"error",
+        code:"connected-long-rest-owner-abort-ack",
+        message:error instanceof Error?error.message:String(error),
+      });
+    }
+    return;
+  }
   if(wire.type==="long-rest-owner-materialized"){
     try{
       await completeConnectedLongRestHostOwnerMaterialization(adapter,message.peer,wire.materialized,wire.projection);
@@ -207,6 +221,17 @@ async function handleClientLongRest(adapter:MockAdapter,wire:ConnectedWireMessag
       const handled=await abortConnectedLongRestOwner(adapter,wire.transactionId,wire.reason);
       if(!handled&&wire.ownerParticipantId&&wire.character&&wire.preparationId){
         await recoverRestartedConnectedLongRestOwnerAbort(adapter,wire);
+      }
+      if(wire.ownerParticipantId&&wire.character&&wire.preparationId){
+        await broadcastConnectedWire({
+          type:"long-rest-owner-aborted",
+          aborted:{
+            transactionId:wire.transactionId,
+            ownerParticipantId:wire.ownerParticipantId,
+            character:structuredClone(wire.character),
+            preparationId:wire.preparationId,
+          },
+        });
       }
       await publishConnectedSnapshot(adapter);
     }catch(error){
