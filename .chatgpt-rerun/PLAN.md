@@ -10,76 +10,73 @@
 - task_id: `phase14-production-play-session-ux`
 - dispatch: `continue`
 
-This is the same V1-completion run. Preserve current Session UI, Character ownership, connected authority/replay, Campaign persistence, and all source-connected Long Rest work. Do not route to `main`, redo implementation solely for validation, or begin the comprehensive Codex audit before the V1 implementation freeze.
+Preserve current V1 Session UI, Player-owned remote Character durability, Campaign authority, V1-12 connected Long Rest source boundary, and the V1-13 owner-routing work. Do not route to `main`, redo source-connected work only for validation, or begin the comprehensive Codex audit before implementation freeze.
 
-## V1-12 contract result
+## V1-12
 
-Connected Long Rest normal durable-storage behavior remains source-complete / validation pending. Do not repeat it. Its source boundary includes owner invisible prepare, Host durable coordinator, stable Campaign commit identity, Host/Player restart recovery, pre-global abort cleanup, owner acknowledgement cleanup, fresh SessionProjection refresh, and the Tauri prepared-generation write barrier.
+Connected Long Rest remains source implementation complete for the normal durable-storage path / validation pending. No exact-head executable evidence has appeared; do not rebuild it.
 
-## V1-13 source audit result
+## V1-13 completed source slice
 
-The V1-13 checklist label is stale relative to existing code. Current canonical source already had:
+The release checklist's V1-13 `TODO` label remains stale relative to current source. Existing Stash/DM Library runtime/UI foundations were preserved.
 
-- Campaign-owned Party Stash item/wallet state and Campaign persistence;
-- local Character <-> Stash transfer with compensating rollback;
-- connected Player self-service Stash requests sequenced through Host Campaign authority;
-- Campaign DM Library custom-item grants to Character or Stash;
-- local deterministic Stash/DM Library tests.
+Product source is now connected through exact head `45c6dae19f2f6721e0fe012079cb6436f80b0938` for the next owner-durability layer:
 
-The first real connected gap was Host-originated mutation of a mounted remote Player Character. `sessionInventoryRuntimeAdapter.adjustDmInventory()` durably wrote only the local active Character; non-active Characters were Host/session shadow state. That meant Host-side Party Stash, currency, and DM Library Character actions could bypass the Player-owned durable Character library.
+- request-scoped inventory compensation from the previous slice is preserved;
+- Host remote Character mutations continue to execute on the owning Client and return a fresh `CharacterSessionProjectionV1`;
+- `connected-owner-inventory.<request>.json` durable owner journal added in Tauri with immutable `applied`, `undoing`, `undone`, and `finalized` sidecars;
+- journal records exact request/actor/command/before state before owner mutation;
+- apply replay can reconcile a durable Character commit that happened before the applied sidecar/ack and does not apply twice;
+- undo writes exact `beforeUndo` + `afterUndo` to the durable journal before compensation, so restart can distinguish pre-undo and post-undo Character state;
+- restarted owner can compensate without the prior process's in-memory `undoByRequest` record;
+- duplicate undo/finalize is idempotent at the journal layer;
+- Host defers owner finalization while Party Stash or DM Library compound work is unresolved;
+- normal Host Stash success finalizes `applied`; successful compensation finalizes `undone`;
+- DM Library Character grant now compensates owner mutation if the later Campaign recent-entry update rejects;
+- connected Host Character->Stash failure no longer depends on a global last-undo choice: the active Stash `command.requestId` is explicitly bound to `undoDmInventoryAdjustment(requestId)`;
+- production `main.tsx` installs journal routing after connected Campaign systems and exact Stash compensation after the journal adapter;
+- Tauri commands are registered for read/prepare/apply/undo/finalize journal phases.
 
-Source connected through exact product-code head `05eb6790404ed617b8b15702b0372bd6a4bef8ee` now adds:
+Focused tests were authored and wired into the existing `test:campaign-rest` entry through the restart durability test module:
 
-- request-scoped inventory undo/compensation rather than relying only on a global last-undo slot;
-- delta-based compensation that preserves later unrelated item/GP changes when safe and rejects stale/unsafe compensation;
-- Host -> owner Client `campaign-owner-inventory` apply/undo request/result routing;
-- owner Client durable active-Character mutation through the existing Character library writer;
-- fresh owner `CharacterSessionProjectionV1` acknowledgement after apply/undo;
-- Host reconstruction + `refreshReconstructedCharacterSessionProjection()` so durable Character facts refresh without copying ownership into Host Character storage;
-- Host session inventory projection refresh and accepted peer-manifest revision refresh;
-- connected Player Stash rollback changed to exact request-id undo;
-- wire validation coverage plus source-structure coverage for the remote-owner path.
+- durable journal phase/idempotency contract;
+- production/Tauri structure contract;
+- apply-committed-before-ack restart replay;
+- owner restart then exact compensation with no in-memory undo record;
+- undo committed before `.undone` sidecar recovery;
+- exact Host Stash compensation binding.
 
-Relevant commits in this slice:
+## Important remaining V1-13 correctness gap
 
-- `c282b8a08e2245d3da8ab8746f7d2ef10f3d59bb` — correct request-scoped compensation test semantics;
-- `9f123cdde3056e253a8584e76ffff36e54624e7c` — request-scoped delta compensation/runtime projection helper;
-- `706fc1a8a55e2d9b9e6c58a09a3849fa882161a0` — Host-to-owner durable inventory routing and fresh projection refresh;
-- `9bf0425910f03f37c084c3e283a2d3bca9c7c077` — aligned connected structure contract;
-- `05eb6790404ed617b8b15702b0372bd6a4bef8ee` — owner inventory wire validation tests.
+Do **not** claim cross-store atomicity or V1-13 completion yet.
 
-## Remaining V1-13 durability gap
+The owner side now retains enough durable evidence to recover its own process restart, but the Host still lacks durable reconciliation if the **Host process** dies in this window:
 
-Do **not** call V1-13 connected transfer release-complete yet.
+1. owner journal is prepared/applied and owner Character generation is durable;
+2. Host has not yet committed the Party Stash Campaign mutation, or cannot remember whether it did;
+3. Host process restarts before issuing undo/finalize.
 
-The current request-id set and exact undo journal in `sessionInventoryRuntimeAdapter` are process memory. If the owner Client durably applies an inventory mutation and then restarts before its acknowledgement reaches Host, a later Host compensation request cannot reconstruct the exact pre-mutation state from the in-memory undo record. A blind inverse is unsafe because Host cannot know whether the original owner write committed before the lost acknowledgement.
+Without a Host recovery coordinator or reconnect reconciliation, this can leave a Character-only durable result. The owner journal is durable truth, but a restarted Host currently does not discover and reconcile it.
 
-This is the next highest-dependency correctness gap. It needs a durable owner-side inventory transaction journal/sidecar analogous in safety properties to the connected Long Rest owner preparation flow:
+A finalize request/ack loss after both durable sides committed is retry-idempotent and does not lock normal Character persistence in the current implementation, but can leave stale journal data until the operation is retried. This is cleanup/recovery debt, not green release evidence.
 
-1. persist exact request identity + enough before/after/inverse information before/with owner Character commit;
-2. make apply replay idempotent across owner process restart;
-3. make abort/undo after lost acknowledgement restart-safe without guessing whether apply happened;
-4. close/delete the durable journal only when the Host-side operation no longer needs compensation;
-5. preserve Character ownership on Player and never copy remote Character durable storage to Host;
-6. add deterministic restart/replay tests before claiming cross-store atomicity.
-
-Also source-review the Host `character-to-stash` compensation path: the underlying Campaign runtime still calls `undoLastDmInventoryAdjustment()` on Campaign failure. The connected wrapper currently routes the last remote mutation correctly in ordinary serialized UI use, but exact request-scoped compensation should replace this dependency before concurrency/restart acceptance is considered closed.
+The journal intentionally uses delta-safe compensation rather than blind inverse. If the same inventory asset diverges before compensation, it rejects rather than overwriting later state; Host recovery must therefore converge promptly.
 
 ## Validation status
 
-**NO GREEN CLAIM.** Exact product head `05eb679` returned:
+**NO GREEN CLAIM.** Exact product head `45c6dae19f2f6721e0fe012079cb6436f80b0938` returned:
 
 - combined commit statuses: none;
 - commit-associated workflow runs: none.
 
-No observed execution exists for the newly added V1-13 tests, `tsc --noEmit`, `npm run build`, Rust, Tauri build, or Windows two-instance acceptance. V1-12 remains `PARTIAL` for release evidence and V1-13 remains implementation-in-progress.
+No observed execution exists for the newly authored owner-journal tests, `npm run test:campaign-rest`, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library recovery.
 
 ## Next Exact Action
 
 1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` HEAD.
-2. If no exact-head executable evidence has appeared, do not redo V1-12 or the source-connected V1-13 owner routing.
-3. Design and implement a durable owner inventory transaction journal/sidecar for `campaign-owner-inventory` apply/undo/finalize so replay and compensation survive owner restart.
-4. Replace the remaining Host Stash compensation dependency on global `undoLastDmInventoryAdjustment()` with exact request identity, either in the Campaign runtime boundary or a transaction-specific connected coordinator.
-5. Add deterministic tests for: apply replay after owner restart; lost apply acknowledgement then restart-safe undo; duplicate undo/finalize; Character/Party Stash no-partial-success behavior; fresh Host projection after recovered completion.
-6. After that boundary is source-connected, continue the remaining V1-13 DM Library/privacy/UI/isolation acceptance audit instead of starting V1-14 early.
-7. Keep comprehensive Codex audit deferred until implementation freeze; final evidence still requires exact-head regression and Windows two-instance acceptance.
+2. If exact-head executable evidence is still absent, preserve V1-12 and the owner-journal source slice rather than repeating them.
+3. Close the Host-restart window for connected Party Stash: add durable Host transaction/reconciliation state or an owner-journal reconnect sync that can determine from Campaign idempotency whether an applied owner mutation must be finalized or undone.
+4. Cover both Host restart cases deterministically: owner applied + Campaign request committed => finalize; owner applied + Campaign request absent => undo then finalize.
+5. Cover duplicate reconnect/recovery messages and finalize-ack loss without double apply/undo.
+6. After Host/owner cross-process recovery is source-connected, finish remaining V1-13 DM Library privacy/isolation/user-reachable UI audit.
+7. Keep comprehensive Codex audit deferred until implementation freeze and retain Windows two-instance acceptance as release evidence.
