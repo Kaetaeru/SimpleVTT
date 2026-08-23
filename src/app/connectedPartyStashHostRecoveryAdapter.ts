@@ -98,7 +98,7 @@ async function refreshRecoveredHostProjection(host:MockAdapter,peer:string,actor
   const state=connectedStateFor(host);const manifest=state.peerManifests.get(peer);const mounted=projectedCharacterById(host,actorId);
   if(state.mode!=="host"||!state.sessionId||!manifest?.character||!mounted)throw new Error("Party Stash recovery owner projection is unavailable");
   if(mounted.peerId!==peer||manifest.character.characterId!==actorId||projection.characterId!==actorId)throw new Error("Party Stash recovery owner identity changed");
-  if(projection.sourceRevision!==manifest.character.sourceRevision)throw new Error("Party Stash recovery source revision changed");
+  if(projection.sourceRevision<manifest.character.sourceRevision)throw new Error("Party Stash recovery source revision moved backwards");
   if(projection.runtimeRevision<manifest.character.runtimeRevision)throw new Error("Party Stash recovery runtime revision moved backwards");
   const snapshot=await host.getSnapshot();const reconstructed=reconstructCharacterSessionProjectionV1(projection,snapshot.catalog);if(reconstructed.status==="rejected")throw new Error(reconstructed.error);
   const refreshed=refreshReconstructedCharacterSessionProjection(host,peer,reconstructed);if(refreshed.status==="rejected")throw new Error(refreshed.error);
