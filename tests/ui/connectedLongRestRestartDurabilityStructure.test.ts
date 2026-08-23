@@ -5,6 +5,8 @@ import "./connectedOwnerInventoryJournal.test";
 import "./connectedOwnerInventoryJournalStructure.test";
 import "./connectedOwnerInventoryRestart.test";
 import "./connectedOwnerInventoryExactCompensationStructure.test";
+import "./connectedPartyStashHostRecovery.test";
+import "./connectedPartyStashHostRecoveryStructure.test";
 
 const runtime=readFileSync(new URL("../../src/app/connectedLongRestRuntimePort.ts",import.meta.url),"utf8");
 const session=readFileSync(new URL("../../src/app/connectedLongRestSessionAdapter.ts",import.meta.url),"utf8");
