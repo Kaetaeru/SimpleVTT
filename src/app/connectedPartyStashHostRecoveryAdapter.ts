@@ -23,6 +23,8 @@ import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSess
 type RecoveryOutcome=ConnectedOwnerInventoryFinalOutcome;
 interface PartyStashOwnerRecoveryRequest {type:"campaign-party-stash-owner-recovery";sessionId:string;requestId:string;actorId:string;outcome:RecoveryOutcome;command:DmInventoryAdjustmentCommand;}
 interface PartyStashOwnerRecoveryResult {type:"campaign-party-stash-owner-recovery-result";sessionId:string;requestId:string;actorId:string;outcome:RecoveryOutcome;accepted:boolean;error?:string;projection?:CharacterSessionProjectionV1;}
+interface PartyStashOwnerComplete {type:"campaign-party-stash-owner-complete";sessionId:string;requestId:string;actorId:string;outcome:RecoveryOutcome;}
+interface ClientStashRequest {type:"campaign-stash-deposit";sessionId:string;command:PartyStashTransferCommand;}
 type Raw=Record<string,unknown>;
 
 const cp=<T,>(value:T):T=>structuredClone(value);
@@ -35,6 +37,7 @@ const baseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
 const baseHostSession=MockAdapter.prototype.hostSession;
 const baseJoinSession=MockAdapter.prototype.joinSession;
 const baseStopSession=MockAdapter.prototype.stopSession;
+const baseTransferPartyStash=MockAdapter.prototype.transferPartyStash;
 
 function object(value:unknown):Raw|undefined{return value&&typeof value==="object"&&!Array.isArray(value)?value as Raw:undefined;}
 function compatibleHelloAck(raw:string){try{const value=object(JSON.parse(raw));const compatibility=object(value?.compatibility);return value?.type==="hello-ack"&&typeof value.sessionId==="string"&&compatibility?.status==="compatible"?value.sessionId:null;}catch{return null;}}
@@ -72,6 +75,12 @@ function decodeResult(raw:string):PartyStashOwnerRecoveryResult|null{try{
   if(value?.type!=="campaign-party-stash-owner-recovery-result"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.actorId!=="string"||(value.outcome!=="applied"&&value.outcome!=="undone")||typeof value.accepted!=="boolean"||(value.error!==undefined&&typeof value.error!=="string"))return null;
   if(value.accepted&&!object(value.projection))return null;
   return value as unknown as PartyStashOwnerRecoveryResult;
+}catch{return null;}}
+function decodeOwnerComplete(raw:string):PartyStashOwnerComplete|null{try{
+  const value=object(JSON.parse(raw));if(value?.type!=="campaign-party-stash-owner-complete"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.actorId!=="string"||(value.outcome!=="applied"&&value.outcome!=="undone"))return null;return value as unknown as PartyStashOwnerComplete;
+}catch{return null;}}
+function decodeClientStashRequest(raw:string):ClientStashRequest|null{try{
+  const value=object(JSON.parse(raw));const command=object(value?.command);if(value?.type!=="campaign-stash-deposit"||typeof value.sessionId!=="string"||!command||typeof command.requestId!=="string"||typeof command.campaignId!=="string"||typeof command.actorId!=="string"||(command.direction!=="character-to-stash"&&command.direction!=="stash-to-character")||(command.asset!=="item"&&command.asset!=="currency"))return null;return value as unknown as ClientStashRequest;
 }catch{return null;}}
 
 async function finalizeRecoveredOwnerJournal(adapter:MockAdapter,requestId:string,outcome:RecoveryOutcome){
@@ -125,6 +134,27 @@ async function settleRecoveryHost(host:MockAdapter,message:SessionTransportMessa
   try{await refreshRecoveredHostProjection(host,message.peer,result.actorId,result.projection);current.resolve(result.projection);}catch(error){current.reject(error instanceof Error?error:new Error(String(error)));}
 }
 
+async function prepareClientStashCoordinator(host:MockAdapter,message:SessionTransportMessage,request:ClientStashRequest){
+  if(request.command.requestId.endsWith(".compensate"))return;
+  const state=connectedStateFor(host);if(state.mode!=="host"||state.sessionId!==request.sessionId)return;
+  const ownerParticipantId=state.peerParticipants.get(message.peer);const manifest=state.peerManifests.get(message.peer)?.character;
+  if(!ownerParticipantId||manifest?.characterId!==request.command.actorId)return;
+  await connectedPartyStashHostCoordinatorStoreFor(host).write({version:1,requestId:request.command.requestId,campaignId:request.command.campaignId,actorId:request.command.actorId,ownerParticipantId,command:cp(request.command)});
+}
+async function settleOwnerComplete(host:MockAdapter,message:SessionTransportMessage,complete:PartyStashOwnerComplete){
+  const state=connectedStateFor(host);if(state.mode!=="host"||state.sessionId!==complete.sessionId)return;
+  const ownerParticipantId=state.peerParticipants.get(message.peer);if(!ownerParticipantId)return;
+  const store=connectedPartyStashHostCoordinatorStoreFor(host);const record=(await store.readAll()).find((entry)=>entry.requestId===complete.requestId);if(!record)return;
+  if(record.ownerParticipantId!==ownerParticipantId||record.actorId!==complete.actorId)return;
+  const snapshot=await host.getSnapshot();const campaign=snapshot.campaigns?.find((entry)=>entry.campaignId===record.campaignId);if(!campaign)return;
+  if(connectedPartyStashRecoveryOutcome(record,campaign)!==complete.outcome)return;
+  await store.delete(record.requestId);
+}
+async function sendOwnerComplete(client:MockAdapter,command:PartyStashTransferCommand,outcome:RecoveryOutcome){
+  const state=connectedStateFor(client);if(state.mode!=="client"||!state.sessionId)return;
+  await tauriSessionTransport.send(JSON.stringify({type:"campaign-party-stash-owner-complete",sessionId:state.sessionId,requestId:command.requestId,actorId:command.actorId,outcome} satisfies PartyStashOwnerComplete));
+}
+
 export async function recoverConnectedPartyStashHostForPeer(host:MockAdapter,peer:string){
   const state=connectedStateFor(host);const participantId=state.peerParticipants.get(peer);if(state.mode!=="host"||!state.sessionId||!participantId)return [] as string[];
   const store=connectedPartyStashHostCoordinatorStoreFor(host);const records=(await store.readAll()).filter((record)=>record.ownerParticipantId===participantId);
@@ -149,6 +179,17 @@ async function onMessageWithPartyStashRecovery(handler:(message:SessionTransport
   return baseOnMessage((message)=>{
     const request=decodeRequest(message.message);if(client&&request){void handleRecoveryClient(client,message.peer,request);return;}
     const result=decodeResult(message.message);if(activeHostAdapter&&result){void settleRecoveryHost(activeHostAdapter,message,result);return;}
+    const complete=decodeOwnerComplete(message.message);if(activeHostAdapter&&complete){void settleOwnerComplete(activeHostAdapter,message,complete);return;}
+    const stash=decodeClientStashRequest(message.message);
+    if(activeHostAdapter&&stash&&!stash.command.requestId.endsWith(".compensate")){
+      void (async()=>{
+        try{await prepareClientStashCoordinator(activeHostAdapter!,message,stash);handler(message);}
+        catch(cause){
+          await baseSendTo(message.peer,JSON.stringify({type:"campaign-stash-deposit-result",sessionId:stash.sessionId,requestId:stash.command.requestId,accepted:false,error:`Host recovery checkpoint failed: ${cause instanceof Error?cause.message:String(cause)}`})).catch(()=>undefined);
+        }
+      })();
+      return;
+    }
     handler(message);
   });
 }
@@ -157,6 +198,15 @@ tauriSessionTransport.sendTo=sendToWithPartyStashRecovery;
 tauriSessionTransport.onMessage=onMessageWithPartyStashRecovery;
 MockAdapter.prototype.hostSession=async function hostSessionWithPartyStashRecovery(){activeHostAdapter=this;return baseHostSession.call(this);};
 MockAdapter.prototype.joinSession=async function joinSessionWithPartyStashRecovery(address:string){registeringClientAdapter=this;try{return await baseJoinSession.call(this,address);}finally{registeringClientAdapter=null;}};
+MockAdapter.prototype.transferPartyStash=async function transferPartyStashWithOwnerCompletion(command:PartyStashTransferCommand){
+  const state=connectedStateFor(this);if(state.mode!=="client")return baseTransferPartyStash.call(this,command);
+  try{const result=await baseTransferPartyStash.call(this,command);await sendOwnerComplete(this,command,"applied").catch(()=>undefined);return result;}
+  catch(error){
+    const store=recoveryJournalStore(this);const record=store?await store.read(command.requestId).catch(()=>null):null;
+    if(record?.phase==="finalized"&&record.finalOutcome==="undone")await sendOwnerComplete(this,command,"undone").catch(()=>undefined);
+    throw error;
+  }
+};
 MockAdapter.prototype.stopSession=async function stopSessionWithPartyStashRecovery(){const result=await baseStopSession.call(this);pending.delete(this);recoveryJournalStores.delete(this);if(activeHostAdapter===this)activeHostAdapter=null;if(registeringClientAdapter===this)registeringClientAdapter=null;return result;};
 
 export {};
