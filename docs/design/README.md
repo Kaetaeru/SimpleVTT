@@ -92,7 +92,6 @@ For UI/UX work, AI should discover the reading order from the dedicated router i
 - `docs/design/campaign-runtime.md` — v1 Campaign-owned continuity, optional Session calendar/ration rules, Party Stash, Campaign-scoped DM Library, and spatial capability fallback.
 - `docs/design/campaign-systems.md` — detailed V1 Campaign subsystem specification: roster, Session snapshot, calendar, rations, stash, DM Library, history, capability loadout, compound transactions, and UI.
 - `docs/design/combat-ux.md` — action-first player UX, authoritative dice presentation, activity log, breakdowns, and Undo.
-- `docs/design/multiplayer-v1-scenario-catalog.md` — V1 multiplayer completion scenarios, H/P1/P2 presentation parity, recovery invariants, and GitHub issue execution order.
 - `docs/design/extensibility-testing.md` — extension seams, capabilities, compatibility, migration, and golden-scenario testing.
 - `docs/design/movement-modules.md` — canonical mapless-Core policy, optional 2D/3D movement-module seam, and current-turn-controller manual movement-triggered reaction policy.
 - `docs/guides/combatant-json-import.md` — Combatant authoring/import workflow.
@@ -127,4 +126,3 @@ For UI/UX work, AI should discover the reading order from the dedicated router i
 - `Predicate` — restricted declarative condition tree.
 - `TimingPoint` — stable event/timing identifier.
 - `Mechanic` — typed operation that changes or grants rules behavior.
-
