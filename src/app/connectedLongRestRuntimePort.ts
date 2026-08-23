@@ -7,6 +7,7 @@ import {
   recordConnectedLongRestOwnerMaterialized,
   recordConnectedLongRestOwnerPrepared,
   type ConnectedLongRestGlobalCommit,
+  type ConnectedLongRestOwnerAborted,
   type ConnectedLongRestOwnerMaterialized,
   type ConnectedLongRestOwnerPrepared,
   type ConnectedLongRestTransactionState,
@@ -526,6 +527,24 @@ export async function abortConnectedLongRestOwner(adapter:MockAdapter,transactio
     await abortConnectedLongRestOwnerCandidate(record.preparationStore,record.prepared);
   }
   return true;
+}
+
+export async function completeConnectedLongRestHostOwnerAbort(
+  adapter:MockAdapter,
+  peer:string,
+  aborted:ConnectedLongRestOwnerAborted,
+) {
+  const record=hostMap(adapter).get(aborted.transactionId);
+  if(!record||!record.transaction||!peerOwnsRecoveredRecord(adapter,peer,record)) throw new Error("connected Long Rest Host abort transaction is missing");
+  if(record.transaction.phase!=="aborted") throw new Error(`connected Long Rest owner abort acknowledgement is invalid during ${record.transaction.phase}`);
+  const transaction=record.transaction;
+  if(aborted.transactionId!==transaction.preflight.transactionId) throw new Error("connected Long Rest abort acknowledgement transaction mismatch");
+  if(aborted.ownerParticipantId!==transaction.preflight.ownerParticipantId) throw new Error("connected Long Rest abort acknowledgement owner mismatch");
+  if(!sameCharacter(aborted.character,transaction.preflight.character)) throw new Error("connected Long Rest abort acknowledgement Character revision mismatch");
+  if(!transaction.preparationId||aborted.preparationId!==transaction.preparationId) throw new Error("connected Long Rest abort acknowledgement preparation mismatch");
+  await hostCoordinatorStore(adapter).delete(aborted.transactionId);
+  hostMap(adapter).delete(aborted.transactionId);
+  return {status:"complete" as const,transactionId:aborted.transactionId};
 }
 
 export async function completeConnectedLongRestHostOwnerMaterialization(
