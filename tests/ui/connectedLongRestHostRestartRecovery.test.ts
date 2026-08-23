@@ -60,7 +60,7 @@ test("Host restart upgrades durable owner-prepared to committed when Campaign id
   }
 });
 
-test("Host restart abort replay closes durable coordinator after exact owner cleanup acknowledgement",async()=>{
+test("Host restart abort replay closes durable coordinator and duplicate owner cleanup acknowledgement is idempotent",async()=>{
   const {adapter,preflight}=await configuredAdapter();
   const store=new MemoryConnectedLongRestHostCoordinatorStore();
   await store.write({version:1,phase:"owner-prepared",preflight,preparationId:"prep.restart.precommit"});
@@ -79,13 +79,16 @@ test("Host restart abort replay closes durable coordinator after exact owner cle
   assert.deepEqual(replay.character,preflight.character);
   assert.equal(replay.preparationId,"prep.restart.precommit");
 
-  const completed=await completeConnectedLongRestHostOwnerAbort(adapter,PEER,{
+  const acknowledgement={
     transactionId:preflight.transactionId,
     ownerParticipantId:preflight.ownerParticipantId,
     character:preflight.character,
     preparationId:"prep.restart.precommit",
-  });
+  };
+  const completed=await completeConnectedLongRestHostOwnerAbort(adapter,PEER,acknowledgement);
   assert.deepEqual(completed,{status:"complete",transactionId:preflight.transactionId});
+  const duplicate=await completeConnectedLongRestHostOwnerAbort(adapter,PEER,acknowledgement);
+  assert.deepEqual(duplicate,completed,"duplicate owner cleanup acknowledgement stays idempotent");
   assert.equal((await store.readAll()).length,0,"owner abort acknowledgement deletes durable Host recovery record");
   assert.equal(connectedLongRestHostRecoveryMessages(adapter,PEER).length,0,"completed abort is not replayed again");
 });
