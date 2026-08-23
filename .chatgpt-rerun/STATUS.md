@@ -7,32 +7,34 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control: `continue`
-- Exact product-code checkpoint: `78e829bdfa5b5c8a1de0f8b89c8493e09d7aacc0`
+- Exact product-code checkpoint: `05eb6790404ed617b8b15702b0372bd6a4bef8ee`
 
 ## Current result
 
-Connected Long Rest distributed durability is now **source-complete for the normal durable-storage path / validation pending**.
+V1-12 Connected Long Rest remains source-complete / validation pending and was not repeated.
 
-- visible DM remote Rest offer and Player preview/accept/decline remain inside the existing Session Campaign pane;
-- owner Character generation is durably prepared but invisible before global commit;
-- a Tauri write barrier prevents unrelated Character generation drift while prepared;
-- Host durable coordinator is written before Campaign global commit;
-- Campaign commit identity is stable/idempotent;
-- Host and Player post-global process restart recover by replay/materialization;
-- Host and Player pre-global double restart recover by exact abort identity;
-- restarted owner abort cleanup does not materialize Character state;
-- abort replay remains idempotent even after a prior cleanup unlocked later legitimate Character writes;
-- Player sends `long-rest-owner-aborted`; Host deletes durable abort coordinator state only after exact owner acknowledgement;
-- duplicate owner abort acknowledgements are idempotent and completed aborts are no longer replayed.
+V1-13 source audit found that Party Stash and Campaign DM Library already had substantial local/connected foundations. The first real connected ownership gap was Host-side inventory mutation of a mounted remote Player Character: it could change Host/session shadow state without durably updating the Player-owned Character library.
 
-Focused source contracts for Host restart and restart durability are included in `npm run test:campaign-rest`.
+This dispatch source-connected:
+
+- request-id scoped item/GP compensation with delta-based undo;
+- connected Host -> owner Client inventory apply/undo request/result routing;
+- owner Client durable Character-library mutation;
+- fresh owner Character SessionProjection acknowledgement;
+- Host remote durable projection + session inventory + peer-manifest revision refresh;
+- exact request-id rollback for connected Player Stash rejection/timeout;
+- focused owner-routing and wire validation tests.
+
+Host still does **not** own or persist a remote Player Character in its Character library.
+
+## Remaining correctness gap
+
+Connected V1-13 is not release-complete. The owner inventory request/undo journal is currently process memory. If owner Character persistence succeeds but the owner process/ack dies before Host observes success, restarted-owner compensation cannot yet prove whether/how the original apply committed.
+
+Next slice: durable owner inventory transaction journal/sidecar with replay-safe apply/undo/finalize, plus exact request-specific Host Stash compensation instead of the remaining underlying global last-undo dependency.
 
 ## Validation
 
-**NO GREEN CLAIM.** Exact head `78e829b` has no combined statuses and no commit-associated workflow runs. No observed `tsx`, TypeScript/build, Rust, Tauri Windows build, or Windows two-instance execution exists for this head.
-
-V1-12 remains release-checklist `PARTIAL` because executable/release evidence is missing, even though its current distributed Long Rest implementation boundary is source-complete.
-
-Next implementation step: audit the actual current V1-13 Party Stash / Campaign DM Library source and implement only real remaining gaps. Do not follow the stale TODO label blindly and do not begin the comprehensive Codex audit yet.
+**NO GREEN CLAIM.** Exact product head `05eb679` has no combined statuses and no commit-associated workflow runs. No observed execution exists for the new V1-13 tests, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library scenarios.
 
 `STATUS.md` is human-facing only. Reconciliation remains README -> control -> STATE -> PLAN.
