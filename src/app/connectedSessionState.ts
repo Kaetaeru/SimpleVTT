@@ -2,6 +2,7 @@ import type { ConnectedActionRequest, SessionCompatibilityManifest } from "./con
 import type { ConnectedResolutionPresentationV1, ConnectedResolutionTimelineEntryV1 } from "./connectedResolutionPresentation";
 import type { InterruptView } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import type { ConcentrationSaveVm } from "./concentrationSaveRuntimeContracts";
 import { ClientSessionReplica, HostSessionLedger } from "./connectedSessionProtocol";
 import type { MockAdapter } from "./mockAdapter";
 
@@ -32,6 +33,7 @@ export interface ConnectedRuntimeState {
   presentationTimelineByResolution:Map<string,ConnectedResolutionTimelineEntryV1[]>;
   privateInterruptsByResolution:Map<string,InterruptView>;
   publishedResolutionEvents:Map<string,ResolutionEvent[]>;
+  privateConcentrationByResolution:Map<string,ConcentrationSaveVm>;
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -60,6 +62,7 @@ export function connectedStateFor(adapter:MockAdapter) {
       presentationTimelineByResolution:new Map<string,ConnectedResolutionTimelineEntryV1[]>(),
       privateInterruptsByResolution:new Map<string,InterruptView>(),
       publishedResolutionEvents:new Map<string,ResolutionEvent[]>(),
+      privateConcentrationByResolution:new Map<string,ConcentrationSaveVm>(),
     };
     states.set(adapter,state);
   }
@@ -88,5 +91,6 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.presentationTimelineByResolution.clear();
   state.privateInterruptsByResolution.clear();
   state.publishedResolutionEvents.clear();
+  state.privateConcentrationByResolution.clear();
   return state;
 }

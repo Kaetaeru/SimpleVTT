@@ -150,6 +150,15 @@ export function buildConnectedResolutionPresentation(
     publicResolution.finalOutcome="응답 대기";
     publicResolution.stateChanges=[];
   }
+  if(resolution.stage==="save-animation"&&resolution.concentrationSave?.natural===undefined){
+    publicResolution.concentrationSave=undefined;
+    publicResolution.compact="비공개 집중 내성 입력 대기";
+    publicResolution.detail=[];
+    publicResolution.provenance=[];
+    publicResolution.calculatedOutcome="응답 대기";
+    publicResolution.finalOutcome="응답 대기";
+    publicResolution.stateChanges=[];
+  }
   const currentTimeline=timelineEntry(resolution);
   const last=previousTimeline.at(-1);
   const timeline=last?.key===currentTimeline.key&&last.label===currentTimeline.label

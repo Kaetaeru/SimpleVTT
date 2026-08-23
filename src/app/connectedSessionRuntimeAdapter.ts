@@ -18,6 +18,7 @@ import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
 import { routeConnectedActionRequest } from "./connectedActionRequestPort";
 import { routeConnectedInterruptResponse } from "./connectedInterruptResponsePort";
+import { routeConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
 import { tauriSessionTransport, type SessionTransportMessage, type SessionTransportStatus } from "./tauriSessionTransport";
 import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "./connectedCharacterProjectionHandshake";
@@ -35,7 +36,7 @@ declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -78,8 +79,10 @@ export async function publishConnectedSnapshot(adapter:MockAdapter) {
 function installConnectedResolutionPresentation(adapter:MockAdapter,presentation:ConnectedResolutionPresentationV1) {
   const app=connectedInternal(adapter);
   const privateInterrupt=connectedStateFor(adapter).privateInterruptsByResolution.get(presentation.resolutionId);
+  const privateConcentration=connectedStateFor(adapter).privateConcentrationByResolution.get(presentation.resolutionId);
   app.resolution=structuredClone(presentation.resolution);
   if(app.resolution?.stage==="interrupt"&&privateInterrupt) app.resolution.interrupt=structuredClone(privateInterrupt);
+  if(app.resolution?.stage==="save-animation"&&privateConcentration) app.resolution.concentrationSave=structuredClone(privateConcentration);
   app.resolutionPresentation={
     resolutionId:presentation.resolutionId,
     presentationSequence:presentation.presentationSequence,
@@ -308,6 +311,15 @@ export function applyConnectedInterruptPrompt(
   return {status:"applied" as const};
 }
 
+export function applyConnectedConcentrationPrompt(adapter:MockAdapter,prompt:Extract<ConnectedWireMessage,{type:"resolution-concentration-prompt"}>) {
+  const state=connectedStateFor(adapter);const app=connectedInternal(adapter);
+  if(state.mode!=="client"||state.sessionId!==prompt.sessionId)return {status:"rejected" as const,error:"concentration prompt session does not match this Client"};
+  if(prompt.save.targetId!==app.activeCharacter.id)return {status:"rejected" as const,error:"concentration prompt does not belong to this Client Character"};
+  state.privateConcentrationByResolution.set(prompt.resolutionId,structuredClone(prompt.save));
+  if(app.resolution?.id===prompt.resolutionId&&app.resolution.stage==="save-animation")app.resolution.concentrationSave=structuredClone(prompt.save);
+  return {status:"applied" as const};
+}
+
 export async function applyConnectedClientEvents(adapter:MockAdapter,events:ConnectedSessionEvent[]) {
   const state=connectedStateFor(adapter);
   if (!state.replica) return { status:"rejected" as const,error:"client replica is not initialized",cursor:0 };
@@ -517,6 +529,11 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
   if(wire.type==="resolution-interrupt-response"){
     const routed=await routeConnectedInterruptResponse(adapter,message,wire.response);
     if(!routed) await sendConnectedWireTo(message.peer,{type:"error",code:"interrupt-route-unavailable",message:"connected interrupt response router is unavailable",hostCursor:ledger.cursor});
+    return;
+  }
+  if(wire.type==="resolution-concentration-response"){
+    const routed=await routeConnectedConcentrationResponse(adapter,message,wire.response);
+    if(!routed)await sendConnectedWireTo(message.peer,{type:"error",code:"concentration-route-unavailable",message:"connected concentration response router is unavailable",hostCursor:ledger.cursor});
   }
 }
 
@@ -603,6 +620,11 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
     if(applied.status==="rejected"){app.session.compatibility="warning";app.session.compatibilityMessage=applied.error;}
     await publishConnectedSnapshot(adapter);
     return;
+  }
+  if(wire.type==="resolution-concentration-prompt"){
+    const applied=applyConnectedConcentrationPrompt(adapter,wire);
+    if(applied.status==="rejected"){app.session.compatibility="warning";app.session.compatibilityMessage=applied.error;}
+    await publishConnectedSnapshot(adapter);return;
   }
 
   if (wire.type==="error") {

@@ -7,6 +7,8 @@ import type {
 import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
 import type { InterruptView } from "./contracts";
 import type { ConnectedInterruptResponse } from "./connectedInterruptResponsePort";
+import type { ConcentrationSaveVm } from "./concentrationSaveRuntimeContracts";
+import type { ConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
 import { isConnectedResolutionPresentation, type ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 import {
   validateConnectedLongRestWireMessage,
@@ -37,6 +39,8 @@ export type ConnectedWireMessage =
   | { type:"resolution-presentation"; sessionId:string; presentation:ConnectedResolutionPresentationV1 }
   | { type:"resolution-interrupt-prompt"; sessionId:string; resolutionId:string; presentationSequence:number; interrupt:InterruptView }
   | { type:"resolution-interrupt-response"; response:ConnectedInterruptResponse }
+  | { type:"resolution-concentration-prompt"; sessionId:string; resolutionId:string; presentationSequence:number; save:ConcentrationSaveVm }
+  | { type:"resolution-concentration-response"; response:ConnectedConcentrationResponse }
   | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number }
   | ConnectedLongRestWireMessage;
@@ -230,6 +234,16 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   if(value.type==="resolution-interrupt-response"){
     const response=value.response;
     if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!isString(response.promptId)||typeof response.accept!=="boolean") return "invalid resolution-interrupt-response message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="resolution-concentration-prompt"){
+    const save=value.save;
+    if(!isString(value.sessionId)||!isString(value.resolutionId)||!isCursor(value.presentationSequence)||!isRecord(save)||!isString(save.targetId)||!isString(save.targetName)||save.ability!=="con"||typeof save.modifier!=="number"||!isString(save.modifierSource)||save.natural!==undefined)return "invalid resolution-concentration-prompt message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="resolution-concentration-response"){
+    const response=value.response;
+    if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!Number.isInteger(response.face)||Number(response.face)<1||Number(response.face)>20)return "invalid resolution-concentration-response message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="session-ended") {

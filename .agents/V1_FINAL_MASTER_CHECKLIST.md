@@ -95,7 +95,8 @@ Continue `#113 / MP-04` with concentration and Ready trigger owner-routing, then
 - [x] H+P1+P2 attack hit/miss, damage, check, healing feature, consumable, charged item, saving-throw single/multi-target, and no-roll Dash coverage.
 - [x] Owner-only interrupt prompt routing with public redaction, Host ownership revalidation, accepted response continuation, and spoof rejection.
 - [x] Host Undo as a new inverse `resolution-undo` event; original Activity remains historical and Client apply is exactly once.
-- [x] Connected regression checkpoint: 186/186 tests, TypeScript pass, Vite production build pass (2026-08-23 Asia/Seoul).
+- [x] Owner-only concentration d20 routing with public redaction, Host ownership validation, shared result presentation, and canonical commit continuation.
+- [x] Connected regression checkpoint: 187/187 tests, TypeScript pass, Vite production build pass (2026-08-23 Asia/Seoul).
 - [ ] MP-03 remaining projected production spell/feature/invalid/concurrent cases.
-- [ ] MP-04 concentration, Ready trigger live presentation, timeout, and correction-during-presentation cases.
+- [ ] MP-04 Ready trigger live presentation, interrupt timeout, and correction-during-presentation cases.
 

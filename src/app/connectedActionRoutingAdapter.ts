@@ -2,6 +2,7 @@ import type { AppSnapshot } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { registerConnectedActionRequestHandler } from "./connectedActionRequestPort";
 import { registerConnectedInterruptResponseHandler } from "./connectedInterruptResponsePort";
+import { registerConnectedConcentrationResponseHandler } from "./connectedConcentrationResponsePort";
 import { connectedStateFor } from "./connectedSessionState";
 import {
   CONNECTED_CAPABILITIES,
@@ -29,6 +30,7 @@ const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const previousDismissResolution=MockAdapter.prototype.dismissResolution;
 const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
+const previousSubmitConcentrationSaveD20=MockAdapter.prototype.submitConcentrationSaveD20;
 const projectionContexts=new WeakMap<MockAdapter,ProjectionResolutionContext>();
 
 function requestId() {
@@ -175,6 +177,11 @@ async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapsh
       interrupt:structuredClone(interrupt),
     });
   }
+  const concentration=snapshot.resolution?.concentrationSave;
+  if(snapshot.resolution?.stage==="save-animation"&&concentration&&concentration.natural===undefined){
+    const ownerPeer=[...state.peerManifests.entries()].find(([,manifest])=>manifest.character?.characterId===concentration.targetId)?.[0];
+    if(ownerPeer)await sendConnectedWireTo(ownerPeer,{type:"resolution-concentration-prompt",sessionId:state.ledger.sessionId,resolutionId:resolution.id,presentationSequence:presentation.presentationSequence,save:structuredClone(concentration)});
+  }
   return snapshot;
 }
 
@@ -190,6 +197,17 @@ registerConnectedInterruptResponseHandler(async(adapter,transportMessage,respons
   if(!characterId||!interrupt||app.resolution?.id!==response.resolutionId){await reject("interrupt-not-pending","no matching authoritative interrupt is pending");return;}
   if(interrupt.responderId!==characterId||interrupt.id!==response.promptId){await reject("interrupt-not-authorized","interrupt response does not belong to this peer Character");return;}
   await adapter.respondToInterrupt(response.accept);
+});
+
+registerConnectedConcentrationResponseHandler(async(adapter,transportMessage,response)=>{
+  const state=connectedStateFor(adapter);const app=connectedInternal(adapter);const ledger=state.ledger;
+  if(state.mode!=="host"||!ledger)return;
+  const characterId=state.peerManifests.get(transportMessage.peer)?.character?.characterId;
+  const save=app.resolution?.concentrationSave;
+  if(response.sessionId!==ledger.sessionId||app.resolution?.id!==response.resolutionId||!save||save.natural!==undefined||save.targetId!==characterId){
+    await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"concentration-not-authorized",message:"no matching owner concentration save is pending",hostCursor:ledger.cursor});return;
+  }
+  await adapter.submitConcentrationSaveD20(response.face);
 });
 
 registerConnectedActionRequestHandler(async (adapter,transportMessage,request) => {
@@ -375,6 +393,18 @@ MockAdapter.prototype.dismissResolution=async function dismissConnectedResolutio
     await sendConnectedWireTo(pending.peer,{type:"error",code:"host-dismissed",message:"host dismissed the pending remote resolution",hostCursor:state.ledger.cursor});
   }
   return previousDismissResolution.call(this);
+};
+
+MockAdapter.prototype.submitConcentrationSaveD20=async function submitConnectedConcentrationSave(face:number){
+  const state=connectedStateFor(this);const app=connectedInternal(this);
+  if(state.mode==="client"){
+    if(!state.sessionId||!app.resolution?.concentrationSave)return app.getSnapshot();
+    await tauriSessionTransport.send(JSON.stringify({type:"resolution-concentration-response",response:{sessionId:state.sessionId,resolutionId:app.resolution.id,face}}));
+    state.privateConcentrationByResolution.delete(app.resolution.id);app.resolution.concentrationSave=undefined;app.resolution.compact="Host 집중 내성 판정 대기";return app.getSnapshot();
+  }
+  const next=await previousSubmitConcentrationSaveD20.call(this,face);
+  await publishConnectedResolutionPresentation(this,next);
+  return publishCommittedResolution(this,next);
 };
 
 MockAdapter.prototype.undoLastResolution=async function undoConnectedResolution() {
