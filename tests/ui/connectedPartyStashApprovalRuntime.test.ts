@@ -116,7 +116,7 @@ test("failed authoritative transfer remains approved and can retry without a fal
   }
 });
 
-test("policy or connected owner changes are revalidated before approval and leave the request pending",async()=>{
+test("policy, roster permission, or connected owner changes are revalidated before approval and leave the request pending",async()=>{
   const first=await configuredHost();
   const policyCommand=withdrawal(first.character.id,"stash-approval.policy-change");
   submit(first.host,policyCommand,first.character.name);
@@ -125,11 +125,28 @@ test("policy or connected owner changes are revalidated before approval and leav
   assert.equal(partyStashApprovalQueueFor(first.host).lookup(policyCommand.requestId)?.state,"pending");
   unmountAllCharacterSessionProjections(first.host);
 
-  const second=await configuredHost();
-  const ownerCommand=withdrawal(second.character.id,"stash-approval.owner-change");
-  submit(second.host,ownerCommand,second.character.name);
-  connectedStateFor(second.host).peerParticipants.set(PEER_ID,"participant.changed-owner");
-  await assert.rejects(()=>second.host.approvePartyStashApproval(ownerCommand.requestId),/현재 연결 소유자가 변경/);
-  assert.equal(partyStashApprovalQueueFor(second.host).lookup(ownerCommand.requestId)?.state,"pending");
-  unmountAllCharacterSessionProjections(second.host);
+  const permission=await configuredHost();
+  const permissionCommand=withdrawal(permission.character.id,"stash-approval.permission-change");
+  submit(permission.host,permissionCommand,permission.character.name);
+  await permission.host.upsertCampaignRosterMember(CAMPAIGN_ID,{
+    rosterMemberId:"roster.connected-stash-approval",
+    label:permission.character.name,
+    kind:"player-character-ref",
+    characterRef:{ownerHint:PARTICIPANT_ID,characterId:permission.character.id},
+    active:true,
+    countsForRations:true,
+    rationUnitsPerDay:1,
+    stashPermission:"view",
+  });
+  await assert.rejects(()=>permission.host.approvePartyStashApproval(permissionCommand.requestId),/권한이 변경/);
+  assert.equal(partyStashApprovalQueueFor(permission.host).lookup(permissionCommand.requestId)?.state,"pending");
+  unmountAllCharacterSessionProjections(permission.host);
+
+  const owner=await configuredHost();
+  const ownerCommand=withdrawal(owner.character.id,"stash-approval.owner-change");
+  submit(owner.host,ownerCommand,owner.character.name);
+  connectedStateFor(owner.host).peerParticipants.set(PEER_ID,"participant.changed-owner");
+  await assert.rejects(()=>owner.host.approvePartyStashApproval(ownerCommand.requestId),/현재 연결 소유자가 변경/);
+  assert.equal(partyStashApprovalQueueFor(owner.host).lookup(ownerCommand.requestId)?.state,"pending");
+  unmountAllCharacterSessionProjections(owner.host);
 });
