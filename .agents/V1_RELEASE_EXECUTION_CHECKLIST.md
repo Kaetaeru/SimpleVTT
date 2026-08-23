@@ -10,6 +10,7 @@ Updated: 2026-08-23
 - `.agents/PHASE14_CHECKLIST.md`는 과거 구현/CI 증거 원장이다. 다음 작업 선택에는 이 문서를 우선한다.
 - `.agents/CURRENT_WORK.md`와 `.agents/SHORT_TERM_CHECKLIST.md`의 Phase 09 표시는 역사적 문맥이다.
 - 제품 계약은 `docs/design/` 문서가 우선하며, 이 체크리스트가 제품 계약을 재정의하지 않는다.
+- 멀티플레이 완료 판정과 GitHub 시나리오 실행 순서는 `docs/design/multiplayer-v1-scenario-catalog.md`를 따른다. 상태 수렴만으로 완료 처리하지 않고 H/P1/P2의 허용된 실시간 연출 일치까지 검증한다.
 
 ## 2026-08-23 exact-head delta
 
@@ -645,3 +646,4 @@ V1-31/V1-32 Ready expiration network propagation
 ```
 
 다음 자기 턴 시작과 initiative 종료로 발생하는 Ready 해제를 Host의 `ready-action: cleared` 이벤트로 전파하고, Client projection 및 reconnect replay를 검증한다. 세부 완료 조건과 후속 구조 보강 순서는 `.agents/V1_CURRENT_HANDOFF.md`를 따른다.
+
