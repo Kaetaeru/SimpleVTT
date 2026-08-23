@@ -10,59 +10,67 @@
 - task_id: `phase14-production-play-session-ux`
 - dispatch: `continue`
 
-Preserve all already source-connected V1-12/V1-13 durability, recovery, Campaign authority, DM Library materialization, Party Stash policy/approval flow, Session UI work, request transport coverage, and approval authority sequencing. Do not repeat source-complete work, route to `main`, or begin the comprehensive Codex audit before implementation freeze.
+Preserve all already source-connected V1-12/V1-13 durability, recovery, Campaign authority, DM Library materialization, Party Stash policy/approval/owner compensation flow, Session UI work, and current approval transport tests. Do not repeat source-complete work or begin the comprehensive Codex audit before implementation freeze.
 
 ## Reconciled source boundary
 
-This watcher execution started from coordination head `3d3caa7cbb62e1c6e681ee3ca3d6027de95b3790`. Mandatory `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` reconciliation, canonical handoff/checklist reads, Campaign design reread, and branch comparison showed `work/v1-composite` identical to that checkpoint before new work began. A second pre-write reconciliation also found no concurrent writer.
+This watcher execution started from coordination head `d2c000e4530b375c6610ebc1bb1cb9663bbf1ff0`. It re-read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, `docs/design/campaign-systems.md`, and `docs/design/ui-ux/ITEM-CURRENCY-TRANSFER-FOUNDATION.md`.
 
-Current exact product/test head before coordination checkpoint writes: `db561a2fe5e438fa37741130d212cfa288de9794`.
+The stale V1-13 TODO wording in handoff/checklist projections was not replayed. GitHub actual state and current Rerun STATE remain authoritative. Before coordination writes, comparing prior coordination head to `work/v1-composite` showed exactly 12 commits ahead and the changed files were exactly this execution's Party Stash outcome transport/UI/test files, with no divergent concurrent writer.
+
+Latest product/test write commit returned by the GitHub contents write chain: `aaddc83a6435671048b9fab9d2a91866a992676c`.
 
 ## Completed in this execution
 
-- Confirmed the actual connected Session lifecycle rather than relying on the earlier truncated fetch: `connectedSessionRuntimeAdapter.ensureListeners()` registers the current composed `tauriSessionTransport.onMessage` chain from both `hostSession()` and `joinSession()`.
-- Reconfirmed authoritative withdrawal transaction order in `campaignRuntimeAdapter`: Campaign Stash debit -> owner Character mutation; owner mutation failure -> inverse Campaign compensation. Approval continues to call the existing `this.transferPartyStash` path rather than a parallel mutation route.
-- Confirmed later production wrappers remain reachable dynamically: Party Stash approval is installed before `connectedOwnerInventoryJournalAdapter` and `connectedOwnerInventoryExactCompensationAdapter`, so approval-time `this.transferPartyStash` reaches the real owner journal/remote inventory path.
+### Player terminal approval outcome contract
 
-### Real connected owner-transfer E2E source
+`ITEM-CURRENCY-TRANSFER-FOUNDATION.md` requires connected clients to receive the resulting projection/transaction outcome and private rejection detail addressed to the initiating participant. The existing V1-13 flow only acknowledged that a request had reached the Host queue. This execution therefore treats final approve/reject/cancel feedback as required source behavior, not optional polish.
 
-- `9b4ba2253f7a169a8a5872dc64e748670065768d` created `tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts`.
-- `4527186e600287148b5f53a4f42594c55405b6fb` added the required progression contract augmentation and cleaned the remote owner fixture.
-- `f5ee5256463638f2daeb453a4fc918471471a52c` aligned the test with production lifecycle ordering by installing `productionSessionLifecycleAdapter` before Party Stash approval.
-- The test uses a real connected hello/hello-ack owner projection and Host Campaign projection, then proves source-level intent for:
-  1. Player approval request -> Host pending queue;
-  2. DM approval -> existing `transferPartyStash` -> remote `campaign-owner-inventory` request/result -> owner Character currency grant -> Host owner projection refresh -> committed queue;
-  3. remote owner mutation failure without replacing `transferPartyStash`;
-  4. failure-time Campaign Stash compensation and unchanged Player currency;
-  5. request remains `approved` with error and can retry;
-  6. same approved request later succeeds exactly once after the owner mutation fault is removed.
+Implemented without creating any asset mutation route:
 
-### Existing transport/runtime coverage hardened
+- `d218b31185fe9c3944682c6e5fae327036eb156f` — added targeted `campaign-stash-approval-outcome` transport for terminal `committed | rejected | cancelled` states.
+- The Host first reaches the authoritative terminal queue state. Notification is best-effort and cannot roll back a committed/rejected/cancelled decision.
+- Failed owner transfer remains non-terminal `approved` with error/retry semantics and emits no false terminal outcome.
+- `5798ac3d772b2aa01f03a5bbeaddfbf4732e342e` + `392e2a448a3a4ed3875bd598d56f0ce98cf08d90` + `5e0e0be6fe098dd809e144092b7333366e6baffd` — added and mounted a global Player toast bridge for approval, rejection, and cancellation. Because it is global under `AppProvider`, the outcome is not lost merely because the inventory pane is closed.
+- Static review found that a single latest-outcome slot could overwrite rapid consecutive DM decisions. `9f0723831f63b1ba37ff9f4f47b6c09403874ac3` and `5d20977e62415c07a7da5623a7c6c623c56aad4a` changed this to a Session-transient FIFO queue drained one notice at a time.
 
-- Static inspection found that the previous transport test called `stopSession()` without mounting the production lifecycle adapter that Party Stash approval wraps in `src/main.tsx`.
-- `b8846555d7dd6e0bf946c71f0cfbd92fd373c994` aligned `connectedPartyStashApprovalTransport.test.ts` with the production lifecycle and uses a saved non-reference Player Character fixture.
-- `806e895970449f8bf51d7ad352a2cb62ec56da78` extended `connectedPartyStashApprovalRuntime.test.ts` so roster permission downgrade (`request -> view`) is revalidated before approval and leaves the request pending.
-- `db561a2fe5e438fa37741130d212cfa288de9794` extended the connected transport lifecycle fixture so Session stop clears both one `approved`-but-uncommitted request and one `pending` request after a successful production-lifecycle stop.
+### Source test updates
 
-No production asset mutation implementation was replaced or duplicated in this execution; changes are deterministic test-source coverage and lifecycle alignment only.
+- `00ccc67b63928f1424ee0d6c7d1ed9949053ad9e` / `322ccb6e56f4b7d7c7d5de8770c8c8e49ee00661` — structure contract covers targeted outcome transport, FIFO storage, bridge consumption, and all three Player-visible terminal labels.
+- `34eb2894aba1a27a1695985a9228101c3080986d` / `0af10e2c09f90f5509e8a71873e75d1ee258865a` — connected transport source test covers Player rejection/cancellation outcomes.
+- `b14c67c902a49afe6ec6dbae0ebfc9d5e6eeccf3` / `aaddc83a6435671048b9fab9d2a91866a992676c` — owner-transfer E2E source test covers committed outcome, proves an approved owner-transfer failure emits no terminal outcome, then verifies committed outcome after successful retry.
+
+The existing authoritative `transferPartyStash`, remote owner inventory, compensation, and Campaign mutation paths remain unchanged.
 
 ## Validation status
 
-**NO GREEN CLAIM.** Exact-head `db561a2fe5e438fa37741130d212cfa288de9794` has no combined statuses and no workflow runs. This environment still has no runnable checked-out repository, so no Node test, TypeScript compile, npm regression, UI build, Tauri, Rust, or Windows two-instance result is claimed.
+**NO GREEN CLAIM.** The current product/test write boundary has no combined GitHub status and no workflow runs. A local checkout retry also failed before execution because this environment could not resolve `github.com`, so no Node test, TypeScript compile, npm regression, UI build, Tauri, Rust, or Windows two-instance result is claimed.
 
-Static review caught and corrected two execution-premise risks before checkpoint: progression type augmentation for the remote fixture, and production `stopSession` lifecycle ordering in the transport tests. Source inspection is not executable evidence.
+GitHub contents writes and branch/file reconciliation confirm the source is present on `work/v1-composite`; source-authored tests remain non-executable evidence until a runner is available.
 
-## Remaining V1-13 work
+## Selective V1-13 re-audit
 
-1. Run exact-head TypeScript/unit/UI regression as soon as a runnable checkout or CI path exists; fix any dynamic-import, wrapper-order, async listener, or type errors before calling V1-13 green.
-2. Decide whether Player-facing final approval/rejection/cancellation status is required beyond the current Host queue acknowledgement. If required, use only the established connected transport; do not create another asset mutation route.
-3. Re-audit V1-13 against the release checklist after executable validation. The source coverage now includes request transport, duplicate/reconnect identity, policy/permission/owner revalidation, reject/cancel, pending/approved cleanup, real owner transfer, compensation, and retry.
-4. Continue the next unblocked V1 implementation slice once V1-13 executable evidence is available or if another source-only prerequisite is explicitly identified. Windows two-instance acceptance remains later release evidence.
-5. Keep the comprehensive Codex audit deferred until implementation freeze.
+After closing the approval-feedback source gap, the next genuine V1-13 source gap is the canonical Ration/Party Stash conversion contract:
+
+- `docs/design/campaign-systems.md` requires a compatible Party Stash `ItemInstance` to convert into integer ration units in **one transaction**: ItemInstance decreases and `SupplyLedger` increases atomically.
+- Conversion eligibility must come from a provider-declared capability/tag, not from item display-name heuristics such as containing `food`.
+- Current `campaignRuntimeAdapter.ts` and `CampaignApplicationService.transferPartyStash` expose normal stash transfer plus manual ration adjustment/consumption, but no atomic stash-item-to-ration conversion command.
+- Current `InstalledCampaignRationProfileV1` defines daily units and shortage consequences only; it has no eligibility/tag/conversion declaration for compatible food ItemInstances.
+
+This is a contract/schema/runtime/UI/test slice, not a safe late-watcher one-line patch, so it was deliberately not started in this execution.
+
+## Remaining work
+
+1. Obtain executable exact-head TypeScript/test/build evidence for the authored V1-13 approval flow before calling it green.
+2. Implement the next V1-13 source slice: provider-declared compatible Party Stash ItemInstance -> ration units atomic conversion, including eligibility contract, application transaction, runtime API/UI, provenance/idempotency, persistence, and deterministic tests.
+3. Re-audit the remaining V1-13 Party Stash/DM Library checklist after that slice rather than trusting stale handoff TODO text.
+4. Windows two-instance acceptance remains later release evidence.
+5. Keep comprehensive Codex audit deferred until implementation freeze.
 
 ## Next Exact Action
 
-1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` HEAD; preserve product/test commits through `db561a2fe5e438fa37741130d212cfa288de9794` unless GitHub advanced.
-2. Prefer executable validation of `connectedPartyStashApprovalRuntime.test.ts`, `connectedPartyStashApprovalTransport.test.ts`, and `connectedPartyStashApprovalOwnerTransfer.test.ts` if an exact-head runner becomes available. Do not infer green from authored source.
-3. If execution remains unavailable, inspect the release checklist and current Player UX contract to make an explicit decision on final approval/reject/cancel notification; implement only if it is a V1-13 requirement rather than optional polish.
-4. Re-audit V1-13 after that decision/evidence and record any genuinely remaining source gap. Comprehensive Codex audit remains deferred until implementation freeze.
+1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` state; preserve this execution's 12 Party Stash outcome commits unless GitHub advanced.
+2. If a runner becomes available, first execute the approval runtime/transport/owner-transfer tests and TypeScript/build checks. Fix real failures before green claims.
+3. Otherwise begin the ration-conversion slice by defining the minimal data-only eligibility/conversion contract on the ration provider/item definition side. Do not infer food compatibility from names.
+4. Implement one authoritative atomic command that validates provider eligibility and performs stash item decrement + ration ledger increment under one Campaign revision/idempotency transaction; then wire DM UI and tests.
+5. Re-audit V1-13 after executable evidence/source completion. Comprehensive Codex audit remains deferred.
