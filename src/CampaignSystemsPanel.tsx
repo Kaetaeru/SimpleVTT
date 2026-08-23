@@ -6,6 +6,9 @@ import { latestCampaignProviderDescriptorsFromCatalog, pinnedCampaignProviderDes
 import { useSimpleVtt } from "./app/AppProvider";
 import { HANDOUT_IMAGE_MAX_BYTES, LOCAL_IMAGE_ACCEPT, readLocalImageFile, type LocalImageAssetV1 } from "./app/localImageAsset";
 import { CAMPAIGN_DM_LIBRARY_JSON_EXAMPLE, parseCampaignDmLibraryJson } from "./app/campaignDmLibraryImport";
+import type { PartyStashPolicy } from "./app/contracts";
+import "./app/campaignPartyStashPolicyRuntimeAdapter";
+import { mockAdapter } from "./app/mockAdapter";
 
 function rosterId(){return `roster.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
 function libraryId(){return `dm-item.${globalThis.crypto?.randomUUID?.()??Date.now()}`;}
@@ -13,6 +16,7 @@ function moduleCalendarProvider(providerId:string){return providerId.startsWith(
 function moduleRationProvider(providerId:string){return providerId.startsWith("module.ration-profile:");}
 function providerOptionValue(provider:{providerId:string;providerVersion:string}){return `${provider.providerId}@@${provider.providerVersion}`;}
 function missingProviderValue(kind:"calendar"|"ration",providerId:string,providerVersion:string){return `missing:${kind}:${providerId}@@${providerVersion}`;}
+function stashPolicyLabel(policy:PartyStashPolicy){return policy==="shared"?"공유":policy==="dm-approval"?"DM 승인":"DM 관리";}
 type ProviderConfigure=(campaignId:string,input:{enabled:boolean;providerId:string;providerVersion?:string})=>Promise<void>;
 
 export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
@@ -91,6 +95,11 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   };
   const toggleCalendar=(enabled:boolean)=>configureCalendarWithVersion(campaign.campaignId,{enabled,providerId:campaign.calendar.capability.providerId,...(moduleCalendarProvider(campaign.calendar.capability.providerId)?{providerVersion:campaign.calendar.capability.providerVersion}:{})});
   const toggleRations=(enabled:boolean)=>configureRationsWithVersion(campaign.campaignId,{enabled,providerId:campaign.rations.capability.providerId,...(moduleRationProvider(campaign.rations.capability.providerId)?{providerVersion:campaign.rations.capability.providerVersion}:{})});
+  const configurePartyStashPolicy=(policy:PartyStashPolicy)=>perform(async()=>{
+    const result=await mockAdapter.setCampaignPartyStashPolicy(campaign.campaignId,policy);
+    if(!result) throw new Error("캠페인 화면에서만 Party Stash 정책을 변경할 수 있습니다.");
+    await api.refresh();
+  });
   const updateMember=(member:CampaignRosterMember,patch:Partial<CampaignRosterMember>)=>perform(()=>api.upsertCampaignRosterMember(campaign.campaignId,{...member,...patch}));
   const addMember=()=>perform(async()=>{
     if(!memberLabel.trim()) throw new Error("구성원 이름을 입력하세요.");
@@ -182,6 +191,13 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
           <div className="campaign-adjust-row"><input aria-label="식량 조정 수량" type="number" step={1} value={rationAdjustment} onChange={(event)=>setRationAdjustment(event.target.value)}/><button disabled={busy||Number(rationAdjustment)===0} onClick={()=>void perform(()=>api.adjustCampaignRations(campaign.campaignId,{amount:Number(rationAdjustment),note:"DM 수동 조정"}))}>식량 조정</button><button className="primary" disabled={busy||!rationPreview||rationPreview.requiredUnits===0} onClick={()=>void perform(()=>api.consumeCampaignDailyRations(campaign.campaignId))}>하루치 소비</button></div>
           <button disabled={busy||!campaign.rations.ledger.consumptionHistory.some((entry)=>entry.kind==="consume")} onClick={()=>void perform(()=>api.undoCampaignRationConsumption(campaign.campaignId))}>최근 소비 되돌리기</button>
         </>}
+      </section>
+
+      <section className="campaign-system-panel" aria-labelledby="campaign-stash-policy-title">
+        <header><div><span>PARTY STASH</span><h3 id="campaign-stash-policy-title">파티 보관함 정책</h3></div><strong>{stashPolicyLabel(campaign.partyStash.policy)}</strong></header>
+        <p className="campaign-panel-copy">플레이어의 보관함 입출고 권한을 Campaign 기본값으로 저장하고 다음 Session snapshot에도 동일하게 사용합니다.</p>
+        <div className="campaign-provider-row"><label><span>출고 정책</span><select aria-label="Party Stash 정책" value={campaign.partyStash.policy} disabled={busy} onChange={(event)=>void configurePartyStashPolicy(event.target.value as PartyStashPolicy)}><option value="shared">공유 · Player 직접 입출고</option><option value="dm-approval">DM 승인 · 입고 직접 / 출고 승인 요청</option><option value="dm-managed">DM 관리 · Player 입출고 차단</option></select></label></div>
+        <p className="campaign-off-note">{campaign.partyStash.policy==="shared"?"Player가 권한 범위 안에서 직접 입고와 출고를 수행합니다.":campaign.partyStash.policy==="dm-approval"?"Player 입고는 즉시 처리하고 출고는 DM 승인 요청으로 전환합니다. 승인 전에는 자산을 이동하지 않습니다.":"Player의 직접 입출고를 막고 DM이 보관함 이동을 관리합니다."}</p>
       </section>
     </div>
 
