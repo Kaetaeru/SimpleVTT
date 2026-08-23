@@ -70,6 +70,19 @@ test("production runtime normalizes Host catalog capability and converts through
   assert.equal(preview.rationUnits,1);
   assert.equal(preview.stashQuantityAfter,1);
 
+  const beforeStaleCommit=structuredClone(campaign);
+  await assert.rejects(()=>adapter.convertCampaignPartyStashItemToRations({
+    requestId:"ration.convert.runtime.stale-provider",
+    campaignId:CAMPAIGN_ID,
+    providerId:preview.providerId,
+    providerVersion:"0",
+    stashItemInstanceId:preview.stashItemInstanceId,
+    quantity:preview.quantity,
+  }),/Ration provider changed/);
+  snapshot=await adapter.getSnapshot();
+  campaign=snapshot.campaigns?.find((entry)=>entry.campaignId===CAMPAIGN_ID);
+  assert.deepEqual(campaign,beforeStaleCommit);
+
   const command={
     requestId:"ration.convert.runtime.1",
     campaignId:CAMPAIGN_ID,
