@@ -199,6 +199,10 @@ test("DM approval uses the real connected owner transfer and compensates Party S
     assert.equal(hostAfterSuccess.campaignSessionSystems?.partyStash.wallet.gp,2,"successful approval must debit Campaign Party Stash exactly once");
     assert.equal(clientAfterSuccess.activeCharacter.goldGp,(clientBeforeSuccess.activeCharacter.goldGp??0)+1,"successful approval must grant currency to the owning Client Character");
     assert.equal(projectedCharacterById(host,remote.id)?.sheet.goldGp,clientAfterSuccess.activeCharacter.goldGp,"Host owner projection must refresh from the Client result");
+    const successOutcome=client.takeLatestPartyStashApprovalOutcome();
+    assert.equal(successOutcome?.requestId,successCommand.requestId);
+    assert.equal(successOutcome?.status,"committed");
+    assert.match(successOutcome?.message??"",/승인/);
 
     const failureCommand=withdrawal(remote.id,"stash-approval.owner-failure");
     const stashBeforeFailure=(await host.getSnapshot()).campaignSessionSystems?.partyStash.wallet.gp;
@@ -220,6 +224,7 @@ test("DM approval uses the real connected owner transfer and compensates Party S
     assert.match(failedRecord?.error??"",/forced remote owner mutation failure/);
     assert.equal(hostAfterFailure.campaignSessionSystems?.partyStash.wallet.gp,stashBeforeFailure,"owner failure must compensate the earlier Campaign Party Stash debit");
     assert.equal(clientAfterFailure.activeCharacter.goldGp,clientBeforeFailure.activeCharacter.goldGp,"failed owner mutation must not change Player currency");
+    assert.equal(client.takeLatestPartyStashApprovalOutcome(),null,"non-terminal approved failure must not emit a false Player outcome");
 
     client.adjustDmInventory=realClientAdjust;
     await host.approvePartyStashApproval(failureCommand.requestId);
@@ -229,6 +234,9 @@ test("DM approval uses the real connected owner transfer and compensates Party S
     assert.equal(hostAfterRetry.campaignSessionSystems?.partyStash.wallet.gp,(stashBeforeFailure??0)-1,"successful retry must debit the compensated Stash exactly once");
     assert.equal(clientAfterRetry.activeCharacter.goldGp,(clientBeforeFailure.activeCharacter.goldGp??0)+1,"successful retry must grant the owner currency exactly once");
     assert.equal(projectedCharacterById(host,remote.id)?.sheet.goldGp,clientAfterRetry.activeCharacter.goldGp);
+    const retryOutcome=client.takeLatestPartyStashApprovalOutcome();
+    assert.equal(retryOutcome?.requestId,failureCommand.requestId);
+    assert.equal(retryOutcome?.status,"committed");
 
     await client.stopSession();
     clientStopped=true;
