@@ -45,19 +45,15 @@ async function configuredHost(){
   state.peerParticipants.set(PEER_ID,PARTICIPANT_ID);
   state.peerManifests.set(PEER_ID,{
     protocolVersion:1,
-    rulesProfileId:character.rulesProfileId??"dnd.srd-5.2.1",
+    rulesProfileId:"dnd.srd-5.2.1",
     capabilities:[],
-    character:{
-      characterId:character.id,
-      sourceRevision:character.sourceRevision??0,
-      runtimeRevision:character.runtimeRevision??0,
-    },
+    character:{characterId:character.id,sourceRevision:0,runtimeRevision:0},
   } satisfies SessionCompatibilityManifest);
   mountCharacterSessionProjection(host,{
     peerId:PEER_ID,
     characterId:character.id,
-    sourceRevision:character.sourceRevision??0,
-    runtimeRevision:character.runtimeRevision??0,
+    sourceRevision:0,
+    runtimeRevision:0,
     projection:{} as CharacterSessionProjectionV1,
     sheet:character,
   });
