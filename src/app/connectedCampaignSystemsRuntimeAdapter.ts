@@ -101,7 +101,7 @@ async function refreshHostOwnerProjection(host:MockAdapter,peer:string,actorId:s
   const state=connectedStateFor(host);const manifest=state.peerManifests.get(peer);const mounted=projectedCharacterById(host,actorId);
   if(state.mode!=="host"||!state.sessionId||!manifest?.character||!mounted)throw new Error("원격 Character 소유권 projection이 없습니다.");
   if(mounted.peerId!==peer||manifest.character.characterId!==actorId||projection.characterId!==actorId)throw new Error("원격 Character owner identity가 변경되었습니다.");
-  if(projection.sourceRevision!==manifest.character.sourceRevision)throw new Error("원격 Character source revision이 세션 중 변경되었습니다.");
+  if(projection.sourceRevision<manifest.character.sourceRevision)throw new Error("원격 Character source revision이 뒤로 이동했습니다.");
   if(projection.runtimeRevision<manifest.character.runtimeRevision)throw new Error("원격 Character runtime revision이 뒤로 이동했습니다.");
   const snapshot=await host.getSnapshot();const reconstructed=reconstructCharacterSessionProjectionV1(projection,snapshot.catalog);if(reconstructed.status==="rejected")throw new Error(reconstructed.error);
   const refreshed=refreshReconstructedCharacterSessionProjection(host,peer,reconstructed);if(refreshed.status==="rejected")throw new Error(refreshed.error);
