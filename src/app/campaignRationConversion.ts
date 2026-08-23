@@ -12,6 +12,7 @@ export interface CampaignRationConversionInput {
   stashItemInstanceId:string;
   quantity:number;
   rationProfile?:InstalledCampaignRationProfileV1;
+  trustedItemCapabilities?:string[];
   note?:string;
 }
 
@@ -39,6 +40,10 @@ function conversionRules(providerId:string,profile?:InstalledCampaignRationProfi
   return profile.itemConversions??[];
 }
 
+function normalizedCapabilities(values:string[]|undefined){
+  return [...new Set((values??[]).map((value)=>value.trim()).filter(Boolean))];
+}
+
 export function previewPartyStashItemRationConversion(
   campaign:CampaignRecordV1,
   input:CampaignRationConversionInput,
@@ -51,7 +56,7 @@ export function previewPartyStashItemRationConversion(
   const item=campaign.partyStash.itemReferences.find((candidate)=>candidate.instanceId===input.stashItemInstanceId);
   if(!item) throw new Error("Party stash item is unavailable");
   if(item.quantity<input.quantity) throw new Error("Party stash item quantity is insufficient");
-  const capabilities=[...new Set((item.itemTemplate?.capabilities??[]).map((value)=>value.trim()).filter(Boolean))];
+  const capabilities=normalizedCapabilities(input.trustedItemCapabilities??item.itemTemplate?.capabilities);
   const matches=conversionRules(input.providerId,input.rationProfile).filter((rule)=>capabilities.includes(rule.requiredCapability));
   if(!matches.length) throw new Error("Party stash item is not eligible for the active ration provider");
   if(matches.length>1) throw new Error("Party stash item matches multiple ration conversion rules");
