@@ -5,6 +5,7 @@ import type {
   SessionCompatibilityResult,
 } from "./connectedSessionProtocol";
 import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
+import { isConnectedResolutionPresentation, type ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 import {
   validateConnectedLongRestWireMessage,
   type ConnectedLongRestWireMessage,
@@ -31,6 +32,7 @@ export type ConnectedWireMessage =
   | { type:"action-request"; request:ConnectedActionRequest }
   | { type:"catchup-request"; sessionId:string; afterCursor:number }
   | { type:"event-batch"; sessionId:string; afterCursor:number; events:ConnectedSessionEvent[] }
+  | { type:"resolution-presentation"; sessionId:string; presentation:ConnectedResolutionPresentationV1 }
   | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number }
   | ConnectedLongRestWireMessage;
@@ -146,7 +148,9 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
   const payload=value.payload;
   if (!isString(payload.kind)||!isStringArray(payload.stateChanges)||!isStringArray(payload.provenance)) return false;
   if (payload.kind==="resolution") {
-    if (!isString(payload.resolutionId)||!Array.isArray(payload.resolutionEvents)||!payload.resolutionEvents.every(isResolutionEvent)) return false;
+    if (!isString(payload.resolutionId)||!isConnectedResolutionPresentation(payload.presentation)
+      ||payload.presentation.resolutionId!==payload.resolutionId
+      ||!Array.isArray(payload.resolutionEvents)||!payload.resolutionEvents.every(isResolutionEvent)) return false;
   } else if (payload.kind==="mode-transition") {
     if ((payload.sessionMode!=="freeform"&&payload.sessionMode!=="initiative")
       ||!isCursor(payload.round)||!isString(payload.currentActorId)||!isEconomyMap(payload.economyByActor)) return false;
@@ -201,6 +205,10 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if (value.type==="event-batch") {
     if (!isString(value.sessionId)||!isCursor(value.afterCursor)||!Array.isArray(value.events)||!value.events.every(isConnectedEvent)) return "invalid event-batch message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="resolution-presentation") {
+    if (!isString(value.sessionId)||!isConnectedResolutionPresentation(value.presentation)) return "invalid resolution-presentation message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="session-ended") {

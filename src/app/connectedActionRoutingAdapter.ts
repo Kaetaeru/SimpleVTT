@@ -11,6 +11,7 @@ import {
   sendConnectedWireTo,
 } from "./connectedSessionRuntimeAdapter";
 import { clearCommittedResolutionEvents, takeCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
+import { buildConnectedResolutionPresentation } from "./connectedResolutionPresentation";
 import { tauriSessionTransport } from "./tauriSessionTransport";
 import {
   activateProjectedCharacterResolutionContext,
@@ -48,6 +49,8 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   const pending=state.pendingRemoteAction;
   const isRemotePending=pending?.resolutionId===resolution.id;
   const events=takeCommittedResolutionEvents(resolution.id);
+  const presentation=buildConnectedResolutionPresentation(current,state.nextPresentationSequence,"catchup");
+  if (!presentation) return current;
   const readyConfig=readyActionConfigurationFor(adapter,resolution.actorId);
   const readyArmed=resolution.actionId==="action.standard.ready"&&readyConfig;
   const readyCleared=readyClearedActorId===resolution.actorId||pending?.request.actionId==="action.standard.ready.trigger";
@@ -87,6 +90,7 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
     payload:{
       kind:"resolution" as const,
       resolutionId:resolution.id,
+      presentation,
       resolutionEvents:events,
       stateChanges:[...resolution.stateChanges],
       provenance:[...resolution.provenance],
@@ -114,6 +118,7 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
     if (economy) outbound.push(state.ledger.commitHostEvent({actorId:resolution.actorId,payload:{kind:"ready-action",actorId:resolution.actorId,transition:"cleared",economy:{...economy},stateChanges:[`${resolution.actorId} 준비 행동 해제`],provenance:["host-authoritative ready-action trigger"]}}));
   }
   state.publishedResolutionIds.add(resolution.id);
+  state.nextPresentationSequence=Math.max(state.nextPresentationSequence,presentation.presentationSequence+1);
   if (isRemotePending) state.pendingRemoteAction=null;
   await broadcastConnectedWire({
     type:"event-batch",
@@ -123,6 +128,20 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   });
   if (isRemotePending&&restoreProjectedContext(adapter)) return connectedInternal(adapter).getSnapshot();
   return current;
+}
+
+async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapshot:AppSnapshot) {
+  const state=connectedStateFor(adapter);
+  const resolution=snapshot.resolution;
+  if (state.mode!=="host"||!state.ledger||!resolution||resolution.stage==="complete") return snapshot;
+  const key=`${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}:${resolution.finalOutcome}`;
+  if (state.lastPublishedPresentationKey===key) return snapshot;
+  const presentation=buildConnectedResolutionPresentation(snapshot,state.nextPresentationSequence,"live");
+  if (!presentation) return snapshot;
+  state.lastPublishedPresentationKey=key;
+  state.nextPresentationSequence+=1;
+  await broadcastConnectedWire({type:"resolution-presentation",sessionId:state.ledger.sessionId,presentation});
+  return snapshot;
 }
 
 registerConnectedActionRequestHandler(async (adapter,transportMessage,request) => {
@@ -203,6 +222,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     }
     state.pendingRemoteAction={peer:transportMessage.peer,request:structuredClone(request),resolutionId:resolution.id};
     await publishConnectedSnapshot(adapter);
+    await publishConnectedResolutionPresentation(adapter,next);
     await publishCommittedResolution(adapter,next);
   } catch(error) {
     ledger.cancelReservedActionRequest(request.requestId);
@@ -249,6 +269,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     return app.getSnapshot();
   }
   const next=await previousResolveAction.call(this,actionId,targetIds);
+  await publishConnectedResolutionPresentation(this,next);
   return publishCommittedResolution(this,next);
 };
 
@@ -258,6 +279,7 @@ MockAdapter.prototype.advanceResolution=async function advanceConnectedResolutio
   const current=connectedInternal(this).resolution;
   const readyBefore=state.mode==="host"&&current?readyActionConfigurationFor(this,current.actorId):undefined;
   const next=await previousAdvanceResolution.call(this);
+  await publishConnectedResolutionPresentation(this,next);
   const readyClearedActorId=readyBefore&&!readyActionConfigurationFor(this,readyBefore.actorId)?readyBefore.actorId:undefined;
   return publishCommittedResolution(this,next,readyClearedActorId);
 };
@@ -266,6 +288,7 @@ MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrup
   const state=connectedStateFor(this);
   if (state.mode==="client") return connectedInternal(this).getSnapshot();
   const next=await previousRespondToInterrupt.call(this,accept);
+  await publishConnectedResolutionPresentation(this,next);
   return publishCommittedResolution(this,next);
 };
 

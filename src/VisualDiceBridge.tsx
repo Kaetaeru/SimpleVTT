@@ -200,7 +200,8 @@ export function VisualDiceBridge() {
 
   const action = useMemo(() => {
     if (!snapshot || !resolution) return undefined;
-    return Object.values(snapshot.scene.actionsByActor).flat().find((candidate) => candidate.id === resolution.actionId);
+    return Object.values(snapshot.scene.actionsByActor).flat().find((candidate) => candidate.id === resolution.actionId)
+      ?? (snapshot.resolutionPresentation?.resolutionId===resolution.id?snapshot.resolutionPresentation.action:undefined);
   },[snapshot,resolution]);
 
   const roll = useMemo(() => resolution ? buildVisualDiceRoll(resolution,action) : null,[resolution,action]);

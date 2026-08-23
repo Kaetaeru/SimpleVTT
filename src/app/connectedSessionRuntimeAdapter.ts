@@ -24,12 +24,17 @@ import { syncConnectedCampaignRoster } from "./connectedCampaignRosterPort";
 import { projectedCharacterById, rebindCharacterSessionProjectionPeer } from "./characterSessionProjectionRegistry";
 import { unmountReconstructedCharacterSessionProjection } from "./characterSessionProjectionMount";
 import { clearReadyActionConfiguration, setReadyActionConfiguration } from "./standardActionReadyState";
+import {
+  actionFromConnectedPresentation,
+  isConnectedResolutionPresentation,
+  type ConnectedResolutionPresentationV1,
+} from "./connectedResolutionPresentation";
 
 declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -38,6 +43,7 @@ export interface ConnectedAdapterState {
   session:AppSnapshot["session"];
   scene:SceneVm;
   resolution:AppSnapshot["resolution"];
+  resolutionPresentation:AppSnapshot["resolutionPresentation"];
   activeCharacter:CharacterSheet;
   characters:CharacterSummary[];
   catalog:CatalogEntry[];
@@ -79,6 +85,7 @@ export function resetConnectedSessionTransientState(adapter:MockAdapter,message:
   app.scene.selectedActorId=localActorId;
   app.scene.economyByActor={};
   app.resolution=null;
+  app.resolutionPresentation=null;
   app.connectionState="disconnected";
   app.session.role="offline";
   app.session.address="";
@@ -197,6 +204,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     return { status:"committed" as const };
   }
   if (payload.kind!=="resolution") return { status:"committed" as const };
+  if (!isConnectedResolutionPresentation(payload.presentation)) return {status:"rejected" as const,error:"Host resolution event is missing a valid presentation envelope"};
   const projected=applyResolutionEvents(app.scene,payload.resolutionEvents,app.activeCharacter.resources,app.activeCharacter.items);
   if (projected.status==="rejected") return projected;
 
@@ -209,6 +217,14 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   app.activeCharacter.resources=projected.resources.map((entry)=>structuredClone(entry));
   app.activeCharacter.items=projected.items.map((entry)=>structuredClone(entry));
   app.syncChar();
+  app.resolution=structuredClone(payload.presentation.resolution);
+  app.resolutionPresentation={
+    resolutionId:payload.presentation.resolutionId,
+    presentationSequence:payload.presentation.presentationSequence,
+    delivery:"catchup",
+    action:actionFromConnectedPresentation(payload.presentation.action),
+  };
+  state.lastAppliedPresentationSequence=Math.max(state.lastAppliedPresentationSequence,payload.presentation.presentationSequence);
   app.activity.unshift({
     id:`connected:${event.eventId}`,
     time:"지금",
@@ -219,6 +235,26 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     stateChanges:[...projected.stateChanges],
   });
   return { status:"committed" as const };
+}
+
+export function applyConnectedResolutionPresentation(adapter:MockAdapter,presentation:ConnectedResolutionPresentationV1) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if (state.mode!=="client") return {status:"rejected" as const,error:"only a connected Client can apply remote presentation"};
+  if (!isConnectedResolutionPresentation(presentation)) return {status:"rejected" as const,error:"invalid connected Resolution presentation"};
+  if (presentation.delivery!=="live") return {status:"rejected" as const,error:"catch-up presentation must arrive with its committed event"};
+  if (presentation.presentationSequence<=state.lastAppliedPresentationSequence) {
+    return {status:"duplicate" as const,presentationSequence:state.lastAppliedPresentationSequence};
+  }
+  state.lastAppliedPresentationSequence=presentation.presentationSequence;
+  app.resolution=structuredClone(presentation.resolution);
+  app.resolutionPresentation={
+    resolutionId:presentation.resolutionId,
+    presentationSequence:presentation.presentationSequence,
+    delivery:presentation.delivery,
+    action:actionFromConnectedPresentation(presentation.action),
+  };
+  return {status:"applied" as const,presentationSequence:presentation.presentationSequence};
 }
 
 export async function applyConnectedClientEvents(adapter:MockAdapter,events:ConnectedSessionEvent[]) {
@@ -485,6 +521,21 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
     if (applied.status==="rejected") {
       app.session.compatibility="warning";
       app.session.compatibilityMessage=applied.error;
+    }
+    await publishConnectedSnapshot(adapter);
+    return;
+  }
+
+  if (wire.type==="resolution-presentation") {
+    if (!state.sessionId||wire.sessionId!==state.sessionId) {
+      app.session.compatibility="warning";
+      app.session.compatibilityMessage="received a Resolution presentation for a different or uninitialized session";
+    } else {
+      const applied=applyConnectedResolutionPresentation(adapter,wire.presentation);
+      if (applied.status==="rejected") {
+        app.session.compatibility="warning";
+        app.session.compatibilityMessage=applied.error;
+      }
     }
     await publishConnectedSnapshot(adapter);
     return;

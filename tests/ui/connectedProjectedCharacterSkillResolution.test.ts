@@ -169,7 +169,9 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
     const preview=await host.getSnapshot();
     assert.equal(state.ledger.cursor,0,"skill preview must not commit before Host advances the resolution");
-    assert.equal(broadcasts.length,0,"skill preview must not broadcast an uncommitted result");
+    const previewMessages=broadcasts.map((message)=>JSON.parse(message) as {type:string});
+    assert.equal(previewMessages.filter((message)=>message.type==="event-batch").length,0,"skill preview must not commit or broadcast shared state");
+    assert.equal(previewMessages.filter((message)=>message.type==="resolution-presentation").length,1,"skill preview must broadcast one mechanics-free live presentation");
     assert.ok(state.pendingRemoteAction);
     assert.equal(preview.activeCharacter.id,remote.id,"remote projection must be the temporary Host resolution context");
     assert.equal(preview.resolution?.rollKind,"check");
@@ -185,8 +187,10 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.equal(connectedStateFor(host).ledger?.cursor,1);
     assert.deepEqual(completed.characters,before.characters,"Host permanent Character library must remain unchanged");
 
-    assert.equal(broadcasts.length,1,"remote skill commit must broadcast exactly one ordered event batch");
-    const batch=JSON.parse(broadcasts[0]) as {type:string;events:ConnectedSessionEvent[]};
+    const wireMessages=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]});
+    const eventBatches=wireMessages.filter((message)=>message.type==="event-batch");
+    assert.equal(eventBatches.length,1,"remote skill commit must broadcast exactly one ordered event batch");
+    const batch=eventBatches[0] as {type:string;events:ConnectedSessionEvent[]};
     assert.equal(batch.type,"event-batch");
     assert.equal(batch.events.length,1);
     const hostEvent=batch.events[0];
@@ -236,7 +240,7 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,persistenceBefore);
 
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
-    assert.equal(broadcasts.length,1,"duplicate request must not create a second Host broadcast");
+    assert.equal(broadcasts.map((message)=>JSON.parse(message) as {type:string}).filter((message)=>message.type==="event-batch").length,1,"duplicate request must not create a second Host state broadcast");
     assert.equal(sentToPeer.length,1,"duplicate request should return the committed event directly to the peer");
     const duplicate=JSON.parse(sentToPeer[0]) as {type:string;events:Array<{sequence:number}>};
     assert.equal(duplicate.type,"event-batch");

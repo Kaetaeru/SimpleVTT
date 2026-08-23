@@ -202,8 +202,11 @@ test("host-unknown projected Character uses its persisted potion through Host au
     assert.ok(mountedAfter!.sheet.hp>remote.hp,"host ephemeral projection must receive committed healing");
     assert.ok(mountedAfter!.sheet.hp<=remote.maxHp);
 
-    assert.equal(broadcasts.length,1,"remote item commit must broadcast exactly one ordered event batch");
-    const batch=JSON.parse(broadcasts[0]) as {type:string;events:ConnectedSessionEvent[]};
+    const wireMessages=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]});
+    assert.ok(wireMessages.some((message)=>message.type==="resolution-presentation"),"remote item preview must fan out through the shared presentation path");
+    const eventBatches=wireMessages.filter((message)=>message.type==="event-batch");
+    assert.equal(eventBatches.length,1,"remote item commit must broadcast exactly one ordered event batch");
+    const batch=eventBatches[0] as {type:string;events:ConnectedSessionEvent[]};
     assert.equal(batch.type,"event-batch");
     assert.equal(batch.events.length,1);
     const hostEvent=batch.events[0];
@@ -255,7 +258,7 @@ test("host-unknown projected Character uses its persisted potion through Host au
     assert.equal(potionQuantity(reloaded.activeCharacter),1);
 
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
-    assert.equal(broadcasts.length,1,"duplicate request must not create a second Host broadcast");
+    assert.equal(broadcasts.map((message)=>JSON.parse(message) as {type:string}).filter((message)=>message.type==="event-batch").length,1,"duplicate request must not create a second Host state broadcast");
     assert.equal(sentToPeer.length,1,"duplicate request should return the already committed event directly to the peer");
     const duplicate=JSON.parse(sentToPeer[0]) as {type:string;events:Array<{sequence:number}>};
     assert.equal(duplicate.type,"event-batch");

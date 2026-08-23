@@ -43,7 +43,8 @@ export function CombatVfxBridge() {
 
   const action=useMemo(()=>{
     if(!snapshot||!resolution)return undefined;
-    return Object.values(snapshot.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId);
+    return Object.values(snapshot.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId)
+      ?? (snapshot.resolutionPresentation?.resolutionId===resolution.id?snapshot.resolutionPresentation.action:undefined);
   },[snapshot,resolution]);
   const profile=useMemo(()=>resolution?buildCombatVfxProfile(resolution,action):null,[resolution,action]);
 

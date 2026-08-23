@@ -174,8 +174,12 @@ test("host-unknown projected Fighter resolves through host authority and converg
     assert.ok((mounted?.sheet.hp??0)>remote.hp,"host ephemeral projected HP must receive the committed healing event");
     assert.ok((mounted?.sheet.hp??0)<=remote.maxHp);
 
-    assert.equal(broadcasts.length,1,"canonical remote commit must broadcast exactly one ordered event batch");
-    const batch=JSON.parse(broadcasts[0]) as {type:string;events:ConnectedSessionEvent[]};
+    const wireMessages=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]});
+    const presentationMessages=wireMessages.filter((message)=>message.type==="resolution-presentation");
+    const eventBatches=wireMessages.filter((message)=>message.type==="event-batch");
+    assert.ok(presentationMessages.length>=1,"staged remote resolution must publish live presentation without committing state");
+    assert.equal(eventBatches.length,1,"canonical remote commit must broadcast exactly one ordered event batch");
+    const batch=eventBatches[0] as {type:string;events:ConnectedSessionEvent[]};
     assert.equal(batch.type,"event-batch");
     assert.equal(batch.events.length,1);
     const hostEvent=batch.events[0];
@@ -224,7 +228,7 @@ test("host-unknown projected Fighter resolves through host authority and converg
     assert.equal(reloaded.activeCharacter.resources.find((resource)=>resource.id==="resource.second-wind")?.current,1);
 
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
-    assert.equal(broadcasts.length,1,"duplicate request must not create a second host broadcast");
+    assert.equal(broadcasts.map((message)=>JSON.parse(message) as {type:string}).filter((message)=>message.type==="event-batch").length,1,"duplicate request must not create a second host state broadcast");
     assert.equal(sentToPeer.length,1,"duplicate request should return the already committed event directly to the peer");
     const duplicate=JSON.parse(sentToPeer[0]) as {type:string;events:Array<{sequence:number}>};
     assert.equal(duplicate.type,"event-batch");

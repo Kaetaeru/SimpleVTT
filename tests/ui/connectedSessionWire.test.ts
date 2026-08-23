@@ -17,6 +17,26 @@ const manifest:SessionCompatibilityManifest={
   capabilities:["resolution-event-v1","character-projection-v1"],
 };
 
+const presentation={
+  schemaId:"simplevtt.connected-resolution-presentation" as const,
+  schemaVersion:1 as const,
+  resolutionId:"resolution.test",
+  presentationSequence:1,
+  delivery:"catchup" as const,
+  audience:{scope:"public" as const},
+  actor:{id:"char.aelar",label:"Aelar"},
+  targets:[{id:"combatant.goblin-a",label:"Goblin A"}],
+  resolution:{
+    id:"resolution.test",actorId:"char.aelar",targetIds:["combatant.goblin-a"],actionId:"action.shortbow",actionName:"Shortbow",
+    rollKind:"damage" as const,stage:"complete" as const,authoritativeDice:[3],saveResults:[],damageComponents:[],compact:"3 damage",detail:[],
+    provenance:[],calculatedOutcome:"3 damage",finalOutcome:"3 damage",stateChanges:["Goblin HP 7 → 4"],adjudicated:false,canAdvance:false,
+  },
+  action:{
+    id:"action.shortbow",actorId:"char.aelar",name:"Shortbow",category:"weapon" as const,target:"enemy" as const,
+    resolutionKind:"attack" as const,summary:"+5 · 1d6+2 piercing",attackBonus:5,damage:[{type:"piercing",dice:"1d6",flat:2,average:6}],
+  },
+};
+
 const event:ConnectedSessionEvent={
   sessionId:"session.test",
   eventId:"session.test:event:1",
@@ -26,6 +46,7 @@ const event:ConnectedSessionEvent={
   payload:{
     kind:"resolution",
     resolutionId:"resolution.test",
+    presentation,
     resolutionEvents:[{
       id:"domain.event.1",
       resolutionId:"resolution.test",
@@ -109,6 +130,7 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
   roundTrip({ type:"catchup-request",sessionId:"session.test",afterCursor:1 });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:1,events:[readyEvent] });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:2,events:[readyActionEvent] });
+  roundTrip({ type:"resolution-presentation",sessionId:"session.test",presentation:{...presentation,delivery:"live"} });
   roundTrip({ type:"session-ended",sessionId:"session.test",reason:"Host ended live play." });
   roundTrip({ type:"error",code:"stale-cursor",message:"client is behind",hostCursor:3 });
 });

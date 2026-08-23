@@ -22,6 +22,9 @@ export interface ConnectedRuntimeState {
   reconnectTimer:ReturnType<typeof setTimeout>|null;
   reconnectAttempts:number;
   reconnectInFlight:boolean;
+  nextPresentationSequence:number;
+  lastAppliedPresentationSequence:number;
+  lastPublishedPresentationKey:string;
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -43,6 +46,9 @@ export function connectedStateFor(adapter:MockAdapter) {
       reconnectTimer:null,
       reconnectAttempts:0,
       reconnectInFlight:false,
+      nextPresentationSequence:1,
+      lastAppliedPresentationSequence:0,
+      lastPublishedPresentationKey:"",
     };
     states.set(adapter,state);
   }
@@ -64,5 +70,8 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.reconnectTimer=null;
   state.reconnectAttempts=0;
   state.reconnectInFlight=false;
+  state.nextPresentationSequence=1;
+  state.lastAppliedPresentationSequence=0;
+  state.lastPublishedPresentationKey="";
   return state;
 }

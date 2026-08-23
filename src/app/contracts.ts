@@ -397,6 +397,13 @@ export interface ResolutionView {
   nextLabel?: string;
 }
 
+export interface ResolutionPresentationRuntimeVm {
+  resolutionId:string;
+  presentationSequence:number;
+  delivery:"live"|"catchup";
+  action?:ActionVm;
+}
+
 export type AdjudicationScope = "resolution" | "target" | "turn" | "scene" | "until-cleared";
 
 export interface DmAdjudicationCommand {
@@ -512,6 +519,7 @@ export interface AppSnapshot {
   combatantImport: CombatantImportPreview | null;
   activity: ActivityEntry[];
   resolution: ResolutionView | null;
+  resolutionPresentation?: ResolutionPresentationRuntimeVm | null;
   session: SessionVm;
   sessionCharacterInventories?: Record<string, SessionCharacterInventoryVm>;
   campaigns?: CampaignRecordV1[];

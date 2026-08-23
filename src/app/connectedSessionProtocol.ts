@@ -1,6 +1,7 @@
 import type { EconomyVm, SessionMode } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
+import type { ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 
 export const CONNECTED_SESSION_PROTOCOL_VERSION = 1 as const;
 
@@ -43,6 +44,7 @@ export type ConnectedEventPayload =
   | {
       kind:"resolution";
       resolutionId:string;
+      presentation:ConnectedResolutionPresentationV1;
       resolutionEvents:ResolutionEvent[];
       stateChanges:string[];
       provenance:string[];
