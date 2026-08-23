@@ -17,6 +17,25 @@ test("Host persists remote Party Stash intent before entering the transfer runti
   assert.match(exact,/if\(coordinated\)await connectedPartyStashHostCoordinatorStoreFor\(this\)\.delete\(command\.requestId\)\.catch/);
 });
 
+test("Player self-service Stash is checkpointed before the Host Campaign handler sees it",()=>{
+  const prepare=recovery.indexOf("await prepareClientStashCoordinator");
+  const delegate=recovery.indexOf("handler(message);",prepare);
+  assert.ok(prepare>=0&&delegate>prepare);
+  assert.match(recovery,/campaign-stash-deposit/);
+  assert.match(recovery,/request\.command\.requestId\.endsWith\("\.compensate"\)/);
+  assert.match(recovery,/Host recovery checkpoint failed/);
+});
+
+test("Player completion acknowledgement deletes coordinator only after Campaign outcome matches",()=>{
+  assert.match(recovery,/campaign-party-stash-owner-complete/);
+  assert.match(recovery,/connectedPartyStashRecoveryOutcome\(record,campaign\)!==complete\.outcome/);
+  assert.match(recovery,/await store\.delete\(record\.requestId\)/);
+  const transfer=recovery.indexOf("transferPartyStashWithOwnerCompletion");
+  const base=recovery.indexOf("baseTransferPartyStash.call(this,command)",transfer);
+  const ack=recovery.indexOf('sendOwnerComplete(this,command,"applied")',base);
+  assert.ok(transfer>=0&&base>transfer&&ack>base);
+});
+
 test("Host restart recovery uses Campaign idempotency including compensation identity",()=>{
   assert.match(recovery,/campaign\.recentRequestIds\.includes\(record\.requestId\)/);
   assert.match(recovery,/campaign\.recentRequestIds\.includes\(`\$\{record\.requestId\}\.compensate`\)/);
