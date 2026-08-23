@@ -14,9 +14,10 @@ export function PartyStashApprovalOutcomeBridge(){
       setNotice(null);
       return;
     }
-    const next=mockAdapter.takeLatestPartyStashApprovalOutcome();
+    if(notice)return;
+    const next=mockAdapter.takeNextPartyStashApprovalOutcome();
     if(next)setNotice(next);
-  },[snapshot]);
+  },[snapshot,notice]);
 
   if(!snapshot||snapshot.session.role!=="client"||!notice)return null;
   const tone=notice.status==="committed"?"success":notice.status==="rejected"?"error":"warning";
