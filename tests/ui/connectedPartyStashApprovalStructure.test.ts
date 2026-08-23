@@ -32,11 +32,13 @@ test("connected approval runtime queues before mutation and commits only after t
   assert.ok(approve>=0&&transfer>approve&&commit>transfer);
 });
 
-test("terminal approval outcomes are targeted to the Player and surfaced without another asset mutation path",()=>{
+test("terminal approval outcomes are targeted, queued, and surfaced without another asset mutation path",()=>{
   assert.match(runtime,/campaign-stash-approval-outcome/);
   assert.match(runtime,/tauriSessionTransport\.sendTo\(peer/);
-  assert.match(runtime,/takeLatestPartyStashApprovalOutcome/);
-  assert.match(bridge,/takeLatestPartyStashApprovalOutcome\(\)/);
+  assert.match(runtime,/clientOutcomeQueues/);
+  assert.match(runtime,/takeNextPartyStashApprovalOutcome/);
+  assert.match(bridge,/takeNextPartyStashApprovalOutcome\(\)/);
+  assert.match(bridge,/\[snapshot,notice\]/);
   assert.match(bridge,/보관함 출고 승인/);
   assert.match(bridge,/보관함 출고 거절/);
   assert.match(bridge,/보관함 출고 취소/);
