@@ -130,6 +130,7 @@ test("DM approval uses the real connected owner transfer and compensates Party S
 
   try{
     await import("../../src/app/connectedSessionRuntimeAdapter");
+    await import("../../src/app/productionSessionLifecycleAdapter");
     await import("../../src/app/connectedPartyStashHostPolicyAdapter");
     await import("../../src/app/connectedCampaignSystemsRuntimeAdapter");
     await import("../../src/app/connectedPartyStashClientPolicyAdapter");
