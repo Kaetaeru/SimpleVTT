@@ -87,6 +87,10 @@ export interface CampaignSupplyTransactionSummary {
   shortage?:number;
   note?:string;
   revertsTransactionId?:string;
+  sourceItemInstanceId?:string;
+  sourceDefinitionId?:string;
+  sourceQuantity?:number;
+  conversionCapability?:string;
   committedAt:string;
   provenance:string[];
 }
@@ -115,6 +119,7 @@ export interface CampaignPartyStashItemTemplate {
   charges?:{current:number;max:number};
   passiveEffects:string[];
   grantedActionIds:string[];
+  capabilities?:string[];
   provenance:string[];
 }
 
