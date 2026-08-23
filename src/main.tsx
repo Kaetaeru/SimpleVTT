@@ -33,7 +33,6 @@ import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
 import { CombatVfxBridge } from "./CombatVfxBridge";
-import { AppearanceSettingsBridge } from "./AppearanceSettingsBridge";
 import { FirstRunTutorialBridge } from "./FirstRunTutorialBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { MovementReactionBridge } from "./MovementReactionBridge";
@@ -43,6 +42,7 @@ import { CharacterPortraitBridge } from "./CharacterPortraitBridge";
 import { CharacterLibraryUxBridge } from "./CharacterLibraryUxBridge";
 import { CampaignStartupRecoveryBridge } from "./CampaignStartupRecoveryBridge";
 import { PartyStashApprovalOutcomeBridge } from "./PartyStashApprovalOutcomeBridge";
+import "./theme-tokens.css";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -83,7 +83,6 @@ createRoot(document.getElementById("root")!).render(
       <LevelUpV10Bridge />
       <VisualDiceBridge />
       <CombatVfxBridge />
-      <AppearanceSettingsBridge />
       <FirstRunTutorialBridge />
       <ConcentrationSaveBridge />
       <MovementReactionBridge />

@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type CSSProperties } from "react";
-import { createPortal } from "react-dom";
+import { useLayoutEffect, useState, type CSSProperties } from "react";
 import {
   APPEARANCE_SWATCHES,
   applyAppearancePreference,
@@ -11,48 +10,18 @@ import {
 
 type SwatchStyle = CSSProperties & { "--appearance-swatch": string };
 
-function sameAppearance(left: AppearancePreference, right: AppearancePreference) {
-  return left.mode === right.mode && left.accent.toLowerCase() === right.accent.toLowerCase();
-}
-
-export function AppearanceSettingsBridge() {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
+export function AppearanceSettingsPanel() {
   const [appearance, setAppearance] = useState<AppearancePreference>(() => readAppearancePreference());
-
-  useEffect(() => {
-    const findTarget = () => setTarget(document.querySelector<HTMLElement>(".settings-card"));
-    findTarget();
-    const observer = new MutationObserver(findTarget);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, []);
 
   useLayoutEffect(() => {
     applyAppearancePreference(appearance);
     persistAppearancePreference(appearance);
   }, [appearance]);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const reconcile = () => {
-      const applied: AppearancePreference = {
-        mode: root.dataset.theme === "light" ? "light" : "dark",
-        accent: root.style.getPropertyValue("--accent-base").trim() || appearance.accent,
-      };
-      if (!sameAppearance(applied, appearance)) applyAppearancePreference(appearance, root);
-    };
-    reconcile();
-    const observer = new MutationObserver(reconcile);
-    observer.observe(root, { attributes: true, attributeFilter: ["data-theme", "style"] });
-    return () => observer.disconnect();
-  }, [appearance]);
-
-  if (!target) return null;
-
   const setMode = (mode: AppearanceMode) => setAppearance((current) => ({ ...current, mode }));
   const setAccent = (accent: string) => setAppearance((current) => ({ ...current, accent }));
 
-  return createPortal(
+  return (
     <section className="appearance-v09-panel" aria-label="외형 설정">
       <div className="appearance-v09-heading">
         <div>
@@ -116,7 +85,6 @@ export function AppearanceSettingsBridge() {
         <button type="button" className="primary">주요 행동</button>
         <i aria-hidden="true" />
       </div>
-    </section>,
-    target,
+    </section>
   );
 }

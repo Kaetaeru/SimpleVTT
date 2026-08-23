@@ -1,16 +1,3 @@
-:root {
-  --accent-base: #c58a2c;
-  --accent: color-mix(in srgb, var(--accent-base) 52%, white);
-  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
-  --line-strong: color-mix(in srgb, var(--accent) 48%, transparent);
-}
-
-:root[data-theme="light"] {
-  --accent: color-mix(in srgb, var(--accent-base) 35%, #121212);
-  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
-  --line-strong: color-mix(in srgb, var(--accent) 42%, transparent);
-}
-
 button.primary {
   border-color: var(--line-strong);
   background: linear-gradient(
@@ -31,18 +18,7 @@ button.primary {
   outline-offset: 2px;
 }
 
-/* Retire the legacy fixed Theme/Accent controls while keeping the existing motion controls. */
-.settings-card {
-  display: grid;
-}
-.settings-card > .section-title:nth-of-type(-n+2),
-.settings-card > .method-tabs:first-of-type,
-.settings-card > .accent-options {
-  display: none;
-}
-
 .appearance-v09-panel {
-  order: -1;
   display: grid;
   gap: 18px;
   padding: 18px;

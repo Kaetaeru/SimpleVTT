@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   APPEARANCE_STORAGE_KEY,
   DEFAULT_APPEARANCE,
+  applyAppearancePreference,
   persistAppearancePreference,
   readAppearancePreference,
   type AppearanceStorage,
@@ -24,6 +25,7 @@ const firstRun = readFileSync("src/FirstRunTutorial.tsx", "utf8");
 const firstRunBridge = readFileSync("src/FirstRunTutorialBridge.tsx", "utf8");
 const appearanceBridge = readFileSync("src/AppearanceSettingsBridge.tsx", "utf8");
 const appearanceCss = readFileSync("src/appearance-settings.css", "utf8");
+const themeTokens = readFileSync("src/theme-tokens.css", "utf8");
 const playbook = readFileSync("docs/design/ui-ux/contracts/IMPLEMENTATION-PLAYBOOK.md", "utf8");
 const workOrder = readFileSync("docs/design/ui-ux/work-orders/WO-UI-001-product-shell-first-run-tutorial-sheet-preference.md", "utf8");
 const continuityWorkOrder = readFileSync("docs/design/ui-ux/work-orders/WO-UI-002-connected-product-shell-continuity-return-to-play.md", "utf8");
@@ -164,16 +166,33 @@ test("V0.9 appearance persists independent mode and accent preferences", () => {
   assert.deepEqual(readAppearancePreference(storage), { mode: "light", accent: DEFAULT_APPEARANCE.accent });
 });
 
+test("the canonical appearance owner applies mode and accent through one root contract", () => {
+  const properties = new Map<string, string>();
+  const root = {
+    dataset: {} as Record<string, string>,
+    style: { setProperty: (name: string, value: string) => properties.set(name, value) },
+  } as unknown as HTMLElement;
+  assert.deepEqual(applyAppearancePreference({ mode: "light", accent: "#7658b5" }, root), { mode: "light", accent: "#7658b5" });
+  assert.equal(root.dataset.theme, "light");
+  assert.equal(properties.get("--accent-base"), "#7658b5");
+  assert.doesNotMatch(app, /dataset\.accent|setTheme\(|setAccent\(/);
+});
+
 test("V0.9 appearance is applied before render and Settings exposes presets plus a custom color", () => {
   assert.match(main, /initializeAppearancePreference\(\);[\s\S]*createRoot/);
-  assert.match(main, /<AppearanceSettingsBridge/);
+  assert.match(main, /theme-tokens\.css/);
+  assert.match(app, /<AppearanceSettingsPanel/);
+  assert.doesNotMatch(main, /<AppearanceSettingsBridge/);
   assert.match(main, /appearance-settings\.css/);
   assert.match(appearanceBridge, /APPEARANCE_SWATCHES\.map/);
   assert.match(appearanceBridge, /type="color"/);
   assert.match(appearanceBridge, /aria-pressed/);
   assert.match(appearanceBridge, /mode === "dark" \? "다크" : "라이트"/);
   assert.doesNotMatch(appearanceBridge, /Parchment|Crimson|양피지/);
-  assert.match(appearanceCss, /--accent-base/);
+  assert.match(themeTokens, /--accent-base/);
+  assert.match(themeTokens, /:root\[data-theme="light"\]/);
+  assert.match(themeTokens, /--border:\s*var\(--line\)/);
+  assert.doesNotMatch(themeTokens, /data-accent/);
   assert.match(appearanceCss, /focus-visible/);
   assert.doesNotMatch(appearanceCss, /--(?:good|bad|info)\s*:/);
 });

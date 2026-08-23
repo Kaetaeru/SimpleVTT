@@ -1,11 +1,3 @@
-.v1-shell {
-  --border: var(--line);
-  --bg-panel: var(--recess);
-  --surface-hover: var(--surface-2);
-  --danger: var(--bad);
-  --warning: var(--accent);
-}
-
 .v1-shell .workspace {
   grid-template-rows: 72px minmax(0, 1fr);
 }

@@ -6,6 +6,7 @@ import { V1HomeScreen } from "./V1HomeScreen";
 import { V1ContentScreen } from "./V1ContentScreen";
 import { CharacterCreateScreenV10 } from "./CharacterCreateV10";
 import { CampaignScreen } from "./CampaignScreen";
+import { AppearanceSettingsPanel } from "./AppearanceSettingsBridge";
 import { applyMotionPreference, isReducedMotionPreferred, persistMotionPreference, readMotionPreference, type MotionPreference } from "./app/motionPreferences";
 import type {
   AbilityKey,
@@ -268,22 +269,12 @@ function SessionScreen({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "
 }
 
 function SettingsScreen() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [accent, setAccent] = useState<"gold" | "blue" | "green">("gold");
   const [motion, setMotion] = useState<MotionPreference>(()=>readMotionPreference());
-  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
-  useEffect(() => { document.documentElement.dataset.accent = accent; }, [accent]);
   useEffect(() => { applyMotionPreference(motion); persistMotionPreference(motion); }, [motion]);
   return <div className="screen page-dark">
     <ScreenHead kicker="SETTINGS" title="환경 설정" description="표시 방식과 움직임을 내 환경에 맞게 조정합니다."/>
     <div className="settings-card">
-      <SectionTitle>화면 테마</SectionTitle>
-      <div className="method-tabs">
-        <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}><strong>다크</strong><span>어두운 배경</span></button>
-        <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}><strong>라이트</strong><span>밝은 배경</span></button>
-      </div>
-      <SectionTitle>강조 색상</SectionTitle>
-      <div className="accent-options">{(["gold", "blue", "green"] as const).map((value) => <button key={value} className={accent === value ? `accent-swatch ${value} active` : `accent-swatch ${value}`} onClick={() => setAccent(value)} aria-label={`${value} 강조 색상`}/>)}</div>
+      <AppearanceSettingsPanel />
       <SectionTitle>접근성 · 움직임</SectionTitle>
       <div className="method-tabs">
         <button className={motion === "system" ? "active" : ""} onClick={() => setMotion("system")}><strong>시스템 설정</strong><span>운영체제의 움직임 설정을 따릅니다</span></button>
