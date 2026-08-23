@@ -7,6 +7,7 @@ mod character_campaign_compound;
 mod connected_long_rest_character;
 mod connected_long_rest_character_guard;
 mod connected_long_rest_host;
+mod connected_owner_inventory;
 mod session_transport;
 
 use std::sync::Mutex;
@@ -132,6 +133,78 @@ fn delete_connected_long_rest_host_record(
     let root = local_data_root(&app)?;
     character_campaign_compound::recover_at(&root)?;
     connected_long_rest_host::delete_at(&root, &request)
+}
+
+#[tauri::command]
+fn read_connected_owner_inventory_journal(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_owner_inventory::OwnerInventoryJournalIdentityRequest,
+) -> Result<Option<connected_owner_inventory::OwnerInventoryJournalDto>, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_owner_inventory::read_request_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn prepare_connected_owner_inventory_journal(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_owner_inventory::PrepareOwnerInventoryJournalRequest,
+) -> Result<connected_owner_inventory::OwnerInventoryJournalDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_owner_inventory::prepare_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn mark_connected_owner_inventory_applied(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_owner_inventory::MarkOwnerInventoryAppliedRequest,
+) -> Result<connected_owner_inventory::OwnerInventoryJournalDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_owner_inventory::mark_applied_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn begin_connected_owner_inventory_undo(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_owner_inventory::BeginOwnerInventoryUndoRequest,
+) -> Result<connected_owner_inventory::OwnerInventoryJournalDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_owner_inventory::begin_undo_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn mark_connected_owner_inventory_undone(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_owner_inventory::OwnerInventoryJournalIdentityRequest,
+) -> Result<connected_owner_inventory::OwnerInventoryJournalDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_owner_inventory::mark_undone_at(&root.join("character-library"), &request)
+}
+
+#[tauri::command]
+fn finalize_connected_owner_inventory_journal(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_owner_inventory::FinalizeOwnerInventoryJournalRequest,
+) -> Result<connected_owner_inventory::OwnerInventoryJournalDto, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_owner_inventory::finalize_at(&root.join("character-library"), &request)
 }
 
 #[tauri::command]
@@ -279,6 +352,12 @@ pub fn run() {
             read_connected_long_rest_host_records,
             write_connected_long_rest_host_record,
             delete_connected_long_rest_host_record,
+            read_connected_owner_inventory_journal,
+            prepare_connected_owner_inventory_journal,
+            mark_connected_owner_inventory_applied,
+            begin_connected_owner_inventory_undo,
+            mark_connected_owner_inventory_undone,
+            finalize_connected_owner_inventory_journal,
             read_authoring_draft_generations,
             write_authoring_draft_generation,
             read_installed_content_generations,
