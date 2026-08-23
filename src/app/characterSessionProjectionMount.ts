@@ -44,8 +44,22 @@ function projectedActions(reconstruction:Extract<CharacterSessionProjectionRecon
   return [...actions.values()];
 }
 
+function canonical(value:unknown):unknown {
+  if(Array.isArray(value)) return value.map(canonical);
+  if(value&&typeof value==="object") {
+    return Object.fromEntries(Object.entries(value as Record<string,unknown>)
+      .sort(([left],[right])=>left.localeCompare(right))
+      .map(([key,item])=>[key,canonical(item)]));
+  }
+  return value;
+}
+
+function sourceFingerprint(value:unknown) {
+  return JSON.stringify(canonical(value));
+}
+
 function fullSourceFingerprint(projection:CharacterSessionProjectionV1) {
-  return JSON.stringify({
+  return sourceFingerprint({
     rulesProfile:projection.rulesProfile,
     source:projection.source,
     sourceAuthority:projection.sourceAuthority,
@@ -55,7 +69,7 @@ function fullSourceFingerprint(projection:CharacterSessionProjectionV1) {
 
 function nonInventorySourceFingerprint(projection:CharacterSessionProjectionV1) {
   const {itemReferences:_,...source}=projection.source;
-  return JSON.stringify({
+  return sourceFingerprint({
     rulesProfile:projection.rulesProfile,
     source,
     sourceAuthority:projection.sourceAuthority,

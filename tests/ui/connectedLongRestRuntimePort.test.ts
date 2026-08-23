@@ -80,7 +80,7 @@ async function setupPair() {
   clientState.scene.entities=[entity(sheet)];
   clientState.scene.currentActorId=sheet.id;
   clientState.scene.selectedActorId=sheet.id;
-  await client.getSnapshot();
+  const ownerSheet=(await client.getSnapshot()).activeCharacter;
   await host.getSnapshot();
 
   await host.createCampaign({campaignId:"campaign.connected-rest",name:"Connected Rest"});
@@ -92,8 +92,8 @@ async function setupPair() {
     characterRef:{ownerHint:`client:${sheet.id}`,characterId:sheet.id},active:true,countsForRations:true,rationUnitsPerDay:1,stashPermission:"request",
   });
 
-  const projection=buildCharacterSessionProjectionV1(sheet,catalog);
-  assert.equal(acceptHostCharacterSessionProjection(host,PEER,manifest(sheet),projection).status,"accepted");
+  const projection=buildCharacterSessionProjectionV1(ownerSheet,catalog);
+  assert.equal(acceptHostCharacterSessionProjection(host,PEER,manifest(ownerSheet),projection).status,"accepted");
   const hostManifest:SessionCompatibilityManifest={
     protocolVersion:1,rulesProfileId:"dnd.srd-5.2.1",
     capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1","connected-long-rest-v1"],
@@ -103,12 +103,12 @@ async function setupPair() {
   hostConnected.sessionId=SESSION_ID;
   hostConnected.ledger=new HostSessionLedger(SESSION_ID,hostManifest);
   hostConnected.peerParticipants.set(PEER,`client:${sheet.id}`);
-  hostConnected.peerManifests.set(PEER,manifest(sheet));
+  hostConnected.peerManifests.set(PEER,manifest(ownerSheet));
   const clientConnected=connectedStateFor(client);
   clientConnected.mode="client";
   clientConnected.sessionId=SESSION_ID;
 
-  return {host,client,sheet};
+  return {host,client,sheet:ownerSheet};
 }
 
 test("connected Long Rest commits Campaign before owner materialization and refreshes only remote durable projection",async()=>{
