@@ -188,7 +188,11 @@ MockAdapter.prototype.approvePartyStashApproval=async function approvePartyStash
     const ownerPeer=[...state.peerParticipants.entries()].find(([,participantId])=>participantId===current.participantId)?.[0];
     if(!ownerPeer||state.peerManifests.get(ownerPeer)?.character?.characterId!==current.command.actorId)throw new Error("요청 Character의 연결된 소유자를 다시 확인할 수 없습니다.");
     const record=queue.approve(requestId);approved=true;
-    await this.transferPartyStash(record.command);
+    const attempt=queue.beginApprovedAttempt(requestId);
+    const transferCommand=attempt.attemptCount===1
+      ? record.command
+      : {...record.command,requestId:`${record.command.requestId}.retry.${attempt.attemptCount}`};
+    await this.transferPartyStash(transferCommand);
     const committed=queue.settle(requestId,"committed");
     await publishConnectedSnapshot(this).catch(()=>undefined);
     await notifyApprovalOutcome(this,committed,"committed",ownerPeer);

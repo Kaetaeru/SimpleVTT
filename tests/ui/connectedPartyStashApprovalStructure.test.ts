@@ -27,7 +27,7 @@ test("connected approval runtime queues before mutation and commits only after t
   assert.match(runtime,/campaign-stash-approval-request/);
   assert.match(runtime,/partyStashApprovalQueueFor\(host\)\.submit/);
   const approve=runtime.indexOf("queue.approve(requestId)");
-  const transfer=runtime.indexOf("await this.transferPartyStash(record.command)");
+  const transfer=runtime.indexOf("await this.transferPartyStash(transferCommand)");
   const commit=runtime.indexOf('queue.settle(requestId,"committed")');
   assert.ok(approve>=0&&transfer>approve&&commit>transfer);
 });

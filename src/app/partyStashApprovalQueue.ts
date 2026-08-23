@@ -13,6 +13,7 @@ export interface PartyStashApprovalSubmission {
 
 export interface PartyStashApprovalRecord extends PartyStashApprovalSubmission {
   state:PartyStashApprovalState;
+  attemptCount:number;
   error?:string;
 }
 
@@ -35,7 +36,7 @@ export class PartyStashApprovalQueue {
       if(identity(existing)!==identity(submission))throw new Error("Party Stash approval retry does not match the original request");
       return cp(existing);
     }
-    const record:PartyStashApprovalRecord={...cp(submission),state:"pending"};
+    const record:PartyStashApprovalRecord={...cp(submission),state:"pending",attemptCount:0};
     this.records.set(requestId,record);
     return cp(record);
   }
@@ -62,6 +63,15 @@ export class PartyStashApprovalQueue {
     if(!current)throw new Error("Party Stash approval request not found");
     if(current.state!=="approved")throw new Error("Party Stash approval failure can only be recorded after approval");
     const next:PartyStashApprovalRecord={...current,error};
+    this.records.set(requestId,next);
+    return cp(next);
+  }
+
+  beginApprovedAttempt(requestId:string):PartyStashApprovalRecord {
+    const current=this.records.get(requestId);
+    if(!current)throw new Error("Party Stash approval request not found");
+    if(current.state!=="approved")throw new Error("Party Stash approval attempt requires an approved request");
+    const next:PartyStashApprovalRecord={...current,attemptCount:current.attemptCount+1};
     this.records.set(requestId,next);
     return cp(next);
   }

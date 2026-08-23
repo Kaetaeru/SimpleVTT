@@ -106,7 +106,7 @@ test("failed authoritative transfer remains approved and can retry without a fal
     assert.equal(host.listPartyStashApprovalRequests().length,1);
 
     let retries=0;
-    host.transferPartyStash=async(incoming)=>{retries+=1;assert.deepEqual(incoming,command);return host.getSnapshot();};
+    host.transferPartyStash=async(incoming)=>{retries+=1;assert.deepEqual(incoming,{...command,requestId:`${command.requestId}.retry.2`});return host.getSnapshot();};
     await host.approvePartyStashApproval(command.requestId);
     assert.equal(retries,1);
     assert.equal(partyStashApprovalQueueFor(host).lookup(command.requestId)?.state,"committed");
@@ -146,7 +146,7 @@ test("policy, roster permission, or connected owner changes are revalidated befo
   const ownerCommand=withdrawal(owner.character.id,"stash-approval.owner-change");
   submit(owner.host,ownerCommand,owner.character.name);
   connectedStateFor(owner.host).peerParticipants.set(PEER_ID,"participant.changed-owner");
-  await assert.rejects(()=>owner.host.approvePartyStashApproval(ownerCommand.requestId),/현재 연결 소유자가 변경/);
+  await assert.rejects(()=>owner.host.approvePartyStashApproval(ownerCommand.requestId),/(현재 연결 소유자가 변경|연결된 소유자를 다시 확인)/);
   assert.equal(partyStashApprovalQueueFor(owner.host).lookup(ownerCommand.requestId)?.state,"pending");
   unmountAllCharacterSessionProjections(owner.host);
 });

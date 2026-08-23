@@ -9,7 +9,9 @@ import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessio
 import { reconstructCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjectionReconstruction";
 import type { CharacterSheet, CharacterSummary, PartyStashTransferCommand, SceneVm } from "../../src/app/contracts";
 import { projectedCharacterById, unmountAllCharacterSessionProjections } from "../../src/app/characterSessionProjectionRegistry";
+import { mutateActiveCharacterDurably, setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
 import { MemoryCampaignLibraryStore } from "../../src/app/memoryCampaignLibraryStore";
+import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { setCampaignLibraryStoreForTests } from "../../src/app/campaignRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
@@ -32,21 +34,38 @@ type MutableAdapterState={
 async function prepareOwningClient(client:MockAdapter){
   const mutable=client as unknown as MutableAdapterState;
   const snapshot=await client.getSnapshot();
+  const canonicalClass=snapshot.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="class");
+  const canonicalSpecies=snapshot.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="species");
+  const canonicalBackground=snapshot.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="background");
+  assert.ok(canonicalClass?.contentId&&canonicalSpecies?.contentId&&canonicalBackground?.contentId,"connected owner fixture requires canonical content identities");
   const remote:CharacterSheet={
     ...structuredClone(snapshot.activeCharacter),
     id:"char.connected-stash-owner",
     name:"Connected Stash Owner",
+    className:canonicalClass.contentId,
+    subclassName:"",
+    species:canonicalSpecies.contentId,
+    background:canonicalBackground.contentId,
+    classLevels:undefined,
+    items:[],
+    equipment:[],
+    cantrips:[],
+    preparedSpells:[],
+    spellbookSpells:[],
+    masteryWeapons:[],
     saveState:"saved",
     goldGp:20,
     sourceRevision:1,
     runtimeRevision:1,
   };
-  const projection=buildCharacterSessionProjectionV1(remote,snapshot.catalog);
+  mutable.activeCharacter=structuredClone(remote);
+  mutable.characters=[structuredClone(remote)];
+  await mutateActiveCharacterDurably(client,(character)=>{character.notes="connected owner validation fixture";});
+  const persisted=(await client.getSnapshot()).activeCharacter;
+  const projection=buildCharacterSessionProjectionV1(persisted,snapshot.catalog);
   const reconstructed=reconstructCharacterSessionProjectionV1(projection,snapshot.catalog);
   assert.equal(reconstructed.status,"accepted",reconstructed.status==="rejected"?reconstructed.error:undefined);
   if(reconstructed.status!=="accepted")throw new Error(reconstructed.error);
-  mutable.activeCharacter=structuredClone(remote);
-  mutable.characters=[structuredClone(remote)];
   mutable.scene.entities=[
     ...mutable.scene.entities.filter((entity)=>entity.kind!=="character"&&entity.id!==remote.id),
     structuredClone(reconstructed.entity),
@@ -55,7 +74,7 @@ async function prepareOwningClient(client:MockAdapter){
   mutable.scene.economyByActor={...mutable.scene.economyByActor,[remote.id]:structuredClone(reconstructed.economy)};
   mutable.scene.selectedActorId=remote.id;
   mutable.scene.currentActorId=remote.id;
-  return remote;
+  return persisted;
 }
 
 function withdrawal(actorId:string,requestId:string,amount=1):PartyStashTransferCommand{
@@ -115,7 +134,7 @@ test("DM approval uses the real connected owner transfer and compensates Party S
     return 1;
   };
   tauriSessionTransport.sendTo=async(_peer,message)=>{
-    if(messageType(message)==="campaign-owner-inventory-result")sendToHost(message);
+    if(["campaign-owner-inventory-result","campaign-owner-inventory-finalize-result"].includes(messageType(message)))sendToHost(message);
     else sendToClient(message);
     return 1;
   };
@@ -124,6 +143,7 @@ test("DM approval uses the real connected owner transfer and compensates Party S
   const client=new MockAdapter();
   setCampaignLibraryStoreForTests(host,new MemoryCampaignLibraryStore());
   setCampaignLibraryStoreForTests(client,new MemoryCampaignLibraryStore());
+  setCharacterLibraryStoreForTests(client,new MemoryCharacterLibraryStore());
   const remote=await prepareOwningClient(client);
   let hostStopped=false;
   let clientStopped=false;

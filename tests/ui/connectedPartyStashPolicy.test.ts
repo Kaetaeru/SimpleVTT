@@ -35,7 +35,8 @@ test("production wrapper order preserves Host authority and Client preflight pol
 
 test("Player Stash UI exposes policy state before mutation",()=>{
   assert.match(playerUi,/const canDeposit=Boolean\(stash&&canTransfer&&stash\.policy!=="dm-managed"\)/);
-  assert.match(playerUi,/const canWithdraw=Boolean\(stash&&canTransfer&&stash\.policy==="shared"\)/);
+  assert.match(playerUi,/const canWithdraw=Boolean\(stash&&canTransfer&&stash\.policy!=="dm-managed"\)/);
+  assert.match(playerUi,/const approvalWithdrawal=Boolean\(stash&&canTransfer&&stash\.policy==="dm-approval"\)/);
   assert.match(playerUi,/DM 전용 관리 정책/);assert.match(playerUi,/출고는 DM 승인이 필요/);
 });
 

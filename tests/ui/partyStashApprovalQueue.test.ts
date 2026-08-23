@@ -31,6 +31,7 @@ test("Party Stash approval queue requires approval before authoritative commit",
   const approved=queue.approve(command.requestId);
   assert.equal(approved.state,"approved");
   assert.deepEqual(queue.approve(command.requestId),approved);
+  assert.equal(queue.beginApprovedAttempt(command.requestId).attemptCount,1);
   assert.equal(queue.active().length,1);
 
   const committed=queue.settle(command.requestId,"committed");

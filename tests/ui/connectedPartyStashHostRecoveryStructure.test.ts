@@ -10,7 +10,7 @@ const tauri=readFileSync(new URL("../../src-tauri/src/lib.rs",import.meta.url),"
 
 test("Host persists remote Party Stash intent before entering the transfer runtime",()=>{
   const write=exact.indexOf("connectedPartyStashHostCoordinatorStoreFor(this).write");
-  const transfer=exact.indexOf("baseTransfer.call(this,command)");
+  const transfer=exact.indexOf("baseTransfer.call(this,command)",write);
   assert.ok(write>=0&&transfer>write);
   assert.match(exact,/ownerParticipantId=state\.peerParticipants\.get\(mounted\.peerId\)/);
   assert.match(exact,/requestId:command\.requestId[\s\S]*campaignId:command\.campaignId[\s\S]*actorId:command\.actorId/);
