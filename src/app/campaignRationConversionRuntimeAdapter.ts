@@ -82,6 +82,7 @@ declare module "./mockAdapter" {
 
 MockAdapter.prototype.previewCampaignPartyStashRationConversion=async function previewCampaignPartyStashRationConversionRuntime(campaignId,input){
   const snapshot=await this.getSnapshot();
+  if(snapshot.session.role==="client")throw new Error("Party Stash 식량 전환 미리보기는 DM Campaign 권위에서만 사용할 수 있습니다.");
   const campaign=campaignFromSnapshot(snapshot,campaignId);
   const providerId=campaign.rations.capability.providerId;
   const providerVersion=campaign.rations.capability.providerVersion;
@@ -97,6 +98,9 @@ MockAdapter.prototype.convertCampaignPartyStashItemToRations=async function conv
   const snapshot=await this.getSnapshot();
   if(snapshot.session.role==="client")throw new Error("Party Stash 식량 전환은 DM Campaign 권위에서만 실행할 수 있습니다.");
   const campaign=campaignFromSnapshot(snapshot,command.campaignId);
+  if(campaign.rations.capability.providerId!==command.providerId||campaign.rations.capability.providerVersion!==command.providerVersion){
+    throw new Error(`Ration provider changed: expected ${command.providerId}@${command.providerVersion}, current ${campaign.rations.capability.providerId}@${campaign.rations.capability.providerVersion}`);
+  }
   const profile=rationProfile(snapshot,command.providerId,command.providerVersion);
   const payload:ConversionPayload={
     requestId:command.requestId,
@@ -108,8 +112,5 @@ MockAdapter.prototype.convertCampaignPartyStashItemToRations=async function conv
     note:command.note,
   };
   const adjustment={amount:1,note:command.note,[RATION_CONVERSION_PAYLOAD]:payload};
-  if(campaign.rations.capability.providerId!==command.providerId||campaign.rations.capability.providerVersion!==command.providerVersion){
-    throw new Error(`Ration provider changed: expected ${command.providerId}@${command.providerVersion}, current ${campaign.rations.capability.providerId}@${campaign.rations.capability.providerVersion}`);
-  }
   return this.adjustCampaignRations(command.campaignId,adjustment as {amount:number;note?:string});
 };
