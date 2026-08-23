@@ -16,7 +16,7 @@ test("Campaign dashboard exposes private custom item CRUD search favorite and du
 
 test("Campaign image and NPC entries have live Session quick actions",()=>{
   assert.match(handout,/revealCampaignDmLibraryImage/);assert.match(handout,/캠페인 DM 라이브러리/);
-  assert.match(encounter,/instantiateCampaignDmLibraryNpc/);assert.match(encounter,/비공개 NPC 액터 정의/);
+  assert.match(encounter,/instantiateCampaignDmLibraryNpc/);assert.match(encounter,/비공개 NPC 정의와 PC Actor preset/);
 });
 
 test("Session DM quick grant targets either selected Character or Party Stash",()=>{
