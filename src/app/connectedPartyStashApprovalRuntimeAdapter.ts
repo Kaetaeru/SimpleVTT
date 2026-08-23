@@ -137,19 +137,29 @@ declare module "./mockAdapter" {
 
 MockAdapter.prototype.listPartyStashApprovalRequests=function(){return partyStashApprovalQueueFor(this).active();};
 MockAdapter.prototype.approvePartyStashApproval=async function approvePartyStashApproval(requestId:string){
-  const queue=partyStashApprovalQueueFor(this);const record=queue.approve(requestId);
+  const queue=partyStashApprovalQueueFor(this);const current=queue.lookup(requestId);
+  if(!current)throw new Error("Party Stash approval request not found");
+  let approved=current.state==="approved";
   try{
     const state=connectedStateFor(this);const snapshot=await this.getSnapshot();const campaign=snapshot.campaignSessionSystems;
     if(state.mode!=="host"||!state.sessionId)throw new Error("Host Session에서만 Party Stash 요청을 승인할 수 있습니다.");
-    if(!campaign||campaign.campaignId!==record.command.campaignId)throw new Error("승인 요청의 캠페인이 현재 세션과 일치하지 않습니다.");
+    if(!campaign||campaign.campaignId!==current.command.campaignId)throw new Error("승인 요청의 캠페인이 현재 세션과 일치하지 않습니다.");
     if(campaign.partyStash.policy!=="dm-approval")throw new Error("Party Stash 정책이 변경되어 요청을 다시 검토해야 합니다.");
-    const member=campaign.roster.find((entry)=>entry.characterId===record.command.actorId);
+    const member=campaign.roster.find((entry)=>entry.characterId===current.command.actorId);
     if(!member||!(member.stashPermission==="request"||member.stashPermission==="manage"))throw new Error("요청자의 Party Stash 권한이 변경되었습니다.");
+    const ownerPeer=[...state.peerParticipants.entries()].find(([,participantId])=>participantId===current.participantId)?.[0];
+    if(!ownerPeer||state.peerManifests.get(ownerPeer)?.character?.characterId!==current.command.actorId)throw new Error("요청 Character의 연결된 소유자를 다시 확인할 수 없습니다.");
+    const record=queue.approve(requestId);approved=true;
     await this.transferPartyStash(record.command);
     queue.settle(requestId,"committed");
     await publishConnectedSnapshot(this).catch(()=>undefined);
     return this.getSnapshot();
-  }catch(cause){const error=cause instanceof Error?cause:new Error(String(cause));queue.recordApprovedFailure(requestId,error.message);await publishConnectedSnapshot(this).catch(()=>undefined);throw error;}
+  }catch(cause){
+    const error=cause instanceof Error?cause:new Error(String(cause));
+    if(approved)queue.recordApprovedFailure(requestId,error.message);
+    await publishConnectedSnapshot(this).catch(()=>undefined);
+    throw error;
+  }
 };
 MockAdapter.prototype.rejectPartyStashApproval=async function rejectPartyStashApproval(requestId:string){partyStashApprovalQueueFor(this).settle(requestId,"rejected");await publishConnectedSnapshot(this).catch(()=>undefined);return this.getSnapshot();};
 MockAdapter.prototype.cancelPartyStashApproval=async function cancelPartyStashApproval(requestId:string){partyStashApprovalQueueFor(this).settle(requestId,"cancelled");await publishConnectedSnapshot(this).catch(()=>undefined);return this.getSnapshot();};
