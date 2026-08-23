@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryConnectedLongRestHostCoordinatorStore } from "../../src/app/connectedLongRestHostCoordinatorStore";
+import { connectedStateFor } from "../../src/app/connectedSessionState";
 import {
+  connectedLongRestHostRecoveryMessages,
   recoverConnectedLongRestHostTransactions,
   setConnectedLongRestHostCoordinatorStoreForTests,
 } from "../../src/app/connectedLongRestRuntimePort";
@@ -11,6 +13,8 @@ import {
   connectedLongRestCampaignCommitId,
 } from "../../src/app/connectedLongRestCampaignPersistence";
 import type { ConnectedLongRestCommitPreflight } from "../../src/app/connectedLongRestPreflight";
+
+const PEER="peer.restart-owner";
 
 async function configuredAdapter() {
   const adapter=new MockAdapter();
@@ -30,6 +34,7 @@ async function configuredAdapter() {
     character:{characterId:"char.remote",sourceRevision:2,runtimeRevision:5},
     options:{advanceMinutes:480,consumeRations:true},
   };
+  connectedStateFor(adapter).peerParticipants.set(PEER,preflight.ownerParticipantId);
   return {adapter,preflight};
 }
 
@@ -45,9 +50,16 @@ test("Host restart upgrades durable owner-prepared to committed when Campaign id
   assert.equal(recovered.phase,"committed");
   assert.equal(recovered.preparationId,"prep.restart.1");
   assert.equal(recovered.campaignCommitId,connectedLongRestCampaignCommitId(preflight.transactionId));
+  const [replay]=connectedLongRestHostRecoveryMessages(adapter,PEER);
+  assert.equal(replay?.type,"long-rest-global-commit");
+  if(replay?.type==="long-rest-global-commit"){
+    assert.equal(replay.commit.ownerParticipantId,preflight.ownerParticipantId);
+    assert.deepEqual(replay.commit.character,preflight.character);
+    assert.equal(replay.commit.preparationId,"prep.restart.1");
+  }
 });
 
-test("Host restart aborts durable owner-prepared when Campaign global commit never happened",async()=>{
+test("Host restart aborts durable owner-prepared with exact owner preparation identity when Campaign global commit never happened",async()=>{
   const {adapter,preflight}=await configuredAdapter();
   const store=new MemoryConnectedLongRestHostCoordinatorStore();
   await store.write({version:1,phase:"owner-prepared",preflight,preparationId:"prep.restart.precommit"});
@@ -58,4 +70,12 @@ test("Host restart aborts durable owner-prepared when Campaign global commit nev
   assert.equal(recovered.phase,"aborted");
   assert.equal(recovered.preparationId,"prep.restart.precommit");
   assert.match(recovered.reason??"",/restarted before.*global commit/i);
+
+  const [replay]=connectedLongRestHostRecoveryMessages(adapter,PEER);
+  assert.equal(replay?.type,"long-rest-abort");
+  if(replay?.type==="long-rest-abort"){
+    assert.equal(replay.ownerParticipantId,preflight.ownerParticipantId);
+    assert.deepEqual(replay.character,preflight.character);
+    assert.equal(replay.preparationId,"prep.restart.precommit");
+  }
 });
