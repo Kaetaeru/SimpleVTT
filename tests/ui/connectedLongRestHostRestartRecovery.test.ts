@@ -4,6 +4,7 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryConnectedLongRestHostCoordinatorStore } from "../../src/app/connectedLongRestHostCoordinatorStore";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import {
+  completeConnectedLongRestHostOwnerAbort,
   connectedLongRestHostRecoveryMessages,
   recoverConnectedLongRestHostTransactions,
   setConnectedLongRestHostCoordinatorStoreForTests,
@@ -59,7 +60,7 @@ test("Host restart upgrades durable owner-prepared to committed when Campaign id
   }
 });
 
-test("Host restart aborts durable owner-prepared with exact owner preparation identity when Campaign global commit never happened",async()=>{
+test("Host restart abort replay closes durable coordinator after exact owner cleanup acknowledgement",async()=>{
   const {adapter,preflight}=await configuredAdapter();
   const store=new MemoryConnectedLongRestHostCoordinatorStore();
   await store.write({version:1,phase:"owner-prepared",preflight,preparationId:"prep.restart.precommit"});
@@ -73,9 +74,18 @@ test("Host restart aborts durable owner-prepared with exact owner preparation id
 
   const [replay]=connectedLongRestHostRecoveryMessages(adapter,PEER);
   assert.equal(replay?.type,"long-rest-abort");
-  if(replay?.type==="long-rest-abort"){
-    assert.equal(replay.ownerParticipantId,preflight.ownerParticipantId);
-    assert.deepEqual(replay.character,preflight.character);
-    assert.equal(replay.preparationId,"prep.restart.precommit");
-  }
+  if(replay?.type!=="long-rest-abort") return;
+  assert.equal(replay.ownerParticipantId,preflight.ownerParticipantId);
+  assert.deepEqual(replay.character,preflight.character);
+  assert.equal(replay.preparationId,"prep.restart.precommit");
+
+  const completed=await completeConnectedLongRestHostOwnerAbort(adapter,PEER,{
+    transactionId:preflight.transactionId,
+    ownerParticipantId:preflight.ownerParticipantId,
+    character:preflight.character,
+    preparationId:"prep.restart.precommit",
+  });
+  assert.deepEqual(completed,{status:"complete",transactionId:preflight.transactionId});
+  assert.equal((await store.readAll()).length,0,"owner abort acknowledgement deletes durable Host recovery record");
+  assert.equal(connectedLongRestHostRecoveryMessages(adapter,PEER).length,0,"completed abort is not replayed again");
 });
