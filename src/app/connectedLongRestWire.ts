@@ -6,6 +6,7 @@ import type {
 } from "./connectedLongRestPreflight";
 import type {
   ConnectedLongRestGlobalCommit,
+  ConnectedLongRestOwnerAborted,
   ConnectedLongRestOwnerMaterialized,
   ConnectedLongRestOwnerPrepared,
 } from "./connectedLongRestTransactionState";
@@ -17,6 +18,7 @@ export type ConnectedLongRestWireMessage =
   | { type:"long-rest-owner-prepared"; prepared:ConnectedLongRestOwnerPrepared }
   | { type:"long-rest-global-commit"; commit:ConnectedLongRestGlobalCommit }
   | { type:"long-rest-owner-materialized"; materialized:ConnectedLongRestOwnerMaterialized; projection:CharacterSessionProjectionV1 }
+  | { type:"long-rest-owner-aborted"; aborted:ConnectedLongRestOwnerAborted }
   | {
       type:"long-rest-abort";
       transactionId:string;
@@ -119,6 +121,14 @@ function isOwnerMaterialized(value:unknown):value is ConnectedLongRestOwnerMater
     &&isString(value.preparationId);
 }
 
+function isOwnerAborted(value:unknown):value is ConnectedLongRestOwnerAborted {
+  return isRecord(value)
+    &&isString(value.transactionId)
+    &&isString(value.ownerParticipantId)
+    &&isCharacterRevision(value.character)
+    &&isString(value.preparationId);
+}
+
 function hasValidAbortRecoveryIdentity(value:JsonRecord) {
   const recovery=[value.ownerParticipantId,value.character,value.preparationId];
   const hasRecovery=recovery.some((entry)=>entry!==undefined);
@@ -151,6 +161,10 @@ export function validateConnectedLongRestWireMessage(value:unknown):ConnectedLon
   if (value.type==="long-rest-owner-materialized") {
     if (!isOwnerMaterialized(value.materialized)||!isProjectionEnvelope(value.projection)) return "invalid long-rest-owner-materialized message";
     if (value.projection.characterId!==value.materialized.character.characterId) return "long-rest-owner-materialized projection Character mismatch";
+    return value as ConnectedLongRestWireMessage;
+  }
+  if (value.type==="long-rest-owner-aborted") {
+    if (!isOwnerAborted(value.aborted)) return "invalid long-rest-owner-aborted message";
     return value as ConnectedLongRestWireMessage;
   }
   if (value.type==="long-rest-abort") {
