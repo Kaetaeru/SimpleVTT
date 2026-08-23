@@ -1,6 +1,7 @@
 import type { CharacterSheet, CharacterSummary, SceneVm } from "./contracts";
 import type { MockAdapter } from "./mockAdapter";
 import type { CharacterSessionProjectionReconstruction } from "./characterSessionProjectionReconstruction";
+import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { deriveCharacterSkillActions } from "./characterSkillActionProjection";
 import {
   mountCharacterSessionProjection,
@@ -43,6 +44,25 @@ function projectedActions(reconstruction:Extract<CharacterSessionProjectionRecon
   return [...actions.values()];
 }
 
+function fullSourceFingerprint(projection:CharacterSessionProjectionV1) {
+  return JSON.stringify({
+    rulesProfile:projection.rulesProfile,
+    source:projection.source,
+    sourceAuthority:projection.sourceAuthority,
+    contentIdentities:projection.contentIdentities,
+  });
+}
+
+function nonInventorySourceFingerprint(projection:CharacterSessionProjectionV1) {
+  const {itemReferences:_,...source}=projection.source;
+  return JSON.stringify({
+    rulesProfile:projection.rulesProfile,
+    source,
+    sourceAuthority:projection.sourceAuthority,
+    contentIdentities:projection.contentIdentities.filter((identity)=>identity.category!=="item"),
+  });
+}
+
 export function mountReconstructedCharacterSessionProjection(
   adapter:MockAdapter,
   peerId:string,
@@ -83,6 +103,11 @@ export function mountReconstructedCharacterSessionProjection(
  * Replaces the durable portion of an already-mounted remote Character after its
  * owning client has committed a new Character generation. Session-local turn
  * economy, initiative, status labels and distance facts remain Host-owned.
+ *
+ * A forward source revision is accepted only when the non-inventory Character
+ * source is byte-for-byte unchanged. This lets an owning Client durably add or
+ * remove ItemInstances while preventing an inventory acknowledgement from also
+ * changing class/build/rules authority.
  */
 export function refreshReconstructedCharacterSessionProjection(
   adapter:MockAdapter,
@@ -96,8 +121,15 @@ export function refreshReconstructedCharacterSessionProjection(
   if(mounted.characterId!==reconstruction.sheet.id){
     return {status:"rejected" as const,error:`projected Character identity changed during durable refresh: ${mounted.characterId} != ${reconstruction.sheet.id}`};
   }
-  if(reconstruction.projection.sourceRevision!==mounted.sourceRevision){
-    return {status:"rejected" as const,error:`projected Character source revision changed during durable refresh: ${mounted.sourceRevision} != ${reconstruction.projection.sourceRevision}`};
+  if(reconstruction.projection.sourceRevision<mounted.sourceRevision){
+    return {status:"rejected" as const,error:`projected Character source revision moved backwards: ${mounted.sourceRevision} -> ${reconstruction.projection.sourceRevision}`};
+  }
+  if(reconstruction.projection.sourceRevision===mounted.sourceRevision){
+    if(fullSourceFingerprint(reconstruction.projection)!==fullSourceFingerprint(mounted.projection)){
+      return {status:"rejected" as const,error:`projected Character source changed without a source revision: ${mounted.characterId}`};
+    }
+  }else if(nonInventorySourceFingerprint(reconstruction.projection)!==nonInventorySourceFingerprint(mounted.projection)){
+    return {status:"rejected" as const,error:`projected Character non-inventory source changed during inventory-capable durable refresh: ${mounted.characterId}`};
   }
   if(reconstruction.projection.runtimeRevision<mounted.runtimeRevision){
     return {status:"rejected" as const,error:`projected Character runtime revision moved backwards: ${mounted.runtimeRevision} -> ${reconstruction.projection.runtimeRevision}`};
