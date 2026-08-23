@@ -11,7 +11,10 @@ test("DM Library PC presets and folders preserve Campaign authority and private 
   const runtime=read("src/app/campaignDmLibraryOrganizationRuntimeAdapter.ts");
   const panel=read("src/CampaignDmLibraryOrganizationPanel.tsx");
   const hostPanel=read("src/CampaignRationConversionPanel.tsx");
-  const projection=read("src/app/campaignPersistenceContracts.ts");
+  const persistence=read("src/app/campaignPersistenceContracts.ts");
+  const projectionStart=persistence.indexOf("export interface CampaignSessionSystemsProjection");
+  const projectionEnd=persistence.indexOf("export interface CampaignRecordV1",projectionStart);
+  const projection=persistence.slice(projectionStart,projectionEnd);
 
   assert.match(contracts,/interface CampaignPcActorPreset/);
   assert.match(contracts,/folders\?:CampaignDmLibraryFolder\[\]/);
@@ -23,5 +26,6 @@ test("DM Library PC presets and folders preserve Campaign authority and private 
   assert.match(panel,/PC preset 저장/);
   assert.match(panel,/Actor \+1/);
   assert.match(hostPanel,/CampaignDmLibraryOrganizationPanel campaign=\{campaign\}/);
-  assert.doesNotMatch(projection,/CampaignSessionSystemsProjection[\s\S]{0,1200}dmLibrary/);
+  assert.ok(projectionStart>=0&&projectionEnd>projectionStart);
+  assert.doesNotMatch(projection,/dmLibrary/);
 });
