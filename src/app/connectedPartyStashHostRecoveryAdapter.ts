@@ -80,7 +80,16 @@ function decodeOwnerComplete(raw:string):PartyStashOwnerComplete|null{try{
   const value=object(JSON.parse(raw));if(value?.type!=="campaign-party-stash-owner-complete"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.actorId!=="string"||(value.outcome!=="applied"&&value.outcome!=="undone"))return null;return value as unknown as PartyStashOwnerComplete;
 }catch{return null;}}
 function decodeClientStashRequest(raw:string):ClientStashRequest|null{try{
-  const value=object(JSON.parse(raw));const command=object(value?.command);if(value?.type!=="campaign-stash-deposit"||typeof value.sessionId!=="string"||!command||typeof command.requestId!=="string"||typeof command.campaignId!=="string"||typeof command.actorId!=="string"||(command.direction!=="character-to-stash"&&command.direction!=="stash-to-character")||(command.asset!=="item"&&command.asset!=="currency"))return null;return value as unknown as ClientStashRequest;
+  const value=object(JSON.parse(raw));const command=object(value?.command);
+  if(value?.type!=="campaign-stash-deposit"||typeof value.sessionId!=="string"||!value.sessionId||!command||typeof command.requestId!=="string"||!command.requestId||typeof command.campaignId!=="string"||!command.campaignId||typeof command.actorId!=="string"||!command.actorId||(command.direction!=="character-to-stash"&&command.direction!=="stash-to-character"))return null;
+  if(command.asset==="currency"){
+    if(!Number.isInteger(command.amount)||Number(command.amount)<1)return null;
+  }else if(command.asset==="item"){
+    if(typeof command.definitionId!=="string"||!command.definitionId||!Number.isInteger(command.quantity)||Number(command.quantity)<1)return null;
+    if(command.direction==="character-to-stash"&&typeof command.itemId!=="string")return null;
+    if(command.direction==="stash-to-character"&&typeof command.catalogEntryId!=="string"&&!object(command.itemTemplate))return null;
+  }else return null;
+  return value as unknown as ClientStashRequest;
 }catch{return null;}}
 
 async function finalizeRecoveredOwnerJournal(adapter:MockAdapter,requestId:string,outcome:RecoveryOutcome){
@@ -138,7 +147,13 @@ async function prepareClientStashCoordinator(host:MockAdapter,message:SessionTra
   if(request.command.requestId.endsWith(".compensate"))return;
   const state=connectedStateFor(host);if(state.mode!=="host"||state.sessionId!==request.sessionId)return;
   const ownerParticipantId=state.peerParticipants.get(message.peer);const manifest=state.peerManifests.get(message.peer)?.character;
-  if(!ownerParticipantId||manifest?.characterId!==request.command.actorId)return;
+  if(!ownerParticipantId||manifest?.characterId!==request.command.actorId)throw new Error("Party Stash checkpoint owner identity is not accepted");
+  const snapshot=await host.getSnapshot();const campaign=snapshot.campaignSessionSystems;
+  if(!campaign||campaign.campaignId!==request.command.campaignId)throw new Error("Party Stash checkpoint Campaign does not match the live Session");
+  const member=campaign.roster.find((entry)=>entry.characterId===request.command.actorId);
+  if(!member||!(member.stashPermission==="request"||member.stashPermission==="manage"))throw new Error("Party Stash checkpoint permission is denied");
+  if(campaign.partyStash.policy==="dm-managed")throw new Error("Party Stash checkpoint rejects DM-managed Player writes");
+  if(campaign.partyStash.policy==="dm-approval"&&request.command.direction==="stash-to-character")throw new Error("Party Stash checkpoint requires DM approval before withdrawal");
   await connectedPartyStashHostCoordinatorStoreFor(host).write({version:1,requestId:request.command.requestId,campaignId:request.command.campaignId,actorId:request.command.actorId,ownerParticipantId,command:cp(request.command)});
 }
 async function settleOwnerComplete(host:MockAdapter,message:SessionTransportMessage,complete:PartyStashOwnerComplete){
