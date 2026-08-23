@@ -42,6 +42,7 @@ import { ProductionSessionDirectNetworkBridge } from "./ProductionSessionDirectN
 import { CharacterPortraitBridge } from "./CharacterPortraitBridge";
 import { CharacterLibraryUxBridge } from "./CharacterLibraryUxBridge";
 import { CampaignStartupRecoveryBridge } from "./CampaignStartupRecoveryBridge";
+import { PartyStashApprovalOutcomeBridge } from "./PartyStashApprovalOutcomeBridge";
 import "./styles.css";
 import "./responsive.css";
 import "./completion.css";
@@ -91,6 +92,7 @@ createRoot(document.getElementById("root")!).render(
       <CharacterPortraitBridge />
       <CharacterLibraryUxBridge />
       <CampaignStartupRecoveryBridge />
+      <PartyStashApprovalOutcomeBridge />
     </AppProvider>
   </StrictMode>,
 );
