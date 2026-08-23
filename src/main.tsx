@@ -24,6 +24,7 @@ import "./app/campaignSessionHistoryRuntimeAdapter";
 import "./app/connectedPartyStashHostPolicyAdapter";
 import "./app/connectedCampaignSystemsRuntimeAdapter";
 import "./app/connectedPartyStashClientPolicyAdapter";
+import "./app/connectedPartyStashApprovalRuntimeAdapter";
 import "./app/campaignDmLibraryMaterializationAdapter";
 import "./app/connectedOwnerInventoryJournalAdapter";
 import "./app/connectedOwnerInventoryExactCompensationAdapter";
