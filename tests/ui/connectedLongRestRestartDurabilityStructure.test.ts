@@ -11,6 +11,8 @@ import "./connectedCharacterInventoryProjectionRefresh.test";
 import "./connectedCustomItemProjection.test";
 import "./campaignDmLibraryGrantDurability.test";
 import "./connectedDmLibraryGrantCommitStructure.test";
+import "./connectedPartyStashPolicy.test";
+import "./campaignDmLibraryDeleteProvenance.test";
 
 const runtime=readFileSync(new URL("../../src/app/connectedLongRestRuntimePort.ts",import.meta.url),"utf8");
 const session=readFileSync(new URL("../../src/app/connectedLongRestSessionAdapter.ts",import.meta.url),"utf8");
