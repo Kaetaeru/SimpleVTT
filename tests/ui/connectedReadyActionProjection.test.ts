@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
-import { applyConnectedClientEvents } from "../../src/app/connectedSessionRuntimeAdapter";
-import { ClientSessionReplica, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { applyConnectedClientEvents, CONNECTED_CAPABILITIES } from "../../src/app/connectedSessionRuntimeAdapter";
+import { ClientSessionReplica, CONNECTED_SESSION_PROTOCOL_VERSION, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { readyActionConfigurationFor } from "../../src/app/standardActionReadyState";
@@ -67,4 +67,34 @@ test("clearing one connected Ready actor preserves another actor configuration",
   assert.equal(readyActionConfigurationFor(adapter,goblinId)?.trigger,"Aelar가 주문을 쓰면");
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===goblinId)?.status.includes("준비 행동"),true);
+});
+
+test("reconnect catch-up replays an already-cleared Ready lifecycle to its final state",async()=>{
+  const host=new HostSessionLedger("session.ready",{
+    protocolVersion:CONNECTED_SESSION_PROTOCOL_VERSION,
+    rulesProfileId:"dnd.srd-5.2.1",
+    capabilities:CONNECTED_CAPABILITIES,
+  });
+  const armed=readyEvent(1,"armed");
+  const cleared=readyEvent(2,"cleared");
+  host.commitHostEvent({actorId:armed.actorId,payload:armed.payload});
+  host.commitHostEvent({actorId:cleared.actorId,payload:cleared.payload});
+
+  const adapter=new MockAdapter();
+  connectedStateFor(adapter).replica=new ClientSessionReplica("session.ready");
+  const catchup=host.eventsAfter(0);
+  assert.deepEqual(catchup.map((event)=>event.payload.kind),["ready-action","ready-action"]);
+  assert.equal((await applyConnectedClientEvents(adapter,catchup)).status,"applied");
+
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(connectedStateFor(adapter).replica?.cursor,2);
+  assert.equal(readyActionConfigurationFor(adapter,"char.aelar"),undefined);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+
+  assert.equal((await applyConnectedClientEvents(adapter,host.eventsAfter(0))).status,"duplicate");
+  snapshot=await adapter.getSnapshot();
+  assert.equal(readyActionConfigurationFor(adapter,"char.aelar"),undefined);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
 });
