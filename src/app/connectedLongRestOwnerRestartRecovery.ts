@@ -67,7 +67,9 @@ export async function recoverRestartedConnectedLongRestOwnerAfterGlobalCommit(
 /**
  * Pre-global restart path. The Host has durably proven that Campaign commit did
  * not happen, so a restarted owner may close only the exact staged Character
- * preparation. No Character generation is materialized by this operation.
+ * preparation. The Rust marker/sidecar is authoritative: an already-aborted
+ * preparation stays idempotently abortable even if later legitimate Character
+ * writes advanced the runtime revision after the first cleanup.
  */
 export async function recoverRestartedConnectedLongRestOwnerAbort(
   adapter:MockAdapter,
@@ -78,8 +80,8 @@ export async function recoverRestartedConnectedLongRestOwnerAbort(
   const before=await adapter.getSnapshot();
   if(before.activeCharacter.id!==identity.character.characterId) throw new Error("connected Long Rest abort recovery Character identity does not match the active owner Character");
   if((before.activeCharacter.sourceRevision??0)!==identity.character.sourceRevision) throw new Error("connected Long Rest abort recovery Character source revision changed");
-  if((before.activeCharacter.runtimeRevision??0)!==identity.character.runtimeRevision) throw new Error("connected Long Rest abort recovery Character runtime revision changed before cleanup");
   if(identity.ownerParticipantId!==`client:${before.activeCharacter.id}`) throw new Error("connected Long Rest abort recovery owner identity does not match the active Character");
+  const beforeRuntimeRevision=before.activeCharacter.runtimeRevision??0;
 
   const preparationStore=new TauriConnectedLongRestOwnerPreparationStore();
   const result=await preparationStore.abort({transactionId:abort.transactionId,preparationId:identity.preparationId});
@@ -87,6 +89,6 @@ export async function recoverRestartedConnectedLongRestOwnerAbort(
 
   const snapshot=await adapter.getSnapshot();
   if(snapshot.activeCharacter.id!==identity.character.characterId) throw new Error("connected Long Rest abort recovery changed the active Character identity");
-  if((snapshot.activeCharacter.runtimeRevision??0)!==identity.character.runtimeRevision) throw new Error("connected Long Rest abort recovery exposed a Character generation");
+  if((snapshot.activeCharacter.runtimeRevision??0)!==beforeRuntimeRevision) throw new Error("connected Long Rest abort recovery exposed or changed a Character generation");
   return {result,snapshot};
 }
