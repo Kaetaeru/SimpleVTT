@@ -2,6 +2,7 @@ import type { CatalogEntry } from "./contracts";
 import type {
   InstalledCampaignCalendarProfileV1,
   InstalledCampaignProviderProfileV1,
+  InstalledCampaignRationItemConversionV1,
   InstalledCampaignRationProfileV1,
   InstalledCatalogEntryV1,
 } from "./installedContentContracts";
@@ -70,7 +71,7 @@ function parseCalendarProfile(raw:Obj):InstalledCampaignCalendarProfileV1 {
 }
 
 function parseRationProfile(raw:Obj):InstalledCampaignRationProfileV1 {
-  assertAllowedKeys(raw,["kind","defaultUnitsPerDay","unitsByRosterKind","shortageConsequences"],"ration provider");
+  assertAllowedKeys(raw,["kind","defaultUnitsPerDay","unitsByRosterKind","shortageConsequences","itemConversions"],"ration provider");
   const defaultUnitsPerDay=integer(raw.defaultUnitsPerDay,"ration.defaultUnitsPerDay",0,1000);
   let unitsByRosterKind:InstalledCampaignRationProfileV1["unitsByRosterKind"];
   if(raw.unitsByRosterKind!==undefined){
@@ -84,7 +85,21 @@ function parseRationProfile(raw:Obj):InstalledCampaignRationProfileV1 {
   }
   let shortageConsequences:string[]|undefined;
   if(raw.shortageConsequences!==undefined) shortageConsequences=textArray(raw.shortageConsequences,"ration.shortageConsequences",32);
-  return {kind:"ration",defaultUnitsPerDay,...(unitsByRosterKind?{unitsByRosterKind}:{}),...(shortageConsequences?{shortageConsequences}:{})};
+  let itemConversions:InstalledCampaignRationItemConversionV1[]|undefined;
+  if(raw.itemConversions!==undefined){
+    if(!Array.isArray(raw.itemConversions)||raw.itemConversions.length>64) throw new Error("ration.itemConversions must be an array with at most 64 entries");
+    itemConversions=raw.itemConversions.map((value,index)=>{
+      const conversion=object(value,`ration.itemConversions[${index}]`);
+      assertAllowedKeys(conversion,["requiredCapability","rationUnitsPerItem"],`ration.itemConversions[${index}]`);
+      return {
+        requiredCapability:text(conversion.requiredCapability,`ration.itemConversions[${index}].requiredCapability`),
+        rationUnitsPerItem:integer(conversion.rationUnitsPerItem,`ration.itemConversions[${index}].rationUnitsPerItem`,1,100000),
+      };
+    });
+    const capabilities=itemConversions.map((conversion)=>conversion.requiredCapability);
+    if(new Set(capabilities).size!==capabilities.length) throw new Error("ration.itemConversions requiredCapability values must be unique");
+  }
+  return {kind:"ration",defaultUnitsPerDay,...(unitsByRosterKind?{unitsByRosterKind}:{}),...(shortageConsequences?{shortageConsequences}:{}),...(itemConversions?{itemConversions}:{})};
 }
 
 export function parseInstalledCampaignProviderProfile(value:unknown):InstalledCampaignProviderProfileV1 {
