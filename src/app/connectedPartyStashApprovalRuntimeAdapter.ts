@@ -2,15 +2,18 @@ import type { AppSnapshot, PartyStashTransferCommand } from "./contracts";
 import { connectedStateFor } from "./connectedSessionState";
 import { publishConnectedSnapshot } from "./connectedSessionRuntimeAdapter";
 import { MockAdapter } from "./mockAdapter";
-import { PartyStashApprovalQueue, type PartyStashApprovalRecord } from "./partyStashApprovalQueue";
+import { PartyStashApprovalQueue, type PartyStashApprovalRecord, type PartyStashApprovalTerminalState } from "./partyStashApprovalQueue";
 import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSessionTransport";
 
 type Raw=Record<string,unknown>;
 interface CampaignStashApprovalRequest {type:"campaign-stash-approval-request";sessionId:string;command:PartyStashTransferCommand;}
 interface CampaignStashApprovalRequestResult {type:"campaign-stash-approval-request-result";sessionId:string;requestId:string;accepted:boolean;error?:string;}
+interface CampaignStashApprovalOutcomeWire {type:"campaign-stash-approval-outcome";sessionId:string;requestId:string;status:PartyStashApprovalTerminalState;message:string;}
+export interface PartyStashApprovalOutcomeNotice {requestId:string;status:PartyStashApprovalTerminalState;message:string;}
 
 const queues=new WeakMap<MockAdapter,PartyStashApprovalQueue>();
 const pendingClientRequests=new WeakMap<MockAdapter,Map<string,{resolve():void;reject(error:Error):void;timer:ReturnType<typeof setTimeout>}>>();
+const latestClientOutcomes=new WeakMap<MockAdapter,PartyStashApprovalOutcomeNotice>();
 let activeHostAdapter:MockAdapter|null=null;
 let registeringClientAdapter:MockAdapter|null=null;
 
@@ -42,11 +45,32 @@ function decodeApprovalResult(raw:string):CampaignStashApprovalRequestResult|nul
     return value as unknown as CampaignStashApprovalRequestResult;
   }catch{return null;}
 }
+function decodeApprovalOutcome(raw:string):CampaignStashApprovalOutcomeWire|null{
+  try{
+    const value=object(JSON.parse(raw));
+    const status=value?.status;
+    if(value?.type!=="campaign-stash-approval-outcome"||typeof value.sessionId!=="string"||!value.sessionId||typeof value.requestId!=="string"||!value.requestId||(status!=="committed"&&status!=="rejected"&&status!=="cancelled")||typeof value.message!=="string"||!value.message)return null;
+    return value as unknown as CampaignStashApprovalOutcomeWire;
+  }catch{return null;}
+}
 function pendingMap(adapter:MockAdapter){let map=pendingClientRequests.get(adapter);if(!map){map=new Map();pendingClientRequests.set(adapter,map);}return map;}
 function rejectPendingClientRequests(adapter:MockAdapter,message:string){
   const map=pendingClientRequests.get(adapter);if(!map)return;
   for(const pending of map.values()){clearTimeout(pending.timer);pending.reject(new Error(message));}
   map.clear();pendingClientRequests.delete(adapter);
+}
+function participantPeer(adapter:MockAdapter,participantId:string){return [...connectedStateFor(adapter).peerParticipants.entries()].find(([,mapped])=>mapped===participantId)?.[0];}
+function approvalAssetLabel(command:PartyStashTransferCommand){return command.asset==="currency"?`${command.amount} GP`:`${command.itemTemplate?.name??command.definitionId} ×${command.quantity}`;}
+function approvalOutcomeMessage(record:PartyStashApprovalRecord,status:PartyStashApprovalTerminalState){
+  const asset=approvalAssetLabel(record.command);
+  if(status==="committed")return `${asset} Party Stash 출고 요청이 승인되어 내 인벤토리로 이동했습니다.`;
+  if(status==="rejected")return `${asset} Party Stash 출고 요청이 DM에게 거절되었습니다.`;
+  return `${asset} Party Stash 출고 요청이 취소되었습니다.`;
+}
+async function notifyApprovalOutcome(host:MockAdapter,record:PartyStashApprovalRecord,status:PartyStashApprovalTerminalState,knownPeer?:string){
+  const state=connectedStateFor(host);if(state.mode!=="host"||!state.sessionId)return;
+  const peer=knownPeer??participantPeer(host,record.participantId);if(!peer)return;
+  await tauriSessionTransport.sendTo(peer,JSON.stringify({type:"campaign-stash-approval-outcome",sessionId:state.sessionId,requestId:record.command.requestId,status,message:approvalOutcomeMessage(record,status)} satisfies CampaignStashApprovalOutcomeWire)).catch(()=>undefined);
 }
 
 async function submitHostApprovalRequest(host:MockAdapter,message:SessionTransportMessage,request:CampaignStashApprovalRequest){
@@ -86,6 +110,13 @@ async function onMessageWithPartyStashApprovals(handler:(message:SessionTranspor
       if(result.accepted)pending.resolve();else pending.reject(new Error(result.error||"Party Stash 승인 요청이 거절되었습니다."));
       return;
     }
+    const outcome=decodeApprovalOutcome(message.message);
+    if(client&&outcome){
+      const state=connectedStateFor(client);if(state.sessionId!==outcome.sessionId)return;
+      latestClientOutcomes.set(client,{requestId:outcome.requestId,status:outcome.status,message:outcome.message});
+      void publishConnectedSnapshot(client).catch(()=>undefined);
+      return;
+    }
     handler(message);
   });
 }
@@ -94,10 +125,10 @@ tauriSessionTransport.onMessage=onMessageWithPartyStashApprovals;
 const baseHostSession=MockAdapter.prototype.hostSession;
 MockAdapter.prototype.hostSession=async function hostSessionWithPartyStashApprovals(){activeHostAdapter=this;partyStashApprovalQueueFor(this).clear();return baseHostSession.call(this);};
 const baseJoinSession=MockAdapter.prototype.joinSession;
-MockAdapter.prototype.joinSession=async function joinSessionWithPartyStashApprovals(address:string){registeringClientAdapter=this;rejectPendingClientRequests(this,"세션 연결이 다시 시작되었습니다.");try{return await baseJoinSession.call(this,address);}finally{registeringClientAdapter=null;}};
+MockAdapter.prototype.joinSession=async function joinSessionWithPartyStashApprovals(address:string){registeringClientAdapter=this;rejectPendingClientRequests(this,"세션 연결이 다시 시작되었습니다.");latestClientOutcomes.delete(this);try{return await baseJoinSession.call(this,address);}finally{registeringClientAdapter=null;}};
 const baseStopSession=MockAdapter.prototype.stopSession;
 MockAdapter.prototype.stopSession=async function stopSessionWithPartyStashApprovals(){
-  partyStashApprovalQueueFor(this).clear();rejectPendingClientRequests(this,"세션이 종료되어 Party Stash 승인 요청이 취소되었습니다.");
+  partyStashApprovalQueueFor(this).clear();rejectPendingClientRequests(this,"세션이 종료되어 Party Stash 승인 요청이 취소되었습니다.");latestClientOutcomes.delete(this);
   const result=await baseStopSession.call(this);
   if(activeHostAdapter===this)activeHostAdapter=null;if(registeringClientAdapter===this)registeringClientAdapter=null;
   return result;
@@ -115,6 +146,7 @@ MockAdapter.prototype.transferPartyStash=async function transferPartyStashWithAp
   if(!state.sessionId)throw new Error("연결된 세션이 없습니다.");
   const map=pendingMap(this);
   if(map.has(command.requestId))throw new Error("같은 Party Stash 승인 요청이 이미 전송 중입니다.");
+  latestClientOutcomes.delete(this);
   const wait=new Promise<void>((resolve,reject)=>{
     const timer=setTimeout(()=>{map.delete(command.requestId);reject(new Error("Party Stash 승인 요청 응답 시간이 초과되었습니다."));},8000);
     map.set(command.requestId,{resolve,reject,timer});
@@ -132,10 +164,12 @@ declare module "./mockAdapter" {
     approvePartyStashApproval(requestId:string):Promise<AppSnapshot>;
     rejectPartyStashApproval(requestId:string):Promise<AppSnapshot>;
     cancelPartyStashApproval(requestId:string):Promise<AppSnapshot>;
+    takeLatestPartyStashApprovalOutcome():PartyStashApprovalOutcomeNotice|null;
   }
 }
 
 MockAdapter.prototype.listPartyStashApprovalRequests=function(){return partyStashApprovalQueueFor(this).active();};
+MockAdapter.prototype.takeLatestPartyStashApprovalOutcome=function(){const outcome=latestClientOutcomes.get(this);if(!outcome)return null;latestClientOutcomes.delete(this);return structuredClone(outcome);};
 MockAdapter.prototype.approvePartyStashApproval=async function approvePartyStashApproval(requestId:string){
   const queue=partyStashApprovalQueueFor(this);const current=queue.lookup(requestId);
   if(!current)throw new Error("Party Stash approval request not found");
@@ -151,8 +185,9 @@ MockAdapter.prototype.approvePartyStashApproval=async function approvePartyStash
     if(!ownerPeer||state.peerManifests.get(ownerPeer)?.character?.characterId!==current.command.actorId)throw new Error("요청 Character의 연결된 소유자를 다시 확인할 수 없습니다.");
     const record=queue.approve(requestId);approved=true;
     await this.transferPartyStash(record.command);
-    queue.settle(requestId,"committed");
+    const committed=queue.settle(requestId,"committed");
     await publishConnectedSnapshot(this).catch(()=>undefined);
+    await notifyApprovalOutcome(this,committed,"committed",ownerPeer);
     return this.getSnapshot();
   }catch(cause){
     const error=cause instanceof Error?cause:new Error(String(cause));
@@ -161,7 +196,7 @@ MockAdapter.prototype.approvePartyStashApproval=async function approvePartyStash
     throw error;
   }
 };
-MockAdapter.prototype.rejectPartyStashApproval=async function rejectPartyStashApproval(requestId:string){partyStashApprovalQueueFor(this).settle(requestId,"rejected");await publishConnectedSnapshot(this).catch(()=>undefined);return this.getSnapshot();};
-MockAdapter.prototype.cancelPartyStashApproval=async function cancelPartyStashApproval(requestId:string){partyStashApprovalQueueFor(this).settle(requestId,"cancelled");await publishConnectedSnapshot(this).catch(()=>undefined);return this.getSnapshot();};
+MockAdapter.prototype.rejectPartyStashApproval=async function rejectPartyStashApproval(requestId:string){const record=partyStashApprovalQueueFor(this).settle(requestId,"rejected");await publishConnectedSnapshot(this).catch(()=>undefined);await notifyApprovalOutcome(this,record,"rejected");return this.getSnapshot();};
+MockAdapter.prototype.cancelPartyStashApproval=async function cancelPartyStashApproval(requestId:string){const record=partyStashApprovalQueueFor(this).settle(requestId,"cancelled");await publishConnectedSnapshot(this).catch(()=>undefined);await notifyApprovalOutcome(this,record,"cancelled");return this.getSnapshot();};
 
 export {};
