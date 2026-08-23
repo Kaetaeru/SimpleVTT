@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { CampaignRecordV1 } from "./app/campaignPersistenceContracts";
 import { CampaignSystemsPanel } from "./CampaignSystemsPanel";
+import { CampaignRationConversionPanel } from "./CampaignRationConversionPanel";
 import { formatCampaignCalendarDateTime } from "./app/campaignCalendar";
 import { deleteCampaign, duplicateCampaign } from "./app/campaignLifecycleCommands";
 
@@ -142,6 +143,7 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
             <article><span>HISTORY</span><h3>세션 기록</h3><strong>{activeCampaign.sessionHistory.length}회</strong><p>최근 세션 요약만 보존합니다.</p></article>
           </div>
           <CampaignSystemsPanel campaign={activeCampaign}/>
+          <CampaignRationConversionPanel campaign={activeCampaign}/>
           {setupOpen&&<section className="campaign-session-setup" aria-label="세션 시작 설정">
             <header><div><span>SESSION SETUP</span><h2>세션 시작</h2></div><button onClick={()=>setSetupOpen(false)}>닫기</button></header>
             <div className="campaign-identity-lock"><span>캠페인</span><strong>{activeCampaign.name}</strong><small>이번 세션은 이 Campaign ID와 revision을 기준으로 시작합니다.</small></div>
