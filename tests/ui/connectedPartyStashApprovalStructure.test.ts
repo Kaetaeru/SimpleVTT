@@ -4,6 +4,7 @@ import test from "node:test";
 
 const pane=readFileSync(new URL("../../src/SessionInventoryPane.tsx",import.meta.url),"utf8");
 const runtime=readFileSync(new URL("../../src/app/connectedPartyStashApprovalRuntimeAdapter.ts",import.meta.url),"utf8");
+const bridge=readFileSync(new URL("../../src/PartyStashApprovalOutcomeBridge.tsx",import.meta.url),"utf8");
 const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
 
 test("dm-approval withdrawal stays clickable but reports an approval request instead of a transfer",()=>{
@@ -29,6 +30,17 @@ test("connected approval runtime queues before mutation and commits only after t
   const transfer=runtime.indexOf("await this.transferPartyStash(record.command)");
   const commit=runtime.indexOf('queue.settle(requestId,"committed")');
   assert.ok(approve>=0&&transfer>approve&&commit>transfer);
+});
+
+test("terminal approval outcomes are targeted to the Player and surfaced without another asset mutation path",()=>{
+  assert.match(runtime,/campaign-stash-approval-outcome/);
+  assert.match(runtime,/tauriSessionTransport\.sendTo\(peer/);
+  assert.match(runtime,/takeLatestPartyStashApprovalOutcome/);
+  assert.match(bridge,/takeLatestPartyStashApprovalOutcome\(\)/);
+  assert.match(bridge,/보관함 출고 승인/);
+  assert.match(bridge,/보관함 출고 거절/);
+  assert.match(bridge,/보관함 출고 취소/);
+  assert.match(main,/PartyStashApprovalOutcomeBridge/);
 });
 
 test("failed approved transfers remain recoverable and Session stop clears transient approvals",()=>{
