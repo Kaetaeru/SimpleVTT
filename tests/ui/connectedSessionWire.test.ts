@@ -109,6 +109,14 @@ const readyActionEvent:ConnectedSessionEvent={
   },
 };
 
+const undoEvent:ConnectedSessionEvent={
+  sessionId:"session.test",eventId:"session.test:event:4",sequence:4,actorId:"dm",
+  payload:{kind:"resolution-undo",undoId:"undo.resolution.test",undoOf:"resolution.test",inverseResolutionEvents:[{
+    id:"undo.resolution.test:event:1",resolutionId:"undo.resolution.test",operationId:"undo:operation.damage",kind:"damage",actorId:"char.aelar",targetId:"combatant.goblin-a",summary:"Undo · 3 piercing damage",provenance:[],
+    stateChanges:[{kind:"hp",targetId:"combatant.goblin-a",field:"current",before:4,after:7,provenance:[],lifetime:"character-durable",writeBack:"character"}],result:{undoOf:"domain.event.1"},
+  }],stateChanges:["Goblin HP 4 → 7"],provenance:["Host-authoritative compensating Undo"]},
+};
+
 function roundTrip(message:ConnectedWireMessage) {
   const decoded=decodeConnectedWireMessage(encodeConnectedWireMessage(message));
   assert.equal(decoded.status,"ok");
@@ -133,6 +141,7 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
   roundTrip({ type:"catchup-request",sessionId:"session.test",afterCursor:1 });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:1,events:[readyEvent] });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:2,events:[readyActionEvent] });
+  roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:3,events:[undoEvent] });
   roundTrip({ type:"resolution-presentation",sessionId:"session.test",presentation:{...presentation,delivery:"live"} });
   roundTrip({type:"resolution-interrupt-prompt",sessionId:"session.test",resolutionId:"resolution.test",presentationSequence:2,interrupt:{id:"reaction.shield",responderId:"char.aelar",responderName:"Aelar",trigger:"hit",optionName:"Shield",cost:"reaction",effect:"AC +5",source:"spell"}});
   roundTrip({type:"resolution-interrupt-response",response:{sessionId:"session.test",resolutionId:"resolution.test",promptId:"reaction.shield",accept:true}});

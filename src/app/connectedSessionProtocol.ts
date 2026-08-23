@@ -77,6 +77,14 @@ export type ConnectedEventPayload =
       provenance:string[];
     }
   | {
+      kind:"resolution-undo";
+      undoId:string;
+      undoOf:string;
+      inverseResolutionEvents:ResolutionEvent[];
+      stateChanges:string[];
+      provenance:string[];
+    }
+  | {
       kind:"ready-action";
       actorId:string;
       transition:"armed"|"cleared";

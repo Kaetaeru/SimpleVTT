@@ -155,6 +155,8 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
     if (!isString(payload.resolutionId)||!isConnectedResolutionPresentation(payload.presentation)
       ||payload.presentation.resolutionId!==payload.resolutionId
       ||!Array.isArray(payload.resolutionEvents)||!payload.resolutionEvents.every(isResolutionEvent)) return false;
+  } else if(payload.kind==="resolution-undo"){
+    if(!isString(payload.undoId)||!isString(payload.undoOf)||!Array.isArray(payload.inverseResolutionEvents)||!payload.inverseResolutionEvents.every(isResolutionEvent))return false;
   } else if (payload.kind==="mode-transition") {
     if ((payload.sessionMode!=="freeform"&&payload.sessionMode!=="initiative")
       ||!isCursor(payload.round)||!isString(payload.currentActorId)||!isEconomyMap(payload.economyByActor)) return false;

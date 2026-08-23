@@ -22,11 +22,13 @@ import {
 } from "./characterSessionProjectionMount";
 import { projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const previousDismissResolution=MockAdapter.prototype.dismissResolution;
+const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 const projectionContexts=new WeakMap<MockAdapter,ProjectionResolutionContext>();
 
 function requestId() {
@@ -121,6 +123,7 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
     if (economy) outbound.push(state.ledger.commitHostEvent({actorId:resolution.actorId,payload:{kind:"ready-action",actorId:resolution.actorId,transition:"cleared",economy:{...economy},stateChanges:[`${resolution.actorId} 준비 행동 해제`],provenance:["host-authoritative ready-action trigger"]}}));
   }
   state.publishedResolutionIds.add(resolution.id);
+  state.publishedResolutionEvents.set(resolution.id,events.map((entry)=>structuredClone(entry)));
   state.nextPresentationSequence=Math.max(state.nextPresentationSequence,presentation.presentationSequence+1);
   if (isRemotePending) state.pendingRemoteAction=null;
   await broadcastConnectedWire({
@@ -131,6 +134,22 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   });
   if (isRemotePending&&restoreProjectedContext(adapter)) return connectedInternal(adapter).getSnapshot();
   return current;
+}
+
+function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):ResolutionEvent[] {
+  return [...events].reverse().map((event,eventIndex)=>({
+    ...structuredClone(event),id:`${undoId}:event:${eventIndex+1}`,resolutionId:undoId,operationId:`undo:${event.operationId}`,summary:`Undo · ${event.summary}`,
+    provenance:[...event.provenance,{source:`undo:${event.resolutionId}`,status:"applied",reason:"Host-authoritative compensating event"}],
+    stateChanges:[...event.stateChanges].reverse().map((change)=>{
+      if(change.kind==="effect")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="concentration")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="spellcasting-turn")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="hp")return {...structuredClone(change),before:change.after,after:change.before};
+      if(change.kind==="economy")return {...structuredClone(change),before:change.after,after:change.before};
+      if(change.kind==="resource")return {...structuredClone(change),before:change.after,after:change.before,recoveryLockouts:change.recoveryLockouts?{before:structuredClone(change.recoveryLockouts.after),after:structuredClone(change.recoveryLockouts.before)}:undefined};
+      return {...structuredClone(change),before:change.after,after:change.before};
+    }),result:{undoOf:event.id},
+  }));
 }
 
 async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapshot:AppSnapshot) {
@@ -356,4 +375,22 @@ MockAdapter.prototype.dismissResolution=async function dismissConnectedResolutio
     await sendConnectedWireTo(pending.peer,{type:"error",code:"host-dismissed",message:"host dismissed the pending remote resolution",hostCursor:state.ledger.cursor});
   }
   return previousDismissResolution.call(this);
+};
+
+MockAdapter.prototype.undoLastResolution=async function undoConnectedResolution() {
+  const state=connectedStateFor(this);
+  const app=connectedInternal(this);
+  if(state.mode==="client")return app.getSnapshot();
+  const resolutionId=app.resolution?.stage==="complete"?app.resolution.id:undefined;
+  const originalEvents=resolutionId?state.publishedResolutionEvents.get(resolutionId):undefined;
+  const next=await previousUndoLastResolution.call(this);
+  if(state.mode!=="host"||!state.ledger||!resolutionId||!originalEvents?.length)return next;
+  const committedUndo=next.activity.find((entry)=>entry.undoOf===resolutionId);
+  if(!committedUndo)return next;
+  const undoId=`undo.${resolutionId}.${state.ledger.cursor+1}`;
+  const inverse=inverseResolutionEvents(originalEvents,undoId);
+  const event=state.ledger.commitHostEvent({actorId:"dm",payload:{kind:"resolution-undo",undoId,undoOf:resolutionId,inverseResolutionEvents:inverse,stateChanges:[...committedUndo.stateChanges],provenance:["Host-authoritative compensating Undo","original event history retained"]}});
+  state.publishedResolutionEvents.delete(resolutionId);
+  await broadcastConnectedWire({type:"event-batch",sessionId:state.ledger.sessionId,afterCursor:event.sequence-1,events:[event]});
+  return next;
 };

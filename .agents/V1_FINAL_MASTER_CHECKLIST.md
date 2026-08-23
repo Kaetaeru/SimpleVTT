@@ -18,11 +18,11 @@ Protocol/state convergence alone is insufficient. H, acting P1, and observing P2
 - [x] Create GitHub Epic `#110`.
 - [x] Create work issues `#111` through `#122`.
 - [x] Open documentation PR `#123` against `work/v1-composite`.
-- [ ] Merge PR `#123`.
+- [x] Merge PR `#123` (`a2e5f3f5e342e57fbe8bb6925b071bcb6a563c98`).
 
 ## Phase 1 — Existing V1 foundation
 
-- [ ] Reconcile latest `work/v1-composite` and record BASE_SHA.
+- [x] Reconcile latest `work/v1-composite` and record BASE_SHA (`a2e5f3f5e342e57fbe8bb6925b071bcb6a563c98`).
 - [ ] Validate `V1-00`~`V1-13`: source baseline, Campaign persistence/UI, calendar, rations, Party Stash, DM Library.
 - [ ] Validate `V1-20`~`V1-21`: Character creation, persistence, sheets, local actions/checks/spells/items/level-up.
 - [ ] Validate `V1-30`~`V1-32`: Session lifecycle, Host authority, Character projection, owner write-back, reconnect.
@@ -86,5 +86,16 @@ Protocol/state convergence alone is insufficient. H, acting P1, and observing P2
 
 ## Immediate next action
 
-Merge documentation PR `#123`, then implement `#111 / MP-01`. No product implementation should skip ahead of the envelope/privacy/reconnect contract.
+Continue `#113 / MP-04` with concentration and Ready trigger owner-routing, then close the remaining MP-03 projected spell/feature cases. Do not close MP-01 through MP-04 until the full mapped scenario set passes.
+
+## Implementation checkpoints on `codex/v1-multiplayer`
+
+- [x] Public Resolution Presentation Envelope schema/identity validation, structured authoritative faces, selected/discarded indices, cumulative timeline, Activity linkage, and private-control stripping.
+- [x] Ordered Client presentation queue with duplicate sequence rejection, terminal catch-up without reroll, and the shared `VisualDiceBridge` / `CombatVfxBridge` path.
+- [x] H+P1+P2 attack hit/miss, damage, check, healing feature, consumable, charged item, saving-throw single/multi-target, and no-roll Dash coverage.
+- [x] Owner-only interrupt prompt routing with public redaction, Host ownership revalidation, accepted response continuation, and spoof rejection.
+- [x] Host Undo as a new inverse `resolution-undo` event; original Activity remains historical and Client apply is exactly once.
+- [x] Connected regression checkpoint: 186/186 tests, TypeScript pass, Vite production build pass (2026-08-23 Asia/Seoul).
+- [ ] MP-03 remaining projected production spell/feature/invalid/concurrent cases.
+- [ ] MP-04 concentration, Ready trigger live presentation, timeout, and correction-during-presentation cases.
 

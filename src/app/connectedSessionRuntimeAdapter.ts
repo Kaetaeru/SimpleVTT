@@ -35,7 +35,7 @@ declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -204,6 +204,22 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     applyParticipantPayload(adapter,payload);
     return { status:"committed" as const };
   }
+  if(payload.kind==="resolution-undo"){
+    const projected=applyResolutionEvents(app.scene,payload.inverseResolutionEvents,app.activeCharacter.resources,app.activeCharacter.items);
+    if(projected.status==="rejected")return projected;
+    const writeBack=await persistCharacterResolutionEvents(adapter,payload.inverseResolutionEvents,"forward");
+    if(writeBack.status==="rejected")return {status:"rejected" as const,error:`Character undo write-back failed: ${writeBack.error}`};
+    app.scene=projected.scene;
+    app.activeCharacter.resources=projected.resources.map((entry)=>structuredClone(entry));
+    app.activeCharacter.items=projected.items.map((entry)=>structuredClone(entry));
+    app.syncChar();
+    app.activity=app.activity.map((entry)=>entry.id===payload.undoOf?{...entry,reversed:true}:entry);
+    app.activity.unshift({id:payload.undoId,time:"지금",actor:"DM",title:"원격 Resolution 되돌림",summary:payload.undoOf,detail:[`eventId=${event.eventId}`,...payload.provenance],stateChanges:[...projected.stateChanges],correction:true,undoOf:payload.undoOf});
+    app.resolution=null;
+    app.resolutionPresentation=null;
+    state.pendingPresentations=[];
+    return {status:"committed" as const};
+  }
   if (payload.kind==="ready-action") {
     const actor=app.scene.entities.find((entity)=>entity.id===payload.actorId);
     if (!actor) return {status:"rejected" as const,error:`ready-action actor is missing: ${payload.actorId}`};
@@ -254,7 +270,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   const presentationStatus=enqueueOrInstallConnectedPresentation(adapter,payload.presentation);
   state.lastAppliedPresentationSequence=Math.max(state.lastAppliedPresentationSequence,payload.presentation.presentationSequence);
   app.activity.unshift({
-    id:`connected:${event.eventId}`,
+    id:payload.resolutionId,
     time:"지금",
     actor:event.actorId ?? "Host",
     title:`원격 Resolution 적용 · ${payload.resolutionId}`,
