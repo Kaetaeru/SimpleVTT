@@ -7,8 +7,6 @@ Recorded V1-13 product/test head: **`cbf20ab test(campaign): include Stash polic
 
 이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 인수인계 문서다. 실행 우선순위/완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 제품 계약은 `docs/design/`, 작업 루트는 `CANONICAL_ROOT.md`, 현재 실행 지점은 `.chatgpt-rerun/STATE.md`가 우선한다.
 
-멀티플레이 후속 구현은 `docs/design/multiplayer-v1-scenario-catalog.md`의 H/P1/P2 시나리오와 GitHub 이슈 순서를 우선한다. 현재 authoritative state convergence는 상당 부분 존재하지만 다른 Client의 동일한 staged Resolution/physics dice/공격 연출은 완료되지 않았으므로 V1 multiplayer 완료로 선언하지 않는다.
-
 ## Resume rules
 
 1. `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md`를 먼저 reconcile한다.
@@ -87,4 +85,3 @@ No observed execution exists for the new focused tests, `npm run test:campaign-r
 5. Add deterministic policy transition, duplicate request/reconnect, rejection/cancel and Session-end cleanup contracts.
 6. Re-audit V1-13 after approval flow; then continue next unblocked V1 slice.
 7. Keep comprehensive Codex audit deferred until implementation freeze.
-
