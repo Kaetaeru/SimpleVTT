@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/sessionInventoryRuntimeAdapter";
 import "../../src/app/campaignRuntimeAdapter";
+import "../../src/app/campaignPartyStashPolicyRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryCampaignLibraryStore } from "../../src/app/memoryCampaignLibraryStore";
 import { setCampaignLibraryStoreForTests } from "../../src/app/campaignRuntimeAdapter";
