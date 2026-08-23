@@ -70,6 +70,7 @@ function matchesApplied(before:SessionCharacterInventoryVm,current:SessionCharac
     }
     return current.items.length===before.items.length-(source.quantity===command.quantity?1:0)&&allUnchanged(before.items,current.items,source.id);
   }
+  if(command.operation!=="grant-item"&&command.operation!=="grant-item-template")return false;
   const definition=definitionFor(command,catalog);if(!definition)return false;
   const quantity=command.quantity;
   const existing=before.items.find((item)=>compatibleDefinition(item.definitionId)===compatibleDefinition(definition)&&!item.charges&&!item.attunementRequired);
