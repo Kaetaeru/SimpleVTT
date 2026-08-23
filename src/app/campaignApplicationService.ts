@@ -58,7 +58,7 @@ export class CampaignApplicationService {
     next.recentRequestIds=[...current.recentRequestIds,context.requestId].slice(-128);
     const campaigns=[...document.campaigns];campaigns[index]=next;
     await this.repository.commit({...document,campaigns});
-    return cp(next);
+    return this.getCampaign(context.campaignId)!;
   }
 
   updateCampaign(context:CampaignMutationContext&{payload:{name?:string;description?:string}}){
