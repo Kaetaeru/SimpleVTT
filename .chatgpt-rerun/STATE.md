@@ -7,100 +7,76 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T12:54:11+09:00`
+- checkpointed_at: `2026-08-23T13:05:27+09:00`
 
 ## Preflight reconciliation
 
-This execution read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, relevant Campaign/ration/transfer design contracts, and actual `work/v1-composite` state.
+This execution read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled canonical root, current handoff, release checklist, Campaign design, and actual branch state.
 
-At dispatch start the branch was identical to prior coordination head `2fe1628b4648585f0e6faa11ca7246c2d1863161`. Run identity remained valid: same run_id, `sequence=1`, task, and `status=continue`. Stale handoff/checklist selector/approval TODO prose was not replayed.
+At dispatch start `work/v1-composite` was identical to prior coordination head `a07124eb39e07be9d3a83d6a2c9a5367357262d4`. Immediately before coordination writes it was exactly 8 commits ahead, all from this execution. No concurrent divergent writer was observed. Run identity remained `sequence=1`, `status=continue`, task `phase14-production-play-session-ux`.
 
-Immediately before coordination writes the branch was exactly 11 commits ahead of `2fe1628...`, all attributable to this execution. No divergent concurrent writer was observed.
+## Preserved foundation
 
-## Preserved source foundation
+Do not repeat:
 
-Keep intact:
-
-- V1-12 connected Long Rest normal durable-storage path / validation pending;
+- V1-12 connected Long Rest durability / validation pending;
 - Player-owned Character durability and Host/owner recovery/compensation;
-- Campaign-authoritative Party Stash durable transfer path;
-- shared/dm-approval/dm-managed policies, approval request/queue, approve/reject/cancel/retry, duplicate/reconnect/current-owner/policy/permission validation;
-- owner transfer, compensation/retry, Session cleanup, targeted Player terminal FIFO outcomes;
-- ration conversion provider contract, atomic/idempotent Campaign mutation, Host-trusted current Catalog eligibility, legacy Stash revalidation, exact provider pin, DM preview/commit, connected Campaign projection reuse;
-- existing DM Library custom item/image/NPC workflows, tags/favorites/recents/search, namespace/privacy/provenance/delete-preservation semantics;
-- comprehensive Codex audit deferred until implementation freeze.
+- Campaign-authoritative Party Stash, all three policies, approval/retry/revalidation/cleanup, real owner transfer and exact compensation;
+- Player committed/rejected/cancelled FIFO outcome delivery;
+- provider-declared atomic ration conversion, Host trusted current Catalog eligibility, legacy Stash revalidation, exact provider pin, DM preview/commit, connected Campaign projection reuse;
+- isolated bundled `dnd-srd-5.2.1.equipment-rations` source;
+- DM Library custom item/image/NPC, PC preset/folders, tags/favorites/recents/search, namespace/privacy/provenance/delete-preservation;
+- image handout preview/reveal/reconnect restore and existing Session NPC quick add;
+- installed/catalog vs Campaign custom source distinction and Session inventory quick actions.
 
 ## Completed in this execution
 
-Latest product/test boundary: `22cdc889e0505ce2c7fee5a6d7055c035b9b9742`.
+Latest product/test boundary: `9632f5119be427c200b5e1aa92a432df7edd27ca`.
 
-### Bundled ration-compatible content
+### Live Session PC preset Actor +1
 
-Content-generation/source inspection established that the built-in generator projects a RuleModule's `capabilities` onto every CatalogEntry in that module. Therefore `campaign.ration-source` cannot safely be added to an existing multi-item equipment module.
+- `290da001a8729fc4913cddd736fa4b2ec9b6d32f` — `SessionDmEncounterPane` now includes Campaign `pc-preset` entries beside existing `npc-definition` entries.
+- It invokes existing `mockAdapter.instantiateCampaignDmLibraryPcPreset`, whose established runtime materializes `CombatantDefinitionVm` and calls existing `instantiateCombatant`, then refreshes the AppProvider snapshot.
+- No alternate actor mutation or Character Library ownership path was added. Existing NPC quick add remains intact.
+- `568ef5fda14af10ee71ee890c0c7e02c6a9c77d0` — structure test pins authority, existing materialization, refresh, and NPC preservation.
 
-- `6934d20208284aca65edfa82718e4239ed292754` — new isolated `dnd-srd-5.2.1.equipment-rations` module.
-- The module has exactly one capability, `campaign.ration-source`, and exactly one SRD-derived content entry, `dnd.srd521.item.gear.rations` (`Rations (1 day)` / `식량 (1일분)`).
-- No unverified price/weight/mechanics were fabricated.
-- `2e07e152110bd6fce7254deb9f40ca22ff9e596c` — structure test pins the isolated declaration and generator behavior.
-- `src/generated/builtinCatalog.generated.json` is not tracked by GitHub; it is generated by normal content-generation/build workflow. Generation did not execute here.
+### Private DM Library note workflow
 
-### DM Library PC preset + folder organization
+- `dd106907029500ad98c44fc1c895c7916ef01fac` — optional `noteText` payload on the already-reserved `note` kind.
+- `a0fb8aac7f4dbcbdf206d823161fad789e2d21dd` — existing Campaign Library upsert path validates/normalizes nonblank note text; no new store or transport.
+- `7a3ea5f956567acd8da400ce68c36ecacae8ac98` — note UI supports create/read/search/edit/delete, title/body/tag search, folders, tags, favorites, and explicit Host-private copy.
+- `4387160505c0a8b3ba7df62c27cfc62e7dde7803` — note panel mounted on Campaign dashboard.
+- `3a2885361c0f0d9bfc10fcdfa27a363abe7ea428` — runtime source test covers blank reject, normalized create/update/folder/tags/favorite/delete.
+- `9632f5119be427c200b5e1aa92a432df7edd27ca` — structure/privacy test verifies note workflow and absence of `dmLibrary`/`noteText` from `CampaignSessionSystemsProjection`.
 
-Contracts:
+### Final Party Stash source re-audit
 
-- `815fddd3947f061ed9d1a86889200878890ed6d5` — optional/backward-compatible `CampaignDmLibraryFolder`, `CampaignPcActorPreset`, entry `folderId`, entry `pcPreset`, and Library `folders` fields.
-- PC preset is explicitly Campaign-owned DM Actor data, not a Player Character file.
+No new code needed for equipped/wielded/attuned transfer handling:
 
-Runtime:
+- `campaignRuntimeAdapter.ts` already forwards `forceUnequip` to authoritative `revoke-item` inventory mutation.
+- `sessionInventoryRuntimeAdapter.ts` rejects equipped/wielded/attuned revoke unless force is explicit.
+- force clears equipped/wielded/attuned/wieldSlot before quantity decrement/removal in the same mutation.
+- undo conflict-checks and restores active state safely.
 
-- `73d79e20329031cb74af436cfa7c859931348738` — organization runtime uses existing `MockAdapter.updateCampaign` -> same `CampaignApplicationService`/repository mutation boundary via a private organization payload. No duplicate Campaign store or actor persistence path was added.
-- Folder upsert supports create/rename; folder removal preserves entries and moves them to root.
-- Entry folder references are validated.
-- PC preset validates definition identity/name/level 1-20/AC/max HP/source/version and canonicalizes actions/status immunities.
-- Preset Actor materialization is DM-only and creates an existing `CombatantDefinitionVm` then calls existing `instantiateCombatant`; Character Library ownership is not touched.
+## Current V1-13 assessment
 
-UI:
+Static/selective source re-audit finds no remaining canonical V1-13 source gap. Covered source includes DM Library item/image/PC preset/NPC/custom item/note + organization/privacy/quick actions, Party Stash transfer/policies/approval/compensation/equipped-state handling, ration conversion/bundled source, and Player terminal outcome paths.
 
-- `ed7caa9e9362c76e827c6a3a1552d05105ffc370` + `efe88f8fdb1d04dfe2634525e3f2fca262a03192` — full folder and PC preset Campaign UI.
-- Folders: create/read/rename/delete, all/root/folder filtering, arbitrary DM Library entry move.
-- PC preset: create/read/update/delete, folder assignment, tags, level/AC/HP/actions, Campaign-dashboard Actor +1.
-- `8df18773ac648aa7066428ad9281c128850658c0` — organization UI is mounted on the active Campaign dashboard.
-
-Tests:
-
-- `a7b1aee66098ba989373c69ae0d59fae6a755c10` -> `22cdc889e0505ce2c7fee5a6d7055c035b9b9742` — source runtime coverage for folder create/rename/delete/root preservation, invalid folder rejection, preset create/update/materialize/recents/delete.
-- `bd0e4304358af7ab79867d5e981fb95121e9fa0c` -> `d2f2666a0f251c7f12779b08cca329f973a26b82` — source structure/privacy contract, including private DM Library absence from `CampaignSessionSystemsProjection`.
+V1-13 is now **SOURCE-COMPLETE / VALIDATION PENDING**, not DONE. The stale release checklist must not be promoted to DONE without exact-head executable evidence and later acceptance.
 
 ## Validation status
 
-**NO GREEN CLAIM.** Product/test boundary `22cdc889e0505ce2c7fee5a6d7055c035b9b9742` returned no combined statuses and no commit-associated workflow runs. Exact-head local execution remains unavailable because the environment cannot resolve GitHub:
+**NO GREEN CLAIM.** Latest product/test boundary `9632f5119be427c200b5e1aa92a432df7edd27ca` has no combined status checks and no commit-associated workflow runs.
+
+A single local exact-head checkout retry again failed:
 
 `Could not resolve host: github.com`
 
-No Node/npm test, `generate:content`, TypeScript compile, Vite build, Tauri/Rust, or Windows two-instance result is claimed. Source-authored tests/static inspection are not executable evidence.
-
-## Selective V1-13 re-audit
-
-Confirmed already source-covered; do not repeat:
-
-1. Custom item/image/NPC DM Library workflows, tags/favorites/recents/search.
-2. Installed/catalog vs Campaign custom source distinction.
-3. Character item grant/reclaim, Character <-> Stash movement, GP grant/reclaim in Session Inventory.
-4. Image preview/reveal: `SessionImageHandoutBridge` loads Campaign DM Library images, supports pre-share preview, Player reveal, reconnect/current handout restoration and withdrawal.
-5. NPC quick add: `SessionDmEncounterPane` loads Campaign `npc-definition` entries and calls existing `instantiateCampaignDmLibraryNpc`.
-6. Namespace isolation, private connected projection, materialization provenance and definition-delete preservation.
-
-New exact gaps:
-
-- **PC preset live-Session quick add:** this execution added Campaign-dashboard `Actor +1`, but `SessionDmEncounterPane` currently lists only `npc-definition`. `pc-preset` must be exposed in the live DM Encounter pane through the new existing preset runtime rather than a second actor path.
-- **DM Library note:** `CampaignDmLibraryEntry.kind` reserves `note`, and canonical design requires DM notes, but no note CRUD/search/folder user path is currently exposed.
-
-V1-13 remains **SOURCE-CONNECTED / VALIDATION PENDING**, not DONE. The release checklist's old TODO projection remains stale until exact-head executable evidence and later acceptance are recorded.
+Therefore no Node/npm tests, `generate:content`, TypeScript compile, Vite build, Tauri/Rust, or Windows two-instance result is claimed.
 
 ## Next Exact Action
 
-1. Re-read README -> control -> STATE -> PLAN and reconcile actual `work/v1-composite`; preserve source through `22cdc889e0505ce2c7fee5a6d7055c035b9b9742` unless GitHub advanced.
-2. Prefer executable exact-head validation if available: ration domain/runtime/legacy/bundled-content tests, DM Library organization tests, Party Stash approval tests, `generate:content`, TypeScript and build. Fix real failures before green claims.
-3. If execution remains unavailable, expose `pc-preset` in `SessionDmEncounterPane` as live DM Actor +1 using `instantiateCampaignDmLibraryPcPreset`, adding the normal AppProvider/session contract and deterministic source tests. Preserve existing NPC quick add.
-4. Then add DM Library `note` CRUD/search/folder workflow as private Campaign data; never project private notes to Clients.
-5. Re-audit V1-13 after note support. Windows two-instance acceptance and comprehensive Codex audit remain later gates.
+1. Re-read README -> control -> STATE -> PLAN and reconcile actual `work/v1-composite`; preserve source through `9632f5119be427c200b5e1aa92a432df7edd27ca` unless GitHub advanced.
+2. Prefer exact-head executable validation when available: DM Library organization/note/Session-preset tests, bundled ration/ration-conversion tests, Party Stash approval/owner-transfer tests, `generate:content`, TypeScript and build. Fix real failures before green claims.
+3. If execution remains unavailable, do not create speculative extra V1-13 functionality. Reconcile the next unresolved canonical release/checklist boundary and begin only a demonstrable source gap.
+4. Windows two-instance acceptance remains later. Comprehensive Codex audit remains deferred until implementation freeze.
