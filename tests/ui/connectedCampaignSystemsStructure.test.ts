@@ -53,9 +53,9 @@ test("connected Players can move only their own Character assets with host ackno
 test("Host DM inventory mutations for mounted remote Characters execute on the owning Client and refresh the Host projection",()=>{
   assert.match(runtime,/campaign-owner-inventory/);
   assert.match(runtime,/projectedCharacterById/);
-  assert.match(runtime,/command\.actorId!==snapshot\.activeCharacter\.id/);
-  assert.match(runtime,/client\.adjustDmInventory\(ownerRequest\.command\)/);
-  assert.match(runtime,/client\.undoDmInventoryAdjustment\(ownerRequest\.requestId\)/);
+  assert.match(runtime,/actorId!==snapshot\.activeCharacter\.id/);
+  assert.match(runtime,/client\.adjustDmInventory\(request\.command\)/);
+  assert.match(runtime,/client\.undoDmInventoryAdjustment\(request\.requestId\)/);
   assert.match(runtime,/buildCharacterSessionProjectionV1/);
   assert.match(runtime,/reconstructCharacterSessionProjectionV1/);
   assert.match(runtime,/refreshReconstructedCharacterSessionProjection/);
