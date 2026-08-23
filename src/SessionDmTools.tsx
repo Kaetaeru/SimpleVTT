@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { SceneEntity } from "./app/contracts";
+import "./app/campaignDmLibraryOrganizationRuntimeAdapter";
+import { mockAdapter } from "./app/mockAdapter";
 import "./session-dm-tools.css";
 
 function entitySummary(entity: SceneEntity) {
@@ -64,7 +66,7 @@ export function SessionDmActorPane({ onClose }: { onClose(): void }) {
 }
 
 export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
-  const { snapshot, instantiateCombatant, instantiateCampaignDmLibraryNpc, removeCombatant, startInitiative, endInitiative } = useSimpleVtt();
+  const { snapshot, refresh, instantiateCombatant, instantiateCampaignDmLibraryNpc, removeCombatant, startInitiative, endInitiative } = useSimpleVtt();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   if (!snapshot) return null;
 
@@ -74,6 +76,7 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
   const campaignId=snapshot.campaignSessionSnapshot?.campaignId??snapshot.activeCampaignId??null;
   const campaign=snapshot.campaigns?.find((entry)=>entry.campaignId===campaignId);
   const libraryNpcs=(campaign?.dmLibrary.entries??[]).filter((entry)=>entry.kind==="npc-definition"&&entry.npcDefinition).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
+  const libraryPresets=(campaign?.dmLibrary.entries??[]).filter((entry)=>entry.kind==="pc-preset"&&entry.pcPreset).sort((a,b)=>Number(Boolean(b.favorite))-Number(Boolean(a.favorite))||a.label.localeCompare(b.label,"ko-KR"));
 
   const addCombatant = async (definitionId: string) => {
     if (pendingKey) return;
@@ -85,6 +88,7 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
     }
   };
   const addLibraryNpc=async(entryId:string)=>{if(pendingKey||!campaignId)return;setPendingKey(`library:${entryId}`);try{await instantiateCampaignDmLibraryNpc(campaignId,entryId);}finally{setPendingKey(null);}};
+  const addLibraryPreset=async(entryId:string)=>{if(pendingKey||!campaignId)return;setPendingKey(`preset:${entryId}`);try{await mockAdapter.instantiateCampaignDmLibraryPcPreset(campaignId,entryId);await refresh();}finally{setPendingKey(null);}};
 
   const remove = async (combatantId: string) => {
     if (pendingKey || removalBlocked) return;
@@ -117,7 +121,7 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
 
     <section className="session-dm-section">
       <div className="session-dm-section-title"><strong>Combatant 추가</strong><span>현재 세션을 떠나지 않고 Encounter에 추가합니다.</span></div>
-      {campaign&&<><div className="session-dm-section-title compact"><strong>캠페인 DM 라이브러리</strong><span>비공개 NPC 액터 정의</span></div>{libraryNpcs.length?<div className="session-dm-definition-grid campaign-library">{libraryNpcs.map((entry)=><button type="button" key={entry.entryId} disabled={Boolean(pendingKey)} onClick={()=>void addLibraryNpc(entry.entryId)}><div><strong>{entry.favorite?"★ ":""}{entry.label}</strong><small>{entry.tags?.join(" · ")||"Campaign 전용"}</small></div><span>AC {entry.npcDefinition!.ac} · HP {entry.npcDefinition!.maxHp}</span>{pendingKey===`library:${entry.entryId}`&&<em>추가 중…</em>}</button>)}</div>:<p className="session-dm-empty">캠페인에 저장된 NPC 액터가 없습니다.</p>}</>}
+      {campaign&&<><div className="session-dm-section-title compact"><strong>캠페인 DM 라이브러리</strong><span>비공개 NPC 정의와 PC Actor preset</span></div>{libraryNpcs.length||libraryPresets.length?<div className="session-dm-definition-grid campaign-library">{libraryNpcs.map((entry)=><button type="button" key={entry.entryId} disabled={Boolean(pendingKey)} onClick={()=>void addLibraryNpc(entry.entryId)}><div><strong>{entry.favorite?"★ ":""}{entry.label}</strong><small>{entry.tags?.join(" · ")||"Campaign NPC"}</small></div><span>AC {entry.npcDefinition!.ac} · HP {entry.npcDefinition!.maxHp}</span>{pendingKey===`library:${entry.entryId}`&&<em>추가 중…</em>}</button>)}{libraryPresets.map((entry)=><button type="button" key={entry.entryId} disabled={Boolean(pendingKey)} onClick={()=>void addLibraryPreset(entry.entryId)}><div><strong>{entry.favorite?"★ ":""}{entry.label}</strong><small>{entry.tags?.join(" · ")||"Campaign PC preset"}</small></div><span>Lv.{entry.pcPreset!.level} · AC {entry.pcPreset!.ac} · HP {entry.pcPreset!.maxHp}</span>{pendingKey===`preset:${entry.entryId}`&&<em>추가 중…</em>}</button>)}</div>:<p className="session-dm-empty">캠페인에 저장된 NPC/PC Actor가 없습니다.</p>}</>}
       {snapshot.combatantDefinitions.length ? <div className="session-dm-definition-grid">
         {snapshot.combatantDefinitions.map((definition) => <button type="button" key={definition.id} disabled={Boolean(pendingKey)} onClick={() => void addCombatant(definition.id)}>
           <div><strong>{definition.name}</strong><small>{definition.source}</small></div>
