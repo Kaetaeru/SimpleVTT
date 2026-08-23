@@ -1,6 +1,7 @@
 import type { AppSnapshot } from "./contracts";
 import { CampaignApplicationService } from "./campaignApplicationService";
 import type { CampaignRecordV1 } from "./campaignPersistenceContracts";
+import { trustedPartyStashCapabilities } from "./campaignPartyStashCapabilityRuntimeAdapter";
 import { pinnedCampaignProviderDescriptorFromCatalog } from "./campaignProviderProfiles";
 import {
   convertPartyStashItemToRations,
@@ -19,6 +20,7 @@ type ConversionPayload={
   stashItemInstanceId:string;
   quantity:number;
   rationProfile?:InstalledCampaignRationProfileV1;
+  trustedItemCapabilities:string[];
   note?:string;
 };
 
@@ -53,6 +55,12 @@ function rationProfile(snapshot:AppSnapshot,providerId:string,providerVersion:st
   return provider.profile;
 }
 
+function trustedItemCapabilities(snapshot:AppSnapshot,campaign:CampaignRecordV1,stashItemInstanceId:string){
+  const item=campaign.partyStash.itemReferences.find((candidate)=>candidate.instanceId===stashItemInstanceId);
+  if(!item)throw new Error("Party stash item is unavailable");
+  return trustedPartyStashCapabilities(snapshot,item.definitionId);
+}
+
 const previousAdjustRations=CampaignApplicationService.prototype.adjustRations;
 CampaignApplicationService.prototype.adjustRations=function adjustRationsWithAtomicStashConversion(context:AdjustRationsContext){
   const payload=(context as AdjustRationsContextWithConversion)[RATION_CONVERSION_PAYLOAD];
@@ -69,6 +77,7 @@ CampaignApplicationService.prototype.adjustRations=function adjustRationsWithAto
     stashItemInstanceId:payload.stashItemInstanceId,
     quantity:payload.quantity,
     rationProfile:payload.rationProfile,
+    trustedItemCapabilities:payload.trustedItemCapabilities,
     note:payload.note,
   });
 };
@@ -88,7 +97,10 @@ MockAdapter.prototype.previewCampaignPartyStashRationConversion=async function p
   const providerVersion=campaign.rations.capability.providerVersion;
   const profile=rationProfile(snapshot,providerId,providerVersion);
   return {
-    ...previewPartyStashItemRationConversion(campaign,{providerId,providerVersion,stashItemInstanceId:input.stashItemInstanceId,quantity:input.quantity,rationProfile:profile}),
+    ...previewPartyStashItemRationConversion(campaign,{
+      providerId,providerVersion,stashItemInstanceId:input.stashItemInstanceId,quantity:input.quantity,rationProfile:profile,
+      trustedItemCapabilities:trustedItemCapabilities(snapshot,campaign,input.stashItemInstanceId),
+    }),
     providerId,
     providerVersion,
   };
@@ -109,6 +121,7 @@ MockAdapter.prototype.convertCampaignPartyStashItemToRations=async function conv
     stashItemInstanceId:command.stashItemInstanceId,
     quantity:command.quantity,
     rationProfile:profile,
+    trustedItemCapabilities:trustedItemCapabilities(snapshot,campaign,command.stashItemInstanceId),
     note:command.note,
   };
   const adjustment={amount:1,note:command.note,[RATION_CONVERSION_PAYLOAD]:payload};
