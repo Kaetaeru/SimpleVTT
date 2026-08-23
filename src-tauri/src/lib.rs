@@ -8,6 +8,7 @@ mod connected_long_rest_character;
 mod connected_long_rest_character_guard;
 mod connected_long_rest_host;
 mod connected_owner_inventory;
+mod connected_party_stash_host;
 mod session_transport;
 
 use std::sync::Mutex;
@@ -208,6 +209,41 @@ fn finalize_connected_owner_inventory_journal(
 }
 
 #[tauri::command]
+fn read_connected_party_stash_host_records(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+) -> Result<Vec<connected_party_stash_host::ConnectedPartyStashHostRecordDto>, String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_party_stash_host::read_all_at(&root)
+}
+
+#[tauri::command]
+fn write_connected_party_stash_host_record(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_party_stash_host::WriteConnectedPartyStashHostRecordRequest,
+) -> Result<(), String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_party_stash_host::write_at(&root, &request)
+}
+
+#[tauri::command]
+fn delete_connected_party_stash_host_record(
+    app: tauri::AppHandle,
+    persistence: tauri::State<'_, CharacterCampaignPersistenceState>,
+    request: connected_party_stash_host::DeleteConnectedPartyStashHostRecordRequest,
+) -> Result<(), String> {
+    let _guard = lock_character_campaign_persistence(&persistence)?;
+    let root = local_data_root(&app)?;
+    character_campaign_compound::recover_at(&root)?;
+    connected_party_stash_host::delete_at(&root, &request)
+}
+
+#[tauri::command]
 fn read_authoring_draft_generations(
     app: tauri::AppHandle,
 ) -> Result<Vec<authoring_drafts::AuthoringDraftGenerationDto>, String> {
@@ -358,6 +394,9 @@ pub fn run() {
             begin_connected_owner_inventory_undo,
             mark_connected_owner_inventory_undone,
             finalize_connected_owner_inventory_journal,
+            read_connected_party_stash_host_records,
+            write_connected_party_stash_host_record,
+            delete_connected_party_stash_host_record,
             read_authoring_draft_generations,
             write_authoring_draft_generation,
             read_installed_content_generations,
