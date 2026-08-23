@@ -46,11 +46,11 @@ test("request-scoped undo reverts the intended mutation without rolling back a l
 
   await adapter.undoDmInventoryAdjustment("gold-first");
   let snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.sessionCharacterInventories?.["char.aelar"].goldGp,initial);
+  assert.equal(snapshot.sessionCharacterInventories?.["char.aelar"].goldGp,initial+5);
 
   await adapter.undoDmInventoryAdjustment("gold-first");
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.sessionCharacterInventories?.["char.aelar"].goldGp,initial,"repeated request-scoped undo must be idempotent");
+  assert.equal(snapshot.sessionCharacterInventories?.["char.aelar"].goldGp,initial+5,"repeated request-scoped undo must be idempotent");
 });
 
 test("equipped items require explicit forceUnequip before DM revocation",async()=>{
