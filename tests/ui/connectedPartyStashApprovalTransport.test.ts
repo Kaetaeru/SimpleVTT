@@ -191,7 +191,7 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
     await client.transferPartyStash(rejectCommand);
     await host.rejectPartyStashApproval(rejectCommand.requestId);
     assert.equal(queue.lookup(rejectCommand.requestId)?.state,"rejected");
-    const rejectedOutcome=client.takeLatestPartyStashApprovalOutcome();
+    const rejectedOutcome=client.takeNextPartyStashApprovalOutcome();
     assert.equal(rejectedOutcome?.requestId,rejectCommand.requestId);
     assert.equal(rejectedOutcome?.status,"rejected");
     assert.match(rejectedOutcome?.message??"",/거절/);
@@ -200,7 +200,7 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
     await client.transferPartyStash(cancelCommand);
     await host.cancelPartyStashApproval(cancelCommand.requestId);
     assert.equal(queue.lookup(cancelCommand.requestId)?.state,"cancelled");
-    const cancelledOutcome=client.takeLatestPartyStashApprovalOutcome();
+    const cancelledOutcome=client.takeNextPartyStashApprovalOutcome();
     assert.equal(cancelledOutcome?.requestId,cancelCommand.requestId);
     assert.equal(cancelledOutcome?.status,"cancelled");
     assert.match(cancelledOutcome?.message??"",/취소/);
