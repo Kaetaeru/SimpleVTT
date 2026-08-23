@@ -7,34 +7,34 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control: `continue`
-- Exact product-code checkpoint: `05eb6790404ed617b8b15702b0372bd6a4bef8ee`
+- Exact product-code checkpoint: `45c6dae19f2f6721e0fe012079cb6436f80b0938`
 
 ## Current result
 
 V1-12 Connected Long Rest remains source-complete / validation pending and was not repeated.
 
-V1-13 source audit found that Party Stash and Campaign DM Library already had substantial local/connected foundations. The first real connected ownership gap was Host-side inventory mutation of a mounted remote Player Character: it could change Host/session shadow state without durably updating the Player-owned Character library.
+V1-13 now has a durable owner inventory journal for connected remote Character mutations. The owner writes request/before state before Character persistence and append-only applied/undoing/undone/finalized sidecars afterward. This closes the owner-process restart windows where apply or undo committed but the acknowledgement/phase sidecar was lost.
 
-This dispatch source-connected:
+Current source also includes:
 
-- request-id scoped item/GP compensation with delta-based undo;
-- connected Host -> owner Client inventory apply/undo request/result routing;
-- owner Client durable Character-library mutation;
-- fresh owner Character SessionProjection acknowledgement;
-- Host remote durable projection + session inventory + peer-manifest revision refresh;
-- exact request-id rollback for connected Player Stash rejection/timeout;
-- focused owner-routing and wire validation tests.
+- Host -> owner Client durable inventory write-back + fresh Character SessionProjection refresh;
+- request-id scoped item/GP compensation;
+- restart-safe compensation without prior process in-memory undo state;
+- deferred owner finalization while Party Stash / DM Library Campaign work is unresolved;
+- DM Library remote Character compensation if the later Campaign mutation fails;
+- exact connected Host Stash requestId binding so compatibility `undoLast...` cannot select an unrelated inventory change;
+- focused journal/restart/structure contracts wired into the existing campaign-rest focused suite.
 
-Host still does **not** own or persist a remote Player Character in its Character library.
+Host still does not own or persist a remote Player Character in its Character library.
 
 ## Remaining correctness gap
 
-Connected V1-13 is not release-complete. The owner inventory request/undo journal is currently process memory. If owner Character persistence succeeds but the owner process/ack dies before Host observes success, restarted-owner compensation cannot yet prove whether/how the original apply committed.
+V1-13 is not release-complete. The owner side is now restart-recoverable, but Host process restart between owner Character apply and Party Stash Campaign reconciliation still lacks durable coordinator/reconnect recovery.
 
-Next slice: durable owner inventory transaction journal/sidecar with replay-safe apply/undo/finalize, plus exact request-specific Host Stash compensation instead of the remaining underlying global last-undo dependency.
+Next slice: on Host restart/reconnect, use Campaign idempotency to decide whether an unfinalized owner request should be finalized `applied` or compensated and finalized `undone`.
 
 ## Validation
 
-**NO GREEN CLAIM.** Exact product head `05eb679` has no combined statuses and no commit-associated workflow runs. No observed execution exists for the new V1-13 tests, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library scenarios.
+**NO GREEN CLAIM.** Exact product head `45c6dae19f2f6721e0fe012079cb6436f80b0938` has no combined statuses and no commit-associated workflow runs. No observed execution exists for the new focused tests, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library restart scenarios.
 
 `STATUS.md` is human-facing only. Reconciliation remains README -> control -> STATE -> PLAN.
