@@ -10,92 +10,73 @@
 - task_id: `phase14-production-play-session-ux`
 - dispatch: `continue`
 
-This remains the same V1-completion run. Preserve source-connected Long Rest, Campaign, SessionProjection, Ready/reconnect, Character ownership, and current Session UI work. Do not route to `main`, duplicate already implemented slices, or begin the comprehensive Codex audit before the pre-release boundary.
+This is the same V1-completion run. Preserve current Session UI, Character ownership, connected authority/replay, Campaign persistence, and all source-connected Long Rest work. Do not route to `main`, redo implementation solely for validation, or begin the comprehensive Codex audit before the V1 implementation freeze.
 
-## Contract decision
+## V1-12 contract result
 
-`docs/design/campaign-systems.md` requires connected Long Rest to collect DM/owner decisions and prevent durable Character-only or Campaign-only partial success. Therefore process-restart recovery is part of this V1-12 transaction boundary; it is not safely excludable as later polish.
+`docs/design/campaign-systems.md` requires connected Long Rest to collect DM/owner decisions and avoid durable Character-only or Campaign-only partial success.
 
-Remote Character durability remains owned by the Player Character store. Host stores only Session projection/reference plus its own Campaign state and transaction coordinator metadata.
+The normal durable-storage implementation path is now source-complete through product-code head `78e829bdfa5b5c8a1de0f8b89c8493e09d7aacc0`:
 
-## Completed in this execution
-
-### Visible connected Rest path
-
-- `95a464d` — new `ConnectedLongRestCampaignControls.tsx`.
-  - live DM Host can offer the existing +8-hour / ration selections to connected remote roster Characters;
-  - Player sees exact HP/Temporary HP preview, options, immutable accept/decline, and transaction phase.
-- `00209e6` — controls integrated into the existing `SessionCampaignPane`; no new route/full-screen/layout redesign.
-- `5f9b3a6` — visible-path structure test.
-- `2704025` — UI structure test added to `test:campaign-rest`.
-
-### Stable global commit / Windows-safe owner preparation
-
-- `c7f346d` — Campaign global commit identity is now stable: `<transactionId>:campaign-commit-v1`, independent of later Campaign revision.
-- `860052f` — deterministic duplicate-after-later-Campaign-mutation test authored.
-- `454c16d` — owner Tauri preparation marker changed from overwrite rename to immutable base marker + `.materialized` / `.aborted` sidecars for Windows-safe phase persistence and crash recovery.
-
-### Durable Host process-restart coordinator
-
-- superseded draft `fa4c4af` was immediately replaced; do not restore it.
-- `f0155bf` — current Rust Host coordinator store uses append-only immutable version files and reads latest record per transaction.
-- `a6ef94b` — Tauri read/write/delete Host coordinator commands registered under existing Character/Campaign mutex and compound recovery fence.
-- `5c84a4e` — TS Memory/Tauri Host coordinator store port.
-- `f1afa99` — runtime Host durable owner-prepared/committed recovery integration.
-- `10eb0b9` — Host session hydrates durable Long Rest coordinator state before replay; owner-materialized completion is awaited.
-- `fb217de`, `316286e` — global commit recovery identity contract and preparation identity retention through precommit abort state.
-- `3390e25`, `75d9222` — wire validation/test for restart recovery identity.
-- `c4f2d66` — deterministic Host restart test authored: Campaign idempotency upgrades owner-prepared to committed, otherwise precommit restart becomes aborted.
-
-### Player process-restart materialization
-
-- `308a26f` — restarted Tauri owner can materialize the exact durable preparation from enriched global commit without an in-memory offer/decision record, then rehydrate Character and publish a fresh SessionProjection.
-- `71d4057` — normal and reconnect global-commit delivery carries/enriches ownerParticipantId + Character revision + preparationId and falls back to the durable owner restart recovery path.
-
-### Prepared-generation write barrier
-
-A new atomicity gap was found during source review: after owner prepare, unrelated Character writes could otherwise advance the generation before Host global commit.
-
-- `bb240df`, corrected by `8c1e0b3` — Rust write-barrier module detects live prepared connected Rest markers.
-- `45729f7` — normal Tauri Character generation writes and Character+Campaign compound writes now reject while the connected Rest preparation owns the next Character generation. Materialize/abort commands bypass this guard intentionally and close the preparation.
-
-Exact product-code head before checkpoint docs: `8c1e0b357d19954ed4320e239d8d6dcad0f8c656`.
+- visible DM remote Rest offer + Player exact preview/accept/decline in existing Campaign pane;
+- Host exact Campaign/owner/Character re-preflight before prepare authorization;
+- owner durable invisible Character prepare;
+- Windows-safe immutable preparation phase sidecars;
+- prepared Character generation Tauri write barrier;
+- Host append-only durable owner-prepared coordinator before Campaign global commit;
+- stable `<transactionId>:campaign-commit-v1` Campaign commit identity;
+- owner materialization only after global commit;
+- fresh owner SessionProjection ack and Host remote durable refresh without copying Character ownership;
+- post-global Host restart global-commit replay;
+- post-global Player restart direct durable marker materialization;
+- pre-global Host restart exact abort reconstruction;
+- pre-global restarted Player direct durable preparation abort;
+- abort replay idempotent after later legitimate Character writes;
+- `long-rest-owner-aborted` acknowledgement closes Host durable abort record;
+- duplicate abort acknowledgement idempotency;
+- focused wire/runtime/UI/restart/write-barrier contracts included in `npm run test:campaign-rest`.
 
 ## Validation status
 
 **NO GREEN CLAIM.**
 
-For exact product head `8c1e0b3`:
+Exact product head `78e829b` returned:
 
 - combined commit statuses: none;
 - commit-associated workflow runs: none.
 
-No observed `tsx`, `tsc --noEmit`, `npm run test:campaign-rest`, `npm run build`, `cargo test`, Tauri build, or Windows two-instance execution exists for this checkpoint. Rust/TS tests added here are source-authored validation contracts, not executed evidence.
+No observed execution exists for:
 
-## Remaining exact gap
+- `npm run test:campaign-rest`;
+- `tsc --noEmit` / `npm run build`;
+- `cargo test --manifest-path src-tauri/Cargo.toml`;
+- Tauri Windows build;
+- Windows two-instance restart/reconnect acceptance.
 
-The post-global-commit durable recovery path is now source-connected for Host and owner process restart, and Tauri Character writes are fenced while prepared.
+Therefore release-checklist V1-12 remains `PARTIAL` for evidence, despite source implementation completion.
 
-Still required before V1-12 can be considered implementation-complete:
+Known exceptional-storage risk: if Host coordinator persistence itself has an I/O failure immediately after owner prepare and the Host also dies before delivering abort, Campaign global commit is not executed, so there is no durable partial success, but the owner can retain an orphan prepared-marker lock. Track this as persistence-failure recovery UX rather than silently treating it as green evidence.
 
-1. Precommit double-restart cleanup:
-   - Host durable abort record must preserve/send the exact owner preparation identity;
-   - a restarted owner receiving that abort must mark the durable prepared Character marker aborted even without an in-memory ClientRecord;
-   - no Character generation may become visible.
-2. Wire `tests/ui/connectedLongRestHostRestartRecovery.test.ts` into `npm run test:campaign-rest` (it is authored but not yet in the command).
-3. Add source/deterministic coverage for the Tauri prepared-generation write barrier registration and restart owner recovery envelope.
-4. Obtain executable evidence when an environment is available: focused TS tests, TypeScript/build, Rust tests, then Windows two-instance restart/reconnect acceptance.
-5. Only after V1-12 distributed durability is closed, reconcile actual V1-13 Stash/DM Library gaps instead of following its stale TODO label.
+## Next implementation slice
+
+V1-13 Party Stash / Campaign DM Library is next in dependency order because V1-12's implementation boundary is now source-connected. The release checklist's V1-13 `TODO` label is known stale relative to existing runtime/UI methods.
+
+Do not reimplement V1-13 from the label. Audit actual canonical source first and identify only real gaps in:
+
+- durable Campaign namespace/ownership;
+- Party Stash item/currency transfer and permissions;
+- connected owner write-back / Host authority where relevant;
+- DM Library CRUD/search/materialization/privacy;
+- Session-visible quick actions;
+- Campaign isolation and delete/provenance behavior;
+- user-reachable UI and deterministic tests.
 
 ## Next Exact Action
 
 1. Reconcile README -> control -> STATE -> PLAN and actual `work/v1-composite` HEAD.
-2. Check exact-head validation evidence; do not rebuild any slice above merely to obtain validation.
-3. Fix the remaining precommit double-restart abort cleanup:
-   - stop emitting placeholder preparation identity from durable Host aborted records;
-   - enrich recovery abort with exact `preparationId`/owner identity;
-   - add a restarted-owner Tauri abort path that closes the prepared sidecar without ClientRecord state.
-4. Add `connectedLongRestHostRestartRecovery.test.ts` and any new abort/write-barrier structure test to `test:campaign-rest`.
-5. Source-review TypeScript signatures around `connectedLongRestSessionAdapter`, global commit enrichment, and async Host completion; fix only concrete regressions.
-6. If execution evidence becomes available, prioritize `npm run test:campaign-rest`, `tsc --noEmit` / `npm run build`, and `cargo test --manifest-path src-tauri/Cargo.toml` before more feature work.
-7. Keep V1-13 and comprehensive Codex audit deferred.
+2. Check whether exact-head V1-12 focused/TypeScript/Rust execution evidence has appeared. If not, preserve the source-complete implementation and continue rather than rebuilding it.
+3. Read the current V1-13 source, tests, and `docs/design/ui-ux/ITEM-CURRENCY-TRANSFER-FOUNDATION.md` plus Campaign Stash/DM Library contract sections.
+4. Compare actual implementation against V1-13 acceptance requirements; produce a concrete gap list before edits.
+5. Implement the smallest highest-dependency real V1-13 gap with deterministic tests, preserving existing UI language and connected ownership boundaries.
+6. Continue remaining V1 implementation slices in dependency order after V1-13.
+7. Keep comprehensive Codex audit deferred until implementation freeze; final evidence still requires exact-head regression and Windows two-instance acceptance.
