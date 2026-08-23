@@ -22,17 +22,18 @@ function presetEntry(folderId?:string){
   };
 }
 
-test("DM Library folders organize entries without owning or deleting the preset asset",async()=>{
+test("DM Library folders support rename and deletion without deleting organized entries",async()=>{
   const adapter=new MockAdapter();
   setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
   await adapter.createCampaign({campaignId:CAMPAIGN_ID,name:"Library Organization"});
 
   await adapter.upsertCampaignDmLibraryFolder(CAMPAIGN_ID,{folderId:"folder.allies",label:"아군"});
   await adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,presetEntry("folder.allies"));
+  await adapter.upsertCampaignDmLibraryFolder(CAMPAIGN_ID,{folderId:"folder.allies",label:"주요 아군"});
 
   let snapshot=await adapter.getSnapshot();
   let campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
-  assert.deepEqual(campaign?.dmLibrary.folders,[{folderId:"folder.allies",label:"아군"}]);
+  assert.deepEqual(campaign?.dmLibrary.folders,[{folderId:"folder.allies",label:"주요 아군"}]);
   assert.equal(campaign?.dmLibrary.entries.find((entry)=>entry.entryId==="dm-pc-preset.guard")?.folderId,"folder.allies");
 
   await adapter.removeCampaignDmLibraryFolder(CAMPAIGN_ID,"folder.allies");
@@ -45,13 +46,18 @@ test("DM Library folders organize entries without owning or deleting the preset 
   assert.equal(preserved?.pcPreset?.definitionId,"local.guard.preset");
 });
 
-test("PC preset validates folder authority and materializes through existing combatant creation",async()=>{
+test("PC preset validates authority, updates, materializes, and deletes through Campaign-owned paths",async()=>{
   const adapter=new MockAdapter();
   setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
   await adapter.createCampaign({campaignId:CAMPAIGN_ID,name:"Library Organization"});
 
   await assert.rejects(()=>adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,presetEntry("folder.missing")),/folder not found/i);
   await adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,presetEntry());
+  await adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,{...presetEntry(),label:"정예 호위 기사",pcPreset:{...presetEntry().pcPreset,name:"정예 호위 기사",level:4,maxHp:36}});
+
+  let snapshot=await adapter.getSnapshot();
+  let campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  assert.equal(campaign?.dmLibrary.entries.find((entry)=>entry.entryId==="dm-pc-preset.guard")?.pcPreset?.level,4);
 
   const definitions:CombatantDefinitionVm[]=[];
   (adapter as unknown as {combatantDefinitions:CombatantDefinitionVm[]}).combatantDefinitions=definitions;
@@ -60,9 +66,14 @@ test("PC preset validates folder authority and materializes through existing com
 
   await adapter.instantiateCampaignDmLibraryPcPreset(CAMPAIGN_ID,"dm-pc-preset.guard");
   assert.equal(instantiated,"local.guard.preset");
-  assert.equal(definitions.find((definition)=>definition.id==="local.guard.preset")?.name,"호위 기사");
+  assert.equal(definitions.find((definition)=>definition.id==="local.guard.preset")?.name,"정예 호위 기사");
 
-  const snapshot=await adapter.getSnapshot();
-  const campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  snapshot=await adapter.getSnapshot();
+  campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
   assert.equal(campaign?.dmLibrary.recentEntryIds[0],"dm-pc-preset.guard");
+
+  await adapter.removeCampaignDmLibraryEntry(CAMPAIGN_ID,"dm-pc-preset.guard");
+  snapshot=await adapter.getSnapshot();
+  campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  assert.equal(campaign?.dmLibrary.entries.some((entry)=>entry.entryId==="dm-pc-preset.guard"),false);
 });
