@@ -14,6 +14,11 @@ async function configuredAdapter() {
   await adapter.configureCampaignCalendar("campaign.connected-rest",{enabled:true,providerId:"builtin.gregorian"});
   await adapter.configureCampaignRations("campaign.connected-rest",{enabled:true,providerId:"builtin.tracking-only"});
   await adapter.adjustCampaignRations("campaign.connected-rest",{amount:5,note:"seed"});
+  await adapter.upsertCampaignRosterMember("campaign.connected-rest",{
+    rosterMemberId:"connected:char.remote",label:"Remote",kind:"player-character-ref",
+    characterRef:{ownerHint:"client:char.remote",characterId:"char.remote"},active:true,
+    countsForRations:true,rationUnitsPerDay:1,stashPermission:"request",
+  });
   const snapshot=await adapter.getSnapshot();
   const campaign=snapshot.campaigns?.find((item)=>item.campaignId==="campaign.connected-rest");
   assert.ok(campaign);
