@@ -6,7 +6,7 @@ const systems=readFileSync(new URL("../../src/CampaignSystemsPanel.tsx",import.m
 
 test("Campaign Party Stash policy selector is user-reachable and uses the persisted policy runtime",()=>{
   assert.match(systems,/campaignPartyStashPolicyRuntimeAdapter/);
-  assert.match(systems,/setCampaignPartyStashPolicy\(campaign\.campaignId,policy\)/);
+  assert.match(systems,/configureCampaignPartyStashPolicy\(campaign\.campaignId,policy\)/);
   assert.match(systems,/await api\.refresh\(\)/);
   assert.match(systems,/aria-label="Party Stash 정책"/);
   assert.match(systems,/<option value="shared">/);
