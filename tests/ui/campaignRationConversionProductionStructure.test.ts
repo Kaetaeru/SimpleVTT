@@ -16,9 +16,10 @@ test("ration conversion production composition keeps Campaign authority and conn
 
   assert.ok(offline.indexOf('import "./campaignRuntimeAdapter";')<offline.indexOf('import "./campaignPartyStashCapabilityRuntimeAdapter";'));
   assert.ok(offline.indexOf('import "./campaignPartyStashCapabilityRuntimeAdapter";')<offline.indexOf('import "./campaignRationConversionRuntimeAdapter";'));
-  assert.match(capability,/trustedCatalogCapabilities/);
+  assert.match(capability,/trustedPartyStashCapabilities/);
   assert.match(capability,/matches\.length!==1/);
   assert.match(capability,/commitConnectedPartyStashDepositWithTrustedCapabilities/);
+  assert.match(runtime,/trustedItemCapabilities/);
   assert.match(runtime,/CampaignApplicationService\.prototype\.adjustRations/);
   assert.match(runtime,/return this\.adjustCampaignRations\(command\.campaignId/);
   assert.match(runtime,/Ration provider changed/);
