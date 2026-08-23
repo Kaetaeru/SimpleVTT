@@ -37,6 +37,22 @@ test("DM currency adjustment rejects overdraft and undo restores the previous wa
   await assert.rejects(()=>adapter.adjustDmInventory({requestId:"gold-overdraft",actorId:"char.aelar",operation:"revoke-currency",amount:initial+1}),/보유 GP/);
 });
 
+test("request-scoped undo reverts the intended mutation without rolling back a later grant",async()=>{
+  const adapter=new MockAdapter();
+  const before=await adapter.getSnapshot();
+  const initial=before.sessionCharacterInventories?.["char.aelar"].goldGp??0;
+  await adapter.adjustDmInventory({requestId:"gold-first",actorId:"char.aelar",operation:"grant-currency",amount:10});
+  await adapter.adjustDmInventory({requestId:"gold-second",actorId:"char.aelar",operation:"grant-currency",amount:5});
+
+  await adapter.undoDmInventoryAdjustment("gold-first");
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.sessionCharacterInventories?.["char.aelar"].goldGp,initial);
+
+  await adapter.undoDmInventoryAdjustment("gold-first");
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.sessionCharacterInventories?.["char.aelar"].goldGp,initial,"repeated request-scoped undo must be idempotent");
+});
+
 test("equipped items require explicit forceUnequip before DM revocation",async()=>{
   const adapter=new MockAdapter();
   const before=await adapter.getSnapshot();
