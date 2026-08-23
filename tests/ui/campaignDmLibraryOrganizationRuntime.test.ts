@@ -22,6 +22,18 @@ function presetEntry(folderId?:string){
   };
 }
 
+function noteEntry(folderId?:string){
+  return {
+    entryId:"dm-note.secret",
+    kind:"note" as const,
+    label:"다음 세션 비밀",
+    folderId,
+    favorite:true,
+    tags:[" 비밀 ","후크","비밀"],
+    noteText:"  플레이어에게 아직 공개하지 않는다.  ",
+  };
+}
+
 test("DM Library folders support rename and deletion without deleting organized entries",async()=>{
   const adapter=new MockAdapter();
   setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
@@ -76,4 +88,36 @@ test("PC preset validates authority, updates, materializes, and deletes through 
   snapshot=await adapter.getSnapshot();
   campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
   assert.equal(campaign?.dmLibrary.entries.some((entry)=>entry.entryId==="dm-pc-preset.guard"),false);
+});
+
+test("private DM notes validate, persist, update, organize, and delete through the shared Library transaction",async()=>{
+  const adapter=new MockAdapter();
+  setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
+  await adapter.createCampaign({campaignId:CAMPAIGN_ID,name:"Library Organization"});
+  await adapter.upsertCampaignDmLibraryFolder(CAMPAIGN_ID,{folderId:"folder.secrets",label:"비밀"});
+
+  await assert.rejects(()=>adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,{...noteEntry("folder.secrets"),noteText:"   "}),/note text is required/i);
+  await adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,noteEntry("folder.secrets"));
+
+  let snapshot=await adapter.getSnapshot();
+  let campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  let note=campaign?.dmLibrary.entries.find((entry)=>entry.entryId==="dm-note.secret");
+  assert.equal(note?.kind,"note");
+  assert.equal(note?.noteText,"플레이어에게 아직 공개하지 않는다.");
+  assert.deepEqual(note?.tags,["비밀","후크"]);
+  assert.equal(note?.folderId,"folder.secrets");
+  assert.equal(note?.favorite,true);
+
+  await adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,{...noteEntry("folder.secrets"),label:"수정된 비밀",favorite:false,noteText:"후반부에 공개한다."});
+  snapshot=await adapter.getSnapshot();
+  campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  note=campaign?.dmLibrary.entries.find((entry)=>entry.entryId==="dm-note.secret");
+  assert.equal(note?.label,"수정된 비밀");
+  assert.equal(note?.noteText,"후반부에 공개한다.");
+  assert.equal(note?.favorite,false);
+
+  await adapter.removeCampaignDmLibraryEntry(CAMPAIGN_ID,"dm-note.secret");
+  snapshot=await adapter.getSnapshot();
+  campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  assert.equal(campaign?.dmLibrary.entries.some((entry)=>entry.entryId==="dm-note.secret"),false);
 });
