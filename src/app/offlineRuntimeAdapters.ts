@@ -70,3 +70,5 @@ import "./abilityCheckResolutionEventAdapter";
 // runtime spatial legality into targetable attack options without changing mechanics authority.
 import "./productionAcceptanceRuntimeAdapter";
 import "./campaignRuntimeAdapter";
+import "./campaignPartyStashCapabilityRuntimeAdapter";
+import "./campaignRationConversionRuntimeAdapter";
