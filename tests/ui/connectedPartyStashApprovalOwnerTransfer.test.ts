@@ -4,7 +4,7 @@ import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/sessionInventoryRuntimeAdapter";
 import "../../src/app/campaignRuntimeAdapter";
 import "../../src/app/campaignPartyStashPolicyRuntimeAdapter";
-import type { CharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import "../../src/app/progressionContracts";
 import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { reconstructCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjectionReconstruction";
 import type { CharacterSheet, CharacterSummary, PartyStashTransferCommand, SceneVm } from "../../src/app/contracts";
@@ -29,36 +29,33 @@ type MutableAdapterState={
   scene:SceneVm;
 };
 
-function prepareOwningClient(client:MockAdapter){
+async function prepareOwningClient(client:MockAdapter){
   const mutable=client as unknown as MutableAdapterState;
-  const catalog=structuredClone(mutable.activeCharacter ? [] : []);
-  void catalog;
-  return client.getSnapshot().then((snapshot)=>{
-    const remote:CharacterSheet={
-      ...structuredClone(snapshot.activeCharacter),
-      id:"char.connected-stash-owner",
-      name:"Connected Stash Owner",
-      saveState:"saved",
-      goldGp:20,
-      sourceRevision:1,
-      runtimeRevision:1,
-    };
-    const projection=buildCharacterSessionProjectionV1(remote,snapshot.catalog);
-    const reconstructed=reconstructCharacterSessionProjectionV1(projection,snapshot.catalog);
-    assert.equal(reconstructed.status,"accepted",reconstructed.status==="rejected"?reconstructed.error:undefined);
-    if(reconstructed.status!=="accepted")throw new Error(reconstructed.error);
-    mutable.activeCharacter=structuredClone(remote);
-    mutable.characters=[structuredClone(remote)];
-    mutable.scene.entities=[
-      ...mutable.scene.entities.filter((entity)=>entity.kind!=="character"&&entity.id!==remote.id),
-      structuredClone(reconstructed.entity),
-    ];
-    mutable.scene.actionsByActor={...mutable.scene.actionsByActor,[remote.id]:structuredClone(reconstructed.actions)};
-    mutable.scene.economyByActor={...mutable.scene.economyByActor,[remote.id]:structuredClone(reconstructed.economy)};
-    mutable.scene.selectedActorId=remote.id;
-    mutable.scene.currentActorId=remote.id;
-    return {remote,projection};
-  });
+  const snapshot=await client.getSnapshot();
+  const remote:CharacterSheet={
+    ...structuredClone(snapshot.activeCharacter),
+    id:"char.connected-stash-owner",
+    name:"Connected Stash Owner",
+    saveState:"saved",
+    goldGp:20,
+    sourceRevision:1,
+    runtimeRevision:1,
+  };
+  const projection=buildCharacterSessionProjectionV1(remote,snapshot.catalog);
+  const reconstructed=reconstructCharacterSessionProjectionV1(projection,snapshot.catalog);
+  assert.equal(reconstructed.status,"accepted",reconstructed.status==="rejected"?reconstructed.error:undefined);
+  if(reconstructed.status!=="accepted")throw new Error(reconstructed.error);
+  mutable.activeCharacter=structuredClone(remote);
+  mutable.characters=[structuredClone(remote)];
+  mutable.scene.entities=[
+    ...mutable.scene.entities.filter((entity)=>entity.kind!=="character"&&entity.id!==remote.id),
+    structuredClone(reconstructed.entity),
+  ];
+  mutable.scene.actionsByActor={...mutable.scene.actionsByActor,[remote.id]:structuredClone(reconstructed.actions)};
+  mutable.scene.economyByActor={...mutable.scene.economyByActor,[remote.id]:structuredClone(reconstructed.economy)};
+  mutable.scene.selectedActorId=remote.id;
+  mutable.scene.currentActorId=remote.id;
+  return remote;
 }
 
 function withdrawal(actorId:string,requestId:string,amount=1):PartyStashTransferCommand{
@@ -127,7 +124,7 @@ test("DM approval uses the real connected owner transfer and compensates Party S
   const client=new MockAdapter();
   setCampaignLibraryStoreForTests(host,new MemoryCampaignLibraryStore());
   setCampaignLibraryStoreForTests(client,new MemoryCampaignLibraryStore());
-  const {remote}=await prepareOwningClient(client);
+  const remote=await prepareOwningClient(client);
   let hostStopped=false;
   let clientStopped=false;
 
