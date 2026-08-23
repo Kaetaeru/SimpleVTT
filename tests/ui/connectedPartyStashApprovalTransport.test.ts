@@ -196,12 +196,18 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
     await client.transferPartyStash(cancelCommand);
     await host.cancelPartyStashApproval(cancelCommand.requestId);
     assert.equal(queue.lookup(cancelCommand.requestId)?.state,"cancelled");
-    assert.equal(queue.active().length,1,"only the original pending request should remain active before Session stop");
+
+    const stopPendingCommand=withdrawal(character.id,"stash-approval.transport-stop-pending",9);
+    await client.transferPartyStash(stopPendingCommand);
+    queue.approve(command.requestId);
+    assert.equal(queue.lookup(command.requestId)?.state,"approved");
+    assert.equal(queue.lookup(stopPendingCommand.requestId)?.state,"pending");
+    assert.equal(queue.active().length,2,"Session stop fixture must contain one approved and one pending request");
 
     unmountAllCharacterSessionProjections(host);
     await host.stopSession();
     hostStopped=true;
-    assert.equal(queue.active().length,0,"Session stop must clear pending Party Stash approval state");
+    assert.equal(queue.active().length,0,"Session stop must clear both pending and approved-but-uncommitted Party Stash requests");
   }finally{
     if(!hostStopped){unmountAllCharacterSessionProjections(host);await host.stopSession().catch(()=>undefined);}
     await client.stopSession().catch(()=>undefined);
