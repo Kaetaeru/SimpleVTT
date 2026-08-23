@@ -83,8 +83,8 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
   };
   tauriSessionTransport.sendTo=async(_peer,message)=>{
     let type="";try{type=String((JSON.parse(message) as {type?:unknown}).type??"");}catch{}
-    if(type==="campaign-stash-approval-request-result"){
-      assert.ok(listeners[1],"Client connected listener must be registered before approval acknowledgement");
+    if(type==="campaign-stash-approval-request-result"||type==="campaign-stash-approval-outcome"){
+      assert.ok(listeners[1],"Client connected listener must be registered before approval acknowledgement or outcome");
       listeners[1]({peer:"host",message});
     }
     return 1;
@@ -191,11 +191,19 @@ test("connected dm-approval request transport is idempotent, non-mutating, recon
     await client.transferPartyStash(rejectCommand);
     await host.rejectPartyStashApproval(rejectCommand.requestId);
     assert.equal(queue.lookup(rejectCommand.requestId)?.state,"rejected");
+    const rejectedOutcome=client.takeLatestPartyStashApprovalOutcome();
+    assert.equal(rejectedOutcome?.requestId,rejectCommand.requestId);
+    assert.equal(rejectedOutcome?.status,"rejected");
+    assert.match(rejectedOutcome?.message??"",/거절/);
 
     const cancelCommand=withdrawal(character.id,"stash-approval.transport-cancel",8);
     await client.transferPartyStash(cancelCommand);
     await host.cancelPartyStashApproval(cancelCommand.requestId);
     assert.equal(queue.lookup(cancelCommand.requestId)?.state,"cancelled");
+    const cancelledOutcome=client.takeLatestPartyStashApprovalOutcome();
+    assert.equal(cancelledOutcome?.requestId,cancelCommand.requestId);
+    assert.equal(cancelledOutcome?.status,"cancelled");
+    assert.match(cancelledOutcome?.message??"",/취소/);
 
     const stopPendingCommand=withdrawal(character.id,"stash-approval.transport-stop-pending",9);
     await client.transferPartyStash(stopPendingCommand);
