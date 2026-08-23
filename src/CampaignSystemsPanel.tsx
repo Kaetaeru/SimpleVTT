@@ -6,7 +6,6 @@ import { latestCampaignProviderDescriptorsFromCatalog, pinnedCampaignProviderDes
 import { useSimpleVtt } from "./app/AppProvider";
 import { HANDOUT_IMAGE_MAX_BYTES, LOCAL_IMAGE_ACCEPT, readLocalImageFile, type LocalImageAssetV1 } from "./app/localImageAsset";
 import { CAMPAIGN_DM_LIBRARY_JSON_EXAMPLE, parseCampaignDmLibraryJson } from "./app/campaignDmLibraryImport";
-import type { PartyStashPolicy } from "./app/contracts";
 import "./app/campaignPartyStashPolicyRuntimeAdapter";
 import { mockAdapter } from "./app/mockAdapter";
 
@@ -16,6 +15,7 @@ function moduleCalendarProvider(providerId:string){return providerId.startsWith(
 function moduleRationProvider(providerId:string){return providerId.startsWith("module.ration-profile:");}
 function providerOptionValue(provider:{providerId:string;providerVersion:string}){return `${provider.providerId}@@${provider.providerVersion}`;}
 function missingProviderValue(kind:"calendar"|"ration",providerId:string,providerVersion:string){return `missing:${kind}:${providerId}@@${providerVersion}`;}
+type PartyStashPolicy=CampaignRecordV1["partyStash"]["policy"];
 function stashPolicyLabel(policy:PartyStashPolicy){return policy==="shared"?"공유":policy==="dm-approval"?"DM 승인":"DM 관리";}
 type ProviderConfigure=(campaignId:string,input:{enabled:boolean;providerId:string;providerVersion?:string})=>Promise<void>;
 
@@ -96,8 +96,7 @@ export function CampaignSystemsPanel({campaign}:{campaign:CampaignRecordV1}){
   const toggleCalendar=(enabled:boolean)=>configureCalendarWithVersion(campaign.campaignId,{enabled,providerId:campaign.calendar.capability.providerId,...(moduleCalendarProvider(campaign.calendar.capability.providerId)?{providerVersion:campaign.calendar.capability.providerVersion}:{})});
   const toggleRations=(enabled:boolean)=>configureRationsWithVersion(campaign.campaignId,{enabled,providerId:campaign.rations.capability.providerId,...(moduleRationProvider(campaign.rations.capability.providerId)?{providerVersion:campaign.rations.capability.providerVersion}:{})});
   const configurePartyStashPolicy=(policy:PartyStashPolicy)=>perform(async()=>{
-    const result=await mockAdapter.setCampaignPartyStashPolicy(campaign.campaignId,policy);
-    if(!result) throw new Error("캠페인 화면에서만 Party Stash 정책을 변경할 수 있습니다.");
+    await mockAdapter.configureCampaignPartyStashPolicy(campaign.campaignId,policy);
     await api.refresh();
   });
   const updateMember=(member:CampaignRosterMember,patch:Partial<CampaignRosterMember>)=>perform(()=>api.upsertCampaignRosterMember(campaign.campaignId,{...member,...patch}));
