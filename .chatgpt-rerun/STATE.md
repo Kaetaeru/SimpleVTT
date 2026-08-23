@@ -7,104 +7,112 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T12:10:00+09:00`
+- checkpointed_at: `2026-08-23T12:20:00+09:00`
 
 ## Preflight reconciliation
 
-This watcher execution read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, `docs/design/campaign-systems.md`, and `docs/design/ui-ux/ITEM-CURRENCY-TRANSFER-FOUNDATION.md`. Actual branch state at start matched prior coordination checkpoint `d2c000e4530b375c6610ebc1bb1cb9663bbf1ff0`; run/sequence/task/status were unchanged and valid.
+This watcher execution read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, `docs/design/campaign-systems.md`, and `docs/design/ui-ux/ITEM-CURRENCY-TRANSFER-FOUNDATION.md`.
 
-The handoff/checklist V1-13 selector/queue TODO wording is stale relative to current GitHub source and this Rerun state. It was not replayed. Immediately before coordination writes, comparing prior coordination head to the branch showed exactly 12 commits ahead, matching exactly the 12 Party Stash outcome source/test writes from this execution and their changed files; no divergent concurrent writer was observed.
+Run identity remained valid: same `run_id`, `sequence=1`, `task_id=phase14-production-play-session-ux`, `status=continue`. The handoff/checklist V1-13 selector/approval TODO prose is stale relative to actual source and was not replayed.
+
+Before product writes, comparing prior base `d2c000e4530b375c6610ebc1bb1cb9663bbf1ff0` to the branch showed 15 commits ahead, exactly the previously recorded 12 Party Stash outcome source/test commits plus 3 coordination commits. Immediately before this checkpoint it showed 20 commits ahead, exactly those 15 plus the 5 new ration-conversion source/test writes below. No divergent concurrent writer was observed.
 
 ## Preserved foundation
 
 Keep intact:
 
-- V1-12 connected Long Rest source-complete normal durable-storage path / validation pending;
+- V1-12 connected Long Rest normal durable-storage path / validation pending;
 - Player-owned Character durability and Host/owner recovery/compensation paths;
-- Campaign-authoritative Party Stash and the existing durable `transferPartyStash` transaction;
-- Party Stash policy selector and connected `dm-approval` Player -> Host request path;
-- DM approve/reject/cancel/retry UI and queue state `pending -> approved -> committed`;
-- request transport/idempotency/reconnect tests;
-- policy/permission/current-owner approval revalidation;
+- Campaign-authoritative Party Stash and existing durable `transferPartyStash` transaction;
+- Party Stash `shared | dm-approval | dm-managed` selector and guards;
+- Player -> Host approval request transport with no pre-approval asset mutation;
+- DM approve/reject/cancel/retry and `pending -> approved -> committed` authority ordering;
+- duplicate/payload drift/reconnect identity and current-owner/policy/permission revalidation;
 - real remote owner transfer/compensation/retry source tests;
 - pending and approved-but-uncommitted Session cleanup;
+- targeted Player terminal committed/rejected/cancelled outcomes with FIFO transient delivery;
 - Campaign DM Library materialization/privacy/provenance work;
 - comprehensive Codex audit deferred until implementation freeze.
 
 ## Findings in this execution
 
-1. `docs/design/ui-ux/ITEM-CURRENCY-TRANSFER-FOUNDATION.md` makes initiating-participant result visibility part of the connected transfer contract: final projection/transaction outcome plus private rejection detail. The previous queue-accepted-only Player UX was therefore a V1-13 source gap rather than optional polish.
-2. Terminal outcome transport can be added without touching the asset mutation path. Authoritative queue/asset state is finalized first; Player notification is targeted and best-effort afterward.
-3. A single latest-notice slot would lose earlier results if multiple DM decisions arrived rapidly, so outcome delivery must be queued FIFO on the Client.
-4. After closing that gap, selective canonical-spec re-audit found the next genuine V1-13 source gap: Party Stash compatible ItemInstance -> ration ledger atomic conversion.
-5. The canonical ration spec explicitly requires provider-declared capability/tag eligibility and prohibits name-based `food` inference. Current `InstalledCampaignRationProfileV1` has no such declaration, and current Campaign runtime/application service has no atomic conversion API.
+1. Canonical ration spec requires Party Stash ItemInstance -> ration conversion to atomically debit the Stash and credit `SupplyLedger` in one Campaign transaction.
+2. Eligibility must be content/provider data. Item display names such as `food` or `ration` cannot be used as authority.
+3. Existing `CampaignApplicationService.mutateCampaign` already supplies the correct single Campaign commit boundary plus `requestId` idempotency, so no second transaction/store should be created.
+4. `InstalledCatalogEntryV1.capabilities` is preserved into runtime `CatalogEntry`, so the existing catalog capability channel is suitable for item eligibility metadata.
+5. A production propagation gap remains: current `ItemInstanceVm` materialization and Party Stash template creation do not yet copy those catalog capabilities into the Stash template. Therefore the domain conversion implemented below is not yet user-reachable for ordinary catalog-derived items.
 
-## Completed in this execution
+## Completed in this execution — ration conversion domain slice
 
-### Player terminal Party Stash approval outcomes
+Latest product/test write boundary: `8339b2a2617542b170d2554ba61eadd466ad222f`.
 
-Latest product/test write commit returned by the GitHub contents write chain: `aaddc83a6435671048b9fab9d2a91866a992676c`.
+### Contracts and provider data
 
-Source changes:
+- `b5790e5c9201f2d6c336b1a2dc38b18660852e39` — `CampaignPartyStashItemTemplate` gained optional `capabilities:string[]`; Supply transaction summaries gained optional source item/definition/quantity/conversion-capability provenance fields. Existing schema version remains unchanged because these are optional backward-compatible fields.
+- `ee9c76467febcac3671f7866e2e7e218b0636293` — added data-only ration `itemConversions?: Array<{requiredCapability:string;rationUnitsPerItem:number}>`.
+- `1fd7e221015f29c1bdb8638d9418393bd8904314` — ration provider parser strictly validates `itemConversions`, unsupported fields, positive integer ratios, and duplicate capability rules.
 
-- `d218b31185fe9c3944682c6e5fae327036eb156f` — `connectedPartyStashApprovalRuntimeAdapter.ts` gained targeted `campaign-stash-approval-outcome` transport for `committed`, `rejected`, and `cancelled`.
-- A successful DM approval still runs the existing authoritative `transferPartyStash` first. Only after successful asset mutation does the queue become `committed` and a Player terminal outcome become eligible.
-- Owner-transfer failure still records an `approved` recoverable error and emits no terminal Player result; later successful retry emits `committed` once.
-- Rejection/cancellation first settle the Host queue, then send a targeted private Player result. Notification failure cannot undo Host authority.
-- `5798ac3d772b2aa01f03a5bbeaddfbf4732e342e` / `392e2a448a3a4ed3875bd598d56f0ce98cf08d90` / `5e0e0be6fe098dd809e144092b7333366e6baffd` — global Player toast bridge/CSS/main mount added under `AppProvider`, so final result can surface even if the inventory pane was closed.
-- `9f0723831f63b1ba37ff9f4f47b6c09403874ac3` / `5d20977e62415c07a7da5623a7c6c623c56aad4a` — Client terminal outcomes changed to Session-transient FIFO queue and one-at-a-time UI drain so rapid DM decisions are not overwritten.
+### Atomic conversion core
 
-Test-source changes:
+- `62109736858acb34bd2321c0afca1bbacfc40f7c` — new `src/app/campaignRationConversion.ts`.
+- Builtin `builtin.tracking-only` conversion rule is explicit data: `campaign.ration-source -> 1 ration/item`.
+- Module profiles can supply different declared capability/ratio rules.
+- Preview validates positive quantity, rations enabled, exact provider ID/version pin, exact Stash instance, available quantity, and declared item capability.
+- Ambiguous multiple matching rules are rejected rather than chosen implicitly.
+- Commit runs inside one existing `CampaignApplicationService.mutateCampaign` call:
+  - exact Stash item quantity decremented or removed;
+  - `partyStash.revision` incremented;
+  - ration balance increased;
+  - ration ledger revision incremented;
+  - one `kind:"convert"` history record appended with participant/item/provider/capability provenance.
+- Existing `mutateCampaign` `recentRequestIds` semantics make an identical committed request idempotent.
+- No display-name heuristic and no new Party Stash/Character mutation path were introduced.
 
-- `00ccc67b63928f1424ee0d6c7d1ed9949053ad9e` / `322ccb6e56f4b7d7c7d5de8770c8c8e49ee00661` — structure/UI contract covers targeted terminal wire, FIFO outcome store, bridge mount, and approval/reject/cancel labels.
-- `34eb2894aba1a27a1695985a9228101c3080986d` / `0af10e2c09f90f5509e8a71873e75d1ee258865a` — transport source test consumes targeted rejection/cancellation outcomes.
-- `b14c67c902a49afe6ec6dbae0ebfc9d5e6eeccf3` / `aaddc83a6435671048b9fab9d2a91866a992676c` — real owner-transfer source test consumes successful committed outcomes, asserts owner-transfer failure emits no false terminal result, and consumes committed after successful retry.
+### Authored deterministic tests
 
-No second Party Stash/Character asset mutation route was introduced.
+- `8339b2a2617542b170d2554ba61eadd466ad222f` — new `tests/ui/campaignRationConversion.test.ts` covers:
+  - atomic builtin success and all relevant revision/balance/quantity changes;
+  - same-request retry without double conversion;
+  - ineligible capability failure with unchanged Campaign state;
+  - insufficient quantity failure with unchanged Campaign state;
+  - module profile conversion ratio;
+  - valid parser data plus duplicate/zero-ratio rejection.
+
+These tests are source-authored only and have not executed in this environment.
 
 ## Validation status
 
-**NO GREEN CLAIM.** Combined status lookup and workflow lookup for the current product/test write boundary returned no statuses/runs. A local exact-branch checkout attempt also failed before any test execution because this environment could not resolve `github.com`.
+**NO GREEN CLAIM.** Canonical branch workflow lookup returned no workflow runs. Exact-branch local execution could not start because the environment could not resolve GitHub:
 
-Therefore no Node, npm, TypeScript, UI build, Tauri, Rust, or Windows two-instance result is claimed. Static/source test coverage and GitHub contents reconciliation are not executable evidence.
+`Could not resolve host: github.com`
 
-One connector inconsistency was observed: contents writes returned product commit identifiers while commit-fetch/compare-by-that-new identifier was not immediately resolvable, but branch comparison from prior coordination head showed exactly the expected 12 source/test commits and expected changed files. Treat branch/file state as authoritative and re-reconcile next dispatch.
+Therefore no Node, npm, TypeScript, UI build, Tauri, Rust, or Windows two-instance result is claimed for the current product/test boundary. Static GitHub source inspection and authored tests are not executable evidence.
 
 ## Current V1-13 assessment
 
 V1-13 remains **SOURCE-CONNECTED / VALIDATION PENDING**, not DONE.
 
-Approval-related source boundary now includes:
+The new ration conversion work is **DOMAIN SLICE PARTIAL / RUNTIME-UI PENDING**.
 
-- policy selector and Player request path;
-- no mutation while pending;
-- approval/reject/cancel/retry;
-- `pending -> approved -> committed` authority ordering;
-- duplicate/payload drift/reconnect identity;
-- policy/permission/current-owner revalidation;
-- real owner-side transfer and failure compensation;
-- pending/approved Session cleanup;
-- targeted Player terminal committed/rejected/cancelled feedback with FIFO transient delivery.
+The current domain contract has the required atomic/idempotent authority shape, but the production path is incomplete because:
 
-Known limitation: terminal outcome is Session-transient and targeted to the currently mapped peer. A Player disconnected exactly at terminal decision time is not guaranteed replay of that notification after reconnect. Do not claim offline/reconnect replay unless a later contract requires and implements it.
+- `sessionInventoryRuntimeAdapter.materializeItem()` does not yet project `CatalogEntry.capabilities` into Character item state;
+- `SessionInventoryPane.stashTemplateFromItem()` and catalog fallback do not yet populate the Stash template capability snapshot;
+- the conversion helper is not yet exposed through the existing Campaign runtime's same `CampaignApplicationService` context;
+- no DM conversion preview/action is yet user-reachable;
+- connected Campaign systems projection refresh for this mutation has not yet been proven;
+- no executable TypeScript/test/build evidence exists.
 
-### Next genuine source gap
-
-Canonical `docs/design/campaign-systems.md` requires:
-
-- compatible Party Stash ItemInstance -> integer ration units conversion;
-- item decrement and SupplyLedger increment atomically in one Campaign transaction;
-- provider-declared capability/tag eligibility, never name heuristics.
-
-Current source has manual ration adjust/consume and normal Party Stash transfer, but no atomic stash-item-to-ration command. `InstalledCampaignRationProfileV1` currently defines daily consumption and shortage consequences only, so eligibility/conversion metadata also needs a minimal data-only contract extension.
-
-This is the next implementation slice; it was not partially hacked into this watcher checkpoint.
+Do not make ordinary items eligible by inspecting `name`, `nameEn`, description, tags that are not provider-authoritative, or regex/string heuristics.
 
 ## Next Exact Action
 
-1. Re-read README -> control -> STATE -> PLAN and reconcile actual `work/v1-composite`; preserve this execution's Party Stash terminal-outcome source unless GitHub advanced.
-2. Prefer exact-head execution first if a runner exists: approval runtime/transport/owner-transfer tests plus TypeScript/build. Fix real failures before any green claim.
-3. If execution remains unavailable, implement the ration-conversion slice starting with a minimal data-only provider/item eligibility contract. Do not use display-name heuristics.
-4. Add one authoritative idempotent Campaign command that validates eligibility and atomically decrements Party Stash item quantity while incrementing ration balance/history under the same Campaign revision.
-5. Wire the DM-facing conversion action/preview and deterministic persistence/idempotency/eligibility tests; then re-audit remaining V1-13 Party Stash/DM Library checklist items.
-6. Keep Windows two-instance acceptance and comprehensive Codex audit for their later release gates.
+1. Re-read README -> control -> STATE -> PLAN and reconcile actual `work/v1-composite`; preserve product/test source through `8339b2a2617542b170d2554ba61eadd466ad222f` unless GitHub advanced.
+2. Prefer exact-head execution first if a runner exists; fix real failures before any green claim.
+3. Otherwise propagate trusted catalog `capabilities` into the actual Character/Stash template path without relying on item names.
+4. Expose the existing atomic ration conversion helper through the **same CampaignApplicationService/repository context** used by `campaignRuntimeAdapter`; do not instantiate a parallel Campaign repository.
+5. Add DM-facing conversion preview/action with quantity, ratio, ration gain, and resulting balance before commit.
+6. Use the existing connected Campaign systems broadcast/projection path for post-conversion refresh; do not invent another network asset path.
+7. Add deterministic production-path tests for capability preservation, provider pin/eligibility/idempotency, DM preview/action, and connected refresh as applicable.
+8. Re-audit remaining V1-13 Party Stash/DM Library items only after this source path is connected.
+9. Keep Windows two-instance acceptance and comprehensive Codex audit for later release gates.
