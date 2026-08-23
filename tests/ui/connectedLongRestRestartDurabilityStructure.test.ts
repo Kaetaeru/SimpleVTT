@@ -15,13 +15,24 @@ test("durable Host abort keeps the real owner preparation identity and never res
   assert.match(runtime,/type:"long-rest-abort"[\s\S]*ownerParticipantId:record\.transaction\.preflight\.ownerParticipantId[\s\S]*preparationId:record\.transaction\.preparationId/);
 });
 
-test("restarted owner consumes an enriched precommit abort without materializing Character state",()=>{
+test("restarted owner consumes enriched precommit abort idempotently without materializing Character state",()=>{
   assert.match(session,/recoverRestartedConnectedLongRestOwnerAbort/);
   assert.match(session,/!handled&&wire\.ownerParticipantId&&wire\.character&&wire\.preparationId/);
   assert.match(ownerRecovery,/recoverRestartedConnectedLongRestOwnerAbort/);
   assert.match(ownerRecovery,/preparationStore\.abort\(\{transactionId:abort\.transactionId,preparationId:identity\.preparationId\}\)/);
   assert.doesNotMatch(ownerRecovery,/recoverRestartedConnectedLongRestOwnerAbort[\s\S]*preparationStore\.materialize/);
-  assert.match(ownerRecovery,/abort recovery exposed a Character generation/);
+  assert.match(ownerRecovery,/const beforeRuntimeRevision=before\.activeCharacter\.runtimeRevision\?\?0/);
+  assert.match(ownerRecovery,/runtimeRevision\?\?0\)!==beforeRuntimeRevision/);
+  assert.doesNotMatch(ownerRecovery,/abort recovery Character runtime revision changed before cleanup/);
+});
+
+test("owner abort acknowledgement closes Host durable replay only after exact cleanup identity",()=>{
+  assert.match(session,/type:"long-rest-owner-aborted"/);
+  assert.match(session,/completeConnectedLongRestHostOwnerAbort/);
+  assert.match(runtime,/completeConnectedLongRestHostOwnerAbort/);
+  assert.match(runtime,/abort acknowledgement preparation mismatch/);
+  assert.match(runtime,/hostCoordinatorStore\(adapter\)\.delete\(aborted\.transactionId\)/);
+  assert.match(runtime,/hostMap\(adapter\)\.delete\(aborted\.transactionId\)/);
 });
 
 test("prepared connected Rest owns the next Character generation until materialize or abort",()=>{
