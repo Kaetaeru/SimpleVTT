@@ -20,6 +20,7 @@ declare module "./campaignPersistenceContracts" {
   interface CampaignDmLibraryEntry {
     folderId?:string;
     pcPreset?:CampaignPcActorPreset;
+    noteText?:string;
   }
 
   interface CampaignDmLibraryState {
