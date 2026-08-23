@@ -35,6 +35,9 @@ const presentation={
     id:"action.shortbow",actorId:"char.aelar",name:"Shortbow",category:"weapon" as const,target:"enemy" as const,
     resolutionKind:"attack" as const,summary:"+5 · 1d6+2 piercing",attackBonus:5,damage:[{type:"piercing",dice:"1d6",flat:2,average:6}],
   },
+  dice:{faces:[3],selectedIndices:[0],discardedIndices:[],selection:"all" as const,total:3,modifier:0},
+  timeline:[{key:"complete" as const,label:"3 damage",terminal:true}],
+  activityLink:{resolutionId:"resolution.test"},
 };
 
 const event:ConnectedSessionEvent={

@@ -156,7 +156,7 @@ export function StandaloneDicePresentation({roll,onFinished}:{roll:StandaloneDic
 }
 
 export function VisualDiceBridge() {
-  const { snapshot } = useSimpleVtt();
+  const { snapshot,advanceResolution } = useSimpleVtt();
   const resolution = snapshot?.resolution ?? null;
   const animated = Boolean(resolution && ANIMATED_STAGES.has(resolution.stage) && resolution.authoritativeDice.length > 0);
   const [replay,setReplay] = useState<DiceReplay|null>(null);
@@ -168,6 +168,10 @@ export function VisualDiceBridge() {
   const settleTimerRef = useRef<number|null>(null);
   const reelTimerRef = useRef<number|null>(null);
   const activeReplayKeyRef = useRef<string|null>(null);
+  const advanceRef=useRef(advanceResolution);
+  const shouldAdvanceRemoteRef=useRef(false);
+  advanceRef.current=advanceResolution;
+  shouldAdvanceRemoteRef.current=snapshot?.session.role==="client"&&snapshot.resolutionPresentation?.delivery==="live";
 
   const scheduleReplayExit = useCallback((key:string) => {
     if (fadeTimerRef.current!==null) window.clearTimeout(fadeTimerRef.current);
@@ -183,6 +187,7 @@ export function VisualDiceBridge() {
         setResolved(false);
         setFading(false);
         hideTimerRef.current=null;
+        if(shouldAdvanceRemoteRef.current) void advanceRef.current();
       },VISUAL_DICE_RESULT_FADE_MS);
     },VISUAL_DICE_RESULT_HOLD_MS);
   },[]);
@@ -233,6 +238,15 @@ export function VisualDiceBridge() {
     }
 
   },[animated,roll,resolution,settleReplay]);
+
+  useEffect(()=>{
+    if(!snapshot||snapshot.session.role!=="client"||snapshot.resolutionPresentation?.delivery!=="live"||animated)return;
+    const sequence=snapshot.resolutionPresentation.presentationSequence;
+    const timer=window.setTimeout(()=>{
+      if(snapshot.resolutionPresentation?.presentationSequence===sequence) void advanceRef.current();
+    },900);
+    return ()=>window.clearTimeout(timer);
+  },[snapshot,animated]);
 
   useEffect(() => () => {
     if (fadeTimerRef.current !== null) window.clearTimeout(fadeTimerRef.current);

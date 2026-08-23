@@ -74,6 +74,37 @@ export async function publishConnectedSnapshot(adapter:MockAdapter) {
   publishExternalAdapterSnapshot(await connectedInternal(adapter).getSnapshot());
 }
 
+function installConnectedResolutionPresentation(adapter:MockAdapter,presentation:ConnectedResolutionPresentationV1) {
+  const app=connectedInternal(adapter);
+  app.resolution=structuredClone(presentation.resolution);
+  app.resolutionPresentation={
+    resolutionId:presentation.resolutionId,
+    presentationSequence:presentation.presentationSequence,
+    delivery:presentation.delivery,
+    action:actionFromConnectedPresentation(presentation.action),
+  };
+}
+
+function enqueueOrInstallConnectedPresentation(adapter:MockAdapter,presentation:ConnectedResolutionPresentationV1) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if(!app.resolutionPresentation){
+    installConnectedResolutionPresentation(adapter,presentation);
+    return "applied" as const;
+  }
+  state.pendingPresentations.push(structuredClone(presentation));
+  return "queued" as const;
+}
+
+export function advanceConnectedResolutionPresentation(adapter:MockAdapter) {
+  const state=connectedStateFor(adapter);
+  if(state.mode!=="client") return {status:"rejected" as const,error:"only a connected Client can advance the remote presentation queue"};
+  const next=state.pendingPresentations.shift();
+  if(!next) return {status:"empty" as const};
+  installConnectedResolutionPresentation(adapter,next);
+  return {status:"applied" as const,presentationSequence:next.presentationSequence,remaining:state.pendingPresentations.length};
+}
+
 export function resetConnectedSessionTransientState(adapter:MockAdapter,message:string) {
   const app=connectedInternal(adapter);
   clearReadyActionConfiguration(adapter);
@@ -217,13 +248,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   app.activeCharacter.resources=projected.resources.map((entry)=>structuredClone(entry));
   app.activeCharacter.items=projected.items.map((entry)=>structuredClone(entry));
   app.syncChar();
-  app.resolution=structuredClone(payload.presentation.resolution);
-  app.resolutionPresentation={
-    resolutionId:payload.presentation.resolutionId,
-    presentationSequence:payload.presentation.presentationSequence,
-    delivery:"catchup",
-    action:actionFromConnectedPresentation(payload.presentation.action),
-  };
+  const presentationStatus=enqueueOrInstallConnectedPresentation(adapter,payload.presentation);
   state.lastAppliedPresentationSequence=Math.max(state.lastAppliedPresentationSequence,payload.presentation.presentationSequence);
   app.activity.unshift({
     id:`connected:${event.eventId}`,
@@ -231,7 +256,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     actor:event.actorId ?? "Host",
     title:`원격 Resolution 적용 · ${payload.resolutionId}`,
     summary:`Host event #${event.sequence}`,
-    detail:[`eventId=${event.eventId}`,`ResolutionEvent ${payload.resolutionEvents.length}개`,`host-authoritative forward apply`],
+    detail:[`eventId=${event.eventId}`,`ResolutionEvent ${payload.resolutionEvents.length}개`,`host-authoritative forward apply`,`presentation=${presentationStatus}`],
     stateChanges:[...projected.stateChanges],
   });
   return { status:"committed" as const };
@@ -247,14 +272,8 @@ export function applyConnectedResolutionPresentation(adapter:MockAdapter,present
     return {status:"duplicate" as const,presentationSequence:state.lastAppliedPresentationSequence};
   }
   state.lastAppliedPresentationSequence=presentation.presentationSequence;
-  app.resolution=structuredClone(presentation.resolution);
-  app.resolutionPresentation={
-    resolutionId:presentation.resolutionId,
-    presentationSequence:presentation.presentationSequence,
-    delivery:presentation.delivery,
-    action:actionFromConnectedPresentation(presentation.action),
-  };
-  return {status:"applied" as const,presentationSequence:presentation.presentationSequence};
+  const status=enqueueOrInstallConnectedPresentation(adapter,presentation);
+  return {status,presentationSequence:presentation.presentationSequence,queued:state.pendingPresentations.length};
 }
 
 export async function applyConnectedClientEvents(adapter:MockAdapter,events:ConnectedSessionEvent[]) {

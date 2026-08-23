@@ -4,6 +4,7 @@ import { registerConnectedActionRequestHandler } from "./connectedActionRequestP
 import { connectedStateFor } from "./connectedSessionState";
 import {
   CONNECTED_CAPABILITIES,
+  advanceConnectedResolutionPresentation,
   broadcastConnectedWire,
   connectedInternal,
   connectedManifest,
@@ -275,7 +276,10 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
 
 MockAdapter.prototype.advanceResolution=async function advanceConnectedResolution() {
   const state=connectedStateFor(this);
-  if (state.mode==="client") return connectedInternal(this).getSnapshot();
+  if (state.mode==="client") {
+    advanceConnectedResolutionPresentation(this);
+    return connectedInternal(this).getSnapshot();
+  }
   const current=connectedInternal(this).resolution;
   const readyBefore=state.mode==="host"&&current?readyActionConfigurationFor(this,current.actorId):undefined;
   const next=await previousAdvanceResolution.call(this);
@@ -294,7 +298,15 @@ MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrup
 
 MockAdapter.prototype.dismissResolution=async function dismissConnectedResolution() {
   const state=connectedStateFor(this);
-  if (state.mode==="client") return connectedInternal(this).getSnapshot();
+  if (state.mode==="client") {
+    const advanced=advanceConnectedResolutionPresentation(this);
+    if(advanced.status==="empty"){
+      const app=connectedInternal(this);
+      app.resolution=null;
+      app.resolutionPresentation=null;
+    }
+    return connectedInternal(this).getSnapshot();
+  }
   const pending=state.pendingRemoteAction;
   if (pending&&state.ledger) {
     state.ledger.cancelReservedActionRequest(pending.request.requestId);

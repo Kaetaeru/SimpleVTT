@@ -1,4 +1,5 @@
 import type { ConnectedActionRequest, SessionCompatibilityManifest } from "./connectedSessionProtocol";
+import type { ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 import { ClientSessionReplica, HostSessionLedger } from "./connectedSessionProtocol";
 import type { MockAdapter } from "./mockAdapter";
 
@@ -25,6 +26,7 @@ export interface ConnectedRuntimeState {
   nextPresentationSequence:number;
   lastAppliedPresentationSequence:number;
   lastPublishedPresentationKey:string;
+  pendingPresentations:ConnectedResolutionPresentationV1[];
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -49,6 +51,7 @@ export function connectedStateFor(adapter:MockAdapter) {
       nextPresentationSequence:1,
       lastAppliedPresentationSequence:0,
       lastPublishedPresentationKey:"",
+      pendingPresentations:[],
     };
     states.set(adapter,state);
   }
@@ -73,5 +76,6 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.nextPresentationSequence=1;
   state.lastAppliedPresentationSequence=0;
   state.lastPublishedPresentationKey="";
+  state.pendingPresentations=[];
   return state;
 }

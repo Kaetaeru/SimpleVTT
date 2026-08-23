@@ -8,7 +8,7 @@ import {
 } from "../../src/app/connectedResolutionPresentation";
 import { buildVisualDiceRoll } from "../../src/app/diceVisuals";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { applyConnectedResolutionPresentation } from "../../src/app/connectedSessionRuntimeAdapter";
+import { advanceConnectedResolutionPresentation, applyConnectedResolutionPresentation } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 
 async function attackPresentation() {
@@ -37,6 +37,9 @@ test("Host builds one public immutable presentation envelope without private res
   assert.equal(envelope.resolution.canAdvance,false);
   assert.equal(envelope.resolution.nextLabel,undefined);
   assert.equal(envelope.action?.damage?.[0]?.dice,"1d8");
+  assert.deepEqual(envelope.dice,{faces:[11],selectedIndices:[0],discardedIndices:[],selection:"all",total:18,modifier:7});
+  assert.deepEqual(envelope.timeline,[{key:"roll",label:"판정 굴림",terminal:false}]);
+  assert.deepEqual(envelope.activityLink,{resolutionId:envelope.resolutionId});
   assert.equal("resourceCost" in (envelope.action??{}),false);
   assert.equal("details" in (envelope.action??{}),false);
   assert.equal(isConnectedResolutionPresentation(envelope),true);
@@ -87,7 +90,25 @@ test("a separate Client applies each live presentation sequence once without run
   const next=structuredClone(envelope);
   next.presentationSequence=2;
   next.resolution.stage="attack-result";
-  assert.equal(applyConnectedResolutionPresentation(observer,next).status,"applied");
+  assert.equal(applyConnectedResolutionPresentation(observer,next).status,"queued");
+  assert.equal(connectedStateFor(observer).pendingPresentations.length,1);
+  assert.equal(advanceConnectedResolutionPresentation(observer).status,"applied");
   snapshot=await observer.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"attack-result");
+});
+
+test("advantage-like presentation freezes selected and discarded authoritative faces",async()=>{
+  const {snapshot}=await attackPresentation();
+  assert.ok(snapshot.resolution);
+  snapshot.resolution.authoritativeDice=[6,17];
+  snapshot.resolution.attackTotal=24;
+  snapshot.resolution.finalOutcome="유리점 적용 · 명중";
+  const envelope=buildConnectedResolutionPresentation(snapshot,3,"live");
+  assert.ok(envelope);
+  assert.deepEqual(envelope.dice.faces,[6,17]);
+  assert.equal(envelope.dice.selection,"highest");
+  assert.deepEqual(envelope.dice.selectedIndices,[1]);
+  assert.deepEqual(envelope.dice.discardedIndices,[0]);
+  assert.equal(envelope.dice.modifier,7);
+  assert.equal(isConnectedResolutionPresentation(envelope),true);
 });

@@ -3,7 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedActionRoutingAdapter";
 import type { ConnectedResolutionPresentationV1 } from "../../src/app/connectedResolutionPresentation";
-import { applyConnectedResolutionPresentation } from "../../src/app/connectedSessionRuntimeAdapter";
+import { advanceConnectedResolutionPresentation, applyConnectedResolutionPresentation } from "../../src/app/connectedSessionRuntimeAdapter";
 import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
 import { connectedManifest, applyConnectedClientEvents } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
@@ -52,13 +52,27 @@ test("Host attack fans the same ordered live dice/VFX presentation and terminal 
     prepareClient(actingClient,sessionId);
     prepareClient(observingClient,sessionId);
 
-    for(const message of live) {
-      assert.equal(applyConnectedResolutionPresentation(actingClient,message.presentation).status,"applied");
-      assert.equal(applyConnectedResolutionPresentation(observingClient,message.presentation).status,"applied");
+    const actingStages:string[]=[];
+    const observingStages:string[]=[];
+    for(const [index,message] of live.entries()) {
+      assert.equal(applyConnectedResolutionPresentation(actingClient,message.presentation).status,index===0?"applied":"queued");
+      assert.equal(applyConnectedResolutionPresentation(observingClient,message.presentation).status,index===0?"applied":"queued");
       const [acting,observing]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
       assert.deepEqual(acting.resolution,observing.resolution);
       assert.deepEqual(acting.resolutionPresentation,observing.resolutionPresentation);
     }
+    while(true){
+      const acting=await actingClient.getSnapshot();
+      const observing=await observingClient.getSnapshot();
+      actingStages.push(acting.resolution!.stage);
+      observingStages.push(observing.resolution!.stage);
+      const actingAdvance=advanceConnectedResolutionPresentation(actingClient);
+      const observingAdvance=advanceConnectedResolutionPresentation(observingClient);
+      assert.equal(actingAdvance.status,observingAdvance.status);
+      if(actingAdvance.status==="empty")break;
+    }
+    assert.deepEqual(actingStages,live.map((entry)=>entry.presentation.resolution.stage));
+    assert.deepEqual(observingStages,actingStages);
 
     const [actingApplied,observingApplied]=await Promise.all([
       applyConnectedClientEvents(actingClient,batches[0].events),
@@ -66,6 +80,8 @@ test("Host attack fans the same ordered live dice/VFX presentation and terminal 
     ]);
     assert.equal(actingApplied.status,"applied");
     assert.equal(observingApplied.status,"applied");
+    assert.equal(advanceConnectedResolutionPresentation(actingClient).status,"applied");
+    assert.equal(advanceConnectedResolutionPresentation(observingClient).status,"applied");
     const [hostAfter,actingAfter,observingAfter]=await Promise.all([host.getSnapshot(),actingClient.getSnapshot(),observingClient.getSnapshot()]);
     const hostTarget=hostAfter.scene.entities.find((entry)=>entry.id==="combatant.goblin-a");
     const actingTarget=actingAfter.scene.entities.find((entry)=>entry.id==="combatant.goblin-a");
