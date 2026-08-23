@@ -1,7 +1,7 @@
 import type { AppSnapshot, PartyStashTransferCommand } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 
-function trustedCatalogCapabilities(snapshot:AppSnapshot,definitionId:string){
+export function trustedPartyStashCapabilities(snapshot:AppSnapshot,definitionId:string){
   const matches=snapshot.catalog.filter((entry)=>entry.category==="item"&&(entry.contentId===definitionId||entry.id===definitionId));
   if(matches.length!==1)return [];
   return [...new Set(matches[0].capabilities.map((value)=>value.trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"en"));
@@ -10,7 +10,7 @@ function trustedCatalogCapabilities(snapshot:AppSnapshot,definitionId:string){
 async function normalizeDepositCapabilities(adapter:MockAdapter,command:PartyStashTransferCommand):Promise<PartyStashTransferCommand>{
   if(command.asset!=="item"||command.direction!=="character-to-stash"||!command.itemTemplate)return command;
   const snapshot=await adapter.getSnapshot();
-  const capabilities=trustedCatalogCapabilities(snapshot,command.definitionId);
+  const capabilities=trustedPartyStashCapabilities(snapshot,command.definitionId);
   return {...command,itemTemplate:{...command.itemTemplate,capabilities}};
 }
 
@@ -25,5 +25,5 @@ MockAdapter.prototype.commitConnectedPartyStashDeposit=async function commitConn
 };
 
 export function trustedPartyStashCapabilitiesForTests(snapshot:AppSnapshot,definitionId:string){
-  return trustedCatalogCapabilities(snapshot,definitionId);
+  return trustedPartyStashCapabilities(snapshot,definitionId);
 }
