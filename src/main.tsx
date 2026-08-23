@@ -23,6 +23,7 @@ import "./app/sessionContentParityRuntimeAdapter";
 import "./app/campaignSessionHistoryRuntimeAdapter";
 import "./app/connectedCampaignSystemsRuntimeAdapter";
 import "./app/connectedOwnerInventoryJournalAdapter";
+import "./app/connectedOwnerInventoryExactCompensationAdapter";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
