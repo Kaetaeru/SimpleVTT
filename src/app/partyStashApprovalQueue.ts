@@ -44,12 +44,24 @@ export class PartyStashApprovalQueue {
 
   pending(){return [...this.records.values()].filter((record)=>record.state==="pending").map(cp);}
 
+  active(){return [...this.records.values()].filter((record)=>record.state==="pending"||record.state==="approved").map(cp);}
+
   approve(requestId:string):PartyStashApprovalRecord {
     const current=this.records.get(requestId);
     if(!current)throw new Error("Party Stash approval request not found");
     if(current.state==="approved")return cp(current);
     if(current.state!=="pending")throw new Error(`Party Stash approval request is already ${current.state}`);
     const next:PartyStashApprovalRecord={...current,state:"approved"};
+    delete next.error;
+    this.records.set(requestId,next);
+    return cp(next);
+  }
+
+  recordApprovedFailure(requestId:string,error:string):PartyStashApprovalRecord {
+    const current=this.records.get(requestId);
+    if(!current)throw new Error("Party Stash approval request not found");
+    if(current.state!=="approved")throw new Error("Party Stash approval failure can only be recorded after approval");
+    const next:PartyStashApprovalRecord={...current,error};
     this.records.set(requestId,next);
     return cp(next);
   }
@@ -72,7 +84,8 @@ export class PartyStashApprovalQueue {
       throw new Error("Party Stash approval request already settled differently");
     }
 
-    const next:PartyStashApprovalRecord={...current,state,...(error?{error}:{})};
+    const next:PartyStashApprovalRecord={...current,state};
+    if(error)next.error=error;else delete next.error;
     this.records.set(requestId,next);
     return cp(next);
   }
