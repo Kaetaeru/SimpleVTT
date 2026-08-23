@@ -26,13 +26,15 @@ test("restarted owner consumes enriched precommit abort idempotently without mat
   assert.doesNotMatch(ownerRecovery,/abort recovery Character runtime revision changed before cleanup/);
 });
 
-test("owner abort acknowledgement closes Host durable replay only after exact cleanup identity",()=>{
+test("owner abort acknowledgement deletes durable recovery and remains idempotent in current Host runtime",()=>{
   assert.match(session,/type:"long-rest-owner-aborted"/);
   assert.match(session,/completeConnectedLongRestHostOwnerAbort/);
   assert.match(runtime,/completeConnectedLongRestHostOwnerAbort/);
   assert.match(runtime,/abort acknowledgement preparation mismatch/);
   assert.match(runtime,/hostCoordinatorStore\(adapter\)\.delete\(aborted\.transactionId\)/);
-  assert.match(runtime,/hostMap\(adapter\)\.delete\(aborted\.transactionId\)/);
+  assert.match(runtime,/record\.outcome="aborted-complete"/);
+  assert.match(runtime,/if\(record\.outcome\|\|!peerOwnsRecoveredRecord/);
+  assert.doesNotMatch(runtime,/hostMap\(adapter\)\.delete\(aborted\.transactionId\)/);
 });
 
 test("prepared connected Rest owns the next Character generation until materialize or abort",()=>{
