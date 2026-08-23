@@ -43,11 +43,17 @@ export interface InstalledCampaignCalendarProfileV1 {
   };
 }
 
+export interface InstalledCampaignRationItemConversionV1 {
+  requiredCapability:string;
+  rationUnitsPerItem:number;
+}
+
 export interface InstalledCampaignRationProfileV1 {
   kind:"ration";
   defaultUnitsPerDay:number;
   unitsByRosterKind?:Partial<Record<"player-character-ref"|"host-preset"|"companion",number>>;
   shortageConsequences?:string[];
+  itemConversions?:InstalledCampaignRationItemConversionV1[];
 }
 
 export type InstalledCampaignProviderProfileV1 = InstalledCampaignCalendarProfileV1 | InstalledCampaignRationProfileV1;
