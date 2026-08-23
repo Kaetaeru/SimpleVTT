@@ -15,6 +15,7 @@ import { HostSessionLedger } from "../../src/app/connectedSessionProtocol";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { expireConnectedInterrupt } from "../../src/app/connectedActionRoutingAdapter";
 
 type MutableApp={scene:SceneVm;activeCharacter:CharacterSheet};
 type PresentationWire={type:"resolution-presentation";sessionId:string;presentation:ConnectedResolutionPresentationV1};
@@ -104,4 +105,15 @@ test("public peers see only interrupt waiting while the eligible owner receives 
     tauriSessionTransport.send=originalSend;
     tauriSessionTransport.sendTo=originalSendTo;
   }
+});
+
+test("expired owner interrupt is authoritatively declined once and public play resumes",async()=>{
+  const sessionId="session.private-interrupt-timeout",peer="peer.mira.timeout";
+  const host=new MockAdapter();const app=host as unknown as MutableApp;const mira=app.scene.entities.find((entry)=>entry.id==="char.mira")!;
+  mira.reactions=[{id:"reaction.timeout",name:"비공개 방어",trigger:"명중",cost:"반응",effect:"AC +5",source:"private",acBonus:5}];
+  await host.setSessionMode("initiative");await host.setCurrentActor("combatant.goblin-a");await host.setQueuedD20(20);
+  const state=connectedStateFor(host);state.mode="host";state.sessionId=sessionId;state.ledger=new HostSessionLedger(sessionId,connectedManifest(host));state.peerManifests.set(peer,{...connectedManifest(host),character:{characterId:"char.mira",sourceRevision:0,runtimeRevision:0}});
+  const originalSend=tauriSessionTransport.send,originalSendTo=tauriSessionTransport.sendTo;tauriSessionTransport.send=async()=>1;tauriSessionTransport.sendTo=async()=>1;
+  try{let snapshot=await host.resolveAction("action.scimitar",["char.mira"]);snapshot=await host.advanceResolution();assert.equal(snapshot.resolution?.stage,"interrupt");assert.equal((await expireConnectedInterrupt(host,snapshot.resolution!.id)).status,"declined");snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"attack-result");assert.equal(snapshot.resolution?.interrupt,undefined);assert.equal((await expireConnectedInterrupt(host,snapshot.resolution!.id)).status,"ignored");}
+  finally{if(state.interruptTimeout)clearTimeout(state.interruptTimeout);tauriSessionTransport.send=originalSend;tauriSessionTransport.sendTo=originalSendTo;}
 });

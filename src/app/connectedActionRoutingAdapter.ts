@@ -167,6 +167,7 @@ async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapsh
   state.nextPresentationSequence+=1;
   await broadcastConnectedWire({type:"resolution-presentation",sessionId:state.ledger.sessionId,presentation});
   const interrupt=snapshot.resolution?.interrupt;
+  if(snapshot.resolution?.stage!=="interrupt"&&state.interruptTimeout){clearTimeout(state.interruptTimeout);state.interruptTimeout=null;state.interruptTimeoutResolutionId=null;}
   if(snapshot.resolution?.stage==="interrupt"&&interrupt){
     const ownerPeer=[...state.peerManifests.entries()].find(([,manifest])=>manifest.character?.characterId===interrupt.responderId)?.[0];
     if(ownerPeer) await sendConnectedWireTo(ownerPeer,{
@@ -176,6 +177,11 @@ async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapsh
       presentationSequence:presentation.presentationSequence,
       interrupt:structuredClone(interrupt),
     });
+    if(ownerPeer&&state.interruptTimeoutResolutionId!==resolution.id){
+      if(state.interruptTimeout)clearTimeout(state.interruptTimeout);
+      state.interruptTimeoutResolutionId=resolution.id;
+      state.interruptTimeout=setTimeout(()=>{state.interruptTimeout=null;state.interruptTimeoutResolutionId=null;void expireConnectedInterrupt(adapter,resolution.id);},30_000);
+    }
   }
   const concentration=snapshot.resolution?.concentrationSave;
   if(snapshot.resolution?.stage==="save-animation"&&concentration&&concentration.natural===undefined){
@@ -183,6 +189,13 @@ async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapsh
     if(ownerPeer)await sendConnectedWireTo(ownerPeer,{type:"resolution-concentration-prompt",sessionId:state.ledger.sessionId,resolutionId:resolution.id,presentationSequence:presentation.presentationSequence,save:structuredClone(concentration)});
   }
   return snapshot;
+}
+
+export async function expireConnectedInterrupt(adapter:MockAdapter,resolutionId:string){
+  const state=connectedStateFor(adapter);const app=connectedInternal(adapter);
+  if(state.mode!=="host"||app.resolution?.id!==resolutionId||app.resolution.stage!=="interrupt"||!app.resolution.interrupt)return {status:"ignored" as const};
+  await adapter.respondToInterrupt(false);
+  return {status:"declined" as const};
 }
 
 registerConnectedInterruptResponseHandler(async(adapter,transportMessage,response)=>{
@@ -196,6 +209,7 @@ registerConnectedInterruptResponseHandler(async(adapter,transportMessage,respons
   const interrupt=app.resolution?.interrupt;
   if(!characterId||!interrupt||app.resolution?.id!==response.resolutionId){await reject("interrupt-not-pending","no matching authoritative interrupt is pending");return;}
   if(interrupt.responderId!==characterId||interrupt.id!==response.promptId){await reject("interrupt-not-authorized","interrupt response does not belong to this peer Character");return;}
+  if(state.interruptTimeout)clearTimeout(state.interruptTimeout);state.interruptTimeout=null;state.interruptTimeoutResolutionId=null;
   await adapter.respondToInterrupt(response.accept);
 });
 

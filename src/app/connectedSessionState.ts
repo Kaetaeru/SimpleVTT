@@ -34,6 +34,8 @@ export interface ConnectedRuntimeState {
   privateInterruptsByResolution:Map<string,InterruptView>;
   publishedResolutionEvents:Map<string,ResolutionEvent[]>;
   privateConcentrationByResolution:Map<string,ConcentrationSaveVm>;
+  interruptTimeout:ReturnType<typeof setTimeout>|null;
+  interruptTimeoutResolutionId:string|null;
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -63,6 +65,8 @@ export function connectedStateFor(adapter:MockAdapter) {
       privateInterruptsByResolution:new Map<string,InterruptView>(),
       publishedResolutionEvents:new Map<string,ResolutionEvent[]>(),
       privateConcentrationByResolution:new Map<string,ConcentrationSaveVm>(),
+      interruptTimeout:null,
+      interruptTimeoutResolutionId:null,
     };
     states.set(adapter,state);
   }
@@ -72,6 +76,7 @@ export function connectedStateFor(adapter:MockAdapter) {
 export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|null) {
   const state=connectedStateFor(adapter);
   if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
+  if(state.interruptTimeout)clearTimeout(state.interruptTimeout);
   state.mode=mode;
   state.sessionId=null;
   state.ledger=null;
@@ -92,5 +97,7 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.privateInterruptsByResolution.clear();
   state.publishedResolutionEvents.clear();
   state.privateConcentrationByResolution.clear();
+  state.interruptTimeout=null;
+  state.interruptTimeoutResolutionId=null;
   return state;
 }

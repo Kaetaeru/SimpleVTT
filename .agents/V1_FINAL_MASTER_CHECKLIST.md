@@ -96,7 +96,8 @@ Continue `#113 / MP-04` with concentration and Ready trigger owner-routing, then
 - [x] Owner-only interrupt prompt routing with public redaction, Host ownership revalidation, accepted response continuation, and spoof rejection.
 - [x] Host Undo as a new inverse `resolution-undo` event; original Activity remains historical and Client apply is exactly once.
 - [x] Owner-only concentration d20 routing with public redaction, Host ownership validation, shared result presentation, and canonical commit continuation.
-- [x] Connected regression checkpoint: 187/187 tests, TypeScript pass, Vite production build pass (2026-08-23 Asia/Seoul).
+- [x] Owner interrupt timeout deterministically declines once and resumes the public resolution without revealing the private option.
+- [x] Connected regression checkpoint: 188/188 tests, TypeScript pass, Vite production build pass (2026-08-23 Asia/Seoul).
 - [ ] MP-03 remaining projected production spell/feature/invalid/concurrent cases.
-- [ ] MP-04 Ready trigger live presentation, interrupt timeout, and correction-during-presentation cases.
+- [ ] MP-04 Ready trigger live presentation and correction-during-presentation cases.
 
