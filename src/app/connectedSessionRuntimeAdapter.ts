@@ -17,6 +17,7 @@ import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
 import { routeConnectedActionRequest } from "./connectedActionRequestPort";
+import { routeConnectedInterruptResponse } from "./connectedInterruptResponsePort";
 import { tauriSessionTransport, type SessionTransportMessage, type SessionTransportStatus } from "./tauriSessionTransport";
 import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "./connectedCharacterProjectionHandshake";
@@ -34,7 +35,7 @@ declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -76,7 +77,9 @@ export async function publishConnectedSnapshot(adapter:MockAdapter) {
 
 function installConnectedResolutionPresentation(adapter:MockAdapter,presentation:ConnectedResolutionPresentationV1) {
   const app=connectedInternal(adapter);
+  const privateInterrupt=connectedStateFor(adapter).privateInterruptsByResolution.get(presentation.resolutionId);
   app.resolution=structuredClone(presentation.resolution);
+  if(app.resolution?.stage==="interrupt"&&privateInterrupt) app.resolution.interrupt=structuredClone(privateInterrupt);
   app.resolutionPresentation={
     resolutionId:presentation.resolutionId,
     presentationSequence:presentation.presentationSequence,
@@ -274,6 +277,19 @@ export function applyConnectedResolutionPresentation(adapter:MockAdapter,present
   state.lastAppliedPresentationSequence=presentation.presentationSequence;
   const status=enqueueOrInstallConnectedPresentation(adapter,presentation);
   return {status,presentationSequence:presentation.presentationSequence,queued:state.pendingPresentations.length};
+}
+
+export function applyConnectedInterruptPrompt(
+  adapter:MockAdapter,
+  prompt:{sessionId:string;resolutionId:string;presentationSequence:number;interrupt:import("./contracts").InterruptView},
+) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if(state.mode!=="client"||!state.sessionId||prompt.sessionId!==state.sessionId) return {status:"rejected" as const,error:"interrupt prompt session does not match this Client"};
+  if(prompt.interrupt.responderId!==app.activeCharacter.id) return {status:"rejected" as const,error:"interrupt prompt does not belong to this Client Character"};
+  state.privateInterruptsByResolution.set(prompt.resolutionId,structuredClone(prompt.interrupt));
+  if(app.resolution?.id===prompt.resolutionId&&app.resolution.stage==="interrupt") app.resolution.interrupt=structuredClone(prompt.interrupt);
+  return {status:"applied" as const};
 }
 
 export async function applyConnectedClientEvents(adapter:MockAdapter,events:ConnectedSessionEvent[]) {
@@ -479,6 +495,12 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
     if (!routed) {
       await sendConnectedWireTo(message.peer,{type:"error",code:"action-route-unavailable",message:"connected ActionRequest router is unavailable",hostCursor:ledger.cursor});
     }
+    return;
+  }
+
+  if(wire.type==="resolution-interrupt-response"){
+    const routed=await routeConnectedInterruptResponse(adapter,message,wire.response);
+    if(!routed) await sendConnectedWireTo(message.peer,{type:"error",code:"interrupt-route-unavailable",message:"connected interrupt response router is unavailable",hostCursor:ledger.cursor});
   }
 }
 
@@ -556,6 +578,13 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
         app.session.compatibilityMessage=applied.error;
       }
     }
+    await publishConnectedSnapshot(adapter);
+    return;
+  }
+
+  if(wire.type==="resolution-interrupt-prompt"){
+    const applied=applyConnectedInterruptPrompt(adapter,wire);
+    if(applied.status==="rejected"){app.session.compatibility="warning";app.session.compatibilityMessage=applied.error;}
     await publishConnectedSnapshot(adapter);
     return;
   }

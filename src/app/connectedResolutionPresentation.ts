@@ -130,6 +130,7 @@ export function buildConnectedResolutionPresentation(
   snapshot:AppSnapshot,
   presentationSequence:number,
   delivery:"live"|"catchup"="live",
+  previousTimeline:ConnectedResolutionTimelineEntryV1[]=[],
 ):ConnectedResolutionPresentationV1|null {
   const resolution=snapshot.resolution;
   if (!resolution||!Number.isInteger(presentationSequence)||presentationSequence<0) return null;
@@ -141,6 +142,19 @@ export function buildConnectedResolutionPresentation(
     canAdvance:false,
     nextLabel:undefined,
   };
+  if(resolution.stage==="interrupt"){
+    publicResolution.compact="비공개 반응 응답 대기";
+    publicResolution.detail=[];
+    publicResolution.provenance=[];
+    publicResolution.calculatedOutcome="응답 대기";
+    publicResolution.finalOutcome="응답 대기";
+    publicResolution.stateChanges=[];
+  }
+  const currentTimeline=timelineEntry(resolution);
+  const last=previousTimeline.at(-1);
+  const timeline=last?.key===currentTimeline.key&&last.label===currentTimeline.label
+    ? previousTimeline.map((entry)=>({...entry}))
+    :[...previousTimeline.map((entry)=>({...entry})),currentTimeline];
   return {
     schemaId:CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_ID,
     schemaVersion:CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_VERSION,
@@ -153,7 +167,7 @@ export function buildConnectedResolutionPresentation(
     resolution:publicResolution,
     action:presentationAction(action),
     dice:dicePresentation(resolution,action),
-    timeline:[timelineEntry(resolution)],
+    timeline,
     activityLink:{resolutionId:resolution.id},
   };
 }
@@ -197,7 +211,8 @@ function isDice(value:unknown) {
 function isTimeline(value:unknown) {
   return Array.isArray(value)&&value.length>0&&value.every((entry)=>isRecord(entry)
     &&["roll","result","interrupt-wait","damage","effect","complete"].includes(String(entry.key))
-    &&typeof entry.label==="string"&&typeof entry.terminal==="boolean");
+    &&typeof entry.label==="string"&&typeof entry.terminal==="boolean"
+    &&Object.keys(entry).every((key)=>key==="key"||key==="label"||key==="terminal"));
 }
 
 function isEntityLabel(value:unknown) {
@@ -239,6 +254,6 @@ export function isConnectedResolutionPresentation(value:unknown):value is Connec
     &&presentation.targets.map((entry)=>entry.id).join("\u0000")===presentation.resolution.targetIds.join("\u0000")
     &&presentation.dice.faces.join("\u0000")===presentation.resolution.authoritativeDice.join("\u0000")
     &&(presentation.action===undefined||(presentation.action.id===presentation.resolution.actionId&&presentation.action.actorId===presentation.resolution.actorId))
-    &&presentation.timeline.length===1
-    &&presentation.timeline[0].terminal===(presentation.resolution.stage==="complete");
+    &&presentation.timeline.slice(0,-1).every((entry)=>!entry.terminal)
+    &&presentation.timeline.at(-1)!.terminal===(presentation.resolution.stage==="complete");
 }

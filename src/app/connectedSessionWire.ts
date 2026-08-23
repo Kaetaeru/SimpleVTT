@@ -5,6 +5,8 @@ import type {
   SessionCompatibilityResult,
 } from "./connectedSessionProtocol";
 import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
+import type { InterruptView } from "./contracts";
+import type { ConnectedInterruptResponse } from "./connectedInterruptResponsePort";
 import { isConnectedResolutionPresentation, type ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 import {
   validateConnectedLongRestWireMessage,
@@ -33,6 +35,8 @@ export type ConnectedWireMessage =
   | { type:"catchup-request"; sessionId:string; afterCursor:number }
   | { type:"event-batch"; sessionId:string; afterCursor:number; events:ConnectedSessionEvent[] }
   | { type:"resolution-presentation"; sessionId:string; presentation:ConnectedResolutionPresentationV1 }
+  | { type:"resolution-interrupt-prompt"; sessionId:string; resolutionId:string; presentationSequence:number; interrupt:InterruptView }
+  | { type:"resolution-interrupt-response"; response:ConnectedInterruptResponse }
   | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number }
   | ConnectedLongRestWireMessage;
@@ -180,6 +184,12 @@ function isActionRequest(value:unknown):value is ConnectedActionRequest {
     &&(value.character===undefined||isCharacterRevision(value.character))&&validReady;
 }
 
+function isInterrupt(value:unknown):value is InterruptView {
+  return isRecord(value)&&isString(value.id)&&isString(value.responderId)&&isString(value.responderName)
+    &&isString(value.trigger)&&isString(value.optionName)&&isString(value.cost)&&isString(value.effect)&&isString(value.source)
+    &&Object.keys(value).every((key)=>["id","responderId","responderName","trigger","optionName","cost","effect","source"].includes(key));
+}
+
 function validateMessage(value:unknown):ConnectedWireMessage|string {
   if (!isRecord(value)||!isString(value.type)) return "wire message must be an object with a type";
   if (value.type==="hello") {
@@ -209,6 +219,15 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if (value.type==="resolution-presentation") {
     if (!isString(value.sessionId)||!isConnectedResolutionPresentation(value.presentation)) return "invalid resolution-presentation message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="resolution-interrupt-prompt"){
+    if(!isString(value.sessionId)||!isString(value.resolutionId)||!isCursor(value.presentationSequence)||!isInterrupt(value.interrupt)) return "invalid resolution-interrupt-prompt message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="resolution-interrupt-response"){
+    const response=value.response;
+    if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!isString(response.promptId)||typeof response.accept!=="boolean") return "invalid resolution-interrupt-response message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="session-ended") {

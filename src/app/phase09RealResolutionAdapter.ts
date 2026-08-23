@@ -31,6 +31,8 @@ import { resolveSceneDamage, resolveSceneHealing } from "./realHealthService";
 import { resolveHealingRollResolution } from "./realHealingRollService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
 import { resolveSavingThrowResolution } from "./realSavingThrowService";
+import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface Phase09BeforeSnapshot {
   scene:AppSnapshot["scene"];
@@ -403,6 +405,29 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
   if (!resolution) return oldAdvanceResolution.call(this);
   const action = internal.action(resolution.actionId);
   if (!action) return oldAdvanceResolution.call(this);
+
+  if(resolution.stage==="effect-preview"&&action.id==="action.dash"){
+    const before=structuredClone(internal.scene.economyByActor[action.actorId]);
+    const next=await oldAdvanceResolution.call(this);
+    const after=internal.scene.economyByActor[action.actorId];
+    const completed=internal.resolution;
+    if(before&&after&&completed?.stage==="complete"){
+      const provenance=[{source:"action.dash",status:"applied" as const,reason:"Host-authoritative Dash economy projection"}];
+      const fields:Array<{field:"action"|"movement"|"movementMaximum";before:boolean|number;after:boolean|number}>=[
+        {field:"action",before:before.action,after:after.action},
+        {field:"movement",before:before.movement,after:after.movement},
+        {field:"movementMaximum",before:before.movementMax,after:after.movementMax},
+      ];
+      const event:ResolutionEvent={
+        id:`${completed.id}:dash`,resolutionId:completed.id,operationId:"dash:economy",kind:"dash",actorId:action.actorId,targetId:action.actorId,
+        summary:completed.finalOutcome,provenance,
+        stateChanges:fields.filter((entry)=>entry.before!==entry.after).map((entry)=>({kind:"economy" as const,targetId:action.actorId,field:entry.field,before:entry.before,after:entry.after,provenance,lifetime:"session-runtime" as const,writeBack:"session" as const})),
+        result:{movement:after.movement,movementMaximum:after.movementMax},
+      };
+      recordRuntimeResolutionEvents(this,completed.id,[event]);
+    }
+    return next;
+  }
 
   if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&action.id==="action.standard.hide.stealth") {
     const actor=internal.entity(action.actorId);

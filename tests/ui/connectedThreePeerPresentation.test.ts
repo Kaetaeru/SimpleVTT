@@ -46,6 +46,11 @@ test("Host attack fans the same ordered live dice/VFX presentation and terminal 
     assert.deepEqual(live.map((entry)=>entry.presentation.presentationSequence),live.map((_,index)=>index+1));
     assert.equal(batches.length,1);
     assert.equal(batches[0].events.length,1);
+    const terminalPayload=batches[0].events[0].payload;
+    assert.equal(terminalPayload.kind,"resolution");
+    if(terminalPayload.kind!=="resolution")throw new Error("expected terminal resolution event");
+    assert.deepEqual(terminalPayload.presentation.timeline.map((entry)=>entry.key),["roll","result","damage","complete"]);
+    assert.equal(terminalPayload.presentation.timeline.at(-1)?.terminal,true);
 
     const actingClient=new MockAdapter();
     const observingClient=new MockAdapter();

@@ -1,6 +1,7 @@
 import type { AppSnapshot } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { registerConnectedActionRequestHandler } from "./connectedActionRequestPort";
+import { registerConnectedInterruptResponseHandler } from "./connectedInterruptResponsePort";
 import { connectedStateFor } from "./connectedSessionState";
 import {
   CONNECTED_CAPABILITIES,
@@ -50,8 +51,9 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   const pending=state.pendingRemoteAction;
   const isRemotePending=pending?.resolutionId===resolution.id;
   const events=takeCommittedResolutionEvents(resolution.id);
-  const presentation=buildConnectedResolutionPresentation(current,state.nextPresentationSequence,"catchup");
+  const presentation=buildConnectedResolutionPresentation(current,state.nextPresentationSequence,"catchup",state.presentationTimelineByResolution.get(resolution.id));
   if (!presentation) return current;
+  state.presentationTimelineByResolution.set(resolution.id,presentation.timeline.map((entry)=>({...entry})));
   const readyConfig=readyActionConfigurationFor(adapter,resolution.actorId);
   const readyArmed=resolution.actionId==="action.standard.ready"&&readyConfig;
   const readyCleared=readyClearedActorId===resolution.actorId||pending?.request.actionId==="action.standard.ready.trigger";
@@ -137,13 +139,39 @@ async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapsh
   if (state.mode!=="host"||!state.ledger||!resolution||resolution.stage==="complete") return snapshot;
   const key=`${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}:${resolution.finalOutcome}`;
   if (state.lastPublishedPresentationKey===key) return snapshot;
-  const presentation=buildConnectedResolutionPresentation(snapshot,state.nextPresentationSequence,"live");
+  const presentation=buildConnectedResolutionPresentation(snapshot,state.nextPresentationSequence,"live",state.presentationTimelineByResolution.get(resolution.id));
   if (!presentation) return snapshot;
+  state.presentationTimelineByResolution.set(resolution.id,presentation.timeline.map((entry)=>({...entry})));
   state.lastPublishedPresentationKey=key;
   state.nextPresentationSequence+=1;
   await broadcastConnectedWire({type:"resolution-presentation",sessionId:state.ledger.sessionId,presentation});
+  const interrupt=snapshot.resolution?.interrupt;
+  if(snapshot.resolution?.stage==="interrupt"&&interrupt){
+    const ownerPeer=[...state.peerManifests.entries()].find(([,manifest])=>manifest.character?.characterId===interrupt.responderId)?.[0];
+    if(ownerPeer) await sendConnectedWireTo(ownerPeer,{
+      type:"resolution-interrupt-prompt",
+      sessionId:state.ledger.sessionId,
+      resolutionId:resolution.id,
+      presentationSequence:presentation.presentationSequence,
+      interrupt:structuredClone(interrupt),
+    });
+  }
   return snapshot;
 }
+
+registerConnectedInterruptResponseHandler(async(adapter,transportMessage,response)=>{
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  const ledger=state.ledger;
+  if(state.mode!=="host"||!ledger)return;
+  const reject=async(code:string,message:string)=>sendConnectedWireTo(transportMessage.peer,{type:"error",code,message,hostCursor:ledger.cursor});
+  if(response.sessionId!==ledger.sessionId){await reject("session-mismatch",`expected ${ledger.sessionId}, received ${response.sessionId}`);return;}
+  const characterId=state.peerManifests.get(transportMessage.peer)?.character?.characterId;
+  const interrupt=app.resolution?.interrupt;
+  if(!characterId||!interrupt||app.resolution?.id!==response.resolutionId){await reject("interrupt-not-pending","no matching authoritative interrupt is pending");return;}
+  if(interrupt.responderId!==characterId||interrupt.id!==response.promptId){await reject("interrupt-not-authorized","interrupt response does not belong to this peer Character");return;}
+  await adapter.respondToInterrupt(response.accept);
+});
 
 registerConnectedActionRequestHandler(async (adapter,transportMessage,request) => {
   const state=connectedStateFor(adapter);
@@ -290,7 +318,19 @@ MockAdapter.prototype.advanceResolution=async function advanceConnectedResolutio
 
 MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrupt(accept:boolean) {
   const state=connectedStateFor(this);
-  if (state.mode==="client") return connectedInternal(this).getSnapshot();
+  if (state.mode==="client") {
+    const app=connectedInternal(this);
+    const interrupt=app.resolution?.interrupt;
+    if(!state.sessionId||!interrupt||!app.resolution)return app.getSnapshot();
+    await tauriSessionTransport.send(JSON.stringify({
+      type:"resolution-interrupt-response",
+      response:{sessionId:state.sessionId,resolutionId:app.resolution.id,promptId:interrupt.id,accept},
+    }));
+    state.privateInterruptsByResolution.delete(app.resolution.id);
+    app.resolution.interrupt=undefined;
+    app.resolution.compact="Host 반응 판정 대기";
+    return app.getSnapshot();
+  }
   const next=await previousRespondToInterrupt.call(this,accept);
   await publishConnectedResolutionPresentation(this,next);
   return publishCommittedResolution(this,next);

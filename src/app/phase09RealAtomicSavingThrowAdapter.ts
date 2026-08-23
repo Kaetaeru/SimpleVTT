@@ -50,11 +50,8 @@ const histories=new WeakMap<MockAdapter,SavingThrowEventHistory>();
 const previousAdvance=MockAdapter.prototype.advanceResolution;
 const previousUndo=MockAdapter.prototype.undoLastResolution;
 
-function isAtomicThunderwave(action:ActionVm|undefined) {
-  return action?.id==="action.thunderwave"
-    && action.resolutionKind==="saving-throw"
-    && action.target==="multi-enemy"
-    && Boolean(action.damage?.length);
+function isAtomicDamagingSavingThrow(action:ActionVm|undefined) {
+  return action?.resolutionKind==="saving-throw"&&Boolean(action.damage?.length);
 }
 
 function beforeEntity(before:BeforeState,id:string) {
@@ -82,7 +79,7 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
   const internal=this as unknown as AtomicSavingThrowAdapterState;
   const resolution=internal.resolution;
   const action=resolution ? internal.action(resolution.actionId) : undefined;
-  if (!resolution||!isAtomicThunderwave(action)||resolution.adjudicated||resolution.stage!=="damage-animation") {
+  if (!resolution||!isAtomicDamagingSavingThrow(action)||resolution.adjudicated||resolution.stage!=="damage-animation") {
     return previousAdvance.call(this);
   }
 
