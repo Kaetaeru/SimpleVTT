@@ -83,11 +83,11 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
     if (!runtime) throw new Error(`projection source item is missing runtime state: ${source.id}`);
     if (!Number.isInteger(runtime.quantity) || runtime.quantity<0) throw new Error(`projection item quantity is invalid: ${source.id}`);
     const canonical=itemEntryById(source.definitionId);
-    if (!canonical && runtime.equipped) {
-      throw new Error(`equipped projected item has no trusted host mechanic entry: ${source.definitionId}`);
+    if (!canonical && (runtime.equipped || runtime.wielded || runtime.attuned)) {
+      throw new Error(`active projected item has no trusted host mechanic entry: ${source.definitionId}`);
     }
     const consumable=canonical ? itemMechanic(canonical,"consumable-definition") : undefined;
-    const kind:ItemInstanceVm["kind"] = consumable ? "consumable" : "equipment";
+    const kind:ItemInstanceVm["kind"] = source.kind ?? (consumable ? "consumable" : "equipment");
     const maxCharges=source.chargeMaximum;
     if (runtime.charges && (!Number.isInteger(runtime.charges.current) || runtime.charges.current<0 || maxCharges===undefined || runtime.charges.current>maxCharges)) {
       throw new Error(`projection item charge state is invalid: ${source.id}`);
@@ -95,8 +95,8 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
     return {
       id:source.id,
       definitionId:source.definitionId,
-      name:canonical ? entryName(canonical) : source.definitionId,
-      nameEn:canonical?.presentation.originalName,
+      name:canonical ? entryName(canonical) : source.name ?? source.definitionId,
+      nameEn:canonical?.presentation.originalName ?? source.nameEn,
       kind,
       quantity:runtime.quantity,
       equipped:runtime.equipped,
@@ -105,9 +105,11 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
       attunementRequired:source.attunementRequired === true,
       attuned:runtime.attuned,
       charges:maxCharges!==undefined ? { current:runtime.charges?.current ?? maxCharges,max:maxCharges } : undefined,
-      passiveEffects:[],
+      passiveEffects:canonical ? [] : clone(source.passiveEffects ?? []),
       grantedActionIds:[],
-      provenance:[`SessionProjection:${projection.characterId}`,`canonical-item:${source.definitionId}`],
+      provenance:canonical
+        ? [`SessionProjection:${projection.characterId}`,`canonical-item:${source.definitionId}`]
+        : [...clone(source.provenance),`SessionProjection:${projection.characterId}`,`inert-custom-item:${source.definitionId}`],
     };
   });
 }
