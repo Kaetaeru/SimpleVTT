@@ -14,6 +14,7 @@ import { mutateActiveCharacterDurably } from "./characterLibraryRuntimeAdapter";
 declare module "./mockAdapter" {
   interface MockAdapter {
     adjustDmInventory(command:DmInventoryAdjustmentCommand):Promise<AppSnapshot>;
+    undoDmInventoryAdjustment(requestId:string):Promise<AppSnapshot>;
     undoLastDmInventoryAdjustment():Promise<AppSnapshot>;
   }
 }
@@ -24,15 +25,19 @@ type AdapterState = {
   catalog:CatalogEntry[];
 };
 
+type InventoryUndoRecord={
+  requestId:string;
+  activityId:string;
+  actorId:string;
+  before:SessionCharacterInventoryVm;
+  after:SessionCharacterInventoryVm;
+};
+
 type InventoryContext = {
   inventories:Map<string,SessionCharacterInventoryVm>;
   requestIds:Set<string>;
-  lastUndo:null|{
-    requestId:string;
-    activityId:string;
-    actorId:string;
-    before:SessionCharacterInventoryVm;
-  };
+  undoByRequest:Map<string,InventoryUndoRecord>;
+  lastUndoRequestId:string|null;
 };
 
 const contexts=new WeakMap<MockAdapter,InventoryContext>();
@@ -68,7 +73,7 @@ function contextFor(adapter:MockAdapter,snapshot?:AppSnapshot) {
       });
     }
   }
-  const created={inventories,requestIds:new Set<string>(),lastUndo:null};
+  const created={inventories,requestIds:new Set<string>(),undoByRequest:new Map<string,InventoryUndoRecord>(),lastUndoRequestId:null};
   contexts.set(adapter,created);
   return created;
 }
@@ -172,7 +177,7 @@ function applyCommand(inventory:SessionCharacterInventoryVm,command:DmInventoryA
 }
 
 function activityFor(inventory:SessionCharacterInventoryVm,command:DmInventoryAdjustmentCommand,changes:string[]):ActivityEntry {
-  const grant=command.operation==="grant-item"||command.operation==="grant-currency";
+  const grant=command.operation==="grant-item"||command.operation==="grant-item-template"||command.operation==="grant-currency";
   return {
     id:`evt.dm-inventory.${Date.now()}.${Math.floor(Math.random()*1000)}`,
     time:"지금",
@@ -182,6 +187,65 @@ function activityFor(inventory:SessionCharacterInventoryVm,command:DmInventoryAd
     detail:[`requestId: ${command.requestId}`,"Host 권위 · 원자적 Character inventory 변경"],
     stateChanges:cp(changes),
   };
+}
+
+function activeState(item:ItemInstanceVm|undefined) {
+  return item?{equipped:item.equipped,wielded:item.wielded??false,wieldSlot:item.wieldSlot,attuned:item.attuned??false}:undefined;
+}
+
+function sameActiveState(left:ItemInstanceVm,right:ItemInstanceVm) {
+  return JSON.stringify(activeState(left))===JSON.stringify(activeState(right));
+}
+
+function restoreActiveState(target:ItemInstanceVm,source:ItemInstanceVm) {
+  target.equipped=source.equipped;
+  target.wielded=source.wielded;
+  target.attuned=source.attuned;
+  if(source.wieldSlot) target.wieldSlot=source.wieldSlot; else delete target.wieldSlot;
+}
+
+function revertMutation(current:SessionCharacterInventoryVm,undo:InventoryUndoRecord) {
+  const next=cp(current);
+  const goldDelta=undo.after.goldGp-undo.before.goldGp;
+  if(goldDelta>0&&next.goldGp<goldDelta) throw new Error("이후 재화 변경 때문에 해당 지급만 안전하게 취소할 수 없습니다.");
+  next.goldGp-=goldDelta;
+
+  const ids=new Set([...undo.before.items,...undo.after.items].map((item)=>item.id));
+  for(const id of ids){
+    const beforeItem=undo.before.items.find((item)=>item.id===id);
+    const afterItem=undo.after.items.find((item)=>item.id===id);
+    const beforeQuantity=beforeItem?.quantity??0;
+    const afterQuantity=afterItem?.quantity??0;
+    const delta=afterQuantity-beforeQuantity;
+    let currentItem=next.items.find((item)=>item.id===id);
+
+    if(delta>0){
+      if(!currentItem||currentItem.quantity<delta) throw new Error("이후 아이템 변경 때문에 해당 지급만 안전하게 취소할 수 없습니다.");
+      currentItem.quantity-=delta;
+      if(currentItem.quantity===0){next.items=next.items.filter((item)=>item.id!==id);currentItem=undefined;}
+    }else if(delta<0){
+      const restoreQuantity=-delta;
+      if(currentItem) currentItem.quantity+=restoreQuantity;
+      else if(beforeItem){
+        currentItem={...cp(beforeItem),quantity:restoreQuantity};
+        next.items.push(currentItem);
+      }
+    }
+
+    if(beforeItem&&afterItem&&!sameActiveState(beforeItem,afterItem)){
+      currentItem=next.items.find((item)=>item.id===id);
+      if(!currentItem) throw new Error("장착 상태를 복원할 아이템이 없습니다.");
+      if(!sameActiveState(currentItem,afterItem)) throw new Error("이후 장착 상태 변경 때문에 해당 회수만 안전하게 취소할 수 없습니다.");
+      restoreActiveState(currentItem,beforeItem);
+    }
+  }
+  next.revision=current.revision+1;
+  return next;
+}
+
+export function refreshSessionCharacterInventoryProjection(adapter:MockAdapter,inventory:SessionCharacterInventoryVm) {
+  const context=contextFor(adapter);
+  context.inventories.set(inventory.characterId,cp(inventory));
 }
 
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithSessionInventories() {
@@ -221,25 +285,27 @@ MockAdapter.prototype.adjustDmInventory=async function adjustDmInventory(command
   }
   context.inventories.set(command.actorId,draft);
   context.requestIds.add(command.requestId);
-  context.lastUndo={requestId:command.requestId,activityId:activity.id,actorId:command.actorId,before};
+  context.undoByRequest.set(command.requestId,{requestId:command.requestId,activityId:activity.id,actorId:command.actorId,before,after:cp(draft)});
+  context.lastUndoRequestId=command.requestId;
   return this.getSnapshot();
 };
 
-MockAdapter.prototype.undoLastDmInventoryAdjustment=async function undoLastDmInventoryAdjustment() {
+MockAdapter.prototype.undoDmInventoryAdjustment=async function undoDmInventoryAdjustment(requestId:string) {
   const snapshot=await this.getSnapshot();
   const context=contextFor(this,snapshot);
-  const undo=context.lastUndo;
-  if (!undo) return snapshot;
+  const undo=context.undoByRequest.get(requestId);
+  if(!undo) return snapshot;
+  const current=inventoryFor(context,snapshot,undo.actorId);
+  const restore=revertMutation(current,undo);
   const state=this as unknown as AdapterState;
-  const restore=cp(undo.before);
   const undoActivity:ActivityEntry={
-    id:`evt.dm-inventory-undo.${Date.now()}`,
+    id:`evt.dm-inventory-undo.${Date.now()}.${Math.floor(Math.random()*1000)}`,
     time:"지금",
     actor:"DM",
     title:`${restore.characterName} 소지품 변경 실행 취소`,
-    summary:"직전 지급·회수 상태를 복원했습니다.",
-    detail:[`undoOf: ${undo.activityId}`],
-    stateChanges:["아이템·GP 이전 상태 복원"],
+    summary:"선택한 지급·회수 변경만 보상 처리했습니다.",
+    detail:[`undoOf: ${undo.activityId}`,`requestId: ${requestId}`],
+    stateChanges:["아이템·GP request delta 보상"],
     correction:true,
     undoOf:undo.activityId,
   };
@@ -256,8 +322,18 @@ MockAdapter.prototype.undoLastDmInventoryAdjustment=async function undoLastDmInv
   }
   context.inventories.set(undo.actorId,restore);
   context.requestIds.delete(undo.requestId);
-  context.lastUndo=null;
+  context.undoByRequest.delete(undo.requestId);
+  if(context.lastUndoRequestId===undo.requestId){
+    const remaining=[...context.undoByRequest.keys()];
+    context.lastUndoRequestId=remaining.length?remaining[remaining.length-1]:null;
+  }
   return this.getSnapshot();
+};
+
+MockAdapter.prototype.undoLastDmInventoryAdjustment=async function undoLastDmInventoryAdjustment() {
+  const snapshot=await this.getSnapshot();
+  const context=contextFor(this,snapshot);
+  return context.lastUndoRequestId?this.undoDmInventoryAdjustment(context.lastUndoRequestId):snapshot;
 };
 
 export {};
