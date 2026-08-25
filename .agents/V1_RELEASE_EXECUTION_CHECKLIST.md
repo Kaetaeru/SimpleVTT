@@ -645,13 +645,13 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R0 canonical remote reconcile
+R1 Fighter Indomitable failed saving-throw follow-up
 ```
 
-1. 통합 상태는 exact checkpoint `e5223da`에서 full TS matrix 1303/1303와 production build가 green이다.
-2. GitHub credential을 복구한다.
-3. canonical `work/v1-composite`를 fetch한 뒤 fast-forward 관계를 확인하고 checkpoint를 push한다.
-4. 그 다음 open ability-check DM DC → Tactical Mind → Indomitable → Rage → Wild Shape → Monk Focus → Rogue Cunning/Uncanny 순서로 진행한다.
+1. 통합 상태는 exact checkpoint `e12727d`에서 full TS matrix 1303/1303, UI matrix 962/962와 production build가 green이다.
+2. open ability-check DM DC와 generic Tactical Mind는 완료했다.
+3. Indomitable → Rage → Wild Shape → Monk Focus → Rogue Cunning/Uncanny 순서로 진행한다.
+4. GitHub credential 복구 후 canonical `work/v1-composite`를 fetch하고 fast-forward 관계 확인 뒤 checkpoint를 push한다.
 5. 각 신규 행동은 connected remote-owner exactly-once/reconnect/Undo matrix 없이는 완료 처리하지 않는다.
 
 상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.
