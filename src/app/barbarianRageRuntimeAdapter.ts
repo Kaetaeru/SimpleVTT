@@ -10,10 +10,9 @@ import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotA
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
-import { BARBARIAN_RAGE_TAG, resolveBarbarianRageEnd, resolveBarbarianRageStart } from "../domain/barbarianRage";
+import { BARBARIAN_RAGE_TAG, resolveBarbarianRageStart } from "../domain/barbarianRage";
 
 const ACTION_ID="action.barbarian.rage";
-const END_ACTION_ID="action.barbarian.rage.end";
 type ArmorDef={training?:"light"|"medium"|"heavy"};
 interface AdapterState {
   sessionMode:SessionMode;
@@ -85,50 +84,33 @@ function rageAction(adapter:MockAdapter,internal:AdapterState,snapshot:AppSnapsh
   };
 }
 
-function rageEndAction(adapter:MockAdapter,internal:AdapterState,snapshot:AppSnapshot):ActionVm|undefined {
-  const character=snapshot.activeCharacter;
-  if(!barbarianLevel(character)||!activeRage(adapter,internal))return undefined;
-  return {
-    id:END_ACTION_ID,actorId:character.id,name:"격노 종료",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",
-    summary:"현재 격노를 종료합니다.",available:true,eligibleTargetIds:[character.id],
-    details:[{label:"출처",value:"SRD 5.2.1 · Barbarian Rage"}],
-  };
-}
-
-function syncRageAction(actions:ActionVm[],actionId:string,action:ActionVm|undefined) {
-  const index=actions.findIndex((entry)=>entry.id===actionId);
-  if(!action){if(index>=0)actions.splice(index,1);return;}
-  if(index>=0)actions[index]=action;else actions.push(action);
-}
-
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithBarbarianRageAction(){
   const internal=this as unknown as AdapterState;
   const snapshot=await previousGetSnapshot.call(this);
+  const action=rageAction(this,internal,snapshot);
   const actions=snapshot.scene.actionsByActor[snapshot.activeCharacter.id];
   if(!actions)return snapshot;
-  syncRageAction(actions,ACTION_ID,rageAction(this,internal,snapshot));
-  syncRageAction(actions,END_ACTION_ID,rageEndAction(this,internal,snapshot));
+  const index=actions.findIndex((entry)=>entry.id===ACTION_ID);
+  if(!action){if(index>=0)actions.splice(index,1);return snapshot;}
+  if(index>=0)actions[index]=action;else actions.push(action);
   return snapshot;
 };
 
 MockAdapter.prototype.resolveAction=async function resolveBarbarianRageFromHotbar(actionId:string,targetIds:string[]){
-  if(actionId!==ACTION_ID&&actionId!==END_ACTION_ID)return previousResolveAction.call(this,actionId,targetIds);
+  if(actionId!==ACTION_ID)return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as AdapterState;
   const snapshot=await internal.getSnapshot();
-  const action=snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id===actionId);
+  const action=snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id===ACTION_ID);
   const actor=internal.activeCharacter;
   const level=barbarianLevel(actor);
   if(!action?.available||targetIds.length!==1||targetIds[0]!==actor.id||!level)return snapshot;
-  const ending=actionId===END_ACTION_ID;
-  const state=ending?snapshotAdapterTurnRuntimeState(this,internal.scene):seedRageResource(this,internal);
+  const state=seedRageResource(this,internal);
   if(!state||!state.combatants[actor.id])return snapshot;
-  const resolutionId=`barbarian.rage.${ending?"end":"start"}.${Date.now()}.${Math.floor(Math.random()*1000)}`;
-  const committed=ending
-    ?resolveBarbarianRageEnd(SIMPLEVTT_APP_RULES_PROFILE,state,{id:resolutionId,actorId:actor.id,expectedRevision:state.revision})
-    :resolveBarbarianRageStart(SIMPLEVTT_APP_RULES_PROFILE,state,{
-      id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
-      wearingHeavyArmor:wearingHeavyArmor(actor),useBonusActionEconomy:internal.sessionMode==="initiative",
-    });
+  const resolutionId=`barbarian.rage.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const committed=resolveBarbarianRageStart(SIMPLEVTT_APP_RULES_PROFILE,state,{
+    id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
+    wearingHeavyArmor:wearingHeavyArmor(actor),useBonusActionEconomy:internal.sessionMode==="initiative",
+  });
   if(committed.status==="rejected")return snapshot;
   const projected=applyResolutionEvents(internal.scene,committed.events,actor.resources,actor.items,state);
   if(projected.status==="rejected")return snapshot;
@@ -141,12 +123,10 @@ MockAdapter.prototype.resolveAction=async function resolveBarbarianRageFromHotba
   internal.scene=projected.scene;
   internal.activeCharacter.resources=projected.resources;
   const session=turnRuntimeSessions.get(this);if(session)projectTurnRuntimeToScene(session,internal.scene);
-  const outcome=ending?"격노 종료":"격노 시작";
   const resolution:ResolutionView={
-    id:resolutionId,actorId:actor.id,targetIds:[actor.id],actionId,actionName:action.name,rollKind:"effect",stage:"complete",
-    authoritativeDice:[],saveResults:[],damageComponents:[],compact:outcome,
-    detail:[ending?"활성 격노 효과 종료":"근력 판정/내성 이점 · 물리 피해 저항 · 근력 공격 Rage Damage"],
-    provenance:["SRD 5.2.1 · Barbarian Rage"],calculatedOutcome:outcome,finalOutcome:outcome,stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
+    id:resolutionId,actorId:actor.id,targetIds:[actor.id],actionId:ACTION_ID,actionName:"격노",rollKind:"effect",stage:"complete",
+    authoritativeDice:[],saveResults:[],damageComponents:[],compact:"격노 시작",detail:["근력 판정/내성 이점 · 물리 피해 저항 · 근력 공격 Rage Damage"],
+    provenance:["SRD 5.2.1 · Barbarian Rage"],calculatedOutcome:"격노 시작",finalOutcome:"격노 시작",stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
   };
   internal.resolution=resolution;
   internal.activity.unshift(projectResolutionEventsToActivity({resolution,events:committed.events,actorName:actor.name,targetNames:[actor.name]}));
