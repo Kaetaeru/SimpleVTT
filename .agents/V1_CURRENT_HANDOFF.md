@@ -10,17 +10,17 @@ Canonical target branch: **`work/v1-composite`**
 ## 1. 현재 로컬 기준선
 
 - 실제 작업 브랜치: `codex/v1-multiplayer`
-- 현재 커밋: `a8f0f4ed436e71dfcbac1b387407546369a95849`
-- 로컬 HEAD: 캐시된 `origin/work/v1-composite`보다 18 commits ahead
+- 검증된 제품 checkpoint: `e5223da02c5e6541cb0dfa38f17c93123284205c`
+- 로컬 HEAD: 캐시된 `origin/work/v1-composite`보다 19 commits ahead
 - 마지막 확인된 원격 ref: `a2e5f3f5e342e57fbe8bb6925b071bcb6a563c98`
-- 원격 재확인: Windows Git credential `SEC_E_NO_CREDENTIALS`로 fetch 실패
-- 작업 트리: 156 tracked files modified, 52 untracked files
+- 원격 재확인: checkpoint 생성 후에도 Windows Git credential `SEC_E_NO_CREDENTIALS`로 fetch 실패
+- 작업 트리: clean
 
-따라서 현재 최신 제품은 **로컬 작업 트리**이며 아직 exact Git SHA나 GitHub 원격 상태로 보존됐다고 주장할 수 없다. 파일을 잃거나 stale branch에서 계속하지 않도록 전체 회귀 정리 후 통합 checkpoint를 먼저 만든다.
+따라서 현재 최신 제품은 로컬 exact checkpoint **`e5223da`**로 보존됐지만 아직 GitHub `work/v1-composite`에 push됐다고 주장할 수 없다.
 
 ## 2. 2026-08-25 실행 증거
 
-### Green
+### Green — exact checkpoint `e5223da`
 
 - `npm run build`
   - UI named-rule boundary: 3 pass
@@ -66,9 +66,9 @@ Source-complete는 release DONE이 아니다. 아래 acceptance와 exact-head �
 - [x] 16개 전체 matrix 실패를 최신 계약에 맞게 분류·수정한다.
 - [x] 전체 TS matrix를 1303/1303 green으로 만든다.
 - [x] npm 11 + tracked `package-lock.json`을 V1 package-manager 기준으로 확정하고 pnpm 메타데이터를 제외한다.
-- [ ] generated output, launcher, source, tests를 검토하고 현재 작업을 통합 checkpoint로 commit한다.
+- [x] generated output, launcher, source, tests를 검토하고 `e5223da` 통합 checkpoint로 commit했다.
 - [ ] `work/v1-composite`와 원격을 자격 증명이 가능한 환경에서 reconcile한다.
-- [ ] 이후 모든 검증은 한 exact SHA를 기록한다.
+- [x] 전체 matrix와 production build를 exact SHA `e5223da`에서 재검증했다.
 
 Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계가 설명 가능하다.
 
@@ -139,8 +139,9 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 다음 작업은 새 클래스 기능 구현이 아니다.
 
 ```text
-현재 dirty integration의 generated output, launcher, source, tests 검토
--> exact checkpoint로 commit
+GitHub credential 복구
+-> `git fetch origin work/v1-composite`
+-> fast-forward 확인 후 `git push origin HEAD:work/v1-composite`
 -> open ability-check DM DC + Tactical Mind
 ```
 

@@ -645,12 +645,12 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R0 integration baseline lock
+R0 canonical remote reconcile
 ```
 
-1. 현재 dirty integration의 generated output, launcher, source, tests를 검토한다.
-2. 검토된 통합 상태를 exact checkpoint로 commit한다.
-3. canonical `work/v1-composite`와 원격을 reconcile한다.
+1. 통합 상태는 exact checkpoint `e5223da`에서 full TS matrix 1303/1303와 production build가 green이다.
+2. GitHub credential을 복구한다.
+3. canonical `work/v1-composite`를 fetch한 뒤 fast-forward 관계를 확인하고 checkpoint를 push한다.
 4. 그 다음 open ability-check DM DC → Tactical Mind → Indomitable → Rage → Wild Shape → Monk Focus → Rogue Cunning/Uncanny 순서로 진행한다.
 5. 각 신규 행동은 connected remote-owner exactly-once/reconnect/Undo matrix 없이는 완료 처리하지 않는다.
 
