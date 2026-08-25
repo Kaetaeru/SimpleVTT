@@ -63,6 +63,12 @@ export function compileBarbarianRageStart(
     });
   }
   operations.push({
+    id:`${request.id}:concentration`,
+    kind:"end-concentration",
+    actorId:request.actorId,
+    reason:"Rage prevents maintaining Concentration",
+  });
+  operations.push({
     id:`${request.id}:effect`,
     kind:"apply-effect",
     effect:{
