@@ -5,6 +5,7 @@ import {
   BARBARIAN_RAGE_TAG,
   barbarianRageDamageBonus,
   resolveBarbarianRageEnd,
+  resolveBarbarianRageExtend,
   resolveBarbarianRageStart,
 } from "../../src/domain/barbarianRage";
 import { BARBARIAN_RAGE_RESOURCE_ID, BERSERKER_MINDLESS_RAGE_TAG } from "../../src/domain/barbarianBerserker";
@@ -51,6 +52,8 @@ test("Rage start atomically spends one use, spends Bonus Action, and installs ph
   assert.ok(rage);
   assert.equal(rage?.expiry.kind,"special");
   assert.equal(rage?.metadata?.rageDamageBonus,2);
+  assert.equal(rage?.metadata?.rageExpiresAfterRound,2);
+  assert.equal(rage?.metadata?.rageMaximumRound,101);
   assert.ok(rage?.tags.includes("damage-resistance:bludgeoning"));
   assert.ok(rage?.tags.includes("damage-resistance:piercing"));
   assert.ok(rage?.tags.includes("damage-resistance:slashing"));
@@ -219,5 +222,141 @@ test("Rage end clears the core marker and Rage-linked Berserker effects together
   assert.equal(ended.state.effects.some((effect) => effect.targetId === "hero" && (
     effect.tags.includes(BARBARIAN_RAGE_TAG)
     || (effect.expiry.kind === "special" && effect.expiry.key === BARBARIAN_RAGE_DURATION_KEY)
+  )),false);
+});
+
+test("Rage expires at the end of the Barbarian's next turn when it is not extended", () => {
+  const started=resolveBarbarianRageStart(TEST_PROFILE,rageState(),{
+    id:"rage.duration.start",actorId:"hero",expectedRevision:0,barbarianLevel:5,wearingHeavyArmor:false,useBonusActionEconomy:false,
+  });
+  assert.equal(started.status,"committed");
+  if(started.status!=="committed")return;
+  const currentEnd=resolvePendingResolution(TEST_PROFILE,started.state,{
+    id:"rage.duration.end-1",actorId:"hero",sourceId:"turn:test",expectedRevision:started.state.revision,
+    operations:[{id:"rage.duration.end-1:turn",kind:"end-turn",actorId:"hero",round:1}],
+  });
+  assert.equal(currentEnd.status,"committed");
+  if(currentEnd.status!=="committed")return;
+  assert.ok(currentEnd.state.effects.some((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG)));
+  const nextEnd=resolvePendingResolution(TEST_PROFILE,currentEnd.state,{
+    id:"rage.duration.end-2",actorId:"hero",sourceId:"turn:test",expectedRevision:currentEnd.state.revision,
+    operations:[{id:"rage.duration.end-2:turn",kind:"end-turn",actorId:"hero",round:2}],
+  });
+  assert.equal(nextEnd.status,"committed");
+  if(nextEnd.status!=="committed")return;
+  assert.equal(nextEnd.state.effects.some((effect)=>effect.targetId==="hero"&&(
+    effect.tags.includes(BARBARIAN_RAGE_TAG)||(effect.expiry.kind==="special"&&effect.expiry.key===BARBARIAN_RAGE_DURATION_KEY)
+  )),false);
+});
+
+test("an attack roll against an enemy extends Rage even when the attack misses", () => {
+  const started=resolveBarbarianRageStart(TEST_PROFILE,rageState(),{
+    id:"rage.attack.start",actorId:"hero",expectedRevision:0,barbarianLevel:5,wearingHeavyArmor:false,useBonusActionEconomy:false,
+  });
+  assert.equal(started.status,"committed");
+  if(started.status!=="committed")return;
+  const turn=resolvePendingResolution(TEST_PROFILE,started.state,{
+    id:"rage.attack.turn",actorId:"hero",sourceId:"turn:test",expectedRevision:started.state.revision,
+    operations:[{id:"rage.attack.turn:begin",kind:"begin-turn",actorId:"hero",round:2}],
+  });
+  assert.equal(turn.status,"committed");
+  if(turn.status!=="committed")return;
+  const attack=resolvePendingResolution(TEST_PROFILE,turn.state,{
+    id:"rage.attack.roll",actorId:"hero",sourceId:"weapon:test",expectedRevision:turn.state.revision,
+    operations:[
+      {
+        id:"rage.attack.target",kind:"targeting",sourceId:"hero",harmful:true,
+        rule:{kind:"creature",rangeFeet:5,minTargets:1,maxTargets:1,allowedRelations:["enemy"],requiresSight:true,directTarget:true},
+        targets:[{id:"goblin",kind:"creature",relation:"enemy",distanceFeet:5,visible:true,cover:"none"}],
+      },
+      {
+        id:"rage.attack.d20",kind:"d20",actorId:"hero",targetId:"goblin",
+        request:{family:"attack-roll",target:30,modifierContributions:[],dice:{id:"rage.attack.d20",purpose:"attack",sides:20,faces:[2]}},
+      },
+    ],
+  });
+  assert.equal(attack.status,"committed");
+  if(attack.status!=="committed")return;
+  const marker=attack.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG));
+  assert.equal(marker?.metadata?.rageExpiresAfterRound,3);
+  const endRound2=resolvePendingResolution(TEST_PROFILE,attack.state,{
+    id:"rage.attack.end-2",actorId:"hero",sourceId:"turn:test",expectedRevision:attack.state.revision,
+    operations:[{id:"rage.attack.end-2:turn",kind:"end-turn",actorId:"hero",round:2}],
+  });
+  assert.equal(endRound2.status,"committed");
+  if(endRound2.status!=="committed")return;
+  assert.ok(endRound2.state.effects.some((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG)));
+});
+
+test("forcing an enemy saving throw on the Barbarian's turn extends Rage", () => {
+  const started=resolveBarbarianRageStart(TEST_PROFILE,rageState(),{
+    id:"rage.save.start",actorId:"hero",expectedRevision:0,barbarianLevel:5,wearingHeavyArmor:false,useBonusActionEconomy:false,
+  });
+  assert.equal(started.status,"committed");
+  if(started.status!=="committed")return;
+  const turn=resolvePendingResolution(TEST_PROFILE,started.state,{
+    id:"rage.save.turn",actorId:"hero",sourceId:"turn:test",expectedRevision:started.state.revision,
+    operations:[{id:"rage.save.turn:begin",kind:"begin-turn",actorId:"hero",round:2}],
+  });
+  assert.equal(turn.status,"committed");
+  if(turn.status!=="committed")return;
+  const save=resolvePendingResolution(TEST_PROFILE,turn.state,{
+    id:"rage.save.roll",actorId:"hero",sourceId:"feature:test",expectedRevision:turn.state.revision,
+    operations:[
+      {
+        id:"rage.save.target",kind:"targeting",sourceId:"hero",harmful:true,
+        rule:{kind:"creature",rangeFeet:30,minTargets:1,maxTargets:1,allowedRelations:["enemy"],requiresSight:true,directTarget:true},
+        targets:[{id:"goblin",kind:"creature",relation:"enemy",distanceFeet:10,visible:true,cover:"none"}],
+      },
+      {
+        id:"rage.save.d20",kind:"d20",actorId:"goblin",
+        request:{family:"saving-throw",target:14,modifierContributions:[],dice:{id:"rage.save.d20",purpose:"save",sides:20,faces:[18]}},
+      },
+    ],
+  });
+  assert.equal(save.status,"committed");
+  if(save.status!=="committed")return;
+  assert.equal(save.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG))?.metadata?.rageExpiresAfterRound,3);
+});
+
+test("Rage can spend a dedicated Bonus Action to extend and cannot stack that extension", () => {
+  const started=resolveBarbarianRageStart(TEST_PROFILE,rageState(),{
+    id:"rage.bonus.start",actorId:"hero",expectedRevision:0,barbarianLevel:5,wearingHeavyArmor:false,useBonusActionEconomy:false,
+  });
+  assert.equal(started.status,"committed");
+  if(started.status!=="committed")return;
+  const turn=resolvePendingResolution(TEST_PROFILE,started.state,{
+    id:"rage.bonus.turn",actorId:"hero",sourceId:"turn:test",expectedRevision:started.state.revision,
+    operations:[{id:"rage.bonus.turn:begin",kind:"begin-turn",actorId:"hero",round:2}],
+  });
+  assert.equal(turn.status,"committed");
+  if(turn.status!=="committed")return;
+  const extended=resolveBarbarianRageExtend(TEST_PROFILE,turn.state,{
+    id:"rage.bonus.extend",actorId:"hero",expectedRevision:turn.state.revision,
+  });
+  assert.equal(extended.status,"committed");
+  if(extended.status!=="committed")return;
+  assert.equal(extended.state.combatants.hero.economy.bonusAction,false);
+  assert.equal(extended.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG))?.metadata?.rageExpiresAfterRound,3);
+  const duplicate=resolveBarbarianRageExtend(TEST_PROFILE,extended.state,{
+    id:"rage.bonus.extend-again",actorId:"hero",expectedRevision:extended.state.revision,
+  });
+  assert.equal(duplicate.status,"rejected");
+});
+
+test("Rage and linked effects expire after the 10 minute maximum duration", () => {
+  const started=resolveBarbarianRageStart(TEST_PROFILE,rageState(),{
+    id:"rage.maximum.start",actorId:"hero",expectedRevision:0,barbarianLevel:5,wearingHeavyArmor:false,useBonusActionEconomy:false,
+  });
+  assert.equal(started.status,"committed");
+  if(started.status!=="committed")return;
+  const advanced=resolvePendingResolution(TEST_PROFILE,started.state,{
+    id:"rage.maximum.time",actorId:"hero",sourceId:"time:test",expectedRevision:started.state.revision,
+    operations:[{id:"rage.maximum.time:advance",kind:"advance-time",elapsedSeconds:600}],
+  });
+  assert.equal(advanced.status,"committed");
+  if(advanced.status!=="committed")return;
+  assert.equal(advanced.state.effects.some((effect)=>effect.targetId==="hero"&&(
+    effect.tags.includes(BARBARIAN_RAGE_TAG)||(effect.expiry.kind==="special"&&effect.expiry.key===BARBARIAN_RAGE_DURATION_KEY)
   )),false);
 });
