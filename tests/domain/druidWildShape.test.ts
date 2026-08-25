@@ -147,6 +147,22 @@ test("voluntary Wild Shape exit removes only the form marker and uses Bonus Acti
   assert.equal(ended.state.combatants.hero.life.hp.temporary,2);
 });
 
+test("starting Wild Shape preserves existing Concentration", () => {
+  const state=druidState();
+  state.concentration.hero={actorId:"hero",groupId:"spell:moonbeam",sourceId:"spell:moonbeam"};
+  const result=resolveDruidWildShapeStart(TEST_PROFILE,state,{
+    id:"wild-shape.concentration",
+    actorId:"hero",
+    expectedRevision:state.revision,
+    druidLevel:2,
+    form:wolf,
+    useBonusActionEconomy:false,
+  });
+  assert.equal(result.status,"committed");
+  if(result.status!=="committed") return;
+  assert.deepEqual(result.state.concentration.hero,state.concentration.hero);
+});
+
 test("Druid level 18 Wild Shape marker records Beast Spells casting permission", () => {
   const state=druidState();
   const result=resolveDruidWildShapeStart(TEST_PROFILE,state,{
