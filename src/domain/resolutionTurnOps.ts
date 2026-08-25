@@ -2,6 +2,7 @@ import { beginTurn } from "./turnEconomy";
 import { conditionActionAvailability, effectiveSpeed } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
 import { expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
+import { expireBarbarianRageAtClock } from "./barbarianRageLifecycle";
 import { recoverResources } from "./resources";
 import { economyStateChanges } from "./stateChange";
 import { effectStateChange, type RuntimeStateChange } from "./runtimeStateChange";
@@ -14,6 +15,16 @@ type BeginTurnOp = Extract<ResolutionOperation, { kind:"begin-turn" }>;
 type EndTurnOp = Extract<ResolutionOperation, { kind:"end-turn" }>;
 type AdvanceTimeOp = Extract<ResolutionOperation, { kind:"advance-time" }>;
 
+function expireRuntimeEffects(ctx:ResolutionExecutionContext) {
+  const generic=expireEffectsAtClock(ctx.state.effects,ctx.state.clock);
+  const rage=expireBarbarianRageAtClock(generic.active,ctx.state.clock);
+  return {
+    active:rage.active,
+    expired:[...generic.expired,...rage.expired],
+    provenance:[...generic.provenance,...rage.provenance],
+  };
+}
+
 export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:BeginTurnOp):OperationExecution {
   const actor = requireCombatant(ctx.state, operation.actorId);
   ctx.state.clock = {
@@ -23,7 +34,7 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
     phase:"start",
   };
   ctx.state.turnFeatureUsage = { actorId:operation.actorId, featureIds:[] };
-  const expiry = expireEffectsAtClock(ctx.state.effects, ctx.state.clock);
+  const expiry = expireRuntimeEffects(ctx);
   ctx.state.effects = resetEffectTurnActivity(expiry.active, operation.actorId);
 
   const conditions = conditionEffectsFor(ctx.state, operation.actorId);
@@ -68,7 +79,7 @@ export function executeEndTurn(ctx:ResolutionExecutionContext, operation:EndTurn
     activeActorId:operation.actorId,
     phase:"end",
   };
-  const expiry = expireEffectsAtClock(ctx.state.effects, ctx.state.clock);
+  const expiry = expireRuntimeEffects(ctx);
   ctx.state.effects = expiry.active;
   const changes = expiry.expired.map((effect) =>
     effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined),
@@ -89,7 +100,7 @@ export function executeAdvanceTime(ctx:ResolutionExecutionContext, operation:Adv
     throw new DomainEvaluationError("elapsed time cannot move backwards");
   }
   ctx.state.clock = { ...ctx.state.clock, elapsedSeconds:operation.elapsedSeconds };
-  const expiry = expireEffectsAtClock(ctx.state.effects, ctx.state.clock);
+  const expiry = expireRuntimeEffects(ctx);
   ctx.state.effects = expiry.active;
   const changes = expiry.expired.map((effect) =>
     effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined),
