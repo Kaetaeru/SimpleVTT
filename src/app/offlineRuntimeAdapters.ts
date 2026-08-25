@@ -69,6 +69,7 @@ import "./unarmedControlRuntimeAdapter";
 import "./bardicInspirationActionRuntimeAdapter";
 import "./bardicInspirationFollowUpRuntimeAdapter";
 import "./fighterTacticalMindFollowUpRuntimeAdapter";
+import "./fighterIndomitableFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";

@@ -16,6 +16,14 @@ import { projectResolutionEventsToActivity } from "./realActivityProjectionServi
 import { undoResolutionEvents } from "./realEventUndoService";
 import { resolveRuntimeSaveModifier } from "./realRuntimeStatProvider";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
+import { projectedCharacterById } from "./characterSessionProjectionRegistry";
+import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
+import {
+  clearFighterIndomitableResolution,
+  fighterIndomitableModifierBonus,
+  synchronizeFighterIndomitableProjectedResources,
+} from "./fighterIndomitableRuntimeState";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface BeforeState {
@@ -105,15 +113,20 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
       if (!entity||!economy) throw new Error(`atomic saving-throw target/economy state is missing: ${preview.targetId}`);
       const stat=resolveRuntimeSaveModifier(
         entity,
-        before.activeCharacter,
+        preview.targetId===before.activeCharacter.id
+          ? before.activeCharacter
+          : projectedCharacterById(this,preview.targetId)?.sheet ?? before.activeCharacter,
         action!.saveAbility ?? "내성",
         internal.combatantDefinitions,
       );
+      const indomitableBonus=fighterIndomitableModifierBonus(this,resolution.id,preview.targetId);
       return {
         entity,
         economy,
-        modifier:stat.modifier,
-        modifierSource:stat.source,
+        modifier:stat.modifier+indomitableBonus,
+        modifierSource:indomitableBonus
+          ? `${stat.source}+feature:fighter.indomitable`
+          : stat.source,
         d20:preview.d20,
         expectedTotal:preview.total,
         expectedOutcome:preview.outcome,
@@ -176,13 +189,18 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
   resolution.canAdvance=false;
   resolution.nextLabel=undefined;
   internal.syncChar();
+  const events=[
+    ...consumeAdapterInterruptEvents(this,resolution.id),
+    ...transaction.events.map((event)=>structuredClone(event)),
+  ];
   internal.activity.unshift(projectResolutionEventsToActivity({
     resolution,
-    events:transaction.events,
+    events,
     actorName:internal.entity(action!.actorId)?.name ?? action!.actorId,
     targetNames:resolution.targetIds.map((id)=>internal.entity(id)?.name ?? id),
   }));
-  histories.set(this,{ resolutionId:resolution.id,events:transaction.events.map((event)=>structuredClone(event)) });
+  histories.set(this,{ resolutionId:resolution.id,events });
+  clearFighterIndomitableResolution(this,resolution.id);
   internal.lastBefore=null;
   internal.lastResolutionId=resolution.id;
   internal.before=null;
@@ -193,11 +211,13 @@ MockAdapter.prototype.undoLastResolution=async function undoAtomicSavingThrowFro
   const internal=this as unknown as AtomicSavingThrowAdapterState;
   const history=histories.get(this);
   if (!history||internal.lastResolutionId!==history.resolutionId) return previousUndo.call(this);
+  const runtimeState=snapshotAdapterTurnRuntimeState(this,internal.scene);
   const undone=undoResolutionEvents(
     internal.scene,
     history.events,
     internal.activeCharacter.resources,
     internal.activeCharacter.items,
+    runtimeState,
   );
   if (undone.status==="rejected") {
     if (internal.resolution) {
@@ -214,10 +234,16 @@ MockAdapter.prototype.undoLastResolution=async function undoAtomicSavingThrowFro
     }
     return internal.getSnapshot();
   }
+  if(runtimeState&&undone.runtimeState&&!commitAdapterTurnRuntimeState(this,internal.scene,runtimeState.revision,undone.runtimeState)){
+    if(writeBack.changed)await persistCharacterResolutionEvents(this,history.events,"forward");
+    if(internal.resolution)internal.resolution.finalOutcome="Undo 거부: turn runtime revision changed before Undo commit";
+    return internal.getSnapshot();
+  }
   internal.scene=undone.scene;
   internal.activeCharacter.resources=undone.resources.map((resource)=>structuredClone(resource));
   internal.activeCharacter.items=undone.items.map((item)=>structuredClone(item));
   internal.syncChar();
+  synchronizeFighterIndomitableProjectedResources(this);
   internal.activity=internal.activity.map((entry)=>entry.id===history.resolutionId ? { ...entry,reversed:true } : entry);
   internal.activity.unshift({
     id:`phase09.saving-throw-undo.${Date.now()}.${Math.floor(Math.random()*1000)}`,
