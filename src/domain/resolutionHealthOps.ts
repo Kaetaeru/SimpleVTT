@@ -162,12 +162,15 @@ function finalizeDamage(
     appendExpiredEffects(changes, terminated);
   }
 
-  const incapacitated = target.life.unconscious
+  const activeIds = activeConditionIds(conditionEffectsFor(ctx.state, operation.targetId));
+  const unconscious = target.life.unconscious || activeIds.includes("unconscious");
+  const incapacitated = unconscious
     || target.life.dead
-    || activeConditionIds(conditionEffectsFor(ctx.state, operation.targetId)).includes("incapacitated");
+    || activeIds.includes("incapacitated");
   if (incapacitated || target.life.dead) {
     const terminated = terminateEffectsForCreatureState(ctx.state.effects, operation.targetId, {
       incapacitated,
+      unconscious,
       dead:target.life.dead,
     });
     ctx.state.effects = terminated.active;
