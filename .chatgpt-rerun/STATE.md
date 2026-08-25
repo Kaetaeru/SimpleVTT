@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T06:28:16+09:00`
+- checkpointed_at: `2026-08-26T06:31:39+09:00`
 
 ## Durable execution checkpoint
 
@@ -23,18 +23,20 @@ Product progress now checkpointed:
 - `4b723f9f12207331432a11c84724205871f74354` injects active Rage Damage as a flat contribution into the existing base damage component for Strength attacks, preserving the existing damage mitigation/critical path.
 - Review found that an ability-only check would also affect Strength Wild Shape attacks. `152cbedda57e00e8413bd1d7c5fa84d58ca02df7` restricts Rage Damage to `weapon`/`unarmed`; `20cec2f4b08e51335517aace0227cf244ebf2876` adds the focused Wild Shape non-qualification regression.
 - `d8afab713872d529d04d03db3ce48a563c751a7f` and `70735dbc3ac028c85c72f7c9d841f0148335b843` add focused coverage and reuse the existing `end-concentration` operation so starting Rage ends the Barbarian's current Concentration.
+- `501bdf9cc516b01eba5591f0c27f1bfab467d2d8`, `ab8b48af83c874ba7e9e89a67add7cbb2abfde2c`, `2c57f6f695304b945f355622bdcad7b2038a261b`, and `a16db31b320dc0d66206b4b58e299ff04425c14f` add and install the production Rage action, covering resource/Bonus Action spend, freeform economy, Heavy-armor disablement, Activity/Undo integration, and visible active Rage projection.
 
 Validation status:
 
 - Local clone/test execution remains unavailable because the container previously could not resolve `github.com`; no retry loop was used.
 - GitHub combined status for `70735dbc3ac028c85c72f7c9d841f0148335b843` returned no status checks.
 - GitHub workflow lookup for that commit returned no workflow runs.
+- The new production Rage action tests are committed but were not executed in this environment.
 - Therefore no new green test/build claim is made. Historical validated matrices remain preserved and were not repeated.
 
-The canonical V1 Barbarian Rage item remains unfinished. The newly checkpointed attack-damage and Concentration-start behavior must not be reimplemented on resume.
+The canonical V1 Barbarian Rage item remains unfinished. The checkpointed attack-damage, Concentration-start, and production-action behavior must not be reimplemented on resume.
 
 ## Next Exact Action
 
-Resume the same current canonical V1 handoff item from the latest GitHub head. Inspect the existing production action projection, spellcasting gate, and effect/turn-expiry boundaries, then implement only the still-missing Rage behavior through those existing paths. Do not duplicate the completed Rage attack-damage, d20 Advantage, Concentration-break, resource, or Berserker work and do not create a parallel Rage manager.
+Resume the same current canonical V1 handoff item from the latest GitHub head. Inspect the existing spellcasting gate and effect/turn-expiry boundaries, then implement only the still-missing Rage spell-cast prohibition and SRD 5.2.1 duration/extension/automatic termination behavior through those existing paths. Do not duplicate completed Rage action, attack-damage, d20 Advantage, Concentration-break, resource, or Berserker work and do not create a parallel Rage manager.
 
 Keep the same run/sequence/task on `continue` while normal implementation progress remains possible. Product work selection remains owned by the canonical V1 planning chain, not this checkpoint.
