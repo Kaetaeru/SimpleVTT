@@ -78,6 +78,83 @@ test("Rage start atomically spends one use, spends Bonus Action, and installs ph
   assert.equal(damage.finalDamage,9);
 });
 
+test("Rage grants Advantage only to Strength ability checks and saving throws", () => {
+  const started = resolveBarbarianRageStart(TEST_PROFILE,rageState(),{
+    id:"barbarian.rage.strength-advantage",
+    actorId:"hero",
+    expectedRevision:0,
+    barbarianLevel:5,
+    wearingHeavyArmor:false,
+  });
+  assert.equal(started.status,"committed");
+  if (started.status !== "committed") return;
+
+  const resolved = resolvePendingResolution(TEST_PROFILE,started.state,{
+    id:"barbarian.rage.d20-scope",
+    actorId:"hero",
+    sourceId:"test:rage-d20-scope",
+    expectedRevision:started.state.revision,
+    operations:[
+      {
+        id:"rage:str-check",
+        kind:"d20",
+        condition:{ ability:"str" },
+        request:{
+          family:"ability-check",
+          target:10,
+          modifierContributions:[],
+          dice:{ id:"rage:str-check", purpose:"strength check", sides:20, faces:[4,17] },
+        },
+      },
+      {
+        id:"rage:dex-check",
+        kind:"d20",
+        condition:{ ability:"dex" },
+        request:{
+          family:"ability-check",
+          target:10,
+          modifierContributions:[],
+          dice:{ id:"rage:dex-check", purpose:"dexterity check", sides:20, faces:[4,17] },
+        },
+      },
+      {
+        id:"rage:str-save",
+        kind:"d20",
+        condition:{ ability:"str" },
+        request:{
+          family:"saving-throw",
+          target:10,
+          modifierContributions:[],
+          dice:{ id:"rage:str-save", purpose:"strength save", sides:20, faces:[4,17] },
+        },
+      },
+      {
+        id:"rage:dex-save",
+        kind:"d20",
+        condition:{ ability:"dex" },
+        request:{
+          family:"saving-throw",
+          target:10,
+          modifierContributions:[],
+          dice:{ id:"rage:dex-save", purpose:"dexterity save", sides:20, faces:[4,17] },
+        },
+      },
+    ],
+  });
+  assert.equal(resolved.status,"committed");
+  if (resolved.status !== "committed") return;
+  for (const id of ["rage:str-check","rage:str-save"]) {
+    const result = resolved.results[id] as { rollState:string; natural:number };
+    assert.equal(result.rollState,"advantage");
+    assert.equal(result.natural,17);
+  }
+  for (const id of ["rage:dex-check","rage:dex-save"]) {
+    const result = resolved.results[id] as { rollState:string; natural:number };
+    assert.equal(result.rollState,"normal");
+    assert.equal(result.natural,4);
+  }
+});
+
 test("Rage rejects Heavy armor and duplicate activation without spending another resource", () => {
   const heavy = rageState();
   const blocked = resolveBarbarianRageStart(TEST_PROFILE,heavy,{
