@@ -8,77 +8,40 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch: `continue`
+- dispatch: `blocked`
 
-Preserve all existing V1-12/V1-13 durability, Campaign authority, Party Stash approval/compensation/outcome work, ration conversion authority, bundled ration source, and DM Library privacy/materialization/organization work. Do not replay stale selector/approval TODO prose. Comprehensive Codex audit remains deferred until implementation freeze.
+Preserve all source-complete work and validation evidence already recorded by the canonical V1 handoff. Do not repeat Fighter Indomitable or older V1-13 work. Comprehensive Codex audit remains deferred until implementation freeze.
 
-## Reconciliation
+## Preflight reconciliation — 2026-08-26
 
-This execution re-read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order and reconciled `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, `docs/design/campaign-systems.md`, and actual `work/v1-composite` state.
+The watcher re-read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled actual `work/v1-composite`, `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, and the available design/source paths.
 
-At dispatch start the branch was identical to coordination head `a07124eb39e07be9d3a83d6a2c9a5367357262d4`. Immediately before coordination writes it was exactly 8 commits ahead, all attributable to this execution. No divergent concurrent writer was observed.
+The old Rerun checkpoint was stale: it recorded product boundary `9632f5119be427c200b5e1aa92a432df7edd27ca`, while actual GitHub branch HEAD is `7a6d7a4b91b1455034a3d4d441d8e9ea5964ca93`.
 
-Latest product/test boundary: `9632f5119be427c200b5e1aa92a432df7edd27ca`.
+The current canonical V1 handoff is newer than the old Rerun state and is authoritative for remaining work. It records:
 
-## Completed in this execution
+- validated local product checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1`;
+- full TS matrix `1303/1303` green and production build green at that exact checkpoint;
+- Fighter Indomitable complete within the preserved source-complete set;
+- next implementation slice: Barbarian Rage lifecycle;
+- critical source-of-truth caveat: checkpoint `4a4cdb1` is local-only and the handoff explicitly says it cannot be claimed as pushed to `work/v1-composite`.
 
-### Live Session PC preset quick add
+The GitHub branch re-fetch immediately before this coordination write still resolves to `7a6d7a4b91b1455034a3d4d441d8e9ea5964ca93`. No concurrent branch advance was observed during this execution.
 
-- `290da001a8729fc4913cddd736fa4b2ec9b6d32f` — `SessionDmEncounterPane` now lists Campaign `pc-preset` entries alongside existing `npc-definition` entries.
-- The action calls the already-established authoritative `mockAdapter.instantiateCampaignDmLibraryPcPreset(campaignId, entryId)` runtime and then `refresh()`es the AppProvider snapshot. The underlying runtime still materializes a `CombatantDefinitionVm` and calls existing `instantiateCombatant`; no parallel actor mutation path or Player Character ownership path was added.
-- Existing `instantiateCampaignDmLibraryNpc` quick add is preserved unchanged.
-- `568ef5fda14af10ee71ee890c0c7e02c6a9c77d0` — source structure test pins Session preset filtering, DM-only runtime authority, existing Combatant materialization, refresh, and NPC preservation.
+## Blocker
 
-### Private DM Library notes
+Do not implement Barbarian Rage against the older product tree currently reachable from GitHub. Doing so would fork below the handoff's validated `4a4cdb1` baseline and risk duplicating or discarding verified work.
 
-Canonical Campaign design explicitly includes private DM notes together with folders/tags/favorites/recents.
+This execution cannot reconstruct unpublished local commits from the GitHub connector. Local clone/fetch from this environment also lacks usable repository credentials, so the missing product checkpoint cannot be recovered here without an authoritative pushed ref/commit.
 
-- `dd106907029500ad98c44fc1c895c7916ef01fac` — backward-compatible optional `CampaignDmLibraryEntry.noteText` contract; no schema-version bump.
-- `a0fb8aac7f4dbcbdf206d823161fad789e2d21dd` — note writes reuse the existing generic Campaign DM Library upsert transaction and reject blank note bodies after trimming. Existing folder and PC preset validation is preserved; no new store or network route exists.
-- `7a3ea5f956567acd8da400ce68c36ecacae8ac98` — `CampaignDmLibraryNotePanel` provides create/read/search/edit/delete, title/body/tag search, folder assignment/filtering, tags, and favorites. UI states that note originals remain Host Campaign data and are not projected to Players.
-- `4387160505c0a8b3ba7df62c27cfc62e7dde7803` — mounts the note panel in the active Campaign dashboard without replacing ration or organization panels.
-- `3a2885361c0f0d9bfc10fcdfa27a363abe7ea428` — source-authored runtime coverage for blank rejection, normalization, create/update/folder/tags/favorite/delete through the shared Library transaction.
-- `9632f5119be427c200b5e1aa92a432df7edd27ca` — source privacy/structure test pins note CRUD/search/folder/favorite and verifies `CampaignSessionSystemsProjection` contains neither `dmLibrary` nor `noteText`.
-
-### Final selective V1-13 Party Stash re-audit
-
-The remaining equipped/wielded/attuned transfer item is already correctly implemented in `sessionInventoryRuntimeAdapter.ts` and was not changed:
-
-- `revoke-item` rejects an equipped, wielded, or attuned item unless `forceUnequip` is explicitly set.
-- Explicit force clears `equipped`, `wielded`, `attuned`, and `wieldSlot` inside the same inventory mutation before decrement/removal.
-- Undo tracks active state and only restores it when no later conflicting active-state mutation occurred.
-- `campaignRuntimeAdapter.ts` already forwards Party Stash `command.forceUnequip` into this authoritative Character inventory command.
-
-No duplicate implementation was added.
-
-## V1-13 source assessment
-
-Static/selective re-audit now finds the canonical V1-13 source requirements covered across:
-
-- DM Library item/image/PC preset/NPC/custom item/note;
-- folders/tags/favorites/recents/search and Campaign namespace privacy;
-- installed/catalog vs Campaign custom source distinction;
-- Session NPC and PC preset Actor quick-add;
-- image preview/reveal/reconnect restoration;
-- Party Stash item/GP deposit/take-out and shared/dm-approval/dm-managed policies;
-- authoritative atomic/idempotent transfer and owner compensation;
-- equipped/wielded/attuned explicit handling;
-- provider-declared atomic ration conversion and bundled isolated ration source;
-- approval terminal Player FIFO outcomes and restart/session cleanup source paths.
-
-Therefore V1-13 is **SOURCE-COMPLETE / VALIDATION PENDING**, not DONE. Do not update the stale release checklist to DONE until exact-head executable evidence and later acceptance exist.
-
-## Validation status
-
-**NO GREEN CLAIM.** Product/test boundary `9632f5119be427c200b5e1aa92a432df7edd27ca` has no combined GitHub statuses and no commit-associated workflow runs. A single local exact-head checkout retry again failed with:
-
-`Could not resolve host: github.com`
-
-No Node test, TypeScript compile, `generate:content`, Vite build, Tauri/Rust, or Windows two-instance success is claimed.
+The handoff also references `docs/design/session-action-resolution.md` and `docs/design/limited-feature-resources.md`, but those paths are absent from the current GitHub branch. Treat those pointers as stale until the validated product checkpoint is published/reconciled.
 
 ## Next Exact Action
 
-1. Re-read README -> control -> STATE -> PLAN and reconcile actual `work/v1-composite`; preserve source through `9632f5119be427c200b5e1aa92a432df7edd27ca` unless GitHub advanced.
-2. Prefer exact-head execution as soon as a runner is available: run the DM Library organization/note/Session-preset tests, bundled-ration/ration-conversion tests, Party Stash approval/owner-transfer tests, `generate:content`, TypeScript and build. Fix actual failures before any green claim.
-3. If execution is still unavailable, do not invent another V1-13 feature. Reconcile the next unresolved canonical release/checklist boundary from GitHub and begin only a demonstrable source gap, while keeping V1-13 at source-complete/validation-pending.
-4. Windows two-instance acceptance remains a later gate. Comprehensive Codex audit remains deferred until implementation freeze.
+1. From the workspace that contains validated checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1`, restore GitHub credentials and reconcile `work/v1-composite` without rewriting verified history.
+2. Push or otherwise publish the exact validated product lineage so `4a4cdb1` and its required descendants are reachable from the canonical GitHub branch/ref.
+3. Re-fetch GitHub and prove the canonical product baseline contains the handoff's validated checkpoint before any new product edit.
+4. Re-arm this same run/sequence by changing control from `blocked` back to `continue` once that source-of-truth repair is complete.
+5. Then implement the next canonical slice only: Barbarian Rage start/end, supported damage resistance, attack/damage qualification and expiry cadence, resource/action economy, manual end, connected exactly-once/reconnect/Undo, with focused deterministic tests.
+
+Do not repeat validated Indomitable work and do not claim new executable verification until it is actually run on the reconciled exact head.
