@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Rerun now routes product work exclusively through the canonical V1 handoff/checklist/design chain. The canonical handoff was reconciled to current GitHub facts. Continue from its current unfinished item without repeating validated work.",
+  "reason": "Core Barbarian Rage domain progress is checkpointed on GitHub. Rage remains incomplete; continue from the current canonical V1 handoff item using the recorded STATE checkpoint without repeating validated work.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T05:29:10+09:00"
+  "updated_at": "2026-08-26T05:43:33+09:00"
 }
