@@ -45,7 +45,10 @@ function weaponFactsByAttackId(character: CharacterSheet) {
     const def = itemMechanic(entry, "weapon-definition") as WeaponDef | undefined;
     if (!def) continue;
     const ability=attackAbility(character,def);
-    facts.set(attack.id, { canonicalRangeFeet:def.mode?canonicalRangeFeet(def):5, ability } as never);
+    facts.set(attack.id, {
+      rangeFeet:canonicalRangeFeet(def),
+      ...(ability?{ability}:{}),
+    });
   }
   return facts;
 }
