@@ -2,7 +2,7 @@
 
 Status: **CANONICAL AI EXECUTION ROUTER**
 Target: **실제 로컬/연결 세션을 처음부터 끝까지 플레이할 수 있는 Windows V1**
-Updated: 2026-08-23
+Updated: 2026-08-25
 
 이 문서는 작업 AI가 다음 구현 작업, 의존성, 검증 및 출시 차단 조건을 빠르게 결정하기 위한 단일 마스터 체크리스트다.
 
@@ -114,19 +114,21 @@ V1-40 + V1-41 + V1-42
 | Workstream | 현재 판단 | 이유 |
 | --- | --- | --- |
 | V1-00 Git baseline | DONE | remote 개발 계보와 로컬 Session Inventory 변경을 `work/v1-composite`에 보존하고 exact-head 검증 완료 |
-| V1-01 Foundation audit | PARTIAL | build/domain/persistence/connected tests 다수 존재, canonical head 재검증 필요 |
-| V1-10 Campaign persistence | PARTIAL | aggregate/repository/application service/Tauri command와 10개 TS 테스트 존재; Rust 실행 증거 대기 |
-| V1-11 Campaign product UI | PARTIAL | Campaign route/dashboard/session binding 완료; recovery/destructive UX 대기 |
-| V1-12 Campaign systems | PARTIAL | roster/calendar/rations/history 기본 workflow 완료; Join roster 편입·Long Rest compound·module profile 대기 |
-| V1-13 Stash/DM Library | TODO | 보관함/DM Library workflow 미구현 |
-| V1-20 Real Character local play | PARTIAL | production Character/skill/spell/inventory tests 존재 |
-| V1-21 Complete local loop | PARTIAL | visible browser path와 전체 human walkthrough 미완료 |
-| V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart adapters/tests 존재 |
-| V1-31~32 Connected play | PARTIAL | protocol/projection/action tests 존재하나 exact-head two-instance proof 없음 |
-| V1-40 DM live operation | PARTIAL | DM combatant/adjudication 및 local inventory grant 일부 존재; Campaign 연동 없음 |
-| V1-41 Spatial fallback | PARTIAL | module host contract 존재; production 기본 거리/fixture facts 제거 필요 |
-| V1-42 Dice | PARTIAL | Three/Cannon 구조 존재; 뒤에서 진입해 실제로 굴러가는 human proof 필요 |
+| V1-01 Foundation audit | PARTIAL | production build와 full TS matrix 1303/1303 green; Rust 증거 대기 |
+| V1-10 Campaign persistence | PARTIAL | TS/application source green; Cargo/Tauri filesystem 실행 증거 대기 |
+| V1-11 Campaign product UI | PARTIAL | route/dashboard/empty/destructive/recovery source 존재; rendered error/migration acceptance 대기 |
+| V1-12 Campaign systems | PARTIAL | roster/providers/calendar/rations/compound Long Rest source와 TS gate green; two-instance 증거 대기 |
+| V1-13 Stash/DM Library | PARTIAL | source-complete, campaign/connected focused tests green; exact checkpoint와 two-instance 증거 대기 |
+| V1-20 Real Character local play | PARTIAL | persisted Character projection, 339 spells, inventory/sheet source 존재; exact artifact walkthrough 대기 |
+| V1-21 Complete local loop | PARTIAL | 기본 전투/행동 다수 완료; 남은 core class action matrix와 human walkthrough 필요 |
+| V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart source와 TS regression green; Tauri 증거 대기 |
+| V1-31~32 Connected play | PARTIAL | 핵심 connected suites green; 신규 action 전체 remote-owner matrix와 two-instance proof 대기 |
+| V1-40 DM live operation | PARTIAL | DM Library/Stash/handout/campaign operation source 존재; action matrix 및 end-to-end acceptance 대기 |
+| V1-41 Spatial fallback | PARTIAL | mapless/provider source와 regression 존재; exact-head provider mount/unmount human proof 대기 |
+| V1-42 Dice | PARTIAL | Three/Cannon, rear-entry, authoritative projection, remote dedup source 존재; human motion proof 대기 |
 | V1-50~80 Quality/release | TODO | Campaign/connected 경로 완료 뒤 수행 |
+
+세부 섹션의 오래된 unchecked 항목은 요구사항 목록이며 현재 source credit이 아니다. 현재 구현 상태와 다음 작업은 `V1_CURRENT_HANDOFF.md`를 우선한다.
 
 ---
 
@@ -353,7 +355,9 @@ Release credit requirements:
 
 - [ ] 행동: attack, representative feature action, common action intents.
 - [ ] 기술: modifier/proficiency 표시, ability/skill roll, advantage state.
-- [ ] 주문: cantrip + slotted spell, target/cost/save/attack/concentration/disabled reason.
+- [x] 주문: 339/339 executable catalog, cantrip + slotted spell, target/cost/save/attack/concentration, partial placeholder 0.
+  - Deterministic combat/health/save/condition/modifier rules are automatic.
+  - Mapless world/scene interactions commit as authoritative tracked effects; optional spatial module facts are never invented.
 - [ ] 인벤토리: 읽기, use, equip/unequip, attune/unattune where canonical, quantity/charges.
 - [ ] full Character sheet를 Session 안에서 read/open.
 - [ ] result/activity/provenance 및 safe Undo.
@@ -638,10 +642,16 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 
 # 5. NEXT
 
-현재 유일한 다음 작업:
+현재 단일 실행 포인터:
 
 ```text
-V1-31/V1-32 Ready expiration network propagation
+R0 integration baseline lock
 ```
 
-다음 자기 턴 시작과 initiative 종료로 발생하는 Ready 해제를 Host의 `ready-action: cleared` 이벤트로 전파하고, Client projection 및 reconnect replay를 검증한다. 세부 완료 조건과 후속 구조 보강 순서는 `.agents/V1_CURRENT_HANDOFF.md`를 따른다.
+1. 현재 dirty integration의 generated output, launcher, source, tests를 검토한다.
+2. 검토된 통합 상태를 exact checkpoint로 commit한다.
+3. canonical `work/v1-composite`와 원격을 reconcile한다.
+4. 그 다음 open ability-check DM DC → Tactical Mind → Indomitable → Rage → Wild Shape → Monk Focus → Rogue Cunning/Uncanny 순서로 진행한다.
+5. 각 신규 행동은 connected remote-owner exactly-once/reconnect/Undo matrix 없이는 완료 처리하지 않는다.
+
+상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.

@@ -1,5 +1,6 @@
 import type { MockAdapter } from "./mockAdapter";
 import {
+  createTurnRuntimeSession,
   projectTurnRuntimeToScene,
   synchronizeTurnRuntimeFromScene,
   type TurnRuntimeSession,
@@ -14,6 +15,11 @@ export const turnRuntimeSessions={
   set:(adapter:MockAdapter,session:TurnRuntimeSession)=>sessions.set(adapter,session),
   delete:(adapter:MockAdapter)=>sessions.delete(adapter),
 };
+
+export function ensureAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm) {
+  if (!sessions.has(adapter)) sessions.set(adapter,createTurnRuntimeSession(scene));
+  return snapshotAdapterTurnRuntimeState(adapter,scene)!;
+}
 
 export function snapshotAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm):RulesRuntimeState|undefined {
   const session=sessions.get(adapter);

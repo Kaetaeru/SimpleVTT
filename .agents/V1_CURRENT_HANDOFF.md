@@ -1,87 +1,161 @@
 # SimpleVTT V1 Current Handoff
 
-Status: **CURRENT CANONICAL HANDOFF**  
-Updated: **2026-08-23 Asia/Seoul**  
-Canonical branch: **`work/v1-composite`**  
-Recorded V1-13 product/test head: **`cbf20ab test(campaign): include Stash policy and provenance contracts`**
+Status: **CURRENT CANONICAL HANDOFF**
+Updated: **2026-08-25 Asia/Seoul**
+Repository: **`Kaetaeru/SimpleVTT`**
+Canonical target branch: **`work/v1-composite`**
 
-이 문서는 다음 작업 에이전트가 현재 V1 구현을 그대로 이어가기 위한 인수인계 문서다. 실행 우선순위/완료 정의는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 제품 계약은 `docs/design/`, 작업 루트는 `CANONICAL_ROOT.md`, 현재 실행 지점은 `.chatgpt-rerun/STATE.md`가 우선한다.
+이 문서는 다음 작업자가 V1 남은 일만 이어가기 위한 현재 실행 포인터다. 전체 요구사항과 출시 Gate는 `V1_RELEASE_EXECUTION_CHECKLIST.md`, 최신 D&D 구현 내역은 `CURRENT_WORK.md`, 제품 계약은 `docs/design/`을 따른다.
 
-## Resume rules
+## 1. 현재 로컬 기준선
 
-1. `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md`를 먼저 reconcile한다.
-2. GitHub ref가 `work/v1-composite`인지 확인한다.
-3. 이미 source-connected된 V1-12, owner journal, Host/Player Stash restart recovery, item projection, DM Library grant semantics, Stash policy guards를 validation만 얻기 위해 다시 구현하지 않는다.
-4. Player-owned remote Character durability와 Host-owned Campaign/Session authority를 유지한다. Host Character library에 remote Character를 복사하지 않는다.
-5. comprehensive Codex audit는 V1 implementation freeze 뒤 exact SHA에서 수행한다.
+- 실제 작업 브랜치: `codex/v1-multiplayer`
+- 현재 커밋: `a8f0f4ed436e71dfcbac1b387407546369a95849`
+- 로컬 HEAD: 캐시된 `origin/work/v1-composite`보다 18 commits ahead
+- 마지막 확인된 원격 ref: `a2e5f3f5e342e57fbe8bb6925b071bcb6a563c98`
+- 원격 재확인: Windows Git credential `SEC_E_NO_CREDENTIALS`로 fetch 실패
+- 작업 트리: 156 tracked files modified, 52 untracked files
 
-## V1-12 preserved
+따라서 현재 최신 제품은 **로컬 작업 트리**이며 아직 exact Git SHA나 GitHub 원격 상태로 보존됐다고 주장할 수 없다. 파일을 잃거나 stale branch에서 계속하지 않도록 전체 회귀 정리 후 통합 checkpoint를 먼저 만든다.
 
-Connected Long Rest normal durable-storage path는 **source implementation complete / validation pending**이다. 실행 증거가 없으므로 release checklist V1-12는 `PARTIAL` 유지다.
+## 2. 2026-08-25 실행 증거
 
-## V1-13 preserved durability boundary
+### Green
 
-- Host remote Character inventory mutation -> owning Client durable write -> fresh SessionProjection.
-- request-id scoped delta compensation.
-- durable owner journal with restart-safe apply/undo/finalize.
-- durable Host Party Stash coordinator and Campaign-idempotency reconnect recovery.
-- Player self-service Stash Host-crash recovery.
-- exact Host compensation identity.
-- inventory-only forward sourceRevision refresh.
-- unknown Campaign custom items cross projection only as inert embedded metadata; no untrusted executable mechanics.
+- `npm run build`
+  - UI named-rule boundary: 3 pass
+  - Character creation/progression structure: 111 pass
+  - Rules domain: 329 pass
+  - Campaign/Long Rest: 94 pass
+  - TypeScript and Vite production build: pass, 503 modules
+- `npm run test:connected-ui`: 19 pass
+- `npm run test:spellcasting`: 42 pass
+- rendered browser checks:
+  - Home에서 `SimpleVTT v1` 표시
+  - Campaign empty state 진입
+  - Character library 진입
+  - Official Character Sheet + Spellcasting Sheet 동시 표시
 
-## V1-13 additions through `cbf20ab`
+### Open validation debt
 
-### DM Library grant semantics
+- 전체 TS matrix: **1303 tests / 1303 pass / 0 fail**
+- 과거 구조/count/stable ID/workspace 기대값과 Session end fixture 16건을 현재 제품 계약에 맞게 갱신했다.
+- `cargo test --manifest-path src-tauri/Cargo.toml`: 현재 agent shell에 Cargo가 없어 미실행.
+- Tauri two-instance와 Windows artifact 검증은 최신 작업 트리에서 미실행.
 
-`recentEntryIds` is private recents/navigation metadata, not asset ownership state.
+## 3. Source-complete로 취급하고 재구현하지 않을 것
 
-- Character/Stash ItemInstance materialization is the asset transaction.
-- If materialization succeeded but the later recents Campaign write failed, the grant remains successful rather than being compensated.
-- The adapter only suppresses the later error when the exact requested definition quantity is proven to have increased by the requested amount; actual grant failures still reject.
-- Connected lost finalize acknowledgement likewise does not expose a retryable user failure when the durable remote quantity is already present.
-- Private DM Library definitions/index/notes remain absent from connected Campaign projection.
+- 339/339 spell executable definitions, multi-target targeting, condition/concentration lifecycle
+- Three/Cannon visual dice, authoritative result projection, remote replay deduplication
+- mapless spatial fallback과 manual movement/opportunity trigger
+- Calendar/Rations providers, compound day/rest/ration transactions
+- Party Stash policy/approval/owner journal/compensation/recovery
+- DM Library item/image/NPC/PC preset/note/JSON/search/drag invocation paths
+- official Character + Spellcasting sheet composition
+- Character/Host authority split, connected projection, inventory write-back, reconnect and event-native Undo foundation
+- Ready lifecycle, death save, Stabilize, Unarmed Strike, Extra Attack, Action Surge
+- Bardic Inspiration/Tactical Mind의 현재 완료 범위
+- Cleric Divine Spark/Turn Undead와 Paladin Lay On Hands/Divine Sense/Abjure Foes
 
-### Stash policy authority
+Source-complete는 release DONE이 아니다. 아래 acceptance와 exact-head 증거가 남아 있다.
 
-The prior runtime incorrectly used only roster `stashPermission`. Current source now enforces both roster permission and Campaign Stash policy.
+## 4. 남은 작업 — 실행 순서
 
-- `shared`: authorized Player direct deposit/withdraw.
-- `dm-approval`: Player deposit allowed; direct withdrawal denied until approval flow exists.
-- `dm-managed`: Player write denied; inspect only.
+### R0. 통합 기준선 잠금 — NEXT
 
-Host authority validates this; Client also preflights it. Player UI disables disallowed controls and explains the policy.
+- [x] 16개 전체 matrix 실패를 최신 계약에 맞게 분류·수정한다.
+- [x] 전체 TS matrix를 1303/1303 green으로 만든다.
+- [x] npm 11 + tracked `package-lock.json`을 V1 package-manager 기준으로 확정하고 pnpm 메타데이터를 제외한다.
+- [ ] generated output, launcher, source, tests를 검토하고 현재 작업을 통합 checkpoint로 commit한다.
+- [ ] `work/v1-composite`와 원격을 자격 증명이 가능한 환경에서 reconcile한다.
+- [ ] 이후 모든 검증은 한 exact SHA를 기록한다.
 
-### Recovery checkpoint hardening
+Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계가 설명 가능하다.
 
-Player self-service recovery coordinator is no longer written for malformed/policy-denied requests. Before durable coordinator creation, source validates request shape/positive amounts, accepted owner identity, live Campaign identity, roster permission and Stash policy.
+### R1. D&D Session Action Matrix 완성
 
-### Privacy/delete/provenance
+- [ ] open ability-check DM DC contract와 일반 능력/기술 판정 UI.
+- [ ] Tactical Mind를 모든 적격 실패 능력 판정에 재사용.
+- [ ] Fighter Indomitable failed saving-throw follow-up.
+- [ ] Barbarian Rage 시작/종료/피해·상태·자원 lifecycle.
+- [ ] Druid Wild Shape 선택/변신/해제/HP·행동·자원 lifecycle.
+- [ ] Monk Focus actions와 자원/행동 경제.
+- [ ] Rogue Cunning Action 및 Uncanny Dodge reaction.
+- [ ] 이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar에 노출.
+- [ ] 각 신규 행동에 local/freeform/initiative/Activity/Undo를 연결.
 
-Existing Campaign A/B namespace isolation and private connected projection contracts remain. A new lifecycle contract proves deleting a DM Library definition does not remove an already granted Character ItemInstance and its provenance snapshot remains.
+Exit: 대표 12-class Character가 UI에서 사용 가능한 핵심 행동을 dead button 없이 실행한다.
 
-## Validation status
+### R2. Connected remote-owner matrix 완성
 
-**NO GREEN CLAIM.** Exact product/test head `cbf20abf4870807348443728c6fd6022113ef14c` is source-checkpointed and returned:
+R1의 모든 신규 행동마다 다음을 검증한다.
 
-- combined statuses: none;
-- commit-associated workflow runs: none.
+- [ ] Client intent -> Host authoritative resolve -> ordered event.
+- [ ] private owner choice와 public result 분리.
+- [ ] exactly-once, duplicate/reorder/retry 안전.
+- [ ] reconnect replay와 fresh projection 수렴.
+- [ ] Character owner write-back / Campaign Host write-back 분리.
+- [ ] event-native Undo와 양 Client 보상 수렴.
 
-No observed execution exists for the new focused tests, `npm run test:campaign-rest`, TypeScript/build, Rust/Tauri, or Windows two-instance Stash/DM Library scenarios.
+Exit: 신규 행동 전체가 Host, acting Client, observing Client에서 같은 최종 상태를 가진다.
 
-## Critical remaining V1-13 product gap
+### R3. Tauri durability와 owner acceptance
 
-1. **Stash policy selector is not user-reachable.** `partyStash.policy` is modeled, enforced and displayed, but current Campaign UI has no selector. New Campaigns stay on default `dm-approval`.
-2. **Actual `dm-approval` queue is missing.** Player direct withdrawal is now safely denied, but Player cannot submit a pending withdrawal request for DM approve/reject/cancel.
-3. Approval must not mutate assets before approval. Accepted requests must call the existing durable `transferPartyStash` transaction so current owner/Host restart recovery remains authoritative.
-4. Pending approval lifetime must be explicit; V1 default should clear pending requests on Session end and avoid persisting transient reservations into Campaign state unless deliberately specified.
+- [ ] Cargo/Rust toolchain이 있는 환경에서 `cargo test --manifest-path src-tauri/Cargo.toml`.
+- [ ] `npm run tauri:build`와 V1 executable 생성.
+- [ ] Character/Campaign/owner journal/Stash/Long Rest를 실제 filesystem restart로 검증.
+- [ ] owner progression walkthrough: Monk 1->2, 2->3, 3->4와 Fighter/Rogue/caster representative.
+- [ ] 최신 build 두 instance Host/Client acceptance.
+- [ ] reconnect, session end, app restart 후 durable/transient 경계 확인.
 
-## Next Exact Action
+Exit: 실제 Windows Tauri 두 앱에서 세션 시작부터 종료·재실행까지 데이터가 정확하다.
 
-1. Reconcile mandatory Rerun files and actual `work/v1-composite` HEAD.
-2. Preserve all source-connected work if executable evidence is still absent.
-3. Add user-reachable Campaign `shared | dm-approval | dm-managed` Stash policy configuration and persist Campaign Stash policy / Session default coherently.
-4. Add Player pending withdrawal request -> DM approve/reject/cancel flow on top of the existing durable transfer path.
-5. Add deterministic policy transition, duplicate request/reconnect, rejection/cancel and Session-end cleanup contracts.
-6. Re-audit V1-13 after approval flow; then continue next unblocked V1 slice.
-7. Keep comprehensive Codex audit deferred until implementation freeze.
+### R4. UX/error/accessibility 마감
+
+- [ ] loading/empty/disabled/error/reconnecting/ended/migration/corrupt recovery path.
+- [ ] keyboard focus, Tab order, Escape, drawer/dialog focus restore.
+- [ ] 1920x1080, Windows 100%/125% scaling, 주요 pane scroll.
+- [ ] selected/focus/disabled/error가 색상만으로 구분되지 않음.
+- [ ] reduced motion과 remote dice/VFX의 non-blocking interaction.
+- [ ] Player DOM/ARIA/live region에 DM private data 없음.
+
+Exit: 코드가 아니라 rendered Host/Player 경로로 확인한다.
+
+### R5. Release gates
+
+- [ ] exact SHA full regression: TS, Rust, Tauri build.
+- [ ] exact SHA Windows two-instance recording/screenshots.
+- [ ] provider 없음/연결/제거 spatial acceptance.
+- [ ] dice rear-entry/roll/settle authoritative-result human proof.
+- [ ] version metadata를 V1로 확정하고 `BUILD.txt`에 exact SHA 기록.
+- [ ] artifact contents와 SHA-256 digest 검사.
+- [ ] 최신 `main` reconcile, 승인된 merge, tag/release notes.
+- [ ] known critical blocker 0.
+
+Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 일치한다.
+
+## 5. Next exact action
+
+다음 작업은 새 클래스 기능 구현이 아니다.
+
+```text
+현재 dirty integration의 generated output, launcher, source, tests 검토
+-> exact checkpoint로 commit
+-> open ability-check DM DC + Tactical Mind
+```
+
+## 6. 검증 명령
+
+Windows Node `uv_os_get_passwd ENOMEM` 발생 시 repository의 기존 bootstrap만 command-local로 사용한다.
+
+```powershell
+$env:NODE_OPTIONS='--require=./tests/tsx-os-userinfo-bootstrap.cjs'
+npm run build
+npm run test:connected-ui
+npm run test:spellcasting
+node node_modules/tsx/dist/cli.mjs --test 'tests/**/*.test.ts'
+cargo test --manifest-path src-tauri/Cargo.toml
+npm run tauri:build
+```
+
+테스트 통과만으로 rendered UX 또는 two-instance acceptance를 DONE 처리하지 않는다.

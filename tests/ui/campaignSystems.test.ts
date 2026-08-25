@@ -131,6 +131,30 @@ test("Ration consumption records shortage as warning data and never invents Char
   assert.equal(campaign.rations.ledger.consumptionHistory.at(-1)?.kind,"undo");
 });
 
+test("DM meal service tracks each character and atomically charges rations or party funds",async()=>{
+  const {service}=await setup();
+  await service.upsertRosterMember({...envelope(1,"roster.a"),member:{rosterMemberId:"a",label:"A",kind:"host-preset",active:true,countsForRations:true}});
+  await service.upsertRosterMember({...envelope(2,"roster.b"),member:{rosterMemberId:"b",label:"B",kind:"host-preset",active:true,countsForRations:true}});
+  await service.configureRations({...envelope(3,"ration.on"),enabled:true,providerId:"builtin.tracking-only"});
+  await service.adjustRations({...envelope(4,"ration.add"),amount:2});
+  await service.transferPartyStash({...envelope(5,"stash.fund"),direction:"character-to-stash",asset:"currency",amount:2});
+  await service.serveMeals({...envelope(6,"meal.ration"),rosterMemberIds:["a"],mealUnits:2,source:"ration"});
+  await service.serveMeals({...envelope(7,"meal.tavern"),rosterMemberIds:["b"],mealUnits:1,source:"tavern",costSpPerPerson:5});
+  let campaign=service.getCampaign("campaign.systems")!;
+  assert.deepEqual(campaign.rations.ledger.mealTracking?.mealsByRosterMember,{a:2,b:1});
+  assert.equal(campaign.rations.ledger.balances.ration,1);
+  assert.deepEqual(campaign.partyStash.wallet,{gp:1,sp:5,cp:0});
+  assert.equal(campaign.rations.ledger.consumptionHistory.at(-1)?.mealSource,"tavern");
+  await service.undoRecentMeal(envelope(8,"meal.undo"));
+  campaign=service.getCampaign("campaign.systems")!;
+  assert.deepEqual(campaign.rations.ledger.mealTracking?.mealsByRosterMember,{a:2,b:0});
+  assert.deepEqual(campaign.partyStash.wallet,{gp:2,sp:0,cp:0});
+  await service.setMemberMeals({...envelope(9,"meal.manual"),rosterMemberId:"b",mealCount:1});
+  campaign=service.getCampaign("campaign.systems")!;
+  assert.equal(campaign.rations.ledger.mealTracking?.mealsByRosterMember.b,1);
+  assert.equal(campaign.rations.ledger.consumptionHistory.at(-1)?.mealSource,"manual");
+});
+
 test("Next-day calendar and optional ration consumption commit atomically",async()=>{
   const {service,store}=await setup();
   await service.upsertRosterMember({...envelope(1,"roster.a"),member:{rosterMemberId:"a",label:"A",kind:"companion",active:true,countsForRations:true,rationUnitsPerDay:1}});

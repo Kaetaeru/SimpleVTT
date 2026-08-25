@@ -26,6 +26,8 @@ export interface ConnectedRuntimeState {
   reconnectTimer:ReturnType<typeof setTimeout>|null;
   reconnectAttempts:number;
   reconnectInFlight:boolean;
+  handshakeTimer:ReturnType<typeof setTimeout>|null;
+  handshakeAttempts:number;
   nextPresentationSequence:number;
   lastAppliedPresentationSequence:number;
   lastPublishedPresentationKey:string;
@@ -57,6 +59,8 @@ export function connectedStateFor(adapter:MockAdapter) {
       reconnectTimer:null,
       reconnectAttempts:0,
       reconnectInFlight:false,
+      handshakeTimer:null,
+      handshakeAttempts:0,
       nextPresentationSequence:1,
       lastAppliedPresentationSequence:0,
       lastPublishedPresentationKey:"",
@@ -76,6 +80,7 @@ export function connectedStateFor(adapter:MockAdapter) {
 export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|null) {
   const state=connectedStateFor(adapter);
   if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
+  if (state.handshakeTimer) clearTimeout(state.handshakeTimer);
   if(state.interruptTimeout)clearTimeout(state.interruptTimeout);
   state.mode=mode;
   state.sessionId=null;
@@ -89,6 +94,8 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.reconnectTimer=null;
   state.reconnectAttempts=0;
   state.reconnectInFlight=false;
+  state.handshakeTimer=null;
+  state.handshakeAttempts=0;
   state.nextPresentationSequence=1;
   state.lastAppliedPresentationSequence=0;
   state.lastPublishedPresentationKey="";

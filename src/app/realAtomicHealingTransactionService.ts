@@ -49,7 +49,8 @@ function runtimeState(request:AtomicSelfHealingRequest):RulesRuntimeState {
           reaction:request.economy.reaction,
           movement:request.economy.movement,
           movementMaximum:request.economy.movementMax,
-          extraActions:[],
+          extraActions:structuredClone(request.economy.extraActions ?? []),
+          extraAttacks:structuredClone(request.economy.extraAttacks ?? []),
         },
         resources:request.resources.map((resource)=>({ id:resource.id,label:resource.label,current:resource.current,maximum:resource.max })),
         hitDice:[],
@@ -100,6 +101,8 @@ export function resolveAtomicSelfHealing(request:AtomicSelfHealingRequest):Atomi
   const economy:EconomyVm={
     action:actor.economy.action,bonusAction:actor.economy.bonusAction,reaction:actor.economy.reaction,
     movement:actor.economy.movement,movementMax:actor.economy.movementMaximum,
+    ...(actor.economy.extraActions?.length?{extraActions:structuredClone(actor.economy.extraActions)}:{}),
+    ...(actor.economy.extraAttacks?.length?{extraAttacks:structuredClone(actor.economy.extraAttacks)}:{}),
   };
   const resources=request.resources.map((resource)=>{
     const pool=actor.resources.find((entry)=>entry.id===resource.id);

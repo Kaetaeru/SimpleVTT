@@ -1,5 +1,5 @@
 import type { AppSnapshot, ResolutionView, SceneEntity } from "./contracts";
-import "./spellcastingRuntimeContracts";
+import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
 import type { RulesRuntimeState } from "../domain/combatState";
@@ -8,6 +8,7 @@ import type { SpellCasterContext, SpellCastTarget } from "../domain/spellcasting
 import { resolveSpellCast } from "../domain/spellcasting";
 import { spellMechanicById } from "../domain/spellMechanics";
 import type { RulesProfileLike } from "../domain/profileEngine";
+import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 
 const PROFILE: RulesProfileLike = {
   profileId: "dnd.srd-5.2.1",
@@ -24,17 +25,15 @@ const SPELL_META = {
   },
   "action.vicious-mockery": {
     spellId: "dnd.srd521.spell.vicious-mockery",
-    runtimeSupport: "partial" as const,
+    runtimeSupport: "combat-executable" as const,
     baseLevel: 0,
     castSource: "prepared" as const,
-    disabledMechanicReason: "다음 공격 굴림에 적용되는 1회성 불리점 효과가 아직 consumable modifier로 연결되지 않았습니다.",
   },
   "action.thunderwave": {
     spellId: "dnd.srd521.spell.thunderwave",
-    runtimeSupport: "partial" as const,
+    runtimeSupport: "combat-executable" as const,
     baseLevel: 1,
     castSource: "prepared" as const,
-    disabledMechanicReason: "실패한 대상의 10피트 강제 이동을 계산할 authoritative geometry가 아직 없습니다.",
   },
   "action.wand": {
     spellId: "dnd.srd521.spell.magic-missile",
@@ -214,7 +213,7 @@ function syncSceneFromRuntime(bridge: BridgeState, internal: AdapterInternalStat
 
 export function commitFreeformSpellSlot(adapter: MockAdapter, actionId: string, actorId: string): FreeformSpellSlotCommit {
   const metadata = SPELL_META[actionId as keyof typeof SPELL_META];
-  if (!metadata || metadata.runtimeSupport !== "combat-executable" || metadata.baseLevel === 0) {
+  if (!metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || metadata.baseLevel === 0) {
     return { status: "not-applicable" };
   }
   const internal = adapter as unknown as AdapterInternalState;
@@ -265,22 +264,6 @@ export function restoreFreeformSpellSlot(adapter: MockAdapter, change: FreeformS
   };
 }
 
-function referenceDistance(actorId: string, targetId: string, target: SceneEntity) {
-  if (actorId === targetId) return 0;
-  const explicit: Record<string, number> = {
-    "char.mira->char.aelar": 25,
-    "char.mira->combatant.goblin-a": 28,
-    "char.mira->combatant.goblin-b": 38,
-    "char.mira->combatant.wolf": 20,
-    "char.mira->combatant.training-guardian": 24,
-  };
-  const keyed = explicit[`${actorId}->${targetId}`];
-  if (keyed !== undefined) return keyed;
-  const parsed = Number.parseInt(target.distance ?? "", 10);
-  if (Number.isFinite(parsed)) return parsed;
-  throw new Error(`reference geometry has no authoritative distance for ${actorId} -> ${targetId}`);
-}
-
 function relation(actor: SceneEntity, target: SceneEntity): SpellCastTarget["relation"] {
   if (actor.id === target.id) return "self";
   return actor.side === target.side ? "ally" : "enemy";
@@ -290,17 +273,18 @@ function targetFacts(internal: AdapterInternalState, actorId: string, targetId: 
   const actor = internal.scene.entities.find((entity) => entity.id === actorId);
   const target = internal.scene.entities.find((entity) => entity.id === targetId);
   if (!actor || !target) throw new Error(`reference scene target not found: ${targetId}`);
+  const spatial=resolveRuntimeTargetingFact(internal.scene,actorId,targetId);
   return {
     id: target.id,
     kind: "creature",
     relation: relation(actor, target),
-    distanceFeet: referenceDistance(actorId, targetId, target),
-    visible: true,
-    cover: "none",
+    distanceFeet: spatial.distanceFeet,
+    visible: spatial.visible,
+    cover: spatial.cover,
     ac: target.ac,
     creatureKind: target.kind === "character" ? "character" : "monster",
     saveModifiers: { str: 2, dex: 2, con: 2, int: 1, wis: 1, cha: 0 },
-    targetCanSeeCaster: true,
+    targetCanSeeCaster: spatial.targetCanSeeAttacker,
   };
 }
 
@@ -340,6 +324,21 @@ function facesForHealingWord(slotLevel: number) {
   const count = 2 + Math.max(0, slotLevel - 1) * 2;
   const pattern = [3, 4, 2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3];
   return pattern.slice(0, count);
+}
+
+type DiceAdapter={d20(actionId:string,index?:number):number};
+function thunderwaveDice(adapter:MockAdapter,targetIds:string[],slotLevel:number) {
+  const roll=(index:number,sides:number)=>(((adapter as unknown as DiceAdapter).d20("action.thunderwave",index)-1)%sides)+1;
+  const count=2+Math.max(0,slotLevel-1);
+  const effectFaces=Array.from({length:count},(_,index)=>roll(index,8));
+  const saves=Object.fromEntries(targetIds.map((targetId,index)=>[targetId,{id:`thunderwave:save:${targetId}`,purpose:"Thunderwave Constitution save",sides:20 as const,faces:[(adapter as unknown as DiceAdapter).d20("action.thunderwave",count+index)]}]));
+  return {faces:[...effectFaces,...Object.values(saves).flatMap((save)=>save.faces)],request:{effectFaces,saves}};
+}
+
+function viciousMockeryDice(adapter:MockAdapter,targetIds:string[]) {
+  const effectFaces=[((adapter as unknown as DiceAdapter).d20("action.vicious-mockery",0)-1)%6+1];
+  const saves=Object.fromEntries(targetIds.map((targetId,index)=>[targetId,{id:`vicious-mockery:save:${targetId}`,purpose:"Vicious Mockery Wisdom save",sides:20 as const,faces:[(adapter as unknown as DiceAdapter).d20("action.vicious-mockery",index+1)]}]));
+  return {faces:[...effectFaces,...Object.values(saves).flatMap((save)=>save.faces)],request:{effectFaces,saves}};
 }
 
 function resolutionFromCast(
@@ -428,11 +427,7 @@ MockAdapter.prototype.getSnapshot = async function getSnapshotWithSpellcasting()
       const metadata = SPELL_META[action.id as keyof typeof SPELL_META];
       if (!metadata) continue;
       action.spellCast = { ...metadata };
-      if (metadata.runtimeSupport === "partial") {
-        action.available = false;
-        action.disabledReason = metadata.disabledMechanicReason;
-      }
-      if (metadata.runtimeSupport === "combat-executable" && metadata.baseLevel > 0) {
+      if (isExecutableSpellRuntimeSupport(metadata.runtimeSupport) && metadata.baseLevel > 0) {
         const hud = snapshot.scene.spellcastingByActor[action.actorId];
         const hasSlot = hud?.slots.some((slot) => slot.level >= metadata.baseLevel && slot.current > 0) ?? false;
         if (!hasSlot) {
@@ -451,7 +446,7 @@ MockAdapter.prototype.getSnapshot = async function getSnapshotWithSpellcasting()
 
 MockAdapter.prototype.resolveAction = async function resolveActionThroughSpellKernel(actionId, targetIds) {
   const metadata = SPELL_META[actionId as keyof typeof SPELL_META];
-  if (!metadata || metadata.runtimeSupport !== "combat-executable") {
+  if (!metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport)) {
     return originalResolveAction.call(this, actionId, targetIds);
   }
 
@@ -474,7 +469,9 @@ MockAdapter.prototype.resolveAction = async function resolveActionThroughSpellKe
     characters: structuredClone(internal.characters),
   };
   const runtimeBefore = structuredClone(bridge.runtime);
-  const faces = metadata.spellId === "dnd.srd521.spell.healing-word" ? facesForHealingWord(slotLevel ?? 1) : [];
+  const thunderwave=metadata.spellId==="dnd.srd521.spell.thunderwave"?thunderwaveDice(this,targetIds,slotLevel??1):null;
+  const vicious=metadata.spellId==="dnd.srd521.spell.vicious-mockery"?viciousMockeryDice(this,targetIds):null;
+  const faces = thunderwave?.faces??vicious?.faces??(metadata.spellId === "dnd.srd521.spell.healing-word" ? facesForHealingWord(slotLevel ?? 1) : []);
 
   let targets: SpellCastTarget[];
   try {
@@ -504,7 +501,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionThroughSpellKe
     componentsSatisfied: true,
     useActionEconomy: internal.sessionMode === "initiative",
     turnId: currentTurnId(internal),
-    dice: { effectFaces: faces },
+    dice: thunderwave?.request??vicious?.request??{ effectFaces: faces },
   });
 
   internal.resolution = resolutionFromCast(sourceAction.name, actionId, actorId, targetIds, slotLevel, result, faces);

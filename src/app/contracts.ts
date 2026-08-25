@@ -1,4 +1,5 @@
-import type { CampaignDmLibraryEntry, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
+import type { CampaignDmLibraryEntry, CampaignMealCommand, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
+import type { ExtraActionGrant, ExtraAttackGrant } from "../domain/turnEconomy";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -308,6 +309,7 @@ export interface ActionVm {
   itemCost?: { itemId: string; quantity?: number; charges?: number };
   saveHalf?: boolean;
   details: ActionDetailVm[];
+  attacksPerAction?:number;
 }
 
 export interface EconomyVm {
@@ -316,6 +318,8 @@ export interface EconomyVm {
   reaction: boolean;
   movement: number;
   movementMax: number;
+  extraActions?: ExtraActionGrant[];
+  extraAttacks?: ExtraAttackGrant[];
 }
 
 export interface SceneVm {
@@ -379,6 +383,8 @@ export interface ResolutionView {
   stage: ResolutionStage;
   authoritativeDice: number[];
   rollTotal?: number;
+  checkTarget?:number;
+  checkOutcome?:"성공"|"실패";
   attackTotal?: number;
   targetAc?: number;
   attackOutcome?: "명중" | "빗나감";
@@ -593,6 +599,9 @@ export interface SimpleVttAdapter {
   adjustDmInventory(command: DmInventoryAdjustmentCommand): Promise<AppSnapshot>;
   undoLastDmInventoryAdjustment(): Promise<AppSnapshot>;
   transferPartyStash(command:PartyStashTransferCommand):Promise<AppSnapshot>;
+  serveCampaignMeals(campaignId:string,input:CampaignMealCommand):Promise<AppSnapshot>;
+  setCampaignMemberMeals(campaignId:string,input:{rosterMemberId:string;mealCount:number}):Promise<AppSnapshot>;
+  undoCampaignMeal(campaignId:string):Promise<AppSnapshot>;
   upsertCampaignDmLibraryEntry(campaignId:string,entry:CampaignDmLibraryEntry):Promise<AppSnapshot>;
   removeCampaignDmLibraryEntry(campaignId:string,entryId:string):Promise<AppSnapshot>;
   grantCampaignDmLibraryItem(campaignId:string,entryId:string,target:{kind:"character";actorId:string}|{kind:"stash"},quantity:number):Promise<AppSnapshot>;

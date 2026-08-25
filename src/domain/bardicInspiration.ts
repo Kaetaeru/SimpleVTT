@@ -116,7 +116,7 @@ export function compileGrantBardicInspiration(state:RulesRuntimeState,request:Gr
         kind:"marker",
         tags:[BARDIC_INSPIRATION_EFFECT_TAG],
         duration:{ kind:"hours", amount:1 },
-        metadata:{ dieSides:bardicInspirationDieSides(request.bardLevel) },
+        metadata:{ dieSides:bardicInspirationDieSides(request.bardLevel),displayName:"바드의 영감",publicLabel:`바드의 영감 · d${bardicInspirationDieSides(request.bardLevel)}` },
       },
     },
   );

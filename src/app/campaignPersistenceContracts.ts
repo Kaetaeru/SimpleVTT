@@ -80,7 +80,7 @@ export interface CampaignCalendarDateTime {
 
 export interface CampaignSupplyTransactionSummary {
   transactionId:string;
-  kind:"adjust"|"consume"|"undo"|"convert";
+  kind:"adjust"|"consume"|"meal"|"undo"|"convert";
   amount:number;
   balanceAfter:number;
   requiredAmount?:number;
@@ -91,6 +91,12 @@ export interface CampaignSupplyTransactionSummary {
   sourceDefinitionId?:string;
   sourceQuantity?:number;
   conversionCapability?:string;
+  rosterMemberIds?:string[];
+  mealUnits?:number;
+  mealUnitsByRosterMember?:Record<string,number>;
+  mealSource?:"tavern"|"camp"|"ration"|"manual";
+  costSp?:number;
+  campaignAbsoluteMinute?:number;
   committedAt:string;
   provenance:string[];
 }
@@ -100,6 +106,7 @@ export interface CampaignSupplyLedger {
   balances:Record<string,number>;
   lastConsumptionAtAbsoluteMinute?:number;
   consumptionHistory:CampaignSupplyTransactionSummary[];
+  mealTracking?:{absoluteDay:number;mealsByRosterMember:Record<string,number>};
 }
 
 export interface CampaignPartyStashState {
@@ -190,6 +197,13 @@ export interface CampaignRationPreview {
   memberUnits:Array<{rosterMemberId:string;label:string;units:number}>;
 }
 
+export interface CampaignMealCommand {
+  rosterMemberIds:string[];
+  mealUnits:1|2;
+  source:"tavern"|"camp"|"ration";
+  costSpPerPerson?:number;
+}
+
 export interface CampaignContentLoadout {
   loadoutId:string;
   revision:number;
@@ -229,6 +243,7 @@ export interface CampaignSessionSystemsProjection {
     label:string;
     kind:CampaignRosterMember["kind"];
     active:boolean;
+    presentInSession?:boolean;
     countsForRations?:boolean;
     rationUnitsPerDay?:number;
     stashPermission?:CampaignRosterMember["stashPermission"];
@@ -238,7 +253,18 @@ export interface CampaignSessionSystemsProjection {
     advancement:{xp:number;levelUpCredits:number};
   }>;
   calendar:{enabled:boolean;providerId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"];currentNote?:string};
-  rations:{enabled:boolean;visibleToPlayers:boolean;balance?:number;dailyRequired?:number;shortage?:number};
+  rations:{
+    enabled:boolean;
+    visibleToPlayers:boolean;
+    balance?:number;
+    dailyRequired?:number;
+    shortage?:number;
+    mealsRequired?:number;
+    mealsSatisfied?:number;
+    mealsShortage?:number;
+    mealsByRosterMember?:Record<string,number>;
+    recentTransactions?:CampaignSupplyTransactionSummary[];
+  };
   partyStash:{revision:number;policy:CampaignPartyStashState["policy"];wallet:CampaignPartyStashState["wallet"];itemReferences:CampaignPartyStashState["itemReferences"]};
 }
 

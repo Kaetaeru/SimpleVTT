@@ -20,11 +20,11 @@ test("accepted Core Systems quick entry opens in the right utility pane with Ctr
   assert.doesNotMatch(css,/backdrop-filter|session-quick-layer/);
 });
 
-test("quick palette routes only to existing Session utilities and invents no blocked library authority",()=>{
-  for(const destination of ["actor","encounter","participants","handout","activity","rules","session"]) assert.match(quick,new RegExp(`destination:\"${destination}\"`));
+test("quick palette routes to existing Session utilities including the authoritative DM library",()=>{
+  for(const destination of ["library","actor","encounter","participants","handout","activity","rules","session"]) assert.match(quick,new RegExp(`destination:\"${destination}\"`));
   assert.match(quick,/세션 도구 찾기/);
   assert.match(quick,/role="complementary"/);
-  assert.doesNotMatch(quick,/instantiateCombatant|resolveAction|revealSessionImageHandout|localStorage|DM Library/);
+  assert.doesNotMatch(quick,/instantiateCombatant|resolveAction|revealSessionImageHandout|localStorage/);
 });
 
 test("Session chrome and Command Center remain mounted beside the quick pane",()=>{
@@ -32,7 +32,9 @@ test("Session chrome and Command Center remain mounted beside the quick pane",()
   const command=root.indexOf('aria-label="Command Center"');
   const panel=root.indexOf('quickOpen?<SessionQuickPalette');
   assert.ok(chrome>=0&&panel>chrome&&command>panel);
-  assert.match(root,/suspended=\{Boolean\(activeUtility \|\| workspaceLayer/);
+  assert.match(root,/suspended=\{Boolean\(workspaceLayer \|\| snapshot\.resolution&&!passiveRemoteResolution\)\}/);
+  assert.doesNotMatch(root,/suspended=\{Boolean\([^}]*playerHandoutOpen/);
+  assert.doesNotMatch(root,/suspended=\{Boolean\([^}]*activeUtility/);
   assert.doesNotMatch(root,/suspended=\{Boolean\([^}]*quickOpen/);
   assert.match(root,/lastLauncher\.current=quickLauncher\.current/);
 });

@@ -15,6 +15,7 @@ export interface DivineSenseActivationRequest {
   expectedRevision: number;
   paladinLevel: number;
   channelDivinityResourceId?: string;
+  useBonusAction?: boolean;
 }
 
 export interface DivineSenseCreatureFact {
@@ -56,13 +57,13 @@ function validateDistance(distanceFeet: number) {
 export function compileDivineSense(request: DivineSenseActivationRequest): PendingResolution {
   validatePaladinLevel(request.paladinLevel);
   const operations: ResolutionOperation[] = [
-    {
+    ...(request.useBonusAction===false?[]:[{
       id:`${request.id}:bonus-action`,
-      kind:"use-economy",
+      kind:"use-economy" as const,
       actorId:request.actorId,
-      slot:"bonus-action",
+      slot:"bonus-action" as const,
       bonusActionGranted:true,
-    },
+    }]),
     {
       id:`${request.id}:channel-divinity`,
       kind:"spend-resource",

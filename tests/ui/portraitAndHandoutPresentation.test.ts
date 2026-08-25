@@ -7,6 +7,9 @@ const portrait=readFileSync(new URL("../../src/CharacterPortraitBridge.tsx",impo
 const handout=readFileSync(new URL("../../src/SessionImageHandoutBridge.tsx",import.meta.url),"utf8");
 const runtime=readFileSync(new URL("../../src/app/sessionImageHandoutRuntimeAdapter.ts",import.meta.url),"utf8");
 const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
+const actorBoards=readFileSync(new URL("../../src/SessionActorBoards.tsx",import.meta.url),"utf8");
+const mainFocus=readFileSync(new URL("../../src/SessionMainFocus.tsx",import.meta.url),"utf8");
+const actionDock=readFileSync(new URL("../../src/SessionActionDock.tsx",import.meta.url),"utf8");
 
 test("portrait accepts only bounded local PNG/JPEG/WebP and exposes preview replace remove and focal controls",()=>{
   const png=parseLocalImageDataUrl("data:image/png;base64,iVBORw0KGgo=","hero.png",PORTRAIT_IMAGE_MAX_BYTES);
@@ -14,8 +17,16 @@ test("portrait accepts only bounded local PNG/JPEG/WebP and exposes preview repl
   assert.equal(isLocalImageAssetV1({...png,byteLength:PORTRAIT_IMAGE_MAX_BYTES+1},PORTRAIT_IMAGE_MAX_BYTES),false);
   assert.throws(()=>parseLocalImageDataUrl("data:image/svg+xml;base64,PHN2Zz4=","hero.svg",PORTRAIT_IMAGE_MAX_BYTES),/PNG, JPEG, WebP/);
   assert.equal(HANDOUT_IMAGE_MAX_BYTES,4*1024*1024);
-  for(const pattern of [/accept=\{LOCAL_IMAGE_ACCEPT\}/,/사진 선택 \/ 교체/,/가로 초점/,/세로 초점/,/제거/,/updateActiveCharacterPortrait/]) assert.match(portrait,pattern);
-  assert.match(portrait,/\.sheet-play-toolbar, \.official-identity-grid/,"both normal Sheet layouts should surface the same portrait bridge");
+  for(const pattern of [/accept=\{LOCAL_IMAGE_ACCEPT\}/,/사진 선택 \/ 교체/,/가로 초점/,/세로 초점/,/제거/,/updateActiveCharacterPortrait/,/character-portrait-hover/,/persisted\?"변경":"\+"/]) assert.match(portrait,pattern);
+  assert.match(portrait,/\.official-2024-appearance, \.sheet-play-toolbar/);
+  assert.doesNotMatch(portrait,/official-identity-grid/);
+});
+
+test("host Session portrait surfaces resolve remote owner projections without copying them into the Host library",()=>{
+  for(const source of [actorBoards,mainFocus,actionDock]){
+    assert.match(source,/projectedCharacterById\(mockAdapter/);
+    assert.match(source,/sanitizeCharacterPortrait/);
+  }
 });
 
 test("DM handout is contextual presentation state with explicit reveal withdraw dismiss reopen and no mechanics path",()=>{

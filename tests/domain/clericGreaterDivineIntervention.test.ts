@@ -108,7 +108,7 @@ test("Greater Divine Intervention can use Wish's basic mode to replicate an exec
   assert.equal((result.results["greater-di.wish-copy:lockout-roll"] as { total:number }).total,5);
 });
 
-test("Wish replication rejects unsupported copied mechanics atomically instead of approximating them", () => {
+test("Wish replication executes newly supported copied mechanics atomically", () => {
   const state = stateBeforeWish();
   const thunderwave = spellMechanicById("dnd.srd521.spell.thunderwave");
   assert.ok(thunderwave);
@@ -125,11 +125,11 @@ test("Wish replication rejects unsupported copied mechanics atomically instead o
     dice:{ saves:{ goblin:{ id:"partial-save", purpose:"partial", sides:20, faces:[3] } }, effectFaces:[4,5] },
     d4Faces:[2,2],
   });
-  assert.equal(result.status,"rejected");
-  assert.equal(result.state,state);
-  assert.equal(state.combatants.hero.economy.action,true);
-  assert.equal(state.combatants.hero.resources.find((pool) => pool.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID)?.current,1);
-  assert.match(result.status === "rejected" ? result.error : "",/fully executable/);
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.combatants.goblin.life.hp.current,6,"replicated Thunderwave deals its exact base 2d8 damage");
+  assert.equal(result.state.combatants.hero.economy.action,false);
+  assert.equal(result.state.combatants.hero.resources.find((pool) => pool.id === CLERIC_DIVINE_INTERVENTION_RESOURCE_ID)?.current,0);
 });
 
 test("Wish replication requires level 20 and Wish's own non-material component before mutation", () => {

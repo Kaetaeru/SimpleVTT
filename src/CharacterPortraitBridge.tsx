@@ -9,7 +9,7 @@ import { LOCAL_IMAGE_ACCEPT, PORTRAIT_IMAGE_MAX_BYTES, readLocalImageFile } from
 function usePortraitTarget() {
   const [target,setTarget]=useState<Element|null>(null);
   useEffect(()=>{
-    const resolve=()=>setTarget(document.querySelector(".sheet-play-toolbar, .official-identity-grid"));
+    const resolve=()=>setTarget(document.querySelector('.official-2024-appearance, .sheet-play-toolbar'));
     resolve();
     const observer=new MutationObserver(resolve);
     observer.observe(document.body,{childList:true,subtree:true});
@@ -51,13 +51,14 @@ export function CharacterPortraitBridge() {
     catch(reason) { setError(reason instanceof Error?reason.message:String(reason)); }
   };
 
-  return createPortal(<section className="character-portrait-card" aria-label="캐릭터 초상화">
-    <div className="character-portrait-frame">{shown?<img src={shown.asset.dataUrl} alt={`${character.name} 초상화`} style={{objectPosition:`${shown.focalX*100}% ${shown.focalY*100}%`}}/>:<span>{initials}</span>}</div>
+  const card=<section className="character-portrait-card" aria-label="캐릭터 초상화">
+    <button type="button" className={`character-portrait-frame${shown?" has-image":""}`} aria-label={persisted?"사진 변경":"사진 추가"} onClick={()=>setEditing(true)}>{shown?<img src={shown.asset.dataUrl} alt={`${character.name} 초상화`} style={{objectPosition:`${shown.focalX*100}% ${shown.focalY*100}%`}}/>:<span className="character-portrait-initials">{initials}</span>}<span className="character-portrait-hover">{persisted?"변경":"+"}</span></button>
     <div className="character-portrait-actions">
       <button type="button" onClick={()=>setEditing((value)=>!value)}>{persisted?"사진 조정":"사진 추가"}</button>
       {persisted&&<button type="button" onClick={remove}>제거</button>}
     </div>
-    {editing&&<div className="character-portrait-editor">
+  </section>;
+  const editor=editing&&<div className="character-portrait-editor-backdrop"><div className="character-portrait-editor" role="dialog" aria-modal="true" aria-label="캐릭터 사진 편집">
       <strong>Character Portrait</strong>
       <label className="portrait-file">사진 선택 / 교체<input type="file" accept={LOCAL_IMAGE_ACCEPT} onChange={(event)=>void choose(event.target.files?.[0])}/></label>
       {draft&&<>
@@ -66,7 +67,8 @@ export function CharacterPortraitBridge() {
         <small>프레임 안에서 보일 위치만 조정합니다. 원본 이미지는 다시 인코딩하지 않습니다.</small>
       </>}
       {error&&<p className="portrait-error">{error}</p>}
-      <div><button type="button" onClick={()=>{setDraft(persisted);setEditing(false);setError("");}}>취소</button><button type="button" className="primary" disabled={!draft} onClick={save}>저장</button></div>
-    </div>}
-  </section>,target);
+      <div>{persisted&&<button type="button" onClick={remove}>제거</button>}<button type="button" onClick={()=>{setDraft(persisted);setEditing(false);setError("");}}>취소</button><button type="button" className="primary" disabled={!draft} onClick={save}>저장</button></div>
+    </div></div>;
+
+  return <>{createPortal(card,target)}{editor&&createPortal(editor,document.body)}</>;
 }

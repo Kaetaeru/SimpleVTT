@@ -56,12 +56,16 @@ test("icon-only slots expose detailed hover and focus information",()=>{
 test("targeting is lifted to Actor Boards with a pointer tether and no picker overlay",()=>{
   assert.match(root,/targetingActionId/);
   assert.match(root,/targetingAction\.eligibleTargetIds\.includes\(entityId\)/);
-  assert.match(root,/await resolveAction\(targetingAction\.id,targetIds\)/);
-  assert.match(root,/targetingAction\.target!=="multi-enemy"/);
+  assert.match(root,/await resolveAction\(targetingExecutionActionId\?\?targetingAction\.id,targetIds\)/);
+  assert.match(root,/targetingAction\.maxTargets\?\?1/);
   assert.match(root,/SessionTargetingCursor/);
+  assert.match(root,/targetIds=\{selectedTargetIds\}/);
   assert.match(root,/\.session-actor-card\[data-actor-id\]/);
   assert.match(root,/element\.dataset\.actorId===action\.actorId/);
   assert.match(cursor,/pointermove/);
+  assert.match(cursor,/targets\.map/);
+  assert.match(cursor,/data-target-id=\{target\.id\}/);
+  assert.match(cursor,/session-targeting-arrow-line fixed/);
   assert.match(cursor,/markerEnd="url\(#session-target-arrow\)"/);
   assert.match(boards,/targetingAction\?\.eligibleTargetIds\.includes\(entity\.id\)/);
   assert.doesNotMatch(dock,/session-action-target-overlay|session-action-target-list/);
@@ -74,8 +78,17 @@ test("Actor Cards are portrait-only damage frames with hover AC detail",()=>{
   assert.match(boards,/role="tooltip"/);
   assert.match(boards,/session-actor-tooltip-hp/);
   assert.match(boards,/eligibleTargetReasons/);
+  assert.match(boards,/aria-label="공개 컨디션"/);
+  assert.match(boards,/entity\.status\.map/);
   assert.doesNotMatch(boards,/session-actor-card-copy|session-actor-card-vitals|session-actor-card-hp/);
   assert.match(css,/height:\s*var\(--session-actor-damage\)/);
+});
+
+test("Actor Cards expose distinct attacker, targeted, dodge, and hit motion cues",()=>{
+  assert.match(boards,/sessionActorCombatMotion\(snapshot\.resolution,entity\.id\)/);
+  assert.match(boards,/data-combat-motion=\{combatMotion\?\?undefined\}/);
+  for(const cue of ["combat-attacking","combat-targeted","combat-braced","combat-dodged","combat-hit"])assert.match(css,new RegExp(cue));
+  assert.match(css,/@media \(prefers-reduced-motion:reduce\)/);
 });
 
 test("controlled portrait repeats the scene damage frame and exact HP",()=>{
@@ -120,8 +133,14 @@ test("Influence, Search, and Study are one action slot each with skill-roll pick
   assert.match(css,/\.session-standard-skill-picker/);
 });
 
-test("174px is the two-row minimum and 3-4 rows expand the command center",()=>{
-  assert.match(css,/--svtt-command-h:\s*max\(174px, calc\(77px \+ var\(--session-hotbar-rows-active, 2\) \* 46px\)\)/);
+test("200px fits two rows and 3-4 rows expand the command center",()=>{
+  assert.match(css,/--svtt-command-h:\s*max\(200px, calc\(108px \+ var\(--session-hotbar-rows-active, 2\) \* 46px\)\)/);
   assert.match(dock,/--session-hotbar-rows-active/);
   assert.match(css,/overflow-x:\s*auto/);
+});
+
+test("Lay On Hands opens amount and condition controls before normal actor targeting",()=>{
+  assert.match(dock,/aria-label="치유의 손길 설정"/);
+  assert.match(dock,/buildLayOnHandsExecutionActionId/);
+  assert.match(dock,/onBeginTargeting\(layOnHandsAction,layOnHandsAnchor,executionActionId\)/);
 });

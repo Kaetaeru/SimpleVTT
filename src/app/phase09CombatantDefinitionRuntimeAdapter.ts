@@ -57,7 +57,9 @@ function parseRuntimeStats(payload:Record<string,unknown>) {
   if (savesRaw!==undefined && !Array.isArray(savesRaw)) throw new Error("savingThrowProficiencies must be an array");
   const savingThrowProficiencies=stringArray(savesRaw) as AbilityKey[];
   for (const key of savingThrowProficiencies) if (!ABILITY_KEYS.includes(key)) throw new Error(`invalid saving throw proficiency: ${key}`);
+  if (payload.creatureType!==undefined&&(typeof payload.creatureType!=="string"||!/^[a-z][a-z-]*$/i.test(payload.creatureType))) throw new Error("creatureType must be a stable creature-type slug");
   return {
+    creatureType:typeof payload.creatureType==="string"?payload.creatureType.toLowerCase():undefined,
     abilities,
     proficiencyBonus,
     savingThrowProficiencies,

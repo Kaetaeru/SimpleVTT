@@ -106,3 +106,27 @@ test("manual movement reaction declaration rejects a provoker who is not the cur
   assert.equal(snapshot.activity[0]?.title,"이동 반응 입력 거부");
   assert.match(snapshot.activity[0]?.summary ?? "",/현재 턴 Actor/);
 });
+
+test("opportunity attacks reject ranged attacks and a provoker using Disengage", async () => {
+  const ranged=new MockAdapter();
+  await ranged.startInitiative();
+  await ranged.setCurrentActor("combatant.goblin-a");
+  await ranged.declareManualMovementReaction({
+    kind:"opportunity-attack",provokerId:"combatant.goblin-a",reactorId:"char.aelar",attackActionId:"action.shortbow",
+    distanceFeet:5,visibleAtTrigger:true,coverAtTrigger:"none",targetCanSeeReactorAtTrigger:true,
+  });
+  let snapshot=await ranged.getSnapshot();
+  assert.equal(snapshot.resolution,null);
+  assert.match(snapshot.activity[0]?.summary??"",/근접 공격/);
+
+  const disengaged=new MockAdapter();
+  await startAelarTurn(disengaged);
+  (disengaged as unknown as { scene:{entities:Array<{id:string;status:string[]}>} }).scene.entities.find((entry)=>entry.id==="char.aelar")!.status.push("이탈");
+  await disengaged.declareManualMovementReaction({
+    kind:"opportunity-attack",provokerId:"char.aelar",reactorId:"combatant.goblin-a",attackActionId:"action.scimitar",
+    distanceFeet:5,visibleAtTrigger:true,coverAtTrigger:"none",targetCanSeeReactorAtTrigger:true,
+  });
+  snapshot=await disengaged.getSnapshot();
+  assert.equal(snapshot.resolution,null);
+  assert.match(snapshot.activity[0]?.summary??"",/이탈 행동/);
+});

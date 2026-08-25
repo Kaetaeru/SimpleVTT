@@ -30,7 +30,7 @@ test("Actor switch delegates to the existing selected-Actor command and never ch
 });
 
 test("Encounter pane uses canonical Combatant and Initiative commands without lifecycle gates in presentation",()=>{
-  assert.match(tools,/instantiateCombatant, removeCombatant, startInitiative, endInitiative/);
+  for(const command of ["instantiateCombatant","removeCombatant","startInitiative","endInitiative"]) assert.match(tools,new RegExp(command));
   assert.match(tools,/await instantiateCombatant\(definitionId\)/);
   assert.match(tools,/await removeCombatant\(combatantId\)/);
   assert.match(tools,/snapshot\.combatantDefinitions/);

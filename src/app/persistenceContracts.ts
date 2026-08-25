@@ -17,6 +17,7 @@ export interface CharacterDurableLifeFlagsV1 {
   stable:boolean;
   unconscious:boolean;
   dead:boolean;
+  deathSaves?:{successes:number;failures:number};
 }
 
 export interface CharacterProgressionSelectionsV1 {

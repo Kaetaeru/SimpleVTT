@@ -1,5 +1,8 @@
-import type { ActionVm, AppRole, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
+import type { ActionVm, ActivityEntry, AppRole, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { projectTurnRuntimeToScene, resolveTurnRuntimeReaction } from "./realTurnRuntimeService";
+import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
+import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import {
   clearReadyActionConfiguration,
   readyActionConfigurationFor,
@@ -14,6 +17,7 @@ type ReadyReactionState={
   sessionMode:SessionMode;
   scene:SceneVm;
   activeCharacter:CharacterSheet;
+  activity:ActivityEntry[];
   getSnapshot():Promise<AppSnapshot>;
   entity(id:string):SceneEntity|undefined;
   resolution:ResolutionView|null;
@@ -154,7 +158,7 @@ MockAdapter.prototype.resolveAction=async function resolveReadyActionAsReaction(
   if (internal.sessionMode==="initiative"&&previousRole==="player") internal.role="dm";
   try {
     const previousEconomy=prepared.economy;
-    prepared.economy="반응";
+    prepared.economy="없음";
     try {
       await withActorActionPriority(internal,config.actorId,()=>previousResolveAction.call(
         this,
@@ -179,7 +183,7 @@ MockAdapter.prototype.advanceResolution=async function advancePreparedActionAsRe
     : actorAction(internal,pending.config.actorId,pending.config.actionId);
   if (!prepared) return previousAdvanceResolution.call(this);
   const previousEconomy=prepared.economy;
-  prepared.economy="반응";
+  prepared.economy="없음";
   const actor=internal.entity(pending.config.actorId);
   if (!pending.started&&actor?.status.includes("준비 행동")) {
     actor.status=actor.status.filter((status)=>status!=="준비 행동");
@@ -194,8 +198,30 @@ MockAdapter.prototype.advanceResolution=async function advancePreparedActionAsRe
   }
   try {
     const snapshot=await withActorActionPriority(internal,pending.config.actorId,()=>previousAdvanceResolution.call(this));
-    if (snapshot.resolution?.stage==="complete") pendingReadyResolution.delete(this);
-    return snapshot;
+    if (snapshot.resolution?.stage!=="complete") return snapshot;
+    const economy=internal.scene.economyByActor[pending.config.actorId];
+    const session=turnRuntimeSessions.get(this);
+    if (session) {
+      const reaction=resolveTurnRuntimeReaction(session,{
+        resolutionId:snapshot.resolution.id,
+        reactorId:pending.config.actorId,
+        trigger:pending.config.trigger,
+        option:{id:"reaction:ready-action",source:"SRD 5.2.1 · Ready"},
+      });
+      if (reaction.status==="rejected") {
+        snapshot.resolution.finalOutcome=`준비 행동 반응 거부: ${reaction.error}`;
+      } else {
+        projectTurnRuntimeToScene(session,internal.scene);
+        recordRuntimeResolutionEvents(this,snapshot.resolution.id,reaction.events);
+      }
+    } else if (economy?.reaction) {
+      economy.reaction=false;
+    }
+    const reactionChange=`${actor?.name??pending.config.actorId} 반응 사용`;
+    snapshot.resolution.stateChanges.push(reactionChange);
+    if (internal.activity[0]&&!internal.activity[0].stateChanges.includes(reactionChange)) internal.activity[0].stateChanges.push(reactionChange);
+    pendingReadyResolution.delete(this);
+    return internal.getSnapshot();
   }
   finally {
     prepared.economy=previousEconomy;

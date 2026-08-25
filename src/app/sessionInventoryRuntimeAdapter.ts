@@ -10,6 +10,11 @@ import type {
 import { MockAdapter } from "./mockAdapter";
 import { entryName, itemEntryById, itemMechanic } from "./characterCreationV10Data";
 import { mutateActiveCharacterDurably } from "./characterLibraryRuntimeAdapter";
+import {
+  installSessionCharacterInventoryProjectionWriter,
+} from "./sessionInventoryProjectionPort";
+
+export { refreshSessionCharacterInventoryProjection } from "./sessionInventoryProjectionPort";
 
 declare module "./mockAdapter" {
   interface MockAdapter {
@@ -243,10 +248,12 @@ function revertMutation(current:SessionCharacterInventoryVm,undo:InventoryUndoRe
   return next;
 }
 
-export function refreshSessionCharacterInventoryProjection(adapter:MockAdapter,inventory:SessionCharacterInventoryVm) {
+function writeSessionCharacterInventoryProjection(adapter:MockAdapter,inventory:SessionCharacterInventoryVm) {
   const context=contextFor(adapter);
   context.inventories.set(inventory.characterId,cp(inventory));
 }
+
+installSessionCharacterInventoryProjectionWriter(writeSessionCharacterInventoryProjection);
 
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithSessionInventories() {
   const snapshot=await oldGetSnapshot.call(this);

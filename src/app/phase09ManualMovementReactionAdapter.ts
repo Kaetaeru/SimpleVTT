@@ -1,7 +1,7 @@
 import "./phase09RealRuntimeAttackAdapter";
 import "./manualMovementReactionContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
-import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
+import { isOpportunityAttackAction, type ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 import { MockAdapter } from "./mockAdapter";
 import { clearPendingManualMovementReaction, setPendingManualMovementReaction } from "./manualMovementReactionRuntime";
 import { resolveAttackRollResolution } from "./realResolutionService";
@@ -60,11 +60,12 @@ function validate(
 ) {
   if (internal.sessionMode!=="initiative") throw new Error("이동 반응 입력은 Initiative에서만 사용할 수 있습니다.");
   if (internal.resolution) throw new Error("진행 중인 Resolution을 먼저 완료하거나 닫아야 합니다.");
-  if (internal.scene.currentActorId!==command.provokerId) throw new Error("이동 반응 입력은 현재 턴 Actor에 대해서만 선언할 수 있습니다.");
+  if (internal.scene.currentActorId!==command.provokerId) throw new Error(`이동 반응 입력은 현재 턴 Actor에 대해서만 선언할 수 있습니다. 현재 ${internal.scene.currentActorId}, 입력 ${command.provokerId}`);
   const provoker=internal.entity(command.provokerId);
   const reactor=internal.entity(command.reactorId);
   if (!provoker) throw new Error(`현재 턴 Actor가 없습니다: ${command.provokerId}`);
   if (!reactor) throw new Error(`반응자가 없습니다: ${command.reactorId}`);
+  if (command.kind==="opportunity-attack"&&provoker.status.includes("이탈")) throw new Error(`${provoker.name}은(는) 이탈 행동으로 기회공격을 유발하지 않습니다.`);
   if (reactor.id===provoker.id) throw new Error("이동 반응자는 현재 이동 Actor와 달라야 합니다.");
   if (reactor.side===provoker.side) throw new Error("현재 수동 반응 공격 경로는 적대 진영 사이에서만 허용합니다.");
   const economy=internal.scene.economyByActor[reactor.id];
@@ -73,6 +74,7 @@ function validate(
   if (!action || action.actorId!==reactor.id) throw new Error(`반응 공격 Action이 없습니다: ${command.attackActionId}`);
   if (action.resolutionKind!=="attack") throw new Error(`반응 입력은 attack Action만 사용할 수 있습니다: ${action.id}`);
   if (action.itemCost || action.resourceCost) throw new Error("추가 Item/Resource 비용이 있는 수동 반응 공격은 아직 지원하지 않습니다.");
+  if (command.kind==="opportunity-attack"&&!isOpportunityAttackAction(action)) throw new Error("기회공격에는 도달거리 10피트 이하의 근접 공격이 필요합니다.");
   if (!Number.isFinite(command.distanceFeet) || command.distanceFeet<0) throw new Error("트리거 순간 거리는 0 이상의 유한한 피트 값이어야 합니다.");
   return { provoker,reactor,action };
 }

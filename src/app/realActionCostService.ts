@@ -78,7 +78,8 @@ function runtimeState(request:ActionCostTransactionRequest):RulesRuntimeState {
           reaction:request.economy.reaction,
           movement:request.economy.movement,
           movementMaximum:request.economy.movementMax,
-          extraActions:[],
+          extraActions:structuredClone(request.economy.extraActions ?? []),
+          extraAttacks:structuredClone(request.economy.extraAttacks ?? []),
         },
         resources:request.resources.map((resource) => ({
           id:resource.id,
@@ -167,6 +168,8 @@ export function resolveActionCostTransaction(request:ActionCostTransactionReques
     reaction:actor.economy.reaction,
     movement:actor.economy.movement,
     movementMax:actor.economy.movementMaximum,
+    ...(actor.economy.extraActions?.length?{extraActions:structuredClone(actor.economy.extraActions)}:{}),
+    ...(actor.economy.extraAttacks?.length?{extraAttacks:structuredClone(actor.economy.extraAttacks)}:{}),
   };
   const resources = beforeResources.map((resource) => {
     const pool = actor.resources.find((entry) => entry.id === resource.id);

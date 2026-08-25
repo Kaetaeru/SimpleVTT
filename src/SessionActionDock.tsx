@@ -3,11 +3,15 @@ import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { ActionVm } from "./app/contracts";
 import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
+import { projectedCharacterById } from "./app/characterSessionProjectionRegistry";
+import { mockAdapter } from "./app/mockAdapter";
 import { DEFAULT_SESSION_HOTBAR_ROWS, readSessionHotbarCategoryOrder, readSessionHotbarRows, writeSessionHotbarCategoryOrder, writeSessionHotbarRows, type SessionHotbarCategory, type SessionHotbarRows } from "./app/sessionHotbarPreferences";
 import type { TargetingAnchor } from "./SessionTargetingCursor";
 import { ActionIcon } from "./ActionIcon";
 import { actionIconDescriptor } from "./app/actionIconProjection";
 import { READY_MOVEMENT_ACTION_ID } from "./app/standardActionReadyState";
+import { visibleCharacterResources } from "./app/characterResourcePresentation";
+import { buildLayOnHandsExecutionActionId, layOnHandsMaximumHealing, type LayOnHandsActionOption } from "./app/paladinLayOnHandsRuntimeContracts";
 import "./session-action-dock.css";
 
 type HotbarPage = "mixed" | SessionHotbarCategory;
@@ -50,7 +54,7 @@ function pageIncludes(page:HotbarPage,action:ActionVm) {
 }
 export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,onCancelTargeting,onExecuteTargeting}:{
   actorId:string|null; suspended:boolean; targeting:SessionActionTargeting|null;
-  onBeginTargeting(action:ActionVm,anchor:TargetingAnchor):void; onCancelTargeting():void; onExecuteTargeting():void;
+  onBeginTargeting(action:ActionVm,anchor:TargetingAnchor,executionActionId?:string):void; onCancelTargeting():void; onExecuteTargeting():void;
 }) {
   const {snapshot,resolveAction,configureReadyAction,endTurn}=useSimpleVtt();
   const [page,setPage]=useState<HotbarPage>("mixed");
@@ -65,6 +69,10 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const [readyOpen,setReadyOpen]=useState(false);
   const [readyActionId,setReadyActionId]=useState("");
   const [readyTrigger,setReadyTrigger]=useState("");
+  const [layOnHandsAction,setLayOnHandsAction]=useState<ActionVm|null>(null);
+  const [layOnHandsAmount,setLayOnHandsAmount]=useState(1);
+  const [layOnHandsConditions,setLayOnHandsConditions]=useState<LayOnHandsActionOption["id"][]>([]);
+  const [layOnHandsAnchor,setLayOnHandsAnchor]=useState<TargetingAnchor|null>(null);
   const actions=snapshot&&actorId?snapshot.scene.actionsByActor[actorId]??[]:[];
   const abilityActions=useMemo(()=>actions.filter((action)=>action.id.startsWith("action.skill.")),[actions]);
   const groupedStandardActions=useMemo(()=>STANDARD_SKILL_GROUPS.flatMap((group)=>{
@@ -86,17 +94,18 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const actorHp=actorEntity?.hp??(ownsCharacter&&snapshot?snapshot.activeCharacter.hp:0);
   const actorMaxHp=actorEntity?.maxHp??(ownsCharacter&&snapshot?snapshot.activeCharacter.maxHp:0);
   const actorDamage=actorMaxHp>0?Math.max(0,Math.min(100,100-actorHp/actorMaxHp*100)):0;
-  const controlledPortrait=ownsCharacter&&snapshot?sanitizeCharacterPortrait(snapshot.activeCharacter.portrait):null;
-  const resources=ownsCharacter&&snapshot?snapshot.activeCharacter.resources:[];
+  const controlledCharacter=ownsCharacter?snapshot?.activeCharacter:actorId?projectedCharacterById(mockAdapter,actorId)?.sheet:undefined;
+  const controlledPortrait=sanitizeCharacterPortrait(controlledCharacter?.portrait);
+  const resources=ownsCharacter&&snapshot?visibleCharacterResources(snapshot.activeCharacter.resources):[];
   const economy=snapshot&&actorId&&snapshot.sessionMode==="initiative"?snapshot.scene.economyByActor[actorId]:undefined;
   const currentActor=snapshot?.scene.entities.find((entity)=>entity.id===snapshot.scene.currentActorId)??null;
   const role=snapshot?.session.role==="host"?"dm":"player";
   const playerOwnsTurn=Boolean(snapshot&&role==="player"&&currentActor?.id===snapshot.activeCharacter.id);
-  const canEndTurn=Boolean(snapshot&&snapshot.sessionMode==="initiative"&&currentActor&&snapshot.connectionState==="connected"&&!snapshot.resolution&&(role==="dm"||playerOwnsTurn));
-  const multiTarget=targeting?.action.target==="multi-enemy";
+  const canEndTurn=Boolean(snapshot&&snapshot.sessionMode==="initiative"&&currentActor&&snapshot.connectionState==="connected"&&!suspended&&(role==="dm"||playerOwnsTurn));
+  const multiTarget=(targeting?.action.maxTargets??1)>1;
   const readyOptions=useMemo(()=>actions.filter((action)=>action.available&&!action.id.startsWith("action.standard.ready")&&!action.id.startsWith("ui.action.standard.")),[actions]);
 
-  useEffect(()=>{ setPage("mixed"); setFeedback(null); setPendingActionId(null); setTooltip(null); setActionMenu(null); setStandardSkillPicker(null); setReadyOpen(false); },[actorId]);
+  useEffect(()=>{ setPage("mixed"); setFeedback(null); setPendingActionId(null); setTooltip(null); setActionMenu(null); setStandardSkillPicker(null); setReadyOpen(false); setLayOnHandsAction(null); },[actorId]);
   useEffect(()=>{ if (!targeting) setTooltip(null); },[targeting?.action.id]);
   useEffect(()=>{
     const root=document.querySelector<HTMLElement>(".session-reference-play-root");
@@ -118,6 +127,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
     if(action.id==="action.standard.ready"){
       setReadyActionId(readyOptions[0]?.id??"");setReadyTrigger("");setReadyOpen(true);setTooltip(null);return;
     }
+    if(action.layOnHands){const rect=button.getBoundingClientRect();setLayOnHandsAction(action);setLayOnHandsAmount(Math.min(5,action.layOnHands.maximumSpend));setLayOnHandsConditions([]);setLayOnHandsAnchor({x:rect.left+rect.width/2,y:rect.top+rect.height/2});setTooltip(null);return;}
     const grouped=STANDARD_SKILL_GROUPS.find((group)=>action.id===`ui.action.standard.${group.id}`);
     if(grouped){setActionMenu(null);setStandardSkillPicker((open)=>open===grouped.id?null:grouped.id);setFeedback(null);setTooltip(null);return;}
     if (action.target==="none") { void runImmediate(action,[]); return; }
@@ -144,6 +154,16 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
     catch{setFeedback("준비 행동을 설정하지 못했습니다.");}
     finally{setPendingActionId(null);}
   };
+  const toggleLayOnHandsCondition=(id:LayOnHandsActionOption["id"])=>{
+    if(!layOnHandsAction)return;const next=layOnHandsConditions.includes(id)?layOnHandsConditions.filter((entry)=>entry!==id):[...layOnHandsConditions,id];
+    if(next.length)try{buildLayOnHandsExecutionActionId(layOnHandsAction,0,next);}catch(reason){setFeedback(reason instanceof Error?reason.message:"상태 제거 비용이 부족합니다.");return;}
+    setLayOnHandsConditions(next);setLayOnHandsAmount((amount)=>Math.min(amount,layOnHandsMaximumHealing(layOnHandsAction,next)));setFeedback(null);
+  };
+  const confirmLayOnHands=()=>{
+    if(!layOnHandsAction||!layOnHandsAnchor)return;
+    try{const executionActionId=buildLayOnHandsExecutionActionId(layOnHandsAction,layOnHandsAmount,layOnHandsConditions);onBeginTargeting(layOnHandsAction,layOnHandsAnchor,executionActionId);setLayOnHandsAction(null);setFeedback(null);}
+    catch(reason){setFeedback(reason instanceof Error?reason.message:"치유의 손길 설정을 확인하세요.");}
+  };
   const renderSlot=(action:ActionVm)=>{
     const unavailable=!action.available; const selected=action.id===targeting?.action.id; const mainHand=isMainHand(action);
     return <button type="button" role="listitem" key={action.id} className={`session-hotbar-slot ${selected?"selected":""} ${unavailable?"unavailable":""} ${mainHand?"main-hand":""}`} aria-label={`${action.name} · ${action.summary}${mainHand?" · 장착 주무기":""}`} aria-pressed={selected} aria-disabled={unavailable||Boolean(pendingActionId)||suspended||targeting?.pending} onPointerEnter={(event)=>showTooltip(action,event.currentTarget)} onPointerLeave={()=>setTooltip(null)} onFocus={(event)=>showTooltip(action,event.currentTarget)} onBlur={()=>setTooltip(null)} onClick={(event)=>chooseAction(action,event.currentTarget)}><ActionIcon action={action}/>{mainHand&&<span className="session-hotbar-main-hand">M</span>}<span className="session-hotbar-cost">{action.itemCost?"I":action.economy.slice(0,1)}</span></button>;
@@ -152,7 +172,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
 
   return <section className="session-command-center session-reference-command-center" data-action-dock-state={targeting?"target":"hotbar"}>
     <div className="session-command-top">
-      <div className="session-command-economy" aria-label="행동 자원">{snapshot.sessionMode==="initiative"&&economy?<><span data-available={economy.action}><i/>행동</span><span data-available={economy.bonusAction}><i/>보너스</span><span data-available={economy.reaction}><i/>반응</span><span><i/>이동 {economy.movement}/{economy.movementMax}</span></>:<span className="freeform">자유 진행 · 턴 자원 없음</span>}</div>
+      <div className="session-command-economy" aria-label="행동 자원">{snapshot.sessionMode==="initiative"&&economy?<><span data-available={economy.action||Boolean(economy.extraActions?.length)||Boolean(economy.extraAttacks?.length)}><i/>행동{economy.extraActions?.length?` +${economy.extraActions.length}`:""}{economy.extraAttacks?.length?` · 추가 공격 ${economy.extraAttacks.length}`:""}</span><span data-available={economy.bonusAction}><i/>보너스</span><span data-available={economy.reaction}><i/>반응</span><span><i/>이동 {economy.movement}/{economy.movementMax}</span></>:<span className="freeform">자유 진행 · 턴 자원 없음</span>}</div>
       <div className="session-command-resources" aria-label="Resource Rail">{resources.length?resources.map((resource)=><span key={resource.id}><b>{resource.label}</b><strong>{resource.current}/{resource.max}</strong></span>):<span className="empty"><b>주요 자원</b><strong>표시할 자원 없음</strong></span>}</div>
     </div>
     <div className="session-command-body">
@@ -181,6 +201,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
     {actionMenu==="ability"&&<aside className="session-action-library ability" aria-label="능력 판정 선택"><header><div><span>D20 TEST</span><strong>능력 판정</strong><small>기술을 선택하면 캐릭터 수정치와 숙련을 적용해 굴립니다.</small></div><button type="button" aria-label="능력 판정 닫기" onClick={()=>setActionMenu(null)}>×</button></header><div className="session-ability-check-groups">{ABILITY_CHECK_GROUPS.map((group)=><section key={group.label}><strong>{group.label}</strong><div>{group.ids.map((id)=>abilityActions.find((action)=>action.id===`action.skill.${id}`)).filter((action):action is ActionVm=>Boolean(action)).map(menuActionButton)}</div></section>)}</div></aside>}
     {standardSkillPicker&&<aside className="session-standard-skill-picker" aria-label={`${STANDARD_SKILL_GROUPS.find((group)=>group.id===standardSkillPicker)?.name??"기본 행동"} 기술 선택`}><header><div><span>SKILL CHECK</span><strong>{STANDARD_SKILL_GROUPS.find((group)=>group.id===standardSkillPicker)?.name}</strong><small>{STANDARD_SKILL_GROUPS.find((group)=>group.id===standardSkillPicker)?.summary}</small></div><button type="button" aria-label="기술 선택 닫기" onClick={()=>setStandardSkillPicker(null)}>×</button></header><div>{actions.filter((action)=>action.id.startsWith(`action.standard.${standardSkillPicker}.`)).map(menuActionButton)}</div></aside>}
     {readyOpen&&<aside className="session-ready-config" aria-label="준비 행동 설정"><header><div><span>READY ACTION</span><strong>행동과 트리거 준비</strong><small>트리거가 발생하면 선택한 행동이나 이동을 반응으로 실행합니다.</small></div><button type="button" aria-label="준비 행동 설정 닫기" onClick={()=>setReadyOpen(false)}>×</button></header><label><span>예약할 행동</span><select value={readyActionId} onChange={(event)=>setReadyActionId(event.target.value)}><option value={READY_MOVEMENT_ACTION_ID}>이동 · 속도까지 이동</option>{readyOptions.map((action)=><option key={action.id} value={action.id}>{action.name} · {action.summary}</option>)}</select></label><label><span>감지 가능한 트리거</span><input value={readyTrigger} onChange={(event)=>setReadyTrigger(event.target.value)} placeholder="예: 고블린이 문을 통과하면"/></label>{readyActionId===READY_MOVEMENT_ACTION_ID&&<p>전투맵 모듈이 없으면 반응과 선언만 기록하며, 임의 좌표 이동은 적용하지 않습니다.</p>}<footer><button type="button" onClick={()=>setReadyOpen(false)}>취소</button><button type="button" className="primary" disabled={!readyActionId||!readyTrigger.trim()||Boolean(pendingActionId)} onClick={()=>void prepareReady()}>준비하기</button></footer></aside>}
+    {layOnHandsAction?.layOnHands&&<aside className="session-ready-config" aria-label="치유의 손길 설정"><header><div><span>LAY ON HANDS</span><strong>치유의 손길</strong><small>회복량과 제거할 상태를 정한 뒤 액터를 선택합니다.</small></div><button type="button" aria-label="치유의 손길 설정 닫기" onClick={()=>setLayOnHandsAction(null)}>×</button></header><label><span>HP 회복량 · 사용 가능 {layOnHandsAction.layOnHands.maximumSpend}</span><input type="number" min={0} max={layOnHandsMaximumHealing(layOnHandsAction,layOnHandsConditions)} value={layOnHandsAmount} onChange={(event)=>setLayOnHandsAmount(Math.max(0,Math.min(Number(event.target.value)||0,layOnHandsMaximumHealing(layOnHandsAction,layOnHandsConditions))))}/></label>{layOnHandsAction.layOnHands.conditionOptions.length>0&&<div className="session-ready-options"><span>상태 제거</span>{layOnHandsAction.layOnHands.conditionOptions.map((option)=><label key={option.id}><input type="checkbox" checked={layOnHandsConditions.includes(option.id)} onChange={()=>toggleLayOnHandsCondition(option.id)}/><span>{option.label} · {option.cost}점</span></label>)}</div>}<footer><button type="button" onClick={()=>setLayOnHandsAction(null)}>취소</button><button type="button" className="primary" disabled={layOnHandsAmount===0&&!layOnHandsConditions.length} onClick={confirmLayOnHands}>대상 선택</button></footer></aside>}
     {(feedback||targeting?.feedback)&&<p className="session-action-feedback session-command-feedback" role="status">{feedback||targeting?.feedback}</p>}
     {tooltip&&createPortal(<aside className="session-hotbar-tooltip" role="tooltip" style={{left:tooltip.x,top:tooltip.y,transform:"translateY(-100%)"}}><small>{tooltip.mainHand?"장착 주무기 · ":""}{actionIconDescriptor(tooltip.action).label} · {targetCopy(tooltip.action.target)} · {tooltip.action.economy}</small><strong>{tooltip.action.name}</strong><b>{actionEffect(tooltip.action)}</b><p>{tooltip.action.summary}</p>{!tooltip.action.available&&<em>{tooltip.action.disabledReason||"현재 사용할 수 없음"}</em>}</aside>,document.body)}
   </section>;

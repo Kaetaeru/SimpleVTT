@@ -21,11 +21,13 @@ import {
   speciesDefinition,
 } from "./characterCreationV10Data";
 import { proficiencyBonusForTotalLevel } from "../domain/progressionCatalog";
+import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID } from "../domain/coreClassResources";
 import {
   parseCharacterSessionProjectionV1,
   type CharacterProjectionContentIdentityV1,
   type CharacterSessionProjectionV1,
 } from "./characterSessionProjection";
+import { materializeCreatedWeaponAttacks } from "./characterCreationWeaponAttackAdapter";
 
 export type CharacterSessionProjectionReconstruction =
   | {
@@ -95,8 +97,8 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
     return {
       id:source.id,
       definitionId:source.definitionId,
-      name:canonical ? entryName(canonical) : source.name ?? source.definitionId,
-      nameEn:canonical?.presentation.originalName ?? source.nameEn,
+      name:source.name ?? (canonical ? entryName(canonical) : source.definitionId),
+      nameEn:source.nameEn ?? canonical?.presentation.originalName,
       kind,
       quantity:runtime.quantity,
       equipped:runtime.equipped,
@@ -298,6 +300,27 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       ],
     });
   }
+  if (fighterLevel>=2) {
+    const surge=sheet.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID);
+    const gate=sheet.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID);
+    if (surge&&gate) actions.push({
+      id:"action.fighter.action-surge",
+      actorId:sheet.id,
+      name:"액션 서지",
+      category:"basic",
+      target:"self",
+      economy:"없음",
+      resolutionKind:"no-roll",
+      summary:`추가 행동 1회 · ${surge.current}/${surge.max}`,
+      available:surge.current>0&&gate.current>0,
+      disabledReason:surge.current<=0?"액션 서지 사용 횟수를 모두 소모했습니다.":gate.current<=0?"이번 턴에 이미 액션 서지를 사용했습니다.":undefined,
+      eligibleTargetIds:targetSelf,
+      details:[
+        {label:"효과",value:"이번 턴 비마법 행동 1회 추가",source:"SRD 5.2.1 · Fighter Action Surge"},
+        {label:"비용",value:`${surge.label} 1회`,source:surge.source},
+      ],
+    });
+  }
   actions.push(...projectedItemActions(sheet,targetSelf));
   return actions;
 }
@@ -341,6 +364,7 @@ function reconstructAccepted(projection:CharacterSessionProjectionV1):CharacterS
     sourceRevision:projection.sourceRevision,
     runtimeRevision:projection.runtimeRevision,
     durableLifeFlags:projection.runtime.lifeFlags ? clone(projection.runtime.lifeFlags) : undefined,
+    portrait:projection.portrait ? clone(projection.portrait) : undefined,
   };
   Object.assign(sheet,{
     classLevels:clone(projection.source.build.classLevels ?? []),
@@ -358,6 +382,7 @@ function reconstructAccepted(projection:CharacterSessionProjectionV1):CharacterS
     goldGp:projection.runtime.goldGp,
     ...clone(projection.source.progression),
   });
+  sheet.attacks=materializeCreatedWeaponAttacks(sheet);
   const entity:SceneEntity={
     id:sheet.id,
     name:sheet.name,
@@ -367,14 +392,15 @@ function reconstructAccepted(projection:CharacterSessionProjectionV1):CharacterS
     maxHp:sheet.maxHp,
     tempHp:sheet.tempHp,
     ac:sheet.ac,
-    initiative:abilityMod(sheet.abilities.dex),
+    initiative:10+abilityMod(sheet.abilities.dex),
     status:[],
+    distance:"0피트",
     resistances:[],
     immunities:[],
     vulnerabilities:[],
     reactions:[],
     runtimeLife:sheet.durableLifeFlags ? {
-      deathSaves:{successes:0,failures:0},
+      deathSaves:clone(sheet.durableLifeFlags.deathSaves??{successes:0,failures:0}),
       stable:sheet.durableLifeFlags.stable,
       unconscious:sheet.durableLifeFlags.unconscious,
       dead:sheet.durableLifeFlags.dead,

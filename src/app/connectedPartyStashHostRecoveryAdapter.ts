@@ -108,6 +108,7 @@ async function handleRecoveryClient(adapter:MockAdapter,peer:string,request:Part
     if(request.outcome==="applied")await adapter.adjustDmInventory(request.command);else await adapter.undoDmInventoryAdjustment(request.requestId);
     await finalizeRecoveredOwnerJournal(adapter,request.requestId,request.outcome);
     const after=await adapter.getSnapshot();projection=buildCharacterSessionProjectionV1(after.activeCharacter,after.catalog);
+    await publishConnectedSnapshot(adapter);
   }catch(cause){error=cause instanceof Error?cause.message:String(cause);}
   await baseSendTo(peer,JSON.stringify({type:"campaign-party-stash-owner-recovery-result",sessionId:request.sessionId,requestId:request.requestId,actorId:request.actorId,outcome:request.outcome,accepted:!error,...(error?{error}:{projection})} satisfies PartyStashOwnerRecoveryResult));
 }

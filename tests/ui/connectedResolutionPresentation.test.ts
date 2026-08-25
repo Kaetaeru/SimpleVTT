@@ -97,6 +97,44 @@ test("a separate Client applies each live presentation sequence once without run
   assert.equal(snapshot.resolution?.stage,"attack-result");
 });
 
+test("a new remote dice signal cancels the active replay and discards older queued presentation steps",async()=>{
+  const {envelope}=await attackPresentation();
+  const observer=new MockAdapter();
+  const state=connectedStateFor(observer);
+  state.mode="client";
+  state.sessionId="session.presentation-replace";
+
+  assert.equal(applyConnectedResolutionPresentation(observer,envelope).status,"applied");
+  const result=structuredClone(envelope);
+  result.presentationSequence=2;
+  result.resolution.stage="attack-result";
+  assert.equal(applyConnectedResolutionPresentation(observer,result).status,"queued");
+  assert.equal(state.pendingPresentations.length,1);
+
+  const nextRoll=structuredClone(envelope);
+  nextRoll.presentationSequence=3;
+  nextRoll.resolutionId="resolution.remote-new-roll";
+  nextRoll.actor={id:"char.mira",label:"Mira"};
+  nextRoll.resolution.id=nextRoll.resolutionId;
+  nextRoll.resolution.actorId="char.mira";
+  nextRoll.resolution.actionId="action.remote-mira-roll";
+  nextRoll.resolution.actionName="Mira 원격 공격";
+  nextRoll.resolution.authoritativeDice=[17];
+  nextRoll.resolution.attackTotal=24;
+  nextRoll.action={...nextRoll.action!,id:nextRoll.resolution.actionId,actorId:"char.mira",name:nextRoll.resolution.actionName};
+  nextRoll.dice={faces:[17],selectedIndices:[0],discardedIndices:[],selection:"all",total:24,modifier:7};
+  nextRoll.activityLink.resolutionId=nextRoll.resolutionId;
+
+  const replaced=applyConnectedResolutionPresentation(observer,nextRoll);
+  assert.equal(replaced.status,"replaced");
+  assert.equal(state.pendingPresentations.length,0,"stale result steps must not replay after the newer dice signal");
+  const snapshot=await observer.getSnapshot();
+  assert.equal(snapshot.resolution?.id,nextRoll.resolutionId);
+  assert.equal(snapshot.resolution?.actorId,"char.mira");
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[17]);
+  assert.equal(snapshot.resolutionPresentation?.presentationSequence,3);
+});
+
 test("advantage-like presentation freezes selected and discarded authoritative faces",async()=>{
   const {snapshot}=await attackPresentation();
   assert.ok(snapshot.resolution);

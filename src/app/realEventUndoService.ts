@@ -37,8 +37,8 @@ function deepEquals(left:unknown,right:unknown):boolean {
   }
   const leftRecord=left as Record<string,unknown>;
   const rightRecord=right as Record<string,unknown>;
-  const leftKeys=Object.keys(leftRecord).sort();
-  const rightKeys=Object.keys(rightRecord).sort();
+  const leftKeys=Object.keys(leftRecord).filter((key)=>leftRecord[key]!==undefined).sort();
+  const rightKeys=Object.keys(rightRecord).filter((key)=>rightRecord[key]!==undefined).sort();
   if (leftKeys.length!==rightKeys.length || leftKeys.some((key,index)=>key!==rightKeys[index])) return false;
   return leftKeys.every((key)=>deepEquals(leftRecord[key],rightRecord[key]));
 }
@@ -59,7 +59,7 @@ function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:Ite
     if (change.field==="reaction") return found(economy.reaction);
     if (change.field==="movement") return found(economy.movement);
     if (change.field==="movementMaximum") return found(economy.movementMax);
-    return missing();
+    return found(economy[change.field] ?? []);
   }
   if (change.kind==="resource") {
     const item=itemResource(change.resourceId);
@@ -75,6 +75,10 @@ function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:Ite
   if (change.kind==="life") {
     const life=scene.entities.find((entry)=>entry.id===change.targetId)?.runtimeLife;
     return life ? found(life[change.field]) : missing();
+  }
+  if (change.kind==="death-save") {
+    const life=scene.entities.find((entry)=>entry.id===change.targetId)?.runtimeLife;
+    return life ? found(life.deathSaves[change.field]) : missing();
   }
   return missing();
 }
@@ -96,7 +100,7 @@ function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateC
     if (change.field==="reaction") return found(combatant.economy.reaction);
     if (change.field==="movement") return found(combatant.economy.movement);
     if (change.field==="movementMaximum") return found(combatant.economy.movementMaximum);
-    return missing();
+    return found(combatant.economy[change.field] ?? []);
   }
   if (change.kind==="resource") {
     if (itemResource(change.resourceId)) return missing();
@@ -104,6 +108,7 @@ function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateC
     return resource ? found(resource.current) : missing();
   }
   if (change.kind==="life") return found(combatant.life[change.field]);
+  if (change.kind==="death-save") return found(combatant.life.deathSaves[change.field]);
   return missing();
 }
 
@@ -117,7 +122,11 @@ function applyAppChange(scene:SceneVm,resources:CharacterResourceVm[],items:Item
   }
   if (change.kind==="economy") {
     const economy=scene.economyByActor[change.targetId]!;
-    if (change.field==="action") economy.action=Boolean(change.before);
+    if (change.field==="extraActions"||change.field==="extraAttacks") {
+      if (change.before.length) economy[change.field]=structuredClone(change.before) as never;
+      else delete economy[change.field];
+    }
+    else if (change.field==="action") economy.action=Boolean(change.before);
     else if (change.field==="bonusAction") economy.bonusAction=Boolean(change.before);
     else if (change.field==="reaction") economy.reaction=Boolean(change.before);
     else if (change.field==="movement") economy.movement=Number(change.before);
@@ -140,6 +149,7 @@ function applyAppChange(scene:SceneVm,resources:CharacterResourceVm[],items:Item
     const entity=scene.entities.find((entry)=>entry.id===change.targetId)!;
     entity.runtimeLife![change.field]=change.before;
   }
+  if (change.kind==="death-save") scene.entities.find((entry)=>entry.id===change.targetId)!.runtimeLife!.deathSaves[change.field]=change.before;
 }
 
 function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateChange) {
@@ -169,7 +179,8 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
     return;
   }
   if (change.kind==="economy") {
-    if (change.field==="action") combatant.economy.action=Boolean(change.before);
+    if (change.field==="extraActions"||change.field==="extraAttacks") combatant.economy[change.field]=structuredClone(change.before) as never;
+    else if (change.field==="action") combatant.economy.action=Boolean(change.before);
     else if (change.field==="bonusAction") combatant.economy.bonusAction=Boolean(change.before);
     else if (change.field==="reaction") combatant.economy.reaction=Boolean(change.before);
     else if (change.field==="movement") combatant.economy.movement=Number(change.before);
@@ -183,6 +194,7 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
     return;
   }
   if (change.kind==="life") combatant.life[change.field]=change.before;
+  if (change.kind==="death-save") combatant.life.deathSaves[change.field]=change.before;
 }
 
 function runtimeOnly(change:RuntimeStateChange) {
@@ -209,7 +221,6 @@ function validate(
   const probeItems=structuredClone(items);
   const probeRuntime=runtimeState ? cloneRuntimeState(runtimeState) : undefined;
   for (const change of [...changes].reverse()) {
-    if (change.kind==="economy"&&change.field==="extraActions") return "event-native undo does not support economy.extraActions yet";
     const app=appCurrentValue(probeScene,probeResources,probeItems,change);
     const runtime=probeRuntime ? runtimeCurrentValue(probeRuntime,change) : missing();
     if (runtimeOnly(change) && !probeRuntime) return `event-native undo requires runtime state for ${change.kind}`;
@@ -235,13 +246,16 @@ function undoLabel(change:RuntimeStateChange) {
     const field=change.field==="current" ? "HP" : change.field==="maximum" ? "최대 HP" : "임시 HP";
     return `${change.targetId} ${field} ${change.after} → ${change.before}`;
   }
-  if (change.kind==="economy") return `${change.targetId} economy.${change.field} ${String(change.after)} → ${String(change.before)}`;
+  if (change.kind==="economy") return change.field==="extraActions"||change.field==="extraAttacks"
+    ? `${change.targetId} 추가 행동 ${change.after.length} → ${change.before.length}`
+    : `${change.targetId} economy.${change.field} ${String(change.after)} → ${String(change.before)}`;
   if (change.kind==="resource") {
     const item=itemResource(change.resourceId);
     if (item) return `${change.targetId} item.${item.itemId}.${item.field} ${change.after} → ${change.before}`;
     return `${change.targetId} resource.${change.resourceId} ${change.after} → ${change.before}`;
   }
   if (change.kind==="life") return `${change.targetId} life.${change.field} ${String(change.after)} → ${String(change.before)}`;
+  if (change.kind==="death-save") return `${change.targetId} death-save.${change.field} ${change.after} → ${change.before}`;
   if (change.kind==="effect") {
     const before=change.before ? change.before.id : "없음";
     const after=change.after ? change.after.id : "없음";

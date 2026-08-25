@@ -117,6 +117,23 @@ const undoEvent:ConnectedSessionEvent={
   }],stateChanges:["Goblin HP 4 → 7"],provenance:["Host-authoritative compensating Undo"]},
 };
 
+const topologyEvent:ConnectedSessionEvent={
+  sessionId:"session.test",eventId:"session.test:event:5",sequence:5,actorId:"host",
+  payload:{
+    kind:"scene-topology",
+    topology:{
+      sceneId:"scene.test",sceneName:"Test Scene",round:0,currentActorId:"char.aelar",
+      entities:[{
+        id:"char.aelar",name:"Aelar",side:"ally",kind:"character",hp:31,maxHp:42,tempHp:5,ac:18,initiative:12,
+        status:[],distance:"0피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[],
+      }],
+      economyByActor:{"char.aelar":{action:true,bonusAction:true,reaction:true,movement:30,movementMax:30}},
+    },
+    stateChanges:["1 Scene actor synchronized"],
+    provenance:["host-authoritative topology test"],
+  },
+};
+
 function roundTrip(message:ConnectedWireMessage) {
   const decoded=decodeConnectedWireMessage(encodeConnectedWireMessage(message));
   assert.equal(decoded.status,"ok");
@@ -138,10 +155,20 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
       readyConfiguration:{actorId:"char.aelar",actionId:"action.shortbow",trigger:"고블린이 문을 통과하면"},
     },
   });
+  roundTrip({
+    type:"action-request",
+    request:{
+      sessionId:"session.test",requestId:"request.opportunity",actorId:"char.aelar",actionId:"action.scimitar",
+      targetIds:["combatant.goblin-a"],knownEventCursor:0,capabilities:["manual-movement-reaction-v1"],
+      character:{characterId:"char.aelar",sourceRevision:2,runtimeRevision:5},
+      manualMovementReaction:{kind:"opportunity-attack",provokerId:"char.aelar",reactorId:"combatant.goblin-a",attackActionId:"action.scimitar",distanceFeet:5,visibleAtTrigger:true,coverAtTrigger:"none",targetCanSeeReactorAtTrigger:true},
+    },
+  });
   roundTrip({ type:"catchup-request",sessionId:"session.test",afterCursor:1 });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:1,events:[readyEvent] });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:2,events:[readyActionEvent] });
   roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:3,events:[undoEvent] });
+  roundTrip({ type:"event-batch",sessionId:"session.test",afterCursor:4,events:[topologyEvent] });
   roundTrip({ type:"resolution-presentation",sessionId:"session.test",presentation:{...presentation,delivery:"live"} });
   roundTrip({type:"resolution-interrupt-prompt",sessionId:"session.test",resolutionId:"resolution.test",presentationSequence:2,interrupt:{id:"reaction.shield",responderId:"char.aelar",responderName:"Aelar",trigger:"hit",optionName:"Shield",cost:"reaction",effect:"AC +5",source:"spell"}});
   roundTrip({type:"resolution-interrupt-response",response:{sessionId:"session.test",resolutionId:"resolution.test",promptId:"reaction.shield",accept:true}});
@@ -149,6 +176,32 @@ test("connected wire round-trips handshake, readiness, action request, catch-up,
   roundTrip({type:"resolution-concentration-response",response:{sessionId:"session.test",resolutionId:"resolution.test",face:12}});
   roundTrip({ type:"session-ended",sessionId:"session.test",reason:"Host ended live play." });
   roundTrip({ type:"error",code:"stale-cursor",message:"client is behind",hostCursor:3 });
+});
+
+test("fresh empty Host hello-ack accepts a Freeform mode transition with no current Actor",()=>{
+  const emptyHostEvent:ConnectedSessionEvent={
+    sessionId:"session.empty-host",
+    eventId:"session.empty-host:event:1",
+    sequence:1,
+    actorId:"host",
+    payload:{
+      kind:"mode-transition",
+      sessionMode:"freeform",
+      round:0,
+      currentActorId:"",
+      economyByActor:{},
+      stateChanges:["Session mode = freeform"],
+      provenance:["fresh Host with an empty Encounter"],
+    },
+  };
+  roundTrip({
+    type:"hello-ack",
+    sessionId:"session.empty-host",
+    sessionName:"금요일 세션",
+    compatibility:{status:"compatible",message:"ok"},
+    hostCursor:1,
+    events:[emptyHostEvent],
+  });
 });
 
 test("connected wire accepts canonical recovery lockout metadata and rejects malformed lockouts", () => {

@@ -31,6 +31,7 @@ export interface LayOnHandsRequest {
   healingAmount: number;
   removeConditions?: LayOnHandsRemovableCondition[];
   resourceId?: string;
+  useBonusAction?: boolean;
 }
 
 function validateRequest(request: LayOnHandsRequest) {
@@ -98,13 +99,13 @@ export function compileLayOnHands(
       targets:[request.target],
       harmful:false,
     },
-    {
+    ...(request.useBonusAction===false?[]:[{
       id:`${request.id}:bonus-action`,
-      kind:"use-economy",
+      kind:"use-economy" as const,
       actorId:request.actorId,
-      slot:"bonus-action",
+      slot:"bonus-action" as const,
       bonusActionGranted:true,
-    },
+    }]),
     {
       id:`${request.id}:pool`,
       kind:"spend-resource",

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isNonBlockingRemoteResolution } from "./app/remoteResolutionNotice";
 import { useSimpleVtt } from "./app/AppProvider";
 import { buildVisualDiceRoll, VISUAL_DICE_REDUCED_REPLAY_MS, VISUAL_DICE_REPLAY_MS, VISUAL_DICE_RESULT_FADE_MS, VISUAL_DICE_RESULT_HOLD_MS, type VisualDieSides, type VisualDiceRollVm } from "./app/diceVisuals";
 import { isReducedMotionPreferred } from "./app/motionPreferences";
@@ -156,7 +157,7 @@ export function StandaloneDicePresentation({roll,onFinished}:{roll:StandaloneDic
 }
 
 export function VisualDiceBridge() {
-  const { snapshot,advanceResolution } = useSimpleVtt();
+  const { snapshot,dismissResolution } = useSimpleVtt();
   const resolution = snapshot?.resolution ?? null;
   const animated = Boolean(resolution && ANIMATED_STAGES.has(resolution.stage) && resolution.authoritativeDice.length > 0);
   const [replay,setReplay] = useState<DiceReplay|null>(null);
@@ -168,10 +169,11 @@ export function VisualDiceBridge() {
   const settleTimerRef = useRef<number|null>(null);
   const reelTimerRef = useRef<number|null>(null);
   const activeReplayKeyRef = useRef<string|null>(null);
-  const advanceRef=useRef(advanceResolution);
-  const shouldAdvanceRemoteRef=useRef(false);
-  advanceRef.current=advanceResolution;
-  shouldAdvanceRemoteRef.current=snapshot?.session.role==="client"&&snapshot.resolutionPresentation?.delivery==="live";
+  const lastStartedReplayKeyRef = useRef<string|null>(null);
+  const dismissRef=useRef(dismissResolution);
+  const shouldDismissRemoteRef=useRef(false);
+  dismissRef.current=dismissResolution;
+  shouldDismissRemoteRef.current=Boolean(snapshot&&isNonBlockingRemoteResolution(snapshot));
 
   const scheduleReplayExit = useCallback((key:string) => {
     if (fadeTimerRef.current!==null) window.clearTimeout(fadeTimerRef.current);
@@ -187,7 +189,7 @@ export function VisualDiceBridge() {
         setResolved(false);
         setFading(false);
         hideTimerRef.current=null;
-        if(shouldAdvanceRemoteRef.current) void advanceRef.current();
+        if(shouldDismissRemoteRef.current) void dismissRef.current();
       },VISUAL_DICE_RESULT_FADE_MS);
     },VISUAL_DICE_RESULT_HOLD_MS);
   },[]);
@@ -213,7 +215,12 @@ export function VisualDiceBridge() {
 
   useEffect(() => {
     if (!animated || !roll || !resolution) return;
-    const key = `${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}`;
+    const presentationSequence=snapshot?.resolutionPresentation?.resolutionId===resolution.id
+      ? snapshot.resolutionPresentation.presentationSequence
+      : "local";
+    const key = `${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}:${presentationSequence}`;
+    if(lastStartedReplayKeyRef.current===key)return;
+    lastStartedReplayKeyRef.current=key;
     const reduced = isReducedMotionPreferred();
     const physical=roll.dice.filter((die)=>die.sides!==null);
     const upper=Math.max(2,physical.reduce((sum,die)=>sum+(die.sides??0),0)||Math.max(2,roll.notice.rawTotal));
@@ -240,10 +247,11 @@ export function VisualDiceBridge() {
   },[animated,roll,resolution,settleReplay]);
 
   useEffect(()=>{
-    if(!snapshot||snapshot.session.role!=="client"||snapshot.resolutionPresentation?.delivery!=="live"||animated)return;
-    const sequence=snapshot.resolutionPresentation.presentationSequence;
+    if(!snapshot||!isNonBlockingRemoteResolution(snapshot)||animated)return;
+    const sequence=snapshot.resolutionPresentation?.presentationSequence;
+    if(sequence===undefined)return;
     const timer=window.setTimeout(()=>{
-      if(snapshot.resolutionPresentation?.presentationSequence===sequence) void advanceRef.current();
+      if(snapshot.resolutionPresentation?.presentationSequence===sequence) void dismissRef.current();
     },900);
     return ()=>window.clearTimeout(timer);
   },[snapshot,animated]);

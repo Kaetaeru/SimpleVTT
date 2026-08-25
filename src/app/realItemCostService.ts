@@ -61,7 +61,7 @@ export function resolveItemCostTransaction(request:ItemCostTransactionRequest):I
     combatants:{ [request.actor.id]:{
       id:request.actor.id, baseSpeed:request.economy.movementMax,
       life:{ hp:{ current:request.actor.hp, maximum:request.actor.maxHp, temporary:request.actor.tempHp }, deathSaves:{ successes:0, failures:0 }, stable:false, unconscious:false, dead:false },
-      economy:{ action:request.economy.action, bonusAction:request.economy.bonusAction, reaction:request.economy.reaction, movement:request.economy.movement, movementMaximum:request.economy.movementMax, extraActions:[] },
+      economy:{ action:request.economy.action, bonusAction:request.economy.bonusAction, reaction:request.economy.reaction, movement:request.economy.movement, movementMaximum:request.economy.movementMax, extraActions:structuredClone(request.economy.extraActions??[]),extraAttacks:structuredClone(request.economy.extraAttacks??[]) },
       resources, hitDice:[],
     }},
     effects:[], concentration:{}, history:[],
@@ -72,7 +72,7 @@ export function resolveItemCostTransaction(request:ItemCostTransactionRequest):I
   if (committed.status === "rejected") return rejected(request,committed.error);
 
   const actor = committed.state.combatants[request.actor.id];
-  const economy:EconomyVm = { action:actor.economy.action, bonusAction:actor.economy.bonusAction, reaction:actor.economy.reaction, movement:actor.economy.movement, movementMax:actor.economy.movementMaximum };
+  const economy:EconomyVm = { action:actor.economy.action, bonusAction:actor.economy.bonusAction, reaction:actor.economy.reaction, movement:actor.economy.movement, movementMax:actor.economy.movementMaximum,...(actor.economy.extraActions?.length?{extraActions:structuredClone(actor.economy.extraActions)}:{}),...(actor.economy.extraAttacks?.length?{extraAttacks:structuredClone(actor.economy.extraAttacks)}:{}) };
   const items = cloneItems(beforeItems);
   const projected = items.find((entry) => entry.id === item.id)!;
   const quantityPool = actor.resources.find((entry) => entry.id === quantityPoolId(item.id));

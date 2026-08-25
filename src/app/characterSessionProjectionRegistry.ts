@@ -55,6 +55,18 @@ export function rebindCharacterSessionProjectionPeer(adapter:MockAdapter,charact
   return structuredClone(rebound);
 }
 
+export function refreshProjectedCharacterPortrait(adapter:MockAdapter,characterId:string,portrait:CharacterSessionProjectionV1["portrait"]) {
+  const state=registries.get(adapter);
+  const mounted=state?.byCharacterId.get(characterId);
+  if (!state||!mounted) return false;
+  state.byCharacterId.set(characterId,structuredClone({
+    ...mounted,
+    projection:{...mounted.projection,...(portrait?{portrait}:{portrait:undefined})},
+    sheet:{...mounted.sheet,portrait},
+  }));
+  return true;
+}
+
 export function unmountCharacterSessionProjectionForPeer(adapter:MockAdapter,peerId:string) {
   const state=registries.get(adapter);
   if (!state) return;

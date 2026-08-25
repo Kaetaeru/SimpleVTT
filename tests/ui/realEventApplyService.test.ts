@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { applyResolutionEvents } from "../../src/app/realEventApplyService";
+import { undoResolutionEvents } from "../../src/app/realEventUndoService";
+import { createTurnRuntimeSession } from "../../src/app/realTurnRuntimeService";
 import type { ResolutionEvent } from "../../src/domain/resolutionTypes";
 
 function eventWithChanges(stateChanges:ResolutionEvent["stateChanges"]):ResolutionEvent {
@@ -86,4 +88,53 @@ test("authoritative event application is atomic when any later change has drifte
   assert.equal(rejected.status,"rejected");
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actor.id)?.hp,actor.hp,"failed apply must not partially mutate the source snapshot");
   assert.equal(snapshot.scene.economyByActor[actor.id]?.action,economy.action);
+});
+
+test("extra Action grants apply and Undo as full runtime identities", async () => {
+  const snapshot=await new MockAdapter().getSnapshot();
+  const runtime=createTurnRuntimeSession(snapshot.scene).state;
+  const actorId=runtime.clock.activeActorId!;
+  const grant={id:"surge:1",source:"feature:fighter.action-surge",allowsMagicAction:false};
+  const event=eventWithChanges([{
+    kind:"economy",targetId:actorId,field:"extraActions",before:[],after:[grant],
+    provenance:[],lifetime:"session-runtime",writeBack:"session",
+  }]);
+
+  const applied=applyResolutionEvents(snapshot.scene,[event],[],[],runtime);
+  assert.equal(applied.status,"committed");
+  if (applied.status!=="committed") return;
+  assert.deepEqual(applied.scene.economyByActor[actorId]?.extraActions,[grant]);
+  assert.deepEqual(applied.runtimeState?.combatants[actorId]?.economy.extraActions,[grant]);
+
+  const undone=undoResolutionEvents(applied.scene,[event],[],[],applied.runtimeState);
+  assert.equal(undone.status,"committed");
+  if (undone.status!=="committed") return;
+  assert.equal(undone.scene.economyByActor[actorId]?.extraActions,undefined);
+  assert.deepEqual(undone.runtimeState?.combatants[actorId]?.economy.extraActions,[]);
+});
+
+test("JSON-round-tripped effect removal ignores local undefined optional fields", async () => {
+  const snapshot=await new MockAdapter().getSnapshot();
+  const runtime=createTurnRuntimeSession(snapshot.scene).state;
+  const actorId=runtime.clock.activeActorId!;
+  const effect={
+    id:"effect:wire-roundtrip",sourceId:"feature:test",sourceActorId:undefined,targetId:actorId,
+    kind:"marker" as const,conditionId:undefined,tags:["test"],expiry:{kind:"time" as const,elapsedSeconds:3600},
+    termination:undefined,turnActivity:undefined,concentrationGroupId:undefined,metadata:{publicLabel:"테스트"},
+  };
+  runtime.effects.push(effect);
+  const event=JSON.parse(JSON.stringify(eventWithChanges([{
+    kind:"effect",targetId:actorId,effectId:effect.id,operation:"removed",before:effect,after:undefined,
+    provenance:[],lifetime:"session-runtime",writeBack:"session",
+  }]))) as ResolutionEvent;
+
+  const applied=applyResolutionEvents(snapshot.scene,[event],[],[],runtime);
+  assert.equal(applied.status,"committed");
+  if(applied.status!=="committed")return;
+  assert.equal(applied.runtimeState?.effects.some((entry)=>entry.id===effect.id),false);
+
+  const undone=undoResolutionEvents(applied.scene,[event],[],[],applied.runtimeState);
+  assert.equal(undone.status,"committed");
+  if(undone.status!=="committed")return;
+  assert.ok(undone.runtimeState?.effects.some((entry)=>entry.id===effect.id));
 });

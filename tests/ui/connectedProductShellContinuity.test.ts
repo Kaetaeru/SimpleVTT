@@ -37,7 +37,8 @@ test("accepted Play chrome owns the Product exit without mutating Session lifecy
 test("live Product Shell Return to Play reuses the same SessionModeRoot", () => {
   assert.match(app, /플레이로 돌아가기/);
   assert.match(productRoot, /isReturnToConnectedPlayTarget/);
-  assert.match(productRoot, /label === "플레이로 돌아가기" \|\| label === "기기로 플레이"/);
+  assert.match(productRoot, /return label === "플레이로 돌아가기"/);
+  assert.doesNotMatch(productRoot, /기기로 플레이/);
   assert.match(productRoot, /event\.preventDefault\(\)/);
   assert.match(productRoot, /event\.stopPropagation\(\)/);
   assert.match(productRoot, /setSurface\("play"\)/);

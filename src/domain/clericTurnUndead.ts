@@ -29,6 +29,7 @@ export interface TurnUndeadRequest {
   targets: TurnUndeadTarget[];
   searUndead?: { effectFaces:number[] };
   channelDivinityResourceId?: string;
+  useActionEconomy?: boolean;
 }
 
 export interface TurnUndeadMovementDirective {
@@ -76,7 +77,7 @@ function turnedConditionEffect(
       sourceBecomesIncapacitated:true,
       sourceDies:true,
     },
-    metadata:{ movementDirective:"maximize-distance-from-source" },
+    metadata:{ movementDirective:"maximize-distance-from-source",displayName:"언데드 퇴치" },
   };
 }
 
@@ -105,13 +106,13 @@ export function compileTurnUndead(request: TurnUndeadRequest): PendingResolution
       targets:request.targets,
       harmful:true,
     },
-    {
+    ...(request.useActionEconomy===false?[]:[{
       id:`${request.id}:action`,
-      kind:"use-economy",
+      kind:"use-economy" as const,
       actorId:request.actorId,
-      slot:"action",
-      actionKind:"magic",
-    },
+      slot:"action" as const,
+      actionKind:"magic" as const,
+    }]),
     {
       id:`${request.id}:channel-divinity`,
       kind:"spend-resource",

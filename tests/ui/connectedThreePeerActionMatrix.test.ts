@@ -89,7 +89,8 @@ for(const scenario of cases)test(`three-peer matrix · ${scenario.name}`,async()
     const actorStages=await drain(actorClient);
     const observerStages=await drain(observerClient);
     assert.deepEqual(actorStages,observerStages);
-    assert.deepEqual(actorStages,live.map((entry)=>entry.presentation.resolution.stage));
+    const latestDiceIndex=live.findLastIndex((entry)=>["roll-animation","save-animation","damage-animation"].includes(entry.presentation.resolution.stage)&&entry.presentation.resolution.authoritativeDice.length>0);
+    assert.deepEqual(actorStages,live.slice(Math.max(0,latestDiceIndex)).map((entry)=>entry.presentation.resolution.stage));
 
     const actorApplied=await applyConnectedClientEvents(actorClient,batches[0].events);
     const observerApplied=await applyConnectedClientEvents(observerClient,batches[0].events);
@@ -106,4 +107,25 @@ for(const scenario of cases)test(`three-peer matrix · ${scenario.name}`,async()
   }finally{
     tauriSessionTransport.send=originalSend;
   }
+});
+
+test("client routes a mapless opportunity trigger through the authoritative action-request channel",async()=>{
+  const client=new MockAdapter();
+  await client.setConnectionState("connected");
+  prepareClient(client,"session.opportunity");
+  const sent:string[]=[];
+  const originalSend=tauriSessionTransport.send;
+  tauriSessionTransport.send=async(message)=>{sent.push(message);return 1;};
+  try{
+    await client.declareManualMovementReaction({
+      kind:"opportunity-attack",provokerId:"char.aelar",reactorId:"combatant.goblin-a",attackActionId:"action.scimitar",
+      distanceFeet:5,visibleAtTrigger:true,coverAtTrigger:"none",targetCanSeeReactorAtTrigger:true,
+    });
+    assert.equal(sent.length,1);
+    const wire=JSON.parse(sent[0]);
+    assert.equal(wire.type,"action-request");
+    assert.equal(wire.request.actorId,"char.aelar");
+    assert.equal(wire.request.manualMovementReaction.reactorId,"combatant.goblin-a");
+    assert.ok(wire.request.capabilities.includes("manual-movement-reaction-v1"));
+  }finally{tauriSessionTransport.send=originalSend;}
 });

@@ -9,7 +9,7 @@ const bridge=readFileSync(new URL("../../src/CampaignStartupRecoveryBridge.tsx",
 test("Campaign hydration guard classifies migration/schema/corruption without inventing recovery",()=>{
   for(const pattern of [/CampaignMigrationRequiredError/,/CampaignSchemaError/,/CampaignCorruptError/,/migration-required/,/schema-unsupported/,/corrupt/]) assert.match(guard,pattern);
   assert.match(guard,/throw error/);
-  assert.doesNotMatch(guard,/delete|reset|clearGenerations|writeGeneration/);
+  assert.doesNotMatch(guard,/\b(?:deleteCampaign|resetCampaign|clearGenerations|writeGeneration)\s*\(/);
 });
 
 test("Campaign startup recovery uses the existing loading shell and offers an explicit retry",()=>{

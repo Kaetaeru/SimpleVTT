@@ -2,7 +2,7 @@ import type { CharacterSheet, CharacterSummary, SceneVm } from "./contracts";
 import type { MockAdapter } from "./mockAdapter";
 import type { CharacterSessionProjectionReconstruction } from "./characterSessionProjectionReconstruction";
 import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
-import { deriveCharacterSkillActions } from "./characterSkillActionProjection";
+import { projectProductionCharacterActions } from "./productionCharacterActionProjectionPort";
 import {
   mountCharacterSessionProjection,
   projectedCharacterForPeer,
@@ -39,9 +39,7 @@ function reorderActionsByActor(actions:SceneVm["actionsByActor"],preferredOrder:
 }
 
 function projectedActions(reconstruction:Extract<CharacterSessionProjectionReconstruction,{status:"accepted"}>) {
-  const actions=new Map(reconstruction.actions.map((action)=>[action.id,structuredClone(action)]));
-  for (const action of deriveCharacterSkillActions(reconstruction.sheet)) actions.set(action.id,structuredClone(action));
-  return [...actions.values()];
+  return projectProductionCharacterActions(reconstruction.sheet,reconstruction.actions);
 }
 
 function canonical(value:unknown):unknown {
@@ -81,6 +79,7 @@ export function mountReconstructedCharacterSessionProjection(
   adapter:MockAdapter,
   peerId:string,
   reconstruction:CharacterSessionProjectionReconstruction,
+  options:{allowDurableCharacterIdCollision?:boolean}={},
 ) {
   if (reconstruction.status==="rejected") return reconstruction;
   const app=internal(adapter);
@@ -88,7 +87,7 @@ export function mountReconstructedCharacterSessionProjection(
   const durableCollision=app.characters.some((character)=>character.id===characterId);
   const sceneCollision=app.scene.entities.some((entity)=>entity.id===characterId);
   const priorPeerProjection=projectedCharacterForPeer(adapter,peerId);
-  if (durableCollision && !priorPeerProjection) {
+  if (durableCollision && !priorPeerProjection && !options.allowDurableCharacterIdCollision) {
     return {status:"rejected" as const,error:`projected Character collides with host permanent Character: ${characterId}`};
   }
   if (sceneCollision && !priorPeerProjection && !durableCollision) {

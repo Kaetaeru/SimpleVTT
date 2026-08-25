@@ -4,16 +4,21 @@ import test from "node:test";
 
 const root=readFileSync(new URL("../../src/SessionModeRoot.tsx",import.meta.url),"utf8");
 const pane=readFileSync(new URL("../../src/SessionCampaignPane.tsx",import.meta.url),"utf8");
+const timeMeals=readFileSync(new URL("../../src/SessionDmTimeMealManager.tsx",import.meta.url),"utf8");
 const palette=readFileSync(new URL("../../src/SessionQuickPalette.tsx",import.meta.url),"utf8");
 const provider=readFileSync(new URL("../../src/app/AppProvider.tsx",import.meta.url),"utf8");
 const chromeStyles=readFileSync(new URL("../../src/session-integrated-reference-play.css",import.meta.url),"utf8");
 
-test("Session shell exposes Campaign status through the canonical utility rail and quick palette",()=>{
-  assert.match(root,/"campaign"/);
-  assert.match(root,/<SessionCampaignPane role=\{role\}/);
-  assert.match(root,/>캠페인<\/button>/);
-  assert.match(palette,/캠페인 달력 · 식량/);
-  assert.match(palette,/캠페인 현황/);
+test("Session shell exposes DM time and meals together while retaining player read-only utilities",()=>{
+  assert.match(root,/aria-label="캠페인 시스템"/);
+  for(const destination of ["calendar","rations","rest","campaign"]) assert.match(root,new RegExp(`<SessionCampaignPane role=\\{role\\} view="${destination==="campaign"?"overview":destination}"`));
+  assert.match(root,/>식량<\/span>/);
+  assert.match(root,/>휴식<\/span>/);
+  assert.match(root,/>파티<\/button>/);
+  assert.match(root,/<SessionDmTimeMealManager onClose=\{closeFullSheet\}/);
+  for(const destination of ["calendar","rations","rest"]) assert.match(palette,new RegExp(`destination:"${destination}"`));
+  assert.match(palette,/파티 관리/);
+  assert.match(palette,/파티 현황/);
 });
 
 test("Campaign time and detailed day period remain visible in the Session chrome",()=>{
@@ -21,12 +26,12 @@ test("Campaign time and detailed day period remain visible in the Session chrome
   assert.match(root,/campaignDayPeriod/);
   assert.match(root,/campaignClockTime/);
   assert.match(root,/Campaign 시간/);
-  assert.match(root,/toggleUtility\("campaign"/);
-  assert.match(root,/role==="dm"&&campaignCalendar\?\.enabled/);
-  assert.match(root,/type="time"/);
-  assert.match(root,/correctCampaignCalendarDateTime/);
-  assert.match(root,/세션 상단 시계 직접 수정/);
-  assert.match(root,/campaignClockBusy/);
+  assert.match(root,/toggleUtility\("calendar"/);
+  assert.match(root,/openTimeMeals/);
+  assert.match(root,/workspaceLayer==="time-meals"/);
+  assert.match(timeMeals,/DateTimeDialog/);
+  assert.match(timeMeals,/correctCampaignCalendarDateTime/);
+  assert.match(timeMeals,/DM 날짜 및 시간 설정/);
   assert.match(provider,/previewCalendarOverride/);
   assert.match(provider,/correctCampaignCalendarDateTime: async/);
   assert.match(provider,/campaignDateTimeToAbsoluteMinute/);
@@ -36,6 +41,10 @@ test("Campaign time and detailed day period remain visible in the Session chrome
   assert.match(chromeStyles,/\.session-reference-campaign-clock-wrap:hover \.session-reference-campaign-clock-editor/);
   assert.match(chromeStyles,/\.session-reference-campaign-clock-wrap:focus-within \.session-reference-campaign-clock-editor/);
   for(const period of ["deep-night","dawn","morning","midday","afternoon","sunset","evening","night"])assert.match(chromeStyles,new RegExp(`session-reference-campaign-clock\\.${period}`));
+});
+
+test("DM time and meal manager covers character meals, shortage confirmation, history and undo",()=>{
+  for(const pattern of [/presentInSession!==false/,/파티 식사 상태/,/식당 식사/,/캠프 식사/,/일일 식량 사용/,/첫 번째 식사/,/aria-pressed/,/setCampaignMemberMeals/,/ShortageDialog/,/식사가 부족합니다/,/serveCampaignMeals/,/undoCampaignMeal/,/advanceCampaignDay/,/최근 기록/])assert.match(timeMeals,pattern);
 });
 
 test("DM Session Campaign pane can operate calendar and rations",()=>{
@@ -69,7 +78,7 @@ test("Session Campaign pane shows persisted party references and browser preview
 });
 
 test("Player pane is read-only and hidden ration values are removed from preview projection",()=>{
-  assert.match(pane,/Player 읽기 전용/);
+  assert.match(pane,/Player 보기/);
   assert.match(pane,/role==="player"&&!projection\.rations\.visibleToPlayers/);
   assert.match(pane,/식량 현황은 DM에게만 공개됩니다/);
   assert.match(provider,/role==="player"&&!previewRations\.visibleToPlayers/);

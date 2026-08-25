@@ -76,7 +76,7 @@ function runtimeCombatant(entity:SceneEntity,economy:EconomyVm,resources:ReturnT
     id:entity.id,
     baseSpeed:economy.movementMax,
     life:{ hp:{ current:entity.hp,maximum:entity.maxHp,temporary:entity.tempHp },deathSaves:{ successes:0,failures:0 },stable:false,unconscious:false,dead:false },
-    economy:{ action:economy.action,bonusAction:economy.bonusAction,reaction:economy.reaction,movement:economy.movement,movementMaximum:economy.movementMax,extraActions:[] },
+    economy:{ action:economy.action,bonusAction:economy.bonusAction,reaction:economy.reaction,movement:economy.movement,movementMaximum:economy.movementMax,extraActions:structuredClone(economy.extraActions??[]),extraAttacks:structuredClone(economy.extraAttacks??[]) },
     resources,
     hitDice:[],
     damageDefenses:defensesFor(entity),
@@ -120,7 +120,7 @@ function projectItems(items:ItemInstanceVm[],action:ActionVm,state:RulesRuntimeS
 
 function projectEconomy(state:RulesRuntimeState,actorId:string):EconomyVm {
   const economy=state.combatants[actorId].economy;
-  return { action:economy.action,bonusAction:economy.bonusAction,reaction:economy.reaction,movement:economy.movement,movementMax:economy.movementMaximum };
+  return { action:economy.action,bonusAction:economy.bonusAction,reaction:economy.reaction,movement:economy.movement,movementMax:economy.movementMaximum,...(economy.extraActions?.length?{extraActions:structuredClone(economy.extraActions)}:{}),...(economy.extraAttacks?.length?{extraAttacks:structuredClone(economy.extraAttacks)}:{}) };
 }
 
 function damageAdjustment(target:SceneEntity,type:string,raw:number,finalDamage:number) {

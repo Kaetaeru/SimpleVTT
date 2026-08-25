@@ -23,11 +23,17 @@ const hostMutations=new WeakMap<MockAdapter,Map<string,HostOwnerMutation>>();
 const lastHostRequestByActor=new WeakMap<MockAdapter,Map<string,string>>();
 const deferHostFinalize=new WeakMap<MockAdapter,number>();
 const pendingFinalize=new WeakMap<MockAdapter,Map<string,{peer:string;resolve():void;reject(error:Error):void;timer:ReturnType<typeof setTimeout>}>>();
+const ownerApplyInFlight=new WeakMap<MockAdapter,Map<string,{command:DmInventoryAdjustmentCommand;promise:Promise<AppSnapshot>}>>();
+const stashTransferInFlight=new WeakMap<MockAdapter,Map<string,{command:PartyStashTransferCommand;promise:Promise<AppSnapshot>}>>();
 let activeHostAdapter:MockAdapter|null=null;
 let registeringClientAdapter:MockAdapter|null=null;
 
 function object(value:unknown):Raw|undefined{return value&&typeof value==="object"&&!Array.isArray(value)?value as Raw:undefined;}
+function canonical(value:unknown):unknown{if(Array.isArray(value))return value.map(canonical);if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value as Raw).sort(([left],[right])=>left.localeCompare(right)).map(([key,item])=>[key,canonical(item)]));return value;}
+function sameCommand(left:DmInventoryAdjustmentCommand,right:DmInventoryAdjustmentCommand){return JSON.stringify(canonical(left))===JSON.stringify(canonical(right));}
 function storeFor(adapter:MockAdapter){let store=stores.get(adapter);if(!store){store=createConnectedOwnerInventoryJournalStore();stores.set(adapter,store);}return store;}
+function ownerApplyMap(adapter:MockAdapter){let map=ownerApplyInFlight.get(adapter);if(!map){map=new Map();ownerApplyInFlight.set(adapter,map);}return map;}
+function stashTransferMap(adapter:MockAdapter){let map=stashTransferInFlight.get(adapter);if(!map){map=new Map();stashTransferInFlight.set(adapter,map);}return map;}
 export function setConnectedOwnerInventoryJournalStoreForTests(adapter:MockAdapter,store:ConnectedOwnerInventoryJournalStore){stores.set(adapter,store);}
 
 function inventory(snapshot:AppSnapshot,actorId:string):SessionCharacterInventoryVm{
@@ -38,8 +44,9 @@ function inventory(snapshot:AppSnapshot,actorId:string):SessionCharacterInventor
 }
 function itemSort(items:ItemInstanceVm[]){return [...items].sort((a,b)=>a.id.localeCompare(b.id));}
 function inventoryCore(value:SessionCharacterInventoryVm){return {characterId:value.characterId,goldGp:value.goldGp,items:itemSort(value.items)};}
-function sameInventory(left:SessionCharacterInventoryVm,right:SessionCharacterInventoryVm){return JSON.stringify(inventoryCore(left))===JSON.stringify(inventoryCore(right));}
-function sameItem(left:ItemInstanceVm,right:ItemInstanceVm){return JSON.stringify(left)===JSON.stringify(right);}
+function sameInventory(left:SessionCharacterInventoryVm,right:SessionCharacterInventoryVm){return JSON.stringify(canonical(inventoryCore(left)))===JSON.stringify(canonical(inventoryCore(right)));}
+function sameItem(left:ItemInstanceVm,right:ItemInstanceVm){return JSON.stringify(canonical(left))===JSON.stringify(canonical(right));}
+function sameItems(left:ItemInstanceVm[],right:ItemInstanceVm[]){return JSON.stringify(canonical(itemSort(left)))===JSON.stringify(canonical(itemSort(right)));}
 const aliases:Record<string,string>={"item.chain-mail":"dnd.srd521.item.armor.chain-mail","item.shield":"dnd.srd521.item.shield","item.potion-of-healing":"dnd.srd521.item.gear.potion-of-healing"};
 function compatibleDefinition(value:string){return aliases[value]??value;}
 function definitionFor(command:DmInventoryAdjustmentCommand,catalog:CatalogEntry[]){
@@ -56,7 +63,7 @@ function matchesApplied(before:SessionCharacterInventoryVm,current:SessionCharac
   if(before.characterId!==current.characterId)return false;
   if(command.operation==="grant-currency"||command.operation==="revoke-currency"){
     const expected=before.goldGp+(command.operation==="grant-currency"?command.amount:-command.amount);
-    return current.goldGp===expected&&JSON.stringify(itemSort(current.items))===JSON.stringify(itemSort(before.items));
+    return current.goldGp===expected&&sameItems(current.items,before.items);
   }
   if(current.goldGp!==before.goldGp)return false;
   if(command.operation==="revoke-item"){
@@ -116,7 +123,7 @@ const baseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
 async function applyClientJournal(adapter:MockAdapter,command:DmInventoryAdjustmentCommand){
   const store=storeFor(adapter);let snapshot=await adapter.getSnapshot();let current=inventory(snapshot,command.actorId);let record=await store.read(command.requestId);
   if(!record)record=await store.prepare({requestId:command.requestId,actorId:command.actorId,command:cp(command),before:current});
-  if(record.actorId!==command.actorId||JSON.stringify(record.command)!==JSON.stringify(command))throw new Error("owner inventory retry does not match durable journal identity");
+  if(record.actorId!==command.actorId||!sameCommand(record.command,command))throw new Error("owner inventory retry does not match durable journal identity");
   if(record.phase==="finalized"){
     if(record.finalOutcome==="applied")return snapshot;
     throw new Error("owner inventory request was already finalized as undone");
@@ -190,14 +197,30 @@ tauriSessionTransport.onMessage=async function onMessageWithOwnerInventoryJourna
 MockAdapter.prototype.hostSession=async function hostSessionWithOwnerInventoryJournal(){activeHostAdapter=this;return baseHostSession.call(this);};
 MockAdapter.prototype.joinSession=async function joinSessionWithOwnerInventoryJournal(address:string){registeringClientAdapter=this;try{return await baseJoinSession.call(this,address);}finally{registeringClientAdapter=null;}};
 
-MockAdapter.prototype.adjustDmInventory=async function adjustDmInventoryWithOwnerJournal(command:DmInventoryAdjustmentCommand){
-  const state=connectedStateFor(this);
-  if(state.mode==="client")return applyClientJournal(this,command);
-  if(state.mode!=="host")return baseAdjust.call(this,command);
-  const route=hostRoute(this,command.actorId);if(!route)return baseAdjust.call(this,command);
-  const result=await baseAdjust.call(this,command);const mutation={...route,outcome:"applied" as const};hostMap(this).set(command.requestId,mutation);actorRequestMap(this).set(command.actorId,command.requestId);
-  if((deferHostFinalize.get(this)??0)===0)await sendFinalize(this,command.requestId,mutation);
+async function adjustDmInventoryWithOwnerJournal(adapter:MockAdapter,command:DmInventoryAdjustmentCommand){
+  const state=connectedStateFor(adapter);
+  if(state.mode==="client")return applyClientJournal(adapter,command);
+  if(state.mode!=="host")return baseAdjust.call(adapter,command);
+  const route=hostRoute(adapter,command.actorId);if(!route)return baseAdjust.call(adapter,command);
+  const previousRequestId=actorRequestMap(adapter).get(command.actorId);
+  const previousMutation=previousRequestId&&previousRequestId!==command.requestId?hostMap(adapter).get(previousRequestId):undefined;
+  if(previousRequestId&&previousMutation?.outcome)await sendFinalize(adapter,previousRequestId,previousMutation);
+  const result=await baseAdjust.call(adapter,command);const mutation={...route,outcome:"applied" as const};hostMap(adapter).set(command.requestId,mutation);actorRequestMap(adapter).set(command.actorId,command.requestId);
+  // A direct DM grant/revoke remains compensatable while it is the latest UI
+  // operation for this Character. Compound Stash/Library callers finalize it
+  // explicitly after their other owner commits settle; a later direct command
+  // finalizes the previous one above.
   return result;
+}
+MockAdapter.prototype.adjustDmInventory=function adjustDmInventoryWithOwnerJournalSingleFlight(command:DmInventoryAdjustmentCommand){
+  const map=ownerApplyMap(this);const existing=map.get(command.requestId);
+  if(existing){
+    if(!sameCommand(existing.command,command))return Promise.reject(new Error("owner inventory in-flight requestId does not match command identity"));
+    return existing.promise;
+  }
+  const promise=adjustDmInventoryWithOwnerJournal(this,command).finally(()=>{if(map.get(command.requestId)?.promise===promise)map.delete(command.requestId);});
+  map.set(command.requestId,{command:cp(command),promise});
+  return promise;
 };
 MockAdapter.prototype.undoDmInventoryAdjustment=async function undoDmInventoryWithOwnerJournal(requestId:string){
   const state=connectedStateFor(this);
@@ -208,17 +231,43 @@ MockAdapter.prototype.undoDmInventoryAdjustment=async function undoDmInventoryWi
 };
 MockAdapter.prototype.undoLastDmInventoryAdjustment=async function undoLastDmInventoryWithOwnerJournal(){const state=connectedStateFor(this);if(state.mode==="client"){const snapshot=await this.getSnapshot();const actorId=snapshot.activeCharacter.id;const requestId=actorRequestMap(this).get(actorId);return requestId?this.undoDmInventoryAdjustment(requestId):baseUndoLast.call(this);}return baseUndoLast.call(this);};
 
-MockAdapter.prototype.transferPartyStash=async function transferPartyStashWithOwnerJournal(command:PartyStashTransferCommand){
-  const state=connectedStateFor(this);
+async function transferPartyStashWithOwnerJournal(adapter:MockAdapter,command:PartyStashTransferCommand){
+  const state=connectedStateFor(adapter);
   if(state.mode==="host"){
-    defer(this,1);try{const result=await baseTransfer.call(this,command);const mutation=hostMap(this).get(command.requestId);if(mutation?.outcome)await sendFinalize(this,command.requestId,mutation);return result;}
-    catch(error){const mutation=hostMap(this).get(command.requestId);if(mutation?.outcome==="undone")await sendFinalize(this,command.requestId,mutation).catch(()=>undefined);throw error;}finally{defer(this,-1);}
+    defer(adapter,1);try{
+      const result=await baseTransfer.call(adapter,command);
+      const mutation=hostMap(adapter).get(command.requestId);
+      // At this point both the owner Character and Campaign Stash commits are
+      // durable. Finalization only retires recovery metadata; a lost/failing
+      // finalize acknowledgement must not report the completed transfer as a
+      // failure or trigger a Client rollback that mints/duplicates assets.
+      if(mutation?.outcome)await sendFinalize(adapter,command.requestId,mutation).catch(()=>undefined);
+      return result;
+    }
+    catch(error){const mutation=hostMap(adapter).get(command.requestId);if(mutation?.outcome==="undone")await sendFinalize(adapter,command.requestId,mutation).catch(()=>undefined);throw error;}finally{defer(adapter,-1);}
   }
   if(state.mode==="client"){
-    try{const result=await baseTransfer.call(this,command);const record=await storeFor(this).read(command.requestId);if(record?.phase==="applied")await finalizeLocal(this,command.requestId,"applied");return result;}
-    catch(error){let record=await storeFor(this).read(command.requestId);if(record&&record.phase!=="undone"&&record.phase!=="finalized"){await undoClientJournal(this,command.requestId).catch(()=>undefined);record=await storeFor(this).read(command.requestId);}if(record?.phase==="undone")await finalizeLocal(this,command.requestId,"undone").catch(()=>undefined);throw error;}
+    let result:AppSnapshot;
+    try{result=await baseTransfer.call(adapter,command);}
+    catch(error){let record=await storeFor(adapter).read(command.requestId);if(record&&record.phase!=="undone"&&record.phase!=="finalized"){await undoClientJournal(adapter,command.requestId).catch(()=>undefined);record=await storeFor(adapter).read(command.requestId);}if(record?.phase==="undone")await finalizeLocal(adapter,command.requestId,"undone").catch(()=>undefined);throw error;}
+    // baseTransfer returning means the Host Campaign mutation is already
+    // durable. Journal finalization is recovery metadata and must never turn a
+    // committed deposit into a Client rollback (which would duplicate assets).
+    const record=await storeFor(adapter).read(command.requestId).catch(()=>null);
+    if(record?.phase==="applied")await finalizeLocal(adapter,command.requestId,"applied").catch(()=>undefined);
+    return result;
   }
-  return baseTransfer.call(this,command);
+  return baseTransfer.call(adapter,command);
+}
+MockAdapter.prototype.transferPartyStash=function transferPartyStashWithOwnerJournalSingleFlight(command:PartyStashTransferCommand){
+  const map=stashTransferMap(this);const existing=map.get(command.requestId);
+  if(existing){
+    if(JSON.stringify(canonical(existing.command))!==JSON.stringify(canonical(command)))return Promise.reject(new Error("Party Stash in-flight requestId does not match command identity"));
+    return existing.promise;
+  }
+  const promise=transferPartyStashWithOwnerJournal(this,command).finally(()=>{if(map.get(command.requestId)?.promise===promise)map.delete(command.requestId);});
+  map.set(command.requestId,{command:cp(command),promise});
+  return promise;
 };
 
 MockAdapter.prototype.grantCampaignDmLibraryItem=async function grantCampaignDmLibraryItemWithOwnerJournal(campaignId,entryId,target,quantity){
@@ -229,6 +278,11 @@ MockAdapter.prototype.grantCampaignDmLibraryItem=async function grantCampaignDmL
   finally{defer(this,-1);}
 };
 
-MockAdapter.prototype.stopSession=async function stopSessionWithOwnerInventoryJournal(){const result=await baseStopSession.call(this);if(activeHostAdapter===this)activeHostAdapter=null;if(registeringClientAdapter===this)registeringClientAdapter=null;pendingFinalize.delete(this);hostMutations.delete(this);lastHostRequestByActor.delete(this);deferHostFinalize.delete(this);return result;};
+MockAdapter.prototype.stopSession=async function stopSessionWithOwnerInventoryJournal(){
+  if(connectedStateFor(this).mode==="host"){
+    for(const [requestId,mutation] of hostMap(this))if(mutation.outcome)await sendFinalize(this,requestId,mutation).catch(()=>undefined);
+  }
+  const result=await baseStopSession.call(this);if(activeHostAdapter===this)activeHostAdapter=null;if(registeringClientAdapter===this)registeringClientAdapter=null;pendingFinalize.delete(this);hostMutations.delete(this);lastHostRequestByActor.delete(this);deferHostFinalize.delete(this);ownerApplyInFlight.delete(this);stashTransferInFlight.delete(this);return result;
+};
 
 export {};

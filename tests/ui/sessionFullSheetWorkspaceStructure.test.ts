@@ -10,7 +10,7 @@ const inventory = readFileSync(new URL("../../src/CharacterInventoryView.tsx", i
 const css = readFileSync(new URL("../../src/session-full-sheet.css", import.meta.url), "utf8");
 
 test("Session Full Sheet is a mounted workspace layer over the persistent Session root", () => {
-  assert.match(sessionRoot, /type WorkspaceLayer = "full-sheet" \| null/);
+  assert.match(sessionRoot, /type WorkspaceLayer = "full-sheet" \| "level-up" \| "time-meals" \| null/);
   assert.match(sessionRoot, /<CharacterSheetWorkspace hostMode="session" onClose=\{closeFullSheet\}/);
   assert.match(sessionRoot, /hidden=\{workspaceLayer !== "full-sheet"\}/);
   assert.match(sessionRoot, /session-full-sheet-layer/);
@@ -60,8 +60,9 @@ test("Session Sheet never presents local random rolls or an embedded dice tray a
 
 test("Full Sheet uses overlay geometry without replacing the accepted Play scene", () => {
   assert.match(css, /\.session-full-sheet-layer \{/);
-  assert.match(css, /position: absolute/);
-  assert.match(css, /width: min\(94vw, 1560px\)/);
+  assert.match(css, /position: fixed/);
+  assert.match(css, /width: min\(calc\(100vw - 32px\), 1840px\)/);
+  assert.match(css, /height: min\(calc\(100vh - 32px\), 1040px\)/);
   assert.match(css, /grid-template-rows: auto auto minmax\(0, 1fr\)/);
   assert.match(css, /session-mode-layer-host:has\(> \.session-full-sheet-layer:not\(\[hidden\]\)\)[\s\S]*pointer-events: auto/);
   assert.match(css, /character-sheet-workspace\[data-sheet-host="session"\] \.character-sheet-workspace-content > \.screen[\s\S]*position: relative !important;[\s\S]*inset: auto !important/);

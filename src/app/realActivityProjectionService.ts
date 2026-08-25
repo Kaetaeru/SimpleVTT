@@ -17,6 +17,7 @@ function stateChangeLabel(change:RuntimeStateChange) {
     return `${change.targetId} ${field} ${change.before} → ${change.after}`;
   }
   if (change.kind === "economy") {
+    if (change.field==="extraActions"||change.field==="extraAttacks") return `${change.targetId} ${change.field==="extraActions"?"추가 행동":"추가 공격"} ${change.before.length} → ${change.after.length}`;
     return `${change.targetId} economy.${change.field} ${String(change.before)} → ${String(change.after)}`;
   }
   if (change.kind === "resource") {
@@ -31,6 +32,7 @@ function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "spellcasting-turn") {
     return `${change.targetId} spellcasting-turn ${spellcastingTurnLabel(change.before)} → ${spellcastingTurnLabel(change.after)}`;
   }
+  if (change.kind==="death-save") return `${change.targetId} death-save.${change.field} ${change.before} → ${change.after}`;
   return `${change.targetId} life.${change.field} ${String(change.before)} → ${String(change.after)}`;
 }
 

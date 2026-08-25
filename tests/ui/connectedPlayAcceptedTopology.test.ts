@@ -16,7 +16,7 @@ const coreSystems = readFileSync("docs/design/ui-ux/prototype/app/core-systems-r
 test("production Play DOM follows the accepted integrated-reference scene, not a structural approximation", () => {
   const chrome = root.indexOf('className="session-reference-play-chrome"');
   const main = root.indexOf('className={`session-reference-play-main');
-  const core = root.indexOf('className="session-reference-play-core"');
+  const core = root.indexOf('className={`session-reference-play-core');
   const upper = root.indexOf('<SessionActorBoard position="upper" role={role}');
   const stage = root.indexOf('className="session-play-context session-reference-mapless-stage"');
   const lower = root.indexOf('<SessionActorBoard position="lower" role={role}');
@@ -30,7 +30,7 @@ test("production retains topology while WO-UI-006 uses tall boards and adaptive 
   assert.match(prototypeCss, /--actor-board-h:86px;[\s\S]*--command-h:174px/);
   assert.match(prototypeCss, /\.play-root\{[^}]*grid-template-rows:41px 1fr var\(--command-h\)/);
   assert.match(runtimeCss, /--svtt-actor-board-h:\s*112px/);
-  assert.match(runtimeCss, /--svtt-command-h:\s*max\(174px/);
+  assert.match(runtimeCss, /--svtt-command-h:\s*max\(200px/);
   assert.match(runtimeCss, /grid-template-rows:\s*41px minmax\(0, 1fr\) var\(--svtt-command-h\)/);
   assert.match(runtimeCss, /grid-template-rows:\s*var\(--svtt-actor-board-h\) minmax\(0, 1fr\) var\(--svtt-actor-board-h\)/);
 });

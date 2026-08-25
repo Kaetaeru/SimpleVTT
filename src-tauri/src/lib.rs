@@ -14,6 +14,21 @@ mod session_transport;
 use std::sync::Mutex;
 use tauri::Manager;
 
+#[cfg(all(debug_assertions, feature = "tauri-e2e"))]
+fn apply_e2e_process_arguments() {
+    for argument in std::env::args().skip(1) {
+        if let Some(value) = argument.strip_prefix("--simplevtt-data-root=") {
+            if !value.trim().is_empty() {
+                std::env::set_var("SIMPLEVTT_LOCAL_DATA_ROOT", value);
+            }
+        } else if let Some(value) = argument.strip_prefix("--simplevtt-instance-label=") {
+            if !value.trim().is_empty() {
+                std::env::set_var("SIMPLEVTT_INSTANCE_LABEL", value);
+            }
+        }
+    }
+}
+
 #[derive(Default)]
 struct CharacterCampaignPersistenceState(Mutex<()>);
 
@@ -365,14 +380,41 @@ fn get_session_transport_status(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .setup(|app| {
-            if let Ok(label) = std::env::var("SIMPLEVTT_INSTANCE_LABEL") {
-                let label = label.trim();
-                if !label.is_empty() {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.set_title(&format!("SimpleVTT - {label}"));
-                    }
+    #[cfg(all(debug_assertions, feature = "tauri-e2e"))]
+    apply_e2e_process_arguments();
+
+    let instance_label = std::env::var("SIMPLEVTT_INSTANCE_LABEL")
+        .ok()
+        .map(|label| label.trim().to_string())
+        .filter(|label| !label.is_empty());
+    let mut context = tauri::generate_context!();
+    if let Some(label) = instance_label.as_deref() {
+        let profile = label
+            .chars()
+            .map(|character| {
+                if character.is_ascii_alphanumeric() || matches!(character, '-' | '_') {
+                    character.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>();
+        for window in &mut context.config_mut().app.windows {
+            window.data_directory = Some(std::path::PathBuf::from(format!(
+                "acceptance-{profile}"
+            )));
+        }
+    }
+
+    let builder = tauri::Builder::default();
+    #[cfg(all(debug_assertions, feature = "tauri-e2e"))]
+    let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
+
+    builder
+        .setup(move |app| {
+            if let Some(label) = instance_label.as_deref() {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_title(&format!("SimpleVTT - {label}"));
                 }
             }
             Ok(())
@@ -411,6 +453,6 @@ pub fn run() {
             stop_session_transport,
             get_session_transport_status
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running SimpleVTT");
 }

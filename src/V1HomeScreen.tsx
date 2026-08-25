@@ -35,7 +35,7 @@ export function V1HomeScreen({
       <header className="v1-hero">
         <div className="v1-hero-copy">
           <span className="v1-kicker">TABLETOP, YOUR WAY</span>
-          <h1>SimpleVTT</h1>
+          <h1>SimpleVTT v1</h1>
           <p>종이 시트처럼 가볍게, 필요할 때는 같은 캐릭터로 바로 연결해서 플레이하세요.</p>
           <div className="v1-hero-actions">
             <button className="primary" onClick={startCharacter}>새 캐릭터 만들기</button>

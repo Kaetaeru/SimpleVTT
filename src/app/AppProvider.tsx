@@ -18,7 +18,7 @@ import type { ManualMovementReactionCommand } from "./manualMovementReactionCont
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import type { PactTomeRestSpellCommand, WizardLongRestSpellCommand } from "./restSpellManagementContracts";
 import type { CircleLandType } from "../domain/druidCircleLandRecovery";
-import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignDmLibraryEntry, CampaignRosterMember, CampaignSessionSummary, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignCalendarState, CampaignDmLibraryEntry, CampaignMealCommand, CampaignRosterMember, CampaignSessionSummary, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
 import { campaignXpThresholdForLevel } from "./campaignApplicationService";
 import "./restSpellManagementRuntimeAdapter";
@@ -102,6 +102,9 @@ interface AppContextValue {
   adjustCampaignRations(campaignId:string,input:{amount:number;note?:string}):Promise<void>;
   consumeCampaignDailyRations(campaignId:string,input?:{requiredUnits?:number;note?:string}):Promise<void>;
   undoCampaignRationConsumption(campaignId:string):Promise<void>;
+  serveCampaignMeals(campaignId:string,input:CampaignMealCommand):Promise<void>;
+  setCampaignMemberMeals(campaignId:string,input:{rosterMemberId:string;mealCount:number}):Promise<void>;
+  undoCampaignMeal(campaignId:string):Promise<void>;
   advanceCampaignDay(campaignId:string,input:{consumeRations:boolean;requiredUnits?:number;note?:string}):Promise<void>;
   appendCampaignSessionSummary(campaignId:string,summary:CampaignSessionSummary):Promise<void>;
   grantCampaignAdvancement(campaignId:string,input:{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}):Promise<void>;
@@ -254,6 +257,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     adjustCampaignRations: async (campaignId,input) => apply(() => mockAdapter.adjustCampaignRations(campaignId,input)),
     consumeCampaignDailyRations: async (campaignId,input) => apply(() => mockAdapter.consumeCampaignDailyRations(campaignId,input)),
     undoCampaignRationConsumption: async (campaignId) => apply(() => mockAdapter.undoCampaignRationConsumption(campaignId)),
+    serveCampaignMeals: async (campaignId,input) => apply(() => mockAdapter.serveCampaignMeals(campaignId,input)),
+    setCampaignMemberMeals: async (campaignId,input) => apply(() => mockAdapter.setCampaignMemberMeals(campaignId,input)),
+    undoCampaignMeal: async (campaignId) => apply(() => mockAdapter.undoCampaignMeal(campaignId)),
     advanceCampaignDay: async (campaignId,input) => apply(() => mockAdapter.advanceCampaignDay(campaignId,input)),
     appendCampaignSessionSummary: async (campaignId,summary) => apply(() => mockAdapter.appendCampaignSessionSummary(campaignId,summary)),
     grantCampaignAdvancement: async (campaignId,input) => apply(() => mockAdapter.grantCampaignAdvancement(campaignId,input)),
@@ -293,6 +299,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
 }) {
   const parent = useSimpleVtt();
   const [previewCalendarOverride,setPreviewCalendarOverride]=useState<{campaignId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"]}|null>(null);
+  const [previewRationOverride,setPreviewRationOverride]=useState<{campaignId:string;rations:CampaignSessionSystemsProjection["rations"]}|null>(null);
   const [previewAdvancementOverride,setPreviewAdvancementOverride]=useState<Record<string,{xp:number;levelUpCredits:number}>>({});
   const [previewStashOverride,setPreviewStashOverride]=useState<{campaignId:string;stash:CampaignSessionSystemsProjection["partyStash"]}|null>(null);
   const [previewInventoryOverrides,setPreviewInventoryOverrides]=useState<Record<string,SessionCharacterInventoryVm>>({});
@@ -316,17 +323,21 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       ...sourceCampaign,
       calendar:{...sourceCampaign.calendar,absoluteMinute:previewCalendarOverride.absoluteMinute,displayAnchor:previewCalendarOverride.displayAnchor},
     }:sourceCampaign;
-    const baseCampaign=previewStashOverride?.campaignId===sourceCampaign.campaignId?{...calendarCampaign,partyStash:previewStashOverride.stash}:calendarCampaign;
+    const stashCampaign=previewStashOverride?.campaignId===sourceCampaign.campaignId?{...calendarCampaign,partyStash:previewStashOverride.stash}:calendarCampaign;
+    const baseCampaign=previewRationOverride?.campaignId===sourceCampaign.campaignId?{...stashCampaign,rations:previewRationOverride.rations}:stashCampaign;
     const previewRosterMemberId=`connected:${activeCharacter.id}`;
     const hasPreviewMember=baseCampaign.roster.some((member)=>member.rosterMemberId===previewRosterMemberId);
-    const roster=(hasPreviewMember?baseCampaign.roster.map((member)=>member.rosterMemberId===previewRosterMemberId?{...member,connectionState:"connected" as const}:member):[
+    const roster=(hasPreviewMember?baseCampaign.roster.map((member)=>member.rosterMemberId===previewRosterMemberId?{...member,presentInSession:true,connectionState:"connected" as const}:member):[
       ...baseCampaign.roster,
-      {rosterMemberId:previewRosterMemberId,label:activeCharacter.name,kind:"player-character-ref" as const,characterId:activeCharacter.id,active:true,countsForRations:true,rationUnitsPerDay:1,stashPermission:"request" as const,connectionState:"connected" as const,level:activeCharacter.level,advancement:{xp:campaignXpThresholdForLevel(activeCharacter.level),levelUpCredits:0}},
+      {rosterMemberId:previewRosterMemberId,label:activeCharacter.name,kind:"player-character-ref" as const,characterId:activeCharacter.id,active:true,presentInSession:true,countsForRations:true,rationUnitsPerDay:1,stashPermission:"request" as const,connectionState:"connected" as const,level:activeCharacter.level,advancement:{xp:campaignXpThresholdForLevel(activeCharacter.level),levelUpCredits:0}},
     ]);
     const advancementRoster=roster.map((member)=>({...member,level:member.level??(member.rosterMemberId===previewRosterMemberId?activeCharacter.level:1),advancement:previewAdvancementOverride[member.rosterMemberId]??member.advancement??{xp:0,levelUpCredits:0}}));
-    const dailyRequired=(baseCampaign.rations.dailyRequired??0)+(hasPreviewMember?0:1);
+    const presentRationMembers=advancementRoster.filter((member)=>member.active&&member.countsForRations&&member.presentInSession!==false);
+    const dailyRequired=presentRationMembers.reduce((sum,member)=>sum+(member.rationUnitsPerDay??1),0);
     const balance=baseCampaign.rations.balance??0;
-    const previewRations={...baseCampaign.rations,dailyRequired,shortage:Math.max(0,dailyRequired-balance)};
+    const mealsRequired=presentRationMembers.length*2;
+    const mealsSatisfied=presentRationMembers.reduce((sum,member)=>sum+Math.min(2,baseCampaign.rations.mealsByRosterMember?.[member.rosterMemberId]??0),0);
+    const previewRations={...baseCampaign.rations,dailyRequired,shortage:Math.max(0,dailyRequired-balance),mealsRequired,mealsSatisfied,mealsShortage:Math.max(0,mealsRequired-mealsSatisfied)};
     const campaignSessionSystems={
       ...baseCampaign,
       roster:role==="player"&&!previewRations.visibleToPlayers
@@ -361,7 +372,7 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       sessionCharacterInventories,
       campaignSessionSystems,
     };
-  }, [mode, parent.snapshot, previewAdvancementOverride, previewCalendarOverride, previewInventoryOverrides, previewStashOverride, role]);
+  }, [mode, parent.snapshot, previewAdvancementOverride, previewCalendarOverride, previewInventoryOverrides, previewRationOverride, previewStashOverride, role]);
 
   const value = useMemo<AppContextValue>(() => ({
     ...parent,
@@ -370,6 +381,10 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
     hostSession: async () => undefined,
     joinSession: async () => undefined,
     stopSession: async () => onExit(),
+    declareManualMovementReaction: async(command)=>{
+      await parent.debug.setCurrentActor(command.provokerId);
+      await parent.declareManualMovementReaction(command);
+    },
     setSessionReady: async () => undefined,
     startPreparedSession: async () => undefined,
     correctCampaignCalendarDateTime: async(campaignId,input)=>{
@@ -377,6 +392,45 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
       if(!calendar||previewSnapshot?.campaignSessionSystems?.campaignId!==campaignId)return;
       const absoluteMinute=campaignDateTimeToAbsoluteMinute(calendar.providerId,input.dateTime);
       setPreviewCalendarOverride({campaignId,absoluteMinute,displayAnchor:projectCampaignCalendar(calendar.providerId,absoluteMinute,input.dateTime.era)});
+    },
+    advanceCampaignCalendar: async(campaignId,input)=>{
+      const calendar=previewSnapshot?.campaignSessionSystems?.calendar;
+      if(!calendar||previewSnapshot?.campaignSessionSystems?.campaignId!==campaignId)return;
+      const absoluteMinute=calendar.absoluteMinute+input.deltaMinutes;
+      setPreviewCalendarOverride({campaignId,absoluteMinute,displayAnchor:projectCampaignCalendar(calendar.providerId,absoluteMinute,calendar.displayAnchor.era)});
+    },
+    advanceCampaignDay: async(campaignId)=>{
+      const campaign=previewSnapshot?.campaignSessionSystems;
+      if(!campaign||campaign.campaignId!==campaignId)return;
+      const absoluteMinute=campaign.calendar.absoluteMinute+1440;
+      setPreviewCalendarOverride({campaignId,absoluteMinute,displayAnchor:projectCampaignCalendar(campaign.calendar.providerId,absoluteMinute,campaign.calendar.displayAnchor.era)});
+      setPreviewRationOverride({campaignId,rations:{...campaign.rations,mealsSatisfied:0,mealsShortage:campaign.rations.mealsRequired??campaign.roster.filter((member)=>member.active&&member.countsForRations).length*2,mealsByRosterMember:{}}});
+    },
+    serveCampaignMeals: async(campaignId,input)=>{
+      const campaign=previewSnapshot?.campaignSessionSystems;
+      if(!campaign||campaign.campaignId!==campaignId)return;
+      const current={...(campaign.rations.mealsByRosterMember??{})};
+      const served=input.rosterMemberIds.filter((id)=>(current[id]??0)<2);
+      const rationCost=input.source==="ration"?served.length:0;
+      if((campaign.rations.balance??0)<rationCost)throw new Error("일일 식량이 부족합니다.");
+      for(const id of served)current[id]=Math.min(2,(current[id]??0)+input.mealUnits);
+      const mealsSatisfied=campaign.roster.filter((member)=>member.active&&member.countsForRations).reduce((sum,member)=>sum+(current[member.rosterMemberId]??0),0);
+      const transaction={transactionId:`preview.meal.${Date.now()}`,kind:"meal" as const,amount:-rationCost,balanceAfter:(campaign.rations.balance??0)-rationCost,committedAt:new Date().toISOString(),rosterMemberIds:served,mealUnits:input.mealUnits,mealUnitsByRosterMember:Object.fromEntries(served.map((id)=>[id,Math.min(input.mealUnits,2-(campaign.rations.mealsByRosterMember?.[id]??0))])),mealSource:input.source,costSp:input.source==="tavern"?(input.costSpPerPerson??0)*served.length:0,campaignAbsoluteMinute:campaign.calendar.absoluteMinute,provenance:["preview"]};
+      setPreviewRationOverride({campaignId,rations:{...campaign.rations,balance:transaction.balanceAfter,mealsByRosterMember:current,mealsSatisfied,mealsShortage:Math.max(0,(campaign.rations.mealsRequired??campaign.roster.length*2)-mealsSatisfied),recentTransactions:[...(campaign.rations.recentTransactions??[]),transaction]}});
+    },
+    setCampaignMemberMeals: async(campaignId,input)=>{
+      const campaign=previewSnapshot?.campaignSessionSystems;if(!campaign||campaign.campaignId!==campaignId)return;
+      const current={...(campaign.rations.mealsByRosterMember??{})};const before=current[input.rosterMemberId]??0;if(before===input.mealCount)return;current[input.rosterMemberId]=input.mealCount;
+      const mealsSatisfied=campaign.roster.filter((member)=>member.active&&member.countsForRations).reduce((sum,member)=>sum+(current[member.rosterMemberId]??0),0);
+      const transaction={transactionId:`preview.meal.manual.${Date.now()}`,kind:"meal" as const,amount:0,balanceAfter:campaign.rations.balance??0,committedAt:new Date().toISOString(),rosterMemberIds:[input.rosterMemberId],mealUnits:input.mealCount-before,mealUnitsByRosterMember:{[input.rosterMemberId]:input.mealCount-before},mealSource:"manual" as const,campaignAbsoluteMinute:campaign.calendar.absoluteMinute,provenance:["preview"]};
+      setPreviewRationOverride({campaignId,rations:{...campaign.rations,mealsByRosterMember:current,mealsSatisfied,mealsShortage:Math.max(0,(campaign.rations.mealsRequired??campaign.roster.length*2)-mealsSatisfied),recentTransactions:[...(campaign.rations.recentTransactions??[]),transaction]}});
+    },
+    undoCampaignMeal: async(campaignId)=>{
+      const campaign=previewSnapshot?.campaignSessionSystems;const history=campaign?.rations.recentTransactions??[];const source=[...history].reverse().find((entry)=>entry.kind==="meal");
+      if(!campaign||campaign.campaignId!==campaignId||!source)throw new Error("되돌릴 식사 기록이 없습니다.");
+      const current={...(campaign.rations.mealsByRosterMember??{})};for(const [id,units] of Object.entries(source.mealUnitsByRosterMember??{}))current[id]=Math.max(0,(current[id]??0)-units);
+      const mealsSatisfied=Object.values(current).reduce((sum,value)=>sum+value,0);
+      setPreviewRationOverride({campaignId,rations:{...campaign.rations,balance:(campaign.rations.balance??0)+Math.abs(source.amount),mealsByRosterMember:current,mealsSatisfied,mealsShortage:Math.max(0,(campaign.rations.mealsRequired??0)-mealsSatisfied),recentTransactions:history.filter((entry)=>entry.transactionId!==source.transactionId)}});
     },
     grantCampaignAdvancement: async(campaignId,input)=>{
       if(previewSnapshot?.campaignSessionSystems?.campaignId!==campaignId)return;

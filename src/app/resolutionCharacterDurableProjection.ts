@@ -2,7 +2,7 @@ import type { CharacterSheet } from "./contracts";
 import type { CharacterDurableLifeFlagsV1 } from "./persistenceContracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ResourceRecoveryLockouts } from "../domain/resources";
-import type { LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
+import type { DeathSaveStateChange, LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
 import type { HpStateChange } from "../domain/stateChange";
 
 export type CharacterWriteBackDirection = "forward" | "inverse";
@@ -10,7 +10,7 @@ export type CharacterWriteBackProjection =
   | { status:"committed"; changed:boolean; sheet:CharacterSheet }
   | { status:"rejected"; error:string };
 
-type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange;
+type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange|DeathSaveStateChange;
 type DurableCharacterResource=CharacterSheet["resources"][number]&{recoveryLockouts?:ResourceRecoveryLockouts};
 
 const ITEM_PREFIX="phase09:item:";
@@ -24,12 +24,13 @@ function itemResource(resourceId:string) {
 }
 
 function isCharacterDurableChange(change:RuntimeStateChange):change is CharacterDurableStateChange {
-  return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life");
+  return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life" || change.kind==="death-save");
 }
 
 function label(change:CharacterDurableStateChange) {
   if (change.kind==="hp") return `hp.${change.field}`;
   if (change.kind==="resource") return `resource.${change.resourceId}`;
+  if (change.kind==="death-save") return `death-save.${change.field}`;
   return `life.${change.field}`;
 }
 
@@ -90,6 +91,17 @@ function applyChange(
       else delete resource.recoveryLockouts;
     }
     resource.current=after;
+    return;
+  }
+  if (change.kind==="death-save") {
+    const before=direction==="forward"?change.before:change.after;
+    const after=direction==="forward"?change.after:change.before;
+    const flags=lifeFlags(sheet,fallbackLife);
+    const deathSaves=flags.deathSaves??{successes:0,failures:0};
+    if (deathSaves[change.field]!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${deathSaves[change.field]}`;
+    deathSaves[change.field]=after;
+    flags.deathSaves=deathSaves;
+    sheet.durableLifeFlags=flags;
     return;
   }
   const before=direction==="forward" ? change.before : change.after;

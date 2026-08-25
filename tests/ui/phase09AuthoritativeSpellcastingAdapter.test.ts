@@ -94,6 +94,18 @@ test("authoritative HUD never re-seeds a depleted slot from the legacy bridge", 
   assert.equal(spellSlotCurrent(adapter,1),3,"legacy HUD is materialization input only; it cannot overwrite authoritative slot state");
 });
 
+test("authoritative Thunderwave targets every enemy when no spatial module is installed",async()=>{
+  const adapter=new MockAdapter();
+  const before=await miraInitiative(adapter);
+  const targets=before.scene.entities.filter((entity)=>entity.side==="enemy");
+  const hp=new Map(targets.map((target)=>[target.id,target.hp+target.tempHp]));
+  const cast=await adapter.resolveAction("action.thunderwave",targets.map((target)=>target.id));
+  assert.equal(cast.resolution?.stage,"complete");
+  assert.deepEqual(cast.resolution?.targetIds,targets.map((target)=>target.id));
+  assert.ok(targets.every((target)=>{const entity=cast.scene.entities.find((entry)=>entry.id===target.id);return Boolean(entity&&entity.hp+entity.tempHp<(hp.get(target.id)??0));}));
+  assert.equal(spellSlotCurrent(adapter,1),3);
+});
+
 test("no-session Healing Word preserves the existing legacy spell bridge and two-step safe Undo", async () => {
   const adapter=new MockAdapter();
   let snapshot=await adapter.getSnapshot();

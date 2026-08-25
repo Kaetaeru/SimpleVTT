@@ -198,7 +198,7 @@ test("live Host accepts a genuinely new participant and returns current authorit
     });
     await new Promise<void>((resolve)=>setImmediate(resolve));
 
-    assert.equal(state.ledger.cursor,cursorBefore+1,"accepted live join commits a participant event");
+    assert.equal(state.ledger.cursor,cursorBefore+2,"accepted live join commits participant and Scene topology events");
     assert.equal(state.peerParticipants.get("peer.late"),participantId);
     assert.equal(state.peerManifests.get("peer.late")?.character?.characterId,characterId);
     assert.equal(app.session.participants.find((participant)=>participant.id===participantId)?.state,"connected");
@@ -209,6 +209,7 @@ test("live Host accepts a genuinely new participant and returns current authorit
     assert.equal(ack.hostCursor,state.ledger.cursor);
     assert.ok(ack.events.some((event)=>event.eventId===modeEvent.eventId&&event.payload.kind==="mode-transition"));
     assert.ok(ack.events.some((event)=>event.payload.kind==="participant"&&event.payload.participantId===participantId));
+    assert.ok(ack.events.some((event)=>event.payload.kind==="scene-topology"));
   } finally {
     transport.restore();
   }

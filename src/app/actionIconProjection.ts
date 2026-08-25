@@ -9,6 +9,16 @@ export type ActionIconKey = SpellVisualKey
   | "item"
   | "ability-check"
   | "saving-throw"
+  | "movement"
+  | "disengage"
+  | "dodge"
+  | "help"
+  | "hide"
+  | "ready"
+  | "utilize"
+  | "influence"
+  | "search"
+  | "study"
   | "action"
   | "magic";
 
@@ -51,6 +61,20 @@ function weaponDamageVisual(type:string,labelSuffix="무기"):ActionIconDescript
   return undefined;
 }
 
+function standardActionVisual(id:string):ActionIconDescriptor|undefined {
+  if (id==="action.dash"||id==="ready.movement") return {key:"movement",label:"이동·질주",source:"action"};
+  if (id==="action.standard.disengage") return {key:"disengage",label:"이탈",source:"action"};
+  if (id==="action.standard.dodge") return {key:"dodge",label:"회피",source:"action"};
+  if (id==="action.standard.help") return {key:"help",label:"도움",source:"action"};
+  if (id.startsWith("action.standard.hide.")) return {key:"hide",label:"숨기",source:"action"};
+  if (id==="action.standard.ready"||id==="action.standard.ready.trigger") return {key:"ready",label:"준비",source:"action"};
+  if (id==="action.standard.utilize") return {key:"utilize",label:"물체 사용",source:"action"};
+  if (id.startsWith("action.standard.influence.")||id==="ui.action.standard.influence") return {key:"influence",label:"영향 주기",source:"action"};
+  if (id.startsWith("action.standard.search.")||id==="ui.action.standard.search") return {key:"search",label:"탐색",source:"action"};
+  if (id.startsWith("action.standard.study.")||id==="ui.action.standard.study") return {key:"study",label:"연구",source:"action"};
+  return undefined;
+}
+
 export function actionIconDescriptor(action:ActionVm):ActionIconDescriptor {
   if (action.category==="magic") {
     const explicit=action.damage?.map((part)=>damageVisual(part.type)??weaponDamageVisual(part.type,"속성")).find(Boolean);
@@ -63,6 +87,9 @@ export function actionIconDescriptor(action:ActionVm):ActionIconDescriptor {
     }
     return {key:"magic",label:"마법 행동",source:"action"};
   }
+
+  const standard=standardActionVisual(action.id);
+  if (standard) return standard;
 
   if (action.itemCost) return {key:"item",label:"아이템 사용",source:"action"};
   if (action.healing||action.resolutionKind==="healing") return {key:"healing",label:"회복 효과",source:"effect"};

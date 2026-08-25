@@ -426,6 +426,11 @@
 }
 .session-resolution-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 .session-resolution-next { min-width: 88px; }
+.session-resolution-notice {
+  pointer-events: none;
+  width: min(520px, calc(100vw - 90px));
+  grid-template-columns: minmax(0, 1fr);
+}
 
 @media (max-width: 899px) {
   .session-mode-root { grid-template-rows: 48px minmax(0, 1fr) 60px; }

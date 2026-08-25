@@ -34,7 +34,7 @@ test("duplicate apply undo and finalize resolve from durable journal phase",()=>
 });
 
 test("Host defers finalization until the compound Stash or DM Library operation settles",()=>{
-  assert.match(runtime,/defer\(this,1\).*baseTransfer/s);
+  assert.match(runtime,/defer\((?:this|adapter),1\).*baseTransfer/s);
   assert.match(runtime,/mutation\?\.outcome\)await sendFinalize/);
   assert.match(runtime,/grantCampaignDmLibraryItemWithOwnerJournal/);
   assert.match(runtime,/this\.undoDmInventoryAdjustment\(requestId\)/);

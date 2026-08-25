@@ -14,7 +14,8 @@ use tauri::{AppHandle, Emitter};
 const MESSAGE_EVENT: &str = "session-transport-message";
 const STATE_EVENT: &str = "session-transport-state";
 const PEER_LIFECYCLE_EVENT: &str = "session-transport-peer-lifecycle";
-const MAX_FRAME_BYTES: usize = 1024 * 1024;
+// A 4 MiB handout expands to about 5.4 MiB as base64 inside its JSON envelope.
+const MAX_FRAME_BYTES: usize = 8 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -393,6 +394,7 @@ mod tests {
     #[test]
     fn raw_newlines_and_oversized_frames_are_rejected() {
         assert!(frame_message("{\n}").is_err());
+        assert!(frame_message(&"x".repeat(6 * 1024 * 1024)).is_ok());
         assert!(frame_message(&"x".repeat(MAX_FRAME_BYTES + 1)).is_err());
     }
 

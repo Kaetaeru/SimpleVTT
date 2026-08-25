@@ -161,3 +161,18 @@ test("source-owned max HP is explicit and constrains projected runtime HP", () =
   assert.equal(parsed.status,"rejected");
   if (parsed.status==="rejected") assert.match(parsed.error,/outside source-owned max HP/);
 });
+
+test("presentation portrait round-trips through the bounded Character projection", () => {
+  const portrait={asset:{mimeType:"image/png" as const,dataUrl:"data:image/png;base64,iVBORw0KGgo=",byteLength:8,fileName:"hero.png"},focalX:.25,focalY:.75};
+  const projection=buildCharacterSessionProjectionV1(character({portrait}),catalog);
+  assert.deepEqual(projection.portrait,portrait);
+  const accepted=parseCharacterSessionProjectionV1(projection,catalog);
+  assert.equal(accepted.status,"accepted");
+  if(accepted.status==="accepted")assert.deepEqual(accepted.projection.portrait,portrait);
+
+  const invalid=structuredClone(projection) as unknown as {portrait:{focalX:number}};
+  invalid.portrait.focalX=2;
+  const rejected=parseCharacterSessionProjectionV1(invalid,catalog);
+  assert.equal(rejected.status,"rejected");
+  if(rejected.status==="rejected")assert.match(rejected.error,/portrait is invalid/);
+});

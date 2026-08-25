@@ -101,6 +101,7 @@ test("compact creation choices and official sheet chrome remain structurally pre
   const compact = readFileSync(new URL("../../src/compact-options.css", import.meta.url), "utf8");
   const sheet = readFileSync(new URL("../../src/character-sheet-v10.css", import.meta.url), "utf8");
   const viewport = readFileSync(new URL("../../src/character-sheet-v10-viewport.css", import.meta.url), "utf8");
+  const official = readFileSync(new URL("../../src/OfficialCharacterSheetPlayScreen.tsx", import.meta.url), "utf8");
   assert.match(compact, /\.create-option-card\.compact/);
   assert.match(compact, /min-height:\s*72px/);
   assert.match(compact, /\.option-detail-popover\.portal/);
@@ -115,5 +116,12 @@ test("compact creation choices and official sheet chrome remain structurally pre
   assert.match(viewport, /overflow-y:\s*auto\s*!important/);
   assert.match(viewport, /position:\s*absolute\s*!important/);
   assert.match(viewport, /@media \(min-width: 1600px\) and \(min-height: 900px\)/);
-  assert.match(viewport, /width:\s*min\(1560px, 100%\)/);
+  assert.match(official, /OfficialSheetFitFrame/);
+  assert.match(official, /ResizeObserver/);
+  assert.match(official, /Math\.min\(1, frame\.clientWidth \/ width\)/);
+  assert.match(official, /height \* scale/);
+  assert.match(viewport, /\.official-sheet-fit-canvas/);
+  assert.match(viewport, /width:\s*2016px/);
+  assert.match(viewport, /grid-template-columns:\s*repeat\(2, 1000px\)/);
+  assert.match(viewport, /transform-origin:\s*top center/);
 });

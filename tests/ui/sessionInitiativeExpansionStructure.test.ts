@@ -31,7 +31,7 @@ test("Initiative tracker is projection-only and stays a compact order strip", ()
 
 test("Initiative economy and End Turn stay in the persistent Command Center", () => {
   assert.match(dock, /snapshot\.scene\.economyByActor\[actorId\]/);
-  assert.match(dock, /const \{snapshot,resolveAction,endTurn\}=useSimpleVtt\(\)/);
+  assert.match(dock, /const \{snapshot,resolveAction,configureReadyAction,endTurn\}=useSimpleVtt\(\)/);
   assert.match(dock, /currentActor\?\.id===snapshot\.activeCharacter\.id/);
   assert.match(dock, /role==="dm"\|\|playerOwnsTurn/);
   assert.match(dock, /await endTurn\(\)/);
@@ -53,6 +53,6 @@ test("Stage focus remains presentation-only and centers the authoritative curren
 
 test("Initiative keeps the exact accepted Play root proportions", () => {
   assert.match(referenceCss, /\.session-reference-play-root\.session-mode-root\[data-session-mode="initiative"\][\s\S]*grid-template-rows:\s*41px minmax\(0, 1fr\) var\(--svtt-command-h\)/);
-  assert.match(referenceCss, /--svtt-command-h:\s*max\(174px/);
+  assert.match(referenceCss, /--svtt-command-h:\s*max\(200px/);
   assert.match(referenceCss, /--svtt-actor-board-h:\s*112px/);
 });

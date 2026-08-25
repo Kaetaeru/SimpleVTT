@@ -1,6 +1,7 @@
 import type { AbilityKey, AbilityScores } from "./contracts";
 
 export interface CombatantRuntimeStatsVm {
+  creatureType?:string;
   abilities:AbilityScores;
   proficiencyBonus:number;
   savingThrowProficiencies:AbilityKey[];

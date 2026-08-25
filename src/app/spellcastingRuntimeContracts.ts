@@ -1,4 +1,8 @@
-export type CombatSpellRuntimeSupport = "combat-executable" | "partial" | "legacy-item";
+export type CombatSpellRuntimeSupport = "combat-executable" | "tracked-executable" | "partial" | "legacy-item";
+
+export function isExecutableSpellRuntimeSupport(value:string) {
+  return value==="combat-executable"||value==="tracked-executable";
+}
 
 export interface SpellActionRuntimeVm {
   spellId: string;

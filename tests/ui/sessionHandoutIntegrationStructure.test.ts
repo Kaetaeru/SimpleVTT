@@ -39,15 +39,18 @@ test("Session Handout presentation reuses the existing handout runtime and does 
   assert.ok(handoutImport >= 0 && parityImport > handoutImport, "handout transport decorator must remain installed before content parity");
 });
 
-test("Player active handout is a transient Session layer with dismiss and contextual reopen", () => {
+test("Freeform handout is a non-blocking center background with contextual player dismissal", () => {
   assert.match(root, /<SessionPlayerHandoutRailButton \/>/);
-  assert.match(root, /<SessionPlayerHandoutViewer \/>/);
+  assert.match(root, /snapshot\.sessionMode==="freeform"&&<SessionPlayerHandoutViewer \/>/);
   assert.match(root, /<SessionPlayerHandoutError \/>/);
   assert.match(handout, /aria-label=\{handout\.dismissed \? "이미지 다시 열기" : "DM 공유 이미지 열림"\}/);
-  assert.match(handout, /role="dialog" aria-modal="true" aria-label="DM 공유 이미지"/);
+  assert.doesNotMatch(handout, /role="dialog"|aria-modal="true"/);
   assert.match(root, /playerHandoutOpen/);
-  assert.match(root, /snapshot\.resolution \|\| playerHandoutOpen/);
+  assert.doesNotMatch(root, /suspended=\{Boolean\([^}]*playerHandoutOpen/);
   assert.match(root, /dismissCurrentSessionImageHandout\(\)/);
+  assert.doesNotMatch(root, /onWithdrawHandout/);
+  assert.match(root, /role==="dm"&&<SessionDmHandoutPreview \/>/);
+  assert.match(handout, /aria-label="모든 화면에서 이미지 공유 철회"/);
 });
 
 test("Handout file validation and reconnect-restored state remain the existing bounded presentation path", () => {
@@ -59,9 +62,10 @@ test("Handout file validation and reconnect-restored state remain the existing b
   assert.doesNotMatch(`${runtime}\n${handout}`, /tactical grid|fog of war|public URL|cloud hosting/i);
 });
 
-test("Handout control and viewer use contextual pane and Session layer geometry", () => {
+test("Handout control uses a contextual pane while the shared image stays behind Last Roll", () => {
   assert.match(css, /\.session-handout-pane\s*\{[\s\S]*position: absolute;[\s\S]*right: 0;[\s\S]*height: 100%/);
-  assert.match(css, /\.session-handout-viewer\s*\{[\s\S]*position: absolute;[\s\S]*z-index: 96/);
+  assert.match(css, /\.session-handout-viewer\s*\{[\s\S]*pointer-events: none;[\s\S]*position: absolute;[\s\S]*inset: 0;[\s\S]*z-index: 0/);
+  assert.match(css, /\.session-dm-handout-preview\s*\{[\s\S]*left:12px;[\s\S]*width:116px/);
   assert.match(css, /@media \(max-width: 899px\)/);
   assert.match(css, /@media \(max-width: 620px\)/);
   assert.doesNotMatch(css, /handout-host-launcher|handout-client-overlay|handout-reopen/);

@@ -60,8 +60,11 @@ test("Host attack fans the same ordered live dice/VFX presentation and terminal 
     const actingStages:string[]=[];
     const observingStages:string[]=[];
     for(const [index,message] of live.entries()) {
-      assert.equal(applyConnectedResolutionPresentation(actingClient,message.presentation).status,index===0?"applied":"queued");
-      assert.equal(applyConnectedResolutionPresentation(observingClient,message.presentation).status,index===0?"applied":"queued");
+      const expected=index===0
+        ?"applied"
+        :(["roll-animation","save-animation","damage-animation"].includes(message.presentation.resolution.stage)&&message.presentation.resolution.authoritativeDice.length>0?"replaced":"queued");
+      assert.equal(applyConnectedResolutionPresentation(actingClient,message.presentation).status,expected);
+      assert.equal(applyConnectedResolutionPresentation(observingClient,message.presentation).status,expected);
       const [acting,observing]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
       assert.deepEqual(acting.resolution,observing.resolution);
       assert.deepEqual(acting.resolutionPresentation,observing.resolutionPresentation);
@@ -76,7 +79,8 @@ test("Host attack fans the same ordered live dice/VFX presentation and terminal 
       assert.equal(actingAdvance.status,observingAdvance.status);
       if(actingAdvance.status==="empty")break;
     }
-    assert.deepEqual(actingStages,live.map((entry)=>entry.presentation.resolution.stage));
+    const latestDiceIndex=live.findLastIndex((entry)=>["roll-animation","save-animation","damage-animation"].includes(entry.presentation.resolution.stage)&&entry.presentation.resolution.authoritativeDice.length>0);
+    assert.deepEqual(actingStages,live.slice(Math.max(0,latestDiceIndex)).map((entry)=>entry.presentation.resolution.stage));
     assert.deepEqual(observingStages,actingStages);
 
     const [actingApplied,observingApplied]=await Promise.all([

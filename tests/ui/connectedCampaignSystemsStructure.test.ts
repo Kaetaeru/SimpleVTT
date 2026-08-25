@@ -23,7 +23,7 @@ test("Host restores projection after compatible hello and broadcasts every Campa
   assert.match(runtime,/value\?\.type==="hello-ack"/);
   assert.match(runtime,/compatibility\?\.status==="compatible"/);
   assert.match(runtime,/baseSendTo\(peer,JSON\.stringify\(envelope\)\)/);
-  for(const method of ["advanceCampaignCalendar","correctCampaignCalendar","correctCampaignCalendarDateTime","setCampaignCalendarNote","undoCampaignCalendar","adjustCampaignRations","consumeCampaignDailyRations","undoCampaignRationConsumption","advanceCampaignDay"]){
+  for(const method of ["advanceCampaignCalendar","correctCampaignCalendar","correctCampaignCalendarDateTime","setCampaignCalendarNote","undoCampaignCalendar","adjustCampaignRations","consumeCampaignDailyRations","undoCampaignRationConsumption","serveCampaignMeals","setCampaignMemberMeals","undoCampaignMeal","advanceCampaignDay"]){
     assert.match(runtime,new RegExp(`MockAdapter\\.prototype\\.${method}=broadcastAfter`));
   }
   assert.match(runtime,/connectedStateFor\(adapter\)\.peerParticipants\.keys\(\)/);
@@ -44,10 +44,10 @@ test("connected Players can move only their own Character assets with host ackno
   assert.match(runtime,/commitConnectedPartyStashDeposit/);
   assert.match(runtime,/command\.direction!=="character-to-stash"&&command\.direction!=="stash-to-character"/);
   assert.match(runtime,/command\.actorId!==snapshot\.activeCharacter\.id/);
-  assert.match(runtime,/undoDmInventoryAdjustment\(command\.requestId\)/);
+  assert.match(runtime,/undoDmInventoryAdjustment\(request\.requestId\)/);
   assert.match(runtime,/이동 응답 시간이 초과/);
-  assert.match(runtime,/hostAccepted&&!localFirst/);
-  assert.match(runtime,/\.compensate/);
+  assert.match(runtime,/await waitForHost/);
+  assert.doesNotMatch(runtime,/localFirst/);
 });
 
 test("Host DM inventory mutations for mounted remote Characters execute on the owning Client and refresh the Host projection",()=>{

@@ -43,8 +43,9 @@ test("canonical builtin catalog composes before durable local content and reload
   assert.equal(builtin.filter((entry)=>entry.category==="background").length,4);
   assert.equal(builtin.filter((entry)=>entry.category==="spell").length,339);
   assert.equal(builtin.filter((entry)=>entry.category==="feat").length,17);
-  assert.equal(builtin.filter((entry)=>entry.category==="item").length,114);
-  assert.equal(initial.catalog.length,495);
+  assert.equal(builtin.filter((entry)=>entry.category==="item").length,115);
+  assert.equal(initial.catalog.length,496);
+  assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.item.gear.rations"));
   assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.class.fighter" && entry.nameKo==="파이터" && entry.nameEn==="Fighter" && entry.sourceId==="dnd.srd-5.2.1" && entry.version==="0.1-draft"));
   assert.ok(!builtin.some((entry)=>entry.contentId==="class.fighter"));
   assert.ok(builtin.some((entry)=>entry.contentId==="dnd.srd521.item.weapon.longsword" && entry.category==="item"));

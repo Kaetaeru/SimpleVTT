@@ -31,7 +31,7 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
   overflow: hidden;
 }
@@ -61,8 +61,49 @@
   touch-action: pan-x pan-y;
 }
 
-/* 1920×1080 desktop density: the first official page fits the usable viewport
-   without sacrificing the scroll fallback for long inventories or spell pages. */
+.character-sheet-workspace[data-sheet-host] .official-sheet-play-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 6px;
+  overflow: hidden !important;
+}
+
+.character-sheet-workspace[data-sheet-host] .character-sheet-workspace-content > .official-sheet-play-screen {
+  overflow: hidden !important;
+}
+
+.official-sheet-fit-frame {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.official-sheet-fit-sizer {
+  position: relative;
+  width: 100%;
+}
+
+.official-sheet-fit-canvas {
+  position: absolute;
+  left: 50%;
+  width: 2016px;
+  margin-left: -1008px;
+  display: grid;
+  grid-template-columns: repeat(2, 1000px);
+  gap: 16px;
+  transform-origin: top center;
+}
+
+.official-sheet-fit-canvas > .official-paper {
+  width: 1000px;
+  max-width: none;
+}
+
+/* Keep application chrome compact at 1920×1080; the paper itself is never
+   reflowed here and is fitted proportionally by OfficialSheetFitFrame. */
 @media (min-width: 1600px) and (min-height: 900px) {
   .character-sheet-workspace[data-sheet-host="standalone"] .sheet-layout-choice-bar {
     min-height: 44px;
@@ -71,67 +112,16 @@
   .character-sheet-workspace[data-sheet-host="standalone"] .character-sheet-system-tabs {
     min-height: 38px;
   }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-sheet-play-screen {
+  .character-sheet-workspace[data-sheet-host] .official-sheet-play-screen {
     padding: 8px 18px 18px;
   }
-  .character-sheet-workspace[data-sheet-host="standalone"] .sheet-play-toolbar {
-    min-height: 48px;
-    align-items: center;
-    margin-bottom: 6px;
+  .character-sheet-workspace[data-sheet-host] .sheet-play-statusbar {
+    margin-bottom: 0;
   }
-  .character-sheet-workspace[data-sheet-host="standalone"] .sheet-play-toolbar h1 {
-    margin-block: 0;
-    font-size: 22px;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .sheet-play-toolbar p { display: none; }
-  .character-sheet-workspace[data-sheet-host="standalone"] .sheet-play-toolbar-actions button { min-height: 32px; }
-  .character-sheet-workspace[data-sheet-host="standalone"] .sheet-play-statusbar {
-    margin-bottom: 6px;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .sheet-play-statusbar > div {
+  .character-sheet-workspace[data-sheet-host] .sheet-play-statusbar > div {
     min-height: 44px;
     padding: 5px 8px;
   }
-  .character-sheet-workspace[data-sheet-host="standalone"] .sheet-play-statusbar strong { font-size: 16px; }
+  .character-sheet-workspace[data-sheet-host] .sheet-play-statusbar strong { font-size: 16px; }
   .character-sheet-workspace[data-sheet-host="standalone"] .sheet-roll-mode button { min-height: 28px; }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-sheet-page-tabs button {
-    min-height: 28px;
-    height: 28px;
-    padding-block: 2px;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-paper {
-    width: min(1560px, 100%);
-    gap: 7px;
-    padding: 10px;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-identity-grid .official-field {
-    min-height: 44px;
-    padding-block: 5px;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-character-grid {
-    height: 529px;
-    min-height: 0;
-    gap: 7px;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-ability-column,
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-proficiency-column,
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-combat-column,
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-roleplay-column {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-ability-block {
-    min-height: 82px;
-    padding-block: 5px;
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-roleplay-column {
-    grid-template-rows: repeat(4, 62px) minmax(253px, 1fr);
-  }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-roleplay-column .official-text-box { min-height: 0; }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-roleplay-column .official-text-box > div { overflow-y: auto; }
-  .character-sheet-workspace[data-sheet-host="standalone"] .official-text-box.grow {
-    min-height: 0;
-  }
 }

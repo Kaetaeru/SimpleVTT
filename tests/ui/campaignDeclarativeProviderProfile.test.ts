@@ -55,5 +55,5 @@ test("custom calendar profile round-trips authoritative absolute minutes",()=>{
   const input={era:"왕국력",year:5,monthId:"sun",day:12,hour:7,minute:45};
   const absolute=campaignDateTimeToAbsoluteMinute(providerId,input,calendarProfile);
   const projected=projectCampaignCalendar(providerId,absolute,"왕국력",calendarProfile);
-  assert.deepEqual(projected,input);
+  assert.deepEqual(projected,{...input,monthLabel:"태양달"});
 });

@@ -40,6 +40,27 @@ test("turn runtime starts initiative from domain ordering and beginTurn economy"
   assert.deepEqual(value.economyByActor.slow,{ action:true, bonusAction:true, reaction:true, movement:40, movementMax:40 });
 });
 
+test("turn runtime publicly projects spell-linked conditions and removes only its own stale labels", () => {
+  const value=scene();
+  value.entities[1].status=["DM 표시"];
+  const session=createTurnRuntimeSession(value);
+  session.state.effects.push(createEffect({
+    id:"charm-person:slow",
+    sourceId:"dnd.srd521.spell.charm-person",
+    sourceActorId:"fast",
+    targetId:"slow",
+    kind:"condition",
+    conditionId:"charmed",
+    duration:{kind:"hours",amount:1},
+  },session.state.clock));
+  projectTurnRuntimeToScene(session,value);
+  assert.ok(value.entities[1].status.some((status)=>status.startsWith("✦ 매혹 · ")));
+  assert.ok(value.entities[1].status.includes("DM 표시"));
+  session.state.effects=[];
+  projectTurnRuntimeToScene(session,value);
+  assert.deepEqual(value.entities[1].status,["DM 표시"]);
+});
+
 test("turn runtime absorbs committed economy projection and only resets the actor whose turn begins", () => {
   const value=scene();
   const session=createTurnRuntimeSession(value);

@@ -16,8 +16,8 @@ test("Phase 06 mechanics registry exposes executable attack, save, healing, area
   assert.ok(entries.some((spell) => spell.runtimeSupport === "combat-executable" && spell.primary.kind === "save-damage"));
   assert.ok(entries.some((spell) => spell.runtimeSupport === "combat-executable" && spell.primary.kind === "healing"));
   assert.ok(entries.some((spell) => spell.runtimeSupport === "combat-executable" && spell.primary.kind === "automatic-projectiles"));
-  assert.equal(SRD_521_SPELL_MECHANICS["dnd.srd521.spell.vicious-mockery"].runtimeSupport, "partial");
-  assert.equal(SRD_521_SPELL_MECHANICS["dnd.srd521.spell.thunderwave"].runtimeSupport, "partial");
+  assert.equal(SRD_521_SPELL_MECHANICS["dnd.srd521.spell.vicious-mockery"].runtimeSupport, "combat-executable");
+  assert.equal(SRD_521_SPELL_MECHANICS["dnd.srd521.spell.thunderwave"].runtimeSupport, "combat-executable");
 });
 
 test("combat spell HUD reuses canonical SpellTile UI, shows slots separately, and preserves the existing target-selection buttons", () => {
@@ -33,7 +33,7 @@ test("combat spell HUD reuses canonical SpellTile UI, shows slots separately, an
   assert.match(hud, /setSelectedCombatSpellSlot/);
   assert.match(runtime, /resolveSpellCast/);
   assert.match(runtime, /spell-slot-1/);
-  assert.match(runtime, /runtimeSupport === "partial"/);
+  assert.match(runtime, /isExecutableSpellRuntimeSupport/);
   assert.match(main, /CombatSpellHudBridge/);
   assert.match(main, /offlineRuntimeAdapters/);
   assert.match(offlineRuntime, /spellcastingRuntimeAdapter/);

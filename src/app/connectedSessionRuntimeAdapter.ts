@@ -6,6 +6,7 @@ import {
   ClientSessionReplica,
   HostSessionLedger,
   type ConnectedEventPayload,
+  type ConnectedSceneTopology,
   type ConnectedSessionEvent,
   type SessionCompatibilityManifest,
 } from "./connectedSessionProtocol";
@@ -26,6 +27,8 @@ import { syncConnectedCampaignRoster } from "./connectedCampaignRosterPort";
 import { projectedCharacterById, rebindCharacterSessionProjectionPeer } from "./characterSessionProjectionRegistry";
 import { unmountReconstructedCharacterSessionProjection } from "./characterSessionProjectionMount";
 import { clearReadyActionConfiguration, setReadyActionConfiguration } from "./standardActionReadyState";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 import {
   actionFromConnectedPresentation,
   isConnectedResolutionPresentation,
@@ -36,7 +39,7 @@ declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","ready-intent-v1","session-end-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","manual-movement-reaction-v1","ready-intent-v1","session-end-v1","scene-topology-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -56,6 +59,15 @@ export interface ConnectedAdapterState {
 
 export function connectedInternal(adapter:MockAdapter) {
   return adapter as unknown as ConnectedAdapterState;
+}
+
+function applyConnectedResolutionEvents(adapter:MockAdapter,events:ResolutionEvent[]) {
+  const app=connectedInternal(adapter);
+  const runtime=ensureAdapterTurnRuntimeState(adapter,app.scene);
+  const projected=applyResolutionEvents(app.scene,events,app.activeCharacter.resources,app.activeCharacter.items,runtime);
+  if(projected.status==="rejected"||!projected.runtimeState)return projected;
+  if(projected.runtimeState.revision!==runtime.revision&&!commitAdapterTurnRuntimeState(adapter,projected.scene,runtime.revision,projected.runtimeState))return {status:"rejected" as const,error:"connected runtime revision changed before event apply"};
+  return projected;
 }
 
 export function connectedManifest(adapter:MockAdapter):SessionCompatibilityManifest {
@@ -91,12 +103,24 @@ function installConnectedResolutionPresentation(adapter:MockAdapter,presentation
   };
 }
 
+const REMOTE_DICE_PRESENTATION_STAGES=new Set(["roll-animation","save-animation","damage-animation"]);
+
+function isRemoteDicePresentation(presentation:ConnectedResolutionPresentationV1) {
+  return REMOTE_DICE_PRESENTATION_STAGES.has(presentation.resolution.stage)
+    && presentation.resolution.authoritativeDice.length>0;
+}
+
 function enqueueOrInstallConnectedPresentation(adapter:MockAdapter,presentation:ConnectedResolutionPresentationV1) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
   if(!app.resolutionPresentation){
     installConnectedResolutionPresentation(adapter,presentation);
     return "applied" as const;
+  }
+  if(isRemoteDicePresentation(presentation)){
+    state.pendingPresentations=[];
+    installConnectedResolutionPresentation(adapter,presentation);
+    return "replaced" as const;
   }
   state.pendingPresentations.push(structuredClone(presentation));
   return "queued" as const;
@@ -149,6 +173,33 @@ export async function broadcastConnectedWire(message:ConnectedWireMessage) {
   await tauriSessionTransport.send(encodeConnectedWireMessage(message));
 }
 
+function sceneTopology(scene:SceneVm):ConnectedSceneTopology {
+  return {
+    sceneId:scene.id,
+    sceneName:scene.name,
+    round:scene.round,
+    currentActorId:scene.currentActorId,
+    entities:structuredClone(scene.entities),
+    economyByActor:structuredClone(scene.economyByActor),
+  };
+}
+
+export async function commitConnectedSceneTopology(
+  adapter:MockAdapter,
+  stateChanges:string[],
+  provenance:string[],
+) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if (state.mode!=="host"||!state.ledger) return {status:"ignored" as const};
+  const event=state.ledger.commitHostEvent({
+    actorId:"host",
+    payload:{kind:"scene-topology",topology:sceneTopology(app.scene),stateChanges:[...stateChanges],provenance:[...provenance]},
+  });
+  await broadcastConnectedWire({type:"event-batch",sessionId:state.ledger.sessionId,afterCursor:event.sequence-1,events:[event]});
+  return {status:"committed" as const,event};
+}
+
 async function sendClientHello(adapter:MockAdapter,knownEventCursor:number) {
   const app=connectedInternal(adapter);
   let projection;
@@ -166,6 +217,45 @@ async function sendClientHello(adapter:MockAdapter,knownEventCursor:number) {
     knownEventCursor,
     projection,
   }));
+}
+
+function clearClientHandshakeRetry(adapter:MockAdapter) {
+  const state=connectedStateFor(adapter);
+  if (state.handshakeTimer) clearTimeout(state.handshakeTimer);
+  state.handshakeTimer=null;
+  state.handshakeAttempts=0;
+}
+
+function scheduleClientHandshakeRetry(adapter:MockAdapter) {
+  const state=connectedStateFor(adapter);
+  if (state.mode!=="client"||state.sessionId||state.handshakeTimer) return;
+  if (state.handshakeAttempts>=4) {
+    const app=connectedInternal(adapter);
+    app.session.compatibility="warning";
+    app.session.compatibilityMessage="Host compatibility handshake timed out after 4 retries. Verify both apps use the same build, then retry Join.";
+    void publishConnectedSnapshot(adapter);
+    return;
+  }
+  const delay=500*(2**state.handshakeAttempts);
+  state.handshakeTimer=setTimeout(async()=>{
+    state.handshakeTimer=null;
+    if (state.mode!=="client"||state.sessionId) return;
+    state.handshakeAttempts+=1;
+    try {
+      await sendClientHello(adapter,state.replica?.cursor??0);
+      const app=connectedInternal(adapter);
+      app.session.compatibility="warning";
+      app.session.compatibilityMessage=`Host compatibility handshake retry ${state.handshakeAttempts}/4.`;
+      await publishConnectedSnapshot(adapter);
+    } catch(error) {
+      const app=connectedInternal(adapter);
+      app.session.compatibility="warning";
+      app.session.compatibilityMessage=`Host handshake retry failed: ${error instanceof Error?error.message:String(error)}`;
+      await publishConnectedSnapshot(adapter);
+    }
+    scheduleClientHandshakeRetry(adapter);
+  },delay);
+  (state.handshakeTimer as unknown as {unref?:()=>void}).unref?.();
 }
 
 function applyParticipantPayload(adapter:MockAdapter,payload:Extract<ConnectedEventPayload,{kind:"participant"}>) {
@@ -207,8 +297,35 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     applyParticipantPayload(adapter,payload);
     return { status:"committed" as const };
   }
+  if (payload.kind==="scene-topology") {
+    const localActorId=app.activeCharacter.id;
+    const localActions=app.scene.actionsByActor[localActorId]?.map((action)=>structuredClone(action))??[];
+    const topology=payload.topology;
+    const hasLocalActor=topology.entities.some((entity)=>entity.id===localActorId);
+    app.scene={
+      ...app.scene,
+      id:topology.sceneId,
+      name:topology.sceneName,
+      round:topology.round,
+      currentActorId:topology.currentActorId,
+      selectedActorId:hasLocalActor?localActorId:topology.currentActorId,
+      entities:structuredClone(topology.entities),
+      actionsByActor:localActions.length?{[localActorId]:localActions}:{},
+      economyByActor:structuredClone(topology.economyByActor),
+    };
+    app.activity.unshift({
+      id:`connected:${event.eventId}`,
+      time:"지금",
+      actor:"Host",
+      title:"장면 액터 동기화",
+      summary:`${topology.entities.length} actors`,
+      detail:[`eventId=${event.eventId}`,...payload.provenance],
+      stateChanges:[...payload.stateChanges],
+    });
+    return {status:"committed" as const};
+  }
   if(payload.kind==="resolution-undo"){
-    const projected=applyResolutionEvents(app.scene,payload.inverseResolutionEvents,app.activeCharacter.resources,app.activeCharacter.items);
+    const projected=applyConnectedResolutionEvents(adapter,payload.inverseResolutionEvents);
     if(projected.status==="rejected")return projected;
     const writeBack=await persistCharacterResolutionEvents(adapter,payload.inverseResolutionEvents,"forward");
     if(writeBack.status==="rejected")return {status:"rejected" as const,error:`Character undo write-back failed: ${writeBack.error}`};
@@ -258,7 +375,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   }
   if (payload.kind!=="resolution") return { status:"committed" as const };
   if (!isConnectedResolutionPresentation(payload.presentation)) return {status:"rejected" as const,error:"Host resolution event is missing a valid presentation envelope"};
-  const projected=applyResolutionEvents(app.scene,payload.resolutionEvents,app.activeCharacter.resources,app.activeCharacter.items);
+  const projected=applyConnectedResolutionEvents(adapter,payload.resolutionEvents);
   if (projected.status==="rejected") return projected;
 
   const writeBack=await persistCharacterResolutionEvents(adapter,payload.resolutionEvents,"forward");
@@ -439,6 +556,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         }
         state.peerManifests.set(message.peer,structuredClone(wire.manifest));
         state.peerParticipants.set(message.peer,wire.participantId);
+        const cursorBeforeParticipant=ledger.cursor;
         const participantEvent=ledger.commitHostEvent({
           actorId:wire.participantId,
           payload:{
@@ -453,9 +571,20 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
           },
         });
         applyParticipantPayload(adapter,participantEvent.payload as Extract<ConnectedEventPayload,{kind:"participant"}>);
+        const participantCommitted=ledger.cursor>cursorBeforeParticipant;
+        const topologyEvent=participantCommitted?ledger.commitHostEvent({
+          actorId:"host",
+          payload:{
+            kind:"scene-topology",
+            topology:sceneTopology(app.scene),
+            stateChanges:[`${app.scene.entities.length} Scene actors synchronized`],
+            provenance:["host-authoritative Character join topology"],
+          },
+        }):undefined;
         for (const peer of state.peerParticipants.keys()) {
           if (peer!==message.peer) {
-            await sendConnectedWireTo(peer,{type:"event-batch",sessionId:ledger.sessionId,afterCursor:participantEvent.sequence-1,events:[participantEvent]}).catch(()=>undefined);
+            const outbound=topologyEvent?[participantEvent,topologyEvent]:[participantEvent];
+            await sendConnectedWireTo(peer,{type:"event-batch",sessionId:ledger.sessionId,afterCursor:participantEvent.sequence-1,events:outbound}).catch(()=>undefined);
           }
         }
         events=ledger.eventsAfter(wire.knownEventCursor);
@@ -553,6 +682,7 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
     return;
   }
   if (wire.type==="hello-ack") {
+    clearClientHandshakeRetry(adapter);
     state.sessionId=wire.sessionId;
     if (wire.sessionName) app.session.name=wire.sessionName;
     if (!state.replica || state.replica.sessionId!==wire.sessionId) state.replica=new ClientSessionReplica(wire.sessionId);
@@ -732,5 +862,6 @@ MockAdapter.prototype.joinSession=async function joinConnectedSession(address:st
   app.session.compatibility="warning";
   app.session.compatibilityMessage="Transport connected · waiting for host compatibility handshake.";
   await sendClientHello(this,0);
+  scheduleClientHandshakeRetry(this);
   return app.getSnapshot();
 };

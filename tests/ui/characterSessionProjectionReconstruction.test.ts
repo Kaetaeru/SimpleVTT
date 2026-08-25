@@ -66,7 +66,8 @@ function fighter(overrides:Partial<CharacterSheet>={}):CharacterSheet {
 }
 
 test("host reconstructs derived mechanics from trusted rules instead of client presentation values", () => {
-  const projection=buildCharacterSessionProjectionV1(fighter(),baseCatalog);
+  const portrait={asset:{mimeType:"image/png" as const,dataUrl:"data:image/png;base64,iVBORw0KGgo=",byteLength:8},focalX:.4,focalY:.6};
+  const projection=buildCharacterSessionProjectionV1(fighter({portrait}),baseCatalog);
   const reconstructed=reconstructCharacterSessionProjectionV1(projection,baseCatalog);
   assert.equal(reconstructed.status,"accepted");
   if (reconstructed.status!=="accepted") return;
@@ -78,6 +79,7 @@ test("host reconstructs derived mechanics from trusted rules instead of client p
   assert.equal(reconstructed.sheet.maxHp,27);
   assert.equal(reconstructed.sheet.hp,19);
   assert.equal(reconstructed.sheet.tempHp,2);
+  assert.deepEqual(reconstructed.sheet.portrait,portrait);
   assert.deepEqual(reconstructed.sheet.saves,["STR +5","CON +4"]);
   assert.deepEqual(reconstructed.sheet.attacks,[]);
   assert.equal(reconstructed.entity.ac,12);

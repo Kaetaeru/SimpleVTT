@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import "./session-quick-palette.css";
 
-export type SessionQuickDestination = "quick-sheet" | "actor" | "inventory" | "campaign" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session";
+export type SessionQuickDestination = "quick-sheet" | "actor" | "inventory" | "library" | "campaign" | "calendar" | "rations" | "rest" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session";
 
 type QuickEntry = {
   destination: SessionQuickDestination;
@@ -12,8 +12,12 @@ type QuickEntry = {
 };
 
 const DM_ENTRIES: QuickEntry[] = [
+  { destination:"library",glyph:"라",label:"DM 라이브러리",description:"준비물을 드래그해 소환·공개·지급합니다.",keywords:"library actor image item drag 라이브러리 액터 이미지 아이템 드래그" },
   { destination:"inventory",glyph:"템",label:"아이템 · 재화",description:"선택한 플레이어에게 빠르게 지급하거나 회수합니다.",keywords:"item inventory gold give take 지급 회수 재화" },
-  { destination:"campaign",glyph:"캠",label:"캠페인 달력 · 식량",description:"현재 날짜와 파티 식량을 확인하고 조정합니다.",keywords:"campaign calendar date time ration food 캠페인 달력 시간 식량" },
+  { destination:"calendar",glyph:"시",label:"시간",description:"캠페인 날짜와 시간을 확인하고 진행합니다.",keywords:"campaign calendar date time 캠페인 달력 시간" },
+  { destination:"rations",glyph:"식",label:"식량",description:"파티 식량 잔량과 하루 소비량을 관리합니다.",keywords:"ration food supply 식량 보급" },
+  { destination:"rest",glyph:"휴",label:"휴식",description:"회복과 시간·식량 옵션을 함께 처리합니다.",keywords:"rest long short 휴식 장기" },
+  { destination:"campaign",glyph:"파",label:"파티 관리",description:"명단, 경험치와 레벨업을 관리합니다.",keywords:"campaign party xp level 파티 경험치 레벨업" },
   { destination:"actor",glyph:"액",label:"액터 전환",description:"조작할 세션 액터를 선택합니다.",keywords:"actor 캐릭터 조작" },
   { destination:"encounter",glyph:"인",label:"인카운터",description:"전투원과 이니셔티브를 관리합니다.",keywords:"encounter 전투원 이니셔티브" },
   { destination:"participants",glyph:"참",label:"참가자",description:"플레이어 연결 상태를 확인합니다.",keywords:"participants player 연결" },
@@ -25,7 +29,10 @@ const DM_ENTRIES: QuickEntry[] = [
 
 const PLAYER_ENTRIES: QuickEntry[] = [
   { destination:"inventory",glyph:"템",label:"내 인벤토리",description:"현재 캐릭터의 아이템과 재화를 확인합니다.",keywords:"item inventory gold 아이템 재화" },
-  { destination:"campaign",glyph:"캠",label:"캠페인 현황",description:"DM이 공개한 날짜와 식량 현황을 확인합니다.",keywords:"campaign calendar date time ration food 캠페인 달력 시간 식량" },
+  { destination:"calendar",glyph:"시",label:"시간",description:"현재 캠페인 날짜와 시간을 확인합니다.",keywords:"campaign calendar date time 캠페인 달력 시간" },
+  { destination:"rations",glyph:"식",label:"식량",description:"DM이 공개한 파티 식량 현황을 확인합니다.",keywords:"ration food supply 식량 보급" },
+  { destination:"rest",glyph:"휴",label:"휴식",description:"DM의 휴식 요청과 회복 결과를 확인합니다.",keywords:"rest long short 휴식 장기" },
+  { destination:"campaign",glyph:"파",label:"파티 현황",description:"파티 명단과 경험치 상태를 확인합니다.",keywords:"campaign party xp level 파티 경험치 레벨업" },
   { destination:"quick-sheet",glyph:"시",label:"빠른 시트",description:"현재 캐릭터의 핵심 수치를 확인합니다.",keywords:"sheet character 캐릭터" },
   { destination:"activity",glyph:"기",label:"활동 기록",description:"공개된 판정과 세션 기록을 확인합니다.",keywords:"activity log 기록 판정" },
   { destination:"rules",glyph:"규",label:"규칙 찾기",description:"활성 규칙과 콘텐츠를 검색합니다.",keywords:"rules search 규칙 검색" },

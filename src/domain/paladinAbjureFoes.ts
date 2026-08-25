@@ -23,6 +23,7 @@ export interface AbjureFoesRequest {
   spellSaveDc: number;
   targets: AbjureFoesTarget[];
   channelDivinityResourceId?: string;
+  useActionEconomy?: boolean;
 }
 
 export function abjureFoesMaximumTargets(charismaModifier: number) {
@@ -66,13 +67,13 @@ export function compileAbjureFoes(request: AbjureFoesRequest): PendingResolution
       targets:request.targets,
       harmful:true,
     },
-    {
+    ...(request.useActionEconomy===false?[]:[{
       id:`${request.id}:action`,
-      kind:"use-economy",
+      kind:"use-economy" as const,
       actorId:request.actorId,
-      slot:"action",
-      actionKind:"magic",
-    },
+      slot:"action" as const,
+      actionKind:"magic" as const,
+    }]),
     {
       id:`${request.id}:channel-divinity`,
       kind:"spend-resource",
@@ -117,6 +118,7 @@ export function compileAbjureFoes(request: AbjureFoesRequest): PendingResolution
           duration:{ kind:"minutes", amount:1 },
           termination:{ targetTakesDamage:true },
           turnActivity:{ chooseOneOf:["movement","action","bonus-action"] },
+          metadata:{ displayName:"적 질책" },
         },
       },
     );

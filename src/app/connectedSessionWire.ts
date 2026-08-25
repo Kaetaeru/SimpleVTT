@@ -82,11 +82,44 @@ function isEconomy(value:unknown) {
     &&typeof value.bonusAction==="boolean"
     &&typeof value.reaction==="boolean"
     &&typeof value.movement==="number"
-    &&typeof value.movementMax==="number";
+    &&typeof value.movementMax==="number"
+    &&(value.extraActions===undefined||(Array.isArray(value.extraActions)&&value.extraActions.every((entry)=>isRecord(entry)&&isString(entry.id)&&isString(entry.source)&&typeof entry.allowsMagicAction==="boolean")))
+    &&(value.extraAttacks===undefined||(Array.isArray(value.extraAttacks)&&value.extraAttacks.every((entry)=>isRecord(entry)&&isString(entry.id)&&isString(entry.source))));
 }
 
 function isEconomyMap(value:unknown) {
   return isRecord(value)&&Object.values(value).every(isEconomy);
+}
+
+function isSceneEntity(value:unknown) {
+  return isRecord(value)
+    &&isString(value.id)
+    &&isString(value.name)
+    &&["ally","enemy","neutral"].includes(String(value.side))
+    &&["character","combatant"].includes(String(value.kind))
+    &&typeof value.hp==="number"
+    &&typeof value.maxHp==="number"
+    &&typeof value.tempHp==="number"
+    &&typeof value.ac==="number"
+    &&typeof value.initiative==="number"
+    &&isStringArray(value.status)
+    &&(value.distance===undefined||typeof value.distance==="string")
+    &&isStringArray(value.resistances)
+    &&isStringArray(value.immunities)
+    &&isStringArray(value.vulnerabilities)
+    &&Array.isArray(value.reactions)
+    &&value.reactions.every(isRecord);
+}
+
+function isSceneTopology(value:unknown) {
+  return isRecord(value)
+    &&isString(value.sceneId)
+    &&isString(value.sceneName)
+    &&isCursor(value.round)
+    &&typeof value.currentActorId==="string"
+    &&Array.isArray(value.entities)
+    &&value.entities.every(isSceneEntity)
+    &&isEconomyMap(value.economyByActor);
 }
 
 function isRecoveryLockouts(value:unknown) {
@@ -133,12 +166,17 @@ function isRuntimeStateChange(value:unknown) {
   if (value.lifetime!=="character-durable"&&value.lifetime!=="session-runtime") return false;
   if (value.writeBack!=="character"&&value.writeBack!=="session") return false;
   if (value.kind==="hp") return ["current","maximum","temporary"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
-  if (value.kind==="economy") return ["action","bonusAction","reaction","movement","movementMaximum","extraActions"].includes(String(value.field))&&value.before!==undefined&&value.after!==undefined;
+  if (value.kind==="economy") {
+    if (!["action","bonusAction","reaction","movement","movementMaximum","extraActions","extraAttacks"].includes(String(value.field))) return false;
+    if (value.field!=="extraActions"&&value.field!=="extraAttacks") return value.before!==undefined&&value.after!==undefined;
+    return [value.before,value.after].every((entries)=>Array.isArray(entries)&&entries.every((entry)=>isRecord(entry)&&isString(entry.id)&&isString(entry.source)&&(value.field!=="extraActions"||typeof entry.allowsMagicAction==="boolean")));
+  }
   if (value.kind==="resource") return isString(value.resourceId)
     &&typeof value.before==="number"
     &&typeof value.after==="number"
     &&(value.recoveryLockouts===undefined||isRecoveryLockoutChange(value.recoveryLockouts));
   if (value.kind==="life") return ["stable","unconscious","dead"].includes(String(value.field))&&typeof value.before==="boolean"&&typeof value.after==="boolean";
+  if (value.kind==="death-save") return ["successes","failures"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
   if (value.kind==="effect") return isString(value.effectId)&&["added","updated","removed"].includes(String(value.operation));
   if (value.kind==="concentration"||value.kind==="spellcasting-turn") return true;
   return false;
@@ -163,7 +201,7 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
     if(!isString(payload.undoId)||!isString(payload.undoOf)||!Array.isArray(payload.inverseResolutionEvents)||!payload.inverseResolutionEvents.every(isResolutionEvent))return false;
   } else if (payload.kind==="mode-transition") {
     if ((payload.sessionMode!=="freeform"&&payload.sessionMode!=="initiative")
-      ||!isCursor(payload.round)||!isString(payload.currentActorId)||!isEconomyMap(payload.economyByActor)) return false;
+      ||!isCursor(payload.round)||typeof payload.currentActorId!=="string"||!isEconomyMap(payload.economyByActor)) return false;
   } else if (payload.kind==="correction") {
     if (typeof payload.ruling!=="string"||!Array.isArray(payload.changes)||!payload.changes.every(isCorrectionChange)) return false;
     if (payload.resolutionId!==undefined&&!isString(payload.resolutionId)) return false;
@@ -172,6 +210,8 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
       ||(payload.characterName!==undefined&&!isString(payload.characterName))
       ||!["connected","reconnecting","disconnected"].includes(String(payload.state))
       ||typeof payload.ready!=="boolean") return false;
+  } else if (payload.kind==="scene-topology") {
+    if (!isSceneTopology(payload.topology)) return false;
   } else if (payload.kind==="ready-action") {
     if (!isString(payload.actorId)||!isEconomy(payload.economy)||!['armed','cleared'].includes(String(payload.transition))) return false;
     const config=payload.configuration;
@@ -185,9 +225,16 @@ function isActionRequest(value:unknown):value is ConnectedActionRequest {
   if (!isRecord(value)) return false;
   const ready=value.readyConfiguration;
   const validReady=ready===undefined||(isRecord(ready)&&isString(ready.actorId)&&isString(ready.actionId)&&isString(ready.trigger));
+  const manual=value.manualMovementReaction;
+  const validManual=manual===undefined||(isRecord(manual)
+    &&["opportunity-attack","other-reaction-attack"].includes(String(manual.kind))
+    &&isString(manual.provokerId)&&isString(manual.reactorId)&&isString(manual.attackActionId)
+    &&typeof manual.distanceFeet==="number"&&Number.isFinite(manual.distanceFeet)&&manual.distanceFeet>=0
+    &&typeof manual.visibleAtTrigger==="boolean"&&["none","half","three-quarters","total"].includes(String(manual.coverAtTrigger))
+    &&typeof manual.targetCanSeeReactorAtTrigger==="boolean"&&(manual.triggerLabel===undefined||isString(manual.triggerLabel)));
   return isString(value.sessionId)&&isString(value.requestId)&&isString(value.actorId)&&isString(value.actionId)
     &&isStringArray(value.targetIds)&&isCursor(value.knownEventCursor)&&isStringArray(value.capabilities)
-    &&(value.character===undefined||isCharacterRevision(value.character))&&validReady;
+    &&(value.character===undefined||isCharacterRevision(value.character))&&validReady&&validManual;
 }
 
 function isInterrupt(value:unknown):value is InterruptView {

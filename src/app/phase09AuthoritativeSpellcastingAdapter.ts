@@ -3,7 +3,7 @@ import "./phase09RealRuntimeAttackAdapter";
 import "./classFeatureSpellRuntimeAdapter";
 import "./spellcastingRuntimeContracts";
 import type { AppSnapshot, ResolutionView, SceneEntity } from "./contracts";
-import type { SpellcastingHudVm } from "./spellcastingRuntimeContracts";
+import { isExecutableSpellRuntimeSupport, type SpellcastingHudVm } from "./spellcastingRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
@@ -16,6 +16,7 @@ import type { SpellCasterContext, SpellCastResolution, SpellCastTarget } from ".
 import { resolveSpellCast } from "../domain/spellcasting";
 import { spellMechanicById } from "../domain/spellMechanics";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 
 const NO_SLOT="사용 가능한 주문 슬롯이 없습니다.";
 const SLOT_ALREADY_USED="이번 턴에는 이미 주문 슬롯을 소비해 주문을 시전했습니다.";
@@ -35,22 +36,6 @@ interface AdapterInternalState {
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 
-function referenceDistance(actorId:string,targetId:string,target:SceneEntity) {
-  if (actorId===targetId) return 0;
-  const existing:Record<string,number>={
-    "char.mira->char.aelar":25,
-    "char.mira->combatant.goblin-a":28,
-    "char.mira->combatant.goblin-b":38,
-    "char.mira->combatant.wolf":20,
-    "char.mira->combatant.training-guardian":24,
-  };
-  const fixed=existing[`${actorId}->${targetId}`];
-  if (fixed!==undefined) return fixed;
-  const parsed=Number.parseInt(target.distance ?? "",10);
-  if (Number.isFinite(parsed)) return parsed;
-  throw new Error(`reference geometry has no authoritative distance for ${actorId} -> ${targetId}`);
-}
-
 function relation(actor:SceneEntity,target:SceneEntity):SpellCastTarget["relation"] {
   if (actor.id===target.id) return "self";
   return actor.side===target.side ? "ally" : "enemy";
@@ -60,17 +45,18 @@ function targetFacts(internal:AdapterInternalState,actorId:string,targetId:strin
   const actor=internal.scene.entities.find((entry)=>entry.id===actorId);
   const target=internal.scene.entities.find((entry)=>entry.id===targetId);
   if (!actor||!target) throw new Error(`reference scene target not found: ${targetId}`);
+  const spatial=resolveRuntimeTargetingFact(internal.scene,actorId,targetId);
   return {
     id:target.id,
     kind:"creature",
     relation:relation(actor,target),
-    distanceFeet:referenceDistance(actorId,targetId,target),
-    visible:true,
-    cover:"none",
+    distanceFeet:spatial.distanceFeet,
+    visible:spatial.visible,
+    cover:spatial.cover,
     ac:target.ac,
     creatureKind:target.kind==="character" ? "character" : "monster",
     saveModifiers:{},
-    targetCanSeeCaster:true,
+    targetCanSeeCaster:spatial.targetCanSeeAttacker,
   };
 }
 
@@ -163,7 +149,7 @@ function applyAuthoritativeHud(
   for (const actions of Object.values(snapshot.scene.actionsByActor)) {
     for (const action of actions) {
       const metadata=action.spellCast;
-      if (!metadata || metadata.runtimeSupport!=="combat-executable" || metadata.baseLevel===0) continue;
+      if (!metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || metadata.baseLevel===0) continue;
       const hud=snapshot.scene.spellcastingByActor?.[action.actorId];
       if (!hud) continue;
       const hasSlot=hud.slots.some((slot)=>slot.level>=metadata.baseLevel&&slot.current>0);
@@ -187,6 +173,15 @@ function facesForHealingWord(slotLevel:number) {
   const count=2+Math.max(0,slotLevel-1)*2;
   const pattern=[3,4,2,3,4,2,3,4,2,3,4,2,3,4,2,3];
   return pattern.slice(0,count);
+}
+
+type DiceAdapter={d20(actionId:string,index?:number):number};
+function thunderwaveDice(adapter:MockAdapter,targetIds:string[],slotLevel:number) {
+  const roll=(index:number,sides:number)=>(((adapter as unknown as DiceAdapter).d20("action.thunderwave",index)-1)%sides)+1;
+  const count=2+Math.max(0,slotLevel-1);
+  const effectFaces=Array.from({length:count},(_,index)=>roll(index,8));
+  const saves=Object.fromEntries(targetIds.map((targetId,index)=>[targetId,{id:`thunderwave:save:${targetId}`,purpose:"Thunderwave Constitution save",sides:20 as const,faces:[(adapter as unknown as DiceAdapter).d20("action.thunderwave",count+index)]}]));
+  return {faces:[...effectFaces,...Object.values(saves).flatMap((save)=>save.faces)],request:{effectFaces,saves}};
 }
 
 function resolutionFromCast(
@@ -263,7 +258,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
   const sourceAction=Object.values(baseline.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
   const metadata=sourceAction?.spellCast;
   const existingRuntime=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  if (!sourceAction || !metadata || metadata.runtimeSupport!=="combat-executable" || !existingRuntime) {
+  if (!sourceAction || !metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || !existingRuntime) {
     return previousResolveAction.call(this,actionId,targetIds);
   }
   const runtime=seedAuthoritativeSlots(this,internal,baseline,sourceAction.actorId);
@@ -275,7 +270,8 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
   const selected=selectedCombatSpellSlot(sourceAction.actorId,metadata.baseLevel||1);
   const slotLevel=metadata.baseLevel===0 ? undefined : Math.max(metadata.baseLevel,selected);
   const castId=`spell-cast.${metadata.spellId}.${Date.now()}`;
-  const faces=metadata.spellId==="dnd.srd521.spell.healing-word" ? facesForHealingWord(slotLevel ?? 1) : [];
+  const thunderwave=metadata.spellId==="dnd.srd521.spell.thunderwave"?thunderwaveDice(this,targetIds,slotLevel??1):null;
+  const faces=thunderwave?.faces??(metadata.spellId==="dnd.srd521.spell.healing-word" ? facesForHealingWord(slotLevel ?? 1) : []);
   let targets:SpellCastTarget[];
   try {
     targets=targetIds.map((targetId)=>targetFacts(internal,sourceAction.actorId,targetId));
@@ -298,7 +294,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     componentsSatisfied:true,
     useActionEconomy:true,
     turnId,
-    dice:{ effectFaces:faces },
+    dice:thunderwave?.request??{ effectFaces:faces },
   });
   internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,faces);
   if (result.status==="rejected") return this.getSnapshot();

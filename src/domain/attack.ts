@@ -27,6 +27,8 @@ export interface AttackDamageComponent {
 export interface AttackEconomyCost {
   slot: TurnSlot;
   bonusActionGranted?: boolean;
+  actionKind?:"attack"|"other";
+  attacksPerAction?:number;
 }
 
 export interface AttackCriticalRange {
@@ -137,7 +139,8 @@ export function compileAttack(request: AttackRequest): PendingResolution {
       actorId:request.actorId,
       slot:request.economy.slot,
       bonusActionGranted:request.economy.bonusActionGranted,
-      actionKind:"other",
+      actionKind:request.economy.actionKind??"other",
+      attacksPerAction:request.economy.attacksPerAction,
     });
   }
 

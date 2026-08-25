@@ -25,6 +25,7 @@ export type DivineSparkRequest = {
   target: DivineSparkTarget;
   effectFaces: number[];
   channelDivinityResourceId?: string;
+  useActionEconomy?: boolean;
 } & (
   | { mode:"healing" }
   | {
@@ -70,13 +71,13 @@ export function compileDivineSpark(request: DivineSparkRequest): PendingResoluti
       targets:[request.target],
       harmful:request.mode === "damage",
     },
-    {
+    ...(request.useActionEconomy===false ? [] : [{
       id:`${request.id}:action`,
-      kind:"use-economy",
+      kind:"use-economy" as const,
       actorId:request.actorId,
-      slot:"action",
-      actionKind:"magic",
-    },
+      slot:"action" as const,
+      actionKind:"magic" as const,
+    }]),
     {
       id:`${request.id}:channel-divinity`,
       kind:"spend-resource",

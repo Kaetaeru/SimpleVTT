@@ -29,3 +29,12 @@ test("every non-spell action family receives a semantic icon",()=>{
   assert.equal(actionIconDescriptor(action({resolutionKind:"healing",healing:{dice:"1d4",flat:2,average:4}})).key,"healing");
   assert.equal(actionIconDescriptor(action({})).key,"action");
 });
+
+test("standard actions receive distinct shared icons",()=>{
+  const expected:Record<string,string>={
+    "action.dash":"movement","action.standard.disengage":"disengage","action.standard.dodge":"dodge","action.standard.help":"help",
+    "action.standard.hide.stealth":"hide","action.standard.ready":"ready","action.standard.utilize":"utilize",
+    "ui.action.standard.influence":"influence","ui.action.standard.search":"search","ui.action.standard.study":"study",
+  };
+  for(const [id,key] of Object.entries(expected)) assert.equal(actionIconDescriptor(action({id})).key,key,id);
+});

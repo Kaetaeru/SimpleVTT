@@ -1,7 +1,8 @@
 param(
   [Parameter(Mandatory = $true)]
   [string]$Root,
-  [switch]$Fresh
+  [switch]$Fresh,
+  [switch]$Wait
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,7 +20,11 @@ function Test-TcpPort {
     [int]$TimeoutMs = 900
   )
 
-  $tcp = New-Object System.Net.Sockets.TcpClient
+  $tcp = if ($HostName -eq '::1') {
+    New-Object System.Net.Sockets.TcpClient ([System.Net.Sockets.AddressFamily]::InterNetworkV6)
+  } else {
+    New-Object System.Net.Sockets.TcpClient
+  }
   try {
     $task = $tcp.ConnectAsync($HostName,$Port)
     if (-not $task.Wait($TimeoutMs)) { return $false }
@@ -37,8 +42,11 @@ if (-not (Test-Path -LiteralPath $appPath)) {
   throw "Debug SimpleVTT executable was not found at $appPath. Start 'Start SimpleVTT Live.cmd' first and wait for the app to finish compiling."
 }
 
-if (-not (Test-TcpPort -HostName '127.0.0.1' -Port 1420)) {
-  throw "Vite dev server is not reachable on 127.0.0.1:1420. Keep 'Start SimpleVTT Live.cmd' running before launching the acceptance pair."
+$viteReachable = (Test-TcpPort -HostName '::1' -Port 1420) `
+  -or (Test-TcpPort -HostName 'localhost' -Port 1420) `
+  -or (Test-TcpPort -HostName '127.0.0.1' -Port 1420)
+if (-not $viteReachable) {
+  throw "Vite dev server is not reachable on localhost:1420. Keep 'Start SimpleVTT Live.cmd' running before launching the acceptance pair."
 }
 
 if (Test-TcpPort -HostName '127.0.0.1' -Port 3210) {
@@ -90,3 +98,7 @@ Write-Host ''
 Write-Host '[ACCEPTANCE] Two isolated SimpleVTT windows are running against the current Vite dev server.'
 Write-Host '[ACCEPTANCE] Use Acceptance Host to host on port 3210 and Acceptance Client to join 127.0.0.1:3210.'
 Write-Host '[ACCEPTANCE] Re-run with -Fresh to discard only the isolated acceptance data and start clean.'
+
+if ($Wait) {
+  Wait-Process -Id $hostProcess.Id,$clientProcess.Id
+}

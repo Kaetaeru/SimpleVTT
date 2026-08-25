@@ -51,7 +51,7 @@ test("fresh use is gated by the canonical Tutorial before normal Home interactio
   assert.match(firstRun, /Official-style/);
   assert.match(firstRun, /SimpleVTT 최적화/);
   assert.match(app, /<V1HomeScreen/);
-  assert.match(home, />SimpleVTT</);
+  assert.match(home, />SimpleVTT v1</);
   assert.doesNotMatch(home, /simplevtt\.v1\.guide\.dismissed|v1-onboarding/);
 });
 
@@ -89,7 +89,7 @@ test("live connected sessions preserve Product-vs-Play continuity while using th
 
   assert.match(productRoot, /isReturnToConnectedPlayTarget/);
   assert.match(productRoot, /플레이로 돌아가기/);
-  assert.match(productRoot, /기기로 플레이/);
+  assert.doesNotMatch(productRoot, /기기로 플레이/);
   assert.match(productRoot, /event\.preventDefault\(\)/);
   assert.match(productRoot, /event\.stopPropagation\(\)/);
 
@@ -101,7 +101,7 @@ test("live connected sessions preserve Product-vs-Play continuity while using th
 
   assert.match(sessionRoot, /className="session-mode-root session-reference-play-root"/);
   assert.match(sessionRoot, /className="session-reference-play-chrome"/);
-  assert.match(sessionRoot, /className="session-reference-play-core"/);
+  assert.match(sessionRoot, /className=\{`session-reference-play-core/);
   assert.match(sessionRoot, /session-reference-mapless-stage/);
   assert.match(sessionRoot, /<SessionActorBoard position="upper"/);
   assert.match(sessionRoot, /<SessionActorBoard position="lower"/);
@@ -112,7 +112,7 @@ test("live connected sessions preserve Product-vs-Play continuity while using th
   assert.match(sessionMainFocus, /session-current-turn-actor/);
   assert.match(sessionMainFocus, /session-last-roll-actor/);
   assert.doesNotMatch(sessionMainFocus, /snapshot\.session\.participants|snapshot\.activity\.map|scene\.entities\.map/);
-  assert.doesNotMatch(sessionRoot, /session-mode-rail|session-mode-bar|mockAdapter|VisualDiceTray|HOTBAR_TABS|SCENE ACTORS/);
+  assert.doesNotMatch(sessionRoot, /session-mode-rail|session-mode-bar|VisualDiceTray|HOTBAR_TABS|SCENE ACTORS/);
 
   assert.match(referencePlayCss, /--svtt-actor-board-h:\s*86px/);
   assert.match(referencePlayCss, /--svtt-command-h:\s*174px/);

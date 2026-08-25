@@ -126,20 +126,31 @@ export function SessionPlayerHandoutRailButton() {
     className={!handout.dismissed ? "active" : ""}
     aria-pressed={!handout.dismissed}
     aria-label={handout.dismissed ? "이미지 다시 열기" : "DM 공유 이미지 열림"}
-    onClick={() => reopenSessionImageHandout(mockAdapter)}
+    onClick={() => handout.dismissed ? reopenSessionImageHandout(mockAdapter) : dismissCurrentSessionImageHandout()}
   ><span>자료</span></button>;
 }
 
 export function SessionPlayerHandoutViewer() {
   const handout = useSessionImageHandout();
   if (!handout.asset || handout.dismissed) return null;
-  return <section className="session-handout-viewer" role="dialog" aria-modal="true" aria-label="DM 공유 이미지">
-    <header>
-      <div><span>DM HANDOUT</span><strong>{imageLabel(handout.asset)}</strong></div>
-      <button type="button" autoFocus onClick={dismissCurrentSessionImageHandout}>닫기</button>
-    </header>
-    <div className="session-handout-viewer-image"><img src={handout.asset.dataUrl} alt="DM이 공유한 이미지" /></div>
-  </section>;
+  return <figure className="session-handout-viewer" aria-label={`DM 공유 이미지 · ${imageLabel(handout.asset)}`}>
+    <img src={handout.asset.dataUrl} alt="DM이 공유한 이미지" />
+  </figure>;
+}
+
+export function SessionDmHandoutPreview() {
+  const {snapshot}=useSimpleVtt();
+  const handout=useSessionImageHandout();
+  const [pending,setPending]=useState(false);
+  const [error,setError]=useState("");
+  if(snapshot?.session.role!=="host"||!handout.asset)return null;
+  const withdraw=async()=>{if(pending)return;setPending(true);setError("");try{await withdrawSessionImageHandout(mockAdapter);}catch(reason){setError(reason instanceof Error?reason.message:String(reason));}finally{setPending(false);}};
+  return <aside className="session-dm-handout-preview" aria-label="현재 공유 이미지">
+    <img src={handout.asset.dataUrl} alt="현재 공유 중인 이미지 미리보기" />
+    <span>{imageLabel(handout.asset)}</span>
+    <button type="button" disabled={pending} aria-label="모든 화면에서 이미지 공유 철회" title="공유 철회" onClick={()=>void withdraw()}>×</button>
+    {error&&<small role="status">{error}</small>}
+  </aside>;
 }
 
 export function SessionPlayerHandoutError() {

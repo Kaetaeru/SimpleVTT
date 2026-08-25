@@ -281,7 +281,7 @@ export function ProductionSessionWorkspaceBridge() {
               {live&&<div><span>진행</span><strong>{snapshot.sessionMode==="initiative"?`이니셔티브 · ${snapshot.scene.round}라운드`:"자유 진행"}</strong></div>}
             </div>
             {lobby&&<div className="production-session-ready-row"><div><strong>{ready?"Ready 상태입니다.":"준비가 되면 Ready를 눌러주세요."}</strong><small>Host가 모든 플레이어의 Ready를 확인한 뒤 플레이를 시작합니다.</small></div><button type="button" className={ready?"secondary":"primary"} disabled={snapshot.connectionState!=="connected"||snapshot.session.compatibility==="incompatible"} onClick={()=>void setSessionReady(!ready)}>{ready?"Ready 취소":"Ready"}</button></div>}
-            {connecting&&<p className="production-session-hint">Host와 버전을 확인하고 로비 참가를 준비하고 있습니다.</p>}
+            {connecting&&<div className="production-session-alert warning" role="status" aria-live="polite"><strong>Host와 버전을 확인하고 있습니다.</strong><span>{snapshot.session.compatibilityMessage||"호환성 응답을 기다리고 있습니다."}</span></div>}
             <button type="button" onClick={()=>void stopSession()}>{live?"세션 나가기":"참가 취소"}</button>
           </article>
         </div>

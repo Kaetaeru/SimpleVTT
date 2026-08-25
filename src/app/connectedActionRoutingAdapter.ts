@@ -24,6 +24,7 @@ import {
 import { projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
@@ -31,6 +32,7 @@ const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const previousDismissResolution=MockAdapter.prototype.dismissResolution;
 const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 const previousSubmitConcentrationSaveD20=MockAdapter.prototype.submitConcentrationSaveD20;
+const previousDeclareManualMovementReaction=MockAdapter.prototype.declareManualMovementReaction;
 const projectionContexts=new WeakMap<MockAdapter,ProjectionResolutionContext>();
 
 function requestId() {
@@ -147,8 +149,11 @@ function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):Resolut
       if(change.kind==="concentration")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="spellcasting-turn")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="hp")return {...structuredClone(change),before:change.after,after:change.before};
+      if(change.kind==="economy"&&change.field==="extraActions")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="economy"&&change.field==="extraAttacks")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="economy")return {...structuredClone(change),before:change.after,after:change.before};
       if(change.kind==="resource")return {...structuredClone(change),before:change.after,after:change.before,recoveryLockouts:change.recoveryLockouts?{before:structuredClone(change.recoveryLockouts.after),after:structuredClone(change.recoveryLockouts.before)}:undefined};
+      if(change.kind==="death-save")return {...structuredClone(change),before:change.after,after:change.before};
       return {...structuredClone(change),before:change.after,after:change.before};
     }),result:{undoOf:event.id},
   }));
@@ -287,13 +292,23 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     setReadyActionConfiguration(adapter,request.readyConfiguration);
   }
 
+  if (request.manualMovementReaction&&(request.manualMovementReaction.provokerId!==request.actorId||request.manualMovementReaction.attackActionId!==request.actionId)) {
+    ledger.cancelReservedActionRequest(request.requestId);
+    restoreProjectedContext(adapter);
+    await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"manual-reaction-not-authorized",message:"manual movement reaction must be declared by the current peer Character",hostCursor:ledger.cursor});
+    return;
+  }
+
   try {
-    const next=await previousResolveAction.call(adapter,request.actionId,request.targetIds);
+    const next=request.manualMovementReaction
+      ?await previousDeclareManualMovementReaction.call(adapter,request.manualMovementReaction)
+      :await previousResolveAction.call(adapter,request.actionId,request.targetIds);
     const resolution=next.resolution;
-    const expectedActionId=request.actionId==="action.standard.ready.trigger"
+    const expectedActorId=request.manualMovementReaction?.reactorId??request.actorId;
+    const expectedActionId=request.manualMovementReaction?.attackActionId??(request.actionId==="action.standard.ready.trigger"
       ? readyActionConfigurationFor(adapter,request.actorId)?.actionId
-      : request.actionId;
-    if (!resolution||resolution.actorId!==request.actorId||resolution.actionId!==expectedActionId) {
+      : request.actionId);
+    if (!resolution||resolution.actorId!==expectedActorId||resolution.actionId!==expectedActionId) {
       ledger.cancelReservedActionRequest(request.requestId);
       if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
       restoreProjectedContext(adapter);
@@ -407,6 +422,29 @@ MockAdapter.prototype.dismissResolution=async function dismissConnectedResolutio
     await sendConnectedWireTo(pending.peer,{type:"error",code:"host-dismissed",message:"host dismissed the pending remote resolution",hostCursor:state.ledger.cursor});
   }
   return previousDismissResolution.call(this);
+};
+
+MockAdapter.prototype.declareManualMovementReaction=async function declareConnectedManualMovementReaction(command:ManualMovementReactionCommand) {
+  const state=connectedStateFor(this);
+  const app=connectedInternal(this);
+  if (state.mode==="client") {
+    const character=connectedManifest(this).character;
+    if (!state.sessionId||!state.replica||app.connectionState!=="connected"||!character||character.characterId!==command.provokerId) return app.getSnapshot();
+    await tauriSessionTransport.send(JSON.stringify({
+      type:"action-request",
+      request:{
+        sessionId:state.sessionId,requestId:requestId(),actorId:command.provokerId,actionId:command.attackActionId,
+        targetIds:[command.reactorId],knownEventCursor:state.replica.cursor,character,capabilities:[...CONNECTED_CAPABILITIES],manualMovementReaction:structuredClone(command),
+      },
+    }));
+    app.session.compatibility="compatible";
+    app.session.compatibilityMessage=`기회공격 유발 선언 전송 · Host event cursor ${state.replica.cursor}`;
+    return app.getSnapshot();
+  }
+  if (state.mode==="host"&&state.pendingRemoteAction) return app.getSnapshot();
+  const next=await previousDeclareManualMovementReaction.call(this,command);
+  await publishConnectedResolutionPresentation(this,next);
+  return publishCommittedResolution(this,next);
 };
 
 MockAdapter.prototype.submitConcentrationSaveD20=async function submitConnectedConcentrationSave(face:number){

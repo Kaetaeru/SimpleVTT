@@ -70,7 +70,8 @@ function runtimeCombatant(entity:SceneEntity,economy:EconomyVm) {
       reaction:economy.reaction,
       movement:economy.movement,
       movementMaximum:economy.movementMax,
-      extraActions:[],
+      extraActions:structuredClone(economy.extraActions ?? []),
+      extraAttacks:structuredClone(economy.extraAttacks ?? []),
     },
     resources:[],
     hitDice:[],
@@ -117,6 +118,8 @@ function projectEconomy(state:RulesRuntimeState,actorId:string):EconomyVm {
     reaction:economy.reaction,
     movement:economy.movement,
     movementMax:economy.movementMaximum,
+    ...(economy.extraActions?.length?{extraActions:structuredClone(economy.extraActions)}:{}),
+    ...(economy.extraAttacks?.length?{extraAttacks:structuredClone(economy.extraAttacks)}:{}),
   };
 }
 

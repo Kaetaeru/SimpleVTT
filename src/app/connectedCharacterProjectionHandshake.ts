@@ -7,7 +7,9 @@ import { mountReconstructedCharacterSessionProjection } from "./characterSession
 import {
   projectedCharacterById,
   rebindCharacterSessionProjectionPeer,
+  refreshProjectedCharacterPortrait,
 } from "./characterSessionProjectionRegistry";
+import { refreshSessionCharacterInventoryProjection } from "./sessionInventoryProjectionPort";
 
 export type HostCharacterProjectionHandshake =
   | {status:"accepted";mode:"host-known"|"mounted"|"rebound";characterId?:string}
@@ -42,6 +44,19 @@ function sourceFingerprint(projection:CharacterSessionProjectionV1) {
   });
 }
 
+function refreshHostInventoryProjection(
+  adapter:MockAdapter,
+  reconstruction:Extract<ReturnType<typeof reconstructCharacterSessionProjectionV1>,{status:"accepted"}>,
+) {
+  refreshSessionCharacterInventoryProjection(adapter,{
+    characterId:reconstruction.sheet.id,
+    characterName:reconstruction.sheet.name,
+    revision:reconstruction.projection.runtimeRevision,
+    goldGp:reconstruction.sheet.goldGp??0,
+    items:structuredClone(reconstruction.sheet.items),
+  });
+}
+
 export function acceptHostCharacterSessionProjection(
   adapter:MockAdapter,
   peerId:string,
@@ -65,11 +80,25 @@ export function acceptHostCharacterSessionProjection(
     if (!rebindCharacterSessionProjectionPeer(adapter,character.characterId,peerId)) {
       return {status:"rejected",error:`failed to rebind projected Character peer: ${character.characterId}`};
     }
+    refreshProjectedCharacterPortrait(adapter,character.characterId,reconstructed.projection.portrait);
+    refreshHostInventoryProjection(adapter,reconstructed);
     return {status:"accepted",mode:"rebound",characterId:character.characterId};
   }
 
   if (app.characters.some((entry)=>entry.id===character.characterId)) {
-    return {status:"accepted",mode:"host-known",characterId:character.characterId};
+    if (!projection) {
+      return {status:"accepted",mode:"host-known",characterId:character.characterId};
+    }
+    const manifestError=projectionMatchesManifest(manifest,projection);
+    if (manifestError) return {status:"rejected",error:manifestError};
+    const reconstructed=reconstructCharacterSessionProjectionV1(projection,app.catalog);
+    if (reconstructed.status==="rejected") return reconstructed;
+    const mounted=mountReconstructedCharacterSessionProjection(adapter,peerId,reconstructed,{
+      allowDurableCharacterIdCollision:true,
+    });
+    if (mounted.status==="rejected") return mounted;
+    refreshHostInventoryProjection(adapter,reconstructed);
+    return {status:"accepted",mode:"mounted",characterId:mounted.characterId};
   }
 
   if (!projection) {
@@ -81,5 +110,6 @@ export function acceptHostCharacterSessionProjection(
   if (reconstructed.status==="rejected") return reconstructed;
   const mounted=mountReconstructedCharacterSessionProjection(adapter,peerId,reconstructed);
   if (mounted.status==="rejected") return mounted;
+  refreshHostInventoryProjection(adapter,reconstructed);
   return {status:"accepted",mode:"mounted",characterId:mounted.characterId};
 }

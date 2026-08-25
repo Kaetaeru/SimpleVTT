@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { CatalogEntry, DmInventoryAdjustmentCommand, ItemInstanceVm, PartyStashTransferCommand } from "./app/contracts";
 import type { CampaignPartyStashItemReference, CampaignPartyStashItemTemplate } from "./app/campaignPersistenceContracts";
@@ -59,6 +59,7 @@ export function SessionPlayerInventoryPane({onClose,onOpenFull}:{onClose():void;
   const [gold,setGold]=useState(10);
   const [stashOpen,setStashOpen]=useState(false);
   const [pending,setPending]=useState<string|null>(null);
+  const pendingRef=useRef(false);
   const [feedback,setFeedback]=useState<{kind:"success"|"error";message:string}|null>(null);
   if (!snapshot) return null;
   const character=snapshot.activeCharacter;
@@ -78,12 +79,16 @@ export function SessionPlayerInventoryPane({onClose,onOpenFull}:{onClose():void;
         :"직접 입고·출고할 수 있습니다.";
   const move=async(key:string,command:PartyStashTransferCommand,success:string)=>{
     const allowed=command.direction==="character-to-stash"?canDeposit:canWithdraw;
-    if(pending||!allowed)return;
+    // React state disables the button on the next render. The ref closes the
+    // smaller same-frame window where rapid/native duplicate clicks could mint
+    // distinct request IDs before `pending` becomes visible.
+    if(pendingRef.current||pending||!allowed)return;
     const needsApproval=command.direction==="stash-to-character"&&stash?.policy==="dm-approval";
+    pendingRef.current=true;
     setPending(key);setFeedback(null);
     try{await transferPartyStash(command);setFeedback({kind:"success",message:needsApproval?"DM에게 Party Stash 출고 승인 요청을 보냈습니다.":success});}
     catch(error){setFeedback({kind:"error",message:error instanceof Error?error.message:"파티 보관함 자산을 옮기지 못했습니다."});}
-    finally{setPending(null);}
+    finally{pendingRef.current=false;setPending(null);}
   };
   return <>
     {stashOpen&&campaign&&stash&&<aside className="session-inventory-pane session-shared-stash-pane" aria-label="공유 보관함">

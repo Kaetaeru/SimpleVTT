@@ -101,6 +101,8 @@ function refreshedClientHello(adapter:MockAdapter,hello:HelloWire):HelloWire {
 let parityBaseSend=tauriSessionTransport.send.bind(tauriSessionTransport);
 let parityBaseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
 let parityBaseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
+let parityTransportDecorated=false;
+let parityTransportStartHost=tauriSessionTransport.startHost;
 
 async function sendHelloWithInventory(adapter:MockAdapter,hello:HelloWire) {
   const app=connectedInternal(adapter);
@@ -253,9 +255,15 @@ async function onMessageWithInstalledContentParity(handler:(message:SessionTrans
 }
 
 function ensureSessionContentParityTransportDecorators() {
+  // Runtime adapters installed after this module legitimately wrap send/onMessage.
+  // Re-basing on those wrappers would make their captured parity callback point back
+  // to itself. A changed startHost identifies a genuinely replaced transport
+  // generation (for example an isolated test transport), where re-installation is
+  // required and safe because the complete transport surface was replaced together.
+  if (parityTransportDecorated&&tauriSessionTransport.startHost===parityTransportStartHost) return;
+  parityTransportDecorated=true;
+  parityTransportStartHost=tauriSessionTransport.startHost;
   parityBaseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
-  if (tauriSessionTransport.send===sendWithInstalledContentParity
-    && tauriSessionTransport.onMessage===onMessageWithInstalledContentParity) return;
   parityBaseSend=tauriSessionTransport.send.bind(tauriSessionTransport);
   parityBaseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
   tauriSessionTransport.send=sendWithInstalledContentParity;

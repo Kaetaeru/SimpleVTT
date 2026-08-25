@@ -205,3 +205,117 @@ button.official-field.interactive:hover { border-color: var(--accent); }
   .official-roleplay-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .official-spell-levels { grid-template-columns: 1fr; }
 }
+
+/* 2024 official paper layout. The page geometry stays fixed; the viewport
+   wrapper scales the whole sheet without reflowing its internal structure. */
+.official-2024-sheet {
+  width: 1000px;
+  height: 1284px;
+  min-height: 1284px;
+  display: grid;
+  grid-template-rows: 122px 42px minmax(0, 1fr);
+  gap: 10px;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: 2px;
+  font-family: Inter, Pretendard, "Noto Sans KR", sans-serif;
+}
+.official-2024-sheet h2 { margin:0; font:900 11px/1.15 Inter,sans-serif; letter-spacing:.04em; text-align:center; }
+.official-2024-sheet button { color:inherit; }
+.official-2024-hero { display:grid; grid-template-columns:minmax(300px,2.2fr) 82px 92px 202px 88px 100px; gap:6px; min-height:0; }
+.official-2024-hero>*,.official-2024-proficiency,.official-2024-ability,.official-2024-inspiration,.official-2024-training,.official-2024-derived>*,.official-2024-ruled,.official-2024-spellcasting-card,.official-2024-slots,.official-2024-coins { border:2px solid currentColor; border-radius:3px; background:transparent; }
+.official-2024-identity { display:grid; grid-template-columns:1fr 1fr; padding:7px 10px; gap:3px 9px; }
+.official-2024-line-field { min-height:0; display:grid; align-content:end; border-bottom:1px solid color-mix(in srgb,currentColor 55%,transparent); }
+.official-2024-line-field:first-child { grid-column:1/-1; }
+.official-2024-line-field strong { font-size:11px; line-height:1.15; }
+.official-2024-line-field span,.official-2024-hero span,.official-2024-hero small { font-size:7px; font-weight:800; letter-spacing:.08em; }
+.official-2024-level,.official-2024-ac,.official-2024-hit-dice,.official-2024-death { display:grid; place-items:center; align-content:center; gap:5px; padding:6px; text-align:center; }
+.official-2024-level { border-radius:50%; }
+.official-2024-level strong,.official-2024-ac strong { font:700 25px Georgia,serif; }
+.official-2024-level b { min-width:44px; padding-top:3px; border-top:1px solid currentColor; font-size:10px; }
+.official-2024-ac span,.official-2024-death>span { font-size:10px; }
+.official-2024-hp { display:grid; grid-template-columns:1.2fr .8fr; grid-template-rows:24px 1fr 1fr; }
+.official-2024-hp h2 { grid-column:1/-1; padding:5px; border-bottom:1px solid currentColor; }
+.official-2024-hp>div { display:grid; align-content:center; gap:2px; padding:5px 8px; }
+.official-2024-hp>div:nth-of-type(1) { grid-row:2/4; border-right:1px solid currentColor; }
+.official-2024-hp>div:nth-of-type(2) { border-bottom:1px solid currentColor; }
+.official-2024-hp strong,.official-2024-hit-dice strong { font:700 18px Georgia,serif; }
+.official-2024-hit-dice { width:100%; min-height:0; }
+.official-2024-death small { white-space:nowrap; }
+.official-2024-brand-row { position:relative; display:grid; place-items:center; border-block:2px solid color-mix(in srgb,currentColor 55%,transparent); }
+.official-2024-brand-row>span { font:900 19px Georgia,serif; letter-spacing:.04em; }
+.official-2024-roll-mode { position:absolute; right:5px; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:6px; }
+.official-2024-roll-mode>span { font-size:7px; font-weight:900; letter-spacing:.1em; }
+.official-2024-roll-mode>div { display:flex; gap:2px; }
+.official-2024-roll-mode button { min-height:24px; height:24px; padding:1px 7px; border-color:color-mix(in srgb,currentColor 34%,transparent); background:transparent; font-size:8px; }
+.official-2024-roll-mode button.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+.official-2024-roll-mode .official-2024-sheet-command { border-color:color-mix(in srgb,var(--accent) 60%,transparent); }
+.official-2024-body { min-height:0; display:grid; grid-template-columns:330px minmax(0,1fr); gap:14px; }
+.official-2024-stat-grid { min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:minmax(0,1fr) 220px; gap:10px; }
+.official-2024-stat-column { min-height:0; display:flex; flex-direction:column; gap:8px; }
+.official-2024-proficiency { min-height:88px; display:grid; place-items:center; align-content:center; gap:8px; padding:8px; }
+.official-2024-proficiency strong { font:700 26px Georgia,serif; }
+.official-2024-ability { overflow:hidden; }
+.official-2024-ability h2 { padding:7px 5px 3px; font-size:12px; }
+.official-2024-ability-score { width:100%; min-height:64px; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr auto; place-items:center; padding:4px 9px; border:0; border-bottom:1px solid color-mix(in srgb,currentColor 55%,transparent); border-radius:0; background:transparent; }
+.official-2024-ability-score strong { width:46px; height:46px; display:grid; place-items:center; border:2px solid currentColor; border-radius:50%; font:700 18px Georgia,serif; }
+.official-2024-ability-score b { font:700 17px Georgia,serif; }
+.official-2024-ability-score small { grid-column:1/-1; font-size:6px; letter-spacing:.12em; }
+.official-2024-check-row { width:100%; min-height:22px; display:grid; grid-template-columns:16px minmax(0,1fr) auto; align-items:center; gap:3px; padding:2px 7px; border:0; border-bottom:1px solid color-mix(in srgb,currentColor 26%,transparent); border-radius:0; background:transparent; text-align:left; font-size:8px; }
+.official-2024-check-row i { font-style:normal; font-size:9px; }
+.official-2024-inspiration { min-height:92px; display:grid; place-items:center; align-content:center; gap:5px; }
+.official-2024-inspiration strong { font-size:25px; }
+.official-2024-training { grid-column:1/-1; padding:8px; overflow:hidden; }
+.official-2024-training h2 { padding-bottom:6px; border-bottom:1px solid currentColor; }
+.official-2024-training p { margin:7px 0 0; padding-bottom:5px; border-bottom:1px solid color-mix(in srgb,currentColor 28%,transparent); font-size:8px; }
+.official-2024-main { min-height:0; display:grid; grid-template-rows:76px 206px minmax(0,1fr) 264px; gap:10px; }
+.official-2024-derived { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.official-2024-derived>* { min-width:0; display:grid; place-items:center; align-content:center; gap:6px; padding:5px; text-align:center; }
+.official-2024-derived span { font-size:8px; font-weight:900; }
+.official-2024-derived strong { font:700 17px Georgia,serif; }
+.official-2024-ruled { min-height:0; overflow:hidden; }
+.official-2024-ruled>h2,.official-2024-coins>h2 { padding:7px; border-bottom:2px solid currentColor; }
+.official-2024-attacks { display:grid; grid-template-rows:auto auto repeat(6,1fr); }
+.official-2024-attacks>header,.official-2024-attacks>div { display:grid; grid-template-columns:1.45fr .62fr 1.05fr 1fr; align-items:center; gap:5px; padding:3px 8px; border-bottom:1px solid color-mix(in srgb,currentColor 30%,transparent); font-size:8px; }
+.official-2024-attacks button { min-height:23px; padding:1px 4px; border:0; background:transparent; text-align:left; font-size:8px; }
+.official-2024-class-features { display:grid; grid-template-rows:auto minmax(0,1fr); }
+.official-2024-class-features>div { columns:2; column-rule:1px solid color-mix(in srgb,currentColor 28%,transparent); padding:8px; overflow:auto; }
+.official-2024-ruled article { break-inside:avoid; display:grid; gap:2px; margin-bottom:7px; font-size:8px; }
+.official-2024-ruled article small { font-size:7px; line-height:1.35; }
+.official-2024-traits { min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.official-2024-traits>section { padding-bottom:7px; overflow:auto; }
+.official-2024-traits article { padding:5px 8px 0; }
+
+.official-2024-page-two { grid-template-rows:150px minmax(0,1fr); }
+.official-2024-spell-top { min-height:0; display:grid; grid-template-columns:220px minmax(0,1fr) 390px; gap:10px; }
+.official-2024-spellcasting-card { display:grid; grid-template-columns:1fr 1.35fr; grid-template-rows:36px repeat(3,1fr); overflow:hidden; }
+.official-2024-spellcasting-card h2 { grid-column:1/-1; padding:7px; border-bottom:1px solid currentColor; }
+.official-2024-spellcasting-card>strong { grid-row:2/5; display:grid; place-items:center; border-right:1px solid currentColor; font:700 23px Georgia,serif; }
+.official-2024-spellcasting-card>div,.official-2024-spellcasting-card>button { min-height:0; display:flex; align-items:center; justify-content:space-between; gap:5px; padding:4px 7px; border:0; border-bottom:1px solid currentColor; border-radius:0; background:transparent; text-align:left; font-size:7px; font-weight:800; }
+.official-2024-page2-brand { position:relative; display:grid; place-items:center; }
+.official-2024-page2-brand>strong { font:900 32px Georgia,serif; }
+.official-2024-slots { display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:34px repeat(3,1fr); padding:0 8px 7px; }
+.official-2024-slots h2 { grid-column:1/-1; margin-inline:-8px; padding:8px; border-bottom:2px solid currentColor; }
+.official-2024-slots>div { display:flex; align-items:center; justify-content:space-between; gap:5px; padding:3px 6px; border-bottom:1px solid color-mix(in srgb,currentColor 30%,transparent); font-size:7px; }
+.official-2024-page2-body { min-height:0; display:grid; grid-template-columns:minmax(0,2.1fr) 310px; gap:12px; }
+.official-2024-spell-table { min-height:0; display:grid; grid-template-rows:36px 32px minmax(0,1fr); border:2px solid currentColor; border-radius:3px; overflow:hidden; }
+.official-2024-spell-table h2 { padding:10px; border-bottom:2px solid currentColor; }
+.official-2024-spell-table>header,.official-2024-spell-table article { display:grid; grid-template-columns:42px 1.45fr 66px 66px 1fr 88px; align-items:center; gap:4px; padding:3px 7px; border-bottom:1px solid color-mix(in srgb,currentColor 28%,transparent); font-size:7px; }
+.official-2024-spell-table>div { overflow:auto; }
+.official-2024-spell-table article { min-height:31px; }
+.official-2024-spell-table article>span:last-child { display:flex; gap:2px; }
+.official-2024-spell-table button { min-height:21px; padding:1px 4px; font-size:7px; }
+.official-2024-page2-side { min-height:0; display:grid; grid-template-rows:150px 250px 96px minmax(0,1fr) 112px; gap:10px; }
+.official-2024-page2-side p { margin:8px; font-size:8px; }
+.official-2024-appearance { display:grid; grid-template-rows:auto minmax(0,1fr); }
+.official-2024-backstory { display:grid; grid-template-rows:auto minmax(0,1fr) auto; }
+.official-2024-backstory small,.official-2024-equipment>small { padding:7px; border-top:1px solid currentColor; font-size:7px; }
+.official-2024-equipment { display:grid; grid-template-rows:auto minmax(0,1fr) auto; }
+.official-2024-equipment>div { overflow:auto; padding:5px; }
+.official-2024-equipment article { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:5px; padding:4px; border-bottom:1px solid color-mix(in srgb,currentColor 24%,transparent); }
+.official-2024-equipment article>div { display:grid; }
+.official-2024-equipment article>span { display:flex; gap:2px; }
+.official-2024-equipment button { min-height:20px; padding:1px 4px; font-size:6px; }
+.official-2024-coins>div { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; padding:7px; }
+.official-2024-coins span { display:grid; gap:3px; text-align:center; font-size:7px; }
+.official-2024-coins b { padding:7px 3px; border:1px solid currentColor; font-size:10px; }

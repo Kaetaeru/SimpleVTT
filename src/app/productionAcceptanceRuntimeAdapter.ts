@@ -1,11 +1,10 @@
 import "./productionPlayRuntimeAdapter";
 import type { ActionVm, AppSnapshot, CharacterSheet, CharacterSummary, SceneVm } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { runtimeSpatialRelation } from "./realSpatialRuntimeService";
+import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 
 const REFERENCE_SCENE_ID="scene.ruined-gate";
 const REFERENCE_MIRA_ID="char.mira";
-const REFERENCE_MELEE_TARGET_ID="combatant.wolf";
 
 interface InternalState {
   characters:CharacterSummary[];
@@ -53,6 +52,9 @@ function materializeReferenceMira(summary:CharacterSummary,template:CharacterShe
       {id:"action.rapier",name:"레이피어",bonus:5,damage:"1d8 + 3 관통"},
       {id:"action.shortbow",name:"숏보우",bonus:5,damage:"1d6 + 3 관통"},
     ],
+    cantrips:["dnd.srd521.spell.vicious-mockery"],
+    preparedSpells:["dnd.srd521.spell.healing-word","dnd.srd521.spell.thunderwave"],
+    spellSlotMaximums:{1:4,2:3},
   };
 }
 
@@ -65,13 +67,6 @@ function ensureSelectableReferenceCharacter(adapter:MockAdapter,characterId:stri
   internal.characters[index]=materializeReferenceMira(selected,internal.activeCharacter);
 }
 
-function ensureReferenceDemoMeleeTarget(adapter:MockAdapter) {
-  const internal=adapter as unknown as InternalState;
-  if (internal.session.role!=="offline"||internal.scene.id!==REFERENCE_SCENE_ID) return;
-  const target=internal.scene.entities.find((entity)=>entity.id===REFERENCE_MELEE_TARGET_ID);
-  if (target?.distance==="18피트") target.distance="5피트";
-}
-
 function projectReferenceAttackEligibility(snapshot:AppSnapshot) {
   if (snapshot.scene.id!==REFERENCE_SCENE_ID) return snapshot;
   for (const actions of Object.values(snapshot.scene.actionsByActor)) {
@@ -79,18 +74,13 @@ function projectReferenceAttackEligibility(snapshot:AppSnapshot) {
       if (action.resolutionKind!=="attack"||!action.runtimeAttack) continue;
       const reasons:Record<string,string>={};
       const legal=action.eligibleTargetIds.filter((targetId)=>{
-        try {
-          const relation=runtimeSpatialRelation(snapshot.scene,action.actorId,targetId);
-          if (!relation.visible) { reasons[targetId]="현재 권위 투영에서 보이지 않는 대상입니다."; return false; }
-          if (relation.distanceFeet>action.runtimeAttack!.rangeFeet) {
-            reasons[targetId]=`거리 ${relation.distanceFeet}피트 · 무기 사거리 ${action.runtimeAttack!.rangeFeet}피트 밖`;
-            return false;
-          }
-          return true;
-        } catch {
-          reasons[targetId]="권위 있는 공간 관계가 없습니다.";
+        const targeting=resolveRuntimeTargetingFact(snapshot.scene,action.actorId,targetId);
+        if (!targeting.visible) { reasons[targetId]="공간 모듈에서 보이지 않는 대상입니다."; return false; }
+        if (targeting.distanceFeet>action.runtimeAttack!.rangeFeet) {
+          reasons[targetId]=`거리 ${targeting.distanceFeet}피트 · 무기 사거리 ${action.runtimeAttack!.rangeFeet}피트 밖`;
           return false;
         }
+        return true;
       });
       action.eligibleTargetIds=legal;
       action.eligibleTargetReasons=reasons;
@@ -111,7 +101,6 @@ MockAdapter.prototype.selectProductionCharacter=async function selectProductionC
 
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithAcceptanceProjection() {
-  ensureReferenceDemoMeleeTarget(this);
   const snapshot=await previousGetSnapshot.call(this);
   return projectReferenceAttackEligibility(snapshot);
 };

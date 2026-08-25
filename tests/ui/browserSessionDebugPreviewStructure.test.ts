@@ -25,6 +25,8 @@ test("preview projects a live-looking snapshot without opening a transport", () 
   assert.match(provider, /실제 네트워크 연결과 권위 상태를 변경하지 않습니다/);
   assert.match(provider, /hostSession: async \(\) => undefined/);
   assert.match(provider, /joinSession: async \(\) => undefined/);
+  assert.match(provider, /await parent\.debug\.setCurrentActor\(command\.provokerId\)/);
+  assert.match(provider, /await parent\.declareManualMovementReaction\(command\)/);
   assert.doesNotMatch(preview, /tauriSessionTransport|hostSession\(|joinSession\(/);
 });
 

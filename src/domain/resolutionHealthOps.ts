@@ -1,7 +1,7 @@
 import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageDefenseContribution, type DamageResolution } from "./damage";
 import { type D20TestResult } from "./d20";
-import { resolveZeroHpAfterDamage, type LifeState } from "./life";
-import { applyHealingToLife } from "./lifeTransitions";
+import { resolveDeathSavingThrow, resolveZeroHpAfterDamage, type LifeState } from "./life";
+import { applyHealingToLife, stabilizeAtZero } from "./lifeTransitions";
 import { activeConditionIds, conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
 import { concentrationBreakReason, endConcentration, resolveConcentrationDamageCheck, type ConcentrationCheckResolution } from "./concentration";
@@ -10,6 +10,7 @@ import { resolveTemporaryHpGain } from "./temporaryHp";
 import { hpStateChanges } from "./stateChange";
 import {
   concentrationStateChange,
+  deathSaveStateChanges,
   effectStateChange,
   lifeFlagStateChanges,
   type RuntimeStateChange,
@@ -24,6 +25,23 @@ type CompoundDamageOp = Extract<ResolutionOperation, { kind:"compound-damage" }>
 type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;
 type TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;
 type DamageLifecycleOp = DamageOp | CompoundDamageOp;
+type DeathSaveOp=Extract<ResolutionOperation,{kind:"death-save"}>;
+type StabilizeOp=Extract<ResolutionOperation,{kind:"stabilize"}>;
+
+export function executeStabilize(ctx:ResolutionExecutionContext,operation:StabilizeOp):OperationExecution {
+  const target=requireCombatant(ctx.state,operation.targetId);
+  const before=structuredClone(target.life);
+  const resolved=stabilizeAtZero(before,ctx.pending.sourceId);
+  target.life=resolved.next;
+  const changes:RuntimeStateChange[]=[
+    ...deathSaveStateChanges(operation.targetId,before,resolved.next,resolved.provenance),
+    ...lifeFlagStateChanges(operation.targetId,before,resolved.next,resolved.provenance),
+  ];
+  return {
+    result:resolved,
+    event:makeEvent(ctx.pending,operation,`${operation.targetId} is stabilized`,resolved,resolved.provenance,changes,operation.targetId),
+  };
+}
 
 function effectDamageDefenses(ctx:ResolutionExecutionContext,targetId:string):DamageDefenseContribution[] {
   const defenses:DamageDefenseContribution[] = [];
@@ -82,6 +100,7 @@ function finalizeDamage(
   const provenance = [...damage.provenance, ...life.provenance];
   const changes: RuntimeStateChange[] = [
     ...hpStateChanges(operation.targetId, beforeHp, target.life.hp, provenance),
+    ...deathSaveStateChanges(operation.targetId,beforeLife,target.life,provenance),
     ...lifeFlagStateChanges(operation.targetId, beforeLife, target.life, provenance),
   ];
   const currentConcentration = ctx.state.concentration[operation.targetId];
@@ -232,6 +251,7 @@ export function executeHealing(ctx: ResolutionExecutionContext, operation: Heali
   target.life = transition.next;
   const changes:RuntimeStateChange[] = [
     ...hpStateChanges(operation.targetId, beforeHp, target.life.hp, transition.provenance),
+    ...deathSaveStateChanges(operation.targetId,beforeLife,target.life,transition.provenance),
     ...lifeFlagStateChanges(operation.targetId, beforeLife, target.life, transition.provenance),
   ];
   return {
@@ -253,7 +273,7 @@ export function executeTemporaryHp(ctx: ResolutionExecutionContext, operation: T
   const beforeHp = { ...target.life.hp };
   const resolved = resolveTemporaryHpGain({
     hp:beforeHp,
-    amount:operation.amount,
+    amount:valueFromResult(ctx.results,operation.amount),
     source:operation.source,
     choice:operation.choice,
   });
@@ -271,4 +291,24 @@ export function executeTemporaryHp(ctx: ResolutionExecutionContext, operation: T
       operation.targetId,
     ),
   };
+}
+
+export function executeDeathSave(ctx:ResolutionExecutionContext,operation:DeathSaveOp):OperationExecution {
+  const actorId=operation.actorId??ctx.pending.actorId;
+  if (ctx.state.clock.activeActorId!==actorId) throw new DomainEvaluationError("death saving throw requires the actor's active turn");
+  const actor=requireCombatant(ctx.state,actorId);
+  const before=structuredClone(actor.life);
+  const resolved=resolveDeathSavingThrow(ctx.profile,{
+    life:before,
+    dice:operation.dice,
+    modifierContributions:operation.modifierContributions,
+    rollStateContributions:operation.rollStateContributions,
+  });
+  actor.life=resolved.next;
+  const changes:RuntimeStateChange[]=[
+    ...hpStateChanges(actorId,before.hp,actor.life.hp,resolved.provenance),
+    ...deathSaveStateChanges(actorId,before,actor.life,resolved.provenance),
+    ...lifeFlagStateChanges(actorId,before,actor.life,resolved.provenance),
+  ];
+  return {result:resolved,event:makeEvent(ctx.pending,operation,`${actorId} death save ${resolved.outcome} (${resolved.total})`,resolved,resolved.provenance,changes,actorId)};
 }

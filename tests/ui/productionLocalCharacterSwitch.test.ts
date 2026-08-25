@@ -61,6 +61,12 @@ test("reference Character cards select distinct canonical Character sheets",asyn
   assert.equal(mira.activeCharacter.id,"char.mira");
   assert.equal(mira.activeCharacter.name,"Mira");
   assert.ok(mira.activeCharacter.attacks.length>0,"reference Mira card must materialize a playable Character sheet");
+  assert.deepEqual(mira.activeCharacter.cantrips,["dnd.srd521.spell.vicious-mockery"]);
+  assert.deepEqual(mira.activeCharacter.preparedSpells,["dnd.srd521.spell.healing-word","dnd.srd521.spell.thunderwave"]);
+  assert.deepEqual(
+    (mira.scene.actionsByActor["char.mira"]??[]).filter((action)=>action.category==="magic").map((action)=>action.id),
+    ["action.spell.vicious-mockery","action.spell.healing-word","action.spell.thunderwave"],
+  );
   assert.ok(mira.scene.entities.some((entity)=>entity.id==="char.mira"));
 
   const aelar=await adapter.selectProductionCharacter("char.aelar");

@@ -4,20 +4,20 @@ import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
-import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { spellcastingTurnStateChange, type SpellcastingTurnSnapshot } from "../domain/runtimeStateChange";
-import { resolveSpellCast, type SpellCasterContext, type SpellCastResolution, type SpellCastTarget } from "../domain/spellcasting";
+import { resolveSpellCast, spellMultiAttackCount, type SpellCasterContext, type SpellCastResolution, type SpellCastTarget } from "../domain/spellcasting";
 import { spellMechanicById } from "../domain/spellMechanics";
+import type { SpellMechanicDefinition } from "../domain/spellcasting";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RulesRuntimeState } from "../domain/combatState";
-
-const FIRE_BOLT_ACTION="action.fire-bolt";
-const MAGIC_MISSILE_ACTION="action.magic-missile";
-const SUPPORTED_ACTIONS=new Set([FIRE_BOLT_ACTION,MAGIC_MISSILE_ACTION]);
+import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
+import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 
 type Internal={
   scene:AppSnapshot["scene"];
+  sessionMode:AppSnapshot["sessionMode"];
   resolution:ResolutionView|null;
   activity:AppSnapshot["activity"];
   lastBefore?:unknown;
@@ -38,19 +38,18 @@ function targetFacts(internal:Internal,actorId:string,targetId:string):SpellCast
   const actor=internal.scene.entities.find((entry)=>entry.id===actorId);
   const target=internal.scene.entities.find((entry)=>entry.id===targetId);
   if (!actor||!target) throw new Error(`production spell target not found: ${targetId}`);
-  const distance=actorId===targetId ? 0 : Number.parseInt(target.distance??"",10);
-  if (!Number.isFinite(distance)) throw new Error(`production spell target has no authoritative distance: ${actorId} -> ${targetId}`);
+  const spatial=resolveRuntimeTargetingFact(internal.scene,actorId,targetId);
   return {
     id:target.id,
     kind:"creature",
     relation:relation(actor,target),
-    distanceFeet:distance,
-    visible:true,
-    cover:"none",
+    distanceFeet:spatial.distanceFeet,
+    visible:spatial.visible,
+    cover:spatial.cover,
     ac:target.ac,
     creatureKind:target.kind==="character" ? "character" : "monster",
     saveModifiers:{},
-    targetCanSeeCaster:true,
+    targetCanSeeCaster:spatial.targetCanSeeAttacker,
   };
 }
 
@@ -80,20 +79,72 @@ function boundedFace(adapter:MockAdapter,actionId:string,index:number,sides:numb
   return ((d20(adapter,actionId,index)-1)%sides)+1;
 }
 
-function spellDice(adapter:MockAdapter,actionId:string,spellId:string,slotLevel:number|undefined) {
-  if (actionId===FIRE_BOLT_ACTION) {
+function formulaCount(definition:SpellMechanicDefinition,slotLevel:number|undefined,characterLevel:number) {
+  if (definition.primary.kind!=="attack-damage"&&definition.primary.kind!=="save-damage"&&definition.primary.kind!=="healing"&&definition.primary.kind!=="temporary-hp") return 0;
+  const formula=definition.primary.dice;
+  const cantripSteps=formula.cantripScaling?[5,11,17].filter((level)=>characterLevel>=level).length:0;
+  return formula.count+cantripSteps+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(formula.dicePerSlotAboveBase??0);
+}
+
+function spellDice(adapter:MockAdapter,actionId:string,definition:SpellMechanicDefinition,slotLevel:number|undefined,characterLevel:number,targetIds:string[]) {
+  const primary=definition.primary;
+  if (primary.kind==="tracked-effect"||primary.kind==="full-healing") return {authoritative:[],request:{}};
+  if (primary.kind==="power-word-kill") {
+    const effectFaces=Array.from({length:primary.fallbackDamage.count},(_,index)=>boundedFace(adapter,actionId,index,primary.fallbackDamage.sides));
+    return {authoritative:effectFaces,request:{effectFaces}};
+  }
+  if (primary.kind==="attack-damage") {
     const attackFace=d20(adapter,actionId,0);
-    const damageFace=boundedFace(adapter,actionId,1,10);
+    const count=formulaCount(definition,slotLevel,characterLevel);
+    const effectFaces=Array.from({length:count},(_,index)=>boundedFace(adapter,actionId,index+1,primary.dice.sides));
     return {
-      authoritative:[attackFace,damageFace],
+      authoritative:[attackFace,...effectFaces],
       request:{
-        attack:{id:`${spellId}:attack`,purpose:`${spellId} spell attack`,sides:20,faces:[attackFace]},
-        effectFaces:[damageFace],
+        attack:{id:`${definition.spellId}:attack`,purpose:`${definition.spellId} spell attack`,sides:20 as const,faces:[attackFace]},
+        effectFaces,
       },
     };
   }
-  const count=3+Math.max(0,(slotLevel??1)-1);
-  const projectileFaces=Array.from({length:count},(_,index)=>boundedFace(adapter,actionId,index,4));
+  if (primary.kind==="multi-attack-damage") {
+    const attackCount=spellMultiAttackCount(definition,characterLevel,slotLevel);
+    const facesPerAttack=primary.dicePerAttack.count;
+    const attackInstances=Array.from({length:attackCount},(_,index)=>{
+      const targetId=targetIds[index%targetIds.length];
+      const offset=index*(facesPerAttack+1);
+      const attackFace=d20(adapter,actionId,offset);
+      const effectFaces=Array.from({length:facesPerAttack},(_,faceIndex)=>boundedFace(adapter,actionId,offset+faceIndex+1,primary.dicePerAttack.sides));
+      return {targetId,attack:{id:`${definition.spellId}:attack:${index}`,purpose:`${definition.spellId} spell attack ${index+1}`,sides:20 as const,faces:[attackFace]},effectFaces};
+    });
+    return {authoritative:attackInstances.flatMap((entry)=>[entry.attack.faces[0],...entry.effectFaces]),request:{attackInstances}};
+  }
+  if (primary.kind==="save-damage") {
+    const count=formulaCount(definition,slotLevel,characterLevel);
+    const effectFaces=Array.from({length:count},(_,index)=>boundedFace(adapter,actionId,index,primary.dice.sides));
+    const saves=Object.fromEntries(targetIds.map((targetId,index)=>[targetId,{id:`${definition.spellId}:save:${targetId}`,purpose:`${definition.spellId} saving throw`,sides:20 as const,faces:[d20(adapter,actionId,count+index)]}]));
+    return {authoritative:[...effectFaces,...Object.values(saves).flatMap((save)=>save.faces)],request:{effectFaces,saves}};
+  }
+  if (primary.kind==="save-compound-damage") {
+    let offset=0;
+    const componentFaces=primary.components.map((component)=>{
+      const count=component.dice.count+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(component.dice.dicePerSlotAboveBase??0);
+      const faces=Array.from({length:count},(_,index)=>boundedFace(adapter,actionId,offset+index,component.dice.sides));
+      offset+=count;
+      return faces;
+    });
+    const saves=Object.fromEntries(targetIds.map((targetId,index)=>[targetId,{id:`${definition.spellId}:save:${targetId}`,purpose:`${definition.spellId} saving throw`,sides:20 as const,faces:[d20(adapter,actionId,offset+index)]}]));
+    return {authoritative:[...componentFaces.flat(),...Object.values(saves).flatMap((save)=>save.faces)],request:{componentFaces,saves}};
+  }
+  if (primary.kind==="healing"||primary.kind==="temporary-hp") {
+    const count=formulaCount(definition,slotLevel,characterLevel);
+    const effectFaces=Array.from({length:count},(_,index)=>boundedFace(adapter,actionId,index,primary.dice.sides));
+    return {authoritative:[...effectFaces],request:{effectFaces}};
+  }
+  if (primary.kind==="save-effect") {
+    const saves=Object.fromEntries(targetIds.map((targetId,index)=>[targetId,{id:`${definition.spellId}:save:${targetId}`,purpose:`${definition.spellId} saving throw`,sides:20 as const,faces:[d20(adapter,actionId,index)]}]));
+    return {authoritative:Object.values(saves).flatMap((save)=>save.faces),request:{saves}};
+  }
+  const count=primary.baseProjectiles+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(primary.projectilesPerSlotAboveBase??0);
+  const projectileFaces=Array.from({length:count},(_,index)=>boundedFace(adapter,actionId,index,primary.projectileDice.sides));
   return {authoritative:[...projectileFaces],request:{projectileFaces}};
 }
 
@@ -161,22 +212,27 @@ function resolutionFromCast(
 }
 
 MockAdapter.prototype.resolveAction=async function resolveProductionSpell(actionId,targetIds) {
-  if (!SUPPORTED_ACTIONS.has(actionId)) return previousResolveAction.call(this,actionId,targetIds);
-
   const internal=this as unknown as Internal;
-  const snapshot=await this.getSnapshot();
-  const sourceAction=(snapshot.scene.actionsByActor[snapshot.activeCharacter.id]??[]).find((entry)=>entry.id===actionId);
-  const metadata=sourceAction?.spellCast;
+  let snapshot=await this.getSnapshot();
+  let sourceAction=(snapshot.scene.actionsByActor[snapshot.activeCharacter.id]??[]).find((entry)=>entry.id===actionId);
+  let metadata=sourceAction?.spellCast;
+  if (!sourceAction||!metadata||!isExecutableSpellRuntimeSupport(metadata.runtimeSupport)) return previousResolveAction.call(this,actionId,targetIds);
+  if (!snapshotAdapterTurnRuntimeState(this,internal.scene)) {
+    ensureAdapterTurnRuntimeState(this,internal.scene);
+    snapshot=await this.getSnapshot();
+    sourceAction=(snapshot.scene.actionsByActor[snapshot.activeCharacter.id]??[]).find((entry)=>entry.id===actionId);
+    metadata=sourceAction?.spellCast;
+  }
   const runtime=snapshotAdapterTurnRuntimeState(this,internal.scene);
   const caster=sourceAction ? casterFromHud(snapshot,sourceAction.actorId) : undefined;
   const definition=metadata ? spellMechanicById(metadata.spellId) : undefined;
-  if (!sourceAction||!metadata||metadata.runtimeSupport!=="combat-executable"||!runtime||!caster||!definition) {
+  if (!sourceAction||!metadata||!isExecutableSpellRuntimeSupport(metadata.runtimeSupport)||!runtime||!caster||!definition) {
     return previousResolveAction.call(this,actionId,targetIds);
   }
 
   const selected=selectedCombatSpellSlot(sourceAction.actorId,metadata.baseLevel||1);
   const slotLevel=metadata.baseLevel===0 ? undefined : Math.max(metadata.baseLevel,selected);
-  const turnId=currentTurnId(runtime);
+  const turnId=internal.sessionMode==="initiative"?currentTurnId(runtime):undefined;
   let targets:SpellCastTarget[];
   try {
     targets=targetIds.map((targetId)=>targetFacts(internal,sourceAction.actorId,targetId));
@@ -188,7 +244,9 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     return this.getSnapshot();
   }
 
-  const dice=spellDice(this,actionId,metadata.spellId,slotLevel);
+  const dice=spellDice(this,actionId,definition,slotLevel,caster.characterLevel,targetIds);
+  const projectileCount=definition.primary.kind==="automatic-projectiles"?definition.primary.baseProjectiles+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(definition.primary.projectilesPerSlotAboveBase??0):0;
+  const projectileAllocations=projectileCount&&targetIds.length?targetIds.map((targetId,index)=>({targetId,count:Math.floor(projectileCount/targetIds.length)+(index<projectileCount%targetIds.length?1:0)})).filter((entry)=>entry.count>0):undefined;
   const result=resolveSpellCast(SIMPLEVTT_APP_RULES_PROFILE,definition,runtime,{
     id:`production-spell-cast.${metadata.spellId}.${Date.now()}`,
     actorId:sourceAction.actorId,
@@ -197,9 +255,10 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     expectedRevision:runtime.revision,
     caster,targets,slotLevel,
     componentsSatisfied:true,
-    useActionEconomy:true,
+    useActionEconomy:internal.sessionMode==="initiative",
     turnId,
     dice:dice.request,
+    projectileAllocations,
   });
   internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,dice.authoritative);
   if (result.status==="rejected") return this.getSnapshot();

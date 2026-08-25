@@ -6,11 +6,22 @@ import { orderInitiative } from "../domain/initiative";
 import { resolvePendingResolution } from "../domain/resolution";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import { beginTurn } from "../domain/turnEconomy";
+import { spellPresentationById } from "./spellPresentation";
 
 export interface TurnRuntimeSession {
   state:RulesRuntimeState;
   initiativeOrder:string[];
   activeIndex:number;
+}
+
+const PUBLIC_EFFECT_PREFIX="✦ ";
+const CONDITION_LABEL:Record<string,string>={blinded:"실명",charmed:"매혹",deafened:"청각상실",exhaustion:"탈진",frightened:"공포",grappled:"붙잡힘",incapacitated:"행동불능",invisible:"투명",paralyzed:"마비",petrified:"석화",poisoned:"중독",prone:"넘어짐",restrained:"구속",stunned:"기절",unconscious:"무의식"};
+
+function publicEffectStatuses(state:RulesRuntimeState,targetId:string) {
+  return [...new Set(state.effects.filter((effect)=>effect.targetId===targetId).flatMap((effect)=>{
+    if(effect.kind==="condition"&&effect.conditionId)return [`${PUBLIC_EFFECT_PREFIX}${CONDITION_LABEL[effect.conditionId]??effect.conditionId} · ${spellPresentationById(effect.sourceId)?.name??effect.metadata?.displayName??"효과"}`];
+    return typeof effect.metadata?.publicLabel==="string"?[`${PUBLIC_EFFECT_PREFIX}${effect.metadata.publicLabel}`]:[];
+  }))];
 }
 
 export interface TurnRuntimeReactionRequest {
@@ -43,18 +54,22 @@ function runtimeEconomy(economy:EconomyVm) {
     reaction:economy.reaction,
     movement:economy.movement,
     movementMaximum:economy.movementMax,
-    extraActions:[],
+    extraActions:structuredClone(economy.extraActions ?? []),
+    extraAttacks:structuredClone(economy.extraAttacks ?? []),
   };
 }
 
 function sceneEconomy(economy:RulesRuntimeState["combatants"][string]["economy"]):EconomyVm {
-  return {
+  const projected:EconomyVm = {
     action:economy.action,
     bonusAction:economy.bonusAction,
     reaction:economy.reaction,
     movement:economy.movement,
     movementMax:economy.movementMaximum,
   };
+  if (economy.extraActions?.length) projected.extraActions=structuredClone(economy.extraActions);
+  if (economy.extraAttacks?.length) projected.extraAttacks=structuredClone(economy.extraAttacks);
+  return projected;
 }
 
 function initiativeOrder(scene:SceneVm) {
@@ -138,6 +153,7 @@ export function projectTurnRuntimeToScene(session:TurnRuntimeSession,scene:Scene
         unconscious:runtime.life.unconscious,
         dead:runtime.life.dead,
       };
+      entity.status=[...entity.status.filter((status)=>!status.startsWith(PUBLIC_EFFECT_PREFIX)),...publicEffectStatuses(session.state,id)];
     }
   }
 }
@@ -147,7 +163,9 @@ function sameEconomy(left:EconomyVm,right:EconomyVm) {
     && left.bonusAction===right.bonusAction
     && left.reaction===right.reaction
     && left.movement===right.movement
-    && left.movementMax===right.movementMax;
+    && left.movementMax===right.movementMax
+    && JSON.stringify(left.extraActions ?? [])===JSON.stringify(right.extraActions ?? [])
+    && JSON.stringify(left.extraAttacks ?? [])===JSON.stringify(right.extraAttacks ?? []);
 }
 
 function sameProjectedLife(runtime:RulesRuntimeState["combatants"][string]["life"],entity:SceneEntity) {
@@ -169,7 +187,7 @@ export function synchronizeTurnRuntimeFromScene(session:TurnRuntimeSession,scene
     const entity=scene.entities.find((entry)=>entry.id===id);
     if (!runtime) continue;
     if (projected && !sameEconomy(sceneEconomy(runtime.economy),projected)) {
-      runtime.economy={ ...runtimeEconomy(projected), extraActions:runtime.economy.extraActions ?? [] };
+      runtime.economy=runtimeEconomy(projected);
       changed=true;
     }
     if (entity) {

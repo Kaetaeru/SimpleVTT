@@ -155,7 +155,7 @@ All C scenarios are incomplete until P2 observes the same permitted live present
 | MP-E05 | DM grants immediate level-up credit | eligible owner can complete level-up in Session using canonical Character persistence | AUTO, WIN |
 | MP-E06 | P1 deposits item into Party Stash | owner debit and Campaign credit are atomic/idempotent; P2 sees updated shared stash | AUTO, WIN |
 | MP-E07 | P1 withdraws item under shared policy | Campaign debit and owner credit settle once; arrow direction and quantity are correct | AUTO, WIN |
-| MP-E08 | Deposit/withdraw GP | exact amount moves once; insufficient funds reject without partial mutation | AUTO, WIN |
+| MP-E08 | Deposit/withdraw GP | exact amount moves once and owner+Stash total GP is conserved; insufficient funds reject without partial mutation; a post-commit journal/finalize failure cannot roll back only the owner debit | AUTO, WIN |
 | MP-E09 | Custom/charged item round-trip | full item instance/template/charges/provenance survive Stash transfer | AUTO, WIN |
 | MP-E10 | DM-approval withdrawal | request causes no mutation before approval; committed/rejected/cancelled outcomes reach requester | AUTO, WIN |
 | MP-E11 | DM-managed policy | unauthorized Player mutation is blocked and DM operation remains available | AUTO, WIN |
@@ -220,6 +220,32 @@ All C scenarios are incomplete until P2 observes the same permitted live present
 | MP-I05 | Presentation performance | a multi-die shared roll does not freeze network intake or lose later ordered events | AUTO, WIN |
 | MP-I06 | Diagnostic correlation | H/P1/P2 logs correlate session/event/request/resolution IDs without logging private payloads | AUTO, WIN |
 
+### J. Cross-client Session UI parity
+
+These scenarios are screen contracts, not protocol-only checks. Except for controls that are deliberately role-scoped, the Host and owning Client must derive the same visible Character state from one accepted owner projection. Every automated case compares the UI-facing values after the full connected handshake and again after each mutation.
+
+| ID | Scenario | Required observations | Gate |
+| --- | --- | --- | --- |
+| MP-J01 | Owner joins and both peers open the Session | H and P1 show the same public Actor roster; production fixture NPCs do not survive on only one peer | AUTO, WIN |
+| MP-J02 | H selects P1 while P1 selects its own Actor | Actor name, HP/max/temp HP, AC, status, initiative, distance, turn economy, and legal target identity agree | AUTO, WIN |
+| MP-J03 | Both peers open the selected Character action bar | executable action IDs, labels, categories, economy, targeting, availability, formulas, costs, and mechanical details agree; only role-authorized controls and owner-source versus Host-authority citation labels may differ | AUTO, WIN |
+| MP-J04 | Both peers open inventory before any DM mutation | item instance identity, localized label, quantity, equipment/wield/attunement/charge state, and GP agree on first render; owner-source and Host-authority provenance labels may deliberately differ | AUTO, WIN |
+| MP-J05 | DM grants/revokes GP and retries the same request | P1 UI refreshes from the transport mutation without manual reload; P1 durable Character, H inventory pane, and H Actor projection converge exactly once; serialized command or inventory item key order cannot change journal identity or recovery state | AUTO, WIN |
+| MP-J06 | DM grants/revokes catalog or custom item | H/P1 inventory cards and any item-derived action refresh together; undo returns both screens to the prior state | AUTO, WIN |
+| MP-J07 | Scene Actor is added/removed or owner reconnects | roster, selection fallback, current Actor, action ownership, and inventory ownership converge without stale fixture/action cards | AUTO, WIN |
+| MP-J08 | Turn, resolution, correction, and reconnect checkpoints | H/P1/P2 UI-facing Actor, action, resource, inventory, Activity, dice/result, and VFX-envelope snapshots agree after every public checkpoint | AUTO, WIN |
+
+The minimum automated UI-parity fingerprint is: public Scene entity fields; Session mode/round/current Actor/economy; selected Character action definitions; owner inventory/GP/items; active resolution presentation; and public Activity state changes. A test that asserts only a wire message, return status, or persistence record does not satisfy an MP-J gate.
+
+Automated evidence map:
+
+- J01-J06 and E08: `tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts` performs the real hello/hello-ack flow, requires a Client snapshot publication after remote GP mutation, compares Host/owner UI fingerprints before and after direct grants/undo/Stash compensation/retry, and proves owner+Stash GP conservation even when post-commit journal finalization fails.
+- J07: `tests/ui/connectedSceneTopologyProjection.test.ts`, `tests/ui/connectedSceneTopologyHostMutation.test.ts`, and `tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts` cover authoritative add/remove and fixture cleanup.
+- J08: `tests/ui/connectedThreePeerActionMatrix.test.ts`, `tests/ui/connectedThreePeerPresentation.test.ts`, `tests/ui/connectedTurnProjection.test.ts`, and `tests/ui/connectedUndoCompensation.test.ts` cover public turn/resolution/presentation checkpoints. Windows visual evidence remains required for the rendered motion/VFX portions.
+- Native H+P1 smoke and the J05/E08 GP path: double-click `Run SimpleVTT Tauri UI Test.cmd` (or run `npm run test:e2e:tauri`). The harness builds a feature-gated automation-only Tauri binary in `.live-dev/tauri-e2e-target`, starts two isolated Host/Client profiles, connects them over `127.0.0.1`, performs real button/input actions, grants 40 GP, deposits 10 GP, and requires both the Client inventory and Host owner-inventory UI to show 30 GP while Party Stash shows 10 GP. It explicitly rejects the observed triple-debit result of 10 GP. Screenshots and rendered UI text are written under `.live-dev/tauri-e2e/<run>/artifacts`; a protocol-only pass does not satisfy this gate.
+
+Run the focused gate with `pnpm test:connected-ui`. The broader connected regression is every `tests/ui/connected*.test.ts` file and remains a required pre-acceptance gate.
+
 ## 5. GitHub issue plan
 
 Create one tracking epic and the following implementation issues. Every issue must link the scenario IDs it owns, list automated tests, and list its Windows evidence artifact.
@@ -239,6 +265,7 @@ Create one tracking epic and the following implementation issues. Every issue mu
 | 10 | `[MP-10] Multiplayer accessibility, responsive UI, and diagnostics` | C25-C30, I01-I06 |
 | 11 | `[MP-11] Automated H+P1+P2 acceptance harness` | executable cross-client assertions for every AUTO gate |
 | 12 | `[MP-12] Windows H+P1+P2 release acceptance` | every WIN gate; recordings/screenshots/log bundle |
+| 13 | `[MP-13] Cross-client Session UI parity contract` | J01-J08 and UI-facing checkpoints in A-I |
 
 Dependencies:
 
@@ -279,10 +306,10 @@ No issue may label a scenario `PASS` based only on a structural source test. Vis
 
 The current source has substantial Host-authoritative request routing, ordered `event-batch` publication, Client state application, idempotency, reconnect catch-up, projected Character action tests, Party Stash recovery, Long Rest transaction work, and local body-level physics dice.
 
-The blocking gap for a complete multiplayer claim is that a remote Client currently applies committed `ResolutionEvent[]` to state and Activity without reconstructing the shared staged Resolution/presentation consumed by the body-level dice and combat feedback layers. Therefore:
+The remaining blocking gap for a complete multiplayer claim is real Windows H+P1+P2 evidence across the full catalog, including visual motion/VFX and reconnect timing. Shared staged Resolution presentation and the J01-J08 UI-facing state contracts now have automated coverage, but automated projection equality does not replace rendered multi-window acceptance. Therefore:
 
 - authoritative result/state convergence: **implemented in significant slices, exact-head automated coverage exists**;
-- H/P1/P2 cross-client presentation parity: **not complete**;
+- H/P1/P2 cross-client state/action/inventory/presentation projection parity: **automated slices implemented; full Windows evidence pending**;
 - comprehensive real Windows H+P1+P2 acceptance: **pending**;
 - V1 multiplayer overall: **not complete**.
 

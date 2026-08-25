@@ -201,7 +201,7 @@ test("Host ends live play by notifying clients before teardown, clears transient
     assert.deepEqual(projectedCharacterIds(adapter),[]);
     assert.equal(restarted.sessionMode,"freeform");
     assert.equal(restarted.scene.round,0);
-    assertFreshLocalEconomy(restarted);
+    assert.deepEqual(restarted.scene.economyByActor,{});
     assert.equal(restarted.activeCharacter.resources[0].current,0);
     assert.equal(transport.hostStarts(),2);
   } finally {
@@ -321,6 +321,20 @@ test("owning Client persists a Host-confirmed durable event across explicit sess
         payload:{
           kind:"resolution",
           resolutionId:resolutionEvent.resolutionId,
+          presentation:{
+            schemaId:"simplevtt.connected-resolution-presentation",
+            schemaVersion:1,
+            resolutionId:resolutionEvent.resolutionId,
+            presentationSequence:1,
+            delivery:"live",
+            audience:{scope:"public"},
+            actor:{id:characterId,label:before.activeCharacter.name},
+            targets:[],
+            resolution:{...pendingResolution(characterId),id:resolutionEvent.resolutionId},
+            dice:{faces:[],selectedIndices:[],discardedIndices:[],selection:"all"},
+            timeline:[{key:"effect",label:"resource spend",terminal:false}],
+            activityLink:{resolutionId:resolutionEvent.resolutionId},
+          },
           resolutionEvents:[resolutionEvent],
           stateChanges:[`${resource.id} ${resource.current} -> ${afterValue}`],
           provenance:["host-authoritative committed event"],

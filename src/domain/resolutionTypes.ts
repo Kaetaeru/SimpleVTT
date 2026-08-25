@@ -49,6 +49,7 @@ export type ResolutionOperation =
       slot: TurnSlot;
       bonusActionGranted?: boolean;
       actionKind?: ActionUseKind;
+      attacksPerAction?:number;
     })
   | (OperationBase & {
       kind: "grant-extra-action";
@@ -158,9 +159,20 @@ export type ResolutionOperation =
   | (OperationBase & {
       kind: "temporary-hp";
       targetId: string;
-      amount: number;
+      amount: NumericOperand;
       source: string;
       choice?: TemporaryHpChoice;
+    })
+  | (OperationBase & {
+      kind:"death-save";
+      actorId?:string;
+      dice:D20TestRequest["dice"];
+      modifierContributions?:D20TestRequest["modifierContributions"];
+      rollStateContributions?:D20TestRequest["rollStateContributions"];
+    })
+  | (OperationBase & {
+      kind:"stabilize";
+      targetId:string;
     })
   | (OperationBase & {
       kind: "apply-effect";

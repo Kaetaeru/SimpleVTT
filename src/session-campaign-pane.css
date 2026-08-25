@@ -23,3 +23,14 @@
 .session-campaign-xp-commit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
 .session-campaign-xp-actions button{white-space:nowrap}
 @media(max-width:520px){.session-campaign-xp-commit{grid-template-columns:1fr}}
+.session-campaign-pane-head{min-height:64px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 11%,var(--surface)),var(--surface))}
+.session-campaign-pane-head>div{display:grid;gap:2px}.session-campaign-pane-head>div>span{color:var(--accent);font-size:7px;font-weight:900;letter-spacing:.14em}.session-campaign-pane-head>div>strong{font-size:16px}
+.session-campaign-scroll[data-view]{gap:12px;padding:12px 14px 26px}
+.session-campaign-feature-block{gap:13px;padding:14px;border-color:var(--line-strong);background:linear-gradient(145deg,var(--recess),color-mix(in srgb,var(--accent) 4%,var(--surface)))}
+.session-campaign-pane[data-campaign-view="calendar"] .session-campaign-date{padding:16px;border:1px solid var(--line);background:linear-gradient(135deg,var(--surface),color-mix(in srgb,var(--accent) 8%,var(--surface)))}
+.session-campaign-pane[data-campaign-view="calendar"] .session-campaign-date strong{font-size:14px}.session-campaign-pane[data-campaign-view="calendar"] .session-campaign-date em{font-size:23px}
+.session-campaign-pane[data-campaign-view="rations"] .session-campaign-ration-facts>div{min-height:74px;align-content:center;padding:12px;border:1px solid var(--line)}
+.session-campaign-pane[data-campaign-view="rations"] .session-campaign-ration-facts strong{font-size:18px;font-variant-numeric:tabular-nums}
+.session-campaign-pane[data-campaign-view="rest"] .session-campaign-editor>div{grid-template-columns:1fr;align-items:stretch}
+.session-campaign-pane[data-campaign-view="rest"] .session-campaign-editor label{grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--recess)}
+.session-campaign-pane[data-campaign-view="rest"] .session-campaign-editor .primary{min-height:38px}

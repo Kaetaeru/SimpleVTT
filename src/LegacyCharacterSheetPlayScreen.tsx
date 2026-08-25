@@ -5,11 +5,12 @@ import { projectOfficialSheet, SHEET_ABILITY_LABELS, signed } from "./app/charac
 import { sheetAbilityModifier, sheetSaveBonus } from "./app/sheetRollValues";
 import { StandaloneDicePresentation } from "./VisualDiceBridge";
 import type { CharacterSheetHostMode } from "./CharacterSheetPlayScreen";
+import { visibleCharacterResources } from "./app/characterResourcePresentation";
 
 type RollMode="normal"|"advantage"|"disadvantage";
 type DieSides=4|6|8|10|12|20;
 type LocalRoll={id:string;label:string;dice:Array<{value:number;sides:DieSides}>;modifier:number;total:number;note?:string};
-type Props={hostMode?:CharacterSheetHostMode;onScene?:()=>void;onLevelUp?:()=>void;onEdit?:()=>void};
+type Props={hostMode?:CharacterSheetHostMode;onLevelUp?:()=>void;onEdit?:()=>void};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
 
 function randomDie(sides:number){
@@ -25,7 +26,7 @@ function parseDice(expression:string) {
   return {count,sides,flat};
 }
 
-export function CharacterSheetPlayScreen({hostMode="standalone",onScene,onLevelUp,onEdit}:Props) {
+export function CharacterSheetPlayScreen({hostMode="standalone",onLevelUp,onEdit}:Props) {
   const {snapshot}=useSimpleVtt();
   const [mode,setMode]=useState<RollMode>("normal");
   const [roll,setRoll]=useState<LocalRoll|null>(null);
@@ -62,7 +63,7 @@ export function CharacterSheetPlayScreen({hostMode="standalone",onScene,onLevelU
   return <div className="screen sheet-play-screen" data-sheet-host={hostMode}>
     {hostMode==="standalone"&&<header className="sheet-play-toolbar">
       <div><span className="eyebrow accent">TABLE CHARACTER SHEET</span><h1>{c.name}</h1><p>{c.className} {c.level} · {c.subclassName||"서브클래스 없음"} · {c.species} · {c.background}</p></div>
-      <div className="sheet-play-toolbar-actions"><button onClick={onEdit}>편집</button><button onClick={onLevelUp}>레벨 업</button><button className="primary" onClick={onScene}>기기로 플레이</button></div>
+      <div className="sheet-play-toolbar-actions"><button onClick={onEdit}>편집</button><button onClick={onLevelUp}>레벨 업</button></div>
     </header>}
 
     <div className="sheet-play-statusbar">
@@ -84,7 +85,7 @@ export function CharacterSheetPlayScreen({hostMode="standalone",onScene,onLevelU
       <section className="sheet-play-core">
         <article className="sheet-play-card"><header><div><span className="eyebrow accent">ATTACKS</span><h2>공격 & 피해</h2></div></header><div className="sheet-play-attack-list">{c.attacks.map((attack)=><div key={attack.id}><div><strong>{attack.name}</strong><span>명중 +{attack.bonus}</span><small>{attack.damage}</small></div><button onClick={()=>d20(`${attack.name} 명중`,attack.bonus)}>{hostMode==="session"?"세션 판정":"명중 굴림"}</button><button onClick={()=>damage(attack.name,attack.damage)}>{hostMode==="session"?"피해 참조":"피해 굴림"}</button></div>)}{!c.attacks.length&&<p>등록된 공격이 없습니다.</p>}</div></article>
 
-        <article className="sheet-play-card"><header><div><span className="eyebrow accent">RESOURCES</span><h2>자원</h2></div></header><div className="sheet-resource-grid">{c.resources.map((resource)=><div key={resource.id}><strong>{resource.label}</strong><span>{resource.current}/{resource.max}</span><small>{resource.source}</small></div>)}{!c.resources.length&&<p>추적할 자원이 없습니다.</p>}</div></article>
+        <article className="sheet-play-card"><header><div><span className="eyebrow accent">RESOURCES</span><h2>자원</h2></div></header><div className="sheet-resource-grid">{visibleCharacterResources(c.resources).map((resource)=><div key={resource.id}><strong>{resource.label}</strong><span>{resource.current}/{resource.max}</span><small>{resource.source}</small></div>)}{!visibleCharacterResources(c.resources).length&&<p>추적할 자원이 없습니다.</p>}</div></article>
 
         <article className="sheet-play-card"><header><div><span className="eyebrow accent">FEATURES</span><h2>기능</h2></div></header><div className="sheet-simple-list">{c.features.map((feature)=><span key={feature}>{feature}</span>)}</div></article>
       </section>

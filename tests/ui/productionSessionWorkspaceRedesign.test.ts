@@ -57,7 +57,7 @@ test("production Session page has one stable state-driven workspace",()=>{
   assert.doesNotMatch(main,/<ProductionPlayerLobbyBridge \/>/);
   assert.match(app,/id="production-session-workspace-root"/);
   assert.match(session,/production-session-workspace-root/);
-  assert.match(session,/새 세션 만들기/);
+  assert.match(session,/캠페인에서 세션 만들기/);
   assert.match(session,/세션 참가하기/);
   assert.match(session,/세션 이름/);
   assert.match(session,/Host 주소/);

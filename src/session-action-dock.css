@@ -488,3 +488,8 @@
 .session-ready-config > p { margin:0; padding:8px; border-radius:7px; background:var(--recess); color:var(--quiet); font-size:9px; line-height:1.5; }
 .session-ready-config select,.session-ready-config input { width:100%; min-height:36px; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:var(--recess); color:var(--text); }
 .session-ready-config footer { display:flex; justify-content:flex-end; gap:7px; }
+.session-ready-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.session-ready-options > span { grid-column:1/-1; color:var(--quiet); font-size:9px; }
+.session-ready-options label { grid-template-columns:16px 1fr; align-items:center; padding:7px; border:1px solid var(--line); border-radius:7px; background:var(--recess); }
+.session-ready-options label input { width:14px; min-height:14px; padding:0; }
+.session-ready-options label span { color:var(--text); font-size:10px; }

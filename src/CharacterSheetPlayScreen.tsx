@@ -13,17 +13,16 @@ import "./session-full-sheet.css";
 
 export type CharacterSheetHostMode = "standalone" | "session";
 
-type StandaloneProps = { onScene(): void; onLevelUp(): void; onEdit(): void };
+type StandaloneProps = { onLevelUp(): void; onEdit(): void };
 type WorkspaceProps = {
   hostMode: CharacterSheetHostMode;
-  onScene?: () => void;
   onLevelUp?: () => void;
   onEdit?: () => void;
   onClose?: () => void;
   onOpenRules?: (launcher: HTMLButtonElement) => void;
 };
 
-export function CharacterSheetWorkspace({ hostMode, onScene, onLevelUp, onEdit, onClose, onOpenRules }: WorkspaceProps) {
+export function CharacterSheetWorkspace({ hostMode, onLevelUp, onEdit, onClose, onOpenRules }: WorkspaceProps) {
   const { snapshot } = useSimpleVtt();
   const [layout, setLayout] = useState<SheetLayoutPreference>(() => readSheetLayoutPreference());
   const [section,setSection]=useState<"sheet"|"inventory">("sheet");
@@ -50,17 +49,7 @@ export function CharacterSheetWorkspace({ hostMode, onScene, onLevelUp, onEdit, 
         {onOpenRules && <button type="button" onClick={(event) => onOpenRules(event.currentTarget)}>규칙</button>}
         <button type="button" className="primary" onClick={onClose} aria-label="전체 캐릭터 시트 닫기">시트 닫기</button>
       </div>
-    </header> : <div className="sheet-layout-choice-bar">
-      <div>
-        <span className="eyebrow accent">SHEET LAYOUT</span>
-        <strong>기본 시트 레이아웃</strong>
-        <small>선택은 캐릭터 데이터와 분리되어 다음 실행에도 유지됩니다.</small>
-      </div>
-      <div className="sheet-layout-switch" role="group" aria-label="기본 캐릭터 시트 레이아웃">
-        <button type="button" className={layout === "simplevtt" ? "active" : ""} aria-pressed={layout === "simplevtt"} onClick={() => selectLayout("simplevtt")}>SimpleVTT Sheet</button>
-        <button type="button" className={layout === "official" ? "active" : ""} aria-pressed={layout === "official"} onClick={() => selectLayout("official")}>Official sheet layout</button>
-      </div>
-    </div>}
+    </header> : null}
 
     <nav className="character-sheet-system-tabs" role="tablist" aria-label="캐릭터 관리 섹션">
       <button type="button" role="tab" aria-selected={section==="sheet"} className={section==="sheet"?"active":""} onClick={()=>setSection("sheet")}>개요 / 시트</button>
@@ -69,8 +58,8 @@ export function CharacterSheetWorkspace({ hostMode, onScene, onLevelUp, onEdit, 
 
     <div className="character-sheet-workspace-content">
       {section==="inventory"?<CharacterInventoryView hostMode={hostMode}/>:layout === "simplevtt"
-        ? <SimpleVttCharacterSheetPlayScreen hostMode={hostMode} onScene={onScene} onLevelUp={onLevelUp} onEdit={onEdit} />
-        : <OfficialCharacterSheetPlayScreen hostMode={hostMode} onScene={onScene} onLevelUp={onLevelUp} onEdit={onEdit} />}
+        ? <SimpleVttCharacterSheetPlayScreen hostMode={hostMode} onLevelUp={onLevelUp} onEdit={onEdit} />
+        : <OfficialCharacterSheetPlayScreen hostMode={hostMode} onLevelUp={onLevelUp} onEdit={onEdit} />}
     </div>
   </div>;
 }

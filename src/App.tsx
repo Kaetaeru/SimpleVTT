@@ -93,8 +93,8 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
         </div>
       </aside>
 
-      <section className="workspace">
-        <header className="v1-topbar">
+      <section className={`workspace${route === "character" ? " character-workspace-focused" : ""}`}>
+        <header className="v1-topbar" hidden={route === "character"}>
           <div className="v1-topbar-title"><span>SimpleVTT</span><strong>{topTitle(route, productionRole)}</strong></div>
           <div className="v1-topbar-actions">
             {liveSession && route !== "scene" && <button className="primary" onClick={() => setRoute("scene")}>플레이로 돌아가기</button>}
@@ -106,7 +106,7 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
           {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onCampaigns={() => setRoute("campaigns")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("scene")} />}
           {route === "campaigns" && <CampaignScreen onOpenSession={() => setRoute("session")} />}
           {snapshot.role === "player" && route === "characters" && <CharacterLibraryScreen onOpen={() => setRoute("character")} onCreate={() => setRoute("create")} />}
-          {snapshot.role === "player" && route === "character" && <CharacterSheetPlayScreen onScene={() => setRoute("scene")} onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
+          {snapshot.role === "player" && route === "character" && <CharacterSheetPlayScreen onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "create" && <CharacterCreateScreenV10 onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}
           {snapshot.role === "player" && route === "levelup" && <LevelUpScreen onDone={() => setRoute("character")} onCancel={() => setRoute("character")} />}
           {route === "scene" && <ProductionPlayScreen role={productionRole} />}

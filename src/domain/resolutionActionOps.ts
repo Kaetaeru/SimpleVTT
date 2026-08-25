@@ -6,6 +6,7 @@ import {
   conditionTargetingRestriction,
   frightenedMovementRestriction,
 } from "./conditions";
+import { effectStateChange } from "./runtimeStateChange";
 import { conditionEffectsFor, requireCombatant, type RulesRuntimeState } from "./combatState";
 import { selectEffectTurnActivity } from "./effects";
 import { findResource, spendResource } from "./resources";
@@ -13,7 +14,7 @@ import { openReactorWindow, resolveReactionChoice } from "./reaction";
 import { resolveTargeting } from "./targeting";
 import { economyStateChanges } from "./stateChange";
 import { resourceStateChange } from "./runtimeStateChange";
-import { grantExtraAction, spendTurnSlot, useMovement } from "./turnEconomy";
+import { grantExtraAction, grantExtraAttacks, spendExtraAttack, spendTurnSlot, useMovement } from "./turnEconomy";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent, targetingResult } from "./resolutionContext";
@@ -86,13 +87,16 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
 
   const actionKind = operation.actionKind
     ?? (ctx.pending.sourceId.startsWith("dnd.srd521.spell.") ? "magic" : "other");
-  const spent = spendTurnSlot(
-    before,
-    operation.slot,
-    operation.bonusActionGranted === true,
-    actionKind,
-  );
-  actor.economy = spent.next;
+  if (operation.attacksPerAction!==undefined&&(!Number.isInteger(operation.attacksPerAction)||operation.attacksPerAction<1)) throw new DomainEvaluationError("attacksPerAction must be a positive integer");
+  const extraAttack=operation.slot==="action"&&actionKind==="attack" ? spendExtraAttack(before) : undefined;
+  const spent=extraAttack ?? spendTurnSlot(before,operation.slot,operation.bonusActionGranted===true,actionKind);
+  actor.economy=spent.next;
+  if (!extraAttack&&actionKind==="attack"&&(operation.attacksPerAction??1)>1) {
+    actor.economy=grantExtraAttacks(actor.economy,Array.from({length:operation.attacksPerAction!-1},(_,index)=>({
+      id:`${ctx.pending.id}:extra-attack:${index+1}`,
+      source:ctx.pending.sourceId,
+    })));
+  }
   const provenance: ProvenanceRecord[] = [
     ...restrictionProvenance,
     {
@@ -100,7 +104,7 @@ export function executeEconomy(ctx: ResolutionExecutionContext, operation: Econo
       status:"applied",
       reason:spent.spentFrom === "standard"
         ? `${operation.slot} spent`
-        : `${operation.slot} spent from extra action grant ${spent.spentFrom}`,
+        : `${operation.slot} spent from grant ${spent.spentFrom}`,
     },
   ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
@@ -230,6 +234,14 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     actorConditions:conditionEffectsFor(ctx.state, actorId),
     targetConditions:operation.targetId ? conditionEffectsFor(ctx.state, operation.targetId) : [],
   });
+  const spellModifiers=ctx.state.effects.filter((effect)=>{
+    if (effect.kind!=="modifier"||effect.metadata?.d20Family!==operation.request.family) return false;
+    const scope=effect.metadata.d20Scope;
+    return scope==="target"?Boolean(operation.targetId&&effect.targetId===operation.targetId):effect.targetId===actorId;
+  });
+  const spellRollStates=spellModifiers.flatMap((effect)=>effect.metadata?.d20RollState==="advantage"||effect.metadata?.d20RollState==="disadvantage"
+    ? [{source:effect.sourceId,state:effect.metadata.d20RollState as "advantage"|"disadvantage"}]
+    : []);
   let target = operation.request.target;
   const modifiers = [...operation.request.modifierContributions, ...adjustments.modifierContributions];
   if (operation.cover) {
@@ -243,7 +255,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     ...operation.request,
     target,
     modifierContributions:modifiers,
-    rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions],
+    rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions, ...spellRollStates],
   });
   if (adjustments.autoFailure) {
     resolved = {
@@ -260,6 +272,10 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
       provenance:[...resolved.provenance, { source:"condition:auto-critical", status:"applied", reason:"condition makes a hit within 5 feet a Critical Hit" }],
     };
   }
+  const consumed=spellModifiers.filter((effect)=>effect.metadata?.consumeOnUse===true);
+  const consumedProvenance=consumed.map((effect)=>({source:effect.sourceId,status:"applied" as const,reason:`effect ${effect.id} consumed by ${operation.request.family}`}));
+  if (consumed.length) ctx.state.effects=ctx.state.effects.filter((effect)=>!consumed.some((entry)=>entry.id===effect.id));
+  if (consumedProvenance.length) resolved={...resolved,provenance:[...resolved.provenance,...consumedProvenance]};
   return {
     result:resolved,
     event:makeEvent(
@@ -268,7 +284,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
       `${resolved.family} ${resolved.outcome} (${resolved.total} vs ${resolved.target})`,
       resolved,
       resolved.provenance,
-      [],
+      consumed.map((effect)=>effectStateChange(effect.targetId,effect.id,"removed",consumedProvenance,effect,undefined)),
       operation.targetId,
     ),
   };

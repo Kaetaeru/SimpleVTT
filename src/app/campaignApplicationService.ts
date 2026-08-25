@@ -1,5 +1,5 @@
 import { CampaignLibraryRepository, CampaignStaleRevisionError, createCampaignRecordV1 } from "./campaignPersistence";
-import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignMealCommand, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import type { InstalledCampaignCalendarProfileV1, InstalledCampaignRationProfileV1 } from "./installedContentContracts";
 import { HANDOUT_IMAGE_MAX_BYTES, isLocalImageAssetV1 } from "./localImageAsset";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
@@ -13,6 +13,12 @@ function assertNonNegativeInteger(value:number,label:string){if(!Number.isIntege
 function assertPositiveInteger(value:number,label:string){if(!Number.isInteger(value)||value<=0) throw new Error(`${label} must be a positive integer`);}
 function builtinCalendarProvider(providerId:string){return providerId==="builtin.simple-day"||providerId==="builtin.gregorian";}
 function builtinRationProvider(providerId:string){return providerId==="builtin.tracking-only";}
+function walletCopper(campaign:CampaignRecordV1){const wallet=campaign.partyStash.wallet;return wallet.gp*100+wallet.sp*10+wallet.cp;}
+function setWalletCopper(campaign:CampaignRecordV1,total:number){
+  assertNonNegativeInteger(total,"party wallet");
+  campaign.partyStash.wallet={gp:Math.floor(total/100),sp:Math.floor(total%100/10),cp:total%10};
+  campaign.partyStash.revision+=1;
+}
 
 export function previewCampaignDailyRations(campaign:CampaignRecordV1,overrideUnits?:number,profile?:InstalledCampaignRationProfileV1):CampaignRationPreview {
   const memberUnits=campaign.roster.filter((member)=>member.active&&member.countsForRations).map((member)=>({
@@ -278,6 +284,70 @@ export class CampaignApplicationService {
       campaign.rations.ledger.balances.ration=after;campaign.rations.ledger.revision+=1;
       campaign.rations.ledger.lastConsumptionAtAbsoluteMinute=campaign.calendar.state.absoluteMinute;
       campaign.rations.ledger.consumptionHistory=bounded([...campaign.rations.ledger.consumptionHistory,{transactionId:context.requestId,kind:"consume",amount:-preview.consumedUnits,requiredAmount:preview.requiredUnits,shortage:preview.shortageUnits,balanceAfter:after,committedAt:context.now??campaign.updatedAt,note:context.note,provenance:[context.initiatedByParticipantId,...preview.memberUnits.map((member)=>member.rosterMemberId)]}]);
+    });
+  }
+
+  serveMeals(context:CampaignMutationContext&CampaignMealCommand){
+    return this.mutateCampaign(context,(campaign)=>{
+      if(!campaign.rations.capability.enabled) throw new Error("Ration capability is disabled");
+      const ids=[...new Set(context.rosterMemberIds)];
+      if(!ids.length) throw new Error("식사를 적용할 캐릭터를 선택하세요.");
+      const members=ids.map((id)=>campaign.roster.find((member)=>member.rosterMemberId===id&&member.active&&member.countsForRations)).filter((member):member is CampaignRosterMember=>Boolean(member));
+      if(members.length!==ids.length) throw new Error("활성 식사 대상이 아닌 캐릭터가 포함되어 있습니다.");
+      const absoluteDay=Math.floor(campaign.calendar.state.absoluteMinute/1440);
+      const tracking=campaign.rations.ledger.mealTracking?.absoluteDay===absoluteDay?cp(campaign.rations.ledger.mealTracking):{absoluteDay,mealsByRosterMember:{}};
+      const mealUnitsByRosterMember=Object.fromEntries(members.map((member)=>[member.rosterMemberId,Math.max(0,Math.min(context.mealUnits,2-(tracking.mealsByRosterMember[member.rosterMemberId]??0)))] as const).filter((entry)=>entry[1]>0));
+      const servedIds=Object.keys(mealUnitsByRosterMember);
+      if(!servedIds.length) throw new Error("선택한 캐릭터는 오늘 식사를 모두 마쳤습니다.");
+      const rationCost=context.source==="ration"?servedIds.length:0;
+      const beforeRations=campaign.rations.ledger.balances.ration??0;
+      if(beforeRations<rationCost) throw new Error("일일 식량이 부족합니다.");
+      const costSp=context.source==="tavern"?Math.max(0,Math.trunc(context.costSpPerPerson??0))*servedIds.length:0;
+      const beforeCopper=walletCopper(campaign);
+      if(beforeCopper<costSp*10) throw new Error("파티 보관함의 식사 비용이 부족합니다.");
+      if(costSp)setWalletCopper(campaign,beforeCopper-costSp*10);
+      for(const rosterMemberId of servedIds)tracking.mealsByRosterMember[rosterMemberId]=(tracking.mealsByRosterMember[rosterMemberId]??0)+mealUnitsByRosterMember[rosterMemberId];
+      const afterRations=beforeRations-rationCost;
+      campaign.rations.ledger.mealTracking=tracking;
+      campaign.rations.ledger.balances.ration=afterRations;
+      campaign.rations.ledger.revision+=1;
+      campaign.rations.ledger.consumptionHistory=bounded([...campaign.rations.ledger.consumptionHistory,{transactionId:context.requestId,kind:"meal",amount:-rationCost,balanceAfter:afterRations,committedAt:context.now??campaign.updatedAt,rosterMemberIds:servedIds,mealUnits:context.mealUnits,mealUnitsByRosterMember,mealSource:context.source,costSp,campaignAbsoluteMinute:campaign.calendar.state.absoluteMinute,provenance:[context.initiatedByParticipantId,...servedIds]}]);
+    });
+  }
+
+  setMemberMeals(context:CampaignMutationContext&{rosterMemberId:string;mealCount:number}){
+    assertNonNegativeInteger(context.mealCount,"meal count");
+    if(context.mealCount>2)throw new Error("하루 식사는 최대 2식입니다.");
+    return this.mutateCampaign(context,(campaign)=>{
+      if(!campaign.rations.capability.enabled)throw new Error("Ration capability is disabled");
+      const member=campaign.roster.find((candidate)=>candidate.rosterMemberId===context.rosterMemberId&&candidate.active&&candidate.countsForRations);
+      if(!member)throw new Error("활성 식사 대상 캐릭터를 찾지 못했습니다.");
+      const absoluteDay=Math.floor(campaign.calendar.state.absoluteMinute/1440);
+      const tracking=campaign.rations.ledger.mealTracking?.absoluteDay===absoluteDay?cp(campaign.rations.ledger.mealTracking):{absoluteDay,mealsByRosterMember:{}};
+      const before=tracking.mealsByRosterMember[member.rosterMemberId]??0;const delta=context.mealCount-before;
+      if(!delta)return;
+      tracking.mealsByRosterMember[member.rosterMemberId]=context.mealCount;
+      campaign.rations.ledger.mealTracking=tracking;campaign.rations.ledger.revision+=1;
+      const balance=campaign.rations.ledger.balances.ration??0;
+      campaign.rations.ledger.consumptionHistory=bounded([...campaign.rations.ledger.consumptionHistory,{transactionId:context.requestId,kind:"meal",amount:0,balanceAfter:balance,committedAt:context.now??campaign.updatedAt,rosterMemberIds:[member.rosterMemberId],mealUnits:delta,mealUnitsByRosterMember:{[member.rosterMemberId]:delta},mealSource:"manual",campaignAbsoluteMinute:campaign.calendar.state.absoluteMinute,provenance:[context.initiatedByParticipantId,member.rosterMemberId]}]);
+    });
+  }
+
+  undoRecentMeal(context:CampaignMutationContext){
+    return this.mutateCampaign(context,(campaign)=>{
+      const history=campaign.rations.ledger.consumptionHistory;
+      const reverted=new Set(history.flatMap((entry)=>entry.revertsTransactionId?[entry.revertsTransactionId]:[]));
+      const source=[...history].reverse().find((entry)=>entry.kind==="meal"&&!reverted.has(entry.transactionId));
+      if(!source) throw new Error("되돌릴 식사 기록이 없습니다.");
+      const absoluteDay=Math.floor(campaign.calendar.state.absoluteMinute/1440);
+      const tracking=campaign.rations.ledger.mealTracking;
+      if(!tracking||tracking.absoluteDay!==absoluteDay||Math.floor((source.campaignAbsoluteMinute??-1440)/1440)!==absoluteDay) throw new Error("지난 날짜의 식사 기록은 되돌릴 수 없습니다.");
+      for(const [rosterMemberId,units] of Object.entries(source.mealUnitsByRosterMember??{}))tracking.mealsByRosterMember[rosterMemberId]=Math.max(0,(tracking.mealsByRosterMember[rosterMemberId]??0)-units);
+      const restoredRations=Math.abs(source.amount);const after=(campaign.rations.ledger.balances.ration??0)+restoredRations;
+      campaign.rations.ledger.balances.ration=after;
+      if(source.costSp)setWalletCopper(campaign,walletCopper(campaign)+source.costSp*10);
+      campaign.rations.ledger.revision+=1;
+      campaign.rations.ledger.consumptionHistory=bounded([...history,{transactionId:context.requestId,kind:"undo",amount:restoredRations,balanceAfter:after,committedAt:context.now??campaign.updatedAt,revertsTransactionId:source.transactionId,campaignAbsoluteMinute:campaign.calendar.state.absoluteMinute,provenance:[context.initiatedByParticipantId]}]);
     });
   }
 

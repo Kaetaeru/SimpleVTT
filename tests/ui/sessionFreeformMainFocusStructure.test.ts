@@ -10,7 +10,7 @@ const referenceCss = readFileSync(new URL("../../src/session-integrated-referenc
 test("Session root delegates the dominant mapless center to the accepted Main Focus projection", () => {
   assert.match(root, /<SessionMainFocus role=\{role\}/);
   assert.match(root, /session-reference-mapless-stage/);
-  assert.match(root, /onOpenActivity=\{\(button\) => toggleUtility\("activity", button\)\}/);
+  assert.match(root, /onDismissLastRoll=\{lastRollResolutionId\?\(\)=>dismissSessionLastRoll\(mockAdapter,lastRollResolutionId\):undefined\}/);
   assert.doesNotMatch(root, /SCENE ACTORS|HOTBAR_TABS|공통.*클래스.*주문.*아이템/s);
 });
 
@@ -20,6 +20,10 @@ test("Freeform resting stage shows the last rolling Actor illustration", () => {
   assert.match(root, /lastRollActorId=\{lastRollActorId\}/);
   assert.match(focus, /session-last-roll-actor/);
   assert.match(focus, /LAST ROLL/);
+  assert.match(focus, /role==="dm"&&Boolean\(actor\)/);
+  assert.match(focus, /다음 굴림까지 모든 화면에서 숨기기/);
+  assert.match(focus, /data-last-roll-hidden="true"/);
+  assert.match(root, /dismissedResolutionId===lastRollResolutionId/);
   assert.match(focus, /첫 굴림을 기다리는 중/);
   assert.doesNotMatch(focus, /economyByActor|actionsByActor/);
 });

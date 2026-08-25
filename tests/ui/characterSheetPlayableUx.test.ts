@@ -20,7 +20,7 @@ test("Character route keeps the validated standalone SimpleVTT sheet and adds a 
   assert.match(wrapper,/SimpleVttCharacterSheetPlayScreen/);
   assert.match(wrapper,/OfficialCharacterSheetPlayScreen/);
   assert.match(legacy,/TABLE CHARACTER SHEET/);
-  assert.match(legacy,/기기로 플레이/);
+  assert.doesNotMatch(sheet,/기기로 플레이/);
 });
 
 test("Character Library exposes the demo-established sheet-style switch before a card is opened",()=>{
@@ -38,6 +38,20 @@ test("validated SimpleVTT sheet local roll behavior remains unchanged behind the
   for(const pattern of [/능력 판정/,/내성 굴림/,/view\.skillsByAbility/,/명중 굴림/,/피해 굴림/,/crypto\.getRandomValues/,/유리/,/불리/,/StandaloneDicePresentation/,/최근 굴림/]) assert.match(legacy,pattern);
   assert.doesNotMatch(legacy,/resolveAction|startInitiative|sessionMode/);
   assert.match(legacy,/hostMode==="standalone"&&roll&&<StandaloneDicePresentation/);
+});
+
+test("standalone Official Sheet shows both pages together and owns commands inside the paper",()=>{
+  assert.match(app,/className="v1-topbar" hidden=\{route === "character"\}/);
+  assert.doesNotMatch(wrapper,/className="sheet-layout-choice-bar"/);
+  assert.doesNotMatch(official,/className="sheet-play-statusbar"/);
+  assert.doesNotMatch(official,/official-sheet-page-tabs|setPage/);
+  assert.match(official,/<OfficialCharacterSheetPage[\s\S]*<OfficialSpellcastingSheetPage/);
+  assert.match(characterPage,/official-2024-brand-row/);
+  assert.match(characterPage,/유리/);
+  assert.match(characterPage,/보통/);
+  assert.match(characterPage,/불리/);
+  assert.match(characterPage,/onEdit=\{onEdit\}/);
+  assert.match(characterPage,/onLevelUp=\{onLevelUp\}/);
 });
 
 test("dual Sheet preference is presentation-only sanitized and restart-persistent",()=>{
@@ -60,31 +74,29 @@ test("both layouts remain on one canonical activeCharacter authority",()=>{
   assert.doesNotMatch([wrapper,official,characterPage,spellPage].join("\n"),/useState<[^>]*Character|localStorage.*Character|new Map<[^>]*Character/i);
 });
 
-test("Official Character page follows paper information arrangement and keeps supported controls interactive",()=>{
-  for (const label of ["Character Name","Class & Level","Background","Player Name","Race / Species","Alignment","Experience Points","Saving Throws","Skills","Passive Wisdom (Perception)","Armor Class","Initiative","Speed","Hit Point Maximum","Temporary Hit Points","Hit Dice","Death Saves","Attacks & Spellcasting","Equipment & Currency","Personality Traits","Ideals","Bonds","Flaws","Features & Traits"]) assert.match(characterPage,new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));
-  assert.match(characterPage,/official-ability-column/);
-  assert.match(characterPage,/toggleItemEquipped/);
-  assert.match(characterPage,/toggleItemAttunement/);
-  assert.match(characterPage,/useItem/);
+test("Official Character page follows the 2024 paper arrangement and keeps supported controls interactive",()=>{
+  for (const label of ["Character Name","Background","Class","Species","Subclass","LEVEL","XP","ARMOR","SHIELD","HIT POINTS","HIT DICE","DEATH","PROFICIENCY BONUS","Saving Throw","INITIATIVE","SPEED","SIZE","PASSIVE PERCEPTION","WEAPONS &amp; DAMAGE CANTRIPS","CLASS FEATURES","SPECIES TRAITS","FEATS","EQUIPMENT TRAINING &amp; PROFICIENCIES","HEROIC"]) assert.match(characterPage,new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));
+  assert.match(characterPage,/official-2024-sheet/);
+  assert.match(characterPage,/official-2024-ability-score/);
+  assert.match(characterPage,/RollModeControl/);
   assert.match(characterPage,/rawDie\(hitDie/);
-  assert.match(characterPage,/Player Name" value="미추적"/);
-  assert.match(characterPage,/Alignment" value="미추적"/);
-  assert.match(characterPage,/Experience Points" value="미추적"/);
-  assert.match(characterPage,/official-resource-box/);
-  assert.match(css,/grid-template-columns: 116px 235px minmax\(360px, 1\.35fr\) minmax\(220px, \.85fr\)/);
+  assert.match(css,/\.official-2024-body/);
+  assert.match(css,/grid-template-columns:330px minmax\(0,1fr\)/);
   assert.doesNotMatch(css,/parchment|url\(/i);
 });
 
-test("Official Spellcasting page provides levels 0 through 9 shared slots known/prepared state and supported local actions",()=>{
-  assert.match(spellPage,/Array\.from\(\{ length: 10 \}/);
-  assert.match(spellPage,/data-spell-level=\{level\}/);
+test("Official Spellcasting page follows the 2024 second page and keeps shared state and local actions",()=>{
+  assert.match(spellPage,/Array\.from\(\{ length: 9 \}/);
   assert.match(spellPage,/spellcasting\?\.slots/);
-  assert.match(spellPage,/spell\.alwaysPrepared \? "◆" : spell\.prepared \? "●" : "○"/);
-  for(const label of ["Spellcasting Class","Spellcasting Ability","Spell Save DC","Spell Attack Bonus"]) assert.match(spellPage,new RegExp(label));
+  assert.match(spellPage,/spell\.alwaysPrepared \? "◆ 항상 준비" : spell\.prepared \? "● 준비" : "○ 알려짐"/);
+  for(const label of ["SPELLCASTING ABILITY","SPELLCASTING MODIFIER","SPELL SAVE DC","SPELL ATTACK BONUS","SPELL SLOTS","CANTRIPS &amp; PREPARED SPELLS","APPEARANCE","BACKSTORY &amp; PERSONALITY","LANGUAGES","EQUIPMENT","COINS"]) assert.match(spellPage,new RegExp(label));
   assert.match(spellPage,/spellcastingAbilityModifier/);
   assert.match(spellPage,/candidate\.spellCast\?\.spellId/);
-  assert.match(spellPage,/action!\.attackBonus!/);
+  assert.match(spellPage,/action\.attackBonus!/);
   assert.match(spellPage,/damage\(spell\.name, expression\)/);
+  assert.match(spellPage,/toggleItemEquipped/);
+  assert.match(spellPage,/toggleItemAttunement/);
+  assert.match(spellPage,/useItem/);
 });
 
 test("Official presentation reads existing projections instead of adding spell/save mechanics arithmetic",()=>{

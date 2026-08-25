@@ -5,6 +5,7 @@ import {
   projectCharacterSourceV1,
 } from "./characterLibraryPersistence";
 import { catalogQualifiedId, builtinCatalogSourceId } from "./contentCatalogIdentity";
+import { sanitizeCharacterPortrait, type CharacterPortraitV1 } from "./characterPortraitContracts";
 import type {
   CharacterRuntimeDurableSnapshotV1,
   CharacterSourceSnapshotV1,
@@ -37,6 +38,7 @@ export interface CharacterSessionProjectionV1 {
   sourceAuthority:CharacterProjectionSourceAuthorityV1;
   runtime:CharacterRuntimeDurableSnapshotV1;
   contentIdentities:CharacterProjectionContentIdentityV1[];
+  portrait?:CharacterPortraitV1;
 }
 
 export type CharacterSessionProjectionValidation =
@@ -49,6 +51,7 @@ type RequiredContentRef = { label:string; token:string; categories:CatalogEntry[
 const PROJECTION_KEYS = new Set([
   "schemaId","schemaVersion","characterId","sourceRevision","runtimeRevision",
   "rulesProfile","source","sourceAuthority","runtime","contentIdentities",
+  "portrait",
 ]);
 const IDENTITY_KEYS = new Set(["qualifiedId","contentId","sourceId","version","category"]);
 const RULES_PROFILE_KEYS = new Set(["id","version"]);
@@ -175,6 +178,7 @@ export function buildCharacterSessionProjectionV1(
   }
   const source=projectCharacterSourceV1(sheet);
   const runtime=projectCharacterRuntimeDurableV1(sheet);
+  const portrait=sanitizeCharacterPortrait(sheet.portrait);
   return {
     schemaId:CHARACTER_SESSION_PROJECTION_SCHEMA_ID,
     schemaVersion:CHARACTER_SESSION_PROJECTION_SCHEMA_VERSION,
@@ -186,6 +190,7 @@ export function buildCharacterSessionProjectionV1(
     sourceAuthority:{ maxHp:sheet.maxHp },
     runtime,
     contentIdentities:resolveProjectionIdentities(source,catalog),
+    ...(portrait?{portrait}:{}),
   };
 }
 
@@ -283,6 +288,8 @@ export function parseCharacterSessionProjectionV1(
     const source=parseSource(raw.source);
     const sourceAuthority=parseSourceAuthority(raw.sourceAuthority);
     const runtime=parseRuntime(raw.runtime);
+    const portrait=sanitizeCharacterPortrait(raw.portrait);
+    if (raw.portrait!==undefined&&!portrait) throw new Error("projection portrait is invalid");
     if (source.characterId!==raw.characterId) throw new Error(`projection Character ID drift: ${source.characterId} != ${raw.characterId}`);
     if (source.rulesProfile.id!==rulesProfile.id || source.rulesProfile.version!==rulesProfile.version) {
       throw new Error("projection rules profile does not match Character source");
@@ -322,6 +329,7 @@ export function parseCharacterSessionProjectionV1(
         sourceAuthority,
         runtime,
         contentIdentities:identities.sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en")),
+        ...(portrait?{portrait}:{}),
       },
     };
   } catch (error) {

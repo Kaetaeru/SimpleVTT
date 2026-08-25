@@ -93,5 +93,17 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     transport.emit(1,"host",withdrawn.raw);
     await flush();
     assert.equal(handout.getSessionImageHandoutState(client).asset,null);
+
+    await handout.dismissSessionLastRoll(host,"resolution.last-roll.1");
+    const dismissed=transport.sent().filter((entry)=>entry.value.type==="presentation-last-roll-dismiss").at(-1);
+    assert.ok(dismissed);
+    transport.emit(1,"host",dismissed.raw);
+    await flush();
+    assert.equal(handout.getSessionLastRollPresentationState(client).dismissedResolutionId,"resolution.last-roll.1");
+
+    transport.emit(0,"peer.client",firstHello.raw);
+    await flush();
+    const restoredDismissal=transport.sentTo().filter((entry)=>entry.peer==="peer.client"&&entry.value.type==="presentation-last-roll-dismiss").at(-1);
+    assert.ok(restoredDismissal,"reconnecting Clients must keep the current Last Roll hidden until a new resolution arrives");
   } finally { transport.restore(); }
 });

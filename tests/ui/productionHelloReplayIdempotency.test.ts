@@ -157,7 +157,7 @@ test("accepted participant hello replay does not advance Host ledger or duplicat
 
     transport.emitFrom(0,peer,hello(0));
     await flushAsync();
-    const acceptedCursor=openCursor+1;
+    const acceptedCursor=openCursor+2;
     assert.equal(state.ledger.cursor,acceptedCursor);
     assert.equal(app.session.participants.filter((participant)=>participant.id===participantId).length,1);
     assert.equal(state.peerParticipants.get(peer),participantId);

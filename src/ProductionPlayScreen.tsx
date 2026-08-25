@@ -171,7 +171,7 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
   };
   const chooseTarget=async(entity:SceneEntity)=>{
     if (!chosen||!chosen.eligibleTargetIds.includes(entity.id)) return;
-    if (chosen.target==="multi-enemy") {
+    if ((chosen.maxTargets??1)>1) {
       setMultiTargets((current)=>current.includes(entity.id)?current.filter((id)=>id!==entity.id):current.length>=(chosen.maxTargets??99)?current:[...current,entity.id]);
       return;
     }
@@ -234,7 +234,7 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
         {sceneActors.length?sceneActors.map((entity)=><ActorCard key={entity.id} entity={entity} current={entity.id===scene.currentActorId||entity.id===actor.id} targetable={Boolean(chosen?.eligibleTargetIds.includes(entity.id))} selected={multiTargets.includes(entity.id)} onClick={()=>void sceneActorClick(entity)}/>):<span className="play-v09-scene-empty">장면의 NPC 또는 Combatant가 여기에 표시됩니다.</span>}
       </div>
       <div className="play-v09-scene-focus" aria-live="polite">
-        {chosen?<><strong>{chosen.name}</strong><span>{chosen.target==="multi-enemy"?`대상을 최대 ${chosen.maxTargets??"여러"}명 선택하세요.`:"장면에서 대상을 선택하세요."}</span></>:<><strong>{actor.name}</strong><span>{isCombat?"행동 HUD에서 사용할 행동을 선택하세요.":"자유 진행 · 행동 HUD에서 필요한 행동을 선택하세요."}</span></>}
+        {chosen?<><strong>{chosen.name}</strong><span>{(chosen.maxTargets??1)>1?`대상을 최대 ${chosen.maxTargets??"여러"}명 선택하세요.`:"장면에서 대상을 선택하세요."}</span></>:<><strong>{actor.name}</strong><span>{isCombat?"행동 HUD에서 사용할 행동을 선택하세요.":"자유 진행 · 행동 HUD에서 필요한 행동을 선택하세요."}</span></>}
       </div>
       <div className="play-v09-scene-row lower" aria-label="Player와 Party">
         {partyActors.length?partyActors.map((entity)=><ActorCard key={entity.id} entity={entity} current={entity.id===scene.currentActorId||entity.id===actor.id} targetable={Boolean(chosen?.eligibleTargetIds.includes(entity.id))} selected={multiTargets.includes(entity.id)} onClick={()=>void sceneActorClick(entity)}/>):<span className="play-v09-scene-empty">Player Character가 장면에 없습니다.</span>}
@@ -257,7 +257,7 @@ export function ProductionPlayScreen({role}:{role:"player"|"dm"}) {
       <div className="play-v09-hotbar">
         <nav className="play-v09-tabs" aria-label="행동 카테고리">{HOTBAR_TABS.map((item)=><button type="button" key={item.id} className={tab===item.id?"active":""} aria-pressed={tab===item.id} onClick={()=>{setTab(item.id);closeFlow();}}>{item.label}</button>)}</nav>
         <div className="play-v09-context" aria-live="polite">
-          {chosen?<><span><strong>{chosen.name}</strong> · {chosen.target==="multi-enemy"?`${multiTargets.length}/${chosen.maxTargets??"여러"}명 선택됨`:"Scene Actor를 대상으로 선택"}</span>{chosen.target==="multi-enemy"&&<button className="primary" aria-disabled={!multiTargets.length} onClick={()=>{if(multiTargets.length)void completeMulti();}}>선택한 대상으로 판정</button>}<button onClick={closeFlow}>취소</button></>
+          {chosen?<><span><strong>{chosen.name}</strong> · {(chosen.maxTargets??1)>1?`${multiTargets.length}/${chosen.maxTargets??"여러"}명 선택됨`:"Scene Actor를 대상으로 선택"}</span>{(chosen.maxTargets??1)>1&&<button className="primary" aria-disabled={!multiTargets.length} onClick={()=>{if(multiTargets.length)void completeMulti();}}>선택한 대상으로 판정</button>}<button onClick={closeFlow}>취소</button></>
           :selectedIntent?<><span><strong>{selectedIntent.label}</strong> · {selectedIntent.summary}</span><div className="play-v09-option-strip">{options.map((action)=><button type="button" key={action.id} aria-disabled={!action.available} onClick={()=>{if(action.available)void chooseOption(action);}}><strong>{skillFactByActionId(action.id)?.name??action.name}</strong><small>{optionMeta(action)}</small>{!action.available&&<em>{action.disabledReason||"사용 불가"}</em>}</button>)}</div><button onClick={closeFlow}>닫기</button></>
           :<span>아이콘에 마우스를 올리거나 키보드 포커스를 두면 행동의 비용·대상·판정·효과를 확인할 수 있습니다.</span>}
         </div>

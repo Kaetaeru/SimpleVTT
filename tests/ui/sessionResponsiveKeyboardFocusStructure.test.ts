@@ -31,7 +31,7 @@ test("Player Handout dismissal restores keyboard focus to the contextual reopen 
   assert.match(handout, /PLAYER_HANDOUT_LAUNCHER_ID = "session-player-handout-launcher"/);
   assert.match(handout, /id=\{PLAYER_HANDOUT_LAUNCHER_ID\}/);
   assert.match(handout, /dismissSessionImageHandout\(mockAdapter\);[\s\S]*requestAnimationFrame[\s\S]*getElementById\(PLAYER_HANDOUT_LAUNCHER_ID\)\?\.focus\(\)/);
-  assert.match(handout, /autoFocus onClick=\{dismissCurrentSessionImageHandout\}/);
+  assert.match(handout, /handout\.dismissed \? reopenSessionImageHandout\(mockAdapter\) : dismissCurrentSessionImageHandout\(\)/);
 });
 
 test("DM session termination remains in the contextual Session pane", () => {

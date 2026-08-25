@@ -70,13 +70,25 @@ export interface LifeFlagStateChange {
   writeBack:"character";
 }
 
+export interface DeathSaveStateChange {
+  kind:"death-save";
+  targetId:string;
+  field:"successes"|"failures";
+  before:number;
+  after:number;
+  provenance:ProvenanceRecord[];
+  lifetime:"character-durable";
+  writeBack:"character";
+}
+
 export type RuntimeStateChange =
   | StateChange
   | ResourceStateChange
   | EffectStateChange
   | ConcentrationStateChange
   | SpellcastingTurnStateChange
-  | LifeFlagStateChange;
+  | LifeFlagStateChange
+  | DeathSaveStateChange;
 
 export function resourceStateChange(
   targetId:string,
@@ -173,4 +185,10 @@ export function lifeFlagStateChanges(
       lifetime:"character-durable",
       writeBack:"character",
     }));
+}
+
+export function deathSaveStateChanges(targetId:string,before:LifeState,after:LifeState,provenance:ProvenanceRecord[]):DeathSaveStateChange[] {
+  return (["successes","failures"] as const)
+    .filter((field)=>before.deathSaves[field]!==after.deathSaves[field])
+    .map((field)=>({kind:"death-save",targetId,field,before:before.deathSaves[field],after:after.deathSaves[field],provenance,lifetime:"character-durable",writeBack:"character"}));
 }

@@ -1,12 +1,17 @@
 import { DomainEvaluationError } from "./profileEngine";
 
 export type TurnSlot = "action" | "bonus-action" | "reaction";
-export type ActionUseKind = "magic" | "other";
+export type ActionUseKind = "magic" | "attack" | "other";
 
 export interface ExtraActionGrant {
   id: string;
   source: string;
   allowsMagicAction: boolean;
+}
+
+export interface ExtraAttackGrant {
+  id:string;
+  source:string;
 }
 
 export interface TurnEconomyState {
@@ -16,6 +21,7 @@ export interface TurnEconomyState {
   movement: number;
   movementMaximum: number;
   extraActions?: ExtraActionGrant[];
+  extraAttacks?: ExtraAttackGrant[];
 }
 
 export interface TurnSlotSpendResolution {
@@ -34,6 +40,7 @@ export function beginTurn(speed: number): TurnEconomyState {
     movement: speed,
     movementMaximum: speed,
     extraActions: [],
+    extraAttacks: [],
   };
 }
 
@@ -57,7 +64,7 @@ export function spendTurnSlot(
   if (slot === "action") {
     const grants = state.extraActions ?? [];
     const extraIndex = compatibleExtraActionIndex(state, actionKind);
-    if (actionKind === "other" && extraIndex >= 0) {
+    if (actionKind !== "magic" && extraIndex >= 0) {
       const grant = grants[extraIndex];
       return {
         next:{ ...state, extraActions:grants.filter((_, index) => index !== extraIndex) },
@@ -99,6 +106,19 @@ export function grantExtraAction(state: TurnEconomyState, grant: ExtraActionGran
     throw new DomainEvaluationError(`duplicate extra action grant: ${grant.id}`);
   }
   return { ...state, extraActions:[...grants, { ...grant }] };
+}
+
+export function grantExtraAttacks(state:TurnEconomyState,grants:ExtraAttackGrant[]):TurnEconomyState {
+  if (!grants.length) return state;
+  if (grants.some((grant)=>!grant.id||!grant.source)) throw new DomainEvaluationError("extra attack grant id and source are required");
+  const current=state.extraAttacks ?? [];
+  if (grants.some((grant)=>current.some((entry)=>entry.id===grant.id))) throw new DomainEvaluationError("duplicate extra attack grant");
+  return {...state,extraAttacks:[...current,...grants.map((grant)=>({...grant}))]};
+}
+
+export function spendExtraAttack(state:TurnEconomyState):TurnSlotSpendResolution|undefined {
+  const [grant,...remaining]=state.extraAttacks ?? [];
+  return grant ? {next:{...state,extraAttacks:remaining},spentFrom:grant.id} : undefined;
 }
 
 export function useMovement(state: TurnEconomyState, distance: number): TurnEconomyState {

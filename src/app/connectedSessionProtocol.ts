@@ -1,7 +1,8 @@
-import type { EconomyVm, SessionMode } from "./contracts";
+import type { EconomyVm, SceneEntity, SessionMode } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import type { ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
+import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 
 export const CONNECTED_SESSION_PROTOCOL_VERSION = 1 as const;
 
@@ -33,12 +34,22 @@ export interface ConnectedActionRequest {
   character?:CharacterProjectionRevision;
   capabilities:string[];
   readyConfiguration?:ReadyActionConfiguration;
+  manualMovementReaction?:ManualMovementReactionCommand;
 }
 
 export type ConnectedCorrectionChange =
   | { kind:"hp"; targetId:string; before:number; after:number }
   | { kind:"status"; targetId:string; before:string[]; after:string[] }
   | { kind:"resource"; targetId:string; resourceId:string; before:number; after:number };
+
+export interface ConnectedSceneTopology {
+  sceneId:string;
+  sceneName:string;
+  round:number;
+  currentActorId:string;
+  entities:SceneEntity[];
+  economyByActor:Record<string,EconomyVm>;
+}
 
 export type ConnectedEventPayload =
   | {
@@ -73,6 +84,12 @@ export type ConnectedEventPayload =
       characterName?:string;
       state:"connected"|"reconnecting"|"disconnected";
       ready:boolean;
+      stateChanges:string[];
+      provenance:string[];
+    }
+  | {
+      kind:"scene-topology";
+      topology:ConnectedSceneTopology;
       stateChanges:string[];
       provenance:string[];
     }

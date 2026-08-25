@@ -1,12 +1,11 @@
 import type { AppSnapshot, CombatantDefinitionVm, PartyStashTransferCommand, SessionMode } from "./contracts";
 import { CampaignApplicationService, previewCampaignDailyRations } from "./campaignApplicationService";
 import { CampaignLibraryRepository } from "./campaignPersistence";
-import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignLibraryStore, CampaignRecordV1, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignLibraryStore, CampaignMealCommand, CampaignRecordV1, CampaignRosterMember, CampaignSessionSnapshot, CampaignSessionSummary } from "./campaignPersistenceContracts";
 import { campaignProviderDescriptorsFromCatalog, type InstalledCampaignProviderDescriptorV1 } from "./campaignProviderProfiles";
 import { MockAdapter } from "./mockAdapter";
 import { createPlatformCampaignLibraryStore } from "./tauriCampaignLibraryStore";
 import { registerConnectedCampaignRosterHandler } from "./connectedCampaignRosterPort";
-import { revealSessionImageHandout } from "./sessionImageHandoutRuntimeAdapter";
 
 interface CampaignRuntimeContext {
   service:CampaignApplicationService;
@@ -66,6 +65,9 @@ declare module "./mockAdapter" {
     adjustCampaignRations(campaignId:string,input:{amount:number;note?:string}):Promise<AppSnapshot>;
     consumeCampaignDailyRations(campaignId:string,input?:{requiredUnits?:number;note?:string}):Promise<AppSnapshot>;
     undoCampaignRationConsumption(campaignId:string):Promise<AppSnapshot>;
+    serveCampaignMeals(campaignId:string,input:CampaignMealCommand):Promise<AppSnapshot>;
+    setCampaignMemberMeals(campaignId:string,input:{rosterMemberId:string;mealCount:number}):Promise<AppSnapshot>;
+    undoCampaignMeal(campaignId:string):Promise<AppSnapshot>;
     advanceCampaignDay(campaignId:string,input:{consumeRations:boolean;requiredUnits?:number;note?:string}):Promise<AppSnapshot>;
     appendCampaignSessionSummary(campaignId:string,summary:CampaignSessionSummary):Promise<AppSnapshot>;
     grantCampaignAdvancement(campaignId:string,input:{rosterMemberIds:string[];kind:"xp"|"level-up-credit";amount:number;levels?:Record<string,number>}):Promise<AppSnapshot>;
@@ -117,10 +119,20 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
   const rationPreview=campaign?previewCampaignDailyRations(campaign,undefined,rationProfile):null;
   const rationsVisible=captured?.rationsVisibleToPlayers??campaign?.sessionDefaults.rationsVisibleToPlayers??true;
   const mayProjectRations=snapshot.session.role!=="client"||rationsVisible;
+  const absoluteDay=campaign?Math.floor(campaign.calendar.state.absoluteMinute/1440):0;
+  const mealsByRosterMember=campaign?.rations.ledger.mealTracking?.absoluteDay===absoluteDay?campaign.rations.ledger.mealTracking.mealsByRosterMember:{};
+  const sceneEntityIds=new Set(snapshot.scene.entities.map((entity)=>entity.id));
+  const sceneEntityNames=new Set(snapshot.scene.entities.map((entity)=>entity.name));
+  const connectedParticipantIds=new Set(snapshot.session.participants.filter((participant)=>participant.state!=="disconnected").map((participant)=>participant.id));
+  const presentRosterMemberIds=new Set(campaign?.roster.filter((member)=>member.active&&(member.characterRef?.characterId===snapshot.activeCharacter.id||Boolean(member.characterRef?.characterId&&sceneEntityIds.has(member.characterRef.characterId))||Boolean(member.characterRef?.ownerHint&&connectedParticipantIds.has(member.characterRef.ownerHint))||sceneEntityNames.has(member.label))).map((member)=>member.rosterMemberId)??[]);
+  const presentRationMembers=campaign?.roster.filter((member)=>member.active&&member.countsForRations&&presentRosterMemberIds.has(member.rosterMemberId))??[];
+  const dailyRequired=rationPreview?.memberUnits.filter((member)=>presentRosterMemberIds.has(member.rosterMemberId)).reduce((sum,member)=>sum+member.units,0)??0;
+  const mealsRequired=presentRationMembers.length*2;
+  const mealsSatisfied=presentRationMembers.reduce((sum,member)=>sum+Math.min(2,mealsByRosterMember?.[member.rosterMemberId]??0),0);
   const campaignSessionSystems=campaign?{
     campaignId:campaign.campaignId,campaignName:campaign.name,campaignRevision:campaign.revision,
     roster:campaign.roster.map((member)=>({
-      rosterMemberId:member.rosterMemberId,label:member.label,kind:member.kind,active:member.active,
+      rosterMemberId:member.rosterMemberId,label:member.label,kind:member.kind,active:member.active,presentInSession:presentRosterMemberIds.has(member.rosterMemberId),
       countsForRations:member.countsForRations,rationUnitsPerDay:member.rationUnitsPerDay,stashPermission:member.stashPermission,
       connectionState:member.characterRef?.ownerHint?snapshot.session.participants.find((participant)=>participant.id===member.characterRef?.ownerHint)?.state:undefined,
       characterId:member.characterRef?.characterId,
@@ -128,7 +140,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCampaigns(){
       advancement:clone(campaign.advancement?.members[member.rosterMemberId]??{xp:0,levelUpCredits:0}),
     })),
     calendar:{enabled:captured?.calendar.enabled??campaign.calendar.capability.enabled,providerId:campaign.calendar.state.providerId,absoluteMinute:campaign.calendar.state.absoluteMinute,displayAnchor:clone(campaign.calendar.state.displayAnchor),currentNote:campaign.calendar.state.currentNote},
-    rations:{enabled:captured?.rations.enabled??campaign.rations.capability.enabled,visibleToPlayers:rationsVisible,...(mayProjectRations?{balance:campaign.rations.ledger.balances.ration??0,dailyRequired:rationPreview?.requiredUnits??0,shortage:rationPreview?.shortageUnits??0}:{})},
+    rations:{enabled:captured?.rations.enabled??campaign.rations.capability.enabled,visibleToPlayers:rationsVisible,...(mayProjectRations?{balance:campaign.rations.ledger.balances.ration??0,dailyRequired,shortage:Math.max(0,dailyRequired-(campaign.rations.ledger.balances.ration??0)),mealsRequired,mealsSatisfied,mealsShortage:Math.max(0,mealsRequired-mealsSatisfied),mealsByRosterMember:clone(mealsByRosterMember),recentTransactions:clone(campaign.rations.ledger.consumptionHistory.slice(-20))}:{})},
     partyStash:clone({revision:campaign.partyStash.revision,policy:campaign.partyStash.policy,wallet:campaign.partyStash.wallet,itemReferences:campaign.partyStash.itemReferences}),
   }:null;
   return {...snapshot,campaigns,activeCampaignId,campaignSessionSnapshot:clone(captured),campaignSessionSystems:clone(campaignSessionSystems)};
@@ -283,6 +295,18 @@ MockAdapter.prototype.undoCampaignRationConsumption=async function undoCampaignR
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
   await service.undoRecentRationConsumption(mutationContext(campaignId,"rations-undo",campaign.revision));return this.getSnapshot();
 };
+MockAdapter.prototype.serveCampaignMeals=async function serveCampaignMealsRuntime(campaignId,input){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
+  await service.serveMeals({...mutationContext(campaignId,"meal-serve",campaign.revision),...input});return this.getSnapshot();
+};
+MockAdapter.prototype.setCampaignMemberMeals=async function setCampaignMemberMealsRuntime(campaignId,input){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
+  await service.setMemberMeals({...mutationContext(campaignId,"meal-set",campaign.revision),...input});return this.getSnapshot();
+};
+MockAdapter.prototype.undoCampaignMeal=async function undoCampaignMealRuntime(campaignId){
+  const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
+  await service.undoRecentMeal(mutationContext(campaignId,"meal-undo",campaign.revision));return this.getSnapshot();
+};
 MockAdapter.prototype.advanceCampaignDay=async function advanceCampaignDayRuntime(campaignId,input){
   const service=await ensureHydrated(this);const campaign=service.getCampaign(campaignId);if(!campaign) throw new Error(`Campaign not found: ${campaignId}`);
   await service.advanceDayWithOptionalRations({...mutationContext(campaignId,"day-advance",campaign.revision),...input,calendarProfile:await currentCalendarProfile(this,campaign),rationProfile:input.consumeRations&&campaign.rations.capability.enabled?await currentRationProfile(this,campaign):undefined});return this.getSnapshot();
@@ -363,6 +387,7 @@ MockAdapter.prototype.grantCampaignDmLibraryItem=async function grantCampaignDmL
 MockAdapter.prototype.revealCampaignDmLibraryImage=async function revealCampaignDmLibraryImageRuntime(campaignId,entryId){
   const service=await ensureHydrated(this);let campaign=service.getCampaign(campaignId);if(!campaign)throw new Error("Campaign not found: "+campaignId);
   const entry=campaign.dmLibrary.entries.find((value)=>value.entryId===entryId&&value.kind==="image");if(!entry?.imageAsset)throw new Error("DM Library image not found: "+entryId);
+  const {revealSessionImageHandout}=await import("./sessionImageHandoutRuntimeAdapter");
   await revealSessionImageHandout(this,entry.imageAsset);
   await service.touchDmLibraryEntry({...mutationContext(campaignId,"dm-library-recent",campaign.revision),entryId});return this.getSnapshot();
 };

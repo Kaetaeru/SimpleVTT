@@ -14,6 +14,7 @@ import {
   unmountReconstructedCharacterSessionProjection,
 } from "../../src/app/characterSessionProjectionMount";
 import { projectedCharacterForPeer } from "../../src/app/characterSessionProjectionRegistry";
+import { deriveProductionCharacterActions } from "../../src/app/productionPlayRuntimeAdapter";
 
 const SOURCE_ID="dnd.srd-5.2.1";
 const VERSION="2024";
@@ -58,6 +59,11 @@ test("host mounts unknown Character only into ephemeral Scene/action/economy pro
   assert.ok(after.scene.actionsByActor["char.phase13.remote"]?.some((action)=>action.id==="action.second-wind"));
   assert.equal(after.scene.economyByActor["char.phase13.remote"]?.movementMax,30);
   assert.equal(projectedCharacterForPeer(adapter,"peer.remote")?.characterId,"char.phase13.remote");
+  assert.deepEqual(
+    after.scene.actionsByActor["char.phase13.remote"]?.map((action)=>action.id),
+    deriveProductionCharacterActions(projectedSheet()).map((action)=>action.id),
+    "Host and owning Client must derive one identical executable action catalog",
+  );
 });
 
 test("projected resolution context is explicit and restores the host local Character", async () => {

@@ -62,6 +62,18 @@ import "./productionSpellRuntimeAdapter";
 import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
+import "./fighterActionSurgeRuntimeAdapter";
+import "./deathSaveRuntimeAdapter";
+import "./stabilizeRuntimeAdapter";
+import "./unarmedControlRuntimeAdapter";
+import "./bardicInspirationActionRuntimeAdapter";
+import "./bardicInspirationFollowUpRuntimeAdapter";
+import "./fighterTacticalMindFollowUpRuntimeAdapter";
+import "./clericDivineSparkActionRuntimeAdapter";
+import "./clericTurnUndeadActionRuntimeAdapter";
+import "./paladinLayOnHandsActionRuntimeAdapter";
+import "./paladinDivineSenseActionRuntimeAdapter";
+import "./paladinAbjureFoesActionRuntimeAdapter";
 // Record successful open ability checks as canonical ResolutionEvents after all
 // production resolution wrappers have completed, without changing their UI/economy path.
 import "./abilityCheckResolutionEventAdapter";

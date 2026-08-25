@@ -111,7 +111,7 @@ function prepareOwningClient(
   state.scene.currentActorId=sheet.id;
 }
 
-test("host-unknown projected spellcaster resolves Fire Bolt through Host authority and Client applies the committed event once",async()=>{
+test("host-unknown projected spellcaster resolves freeform Fire Bolt through Host authority and Client applies the committed event once",async()=>{
   const host=new MockAdapter();
   await host.setReferenceRole("dm");
   const before=await host.getSnapshot();
@@ -128,12 +128,14 @@ test("host-unknown projected spellcaster resolves Fire Bolt through Host authori
   assert.deepEqual(mountedBefore!.sheet.cantrips,[FIRE_BOLT]);
   assert.equal(mountedBefore!.sheet.rulesProfileId,"dnd.srd-5.2.1");
 
-  await host.startInitiative();
-  await host.setCurrentActor(remote.id);
+  await host.setSessionMode("freeform");
   await host.setQueuedD20(18);
   const initiativeBaseline=await host.getSnapshot();
-  const target=initiativeBaseline.scene.entities.find((entity)=>entity.side==="enemy"&&Number.parseInt(entity.distance??"")<=120);
+  const fireBolt=(initiativeBaseline.scene.actionsByActor[remote.id]??[]).find((action)=>action.id==="action.fire-bolt");
+  assert.equal(fireBolt?.target,"enemy");
+  const target=initiativeBaseline.scene.entities.find((entity)=>entity.side==="enemy");
   assert.ok(target,"remote Fire Bolt requires a Host Scene enemy within 120 feet");
+  assert.ok(fireBolt?.eligibleTargetIds.includes(target.id));
   const targetHpBefore=target.hp;
 
   const state=connectedStateFor(host);
@@ -165,6 +167,8 @@ test("host-unknown projected spellcaster resolves Fire Bolt through Host authori
     assert.equal(completed.activeCharacter.id,before.activeCharacter.id,"Host local Character context must restore after remote spell commit");
     assert.equal(connectedStateFor(host).pendingRemoteAction,null);
     assert.equal(connectedStateFor(host).ledger?.cursor,1);
+    assert.equal(completed.resolution?.stage,"complete");
+    assert.notEqual(completed.resolution?.finalOutcome,"적용 예정");
     assert.deepEqual(completed.characters,before.characters,"Host permanent Character library must remain unchanged");
     assert.ok((completed.scene.entities.find((entity)=>entity.id===target.id)?.hp??targetHpBefore)<targetHpBefore,"Host authoritative Fire Bolt must commit damage");
 

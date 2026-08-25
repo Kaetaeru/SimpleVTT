@@ -1,8 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./app/campaignHydrationIssueAdapter";
-import { ProductRoot } from "./ProductRoot";
-import { AppProvider } from "./app/AppProvider";
 import { initializeAppearancePreference } from "./app/appearancePreferences";
 import { initializeMotionPreference } from "./app/motionPreferences";
 import "./app/offlineRuntimeAdapters";
@@ -17,6 +15,7 @@ import "./app/connectedTurnRoutingAdapter";
 import "./app/connectedCorrectionRoutingAdapter";
 import "./app/productionSessionLifecycleAdapter";
 import "./app/productionSessionEmptyEncounterAdapter";
+import "./app/connectedSceneTopologyRuntimeAdapter";
 import "./app/productionSessionUiStateAdapter";
 import "./app/sessionImageHandoutRuntimeAdapter";
 import "./app/sessionContentParityRuntimeAdapter";
@@ -29,13 +28,16 @@ import "./app/campaignDmLibraryMaterializationAdapter";
 import "./app/connectedOwnerInventoryJournalAdapter";
 import "./app/connectedOwnerInventoryExactCompensationAdapter";
 import "./app/connectedDmLibraryGrantCommitAdapter";
+// UI modules can import presentation runtimes. Keep them after the canonical
+// offline -> connected -> presentation adapter composition above.
+import { ProductRoot } from "./ProductRoot";
+import { AppProvider } from "./app/AppProvider";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
 import { CombatVfxBridge } from "./CombatVfxBridge";
 import { FirstRunTutorialBridge } from "./FirstRunTutorialBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
-import { MovementReactionBridge } from "./MovementReactionBridge";
 import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
 import { ProductionSessionDirectNetworkBridge } from "./ProductionSessionDirectNetworkBridge";
 import { CharacterPortraitBridge } from "./CharacterPortraitBridge";
@@ -85,7 +87,6 @@ createRoot(document.getElementById("root")!).render(
       <CombatVfxBridge />
       <FirstRunTutorialBridge />
       <ConcentrationSaveBridge />
-      <MovementReactionBridge />
       <ProductionSessionWorkspaceBridge />
       <ProductionSessionDirectNetworkBridge />
       <CharacterPortraitBridge />

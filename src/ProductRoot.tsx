@@ -32,7 +32,7 @@ function isReturnToConnectedPlayTarget(target: EventTarget | null) {
   const control = target.closest("button, a");
   if (!control) return false;
   const label = control.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  return label === "플레이로 돌아가기" || label === "기기로 플레이";
+  return label === "플레이로 돌아가기";
 }
 
 export function ProductRoot() {

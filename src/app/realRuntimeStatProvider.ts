@@ -38,6 +38,8 @@ const BUILTIN_COMBATANT_RUNTIME_STATS:Record<string,CombatantRuntimeStatDefiniti
   },
 };
 
+const BUILTIN_CREATURE_TYPES:Record<string,string>={"combatant.goblin":"humanoid","combatant.wolf":"beast","combatant.training-guardian":"construct"};
+
 const abilityModifier = (score:number) => Math.floor((score - 10) / 2);
 
 export function runtimeAbilityKey(label:string):AbilityKey {
@@ -117,4 +119,12 @@ export function resolveRuntimeSaveModifier(
     return characterSaveModifier(activeCharacter,ability);
   }
   return combatantSaveModifier(entity,ability,combatantDefinitions);
+}
+
+export function resolveRuntimeCreatureType(entity:SceneEntity,definitions:CombatantDefinitionVm[]=[]):string|undefined {
+  if(entity.kind==="character")return "humanoid";
+  const imported=[...definitions].sort((left,right)=>right.id.length-left.id.length).find((definition)=>matchesDefinition(entity.id,definition.id)&&definition.runtimeStats?.creatureType);
+  if(imported?.runtimeStats?.creatureType)return imported.runtimeStats.creatureType;
+  const definitionId=Object.keys(BUILTIN_CREATURE_TYPES).find((id)=>matchesDefinition(entity.id,id));
+  return definitionId?BUILTIN_CREATURE_TYPES[definitionId]:undefined;
 }

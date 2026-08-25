@@ -73,11 +73,23 @@ export function synchronizeAdapterTurnRuntime(adapter:MockAdapter) {
   return syncFromScene(adapter,adapter as unknown as Phase09TurnAdapterState);
 }
 
+export function projectAdapterTurnRuntime(adapter:MockAdapter) {
+  project(adapter,adapter as unknown as Phase09TurnAdapterState);
+}
+
 export function consumeAdapterInterruptEvents(adapter:MockAdapter,resolutionId:string) {
   const history=interruptEvents.get(adapter);
   if (!history||history.resolutionId!==resolutionId) return [];
   interruptEvents.delete(adapter);
   return history.events.map((event)=>structuredClone(event));
+}
+
+export function appendAdapterInterruptEvents(adapter:MockAdapter,resolutionId:string,events:ResolutionEvent[]) {
+  const current=interruptEvents.get(adapter);
+  interruptEvents.set(adapter,{
+    resolutionId,
+    events:[...(current?.resolutionId===resolutionId?current.events:[]),...events].map((event)=>structuredClone(event)),
+  });
 }
 
 /**
@@ -283,7 +295,7 @@ MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTu
   resolution.detail.push(`RulesRuntimeState reaction commit · revision ${session.state.revision}`);
   resolution.stateChanges.push(`${reactor.name} 반응 사용`);
   resolution.provenance.push(...committed.events.flatMap((event)=>event.provenance.map((entry)=>`${entry.source} · ${entry.status} · ${entry.reason}`)));
-  interruptEvents.set(this,{ resolutionId:resolution.id,events:committed.events.map((event)=>structuredClone(event)) });
+  appendAdapterInterruptEvents(this,resolution.id,committed.events);
   resolution.interrupt=undefined;
   resolution.stage="attack-result";
   resolution.canAdvance=true;

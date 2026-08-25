@@ -1,6 +1,6 @@
 import type { HpState } from "./damage";
 import type { ProvenanceRecord } from "./profileEngine";
-import type { TurnEconomyState } from "./turnEconomy";
+import type { ExtraActionGrant, ExtraAttackGrant, TurnEconomyState } from "./turnEconomy";
 
 export type StateLifetime = "character-durable" | "session-runtime";
 export type WriteBackClass = "character" | "session";
@@ -19,12 +19,28 @@ export interface HpStateChange extends StateChangeBase {
   after: number;
 }
 
-export interface EconomyStateChange extends StateChangeBase {
+interface EconomyScalarStateChange extends StateChangeBase {
   kind: "economy";
-  field: "action" | "bonusAction" | "reaction" | "movement" | "movementMaximum" | "extraActions";
+  field: "action" | "bonusAction" | "reaction" | "movement" | "movementMaximum";
   before: boolean | number;
   after: boolean | number;
 }
+
+interface EconomyExtraActionsStateChange extends StateChangeBase {
+  kind: "economy";
+  field: "extraActions";
+  before: ExtraActionGrant[];
+  after: ExtraActionGrant[];
+}
+
+interface EconomyExtraAttacksStateChange extends StateChangeBase {
+  kind:"economy";
+  field:"extraAttacks";
+  before:ExtraAttackGrant[];
+  after:ExtraAttackGrant[];
+}
+
+export type EconomyStateChange = EconomyScalarStateChange | EconomyExtraActionsStateChange | EconomyExtraAttacksStateChange;
 
 export type StateChange = HpStateChange | EconomyStateChange;
 
@@ -55,7 +71,7 @@ export function economyStateChanges(
   after: TurnEconomyState,
   provenance: ProvenanceRecord[],
 ): EconomyStateChange[] {
-  const fields: Array<Exclude<EconomyStateChange["field"], "extraActions">> = [
+  const fields: Array<EconomyScalarStateChange["field"]> = [
     "action",
     "bonusAction",
     "reaction",
@@ -74,19 +90,19 @@ export function economyStateChanges(
       lifetime: "session-runtime",
       writeBack: "session",
     }));
-  const beforeExtra = before.extraActions?.length ?? 0;
-  const afterExtra = after.extraActions?.length ?? 0;
-  if (beforeExtra !== afterExtra) {
+  const pushGrantChange=<K extends "extraActions"|"extraAttacks">(field:K,beforeExtra:NonNullable<TurnEconomyState[K]>,afterExtra:NonNullable<TurnEconomyState[K]>)=>{
+    if (JSON.stringify(beforeExtra)===JSON.stringify(afterExtra)) return;
     changes.push({
       kind:"economy",
       targetId,
-      field:"extraActions",
-      before:beforeExtra,
-      after:afterExtra,
+      field,
+      before:structuredClone(beforeExtra),after:structuredClone(afterExtra),
       provenance,
       lifetime:"session-runtime",
       writeBack:"session",
-    });
-  }
+    } as EconomyStateChange);
+  };
+  pushGrantChange("extraActions",before.extraActions??[],after.extraActions??[]);
+  pushGrantChange("extraAttacks",before.extraAttacks??[],after.extraAttacks??[]);
   return changes;
 }

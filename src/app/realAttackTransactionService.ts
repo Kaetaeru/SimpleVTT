@@ -97,7 +97,8 @@ function runtimeCombatant(entity:SceneEntity,economy:EconomyVm) {
       reaction:economy.reaction,
       movement:economy.movement,
       movementMaximum:economy.movementMax,
-      extraActions:[],
+      extraActions:structuredClone(economy.extraActions ?? []),
+      extraAttacks:structuredClone(economy.extraAttacks ?? []),
     },
     resources:[],
     hitDice:[],
@@ -164,6 +165,8 @@ function projectEconomy(state:RulesRuntimeState,actorId:string):EconomyVm {
     reaction:economy.reaction,
     movement:economy.movement,
     movementMax:economy.movementMaximum,
+    ...(economy.extraActions?.length?{extraActions:structuredClone(economy.extraActions)}:{}),
+    ...(economy.extraAttacks?.length?{extraAttacks:structuredClone(economy.extraAttacks)}:{}),
   };
 }
 
@@ -179,6 +182,7 @@ function projectLife(state:RulesRuntimeState,targetId:string):RuntimeLifeVm {
 
 function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
   const damageSpec=request.action.damage![0];
+  const cost=economyCost(request.action,request.initiativeMode);
   return {
     id:request.resolutionId,
     actorId:request.actor.id,
@@ -214,7 +218,10 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       dice:request.attackFact.damageDice,
       flat:request.attackFact.flatDamage,
     },
-    economy:request.reaction ? undefined : economyCost(request.action,request.initiativeMode),
+    economy:request.reaction||!cost ? undefined : {
+      ...cost,
+      ...(request.action.economy==="행동"?{actionKind:"attack" as const,attacksPerAction:request.action.attacksPerAction??1}:{}),
+    },
     concentrationCheck:request.concentrationCheck,
   };
 }

@@ -142,7 +142,16 @@ Implementation checkpoint: `3832c5a3bbda73e9c5bd946ed3e2a637c2f5b4bb`
 - [x] 같은 turn 두 번째 slotted spell은 추가 slot 소비 없이 explicit reject
 - [x] 실제 TurnRuntimeSession이 없는 spell action은 captured legacy spell bridge + 기존 2단계 safe Undo로 명시적 fallback
 - [x] no-session non-spell action은 legacy fallback으로 우회하지 않고 전체 Phase 09 adapter chain 유지
-- [x] canonical `src/domain/spellcasting.ts`는 변경하지 않고 app/event integration 경계에서 turn-marker state change 보강
+- [x] canonical `src/domain/spellcasting.ts`가 attack/save/damage/healing/full-healing/condition/tracked effect를 동일 atomic Resolution로 compile
+- [x] 339/339 catalog spell에 executable definition 존재 (`combat-executable` 117, `tracked-executable` 222, partial 0)
+- [x] attack 10 + multi-attack 2 / save-damage 25 + compound 3 / save-effect 61 / healing 7 + full-healing 1 / temporary HP 1 / Power Word Kill 1 / projectile 1 자동 판정
+- [x] 32개 주문의 표준 condition 적용·면역·지속시간·집중·피해 종료 lifecycle 연결
+- [x] 25개 주문의 d20 advantage/disadvantage modifier 연결; 1회성 modifier는 사용한 굴림에서 event-native consume
+- [x] 공간 모듈이 없을 때 area/multi-target 주문은 명시적으로 선택한 Scene actor 집합을 권위 대상으로 사용
+- [x] 다중 타깃 선택 시 시전자→선택 Actor 카드 화살표를 타깃별로 고정하고 다음 선택용 커서 화살표 유지
+- [x] 주문 condition effect를 `SceneEntity.status` 공개 배지로 투영하며 Host/Client event apply 및 Undo에서 동일 수명주기 사용
+- [x] 나머지 world/scene interaction 주문도 승인 placeholder 없이 즉시 commit하며 target/action/slot/concentration/duration/effect summary를 권위 상태로 추적
+- [x] `tests/domain/spellExecutionCoverage.test.ts`가 339 누락/partial 회귀와 대표 condition/modifier lifecycle을 차단
 - [x] dedicated authoritative spellcasting CI gate 추가
 
 #### ResolutionEvent / Activity / Undo
@@ -175,6 +184,7 @@ Authoritative turn-runtime attacks     ✅
 Effect/Concentration runtime Undo      ✅
 Effect application Activity/Undo       ✅
 Authoritative spellcasting gate        ✅
+339-spell executable coverage          ✅
 Manual movement reaction E2E           ✅
 Movement reaction UI/policy structure  ✅
 3D dice tests                          ✅
@@ -235,3 +245,49 @@ Phase 09 완료 기준:
 7. UI에 named-rule 계산을 넣지 않는다.
 8. **Core는 movement/map/coordinate 시스템을 소유하지 않는다.** 2D/3D 모듈은 coordinate-agnostic host contract를 통해 rules/spatial primitive만 재사용한다.
 9. **Core는 movement-triggered reaction을 자동 감지하지 않는다.** 현재 턴 조종자의 수동 입력 또는 future movement module의 authoritative trigger fact를 동일한 Reaction/action transaction으로 검증한다.
+
+## 2026-08-25 V1 D&D Session mechanics checkpoint
+
+Owner scope: 식량·시간·휴식 **UI**는 별도 작업으로 분리한다. 이 묶음에서는 해당 UI를 변경하지 않는다.
+
+### 이번 checkpoint에서 완료
+
+- [x] mapless Actor-card 기회공격 선언 + Reaction/공격/피해 atomic commit + connected/Undo
+- [x] Fighter Extra Attack attack-credit + Action Surge exact extra-Action/resource/connected/Undo
+- [x] death save success/failure/natural 1/natural 20 + durable write-back/connected/Undo
+- [x] Stabilize Medicine DC 10 + exact target/action/Undo
+- [x] Unarmed Strike damage/grapple/shove-prone + public condition + mapless target + connected/Undo
+- [x] Bardic Inspiration grant + Bonus Action/resource/public die marker + connected/Undo
+- [x] Bardic Inspiration failed attack follow-up + private owner prompt + consume/decline + same attack commit + connected exactly-once/Undo
+- [x] Fighter Tactical Mind on explicit-DC ability checks (Stabilize DC 10) + success-only Second Wind spend + private owner prompt + connected exactly-once/Undo
+- [x] Cleric Divine Spark heal/radiant/necrotic + freeform/initiative + Channel Divinity + connected/Undo
+- [x] Cleric Turn Undead/Sear Undead + typed Undead multi-target + public conditions + connected/Undo
+- [x] custom Combatant `creatureType` JSON validation and runtime fact projection
+- [x] legacy/remote Fighter SessionProjection without Action Surge resource remains compatible; only unavailable action is omitted
+
+### 검증
+
+- [x] focused mechanics/domain/connected regression 47 tests green
+- [x] Divine Spark domain/UI/connected 8 tests green
+- [x] Turn Undead domain/UI/runtime stats 16 tests green
+- [x] TypeScript `tsc --noEmit` green
+- [x] production `npm run build` green (Windows `tsx os.userInfo` ENOMEM workaround applied only to the command)
+- [x] rendered DM initiative preview: Actor boards, Action bar, Opportunity trigger, Extra Attack/Action Surge/Unarmed/Stabilize visible
+- [x] Paladin action matrix aggregate: 48 focused domain/UI/connected tests green
+- [x] post-Paladin production `npm run build`: creation 111 / rules domain 329 / campaign-rest 94 / Vite 500 modules green
+- [x] post-follow-up production `npm run build`: creation 111 / rules domain 329 / campaign-rest 94 / Vite 503 modules green
+
+### 다음 구현 순서
+
+1. [x] Paladin Lay On Hands: arbitrary pool amount + condition removal command, freeform/initiative, owner write-back, connected/Undo
+2. [x] Paladin Divine Sense: typed creature detection, freeform/initiative, Channel Divinity, connected/Undo
+3. [x] Paladin Abjure Foes: mapless multi-target saves, public Frightened, Channel Divinity, connected/Undo
+4. [x] failed attack follow-up: Bardic Inspiration consume/decline, private owner prompt, connected exactly-once, Undo
+5. [x] explicit-DC failed ability check follow-up: Fighter Tactical Mind (Stabilize DC 10), success-only resource spend, connected/Undo
+6. [ ] open ability-check DM DC contract + Tactical Mind reuse
+7. [ ] failed saving-throw follow-up: Fighter Indomitable
+8. [ ] remaining core class actions: Rage, Wild Shape, Monk Focus actions, Rogue Cunning/Uncanny paths
+9. [ ] subclass action commands already backed by domain resolvers; expose only mechanics-complete actions
+10. [ ] connected remote-owner matrix for every new action: host authority, public/private result, exactly-once, reconnect replay, Undo
+11. [ ] non-food/time/rest full regression failures: distinguish stale structural expectations from actual runtime regressions, then repair
+12. [ ] two-instance Tauri acceptance after the action matrix is complete

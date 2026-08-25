@@ -40,7 +40,8 @@ test("Campaign archive is an explicit confirmed destructive operation",()=>{
   assert.match(screen,/archiveTarget/);
   assert.match(screen,/캠페인 보관 확인/);
   assert.match(screen,/보관하면 세션 시작이 비활성화/);
-  assert.match(screen,/archiveCampaign\(archiveTarget\.campaignId\)/);
+  assert.match(screen,/const targetId=archiveTarget\.campaignId/);
+  assert.match(screen,/archiveCampaign\(targetId\)/);
   assert.doesNotMatch(screen,/onArchive=\{\(\)=>perform\(\(\)=>archiveCampaign\(/);
 });
 

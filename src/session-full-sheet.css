@@ -31,9 +31,9 @@
 
 .session-full-sheet-layer {
   pointer-events: auto;
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 1300;
   display: grid;
   place-items: center;
   padding: clamp(12px, 2vw, 26px);
@@ -47,11 +47,12 @@
 
 .session-mode-layer-host:has(> .session-full-sheet-layer:not([hidden])) {
   pointer-events: auto;
+  z-index: 1300;
 }
 
 .session-full-sheet-layer .character-sheet-workspace {
-  width: min(94vw, 1560px);
-  height: min(94%, 980px);
+  width: min(calc(100vw - 32px), 1840px);
+  height: min(calc(100vh - 32px), 1040px);
   min-height: 0;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -116,6 +117,12 @@
   height: 100%;
   padding: 14px 16px 28px;
   overflow: auto;
+}
+
+@media (min-width: 1600px) and (min-height: 900px) {
+  .character-sheet-workspace[data-sheet-host="session"] .character-sheet-workspace-content > .screen {
+    padding: 8px 10px 10px;
+  }
 }
 
 .character-sheet-workspace[data-sheet-host="session"] .sheet-play-statusbar {

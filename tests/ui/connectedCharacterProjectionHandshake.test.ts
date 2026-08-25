@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionContracts";
+import "../../src/app/sessionInventoryRuntimeAdapter";
 import type { CatalogEntry, CharacterSheet } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
@@ -31,6 +32,7 @@ function character():CharacterSheet {
     hp:8,maxHp:12,tempHp:0,ac:12,speed:30,proficiencyBonus:2,saveState:"saved",
     abilities:{str:16,dex:14,con:14,int:10,wis:12,cha:8},saves:[],skills:["운동"],features:["Second Wind"],equipment:[],items:[],
     resources:[{id:"resource.second-wind",label:"재기의 바람",current:2,max:2,source:"SRD Fighter"}],attacks:[],
+    goldGp:42,
     rulesProfileId:"dnd.srd-5.2.1",rulesProfileVersion:"0.1-draft",sourceRevision:4,runtimeRevision:6,
     classLevels:[{classId:"dnd.srd521.class.fighter",level:1}],
   };
@@ -53,7 +55,8 @@ function host() {
 
 test("host-unknown Character requires and mounts a validated SessionProjection", async () => {
   const adapter=host();
-  const sheet=character();
+  const portrait={asset:{mimeType:"image/png" as const,dataUrl:"data:image/png;base64,iVBORw0KGgo=",byteLength:8},focalX:.5,focalY:.5};
+  const sheet={...character(),portrait};
   const rejected=acceptHostCharacterSessionProjection(adapter,"peer.1",manifest(sheet));
   assert.equal(rejected.status,"rejected");
   if (rejected.status==="rejected") assert.match(rejected.error,/SessionProjection is required/);
@@ -62,9 +65,17 @@ test("host-unknown Character requires and mounts a validated SessionProjection",
   const accepted=acceptHostCharacterSessionProjection(adapter,"peer.1",manifest(sheet),projection);
   assert.deepEqual(accepted,{status:"accepted",mode:"mounted",characterId:sheet.id});
   assert.equal(projectedCharacterForPeer(adapter,"peer.1")?.sheet.hp,8);
+  assert.deepEqual(projectedCharacterForPeer(adapter,"peer.1")?.sheet.portrait,portrait);
   const snapshot=await adapter.getSnapshot();
   assert.ok(snapshot.scene.entities.some((entity)=>entity.id===sheet.id));
   assert.equal(snapshot.characters.some((entry)=>entry.id===sheet.id),false);
+  assert.deepEqual(snapshot.sessionCharacterInventories?.[sheet.id],{
+    characterId:sheet.id,
+    characterName:sheet.name,
+    revision:sheet.runtimeRevision,
+    goldGp:42,
+    items:[],
+  },"Host inventory UI must be seeded from the owner projection on its first connected render");
 });
 
 test("reconnect rebinds peer without replacing host authoritative runtime with stale client projection", () => {
@@ -75,11 +86,13 @@ test("reconnect rebinds peer without replacing host authoritative runtime with s
 
   const stale=structuredClone(projection);
   stale.runtime.hp=3;
+  stale.portrait={asset:{mimeType:"image/png",dataUrl:"data:image/png;base64,iVBORw0KGgo=",byteLength:8},focalX:.2,focalY:.8};
   const reconnected=acceptHostCharacterSessionProjection(adapter,"peer.new",manifest(sheet),stale);
   assert.deepEqual(reconnected,{status:"accepted",mode:"rebound",characterId:sheet.id});
   assert.equal(projectedCharacterForPeer(adapter,"peer.old"),undefined);
   assert.equal(projectedCharacterForPeer(adapter,"peer.new")?.sheet.hp,8);
   assert.equal(projectedCharacterById(adapter,sheet.id)?.sheet.hp,8);
+  assert.deepEqual(projectedCharacterById(adapter,sheet.id)?.sheet.portrait,stale.portrait);
 });
 
 test("reconnect rejects source/content drift even if the client reuses the old source revision", () => {
@@ -105,4 +118,19 @@ test("host-known permanent Character keeps the Phase 12 path and does not requir
   };
   const accepted=acceptHostCharacterSessionProjection(adapter,"peer.known",knownManifest);
   assert.deepEqual(accepted,{status:"accepted",mode:"host-known",characterId:"char.aelar"});
+});
+
+test("host-known Character with a Client projection is mounted as the peer-owned Scene actor", async () => {
+  const adapter=host();
+  const sheet={...character(),id:"char.aelar",name:"Remote Aelar Identity"};
+  const accepted=acceptHostCharacterSessionProjection(
+    adapter,
+    "peer.known-projected",
+    manifest(sheet),
+    buildCharacterSessionProjectionV1(sheet,catalog),
+  );
+
+  assert.deepEqual(accepted,{status:"accepted",mode:"mounted",characterId:"char.aelar"});
+  assert.equal(projectedCharacterForPeer(adapter,"peer.known-projected")?.sheet.name,"Remote Aelar Identity");
+  assert.equal((await adapter.getSnapshot()).scene.entities.find((entry)=>entry.id==="char.aelar")?.name,"Remote Aelar Identity");
 });
