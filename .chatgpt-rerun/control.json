@@ -3,6 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
+  "reason": "Re-arm the existing SimpleVTT continuation after a watchdog force-stop left the local watcher at retry_limit.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-23T13:05:27+09:00"
+  "updated_at": "2026-08-26T03:18:00+09:00"
 }
