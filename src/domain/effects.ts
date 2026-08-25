@@ -38,8 +38,10 @@ export type EffectKind = "condition" | "modifier" | "marker";
 export interface EffectTermination {
   targetTakesDamage?: boolean;
   targetBecomesIncapacitated?: boolean;
+  targetBecomesUnconscious?: boolean;
   targetDies?: boolean;
   sourceBecomesIncapacitated?: boolean;
+  sourceBecomesUnconscious?: boolean;
   sourceDies?: boolean;
 }
 
@@ -227,22 +229,24 @@ export function terminateEffectsForDamage(effects: EffectInstance[], targetId: s
 export function terminateEffectsForCreatureState(
   effects: EffectInstance[],
   actorId: string,
-  state: { incapacitated:boolean; dead:boolean },
+  state: { incapacitated:boolean; unconscious?:boolean; dead:boolean },
 ): EffectExpiryResolution {
   return terminateEffects(
     effects,
     (effect) => {
       const targetEnds = effect.targetId === actorId
         && ((state.incapacitated && effect.termination?.targetBecomesIncapacitated === true)
+          || (state.unconscious && effect.termination?.targetBecomesUnconscious === true)
           || (state.dead && effect.termination?.targetDies === true));
       const sourceEnds = effect.sourceActorId === actorId
         && ((state.incapacitated && effect.termination?.sourceBecomesIncapacitated === true)
+          || (state.unconscious && effect.termination?.sourceBecomesUnconscious === true)
           || (state.dead && effect.termination?.sourceDies === true));
       return targetEnds || sourceEnds;
     },
     (effect) => {
       const role = effect.targetId === actorId ? "target" : "source";
-      const stateName = state.dead ? "died" : "became Incapacitated";
+      const stateName = state.dead ? "died" : state.unconscious ? "became Unconscious" : "became Incapacitated";
       return `effect ${effect.id} ended because its ${role} ${actorId} ${stateName}`;
     },
   );
