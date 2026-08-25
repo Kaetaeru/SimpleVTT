@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Rerun product-plan duplication was removed. PLAN now routes to the canonical V1 handoff/checklist/design authority; STATE preserves execution continuity only. Continue from the current canonical V1 unfinished item without repeating validated work.",
+  "reason": "Rerun now routes product work exclusively through the canonical V1 handoff/checklist/design chain. The canonical handoff was reconciled to current GitHub facts. Continue from its current unfinished item without repeating validated work.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T05:28:16+09:00"
+  "updated_at": "2026-08-26T05:29:10+09:00"
 }
