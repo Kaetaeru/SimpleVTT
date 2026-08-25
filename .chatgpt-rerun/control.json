@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "User explicitly re-armed the existing SimpleVTT watcher run. Resume from the durable STATE checkpoint and reconcile current GitHub state before further product work.",
+  "reason": "User requested uninterrupted continuation. The stale baseline blocker is resolved on GitHub; PLAN and STATE are reconciled forward. Continue from the latest unfinished canonical checkpoint without repeating validated work.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T04:19:23+09:00"
+  "updated_at": "2026-08-26T05:04:35+09:00"
 }
