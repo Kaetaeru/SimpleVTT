@@ -9,35 +9,25 @@
 - control path: `.chatgpt-rerun/control.json`
 - checkpointed_at: `2026-08-26T05:04:00+09:00`
 
-## Preflight reconciliation
+## Durable execution checkpoint
 
-Mandatory Rerun files were read in order. Current `control.json` authorizes `continue` for the same run/sequence/task.
+Rerun preflight and coordination reconciliation are complete for this run/sequence/task. Current `control.json` authorizes `continue`.
 
-The former source-of-truth blocker is resolved. GitHub comparison proves validated checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1` is reachable and is the merge-base ancestor of `work/v1-composite`; the branch is ahead of it and not behind it. The reported changed paths between that product checkpoint and the pre-update branch head are coordination/handoff files rather than product source.
+Validated product work and release evidence are owned by the canonical V1 documents. Do not reproduce their completed-feature list, remaining-feature list, acceptance criteria, or next product slice here.
 
-README protocol now makes current `control.json` the sole dispatch authorization record. When run/sequence/task identity agrees, stale PLAN/STATE status text cannot override `control=continue`; it must be reconciled forward instead of creating a synthetic blocker.
+No product-source code was changed by the plan-routing repair. The repair only removes duplicate product planning from `.chatgpt-rerun/` and makes the canonical V1 planning chain authoritative.
 
-## Preserved foundation — do not repeat
+Current GitHub evidence observed during this repair:
 
-Preserve the canonical handoff's completed/source-complete set and its exact historical validation evidence, including Fighter Indomitable and earlier V1 work. The comprehensive Codex audit remains deferred until implementation freeze.
+- `work/v1-composite` resolves on GitHub.
+- validated product checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1` is an ancestor of the branch;
+- comparison reported the branch ahead and not behind;
+- changes after that checkpoint observed in the comparison were coordination/handoff documents, not product source.
 
-No product-source code was changed in this coordination repair. No new product test/build execution is claimed.
-
-## Current unfinished point
-
-Next canonical slice remains Barbarian Rage lifecycle:
-
-- start/end;
-- resource spend and action economy;
-- raging state/status;
-- supported damage resistance;
-- attack/damage bonus qualification;
-- expiry/end conditions;
-- connected exactly-once/reconnect/Undo;
-- focused deterministic verification.
+If a canonical V1 document still contains an older factual repository statement, reconcile that statement against current GitHub and repair the canonical V1 document. Do not compensate by creating a second plan in Rerun files.
 
 ## Next Exact Action
 
-Re-fetch current `work/v1-composite`, inspect the existing Barbarian resource/runtime patterns and the already-established connected feature pattern, then implement the smallest Rage start/end lifecycle slice without repeating validated work.
+Read the current canonical product pointer from `.agents/V1_CURRENT_HANDOFF.md`, confirm it against `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` and the relevant `docs/design/` contract, reconcile factual GitHub state, then resume that canonical unfinished item without repeating validated work.
 
-Keep this same run/sequence/task on `continue` while normal implementation progress remains possible. Use a waiting status only for a real unrecoverable identity conflict, safety boundary, or required permission that cannot be obtained by the current execution.
+Keep this same run/sequence/task on `continue` while normal implementation progress remains possible. Product work selection must come from the canonical V1 planning documents, not from `.chatgpt-rerun/PLAN.md` or copied prose in this STATE file.
