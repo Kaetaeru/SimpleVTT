@@ -38,9 +38,9 @@ Before executing any task:
 1. Fetch the configured repository and branch/ref from GitHub and confirm they still resolve.
 2. Read the mandatory files in order.
 3. Reconcile `run_id`, `sequence`, and `task_id` across control, STATE, and PLAN before changing code.
-4. Treat `control.json` as the dispatch authorization/status record, `STATE.md` as the durable execution checkpoint, and `PLAN.md` as the intended task/acceptance contract.
+4. Treat `control.json` as the sole dispatch authorization/status record, `STATE.md` as the durable execution checkpoint, and `PLAN.md` as the intended task/acceptance contract.
 5. Never reset an existing run_id, sequence, task, checkpoint, completion record, or validation history merely because a new watcher invocation starts.
-6. If the files disagree in a way that cannot be reconciled safely, do not guess. Record the conflict in STATE/STATUS and use `needs_user` or `blocked` as appropriate.
+6. When `run_id`, `sequence`, and `task_id` agree and current `control.json` says `continue`, stale status wording in PLAN/STATE is not a blocker. Reconcile those durable files forward to the current GitHub state and continue from the latest unfinished checkpoint. Only an unreconcilable identity/task conflict or a real safety/permission boundary may stop execution.
 7. Re-fetch `work/v1-composite` before writes when concurrent GitHub activity could have advanced it.
 8. Before product edits, verify the active product ref is `work/v1-composite`; do not silently route work back to `main`.
 
@@ -48,8 +48,8 @@ Before executing any task:
 
 Chrome Side Panel **Start/Stop controls the tab watcher only**. It is independent of GitHub control status.
 
-- `continue` means work is authorized to start or resume.
-- `complete`, `needs_user`, and `blocked` are dispatch waiting states. They do **not** turn off the watcher; polling continues while the watcher is started.
+- `continue` in `control.json` means work is authorized to start or resume.
+- `complete`, `needs_user`, and `blocked` are waiting states only when they are the current value in `control.json`. Mirrored or historical wording in PLAN/STATE cannot override a current `continue` authorization.
 - `working` is not a valid control status and must not be written.
 - If a terminal/waiting status later becomes `continue` with the **same sequence**, that transition is a new work authorization. The watcher must automatically resume from the durable STATE checkpoint rather than requiring a sequence increment.
 - A sequence change means the controller has intentionally advanced dispatch state; reconcile task identity before acting.
