@@ -1,3 +1,4 @@
+import type { AbilityKey } from "./contracts";
 import type { FixedDamageDice, FlatDamageContribution } from "../domain/damageRoll";
 import type { FixedFormulaDice, FlatFormulaContribution } from "../domain/diceFormula";
 
@@ -8,6 +9,7 @@ export interface Phase09SaveModifierFact {
 
 export interface Phase09AttackFact {
   sourceKind:"weapon"|"unarmed"|"wild-shape";
+  ability?:AbilityKey;
   rangeFeet:number;
   damageDice:FixedDamageDice[];
   flatDamage:FlatDamageContribution[];
@@ -29,7 +31,7 @@ const REFERENCE_SAVE_MODIFIERS:Record<string,Record<string,number>> = {
   "char.aelar":{ "근력":7, "민첩":2, "건강":6, "지능":0, "지혜":1, "매력":-1 },
   "char.mira":{ "근력":-1, "민첩":5, "건강":1, "지능":0, "지혜":1, "매력":6 },
   "combatant.goblin-a":{ "근력":-1, "민첩":2, "건강":0, "지능":0, "지혜":-1, "매력":-1 },
-  "combatant.goblin-b":{ "근력":-1, "민첩":2, "건강":0, "지혜":-1, "매력":-1, "지능":0 },
+  "combatant.goblin-b":{ "근력":-1, "민첩":2, "건강":0, "지능":0, "지혜":-1, "매력":-1 },
   "combatant.wolf":{ "근력":1, "민첩":2, "건강":1, "지능":-4, "지혜":1, "매력":-2 },
   "combatant.training-guardian":{ "근력":3, "민첩":0, "건강":3, "지능":-2, "지혜":1, "매력":0 },
 };
@@ -37,6 +39,7 @@ const REFERENCE_SAVE_MODIFIERS:Record<string,Record<string,number>> = {
 const REFERENCE_ATTACK_FACTS:Record<string,Phase09AttackFact> = {
   "action.shortbow":{
     sourceKind:"weapon",
+    ability:"dex",
     rangeFeet:80,
     damageDice:[{
       source:"phase09:reference-attack:action.shortbow:d6",
