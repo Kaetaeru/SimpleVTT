@@ -63,6 +63,7 @@ import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./fighterActionSurgeRuntimeAdapter";
+import "./barbarianRageRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
 import "./unarmedControlRuntimeAdapter";
