@@ -112,6 +112,7 @@ async function finishResolution(adapter:MockAdapter) {
 test("remote owner Rage commits once, reconnects from the event cursor, and Undo restores the authoritative start",async()=>{
   const host=new MockAdapter();
   await host.setReferenceRole("dm");
+  await host.endInitiative();
   const before=await host.getSnapshot();
   const catalog=structuredClone(before.catalog);
   const remote=remoteBarbarian(catalog);
