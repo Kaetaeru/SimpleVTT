@@ -40,6 +40,15 @@ export function barbarianRageMaximum(level:number) {
   return 2;
 }
 
+export function barbarianRageDamageBonus(level:number) {
+  if (!Number.isInteger(level) || level < 1 || level > 20) {
+    throw new DomainEvaluationError("Rage Damage requires Barbarian level 1-20");
+  }
+  if (level >= 16) return 4;
+  if (level >= 9) return 3;
+  return 2;
+}
+
 export function barbarianRuntimeResourceDefinitions(
   classTracks:ProgressionClassTrack[],
   subclassIds:Record<string,string> = {},
@@ -119,7 +128,12 @@ export function compileBarbarianRageStart(
           sourceActorId:request.actorId,
           targetId:request.actorId,
           kind:"marker",
-          tags:[BARBARIAN_RAGE_TAG],
+          tags:[
+            BARBARIAN_RAGE_TAG,
+            "damage-resistance:bludgeoning",
+            "damage-resistance:piercing",
+            "damage-resistance:slashing",
+          ],
           duration:{ kind:"special", key:"barbarian-rage" },
         },
       },
