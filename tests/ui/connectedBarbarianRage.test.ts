@@ -161,6 +161,17 @@ test("remote owner Rage commits once, reconnects from the event cursor, and Undo
     assert.equal(rageEvent.payload.kind,"resolution");
     if(rageEvent.payload.kind!=="resolution")throw new Error("expected Rage resolution event");
     const resolutionId=rageEvent.payload.resolutionId;
+    const published=state.publishedResolutionEvents.get(resolutionId);
+    assert.ok(published?.length,"Host must retain canonical Rage ResolutionEvents for connected Undo");
+    const durableRageChange=published
+      ?.flatMap((event)=>event.stateChanges)
+      .find((change)=>change.kind==="resource"&&change.resourceId===BARBARIAN_RAGE_RESOURCE_ID);
+    assert.ok(durableRageChange,"published Rage event must retain its durable Rage resource change");
+    if(!durableRageChange||durableRageChange.kind!=="resource")throw new Error("expected Rage resource state change");
+    assert.equal(durableRageChange.targetId,remote.id);
+    assert.equal(durableRageChange.writeBack,"character");
+    assert.equal(durableRageChange.before,2);
+    assert.equal(durableRageChange.after,1);
 
     const client=new MockAdapter();
     prepareOwningClient(client,remote,projection,catalog);
