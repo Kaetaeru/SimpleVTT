@@ -21,7 +21,7 @@ test("production snapshot projects weapon ability and Rage damage metadata", asy
 
   const snapshot = await adapter.startProductionLocalPlay("player");
   const actions = snapshot.scene.actionsByActor[snapshot.activeCharacter.id] ?? [];
-  const longsword = actions.find((action) => action.id === "action.character-attack.0");
+  const longsword = actions.find((action) => action.id === "action.longsword");
 
   assert.ok(longsword?.runtimeAttack, "production Longsword action must expose runtime attack facts");
   assert.equal(longsword.attackAbility, "str");
