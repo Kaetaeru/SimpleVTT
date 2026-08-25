@@ -5,7 +5,7 @@ import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
-import { projectTurnRuntimeToScene } from "./realTurnRuntimeService";
+import { addTurnRuntimeCombatant, projectTurnRuntimeToScene } from "./realTurnRuntimeService";
 import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState, turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
@@ -63,6 +63,13 @@ function syncResourceFromRuntime(adapter:MockAdapter,internal:AdapterState) {
 function seedResource(adapter:MockAdapter,internal:AdapterState) {
   let state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   if(!state){ensureAdapterTurnRuntimeState(adapter,internal.scene);state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);}
+  if(!state?.combatants[internal.activeCharacter.id]){
+    const session=turnRuntimeSessions.get(adapter);
+    if(session){
+      addTurnRuntimeCombatant(session,internal.scene,internal.activeCharacter.id);
+      state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+    }
+  }
   const combatant=state?.combatants[internal.activeCharacter.id];
   const resource=internal.activeCharacter.resources.find((entry)=>entry.id===BARBARIAN_RAGE_RESOURCE_ID);
   if(!state||!combatant||!resource||combatant.resources.some((entry)=>entry.id===resource.id))return state;
