@@ -5,7 +5,11 @@ import type { RulesRuntimeState } from "../../src/domain/combatState";
 import type { RulesProfileLike } from "../../src/domain/profileEngine";
 import { resolvePendingResolution } from "../../src/domain/resolution";
 import type { ResolutionCommit } from "../../src/domain/resolutionTypes";
+import { SRD_521_SPELL_MECHANICS } from "../../src/domain/spellMechanics";
+import { resolveSpellCast, type SpellCasterContext, type SpellCastTarget } from "../../src/domain/spellcasting";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
+
+const FIRE_BOLT = "dnd.srd521.spell.fire-bolt";
 
 interface RageLifecycleRequest {
   id:string;
@@ -75,6 +79,34 @@ async function activeRageState(level=1) {
   assert.equal(started.status,"committed");
   if (started.status !== "committed") throw new Error(started.error);
   return started.state;
+}
+
+function spellCaster():SpellCasterContext {
+  return {
+    characterLevel:5,
+    spellAttackModifier:5,
+    spellSaveDc:14,
+    spellcastingAbilityModifier:3,
+    preparedSpellIds:[],
+    alwaysPreparedSpellIds:[],
+    cantripSpellIds:[FIRE_BOLT],
+    slotResourceIds:{ 1:"spell-slot-1" },
+  };
+}
+
+function spellTarget():SpellCastTarget {
+  return {
+    id:"goblin",
+    kind:"creature",
+    relation:"enemy",
+    distanceFeet:30,
+    visible:true,
+    cover:"none",
+    ac:12,
+    creatureKind:"monster",
+    saveModifiers:{ str:0,dex:1,con:2,int:0,wis:1,cha:0 },
+    targetCanSeeCaster:true,
+  };
 }
 
 test("Barbarian Rage starts atomically and expires at the end of the Barbarian's next turn", async () => {
@@ -340,4 +372,112 @@ test("Rage Damage follows the exact Barbarian level breakpoints", async () => {
   );
   assert.throws(() => resolveBonus(0),/Barbarian level 1-20/);
   assert.throws(() => resolveBonus(21),/Barbarian level 1-20/);
+});
+
+test("active Rage grants Advantage only to Strength ability checks and Strength saving throws", async () => {
+  const strengthCheckState = await activeRageState();
+  const strengthCheck = resolvePendingResolution(TEST_PROFILE,strengthCheckState,{
+    id:"barbarian.rage.strength-check",
+    actorId:"hero",
+    sourceId:"test:strength-check",
+    expectedRevision:strengthCheckState.revision,
+    operations:[{
+      id:"barbarian.rage.strength-check:d20",
+      kind:"d20",
+      actorId:"hero",
+      request:{
+        family:"ability-check",
+        target:10,
+        modifierContributions:[],
+        dice:{ id:"rage-strength-check", purpose:"Strength check", sides:20, faces:[4,17] },
+      },
+      condition:{ ability:"str" },
+    }],
+  });
+  assert.equal(strengthCheck.status,"committed");
+  if (strengthCheck.status !== "committed") return;
+  const checkResult = strengthCheck.results["barbarian.rage.strength-check:d20"] as { rollState:string; natural:number };
+  assert.equal(checkResult.rollState,"advantage");
+  assert.equal(checkResult.natural,17);
+
+  const strengthSaveState = await activeRageState();
+  const strengthSave = resolvePendingResolution(TEST_PROFILE,strengthSaveState,{
+    id:"barbarian.rage.strength-save",
+    actorId:"hero",
+    sourceId:"test:strength-save",
+    expectedRevision:strengthSaveState.revision,
+    operations:[{
+      id:"barbarian.rage.strength-save:d20",
+      kind:"d20",
+      actorId:"hero",
+      request:{
+        family:"saving-throw",
+        target:10,
+        modifierContributions:[],
+        dice:{ id:"rage-strength-save", purpose:"Strength save", sides:20, faces:[3,16] },
+      },
+      condition:{ ability:"str" },
+    }],
+  });
+  assert.equal(strengthSave.status,"committed");
+  if (strengthSave.status !== "committed") return;
+  const saveResult = strengthSave.results["barbarian.rage.strength-save:d20"] as { rollState:string; natural:number };
+  assert.equal(saveResult.rollState,"advantage");
+  assert.equal(saveResult.natural,16);
+
+  const dexterityState = await activeRageState();
+  const dexterityCheck = resolvePendingResolution(TEST_PROFILE,dexterityState,{
+    id:"barbarian.rage.dexterity-check",
+    actorId:"hero",
+    sourceId:"test:dexterity-check",
+    expectedRevision:dexterityState.revision,
+    operations:[{
+      id:"barbarian.rage.dexterity-check:d20",
+      kind:"d20",
+      actorId:"hero",
+      request:{
+        family:"ability-check",
+        target:10,
+        modifierContributions:[],
+        dice:{ id:"rage-dexterity-check", purpose:"Dexterity check", sides:20, faces:[9] },
+      },
+      condition:{ ability:"dex" },
+    }],
+  });
+  assert.equal(dexterityCheck.status,"committed");
+  if (dexterityCheck.status !== "committed") return;
+  const dexterityResult = dexterityCheck.results["barbarian.rage.dexterity-check:d20"] as { rollState:string; natural:number };
+  assert.equal(dexterityResult.rollState,"normal");
+  assert.equal(dexterityResult.natural,9);
+});
+
+test("active Rage rejects spell casting before Action, slot, HP, or history mutation", async () => {
+  const active = await activeRageState();
+  active.combatants.goblin.life.hp = { current:30, maximum:30, temporary:0 };
+  const beforeAction = active.combatants.hero.economy.action;
+  const beforeHp = active.combatants.goblin.life.hp.current;
+  const beforeHistory = active.history.length;
+
+  const result = resolveSpellCast(TEST_PROFILE,SRD_521_SPELL_MECHANICS[FIRE_BOLT],active,{
+    id:"barbarian.rage.cast.fire-bolt",
+    actorId:"hero",
+    spellId:FIRE_BOLT,
+    source:"prepared",
+    expectedRevision:active.revision,
+    caster:spellCaster(),
+    targets:[spellTarget()],
+    componentsSatisfied:true,
+    useActionEconomy:true,
+    turnId:"round-1:hero",
+    dice:{
+      attack:{ id:"rage-fire-bolt-attack", purpose:"spell attack", sides:20, faces:[15] },
+      effectFaces:[6,7],
+    },
+  });
+  assert.equal(result.status,"rejected");
+  assert.match(result.status === "rejected" ? result.error : "",/Rage.*cast.*spell|cast.*spell.*Rage/i);
+  assert.equal(result.state,active);
+  assert.equal(active.combatants.hero.economy.action,beforeAction);
+  assert.equal(active.combatants.goblin.life.hp.current,beforeHp);
+  assert.equal(active.history.length,beforeHistory);
 });
