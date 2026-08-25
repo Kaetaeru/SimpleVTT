@@ -262,6 +262,9 @@ Owner scope: 식량·시간·휴식 **UI**는 별도 작업으로 분리한다. 
 - [x] Fighter Tactical Mind on explicit-DC ability checks (Stabilize DC 10) + success-only Second Wind spend + private owner prompt + connected exactly-once/Undo
 - [x] open ability-check Host public DC contract + six pure ability actions + 18 skill actions + connected/Undo
 - [x] Fighter Tactical Mind on every eligible failed explicit-DC ability check + success-only Second Wind spend
+- [x] Fighter Indomitable on failed saving throws + mandatory reroll/Fighter-level bonus/resource spend
+- [x] projected remote Character saving throws resolve from the mounted owner sheet rather than the Host active sheet
+- [x] Indomitable private owner prompt + multi-target sequential prompt + atomic damage/event history + connected exactly-once/Undo
 - [x] Cleric Divine Spark heal/radiant/necrotic + freeform/initiative + Channel Divinity + connected/Undo
 - [x] Cleric Turn Undead/Sear Undead + typed Undead multi-target + public conditions + connected/Undo
 - [x] custom Combatant `creatureType` JSON validation and runtime fact projection
@@ -281,6 +284,9 @@ Owner scope: 식량·시간·휴식 **UI**는 별도 작업으로 분리한다. 
 - [x] open ability/DC full UI matrix 962/962 and focused post-preview regression 38/38 green
 - [x] post-open-ability production `npm run build`: UI boundary 3 / creation 111 / rules domain 329 / campaign-rest 94 / Vite 505 modules green
 - [ ] rendered DM preview interaction: HMR URL HTTP 200, but current in-app Browser localhost URL policy blocked click-path completion
+- [x] Indomitable domain/local/remote-owner focused regression 16/16 green
+- [x] post-Indomitable full UI matrix 965/965 green
+- [x] post-Indomitable production `npm run build`: UI boundary 3 / creation 111 / rules domain 329 / campaign-rest 94 / Vite 508 modules green
 
 ### 다음 구현 순서
 
@@ -290,7 +296,7 @@ Owner scope: 식량·시간·휴식 **UI**는 별도 작업으로 분리한다. 
 4. [x] failed attack follow-up: Bardic Inspiration consume/decline, private owner prompt, connected exactly-once, Undo
 5. [x] explicit-DC failed ability check follow-up: Fighter Tactical Mind (Stabilize DC 10), success-only resource spend, connected/Undo
 6. [x] open ability-check DM DC contract + Tactical Mind reuse
-7. [ ] failed saving-throw follow-up: Fighter Indomitable
+7. [x] failed saving-throw follow-up: Fighter Indomitable
 8. [ ] remaining core class actions: Rage, Wild Shape, Monk Focus actions, Rogue Cunning/Uncanny paths
 9. [ ] subclass action commands already backed by domain resolvers; expose only mechanics-complete actions
 10. [ ] connected remote-owner matrix for every new action: host authority, public/private result, exactly-once, reconnect replay, Undo

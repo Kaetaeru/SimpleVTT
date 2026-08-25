@@ -645,12 +645,12 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R1 Fighter Indomitable failed saving-throw follow-up
+R1 Barbarian Rage lifecycle
 ```
 
-1. 통합 상태는 exact checkpoint `e12727d`에서 full TS matrix 1303/1303, UI matrix 962/962와 production build가 green이다.
-2. open ability-check DM DC와 generic Tactical Mind는 완료했다.
-3. Indomitable → Rage → Wild Shape → Monk Focus → Rogue Cunning/Uncanny 순서로 진행한다.
+1. 통합 상태는 exact checkpoint `4a4cdb1`에서 full TS matrix 1303/1303, UI matrix 965/965와 production build가 green이다.
+2. open ability-check DM DC, generic Tactical Mind, Fighter Indomitable은 완료했다.
+3. Rage → Wild Shape → Monk Focus → Rogue Cunning/Uncanny 순서로 진행한다.
 4. GitHub credential 복구 후 canonical `work/v1-composite`를 fetch하고 fast-forward 관계 확인 뒤 checkpoint를 push한다.
 5. 각 신규 행동은 connected remote-owner exactly-once/reconnect/Undo matrix 없이는 완료 처리하지 않는다.
 

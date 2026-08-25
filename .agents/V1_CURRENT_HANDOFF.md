@@ -1,7 +1,7 @@
 # SimpleVTT V1 Current Handoff
 
 Status: **CURRENT CANONICAL HANDOFF**
-Updated: **2026-08-25 Asia/Seoul**
+Updated: **2026-08-26 Asia/Seoul**
 Repository: **`Kaetaeru/SimpleVTT`**
 Canonical target branch: **`work/v1-composite`**
 
@@ -10,28 +10,29 @@ Canonical target branch: **`work/v1-composite`**
 ## 1. 현재 로컬 기준선
 
 - 실제 작업 브랜치: `codex/v1-multiplayer`
-- 검증된 제품 checkpoint: `e12727d84078471893612e5fecd18095b84b3a73`
-- 로컬 HEAD: 캐시된 `origin/work/v1-composite`보다 21 commits ahead
+- 검증된 제품 checkpoint: `4a4cdb195ff4544adbb3bfd49487042238b112c1`
+- 로컬 HEAD: 이 문서 commit 포함 시 캐시된 `origin/work/v1-composite`보다 24 commits ahead
 - 마지막 확인된 원격 ref: `a2e5f3f5e342e57fbe8bb6925b071bcb6a563c98`
 - 원격 재확인: checkpoint 생성 후에도 Windows Git credential `SEC_E_NO_CREDENTIALS`로 fetch 실패
 - 작업 트리: clean
 
-따라서 현재 최신 제품은 로컬 exact checkpoint **`e12727d`**로 보존됐지만 아직 GitHub `work/v1-composite`에 push됐다고 주장할 수 없다.
+따라서 현재 최신 제품은 로컬 exact checkpoint **`4a4cdb1`**로 보존됐지만 아직 GitHub `work/v1-composite`에 push됐다고 주장할 수 없다.
 
 ## 2. 2026-08-25 실행 증거
 
-### Green — exact checkpoint `e12727d`
+### Green — exact checkpoint `4a4cdb1`
 
 - `npm run build`
   - UI named-rule boundary: 3 pass
   - Character creation/progression structure: 111 pass
   - Rules domain: 329 pass
   - Campaign/Long Rest: 94 pass
-  - TypeScript and Vite production build: pass, 505 modules
+  - TypeScript and Vite production build: pass, 508 modules
 - `npm run test:connected-ui`: 19 pass
 - `npm run test:spellcasting`: 42 pass
-- 전체 UI matrix: **962 tests / 962 pass / 0 fail**
+- 전체 UI matrix: **965 tests / 965 pass / 0 fail**
 - open ability-check/DC/preview focused regression: **38 tests / 38 pass / 0 fail**
+- Fighter Indomitable + saving-throw/connected focused regression: **16 tests / 16 pass / 0 fail**
 - rendered browser 검증: **PARTIAL**
   - HMR preview server와 DM preview URL은 HTTP 200 확인.
   - 현재 Codex in-app Browser의 localhost URL 보안 정책이 재탐색을 차단해 새 DC UI의 실제 클릭 검증은 미완료.
@@ -54,7 +55,7 @@ Canonical target branch: **`work/v1-composite`**
 - official Character + Spellcasting sheet composition
 - Character/Host authority split, connected projection, inventory write-back, reconnect and event-native Undo foundation
 - Ready lifecycle, death save, Stabilize, Unarmed Strike, Extra Attack, Action Surge
-- Bardic Inspiration/Tactical Mind의 현재 완료 범위
+- Bardic Inspiration/Tactical Mind/Fighter Indomitable follow-up 완료 범위
 - Cleric Divine Spark/Turn Undead와 Paladin Lay On Hands/Divine Sense/Abjure Foes
 
 Source-complete는 release DONE이 아니다. 아래 acceptance와 exact-head 증거가 남아 있다.
@@ -68,7 +69,7 @@ Source-complete는 release DONE이 아니다. 아래 acceptance와 exact-head �
 - [x] npm 11 + tracked `package-lock.json`을 V1 package-manager 기준으로 확정하고 pnpm 메타데이터를 제외한다.
 - [x] generated output, launcher, source, tests를 검토하고 `e5223da` 통합 checkpoint로 commit했다.
 - [ ] `work/v1-composite`와 원격을 자격 증명이 가능한 환경에서 reconcile한다.
-- [x] 전체 matrix와 production build를 exact SHA `e12727d`에서 재검증했다.
+- [x] 전체 matrix와 production build를 exact SHA `4a4cdb1`에서 재검증했다.
 
 Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계가 설명 가능하다.
 
@@ -76,7 +77,7 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계가 설명
 
 - [x] open ability-check DM DC contract와 일반 능력/기술 판정 UI.
 - [x] Tactical Mind를 모든 적격 실패 능력 판정에 재사용.
-- [ ] Fighter Indomitable failed saving-throw follow-up.
+- [x] Fighter Indomitable failed saving-throw follow-up.
 - [ ] Barbarian Rage 시작/종료/피해·상태·자원 lifecycle.
 - [ ] Druid Wild Shape 선택/변신/해제/HP·행동·자원 lifecycle.
 - [ ] Monk Focus actions와 자원/행동 경제.
@@ -136,12 +137,12 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-다음 구현 작업은 Fighter Indomitable failed saving-throw follow-up이다.
+다음 구현 작업은 Barbarian Rage lifecycle이다.
 
 ```text
-Fighter Indomitable failed saving-throw follow-up
--> owner-private 선택
--> 재굴림/자원 소모/공개 결과 atomic commit
+Barbarian Rage 시작/종료
+-> 피해 저항/상태/공격·피해 보너스
+-> 자원·행동 경제와 종료 조건
 -> connected exactly-once/reconnect/Undo
 ```
 
