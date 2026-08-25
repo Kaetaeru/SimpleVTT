@@ -243,6 +243,11 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
   const spellRollStates=spellModifiers.flatMap((effect)=>effect.metadata?.d20RollState==="advantage"||effect.metadata?.d20RollState==="disadvantage"
     ? [{source:effect.sourceId,state:effect.metadata.d20RollState as "advantage"|"disadvantage"}]
     : []);
+  const rageRollStates = (operation.condition?.ability === "str"
+    && (operation.request.family === "ability-check" || operation.request.family === "saving-throw")
+    && ctx.state.effects.some((effect) => effect.targetId === actorId && effect.tags.includes("barbarian:rage")))
+    ? [{ source:"dnd.srd521.feature.barbarian.rage", state:"advantage" as const }]
+    : [];
   let target = operation.request.target;
   const modifiers = [...operation.request.modifierContributions, ...adjustments.modifierContributions];
   if (operation.cover) {
@@ -256,7 +261,12 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     ...operation.request,
     target,
     modifierContributions:modifiers,
-    rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions, ...spellRollStates],
+    rollStateContributions:[
+      ...(operation.request.rollStateContributions ?? []),
+      ...adjustments.rollStateContributions,
+      ...spellRollStates,
+      ...rageRollStates,
+    ],
   });
   if (adjustments.autoFailure) {
     resolved = {
