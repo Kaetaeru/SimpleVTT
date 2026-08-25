@@ -45,6 +45,7 @@ export function resolveRuntimeAttackFact(action:ActionVm,fixedFaces:number[]):Ph
     if (fixedFaces.length < fact.diceCount*2) throw new Error(`runtime attack fixture requires ${fact.diceCount*2} fixed faces for critical replay: ${action.id}`);
     return {
       sourceKind:fact.sourceKind,
+      ability:fact.sourceKind==="unarmed" ? "str" : fact.ability,
       rangeFeet:fact.rangeFeet,
       damageDice:[{ source:fact.damageSource,sides:fact.diceSides,count:fact.diceCount,faces:fixedFaces.slice(0,fact.diceCount*2) }],
       flatDamage:[{ source:`runtime:action:${action.id}:damage-flat`,value:actionDamage.flat }],
@@ -58,6 +59,7 @@ export function resolveRuntimeAttackFact(action:ActionVm,fixedFaces:number[]):Ph
   if (fixedFaces.length < formula.count * 2) throw new Error(`runtime attack fixture requires ${formula.count * 2} fixed faces for critical replay: ${action.id}`);
   return {
     sourceKind:"weapon",
+    ability:weapon.mode==="ranged" ? "dex" : weapon.properties.includes("finesse") ? undefined : "str",
     rangeFeet:normalRangeFeet(weapon.properties,weapon.mode),
     damageDice:[{ source:`runtime:weapon:${weapon.id}:damage`,sides:formula.sides,count:formula.count,faces:fixedFaces.slice(0,formula.count * 2) }],
     flatDamage:[{ source:`runtime:action:${action.id}:damage-flat`,value:actionDamage.flat }],
