@@ -10,9 +10,11 @@ import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotA
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
-import { BARBARIAN_RAGE_TAG, resolveBarbarianRageStart } from "../domain/barbarianRage";
+import { BARBARIAN_RAGE_TAG, resolveBarbarianRageExtend, resolveBarbarianRageStart } from "../domain/barbarianRage";
+import { barbarianRageExtensionUpdate } from "../domain/barbarianRageLifecycle";
 
 const ACTION_ID="action.barbarian.rage";
+const EXTEND_ACTION_ID="action.barbarian.rage.extend";
 type ArmorDef={training?:"light"|"medium"|"heavy"};
 interface AdapterState {
   sessionMode:SessionMode;
@@ -84,33 +86,67 @@ function rageAction(adapter:MockAdapter,internal:AdapterState,snapshot:AppSnapsh
   };
 }
 
+function rageExtendAction(adapter:MockAdapter,internal:AdapterState,snapshot:AppSnapshot):ActionVm|undefined {
+  const character=snapshot.activeCharacter;
+  if(!barbarianLevel(character))return undefined;
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  if(!state?.effects.some((effect)=>effect.targetId===character.id&&effect.tags.includes(BARBARIAN_RAGE_TAG)))return undefined;
+  const ownTurn=internal.sessionMode==="initiative"&&state.clock.activeActorId===character.id;
+  const bonusAvailable=snapshot.scene.economyByActor[character.id]?.bonusAction??false;
+  const canExtend=Boolean(barbarianRageExtensionUpdate(state.effects,character.id,state.clock));
+  const available=ownTurn&&bonusAvailable&&canExtend;
+  const disabledReason=!ownTurn?"자신의 턴에만 격노를 연장할 수 있습니다."
+    :!bonusAvailable?"추가 행동을 이미 사용했습니다."
+      :!canExtend?"이미 다음 턴 끝까지 격노가 연장되어 있습니다.":undefined;
+  return {
+    id:EXTEND_ACTION_ID,actorId:character.id,name:"격노 연장",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",
+    summary:"격노를 다음 턴 끝까지 연장",available,disabledReason,eligibleTargetIds:[character.id],
+    details:[
+      {label:"효과",value:"격노 지속 시간을 다음 턴 끝까지 연장"},
+      {label:"비용",value:"추가 행동 1"},
+      {label:"제한",value:"자신의 턴에만 사용 가능"},
+      {label:"출처",value:"SRD 5.2.1 · Barbarian Rage"},
+    ],
+  };
+}
+
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithBarbarianRageAction(){
   const internal=this as unknown as AdapterState;
   const snapshot=await previousGetSnapshot.call(this);
-  const action=rageAction(this,internal,snapshot);
   const actions=snapshot.scene.actionsByActor[snapshot.activeCharacter.id];
   if(!actions)return snapshot;
-  const index=actions.findIndex((entry)=>entry.id===ACTION_ID);
-  if(!action){if(index>=0)actions.splice(index,1);return snapshot;}
-  if(index>=0)actions[index]=action;else actions.push(action);
+  for(const action of [rageAction(this,internal,snapshot),rageExtendAction(this,internal,snapshot)]){
+    const id=action?.id??(activeRage(this,internal)?undefined:EXTEND_ACTION_ID);
+    if(!id)continue;
+    const index=actions.findIndex((entry)=>entry.id===id);
+    if(!action){if(index>=0)actions.splice(index,1);continue;}
+    if(index>=0)actions[index]=action;else actions.push(action);
+  }
+  if(!activeRage(this,internal)){
+    const extendIndex=actions.findIndex((entry)=>entry.id===EXTEND_ACTION_ID);
+    if(extendIndex>=0)actions.splice(extendIndex,1);
+  }
   return snapshot;
 };
 
 MockAdapter.prototype.resolveAction=async function resolveBarbarianRageFromHotbar(actionId:string,targetIds:string[]){
-  if(actionId!==ACTION_ID)return previousResolveAction.call(this,actionId,targetIds);
+  if(actionId!==ACTION_ID&&actionId!==EXTEND_ACTION_ID)return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as AdapterState;
   const snapshot=await internal.getSnapshot();
-  const action=snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id===ACTION_ID);
+  const action=snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id===actionId);
   const actor=internal.activeCharacter;
   const level=barbarianLevel(actor);
   if(!action?.available||targetIds.length!==1||targetIds[0]!==actor.id||!level)return snapshot;
-  const state=seedRageResource(this,internal);
+  const state=actionId===ACTION_ID?seedRageResource(this,internal):snapshotAdapterTurnRuntimeState(this,internal.scene);
   if(!state||!state.combatants[actor.id])return snapshot;
-  const resolutionId=`barbarian.rage.${Date.now()}.${Math.floor(Math.random()*1000)}`;
-  const committed=resolveBarbarianRageStart(SIMPLEVTT_APP_RULES_PROFILE,state,{
-    id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
-    wearingHeavyArmor:wearingHeavyArmor(actor),useBonusActionEconomy:internal.sessionMode==="initiative",
-  });
+  const extending=actionId===EXTEND_ACTION_ID;
+  const resolutionId=`barbarian.rage.${extending?"extend":"start"}.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const committed=extending
+    ?resolveBarbarianRageExtend(SIMPLEVTT_APP_RULES_PROFILE,state,{id:resolutionId,actorId:actor.id,expectedRevision:state.revision})
+    :resolveBarbarianRageStart(SIMPLEVTT_APP_RULES_PROFILE,state,{
+      id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
+      wearingHeavyArmor:wearingHeavyArmor(actor),useBonusActionEconomy:internal.sessionMode==="initiative",
+    });
   if(committed.status==="rejected")return snapshot;
   const projected=applyResolutionEvents(internal.scene,committed.events,actor.resources,actor.items,state);
   if(projected.status==="rejected")return snapshot;
@@ -123,10 +159,13 @@ MockAdapter.prototype.resolveAction=async function resolveBarbarianRageFromHotba
   internal.scene=projected.scene;
   internal.activeCharacter.resources=projected.resources;
   const session=turnRuntimeSessions.get(this);if(session)projectTurnRuntimeToScene(session,internal.scene);
+  const label=extending?"격노 연장":"격노";
+  const outcome=extending?"격노 연장":"격노 시작";
   const resolution:ResolutionView={
-    id:resolutionId,actorId:actor.id,targetIds:[actor.id],actionId:ACTION_ID,actionName:"격노",rollKind:"effect",stage:"complete",
-    authoritativeDice:[],saveResults:[],damageComponents:[],compact:"격노 시작",detail:["근력 판정/내성 이점 · 물리 피해 저항 · 근력 공격 Rage Damage"],
-    provenance:["SRD 5.2.1 · Barbarian Rage"],calculatedOutcome:"격노 시작",finalOutcome:"격노 시작",stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
+    id:resolutionId,actorId:actor.id,targetIds:[actor.id],actionId,actionName:label,rollKind:"effect",stage:"complete",
+    authoritativeDice:[],saveResults:[],damageComponents:[],compact:outcome,
+    detail:[extending?"격노 지속 시간을 다음 턴 끝까지 연장":"근력 판정/내성 이점 · 물리 피해 저항 · 근력 공격 Rage Damage"],
+    provenance:["SRD 5.2.1 · Barbarian Rage"],calculatedOutcome:outcome,finalOutcome:outcome,stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
   };
   internal.resolution=resolution;
   internal.activity.unshift(projectResolutionEventsToActivity({resolution,events:committed.events,actorName:actor.name,targetNames:[actor.name]}));
