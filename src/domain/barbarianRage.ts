@@ -82,6 +82,22 @@ export function compileBarbarianRageStart(
       metadata:{ rageDamageBonus:damageBonus },
     },
   });
+  for (const family of ["ability-check","saving-throw"] as const) {
+    operations.push({
+      id:`${request.id}:strength-advantage:${family}`,
+      kind:"apply-effect",
+      effect:{
+        id:`${request.id}:${request.actorId}:strength-advantage:${family}`,
+        sourceId:BARBARIAN_RAGE_FEATURE_ID,
+        sourceActorId:request.actorId,
+        targetId:request.actorId,
+        kind:"modifier",
+        duration:{ kind:"special", key:BARBARIAN_RAGE_DURATION_KEY },
+        termination:{ targetBecomesIncapacitated:true, targetDies:true },
+        metadata:{ d20Family:family, d20Ability:"str", d20RollState:"advantage" },
+      },
+    });
+  }
   return {
     id:request.id,
     actorId:request.actorId,
