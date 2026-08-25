@@ -61,8 +61,9 @@ function damageRaw(sourceKind:Phase09AttackFact["sourceKind"],ability:AbilityKey
   return result.damage?.components[0]?.raw;
 }
 
-test("active Rage adds Rage Damage only to attacks that use Strength", () => {
+test("active Rage adds Rage Damage only to qualifying Strength weapon and Unarmed attacks", () => {
   assert.equal(damageRaw("weapon","str",1,6,3),9);
   assert.equal(damageRaw("unarmed","str",0,2,4),6);
   assert.equal(damageRaw("weapon","dex",1,6,3),7);
+  assert.equal(damageRaw("wild-shape","str",1,6,3),7);
 });
