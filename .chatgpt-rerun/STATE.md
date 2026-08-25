@@ -7,45 +7,40 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T08:26:45+09:00`
+- checkpointed_at: `2026-08-26T08:51:19+09:00`
 
 ## Durable execution checkpoint
 
-Rerun preflight completed in the mandatory order and canonical V1 routing was followed. Current run/sequence/task identity remains consistent and authorized by `control.json=continue`.
+Rerun preflight completed in the mandatory order and the live run/sequence/task identity remained consistent with `control.json=continue`. Canonical V1 routing still points to R1 Druid Wild Shape. Previously completed Barbarian Rage work remains preserved and must not be repeated, including spellcasting prohibition, SRD 5.2.1 duration/extension/automatic termination, production extension action, Heavy-armor termination, and the intentional absence of a voluntary End Rage action.
 
-Previously checkpointed Rage work remains preserved and must not be repeated:
+New Druid Wild Shape progress in this execution:
 
-- existing Rage resource/Berserker mechanics, start/end domain primitives, Bonus Action start economy, Heavy-armor start rejection, duplicate rejection, B/P/S resistance, Rage Damage scaling and linked-effect cleanup;
-- Strength ability-check/saving-throw Advantage;
-- authoritative Strength weapon/unarmed Rage Damage without Dexterity or Wild Shape leakage;
-- starting Rage ends Concentration;
-- production Rage start action with resource/economy, Activity/Undo, authoritative armor check, and visible active projection;
-- Rage spellcasting prohibition at `compileSpellCast` from `1e23038fe314b109eaecef75aeca8e67c2462ccf`, with regression in `tests/domain/spellcastingKernel.test.ts`;
-- voluntary production `End Rage` was intentionally rejected as legacy behavior and must not be reintroduced.
-
-New progress in this execution:
-
-- `src/domain/barbarianRageLifecycle.ts` now owns the minimal SRD 5.2.1 Rage timing facts without adding a parallel manager: initial end-of-next-turn deadline, per-turn extension deadline, and 10-minute/100-round maximum.
-- `src/domain/barbarianRage.ts` reuses those facts for Rage start and adds the dedicated `resolveBarbarianRageExtend` Bonus Action path. Arbitrary Bonus Actions do not extend Rage.
-- `src/domain/resolutionActionOps.ts` extends active Rage on the Barbarian's own turn when the shared D20 path executes an attack roll against an enemy or a saving throw forced on an enemy. Roll success is not required.
-- `src/domain/resolutionTurnOps.ts` composes Rage special expiry with the existing turn/time effect expiry path so the core marker and Rage-linked effects end together.
-- `src/app/barbarianRageRuntimeAdapter.ts` exposes `action.barbarian.rage.extend` only for active Rage and uses the existing resolution/activity/Undo pipeline. It also wraps the existing authoritative `toggleItemEquipped` mutation so donning Heavy armor automatically removes Rage and linked transient effects. This automatic equipment consequence is not exposed as a separate voluntary End Rage/Undo action.
-- Existing Incapacitated/dead termination is reused; Berserker Mindless Rage already carries the same creature-state termination and `barbarian-rage` special duration.
-- `tests/domain/barbarianRage.test.ts` adds deterministic coverage for initial duration, attack/save extension, dedicated Bonus Action extension, and 10-minute maximum expiry.
-- `tests/ui/barbarianRageActionRuntime.test.ts` adds production coverage for extension action/resource economy and Heavy armor automatic termination, and explicitly guards against a voluntary End Rage action.
-- Product source/test head is `b939f892e80b1c37b97ad23b65204d5665ea4739`.
-- GitHub compare from prior Rerun head `6cf2b31007d9a0e87dd5e47746a4352dfd088228` to `b939f892` is ahead 8 / behind 0. Final product delta contains only seven intended Rage paths: `src/domain/barbarianRageLifecycle.ts`, `src/domain/barbarianRage.ts`, `src/domain/resolutionActionOps.ts`, `src/domain/resolutionTurnOps.ts`, `src/app/barbarianRageRuntimeAdapter.ts`, `tests/domain/barbarianRage.test.ts`, and `tests/ui/barbarianRageActionRuntime.test.ts`.
-- `.agents/V1_CURRENT_HANDOFF.md` was advanced in `fdf1bd4a84112a00b31637d08c6988fb6620b09a`: Barbarian Rage is now source-complete and the canonical next R1 implementation item is Druid Wild Shape.
+- Added `src/domain/druidWildShape.ts` using existing RulesRuntimeState/Resolution primitives rather than a parallel shapeshift manager.
+- Added canonical form-limit facts from the repository-linked SRD 5.2.1 Druid source: level 2 = 4 known forms / CR 1/4 / no flight; level 4 = 6 / CR 1/2 / no flight; level 8 = 8 / CR 1 / flight allowed.
+- Wild Shape start now compiles one atomic resolution: replace any active Wild Shape marker, spend `resource:druid.wild-shape`, spend Bonus Action when initiative economy is active, gain temporary HP equal to Druid level through the existing temporary-HP primitive, and apply a time-limited marker for `druid level / 2` hours.
+- The marker reuses existing effect termination for Incapacitated/dead and records selected form identity/CR/AC/speed plus Beast Spells casting permission at Druid level 18.
+- Wild Shape start intentionally does not end Concentration; the repository-linked SRD source explicitly preserves existing Concentration.
+- Voluntary Wild Shape exit is represented as the canonical Bonus Action removal of the active marker. It does not invent temp-HP source cleanup because the SRD text does not say remaining temporary HP disappears on exit and the existing temp-HP model has no source ownership.
+- Reusing Wild Shape while already shaped replaces the marker and spends another use. Existing temporary HP conflict remains an explicit `keep-existing` / `take-new` choice through the existing temporary-HP rule instead of silently stacking or overwriting it.
+- Added `tests/domain/druidWildShape.test.ts` covering atomic start/resource/economy/temp HP/duration, CR and flight gates, form replacement, voluntary exit, Concentration preservation, and level-18 Beast Spells metadata.
+- Corrected the flying-form regression fixture so CR validation cannot mask the intended pre-level-8 flight rejection.
+- Product source/test head before Rerun metadata commits: `cddef0c254108fe963a92cab2da7bd991a09bc21`.
+- GitHub compare from pre-slice head `8dfa7334c687a3039fa4dbbe536bad645399d87f` to `cddef0c2` is ahead 4 / behind 0 and contains only `src/domain/druidWildShape.ts` and `tests/domain/druidWildShape.test.ts`.
 
 Validation status:
 
-- A current container check still fails at `git ls-remote` with `Could not resolve host: github.com`; no local checkout exists in the runtime.
-- GitHub combined status for `b939f892` returned no status checks and workflow lookup returned no workflow runs.
-- Therefore no new green test/build claim is made for the Rage lifecycle increment. Historical validated matrices remain preserved and were not repeated.
-- The new Rage tests are committed as deterministic validation debt for the next capable checkout/full regression. Source-complete does not mean release DONE.
+- GitHub exposes 0 check runs and 0 commit statuses for `cddef0c2`; combined status therefore has no executable evidence.
+- No new test/build green claim is made. The focused domain test is committed validation debt for a capable checkout/CI.
+- Wild Shape overall is **not source-complete yet**. This checkpoint covers the domain lifecycle core only; production selection/action/projection/Undo and spellcasting enforcement remain.
 
 ## Next Exact Action
 
-Resume from `.agents/V1_CURRENT_HANDOFF.md` section `5. Next exact action`. The canonical next implementation item is the existing Druid Wild Shape lifecycle gap. Inspect current Druid/Wild Shape primitives first, credit already implemented behavior, and implement only missing production lifecycle pieces. Do not reimplement Rage.
+Continue Druid Wild Shape without repeating the domain core:
 
-Keep the same run/sequence/task on `continue` while normal implementation progress remains possible.
+1. Reuse the existing production feature-adapter pattern (`barbarianRageRuntimeAdapter`) and existing `sourceKind:"wild-shape"` attack path; do not create a generic shapeshift/attack subsystem.
+2. Establish the smallest non-arbitrary production seam for the Character's **known Wild Shape forms** and project one executable transform action per known form plus the canonical Bonus Action exit.
+3. Connect transform/exit to existing resource/economy, ResolutionEvent Activity, Character write-back/runtime commit, and event-native Undo paths.
+4. Enforce spellcasting prohibition from the active `DRUID_WILD_SHAPE_TAG` marker while allowing the level-18 Beast Spells exception recorded by `spellcastingAllowed`.
+5. Add focused production regressions, then obtain executable validation evidence before calling Wild Shape source-complete or advancing the canonical R1 pointer to Monk Focus.
+
+Keep the same run/sequence/task on `continue` while this implementation remains incomplete.
