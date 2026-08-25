@@ -62,3 +62,21 @@ test("freeform Rage spends the resource without stranding Bonus Action economy",
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===BARBARIAN_RAGE_RESOURCE_ID)?.current,2);
   assert.equal(snapshot.scene.economyByActor[snapshot.activeCharacter.id]?.bonusAction,true);
 });
+
+test("active Rage exposes a free end action that removes Rage without refunding resource or economy",async()=>{
+  const adapter=await barbarian();
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet};
+  await adapter.startInitiative();
+  await adapter.setCurrentActor(internal.activeCharacter.id);
+  await adapter.selectDmActor(internal.activeCharacter.id);
+  let snapshot=await adapter.getSnapshot();
+  await adapter.resolveAction("action.barbarian.rage",[snapshot.activeCharacter.id]);
+  snapshot=await adapter.getSnapshot();
+  const endAction=snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id==="action.barbarian.rage.end");
+  assert.equal(endAction?.available,true);
+  await adapter.resolveAction("action.barbarian.rage.end",[snapshot.activeCharacter.id]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===snapshot.activeCharacter.id)?.status.some((entry)=>entry.includes("격노")),false);
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===BARBARIAN_RAGE_RESOURCE_ID)?.current,2);
+  assert.equal(snapshot.scene.economyByActor[snapshot.activeCharacter.id]?.bonusAction,false);
+});
