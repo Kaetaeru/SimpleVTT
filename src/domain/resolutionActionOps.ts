@@ -236,6 +236,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
   });
   const spellModifiers=ctx.state.effects.filter((effect)=>{
     if (effect.kind!=="modifier"||effect.metadata?.d20Family!==operation.request.family) return false;
+    if (typeof effect.metadata.d20Ability === "string" && effect.metadata.d20Ability !== operation.condition?.ability) return false;
     const scope=effect.metadata.d20Scope;
     return scope==="target"?Boolean(operation.targetId&&effect.targetId===operation.targetId):effect.targetId===actorId;
   });
