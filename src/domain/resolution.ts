@@ -72,6 +72,11 @@ function executeOperation(
   }
 }
 
+function ragePreventsSpellCast(state:RulesRuntimeState,pending:PendingResolution) {
+  return pending.sourceId.startsWith("dnd.srd521.spell.")
+    && state.effects.some((effect) => effect.targetId === pending.actorId && effect.tags.includes("barbarian:rage"));
+}
+
 export function resolvePendingResolution(
   profile: RulesProfileLike,
   inputState: RulesRuntimeState,
@@ -93,6 +98,15 @@ export function resolvePendingResolution(
       events:[],
       results:{},
       error:`revision mismatch: expected ${pending.expectedRevision}, current ${inputState.revision}`,
+    };
+  }
+  if (ragePreventsSpellCast(inputState,pending)) {
+    return {
+      status:"rejected",
+      state:inputState,
+      events:[],
+      results:{},
+      error:"Rage prevents casting spells",
     };
   }
 
