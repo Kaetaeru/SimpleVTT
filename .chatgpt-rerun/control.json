@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Current Barbarian Rage production start action and core mechanics are checkpointed in STATE. Legacy voluntary End Rage behavior was explicitly excluded; the canonical V1 item remains incomplete and should resume from the spellcasting/duration lifecycle gap.",
+  "reason": "Barbarian Rage spellcasting prohibition is now implemented and checkpointed. The canonical V1 Rage item remains incomplete only at the SRD 5.2.1 duration/extension/automatic-termination lifecycle; resume from V1_CURRENT_HANDOFF section 5 without repeating completed Rage work.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T06:35:00+09:00"
+  "updated_at": "2026-08-26T08:06:30+09:00"
 }
