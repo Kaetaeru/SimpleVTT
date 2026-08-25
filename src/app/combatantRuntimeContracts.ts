@@ -27,6 +27,7 @@ export interface CombatantRuntimeAttackVm {
 
 export interface RuntimeAttackFactVm {
   sourceKind:"weapon"|"unarmed"|"wild-shape";
+  ability?:AbilityKey;
   rangeFeet:number;
   diceSides:number;
   diceCount:number;
