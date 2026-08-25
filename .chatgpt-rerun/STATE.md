@@ -6,80 +6,64 @@
 - dispatch status to preserve: `continue`
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
-- canonical head reconciled this slice: `bde75ed8bbe68959765935d199c2685446c2c0f7`
+- canonical head reconciled: `7a6d7a4b91b1455034a3d4d441d8e9ea5964ca93`
 - active work branch: `codex/v1-barbarian-rage`
 - active issue: `#124` — R1 Barbarian Rage lifecycle
 - active draft PR: `#125`
-- verified product head: `d31a26302f1469b2edbb3b4d1b2c939ec840f7e9`
-- PLAN coordination commit written immediately before this STATE update: `49ee79567cce6a8205e1ad2e74de5e19af5743e5`
-- checkpointed_at: `2026-08-26T02:39:46+09:00`
+- latest product fix before coordination writes: `0fe59b17da87f0357657f2599b2052f41978f537`
+- PLAN checkpoint commit immediately before this STATE update: `13a90d8d93fcad53ec6930ff53593a1898062867`
+- checkpointed_at: `2026-08-26T03:32:34+09:00`
 
-## Resume source of truth
+## Reconciliation performed
 
-Mandatory Rerun preflight was performed in the required order for this slice:
+This resume read the Rerun files in the required order (`README.md -> control.json -> STATE.md -> PLAN.md`), then checked canonical root, V1 handoff/release checklist, branch heads, PR #125, and CI.
 
-`.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md`
+Canonical `work/v1-composite` advanced from the prior product base only by `chore(rerun): rearm after watchdog stop`; product code did not advance. The R1 working branch remained the authoritative unfinished product line.
 
-Then canonical root, current V1 handoff, release checklist, actual branch/PR state, relevant design contracts, and CI were reconciled. The canonical Rerun files on `work/v1-composite` still describe an older V1-13 checkpoint; the active PR branch state is newer and authoritative for unfinished R1 work.
+Do not repeat already-validated Rage domain mechanics, actual Rage Damage integration, local Session Rage projection, or the previous full Rules Domain / Phase 11 checkpoints.
 
-Do not repeat previously validated V1-13, Indomitable, Rage domain foundation, or Rage attack-damage integration.
+## Connected Rage work completed in this sequence
 
-## Work completed in this slice
+The deterministic regression `tests/ui/connectedBarbarianRage.test.ts` is present and explicitly included in `.github/workflows/phase12-connected.yml`.
 
-### Production attack snapshot regression
+Before the current fix it already passed through:
 
-- The earlier regression failure was traced to a test-only wrong action ID assumption, not a product defect.
-- Real Aelar Longsword uses `action.longsword`; the test was corrected to that canonical ID.
-- The existing product adapter already used `ItemInstanceVm.definitionId`; no duplicate product fix was made.
-- The production snapshot regression now proves `attackAbility: str` plus Rage Damage metadata on the real production path and is GREEN.
+- remote projected Barbarian owner authorization;
+- Host action routing and authoritative resolution commit;
+- one Rage Resource spend;
+- owning-client ResolutionEvent apply and active Rage presentation;
+- duplicate ActionRequest and duplicate event idempotency;
+- reconnect cursor with no replay/double spend.
 
-### Local player-facing Rage Session action
+Two earlier RED boundaries were resolved without introducing a parallel system:
 
-A deterministic RED was added to `tests/ui/barbarianRageRuntimeAdapter.test.ts` and observed in CI before implementation: the production Session had no `action.barbarian.rage` projection.
+1. Projected Barbarian absent from TurnRuntime — fixed by reusing `addTurnRuntimeCombatant` in the existing Rage adapter.
+2. Test accidentally remained in Initiative with a different current actor — corrected to the intended connected Freeform contract.
 
-The minimum production adapter was then added and installed in canonical offline composition:
+The final RED was Host Undo: the inverse runtime/event history was created, but the mounted remote Character's durable Rage Resource remained `1` instead of restoring to `2`.
 
-- `src/app/barbarianRageActionRuntimeAdapter.ts`
-- `src/app/offlineRuntimeAdapters.ts`
+Root cause was generic persistence ownership, not Rage mechanics. `characterSessionProjectionPersistenceGuard.ts` only examined `state.activeCharacter`, while the connected router restores the Host-local Character after a remote commit.
 
-The adapter reuses the existing authoritative pipeline:
+Product fix `0fe59b17da87f0357657f2599b2052f41978f537` now:
 
-`domain Rage resolver -> ResolutionEvents -> event apply -> Character write-back -> turn-runtime commit -> Activity projection -> runtime event history/Undo`
+- detects projected durable write-back targets from canonical state changes with `writeBack:"character"`;
+- uses the existing SessionProjection registry sheet when Host-local Character context is active;
+- updates the projected registry without switching the Host-local active Character;
+- rejects ambiguous multi-projected-owner write-back instead of silently choosing one.
 
-It does not add a second rules engine, persistence schema, or voluntary Rage-end API.
+No Rage-specific transport, duplicate persistence model, or new mechanics authority was added.
 
-Verified local behavior at `d31a263`:
+## Verification status
 
-- Freeform: Rage appears as a self Bonus Action presentation, spends one canonical Rage use, creates a committed resolution and Activity entry, and Undo restores the Resource.
-- Initiative: Rage consumes the authoritative Bonus Action and one Rage use; while active, a second start is unavailable; Undo restores Bonus Action, Rage Resource, and availability.
-- Heavy Armor start gating uses the existing equipment `armor-definition.training === heavy` fact.
-- Activity expectation follows the existing canonical projector (`격노 → Aelar`) rather than inventing a Rage-specific title format.
-- Existing Rage termination remains domain-owned. The current SRD 5.2.1 regression explicitly forbids a voluntary `resolveBarbarianRageEnd` API.
-
-## Verification evidence
-
-For product head `d31a26302f1469b2edbb3b4d1b2c939ec840f7e9`:
-
-- UI run `32879026250`: **success**.
-  - focused production/local Rage Session tests: success.
-  - production weapon Rage projection regression: success.
-  - all preceding/following UI groups: success.
-  - TypeScript + production build: success.
-- Contract validation run `32879026270`: **success**.
-- Rules Domain run `32879026373`: **success**.
-- Phase 11 Playable run `32879026268`: was still `in_progress` at the last pre-checkpoint read.
-- Phase 12 Connected Session run `32879026318`: was still `in_progress` at the last pre-checkpoint read.
-
-A future resume must re-fetch current workflow conclusions instead of assuming those two in-progress runs completed successfully.
+- Prior intentional RED Phase 12 run: `32881268426`.
+- That run reached the new connected Rage test and failed only at Host Undo durable projected Rage Resource restoration after all earlier exactly-once/reconnect assertions passed.
+- No new Phase 12 run exists yet for `0fe59b1` because PR #125 became `mergeable=false` after canonical independently changed `.chatgpt-rerun/control.json` during the watchdog re-arm.
+- The canonical conflict is coordination-only: both branches changed the same `control.json` timestamp line from the old common base.
 
 ## Current unfinished point / Next Exact Action
 
-R1 local Session acceptance is now checkpointed. The next unfinished boundary is **connected remote-owner Rage exactly-once/reconnect/Undo**.
-
-1. Re-fetch PR `#125`, latest branch head, and CI conclusions. GitHub state wins this checkpoint if it advanced.
-2. Add one minimal deterministic RED to the existing connected Session tests for a saved remote-owner Barbarian invoking `action.barbarian.rage`.
-3. The regression must prove owner authorization and host authority, exactly one Rage Resource spend/authoritative commit, committed effect/Activity continuity through reconnect, and one event-native Undo restoring the transaction without duplicate history.
-4. Reuse the existing connected ActionRequest/session projection/event-history path; do not create a Rage-specific transport or duplicate mechanics state.
-5. After connected GREEN and related Phase 12 regression, evaluate whether any explicit R1 acceptance gap remains before closing Rage and moving to Wild Shape.
-
-Keep PR `#125` draft until the full Rage R1 acceptance boundary is satisfied.
+1. Write `control.json` last for this checkpoint, preserving `status: continue` and incorporating the canonical watchdog re-arm reason.
+2. Create a coordination-only merge commit with the working head tree and canonical `7a6d7a4b...` as the second parent, then fast-forward `codex/v1-barbarian-rage` to it. This resolves ancestry/mergeability without changing product files.
+3. Verify PR #125 is mergeable and that the Phase 12 connected-session workflow is created for the reconciled head.
+4. Inspect the focused connected job. If GREEN, record the run as the completed connected Rage exactly-once/reconnect/Undo checkpoint.
+5. Keep PR #125 Draft and evaluate any remaining explicit R1 acceptance gap before closing Rage.
