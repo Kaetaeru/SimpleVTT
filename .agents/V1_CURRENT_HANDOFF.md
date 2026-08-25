@@ -13,11 +13,11 @@ Canonical target branch: **`work/v1-composite`**
 - 검증된 제품 checkpoint: `4a4cdb195ff4544adbb3bfd49487042238b112c1`
 - 2026-08-26 GitHub compare에서 `4a4cdb1`은 `work/v1-composite`의 merge-base ancestor로 확인됨.
 - 같은 compare에서 branch는 `4a4cdb1`보다 ahead, behind 0으로 확인됨.
-- checkpoint 이후 compare에 나타난 변경 경로는 coordination/handoff 문서이며 product source divergence는 확인되지 않음.
+- `4a4cdb1` 이후의 R1 증분은 아래에 별도로 기록하며, 새 증분은 아직 exact-head green으로 승격하지 않는다.
 
 따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
-## 2. 2026-08-25 실행 증거
+## 2. 실행 증거
 
 ### Green — exact product checkpoint `4a4cdb1`
 
@@ -42,13 +42,22 @@ Canonical target branch: **`work/v1-composite`**
 - `cargo test --manifest-path src-tauri/Cargo.toml`: 당시 agent shell에 Cargo가 없어 미실행.
 - Tauri two-instance와 Windows artifact 검증은 최신 제품 checkpoint에서 미실행.
 
-### 2026-08-26 Rage incremental checkpoint — unverified
+### 2026-08-26 Rage incremental source checkpoint — unverified
 
-- `1e23038fe314b109eaecef75aeca8e67c2462ccf` adds the SRD 5.2.1 Rage spellcasting prohibition at the shared `compileSpellCast` legality boundary, before economy, slot, roll, or state mutation.
-- `a7ad94b578babeef4e1559884f645cfd2002a9ab` adds deterministic regression coverage to the existing `spellcastingKernel.test.ts`; the final cleanup head after removing a transient duplicate test file is `2de54420b400fc8d71601102faa3b05eba8671e2`.
-- GitHub compare from the prior handoff head `f4b3f39` to `2de5442` shows only `src/domain/spellcasting.ts` (+4) and `tests/domain/spellcastingKernel.test.ts` (+40) as final file changes.
-- GitHub exposes no commit status checks for `2de5442`, and this execution environment cannot resolve `github.com` from the local container. No new green test/build claim is made.
-- SRD 5.2.1 duration behavior still remains: Rage lasts through the end of the Barbarian's next turn, can be extended round-to-round by an attack roll against an enemy, forcing an enemy saving throw, or spending a Bonus Action, lasts at most 10 minutes, and ends early on Heavy armor or Incapacitated. Do not restore the removed voluntary End Rage action.
+- spellcasting prohibition remains checkpointed from `1e23038fe314b109eaecef75aeca8e67c2462ccf` with deterministic coverage in `spellcastingKernel.test.ts`.
+- product source head `b939f892e80b1c37b97ad23b65204d5665ea4739` completes the remaining SRD 5.2.1 Rage lifecycle source:
+  - initial duration through end of the Barbarian's next turn;
+  - extension on the Barbarian's turn from an enemy attack roll, forcing an enemy saving throw, or the dedicated `격노 연장` Bonus Action;
+  - no extension from arbitrary Bonus Actions;
+  - 10-minute/100-round maximum guard;
+  - Heavy armor donning automatically ends Rage through the actual equipment toggle boundary;
+  - existing Incapacitated/dead effect termination remains reused;
+  - Rage-linked special effects expire with the core marker;
+  - no voluntary `End Rage` production action was restored.
+- `tests/domain/barbarianRage.test.ts` now covers duration, attack/save extension, dedicated Bonus Action extension, and maximum duration.
+- `tests/ui/barbarianRageActionRuntime.test.ts` now covers the production extension action and Heavy armor automatic termination.
+- GitHub compare from prior Rerun head `6cf2b31007d9a0e87dd5e47746a4352dfd088228` to `b939f892e80b1c37b97ad23b65204d5665ea4739` is ahead 8 / behind 0 and contains only the seven intended Rage source/test paths.
+- Container `git ls-remote` still fails with `Could not resolve host: github.com`; GitHub exposes no commit statuses or workflow runs for `b939f892`. Therefore the new Rage increment is **source-complete but execution-unverified**. Do not claim a new green test/build checkpoint from it.
 
 ## 3. Source-complete로 취급하고 재구현하지 않을 것
 
@@ -63,9 +72,10 @@ Canonical target branch: **`work/v1-composite`**
 - Ready lifecycle, death save, Stabilize, Unarmed Strike, Extra Attack, Action Surge
 - Bardic Inspiration/Tactical Mind/Fighter Indomitable follow-up 완료 범위
 - Cleric Divine Spark/Turn Undead와 Paladin Lay On Hands/Divine Sense/Abjure Foes
-- existing Barbarian resource definitions and already-implemented Berserker mechanics
+- Barbarian core Rage source through `b939f892`: start/resource/economy, resistance, Rage Damage, Strength Advantage, Concentration/spellcasting restrictions, SRD 5.2.1 duration/extension/automatic termination, production extension action, and Heavy armor termination
+- existing Barbarian Berserker mechanics
 
-Source-complete는 release DONE이 아니다. 아래 acceptance와 exact-head 증거가 남아 있다.
+Source-complete는 release DONE 또는 exact-head green이 아니다. 새 Rage 증분의 focused execution evidence는 이후 capable checkout/full regression에서 확보한다.
 
 ## 4. 남은 작업 — 실행 순서
 
@@ -85,9 +95,7 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
 - [x] open ability-check DM DC contract와 일반 능력/기술 판정 UI.
 - [x] Tactical Mind를 모든 적격 실패 능력 판정에 재사용.
 - [x] Fighter Indomitable failed saving-throw follow-up.
-- [ ] Barbarian core Rage lifecycle integration. 기존 Rage resource/Berserker mechanics를 재사용하고, 실제 코드에 없는 start/end, action economy, 상태, 피해 저항/보너스, 종료 조건만 채운다.
-  - [x] Rage 중 Concentration 종료 및 spellcasting 금지.
-  - [ ] SRD 5.2.1 duration/extension/automatic termination 완성.
+- [x] Barbarian core Rage lifecycle integration source. 기존 Rage resource/Berserker mechanics를 재사용하고 start/economy/state/resistance/damage/Strength Advantage/Concentration/spellcasting/duration/extension/automatic termination을 authoritative paths에 연결했다. 새 증분 focused execution evidence는 validation debt로 남아 있다.
 - [ ] Druid Wild Shape 선택/변신/해제/HP·행동·자원 lifecycle.
 - [ ] Monk Focus actions와 자원/행동 경제.
 - [ ] Rogue Cunning Action 및 Uncanny Dodge reaction.
@@ -146,18 +154,19 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R1 Barbarian Rage의 남은 lifecycle만 이어간다.
+R1의 다음 미완료 항목인 **Druid Wild Shape lifecycle**로 이동한다.
 
 ```text
-existing effect/turn-expiry + attack/save action boundaries 확인
--> SRD 5.2.1 initial end-of-next-turn duration 적용
--> enemy attack roll / forced enemy save / Bonus Action extension을 기존 authoritative paths에 최소 연결
--> 10-minute cap + Heavy armor/Incapacitated automatic termination 연결
--> focused deterministic validation
--> Barbarian Rage 항목 완료 후 canonical handoff/checklist 갱신하고 다음 R1 항목으로 이동
+existing Druid/Wild Shape domain + progression + production action primitives 확인
+-> 이미 구현된 선택/변신/해제/HP/행동/자원 behavior는 source-complete로 인정하고 재구현하지 않음
+-> 실제 빠진 production lifecycle만 최소 구현
+-> focused deterministic tests/fixtures 추가
+-> canonical handoff 갱신 후 다음 R1 항목으로 이동
 ```
 
-중요: 이미 구현·checkpoint된 Rage start action, resource/economy, B/P/S resistance, Rage Damage, Strength Advantage, Concentration break, spellcasting prohibition을 재구현하지 않는다. legacy voluntary End Rage action도 추가하지 않는다. 이 문서가 현재 V1 실행 포인터다. `.chatgpt-rerun/PLAN.md`나 `.chatgpt-rerun/STATE.md`에 별도 제품 작업 목록을 복사하지 않는다.
+Rage는 재구현하지 않는다. capable checkout이 생기면 새 Rage 증분에 대해 `tests/domain/barbarianRage.test.ts`, `tests/domain/spellcastingKernel.test.ts`, `tests/ui/barbarianRageActionRuntime.test.ts`를 focused validation 대상으로 포함하되, resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다. legacy voluntary End Rage action도 추가하지 않는다.
+
+중요: 이 문서가 현재 V1 실행 포인터다. `.chatgpt-rerun/PLAN.md`나 `.chatgpt-rerun/STATE.md`에 별도 제품 작업 목록을 복사하지 않는다.
 
 ## 6. 검증 명령
 
