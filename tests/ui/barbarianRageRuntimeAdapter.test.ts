@@ -41,7 +41,7 @@ test("Barbarian Rage is a player-facing Freeform action with canonical Resource,
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.resolution?.actionId,"action.barbarian.rage");
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===BARBARIAN_RAGE_RESOURCE_ID)?.current,1);
-  assert.equal(snapshot.activity[0]?.title,"격노");
+  assert.equal(snapshot.activity[0]?.title,"격노 → Aelar");
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
