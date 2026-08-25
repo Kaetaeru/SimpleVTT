@@ -4,6 +4,7 @@ import type { ActionVm, EconomyVm, SceneEntity, SceneVm } from "../../src/app/co
 import { resolveAtomicAttackTransaction } from "../../src/app/realAttackTransactionService";
 import { createTurnRuntimeSession } from "../../src/app/realTurnRuntimeService";
 import { phase09ReferenceAttackFact, phase09ReferenceTargetingFact } from "../../src/app/phase09ReferenceRulesFacts";
+import { BARBARIAN_RAGE_TAG } from "../../src/domain/barbarianBerserker";
 import { createEffect } from "../../src/domain/effects";
 
 const SHORTBOW:ActionVm = {
@@ -72,6 +73,21 @@ function commonRequest(actor:SceneEntity,target:SceneEntity) {
     targetingFact:phase09ReferenceTargetingFact("combatant.goblin-a"),
     expectedPreview:{ total:20, outcome:"명중" as const, critical:false },
   };
+}
+
+function runtimeWithRage(actor:SceneEntity,target:SceneEntity) {
+  const runtimeState=authoritativeRuntime(actor,target);
+  runtimeState.effects.push(createEffect({
+    id:"barbarian-rage",
+    sourceId:"dnd.srd521.feature.barbarian.rage",
+    sourceActorId:actor.id,
+    targetId:actor.id,
+    kind:"marker",
+    tags:[BARBARIAN_RAGE_TAG],
+    metadata:{ rageDamageBonus:2 },
+    duration:{ kind:"rounds", amount:1, anchorActorId:actor.id, boundary:"end" },
+  },runtimeState.clock));
+  return runtimeState;
 }
 
 test("atomic shortbow transaction commits targeting, attack, damage, and Action economy in one domain resolution", () => {
@@ -192,6 +208,38 @@ test("supplied authoritative runtime effects participate in attack damage instea
   assert.equal(result.runtimeState?.revision,1);
   assert.ok(result.runtimeState?.effects.some((effect)=>effect.id==="runtime-piercing-resistance"));
   assert.match(result.damageComponent?.adjustment ?? "",/런타임 효과 조정/);
+});
+
+test("Rage Damage applies to a Strength-based weapon attack", () => {
+  const actor=entity({ id:"char.aelar",name:"Aelar",side:"ally",ac:18,hp:31,maxHp:42,tempHp:5 });
+  const target=entity({ id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,ac:15 });
+  const action={ ...SHORTBOW, attackAbility:"str" as const } as ActionVm & { attackAbility:"str" };
+  const result=resolveAtomicAttackTransaction({
+    resolutionId:"phase09.atomic.rage-damage.strength",
+    ...commonRequest(actor,target),
+    action,
+    runtimeState:runtimeWithRage(actor,target),
+  });
+  assert.equal(result.status,"committed");
+  if (result.status!=="committed") return;
+  assert.equal(result.damage?.finalDamage,8,"Rage +2 applies to a Strength-based weapon attack");
+  assert.equal(result.targetHp,4);
+});
+
+test("Rage Damage does not apply to a Dexterity-based weapon attack", () => {
+  const actor=entity({ id:"char.aelar",name:"Aelar",side:"ally",ac:18,hp:31,maxHp:42,tempHp:5 });
+  const target=entity({ id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,ac:15 });
+  const action={ ...SHORTBOW, attackAbility:"dex" as const } as ActionVm & { attackAbility:"dex" };
+  const result=resolveAtomicAttackTransaction({
+    resolutionId:"phase09.atomic.rage-damage.dexterity",
+    ...commonRequest(actor,target),
+    action,
+    runtimeState:runtimeWithRage(actor,target),
+  });
+  assert.equal(result.status,"committed");
+  if (result.status!=="committed") return;
+  assert.equal(result.damage?.finalDamage,6,"Rage Damage requires a Strength-based attack");
+  assert.equal(result.targetHp,6);
 });
 
 test("authoritative runtime attack rejects damage to a concentrator without fixed save input, then breaks concentration with explicit failed save", () => {
