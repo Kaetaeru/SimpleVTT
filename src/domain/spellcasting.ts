@@ -3,6 +3,7 @@ import type { DurationSpec } from "./effects";
 import type { FixedDiceInput } from "./d20";
 import type { FixedDamageDice } from "./damageRoll";
 import { cloneRuntimeState, type RulesRuntimeState } from "./combatState";
+import { BARBARIAN_RAGE_TAG } from "./barbarianRage";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionEvent, ResolutionOperation } from "./resolutionTypes";
@@ -455,6 +456,9 @@ export function compileSpellCast(
   request: SpellCastRequest,
 ): SpellCastCompilation {
   if (request.expectedRevision !== inputState.revision) throw new DomainEvaluationError("spell cast revision mismatch");
+  if (inputState.effects.some((effect) => effect.targetId === request.actorId && effect.tags.includes(BARBARIAN_RAGE_TAG))) {
+    throw new DomainEvaluationError("Rage prevents casting spells");
+  }
   const access = validateAccess(definition, request);
   const operations: ResolutionOperation[] = [];
   const targetOpId = `${request.id}:targets`;
