@@ -11,6 +11,8 @@ import type { TargetFacts } from "./targeting";
 export const BARBARIAN_CLASS_ID = "dnd.srd521.class.barbarian";
 export const BARBARIAN_BERSERKER_SUBCLASS_ID = "dnd.srd521.subclass.barbarian.path-of-the-berserker";
 export const BARBARIAN_RAGE_RESOURCE_ID = "resource:barbarian.rage";
+export const BARBARIAN_RAGE_FEATURE_ID = "dnd.srd521.feature.barbarian.rage";
+export const BARBARIAN_RAGE_TAG = "barbarian:rage";
 export const BERSERKER_MINDLESS_RAGE_FEATURE_ID = "dnd.srd521.feature.barbarian.berserker.mindless-rage";
 export const BERSERKER_RETALIATION_FEATURE_ID = "dnd.srd521.feature.barbarian.berserker.retaliation";
 export const BERSERKER_INTIMIDATING_PRESENCE_FEATURE_ID = "dnd.srd521.feature.barbarian.berserker.intimidating-presence";
@@ -64,6 +66,106 @@ export function barbarianRuntimeResourceDefinitions(
     });
   }
   return definitions;
+}
+
+export interface BarbarianRageRequest {
+  id:string;
+  actorId:string;
+  expectedRevision:number;
+  barbarianLevel:number;
+}
+
+function validateBarbarianRage(level:number) {
+  if (!Number.isInteger(level) || level < 1 || level > 20) {
+    throw new DomainEvaluationError("Rage requires Barbarian level 1-20");
+  }
+}
+
+export function compileBarbarianRageStart(
+  inputState:RulesRuntimeState,
+  request:BarbarianRageRequest,
+):PendingResolution {
+  validateBarbarianRage(request.barbarianLevel);
+  if (inputState.effects.some((effect) => effect.targetId === request.actorId && effect.tags.includes(BARBARIAN_RAGE_TAG))) {
+    throw new DomainEvaluationError("Rage is already active");
+  }
+  return {
+    id:request.id,
+    actorId:request.actorId,
+    sourceId:BARBARIAN_RAGE_FEATURE_ID,
+    expectedRevision:request.expectedRevision,
+    operations:[
+      {
+        id:`${request.id}:bonus-action`,
+        kind:"use-economy",
+        actorId:request.actorId,
+        slot:"bonus-action",
+        bonusActionGranted:true,
+        actionKind:"other",
+      },
+      {
+        id:`${request.id}:rage-use`,
+        kind:"spend-resource",
+        actorId:request.actorId,
+        resourceId:BARBARIAN_RAGE_RESOURCE_ID,
+        amount:1,
+      },
+      {
+        id:`${request.id}:rage-effect`,
+        kind:"apply-effect",
+        effect:{
+          id:`${request.id}:${request.actorId}:rage`,
+          sourceId:BARBARIAN_RAGE_FEATURE_ID,
+          sourceActorId:request.actorId,
+          targetId:request.actorId,
+          kind:"marker",
+          tags:[BARBARIAN_RAGE_TAG],
+          duration:{ kind:"special", key:"barbarian-rage" },
+        },
+      },
+    ],
+  };
+}
+
+export function resolveBarbarianRageStart(
+  profile:RulesProfileLike,
+  inputState:RulesRuntimeState,
+  request:BarbarianRageRequest,
+):ResolutionCommit {
+  try {
+    return resolvePendingResolution(profile,inputState,compileBarbarianRageStart(inputState,request));
+  } catch (error) {
+    return { status:"rejected", state:inputState, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export function compileBarbarianRageEnd(
+  inputState:RulesRuntimeState,
+  request:BarbarianRageRequest,
+):PendingResolution {
+  validateBarbarianRage(request.barbarianLevel);
+  const markers = inputState.effects.filter((effect) =>
+    effect.targetId === request.actorId && effect.tags.includes(BARBARIAN_RAGE_TAG));
+  if (!markers.length) throw new DomainEvaluationError("Rage is not active");
+  return {
+    id:request.id,
+    actorId:request.actorId,
+    sourceId:BARBARIAN_RAGE_FEATURE_ID,
+    expectedRevision:request.expectedRevision,
+    operations:markers.map((effect,index) => ({ id:`${request.id}:end:${index}`, kind:"remove-effect", effectId:effect.id })),
+  };
+}
+
+export function resolveBarbarianRageEnd(
+  profile:RulesProfileLike,
+  inputState:RulesRuntimeState,
+  request:BarbarianRageRequest,
+):ResolutionCommit {
+  try {
+    return resolvePendingResolution(profile,inputState,compileBarbarianRageEnd(inputState,request));
+  } catch (error) {
+    return { status:"rejected", state:inputState, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function validateBerserker(level:number,subclassId:string|undefined,minimumLevel:number,feature:string) {
