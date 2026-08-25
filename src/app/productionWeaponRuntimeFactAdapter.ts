@@ -1,4 +1,4 @@
-import type { AppSnapshot, CharacterSheet, SceneVm } from "./contracts";
+import type { AbilityKey, AppSnapshot, CharacterSheet, SceneVm } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
 
@@ -20,8 +20,21 @@ function canonicalRangeFeet(def: WeaponDef) {
   return 5;
 }
 
-function weaponRangeByAttackId(character: CharacterSheet) {
-  const ranges = new Map<string, number>();
+function abilityMod(score:number) {
+  return Math.floor((score-10)/2);
+}
+
+function attackAbility(character:CharacterSheet,def:WeaponDef):AbilityKey|undefined {
+  if (def.mode === "ranged") return "dex";
+  if (!def.properties?.includes("finesse")) return "str";
+  const strength=abilityMod(character.abilities.str);
+  const dexterity=abilityMod(character.abilities.dex);
+  if (strength===dexterity) return undefined;
+  return strength>dexterity ? "str" : "dex";
+}
+
+function weaponFactsByAttackId(character: CharacterSheet) {
+  const facts = new Map<string, {rangeFeet:number;ability?:AbilityKey}>();
   for (const attack of character.attacks) {
     const item = character.items.find((candidate) =>
       candidate.name === attack.name || candidate.nameEn === attack.name,
@@ -31,18 +44,24 @@ function weaponRangeByAttackId(character: CharacterSheet) {
     if (!entry || entry.category !== "weapon") continue;
     const def = itemMechanic(entry, "weapon-definition") as WeaponDef | undefined;
     if (!def) continue;
-    ranges.set(attack.id, canonicalRangeFeet(def));
+    const ability=attackAbility(character,def);
+    facts.set(attack.id, { canonicalRangeFeet:def.mode?canonicalRangeFeet(def):5, ability } as never);
   }
-  return ranges;
+  return facts;
 }
 
 function reconcileWeaponRuntimeFacts(scene: SceneVm, character: CharacterSheet) {
-  const ranges = weaponRangeByAttackId(character);
-  if (!ranges.size) return;
+  const facts = weaponFactsByAttackId(character);
+  if (!facts.size) return;
   for (const action of scene.actionsByActor[character.id] ?? []) {
-    const rangeFeet = ranges.get(action.id);
-    if (rangeFeet === undefined || !action.runtimeAttack) continue;
-    action.runtimeAttack = { ...action.runtimeAttack, rangeFeet };
+    const fact = facts.get(action.id);
+    if (!fact || !action.runtimeAttack) continue;
+    const { ability: _previousAbility, ...runtimeAttack }=action.runtimeAttack;
+    action.runtimeAttack = {
+      ...runtimeAttack,
+      rangeFeet:fact.rangeFeet,
+      ...(fact.ability?{ability:fact.ability}:{}),
+    };
   }
 }
 
