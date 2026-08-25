@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BARBARIAN_RAGE_RESOURCE_ID } from "../../src/domain/barbarianBerserker";
+import { BARBARIAN_RAGE_RESOURCE_ID, BARBARIAN_RAGE_TAG } from "../../src/domain/barbarianBerserker";
 import type { RulesRuntimeState } from "../../src/domain/combatState";
 import type { RulesProfileLike } from "../../src/domain/profileEngine";
 import { resolvePendingResolution } from "../../src/domain/resolution";
@@ -12,28 +12,38 @@ interface RageLifecycleRequest {
   actorId:string;
   expectedRevision:number;
   barbarianLevel:number;
+  wearingHeavyArmor:boolean;
 }
 
-type RageLifecycleResolver = (
+type RageStartResolver = (
   profile:RulesProfileLike,
   state:RulesRuntimeState,
   request:RageLifecycleRequest,
+) => ResolutionCommit;
+
+type RageHeavyArmorResolver = (
+  profile:RulesProfileLike,
+  state:RulesRuntimeState,
+  request:{ id:string; actorId:string; expectedRevision:number },
 ) => ResolutionCommit;
 
 async function rageModule() {
   return await import("../../src/domain/barbarianBerserker") as unknown as Record<string,unknown>;
 }
 
-async function rageResolvers() {
+async function rageStartResolver() {
   const exports = await rageModule();
   const start = exports.resolveBarbarianRageStart;
-  const end = exports.resolveBarbarianRageEnd;
   assert.equal(typeof start,"function","base Rage start resolver must exist");
-  assert.equal(typeof end,"function","base Rage end resolver must exist");
-  return {
-    start:start as RageLifecycleResolver,
-    end:end as RageLifecycleResolver,
-  };
+  assert.equal(exports.resolveBarbarianRageEnd,undefined,"SRD 5.2.1 Rage has no voluntary end resolver");
+  return start as RageStartResolver;
+}
+
+async function rageHeavyArmorResolver() {
+  const exports = await rageModule();
+  const resolver = exports.resolveBarbarianRageHeavyArmorEquipped;
+  assert.equal(typeof resolver,"function","donning Heavy Armor must have an explicit forced Rage-end resolver");
+  return resolver as RageHeavyArmorResolver;
 }
 
 function barbarianState(rageUses:number) {
@@ -48,30 +58,35 @@ function barbarianState(rageUses:number) {
   return state;
 }
 
+function rageEffects(state:RulesRuntimeState) {
+  return state.effects.filter((effect) => effect.targetId === "hero" && effect.tags.includes(BARBARIAN_RAGE_TAG));
+}
+
 async function activeRageState(level=1) {
-  const { start } = await rageResolvers();
+  const start = await rageStartResolver();
   const state = barbarianState(2);
   const started = start(TEST_PROFILE,state,{
     id:`barbarian.rage.active.${level}`,
     actorId:"hero",
     expectedRevision:state.revision,
     barbarianLevel:level,
+    wearingHeavyArmor:false,
   });
   assert.equal(started.status,"committed");
   if (started.status !== "committed") throw new Error(started.error);
   return started.state;
 }
 
-test("Barbarian Rage start and end form one atomic resource/economy/effect lifecycle", async () => {
-  const { start,end } = await rageResolvers();
+test("Barbarian Rage starts atomically and expires at the end of the Barbarian's next turn", async () => {
+  const start = await rageStartResolver();
   const state = barbarianState(2);
-  const existingEffectIds = new Set(state.effects.map((effect) => effect.id));
 
   const started = start(TEST_PROFILE,state,{
     id:"barbarian.rage.start",
     actorId:"hero",
     expectedRevision:state.revision,
     barbarianLevel:1,
+    wearingHeavyArmor:false,
   });
   assert.equal(started.status,"committed");
   if (started.status !== "committed") return;
@@ -80,46 +95,196 @@ test("Barbarian Rage start and end form one atomic resource/economy/effect lifec
     started.state.combatants.hero.resources.find((pool) => pool.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,
     1,
   );
-  const createdRageEffects = started.state.effects.filter((effect) =>
-    effect.targetId === "hero" && !existingEffectIds.has(effect.id),
-  );
-  assert.ok(createdRageEffects.length > 0,"starting Rage must create an active self effect");
+  assert.ok(rageEffects(started.state).length > 0,"starting Rage must create active Rage effects");
+  for (const effect of rageEffects(started.state)) {
+    assert.deepEqual(effect.expiry,{ kind:"turn-boundary", actorId:"hero", round:2, boundary:"end" });
+    assert.equal(effect.termination?.targetBecomesIncapacitated,true);
+  }
 
-  const ended = end(TEST_PROFILE,started.state,{
-    id:"barbarian.rage.end",
+  const currentTurnEnd = resolvePendingResolution(TEST_PROFILE,started.state,{
+    id:"barbarian.rage.current-turn-end",
     actorId:"hero",
+    sourceId:"test:turn",
     expectedRevision:started.state.revision,
-    barbarianLevel:1,
+    operations:[{ id:"barbarian.rage.current-turn-end:end", kind:"end-turn", actorId:"hero", round:1 }],
   });
-  assert.equal(ended.status,"committed");
-  if (ended.status !== "committed") return;
-  const createdIds = new Set(createdRageEffects.map((effect) => effect.id));
-  assert.equal(ended.state.effects.some((effect) => createdIds.has(effect.id)),false);
+  assert.equal(currentTurnEnd.status,"committed");
+  if (currentTurnEnd.status !== "committed") return;
+  assert.ok(rageEffects(currentTurnEnd.state).length > 0,"Rage must survive the activation turn");
+
+  const nextTurnEnd = resolvePendingResolution(TEST_PROFILE,currentTurnEnd.state,{
+    id:"barbarian.rage.next-turn-end",
+    actorId:"hero",
+    sourceId:"test:turn",
+    expectedRevision:currentTurnEnd.state.revision,
+    operations:[{ id:"barbarian.rage.next-turn-end:end", kind:"end-turn", actorId:"hero", round:2 }],
+  });
+  assert.equal(nextTurnEnd.status,"committed");
+  if (nextTurnEnd.status !== "committed") return;
+  assert.equal(rageEffects(nextTurnEnd.state).length,0);
   assert.equal(
-    ended.state.combatants.hero.resources.find((pool) => pool.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,
+    nextTurnEnd.state.combatants.hero.resources.find((pool) => pool.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,
     1,
-    "ending Rage must not refund the spent use",
+    "natural Rage expiry must not refund the spent use",
   );
 });
 
-test("Barbarian Rage start rejects atomically when no Rage use remains", async () => {
-  const { start } = await rageResolvers();
-  const state = barbarianState(0);
-
-  const result = start(TEST_PROFILE,state,{
+test("Barbarian Rage start rejects atomically when no Rage use remains or Heavy Armor is worn", async () => {
+  const start = await rageStartResolver();
+  const depleted = barbarianState(0);
+  const noUse = start(TEST_PROFILE,depleted,{
     id:"barbarian.rage.depleted",
     actorId:"hero",
-    expectedRevision:state.revision,
+    expectedRevision:depleted.revision,
     barbarianLevel:1,
+    wearingHeavyArmor:false,
   });
-  assert.equal(result.status,"rejected");
-  assert.equal(result.state,state);
-  assert.equal(state.combatants.hero.economy.bonusAction,true);
-  assert.equal(
-    state.combatants.hero.resources.find((pool) => pool.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,
-    0,
-  );
-  assert.equal(state.effects.length,0);
+  assert.equal(noUse.status,"rejected");
+  assert.equal(noUse.state,depleted);
+  assert.equal(depleted.combatants.hero.economy.bonusAction,true);
+  assert.equal(depleted.effects.length,0);
+
+  const armored = barbarianState(2);
+  const heavyArmor = start(TEST_PROFILE,armored,{
+    id:"barbarian.rage.heavy-armor",
+    actorId:"hero",
+    expectedRevision:armored.revision,
+    barbarianLevel:1,
+    wearingHeavyArmor:true,
+  });
+  assert.equal(heavyArmor.status,"rejected");
+  assert.equal(heavyArmor.state,armored);
+  assert.equal(armored.combatants.hero.economy.bonusAction,true);
+  assert.equal(armored.combatants.hero.resources.find((pool) => pool.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,2);
+  assert.equal(armored.effects.length,0);
+});
+
+test("starting Rage ends Concentration atomically", async () => {
+  const state = barbarianState(2);
+  const concentrating = resolvePendingResolution(TEST_PROFILE,state,{
+    id:"barbarian.rage.concentration.setup",
+    actorId:"hero",
+    sourceId:"test:concentration",
+    expectedRevision:state.revision,
+    operations:[{
+      id:"barbarian.rage.concentration.setup:start",
+      kind:"start-concentration",
+      actorId:"hero",
+      groupId:"test:concentration:group",
+      sourceId:"test:concentration",
+    }],
+  });
+  assert.equal(concentrating.status,"committed");
+  if (concentrating.status !== "committed") return;
+  assert.ok(concentrating.state.concentration.hero);
+
+  const start = await rageStartResolver();
+  const result = start(TEST_PROFILE,concentrating.state,{
+    id:"barbarian.rage.break-concentration",
+    actorId:"hero",
+    expectedRevision:concentrating.state.revision,
+    barbarianLevel:1,
+    wearingHeavyArmor:false,
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(result.state.concentration.hero,undefined);
+  assert.ok(rageEffects(result.state).length > 0);
+});
+
+test("Rage ends early when a level 1-14 Barbarian becomes Incapacitated", async () => {
+  const active = await activeRageState(1);
+  const result = resolvePendingResolution(TEST_PROFILE,active,{
+    id:"barbarian.rage.incapacitated",
+    actorId:"goblin",
+    sourceId:"test:incapacitated",
+    expectedRevision:active.revision,
+    operations:[{
+      id:"barbarian.rage.incapacitated:effect",
+      kind:"apply-effect",
+      effect:{
+        id:"hero-incapacitated",
+        sourceId:"test:incapacitated",
+        sourceActorId:"goblin",
+        targetId:"hero",
+        kind:"condition",
+        conditionId:"incapacitated",
+        duration:{ kind:"rounds", amount:1, anchorActorId:"hero", boundary:"end" },
+      },
+    }],
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(rageEffects(result.state).length,0);
+});
+
+test("Persistent Rage at Barbarian 15 lasts ten minutes, survives mere Incapacitated, and ends on Unconscious", async () => {
+  const persistent = await activeRageState(15);
+  for (const effect of rageEffects(persistent)) {
+    assert.deepEqual(effect.expiry,{ kind:"time", elapsedSeconds:600 });
+    assert.equal(effect.termination?.targetBecomesIncapacitated,undefined);
+    assert.equal(effect.termination?.targetBecomesUnconscious,true);
+  }
+
+  const incapacitated = resolvePendingResolution(TEST_PROFILE,persistent,{
+    id:"barbarian.rage.persistent.incapacitated",
+    actorId:"goblin",
+    sourceId:"test:incapacitated",
+    expectedRevision:persistent.revision,
+    operations:[{
+      id:"barbarian.rage.persistent.incapacitated:effect",
+      kind:"apply-effect",
+      effect:{
+        id:"persistent-incapacitated",
+        sourceId:"test:incapacitated",
+        sourceActorId:"goblin",
+        targetId:"hero",
+        kind:"condition",
+        conditionId:"incapacitated",
+        duration:{ kind:"rounds", amount:1, anchorActorId:"hero", boundary:"end" },
+      },
+    }],
+  });
+  assert.equal(incapacitated.status,"committed");
+  if (incapacitated.status !== "committed") return;
+  assert.ok(rageEffects(incapacitated.state).length > 0,"Persistent Rage must survive Incapacitated without Unconscious");
+
+  const unconscious = resolvePendingResolution(TEST_PROFILE,persistent,{
+    id:"barbarian.rage.persistent.unconscious",
+    actorId:"goblin",
+    sourceId:"test:unconscious",
+    expectedRevision:persistent.revision,
+    operations:[{
+      id:"barbarian.rage.persistent.unconscious:effect",
+      kind:"apply-effect",
+      effect:{
+        id:"persistent-unconscious",
+        sourceId:"test:unconscious",
+        sourceActorId:"goblin",
+        targetId:"hero",
+        kind:"condition",
+        conditionId:"unconscious",
+        duration:{ kind:"rounds", amount:1, anchorActorId:"hero", boundary:"end" },
+      },
+    }],
+  });
+  assert.equal(unconscious.status,"committed");
+  if (unconscious.status !== "committed") return;
+  assert.equal(rageEffects(unconscious.state).length,0);
+});
+
+test("donning Heavy Armor forcibly ends active Rage without a voluntary end API", async () => {
+  const active = await activeRageState(1);
+  const forcedEnd = await rageHeavyArmorResolver();
+  const result = forcedEnd(TEST_PROFILE,active,{
+    id:"barbarian.rage.don-heavy-armor",
+    actorId:"hero",
+    expectedRevision:active.revision,
+  });
+  assert.equal(result.status,"committed");
+  if (result.status !== "committed") return;
+  assert.equal(rageEffects(result.state).length,0);
+  assert.equal(result.state.combatants.hero.resources.find((pool) => pool.id === BARBARIAN_RAGE_RESOURCE_ID)?.current,1);
 });
 
 test("active Rage resists Bludgeoning, Piercing, and Slashing damage through the generic damage lifecycle", async () => {
