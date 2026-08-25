@@ -1,6 +1,6 @@
-# Rerun Plan — SimpleVTT
+# Rerun Plan Router — SimpleVTT
 
-## Project coordinates
+## Run identity
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Canonical branch/ref: `work/v1-composite`
@@ -8,36 +8,29 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch: `continue`
 
-Preserve all source-complete work and validation evidence already recorded by the canonical V1 handoff. Do not repeat Fighter Indomitable or older validated work. Comprehensive Codex audit remains deferred until implementation freeze.
+## Canonical product-plan route
 
-## Reconciliation — 2026-08-26
+This file is not a product plan and must not duplicate one.
 
-The previous `blocked` plan was stale. GitHub now proves validated product checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1` is reachable and is the merge-base ancestor of `work/v1-composite`.
+For every V1 implementation decision, read and follow this authority chain after Rerun preflight:
 
-Current branch was compared directly against `4a4cdb1`: `work/v1-composite` is ahead by 6 commits and behind by 0. The changed paths are coordination/handoff files only; no product-source divergence was reported by that compare.
+1. `CANONICAL_ROOT.md` — repository/workspace routing authority.
+2. `.agents/V1_CURRENT_HANDOFF.md` — current V1 execution pointer and latest canonical checkpoint.
+3. `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` — full V1 completion plan, dependency order, acceptance gates, and remaining work.
+4. relevant `docs/design/` files — product behavior contracts for the selected item.
 
-Therefore the old unpublished-baseline blocker is resolved. Current `control.json=continue` is authoritative. This run/sequence must keep progressing from the latest unfinished canonical checklist item.
+The current feature, next feature, acceptance criteria, completed-feature list, and implementation sequence must not be copied into this file. If those change, update the canonical V1 documents instead.
 
-## Current execution target
+## Rerun responsibility
 
-Resume the next canonical implementation slice only:
+Rerun only preserves execution continuity:
 
-1. Barbarian Rage start/end.
-2. Rage resource spend and action economy.
-3. Raging state/status and supported damage resistance.
-4. Attack/damage bonus qualification and expiry/end conditions.
-5. Connected exactly-once/reconnect/Undo behavior with focused deterministic tests.
+- verify run/sequence/task identity;
+- obey current `control.json` authorization;
+- resume from `.chatgpt-rerun/STATE.md` without repeating validated work;
+- reconcile current GitHub facts before edits;
+- select actual product work from the canonical V1 authority chain above;
+- checkpoint durable execution state before the time limit.
 
-Reuse the existing Barbarian resource/runtime/action patterns. Do not add speculative architecture.
-
-## Verification policy
-
-Do not rerun already validated full matrices merely to resume. Run the narrowest Rage-focused deterministic checks required by the changed code, then broader validation only when justified by affected shared paths or the later final-audit boundary.
-
-Do not claim new green execution unless it is actually observed on the relevant exact head.
-
-## Continuation rule
-
-For this same `run_id`, `sequence`, and `task_id`, stale PLAN/STATE status wording must be reconciled forward when `control.json` says `continue`; it must not re-create a blocker by itself. Stop only for a real unrecoverable identity conflict, safety boundary, or unavailable permission required for the next concrete action.
+If Rerun files disagree with canonical V1 planning about product scope or order, canonical V1 planning wins. If a canonical V1 document contains stale factual GitHub state, reconcile and repair that canonical document rather than recording an alternate product plan here.
