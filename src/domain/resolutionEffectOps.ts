@@ -97,10 +97,12 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     changes.push(...lifeFlagStateChanges(target.id, beforeLife, target.life, provenance));
   }
 
-  const concentration = ctx.state.concentration[target.id];
-  const incapacitated = target.life.unconscious
+  const activeIds = activeConditionIds(activeConditions);
+  const unconscious = target.life.unconscious || activeIds.includes("unconscious");
+  const incapacitated = unconscious
     || target.life.dead
-    || activeConditionIds(activeConditions).includes("incapacitated");
+    || activeIds.includes("incapacitated");
+  const concentration = ctx.state.concentration[target.id];
   if (concentration && incapacitated) {
     const reason = target.life.dead ? "creature died" : "Incapacitated condition applied";
     const { ended } = endActorConcentration(ctx, target.id, reason);
@@ -114,6 +116,7 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
   if (incapacitated || target.life.dead) {
     const terminated = terminateEffectsForCreatureState(ctx.state.effects, target.id, {
       incapacitated,
+      unconscious,
       dead:target.life.dead,
     });
     ctx.state.effects = terminated.active;
