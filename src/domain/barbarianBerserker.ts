@@ -82,6 +82,7 @@ export interface BarbarianRageRequest {
   actorId:string;
   expectedRevision:number;
   barbarianLevel:number;
+  wearingHeavyArmor:boolean;
 }
 
 function validateBarbarianRage(level:number) {
@@ -90,14 +91,29 @@ function validateBarbarianRage(level:number) {
   }
 }
 
+function barbarianRageDuration(level:number,actorId:string) {
+  return level >= 15
+    ? ({ kind:"minutes", amount:10 } as const)
+    : ({ kind:"rounds", amount:1, anchorActorId:actorId, boundary:"end" } as const);
+}
+
+function barbarianRageTermination(level:number) {
+  return level >= 15
+    ? ({ targetBecomesUnconscious:true, targetDies:true } as const)
+    : ({ targetBecomesIncapacitated:true, targetDies:true } as const);
+}
+
+function rageEffectsFor(inputState:RulesRuntimeState,actorId:string) {
+  return inputState.effects.filter((effect) => effect.targetId === actorId && effect.tags.includes(BARBARIAN_RAGE_TAG));
+}
+
 export function compileBarbarianRageStart(
   inputState:RulesRuntimeState,
   request:BarbarianRageRequest,
 ):PendingResolution {
   validateBarbarianRage(request.barbarianLevel);
-  if (inputState.effects.some((effect) => effect.targetId === request.actorId && effect.tags.includes(BARBARIAN_RAGE_TAG))) {
-    throw new DomainEvaluationError("Rage is already active");
-  }
+  if (request.wearingHeavyArmor) throw new DomainEvaluationError("Rage cannot start while wearing Heavy Armor");
+  if (rageEffectsFor(inputState,request.actorId).length) throw new DomainEvaluationError("Rage is already active");
   return {
     id:request.id,
     actorId:request.actorId,
@@ -120,6 +136,12 @@ export function compileBarbarianRageStart(
         amount:1,
       },
       {
+        id:`${request.id}:end-concentration`,
+        kind:"end-concentration",
+        actorId:request.actorId,
+        reason:"Rage prevents Concentration",
+      },
+      {
         id:`${request.id}:rage-effect`,
         kind:"apply-effect",
         effect:{
@@ -134,7 +156,8 @@ export function compileBarbarianRageStart(
             "damage-resistance:piercing",
             "damage-resistance:slashing",
           ],
-          duration:{ kind:"special", key:"barbarian-rage" },
+          duration:barbarianRageDuration(request.barbarianLevel,request.actorId),
+          termination:barbarianRageTermination(request.barbarianLevel),
         },
       },
     ],
@@ -153,30 +176,38 @@ export function resolveBarbarianRageStart(
   }
 }
 
-export function compileBarbarianRageEnd(
+export interface BarbarianRageHeavyArmorRequest {
+  id:string;
+  actorId:string;
+  expectedRevision:number;
+}
+
+export function compileBarbarianRageHeavyArmorEquipped(
   inputState:RulesRuntimeState,
-  request:BarbarianRageRequest,
+  request:BarbarianRageHeavyArmorRequest,
 ):PendingResolution {
-  validateBarbarianRage(request.barbarianLevel);
-  const markers = inputState.effects.filter((effect) =>
-    effect.targetId === request.actorId && effect.tags.includes(BARBARIAN_RAGE_TAG));
-  if (!markers.length) throw new DomainEvaluationError("Rage is not active");
+  const active = rageEffectsFor(inputState,request.actorId);
+  if (!active.length) throw new DomainEvaluationError("Rage is not active");
   return {
     id:request.id,
     actorId:request.actorId,
     sourceId:BARBARIAN_RAGE_FEATURE_ID,
     expectedRevision:request.expectedRevision,
-    operations:markers.map((effect,index) => ({ id:`${request.id}:end:${index}`, kind:"remove-effect", effectId:effect.id })),
+    operations:active.map((effect,index) => ({
+      id:`${request.id}:heavy-armor-end:${index}`,
+      kind:"remove-effect",
+      effectId:effect.id,
+    })),
   };
 }
 
-export function resolveBarbarianRageEnd(
+export function resolveBarbarianRageHeavyArmorEquipped(
   profile:RulesProfileLike,
   inputState:RulesRuntimeState,
-  request:BarbarianRageRequest,
+  request:BarbarianRageHeavyArmorRequest,
 ):ResolutionCommit {
   try {
-    return resolvePendingResolution(profile,inputState,compileBarbarianRageEnd(inputState,request));
+    return resolvePendingResolution(profile,inputState,compileBarbarianRageHeavyArmorEquipped(inputState,request));
   } catch (error) {
     return { status:"rejected", state:inputState, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
   }
