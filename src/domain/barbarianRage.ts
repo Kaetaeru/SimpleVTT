@@ -85,7 +85,7 @@ export function compileBarbarianRageStart(
       ],
       duration:{ kind:"special", key:BARBARIAN_RAGE_DURATION_KEY },
       termination:{ targetBecomesIncapacitated:true, targetDies:true },
-      metadata:{ rageDamageBonus:damageBonus },
+      metadata:{ rageDamageBonus:damageBonus, publicLabel:"격노" },
     },
   });
   for (const family of ["ability-check","saving-throw"] as const) {
