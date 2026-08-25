@@ -14,6 +14,7 @@ import {
   sendConnectedWireTo,
 } from "./connectedSessionRuntimeAdapter";
 import { clearCommittedResolutionEvents, takeCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
+import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { buildConnectedResolutionPresentation } from "./connectedResolutionPresentation";
 import { tauriSessionTransport } from "./tauriSessionTransport";
 import {
@@ -21,7 +22,7 @@ import {
   restoreProjectionResolutionContext,
   type ProjectionResolutionContext,
 } from "./characterSessionProjectionMount";
-import { projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
+import { isEphemeralSessionProjectionCharacter, projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
@@ -471,6 +472,14 @@ MockAdapter.prototype.undoLastResolution=async function undoConnectedResolution(
   if(!committedUndo)return next;
   const undoId=`undo.${resolutionId}.${state.ledger.cursor+1}`;
   const inverse=inverseResolutionEvents(originalEvents,undoId);
+  const projectedWriteBack=inverse.some((event)=>event.stateChanges.some((change)=>change.writeBack==="character"&&isEphemeralSessionProjectionCharacter(this,change.targetId)));
+  if(projectedWriteBack){
+    const writeBack=await persistCharacterResolutionEvents(this,inverse,"forward");
+    if(writeBack.status==="rejected"){
+      committedUndo.detail.push(`Connected projected Character Undo write-back failed: ${writeBack.error}`);
+      return next;
+    }
+  }
   const event=state.ledger.commitHostEvent({actorId:"dm",payload:{kind:"resolution-undo",undoId,undoOf:resolutionId,inverseResolutionEvents:inverse,stateChanges:[...committedUndo.stateChanges],provenance:["Host-authoritative compensating Undo","original event history retained"]}});
   state.publishedResolutionEvents.delete(resolutionId);
   await broadcastConnectedWire({type:"event-batch",sessionId:state.ledger.sessionId,afterCursor:event.sequence-1,events:[event]});
