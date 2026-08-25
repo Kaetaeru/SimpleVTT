@@ -1,12 +1,17 @@
 import { BARBARIAN_RAGE_RESOURCE_ID } from "./barbarianBerserker";
 import type { RulesRuntimeState } from "./combatState";
+import {
+  BARBARIAN_RAGE_DURATION_KEY,
+  BARBARIAN_RAGE_FEATURE_ID,
+  BARBARIAN_RAGE_TAG,
+  barbarianRageExtensionUpdate,
+  barbarianRageStartMetadata,
+} from "./barbarianRageLifecycle";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 
-export const BARBARIAN_RAGE_FEATURE_ID = "dnd.srd521.feature.barbarian.rage";
-export const BARBARIAN_RAGE_TAG = "barbarian:rage";
-export const BARBARIAN_RAGE_DURATION_KEY = "barbarian-rage";
+export { BARBARIAN_RAGE_DURATION_KEY, BARBARIAN_RAGE_FEATURE_ID, BARBARIAN_RAGE_TAG } from "./barbarianRageLifecycle";
 
 export function barbarianRageDamageBonus(level:number) {
   if (!Number.isInteger(level) || level < 1 || level > 20) {
@@ -85,7 +90,11 @@ export function compileBarbarianRageStart(
       ],
       duration:{ kind:"special", key:BARBARIAN_RAGE_DURATION_KEY },
       termination:{ targetBecomesIncapacitated:true, targetDies:true },
-      metadata:{ rageDamageBonus:damageBonus, publicLabel:"격노" },
+      metadata:{
+        rageDamageBonus:damageBonus,
+        publicLabel:"격노",
+        ...barbarianRageStartMetadata(inputState.clock),
+      },
     },
   });
   for (const family of ["ability-check","saving-throw"] as const) {
@@ -120,6 +129,57 @@ export function resolveBarbarianRageStart(
 ):ResolutionCommit {
   try {
     return resolvePendingResolution(profile,inputState,compileBarbarianRageStart(inputState,request));
+  } catch (error) {
+    return { status:"rejected", state:inputState, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export interface BarbarianRageExtendRequest {
+  id:string;
+  actorId:string;
+  expectedRevision:number;
+}
+
+export function compileBarbarianRageExtend(
+  inputState:RulesRuntimeState,
+  request:BarbarianRageExtendRequest,
+):PendingResolution {
+  const marker=inputState.effects.find((effect)=>effect.targetId===request.actorId&&effect.tags.includes(BARBARIAN_RAGE_TAG));
+  if(!marker)throw new DomainEvaluationError("Rage is not active");
+  if(inputState.clock.activeActorId!==request.actorId)throw new DomainEvaluationError("Rage can only be extended on the Barbarian's active turn");
+  const update=barbarianRageExtensionUpdate(inputState.effects,request.actorId,inputState.clock);
+  if(!update)throw new DomainEvaluationError("Rage is already extended through the end of the next turn");
+  return {
+    id:request.id,
+    actorId:request.actorId,
+    sourceId:BARBARIAN_RAGE_FEATURE_ID,
+    expectedRevision:request.expectedRevision,
+    operations:[
+      {
+        id:`${request.id}:bonus-action`,
+        kind:"use-economy",
+        actorId:request.actorId,
+        slot:"bonus-action",
+        bonusActionGranted:true,
+        actionKind:"other",
+      },
+      {
+        id:`${request.id}:effect`,
+        kind:"update-effect",
+        effectId:marker.id,
+        metadataPatch:update.after.metadata??{},
+      },
+    ],
+  };
+}
+
+export function resolveBarbarianRageExtend(
+  profile:RulesProfileLike,
+  inputState:RulesRuntimeState,
+  request:BarbarianRageExtendRequest,
+):ResolutionCommit {
+  try {
+    return resolvePendingResolution(profile,inputState,compileBarbarianRageExtend(inputState,request));
   } catch (error) {
     return { status:"rejected", state:inputState, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
   }
