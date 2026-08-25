@@ -90,6 +90,7 @@ jobs:
       - name: Verify class mechanics
         run: >-
           npx tsx --test
+          tests/domain/barbarianRage.test.ts
           tests/domain/druidArchdruid.test.ts
           tests/domain/druidElementalFury.test.ts
           tests/domain/druidCircleLand.test.ts
