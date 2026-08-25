@@ -117,10 +117,18 @@ test("no-target and self actions still use the existing resolver",()=>{
 test("ability checks use one catalog while official actions remain normal action-category slots",()=>{
   assert.match(dock,/ABILITY_CHECK_GROUPS/);
   assert.match(dock,/session-action-library ability/);
+  assert.match(dock,/action\.ability\.con/);
   assert.match(dock,/!action\.id\.startsWith\("action\.skill\."\)/);
   assert.match(dock,/action\.id==="action\.dash"\|\|action\.id\.startsWith\("action\.standard\."\)\|\|action\.id\.startsWith\("ui\.action\.standard\."\)/);
   assert.match(css,/\.session-ability-check-groups/);
   assert.doesNotMatch(dock,/session-standard-action-strip/);
+});
+
+test("Host ability checks expose a native public DC control",()=>{
+  assert.match(root,/awaitingAbilityCheckDc/);
+  assert.match(root,/type="number" min=\{1\} max=\{99\}/);
+  assert.match(root,/type:"ability-check-dc"/);
+  assert.match(root,/\[5,10,15,20,25,30\]/);
 });
 
 test("Influence, Search, and Study are one action slot each with skill-roll pickers",()=>{

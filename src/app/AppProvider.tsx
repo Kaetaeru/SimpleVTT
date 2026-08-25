@@ -27,6 +27,7 @@ import "./productionCombatantPreparationAdapter";
 import "./campaignRuntimeAdapter";
 import { mockAdapter } from "./mockAdapter";
 import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
+import { setSessionDebugPreviewRole } from "./sessionDebugPreviewRole";
 
 export interface UiDebugState {
   selectedActionId: string | null;
@@ -298,6 +299,10 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
   onExit(): void;
 }) {
   const parent = useSimpleVtt();
+  useEffect(()=>{
+    setSessionDebugPreviewRole(mockAdapter,role);
+    return ()=>setSessionDebugPreviewRole(mockAdapter,null);
+  },[role]);
   const [previewCalendarOverride,setPreviewCalendarOverride]=useState<{campaignId:string;absoluteMinute:number;displayAnchor:CampaignCalendarState["displayAnchor"]}|null>(null);
   const [previewRationOverride,setPreviewRationOverride]=useState<{campaignId:string;rations:CampaignSessionSystemsProjection["rations"]}|null>(null);
   const [previewAdvancementOverride,setPreviewAdvancementOverride]=useState<Record<string,{xp:number;levelUpCredits:number}>>({});

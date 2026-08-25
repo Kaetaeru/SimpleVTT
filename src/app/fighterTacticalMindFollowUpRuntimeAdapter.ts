@@ -16,6 +16,7 @@ const STABILIZE_ACTION_ID="action.standard.stabilize";
 type DicePrototype={d20(actionId:string,index?:number):number};
 interface AdapterState {scene:SceneVm;activeCharacter:CharacterSheet;resolution:ResolutionView|null;activity:ActivityEntry[];syncChar():void;getSnapshot():Promise<AppSnapshot>}
 const previousResolveAction=MockAdapter.prototype.resolveAction;
+const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const handled=new WeakMap<MockAdapter,Set<string>>();
 
@@ -27,6 +28,8 @@ function offer(adapter:MockAdapter,internal:AdapterState){const resolution=inter
 function markHandled(adapter:MockAdapter,resolutionId:string){const ids=handled.get(adapter)??new Set<string>();ids.add(resolutionId);handled.set(adapter,ids);}
 
 MockAdapter.prototype.resolveAction=async function resolveWithTacticalMindOffer(actionId:string,targetIds:string[]){const snapshot=await previousResolveAction.call(this,actionId,targetIds);offer(this,this as unknown as AdapterState);return this.getSnapshot();};
+
+MockAdapter.prototype.advanceResolution=async function advanceWithTacticalMindOffer(){await previousAdvanceResolution.call(this);offer(this,this as unknown as AdapterState);return this.getSnapshot();};
 
 MockAdapter.prototype.respondToInterrupt=async function respondToTacticalMind(accept:boolean){
   const internal=this as unknown as AdapterState;const resolution=internal.resolution;const interrupt=resolution?.interrupt;if(!resolution||interrupt?.id!==INTERRUPT_ID)return previousRespondToInterrupt.call(this,accept);

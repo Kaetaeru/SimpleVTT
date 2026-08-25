@@ -34,7 +34,7 @@ MockAdapter.prototype.advanceResolution=async function advanceAbilityCheckWithCa
     checkLabel,
   });
   const completed=await previousAdvanceResolution.call(this);
-  if (completed.resolution?.id===resolution.id && completed.resolution.stage==="complete") {
+  if (completed.resolution?.id===resolution.id && (completed.resolution.stage==="complete"||completed.resolution.stage==="interrupt")) {
     recordRuntimeResolutionEvents(this,resolution.id,[event]);
   }
   return completed;

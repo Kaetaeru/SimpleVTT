@@ -17,6 +17,9 @@ test("production characters expose every SRD 5.2.1 base action through executabl
   assert.equal(actions.filter((action)=>action.id.startsWith("action.standard.search.")).length,4);
   assert.equal(actions.filter((action)=>action.id.startsWith("action.standard.study.")).length,5);
   assert.equal(actions.filter((action)=>action.id.startsWith("action.skill.")).length,18);
+  assert.deepEqual(actions.filter((action)=>action.id.startsWith("action.ability.")).map((action)=>action.id),[
+    "action.ability.str","action.ability.dex","action.ability.con","action.ability.int","action.ability.wis","action.ability.cha",
+  ]);
   assert.equal(actions.find((action)=>action.id==="action.standard.help")?.target,"ally");
   assert.equal(actions.find((action)=>action.id==="action.standard.dodge")?.economy,"행동");
 });

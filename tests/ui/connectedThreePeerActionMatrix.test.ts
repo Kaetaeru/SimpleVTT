@@ -64,7 +64,9 @@ for(const scenario of cases)test(`three-peer matrix · ${scenario.name}`,async()
     let completed=await host.resolveAction(scenario.actionId,scenario.targetIds);
     assert.ok(completed.resolution,`${scenario.actionId} must start a resolution`);
     for(let step=0;step<12&&completed.resolution?.stage!=="complete";step+=1){
-      completed=completed.resolution?.stage==="interrupt"
+      completed=completed.resolution?.rollKind==="check"&&completed.resolution.stage==="effect-preview"&&completed.resolution.checkTarget===undefined
+        ?await host.applyDmAdjudication({type:"ability-check-dc",value:15,scope:"resolution"})
+        :completed.resolution?.stage==="interrupt"
         ?await host.respondToInterrupt(false)
         :await host.advanceResolution();
     }

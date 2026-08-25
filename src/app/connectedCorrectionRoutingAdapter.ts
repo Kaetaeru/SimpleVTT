@@ -48,6 +48,7 @@ MockAdapter.prototype.applyDmAdjudication=async function applyConnectedDmCorrect
   const state=connectedStateFor(this);
   const app=connectedInternal(this);
   if (state.mode==="client") return app.getSnapshot();
+  if (command.type==="ability-check-dc") return previousApplyDmAdjudication.call(this,command);
 
   if (state.mode==="host"&&state.pendingRemoteAction&&IMMEDIATE_STATE_CORRECTIONS.has(command.type)) {
     app.session.compatibility="warning";

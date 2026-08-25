@@ -449,10 +449,14 @@ function QuickSheet({ onClose, onOpenFull }: { onClose(): void; onOpenFull(butto
 }
 
 function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTMLButtonElement): void }) {
-  const { snapshot, advanceResolution, respondToInterrupt, dismissResolution, undoLastResolution } = useSimpleVtt();
+  const { snapshot, advanceResolution, respondToInterrupt, dismissResolution, undoLastResolution, applyDmAdjudication } = useSimpleVtt();
+  const [abilityCheckDc,setAbilityCheckDc]=useState(15);
   const resolution = snapshot?.resolution;
   const diceAnimated = Boolean(resolution && ANIMATED_RESOLUTION_STAGES.has(resolution.stage) && resolution.authoritativeDice.length > 0);
   const passiveRemote=Boolean(snapshot&&isNonBlockingRemoteResolution(snapshot));
+  const awaitingAbilityCheckDc=Boolean(snapshot?.session.role==="host"&&resolution?.rollKind==="check"&&resolution.stage==="effect-preview"&&resolution.checkTarget===undefined);
+
+  useEffect(()=>setAbilityCheckDc(15),[resolution?.id]);
 
   useEffect(() => {
     if (!resolution || !diceAnimated || !resolution.canAdvance || passiveRemote) return;
@@ -491,6 +495,11 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
     </div>
     <span className="session-resolution-stage">{resolutionStageCopy(resolution.stage)}</span>
     {resolution.interrupt && <div className="session-resolution-actions"><button className="primary" type="button" onClick={() => void respondToInterrupt(true)}>사용</button><button type="button" onClick={() => void respondToInterrupt(false)}>넘기기</button></div>}
+    {awaitingAbilityCheckDc&&<form className="session-resolution-dc" aria-label="능력 판정 난이도 설정" onSubmit={(event)=>{event.preventDefault();void applyDmAdjudication({type:"ability-check-dc",value:abilityCheckDc,scope:"resolution"});}}>
+      <label><span>공개 DC</span><input type="number" min={1} max={99} required value={abilityCheckDc} onChange={(event)=>setAbilityCheckDc(Number(event.target.value))}/></label>
+      <div aria-label="표준 난이도">{[5,10,15,20,25,30].map((dc)=><button type="button" key={dc} onClick={()=>void applyDmAdjudication({type:"ability-check-dc",value:dc,scope:"resolution"})}>{dc}</button>)}</div>
+      <button className="primary" type="submit">판정 확정</button>
+    </form>}
     {!resolution.interrupt && resolution.canAdvance && <button className="primary session-resolution-next" type="button" onClick={() => void advanceResolution()}>{resolution.nextLabel ?? "계속"}</button>}
     {resolution.stage === "complete" && <div className="session-resolution-actions"><button type="button" onClick={(event) => onOpenActivity(event.currentTarget)}>상세</button>{snapshot.session.role === "host" && <button type="button" onClick={() => void undoLastResolution()}>되돌리기</button>}<button className="primary" type="button" onClick={() => void dismissResolution()}>닫기</button></div>}
   </section>;

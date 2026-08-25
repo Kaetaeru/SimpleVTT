@@ -419,6 +419,7 @@ export interface DmAdjudicationCommand {
     | "disadvantage"
     | "force-success"
     | "force-failure"
+    | "ability-check-dc"
     | "ac-dc-adjustment"
     | "damage-correction"
     | "healing-correction"

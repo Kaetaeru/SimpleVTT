@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/connectedCorrectionRoutingAdapter";
 import "../../src/app/progressionContracts";
 import type { CatalogEntry, CharacterSheet, CharacterSummary, SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -180,8 +181,11 @@ test("host-unknown projected Character resolves Arcana with canonical proficienc
     assert.ok(preview.resolution?.provenance.some((entry)=>entry.includes(`action:${ARCANA_ACTION}:check-bonus`)));
     assert.deepEqual(preview.scene.economyByActor[remote.id],freeformEconomy,"Freeform skill preview must not spend Initiative action economy");
 
-    await host.advanceResolution();
-    const completed=await host.getSnapshot();
+    const awaitingDc=await host.advanceResolution();
+    assert.equal(awaitingDc.resolution?.stage,"effect-preview");
+    assert.equal(awaitingDc.resolution?.checkTarget,undefined);
+    assert.equal(state.ledger.cursor,0,"open skill check must remain uncommitted until the DM publishes a DC");
+    const completed=await host.applyDmAdjudication({type:"ability-check-dc",value:15,scope:"resolution"});
     assert.equal(completed.activeCharacter.id,before.activeCharacter.id,"Host local Character context must restore after remote skill commit");
     assert.equal(connectedStateFor(host).pendingRemoteAction,null);
     assert.equal(connectedStateFor(host).ledger?.cursor,1);

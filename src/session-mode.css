@@ -425,6 +425,11 @@
   white-space: nowrap;
 }
 .session-resolution-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.session-resolution-dc { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.session-resolution-dc label,
+.session-resolution-dc > div { display: flex; align-items: center; gap: 4px; }
+.session-resolution-dc input { width: 58px; }
+.session-resolution-dc button { min-width: 34px; }
 .session-resolution-next { min-width: 88px; }
 .session-resolution-notice {
   pointer-events: none;

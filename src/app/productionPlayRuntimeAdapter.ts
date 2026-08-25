@@ -17,6 +17,7 @@ import { LAY_ON_HANDS_ACTION_ID } from "./paladinLayOnHandsRuntimeContracts";
 import { abjureFoesMaximumTargets } from "../domain/paladinAbjureFoes";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
+const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
 const SKILLS:Array<{id:string;name:string;ability:AbilityKey}>=[
   {id:"athletics",name:"운동",ability:"str"},
   {id:"acrobatics",name:"곡예",ability:"dex"},
@@ -144,7 +145,28 @@ function attackActions(character:CharacterSheet):ActionVm[] {
 }
 
 function skillActions(character:CharacterSheet):ActionVm[] {
-  return SKILLS.map((skill)=>{
+  const abilities=ABILITIES.map((ability)=>{
+    const bonus=mod(character.abilities[ability]);
+    return {
+      id:`action.ability.${ability}`,
+      actorId:character.id,
+      name:`${ABILITY_LABEL[ability]} 판정`,
+      category:"basic",
+      target:"none",
+      economy:"없음",
+      resolutionKind:"ability-check",
+      summary:signed(bonus),
+      available:true,
+      eligibleTargetIds:[],
+      checkBonus:bonus,
+      details:[
+        detail("판정",ABILITY_LABEL[ability]),
+        detail("능력 수정치",signed(bonus),`${ABILITY_LABEL[ability]} ${character.abilities[ability]}`),
+        detail("총 보너스",signed(bonus),"Production Character projection"),
+      ],
+    } satisfies ActionVm;
+  });
+  const skills=SKILLS.map((skill)=>{
     const proficient=hasSkill(character,skill.name);
     const abilityBonus=mod(character.abilities[skill.ability]);
     const total=skillBonus(character,skill.name,skill.ability);
@@ -168,6 +190,7 @@ function skillActions(character:CharacterSheet):ActionVm[] {
       ],
     } satisfies ActionVm;
   });
+  return [...abilities,...skills];
 }
 
 function featureActions(character:CharacterSheet):ActionVm[] {
