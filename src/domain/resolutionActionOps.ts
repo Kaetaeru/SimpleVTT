@@ -6,6 +6,7 @@ import {
   conditionTargetingRestriction,
   frightenedMovementRestriction,
 } from "./conditions";
+import { applyRageEffectUpdate, barbarianRageD20ExtensionUpdate } from "./barbarianRageLifecycle";
 import { effectStateChange } from "./runtimeStateChange";
 import { conditionEffectsFor, requireCombatant, type RulesRuntimeState } from "./combatState";
 import { selectEffectTurnActivity } from "./effects";
@@ -278,6 +279,12 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
   const consumedProvenance=consumed.map((effect)=>({source:effect.sourceId,status:"applied" as const,reason:`effect ${effect.id} consumed by ${operation.request.family}`}));
   if (consumed.length) ctx.state.effects=ctx.state.effects.filter((effect)=>!consumed.some((entry)=>entry.id===effect.id));
   if (consumedProvenance.length) resolved={...resolved,provenance:[...resolved.provenance,...consumedProvenance]};
+  const rageUpdate=barbarianRageD20ExtensionUpdate(ctx.state.effects,ctx.state.clock,ctx.pending,operation);
+  const rageProvenance:ProvenanceRecord[]=rageUpdate?[{source:rageUpdate.before.sourceId,status:"applied",reason:rageUpdate.reason}]:[];
+  if(rageUpdate){
+    ctx.state.effects=applyRageEffectUpdate(ctx.state.effects,rageUpdate);
+    resolved={...resolved,provenance:[...resolved.provenance,...rageProvenance]};
+  }
   return {
     result:resolved,
     event:makeEvent(
@@ -286,7 +293,10 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
       `${resolved.family} ${resolved.outcome} (${resolved.total} vs ${resolved.target})`,
       resolved,
       resolved.provenance,
-      consumed.map((effect)=>effectStateChange(effect.targetId,effect.id,"removed",consumedProvenance,effect,undefined)),
+      [
+        ...consumed.map((effect)=>effectStateChange(effect.targetId,effect.id,"removed",consumedProvenance,effect,undefined)),
+        ...(rageUpdate?[effectStateChange(rageUpdate.before.targetId,rageUpdate.before.id,"updated",rageProvenance,rageUpdate.before,rageUpdate.after)]:[]),
+      ],
       operation.targetId,
     ),
   };
