@@ -5,6 +5,7 @@ import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09Reference
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import { compileAttack, resolveAttack } from "../domain/attack";
+import { BARBARIAN_RAGE_TAG } from "../domain/barbarianRage";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
 import type { ConcentrationCheckRequest } from "../domain/concentration";
 import type { D20TestResult } from "../domain/d20";
@@ -124,12 +125,21 @@ function isolatedRuntimeState(request:AtomicAttackTransactionRequest):RulesRunti
   };
 }
 
-function transactionInput(request:AtomicAttackTransactionRequest) {
+function transactionInput(request:AtomicAttackTransactionRequest):RulesRuntimeState {
   if (!request.runtimeState) return isolatedRuntimeState(request);
   const input=cloneRuntimeState(request.runtimeState);
   if (!input.combatants[request.actor.id]) throw new Error(`runtime attack actor is missing from authoritative runtime: ${request.actor.id}`);
   if (!input.combatants[request.target.id]) throw new Error(`runtime attack target is missing from authoritative runtime: ${request.target.id}`);
   return input;
+}
+
+function rageDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase09AttackFact) {
+  if (attackFact.ability!=="str") return [];
+  const rage=state.effects.find((effect) => effect.targetId===actorId && effect.tags.includes(BARBARIAN_RAGE_TAG));
+  const value=rage?.metadata?.rageDamageBonus;
+  return typeof value==="number" && value>0
+    ? [{ source:`effect:${rage.id}:rage-damage`,value }]
+    : [];
 }
 
 function economyCost(action:ActionVm,initiativeMode:boolean) {
@@ -216,7 +226,7 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       sourceId:request.action.id,
       damageType:damageSpec.type,
       dice:request.attackFact.damageDice,
-      flat:request.attackFact.flatDamage,
+      flat:[...request.attackFact.flatDamage,...rageDamageFlat(input,request.actor.id,request.attackFact)],
     },
     economy:request.reaction||!cost ? undefined : {
       ...cost,
