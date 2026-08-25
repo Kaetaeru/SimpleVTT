@@ -2,8 +2,8 @@
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
-  "status": "continue",
-  "reason": "Re-arm the existing SimpleVTT continuation after a watchdog force-stop left the local watcher at retry_limit.",
+  "status": "blocked",
+  "reason": "Canonical V1 handoff says validated product checkpoint 4a4cdb1 is local-only and not reachable from work/v1-composite; implementing Barbarian Rage on the current remote tree would fork below the verified baseline. Publish/reconcile the validated lineage, then re-arm this same sequence to continue.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T03:18:00+09:00"
+  "updated_at": "2026-08-26T04:10:33+09:00"
 }
