@@ -34,3 +34,9 @@ Rerun only preserves execution continuity:
 - checkpoint durable execution state before the time limit.
 
 If Rerun files disagree with canonical V1 planning about product scope or order, canonical V1 planning wins. If a canonical V1 document contains stale factual GitHub state, reconcile and repair that canonical document rather than recording an alternate product plan here.
+
+## Router checkpoint
+
+- reconciled_at: `2026-08-26T08:51:19+09:00`
+- observed product head before Rerun metadata writes: `cddef0c254108fe963a92cab2da7bd991a09bc21`
+- product routing remains delegated to `.agents/V1_CURRENT_HANDOFF.md`; incremental no-repeat facts are recorded only in `STATE.md`.
