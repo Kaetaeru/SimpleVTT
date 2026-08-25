@@ -5,6 +5,7 @@ import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09Reference
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import { compileAttack, resolveAttack } from "../domain/attack";
+import { BARBARIAN_RAGE_FEATURE_ID, BARBARIAN_RAGE_TAG } from "../domain/barbarianBerserker";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
 import type { ConcentrationCheckRequest } from "../domain/concentration";
 import type { D20TestResult } from "../domain/d20";
@@ -180,6 +181,18 @@ function projectLife(state:RulesRuntimeState,targetId:string):RuntimeLifeVm {
   };
 }
 
+function rageDamageFlat(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
+  if (request.action.attackAbility !== "str") return [];
+  if (request.attackFact.sourceKind !== "weapon" && request.attackFact.sourceKind !== "unarmed") return [];
+  if (request.attackFact.flatDamage.some((entry) => entry.source === BARBARIAN_RAGE_FEATURE_ID)) return [];
+  const rage = input.effects.find((effect) => effect.targetId === request.actor.id && effect.tags.includes(BARBARIAN_RAGE_TAG));
+  if (!rage) return [];
+  const effectBonus = rage.metadata?.rageDamageBonus;
+  const bonus = typeof effectBonus === "number" ? effectBonus : request.action.rageDamageBonus;
+  if (typeof bonus !== "number" || !Number.isFinite(bonus) || bonus <= 0) return [];
+  return [{ source:BARBARIAN_RAGE_FEATURE_ID, value:bonus }];
+}
+
 function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
   const damageSpec=request.action.damage![0];
   const cost=economyCost(request.action,request.initiativeMode);
@@ -216,7 +229,7 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       sourceId:request.action.id,
       damageType:damageSpec.type,
       dice:request.attackFact.damageDice,
-      flat:request.attackFact.flatDamage,
+      flat:[...request.attackFact.flatDamage,...rageDamageFlat(request,input)],
     },
     economy:request.reaction||!cost ? undefined : {
       ...cost,

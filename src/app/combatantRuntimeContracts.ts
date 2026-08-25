@@ -40,5 +40,7 @@ declare module "./contracts" {
   }
   interface ActionVm {
     runtimeAttack?:RuntimeAttackFactVm;
+    attackAbility?:AbilityKey;
+    rageDamageBonus?:number;
   }
 }
