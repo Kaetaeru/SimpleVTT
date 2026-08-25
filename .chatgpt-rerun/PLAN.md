@@ -10,47 +10,56 @@
 - task_id: `phase14-production-play-session-ux`
 - dispatch: `continue`
 
-## Active V1 planning authority — read this before product work
+## Active V1 planning authority
 
-After the mandatory Rerun read order (`README.md -> control.json -> STATE.md -> PLAN.md`), read the current V1 planning sources in this order:
+After the mandatory Rerun read order (`README.md -> control.json -> STATE.md -> PLAN.md`), read and reconcile the current V1 planning sources with actual GitHub state. `.agents/V1_CURRENT_HANDOFF.md` is the active execution pointer and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` is the broader acceptance contract. Actual branch/PR state wins stale embedded SHA or prose.
 
-1. `.agents/README.md` — priority/router rules.
-2. `.agents/DEFERRED_FIXES.md` — any currently blocking deferred gate.
-3. `.agents/V1_CURRENT_HANDOFF.md` — **primary active execution plan and Next Exact Action**.
-4. `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` — full V1 dependency/order/acceptance contract.
-5. `.agents/CURRENT_WORK.md` — latest implementation evidence and already-completed mechanics.
-6. Relevant `docs/design/` contracts for the selected item.
-
-Rerun must not invent a second V1 implementation plan inside this file. This file is a resume pointer into the canonical `.agents` planning set. Reconcile those files with actual GitHub state before acting; a newer branch/PR/commit can make embedded SHA or branch prose stale. Do not repeat work already present and validated on the active head.
+Do not replay previously validated V1-13, Indomitable, or already-GREEN Rage domain/attack work.
 
 ## Current active slice
 
-Canonical sequence is currently **R1 — Barbarian Rage lifecycle** from `.agents/V1_CURRENT_HANDOFF.md`.
+Canonical sequence remains **R1 — Barbarian Rage lifecycle**.
 
 - Tracking issue: `#124` — `R1: Barbarian Rage lifecycle`
-- Active draft PR: `#125` — `feat(v1): add Barbarian Rage atomic start/end lifecycle`
+- Active draft PR: `#125`
 - Working branch: `codex/v1-barbarian-rage`
 - PR base: `work/v1-composite`
-- Last reconciled PR head: `af430394bc8d3312468c8aff3d477331e9911467`
+- Canonical base remains `bde75ed8bbe68959765935d199c2685446c2c0f7` at this checkpoint.
+- Last verified product head before this coordination update: `d31a26302f1469b2edbb3b4d1b2c939ec840f7e9`.
 
-The Issue/PR description can lag implementation. Always inspect the current PR head/diff before deciding what remains.
+The branch already contains and has validated the Rage domain foundation, physical damage resistance/status semantics, Concentration and Heavy Armor termination handling, Rage damage breakpoints, and Strength-based weapon/unarmed Rage damage integration. The SRD 5.2.1 contract has **no voluntary Rage-end resolver**; Session must not invent an End Rage button. Existing natural/condition/armor termination remains domain-owned.
 
-At `af430394` the branch already contains the Rage domain foundation, including atomic start/end, resistance/status metadata, concentration termination, heavy-armor termination handling, Rage damage scaling, and Strength-based weapon/unarmed Rage damage integration. Do not recreate those paths.
+The production attack snapshot regression is now present and GREEN: the real production Longsword projection exposes `attackAbility: str` and Rage Damage metadata.
 
-GitHub Actions associated with `af430394` are green for UI, Rules Domain, Contract validation, Phase 11 Playable, and Phase 12 Connected Session.
+The player-facing local Session Rage start slice is also implemented and GREEN at `d31a263`:
+
+- `action.barbarian.rage` projects for a Barbarian with the canonical Rage resource.
+- Freeform resolves through the canonical ResolutionEvent path and updates Resource, Activity, and event-native Undo.
+- Initiative consumes Bonus Action plus one Rage use, disables a duplicate start while Rage is active, and Undo restores the atomic start state.
+- Heavy Armor blocks start through existing canonical armor mechanics.
+- The implementation reuses existing turn-runtime, event apply, Character write-back, Activity projection, and event-history services; no parallel Rage engine or persistence schema was added.
+
+Verification for `d31a263`:
+
+- UI run `32879026250`: success, including the focused Rage Session regressions and TypeScript/production build.
+- Contract validation run `32879026270`: success.
+- Rules Domain run `32879026373`: success.
+- Phase 11 Playable run `32879026268` and Phase 12 Connected Session run `32879026318` were still in progress when this checkpoint was prepared; re-read their current GitHub conclusions before relying on them.
 
 ## Next Exact Action
 
-1. Fetch PR `#125` and reconcile its current head against `af430394` before writing.
-2. If no later commit already covers it, add the smallest regression in the existing production snapshot/weapon-runtime test surface proving that projected attacks expose the correct `attackAbility` and Rage damage metadata for the real production path. Do not add a new test framework or persistence schema.
-3. Then continue the remaining Rage chain from the canonical handoff instead of revisiting completed domain work: player-facing Session action projection/resource economy -> local/freeform/initiative Activity + event-native Undo -> connected remote-owner exactly-once/reconnect/Undo.
-4. Preserve the existing R1 order after Rage: Wild Shape -> Monk Focus -> Rogue Cunning Action/Uncanny Dodge, unless the canonical planning files or an explicit owner decision change it.
+1. Fetch PR `#125`, branch `codex/v1-barbarian-rage`, and the workflow conclusions for the latest head. If GitHub advanced, reconcile from that newer state.
+2. Do **not** repeat the now-GREEN local Rage Session action work or production weapon snapshot regression.
+3. Add the smallest deterministic RED regression on the existing connected Session surface for a remote owner using `action.barbarian.rage`, proving the canonical connected requirements: owner-authorized request, exactly-once authoritative commit, Rage Resource/effect visibility after reconnect, and event-native Undo without double spend or duplicate Activity.
+4. Implement only the minimum connected projection/routing change needed to make that regression GREEN, reusing the existing ActionRequest/host authority/session projection/event history paths.
+5. After focused connected GREEN, run the related Phase 12/Session regression surface and then decide whether R1 is ready to close or still has an explicit remaining acceptance gap.
+6. Preserve the handoff order after Rage: Wild Shape -> Monk Focus -> Rogue Cunning Action/Uncanny Dodge unless canonical planning or an explicit owner decision changes it.
 
 ## Resume invariants
 
 - Actual GitHub state wins stale checkpoint prose.
-- `.agents/V1_CURRENT_HANDOFF.md` is the active execution pointer; `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` is the broader release contract.
-- Do not replay previously validated V1-13 or Indomitable work.
-- Prefer existing services/adapters and the smallest changed-file set; do not add parallel Rage engines or speculative abstractions.
-- One active implementation slice at a time, deterministic test first where a behavior gap remains, then focused + regression validation.
-- Windows two-instance/human acceptance remains a later release gate unless the canonical plan explicitly moves it forward.
+- One active implementation slice at a time; deterministic regression first for a behavior gap.
+- Reuse existing adapters/services and keep the changed-file set minimal.
+- Do not create a voluntary Rage-end API or a second mechanics authority.
+- Connected Player requests must remain owner-authorized and host-authoritative; retries/reconnect must not duplicate commits.
+- Windows two-instance/human acceptance remains a later release gate unless canonical planning explicitly moves it forward.
