@@ -1,19 +1,27 @@
 import type { CharacterSheet } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { projectResolutionCharacterWriteBack } from "./resolutionCharacterDurableProjection";
+import {
+  projectResolutionCharacterWriteBack,
+  type CharacterWriteBackDirection,
+} from "./resolutionCharacterDurableProjection";
 import { installCharacterResolutionWriteBackGuard } from "./resolutionCharacterWriteBackPort";
 import {
   isEphemeralSessionProjectionCharacter,
   projectedCharacterById,
   replaceProjectedCharacterSheet,
 } from "./characterSessionProjectionRegistry";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 type AdapterState = {
   activeCharacter:CharacterSheet;
   scene:{ entities:Array<{ id:string; runtimeLife?:{ stable:boolean; unconscious:boolean; dead:boolean } }> };
 };
 
-installCharacterResolutionWriteBackGuard(async (adapter,events,direction) => {
+export async function persistProjectedCharacterResolutionEvents(
+  adapter:MockAdapter,
+  events:ResolutionEvent[],
+  direction:CharacterWriteBackDirection,
+) {
   const state=adapter as unknown as AdapterState;
   const activeIsProjected=isEphemeralSessionProjectionCharacter(adapter,state.activeCharacter.id);
   const projectedTargetIds=[...new Set(events.flatMap((event)=>event.stateChanges.flatMap((change)=>
@@ -49,7 +57,9 @@ installCharacterResolutionWriteBackGuard(async (adapter,events,direction) => {
     return { status:"rejected" as const,error:`ephemeral SessionProjection registry lost Character: ${projected.sheet.id}` };
   }
   return { status:"committed" as const,changed:true };
-});
+}
+
+installCharacterResolutionWriteBackGuard(persistProjectedCharacterResolutionEvents);
 
 export function isProjectedCharacterPersistenceGuardInstalledForTests(adapter:MockAdapter) {
   const state=adapter as unknown as AdapterState;
