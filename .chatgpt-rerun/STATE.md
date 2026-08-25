@@ -3,80 +3,61 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch status to preserve: `continue`
+- dispatch status to preserve: `blocked`
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-23T13:05:27+09:00`
+- checkpointed_at: `2026-08-26T04:10:33+09:00`
 
 ## Preflight reconciliation
 
-This execution read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled canonical root, current handoff, release checklist, Campaign design, and actual branch state.
+This execution read `.chatgpt-rerun/README.md -> control.json -> STATE.md -> PLAN.md` in the mandatory order, then reconciled actual `work/v1-composite`, `CANONICAL_ROOT.md`, `.agents/V1_CURRENT_HANDOFF.md`, `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, relevant available design/source files, and the branch again immediately before coordination writes.
 
-At dispatch start `work/v1-composite` was identical to prior coordination head `a07124eb39e07be9d3a83d6a2c9a5367357262d4`. Immediately before coordination writes it was exactly 8 commits ahead, all from this execution. No concurrent divergent writer was observed. Run identity remained `sequence=1`, `status=continue`, task `phase14-production-play-session-ux`.
+Run identity remains `run_id=b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, `sequence=1`, task `phase14-production-play-session-ux`. The old Rerun checkpoint was stale: it still pointed at product boundary `9632f5119be427c200b5e1aa92a432df7edd27ca`, while GitHub had advanced to coordination head `7a6d7a4b91b1455034a3d4d441d8e9ea5964ca93` before this execution's PLAN write.
 
-## Preserved foundation
+The newer canonical V1 handoff is authoritative for product progress. It records validated local product checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1`, full TS matrix `1303/1303` green and production build green at that exact checkpoint, Fighter Indomitable already source-complete/verified in its focused matrix, and Barbarian Rage lifecycle as the next implementation slice.
 
-Do not repeat:
+Critical reconciliation result: the same handoff explicitly says `4a4cdb1` is preserved only in the local working lineage and cannot be claimed as pushed to GitHub `work/v1-composite`. The GitHub branch visible to this watcher therefore does not expose the validated product baseline required for safe continuation.
 
-- V1-12 connected Long Rest durability / validation pending;
-- Player-owned Character durability and Host/owner recovery/compensation;
-- Campaign-authoritative Party Stash, all three policies, approval/retry/revalidation/cleanup, real owner transfer and exact compensation;
-- Player committed/rejected/cancelled FIFO outcome delivery;
-- provider-declared atomic ration conversion, Host trusted current Catalog eligibility, legacy Stash revalidation, exact provider pin, DM preview/commit, connected Campaign projection reuse;
-- isolated bundled `dnd-srd-5.2.1.equipment-rations` source;
-- DM Library custom item/image/NPC, PC preset/folders, tags/favorites/recents/search, namespace/privacy/provenance/delete-preservation;
-- image handout preview/reveal/reconnect restore and existing Session NPC quick add;
-- installed/catalog vs Campaign custom source distinction and Session inventory quick actions.
+Immediately before the STATE write, branch HEAD was `c1f04c93c4ffd0649842c53759e858f5708e0b41`, exactly this execution's preceding PLAN commit. No concurrent divergent writer was observed.
 
-## Completed in this execution
+## Preserved foundation — do not repeat
 
-Latest product/test boundary: `9632f5119be427c200b5e1aa92a432df7edd27ca`.
+Preserve the canonical handoff's completed/source-complete set, including:
 
-### Live Session PC preset Actor +1
+- 339/339 executable spell definitions and established spell lifecycle;
+- dice/result projection, mapless/manual movement foundation, Calendar/Rations, Party Stash, DM Library, Character/Host authority, connected projection/reconnect/Undo foundations;
+- Ready lifecycle, death save, Stabilize, Unarmed Strike, Extra Attack, Action Surge;
+- Bardic Inspiration, Tactical Mind, and Fighter Indomitable follow-up;
+- Cleric Divine Spark/Turn Undead and Paladin Lay On Hands/Divine Sense/Abjure Foes.
 
-- `290da001a8729fc4913cddd736fa4b2ec9b6d32f` — `SessionDmEncounterPane` now includes Campaign `pc-preset` entries beside existing `npc-definition` entries.
-- It invokes existing `mockAdapter.instantiateCampaignDmLibraryPcPreset`, whose established runtime materializes `CombatantDefinitionVm` and calls existing `instantiateCombatant`, then refreshes the AppProvider snapshot.
-- No alternate actor mutation or Character Library ownership path was added. Existing NPC quick add remains intact.
-- `568ef5fda14af10ee71ee890c0c7e02c6a9c77d0` — structure test pins authority, existing materialization, refresh, and NPC preservation.
+Do not replay the old V1-13 validation-pending implementation list as product TODOs.
 
-### Private DM Library note workflow
+## Work performed in this execution
 
-- `dd106907029500ad98c44fc1c895c7916ef01fac` — optional `noteText` payload on the already-reserved `note` kind.
-- `a0fb8aac7f4dbcbdf206d823161fad789e2d21dd` — existing Campaign Library upsert path validates/normalizes nonblank note text; no new store or transport.
-- `7a3ea5f956567acd8da400ce68c36ecacae8ac98` — note UI supports create/read/search/edit/delete, title/body/tag search, folders, tags, favorites, and explicit Host-private copy.
-- `4387160505c0a8b3ba7df62c27cfc62e7dde7803` — note panel mounted on Campaign dashboard.
-- `3a2885361c0f0d9bfc10fcdfa27a363abe7ea428` — runtime source test covers blank reject, normalized create/update/folder/tags/favorite/delete.
-- `9632f5119be427c200b5e1aa92a432df7edd27ca` — structure/privacy test verifies note workflow and absence of `dmLibrary`/`noteText` from `CampaignSessionSystemsProjection`.
+- Reconciled the stale Rerun files against actual GitHub and the newer canonical V1 handoff.
+- Inspected the currently reachable Barbarian/domain and combat adapter paths only to determine whether Rage could be continued safely.
+- Confirmed the current GitHub product tree is older than the handoff's validated local checkpoint.
+- Confirmed handoff-referenced design paths `docs/design/session-action-resolution.md` and `docs/design/limited-feature-resources.md` are absent from the currently reachable GitHub tree.
+- Attempted a local clone of `work/v1-composite`; repository authentication was unavailable in this environment, so unpublished local commits could not be recovered.
+- Made no product-source change and did not re-run or repeat previously validated implementation work.
 
-### Final Party Stash source re-audit
+## Blocker
 
-No new code needed for equipped/wielded/attuned transfer handling:
+Do not implement Barbarian Rage against the older product tree currently reachable from GitHub. That would fork below the handoff's validated `4a4cdb1` baseline and could duplicate, discard, or conflict with verified work.
 
-- `campaignRuntimeAdapter.ts` already forwards `forceUnequip` to authoritative `revoke-item` inventory mutation.
-- `sessionInventoryRuntimeAdapter.ts` rejects equipped/wielded/attuned revoke unless force is explicit.
-- force clears equipped/wielded/attuned/wieldSlot before quantity decrement/removal in the same mutation.
-- undo conflict-checks and restores active state safely.
-
-## Current V1-13 assessment
-
-Static/selective source re-audit finds no remaining canonical V1-13 source gap. Covered source includes DM Library item/image/PC preset/NPC/custom item/note + organization/privacy/quick actions, Party Stash transfer/policies/approval/compensation/equipped-state handling, ration conversion/bundled source, and Player terminal outcome paths.
-
-V1-13 is now **SOURCE-COMPLETE / VALIDATION PENDING**, not DONE. The stale release checklist must not be promoted to DONE without exact-head executable evidence and later acceptance.
+The blocker is source-of-truth availability: the canonical handoff's validated product lineage must first be published/reconciled to an authoritative GitHub ref reachable by the watcher.
 
 ## Validation status
 
-**NO GREEN CLAIM.** Latest product/test boundary `9632f5119be427c200b5e1aa92a432df7edd27ca` has no combined status checks and no commit-associated workflow runs.
-
-A single local exact-head checkout retry again failed:
-
-`Could not resolve host: github.com`
-
-Therefore no Node/npm tests, `generate:content`, TypeScript compile, Vite build, Tauri/Rust, or Windows two-instance result is claimed.
+No new product execution result is claimed in this watcher run. The `1303/1303` TS and production-build green evidence belongs to the canonical handoff's exact local checkpoint `4a4cdb1`; this execution did not recreate that checkpoint or independently rerun it.
 
 ## Next Exact Action
 
-1. Re-read README -> control -> STATE -> PLAN and reconcile actual `work/v1-composite`; preserve source through `9632f5119be427c200b5e1aa92a432df7edd27ca` unless GitHub advanced.
-2. Prefer exact-head executable validation when available: DM Library organization/note/Session-preset tests, bundled ration/ration-conversion tests, Party Stash approval/owner-transfer tests, `generate:content`, TypeScript and build. Fix real failures before green claims.
-3. If execution remains unavailable, do not create speculative extra V1-13 functionality. Reconcile the next unresolved canonical release/checklist boundary and begin only a demonstrable source gap.
-4. Windows two-instance acceptance remains later. Comprehensive Codex audit remains deferred until implementation freeze.
+1. From the workspace that contains validated checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1`, restore GitHub credentials and reconcile `work/v1-composite` without rewriting verified history.
+2. Push or otherwise publish the exact validated product lineage so `4a4cdb1` and required descendants are reachable from the canonical GitHub branch/ref.
+3. Re-fetch GitHub and prove the canonical product baseline contains the handoff's validated checkpoint before any new product edit.
+4. Re-arm this same `run_id` / `sequence=1` by changing control from `blocked` back to `continue` after source-of-truth repair.
+5. Resume only the canonical next slice: Barbarian Rage start/end, supported damage resistance, state and attack/damage qualification, resource/action economy and expiry/end conditions, then connected exactly-once/reconnect/Undo with focused deterministic tests.
+
+Windows two-instance acceptance and the comprehensive Codex audit remain later gates; do not pull them forward while this baseline blocker is unresolved.
