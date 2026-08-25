@@ -87,7 +87,7 @@ test("Wild Shape level gates reject excessive CR and flying forms before level 8
     actorId:"hero",
     expectedRevision:flyState.revision,
     druidLevel:4,
-    form:{...wolf,id:"dnd.srd521.beast.giant-eagle",name:"거대 독수리",challengeRating:1,hasFlySpeed:true},
+    form:{...wolf,id:"dnd.srd521.beast.bat",name:"박쥐",challengeRating:0,hasFlySpeed:true},
   });
   assert.equal(flying.status,"rejected");
   assert.match(flying.status==="rejected"?flying.error:"",/flying speed before Druid level 8/);
