@@ -10,7 +10,7 @@ import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotA
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
-import { BARBARIAN_RAGE_TAG, resolveBarbarianRageExtend, resolveBarbarianRageStart } from "../domain/barbarianRage";
+import { BARBARIAN_RAGE_TAG, resolveBarbarianRageEnd, resolveBarbarianRageExtend, resolveBarbarianRageStart } from "../domain/barbarianRage";
 import { barbarianRageExtensionUpdate } from "../domain/barbarianRageLifecycle";
 
 const ACTION_ID="action.barbarian.rage";
@@ -29,6 +29,7 @@ interface AdapterState {
 }
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousResolveAction=MockAdapter.prototype.resolveAction;
+const previousToggleItemEquipped=MockAdapter.prototype.toggleItemEquipped;
 
 function barbarianLevel(character:CharacterSheet) {
   return character.classLevels?.find((entry)=>entry.classId===BARBARIAN_CLASS_ID)?.level??0;
@@ -115,16 +116,10 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithBarbarianRageAct
   const snapshot=await previousGetSnapshot.call(this);
   const actions=snapshot.scene.actionsByActor[snapshot.activeCharacter.id];
   if(!actions)return snapshot;
-  for(const action of [rageAction(this,internal,snapshot),rageExtendAction(this,internal,snapshot)]){
-    const id=action?.id??(activeRage(this,internal)?undefined:EXTEND_ACTION_ID);
-    if(!id)continue;
+  for(const [id,action] of [[ACTION_ID,rageAction(this,internal,snapshot)],[EXTEND_ACTION_ID,rageExtendAction(this,internal,snapshot)]] as const){
     const index=actions.findIndex((entry)=>entry.id===id);
     if(!action){if(index>=0)actions.splice(index,1);continue;}
     if(index>=0)actions[index]=action;else actions.push(action);
-  }
-  if(!activeRage(this,internal)){
-    const extendIndex=actions.findIndex((entry)=>entry.id===EXTEND_ACTION_ID);
-    if(extendIndex>=0)actions.splice(extendIndex,1);
   }
   return snapshot;
 };
@@ -170,5 +165,25 @@ MockAdapter.prototype.resolveAction=async function resolveBarbarianRageFromHotba
   internal.resolution=resolution;
   internal.activity.unshift(projectResolutionEventsToActivity({resolution,events:committed.events,actorName:actor.name,targetNames:[actor.name]}));
   internal.lastResolutionId=resolutionId;internal.lastBefore=null;recordRuntimeResolutionEvents(this,resolutionId,committed.events);internal.syncChar();
+  return internal.getSnapshot();
+};
+
+MockAdapter.prototype.toggleItemEquipped=async function toggleItemEquippedWithRageTermination(itemId:string){
+  const internal=this as unknown as AdapterState;
+  const wasRaging=activeRage(this,internal);
+  const snapshot=await previousToggleItemEquipped.call(this,itemId);
+  if(!wasRaging||!wearingHeavyArmor(internal.activeCharacter))return snapshot;
+  const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
+  if(!state?.effects.some((effect)=>effect.targetId===internal.activeCharacter.id&&effect.tags.includes(BARBARIAN_RAGE_TAG)))return snapshot;
+  const resolutionId=`barbarian.rage.heavy-armor.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const committed=resolveBarbarianRageEnd(SIMPLEVTT_APP_RULES_PROFILE,state,{
+    id:resolutionId,actorId:internal.activeCharacter.id,expectedRevision:state.revision,
+  });
+  if(committed.status==="rejected"||!commitAdapterTurnRuntimeState(this,internal.scene,state.revision,committed.state))return snapshot;
+  const session=turnRuntimeSessions.get(this);if(session)projectTurnRuntimeToScene(session,internal.scene);
+  internal.activity.unshift({
+    id:resolutionId,time:"지금",actor:internal.activeCharacter.name,title:"격노 종료",summary:"중갑 착용으로 자동 종료",
+    detail:["SRD 5.2.1 · Barbarian Rage","중갑을 착용하면 격노가 종료됩니다."],stateChanges:["격노 및 연결 효과 제거"],
+  });
   return internal.getSnapshot();
 };
