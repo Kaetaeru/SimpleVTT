@@ -7,27 +7,31 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T05:04:00+09:00`
+- checkpointed_at: `2026-08-26T05:43:33+09:00`
 
 ## Durable execution checkpoint
 
-Rerun preflight and coordination reconciliation are complete for this run/sequence/task. Current `control.json` authorizes `continue`.
+Rerun preflight completed in the mandatory order and canonical V1 routing was followed. Current run/sequence/task identity remains consistent and authorized by `control.json=continue`.
 
-Validated product work and release evidence are owned by the canonical V1 documents. Do not reproduce their completed-feature list, remaining-feature list, acceptance criteria, or next product slice here.
+Product progress in this execution:
 
-No product-source code was changed by the plan-routing repair. The repair only removes duplicate product planning from `.chatgpt-rerun/` and makes the canonical V1 planning chain authoritative.
+- `a78887ef8507fe21e12ddce9172941f2bb3338c7` adds the core Barbarian Rage domain lifecycle without replacing the existing Rage resource or Berserker mechanics.
+- Rage start now uses the existing Rage resource and standard Resolution transaction, spends Bonus Action economy, rejects Heavy armor and duplicate activation, and applies standard B/P/S resistance tags.
+- Rage end removes the core Rage marker and other actor effects tied to the existing `barbarian-rage` special duration key.
+- Rage Damage table scaling is represented by `barbarianRageDamageBonus` and stored on the active Rage effect for later attack integration.
+- `49a21ac939dd4575d2ab4beb3440f978706c5149` adds focused deterministic domain tests for resource/economy use, Heavy armor/duplicate rejection, B/P/S resistance behavior, linked-effect cleanup, and Rage Damage scaling.
 
-Current GitHub evidence observed during this repair:
+Validation status:
 
-- `work/v1-composite` resolves on GitHub.
-- validated product checkpoint `4a4cdb195ff4544adbb3bfd49487042238b112c1` is an ancestor of the branch;
-- comparison reported the branch ahead and not behind;
-- changes after that checkpoint observed in the comparison were coordination/handoff documents, not product source.
+- Local clone/test execution was unavailable because the container could not resolve `github.com`; no retry loop was used.
+- GitHub combined status for `49a21ac939dd4575d2ab4beb3440f978706c5149` returned no status checks.
+- GitHub workflow lookup for that commit returned no workflow runs.
+- Therefore no new green test/build claim is made. Historical validated matrices remain preserved and were not repeated.
 
-If a canonical V1 document still contains an older factual repository statement, reconcile that statement against current GitHub and repair the canonical V1 document. Do not compensate by creating a second plan in Rerun files.
+The canonical V1 item remains unfinished. Do not mark Barbarian Rage complete yet.
 
 ## Next Exact Action
 
-Read the current canonical product pointer from `.agents/V1_CURRENT_HANDOFF.md`, confirm it against `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` and the relevant `docs/design/` contract, reconcile factual GitHub state, then resume that canonical unfinished item without repeating validated work.
+Resume the same current canonical V1 handoff item. Inspect the existing production action projection and shared d20/effect boundaries, then add only the missing Rage runtime exposure and remaining rule integrations. Reuse the new core Rage domain and existing transaction/effect machinery; do not create a parallel Rage manager or duplicate Berserker/resource logic.
 
-Keep this same run/sequence/task on `continue` while normal implementation progress remains possible. Product work selection must come from the canonical V1 planning documents, not from `.chatgpt-rerun/PLAN.md` or copied prose in this STATE file.
+Keep the same run/sequence/task on `continue` while normal implementation progress remains possible. Product work selection remains owned by the canonical V1 planning chain, not this checkpoint.
