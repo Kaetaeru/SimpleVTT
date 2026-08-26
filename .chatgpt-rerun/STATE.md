@@ -7,45 +7,65 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T21:34:00+09:00`
+- checkpointed_at: `2026-08-26T21:41:38+09:00`
 
 ## Durable checkpoint
 
 Mandatory preflight completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`). `PLAN.md` unchanged. GitHub live branch is authoritative under concurrent writes.
 
-R1 source/execution matrix remains canonically closed:
-- canonical handoff advanced through Cunning Hide at `00b2f1147658987fbf90cea5eae68ec37340bdc5`
-- release execution pointer advanced to Uncanny Dodge at `febc63a73b4ce5f73880ce920803937abde01ce7`
-Do not reopen R1 without direct regression evidence.
+R1 source/execution matrix remains canonically closed. Canonical R2 pointer is Rogue Uncanny Dodge after Cunning Hide; do not reopen R1 without direct regression evidence.
 
-R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client apply, duplicate-safe replay, and compensating Undo. No new connected protocol/schema/remote-only rules engine.
+R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client apply, duplicate-safe replay, connected interrupt transport, Character owner write-back, and compensating Undo. No new connected protocol/schema/reaction engine/remote-only rules path.
 
-## R2 validated slices
+## R2 validated slices — do not repeat
 
-- Rage: focused `5585e6b3c329c3188baa60ba7c05d3a99d1ac1`; Undo repair `0f17a4d5cb9319776b66fb9909b12808b165a13b`; write-back narrowing `dec4f22178b1256597c140170481025bb26f39e3`; Phase12 `32963492151` / job `98160810148` green.
-- Wild Shape: projection/source `657f7ea850350758bd5b0f5ac49977cd533d6df2` + `b9a666c772820432bc024fa0b9fb503110111e15`; proof `a65cbd2926032d70f47495873996653c7622cb1e`; Phase12 `32964082295` / job `98162628731` green.
-- Cunning Action Dash: event-native `cbbda07dd7c11ba126e79c26cba99586905e7dce`; remote reconstruction `922cfd1f9b53ba4c14e4fe957b5bcc0e397cdce6`; proof `ea96509ee0c01922d0f23926445b5a7271a45ae1`; staged correction `1e7b21df54a74252c3eb91bd255edbd7a0006311`; Phase12 `32964728723` / job `98164631534` green.
-- Cunning Action Disengage: event-native core `e736114de729964b855c67d181f0f14025aee630`; opportunity marker alignment `c3bb54c467c43e1940805fac2b0b468cadf9cc92`; remote runtime/reconstruction `1074cb6db2a1e917dc0db14bde771350b74b15cb` + `87e8ace567c8eb7e421c582ccbb6150e861e8fee`; proof `134e6a8d7def8711d84bb5be56186f353a4ddeb2`; staged proof fix `2e01cc2e321dbf43dad84e524013ed688e6fa5c9`; duplicate adapter cleanup `732758391dd18ec52afa65b056185f544c51fe4b`; Phase12 `32965968749` / job `98168404394` green including Phase11 + `npm run build`.
-- Cunning Action Hide: event/runtime bridge `5765534b320f245678edb90173d740d8fb7c0113`; bridge install `3ad7f6a3c1f57495103cfa86fa9f86591eee2f7c`; remote reconstruction `03164a314762c0981bae8c7153f391366b49b6e0`; focused remote-owner proof `f21c9f74553bc2271f18e26256c6cf6e88b3ceaf`; gate `694100d7942dace98937b4e5964bb41dc9380cee`; canonical d20 expectation `b071f7566d5b0fa408b87a9641a2d0d1bfdc00de`; scoped DC/runtime fixes through `e2107025fb1fd4a896559decc1ee191c033e9b2a`; test-only regression `97402706c54622fb128a3e2209c014deb18f5430` fully reverted by `7f8e9459e433164b916ee8ef12fdf3042492d9d7`. Exact-head Phase12 run `32968629791` / connected-protocol job `98176845690` is green for connected authority, Phase11 offline walkthrough, and production frontend / `npm run build`. UI run `32968629784` / frontend job `98176845419` is green including Typecheck/build. Hide is closed; do not reopen without direct regression evidence.
+- Rage: exact connected checkpoint through `dec4f22178b1256597c140170481025bb26f39e3`; Phase12 `32963492151` / job `98160810148` green.
+- Wild Shape: focused proof `a65cbd2926032d70f47495873996653c7622cb1e`; Phase12 `32964082295` / job `98162628731` green.
+- Cunning Action Dash: proof/fixes through `1e7b21df54a74252c3eb91bd255edbd7a0006311`; Phase12 `32964728723` / job `98164631534` green.
+- Cunning Action Disengage: proof/fixes through `732758391dd18ec52afa65b056185f544c51fe4b`; Phase12 `32965968749` / job `98168404394` green including Phase11 + `npm run build`.
+- Cunning Action Hide: exact checkpoint `7f8e9459e433164b916ee8ef12fdf3042492d9d7`; UI `32968629784` / frontend `98176845419` green; Phase12 `32968629791` / connected-protocol `98176845690` green including Phase11 + production `npm run build`.
 
-Do not repeat validated slices. `windows-connected-playable` is R3 acceptance, not an R2 gate.
+`windows-connected-playable` is R3 acceptance, not an R2 gate.
 
-## R2 next gap: Uncanny Dodge
+## R2 current gap: Uncanny Dodge
 
-Canonical handoff and release checklist are now reconciled: Cunning Hide is closed and **Rogue Uncanny Dodge remote-owner gap** is the single next R2 pointer.
+Existing R1 `rogueCoreRuntimeAdapter.ts` remains mechanics authority:
+- Rogue 5+ `UNCANNY_DODGE_REACTION_ID` projection;
+- interrupt acceptance queues existing atomic `0.5` damage multiplier;
+- actual rolled damage uses floor-half semantics;
+- completion/Activity/Undo remain on existing atomic/event-native paths.
+Do not duplicate these mechanics.
 
-Existing R1 source inspection confirms `src/app/rogueCoreRuntimeAdapter.ts` already owns the feature mechanics:
-- Rogue 5+ reaction projection via `UNCANNY_DODGE_REACTION_ID`.
-- existing interrupt acceptance path records the active resolution and calls `queueAtomicAttackDamageMultiplier(resolutionId, 0.5, "기묘한 회피")`.
-- completion reuses the atomic attack transaction result, adds the damage reduction detail/Activity, and leaves Uncanny Dodge on the existing event-native Undo boundary.
-Do not replace or duplicate this mechanics path. The remaining question is connected remote-owner reaction/interrupt authority and convergence.
+Concurrent GitHub work advanced the Uncanny Dodge proof from investigation head `045e7aa53b8478b4219b67c42a2fd545d2ad9b17` to live product/test head `aefb7a890f266e058eeb0c4e4e72d5aee42734dc` before this checkpoint. The five-commit diff adds only the relevant mounted projection/reaction seam, small Rogue runtime support, focused remote-owner proof, and Phase12 gate entry.
+
+Focused proof: `tests/ui/connectedProjectedCharacterUncannyDodgeResolution.test.ts` now exercises a Host-unknown Rogue 5+ through the existing connected primitives:
+- mounted Host Scene reconstructs Uncanny Dodge reaction from trusted projection data;
+- visible incoming `action.scimitar` hit reaches private owner interrupt prompt;
+- owner acceptance routes through existing connected interrupt response transport;
+- Host Reaction economy becomes spent;
+- existing atomic attack result applies `floor(raw/2)` damage;
+- Host permanent Character library stays unchanged while ephemeral projection HP updates;
+- one ordered Host event batch contains Reaction economy + HP changes;
+- owning Client applies/persists the Host event once; duplicate replay is a no-op;
+- stale reconnect projection does not overwrite Host-authoritative HP/Reaction state;
+- Host Undo restores projected HP/Reaction and publishes one compensating ordered event;
+- owning Client applies/persists inverse once; duplicate Undo replay is a no-op.
+
+Exact-head CI at checkpoint:
+- HEAD: `aefb7a890f266e058eeb0c4e4e72d5aee42734dc` (`test: use mounted Uncanny Dodge scene reaction`).
+- Phase 12 Connected Session run `32969745056`, connected-protocol job `98180422630`:
+  - `Verify connected-session authority protocol`: **success**. This includes the focused Uncanny Dodge remote-owner proof.
+  - `Verify Phase 11 offline walkthrough remains green`: **success**.
+  - `Verify production frontend gate` (`npm run build`): **in_progress** at checkpoint.
+- UI run `32969745069`, frontend job `98180422561`: all earlier UI/regression steps green; `Typecheck and build`: **in_progress** at checkpoint.
+
+Therefore Uncanny Dodge R2 is **not closed yet**. No speculative code change is justified while the exact-head production gates are still running.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Stay in R2. Do not reopen validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, or Cunning Hide.
-3. Inspect existing connected reaction/interrupt request/response path and incoming attack-damage `ResolutionEvent` publication for a Host-unknown Rogue defender. Reuse existing primitives; no new reaction engine, protocol, schema, or remote-only rules path.
-4. Add or reuse only the smallest deterministic remote-owner proof if a gap exists: Host-unknown level-5 Rogue, eligible incoming hit from a visible attacker, owner/Host-authoritative Uncanny Dodge acceptance, Reaction economy, rolled damage floor-half, Host ordered events, exactly-once Client apply, duplicate safety, and compensating Undo. Preserve Character/session lifetime boundaries.
-5. Verify changed exact SHA through existing Phase12 connected gate + production `npm run build`; fix only the first direct regression.
-6. `PLAN.md` remains unchanged unless routing changes. Persist `STATE.md`, then `control.json` LAST.
-7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Inspect exact-head CI for `aefb7a8` or the newer live descendant; do not rerun already-green connected proof/Phase11 steps.
+3. If Phase12 production `npm run build` and UI Typecheck/build are green, record Uncanny Dodge R2 as validated, update canonical handoff/release pointer if not already advanced, then choose the next single R2 remote-owner gap. Do not wait for `windows-connected-playable`; that is R3.
+4. If either gate is red, read its first direct failure and fix only that cause. Do not broaden the feature or create new reaction/protocol abstractions.
+5. `PLAN.md` remains unchanged unless routing changes. Persist `STATE.md`, then `control.json` LAST.
+6. R3 Windows/Tauri durability, R4 rendered UX/accessibility, and R5 packaging remain separate.
