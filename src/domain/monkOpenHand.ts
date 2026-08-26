@@ -101,6 +101,7 @@ export interface OpenHandWholenessOfBodyRequest {
   subclassId?:string;
   wisdomModifier:number;
   martialArtsDieFace:number;
+  useBonusActionEconomy?:boolean;
 }
 
 export function compileOpenHandWholenessOfBody(request:OpenHandWholenessOfBodyRequest):PendingResolution {
@@ -113,47 +114,51 @@ export function compileOpenHandWholenessOfBody(request:OpenHandWholenessOfBodyRe
     throw new DomainEvaluationError(`Wholeness of Body requires a fixed d${dieSides} face`);
   }
   const rollId = `${request.id}:healing-roll`;
+  const operations:ResolutionOperation[] = [];
+  if (request.useBonusActionEconomy !== false) {
+    operations.push({
+      id:`${request.id}:economy`,
+      kind:"use-economy",
+      actorId:request.actorId,
+      slot:"bonus-action",
+      bonusActionGranted:true,
+      actionKind:"other",
+    });
+  }
+  operations.push(
+    {
+      id:`${request.id}:resource`,
+      kind:"spend-resource",
+      actorId:request.actorId,
+      resourceId:OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID,
+      amount:1,
+    },
+    {
+      id:rollId,
+      kind:"damage-roll",
+      request:{
+        dice:[{
+          source:`${OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID}:martial-arts-die`,
+          count:1,
+          sides:dieSides,
+          faces:[request.martialArtsDieFace],
+        }],
+        flat:[{ source:`${OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID}:wisdom`, value:request.wisdomModifier }],
+      },
+    },
+    {
+      id:`${request.id}:healing`,
+      kind:"healing",
+      targetId:request.actorId,
+      amount:{ operationId:rollId, field:"total" },
+    },
+  );
   return {
     id:request.id,
     actorId:request.actorId,
     sourceId:OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID,
     expectedRevision:request.expectedRevision,
-    operations:[
-      {
-        id:`${request.id}:economy`,
-        kind:"use-economy",
-        actorId:request.actorId,
-        slot:"bonus-action",
-        bonusActionGranted:true,
-        actionKind:"other",
-      },
-      {
-        id:`${request.id}:resource`,
-        kind:"spend-resource",
-        actorId:request.actorId,
-        resourceId:OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID,
-        amount:1,
-      },
-      {
-        id:rollId,
-        kind:"damage-roll",
-        request:{
-          dice:[{
-            source:`${OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID}:martial-arts-die`,
-            count:1,
-            sides:dieSides,
-            faces:[request.martialArtsDieFace],
-          }],
-          flat:[{ source:`${OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID}:wisdom`, value:request.wisdomModifier }],
-        },
-      },
-      {
-        id:`${request.id}:healing`,
-        kind:"healing",
-        targetId:request.actorId,
-        amount:{ operationId:rollId, field:"total" },
-      },
-    ],
+    operations,
   };
 }
 
