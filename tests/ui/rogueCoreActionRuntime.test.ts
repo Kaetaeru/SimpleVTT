@@ -56,6 +56,7 @@ test("Cunning Action Dash spends only Bonus Action, applies movement, and Undo r
   await adapter.startInitiative();
   const before=await adapter.getSnapshot();
   const actorId=before.activeCharacter.id;
+  await adapter.setCurrentActor(actorId);
   const movementBefore=before.scene.economyByActor[actorId]?.movementMax??0;
   await adapter.resolveAction(CUNNING_DASH_ACTION_ID,[actorId]);
   let snapshot=await finish(adapter);
@@ -75,6 +76,7 @@ test("Cunning Action Disengage applies the existing Disengage state and Undo res
   await adapter.startInitiative();
   let snapshot=await adapter.getSnapshot();
   const actorId=snapshot.activeCharacter.id;
+  await adapter.setCurrentActor(actorId);
   await adapter.resolveAction(CUNNING_DISENGAGE_ACTION_ID,[actorId]);
   snapshot=await finish(adapter);
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.includes("이탈"),true);
