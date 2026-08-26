@@ -7,34 +7,42 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T12:49:55+09:00`
+- checkpointed_at: `2026-08-26T13:11:17+09:00`
 
 ## Durable execution checkpoint
 
-Mandatory preflight was repeated in order: `README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`, then live branch and canonical V1 routing were reconciled. Run/sequence/task identity remains unchanged.
+Mandatory preflight was repeated in order: `README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`, then live branch and canonical V1 routing were reconciled. Run/sequence/task identity remains unchanged and the canonical pointer remains Rogue Cunning Action / Uncanny Dodge R1.
 
-Monk Focus R1 is now execution-validated. Product checkpoint `c282a1e4fd6929dc56079d811021dcfe160d51f5` fixes the remaining one-call local Undo seam without expanding the R1 scope into connected/event-native R2 work.
+Validated Rage, Druid Wild Shape, and Monk Focus work was not repeated.
 
-Exact checkpoint evidence:
+Rogue R1 source progress on live branch:
 
-- UI run `32927666548` / job `98053688070` `frontend`: success; `Typecheck and build` success.
-- Phase 12 Connected Session run `32927666546` / job `98053687822` `connected-protocol`: success; connected authority protocol, offline walkthrough, and production frontend gate success.
-- `npm run build` includes `test:monk-focus`, so the focused Monk gate is covered by the exact SHA build.
+- `de0662c885b61a897ea69f647e41ac0914364e28` — added `src/app/rogueCoreRuntimeAdapter.ts`.
+  - projects level 2+ Cunning Action Dash / Disengage / Hide by cloning existing standard action semantics and changing only economy/id/presentation;
+  - applies Dash movement and Disengage state through the existing Resolution flow;
+  - projects level 5+ Uncanny Dodge into the existing hit-before-damage Reaction interrupt seam;
+  - accepted Uncanny Dodge halves the pending attack damage and reuses Reaction economy;
+  - mixed direct/runtime mutations arm the existing snapshot Undo fallback instead of adding a new rollback system.
+- `a143481d41850d99cfa64dcb7a70b1d8f5f8ea89` — installed the Rogue adapter in canonical `offlineRuntimeAdapters.ts` composition immediately after Monk Focus.
+- `793135f34c05d21aa199e054e60b119f5b74afcd` — added focused deterministic coverage in `tests/ui/rogueCoreActionRuntime.test.ts` for projection/eligibility, Bonus Action economy, Dash/Disengage behavior, Uncanny Dodge damage/Reaction, Activity, and Undo.
 
-Canonical routing was advanced after green evidence:
+Automatic gates triggered for exact HEAD `793135f34c05d21aa199e054e60b119f5b74afcd`:
 
-- `.agents/V1_CURRENT_HANDOFF.md` commit `12df01ce31a16e44e6f58ab008ecae4b8fd62f65` marks Monk Focus R1 complete and points to Rogue.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` commit `3d13256048bb7dc7ae013fef5bb3e8f73316a332` points NEXT to Rogue Cunning Action / Uncanny Dodge.
-- `PLAN.md` is intentionally unchanged because run identity and canonical-plan routing mechanism did not change.
+- UI run `32929226260`: `in_progress` at checkpoint.
+- Phase 12 Connected Session run `32929226269`: `in_progress` at checkpoint.
+
+No gate result is claimed yet. The new focused test exists but `package.json` has not yet been wired with `test:rogue-core`, so Rogue R1 is not execution-validated and canonical handoff/checklist must not advance yet.
+
+`PLAN.md` remains intentionally unchanged because run identity and canonical routing mechanism did not change.
 
 ## Preserved verified state
 
-- Rage, Druid Wild Shape, and Monk Focus R1 are source-complete/execution-validated in the canonical handoff; do not repeat them.
+- Rage, Druid Wild Shape, and Monk Focus R1 remain source-complete/execution-validated; do not repeat them.
 - Connected remote-owner exactly-once/reconnect/event-native Undo remains R2 unless a direct R1 regression requires it.
 - Do not rerun the historical full 1303/1303 matrix merely because execution resumed.
 
 ## Next Exact Action
 
-Follow the canonical V1 pointer: inspect existing Rogue progression plus Cunning Action / Uncanny Dodge domain/runtime primitives, credit existing source-complete behavior, and identify only the missing production action/reaction seam. Implement the smallest contract-preserving R1 delta with focused deterministic coverage, then run the related build gate before advancing canonical evidence.
+Read the exact results for UI run `32929226260` and Phase 12 run `32929226269` on HEAD `793135f34c05d21aa199e054e60b119f5b74afcd`. If either is red, inspect the first Rogue-related failure and make only the smallest evidence-driven fix. If compile/current regressions are green, wire `test:rogue-core` into `package.json` and the canonical build, then run/observe the focused Rogue + build/Connected gates. Only after those gates pass may `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` advance.
 
 Keep the same run/sequence/task identity. `control.json` must be written last.
