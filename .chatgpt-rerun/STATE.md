@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T18:24:55+09:00`
+- checkpointed_at: `2026-08-26T18:27:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -29,9 +29,9 @@ Validated work was not repeated: Rage, Wild Shape, Monk Focus, Rogue R1, Berserk
 
 Concurrent GitHub work advanced the canonical documents after the Fiend gates turned green.
 
-- `.agents/V1_CURRENT_HANDOFF.md` now records Fiend exact checkpoint `95042b2`, UI `32952470669` / job `98126755335`, and Phase 12 `32952470663` / connected-protocol `98126755397`.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` was also updated in the same canonical checkpoint sequence.
-- Latest observed canonical docs commit: `8ea06d62f85f00e1663818a4fba19e701e298002` (`docs: checkpoint Devotion and Fiend R1`).
+- `.agents/V1_CURRENT_HANDOFF.md` records Devotion Smite of Protection checkpoint `ec89fa2` and Fiend checkpoint `95042b2`, including exact UI/Connected evidence. Commit: `8ea06d62f85f00e1663818a4fba19e701e298002`.
+- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` records the same completed R1 evidence without over-promoting broader V1 workstreams. Commit: `499149a7e519325878baf5b02d6a56f73b9c82d2`.
+- Latest observed canonical docs head before this STATE write: `499149a7e519325878baf5b02d6a56f73b9c82d2`.
 
 `PLAN.md` remains unchanged.
 
