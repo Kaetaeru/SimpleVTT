@@ -81,6 +81,7 @@ import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";
 import "./paladinDivineSenseActionRuntimeAdapter";
 import "./paladinAbjureFoesActionRuntimeAdapter";
+import "./paladinDevotionHolyNimbusRuntimeAdapter";
 // Record successful open ability checks as canonical ResolutionEvents after all
 // production resolution wrappers have completed, without changing their UI/economy path.
 import "./abilityCheckResolutionEventAdapter";
