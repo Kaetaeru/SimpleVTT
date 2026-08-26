@@ -91,7 +91,7 @@ test("level 15 Devotion automatically appends Smite of Protection to a committed
   assert.equal(undoneState?.effects.some((effect)=>effect.tags.includes(DEVOTION_SMITE_OF_PROTECTION_TAG)),false);
 });
 
-test.skip("Smite of Protection marker expires at the Paladin next-turn start and stays absent below level 15",async()=>{
+test("Smite of Protection marker expires at the Paladin next-turn start and stays absent below level 15",async()=>{
   const adapter=await devotionPaladin(15);
   let snapshot=await adapter.getSnapshot();
   const actorId=snapshot.activeCharacter.id;
