@@ -248,7 +248,6 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
     state.handled.add(offered.kind);
     resolution.detail.push(`${interrupt.responderName} 도발의 말 사용 안 함`);
     restoreStage(resolution,offered.kind);
-    offer(this,internal);
     return this.getSnapshot();
   }
 
