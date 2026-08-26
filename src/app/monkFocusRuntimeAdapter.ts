@@ -18,11 +18,15 @@ type AdapterState={
   scene:SceneVm;
   activeCharacter:CharacterSheet;
   resolution:ResolutionView|null;
+  lastResolutionId:string|null;
+  _undoPreviewArmed?:boolean;
   getSnapshot():Promise<AppSnapshot>;
 };
 
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
+const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
+const monkUndoResolutionIds=new WeakMap<MockAdapter,string>();
 
 function monkLevel(character:CharacterSheet) {
   return character.classLevels?.find((entry)=>entry.classId===MONK_OPEN_HAND_CLASS_ID)?.level??0;
@@ -140,6 +144,15 @@ MockAdapter.prototype.advanceResolution=async function advanceMonkFocusResolutio
   const snapshot=await previousAdvanceResolution.call(this);
   if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
     clearRuntimeResolutionEventHistory(this);
+    monkUndoResolutionIds.set(this,resolution.id);
   }
   return snapshot;
+};
+
+MockAdapter.prototype.undoLastResolution=async function undoMonkFocusResolution(){
+  const internal=this as unknown as AdapterState;
+  const resolutionId=monkUndoResolutionIds.get(this);
+  monkUndoResolutionIds.delete(this);
+  if(resolutionId&&internal.lastResolutionId===resolutionId) internal._undoPreviewArmed=true;
+  return previousUndoLastResolution.call(this);
 };
