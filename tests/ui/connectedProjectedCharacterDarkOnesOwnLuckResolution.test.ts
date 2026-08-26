@@ -91,13 +91,14 @@ test("host-unknown Fiend Dark One's Own Luck accepts owner interrupt, spends one
     snapshot=await host.advanceResolution();assert.equal(snapshot.resolution?.stage,"effect-preview");assert.equal(state.ledger.cursor,0);
     snapshot=await host.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:10});
     assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));assert.equal(snapshot.resolution?.checkTarget,10);assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);assert.equal(snapshot.resolution?.interrupt?.responderId,remote.id);assert.equal(snapshot.resolution?.checkOutcome,"실패");assert.equal(state.ledger.cursor,0);
+    const failedTotal=snapshot.resolution?.rollTotal;assert.equal(typeof failedTotal,"number");
     const prompt=sentToPeer.filter((entry)=>entry.peer===PEER).map((entry)=>JSON.parse(entry.message) as {type:string;resolutionId?:string;interrupt?:{id:string}}).find((message)=>message.type==="resolution-interrupt-prompt");assert.ok(prompt,"Host must send Dark One's Own Luck only to the owning peer");assert.equal(prompt!.interrupt?.id,INTERRUPT_ID);
 
     await host.setQueuedD20(10);
     const response={sessionId:state.sessionId,resolutionId:snapshot.resolution!.id,promptId:INTERRUPT_ID,accept:true};
     assert.equal(await routeConnectedInterruptResponse(host,{peer:PEER,message:""},response),true);
     snapshot=await host.getSnapshot();assert.equal(state.pendingRemoteAction,null);assert.equal(state.ledger.cursor,1);assert.equal(snapshot.activeCharacter.id,before.activeCharacter.id);assert.deepEqual(snapshot.characters,before.characters);
-    assert.equal(snapshot.resolution?.stage,"complete");assert.deepEqual(snapshot.resolution?.authoritativeDice,[4,10]);assert.equal(snapshot.resolution?.rollTotal,14);assert.equal(snapshot.resolution?.checkOutcome,"성공");
+    assert.equal(snapshot.resolution?.stage,"complete");assert.deepEqual(snapshot.resolution?.authoritativeDice,[4,10]);assert.equal(snapshot.resolution?.rollTotal,failedTotal!+10);assert.equal(snapshot.resolution?.checkOutcome,"성공");
     assert.equal(luckCurrent(projectedCharacterById(host,remote.id)!.sheet),beforeUses!-1);assert.equal(snapshot.activity.some((activity)=>activity.detail.some((detail)=>detail.includes("어둠의 존재의 행운"))),true);
 
     const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");assert.equal(batches.length,1,"accepted owner follow-up must commit one ordered Host event batch");
