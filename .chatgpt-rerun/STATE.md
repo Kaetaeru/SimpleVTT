@@ -31,7 +31,7 @@ Implementation/evidence to preserve and not duplicate:
 
 Canonical routing:
 
-- `.agents/V1_CURRENT_HANDOFF.md` already points to the same remaining subclass-domain-resolver inventory umbrella. Fleet Step completion does not change that route, so the large canonical handoff was intentionally not rewritten only to restate the same next action.
+- `.agents/V1_CURRENT_HANDOFF.md` advanced in commit `da137c099ba3c2e8692454aa7413bf77ebaa2a36` after Fleet Step gates were green; it records the exact Fleet Step checkpoint/evidence and points back to the remaining subclass-domain-resolver inventory umbrella.
 - `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` remains correctly `PARTIAL`; one incremental subclass action does not earn a broad release checkbox.
 - `PLAN.md` unchanged.
 - R2 remote-owner exactly-once/reconnect remains excluded unless a direct R1 regression requires it.
