@@ -4,10 +4,13 @@ import "../../src/app/offlineRuntimeAdapters";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { CharacterSheet, SceneVm } from "../../src/app/contracts";
 import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+import { createEffect } from "../../src/domain/effects";
 import {
   BARBARIAN_BERSERKER_SUBCLASS_ID,
   BARBARIAN_CLASS_ID,
   BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
+  BERSERKER_MINDLESS_RAGE_TAG,
 } from "../../src/domain/barbarianBerserker";
 import { BERSERKER_INTIMIDATING_PRESENCE_ACTION_ID } from "../../src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter";
 
@@ -80,4 +83,50 @@ test("freeform Intimidating Presence spends its feature resource without strandi
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,bonusBefore);
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID)?.current,0);
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("공포")),true);
+});
+
+test("Berserker Mindless Rage composes into production Rage and shares condition, Activity, Undo, and Rage-end lifecycle",async()=>{
+  const adapter=await berserker();
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  const actorId=internal.activeCharacter.id;
+  internal.activeCharacter.items=[...internal.activeCharacter.items,{
+    id:"test.chain-mail",definitionId:"dnd.srd521.item.armor.chain-mail",name:"사슬 갑옷",kind:"equipment",quantity:1,equipped:false,
+    passiveEffects:[],grantedActionIds:[],provenance:["test"],
+  }];
+
+  let state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state);
+  const seeded=state!;
+  seeded.effects.push(
+    createEffect({id:"test:mindless:charmed",sourceId:"test:charm",targetId:actorId,kind:"condition",conditionId:"charmed",duration:{kind:"minutes",amount:1}},seeded.clock),
+    createEffect({id:"test:mindless:frightened",sourceId:"test:fear",targetId:actorId,kind:"condition",conditionId:"frightened",duration:{kind:"minutes",amount:1}},seeded.clock),
+  );
+  const expectedRevision=seeded.revision;
+  seeded.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expectedRevision,seeded),true);
+
+  let snapshot=await adapter.getSnapshot();
+  await adapter.resolveAction("action.barbarian.rage",[actorId]);
+  snapshot=await adapter.getSnapshot();
+  state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state);
+  assert.equal(state!.effects.some((effect)=>effect.targetId===actorId&&(effect.conditionId==="charmed"||effect.conditionId==="frightened")),false);
+  const mindless=state!.effects.find((effect)=>effect.targetId===actorId&&effect.tags.includes(BERSERKER_MINDLESS_RAGE_TAG));
+  assert.ok(mindless);
+  assert.equal(mindless!.tags.includes("condition-immunity:charmed"),true);
+  assert.equal(mindless!.tags.includes("condition-immunity:frightened"),true);
+  assert.equal(snapshot.activity.some((entry)=>entry.stateChanges.some((change)=>change.includes("mindless-rage"))),true);
+
+  await adapter.undoLastResolution();
+  state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state);
+  assert.equal(state!.effects.some((effect)=>effect.tags.includes(BERSERKER_MINDLESS_RAGE_TAG)),false);
+  assert.equal(state!.effects.some((effect)=>effect.id==="test:mindless:charmed"),true);
+  assert.equal(state!.effects.some((effect)=>effect.id==="test:mindless:frightened"),true);
+
+  await adapter.resolveAction("action.barbarian.rage",[actorId]);
+  await adapter.toggleItemEquipped("test.chain-mail");
+  state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state);
+  assert.equal(state!.effects.some((effect)=>effect.tags.includes(BERSERKER_MINDLESS_RAGE_TAG)),false);
 });
