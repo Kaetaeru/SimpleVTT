@@ -37,9 +37,9 @@ If Rerun files disagree with canonical V1 planning about product scope or order,
 
 ## Router checkpoint
 
-- reconciled_at: `2026-08-26T10:16:22+09:00`
-- observed branch head before this ordered Rerun checkpoint: `871c3a3fa56bb8bf44bc489caee9eab0c3a59783`.
-- latest execution-validated product/test checkpoint before canonical/Rerun metadata commits: `11bc8581a04678e33796054117f05b5455a25db3`.
-- GitHub Actions evidence is green for the resolved R1 checkpoint; canonical handoff/checklist were advanced before this Rerun checkpoint.
+- reconciled_at: `2026-08-26T23:10:00+09:00`
+- observed branch head before this ordered Rerun checkpoint: `9ce042f49f7894b7f114cfd4faaa44b7288527bf`.
+- latest fully green Quivering Palm connected checkpoint before the initiative-economy extension: `09d0cea3ffa010eb5b30258e9500399cba06e095`.
+- current initiative-economy proof head `9ce042f49f7894b7f114cfd4faaa44b7288527bf` fixes the first exact-head Phase12 red by advancing the staged detonation resolution before asserting ledger commit; its UI and Phase12 runs were still in progress at checkpoint.
 - this durable checkpoint uses the required write order `PLAN -> STATE -> control.json`.
 - product routing remains delegated to `.agents/V1_CURRENT_HANDOFF.md`; no product scope is duplicated here.
