@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T21:59:00+09:00`
+- checkpointed_at: `2026-08-26T22:02:00+09:00`
 
 ## Durable checkpoint
 
@@ -25,28 +25,28 @@ R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client a
 - Cunning Action Disengage: focused remote-owner proof green through `134e6a8d7def8711d84bb5be56186f353a4ddeb2`.
 - Cunning Action Hide: `7f8e9459e433164b916ee8ef12fdf3042492d9d7`; UI `32968629784` / `98176845419`, Phase12 `32968629791` / `98176845690` green.
 - Uncanny Dodge: `a1edf6bc869984aaabf5cf5f564f4f11c21399ad`; UI `32970182652` / `98181814250`, Phase12 `32970182722` / `98181814527` green. Duplicate owner interrupt-response/event, reconnect, owner write-back and compensating Undo are covered. Ponytail cleanup `d8df984ce868e3ae9bf8a78162e0924120f4f2c3` removed duplicate remote Rogue rules materialization.
-- Berserker Intimidating Presence R2: latest exact test head `3d3c9866fd24c15d233e8d8730e70052597e8fec` is green. Phase12 run `32971306050` / connected-protocol job `98185443594` succeeded through focused connected authority, Phase11 walkthrough and production frontend gate. UI run `32971305995` / frontend job `98185443299` succeeded including `Typecheck and build`. `windows-connected-playable` remains R3 acceptance and is not an R2 gate.
+- Berserker Intimidating Presence R2: exact test head `3d3c9866fd24c15d233e8d8730e70052597e8fec`; Phase12 `32971306050` / connected-protocol `98185443594` success through focused authority proof, Phase11 walkthrough and production frontend gate; UI `32971305995` / frontend `98185443299` success including `Typecheck and build`. `windows-connected-playable` is R3, not an R2 gate.
 
-## Berserker Intimidating Presence R2 closure evidence
+## Berserker Intimidating Presence R2 closure
 
-Focused proof: `tests/ui/connectedProjectedCharacterBerserkerIntimidatingPresenceResolution.test.ts`.
+- Focused proof: `tests/ui/connectedProjectedCharacterBerserkerIntimidatingPresenceResolution.test.ts`.
+- Direct connected gap was canonical Berserker subclass projection/content identity, not mechanics.
+- `7e8541864f19c1abd22bbe0a32ae0f2dae685fa0` added canonical `dnd.srd521.subclass.barbarian.path-of-the-berserker` identity without a second fear engine/protocol/schema.
+- `3d3c9866fd24c15d233e8d8730e70052597e8fec` proves Host-unknown authoritative resolve, resource/Bonus Action/Frightened ordered events, Host permanent-library isolation, owning Client durable exactly-once apply, duplicate safety, reconnect preservation, and compensating Undo/inverse owner persistence.
+- Canonical handoff/checklist commit `c0275f10b17834fafcabb8afe3fdf6c46e8d0d7a` records exact evidence, closes Berserker Intimidating Presence R2, and advances NEXT.
 
-First direct connected red on the focused line was projection/content identity, not mechanics: `missing canonical host/client content for subclass: dnd.srd521.subclass.barbarian.path-of-the-berserker`.
+## Active R2 slice — Open Hand Wholeness of Body
 
-Minimal forward work preserved the existing R1 rules/runtime path:
-- `7e8541864f19c1abd22bbe0a32ae0f2dae685fa0`: canonical Berserker subclass catalog identity support; no second fear engine/protocol/schema.
-- fixture alignment through `4644987154266bf5e822e4b69231d66de662ea9f`: mirror persisted Character shape rather than invent remote-only rules.
-- `3d3c9866fd24c15d233e8d8730e70052597e8fec`: strengthen persisted subclass metadata coverage against canonical content.
+Canonical NEXT is now **Open Hand Wholeness of Body remote-owner gap**. R1 exact checkpoint `f26092033673622c7c15755ac304678441a1eda3` is already source/execution green; do not reimplement or rerun it merely because R2 started.
 
-The green focused proof covers Host-unknown authoritative ActionRequest, feature resource and Bonus Action economy, Frightened effect, Host permanent Character-library isolation, one ordered resource/economy/effect event batch, owning Client durable exactly-once apply, duplicate request/event replay safety, reconnect preservation, and compensating Undo/inverse owner persistence.
-
-No additional product rules engine, network protocol, schema, or remote-only mechanics path was added for this slice.
+Reuse the existing Wholeness resolver, Focus Point resource, healing path, initiative/freeform economy split, Activity, generic `ResolutionEvent`, Character owner write-back, duplicate/reconnect primitives, and event-native Undo. Do not create a second healing engine, protocol, schema, or remote-only rules path.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Do not repeat validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, Cunning Hide, Uncanny Dodge, or Berserker Intimidating Presence R2.
-3. Update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` only if they still point at Berserker Intimidating Presence: record exact `3d3c986` green evidence, mark that R2 slice closed, then select the next R2 slice from the live canonical R1 execution order.
-4. Before implementing the next slice, inspect whether an existing connected proof already covers it. Reuse existing Host authority/event/write-back/Undo primitives; add only the smallest focused proof/fix for a direct gap.
-5. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
-6. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Do not repeat validated Rage, Wild Shape, Cunning Dash/Disengage/Hide, Uncanny Dodge, or Berserker Intimidating Presence R2.
+3. Inspect current Wholeness of Body domain/runtime, connected reconstruction, and existing tests first. If a connected remote-owner proof already exists, reuse its evidence instead of duplicating it.
+4. Otherwise add only the smallest deterministic Host-unknown Open Hand Monk proof for authoritative healing/resource/economy ordered events, Host permanent Character-library isolation, owning Client exactly-once write-back, duplicate request/event safety, reconnect/fresh projection convergence, and compensating Undo/inverse owner convergence.
+5. Fix only the first direct red. Verify changed exact SHA through existing Phase12 connected gate plus production frontend/build. `windows-connected-playable` remains R3 acceptance.
+6. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
+7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
