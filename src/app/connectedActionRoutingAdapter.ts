@@ -21,7 +21,7 @@ import {
   restoreProjectionResolutionContext,
   type ProjectionResolutionContext,
 } from "./characterSessionProjectionMount";
-import { projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
+import { projectedCharacterById, projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
@@ -463,9 +463,19 @@ MockAdapter.prototype.undoLastResolution=async function undoConnectedResolution(
   const state=connectedStateFor(this);
   const app=connectedInternal(this);
   if(state.mode==="client")return app.getSnapshot();
-  const resolutionId=app.resolution?.stage==="complete"?app.resolution.id:undefined;
+  const completed=app.resolution?.stage==="complete"?app.resolution:undefined;
+  const resolutionId=completed?.id;
   const originalEvents=resolutionId?state.publishedResolutionEvents.get(resolutionId):undefined;
-  const next=await previousUndoLastResolution.call(this);
+  const mounted=completed?projectedCharacterById(this,completed.actorId):undefined;
+  const activated=mounted?activateProjectedCharacterResolutionContext(this,mounted.peerId):undefined;
+  const undoContext=activated?.status==="accepted"?activated.context:undefined;
+  let next:AppSnapshot;
+  try {
+    next=await previousUndoLastResolution.call(this);
+  } finally {
+    if(undoContext)restoreProjectionResolutionContext(this,undoContext);
+  }
+  if(undoContext)next=await app.getSnapshot();
   if(state.mode!=="host"||!state.ledger||!resolutionId||!originalEvents?.length)return next;
   const committedUndo=next.activity.find((entry)=>entry.undoOf===resolutionId);
   if(!committedUndo)return next;
