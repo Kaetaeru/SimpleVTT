@@ -4,6 +4,7 @@ import type { FixedDiceInput } from "./d20";
 import type { FixedDamageDice } from "./damageRoll";
 import { cloneRuntimeState, type RulesRuntimeState } from "./combatState";
 import { BARBARIAN_RAGE_TAG } from "./barbarianRage";
+import { DRUID_WILD_SHAPE_TAG } from "./druidWildShape";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionEvent, ResolutionOperation } from "./resolutionTypes";
@@ -458,6 +459,10 @@ export function compileSpellCast(
   if (request.expectedRevision !== inputState.revision) throw new DomainEvaluationError("spell cast revision mismatch");
   if (inputState.effects.some((effect) => effect.targetId === request.actorId && effect.tags.includes(BARBARIAN_RAGE_TAG))) {
     throw new DomainEvaluationError("Rage prevents casting spells");
+  }
+  const wildShape=inputState.effects.find((effect)=>effect.targetId===request.actorId&&effect.tags.includes(DRUID_WILD_SHAPE_TAG));
+  if (wildShape&&wildShape.metadata?.spellcastingAllowed!==true) {
+    throw new DomainEvaluationError("Wild Shape prevents casting spells");
   }
   const access = validateAccess(definition, request);
   const operations: ResolutionOperation[] = [];
