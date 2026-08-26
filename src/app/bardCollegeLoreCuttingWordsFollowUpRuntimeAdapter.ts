@@ -198,8 +198,9 @@ function refreshActivity(internal:AdapterState,resolution:ResolutionView){
   const activity=internal.activity.find((entry)=>entry.id===resolution.id);
   if(!activity)return;
   activity.summary=resolution.compact;
-  activity.detail=[...resolution.detail,...resolution.provenance.map((entry)=>`출처: ${entry}`)];
-  activity.stateChanges=[...resolution.stateChanges];
+  const detail=[...resolution.detail,...resolution.provenance.map((entry)=>`출처: ${entry}`)];
+  for(const entry of detail)if(!activity.detail.includes(entry))activity.detail.push(entry);
+  for(const entry of resolution.stateChanges)if(!activity.stateChanges.includes(entry))activity.stateChanges.push(entry);
 }
 
 MockAdapter.prototype.resolveAction=async function resolveWithLoreCuttingWords(actionId:string,targetIds:string[]){
