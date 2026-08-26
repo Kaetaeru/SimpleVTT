@@ -33,6 +33,7 @@ Canonical target branch: **`work/v1-composite`**
 - R2 remote-owner Cunning Action Hide exact checkpoint: `7f8e9459e433164b916ee8ef12fdf3042492d9d7`; event/runtime bridge `5765534b320f245678edb90173d740d8fb7c0113`; remote reconstruction `03164a314762c0981bae8c7153f391366b49b6e0`; turn-runtime initialization repair `726081e1a7beb9c5c2769da62a1cea3b3da5c4ec`; UI run `32968629784` / frontend job `98176845419` success; Phase 12 run `32968629791` / connected-protocol job `98176845690` success through production frontend gate.
 - R2 remote-owner Uncanny Dodge exact checkpoint: `a1edf6bc869984aaabf5cf5f564f4f11c21399ad`; remote reaction projection/fix chain through `87b2b4b21332415e4dc00cb864c2908f3ddbc67f` and `e07eac8f82a6ae5a4c2ea80ca92d87e2bf1802d3`, Ponytail cleanup `d8df984ce868e3ae9bf8a78162e0924120f4f2c3`; UI run `32970182652` / frontend job `98181814250` success; Phase 12 run `32970182722` / connected-protocol job `98181814527` success through production frontend gate, including duplicate owner interrupt-response no-op proof.
 - R2 remote-owner Berserker Intimidating Presence exact checkpoint: `3d3c9866fd24c15d233e8d8730e70052597e8fec`; canonical subclass catalog identity source `7e8541864f19c1abd22bbe0a32ae0f2dae685fa0`; UI run `32971305995` / frontend job `98185443299` success including `Typecheck and build`; Phase 12 run `32971306050` / connected-protocol job `98185443594` success through focused authority proof, Phase 11 walkthrough and production frontend gate.
+- R2 remote-owner Open Hand Wholeness of Body exact checkpoint: `d03adbe11c10aa394628c025c36bea9d5c27f9c5`; focused connected proof `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d`, canonical Open Hand identity `81baf37690f0e36758e4eabe5d5244f8163cdaec`; UI run `32972536815` / frontend job `98189406605` success; Phase 12 run `32972594009` / connected-protocol job `98189595694` success through focused authority proof, Phase 11 walkthrough and production `npm run build`.
 - `21b5ab8`은 Fleet Step과 Holy Nimbus focused gate를 포함한 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다.
 - `126cd84`는 Quivering Palm focused gate를 포함한 UI run `32942627369`가 success이고 Phase 12 run `32942627376`의 connected-protocol job `98096599197`이 success다. 이는 Quivering Palm R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 - `ec89fa2`는 Smite of Protection focused gate를 포함한 UI run `32950193461` / frontend job `98119645421`과 Phase 12 run `32950193590` / connected-protocol job `98119646335`가 success다.
@@ -121,6 +122,17 @@ Canonical target branch: **`work/v1-composite`**
   - UI run `32971305995` / frontend job `98185443299`: **success**, `Typecheck and build` 포함 전 단계 green.
   - Phase 12 Connected Session run `32971306050` / connected-protocol job `98185443594`: **success**, focused authority proof, Phase 11 offline walkthrough, production frontend gate all green.
 - 결론: **Berserker Intimidating Presence R2 remote-owner/exactly-once/reconnect/owner-write-back/compensating Undo gap은 완료**. R3 Windows/Tauri acceptance는 별도다.
+
+### Green — R2 Open Hand Wholeness of Body exact checkpoint `d03adbe`
+
+- 기존 R1 Wholeness resolver/Focus Point/healing/economy/Activity/ResolutionEvent/Undo와 connected SessionProjection/owner write-back/reconnect primitives를 재사용했다. 새 healing engine, protocol, schema, remote-only rules path는 추가하지 않았다.
+- `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d`가 Host-unknown Open Hand Monk focused proof를 추가해 HP/resource/Bonus Action ordered events, Host permanent Character library 불변, owning Client durable exactly-once apply, duplicate request/event no-op, reconnect/rebind, compensating Undo와 inverse owner write-back을 검증한다.
+- 첫 direct red는 mechanics가 아니라 canonical Open Hand subclass identity 부재였다. `81baf37690f0e36758e4eabe5d5244f8163cdaec`가 `dnd.srd521.subclass.monk.warrior-of-the-open-hand` catalog identity만 추가했다.
+- `d03adbe11c10aa394628c025c36bea9d5c27f9c5`가 `content/**`를 Phase 12 trigger에 포함해 canonical content 변경이 connected gate를 우회하지 않게 했다.
+- exact evidence:
+  - UI run `32972536815` / frontend job `98189406605`: **success**, `Typecheck and build` 포함.
+  - Phase 12 Connected Session run `32972594009` / connected-protocol job `98189595694`: **success**, focused Wholeness authority proof, Phase 11 walkthrough, production `npm run build` 모두 green.
+- 결론: **Open Hand Wholeness of Body R2 remote-owner/healing/resource/economy/exactly-once/reconnect/owner-write-back/compensating Undo gap은 완료**. R3 Windows/Tauri acceptance는 별도다.
 
 ### Green — Druid Wild Shape exact checkpoint `11bc858`
 
@@ -365,6 +377,7 @@ R1의 모든 신규 행동마다 다음을 검증한다.
 - [x] **Rogue Cunning Action Hide remote-owner gap**: canonical d20/DC15, Hidden effect/economy events, Host permanent-library isolation, owner apply exactly-once, duplicate safety, event-native Undo. exact checkpoint `7f8e945`; UI `32968629784` / `98176845419` green; Phase 12 `32968629791` / `98176845690` green.
 - [x] **Rogue Uncanny Dodge remote-owner gap**: existing R1 reaction + atomic floor-half damage + connected interrupt/event/Undo primitives, Host-unknown Rogue reaction reconstruction, private owner response, authoritative Reaction/HP events, Host permanent-library isolation, owner HP write-back exactly once, duplicate event/response/Undo safety, reconnect preservation, compensating Undo. exact checkpoint `a1edf6b`; UI `32970182652` / frontend `98181814250` green; Phase 12 `32970182722` / connected-protocol `98181814527` green through production `npm run build`.
 - [x] **Berserker Intimidating Presence remote-owner gap**: canonical Berserker subclass identity, Host-unknown authoritative resolve, target/resource/economy/Frightened ordered events, Host permanent-library isolation, owner apply exactly once, duplicate request/event safety, reconnect preservation, compensating Undo/inverse owner persistence. exact checkpoint `3d3c986`; UI `32971305995` / frontend `98185443299` green; Phase 12 `32971306050` / connected-protocol `98185443594` green through production frontend gate.
+- [x] **Open Hand Wholeness of Body remote-owner gap**: focused proof `b621ede`; canonical Open Hand identity `81baf37`; exact test/content head `d03adbe`; UI `32972536815` / `98189406605` green; Phase 12 `32972594009` / `98189595694` green through focused authority proof, Phase 11 walkthrough and production `npm run build`. Covers HP/resource/Bonus Action ordered events, Host permanent-library isolation, owner exactly-once write-back, duplicate safety, reconnect/rebind, compensating Undo and inverse owner convergence.
 
 Exit: 신규 행동 전체가 Host, acting Client, observing Client에서 같은 최종 상태를 가진다. **위 focused gaps 완료만으로 R2 전체 완료가 아니다.**
 
@@ -405,13 +418,13 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R2에서 Rage, Wild Shape, Cunning Action Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence는 focused remote-owner evidence와 exact-head production gates가 green이다. 검증된 slice를 반복하지 않는다. 다음은 **Open Hand Wholeness of Body remote-owner gap**이다.
+R2에서 Rage, Wild Shape, Cunning Action Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, Open Hand Wholeness of Body는 focused remote-owner evidence와 exact-head production gates가 green이다. 검증된 slice를 반복하지 않는다. 다음은 **Open Hand Fleet Step remote-owner gap**이다.
 
 ```text
-live branch와 current Wholeness of Body domain/runtime/connected projection 상태 재대조
--> R1의 existing resolver/Focus Point/healing/initiative-freeform economy/Activity/event-native Undo primitive 재사용
--> eligible Host-unknown Open Hand Monk의 action intent를 Host authoritative resolution으로 focused proof
--> healing/resource/economy ordered events + Host permanent Character library 불변 + owning Client exactly-once convergence 확인
+live branch와 current Fleet Step domain/runtime/connected projection 상태 재대조
+-> R1의 existing resolver/Focus Point/turn-runtime history/free-or-focused variants/movement-effect/Activity/Undo primitive 재사용
+-> eligible Host-unknown Open Hand Monk에서 직전 non-Step Bonus Action trigger를 Host authoritative resolution으로 focused proof
+-> free movement 또는 focused Focus-1/effect ordered events + Host permanent Character library 불변 + owning Client exactly-once convergence 확인
 -> duplicate request/event replay와 reconnect/fresh projection 수렴 확인
 -> event-native Undo의 Host projection + owner inverse convergence 확인
 -> 실제 red가 있으면 첫 원인 하나만 최소 수정
