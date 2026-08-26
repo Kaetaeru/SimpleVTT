@@ -137,7 +137,8 @@ function rageDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase0
   if (attackFact.ability!=="str") return [];
   if (attackFact.sourceKind!=="weapon"&&attackFact.sourceKind!=="unarmed") return [];
   const rage=state.effects.find((effect) => effect.targetId===actorId && effect.tags.includes(BARBARIAN_RAGE_TAG));
-  const value=rage?.metadata?.rageDamageBonus;
+  if (!rage) return [];
+  const value=rage.metadata?.rageDamageBonus;
   return typeof value==="number" && value>0
     ? [{ source:`effect:${rage.id}:rage-damage`,value }]
     : [];
