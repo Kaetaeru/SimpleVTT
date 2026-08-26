@@ -120,10 +120,10 @@ V1-40 + V1-41 + V1-42
 | V1-12 Campaign systems | PARTIAL | roster/providers/calendar/rations/compound Long Rest source와 TS gate green; two-instance 증거 대기 |
 | V1-13 Stash/DM Library | PARTIAL | source-complete, campaign/connected focused tests green; exact checkpoint와 two-instance 증거 대기 |
 | V1-20 Real Character local play | PARTIAL | persisted Character projection, 339 spells, inventory/sheet source 존재; exact artifact walkthrough 대기 |
-| V1-21 Complete local loop | PARTIAL | 기본 전투/행동 다수 완료; 남은 core class action matrix와 human walkthrough 필요 |
+| V1-21 Complete local loop | PARTIAL | R1 source/execution action matrix는 완료; 실제 Windows local journey, durable restart, human walkthrough 증거 대기 |
 | V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart source와 TS regression green; Tauri 증거 대기 |
-| V1-31~32 Connected play | PARTIAL | 핵심 connected suites green; 신규 action 전체 remote-owner matrix와 two-instance proof 대기 |
-| V1-40 DM live operation | PARTIAL | DM Library/Stash/handout/campaign operation source 존재; action matrix 및 end-to-end acceptance 대기 |
+| V1-31~32 Connected play | PARTIAL | 핵심 connected suites green; R1 신규 기능 remote-owner exactly-once/reconnect/Undo matrix와 two-instance proof 대기 |
+| V1-40 DM live operation | PARTIAL | DM Library/Stash/handout/campaign operation source 존재; connected action matrix 및 end-to-end acceptance 대기 |
 | V1-41 Spatial fallback | PARTIAL | mapless/provider source와 regression 존재; exact-head provider mount/unmount human proof 대기 |
 | V1-42 Dice | PARTIAL | Three/Cannon, rear-entry, authoritative projection, remote dedup source 존재; human motion proof 대기 |
 | V1-50~80 Quality/release | TODO | Campaign/connected 경로 완료 뒤 수행 |
@@ -343,6 +343,8 @@ Release credit requirements:
 ## V1-21 Complete local play loop — PARTIAL
 
 `depends_on: V1-20`
+
+R1 source/execution action matrix is complete at the canonical handoff. This release item remains PARTIAL because the requirements below include actual Windows local-session journey, durable restart, and human acceptance evidence.
 
 ### Session lifecycle
 
@@ -645,18 +647,15 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R1 mechanics-complete subclass actions -> action bar exposure
+R2 connected remote-owner matrix for R1 actions/features
 ```
 
-1. 통합 상태는 exact checkpoint `4a4cdb1`에서 full TS matrix 1303/1303, UI matrix 965/965와 production build가 green이다.
-2. open ability-check DM DC, generic Tactical Mind, Fighter Indomitable, Rage source, Druid Wild Shape R1 local lifecycle, Monk Focus R1 local lifecycle, Rogue Cunning Action/Uncanny Dodge R1은 완료했다.
-3. Rogue exact checkpoint `5bb8bfbc4753dcc15f1198a04c0982817176c644`: UI run `32932781542` / job `98068084958`과 Phase 12 Connected Session run `32932781591` / connected-protocol job `98068085017`가 success이며 `npm run build`의 Rogue focused gate와 production build가 green이다.
-4. 이후 subclass inventory에서 Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported path, Devotion Smite of Protection, Fiend Dark One's Own Luck, Lore Peerless Skill, Lore Cutting Words까지 R1 execution evidence를 확보했다. 완료된 항목은 재구현하지 않는다.
-5. Devotion Smite of Protection exact checkpoint `ec89fa251d969a250c20e11f0abe6d7a4f13d58e`: UI run `32950193461` / frontend job `98119645421`, Phase 12 run `32950193590` / connected-protocol job `98119646335` success.
-6. Fiend Dark One's Own Luck exact checkpoint `95042b2ef3c65aef3619334c0bec1ad243d165f2`: UI run `32952470669` / frontend job `98126755335`, Phase 12 run `32952470663` / connected-protocol job `98126755397` success. `npm run build`에 `test:fiend-luck`가 포함되며 ability-check/resource/Activity/Undo, saving-throw, below-level 3개 focused case가 모두 열린 상태다.
-7. Lore Peerless Skill exact checkpoint `88bb72dc3d725af049025728003ab6e6b8db1eb0`: UI run `32953773211` / frontend job `98130829740`, Phase 12 run `32953773099` / connected-protocol job `98130829706` success. `npm run build`에 `test:lore-peerless-skill`이 포함되며 failed ability-check/missed-attack/resource/Activity/Undo/level-gate 범위가 execution-validated다.
-8. Lore Cutting Words exact checkpoint `90514e44a21840070bb77ea17561036a86b2e5ca`: UI run `32960806646` / frontend job `98152495174`, Phase 12 run `32960806633` / connected-protocol job `98152494916` success. `npm run build`에 `test:lore-cutting-words`가 포함되고 ability-check/attack/staged-damage/below-level focused coverage가 green이다. temporary diagnostic workflow는 `c7aee31cf0d8ee0b9e1b70359eaac7bcf55db928`에서 제거했고 UI run `32961013657` / frontend job `98153136326`도 success다.
-9. 다음 순서는 남은 subclass domain resolver inventory에서 mechanics-complete인데 production action bar에 빠진 것 하나만 식별하는 작업이다. Preserve Life/Land's Aid처럼 richer player-choice input이 필요한 partial feature는 자동할당하거나 dead button으로 노출하지 않는다.
-10. connected remote-owner exactly-once/reconnect/event-native Undo matrix는 R2에서 별도 완료하며, 그 전에는 V1-21/connected release DONE으로 승격하지 않는다.
+1. R1 source/execution action matrix는 canonical handoff에서 DONE이다. 이 판정은 V1-21 release DONE이나 Windows/human acceptance가 아니다.
+2. 마지막 inventory gap은 Berserker Mindless Rage였다. `8bbd21a0ff4b20bef4c0232f175785c5f7633312`가 기존 Rage transaction에 Mindless Rage operations를 합성했고, 별도 fake action을 만들지 않았다.
+3. production lifecycle checkpoint `b82e9048618ab3c105f2f99e148d2e5d2198c5dc`: UI run `32961779455` / frontend job `98155486715`, Phase 12 run `32961779556` / connected-protocol job `98155487334`가 success다. 기존 `test:berserker-presence` build gate가 Charmed/Frightened 제거, immunity marker, Activity, Undo, Rage-end termination을 검증한다.
+4. 남은 subclass inventory를 재대조했다. Preserve Life/Land's Aid/Retaliation은 richer explicit player input이 필요하고, Hunter/Champion/Thief/Draconic/Fiend/Evocation remainder는 passive/rest-choice/item-runtime/trigger/reaction/progression-spell integration이다. dead/auto-selected action button으로 만들지 않는다.
+5. 다음 구현 범위는 R2다. R1 신규 기능의 connected coverage inventory를 먼저 작성하고, 기존 connected evidence를 재구현/재실행하지 않은 채 실제 remote-owner gap 하나만 선택한다.
+6. 선택한 gap에서 Client intent -> Host authoritative resolve -> ordered event, owner/private vs public projection, duplicate/reorder/retry exactly-once, reconnect convergence, owner/Campaign write-back 분리, event-native Undo convergence를 기존 primitives로 검증한다.
+7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging은 별도다. V1-21/V1-31/V1-32는 각 release/human exit가 충족될 때까지 PARTIAL 유지한다.
 
 상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.
