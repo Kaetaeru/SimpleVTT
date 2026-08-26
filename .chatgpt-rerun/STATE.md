@@ -7,35 +7,40 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T15:52:00+09:00`
+- checkpointed_at: `2026-08-26T15:57:00+09:00`
 
 ## Durable execution checkpoint
 
 Mandatory preflight was completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`) and live GitHub state was treated as authoritative.
 
-Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge R1, Berserker Intimidating Presence R1, and Open Hand Wholeness of Body R1 remain source-complete/execution-validated.
+Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, and Open Hand Fleet Step R1 remain source-complete/execution-validated.
 
-**Monk Open Hand — Fleet Step R1 is now source-complete + execution-validated.**
+**Paladin Devotion — Holy Nimbus R1 is source-complete + execution-validated without new product code in this checkpoint.**
 
 Implementation/evidence to preserve and not duplicate:
 
-- `46042e0eaf857653a415a35df38b4e5d4dbfd49e` — projects Fleet Step from the existing `monkOpenHand` domain resolver, reusing authoritative Bonus Action history, Focus resource, movement/effect events, Activity, write-back, and Undo primitives.
-- `efc00453377dfc4bbb36f83b18dcb15ec302fbbe` — installs the Fleet Step adapter into canonical offline production composition.
-- `a4a33058b0b9936d27fdfb70c3c89d21c3e5e269` — adds focused deterministic level/trigger/free-Fleet-Step/focused-Fleet-Step/Undo coverage.
-- `7768191e3f64a2a3157e339b0e11de03efc45564` — adds `test:open-hand-fleet-step` to `npm run build`; incidental package drift from that edit was corrected before validation.
-- `14aa191a4562ca70cbdfdd5b99b3f6e2297e703e` — restores existing package values while retaining the Fleet Step build gate.
-- `21b5ab830442318e5c5b499464a746fb4370cd4b` — final minimal product source removes a test-only exported helper from the adapter surface without changing mechanics.
-- UI run `32939892234`, frontend job `98088532407`: **success**, including `Typecheck and build` and therefore the focused Fleet Step build gate.
+- `9296e234c8ae7697cb229a638db121c7eae6acbf` — exposes Devotion Holy Nimbus as a production action using the existing `paladinDevotion` domain resolver/resource.
+- `be30dadb32f37eaa019e968696666ccc48d5cbb3` — keeps Holy Nimbus freeform-safe by avoiding stranded initiative Bonus Action economy.
+- `251a096fc505e90d136a483fae8eecde525639ae` and `e66e2efe61480ad4c8ce53b58ee1113520fb6b53` — deterministic projection/resource/economy/Activity/Undo plus freeform coverage.
+- `68ae6ac2d06f174faf5aaba68d45883a06f6e45b` — adds `test:devotion-holy-nimbus` to `npm run build`.
+- Exact product source `21b5ab830442318e5c5b499464a746fb4370cd4b` contains the final Holy Nimbus source/test/build gate. Later commits through the reconciled handoff are documentation/rerun-state only for this product seam.
+- UI run `32939892234`, frontend job `98088532407`: **success**, including `Typecheck and build`; `npm run build` includes `test:devotion-holy-nimbus`.
 - Phase 12 run `32939892195`, connected-protocol job `98088532135`: **success**, including connected-session authority protocol, Phase 11 offline walkthrough, and production frontend gate.
-- The same Phase 12 run's `windows-connected-playable` job is R3/R5 artifact evidence and is not required for this R1 completion decision.
+- R1 behavior covered: Paladin 20+ Devotion-only projection, self target, resource 1/long rest, initiative Bonus Action economy, freeform no stranded economy, Activity, and generic/event-native Undo.
+
+Inventory decisions to preserve:
+
+- Life Domain `Preserve Life` is not a minimal action-bar projection under the current `resolveAction(actionId,targetIds)` input contract because rules require player-selected per-target healing allocations. Do not auto-allocate and silently remove player choice.
+- Circle of the Land `Land's Aid` likewise carries richer point/multi-result input semantics; do not force it into a dead/simple button without the needed choice contract.
+- Continue looking for one mechanics-complete resolver that is fully expressible through existing production inputs before introducing any new UI/input abstraction.
 
 Canonical routing:
 
-- `.agents/V1_CURRENT_HANDOFF.md` advanced in commit `da137c099ba3c2e8692454aa7413bf77ebaa2a36` after Fleet Step gates were green; it records the exact Fleet Step checkpoint/evidence and points back to the remaining subclass-domain-resolver inventory umbrella.
+- `.agents/V1_CURRENT_HANDOFF.md` already routes to the same remaining subclass-domain-resolver inventory umbrella. This Holy Nimbus reconciliation does not change that route, so no noisy large canonical rewrite is required for dispatch correctness.
 - `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` remains correctly `PARTIAL`; one incremental subclass action does not earn a broad release checkbox.
 - `PLAN.md` unchanged.
 - R2 remote-owner exactly-once/reconnect remains excluded unless a direct R1 regression requires it.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite`, read the canonical `V1_CURRENT_HANDOFF.md`, then continue the existing R1 subclass-domain-resolver / production action inventory from the next unvalidated gap after Fleet Step. Do not reimplement or rerun Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence, Open Hand Wholeness of Body, or Open Hand Fleet Step. Select only one mechanics-complete domain resolver that is still missing a production action projection, reuse existing local/freeform/initiative/economy/Activity/Undo primitives, add or reuse focused deterministic evidence, and require `npm run build` plus the normal R1 UI/Phase12 connected-protocol gates before advancing routing again.
+Reconcile live `work/v1-composite`, then continue the R1 subclass-domain-resolver / production action inventory after Holy Nimbus. Do not reimplement or rerun Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, or Devotion Holy Nimbus. Skip resolvers that require an unimplemented richer choice/input contract rather than inventing automatic choices. Select one remaining mechanics-complete gap that fits existing production inputs, reuse local/freeform/initiative/economy/Activity/Undo primitives, add or reuse focused deterministic evidence, and require `npm run build` plus the normal R1 UI/Phase12 connected-protocol gates before advancing routing again.
