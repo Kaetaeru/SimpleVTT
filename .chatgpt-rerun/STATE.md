@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T17:39:00+09:00`
+- checkpointed_at: `2026-08-26T17:41:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -39,13 +39,13 @@ Actions job logs remain inaccessible to this integration (403), so exact-SHA tes
 - `6f2d322bfe77d89591909c240d88c0b2a3e683fd`: first Smite case advanced through Smite resolution-detail and Activity provenance assertions, then returned before TurnRuntime marker checks. UI `32948045089` **success**, including `Typecheck and build`. Therefore action projection, committed Divine Smite execution, Smite of Protection detail, and Activity provenance are green.
 - `52555dca30a83e9244edf905d89ce870261a110c`: first Smite case advanced only through TurnRuntime protection marker existence, then returned before expiry metadata. UI `32948247304` **success**, including `Typecheck and build`. Therefore marker persistence/projection is green.
 - `506ab6fb2b1ab219f530a60aaeb0ba8270c38c2c`: first Smite case advanced through marker expiry metadata and returned before half-cover eligibility. UI `32948422256` **success**, including `Typecheck and build`; Connected `32948422247` connected-protocol and production frontend **success** when checked. Therefore expiry metadata is green.
-- `013a02f8d7510a896c13091748a0333360d537ff`: first Smite case advanced through `smiteOfProtectionGrantsHalfCover(...) === true` and returned before generic Undo. UI `32948609647` **success**, including `Typecheck and build`. Therefore half-cover eligibility is green and generic Undo is the sole remaining assertion in the first Smite case.
-- `6ea5efbda2a56a8b1405043804b4f3ad4a8485cd`: removed only that final diagnostic return so the existing generic Undo assertion executes. UI `32948793586` and Connected `32948793582` are **in progress** at checkpoint. No production mechanics changed.
+- `013a02f8d7510a896c13091748a0333360d537ff`: first Smite case advanced through `smiteOfProtectionGrantsHalfCover(...) === true` and returned before generic Undo. UI `32948609647` **success**, including `Typecheck and build`; Connected `32948609609` connected-protocol and production frontend **success** when checked. Therefore half-cover eligibility is green and generic Undo is the sole remaining assertion in the first Smite case.
+- `6ea5efbda2a56a8b1405043804b4f3ad4a8485cd`: removed only that final diagnostic return so the existing generic Undo assertion executes. UI `32948793586` **failure** specifically at `Typecheck and build`, while every earlier UI step succeeded. Therefore generic Undo removal is now the first and only concrete failing assertion in the first Smite case. No production mechanics changed by the bisection.
 
 Current diagnostic test state at live code boundary `6ea5efbda2a56a8b1405043804b4f3ad4a8485cd`:
 
 - `tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts`: first case returns immediately after `beforeUses === 4`; saving-throw and below-feature-level cases are temporarily `test.skip`.
-- `tests/ui/paladinDevotionSmiteOfProtectionRuntime.test.ts`: first case now runs through generic Undo; second expiry/below-level case remains temporarily `test.skip`.
+- `tests/ui/paladinDevotionSmiteOfProtectionRuntime.test.ts`: first case now runs through generic Undo and is red only at the post-Undo marker-removal assertion; second expiry/below-level case remains temporarily `test.skip`.
 - Smite fixture enters `startProductionLocalPlay("dm")` before Initiative.
 - No Fiend or Smite production mechanics file was changed by the current bisection.
 - All diagnostic skips/returns must be restored before canonical advancement.
@@ -60,4 +60,4 @@ Inventory decisions to preserve:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Check exact-SHA UI `32948793586` and Connected `32948793582` for `6ea5efbda2a56a8b1405043804b4f3ad4a8485cd`. If UI is red, generic Undo is the first and only concrete failing assertion in the first Smite case; inspect only the existing event-native Undo/history composition and fix the smallest proven seam. If UI is green, the full first Smite case is green and no production fix is needed there; restore the second Smite case and full Fiend focused coverage without changing mechanics, then require `test:fiend-luck` and `test:devotion-smite-protection` inside exact-head `npm run build` plus UI and Connected green. Only after all diagnostic skips/returns are restored and gates are green may canonical handoff/checklist advance. PLAN unchanged; update `STATE.md` then `control.json` last per protocol.
+Reconcile live `work/v1-composite` first. Generic Undo is the sole concrete failing assertion in the first Smite case: inspect only the existing `paladinDevotionSmiteOfProtectionRuntimeAdapter.ts` event-history/Undo composition together with the repository's event-native Undo path, determine why the protection marker survives `undoLastResolution()`, and make the smallest proven production fix. Do not alter already-green Smite projection/detail/Activity/marker/expiry/half-cover behavior. Keep Fiend at the known-green `6038687` diagnostic boundary and the second Smite case skipped while fixing this seam. After the Undo seam is green, restore the second Smite case and full Fiend focused coverage, verify `test:fiend-luck` and `test:devotion-smite-protection` execute/pass inside exact-head `npm run build`, require UI + Connected green, then advance canonical handoff/checklist. PLAN unchanged; update `STATE.md` then `control.json` last per protocol.
