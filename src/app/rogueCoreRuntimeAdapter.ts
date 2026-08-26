@@ -185,7 +185,7 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
     }
   }
 
-  const uncanny=uncannyResolutionIds.get(this)===resolution.id&&resolution.stage==="damage-animation";
+  const uncanny=uncannyResolutionIds.get(this)===resolution.id&&(resolution.stage==="attack-result"||resolution.stage==="damage-animation");
   const action=uncanny
     ? Object.values(internal.scene.actionsByActor).flat().find((entry)=>entry.id===resolution.actionId)
     : undefined;
@@ -196,7 +196,8 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
     const raw=originalAverage*multiplier;
     const reduced=Math.floor(raw/2);
     damage.average=reduced/multiplier;
-    resolution.detail.push(`기묘한 회피: 피해 ${raw} → ${reduced}`);
+    const detail=`기묘한 회피: 피해 ${raw} → ${reduced}`;
+    if(!resolution.detail.includes(detail))resolution.detail.push(detail);
   }
 
   try {
