@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T22:17:00+09:00`
+- checkpointed_at: `2026-08-26T22:19:00+09:00`
 
 ## Durable checkpoint
 
@@ -34,7 +34,8 @@ R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client a
 - `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d` proves Host-unknown authoritative resolve, HP/resource/Bonus Action ordered events, Host permanent Character library isolation, owning Client durable exactly-once apply, duplicate request/event no-op, reconnect/rebind, compensating Undo and inverse owner write-back.
 - The first direct red was canonical Open Hand subclass identity, fixed only by `81baf37690f0e36758e4eabe5d5244f8163cdaec`.
 - `d03adbe11c10aa394628c025c36bea9d5c27f9c5` ensures `content/**` changes trigger Phase12 connected validation.
-- Canonical handoff/checklist commit `733bf1ecb5ea6db5127e8ddbb7524f9286bf0f3b` closes Wholeness R2 and advances NEXT.
+- Canonical handoff commit `733bf1ecb5ea6db5127e8ddbb7524f9286bf0f3b` closes Wholeness R2 and advances NEXT.
+- Release execution router commit `400f236d720d409918e95feedc1d0f551fc1d9a8` records the same Wholeness evidence and advances its single NEXT pointer to Fleet Step R2.
 - `windows-connected-playable` remains R3 acceptance and is not an R2 closure gate.
 
 ## Active R2 slice — Open Hand Fleet Step
