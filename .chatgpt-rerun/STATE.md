@@ -7,17 +7,19 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T09:27:02+09:00`
+- checkpointed_at: `2026-08-26T09:30:17+09:00`
 
 ## Durable execution checkpoint
 
 Rerun preflight was repeated in the mandatory order. The live run/sequence/task identity still matches `control.json=continue`, but the product branch had advanced well beyond the previous Rerun checkpoint while `STATE.md` and `control.json` remained stale.
 
+The earlier STATE-only reconciliation commit `f0a4cae0da9c32cf48693600892377340376b69a` was written out of protocol order. It is superseded by this ordered checkpoint sequence, which restarted with `PLAN.md` at `d978289e8efa5162efb3b88c4ec3c1c7d61a026c` and continues with this STATE update before the final `control.json` write.
+
 Preflight reconciliation result:
 
 - Previous Rerun product checkpoint: `cddef0c254108fe963a92cab2da7bd991a09bc21` (Druid Wild Shape domain lifecycle core only).
-- Live product head before this metadata checkpoint: `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`.
-- GitHub compare shows the live branch ahead of `cddef0c2` and not behind it.
+- Live product/source head before Rerun metadata writes: `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`.
+- GitHub compare shows the live product branch ahead of `cddef0c2` and not behind it.
 - The post-checkpoint commits already implement the production Wild Shape seam that the old STATE listed as Next Exact Action. Do **not** repeat those changes.
 
 Wild Shape production source now present at the live product head:
