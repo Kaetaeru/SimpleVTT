@@ -134,7 +134,7 @@ export async function applyMovementModuleCommand(adapter:MockAdapter,command:Mov
   internal.activity.unshift({
     id:eventId("movement-module-commit"),
     time:"지금",
-    actor:actor?.name ?? actorId,
+    actor:actor?.name ?? command.actorId,
     title:"이동 모듈 적용",
     summary:`${command.distanceFeet}피트 이동`,
     detail:[
