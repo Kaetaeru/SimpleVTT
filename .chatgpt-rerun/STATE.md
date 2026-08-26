@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:29:30+09:00`
+- checkpointed_at: `2026-08-26T14:32:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -15,35 +15,37 @@ Mandatory preflight was completed in the required order (`README.md` -> `control
 
 Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, and Rogue Cunning Action/Uncanny Dodge R1 remain source-complete/execution-validated. Rogue exact checkpoint remains `5bb8bfbc4753dcc15f1198a04c0982817176c644` with UI run `32932781542` and Phase 12 run `32932781591` green.
 
-Current R1 remains Berserker `Intimidating Presence` only. Concurrent workers briefly created equivalent adapters/tests on the same branch. Duplicate variants were reconciled in `95f471ce77d8f3c8fc295ba1213441c0a3f4998c`; do not recreate them.
+Berserker `Intimidating Presence` R1 is now source-complete + execution-validated. Duplicate variants were already reconciled in `95f471ce77d8f3c8fc295ba1213441c0a3f4998c`; do not recreate them.
 
-Current coherent wiring:
+Validated Berserker wiring:
 
 - production adapter: `src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts`
 - canonical offline composition imports only that Berserker presence adapter
 - focused gate: `tests/ui/barbarianBerserkerIntimidatingPresenceRuntime.test.ts`
 - `package.json` runs it as `test:berserker-presence` inside canonical `npm run build`
-- focused evidence covers initiative projection/resource/Bonus Action/frightened/Activity/generic Undo and freeform non-stranding
+- initiative projection/resource/Bonus Action/frightened/Activity/generic Undo and freeform non-stranding are covered
+- the 35 ft out-of-range fixture uses authoritative `module:test:` provenance so production targeting consumes the authored module fact rather than an ignored non-authoritative test relation
 
-Minimal follow-up fixes already landed; do not repeat them:
+Do not repeat these landed fixes:
 
-- `ca4667662184a451107c1b2d5182b63706c8dfb7`: added `BerserkerIntimidatingPresenceRequest.useBonusActionEconomy?: boolean`, defaulting to prior domain behavior and allowing freeform to omit only the Bonus Action economy event.
-- `3465010f6d9c31a636d0750bc20dbac606dea43e`: adapter now passes `useBonusActionEconomy: internal.sessionMode === "initiative"` directly to the existing domain resolver; removed the temporary app-side operation filtering.
-- `ba409e19a7a4697490251a1b0997adabda2222ee`: renamed the adapter prototype method to avoid shadowing the imported `resolveBerserkerIntimidatingPresence` domain resolver.
-- `2b361221f34cd0c17d01161d063e7667c849aef5`: explicitly authored the 35 ft Berserker range test relation.
-- `1df452fcd951525242631e2cb345e6ee390251fd`: corrected that test relation provenance from non-authoritative `test:` to authoritative `module:test:`. Production code was not changed.
+- `ca4667662184a451107c1b2d5182b63706c8dfb7`: optional `useBonusActionEconomy` domain seam for freeform compatibility.
+- `3465010f6d9c31a636d0750bc20dbac606dea43e`: production adapter passes initiative/freeform economy intent through the existing domain resolver.
+- `ba409e19a7a4697490251a1b0997adabda2222ee`: resolver-name shadowing fix.
+- `2b361221f34cd0c17d01161d063e7667c849aef5`: explicit 35 ft focused spatial fact.
+- `1df452fcd951525242631e2cb345e6ee390251fd`: authoritative `module:test:` provenance correction; no production-code change.
 
-The provenance correction is required by `resolveRuntimeTargetingFact`, which consumes only authoritative spatial module relations. Without `module:` provenance the 35 ft fixture is intentionally treated as unconstrained/no-module-fact, so the out-of-range assertion cannot be valid.
+Exact execution evidence for source checkpoint `1df452fcd951525242631e2cb345e6ee390251fd`:
 
-Exact-head CI for `1df452fcd951525242631e2cb345e6ee390251fd` was running at checkpoint time:
+- UI run `32934223691`, frontend job `98072253329`: **success**; `Typecheck and build` and all preceding UI gates green.
+- Phase 12 Connected Session run `32934223675`, connected-protocol job `98072253248`: **success**; connected-session authority protocol, Phase 11 offline walkthrough, and production frontend gate green.
+- `npm run build` includes `npm run test:berserker-presence`, so the focused Berserker gate is part of the exact-head production build evidence.
 
-- UI run `32934223691`, frontend job `98072253329`: in progress; setup reached dependency installation at the last observation.
-- Phase 12 Connected Session run `32934223675`: in progress.
-
-No canonical completion claim was made because these exact-head gates had not completed. `PLAN.md` remains unchanged.
+Canonical execution routing was advanced in `.agents/V1_CURRENT_HANDOFF.md` at commit `dd71e88bce66f1039a08af69809b03230b21a87e`. The subclass-action umbrella remains intentionally incomplete: Berserker Intimidating Presence is one validated member, not evidence that every mechanics-complete subclass resolver is already projected. `V1_RELEASE_EXECUTION_CHECKLIST.md` already routes generically to the same remaining subclass-action inventory, so no semantic checklist rewrite was required. `PLAN.md` remains unchanged.
 
 Do not expose College of Lore `Cutting Words` as a free-standing button. Keep `Preserve Life` / `Land's Aid` excluded until their allocation/point-AOE authoring inputs exist. Connected remote-owner exactly-once/reconnect remains R2.
 
 ## Next Exact Action
 
-Reconcile the live branch first because concurrent commits may have advanced beyond `1df452fcd951525242631e2cb345e6ee390251fd`. Do not repeat duplicate cleanup, the freeform economy seam, resolver dispatch/shadowing fixes, or the authoritative range-fixture correction. Inspect exact-head GitHub Actions for the latest source-equivalent head. If the Berserker build-gated focused test and canonical `npm run build` are green, record exact UI/Phase 12 run+job evidence, update canonical V1 routing to the next suitable mechanics-complete subclass action candidate, then update this STATE and `control.json` last. If red, inspect and fix only the first Berserker-related failure. Keep R2 excluded.
+Reconcile the live branch first because concurrent commits may have advanced beyond this checkpoint. Do not repeat Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence, duplicate cleanup, freeform economy compatibility, resolver dispatch/shadowing, or the authoritative range-fixture correction.
+
+Continue the R1 subclass inventory: compare existing subclass domain resolvers with production action projection, identify exactly one next mechanics-complete resolver that is still missing from the action bar, and prefer existing runtime/economy/Activity/Undo primitives. Do not expose partial/unsupported features as dead buttons. Add or reuse focused local/freeform/initiative evidence and gate through `npm run build`. Keep connected remote-owner exactly-once/reconnect work in R2 unless a direct R1 regression requires it.
