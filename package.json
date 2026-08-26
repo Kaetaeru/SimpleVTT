@@ -27,8 +27,9 @@
     "test:rogue-core": "tsx --test tests/ui/rogueCoreActionRuntime.test.ts",
     "test:berserker-presence": "tsx --test tests/ui/barbarianBerserkerIntimidatingPresenceRuntime.test.ts",
     "test:open-hand-wholeness": "tsx --test tests/ui/monkOpenHandWholenessRuntime.test.ts",
+    "test:open-hand-fleet-step": "tsx --test tests/ui/monkOpenHandFleetStepRuntime.test.ts",
     "test:devotion-holy-nimbus": "tsx --test tests/ui/paladinDevotionHolyNimbusRuntime.test.ts",
-    "build": "npm run generate:content && npm run test:ui-rule-boundary && tsc --noEmit && npm run test:creation-structure:raw && npm run test:rules-domain && npm run test:druid-wild-shape && npm run test:monk-focus && npm run test:rogue-core && npm run test:berserker-presence && npm run test:open-hand-wholeness && npm run test:devotion-holy-nimbus && npm run test:campaign-rest && vite build",
+    "build": "npm run generate:content && npm run test:ui-rule-boundary && tsc --noEmit && npm run test:creation-structure:raw && npm run test:rules-domain && npm run test:druid-wild-shape && npm run test:monk-focus && npm run test:rogue-core && npm run test:berserker-presence && npm run test:open-hand-wholeness && npm run test:open-hand-fleet-step && npm run test:devotion-holy-nimbus && npm run test:campaign-rest && vite build",
     "preview": "vite preview",
     "test:e2e:tauri": "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root .",
     "tauri": "tauri",
@@ -39,7 +40,7 @@
     "@tauri-apps/api": "^2.0.0",
     "cannon-es": "^0.20.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react-dom": "^19.2.3",
     "three": "^0.180.0"
   },
   "devDependencies": {
