@@ -229,6 +229,7 @@ MockAdapter.prototype.advanceResolution=async function advanceWithLoreCuttingWor
     await previousAdvanceResolution.call(this);
   }
   offer(this,internal);
+  if(resolution?.stage==="complete"&&states.get(this)?.used)refreshActivity(internal,resolution);
   return this.getSnapshot();
 };
 
