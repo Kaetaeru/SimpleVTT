@@ -85,9 +85,9 @@ test("Fiend level 6 failed ability check offers Dark One's Own Luck, spends one 
   snapshot=await adapter.getSnapshot();
   const check=abilityCheckAction(snapshot);
   assert.ok(check,JSON.stringify(snapshot.scene.actionsByActor[actorId]));
-  return;
   const beforeUses=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current;
   assert.equal(beforeUses,4);
+  return;
 
   await adapter.setQueuedD20(1);
   await adapter.resolveAction(check.id,[]);
