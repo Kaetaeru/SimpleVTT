@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T15:32:49+09:00`
+- checkpointed_at: `2026-08-26T15:36:35+09:00`
 
 ## Durable execution checkpoint
 
@@ -32,25 +32,27 @@ Validated evidence preserved:
 
 - `test:open-hand-wholeness`: **4/4 green** at the permitted source, covering initiative healing/economy/resource/Activity/Undo and freeform healing/resource/Activity/Undo without consuming Bonus Action.
 - Phase 12 run `32935738475`, connected-protocol job `98076495591`: job conclusion is **failure**, but `Verify connected-session authority protocol` and `Verify Phase 11 offline walkthrough remains green` are individually green; failure occurs later at `Verify production frontend gate`. Do not repeat those two green steps unless affected source changes.
-- No product source, package script, canonical handoff/checklist, or design contract changed after `3a9f22d`; live reconciliation through `24f61d0215aeecee9c0ce3230a7f6645aaf906c2` confirms only Rerun metadata changed.
+- `ba820a4efe8bcfc52ff18374dea5887a1fe1a77d` -> `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` compares source-equivalent: net changes are Rerun metadata only. Later live checkpoints through `d44ddfb15ee0caa26f29ec14f84b4edd4919b372` likewise did not change permitted product source.
 
 Fresh full-gate reconciliation on exact permitted source:
 
 - UI Regression run `32935738464` is exact `head_sha=3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83`.
 - Only the previously failed frontend job was rerun; already-green Wholeness/connected-protocol/Phase 11 focused evidence was not separately repeated.
-- rerun attempt `2`, frontend job/check `98082586625`: preliminary workflow steps reached green; `Typecheck and build` failed again.
-- GitHub Check Runs evidence independently confirms `98082586625` has `annotations_count=3`, but the connector rejects the direct annotations endpoint as unsupported; run `32935738464` has zero downloadable artifacts.
+- rerun attempt `2`, frontend job/check `98082586625`: preliminary workflow steps reached green; `Typecheck and build` failed again. Direct current-attempt annotation/log payload remains unavailable through the connector.
 - Phase 12 run `32935738475` independently reaches the same production frontend gate class and fails at step `Verify production frontend gate`; its connected-session authority and Phase 11 walkthrough steps are green.
-- Repeated job-log retrieval did not surface the exact first failing assertion/error payload. Therefore the first current frontend build blocker remains **unverified**.
-- The prior durable claim that current `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:88` contains a `64 !== 65` / "10 rounds" failure is stale and must not be used for a patch: the exact file fetched at ref `3a9f22d` contains no such assertion/test text.
-- No Wholeness, Holy Nimbus, or unrelated product code was changed. No speculative fix was made.
+- A source-equivalent durable checkpoint at commit `33a91867d24ba6e0cf5aaaed7820facf5d2b58ec` records UI run `32935353043` and Phase 12 run `32935353057` as red only because shared `npm run build` failed in unrelated `test:devotion-holy-nimbus` at `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:73:10` with `expected 1, actual 0`.
+- The exact test at permitted source `3a9f22d` still has line 73 as the Holy Nimbus post-Undo resource restoration assertion (`current === usesBefore`). Because product source is net-identical to `ba820a4e`, this is valid source-equivalent evidence of the shared-gate blocker; it is not a Wholeness regression.
+- The separate prior durable claim about `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:88` containing a `64 !== 65` / "10 rounds" failure remains stale and must not be used.
+- Shared freeform TurnRuntime inverse work was attempted by `69f01dcb5823c2891aaafd180c3ad7acb46f4764` and deliberately reverted by `3a9f22d` to keep Wholeness scope isolated. Do not reapply that out-of-scope fix here.
+- No Wholeness, Holy Nimbus, or unrelated product code was changed in this reconciliation. No speculative fix was made.
 
 Scope/routing:
 
 - `PLAN.md` unchanged.
 - R2 remote-owner exactly-once/reconnect excluded.
-- Canonical V1 handoff/checklist must not advance while required frontend/full build remains red and its first current blocker is not authoritatively identified.
+- Wholeness R1 is source-complete and focused-green, but canonical V1 handoff/checklist must not advance until the required shared frontend/full build is green on a source-equivalent exact HEAD.
+- The remaining blocker is outside Wholeness scope. Do not patch Holy Nimbus or the reverted shared freeform TurnRuntime seam from this task.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Recover the exact first failing assertion/error behind the shared frontend gate from UI attempt-2 job/check `98082586625`, Phase 12 job `98076495591`, an authoritative GitHub Actions annotation/log, or a newer exact-head gate result. Fix only that first verified blocker. If exact failure evidence is still unavailable, do not alter Wholeness, Holy Nimbus, or unrelated product source and do not repeat already-green validation. After an evidence-backed fix, verify the new exact HEAD full UI/build gate and Phase 12 gate; only then mark Wholeness R1 execution-validated and advance canonical routing.
+Reconcile live `work/v1-composite` first. If a newer product-source commit fixes the Holy Nimbus/shared frontend blocker, consume that source instead of repeating Wholeness work and verify the required exact-head UI/build and Phase 12 gates. If product source is unchanged, do not modify Wholeness, Holy Nimbus, or unrelated shared runtime and do not repeat already-green focused validation. Advance canonical routing only after a source-equivalent exact HEAD has both required gates green.
