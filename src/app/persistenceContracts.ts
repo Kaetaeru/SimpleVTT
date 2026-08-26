@@ -2,6 +2,7 @@ import "./creationContracts";
 import "./progressionContracts";
 import type { AbilityScores, CharacterSheet } from "./contracts";
 import type { ProgressionClassTrack } from "../domain/progression";
+import type { DruidWildShapeForm } from "../domain/druidWildShape";
 import type { CharacterCreationAuthoringSourceV1 } from "./characterCreationAuthoringSource";
 
 export const CHARACTER_LIBRARY_SCHEMA_ID = "simplevtt.character-library" as const;
@@ -40,6 +41,7 @@ export interface CharacterProgressionSelectionsV1 {
   persistentFeatureOptionIds?:string[];
   persistentFeatureOptionSources?:Record<string,string>;
   epicBoonFeatIds?:string[];
+  epicBoonSources?:Record<string,string>;
   epicBoonFeatSources?:Record<string,string>;
   weaponMasteryIds?:string[];
   weaponMasterySources?:Record<string,string>;
@@ -130,6 +132,7 @@ export interface CharacterSourceSnapshotV1 {
   };
   progression:CharacterProgressionSelectionsV1;
   featureGrants?:string[];
+  wildShapeKnownForms?:DruidWildShapeForm[];
   resourceDefinitions?:CharacterResourceSourceDefinitionV1[];
   itemReferences:CharacterItemSourceReferenceV1[];
 }
