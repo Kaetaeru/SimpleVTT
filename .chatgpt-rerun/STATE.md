@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T21:09:00+09:00`
+- checkpointed_at: `2026-08-26T21:28:00+09:00`
 
 ## Durable checkpoint
 
@@ -31,27 +31,33 @@ Do not repeat these slices without direct regression evidence. `windows-connecte
 
 ## R2 in progress: Cunning Action Hide
 
-Direct investigation established the real gap:
-- Standard Hide semantics are already regression-covered in `tests/ui/standardActionLifecycle.test.ts`: ability check, DC 15 success/failure, Hidden lifecycle, attack reveal. Reuse them.
-- `phase09RealResolutionAdapter.ts` legacy Hidden application checks exact id `action.standard.hide.stealth`; Cunning Hide has a different id, so its Hidden state was not covered by that exact branch.
-- `abilityCheckResolutionEventAdapter.ts` records the d20 event only; it does not carry Hidden or Bonus Action state changes.
+Existing standard Hide semantics are reused. No new stealth engine/protocol/schema was introduced.
 
-Concurrent live fixes now exist:
-- `5765534b320f245678edb90173d740d8fb7c0113` adds `rogueCunningHideEventRuntimeAdapter.ts`: staged Cunning Hide composes the existing d20 event with canonical session Bonus Action economy + tagged Hidden effect, and records attack-triggered Hidden removal in the same event history.
-- `3ad7f6a3c1f57495103cfa86fa9f86591eee2f7c` installs the bridge immediately outside the generic ability-check recorder so the d20 event is composed, not replaced.
-- `03164a314762c0981bae8c7153f391366b49b6e0` reconstructs remote level-2+ Cunning Hide from canonical Rogue class-level and Stealth skill facts.
-- Phase12 run `32966851411` / connected-protocol job `98171137748` for bridge-install head: connected authority suite green; Phase11 offline walkthrough green; production frontend gate was still running at checkpoint.
-- No accepted focused remote-owner Cunning Hide proof is recorded yet. Hide R2 is NOT claimed complete.
+Current live Hide chain already contains the required focused remote-owner proof and the product fixes; do not duplicate them:
+- `5765534b320f245678edb90173d740d8fb7c0113`: Cunning Hide event/runtime bridge.
+- `3ad7f6a3c1f57495103cfa86fa9f86591eee2f7c`: installs the bridge outside the generic ability-check recorder.
+- `03164a314762c0981bae8c7153f391366b49b6e0`: reconstructs remote level-2+ Cunning Hide from canonical Rogue/Stealth facts.
+- `f21c9f7`: focused remote-owner Hide proof.
+- `694100d`: Phase12 gate wiring for the proof.
+- `b071f7566d5b0fa408b87a9641a2d0d1bfdc00de`: canonical Hide d20 event-kind expectation alignment.
+- `5895f7b184d73749a1207bf5d00a8569a82d1041`: canonical fixed DC work.
+- `e2107025fb1fd4a896559decc1ee191c033e9b2a`: scopes the fixed DC to Cunning Hide and ensures the connected Host TurnRuntime exists before committing Hidden/economy effects.
+- `97402706c54622fb128a3e2209c014deb18f5430` then exposed two broad lifecycle fixture-selection regressions; the Cunning Hide connected proof itself was green.
+- `7f8e9459e433164b916ee8ef12fdf3042492d9d7`: restores the lifecycle tests to selecting an actual composed ability-check action rather than nonexistent `action.athletics`.
+
+Exact-head evidence at checkpoint for `7f8e9459e433164b916ee8ef12fdf3042492d9d7`:
+- Phase12 run `32968629791` / connected-protocol job `98176845690`: connected-session authority protocol green, including focused remote-owner Cunning Hide; Phase11 offline walkthrough green; production frontend gate (`npm run build`) still in progress at checkpoint.
+- UI run `32968629784` / frontend job `98176845419`: broad UI steps were still in progress; no new direct Hide red recorded at checkpoint.
+
+Therefore Hide product behavior/proof is green, but Hide R2 is NOT yet claimed fully validated until the exact-head production frontend/build gate finishes green.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Stay in R2; do not reopen validated Rage/Wild Shape/Cunning Dash/Cunning Disengage.
-3. Inspect exact-head CI after `03164a314762c0981bae8c7153f391366b49b6e0` and any newer concurrent Hide commits. Fix only the first direct Hide regression if red.
-4. Check for an already-added focused remote-owner Cunning Hide proof/gate. Reuse it if present; never duplicate it.
-5. If missing, add only the smallest deterministic proof: host-unknown level-2 Rogue, successful Cunning Hide check, Host authority, ordered d20 + Bonus Action + Hidden effect convergence, exactly-once Client apply, duplicate event/request safety, no Character-library generation for session-only state, attack reveal if needed, and compensating Undo.
-6. Reuse standard Hide semantics. No new stealth engine, protocol, schema, or generic abstraction.
-7. Verify changed exact SHA through existing Phase12 connected gate + production `npm run build`; fix only first direct regression.
-8. Update canonical handoff/checklist only if the overall R2 pointer/status changes. Otherwise STATE then `control.json` LAST.
-9. Keep Uncanny Dodge separate until Hide is green/checkpointed.
-10. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Stay in R2. Do not reopen Rage/Wild Shape/Cunning Dash/Cunning Disengage.
+3. Inspect exact-head completion of Phase12 `32968629791` / job `98176845690` and UI `32968629784` / job `98176845419` for `7f8e9459e433164b916ee8ef12fdf3042492d9d7`, unless GitHub has a newer head.
+4. If exact-head connected + Phase11 + production `npm run build` are green, close Cunning Action Hide R2 without rerunning validated work, minimally repair canonical handoff/release checklist, and advance the R2 pointer to Uncanny Dodge.
+5. If red, read the first direct failing step/log and fix only that regression. Do not reopen already-green Hide semantics/proof unless the failure directly implicates them.
+6. Keep Uncanny Dodge separate until Hide is fully green/checkpointed.
+7. `PLAN.md` unchanged. Durable update order remains STATE -> `control.json` LAST unless routing materially changes.
+8. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
