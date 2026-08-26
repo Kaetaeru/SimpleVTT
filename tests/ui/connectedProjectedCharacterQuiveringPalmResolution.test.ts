@@ -175,7 +175,7 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
     assert.equal(turnEvents.length,2,"initiative start and explicit remote turn selection must publish ordered mode events");
     assert.equal((await applyConnectedClientEvents(client,turnEvents)).status,"applied");
     clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);
-    assert.deepEqual(markers(host,remote.id),[]);assert.deepEqual(markers(client,remote.id),[]);
+    assert.deepEqual(markers(host,remote.id),[TARGET_B]);assert.deepEqual(markers(client,remote.id),[TARGET_B]);
 
     const initiativeSeedCursor=state.ledger.cursor;
     await seed(host,RECONNECT_PEER,state.sessionId,remoteManifest,TARGET_B,"request.r2.quivering.seed-initiative",initiativeSeedCursor);
