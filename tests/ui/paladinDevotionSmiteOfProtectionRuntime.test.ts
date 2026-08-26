@@ -26,7 +26,7 @@ async function devotionPaladin(level=15){
     preparedSpells:[DIVINE_SMITE_ID],
     spellSlotMaximums:{1:4},
   } as CharacterSheet;
-  await adapter.getSnapshot();
+  await adapter.startProductionLocalPlay("dm");
   await adapter.startInitiative();
   await adapter.setCurrentActor(internal.activeCharacter.id);
   await adapter.selectDmActor(internal.activeCharacter.id);
