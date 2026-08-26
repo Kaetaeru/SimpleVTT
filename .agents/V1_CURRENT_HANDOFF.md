@@ -23,12 +23,14 @@ Canonical target branch: **`work/v1-composite`**
 - Open Hand Quivering Palm R1 exact execution checkpoint: `126cd848b1b7896eaa09f8775e60dcd9638fdf72`.
 - Devotion Smite of Protection R1 exact execution checkpoint: `ec89fa251d969a250c20e11f0abe6d7a4f13d58e`.
 - Fiend Dark One's Own Luck R1 exact execution checkpoint: `95042b2ef3c65aef3619334c0bec1ad243d165f2`.
+- Lore Peerless Skill R1 exact execution checkpoint: `88bb72dc3d725af049025728003ab6e6b8db1eb0`.
 - `21b5ab8`은 Fleet Step과 Holy Nimbus focused gate를 포함한 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다.
 - `126cd84`는 Quivering Palm focused gate를 포함한 UI run `32942627369`가 success이고 Phase 12 run `32942627376`의 connected-protocol job `98096599197`이 success다. 이는 Quivering Palm R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 - `ec89fa2`는 Smite of Protection focused gate를 포함한 UI run `32950193461` / frontend job `98119645421`과 Phase 12 run `32950193590` / connected-protocol job `98119646335`가 success다.
 - `95042b2`는 Fiend Dark One's Own Luck 3개 focused case를 포함한 UI run `32952470669` / frontend job `98126755335`와 Phase 12 run `32952470663` / connected-protocol job `98126755397`이 success다.
+- `88bb72d`는 Lore Peerless Skill 4개 focused case를 포함한 UI run `32953773211` / frontend job `98130829740`과 Phase 12 run `32953773099` / connected-protocol job `98130829706`이 success다.
 
-따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, Fiend Dark One's Own Luck R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
+따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, Fiend Dark One's Own Luck R1, Lore Peerless Skill R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
 ## 2. 실행 증거
 
@@ -197,6 +199,18 @@ Canonical target branch: **`work/v1-composite`**
   - Phase 12 Connected Session run `32952470663` / job `98126755397` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
 - 결론: **Fiend Dark One's Own Luck R1 ability-check/saving-throw/resource/Activity/Undo/level-gate 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
 
+### Green — Lore Peerless Skill R1 exact checkpoint `88bb72d`
+
+- 기존 `resolveLorePeerlessSkill` domain resolver와 Bardic Inspiration resource를 재사용하고 production follow-up adapter만 얇게 연결했다.
+- College of Lore Bard 14+의 실패한 ability check와 missed attack에만 후속 사용을 노출하며, Bardic Inspiration die를 더해 성공으로 전환되는 경우에만 자원을 소비한다.
+- ability-check path와 attack path 모두 Activity를 남기며, attack follow-up의 누락 Activity는 `88bb72dc3d725af049025728003ab6e6b8db1eb0`에서 최소 수정으로 복구했다.
+- focused test 4개는 ability-check 성공 전환/Undo, 여전히 실패할 때 자원 보존, missed attack 성공 전환/피해/Activity/Undo, below-level 비노출을 검증한다.
+- exact SHA `88bb72dc3d725af049025728003ab6e6b8db1eb0` GitHub Actions:
+  - UI run `32953773211` / frontend job `98130829740`: **success**, `Typecheck and build` 포함 전 단계 green.
+  - Phase 12 Connected Session run `32953773099` / connected-protocol job `98130829706`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
+- `npm run build`가 `npm run test:lore-peerless-skill`를 포함하므로 focused Peerless Skill gate와 production build가 exact SHA에서 green이다.
+- 결론: **Lore Peerless Skill R1 ability-check/attack/resource/Activity/Undo/level-gate 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
+
 ## 3. Source-complete로 취급하고 재구현하지 않을 것
 
 - 339/339 spell executable definitions, multi-target targeting, condition/concentration lifecycle
@@ -221,6 +235,7 @@ Canonical target branch: **`work/v1-composite`**
 - Open Hand Quivering Palm R1 through `126cd84`: post-Unarmed-hit seed, Focus 4, single-target marker replacement, Action detonation, Constitution save, 10d12 force/save-half, freeform/initiative economy, Activity and Undo. `replace-attack` remains unsupported and unexposed.
 - Devotion Smite of Protection R1 through `ec89fa2`: existing protection runtime, public Undo, expiry and below-level gate focused coverage.
 - Fiend Dark One's Own Luck R1 through `95042b2`: existing follow-up/domain resolver reuse, failed ability-check/saving-throw recovery, resource spend, Activity, event-native Undo and below-level gate.
+- Lore Peerless Skill R1 through `88bb72d`: existing Lore resolver/resource reuse, failed ability-check and missed-attack follow-up, success-only resource spend, Activity, Undo and below-level gate.
 - remaining existing subclass mechanics outside the exposed R1 actions are not reimplemented unless the inventory identifies a real production projection gap.
 
 Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, R3 Tauri durability, R4 rendered UX/accessibility, R5 release gates는 별도다.
@@ -255,6 +270,7 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
   - [x] Open Hand Quivering Palm supported seed + Action detonation: exact checkpoint `126cd84`, focused build gate + UI/Phase12 connected-protocol green.
   - [x] Devotion Smite of Protection: exact checkpoint `ec89fa2`, focused build gate + UI/Phase12 connected-protocol green.
   - [x] Fiend Dark One's Own Luck: exact checkpoint `95042b2`, 3 focused cases + UI/Phase12 connected-protocol green.
+  - [x] Lore Peerless Skill: exact checkpoint `88bb72d`, 4 focused cases + UI/Phase12 connected-protocol green.
   - [ ] 남은 subclass domain resolver inventory에서 다음 mechanics-complete production projection gap 식별.
 - [ ] 각 신규 행동에 local/freeform/initiative/Activity/Undo를 연결.
   - [x] Berserker Intimidating Presence R1 범위.
@@ -264,6 +280,7 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
   - [x] Open Hand Quivering Palm supported R1 범위.
   - [x] Devotion Smite of Protection R1 범위.
   - [x] Fiend Dark One's Own Luck R1 범위.
+  - [x] Lore Peerless Skill R1 범위.
 
 Exit: 대표 12-class Character가 UI에서 사용 가능한 핵심 행동을 dead button 없이 실행한다.
 
@@ -317,11 +334,11 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-Devotion Smite of Protection R1은 `ec89fa2`, Fiend Dark One's Own Luck R1은 `95042b2`에서 execution-validated 됐다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
+Lore Peerless Skill R1은 `88bb72d`에서 execution-validated 됐다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
 
 ```text
 live branch와 existing subclass domain resolver / production action projection inventory 재대조
--> Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported R1, Devotion Smite of Protection, Fiend Dark One's Own Luck, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
+-> Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported R1, Devotion Smite of Protection, Fiend Dark One's Own Luck, Lore Peerless Skill, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
 -> domain resolver가 실제 mechanics를 소유하지만 production action bar에 빠진 다음 action 하나만 식별
 -> richer player-choice input이 필요한 Preserve Life/Land's Aid 같은 partial feature는 자동할당하거나 dead button으로 노출하지 않음
 -> unsupported/partial feature는 dead button으로 노출하지 않음
@@ -349,6 +366,7 @@ npm run test:devotion-holy-nimbus
 npm run test:open-hand-quivering-palm
 npm run test:devotion-smite-protection
 npm run test:fiend-luck
+npm run test:lore-peerless-skill
 npm run build
 npm run test:connected-ui
 npm run test:spellcasting
