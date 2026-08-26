@@ -168,15 +168,7 @@ MockAdapter.prototype.startInitiative=async function startInitiativeWithTurnRunt
   const internal=this as unknown as Phase09TurnAdapterState;
   internal.sessionMode="initiative";
   interruptEvents.delete(this);
-  const previousSession=sessions.get(this);
   const session=createTurnRuntimeSession(internal.scene);
-  if (previousSession) {
-    session.state.clock.elapsedSeconds=previousSession.state.clock.elapsedSeconds;
-    session.state.effects=previousSession.state.effects
-      .filter((effect)=>effect.expiry.kind!=="instant"&&effect.expiry.kind!=="turn-boundary")
-      .map((effect)=>structuredClone(effect));
-    session.state.concentration=structuredClone(previousSession.state.concentration);
-  }
   sessions.set(this,session);
   projectTurnRuntimeToScene(session,internal.scene);
   const current=internal.scene.entities.find((entity)=>entity.id===internal.scene.currentActorId);
