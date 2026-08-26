@@ -11,7 +11,7 @@ async function monk(level=6,initiative=true){
   const adapter=new MockAdapter();const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
   internal.activeCharacter={...internal.activeCharacter,className:"수도승",subclassName:"열린 손의 전사",level,hp:10,maxHp:30,abilities:{...internal.activeCharacter.abilities,wis:16},classLevels:[{classId:MONK_OPEN_HAND_CLASS_ID,className:"수도승",subclassName:"열린 손의 전사",level}],subclassIds:{[MONK_OPEN_HAND_CLASS_ID]:MONK_OPEN_HAND_SUBCLASS_ID},resources:[]};
   const actor=internal.scene.entities.find((entry)=>entry.id===internal.activeCharacter.id);if(actor){actor.hp=10;actor.maxHp=30;}
-  await adapter.getSnapshot();if(initiative){await adapter.startInitiative();await adapter.setCurrentActor(internal.activeCharacter.id);await adapter.selectDmActor(internal.activeCharacter.id);}return adapter;
+  await adapter.getSnapshot();if(initiative){await adapter.startInitiative();await adapter.setCurrentActor(internal.activeCharacter.id);await adapter.selectDmActor(internal.activeCharacter.id);}else await adapter.setSessionMode("freeform");return adapter;
 }
 
 function action(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>){return snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id===OPEN_HAND_WHOLENESS_ACTION_ID);}
