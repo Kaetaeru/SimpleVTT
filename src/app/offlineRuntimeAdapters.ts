@@ -64,6 +64,7 @@ import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./fighterActionSurgeRuntimeAdapter";
 import "./barbarianRageRuntimeAdapter";
+import "./druidWildShapeRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
 import "./unarmedControlRuntimeAdapter";
