@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T21:47:00+09:00`
+- checkpointed_at: `2026-08-26T21:48:00+09:00`
 
 ## Durable checkpoint
 
@@ -39,20 +39,22 @@ R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client a
   - compensating Undo restores HP/Reaction and inverse owner write-back; duplicate Undo is a no-op.
 - `aefb7a8` validation: Phase12 `32969745056` / connected-protocol `98180422630` success including focused proof, Phase11 walkthrough, production `npm run build`; UI `32969745069` / frontend `98180422561` success including Typecheck/build.
 - Ponytail cleanup `d8df984ce868e3ae9bf8a78162e0924120f4f2c3` removes duplicated Rogue rule materialization from `characterSessionProjectionMount.ts`; connected authority step remained green on its exact-head run.
-- New test-only head `a1edf6bc869984aaabf5cf5f564f4f11c21399ad` explicitly proves a duplicate owner interrupt response is a no-op: resolution does not advance twice and Reaction is not spent twice.
-- Exact-head `a1edf6b` current validation at checkpoint:
-  - Phase12 run `32970182722` / connected-protocol job `98181814527`: connected authority suite + Phase11 walkthrough green; production frontend gate still `in_progress`.
-  - UI run `32970182652` / frontend job `98181814250`: all prior steps green; `Typecheck and build` still `in_progress`.
-- Therefore do **not** advance to Berserker yet. Read only these unfinished exact-head build results first. If both green, Uncanny Dodge R2 is closed at the latest tested head and canonical evidence can advance. If red, fix only the first direct cause.
+- Test-only head `a1edf6bc869984aaabf5cf5f564f4f11c21399ad` explicitly proves a duplicate owner interrupt response is a no-op: resolution does not advance twice and Reaction is not spent twice.
+- Exact-head `a1edf6b` validation is now fully green:
+  - Phase12 run `32970182722` / connected-protocol job `98181814527`: connected authority suite, Phase11 walkthrough, and production frontend gate all **success**.
+  - UI run `32970182652` / frontend job `98181814250`: all frontend steps including `Typecheck and build` **success**.
+- **Uncanny Dodge R2 is closed at the latest tested head `a1edf6b`.** Do not reopen it without direct regression evidence.
+- Canonical `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` were still stale at this checkpoint and must receive the exact evidence above before moving the canonical pointer to the next R2 slice.
 
 `windows-connected-playable` is R3 acceptance, not an R2 gate.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Do not repeat validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, Cunning Hide, or the already-green Uncanny authority proof.
-3. Read the unfinished exact-head results only: Phase12 `32970182722` / job `98181814527` production frontend step and UI `32970182652` / job `98181814250` Typecheck/build.
-4. If both are green, minimally update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` with the latest Uncanny Dodge evidence, then continue the remaining R1 remote-owner matrix in R1 execution order with **Berserker Intimidating Presence** first (`1df452f`).
-5. If either is red, inspect only the first direct failure and apply the smallest fix. No new protocol/schema/reaction engine.
-6. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
-7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Do not repeat validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, Cunning Hide, or Uncanny Dodge.
+3. Minimally update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` with Uncanny Dodge exact head `a1edf6b`, Phase12 `32970182722` / job `98181814527` green, and UI `32970182652` / job `98181814250` green. Preserve unrelated canonical history.
+4. Then continue the remaining R1 remote-owner matrix in existing R1 execution order. Inspect **Berserker Intimidating Presence** first (`1df452f` R1): existing domain/runtime action, target/effect/resource/economy/Activity/Undo, connected reconstruction, and whether a focused remote-owner proof already exists. Do not create a second fear engine/protocol/schema.
+5. If direct evidence shows a gap, add only the smallest deterministic remote-owner proof/fix using existing Host authority + ordered `ResolutionEvent` + Client apply + duplicate/reconnect + compensating Undo primitives.
+6. Verify any changed exact SHA through the existing Phase12 connected gate plus production `npm run build`; fix only the first direct regression.
+7. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
+8. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
