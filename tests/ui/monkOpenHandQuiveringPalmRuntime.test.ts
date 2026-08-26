@@ -18,7 +18,7 @@ async function monk(level=17,initiative=false){
   const actor=internal.scene.entities.find((entry)=>entry.id===internal.activeCharacter.id);if(actor){actor.tempHp=0;actor.ac=15;}
   for(const id of [TARGET_A,TARGET_B]){const target=internal.scene.entities.find((entry)=>entry.id===id);if(target){target.hp=200;target.maxHp=200;target.tempHp=0;target.ac=1;target.distance="5피트";}}
   await adapter.getSnapshot();
-  if(initiative){await adapter.startInitiative();await adapter.setCurrentActor(internal.activeCharacter.id);await adapter.selectDmActor(internal.activeCharacter.id);}
+  if(initiative){await adapter.startInitiative();await adapter.setCurrentActor(internal.activeCharacter.id);await adapter.selectDmActor(internal.activeCharacter.id);}else await adapter.setSessionMode("freeform");
   return adapter;
 }
 function action(snapshot:AppSnapshot,id:string){return snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id===id);}
