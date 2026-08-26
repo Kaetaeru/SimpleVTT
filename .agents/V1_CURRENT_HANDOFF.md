@@ -16,9 +16,10 @@ Canonical target branch: **`work/v1-composite`**
 - Druid Wild Shape exact execution checkpoint: `11bc8581a04678e33796054117f05b5455a25db3`.
 - Monk Focus R1 exact execution checkpoint: `c282a1e4fd6929dc56079d811021dcfe160d51f5`.
 - Rogue R1 exact execution checkpoint: `5bb8bfbc4753dcc15f1198a04c0982817176c644`.
-- `5bb8bfb`은 UI frontend job과 connected-protocol production frontend gate가 green이다. 이는 Rogue R1 실행 증거이며 전체 release DONE 판정은 아니다.
+- Berserker Intimidating Presence R1 exact execution checkpoint: `1df452fcd951525242631e2cb345e6ee390251fd`.
+- `1df452f`은 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다. 이는 Berserker Intimidating Presence R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 
-따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
+따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
 ## 2. 실행 증거
 
@@ -107,6 +108,18 @@ Canonical target branch: **`work/v1-composite`**
 - `npm run build`가 `npm run test:rogue-core`를 포함하므로 Rogue focused gate와 production build가 exact SHA에서 green이다.
 - 결론: **Rogue Cunning Action/Uncanny Dodge R1 local/freeform/initiative/economy/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
 
+### Green — Berserker Intimidating Presence R1 exact checkpoint `1df452f`
+
+- 기존 `src/domain/barbarianBerserker.ts`의 Intimidating Presence resolver를 재사용하고 production action projection/runtime만 최소 연결했다.
+- initiative에서는 Bonus Action economy를 소비하고, freeform에서는 같은 domain resolver에 `useBonusActionEconomy: false`를 전달해 전투 turn economy를 남기지 않는다.
+- 기존 feature resource, 실패 내성의 Frightened 적용, Activity, generic/event-native Undo 경계를 재사용한다.
+- focused test는 35 ft out-of-range spatial fact를 `module:test:` provenance로 명시해 production targeting이 실제 authoritative module fact로 인식하게 한다. 제품 range 규칙을 test에 복제하지 않는다.
+- exact SHA `1df452fcd951525242631e2cb345e6ee390251fd` GitHub Actions:
+  - UI run `32934223691` / job `98072253329` `frontend`: **success**, `Typecheck and build` 포함 전 단계 green.
+  - Phase 12 Connected Session run `32934223675` / job `98072253248` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
+- `npm run build`가 `npm run test:berserker-presence`를 포함하므로 focused Berserker gate와 production build가 exact SHA에서 green이다.
+- 결론: **Berserker Intimidating Presence R1 local/freeform/initiative/resource/economy/targeting/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
+
 ## 3. Source-complete로 취급하고 재구현하지 않을 것
 
 - 339/339 spell executable definitions, multi-target targeting, condition/concentration lifecycle
@@ -124,7 +137,8 @@ Canonical target branch: **`work/v1-composite`**
 - Druid Wild Shape through `11bc858`: known-form selection, transform/exit actions, resource/Bonus Action economy, transformed attack projection, explicit temporary-HP keep/take choice, spellcasting restriction, event-native write-back and Undo
 - Monk Focus R1 through `c282a1e`: Focus actions, resource/Bonus Action economy, Flurry extra attacks, Patient Defense/Step effects, local/freeform/initiative Activity and one-call snapshot Undo
 - Rogue R1 through `5bb8bfb`: Cunning Action Dash/Disengage/Hide projection, Bonus Action economy, standard action mechanics reuse, Uncanny Dodge reaction with atomic floor-half damage, Activity and local/event-native Undo boundaries
-- existing Barbarian Berserker mechanics
+- Berserker Intimidating Presence R1 through `1df452f`: existing domain resolver reuse, production action projection, initiative/freeform economy split, feature resource, authoritative targeting, Frightened, Activity and Undo boundaries
+- remaining existing Barbarian Berserker mechanics outside the exposed R1 action are not reimplemented unless the inventory identifies a real production projection gap.
 
 Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, R3 Tauri durability, R4 rendered UX/accessibility, R5 release gates는 별도다.
 
@@ -151,7 +165,10 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
 - [x] Monk Focus actions와 자원/행동 경제. exact checkpoint `c282a1e`에서 focused Monk gate, one-call local Undo, production build, connected-protocol frontend gate를 검증했다.
 - [x] Rogue Cunning Action 및 Uncanny Dodge reaction. exact checkpoint `5bb8bfb`에서 focused Rogue gate, production build, connected-protocol frontend gate를 검증했다.
 - [ ] 이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar에 노출.
+  - [x] Berserker Intimidating Presence: exact checkpoint `1df452f`, focused build gate + UI/Phase12 green.
+  - [ ] 남은 subclass domain resolver inventory에서 다음 mechanics-complete production projection gap 식별.
 - [ ] 각 신규 행동에 local/freeform/initiative/Activity/Undo를 연결.
+  - [x] Berserker Intimidating Presence R1 범위.
 
 Exit: 대표 12-class Character가 UI에서 사용 가능한 핵심 행동을 dead button 없이 실행한다.
 
@@ -205,19 +222,20 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R1의 다음 미완료 항목인 **이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar에 노출**로 이동한다.
+Berserker Intimidating Presence R1은 `1df452f`에서 execution-validated 됐다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
 
 ```text
-existing subclass domain resolvers와 production action projection inventory 확인
--> 이미 source-complete인 subclass mechanics와 이미 노출된 actions는 재구현하지 않음
--> domain resolver가 실제 mechanics를 소유하지만 production action bar에 빠진 action만 식별
--> mechanics-complete action만 최소 projection하고 unsupported/partial feature는 dead button으로 노출하지 않음
--> local/freeform/initiative/economy/Activity/Undo focused deterministic evidence 추가 또는 기존 증거 재사용
+live branch와 existing subclass domain resolver / production action projection inventory 재대조
+-> Berserker Intimidating Presence, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
+-> domain resolver가 실제 mechanics를 소유하지만 production action bar에 빠진 다음 action 하나만 식별
+-> unsupported/partial feature는 dead button으로 노출하지 않음
+-> 선택한 action의 local/freeform/initiative/economy/Activity/Undo 기존 primitives를 우선 재사용
+-> focused deterministic evidence 추가 또는 기존 증거 재사용
 -> npm run build로 관련 gate 확인
--> canonical handoff 갱신 후 마지막 R1 integration 항목으로 이동
+-> green이면 canonical handoff 갱신 후 inventory를 계속하거나 마지막 R1 integration 항목으로 이동
 ```
 
-Rage, Wild Shape, Monk Focus, Rogue R1은 재구현하지 않는다. connected Host/Client/reconnect/exactly-once는 direct R1 regression이 아니면 R2에서 다룬다. resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
+Connected Host/Client/reconnect/exactly-once는 direct R1 regression이 아니면 R2에서 다룬다. resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
 
 중요: 이 문서가 현재 V1 실행 포인터다. `.chatgpt-rerun/PLAN.md`나 `.chatgpt-rerun/STATE.md`에 별도 제품 작업 목록을 복사하지 않는다.
 
@@ -228,6 +246,7 @@ Windows Node `uv_os_get_passwd ENOMEM` 발생 시 repository의 기존 bootstrap
 ```powershell
 $env:NODE_OPTIONS='--require=./tests/tsx-os-userinfo-bootstrap.cjs'
 npm run test:rogue-core
+npm run test:berserker-presence
 npm run build
 npm run test:connected-ui
 npm run test:spellcasting
