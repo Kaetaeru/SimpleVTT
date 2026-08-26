@@ -185,6 +185,14 @@ function skillProficient(skills:string[],nameKo:string,nameEn:string) {
   });
 }
 
+function skillBonus(skills:string[],nameKo:string,nameEn:string) {
+  const skill=skills.find((entry)=>{
+    const normalized=entry.replace(/\s+[+-]\d+$/,"").trim().toLowerCase();
+    return normalized===nameKo.toLowerCase() || normalized===nameEn.toLowerCase();
+  });
+  return Number(skill?.match(/([+-]\d+)$/)?.[1]??0);
+}
+
 function parseHealingFormula(value:string|undefined) {
   const match=value?.trim().match(/^(\d+)d(\d+)(?:\s*\+\s*(\d+))?$/i);
   if (!match) return undefined;
@@ -310,6 +318,29 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       {label:"비용",value:"추가 행동 1"},
     ],
   });
+  if (rogueLevel>=2) {
+    const stealth=skillBonus(sheet.skills,"은신","Stealth");
+    const signed=stealth>=0?`+${stealth}`:String(stealth);
+    actions.push({
+      id:"action.rogue.cunning-action.hide",
+      actorId:sheet.id,
+      name:"교활한 행동 · 숨기",
+      category:"basic",
+      target:"none",
+      economy:"추가 행동",
+      resolutionKind:"ability-check",
+      summary:`민첩(은신) ${signed}`,
+      available:true,
+      eligibleTargetIds:[],
+      checkBonus:stealth,
+      details:[
+        {label:"판정",value:"민첩(은신)"},
+        {label:"보너스",value:signed},
+        {label:"비용",value:"추가 행동 1"},
+        {label:"출처",value:"SRD 5.2.1 · Rogue · Cunning Action"},
+      ],
+    });
+  }
 
   const fighterLevel=classLevel(projection,"dnd.srd521.class.fighter");
   if (fighterLevel>=1) {
