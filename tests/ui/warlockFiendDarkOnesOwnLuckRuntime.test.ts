@@ -32,10 +32,8 @@ async function prepareFiend(adapter:MockAdapter,level=6){
     resources:[],
   };
   internal.activeCharacter=fiend;
-  internal.characters=[fiend];
   internal.session.role="host";
-  await adapter.getSnapshot();
-  return (await adapter.getSnapshot()).activeCharacter;
+  return fiend;
 }
 
 function savingThrowAction(targetId:string):ActionVm{
