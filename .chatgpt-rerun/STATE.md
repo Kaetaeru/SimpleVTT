@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T15:14:11+09:00`
+- checkpointed_at: `2026-08-26T15:17:06+09:00`
 
 ## Durable execution checkpoint
 
@@ -38,12 +38,12 @@ Exact source-equivalent evidence at `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83`:
 
 Follow-up live reconciliation:
 
-- live `work/v1-composite` HEAD before this checkpoint is `c79f9f3142ead4960e6cb0f9c4e63d7bf9545e9b` (`chore: publish Wholeness reconciliation control`).
-- GitHub compare `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83...c79f9f3142ead4960e6cb0f9c4e63d7bf9545e9b` reports eight commits ahead, zero behind, with changes only to `.chatgpt-rerun/STATE.md` and `.chatgpt-rerun/control.json`.
-- `c79f9f3` is the prior control-last checkpoint over STATE commit `b5c4e4c3d9bf719451fad84d09f47ebd8f3803f1`; it introduces no product change.
+- live `work/v1-composite` HEAD before this checkpoint is `0a98940886fe98c033b1a8b0318aef2fddcc6159` (`chore: publish Wholeness no-op control`).
+- GitHub compare `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83...0a98940886fe98c033b1a8b0318aef2fddcc6159` reports ten commits ahead, zero behind, with changes only to `.chatgpt-rerun/STATE.md` and `.chatgpt-rerun/control.json`.
+- No product source, tests, package scripts, canonical handoff/checklist, or design contracts changed after the permitted Wholeness source.
 - No new validation was triggered or repeated. Existing exact source-equivalent Wholeness 4/4 evidence remains authoritative.
-- Therefore `c79f9f3` is product-source-equivalent to the permitted Wholeness source `3a9f22d`; no newer concurrent product change exists to remove the Holy Nimbus-only build blocker.
-- No Wholeness product code was changed and no already-green Wholeness or historical full-matrix validation was repeated during this reconciliation.
+- Therefore `0a98940` is product-source-equivalent to the permitted Wholeness source `3a9f22d`; no newer concurrent product change exists to remove the Holy Nimbus-only build blocker.
+- No Wholeness or Holy Nimbus product code was changed and no already-green Wholeness or historical full-matrix validation was repeated during this reconciliation.
 
 Scope reconciliation:
 
