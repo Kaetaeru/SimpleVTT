@@ -60,7 +60,7 @@ async function cycleToNextOwnTurn(adapter:MockAdapter,actorId:string){
   assert.fail(`initiative did not cycle back to ${actorId}`);
 }
 
-test.skip("level 15 Devotion automatically appends Smite of Protection to a committed Divine Smite and generic Undo removes it",async()=>{
+test("level 15 Devotion automatically appends Smite of Protection to a committed Divine Smite and generic Undo removes it",async()=>{
   const adapter=await devotionPaladin(15);
   let snapshot=await adapter.getSnapshot();
   const actorId=snapshot.activeCharacter.id;
