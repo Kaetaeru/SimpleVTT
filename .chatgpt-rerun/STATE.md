@@ -7,15 +7,15 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T21:29:59+09:00`
+- checkpointed_at: `2026-08-26T21:34:00+09:00`
 
 ## Durable checkpoint
 
 Mandatory preflight completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`). `PLAN.md` unchanged. GitHub live branch is authoritative under concurrent writes.
 
 R1 source/execution matrix remains canonically closed:
-- handoff `d9e57cf7dd6a8df8d8c3de463f236fdcf07cc7b7`
-- release checklist `14824868d8d29b047f4b079f482ce2d861d84f66`
+- canonical handoff advanced through Cunning Hide at `00b2f1147658987fbf90cea5eae68ec37340bdc5`
+- release execution pointer advanced to Uncanny Dodge at `febc63a73b4ce5f73880ce920803937abde01ce7`
 Do not reopen R1 without direct regression evidence.
 
 R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client apply, duplicate-safe replay, and compensating Undo. No new connected protocol/schema/remote-only rules engine.
@@ -32,17 +32,20 @@ Do not repeat validated slices. `windows-connected-playable` is R3 acceptance, n
 
 ## R2 next gap: Uncanny Dodge
 
-The canonical handoff/release-checklist pointer was observed stale relative to the live R2 checkpoint. Those files are large and the branch is receiving concurrent writes, so do not overwrite them from stale/truncated content. Reconcile their pointer safely before feature work.
+Canonical handoff and release checklist are now reconciled: Cunning Hide is closed and **Rogue Uncanny Dodge remote-owner gap** is the single next R2 pointer.
 
-Keep the existing R1 Uncanny Dodge implementation intact unless direct connected-session evidence proves a missing seam.
+Existing R1 source inspection confirms `src/app/rogueCoreRuntimeAdapter.ts` already owns the feature mechanics:
+- Rogue 5+ reaction projection via `UNCANNY_DODGE_REACTION_ID`.
+- existing interrupt acceptance path records the active resolution and calls `queueAtomicAttackDamageMultiplier(resolutionId, 0.5, "기묘한 회피")`.
+- completion reuses the atomic attack transaction result, adds the damage reduction detail/Activity, and leaves Uncanny Dodge on the existing event-native Undo boundary.
+Do not replace or duplicate this mechanics path. The remaining question is connected remote-owner reaction/interrupt authority and convergence.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Safely reconcile `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` so the R2 pointer reflects Cunning Hide closed and Uncanny Dodge next. Do not rewrite unrelated content from stale snapshots.
-3. Stay in R2. Do not reopen validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, or Cunning Hide.
-4. Inspect existing R1 Uncanny Dodge runtime primitives plus connected reaction/interrupt and attack-damage event paths. Reuse them; no new reaction engine, protocol, schema, or remote-only rules path.
-5. Add or reuse only the smallest deterministic remote-owner proof if a gap exists: host-unknown level-5 Rogue, eligible incoming hit from a visible attacker, Uncanny Dodge Reaction economy, half damage, Host-authoritative ordered events, exactly-once Client apply, duplicate safety, and compensating Undo. Preserve Character/session lifetime boundaries.
-6. Verify changed exact SHA through existing Phase12 connected gate + production `npm run build`; fix only the first direct regression.
-7. `PLAN.md` remains unchanged unless routing changes. Persist `STATE.md`, then `control.json` LAST.
-8. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Stay in R2. Do not reopen validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, or Cunning Hide.
+3. Inspect existing connected reaction/interrupt request/response path and incoming attack-damage `ResolutionEvent` publication for a Host-unknown Rogue defender. Reuse existing primitives; no new reaction engine, protocol, schema, or remote-only rules path.
+4. Add or reuse only the smallest deterministic remote-owner proof if a gap exists: Host-unknown level-5 Rogue, eligible incoming hit from a visible attacker, owner/Host-authoritative Uncanny Dodge acceptance, Reaction economy, rolled damage floor-half, Host ordered events, exactly-once Client apply, duplicate safety, and compensating Undo. Preserve Character/session lifetime boundaries.
+5. Verify changed exact SHA through existing Phase12 connected gate + production `npm run build`; fix only the first direct regression.
+6. `PLAN.md` remains unchanged unless routing changes. Persist `STATE.md`, then `control.json` LAST.
+7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
