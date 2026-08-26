@@ -3,7 +3,7 @@ import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionVi
 import { MockAdapter } from "./mockAdapter";
 import { queueAtomicAttackDamageMultiplier } from "./realAttackTransactionService";
 import { clearRuntimeResolutionEventHistory, recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
-import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { resolvePendingResolution } from "../domain/resolution";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
@@ -206,8 +206,8 @@ function recordCunningDisengageResolutionEvents(
   before:SceneVm["economyByActor"][string],
 ) {
   const after=internal.scene.economyByActor[resolution.actorId];
-  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
-  if(!after||!state)return false;
+  const state=ensureAdapterTurnRuntimeState(adapter,internal.scene);
+  if(!after)return false;
   const source="rogue:cunning-action:disengage";
   const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
     id:resolution.id,
