@@ -122,7 +122,7 @@ V1-40 + V1-41 + V1-42
 | V1-20 Real Character local play | PARTIAL | persisted Character projection, 339 spells, inventory/sheet source 존재; exact artifact walkthrough 대기 |
 | V1-21 Complete local loop | PARTIAL | R1 source/execution action matrix는 완료; 실제 Windows local journey, durable restart, human walkthrough 증거 대기 |
 | V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart source와 TS regression green; Tauri 증거 대기 |
-| V1-31~32 Connected play | PARTIAL | 핵심 connected suites + remote-owner Rage/Wild Shape/Cunning Action Dash/Disengage/Hide forward·exactly-once·Undo focused evidence green; Uncanny Dodge와 나머지 R1 remote-owner/reconnect matrix 및 two-instance proof 대기 |
+| V1-31~32 Connected play | PARTIAL | 핵심 connected suites + remote-owner Rage/Wild Shape/Cunning Action Dash/Disengage/Hide/Uncanny Dodge forward·exactly-once·Undo focused evidence green; 나머지 R1 remote-owner/reconnect matrix 및 two-instance proof 대기 |
 | V1-40 DM live operation | PARTIAL | DM Library/Stash/handout/campaign operation source 존재; connected action matrix 및 end-to-end acceptance 대기 |
 | V1-41 Spatial fallback | PARTIAL | mapless/provider source와 regression 존재; exact-head provider mount/unmount human proof 대기 |
 | V1-42 Dice | PARTIAL | Three/Cannon, rear-entry, authoritative projection, remote dedup source 존재; human motion proof 대기 |
@@ -412,7 +412,7 @@ Existing workspace tests to reconcile, not automatically credit:
 - [ ] Host와 Client가 committed revision/result에 수렴.
 - [ ] private Character source 및 DM private Campaign data 과다 전송 금지.
 
-R2 focused evidence now includes remote-owner Rage (`dec4f22`), Wild Shape (`a65cbd2` proof), Cunning Action Dash (`ea96509` proof), Cunning Action Disengage (`134e6a8` proof), and Cunning Action Hide (exact green tree `7f8e945`). The exact Cunning Hide tree is green in UI run `32968629784` / frontend job `98176845419` and Phase 12 run `32968629791` / connected-protocol job `98176845690`, including connected authority, Phase11 offline walkthrough, and production `npm run build`. These slices prove Host-unknown projection/authority and ordered event convergence without transferring permanent Host Character ownership. They are focused evidence only; V1-31 remains PARTIAL until Uncanny Dodge and the remaining R1 remote-owner/reconnect matrix are covered.
+R2 focused evidence now includes remote-owner Rage (`dec4f22`), Wild Shape (`a65cbd2` proof), Cunning Action Dash (`ea96509` proof), Cunning Action Disengage (`134e6a8` proof), Cunning Action Hide (exact green tree `7f8e945`), and Uncanny Dodge (exact green test head `a1edf6b`). Cunning Hide is green in UI run `32968629784` / frontend job `98176845419` and Phase 12 run `32968629791` / connected-protocol job `98176845690`. Uncanny Dodge is green in UI run `32970182652` / frontend job `98181814250` and Phase 12 run `32970182722` / connected-protocol job `98181814527`, including the focused private owner interrupt/duplicate-response proof, Phase11 offline walkthrough, and production `npm run build`. These slices prove Host-unknown projection/authority and ordered event convergence without transferring permanent Host Character ownership. They are focused evidence only; V1-31 remains PARTIAL until the remaining R1 remote-owner/reconnect matrix is covered.
 
 ## V1-32 Connected durable write-back / reconnect — PARTIAL
 
@@ -427,7 +427,7 @@ R2 focused evidence now includes remote-owner Rage (`dec4f22`), Wild Shape (`a65
 - [ ] 어느 durable side 실패 시 explicit failure 및 partial commit 금지.
 - [ ] Session end/restart 후 stale projection/Ready/turn 없음.
 
-R2 focused slices through Cunning Hide reuse the same duplicate-safe event ledger and compensating Undo foundations. Rage confirms owning-Client durable forward/inverse write-back with Host permanent-library isolation; Wild Shape and Cunning Action slices extend the Host-unknown authoritative execution evidence through class feature state/economy/effects. Cunning Hide additionally proves d20 + Bonus Action + tagged Hidden effect convergence and event-native Undo at exact green tree `7f8e945`. Reconnect/fresh-projection coverage for Uncanny Dodge and the rest of the R1 matrix is still pending, so V1-32 remains PARTIAL.
+R2 focused slices through Uncanny Dodge reuse the same duplicate-safe event ledger and compensating Undo foundations. Rage confirms owning-Client durable forward/inverse write-back with Host permanent-library isolation; Wild Shape and Cunning Action slices extend Host-unknown authoritative execution through class feature state/economy/effects; Cunning Hide proves d20 + Bonus Action + tagged Hidden effect convergence. Uncanny Dodge additionally proves private owner interrupt acceptance, authoritative Reaction + HP ordered events, atomic floor-half damage, owner HP durable apply exactly once, duplicate Host event and duplicate owner response no-op, stale reconnect preservation, compensating Undo, inverse owner write-back and duplicate Undo safety at exact green test head `a1edf6b`. The remaining R1 matrix and actual two-instance/restart proof are still pending, so V1-32 remains PARTIAL.
 
 **Exit G4:** 두 실제 Windows app instance가 Host-unknown Character로 Join하고 action/item/spell 중 하나를 commit한 뒤 reconnect/restart까지 정확히 수렴한다.
 
@@ -652,15 +652,15 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R2 Rogue Uncanny Dodge remote-owner gap
+R2 Berserker Intimidating Presence remote-owner gap
 ```
 
 1. R1 source/execution action matrix는 canonical handoff에서 DONE이다. 이 판정은 V1-21 release DONE이나 Windows/human acceptance가 아니다.
-2. R2에서 remote-owner Rage, Wild Shape, Cunning Action Dash/Disengage/Hide는 focused evidence와 exact production gates가 green이다. Cunning Hide exact green tree는 `7f8e9459e433164b916ee8ef12fdf3042492d9d7`; UI run `32968629784` / frontend job `98176845419`, Phase 12 run `32968629791` / connected-protocol job `98176845690`이 success다. 이 slice들을 반복하지 않는다.
-3. 다음은 Rogue Uncanny Dodge remote-owner gap이다. 기존 R1 reaction projection, atomic floor-half damage transaction, connected attack/interrupt/event primitives, projection persistence guard와 compensating Undo를 재사용한다.
-4. Host-unknown Rogue 5+가 볼 수 있는 공격자에게 명중됐을 때 Host authoritative interrupt/accept -> Reaction 소비 -> 실제 rolled damage 절반을 focused deterministic proof로 대조한다.
-5. Host permanent Character library 불변, owning Client durable HP/economy write-back exactly once, duplicate request/event replay no-op, reconnect/fresh projection 수렴, event-native Undo의 Host projection + owner inverse convergence를 확인한다.
-6. 실제 red가 있으면 첫 원인 하나만 최소 수정하고 exact SHA production frontend/connected gate를 확인한다. 새 reaction engine, protocol, schema, remote-only rules path는 추가하지 않는다.
+2. R2에서 remote-owner Rage, Wild Shape, Cunning Action Dash/Disengage/Hide, Uncanny Dodge는 focused evidence와 exact production gates가 green이다. Uncanny Dodge exact green test head는 `a1edf6bc869984aaabf5cf5f564f4f11c21399ad`; UI `32970182652` / frontend `98181814250`, Phase 12 `32970182722` / connected-protocol `98181814527`이 success다. 이 slice들을 반복하지 않는다.
+3. 다음은 Berserker Intimidating Presence remote-owner gap이다. 기존 R1 resolver, feature resource, initiative/freeform economy split, authoritative targeting, Frightened, Activity, generic/event-native Undo와 current connected authority/event primitives를 재사용한다.
+4. Host-unknown eligible Berserker의 ActionRequest를 Host가 authoritative resolve하고 target/resource/economy/effect ordered events로 수렴하는지 focused deterministic proof로 대조한다.
+5. Host permanent Character library 불변, owning Client exactly-once apply, duplicate request/event replay no-op, reconnect/fresh projection 수렴, event-native Undo의 Host projection + owner inverse convergence를 확인한다.
+6. 실제 red가 있으면 첫 원인 하나만 최소 수정하고 exact SHA production frontend/connected gate를 확인한다. 새 fear engine, protocol, schema, remote-only rules path는 추가하지 않는다.
 7. V1-31/V1-32는 전체 R1 matrix와 reconnect/two-instance exit가 충족될 때까지 PARTIAL 유지한다. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging은 별도다.
 
 상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.
