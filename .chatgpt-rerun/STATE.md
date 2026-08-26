@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T22:45:00+09:00`
+- checkpointed_at: `2026-08-26T23:00:00+09:00`
 
 ## Durable checkpoint
 
@@ -32,16 +32,22 @@ R2 validated slices are closed and must not be repeated: Rage, Wild Shape, Cunni
 
 ## Active R2 slice — Open Hand Quivering Palm
 
-Canonical NEXT is **Open Hand Quivering Palm remote-owner gap**. R1 exact checkpoint `126cd848b1b7896eaa09f8775e60dcd9638fdf72` is already source/execution green; do not reimplement or rerun it merely because R2 starts.
+Canonical NEXT remains **Open Hand Quivering Palm remote-owner gap**. R1 exact checkpoint `126cd848b1b7896eaa09f8775e60dcd9638fdf72` remains source/execution green and was not reimplemented.
 
-Reuse existing supported post-Unarmed-hit seed, Focus 4, single-target marker replacement, Action detonation, Constitution save, 10d12 force/save-half, Activity, ResolutionEvent/owner write-back, duplicate/reconnect, and event-native Undo primitives. `replace-attack` remains unsupported; do not invent a remote-only activation path.
+Connected proof/gate progress:
+- Host-unknown Quivering Palm focused proof added at `800fcdd76173204f8649993e93bba8786d21630f` and gated by `7940e98abd355aebb74db53991cbd967ceab6f98`.
+- First red (`7940e98`, Phase12 `32976716374`) was a test-stage assumption: connected Unarmed Strike starts at `roll-animation`, not immediate interrupt. Test advanced through the existing staged resolution.
+- Second red (`7ca0b2ca13faae3b2a26c5fc92dbc1cc67f70243`, Phase12 `32976920027`) required no product change; connected projection restore does not dismiss the completed resolution. Existing Wholeness contract restores Host active Character/selection/action ordering, while the completed resolution remains visible. Test stopped requiring a different resolution id at `f9ace0f5204b7d13fd51ea9f992d159d3d450637`.
+- Third red (`f9ace0f`, Phase12 `32977312653`) was fixture state drift: Host targets were initialized to 200 HP for repeated seed/detonation coverage while the owning Client retained default target HP. `09d0cea3ffa010eb5b30258e9500399cba06e095` aligns the Client Scene fixture to the same authoritative initial target facts. No Quivering runtime/protocol/schema change.
+- Exact-head `09d0cea3ffa010eb5b30258e9500399cba06e095` Phase12 `32977502571` / connected-protocol `98205721100`: focused connected authority protocol step SUCCESS; Phase11 offline walkthrough SUCCESS; production frontend gate still running at checkpoint.
+- Exact-head UI `32977502567` / frontend `98205721082`: all listed UI/progression/runtime gates through Phase09 SUCCESS; `Typecheck and build` still running at checkpoint.
+- Focused proof now covers supported remote Unarmed-hit seed + owner interrupt, Focus 4 spend, single-target marker replacement, owning Client exactly-once apply/persist, duplicate request/event safety, reconnect/rebind, Action detonation, save/damage/effect removal, and compensating Undo convergence.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Inspect current Quivering Palm domain/runtime/connected projection/tests before adding code.
-3. Add or reuse the smallest Host-unknown Open Hand Monk focused proof for supported seed + Action detonation.
-4. Verify Focus/resource + marker/effect + Action economy + save/damage ordered events, Host permanent Character library isolation, owning Client exactly-once apply, duplicate request/event no-op, reconnect/fresh projection, compensating Undo and inverse owner convergence.
-5. If a direct red appears, fix only the first Quivering-Palm-related cause. No broad refactor, new protocol, schema, or unsupported `replace-attack` path.
-6. Verify exact-head production frontend/connected gates. R3 Windows/Tauri, R4 rendered UX/accessibility, R5 packaging remain separate.
-7. After meaningful progress persist `STATE.md`, then `control.json` LAST.
+2. Inspect exact-head `09d0cea3ffa010eb5b30258e9500399cba06e095` UI run `32977502567` and Phase12 run `32977502571` only; do not repeat focused or offline gates already green.
+3. If UI frontend `Typecheck and build` and Phase12 production frontend gate are green, close Quivering Palm R2 in canonical handoff/checklist and move to the next canonical R2 slice.
+4. If either exact-head build is red, fix only the first Quivering-Palm-related cause. No broad refactor, new protocol, schema, or unsupported `replace-attack` path.
+5. `windows-connected-playable` remains R3; R4 rendered UX/accessibility and R5 packaging remain separate.
+6. After meaningful progress persist `STATE.md`, then `control.json` LAST.
