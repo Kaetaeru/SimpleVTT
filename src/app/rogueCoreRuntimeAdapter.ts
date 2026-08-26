@@ -51,14 +51,64 @@ function cunningAction(source:ActionVm|undefined,id:string,name:string):ActionVm
   };
 }
 
+function skillBonus(character:CharacterSheet,label:string) {
+  const value=character.skills.find((entry)=>entry.startsWith(label));
+  return Number(value?.match(/([+-]\d+)$/)?.[1]??0);
+}
+
+function cunningDisengageAction(character:CharacterSheet):ActionVm {
+  return {
+    id:CUNNING_DISENGAGE_ACTION_ID,
+    actorId:character.id,
+    name:"교활한 행동 · 이탈",
+    category:"basic",
+    target:"self",
+    economy:"추가 행동",
+    resolutionKind:"no-roll",
+    summary:"이동 중 기회 공격을 유발하지 않음",
+    available:true,
+    eligibleTargetIds:[],
+    details:[
+      {label:"대상",value:"자신"},
+      {label:"효과",value:"이번 턴 이동 중 기회 공격을 유발하지 않음"},
+      {label:"비용",value:"추가 행동 1"},
+      {label:"출처",value:"SRD 5.2.1 · Rogue · Cunning Action"},
+    ],
+  };
+}
+
+function cunningHideAction(character:CharacterSheet):ActionVm {
+  const bonus=skillBonus(character,"은신");
+  const signed=bonus>=0?`+${bonus}`:String(bonus);
+  return {
+    id:CUNNING_HIDE_ACTION_ID,
+    actorId:character.id,
+    name:"교활한 행동 · 숨기",
+    category:"basic",
+    target:"none",
+    economy:"추가 행동",
+    resolutionKind:"ability-check",
+    summary:`민첩(은신) ${signed}`,
+    available:true,
+    eligibleTargetIds:[],
+    checkBonus:bonus,
+    details:[
+      {label:"판정",value:"민첩(은신)"},
+      {label:"보너스",value:signed},
+      {label:"비용",value:"추가 행동 1"},
+      {label:"출처",value:"SRD 5.2.1 · Rogue · Cunning Action"},
+    ],
+  };
+}
+
 function rogueActions(snapshot:AppSnapshot):ActionVm[] {
   const character=snapshot.activeCharacter;
   if(rogueLevel(character)<2)return [];
   const scene=snapshot.scene;
   return [
     cunningAction(sourceAction(scene,character.id,"action.dash"),CUNNING_DASH_ACTION_ID,"교활한 행동 · 질주"),
-    cunningAction(sourceAction(scene,character.id,"action.standard.disengage"),CUNNING_DISENGAGE_ACTION_ID,"교활한 행동 · 이탈"),
-    cunningAction(sourceAction(scene,character.id,"action.standard.hide.stealth"),CUNNING_HIDE_ACTION_ID,"교활한 행동 · 숨기"),
+    cunningDisengageAction(character),
+    cunningHideAction(character),
   ].filter((entry):entry is ActionVm=>Boolean(entry));
 }
 
