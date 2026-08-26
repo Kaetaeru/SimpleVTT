@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/connectedTurnRoutingAdapter";
 import "../../src/app/progressionContracts";
 import type { CatalogEntry, CharacterSheet, CharacterSummary, SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -165,29 +166,42 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
     state.peerManifests.set(RECONNECT_PEER,structuredClone(remoteManifest));
     snapshot=await host.getSnapshot();assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.deepEqual(markers(host,remote.id),[TARGET_B]);assert.equal(projectedCharacterById(host,remote.id)?.peerId,RECONNECT_PEER);
 
+    const turnBatchStart=batches(broadcasts).length;
+    await host.startInitiative();
+    await host.setCurrentActor(remote.id);
+    snapshot=await host.getSnapshot();
+    assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true,"initiative turn must expose an Action before detonation");
+    const turnEvents=batches(broadcasts).slice(turnBatchStart).flatMap((batch)=>batch.events??[]);
+    assert.equal(turnEvents.length,2,"initiative start and explicit remote turn selection must publish ordered mode events");
+    assert.equal((await applyConnectedClientEvents(client,turnEvents)).status,"applied");
+    clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);
+
     const hpBeforeDetonate=hp(snapshot.scene,TARGET_B);
-    const detonateRequest=request(state.sessionId,"request.r2.quivering.detonate",remoteManifest,OPEN_HAND_QUIVERING_PALM_DETONATE_ACTION_ID,TARGET_B,2);
+    const detonateCursor=state.ledger.cursor;
+    const detonateRequest=request(state.sessionId,"request.r2.quivering.detonate",remoteManifest,OPEN_HAND_QUIVERING_PALM_DETONATE_ACTION_ID,TARGET_B,detonateCursor);
     assert.equal(await routeConnectedActionRequest(host,{peer:RECONNECT_PEER,message:""},detonateRequest),true);
-    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,3);assert.deepEqual(markers(host,remote.id),[]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.ok(hp(snapshot.scene,TARGET_B)<hpBeforeDetonate);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true,"freeform detonation must not spend initiative Action");assert.deepEqual(snapshot.characters,before.characters);
-    hostBatches=batches(broadcasts);assert.equal(hostBatches.length,3);const detonateEvent=hostBatches[2].events?.[0];assert.ok(detonateEvent);assert.equal(detonateEvent!.payload.kind,"resolution");
+    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,detonateCursor+1);assert.deepEqual(markers(host,remote.id),[]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.ok(hp(snapshot.scene,TARGET_B)<hpBeforeDetonate);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,false,"initiative detonation must spend Action");assert.deepEqual(snapshot.characters,before.characters);
+    hostBatches=batches(broadcasts);const detonateEvent=hostBatches.at(-1)?.events?.[0];assert.ok(detonateEvent);assert.equal(detonateEvent!.payload.kind,"resolution");
     if(detonateEvent!.payload.kind!=="resolution")throw new Error("expected detonation resolution event");
     const detonateChanges=detonateEvent!.payload.resolutionEvents.flatMap((event)=>event.stateChanges);
+    assert.ok(detonateChanges.some((change)=>change.kind==="economy"&&change.targetId===remote.id&&change.field==="action"&&change.before===true&&change.after===false));
     assert.ok(detonateChanges.some((change)=>change.kind==="hp"&&change.targetId===TARGET_B));assert.ok(detonateChanges.some((change)=>change.kind==="effect"&&change.targetId===TARGET_B&&change.operation==="removed"));
     assert.equal(snapshot.activity.some((activity)=>activity.title.includes("진동장")),true);
 
     const targetHpBeforeClientDetonate=hp((await client.getSnapshot()).scene,TARGET_B);
     const persistenceBeforeDetonate=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
-    assert.equal((await applyConnectedClientEvents(client,[detonateEvent!])).status,"applied");clientAfter=await client.getSnapshot();assert.deepEqual(markers(client,remote.id),[]);assert.ok(hp(clientAfter.scene,TARGET_B)<targetHpBeforeClientDetonate);
+    assert.equal((await applyConnectedClientEvents(client,[detonateEvent!])).status,"applied");clientAfter=await client.getSnapshot();assert.deepEqual(markers(client,remote.id),[]);assert.ok(hp(clientAfter.scene,TARGET_B)<targetHpBeforeClientDetonate);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,false);
     const persistenceAfterDetonate=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;assert.ok(persistenceAfterDetonate>=persistenceBeforeDetonate);
     assert.equal((await applyConnectedClientEvents(client,[detonateEvent!])).status,"duplicate");
 
-    assert.equal(await routeConnectedActionRequest(host,{peer:RECONNECT_PEER,message:""},detonateRequest),true);assert.equal(batches(broadcasts).length,3,"duplicate detonation request must not create a second Host event");
+    const batchCountAfterDetonate=batches(broadcasts).length;
+    assert.equal(await routeConnectedActionRequest(host,{peer:RECONNECT_PEER,message:""},detonateRequest),true);assert.equal(batches(broadcasts).length,batchCountAfterDetonate,"duplicate detonation request must not create a second Host event");
 
     const persistenceBeforeUndo=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
     await host.undoLastResolution();
-    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,4);assert.equal(hp(snapshot.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(host,remote.id),[TARGET_B]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.deepEqual(snapshot.characters,before.characters);
-    hostBatches=batches(broadcasts);assert.equal(hostBatches.length,4);const undoEvent=hostBatches[3].events?.[0];assert.ok(undoEvent);assert.equal(undoEvent!.payload.kind,"resolution-undo");
-    assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"applied");clientAfter=await client.getSnapshot();assert.equal(hp(clientAfter.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(client,remote.id),[TARGET_B]);assert.equal(focus(clientAfter.activeCharacter),9);
+    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,detonateCursor+2);assert.equal(hp(snapshot.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(host,remote.id),[TARGET_B]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(snapshot.characters,before.characters);
+    hostBatches=batches(broadcasts);const undoEvent=hostBatches.at(-1)?.events?.[0];assert.ok(undoEvent);assert.equal(undoEvent!.payload.kind,"resolution-undo");
+    assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"applied");clientAfter=await client.getSnapshot();assert.equal(hp(clientAfter.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(client,remote.id),[TARGET_B]);assert.equal(focus(clientAfter.activeCharacter),9);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);
     const persistenceAfterUndo=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;assert.ok(persistenceAfterUndo>=persistenceBeforeUndo);assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"duplicate");
   } finally {tauriSessionTransport.send=originalSend;tauriSessionTransport.sendTo=originalSendTo;}
 });
