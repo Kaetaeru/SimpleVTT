@@ -95,7 +95,8 @@ test("host-unknown Rogue Uncanny Dodge accepts owner interrupt, halves damage ex
 
   const mountedBefore=projectedCharacterById(host,remote.id);
   assert.ok(mountedBefore);
-  assert.equal(mountedBefore!.entity.reactions.some((reaction)=>reaction.id===UNCANNY_DODGE_REACTION_ID),true,"Host must reconstruct the Rogue 5+ reaction from trusted projection data");
+  const hostAfterMount=await host.getSnapshot();
+  assert.equal(hostAfterMount.scene.entities.find((entity)=>entity.id===remote.id)?.reactions.some((reaction)=>reaction.id===UNCANNY_DODGE_REACTION_ID),true,"Host must reconstruct the Rogue 5+ reaction from trusted projection data");
 
   const state=connectedStateFor(host);
   state.mode="host";
