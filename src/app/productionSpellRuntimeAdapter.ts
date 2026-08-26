@@ -213,6 +213,8 @@ function resolutionFromCast(
 
 MockAdapter.prototype.resolveAction=async function resolveProductionSpell(actionId,targetIds) {
   const internal=this as unknown as Internal;
+  const currentAction=Object.values(internal.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
+  if (currentAction&&!currentAction.spellCast) return previousResolveAction.call(this,actionId,targetIds);
   let snapshot=await this.getSnapshot();
   let sourceAction=(snapshot.scene.actionsByActor[snapshot.activeCharacter.id]??[]).find((entry)=>entry.id===actionId);
   let metadata=sourceAction?.spellCast;
