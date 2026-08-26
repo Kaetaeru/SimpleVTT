@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T15:36:35+09:00`
+- checkpointed_at: `2026-08-26T15:40:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -22,37 +22,36 @@ Wholeness implementation chain already present and must not be duplicated:
 - `1ca17f135fb41e805b1a044535ba764f9f8be019` — production Wholeness adapter using existing domain resolver, resource definition, ResolutionEvent application/write-back, Activity projection, runtime history, and generic Undo boundary.
 - `bd76d7fc9602005a7d982784375a624e52359781` — focused initiative projection/resource/healing/Bonus Action/Activity/Undo coverage.
 - `f6f965a50b311ab341396da0579a2ea0c0d92c6a` — canonical offline adapter install.
-- `1db96f19e86dbc6017c20e0144632b3173ed48fc` — `test:open-hand-wholeness` added to canonical `npm run build`; checkpoint fully green.
+- `1db96f19e86dbc6017c20e0144632b3173ed48fc` — `test:open-hand-wholeness` added to canonical `npm run build`.
 - `d7916ffe5d541fdb091adf72af722024c538f78e` — freeform economy seam; Bonus Action consumed only in initiative.
 - `eafaff11101f6576ac46efe8eb4b6f8fd72d29a8` — focused fixture explicitly enters `freeform`.
 - `ba820a4efe8bcfc52ff18374dea5887a1fe1a77d` — generic event-native Undo writes restored Character resources/items back after `undoResolutionEvents`.
-- `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` — reverted out-of-scope freeform TurnRuntime inverse diagnostic while retaining permitted Character resource/item Undo fix. This remains the permitted Wholeness product source.
+- `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` — prior permitted Wholeness product source after reverting an out-of-scope freeform TurnRuntime inverse diagnostic.
+- `f26092033673622c7c15755ac304678441a1eda3` — newer product source that restores the shared freeform runtime-effect Undo seam and clears the previously observed shared frontend blocker.
 
-Validated evidence preserved:
+Validated Wholeness evidence preserved:
 
-- `test:open-hand-wholeness`: **4/4 green** at the permitted source, covering initiative healing/economy/resource/Activity/Undo and freeform healing/resource/Activity/Undo without consuming Bonus Action.
-- Phase 12 run `32935738475`, connected-protocol job `98076495591`: job conclusion is **failure**, but `Verify connected-session authority protocol` and `Verify Phase 11 offline walkthrough remains green` are individually green; failure occurs later at `Verify production frontend gate`. Do not repeat those two green steps unless affected source changes.
-- `ba820a4efe8bcfc52ff18374dea5887a1fe1a77d` -> `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` compares source-equivalent: net changes are Rerun metadata only. Later live checkpoints through `d44ddfb15ee0caa26f29ec14f84b4edd4919b372` likewise did not change permitted product source.
+- `test:open-hand-wholeness`: **4/4 green**, covering initiative healing/economy/resource/Activity/Undo and freeform healing/resource/Activity/Undo without consuming Bonus Action.
+- Historical shared-gate blocker: source-equivalent checkpoints failed `npm run build` in unrelated `test:devotion-holy-nimbus` at `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:73:10` (`expected 1, actual 0`). Wholeness itself remained focused-green.
+- Do not use the stale older claim about line 88 / `64 !== 65` / `10 rounds`.
 
-Fresh full-gate reconciliation on exact permitted source:
+Fresh blocker-resolution evidence:
 
-- UI Regression run `32935738464` is exact `head_sha=3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83`.
-- Only the previously failed frontend job was rerun; already-green Wholeness/connected-protocol/Phase 11 focused evidence was not separately repeated.
-- rerun attempt `2`, frontend job/check `98082586625`: preliminary workflow steps reached green; `Typecheck and build` failed again. Direct current-attempt annotation/log payload remains unavailable through the connector.
-- Phase 12 run `32935738475` independently reaches the same production frontend gate class and fails at step `Verify production frontend gate`; its connected-session authority and Phase 11 walkthrough steps are green.
-- A source-equivalent durable checkpoint at commit `33a91867d24ba6e0cf5aaaed7820facf5d2b58ec` records UI run `32935353043` and Phase 12 run `32935353057` as red only because shared `npm run build` failed in unrelated `test:devotion-holy-nimbus` at `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:73:10` with `expected 1, actual 0`.
-- The exact test at permitted source `3a9f22d` still has line 73 as the Holy Nimbus post-Undo resource restoration assertion (`current === usesBefore`). Because product source is net-identical to `ba820a4e`, this is valid source-equivalent evidence of the shared-gate blocker; it is not a Wholeness regression.
-- The separate prior durable claim about `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:88` containing a `64 !== 65` / "10 rounds" failure remains stale and must not be used.
-- Shared freeform TurnRuntime inverse work was attempted by `69f01dcb5823c2891aaafd180c3ad7acb46f4764` and deliberately reverted by `3a9f22d` to keep Wholeness scope isolated. Do not reapply that out-of-scope fix here.
-- No Wholeness, Holy Nimbus, or unrelated product code was changed in this reconciliation. No speculative fix was made.
+- Live branch before this checkpoint: `a75fd3dc4b34380441169ac58446189bade41579`.
+- `f26092033673622c7c15755ac304678441a1eda3` is its direct product-source parent; `f260920 -> a75fd3d` changes only `.chatgpt-rerun/control.json`, so live HEAD is product-source equivalent to `f260920`.
+- UI run `32938958220`, frontend job `98085775444`: **success**. `Typecheck and build` and all preceding frontend steps are green.
+- Phase 12 Connected Session run `32938958204`, connected-protocol job `98085775486`: **success**. `Verify connected-session authority protocol`, `Verify Phase 11 offline walkthrough remains green`, and `Verify production frontend gate` are all green.
+- The separate `windows-connected-playable` job in that Phase 12 run was still in progress when observed; it is R3/R5 evidence and is not required to decide Wholeness R1 source completion.
+- Therefore the previous shared frontend blocker is cleared on the newer product source. Wholeness R1 now has focused evidence plus the required shared UI/build and Phase 12 production frontend gates green on a source-equivalent live HEAD.
 
 Scope/routing:
 
 - `PLAN.md` unchanged.
-- R2 remote-owner exactly-once/reconnect excluded.
-- Wholeness R1 is source-complete and focused-green, but canonical V1 handoff/checklist must not advance until the required shared frontend/full build is green on a source-equivalent exact HEAD.
-- The remaining blocker is outside Wholeness scope. Do not patch Holy Nimbus or the reverted shared freeform TurnRuntime seam from this task.
+- R2 remote-owner exactly-once/reconnect remains excluded.
+- No already-green Rage/Wild Shape/Monk Focus/Rogue/Berserker validation was repeated.
+- No additional Wholeness or Holy Nimbus patch was made in this reconciliation.
+- Canonical `V1_CURRENT_HANDOFF.md` / `V1_RELEASE_EXECUTION_CHECKLIST.md` have not yet been advanced for this newly recovered green gate evidence; they must be updated before selecting the next R1 production projection gap.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. If a newer product-source commit fixes the Holy Nimbus/shared frontend blocker, consume that source instead of repeating Wholeness work and verify the required exact-head UI/build and Phase 12 gates. If product source is unchanged, do not modify Wholeness, Holy Nimbus, or unrelated shared runtime and do not repeat already-green focused validation. Advance canonical routing only after a source-equivalent exact HEAD has both required gates green.
+Reconcile live `work/v1-composite`, then update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` to record Wholeness R1 as source-complete + execution-validated at product source `f26092033673622c7c15755ac304678441a1eda3` with UI run `32938958220` / frontend job `98085775444` and Phase 12 run `32938958204` / connected-protocol job `98085775486`. After canonical routing is advanced, continue the existing R1 subclass-domain-resolver inventory and identify only the next mechanics-complete production projection gap. Do not repeat validated work or enter R2 unless a direct R1 regression requires it.
