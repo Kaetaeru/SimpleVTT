@@ -83,7 +83,6 @@ test("level 15 Devotion automatically appends Smite of Protection to a committed
     state:state!,paladinId:actorId,paladinLevel:15,subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
     paladinIncapacitated:false,relation:"self",distanceFeet:0,
   }),true);
-  return;
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
