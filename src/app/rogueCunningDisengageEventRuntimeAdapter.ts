@@ -35,7 +35,7 @@ MockAdapter.prototype.resolveAction=async function resolveEventNativeCunningDise
   if(rogueLevel(actor)<2||targetIds.length!==1||targetIds[0]!==actor.id)return snapshot;
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
   const session=turnRuntimeSessions.get(this);
-  if(!state||!session||state.clock.activeActorId!==actor.id||!state.combatants[actor.id])return snapshot;
+  if(!state||!session||!state.combatants[actor.id])return snapshot;
 
   const resolutionId=`rogue.cunning-disengage.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
