@@ -71,7 +71,6 @@ test("host-unknown Rogue Cunning Hide converges d20/effect/economy exactly once 
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
     assert.equal(state.pendingRemoteAction?.request.requestId,request.requestId,"Host must keep staged Cunning Hide pending until resolution completion");
     await host.advanceResolution();
-    await host.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:"15"});
     const completed=await host.getSnapshot();assert.equal(completed.activeCharacter.id,before.activeCharacter.id);assert.deepEqual(completed.characters,before.characters);assert.equal(state.pendingRemoteAction,null);assert.equal(state.ledger.cursor,1);
     assert.equal(hidden(completed.scene,remote.id),true);assert.equal(completed.scene.economyByActor[remote.id]?.bonusAction,false);assert.equal(completed.scene.economyByActor[remote.id]?.action,true);
     const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");assert.equal(batches.length,1);
