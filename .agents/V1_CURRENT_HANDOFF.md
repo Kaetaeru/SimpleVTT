@@ -26,6 +26,7 @@ Canonical target branch: **`work/v1-composite`**
 - Fiend Dark One's Own Luck R1 exact execution checkpoint: `95042b2ef3c65aef3619334c0bec1ad243d165f2`.
 - Lore Peerless Skill R1 exact execution checkpoint: `88bb72dc3d725af049025728003ab6e6b8db1eb0`.
 - Lore Cutting Words R1 exact execution checkpoint: `90514e44a21840070bb77ea17561036a86b2e5ca`; temporary diagnostic cleanup head: `c7aee31cf0d8ee0b9e1b70359eaac7bcf55db928`.
+- R2 remote-owner Rage exact checkpoint: `dec4f22178b1256597c140170481025bb26f39e3`; focused connected source `5585e6be35b96a46a702cd877c32078ff677f97e`, projected inverse write-back `9738b425d908399885f9ade1424d38294db2110a`, connected projected Undo context `0f17a4d5cb9319776b66fb9909b12808b165a13b`.
 - `21b5ab8`은 Fleet Step과 Holy Nimbus focused gate를 포함한 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다.
 - `126cd84`는 Quivering Palm focused gate를 포함한 UI run `32942627369`가 success이고 Phase 12 run `32942627376`의 connected-protocol job `98096599197`이 success다. 이는 Quivering Palm R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 - `ec89fa2`는 Smite of Protection focused gate를 포함한 UI run `32950193461` / frontend job `98119645421`과 Phase 12 run `32950193590` / connected-protocol job `98119646335`가 success다.
@@ -33,6 +34,7 @@ Canonical target branch: **`work/v1-composite`**
 - `88bb72d`는 Lore Peerless Skill 4개 focused case를 포함한 UI run `32953773211` / frontend job `98130829740`과 Phase 12 run `32953773099` / connected-protocol job `98130829706`이 success다.
 - `90514e4`는 Lore Cutting Words ability-check/attack/staged-damage/below-level focused slices를 포함한 UI run `32960806646` / frontend job `98152495174`와 Phase 12 run `32960806633` / connected-protocol job `98152494916`이 success다. `c7aee31`은 임시 diagnostic steps만 제거했고 UI run `32961013657` / frontend job `98153136326`도 success다.
 - `b82e904`는 Berserker Mindless Rage production Rage 합성, 기존 Charmed/Frightened 제거, immunity marker, Activity, Undo, Rage-end lifecycle을 focused production test로 검증했고 UI run `32961779455` / frontend job `98155486715`과 Phase 12 run `32961779556` / connected-protocol job `98155487334`가 success다.
+- `dec4f22`는 remote-owner Rage ActionRequest/Host authoritative resolve/ordered event, Host permanent Character library 불변, owning Client durable exactly-once, duplicate request/event no-op, Host projected Undo와 owning Client inverse write-back을 검증했다. UI run `32963492157`은 success이고 Phase 12 run `32963492151` / connected-protocol job `98160810148`은 production frontend gate까지 success다. `windows-connected-playable`은 R3이므로 이 R2 gap의 exit 조건이 아니다.
 
 따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage/Mindless Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, Fiend Dark One's Own Luck R1, Lore Peerless Skill R1, Lore Cutting Words R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
@@ -78,6 +80,19 @@ Canonical target branch: **`work/v1-composite`**
 - `8bbd21a0ff4b20bef4c0232f175785c5f7633312` composes existing Berserker Mindless Rage operations into the same authoritative Rage transaction for Berserker 6+, without a fake extra button. Existing Charmed/Frightened effects are removed, the Rage-linked charm/fear immunity marker is applied, and the same Rage lifecycle owns termination.
 - `b82e9048618ab3c105f2f99e148d2e5d2198c5dc` adds production lifecycle coverage through the existing `test:berserker-presence` build gate: UI run `32961779455` / frontend job `98155486715` and Phase 12 run `32961779556` / connected-protocol job `98155487334` are **success**.
 - Rage + Mindless Rage R1 source/execution 범위는 완료다. resume만을 이유로 다시 구현하지 않는다.
+
+### Green — R2 remote-owner Rage exact checkpoint `dec4f22`
+
+- `5585e6be35b96a46a702cd877c32078ff677f97e` adds focused host-unknown Barbarian Rage connected evidence using the existing ActionRequest/SessionProjection/ResolutionEvent primitives.
+- forward commit keeps the Host permanent Character library unchanged while the owning Client persists Rage resource use exactly once; duplicate ActionRequest and duplicate event replay are no-ops.
+- `e5cfbe886d896f2f4add4ce39540fee46931ec6c` exposed the real remote projected Undo gap instead of masking it.
+- `9738b425d908399885f9ade1424d38294db2110a` makes the existing Character write-back guard resolve ephemeral projected event targets even after Host actor context restoration.
+- `0f17a4d5cb9319776b66fb9909b12808b165a13b` reactivates the existing projected Character context around connected Undo so generic event-native inverse persistence restores the Host ephemeral projection before the inverse event is published.
+- `dec4f22178b1256597c140170481025bb26f39e3` applies the minimal TypeScript target-id narrowing needed by that existing guard; no new protocol or rules engine was added.
+- exact SHA `dec4f22` GitHub Actions:
+  - UI run `32963492157`: **success**.
+  - Phase 12 Connected Session run `32963492151` / connected-protocol job `98160810148`: **success**, connected authority suite, offline walkthrough and production frontend gate all green.
+- 결론: **Rage representative R2 remote-owner forward/exactly-once/owner-write-back/event-native Undo gap은 완료**. R2 전체 matrix, reconnect/fresh-projection coverage for every R1 feature, observer-specific coverage and R3 Windows evidence는 아직 남는다.
 
 ### Green — Druid Wild Shape exact checkpoint `11bc858`
 
@@ -317,8 +332,9 @@ R1의 모든 신규 행동마다 다음을 검증한다.
 - [ ] reconnect replay와 fresh projection 수렴.
 - [ ] Character owner write-back / Campaign Host write-back 분리.
 - [ ] event-native Undo와 양 Client 보상 수렴.
+- [x] **Representative remote-owner Rage gap**: Host-unknown Barbarian Rage forward commit, Host permanent-library isolation, owning Client exactly-once write-back, duplicate request/event no-op, Host projected Undo와 owner inverse write-back. exact checkpoint `dec4f22`; UI `32963492157` success; Phase 12 `32963492151` / connected-protocol `98160810148` success.
 
-Exit: 신규 행동 전체가 Host, acting Client, observing Client에서 같은 최종 상태를 가진다.
+Exit: 신규 행동 전체가 Host, acting Client, observing Client에서 같은 최종 상태를 가진다. **Rage 대표 gap 완료만으로 R2 전체 완료가 아니다.**
 
 ### R3. Tauri durability와 owner acceptance
 
@@ -357,21 +373,20 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R1 source/execution action matrix는 Berserker Mindless Rage production 통합과 최종 subclass inventory 재대조까지 완료됐다. 다음은 **R2 Connected remote-owner matrix**다. 이미 존재하는 connected authority/projection/event primitives를 재사용하고, R1에서 새로 추가된 기능을 하나씩 remote-owner exactness에 대조한다.
+R2 첫 대표 gap인 remote-owner Rage는 exact `dec4f22`에서 green이다. 검증된 Rage forward/Undo/write-back path를 반복하지 않는다. 현재 live branch에는 Wild Shape known-form source projection 보존 작업(`a775181`, `657f7ea`)이 이미 진행 중이므로 이를 중복 구현하지 말고 다음 **Druid Wild Shape remote-owner gap**으로 이어간다.
 
 ```text
-live branch와 current R2 connected tests / action-request / projection / event-history source 재대조
--> R1 완료 기능의 connected coverage inventory 작성; 기존 connected proof는 재실행/재구현하지 않음
--> 가장 작은 실제 gap 하나 선택
--> Client intent -> Host authoritative resolve -> ordered event
--> owner/private choice boundary와 public result 분리
--> duplicate/reorder/retry exactly-once
--> reconnect replay/fresh projection 수렴
--> Character owner write-back / Campaign Host write-back 분리
--> event-native Undo + Host/acting Client/observer 최종 상태 수렴
--> focused deterministic connected evidence 추가 또는 기존 증거 재사용
--> production frontend/connected gate로 exact SHA 검증
--> canonical handoff 갱신 후 다음 R2 gap으로 이동
+live branch와 current Wild Shape projection/connected test 상태 재대조
+-> a775181/657f7ea source preservation이 실제 current head에 남아 있는지 확인
+-> existing Wild Shape action/runtime + SessionProjection reconstruction 재사용
+-> Host-unknown owner Character의 known-form 선택/변신 intent가 Host authoritative resolution으로 실행되는지 focused test
+-> Host permanent Character library 불변 + owning Client durable resource/state write-back exactly once
+-> duplicate request/event no-op
+-> current reconnect/fresh projection primitives로 known-form/state 수렴 확인
+-> event-native Undo가 Host projected Character와 owner durable Character를 함께 inverse하는지 확인
+-> 실제 red가 있으면 첫 원인 하나만 최소 수정
+-> production frontend/connected gate exact SHA green 확인
+-> canonical handoff 갱신 후 다음 R2 gap 선택
 ```
 
 R3 Tauri durability/실제 Windows two-instance acceptance, R4 rendered UX/accessibility, R5 release packaging은 R2와 분리한다. Resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
