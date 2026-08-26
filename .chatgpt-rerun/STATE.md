@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:10:15+09:00`
+- checkpointed_at: `2026-08-26T14:13:44+09:00`
 
 ## Durable execution checkpoint
 
@@ -15,7 +15,7 @@ Mandatory preflight was repeated in order: `README.md` -> `control.json` -> `STA
 
 Validated Rage, Druid Wild Shape, Monk Focus, and earlier green work was not repeated.
 
-Rogue R1 is now source-complete and execution-validated:
+Rogue R1 is source-complete and execution-validated:
 
 - `5bb8bfbc4753dcc15f1198a04c0982817176c644` is the exact Rogue execution checkpoint.
 - Cunning Action reuses existing Dash/Disengage/Hide mechanics with Rogue Bonus Action projection.
@@ -25,7 +25,14 @@ Rogue R1 is now source-complete and execution-validated:
 - Phase 12 Connected Session run `32932781591` / connected-protocol job `98068085017` is green, including the production frontend gate that runs `npm run build`.
 - `npm run build` includes `npm run test:rogue-core`, so focused Rogue coverage and the canonical production build are green on the exact checkpoint.
 
-Canonical execution routing has advanced in `502eb753fb81e061195da63622c0e3325fb170dd` (`docs: advance V1 handoff past Rogue R1`). `.agents/V1_CURRENT_HANDOFF.md` now marks Rogue R1 complete and points to the next R1 item. No duplicate canonical product work list is copied here.
+Canonical execution routing advanced in `502eb753fb81e061195da63622c0e3325fb170dd` (`docs: advance V1 handoff past Rogue R1`). `.agents/V1_CURRENT_HANDOFF.md` marks Rogue R1 complete and points to subclass action projection inventory.
+
+Subclass inventory has now found the first high-confidence production projection gap without creating a speculative button:
+
+- `src/domain/bardCollegeLore.ts` already implements College of Lore `Cutting Words`, but this is a trigger-driven Reaction. `src/app/progressionPhase08BardLoreAdapter.ts` only handles progression persistence. Do not turn Cutting Words into an always-clickable action-bar button; it needs trigger/reaction UX if handled later.
+- `src/domain/barbarianBerserker.ts` already implements `Intimidating Presence` as a real Bonus Action resolver with its own resource spend, targeting, Wisdom saves, frightened effect, and existing domain economy semantics.
+- No Berserker production runtime/action adapter is present in `src/app`; this makes `Intimidating Presence` the first suitable mechanics-complete subclass action to project rather than a passive or trigger-only feature.
+- No source code was changed during this inventory checkpoint. This avoids speculative adapter work at the execution boundary and preserves the exact resume point.
 
 `PLAN.md` remains intentionally unchanged because run identity and routing mechanism did not change.
 
@@ -34,9 +41,10 @@ Canonical execution routing has advanced in `502eb753fb81e061195da63622c0e3325fb
 - Rage, Druid Wild Shape, Monk Focus, and Rogue R1 remain source-complete/execution-validated; do not repeat them.
 - Connected remote-owner exactly-once/reconnect matrices remain R2 unless a direct R1 regression requires them.
 - Do not rerun the historical full 1303/1303 matrix merely because execution resumed.
+- Do not expose `Cutting Words` as a dead/free-standing action button; it is trigger-driven Reaction mechanics.
 
 ## Next Exact Action
 
-Follow `.agents/V1_CURRENT_HANDOFF.md`: inventory existing subclass domain resolvers against production action projection, identify only mechanics-complete subclass actions that are missing from the action bar, and add the smallest projection/evidence needed. Do not expose partial/unsupported features as dead buttons. Reuse existing mechanics and existing green evidence wherever possible.
+Start from the existing `src/domain/barbarianBerserker.ts` `Intimidating Presence` resolver. Verify the live production action-adapter conventions, then add the smallest production projection that reuses that resolver/economy/resource semantics. Add focused deterministic evidence for projection, Bonus Action/resource consumption, save/effect result, Activity/Undo only to the extent already supported by the production action path, then run the canonical `npm run build` gate. Do not create new domain mechanics and do not touch passive Berserker features or R2 remote/reconnect behavior.
 
 Keep the same run/sequence/task identity. `control.json` must be written last.
