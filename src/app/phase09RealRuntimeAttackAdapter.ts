@@ -134,6 +134,20 @@ function build(
   }
 }
 
+export function previewRuntimeAtomicAttackDamage(adapter:MockAdapter) {
+  const internal=adapter as unknown as RuntimeAttackAdapterState;
+  const resolution=internal.resolution;
+  const action=resolution ? internal.action(resolution.actionId) : undefined;
+  const manual=manualFor(adapter,action,resolution);
+  if (!resolution || resolution.stage!=="attack-result" || resolution.attackOutcome!=="명중" || !isRuntimeAtomicAttack(action,manual) || resolution.adjudicated) return undefined;
+  const transaction=build(adapter,internal,action!,resolution,manual);
+  if (transaction.status==="rejected" || !transaction.damage) return undefined;
+  return {
+    total:transaction.damage.raw,
+    faces:[...transaction.damageFaces],
+  };
+}
+
 function runtimeRevisionMatches(
   adapter:MockAdapter,
   internal:RuntimeAttackAdapterState,
