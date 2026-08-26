@@ -69,17 +69,26 @@ async function installNpcSave(adapter:MockAdapter,targetId:string){
   await adapter.selectDmActor(CASTER);
 }
 
+function abilityCheckAction(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>){
+  const actorId=snapshot.activeCharacter.id;
+  return snapshot.scene.actionsByActor[actorId]?.find((entry)=>entry.resolutionKind==="ability-check");
+}
+
 test("Fiend level 6 failed ability check offers Dark One's Own Luck, spends one use, records Activity, and Undo restores it",async()=>{
   const adapter=new MockAdapter();
-  const fiend=await prepareFiend(adapter);
+  await prepareFiend(adapter);
   await adapter.startInitiative();
-  await adapter.setCurrentActor(fiend.id);
   let snapshot=await adapter.getSnapshot();
+  const actorId=snapshot.activeCharacter.id;
+  await adapter.setCurrentActor(actorId);
+  snapshot=await adapter.getSnapshot();
+  const check=abilityCheckAction(snapshot);
+  assert.ok(check,JSON.stringify(snapshot.scene.actionsByActor[actorId]));
   const beforeUses=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current;
   assert.equal(beforeUses,4);
 
   await adapter.setQueuedD20(1);
-  await adapter.resolveAction("action.skill.athletics",[]);
+  await adapter.resolveAction(check.id,[]);
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
@@ -97,14 +106,17 @@ test("Fiend level 6 failed ability check offers Dark One's Own Luck, spends one 
 
 test("Fiend Dark One's Own Luck can turn the Warlock's failed saving throw into a success",async()=>{
   const adapter=new MockAdapter();
-  const fiend=await prepareFiend(adapter);
-  await installNpcSave(adapter,fiend.id);
+  await prepareFiend(adapter);
   let snapshot=await adapter.getSnapshot();
-  const beforeHp=snapshot.scene.entities.find((entry)=>entry.id===fiend.id)!.hp;
+  const actorId=snapshot.activeCharacter.id;
+  const actor=snapshot.scene.entities.find((entry)=>entry.id===actorId);
+  assert.ok(actor,JSON.stringify(snapshot.scene.entities));
+  const beforeHp=actor.hp;
   const beforeUses=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)!.current;
+  await installNpcSave(adapter,actorId);
 
   await adapter.setQueuedD20(1);
-  await adapter.resolveAction(SAVE_ACTION,[fiend.id]);
+  await adapter.resolveAction(SAVE_ACTION,[actorId]);
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
 
@@ -116,7 +128,7 @@ test("Fiend Dark One's Own Luck can turn the Warlock's failed saving throw into 
   await adapter.advanceResolution();
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===fiend.id)?.hp,beforeHp);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.hp,beforeHp);
 
   snapshot=await adapter.undoLastResolution();
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,beforeUses);
@@ -124,13 +136,18 @@ test("Fiend Dark One's Own Luck can turn the Warlock's failed saving throw into 
 
 test("Warlock below Fiend feature level does not receive Dark One's Own Luck",async()=>{
   const adapter=new MockAdapter();
-  const fiend=await prepareFiend(adapter,5);
+  await prepareFiend(adapter,5);
   await adapter.startInitiative();
-  await adapter.setCurrentActor(fiend.id);
+  let snapshot=await adapter.getSnapshot();
+  const actorId=snapshot.activeCharacter.id;
+  await adapter.setCurrentActor(actorId);
+  snapshot=await adapter.getSnapshot();
+  const check=abilityCheckAction(snapshot);
+  assert.ok(check,JSON.stringify(snapshot.scene.actionsByActor[actorId]));
   await adapter.setQueuedD20(1);
-  await adapter.resolveAction("action.skill.athletics",[]);
+  await adapter.resolveAction(check.id,[]);
   await adapter.advanceResolution();
-  const snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
+  snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
   assert.notEqual(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
   assert.equal(snapshot.activeCharacter.resources.some((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID),false);
 });
