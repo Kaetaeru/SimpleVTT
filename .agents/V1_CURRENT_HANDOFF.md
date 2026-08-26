@@ -17,6 +17,7 @@ Canonical target branch: **`work/v1-composite`**
 - Monk Focus R1 exact execution checkpoint: `c282a1e4fd6929dc56079d811021dcfe160d51f5`.
 - Rogue R1 exact execution checkpoint: `5bb8bfbc4753dcc15f1198a04c0982817176c644`.
 - Berserker Intimidating Presence R1 exact execution checkpoint: `1df452fcd951525242631e2cb345e6ee390251fd`.
+- Berserker Mindless Rage production integration checkpoint: `b82e9048618ab3c105f2f99e148d2e5d2198c5dc` (product integration source `8bbd21a0ff4b20bef4c0232f175785c5f7633312`).
 - Open Hand Wholeness of Body R1 exact execution checkpoint: `f26092033673622c7c15755ac304678441a1eda3`.
 - Open Hand Fleet Step R1 exact execution checkpoint: `21b5ab830442318e5c5b499464a746fb4370cd4b`.
 - Devotion Holy Nimbus R1 exact execution checkpoint: `21b5ab830442318e5c5b499464a746fb4370cd4b`.
@@ -31,8 +32,9 @@ Canonical target branch: **`work/v1-composite`**
 - `95042b2`는 Fiend Dark One's Own Luck 3개 focused case를 포함한 UI run `32952470669` / frontend job `98126755335`와 Phase 12 run `32952470663` / connected-protocol job `98126755397`이 success다.
 - `88bb72d`는 Lore Peerless Skill 4개 focused case를 포함한 UI run `32953773211` / frontend job `98130829740`과 Phase 12 run `32953773099` / connected-protocol job `98130829706`이 success다.
 - `90514e4`는 Lore Cutting Words ability-check/attack/staged-damage/below-level focused slices를 포함한 UI run `32960806646` / frontend job `98152495174`와 Phase 12 run `32960806633` / connected-protocol job `98152494916`이 success다. `c7aee31`은 임시 diagnostic steps만 제거했고 UI run `32961013657` / frontend job `98153136326`도 success다.
+- `b82e904`는 Berserker Mindless Rage production Rage 합성, 기존 Charmed/Frightened 제거, immunity marker, Activity, Undo, Rage-end lifecycle을 focused production test로 검증했고 UI run `32961779455` / frontend job `98155486715`과 Phase 12 run `32961779556` / connected-protocol job `98155487334`가 success다.
 
-따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, Fiend Dark One's Own Luck R1, Lore Peerless Skill R1, Lore Cutting Words R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
+따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage/Mindless Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, Fiend Dark One's Own Luck R1, Lore Peerless Skill R1, Lore Cutting Words R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
 ## 2. 실행 증거
 
@@ -73,7 +75,9 @@ Canonical target branch: **`work/v1-composite`**
   - no voluntary `End Rage` production action was restored.
 - `tests/domain/barbarianRage.test.ts` covers duration, attack/save extension, dedicated Bonus Action extension, and maximum duration.
 - `tests/ui/barbarianRageActionRuntime.test.ts` covers the production extension action and Heavy armor automatic termination.
-- Rage는 이미 source-complete다. resume만을 이유로 다시 구현하지 않는다.
+- `8bbd21a0ff4b20bef4c0232f175785c5f7633312` composes existing Berserker Mindless Rage operations into the same authoritative Rage transaction for Berserker 6+, without a fake extra button. Existing Charmed/Frightened effects are removed, the Rage-linked charm/fear immunity marker is applied, and the same Rage lifecycle owns termination.
+- `b82e9048618ab3c105f2f99e148d2e5d2198c5dc` adds production lifecycle coverage through the existing `test:berserker-presence` build gate: UI run `32961779455` / frontend job `98155486715` and Phase 12 run `32961779556` / connected-protocol job `98155487334` are **success**.
+- Rage + Mindless Rage R1 source/execution 범위는 완료다. resume만을 이유로 다시 구현하지 않는다.
 
 ### Green — Druid Wild Shape exact checkpoint `11bc858`
 
@@ -186,7 +190,7 @@ Canonical target branch: **`work/v1-composite`**
 - `test:devotion-smite-protection`은 보호 적용, public Undo 복원, effect expiry와 below-level gate를 검증한다.
 - exact SHA `ec89fa251d969a250c20e11f0abe6d7a4f13d58e` GitHub Actions:
   - UI run `32950193461` / job `98119645421` `frontend`: **success**, `Typecheck and build` 포함 전 단계 green.
-  - Phase 12 Connected Session run `32950193590` / job `98119646335` `connected-protocol`: **success**, production frontend gate와 connected protocol green.
+  - Phase 12 Connected Session run `32950193590` / connected-protocol job `98119646335`: **success**, production frontend gate와 connected protocol green.
 - 결론: **Devotion Smite of Protection R1 local mechanics/Activity/Undo/expiry/level-gate 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
 
 ### Green — Fiend Dark One's Own Luck R1 exact checkpoint `95042b2`
@@ -198,7 +202,7 @@ Canonical target branch: **`work/v1-composite`**
 - bisection 중 `c93a008`까지 ability-check response/resource/Activity를, `8ed1d60`에서 Undo까지 green으로 좁힌 뒤 `23019e7`과 `95042b2`에서 saving-throw와 below-level coverage를 순서대로 복구했다.
 - exact SHA `95042b2ef3c65aef3619334c0bec1ad243d165f2` GitHub Actions:
   - UI run `32952470669` / job `98126755335` `frontend`: **success**, `Typecheck and build` 및 `test:fiend-luck` 포함 전 단계 green.
-  - Phase 12 Connected Session run `32952470663` / job `98126755397` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
+  - Phase 12 Connected Session run `32952470663` / connected-protocol job `98126755397`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
 - 결론: **Fiend Dark One's Own Luck R1 ability-check/saving-throw/resource/Activity/Undo/level-gate 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
 
 ### Green — Lore Peerless Skill R1 exact checkpoint `88bb72d`
@@ -238,7 +242,7 @@ Canonical target branch: **`work/v1-composite`**
 - Ready lifecycle, death save, Stabilize, Unarmed Strike, Extra Attack, Action Surge
 - Bardic Inspiration/Tactical Mind/Fighter Indomitable follow-up 완료 범위
 - Cleric Divine Spark/Turn Undead와 Paladin Lay On Hands/Divine Sense/Abjure Foes
-- Barbarian core Rage source through `b939f892`: start/resource/economy, resistance, Rage Damage, Strength Advantage, Concentration/spellcasting restrictions, SRD 5.2.1 duration/extension/automatic termination, production extension action, and Heavy armor termination
+- Barbarian core Rage source through `b939f892` plus Berserker Mindless Rage production composition through `b82e904`: start/resource/economy, resistance, Rage Damage, Strength Advantage, Concentration/spellcasting restrictions, duration/extension/automatic termination, existing Charmed/Frightened removal, charm/fear immunity marker, Activity and Undo
 - Druid Wild Shape through `11bc858`: known-form selection, transform/exit actions, resource/Bonus Action economy, transformed attack projection, explicit temporary-HP keep/take choice, spellcasting restriction, event-native write-back and Undo
 - Monk Focus R1 through `c282a1e`: Focus actions, resource/Bonus Action economy, Flurry extra attacks, Patient Defense/Step effects, local/freeform/initiative Activity and one-call snapshot Undo
 - Rogue R1 through `5bb8bfb`: Cunning Action Dash/Disengage/Hide projection, Bonus Action economy, standard action mechanics reuse, Uncanny Dodge reaction with atomic floor-half damage, Activity and local/event-native Undo boundaries
@@ -251,7 +255,7 @@ Canonical target branch: **`work/v1-composite`**
 - Fiend Dark One's Own Luck R1 through `95042b2`: existing follow-up/domain resolver reuse, failed ability-check/saving-throw recovery, resource spend, Activity, event-native Undo and below-level gate.
 - Lore Peerless Skill R1 through `88bb72d`: existing Lore resolver/resource reuse, failed ability-check and missed-attack follow-up, success-only resource spend, Activity, Undo and below-level gate.
 - Lore Cutting Words R1 through `90514e4`: existing Lore resolver/resource/follow-up reuse, another-creature ability-check/attack/damage reduction, resource/reaction economy, Activity, Undo and below-level gate; non-spell runtime router passthrough fixed at `d39d599`.
-- remaining existing subclass mechanics outside the exposed R1 actions are not reimplemented unless the inventory identifies a real production projection gap.
+- Remaining subclass inventory was reconciled after Mindless Rage. Preserve Life, Land's Aid and Retaliation need richer explicit player input; Hunter/Champion/Thief/Draconic/Fiend/Evocation remainder is passive, rest-choice, item-runtime, automatic trigger/reaction or progression/spell integration rather than an honest standalone action-bar command. Do not invent dead/fake buttons to exhaust the list.
 
 Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, R3 Tauri durability, R4 rendered UX/accessibility, R5 release gates는 별도다.
 
@@ -268,7 +272,7 @@ Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, 
 
 Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 가능.
 
-### R1. D&D Session Action Matrix 완성
+### R1. D&D Session Action Matrix 완성 — DONE (source/execution scope)
 
 - [x] open ability-check DM DC contract와 일반 능력/기술 판정 UI.
 - [x] Tactical Mind를 모든 적격 실패 능력 판정에 재사용.
@@ -277,8 +281,9 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
 - [x] Druid Wild Shape 선택/변신/해제/HP·행동·자원 lifecycle. exact checkpoint `11bc858`에서 focused gate와 production build를 GitHub Actions로 검증했다.
 - [x] Monk Focus actions와 자원/행동 경제. exact checkpoint `c282a1e`에서 focused Monk gate, one-call local Undo, production build, connected-protocol frontend gate를 검증했다.
 - [x] Rogue Cunning Action 및 Uncanny Dodge reaction. exact checkpoint `5bb8bfb`에서 focused Rogue gate, production build, connected-protocol frontend gate를 검증했다.
-- [ ] 이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar에 노출.
+- [x] 이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar/기존 feature action에 노출.
   - [x] Berserker Intimidating Presence: exact checkpoint `1df452f`, focused build gate + UI/Phase12 green.
+  - [x] Berserker Mindless Rage: 별도 가짜 action 없이 기존 Rage activation에 합성. source `8bbd21a`, production lifecycle checkpoint `b82e904`, UI/Phase12 green.
   - [x] Open Hand Wholeness of Body: exact checkpoint `f260920`, focused 4/4 + UI/Phase12 connected-protocol green.
   - [x] Open Hand Fleet Step: exact checkpoint `21b5ab8`, focused 4/4 + UI/Phase12 connected-protocol green.
   - [x] Devotion Holy Nimbus: exact checkpoint `21b5ab8`, focused build gate + UI/Phase12 connected-protocol green.
@@ -287,9 +292,10 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
   - [x] Fiend Dark One's Own Luck: exact checkpoint `95042b2`, 3 focused cases + UI/Phase12 connected-protocol green.
   - [x] Lore Peerless Skill: exact checkpoint `88bb72d`, 4 focused cases + UI/Phase12 connected-protocol green.
   - [x] Lore Cutting Words: exact checkpoint `90514e4`, focused ability-check/attack/damage/level gate + UI/Phase12 connected-protocol green; diagnostic cleanup UI green at `c7aee31`.
-  - [ ] 남은 subclass domain resolver inventory에서 다음 mechanics-complete production projection gap 식별.
-- [ ] 각 신규 행동에 local/freeform/initiative/Activity/Undo를 연결.
+  - [x] 남은 subclass resolver inventory 재대조 완료. richer explicit input이 필요한 Preserve Life/Land's Aid/Retaliation과 passive/rest-choice/item-runtime/trigger/reaction-only mechanics는 dead/auto-selected button으로 노출하지 않는다.
+- [x] 각 신규 행동/기능 통합에 local/freeform/initiative/Activity/Undo의 적용 가능한 기존 primitive를 연결.
   - [x] Berserker Intimidating Presence R1 범위.
+  - [x] Berserker Mindless Rage: 기존 Rage Activity/Undo/Rage-end lifecycle 공유.
   - [x] Open Hand Wholeness of Body R1 범위.
   - [x] Open Hand Fleet Step R1 범위.
   - [x] Devotion Holy Nimbus R1 범위.
@@ -299,7 +305,7 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
   - [x] Lore Peerless Skill R1 범위.
   - [x] Lore Cutting Words R1 범위.
 
-Exit: 대표 12-class Character가 UI에서 사용 가능한 핵심 행동을 dead button 없이 실행한다.
+Exit: 대표 12-class Character가 UI에서 사용 가능한 핵심 행동을 dead button 없이 실행한다. **R1 source/execution scope 충족.** 이는 V1-21 release DONE이나 Windows/human acceptance를 의미하지 않는다.
 
 ### R2. Connected remote-owner matrix 완성
 
@@ -351,21 +357,24 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-Lore Cutting Words R1은 `90514e4`에서 execution-validated 됐고 `c7aee31`에서 temporary diagnostic workflow를 제거한 뒤 UI gate가 다시 green이다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
+R1 source/execution action matrix는 Berserker Mindless Rage production 통합과 최종 subclass inventory 재대조까지 완료됐다. 다음은 **R2 Connected remote-owner matrix**다. 이미 존재하는 connected authority/projection/event primitives를 재사용하고, R1에서 새로 추가된 기능을 하나씩 remote-owner exactness에 대조한다.
 
 ```text
-live branch와 existing subclass domain resolver / production action projection inventory 재대조
--> Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported R1, Devotion Smite of Protection, Fiend Dark One's Own Luck, Lore Peerless Skill, Lore Cutting Words, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
--> domain resolver가 실제 mechanics를 소유하지만 production action bar에 빠진 다음 action 하나만 식별
--> richer player-choice input이 필요한 Preserve Life/Land's Aid 같은 partial feature는 자동할당하거나 dead button으로 노출하지 않음
--> unsupported/partial feature는 dead button으로 노출하지 않음
--> 선택한 action의 local/freeform/initiative/economy/Activity/Undo 기존 primitives를 우선 재사용
--> focused deterministic evidence 추가 또는 기존 증거 재사용
--> npm run build로 관련 gate 확인
--> green이면 canonical handoff 갱신 후 inventory를 계속하거나 마지막 R1 integration 항목으로 이동
+live branch와 current R2 connected tests / action-request / projection / event-history source 재대조
+-> R1 완료 기능의 connected coverage inventory 작성; 기존 connected proof는 재실행/재구현하지 않음
+-> 가장 작은 실제 gap 하나 선택
+-> Client intent -> Host authoritative resolve -> ordered event
+-> owner/private choice boundary와 public result 분리
+-> duplicate/reorder/retry exactly-once
+-> reconnect replay/fresh projection 수렴
+-> Character owner write-back / Campaign Host write-back 분리
+-> event-native Undo + Host/acting Client/observer 최종 상태 수렴
+-> focused deterministic connected evidence 추가 또는 기존 증거 재사용
+-> production frontend/connected gate로 exact SHA 검증
+-> canonical handoff 갱신 후 다음 R2 gap으로 이동
 ```
 
-Connected Host/Client/reconnect/exactly-once는 direct R1 regression이 아니면 R2에서 다룬다. resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
+R3 Tauri durability/실제 Windows two-instance acceptance, R4 rendered UX/accessibility, R5 release packaging은 R2와 분리한다. Resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
 
 중요: 이 문서가 현재 V1 실행 포인터다. `.chatgpt-rerun/PLAN.md`나 `.chatgpt-rerun/STATE.md`에 별도 제품 작업 목록을 복사하지 않는다.
 
