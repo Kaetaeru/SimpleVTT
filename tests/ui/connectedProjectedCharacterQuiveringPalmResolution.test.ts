@@ -170,18 +170,36 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
     await host.startInitiative();
     await host.setCurrentActor(remote.id);
     snapshot=await host.getSnapshot();
-    assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true,"initiative turn must expose an Action before detonation");
+    assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true,"initiative turn must expose an Action before seed");
     const turnEvents=batches(broadcasts).slice(turnBatchStart).flatMap((batch)=>batch.events??[]);
     assert.equal(turnEvents.length,2,"initiative start and explicit remote turn selection must publish ordered mode events");
     assert.equal((await applyConnectedClientEvents(client,turnEvents)).status,"applied");
     clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);
+    assert.deepEqual(markers(host,remote.id),[]);assert.deepEqual(markers(client,remote.id),[]);
+
+    const initiativeSeedCursor=state.ledger.cursor;
+    await seed(host,RECONNECT_PEER,state.sessionId,remoteManifest,TARGET_B,"request.r2.quivering.seed-initiative",initiativeSeedCursor);
+    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,initiativeSeedCursor+1);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),5);assert.deepEqual(markers(host,remote.id),[TARGET_B]);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,false,"initiative seed attack must spend Action");
+    hostBatches=batches(broadcasts);const initiativeSeedEvent=hostBatches.at(-1)?.events?.[0];assert.ok(initiativeSeedEvent);
+    assert.equal((await applyConnectedClientEvents(client,[initiativeSeedEvent!])).status,"applied");clientAfter=await client.getSnapshot();assert.equal(focus(clientAfter.activeCharacter),5);assert.deepEqual(markers(client,remote.id),[TARGET_B]);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,false);
+
+    const nextTurnBatchStart=batches(broadcasts).length;
+    let leftRemoteTurn=false;
+    for(let step=0;step<12;step++){
+      snapshot=await host.endTurn();
+      if(snapshot.scene.currentActorId!==remote.id)leftRemoteTurn=true;
+      if(leftRemoteTurn&&snapshot.scene.currentActorId===remote.id)break;
+    }
+    assert.equal(snapshot.scene.currentActorId,remote.id,"initiative must return to the remote Monk before detonation");assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true,"next Monk turn must restore Action before detonation");
+    const nextTurnEvents=batches(broadcasts).slice(nextTurnBatchStart).flatMap((batch)=>batch.events??[]);assert.ok(nextTurnEvents.length>0);
+    assert.equal((await applyConnectedClientEvents(client,nextTurnEvents)).status,"applied");clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.currentActorId,remote.id);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(markers(client,remote.id),[TARGET_B]);
 
     const hpBeforeDetonate=hp(snapshot.scene,TARGET_B);
     const detonateCursor=state.ledger.cursor;
     const detonateRequest=request(state.sessionId,"request.r2.quivering.detonate",remoteManifest,OPEN_HAND_QUIVERING_PALM_DETONATE_ACTION_ID,TARGET_B,detonateCursor);
     assert.equal(await routeConnectedActionRequest(host,{peer:RECONNECT_PEER,message:""},detonateRequest),true);
     for(let step=0;step<8&&state.ledger.cursor===detonateCursor;step++)await host.advanceResolution();
-    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,detonateCursor+1);assert.deepEqual(markers(host,remote.id),[]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.ok(hp(snapshot.scene,TARGET_B)<hpBeforeDetonate);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,false,"initiative detonation must spend Action");assert.deepEqual(snapshot.characters,before.characters);
+    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,detonateCursor+1);assert.deepEqual(markers(host,remote.id),[]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),5);assert.ok(hp(snapshot.scene,TARGET_B)<hpBeforeDetonate);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,false,"initiative detonation must spend Action");assert.deepEqual(snapshot.characters,before.characters);
     hostBatches=batches(broadcasts);const detonateEvent=hostBatches.at(-1)?.events?.[0];assert.ok(detonateEvent);assert.equal(detonateEvent!.payload.kind,"resolution");
     if(detonateEvent!.payload.kind!=="resolution")throw new Error("expected detonation resolution event");
     const detonateChanges=detonateEvent!.payload.resolutionEvents.flatMap((event)=>event.stateChanges);
@@ -200,9 +218,9 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
 
     const persistenceBeforeUndo=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
     await host.undoLastResolution();
-    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,detonateCursor+2);assert.equal(hp(snapshot.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(host,remote.id),[TARGET_B]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(snapshot.characters,before.characters);
+    snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,detonateCursor+2);assert.equal(hp(snapshot.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(host,remote.id),[TARGET_B]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),5);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(snapshot.characters,before.characters);
     hostBatches=batches(broadcasts);const undoEvent=hostBatches.at(-1)?.events?.[0];assert.ok(undoEvent);assert.equal(undoEvent!.payload.kind,"resolution-undo");
-    assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"applied");clientAfter=await client.getSnapshot();assert.equal(hp(clientAfter.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(client,remote.id),[TARGET_B]);assert.equal(focus(clientAfter.activeCharacter),9);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);
+    assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"applied");clientAfter=await client.getSnapshot();assert.equal(hp(clientAfter.scene,TARGET_B),hpBeforeDetonate);assert.deepEqual(markers(client,remote.id),[TARGET_B]);assert.equal(focus(clientAfter.activeCharacter),5);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);
     const persistenceAfterUndo=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;assert.ok(persistenceAfterUndo>=persistenceBeforeUndo);assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"duplicate");
   } finally {tauriSessionTransport.send=originalSend;tauriSessionTransport.sendTo=originalSendTo;}
 });
