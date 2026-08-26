@@ -3,6 +3,7 @@ import { MockAdapter } from "./mockAdapter";
 import { CUNNING_HIDE_ACTION_ID } from "./rogueCoreRuntimeAdapter";
 import {
   commitAdapterTurnRuntimeState,
+  ensureAdapterTurnRuntimeState,
   snapshotAdapterTurnRuntimeState,
 } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
@@ -88,8 +89,7 @@ function commitHideEffect(
   resolution:ResolutionView,
   succeeded:boolean,
 ):ResolutionEvent[]|undefined {
-  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
-  if(!state)return [];
+  const state=ensureAdapterTurnRuntimeState(adapter,internal.scene);
   const current=state.effects.find((effect)=>effect.targetId===resolution.actorId&&effect.tags.includes(HIDDEN_TAG)&&effect.tags.includes(CUNNING_HIDE_TAG));
   if((succeeded&&current)||(!succeeded&&!current))return [];
   const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
