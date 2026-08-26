@@ -27,6 +27,10 @@ Canonical target branch: **`work/v1-composite`**
 - Lore Peerless Skill R1 exact execution checkpoint: `88bb72dc3d725af049025728003ab6e6b8db1eb0`.
 - Lore Cutting Words R1 exact execution checkpoint: `90514e44a21840070bb77ea17561036a86b2e5ca`; temporary diagnostic cleanup head: `c7aee31cf0d8ee0b9e1b70359eaac7bcf55db928`.
 - R2 remote-owner Rage exact checkpoint: `dec4f22178b1256597c140170481025bb26f39e3`; focused connected source `5585e6be35b96a46a702cd877c32078ff677f97e`, projected inverse write-back `9738b425d908399885f9ade1424d38294db2110a`, connected projected Undo context `0f17a4d5cb9319776b66fb9909b12808b165a13b`.
+- R2 remote-owner Wild Shape exact proof: `a65cbd2926032d70f47495873996653c7622cb1e`; source/projection preservation `657f7ea850350758bd5b0f5ac49977cd533d6df2` + `b9a666c772820432bc024fa0b9fb503110111e15`; Phase 12 run `32964082295` / job `98162628731` green.
+- R2 remote-owner Cunning Action Dash exact proof: `ea96509ee0c01922d0f23926445b5a7271a45ae1`; event-native core `cbbda07dd7c11ba126e79c26cba99586905e7dce`; remote reconstruction `922cfd1f9b53ba4c14e4fe957b5bcc0e397cdce6`; Phase 12 run `32964728723` / job `98164631534` green.
+- R2 remote-owner Cunning Action Disengage exact proof: `134e6a8d7def8711d84bb5be56186f353a4ddeb2`; event-native core `e736114de729964b855c67d181f0f14025aee630`; remote runtime/reconstruction `1074cb6db2a1e917dc0db14bde771350b74b15cb` + `87e8ace567c8eb7e421c582ccbb6150e861e8fee`; Phase 12 run `32965968749` / job `98168404394` green.
+- R2 remote-owner Cunning Action Hide exact checkpoint: `7f8e9459e433164b916ee8ef12fdf3042492d9d7`; event/runtime bridge `5765534b320f245678edb90173d740d8fb7c0113`; remote reconstruction `03164a314762c0981bae8c7153f391366b49b6e0`; turn-runtime initialization repair `726081e1a7beb9c5c2769da62a1cea3b3da5c4ec`; UI run `32968629784` / frontend job `98176845419` success; Phase 12 run `32968629791` / connected-protocol job `98176845690` success through production frontend gate.
 - `21b5ab8`은 Fleet Step과 Holy Nimbus focused gate를 포함한 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다.
 - `126cd84`는 Quivering Palm focused gate를 포함한 UI run `32942627369`가 success이고 Phase 12 run `32942627376`의 connected-protocol job `98096599197`이 success다. 이는 Quivering Palm R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 - `ec89fa2`는 Smite of Protection focused gate를 포함한 UI run `32950193461` / frontend job `98119645421`과 Phase 12 run `32950193590` / connected-protocol job `98119646335`가 success다.
@@ -93,6 +97,18 @@ Canonical target branch: **`work/v1-composite`**
   - UI run `32963492157`: **success**.
   - Phase 12 Connected Session run `32963492151` / connected-protocol job `98160810148`: **success**, connected authority suite, offline walkthrough and production frontend gate all green.
 - 결론: **Rage representative R2 remote-owner forward/exactly-once/owner-write-back/event-native Undo gap은 완료**. R2 전체 matrix, reconnect/fresh-projection coverage for every R1 feature, observer-specific coverage and R3 Windows evidence는 아직 남는다.
+
+### Green — R2 Rogue Cunning Action Hide exact checkpoint `7f8e945`
+
+- 기존 표준 Hide semantics와 connected ActionRequest/SessionProjection/ResolutionEvent primitives를 재사용했다. 새 stealth engine, protocol, schema를 추가하지 않았다.
+- `a357d596981a312f3f41f9344fa9b62f4c2da66d`가 Cunning Hide 자체에 canonical DC 15를 feature-local로 고정하고 generic ability-check DM DC contract는 그대로 둔다.
+- `726081e1a7beb9c5c2769da62a1cea3b3da5c4ec`가 fresh Host-unknown projected Rogue에서도 기존 `ensureAdapterTurnRuntimeState` primitive로 TurnRuntime을 초기화해 Hidden effect/economy event commit을 보장한다.
+- focused remote-owner proof는 Host permanent Character library 불변, authoritative d20/effect/economy ordering, owning Client apply exactly-once, duplicate request/event no-op, Host event-native Undo와 Client inverse convergence를 검증한다.
+- `e2107025fb1fd4a896559decc1ee191c033e9b2a`에서 broad fixed-DC 실험을 제거해 Cunning Hide에만 scope를 남겼고, `7f8e9459e433164b916ee8ef12fdf3042492d9d7`의 source tree는 그 green tree와 동일하다.
+- exact SHA `7f8e945` GitHub Actions:
+  - UI run `32968629784` / frontend job `98176845419`: **success**, `Typecheck and build` 포함 전 단계 green.
+  - Phase 12 Connected Session run `32968629791` / connected-protocol job `98176845690`: **success**, focused Cunning Hide proof, connected authority suite, Phase 11 offline walkthrough, production frontend gate all green.
+- 결론: **Cunning Action Hide R2 remote-owner forward/effect/economy/exactly-once/event-native Undo gap은 완료**. Uncanny Dodge와 나머지 R1 feature matrix는 별도 R2 slice다.
 
 ### Green — Druid Wild Shape exact checkpoint `11bc858`
 
@@ -234,9 +250,7 @@ Canonical target branch: **`work/v1-composite`**
 
 ### Green — Lore Cutting Words R1 exact checkpoint `90514e4`
 
-- 기존 College of Lore Cutting Words domain resolver/resource와 production follow-up adapter를 재사용했다. 신규 rules engine이나 별도 reaction authority를 추가하지 않았다.
-- focused coverage는 다른 creature의 성공 ability check, 성공 attack roll, staged damage 감소, below-level gate를 검증하며 Bardic Inspiration/Reaction 소비, Activity, authoritative result 변경과 Undo를 기존 event/runtime primitives로 통과한다.
-- ability-check red의 실제 원인은 Cutting Words mechanics가 아니라 `productionSpellRuntimeAdapter`가 non-spell runtime action까지 가로채던 router 경계였다. `d39d599c60d8499028e0cff25ab34358f15ca6aa`에서 `spellCast`가 없는 현재 runtime action을 기존 resolver로 바로 통과시키는 최소 수정으로 복구했다.
+- 기존 College of Lore Cutting Words domain resolver/resource/follow-up reuse, another-creature ability-check/attack/damage reduction, resource/reaction economy, Activity, Undo and below-level gate; non-spell runtime router passthrough fixed at `d39d599`.
 - connected projected Character actor context를 깨는 과한 currentActor 우선순위 실험은 `90514e44a21840070bb77ea17561036a86b2e5ca`에서 원복해 기존 remote projection contract를 보존했다.
 - exact SHA `90514e4` GitHub Actions:
   - UI run `32960806646` / frontend job `98152495174`: **success**, Cutting Words 4 focused slices와 `Typecheck and build` 포함 전 단계 green.
@@ -333,8 +347,12 @@ R1의 모든 신규 행동마다 다음을 검증한다.
 - [ ] Character owner write-back / Campaign Host write-back 분리.
 - [ ] event-native Undo와 양 Client 보상 수렴.
 - [x] **Representative remote-owner Rage gap**: Host-unknown Barbarian Rage forward commit, Host permanent-library isolation, owning Client exactly-once write-back, duplicate request/event no-op, Host projected Undo와 owner inverse write-back. exact checkpoint `dec4f22`; UI `32963492157` success; Phase 12 `32963492151` / connected-protocol `98160810148` success.
+- [x] **Druid Wild Shape remote-owner gap**: known-form source/projection preservation + Host-authoritative transform/resource/state convergence. proof `a65cbd2`; Phase 12 `32964082295` / `98162628731` green.
+- [x] **Rogue Cunning Action Dash remote-owner gap**: existing movement/economy event path, remote reconstruction, exactly-once/Undo. proof `ea96509`; Phase 12 `32964728723` / `98164631534` green.
+- [x] **Rogue Cunning Action Disengage remote-owner gap**: existing effect/economy path, opportunity marker alignment, remote reconstruction, exactly-once/Undo. proof `134e6a8`; Phase 12 `32965968749` / `98168404394` green.
+- [x] **Rogue Cunning Action Hide remote-owner gap**: canonical d20/DC15, Hidden effect/economy events, Host permanent-library isolation, owner apply exactly-once, duplicate safety, event-native Undo. exact checkpoint `7f8e945`; UI `32968629784` / `98176845419` green; Phase 12 `32968629791` / `98176845690` green.
 
-Exit: 신규 행동 전체가 Host, acting Client, observing Client에서 같은 최종 상태를 가진다. **Rage 대표 gap 완료만으로 R2 전체 완료가 아니다.**
+Exit: 신규 행동 전체가 Host, acting Client, observing Client에서 같은 최종 상태를 가진다. **위 focused gaps 완료만으로 R2 전체 완료가 아니다.**
 
 ### R3. Tauri durability와 owner acceptance
 
@@ -373,23 +391,22 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R2 첫 대표 gap인 remote-owner Rage는 exact `dec4f22`에서 green이다. 검증된 Rage forward/Undo/write-back path를 반복하지 않는다. 현재 live branch에는 Wild Shape known-form source projection 보존 작업(`a775181`, `657f7ea`)이 이미 진행 중이므로 이를 중복 구현하지 말고 다음 **Druid Wild Shape remote-owner gap**으로 이어간다.
+R2에서 Rage, Wild Shape, Cunning Action Dash/Disengage/Hide는 focused remote-owner evidence와 exact-head production gates가 green이다. 검증된 slice를 반복하지 않는다. 다음은 **Rogue Uncanny Dodge remote-owner gap**이다.
 
 ```text
-live branch와 current Wild Shape projection/connected test 상태 재대조
--> a775181/657f7ea source preservation이 실제 current head에 남아 있는지 확인
--> existing Wild Shape action/runtime + SessionProjection reconstruction 재사용
--> Host-unknown owner Character의 known-form 선택/변신 intent가 Host authoritative resolution으로 실행되는지 focused test
--> Host permanent Character library 불변 + owning Client durable resource/state write-back exactly once
--> duplicate request/event no-op
--> current reconnect/fresh projection primitives로 known-form/state 수렴 확인
--> event-native Undo가 Host projected Character와 owner durable Character를 함께 inverse하는지 확인
+live branch와 current Uncanny Dodge reaction/runtime/connected projection 상태 재대조
+-> Rogue R1의 existing reaction + atomic floor-half damage + event-native Undo primitive 재사용
+-> Host-unknown Rogue 5+가 공격에 명중됐을 때 Host authoritative interrupt/accept/Reaction spend/half-damage를 focused connected proof로 검증
+-> Host permanent Character library 불변 + owning Client durable HP/economy write-back exactly once 확인
+-> duplicate ActionRequest/event replay no-op 확인
+-> current reconnect/fresh projection primitives로 reaction/economy/HP 수렴 확인
+-> Host event-native Undo가 projected Host state와 owner durable Character를 함께 보상하는지 확인
 -> 실제 red가 있으면 첫 원인 하나만 최소 수정
 -> production frontend/connected gate exact SHA green 확인
 -> canonical handoff 갱신 후 다음 R2 gap 선택
 ```
 
-R3 Tauri durability/실제 Windows two-instance acceptance, R4 rendered UX/accessibility, R5 release packaging은 R2와 분리한다. Resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
+R3 Tauri durability/실제 Windows two-instance acceptance, R4 rendered UX/accessibility, R5 release packaging은 R2와 분리한다. Resume만을 이유로 과거 전체 matrix를 반복하지 않는다.
 
 중요: 이 문서가 현재 V1 실행 포인터다. `.chatgpt-rerun/PLAN.md`나 `.chatgpt-rerun/STATE.md`에 별도 제품 작업 목록을 복사하지 않는다.
 
