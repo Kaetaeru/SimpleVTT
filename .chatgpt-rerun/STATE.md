@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T18:27:00+09:00`
+- checkpointed_at: `2026-08-26T18:38:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -15,23 +15,22 @@ Mandatory preflight completed in required order (`README.md` -> `control.json` -
 
 Validated work was not repeated: Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, and Fiend Dark One's Own Luck R1 are preserved.
 
-## Fiend Dark One's Own Luck R1 — complete for R1 scope
+## College of Lore Peerless Skill R1 — execution-validated, canonical sync pending
 
-- Exact execution checkpoint: `95042b2ef3c65aef3619334c0bec1ad243d165f2`.
-- Final focused file has all three intended cases active; diagnostic returns/skips are removed.
-- UI run `32952470669` / frontend job `98126755335`: **success**, including `Typecheck and build`.
-- Phase 12 run `32952470663` / connected-protocol job `98126755397`: **success**, including connected authority protocol, offline walkthrough, and production frontend gate.
-- Existing `src/app/warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts` and domain resolver were reused; no duplicate Fiend subsystem was added.
-- Validated scope: failed ability-check interrupt/accept, deterministic d10 addition, resource spend, Activity, event-native Undo restore, failed saving-throw conversion/no-damage continuation/Undo, and below-level non-projection.
-- Separate Windows connected-playable packaging belongs to R3 acceptance/build debt and is not used to claim R1 completion.
+Live GitHub advanced beyond the prior Fiend inventory checkpoint and had already selected/implemented College of Lore `Peerless Skill` as the next mechanics-complete production follow-up. That work was adopted instead of duplicating a different subclass slice.
 
-## Canonical synchronization — complete
+- Focused gate was already wired as `test:lore-peerless-skill` in `npm run build`.
+- Existing implementation reused `resolveLorePeerlessSkill`, Bardic Inspiration resource/runtime state, existing interrupt/follow-up flow, ResolutionEvent persistence, Activity, and Undo primitives.
+- Prior exact-head focused failure was isolated to the production attack case Activity record: mechanics already converted miss -> hit, spent Inspiration, applied damage, and restored via Undo; the final Activity detail lacked `비할 데 없는 기술`.
+- Minimal product fix: `88bb72dc3d725af049025728003ab6e6b8db1eb0` (`fix: record Peerless Skill attack activity`). It refreshes the completed Peerless attack Activity from the authoritative resolution; no attack/resource/Undo mechanics were changed.
+- UI run `32953773211` / frontend job `98130829740`: **success**, including `Typecheck and build` and the focused `test:lore-peerless-skill` gate.
+- Phase 12 run `32953773099` / connected-protocol job `98130829706`: **success**, including connected authority protocol, offline walkthrough, and production frontend gate.
+- Windows connected-playable job is R3 packaging/acceptance debt and is not required to claim this R1 execution checkpoint.
+- R1 evidence now covers level-14 eligibility, failed ability-check conversion, failure-with-resource-preservation, failed attack conversion to hit/damage, Activity, Undo restoration, and below-level non-projection.
 
-Concurrent GitHub work advanced the canonical documents after the Fiend gates turned green.
+## Canonical synchronization — pending
 
-- `.agents/V1_CURRENT_HANDOFF.md` records Devotion Smite of Protection checkpoint `ec89fa2` and Fiend checkpoint `95042b2`, including exact UI/Connected evidence. Commit: `8ea06d62f85f00e1663818a4fba19e701e298002`.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` records the same completed R1 evidence without over-promoting broader V1 workstreams. Commit: `499149a7e519325878baf5b02d6a56f73b9c82d2`.
-- Latest observed canonical docs head before this STATE write: `499149a7e519325878baf5b02d6a56f73b9c82d2`.
+`.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` still record the prior Fiend checkpoint as the latest canonical subclass slice. Do not claim Peerless canonical completion until those two documents are updated with exact checkpoint `88bb72d`, UI `32953773211` / `98130829740`, and Phase 12 `32953773099` / `98130829706` evidence.
 
 `PLAN.md` remains unchanged.
 
@@ -43,13 +42,14 @@ Inventory decisions to preserve:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Then continue the canonical remaining-subclass domain-resolver inventory and identify exactly one next mechanics-complete domain resolver that lacks production action projection.
+Reconcile live `work/v1-composite` first. Then synchronize the exact Peerless Skill R1 evidence into `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` without reopening validated mechanics.
 
-- Do not reopen Fiend/Smite or other validated R1 work without direct regression evidence.
+After canonical sync, continue the remaining-subclass domain-resolver inventory and select exactly one next mechanics-complete resolver missing production projection.
+
+- Do not reopen Peerless, Fiend/Smite, or other validated R1 work without direct regression evidence.
 - Do not select `Preserve Life`, `Land's Aid`, or another richer-input/partial feature as a dead/simple action button.
 - Reuse existing domain/runtime/local/freeform/initiative/economy/Activity/Undo primitives.
-- Add only focused deterministic evidence for the selected gap.
-- Require exact-head build/UI/Connected green before advancing canonical state again.
+- Require exact-head build/UI/Connected green before advancing another R1 slice.
 - Do not expand into R2 unless a direct R1 regression requires it.
 
 PLAN unchanged; `control.json` must be written last per protocol.
