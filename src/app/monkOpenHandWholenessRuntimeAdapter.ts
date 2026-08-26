@@ -11,12 +11,10 @@ import {
   MONK_OPEN_HAND_CLASS_ID,
   OPEN_HAND_WHOLENESS_OF_BODY_FEATURE_ID,
   OPEN_HAND_WHOLENESS_OF_BODY_RESOURCE_ID,
-  compileOpenHandWholenessOfBody,
   monkMartialArtsDieSides,
   monkOpenHandRuntimeResourceDefinitions,
   resolveOpenHandWholenessOfBody,
 } from "../domain/monkOpenHand";
-import { resolvePendingResolution } from "../domain/resolution";
 import { MONK_OPEN_HAND_SUBCLASS_ID } from "../domain/srdSubclassCatalog";
 
 export const OPEN_HAND_WHOLENESS_ACTION_ID="action.monk.open-hand.wholeness-of-body";
@@ -54,13 +52,6 @@ function seedResource(adapter:MockAdapter,internal:AdapterState){
   return commitAdapterTurnRuntimeState(adapter,internal.scene,expected,state)?snapshotAdapterTurnRuntimeState(adapter,internal.scene):undefined;
 }
 function rollDie(adapter:MockAdapter,actionId:string,sides:number){const limit=Math.floor(20/sides)*sides;let face:number;let attempt=0;do{face=(MockAdapter.prototype as unknown as DicePrototype).d20.call(adapter,actionId,attempt++);}while(face>limit);return ((face-1)%sides)+1;}
-function resolveWholeness(state:Parameters<typeof resolveOpenHandWholenessOfBody>[1],request:Parameters<typeof resolveOpenHandWholenessOfBody>[2],useBonusActionEconomy:boolean){
-  if(useBonusActionEconomy)return resolveOpenHandWholenessOfBody(SIMPLEVTT_APP_RULES_PROFILE,state,request);
-  try{
-    const pending=compileOpenHandWholenessOfBody(request);
-    return resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{...pending,operations:pending.operations.filter((operation)=>!(operation.kind==="use-economy"&&operation.actorId===request.actorId&&operation.slot==="bonus-action"))});
-  }catch(error){return {status:"rejected" as const,state,events:[],results:{},error:error instanceof Error?error.message:String(error)};}
-}
 
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithOpenHandWholeness(){
   const internal=this as unknown as AdapterState;ensureResource(internal.activeCharacter);const snapshot=await previousGetSnapshot.call(this);ensureResource(snapshot.activeCharacter);const action=actionFor(snapshot.activeCharacter,snapshot.scene,internal.sessionMode);project(internal.scene,action);project(snapshot.scene,action);return snapshot;
@@ -71,8 +62,8 @@ MockAdapter.prototype.resolveAction=async function resolveOpenHandWholenessActio
   const internal=this as unknown as AdapterState;const snapshot=await internal.getSnapshot();const source=snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.id===actionId);const actor=internal.scene.entities.find((entry)=>entry.id===snapshot.activeCharacter.id);
   if(!source?.available||!actor||targetIds.length!==1||targetIds[0]!==actor.id)return snapshot;if(internal.sessionMode==="initiative"&&internal.role==="player"&&actor.id!==internal.scene.currentActorId)return snapshot;
   const level=monkLevel(internal.activeCharacter);const state=seedResource(this,internal);if(!state||!state.combatants[actor.id])return snapshot;const die=monkMartialArtsDieSides(level);const face=rollDie(this,actionId,die);const wisdomModifier=Math.floor((internal.activeCharacter.abilities.wis-10)/2);const resolutionId=`monk.open-hand.wholeness.${Date.now()}.${Math.floor(Math.random()*1000)}`;const beforeHp=actor.hp;
-  const request={id:resolutionId,actorId:actor.id,expectedRevision:state.revision,monkLevel:level,subclassId:internal.activeCharacter.subclassIds?.[MONK_OPEN_HAND_CLASS_ID],wisdomModifier,martialArtsDieFace:face};
-  const committed=resolveWholeness(state,request,internal.sessionMode==="initiative");if(committed.status==="rejected")return snapshot;
+  const request={id:resolutionId,actorId:actor.id,expectedRevision:state.revision,monkLevel:level,subclassId:internal.activeCharacter.subclassIds?.[MONK_OPEN_HAND_CLASS_ID],wisdomModifier,martialArtsDieFace:face,useBonusActionEconomy:internal.sessionMode==="initiative"};
+  const committed=resolveOpenHandWholenessOfBody(SIMPLEVTT_APP_RULES_PROFILE,state,request);if(committed.status==="rejected")return snapshot;
   const projected=applyResolutionEvents(internal.scene,committed.events,internal.activeCharacter.resources,internal.activeCharacter.items,state);if(projected.status==="rejected")return snapshot;const writeBack=await persistCharacterResolutionEvents(this,committed.events,"forward");if(writeBack.status==="rejected")return snapshot;if(!commitAdapterTurnRuntimeState(this,internal.scene,state.revision,committed.state)){if(writeBack.changed)await persistCharacterResolutionEvents(this,committed.events,"inverse");return snapshot;}
   internal.scene=projected.scene;internal.activeCharacter.resources=projected.resources;const session=turnRuntimeSessions.get(this);if(session)projectTurnRuntimeToScene(session,internal.scene);const after=internal.scene.entities.find((entry)=>entry.id===actor.id)!;const healed=Math.max(0,after.hp-beforeHp);const outcome=`${healed} HP 회복`;
   const resolution:ResolutionView={id:resolutionId,actorId:actor.id,targetIds:[actor.id],actionId,actionName:"신체 완성",rollKind:"healing",stage:"complete",authoritativeDice:[face],rollTotal:face+wisdomModifier,saveResults:[],damageComponents:[],compact:`${actor.name} · ${outcome}`,detail:[`신체 완성 ${face}+${wisdomModifier}`],provenance:["SRD 5.2.1 · Monk · Warrior of the Open Hand · Wholeness of Body"],calculatedOutcome:outcome,finalOutcome:outcome,stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false};
