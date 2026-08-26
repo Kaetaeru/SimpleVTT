@@ -7,54 +7,34 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:18:53+09:00`
+- checkpointed_at: `2026-08-26T14:24:30+09:00`
 
 ## Durable execution checkpoint
 
-Mandatory preflight was repeated in order: `README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`, then live branch and canonical V1 routing were reconciled. Run/sequence/task identity remains unchanged.
+Mandatory preflight was completed in the required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`) and live/canonical routing was reconciled. Run/sequence/task identity is unchanged.
 
-Validated Rage, Druid Wild Shape, Monk Focus, and earlier green work was not repeated.
+Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, and Rogue Cunning Action/Uncanny Dodge R1 remain source-complete/execution-validated. Rogue exact checkpoint remains `5bb8bfbc4753dcc15f1198a04c0982817176c644` with UI run `32932781542` and Phase 12 run `32932781591` green.
 
-Rogue R1 is source-complete and execution-validated:
+Current R1 remains Berserker `Intimidating Presence` only. During this execution several concurrent workers wrote equivalent adapter/test variants to the same branch. Reconciliation therefore took precedence over feature expansion.
 
-- `5bb8bfbc4753dcc15f1198a04c0982817176c644` is the exact Rogue execution checkpoint.
-- Cunning Action reuses existing Dash/Disengage/Hide mechanics with Rogue Bonus Action projection.
-- Uncanny Dodge reuses the atomic attack transaction with a `0.5` damage multiplier and `floor` rounding; it no longer treats display average as mechanics authority.
-- `07c68ab43404c590a408d3673439fe0ea147d289` preserves Uncanny Dodge on the existing event-native Undo path.
-- UI run `32932781542` / frontend job `98068084958` is green at the exact Rogue checkpoint.
-- Phase 12 Connected Session run `32932781591` / connected-protocol job `98068085017` is green, including the production frontend gate that runs `npm run build`.
-- `npm run build` includes `npm run test:rogue-core`, so focused Rogue coverage and the canonical production build are green on the exact checkpoint.
+Current coherent production wiring after duplicate cleanup:
 
-Canonical execution routing advanced in `502eb753fb81e061195da63622c0e3325fb170dd` (`docs: advance V1 handoff past Rogue R1`). `.agents/V1_CURRENT_HANDOFF.md` marks Rogue R1 complete and points to subclass action projection inventory.
+- `95f471ce77d8f3c8fc295ba1213441c0a3f4998c` removed duplicate Berserker adapters.
+- `src/app/offlineRuntimeAdapters.ts` currently installs only `./barbarianBerserkerIntimidatingPresenceRuntimeAdapter` for this feature.
+- `package.json` currently gates `tests/ui/barbarianBerserkerIntimidatingPresenceRuntime.test.ts` through `test:berserker-presence` inside `npm run build`.
+- The focused test now includes initiative projection/resource/Bonus Action/frightened/Activity/generic Undo evidence and a freeform non-stranding assertion (`f8995f60cbaddb41d0fb8c899aadb4d740858b28`).
+- `ca4667662184a451107c1b2d5182b63706c8dfb7` added the smallest domain compatibility seam: `BerserkerIntimidatingPresenceRequest.useBonusActionEconomy?: boolean`, defaulting to existing behavior and omitting the Bonus Action event only when explicitly `false`.
 
-Subclass inventory found the first high-confidence production projection gap without creating speculative buttons:
+Important remaining seam at this checkpoint:
 
-- `src/domain/bardCollegeLore.ts` College of Lore `Cutting Words` is trigger-driven Reaction mechanics. Do not expose it as an always-clickable action-bar button.
-- `src/domain/barbarianBerserker.ts` implements `Intimidating Presence` as a complete Bonus Action resolver: its own resource spend, targeting, Wisdom saves, frightened effect, and economy semantics.
-- No Berserker production runtime/action adapter exists in `src/app`; `Intimidating Presence` remains the first suitable subclass action projection target.
-- Wider inventory also found mechanics-complete but later candidates such as Open Hand `Wholeness of Body` and Devotion `Holy Nimbus`; do not jump to them before the current Berserker pointer is completed. `Preserve Life` and `Land's Aid` require additional allocation/point-AOE input and must not be surfaced as dead/incomplete action buttons.
+- The currently wired `src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` still calls `resolveBerserkerIntimidatingPresence(...)` without passing `useBonusActionEconomy`.
+- Therefore the newly added freeform assertion is expected to remain red until the adapter passes `useBonusActionEconomy: internal.sessionMode === "initiative"` (or an equivalent minimal expression preserving initiative behavior).
+- No canonical completion claim was made. Exact-head CI for the concurrent cleanup/fix chain was still running/advancing; earlier observed cleanup-head runs were UI `32933824963` and Phase 12 `32933825040` at `95f471ce...`.
 
-Live production conventions for the Berserker implementation are now verified:
+Do not re-create deleted duplicate adapter/test variants. Do not expose Cutting Words as an action button. Preserve the exclusion of `Preserve Life` / `Land's Aid` until their missing allocation/point-AOE authoring inputs exist. Connected remote-owner exactly-once/reconnect remains R2.
 
-- `src/app/clericTurnUndeadActionRuntimeAdapter.ts` is the closest production pattern: seed the Character resource into TurnRuntime, resolve the existing domain transaction, apply/persist ResolutionEvents, commit TurnRuntime, project Activity, and record the same events for generic event-native Undo.
-- `tests/ui/clericTurnUndeadActionRuntime.test.ts` shows the focused deterministic pattern: `setQueuedD20(...)`, explicit initiative/current actor selection, resource/economy/effect assertions, then `undoLastResolution()` restoration.
-- `src/app/productionPlayRuntimeAdapter.ts` confirms `ActionVm.target` supports `any`; a Berserker action can project creature targets without inventing a new target kind. Self remains excluded by the domain feature contract.
-- `resolveRuntimeTargetingFact(...)` treats a missing authoritative spatial-module fact as unconstrained/in-range, so a projected 30-foot action can preserve the mapless fallback while rejecting explicit provider facts beyond 30 feet.
-- Important freeform seam: `compileBerserkerIntimidatingPresence(...)` currently always emits a `use-economy` Bonus Action operation. Existing production patterns such as Abjure Foes and Rage omit turn-economy consumption in freeform. The production adapter must not strand freeform Bonus Action state. Add only the smallest compatibility seam, preferably optional `useBonusActionEconomy?: boolean` with the existing domain behavior as the default, and pass `false` only for freeform. This is plumbing, not a new mechanic.
-- No product source patch was started after this verification because the Rerun hard-stop boundary was reached.
-
-`PLAN.md` remains intentionally unchanged because run identity and routing mechanism did not change.
-
-## Preserved verified state
-
-- Rage, Druid Wild Shape, Monk Focus, and Rogue R1 remain source-complete/execution-validated; do not repeat them.
-- Connected remote-owner exactly-once/reconnect matrices remain R2 unless a direct R1 regression requires them.
-- Do not rerun the historical full 1303/1303 matrix merely because execution resumed.
-- Do not expose `Cutting Words` as a dead/free-standing action button; it is trigger-driven Reaction mechanics.
-- Do not expose subclass mechanics requiring product inputs the current action path cannot author (for example Preserve Life allocations or Land's Aid point/AOE composition).
+`PLAN.md` remains unchanged.
 
 ## Next Exact Action
 
-Create the smallest dedicated Berserker `Intimidating Presence` production adapter, following the existing Turn Undead event-native action pattern. Reuse `barbarianRuntimeResourceDefinitions`, `berserkerIntimidatingPresenceDc`, and `resolveBerserkerIntimidatingPresence`; do not duplicate their mechanics. Add the minimal optional economy-plumbing seam needed so initiative spends Bonus Action while freeform does not strand turn economy, preserving the current domain default behavior. Project one Bonus Action with `target: "any"`, excluding self; use `resolveRuntimeTargetingFact(...)` so explicit facts beyond 30 feet are ineligible while missing spatial facts remain unconstrained. Add focused deterministic UI/runtime evidence using `setQueuedD20(...)` for projection, initiative Bonus Action/resource consumption, failed-save frightened effect, Activity, generic event-native Undo restoration, and freeform non-stranding. Wire only that adapter/test into canonical offline/build composition, run exact-head `npm run build`, and advance canonical routing only after green evidence. Do not touch passive Berserker features or R2 remote/reconnect behavior.
-
-Keep the same run/sequence/task identity. `control.json` must be written last.
+First reconcile the live branch because concurrent commits may have advanced past `ca4667662184a451107c1b2d5182b63706c8dfb7`. If the wired adapter has not already been fixed, make only the one minimal dispatch change so `resolveBerserkerIntimidatingPresence(...)` receives `useBonusActionEconomy: internal.sessionMode === "initiative"`. Do not create another adapter. Then use exact-head GitHub Actions evidence for canonical `npm run build`; the build-gated focused test must pass both initiative and freeform cases, including resource spend, Bonus Action semantics, frightened effect, Activity, and generic event-native Undo. Only after exact-head green evidence update canonical V1 routing, then update this STATE and `control.json` last. If a newer live commit already performs the dispatch fix, do not repeat it; verify that exact head instead.
