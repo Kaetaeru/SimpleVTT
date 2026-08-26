@@ -9,9 +9,10 @@ import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState, turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
-import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
-import { BARBARIAN_RAGE_TAG, resolveBarbarianRageEnd, resolveBarbarianRageExtend, resolveBarbarianRageStart } from "../domain/barbarianRage";
+import { BARBARIAN_BERSERKER_SUBCLASS_ID, BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID, compileBerserkerMindlessRageStart } from "../domain/barbarianBerserker";
+import { BARBARIAN_RAGE_TAG, compileBarbarianRageStart, resolveBarbarianRageEnd, resolveBarbarianRageExtend, resolveBarbarianRageStart } from "../domain/barbarianRage";
 import { barbarianRageExtensionUpdate } from "../domain/barbarianRageLifecycle";
+import { resolvePendingResolution } from "../domain/resolution";
 
 const ACTION_ID="action.barbarian.rage";
 const EXTEND_ACTION_ID="action.barbarian.rage.extend";
@@ -136,12 +137,25 @@ MockAdapter.prototype.resolveAction=async function resolveBarbarianRageFromHotba
   if(!state||!state.combatants[actor.id])return snapshot;
   const extending=actionId===EXTEND_ACTION_ID;
   const resolutionId=`barbarian.rage.${extending?"extend":"start"}.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const mindlessRage=!extending&&level>=6&&actor.subclassIds?.[BARBARIAN_CLASS_ID]===BARBARIAN_BERSERKER_SUBCLASS_ID;
   const committed=extending
     ?resolveBarbarianRageExtend(SIMPLEVTT_APP_RULES_PROFILE,state,{id:resolutionId,actorId:actor.id,expectedRevision:state.revision})
-    :resolveBarbarianRageStart(SIMPLEVTT_APP_RULES_PROFILE,state,{
-      id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
-      wearingHeavyArmor:wearingHeavyArmor(actor),useBonusActionEconomy:internal.sessionMode==="initiative",
-    });
+    :mindlessRage
+      ?(()=>{
+        const rage=compileBarbarianRageStart(state,{
+          id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
+          wearingHeavyArmor:wearingHeavyArmor(actor),useBonusActionEconomy:internal.sessionMode==="initiative",
+        });
+        const mindless=compileBerserkerMindlessRageStart(state,{
+          id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
+          subclassId:actor.subclassIds?.[BARBARIAN_CLASS_ID],
+        });
+        return resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{...rage,operations:[...rage.operations,...mindless.operations]});
+      })()
+      :resolveBarbarianRageStart(SIMPLEVTT_APP_RULES_PROFILE,state,{
+        id:resolutionId,actorId:actor.id,expectedRevision:state.revision,barbarianLevel:level,
+        wearingHeavyArmor:wearingHeavyArmor(actor),useBonusActionEconomy:internal.sessionMode==="initiative",
+      });
   if(committed.status==="rejected")return snapshot;
   const projected=applyResolutionEvents(internal.scene,committed.events,actor.resources,actor.items,state);
   if(projected.status==="rejected")return snapshot;
@@ -159,8 +173,8 @@ MockAdapter.prototype.resolveAction=async function resolveBarbarianRageFromHotba
   const resolution:ResolutionView={
     id:resolutionId,actorId:actor.id,targetIds:[actor.id],actionId,actionName:label,rollKind:"effect",stage:"complete",
     authoritativeDice:[],saveResults:[],damageComponents:[],compact:outcome,
-    detail:[extending?"격노 지속 시간을 다음 턴 끝까지 연장":"근력 판정/내성 이점 · 물리 피해 저항 · 근력 공격 Rage Damage"],
-    provenance:["SRD 5.2.1 · Barbarian Rage"],calculatedOutcome:outcome,finalOutcome:outcome,stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
+    detail:[extending?"격노 지속 시간을 다음 턴 끝까지 연장":mindlessRage?"근력 판정/내성 이점 · 물리 피해 저항 · 근력 공격 Rage Damage · 매혹/공포 면역":"근력 판정/내성 이점 · 물리 피해 저항 · 근력 공격 Rage Damage"],
+    provenance:mindlessRage?["SRD 5.2.1 · Barbarian Rage","SRD 5.2.1 · Path of the Berserker · Mindless Rage"]:["SRD 5.2.1 · Barbarian Rage"],calculatedOutcome:outcome,finalOutcome:outcome,stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
   };
   internal.resolution=resolution;
   internal.activity.unshift(projectResolutionEventsToActivity({resolution,events:committed.events,actorName:actor.name,targetNames:[actor.name]}));
