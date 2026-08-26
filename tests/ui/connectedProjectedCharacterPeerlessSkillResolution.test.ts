@@ -130,3 +130,42 @@ test("host-unknown Lore Peerless Skill accepts owner interrupt, spends Inspirati
     assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"duplicate");assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,persistenceAfterUndo);
   } finally {tauriSessionTransport.send=originalSend;tauriSessionTransport.sendTo=originalSendTo;}
 });
+
+test("host-unknown Lore Peerless Skill preserves Inspiration when the authoritative die cannot rescue the failed check",async()=>{
+  const host=new MockAdapter();await host.setReferenceRole("dm");
+  const before=await host.getSnapshot();const catalog=structuredClone(before.catalog);const remote=remoteLoreBard(catalog);const remoteManifest=manifest(remote);const projection=buildCharacterSessionProjectionV1(remote,catalog);
+  const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
+  await host.startInitiative();await host.setCurrentActor(remote.id);
+  let snapshot=await host.getSnapshot();
+  const check=(snapshot.scene.actionsByActor[remote.id]??[]).find((action)=>action.resolutionKind==="ability-check");assert.ok(check);
+  const beforeUses=inspirationCurrent(projectedCharacterById(host,remote.id)!.sheet);assert.equal(beforeUses,4);
+
+  const state=connectedStateFor(host);state.mode="host";state.sessionId="session.r2.remote-peerless-skill.no-spend";state.ledger=new HostSessionLedger(state.sessionId,connectedManifest(host));state.peerManifests.set(PEER,structuredClone(remoteManifest));
+  const broadcasts:string[]=[];const originalSend=tauriSessionTransport.send,originalSendTo=tauriSessionTransport.sendTo;
+  tauriSessionTransport.send=async(message:string)=>{broadcasts.push(message);return 1;};tauriSessionTransport.sendTo=async()=>1;
+  try {
+    await host.setQueuedD20(4);
+    const request:ConnectedActionRequest={sessionId:state.sessionId,requestId:"request.r2.remote-peerless-skill.no-spend",actorId:remote.id,actionId:check!.id,targetIds:[],knownEventCursor:0,character:remoteManifest.character,capabilities:[...CONNECTED_CAPABILITIES]};
+    assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
+    snapshot=await host.advanceResolution();const failedTotal=snapshot.resolution?.rollTotal;assert.equal(typeof failedTotal,"number");
+    snapshot=await host.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:failedTotal!+10});assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
+
+    await host.setQueuedD20(3);
+    const response={sessionId:state.sessionId,resolutionId:snapshot.resolution!.id,promptId:INTERRUPT_ID,accept:true};
+    assert.equal(await routeConnectedInterruptResponse(host,{peer:PEER,message:""},response),true);
+    snapshot=await host.getSnapshot();assert.equal(state.pendingRemoteAction,null);assert.equal(state.ledger.cursor,1);assert.equal(snapshot.resolution?.stage,"complete");
+    assert.deepEqual(snapshot.resolution?.authoritativeDice,[4,3]);assert.equal(snapshot.resolution?.rollTotal,failedTotal!+3);assert.equal(snapshot.resolution?.checkOutcome,"실패");
+    assert.equal(inspirationCurrent(projectedCharacterById(host,remote.id)!.sheet),beforeUses);assert.deepEqual(snapshot.characters,before.characters);
+
+    const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");assert.equal(batches.length,1);
+    const hostEvent=batches[0].events?.[0];assert.ok(hostEvent);assert.equal(hostEvent!.payload.kind,"resolution");
+    if(hostEvent!.payload.kind!=="resolution")throw new Error("expected Host Peerless Skill resolution event");
+    const changes=hostEvent!.payload.resolutionEvents.flatMap((event)=>event.stateChanges);
+    assert.equal(changes.some((change)=>change.kind==="resource"&&change.targetId===remote.id&&change.resourceId===BARDIC_INSPIRATION_RESOURCE_ID),false,"failed Peerless Skill must not publish an Inspiration spend");
+
+    const client=new MockAdapter();setCharacterLibraryStoreForTests(client,new MemoryCharacterLibraryStore());prepareOwningClient(client,remote,projection,catalog);
+    const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=state.sessionId;clientState.replica=new ClientSessionReplica(state.sessionId);
+    const applied=await applyConnectedClientEvents(client,[hostEvent!]);assert.equal(applied.status,"applied");assert.equal(applied.cursor,1);
+    const clientAfter=await client.getSnapshot();assert.equal(inspirationCurrent(clientAfter.activeCharacter),beforeUses);
+  } finally {tauriSessionTransport.send=originalSend;tauriSessionTransport.sendTo=originalSendTo;}
+});
