@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:36:30+09:00`
+- checkpointed_at: `2026-08-26T14:43:57+09:00`
 
 ## Durable execution checkpoint
 
@@ -15,33 +15,34 @@ Mandatory preflight was completed in the required order (`README.md` -> `control
 
 Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge R1, and Berserker Intimidating Presence R1 remain source-complete/execution-validated.
 
-Berserker exact checkpoint remains `1df452fcd951525242631e2cb345e6ee390251fd`:
+Active R1 is **Monk Open Hand — Wholeness of Body**. Existing mechanics-domain implementation is reused; no new generic engine was introduced.
 
-- UI run `32934223691`, frontend job `98072253329`: **success**.
-- Phase 12 run `32934223675`, connected-protocol job `98072253248`: **success**.
-- canonical handoff advanced at `dd71e88bce66f1039a08af69809b03230b21a87e`.
-- durable Berserker completion checkpoint/control were published through `638cb801547f474bb3f40249581f423d01f0ddbb`.
+Wholeness implementation chain already present and must not be duplicated:
 
-The remaining subclass-action inventory was resumed. Ranger Hunter resolvers are trigger/reaction/rider semantics, Warlock Fiend candidates require trigger/rest or additional dice/attack context, and Paladin Devotion Holy Nimbus requires ongoing aura consumers. The smallest independent mechanics-complete action gap identified is **Monk Open Hand — Wholeness of Body**. Existing `progressionPhase08MonkOpenHandAdapter.ts` only handles progression; no production Wholeness action runtime existed before this checkpoint.
+- `1ca17f135fb41e805b1a044535ba764f9f8be019` — production Wholeness adapter using the existing domain resolver, resource definition, ResolutionEvent application/write-back, Activity projection, runtime history, and generic Undo boundary.
+- `bd76d7fc9602005a7d982784375a624e52359781` — focused initiative projection/resource/healing/Bonus Action/Activity/Undo coverage.
+- `f6f965a50b311ab341396da0579a2ea0c0d92c6a` — canonical offline adapter install.
+- `1db96f19e86dbc6017c20e0144632b3173ed48fc` — `test:open-hand-wholeness` added to canonical `npm run build`.
 
-Concurrent product commits landed and must not be duplicated:
+Checkpoint `1db96f19e86dbc6017c20e0144632b3173ed48fc` is green:
 
-- `1ca17f135fb41e805b1a044535ba764f9f8be019` — adds `src/app/monkOpenHandWholenessRuntimeAdapter.ts`, reusing the existing `resolveOpenHandWholenessOfBody` domain resolver, subclass resource definition, event application/write-back, Activity projection, runtime history, and generic Undo boundary. The local die helper derives an unbiased Martial Arts die face from the existing authoritative d20 source by rejection sampling rather than adding a second RNG abstraction.
-- `bd76d7fc9602005a7d982784375a624e52359781` — adds focused initiative coverage for projection/resource/healing/Bonus Action/Activity/Undo and level gating.
-- `f6f965a50b311ab341396da0579a2ea0c0d92c6a` — installs the Wholeness adapter in canonical `offlineRuntimeAdapters.ts` composition.
-- `1db96f19e86dbc6017c20e0144632b3173ed48fc` — adds `test:open-hand-wholeness` and includes it in canonical `npm run build`.
+- UI run `32934685748`, frontend job `98073537891`: **success**, including `Typecheck and build`.
+- Phase 12 run `32934685775`: connected authority protocol and production frontend gate **success**.
 
-Exact-head CI for `1db96f19e86dbc6017c20e0144632b3173ed48fc` was still running at checkpoint time:
+The freeform non-stranding gap was then addressed by concurrent commits and must not be reimplemented:
 
-- UI run `32934685748`: **in progress** at last observation.
-- Phase 12 Connected Session run `32934685775`: **in progress** at last observation.
+- `d7916ffe5d541fdb091adf72af722024c538f78e` routes Wholeness economy through the domain resolver with a context flag so Bonus Action is consumed only in initiative while resource/healing events remain shared.
+- focused coverage now includes freeform healing/resource/Activity/Undo and verifies no Bonus Action spend.
+- the first freeform regression revision was red because its helper had not actually switched the adapter into `freeform` mode.
+- `eafaff11101f6576ac46efe8eb4b6f8fd72d29a8` fixes only that fixture by explicitly calling `setSessionMode("freeform")`; do not duplicate this fix.
 
-Do **not** mark Wholeness R1 complete yet. Review found one acceptance gap not covered by the current focused test: `compileOpenHandWholenessOfBody` always emits Bonus Action economy, while the new adapter calls the same resolver in freeform. Unlike Berserker, there is not yet an explicit freeform non-stranding seam/test. Preserve initiative behavior by default; the minimal expected fix, if live HEAD has not already supplied one, is a domain request flag defaulting to existing Bonus Action behavior and an adapter pass-through keyed to `sessionMode === "initiative"`, plus one focused freeform regression. Do not implement an app-side operation filter or a new generic dice subsystem.
+Exact-head validation for source checkpoint `eafaff11101f6576ac46efe8eb4b6f8fd72d29a8` is still running at this durable checkpoint:
 
-`PLAN.md` remains unchanged. Do not expose College of Lore `Cutting Words` as a free-standing button. Keep `Preserve Life` / `Land's Aid` excluded until their allocation/point-AOE authoring inputs exist. Connected remote-owner exactly-once/reconnect remains R2.
+- UI run `32935101447`, frontend job `98074719852`: all observed pre-build steps green; `Typecheck and build` was **in progress**.
+- Phase 12 run `32935101467`, connected-protocol job `98074719995`: authority protocol and offline walkthrough green; `production frontend gate` was **in progress**.
+
+Do **not** mark Wholeness R1 complete or advance canonical routing until both exact-head gates finish green. Do not rerun previously green R1 work. `PLAN.md` remains unchanged. Connected remote-owner exactly-once/reconnect remains R2 and excluded.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first because concurrent commits may have advanced beyond `1db96f19e86dbc6017c20e0144632b3173ed48fc`. Do not repeat Wholeness adapter/test/install/build-gate creation.
-
-Inspect exact-head UI/Phase 12 results for the latest source-equivalent Wholeness head. If red, fix only the first Wholeness-related failure. Before any completion claim, add or verify explicit freeform non-stranding evidence: preserve domain default initiative Bonus Action behavior, omit only the turn-economy operation in freeform through the smallest domain seam, and prove resource/healing/Activity/Undo remain correct. Gate through canonical `npm run build`. Only after exact-head green + freeform evidence should canonical V1 routing advance to the next subclass inventory candidate. Keep R2 excluded.
+Reconcile live `work/v1-composite` first because concurrent commits may advance beyond `eafaff11101f6576ac46efe8eb4b6f8fd72d29a8`. If source-equivalent Wholeness HEAD has not changed, inspect UI run `32935101447` and Phase 12 run `32935101467` to completion. If red, fix only the first Wholeness-related failure. If both are green, mark Wholeness R1 source-complete/execution-validated, advance canonical V1 handoff/checklist to the next smallest mechanics-complete subclass action candidate, then publish durable `STATE.md` followed by `control.json` last. Keep R2 excluded.
