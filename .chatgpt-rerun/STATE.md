@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T20:13:00+09:00`
+- checkpointed_at: `2026-08-26T20:36:00+09:00`
 
 ## Durable checkpoint
 
@@ -42,7 +42,14 @@ Remote-owner Rage is now execution-validated without adding a new protocol or ru
 - `dec4f22178b1256597c140170481025bb26f39e3` fixes the adjacent projected write-back target type narrowing. Exact-head Phase 12 run `32963492151` / connected-protocol job `98160810148` passed the connected suite and `npm run build`; remote Rage resolution + compensating Undo + owning-client durable restore are green.
 - concurrent `cbbda07dd7c11ba126e79c26cba99586905e7dce` made Rogue Cunning Action Dash event-native using the existing canonical ResolutionEvent/economy path. Do not reimplement it.
 
-After the Rage slice, concurrent Wild Shape source-persistence cleanup moved known forms under `source.progression`. Intermediate head `657f7ea850350758bd5b0f5ac49977cd533d6df2` was red because `characterLibraryPersistence.ts` still referenced the old top-level field. Concurrent fix `b9a666c772820432bc024fa0b9fb503110111e15` aligns serialization/materialization with `progression.wildShapeKnownForms`. At this checkpoint, Phase 12 run `32963782057` / connected-protocol job `98161708187` is green through the connected authority suite and `npm run build`. This is direct regression reconciliation only; validated Wild Shape mechanics were not reworked.
+## R2 progress: remote-owner Wild Shape projection proof
+
+Wild Shape R1 mechanics remain unchanged. The connected-only gap was that host-unknown Druid SessionProjection lost `wildShapeKnownForms`, so the existing production Wild Shape adapter correctly refused to invent a form and therefore could not resolve the owner's requested form remotely.
+
+- `657f7ea850350758bd5b0f5ac49977cd533d6df2` moves the optional known-form fact into the existing `source.progression` envelope; concurrent fix `b9a666c772820432bc024fa0b9fb503110111e15` aligns Character source serialization/materialization with `progression.wildShapeKnownForms` without a schema bump or new protocol.
+- `a65cbd2926032d70f47495873996653c7622cb1e` adds `connectedProjectedCharacterWildShapeResolution.test.ts`: a host-unknown Druid retains the known Wolf form through projection reconstruction, resolves Wild Shape on Host authority, spends the ephemeral projected resource, gains Druid-level temporary HP, emits one ordered canonical event batch, and the owning Client durably applies the confirmed resource/temp-HP state exactly once.
+- `6f25193d93ea8bc010b85239e56055905b62c974` wires that focused proof into the existing Phase 12 connected gate. Exact-head Phase 12 run `32964082295` / connected-protocol job `98162628731` passed the connected authority suite, Phase 11 offline walkthrough, and production `npm run build`. Duplicate Host event and duplicate ActionRequest are explicitly idempotent in the focused test.
+- The Windows connected-playable job is not part of this R2 proof and remains R3 acceptance work.
 
 ## Next Exact Action
 
