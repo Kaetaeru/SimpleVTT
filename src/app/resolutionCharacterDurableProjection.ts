@@ -24,6 +24,9 @@ function itemResource(resourceId:string) {
 }
 
 function isCharacterDurableChange(change:RuntimeStateChange):change is CharacterDurableStateChange {
+  // Current spell-slot counts are authoritative TurnRuntime session state. Character persistence
+  // stores their maxima/source facts, not a parallel spell-slot-N resource current value.
+  if (change.kind==="resource"&&/^spell-slot-\d+$/.test(change.resourceId)) return false;
   return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life" || change.kind==="death-save");
 }
 
