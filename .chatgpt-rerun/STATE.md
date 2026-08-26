@@ -33,19 +33,20 @@ Actions job logs remain inaccessible to this integration (403), so exact-SHA tes
 - `ac4df00d256d721d1ff18ddefdae0875bf99304a`: only first Smite case active over the known-green Fiend boundary. UI `32947180684` **failure**; Connected `32947180662` failed shared build. Therefore first Smite focused case is independently red.
 - `68469e1b47342573742d6a4e97c4ffd1acd87545`: first Smite case early-returned immediately after `assert.ok(smite)`, but full Fiend coverage was active; UI `32947379834` **failure**, so this result was confounded.
 - `af30d17e1a5cc35df491cb757b682a1d69c9651c`: Fiend returned to the known-green `6038687` boundary; first Smite case remained skipped. No production code changed.
-- `a993ff8061a362cdc102985b1e7b0858437ec5c9`: first Smite case alone reactivated on top of `af30d17`, still early-returning immediately after `assert.ok(smite)`; second Smite case remained skipped. UI run `32947669347` **success**. This proves Fiend diagnostic setup and existing Divine Smite action projection are green.
+- `a993ff8061a362cdc102985b1e7b0858437ec5c9`: first Smite case alone reactivated on top of `af30d17`, early-returning immediately after `assert.ok(smite)`; second Smite case remained skipped. UI `32947669347` **success**. This proves Fiend diagnostic setup and existing Divine Smite action projection are green.
 - `78b9d382e1f68b23ddf81b710f226dc59d675ede`: test-only fixture alignment changed `devotionPaladin()` to existing production entry `startProductionLocalPlay("dm")`; no production mechanics changed.
-- `0b23d14e3f22615d1365560edaf0b1c626ff6a78`: advanced only the first Smite case past `resolveAction` through committed `resolutionId`, `stage === "complete"`, and `actionId`, then early-returned before Smite detail/Activity. UI run `32947868960` completed **success**. Therefore Divine Smite execution and committed resolution identity are green; the proven red seam is later: Smite of Protection detail/Activity or TurnRuntime marker/expiry/half-cover/Undo.
+- `0b23d14e3f22615d1365560edaf0b1c626ff6a78`: first Smite case advanced through `resolveAction` and committed `resolutionId`, `stage === "complete"`, and `actionId`, then returned before Smite detail/Activity. UI `32947868960` **success**. Therefore Divine Smite execution and committed resolution identity are green.
+- `6f2d322bfe77d89591909c240d88c0b2a3e683fd`: first Smite case advanced again through the Smite resolution-detail assertion and Activity provenance assertion, then returns before TurnRuntime marker checks. UI `32948045089` and Connected `32948045090` were **in progress** at checkpoint. No production mechanics changed.
 
-Current diagnostic test state inherited from `0b23d14e3f22615d1365560edaf0b1c626ff6a78`:
+Current diagnostic test state at live code boundary `6f2d322bfe77d89591909c240d88c0b2a3e683fd`:
 
 - `tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts`: first case returns immediately after `beforeUses === 4`; saving-throw and below-feature-level cases are temporarily `test.skip`.
-- `tests/ui/paladinDevotionSmiteOfProtectionRuntime.test.ts`: first case is active and returns after committed `resolutionId`/`stage`/`actionId`; second expiry/below-level case remains temporarily `test.skip`.
+- `tests/ui/paladinDevotionSmiteOfProtectionRuntime.test.ts`: first case is active and returns after Smite resolution detail + Activity assertions; second expiry/below-level case remains temporarily `test.skip`.
 - Smite fixture enters `startProductionLocalPlay("dm")` before Initiative.
 - No Fiend or Smite production mechanics file was changed by the current bisection.
 - All diagnostic skips/returns must be restored before canonical advancement.
 
-The first Smite focused case checks next, in order: Smite of Protection resolution detail, Activity provenance, TurnRuntime protection marker + expiry metadata + half-cover eligibility, then generic Undo removal.
+The remaining first-case assertions are TurnRuntime protection marker existence, expiry metadata, half-cover eligibility, then generic Undo removal.
 
 Inventory decisions to preserve:
 
@@ -57,4 +58,4 @@ Inventory decisions to preserve:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Starting from the `0b23d14e3f22615d1365560edaf0b1c626ff6a78` diagnostic code state unless GitHub has moved, keep Fiend at the known-green `6038687` boundary and the second Smite case skipped. Move only the first Smite early return to immediately after the Smite resolution-detail and Activity assertions. If that split is green, isolate TurnRuntime marker/expiry/half-cover/Undo; if red, split only detail versus Activity. Do not edit `paladinDevotionSmiteOfProtectionRuntimeAdapter.ts` until a concrete failing assertion proves its seam. After the seam is fixed, restore all Fiend and both Smite tests, verify `test:fiend-luck` and `test:devotion-smite-protection` execute/pass inside exact-head `npm run build`, require UI + Connected green, then advance canonical handoff/checklist. Update `STATE.md` then `control.json` last per protocol.
+Reconcile live `work/v1-composite` first. Check exact-SHA UI `32948045089` and Connected `32948045090` for `6f2d322bfe77d89591909c240d88c0b2a3e683fd`. If green, the proven failure is in TurnRuntime marker/expiry/half-cover/Undo; advance the early return only within that remaining block and isolate the first failing assertion. If red, split only Smite resolution detail versus Activity provenance. Keep Fiend at the known-green `6038687` boundary and the second Smite case skipped during isolation. Do not edit `paladinDevotionSmiteOfProtectionRuntimeAdapter.ts` until a concrete failing assertion proves its seam. After the seam is fixed, restore all Fiend and both Smite tests, verify `test:fiend-luck` and `test:devotion-smite-protection` execute/pass inside exact-head `npm run build`, require UI + Connected green, then advance canonical handoff/checklist. Update `STATE.md` then `control.json` last per protocol.
