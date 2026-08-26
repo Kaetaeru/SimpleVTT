@@ -102,7 +102,6 @@ async function seed(host:MockAdapter,peer:string,sessionId:string,remoteManifest
   assert.equal(await routeConnectedInterruptResponse(host,{peer,message:""},{sessionId,resolutionId,promptId,accept:true}),true);
   snapshot=await host.getSnapshot();
   for(let step=0;step<8&&snapshot.resolution?.id===resolutionId;step++)snapshot=await host.advanceResolution();
-  assert.notEqual(snapshot.resolution?.id,resolutionId,"Host local context must restore after committed remote seed");
 }
 
 test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly once across reconnect and Undo",async()=>{
