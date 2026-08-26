@@ -4,6 +4,7 @@ import "../../src/app/offlineRuntimeAdapters";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { AppSnapshot, CharacterSheet, SceneVm } from "../../src/app/contracts";
 import { previewRuntimeAtomicAttackDamage } from "../../src/app/phase09RealRuntimeAttackAdapter";
+import { runtimeResolutionEventHistory } from "../../src/app/runtimeResolutionEventHistory";
 import {
   CUNNING_DASH_ACTION_ID,
   CUNNING_DISENGAGE_ACTION_ID,
@@ -12,7 +13,7 @@ import {
   UNCANNY_DODGE_REACTION_ID,
 } from "../../src/app/rogueCoreRuntimeAdapter";
 
-async function rogue(level=5){
+async function rogue(level=5,stealth=5){
   const adapter=new MockAdapter();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm;role:"player"|"dm"};
   internal.activeCharacter={
@@ -21,7 +22,7 @@ async function rogue(level=5){
     level,
     ac:15,
     tempHp:0,
-    skills:[...internal.activeCharacter.skills.filter((entry)=>!entry.startsWith("은신")),"은신 +5"],
+    skills:[...internal.activeCharacter.skills.filter((entry)=>!entry.startsWith("은신")),`은신 ${stealth>=0?"+":""}${stealth}`],
     classLevels:[{classId:ROGUE_CLASS_ID,className:"도적",level}],
   };
   const actor=internal.scene.entities.find((entry)=>entry.id===internal.activeCharacter.id);
@@ -87,6 +88,42 @@ test("Cunning Action Disengage applies the existing Disengage state and Undo res
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("이탈")),false);
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,true);
+});
+
+test("Cunning Action Hide records hidden state/economy, Undo restores them, and attacking reveals the Rogue event-natively",async()=>{
+  const adapter=await rogue(5,20);
+  await adapter.startInitiative();
+  let snapshot=await adapter.getSnapshot();
+  const actorId=snapshot.activeCharacter.id;
+  await adapter.setCurrentActor(actorId);
+
+  await adapter.resolveAction(CUNNING_HIDE_ACTION_ID,[]);
+  snapshot=await finish(adapter);
+  assert.equal(snapshot.resolution?.finalOutcome.includes("숨기 성공"),true);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),true);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,false);
+  const hideEvents=runtimeResolutionEventHistory(adapter)?.events??[];
+  assert.equal(hideEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="effect"&&change.operation==="added")),true);
+  assert.equal(hideEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="economy"&&change.field==="bonusAction"&&change.after===false)),true);
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),false);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,true);
+
+  await adapter.resolveAction(CUNNING_HIDE_ACTION_ID,[]);
+  snapshot=await finish(adapter);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),true);
+  await adapter.dismissResolution();
+  snapshot=await adapter.resolveAction("action.longsword",["combatant.goblin-a"]);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),false,"attack declaration reveals the Rogue");
+  snapshot=await finish(adapter);
+  const attackEvents=runtimeResolutionEventHistory(adapter)?.events??[];
+  assert.equal(attackEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="effect"&&change.operation==="removed")),true);
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),true,"Undo restores the pre-attack hidden effect");
 });
 
 test("Rogue level 5 Uncanny Dodge spends Reaction, halves a hit, records Activity, and Undo restores HP/economy",async()=>{
