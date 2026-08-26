@@ -7,42 +7,35 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T15:57:00+09:00`
+- checkpointed_at: `2026-08-26T16:28:00+09:00`
 
 ## Durable execution checkpoint
 
 Mandatory preflight was completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`) and live GitHub state was treated as authoritative.
 
-Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, and Open Hand Fleet Step R1 remain source-complete/execution-validated.
+Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, and Paladin Devotion Holy Nimbus R1 remain source-complete/execution-validated.
 
-**Paladin Devotion — Holy Nimbus R1 is source-complete + execution-validated without new product code in this checkpoint.**
+**Open Hand Quivering Palm R1 is now source-complete + execution-validated.**
 
-Implementation/evidence to preserve and not duplicate:
+Evidence to preserve and not duplicate:
 
-- `9296e234c8ae7697cb229a638db121c7eae6acbf` — exposes Devotion Holy Nimbus as a production action using the existing `paladinDevotion` domain resolver/resource.
-- `be30dadb32f37eaa019e968696666ccc48d5cbb3` — keeps Holy Nimbus freeform-safe by avoiding stranded initiative Bonus Action economy.
-- `251a096fc505e90d136a483fae8eecde525639ae` and `e66e2efe61480ad4c8ce53b58ee1113520fb6b53` — deterministic projection/resource/economy/Activity/Undo plus freeform coverage.
-- `68ae6ac2d06f174faf5aaba68d45883a06f6e45b` — adds `test:devotion-holy-nimbus` to `npm run build`.
-- Exact product source `21b5ab830442318e5c5b499464a746fb4370cd4b` contains the final Holy Nimbus source/test/build gate. Later commits through the reconciled handoff are documentation/rerun-state only for this product seam.
-- UI run `32939892234`, frontend job `98088532407`: **success**, including `Typecheck and build`; `npm run build` includes `test:devotion-holy-nimbus`.
-- Phase 12 run `32939892195`, connected-protocol job `98088532135`: **success**, including connected-session authority protocol, Phase 11 offline walkthrough, and production frontend gate.
-- R1 behavior covered: Paladin 20+ Devotion-only projection, self target, resource 1/long rest, initiative Bonus Action economy, freeform no stranded economy, Activity, and generic/event-native Undo.
+- Product/runtime chain: `011ad92f47f73a774f3b41fde9cb93a6925505d6` (runtime), `45e1ec377431a7d63fecc2fdd82be26c3144c84b` (offline install), `5a556073b609b1f27314780ac6e9394f257f7340` (focused coverage), `00bfe4c779b812fd4554319404cc0e6c67160c7e` (build gate).
+- Follow-up fixes were minimal and evidence-driven: `641d155decfa9479f0de3c1191fb54da82282897` removes the invalid UI-resource `recovery` field from the runtime resource bridge; `169712dffe2ee9efe116dcd54c0b14749ebb3248` aligns the test Character resource shape; `126cd848b1b7896eaa09f8775e60dcd9638fdf72` runs non-initiative cases in explicit freeform mode.
+- Exact product head: `126cd848b1b7896eaa09f8775e60dcd9638fdf72`.
+- UI run `32942627369`, frontend job `98096599031`: **success**, including all prior UI gates and `Typecheck and build`.
+- Phase 12 run `32942627376`, connected-protocol job `98096599197`: **success**, including connected-session authority protocol, Phase 11 offline walkthrough, and production frontend gate.
+- The separate `windows-connected-playable` job in that Phase 12 workflow was still running when this R1 checkpoint was written; it is release-artifact evidence, not a Quivering Palm R1 completion condition.
+- Focused behavior covers Open Hand Monk 17+ eligibility, post-Unarmed-Strike-hit seed, Focus 4 spend, replacement of a prior marked target, action detonation using the target Constitution save, 10d12 force damage with save handling, freeform/initiative economy, Activity, marker lifecycle, and Undo.
+- Unsupported `activation: "replace-attack"` remains deliberately unexposed until an attack-sequence replacement primitive exists.
 
 Inventory decisions to preserve:
 
-- Life Domain `Preserve Life` is not a minimal action-bar projection under the current `resolveAction(actionId,targetIds)` input contract because rules require player-selected per-target healing allocations. Do not auto-allocate and silently remove player choice.
-- Circle of the Land `Land's Aid` likewise carries richer point/multi-result input semantics; do not force it into a dead/simple button without the needed choice contract.
-- **Next selected R1 gap: Open Hand `Quivering Palm` supported action path.** `src/domain/monkOpenHand.ts` already owns mechanics-complete seed, Action detonation, and harmless-end resolvers, while no production `monkOpenHandQuiveringPalmRuntimeAdapter.ts` exists.
-- Quivering Palm `activation: "replace-attack"` is explicitly rejected by the domain until Attack-sequence replacement support exists. Do not expose that path or add a fake/dead button.
-- The supported R1 subset fits existing inputs: after a completed Unarmed Strike hit, offer an ephemeral follow-up to spend 4 Focus and seed the hit target; while the marker exists, expose the existing Action detonation path (or harmless end) against that target. Reuse existing target Constitution save facts, deterministic dice, ResolutionEvent/Activity/write-back, and generic Undo primitives. No new choice UI abstraction is needed for this subset.
-
-Canonical routing:
-
-- `.agents/V1_CURRENT_HANDOFF.md` routes to the same remaining subclass-domain-resolver inventory umbrella.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` remains correctly `PARTIAL`; one incremental subclass action does not earn a broad release checkbox.
-- `PLAN.md` unchanged.
-- R2 remote-owner exactly-once/reconnect remains excluded unless a direct R1 regression requires it.
+- Life Domain `Preserve Life` requires player-selected per-target healing allocation; do not auto-allocate under the current `resolveAction(actionId,targetIds)` contract.
+- Circle of the Land `Land's Aid` also requires richer point/multi-result input; do not force it into a simple button.
+- R2 remote-owner exactly-once/reconnect work remains excluded unless a direct R1 regression requires it.
+- `PLAN.md` is unchanged.
+- The release checklist remains `PARTIAL`; one additional subclass mechanic does not earn a broad V1 checkbox.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite`, then inspect the existing completed Unarmed Strike hit resolution/follow-up seam and target Constitution save provider. Implement only a thin Open Hand Quivering Palm R1 production adapter for the supported paths: post-hit seed (Focus 4), Action detonation, and harmless end if directly expressible. Do not implement or expose `replace-attack`. Reuse existing local/freeform/initiative/action-economy/Activity/ResolutionEvent/Undo primitives, add focused deterministic level/eligibility/seed/replacement-of-prior-marker/detonation-save-damage/Undo coverage, add the focused gate to `npm run build`, then require exact-head UI plus Phase12 connected-protocol green before canonical advancement.
+Reconcile live `work/v1-composite`, then inspect the existing completed Divine Smite cast/resolution seam and current half-cover/aura consumers. If no production bridge already exists, implement only the thin Paladin Devotion **Smite of Protection R1** path: Paladin 15+ Devotion, automatically apply the existing one-round `compileDevotionSmiteOfProtection` marker after a real Divine Smite cast, reuse existing ResolutionEvent/Activity/write-back/Undo/effect-expiry primitives, and add focused deterministic coverage plus the focused `npm run build` gate. Do not add a button or new choice UI because this feature is a post-cast automatic effect. If live GitHub already contains equivalent source or a newer canonical next pointer, GitHub wins and validated work must not be repeated.
