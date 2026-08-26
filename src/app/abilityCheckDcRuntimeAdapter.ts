@@ -12,27 +12,9 @@ interface AbilityCheckDcState {
 
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousApplyDmAdjudication=MockAdapter.prototype.applyDmAdjudication;
-const FIXED_CHECK_DCS:Readonly<Record<string,number>>={
-  "action.standard.hide.stealth":15,
-  "action.rogue.cunning-action.hide":15,
-};
 
 function isHost(adapter:MockAdapter,internal:AbilityCheckDcState) {
   return internal.role==="dm"||internal.session.role==="host"||connectedStateFor(adapter).mode==="host"||sessionDebugPreviewRoleFor(adapter)==="dm";
-}
-
-function applyFixedCheckDc(resolution:ResolutionView) {
-  const dc=FIXED_CHECK_DCS[resolution.actionId];
-  if(dc===undefined||resolution.rollKind!=="check"||resolution.stage!=="roll-animation"||resolution.checkTarget!==undefined)return false;
-  const total=resolution.rollTotal??0;
-  resolution.checkTarget=dc;
-  resolution.checkOutcome=total>=dc?"성공":"실패";
-  resolution.compact=`${total} vs DC ${dc} · ${resolution.checkOutcome}`;
-  resolution.calculatedOutcome=resolution.compact;
-  resolution.finalOutcome=resolution.checkOutcome;
-  resolution.detail.push(`규칙 고정 DC: ${dc}`);
-  resolution.provenance.push(`rules:fixed-ability-check-dc · ${resolution.actionId} · DC ${dc}`);
-  return true;
 }
 
 function awaitingDc(adapter:MockAdapter,internal:AbilityCheckDcState) {
@@ -46,7 +28,6 @@ function awaitingDc(adapter:MockAdapter,internal:AbilityCheckDcState) {
 MockAdapter.prototype.advanceResolution=async function advanceAbilityCheckToDmDc():Promise<AppSnapshot> {
   const internal=this as unknown as AbilityCheckDcState;
   const resolution=internal.resolution;
-  if(resolution&&applyFixedCheckDc(resolution))return previousAdvanceResolution.call(this);
   if (isHost(this,internal)&&resolution?.rollKind==="check"&&resolution.stage==="roll-animation"&&resolution.checkTarget===undefined) {
     resolution.stage="effect-preview";
     resolution.canAdvance=false;
