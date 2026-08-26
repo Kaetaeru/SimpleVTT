@@ -645,13 +645,13 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R1 Rogue Cunning Action / Uncanny Dodge
+R1 mechanics-complete subclass actions -> action bar exposure
 ```
 
 1. 통합 상태는 exact checkpoint `4a4cdb1`에서 full TS matrix 1303/1303, UI matrix 965/965와 production build가 green이다.
-2. open ability-check DM DC, generic Tactical Mind, Fighter Indomitable, Rage source, Druid Wild Shape R1 local lifecycle, Monk Focus R1 local lifecycle은 완료했다.
-3. Monk Focus exact checkpoint `c282a1e4fd6929dc56079d811021dcfe160d51f5`: UI run `32927666548` / job `98053688070`과 Phase 12 Connected Session run `32927666546` / connected-protocol job `98053687822`가 success이며 production build gate가 green이다.
-4. 다음 순서는 Rogue Cunning Action/Uncanny Dodge다. 완료된 Rage/Wild Shape/Monk Focus R1은 재구현하지 않는다.
+2. open ability-check DM DC, generic Tactical Mind, Fighter Indomitable, Rage source, Druid Wild Shape R1 local lifecycle, Monk Focus R1 local lifecycle, Rogue Cunning Action/Uncanny Dodge R1은 완료했다.
+3. Rogue exact checkpoint `5bb8bfbc4753dcc15f1198a04c0982817176c644`: UI run `32932781542` / job `98068084958`과 Phase 12 Connected Session run `32932781591` / connected-protocol job `98068085017`가 success이며 `npm run build`의 Rogue focused gate와 production build가 green이다.
+4. 다음 순서는 이미 domain resolver가 있는 subclass action 중 mechanics-complete인데 production action bar에 빠진 것만 노출하는 작업이다. 완료된 Rage/Wild Shape/Monk Focus/Rogue R1은 재구현하지 않는다.
 5. connected remote-owner exactly-once/reconnect/event-native Undo matrix는 R2에서 별도 완료하며, 그 전에는 V1-21/connected release DONE으로 승격하지 않는다.
 
 상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.
