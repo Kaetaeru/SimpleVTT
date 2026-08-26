@@ -11,7 +11,6 @@ import {
   MONK_FOCUS_RESOURCE_ID,
   MONK_OPEN_HAND_CLASS_ID,
   OPEN_HAND_FLEET_STEP_FEATURE_ID,
-  OPEN_HAND_FLEET_STEP_JUMP_TAG,
   STEP_OF_THE_WIND_SOURCE_ID,
   resolveOpenHandFleetStep,
 } from "../domain/monkOpenHand";
@@ -99,5 +98,3 @@ MockAdapter.prototype.resolveAction=async function resolveOpenHandFleetStepActio
 };
 
 MockAdapter.prototype.advanceResolution=async function advanceWithOpenHandFleetStepTrigger(){const snapshot=await previousAdvanceResolution.call(this);rememberTrigger(this,this as unknown as AdapterState);return this.getSnapshot();};
-
-export function hasOpenHandFleetStepJumpEffect(adapter:MockAdapter,actorId:string){return snapshotAdapterTurnRuntimeState(adapter,(adapter as unknown as AdapterState).scene)?.effects.some((effect)=>effect.sourceActorId===actorId&&effect.tags.includes(OPEN_HAND_FLEET_STEP_JUMP_TAG))??false;}
