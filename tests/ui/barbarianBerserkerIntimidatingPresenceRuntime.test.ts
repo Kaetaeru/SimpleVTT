@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { CharacterSheet, SceneVm } from "../../src/app/contracts";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 import {
   BARBARIAN_BERSERKER_SUBCLASS_ID,
   BARBARIAN_CLASS_ID,
@@ -23,6 +24,15 @@ async function berserker(mode:"initiative"|"freeform"="initiative"){
     abilities:{...internal.activeCharacter.abilities,str:18},
     resources:[],
   };
+  setSpatialRelation(internal.scene,{
+    sourceId:internal.activeCharacter.id,
+    targetId:"combatant.goblin-b",
+    distanceFeet:35,
+    visible:true,
+    cover:"none",
+    targetCanSeeAttacker:true,
+    provenance:"test:berserker-intimidating-presence:35ft",
+  });
   await adapter.getSnapshot();
   if(mode==="initiative"){
     await adapter.startInitiative();
