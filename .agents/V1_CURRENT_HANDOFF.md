@@ -14,9 +14,10 @@ Canonical target branch: **`work/v1-composite`**
 - 2026-08-26 GitHub compare에서 `4a4cdb1`은 `work/v1-composite`의 merge-base ancestor로 확인됨.
 - 같은 compare에서 branch는 `4a4cdb1`보다 ahead, behind 0으로 확인됨.
 - Druid Wild Shape exact execution checkpoint: `11bc8581a04678e33796054117f05b5455a25db3`.
-- `11bc858`은 현재 branch exact head에서 기존 UI / Rules Domain Actions가 모두 green이다. 이는 Wild Shape R1 실행 증거이며 전체 release DONE 판정은 아니다.
+- Monk Focus R1 exact execution checkpoint: `c282a1e4fd6929dc56079d811021dcfe160d51f5`.
+- `c282a1e`은 UI frontend job과 connected-protocol production frontend gate가 green이다. 이는 Monk Focus R1 실행 증거이며 전체 release DONE 판정은 아니다.
 
-따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
+따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
 ## 2. 실행 증거
 
@@ -73,6 +74,24 @@ Canonical target branch: **`work/v1-composite`**
 - `npm run build`가 `npm run test:druid-wild-shape`를 포함하므로 Wild Shape focused gate와 production build가 exact SHA에서 green이다.
 - 결론: **Druid Wild Shape R1 local/source lifecycle은 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect/Undo는 R2에서 별도 검증한다.
 
+### Green — Monk Focus R1 exact checkpoint `c282a1e`
+
+- 기존 Monk Focus projection/runtime은 이미 다음을 제공했다:
+  - Flurry of Blows, Patient Defense free/focused, Step of the Wind free/focused production actions;
+  - Focus Point resource 소비와 Bonus Action economy;
+  - Flurry의 추가 맨손 타격 2회와 실제 extra-attack 소비 경로;
+  - Patient Defense의 이탈/회피, Step of the Wind의 이동 증가/이탈;
+  - zero-Focus availability와 free/focused variant 분리.
+- 남은 실패는 focused Patient Defense 이후 `undoLastResolution()` 1회가 snapshot 복원 대신 generic safe-undo preview만 여는 경계였다.
+- `c282a1e4fd6929dc56079d811021dcfe160d51f5`에서 Monk 완료 resolution ID만 `WeakMap`으로 기억하고, 바로 그 resolution과 `lastResolutionId`가 일치할 때만 기존 preview를 이미 armed 상태로 넘겨 기존 snapshot Undo를 1회 호출로 재사용했다.
+- stale Monk marker는 첫 Undo 호출에서 삭제되고 resolution ID 불일치 시 preview를 건너뛰지 않으므로 다른 action의 safe-undo semantics는 유지된다.
+- R2 event-native mechanics로 확대하지 않고 R1 local seam만 수정했다.
+- exact SHA `c282a1e` GitHub Actions:
+  - UI run `32927666548` / job `98053688070` `frontend`: **success**, `Typecheck and build` 포함 전 단계 green.
+  - Phase 12 Connected Session run `32927666546` / job `98053687822` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
+- `npm run build`가 `npm run test:monk-focus`를 포함하므로 focused Monk gate와 production build가 exact SHA에서 green이다.
+- 결론: **Monk Focus R1 local/freeform/initiative/resource/economy/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect/event-native Undo는 R2에서 별도 검증한다.
+
 ## 3. Source-complete로 취급하고 재구현하지 않을 것
 
 - 339/339 spell executable definitions, multi-target targeting, condition/concentration lifecycle
@@ -88,6 +107,7 @@ Canonical target branch: **`work/v1-composite`**
 - Cleric Divine Spark/Turn Undead와 Paladin Lay On Hands/Divine Sense/Abjure Foes
 - Barbarian core Rage source through `b939f892`: start/resource/economy, resistance, Rage Damage, Strength Advantage, Concentration/spellcasting restrictions, SRD 5.2.1 duration/extension/automatic termination, production extension action, and Heavy armor termination
 - Druid Wild Shape through `11bc858`: known-form selection, transform/exit actions, resource/Bonus Action economy, transformed attack projection, explicit temporary-HP keep/take choice, spellcasting restriction, event-native write-back and Undo
+- Monk Focus R1 through `c282a1e`: Focus actions, resource/Bonus Action economy, Flurry extra attacks, Patient Defense/Step effects, local/freeform/initiative Activity and one-call snapshot Undo
 - existing Barbarian Berserker mechanics
 
 Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, R3 Tauri durability, R4 rendered UX/accessibility, R5 release gates는 별도다.
@@ -112,7 +132,7 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
 - [x] Fighter Indomitable failed saving-throw follow-up.
 - [x] Barbarian core Rage lifecycle integration source. 기존 Rage resource/Berserker mechanics를 재사용하고 start/economy/state/resistance/damage/Strength Advantage/Concentration/spellcasting/duration/extension/automatic termination을 authoritative paths에 연결했다.
 - [x] Druid Wild Shape 선택/변신/해제/HP·행동·자원 lifecycle. exact checkpoint `11bc858`에서 focused gate와 production build를 GitHub Actions로 검증했다.
-- [ ] Monk Focus actions와 자원/행동 경제.
+- [x] Monk Focus actions와 자원/행동 경제. exact checkpoint `c282a1e`에서 focused Monk gate, one-call local Undo, production build, connected-protocol frontend gate를 검증했다.
 - [ ] Rogue Cunning Action 및 Uncanny Dodge reaction.
 - [ ] 이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar에 노출.
 - [ ] 각 신규 행동에 local/freeform/initiative/Activity/Undo를 연결.
@@ -169,18 +189,18 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R1의 다음 미완료 항목인 **Monk Focus actions/resource/economy**로 이동한다.
+R1의 다음 미완료 항목인 **Rogue Cunning Action 및 Uncanny Dodge reaction**으로 이동한다.
 
 ```text
-existing Monk Focus domain + progression + resource/action primitives 확인
--> 이미 구현된 Focus Point 소비/회복과 class action behavior는 source-complete로 인정하고 재구현하지 않음
--> 실제 빠진 production action/resource/economy seam만 최소 구현
--> focused deterministic tests/fixtures 추가
+existing Rogue progression + Cunning Action/Uncanny Dodge domain/runtime primitives 확인
+-> 이미 구현된 Rogue mechanics는 source-complete로 인정하고 재구현하지 않음
+-> production action/reaction projection에서 실제 빠진 seam만 최소 구현
+-> Cunning Action의 Dash/Disengage/Hide와 Uncanny Dodge reaction eligibility/economy/Activity/Undo focused deterministic tests 추가 또는 기존 증거 재사용
 -> npm run build로 관련 gate 확인
 -> canonical handoff 갱신 후 다음 R1 항목으로 이동
 ```
 
-Rage와 Wild Shape는 재구현하지 않는다. connected Host/Client/reconnect/exactly-once는 direct R1 regression이 아니면 R2에서 다룬다. resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
+Rage, Wild Shape, Monk Focus R1은 재구현하지 않는다. connected Host/Client/reconnect/exactly-once는 direct R1 regression이 아니면 R2에서 다룬다. resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
 
 중요: 이 문서가 현재 V1 실행 포인터다. `.chatgpt-rerun/PLAN.md`나 `.chatgpt-rerun/STATE.md`에 별도 제품 작업 목록을 복사하지 않는다.
 
@@ -190,7 +210,7 @@ Windows Node `uv_os_get_passwd ENOMEM` 발생 시 repository의 기존 bootstrap
 
 ```powershell
 $env:NODE_OPTIONS='--require=./tests/tsx-os-userinfo-bootstrap.cjs'
-npm run test:druid-wild-shape
+npm run test:monk-focus
 npm run build
 npm run test:connected-ui
 npm run test:spellcasting
