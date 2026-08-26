@@ -32,15 +32,17 @@ Inventory decisions to preserve:
 
 - Life Domain `Preserve Life` is not a minimal action-bar projection under the current `resolveAction(actionId,targetIds)` input contract because rules require player-selected per-target healing allocations. Do not auto-allocate and silently remove player choice.
 - Circle of the Land `Land's Aid` likewise carries richer point/multi-result input semantics; do not force it into a dead/simple button without the needed choice contract.
-- Continue looking for one mechanics-complete resolver that is fully expressible through existing production inputs before introducing any new UI/input abstraction.
+- **Next selected R1 gap: Open Hand `Quivering Palm` supported action path.** `src/domain/monkOpenHand.ts` already owns mechanics-complete seed, Action detonation, and harmless-end resolvers, while no production `monkOpenHandQuiveringPalmRuntimeAdapter.ts` exists.
+- Quivering Palm `activation: "replace-attack"` is explicitly rejected by the domain until Attack-sequence replacement support exists. Do not expose that path or add a fake/dead button.
+- The supported R1 subset fits existing inputs: after a completed Unarmed Strike hit, offer an ephemeral follow-up to spend 4 Focus and seed the hit target; while the marker exists, expose the existing Action detonation path (or harmless end) against that target. Reuse existing target Constitution save facts, deterministic dice, ResolutionEvent/Activity/write-back, and generic Undo primitives. No new choice UI abstraction is needed for this subset.
 
 Canonical routing:
 
-- `.agents/V1_CURRENT_HANDOFF.md` already routes to the same remaining subclass-domain-resolver inventory umbrella. This Holy Nimbus reconciliation does not change that route, so no noisy large canonical rewrite is required for dispatch correctness.
+- `.agents/V1_CURRENT_HANDOFF.md` routes to the same remaining subclass-domain-resolver inventory umbrella.
 - `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` remains correctly `PARTIAL`; one incremental subclass action does not earn a broad release checkbox.
 - `PLAN.md` unchanged.
 - R2 remote-owner exactly-once/reconnect remains excluded unless a direct R1 regression requires it.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite`, then continue the R1 subclass-domain-resolver / production action inventory after Holy Nimbus. Do not reimplement or rerun Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, or Devotion Holy Nimbus. Skip resolvers that require an unimplemented richer choice/input contract rather than inventing automatic choices. Select one remaining mechanics-complete gap that fits existing production inputs, reuse local/freeform/initiative/economy/Activity/Undo primitives, add or reuse focused deterministic evidence, and require `npm run build` plus the normal R1 UI/Phase12 connected-protocol gates before advancing routing again.
+Reconcile live `work/v1-composite`, then inspect the existing completed Unarmed Strike hit resolution/follow-up seam and target Constitution save provider. Implement only a thin Open Hand Quivering Palm R1 production adapter for the supported paths: post-hit seed (Focus 4), Action detonation, and harmless end if directly expressible. Do not implement or expose `replace-attack`. Reuse existing local/freeform/initiative/action-economy/Activity/ResolutionEvent/Undo primitives, add focused deterministic level/eligibility/seed/replacement-of-prior-marker/detonation-save-damage/Undo coverage, add the focused gate to `npm run build`, then require exact-head UI plus Phase12 connected-protocol green before canonical advancement.
