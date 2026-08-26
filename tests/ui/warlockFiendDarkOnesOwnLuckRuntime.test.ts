@@ -15,23 +15,22 @@ const CASTER="char.test-fiend-luck-caster";
 type Internal={activeCharacter:CharacterSheet;characters:CharacterSheet[];scene:SceneVm;session:SessionVm};
 
 async function prepareFiend(adapter:MockAdapter,level=6){
-  const initial=await adapter.getSnapshot();
+  const internal=adapter as unknown as Internal;
   const fiend={
-    ...structuredClone(initial.activeCharacter),
+    ...structuredClone(internal.activeCharacter),
     name:"Fiend Warlock",
     className:"워락",
     subclassName:"악마 후원자",
     level,
     classLevels:[{classId:WARLOCK_ID,className:"워락",level}],
     subclassIds:{[WARLOCK_ID]:WARLOCK_FIEND_SUBCLASS_ID},
-    abilities:{...initial.activeCharacter.abilities,cha:18},
+    abilities:{...internal.activeCharacter.abilities,cha:18},
     features:[],
     equipment:[],
     items:[],
     attacks:[],
     resources:[],
   };
-  const internal=adapter as unknown as Internal;
   internal.activeCharacter=fiend;
   internal.characters=[fiend];
   internal.session.role="host";
