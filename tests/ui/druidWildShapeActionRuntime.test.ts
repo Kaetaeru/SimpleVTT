@@ -17,7 +17,7 @@ const wolf:DruidWildShapeForm={
 
 async function druid(options:{knownForms?:DruidWildShapeForm[];tempHp?:number}={}) {
   const adapter=new MockAdapter();
-  const internal=adapter as unknown as {activeCharacter:CharacterSheet};
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:{entities:Array<{id:string;tempHp:number}>}};
   internal.activeCharacter={
     ...internal.activeCharacter,
     className:"드루이드",
@@ -34,6 +34,8 @@ async function druid(options:{knownForms?:DruidWildShapeForm[];tempHp?:number}={
     }],
     wildShapeKnownForms:options.knownForms??[],
   };
+  const entity=internal.scene.entities.find((entry)=>entry.id===internal.activeCharacter.id);
+  if(entity)entity.tempHp=internal.activeCharacter.tempHp;
   await adapter.getSnapshot();
   return adapter;
 }
