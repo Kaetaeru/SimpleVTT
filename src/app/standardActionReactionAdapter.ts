@@ -142,14 +142,8 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithReadyReactionAva
 };
 
 MockAdapter.prototype.resolveAction=async function resolveReadyActionAsReaction(actionId:string,targetIds:string[]) {
+  if (actionId!==READY_TRIGGER_ID) return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as ReadyReactionState;
-  if (actionId!==READY_TRIGGER_ID) {
-    const actorId=internal.sessionMode==="initiative"?internal.scene.currentActorId:undefined;
-    if (actorId&&actorAction(internal,actorId,actionId)) {
-      return withActorActionPriority(internal,actorId,()=>previousResolveAction.call(this,actionId,targetIds));
-    }
-    return previousResolveAction.call(this,actionId,targetIds);
-  }
   const config=contextualReadyConfiguration(this,internal);
   if (!config) return internal.getSnapshot();
   const trigger=actorAction(internal,config.actorId,READY_TRIGGER_ID);
