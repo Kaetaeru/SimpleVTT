@@ -2,7 +2,8 @@ import "./progressionContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { queueAtomicAttackDamageMultiplier } from "./realAttackTransactionService";
-import { clearRuntimeResolutionEventHistory } from "./runtimeResolutionEventHistory";
+import { clearRuntimeResolutionEventHistory, recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const ROGUE_CLASS_ID="dnd.srd521.class.rogue";
 export const CUNNING_DASH_ACTION_ID="action.rogue.cunning-action.dash";
@@ -180,6 +181,9 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
   if(!resolution)return previousAdvanceResolution.call(this);
+  const cunningDashBefore=resolution.stage==="effect-preview"&&resolution.actionId===CUNNING_DASH_ACTION_ID
+    ? structuredClone(internal.scene.economyByActor[resolution.actorId])
+    : undefined;
 
   if(resolution.stage==="effect-preview"&&ROGUE_ACTION_IDS.has(resolution.actionId)) {
     const actor=internal.scene.entities.find((entry)=>entry.id===resolution.actorId);
@@ -199,7 +203,42 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
   const snapshot=await previousAdvanceResolution.call(this);
   if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
     const uncannyComplete=uncannyResolutionIds.get(this)===resolution.id;
-    if(ROGUE_ACTION_IDS.has(resolution.actionId))markSnapshotUndo(this,resolution.id);
+    if(resolution.actionId===CUNNING_DASH_ACTION_ID&&cunningDashBefore) {
+      const after=internal.scene.economyByActor[resolution.actorId];
+      if(after) {
+        const provenance=[{source:"rogue:cunning-action:dash",status:"applied" as const,reason:"Rogue Cunning Action Dash authoritative economy"}];
+        const fields:Array<{field:"action"|"bonusAction"|"movement"|"movementMaximum";before:boolean|number;after:boolean|number}>=[
+          {field:"action",before:cunningDashBefore.action,after:after.action},
+          {field:"bonusAction",before:cunningDashBefore.bonusAction,after:after.bonusAction},
+          {field:"movement",before:cunningDashBefore.movement,after:after.movement},
+          {field:"movementMaximum",before:cunningDashBefore.movementMax,after:after.movementMax},
+        ];
+        const event:ResolutionEvent={
+          id:`${resolution.id}:cunning-dash`,
+          resolutionId:resolution.id,
+          operationId:"cunning-action:dash:economy",
+          kind:"cunning-action-dash",
+          actorId:resolution.actorId,
+          targetId:resolution.actorId,
+          summary:resolution.finalOutcome,
+          provenance,
+          stateChanges:fields.filter((entry)=>entry.before!==entry.after).map((entry)=>({
+            kind:"economy" as const,
+            targetId:resolution.actorId,
+            field:entry.field,
+            before:entry.before,
+            after:entry.after,
+            provenance,
+            lifetime:"session-runtime" as const,
+            writeBack:"session" as const,
+          })),
+          result:{movement:after.movement,movementMaximum:after.movementMax},
+        };
+        recordRuntimeResolutionEvents(this,resolution.id,[event]);
+      }
+    } else if(ROGUE_ACTION_IDS.has(resolution.actionId)) {
+      markSnapshotUndo(this,resolution.id);
+    }
     if(uncannyComplete) {
       const damage=resolution.damageComponents[0];
       if(damage) {
