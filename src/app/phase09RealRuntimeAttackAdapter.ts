@@ -283,7 +283,7 @@ MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFrom
   const runtimeState=internal.sessionMode === "initiative"
     ? snapshotAdapterTurnRuntimeState(this,internal.scene)
     : undefined;
-  const undone=undoResolutionEvents(internal.scene,history.events,[],[],runtimeState);
+  const undone=undoResolutionEvents(internal.scene,history.events,internal.activeCharacter.resources,internal.activeCharacter.items,runtimeState);
   if (undone.status === "rejected") {
     if (internal.resolution) {
       internal.resolution.detail.push(`Event-native Undo 거부: ${undone.error}`);
@@ -316,6 +316,8 @@ MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFrom
     }
   }
   internal.scene=undone.scene;
+  internal.activeCharacter.resources=undone.resources;
+  internal.activeCharacter.items=undone.items;
   internal.syncChar();
   internal.activity=internal.activity.map((entry)=>entry.id===history.resolutionId ? { ...entry, reversed:true } : entry);
   internal.activity.unshift({
