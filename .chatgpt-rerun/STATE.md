@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T22:11:00+09:00`
+- checkpointed_at: `2026-08-26T22:13:00+09:00`
 
 ## Durable checkpoint
 
@@ -44,15 +44,19 @@ Current connected proof work:
 - `d2923455f1de8e0368258b8d53ed3da7e3362925` wired that proof into Phase12. Exact run `32972457970` exposed the first direct red only: production catalog missing `dnd.srd521.subclass.monk.warrior-of-the-open-hand`.
 - `81baf37690f0e36758e4eabe5d5244f8163cdaec` added the canonical Open Hand subclass catalog identity. No second healing engine/protocol/schema was added.
 - `d03adbe11c10aa394628c025c36bea9d5c27f9c5` added `content/**` to the Phase12 trigger so catalog identity changes cannot bypass the connected gate.
-- Exact Phase12 run `32972594009` / `connected-protocol` job `98189595694`: Wholeness connected authority proof is green and Phase11 offline walkthrough is green; production frontend `npm run build` is still in progress at this checkpoint. Do not claim R2 closure until that exact build step succeeds.
+- Exact Phase12 run `32972594009` / `connected-protocol` job `98189595694` is fully green: Wholeness connected authority proof, Phase11 offline walkthrough, and production frontend `npm run build` all succeeded. `windows-connected-playable` is R3 and is not an R2 closure gate.
+- UI run `32972536815` / frontend job `98189406605` on product/content head `81baf37690f0e36758e4eabe5d5244f8163cdaec` also succeeded through `Typecheck and build`.
+
+Wholeness R2 execution evidence is complete. Canonical handoff/checklist reconciliation is the only remaining closure bookkeeping at this checkpoint.
 
 Reuse the existing Wholeness resolver, Focus Point resource, healing path, initiative/freeform economy split, Activity, generic `ResolutionEvent`, Character owner write-back, duplicate/reconnect primitives, and event-native Undo. Do not create a second healing engine, protocol, schema, or remote-only rules path.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Do not repeat validated Rage, Wild Shape, Cunning Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, or Wholeness focused authority proof.
-3. Read exact Phase12 run `32972594009`, job `98189595694`. If production frontend `npm run build` is green, close Wholeness R2 from `d03adbe11c10aa394628c025c36bea9d5c27f9c5` evidence and advance canonical NEXT to the next R2 item. If red, fix only the first direct Wholeness-related red.
-4. `windows-connected-playable` remains R3 acceptance and is not an R2 closure gate.
-5. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
-6. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Do not repeat validated Rage, Wild Shape, Cunning Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, or Wholeness R2 execution gates.
+3. Update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` with exact Wholeness evidence (`d03adbe11c10aa394628c025c36bea9d5c27f9c5`, Phase12 `32972594009` / `98189595694`, UI `32972536815` / `98189406605`) and close Wholeness R2.
+4. Advance canonical NEXT to the next unvalidated R2 item: **Open Hand Fleet Step remote-owner gap** (R1 checkpoint `21b5ab830442318e5c5b499464a746fb4370cd4b`). Inspect existing runtime/reconstruction/tests before adding code; reuse existing Host authority/events/owner persistence/duplicate/reconnect/Undo primitives.
+5. `windows-connected-playable` remains R3 acceptance and is not an R2 closure gate.
+6. `PLAN.md` remains unchanged unless routing materially changes. After canonical reconciliation persist `STATE.md`, then `control.json` LAST.
+7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
