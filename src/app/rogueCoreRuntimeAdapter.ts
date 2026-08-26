@@ -4,6 +4,7 @@ import { MockAdapter } from "./mockAdapter";
 import { queueAtomicAttackDamageMultiplier } from "./realAttackTransactionService";
 import { clearRuntimeResolutionEventHistory, recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { projectedCharacterById, projectedCharacterIds } from "./characterSessionProjectionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { resolvePendingResolution } from "../domain/resolution";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
@@ -147,6 +148,12 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithRogueCoreActions
   projectActions(snapshot.scene,actorId,actions);
   projectUncannyDodge(internal.scene,internal.activeCharacter);
   projectUncannyDodge(snapshot.scene,snapshot.activeCharacter);
+  for(const projectedId of projectedCharacterIds(this)) {
+    const projected=projectedCharacterById(this,projectedId);
+    if(!projected)continue;
+    projectUncannyDodge(internal.scene,projected.sheet);
+    projectUncannyDodge(snapshot.scene,projected.sheet);
+  }
   return snapshot;
 };
 
