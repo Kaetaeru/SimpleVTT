@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T17:27:00+09:00`
+- checkpointed_at: `2026-08-26T17:29:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -29,19 +29,22 @@ Warlock Fiend Dark One's Own Luck mechanics also already exist; do not add anoth
 Actions job logs remain inaccessible to this integration (403), so exact-SHA test-only bisection is authoritative evidence.
 
 - `a2b6a941bb1f90fa392bdb9dae680c86b36d5747`: both Smite cases skipped; earliest Fiend action-projection smoke. UI `32946981597` **success**.
-- `6038687ac4d74ffc6da1163d4224deb1cecc9c3a`: Fiend smoke advanced through Dark One's Own Luck resource projection (`beforeUses === 4`), both Smite cases skipped. UI `32947158403` **success**.
-- `ac4df00d256d721d1ff18ddefdae0875bf99304a`: only first Smite case changed from skipped to active while Fiend stayed at the known-green diagnostic boundary. UI `32947180684` **failure**; Connected `32947180662` failed shared build. Therefore first Smite focused case is independently red.
-- `af30d17e1a5cc35df491cb757b682a1d69c9651c`: Fiend restored to the known-green `6038687` boundary while first Smite case early-returns immediately after confirming Divine Smite action projection; second Smite case remains skipped. UI `32947608202` **success**. Therefore Fiend diagnostic setup and Smite Divine Smite action projection are green; the first Smite failure is after action projection.
-- `78b9d382e1f68b23ddf81b710f226dc59d675ede`: fixture-only change in `devotionPaladin()` from `await adapter.getSnapshot()` to `await adapter.startProductionLocalPlay("dm")`, aligning the Smite fixture with the production local-play path required by the existing authoritative spell/TurnRuntime bridge. No production mechanics changed. UI `32947748619` and Connected `32947748644` were in progress at checkpoint. The first Smite case still early-returns after action projection, so this SHA only validates fixture alignment/projection until the diagnostic return is advanced.
+- `6038687ac4d74ffc6da1163d4224deb1cecc9c3a`: Fiend smoke advanced through Dark One's Own Luck resource projection (`beforeUses === 4`), both Smite cases skipped. UI `32947158403` **success**. This is the known-green Fiend diagnostic boundary.
+- `ac4df00d256d721d1ff18ddefdae0875bf99304a`: only first Smite case active over the known-green Fiend boundary. UI `32947180684` **failure**; Connected `32947180662` failed shared build. Therefore first Smite focused case is independently red.
+- `68469e1b47342573742d6a4e97c4ffd1acd87545`: first Smite case early-returned immediately after `assert.ok(smite)`, but full Fiend coverage was active; UI `32947379834` **failure**, so this result was confounded.
+- `af30d17e1a5cc35df491cb757b682a1d69c9651c`: Fiend returned to the known-green `6038687` boundary; first Smite case remained skipped. No production code changed.
+- `a993ff8061a362cdc102985b1e7b0858437ec5c9`: first Smite case alone reactivated on top of `af30d17`, still early-returning immediately after `assert.ok(smite)`; second Smite case remained skipped. UI run `32947669347` completed **success**. Connected run `32947669388` had `connected-protocol` **success** when checked. This clean split proves the Fiend diagnostic boundary and existing Divine Smite action projection are green; the independently red first Smite case fails **after `resolveAction` begins**.
+- `78b9d382e1f68b23ddf81b710f226dc59d675ede`: test-only follow-up changed `devotionPaladin()` from `await adapter.getSnapshot()` to existing production entry `await adapter.startProductionLocalPlay("dm")`; no production mechanics changed. UI `32947748619` and Connected `32947748644` were still in progress at checkpoint. Treat their result as evidence only.
 
-Current diagnostic test state at live head `78b9d382e1f68b23ddf81b710f226dc59d675ede`:
+Current diagnostic test state at `78b9d382e1f68b23ddf81b710f226dc59d675ede`:
 
-- `tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts`: first case returns immediately after `beforeUses === 4`; saving-throw and below-feature-level cases are temporarily `test.skip` to hold the known-green boundary.
+- `tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts`: first case returns immediately after `beforeUses === 4`; saving-throw and below-feature-level cases are temporarily `test.skip`.
 - `tests/ui/paladinDevotionSmiteOfProtectionRuntime.test.ts`: first case is active but returns immediately after `assert.ok(smite)`; second expiry/below-level case remains temporarily `test.skip`.
-- Smite fixture now enters `startProductionLocalPlay("dm")` before Initiative.
-- No Fiend or Smite production mechanics file was changed by this bisection/fix candidate.
+- Smite fixture enters `startProductionLocalPlay("dm")` before Initiative.
+- No Fiend or Smite production mechanics file was changed by the current bisection.
+- All diagnostic skips/returns must be restored before canonical advancement.
 
-The first Smite focused case checks, in order: Divine Smite action projection, committed resolution, Smite of Protection detail/Activity, TurnRuntime protection marker + expiry metadata + half-cover eligibility, then generic Undo removal. Action projection is now proven green. The exact post-projection failing assertion is not yet isolated.
+The first Smite focused case checks, in order: Divine Smite action projection, committed resolution, Smite of Protection detail/Activity, TurnRuntime protection marker + expiry metadata + half-cover eligibility, then generic Undo removal. Action projection is proven green. The exact post-projection failing assertion is not yet isolated.
 
 Inventory decisions to preserve:
 
@@ -53,4 +56,4 @@ Inventory decisions to preserve:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Check exact-SHA UI `32947748619` and Connected `32947748644` for `78b9d382e1f68b23ddf81b710f226dc59d675ede`. If the diagnostic fixture-alignment SHA is green, advance only the first Smite case's early return to after the committed-resolution + Smite detail/Activity assertions while keeping Fiend at the known-green `6038687` boundary and the second Smite case skipped. If that split is green, the failure is in TurnRuntime marker/expiry/half-cover/Undo; if red, bisect only the committed-resolution/detail/Activity half. Do not edit `paladinDevotionSmiteOfProtectionRuntimeAdapter.ts` until a concrete post-projection seam is proven. After the seam is fixed, restore all Fiend and both Smite tests, verify `test:fiend-luck` and `test:devotion-smite-protection` execute/pass inside exact-head `npm run build`, require UI + Connected green, then advance canonical handoff/checklist. Update `STATE.md` and `control.json` last per protocol.
+Reconcile live `work/v1-composite` first. Check exact-SHA UI `32947748619` and Connected `32947748644` for `78b9d382e1f68b23ddf81b710f226dc59d675ede`. `a993ff8061a362cdc102985b1e7b0858437ec5c9` already proves action projection is green, so do not patch production or keep changing fixture identity speculatively. If `78b9d382...` is green, advance only the first Smite case's early return past `resolveAction` and the committed `resolutionId`/`stage`/`actionId` assertions while keeping Fiend at the known-green `6038687` boundary and the second Smite case skipped. If `78b9d382...` is red, revert only that test-fixture change and continue from the proven-green `a993ff80` boundary. Once a concrete post-`resolveAction` assertion proves a runtime seam, fix only that seam. Then restore all Fiend and both Smite tests, verify `test:fiend-luck` and `test:devotion-smite-protection` execute/pass inside exact-head `npm run build`, require UI + Connected green, and only then advance canonical handoff/checklist. Update `STATE.md` and `control.json` last per protocol.
