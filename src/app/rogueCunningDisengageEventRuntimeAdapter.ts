@@ -1,106 +1,94 @@
 import "./rogueCoreRuntimeAdapter";
-import type { ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
+import type { AppSnapshot, CharacterSheet, EconomyVm, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
-import { projectTurnRuntimeToScene } from "./realTurnRuntimeService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
-import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState, turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { resolvePendingResolution } from "../domain/resolution";
-import { CUNNING_DISENGAGE_ACTION_ID, ROGUE_CLASS_ID } from "./rogueCoreRuntimeAdapter";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
+import { CUNNING_DISENGAGE_ACTION_ID } from "./rogueCoreRuntimeAdapter";
 
 type AdapterState={
   sessionMode:SessionMode;
   scene:SceneVm;
   activeCharacter:CharacterSheet;
   resolution:ResolutionView|null;
-  activity:ActivityEntry[];
-  lastResolutionId:string|null;
-  lastBefore:unknown;
   getSnapshot():Promise<AppSnapshot>;
 };
 
-const previousResolveAction=MockAdapter.prototype.resolveAction;
+const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 
-function rogueLevel(character:CharacterSheet) {
-  return character.classLevels?.find((entry)=>entry.classId===ROGUE_CLASS_ID)?.level??0;
+function economyEvent(resolution:ResolutionView,before:EconomyVm,after:EconomyVm):ResolutionEvent {
+  const provenance=[{source:"rogue:cunning-action:disengage",status:"applied" as const,reason:"Rogue Cunning Action Disengage authoritative economy"}];
+  const fields:Array<{field:"action"|"bonusAction"|"movement"|"movementMaximum";before:boolean|number;after:boolean|number}>=[
+    {field:"action",before:before.action,after:after.action},
+    {field:"bonusAction",before:before.bonusAction,after:after.bonusAction},
+    {field:"movement",before:before.movement,after:after.movement},
+    {field:"movementMaximum",before:before.movementMax,after:after.movementMax},
+  ];
+  return {
+    id:`${resolution.id}:cunning-disengage-economy`,
+    resolutionId:resolution.id,
+    operationId:"cunning-action:disengage:economy",
+    kind:"cunning-action-disengage",
+    actorId:resolution.actorId,
+    targetId:resolution.actorId,
+    summary:resolution.finalOutcome,
+    provenance,
+    stateChanges:fields.filter((entry)=>entry.before!==entry.after).map((entry)=>({
+      kind:"economy" as const,
+      targetId:resolution.actorId,
+      field:entry.field,
+      before:entry.before,
+      after:entry.after,
+      provenance,
+      lifetime:"session-runtime" as const,
+      writeBack:"session" as const,
+    })),
+    result:{bonusAction:after.bonusAction},
+  };
 }
 
-MockAdapter.prototype.resolveAction=async function resolveEventNativeCunningDisengage(actionId:string,targetIds:string[]){
-  if(actionId!==CUNNING_DISENGAGE_ACTION_ID)return previousResolveAction.call(this,actionId,targetIds);
+MockAdapter.prototype.advanceResolution=async function advanceEventNativeCunningDisengage(){
   const internal=this as unknown as AdapterState;
-  if(internal.sessionMode!=="initiative")return previousResolveAction.call(this,actionId,targetIds);
-  const snapshot=await internal.getSnapshot();
-  const actor=internal.activeCharacter;
-  if(rogueLevel(actor)<2||targetIds.length!==1||targetIds[0]!==actor.id)return snapshot;
-  const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  const session=turnRuntimeSessions.get(this);
-  if(!state||!session||!state.combatants[actor.id])return snapshot;
+  const resolution=internal.resolution;
+  const eventNative=internal.sessionMode==="initiative"
+    && resolution?.stage==="effect-preview"
+    && resolution.actionId===CUNNING_DISENGAGE_ACTION_ID;
+  const economyBefore=eventNative
+    ? structuredClone(internal.scene.economyByActor[resolution!.actorId])
+    : undefined;
+  const snapshot=await previousAdvanceResolution.call(this);
+  if(!eventNative||!economyBefore||snapshot.resolution?.id!==resolution!.id||snapshot.resolution.stage!=="complete")return snapshot;
 
-  const resolutionId=`rogue.cunning-disengage.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
+  if(!state?.combatants[resolution!.actorId])return snapshot;
   const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
-    id:resolutionId,
-    actorId:actor.id,
+    id:resolution!.id,
+    actorId:resolution!.actorId,
     sourceId:CUNNING_DISENGAGE_ACTION_ID,
     expectedRevision:state.revision,
-    operations:[
-      {
-        id:`${resolutionId}:bonus-action`,
-        kind:"use-economy",
-        actorId:actor.id,
-        slot:"bonus-action",
-        bonusActionGranted:true,
-        actionKind:"other",
+    operations:[{
+      id:`${resolution!.id}:disengage-effect`,
+      kind:"apply-effect",
+      effect:{
+        id:`${resolution!.id}:disengage`,
+        sourceId:CUNNING_DISENGAGE_ACTION_ID,
+        sourceActorId:resolution!.actorId,
+        targetId:resolution!.actorId,
+        kind:"marker",
+        tags:["rogue:cunning-action:disengage","opportunity-attack:no-provoke"],
+        duration:{kind:"until-turn-boundary",actorId:resolution!.actorId,round:state.clock.round,boundary:"end"},
+        metadata:{publicLabel:"이탈"},
       },
-      {
-        id:`${resolutionId}:effect`,
-        kind:"apply-effect",
-        effect:{
-          id:`${resolutionId}:disengage`,
-          sourceId:CUNNING_DISENGAGE_ACTION_ID,
-          sourceActorId:actor.id,
-          targetId:actor.id,
-          kind:"marker",
-          tags:["rogue:cunning-action:disengage","opportunity-attack:no-provoke"],
-          duration:{kind:"until-turn-boundary",actorId:actor.id,round:state.clock.round,boundary:"end"},
-          metadata:{publicLabel:"이탈"},
-        },
-      },
-    ],
+    }],
   });
   if(committed.status==="rejected")return snapshot;
   if(!commitAdapterTurnRuntimeState(this,internal.scene,state.revision,committed.state))return snapshot;
-  projectTurnRuntimeToScene(session,internal.scene);
-
-  const resolution:ResolutionView={
-    id:resolutionId,
-    actorId:actor.id,
-    targetIds:[actor.id],
-    actionId:CUNNING_DISENGAGE_ACTION_ID,
-    actionName:"교활한 행동 · 이탈",
-    rollKind:"effect",
-    stage:"complete",
-    authoritativeDice:[],
-    saveResults:[],
-    damageComponents:[],
-    compact:"이탈 적용",
-    detail:["이번 턴 이동 중 기회 공격을 유발하지 않음"],
-    provenance:["SRD 5.2.1 · Rogue · Cunning Action"],
-    calculatedOutcome:"이탈 적용",
-    finalOutcome:"이탈 적용",
-    stateChanges:committed.events.flatMap((event)=>event.stateChanges.map((change)=>change.kind==="effect"?`${actor.name} 상태 추가: 이탈`:`${actor.name} 추가 행동 사용`)),
-    adjudicated:false,
-    canAdvance:false,
-  };
-  internal.resolution=resolution;
-  internal.activity.unshift(projectResolutionEventsToActivity({
-    resolution,
-    events:committed.events,
-    actorName:actor.name,
-    targetNames:[actor.name],
-  }));
-  internal.lastResolutionId=resolutionId;
-  internal.lastBefore=null;
-  recordRuntimeResolutionEvents(this,resolutionId,committed.events);
+  const actor=internal.scene.entities.find((entry)=>entry.id===resolution!.actorId);
+  if(actor)actor.status=actor.status.filter((status)=>status!=="이탈");
+  const economyAfter=internal.scene.economyByActor[resolution!.actorId];
+  if(!economyAfter)return internal.getSnapshot();
+  recordRuntimeResolutionEvents(this,resolution!.id,[economyEvent(resolution!,economyBefore,economyAfter),...committed.events]);
   return internal.getSnapshot();
 };
