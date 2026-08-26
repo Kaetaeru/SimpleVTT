@@ -7,50 +7,41 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T09:30:17+09:00`
+- checkpointed_at: `2026-08-26T10:01:49+09:00`
 
 ## Durable execution checkpoint
 
-Rerun preflight was repeated in the mandatory order. The live run/sequence/task identity still matches `control.json=continue`, but the product branch had advanced well beyond the previous Rerun checkpoint while `STATE.md` and `control.json` remained stale.
+Preflight was repeated in the mandatory order: `README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`, followed by canonical handoff/checklist/design authority reads. The live run/sequence/task identity still matches `control.json=continue`.
 
-The earlier STATE-only reconciliation commit `f0a4cae0da9c32cf48693600892377340376b69a` was written out of protocol order. It is superseded by this ordered checkpoint sequence, which restarted with `PLAN.md` at `d978289e8efa5162efb3b88c4ec3c1c7d61a026c` and continues with this STATE update before the final `control.json` write.
+This checkpoint continues the ordered metadata sequence whose PLAN write is commit `7b1b535cfa2c39be04bdcb495bbcbe3885a67614`. This STATE write must be followed by `control.json` last.
 
-Preflight reconciliation result:
+### Reconciled source state
 
-- Previous Rerun product checkpoint: `cddef0c254108fe963a92cab2da7bd991a09bc21` (Druid Wild Shape domain lifecycle core only).
-- Live product/source head before Rerun metadata writes: `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`.
-- GitHub compare shows the live product branch ahead of `cddef0c2` and not behind it.
-- The post-checkpoint commits already implement the production Wild Shape seam that the old STATE listed as Next Exact Action. Do **not** repeat those changes.
+- Wild Shape product/source head remains `12834c74ee0b997d9cd28f1d6c9227e326c1fe60` (`test(druid): gate Wild Shape lifecycle in build`).
+- The existing Druid known-form/action/projection/Undo/spellcasting seam is already implemented and must not be repeated or redesigned.
+- Completed Rage work remains closed.
+- The next canonical R1 class seam after Wild Shape is Monk Focus actions/resource/economy, but the canonical pointer must not advance until executable Wild Shape/build validation is green.
 
-Wild Shape production source now present at the live product head:
+### Corrected validation evidence
 
-- `src/app/druidWildShapeContracts.ts` adds the smallest explicit Character-owned known-form seam, `CharacterSheet.wildShapeKnownForms?: DruidWildShapeForm[]`; runtime code does not invent a beast catalog or fallback forms.
-- `src/app/druidWildShapeRuntimeAdapter.ts` reuses the existing offline/production adapter composition and projects one executable transform action per Character-known form plus the canonical Bonus Action exit.
-- Transform/exit reuse the domain Wild Shape resolution, resource and initiative economy, ResolutionEvent application, Character resolution-event write-back, runtime commit, Activity/ResolutionView recording, scene projection, and event-native Undo/compensation paths.
-- Existing temporary HP is handled through the explicit keep-existing/take-new choice instead of stacking or silently overwriting.
-- The adapter is installed through `src/app/offlineRuntimeAdapters.ts`; no generic shapeshift subsystem was introduced.
-- `src/domain/spellcasting.ts` enforces the active `DRUID_WILD_SHAPE_TAG` spellcasting prohibition before spell economy/state mutation and permits the level-18 Beast Spells exception when the active marker records `spellcastingAllowed=true`.
-- `tests/ui/druidWildShapeActionRuntime.test.ts` covers no-known-form suppression, known-form transform/exit, resource + Bonus Action + temporary HP + marker state, event-native Undo restoration, explicit temporary-HP conflict choices, and freeform/initiative economy behavior.
-- `tests/domain/druidWildShapeSpellcasting.test.ts` covers rejection while shaped without Beast Spells and normal spell resolution when `spellcastingAllowed=true`.
-- `package.json` adds `test:druid-wild-shape` and includes it in `npm run build`, so the focused lifecycle/action/spellcasting contract is now part of the repository build gate.
-- A small intervening Rage type-narrowing fix is present at `e3e4d36aea0647c0e881bd0185f049c728fbdc59`; preserve it and do not reopen completed Rage behavior.
+The previous STATE claim that GitHub exposed no workflow runs for `12834c74...` was stale and is superseded.
 
-Validation status:
+GitHub Actions has two push runs for exact product SHA `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`, and both failed only at their final production/build gate after preceding steps passed:
 
-- GitHub exposes no commit statuses/checks and no workflow runs for `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`.
-- This watcher attempted to obtain executable evidence in a fresh container checkout, but `git ls-remote https://github.com/Kaetaeru/SimpleVTT.git refs/heads/work/v1-composite` failed with `Could not resolve host: github.com`; the container has no pre-existing SimpleVTT checkout.
-- Therefore no test/build green claim is made. The committed focused tests and build hook are source evidence only, not execution evidence.
-- Wild Shape is **implementation-complete for the current local R1 source seam but not yet eligible to be declared source-complete or to advance the canonical handoff**, because the prior checkpoint explicitly required executable validation first.
-- Connected remote-owner parity remains R2 work and is not a reason to expand or rewrite this R1 source seam now.
+- UI workflow `.github/workflows/ui.yml`, run `32914546013`, job `98015384057` (`frontend`): steps 1-28 passed; step 29 `Typecheck and build` failed.
+- Phase 12 Connected Session workflow `.github/workflows/phase12-connected.yml`, run `32914546014`, job `98015384132` (`connected-protocol`): steps 1-7 passed; step 8 `Verify production frontend gate` failed. The dependent Windows job was skipped.
+
+The connector exposes the failed step metadata but did not yield the failed command's text log body in this watcher. The execution container also cannot obtain a checkout because `github.com` DNS resolution fails. Therefore the exact compiler/test error is not established here.
+
+No source edit is made from a step name alone. No green test/build claim is made. Wild Shape remains source-implemented but not yet eligible for canonical source-complete status.
 
 ## Next Exact Action
 
-Do not reimplement Druid Wild Shape production actions, known-form projection, Undo, or spellcasting enforcement.
+1. Obtain the exact text output for UI run `32914546013` job `98015384057` step `Typecheck and build` (or reproduce `npm run build` in a checkout capable of executing the repository).
+2. Use the Connected run `32914546014` only as corroborating evidence unless its final-gate output identifies a distinct failure.
+3. If the concrete failure is source-related, change only the failing code/test; preserve the current Wild Shape architecture and avoid new dependencies or generic shapeshift abstractions.
+4. Re-run `npm run test:druid-wild-shape`, then `npm run build`/equivalent existing CI production gate.
+5. Only after green executable evidence, update `.agents/V1_CURRENT_HANDOFF.md` and the R1 checklist with the exact validated SHA/evidence and advance R1 to Monk Focus.
+6. Keep connected Host/Client/reconnect/exactly-once parity in R2 unless the concrete validation failure proves an R1 regression.
 
-1. In a checkout capable of executing the repository, verify the exact current branch head and run `npm run test:druid-wild-shape` first.
-2. If the focused command is green, run `npm run build` so the repository-owned build gate also exercises the Wild Shape suite.
-3. If either command fails, fix only the concrete failure against the existing Wild Shape implementation; do not redesign the seam or invent a generic shapeshift/form-catalog subsystem.
-4. If focused validation and build are green, update `.agents/V1_CURRENT_HANDOFF.md` and the R1 checklist to mark **Druid Wild Shape source-complete**, record the exact validated SHA/evidence, and advance the canonical R1 pointer to **Monk Focus actions/resource/economy**.
-5. Keep connected Host/Client/reconnect/exactly-once parity in R2 unless validation exposes a direct R1 regression.
-
-Keep the same run/sequence/task on `continue` until executable Wild Shape validation is captured and the canonical R1 pointer is advanced.
+Keep the same run/sequence/task on `continue`.
