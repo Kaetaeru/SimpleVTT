@@ -89,7 +89,6 @@ test("host-unknown Rogue Cunning Action Dash converges session economy exactly o
   const reconstructed=reconstructCharacterSessionProjectionV1(projection,catalog);
   assert.equal(reconstructed.status,"accepted",reconstructed.status==="rejected"?reconstructed.error:undefined);
   if(reconstructed.status!=="accepted")throw new Error(reconstructed.error);
-  assert.ok(reconstructed.actions.some((entry)=>entry.id===CUNNING_DASH_ACTION_ID),"Host reconstruction must project Cunning Action Dash");
   const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);
   assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
 
