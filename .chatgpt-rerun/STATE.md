@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T22:02:00+09:00`
+- checkpointed_at: `2026-08-26T22:11:00+09:00`
 
 ## Durable checkpoint
 
@@ -37,16 +37,22 @@ R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client a
 
 ## Active R2 slice — Open Hand Wholeness of Body
 
-Canonical NEXT is now **Open Hand Wholeness of Body remote-owner gap**. R1 exact checkpoint `f26092033673622c7c15755ac304678441a1eda3` is already source/execution green; do not reimplement or rerun it merely because R2 started.
+Canonical NEXT is **Open Hand Wholeness of Body remote-owner gap**. R1 exact checkpoint `f26092033673622c7c15755ac304678441a1eda3` is already source/execution green; do not reimplement or rerun it merely because R2 started.
+
+Current connected proof work:
+- `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d` added `tests/ui/connectedProjectedCharacterWholenessResolution.test.ts` covering Host-unknown authority, HP/resource/Bonus Action ordered events, Host permanent-library isolation, owning Client durable exactly-once apply, duplicate request/event safety, reconnect/rebind, and compensating Undo/inverse write-back.
+- `d2923455f1de8e0368258b8d53ed3da7e3362925` wired that proof into Phase12. Exact run `32972457970` exposed the first direct red only: production catalog missing `dnd.srd521.subclass.monk.warrior-of-the-open-hand`.
+- `81baf37690f0e36758e4eabe5d5244f8163cdaec` added the canonical Open Hand subclass catalog identity. No second healing engine/protocol/schema was added.
+- `d03adbe11c10aa394628c025c36bea9d5c27f9c5` added `content/**` to the Phase12 trigger so catalog identity changes cannot bypass the connected gate.
+- Exact Phase12 run `32972594009` / `connected-protocol` job `98189595694`: Wholeness connected authority proof is green and Phase11 offline walkthrough is green; production frontend `npm run build` is still in progress at this checkpoint. Do not claim R2 closure until that exact build step succeeds.
 
 Reuse the existing Wholeness resolver, Focus Point resource, healing path, initiative/freeform economy split, Activity, generic `ResolutionEvent`, Character owner write-back, duplicate/reconnect primitives, and event-native Undo. Do not create a second healing engine, protocol, schema, or remote-only rules path.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Do not repeat validated Rage, Wild Shape, Cunning Dash/Disengage/Hide, Uncanny Dodge, or Berserker Intimidating Presence R2.
-3. Inspect current Wholeness of Body domain/runtime, connected reconstruction, and existing tests first. If a connected remote-owner proof already exists, reuse its evidence instead of duplicating it.
-4. Otherwise add only the smallest deterministic Host-unknown Open Hand Monk proof for authoritative healing/resource/economy ordered events, Host permanent Character-library isolation, owning Client exactly-once write-back, duplicate request/event safety, reconnect/fresh projection convergence, and compensating Undo/inverse owner convergence.
-5. Fix only the first direct red. Verify changed exact SHA through existing Phase12 connected gate plus production frontend/build. `windows-connected-playable` remains R3 acceptance.
-6. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
-7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Do not repeat validated Rage, Wild Shape, Cunning Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, or Wholeness focused authority proof.
+3. Read exact Phase12 run `32972594009`, job `98189595694`. If production frontend `npm run build` is green, close Wholeness R2 from `d03adbe11c10aa394628c025c36bea9d5c27f9c5` evidence and advance canonical NEXT to the next R2 item. If red, fix only the first direct Wholeness-related red.
+4. `windows-connected-playable` remains R3 acceptance and is not an R2 closure gate.
+5. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
+6. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
