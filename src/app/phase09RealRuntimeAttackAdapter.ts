@@ -280,7 +280,9 @@ MockAdapter.prototype.undoLastResolution = async function undoLastResolutionFrom
   const internal=this as unknown as RuntimeAttackAdapterState;
   const history=committedEventHistory.get(this);
   if (!history || internal.lastResolutionId !== history.resolutionId) return previousUndo.call(this);
-  const runtimeState=snapshotAdapterTurnRuntimeState(this,internal.scene);
+  const runtimeState=internal.sessionMode === "initiative"
+    ? snapshotAdapterTurnRuntimeState(this,internal.scene)
+    : undefined;
   const undone=undoResolutionEvents(internal.scene,history.events,internal.activeCharacter.resources,internal.activeCharacter.items,runtimeState);
   if (undone.status === "rejected") {
     if (internal.resolution) {
