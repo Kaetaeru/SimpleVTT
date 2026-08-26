@@ -55,6 +55,7 @@ export interface CharacterProgressionSelectionsV1 {
   pactTomeCantripIds?:string[];
   pactTomeRitualSpellIds?:string[];
   pactTomeSpellSources?:Record<string,string>;
+  wildShapeKnownForms?:DruidWildShapeForm[];
   spellMasterySourcesByLevel?:Record<number,string>;
 }
 
@@ -131,7 +132,6 @@ export interface CharacterSourceSnapshotV1 {
   };
   progression:CharacterProgressionSelectionsV1;
   featureGrants?:string[];
-  wildShapeKnownForms?:DruidWildShapeForm[];
   resourceDefinitions?:CharacterResourceSourceDefinitionV1[];
   itemReferences:CharacterItemSourceReferenceV1[];
 }
