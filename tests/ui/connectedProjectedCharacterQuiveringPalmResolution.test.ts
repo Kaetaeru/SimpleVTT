@@ -180,6 +180,7 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
     const detonateCursor=state.ledger.cursor;
     const detonateRequest=request(state.sessionId,"request.r2.quivering.detonate",remoteManifest,OPEN_HAND_QUIVERING_PALM_DETONATE_ACTION_ID,TARGET_B,detonateCursor);
     assert.equal(await routeConnectedActionRequest(host,{peer:RECONNECT_PEER,message:""},detonateRequest),true);
+    for(let step=0;step<8&&state.ledger.cursor===detonateCursor;step++)await host.advanceResolution();
     snapshot=await host.getSnapshot();assert.equal(state.ledger.cursor,detonateCursor+1);assert.deepEqual(markers(host,remote.id),[]);assert.equal(focus(projectedCharacterById(host,remote.id)!.sheet),9);assert.ok(hp(snapshot.scene,TARGET_B)<hpBeforeDetonate);assert.equal(snapshot.scene.economyByActor[remote.id]?.action,false,"initiative detonation must spend Action");assert.deepEqual(snapshot.characters,before.characters);
     hostBatches=batches(broadcasts);const detonateEvent=hostBatches.at(-1)?.events?.[0];assert.ok(detonateEvent);assert.equal(detonateEvent!.payload.kind,"resolution");
     if(detonateEvent!.payload.kind!=="resolution")throw new Error("expected detonation resolution event");
