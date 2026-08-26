@@ -19,9 +19,12 @@ Canonical target branch: **`work/v1-composite`**
 - Berserker Intimidating Presence R1 exact execution checkpoint: `1df452fcd951525242631e2cb345e6ee390251fd`.
 - Open Hand Wholeness of Body R1 exact execution checkpoint: `f26092033673622c7c15755ac304678441a1eda3`.
 - Open Hand Fleet Step R1 exact execution checkpoint: `21b5ab830442318e5c5b499464a746fb4370cd4b`.
-- `21b5ab8`은 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다. 이는 Fleet Step R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
+- Devotion Holy Nimbus R1 exact execution checkpoint: `21b5ab830442318e5c5b499464a746fb4370cd4b`.
+- Open Hand Quivering Palm R1 exact execution checkpoint: `126cd848b1b7896eaa09f8775e60dcd9638fdf72`.
+- `21b5ab8`은 Fleet Step과 Holy Nimbus focused gate를 포함한 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다.
+- `126cd84`는 Quivering Palm focused gate를 포함한 UI run `32942627369`가 success이고 Phase 12 run `32942627376`의 connected-protocol job `98096599197`이 success다. 이는 Quivering Palm R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 
-따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
+따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
 ## 2. 실행 증거
 
@@ -147,6 +150,28 @@ Canonical target branch: **`work/v1-composite`**
   - Phase 12 Connected Session run `32939892195` / job `98088532135` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
 - 결론: **Open Hand Fleet Step R1 local/initiative/trigger/economy/resource/effect/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
 
+### Green — Devotion Holy Nimbus R1 exact checkpoint `21b5ab8`
+
+- 기존 `paladinDevotion` domain resolver/resource를 재사용해 Paladin 20+ Devotion에 Holy Nimbus production action을 노출한다.
+- initiative에서는 기존 Bonus Action economy를 쓰고 freeform에서는 stranded turn economy를 남기지 않는다.
+- resource 1/long rest, self target, Activity, generic/event-native Undo 경계를 기존 primitives로 유지한다.
+- `npm run build`의 `test:devotion-holy-nimbus` gate가 exact `21b5ab8` UI frontend와 Phase 12 connected-protocol production frontend gate에서 green이다.
+- Life Domain Preserve Life와 Circle of the Land Land's Aid처럼 현재 `resolveAction(actionId,targetIds)`보다 richer choice input이 필요한 기능은 자동할당/가짜 버튼으로 노출하지 않는다.
+- 결론: **Devotion Holy Nimbus R1 local/freeform/initiative/resource/economy/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
+
+### Green — Open Hand Quivering Palm R1 exact checkpoint `126cd84`
+
+- 기존 `src/domain/monkOpenHand.ts`의 Quivering Palm seed와 Action detonation resolver를 재사용하고 production adapter만 얇게 연결했다.
+- completed Unarmed Strike hit 뒤 Focus 4를 소비하는 ephemeral seed follow-up을 제공하며 Monk당 기존 marker는 새 target으로 교체된다.
+- marker가 있으면 해당 target에만 Action detonation을 노출한다. Constitution save, 10d12 force damage, 성공 시 절반, marker 종료를 domain resolver가 소유한다.
+- initiative에서는 Action economy를 소비하고 freeform에서는 같은 mechanics를 사용하되 turn economy를 남기지 않는다. `activation: "replace-attack"`은 domain에서 unsupported이므로 노출하지 않는다.
+- focused test는 level/subclass eligibility, seed/resource/marker replacement, freeform detonation/save/damage/Undo, initiative Action economy/Undo를 검증한다.
+- gate red의 마지막 원인은 product runtime이 아니라 test fixture였다. `MockAdapter` 기본 mode가 initiative인데 freeform fixture가 mode를 전환하지 않아 두 번째 seed와 freeform detonation이 Action economy에 막혔다. `126cd848b1b7896eaa09f8775e60dcd9638fdf72`에서 test setup만 `freeform`으로 정렬했다.
+- exact SHA `126cd84` GitHub Actions:
+  - UI run `32942627369` / job `98096599031` `frontend`: **success**, `Typecheck and build`와 `test:open-hand-quivering-palm` 포함 전 단계 green.
+  - Phase 12 Connected Session run `32942627376` / job `98096599197` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
+- 결론: **Open Hand Quivering Palm R1 supported seed + Action detonation local/freeform/initiative/resource/economy/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect와 attack-replacement activation은 R2/향후 지원에서 별도 검증한다.
+
 ## 3. Source-complete로 취급하고 재구현하지 않을 것
 
 - 339/339 spell executable definitions, multi-target targeting, condition/concentration lifecycle
@@ -167,7 +192,9 @@ Canonical target branch: **`work/v1-composite`**
 - Berserker Intimidating Presence R1 through `1df452f`: existing domain resolver reuse, production action projection, initiative/freeform economy split, feature resource, authoritative targeting, Frightened, Activity and Undo boundaries
 - Open Hand Wholeness of Body R1 through `f260920`: existing resolver/resource reuse, initiative/freeform economy split, healing, Activity, event-native write-back and Undo.
 - Open Hand Fleet Step R1 through `21b5ab8`: existing resolver/turn-history/resource reuse, post-Bonus-Action projection, free/focused variants, movement/effect semantics, Activity and Undo.
-- remaining existing Barbarian Berserker mechanics outside the exposed R1 action are not reimplemented unless the inventory identifies a real production projection gap.
+- Devotion Holy Nimbus R1 through `21b5ab8`: existing resolver/resource reuse, level/subclass projection, initiative/freeform economy split, Activity and Undo.
+- Open Hand Quivering Palm R1 through `126cd84`: post-Unarmed-hit seed, Focus 4, single-target marker replacement, Action detonation, Constitution save, 10d12 force/save-half, freeform/initiative economy, Activity and Undo. `replace-attack` remains unsupported and unexposed.
+- remaining existing subclass mechanics outside the exposed R1 actions are not reimplemented unless the inventory identifies a real production projection gap.
 
 Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, R3 Tauri durability, R4 rendered UX/accessibility, R5 release gates는 별도다.
 
@@ -197,11 +224,15 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
   - [x] Berserker Intimidating Presence: exact checkpoint `1df452f`, focused build gate + UI/Phase12 green.
   - [x] Open Hand Wholeness of Body: exact checkpoint `f260920`, focused 4/4 + UI/Phase12 connected-protocol green.
   - [x] Open Hand Fleet Step: exact checkpoint `21b5ab8`, focused 4/4 + UI/Phase12 connected-protocol green.
+  - [x] Devotion Holy Nimbus: exact checkpoint `21b5ab8`, focused build gate + UI/Phase12 connected-protocol green.
+  - [x] Open Hand Quivering Palm supported seed + Action detonation: exact checkpoint `126cd84`, focused build gate + UI/Phase12 connected-protocol green.
   - [ ] 남은 subclass domain resolver inventory에서 다음 mechanics-complete production projection gap 식별.
 - [ ] 각 신규 행동에 local/freeform/initiative/Activity/Undo를 연결.
   - [x] Berserker Intimidating Presence R1 범위.
   - [x] Open Hand Wholeness of Body R1 범위.
   - [x] Open Hand Fleet Step R1 범위.
+  - [x] Devotion Holy Nimbus R1 범위.
+  - [x] Open Hand Quivering Palm supported R1 범위.
 
 Exit: 대표 12-class Character가 UI에서 사용 가능한 핵심 행동을 dead button 없이 실행한다.
 
@@ -255,12 +286,13 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-Open Hand Fleet Step R1은 `21b5ab8`에서 execution-validated 됐다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
+Open Hand Quivering Palm supported R1은 `126cd84`에서 execution-validated 됐다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
 
 ```text
 live branch와 existing subclass domain resolver / production action projection inventory 재대조
--> Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
+-> Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported R1, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
 -> domain resolver가 실제 mechanics를 소유하지만 production action bar에 빠진 다음 action 하나만 식별
+-> richer player-choice input이 필요한 Preserve Life/Land's Aid 같은 partial feature는 자동할당하거나 dead button으로 노출하지 않음
 -> unsupported/partial feature는 dead button으로 노출하지 않음
 -> 선택한 action의 local/freeform/initiative/economy/Activity/Undo 기존 primitives를 우선 재사용
 -> focused deterministic evidence 추가 또는 기존 증거 재사용
@@ -282,6 +314,8 @@ npm run test:rogue-core
 npm run test:berserker-presence
 npm run test:open-hand-wholeness
 npm run test:open-hand-fleet-step
+npm run test:devotion-holy-nimbus
+npm run test:open-hand-quivering-palm
 npm run build
 npm run test:connected-ui
 npm run test:spellcasting
