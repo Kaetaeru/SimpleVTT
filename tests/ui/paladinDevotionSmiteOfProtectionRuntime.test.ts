@@ -3,9 +3,6 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { CharacterSheet, SceneVm } from "../../src/app/contracts";
-import { runtimeResolutionEventHistories } from "../../src/app/runtimeResolutionEventHistory";
-import { undoResolutionEvents } from "../../src/app/realEventUndoService";
-import { projectResolutionCharacterWriteBack } from "../../src/app/resolutionCharacterDurableProjection";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import { DIVINE_SMITE_ID, PALADIN_ID } from "../../src/domain/classFeatureSpellResources";
 import {
@@ -86,14 +83,6 @@ test("level 15 Devotion automatically appends Smite of Protection to a committed
     state:state!,paladinId:actorId,paladinLevel:15,subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
     paladinIncapacitated:false,relation:"self",distanceFeet:0,
   }),true);
-
-  const history=runtimeResolutionEventHistories.get(adapter);
-  assert.ok(history);
-  const preview=undoResolutionEvents(snapshot.scene,history.events,snapshot.activeCharacter.resources,snapshot.activeCharacter.items,state);
-  assert.equal(preview.status,"committed");
-  const durable=projectResolutionCharacterWriteBack(snapshot.activeCharacter,history.events,"inverse");
-  assert.equal(durable.status,"committed");
-  return;
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
