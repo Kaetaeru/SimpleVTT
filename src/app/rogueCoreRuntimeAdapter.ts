@@ -211,9 +211,9 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
     const snapshot=await previousAdvanceResolution.call(this);
     if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
       const uncannyComplete=uncannyResolutionIds.get(this)===resolution.id;
-      if(ROGUE_ACTION_IDS.has(resolution.actionId)||uncannyComplete) {
-        if(uncannyComplete)projectUncannyDodgeActivity(internal,resolution);
-        markSnapshotUndo(this,resolution.id);
+      if(ROGUE_ACTION_IDS.has(resolution.actionId)) markSnapshotUndo(this,resolution.id);
+      if(uncannyComplete) {
+        projectUncannyDodgeActivity(internal,resolution);
         uncannyResolutionIds.delete(this);
       }
     }
