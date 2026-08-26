@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T22:13:00+09:00`
+- checkpointed_at: `2026-08-26T22:17:00+09:00`
 
 ## Durable checkpoint
 
@@ -25,38 +25,31 @@ R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client a
 - Cunning Action Disengage: focused remote-owner proof green through `134e6a8d7def8711d84bb5be56186f353a4ddeb2`.
 - Cunning Action Hide: `7f8e9459e433164b916ee8ef12fdf3042492d9d7`; UI `32968629784` / `98176845419`, Phase12 `32968629791` / `98176845690` green.
 - Uncanny Dodge: `a1edf6bc869984aaabf5cf5f564f4f11c21399ad`; UI `32970182652` / `98181814250`, Phase12 `32970182722` / `98181814527` green. Duplicate owner interrupt-response/event, reconnect, owner write-back and compensating Undo are covered. Ponytail cleanup `d8df984ce868e3ae9bf8a78162e0924120f4f2c3` removed duplicate remote Rogue rules materialization.
-- Berserker Intimidating Presence R2: exact test head `3d3c9866fd24c15d233e8d8730e70052597e8fec`; Phase12 `32971306050` / connected-protocol `98185443594` success through focused authority proof, Phase11 walkthrough and production frontend gate; UI `32971305995` / frontend `98185443299` success including `Typecheck and build`. `windows-connected-playable` is R3, not an R2 gate.
+- Berserker Intimidating Presence R2: exact test head `3d3c9866fd24c15d233e8d8730e70052597e8fec`; Phase12 `32971306050` / connected-protocol `98185443594` and UI `32971305995` / frontend `98185443299` green.
+- Open Hand Wholeness of Body R2: focused proof `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d`; canonical Open Hand identity `81baf37690f0e36758e4eabe5d5244f8163cdaec`; exact test/content head `d03adbe11c10aa394628c025c36bea9d5c27f9c5`; Phase12 `32972594009` / `98189595694` and UI `32972536815` / `98189406605` green through production `npm run build`.
 
-## Berserker Intimidating Presence R2 closure
+## Open Hand Wholeness of Body R2 closure
 
-- Focused proof: `tests/ui/connectedProjectedCharacterBerserkerIntimidatingPresenceResolution.test.ts`.
-- Direct connected gap was canonical Berserker subclass projection/content identity, not mechanics.
-- `7e8541864f19c1abd22bbe0a32ae0f2dae685fa0` added canonical `dnd.srd521.subclass.barbarian.path-of-the-berserker` identity without a second fear engine/protocol/schema.
-- `3d3c9866fd24c15d233e8d8730e70052597e8fec` proves Host-unknown authoritative resolve, resource/Bonus Action/Frightened ordered events, Host permanent-library isolation, owning Client durable exactly-once apply, duplicate safety, reconnect preservation, and compensating Undo/inverse owner persistence.
-- Canonical handoff/checklist commit `c0275f10b17834fafcabb8afe3fdf6c46e8d0d7a` records exact evidence, closes Berserker Intimidating Presence R2, and advances NEXT.
+- Existing R1 Wholeness resolver/Focus Point/healing/economy/Activity/ResolutionEvent/Undo and connected SessionProjection/owner write-back/reconnect primitives were reused. No second healing engine, protocol, schema, or remote-only rules path was added.
+- `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d` proves Host-unknown authoritative resolve, HP/resource/Bonus Action ordered events, Host permanent Character library isolation, owning Client durable exactly-once apply, duplicate request/event no-op, reconnect/rebind, compensating Undo and inverse owner write-back.
+- The first direct red was canonical Open Hand subclass identity, fixed only by `81baf37690f0e36758e4eabe5d5244f8163cdaec`.
+- `d03adbe11c10aa394628c025c36bea9d5c27f9c5` ensures `content/**` changes trigger Phase12 connected validation.
+- Canonical handoff/checklist commit `733bf1ecb5ea6db5127e8ddbb7524f9286bf0f3b` closes Wholeness R2 and advances NEXT.
+- `windows-connected-playable` remains R3 acceptance and is not an R2 closure gate.
 
-## Active R2 slice — Open Hand Wholeness of Body
+## Active R2 slice — Open Hand Fleet Step
 
-Canonical NEXT is **Open Hand Wholeness of Body remote-owner gap**. R1 exact checkpoint `f26092033673622c7c15755ac304678441a1eda3` is already source/execution green; do not reimplement or rerun it merely because R2 started.
+Canonical NEXT is **Open Hand Fleet Step remote-owner gap**. R1 exact checkpoint `21b5ab830442318e5c5b499464a746fb4370cd4b` is already source/execution green; do not reimplement or rerun it merely because R2 started.
 
-Current connected proof work:
-- `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d` added `tests/ui/connectedProjectedCharacterWholenessResolution.test.ts` covering Host-unknown authority, HP/resource/Bonus Action ordered events, Host permanent-library isolation, owning Client durable exactly-once apply, duplicate request/event safety, reconnect/rebind, and compensating Undo/inverse write-back.
-- `d2923455f1de8e0368258b8d53ed3da7e3362925` wired that proof into Phase12. Exact run `32972457970` exposed the first direct red only: production catalog missing `dnd.srd521.subclass.monk.warrior-of-the-open-hand`.
-- `81baf37690f0e36758e4eabe5d5244f8163cdaec` added the canonical Open Hand subclass catalog identity. No second healing engine/protocol/schema was added.
-- `d03adbe11c10aa394628c025c36bea9d5c27f9c5` added `content/**` to the Phase12 trigger so catalog identity changes cannot bypass the connected gate.
-- Exact Phase12 run `32972594009` / `connected-protocol` job `98189595694` is fully green: Wholeness connected authority proof, Phase11 offline walkthrough, and production frontend `npm run build` all succeeded. `windows-connected-playable` is R3 and is not an R2 closure gate.
-- UI run `32972536815` / frontend job `98189406605` on product/content head `81baf37690f0e36758e4eabe5d5244f8163cdaec` also succeeded through `Typecheck and build`.
-
-Wholeness R2 execution evidence is complete. Canonical handoff/checklist reconciliation is the only remaining closure bookkeeping at this checkpoint.
-
-Reuse the existing Wholeness resolver, Focus Point resource, healing path, initiative/freeform economy split, Activity, generic `ResolutionEvent`, Character owner write-back, duplicate/reconnect primitives, and event-native Undo. Do not create a second healing engine, protocol, schema, or remote-only rules path.
+Reuse the existing Fleet Step resolver, Focus Point resource, authoritative turn-runtime history, post-non-Step-Bonus-Action trigger, free/focused variants, movement/effect semantics, Activity, generic `ResolutionEvent`, Character owner write-back, duplicate/reconnect primitives, and event-native Undo. Do not create a second movement engine, protocol, schema, or remote-only rules path.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Do not repeat validated Rage, Wild Shape, Cunning Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, or Wholeness R2 execution gates.
-3. Update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` with exact Wholeness evidence (`d03adbe11c10aa394628c025c36bea9d5c27f9c5`, Phase12 `32972594009` / `98189595694`, UI `32972536815` / `98189406605`) and close Wholeness R2.
-4. Advance canonical NEXT to the next unvalidated R2 item: **Open Hand Fleet Step remote-owner gap** (R1 checkpoint `21b5ab830442318e5c5b499464a746fb4370cd4b`). Inspect existing runtime/reconstruction/tests before adding code; reuse existing Host authority/events/owner persistence/duplicate/reconnect/Undo primitives.
-5. `windows-connected-playable` remains R3 acceptance and is not an R2 closure gate.
-6. `PLAN.md` remains unchanged unless routing materially changes. After canonical reconciliation persist `STATE.md`, then `control.json` LAST.
-7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Do not repeat validated Rage, Wild Shape, Cunning Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, or Wholeness R2 gates.
+3. Inspect existing Fleet Step domain/runtime/reconstruction/tests before adding code. Reuse current Host authority/event/owner persistence/duplicate/reconnect/Undo primitives.
+4. Add or reuse the smallest focused proof for an eligible Host-unknown Open Hand Monk: authoritative prior non-Step Bonus Action trigger, free Fleet Step movement, focused Fleet Step Focus-1/effect path, ordered events, Host permanent-library isolation, owning Client exactly-once convergence, duplicate request/event safety, reconnect/fresh projection, compensating Undo and owner inverse convergence.
+5. If a direct red appears, fix only the first Fleet Step-related cause. No broad refactor.
+6. Verify exact-head production frontend/connected gates. `windows-connected-playable` remains R3, not an R2 gate.
+7. `PLAN.md` remains unchanged unless routing materially changes. After meaningful progress persist `STATE.md`, then `control.json` LAST.
+8. R3 Windows/Tauri durability, R4 rendered UX/accessibility, and R5 packaging remain separate.
