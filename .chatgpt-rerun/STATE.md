@@ -36,6 +36,13 @@ Exact source-equivalent evidence at `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83`:
 - Phase 12 run `32935738475`, connected-protocol job `98076495591`: `Verify connected-session authority protocol` green and `Verify Phase 11 offline walkthrough remains green` green; only `Verify production frontend gate` fails because it runs the same `npm run build` blocked by Holy Nimbus.
 - Branch checkpoint `aa4c6b791ce25e5cd9e734a41980d737367963b3` changes rerun state/control only and is product-source-equivalent to `3a9f22d`.
 
+Follow-up live reconciliation:
+
+- live `work/v1-composite` HEAD is `9bad9547a20a7ed9d739764ffb2a17179570d8ef` (`chore: publish Wholeness gate checkpoint`).
+- GitHub compare `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83...9bad9547a20a7ed9d739764ffb2a17179570d8ef` reports four commits ahead, zero behind, with changes only to `.chatgpt-rerun/STATE.md` and `.chatgpt-rerun/control.json`.
+- Therefore `9bad9547` is product-source-equivalent to the permitted Wholeness source `3a9f22d`; no newer concurrent product change exists to remove the Holy Nimbus-only build blocker.
+- No Wholeness product code was changed and no already-green Wholeness or historical full-matrix validation was repeated during this reconciliation.
+
 Scope reconciliation:
 
 - The previous Holy Nimbus failure shape at the earlier `ba820a4` checkpoint (`expected 1, actual 0` at line 73) was superseded by concurrent Holy Nimbus changes. The latest permitted-source blocker is the line 88 expiry count mismatch (`65 !== 64`) above.
@@ -45,4 +52,4 @@ Scope reconciliation:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. If a newer concurrent product HEAD removes the Holy Nimbus-only `npm run build` red, inspect only that exact HEAD's UI and Phase 12 gates. If both are green and Wholeness remains source-equivalent/focused-green, mark Wholeness R1 source-complete/execution-validated and advance canonical V1 handoff/checklist to the next smallest mechanics-complete subclass action candidate. If HEAD remains source-equivalent to `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` with the same unrelated Holy Nimbus-only red, make no Wholeness product-code change and do not repeat already-green tests. Keep R2 excluded.
+Reconcile live `work/v1-composite` first. If a newer concurrent product HEAD removes the Holy Nimbus-only `npm run build` red, inspect only that exact HEAD's UI and Phase 12 gates. If both are green and Wholeness remains source-equivalent/focused-green, mark Wholeness R1 source-complete/execution-validated and advance canonical V1 handoff/checklist to the next smallest mechanics-complete subclass action candidate. If HEAD remains product-source-equivalent to `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` with the same unrelated Holy Nimbus-only red, make no Wholeness product-code change and do not repeat already-green tests. Keep R2 excluded.
