@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T18:05:00+09:00`
+- checkpointed_at: `2026-08-26T18:23:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -17,7 +17,7 @@ Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, Rogue
 
 ## Smite of Protection result — do not reopen
 
-Paladin Devotion Smite of Protection R1 is green at the focused UI/build gate.
+Paladin Devotion Smite of Protection R1 remains green at the focused UI/build gate.
 
 - `d128fc0db9c58ca46b426c140faf6c726890bd74` fixed generic Undo by excluding TurnRuntime spell-slot current counts from Character durable write-back.
 - `89cc64213032c016de053d6a88b51e23aa91209d` restored the real public `undoLastResolution()` assertion and passed UI `32950156016`.
@@ -25,21 +25,27 @@ Paladin Devotion Smite of Protection R1 is green at the focused UI/build gate.
 
 Do not repeat the Smite bisection unless a direct regression proves it necessary.
 
-## Current Fiend Dark One's Own Luck bisection
+## Fiend Dark One's Own Luck R1 — green; do not reopen
 
-Warlock Fiend Dark One's Own Luck mechanics already exist in `src/app/warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts`; do not add another bridge. Existing local-DM ability-check host fix `a51154f3a06a00122df12459e8465129123d6d41` is preserved.
+Warlock Fiend Dark One's Own Luck mechanics already existed in `src/app/warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts`; no second bridge was added and no Fiend production mechanics file was changed by the diagnostic bisection. Existing local-DM ability-check host fix `a51154f3a06a00122df12459e8465129123d6d41` remains preserved.
 
-- `6038687ac4d74ffc6da1163d4224deb1cecc9c3a` remains the earlier known-green diagnostic boundary through Fiend resource projection (`beforeUses === 4`), UI `32947158403` success.
-- `5ecc2eb7d77a0c89b1444eac9032bd9ed0a7a574` restored all three Fiend focused cases and exposed the Fiend-only build red; UI `32950308840` failed at `Typecheck and build` while its parent full Smite gate was green.
-- `875bcd926b59366092f0e912f877888965b69538` kept only the first ability-check/Activity/Undo case active and was red, proving the failure is inside the first Fiend ability-check case after the previously green resource projection boundary.
-- `5cca3692234d59b3cfcaf108e5bcd54d7bb0dde0` returned immediately after the DM DC produces the Fiend interrupt. UI `32950659433` passed, proving ability-check resolution, DM DC adjudication, and interrupt offer are green.
-- `7c3aaa272dfae45f2b8bf3919fabdadc3b68c00f` advanced through `respondToInterrupt(true)` and asserted `checkOutcome === "성공"`. UI `32950832046` failed at `Typecheck and build`. Therefore the failing boundary is after the interrupt is offered and at/inside accepted Fiend response processing; resource/Activity/Undo assertions were not reached.
-- Live diagnostic HEAD at checkpoint is `7597d5358b00058692c3ce024f325179cd05166f` (`test: bisect Fiend interrupt response call`). It calls `respondToInterrupt(true)` and returns immediately before any post-response assertion. UI `32951016604` and Connected `32951016520` are the exact-SHA evidence runs; UI had reached `Typecheck and build` and was still in progress at checkpoint.
-- No Fiend production mechanics file has been changed by this bisection.
+The bisection proved each boundary in order without reopening validated work:
 
-Static inspection confirms the existing Fiend adapter reuses TurnRuntime resource state, `resolveFiendDarkOnesOwnLuck`, `applyResolutionEvents`, Character write-back, and `commitAdapterTurnRuntimeState`; do not replace those with a new subsystem. The next diagnostic must distinguish whether `respondToInterrupt(true)` itself completes cleanly versus the first post-response outcome assertion being wrong. A plausible test-fixture issue is that Dark One's Own Luck adds d10 but does not guarantee success; do not change production behavior merely to satisfy `checkOutcome === "성공"` unless exact evidence proves the mechanics path failed.
+- `c93a008a2cddc40152f3344293c59cff1a4d4d3b` enabled the Activity assertion. UI `32952038593` passed.
+- `8ed1d603bcde874772c74879d1063368d7da0c19` enabled the ability-check Undo restore assertion. UI `32952247276` passed.
+- `23019e79be5aed9ea327ab5c38dc1d987049a6e4` restored the saving-throw case. UI `32952426354` passed.
+- `95042b2ef3c65aef3619334c0bec1ad243d165f2` restored the below-level guard, leaving all three Fiend cases active with no diagnostic returns/skips.
+- Exact HEAD `95042b2` UI run `32952470669` / frontend job `98126755335` passed including `Typecheck and build`.
+- Exact HEAD `95042b2` Phase 12 run `32952470663` / `connected-protocol` job `98126755397` passed connected authority protocol, offline walkthrough, and production frontend gate. The separate Windows packaging job was still running at checkpoint and is not used to claim R3/Tauri completion.
+- `package.json` has both `test:fiend-luck` and `test:devotion-smite-protection` wired into `npm run build`.
 
-`PLAN.md` is unchanged. Canonical handoff/checklist must not advance while Fiend diagnostic returns/skips remain or exact-head gates are red/pending.
+Validated Fiend R1 boundaries now include failed ability-check interrupt offer/accept, deterministic d10 success fixture, resource spend, Activity, event-native Undo restore, failed saving-throw conversion, no-damage success continuation, saving-throw Undo restore, and below-level non-projection.
+
+Do not repeat this Fiend bisection unless a direct regression proves it necessary.
+
+## Canonical synchronization pending
+
+`PLAN.md` is unchanged. `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` still point at the generic remaining-subclass inventory after Quivering Palm and must now be advanced with the Fiend `95042b2` exact execution evidence before selecting the next R1 inventory item.
 
 Inventory decisions to preserve:
 
@@ -49,11 +55,11 @@ Inventory decisions to preserve:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Read UI `32951016604` and Connected `32951016520` for exact HEAD `7597d5358b00058692c3ce024f325179cd05166f`.
+Reconcile live `work/v1-composite` first.
 
-- If `7597d53` is green, `respondToInterrupt(true)` itself is green and the first failing assertion is the hard-coded `checkOutcome === "성공"`. Inspect the actual deterministic initial total / d10 expectation and change only the test if the feature correctly adds d10 but still legitimately fails; otherwise isolate resource/Activity/Undo one boundary at a time.
-- If `7597d53` is red, the fault is inside the accepted interrupt call before any post-response assertion; isolate seed/domain/apply/write-back/TurnRuntime commit using existing helpers and do not introduce a new bridge.
-- After the first Fiend ability-check case is green, re-enable only the saving-throw case, then the below-level case.
-- After all Fiend cases are green, remove all diagnostic skips/returns and require exact-head `npm run build`, UI, and Connected green with both `test:fiend-luck` and `test:devotion-smite-protection` wired into build; only then advance canonical handoff/checklist to the next R1 inventory item.
+1. Confirm `95042b2` remains an ancestor/current checkpoint and do not rerun its already-green focused work.
+2. Update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` with Fiend Dark One's Own Luck R1 exact checkpoint `95042b2`, UI `32952470669`, and Phase 12 connected-protocol job `98126755397`.
+3. Continue the existing remaining-subclass domain-resolver inventory and identify exactly one next mechanics-complete production projection gap. Do not choose Preserve Life or Land's Aid without the richer choice-input contract they require.
+4. Prefer existing domain/runtime primitives; no speculative subsystem, no R2 expansion.
 
 PLAN unchanged; update `STATE.md` then `control.json` last per protocol.
