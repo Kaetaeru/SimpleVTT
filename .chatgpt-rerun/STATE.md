@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T18:44:00+09:00`
+- checkpointed_at: `2026-08-26T18:47:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -38,27 +38,36 @@ Inventory decisions to preserve:
 
 ## Next selected R1 gap — College of Lore Cutting Words
 
-The remaining subclass inventory identifies College of Lore `Cutting Words` as the next mechanics-complete domain resolver with no production runtime bridge at the reconciled `2a2061e26f25df6a5d0c03aa1bfe2046e4d6723f` head.
+Live GitHub selected College of Lore `Cutting Words` as the next mechanics-complete domain resolver with no production runtime bridge. A concurrent checkpoint at `ae19764aa8dfa045c1ce032acaa1b0a75b93d13a` is authoritative over the earlier local inventory candidate.
 
 - `src/domain/bardCollegeLore.ts` already owns `resolveLoreCuttingWords` for successful ability checks, successful attack rolls, and damage rolls; it owns Bardic Inspiration spend, optional Reaction economy, fixed Inspiration die validation, 60-foot range, visibility, and result adjustment.
 - `tests/domain/bardCollegeLore.test.ts` already proves attack/check reduction, damage reduction floor at zero, resource/Reaction spend, and 60-foot/visibility validation.
 - Live `src/app` inventory has the Peerless Skill bridge but no Cutting Words production adapter; do not duplicate domain mechanics.
 - `resolveRuntimeTargetingFact` already provides authoritative distance/visibility and the existing mapless fallback; do not invent spatial facts.
-- `phase09RealRuntimeAttackAdapter` exposes a safe successful-attack interruption point at `attack-result` before the atomic attack transaction is committed. Existing interrupt/event/write-back/Undo primitives should be reused.
-- Damage-roll support must remain mechanics-complete. Before writing a production bridge, verify a clean existing seam can adjust the staged authoritative damage transaction. If no such seam exists, do not ship attack/check-only partial Cutting Words; record the blocker and continue inventory instead of adding a dead/partial feature.
+
+### Staged damage seam — verified
+
+The required damage-roll seam exists without a new subsystem:
+
+- `src/app/rogueCoreRuntimeAdapter.ts` already queues Uncanny Dodge at the hit interrupt through `queueAtomicAttackDamageMultiplier(resolutionId,0.5,source)`.
+- `src/app/realAttackTransactionService.ts` consumes that queued adjustment immediately before the authoritative atomic attack commit, then applies it to compiled `compound-damage` operations.
+- Cutting Words can reuse the same queue/commit location by minimally generalizing the pending atomic damage adjustment to support an additive flat reduction alongside the existing multiplier. No parallel attack engine or duplicate transaction path is needed.
+- Successful attack-roll reduction can reuse the existing follow-up pattern used by Bardic Inspiration/Peerless Skill: adjust the staged attack total/temporary attack modifier before the atomic transaction validates preview parity.
+- Successful ability-check reduction can reuse the existing completed-check follow-up/activity/event-history pattern used by Dark One's Own Luck.
+- Reaction/resource spend remains owned by `resolveLoreCuttingWords`; append its ResolutionEvents to the parent resolution so current Character write-back, Activity projection, and event-native Undo stay authoritative.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Then inspect the existing staged-damage adjustment seams used by current reactions/riders (especially atomic attack damage modifiers) and decide whether all three Cutting Words trigger families can reuse them without a new subsystem.
+Reconcile live `work/v1-composite` first. Then implement one thin Cutting Words follow-up adapter using the existing seams above.
 
-If the seam exists:
-- add one thin Cutting Words follow-up adapter using `resolveLoreCuttingWords`;
-- reuse `resolveRuntimeTargetingFact`, Bardic Inspiration/Reaction turn runtime, interrupt events, Character write-back, Activity, and event-native Undo;
-- add focused deterministic coverage for ability-check, attack-roll, damage-roll, range/visibility/resource/reaction/Undo, and below-level/subclass gates;
-- wire only that focused gate into `npm run build`;
-- require exact-head UI frontend and Phase 12 connected-protocol production frontend green before canonical advancement.
-
-If the seam does not exist cleanly, do not invent a broad attack subsystem just for Cutting Words; preserve the finding and select the next mechanics-complete inventory gap.
+- Generalize the existing queued atomic attack damage adjustment minimally: preserve current multiplier behavior and add only the flat-reduction capability needed by Cutting Words.
+- Offer Cutting Words only for a qualifying visible target within 60 feet, College of Lore level 3+, Bardic Inspiration available, and Reaction available when initiative economy applies.
+- Support all three existing domain trigger families: successful ability check, successful attack roll, and damage roll. Do not ship attack/check-only partial support.
+- Use `resolveLoreCuttingWords`; do not reproduce its range/resource/economy/die/result rules in a second mechanics implementation beyond projection eligibility needed to render the interrupt.
+- Reuse `resolveRuntimeTargetingFact`, turn-runtime resource/economy state, interrupt events, Character write-back, Activity projection, and event-native Undo.
+- Add focused deterministic coverage for ability-check, attack-roll, damage-roll, range/visibility/resource/reaction/Undo, and below-level/subclass gates.
+- Wire only that focused gate into `npm run build`.
+- Require exact-head UI frontend and Phase 12 connected-protocol production frontend green before canonical advancement.
 
 Do not reopen Peerless or earlier validated R1 work without direct regression evidence. Do not expand into R2 unless a direct R1 regression requires it.
 
