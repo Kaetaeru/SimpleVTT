@@ -8,7 +8,7 @@ import { PALADIN_ID } from "../../src/domain/coreClassResources";
 import { DEVOTION_HOLY_NIMBUS_RESOURCE_ID } from "../../src/domain/paladinDevotion";
 import { PALADIN_DEVOTION_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 
-async function devotionPaladin(level=20){
+async function devotionPaladin(level=20,initiative=true){
   const adapter=new MockAdapter();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
   internal.activeCharacter={
@@ -22,10 +22,12 @@ async function devotionPaladin(level=20){
     resources:[],
   };
   await adapter.getSnapshot();
-  if(level>=20){
+  if(level>=20&&initiative){
     await adapter.startInitiative();
     await adapter.setCurrentActor(internal.activeCharacter.id);
     await adapter.selectDmActor(internal.activeCharacter.id);
+  } else if(level>=20) {
+    await adapter.setSessionMode("freeform");
   }
   return adapter;
 }
@@ -51,6 +53,25 @@ test("Devotion Holy Nimbus projects as a Bonus Action, spends its resource/econo
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===DEVOTION_HOLY_NIMBUS_RESOURCE_ID)?.current,1);
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,true);
+});
+
+test("Devotion Holy Nimbus works in freeform without stranding Bonus Action economy",async()=>{
+  const adapter=await devotionPaladin(20,false);
+  let snapshot=await adapter.getSnapshot();
+  const actorId=snapshot.activeCharacter.id;
+  const usesBefore=snapshot.activeCharacter.resources.find((entry)=>entry.id===DEVOTION_HOLY_NIMBUS_RESOURCE_ID)?.current??0;
+  const bonusBefore=snapshot.scene.economyByActor[actorId]?.bonusAction;
+
+  await adapter.resolveAction(DEVOTION_HOLY_NIMBUS_ACTION_ID,[actorId]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===DEVOTION_HOLY_NIMBUS_RESOURCE_ID)?.current,usesBefore-1);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,bonusBefore);
+  assert.equal(snapshot.activity.some((entry)=>entry.title.includes("성스러운 후광")),true);
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===DEVOTION_HOLY_NIMBUS_RESOURCE_ID)?.current,usesBefore);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,bonusBefore);
 });
 
 test("Devotion Holy Nimbus stays absent before Paladin level 20",async()=>{
