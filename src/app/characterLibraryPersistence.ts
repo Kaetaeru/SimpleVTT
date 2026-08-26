@@ -66,6 +66,7 @@ function progressionSelections(sheet:CharacterSheet):CharacterProgressionSelecti
     pactTomeCantripIds:sheet.pactTomeCantripIds,
     pactTomeRitualSpellIds:sheet.pactTomeRitualSpellIds,
     pactTomeSpellSources:sheet.pactTomeSpellSources,
+    wildShapeKnownForms:sheet.wildShapeKnownForms,
   });
 }
 
@@ -149,7 +150,6 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
     },
     progression:progressionSelections(sheet),
     featureGrants:cp(sheet.features),
-    wildShapeKnownForms:sheet.wildShapeKnownForms ? cp(sheet.wildShapeKnownForms) : undefined,
     resourceDefinitions:sheet.resources.map(resourceSourceDefinition),
     itemReferences:sheet.items.map(itemSourceReference),
   };
@@ -247,6 +247,7 @@ function applyProgressionSource(sheet:CharacterSheet,progression:CharacterProgre
   sheet.pactTomeCantripIds=progression.pactTomeCantripIds ? cp(progression.pactTomeCantripIds) : undefined;
   sheet.pactTomeRitualSpellIds=progression.pactTomeRitualSpellIds ? cp(progression.pactTomeRitualSpellIds) : undefined;
   sheet.pactTomeSpellSources=progression.pactTomeSpellSources ? cp(progression.pactTomeSpellSources) : undefined;
+  sheet.wildShapeKnownForms=progression.wildShapeKnownForms ? cp(progression.wildShapeKnownForms) : undefined;
 }
 
 function applySourceSnapshot(sheet:CharacterSheet,source:CharacterSourceSnapshotV1) {
@@ -272,7 +273,6 @@ function applySourceSnapshot(sheet:CharacterSheet,source:CharacterSourceSnapshot
   sheet.masteryWeapons=source.spellAndFeatureSelections.masteryWeapons ? cp(source.spellAndFeatureSelections.masteryWeapons) : undefined;
   applyProgressionSource(sheet,source.progression);
   if (source.featureGrants) sheet.features=cp(source.featureGrants);
-  sheet.wildShapeKnownForms=source.wildShapeKnownForms ? cp(source.wildShapeKnownForms) : undefined;
   sheet.rulesProfileId=source.rulesProfile.id;
   sheet.rulesProfileVersion=source.rulesProfile.version;
 }
