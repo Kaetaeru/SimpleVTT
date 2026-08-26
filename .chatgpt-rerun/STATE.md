@@ -7,67 +7,41 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T18:55:00+09:00`
+- checkpointed_at: `2026-08-26T18:57:00+09:00`
 
-## Durable execution checkpoint
+## Durable checkpoint
 
-Mandatory preflight completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`). Live GitHub remained authoritative throughout concurrent branch movement.
+Preflight was completed in the required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`). Live GitHub remained authoritative. PLAN is unchanged.
 
-Validated work was not repeated: Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, Fiend Dark One's Own Luck R1, and College of Lore Peerless Skill R1 are preserved.
+Protected execution-validated R1 work was not repeated: Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1, Devotion Holy Nimbus R1, Open Hand Quivering Palm R1, Devotion Smite of Protection R1, Fiend Dark One's Own Luck R1, and College of Lore Peerless Skill R1.
 
-## College of Lore Peerless Skill R1 — execution-validated
+Peerless exact product checkpoint remains `88bb72dc3d725af049025728003ab6e6b8db1eb0`; UI `32953773211` / frontend `98130829740` and Phase 12 `32953773099` / connected-protocol `98130829706` are green. Canonical Peerless sync remains handoff `c9016dc1729fa1789d03c6aad8ab4ef430ab8edd` and release checklist `8cd1be27d1afca578d84ccc6ce2407567580a3ff`.
 
-- Exact product checkpoint: `88bb72dc3d725af049025728003ab6e6b8db1eb0`.
-- Focused `test:lore-peerless-skill` is part of `npm run build`.
-- UI run `32953773211` / frontend job `98130829740`: **success**.
-- Phase 12 run `32953773099` / connected-protocol job `98130829706`: **success**.
-- Canonical synchronization: handoff `c9016dc1729fa1789d03c6aad8ab4ef430ab8edd`, release checklist `8cd1be27d1afca578d84ccc6ce2407567580a3ff`.
-- Windows connected-playable remains R3 packaging/acceptance debt and is not an R1 completion gate.
+Inventory exclusions remain: Life Domain `Preserve Life` requires per-target allocation; Circle of the Land `Land's Aid` requires richer point/multi-result input; Berserker `Retaliation` requires a player action-choice reaction surface and must not auto-select a melee/Unarmed action; R2 is excluded absent direct R1 regression.
 
-Inventory exclusions to preserve:
+## College of Lore Cutting Words — implementation in progress, not validated
 
-- Life Domain `Preserve Life`: player-selected per-target healing allocation required.
-- Circle of the Land `Land's Aid`: richer point/multi-result input required.
-- Berserker `Retaliation`: current `InterruptView` is a single boolean option while Retaliation requires choosing a melee weapon or Unarmed Strike; do not auto-select and erase player agency. Revisit only when an existing clean action-choice reaction surface is available.
-- R2 remote-owner exactly-once/reconnect work remains excluded unless a direct R1 regression requires it.
+Live GitHub added a sanctioned staged attack adjustment path after the earlier timing blocker:
 
-## College of Lore Cutting Words — live branch changed during reconciliation
+- `bb51a63d1b4f717a2ba5e354c2bbc7b9ec246eae` exposes staged atomic damage preview.
+- `6a2ab2b322cea054c2fe0f6c488f5e53b3fe0223` adds queued flat damage reduction, preview state, and multiplier inspection helpers.
+- `bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts` now bridges all three `resolveLoreCuttingWords` trigger families: successful other-creature ability check, successful other-creature attack roll, and staged damage roll. It reuses Bardic Inspiration runtime state, Reaction economy, targeting facts, ResolutionEvents, Character write-back, Activity, and Undo.
+- `472b3e4f0939d733eda76e8cfa0d57b15b6db20a` installs that adapter in `offlineRuntimeAdapters.ts`.
+- `60814cfb8b0be8e9b19576ee1a0b91ea6f0bbde6` adds focused runtime coverage for ability-check reduction, hit->miss attack reduction, staged damage reduction, Activity/economy/Undo, and below-level non-projection.
 
-Earlier source inspection correctly found that the pre-existing queue alone was too early for the damage-roll trigger: `phase09RealRuntimeAttackAdapter` built/resolved the atomic attack at `attack-result`, exposed damage faces afterward, and `queueAtomicAttackDamageMultiplier` was consumed during that build. A partial attack/check-only Cutting Words bridge remains prohibited.
+No Cutting Words completion is claimed yet. At this checkpoint no exact-head focused gate/build result or UI/Phase12 green has been observed for `60814cf`.
 
-Live GitHub then advanced beyond that checkpoint and added an explicit staged preview/adjustment seam:
-
-- `bb51a63d1b4f717a2ba5e354c2bbc7b9ec246eae` (`refactor: expose staged atomic damage preview`) adds `previewRuntimeAtomicAttackDamage(adapter)` in `phase09RealRuntimeAttackAdapter.ts` so a hit can be deterministically previewed at `attack-result` before the normal staged commit.
-- `6a2ab2b322cea054c2fe0f6c488f5e53b3fe0223` (`feat: expose staged atomic damage adjustment seam`) adds queued flat damage reduction, preview storage, and multiplier peek helpers in `realAttackTransactionService.ts`.
-- No Cutting Words completion is claimed at this checkpoint. These commits are infrastructure/seam work only until the production adapter, focused gate, exact-head CI, and canonical advancement exist.
-
-### Required seam verification before any Cutting Words adapter
-
-The new preview path calls the same `build()` / `resolveAtomicAttackTransaction()` used by the real staged attack. That service consumes queued damage multipliers during resolution. Uncanny Dodge already queues such a multiplier.
-
-Before using the preview seam, verify and test that previewing a hit cannot consume or lose an existing Uncanny Dodge multiplier before the real commit. `peekAtomicAttackDamageMultiplier` appears intended to preserve this state, but no assumption should be made until the exact call flow/test proves it.
-
-Also verify that preview + queued flat reduction rebuilds the same deterministic damage faces and applies the reduction before authoritative commit, with no duplicate write-back/events.
-
-## Backup mechanically clean candidate
-
-If the staged preview seam cannot preserve existing attack modifiers without broad refactoring, prefer Berserker `Mindless Rage` over Retaliation:
-
-- `resolveBerserkerMindlessRageStart` is source-complete and domain-tested.
-- It is automatic on Rage start, requires no player choice, removes existing Charmed/Frightened, and installs the condition-immunity marker.
-- `compileBarbarianRageEnd` already removes all effects with the shared Barbarian Rage special duration key, so Mindless Rage cleanup composes with current Rage termination.
-- This remains a backup only; do not switch while live Cutting Words seam work is still viable.
+Important regression risk to verify before completion: the attack transaction is rebuilt after a damage-roll Cutting Words choice. Existing queued attack modifiers such as Uncanny Dodge must not be consumed/lost by the earlier staged build, and staged damage preview/reduction must apply exactly once with deterministic faces and no duplicate write-back/events. Do not reopen validated Rogue mechanics; test the shared seam only as required.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Inspect the exact staged preview/adjustment implementation at and after `6a2ab2b322cea054c2fe0f6c488f5e53b3fe0223`.
+Reconcile live `work/v1-composite` first.
 
-1. Prove a preview does not consume/lose a queued Uncanny Dodge multiplier; add the smallest regression fix/test only if needed.
-2. Prove preview faces/total are stable across the subsequent authoritative rebuild and that queued flat reduction is applied exactly once before commit.
-3. Only if both are green, resume the thin Cutting Words adapter using `resolveLoreCuttingWords` for all three trigger families (ability check, attack roll, damage roll), existing targeting/resource/reaction/event/Activity/Undo primitives, one focused deterministic gate, and `npm run build` wiring.
-4. Require exact-head UI frontend + Phase 12 connected-protocol green before canonical handoff/checklist advancement.
-5. If the seam is not clean without broad refactoring, record the blocker and switch to the backup `Berserker Mindless Rage` slice.
+1. If a concurrent owner has already wired `test:lore-cutting-words` into `npm run build`, adopt it; do not duplicate.
+2. Otherwise wire only the focused `tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts` gate into `npm run build`.
+3. Run/observe exact-head CI. Fix only the first Cutting Words/staged-seam regression.
+4. Require UI frontend and Phase 12 connected-protocol green at the exact product head.
+5. Only after those gates are green, update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`, then publish STATE and `control.json` last with the next remaining R1 inventory action.
+6. If the staged rebuild cannot preserve existing attack modifiers without broad refactoring, record the blocker and switch to the backup Berserker Mindless Rage slice instead of expanding the attack subsystem.
 
-Do not reopen Peerless or earlier validated R1 work without direct regression evidence. Do not expand into R2 unless a direct R1 regression requires it.
-
-PLAN unchanged; `control.json` must be written last per protocol.
+Windows connected-playable remains R3 and is not an R1 completion gate.
