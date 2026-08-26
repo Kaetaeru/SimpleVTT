@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:24:30+09:00`
+- checkpointed_at: `2026-08-26T14:26:20+09:00`
 
 ## Durable execution checkpoint
 
@@ -15,26 +15,36 @@ Mandatory preflight was completed in the required order (`README.md` -> `control
 
 Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, and Rogue Cunning Action/Uncanny Dodge R1 remain source-complete/execution-validated. Rogue exact checkpoint remains `5bb8bfbc4753dcc15f1198a04c0982817176c644` with UI run `32932781542` and Phase 12 run `32932781591` green.
 
-Current R1 remains Berserker `Intimidating Presence` only. During this execution several concurrent workers wrote equivalent adapter/test variants to the same branch. Reconciliation therefore took precedence over feature expansion.
+Current R1 remains Berserker `Intimidating Presence` only. Concurrent workers briefly created equivalent adapters/tests on the same branch. Duplicate variants were reconciled in `95f471ce77d8f3c8fc295ba1213441c0a3f4998c`; do not recreate them.
 
-Current coherent production wiring after duplicate cleanup:
+Current coherent wiring:
 
-- `95f471ce77d8f3c8fc295ba1213441c0a3f4998c` removed duplicate Berserker adapters.
-- `src/app/offlineRuntimeAdapters.ts` currently installs only `./barbarianBerserkerIntimidatingPresenceRuntimeAdapter` for this feature.
-- `package.json` currently gates `tests/ui/barbarianBerserkerIntimidatingPresenceRuntime.test.ts` through `test:berserker-presence` inside `npm run build`.
-- The focused test now includes initiative projection/resource/Bonus Action/frightened/Activity/generic Undo evidence and a freeform non-stranding assertion (`f8995f60cbaddb41d0fb8c899aadb4d740858b28`).
-- `ca4667662184a451107c1b2d5182b63706c8dfb7` added the smallest domain compatibility seam: `BerserkerIntimidatingPresenceRequest.useBonusActionEconomy?: boolean`, defaulting to existing behavior and omitting the Bonus Action event only when explicitly `false`.
+- production adapter: `src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts`
+- canonical offline composition imports only that Berserker presence adapter
+- focused gate: `tests/ui/barbarianBerserkerIntimidatingPresenceRuntime.test.ts`
+- `package.json` runs it as `test:berserker-presence` inside canonical `npm run build`
+- focused evidence covers initiative projection/resource/Bonus Action/frightened/Activity/generic Undo and freeform non-stranding
 
-Important remaining seam at this checkpoint:
+The first cleanup-head validation at `95f471ce77d8f3c8fc295ba1213441c0a3f4998c` failed only in the frontend/build portion after earlier regression steps passed:
 
-- The currently wired `src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` still calls `resolveBerserkerIntimidatingPresence(...)` without passing `useBonusActionEconomy`.
-- Therefore the newly added freeform assertion is expected to remain red until the adapter passes `useBonusActionEconomy: internal.sessionMode === "initiative"` (or an equivalent minimal expression preserving initiative behavior).
-- No canonical completion claim was made. Exact-head CI for the concurrent cleanup/fix chain was still running/advancing; earlier observed cleanup-head runs were UI `32933824963` and Phase 12 `32933825040` at `95f471ce...`.
+- UI run `32933824963`, frontend job `98071125495`: `Typecheck and build` failed; steps 1-28 were green.
+- Phase 12 run `32933825040`, connected-protocol job `98071125728`: connected authority + Phase 11 offline walkthrough were green; `Verify production frontend gate` failed from the same frontend/build path.
 
-Do not re-create deleted duplicate adapter/test variants. Do not expose Cutting Words as an action button. Preserve the exclusion of `Preserve Life` / `Land's Aid` until their missing allocation/point-AOE authoring inputs exist. Connected remote-owner exactly-once/reconnect remains R2.
+Minimal follow-up fixes already landed; do not repeat them:
 
-`PLAN.md` remains unchanged.
+- `ca4667662184a451107c1b2d5182b63706c8dfb7`: added `BerserkerIntimidatingPresenceRequest.useBonusActionEconomy?: boolean`, defaulting to prior domain behavior and allowing freeform to omit only the Bonus Action economy event.
+- `3465010f6d9c31a636d0750bc20dbac606dea43e`: adapter now passes `useBonusActionEconomy: internal.sessionMode === "initiative"` directly to the existing domain resolver; removed the temporary app-side operation filtering.
+- `ba409e19a7a4697490251a1b0997adabda2222ee`: renamed the adapter prototype method to avoid shadowing the imported `resolveBerserkerIntimidatingPresence` domain resolver. This is the latest observed source checkpoint.
+
+Exact-head CI for source checkpoint `ba409e19a7a4697490251a1b0997adabda2222ee` was running at checkpoint time:
+
+- UI run `32934018934`: in progress.
+- Phase 12 Connected Session run `32934018931`: in progress.
+
+No canonical completion claim was made. `PLAN.md` remains unchanged.
+
+Do not expose College of Lore `Cutting Words` as a free-standing button. Keep `Preserve Life` / `Land's Aid` excluded until their allocation/point-AOE authoring inputs exist. Connected remote-owner exactly-once/reconnect remains R2.
 
 ## Next Exact Action
 
-First reconcile the live branch because concurrent commits may have advanced past `ca4667662184a451107c1b2d5182b63706c8dfb7`. If the wired adapter has not already been fixed, make only the one minimal dispatch change so `resolveBerserkerIntimidatingPresence(...)` receives `useBonusActionEconomy: internal.sessionMode === "initiative"`. Do not create another adapter. Then use exact-head GitHub Actions evidence for canonical `npm run build`; the build-gated focused test must pass both initiative and freeform cases, including resource spend, Bonus Action semantics, frightened effect, Activity, and generic event-native Undo. Only after exact-head green evidence update canonical V1 routing, then update this STATE and `control.json` last. If a newer live commit already performs the dispatch fix, do not repeat it; verify that exact head instead.
+Reconcile the live branch first because concurrent commits may have advanced beyond `ba409e19a7a4697490251a1b0997adabda2222ee`. Do not repeat the duplicate cleanup, freeform economy seam, adapter dispatch, or resolver-shadowing fix. Inspect exact-head GitHub Actions for the latest source-equivalent head. If the Berserker build-gated focused test and canonical `npm run build` are green, record the exact UI/Phase 12 run+job evidence, update canonical V1 routing to the next suitable mechanics-complete subclass action candidate, then update this STATE and `control.json` last. If red, inspect and fix only the first Berserker-related failure. Keep R2 excluded.
