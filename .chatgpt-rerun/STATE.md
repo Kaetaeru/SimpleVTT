@@ -7,51 +7,32 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T15:40:00+09:00`
+- checkpointed_at: `2026-08-26T15:42:30+09:00`
 
 ## Durable execution checkpoint
 
-Mandatory preflight completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`) and live/canonical routing reconciled. Run/sequence/task identity unchanged.
+Mandatory preflight was completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`) and live GitHub state was treated as authoritative.
 
 Preserved green work was not repeated: Rage, Druid Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge R1, and Berserker Intimidating Presence R1 remain source-complete/execution-validated.
 
-Active R1 is **Monk Open Hand — Wholeness of Body**. Existing mechanics-domain/runtime implementation is reused; no new generic engine was introduced.
+**Monk Open Hand — Wholeness of Body R1 is now source-complete + execution-validated.**
 
-Wholeness implementation chain already present and must not be duplicated:
+Implementation/evidence to preserve and not duplicate:
 
-- `1ca17f135fb41e805b1a044535ba764f9f8be019` — production Wholeness adapter using existing domain resolver, resource definition, ResolutionEvent application/write-back, Activity projection, runtime history, and generic Undo boundary.
-- `bd76d7fc9602005a7d982784375a624e52359781` — focused initiative projection/resource/healing/Bonus Action/Activity/Undo coverage.
-- `f6f965a50b311ab341396da0579a2ea0c0d92c6a` — canonical offline adapter install.
-- `1db96f19e86dbc6017c20e0144632b3173ed48fc` — `test:open-hand-wholeness` added to canonical `npm run build`.
-- `d7916ffe5d541fdb091adf72af722024c538f78e` — freeform economy seam; Bonus Action consumed only in initiative.
-- `eafaff11101f6576ac46efe8eb4b6f8fd72d29a8` — focused fixture explicitly enters `freeform`.
-- `ba820a4efe8bcfc52ff18374dea5887a1fe1a77d` — generic event-native Undo writes restored Character resources/items back after `undoResolutionEvents`.
-- `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` — prior permitted Wholeness product source after reverting an out-of-scope freeform TurnRuntime inverse diagnostic.
-- `f26092033673622c7c15755ac304678441a1eda3` — newer product source that restores the shared freeform runtime-effect Undo seam and clears the previously observed shared frontend blocker.
+- `1ca17f135fb41e805b1a044535ba764f9f8be019` — Wholeness production adapter using existing domain/resource/resolution primitives.
+- `bd76d7fc9602005a7d982784375a624e52359781` + later focused fixture updates — deterministic initiative/freeform healing/resource/economy/Activity/Undo coverage; `test:open-hand-wholeness` is **4/4 green**.
+- `f26092033673622c7c15755ac304678441a1eda3` — newer shared product source restoring freeform runtime-effect Undo through the existing runtime-state snapshot/`undoResolutionEvents` seam. This cleared the shared frontend blocker without adding a new engine.
+- UI run `32938958220`, frontend job `98085775444`: **success**, including `Typecheck and build`.
+- Phase 12 run `32938958204`, connected-protocol job `98085775486`: **success**, including connected-session authority protocol, Phase 11 walkthrough, and production frontend gate.
+- The Phase 12 `windows-connected-playable` job was still running when last observed; that is R3/R5 artifact evidence and is not required for this R1 completion decision.
 
-Validated Wholeness evidence preserved:
+Canonical routing:
 
-- `test:open-hand-wholeness`: **4/4 green**, covering initiative healing/economy/resource/Activity/Undo and freeform healing/resource/Activity/Undo without consuming Bonus Action.
-- Historical shared-gate blocker: source-equivalent checkpoints failed `npm run build` in unrelated `test:devotion-holy-nimbus` at `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:73:10` (`expected 1, actual 0`). Wholeness itself remained focused-green.
-- Do not use the stale older claim about line 88 / `64 !== 65` / `10 rounds`.
-
-Fresh blocker-resolution evidence:
-
-- Live branch before this checkpoint: `a75fd3dc4b34380441169ac58446189bade41579`.
-- `f26092033673622c7c15755ac304678441a1eda3` is its direct product-source parent; `f260920 -> a75fd3d` changes only `.chatgpt-rerun/control.json`, so live HEAD is product-source equivalent to `f260920`.
-- UI run `32938958220`, frontend job `98085775444`: **success**. `Typecheck and build` and all preceding frontend steps are green.
-- Phase 12 Connected Session run `32938958204`, connected-protocol job `98085775486`: **success**. `Verify connected-session authority protocol`, `Verify Phase 11 offline walkthrough remains green`, and `Verify production frontend gate` are all green.
-- The separate `windows-connected-playable` job in that Phase 12 run was still in progress when observed; it is R3/R5 evidence and is not required to decide Wholeness R1 source completion.
-- Therefore the previous shared frontend blocker is cleared on the newer product source. Wholeness R1 now has focused evidence plus the required shared UI/build and Phase 12 production frontend gates green on a source-equivalent live HEAD.
-
-Scope/routing:
-
+- `.agents/V1_CURRENT_HANDOFF.md` advanced in commit `9d2d803abbad19fbbff6efc84d38623eeb958367` to record Wholeness R1 and point back to the remaining subclass-domain-resolver inventory.
+- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` was reviewed. V1-21 remains correctly `PARTIAL`; no broad checkbox is earned by one incremental subclass action, so no checklist status mutation was made.
 - `PLAN.md` unchanged.
-- R2 remote-owner exactly-once/reconnect remains excluded.
-- No already-green Rage/Wild Shape/Monk Focus/Rogue/Berserker validation was repeated.
-- No additional Wholeness or Holy Nimbus patch was made in this reconciliation.
-- Canonical `V1_CURRENT_HANDOFF.md` / `V1_RELEASE_EXECUTION_CHECKLIST.md` have not yet been advanced for this newly recovered green gate evidence; they must be updated before selecting the next R1 production projection gap.
+- R2 remote-owner exactly-once/reconnect remains excluded unless a direct R1 regression requires it.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite`, then update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` to record Wholeness R1 as source-complete + execution-validated at product source `f26092033673622c7c15755ac304678441a1eda3` with UI run `32938958220` / frontend job `98085775444` and Phase 12 run `32938958204` / connected-protocol job `98085775486`. After canonical routing is advanced, continue the existing R1 subclass-domain-resolver inventory and identify only the next mechanics-complete production projection gap. Do not repeat validated work or enter R2 unless a direct R1 regression requires it.
+Reconcile live `work/v1-composite`, read the canonical `V1_CURRENT_HANDOFF.md`, then continue the existing R1 subclass-domain-resolver / production action inventory from its next unvalidated gap. Do not reimplement or rerun Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence, or Open Hand Wholeness of Body. Select only one mechanics-complete domain resolver that is still missing a production action projection, reuse existing local/freeform/initiative/economy/Activity/Undo primitives, add or reuse focused deterministic evidence, and require `npm run build` plus the normal R1 UI/Phase12 connected-protocol gates before advancing canonical routing again.
