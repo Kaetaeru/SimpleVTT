@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T17:34:00+09:00`
+- checkpointed_at: `2026-08-26T17:36:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -37,8 +37,8 @@ Actions job logs remain inaccessible to this integration (403), so exact-SHA tes
 - `78b9d382e1f68b23ddf81b710f226dc59d675ede`: test-only fixture alignment changed `devotionPaladin()` to existing production entry `startProductionLocalPlay("dm")`; UI `32947748619` **success** and Connected `32947748644` production frontend **success**. No production mechanics changed.
 - `0b23d14e3f22615d1365560edaf0b1c626ff6a78`: first Smite case advanced through `resolveAction` and committed `resolutionId`, `stage === "complete"`, and `actionId`, then returned before Smite detail/Activity. UI `32947868960` **success**. Therefore Divine Smite execution and committed resolution identity are green.
 - `6f2d322bfe77d89591909c240d88c0b2a3e683fd`: first Smite case advanced through Smite resolution-detail and Activity provenance assertions, then returned before TurnRuntime marker checks. UI `32948045089` **success**, including `Typecheck and build`. Therefore action projection, committed Divine Smite execution, Smite of Protection detail, and Activity provenance are green.
-- `52555dca30a83e9244edf905d89ce870261a110c`: first Smite case advanced only through TurnRuntime protection marker existence, then returned before expiry metadata. UI `32948247304` **success**, including `Typecheck and build`. Therefore marker persistence/projection is green; the remaining first-case red region is expiry metadata, half-cover eligibility, or generic Undo.
-- `506ab6fb2b1ab219f530a60aaeb0ba8270c38c2c`: first Smite case advanced one assertion further through marker expiry metadata and returns before half-cover eligibility. UI `32948422256` and Connected `32948422247` were **in progress** at checkpoint. No production mechanics changed.
+- `52555dca30a83e9244edf905d89ce870261a110c`: first Smite case advanced only through TurnRuntime protection marker existence, then returned before expiry metadata. UI `32948247304` **success**, including `Typecheck and build`. Therefore marker persistence/projection is green.
+- `506ab6fb2b1ab219f530a60aaeb0ba8270c38c2c`: first Smite case advanced one assertion further through marker expiry metadata and returns before half-cover eligibility. UI `32948422256` **success**, including `Typecheck and build`. Therefore expiry metadata is green; the remaining first-case red region is only half-cover eligibility or generic Undo. Connected `32948422247` was still running when this checkpoint was published. No production mechanics changed.
 
 Current diagnostic test state at live code boundary `506ab6fb2b1ab219f530a60aaeb0ba8270c38c2c`:
 
@@ -58,4 +58,4 @@ Inventory decisions to preserve:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Check exact-SHA UI `32948422256` and Connected `32948422247` for `506ab6fb2b1ab219f530a60aaeb0ba8270c38c2c`. If UI is green, expiry metadata is proven green; advance only the first Smite diagnostic return through `smiteOfProtectionGrantsHalfCover(...) === true`, leaving generic Undo closed. If UI is red, expiry metadata is the first concrete failing assertion; inspect that exact domain/runtime projection seam and make only the smallest proven production fix. Keep Fiend at the known-green `6038687` boundary and the second Smite case skipped during isolation. After the seam is fixed, restore all Fiend and both Smite tests, verify `test:fiend-luck` and `test:devotion-smite-protection` execute/pass inside exact-head `npm run build`, require UI + Connected green, then advance canonical handoff/checklist. Update `STATE.md` then `control.json` last per protocol.
+Reconcile live `work/v1-composite` first. Starting from `506ab6fb2b1ab219f530a60aaeb0ba8270c38c2c` unless GitHub has moved, keep Fiend at the known-green `6038687` diagnostic boundary and the second Smite case skipped. Advance only the first Smite diagnostic return through `smiteOfProtectionGrantsHalfCover(...) === true`, leaving generic Undo closed. If that exact-SHA UI split is green, half-cover eligibility is proven green and generic Undo is the final first-case seam; if red, half-cover eligibility is the first concrete failing assertion and only that domain/runtime seam may be fixed. After the seam is fixed, restore all Fiend and both Smite tests, verify `test:fiend-luck` and `test:devotion-smite-protection` execute/pass inside exact-head `npm run build`, require UI + Connected green, then advance canonical handoff/checklist. Update `STATE.md` then `control.json` last per protocol.
