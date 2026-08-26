@@ -41,7 +41,6 @@ export interface CharacterProgressionSelectionsV1 {
   persistentFeatureOptionIds?:string[];
   persistentFeatureOptionSources?:Record<string,string>;
   epicBoonFeatIds?:string[];
-  epicBoonSources?:Record<string,string>;
   epicBoonFeatSources?:Record<string,string>;
   weaponMasteryIds?:string[];
   weaponMasterySources?:Record<string,string>;
