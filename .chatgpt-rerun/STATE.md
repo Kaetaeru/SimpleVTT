@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T20:36:00+09:00`
+- checkpointed_at: `2026-08-26T20:44:00+09:00`
 
 ## Durable checkpoint
 
@@ -51,13 +51,26 @@ Wild Shape R1 mechanics remain unchanged. The connected-only gap was that host-u
 - `6f25193d93ea8bc010b85239e56055905b62c974` wires that focused proof into the existing Phase 12 connected gate. Exact-head Phase 12 run `32964082295` / connected-protocol job `98162628731` passed the connected authority suite, Phase 11 offline walkthrough, and production `npm run build`. Duplicate Host event and duplicate ActionRequest are explicitly idempotent in the focused test.
 - The Windows connected-playable job is not part of this R2 proof and remains R3 acceptance work.
 
+## R2 progress: remote-owner Cunning Action Dash proof
+
+Cunning Action Dash now has focused remote-owner proof without adding protocol or duplicating the existing event-native execution path:
+
+- `ea96509ee0c01922d0f23926445b5a7271a45ae1` adds the focused connected test for Host authority, ordered session-economy events, duplicate-safe Client apply/request replay, and compensating Undo. A duplicate concurrently-created test was removed by `f91bf9f4ca22220f3f3e71be51f327bca113a27d`; the retained canonical test is `connectedProjectedCharacterCunningDashResolution.test.ts`.
+- `922cfd1f9b53ba4c14e4fe957b5bcc0e397cdce6` fixes the direct host-unknown projection gap by reconstructing the already-supported level-2 Cunning Action Dash action from canonical Rogue level/source facts; it does not add a new rules engine or network schema.
+- `04afe3e7eadb33f965a70fb59206909ee3c3d1dc` wires the retained focused test into the existing Phase 12 connected gate.
+- The first exact gate exposed a test-contract mistake rather than a product gap: Cunning Dash is a staged `effect-preview` resolution, so remote Host resolution must advance once before commit. `1e7b21df54a74252c3eb91bd255edbd7a0006311` aligns the focused test with that existing staged lifecycle.
+- Exact-head Phase 12 run `32964728723` / connected-protocol job `98164631534` passed the connected authority suite (75/75), Phase 11 offline walkthrough, and production `npm run build` on `1e7b21df54a74252c3eb91bd255edbd7a0006311`.
+- The focused proof confirms Host-authoritative Cunning Dash, normal Action preservation, Bonus Action spend, movement/movementMaximum projection, exactly-once Client session-economy apply, duplicate event/request safety, and compensating Undo. These economy changes are `writeBack:"session"`; no durable Character-library write is expected or invented.
+- The Windows connected-playable job remains R3 acceptance and is not an R2 closure gate.
+
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer than this checkpoint.
-2. Stay in `R2. Connected remote-owner matrix`; do not reopen R1 or wait for the Windows job, which belongs to R3 acceptance.
-3. Use `cbbda07dd7c11ba126e79c26cba99586905e7dce` as existing product evidence that Cunning Action Dash is event-native. Inspect current branch first in case a concurrent watcher already added connected proof.
-4. If still uncovered, add the smallest focused remote-owner **Cunning Action Dash** connected test only: Host-authoritative resolution, ordered event/economy projection, acting-owner durable apply/idempotency, and compensating Undo convergence. Reuse generic duplicate/reconnect/observer proofs rather than copying a new protocol harness unnecessarily.
-5. Do not include Cunning Disengage/Hide in that slice unless direct evidence shows they are already event-native; snapshot-only paths are separate genuine R2 gaps.
-6. Verify the changed exact SHA with the existing Phase 12 connected gate and production `npm run build`. Fix only the first direct regression.
-7. Update canonical handoff/checklist only when the overall R2 pointer/status materially changes. Otherwise update this STATE and `control.json` last.
-8. R3 Tauri durability/Windows two-instance acceptance, R4 rendered UX/accessibility, and R5 packaging remain separate.
+2. Stay in `R2. Connected remote-owner matrix`; do not reopen R1 and do not wait for the Windows job, which belongs to R3 acceptance.
+3. Treat remote-owner Rage, Wild Shape, and Cunning Action Dash as validated slices. Do not rerun or reimplement them without direct regression evidence.
+4. Inspect the remaining Rogue Cunning Action seams against canonical `ResolutionEvent` output, starting with **Cunning Action Disengage** only. Current source suggests its local status/Undo path may still be snapshot-oriented; confirm live evidence before changing anything.
+5. If Disengage is not event-native, make only the smallest existing-event-path change needed for Host-authoritative connected resolution + compensating Undo, then add one focused remote-owner proof. Keep Hide separate unless the same direct evidence proves it already shares the canonical event path.
+6. Reuse generic duplicate/reconnect/observer machinery; do not create a new protocol, schema, or broad class-feature abstraction.
+7. Verify the changed exact SHA with the existing Phase 12 connected gate and production `npm run build`. Fix only the first direct regression.
+8. Update canonical handoff/checklist only when the overall R2 pointer/status materially changes. Otherwise update this STATE and `control.json` last.
+9. R3 Tauri durability/Windows two-instance acceptance, R4 rendered UX/accessibility, and R5 packaging remain separate.
