@@ -1,4 +1,6 @@
 import "./druidWildShapeContracts";
+import "./progressionContracts";
+import "./spellcastingRuntimeContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { applyResolutionEvents } from "./realEventApplyService";
@@ -173,6 +175,14 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithDruidWildShapeAc
   for(const descriptor of startActionDescriptors(this,internal,snapshot))actions.push(descriptor.action);
   const end=endAction(this,internal,snapshot);
   if(end)actions.push(end);
+  const marker=activeWildShape(this,internal);
+  if(marker&&marker.metadata?.spellcastingAllowed!==true) {
+    for(const action of actions) {
+      if(!action.spellCast)continue;
+      action.available=false;
+      action.disabledReason="야생 변신 중에는 주문을 시전할 수 없습니다.";
+    }
+  }
   return snapshot;
 };
 
@@ -193,6 +203,7 @@ MockAdapter.prototype.resolveAction=async function resolveDruidWildShapeFromHotb
     :seedWildShapeResource(this,internal);
   if(!state?.combatants[actor.id])return snapshot;
   const ending=actionIdValue===END_ACTION_ID;
+  const endingFormName=ending?String(activeWildShape(this,internal)?.metadata?.formName??"야생 형태"):undefined;
   const resolutionId=`druid.wild-shape.${ending?"end":"start"}.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const committed=ending
     ?resolveDruidWildShapeEnd(SIMPLEVTT_APP_RULES_PROFILE,state,{
@@ -225,8 +236,8 @@ MockAdapter.prototype.resolveAction=async function resolveDruidWildShapeFromHotb
   if(projectedActor)internal.activeCharacter.tempHp=projectedActor.tempHp;
   const session=turnRuntimeSessions.get(this);
   if(session)projectTurnRuntimeToScene(session,internal.scene);
-  const formName=ending?String(activeWildShape(this,internal)?.metadata?.formName??"야생 형태"):start!.form.name;
-  const outcome=ending?"야생 변신 해제":`야생 변신 · ${formName}`;
+  const formName=ending?endingFormName!:start!.form.name;
+  const outcome=ending?`야생 변신 해제 · ${formName}`:`야생 변신 · ${formName}`;
   const resolution:ResolutionView={
     id:resolutionId,
     actorId:actor.id,
@@ -239,7 +250,7 @@ MockAdapter.prototype.resolveAction=async function resolveDruidWildShapeFromHotb
     saveResults:[],
     damageComponents:[],
     compact:outcome,
-    detail:[ending?"현재 야생 형태 종료":`${start!.form.name} 형태 · 임시 HP ${level}`],
+    detail:[ending?`${formName} 형태 종료`:`${start!.form.name} 형태 · 임시 HP ${level}`],
     provenance:["SRD 5.2.1 · Druid Wild Shape"],
     calculatedOutcome:outcome,
     finalOutcome:outcome,
