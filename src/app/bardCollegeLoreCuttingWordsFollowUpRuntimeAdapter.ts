@@ -115,6 +115,7 @@ function offerInterrupt(adapter:MockAdapter,internal:AdapterState,trigger:Offere
   const targetName=internal.scene.entities.find((entry)=>entry.id===trigger.targetActorId)?.name??trigger.targetActorId;
   const sides=bardicInspirationDieSides(bardLevel(internal.activeCharacter));
   state.offered=trigger;
+  if(trigger.kind==="damage-roll")resolution.rollKind="damage";
   resolution.interrupt={
     id:CUTTING_WORDS_INTERRUPT_ID,
     responderId:internal.activeCharacter.id,
