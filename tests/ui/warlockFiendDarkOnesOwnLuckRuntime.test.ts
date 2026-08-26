@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import type { ActionVm, CharacterSheet, SceneVm, SessionVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { setSessionDebugPreviewRole } from "../../src/app/sessionDebugPreviewRole";
 import { WARLOCK_FIEND_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 import {
   FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID,
@@ -18,6 +19,7 @@ async function prepareFiend(adapter:MockAdapter,level=6){
   const internal=adapter as unknown as Internal;
   const fiend={
     ...structuredClone(internal.activeCharacter),
+    id:"char.test-fiend-luck",
     name:"Fiend Warlock",
     className:"워락",
     subclassName:"악마 후원자",
@@ -32,7 +34,8 @@ async function prepareFiend(adapter:MockAdapter,level=6){
     resources:[],
   };
   internal.activeCharacter=fiend;
-  internal.session.role="host";
+  setSessionDebugPreviewRole(adapter,"dm");
+  await adapter.getSnapshot();
   return fiend;
 }
 
