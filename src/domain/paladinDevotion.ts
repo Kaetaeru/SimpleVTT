@@ -141,6 +141,7 @@ export interface DevotionHolyNimbusActivateRequest {
   subclassId?:string;
   charismaModifier:number;
   proficiencyBonus:number;
+  useBonusActionEconomy?:boolean;
 }
 
 export function compileDevotionHolyNimbusActivation(request:DevotionHolyNimbusActivateRequest):PendingResolution {
@@ -148,47 +149,50 @@ export function compileDevotionHolyNimbusActivation(request:DevotionHolyNimbusAc
   if (!Number.isInteger(request.charismaModifier) || !Number.isInteger(request.proficiencyBonus) || request.proficiencyBonus < 0) {
     throw new DomainEvaluationError("Holy Nimbus requires integer Charisma modifier and proficiency bonus");
   }
+  const operations:ResolutionOperation[] = [
+    {
+      id:`${request.id}:usage`,
+      kind:"spend-resource",
+      actorId:request.actorId,
+      resourceId:DEVOTION_HOLY_NIMBUS_RESOURCE_ID,
+      amount:1,
+    },
+  ];
+  if (request.useBonusActionEconomy !== false) {
+    operations.push({
+      id:`${request.id}:bonus-action`,
+      kind:"use-economy",
+      actorId:request.actorId,
+      slot:"bonus-action",
+      bonusActionGranted:true,
+      actionKind:"other",
+    });
+  }
+  operations.push({
+    id:`${request.id}:effect`,
+    kind:"apply-effect",
+    effect:{
+      id:`${request.id}:${request.actorId}:holy-nimbus`,
+      sourceId:DEVOTION_HOLY_NIMBUS_FEATURE_ID,
+      sourceActorId:request.actorId,
+      targetId:request.actorId,
+      kind:"marker",
+      tags:[DEVOTION_HOLY_NIMBUS_TAG],
+      duration:{ kind:"minutes", amount:10 },
+      termination:{ sourceBecomesIncapacitated:true, sourceDies:true },
+      metadata:{
+        charismaModifier:request.charismaModifier,
+        proficiencyBonus:request.proficiencyBonus,
+        sunlight:true,
+      },
+    },
+  });
   return {
     id:request.id,
     actorId:request.actorId,
     sourceId:DEVOTION_HOLY_NIMBUS_FEATURE_ID,
     expectedRevision:request.expectedRevision,
-    operations:[
-      {
-        id:`${request.id}:usage`,
-        kind:"spend-resource",
-        actorId:request.actorId,
-        resourceId:DEVOTION_HOLY_NIMBUS_RESOURCE_ID,
-        amount:1,
-      },
-      {
-        id:`${request.id}:bonus-action`,
-        kind:"use-economy",
-        actorId:request.actorId,
-        slot:"bonus-action",
-        bonusActionGranted:true,
-        actionKind:"other",
-      },
-      {
-        id:`${request.id}:effect`,
-        kind:"apply-effect",
-        effect:{
-          id:`${request.id}:${request.actorId}:holy-nimbus`,
-          sourceId:DEVOTION_HOLY_NIMBUS_FEATURE_ID,
-          sourceActorId:request.actorId,
-          targetId:request.actorId,
-          kind:"marker",
-          tags:[DEVOTION_HOLY_NIMBUS_TAG],
-          duration:{ kind:"minutes", amount:10 },
-          termination:{ sourceBecomesIncapacitated:true, sourceDies:true },
-          metadata:{
-            charismaModifier:request.charismaModifier,
-            proficiencyBonus:request.proficiencyBonus,
-            sunlight:true,
-          },
-        },
-      },
-    ],
+    operations,
   };
 }
 
