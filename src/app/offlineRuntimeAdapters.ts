@@ -69,6 +69,7 @@ import "./druidWildShapeRuntimeAdapter";
 import "./monkFocusRuntimeAdapter";
 import "./monkOpenHandWholenessRuntimeAdapter";
 import "./monkOpenHandFleetStepRuntimeAdapter";
+import "./monkOpenHandQuiveringPalmRuntimeAdapter";
 import "./rogueCoreRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
