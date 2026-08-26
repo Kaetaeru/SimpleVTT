@@ -101,6 +101,7 @@ async function seed(host:MockAdapter,peer:string,sessionId:string,remoteManifest
   const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
   assert.equal(await routeConnectedInterruptResponse(host,{peer,message:""},{sessionId,resolutionId,promptId,accept:true}),true);
   snapshot=await host.getSnapshot();
+  for(let step=0;step<8&&snapshot.resolution?.id===resolutionId;step++)snapshot=await host.advanceResolution();
   assert.notEqual(snapshot.resolution?.id,resolutionId,"Host local context must restore after committed remote seed");
 }
 
