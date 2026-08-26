@@ -79,6 +79,7 @@ import "./bardicInspirationFollowUpRuntimeAdapter";
 import "./fighterTacticalMindFollowUpRuntimeAdapter";
 import "./fighterIndomitableFollowUpRuntimeAdapter";
 import "./warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter";
+import "./bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";
