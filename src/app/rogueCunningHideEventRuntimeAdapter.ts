@@ -144,6 +144,10 @@ MockAdapter.prototype.resolveAction=async function resolveActionWithCunningHideR
   const action=internal.action(actionId);
   const snapshot=await previousResolveAction.call(this,actionId,targetIds);
   const resolution=internal.resolution;
+  if(resolution?.actionId===CUNNING_HIDE_ACTION_ID&&resolution.rollKind==="check"&&resolution.checkTarget===undefined) {
+    resolution.checkTarget=15;
+    return internal.getSnapshot();
+  }
   if(action?.resolutionKind==="attack"&&resolution?.actionId===actionId&&internal.sessionMode==="initiative"&&hideEffectFor(this,internal,resolution.actorId)) {
     removeHideForAttack(this,internal,resolution);
     return internal.getSnapshot();
