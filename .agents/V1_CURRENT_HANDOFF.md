@@ -82,27 +82,28 @@ Current focused R2 implementation/proof:
 - `aae3f10a466afb25b75d4358a2b410e3e5aa38ab` strengthens the proof with an exact failed-target assertion; no product runtime change.
 - Direct canonical-content inspection exposed a real SessionProjection gap: College of Lore identity was missing from `content/modules/dnd-srd-5.2.1.subclasses/module.json` even though Host reconstruction requires canonical subclass identity.
 - `919124900ea741b8e45d93a5dd975bf5e3c2ed65` adds only `dnd.srd521.subclass.bard.college-of-lore` with parent Bard. No runtime refactor, protocol or schema change.
-- Compare `c1aea379ee70f9a950860147ac945dbf247180b6...919124900ea741b8e45d93a5dd975bf5e3c2ed65` confirms the entire Peerless delta is limited to the focused test, one Phase12 gate-line change, and one subclass-content entry.
+- R1 runtime proof `tests/ui/bardCollegeLorePeerlessSkillRuntime.test.ts` explicitly confirms that an accepted Peerless die which still leaves the check failed preserves Bardic Inspiration. The first connected proof covered only the success/spend branch, so the remote no-spend authority branch remained unproven.
+- `bfc459ba35d089171d654fd27abb881309bef1fb` adds one test-only connected case in the same focused file: Host-unknown Lore Bard accepts the owner interrupt, authoritative d10 is insufficient, the Host still commits the authoritative resolution but emits no Bardic Inspiration resource StateChange, and the owning Client remains at the original Inspiration count. Product runtime is unchanged.
 
-Verification is currently blocked by GitHub Actions startup/queue behavior, not by an observed product failure:
+Current exact verification candidate is `bfc459ba35d089171d654fd27abb881309bef1fb`. Peerless is **not closed** yet.
 
-- exact product/proof/gate head: `919124900ea741b8e45d93a5dd975bf5e3c2ed65`;
-- UI run `32984089140`: queued with zero jobs;
-- duplicate exact-head UI run `32984184587`: `startup_failure` with zero jobs;
-- retrying the startup-failed run through the available Actions API returned `403 This workflow run cannot be retried`;
-- exact-head Phase12 has not registered;
-- older Phase12 `32983965455` is queued at pre-gate head `8c9f29c3434e10db7254af46dfb6f526bd77c2a2`, so it is not closure evidence;
-- current branch has no in-progress Actions jobs. Do not mutate product or create no-op commits merely to force CI.
+GitHub Actions remains an external verification blocker rather than an observed product failure:
+
+- older product/proof head `919124900ea741b8e45d93a5dd975bf5e3c2ed65` has UI `32984089140` queued with zero jobs and duplicate UI `32984184587` `startup_failure` with zero jobs; exact Phase12 never registered;
+- the new exact candidate `bfc459ba35d089171d654fd27abb881309bef1fb` has no workflow runs or check suites registered as of `2026-08-27T00:32:26+09:00`;
+- GitHub's public status page reports Actions operational, so there is no current service-wide incident evidence explaining the repository-specific behavior;
+- the available container cannot resolve `github.com`, so a shallow exact-head clone for local focused execution failed before tests with `Could not resolve host: github.com`; no local test result exists;
+- do not mutate product, add protocol/schema, or create no-op commits merely to force CI.
 
 Next exact action:
 
 ```text
 reconcile live branch
--> inspect only exact-head 919124900ea741b8e45d93a5dd975bf5e3c2ed65 UI/Phase12 registration and jobs
+-> inspect only exact-head bfc459ba35d089171d654fd27abb881309bef1fb UI/Phase12 registration and jobs
 -> if jobs execute and the first Peerless-specific red appears, fix only that cause
 -> if UI frontend/Typecheck build and Phase12 connected-protocol + Phase11 + production frontend are green, close Peerless canonically
 -> then advance to Lore Cutting Words
--> if Actions remains queued/startup-failed with zero jobs, preserve the current code unchanged; this is an external verification blocker, not evidence for a product refactor
+-> if Actions remains absent/queued/startup-failed with zero jobs, preserve code; this is an external verification blocker, not evidence for a product refactor
 ```
 
 Do not add a separate remote attack proof unless direct connected evidence shows a distinct authority gap; R1 already covers the attack branch.
@@ -122,4 +123,4 @@ Do not add a separate remote attack proof unless direct connected evidence shows
 
 Use only the gate needed by the active slice plus its existing connected production gate. Do not rerun the historical full matrix for resume alone.
 
-Peerless Skill closure requires GitHub Actions evidence from the exact product/proof/gate head: UI frontend/Typecheck build plus Phase12 focused connected authority proof, Phase11 walkthrough and production frontend gate. Rust/Tauri/Windows evidence stays separate until R3.
+Peerless Skill closure requires GitHub Actions evidence from the exact verification candidate: UI frontend/Typecheck build plus Phase12 focused connected authority proof, Phase11 walkthrough and production frontend gate. Rust/Tauri/Windows evidence stays separate until R3.
