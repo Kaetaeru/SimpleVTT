@@ -117,7 +117,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithBerserkerIntimid
   return snapshot;
 };
 
-MockAdapter.prototype.resolveAction=async function resolveBerserkerIntimidatingPresence(actionId:string,targetIds:string[]){
+MockAdapter.prototype.resolveAction=async function resolveBerserkerIntimidatingPresenceAction(actionId:string,targetIds:string[]){
   if(actionId!==BERSERKER_INTIMIDATING_PRESENCE_ACTION_ID)return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as AdapterState;
   const snapshot=await internal.getSnapshot();
