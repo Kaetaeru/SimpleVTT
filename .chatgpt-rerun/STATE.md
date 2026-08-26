@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:13:44+09:00`
+- checkpointed_at: `2026-08-26T14:15:29+09:00`
 
 ## Durable execution checkpoint
 
@@ -27,12 +27,19 @@ Rogue R1 is source-complete and execution-validated:
 
 Canonical execution routing advanced in `502eb753fb81e061195da63622c0e3325fb170dd` (`docs: advance V1 handoff past Rogue R1`). `.agents/V1_CURRENT_HANDOFF.md` marks Rogue R1 complete and points to subclass action projection inventory.
 
-Subclass inventory has now found the first high-confidence production projection gap without creating a speculative button:
+Subclass inventory found the first high-confidence production projection gap without creating speculative buttons:
 
-- `src/domain/bardCollegeLore.ts` already implements College of Lore `Cutting Words`, but this is a trigger-driven Reaction. `src/app/progressionPhase08BardLoreAdapter.ts` only handles progression persistence. Do not turn Cutting Words into an always-clickable action-bar button; it needs trigger/reaction UX if handled later.
-- `src/domain/barbarianBerserker.ts` already implements `Intimidating Presence` as a real Bonus Action resolver with its own resource spend, targeting, Wisdom saves, frightened effect, and existing domain economy semantics.
-- No Berserker production runtime/action adapter is present in `src/app`; this makes `Intimidating Presence` the first suitable mechanics-complete subclass action to project rather than a passive or trigger-only feature.
-- No source code was changed during this inventory checkpoint. This avoids speculative adapter work at the execution boundary and preserves the exact resume point.
+- `src/domain/bardCollegeLore.ts` College of Lore `Cutting Words` is trigger-driven Reaction mechanics. Do not expose it as an always-clickable action-bar button.
+- `src/domain/barbarianBerserker.ts` implements `Intimidating Presence` as a complete Bonus Action resolver: its own resource spend, targeting, Wisdom saves, frightened effect, and economy semantics.
+- No Berserker production runtime/action adapter exists in `src/app`; `Intimidating Presence` remains the first suitable subclass action projection target.
+- Wider inventory also found mechanics-complete but later candidates such as Open Hand `Wholeness of Body` and Devotion `Holy Nimbus`; do not jump to them before the current Berserker pointer is completed. `Preserve Life` and `Land's Aid` require additional allocation/point-AOE input and must not be surfaced as dead/incomplete action buttons.
+
+Live production conventions for the Berserker implementation are now verified:
+
+- `src/app/clericTurnUndeadActionRuntimeAdapter.ts` is the closest production pattern: seed the Character resource into TurnRuntime, resolve the existing domain transaction, apply/persist ResolutionEvents, commit TurnRuntime, project Activity, and record the same events for generic event-native Undo.
+- `tests/ui/clericTurnUndeadActionRuntime.test.ts` shows the focused deterministic pattern: `setQueuedD20(...)`, explicit initiative/current actor selection, resource/economy/effect assertions, then `undoLastResolution()` restoration.
+- `src/app/productionPlayRuntimeAdapter.ts` confirms `ActionVm.target` supports `any`; a Berserker action can project creature targets without inventing a new target kind. Self remains excluded by the domain feature contract.
+- No source code was changed after this verification because the Rerun 18-minute checkpoint was reached. This avoids starting an unverified multi-file patch near the hard stop.
 
 `PLAN.md` remains intentionally unchanged because run identity and routing mechanism did not change.
 
@@ -42,9 +49,10 @@ Subclass inventory has now found the first high-confidence production projection
 - Connected remote-owner exactly-once/reconnect matrices remain R2 unless a direct R1 regression requires them.
 - Do not rerun the historical full 1303/1303 matrix merely because execution resumed.
 - Do not expose `Cutting Words` as a dead/free-standing action button; it is trigger-driven Reaction mechanics.
+- Do not expose subclass mechanics requiring product inputs the current action path cannot author (for example Preserve Life allocations or Land's Aid point/AOE composition).
 
 ## Next Exact Action
 
-Start from the existing `src/domain/barbarianBerserker.ts` `Intimidating Presence` resolver. Verify the live production action-adapter conventions, then add the smallest production projection that reuses that resolver/economy/resource semantics. Add focused deterministic evidence for projection, Bonus Action/resource consumption, save/effect result, Activity/Undo only to the extent already supported by the production action path, then run the canonical `npm run build` gate. Do not create new domain mechanics and do not touch passive Berserker features or R2 remote/reconnect behavior.
+Create the smallest dedicated Berserker `Intimidating Presence` production adapter, following the existing Turn Undead event-native action pattern. Reuse `barbarianRuntimeResourceDefinitions`, `berserkerIntimidatingPresenceDc`, and `resolveBerserkerIntimidatingPresence`; do not duplicate their mechanics. Project one Bonus Action with `target: "any"`, excluding self, and let the domain resolver own 30-foot targeting, resource spend, Wisdom saves, frightened effects, and economy. Add one focused deterministic UI/runtime test using `setQueuedD20(...)` that proves projection, Bonus Action/resource consumption, failed-save frightened effect, Activity, and generic event-native Undo restoration. Wire only that adapter/test into the canonical offline/build composition, run the exact-head `npm run build` gate, and advance canonical routing only after green evidence. Do not touch passive Berserker features or R2 remote/reconnect behavior.
 
 Keep the same run/sequence/task identity. `control.json` must be written last.
