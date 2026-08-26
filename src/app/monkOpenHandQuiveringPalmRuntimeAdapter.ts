@@ -33,6 +33,7 @@ const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
+const previousStartInitiative=MockAdapter.prototype.startInitiative;
 const handledSeeds=new WeakMap<MockAdapter,Set<string>>();
 
 function monkLevel(sheet:CharacterSheet){return sheet.classLevels?.find((entry)=>entry.classId===MONK_OPEN_HAND_CLASS_ID)?.level??0;}
@@ -61,6 +62,17 @@ function offerSeed(adapter:MockAdapter,internal:AdapterState){
 function refreshActivity(internal:AdapterState,resolution:ResolutionView){const activity=internal.activity.find((entry)=>entry.id===resolution.id);if(!activity)return;activity.summary=resolution.compact;activity.detail=[...resolution.detail,...resolution.provenance.map((entry)=>`출처: ${entry}`)];activity.stateChanges=[...resolution.stateChanges];}
 
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithQuiveringPalm(){const internal=this as unknown as AdapterState;const snapshot=await previousGetSnapshot.call(this);const action=detonationAction(this,internal,snapshot);project(internal.scene,action);project(snapshot.scene,action);return snapshot;};
+MockAdapter.prototype.startInitiative=async function startInitiativePreservingQuiveringPalm(){
+  const internal=this as unknown as AdapterState;
+  const before=snapshotAdapterTurnRuntimeState(this,internal.scene);
+  const preserved=(before?.effects??[]).filter((effect)=>effect.tags.includes(OPEN_HAND_QUIVERING_PALM_TAG)).map((effect)=>structuredClone(effect));
+  const snapshot=await previousStartInitiative.call(this);
+  if(!preserved.length)return snapshot;
+  const state=snapshotAdapterTurnRuntimeState(this,internal.scene);if(!state)return snapshot;
+  const known=new Set(state.effects.map((effect)=>effect.id)),missing=preserved.filter((effect)=>!known.has(effect.id));if(!missing.length)return snapshot;
+  const expected=state.revision;state.effects.push(...missing);state.revision+=1;
+  return commitAdapterTurnRuntimeState(this,internal.scene,expected,state)?this.getSnapshot():snapshot;
+};
 MockAdapter.prototype.resolveAction=async function resolveWithQuiveringPalm(actionId:string,targetIds:string[]){if(actionId===OPEN_HAND_QUIVERING_PALM_DETONATE_ACTION_ID)return resolveDetonation(this,this as unknown as AdapterState,targetIds);const snapshot=await previousResolveAction.call(this,actionId,targetIds);offerSeed(this,this as unknown as AdapterState);return snapshot.resolution?.stage==="interrupt"?(this as MockAdapter).getSnapshot():snapshot;};
 MockAdapter.prototype.advanceResolution=async function advanceWithQuiveringPalmSeed(){await previousAdvanceResolution.call(this);offerSeed(this,this as unknown as AdapterState);return this.getSnapshot();};
 MockAdapter.prototype.respondToInterrupt=async function respondToQuiveringPalmSeed(accept:boolean){
