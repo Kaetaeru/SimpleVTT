@@ -131,15 +131,21 @@ test("host-unknown Rogue Uncanny Dodge accepts owner interrupt, halves damage ex
     assert.ok(prompt,"Host must send the private interrupt prompt to the owning peer");
     assert.equal(prompt!.interrupt?.id,UNCANNY_DODGE_REACTION_ID);
 
-    assert.equal(await routeConnectedInterruptResponse(host,{peer:PEER,message:""},{
+    const interruptResponse={
       sessionId:state.sessionId,
       resolutionId:snapshot.resolution!.id,
       promptId:UNCANNY_DODGE_REACTION_ID,
       accept:true,
-    }),true);
+    };
+    assert.equal(await routeConnectedInterruptResponse(host,{peer:PEER,message:""},interruptResponse),true);
     snapshot=await host.getSnapshot();
     assert.equal(snapshot.resolution?.stage,"attack-result");
     assert.equal(reactionAvailable(snapshot.scene,remote.id),false,"Host authoritative turn runtime must spend Reaction");
+
+    assert.equal(await routeConnectedInterruptResponse(host,{peer:PEER,message:""},interruptResponse),true);
+    const afterDuplicateInterrupt=await host.getSnapshot();
+    assert.equal(afterDuplicateInterrupt.resolution?.stage,"attack-result","duplicate owner response must not advance the authoritative resolution twice");
+    assert.equal(reactionAvailable(afterDuplicateInterrupt.scene,remote.id),false,"duplicate owner response must not spend Reaction twice");
 
     snapshot=await finish(host);
     const damage=snapshot.resolution?.damageComponents[0];
