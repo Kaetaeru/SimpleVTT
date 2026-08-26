@@ -138,6 +138,7 @@ MockAdapter.prototype.resolveAction=async function resolveDevotionHolyNimbusActi
     subclassId,
     charismaModifier,
     proficiencyBonus:internal.activeCharacter.proficiencyBonus,
+    useBonusActionEconomy:internal.sessionMode==="initiative",
   });
   if(committed.status==="rejected")return snapshot;
   const projected=applyResolutionEvents(internal.scene,committed.events,internal.activeCharacter.resources,internal.activeCharacter.items,state);
