@@ -1,6 +1,7 @@
 import "./progressionContracts";
 import type { ActionVm, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { clearRuntimeResolutionEventHistory } from "./runtimeResolutionEventHistory";
 import { MONK_FOCUS_RESOURCE_ID, MONK_OPEN_HAND_CLASS_ID, STEP_OF_THE_WIND_SOURCE_ID } from "../domain/monkOpenHand";
 
 const FLURRY_ACTION_ID="action.monk.flurry-of-blows";
@@ -136,5 +137,9 @@ MockAdapter.prototype.advanceResolution=async function advanceMonkFocusResolutio
     if(resolution.actionId===STEP_FOCUS_ACTION_ID) addStatus(actor,"이탈",resolution);
     resolution.finalOutcome=resolution.actionId===STEP_FOCUS_ACTION_ID?"질주 + 이탈 + 도약 거리 2배":"질주 적용";
   }
-  return previousAdvanceResolution.call(this);
+  const snapshot=await previousAdvanceResolution.call(this);
+  if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
+    clearRuntimeResolutionEventHistory(this);
+  }
+  return snapshot;
 };
