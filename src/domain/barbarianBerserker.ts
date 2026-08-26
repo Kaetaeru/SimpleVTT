@@ -231,6 +231,7 @@ export interface BerserkerIntimidatingPresenceRequest {
   strengthModifier:number;
   proficiencyBonus:number;
   targets:BerserkerIntimidatingPresenceTarget[];
+  useBonusActionEconomy?:boolean;
 }
 
 export function berserkerIntimidatingPresenceDc(strengthModifier:number,proficiencyBonus:number) {
@@ -268,15 +269,17 @@ export function compileBerserkerIntimidatingPresence(request:BerserkerIntimidati
       resourceId:BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
       amount:1,
     },
-    {
+  ];
+  if (request.useBonusActionEconomy !== false) {
+    operations.push({
       id:`${request.id}:bonus-action`,
       kind:"use-economy",
       actorId:request.actorId,
       slot:"bonus-action",
       bonusActionGranted:true,
       actionKind:"other",
-    },
-  ];
+    });
+  }
   request.targets.forEach((target,index) => {
     if (!Number.isFinite(target.wisdomSaveModifier)) throw new DomainEvaluationError(`target Wisdom save modifier must be finite: ${target.id}`);
     const saveId = `${request.id}:save:${index}`;
