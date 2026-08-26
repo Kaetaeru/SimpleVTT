@@ -174,6 +174,14 @@ test("host-unknown Druid Wild Shape preserves known form facts and commits throu
     const persistenceAfter=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
     assert.ok(persistenceAfter>persistenceBefore,"owning client must persist Host-confirmed Wild Shape changes before cursor advancement");
 
+    const freshProjection=buildCharacterSessionProjectionV1(clientAfter.activeCharacter,catalog);
+    const freshReconstructed=reconstructCharacterSessionProjectionV1(freshProjection,catalog);
+    assert.equal(freshReconstructed.status,"accepted",freshReconstructed.status==="rejected"?freshReconstructed.error:undefined);
+    if(freshReconstructed.status!=="accepted")throw new Error(freshReconstructed.error);
+    assert.deepEqual(freshReconstructed.sheet.wildShapeKnownForms,[wolf],"fresh projection must preserve known forms after remote Wild Shape");
+    assert.equal(wildShapeCurrent(freshReconstructed.sheet),1,"fresh projection must preserve the committed Wild Shape resource state");
+    assert.equal(freshReconstructed.sheet.tempHp,5,"fresh projection must preserve the committed Wild Shape temporary HP");
+
     const duplicate=await applyConnectedClientEvents(client,[hostEvent!]);
     assert.equal(duplicate.status,"duplicate");
     assert.equal(wildShapeCurrent((await client.getSnapshot()).activeCharacter),1);
@@ -211,6 +219,14 @@ test("host-unknown Druid Wild Shape preserves known form facts and commits throu
     assert.equal(clientAfterUndo.activeCharacter.tempHp,0,"owning Client must converge the compensating temporary HP restore");
     const persistenceAfterUndo=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
     assert.ok(persistenceAfterUndo>persistenceBeforeUndo,"owning Client must durably persist the compensating Wild Shape restore before cursor advancement");
+
+    const freshUndoProjection=buildCharacterSessionProjectionV1(clientAfterUndo.activeCharacter,catalog);
+    const freshUndoReconstructed=reconstructCharacterSessionProjectionV1(freshUndoProjection,catalog);
+    assert.equal(freshUndoReconstructed.status,"accepted",freshUndoReconstructed.status==="rejected"?freshUndoReconstructed.error:undefined);
+    if(freshUndoReconstructed.status!=="accepted")throw new Error(freshUndoReconstructed.error);
+    assert.deepEqual(freshUndoReconstructed.sheet.wildShapeKnownForms,[wolf],"fresh projection must preserve known forms after compensating Undo");
+    assert.equal(wildShapeCurrent(freshUndoReconstructed.sheet),2,"fresh projection must preserve the restored Wild Shape resource state");
+    assert.equal(freshUndoReconstructed.sheet.tempHp,0,"fresh projection must preserve restored temporary HP");
 
     const duplicateUndo=await applyConnectedClientEvents(client,[undoEvent!]);
     assert.equal(duplicateUndo.status,"duplicate");
