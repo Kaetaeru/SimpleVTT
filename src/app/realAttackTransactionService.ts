@@ -38,6 +38,8 @@ export interface AtomicAttackTransactionRequest {
   reaction?:AtomicReactionAttackContext;
   damageMultiplier?:number;
   damageMultiplierSource?:string;
+  damageReduction?:number;
+  damageReductionSource?:string;
   attackD20Face:number;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
@@ -71,16 +73,47 @@ export type AtomicAttackTransactionResult =
     };
 
 type PendingDamageMultiplier={multiplier:number;source:string};
+type PendingDamageReduction={reduction:number;source:string};
+export interface AtomicAttackDamagePreview { total:number;faces:number[] }
 const pendingDamageMultipliers=new Map<string,PendingDamageMultiplier>();
+const pendingDamageReductions=new Map<string,PendingDamageReduction>();
+const pendingDamagePreviews=new Map<string,AtomicAttackDamagePreview>();
+
+function atomicResolutionId(resolutionId:string) {
+  return `${resolutionId}:runtime-atomic`;
+}
 
 export function queueAtomicAttackDamageMultiplier(resolutionId:string,multiplier:number,source:string) {
   if(!Number.isFinite(multiplier)||multiplier<0)throw new Error("runtime attack damage multiplier must be non-negative and finite");
-  pendingDamageMultipliers.set(`${resolutionId}:runtime-atomic`,{multiplier,source});
+  pendingDamageMultipliers.set(atomicResolutionId(resolutionId),{multiplier,source});
+}
+
+export function peekAtomicAttackDamageMultiplier(resolutionId:string) {
+  const pending=pendingDamageMultipliers.get(atomicResolutionId(resolutionId));
+  return pending?{...pending}:undefined;
+}
+
+export function queueAtomicAttackDamageReduction(resolutionId:string,reduction:number,source:string) {
+  if(!Number.isFinite(reduction)||reduction<0)throw new Error("runtime attack damage reduction must be non-negative and finite");
+  pendingDamageReductions.set(atomicResolutionId(resolutionId),{reduction,source});
+}
+
+export function consumeAtomicAttackDamagePreview(resolutionId:string) {
+  const key=atomicResolutionId(resolutionId);
+  const preview=pendingDamagePreviews.get(key);
+  pendingDamagePreviews.delete(key);
+  return preview?{total:preview.total,faces:[...preview.faces]}:undefined;
 }
 
 function consumeAtomicAttackDamageMultiplier(resolutionId:string) {
   const pending=pendingDamageMultipliers.get(resolutionId);
   pendingDamageMultipliers.delete(resolutionId);
+  return pending;
+}
+
+function consumeAtomicAttackDamageReduction(resolutionId:string) {
+  const pending=pendingDamageReductions.get(resolutionId);
+  pendingDamageReductions.delete(resolutionId);
   return pending;
 }
 
@@ -158,6 +191,14 @@ function rageDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase0
   return typeof value==="number" && value>0
     ? [{ source:`effect:${rage.id}:rage-damage`,value }]
     : [];
+}
+
+function damageReductionFlat(request:AtomicAttackTransactionRequest) {
+  if(request.damageReduction===undefined||request.damageReduction===0)return [];
+  return [{
+    source:request.damageReductionSource??"runtime:atomic-attack:damage-reduction",
+    value:-request.damageReduction,
+  }];
 }
 
 function economyCost(action:ActionVm,initiativeMode:boolean) {
@@ -244,7 +285,11 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       sourceId:request.action.id,
       damageType:damageSpec.type,
       dice:request.attackFact.damageDice,
-      flat:[...request.attackFact.flatDamage,...rageDamageFlat(input,request.actor.id,request.attackFact)],
+      flat:[
+        ...request.attackFact.flatDamage,
+        ...rageDamageFlat(input,request.actor.id,request.attackFact),
+        ...damageReductionFlat(request),
+      ],
     },
     economy:request.reaction||!cost ? undefined : {
       ...cost,
@@ -321,6 +366,8 @@ function retainStagedAtomicEvents(request:AtomicAttackTransactionRequest,events:
 export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRequest):AtomicAttackTransactionResult {
   const queuedMultiplier=consumeAtomicAttackDamageMultiplier(request.resolutionId);
   if(queuedMultiplier)request={...request,damageMultiplier:queuedMultiplier.multiplier,damageMultiplierSource:queuedMultiplier.source};
+  const queuedReduction=consumeAtomicAttackDamageReduction(request.resolutionId);
+  if(queuedReduction)request={...request,damageReduction:queuedReduction.reduction,damageReductionSource:queuedReduction.source};
   const damageSpec = request.action.damage?.[0];
   if (request.action.resolutionKind !== "attack" || !damageSpec) {
     return { status:"rejected", error:`atomic attack requires one attack damage component: ${request.action.id}` };
@@ -351,6 +398,11 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
   const rollResult = transaction.results[`${request.resolutionId}:damage-roll:0`] as DamageRollResolution|{ skipped:true };
   const damage = "skipped" in damageResult ? undefined : damageResult;
   const damageRoll = "skipped" in rollResult ? undefined : rollResult;
+  if(damageRoll)pendingDamagePreviews.set(request.resolutionId,{
+    total:damageRoll.total,
+    faces:damageRoll.dice.flatMap((entry)=>entry.selectedFaces),
+  });
+  else pendingDamagePreviews.delete(request.resolutionId);
   const targetAfter = transaction.state.combatants[request.target.id].life.hp;
   const targetLife=projectLife(transaction.state,request.target.id);
   const actorEconomy = projectEconomy(transaction.state,request.actor.id);
