@@ -2,6 +2,7 @@ import "./progressionContracts";
 import "./spellcastingRuntimeContracts";
 import type { AbilityKey, ActionVm, AppSnapshot, CharacterSheet } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { multiclassSpellSlots } from "../domain/progressionCatalog";
 
 const FIRE_BOLT="dnd.srd521.spell.fire-bolt";
 const MAGIC_MISSILE="dnd.srd521.spell.magic-missile";
@@ -101,7 +102,8 @@ function projectSpellcaster(snapshot:AppSnapshot,character:SpellCharacter) {
 
   const ability=spellAbility(character);
   const abilityMod=mod(character.abilities[ability]);
-  const slots=Object.entries(character.spellSlotMaximums??{})
+  const slotMaximums=character.spellSlotMaximums??multiclassSpellSlots(character.classLevels??[]).slots;
+  const slots=Object.entries(slotMaximums)
     .map(([level,maximum])=>({level:Number(level),current:maximum,max:maximum}))
     .filter((entry)=>Number.isInteger(entry.level)&&entry.level>0&&entry.max>0)
     .sort((a,b)=>a.level-b.level);
