@@ -67,7 +67,7 @@ R1 exact checkpoint `95042b2ef3c65aef3619334c0bec1ad243d165f2` is already local/
 
 Current production semantics to preserve:
 
-- level 10+ Fiend Warlock only;
+- level 6+ Fiend Warlock only;
 - after a failed ability check or saving throw, the existing follow-up opens an owner interrupt asking whether to use Dark One's Own Luck;
 - accepting spends one canonical Dark One's Own Luck resource and adds one authoritative d10 to the failed result;
 - declining changes no durable/shared state;
