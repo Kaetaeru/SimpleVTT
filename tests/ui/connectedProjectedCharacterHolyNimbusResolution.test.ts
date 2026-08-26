@@ -37,16 +37,16 @@ function entry(catalog:CatalogEntry[],contentId:string) {
 
 function remotePaladin(catalog:CatalogEntry[]):CharacterSheet {
   const paladin=entry(catalog,PALADIN_ID);
-  const devotion=entry(catalog,PALADIN_DEVOTION_SUBCLASS_ID);
   const human=entry(catalog,"dnd.srd521.species.human");
   const soldier=entry(catalog,"dnd.srd521.background.soldier");
+  const devotionName="헌신의 맹세";
   return {
-    id:CHARACTER_ID,name:"Remote Devotion Paladin",className:paladin.nameKo||paladin.nameEn,subclassName:devotion.nameKo||devotion.nameEn,level:20,
+    id:CHARACTER_ID,name:"Remote Devotion Paladin",className:paladin.nameKo||paladin.nameEn,subclassName:devotionName,level:20,
     species:human.nameKo||human.nameEn,background:soldier.nameKo||soldier.nameEn,hp:150,maxHp:150,tempHp:0,ac:20,speed:30,proficiencyBonus:6,saveState:"saved",
     abilities:{str:18,dex:10,con:16,int:8,wis:12,cha:20},saves:[],skills:[],features:["성스러운 후광"],equipment:[],items:[],attacks:[],
     resources:[{id:DEVOTION_HOLY_NIMBUS_RESOURCE_ID,label:"성스러운 후광",current:1,max:1,source:"SRD Devotion",recovery:{longRest:"all"}}],
     rulesProfileId:"dnd.srd-5.2.1",rulesProfileVersion:"0.1-draft",sourceRevision:2,runtimeRevision:3,
-    classLevels:[{classId:PALADIN_ID,className:paladin.nameKo||paladin.nameEn,level:20,subclassName:devotion.nameKo||devotion.nameEn}],subclassIds:{[PALADIN_ID]:PALADIN_DEVOTION_SUBCLASS_ID},
+    classLevels:[{classId:PALADIN_ID,className:paladin.nameKo||paladin.nameEn,level:20,subclassName:devotionName}],subclassIds:{[PALADIN_ID]:PALADIN_DEVOTION_SUBCLASS_ID},
   };
 }
 
