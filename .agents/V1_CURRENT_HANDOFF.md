@@ -35,11 +35,12 @@ Canonical target branch: **`work/v1-composite`**
 - R2 remote-owner Berserker Intimidating Presence exact checkpoint: `3d3c9866fd24c15d233e8d8730e70052597e8fec`; canonical subclass catalog identity source `7e8541864f19c1abd22bbe0a32ae0f2dae685fa0`; UI run `32971305995` / frontend job `98185443299` success including `Typecheck and build`; Phase 12 run `32971306050` / connected-protocol job `98185443594` success through focused authority proof, Phase 11 walkthrough and production frontend gate.
 - R2 remote-owner Open Hand Wholeness of Body exact checkpoint: `d03adbe11c10aa394628c025c36bea9d5c27f9c5`; focused connected proof `b621ede2f64b9be50e814104f7bdf7c56cfa7e0d`, canonical Open Hand identity `81baf37690f0e36758e4eabe5d5244f8163cdaec`; UI run `32972536815` / frontend job `98189406605` success; Phase 12 run `32972594009` / connected-protocol job `98189595694` success through focused authority proof, Phase 11 walkthrough and production `npm run build`.
 - R2 remote-owner Open Hand Fleet Step exact checkpoint: `df37d8a1ec21459578d79bc076b53b58f142f39c`; focused proof `f2c764b62e4df4c16c11947f996c6239ebc19fc3`, Phase 12 gate wiring `52d2f6fa8a1042cbfba1c7733edcc0145c1f2750`; UI run `32973935487` / frontend job `98193953153` success; Phase 12 run `32973935583` / connected-protocol job `98193953169` success through focused authority proof, Phase 11 walkthrough and production frontend gate.
+- R2 remote-owner Devotion Holy Nimbus exact checkpoint: `5ff7d00e54135bcacfc306d68467671a3a76298e`; focused proof `9e426db9aeff9008ed091897295bae1d7fbef13f`, Phase 12 gate wiring `2e689f98e996e7dd076a7fe8c68e38ddc217ab8c`, canonical Devotion identity `b3263376afa1bc113d79664766ba9a956f23720e`; UI run `32975449153` / frontend job `98198941858` success; Phase 12 run `32975449175` / connected-protocol job `98198941805` success through focused authority proof, Phase 11 walkthrough and production frontend gate.
 - `21b5ab8`은 Fleet Step과 Holy Nimbus focused gate를 포함한 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다.
 - `126cd84`는 Quivering Palm focused gate를 포함한 UI run `32942627369`가 success이고 Phase 12 run `32942627376`의 connected-protocol job `98096599197`이 success다. 이는 Quivering Palm R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 - `ec89fa2`는 Smite of Protection focused gate를 포함한 UI run `32950193461` / frontend job `98119645421`과 Phase 12 run `32950193590` / connected-protocol job `98119646335`가 success다.
 - `95042b2`는 Fiend Dark One's Own Luck 3개 focused case를 포함한 UI run `32952470669` / frontend job `98126755335`와 Phase 12 run `32952470663` / connected-protocol job `98126755397`이 success다.
-- `88bb72d`는 Lore Peerless Skill 4개 focused case를 포함한 UI run `32953773211` / frontend job `98130829740`과 Phase 12 run `32953773099` / connected-protocol job `98130829706`이 success다.
+- `88bb72d`는 Lore Peerless Skill 4개 focused case를 포함한 UI run `32953773211` / frontend job `98130829740`과 Phase 12 run `32953773099` / connected-protocol job `98130829706`가 success다.
 - `90514e4`는 Lore Cutting Words ability-check/attack/staged-damage/below-level focused slices를 포함한 UI run `32960806646` / frontend job `98152495174`와 Phase 12 run `32960806633` / connected-protocol job `98152494916`이 success다. `c7aee31`은 임시 diagnostic steps만 제거했고 UI run `32961013657` / frontend job `98153136326`도 success다.
 - `b82e904`는 Berserker Mindless Rage production Rage 합성, 기존 Charmed/Frightened 제거, immunity marker, Activity, Undo, Rage-end lifecycle을 focused production test로 검증했고 UI run `32961779455` / frontend job `98155486715`과 Phase 12 run `32961779556` / connected-protocol job `98155487334`가 success다.
 - `dec4f22`는 remote-owner Rage ActionRequest/Host authoritative resolve/ordered event, Host permanent Character library 불변, owning Client durable exactly-once, duplicate request/event no-op, Host projected Undo와 owning Client inverse write-back을 검증했다. UI run `32963492157`은 success이고 Phase 12 run `32963492151` / connected-protocol job `98160810148`은 production frontend gate까지 success다. `windows-connected-playable`은 R3이므로 이 R2 gap의 exit 조건이 아니다.
@@ -145,6 +146,17 @@ Canonical target branch: **`work/v1-composite`**
   - UI run `32973935487` / frontend job `98193953153`: **success**, `Typecheck and build` 포함.
   - Phase 12 Connected Session run `32973935583` / connected-protocol job `98193953169`: **success**, focused Fleet Step authority proof, Phase 11 walkthrough, production frontend gate 모두 green.
 - 결론: **Open Hand Fleet Step R2 remote-owner/trigger/resource/movement/effect/exactly-once/reconnect/owner-write-back/compensating Undo gap은 완료**. R3 Windows/Tauri acceptance는 별도다.
+
+### Green — R2 Devotion Holy Nimbus exact checkpoint `5ff7d00`
+
+- 기존 R1 Paladin Devotion resolver/resource, initiative Bonus Action/freeform economy split, self target/effect, Activity, ResolutionEvent/Undo와 current connected SessionProjection/owner write-back/reconnect primitives를 재사용했다. 새 protocol, schema, remote-only rules path는 추가하지 않았다.
+- `9e426db9aeff9008ed091897295bae1d7fbef13f`가 Host-unknown Devotion Paladin focused proof를 추가해 resource `1 -> 0`, Bonus Action `true -> false`, Holy Nimbus self effect ordered events, Host permanent Character library 불변, owning Client durable exactly-once apply, duplicate request/event no-op, reconnect/rebind, compensating Undo와 inverse owner persistence를 검증한다.
+- `2e689f98e996e7dd076a7fe8c68e38ddc217ab8c`가 이 proof를 Phase 12 connected authority gate에 포함했다.
+- 첫 direct red는 mechanics가 아니라 canonical Devotion subclass identity 부재였다. `b3263376afa1bc113d79664766ba9a956f23720e`가 `dnd.srd521.subclass.paladin.oath-of-devotion` catalog identity만 추가했다. `9437d0367c94e6a8d520e2314027c9a458e45dcd`에서 fixture 이름을 canonical identity에 맞췄고 `5ff7d00e54135bcacfc306d68467671a3a76298e`가 catalog-backed proof를 유지했다.
+- exact evidence:
+  - UI run `32975449153` / frontend job `98198941858`: **success**, `Typecheck and build` 포함.
+  - Phase 12 Connected Session run `32975449175` / connected-protocol job `98198941805`: **success**, focused Holy Nimbus authority proof, Phase 11 walkthrough, production frontend gate 모두 green.
+- 결론: **Devotion Holy Nimbus R2 remote-owner/resource/economy/self-effect/exactly-once/reconnect/owner-write-back/compensating Undo gap은 완료**. R3 Windows/Tauri acceptance는 별도다.
 
 ### Green — Druid Wild Shape exact checkpoint `11bc858`
 
@@ -391,6 +403,7 @@ R1의 모든 신규 행동마다 다음을 검증한다.
 - [x] **Berserker Intimidating Presence remote-owner gap**: canonical Berserker subclass identity, Host-unknown authoritative resolve, target/resource/economy/Frightened ordered events, Host permanent-library isolation, owner apply exactly once, duplicate request/event safety, reconnect preservation, compensating Undo/inverse owner persistence. exact checkpoint `3d3c986`; UI `32971305995` / frontend `98185443299` green; Phase 12 `32971306050` / connected-protocol `98185443594` green through production frontend gate.
 - [x] **Open Hand Wholeness of Body remote-owner gap**: focused proof `b621ede`; canonical Open Hand identity `81baf37`; exact test/content head `d03adbe`; UI `32972536815` / `98189406605` green; Phase 12 `32972594009` / `98189595694` green through focused authority proof, Phase 11 walkthrough and production `npm run build`. Covers HP/resource/Bonus Action ordered events, Host permanent-library isolation, owner exactly-once write-back, duplicate safety, reconnect/rebind, compensating Undo and inverse owner convergence.
 - [x] **Open Hand Fleet Step remote-owner gap**: focused proof `f2c764b`; Phase 12 gate wiring `52d2f6f`; actor-scoped remote trigger fix/exact head `df37d8a`; UI `32973935487` / `98193953153` green; Phase 12 `32973935583` / `98193953169` green through focused Host-unknown authority, exact-owner persistence, duplicate/reconnect, compensating Undo and production frontend gate.
+- [x] **Devotion Holy Nimbus remote-owner gap**: focused proof `9e426db`; Phase 12 gate wiring `2e689f9`; canonical Devotion identity `b326337`; exact head `5ff7d00`; UI `32975449153` / `98198941858` green; Phase 12 `32975449175` / `98198941805` green through Host-unknown authority, resource/economy/self-effect ordered events, Host library isolation, owner exactly-once persistence, duplicate/reconnect and compensating Undo.
 
 Exit: 신규 행동 전체가 Host, acting Client, observing Client에서 같은 최종 상태를 가진다. **위 focused gaps 완료만으로 R2 전체 완료가 아니다.**
 
@@ -431,15 +444,16 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R2에서 Rage, Wild Shape, Cunning Action Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step은 focused remote-owner evidence와 exact-head production gates가 green이다. 검증된 slice를 반복하지 않는다. 다음은 **Devotion Holy Nimbus remote-owner gap**이다.
+R2에서 Rage, Wild Shape, Cunning Action Dash/Disengage/Hide, Uncanny Dodge, Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus는 focused remote-owner evidence와 exact-head production gates가 green이다. 검증된 slice를 반복하지 않는다. 다음은 **Open Hand Quivering Palm remote-owner gap**이다.
 
 ```text
-live branch와 current Holy Nimbus domain/runtime/connected projection 상태 재대조
--> R1의 existing Paladin Devotion resolver/resource, initiative Bonus Action/freeform economy split, self target, Activity, Undo primitive 재사용
--> eligible Host-unknown Devotion Paladin에서 Holy Nimbus intent를 Host authoritative resolution으로 focused proof
--> resource/economy/self effect ordered events + Host permanent Character library 불변 + owning Client exactly-once convergence 확인
+live branch와 current Quivering Palm domain/runtime/connected projection 상태 재대조
+-> R1의 existing post-Unarmed-hit seed, Focus 4, single-target marker replacement, Action detonation, Constitution save, 10d12 force/save-half, Activity, event-native Undo primitive 재사용
+-> eligible Host-unknown Open Hand Monk에서 supported seed + Action detonation intent를 Host authoritative resolution으로 focused proof
+-> Focus/resource + marker/effect + Action economy + save/damage ordered events, Host permanent Character library 불변, owning Client exactly-once convergence 확인
 -> duplicate request/event replay와 reconnect/fresh projection 수렴 확인
 -> event-native Undo의 Host projection + owner inverse convergence 확인
+-> unsupported `replace-attack` activation은 발명하거나 노출하지 않음
 -> 실제 red가 있으면 첫 원인 하나만 최소 수정
 -> exact SHA production frontend/connected gate green 확인
 -> canonical handoff 갱신 후 다음 R2 gap 선택
