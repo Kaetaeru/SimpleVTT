@@ -3,48 +3,53 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch status to preserve: `continue`
+- dispatch status to publish: `blocked`
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T10:16:22+09:00`
+- checkpointed_at: `2026-08-26T11:47:12+09:00`
 
 ## Durable execution checkpoint
 
-Preflight was performed in the mandatory order: `README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`, followed by live branch, canonical handoff/checklist, and relevant design authority reconciliation. The live run/sequence/task identity still matches `control.json=continue`.
+Preflight was performed in the mandatory order: `README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`, followed by live branch and canonical V1 handoff/checklist reconciliation. The supplied run/sequence/task identity matched the live `control.json=continue`. The previous STATE checkpoint was stale, so live GitHub state was treated as authoritative and already-landed Monk work was credited instead of repeated.
 
-This STATE follows the required PLAN write at commit `546318e9e50ac6ef840aa2946f74831cbbecaba7`. `control.json` must be written last after this file.
+`PLAN.md` was intentionally not changed because run identity and canonical-plan routing did not change. `control.json` must be written last after this file.
 
-### Reconciled Wild Shape result
+### Reconciled Monk Focus state
 
-- Existing Wild Shape product/source implementation through `12834c74ee0b997d9cd28f1d6c9227e326c1fe60` was not reimplemented.
-- Failed job `98015384132` exposed the exact failure: `test:druid-wild-shape` ran 12 tests with 9 pass / 3 fail, all in `tests/ui/druidWildShapeActionRuntime.test.ts`.
-- Root cause was test fixture state, not product runtime: the fixture changed `activeCharacter.tempHp` but left the matching Scene entity temp HP at default `5`; `MockAdapter.syncChar()` then projected Scene temp HP back into the Character on snapshot.
-- Minimal fix commit `11bc8581a04678e33796054117f05b5455a25db3` synchronizes the fixture's Scene entity temp HP with the Character input. Diff is test-only `+3/-1`; product code changed by 0 lines and no dependency/abstraction was added.
+The live branch already contained the R1 Monk tranche after the prior STATE checkpoint:
 
-### Green executable evidence
+- `8aa0f06e76f1b0f508d7981c3ea8204c27740655` — projects Monk Focus actions into the existing runtime/action/economy model.
+- `d311da7153e00a9a2324f5ca1d8ce4f88bdb7824` — loads the Monk Focus runtime through `offlineRuntimeAdapters`.
+- `7402dc72b931ac74319da7ac3ffd24465f2f575a` — adds focused `tests/ui/monkFocusActionRuntime.test.ts` coverage.
+- `576b1c1bd2af253ff15573f92d27467a78167dd0` — adds `npm run test:monk-focus` to the production `build` gate.
 
-Exact fix SHA `11bc8581a04678e33796054117f05b5455a25db3` has green existing GitHub Actions:
+The domain/progression/runtime seams were inspected before considering any edit. Existing Focus spend/recovery primitives and the newly landed action projection were not reimplemented.
 
-- UI run `32917949237`, job `98025501810` (`frontend`): completed `success`; every listed step passed, including `Typecheck and build`.
-- Rules Domain run `32917949368`, job `98025502082` (`connected-protocol`): completed `success`; `Production frontend gate`, connected protocol tests, and offline play walkthrough tests passed.
-- Because the existing production build invokes `npm run test:druid-wild-shape`, the focused Wild Shape gate and production build are green at the exact validation SHA.
+### Verification and regression boundary
 
-No new CI workflow was added and no already-validated Rage/Wild Shape implementation was repeated.
+Commit-level GitHub Actions comparison narrowed the regression without guessing:
 
-### Canonical advancement
+- CI remained green through `7402dc72b931ac74319da7ac3ffd24465f2f575a`.
+- The first red commit is `576b1c1bd2af253ff15573f92d27467a78167dd0`, whose functional change is gating the focused Monk runtime test in `npm run build`.
+- Current CI run `32922271950`, job `98038025510` (`build-and-test`) fails in `Typecheck and build`.
+- Current release-smoke run `32922271963`, job `98038025602` (`release-smoke`) fails in `Build`; browser smoke is therefore skipped.
+- `package.json` runs `test:monk-focus` as `tsx --test tests/ui/monkFocusActionRuntime.test.ts` inside `build`.
 
-- `.agents/V1_CURRENT_HANDOFF.md` advanced Wild Shape R1 local/source lifecycle to source-complete + execution-validated at commit `726b9c99dd75fe5e4bf3e5c861ccf9fa55b3b191`.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` now points the single R1 execution pointer to Monk Focus at commit `871c3a3fa56bb8bf44bc489caee9eab0c3a59783`.
-- Connected remote-owner exactly-once/reconnect/Undo remains R2 and is not falsely promoted to release DONE.
+The exact failing assertion/error could not be obtained from the available workflow-log response. Local reproduction is also unavailable in this watcher runtime because repository clone/network access failed with DNS/network resolution. Static inspection of the focused test and Monk adapter did not establish one uniquely correct fix. Per repository engineering rules, no speculative product or test edit was made.
+
+### Canonical/checklist status
+
+- Do **not** credit Monk Focus R1 as execution-validated yet.
+- Do **not** advance the release checklist or current canonical handoff from Monk Focus on this evidence.
+- No existing validated Wild Shape/Rage work was repeated.
+
+## Blocker
+
+Technical blocker: the exact `test:monk-focus` failure at `576b1c1bd2af253ff15573f92d27467a78167dd0` cannot be reproduced locally or read from the available CI log channel, so a safe minimal fix cannot be selected without guessing.
 
 ## Next Exact Action
 
-1. Read the current Monk Focus domain/progression/resource/action primitives from the live branch before any edit.
-2. Credit any already-implemented Focus Point consumption/recovery and action behavior; do not rebuild it.
-3. Identify the smallest missing production action/resource/economy seam for R1 and add only the focused deterministic test/fixture needed to prove it.
-4. Reuse existing runtime/action/economy infrastructure and dependencies; do not add generic class-action abstractions unless a concrete repository constraint requires them.
-5. Validate the focused Monk gate and existing production build before advancing canonical state again.
-6. Keep connected Host/Client/reconnect/exactly-once work in R2 unless a direct R1 regression requires it.
+Resume from the current canonical V1 Monk Focus R1 pointer. First obtain or reproduce the failing output for `tests/ui/monkFocusActionRuntime.test.ts` at the `576b1c1` gate. Apply only the smallest contract-preserving fix supported by that failure, then run `npm run build` and both required live gates. Update canonical handoff/checklist evidence only after the required gates pass.
 
-Keep the same run/sequence/task on `continue`.
+Keep the same run/sequence/task identity. A controller may return this same sequence from `blocked` to `continue` when the technical blocker is cleared.
