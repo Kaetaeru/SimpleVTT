@@ -176,3 +176,49 @@ test("host-unknown Open Hand Fleet Step follows an authoritative Bonus Action an
     assert.equal((await applyConnectedClientEvents(client,[undoEvent!])).status,"duplicate");assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,persistenceAfterUndo);
   } finally {tauriSessionTransport.send=originalSend;tauriSessionTransport.sendTo=originalSendTo;}
 });
+
+test("host-unknown Open Hand free Fleet Step resolves without Focus spend or a second Bonus Action",async()=>{
+  const host=new MockAdapter();
+  await host.setReferenceRole("dm");
+  const before=await host.getSnapshot();
+  const catalog=structuredClone(before.catalog);
+  const remote=remoteMonk(catalog);
+  const remoteManifest=manifest(remote);
+  const projection=buildCharacterSessionProjectionV1(remote,catalog);
+  const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);
+  assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
+  await host.startInitiative();
+
+  const state=connectedStateFor(host);
+  state.mode="host";state.sessionId="session.r2.remote-fleet-step.free";state.ledger=new HostSessionLedger(state.sessionId,connectedManifest(host));state.peerManifests.set(PEER,structuredClone(remoteManifest));
+  const broadcasts:string[]=[];
+  const originalSend=tauriSessionTransport.send,originalSendTo=tauriSessionTransport.sendTo;
+  tauriSessionTransport.send=async(message:string)=>{broadcasts.push(message);return 1;};
+  tauriSessionTransport.sendTo=async()=>1;
+  try {
+    const triggerRequest:ConnectedActionRequest={sessionId:state.sessionId,requestId:"request.r2.remote-fleet-step.free.trigger",actorId:remote.id,actionId:OPEN_HAND_WHOLENESS_ACTION_ID,targetIds:[remote.id],knownEventCursor:0,character:remoteManifest.character,capabilities:[...CONNECTED_CAPABILITIES]};
+    assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},triggerRequest),true);
+    const focusBefore=resourceCurrent(projectedCharacterById(host,remote.id)!.sheet,MONK_FOCUS_RESOURCE_ID);
+    assert.equal(focusBefore,11);
+
+    const fleetRequest:ConnectedActionRequest={sessionId:state.sessionId,requestId:"request.r2.remote-fleet-step.free",actorId:remote.id,actionId:OPEN_HAND_FLEET_STEP_ACTION_ID,targetIds:[remote.id],knownEventCursor:1,character:remoteManifest.character,capabilities:[...CONNECTED_CAPABILITIES]};
+    assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},fleetRequest),true);
+
+    const snapshot=await host.getSnapshot();
+    assert.equal(snapshot.activeCharacter.id,before.activeCharacter.id);
+    assert.deepEqual(snapshot.characters,before.characters,"free Fleet Step must not mutate Host permanent Character library");
+    assert.equal(state.ledger.cursor,2);
+    assert.equal(resourceCurrent(projectedCharacterById(host,remote.id)!.sheet,MONK_FOCUS_RESOURCE_ID),focusBefore,"free Fleet Step must not spend Focus");
+    assert.equal(snapshot.scene.economyByActor[remote.id]?.bonusAction,false,"Fleet Step must not spend a second Bonus Action");
+
+    const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");
+    assert.equal(batches.length,2);
+    const fleetEvent=batches[1].events?.[0];assert.ok(fleetEvent);assert.equal(fleetEvent!.payload.kind,"resolution");
+    if(fleetEvent!.payload.kind!=="resolution")throw new Error("expected Host free Fleet Step resolution event");
+    assert.ok(fleetEvent!.payload.resolutionEvents.some((event)=>event.kind==="free-move"));
+    assert.equal(fleetEvent!.payload.resolutionEvents.some((event)=>event.kind==="spend-resource"),false);
+    assert.equal(fleetEvent!.payload.resolutionEvents.some((event)=>event.kind==="apply-effect"),false);
+    const changes=fleetEvent!.payload.resolutionEvents.flatMap((event)=>event.stateChanges);
+    assert.equal(changes.some((change)=>change.kind==="economy"&&change.field==="bonusAction"),false);
+  } finally {tauriSessionTransport.send=originalSend;tauriSessionTransport.sendTo=originalSendTo;}
+});
