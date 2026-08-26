@@ -4,6 +4,7 @@ import { projectResolutionCharacterWriteBack } from "./resolutionCharacterDurabl
 import { installCharacterResolutionWriteBackGuard } from "./resolutionCharacterWriteBackPort";
 import {
   isEphemeralSessionProjectionCharacter,
+  projectedCharacterById,
   replaceProjectedCharacterSheet,
 } from "./characterSessionProjectionRegistry";
 
@@ -14,19 +15,26 @@ type AdapterState = {
 
 installCharacterResolutionWriteBackGuard(async (adapter,events,direction) => {
   const state=adapter as unknown as AdapterState;
-  if (!isEphemeralSessionProjectionCharacter(adapter,state.activeCharacter.id)) return undefined;
+  const characterId=isEphemeralSessionProjectionCharacter(adapter,state.activeCharacter.id)
+    ?state.activeCharacter.id
+    :events.map((event)=>event.targetId).find((targetId)=>isEphemeralSessionProjectionCharacter(adapter,targetId));
+  if (!characterId) return undefined;
 
-  const entity=state.scene.entities.find((entry)=>entry.id===state.activeCharacter.id);
+  const sheet=characterId===state.activeCharacter.id
+    ?state.activeCharacter
+    :projectedCharacterById(adapter,characterId)?.sheet;
+  if (!sheet) return { status:"rejected" as const,error:`ephemeral SessionProjection registry lost Character: ${characterId}` };
+  const entity=state.scene.entities.find((entry)=>entry.id===characterId);
   const fallbackLife=entity?.runtimeLife ? {
     stable:entity.runtimeLife.stable,
     unconscious:entity.runtimeLife.unconscious,
     dead:entity.runtimeLife.dead,
   } : undefined;
-  const projected=projectResolutionCharacterWriteBack(state.activeCharacter,events,direction,fallbackLife);
+  const projected=projectResolutionCharacterWriteBack(sheet,events,direction,fallbackLife);
   if (projected.status==="rejected") return projected;
   if (!projected.changed) return { status:"committed" as const,changed:false };
 
-  state.activeCharacter=structuredClone(projected.sheet);
+  if (state.activeCharacter.id===characterId) state.activeCharacter=structuredClone(projected.sheet);
   if (!replaceProjectedCharacterSheet(adapter,projected.sheet)) {
     return { status:"rejected" as const,error:`ephemeral SessionProjection registry lost Character: ${projected.sheet.id}` };
   }
