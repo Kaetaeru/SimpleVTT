@@ -122,7 +122,7 @@ V1-40 + V1-41 + V1-42
 | V1-20 Real Character local play | PARTIAL | persisted Character projection, 339 spells, inventory/sheet source 존재; exact artifact walkthrough 대기 |
 | V1-21 Complete local loop | PARTIAL | R1 source/execution action matrix는 완료; 실제 Windows local journey, durable restart, human walkthrough 증거 대기 |
 | V1-30 Session lifecycle | PARTIAL | Host/Ready/end/restart source와 TS regression green; Tauri 증거 대기 |
-| V1-31~32 Connected play | PARTIAL | 핵심 connected suites green; R1 신규 기능 remote-owner exactly-once/reconnect/Undo matrix와 two-instance proof 대기 |
+| V1-31~32 Connected play | PARTIAL | 핵심 connected suites + remote-owner Rage forward/Undo exactly-once green; 나머지 R1 기능 reconnect/remote-owner matrix와 two-instance proof 대기 |
 | V1-40 DM live operation | PARTIAL | DM Library/Stash/handout/campaign operation source 존재; connected action matrix 및 end-to-end acceptance 대기 |
 | V1-41 Spatial fallback | PARTIAL | mapless/provider source와 regression 존재; exact-head provider mount/unmount human proof 대기 |
 | V1-42 Dice | PARTIAL | Three/Cannon, rear-entry, authoritative projection, remote dedup source 존재; human motion proof 대기 |
@@ -402,6 +402,7 @@ Existing workspace tests to reconcile, not automatically credit:
 - `connectedProjectedCharacterInventoryResolution.test.ts`
 - `connectedProjectedCharacterSpellResolution.test.ts`
 - `connectedTwoPeerResolution.test.ts`
+- `connectedProjectedCharacterRageResolution.test.ts`
 
 - [ ] Client가 Host에 영구 저장되지 않은 persisted Character 선택.
 - [ ] manifest/compatible projection handshake.
@@ -410,6 +411,8 @@ Existing workspace tests to reconcile, not automatically credit:
 - [ ] skill/action/spell/item/target/turn requests가 같은 authority path 사용.
 - [ ] Host와 Client가 committed revision/result에 수렴.
 - [ ] private Character source 및 DM private Campaign data 과다 전송 금지.
+
+R2 focused evidence: remote-owner Rage at exact `dec4f22178b1256597c140170481025bb26f39e3` proves Host-unknown Barbarian ActionRequest -> Host authoritative Rage ResolutionEvent, with duplicate request/event idempotency and no Host permanent Character ownership. UI run `32963492157` and Phase 12 connected-protocol job `98160810148` are green. This is representative evidence only; V1-31 remains PARTIAL.
 
 ## V1-32 Connected durable write-back / reconnect — PARTIAL
 
@@ -423,6 +426,8 @@ Existing workspace tests to reconcile, not automatically credit:
 - [ ] Host Campaign store만 Campaign durable write-back.
 - [ ] 어느 durable side 실패 시 explicit failure 및 partial commit 금지.
 - [ ] Session end/restart 후 stale projection/Ready/turn 없음.
+
+R2 focused evidence: the same Rage checkpoint keeps the Host permanent library unchanged, applies resource use to the owning Client exactly once, and routes event-native Undo through the Host ephemeral projection plus owner inverse write-back. `9738b42` reuses the projection persistence guard and `0f17a4d` reuses the projected resolution context around generic Undo; `dec4f22` only narrows optional event target IDs. Reconnect coverage for this feature and the rest of the R1 matrix is still pending, so V1-32 remains PARTIAL.
 
 **Exit G4:** 두 실제 Windows app instance가 Host-unknown Character로 Join하고 action/item/spell 중 하나를 commit한 뒤 reconnect/restart까지 정확히 수렴한다.
 
@@ -647,15 +652,15 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R2 connected remote-owner matrix for R1 actions/features
+R2 Druid Wild Shape remote-owner gap
 ```
 
 1. R1 source/execution action matrix는 canonical handoff에서 DONE이다. 이 판정은 V1-21 release DONE이나 Windows/human acceptance가 아니다.
-2. 마지막 inventory gap은 Berserker Mindless Rage였다. `8bbd21a0ff4b20bef4c0232f175785c5f7633312`가 기존 Rage transaction에 Mindless Rage operations를 합성했고, 별도 fake action을 만들지 않았다.
-3. production lifecycle checkpoint `b82e9048618ab3c105f2f99e148d2e5d2198c5dc`: UI run `32961779455` / frontend job `98155486715`, Phase 12 run `32961779556` / connected-protocol job `98155487334`가 success다. 기존 `test:berserker-presence` build gate가 Charmed/Frightened 제거, immunity marker, Activity, Undo, Rage-end termination을 검증한다.
-4. 남은 subclass inventory를 재대조했다. Preserve Life/Land's Aid/Retaliation은 richer explicit player input이 필요하고, Hunter/Champion/Thief/Draconic/Fiend/Evocation remainder는 passive/rest-choice/item-runtime/trigger/reaction/progression-spell integration이다. dead/auto-selected action button으로 만들지 않는다.
-5. 다음 구현 범위는 R2다. R1 신규 기능의 connected coverage inventory를 먼저 작성하고, 기존 connected evidence를 재구현/재실행하지 않은 채 실제 remote-owner gap 하나만 선택한다.
-6. 선택한 gap에서 Client intent -> Host authoritative resolve -> ordered event, owner/private vs public projection, duplicate/reorder/retry exactly-once, reconnect convergence, owner/Campaign write-back 분리, event-native Undo convergence를 기존 primitives로 검증한다.
-7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging은 별도다. V1-21/V1-31/V1-32는 각 release/human exit가 충족될 때까지 PARTIAL 유지한다.
+2. R2 첫 대표 gap인 remote-owner Rage는 exact `dec4f22178b1256597c140170481025bb26f39e3`에서 green이다. UI run `32963492157`, Phase 12 run `32963492151` / connected-protocol job `98160810148`이 success다. Host permanent Character library는 불변이고 owning Client forward/inverse write-back은 exactly-once다. 이 검증을 반복하지 않는다.
+3. current branch는 Wild Shape known-form source preservation을 progression source에 연결하는 작업(`a775181`, `657f7ea`, `b9a666c`)을 이미 포함한다. 이를 중복 구현하지 않는다.
+4. 다음은 Druid Wild Shape remote-owner gap이다. 기존 Wild Shape action/runtime, SessionProjection, owner write-back, reconnect/event primitives를 재사용한다.
+5. Host-unknown owner Character known-form 선택/변신 intent -> Host authoritative event, Host permanent-library isolation, owner durable resource/state exactly-once, duplicate request/event, reconnect/fresh projection, event-native Undo를 focused deterministic evidence로 대조한다.
+6. 실제 red가 있으면 첫 원인 하나만 최소 수정하고 exact SHA production frontend/connected gate를 확인한다.
+7. V1-31/V1-32는 전체 R1 matrix와 reconnect/two-instance exit가 충족될 때까지 PARTIAL 유지한다. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging은 별도다.
 
 상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.
