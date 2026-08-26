@@ -77,7 +77,7 @@ test("host-unknown Rogue Cunning Hide converges d20/effect/economy exactly once 
     const hostEvent=batches[0].events?.[0];assert.ok(hostEvent);assert.equal(hostEvent!.sequence,1);assert.equal(hostEvent!.actorId,remote.id);assert.equal(hostEvent!.payload.kind,"resolution");
     if(hostEvent!.payload.kind!=="resolution")throw new Error("expected Host resolution event");
     const resolutionEvents=hostEvent!.payload.resolutionEvents;
-    assert.equal(resolutionEvents[0]?.kind,"d20-resolution","canonical ability-check event must remain first");
+    assert.equal(resolutionEvents[0]?.kind,"d20","canonical ability-check event must remain first");
     const changes=resolutionEvents.flatMap((event)=>event.stateChanges);
     assert.ok(changes.some((change)=>change.kind==="economy"&&change.targetId===remote.id&&change.field==="bonusAction"&&change.before===true&&change.after===false));
     assert.ok(changes.some((change)=>change.kind==="effect"&&change.targetId===remote.id&&Boolean(change.after)));
