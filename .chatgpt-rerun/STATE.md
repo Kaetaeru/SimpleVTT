@@ -36,46 +36,42 @@ Inventory decisions to preserve:
 - Circle of the Land `Land's Aid` needs richer point/multi-result input; do not force it into a simple button.
 - R2 remote-owner exactly-once/reconnect work remains excluded unless a direct R1 regression requires it.
 
-## Next selected R1 gap — College of Lore Cutting Words
+## College of Lore Cutting Words — deferred, staged timing blocker
 
-Live GitHub selected College of Lore `Cutting Words` as the next mechanics-complete domain resolver with no production runtime bridge. A concurrent checkpoint at `ae19764aa8dfa045c1ce032acaa1b0a75b93d13a` is authoritative over the earlier local inventory candidate.
+Cutting Words remains mechanics-complete in `src/domain/bardCollegeLore.ts`, but the current production attack staging cannot support its damage-roll trigger without a broader attack-stage change. Do not ship a partial attack/check-only bridge.
 
-- `src/domain/bardCollegeLore.ts` already owns `resolveLoreCuttingWords` for successful ability checks, successful attack rolls, and damage rolls; it owns Bardic Inspiration spend, optional Reaction economy, fixed Inspiration die validation, 60-foot range, visibility, and result adjustment.
-- `tests/domain/bardCollegeLore.test.ts` already proves attack/check reduction, damage reduction floor at zero, resource/Reaction spend, and 60-foot/visibility validation.
-- Live `src/app` inventory has the Peerless Skill bridge but no Cutting Words production adapter; do not duplicate domain mechanics.
-- `resolveRuntimeTargetingFact` already provides authoritative distance/visibility and the existing mapless fallback; do not invent spatial facts.
+- `resolveLoreCuttingWords` correctly owns successful ability-check, successful attack-roll, and damage-roll adjustment plus Bardic Inspiration/Reaction economy.
+- `phase09RealRuntimeAttackAdapter` calls `resolveAtomicAttackTransaction` while the parent resolution is still at `attack-result`. That call already compiles/resolves the atomic attack transaction and stores the committed result in its private `pending` map.
+- Only after that build completes does the adapter expose `damage-animation` and `transaction.damageFaces` to the parent resolution.
+- `queueAtomicAttackDamageMultiplier` is consumed inside `resolveAtomicAttackTransaction`; therefore a post-roll Cutting Words decision at `damage-animation` is too late for that queue.
+- Generalizing the queue from multiplier to flat reduction does **not** fix this timing problem: the damage total is not observable before the queue is consumed.
+- Correct support would require an explicit staged post-roll/pre-commit adjustment seam or transaction rebuild contract. That is broader than this minimal R1 slice and must not be smuggled in as a private-`pending` hack.
 
-### Staged damage seam — verified
+Cutting Words is therefore deferred until that sanctioned seam exists. No Cutting Words product code or test gate was added, and no completion is claimed.
 
-The required damage-roll seam exists without a new subsystem:
+## Next selected R1 gap — Berserker Retaliation
 
-- `src/app/rogueCoreRuntimeAdapter.ts` already queues Uncanny Dodge at the hit interrupt through `queueAtomicAttackDamageMultiplier`.
-- `src/app/realAttackTransactionService.ts` consumes that queued adjustment immediately before the authoritative atomic attack commit, then applies it to compiled `compound-damage` operations.
-- Cutting Words can reuse the same queue/commit location by minimally generalizing the pending atomic damage adjustment to support an additive flat reduction alongside the existing multiplier. No parallel attack engine or duplicate transaction path is needed.
-- Successful attack-roll reduction can reuse the existing follow-up pattern used by Bardic Inspiration/Peerless Skill: adjust the staged attack total/temporary attack modifier before the atomic transaction validates preview parity.
-- Successful ability-check reduction can reuse the existing completed-check follow-up/activity/event-history pattern used by Dark One's Own Luck.
-- Reaction/resource spend remains owned by `resolveLoreCuttingWords`; append its ResolutionEvents to the parent resolution so current Character write-back, Activity projection, and event-native Undo stay authoritative.
+The next mechanically complete, production-unprojected candidate is Path of the Berserker `Retaliation`.
 
-### Reconciliation at live head `0b36cad242bf87068581181e11a3d1621c2cd51f`
-
-- `0b36cad` and its immediate checkpoints are investigation/state commits, not a Cutting Words implementation checkpoint.
-- Current `package.json` has **no** `test:cutting-words` script and `npm run build` has **no** Cutting Words focused gate.
-- No execution validation for Cutting Words should be claimed yet.
-- First implementation files should stay minimal: extend `src/app/realAttackTransactionService.ts` with one queued flat post-multiplier reduction seam; add one thin Cutting Words follow-up/runtime adapter using `resolveLoreCuttingWords`; install it in `src/app/offlineRuntimeAdapters.ts`; add one focused UI runtime test and one package gate.
-- Do not create a second attack engine, second Bardic Inspiration resource model, or duplicate the domain resolver.
+- `src/domain/barbarianBerserker.ts` already owns `resolveBerserkerRetaliation` / `compileBerserkerRetaliation` at Barbarian level 10 + Berserker subclass.
+- Domain mechanics already enforce melee weapon/Unarmed Strike, target = triggering damage source, 5-foot range, unseen-target disadvantage, and Reaction economy.
+- `tests/domain/barbarianBerserker.test.ts` proves Reaction spend, attack against the triggering creature, unseen-target disadvantage, damage application, and invalid-trigger rejection.
+- No Retaliation production bridge is present in current `src/app` inventory.
+- Existing production primitives can be reused: completed attack ResolutionEvent/Activity identifies damaging actor/target; `resolveRuntimeTargetingFact` supplies current distance/visibility; existing off-turn prepared/reaction attack adapters demonstrate temporary off-turn execution and event-native Reaction/Undo handling.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Then implement one thin Cutting Words follow-up adapter using the existing seams above.
+Reconcile live `work/v1-composite` first. Then verify the existing completed-damage -> off-turn reaction-attack seam for Retaliation without adding a new generic reaction engine.
 
-- Generalize the existing queued atomic attack damage adjustment minimally: preserve current multiplier behavior and add only the flat-reduction capability needed by Cutting Words.
-- Offer Cutting Words only for a qualifying visible target within 60 feet, College of Lore level 3+, Bardic Inspiration available, and Reaction available when initiative economy applies.
-- Support all three existing domain trigger families: successful ability check, successful attack roll, and damage roll. Do not ship attack/check-only partial support.
-- Use `resolveLoreCuttingWords`; do not reproduce its range/resource/economy/die/result rules in a second mechanics implementation beyond projection eligibility needed to render the interrupt.
-- Reuse `resolveRuntimeTargetingFact`, turn-runtime resource/economy state, interrupt events, Character write-back, Activity projection, and event-native Undo.
-- Add focused deterministic coverage for ability-check, attack-roll, damage-roll, range/visibility/resource/reaction/Undo, and below-level/subclass gates.
-- Wire only that focused gate into `npm run build`.
-- Require exact-head UI frontend and Phase 12 connected-protocol production frontend green before canonical advancement.
+If clean:
+- add one thin Berserker Retaliation follow-up adapter using `resolveBerserkerRetaliation`;
+- offer only when the active character is Berserker level 10+, has Reaction available in initiative, was actually damaged by the triggering creature, and that creature is currently within 5 feet;
+- reuse an existing melee weapon/Unarmed Strike action and authoritative targeting/attack facts; do not duplicate attack mechanics;
+- preserve Activity, Character write-back, ResolutionEvent history, and event-native Undo;
+- add focused deterministic coverage for trigger eligibility, 5-foot boundary, visible/unseen attack, Reaction economy, Activity, Undo, and below-level/subclass gates;
+- wire only that focused gate into `npm run build` and require exact-head UI frontend + Phase 12 connected-protocol green before canonical advancement.
+
+If the existing reaction-attack seam cannot preserve the trigger source and event-native Undo cleanly, do not create a second attack engine; record the blocker and continue inventory.
 
 Do not reopen Peerless or earlier validated R1 work without direct regression evidence. Do not expand into R2 unless a direct R1 regression requires it.
 
