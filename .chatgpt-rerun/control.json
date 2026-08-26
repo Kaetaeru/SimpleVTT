@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Rage, Wild Shape, Monk Focus, and Rogue R1 remain validated and must not be repeated. Berserker Intimidating Presence remains current R1. Duplicate cleanup, freeform economy compatibility, resolver dispatch/shadowing fixes, and the authoritative 35 ft spatial fixture are already landed. Latest source-equivalent fix is 1df452fcd951525242631e2cb345e6ee390251fd, which changes only the focused test provenance from test: to module:test: so production targeting recognizes the authored module relation. Exact-head UI run 32934223691 (frontend job 98072253329) and Phase 12 run 32934223675 were still in progress at checkpoint. Resume from STATE: reconcile live HEAD first; green advances canonical routing, red fixes only the first Berserker-related failure. R2 remote/reconnect remains excluded.",
+  "reason": "Rage, Wild Shape, Monk Focus, Rogue R1, and Berserker Intimidating Presence R1 are validated and must not be repeated. Berserker exact checkpoint 1df452fcd951525242631e2cb345e6ee390251fd is green: UI run 32934223691/frontend 98072253329 and Phase 12 run 32934223675/connected-protocol 98072253248 succeeded, including the production build gate. Canonical handoff was advanced at dd71e88bce66f1039a08af69809b03230b21a87e and STATE at 312718e5bf5eaec57a76b4c6ee2b2b93abee7261. Resume from STATE: reconcile live HEAD, then continue the remaining mechanics-complete subclass domain-resolver versus production-action inventory and select exactly one next projection gap. Do not expose partial/dead-button features. R2 remote/reconnect remains excluded.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T14:30:10+09:00"
+  "updated_at": "2026-08-26T14:32:20+09:00"
 }
