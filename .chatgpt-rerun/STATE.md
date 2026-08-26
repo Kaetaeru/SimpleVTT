@@ -44,26 +44,48 @@ Windows `windows-connected-playable` / Tauri artifact work is R3 packaging/accep
 
 ## Canonical sync status
 
-Canonical docs are now synchronized with the validated Cutting Words state:
+Canonical docs are synchronized with the validated Cutting Words state:
 
-- `.agents/V1_CURRENT_HANDOFF.md`: commit `b21d814035317921292502f3800a199a47cfead7` records Cutting Words checkpoint/evidence, source-complete exclusion, R1 checklist credit, and returns Next Exact Action to remaining subclass resolver inventory.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`: commit `1e56353c11619ce82de2facfc1d912fdb7e2fcc1` records Cutting Words in the release router NEXT evidence and keeps R1 incomplete until the remaining mechanics-complete resolver inventory is exhausted.
+- `.agents/V1_CURRENT_HANDOFF.md`: commit `b21d814035317921292502f3800a199a47cfead7` records Cutting Words checkpoint/evidence and R1 checklist credit.
+- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`: commit `1e56353c11619ce82de2facfc1d912fdb7e2fcc1` records Cutting Words in the release router evidence.
 
-Do not reopen Cutting Words merely because its product execution checkpoint `90514e4` is older than the canonical documentation commits. `c7aee31` cleanup UI is green and the later commits are documentation/control-only.
+Do not reopen Cutting Words merely because its product execution checkpoint `90514e4` is older than the canonical documentation commits. `c7aee31` cleanup UI is green and later commits are documentation/control-only.
 
-## Inventory exclusions / backup
+## R1 subclass resolver inventory — exhausted for honest action-bar projection
+
+The live SRD subclass domain inventory was reconciled after Cutting Words. No additional standalone mechanics-complete subclass action remains that can be honestly projected through the current production `resolveAction(actionId,targetIds)` surface without inventing inputs or converting passive/trigger mechanics into fake buttons.
+
+Inventory result:
+
+- Berserker: completed Intimidating Presence; `Retaliation` requires an explicit melee weapon/Unarmed Strike choice. Mindless Rage is passive, not an action-bar candidate.
+- College of Lore: Peerless Skill and Cutting Words are already execution-validated.
+- Life Domain: `Preserve Life` requires explicit per-target healing allocations; the remaining healing wrappers are automatic mechanics.
+- Circle of the Land: `Land's Aid` requires an authoritative point plus damage/healing target sets and results; no simple targetIds-only projection is honest.
+- Champion: remaining resolver surface is critical-range/critical-movement contribution, not a standalone action.
+- Open Hand: supported Wholeness/Fleet Step/Quivering Palm R1 paths are already validated; unsupported attack-replacement input remains intentionally unexposed.
+- Devotion: Holy Nimbus and Smite of Protection are validated; Aura of Devotion is passive.
+- Hunter: Defensive Tactics is a rest-time choice; Escape the Horde/Multiattack Defense are roll-state triggers; Superior Hunter's Prey is automatic; Superior Hunter's Defense is a damage reaction. None is a standalone action-bar command.
+- Thief: Supreme Sneak is passive, Use Magic Device is item/scroll runtime behavior, and Thief's Reflexes is initiative behavior.
+- Draconic Sorcery: current domain mechanics are passive/spell integrations; no mechanics-complete standalone action resolver exists for Dragon Wings/Dragon Companion.
+- Fiend: Dark One's Own Luck is already validated; Fiendish Resilience is a rest-time damage-type choice and Hurl Through Hell is an on-hit trigger/recovery path, not a standalone action.
+- Evocation: current live domain source is progression/spell integration; no standalone subclass action resolver is present.
+
+This audit changes no product code. No validated test was rerun. Existing exact Cutting Words and prior R1 execution evidence remains authoritative.
+
+R1 source/execution action-matrix conclusion: the final unchecked subclass-inventory item is now an **inventory exhaustion result**, not a missing action implementation. Canonical docs still need this audit recorded before the handoff formally checks the R1 umbrella complete. `V1-21 Complete local play loop` must remain PARTIAL because its Windows/human/durable journey acceptance is broader than R1 source/execution completion.
+
+## Inventory exclusions
 
 - Life Domain `Preserve Life`: requires explicit per-target allocation; no auto-allocation.
 - Circle of the Land `Land's Aid`: requires richer point/multi-result input; no fake simple button.
 - Berserker `Retaliation`: requires player choice of melee weapon/Unarmed Strike; do not auto-select an attack.
-- `Berserker Mindless Rage` may be inspected as a smaller inventory slice only if live source confirms a real mechanics-complete production projection gap; do not assume it is missing.
-- R2 remote-owner exactly-once/reconnect/event-native Undo matrix stays excluded absent direct R1 regression.
+- Passive, rest-choice, item-runtime, automatic trigger, and reaction-only subclass mechanics are not converted into dead or misleading action-bar buttons merely to exhaust the list.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer than this checkpoint.
 2. Do not rerun Cutting Words or earlier validated R1 mechanics without direct regression evidence.
-3. Continue the canonical R1 subclass resolver inventory and identify exactly one remaining mechanics-complete domain resolver that is genuinely absent from production action projection.
-4. Do not expose partial/richer-choice features as dead or auto-selected buttons. Preserve Life, Land's Aid, and Retaliation remain excluded until their input contracts are honestly supported.
-5. Prefer the smallest existing resolver/runtime primitive; add only focused deterministic evidence for the selected gap and use `npm run build` as the related gate.
-6. Update canonical handoff/checklist only after that selected gap is green, then update `STATE.md` and `control.json` last. `control.json` remains `continue` until the sequence itself reaches a waiting status.
+3. Record the exhausted 12-subclass inventory in `.agents/V1_CURRENT_HANDOFF.md`: check the subclass-action umbrella and inventory-exhaustion item, check the already-complete local/freeform/initiative/Activity/Undo umbrella, and state explicitly that richer-choice/passive/trigger mechanics remain unexposed rather than faked.
+4. Update `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` R1 evidence to the same conclusion while keeping `V1-21` PARTIAL; do not promote release DONE from source-only evidence.
+5. After canonical R1 closure, route Next Exact Action to R2 connected remote-owner matrix. Do not implement R2 before that canonical handoff change.
+6. `PLAN.md` remains unchanged. After canonical writes, update `STATE.md` and `control.json` last; `control.json` remains `continue` until the sequence itself reaches a waiting status.
