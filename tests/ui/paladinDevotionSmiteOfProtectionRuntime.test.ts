@@ -5,6 +5,7 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import type { CharacterSheet, SceneVm } from "../../src/app/contracts";
 import { runtimeResolutionEventHistories } from "../../src/app/runtimeResolutionEventHistory";
 import { undoResolutionEvents } from "../../src/app/realEventUndoService";
+import { persistCharacterResolutionEvents } from "../../src/app/resolutionCharacterWriteBackPort";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import { DIVINE_SMITE_ID, PALADIN_ID } from "../../src/domain/classFeatureSpellResources";
 import {
@@ -90,6 +91,8 @@ test("level 15 Devotion automatically appends Smite of Protection to a committed
   assert.ok(history);
   const preview=undoResolutionEvents(snapshot.scene,history.events,snapshot.activeCharacter.resources,snapshot.activeCharacter.items,state);
   assert.equal(preview.status,"committed");
+  const writeBack=await persistCharacterResolutionEvents(adapter,history.events,"inverse");
+  assert.equal(writeBack.status,"committed");
   return;
 
   await adapter.undoLastResolution();
