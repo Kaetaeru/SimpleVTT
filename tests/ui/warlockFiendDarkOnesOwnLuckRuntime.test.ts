@@ -95,9 +95,8 @@ test("Fiend level 6 failed ability check offers Dark One's Own Luck, spends one 
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
   assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
 
-  await adapter.setQueuedD20(8);
+  await adapter.setQueuedD20(10);
   snapshot=await adapter.respondToInterrupt(true);
-  return;
   assert.equal(snapshot.resolution?.checkOutcome,"성공");
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,beforeUses!-1);
   assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("어둠의 존재의 행운"))),true);
