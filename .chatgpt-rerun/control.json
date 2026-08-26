@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Rogue R1 is source-complete and execution-validated at 5bb8bfbc4753dcc15f1198a04c0982817176c644: UI run 32932781542 / frontend job 98068084958 and Phase 12 run 32932781591 / connected-protocol job 98068085017 are green, including npm run build with test:rogue-core. Canonical V1 routing and STATE now advance to the next R1 item: inventory existing subclass domain resolvers and expose only mechanics-complete subclass actions missing from the production action bar. Resume from STATE; do not repeat validated Rage, Wild Shape, Monk Focus, or Rogue R1 work. Connected remote-owner exactly-once/reconnect remains R2 unless a direct R1 regression requires it.",
+  "reason": "Rogue R1 remains source-complete and execution-validated at 5bb8bfbc4753dcc15f1198a04c0982817176c644; do not repeat Rage, Wild Shape, Monk Focus, or Rogue work. Subclass inventory found the first suitable mechanics-complete production projection gap: Berserker Intimidating Presence already has a Bonus Action/resource/save/effect domain resolver in src/domain/barbarianBerserker.ts but no production action adapter. College of Lore Cutting Words is trigger-driven Reaction mechanics and must not be exposed as a free-standing dead button. Resume from STATE and add only the minimal Berserker Intimidating Presence production projection/evidence, reusing existing domain semantics. Connected remote-owner exactly-once/reconnect remains R2 unless a direct R1 regression requires it.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T14:10:15+09:00"
+  "updated_at": "2026-08-26T14:13:44+09:00"
 }
