@@ -81,7 +81,7 @@ test("Fiend level 6 failed ability check offers Dark One's Own Luck, spends one 
   assert.equal(beforeUses,4);
 
   await adapter.setQueuedD20(1);
-  await adapter.resolveAction("action.athletics",[]);
+  await adapter.resolveAction("action.skill.athletics",[]);
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
@@ -130,7 +130,7 @@ test("Warlock below Fiend feature level does not receive Dark One's Own Luck",as
   await adapter.startInitiative();
   await adapter.setCurrentActor(fiend.id);
   await adapter.setQueuedD20(1);
-  await adapter.resolveAction("action.athletics",[]);
+  await adapter.resolveAction("action.skill.athletics",[]);
   await adapter.advanceResolution();
   const snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
   assert.notEqual(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
