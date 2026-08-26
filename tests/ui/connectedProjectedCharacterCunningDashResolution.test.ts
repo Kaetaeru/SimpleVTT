@@ -111,6 +111,8 @@ test("host-unknown Rogue Cunning Action Dash converges session economy exactly o
       character:remoteManifest.character,capabilities:[...CONNECTED_CAPABILITIES],
     };
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
+    assert.equal(state.pendingRemoteAction?.request.requestId,request.requestId,"Host must keep staged Cunning Dash pending until resolution completion");
+    await host.advanceResolution();
     const completed=await host.getSnapshot();
     assert.equal(completed.activeCharacter.id,before.activeCharacter.id,"Host local Character context must restore after remote Cunning Action Dash");
     assert.deepEqual(completed.characters,before.characters,"session economy must not mutate Host permanent Character library");
