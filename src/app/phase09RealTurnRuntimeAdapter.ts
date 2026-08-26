@@ -134,7 +134,7 @@ export async function applyMovementModuleCommand(adapter:MockAdapter,command:Mov
   internal.activity.unshift({
     id:eventId("movement-module-commit"),
     time:"지금",
-    actor:actor?.name ?? command.actorId,
+    actor:actor?.name ?? actorId,
     title:"이동 모듈 적용",
     summary:`${command.distanceFeet}피트 이동`,
     detail:[
@@ -168,7 +168,15 @@ MockAdapter.prototype.startInitiative=async function startInitiativeWithTurnRunt
   const internal=this as unknown as Phase09TurnAdapterState;
   internal.sessionMode="initiative";
   interruptEvents.delete(this);
+  const previousSession=sessions.get(this);
   const session=createTurnRuntimeSession(internal.scene);
+  if (previousSession) {
+    session.state.clock.elapsedSeconds=previousSession.state.clock.elapsedSeconds;
+    session.state.effects=previousSession.state.effects
+      .filter((effect)=>effect.expiry.kind!=="instant"&&effect.expiry.kind!=="turn-boundary")
+      .map((effect)=>structuredClone(effect));
+    session.state.concentration=structuredClone(previousSession.state.concentration);
+  }
   sessions.set(this,session);
   projectTurnRuntimeToScene(session,internal.scene);
   const current=internal.scene.entities.find((entity)=>entity.id===internal.scene.currentActorId);
