@@ -65,10 +65,10 @@ function economyEvent(
   };
 }
 
-function combineEvents(adapter:MockAdapter,resolutionId:string,events:ResolutionEvent[]) {
+function combineEvents(adapter:MockAdapter,resolutionId:string,events:ResolutionEvent[],prepend=false) {
   const existing=runtimeResolutionEventHistory(adapter);
   const combined=existing?.resolutionId===resolutionId
-    ? [...existing.events,...events]
+    ? prepend?[...events,...existing.events]:[...existing.events,...events]
     : events;
   recordRuntimeResolutionEvents(adapter,resolutionId,combined);
 }
@@ -178,7 +178,7 @@ MockAdapter.prototype.advanceResolution=async function advanceCunningHideWithEve
   const reveal=pendingRevealEvents.get(this);
   if(reveal&&reveal.resolutionId===resolution.id&&snapshot.resolution?.stage==="complete") {
     pendingRevealEvents.delete(this);
-    combineEvents(this,resolution.id,reveal.events);
+    combineEvents(this,resolution.id,reveal.events,true);
   }
   return snapshot;
 };
