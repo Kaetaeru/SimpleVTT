@@ -37,6 +37,7 @@ If Rerun files disagree with canonical V1 planning about product scope or order,
 
 ## Router checkpoint
 
-- reconciled_at: `2026-08-26T08:51:19+09:00`
-- observed product head before Rerun metadata writes: `cddef0c254108fe963a92cab2da7bd991a09bc21`
-- product routing remains delegated to `.agents/V1_CURRENT_HANDOFF.md`; incremental no-repeat facts are recorded only in `STATE.md`.
+- reconciled_at: `2026-08-26T09:30:17+09:00`
+- observed product/source head before this Rerun metadata checkpoint: `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`
+- an earlier STATE-only reconciliation commit `f0a4cae0da9c32cf48693600892377340376b69a` was written out of protocol order; this checkpoint supersedes it by restarting the durable write sequence as `PLAN -> STATE -> control.json`.
+- product routing remains delegated to `.agents/V1_CURRENT_HANDOFF.md`; incremental no-repeat and validation facts are recorded only in `STATE.md`.
