@@ -20,7 +20,7 @@ export const OPEN_HAND_FLEET_STEP_ACTION_ID="action.monk.open-hand.fleet-step";
 export const OPEN_HAND_FLEET_STEP_FOCUS_ACTION_ID="action.monk.open-hand.fleet-step.focus";
 const FLEET_STEP_ACTION_IDS=new Set([OPEN_HAND_FLEET_STEP_ACTION_ID,OPEN_HAND_FLEET_STEP_FOCUS_ACTION_ID]);
 
-type FleetTrigger={resolutionId:string;sourceId:string};
+type FleetTrigger={actorId:string;resolutionId:string;sourceId:string};
 interface AdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
@@ -46,19 +46,19 @@ function sourceFor(action:ActionVm|undefined){return action?.details.find((entry
 function validTrigger(adapter:MockAdapter,internal:AdapterState,trigger:FleetTrigger|undefined){
   if(!trigger||internal.sessionMode!=="initiative"||!qualifies(internal.activeCharacter))return false;
   const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);const actorId=internal.activeCharacter.id;
-  if(!state||state.clock.activeActorId!==actorId)return false;
+  if(trigger.actorId!==actorId||!state||state.clock.activeActorId!==actorId)return false;
   const actorHistory=state.history.filter((entry)=>entry.actorId===actorId);const latest=actorHistory[actorHistory.length-1];
   return Boolean(latest?.resolutionId===trigger.resolutionId&&actorHistory.some((entry)=>entry.resolutionId===trigger.resolutionId&&entry.kind==="use-economy"&&entry.summary.includes("spends bonus-action"))&&trigger.sourceId!==STEP_OF_THE_WIND_SOURCE_ID);
 }
 
 function rememberTrigger(adapter:MockAdapter,internal:AdapterState){
   const resolution=internal.resolution;if(!resolution||resolution.stage!=="complete"||resolution.actorId!==internal.activeCharacter.id||FLEET_STEP_ACTION_IDS.has(resolution.actionId)){return;}
-  const action=actionFor(internal.scene,resolution.actorId,resolution.actionId);const sourceId=sourceFor(action);const candidate=sourceId?{resolutionId:resolution.id,sourceId}:undefined;
-  if(candidate&&validTrigger(adapter,internal,candidate))triggers.set(adapter,candidate);else triggers.delete(adapter);
+  const action=actionFor(internal.scene,resolution.actorId,resolution.actionId);const sourceId=sourceFor(action);const candidate=sourceId?{actorId:resolution.actorId,resolutionId:resolution.id,sourceId}:undefined;
+  if(candidate&&validTrigger(adapter,internal,candidate))triggers.set(adapter,candidate);else if(triggers.get(adapter)?.actorId===resolution.actorId)triggers.delete(adapter);
 }
 
 function actions(adapter:MockAdapter,internal:AdapterState,snapshot:AppSnapshot):ActionVm[]{
-  const trigger=triggers.get(adapter);if(!validTrigger(adapter,internal,trigger)){triggers.delete(adapter);return [];}
+  const trigger=triggers.get(adapter);if(!trigger||trigger.actorId!==snapshot.activeCharacter.id)return[];if(!validTrigger(adapter,internal,trigger)){triggers.delete(adapter);return [];}
   const sheet=snapshot.activeCharacter;const focus=sheet.resources.find((entry)=>entry.id===MONK_FOCUS_RESOURCE_ID);const distance=sheet.speed;const self=[sheet.id];
   return [
     {id:OPEN_HAND_FLEET_STEP_ACTION_ID,actorId:sheet.id,name:"날랜 발걸음 · 질주",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:`즉시 ${distance}피트 추가 이동`,available:true,eligibleTargetIds:self,details:[{label:"효과",value:`직전 추가 행동 후 최대 ${distance}피트 추가 이동`},{label:"비용",value:"없음"},{label:"출처",value:"SRD 5.2.1 · Monk · Warrior of the Open Hand · Fleet Step",source:OPEN_HAND_FLEET_STEP_FEATURE_ID}]},
@@ -82,8 +82,9 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithOpenHandFleetSte
 };
 
 MockAdapter.prototype.resolveAction=async function resolveOpenHandFleetStepAction(actionId:string,targetIds:string[]){
-  if(!FLEET_STEP_ACTION_IDS.has(actionId)){triggers.delete(this);const snapshot=await previousResolveAction.call(this,actionId,targetIds);rememberTrigger(this,this as unknown as AdapterState);return this.getSnapshot();}
-  const internal=this as unknown as AdapterState;const snapshot=await internal.getSnapshot();const source=actionFor(snapshot.scene,snapshot.activeCharacter.id,actionId);const trigger=triggers.get(this);const actor=internal.scene.entities.find((entry)=>entry.id===snapshot.activeCharacter.id);
+  const internal=this as unknown as AdapterState;
+  if(!FLEET_STEP_ACTION_IDS.has(actionId)){if(triggers.get(this)?.actorId===internal.activeCharacter.id)triggers.delete(this);const snapshot=await previousResolveAction.call(this,actionId,targetIds);rememberTrigger(this,internal);return this.getSnapshot();}
+  const snapshot=await internal.getSnapshot();const source=actionFor(snapshot.scene,snapshot.activeCharacter.id,actionId);const trigger=triggers.get(this);const actor=internal.scene.entities.find((entry)=>entry.id===snapshot.activeCharacter.id);
   if(!source?.available||!actor||targetIds.length!==1||targetIds[0]!==actor.id||!validTrigger(this,internal,trigger))return snapshot;
   const state=seedFocus(this,internal);const runtimeActor=state?.combatants[actor.id];if(!state||!runtimeActor||!trigger)return snapshot;
   const spendFocus=actionId===OPEN_HAND_FLEET_STEP_FOCUS_ACTION_ID;const resolutionId=`monk.open-hand.fleet-step.${Date.now()}.${Math.floor(Math.random()*1000)}`;
