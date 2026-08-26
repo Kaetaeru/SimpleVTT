@@ -31,23 +31,24 @@ Canonical target branch: **`work/v1-composite`**
   - Devotion Holy Nimbus `5ff7d00e54135bcacfc306d68467671a3a76298e`
   - Open Hand Quivering Palm `37d002862a9ac253b8b7e6b0b138369c588be17d`
   - Devotion Smite of Protection `799fcaebd967b31c74e5520671050e81a5eb09dd`
+  - Fiend Dark One's Own Luck `15681838b499e76f8558de2a52265015249e3cc0`
 
 Historical detailed evidence remains in `CURRENT_WORK.md`, previous revisions of this handoff, and GitHub Actions. This handoff intentionally carries only the current execution pointer and exact closure facts.
 
-## 2. Green — R2 Devotion Smite of Protection
+## 2. Green — R2 Fiend Dark One's Own Luck
 
-Smite of Protection R2 is closed at exact green product/test head `799fcaebd967b31c74e5520671050e81a5eb09dd`.
+Dark One's Own Luck R2 is closed at exact green product/test head `15681838b499e76f8558de2a52265015249e3cc0`.
 
-- Existing R1 semantics were reused: level 15+ Devotion Paladin, no standalone action, committed Divine Smite automatically appends the protection effect to the same resolution.
-- The focused Host-unknown proof covers the projected Divine Smite path, Host permanent Character-library isolation, owning Client exactly-once apply/persistence, duplicate request/event safety, reconnect/rebind, and compensating Undo/inverse owner convergence.
-- First fixture-only correction `3d124cf8c74e1b424b4002c8a9a4a4c7b9dae45b` preserved canonical class-feature spell resources but did not close the red.
-- Direct product evidence then showed reconstructed remote spellcasters could lose the derived spell-slot cache. Final fix stays local to the existing spellcaster projection path: when `spellSlotMaximums` is absent, derive canonical slots from projected `classLevels` through existing `multiclassSpellSlots`; no SessionProjection schema/protocol expansion.
-- Exact evidence at `799fcae`:
-  - UI run `32981342812` / frontend job `98218488387`: **success**, including Typecheck/build.
-  - Phase 12 run `32981342785` / connected-protocol job `98218488092`: **success**, including focused connected authority proof, Phase 11 walkthrough, production frontend gate.
+- Existing R1 semantics were reused: level 6+ Fiend Warlock, failed ability check/save opens the owner interrupt, accepting adds one authoritative d10 and spends one canonical use exactly once.
+- The focused Host-unknown proof covers owner-only prompt routing, authoritative d10 delta, one resource spend, one Host commit, Host permanent Character-library isolation, owning Client exactly-once apply/persistence, duplicate request/event safety, reconnect/rebind, and compensating Undo/inverse owner convergence.
+- First direct connected red proved a real content-authority gap rather than a fixture-only problem: `dnd.srd521.subclass.warlock.fiend-patron` was absent from canonical builtin subclass content. `83146b8ef94fa3ccc1352e544e58653096ae0cef` adds only that canonical Fiend Patron content identity; no protocol/schema change.
+- The next red was test-only: the failed projected check already carried its canonical check bonus, so the proof was corrected to assert the authoritative `+10` d10 delta instead of hard-coding final total 14, and to assert a genuine failed precondition before the owner accepts.
+- Exact evidence at `15681838`:
+  - UI run `32983451534` / frontend job `98225539840`: **success**, including Typecheck/build.
+  - Phase 12 run `32983451596` / connected-protocol job `98225541222`: **success**, including focused connected authority proof, Phase 11 walkthrough, production frontend gate.
   - Windows/Tauri child job is R3, not an R2 closure gate.
 
-Conclusion: **Devotion Smite of Protection remote-owner gap is CLOSED.**
+Conclusion: **Fiend Dark One's Own Luck remote-owner gap is CLOSED.**
 
 ## 3. R2 remaining scope
 
@@ -55,33 +56,36 @@ R2 remains **PARTIAL** until the remaining R1 feature matrix is covered. Actual 
 
 Next remaining R1-backed slices, in current source/execution order:
 
-1. Fiend Dark One's Own Luck
-2. Lore Peerless Skill
-3. Lore Cutting Words
+1. Lore Peerless Skill
+2. Lore Cutting Words
 
 For every slice, reuse current SessionProjection/ActionRequest/ResolutionEvent/owner write-back/reconnect/Undo primitives. Do not add protocol/schema or fake action-bar commands unless a direct product requirement proves they are necessary.
 
-## 4. Next exact action — Fiend Dark One's Own Luck remote-owner gap
+## 4. Next exact action — Lore Peerless Skill remote-owner gap
 
-R1 exact checkpoint `95042b2ef3c65aef3619334c0bec1ad243d165f2` is already local/source execution-green. Do not reimplement or rerun it merely because R2 starts.
+R1 exact checkpoint `88bb72dc3d725af049025728003ab6e6b8db1eb0` is already local/source execution-green. Do not reimplement or rerun it merely because R2 starts.
 
 Current production semantics to preserve:
 
-- level 6+ Fiend Warlock only;
-- after a failed ability check or saving throw, the existing follow-up opens an owner interrupt asking whether to use Dark One's Own Luck;
-- accepting spends one canonical Dark One's Own Luck resource and adds one authoritative d10 to the failed result;
-- declining changes no durable/shared state;
-- existing Activity/provenance, ResolutionEvent history, owner write-back and generic Undo remain authoritative;
+- level 14+ College of Lore Bard only;
+- after the Bard fails an ability check or attack roll, the existing owner interrupt offers Peerless Skill;
+- at level 14 the existing Bardic Inspiration progression supplies a d10; the authoritative die is added to the failed total;
+- Bardic Inspiration is spent only if the added die changes the result to success; if failure remains, the resource is preserved;
+- attack success continues through the existing attack resolution and Activity/history path;
+- existing ResolutionEvent history, Character owner write-back and generic Undo remain authoritative;
 - no standalone fake action is added.
+
+Observed content-authority fact before R2 implementation: canonical `content/modules/dnd-srd-5.2.1.subclasses/module.json` currently contains Berserker, Open Hand, Devotion and Fiend, but not `dnd.srd521.subclass.bard.college-of-lore`. Treat this as a likely real Host-unknown projection gap, but keep the fix minimal and tied to the focused proof.
 
 Next work:
 
 ```text
 reconcile live branch
--> inspect the existing Dark One's Own Luck R1 runtime proof and one connected owner-interrupt analogue
--> add the smallest Host-unknown projected Fiend proof around a failed ability check or save
--> verify the owner receives/accepts the authoritative interrupt, resource 1 is spent once, one d10 is applied, and the final result/event is committed once
+-> inspect the existing Peerless Skill R1 runtime proof and one connected owner-interrupt analogue
+-> add the smallest Host-unknown projected Lore Bard proof around a failed ability check first
+-> preserve the existing owner interrupt, authoritative Bardic Inspiration die, success-only resource spend, one Host commit and generic Undo
 -> verify Host permanent Character library isolation, owning Client exactly-once apply/persist, duplicate request/event no-op, reconnect/rebind, compensating Undo + owner inverse convergence
+-> cover the attack-only branch only if the focused connected evidence shows a distinct remote-authority gap; do not duplicate R1 coverage by default
 -> if first direct red appears, fix only that cause; no broad refactor and no protocol/schema/fake action without direct evidence
 -> verify exact-head UI frontend + Phase12 connected production gate
 -> close canonically, then re-read the canonical remaining R2 order instead of guessing
@@ -102,4 +106,4 @@ reconcile live branch
 
 Use only the gate needed by the active slice plus its existing connected production gate. Do not rerun the historical full matrix for resume alone.
 
-When the focused Dark One's Own Luck proof is added, run that proof only during iteration. On pushed source changes, GitHub Actions exact-head UI and Phase12 connected jobs are the closure evidence. Rust/Tauri/Windows evidence stays separate until R3.
+When the focused Lore Peerless Skill proof is added, run that proof only during iteration. On pushed source changes, GitHub Actions exact-head UI and Phase12 connected jobs are the closure evidence. Rust/Tauri/Windows evidence stays separate until R3.
