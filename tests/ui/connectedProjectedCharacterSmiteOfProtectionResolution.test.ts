@@ -17,6 +17,7 @@ import { routeConnectedActionRequest } from "../../src/app/connectedActionReques
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import { getCharacterLibraryPersistenceStateForTests, setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
+import { ensureClassFeatureSpellResources } from "../../src/app/classFeatureSpellRuntimeAdapter";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import { DIVINE_SMITE_ID, PALADIN_ID } from "../../src/domain/classFeatureSpellResources";
 import { DEVOTION_SMITE_OF_PROTECTION_TAG } from "../../src/domain/paladinDevotion";
@@ -39,7 +40,7 @@ function remotePaladin(catalog:CatalogEntry[]):CharacterSheet {
   const devotion=entry(catalog,PALADIN_DEVOTION_SUBCLASS_ID);
   const human=entry(catalog,"dnd.srd521.species.human");
   const soldier=entry(catalog,"dnd.srd521.background.soldier");
-  return {
+  const sheet={
     id:CHARACTER_ID,name:"Remote Devotion Paladin",className:paladin.nameKo||paladin.nameEn,subclassName:devotion.nameKo||devotion.nameEn,level:15,
     species:human.nameKo||human.nameEn,background:soldier.nameKo||soldier.nameEn,hp:120,maxHp:120,tempHp:0,ac:20,speed:30,proficiencyBonus:5,saveState:"saved",
     abilities:{str:18,dex:10,con:16,int:8,wis:12,cha:18},saves:[],skills:[],features:["보호의 강타"],equipment:[],items:[],attacks:[],resources:[],
@@ -47,6 +48,7 @@ function remotePaladin(catalog:CatalogEntry[]):CharacterSheet {
     rulesProfileId:"dnd.srd-5.2.1",rulesProfileVersion:"0.1-draft",sourceRevision:2,runtimeRevision:3,
     classLevels:[{classId:PALADIN_ID,className:paladin.nameKo||paladin.nameEn,level:15,subclassName:devotion.nameKo||devotion.nameEn}],subclassIds:{[PALADIN_ID]:PALADIN_DEVOTION_SUBCLASS_ID},
   } as CharacterSheet;
+  return ensureClassFeatureSpellResources(sheet);
 }
 
 function manifest(sheet:CharacterSheet):SessionCompatibilityManifest {
