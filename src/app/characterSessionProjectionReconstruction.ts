@@ -293,6 +293,23 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       {label:"비용",value:"추가 행동 1"},
     ],
   });
+  if (rogueLevel>=2) actions.push({
+    id:"action.rogue.cunning-action.disengage",
+    actorId:sheet.id,
+    name:"교활한 행동 · 이탈",
+    category:"basic",
+    target:"self",
+    economy:"추가 행동",
+    resolutionKind:"no-roll",
+    summary:"이 턴 동안 기회공격을 유발하지 않음",
+    available:true,
+    eligibleTargetIds:targetSelf,
+    details:[
+      {label:"대상",value:"자신"},
+      {label:"효과",value:"이 턴 동안 기회공격을 유발하지 않음",source:"SRD 5.2.1 · Rogue · Cunning Action"},
+      {label:"비용",value:"추가 행동 1"},
+    ],
+  });
 
   const fighterLevel=classLevel(projection,"dnd.srd521.class.fighter");
   if (fighterLevel>=1) {
