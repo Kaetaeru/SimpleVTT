@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T20:57:06+09:00`
+- checkpointed_at: `2026-08-26T21:08:00+09:00`
 
 ## Durable checkpoint
 
@@ -53,40 +53,47 @@ Remote-owner Cunning Action Dash is validated on the existing staged resolution 
 - focused proof `ea96509ee0c01922d0f23926445b5a7271a45ae1`
 - remote Rogue reconstruction `922cfd1f9b53ba4c14e4fe957b5bcc0e397cdce6`
 - gate `04afe3e7eadb33f965a70fb59206909ee3c3d1dc`
-- staged lifecycle test correction `1e7b21df54a74252c3eb91bd255edbd7a0006311`
-- exact Phase 12 run `32964728723` / connected job `98164631534` green; connected 75/75 + Phase 11 + `npm run build`
+- staged lifecycle correction `1e7b21df54a74252c3eb91bd255edbd7a0006311`
+- exact Phase 12 run `32964728723` / connected job `98164631534` green, including Phase 11 and `npm run build`
 
-The proof covers Host authority, normal Action preservation, Bonus Action spend, movement projection, exactly-once Client session apply, duplicate event/request safety, and compensating Undo. These are session-runtime economy changes, not durable Character-library writes.
+Do not reopen Cunning Dash without direct regression evidence.
 
 ### Cunning Action Disengage
 
-Remote-owner Cunning Action Disengage is now validated on the same staged lifecycle. Concurrent work briefly created two competing implementations/tests; that duplication was reconciled instead of adding another abstraction.
+Remote-owner Cunning Action Disengage is validated on the same staged lifecycle. Concurrent duplicate implementations/tests were reconciled instead of adding another abstraction.
 
-- `e736114de729964b855c67d181f0f14025aee630` made the existing `rogueCoreRuntimeAdapter` staged Disengage path event-native using canonical session economy plus `apply-effect` events.
-- `c3bb54c467c43e1940805fac2b0b468cadf9cc92` aligns opportunity-attack status recognition with the event-native Disengage marker.
-- `67b117dfc705cc51d1152d3a355d5d907dd18ab4` aligns the local lifecycle proof with the projected status label.
-- `1074cb6db2a1e917dc0db14bde771350b74b15cb` ensures remote projected runtime state is available to the existing staged core path.
-- `87e8ace567c8eb7e421c582ccbb6150e861e8fee` reconstructs the level-2 remote Rogue Cunning Action Disengage action from canonical class-level facts.
-- `134e6a8d7def8711d84bb5be56186f353a4ddeb2` adds the focused remote-owner proof; `813738873aad4246b2c047c7b567865142674927` gates it in the existing Phase 12 workflow.
-- The first combined gate exposed competing immediate-vs-staged implementations, not a new protocol gap. The staged lifecycle is authoritative because it matches the existing Rogue core/Cunning Dash resolution contract.
-- `0772314807119049fd239376b0225d43a17524c5` removes the duplicate immediate adapter from production composition.
-- `ffe56d5676d1a78d396a91f8334de1f7e9f4cf8f` removes the duplicate second Disengage proof from the Dash test file, leaving one focused Disengage proof.
-- `2e01cc2e321dbf43dad84e524013ed688e6fa5c9` aligns that retained focused proof with the staged `route -> pending -> advanceResolution -> commit` lifecycle.
-- `732758391dd18ec52afa65b056185f544c51fe4b` deletes the now-dead duplicate `rogueCunningDisengageEventRuntimeAdapter.ts`.
-- Exact-head Phase 12 run `32965968749` / connected-protocol job `98168404394` passed the connected authority suite, Phase 11 offline walkthrough, and production `npm run build` on `732758391dd18ec52afa65b056185f544c51fe4b`.
+- event-native core `e736114de729964b855c67d181f0f14025aee630`
+- opportunity-attack marker alignment `c3bb54c467c43e1940805fac2b0b468cadf9cc92`
+- projected runtime state `1074cb6db2a1e917dc0db14bde771350b74b15cb`
+- remote action reconstruction `87e8ace567c8eb7e421c582ccbb6150e861e8fee`
+- focused proof `134e6a8d7def8711d84bb5be56186f353a4ddeb2`
+- staged lifecycle proof fix `2e01cc2e321dbf43dad84e524013ed688e6fa5c9`
+- duplicate adapter cleanup `732758391dd18ec52afa65b056185f544c51fe4b`
+- exact Phase 12 run `32965968749` / connected-protocol job `98168404394` green, including Phase 11 and production `npm run build`
 
-The retained proof covers Host-authoritative Disengage, Action preservation, Bonus Action spend, canonical effect projection, exactly-once Client session apply, duplicate event/request safety, and compensating Undo. No Character-library write-back is invented for this turn-bound session effect/economy. Do not reopen Disengage without direct regression evidence.
+Do not reopen Disengage without direct regression evidence. `windows-connected-playable` remains R3 packaging/human acceptance and is not an R2 closure gate.
 
-`windows-connected-playable` remains R3 packaging/human acceptance and is not an R2 closure gate. Do not wait for it while advancing R2.
+## R2 in progress: Cunning Action Hide
+
+Live investigation found a direct local/event seam rather than only a remote projection gap:
+
+- Standard Hide semantics already exist and are regression-covered in `tests/ui/standardActionLifecycle.test.ts`: ability check, DC 15 success/failure, Hidden application/removal, and attack-reveals-Hidden lifecycle. Do not create a second stealth rules engine.
+- `phase09RealResolutionAdapter.ts` applies the legacy Hidden status only when the action id is exactly `action.standard.hide.stealth`. `CUNNING_HIDE_ACTION_ID` therefore did not enter that exact standard-Hide state branch.
+- `abilityCheckResolutionEventAdapter.ts` records the canonical d20 event, but that event has no Hidden-state or Bonus Action state changes. That is insufficient by itself for remote-owner convergence.
+- concurrent commit `5765534b320f245678edb90173d740d8fb7c0113` adds `rogueCunningHideEventRuntimeAdapter.ts`. It keeps the staged ability-check path, composes the existing d20 event with session-runtime Bonus Action economy plus a tagged Hidden marker effect, and records attack-triggered removal through the same event history instead of inventing a remote-only protocol.
+- concurrent commit `3ad7f6a3c1f57495103cfa86fa9f86591eee2f7c` installs that bridge in `offlineRuntimeAdapters.ts` immediately outside the generic ability-check recorder so the canonical check event is composed rather than replaced.
+- exact-head Phase 12 run `32966851411` / connected-protocol job `98171137748`: `Verify connected-session authority protocol` green and `Verify Phase 11 offline walkthrough remains green` green; `Verify production frontend gate` (`npm run build`) was still in progress at this checkpoint.
+- No focused remote-owner Cunning Hide proof has been accepted at this checkpoint. Do not claim Hide R2 complete yet.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer than this checkpoint.
 2. Stay in `R2. Connected remote-owner matrix`; do not reopen R1, Rage, Wild Shape, Cunning Dash, or Cunning Disengage without direct regression evidence.
-3. Inspect **Cunning Action Hide only** against the existing ability-check / hidden-state / `ResolutionEvent` path. Confirm live evidence before changing anything.
-4. Reuse the existing standard Hide/ability-check semantics. Do not invent a new stealth engine, protocol, schema, or remote-only action implementation.
-5. If Cunning Hide is already event-native, add only the smallest remote-owner proof/projection seam. If it is not, fix only the first direct local event gap, then prove Host authority, exactly-once Client apply, duplicate safety, and compensating Undo where the existing semantics support it.
-6. Keep other Rogue reactions/features separate unless the same direct evidence proves they share the exact same path.
+3. Inspect the exact-head result for Phase 12 run `32966851411`. If red, fix only the first direct Cunning Hide regression. If green, do not rerun validated generic suites unnecessarily.
+4. Check whether concurrent work already added a focused remote-owner Cunning Hide proof and Host SessionProjection reconstruction. Reuse it if present; do not create a duplicate test/adapter.
+5. If still missing, add the smallest focused proof for a host-unknown level-2 Rogue: deterministic successful Hide check, Host authority, ordered canonical d20 + Bonus Action + Hidden effect convergence, exactly-once Client apply, duplicate event/request safety, no Character-library generation for session-only state, attack-triggered reveal where needed to prove the bridge, and compensating Undo.
+6. Reuse standard Hide success/failure semantics. Do not add a new stealth engine, protocol, schema, or generic abstraction.
 7. Verify the changed exact SHA with the existing Phase 12 connected gate and production `npm run build`; fix only the first direct regression.
 8. Update canonical handoff/checklist only when the overall R2 pointer/status materially changes. Otherwise update this STATE and `control.json` last.
-9. R3 Tauri durability/Windows two-instance acceptance, R4 rendered UX/accessibility, and R5 packaging remain separate.
+9. Keep Uncanny Dodge separate until Hide is green and checkpointed.
+10. R3 Tauri durability/Windows two-instance acceptance, R4 rendered UX/accessibility, and R5 packaging remain separate.
