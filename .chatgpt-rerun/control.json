@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Same-sequence resume authorized by the user. Mandatory preflight was repeated and live branch/canonical routing were reconciled. The previous blocker was limited to missing exact Monk Focus CI failure output; GitHub Actions job logs are now available in this runtime. Resume from STATE Next Exact Action: read the failing 576b1c1 job log, apply only the smallest failure-supported fix, validate production build/live gates, and advance canonical evidence only when green.",
+  "reason": "Monk Focus R1 is execution-validated at c282a1e4fd6929dc56079d811021dcfe160d51f5. Exact UI frontend and connected-protocol gates are green, canonical handoff/checklist now point to Rogue Cunning Action / Uncanny Dodge, and validated Rage/Wild Shape/Monk work must not be repeated. Resume from STATE Next Exact Action and implement only the missing Rogue R1 production seam with focused validation.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T11:56:20+09:00"
+  "updated_at": "2026-08-26T12:49:55+09:00"
 }
