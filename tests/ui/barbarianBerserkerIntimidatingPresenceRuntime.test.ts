@@ -31,7 +31,7 @@ async function berserker(mode:"initiative"|"freeform"="initiative"){
     visible:true,
     cover:"none",
     targetCanSeeAttacker:true,
-    provenance:"test:berserker-intimidating-presence:35ft",
+    provenance:"module:test:berserker-intimidating-presence:35ft",
   });
   await adapter.getSnapshot();
   if(mode==="initiative"){
