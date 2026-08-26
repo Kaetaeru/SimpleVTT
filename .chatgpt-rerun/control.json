@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Druid Wild Shape domain lifecycle core is checkpointed at product head cddef0c2 with focused tests: canonical form gates, resource/Bonus Action/temp HP, duration, replacement/exit, Concentration preservation, Incapacitated/dead termination, and Beast Spells metadata. Execution remains unverified because GitHub exposes no checks/statuses. Resume with the production known-form/action/projection/Undo and Wild Shape spellcasting-enforcement seam; do not repeat Rage or the completed Wild Shape domain core.",
+  "reason": "Preflight reconciled the live product/source head 12834c74ee0b997d9cd28f1d6c9227e326c1fe60: the Druid Wild Shape production known-form/action/projection/Undo seam and spellcasting enforcement already exist, with focused tests wired into test:druid-wild-shape and npm run build. Do not repeat that implementation or completed Rage work. Executable validation remains unavailable in this watcher because GitHub exposes no checks/workflow runs for the product head and the execution container cannot resolve github.com for a fresh checkout. Resume by running npm run test:druid-wild-shape, then npm run build in a capable checkout; only after green evidence update the canonical handoff/checklist and advance R1 to Monk Focus.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T08:51:19+09:00"
+  "updated_at": "2026-08-26T09:30:17+09:00"
 }
