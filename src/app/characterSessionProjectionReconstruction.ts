@@ -275,6 +275,25 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
     ],
   });
 
+  const rogueLevel=classLevel(projection,"dnd.srd521.class.rogue");
+  if (rogueLevel>=2) actions.push({
+    id:"action.rogue.cunning-action.dash",
+    actorId:sheet.id,
+    name:"교활한 행동 · 질주",
+    category:"basic",
+    target:"self",
+    economy:"추가 행동",
+    resolutionKind:"no-roll",
+    summary:"이동 가능량 증가",
+    available:true,
+    eligibleTargetIds:targetSelf,
+    details:[
+      {label:"대상",value:"자신"},
+      {label:"효과",value:`이동 가능량 +${sheet.speed}피트`,source:"SRD 5.2.1 · Rogue · Cunning Action"},
+      {label:"비용",value:"추가 행동 1"},
+    ],
+  });
+
   const fighterLevel=classLevel(projection,"dnd.srd521.class.fighter");
   if (fighterLevel>=1) {
     const secondWind=sheet.resources.find((resource)=>resource.id==="resource.second-wind" || resource.id.includes("second-wind"));
