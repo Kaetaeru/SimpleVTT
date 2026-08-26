@@ -18,12 +18,9 @@ import {
   BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,
   barbarianRuntimeResourceDefinitions,
   berserkerIntimidatingPresenceDc,
-  compileBerserkerIntimidatingPresence,
   resolveBerserkerIntimidatingPresence,
   type BerserkerIntimidatingPresenceRequest,
 } from "../domain/barbarianBerserker";
-import { resolvePendingResolution } from "../domain/resolution";
-import type { ResolutionCommit } from "../domain/resolutionTypes";
 
 export const BERSERKER_INTIMIDATING_PRESENCE_ACTION_ID="action.barbarian.berserker.intimidating-presence";
 type DicePrototype={d20(actionId:string,index?:number):number};
@@ -108,19 +105,6 @@ function relation(actor:SceneEntity,target:SceneEntity) {
   return actor.side===target.side?"ally" as const:"enemy" as const;
 }
 
-function resolvePresence(state:NonNullable<ReturnType<typeof snapshotAdapterTurnRuntimeState>>,request:BerserkerIntimidatingPresenceRequest,useBonusActionEconomy:boolean):ResolutionCommit {
-  if(useBonusActionEconomy)return resolveBerserkerIntimidatingPresence(SIMPLEVTT_APP_RULES_PROFILE,state,request);
-  try{
-    const pending=compileBerserkerIntimidatingPresence(request);
-    return resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
-      ...pending,
-      operations:pending.operations.filter((operation)=>!(operation.kind==="use-economy"&&operation.actorId===request.actorId&&operation.slot==="bonus-action")),
-    });
-  }catch(error){
-    return {status:"rejected",state,events:[],results:{},error:error instanceof Error?error.message:String(error)};
-  }
-}
-
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithBerserkerIntimidatingPresence(){
   const internal=this as unknown as AdapterState;
   const snapshot=await previousGetSnapshot.call(this);
@@ -158,8 +142,9 @@ MockAdapter.prototype.resolveAction=async function resolveBerserkerIntimidatingP
     const request:BerserkerIntimidatingPresenceRequest={
       id:resolutionId,actorId:source.actorId,expectedRevision:state.revision,barbarianLevel:level,subclassId,
       strengthModifier,proficiencyBonus:internal.activeCharacter.proficiencyBonus,targets,
+      useBonusActionEconomy:internal.sessionMode==="initiative",
     };
-    const committed=resolvePresence(state,request,internal.sessionMode==="initiative");
+    const committed=resolveBerserkerIntimidatingPresence(SIMPLEVTT_APP_RULES_PROFILE,state,request);
     if(committed.status==="rejected")return snapshot;
     const projected=applyResolutionEvents(internal.scene,committed.events,internal.activeCharacter.resources,internal.activeCharacter.items,state);if(projected.status==="rejected")return snapshot;
     const writeBack=await persistCharacterResolutionEvents(this,committed.events,"forward");if(writeBack.status==="rejected")return snapshot;
