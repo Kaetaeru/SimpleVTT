@@ -84,13 +84,13 @@ test("Cutting Words reduces another creature's successful ability check and Undo
   let snapshot=await prepareLoreBard(adapter);
   const usesBefore=inspirationUses(snapshot);
   snapshot=await beginGoblinTurn(adapter);
+  await adapter.setQueuedD20(15);
   const internal=adapter as unknown as {scene:SceneVm};
   internal.scene.actionsByActor[GOBLIN_ID]=[
     ...(internal.scene.actionsByActor[GOBLIN_ID]??[]),
     goblinCheckAction(),
   ];
 
-  await adapter.setQueuedD20(15);
   await adapter.resolveAction("action.goblin.cutting-words-check",[]);
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
