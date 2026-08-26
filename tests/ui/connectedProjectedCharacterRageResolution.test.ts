@@ -164,6 +164,34 @@ test("host-unknown Barbarian Rage commits through Host authority and owning-clie
     const replay=JSON.parse(sentToPeer[0]) as {type:string;events:Array<{sequence:number}>};
     assert.equal(replay.type,"event-batch");
     assert.equal(replay.events[0].sequence,1);
+
+    const persistenceBeforeUndo=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
+    await host.undoLastResolution();
+    const hostAfterUndo=await host.getSnapshot();
+    assert.equal(hostAfterUndo.activeCharacter.id,before.activeCharacter.id,"Host local Character context must remain restored after remote Rage Undo");
+    const mountedAfterUndo=projectedCharacterById(host,remote.id);
+    assert.ok(mountedAfterUndo);
+    assert.equal(rageCurrent(mountedAfterUndo!.sheet),2,"Host ephemeral projection must restore the remote owner's Rage resource on Undo");
+    assert.deepEqual(hostAfterUndo.characters,before.characters,"Host permanent Character library must remain unchanged by remote Rage Undo");
+
+    const batchesAfterUndo=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");
+    assert.equal(batchesAfterUndo.length,2,"remote Rage Undo must publish one compensating ordered event batch");
+    const undoEvent=batchesAfterUndo[1].events?.[0];
+    assert.ok(undoEvent);
+    assert.equal(undoEvent!.sequence,2);
+    assert.equal(undoEvent!.payload.kind,"resolution-undo");
+
+    const undoApplied=await applyConnectedClientEvents(client,[undoEvent!]);
+    assert.equal(undoApplied.status,"applied");
+    assert.equal(undoApplied.cursor,2);
+    assert.equal(rageCurrent((await client.getSnapshot()).activeCharacter),2,"owning Client must converge the compensating Rage resource restore");
+    const persistenceAfterUndo=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
+    assert.ok(persistenceAfterUndo>persistenceBeforeUndo,"owning Client must durably persist the compensating Rage restore before cursor advancement");
+
+    const duplicateUndo=await applyConnectedClientEvents(client,[undoEvent!]);
+    assert.equal(duplicateUndo.status,"duplicate");
+    assert.equal(rageCurrent((await client.getSnapshot()).activeCharacter),2);
+    assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,persistenceAfterUndo,"duplicate Undo event must not create another Character generation");
   } finally {
     tauriSessionTransport.send=originalSend;
     tauriSessionTransport.sendTo=originalSendTo;
