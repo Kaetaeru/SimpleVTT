@@ -18,9 +18,10 @@ Canonical target branch: **`work/v1-composite`**
 - Rogue R1 exact execution checkpoint: `5bb8bfbc4753dcc15f1198a04c0982817176c644`.
 - Berserker Intimidating Presence R1 exact execution checkpoint: `1df452fcd951525242631e2cb345e6ee390251fd`.
 - Open Hand Wholeness of Body R1 exact execution checkpoint: `f26092033673622c7c15755ac304678441a1eda3`.
-- `f260920`은 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다. 이는 Wholeness of Body R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
+- Open Hand Fleet Step R1 exact execution checkpoint: `21b5ab830442318e5c5b499464a746fb4370cd4b`.
+- `21b5ab8`은 UI frontend job과 Phase 12 connected-protocol production frontend gate가 green이다. 이는 Fleet Step R1 실행 증거이며 전체 subclass-action umbrella 또는 release DONE 판정은 아니다.
 
-따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
+따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape, Monk Focus, Rogue R1, Berserker Intimidating Presence R1, Open Hand Wholeness of Body R1, Open Hand Fleet Step R1 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
 ## 2. 실행 증거
 
@@ -133,6 +134,19 @@ Canonical target branch: **`work/v1-composite`**
   - Phase 12 Connected Session run `32938958204` / job `98085775486` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
 - 결론: **Open Hand Wholeness of Body R1 local/freeform/initiative/resource/economy/healing/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
 
+### Green — Open Hand Fleet Step R1 exact checkpoint `21b5ab8`
+
+- existing `resolveOpenHandFleetStep` domain resolver와 Focus Point/turn-runtime history를 재사용해 Open Hand Monk 11+의 직전 Bonus Action 후속 action을 production projection으로 연결했다.
+- 무료 Fleet Step은 추가 Bonus Action이나 Focus를 소비하지 않고 즉시 추가 이동을 제공한다.
+- focused Fleet Step은 Focus 1을 소비하고 기존 domain effect를 통해 기회 공격 회피/도약 거리 2배 marker를 적용한다.
+- Step of the Wind 자체는 trigger에서 제외하고, 같은 turn의 authoritative `use-economy` history가 확인된 직전 비-Step Bonus Action만 허용한다.
+- `test:open-hand-fleet-step`은 노출 eligibility, 무료 이동, focused resource/effect/Activity/Undo, 레벨 gate를 **4/4 green**으로 검증한다.
+- `21b5ab830442318e5c5b499464a746fb4370cd4b`에서 test-only helper export를 제거해 adapter surface를 mechanics에 필요한 최소 범위로 유지했다.
+- exact SHA `21b5ab8` GitHub Actions:
+  - UI run `32939892234` / job `98088532407` `frontend`: **success**, `Typecheck and build` 포함 전 단계 green.
+  - Phase 12 Connected Session run `32939892195` / job `98088532135` `connected-protocol`: **success**, connected-session authority protocol, Phase 11 offline walkthrough, production frontend gate green.
+- 결론: **Open Hand Fleet Step R1 local/initiative/trigger/economy/resource/effect/Activity/Undo 범위는 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect matrix는 R2에서 별도 검증한다.
+
 ## 3. Source-complete로 취급하고 재구현하지 않을 것
 
 - 339/339 spell executable definitions, multi-target targeting, condition/concentration lifecycle
@@ -152,6 +166,7 @@ Canonical target branch: **`work/v1-composite`**
 - Rogue R1 through `5bb8bfb`: Cunning Action Dash/Disengage/Hide projection, Bonus Action economy, standard action mechanics reuse, Uncanny Dodge reaction with atomic floor-half damage, Activity and local/event-native Undo boundaries
 - Berserker Intimidating Presence R1 through `1df452f`: existing domain resolver reuse, production action projection, initiative/freeform economy split, feature resource, authoritative targeting, Frightened, Activity and Undo boundaries
 - Open Hand Wholeness of Body R1 through `f260920`: existing resolver/resource reuse, initiative/freeform economy split, healing, Activity, event-native write-back and Undo.
+- Open Hand Fleet Step R1 through `21b5ab8`: existing resolver/turn-history/resource reuse, post-Bonus-Action projection, free/focused variants, movement/effect semantics, Activity and Undo.
 - remaining existing Barbarian Berserker mechanics outside the exposed R1 action are not reimplemented unless the inventory identifies a real production projection gap.
 
 Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, R3 Tauri durability, R4 rendered UX/accessibility, R5 release gates는 별도다.
@@ -181,10 +196,12 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
 - [ ] 이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar에 노출.
   - [x] Berserker Intimidating Presence: exact checkpoint `1df452f`, focused build gate + UI/Phase12 green.
   - [x] Open Hand Wholeness of Body: exact checkpoint `f260920`, focused 4/4 + UI/Phase12 connected-protocol green.
+  - [x] Open Hand Fleet Step: exact checkpoint `21b5ab8`, focused 4/4 + UI/Phase12 connected-protocol green.
   - [ ] 남은 subclass domain resolver inventory에서 다음 mechanics-complete production projection gap 식별.
 - [ ] 각 신규 행동에 local/freeform/initiative/Activity/Undo를 연결.
   - [x] Berserker Intimidating Presence R1 범위.
   - [x] Open Hand Wholeness of Body R1 범위.
+  - [x] Open Hand Fleet Step R1 범위.
 
 Exit: 대표 12-class Character가 UI에서 사용 가능한 핵심 행동을 dead button 없이 실행한다.
 
@@ -238,11 +255,11 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-Open Hand Wholeness of Body R1은 `f260920`에서 execution-validated 됐다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
+Open Hand Fleet Step R1은 `21b5ab8`에서 execution-validated 됐다. R1의 같은 미완료 umbrella에서 **남은 subclass domain resolver inventory를 계속해 다음 mechanics-complete production projection gap 하나를 식별**한다.
 
 ```text
 live branch와 existing subclass domain resolver / production action projection inventory 재대조
--> Berserker Intimidating Presence, Open Hand Wholeness of Body, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
+-> Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Rage, Wild Shape, Monk Focus, Rogue R1 및 이미 노출된 actions는 재구현하지 않음
 -> domain resolver가 실제 mechanics를 소유하지만 production action bar에 빠진 다음 action 하나만 식별
 -> unsupported/partial feature는 dead button으로 노출하지 않음
 -> 선택한 action의 local/freeform/initiative/economy/Activity/Undo 기존 primitives를 우선 재사용
@@ -264,6 +281,7 @@ $env:NODE_OPTIONS='--require=./tests/tsx-os-userinfo-bootstrap.cjs'
 npm run test:rogue-core
 npm run test:berserker-presence
 npm run test:open-hand-wholeness
+npm run test:open-hand-fleet-step
 npm run build
 npm run test:connected-ui
 npm run test:spellcasting
