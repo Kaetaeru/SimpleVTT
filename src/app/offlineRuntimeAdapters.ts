@@ -91,6 +91,9 @@ import "./paladinDevotionSmiteOfProtectionRuntimeAdapter";
 // Record successful open ability checks as canonical ResolutionEvents after all
 // production resolution wrappers have completed, without changing their UI/economy path.
 import "./abilityCheckResolutionEventAdapter";
+// Cunning Hide must stay outside the generic ability-check recorder so it can compose
+// the canonical check event with its session economy/effect changes instead of replacing it.
+import "./rogueCunningHideEventRuntimeAdapter";
 import "./abilityCheckDcRuntimeAdapter";
 // Human-acceptance projection stays outermost: it materializes the remaining legacy
 // reference Character summary, keeps the reference demo melee-playable, and projects
