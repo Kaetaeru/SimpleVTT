@@ -7,25 +7,28 @@
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
 - Control to publish: `blocked`
-- Reconciled at: `2026-08-27T00:17:16+09:00`
+- Reconciled at: `2026-08-27T00:33:40+09:00`
 
 ## Current result
 
 Fiend Dark One's Own Luck R2 remains closed and was not repeated.
 
-Lore Peerless Skill R2 source/proof work is preserved at exact product/proof/gate head `919124900ea741b8e45d93a5dd975bf5e3c2ed65`. The delta from the prior canonical closure is limited to one focused connected proof, one Phase12 gate-line update, and one canonical College of Lore subclass content entry. Canonical handoff was reconciled at `25a7eed05da435115279c20c90f7307ea1c6c045`.
+Lore Peerless Skill remains active. R1/runtime inspection confirmed the success-only Bardic Inspiration spend rule already exists locally. The connected proof lacked only the remote failure/no-spend authority branch, so `bfc459ba35d089171d654fd27abb881309bef1fb` adds one test-only case in the existing focused file. It proves an accepted authoritative d10 that still leaves the check failed emits no Inspiration resource StateChange and leaves the owning Client resource unchanged. No product runtime/protocol/schema code changed.
 
-Required GitHub Actions closure evidence is not executing:
-- UI `32984089140`: queued, zero jobs.
-- UI `32984184587`: startup_failure, zero jobs; available retry API returned 403.
-- exact-head Phase12 for `9191249` has not registered.
-- older pre-gate Phase12 `32983965455` remains queued and is not closure evidence.
-- no branch Actions jobs are currently in progress.
+Canonical handoff was reconciled at `43540acac018b40da428df19dcd3ad216d3fc64c`.
 
-No Peerless green claim is made. No product mutation or no-op commit was added to force CI.
+Required closure evidence is still unavailable:
+- exact candidate `bfc459ba35d089171d654fd27abb881309bef1fb` has zero workflow runs/check suites registered;
+- older UI `32984089140` remains queued with zero jobs;
+- older duplicate UI `32984184587` is `startup_failure` with zero jobs;
+- exact Peerless Phase12 has not registered;
+- GitHub public status reports Actions operational, so no service-wide incident explains this repository-specific behavior;
+- local shallow clone cannot start because the execution container cannot resolve `github.com`.
+
+No Peerless green claim is made. No no-op commit or product refactor was added to force CI.
 
 ## Next
 
-When execution is re-authorized, reconcile the live branch and inspect only exact-head `9191249` UI/Phase12 registration. If jobs run, fix only the first Peerless-specific red if one exists. If exact UI and Phase12 are green, close Peerless canonically and advance to Lore Cutting Words. If Actions still has zero runnable jobs, preserve code unchanged.
+When execution is re-authorized, reconcile live GitHub and inspect only exact candidate `bfc459ba35d089171d654fd27abb881309bef1fb` UI/Phase12 registration. If jobs execute, fix only the first Peerless-specific red. If exact UI and Phase12 are green, close Peerless canonically and advance to Lore Cutting Words. If Actions still has zero runnable jobs, preserve code unchanged.
 
 `STATUS.md` remains human-facing only. Authoritative checkpoint order remains PLAN when routing changes -> STATE -> control.json last.
