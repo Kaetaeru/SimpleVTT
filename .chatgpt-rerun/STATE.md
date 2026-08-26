@@ -7,15 +7,13 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T19:09:00+09:00`
+- checkpointed_at: `2026-08-26T19:14:00+09:00`
 
 ## Durable checkpoint
 
 Mandatory preflight was completed in required order (`README.md` -> `control.json` -> `STATE.md` -> `PLAN.md`). GitHub live state remained authoritative during concurrent branch movement. `PLAN.md` is unchanged.
 
-Do not repeat validated R1 work without direct regression evidence: Rage, Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge, Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported path, Devotion Smite of Protection, Fiend Dark One's Own Luck, College of Lore Peerless Skill, and College of Lore Cutting Words.
-
-Peerless Skill exact product checkpoint remains `88bb72dc3d725af049025728003ab6e6b8db1eb0`; its recorded UI/Phase12 evidence remains green and must not be rerun merely because this checkpoint advanced.
+Do not repeat validated R1 work without direct regression evidence: Rage, Wild Shape, Monk Focus, Rogue Cunning Action/Uncanny Dodge, Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported path, Devotion Smite of Protection, Fiend Dark One's Own Luck, College of Lore Peerless Skill, College of Lore Cutting Words, and the passive Berserker Mindless Rage production integration described below.
 
 ## College of Lore Cutting Words — R1 execution-validated
 
@@ -32,24 +30,20 @@ Exact execution evidence:
 
 - Product checkpoint `90514e44a21840070bb77ea17561036a86b2e5ca`:
   - UI run `32960806646` / frontend job `98152495174`: **success**. Cutting Words ability-check, attack-roll, staged-damage, below-level focused slices and `Typecheck and build` all green.
-  - Phase 12 Connected Session run `32960806633` / connected-protocol job `98152494916`: **success**. Connected authority protocol, Phase 11 offline walkthrough, and production frontend gate green.
+  - Phase 12 Connected Session run `32960806633` / connected-protocol job `98152494916`: **success**.
 - Workflow-cleanup head `c7aee31cf0d8ee0b9e1b70359eaac7bcf55db928`:
-  - UI run `32961013657` / frontend job `98153136326`: **success**. This commit only removes temporary diagnostic workflow steps, so the R1 product checkpoint remains `90514e4`.
+  - UI run `32961013657` / frontend job `98153136326`: **success**.
 
-The earlier current-actor action-priority experiment was not a Cutting Words mechanics fix. It broke connected projected Character inventory resolution by selecting Aelar instead of the mounted remote Character. That change is reverted and must not be reapplied.
-
-Shared-seam invariant remains: Cutting Words staged damage adjustment must preserve existing queued attack modifiers (especially Uncanny Dodge multiplier), authoritative dice faces, single Character write-back/event history, and event-native Undo.
-
-Windows `windows-connected-playable` / Tauri artifact work is R3 packaging/acceptance debt and is not required to reopen this R1 checkpoint.
+Do not reapply the reverted current-actor action-priority experiment. Shared staged-damage invariants remain queued-modifier preservation, authoritative dice preservation, single Character write-back/event history, and event-native Undo.
 
 ## Canonical sync status
 
-Canonical docs are synchronized with the validated Cutting Words state:
+Canonical docs are synchronized with validated Cutting Words:
 
-- `.agents/V1_CURRENT_HANDOFF.md`: commit `b21d814035317921292502f3800a199a47cfead7` records Cutting Words checkpoint/evidence and R1 checklist credit.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`: commit `1e56353c11619ce82de2facfc1d912fdb7e2fcc1` records Cutting Words in the release router evidence.
+- `.agents/V1_CURRENT_HANDOFF.md`: commit `b21d814035317921292502f3800a199a47cfead7`.
+- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`: commit `1e56353c11619ce82de2facfc1d912fdb7e2fcc1`.
 
-Do not reopen Cutting Words merely because its product execution checkpoint `90514e4` is older than the canonical documentation commits. `c7aee31` cleanup UI is green and later commits are documentation/control-only.
+The later inventory audit is durable in STATE but is not yet recorded as canonical R1 closure.
 
 ## R1 subclass resolver inventory — exhausted for honest action-bar projection
 
@@ -58,21 +52,36 @@ The live SRD subclass domain inventory was reconciled after Cutting Words. No ad
 Inventory result:
 
 - Berserker: completed Intimidating Presence; `Retaliation` requires an explicit melee weapon/Unarmed Strike choice. Mindless Rage is passive, not an action-bar candidate.
-- College of Lore: Peerless Skill and Cutting Words are already execution-validated.
-- Life Domain: `Preserve Life` requires explicit per-target healing allocations; the remaining healing wrappers are automatic mechanics.
+- College of Lore: Peerless Skill and Cutting Words are execution-validated.
+- Life Domain: `Preserve Life` requires explicit per-target healing allocations; remaining healing wrappers are automatic mechanics.
 - Circle of the Land: `Land's Aid` requires an authoritative point plus damage/healing target sets and results; no simple targetIds-only projection is honest.
 - Champion: remaining resolver surface is critical-range/critical-movement contribution, not a standalone action.
-- Open Hand: supported Wholeness/Fleet Step/Quivering Palm R1 paths are already validated; unsupported attack-replacement input remains intentionally unexposed.
+- Open Hand: supported Wholeness/Fleet Step/Quivering Palm R1 paths are validated; unsupported attack-replacement input remains intentionally unexposed.
 - Devotion: Holy Nimbus and Smite of Protection are validated; Aura of Devotion is passive.
-- Hunter: Defensive Tactics is a rest-time choice; Escape the Horde/Multiattack Defense are roll-state triggers; Superior Hunter's Prey is automatic; Superior Hunter's Defense is a damage reaction. None is a standalone action-bar command.
+- Hunter: Defensive Tactics is a rest-time choice; Escape the Horde/Multiattack Defense are roll-state triggers; Superior Hunter's Prey is automatic; Superior Hunter's Defense is a damage reaction.
 - Thief: Supreme Sneak is passive, Use Magic Device is item/scroll runtime behavior, and Thief's Reflexes is initiative behavior.
 - Draconic Sorcery: current domain mechanics are passive/spell integrations; no mechanics-complete standalone action resolver exists for Dragon Wings/Dragon Companion.
-- Fiend: Dark One's Own Luck is already validated; Fiendish Resilience is a rest-time damage-type choice and Hurl Through Hell is an on-hit trigger/recovery path, not a standalone action.
+- Fiend: Dark One's Own Luck is validated; Fiendish Resilience is a rest-time damage-type choice and Hurl Through Hell is an on-hit trigger/recovery path.
 - Evocation: current live domain source is progression/spell integration; no standalone subclass action resolver is present.
 
-This audit changes no product code. No validated test was rerun. Existing exact Cutting Words and prior R1 execution evidence remains authoritative.
+R1 source/execution action-matrix conclusion: the final unchecked subclass-inventory item is an **inventory exhaustion result**, not a missing action implementation. `V1-21 Complete local play loop` remains PARTIAL because Windows/human/durable journey acceptance is broader than R1 source/execution completion.
 
-R1 source/execution action-matrix conclusion: the final unchecked subclass-inventory item is now an **inventory exhaustion result**, not a missing action implementation. Canonical docs still need this audit recorded before the handoff formally checks the R1 umbrella complete. `V1-21 Complete local play loop` must remain PARTIAL because its Windows/human/durable journey acceptance is broader than R1 source/execution completion.
+## Berserker Mindless Rage — passive production integration execution-validated
+
+During reconciliation, live source confirmed a real passive production gap even though Mindless Rage is not an action-bar candidate. The domain mechanics and domain tests already existed, so no second implementation or fake button was added.
+
+- `8bbd21a0ff4b20bef4c0232f175785c5f7633312`: `barbarianRageRuntimeAdapter.ts` composes existing core Rage operations with `compileBerserkerMindlessRageStart` into **one atomic PendingResolution** for Berserker 6+. This preserves one revision increment and one event-native Undo history instead of attempting two sequential runtime commits.
+- The automatic Rage start removes existing Charmed/Frightened effects and applies the existing `condition-immunity:charmed` / `condition-immunity:frightened` marker linked to the `barbarian-rage` special duration. Existing Rage termination removes the linked marker; no new End Rage surface was added.
+- `b82e9048618ab3c105f2f99e148d2e5d2198c5dc`: adds one focused Berserker production regression to the already-build-gated `barbarianBerserkerIntimidatingPresenceRuntime.test.ts`; no package/build wiring change was needed.
+- Focused production evidence verifies condition cleanup, immunity marker projection, Activity state-change evidence, one-call event-native Undo restoring prior conditions, and Rage-end lifecycle removal.
+
+Exact-head evidence at `b82e9048618ab3c105f2f99e148d2e5d2198c5dc`:
+
+- UI run `32961779455` / frontend job `98155486715`: **success**, including `Typecheck and build` and existing `test:berserker-presence` build gate containing the new focused case.
+- Phase 12 Connected Session run `32961779556` / connected-protocol job `98155487334`: **success**.
+- `windows-connected-playable` is R3 packaging/acceptance debt and is not required for this R1/source checkpoint.
+
+This passive closure does **not** reopen or change the action-bar inventory exhaustion conclusion. It is additional source/execution coverage discovered during the same inventory reconciliation.
 
 ## Inventory exclusions
 
@@ -80,12 +89,13 @@ R1 source/execution action-matrix conclusion: the final unchecked subclass-inven
 - Circle of the Land `Land's Aid`: requires richer point/multi-result input; no fake simple button.
 - Berserker `Retaliation`: requires player choice of melee weapon/Unarmed Strike; do not auto-select an attack.
 - Passive, rest-choice, item-runtime, automatic trigger, and reaction-only subclass mechanics are not converted into dead or misleading action-bar buttons merely to exhaust the list.
+- R2 remote-owner exactly-once/reconnect/event-native Undo work starts only after canonical R1 closure.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer than this checkpoint.
-2. Do not rerun Cutting Words or earlier validated R1 mechanics without direct regression evidence.
-3. Record the exhausted 12-subclass inventory in `.agents/V1_CURRENT_HANDOFF.md`: check the subclass-action umbrella and inventory-exhaustion item, check the already-complete local/freeform/initiative/Activity/Undo umbrella, and state explicitly that richer-choice/passive/trigger mechanics remain unexposed rather than faked.
+2. Do not rerun Cutting Words, Mindless Rage, or earlier validated R1 mechanics without direct regression evidence.
+3. Record the exhausted 12-subclass action-bar inventory in `.agents/V1_CURRENT_HANDOFF.md`: check the subclass-action umbrella and inventory-exhaustion item, check the completed local/freeform/initiative/Activity/Undo umbrella, and state that richer-choice/passive/trigger mechanics remain unexposed rather than faked. Record Mindless Rage `b82e9048` only as an additional passive production checkpoint, not as an action-bar requirement.
 4. Update `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` R1 evidence to the same conclusion while keeping `V1-21` PARTIAL; do not promote release DONE from source-only evidence.
 5. After canonical R1 closure, route Next Exact Action to R2 connected remote-owner matrix. Do not implement R2 before that canonical handoff change.
 6. `PLAN.md` remains unchanged. After canonical writes, update `STATE.md` and `control.json` last; `control.json` remains `continue` until the sequence itself reaches a waiting status.
