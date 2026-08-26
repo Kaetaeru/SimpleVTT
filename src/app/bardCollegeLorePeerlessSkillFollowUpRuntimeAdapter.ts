@@ -147,6 +147,17 @@ function restoreFailedStage(internal:AdapterState,resolution:ResolutionView,fami
   resolution.nextLabel="판정 적용";
 }
 
+function refreshPeerlessAttackActivity(adapter:MockAdapter,internal:AdapterState){
+  const resolution=internal.resolution;
+  const state=states.get(adapter);
+  if(!resolution||resolution.stage!=="complete"||state?.resolutionId!==resolution.id||!state.handled.has("attack"))return;
+  const activity=internal.activity.find((entry)=>entry.id===resolution.id);
+  if(!activity)return;
+  activity.summary=resolution.compact;
+  activity.detail=[...resolution.detail,...resolution.provenance.map((entry)=>`출처: ${entry}`)];
+  activity.stateChanges=[...resolution.stateChanges];
+}
+
 MockAdapter.prototype.resolveAction=async function resolveWithLorePeerlessSkill(actionId:string,targetIds:string[]){
   await previousResolveAction.call(this,actionId,targetIds);
   offer(this,this as unknown as AdapterState);
@@ -171,6 +182,7 @@ MockAdapter.prototype.advanceResolution=async function advanceWithLorePeerlessSk
     await previousAdvanceResolution.call(this);
   }
   offer(this,internal);
+  refreshPeerlessAttackActivity(this,internal);
   return this.getSnapshot();
 };
 
