@@ -3,7 +3,6 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import type { ActionVm, CharacterSheet, SceneVm, SessionVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { setSessionDebugPreviewRole } from "../../src/app/sessionDebugPreviewRole";
 import { WARLOCK_FIEND_SUBCLASS_ID } from "../../src/domain/srdSubclassCatalog";
 import {
   FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID,
@@ -34,8 +33,7 @@ async function prepareFiend(adapter:MockAdapter,level=6){
     resources:[],
   };
   internal.activeCharacter=fiend;
-  setSessionDebugPreviewRole(adapter,"dm");
-  await adapter.getSnapshot();
+  await adapter.startProductionLocalPlay("dm");
   return fiend;
 }
 
