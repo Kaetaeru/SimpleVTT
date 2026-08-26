@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T18:47:00+09:00`
+- checkpointed_at: `2026-08-26T18:52:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -49,12 +49,20 @@ Live GitHub selected College of Lore `Cutting Words` as the next mechanics-compl
 
 The required damage-roll seam exists without a new subsystem:
 
-- `src/app/rogueCoreRuntimeAdapter.ts` already queues Uncanny Dodge at the hit interrupt through `queueAtomicAttackDamageMultiplier(resolutionId,0.5,source)`.
+- `src/app/rogueCoreRuntimeAdapter.ts` already queues Uncanny Dodge at the hit interrupt through `queueAtomicAttackDamageMultiplier`.
 - `src/app/realAttackTransactionService.ts` consumes that queued adjustment immediately before the authoritative atomic attack commit, then applies it to compiled `compound-damage` operations.
 - Cutting Words can reuse the same queue/commit location by minimally generalizing the pending atomic damage adjustment to support an additive flat reduction alongside the existing multiplier. No parallel attack engine or duplicate transaction path is needed.
 - Successful attack-roll reduction can reuse the existing follow-up pattern used by Bardic Inspiration/Peerless Skill: adjust the staged attack total/temporary attack modifier before the atomic transaction validates preview parity.
 - Successful ability-check reduction can reuse the existing completed-check follow-up/activity/event-history pattern used by Dark One's Own Luck.
 - Reaction/resource spend remains owned by `resolveLoreCuttingWords`; append its ResolutionEvents to the parent resolution so current Character write-back, Activity projection, and event-native Undo stay authoritative.
+
+### Reconciliation at live head `0b36cad242bf87068581181e11a3d1621c2cd51f`
+
+- `0b36cad` and its immediate checkpoints are investigation/state commits, not a Cutting Words implementation checkpoint.
+- Current `package.json` has **no** `test:cutting-words` script and `npm run build` has **no** Cutting Words focused gate.
+- No execution validation for Cutting Words should be claimed yet.
+- First implementation files should stay minimal: extend `src/app/realAttackTransactionService.ts` with one queued flat post-multiplier reduction seam; add one thin Cutting Words follow-up/runtime adapter using `resolveLoreCuttingWords`; install it in `src/app/offlineRuntimeAdapters.ts`; add one focused UI runtime test and one package gate.
+- Do not create a second attack engine, second Bardic Inspiration resource model, or duplicate the domain resolver.
 
 ## Next Exact Action
 
