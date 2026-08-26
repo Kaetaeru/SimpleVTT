@@ -5,7 +5,7 @@ import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, CharacterSum
 import { MockAdapter } from "./mockAdapter";
 import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
-import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
+import { peekAtomicAttackDamageMultiplier, queueAtomicAttackDamageMultiplier, resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
 import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
@@ -140,7 +140,9 @@ export function previewRuntimeAtomicAttackDamage(adapter:MockAdapter) {
   const action=resolution ? internal.action(resolution.actionId) : undefined;
   const manual=manualFor(adapter,action,resolution);
   if (!resolution || resolution.stage!=="attack-result" || resolution.attackOutcome!=="명중" || !isRuntimeAtomicAttack(action,manual) || resolution.adjudicated) return undefined;
+  const queuedMultiplier=peekAtomicAttackDamageMultiplier(resolution.id);
   const transaction=build(adapter,internal,action!,resolution,manual);
+  if(queuedMultiplier)queueAtomicAttackDamageMultiplier(resolution.id,queuedMultiplier.multiplier,queuedMultiplier.source);
   if (transaction.status==="rejected" || !transaction.damage) return undefined;
   return {
     total:transaction.damage.raw,
