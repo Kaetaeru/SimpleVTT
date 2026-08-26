@@ -30,25 +30,24 @@ Canonical target branch: **`work/v1-composite`**
   - Open Hand Fleet Step `df37d8a1ec21459578d79bc076b53b58f142f39c`
   - Devotion Holy Nimbus `5ff7d00e54135bcacfc306d68467671a3a76298e`
   - Open Hand Quivering Palm `37d002862a9ac253b8b7e6b0b138369c588be17d`
+  - Devotion Smite of Protection `799fcaebd967b31c74e5520671050e81a5eb09dd`
 
 Historical detailed evidence remains in `CURRENT_WORK.md`, previous revisions of this handoff, and GitHub Actions. This handoff intentionally carries only the current execution pointer and exact closure facts.
 
-## 2. Green — R2 Open Hand Quivering Palm
+## 2. Green — R2 Devotion Smite of Protection
 
-Quivering Palm R2 is closed at exact green head `37d002862a9ac253b8b7e6b0b138369c588be17d`.
+Smite of Protection R2 is closed at exact green product/test head `799fcaebd967b31c74e5520671050e81a5eb09dd`.
 
-- Original freeform Host-unknown proof: `09d0cea3ffa010eb5b30258e9500399cba06e095`.
-- Existing R1 primitives were reused: post-Unarmed-hit seed, Focus 4, single-target marker replacement, Action detonation, Constitution save, 10d12 force/save-half, Activity, ResolutionEvent/owner write-back, duplicate/reconnect, compensating Undo.
-- `replace-attack` remains unsupported/unexposed; no remote-only activation path was invented.
-- Initiative gap exposed a real product boundary: entering initiative recreated TurnRuntime and could lose the long-lived Quivering marker.
-- Broad shared TurnRuntime persistence was tried and then removed. Final fix stays feature-local through Quivering Palm's existing `startInitiative` wrapper, preserving only the relevant marker across the mode transition.
-- Exact evidence at `37d0028`:
-  - UI run `32979538192` / frontend job `98212492938`: **success**, including Typecheck/build.
-  - Phase 12 run `32979538159` / connected-protocol job `98212492528`: **success**, including focused connected authority proof, Phase 11 walkthrough, production frontend gate.
-  - Windows/Tauri job is R3, not an R2 closure gate.
-- Covered: Host-unknown seed/reseed, marker persistence across freeform -> initiative, initiative Action economy, save/damage/effect removal, Host permanent Character-library isolation, owner exactly-once convergence, duplicate request/event safety, reconnect/rebind, compensating Undo and owner inverse convergence.
+- Existing R1 semantics were reused: level 15+ Devotion Paladin, no standalone action, committed Divine Smite automatically appends the protection effect to the same resolution.
+- The focused Host-unknown proof covers the projected Divine Smite path, Host permanent Character-library isolation, owning Client exactly-once apply/persistence, duplicate request/event safety, reconnect/rebind, and compensating Undo/inverse owner convergence.
+- First fixture-only correction `3d124cf8c74e1b424b4002c8a9a4a4c7b9dae45b` preserved canonical class-feature spell resources but did not close the red.
+- Direct product evidence then showed reconstructed remote spellcasters could lose the derived spell-slot cache. Final fix stays local to the existing spellcaster projection path: when `spellSlotMaximums` is absent, derive canonical slots from projected `classLevels` through existing `multiclassSpellSlots`; no SessionProjection schema/protocol expansion.
+- Exact evidence at `799fcae`:
+  - UI run `32981342812` / frontend job `98218488387`: **success**, including Typecheck/build.
+  - Phase 12 run `32981342785` / connected-protocol job `98218488092`: **success**, including focused connected authority proof, Phase 11 walkthrough, production frontend gate.
+  - Windows/Tauri child job is R3, not an R2 closure gate.
 
-Conclusion: **Open Hand Quivering Palm remote-owner gap is CLOSED.**
+Conclusion: **Devotion Smite of Protection remote-owner gap is CLOSED.**
 
 ## 3. R2 remaining scope
 
@@ -56,36 +55,36 @@ R2 remains **PARTIAL** until the remaining R1 feature matrix is covered. Actual 
 
 Next remaining R1-backed slices, in current source/execution order:
 
-1. Devotion Smite of Protection
-2. Fiend Dark One's Own Luck
-3. Lore Peerless Skill
-4. Lore Cutting Words
+1. Fiend Dark One's Own Luck
+2. Lore Peerless Skill
+3. Lore Cutting Words
 
 For every slice, reuse current SessionProjection/ActionRequest/ResolutionEvent/owner write-back/reconnect/Undo primitives. Do not add protocol/schema or fake action-bar commands unless a direct product requirement proves they are necessary.
 
-## 4. Next exact action — Devotion Smite of Protection remote-owner gap
+## 4. Next exact action — Fiend Dark One's Own Luck remote-owner gap
 
-R1 exact checkpoint `ec89fa251d969a250c20e11f0abe6d7a4f13d58e` is already local/source execution-green. Do not reimplement or rerun it merely because R2 starts.
+R1 exact checkpoint `95042b2ef3c65aef3619334c0bec1ad243d165f2` is already local/source execution-green. Do not reimplement or rerun it merely because R2 starts.
 
 Current production semantics to preserve:
 
-- level 15+ Oath of Devotion only;
-- no separate fake action: a committed Divine Smite automatically appends Smite of Protection to the same resolution path;
-- existing marker grants half cover to self/allies in aura until the Paladin's next turn start and ends on existing termination rules;
-- existing Activity/provenance, ResolutionEvent history, owner write-back and generic Undo are authoritative;
-- below-level/non-Devotion stays absent.
+- level 10+ Fiend Warlock only;
+- after a failed ability check or saving throw, the existing follow-up opens an owner interrupt asking whether to use Dark One's Own Luck;
+- accepting spends one canonical Dark One's Own Luck resource and adds one authoritative d10 to the failed result;
+- declining changes no durable/shared state;
+- existing Activity/provenance, ResolutionEvent history, owner write-back and generic Undo remain authoritative;
+- no standalone fake action is added.
 
 Next work:
 
 ```text
 reconcile live branch
--> inspect current Smite of Protection runtime + connected projected Paladin reconstruction + Divine Smite action path
--> add the smallest Host-unknown focused proof for committed Divine Smite automatically appending Smite of Protection
--> verify ordered spell/resource/economy + protection-effect events as applicable, Host permanent Character library isolation, owning Client exactly-once apply/persist
--> verify duplicate request/event no-op, reconnect/fresh projection, marker/expiry state convergence, compensating Undo + owner inverse convergence
--> if first direct red appears, fix only that cause; no new protocol/schema and no separate Smite-of-Protection button
+-> inspect the existing Dark One's Own Luck R1 runtime proof and one connected owner-interrupt analogue
+-> add the smallest Host-unknown projected Fiend proof around a failed ability check or save
+-> verify the owner receives/accepts the authoritative interrupt, resource 1 is spent once, one d10 is applied, and the final result/event is committed once
+-> verify Host permanent Character library isolation, owning Client exactly-once apply/persist, duplicate request/event no-op, reconnect/rebind, compensating Undo + owner inverse convergence
+-> if first direct red appears, fix only that cause; no broad refactor and no protocol/schema/fake action without direct evidence
 -> verify exact-head UI frontend + Phase12 connected production gate
--> close canonically, then advance to Fiend Dark One's Own Luck
+-> close canonically, then re-read the canonical remaining R2 order instead of guessing
 ```
 
 ## 5. Hard boundaries
@@ -103,11 +102,4 @@ reconcile live branch
 
 Use only the gate needed by the active slice plus its existing connected production gate. Do not rerun the historical full matrix for resume alone.
 
-```powershell
-$env:NODE_OPTIONS='--require=./tests/tsx-os-userinfo-bootstrap.cjs'
-npm run test:devotion-smite-protection
-npm run test:connected-ui
-npm run build
-```
-
-When source changes are pushed, GitHub Actions exact-head UI and Phase12 connected jobs are the closure evidence. Rust/Tauri/Windows evidence stays separate until R3.
+When the focused Dark One's Own Luck proof is added, run that proof only during iteration. On pushed source changes, GitHub Actions exact-head UI and Phase12 connected jobs are the closure evidence. Rust/Tauri/Windows evidence stays separate until R3.
