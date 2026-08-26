@@ -68,6 +68,7 @@ import "./barbarianBerserkerIntimidatingPresenceRuntimeAdapter";
 import "./druidWildShapeRuntimeAdapter";
 import "./monkFocusRuntimeAdapter";
 import "./monkOpenHandWholenessRuntimeAdapter";
+import "./monkOpenHandFleetStepRuntimeAdapter";
 import "./rogueCoreRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
