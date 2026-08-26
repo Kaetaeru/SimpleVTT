@@ -91,7 +91,7 @@ test("host-unknown Fiend Dark One's Own Luck accepts owner interrupt, spends one
     snapshot=await host.advanceResolution();assert.equal(snapshot.resolution?.stage,"effect-preview");assert.equal(state.ledger.cursor,0);
     snapshot=await host.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:10});
     assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));assert.equal(snapshot.resolution?.checkTarget,10);assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);assert.equal(snapshot.resolution?.interrupt?.responderId,remote.id);assert.equal(snapshot.resolution?.checkOutcome,"실패");assert.equal(state.ledger.cursor,0);
-    const failedTotal=snapshot.resolution?.rollTotal;assert.equal(typeof failedTotal,"number");
+    const failedTotal=snapshot.resolution?.rollTotal;assert.equal(typeof failedTotal,"number");assert.ok(failedTotal!<snapshot.resolution!.checkTarget!);
     const prompt=sentToPeer.filter((entry)=>entry.peer===PEER).map((entry)=>JSON.parse(entry.message) as {type:string;resolutionId?:string;interrupt?:{id:string}}).find((message)=>message.type==="resolution-interrupt-prompt");assert.ok(prompt,"Host must send Dark One's Own Luck only to the owning peer");assert.equal(prompt!.interrupt?.id,INTERRUPT_ID);
 
     await host.setQueuedD20(10);
