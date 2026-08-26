@@ -124,26 +124,6 @@ jobs:
           tests/ui/visualDiceProjection.test.ts
           tests/ui/visualDiceStructure.test.ts
           tests/ui/movementReactionStructure.test.ts
-      - name: Diagnose Cutting Words ability check
-        shell: bash
-        run: |
-          set +e
-          npx tsx --test --test-name-pattern="successful ability check" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts > cutting-words-ability.log 2>&1
-          status=$?
-          cat cutting-words-ability.log
-          exit "$status"
-      - name: Upload Cutting Words ability diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cutting-words-ability-diagnostic
-          path: cutting-words-ability.log
-      - name: Diagnose Cutting Words attack roll
-        run: npx tsx --test --test-name-pattern="successful attack" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
-      - name: Diagnose Cutting Words staged damage
-        run: npx tsx --test --test-name-pattern="staged damage" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
-      - name: Diagnose Cutting Words below-level gate
-        run: npx tsx --test --test-name-pattern="below College of Lore level 3" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
       - name: Typecheck and build
         shell: bash
         run: |
