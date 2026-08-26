@@ -65,7 +65,7 @@ function validate(
   const reactor=internal.entity(command.reactorId);
   if (!provoker) throw new Error(`현재 턴 Actor가 없습니다: ${command.provokerId}`);
   if (!reactor) throw new Error(`반응자가 없습니다: ${command.reactorId}`);
-  if (command.kind==="opportunity-attack"&&provoker.status.includes("이탈")) throw new Error(`${provoker.name}은(는) 이탈 행동으로 기회공격을 유발하지 않습니다.`);
+  if (command.kind==="opportunity-attack"&&provoker.status.some((status)=>status==="이탈"||status.endsWith("이탈"))) throw new Error(`${provoker.name}은(는) 이탈 행동으로 기회공격을 유발하지 않습니다.`);
   if (reactor.id===provoker.id) throw new Error("이동 반응자는 현재 이동 Actor와 달라야 합니다.");
   if (reactor.side===provoker.side) throw new Error("현재 수동 반응 공격 경로는 적대 진영 사이에서만 허용합니다.");
   const economy=internal.scene.economyByActor[reactor.id];
