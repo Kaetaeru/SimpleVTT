@@ -139,6 +139,11 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
     assert.ok(seedAChanges.some((change)=>change.kind==="effect"&&change.targetId===TARGET_A&&change.operation==="added"));
 
     const client=new MockAdapter();setCharacterLibraryStoreForTests(client,new MemoryCharacterLibraryStore());prepareOwningClient(client,remote,projection,catalog);
+    const clientInternal=client as unknown as MutableAdapterState;
+    for(const targetId of [TARGET_A,TARGET_B]){
+      const target=clientInternal.scene.entities.find((entity)=>entity.id===targetId);
+      if(target){target.hp=200;target.maxHp=200;target.tempHp=0;target.ac=1;target.distance="5피트";}
+    }
     const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=state.sessionId;clientState.replica=new ClientSessionReplica(state.sessionId);
     const persistenceBefore=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
     assert.equal((await applyConnectedClientEvents(client,[seedAEvent!])).status,"applied");
