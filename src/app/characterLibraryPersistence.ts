@@ -149,6 +149,7 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
     },
     progression:progressionSelections(sheet),
     featureGrants:cp(sheet.features),
+    wildShapeKnownForms:sheet.wildShapeKnownForms ? cp(sheet.wildShapeKnownForms) : undefined,
     resourceDefinitions:sheet.resources.map(resourceSourceDefinition),
     itemReferences:sheet.items.map(itemSourceReference),
   };
@@ -271,6 +272,7 @@ function applySourceSnapshot(sheet:CharacterSheet,source:CharacterSourceSnapshot
   sheet.masteryWeapons=source.spellAndFeatureSelections.masteryWeapons ? cp(source.spellAndFeatureSelections.masteryWeapons) : undefined;
   applyProgressionSource(sheet,source.progression);
   if (source.featureGrants) sheet.features=cp(source.featureGrants);
+  sheet.wildShapeKnownForms=source.wildShapeKnownForms ? cp(source.wildShapeKnownForms) : undefined;
   sheet.rulesProfileId=source.rulesProfile.id;
   sheet.rulesProfileVersion=source.rulesProfile.version;
 }
