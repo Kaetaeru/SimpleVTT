@@ -14,7 +14,7 @@ const TARGET_B="combatant.goblin-b";
 
 async function monk(level=17,initiative=false){
   const adapter=new MockAdapter();const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
-  internal.activeCharacter={...internal.activeCharacter,className:"수도승",subclassName:"열린 손의 전사",level,proficiencyBonus:6,tempHp:0,abilities:{...internal.activeCharacter.abilities,str:18,wis:18},classLevels:[{classId:MONK_OPEN_HAND_CLASS_ID,className:"수도승",subclassName:"열린 손의 전사",level}],subclassIds:{[MONK_OPEN_HAND_CLASS_ID]:MONK_OPEN_HAND_SUBCLASS_ID},resources:[{id:MONK_FOCUS_RESOURCE_ID,label:"기 점수",current:level,max:level,source:`수도승 ${level}레벨`,recovery:{shortRest:"all",longRest:"all"}}]};
+  internal.activeCharacter={...internal.activeCharacter,className:"수도승",subclassName:"열린 손의 전사",level,proficiencyBonus:6,tempHp:0,abilities:{...internal.activeCharacter.abilities,str:18,wis:18},classLevels:[{classId:MONK_OPEN_HAND_CLASS_ID,className:"수도승",subclassName:"열린 손의 전사",level}],subclassIds:{[MONK_OPEN_HAND_CLASS_ID]:MONK_OPEN_HAND_SUBCLASS_ID},resources:[{id:MONK_FOCUS_RESOURCE_ID,label:"기 점수",current:level,max:level,source:`수도승 ${level}레벨`}]};
   const actor=internal.scene.entities.find((entry)=>entry.id===internal.activeCharacter.id);if(actor){actor.tempHp=0;actor.ac=15;}
   for(const id of [TARGET_A,TARGET_B]){const target=internal.scene.entities.find((entry)=>entry.id===id);if(target){target.hp=200;target.maxHp=200;target.tempHp=0;target.ac=1;target.distance="5피트";}}
   await adapter.getSnapshot();
