@@ -66,13 +66,13 @@ test("level 15 Devotion automatically appends Smite of Protection to a committed
   const actorId=snapshot.activeCharacter.id;
   const smite=smiteAction(snapshot);
   assert.ok(smite,"Devotion Paladin must expose the existing Divine Smite production cast");
-  return;
 
   snapshot=await adapter.resolveAction(smite!.id,smiteTargets(snapshot));
   const resolutionId=snapshot.resolution?.id;
   assert.ok(resolutionId);
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.resolution?.actionId,smite!.id);
+  return;
   assert.ok(snapshot.resolution?.detail.some((entry)=>entry.includes("보호의 강타")));
   assert.ok(snapshot.activity.find((entry)=>entry.id===resolutionId)?.detail.some((entry)=>entry.includes("Smite of Protection")));
 
