@@ -104,7 +104,9 @@ test("Rogue level 5 Uncanny Dodge spends Reaction, halves a hit, records Activit
   assert.equal(snapshot.resolution?.interrupt?.id,UNCANNY_DODGE_REACTION_ID);
   await adapter.respondToInterrupt(true);
   snapshot=await finish(adapter);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.hp,hpBefore-3);
+  assert.equal(snapshot.resolution?.damageComponents[0]?.raw,5);
+  assert.equal(snapshot.resolution?.damageComponents[0]?.adjusted,2);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.hp,hpBefore-2);
   assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);
   assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("기묘한 회피"))),true);
 

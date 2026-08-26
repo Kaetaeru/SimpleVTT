@@ -36,6 +36,8 @@ export interface AtomicAttackTransactionRequest {
   initiativeMode:boolean;
   activeTurnActorId?:string;
   reaction?:AtomicReactionAttackContext;
+  damageMultiplier?:number;
+  damageMultiplierSource?:string;
   attackD20Face:number;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
@@ -67,6 +69,20 @@ export type AtomicAttackTransactionResult =
       status:"rejected";
       error:string;
     };
+
+type PendingDamageMultiplier={multiplier:number;source:string};
+const pendingDamageMultipliers=new Map<string,PendingDamageMultiplier>();
+
+export function queueAtomicAttackDamageMultiplier(resolutionId:string,multiplier:number,source:string) {
+  if(!Number.isFinite(multiplier)||multiplier<0)throw new Error("runtime attack damage multiplier must be non-negative and finite");
+  pendingDamageMultipliers.set(`${resolutionId}:runtime-atomic`,{multiplier,source});
+}
+
+function consumeAtomicAttackDamageMultiplier(resolutionId:string) {
+  const pending=pendingDamageMultipliers.get(resolutionId);
+  pendingDamageMultipliers.delete(resolutionId);
+  return pending;
+}
 
 function defensesFor(target:SceneEntity):DamageDefenseContribution[] {
   return [
@@ -238,11 +254,30 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
   };
 }
 
+function applyDamageMultiplier(compiled:ReturnType<typeof compileAttack>,multiplier:number) {
+  for(const operation of compiled.operations) {
+    if(operation.kind!=="compound-damage")continue;
+    operation.components=operation.components.map((component)=>({
+      ...component,
+      amount:typeof component.amount==="number"
+        ? Math.floor(component.amount*multiplier)
+        : {
+            ...component.amount,
+            multiplier:(component.amount.multiplier??1)*multiplier,
+            rounding:"floor" as const,
+          },
+    }));
+  }
+}
+
 function resolveAttackTransaction(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
   const compiledRequest=attackRequest(request,input);
-  if (!request.reaction) return resolveAttack(SIMPLEVTT_APP_RULES_PROFILE,input,compiledRequest);
+  if (!request.reaction&&request.damageMultiplier===undefined) return resolveAttack(SIMPLEVTT_APP_RULES_PROFILE,input,compiledRequest);
 
   const compiled=compileAttack(compiledRequest);
+  if(request.damageMultiplier!==undefined)applyDamageMultiplier(compiled,request.damageMultiplier);
+  if(!request.reaction)return resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,input,compiled);
+
   const [targeting,...rest]=compiled.operations;
   const reaction:ResolutionOperation={
     id:`${request.resolutionId}:reaction`,
@@ -284,6 +319,8 @@ function retainStagedAtomicEvents(request:AtomicAttackTransactionRequest,events:
 }
 
 export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRequest):AtomicAttackTransactionResult {
+  const queuedMultiplier=consumeAtomicAttackDamageMultiplier(request.resolutionId);
+  if(queuedMultiplier)request={...request,damageMultiplier:queuedMultiplier.multiplier,damageMultiplierSource:queuedMultiplier.source};
   const damageSpec = request.action.damage?.[0];
   if (request.action.resolutionKind !== "attack" || !damageSpec) {
     return { status:"rejected", error:`atomic attack requires one attack damage component: ${request.action.id}` };
@@ -329,12 +366,15 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
   if ((beforeLife?.dead ?? false)!==targetLife.dead) stateChanges.push(`${request.target.name} dead ${beforeLife?.dead ?? false} → ${targetLife.dead}`);
 
   const component = damage?.components[0];
+  const displayedRaw=request.damageMultiplier!==undefined&&damageRoll ? damageRoll.total : component?.raw;
   const damageComponent = component ? {
     type:component.damageType,
     roll:damageRoll?.dice.flatMap((entry) => entry.selectedFaces).join(" + ") ?? String(component.raw),
-    raw:component.raw,
+    raw:displayedRaw??component.raw,
     adjusted:component.finalDamage,
-    adjustment:componentAdjustment(request.target,component.damageType,component.raw,component.finalDamage),
+    adjustment:request.damageMultiplierSource
+      ? `${request.damageMultiplierSource} ${displayedRaw??component.raw} → ${component.raw}${component.raw!==component.finalDamage ? ` · ${componentAdjustment(request.target,component.damageType,component.raw,component.finalDamage)}` : ""}`
+      : componentAdjustment(request.target,component.damageType,component.raw,component.finalDamage),
     source:"Rules Domain · atomic resolveAttack transaction",
   } satisfies DamageComponentView : undefined;
 

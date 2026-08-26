@@ -1,6 +1,7 @@
 import "./progressionContracts";
 import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { queueAtomicAttackDamageMultiplier } from "./realAttackTransactionService";
 import { clearRuntimeResolutionEventHistory } from "./runtimeResolutionEventHistory";
 
 export const ROGUE_CLASS_ID="dnd.srd521.class.rogue";
@@ -168,7 +169,10 @@ MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDod
   const accepted=Boolean(accept&&resolution?.interrupt?.id===UNCANNY_DODGE_REACTION_ID);
   const resolutionId=accepted?resolution!.id:undefined;
   const snapshot=await previousRespondToInterrupt.call(this,accept);
-  if(resolutionId)uncannyResolutionIds.set(this,resolutionId);
+  if(resolutionId) {
+    uncannyResolutionIds.set(this,resolutionId);
+    queueAtomicAttackDamageMultiplier(resolutionId,0.5,"기묘한 회피");
+  }
   return snapshot;
 };
 
@@ -192,35 +196,22 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
     }
   }
 
-  const uncanny=uncannyResolutionIds.get(this)===resolution.id&&(resolution.stage==="attack-result"||resolution.stage==="damage-animation");
-  const action=uncanny
-    ? Object.values(internal.scene.actionsByActor).flat().find((entry)=>entry.id===resolution.actionId)
-    : undefined;
-  const damage=action?.damage?.[0];
-  const originalAverage=damage?.average;
-  if(uncanny&&damage&&originalAverage!==undefined) {
-    const multiplier=resolution.critical?2:1;
-    const raw=originalAverage*multiplier;
-    const reduced=Math.floor(raw/2);
-    damage.average=reduced/multiplier;
-    const detail=`기묘한 회피: 피해 ${raw} → ${reduced}`;
-    if(!resolution.detail.includes(detail))resolution.detail.push(detail);
-  }
-
-  try {
-    const snapshot=await previousAdvanceResolution.call(this);
-    if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
-      const uncannyComplete=uncannyResolutionIds.get(this)===resolution.id;
-      if(ROGUE_ACTION_IDS.has(resolution.actionId)) markSnapshotUndo(this,resolution.id);
-      if(uncannyComplete) {
-        projectUncannyDodgeActivity(internal,resolution);
-        uncannyResolutionIds.delete(this);
+  const snapshot=await previousAdvanceResolution.call(this);
+  if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
+    const uncannyComplete=uncannyResolutionIds.get(this)===resolution.id;
+    if(ROGUE_ACTION_IDS.has(resolution.actionId))markSnapshotUndo(this,resolution.id);
+    if(uncannyComplete) {
+      const damage=resolution.damageComponents[0];
+      if(damage) {
+        const detail=`기묘한 회피: 피해 ${damage.raw} → ${damage.adjusted}`;
+        if(!resolution.detail.includes(detail))resolution.detail.push(detail);
       }
+      projectUncannyDodgeActivity(internal,resolution);
+      uncannyResolutionIds.delete(this);
+      return internal.getSnapshot();
     }
-    return originalAverage!==undefined?internal.getSnapshot():snapshot;
-  } finally {
-    if(damage&&originalAverage!==undefined)damage.average=originalAverage;
   }
+  return snapshot;
 };
 
 MockAdapter.prototype.undoLastResolution=async function undoRogueCoreResolution(){
