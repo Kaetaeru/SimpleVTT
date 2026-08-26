@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T21:46:00+09:00`
+- checkpointed_at: `2026-08-26T21:47:00+09:00`
 
 ## Durable checkpoint
 
@@ -24,21 +24,35 @@ R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client a
 - Cunning Action Dash: proof/fixes through `1e7b21df54a74252c3eb91bd255edbd7a0006311`; Phase12 `32964728723` / job `98164631534` green.
 - Cunning Action Disengage: proof/fixes through `732758391dd18ec52afa65b056185f544c51fe4b`; Phase12 `32965968749` / job `98168404394` green including Phase11 + `npm run build`.
 - Cunning Action Hide: exact checkpoint `7f8e9459e433164b916ee8ef12fdf3042492d9d7`; UI `32968629784` / frontend `98176845419` green; Phase12 `32968629791` / connected-protocol `98176845690` green including Phase11 + production `npm run build`.
-- Uncanny Dodge: exact product/test head `aefb7a890f266e058eeb0c4e4e72d5aee42734dc`. Remote reaction reconstruction/fix chain through `e07eac8f82a6ae5a4c2ea80ca92d87e2bf1802d3`; focused remote-owner proof + Phase12 wiring `37269ef485b5dff68abed654690bec97feb91317`; mounted-scene proof correction `aefb7a890f266e058eeb0c4e4e72d5aee42734dc`.
-  - Phase12 run `32969745056` / connected-protocol job `98180422630`: **success**. Connected authority suite including focused Uncanny Dodge, Phase11 offline walkthrough, and production `npm run build` all green.
-  - UI run `32969745069` / frontend job `98180422561`: **success**, including `Typecheck and build`.
-  - Focused proof covers Host-unknown Rogue 5+ reaction reconstruction, private owner interrupt prompt/acceptance, Host Reaction spend, existing atomic `floor(raw/2)` damage, one ordered Host event batch with Reaction + HP changes, Host permanent-library isolation, owning Client durable exactly-once HP write-back, duplicate no-op, reconnect preservation against stale projection overwrite, compensating Undo, inverse owner write-back, and duplicate Undo no-op.
-  - **Uncanny Dodge R2 is closed.**
+
+## Current Uncanny Dodge R2 checkpoint
+
+- Base focused remote-owner proof/fix chain is green through `aefb7a890f266e058eeb0c4e4e72d5aee42734dc`:
+  - remote Rogue reaction projection uses the existing `rogueCoreRuntimeAdapter` rather than a duplicate remote-only rules implementation;
+  - Host-unknown Rogue 5+ receives the existing Uncanny Dodge reaction;
+  - private owner interrupt prompt/acceptance routes through existing connected interrupt transport;
+  - Host spends Reaction and applies existing atomic `floor(raw/2)` damage;
+  - one ordered Host event batch carries Reaction + HP changes;
+  - Host permanent Character library stays unchanged;
+  - owning Client applies durable HP write-back exactly once; duplicate Host event is a no-op;
+  - reconnect preserves Host-authoritative HP/Reaction against stale projection overwrite;
+  - compensating Undo restores HP/Reaction and inverse owner write-back; duplicate Undo is a no-op.
+- `aefb7a8` validation: Phase12 `32969745056` / connected-protocol `98180422630` success including focused proof, Phase11 walkthrough, production `npm run build`; UI `32969745069` / frontend `98180422561` success including Typecheck/build.
+- Ponytail cleanup `d8df984ce868e3ae9bf8a78162e0924120f4f2c3` removes duplicated Rogue rule materialization from `characterSessionProjectionMount.ts`; connected authority step remained green on its exact-head run.
+- New test-only head `a1edf6bc869984aaabf5cf5f564f4f11c21399ad` explicitly proves a duplicate owner interrupt response is a no-op: resolution does not advance twice and Reaction is not spent twice.
+- Exact-head `a1edf6b` current validation at checkpoint:
+  - Phase12 run `32970182722` / connected-protocol job `98181814527`: connected authority suite + Phase11 walkthrough green; production frontend gate still `in_progress`.
+  - UI run `32970182652` / frontend job `98181814250`: all prior steps green; `Typecheck and build` still `in_progress`.
+- Therefore do **not** advance to Berserker yet. Read only these unfinished exact-head build results first. If both green, Uncanny Dodge R2 is closed at the latest tested head and canonical evidence can advance. If red, fix only the first direct cause.
 
 `windows-connected-playable` is R3 acceptance, not an R2 gate.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Stay in R2. Do not reopen validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, Cunning Hide, or Uncanny Dodge.
-3. Minimally advance `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` with exact Uncanny Dodge evidence above if GitHub has not already done so. Preserve unrelated canonical history.
-4. Continue the remaining R1 remote-owner matrix in existing R1 execution order. Inspect **Berserker Intimidating Presence** first (`1df452f` R1): existing domain/runtime action, target/effect/resource/economy/Activity/Undo, connected reconstruction, and whether a focused remote-owner proof already exists. Do not create a second fear engine/protocol/schema.
-5. If direct evidence shows a gap, add only the smallest deterministic remote-owner proof/fix using existing Host authority + ordered `ResolutionEvent` + Client apply + duplicate/reconnect + compensating Undo primitives.
-6. Verify the changed exact SHA through existing Phase12 connected gate plus production `npm run build`; fix only the first direct regression.
-7. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
-8. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
+2. Do not repeat validated Rage, Wild Shape, Cunning Dash, Cunning Disengage, Cunning Hide, or the already-green Uncanny authority proof.
+3. Read the unfinished exact-head results only: Phase12 `32970182722` / job `98181814527` production frontend step and UI `32970182652` / job `98181814250` Typecheck/build.
+4. If both are green, minimally update `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` with the latest Uncanny Dodge evidence, then continue the remaining R1 remote-owner matrix in R1 execution order with **Berserker Intimidating Presence** first (`1df452f`).
+5. If either is red, inspect only the first direct failure and apply the smallest fix. No new protocol/schema/reaction engine.
+6. `PLAN.md` remains unchanged unless routing materially changes. Persist `STATE.md`, then `control.json` LAST.
+7. R3 Windows/Tauri durability, R4 rendered UX/accessibility, R5 packaging remain separate.
