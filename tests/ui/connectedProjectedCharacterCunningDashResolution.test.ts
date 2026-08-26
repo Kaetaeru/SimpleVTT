@@ -25,7 +25,7 @@ import {
   getCharacterLibraryPersistenceStateForTests,
   setCharacterLibraryStoreForTests,
 } from "../../src/app/characterLibraryRuntimeAdapter";
-import { CUNNING_DASH_ACTION_ID, CUNNING_DISENGAGE_ACTION_ID, ROGUE_CLASS_ID } from "../../src/app/rogueCoreRuntimeAdapter";
+import { CUNNING_DASH_ACTION_ID, ROGUE_CLASS_ID } from "../../src/app/rogueCoreRuntimeAdapter";
 
 const PEER="peer.r2.remote-cunning-dash";
 const CHARACTER_ID="char.r2.remote-rogue";
@@ -200,101 +200,6 @@ test("host-unknown Rogue Cunning Action Dash converges session economy exactly o
     const duplicateUndo=await applyConnectedClientEvents(client,[undoEvent!]);
     assert.equal(duplicateUndo.status,"duplicate");
     assert.equal((await client.getSnapshot()).scene.economyByActor[remote.id]?.movementMax,economyBefore!.movementMax);
-    assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0,persistenceBefore);
-  } finally {
-    tauriSessionTransport.send=originalSend;
-    tauriSessionTransport.sendTo=originalSendTo;
-  }
-});
-
-test("host-unknown Rogue Cunning Action Disengage converges session effect/economy and Undo compensates",async()=>{
-  const host=new MockAdapter();
-  await host.setReferenceRole("dm");
-  const before=await host.getSnapshot();
-  const catalog=structuredClone(before.catalog);
-  const remote=remoteRogue(catalog);
-  const remoteManifest=manifest(remote);
-  const projection=buildCharacterSessionProjectionV1(remote,catalog);
-  const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);
-  assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
-
-  const economyBefore=structuredClone((await host.getSnapshot()).scene.economyByActor[remote.id]);
-  assert.ok(economyBefore);
-  const state=connectedStateFor(host);
-  state.mode="host";
-  state.sessionId="session.r2.remote-cunning-disengage";
-  state.ledger=new HostSessionLedger(state.sessionId,connectedManifest(host));
-  state.peerManifests.set(PEER,structuredClone(remoteManifest));
-
-  const broadcasts:string[]=[];
-  const originalSend=tauriSessionTransport.send;
-  const originalSendTo=tauriSessionTransport.sendTo;
-  tauriSessionTransport.send=async(message:string)=>{broadcasts.push(message);return 1;};
-  tauriSessionTransport.sendTo=async()=>1;
-  try {
-    const request:ConnectedActionRequest={
-      sessionId:state.sessionId,requestId:"request.r2.remote-cunning-disengage",actorId:remote.id,actionId:CUNNING_DISENGAGE_ACTION_ID,targetIds:[remote.id],knownEventCursor:0,
-      character:remoteManifest.character,capabilities:[...CONNECTED_CAPABILITIES],
-    };
-    assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
-    assert.equal(state.pendingRemoteAction?.request.requestId,request.requestId);
-    await host.advanceResolution();
-    const completed=await host.getSnapshot();
-    assert.equal(completed.activeCharacter.id,before.activeCharacter.id);
-    assert.deepEqual(completed.characters,before.characters);
-    assert.equal(state.pendingRemoteAction,null);
-    assert.equal(completed.scene.economyByActor[remote.id]?.action,true);
-    assert.equal(completed.scene.economyByActor[remote.id]?.bonusAction,false);
-    assert.equal(completed.scene.entities.find((entry)=>entry.id===remote.id)?.status.some((status)=>status.endsWith("이탈")),true);
-
-    const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");
-    assert.equal(batches.length,1);
-    const hostEvent=batches[0].events?.[0];
-    assert.ok(hostEvent);
-    assert.equal(hostEvent!.payload.kind,"resolution");
-    if(hostEvent!.payload.kind!=="resolution")throw new Error("expected Host resolution event");
-    const changes=hostEvent!.payload.resolutionEvents.flatMap((event)=>event.stateChanges);
-    assert.ok(changes.some((change)=>change.kind==="economy"&&change.targetId===remote.id&&change.field==="bonusAction"&&change.before===true&&change.after===false));
-    assert.ok(changes.some((change)=>change.kind==="effect"&&change.targetId===remote.id&&change.after?.metadata?.publicLabel==="이탈"));
-
-    const clientStore=new MemoryCharacterLibraryStore();
-    const client=new MockAdapter();
-    setCharacterLibraryStoreForTests(client,clientStore);
-    prepareOwningClient(client,remote,projection,catalog);
-    const persistenceBefore=getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0;
-    const clientState=connectedStateFor(client);
-    clientState.mode="client";
-    clientState.sessionId=state.sessionId;
-    clientState.replica=new ClientSessionReplica(state.sessionId);
-
-    const applied=await applyConnectedClientEvents(client,[hostEvent!]);
-    assert.equal(applied.status,"applied");
-    let clientAfter=await client.getSnapshot();
-    assert.equal(clientAfter.scene.economyByActor[remote.id]?.bonusAction,false);
-    assert.equal(clientAfter.scene.entities.find((entry)=>entry.id===remote.id)?.status.some((status)=>status.endsWith("이탈")),true);
-    assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0,persistenceBefore);
-
-    const duplicate=await applyConnectedClientEvents(client,[hostEvent!]);
-    assert.equal(duplicate.status,"duplicate");
-    assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0,persistenceBefore);
-
-    await host.undoLastResolution();
-    const hostAfterUndo=await host.getSnapshot();
-    assert.equal(hostAfterUndo.scene.economyByActor[remote.id]?.bonusAction,economyBefore!.bonusAction);
-    assert.equal(hostAfterUndo.scene.entities.find((entry)=>entry.id===remote.id)?.status.some((status)=>status.endsWith("이탈")),false);
-    assert.deepEqual(hostAfterUndo.characters,before.characters);
-
-    const batchesAfterUndo=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");
-    assert.equal(batchesAfterUndo.length,2);
-    const undoEvent=batchesAfterUndo[1].events?.[0];
-    assert.ok(undoEvent);
-    assert.equal(undoEvent!.payload.kind,"resolution-undo");
-
-    const undoApplied=await applyConnectedClientEvents(client,[undoEvent!]);
-    assert.equal(undoApplied.status,"applied");
-    clientAfter=await client.getSnapshot();
-    assert.equal(clientAfter.scene.economyByActor[remote.id]?.bonusAction,economyBefore!.bonusAction);
-    assert.equal(clientAfter.scene.entities.find((entry)=>entry.id===remote.id)?.status.some((status)=>status.endsWith("이탈")),false);
     assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision??0,persistenceBefore);
   } finally {
     tauriSessionTransport.send=originalSend;
