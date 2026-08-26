@@ -2,8 +2,8 @@
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
-  "status": "continue",
-  "reason": "Wild Shape R1 validation completed without reimplementing product logic. Exact failure was a test fixture Scene/Character temp-HP mismatch; test-only commit 11bc8581a04678e33796054117f05b5455a25db3 fixes it with +3/-1 and no product-code changes. Existing GitHub Actions are green at that exact SHA: UI run 32917949237 and Rules Domain run 32917949368 both completed success with production build gates passing. Canonical handoff/checklist now advance R1 to Monk Focus. Resume from STATE Next Exact Action: inspect existing Monk Focus primitives, credit completed behavior, implement only the smallest missing production action/resource/economy seam, then focused/build validation. Keep connected remote-owner/reconnect/exactly-once in R2 unless directly required by an R1 regression.",
+  "status": "blocked",
+  "reason": "Preflight reconciled the stale STATE against live GitHub without repeating validated work. Monk Focus runtime/action wiring and focused coverage already exist through 7402dc72b931ac74319da7ac3ffd24465f2f575a, where CI was still green. The first red commit is 576b1c1bd2af253ff15573f92d27467a78167dd0, which adds test:monk-focus to the production build gate; current CI run 32922271950 and release-smoke run 32922271963 both fail in their build step. The exact failing assertion/error is not available through the workflow-log channel, and local reproduction is blocked by repository clone/network DNS failure, so no speculative fix or checklist promotion was made. Resume from STATE Next Exact Action: obtain/reproduce the failing tests/ui/monkFocusActionRuntime.test.ts output at 576b1c1, apply the smallest contract-preserving fix, then rerun npm run build and both live gates before advancing canonical evidence.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T10:16:22+09:00"
+  "updated_at": "2026-08-26T11:47:12+09:00"
 }
