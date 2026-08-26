@@ -135,7 +135,7 @@ test("Fiend Dark One's Own Luck can turn the Warlock's failed saving throw into 
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,beforeUses);
 });
 
-test.skip("Warlock below Fiend feature level does not receive Dark One's Own Luck",async()=>{
+test("Warlock below Fiend feature level does not receive Dark One's Own Luck",async()=>{
   const adapter=new MockAdapter();
   await prepareFiend(adapter,5);
   await adapter.startInitiative();
