@@ -18,7 +18,6 @@ async function prepareFiend(adapter:MockAdapter,level=6){
   const internal=adapter as unknown as Internal;
   const fiend={
     ...structuredClone(internal.activeCharacter),
-    id:"char.test-fiend-luck",
     name:"Fiend Warlock",
     className:"워락",
     subclassName:"악마 후원자",
