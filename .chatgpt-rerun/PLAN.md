@@ -37,9 +37,9 @@ If Rerun files disagree with canonical V1 planning about product scope or order,
 
 ## Router checkpoint
 
-- reconciled_at: `2026-08-26T09:56:57+09:00`
-- observed branch head before this ordered Rerun checkpoint: `7e7a8495568cb343749e4887bc3eb2c4fcd1037a`.
-- observed product/source head before Rerun metadata-only commits: `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`.
-- GitHub CI evidence was re-reconciled; detailed no-repeat and validation facts belong only in `STATE.md`.
+- reconciled_at: `2026-08-26T10:16:22+09:00`
+- observed branch head before this ordered Rerun checkpoint: `871c3a3fa56bb8bf44bc489caee9eab0c3a59783`.
+- latest execution-validated product/test checkpoint before canonical/Rerun metadata commits: `11bc8581a04678e33796054117f05b5455a25db3`.
+- GitHub Actions evidence is green for the resolved R1 checkpoint; canonical handoff/checklist were advanced before this Rerun checkpoint.
 - this durable checkpoint uses the required write order `PLAN -> STATE -> control.json`.
-- product routing remains delegated to `.agents/V1_CURRENT_HANDOFF.md`; no canonical product pointer is advanced without green executable validation.
+- product routing remains delegated to `.agents/V1_CURRENT_HANDOFF.md`; no product scope is duplicated here.
