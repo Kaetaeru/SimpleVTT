@@ -71,6 +71,7 @@ import "./monkOpenHandWholenessRuntimeAdapter";
 import "./monkOpenHandFleetStepRuntimeAdapter";
 import "./monkOpenHandQuiveringPalmRuntimeAdapter";
 import "./rogueCoreRuntimeAdapter";
+import "./rogueCunningDisengageEventRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
 import "./unarmedControlRuntimeAdapter";
