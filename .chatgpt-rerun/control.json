@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Rage, Wild Shape, Monk Focus, and Rogue R1 remain validated and must not be repeated. Berserker Intimidating Presence is the current R1. Concurrent duplicate adapters were reconciled; the coherent wiring uses barbarianBerserkerIntimidatingPresenceRuntimeAdapter and the build-gated barbarianBerserkerIntimidatingPresenceRuntime test. Commit ca4667662184a451107c1b2d5182b63706c8dfb7 added the optional domain economy seam and the focused test now includes freeform non-stranding, but at the durable checkpoint the wired adapter had not yet passed useBonusActionEconomy based on session mode. Resume from STATE: reconcile live HEAD first, avoid recreating duplicate variants, apply only the missing one-line dispatch if still absent, then require exact-head npm run build green before canonical advancement. R2 remote/reconnect remains excluded.",
+  "reason": "Rage, Wild Shape, Monk Focus, and Rogue R1 remain validated and must not be repeated. Berserker Intimidating Presence remains current R1. Duplicate variants are already removed. ca466766 added the optional freeform economy seam, 3465010 passed that flag through the existing domain resolver, and ba409e1 fixed resolver-name shadowing. Exact-head UI run 32934018934 and Phase 12 run 32934018931 for ba409e19 were still in progress at the durable checkpoint. Resume from STATE: reconcile live HEAD first, do not repeat those fixes, then use exact-head build-gated evidence; green advances canonical routing, red fixes only the first Berserker-related failure. R2 remote/reconnect remains excluded.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T14:24:40+09:00"
+  "updated_at": "2026-08-26T14:26:30+09:00"
 }
