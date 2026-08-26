@@ -68,6 +68,8 @@ test("host-unknown Rogue Cunning Disengage converges effect/economy exactly once
   try {
     const request:ConnectedActionRequest={sessionId:state.sessionId,requestId:"request.r2.remote-cunning-disengage",actorId:remote.id,actionId:CUNNING_DISENGAGE_ACTION_ID,targetIds:[remote.id],knownEventCursor:0,character:remoteManifest.character,capabilities:[...CONNECTED_CAPABILITIES]};
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
+    assert.equal(state.pendingRemoteAction?.request.requestId,request.requestId,"Host must keep staged Cunning Disengage pending until resolution completion");
+    await host.advanceResolution();
     const completed=await host.getSnapshot();assert.equal(completed.activeCharacter.id,before.activeCharacter.id);assert.deepEqual(completed.characters,before.characters);assert.equal(state.pendingRemoteAction,null);assert.equal(state.ledger.cursor,1);
     assert.equal(disengaged(completed.scene,remote.id),true);assert.equal(completed.scene.economyByActor[remote.id]?.bonusAction,false);
     const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");assert.equal(batches.length,1);
