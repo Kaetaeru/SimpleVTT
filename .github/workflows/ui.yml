@@ -124,6 +124,14 @@ jobs:
           tests/ui/visualDiceProjection.test.ts
           tests/ui/visualDiceStructure.test.ts
           tests/ui/movementReactionStructure.test.ts
+      - name: Diagnose Cutting Words ability check
+        run: npx tsx --test --test-name-pattern="successful ability check" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+      - name: Diagnose Cutting Words attack roll
+        run: npx tsx --test --test-name-pattern="successful attack" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+      - name: Diagnose Cutting Words staged damage
+        run: npx tsx --test --test-name-pattern="staged damage" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+      - name: Diagnose Cutting Words below-level gate
+        run: npx tsx --test --test-name-pattern="below College of Lore level 3" tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
       - name: Typecheck and build
         shell: bash
         run: |
