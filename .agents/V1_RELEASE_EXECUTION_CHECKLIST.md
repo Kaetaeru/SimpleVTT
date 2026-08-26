@@ -651,7 +651,10 @@ R1 mechanics-complete subclass actions -> action bar exposure
 1. 통합 상태는 exact checkpoint `4a4cdb1`에서 full TS matrix 1303/1303, UI matrix 965/965와 production build가 green이다.
 2. open ability-check DM DC, generic Tactical Mind, Fighter Indomitable, Rage source, Druid Wild Shape R1 local lifecycle, Monk Focus R1 local lifecycle, Rogue Cunning Action/Uncanny Dodge R1은 완료했다.
 3. Rogue exact checkpoint `5bb8bfbc4753dcc15f1198a04c0982817176c644`: UI run `32932781542` / job `98068084958`과 Phase 12 Connected Session run `32932781591` / connected-protocol job `98068085017`가 success이며 `npm run build`의 Rogue focused gate와 production build가 green이다.
-4. 다음 순서는 이미 domain resolver가 있는 subclass action 중 mechanics-complete인데 production action bar에 빠진 것만 노출하는 작업이다. 완료된 Rage/Wild Shape/Monk Focus/Rogue R1은 재구현하지 않는다.
-5. connected remote-owner exactly-once/reconnect/event-native Undo matrix는 R2에서 별도 완료하며, 그 전에는 V1-21/connected release DONE으로 승격하지 않는다.
+4. 이후 subclass inventory에서 Berserker Intimidating Presence, Open Hand Wholeness of Body, Open Hand Fleet Step, Devotion Holy Nimbus, Open Hand Quivering Palm supported path, Devotion Smite of Protection, Fiend Dark One's Own Luck까지 R1 execution evidence를 확보했다. 완료된 항목은 재구현하지 않는다.
+5. Devotion Smite of Protection exact checkpoint `ec89fa251d969a250c20e11f0abe6d7a4f13d58e`: UI run `32950193461` / frontend job `98119645421`, Phase 12 run `32950193590` / connected-protocol job `98119646335` success.
+6. Fiend Dark One's Own Luck exact checkpoint `95042b2ef3c65aef3619334c0bec1ad243d165f2`: UI run `32952470669` / frontend job `98126755335`, Phase 12 run `32952470663` / connected-protocol job `98126755397` success. `npm run build`에 `test:fiend-luck`가 포함되며 ability-check/resource/Activity/Undo, saving-throw, below-level 3개 focused case가 모두 열린 상태다.
+7. 다음 순서는 남은 subclass domain resolver inventory에서 mechanics-complete인데 production action bar에 빠진 것 하나만 식별하는 작업이다. Preserve Life/Land's Aid처럼 richer player-choice input이 필요한 partial feature는 자동할당하거나 dead button으로 노출하지 않는다.
+8. connected remote-owner exactly-once/reconnect/event-native Undo matrix는 R2에서 별도 완료하며, 그 전에는 V1-21/connected release DONE으로 승격하지 않는다.
 
 상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.
