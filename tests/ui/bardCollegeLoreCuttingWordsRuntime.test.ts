@@ -94,7 +94,8 @@ test("Cutting Words reduces another creature's successful ability check and Undo
     otherCharacterCheckAction(),
   ];
 
-  await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
+  snapshot=await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
+  assert.equal(snapshot.resolution?.stage,"roll-animation",JSON.stringify(snapshot.resolution));
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
   const total=snapshot.resolution?.rollTotal;
