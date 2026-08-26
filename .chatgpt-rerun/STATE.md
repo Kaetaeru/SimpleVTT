@@ -3,11 +3,11 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch status to publish: `blocked`
+- dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T22:31:00+09:00`
+- checkpointed_at: `2026-08-26T22:32:00+09:00`
 
 ## Durable checkpoint
 
@@ -37,25 +37,21 @@ R2 is active. Reuse existing Host authority, ordered `ResolutionEvent`, Client a
 - `df37d8a1ec21459578d79bc076b53b58f142f39c` fixes only that seam by keying the trigger to `actorId` and clearing/projecting it only for the matching actor. No new protocol, schema, movement engine, or remote-only rules engine.
 - `664d976b6c9639fb374c9524ec187370a67c50c8` adds the missing remote free-variant execution proof: Host-authoritative `free-move`, no Focus spend, no focused effect, and no second Bonus Action spend. Product code unchanged.
 - Exact latest proof gates are green: UI `32974145313` / `98194654864`; Phase12 `32974145312` / `98194654526`.
+- Canonical handoff commit `de4b46a893671d74e7b0cdfdd42f304c29d55fe5` closes Fleet Step R2 and advances NEXT.
+- Release execution router commit `38b910a179bae2163efd82eab32124ab1a179556` records Fleet Step R2 evidence and advances its single NEXT pointer to Holy Nimbus.
 
-## Canonical reconciliation still required
+## Active R2 slice — Devotion Holy Nimbus
 
-`.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` still point to Fleet Step R2. This is stale routing metadata, not a product blocker.
+Canonical NEXT is **Devotion Holy Nimbus remote-owner gap**. R1 exact checkpoint `21b5ab830442318e5c5b499464a746fb4370cd4b` is already source/execution green; do not reimplement or rerun it merely because R2 started.
 
-Do not start Holy Nimbus before repairing those canonical pointers. When repaired, mark Fleet Step R2 closed with product fix `df37d8a1ec21459578d79bc076b53b58f142f39c` and exact proof head `664d976b6c9639fb374c9524ec187370a67c50c8`, then advance the single R2 pointer to **Devotion Holy Nimbus remote-owner gap**. Keep V1-31/V1-32 PARTIAL; Fleet Step alone does not complete R2.
-
-## Blocked reason
-
-The current GitHub connector exposes whole-file replacement for repository text writes but no safe partial-patch operation. Both canonical files are large evidence ledgers. Replacing either from a truncated/hand-reconstructed body would violate the repository rule to preserve unrelated evidence. Repository search found no existing canonical patch helper to reuse. Therefore further product work is intentionally blocked rather than starting Holy Nimbus from stale canonical routing metadata.
-
-Unblock condition: provide a safe partial-patch repository write capability, or otherwise establish an exact full-file transformation path that can be verified byte-for-byte before write. Then perform the two canonical pointer edits below and resume normally.
+Reuse the existing Paladin Devotion resolver/resource, initiative Bonus Action/freeform economy split, self target, Activity, generic `ResolutionEvent`, Character owner write-back, duplicate/reconnect primitives, and event-native Undo. Do not create a second aura/effect engine, protocol, schema, or remote-only rules path.
 
 ## Next Exact Action
 
 1. Reconcile live `work/v1-composite`; GitHub wins if newer.
-2. Do not repeat any validated R2 slice, including Fleet Step exact-head gates above.
-3. Safely patch `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` to record Fleet Step R2 closure with product fix `df37d8a1` and exact proof head `664d976`, then advance NEXT to **Devotion Holy Nimbus remote-owner gap**. Preserve all unrelated evidence.
-4. Only after those canonical pointers are repaired, inspect existing Holy Nimbus domain/runtime/reconstruction/tests. Reuse the R1 checkpoint `21b5ab830442318e5c5b499464a746fb4370cd4b`, existing Paladin Devotion resolver/resource, initiative Bonus Action/freeform economy split, self target, Activity, Host authority/event, owner persistence, duplicate/reconnect and Undo primitives.
-5. Add/reuse the smallest Host-unknown Holy Nimbus focused proof. If a direct red appears, fix only the first Holy Nimbus-related cause.
+2. Do not repeat any validated R2 slice, including Fleet Step exact proof head `664d976`.
+3. Inspect existing Holy Nimbus domain/runtime/reconstruction/tests before adding code. Reuse R1 checkpoint `21b5ab830442318e5c5b499464a746fb4370cd4b` and current connected authority/event/owner persistence/duplicate/reconnect/Undo primitives.
+4. Add or reuse the smallest Host-unknown Devotion Paladin proof: authoritative Holy Nimbus intent, resource/economy/self-effect ordered events, Host permanent-library isolation, owning Client exactly-once convergence, duplicate request/event safety, reconnect/fresh projection, compensating Undo and owner inverse convergence.
+5. If a direct red appears, fix only the first Holy Nimbus-related cause. No broad refactor.
 6. Verify exact-head production frontend/connected gates. R3 Windows/Tauri, R4 rendered UX/accessibility, R5 packaging remain separate.
-7. `PLAN.md` remains unchanged unless routing materially changes. When unblocked and progress resumes, persist `STATE.md`, then `control.json` LAST.
+7. `PLAN.md` remains unchanged unless routing materially changes. After meaningful progress persist `STATE.md`, then `control.json` LAST.
