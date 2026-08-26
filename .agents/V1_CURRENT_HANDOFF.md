@@ -1,7 +1,7 @@
 # SimpleVTT V1 Current Handoff
 
 Status: **CURRENT CANONICAL HANDOFF**
-Updated: **2026-08-26 Asia/Seoul**
+Updated: **2026-08-27 Asia/Seoul**
 Repository: **`Kaetaeru/SimpleVTT`**
 Canonical target branch: **`work/v1-composite`**
 
@@ -61,11 +61,11 @@ Next remaining R1-backed slices, in current source/execution order:
 
 For every slice, reuse current SessionProjection/ActionRequest/ResolutionEvent/owner write-back/reconnect/Undo primitives. Do not add protocol/schema or fake action-bar commands unless a direct product requirement proves they are necessary.
 
-## 4. Next exact action — Lore Peerless Skill remote-owner gap
+## 4. Active — Lore Peerless Skill remote-owner verification
 
-R1 exact checkpoint `88bb72dc3d725af049025728003ab6e6b8db1eb0` is already local/source execution-green. Do not reimplement or rerun it merely because R2 starts.
+R1 exact checkpoint `88bb72dc3d725af049025728003ab6e6b8db1eb0` remains local/source execution-green and was not reimplemented.
 
-Current production semantics to preserve:
+Current production semantics preserved:
 
 - level 14+ College of Lore Bard only;
 - after the Bard fails an ability check or attack roll, the existing owner interrupt offers Peerless Skill;
@@ -75,21 +75,37 @@ Current production semantics to preserve:
 - existing ResolutionEvent history, Character owner write-back and generic Undo remain authoritative;
 - no standalone fake action is added.
 
-Observed content-authority fact before R2 implementation: canonical `content/modules/dnd-srd-5.2.1.subclasses/module.json` currently contains Berserker, Open Hand, Devotion and Fiend, but not `dnd.srd521.subclass.bard.college-of-lore`. Treat this as a likely real Host-unknown projection gap, but keep the fix minimal and tied to the focused proof.
+Current focused R2 implementation/proof:
 
-Next work:
+- `8c9f29c3434e10db7254af46dfb6f526bd77c2a2` adds only `tests/ui/connectedProjectedCharacterPeerlessSkillResolution.test.ts`, covering the Host-unknown level-14 Lore Bard ability-check branch: genuine failure -> owner-only interrupt -> authoritative d10 success -> success-only Bardic Inspiration spend -> one Host event -> owning Client exactly-once persistence -> duplicate safety -> reconnect/rebind -> compensating Undo/inverse convergence.
+- `0713b637bfd7b542e0b3e8f27d2c95541057e1a3` wires only that proof into the existing Phase12 connected authority gate.
+- `aae3f10a466afb25b75d4358a2b410e3e5aa38ab` strengthens the proof with an exact failed-target assertion; no product runtime change.
+- Direct canonical-content inspection exposed a real SessionProjection gap: College of Lore identity was missing from `content/modules/dnd-srd-5.2.1.subclasses/module.json` even though Host reconstruction requires canonical subclass identity.
+- `919124900ea741b8e45d93a5dd975bf5e3c2ed65` adds only `dnd.srd521.subclass.bard.college-of-lore` with parent Bard. No runtime refactor, protocol or schema change.
+- Compare `c1aea379ee70f9a950860147ac945dbf247180b6...919124900ea741b8e45d93a5dd975bf5e3c2ed65` confirms the entire Peerless delta is limited to the focused test, one Phase12 gate-line change, and one subclass-content entry.
+
+Verification is currently blocked by GitHub Actions startup/queue behavior, not by an observed product failure:
+
+- exact product/proof/gate head: `919124900ea741b8e45d93a5dd975bf5e3c2ed65`;
+- UI run `32984089140`: queued with zero jobs;
+- duplicate exact-head UI run `32984184587`: `startup_failure` with zero jobs;
+- retrying the startup-failed run through the available Actions API returned `403 This workflow run cannot be retried`;
+- exact-head Phase12 has not registered;
+- older Phase12 `32983965455` is queued at pre-gate head `8c9f29c3434e10db7254af46dfb6f526bd77c2a2`, so it is not closure evidence;
+- current branch has no in-progress Actions jobs. Do not mutate product or create no-op commits merely to force CI.
+
+Next exact action:
 
 ```text
 reconcile live branch
--> inspect the existing Peerless Skill R1 runtime proof and one connected owner-interrupt analogue
--> add the smallest Host-unknown projected Lore Bard proof around a failed ability check first
--> preserve the existing owner interrupt, authoritative Bardic Inspiration die, success-only resource spend, one Host commit and generic Undo
--> verify Host permanent Character library isolation, owning Client exactly-once apply/persist, duplicate request/event no-op, reconnect/rebind, compensating Undo + owner inverse convergence
--> cover the attack-only branch only if the focused connected evidence shows a distinct remote-authority gap; do not duplicate R1 coverage by default
--> if first direct red appears, fix only that cause; no broad refactor and no protocol/schema/fake action without direct evidence
--> verify exact-head UI frontend + Phase12 connected production gate
--> close canonically, then re-read the canonical remaining R2 order instead of guessing
+-> inspect only exact-head 919124900ea741b8e45d93a5dd975bf5e3c2ed65 UI/Phase12 registration and jobs
+-> if jobs execute and the first Peerless-specific red appears, fix only that cause
+-> if UI frontend/Typecheck build and Phase12 connected-protocol + Phase11 + production frontend are green, close Peerless canonically
+-> then advance to Lore Cutting Words
+-> if Actions remains queued/startup-failed with zero jobs, preserve the current code unchanged; this is an external verification blocker, not evidence for a product refactor
 ```
+
+Do not add a separate remote attack proof unless direct connected evidence shows a distinct authority gap; R1 already covers the attack branch.
 
 ## 5. Hard boundaries
 
@@ -106,4 +122,4 @@ reconcile live branch
 
 Use only the gate needed by the active slice plus its existing connected production gate. Do not rerun the historical full matrix for resume alone.
 
-When the focused Lore Peerless Skill proof is added, run that proof only during iteration. On pushed source changes, GitHub Actions exact-head UI and Phase12 connected jobs are the closure evidence. Rust/Tauri/Windows evidence stays separate until R3.
+Peerless Skill closure requires GitHub Actions evidence from the exact product/proof/gate head: UI frontend/Typecheck build plus Phase12 focused connected authority proof, Phase11 walkthrough and production frontend gate. Rust/Tauri/Windows evidence stays separate until R3.
