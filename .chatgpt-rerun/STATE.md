@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:15:29+09:00`
+- checkpointed_at: `2026-08-26T14:18:53+09:00`
 
 ## Durable execution checkpoint
 
@@ -39,7 +39,9 @@ Live production conventions for the Berserker implementation are now verified:
 - `src/app/clericTurnUndeadActionRuntimeAdapter.ts` is the closest production pattern: seed the Character resource into TurnRuntime, resolve the existing domain transaction, apply/persist ResolutionEvents, commit TurnRuntime, project Activity, and record the same events for generic event-native Undo.
 - `tests/ui/clericTurnUndeadActionRuntime.test.ts` shows the focused deterministic pattern: `setQueuedD20(...)`, explicit initiative/current actor selection, resource/economy/effect assertions, then `undoLastResolution()` restoration.
 - `src/app/productionPlayRuntimeAdapter.ts` confirms `ActionVm.target` supports `any`; a Berserker action can project creature targets without inventing a new target kind. Self remains excluded by the domain feature contract.
-- No source code was changed after this verification because the Rerun 18-minute checkpoint was reached. This avoids starting an unverified multi-file patch near the hard stop.
+- `resolveRuntimeTargetingFact(...)` treats a missing authoritative spatial-module fact as unconstrained/in-range, so a projected 30-foot action can preserve the mapless fallback while rejecting explicit provider facts beyond 30 feet.
+- Important freeform seam: `compileBerserkerIntimidatingPresence(...)` currently always emits a `use-economy` Bonus Action operation. Existing production patterns such as Abjure Foes and Rage omit turn-economy consumption in freeform. The production adapter must not strand freeform Bonus Action state. Add only the smallest compatibility seam, preferably optional `useBonusActionEconomy?: boolean` with the existing domain behavior as the default, and pass `false` only for freeform. This is plumbing, not a new mechanic.
+- No product source patch was started after this verification because the Rerun hard-stop boundary was reached.
 
 `PLAN.md` remains intentionally unchanged because run identity and routing mechanism did not change.
 
@@ -53,6 +55,6 @@ Live production conventions for the Berserker implementation are now verified:
 
 ## Next Exact Action
 
-Create the smallest dedicated Berserker `Intimidating Presence` production adapter, following the existing Turn Undead event-native action pattern. Reuse `barbarianRuntimeResourceDefinitions`, `berserkerIntimidatingPresenceDc`, and `resolveBerserkerIntimidatingPresence`; do not duplicate their mechanics. Project one Bonus Action with `target: "any"`, excluding self, and let the domain resolver own 30-foot targeting, resource spend, Wisdom saves, frightened effects, and economy. Add one focused deterministic UI/runtime test using `setQueuedD20(...)` that proves projection, Bonus Action/resource consumption, failed-save frightened effect, Activity, and generic event-native Undo restoration. Wire only that adapter/test into the canonical offline/build composition, run the exact-head `npm run build` gate, and advance canonical routing only after green evidence. Do not touch passive Berserker features or R2 remote/reconnect behavior.
+Create the smallest dedicated Berserker `Intimidating Presence` production adapter, following the existing Turn Undead event-native action pattern. Reuse `barbarianRuntimeResourceDefinitions`, `berserkerIntimidatingPresenceDc`, and `resolveBerserkerIntimidatingPresence`; do not duplicate their mechanics. Add the minimal optional economy-plumbing seam needed so initiative spends Bonus Action while freeform does not strand turn economy, preserving the current domain default behavior. Project one Bonus Action with `target: "any"`, excluding self; use `resolveRuntimeTargetingFact(...)` so explicit facts beyond 30 feet are ineligible while missing spatial facts remain unconstrained. Add focused deterministic UI/runtime evidence using `setQueuedD20(...)` for projection, initiative Bonus Action/resource consumption, failed-save frightened effect, Activity, generic event-native Undo restoration, and freeform non-stranding. Wire only that adapter/test into canonical offline/build composition, run exact-head `npm run build`, and advance canonical routing only after green evidence. Do not touch passive Berserker features or R2 remote/reconnect behavior.
 
 Keep the same run/sequence/task identity. `control.json` must be written last.
