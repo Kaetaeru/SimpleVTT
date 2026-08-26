@@ -80,12 +80,12 @@ test("Cunning Action Disengage applies the existing Disengage state and Undo res
   await adapter.setCurrentActor(actorId);
   await adapter.resolveAction(CUNNING_DISENGAGE_ACTION_ID,[actorId]);
   snapshot=await finish(adapter);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.includes("이탈"),true);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("이탈")),true);
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,false);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.includes("이탈"),false);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("이탈")),false);
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,true);
 });
 
