@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T18:40:00+09:00`
+- checkpointed_at: `2026-08-26T18:42:00+09:00`
 
 ## Durable execution checkpoint
 
@@ -17,21 +17,17 @@ Validated work was not repeated: Rage, Wild Shape, Monk Focus, Rogue R1, Berserk
 
 ## College of Lore Peerless Skill R1 — execution-validated
 
-Live GitHub advanced beyond the prior Fiend inventory checkpoint and had already selected/implemented College of Lore `Peerless Skill` as the next mechanics-complete production follow-up. That work was adopted instead of duplicating a different subclass slice.
-
-- Focused gate is wired as `test:lore-peerless-skill` in `npm run build`.
-- Existing implementation reuses `resolveLorePeerlessSkill`, Bardic Inspiration resource/runtime state, existing interrupt/follow-up flow, ResolutionEvent persistence, Activity, and Undo primitives.
-- Prior exact-head focused failure was isolated to the production attack case Activity record: mechanics already converted miss -> hit, spent Inspiration, applied damage, and restored via Undo; the final Activity detail lacked `비할 데 없는 기술`.
-- Minimal product fix: `88bb72dc3d725af049025728003ab6e6b8db1eb0` (`fix: record Peerless Skill attack activity`). It refreshes the completed Peerless attack Activity from the authoritative resolution; no attack/resource/Undo mechanics were changed.
-- UI run `32953773211` / frontend job `98130829740`: **success**, including `Typecheck and build` and the focused `test:lore-peerless-skill` gate.
+- Exact product checkpoint: `88bb72dc3d725af049025728003ab6e6b8db1eb0` (`fix: record Peerless Skill attack activity`).
+- Existing `resolveLorePeerlessSkill`, Bardic Inspiration resource/runtime state, interrupt/follow-up flow, ResolutionEvent persistence, Activity, and Undo primitives are reused; no duplicate resolver/subsystem was added.
+- Focused `test:lore-peerless-skill` is part of `npm run build` and covers level-14 eligibility, failed ability-check conversion, failure-with-resource-preservation, missed attack conversion to hit/damage, Activity, Undo restoration, and below-level non-projection.
+- UI run `32953773211` / frontend job `98130829740`: **success**, including `Typecheck and build` and `test:lore-peerless-skill`.
 - Phase 12 run `32953773099` / connected-protocol job `98130829706`: **success**, including connected authority protocol, offline walkthrough, and production frontend gate.
-- Windows connected-playable is R3 packaging/acceptance debt and is not required to claim this R1 execution checkpoint.
-- R1 evidence covers level-14 eligibility, failed ability-check conversion, failure-with-resource-preservation, failed attack conversion to hit/damage, Activity, Undo restoration, and below-level non-projection.
+- Windows connected-playable remains R3 packaging/acceptance debt and is not an R1 completion gate.
 
-## Canonical synchronization — partially complete
+## Canonical synchronization — complete
 
-- `.agents/V1_CURRENT_HANDOFF.md` now records Peerless Skill exact checkpoint `88bb72d`, UI `32953773211` / `98130829740`, Phase 12 `32953773099` / `98130829706`, source-complete protection, R1 checklist entries, and the remaining-inventory Next Exact Action. Canonical handoff sync commit: `c9016dc1729fa1789d03c6aad8ab4ef430ab8edd`.
-- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` still needs the same exact Peerless evidence synchronized before selecting the next subclass slice.
+- `.agents/V1_CURRENT_HANDOFF.md` records Peerless Skill exact checkpoint/evidence and the remaining-inventory pointer. Commit: `c9016dc1729fa1789d03c6aad8ab4ef430ab8edd`.
+- `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` records the same R1 execution evidence and keeps the next step on the remaining subclass inventory. Commit: `8cd1be27d1afca578d84ccc6ce2407567580a3ff`.
 - `PLAN.md` remains unchanged.
 
 Inventory decisions to preserve:
@@ -42,13 +38,12 @@ Inventory decisions to preserve:
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. Then synchronize the exact Peerless Skill R1 evidence into `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` only; `.agents/V1_CURRENT_HANDOFF.md` is already synchronized at `c9016dc` and must not be rewritten just to repeat evidence.
+Reconcile live `work/v1-composite` first. Then follow `.agents/V1_CURRENT_HANDOFF.md`: continue the remaining-subclass domain-resolver inventory and identify exactly one mechanics-complete resolver that still lacks production action projection.
 
-After release-checklist sync, continue the remaining-subclass domain-resolver inventory and select exactly one next mechanics-complete resolver missing production projection.
-
-- Do not reopen Peerless, Fiend/Smite, or other validated R1 work without direct regression evidence.
+- Do not reopen Peerless or earlier validated R1 work without direct regression evidence.
 - Do not select `Preserve Life`, `Land's Aid`, or another richer-input/partial feature as a dead/simple action button.
 - Reuse existing domain/runtime/local/freeform/initiative/economy/Activity/Undo primitives.
+- Add only focused deterministic evidence for the selected gap.
 - Require exact-head build/UI/Connected green before advancing another R1 slice.
 - Do not expand into R2 unless a direct R1 regression requires it.
 
