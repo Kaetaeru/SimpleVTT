@@ -42,7 +42,7 @@ function markHandled(adapter:MockAdapter,id:string){const ids=handledSeeds.get(a
 function seedState(adapter:MockAdapter,internal:AdapterState){
   let state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);if(!state){ensureAdapterTurnRuntimeState(adapter,internal.scene);state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);}
   const combatant=state?.combatants[internal.activeCharacter.id],resource=focus(internal.activeCharacter);if(!state||!combatant||!resource||combatant.resources.some((entry)=>entry.id===resource.id))return state;
-  combatant.resources.push({id:resource.id,label:resource.label,current:resource.current,maximum:resource.max,recovery:resource.recovery?structuredClone(resource.recovery):undefined});const expected=state.revision;state.revision+=1;
+  combatant.resources.push({id:resource.id,label:resource.label,current:resource.current,maximum:resource.max});const expected=state.revision;state.revision+=1;
   return commitAdapterTurnRuntimeState(adapter,internal.scene,expected,state)?snapshotAdapterTurnRuntimeState(adapter,internal.scene):undefined;
 }
 function rollDie(adapter:MockAdapter,id:string,sides:number,offset:number){const limit=Math.floor(20/sides)*sides;let face:number,attempt=0;do{face=(MockAdapter.prototype as unknown as DicePrototype).d20.call(adapter,id,offset+attempt++*32);}while(face>limit);return((face-1)%sides)+1;}
