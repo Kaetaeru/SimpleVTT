@@ -10,7 +10,7 @@ import {
 } from "../../src/domain/barbarianBerserker";
 import { BERSERKER_INTIMIDATING_PRESENCE_ACTION_ID } from "../../src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter";
 
-async function berserker(){
+async function berserker(mode:"initiative"|"freeform"="initiative"){
   const adapter=new MockAdapter();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
   internal.activeCharacter={
@@ -24,9 +24,11 @@ async function berserker(){
     resources:[],
   };
   await adapter.getSnapshot();
-  await adapter.startInitiative();
-  await adapter.setCurrentActor(internal.activeCharacter.id);
-  await adapter.selectDmActor(internal.activeCharacter.id);
+  if(mode==="initiative"){
+    await adapter.startInitiative();
+    await adapter.setCurrentActor(internal.activeCharacter.id);
+    await adapter.selectDmActor(internal.activeCharacter.id);
+  }else await adapter.setSessionMode("freeform");
   return adapter;
 }
 
@@ -39,6 +41,7 @@ test("Berserker Intimidating Presence projects, frightens on a failed save, spen
   assert.equal(action?.economy,"추가 행동");
   assert.equal(action?.eligibleTargetIds.includes(actorId),false);
   assert.equal(action?.eligibleTargetIds.includes("combatant.goblin-a"),true);
+  assert.equal(action?.eligibleTargetIds.includes("combatant.goblin-b"),false);
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID)?.current,1);
 
   await adapter.setQueuedD20(1);
@@ -54,4 +57,17 @@ test("Berserker Intimidating Presence projects, frightens on a failed save, spen
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID)?.current,1);
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,true);
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("공포")),false);
+});
+
+test("freeform Intimidating Presence spends its feature resource without stranding Bonus Action economy",async()=>{
+  const adapter=await berserker("freeform");
+  let snapshot=await adapter.getSnapshot();
+  const actorId=snapshot.activeCharacter.id;
+  const bonusBefore=snapshot.scene.economyByActor[actorId]?.bonusAction;
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction(BERSERKER_INTIMIDATING_PRESENCE_ACTION_ID,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,bonusBefore);
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID)?.current,0);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("공포")),true);
 });
