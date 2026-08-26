@@ -95,6 +95,7 @@ async function seed(host:MockAdapter,peer:string,sessionId:string,remoteManifest
   const routed=await routeConnectedActionRequest(host,{peer,message:""},request(sessionId,requestId,remoteManifest,UNARMED_DAMAGE_ACTION_ID,targetId,cursor));
   assert.equal(routed,true);
   let snapshot=await host.getSnapshot();
+  for(let step=0;step<8&&snapshot.resolution?.stage!=="interrupt";step++)snapshot=await host.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"interrupt");
   assert.equal(snapshot.resolution?.interrupt?.optionName,"진동장 주입");
   const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
