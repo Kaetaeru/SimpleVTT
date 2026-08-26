@@ -11,6 +11,7 @@ on:
     paths:
       - "src/**"
       - "src-tauri/**"
+      - "content/**"
       - "tests/ui/**"
       - "scripts/start-acceptance-pair.ps1"
       - "Start SimpleVTT Acceptance Pair.cmd"
@@ -23,6 +24,7 @@ on:
     paths:
       - "src/**"
       - "src-tauri/**"
+      - "content/**"
       - "tests/ui/**"
       - "scripts/start-acceptance-pair.ps1"
       - "Start SimpleVTT Acceptance Pair.cmd"
