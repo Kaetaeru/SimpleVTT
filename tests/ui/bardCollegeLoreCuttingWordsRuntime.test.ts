@@ -10,6 +10,7 @@ import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";
 const INTERRUPT_ID="follow-up.bard.college-of-lore.cutting-words";
 const GOBLIN_ID="combatant.goblin-a";
 const OTHER_CHARACTER_ID="char.mira";
+const OTHER_CHARACTER_CHECK_ID="action.mira.ability.str";
 
 async function prepareLoreBard(adapter:MockAdapter,level=5){
   const internal=adapter as unknown as {activeCharacter:CharacterSheet};
@@ -65,7 +66,7 @@ async function finish(adapter:MockAdapter){
 
 function otherCharacterCheckAction():ActionVm{
   return {
-    id:"action.ability.str",
+    id:OTHER_CHARACTER_CHECK_ID,
     actorId:OTHER_CHARACTER_ID,
     name:"근력 판정",
     category:"basic",
@@ -93,7 +94,7 @@ test("Cutting Words reduces another creature's successful ability check and Undo
     otherCharacterCheckAction(),
   ];
 
-  await adapter.resolveAction("action.ability.str",[]);
+  await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
   const total=snapshot.resolution?.rollTotal;
