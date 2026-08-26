@@ -3,11 +3,9 @@ import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionVi
 import { MockAdapter } from "./mockAdapter";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { appendAdapterInterruptEvents, projectAdapterTurnRuntime } from "./phase09RealTurnRuntimeAdapter";
+import { previewRuntimeAtomicAttackDamage } from "./phase09RealRuntimeAttackAdapter";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
-import {
-  consumeAtomicAttackDamagePreview,
-  queueAtomicAttackDamageReduction,
-} from "./realAttackTransactionService";
+import { queueAtomicAttackDamageReduction } from "./realAttackTransactionService";
 import { runtimeResolutionEventHistories } from "./runtimeResolutionEventHistory";
 import {
   commitAdapterTurnRuntimeState,
@@ -25,8 +23,9 @@ import {
 } from "../domain/bardCollegeLore";
 import { BARD_LORE_CLASS_ID } from "../domain/bardLoreProgression";
 
-const INTERRUPT_ID="follow-up.bard.college-of-lore.cutting-words";
+export const CUTTING_WORDS_INTERRUPT_ID="follow-up.bard.college-of-lore.cutting-words";
 type DicePrototype={d20(actionId:string,index?:number):number};
+type TriggerKind=CuttingWordsTrigger["kind"];
 type AdapterState={
   sessionMode:SessionMode;
   scene:SceneVm;
@@ -37,11 +36,11 @@ type AdapterState={
   syncChar():void;
   getSnapshot():Promise<AppSnapshot>;
 };
-type OfferedTrigger={kind:CuttingWordsTrigger["kind"];targetActorId:string;total:number;target?:number};
-type ResolutionState={resolutionId:string;handled:Set<string>;used:boolean;offered?:OfferedTrigger};
+type OfferedTrigger={kind:TriggerKind;targetActorId:string;total:number;target?:number};
+type ResolutionState={resolutionId:string;handled:Set<TriggerKind>;used:boolean;offered?:OfferedTrigger};
 
 const states=new WeakMap<MockAdapter,ResolutionState>();
-const pendingAttackPenalty=new WeakMap<MockAdapter,{resolutionId:string;face:number}>();
+const pendingAttackPenalty=new WeakMap<MockAdapter,{resolutionId:string;reduction:number}>();
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
@@ -49,7 +48,7 @@ const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 function stateFor(adapter:MockAdapter,resolutionId:string){
   const current=states.get(adapter);
   if(current?.resolutionId===resolutionId)return current;
-  const next:ResolutionState={resolutionId,handled:new Set<string>(),used:false};
+  const next:ResolutionState={resolutionId,handled:new Set<TriggerKind>(),used:false};
   states.set(adapter,next);
   return next;
 }
@@ -58,23 +57,21 @@ function bardLevel(character:CharacterSheet){
   return character.classLevels?.find((entry)=>entry.classId===BARD_LORE_CLASS_ID)?.level??0;
 }
 
-function reactionAvailable(internal:AdapterState){
-  return internal.sessionMode!=="initiative"
-    || Boolean(internal.scene.economyByActor[internal.activeCharacter.id]?.reaction);
-}
-
 function eligible(internal:AdapterState){
-  return bardLevel(internal.activeCharacter)>=3
-    && internal.activeCharacter.subclassIds?.[BARD_LORE_CLASS_ID]===BARD_COLLEGE_LORE_SUBCLASS_ID
-    && Boolean(internal.activeCharacter.resources.find((entry)=>entry.id===BARDIC_INSPIRATION_RESOURCE_ID)?.current)
-    && reactionAvailable(internal);
+  const resource=internal.activeCharacter.resources.find((entry)=>entry.id===BARDIC_INSPIRATION_RESOURCE_ID);
+  if(
+    bardLevel(internal.activeCharacter)<3
+    || internal.activeCharacter.subclassIds?.[BARD_LORE_CLASS_ID]!==BARD_COLLEGE_LORE_SUBCLASS_ID
+    || !resource?.current
+  )return false;
+  return internal.sessionMode!=="initiative"||Boolean(internal.scene.economyByActor[internal.activeCharacter.id]?.reaction);
 }
 
 function rollInspirationDie(adapter:MockAdapter,sides:number){
   const limit=Math.floor(20/sides)*sides;
   let face:number;
   do{
-    face=(MockAdapter.prototype as unknown as DicePrototype).d20.call(adapter,INTERRUPT_ID);
+    face=(MockAdapter.prototype as unknown as DicePrototype).d20.call(adapter,CUTTING_WORDS_INTERRUPT_ID);
   }while(face>limit);
   return ((face-1)%sides)+1;
 }
@@ -112,35 +109,35 @@ function spatiallyEligible(internal:AdapterState,targetActorId:string){
 
 function offerInterrupt(adapter:MockAdapter,internal:AdapterState,trigger:OfferedTrigger){
   const resolution=internal.resolution;
-  if(!resolution)return;
+  if(!resolution)return false;
   const state=stateFor(adapter,resolution.id);
-  const key=trigger.kind;
-  if(state.used||state.handled.has(key)||!eligible(internal)||!spatiallyEligible(internal,trigger.targetActorId))return;
+  if(state.used||state.handled.has(trigger.kind)||!eligible(internal)||!spatiallyEligible(internal,trigger.targetActorId))return false;
   const targetName=internal.scene.entities.find((entry)=>entry.id===trigger.targetActorId)?.name??trigger.targetActorId;
   const sides=bardicInspirationDieSides(bardLevel(internal.activeCharacter));
   state.offered=trigger;
   resolution.interrupt={
-    id:INTERRUPT_ID,
+    id:CUTTING_WORDS_INTERRUPT_ID,
     responderId:internal.activeCharacter.id,
     responderName:internal.activeCharacter.name,
     trigger:trigger.kind==="damage-roll"
       ? `${targetName} 피해 굴림 ${trigger.total}`
       : `${targetName} ${trigger.kind==="attack-roll"?"공격":"능력 판정"} ${trigger.total} vs ${trigger.target}`,
     optionName:`도발의 말 d${sides}`,
-    cost:`반응${internal.sessionMode==="initiative"?" 1 · ":" · "}바드의 영감 1회`,
+    cost:`${internal.sessionMode==="initiative"?"반응 1 + ":""}바드의 영감 1회`,
     effect:`d${sides}만큼 대상 굴림을 감소시킵니다.`,
     source:"SRD 5.2.1 · College of Lore · Cutting Words",
   };
   resolution.stage="interrupt";
   resolution.canAdvance=false;
   resolution.nextLabel=undefined;
+  return true;
 }
 
 function offer(adapter:MockAdapter,internal:AdapterState){
   const resolution=internal.resolution;
-  if(!resolution||resolution.interrupt||!eligible(internal))return;
+  if(!resolution||resolution.interrupt||!eligible(internal))return false;
   const state=stateFor(adapter,resolution.id);
-  if(state.used)return;
+  if(state.used)return false;
 
   if(
     resolution.rollKind==="check"
@@ -149,15 +146,12 @@ function offer(adapter:MockAdapter,internal:AdapterState){
     && resolution.checkOutcome==="성공"
     && Number.isFinite(resolution.rollTotal)
     && Number.isFinite(resolution.checkTarget)
-  ){
-    offerInterrupt(adapter,internal,{
-      kind:"ability-check",
-      targetActorId:resolution.actorId,
-      total:resolution.rollTotal!,
-      target:resolution.checkTarget!,
-    });
-    return;
-  }
+  )return offerInterrupt(adapter,internal,{
+    kind:"ability-check",
+    targetActorId:resolution.actorId,
+    total:resolution.rollTotal!,
+    target:resolution.checkTarget!,
+  });
 
   if(
     resolution.rollKind==="attack"
@@ -167,44 +161,36 @@ function offer(adapter:MockAdapter,internal:AdapterState){
     && Number.isFinite(resolution.attackTotal)
     && Number.isFinite(resolution.targetAc)
   ){
-    offerInterrupt(adapter,internal,{
+    if(!state.handled.has("attack-roll"))return offerInterrupt(adapter,internal,{
       kind:"attack-roll",
       targetActorId:resolution.actorId,
       total:resolution.attackTotal!,
       target:resolution.targetAc!,
     });
-    return;
+    if(!state.handled.has("damage-roll")){
+      const preview=previewRuntimeAtomicAttackDamage(adapter);
+      if(preview)return offerInterrupt(adapter,internal,{
+        kind:"damage-roll",
+        targetActorId:resolution.actorId,
+        total:preview.total,
+      });
+    }
   }
-
-  if(
-    resolution.rollKind==="damage"
-    && resolution.stage==="damage-animation"
-    && resolution.actorId!==internal.activeCharacter.id
-  ){
-    const preview=consumeAtomicAttackDamagePreview(resolution.id);
-    if(preview)offerInterrupt(adapter,internal,{
-      kind:"damage-roll",
-      targetActorId:resolution.actorId,
-      total:preview.total,
-    });
-  }
+  return false;
 }
 
-function restoreStage(resolution:ResolutionView,kind:CuttingWordsTrigger["kind"]){
+function restoreStage(resolution:ResolutionView,kind:TriggerKind){
   resolution.interrupt=undefined;
   if(kind==="ability-check"){
     resolution.stage="complete";
     resolution.canAdvance=false;
     resolution.nextLabel=undefined;
-  }else if(kind==="attack-roll"){
-    resolution.stage="attack-result";
-    resolution.canAdvance=true;
-    resolution.nextLabel="판정 적용";
-  }else{
-    resolution.stage="damage-animation";
-    resolution.canAdvance=true;
-    resolution.nextLabel="피해 적용";
+    return;
   }
+  resolution.stage="attack-result";
+  resolution.rollKind="attack";
+  resolution.canAdvance=true;
+  resolution.nextLabel=kind==="damage-roll"?"피해 적용":"판정 적용";
 }
 
 function refreshActivity(internal:AdapterState,resolution:ResolutionView){
@@ -223,12 +209,15 @@ MockAdapter.prototype.resolveAction=async function resolveWithLoreCuttingWords(a
 
 MockAdapter.prototype.advanceResolution=async function advanceWithLoreCuttingWords(){
   const internal=this as unknown as AdapterState;
+  if(internal.resolution?.interrupt?.id===CUTTING_WORDS_INTERRUPT_ID)return internal.getSnapshot();
+  if(offer(this,internal))return internal.getSnapshot();
+
   const pending=pendingAttackPenalty.get(this);
   const resolution=internal.resolution;
   const action=resolution&&internal.action(resolution.actionId);
   if(pending&&resolution?.id===pending.resolutionId&&resolution.stage==="attack-result"&&action?.attackBonus!==undefined){
     const original=action.attackBonus;
-    action.attackBonus-=pending.face;
+    action.attackBonus-=pending.reduction;
     try{
       await previousAdvanceResolution.call(this);
     }finally{
@@ -248,17 +237,18 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
   const interrupt=resolution?.interrupt;
   const state=resolution?stateFor(this,resolution.id):undefined;
   const offered=state?.offered;
-  if(!resolution||interrupt?.id!==INTERRUPT_ID||!state||!offered){
+  if(!resolution||interrupt?.id!==CUTTING_WORDS_INTERRUPT_ID||!state||!offered){
     await previousRespondToInterrupt.call(this,accept);
     offer(this,internal);
     return this.getSnapshot();
   }
 
-  state.handled.add(offered.kind);
   state.offered=undefined;
   if(!accept){
+    state.handled.add(offered.kind);
     resolution.detail.push(`${interrupt.responderName} 도발의 말 사용 안 함`);
     restoreStage(resolution,offered.kind);
+    offer(this,internal);
     return this.getSnapshot();
   }
 
@@ -302,7 +292,9 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
 
   internal.scene=projected.scene;
   internal.activeCharacter.resources=projected.resources;
+  internal.activeCharacter.items=projected.items;
   projectAdapterTurnRuntime(this);
+  state.handled.add(offered.kind);
   state.used=true;
   resolution.authoritativeDice.push(face);
   resolution.stateChanges.push(...projected.stateChanges);
@@ -325,23 +317,24 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
     });
     refreshActivity(internal,resolution);
   }else if(offered.kind==="attack-roll"){
+    const effectiveReduction=committed.adjustment.originalTotal-committed.adjustment.adjustedTotal;
     resolution.attackTotal=committed.adjustment.adjustedTotal;
     resolution.rollTotal=committed.adjustment.adjustedTotal;
     resolution.attackOutcome=committed.adjustment.outcome==="success"?"명중":"빗나감";
-    resolution.compact=`${committed.adjustment.adjustedTotal} vs AC ${offered.target} — ${resolution.attackOutcome}`;
+    resolution.compact=`${committed.adjustment.originalTotal} - d${sides} ${face} = ${committed.adjustment.adjustedTotal} vs AC ${offered.target} — ${resolution.attackOutcome}`;
     resolution.calculatedOutcome=resolution.compact;
     resolution.finalOutcome=resolution.compact;
     appendAdapterInterruptEvents(this,resolution.id,committed.events);
-    pendingAttackPenalty.set(this,{resolutionId:resolution.id,face});
+    pendingAttackPenalty.set(this,{resolutionId:resolution.id,reduction:effectiveReduction});
     restoreStage(resolution,"attack-roll");
   }else{
     appendAdapterInterruptEvents(this,resolution.id,committed.events);
-    queueAtomicAttackDamageReduction(resolution.id,face,LORE_CUTTING_WORDS_SOURCE);
-    resolution.stage="attack-result";
-    resolution.rollKind="attack";
-    resolution.canAdvance=true;
-    resolution.nextLabel="명중 결과";
-    await previousAdvanceResolution.call(this);
+    queueAtomicAttackDamageReduction(
+      resolution.id,
+      committed.adjustment.originalTotal-committed.adjustment.adjustedTotal,
+      LORE_CUTTING_WORDS_SOURCE,
+    );
+    restoreStage(resolution,"damage-roll");
   }
 
   internal.syncChar();
