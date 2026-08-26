@@ -80,6 +80,7 @@ import "./fighterTacticalMindFollowUpRuntimeAdapter";
 import "./fighterIndomitableFollowUpRuntimeAdapter";
 import "./warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter";
 import "./bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter";
+import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";
