@@ -1,5 +1,5 @@
 import "./progressionContracts";
-import type { ActionVm, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
+import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { clearRuntimeResolutionEventHistory } from "./runtimeResolutionEventHistory";
 
@@ -15,6 +15,7 @@ type AdapterState={
   sessionMode:SessionMode;
   scene:SceneVm;
   activeCharacter:CharacterSheet;
+  activity:ActivityEntry[];
   resolution:ResolutionView|null;
   lastResolutionId:string|null;
   _undoPreviewArmed?:boolean;
@@ -155,6 +156,12 @@ function markSnapshotUndo(adapter:MockAdapter,resolutionId:string) {
   rogueUndoResolutionIds.set(adapter,resolutionId);
 }
 
+function projectUncannyDodgeActivity(internal:AdapterState,resolution:ResolutionView) {
+  const detail=resolution.detail.find((entry)=>entry.startsWith("기묘한 회피:"));
+  const activity=internal.activity.find((entry)=>entry.id===resolution.id);
+  if(detail&&activity&&!activity.detail.includes(detail))activity.detail.push(detail);
+}
+
 MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean){
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
@@ -203,7 +210,9 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
   try {
     const snapshot=await previousAdvanceResolution.call(this);
     if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
-      if(ROGUE_ACTION_IDS.has(resolution.actionId)||uncannyResolutionIds.get(this)===resolution.id) {
+      const uncannyComplete=uncannyResolutionIds.get(this)===resolution.id;
+      if(ROGUE_ACTION_IDS.has(resolution.actionId)||uncannyComplete) {
+        if(uncannyComplete)projectUncannyDodgeActivity(internal,resolution);
         markSnapshotUndo(this,resolution.id);
         uncannyResolutionIds.delete(this);
       }
