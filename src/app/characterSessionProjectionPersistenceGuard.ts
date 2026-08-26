@@ -17,7 +17,7 @@ installCharacterResolutionWriteBackGuard(async (adapter,events,direction) => {
   const state=adapter as unknown as AdapterState;
   const characterId=isEphemeralSessionProjectionCharacter(adapter,state.activeCharacter.id)
     ?state.activeCharacter.id
-    :events.map((event)=>event.targetId).find((targetId)=>isEphemeralSessionProjectionCharacter(adapter,targetId));
+    :events.map((event)=>event.targetId).find((targetId):targetId is string=>targetId!==undefined&&isEphemeralSessionProjectionCharacter(adapter,targetId));
   if (!characterId) return undefined;
 
   const sheet=characterId===state.activeCharacter.id
