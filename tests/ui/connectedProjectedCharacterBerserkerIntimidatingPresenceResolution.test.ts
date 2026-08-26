@@ -39,15 +39,16 @@ function entry(catalog:CatalogEntry[],contentId:string) {
 
 function remoteBerserker(catalog:CatalogEntry[]):CharacterSheet {
   const barbarian=entry(catalog,BARBARIAN_CLASS_ID);
+  const berserker=entry(catalog,BARBARIAN_BERSERKER_SUBCLASS_ID);
   const human=entry(catalog,"dnd.srd521.species.human");
   const soldier=entry(catalog,"dnd.srd521.background.soldier");
   return {
-    id:CHARACTER_ID,name:"Remote Berserker Presence",className:barbarian.nameKo||barbarian.nameEn,level:14,
+    id:CHARACTER_ID,name:"Remote Berserker Presence",className:barbarian.nameKo||barbarian.nameEn,subclassName:berserker.nameKo||berserker.nameEn,level:14,
     species:human.nameKo||human.nameEn,background:soldier.nameKo||soldier.nameEn,hp:120,maxHp:120,tempHp:0,ac:15,speed:30,proficiencyBonus:5,saveState:"saved",
     abilities:{str:18,dex:14,con:18,int:8,wis:12,cha:10},saves:[],skills:["위협"],features:["위압적인 존재감"],equipment:[],items:[],attacks:[],
     resources:[{id:BERSERKER_INTIMIDATING_PRESENCE_RESOURCE_ID,label:"위압적인 존재감",current:1,max:1,source:"SRD Berserker"}],
     rulesProfileId:"dnd.srd-5.2.1",rulesProfileVersion:"0.1-draft",sourceRevision:2,runtimeRevision:3,
-    classLevels:[{classId:BARBARIAN_CLASS_ID,level:14}],subclassIds:{[BARBARIAN_CLASS_ID]:BARBARIAN_BERSERKER_SUBCLASS_ID},
+    classLevels:[{classId:BARBARIAN_CLASS_ID,className:barbarian.nameKo||barbarian.nameEn,level:14,subclassName:berserker.nameKo||berserker.nameEn}],subclassIds:{[BARBARIAN_CLASS_ID]:BARBARIAN_BERSERKER_SUBCLASS_ID},
   };
 }
 
