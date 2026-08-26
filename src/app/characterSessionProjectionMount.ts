@@ -23,29 +23,8 @@ export interface ProjectionResolutionContext {
   previousActionActorOrder:string[];
 }
 
-const ROGUE_CLASS_ID="dnd.srd521.class.rogue";
-const UNCANNY_DODGE_REACTION_ID="reaction.rogue.uncanny-dodge";
-
 function internal(adapter:MockAdapter) {
   return adapter as unknown as ProjectionMountAdapterState;
-}
-
-function projectedEntity(reconstruction:Extract<CharacterSessionProjectionReconstruction,{status:"accepted"}>) {
-  const entity=structuredClone(reconstruction.entity);
-  const rogueLevel=reconstruction.sheet.classLevels?.find((entry)=>entry.classId===ROGUE_CLASS_ID)?.level??0;
-  if(rogueLevel<5) return entity;
-  entity.reactions=[
-    ...entity.reactions.filter((entry)=>entry.id!==UNCANNY_DODGE_REACTION_ID),
-    {
-      id:UNCANNY_DODGE_REACTION_ID,
-      name:"기묘한 회피",
-      trigger:"볼 수 있는 공격자에게 공격이 명중할 때",
-      cost:"반응 1",
-      effect:"이번 공격 피해 절반",
-      source:"SRD 5.2.1 · Rogue · Uncanny Dodge",
-    },
-  ];
-  return entity;
 }
 
 function reorderActionsByActor(actions:SceneVm["actionsByActor"],preferredOrder:string[]) {
@@ -127,7 +106,7 @@ export function mountReconstructedCharacterSessionProjection(
     projection:structuredClone(reconstruction.projection),
     sheet:structuredClone(reconstruction.sheet),
   });
-  app.scene.entities=[...app.scene.entities.filter((entity)=>entity.id!==characterId),projectedEntity(reconstruction)];
+  app.scene.entities=[...app.scene.entities.filter((entity)=>entity.id!==characterId),structuredClone(reconstruction.entity)];
   app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:projectedActions(reconstruction)};
   app.scene.economyByActor={...app.scene.economyByActor,[characterId]:structuredClone(reconstruction.economy)};
   return {status:"accepted" as const,characterId};
@@ -181,7 +160,7 @@ export function refreshReconstructedCharacterSessionProjection(
     sheet:structuredClone(reconstruction.sheet),
   });
 
-  const durableEntity=projectedEntity(reconstruction);
+  const durableEntity=structuredClone(reconstruction.entity);
   const refreshed={
     ...durableEntity,
     initiative:currentEntity.initiative,
