@@ -25,7 +25,7 @@ test("Help is consumed by the next ability check and resolves as authoritative a
   const actorId=before.activeCharacter.id;
   const actor=entity(adapter,actorId);
   actor.status.push("도움 받음");
-  const action=before.scene.actionsByActor[actorId]?.find((entry)=>entry.id==="action.athletics");
+  const action=before.scene.actionsByActor[actorId]?.find((entry)=>entry.resolutionKind==="ability-check");
   assert.ok(action,"active production character requires an ability check action");
 
   await adapter.setQueuedD20(5);
@@ -171,7 +171,7 @@ test("Ready exposes an off-turn trigger that spends Reaction and clears the prep
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
   const initial=await adapter.getSnapshot();
-  const prepared=initial.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.athletics");
+  const prepared=initial.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.resolutionKind==="ability-check");
   assert.ok(prepared,"ready test requires an ability-check action");
 
   await adapter.configureReadyAction({actorId:"char.aelar",actionId:prepared.id,trigger:"고블린이 문을 통과하면"});
