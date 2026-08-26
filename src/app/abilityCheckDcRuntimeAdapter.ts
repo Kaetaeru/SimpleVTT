@@ -1,9 +1,10 @@
-import type { AppSnapshot, DmAdjudicationCommand, ResolutionView, SessionVm } from "./contracts";
+import type { AppRole, AppSnapshot, DmAdjudicationCommand, ResolutionView, SessionVm } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { connectedStateFor } from "./connectedSessionState";
 import { sessionDebugPreviewRoleFor } from "./sessionDebugPreviewRole";
 
 interface AbilityCheckDcState {
+  role:AppRole;
   resolution:ResolutionView|null;
   session:SessionVm;
   getSnapshot():Promise<AppSnapshot>;
@@ -13,7 +14,7 @@ const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousApplyDmAdjudication=MockAdapter.prototype.applyDmAdjudication;
 
 function isHost(adapter:MockAdapter,internal:AbilityCheckDcState) {
-  return internal.session.role==="host"||connectedStateFor(adapter).mode==="host"||sessionDebugPreviewRoleFor(adapter)==="dm";
+  return internal.role==="dm"||internal.session.role==="host"||connectedStateFor(adapter).mode==="host"||sessionDebugPreviewRoleFor(adapter)==="dm";
 }
 
 function awaitingDc(adapter:MockAdapter,internal:AbilityCheckDcState) {
