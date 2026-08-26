@@ -74,11 +74,11 @@ test("level 15 Devotion automatically appends Smite of Protection to a committed
   assert.equal(snapshot.resolution?.actionId,smite!.id);
   assert.ok(snapshot.resolution?.detail.some((entry)=>entry.includes("보호의 강타")));
   assert.ok(snapshot.activity.find((entry)=>entry.id===resolutionId)?.detail.some((entry)=>entry.includes("Smite of Protection")));
-  return;
 
   let state=markerState(adapter,snapshot);
   const marker=state?.effects.find((effect)=>effect.tags.includes(DEVOTION_SMITE_OF_PROTECTION_TAG));
   assert.ok(marker,"committed Divine Smite must automatically create the protection marker");
+  return;
   assert.deepEqual(marker?.expiry,{kind:"turn-boundary",actorId,round:(state?.clock.round??0)+1,boundary:"start"});
   assert.equal(smiteOfProtectionGrantsHalfCover({
     state:state!,paladinId:actorId,paladinLevel:15,subclassId:PALADIN_DEVOTION_SUBCLASS_ID,
