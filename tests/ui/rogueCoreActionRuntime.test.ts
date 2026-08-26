@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { AppSnapshot, CharacterSheet, SceneVm } from "../../src/app/contracts";
+import { previewRuntimeAtomicAttackDamage } from "../../src/app/phase09RealRuntimeAttackAdapter";
 import {
   CUNNING_DASH_ACTION_ID,
   CUNNING_DISENGAGE_ACTION_ID,
@@ -103,6 +104,8 @@ test("Rogue level 5 Uncanny Dodge spends Reaction, halves a hit, records Activit
   assert.equal(snapshot.resolution?.stage,"interrupt");
   assert.equal(snapshot.resolution?.interrupt?.id,UNCANNY_DODGE_REACTION_ID);
   await adapter.respondToInterrupt(true);
+  const preview=previewRuntimeAtomicAttackDamage(adapter);
+  assert.ok(preview,"damage preview must not consume the queued Uncanny Dodge multiplier");
   snapshot=await finish(adapter);
   assert.equal(snapshot.resolution?.damageComponents[0]?.raw,5);
   assert.equal(snapshot.resolution?.damageComponents[0]?.adjusted,2);
