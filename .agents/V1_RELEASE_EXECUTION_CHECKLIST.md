@@ -2,7 +2,7 @@
 
 Status: **CANONICAL AI EXECUTION ROUTER**
 Target: **실제 로컬/연결 세션을 처음부터 끝까지 플레이할 수 있는 Windows V1**
-Updated: 2026-08-25
+Updated: 2026-08-26
 
 이 문서는 작업 AI가 다음 구현 작업, 의존성, 검증 및 출시 차단 조건을 빠르게 결정하기 위한 단일 마스터 체크리스트다.
 
@@ -645,13 +645,13 @@ Release workflow는 위 행렬을 명명된 jobs로 실행하고 exact checked-o
 현재 단일 실행 포인터:
 
 ```text
-R1 Barbarian Rage lifecycle
+R1 Monk Focus actions/resource/economy
 ```
 
 1. 통합 상태는 exact checkpoint `4a4cdb1`에서 full TS matrix 1303/1303, UI matrix 965/965와 production build가 green이다.
-2. open ability-check DM DC, generic Tactical Mind, Fighter Indomitable은 완료했다.
-3. Rage → Wild Shape → Monk Focus → Rogue Cunning/Uncanny 순서로 진행한다.
-4. GitHub credential 복구 후 canonical `work/v1-composite`를 fetch하고 fast-forward 관계 확인 뒤 checkpoint를 push한다.
-5. 각 신규 행동은 connected remote-owner exactly-once/reconnect/Undo matrix 없이는 완료 처리하지 않는다.
+2. open ability-check DM DC, generic Tactical Mind, Fighter Indomitable, Rage source, Druid Wild Shape R1 local lifecycle은 완료했다.
+3. Druid Wild Shape exact checkpoint `11bc8581a04678e33796054117f05b5455a25db3`: UI run `32917949237`와 Rules Domain run `32917949368`가 success이며 production build gate가 green이다.
+4. 다음 순서는 Monk Focus → Rogue Cunning Action/Uncanny Dodge다. 완료된 Rage/Wild Shape는 재구현하지 않는다.
+5. connected remote-owner exactly-once/reconnect/Undo matrix는 R2에서 별도 완료하며, 그 전에는 V1-21/connected release DONE으로 승격하지 않는다.
 
 상세 완료 조건과 검증 명령은 `V1_CURRENT_HANDOFF.md`를 따른다.
