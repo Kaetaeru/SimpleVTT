@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
   "status": "continue",
-  "reason": "Rogue R1 source implementation and focused regression coverage are now committed through 793135f34c05d21aa199e054e60b119f5b74afcd. UI run 32929226260 and Phase 12 run 32929226269 are still in progress, and package.json still needs the focused test:rogue-core build wiring before Rogue can be execution-validated. Resume from STATE Next Exact Action; do not repeat validated Rage, Wild Shape, or Monk work.",
+  "reason": "Rogue R1 is source-complete and execution-validated at 5bb8bfbc4753dcc15f1198a04c0982817176c644: UI run 32932781542 / frontend job 98068084958 and Phase 12 run 32932781591 / connected-protocol job 98068085017 are green, including npm run build with test:rogue-core. Canonical V1 routing and STATE now advance to the next R1 item: inventory existing subclass domain resolvers and expose only mechanics-complete subclass actions missing from the production action bar. Resume from STATE; do not repeat validated Rage, Wild Shape, Monk Focus, or Rogue R1 work. Connected remote-owner exactly-once/reconnect remains R2 unless a direct R1 regression requires it.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-26T13:11:17+09:00"
+  "updated_at": "2026-08-26T14:10:15+09:00"
 }
