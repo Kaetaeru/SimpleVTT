@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:55:20+09:00`
+- checkpointed_at: `2026-08-26T15:12:23+09:00`
 
 ## Durable execution checkpoint
 
@@ -38,9 +38,10 @@ Exact source-equivalent evidence at `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83`:
 
 Follow-up live reconciliation:
 
-- live `work/v1-composite` HEAD is `9bad9547a20a7ed9d739764ffb2a17179570d8ef` (`chore: publish Wholeness gate checkpoint`).
-- GitHub compare `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83...9bad9547a20a7ed9d739764ffb2a17179570d8ef` reports four commits ahead, zero behind, with changes only to `.chatgpt-rerun/STATE.md` and `.chatgpt-rerun/control.json`.
-- Therefore `9bad9547` is product-source-equivalent to the permitted Wholeness source `3a9f22d`; no newer concurrent product change exists to remove the Holy Nimbus-only build blocker.
+- live `work/v1-composite` HEAD before this checkpoint is `a70f6265417a16a99f2436913a6cc33771acaad2` (`chore: publish rerun reconciliation`).
+- GitHub compare `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83...a70f6265417a16a99f2436913a6cc33771acaad2` reports six commits ahead, zero behind, with changes only to `.chatgpt-rerun/STATE.md` and `.chatgpt-rerun/control.json`.
+- GitHub Actions lookup for exact metadata HEAD `a70f626` reports no workflow runs. No new validation was triggered or repeated.
+- Therefore `a70f626` is product-source-equivalent to the permitted Wholeness source `3a9f22d`; no newer concurrent product change exists to remove the Holy Nimbus-only build blocker.
 - No Wholeness product code was changed and no already-green Wholeness or historical full-matrix validation was repeated during this reconciliation.
 
 Scope reconciliation:
