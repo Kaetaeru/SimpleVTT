@@ -10,12 +10,13 @@ Canonical target branch: **`work/v1-composite`**
 ## 1. 현재 canonical 기준선
 
 - canonical GitHub branch: `work/v1-composite`
-- 검증된 제품 checkpoint: `4a4cdb195ff4544adbb3bfd49487042238b112c1`
+- 검증된 통합 baseline: `4a4cdb195ff4544adbb3bfd49487042238b112c1`
 - 2026-08-26 GitHub compare에서 `4a4cdb1`은 `work/v1-composite`의 merge-base ancestor로 확인됨.
 - 같은 compare에서 branch는 `4a4cdb1`보다 ahead, behind 0으로 확인됨.
-- `4a4cdb1` 이후의 R1 증분은 아래에 별도로 기록하며, 새 증분은 아직 exact-head green으로 승격하지 않는다.
+- Druid Wild Shape exact execution checkpoint: `11bc8581a04678e33796054117f05b5455a25db3`.
+- `11bc858`은 현재 branch exact head에서 기존 UI / Rules Domain Actions가 모두 green이다. 이는 Wild Shape R1 실행 증거이며 전체 release DONE 판정은 아니다.
 
-따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
+따라서 과거의 "4a4cdb1이 로컬에만 있고 push되지 않았다"는 blocker는 해소됐다. 현재 GitHub `work/v1-composite`가 repository-side canonical ref다. 검증된 `4a4cdb1` 제품 작업, 완료된 Rage, Wild Shape 구현을 재구현하거나 전체 검증을 단순 resume 이유로 반복하지 않는다.
 
 ## 2. 실행 증거
 
@@ -42,7 +43,7 @@ Canonical target branch: **`work/v1-composite`**
 - `cargo test --manifest-path src-tauri/Cargo.toml`: 당시 agent shell에 Cargo가 없어 미실행.
 - Tauri two-instance와 Windows artifact 검증은 최신 제품 checkpoint에서 미실행.
 
-### 2026-08-26 Rage incremental source checkpoint — unverified
+### 2026-08-26 Rage incremental source checkpoint
 
 - spellcasting prohibition remains checkpointed from `1e23038fe314b109eaecef75aeca8e67c2462ccf` with deterministic coverage in `spellcastingKernel.test.ts`.
 - product source head `b939f892e80b1c37b97ad23b65204d5665ea4739` completes the remaining SRD 5.2.1 Rage lifecycle source:
@@ -54,10 +55,23 @@ Canonical target branch: **`work/v1-composite`**
   - existing Incapacitated/dead effect termination remains reused;
   - Rage-linked special effects expire with the core marker;
   - no voluntary `End Rage` production action was restored.
-- `tests/domain/barbarianRage.test.ts` now covers duration, attack/save extension, dedicated Bonus Action extension, and maximum duration.
-- `tests/ui/barbarianRageActionRuntime.test.ts` now covers the production extension action and Heavy armor automatic termination.
-- GitHub compare from prior Rerun head `6cf2b31007d9a0e87dd5e47746a4352dfd088228` to `b939f892e80b1c37b97ad23b65204d5665ea4739` is ahead 8 / behind 0 and contains only the seven intended Rage source/test paths.
-- Container `git ls-remote` still fails with `Could not resolve host: github.com`; GitHub exposes no commit statuses or workflow runs for `b939f892`. Therefore the new Rage increment is **source-complete but execution-unverified**. Do not claim a new green test/build checkpoint from it.
+- `tests/domain/barbarianRage.test.ts` covers duration, attack/save extension, dedicated Bonus Action extension, and maximum duration.
+- `tests/ui/barbarianRageActionRuntime.test.ts` covers the production extension action and Heavy armor automatic termination.
+- Rage는 이미 source-complete다. resume만을 이유로 다시 구현하지 않는다.
+
+### Green — Druid Wild Shape exact checkpoint `11bc858`
+
+- 기존 product/source head `12834c74ee0b997d9cd28f1d6c9227e326c1fe60`의 Wild Shape 구현은 이미 완성돼 있었다.
+- 당시 `test:druid-wild-shape` 실패 3건은 product runtime 결함이 아니라 test fixture 불일치였다:
+  - fixture가 `activeCharacter.tempHp`만 설정하고 동일 Character의 Scene entity `tempHp`를 갱신하지 않았다.
+  - `MockAdapter.syncChar()`가 다음 snapshot에서 Scene 기본 temp HP `5`를 Character로 다시 투영했다.
+  - 이 때문에 explicit keep/take 임시 HP 선택이 생기며 exact Wild Shape action lookup과 temp HP 기대값이 깨졌다.
+- `11bc8581a04678e33796054117f05b5455a25db3`에서 `tests/ui/druidWildShapeActionRuntime.test.ts` fixture만 Scene temp HP와 Character temp HP를 동기화했다. 제품 코드 변경 없음, 최소 diff `+3/-1`.
+- exact SHA `11bc858` GitHub Actions:
+  - UI run `32917949237` / job `frontend`: **success**, `Typecheck and build` 포함 전 단계 green.
+  - Rules Domain run `32917949368` / job `connected-protocol`: **success**, `Production frontend gate`, connected protocol tests, offline play walkthrough tests green.
+- `npm run build`가 `npm run test:druid-wild-shape`를 포함하므로 Wild Shape focused gate와 production build가 exact SHA에서 green이다.
+- 결론: **Druid Wild Shape R1 local/source lifecycle은 source-complete + execution-validated**. Connected remote-owner exactly-once/reconnect/Undo는 R2에서 별도 검증한다.
 
 ## 3. Source-complete로 취급하고 재구현하지 않을 것
 
@@ -73,9 +87,10 @@ Canonical target branch: **`work/v1-composite`**
 - Bardic Inspiration/Tactical Mind/Fighter Indomitable follow-up 완료 범위
 - Cleric Divine Spark/Turn Undead와 Paladin Lay On Hands/Divine Sense/Abjure Foes
 - Barbarian core Rage source through `b939f892`: start/resource/economy, resistance, Rage Damage, Strength Advantage, Concentration/spellcasting restrictions, SRD 5.2.1 duration/extension/automatic termination, production extension action, and Heavy armor termination
+- Druid Wild Shape through `11bc858`: known-form selection, transform/exit actions, resource/Bonus Action economy, transformed attack projection, explicit temporary-HP keep/take choice, spellcasting restriction, event-native write-back and Undo
 - existing Barbarian Berserker mechanics
 
-Source-complete는 release DONE 또는 exact-head green이 아니다. 새 Rage 증분의 focused execution evidence는 이후 capable checkout/full regression에서 확보한다.
+Source-complete는 release DONE이 아니다. R2 connected remote-owner matrix, R3 Tauri durability, R4 rendered UX/accessibility, R5 release gates는 별도다.
 
 ## 4. 남은 작업 — 실행 순서
 
@@ -95,8 +110,8 @@ Exit: clean/reviewed checkpoint + full TS green + canonical ref 관계 설명 �
 - [x] open ability-check DM DC contract와 일반 능력/기술 판정 UI.
 - [x] Tactical Mind를 모든 적격 실패 능력 판정에 재사용.
 - [x] Fighter Indomitable failed saving-throw follow-up.
-- [x] Barbarian core Rage lifecycle integration source. 기존 Rage resource/Berserker mechanics를 재사용하고 start/economy/state/resistance/damage/Strength Advantage/Concentration/spellcasting/duration/extension/automatic termination을 authoritative paths에 연결했다. 새 증분 focused execution evidence는 validation debt로 남아 있다.
-- [ ] Druid Wild Shape 선택/변신/해제/HP·행동·자원 lifecycle.
+- [x] Barbarian core Rage lifecycle integration source. 기존 Rage resource/Berserker mechanics를 재사용하고 start/economy/state/resistance/damage/Strength Advantage/Concentration/spellcasting/duration/extension/automatic termination을 authoritative paths에 연결했다.
+- [x] Druid Wild Shape 선택/변신/해제/HP·행동·자원 lifecycle. exact checkpoint `11bc858`에서 focused gate와 production build를 GitHub Actions로 검증했다.
 - [ ] Monk Focus actions와 자원/행동 경제.
 - [ ] Rogue Cunning Action 및 Uncanny Dodge reaction.
 - [ ] 이미 domain resolver가 있는 subclass action만 mechanics-complete 상태로 action bar에 노출.
@@ -154,17 +169,18 @@ Exit: 같은 SHA의 source, tests, Windows artifact, human acceptance가 모두 
 
 ## 5. Next exact action
 
-R1의 다음 미완료 항목인 **Druid Wild Shape lifecycle**로 이동한다.
+R1의 다음 미완료 항목인 **Monk Focus actions/resource/economy**로 이동한다.
 
 ```text
-existing Druid/Wild Shape domain + progression + production action primitives 확인
--> 이미 구현된 선택/변신/해제/HP/행동/자원 behavior는 source-complete로 인정하고 재구현하지 않음
--> 실제 빠진 production lifecycle만 최소 구현
+existing Monk Focus domain + progression + resource/action primitives 확인
+-> 이미 구현된 Focus Point 소비/회복과 class action behavior는 source-complete로 인정하고 재구현하지 않음
+-> 실제 빠진 production action/resource/economy seam만 최소 구현
 -> focused deterministic tests/fixtures 추가
+-> npm run build로 관련 gate 확인
 -> canonical handoff 갱신 후 다음 R1 항목으로 이동
 ```
 
-Rage는 재구현하지 않는다. capable checkout이 생기면 새 Rage 증분에 대해 `tests/domain/barbarianRage.test.ts`, `tests/domain/spellcastingKernel.test.ts`, `tests/ui/barbarianRageActionRuntime.test.ts`를 focused validation 대상으로 포함하되, resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다. legacy voluntary End Rage action도 추가하지 않는다.
+Rage와 Wild Shape는 재구현하지 않는다. connected Host/Client/reconnect/exactly-once는 direct R1 regression이 아니면 R2에서 다룬다. resume만을 이유로 과거 1303/1303 전체 matrix를 반복하지 않는다.
 
 중요: 이 문서가 현재 V1 실행 포인터다. `.chatgpt-rerun/PLAN.md`나 `.chatgpt-rerun/STATE.md`에 별도 제품 작업 목록을 복사하지 않는다.
 
@@ -174,6 +190,7 @@ Windows Node `uv_os_get_passwd ENOMEM` 발생 시 repository의 기존 bootstrap
 
 ```powershell
 $env:NODE_OPTIONS='--require=./tests/tsx-os-userinfo-bootstrap.cjs'
+npm run test:druid-wild-shape
 npm run build
 npm run test:connected-ui
 npm run test:spellcasting
