@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-26T14:47:32+09:00`
+- checkpointed_at: `2026-08-26T14:52:30+09:00`
 
 ## Durable execution checkpoint
 
@@ -34,8 +34,14 @@ Exact-head evidence at `ba820a4efe8bcfc52ff18374dea5887a1fe1a77d`:
 - Phase 12 run `32935353057`, connected-protocol job `98075422310`: connected authority protocol and offline walkthrough green; only `Verify production frontend gate` failed because it runs the same `npm run build`.
 - The build failure is **not Wholeness-related**. The first actual red is concurrent `test:devotion-holy-nimbus`: `Devotion Holy Nimbus works in freeform without stranding Bonus Action economy`, `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts:73:10`, `Expected 1, actual 0`. Other Holy Nimbus focused tests passed 2/3.
 
-Per current scope, do not patch concurrent Holy Nimbus work under the Wholeness rerun. Wholeness source/focused behavior is validated, but do **not** advance canonical routing while the exact-head required full gate is red. `PLAN.md` remains unchanged. R2 remote-owner exactly-once/reconnect remains excluded.
+Scope reconciliation after that checkpoint:
+
+- `69f01dcb5823c2891aaafd180c3ad7acb46f4764` briefly changed the shared event-native Undo runtime-state lookup while diagnosing the unrelated Holy Nimbus red.
+- Fresh `control.json` explicitly forbids patching concurrent Holy Nimbus work under this Wholeness scope, so that out-of-scope change was immediately reverted at `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` using the exact previous blob. Current product source is therefore source-equivalent to the permitted `ba820a4` Wholeness checkpoint for this seam.
+- `PLAN.md` remains unchanged. R2 remote-owner exactly-once/reconnect remains excluded.
+
+Per current scope, do not patch concurrent Holy Nimbus work under the Wholeness rerun. Wholeness source/focused behavior is validated, but do **not** advance canonical routing while the required source-equivalent full gate is red.
 
 ## Next Exact Action
 
-Reconcile live `work/v1-composite` first. If a newer concurrent HEAD removes the unrelated Holy Nimbus build red, inspect only that exact HEAD's UI and Phase 12 gates. If both are green and Wholeness remains source-equivalent/focused-green, mark Wholeness R1 source-complete/execution-validated and advance canonical V1 handoff/checklist to the next smallest mechanics-complete subclass action candidate. If HEAD remains `ba820a4efe8bcfc52ff18374dea5887a1fe1a77d` with the same Holy Nimbus-only red, make no Wholeness code change and do not repeat already-green tests. Keep R2 excluded.
+Reconcile live `work/v1-composite` first. If a newer concurrent HEAD removes the unrelated Holy Nimbus build red, inspect only that exact HEAD's UI and Phase 12 gates. If both are green and Wholeness remains source-equivalent/focused-green, mark Wholeness R1 source-complete/execution-validated and advance canonical V1 handoff/checklist to the next smallest mechanics-complete subclass action candidate. If HEAD remains source-equivalent to `3a9f22dc30c6c1b7f3f2f2b9f4978c1980088a83` / `ba820a4efe8bcfc52ff18374dea5887a1fe1a77d` with the same Holy Nimbus-only red, make no Wholeness code change and do not repeat already-green tests. Keep R2 excluded.
