@@ -9,8 +9,8 @@ import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";
 
 const INTERRUPT_ID="follow-up.bard.college-of-lore.cutting-words";
 const GOBLIN_ID="combatant.goblin-a";
-const OTHER_CHARACTER_ID="char.mira";
-const OTHER_CHARACTER_CHECK_ID="action.mira.ability.str";
+const OTHER_CHARACTER_ID="char.cutting-words-target";
+const OTHER_CHARACTER_CHECK_ID="action.cutting-words-target.ability.str";
 
 async function prepareLoreBard(adapter:MockAdapter,level=5){
   const internal=adapter as unknown as {activeCharacter:CharacterSheet};
@@ -85,14 +85,27 @@ test("Cutting Words reduces another creature's successful ability check and Undo
   const adapter=new MockAdapter();
   let snapshot=await prepareLoreBard(adapter);
   const usesBefore=inspirationUses(snapshot);
+  const internal=adapter as unknown as {scene:SceneVm};
+  internal.scene.entities.push({
+    id:OTHER_CHARACTER_ID,
+    name:"Cutting Words Target",
+    side:"ally",
+    kind:"character",
+    hp:20,
+    maxHp:20,
+    tempHp:0,
+    ac:12,
+    initiative:18,
+    status:[],
+    resistances:[],
+    immunities:[],
+    vulnerabilities:[],
+    reactions:[],
+  });
+  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction()];
   await adapter.startInitiative();
   snapshot=await adapter.setCurrentActor(OTHER_CHARACTER_ID);
   await adapter.setQueuedD20(15);
-  const internal=adapter as unknown as {scene:SceneVm};
-  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[
-    ...(internal.scene.actionsByActor[OTHER_CHARACTER_ID]??[]),
-    otherCharacterCheckAction(),
-  ];
 
   snapshot=await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
   assert.equal(snapshot.resolution?.stage,"roll-animation",JSON.stringify(snapshot.resolution));
