@@ -1,0 +1,50 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.unknown.retaliatory-ward",
+  "entryPoints": [
+    {
+      "id": "activate",
+      "invocation": "manual",
+      "operations": [
+        {
+          "kind": "effect.apply",
+          "template": "retaliatory-ward",
+          "target": "actor"
+        }
+      ]
+    }
+  ],
+  "artifactTemplates": [
+    {
+      "id": "retaliatory-ward",
+      "artifactKind": "effect",
+      "duration": {
+        "kind": "elapsed",
+        "amount": { "value": 1 },
+        "unit": "hours"
+      },
+      "rules": [
+        {
+          "id": "retaliate",
+          "event": "damage.taken",
+          "frequency": "once",
+          "operations": [
+            {
+              "kind": "damage.apply",
+              "amount": { "value": 5 },
+              "damageType": "cold",
+              "target": "event.actor"
+            }
+          ]
+        }
+      ],
+      "lifetime": {
+        "kind": "until-event",
+        "event": "damage.taken",
+        "onEnd": "destroy"
+      },
+      "instancePolicy": "stack"
+    }
+  ]
+}
