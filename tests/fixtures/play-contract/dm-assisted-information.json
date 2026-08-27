@@ -1,0 +1,38 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "fixture.dm-assisted-information",
+  "entryPoints": [
+    {
+      "id": "request-hidden-information",
+      "invocation": "manual",
+      "factQueries": [
+        {
+          "id": "hidden-world-fact",
+          "fact": "world.hidden-information",
+          "subject": "actor.querySubject",
+          "authority": "dm",
+          "visibility": "actor-and-dm",
+          "unknownPolicy": "request-authority"
+        }
+      ],
+      "operations": [
+        {
+          "kind": "adjudication.request",
+          "interaction": {
+            "id": "dm-information-response",
+            "kind": "adjudication",
+            "responder": "dm",
+            "mode": "blocking",
+            "input": { "type": "text" },
+            "visibility": "actor-and-dm",
+            "promptKey": "fixture.hidden-information.prompt",
+            "revalidate": "always",
+            "stalePolicy": "restart",
+            "idempotencyKey": "fixture.dm-assisted-information.response"
+          }
+        }
+      ]
+    }
+  ]
+}
