@@ -3,32 +3,47 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `1`
 - task_id: `phase14-production-play-session-ux`
-- dispatch status to publish: `blocked`
+- dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-27T00:40:06+09:00`
+- checkpointed_at: `2026-08-28 Asia/Seoul`
 
 ## Durable checkpoint
 
-The user explicitly re-authorized continuation on this same run/sequence/task. Mandatory preflight and canonical V1 authority were re-read. Validated work through Fiend Dark One's Own Luck remains closed and was not repeated. PLAN routing remains unchanged.
+The owner explicitly re-authorized this existing run/sequence and directed Rerun to resume from the unfinished point without repeating validated work.
 
-The active slice remains Lore Peerless Skill R2. Current focused verification candidate is still `bfc459ba35d089171d654fd27abb881309bef1fb`, which adds only the remote failure/no-spend proof on top of the existing success/spend proof. No product runtime, protocol, schema, dependency or fake action change was made.
+Mandatory preflight was read from `work/v1-composite` in the required order: README -> control -> STATE -> PLAN. Run identity remains consistent: run `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`, sequence `1`, task `phase14-production-play-session-ux`.
 
-## Verification blocker
+The current explicit product-work priority is **Common Play / data-driven Rules Resolver**. Historical Lore Peerless / missing-Actions evidence remains preserved but is not an active blocker or product selector for this priority.
 
-Reconciliation after re-authorization found no runnable exact-head CI:
-- exact `bfc459b` workflow runs: `0`;
-- exact `bfc459b` check suites: `0`;
-- both `.github/workflows/ui.yml` and `.github/workflows/phase12-connected.yml` include `tests/ui/**` push triggers for `work/v1-composite`, so the missing run is not explained by their path filters;
-- branch-wide Actions query for `work/v1-composite` from `2026-08-26T15:20:00Z` through `16:00:00Z` also returned `0` runs, so this is not isolated to the single candidate commit;
-- the available connector can re-run an existing workflow/job but cannot create the missing exact-head run; the last known startup-failed zero-job run has no job log to inspect;
-- local exact-head clone remains unavailable because the execution container cannot resolve `github.com`.
+The resolver routing checklist is `docs/rules/resolver-execution-checklist.md`. PR #139 is still open, so until it lands on `work/v1-composite`, use that exact file from ref `agent/138-resolver-execution-checklist`.
 
-There is still no exact-head green evidence and no Peerless-specific product red. Per Ponytail/Karpathy discipline, do not add a no-op commit or speculative product change merely to force CI.
+## Work completed in this execution
+
+Validated Gate A/B/C and already-proven Gate D artifact/frequency behavior were not repeated.
+
+ChatGPT completed the previously unfinished Gate D design step:
+- Issue #136 now defines the bounded mapless/manual Zone membership model and explicit non-goals.
+- PR #137 carries the same acceptance and remains the Gate D implementation PR.
+- PR #137 comment `5444398800` is the bounded Codex Task Packet.
+- actor-bound aura anchors, Zone relocation/reconciliation, and hidden-Zone visibility were reviewed but removed from mandatory Gate D scope until concrete failing scenarios require them.
+- the resolver checklist now routes directly to Codex implementation rather than repeating ChatGPT design.
+
+Rerun routing was reconciled directly on `work/v1-composite` and canonical `control.json` is authorized as `continue`.
+
+PR #139 was cleaned after that reconciliation: branch `agent/138-resolver-execution-checklist` was reset to current canonical head `f146fa09e9003987cca0a7a8c9ff372304e4bfa2`, then only three docs/pointer changes were reapplied. Current branch head is `d679cab3c2b9908eb792e0a1cfe2aaf4e9714ab7`; compare shows it is 3 commits ahead / 0 behind with only `.agents/README.md`, `docs/rules/README.md`, and `docs/rules/resolver-execution-checklist.md` changed. PR #139 is open and unmerged.
+
+PR #137 product head was still `af0d2cc791c3f7517aa1151590542fb7d6b3b675` at the final reconciliation. Because `work/v1-composite` advanced with Rerun coordination commits, Codex should reconcile/rebase the implementation branch onto the latest canonical head before making the Gate D delta rather than treating the old PR base SHA as current.
 
 ## Next Exact Action
 
-On the next explicit continuation, reconcile live GitHub first and inspect only exact candidate `bfc459ba35d089171d654fd27abb881309bef1fb` UI/Phase12 registration/results. If exact required gates execute and are green, close Peerless canonically and advance to Lore Cutting Words. If the first Peerless-specific red appears, fix only that cause. If Actions remains absent/zero-job, preserve product code unchanged and keep the external verification blocker durable.
+1. Reconcile live `work/v1-composite` and PR #137.
+2. Read the resolver checklist from canonical if PR #139 has landed; otherwise from `agent/138-resolver-execution-checklist`.
+3. If PR #137 head has advanced beyond `af0d2cc791c3f7517aa1151590542fb7d6b3b675`, review only the new Codex implementation delta against Issue #136, the checklist, and PR comment `5444398800`; validate only gates affected by that delta.
+4. If PR #137 head is unchanged, do not repeat Gate D design or validated regressions. The next implementation work is Codex-owned under the frozen task packet. Reconcile its branch with current canonical before coding.
+5. Do not merge PR #137 or PR #139 without explicit owner approval.
 
-PLAN unchanged. Authoritative future write order remains STATE then `control.json` LAST unless routing identity changes.
+No current Rerun authorization blocker remains. Record only genuinely new product, CI, permission, safety, or contract conflicts as future blockers.
+
+Authoritative write order for this final checkpoint is STATE -> control.json LAST; PLAN routing did not change in this final reconciliation.

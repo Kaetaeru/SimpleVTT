@@ -1,34 +1,29 @@
 # Rerun Status
 
-**Connection:** `work/v1-composite` · existing run · V1 completion
+**Connection:** `work/v1-composite` · existing run · Common Play / Rules Resolver
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - Sequence: `1`
 - Task: `phase14-production-play-session-ux`
-- Control to publish: `blocked`
-- Reconciled at: `2026-08-27T00:33:40+09:00`
+- Control to publish: `continue`
+- Reconciled at: `2026-08-28 Asia/Seoul`
 
 ## Current result
 
-Fiend Dark One's Own Luck R2 remains closed and was not repeated.
+Rerun is re-authorized for the current resolver priority. Historical Lore Peerless / missing-Actions evidence is preserved but is not an active blocker or work selector.
 
-Lore Peerless Skill remains active. R1/runtime inspection confirmed the success-only Bardic Inspiration spend rule already exists locally. The connected proof lacked only the remote failure/no-spend authority branch, so `bfc459ba35d089171d654fd27abb881309bef1fb` adds one test-only case in the existing focused file. It proves an accepted authoritative d10 that still leaves the check failed emits no Inspiration resource StateChange and leaves the owning Client resource unchanged. No product runtime/protocol/schema code changed.
+The unfinished ChatGPT design step for Gate D is complete:
+- Issue #136 and PR #137 now require mapless/manual Zone membership while keeping spatial automation optional;
+- already-proven Gate A/B/C and Gate D artifact/frequency behavior were not repeated;
+- actor-bound aura anchors, Zone relocation, and hidden-Zone visibility were removed from mandatory Gate D scope and left as deferred concrete scenarios;
+- bounded Codex Task Packet is posted on PR #137 (comment `5444398800`);
+- resolver checklist on `agent/138-resolver-execution-checklist` is updated at `b79b3983e599c07be68a7b0868e461e62974f7d6` and now routes directly to Codex implementation.
 
-Canonical handoff was reconciled at `43540acac018b40da428df19dcd3ad216d3fc64c`.
-
-Required closure evidence is still unavailable:
-- exact candidate `bfc459ba35d089171d654fd27abb881309bef1fb` has zero workflow runs/check suites registered;
-- older UI `32984089140` remains queued with zero jobs;
-- older duplicate UI `32984184587` is `startup_failure` with zero jobs;
-- exact Peerless Phase12 has not registered;
-- GitHub public status reports Actions operational, so no service-wide incident explains this repository-specific behavior;
-- local shallow clone cannot start because the execution container cannot resolve `github.com`.
-
-No Peerless green claim is made. No no-op commit or product refactor was added to force CI.
+PR #137 remains open/mergeable; last observed product head is `af0d2cc791c3f7517aa1151590542fb7d6b3b675`. PR #139 remains open/mergeable and carries the permanent checklist/routing documentation. Neither PR was merged.
 
 ## Next
 
-When execution is re-authorized, reconcile live GitHub and inspect only exact candidate `bfc459ba35d089171d654fd27abb881309bef1fb` UI/Phase12 registration. If jobs execute, fix only the first Peerless-specific red. If exact UI and Phase12 are green, close Peerless canonically and advance to Lore Cutting Words. If Actions still has zero runnable jobs, preserve code unchanged.
+Reconcile PR #137 head. If Codex has advanced it, review only the new implementation delta against Issue #136 and the resolver checklist, then validate only affected gates. If the head is unchanged, do not repeat the completed design or old regressions; the next implementation step remains Codex-owned under the frozen task packet.
 
-`STATUS.md` remains human-facing only. Authoritative checkpoint order remains PLAN when routing changes -> STATE -> control.json last.
+`STATUS.md` is human-facing only. Authoritative state is STATE plus `control.json`, with control written last.
