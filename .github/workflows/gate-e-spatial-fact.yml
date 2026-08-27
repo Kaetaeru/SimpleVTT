@@ -6,16 +6,20 @@ on:
       - "agent/resolver-foundation-convergence"
     paths:
       - "src/domain/commonPlaySpatialFactRuntime.ts"
+      - "src/domain/commonPlayMovementRuntime.ts"
       - "src/domain/targeting.ts"
       - "tests/domain/commonPlaySpatialFactRuntime.test.ts"
       - "tests/domain/commonPlayMaplessTargeting.test.ts"
+      - "tests/domain/commonPlayMovementRuntime.test.ts"
       - ".github/workflows/gate-e-spatial-fact.yml"
   pull_request:
     paths:
       - "src/domain/commonPlaySpatialFactRuntime.ts"
+      - "src/domain/commonPlayMovementRuntime.ts"
       - "src/domain/targeting.ts"
       - "tests/domain/commonPlaySpatialFactRuntime.test.ts"
       - "tests/domain/commonPlayMaplessTargeting.test.ts"
+      - "tests/domain/commonPlayMovementRuntime.test.ts"
       - ".github/workflows/gate-e-spatial-fact.yml"
 
 jobs:
@@ -35,5 +39,6 @@ jobs:
           npx tsx --test
           tests/domain/commonPlaySpatialFactRuntime.test.ts
           tests/domain/commonPlayMaplessTargeting.test.ts
+          tests/domain/commonPlayMovementRuntime.test.ts
       - name: Typecheck application
         run: npx tsc --noEmit
