@@ -20,9 +20,9 @@ export interface TargetFacts {
   id: string;
   kind: TargetKind;
   relation: TargetRelation;
-  distanceFeet: number;
-  visible: boolean;
-  cover: CoverDegree;
+  distanceFeet?: number;
+  visible?: boolean;
+  cover?: CoverDegree;
 }
 
 export interface TargetingRule {
@@ -38,7 +38,7 @@ export interface TargetingRule {
 
 export interface TargetResolutionEntry {
   targetId: string;
-  cover: CoverDegree;
+  cover?: CoverDegree;
   acBonus: number;
   dexteritySaveBonus: number;
   provenance: ProvenanceRecord[];
@@ -99,6 +99,8 @@ export function resolveTargeting(
   const rejected: TargetRejection[] = [];
   const targets: TargetResolutionEntry[] = [];
   const seen = new Set<string>();
+  const requiresDistance = rule.minimumRangeFeet !== undefined || rule.rangeFeet !== undefined;
+  const requiresCover = rule.directTarget !== false;
 
   if (selected.length < rule.minTargets || selected.length > rule.maxTargets) {
     provenance.push({
@@ -113,13 +115,28 @@ export function resolveTargeting(
     if (!target.id) reasons.push("target id is required");
     if (seen.has(target.id)) reasons.push("duplicate target");
     seen.add(target.id);
-    if (!Number.isFinite(target.distanceFeet) || target.distanceFeet < 0) reasons.push("invalid authoritative distance");
+
+    if (requiresDistance) {
+      if (target.distanceFeet === undefined) reasons.push("authoritative distance is required");
+      else if (!Number.isFinite(target.distanceFeet) || target.distanceFeet < 0) reasons.push("invalid authoritative distance");
+    } else if (target.distanceFeet !== undefined && (!Number.isFinite(target.distanceFeet) || target.distanceFeet < 0)) {
+      reasons.push("invalid authoritative distance");
+    }
+
     if (rule.kind !== "any" && target.kind !== rule.kind) reasons.push(`requires ${rule.kind} target`);
     if (rule.allowedRelations && !rule.allowedRelations.includes(target.relation)) reasons.push(`relation ${target.relation} is not allowed`);
-    if (rule.minimumRangeFeet !== undefined && target.distanceFeet < rule.minimumRangeFeet) reasons.push(`inside minimum range ${rule.minimumRangeFeet} ft`);
-    if (rule.rangeFeet !== undefined && target.distanceFeet > rule.rangeFeet) reasons.push(`beyond range ${rule.rangeFeet} ft`);
-    if (rule.requiresSight && !target.visible) reasons.push("target is not visible");
-    if (rule.directTarget !== false && policy.totalPreventsDirectTarget && target.cover === "total") reasons.push("total cover prevents direct targeting");
+    if (rule.minimumRangeFeet !== undefined && target.distanceFeet !== undefined && target.distanceFeet < rule.minimumRangeFeet) reasons.push(`inside minimum range ${rule.minimumRangeFeet} ft`);
+    if (rule.rangeFeet !== undefined && target.distanceFeet !== undefined && target.distanceFeet > rule.rangeFeet) reasons.push(`beyond range ${rule.rangeFeet} ft`);
+
+    if (rule.requiresSight) {
+      if (target.visible === undefined) reasons.push("authoritative visibility is required");
+      else if (!target.visible) reasons.push("target is not visible");
+    }
+
+    if (requiresCover) {
+      if (target.cover === undefined) reasons.push("authoritative cover is required");
+      else if (policy.totalPreventsDirectTarget && target.cover === "total") reasons.push("total cover prevents direct targeting");
+    }
     if (target.relation === "self" && target.id !== sourceId) reasons.push("self relation must refer to the source actor");
 
     if (reasons.length) {
@@ -128,13 +145,13 @@ export function resolveTargeting(
       continue;
     }
 
-    const bonus = coverBonus(policy, target.cover);
+    const bonus = target.cover === undefined ? 0 : coverBonus(policy, target.cover);
     targets.push({
       targetId: target.id,
       cover: target.cover,
       acBonus: bonus,
       dexteritySaveBonus: bonus,
-      provenance: bonus > 0 ? [{
+      provenance: bonus > 0 && target.cover !== undefined ? [{
         source:`cover:${target.cover}`,
         status:"applied",
         reason:`${target.cover} cover grants +${bonus} AC and Dexterity saving throws`,
