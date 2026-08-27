@@ -1,0 +1,42 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "fixture.reaction-recalculate",
+  "payments": [
+    {
+      "kind": "resource",
+      "resource": "resource.reaction-defense",
+      "amount": { "value": 1 },
+      "consumeAt": "commit",
+      "refundOnCancel": true
+    }
+  ],
+  "interceptors": [
+    {
+      "id": "recalculate-pending-attack",
+      "timing": "attack.outcome-determined",
+      "interaction": {
+        "id": "accept-reaction",
+        "kind": "choice",
+        "responder": "actor-owner",
+        "mode": "blocking",
+        "input": { "type": "boolean" },
+        "visibility": "actor-and-dm",
+        "promptKey": "fixture.accept-reaction",
+        "revalidate": "always",
+        "stalePolicy": "cancel",
+        "idempotencyKey": "fixture.reaction-recalculate.accept"
+      },
+      "operation": "recalculate",
+      "slot": "attack.outcome",
+      "operations": [
+        {
+          "kind": "property.modify",
+          "property": "defense.ac",
+          "operation": "add",
+          "value": { "value": 5 }
+        }
+      ]
+    }
+  ]
+}
