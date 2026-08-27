@@ -7,6 +7,10 @@ import type { PendingResolution, ResolutionCommit, ResolutionOperation } from ".
 import type { TargetFacts } from "./targeting";
 
 type LiteralNumberExpression = { value:number };
+type SaveOutcome = "success"|"failure";
+type SaveOutcomePredicate =
+  | { op:"eq"; left:{ ref:"test.outcome" }; right:{ value:SaveOutcome } }
+  | { op:"eq"; left:{ value:SaveOutcome }; right:{ ref:"test.outcome" } };
 
 export interface CommonPlaySaveDamageDefinition {
   $schema?:string;
@@ -32,6 +36,7 @@ export interface CommonPlaySaveDamageDefinition {
       amount:string;
       damageType:string;
       multiplier?:number;
+      when?:SaveOutcomePredicate;
     }>;
   }>;
 }
@@ -57,6 +62,13 @@ interface ParsedDamageFormula {
   count:number;
   sides:number;
   flat:number;
+}
+
+interface NormalizedDamageOperation {
+  damageType:string;
+  amount:string;
+  multiplier:number;
+  outcome?:SaveOutcome;
 }
 
 const ABILITIES = new Set<AbilityKey>(["str","dex","con","int","wis","cha"]);
@@ -88,6 +100,24 @@ function parseDamageFormula(formula:string):ParsedDamageFormula {
   return { count, sides, flat };
 }
 
+function saveOutcomeFromPredicate(predicate:SaveOutcomePredicate|undefined,label:string):SaveOutcome|undefined {
+  if (!predicate) return undefined;
+  assertOnlyKeys(predicate,["op","left","right"],label);
+  if (predicate.op!=="eq") throw new Error(`${label} supports only eq`);
+
+  const left=predicate.left as Record<string,unknown>;
+  const right=predicate.right as Record<string,unknown>;
+  const leftIsRef=left.ref==="test.outcome";
+  const rightIsRef=right.ref==="test.outcome";
+  const value=leftIsRef?right.value:rightIsRef?left.value:undefined;
+  if (leftIsRef===rightIsRef||(value!=="success"&&value!=="failure")) {
+    throw new Error(`${label} must compare test.outcome with success or failure`);
+  }
+  assertOnlyKeys(left,leftIsRef?["ref"]:["value"],`${label} left expression`);
+  assertOnlyKeys(right,rightIsRef?["ref"]:["value"],`${label} right expression`);
+  return value;
+}
+
 function requireEntryPoint(definition:CommonPlaySaveDamageDefinition,entryPointId:string) {
   assertOnlyKeys(definition,["$schema","schemaVersion","id","entryPoints"],"Common Play definition");
   if (definition.schemaVersion!=="0.2-draft") throw new Error(`unsupported Common Play schema version: ${definition.schemaVersion}`);
@@ -102,17 +132,30 @@ function requireEntryPoint(definition:CommonPlaySaveDamageDefinition,entryPointI
   }
   assertOnlyKeys(entryPoint.test,["kind","roller","property","dc","perTarget"],`entry point ${entryPoint.id} test`);
   if (!ABILITIES.has(entryPoint.test.property)) throw new Error(`unsupported saving throw ability: ${entryPoint.test.property}`);
-  if (entryPoint.operations.length!==1||entryPoint.operations[0]?.kind!=="damage.apply") {
-    throw new Error("save-damage entry point requires exactly one damage.apply operation in this runtime slice");
+  if (entryPoint.operations.length<1||entryPoint.operations.some((operation)=>operation.kind!=="damage.apply")) {
+    throw new Error("save-damage entry point requires one or more damage.apply operations in this runtime slice");
   }
-  const damage=entryPoint.operations[0];
-  assertOnlyKeys(damage,["kind","amount","damageType","multiplier"],`entry point ${entryPoint.id} damage operation`);
-  if (typeof damage.amount!=="string") throw new Error("save-damage entry point requires a dice-formula damage amount");
-  if (!damage.damageType) throw new Error("damage.apply damageType is required");
-  if (damage.multiplier!==undefined&&(!Number.isFinite(damage.multiplier)||damage.multiplier<0)) {
-    throw new Error("damage.apply multiplier must be a non-negative finite number");
+
+  const damages:NormalizedDamageOperation[]=entryPoint.operations.map((damage,index)=>{
+    const label=`entry point ${entryPoint.id} damage operation ${index+1}`;
+    assertOnlyKeys(damage,["kind","amount","damageType","multiplier","when"],label);
+    if (typeof damage.amount!=="string") throw new Error(`${label} requires a dice-formula damage amount`);
+    if (!damage.damageType) throw new Error(`${label} damageType is required`);
+    if (damage.multiplier!==undefined&&(!Number.isFinite(damage.multiplier)||damage.multiplier<0)) {
+      throw new Error(`${label} multiplier must be a non-negative finite number`);
+    }
+    return {
+      damageType:damage.damageType,
+      amount:damage.amount,
+      multiplier:damage.multiplier??1,
+      outcome:saveOutcomeFromPredicate(damage.when,`${label} when`),
+    };
+  });
+  const sharedFormula=damages[0].amount;
+  if (damages.some((damage)=>damage.amount!==sharedFormula)) {
+    throw new Error("save-damage runtime slice requires damage.apply operations to share one dice formula");
   }
-  return { entryPoint, damage };
+  return { entryPoint, damages, sharedFormula };
 }
 
 function numericDamageOperand(
@@ -133,13 +176,12 @@ export function compileCommonPlaySaveDamageEntryPoint(
   input:CommonPlaySaveDamageExecutionInput,
 ):PendingResolution {
   if (!input.resolutionId||!input.actorId) throw new Error("resolutionId and actorId are required");
-  const { entryPoint, damage }=requireEntryPoint(definition,input.entryPointId);
+  const { entryPoint, damages, sharedFormula }=requireEntryPoint(definition,input.entryPointId);
   const dc=literalNumber(entryPoint.test.dc,"saving throw DC");
-  const formula=parseDamageFormula(damage.amount);
+  const formula=parseDamageFormula(sharedFormula);
   const minTargets=entryPoint.targeting.min??1;
   const maxTargets=entryPoint.targeting.max??Math.max(minTargets,input.targets.length);
   const damageRollOperationId="common-play-shared-damage-roll";
-  const baseMultiplier=damage.multiplier??1;
 
   const operations:ResolutionOperation[]=[
     {
@@ -173,9 +215,9 @@ export function compileCommonPlaySaveDamageEntryPoint(
     },
   ];
 
-  input.targets.forEach((target,index)=>{
-    const suffix=index+1;
-    const saveOperationId=`common-play-save-${suffix}`;
+  input.targets.forEach((target,targetIndex)=>{
+    const targetSuffix=targetIndex+1;
+    const saveOperationId=`common-play-save-${targetSuffix}`;
     operations.push({
       id:saveOperationId,
       kind:"d20",
@@ -194,23 +236,18 @@ export function compileCommonPlaySaveDamageEntryPoint(
       },
       condition:{ ability:entryPoint.test.property },
     });
-    operations.push({
-      id:`common-play-damage-${suffix}-full`,
-      kind:"damage",
-      targetId:target.facts.id,
-      damageType:damage.damageType,
-      amount:numericDamageOperand(damageRollOperationId,baseMultiplier),
-      creatureKind:target.creatureKind,
-      when:{ operationId:saveOperationId, field:"outcome", equals:"failure" },
-    });
-    operations.push({
-      id:`common-play-damage-${suffix}-half`,
-      kind:"damage",
-      targetId:target.facts.id,
-      damageType:damage.damageType,
-      amount:numericDamageOperand(damageRollOperationId,baseMultiplier*0.5),
-      creatureKind:target.creatureKind,
-      when:{ operationId:saveOperationId, field:"outcome", equals:"success" },
+    damages.forEach((damage,damageIndex)=>{
+      operations.push({
+        id:`common-play-damage-${targetSuffix}-${damageIndex+1}`,
+        kind:"damage",
+        targetId:target.facts.id,
+        damageType:damage.damageType,
+        amount:numericDamageOperand(damageRollOperationId,damage.multiplier),
+        creatureKind:target.creatureKind,
+        when:damage.outcome
+          ? { operationId:saveOperationId, field:"outcome", equals:damage.outcome }
+          : undefined,
+      });
     });
   });
 
