@@ -139,9 +139,7 @@ function validateTemplate(template:CommonPlayZoneArtifactTemplate,index:number) 
   if (!template.id) throw new Error(`${label} id is required`);
   if (template.artifactKind!=="zone") throw new Error(`${label} must be a zone artifact`);
   durationSeconds(template.duration,`${label} duration`);
-  if (!Array.isArray(template.rules)||template.rules.length<2) {
-    throw new Error(`${label} requires at least two rules for the Gate D runtime slice`);
-  }
+  if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);
   const ruleIds=new Set<string>();
   template.rules.forEach((rule,ruleIndex)=>{
     validateRule(rule,template.id,ruleIndex);
@@ -269,8 +267,8 @@ function currentTurnToken(state:RulesRuntimeState) {
   return `${state.clock.round}:${state.clock.activeActorId}`;
 }
 
-function frequencyKey(ruleId:string) {
-  return `${FREQUENCY_PREFIX}:${ruleId}`;
+function frequencyKey(ruleId:string,subjectId:string) {
+  return `${FREQUENCY_PREFIX}:${ruleId}:${subjectId}`;
 }
 
 function validateSemanticEvent(state:RulesRuntimeState,input:CommonPlayZoneEventInput) {
@@ -294,7 +292,7 @@ function triggerOperations(
   const operations:ResolutionOperation[]=[];
   template.rules.forEach((rule,ruleIndex)=>{
     if (rule.event!==input.kind) return;
-    const markerKey=frequencyKey(rule.id);
+    const markerKey=frequencyKey(rule.id,input.subjectId);
     if (artifact.metadata?.[markerKey]===turnToken) return;
     rule.operations.forEach((operation,operationIndex)=>{
       operations.push({
