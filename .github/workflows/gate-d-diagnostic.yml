@@ -1,0 +1,42 @@
+name: Gate D Diagnostic
+
+on:
+  push:
+    branches:
+      - "agent/136-common-play-zone-runtime"
+
+jobs:
+  locate-session-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content
+        run: npm run generate:content
+      - name: Inspect after generation
+        run: |
+          git status --short
+          if [ -f src/app/sessionRuntime.ts ]; then echo "SESSION_RUNTIME_AFTER_GENERATE"; sed -n '680,715p' src/app/sessionRuntime.ts; fi
+      - name: Run domain tests for generation side effects
+        run: npx tsx --test tests/domain/*.test.ts || true
+      - name: Inspect after domain tests
+        run: |
+          git status --short
+          if [ -f src/app/sessionRuntime.ts ]; then echo "SESSION_RUNTIME_AFTER_DOMAIN"; sed -n '680,715p' src/app/sessionRuntime.ts; fi
+      - name: Run spellcasting integration
+        run: npm run test:spellcasting || true
+      - name: Inspect after spellcasting
+        run: |
+          git status --short
+          if [ -f src/app/sessionRuntime.ts ]; then echo "SESSION_RUNTIME_AFTER_SPELLCASTING"; sed -n '680,715p' src/app/sessionRuntime.ts; fi
+      - name: Run progression integration
+        run: npm run test:progression || true
+      - name: Inspect generated session runtime
+        run: |
+          git status --short
+          test -f src/app/sessionRuntime.ts
+          sed -n '680,715p' src/app/sessionRuntime.ts
