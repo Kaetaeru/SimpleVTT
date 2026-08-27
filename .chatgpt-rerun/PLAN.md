@@ -7,8 +7,8 @@
 - Product integration target: `work/v1-composite`
 - Control path: `.chatgpt-rerun/control.json`
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `1`
-- task_id: `phase14-production-play-session-ux`
+- sequence: `2`
+- task_id: `common-play-foundation-convergence`
 
 ## Product-plan document
 
