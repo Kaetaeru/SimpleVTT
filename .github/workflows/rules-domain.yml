@@ -68,6 +68,7 @@ jobs:
           tests/domain/effectTermination.test.ts
           tests/domain/effectTurnActivity.test.ts
           tests/domain/resolutionAtomic.test.ts
+          tests/domain/commonPlayReactionRuntime.test.ts
           tests/domain/concentrationDamageResult.test.ts
           tests/domain/resourceRecoveryLockout.test.ts
           tests/domain/compoundDamage.test.ts
