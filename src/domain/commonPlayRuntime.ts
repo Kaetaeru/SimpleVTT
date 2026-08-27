@@ -217,6 +217,30 @@ export function startCommonPlayResolution(
   const result=preview.results[attack.operation.id] as D20TestResult|undefined;
   if (!result||result.family!=="attack-roll") return rejected(inputState,"provisional attack result is missing");
   if (result.outcome!=="success") return resolvePendingResolution(profile,inputState,pending);
+  if (attack.operation.targetId&&attack.operation.targetId!==sourceActorId) {
+    return resolvePendingResolution(profile,inputState,pending);
+  }
+
+  let payments:ResolutionOperation[];
+  try {
+    let target=attack.operation.request.target;
+    for (const operation of interceptor.operations) target=applyDefenseModifier(target,operation);
+    if (!Number.isFinite(target)) return rejected(inputState,"recalculated attack target must be finite");
+    payments=paymentOperations(definition,sourceActorId,interceptor.id);
+  } catch (error) {
+    return rejected(inputState,error instanceof Error?error.message:String(error));
+  }
+
+  const paymentEligibility=stagePendingResolution(profile,inputState,{
+    id:`${pending.id}:eligibility:${interceptor.id}`,
+    actorId:sourceActorId,
+    sourceId:definition.id,
+    expectedRevision:inputState.revision,
+    operations:payments,
+  });
+  if (paymentEligibility.status==="rejected") {
+    return resolvePendingResolution(profile,inputState,pending);
+  }
 
   const interactionId=`${pending.id}:${definition.id}:${interceptor.interaction.id}`;
   const idempotencyKey=`${interceptor.interaction.idempotencyKey??interactionId}:${pending.id}`;
