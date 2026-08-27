@@ -1,0 +1,41 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.unknown.instant-sphere",
+  "entryPoints": [
+    {
+      "id": "release",
+      "invocation": "manual",
+      "targeting": {
+        "from": "targets",
+        "min": 0,
+        "max": 64,
+        "area": {
+          "kind": "instant",
+          "shape": "sphere",
+          "origin": "point",
+          "radiusFeet": 5,
+          "rangeFeet": 60
+        }
+      },
+      "interaction": {
+        "id": "select-affected-targets",
+        "kind": "adjudication",
+        "responder": "dm",
+        "mode": "blocking",
+        "input": { "type": "targets" },
+        "visibility": "authority-only",
+        "revalidate": "if-revision-changed",
+        "stalePolicy": "reject",
+        "idempotencyKey": "external.unknown.instant-sphere.targets"
+      },
+      "operations": [
+        {
+          "kind": "damage.apply",
+          "amount": "1d6",
+          "damageType": "acid"
+        }
+      ]
+    }
+  ]
+}
