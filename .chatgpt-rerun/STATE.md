@@ -3,29 +3,29 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `2`
 - task_id: `common-play-foundation-convergence`
-- dispatch status to publish: `continue`
+- dispatch status to publish: `needs_user`
 - repository: `Kaetaeru/SimpleVTT`
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T07:43:27+09:00`
+- checkpointed_at: `2026-08-28T08:06:43+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight for this run was completed in the required order on `agent/resolver-foundation-convergence`:
+Mandatory preflight for this continuation was completed in the required order on `agent/resolver-foundation-convergence`:
 
 1. `.chatgpt-rerun/README.md`
 2. `.chatgpt-rerun/control.json`
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Run identity reconciled cleanly as sequence `2`, task `common-play-foundation-convergence`, control `continue`. `CANONICAL_ROOT.md`, `docs/rules/resolver-execution-checklist.md`, and `docs/rules/gate-e-spatial-fact-execution-packet.md` were then re-read. Previously validated Gate A-D work was not repeated.
+Run identity reconciled cleanly as sequence `2`, task `common-play-foundation-convergence`, control `continue`. `CANONICAL_ROOT.md`, `docs/rules/resolver-execution-checklist.md`, and `docs/rules/gate-e-spatial-fact-execution-packet.md` were then re-read. Previously validated Gate A-D and Gate E E1-E4 work was not repeated.
 
 Canonical product-plan pointer remains:
 
 `docs/rules/resolver-execution-checklist.md`
 
-PLAN routing did not change in this run and was not rewritten.
+PLAN routing did not change and was not rewritten. The checklist intentionally remains Gate E `ACTIVE` until the implementation PR is actually merged; it was not prematurely marked DONE.
 
 ## Active Gate E PR
 
@@ -37,155 +37,183 @@ Child PR:
 
 `#141` — `rules: execute generic Common Play spatial fact answers`
 
-At checkpoint:
+Current exact candidate/head:
+
+`12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba`
+
+Live PR facts at checkpoint:
 
 - PR #141 is open, mergeable, and unmerged;
-- head: `1c5cd2309d29f0b71240da6554af77178b1f342c`;
-- base: `agent/resolver-foundation-convergence`;
-- live diff is exactly eight files:
+- base is `agent/resolver-foundation-convergence`;
+- compare reports `ahead_by=18`, `behind_by=5`, `status=diverged` because the parent has Rerun coordination commits after the original merge base;
+- the product diff is exactly 13 intended Gate E files and contains no unexpected parent-only product file:
   - `.github/workflows/gate-e-spatial-fact.yml`
   - `schemas/common-play-contract.schema.json`
+  - `src/app/connectedCommonPlayAuthorityFactRuntime.ts`
+  - `src/app/connectedSessionRuntimeAdapter.ts`
+  - `src/app/connectedSessionWire.ts`
   - `src/domain/commonPlayMovementRuntime.ts`
   - `src/domain/commonPlaySpatialFactRuntime.ts`
   - `src/domain/targeting.ts`
   - `tests/domain/commonPlayMaplessTargeting.test.ts`
   - `tests/domain/commonPlayMovementRuntime.test.ts`
   - `tests/fixtures/play-contract/instant-area-targets.json`
-- PR body was updated to record current red/green evidence and the remaining connected-authority boundary;
-- PR #141 is not approved for merge and must not be merged implicitly.
+  - `tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts`
+  - `tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts`
+- PR body has been updated with the final red/green evidence and explicit owner-approval boundary;
+- PR #141 must not be merged implicitly.
 
-## Gate E work completed and verified in this sequence
+## Gate E E1-E4 evidence retained from the prior checkpoint
 
-### E1/E2 typed spatial facts and mapless targeting
+Do not repeat these validations merely to reconfirm them. They were already green before the connected routing slice:
 
-`src/domain/commonPlaySpatialFactRuntime.ts` now provides a generic registered fact boundary for:
+- mapless targeting red `02e53a735019bf771e01afc001fa7c6ea4e84f86`, Gate E run `33122252479`: 7/9 pass with exactly the intended unconditional-distance failures;
+- E3 schema red `1baeb029e14b966aef3a0e03a03594b1c2c338a6`, Contract run `33122717609`, job `98693342568`: `targeting.area` absent from persisted contract;
+- E4 movement red `ee2e42f2846b3735c0a91534b6c0b526375b4dcb`, Gate E run `33123174007`, job `98694873221`: new movement proof alone failed because `commonPlayMovementRuntime` did not exist;
+- previous E1-E4 green candidate `1c5cd2309d29f0b71240da6554af77178b1f342c` had Gate E, Rules Domain, Contract, UI, Phase 11, and Phase 12 green.
 
-- `boolean`;
-- `number`;
-- `string`;
-- deterministic `targets`;
-- opaque `destination`.
+## Connected manual-authority routing completed in this continuation
 
-Provider and manual-authority answers normalize through the same fact result. The runtime preserves resolution identity, expected revision, idempotency identity and provenance, rejects stale/identity/type mismatches, and never computes geometry.
+Repository inspection confirmed the existing connected session already provides the required authority/transport primitives:
 
-Mapless targeting red was captured at `02e53a735019bf771e01afc001fa7c6ea4e84f86`: Gate E run `33122252479` produced `7/9` PASS with exactly two intended failures because `resolveTargeting()` unconditionally required authoritative distance.
+- accepted peer -> `SessionCompatibilityManifest` mappings in `state.peerManifests`;
+- Character identity in each accepted manifest;
+- same-Character reconnect/rebind replacing the peer mapping;
+- peer-private `sendConnectedWireTo(peer, ...)` delivery;
+- existing thin inbound response-port/message-loop pattern;
+- Host authority remains the shared resolution authority.
 
-The initial fix made the public `TargetFacts` fields optional and exposed an exact typecheck regression. That broad type weakening was corrected rather than patched at call sites.
+No second transport stack or projection-context switching was introduced.
 
-Final mapless-targeting correction at `59c4ea2dc721368d6135a2e88321a65fcfb1d473`:
+### Connected coordinator red
 
-- existing `TargetFacts` remains strict for existing callers;
-- `TargetingFactInput` is the relaxed input boundary for `resolveTargeting()` only;
-- distance is required only for declared range semantics;
-- visibility only for sight semantics;
-- cover only for direct-target cover semantics;
-- provided invalid facts still reject;
-- no missing spatial value is fabricated.
+Exact red head:
 
-Exact evidence at `59c4ea2d...`:
+`0f989335a25ee65821d4df0d9c0c7d1ea29a80f1`
 
-- Gate E Spatial Fact `33122611047`: SUCCESS including typecheck;
-- Rules Domain `33122610992`: SUCCESS;
-- Contract validation `33122611022`: SUCCESS.
+Gate E run `33124115235`, job `98697981604`:
 
-Do not repeat this evidence unless affected product/runtime/test files change.
+- the new connected authority-routing focused step failed before product implementation;
+- the missing reusable capability was exactly the absent generic `connectedCommonPlayAuthorityFactRuntime` coordinator;
+- no product implementation had been added at that red point.
 
-### E3 instantaneous area metadata
+The red fixture pins:
 
-Concrete schema red:
+- `authority-only` fact request goes only to the peer whose accepted Character identity owns the responder;
+- wrong Client Character, session, responder, or current owner peer rejects;
+- correct answer normalizes through `answerCommonPlayFactRequest` with authority provenance;
+- duplicate delivery cannot publish a second authoritative answer;
+- stale revision closes rather than revives the request;
+- unanswered request may resend to a new peer after same-Character rebind;
+- old peer loses authority after rebind;
+- resolved/stale request cannot revive after later reconnect.
 
-- fixture head `1baeb029e14b966aef3a0e03a03594b1c2c338a6`;
-- Contract run `33122717609`, job `98693342568`;
-- failure was exactly that selector `targeting.area` was not a persisted Common Play property.
+### Generic coordinator/wire implementation
 
-Minimal persisted metadata was added at `cdf79016d95d82bd1b184b80a269d1b081357ad4`:
+Added `src/app/connectedCommonPlayAuthorityFactRuntime.ts` and generic connected wire messages:
 
-- `kind: "instant"`;
-- proven shape only: `shape: "sphere"`;
-- `origin: "self" | "point"`;
-- positive `radiusFeet`;
-- optional nonnegative `rangeFeet`;
-- `area` only on selectors whose source is `targets`;
-- metadata only; Core still performs no geometry/raycast.
+- `common-play-fact-request`;
+- `common-play-fact-response`.
 
-Exact evidence at `cdf79016...`:
+The coordinator:
 
-- Contract validation `33122809147`: SUCCESS;
-- Gate E Spatial Fact `33122809115`: SUCCESS;
-- Rules Domain `33122809117`: SUCCESS;
-- connected/UI/playable downstream runs associated with that head were also green.
+- stores pending/completed/closed state per adapter/session;
+- resolves owner peer from existing `peerManifests` Character identity;
+- uses existing peer-targeted transport for private prompts;
+- validates session/responder/current owner peer;
+- delegates semantic answer validation to `answerCommonPlayFactRequest`;
+- provides first-answer-wins idempotency without a second callback/apply;
+- retains Client answer identity so a Host retry may replay the already-supplied response;
+- resends only still-pending requests on same-Character rebind.
 
-Do not repeat this evidence unless affected files change.
+No named content branch, geometry engine, feature-specific transport, or projection-context switch was added.
 
-### E4 legal destination / movement orchestration
+Intermediate exact head `569008345d0a7eb34e695d68995a50b2cd7f067c` proved the coordinator/wire focused tests and TypeScript typecheck green, but was not treated as Gate E completion because the real connected message loop was not yet wired.
 
-Repository inspection established that Core stores no authoritative map position. Existing `move`/`free-move` primitives represent movement economy/rule validation, so mapping `push`, `pull`, or `teleport` to normal `move` would silently change semantics.
+### Production message-loop red
 
-Concrete E4 red was captured before implementation:
+Exact red head:
 
-- red workflow head `ee2e42f2846b3735c0a91534b6c0b526375b4dcb`;
-- Gate E run `33123174007`, job `98694873221`;
-- all existing Gate E tests stayed green and the new movement proof alone failed because `commonPlayMovementRuntime` did not exist.
+`f5f4d753a4a2385cd57997e150d10cb27ab45703`
 
-Minimal `src/domain/commonPlayMovementRuntime.ts` was then added. It:
+Gate E run `33124479006`, job `98699176336`:
 
-- accepts an already-normalized semantic destination answer;
-- preserves destination as an opaque string instead of inventing coordinates;
-- verifies query/fact/subject identity;
-- compiles only `movement.relocate` with `mode: "move"` and a finite nonnegative literal distance into the existing authoritative Resolver `move` operation;
-- explicitly returns unsupported for `push`, `pull`, `teleport`, and unsupported/nonliteral distance expressions instead of approximating them.
+- coordinator/wire existed;
+- the new production dispatch integration test failed because real `connectedSessionRuntimeAdapter` did not yet dispatch the two generic Common Play fact messages.
 
-Current exact green child candidate:
+This prevented a false green based only on a unit-level coordinator.
 
-`1c5cd2309d29f0b71240da6554af77178b1f342c`
+### Production message-loop correction
 
-Exact evidence at that SHA:
+`src/app/connectedSessionRuntimeAdapter.ts` now:
 
-- Gate E Spatial Fact `33123267315`: SUCCESS including focused tests and `npx tsc --noEmit`;
-- Rules Domain `33123267343`: SUCCESS;
-- Contract validation `33123267291`: SUCCESS;
-- UI `33123267328`: SUCCESS;
-- Phase 11 Playable `33123267297`: SUCCESS;
-- Phase 12 Connected Session `33123267293`: SUCCESS.
+- advertises `common-play-authority-fact-v1`;
+- registers the generic coordinator against the existing `sendConnectedWireTo` / broadcast transport;
+- resumes still-pending owner fact requests after an accepted same-Character hello/rebind;
+- routes Host `common-play-fact-response` into the generic coordinator;
+- routes Client `common-play-fact-request` to the active Character ownership check;
+- uses the existing session message loop rather than a parallel protocol stack.
 
-This evidence covers the current E1-E4 domain/schema candidate. Do not rerun it merely to reconfirm state.
+## Final exact-head verification
 
-## Remaining Gate E work
+Final Gate E candidate:
 
-The remaining unimplemented foundation boundary is connected manual-authority routing.
+`12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba`
 
-Existing connected infrastructure inspected in this run already provides the needed transport/ownership primitives:
+Do not rerun these green checks unless product/runtime/test files change.
 
-- `connectedSessionRuntimeAdapter.ts` keeps accepted peer → manifest mappings in `state.peerManifests`;
-- each accepted manifest carries the connected Character identity;
-- reconnect of the same accepted Character identity replaces/rebinds the peer mapping;
-- `sendConnectedWireTo(peer, ...)` already provides peer-private delivery;
-- inbound connected responses already use thin registered route/port patterns for interrupt and concentration responses;
-- `HostSessionLedger` already owns shared authoritative event ordering/cursors;
-- therefore do not introduce a second transport stack or projection-context switching.
+### Required Gate E focused evidence
 
-The previously rejected broad projection-context switching pattern remains forbidden because it regressed unrelated connected mechanics.
+Gate E Spatial Fact run `33124577135`, job `98699500259`:
+
+- focused command covers spatial fact runtime, mapless targeting, movement orchestration, connected owner routing/reconnect, and production Host/Client message-loop dispatch;
+- **15/15 PASS, 0 FAIL**;
+- `npx tsc --noEmit`: PASS.
+
+### Contract / domain / UI / playable / connected regression
+
+On the same exact SHA:
+
+- Contract validation run `33124577119`: SUCCESS;
+- Rules Domain run `33124577116`, job `98699499753`: SUCCESS, including application typecheck;
+- UI run `33124577166`: SUCCESS;
+- Phase 11 Playable run `33124577172`, `offline-walkthrough` job `98699500325`: SUCCESS, including the full production frontend gate;
+- Phase 12 Connected Session run `33124577117`, `connected-protocol` job `98699499728`: SUCCESS, including connected authority protocol regression, Phase 11 offline walkthrough regression, and production frontend build.
+
+At this checkpoint the downstream Windows artifact jobs in Phase 11 and Phase 12 were still running. They are not being used as the Gate E semantic/authority proof. On any merge-approval continuation, read their existing final conclusions; do not rerun them merely to obtain a result.
+
+### Unrelated persistence baseline
+
+Persistence run `33124577216` remains the pre-existing unrelated baseline:
+
+- `74/75` persistence-adapter tests pass;
+- sole failure: `tests/app/installedContentRuntimeAdapter.test.ts` with `501 !== 496`;
+- Gate E's 13-file diff does not touch that adapter/catalog-count baseline;
+- Windows `tauri-storage` job is green.
+
+Do not classify this as a Gate E regression.
+
+## Current Gate E status
+
+Implementation and required exact-head Gate E semantic/authority evidence are GREEN.
+
+Gate E is **not canonical DONE** because PR #141 is still open and owner merge approval is required by the checklist.
+
+No Gate F+ work was activated. Phase 2 Legacy Convergence has not started.
 
 ## Next Exact Action
 
-Resume on `agent/gate-e-spatial-fact-runtime` from head `1c5cd2309d29f0b71240da6554af77178b1f342c` unless GitHub has advanced it.
+Owner decision required: explicit merge approval for PR #141.
 
-1. Fresh-check PR #141/head before editing.
-2. Add a deterministic **connected manual-authority red test first**. The bounded scenario must prove, using the existing session ownership model:
-   - an `authority-only` generic `CommonPlayAuthorityFactRequest` for an owner-backed Character routes only to the peer whose accepted manifest owns that Character;
-   - no broadcast/private fact leak occurs;
-   - wrong session and wrong peer/owner responses reject;
-   - the correct response normalizes through `answerCommonPlayFactRequest`;
-   - stale revision rejects;
-   - duplicate response delivery cannot produce a second authoritative answer;
-   - reconnect/rebind may let the same accepted Character identity answer an unanswered request from its new peer, but cannot revive an already answered request.
-3. Only after the red is demonstrated, add the smallest generic connected implementation:
-   - generic fact request/response wire envelopes in the existing `ConnectedWireMessage` protocol;
-   - strict wire validation;
-   - a thin generic fact response/request state/route port using current peer ownership maps;
-   - existing `sendTo(peer, ...)` for authority-only delivery;
-   - advertise a connected capability if the new wire contract requires it;
-   - no feature-specific UI/transport engine and no projection-context switch.
-4. After connected product/test files change, run only the impacted exact-head validation needed for that new change. Phase 12 Connected Session and typecheck are mandatory; the final Gate E candidate must also carry the checklist-required focused/contract/domain evidence, but do not rerun unchanged evidence prematurely.
-5. When connected routing is green, update the Gate E checklist/evidence on the product branch as appropriate, then stop at the owner merge-approval boundary for PR #141.
-6. Do not merge PR #141, route to `main`, start Phase 2, or activate Gate F+ without the required completion/approval transition.
+If the owner approves PR #141:
+
+1. perform mandatory Rerun preflight again in exact order: README -> control -> STATE -> PLAN;
+2. fresh-fetch PR #141, its head, current parent head, changed filenames, and compare;
+3. read the already-running downstream Windows workflow conclusions if they have finished; do not repeat validated Gate E tests;
+4. if parent/child divergence is still coordination/docs-only and the 13-file product/runtime/test diff is unchanged, reconcile ancestry without changing the validated product tree and without rerunning green evidence;
+5. verify PR #141 is mergeable with the expected reconciled head;
+6. merge PR #141 only with the explicit owner approval;
+7. after merge, update `docs/rules/resolver-execution-checklist.md` to mark Gate E DONE / Foundation frozen through E and record canonical merge evidence;
+8. then update STATE and control last; Phase 2 becomes the next canonical product queue, while Gate F+ remains dormant unless a later concrete migration failure separately satisfies its activation rule.
+
+Until owner approval, do not merge PR #141, route to `main`, start Phase 2, or activate Gate F+.
