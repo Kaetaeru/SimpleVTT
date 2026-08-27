@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T05:32:25+09:00`
+- checkpointed_at: `2026-08-28T05:36:28+09:00`
 
 ## Durable checkpoint
 
@@ -15,40 +15,47 @@ Mandatory preflight was read from `work/v1-composite` in the required order: `.c
 
 The current explicit product priority remains **Common Play / data-driven Rules Resolver**. The resolver router is `docs/rules/resolver-execution-checklist.md`; PR #139 remains open, so use the current file from `agent/138-resolver-execution-checklist` until that PR lands.
 
-## Work completed in this execution
+## Work completed and reconciled
 
-Validated Gates A/B/C and already-proven Gate D behavior were not repeated. Live repository state was reconciled first.
+Validated Gates A/B/C and already-proven Gate D behavior were not repeated.
 
-PR #137 (`agent/136-common-play-zone-runtime`) had advanced beyond the prior checkpoint. Its product branch was reconciled with then-current canonical `work/v1-composite` before further coding via merge commit `3eef7b0f3a40365c25e0c93b27b0adee8aae4eac`; the canonical delta was Rerun coordination-only.
+Gate D product implementation remains fully reviewed and validated at product commit `134d2b88af707ee2e247372e25cec9630442d5d6`:
+- optional opaque placement and mapless activation;
+- authoritative `ZoneMembershipState` with `manual` / `spatial` authority through one semantic path;
+- idempotent enter/leave and persistent membership;
+- membership-driven `zone.turn-start` / `zone.turn-end`;
+- atomic Zone removal/expiry membership cleanup;
+- generic rule/frequency execution without named-content branches;
+- session apply/undo plus connected compensating Undo support for artifact and membership state;
+- temporary typecheck diagnostics removed.
 
-Only the new Gate D implementation delta was reviewed and corrected:
-- Gate D mapless Zone membership implementation is present: optional opaque placement, authoritative `ZoneMembershipState`, manual/spatial authority through one semantic path, idempotent enter/leave, persistent membership, turn-start/turn-end emission, atomic expiry/removal cleanup, and existing generic Zone rule/frequency execution.
-- Session event apply/undo already learned the new artifact/membership state kinds in the implementation delta.
-- The remaining connected compensating-Undo type gap was fixed by commit `beae5bdae2083168babd3eb040170712a1b7ebd0`, adding explicit `artifact` and `zone-membership` inversion without casts or RuntimeStateChange type weakening.
-- Temporary Rules Domain typecheck diagnostics were removed and the canonical `Typecheck application` step restored by commit `134d2b88af707ee2e247372e25cec9630442d5d6`.
-- PR #137 body/acceptance was updated to the verified state. Current product head is `134d2b88af707ee2e247372e25cec9630442d5d6`; PR #137 is open, mergeable, and unmerged.
-
-Validation at PR #137 head `134d2b88af707ee2e247372e25cec9630442d5d6`:
+Validation at product commit `134d2b88af707ee2e247372e25cec9630442d5d6` remains authoritative because no product/runtime files changed afterward:
 - Contract validation: green.
 - Rules Domain: green, including focused `commonPlayZoneRuntime` coverage and canonical `npx tsc --noEmit`.
 - UI: green, including production typecheck/build and affected runtime/session regressions.
-- Phase 11 offline walkthrough + full production frontend gate: green. The Windows playable packaging job was still building at checkpoint time and is not a Gate D runtime-contract blocker.
-- Phase 12 connected-session authority protocol + production frontend gate: green. The Windows connected-playable packaging job was still building at checkpoint time and is not a Gate D runtime-contract blocker.
-- Persistence application-contract remains red only on the pre-existing builtin-catalog count baseline in `installedContentRuntimeAdapter.test.ts`: generated `501` versus stale expected `496`; the other 74 tests in that job passed. Gate D does not own the catalog generator or that expectation.
+- Phase 11 offline walkthrough + full production frontend gate: green.
+- Phase 12 connected-session authority protocol + production frontend gate: green.
+- Persistence application-contract remains red only on the pre-existing builtin-catalog count baseline in `installedContentRuntimeAdapter.test.ts`: generated `501` versus stale expected `496`; Gate D does not own that generator/expectation.
 
-PR #139 resolver-router branch was updated by commit `c360350fdfb1252e932d3dd7fdc22b8e9a4360c5` so Gate D remains `ACTIVE` only because it is not yet merged, while all implementation/validation requirements are recorded complete. Its `Current next action` now routes to explicit owner merge decision and forbids repeating Gate D implementation or activating Gate E without a concrete new scenario.
+Live reconciliation for this dispatch:
+- canonical `work/v1-composite` head is `2938aa483d6db2777091ca318e00ee3aaabcf54c` (`rerun: await Gate D merge decision`);
+- PR #137 had become non-mergeable only because its branch still carried older `.chatgpt-rerun/STATE.md` / `control.json` content while canonical advanced those same coordination files;
+- PR #137 branch coordination files were synchronized to canonical in protocol order (`STATE.md` then `control.json`), producing branch head `caa3da1cf93834418eb53587a862c4c77d832c4b`;
+- compare `134d2b88... -> caa3da1c...` contains only `.chatgpt-rerun/STATE.md` and `.chatgpt-rerun/control.json`; therefore prior Gate D product validation was not repeated;
+- PR #137 is open, mergeable, and unmerged at branch head `caa3da1cf93834418eb53587a862c4c77d832c4b`;
+- PR #139 is also open, mergeable, and unmerged; it still contains only the three resolver checklist/discovery documentation changes.
 
-Tooling cleanup note: an accidental branch `tmp-should-not-create` exists from this execution. It is not referenced by PR #137/#139 and is not a product blocker. The connected GitHub tool surface exposed branch create/update but no branch/ref deletion action, so it could not be removed here.
+The current dispatch requested continuation, which authorized reconciliation of the unfinished sequence, but it did not explicitly authorize merging a pull request. Repository governance still requires an explicit owner merge decision before either PR is merged.
 
 ## Next Exact Action
 
-1. Await an **explicit owner merge decision** for PR #137. No further Gate D implementation work is currently authorized.
-2. If the owner explicitly approves merging PR #137, perform a fresh Rerun preflight and verify the approved PR head. If it changed beyond `134d2b88af707ee2e247372e25cec9630442d5d6`, review only the new delta before merge.
+1. Await an **explicit owner merge decision** for PR #137. No further Gate D implementation work is currently required.
+2. If the owner explicitly approves merging PR #137, perform a fresh Rerun preflight and verify the approved PR head. If only Rerun coordination files changed after the validated product commit, do not repeat product regressions.
 3. Merge PR #137 only after explicit owner approval; then reconcile `work/v1-composite`, mark Gate D `DONE` in the resolver router after the merge is canonical, and update Rerun routing accordingly.
 4. Do not merge PR #139 without explicit owner approval.
 5. Do not activate Gate E from the planned backlog alone. A concrete spatial-fact/manual-authority scenario and a bounded design step are required first.
 6. Do not fix the unrelated `501 !== 496` persistence baseline inside Gate D unless the owner separately scopes that cleanup.
 
-There is no remaining Gate-D-specific technical blocker. The current blocker is the required owner decision for merge.
+There is no remaining Gate-D-specific technical blocker. Both relevant PRs are mergeable. The remaining blocker is only the required owner merge decision.
 
-PLAN routing did not change in this final checkpoint and was not rewritten. Authoritative checkpoint write order is `STATE.md` -> `control.json` LAST.
+PLAN routing did not change in this checkpoint and was not rewritten. Authoritative checkpoint write order is `STATE.md` -> `control.json` LAST.
