@@ -8,109 +8,184 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T07:24:04+09:00`
+- checkpointed_at: `2026-08-28T07:43:27+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight was completed in the required order on `agent/resolver-foundation-convergence`:
+Mandatory preflight for this run was completed in the required order on `agent/resolver-foundation-convergence`:
 
 1. `.chatgpt-rerun/README.md`
 2. `.chatgpt-rerun/control.json`
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Run identity reconciled cleanly as sequence `2`, task `common-play-foundation-convergence`, with control `continue`. `CANONICAL_ROOT.md` and the product-plan pointer were then re-read. No previously validated Gate A-D work was repeated.
+Run identity reconciled cleanly as sequence `2`, task `common-play-foundation-convergence`, control `continue`. `CANONICAL_ROOT.md`, `docs/rules/resolver-execution-checklist.md`, and `docs/rules/gate-e-spatial-fact-execution-packet.md` were then re-read. Previously validated Gate A-D work was not repeated.
 
 Canonical product-plan pointer remains:
 
 `docs/rules/resolver-execution-checklist.md`
 
-Do not copy that checklist into STATE. Resume from its current action plus the concrete execution evidence below.
+PLAN routing did not change in this run and was not rewritten.
 
-## Gate E execution evidence captured in this run
+## Active Gate E PR
 
-### Design freeze
-
-A bounded implementation packet was added on the Rerun working branch:
-
-`docs/rules/gate-e-spatial-fact-execution-packet.md`
-
-Repository inspection established that the persisted Common Play contract already has `FactQuery`, `Interaction`, target input, `Selector`, `movement.relocate.destinationFact`, and adjudication structures. The concrete missing foundation is runtime orchestration/typed fact answering rather than a geometry engine or named-content resolver.
-
-### Parent working-branch test harness
-
-The parent branch now contains:
-
-- `tests/domain/commonPlaySpatialFactRuntime.test.ts`;
-- `.github/workflows/gate-e-spatial-fact.yml`;
-- content generation was added before focused typecheck after the first CI run proved the temporary workflow omitted generated catalogs.
-
-The initial exact candidate `6c5a83476dcc5a19b4462df35c72f288c8c7a21b` on child PR #141 produced Gate E run `33122129769`, job `98691330316`:
-
-- focused spatial fact runtime: `6/6` PASS;
-- typecheck failed only because the new focused workflow had not run `npm run generate:content` first;
-- failure was missing generated catalog JSON imports, not a Gate-E product/type error;
-- the workflow setup was corrected without changing product code.
-
-### Concrete mapless targeting red
-
-Implementation child branch:
+Child implementation branch:
 
 `agent/gate-e-spatial-fact-runtime`
 
-Child PR: `#141` targeting `agent/resolver-foundation-convergence`.
+Child PR:
 
-Exact red candidate `02e53a735019bf771e01afc001fa7c6ea4e84f86` ran Gate E workflow `33122252479`, job `98691750579`:
+`#141` — `rules: execute generic Common Play spatial fact answers`
 
-- `9` focused tests total;
-- `7` PASS;
-- exactly `2` FAIL;
-- both failures were the intended mapless targeting gap: `resolveTargeting()` unconditionally rejected absent `distanceFeet` as `invalid authoritative distance`, including when the rule declared no range/sight/cover requirement.
+At checkpoint:
 
-This is the bounded executable failure required before changing targeting semantics.
+- PR #141 is open, mergeable, and unmerged;
+- head: `1c5cd2309d29f0b71240da6554af77178b1f342c`;
+- base: `agent/resolver-foundation-convergence`;
+- live diff is exactly eight files:
+  - `.github/workflows/gate-e-spatial-fact.yml`
+  - `schemas/common-play-contract.schema.json`
+  - `src/domain/commonPlayMovementRuntime.ts`
+  - `src/domain/commonPlaySpatialFactRuntime.ts`
+  - `src/domain/targeting.ts`
+  - `tests/domain/commonPlayMaplessTargeting.test.ts`
+  - `tests/domain/commonPlayMovementRuntime.test.ts`
+  - `tests/fixtures/play-contract/instant-area-targets.json`
+- PR body was updated to record current red/green evidence and the remaining connected-authority boundary;
+- PR #141 is not approved for merge and must not be merged implicitly.
 
-### Minimal targeting correction
+## Gate E work completed and verified in this sequence
 
-Exact current child candidate:
+### E1/E2 typed spatial facts and mapless targeting
 
-`9b4936bff06d318344fc010595e2ab0011972e7a`
+`src/domain/commonPlaySpatialFactRuntime.ts` now provides a generic registered fact boundary for:
 
-Changes made after the red:
+- `boolean`;
+- `number`;
+- `string`;
+- deterministic `targets`;
+- opaque `destination`.
 
-- `TargetFacts.distanceFeet`, `visible`, and `cover` are optional inputs;
-- distance is required only when minimum/maximum range is declared;
-- visibility is required only when sight is declared;
-- cover is required only for direct-target cover semantics;
-- provided invalid facts are still rejected;
-- no spatial value is fabricated when the rule does not require it;
-- existing authoritative range/sight/cover behavior remains covered by the focused regression.
+Provider and manual-authority answers normalize through the same fact result. The runtime preserves resolution identity, expected revision, idempotency identity and provenance, rejects stale/identity/type mismatches, and never computes geometry.
 
-At checkpoint, Gate E workflow `33122306955`, job `98691942457` on the exact current candidate reports:
+Mapless targeting red was captured at `02e53a735019bf771e01afc001fa7c6ea4e84f86`: Gate E run `33122252479` produced `7/9` PASS with exactly two intended failures because `resolveTargeting()` unconditionally required authoritative distance.
 
-- focused Gate E tests: PASS (`9/9` step completed successfully);
-- content generation: PASS;
-- TypeScript typecheck: still `in_progress` at the checkpoint boundary.
+The initial fix made the public `TargetFacts` fields optional and exposed an exact typecheck regression. That broad type weakening was corrected rather than patched at call sites.
 
-Do not infer the typecheck result. Re-read the exact job before continuing.
+Final mapless-targeting correction at `59c4ea2dc721368d6135a2e88321a65fcfb1d473`:
 
-## Scope intentionally not started after checkpoint boundary
+- existing `TargetFacts` remains strict for existing callers;
+- `TargetingFactInput` is the relaxed input boundary for `resolveTargeting()` only;
+- distance is required only for declared range semantics;
+- visibility only for sight semantics;
+- cover only for direct-target cover semantics;
+- provided invalid facts still reject;
+- no missing spatial value is fabricated.
 
-No new long work was started for the remaining Gate E slices once the Rerun checkpoint window was reached. In particular, the run has not yet implemented the remaining persisted instantaneous-area metadata gap, movement/destination orchestration, or connected manual-authority routing.
+Exact evidence at `59c4ea2d...`:
 
-No named spell/feat/class/subclass/item execution adapter was added or expanded.
+- Gate E Spatial Fact `33122611047`: SUCCESS including typecheck;
+- Rules Domain `33122610992`: SUCCESS;
+- Contract validation `33122611022`: SUCCESS.
 
-## Current branch/PR facts
+Do not repeat this evidence unless affected product/runtime/test files change.
 
-- Rerun working branch: `agent/resolver-foundation-convergence`.
-- Gate E child implementation branch: `agent/gate-e-spatial-fact-runtime`.
-- Child PR: `#141`, open, not approved for integration/merge.
-- PR #139 and PR #140 remain closed/unmerged as superseded.
-- `main` remains outside this sequence; product integration target remains `work/v1-composite`.
+### E3 instantaneous area metadata
+
+Concrete schema red:
+
+- fixture head `1baeb029e14b966aef3a0e03a03594b1c2c338a6`;
+- Contract run `33122717609`, job `98693342568`;
+- failure was exactly that selector `targeting.area` was not a persisted Common Play property.
+
+Minimal persisted metadata was added at `cdf79016d95d82bd1b184b80a269d1b081357ad4`:
+
+- `kind: "instant"`;
+- proven shape only: `shape: "sphere"`;
+- `origin: "self" | "point"`;
+- positive `radiusFeet`;
+- optional nonnegative `rangeFeet`;
+- `area` only on selectors whose source is `targets`;
+- metadata only; Core still performs no geometry/raycast.
+
+Exact evidence at `cdf79016...`:
+
+- Contract validation `33122809147`: SUCCESS;
+- Gate E Spatial Fact `33122809115`: SUCCESS;
+- Rules Domain `33122809117`: SUCCESS;
+- connected/UI/playable downstream runs associated with that head were also green.
+
+Do not repeat this evidence unless affected files change.
+
+### E4 legal destination / movement orchestration
+
+Repository inspection established that Core stores no authoritative map position. Existing `move`/`free-move` primitives represent movement economy/rule validation, so mapping `push`, `pull`, or `teleport` to normal `move` would silently change semantics.
+
+Concrete E4 red was captured before implementation:
+
+- red workflow head `ee2e42f2846b3735c0a91534b6c0b526375b4dcb`;
+- Gate E run `33123174007`, job `98694873221`;
+- all existing Gate E tests stayed green and the new movement proof alone failed because `commonPlayMovementRuntime` did not exist.
+
+Minimal `src/domain/commonPlayMovementRuntime.ts` was then added. It:
+
+- accepts an already-normalized semantic destination answer;
+- preserves destination as an opaque string instead of inventing coordinates;
+- verifies query/fact/subject identity;
+- compiles only `movement.relocate` with `mode: "move"` and a finite nonnegative literal distance into the existing authoritative Resolver `move` operation;
+- explicitly returns unsupported for `push`, `pull`, `teleport`, and unsupported/nonliteral distance expressions instead of approximating them.
+
+Current exact green child candidate:
+
+`1c5cd2309d29f0b71240da6554af77178b1f342c`
+
+Exact evidence at that SHA:
+
+- Gate E Spatial Fact `33123267315`: SUCCESS including focused tests and `npx tsc --noEmit`;
+- Rules Domain `33123267343`: SUCCESS;
+- Contract validation `33123267291`: SUCCESS;
+- UI `33123267328`: SUCCESS;
+- Phase 11 Playable `33123267297`: SUCCESS;
+- Phase 12 Connected Session `33123267293`: SUCCESS.
+
+This evidence covers the current E1-E4 domain/schema candidate. Do not rerun it merely to reconfirm state.
+
+## Remaining Gate E work
+
+The remaining unimplemented foundation boundary is connected manual-authority routing.
+
+Existing connected infrastructure inspected in this run already provides the needed transport/ownership primitives:
+
+- `connectedSessionRuntimeAdapter.ts` keeps accepted peer → manifest mappings in `state.peerManifests`;
+- each accepted manifest carries the connected Character identity;
+- reconnect of the same accepted Character identity replaces/rebinds the peer mapping;
+- `sendConnectedWireTo(peer, ...)` already provides peer-private delivery;
+- inbound connected responses already use thin registered route/port patterns for interrupt and concentration responses;
+- `HostSessionLedger` already owns shared authoritative event ordering/cursors;
+- therefore do not introduce a second transport stack or projection-context switching.
+
+The previously rejected broad projection-context switching pattern remains forbidden because it regressed unrelated connected mechanics.
 
 ## Next Exact Action
 
-1. Re-fetch PR #141 and exact child head before editing.
-2. Re-read Gate E run `33122306955` / job `98691942457`; record the actual typecheck conclusion. Also classify the exact-head Rules Domain result if completed.
-3. If the exact current candidate is green for focused tests/typecheck, do not repeat those already-executed checks unless product/runtime/test files change.
-4. Resume from `docs/rules/resolver-execution-checklist.md` and `docs/rules/gate-e-spatial-fact-execution-packet.md` at the remaining Gate E work. Preserve red-first, smallest-generic-capability, no-geometry, no-named-content constraints.
-5. Do not merge PR #141 or promote Gate E to `work/v1-composite` without the checklist-required owner approval and complete Gate E evidence.
+Resume on `agent/gate-e-spatial-fact-runtime` from head `1c5cd2309d29f0b71240da6554af77178b1f342c` unless GitHub has advanced it.
+
+1. Fresh-check PR #141/head before editing.
+2. Add a deterministic **connected manual-authority red test first**. The bounded scenario must prove, using the existing session ownership model:
+   - an `authority-only` generic `CommonPlayAuthorityFactRequest` for an owner-backed Character routes only to the peer whose accepted manifest owns that Character;
+   - no broadcast/private fact leak occurs;
+   - wrong session and wrong peer/owner responses reject;
+   - the correct response normalizes through `answerCommonPlayFactRequest`;
+   - stale revision rejects;
+   - duplicate response delivery cannot produce a second authoritative answer;
+   - reconnect/rebind may let the same accepted Character identity answer an unanswered request from its new peer, but cannot revive an already answered request.
+3. Only after the red is demonstrated, add the smallest generic connected implementation:
+   - generic fact request/response wire envelopes in the existing `ConnectedWireMessage` protocol;
+   - strict wire validation;
+   - a thin generic fact response/request state/route port using current peer ownership maps;
+   - existing `sendTo(peer, ...)` for authority-only delivery;
+   - advertise a connected capability if the new wire contract requires it;
+   - no feature-specific UI/transport engine and no projection-context switch.
+4. After connected product/test files change, run only the impacted exact-head validation needed for that new change. Phase 12 Connected Session and typecheck are mandatory; the final Gate E candidate must also carry the checklist-required focused/contract/domain evidence, but do not rerun unchanged evidence prematurely.
+5. When connected routing is green, update the Gate E checklist/evidence on the product branch as appropriate, then stop at the owner merge-approval boundary for PR #141.
+6. Do not merge PR #141, route to `main`, start Phase 2, or activate Gate F+ without the required completion/approval transition.
