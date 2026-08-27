@@ -70,6 +70,7 @@ jobs:
           tests/domain/resolutionAtomic.test.ts
           tests/domain/commonPlayReactionRuntime.test.ts
           tests/domain/commonPlaySaveDamageRuntime.test.ts
+          tests/domain/commonPlayEffectRuntime.test.ts
           tests/domain/concentrationDamageResult.test.ts
           tests/domain/resourceRecoveryLockout.test.ts
           tests/domain/compoundDamage.test.ts
