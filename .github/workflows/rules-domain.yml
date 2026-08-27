@@ -162,21 +162,5 @@ jobs:
         run: npm run test:spellcasting
       - name: Run Phase 07/08 progression integration gate
         run: npm run test:progression
-      - name: Capture application typecheck diagnostics
-        id: gate_d_typecheck
-        shell: bash
-        run: |
-          set +e
-          npx tsc --noEmit > /tmp/gate-d-tsc.log 2>&1
-          status=$?
-          cat /tmp/gate-d-tsc.log
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
-      - name: Upload application typecheck diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: gate-d-tsc-diagnostics
-          path: /tmp/gate-d-tsc.log
-      - name: Fail application typecheck
-        if: steps.gate_d_typecheck.outputs.status != '0'
-        run: exit 1
+      - name: Typecheck application
+        run: npx tsc --noEmit
