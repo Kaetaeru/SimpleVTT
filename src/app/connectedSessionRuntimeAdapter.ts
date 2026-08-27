@@ -20,6 +20,12 @@ import { connectedStateFor, resetConnectedState } from "./connectedSessionState"
 import { routeConnectedActionRequest } from "./connectedActionRequestPort";
 import { routeConnectedInterruptResponse } from "./connectedInterruptResponsePort";
 import { routeConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
+import {
+  applyConnectedCommonPlayAuthorityFactRequest,
+  registerConnectedCommonPlayAuthorityFactTransport,
+  resumeConnectedCommonPlayAuthorityFactRequestsForCharacter,
+  routeConnectedCommonPlayAuthorityFactResponse,
+} from "./connectedCommonPlayAuthorityFactRuntime";
 import { tauriSessionTransport, type SessionTransportMessage, type SessionTransportStatus } from "./tauriSessionTransport";
 import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "./connectedCharacterProjectionHandshake";
@@ -39,7 +45,7 @@ declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","manual-movement-reaction-v1","ready-intent-v1","session-end-v1","scene-topology-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","manual-movement-reaction-v1","common-play-authority-fact-v1","ready-intent-v1","session-end-v1","scene-topology-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -172,6 +178,11 @@ export async function sendConnectedWireTo(peer:string,message:ConnectedWireMessa
 export async function broadcastConnectedWire(message:ConnectedWireMessage) {
   await tauriSessionTransport.send(encodeConnectedWireMessage(message));
 }
+
+registerConnectedCommonPlayAuthorityFactTransport({
+  sendTo:sendConnectedWireTo,
+  send:broadcastConnectedWire,
+});
 
 function sceneTopology(scene:SceneVm):ConnectedSceneTopology {
   return {
@@ -556,6 +567,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         }
         state.peerManifests.set(message.peer,structuredClone(wire.manifest));
         state.peerParticipants.set(message.peer,wire.participantId);
+        if(characterId) await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);
         const cursorBeforeParticipant=ledger.cursor;
         const participantEvent=ledger.commitHostEvent({
           actorId:wire.participantId,
@@ -655,6 +667,14 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
     return;
   }
 
+  if(wire.type==="common-play-fact-response"){
+    const routed=await routeConnectedCommonPlayAuthorityFactResponse(adapter,message,wire);
+    if(routed.status==="rejected"||routed.status==="stale"){
+      await sendConnectedWireTo(message.peer,{type:"error",code:"common-play-fact-response-rejected",message:routed.reason,hostCursor:ledger.cursor});
+    }
+    return;
+  }
+
   if(wire.type==="resolution-interrupt-response"){
     const routed=await routeConnectedInterruptResponse(adapter,message,wire.response);
     if(!routed) await sendConnectedWireTo(message.peer,{type:"error",code:"interrupt-route-unavailable",message:"connected interrupt response router is unavailable",hostCursor:ledger.cursor});
@@ -740,6 +760,16 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
         app.session.compatibility="warning";
         app.session.compatibilityMessage=applied.error;
       }
+    }
+    await publishConnectedSnapshot(adapter);
+    return;
+  }
+
+  if(wire.type==="common-play-fact-request"){
+    const applied=await applyConnectedCommonPlayAuthorityFactRequest(adapter,wire,app.activeCharacter.id);
+    if(applied.status==="rejected"){
+      app.session.compatibility="warning";
+      app.session.compatibilityMessage=applied.reason;
     }
     await publishConnectedSnapshot(adapter);
     return;

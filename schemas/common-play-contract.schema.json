@@ -216,6 +216,18 @@
       },
       "additionalProperties": false
     },
+    "instantArea": {
+      "type": "object",
+      "required": ["kind", "shape", "origin", "radiusFeet"],
+      "properties": {
+        "kind": { "const": "instant" },
+        "shape": { "const": "sphere" },
+        "origin": { "enum": ["self", "point"] },
+        "radiusFeet": { "type": "number", "exclusiveMinimum": 0 },
+        "rangeFeet": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "selector": {
       "type": "object",
       "required": ["from"],
@@ -224,8 +236,15 @@
         "where": { "$ref": "#/$defs/predicate" },
         "min": { "type": "integer", "minimum": 0 },
         "max": { "type": "integer", "minimum": 0 },
-        "orderBy": { "type": "string", "minLength": 1 }
+        "orderBy": { "type": "string", "minLength": 1 },
+        "area": { "$ref": "#/$defs/instantArea" }
       },
+      "allOf": [
+        {
+          "if": { "required": ["area"] },
+          "then": { "properties": { "from": { "const": "targets" } } }
+        }
+      ],
       "additionalProperties": false
     },
     "allocationPlan": {

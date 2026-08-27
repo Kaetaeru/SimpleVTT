@@ -9,6 +9,7 @@ import type { InterruptView } from "./contracts";
 import type { ConnectedInterruptResponse } from "./connectedInterruptResponsePort";
 import type { ConcentrationSaveVm } from "./concentrationSaveRuntimeContracts";
 import type { ConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
+import type { CommonPlayAuthorityFactRequest, CommonPlayAuthorityFactResponse } from "../domain/commonPlaySpatialFactRuntime";
 import { isConnectedResolutionPresentation, type ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 import {
   validateConnectedLongRestWireMessage,
@@ -41,6 +42,8 @@ export type ConnectedWireMessage =
   | { type:"resolution-interrupt-response"; response:ConnectedInterruptResponse }
   | { type:"resolution-concentration-prompt"; sessionId:string; resolutionId:string; presentationSequence:number; save:ConcentrationSaveVm }
   | { type:"resolution-concentration-response"; response:ConnectedConcentrationResponse }
+  | { type:"common-play-fact-request"; sessionId:string; responderId:string; request:CommonPlayAuthorityFactRequest }
+  | { type:"common-play-fact-response"; sessionId:string; response:CommonPlayAuthorityFactResponse }
   | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number }
   | ConnectedLongRestWireMessage;
@@ -243,6 +246,30 @@ function isInterrupt(value:unknown):value is InterruptView {
     &&Object.keys(value).every((key)=>["id","responderId","responderName","trigger","optionName","cost","effect","source"].includes(key));
 }
 
+function isCommonPlayFactRequest(value:unknown):value is CommonPlayAuthorityFactRequest {
+  if(!isRecord(value))return false;
+  return isString(value.id)
+    &&isString(value.queryId)
+    &&isString(value.fact)
+    &&(value.subject===undefined||isString(value.subject))
+    &&["host","actor-owner","target-owner","dm"].includes(String(value.authority))
+    &&["public","actor","dm","actor-and-dm","authority-only"].includes(String(value.visibility))
+    &&["boolean","number","text","targets"].includes(String(value.inputType))
+    &&["boolean","number","string","targets","destination"].includes(String(value.valueType))
+    &&isCursor(value.expectedRevision)
+    &&isString(value.resolutionId)
+    &&isString(value.idempotencyKey);
+}
+
+function isCommonPlayFactResponse(value:unknown):value is CommonPlayAuthorityFactResponse {
+  if(!isRecord(value)||!isString(value.requestId)||!isString(value.idempotencyKey)||!isCursor(value.expectedRevision)||!isString(value.responderId))return false;
+  const answer=value.value;
+  return typeof answer==="boolean"
+    ||(typeof answer==="number"&&Number.isFinite(answer))
+    ||isString(answer)
+    ||(Array.isArray(answer)&&answer.every((entry)=>isString(entry)));
+}
+
 function validateMessage(value:unknown):ConnectedWireMessage|string {
   if (!isRecord(value)||!isString(value.type)) return "wire message must be an object with a type";
   if (value.type==="hello") {
@@ -291,6 +318,14 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   if(value.type==="resolution-concentration-response"){
     const response=value.response;
     if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!Number.isInteger(response.face)||Number(response.face)<1||Number(response.face)>20)return "invalid resolution-concentration-response message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="common-play-fact-request"){
+    if(!isString(value.sessionId)||!isString(value.responderId)||!isCommonPlayFactRequest(value.request))return "invalid Common Play fact request message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="common-play-fact-response"){
+    if(!isString(value.sessionId)||!isCommonPlayFactResponse(value.response))return "invalid Common Play fact response message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="session-ended") {
