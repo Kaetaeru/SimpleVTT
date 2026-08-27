@@ -13,14 +13,31 @@
 
 This file is not a product plan and must not duplicate one.
 
-For every V1 implementation decision, read and follow this authority chain after Rerun preflight:
+For every product implementation decision, read and follow this authority chain after Rerun preflight:
 
 1. `CANONICAL_ROOT.md` — repository/workspace routing authority.
-2. `.agents/V1_CURRENT_HANDOFF.md` — current V1 execution pointer and latest canonical checkpoint.
-3. `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` — full V1 completion plan, dependency order, acceptance gates, and remaining work.
-4. relevant `docs/design/` files — product behavior contracts for the selected item.
+2. **For the current explicit owner direction, Common Play / Rules Resolver, `docs/rules/resolver-execution-checklist.md` MUST be read and followed before selecting or resuming implementation work.**
+3. Until PR #139 lands that file on `work/v1-composite`, read the exact same path from ref `agent/138-resolver-execution-checklist`; Issue #136 and PR #137 are the active Gate D implementation evidence/contract.
+4. `.agents/V1_CURRENT_HANDOFF.md` remains the execution pointer only for V1 release-track work that is still relevant to the active owner priority.
+5. `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` preserves the wider V1 dependency/release route.
+6. relevant `docs/rules/` and `docs/design/` files remain product behavior/architecture contracts.
 
-The current feature, next feature, acceptance criteria, completed-feature list, and implementation sequence must not be copied into this file. If those change, update the canonical V1 documents instead.
+Do not copy the current feature details, acceptance criteria, completed-feature list, or implementation sequence into this router. Update the resolver checklist / Issue / PR instead.
+
+## Current routing directive
+
+The current explicit owner priority is **Common Play / data-driven Rules Resolver**.
+
+Therefore every authorized Rerun execution must:
+
+- reconcile live `work/v1-composite` plus open resolver PRs first;
+- not resume stale Lore Peerless/R2 work solely from historical STATE;
+- route through the resolver checklist's current active gate / `Current next action`;
+- obey the checklist's ChatGPT/Codex division of labor and return-to-design rules;
+- reuse already validated Gate A/B/C and Gate D work rather than repeating it;
+- preserve unrelated V1 release/R2 queues for later.
+
+The current checklist records that Gate D design/acceptance is frozen and the bounded Codex task packet is posted on PR #137. Future Rerun turns must treat that as completed ChatGPT design work and must not redesign the same Gate D scope unless new repository evidence creates a concrete conflict.
 
 ## Rerun responsibility
 
@@ -30,16 +47,18 @@ Rerun only preserves execution continuity:
 - obey current `control.json` authorization;
 - resume from `.chatgpt-rerun/STATE.md` without repeating validated work;
 - reconcile current GitHub facts before edits;
-- select actual product work from the canonical V1 authority chain above;
+- select actual product work from the canonical authority chain above;
 - checkpoint durable execution state before the time limit.
 
-If Rerun files disagree with canonical V1 planning about product scope or order, canonical V1 planning wins. If a canonical V1 document contains stale factual GitHub state, reconcile and repair that canonical document rather than recording an alternate product plan here.
+If Rerun files disagree with canonical planning about product scope or order, the planning document selected by the current explicit owner priority wins. If a canonical document contains stale factual GitHub state, reconcile and repair that canonical document rather than recording an alternate product plan here.
 
 ## Router checkpoint
 
-- reconciled_at: `2026-08-26T23:10:00+09:00`
-- observed branch head before this ordered Rerun checkpoint: `9ce042f49f7894b7f114cfd4faaa44b7288527bf`.
-- latest fully green Quivering Palm connected checkpoint before the initiative-economy extension: `09d0cea3ffa010eb5b30258e9500399cba06e095`.
-- current initiative-economy proof head `9ce042f49f7894b7f114cfd4faaa44b7288527bf` fixes the first exact-head Phase12 red by advancing the staged detonation resolution before asserting ledger commit; its UI and Phase12 runs were still in progress at checkpoint.
-- this durable checkpoint uses the required write order `PLAN -> STATE -> control.json`.
-- product routing remains delegated to `.agents/V1_CURRENT_HANDOFF.md`; no product scope is duplicated here.
+- reconciled_at: `2026-08-28 Asia/Seoul`
+- owner priority: Common Play / data-driven Rules Resolver.
+- canonical checklist target path: `docs/rules/resolver-execution-checklist.md`.
+- temporary checklist ref while PR #139 remains open: `agent/138-resolver-execution-checklist`.
+- active Gate D implementation: Issue #136 / PR #137.
+- ChatGPT Gate D mapless-membership design is frozen; bounded Codex Task Packet is posted on PR #137.
+- old Lore Peerless / missing-Actions evidence remains historical and non-blocking for this priority.
+- product routing details remain delegated to the checklist and active Issue/PR; PLAN stays a router only.
