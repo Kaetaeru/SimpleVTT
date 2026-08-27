@@ -27,7 +27,7 @@ import {
   executeStartConcentration,
   executeUpdateEffect,
 } from "./resolutionEffectOps";
-import { executeRemoveArtifact, executeSpawnArtifact, executeUpdateArtifact } from "./resolutionArtifactOps";
+import { executeRemoveArtifact, executeSetZoneMembership, executeSpawnArtifact, executeUpdateArtifact } from "./resolutionArtifactOps";
 import { executeAdvanceTime, executeBeginTurn, executeEndTurn } from "./resolutionTurnOps";
 import { executeLongRest, executeShortRest } from "./resolutionRestOps";
 import type {
@@ -65,6 +65,7 @@ function executeOperation(
     case "spawn-artifact": return executeSpawnArtifact(ctx,operation);
     case "update-artifact": return executeUpdateArtifact(ctx,operation);
     case "remove-artifact": return executeRemoveArtifact(ctx,operation);
+    case "set-zone-membership": return executeSetZoneMembership(ctx,operation);
     case "start-concentration": return executeStartConcentration(ctx, operation);
     case "end-concentration": return executeEndConcentration(ctx, operation);
     case "reaction": return executeReaction(ctx, operation);
