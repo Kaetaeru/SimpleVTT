@@ -1,0 +1,61 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.unknown.persistent-zone",
+  "entryPoints": [
+    {
+      "id": "create-zone",
+      "invocation": "manual",
+      "operations": [
+        {
+          "kind": "artifact.spawn",
+          "template": "hazard-zone"
+        }
+      ]
+    }
+  ],
+  "artifactTemplates": [
+    {
+      "id": "hazard-zone",
+      "artifactKind": "zone",
+      "duration": {
+        "kind": "elapsed",
+        "amount": { "value": 1 },
+        "unit": "minutes"
+      },
+      "rules": [
+        {
+          "id": "entered",
+          "event": "zone.entered",
+          "frequency": "once-per-turn",
+          "operations": [
+            {
+              "kind": "damage.apply",
+              "amount": { "value": 2 },
+              "damageType": "cold",
+              "target": "event.subject"
+            }
+          ]
+        },
+        {
+          "id": "turn-start",
+          "event": "zone.turn-start",
+          "frequency": "once-per-turn",
+          "operations": [
+            {
+              "kind": "damage.apply",
+              "amount": { "value": 3 },
+              "damageType": "necrotic",
+              "target": "event.subject"
+            }
+          ]
+        }
+      ],
+      "lifetime": {
+        "kind": "until-duration",
+        "onEnd": "destroy"
+      },
+      "instancePolicy": "stack"
+    }
+  ]
+}
