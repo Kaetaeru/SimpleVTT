@@ -1,0 +1,81 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "fixture.long-cast-payment",
+  "castProcess": {
+    "duration": {
+      "kind": "elapsed",
+      "amount": { "value": 10 },
+      "unit": "minutes"
+    },
+    "activity": "activity.casting",
+    "interruptible": true,
+    "onInterrupt": "cancel",
+    "completionEntryPoint": "resolve-cast",
+    "ritual": true
+  },
+  "payments": [
+    {
+      "kind": "item",
+      "selector": {
+        "from": "items",
+        "where": {
+          "op": "has-tag",
+          "ref": "material.focus",
+          "value": "required-focus"
+        },
+        "min": 1,
+        "max": 1
+      },
+      "quantity": { "value": 1 },
+      "consumed": false,
+      "consumeAt": "commit",
+      "refundOnCancel": true
+    },
+    {
+      "kind": "resource",
+      "resource": "resource.spell-slot",
+      "amount": { "value": 1 },
+      "consumeAt": "commit",
+      "refundOnCancel": true
+    }
+  ],
+  "bindings": [
+    {
+      "id": "cast-level",
+      "valueType": "integer",
+      "from": "cast.slotLevel",
+      "capture": "snapshot"
+    }
+  ],
+  "entryPoints": [
+    {
+      "id": "resolve-cast",
+      "invocation": "manual",
+      "targeting": {
+        "from": "targets",
+        "min": 1,
+        "max": 1
+      },
+      "operations": [
+        {
+          "kind": "effect.apply",
+          "template": "completed-effect",
+          "target": "targets.primary"
+        }
+      ]
+    }
+  ],
+  "artifactTemplates": [
+    {
+      "id": "completed-effect",
+      "artifactKind": "effect",
+      "duration": { "kind": "durable" },
+      "lifetime": {
+        "kind": "durable",
+        "onEnd": "profile-policy"
+      },
+      "instancePolicy": "unique-by-source"
+    }
+  ]
+}
