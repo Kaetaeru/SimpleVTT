@@ -2,10 +2,10 @@ import type { RulesRuntimeState } from "./combatState";
 import type { RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
-import type { RuntimeArtifactExpiry, RuntimeArtifactInstance } from "./runtimeArtifact";
+import type { RuntimeArtifactExpiry, RuntimeArtifactInstance, ZoneMembershipAuthority, ZoneMembershipState } from "./runtimeArtifact";
 
 type LiteralNumberExpression={value:number};
-type ZoneEventKind="zone.entered"|"zone.turn-start";
+type ZoneEventKind="zone.entered"|"zone.left"|"zone.turn-start"|"zone.turn-end";
 
 interface CommonPlayArtifactSpawnOperation {
   kind:"artifact.spawn";
@@ -58,12 +58,30 @@ export interface CommonPlayZoneActivationInput {
   resolutionId:string;
   actorId:string;
   entryPointId:string;
-  placementRef:string;
+  membershipAuthority:ZoneMembershipAuthority;
+  placementRef?:string;
 }
 
 export interface CommonPlayZoneEventInput {
   id:string;
   kind:ZoneEventKind;
+  artifactId:string;
+  subjectId:string;
+  subjectCreatureKind:"character"|"monster";
+}
+
+export interface CommonPlayZoneMembershipChangeInput {
+  id:string;
+  artifactId:string;
+  subjectId:string;
+  subjectCreatureKind:"character"|"monster";
+  authority:ZoneMembershipAuthority;
+  present:boolean;
+}
+
+export interface CommonPlayZoneTurnEventInput {
+  id:string;
+  kind:"zone.turn-start"|"zone.turn-end";
   artifactId:string;
   subjectId:string;
   subjectCreatureKind:"character"|"monster";
@@ -115,7 +133,7 @@ function validateRule(rule:CommonPlayZoneRule,templateId:string,ruleIndex:number
   const label=`artifact ${templateId} rule ${ruleIndex+1}`;
   assertOnlyKeys(rule,["id","event","frequency","operations"],label);
   if (!rule.id) throw new Error(`${label} id is required`);
-  if (rule.event!=="zone.entered"&&rule.event!=="zone.turn-start") {
+  if (rule.event!=="zone.entered"&&rule.event!=="zone.left"&&rule.event!=="zone.turn-start"&&rule.event!=="zone.turn-end") {
     throw new Error(`${label} event is not supported by the zone runtime slice`);
   }
   if (rule.frequency!=="once-per-turn") {
@@ -191,17 +209,17 @@ function artifactForTemplate(
   input:CommonPlayZoneActivationInput,
   operationIndex:number,
 ):Extract<ResolutionOperation,{kind:"spawn-artifact"}> {
-  if (!input.placementRef) throw new Error("zone activation requires an opaque placementRef from the authoritative spatial layer");
   return {
     id:`common-play-zone-spawn-${operationIndex+1}`,
     kind:"spawn-artifact",
+    zoneMembershipAuthority:input.membershipAuthority,
     artifact:{
       id:`${input.resolutionId}:artifact:${operationIndex+1}:${template.id}`,
       sourceId:definition.id,
       sourceActorId:input.actorId,
       templateId:template.id,
       artifactKind:"zone",
-      placementRef:input.placementRef,
+      ...(input.placementRef ? {placementRef:input.placementRef} : {}),
       expiry:runtimeExpiry(inputState,template),
     },
   };
@@ -214,6 +232,9 @@ export function compileCommonPlayZoneActivation(
 ):PendingResolution {
   validateDefinition(definition);
   if (!input.resolutionId||!input.actorId) throw new Error("resolutionId and actorId are required");
+  if (input.membershipAuthority!=="manual"&&input.membershipAuthority!=="spatial") {
+    throw new Error(`unsupported zone membership authority: ${input.membershipAuthority}`);
+  }
   const entryPoint=definition.entryPoints.find((candidate)=>candidate.id===input.entryPointId);
   if (!entryPoint) throw new Error(`Common Play entry point not found: ${input.entryPointId}`);
   assertOnlyKeys(entryPoint,["id","invocation","operations"],`entry point ${entryPoint.id}`);
@@ -262,6 +283,10 @@ function activeZone(
   );
 }
 
+function activeMembership(state:RulesRuntimeState,artifactId:string):ZoneMembershipState|undefined {
+  return (state.zoneMemberships??[]).find((membership)=>membership.artifactId===artifactId);
+}
+
 function currentTurnToken(state:RulesRuntimeState) {
   if (!state.clock.activeActorId) throw new Error("once-per-turn zone rules require an authoritative active turn");
   return `${state.clock.round}:${state.clock.activeActorId}`;
@@ -273,10 +298,17 @@ function frequencyKey(ruleId:string,subjectId:string) {
 
 function validateSemanticEvent(state:RulesRuntimeState,input:CommonPlayZoneEventInput) {
   if (!input.id||!input.artifactId||!input.subjectId) throw new Error("zone event id, artifactId, and subjectId are required");
-  if (input.kind!=="zone.entered"&&input.kind!=="zone.turn-start") throw new Error(`unsupported zone event: ${input.kind}`);
+  if (input.kind!=="zone.entered"&&input.kind!=="zone.left"&&input.kind!=="zone.turn-start"&&input.kind!=="zone.turn-end") {
+    throw new Error(`unsupported zone event: ${input.kind}`);
+  }
   if (input.kind==="zone.turn-start") {
     if (state.clock.phase!=="start"||state.clock.activeActorId!==input.subjectId) {
       throw new Error("zone.turn-start must match the authoritative active actor at turn start");
+    }
+  }
+  if (input.kind==="zone.turn-end") {
+    if (state.clock.phase!=="end"||state.clock.activeActorId!==input.subjectId) {
+      throw new Error("zone.turn-end must match the authoritative active actor at turn end");
     }
   }
 }
@@ -314,6 +346,19 @@ function triggerOperations(
   return operations;
 }
 
+function activeUnexpiredZone(
+  state:RulesRuntimeState,
+  definition:CommonPlayZoneDefinition,
+  artifactId:string,
+):RuntimeArtifactInstance|CommonPlayZoneEventNoMatch {
+  const artifact=activeZone(state,definition,artifactId);
+  if (!artifact) return {status:"no-match",state,reason:"no active Common Play zone matches the authoritative event"};
+  if (artifact.expiry.kind==="time"&&state.clock.elapsedSeconds>=artifact.expiry.elapsedSeconds) {
+    return {status:"no-match",state,reason:"zone artifact is expired"};
+  }
+  return artifact;
+}
+
 export function resolveCommonPlayZoneEvent(
   profile:RulesProfileLike,
   inputState:RulesRuntimeState,
@@ -323,14 +368,11 @@ export function resolveCommonPlayZoneEvent(
   try {
     validateDefinition(definition);
     validateSemanticEvent(inputState,input);
-    const artifact=activeZone(inputState,definition,input.artifactId);
-    if (!artifact) return {status:"no-match",state:inputState,reason:"no active Common Play zone matches the authoritative event"};
-    if (artifact.expiry.kind==="time"&&inputState.clock.elapsedSeconds>=artifact.expiry.elapsedSeconds) {
-      return {status:"no-match",state:inputState,reason:"zone artifact is expired"};
-    }
+    const artifact=activeUnexpiredZone(inputState,definition,input.artifactId);
+    if ("status" in artifact) return artifact;
     const operations=triggerOperations(inputState,definition,artifact,input);
     if (!operations.length) {
-      return {status:"no-match",state:inputState,reason:"matching zone rules are already consumed for the active turn"};
+      return {status:"no-match",state:inputState,reason:"matching zone rules are already consumed for the active turn or no rule matches the event"};
     }
     return resolvePendingResolution(profile,inputState,{
       id:`${input.id}:${definition.id}:${artifact.id}:zone-rules`,
@@ -339,6 +381,77 @@ export function resolveCommonPlayZoneEvent(
       expectedRevision:inputState.revision,
       operations,
     });
+  } catch (error) {
+    return rejected(inputState,error instanceof Error?error.message:String(error));
+  }
+}
+
+export function resolveCommonPlayZoneMembershipChange(
+  profile:RulesProfileLike,
+  inputState:RulesRuntimeState,
+  definition:CommonPlayZoneDefinition,
+  input:CommonPlayZoneMembershipChangeInput,
+):CommonPlayZoneEventResult {
+  try {
+    validateDefinition(definition);
+    if (!input.id||!input.artifactId||!input.subjectId) throw new Error("zone membership event id, artifactId, and subjectId are required");
+    if (input.authority!=="manual"&&input.authority!=="spatial") throw new Error(`unsupported zone membership authority: ${input.authority}`);
+    const artifact=activeUnexpiredZone(inputState,definition,input.artifactId);
+    if ("status" in artifact) return artifact;
+    const membership=activeMembership(inputState,artifact.id);
+    if (!membership) return rejected(inputState,`zone membership not found: ${artifact.id}`);
+    if (membership.authority!==input.authority) {
+      return rejected(inputState,`zone membership authority mismatch: expected ${membership.authority}, received ${input.authority}`);
+    }
+    const alreadyPresent=membership.memberIds.includes(input.subjectId);
+    if (alreadyPresent===input.present) {
+      return {status:"no-match",state:inputState,reason:`zone membership already ${input.present?"contains":"excludes"} subject`};
+    }
+    const event:CommonPlayZoneEventInput={
+      id:input.id,
+      kind:input.present?"zone.entered":"zone.left",
+      artifactId:input.artifactId,
+      subjectId:input.subjectId,
+      subjectCreatureKind:input.subjectCreatureKind,
+    };
+    validateSemanticEvent(inputState,event);
+    const operations:ResolutionOperation[]=[{
+      id:"common-play-zone-membership",
+      kind:"set-zone-membership",
+      artifactId:input.artifactId,
+      authority:input.authority,
+      memberId:input.subjectId,
+      present:input.present,
+    },...triggerOperations(inputState,definition,artifact,event)];
+    return resolvePendingResolution(profile,inputState,{
+      id:`${input.id}:${definition.id}:${artifact.id}:zone-membership`,
+      actorId:artifact.sourceActorId??input.subjectId,
+      sourceId:definition.id,
+      expectedRevision:inputState.revision,
+      operations,
+    });
+  } catch (error) {
+    return rejected(inputState,error instanceof Error?error.message:String(error));
+  }
+}
+
+export function resolveCommonPlayZoneTurnEvent(
+  profile:RulesProfileLike,
+  inputState:RulesRuntimeState,
+  definition:CommonPlayZoneDefinition,
+  input:CommonPlayZoneTurnEventInput,
+):CommonPlayZoneEventResult {
+  try {
+    validateDefinition(definition);
+    const event:CommonPlayZoneEventInput={...input};
+    validateSemanticEvent(inputState,event);
+    const artifact=activeUnexpiredZone(inputState,definition,input.artifactId);
+    if ("status" in artifact) return artifact;
+    const membership=activeMembership(inputState,artifact.id);
+    if (!membership?.memberIds.includes(input.subjectId)) {
+      return {status:"no-match",state:inputState,reason:"active subject is not a member of the zone"};
+    }
+    return resolveCommonPlayZoneEvent(profile,inputState,definition,event);
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }
