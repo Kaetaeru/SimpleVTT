@@ -20,10 +20,12 @@ export interface TargetFacts {
   id: string;
   kind: TargetKind;
   relation: TargetRelation;
-  distanceFeet?: number;
-  visible?: boolean;
-  cover?: CoverDegree;
+  distanceFeet: number;
+  visible: boolean;
+  cover: CoverDegree;
 }
+
+export type TargetingFactInput = Pick<TargetFacts, "id" | "kind" | "relation"> & Partial<Pick<TargetFacts, "distanceFeet" | "visible" | "cover">>;
 
 export interface TargetingRule {
   kind: TargetKind | "any";
@@ -91,7 +93,7 @@ export function coverTargetBonus(
 export function resolveTargeting(
   sourceId: string,
   rule: TargetingRule,
-  selected: TargetFacts[],
+  selected: TargetingFactInput[],
   policy: CoverPolicy = SRD_521_COVER_POLICY,
 ): TargetingResolution {
   validateRule(rule);
