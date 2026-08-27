@@ -66,7 +66,7 @@ function executionInput():CommonPlaySaveDamageExecutionInput {
 test("Common Play compiles an unknown multi-target save damage entry point into one shared atomic resolution",()=>{
   const state=preparedState();
   const input=executionInput();
-  const pending=compileCommonPlaySaveDamageEntryPoint(state,DEFINITION,input);
+  const pending=compileCommonPlaySaveDamageEntryPoint(TEST_PROFILE,state,DEFINITION,input);
 
   assert.equal(pending.sourceId,"external.unknown.area-save-damage");
   assert.equal(pending.operations.filter((operation)=>operation.kind==="targeting").length,1);
@@ -110,6 +110,24 @@ test("Common Play save outcome damage is declared by JSON rather than implied by
   assert.equal(resolved.state.combatants.orc.life.hp.current,30);
 });
 
+test("Common Play scaled damage uses the RulesProfile default rounding policy",()=>{
+  const state=preparedState();
+  state.combatants.orc.damageDefenses=[];
+  const input=executionInput();
+  input.damageFaces=[6,5,4,2];
+  const ceilProfile={
+    ...TEST_PROFILE,
+    roundingPolicy:{ id:"test.rounding.ceil", default:"ceil" as const },
+  };
+
+  const resolved=resolveCommonPlaySaveDamageEntryPoint(ceilProfile,state,DEFINITION,input);
+  assert.equal(resolved.status,"committed");
+  if (resolved.status!=="committed") return;
+  assert.equal((resolved.results["common-play-shared-damage-roll"] as {total:number}).total,17);
+  assert.equal((resolved.results["common-play-damage-2-2"] as {raw:number}).raw,9);
+  assert.equal(resolved.state.combatants.orc.life.hp.current,21);
+});
+
 test("Common Play late invalid target input rolls back damage already staged for earlier targets",()=>{
   const state=preparedState();
   const input=executionInput();
@@ -133,7 +151,7 @@ test("Common Play save damage behavior is independent of the external content id
   const input=executionInput();
   input.resolutionId="renamed-external-resolution";
 
-  const pending=compileCommonPlaySaveDamageEntryPoint(state,renamed,input);
+  const pending=compileCommonPlaySaveDamageEntryPoint(TEST_PROFILE,state,renamed,input);
   assert.equal(pending.sourceId,"external.previously-unseen.payload");
 
   const resolved=resolveCommonPlaySaveDamageEntryPoint(TEST_PROFILE,state,renamed,input);
