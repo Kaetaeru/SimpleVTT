@@ -162,7 +162,7 @@ test("host-unknown Lore Bard Cutting Words reacts to another actor, persists own
     const hpBefore=entityHp(snapshot.scene,remote.id);
     assert.equal(hpBefore,remote.hp);
 
-    await host.setQueuedD20(18);
+    await host.setQueuedD20(16);
     await host.resolveAction("action.scimitar",[remote.id]);
     snapshot=await waitForInterrupt(host);
     assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));

@@ -1,7 +1,5 @@
 import type { MockAdapter } from "./mockAdapter";
 import type { SessionTransportMessage } from "./tauriSessionTransport";
-import { activateProjectedCharacterResolutionContext, restoreProjectionResolutionContext } from "./characterSessionProjectionMount";
-import { projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
 
 export interface ConnectedInterruptResponse {
   sessionId:string;
@@ -28,17 +26,6 @@ export async function routeConnectedInterruptResponse(
   response:ConnectedInterruptResponse,
 ) {
   if(!handler)return false;
-  const mounted=projectedCharacterForPeer(adapter,transportMessage.peer);
-  if(!mounted){
-    await handler(adapter,transportMessage,response);
-    return true;
-  }
-  const activated=activateProjectedCharacterResolutionContext(adapter,transportMessage.peer);
-  if(activated.status==="rejected")throw new Error(activated.error);
-  try {
-    await handler(adapter,transportMessage,response);
-  } finally {
-    restoreProjectionResolutionContext(adapter,activated.context);
-  }
+  await handler(adapter,transportMessage,response);
   return true;
 }

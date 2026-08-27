@@ -13,6 +13,7 @@ import {
   snapshotAdapterTurnRuntimeState,
 } from "./turnRuntimeSessionRegistry";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
+import { projectedCharacterById, projectedCharacterIds } from "./characterSessionProjectionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { BARDIC_INSPIRATION_RESOURCE_ID, bardicInspirationDieSides } from "../domain/bardicInspiration";
 import {
@@ -57,14 +58,29 @@ function bardLevel(character:CharacterSheet){
   return character.classLevels?.find((entry)=>entry.classId===BARD_LORE_CLASS_ID)?.level??0;
 }
 
-function eligible(internal:AdapterState){
-  const resource=internal.activeCharacter.resources.find((entry)=>entry.id===BARDIC_INSPIRATION_RESOURCE_ID);
+function eligibleCharacter(internal:AdapterState,character:CharacterSheet){
+  const resource=character.resources.find((entry)=>entry.id===BARDIC_INSPIRATION_RESOURCE_ID);
   if(
-    bardLevel(internal.activeCharacter)<3
-    || internal.activeCharacter.subclassIds?.[BARD_LORE_CLASS_ID]!==BARD_COLLEGE_LORE_SUBCLASS_ID
+    bardLevel(character)<3
+    || character.subclassIds?.[BARD_LORE_CLASS_ID]!==BARD_COLLEGE_LORE_SUBCLASS_ID
     || !resource?.current
   )return false;
-  return internal.sessionMode!=="initiative"||Boolean(internal.scene.economyByActor[internal.activeCharacter.id]?.reaction);
+  return internal.sessionMode!=="initiative"||Boolean(internal.scene.economyByActor[character.id]?.reaction);
+}
+
+function responderCandidates(adapter:MockAdapter,internal:AdapterState){
+  const candidates=[internal.activeCharacter];
+  for(const characterId of projectedCharacterIds(adapter)){
+    if(characterId===internal.activeCharacter.id)continue;
+    const mounted=projectedCharacterById(adapter,characterId);
+    if(mounted)candidates.push(mounted.sheet);
+  }
+  return candidates;
+}
+
+function responderCharacter(adapter:MockAdapter,internal:AdapterState,characterId:string){
+  if(characterId===internal.activeCharacter.id)return internal.activeCharacter;
+  return projectedCharacterById(adapter,characterId)?.sheet;
 }
 
 function rollInspirationDie(adapter:MockAdapter,sides:number){
@@ -76,14 +92,14 @@ function rollInspirationDie(adapter:MockAdapter,sides:number){
   return ((face-1)%sides)+1;
 }
 
-function seedResource(adapter:MockAdapter,internal:AdapterState){
+function seedResource(adapter:MockAdapter,internal:AdapterState,character:CharacterSheet){
   let state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   if(!state){
     ensureAdapterTurnRuntimeState(adapter,internal.scene);
     state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   }
-  const combatant=state?.combatants[internal.activeCharacter.id];
-  const resource=internal.activeCharacter.resources.find((entry)=>entry.id===BARDIC_INSPIRATION_RESOURCE_ID);
+  const combatant=state?.combatants[character.id];
+  const resource=character.resources.find((entry)=>entry.id===BARDIC_INSPIRATION_RESOURCE_ID);
   if(!state||!combatant||!resource)return state;
   if(combatant.resources.some((entry)=>entry.id===resource.id))return state;
   combatant.resources.push({
@@ -100,26 +116,26 @@ function seedResource(adapter:MockAdapter,internal:AdapterState){
     : undefined;
 }
 
-function spatiallyEligible(internal:AdapterState,targetActorId:string){
-  if(targetActorId===internal.activeCharacter.id)return undefined;
+function spatiallyEligible(internal:AdapterState,responderId:string,targetActorId:string){
+  if(targetActorId===responderId)return undefined;
   if(!internal.scene.entities.some((entry)=>entry.id===targetActorId))return undefined;
-  const fact=resolveRuntimeTargetingFact(internal.scene,internal.activeCharacter.id,targetActorId);
+  const fact=resolveRuntimeTargetingFact(internal.scene,responderId,targetActorId);
   return fact.distanceFeet<=60&&fact.visible?fact:undefined;
 }
 
-function offerInterrupt(adapter:MockAdapter,internal:AdapterState,trigger:OfferedTrigger){
+function offerInterrupt(adapter:MockAdapter,internal:AdapterState,trigger:OfferedTrigger,responder:CharacterSheet){
   const resolution=internal.resolution;
   if(!resolution)return false;
   const state=stateFor(adapter,resolution.id);
-  if(state.used||state.handled.has(trigger.kind)||!eligible(internal)||!spatiallyEligible(internal,trigger.targetActorId))return false;
+  if(state.used||state.handled.has(trigger.kind)||!eligibleCharacter(internal,responder)||!spatiallyEligible(internal,responder.id,trigger.targetActorId))return false;
   const targetName=internal.scene.entities.find((entry)=>entry.id===trigger.targetActorId)?.name??trigger.targetActorId;
-  const sides=bardicInspirationDieSides(bardLevel(internal.activeCharacter));
+  const sides=bardicInspirationDieSides(bardLevel(responder));
   state.offered=trigger;
   if(trigger.kind==="damage-roll")resolution.rollKind="damage";
   resolution.interrupt={
     id:CUTTING_WORDS_INTERRUPT_ID,
-    responderId:internal.activeCharacter.id,
-    responderName:internal.activeCharacter.name,
+    responderId:responder.id,
+    responderName:responder.name,
     trigger:trigger.kind==="damage-roll"
       ? `${targetName} 피해 굴림 ${trigger.total}`
       : `${targetName} ${trigger.kind==="attack-roll"?"공격":"능력 판정"} ${trigger.total} vs ${trigger.target}`,
@@ -136,46 +152,52 @@ function offerInterrupt(adapter:MockAdapter,internal:AdapterState,trigger:Offere
 
 function offer(adapter:MockAdapter,internal:AdapterState){
   const resolution=internal.resolution;
-  if(!resolution||resolution.interrupt||!eligible(internal))return false;
+  if(!resolution||resolution.interrupt)return false;
   const state=stateFor(adapter,resolution.id);
   if(state.used)return false;
 
+  let trigger:OfferedTrigger|undefined;
   if(
     resolution.rollKind==="check"
     && resolution.stage==="complete"
-    && resolution.actorId!==internal.activeCharacter.id
     && resolution.checkOutcome==="성공"
     && Number.isFinite(resolution.rollTotal)
     && Number.isFinite(resolution.checkTarget)
-  )return offerInterrupt(adapter,internal,{
-    kind:"ability-check",
-    targetActorId:resolution.actorId,
-    total:resolution.rollTotal!,
-    target:resolution.checkTarget!,
-  });
-
-  if(
+  ){
+    trigger={
+      kind:"ability-check",
+      targetActorId:resolution.actorId,
+      total:resolution.rollTotal!,
+      target:resolution.checkTarget!,
+    };
+  }else if(
     resolution.rollKind==="attack"
     && resolution.stage==="attack-result"
-    && resolution.actorId!==internal.activeCharacter.id
     && resolution.attackOutcome==="명중"
     && Number.isFinite(resolution.attackTotal)
     && Number.isFinite(resolution.targetAc)
   ){
-    if(!state.handled.has("attack-roll"))return offerInterrupt(adapter,internal,{
-      kind:"attack-roll",
-      targetActorId:resolution.actorId,
-      total:resolution.attackTotal!,
-      target:resolution.targetAc!,
-    });
-    if(!state.handled.has("damage-roll")){
+    if(!state.handled.has("attack-roll")){
+      trigger={
+        kind:"attack-roll",
+        targetActorId:resolution.actorId,
+        total:resolution.attackTotal!,
+        target:resolution.targetAc!,
+      };
+    }else if(!state.handled.has("damage-roll")){
       const preview=previewRuntimeAtomicAttackDamage(adapter);
-      if(preview)return offerInterrupt(adapter,internal,{
+      if(preview)trigger={
         kind:"damage-roll",
         targetActorId:resolution.actorId,
         total:preview.total,
-      });
+      };
     }
+  }
+  if(!trigger)return false;
+
+  for(const responder of responderCandidates(adapter,internal)){
+    if(resolution.actorId===responder.id)continue;
+    if(offerInterrupt(adapter,internal,trigger,responder))return true;
   }
   return false;
 }
@@ -246,6 +268,7 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
     return this.getSnapshot();
   }
 
+  const responder=responderCharacter(this,internal,interrupt.responderId);
   state.offered=undefined;
   if(!accept){
     state.handled.add(offered.kind);
@@ -253,21 +276,22 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
     restoreStage(resolution,offered.kind);
     return this.getSnapshot();
   }
+  if(!responder)return this.getSnapshot();
 
-  const fact=spatiallyEligible(internal,offered.targetActorId);
-  const runtime=seedResource(this,internal);
+  const fact=spatiallyEligible(internal,responder.id,offered.targetActorId);
+  const runtime=seedResource(this,internal,responder);
   if(!fact||!runtime)return this.getSnapshot();
-  const sides=bardicInspirationDieSides(bardLevel(internal.activeCharacter));
+  const sides=bardicInspirationDieSides(bardLevel(responder));
   const face=rollInspirationDie(this,sides);
   const trigger:CuttingWordsTrigger=offered.kind==="damage-roll"
     ? {kind:"damage-roll",total:offered.total}
     : {kind:offered.kind,total:offered.total,target:offered.target!};
   const committed=resolveLoreCuttingWords(SIMPLEVTT_APP_RULES_PROFILE,runtime,{
     id:`${resolution.id}:cutting-words`,
-    actorId:internal.activeCharacter.id,
+    actorId:responder.id,
     expectedRevision:runtime.revision,
-    bardLevel:bardLevel(internal.activeCharacter),
-    subclassId:internal.activeCharacter.subclassIds?.[BARD_LORE_CLASS_ID],
+    bardLevel:bardLevel(responder),
+    subclassId:responder.subclassIds?.[BARD_LORE_CLASS_ID],
     targetActorId:offered.targetActorId,
     distanceFeet:fact.distanceFeet,
     targetVisible:fact.visible,
@@ -280,8 +304,8 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
   const projected=applyResolutionEvents(
     internal.scene,
     committed.events,
-    internal.activeCharacter.resources,
-    internal.activeCharacter.items,
+    responder.resources,
+    responder.items,
     runtime,
   );
   if(projected.status==="rejected")return this.getSnapshot();
@@ -293,8 +317,10 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
   }
 
   internal.scene=projected.scene;
-  internal.activeCharacter.resources=projected.resources;
-  internal.activeCharacter.items=projected.items;
+  if(responder.id===internal.activeCharacter.id){
+    internal.activeCharacter.resources=projected.resources;
+    internal.activeCharacter.items=projected.items;
+  }
   projectAdapterTurnRuntime(this);
   state.handled.add(offered.kind);
   state.used=true;
@@ -339,6 +365,6 @@ MockAdapter.prototype.respondToInterrupt=async function respondToLoreCuttingWord
     restoreStage(resolution,"damage-roll");
   }
 
-  internal.syncChar();
+  if(responder.id===internal.activeCharacter.id)internal.syncChar();
   return this.getSnapshot();
 };
