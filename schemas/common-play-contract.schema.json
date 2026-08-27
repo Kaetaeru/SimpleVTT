@@ -304,6 +304,7 @@
         { "$ref": "#/$defs/resourceChange" },
         { "$ref": "#/$defs/effectApply" },
         { "$ref": "#/$defs/effectRemove" },
+        { "$ref": "#/$defs/artifactSpawn" },
         { "$ref": "#/$defs/conditionChange" },
         { "$ref": "#/$defs/economyModify" },
         { "$ref": "#/$defs/contentGrant" },
@@ -405,6 +406,16 @@
       "properties": {
         "kind": { "const": "effect.remove" },
         "selector": { "$ref": "#/$defs/selector" },
+        "when": { "$ref": "#/$defs/predicate" }
+      },
+      "additionalProperties": false
+    },
+    "artifactSpawn": {
+      "type": "object",
+      "required": ["kind", "template"],
+      "properties": {
+        "kind": { "const": "artifact.spawn" },
+        "template": { "$ref": "#/$defs/stableId" },
         "when": { "$ref": "#/$defs/predicate" }
       },
       "additionalProperties": false
