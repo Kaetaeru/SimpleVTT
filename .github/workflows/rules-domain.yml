@@ -162,5 +162,13 @@ jobs:
         run: npm run test:spellcasting
       - name: Run Phase 07/08 progression integration gate
         run: npm run test:progression
+      - name: Diagnose PR typecheck workspace
+        run: |
+          git status --short
+          find src/app -maxdepth 1 -type f -print | sort
+          if [ -f src/app/sessionRuntime.ts ]; then
+            echo SESSION_RUNTIME_PRESENT
+            sed -n '680,715p' src/app/sessionRuntime.ts
+          fi
       - name: Typecheck application
         run: npx tsc --noEmit
