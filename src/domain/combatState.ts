@@ -6,7 +6,7 @@ import type { HitDiePool } from "./rest";
 import type { EffectInstance, RuntimeClock } from "./effects";
 import type { ConcentrationState } from "./concentration";
 import type { ConditionEffectRef, ConditionId } from "./conditions";
-import type { RuntimeArtifactInstance } from "./runtimeArtifact";
+import type { RuntimeArtifactInstance, ZoneMembershipState } from "./runtimeArtifact";
 import { DomainEvaluationError } from "./profileEngine";
 
 export interface CombatantRuntimeState {
@@ -41,6 +41,7 @@ export interface RulesRuntimeState {
   combatants: Record<string, CombatantRuntimeState>;
   effects: EffectInstance[];
   artifacts?: RuntimeArtifactInstance[];
+  zoneMemberships?: ZoneMembershipState[];
   concentration: Record<string, ConcentrationState | undefined>;
   history: RuntimeLogEntry[];
   turnFeatureUsage?: TurnFeatureUsageState;
