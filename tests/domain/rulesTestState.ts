@@ -4,6 +4,7 @@ import { beginTurn } from "../../src/domain/turnEconomy";
 
 export const TEST_PROFILE: RulesProfileLike = {
   profileId:"dnd.srd-5.2.1",
+  roundingPolicy:{ id:"dnd.rounding.default-floor", default:"floor" },
   properties:{},
   d20Test:{ advantageDisadvantage:{ sameSideStacks:false, opposingCancel:true } },
 };
