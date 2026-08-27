@@ -6,7 +6,7 @@ import { expireBarbarianRageAtClock } from "./barbarianRageLifecycle";
 import { recoverResources } from "./resources";
 import { expireRuntimeArtifactsAtClock } from "./runtimeArtifact";
 import { economyStateChanges } from "./stateChange";
-import { artifactStateChange, effectStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, effectStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
@@ -105,17 +105,29 @@ export function executeAdvanceTime(ctx:ResolutionExecutionContext, operation:Adv
   ctx.state.effects = effectExpiry.active;
   const artifactExpiry=expireRuntimeArtifactsAtClock(ctx.state.artifacts??[],ctx.state.clock);
   ctx.state.artifacts=artifactExpiry.active;
+  const expiredArtifactIds=new Set(artifactExpiry.expired.map((artifact)=>artifact.id));
+  const expiredMemberships=(ctx.state.zoneMemberships??[]).filter((membership)=>expiredArtifactIds.has(membership.artifactId));
+  ctx.state.zoneMemberships=(ctx.state.zoneMemberships??[]).filter((membership)=>!expiredArtifactIds.has(membership.artifactId));
   const provenance=[...effectExpiry.provenance,...artifactExpiry.provenance];
   const changes:RuntimeStateChange[] = effectExpiry.expired.map((effect) =>
     effectStateChange(effect.targetId, effect.id, "removed", effectExpiry.provenance, effect, undefined),
   );
   artifactExpiry.expired.forEach((artifact)=>{
     changes.push(artifactStateChange(
-      artifact.placementRef,
+      artifact.id,
       artifact.id,
       "removed",
       artifactExpiry.provenance,
       artifact,
+      undefined,
+    ));
+  });
+  expiredMemberships.forEach((membership)=>{
+    changes.push(zoneMembershipStateChange(
+      membership.artifactId,
+      "removed",
+      artifactExpiry.provenance,
+      membership,
       undefined,
     ));
   });
