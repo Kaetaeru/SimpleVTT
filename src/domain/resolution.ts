@@ -72,11 +72,20 @@ function executeOperation(
   }
 }
 
-export function resolvePendingResolution(
+export type StagedResolution =
+  | {
+      status: "staged";
+      state: RulesRuntimeState;
+      events: ResolutionEvent[];
+      results: Record<string, unknown>;
+    }
+  | Extract<ResolutionCommit, { status:"rejected" }>;
+
+export function stagePendingResolution(
   profile: RulesProfileLike,
   inputState: RulesRuntimeState,
   pending: PendingResolution,
-): ResolutionCommit {
+): StagedResolution {
   if (!pending.id || !pending.actorId || !pending.sourceId) {
     return {
       status:"rejected",
@@ -136,8 +145,25 @@ export function resolvePendingResolution(
     };
   }
 
+  return {
+    status:"staged",
+    state,
+    events,
+    results:Object.fromEntries(ctx.results.entries()),
+  };
+}
+
+export function resolvePendingResolution(
+  profile: RulesProfileLike,
+  inputState: RulesRuntimeState,
+  pending: PendingResolution,
+): ResolutionCommit {
+  const staged = stagePendingResolution(profile, inputState, pending);
+  if (staged.status === "rejected") return staged;
+
+  const state = staged.state;
   state.revision += 1;
-  state.history.push(...events.map((entry) => ({
+  state.history.push(...staged.events.map((entry) => ({
     id:entry.id,
     resolutionId:entry.resolutionId,
     operationId:entry.operationId,
@@ -150,7 +176,7 @@ export function resolvePendingResolution(
   return {
     status:"committed",
     state,
-    events,
-    results:Object.fromEntries(ctx.results.entries()),
+    events:staged.events,
+    results:staged.results,
   };
 }
