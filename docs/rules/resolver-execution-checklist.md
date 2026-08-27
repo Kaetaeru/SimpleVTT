@@ -197,9 +197,11 @@ These are not hidden Gate-D requirements. Activate only from a concrete later sc
 - [ ] Zone relocation + membership reconciliation after movement;
 - [ ] hidden/DM-only Zone visibility policy.
 
-## Gate E — Spatial Fact / Manual Authority execution — ACTIVE / REQUIRED FOUNDATION
+## Gate E — Spatial Fact / Manual Authority execution — DONE
 
-Gate E is the final proactive foundation gate. It closes the mapless spatial-query side that complements Gate D's persistent spatial-state side.
+Canonical merge evidence: PR #141 merged at `00d3c9233bb678ec93bb828cb3941c3048c42054` after owner approval. The validated product/runtime/test candidate was `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba`; the child was reconciled to current coordination ancestry at `9d0a252a7e83f694cf45b7b6ffd7673febe98995` without changing the 13-file product diff.
+
+**Foundation is frozen through Gate E.** Gate F-M remain dormant unless a concrete Phase-2 migration failure satisfies their activation rule.
 
 ### Gate E objective
 
@@ -209,78 +211,88 @@ A rule may require a semantic spatial answer without Core owning geometry. A pro
 
 #### E1 — Range fact
 
-- [ ] Unknown external JSON ability declares a supported range requirement.
-- [ ] With a spatial provider, provider answers the semantic range fact.
-- [ ] Without a provider, the authorized manual authority receives a fact/adjudication request.
-- [ ] Both answers normalize to the same Core fact result.
-- [ ] Rule execution does not branch on the ability's ID/name.
+- [x] Unknown external JSON ability declares a supported range requirement.
+- [x] With a spatial provider, provider answers the semantic range fact.
+- [x] Without a provider, the authorized manual authority receives a fact/adjudication request.
+- [x] Both answers normalize to the same Core fact result.
+- [x] Rule execution does not branch on the ability's ID/name.
 
 #### E2 — Visibility / cover-like fact
 
-- [ ] Unknown external JSON rule requests registered visibility/cover-like semantic facts.
-- [ ] Core does not compute raycasts/geometry.
-- [ ] Provider-backed and manual paths use the same typed fact boundary.
-- [ ] Missing capability/authority fails explicitly rather than inventing a value.
+- [x] Unknown external JSON rule requests registered visibility/cover-like semantic facts.
+- [x] Core does not compute raycasts/geometry.
+- [x] Provider-backed and manual paths use the same typed fact boundary.
+- [x] Missing capability/authority fails explicitly rather than inventing a value.
 
 #### E3 — Instantaneous area affected-target set
 
-- [ ] Unknown external JSON action declares a supported instantaneous area shape/range as content metadata/targeting semantics.
-- [ ] Without a spatial provider, authorized user selects the affected eligible actor set manually.
-- [ ] The instantaneous effect does **not** create a fake temporary Zone merely to choose targets.
-- [ ] The selected set enters the normal selector/resolution path deterministically.
-- [ ] Provider-backed target determination, when available, converges on the same semantic target-set contract.
+- [x] Unknown external JSON action declares a supported instantaneous area shape/range as content metadata/targeting semantics.
+- [x] Without a spatial provider, authorized user selects the affected eligible actor set manually.
+- [x] The instantaneous effect does **not** create a fake temporary Zone merely to choose targets.
+- [x] The selected set enters the normal selector/resolution path deterministically.
+- [x] Provider-backed target determination, when available, converges on the same semantic target-set contract.
 
 #### E4 — Legal destination / movement result
 
-- [ ] Unknown external JSON movement operation requests a semantic legal-destination/movement result.
-- [ ] Without a provider, DM/manual authority supplies the legal result rather than Core fabricating geometry.
-- [ ] With a provider, automatic answer uses the same semantic result type.
-- [ ] Unsupported movement shapes fail explicitly.
+- [x] Unknown external JSON movement operation requests a semantic legal-destination/movement result.
+- [x] Without a provider, DM/manual authority supplies the legal result rather than Core fabricating geometry.
+- [x] With a provider, automatic answer uses the same semantic result type.
+- [x] Unsupported movement shapes fail explicitly.
 
 ### Gate E authority requirements
 
-- [ ] Fact/selection request identifies eligible authority/responder.
-- [ ] Connected Host/session authority remains authoritative for shared resolution.
-- [ ] Private/owner-only information is not exposed merely because a fact was requested.
-- [ ] Duplicate response/event delivery is idempotent.
-- [ ] Stale response is rejected.
-- [ ] Reconnect/rebind cannot revive an already consumed/answered interaction.
+- [x] Fact/selection request identifies eligible authority/responder.
+- [x] Connected Host/session authority remains authoritative for shared resolution.
+- [x] Private/owner-only information is not exposed merely because a fact was requested.
+- [x] Duplicate response/event delivery is idempotent.
+- [x] Stale response is rejected.
+- [x] Reconnect/rebind cannot revive an already consumed/answered interaction.
 
 ### Gate E data/engine requirements
 
-- [ ] Fact keys/capabilities are registered typed semantics, not arbitrary executable strings.
-- [ ] Imported JSON may request supported fact kinds but may not define code for new fact evaluators.
-- [ ] Manual and provider answers preserve provenance: requester, responder/provider, fact kind, answer, causation/resolution IDs.
-- [ ] No named spell/feat/class/subclass/item branch is added.
-- [ ] Unknown-ID fixture passes.
-- [ ] Changing only the external ID/name preserves behavior.
+- [x] Fact keys/capabilities are registered typed semantics, not arbitrary executable strings.
+- [x] Imported JSON may request supported fact kinds but may not define code for new fact evaluators.
+- [x] Manual and provider answers preserve provenance: requester, responder/provider, fact kind, answer, causation/resolution IDs.
+- [x] No named spell/feat/class/subclass/item branch is added.
+- [x] Unknown-ID fixture passes.
+- [x] Changing only the external ID/name preserves behavior.
 
 ### Gate E verification
 
-- [ ] Concrete red scenario exists before implementation.
-- [ ] Existing Common Play composition is attempted first.
-- [ ] Smallest missing reusable capability only, if one is actually needed.
-- [ ] Focused tests run at exact candidate SHA.
-- [ ] Impacted Gate A-D regressions remain green.
-- [ ] Connected-session regression runs if authority/interaction changes.
-- [ ] Typecheck/build runs for touched surfaces.
-- [ ] Exact SHA, environment, commands, pass/fail counts, workflow/job IDs are recorded.
-- [ ] Gate E merges only after owner approval.
+- [x] Concrete red scenario exists before implementation.
+- [x] Existing Common Play composition is attempted first.
+- [x] Smallest missing reusable capability only, if one is actually needed.
+- [x] Focused tests run at exact candidate SHA.
+- [x] Impacted Gate A-D regressions remain green.
+- [x] Connected-session regression runs if authority/interaction changes.
+- [x] Typecheck/build runs for touched surfaces.
+- [x] Exact SHA, environment, commands, pass/fail counts, workflow/job IDs are recorded.
+- [x] Gate E merges only after owner approval.
+
+Completion evidence on validated candidate `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba`:
+
+- Gate E Spatial Fact run `33124577135`, job `98699500259`: focused **15/15 PASS** plus TypeScript typecheck;
+- Contract validation `33124577119`: SUCCESS;
+- Rules Domain `33124577116`, job `98699499753`: SUCCESS;
+- UI `33124577166`: SUCCESS;
+- Phase 11 Playable `33124577172`: offline walkthrough/front-end gate SUCCESS and Windows playable job `98699870955` SUCCESS;
+- Phase 12 Connected Session `33124577117`: connected-protocol job `98699499728` SUCCESS and Windows connected-playable job `98699751686` SUCCESS;
+- Persistence `33124577216` retains the unrelated existing `501 !== 496` catalog-count baseline and is not a Gate E regression.
 
 ### Gate E completion transition
 
-When Gate E is merged and green:
+Gate E is merged and green:
 
-1. mark Foundation frozen through E;
-2. do **not** automatically activate F;
-3. begin Phase 2 Legacy Convergence;
-4. use migration failures to decide whether any F-M gate must activate.
+1. Foundation is frozen through E;
+2. Gate F is **not** automatically activated;
+3. Phase 2 Legacy Convergence is now the active next queue;
+4. migration failures decide whether any F-M gate activates.
 
 ---
 
 # PHASE 2 — LEGACY CONVERGENCE / STRANGLER MIGRATION
 
-Status: **QUEUED AFTER GATE E**.
+Status: **ACTIVE — NEXT QUEUE AFTER GATE E**.
 
 The purpose is not a big-bang rewrite. Existing named execution remains temporarily as a behavior oracle until each path is replaced and verified through JSON/Common Play. Then the absorbed named execution code is deleted.
 
@@ -616,7 +628,9 @@ artifact/run: <workflow/job/artifact if applicable>
 ## 7. Current repository decisions
 
 - Gate D is `DONE` on canonical history.
-- Gate E is the current next foundation gate.
+- Gate E is `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`; Foundation is frozen through E.
+- Phase 2 Legacy Convergence is now the active next queue, beginning with M0 inventory and then the migration harness/probes.
+- Gate F-M remain dormant until a concrete Phase-2 migration/V1 scenario satisfies the activation rule.
 - The previous post-Gate-D rule that automatically returned to named-feature/V1 R2 implementation is superseded by this owner direction.
 - PR #140's remote-owner Cutting Words test scenario is useful migration evidence; the PR's adapter-local named implementation direction is **not** the architecture to merge as the final solution.
 - The old resolver-checklist PR #139 is superseded by this rewritten plan once this branch is used as the Rerun source.
@@ -626,10 +640,10 @@ artifact/run: <workflow/job/artifact if applicable>
 
 ## 8. Current next action
 
-1. Treat Gate E as `ACTIVE`.
-2. Capture the smallest executable Gate-E scenarios E1-E4 against the current Common Play contract and implementation.
-3. Prove which pieces compose already and identify only concrete missing generic capability.
-4. Freeze the bounded Gate-E implementation packet.
-5. Implement/verify Gate E without named-content branches.
-6. After owner-approved Gate-E merge, begin Phase 2 M0 inventory and migration harness.
-7. Do not start Gate F merely because Gate E completes.
+1. Treat Phase 2 M0 as `ACTIVE` and keep the no-new-named-adapter freeze in force.
+2. Inventory runtime/session/resolver/app execution paths that recognize known content IDs/names or import known-content constants for execution decisions.
+3. Classify each finding as `CONTENT/PRESENTATION`, `LEGACY_EXECUTION`, `GENERIC_ENGINE`, or `UNCLEAR`, recording mechanism family, current tests, authority/lifetime dependencies, and likely Common Play composition.
+4. Add only a narrow architecture guard if the inventory shows a safe execution-directory boundary; do not ban IDs repository-wide.
+5. Use the inventory to choose the smallest representative migration probe. Preserve existing behavior tests as golden evidence, execute the replacement through JSON/Common Play with arbitrary-ID/rename invariance, then delete only the absorbed named execution path.
+6. If an actual migration cannot compose safely from Gates A-E, capture the deterministic generic failure before considering Gate F-M activation.
+7. Do not activate Gate F merely because Gate E completed.
