@@ -16,28 +16,24 @@ This file is not a product plan and must not duplicate one.
 For every product implementation decision, read and follow this authority chain after Rerun preflight:
 
 1. `CANONICAL_ROOT.md` — repository/workspace routing authority.
-2. **For the current explicit owner direction, Common Play / Rules Resolver, `docs/rules/resolver-execution-checklist.md` MUST be read and followed before selecting or resuming implementation work.**
-3. Until PR #139 lands that file on `work/v1-composite`, read the exact same path from ref `agent/138-resolver-execution-checklist`; Issue #136 and PR #137 are the active Gate D implementation evidence/contract.
-4. `.agents/V1_CURRENT_HANDOFF.md` remains the execution pointer only for V1 release-track work that is still relevant to the active owner priority.
-5. `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` preserves the wider V1 dependency/release route.
-6. relevant `docs/rules/` and `docs/design/` files remain product behavior/architecture contracts.
+2. `.agents/V1_CURRENT_HANDOFF.md` — current V1 execution pointer and exact remaining slice.
+3. `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` — wider V1 dependency/release route.
+4. relevant `docs/design/` and `docs/rules/` contracts for the selected V1 item.
+5. `docs/rules/resolver-execution-checklist.md` only when a concrete V1/product failure plus explicit owner direction reactivates Resolver implementation. Until PR #139 lands, that document remains on `agent/138-resolver-execution-checklist` and must not auto-activate Gate E.
 
-Do not copy the current feature details, acceptance criteria, completed-feature list, or implementation sequence into this router. Update the resolver checklist / Issue / PR instead.
+Do not copy feature details, acceptance criteria, completed-feature lists, or implementation sequences into this router. Repair the canonical planning document when its factual GitHub state is stale.
 
 ## Current routing directive
 
-The current explicit owner priority is **Common Play / data-driven Rules Resolver**.
+Gate D merged into `work/v1-composite` as PR #137 at canonical merge commit `406a9574d249bb770ec7725efa1384808ddc9bc3`.
 
-Therefore every authorized Rerun execution must:
+The explicit stop-line rule now returns execution priority to the **V1 release track**. Therefore every authorized Rerun execution must:
 
-- reconcile live `work/v1-composite` plus open resolver PRs first;
-- not resume stale Lore Peerless/R2 work solely from historical STATE;
-- route through the resolver checklist's current active gate / `Current next action`;
-- obey the checklist's ChatGPT/Codex division of labor and return-to-design rules;
-- reuse already validated Gate A/B/C and Gate D work rather than repeating it;
-- preserve unrelated V1 release/R2 queues for later.
-
-The current checklist records that Gate D design/acceptance is frozen and the bounded Codex task packet is posted on PR #137. Future Rerun turns must treat that as completed ChatGPT design work and must not redesign the same Gate D scope unless new repository evidence creates a concrete conflict.
+- reconcile live `work/v1-composite` first;
+- select the next unfinished work from `.agents/V1_CURRENT_HANDOFF.md` / `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`;
+- reuse already validated Gate D and R2 evidence rather than repeating it;
+- keep Gate E and later Resolver gates dormant unless a concrete V1 failure proves an existing Common Play gap and the owner explicitly reactivates Resolver implementation;
+- keep PR #139 separate; it is documentation-only and is not implicitly approved for merge by the PR #137 approval.
 
 ## Rerun responsibility
 
@@ -55,10 +51,8 @@ If Rerun files disagree with canonical planning about product scope or order, th
 ## Router checkpoint
 
 - reconciled_at: `2026-08-28 Asia/Seoul`
-- owner priority: Common Play / data-driven Rules Resolver.
-- canonical checklist target path: `docs/rules/resolver-execution-checklist.md`.
-- temporary checklist ref while PR #139 remains open: `agent/138-resolver-execution-checklist`.
-- active Gate D implementation: Issue #136 / PR #137.
-- ChatGPT Gate D mapless-membership design is frozen; bounded Codex Task Packet is posted on PR #137.
-- old Lore Peerless / missing-Actions evidence remains historical and non-blocking for this priority.
-- product routing details remain delegated to the checklist and active Issue/PR; PLAN stays a router only.
+- owner priority: V1 release track after Gate D closure.
+- Gate D canonical merge: PR #137 -> `406a9574d249bb770ec7725efa1384808ddc9bc3`.
+- later Resolver gates: demand-gated and inactive.
+- resolver checklist PR #139: open/unmerged; no merge approval implied.
+- active execution pointer: `.agents/V1_CURRENT_HANDOFF.md`.
