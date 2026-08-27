@@ -150,3 +150,17 @@ test("Common Play stale response invalidates without payment",()=>{
   assert.equal(stale.state.combatants.hero.economy.reaction,true);
   assert.equal(stale.state.combatants.hero.life.hp.current,20);
 });
+
+test("Common Play does not open an interaction when its payments are unavailable",()=>{
+  const state=runtimeState();
+  const slot=state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1");
+  assert.ok(slot);
+  slot.current=0;
+
+  const resolved=startCommonPlayResolution(TEST_PROFILE,state,attackPending(),EXTERNAL_DEFENSE,"hero");
+  assert.equal(resolved.status,"committed");
+  if (resolved.status!=="committed") return;
+  assert.equal(resolved.state.combatants.hero.life.hp.current,13);
+  assert.equal(resolved.state.combatants.hero.economy.reaction,true);
+  assert.equal(resolved.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,0);
+});
