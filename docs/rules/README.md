@@ -2,6 +2,8 @@
 
 Version: `0.1-draft`
 
+Execution router: [`resolver-execution-checklist.md`](./resolver-execution-checklist.md) is the canonical Common Play / Rules Resolver work checklist, including gate status, mapless fallback invariants, and ChatGPT/Codex handoff rules.
+
 This document defines the common declarative rules language used by SimpleVTT. A `RulesProfile` supplies edition/ruleset semantics on top of this language. Named feats, spells, items, classes, species, conditions, and monsters are content built from these primitives; they are not hard-coded resolver branches.
 
 ## 1. Design constraints
