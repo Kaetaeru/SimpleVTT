@@ -22,7 +22,23 @@
         {
           "kind": "damage.apply",
           "amount": "4d6",
-          "damageType": "fire"
+          "damageType": "fire",
+          "when": {
+            "op": "eq",
+            "left": { "ref": "test.outcome" },
+            "right": { "value": "failure" }
+          }
+        },
+        {
+          "kind": "damage.apply",
+          "amount": "4d6",
+          "damageType": "fire",
+          "multiplier": 0.5,
+          "when": {
+            "op": "eq",
+            "left": { "ref": "test.outcome" },
+            "right": { "value": "success" }
+          }
         }
       ]
     }
