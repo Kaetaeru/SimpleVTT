@@ -159,18 +159,24 @@ function requireEntryPoint(definition:CommonPlaySaveDamageDefinition,entryPointI
 }
 
 function numericDamageOperand(
+  profile:RulesProfileLike,
   damageRollOperationId:string,
   multiplier:number,
 ):Extract<ResolutionOperation,{kind:"damage"}>["amount"] {
+  const rounding=Number.isInteger(multiplier)?undefined:profile.roundingPolicy?.default;
+  if (!Number.isInteger(multiplier)&&!rounding) {
+    throw new Error("fractional damage multiplier requires RulesProfile default rounding");
+  }
   return {
     operationId:damageRollOperationId,
     field:"total",
     multiplier,
-    rounding:"floor",
+    ...(rounding?{ rounding }:{}),
   };
 }
 
 export function compileCommonPlaySaveDamageEntryPoint(
+  profile:RulesProfileLike,
   inputState:RulesRuntimeState,
   definition:CommonPlaySaveDamageDefinition,
   input:CommonPlaySaveDamageExecutionInput,
@@ -242,7 +248,7 @@ export function compileCommonPlaySaveDamageEntryPoint(
         kind:"damage",
         targetId:target.facts.id,
         damageType:damage.damageType,
-        amount:numericDamageOperand(damageRollOperationId,damage.multiplier),
+        amount:numericDamageOperand(profile,damageRollOperationId,damage.multiplier),
         creatureKind:target.creatureKind,
         when:damage.outcome
           ? { operationId:saveOperationId, field:"outcome", equals:damage.outcome }
@@ -270,7 +276,7 @@ export function resolveCommonPlaySaveDamageEntryPoint(
     return resolvePendingResolution(
       profile,
       inputState,
-      compileCommonPlaySaveDamageEntryPoint(inputState,definition,input),
+      compileCommonPlaySaveDamageEntryPoint(profile,inputState,definition,input),
     );
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
