@@ -209,6 +209,13 @@ def main() -> None:
     for path in sorted((ROOT / "tests/fixtures/rules").glob("*.json")):
         validate(path, golden_schema, registry)
 
+    play_contract_schema = schema_by_id(
+        schemas,
+        "https://simplevtt.local/schemas/common-play-contract.schema.json",
+    )
+    for path in sorted((ROOT / "tests/fixtures/play-contract").glob("*.json")):
+        validate(path, play_contract_schema, registry)
+
     content_entry_schema = schema_by_id(schemas, "https://simplevtt.local/schemas/content-entry.schema.json")
     for path in sorted((ROOT / "tests/fixtures/content").glob("*.json")):
         validate(path, content_entry_schema, registry)
