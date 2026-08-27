@@ -16,7 +16,7 @@ export type ExpressionNode =
 
 export interface RulesProfileLike {
   profileId: string;
-  roundingPolicy?: { id: string };
+  roundingPolicy?: { id: string; default?: "floor"|"ceil"|"round" };
   properties: Record<string, { storage?: string; formula?: ExpressionNode }>;
   d20Test?: {
     advantageDisadvantage?: {
