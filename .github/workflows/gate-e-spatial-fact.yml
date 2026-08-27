@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Verify Gate E spatial fact runtime
         run: npx tsx --test tests/domain/commonPlaySpatialFactRuntime.test.ts
       - name: Typecheck application
