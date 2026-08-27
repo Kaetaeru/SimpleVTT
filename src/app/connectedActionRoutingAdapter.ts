@@ -146,6 +146,8 @@ function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):Resolut
     provenance:[...event.provenance,{source:`undo:${event.resolutionId}`,status:"applied",reason:"Host-authoritative compensating event"}],
     stateChanges:[...event.stateChanges].reverse().map((change)=>{
       if(change.kind==="effect")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="artifact")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="zone-membership")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="concentration")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="spellcasting-turn")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="hp")return {...structuredClone(change),before:change.after,after:change.before};
