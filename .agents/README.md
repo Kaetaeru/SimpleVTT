@@ -6,14 +6,15 @@ This directory is reserved for user/operator instructions and agent-only working
 
 When resuming work on a branch, inspect the agent workspace before choosing the next implementation slice.
 
-1. Read `DEFERRED_FIXES.md` first when it exists. Active owner-playtest regressions and explicit blocking queues there take priority over planned work in `CURRENT_WORK.md`.
-2. Read `V1_CURRENT_HANDOFF.md` for the exact canonical head, active implementation slice, immediate next task, validation commands, and known limitations.
-3. Use `V1_RELEASE_EXECUTION_CHECKLIST.md` as the full V1 dependency and release-gate router.
-4. Read `UX_STRUCTURE_GATES.md` when the task touches a previously deferred owner walkthrough, UX acceptance, or structure gate.
+1. Read `DEFERRED_FIXES.md` first when it exists. Active owner-playtest regressions and explicit blocking queues there take priority over planned work in `CURRENT_WORK.md`, unless the owner has explicitly reprioritized the work.
+2. If the current explicit owner direction is Common Play / Rules Resolver work, read `docs/rules/resolver-execution-checklist.md` next and use it as the canonical resolver gate/Chat-Codex router. A later explicit owner priority change overrides an older unrelated handoff pointer; do not resume stale R2 work merely because `V1_CURRENT_HANDOFF.md` predates that direction.
+3. Read `V1_CURRENT_HANDOFF.md` for the exact canonical head, active implementation slice, immediate next task, validation commands, and known limitations when it remains relevant to the current owner priority.
+4. Use `V1_RELEASE_EXECUTION_CHECKLIST.md` as the full V1 dependency and release-gate router.
+5. Read `UX_STRUCTURE_GATES.md` when the task touches a previously deferred owner walkthrough, UX acceptance, or structure gate.
 
 `CURRENT_WORK.md` and `SHORT_TERM_CHECKLIST.md` retain historical Phase 09 context. Do not treat their old `NEXT` sections as the current implementation pointer when `V1_CURRENT_HANDOFF.md` exists.
 
-Do not resume a later feature slice merely because automated CI is green when `DEFERRED_FIXES.md` records an unresolved owner-playtest gate.
+Do not resume a later feature slice merely because automated CI is green when `DEFERRED_FIXES.md` records an unresolved owner-playtest gate, unless the owner has explicitly reprioritized the work.
 
 ## Allowed here
 
