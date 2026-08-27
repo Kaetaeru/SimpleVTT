@@ -2,8 +2,8 @@
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 1,
-  "status": "continue",
-  "reason": "Owner-approved PR #137 is merged into work/v1-composite at 406a9574d249bb770ec7725efa1384808ddc9bc3. Rerun routing has returned to the V1 release track; Gate E remains dormant and PR #139 remains separately unapproved/unmerged. Live evidence closes the stale Lore Peerless Skill blocker without repeating validated work: the unchanged focused Peerless proof is present on canonical and the later Phase 12 connected-protocol job 98664726346/run 33114261443 plus UI frontend job 98664726301 succeeded. The active unfinished R2 slice is Lore Cutting Words: add the smallest Host-unknown connected owner-authority proof, wire it into Phase 12, execute exact-SHA focused and justified regression evidence, fix only direct Cutting-Words-specific reds, then close R2 and advance to R3.",
+  "status": "needs_user",
+  "reason": "Gate D is canonical and the V1 release track is active. Lore Peerless Skill is closed from existing live evidence. The final Lore Cutting Words candidate on PR #140 is 7f4a582f00fac98f47d336f245c3cb1f73c488e5. Its direct authority gap was reproduced at 66fceede7325638429d98bb542cf0cf20c5728b0 (88/89, only Cutting Words failed); a too-broad generic interrupt-context attempt was rejected/reverted after regressions; the final minimal adapter-local fix is exact-head green: Phase 12 run 33119129767/job 98681292701 passed 89/89 connected tests, the embedded Phase 11 walkthrough passed 1/1, production build passed, UI run 33119129773/job 98681292734 passed including Typecheck/build, and Contract run 33119129808 passed. PR #140 remains open and its product diff is exactly three intended files; canonical has only advanced through handoff/Rerun documentation since the green candidate. R2 remains PARTIAL until PR #140 receives explicit owner merge approval and lands. Do not repeat validation unless product/runtime/test files change. PR #139 remains separately unapproved/unmerged.",
   "task_id": "phase14-production-play-session-ux",
-  "updated_at": "2026-08-28T06:29:59+09:00"
+  "updated_at": "2026-08-28T06:43:44+09:00"
 }
