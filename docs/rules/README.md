@@ -2,6 +2,10 @@
 
 Version: `0.1-draft`
 
+Execution planning authority for Common Play / Resolver / legacy convergence work:
+
+`docs/rules/resolver-execution-checklist.md`
+
 This document defines the common declarative rules language used by SimpleVTT. A `RulesProfile` supplies edition/ruleset semantics on top of this language. Named feats, spells, items, classes, species, conditions, and monsters are content built from these primitives; they are not hard-coded resolver branches.
 
 ## 1. Design constraints
