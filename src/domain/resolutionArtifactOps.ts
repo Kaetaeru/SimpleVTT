@@ -2,7 +2,7 @@ import { requireCombatant } from "./combatState";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
-import { artifactStateChange, zoneMembershipStateChange } from "./runtimeStateChange";
+import { artifactStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { createRuntimeArtifact, type ZoneMembershipState } from "./runtimeArtifact";
 import type { ResolutionOperation } from "./resolutionTypes";
 
@@ -42,7 +42,7 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
     status:"applied",
     reason:`runtime ${artifact.artifactKind} artifact ${artifact.id} spawned with ${membership.authority} membership authority`,
   }];
-  const stateChanges=[
+  const stateChanges:RuntimeStateChange[]=[
     artifactStateChange(artifact.id,artifact.id,"added",provenance,undefined,artifact),
     zoneMembershipStateChange(artifact.id,"added",provenance,undefined,membership),
   ];
@@ -64,7 +64,7 @@ export function executeUpdateArtifact(ctx:ResolutionExecutionContext,operation:U
     status:"applied",
     reason:`runtime artifact ${artifact.id} metadata updated`,
   }];
-  const stateChanges=[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)];
+  const stateChanges:RuntimeStateChange[]=[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)];
   const result={updated:true,artifact:after};
   return {
     result,
@@ -83,7 +83,7 @@ export function executeRemoveArtifact(ctx:ResolutionExecutionContext,operation:R
     status:"applied",
     reason:`runtime artifact ${artifact.id} removed`,
   }];
-  const stateChanges=[artifactStateChange(artifact.id,artifact.id,"removed",provenance,artifact,undefined)];
+  const stateChanges:RuntimeStateChange[]=[artifactStateChange(artifact.id,artifact.id,"removed",provenance,artifact,undefined)];
   if (membership) stateChanges.push(zoneMembershipStateChange(artifact.id,"removed",provenance,membership,undefined));
   const result={removed:true,artifact:structuredClone(artifact),membership:membership?structuredClone(membership):undefined};
   return {
@@ -119,7 +119,7 @@ export function executeSetZoneMembership(ctx:ResolutionExecutionContext,operatio
     status:"applied",
     reason:`${operation.memberId} ${operation.present?"entered":"left"} runtime zone ${artifact.id}`,
   }];
-  const stateChanges=[zoneMembershipStateChange(artifact.id,"updated",provenance,before,after)];
+  const stateChanges:RuntimeStateChange[]=[zoneMembershipStateChange(artifact.id,"updated",provenance,before,after)];
   const result={
     changed:true,
     artifactId:operation.artifactId,
