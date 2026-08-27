@@ -4,22 +4,18 @@ on:
   push:
     branches:
       - "agent/resolver-foundation-convergence"
-    paths:
-      - "src/domain/commonPlaySpatialFactRuntime.ts"
-      - "src/domain/commonPlayMovementRuntime.ts"
-      - "src/domain/targeting.ts"
-      - "tests/domain/commonPlaySpatialFactRuntime.test.ts"
-      - "tests/domain/commonPlayMaplessTargeting.test.ts"
-      - "tests/domain/commonPlayMovementRuntime.test.ts"
-      - ".github/workflows/gate-e-spatial-fact.yml"
   pull_request:
     paths:
       - "src/domain/commonPlaySpatialFactRuntime.ts"
       - "src/domain/commonPlayMovementRuntime.ts"
       - "src/domain/targeting.ts"
+      - "src/app/connectedCommonPlayAuthorityFactRuntime.ts"
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedSessionWire.ts"
       - "tests/domain/commonPlaySpatialFactRuntime.test.ts"
       - "tests/domain/commonPlayMaplessTargeting.test.ts"
       - "tests/domain/commonPlayMovementRuntime.test.ts"
+      - "tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts"
       - ".github/workflows/gate-e-spatial-fact.yml"
 
 jobs:
@@ -40,5 +36,6 @@ jobs:
           tests/domain/commonPlaySpatialFactRuntime.test.ts
           tests/domain/commonPlayMaplessTargeting.test.ts
           tests/domain/commonPlayMovementRuntime.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
       - name: Typecheck application
         run: npx tsc --noEmit
