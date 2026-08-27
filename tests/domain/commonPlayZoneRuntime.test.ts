@@ -76,7 +76,7 @@ test("Common Play spawns an unknown zone artifact with opaque placement and elap
   assert.equal(activated.events[0].stateChanges[0]?.kind,"artifact");
 });
 
-test("Common Play zone rules keep independent once-per-turn frequency and allow a later turn",()=>{
+test("Common Play zone rules keep frequency per rule, subject, and active turn",()=>{
   const activated=activate();
   const turn1=beginTurn(activated.state,"goblin",1);
   const artifactId=zoneArtifactId(turn1.state);
@@ -91,7 +91,7 @@ test("Common Play zone rules keep independent once-per-turn frequency and allow 
   assert.equal(entered.status,"committed");
   if (entered.status!=="committed") return;
   assert.equal(entered.state.combatants.goblin.life.hp.current,13);
-  assert.equal(entered.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered"],"1:goblin");
+  assert.equal(entered.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered:goblin"],"1:goblin");
 
   const enteredReplay=resolveCommonPlayZoneEvent(TEST_PROFILE,entered.state,DEFINITION,{
     id:"zone-entered-1-replay",
@@ -104,7 +104,19 @@ test("Common Play zone rules keep independent once-per-turn frequency and allow 
   if (enteredReplay.status!=="no-match") return;
   assert.equal(enteredReplay.state.combatants.goblin.life.hp.current,13);
 
-  const turnStart=resolveCommonPlayZoneEvent(TEST_PROFILE,entered.state,DEFINITION,{
+  const secondSubject=resolveCommonPlayZoneEvent(TEST_PROFILE,entered.state,DEFINITION,{
+    id:"zone-entered-hero-same-turn",
+    kind:"zone.entered",
+    artifactId,
+    subjectId:"hero",
+    subjectCreatureKind:"character",
+  });
+  assert.equal(secondSubject.status,"committed");
+  if (secondSubject.status!=="committed") return;
+  assert.equal(secondSubject.state.combatants.hero.life.hp.current,18);
+  assert.equal(secondSubject.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered:hero"],"1:goblin");
+
+  const turnStart=resolveCommonPlayZoneEvent(TEST_PROFILE,secondSubject.state,DEFINITION,{
     id:"zone-turn-start-1",
     kind:"zone.turn-start",
     artifactId,
@@ -114,7 +126,7 @@ test("Common Play zone rules keep independent once-per-turn frequency and allow 
   assert.equal(turnStart.status,"committed");
   if (turnStart.status!=="committed") return;
   assert.equal(turnStart.state.combatants.goblin.life.hp.current,10);
-  assert.equal(turnStart.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:turn-start"],"1:goblin");
+  assert.equal(turnStart.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:turn-start:goblin"],"1:goblin");
 
   const turnStartReplay=resolveCommonPlayZoneEvent(TEST_PROFILE,turnStart.state,DEFINITION,{
     id:"zone-turn-start-1-replay",
@@ -137,7 +149,7 @@ test("Common Play zone rules keep independent once-per-turn frequency and allow 
   assert.equal(enteredAgain.status,"committed");
   if (enteredAgain.status!=="committed") return;
   assert.equal(enteredAgain.state.combatants.goblin.life.hp.current,8);
-  assert.equal(enteredAgain.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered"],"2:goblin");
+  assert.equal(enteredAgain.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered:goblin"],"2:goblin");
 });
 
 test("Common Play zone damage and frequency marker roll back together when the trigger fails",()=>{
@@ -156,7 +168,7 @@ test("Common Play zone damage and frequency marker roll back together when the t
   if (failed.status!=="rejected") return;
   assert.equal(failed.failedOperationId,"common-play-zone-rule-1-damage-1");
   assert.equal(failed.state,turn.state);
-  assert.equal(failed.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered"],undefined);
+  assert.equal(failed.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered:missing-subject"],undefined);
 
   const retry=resolveCommonPlayZoneEvent(TEST_PROFILE,turn.state,DEFINITION,{
     id:"zone-entered-valid-retry",
@@ -168,7 +180,7 @@ test("Common Play zone damage and frequency marker roll back together when the t
   assert.equal(retry.status,"committed");
   if (retry.status!=="committed") return;
   assert.equal(retry.state.combatants.goblin.life.hp.current,13);
-  assert.equal(retry.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered"],"1:goblin");
+  assert.equal(retry.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered:goblin"],"1:goblin");
 });
 
 test("Common Play zone expires through authoritative elapsed time and cannot fire afterward",()=>{
