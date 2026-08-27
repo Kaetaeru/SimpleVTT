@@ -2,6 +2,7 @@ import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { RuntimeClock } from "./effects";
 
 export type RuntimeArtifactKind = "zone";
+export type ZoneMembershipAuthority = "manual"|"spatial";
 
 export type RuntimeArtifactExpiry =
   | { kind:"time"; elapsedSeconds:number }
@@ -13,9 +14,15 @@ export interface RuntimeArtifactInstance {
   sourceActorId?:string;
   templateId:string;
   artifactKind:RuntimeArtifactKind;
-  placementRef:string;
+  placementRef?:string;
   expiry:RuntimeArtifactExpiry;
   metadata?:Record<string,string|number|boolean>;
+}
+
+export interface ZoneMembershipState {
+  artifactId:string;
+  authority:ZoneMembershipAuthority;
+  memberIds:string[];
 }
 
 export interface RuntimeArtifactSpawnRequest {
@@ -24,7 +31,7 @@ export interface RuntimeArtifactSpawnRequest {
   sourceActorId?:string;
   templateId:string;
   artifactKind:RuntimeArtifactKind;
-  placementRef:string;
+  placementRef?:string;
   expiry:RuntimeArtifactExpiry;
   metadata?:Record<string,string|number|boolean>;
 }
@@ -40,7 +47,6 @@ export function createRuntimeArtifact(request:RuntimeArtifactSpawnRequest):Runti
   if (!request.sourceId) throw new DomainEvaluationError("runtime artifact sourceId is required");
   if (!request.templateId) throw new DomainEvaluationError("runtime artifact templateId is required");
   if (request.artifactKind!=="zone") throw new DomainEvaluationError(`unsupported runtime artifact kind: ${request.artifactKind}`);
-  if (!request.placementRef) throw new DomainEvaluationError("runtime artifact placementRef is required");
   if (request.expiry.kind==="time"&&(!Number.isFinite(request.expiry.elapsedSeconds)||request.expiry.elapsedSeconds<0)) {
     throw new DomainEvaluationError("runtime artifact expiry must be a non-negative finite elapsed time");
   }
