@@ -341,33 +341,31 @@ Status meanings:
 
 ### Active gate
 
-- [ ] **Gate D — Zone RuntimeArtifact + frequency + mapless membership** (`ACTIVE`, Issue #136 / PR #137; design frozen for bounded Codex implementation)
+- [ ] **Gate D — Zone RuntimeArtifact + frequency + mapless membership** (`ACTIVE`; implementation validated on Issue #136 / PR #137, awaiting owner-approved merge)
 
-Already implemented/proven on the current PR branch:
+Implemented/proven on PR #137:
 
 - [x] first narrow `artifact.spawn` operation;
 - [x] first-class `RuntimeArtifact` zone state;
-- [x] opaque external placement support;
-- [x] authoritative `zone.entered` / `zone.turn-start` consumption;
+- [x] opaque optional external placement support;
+- [x] authoritative `zone.entered` / `zone.left` / `zone.turn-start` / `zone.turn-end` semantic event path;
 - [x] per-rule + subject + active-turn `once-per-turn` frequency;
 - [x] frequency marker and resulting damage in one atomic resolution;
 - [x] elapsed-duration expiry and artifact removal;
-- [x] unknown external zone fixture and focused runtime regressions.
+- [x] unknown external zone fixture, content-ID invariance, and focused runtime regressions;
+- [x] authoritative session-runtime Zone membership state outside artifact metadata/UI-local state;
+- [x] `manual` and `spatial` membership authority through one semantic state/event contract;
+- [x] persistent idempotent enter/leave with real-transition-only events;
+- [x] membership-driven authoritative turn-start/turn-end execution without repeated DM entry actions;
+- [x] Zone removal/expiry atomically cleans membership;
+- [x] removed/expired Zones cannot produce later membership/turn events;
+- [x] manual and spatial-provider inputs converge on the same Common Play Zone rule executor;
+- [x] temporary Gate D diagnostics removed;
+- [x] Gate-D-caused type/session integration regressions resolved without weakening typed StateChanges.
 
-Required before Gate D can close:
+Evidence pointer: PR #137 head `134d2b88af707ee2e247372e25cec9630442d5d6`. Contract validation, Rules Domain (including focused Gate D + canonical typecheck), UI build, Phase 11 offline/full-frontend gate, and Phase 12 connected-session authority/full-frontend gate are green. Persistence remains red only on the pre-existing builtin-catalog count baseline (`501 !== 496`); the Gate D diff does not own that generator/expectation.
 
-- [ ] external spatial placement is **not required** for Zone execution;
-- [ ] add authoritative session-runtime Zone membership state outside artifact metadata/UI-local state;
-- [ ] support `manual` and `spatial` membership authority through one semantic state/event contract;
-- [ ] manual `enter` persists until explicit leave, provider reconciliation, or Zone cleanup;
-- [ ] idempotent enter/leave emits `zone.entered` / `zone.left` only on real membership transitions;
-- [ ] membership drives authoritative `zone.turn-start` and `zone.turn-end` events without repeated DM entry actions;
-- [ ] Zone removal/expiry atomically cleans its membership state;
-- [ ] removed/expired Zones cannot produce later membership/turn events;
-- [ ] manual and spatial-provider inputs converge on the same Common Play Zone rule executor;
-- [ ] no UI-local-only membership authority;
-- [ ] clean temporary diagnostic workflow/steps from PR #137 before final review;
-- [ ] resolve only Gate-D-caused CI regressions; keep unrelated catalog baseline failures separate.
+Gate D still requires only lifecycle step 8: **explicit owner approval and merge**. Do not mark it `DONE` before that merge lands in `work/v1-composite`.
 
 Explicitly reviewed but deferred from Gate D until a concrete failing scenario requires them:
 
@@ -447,7 +445,7 @@ Before activating later gates, use concrete examples to challenge the current la
 
 - [ ] instantaneous single-target attack/save/check effects;
 - [ ] instantaneous multi-target and area target sets;
-- [x] persistent zones and moving/actor-bound auras reviewed; only persistent membership is active in Gate D, moving/actor-bound execution remains deferred;
+- [x] persistent zones and moving/actor-bound auras reviewed; persistent mapless membership is validated on PR #137, while moving/actor-bound execution remains deferred;
 - [ ] walls/objects/portals;
 - [ ] range/visibility/cover/destination facts;
 - [ ] push/pull/teleport and blocked movement;
@@ -585,14 +583,13 @@ When a gate changes:
 ### Current next action
 
 ```text
-Codex: implement only the frozen Gate D mapless-membership delta from Issue #136 / PR #137
-       -> reuse existing Gate D code instead of redoing validated work
-       -> focused tests first
-       -> relevant typecheck/build/session-persistence validation only if touched
-       -> remove temporary diagnostics before final handoff
-       -> stop and return architecture questions instead of widening the contract
+Owner: decide whether PR #137 should merge into work/v1-composite.
+       -> Gate D implementation and architecture review are complete on the PR branch
+       -> merge is still prohibited without explicit owner approval
 
-ChatGPT: when PR #137 head changes, review the actual diff against this checklist
-         -> if the implementation is architecture-clean and required CI is green, present Gate D for owner merge decision
-         -> do not merge without explicit owner approval
+ChatGPT: do not repeat Gate D implementation or validation unless PR #137 head changes or a new regression appears
+         -> if the owner approves merge, merge only the approved PR/head and then mark Gate D DONE after canonical reconciliation
+         -> do not activate Gate E from this checklist alone; first capture a concrete spatial-fact/manual-authority scenario and freeze a bounded gate
+
+Codex: no further Gate D implementation work is currently authorized.
 ```
