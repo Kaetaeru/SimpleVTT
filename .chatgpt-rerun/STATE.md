@@ -7,7 +7,7 @@
 - repository: `Kaetaeru/SimpleVTT`
 - canonical branch/ref: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T05:36:28+09:00`
+- checkpointed_at: `2026-08-28T05:38:10+09:00`
 
 ## Durable checkpoint
 
@@ -38,19 +38,19 @@ Validation at product commit `134d2b88af707ee2e247372e25cec9630442d5d6` remains 
 - Persistence application-contract remains red only on the pre-existing builtin-catalog count baseline in `installedContentRuntimeAdapter.test.ts`: generated `501` versus stale expected `496`; Gate D does not own that generator/expectation.
 
 Live reconciliation for this dispatch:
-- canonical `work/v1-composite` head is `2938aa483d6db2777091ca318e00ee3aaabcf54c` (`rerun: await Gate D merge decision`);
-- PR #137 had become non-mergeable only because its branch still carried older `.chatgpt-rerun/STATE.md` / `control.json` content while canonical advanced those same coordination files;
-- PR #137 branch coordination files were synchronized to canonical in protocol order (`STATE.md` then `control.json`), producing branch head `caa3da1cf93834418eb53587a862c4c77d832c4b`;
-- compare `134d2b88... -> caa3da1c...` contains only `.chatgpt-rerun/STATE.md` and `.chatgpt-rerun/control.json`; therefore prior Gate D product validation was not repeated;
-- PR #137 is open, mergeable, and unmerged at branch head `caa3da1cf93834418eb53587a862c4c77d832c4b`;
-- PR #139 is also open, mergeable, and unmerged; it still contains only the three resolver checklist/discovery documentation changes.
+- canonical `work/v1-composite` had advanced only through Rerun coordination after the validated Gate D product commit;
+- PR #137 temporarily became non-mergeable because its older branch history also carried stale `.chatgpt-rerun/STATE.md` / `control.json` edits;
+- those coordination files were first synchronized, then canonical commit `0e83b8c8c2750f67b2a2019cb79bb973477c0a98` was incorporated as an actual second parent of PR #137 in merge commit `fa386d824658104e17ce409510b7df3e012173ec`;
+- compare from current canonical at that reconciliation point to `fa386d824658104e17ce409510b7df3e012173ec` showed `behind_by: 0` and exactly the 16 intended Gate D product/test/workflow files; `.chatgpt-rerun/*` no longer appears in the PR diff;
+- PR #137 is open, mergeable, and unmerged at branch head `fa386d824658104e17ce409510b7df3e012173ec`;
+- PR #139 is open, mergeable, and unmerged with only the three resolver checklist/discovery documentation changes.
 
-The current dispatch requested continuation, which authorized reconciliation of the unfinished sequence, but it did not explicitly authorize merging a pull request. Repository governance still requires an explicit owner merge decision before either PR is merged.
+The current dispatch requested continuation and authorized reconciliation of the unfinished sequence, but it did not explicitly authorize merging a pull request. Repository governance still requires an explicit owner merge decision before either PR is merged.
 
 ## Next Exact Action
 
 1. Await an **explicit owner merge decision** for PR #137. No further Gate D implementation work is currently required.
-2. If the owner explicitly approves merging PR #137, perform a fresh Rerun preflight and verify the approved PR head. If only Rerun coordination files changed after the validated product commit, do not repeat product regressions.
+2. If the owner explicitly approves merging PR #137, perform a fresh Rerun preflight and verify the approved PR head. Do not repeat product validation unless a product/runtime/test file changed after `134d2b88af707ee2e247372e25cec9630442d5d6`.
 3. Merge PR #137 only after explicit owner approval; then reconcile `work/v1-composite`, mark Gate D `DONE` in the resolver router after the merge is canonical, and update Rerun routing accordingly.
 4. Do not merge PR #139 without explicit owner approval.
 5. Do not activate Gate E from the planned backlog alone. A concrete spatial-fact/manual-authority scenario and a bounded design step are required first.
