@@ -84,16 +84,30 @@ test("Common Play compiles an unknown multi-target save damage entry point into 
   assert.equal((resolved.results["common-play-shared-damage-roll"] as {total:number}).total,18);
   assert.equal((resolved.results["common-play-save-1"] as {outcome:string}).outcome,"failure");
   assert.equal((resolved.results["common-play-save-2"] as {outcome:string}).outcome,"success");
-  assert.equal((resolved.results["common-play-damage-1-full"] as {finalDamage:number}).finalDamage,18);
-  assert.deepEqual(resolved.results["common-play-damage-1-half"],{ skipped:true });
-  assert.deepEqual(resolved.results["common-play-damage-2-full"],{ skipped:true });
-  assert.equal((resolved.results["common-play-damage-2-half"] as {raw:number;finalDamage:number}).raw,9);
-  assert.equal((resolved.results["common-play-damage-2-half"] as {finalDamage:number}).finalDamage,4);
+  assert.equal((resolved.results["common-play-damage-1-1"] as {finalDamage:number}).finalDamage,18);
+  assert.deepEqual(resolved.results["common-play-damage-1-2"],{ skipped:true });
+  assert.deepEqual(resolved.results["common-play-damage-2-1"],{ skipped:true });
+  assert.equal((resolved.results["common-play-damage-2-2"] as {raw:number;finalDamage:number}).raw,9);
+  assert.equal((resolved.results["common-play-damage-2-2"] as {finalDamage:number}).finalDamage,4);
 
   const targeting=resolved.results["common-play-targets"] as {targets:Array<{targetId:string}>};
   assert.deepEqual(targeting.targets.map((target)=>target.targetId),["goblin","orc"]);
   assert.equal(resolved.events.every((event)=>event.resolutionId===input.resolutionId),true);
   assert.equal(resolved.state.history.every((entry)=>entry.resolutionId===input.resolutionId),true);
+});
+
+test("Common Play save outcome damage is declared by JSON rather than implied by the runtime",()=>{
+  const state=preparedState();
+  const failureOnly=structuredClone(DEFINITION);
+  failureOnly.entryPoints[0].operations=failureOnly.entryPoints[0].operations.filter((operation)=>
+    operation.when?.right&&"value" in operation.when.right&&operation.when.right.value==="failure"
+  );
+
+  const resolved=resolveCommonPlaySaveDamageEntryPoint(TEST_PROFILE,state,failureOnly,executionInput());
+  assert.equal(resolved.status,"committed");
+  if (resolved.status!=="committed") return;
+  assert.equal(resolved.state.combatants.goblin.life.hp.current,12);
+  assert.equal(resolved.state.combatants.orc.life.hp.current,30);
 });
 
 test("Common Play late invalid target input rolls back damage already staged for earlier targets",()=>{
