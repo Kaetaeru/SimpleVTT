@@ -1,0 +1,30 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.unknown.area-save-damage",
+  "entryPoints": [
+    {
+      "id": "release",
+      "invocation": "manual",
+      "targeting": {
+        "from": "targets",
+        "min": 2,
+        "max": 4
+      },
+      "test": {
+        "kind": "saving-throw",
+        "roller": "each-target",
+        "property": "dex",
+        "dc": { "value": 15 },
+        "perTarget": true
+      },
+      "operations": [
+        {
+          "kind": "damage.apply",
+          "amount": "4d6",
+          "damageType": "fire"
+        }
+      ]
+    }
+  ]
+}
