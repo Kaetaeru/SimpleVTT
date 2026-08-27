@@ -10,7 +10,7 @@ import type { TargetFacts, TargetingRule } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { RulesRuntimeState } from "./combatState";
-import type { RuntimeArtifactSpawnRequest } from "./runtimeArtifact";
+import type { RuntimeArtifactSpawnRequest, ZoneMembershipAuthority } from "./runtimeArtifact";
 import type { RuntimeStateChange } from "./runtimeStateChange";
 import type { TemporaryHpChoice } from "./temporaryHp";
 import type { ResourceRecovery } from "./resources";
@@ -191,6 +191,7 @@ export type ResolutionOperation =
   | (OperationBase & {
       kind:"spawn-artifact";
       artifact:RuntimeArtifactSpawnRequest;
+      zoneMembershipAuthority:ZoneMembershipAuthority;
     })
   | (OperationBase & {
       kind:"update-artifact";
@@ -200,6 +201,13 @@ export type ResolutionOperation =
   | (OperationBase & {
       kind:"remove-artifact";
       artifactId:string;
+    })
+  | (OperationBase & {
+      kind:"set-zone-membership";
+      artifactId:string;
+      authority:ZoneMembershipAuthority;
+      memberId:string;
+      present:boolean;
     })
   | (OperationBase & {
       kind: "start-concentration";
