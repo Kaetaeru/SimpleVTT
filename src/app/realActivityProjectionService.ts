@@ -26,6 +26,12 @@ function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "effect") {
     return `${change.targetId} effect.${change.effectId} ${change.operation}`;
   }
+  if (change.kind === "artifact") {
+    return `${change.targetId} artifact.${change.artifactId} ${change.operation}`;
+  }
+  if (change.kind === "zone-membership") {
+    return `${change.targetId} zone-membership.${change.artifactId} ${change.operation}`;
+  }
   if (change.kind === "concentration") {
     return `${change.targetId} concentration ${concentrationLabel(change.before)} → ${concentrationLabel(change.after)}`;
   }

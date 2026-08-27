@@ -85,6 +85,8 @@ function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:Ite
 
 function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateChange):ReadValue {
   if (change.kind==="effect") return found(runtimeState.effects.find((effect)=>effect.id===change.effectId));
+  if (change.kind==="artifact") return found(runtimeState.artifacts?.find((artifact)=>artifact.id===change.artifactId));
+  if (change.kind==="zone-membership") return found(runtimeState.zoneMemberships?.find((membership)=>membership.artifactId===change.artifactId));
   if (change.kind==="concentration") return found(runtimeState.concentration[change.targetId]);
   if (change.kind==="spellcasting-turn") return found(runtimeState.spellcastingTurn);
   const combatant=runtimeState.combatants[change.targetId];
@@ -162,6 +164,26 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
     } else if (index>=0) runtimeState.effects.splice(index,1);
     return;
   }
+  if (change.kind==="artifact") {
+    const artifacts=runtimeState.artifacts??(runtimeState.artifacts=[]);
+    const index=artifacts.findIndex((artifact)=>artifact.id===change.artifactId);
+    if (change.before) {
+      const restored=structuredClone(change.before);
+      if (index>=0) artifacts[index]=restored;
+      else artifacts.push(restored);
+    } else if (index>=0) artifacts.splice(index,1);
+    return;
+  }
+  if (change.kind==="zone-membership") {
+    const memberships=runtimeState.zoneMemberships??(runtimeState.zoneMemberships=[]);
+    const index=memberships.findIndex((membership)=>membership.artifactId===change.artifactId);
+    if (change.before) {
+      const restored=structuredClone(change.before);
+      if (index>=0) memberships[index]=restored;
+      else memberships.push(restored);
+    } else if (index>=0) memberships.splice(index,1);
+    return;
+  }
   if (change.kind==="concentration") {
     runtimeState.concentration[change.targetId]=change.before ? structuredClone(change.before) : undefined;
     return;
@@ -189,7 +211,7 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
   }
   if (change.kind==="resource") {
     if (itemResource(change.resourceId)) return;
-    const resource=combatant.resources.find((entry)=>entry.id===change.resourceId);
+    const resource=runtimeState.combatants[change.targetId]?.resources.find((entry)=>entry.id===change.resourceId);
     if (resource) resource.current=change.before;
     return;
   }
@@ -198,12 +220,14 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
 }
 
 function runtimeOnly(change:RuntimeStateChange) {
-  return change.kind==="effect" || change.kind==="concentration" || change.kind==="spellcasting-turn";
+  return change.kind==="effect" || change.kind==="artifact" || change.kind==="zone-membership" || change.kind==="concentration" || change.kind==="spellcasting-turn";
 }
 
 function changeField(change:RuntimeStateChange) {
   if (change.kind==="resource") return `resource.${change.resourceId}`;
   if (change.kind==="effect") return `effect.${change.effectId}`;
+  if (change.kind==="artifact") return `artifact.${change.artifactId}`;
+  if (change.kind==="zone-membership") return `zone-membership.${change.artifactId}`;
   if (change.kind==="concentration") return "concentration";
   if (change.kind==="spellcasting-turn") return "spellcasting-turn";
   return `${change.kind}.${change.field}`;
@@ -261,6 +285,8 @@ function undoLabel(change:RuntimeStateChange) {
     const after=change.after ? change.after.id : "없음";
     return `${change.targetId} effect.${change.effectId} ${after} → ${before}`;
   }
+  if (change.kind==="artifact") return `${change.targetId} artifact.${change.artifactId} undo ${change.operation}`;
+  if (change.kind==="zone-membership") return `${change.targetId} zone-membership.${change.artifactId} undo ${change.operation}`;
   if (change.kind==="concentration") {
     const before=change.before ? change.before.groupId : "없음";
     const after=change.after ? change.after.groupId : "없음";

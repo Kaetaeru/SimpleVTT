@@ -3,6 +3,7 @@ import type { EffectInstance } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { ResourceRecoveryLockouts } from "./resources";
+import type { RuntimeArtifactInstance, ZoneMembershipState } from "./runtimeArtifact";
 import type { StateChange } from "./stateChange";
 
 export interface ResourceRecoveryLockoutStateChange {
@@ -29,6 +30,30 @@ export interface EffectStateChange {
   operation:"added" | "updated" | "removed";
   before?:EffectInstance;
   after?:EffectInstance;
+  provenance:ProvenanceRecord[];
+  lifetime:"session-runtime";
+  writeBack:"session";
+}
+
+export interface ArtifactStateChange {
+  kind:"artifact";
+  targetId:string;
+  artifactId:string;
+  operation:"added"|"updated"|"removed";
+  before?:RuntimeArtifactInstance;
+  after?:RuntimeArtifactInstance;
+  provenance:ProvenanceRecord[];
+  lifetime:"session-runtime";
+  writeBack:"session";
+}
+
+export interface ZoneMembershipStateChange {
+  kind:"zone-membership";
+  targetId:string;
+  artifactId:string;
+  operation:"added"|"updated"|"removed";
+  before?:ZoneMembershipState;
+  after?:ZoneMembershipState;
   provenance:ProvenanceRecord[];
   lifetime:"session-runtime";
   writeBack:"session";
@@ -85,6 +110,8 @@ export type RuntimeStateChange =
   | StateChange
   | ResourceStateChange
   | EffectStateChange
+  | ArtifactStateChange
+  | ZoneMembershipStateChange
   | ConcentrationStateChange
   | SpellcastingTurnStateChange
   | LifeFlagStateChange
@@ -123,6 +150,47 @@ export function effectStateChange(
     kind:"effect",
     targetId,
     effectId,
+    operation,
+    before:before ? structuredClone(before) : undefined,
+    after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
+}
+
+export function artifactStateChange(
+  targetId:string,
+  artifactId:string,
+  operation:"added"|"updated"|"removed",
+  provenance:ProvenanceRecord[],
+  before?:RuntimeArtifactInstance,
+  after?:RuntimeArtifactInstance,
+):ArtifactStateChange {
+  return {
+    kind:"artifact",
+    targetId,
+    artifactId,
+    operation,
+    before:before ? structuredClone(before) : undefined,
+    after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
+}
+
+export function zoneMembershipStateChange(
+  artifactId:string,
+  operation:"added"|"updated"|"removed",
+  provenance:ProvenanceRecord[],
+  before?:ZoneMembershipState,
+  after?:ZoneMembershipState,
+):ZoneMembershipStateChange {
+  return {
+    kind:"zone-membership",
+    targetId:artifactId,
+    artifactId,
     operation,
     before:before ? structuredClone(before) : undefined,
     after:after ? structuredClone(after) : undefined,
