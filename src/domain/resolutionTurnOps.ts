@@ -4,8 +4,9 @@ import { conditionEffectsFor, requireCombatant } from "./combatState";
 import { expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
 import { expireBarbarianRageAtClock } from "./barbarianRageLifecycle";
 import { recoverResources } from "./resources";
+import { expireRuntimeArtifactsAtClock } from "./runtimeArtifact";
 import { economyStateChanges } from "./stateChange";
-import { effectStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, effectStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
@@ -100,17 +101,31 @@ export function executeAdvanceTime(ctx:ResolutionExecutionContext, operation:Adv
     throw new DomainEvaluationError("elapsed time cannot move backwards");
   }
   ctx.state.clock = { ...ctx.state.clock, elapsedSeconds:operation.elapsedSeconds };
-  const expiry = expireRuntimeEffects(ctx);
-  ctx.state.effects = expiry.active;
-  const changes = expiry.expired.map((effect) =>
-    effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined),
+  const effectExpiry = expireRuntimeEffects(ctx);
+  ctx.state.effects = effectExpiry.active;
+  const artifactExpiry=expireRuntimeArtifactsAtClock(ctx.state.artifacts??[],ctx.state.clock);
+  ctx.state.artifacts=artifactExpiry.active;
+  const provenance=[...effectExpiry.provenance,...artifactExpiry.provenance];
+  const changes:RuntimeStateChange[] = effectExpiry.expired.map((effect) =>
+    effectStateChange(effect.targetId, effect.id, "removed", effectExpiry.provenance, effect, undefined),
   );
+  artifactExpiry.expired.forEach((artifact)=>{
+    changes.push(artifactStateChange(
+      artifact.placementRef,
+      artifact.id,
+      "removed",
+      artifactExpiry.provenance,
+      artifact,
+      undefined,
+    ));
+  });
   const result = {
     elapsedSeconds:operation.elapsedSeconds,
-    expiredEffectIds:expiry.expired.map((effect) => effect.id),
+    expiredEffectIds:effectExpiry.expired.map((effect) => effect.id),
+    expiredArtifactIds:artifactExpiry.expired.map((artifact)=>artifact.id),
   };
   return {
     result,
-    event:makeEvent(ctx.pending, operation, `time advanced to ${operation.elapsedSeconds}s`, result, expiry.provenance, changes),
+    event:makeEvent(ctx.pending, operation, `time advanced to ${operation.elapsedSeconds}s`, result, provenance, changes),
   };
 }
