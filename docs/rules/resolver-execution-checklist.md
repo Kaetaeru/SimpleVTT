@@ -1,7 +1,7 @@
 # Common Play Resolver Execution Checklist
 
 Status: **CANONICAL RULES/RESOLVER EXECUTION ROUTER**  
-Owner priority: **Common Play / data-driven rules resolver**  
+Owner priority: **Gate D closure, then return to the V1 release queue; later resolver gates are demand-gated**  
 Canonical integration target: `work/v1-composite`  
 Last structured review: **2026-08-28 Asia/Seoul**
 
@@ -60,6 +60,18 @@ Use sources in this order for Common Play / resolver work:
 An older `.agents/V1_CURRENT_HANDOFF.md` or release item must not silently cancel a later explicit owner priority change. Conversely, this resolver program must not erase unrelated historical release work; those queues remain separate until the owner returns to them.
 
 When repository state and chat memory conflict, repository state wins unless the owner explicitly changes the requirement.
+
+### Post-Gate-D stop line
+
+**Gate D is the stop line for the current proactive Resolver expansion.** After Gate D lands in `work/v1-composite`, implementation priority returns to the actual V1 product/release queue defined by `.agents/V1_CURRENT_HANDOFF.md` and `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md`.
+
+Gate E and later mechanism families remain design candidates only. They must not become implementation work merely because the preceding resolver gate finished. A later resolver gate may activate only when:
+
+1. an actual V1 play, Windows/Tauri, connected-session, rendered UX, or other concrete product path exposes a mechanism that existing Common Play primitives cannot safely express;
+2. ChatGPT captures that failure as a bounded scenario and proves composition with existing primitives is insufficient; and
+3. the owner explicitly returns implementation priority to that resolver gate.
+
+A survey, backlog item, named D&D mechanic, or theoretical completeness argument is not enough to bypass this stop line.
 
 ### Rerun integration
 
@@ -192,7 +204,8 @@ Use Codex after the gate contract is sufficiently fixed for:
 - compile/type/build/test failures;
 - CI diagnosis;
 - minimal migrations or compatibility wiring required by the accepted contract;
-- preparing the implementation PR and reporting concrete unresolved code constraints.
+- preparing the implementation PR and reporting concrete unresolved code constraints;
+- directly executing the focused tests and justified regressions for its implementation at the exact candidate SHA, rather than handing first-line verification to the owner.
 
 ### 5.3 Return-to-design conditions
 
@@ -216,6 +229,26 @@ Do not spend Codex tokens inventing the missing product decision.
 - Reuse already validated regressions; do not ask Codex to re-prove the entire historical matrix on every gate.
 - Run narrow tests first, then only the broader repository gates justified by the change.
 - Keep unrelated cleanup, dependency upgrades, and speculative abstractions out of the implementation task.
+
+### 5.5 Execution-evidence rule
+
+For executable product work, **test source existing is not test evidence, static review is not runtime evidence, and CI registration is not a passing result**.
+
+Codex must execute every applicable focused test and justified regression it can run for the exact candidate SHA and report:
+
+```text
+head: <exact SHA>
+environment: <OS/runtime/toolchain relevant to the test>
+command: <exact command>
+result: <pass/fail plus pass counts when available>
+artifact/run: <workflow/run/artifact when applicable>
+```
+
+If the required execution environment is unavailable or a required test cannot actually run, the gate remains **VERIFICATION BLOCKED** for that evidence. Do not infer success from source inspection, a test that was merely written, a previously green different SHA, or absence of an observed failure.
+
+CI may provide additional exact-SHA execution evidence, but a red job must first be classified by dependency/diff ownership before it is either treated as a gate blocker or reported as unrelated. Conversely, an unrelated red must not be folded into the resolver gate merely because it appears on the same PR.
+
+Human/owner acceptance can remain a final product or release gate where explicitly required, but it does not replace executable verification and must not be the first mechanism used to discover ordinary implementation regressions.
 
 ---
 
@@ -243,10 +276,12 @@ Every executable mechanism gate follows this loop:
 5. Codex implementation task packet
         |
         v
-6. Focused tests -> broader justified CI
+6. Codex executes focused tests at exact SHA -> broader justified regressions -> records evidence
+        |
+        +--> required execution unavailable -> VERIFICATION BLOCKED, not DONE
         |
         v
-7. ChatGPT architecture review of actual diff/PR
+7. ChatGPT architecture + evidence review of actual diff/PR
         |
         +--> design gap -> return to step 2
         |
@@ -254,7 +289,7 @@ Every executable mechanism gate follows this loop:
 8. Owner-approved merge
 ```
 
-A gate is not complete because a schema fixture parses. It is complete only when the supported path executes through the runtime and its acceptance tests prove the intended authority, state, failure, and retry behavior.
+A gate is not complete because a schema fixture parses, because test code exists, or because the diff looks correct. It is complete only when the supported path executes through the runtime and its acceptance tests prove the intended authority, state, failure, retry, and applicable environment behavior.
 
 ---
 
@@ -289,12 +324,17 @@ Unless the gate is explicitly structural-only, check all applicable items.
 
 ### Verification
 
-- [ ] Focused regression test passes.
+- [ ] Codex directly executes the focused regression at the exact candidate SHA and records the exact command/result.
 - [ ] Existing Gates A..current focused regressions remain green where impacted.
 - [ ] Typecheck/build passes for changed application surfaces.
 - [ ] Relevant connected/persistence gate passes when authority/persistence changed.
+- [ ] Duplicate/retry, rollback/atomic failure, cleanup/expiry, reconnect, Undo, missing-capability, and unknown-ID cases are executed where the changed mechanism makes them applicable.
+- [ ] Required OS/runtime-specific evidence (for example Windows/Tauri/two-instance behavior) actually runs when the gate depends on that environment; otherwise that evidence is `VERIFICATION BLOCKED`, not assumed green.
+- [ ] Exact SHA, environment, commands, pass/fail counts, and applicable run/artifact identifiers are recorded.
+- [ ] A test that exists but did not execute is never counted as passing evidence.
 - [ ] Unrelated pre-existing CI failures are reported separately instead of being folded into the gate.
-- [ ] ChatGPT reviews the final PR against this checklist before merge.
+- [ ] ChatGPT reviews the final PR and its execution evidence against this checklist before merge.
+- [ ] Human/owner acceptance, when required, supplements rather than substitutes for executable verification.
 - [ ] Merge occurs only after owner approval.
 
 ---
@@ -367,6 +407,8 @@ Evidence pointer: PR #137 head `134d2b88af707ee2e247372e25cec9630442d5d6`. Contr
 
 Gate D still requires only lifecycle step 8: **explicit owner approval and merge**. Do not mark it `DONE` before that merge lands in `work/v1-composite`.
 
+**After Gate D merges, stop selecting Resolver implementation gates and return execution priority to the canonical V1 release queue.** Gate E or any later gate remains dormant until the Post-Gate-D stop-line conditions in section 2 are satisfied.
+
 Explicitly reviewed but deferred from Gate D until a concrete failing scenario requires them:
 
 - [ ] actor-bound/aura anchor execution;
@@ -375,7 +417,7 @@ Explicitly reviewed but deferred from Gate D until a concrete failing scenario r
 
 ### Next mechanism families
 
-The following are ordered candidates, not permission to pre-build a giant DSL. Each becomes an implementation gate only after ChatGPT captures one or more concrete table/content scenarios and proves the existing contract insufficient.
+The following are ordered candidates, not permission to pre-build a giant DSL. Each becomes an implementation gate only after ChatGPT captures one or more concrete table/content scenarios, proves the existing contract insufficient, and the owner explicitly returns implementation priority to Resolver work.
 
 - [ ] **Gate E — Spatial Fact / Manual Authority execution** (`PLANNED`)
   - range checks;
@@ -528,19 +570,26 @@ Regression gates:
 - typecheck/build if touched
 - connected/persistence only if authority/lifetime changed
 
+Execution evidence:
+- run the applicable commands yourself at the exact candidate SHA
+- record exact SHA, environment, commands, pass/fail and pass counts
+- record applicable workflow/run/artifact IDs
+- if a required command/environment cannot run, report VERIFICATION BLOCKED; do not report or imply green
+
 STOP AND REPORT TO CHATGPT/OWNER IF:
 - a new Common Play primitive appears required
 - current contracts conflict
 - authority/lifetime is undefined
 - named-content branching appears necessary
 - there are multiple materially different product choices
+- required execution evidence cannot be produced
 
 Deliver:
 - smallest implementation diff
 - tests
-- exact validation results
+- exact validation evidence
 - PR
-- unresolved architectural questions only
+- unresolved architectural questions or blocked verification only
 ```
 
 ---
@@ -559,6 +608,9 @@ After Codex implementation and before owner-approved merge, review the actual di
 - [ ] Do costs/frequency/effects/cleanup commit atomically where required?
 - [ ] Was a new abstraction added without a scenario that needs it?
 - [ ] Are unsupported cases rejected explicitly?
+- [ ] Did Codex actually execute the required focused/regression commands at the candidate SHA rather than only adding test source?
+- [ ] Are exact SHA, environment, commands, pass/fail counts and applicable workflow/artifact IDs recorded?
+- [ ] Is any environment-specific requirement explicitly green or `VERIFICATION BLOCKED`, rather than inferred from source review?
 - [ ] Are unrelated CI failures clearly separated?
 - [ ] Is the PR free of temporary diagnostics and drive-by cleanup?
 - [ ] Is the documentation/checklist status updated if the gate actually closed?
@@ -578,7 +630,9 @@ When a gate changes:
 5. if gate order changes, record the prerequisite reason;
 6. if the owner changes priority, update the `Owner priority` field and active gate rather than rewriting unrelated release history;
 7. reconcile Rerun PLAN/STATE routing pointers when owner priority changes, but keep product details canonical here;
-8. never mark a gate `DONE` from green CI alone if owner/manual acceptance is part of that gate's explicit Definition of Done.
+8. never mark a gate `DONE` from source inspection, test-source presence, or CI registration alone; required executable evidence must have actually run at the candidate SHA;
+9. if required execution evidence cannot run, record `VERIFICATION BLOCKED` instead of assuming success;
+10. after Gate D merges, return execution priority to the canonical V1 release queue; later Resolver gates require a concrete product failure plus explicit owner reactivation.
 
 ### Current next action
 
@@ -589,7 +643,11 @@ Owner: decide whether PR #137 should merge into work/v1-composite.
 
 ChatGPT: do not repeat Gate D implementation or validation unless PR #137 head changes or a new regression appears
          -> if the owner approves merge, merge only the approved PR/head and then mark Gate D DONE after canonical reconciliation
-         -> do not activate Gate E from this checklist alone; first capture a concrete spatial-fact/manual-authority scenario and freeze a bounded gate
+         -> after Gate D lands, return execution priority to .agents/V1_CURRENT_HANDOFF.md / V1_RELEASE_EXECUTION_CHECKLIST.md
+         -> do not activate Gate E from this checklist alone; require a concrete V1/product failure, proof that existing primitives are insufficient, and explicit owner reactivation
+         -> for future executable gates, reject DONE when required exact-SHA execution evidence did not actually run
 
 Codex: no further Gate D implementation work is currently authorized.
+       -> for future authorized implementation, directly run focused and justified regression commands at the exact candidate SHA
+       -> if required execution cannot run, report VERIFICATION BLOCKED rather than green
 ```
