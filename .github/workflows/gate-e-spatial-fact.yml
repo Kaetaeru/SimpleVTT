@@ -1,0 +1,30 @@
+name: Gate E Spatial Fact
+
+on:
+  push:
+    branches:
+      - "agent/resolver-foundation-convergence"
+    paths:
+      - "src/domain/commonPlaySpatialFactRuntime.ts"
+      - "tests/domain/commonPlaySpatialFactRuntime.test.ts"
+      - ".github/workflows/gate-e-spatial-fact.yml"
+  pull_request:
+    paths:
+      - "src/domain/commonPlaySpatialFactRuntime.ts"
+      - "tests/domain/commonPlaySpatialFactRuntime.test.ts"
+      - ".github/workflows/gate-e-spatial-fact.yml"
+
+jobs:
+  gate-e-spatial-fact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Gate E spatial fact runtime
+        run: npx tsx --test tests/domain/commonPlaySpatialFactRuntime.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit
