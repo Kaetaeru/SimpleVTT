@@ -11,10 +11,9 @@ Canonical target branch: **`work/v1-composite`**
 
 - canonical branch: `work/v1-composite`
 - Gate D / Common Play Zone RuntimeArtifact merge: PR #137 -> `406a9574d249bb770ec7725efa1384808ddc9bc3`
-- post-Gate-D routing commit: `a2b5f2aad728d3e62204497ce7a5bf693621c3c1`
 - Gate D is closed for the current proactive Resolver program. Do not auto-activate Gate E; later Resolver gates require a concrete V1/product failure plus explicit owner reactivation.
 - R1 source/execution matrix: **DONE**. 이는 V1-21 release DONE/Windows acceptance를 뜻하지 않는다.
-- R1 exact checkpoints relevant to the remaining R2 order:
+- R1 exact checkpoints relevant to the end of R2:
   - Lore Peerless Skill: `88bb72dc3d725af049025728003ab6e6b8db1eb0`
   - Lore Cutting Words: `90514e44a21840070bb77ea17561036a86b2e5ca`
 
@@ -38,50 +37,85 @@ Closed and not to be repeated without direct regression evidence:
 - Devotion Smite of Protection `799fcaebd967b31c74e5520671050e81a5eb09dd`
 - Fiend Dark One's Own Luck `15681838b499e76f8558de2a52265015249e3cc0`
 - Lore Peerless Skill source/test candidate `bfc459ba35d089171d654fd27abb881309bef1fb`; closure evidence at `fa386d824658104e17ce409510b7df3e012173ec`:
-  - `bfc459...` is an ancestor of current canonical; its focused connected proof remains present.
-  - Phase 12 `connected-protocol` job `98664726346` / run `33114261443`: **success**. The workflow explicitly executes `tests/ui/connectedProjectedCharacterPeerlessSkillResolution.test.ts`, then Phase 11 offline walkthrough and `npm run build` in the same job.
+  - Phase 12 `connected-protocol` job `98664726346` / run `33114261443`: **success**, including the focused Peerless connected proof, Phase 11 walkthrough, and production build.
   - UI `frontend` job `98664726301`: **success**.
-  - Therefore the previous missing/zero-job GitHub Actions blocker is stale and **Peerless Skill R2 is CLOSED** without repeating its already-executed proof.
+  - The previous missing/zero-job Actions blocker is stale; **Peerless Skill R2 is CLOSED**.
 
 ## 3. R2 remaining scope
 
-R2 is **PARTIAL** with one remaining R1-backed remote-owner slice:
+R2 remains **PARTIAL only because the final Lore Cutting Words candidate is not merged yet**.
 
-1. **Lore Cutting Words**
+- PR #140: `test: prove remote-owner Lore Cutting Words`
+- branch: `agent/v1-lore-cutting-words-r2`
+- exact green candidate: `7f4a582f00fac98f47d336f245c3cb1f73c488e5`
+- PR status at checkpoint: open, mergeable, unmerged, `behind_by: 0`
+- canonical diff: exactly three intended files:
+  1. `.github/workflows/phase12-connected.yml`
+  2. `src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts`
+  3. `tests/ui/connectedProjectedCharacterCuttingWordsResolution.test.ts`
 
-Actual Windows two-instance/restart proof remains R3 and is not an R2 closure gate.
+Do not mark R2 `DONE` until PR #140 is merged into `work/v1-composite`.
 
-## 4. Active — Lore Cutting Words remote-owner verification
+## 4. Lore Cutting Words — implementation/verification green on PR #140
 
-R1 exact checkpoint `90514e44a21840070bb77ea17561036a86b2e5ca` remains the source/execution reference and must not be reimplemented.
+R1 exact checkpoint `90514e44a21840070bb77ea17561036a86b2e5ca` remains the source/execution reference; existing local branches were not reimplemented.
 
-Current canonical R1 proof `tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts` already covers:
+The existing canonical R1 test already covers level eligibility, ability-check reduction, attack-to-miss reduction, staged damage reduction, Inspiration + Reaction spend, Activity/history, Undo, and the level threshold.
 
-- level 3+ College of Lore Bard eligibility;
-- reducing another creature's successful ability check;
-- turning another creature's successful attack into a miss;
-- reducing staged damage before authoritative attack commit;
-- Bardic Inspiration spend and Reaction spend;
-- Activity/history projection;
-- Undo restoring Inspiration, Reaction, and affected HP/state;
-- no offer below the subclass level threshold.
+### Connected authority gap reproduced
 
-There is currently **no** `tests/ui/connectedProjectedCharacterCuttingWordsResolution.test.ts` on canonical. That missing connected Host-unknown/owner-authority proof is the next R2 gap.
+Initial exact candidate `66fceede7325638429d98bb542cf0cf20c5728b0` added only the focused Host-unknown connected proof and Phase 12 wiring.
 
-### Next exact action
+- Phase 12 run `33118589894`, connected-protocol job `98679491220`: **88/89 pass**.
+- Only the new Cutting Words proof failed.
+- Observed failure: the Host mounted the remote Lore Bard but never offered the Cutting Words interrupt.
+- Direct cause: the existing Cutting Words follow-up adapter considered only Host `activeCharacter`; a Host-unknown projected Lore Bard was not a reaction candidate.
+
+A broader generic projection-context experiment at `fdb0dac1d973dd48c0c0b69f90acad1f4ca88965` was rejected and fully reverted after Phase 12 run `33118780628` / job `98680120839` regressed existing Dark One's Own Luck, Peerless Skill, and Quivering Palm owner invariants. That generic port change is not present in the final diff.
+
+### Final minimal correction
+
+Exact candidate `7f4a582f00fac98f47d336f245c3cb1f73c488e5` keeps the correction inside the existing Cutting Words follow-up adapter:
+
+- consider Host active Character plus mounted projected Characters as possible Cutting Words responders;
+- use the selected responder's sheet/resource state through the existing resolver and Character owner write-back paths;
+- keep Host permanent Character library and Host-local active Character isolated for remote responders;
+- preserve existing ResolutionEvent, duplicate/retry, reconnect/rebind, and compensating Undo behavior;
+- no protocol/schema change;
+- no fake action-bar command;
+- no generic interrupt-context rewrite;
+- no unrelated cleanup.
+
+Focused Host-unknown proof covers owner-only prompt routing, authoritative d8 reduction turning a hit into a miss, exactly one Bardic Inspiration + Reaction spend, one Host event commit, Host durable Character isolation, owning Client exactly-once persistence, duplicate interrupt/event safety, reconnect/rebind, and compensating Undo/inverse convergence.
+
+### Exact-head evidence
+
+At `7f4a582f00fac98f47d336f245c3cb1f73c488e5`:
+
+- Phase 12 run `33119129767` / connected-protocol job `98681292701`: **success**.
+  - connected authority suite: **89/89 pass, 0 fail**;
+  - new Cutting Words proof: subtest 85, **pass**;
+  - Phase 11 walkthrough inside the same job: **1/1 pass**;
+  - production frontend gate `npm run build`: **success**.
+- UI run `33119129773` / frontend job `98681292734`: **success**, including Typecheck/build.
+- Contract run `33119129808`: **success**.
+
+Conclusion: **Cutting Words implementation and exact-head verification are green. The only remaining R2 action is owner-approved merge of PR #140.**
+
+## 5. Next exact action
 
 ```text
-reconcile current Cutting Words runtime + connected owner interrupt/write-back primitives
--> add the smallest focused connected proof for a Host-unknown Lore Bard using existing SessionProjection / interrupt response / ResolutionEvent / owner write-back / reconnect / Undo paths
--> prove owner-only interrupt routing, authoritative Cutting Words delta, one Reaction + one Bardic Inspiration spend, one Host commit, Host permanent Character-library isolation, owning Client exactly-once persistence, duplicate request/event safety, reconnect/rebind, and compensating Undo/inverse convergence
--> reuse the existing R1 branches; add multiple connected trigger branches only if repository evidence shows materially different connected authority paths
--> add no fake action-bar command, protocol/schema change, or named-content branch unless a direct failing product requirement proves it necessary
--> run the focused test at the exact candidate SHA, then the existing Phase 12 connected production gate and UI frontend/typecheck/build
--> if the first red exposes a real product/content-authority gap, fix only that cause
--> when exact-SHA evidence is green, close Cutting Words and R2, then advance to R3
+await explicit owner merge decision for PR #140
+-> on approval, perform mandatory Rerun preflight
+-> verify PR #140 head is still the approved exact green candidate or only coordination-only ancestry changed with the same three-file product diff
+-> do not repeat Cutting Words validation unless product/runtime/test files changed after 7f4a582f00fac98f47d336f245c3cb1f73c488e5
+-> merge PR #140 only after explicit approval
+-> after canonical merge, mark R2 DONE and advance to R3
 ```
 
-## 5. Hard boundaries
+Do not merge PR #139 as part of this action; it remains separately approval-gated.
+
+## 6. Hard boundaries
 
 - R3: Cargo/Tauri durability, actual Windows two-instance/restart acceptance.
 - R4: rendered UX/error/accessibility.
@@ -92,9 +126,3 @@ reconcile current Cutting Words runtime + connected owner interrupt/write-back p
 - Session transient state is not a second durable source.
 - Connected retry/reconnect remains exactly-once/idempotent.
 - Gate E and later Resolver expansion remain dormant until a concrete V1 failure plus explicit owner reactivation.
-
-## 6. Focused verification
-
-Use only the gate needed by the active slice plus its existing connected production gate. Do not rerun the historical full matrix for resume alone.
-
-Cutting Words closure requires exact-candidate execution evidence for the focused connected proof, UI frontend/typecheck/build, and Phase 12 connected-protocol + Phase 11 + production frontend. Rust/Tauri/actual Windows two-instance evidence remains R3.
