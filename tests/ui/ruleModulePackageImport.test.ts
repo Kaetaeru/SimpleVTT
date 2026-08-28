@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { parseRuleModulePackage } from "../../src/app/ruleModulePackageImport";
 
 function packagePayload(overrides:Record<string,unknown>={}) {
   return JSON.stringify({
@@ -68,6 +70,20 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.ok(child?.validation.some((entry)=>entry.severity==="blocking" && /relationship.target.missing/.test(entry.message)));
   await adapter.activateContentImport();
   assert.equal((await store.readGenerations()).length,0);
+});
+
+test("Common Play mechanic reaches the generic normalization boundary instead of being discarded", () => {
+  const payload=readFileSync(new URL("../fixtures/content/wholeness-common-play-rule-module.json",import.meta.url),"utf8");
+  const parsed=parseRuleModulePackage(payload) as ReturnType<typeof parseRuleModulePackage> & {
+    executables:Array<{contentId:string;mechanicId?:string;definition:{schemaVersion:string;id:string;payments?:unknown[];entryPoints?:unknown[]}}>;
+  };
+  assert.equal(parsed.executables.length,1);
+  assert.equal(parsed.executables[0].contentId,"feature.wholeness-probe");
+  assert.equal(parsed.executables[0].mechanicId,"activate");
+  assert.equal(parsed.executables[0].definition.schemaVersion,"0.2-draft");
+  assert.equal(parsed.executables[0].definition.id,"external.wholeness-probe.runtime");
+  assert.equal(parsed.executables[0].definition.payments?.length,2);
+  assert.equal(parsed.executables[0].definition.entryPoints?.length,1);
 });
 
 test("unsupported generic-catalog member data blocks package import instead of silently dropping mechanics", async () => {
