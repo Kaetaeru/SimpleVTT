@@ -216,7 +216,7 @@ Track each family independently through `SPEC -> KERNEL -> PORTABLE -> PRODUCTIO
 
 Initial families:
 
-- [x] resource / action economy — `PORTABLE`; production dispatch is the active next boundary;
+- [x] resource / action economy — `PRODUCTION`; built-in Action Surge generic-path parity and named-seam removal are the active next boundary;
 - [ ] tests / rolls / outcomes;
 - [ ] damage / healing / HP;
 - [ ] targeting / selectors / allocation;
@@ -231,7 +231,7 @@ Do not migrate by class/spell/feat list order. Migrate the smallest coherent mec
 
 ---
 
-## P3 — Current active slice: Resource / Economy production convergence
+## P3 — Current active slice: Resource / Economy migration convergence
 
 Named oracle: Fighter Action Surge only because it provides a deterministic existing behavior sample. `Action Surge` is not a primitive and must never become a dispatch key.
 
@@ -287,15 +287,43 @@ Exact-head acceptance for `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`:
 - [x] owner merge approval obtained through the Rerun continuation command;
 - [x] PR #159 merged into `agent/resolver-foundation-convergence`, never `main`.
 
-### Active next boundary after #159 integration
+### PR #168 production bridge — INTEGRATED
 
-- [ ] create deterministic RED for installed portable mechanics -> actual production/session action dispatch;
-- [ ] route that dispatch through `commonPlayOperationRuntime` + generic Resolver;
-- [ ] prove Action Surge oracle parity end-to-end;
-- [ ] prove arbitrary unknown content with the same mechanics executes identically;
+PR: `#168` — `rules: dispatch installed Common Play through production authority`  
+Branch: `agent/m1-installed-common-play-production`  
+Validated candidate: `da4ffecd2de1b7f95d324e7170312cdd8d512797`  
+Merge commit: `c372c09353de58dfcc12ad3adbe6fd118fe28106`
+
+Required outcome:
+
+- [x] arbitrary installed data-only Common Play mechanics enter the real production/session action authority;
+- [x] dispatch uses the installed-content repository lookup, `commonPlayOperationRuntime`, the existing generic Resolver, and the shared authoritative commit path;
+- [x] Character resource writeback plus turn/session/history projection and Undo are preserved;
+- [x] D&D economy grants remain RulesProfile-owned;
+- [x] arbitrary external package/content/mechanic/entry-point identities prove production dispatch is not selected by Action Surge identity/name;
+- [x] no second evaluator, store, session transport, executable-content fallback, or named-content algorithm branch is introduced.
+
+Exact-head acceptance for `da4ffecd2de1b7f95d324e7170312cdd8d512797` reused at merge:
+
+- [x] Contract validation — SUCCESS;
+- [x] M1 Common Play Resource Economy — SUCCESS;
+- [x] Rules Domain — SUCCESS;
+- [x] UI — SUCCESS;
+- [x] Phase 11 Playable — SUCCESS;
+- [x] Phase 12 Connected Session — SUCCESS.
+
+PR #168 establishes Resource/Economy `PRODUCTION`, not `MIGRATED`. The named Fighter Action Surge adapter remains only as the behavior oracle until built-in parity is proven through the generic path.
+
+### Active next boundary after #168 integration
+
+- [x] create deterministic coverage for installed portable mechanics -> actual production/session action dispatch;
+- [x] route that dispatch through `commonPlayOperationRuntime` + generic Resolver;
+- [ ] prove built-in Fighter Action Surge oracle parity end-to-end through the same generic production path, including its two-resource spend, restricted extra Action semantics, authoritative writeback, Undo, and connected convergence;
+- [x] prove arbitrary unknown content with the same mechanics reaches the generic production path without identity/name dispatch;
+- [ ] prove ID/name-only rename invariance for the built-in parity fixture/path where provenance changes but semantics do not;
 - [ ] only then delete/bypass Fighter Action Surge named production execution;
-- [ ] shrink Legacy Execution Boundary/inventory;
-- [ ] advance the resource/economy family beyond `PORTABLE` only with corresponding evidence.
+- [ ] shrink Legacy Execution Boundary/inventory after removal;
+- [x] advance the resource/economy family from `PORTABLE` to `PRODUCTION` with PR #168 merge evidence.
 
 ---
 
@@ -305,22 +333,22 @@ Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.
 
 The old rule “only a current legacy migration may activate F-M” is superseded.
 
-F-M were deliberately anticipated because D&D contains difficult rule structures. They must not be implemented speculatively, but they also must not disappear merely because current SimpleVTT legacy code does not exercise them.
+F-M were deliberately anticipated because D&D contains difficult rules that a generic language must be able to represent safely.
 
 ## Required disposition for every F-M gate
 
 Before Gate N, each gate must be exactly one of:
 
 - `IMPLEMENTED` — deterministic scenario proved a reusable missing semantic and the capability was implemented/verified;
-- `PROVEN_UNNEEDED` — deterministic representative D&D scenario composes safely from existing primitives, with tests proving no new primitive is needed;
-- `EXPLICITLY_OUT_OF_SCOPE` — owner/product scope explicitly excludes it and content requiring it reports unsupported.
+- `PROVEN_UNNEEDED` — deterministic representative D&D scenario composes safely from existing primitives, with tests proving that no new primitive is required;
+- `EXPLICITLY_OUT_OF_SCOPE` — owner/product scope explicitly declines that mechanism for the claimed V1 support boundary, and imported content requiring it is reported unsupported rather than silently approximated.
 
 `DORMANT`, `PLANNED`, or `TBD` is not a valid Gate-N-entry disposition.
 
 A coverage probe may be triggered by either:
 
 1. a real shipping/legacy migration failure; or
-2. a deliberately selected representative D&D rule scenario where current legacy code provides no suitable oracle.
+2. a deliberately selected representative D&D rule scenario where current SimpleVTT legacy code provides no suitable oracle.
 
 For every probe:
 
