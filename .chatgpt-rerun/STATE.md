@@ -8,7 +8,7 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T10:28:40+09:00`
+- checkpointed_at: `2026-08-28T10:30:03+09:00`
 
 ## Durable checkpoint
 
@@ -45,7 +45,7 @@ Freeze authority:
 
 The guard now classifies every canonical offline production side-effect import. A new production import fails until explicitly classified; stale baseline entries fail; removed legacy debt must shrink from composition and baseline together; the ledger must not grow merely to admit new named-content execution. This is intentionally not a repository-wide content-ID ban.
 
-Three composition imports remain explicitly classified `UNCLEAR`. `UNCLEAR` is an allowed M0 classification and is recorded as requiring symbol-level architecture review before those modules are edited; it is not treated as generic execution by default.
+No canonical offline composition entry remains `UNCLEAR` after the final M0 symbol-level review. `characterCreationV10Adapter` and `progressionPhase08WeaponMasteryAdapter` are classified `LEGACY_EXECUTION`; `characterCreationWeaponAttackAdapter` is `GENERIC_ENGINE` because it derives behavior from generic weapon-definition metadata rather than known weapon identity.
 
 ### M0 commit/evidence chain
 
@@ -57,12 +57,13 @@ Three composition imports remain explicitly classified `UNCLEAR`. `UNCLEAR` is a
 - `49137e3fd8726ffdd9701465463affc49f3dbb34` — initial detailed inventory;
 - `bddc048075a19cd1731df9b8873d2c09c0c875a5`, `8399feeb273f7a6e12e8beb978229cd32f9261ca`, `effcf6544f271078d1b7a953d999cac7228e1559` — full production-composition classification and regression hardening;
 - `9894e9feee046edb83ca22f01aca3ce74e88bf2a`, `2b5128a43048aaa4e290dd595e98a4148408e688`, `c2241520c622df6ad22b0588e901b51cd69099c0` — classification/inventory reconciliation for compatibility, progression, resource, and rest dispatch;
+- `c155d3e0aa1f21f79eedc7e7a944718438c2403a`, `6b584db76e9681abf0a2bb0b00a60c1ec90d8770` — final M0 symbol-level classification and inventory alignment with zero remaining `UNCLEAR` composition entries;
 - `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118` — canonical checklist transition to M0 `DONE` / M1 `ACTIVE`.
 
 Exact closure evidence:
 
 - Legacy Execution Boundary run `33132952951` on head `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118`: `SUCCESS`;
-- the same-head Gate E workflow was automatic/unrelated and was not used as new M0 evidence.
+- the same-head Gate E workflow `33132952953` completed `SUCCESS` automatically; no Gate E validation was manually repeated for M0.
 
 ## Product-plan transition
 
