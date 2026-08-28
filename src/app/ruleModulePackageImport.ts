@@ -1,7 +1,9 @@
+import { parseCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./contracts";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 import type {
   InstalledCatalogEntryV1,
+  InstalledCommonPlayMechanicV1,
   InstalledContentRelationshipV1,
   InstalledModuleExtensionPointV1,
   InstalledModuleManifestV1,
@@ -54,6 +56,17 @@ function semanticRelationships(value:unknown,label:string):InstalledContentRelat
       targetVersion:typeof relation.targetVersion==="string" ? relation.targetVersion : undefined,
       extensionPoint:typeof relation.extensionPoint==="string" ? relation.extensionPoint : undefined,
     };
+  });
+}
+function portableMechanics(value:unknown,label:string):InstalledCommonPlayMechanicV1[] {
+  if(value===undefined) return [];
+  if(!Array.isArray(value)) throw new Error(`${label} must be an array`);
+  return value.map((item,index)=>{
+    const mechanic=object(item,`${label}[${index}]`);
+    const kind=string(mechanic.kind,`${label}[${index}].kind`);
+    if(kind!=="common-play") throw new Error(`${label}[${index}] mechanics cannot be activated: unsupported kind ${kind}`);
+    const id=string(mechanic.id,`${label}[${index}].id`);
+    return {id,kind,definition:parseCommonPlayOperationDefinition(mechanic.config)};
   });
 }
 
@@ -135,7 +148,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const category=categoryRaw as InstalledCatalogEntryV1["category"];
     const present=presentation(value.presentation,defaultLocale,`content[${index}]`);
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
-    if (Array.isArray(value.mechanics) && value.mechanics.length) throw new Error(`content[${index}].mechanics cannot be activated by the generic Catalog yet`);
+    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`);
     if (Array.isArray(value.progressionContributions) && value.progressionContributions.length) throw new Error(`content[${index}].progressionContributions cannot be activated by the generic Catalog yet`);
     const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {
@@ -146,6 +159,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
       semanticRelationships:relations,
       extensionPoints:extensionPoints(value.extensionPoints,`content[${index}].extensionPoints`),
       module:cp(module),
+      ...(mechanics.length?{portableMechanics:mechanics}:{}),
       ...(campaignProvider?{campaignProvider}:{}),
     } satisfies InstalledCatalogEntryV1;
   });
