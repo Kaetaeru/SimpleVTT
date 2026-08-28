@@ -217,7 +217,7 @@ Track each family independently through `SPEC -> KERNEL -> PORTABLE -> PRODUCTIO
 Initial families:
 
 - [x] resource / action economy — `MIGRATED`; PR #171 absorbed the built-in Action Surge named production seam after generic-path parity. `ACCEPTED` is not claimed by this migration alone;
-- [ ] tests / rolls / outcomes;
+- [x] tests / rolls / outcomes — `PRODUCTION`; generic authored actor d20 tests cross validation, normalization, installed persistence/rehydration, existing Resolver lowering, production authority, connected presentation, and ID/name rename invariance. Named post-roll features remain legacy, so `MIGRATED`/`ACCEPTED` are not claimed;
 - [ ] damage / healing / HP;
 - [ ] targeting / selectors / allocation;
 - [ ] interactions / reactions / interceptors;
@@ -348,6 +348,30 @@ Exact-head acceptance for `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`:
 Resource/Economy therefore advances from `PRODUCTION` to `MIGRATED`. This does not by itself claim the stronger `ACCEPTED` maturity status; any remaining acceptance obligations must be proven explicitly under the universal criteria.
 
 The next Phase 2 implementation slice must be selected by mechanism family from the P2 maturity board and current legacy evidence. Do not resume a named class/spell/feat queue or speculatively activate Gates F-M merely because Resource/Economy is complete.
+
+---
+
+## P4 — Tests / Rolls / Outcomes production bridge — PRODUCTION
+
+The first bounded slice reuses the existing generic Resolver `d20` operation. Common Play does not own a second dice algorithm or evaluator.
+
+Evidence:
+
+- [x] authored `entryPoint.test` supports actor `ability-check`, `saving-throw`, and `attack-roll` families with a literal target;
+- [x] unsupported roller, per-target, property-backed modifier, and malformed target shapes fail explicitly at the shared import/persistence parser;
+- [x] normalized mechanics survive package preview/activation, installed persistence/rehydration, and required-session peer transfer;
+- [x] Common Play lowers the authored test to the existing `ResolutionOperation` `kind:"d20"` and generic `resolveD20Test` semantics;
+- [x] arbitrary installed content reaches the existing production authoritative commit path;
+- [x] Host-authoritative faces, total, and outcome converge through the existing connected Resolution presentation/event path;
+- [x] content/action ID, definition ID, entry-point ID, and display-name-only renames preserve mechanics;
+- [x] Resource/Economy arbitrary installed coverage and built-in Action Surge coverage remain in the focused regression harness;
+- [x] no new evaluator, store, transport, fallback, or content-ID/name algorithm branch exists.
+
+Deliberate boundary:
+
+- property-backed stat/provider resolution, target/every-target rolls, and named post-roll features remain explicit later slices;
+- Tactical Mind, Indomitable, Cutting Words, Peerless Skill, Dark One's Own Luck, and other named roll/outcome seams remain unchanged;
+- therefore this family is `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
 ---
 

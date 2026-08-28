@@ -1,5 +1,6 @@
 import type { RulesRuntimeState } from "./combatState";
-import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
+import type { D20TestFamily, ModifierContribution } from "./d20";
+import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 
@@ -28,6 +29,13 @@ type CommonPlayPayment={
 
 export type CommonPlayOperation=CommonPlayResourceChange|CommonPlayEconomyModify;
 
+export interface CommonPlayD20TestDefinition {
+  kind:D20TestFamily;
+  roller:"actor";
+  dc:LiteralNumberExpression;
+  perTarget?:false;
+}
+
 export interface CommonPlayOperationDefinition {
   schemaVersion:string;
   id:string;
@@ -35,6 +43,7 @@ export interface CommonPlayOperationDefinition {
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
+    test?:CommonPlayD20TestDefinition;
     operations:CommonPlayOperation[];
   }>;
 }
@@ -43,12 +52,19 @@ export interface CommonPlayOperationExecutionInput {
   resolutionId:string;
   actorId:string;
   entryPointId:string;
+  d20?:{
+    faces:number[];
+    targetId?:string;
+    modifierContributions?:ModifierContribution[];
+    rollStateContributions?:RollStateContribution[];
+  };
 }
 
 type Obj=Record<string,unknown>;
 const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
 const PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
-const ENTRY_POINT_KEYS=new Set(["id","invocation","operations"]);
+const ENTRY_POINT_KEYS=new Set(["id","invocation","test","operations"]);
+const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 
@@ -118,6 +134,23 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);
 }
 
+function parseD20Test(value:unknown,label:string):CommonPlayD20TestDefinition {
+  const definition=object(value,label);
+  supportedKeys(definition,D20_TEST_KEYS,label);
+  if(definition.kind!=="ability-check"&&definition.kind!=="saving-throw"&&definition.kind!=="attack-roll") {
+    throw new DomainEvaluationError(`${label}.kind is unsupported`);
+  }
+  if(definition.roller!=="actor") throw new DomainEvaluationError(`${label}.roller must be actor for portable Common Play d20`);
+  if(definition.property!==undefined) throw new DomainEvaluationError(`${label}.property-backed modifiers are not supported by this Common Play d20 slice`);
+  if(definition.perTarget!==undefined&&definition.perTarget!==false) throw new DomainEvaluationError(`${label}.perTarget must be false for an actor d20 test`);
+  return {
+    kind:definition.kind,
+    roller:"actor",
+    dc:literalExpression(definition.dc,`${label}.dc`),
+    ...(definition.perTarget===false?{perTarget:false}:{}),
+  };
+}
+
 export function parseCommonPlayOperationDefinition(value:unknown,label="Common Play definition"):CommonPlayOperationDefinition {
   const definition=object(value,label);
   supportedKeys(definition,DEFINITION_KEYS,label);
@@ -139,6 +172,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     return {
       id:nonEmptyString(entry.id,`${label}.entryPoints[${index}].id`),
       invocation,
+      ...(entry.test===undefined?{}:{test:parseD20Test(entry.test,`${label}.entryPoints[${index}].test`)}),
       operations:entry.operations.map((operation,operationIndex)=>parseOperation(operation,`${label}.entryPoints[${index}].operations[${operationIndex}]`)),
     };
   });
@@ -190,6 +224,28 @@ export function compileCommonPlayEntryPointOperations(
   if(!entryPoint) throw new DomainEvaluationError(`Common Play entry point not found: ${input.entryPointId}`);
 
   const operations:ResolutionOperation[]=[...compilePayments(supported,input)];
+  if(entryPoint.test) {
+    if(!input.d20) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires authoritative d20 input`);
+    operations.push({
+      id:`${input.resolutionId}:test`,
+      kind:"d20",
+      actorId:input.actorId,
+      targetId:input.d20.targetId,
+      request:{
+        family:entryPoint.test.kind,
+        target:literalInteger(entryPoint.test.dc,"d20 target"),
+        targetSource:`common-play:${supported.id}:${entryPoint.id}:dc`,
+        modifierContributions:input.d20.modifierContributions??[],
+        rollStateContributions:input.d20.rollStateContributions,
+        dice:{
+          id:`${input.resolutionId}:d20`,
+          purpose:`common-play:${supported.id}:${entryPoint.id}:${entryPoint.test.kind}`,
+          sides:20,
+          faces:[...input.d20.faces],
+        },
+      },
+    });
+  }
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
     if(operation.kind==="resource.change") {

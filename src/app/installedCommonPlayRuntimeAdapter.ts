@@ -14,11 +14,13 @@ import {
   type CommonPlayOperationDefinition,
 } from "../domain/commonPlayOperationRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
+import type { D20TestResult } from "../domain/d20";
 
 interface AdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
   activeCharacter:CharacterSheet;
+  d20(actionId:string,index?:number):number;
   getSnapshot():Promise<AppSnapshot>;
 }
 
@@ -134,11 +136,19 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   if (!state||state.clock.activeActorId!==actor.id||targetIds.length!==1||targetIds[0]!==actor.id) return internal.getSnapshot();
 
   const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const entryPoint=action.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const committed=resolveCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,action.definition,{
     resolutionId,
     actorId:actor.id,
     entryPointId:action.entryPointId,
+    ...(entryPoint.test?{d20:{
+      faces:[internal.d20(actionId,0),internal.d20(actionId,1)],
+      targetId:actor.id,
+    }}:{}),
   });
+  const roll=committed.status==="committed"
+    ? committed.results[`${resolutionId}:test`] as D20TestResult|undefined
+    : undefined;
   const projectedAction=internal.scene.actionsByActor[actor.id]?.find((candidate)=>candidate.id===actionId);
   return commitProductionRuntimeResolution(this,state,committed,{
     resolutionId,
@@ -147,10 +157,14 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
     actorId:actor.id,
     targetIds:[actor.id],
     targetNames:[actor.name],
-    compact:"Common Play 규칙 적용",
-    detail:[`${action.definition.id} · ${action.entryPointId}`],
+    compact:roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:"Common Play 규칙 적용",
+    detail:[`${action.definition.id} · ${action.entryPointId}`,...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[])],
     provenance:[`${action.source} · ${action.contentId}`],
-    calculatedOutcome:"규칙 효과 적용",
-    finalOutcome:"규칙 효과 적용",
+    calculatedOutcome:roll?roll.outcome:"규칙 효과 적용",
+    finalOutcome:roll?roll.outcome:"규칙 효과 적용",
+    rollKind:roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):undefined,
+    authoritativeDice:roll?.rollState==="normal"?[roll.natural]:roll?.dice.faces,
+    rollTotal:roll?.total,
+    attackTotal:roll?.family==="attack-roll"?roll.total:undefined,
   });
 };
