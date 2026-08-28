@@ -61,6 +61,11 @@ export interface EffectInstance {
   turnActivity?: EffectTurnActivityRestriction;
   concentrationGroupId?: string;
   metadata?: Record<string, string | number | boolean>;
+  suppression?:{
+    reason:string;
+    pauseDuration:boolean;
+    remainingSeconds?:number;
+  };
 }
 
 export interface EffectApplyRequest {
@@ -145,6 +150,32 @@ export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): 
   };
 }
 
+export function effectIsActive(effect:EffectInstance) {
+  return effect.suppression===undefined;
+}
+
+export function suppressEffect(effect:EffectInstance,clock:RuntimeClock,reason:string,pauseDuration=false):EffectInstance {
+  if(!reason) throw new DomainEvaluationError("effect suppression reason is required");
+  if(effect.suppression) return structuredClone(effect);
+  if(pauseDuration&&effect.expiry.kind!=="time") throw new DomainEvaluationError("duration pause currently requires a time-based effect");
+  return {
+    ...structuredClone(effect),
+    suppression:{
+      reason,pauseDuration,
+      ...(pauseDuration&&effect.expiry.kind==="time"?{remainingSeconds:Math.max(0,effect.expiry.elapsedSeconds-clock.elapsedSeconds)}:{}),
+    },
+  };
+}
+
+export function unsuppressEffect(effect:EffectInstance,clock:RuntimeClock):EffectInstance {
+  if(!effect.suppression) return structuredClone(effect);
+  const remaining=effect.suppression.remainingSeconds;
+  const next=structuredClone(effect);
+  delete next.suppression;
+  if(remaining!==undefined) next.expiry={kind:"time",elapsedSeconds:clock.elapsedSeconds+remaining};
+  return next;
+}
+
 export function selectEffectTurnActivity(
   effects: EffectInstance[],
   actorId: string,
@@ -152,6 +183,7 @@ export function selectEffectTurnActivity(
 ): { effects:EffectInstance[]; provenance:ProvenanceRecord[] } {
   const provenance: ProvenanceRecord[] = [];
   const next = effects.map((effect) => {
+    if(!effectIsActive(effect)) return effect;
     if (effect.targetId !== actorId || !effect.turnActivity) return effect;
     validateTurnActivity(effect.turnActivity);
     if (!effect.turnActivity.chooseOneOf.includes(category)) {
@@ -252,6 +284,7 @@ export function expireEffectsAtClock(effects: EffectInstance[], clock: RuntimeCl
   const expired: EffectInstance[] = [];
   const active: EffectInstance[] = [];
   for (const effect of effects) {
+    if(effect.suppression?.pauseDuration) { active.push(effect); continue; }
     const shouldExpire = effect.expiry.kind === "instant"
       || (effect.expiry.kind === "time" && clock.elapsedSeconds >= effect.expiry.elapsedSeconds)
       || (effect.expiry.kind === "turn-boundary" && boundaryReached(effect.expiry, clock));

@@ -24,6 +24,7 @@ import {
   executeApplyEffect,
   executeEndConcentration,
   executeRemoveEffect,
+  executeSetEffectSuppression,
   executeStartConcentration,
   executeUpdateEffect,
 } from "./resolutionEffectOps";
@@ -61,6 +62,7 @@ function executeOperation(
     case "stabilize": return executeStabilize(ctx,operation);
     case "apply-effect": return executeApplyEffect(ctx, operation);
     case "update-effect": return executeUpdateEffect(ctx, operation);
+    case "set-effect-suppression": return executeSetEffectSuppression(ctx,operation);
     case "remove-effect": return executeRemoveEffect(ctx, operation);
     case "spawn-artifact": return executeSpawnArtifact(ctx,operation);
     case "update-artifact": return executeUpdateArtifact(ctx,operation);

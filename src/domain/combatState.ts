@@ -3,7 +3,7 @@ import type { LifeState } from "./life";
 import type { TurnEconomyState } from "./turnEconomy";
 import type { ResourcePool } from "./resources";
 import type { HitDiePool } from "./rest";
-import type { EffectInstance, RuntimeClock } from "./effects";
+import { effectIsActive, type EffectInstance, type RuntimeClock } from "./effects";
 import type { ConcentrationState } from "./concentration";
 import type { ConditionEffectRef, ConditionId } from "./conditions";
 import type { RuntimeArtifactInstance, ZoneMembershipState } from "./runtimeArtifact";
@@ -59,7 +59,7 @@ export function requireCombatant(state: RulesRuntimeState, id: string) {
 
 export function conditionEffectsFor(state: RulesRuntimeState, targetId: string): ConditionEffectRef[] {
   const effects: ConditionEffectRef[] = state.effects
-    .filter((effect) => effect.targetId === targetId && effect.kind === "condition" && effect.conditionId)
+    .filter((effect) => effectIsActive(effect) && effect.targetId === targetId && effect.kind === "condition" && effect.conditionId)
     .map((effect) => ({ id:effect.id, conditionId:effect.conditionId!, sourceActorId:effect.sourceActorId }));
   const combatant = requireCombatant(state, targetId);
   if (combatant.life.unconscious && !effects.some((effect) => effect.conditionId === "unconscious")) {

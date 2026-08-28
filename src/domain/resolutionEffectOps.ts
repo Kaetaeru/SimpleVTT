@@ -6,7 +6,7 @@ import {
   type ConditionId,
 } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { createEffect, terminateEffectsForCreatureState, type EffectInstance } from "./effects";
+import { createEffect, effectIsActive, suppressEffect, terminateEffectsForCreatureState, unsuppressEffect, type EffectInstance } from "./effects";
 import { endConcentration, startConcentration } from "./concentration";
 import {
   concentrationStateChange,
@@ -21,6 +21,7 @@ import type { ResolutionOperation } from "./resolutionTypes";
 
 type ApplyEffectOp = Extract<ResolutionOperation, { kind:"apply-effect" }>;
 type UpdateEffectOp = Extract<ResolutionOperation, { kind:"update-effect" }>;
+type SetEffectSuppressionOp=Extract<ResolutionOperation,{kind:"set-effect-suppression"}>;
 type RemoveEffectOp = Extract<ResolutionOperation, { kind:"remove-effect" }>;
 type StartConcentrationOp = Extract<ResolutionOperation, { kind:"start-concentration" }>;
 type EndConcentrationOp = Extract<ResolutionOperation, { kind:"end-concentration" }>;
@@ -30,6 +31,7 @@ const CONDITION_IMMUNITY_TAG_PREFIX = "condition-immunity:";
 function taggedConditionImmunities(effects:EffectInstance[],targetId:string):ConditionId[] {
   const immunities = new Set<ConditionId>();
   for (const effect of effects) {
+    if(!effectIsActive(effect)) continue;
     if (effect.targetId !== targetId) continue;
     for (const tag of effect.tags) {
       if (!tag.startsWith(CONDITION_IMMUNITY_TAG_PREFIX)) continue;
@@ -161,6 +163,25 @@ export function executeUpdateEffect(ctx:ResolutionExecutionContext, operation:Up
       [effectStateChange(before.targetId,before.id,"updated",provenance,before,after)],
       before.targetId,
     ),
+  };
+}
+
+export function executeSetEffectSuppression(ctx:ResolutionExecutionContext,operation:SetEffectSuppressionOp):OperationExecution {
+  const index=ctx.state.effects.findIndex((entry)=>entry.id===operation.effectId);
+  if(index<0) throw new DomainEvaluationError(`effect not found: ${operation.effectId}`);
+  const before=ctx.state.effects[index];
+  const after=operation.suppressed
+    ? suppressEffect(before,ctx.state.clock,operation.reason??ctx.pending.sourceId,operation.pauseDuration===true)
+    : unsuppressEffect(before,ctx.state.clock);
+  ctx.state.effects[index]=after;
+  const provenance:ProvenanceRecord[]=[{
+    source:ctx.pending.sourceId,status:"applied",reason:`effect ${before.id} ${operation.suppressed?"suppressed":"unsuppressed"}`,
+  }];
+  return {
+    result:{suppressed:operation.suppressed,effect:after},
+    event:makeEvent(ctx.pending,operation,`effect ${before.id} ${operation.suppressed?"suppressed":"unsuppressed"}`,
+      {suppressed:operation.suppressed,effect:after},provenance,
+      [effectStateChange(before.targetId,before.id,"updated",provenance,before,after)],before.targetId),
   };
 }
 

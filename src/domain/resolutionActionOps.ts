@@ -10,6 +10,7 @@ import { applyRageEffectUpdate, barbarianRageD20ExtensionUpdate } from "./barbar
 import { effectStateChange } from "./runtimeStateChange";
 import { conditionEffectsFor, requireCombatant, type RulesRuntimeState } from "./combatState";
 import { selectEffectTurnActivity } from "./effects";
+import { effectIsActive } from "./effects";
 import { findResource, spendResource } from "./resources";
 import { openReactorWindow, resolveReactionChoice } from "./reaction";
 import { resolveTargeting } from "./targeting";
@@ -34,7 +35,7 @@ type ReactionOp = Extract<ResolutionOperation, { kind:"reaction" }>;
 const TEMPORARILY_UNAVAILABLE_TARGET_TAG = "runtime:temporarily-unavailable-target";
 
 function temporarilyUnavailable(state:RulesRuntimeState,actorId:string) {
-  return state.effects.some((effect) => effect.targetId === actorId && effect.tags.includes(TEMPORARILY_UNAVAILABLE_TARGET_TAG));
+  return state.effects.some((effect) => effectIsActive(effect)&&effect.targetId === actorId && effect.tags.includes(TEMPORARILY_UNAVAILABLE_TARGET_TAG));
 }
 
 function requireAvailableInScene(state:RulesRuntimeState,actorId:string,label:string) {
@@ -246,6 +247,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     targetConditions:operation.targetId ? conditionEffectsFor(ctx.state, operation.targetId) : [],
   });
   const spellModifiers=ctx.state.effects.filter((effect)=>{
+    if(!effectIsActive(effect)) return false;
     if (effect.kind!=="modifier"||effect.metadata?.d20Family!==operation.request.family) return false;
     const ability=effect.metadata.d20Ability;
     if (typeof ability==="string"&&ability!==operation.condition?.ability) return false;

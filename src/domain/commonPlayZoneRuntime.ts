@@ -3,6 +3,7 @@ import type { RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { RuntimeArtifactExpiry, RuntimeArtifactInstance, ZoneMembershipAuthority, ZoneMembershipState } from "./runtimeArtifact";
+import { resolveCommonPlayFrequency, type CommonPlayFrequency } from "./commonPlayFrequencyRuntime";
 
 type LiteralNumberExpression={value:number};
 type ZoneEventKind="zone.entered"|"zone.left"|"zone.turn-start"|"zone.turn-end";
@@ -22,7 +23,7 @@ interface CommonPlayZoneDamageOperation {
 interface CommonPlayZoneRule {
   id:string;
   event:ZoneEventKind;
-  frequency:"once-per-turn";
+  frequency:CommonPlayFrequency;
   operations:CommonPlayZoneDamageOperation[];
 }
 
@@ -96,7 +97,6 @@ export interface CommonPlayZoneEventNoMatch {
 export type CommonPlayZoneEventResult=ResolutionCommit|CommonPlayZoneEventNoMatch;
 
 const DEFINITION_KEYS=["$schema","schemaVersion","id","entryPoints","artifactTemplates"] as const;
-const FREQUENCY_PREFIX="commonPlayRuleOncePerTurn";
 
 function rejected(state:RulesRuntimeState,error:string):Extract<ResolutionCommit,{status:"rejected"}> {
   return {status:"rejected",state,events:[],results:{},error};
@@ -136,9 +136,7 @@ function validateRule(rule:CommonPlayZoneRule,templateId:string,ruleIndex:number
   if (rule.event!=="zone.entered"&&rule.event!=="zone.left"&&rule.event!=="zone.turn-start"&&rule.event!=="zone.turn-end") {
     throw new Error(`${label} event is not supported by the zone runtime slice`);
   }
-  if (rule.frequency!=="once-per-turn") {
-    throw new Error(`${label} supports only once-per-turn frequency in this runtime slice`);
-  }
+  if (!["unlimited","once","once-per-turn","once-per-round","once-per-resolution"].includes(rule.frequency)) throw new Error(`${label} frequency is unsupported`);
   if (!Array.isArray(rule.operations)||!rule.operations.length) throw new Error(`${label} requires at least one operation`);
   rule.operations.forEach((operation,index)=>{
     const operationLabel=`${label} operation ${index+1}`;
@@ -287,15 +285,6 @@ function activeMembership(state:RulesRuntimeState,artifactId:string):ZoneMembers
   return (state.zoneMemberships??[]).find((membership)=>membership.artifactId===artifactId);
 }
 
-function currentTurnToken(state:RulesRuntimeState) {
-  if (!state.clock.activeActorId) throw new Error("once-per-turn zone rules require an authoritative active turn");
-  return `${state.clock.round}:${state.clock.activeActorId}`;
-}
-
-function frequencyKey(ruleId:string,subjectId:string) {
-  return `${FREQUENCY_PREFIX}:${ruleId}:${subjectId}`;
-}
-
 function validateSemanticEvent(state:RulesRuntimeState,input:CommonPlayZoneEventInput) {
   if (!input.id||!input.artifactId||!input.subjectId) throw new Error("zone event id, artifactId, and subjectId are required");
   if (input.kind!=="zone.entered"&&input.kind!=="zone.left"&&input.kind!=="zone.turn-start"&&input.kind!=="zone.turn-end") {
@@ -320,12 +309,14 @@ function triggerOperations(
   input:CommonPlayZoneEventInput,
 ):ResolutionOperation[] {
   const template=templateById(definition,artifact.templateId);
-  const turnToken=currentTurnToken(state);
   const operations:ResolutionOperation[]=[];
   template.rules.forEach((rule,ruleIndex)=>{
     if (rule.event!==input.kind) return;
-    const markerKey=frequencyKey(rule.id,input.subjectId);
-    if (artifact.metadata?.[markerKey]===turnToken) return;
+    const frequency=resolveCommonPlayFrequency({
+      ruleId:rule.id,subjectId:input.subjectId,frequency:rule.frequency,resolutionId:input.id,
+      clock:state.clock,markers:artifact.metadata??{},
+    });
+    if (!frequency.eligible) return;
     rule.operations.forEach((operation,operationIndex)=>{
       operations.push({
         id:`common-play-zone-rule-${ruleIndex+1}-damage-${operationIndex+1}`,
@@ -336,11 +327,9 @@ function triggerOperations(
         creatureKind:input.subjectCreatureKind,
       });
     });
-    operations.push({
-      id:`common-play-zone-rule-${ruleIndex+1}-frequency`,
-      kind:"update-artifact",
-      artifactId:artifact.id,
-      metadataPatch:{[markerKey]:turnToken},
+    if(Object.keys(frequency.metadataPatch).length) operations.push({
+      id:`common-play-zone-rule-${ruleIndex+1}-frequency`,kind:"update-artifact",artifactId:artifact.id,
+      metadataPatch:frequency.metadataPatch,
     });
   });
   return operations;

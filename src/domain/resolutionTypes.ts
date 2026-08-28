@@ -191,13 +191,20 @@ export type ResolutionOperation =
       metadataPatch: Record<string,string|number|boolean>;
     })
   | (OperationBase & {
+      kind:"set-effect-suppression";
+      effectId:string;
+      suppressed:boolean;
+      reason?:string;
+      pauseDuration?:boolean;
+    })
+  | (OperationBase & {
       kind: "remove-effect";
       effectId: string;
     })
   | (OperationBase & {
       kind:"spawn-artifact";
       artifact:RuntimeArtifactSpawnRequest;
-      zoneMembershipAuthority:ZoneMembershipAuthority;
+      zoneMembershipAuthority?:ZoneMembershipAuthority;
     })
   | (OperationBase & {
       kind:"update-artifact";

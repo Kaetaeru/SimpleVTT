@@ -486,6 +486,23 @@ Deliberate boundary:
 
 ---
 
+## C4 — Maintained effects / frequency / ordering / stored invocation primitives — bounded
+
+Evidence:
+
+- [x] active effects can be suppressed and unsuppressed through Resolver state changes; elapsed duration can explicitly pause and resume without leaking condition/modifier mechanics;
+- [x] one generic frequency token policy covers unlimited, once, once per turn, once per round, and once per resolution; zone rules use it instead of a zone-only marker algorithm;
+- [x] simultaneous effects produce a typed, revision-bound ordering decision and accept only an exact authoritative permutation with deterministic replay;
+- [x] stored invocation is a session RuntimeArtifact, not a WeakMap: capture cost plus storage is atomic, semantic triggers are structural, Reaction plus payload plus consumption is exactly one atomic commit, and ignore/cancel/stale/replay paths preserve authority;
+- [x] stored invocation artifacts have real turn-boundary expiry and optional maintained-Concentration identity.
+
+Deliberate boundary:
+
+- legacy Ready UI/connected routing still uses its old adapter until the C8 strangler checkpoint moves it onto this artifact primitive;
+- full remote ordering/interaction presentation persistence and every N-S production composition remain incomplete and are not marked accepted in the ledger.
+
+---
+
 # PHASE 3 — ANTICIPATED D&D CAPABILITY COVERAGE F-M
 
 Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.

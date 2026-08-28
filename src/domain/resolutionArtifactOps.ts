@@ -26,27 +26,26 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
   if (zoneMemberships(ctx).some((membership)=>membership.artifactId===operation.artifact.id)) {
     throw new DomainEvaluationError(`zone membership already exists: ${operation.artifact.id}`);
   }
-  if (operation.zoneMembershipAuthority!=="manual"&&operation.zoneMembershipAuthority!=="spatial") {
-    throw new DomainEvaluationError(`unsupported zone membership authority: ${operation.zoneMembershipAuthority}`);
-  }
   const artifact=createRuntimeArtifact(operation.artifact);
-  const membership:ZoneMembershipState={
-    artifactId:artifact.id,
-    authority:operation.zoneMembershipAuthority,
-    memberIds:[],
-  };
+  if(artifact.artifactKind==="zone"&&operation.zoneMembershipAuthority!=="manual"&&operation.zoneMembershipAuthority!=="spatial") throw new DomainEvaluationError(`unsupported zone membership authority: ${operation.zoneMembershipAuthority}`);
+  if(artifact.artifactKind!=="zone"&&operation.zoneMembershipAuthority!==undefined) throw new DomainEvaluationError("zone membership authority applies only to zone artifacts");
+  const membership:ZoneMembershipState|undefined=artifact.artifactKind==="zone"?{
+    artifactId:artifact.id,authority:operation.zoneMembershipAuthority!,memberIds:[],
+  }:undefined;
   ctx.state.artifacts!.push(artifact);
-  ctx.state.zoneMemberships!.push(membership);
+  if(membership) ctx.state.zoneMemberships!.push(membership);
   const provenance:ProvenanceRecord[]=[{
     source:artifact.sourceId,
     status:"applied",
-    reason:`runtime ${artifact.artifactKind} artifact ${artifact.id} spawned with ${membership.authority} membership authority`,
+    reason:membership
+      ? `runtime ${artifact.artifactKind} artifact ${artifact.id} spawned with ${membership.authority} membership authority`
+      : `runtime ${artifact.artifactKind} artifact ${artifact.id} spawned`,
   }];
   const stateChanges:RuntimeStateChange[]=[
     artifactStateChange(artifact.id,artifact.id,"added",provenance,undefined,artifact),
-    zoneMembershipStateChange(artifact.id,"added",provenance,undefined,membership),
   ];
-  const result={spawned:true,artifact:structuredClone(artifact),membership:structuredClone(membership)};
+  if(membership) stateChanges.push(zoneMembershipStateChange(artifact.id,"added",provenance,undefined,membership));
+  const result={spawned:true,artifact:structuredClone(artifact),...(membership?{membership:structuredClone(membership)}:{})};
   return {
     result,
     event:makeEvent(ctx.pending,operation,`runtime artifact ${artifact.id} spawned`,result,provenance,stateChanges),
