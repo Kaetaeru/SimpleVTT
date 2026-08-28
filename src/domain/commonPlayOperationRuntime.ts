@@ -19,11 +19,19 @@ type CommonPlayEconomyModify={
   amount:CommonPlayExpression;
 };
 
+type CommonPlayPayment={
+  kind:string;
+  resource?:string;
+  amount?:CommonPlayExpression;
+  consumeAt?:string;
+};
+
 export type CommonPlayOperation=CommonPlayResourceChange|CommonPlayEconomyModify;
 
 export interface CommonPlayOperationDefinition {
   schemaVersion:string;
   id:string;
+  payments?:CommonPlayPayment[];
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
@@ -37,7 +45,7 @@ export interface CommonPlayOperationExecutionInput {
   entryPointId:string;
 }
 
-function literalInteger(expression:CommonPlayExpression,label:string) {
+function literalInteger(expression:CommonPlayExpression|undefined,label:string) {
   if(!expression||typeof expression!=="object"||!("value" in expression)) {
     throw new DomainEvaluationError(`${label} requires a supported literal expression`);
   }
@@ -46,6 +54,30 @@ function literalInteger(expression:CommonPlayExpression,label:string) {
     throw new DomainEvaluationError(`${label} requires a finite integer literal`);
   }
   return value;
+}
+
+function compilePayments(
+  definition:CommonPlayOperationDefinition,
+  input:CommonPlayOperationExecutionInput,
+):ResolutionOperation[] {
+  return (definition.payments??[]).map((payment,index)=>{
+    if(payment.kind!=="resource") {
+      throw new DomainEvaluationError(`unsupported Common Play payment kind: ${payment.kind}`);
+    }
+    if(payment.consumeAt!=="commit") {
+      throw new DomainEvaluationError(`unsupported Common Play resource payment consumeAt: ${payment.consumeAt??"<missing>"}`);
+    }
+    if(!payment.resource) throw new DomainEvaluationError("Common Play resource payment requires a resource id");
+    const amount=literalInteger(payment.amount,"resource payment amount");
+    if(amount<=0) throw new DomainEvaluationError("Common Play resource payment amount must be a positive integer");
+    return {
+      id:`${input.resolutionId}:payment:${index}`,
+      kind:"spend-resource" as const,
+      actorId:input.actorId,
+      resourceId:payment.resource,
+      amount,
+    };
+  });
 }
 
 export function compileCommonPlayEntryPointOperations(
@@ -60,7 +92,7 @@ export function compileCommonPlayEntryPointOperations(
     throw new DomainEvaluationError(`Common Play operation runtime supports manual entry points only: ${entryPoint.invocation}`);
   }
 
-  const operations:ResolutionOperation[]=[];
+  const operations:ResolutionOperation[]=[...compilePayments(definition,input)];
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
     if(operation.kind==="resource.change") {
