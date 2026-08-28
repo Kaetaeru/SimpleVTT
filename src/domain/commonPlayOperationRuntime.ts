@@ -45,6 +45,79 @@ export interface CommonPlayOperationExecutionInput {
   entryPointId:string;
 }
 
+type Obj=Record<string,unknown>;
+function portableObject(value:unknown,label:string):Obj {
+  if(!value||typeof value!=="object"||Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an object`);
+  return value as Obj;
+}
+function portableString(value:unknown,label:string) {
+  if(typeof value!=="string"||!value.trim()) throw new DomainEvaluationError(`${label} must be a non-empty string`);
+  return value.trim();
+}
+function portableKeys(value:Obj,allowed:string[],label:string) {
+  const allowedSet=new Set(allowed);
+  const extra=Object.keys(value).find((key)=>!allowedSet.has(key));
+  if(extra) throw new DomainEvaluationError(`${label}.${extra} is unsupported by the Common Play operation runtime`);
+}
+function portableLiteral(value:unknown,label:string):LiteralNumberExpression {
+  const expression=portableObject(value,label);
+  portableKeys(expression,["value"],label);
+  const number=expression.value;
+  if(typeof number!=="number"||!Number.isFinite(number)||!Number.isInteger(number)) {
+    throw new DomainEvaluationError(`${label}.value must be a finite integer`);
+  }
+  return {value:number};
+}
+
+export function parseCommonPlayOperationDefinition(value:unknown,label="Common Play definition"):CommonPlayOperationDefinition {
+  const definition=portableObject(value,label);
+  portableKeys(definition,["schemaVersion","id","payments","entryPoints"],label);
+  if(definition.schemaVersion!=="0.2-draft") throw new DomainEvaluationError(`${label}.schemaVersion must be 0.2-draft`);
+  const id=portableString(definition.id,`${label}.id`);
+
+  let payments:CommonPlayPayment[]|undefined;
+  if(definition.payments!==undefined) {
+    if(!Array.isArray(definition.payments)) throw new DomainEvaluationError(`${label}.payments must be an array`);
+    payments=definition.payments.map((raw,index)=>{
+      const payment=portableObject(raw,`${label}.payments[${index}]`);
+      portableKeys(payment,["kind","resource","amount","consumeAt"],`${label}.payments[${index}]`);
+      if(payment.kind!=="resource") throw new DomainEvaluationError(`${label}.payments[${index}].kind is unsupported: ${String(payment.kind)}`);
+      if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.payments[${index}].consumeAt must be commit`);
+      const amount=portableLiteral(payment.amount,`${label}.payments[${index}].amount`);
+      if(amount.value<=0) throw new DomainEvaluationError(`${label}.payments[${index}].amount.value must be positive`);
+      return {kind:"resource",resource:portableString(payment.resource,`${label}.payments[${index}].resource`),amount,consumeAt:"commit"};
+    });
+  }
+
+  if(!Array.isArray(definition.entryPoints)||!definition.entryPoints.length) throw new DomainEvaluationError(`${label}.entryPoints must be a non-empty array`);
+  const entryPoints=definition.entryPoints.map((raw,index)=>{
+    const entry=portableObject(raw,`${label}.entryPoints[${index}]`);
+    portableKeys(entry,["id","invocation","operations"],`${label}.entryPoints[${index}]`);
+    if(entry.invocation!=="manual") throw new DomainEvaluationError(`${label}.entryPoints[${index}].invocation is unsupported: ${String(entry.invocation)}`);
+    if(!Array.isArray(entry.operations)||!entry.operations.length) throw new DomainEvaluationError(`${label}.entryPoints[${index}].operations must be a non-empty array`);
+    const operations=entry.operations.map((rawOperation,operationIndex):CommonPlayOperation=>{
+      const operation=portableObject(rawOperation,`${label}.entryPoints[${index}].operations[${operationIndex}]`);
+      if(operation.kind==="resource.change") {
+        portableKeys(operation,["kind","resource","amount","target"],`${label}.entryPoints[${index}].operations[${operationIndex}]`);
+        const amount=portableLiteral(operation.amount,`${label}.entryPoints[${index}].operations[${operationIndex}].amount`);
+        if(amount.value===0) throw new DomainEvaluationError(`${label}.entryPoints[${index}].operations[${operationIndex}].amount.value must be non-zero`);
+        const target=operation.target===undefined?undefined:portableString(operation.target,`${label}.entryPoints[${index}].operations[${operationIndex}].target`);
+        return {kind:"resource.change",resource:portableString(operation.resource,`${label}.entryPoints[${index}].operations[${operationIndex}].resource`),amount,...(target?{target}:{})};
+      }
+      if(operation.kind==="economy.modify") {
+        portableKeys(operation,["kind","bucket","amount"],`${label}.entryPoints[${index}].operations[${operationIndex}]`);
+        const amount=portableLiteral(operation.amount,`${label}.entryPoints[${index}].operations[${operationIndex}].amount`);
+        if(amount.value<=0) throw new DomainEvaluationError(`${label}.entryPoints[${index}].operations[${operationIndex}].amount.value must be positive`);
+        return {kind:"economy.modify",bucket:portableString(operation.bucket,`${label}.entryPoints[${index}].operations[${operationIndex}].bucket`),amount};
+      }
+      throw new DomainEvaluationError(`${label}.entryPoints[${index}].operations[${operationIndex}].kind is unsupported: ${String(operation.kind)}`);
+    });
+    return {id:portableString(entry.id,`${label}.entryPoints[${index}].id`),invocation:"manual" as const,operations};
+  });
+
+  return {schemaVersion:"0.2-draft",id,...(payments?{payments}:{}),entryPoints};
+}
+
 function literalInteger(expression:CommonPlayExpression|undefined,label:string) {
   if(!expression||typeof expression!=="object"||!("value" in expression)) {
     throw new DomainEvaluationError(`${label} requires a supported literal expression`);
