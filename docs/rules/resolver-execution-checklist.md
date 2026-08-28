@@ -292,20 +292,37 @@ Gate E is merged and green:
 
 # PHASE 2 — LEGACY CONVERGENCE / STRANGLER MIGRATION
 
-Status: **ACTIVE — NEXT QUEUE AFTER GATE E**.
+Status: **ACTIVE — M1 GENERIC MIGRATION HARNESS**.
 
 The purpose is not a big-bang rewrite. Existing named execution remains temporarily as a behavior oracle until each path is replaced and verified through JSON/Common Play. Then the absorbed named execution code is deleted.
 
-## M0 — Freeze and inventory named execution
+## M0 — Freeze and inventory named execution — DONE
 
-- [ ] Enumerate runtime/session/resolver/app code that recognizes known content IDs/names or imports known-content constants to decide execution semantics.
-- [ ] Classify every finding:
+- [x] Enumerate runtime/session/resolver/app code that recognizes known content IDs/names or imports known-content constants to decide execution semantics.
+- [x] Classify every finding:
   - `CONTENT/PRESENTATION` — allowed named data/label/catalog code;
   - `LEGACY_EXECUTION` — must migrate/delete;
   - `GENERIC_ENGINE` — allowed primitive/capability code;
   - `UNCLEAR` — requires architecture review before editing.
-- [ ] Record file, symbol, recognized content identity, mechanism family, current tests, authority/lifetime dependencies, and likely Common Play composition.
-- [ ] Add a narrow architecture guard for execution directories when feasible; allowlist content/presentation/fixtures rather than banning IDs repository-wide.
+- [x] Record file, symbol, recognized content identity, mechanism family, current tests, authority/lifetime dependencies, and likely Common Play composition.
+- [x] Add a narrow architecture guard for execution directories when feasible; allowlist content/presentation/fixtures rather than banning IDs repository-wide.
+
+M0 inventory authority: `docs/rules/legacy-execution-inventory.md`.
+
+M0 freeze authority:
+
+- composition root: `src/app/offlineRuntimeAdapters.ts`;
+- classification ledger: `.agents/LEGACY_EXECUTION_BASELINE.json`;
+- checker: `scripts/check-legacy-execution-boundary.mjs`;
+- regression: `tests/ui/legacyExecutionBoundary.test.mjs`;
+- CI: `.github/workflows/legacy-execution-boundary.yml`.
+
+Completion evidence on classified composition candidate `c2241520c622df6ad22b0588e901b51cd69099c0`:
+
+- every current canonical offline composition import is classified as `CONTENT/PRESENTATION`, `LEGACY_EXECUTION`, `GENERIC_ENGINE`, or explicit `UNCLEAR` pending symbol-level architecture review;
+- central legacy compatibility paths, named gameplay families, mixed progression/resource/rest dispatch, current golden tests, authority/lifetime dependencies, and likely convergence compositions are recorded in the inventory;
+- Legacy Execution Boundary run `33132812400`: SUCCESS on the exact candidate SHA;
+- Gate E validation was not repeated for M0; its unrelated automatic workflow remained green on the same documentation/classification head.
 
 ## M1 — Establish the generic migration harness
 
@@ -629,7 +646,7 @@ artifact/run: <workflow/job/artifact if applicable>
 
 - Gate D is `DONE` on canonical history.
 - Gate E is `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`; Foundation is frozen through E.
-- Phase 2 Legacy Convergence is now the active next queue, beginning with M0 inventory and then the migration harness/probes.
+- Phase 2 Legacy Convergence is active; M0 inventory/freeze is `DONE` and M1 generic migration harness is the current queue.
 - Gate F-M remain dormant until a concrete Phase-2 migration/V1 scenario satisfies the activation rule.
 - The previous post-Gate-D rule that automatically returned to named-feature/V1 R2 implementation is superseded by this owner direction.
 - PR #140's remote-owner Cutting Words test scenario is useful migration evidence; the PR's adapter-local named implementation direction is **not** the architecture to merge as the final solution.
@@ -640,10 +657,10 @@ artifact/run: <workflow/job/artifact if applicable>
 
 ## 8. Current next action
 
-1. Treat Phase 2 M0 as `ACTIVE` and keep the no-new-named-adapter freeze in force.
-2. Inventory runtime/session/resolver/app execution paths that recognize known content IDs/names or import known-content constants for execution decisions.
-3. Classify each finding as `CONTENT/PRESENTATION`, `LEGACY_EXECUTION`, `GENERIC_ENGINE`, or `UNCLEAR`, recording mechanism family, current tests, authority/lifetime dependencies, and likely Common Play composition.
-4. Add only a narrow architecture guard if the inventory shows a safe execution-directory boundary; do not ban IDs repository-wide.
-5. Use the inventory to choose the smallest representative migration probe. Preserve existing behavior tests as golden evidence, execute the replacement through JSON/Common Play with arbitrary-ID/rename invariance, then delete only the absorbed named execution path.
-6. If an actual migration cannot compose safely from Gates A-E, capture the deterministic generic failure before considering Gate F-M activation.
-7. Do not activate Gate F merely because Gate E completed.
+1. Treat M1 as `ACTIVE`; do not reopen M0 or repeat Gate E validation unless affected files materially change.
+2. Use `docs/rules/legacy-execution-inventory.md` and existing behavior tests to choose the smallest action/resource/economy legacy path as the first generic migration harness probe.
+3. Capture the existing deterministic behavior oracle before deletion, then create an equivalent RuleModule/content JSON fixture and normalize it to Common Play IR.
+4. Execute the replacement only through the generic resolver/session path; prove arbitrary external ID and ID/name-only rename invariance and relevant authority/lifetime parity.
+5. Delete the absorbed named execution branch/adapter only after the generic path is authoritative and focused regressions are green; do not retain a hidden compatibility fallback for the same supported mechanic.
+6. If the first real migration cannot compose safely from Gates A-E, capture the deterministic generic failure before considering Gate F-M activation.
+7. Keep Gate F-M dormant unless the activation rule is actually satisfied; do not route product work to `main`.
