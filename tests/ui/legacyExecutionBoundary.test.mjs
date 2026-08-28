@@ -5,54 +5,67 @@ import { join } from "node:path";
 import test from "node:test";
 import { checkLegacyExecutionBoundary } from "../../scripts/check-legacy-execution-boundary.mjs";
 
-function fixture() {
+function fixture(entries, imports) {
   const root = mkdtempSync(join(tmpdir(), "simplevtt-legacy-boundary-"));
   mkdirSync(join(root, ".agents"), { recursive: true });
   mkdirSync(join(root, "src", "app"), { recursive: true });
   writeFileSync(join(root, ".agents", "LEGACY_EXECUTION_BASELINE.json"), JSON.stringify({
-    version: 1,
-    legacyExecutionAdapters: ["src/app/barbarianRageRuntimeAdapter.ts"],
-    contentPresentationExceptions: ["src/app/druidCircleLandSpellRuntimeAdapter.ts"],
+    version: 2,
+    compositionRoot: "src/app/offlineRuntimeAdapters.ts",
+    entries,
   }));
+  writeFileSync(
+    join(root, "src", "app", "offlineRuntimeAdapters.ts"),
+    imports.map((module) => `import "${module}";`).join("\n") + "\n",
+  );
   return root;
 }
 
-function touch(root, path) {
-  writeFileSync(join(root, "src", "app", path), "export {};\n");
-}
+const legacy = { module: "./barbarianRageRuntimeAdapter", classification: "LEGACY_EXECUTION" };
+const generic = { module: "./productionPlayRuntimeAdapter", classification: "GENERIC_ENGINE" };
 
-test("grandfathered named execution may remain or shrink", () => {
-  const root = fixture();
+test("classified legacy and generic composition is accepted", () => {
+  const root = fixture([legacy, generic], [legacy.module, generic.module]);
   try {
-    touch(root, "barbarianRageRuntimeAdapter.ts");
-    touch(root, "productionPlayRuntimeAdapter.ts");
-    assert.equal(checkLegacyExecutionBoundary(root).ok, true);
-    rmSync(join(root, "src", "app", "barbarianRageRuntimeAdapter.ts"));
     assert.equal(checkLegacyExecutionBoundary(root).ok, true);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("explicit content/presentation exception is allowed", () => {
-  const root = fixture();
+test("legacy debt may shrink when composition and baseline shrink together", () => {
+  const root = fixture([generic], [generic.module]);
   try {
-    touch(root, "druidCircleLandSpellRuntimeAdapter.ts");
     assert.equal(checkLegacyExecutionBoundary(root).ok, true);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("new class/subclass named runtime adapter fails", () => {
-  const root = fixture();
+test("new composition import fails until explicitly classified", () => {
+  const root = fixture([generic], [generic.module, "./wizardExampleRuntimeAdapter"]);
   try {
-    touch(root, "wizardExampleRuntimeAdapter.ts");
     const result = checkLegacyExecutionBoundary(root);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.errors, [
-      "src/app/wizardExampleRuntimeAdapter.ts: new class/subclass-named runtime adapter is not inventoried",
-    ]);
+    assert.deepEqual(result.errors, ["unclassified composition import: ./wizardExampleRuntimeAdapter"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("stale baseline and invalid classification fail", () => {
+  const root = fixture([
+    generic,
+    { module: "./removedRuntimeAdapter", classification: "LEGACY_EXECUTION" },
+    { module: "./badRuntimeAdapter", classification: "MAYBE" },
+  ], [generic.module, "./badRuntimeAdapter"]);
+  try {
+    const result = checkLegacyExecutionBoundary(root);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.errors.sort(), [
+      "./badRuntimeAdapter: invalid classification MAYBE",
+      "stale baseline module: ./removedRuntimeAdapter",
+    ].sort());
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
