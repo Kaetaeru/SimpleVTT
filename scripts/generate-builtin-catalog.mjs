@@ -128,6 +128,7 @@ const moduleEntries = records.map(({module,entry,category,presentation}) => {
       targetName:allNames.get(relationship.target)?.nameKo ?? relationship.target,
     })),
     capabilities:[...new Set(module.capabilities ?? [])].sort((a,b) => a.localeCompare(b,"en")),
+    ...(entry.mechanics?.length ? {mechanics:entry.mechanics} : {}),
   };
 });
 
