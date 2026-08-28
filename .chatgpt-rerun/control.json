@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 2,
   "status": "continue",
-  "reason": "Owner approval semantics now treat `Rerun 진행` as explicit merge approval when current STATE/control are waiting solely for the specifically named PR merge. PR #141 is merged at 00d3c9233bb678ec93bb828cb3941c3048c42054; Gate E is DONE and Foundation is frozen through E. Resume from STATE.md and docs/rules/resolver-execution-checklist.md at Phase 2 M0 named-execution inventory. Keep Gate F-M dormant unless a concrete migration failure satisfies the activation rule, do not repeat unchanged Gate E validation, and do not route to main.",
+  "reason": "Phase 2 M0 legacy-execution inventory/freeze is DONE. The canonical inventory is docs/rules/legacy-execution-inventory.md; the full offline production composition is guarded by .agents/LEGACY_EXECUTION_BASELINE.json and Legacy Execution Boundary CI. Checklist head daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118 passed boundary run 33132952951. Resume from STATE.md and the checklist at M1 generic migration harness using the smallest action/resource/economy legacy path and its existing golden behavior test. Do not reopen M0, repeat unchanged Gate E validation, activate Gate F-M without a concrete migration failure, or route to main.",
   "task_id": "common-play-foundation-convergence",
-  "updated_at": "2026-08-28T08:17:30+09:00"
+  "updated_at": "2026-08-28T10:28:40+09:00"
 }
