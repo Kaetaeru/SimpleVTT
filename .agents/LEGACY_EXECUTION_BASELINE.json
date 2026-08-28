@@ -33,7 +33,6 @@
     { "file": "src/app/paladinLayOnHandsActionRuntimeAdapter.ts", "rule": "known-domain-id-import", "maxCount": 2 },
     { "file": "src/app/phase09AuthoritativeSpellcastingAdapter.ts", "rule": "known-content-id-literal", "maxCount": 2 },
     { "file": "src/app/phase09SpellcastingRuntimeRouter.ts", "rule": "legacy-spell-handler-import", "maxCount": 1 },
-    { "file": "src/app/productionAcceptanceRuntimeAdapter.ts", "rule": "known-content-id-literal", "maxCount": 3 },
     { "file": "src/app/productionPlayRuntimeAdapter.ts", "rule": "known-content-id-literal", "maxCount": 3 },
     { "file": "src/app/productionPlayRuntimeAdapter.ts", "rule": "known-domain-id-import", "maxCount": 12 },
     { "file": "src/app/progressionPhase08BarbarianPrimalKnowledgeAdapter.ts", "rule": "known-content-id-literal", "maxCount": 3 },
