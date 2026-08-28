@@ -84,13 +84,16 @@ function fighterState(level=17) {
 function fighterCommonPlayDefinition():CommonPlayOperationDefinition {
   const definition=structuredClone(DEFINITION);
   definition.id="external.unknown.restricted-extra-action";
-  const operations=definition.entryPoints[0].operations as Array<Record<string,unknown>>;
-  operations[0].resource=FIGHTER_ACTION_SURGE_RESOURCE_ID;
-  operations[1].resource=FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID;
+  const payments=definition.payments as Array<Record<string,unknown>>;
+  payments[0].resource=FIGHTER_ACTION_SURGE_RESOURCE_ID;
+  payments[1].resource=FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID;
   return definition;
 }
 
-test("Common Play lowers an unknown resource/economy action into existing generic Resolver operations",()=>{
+test("Common Play lowers committed resource payments before generic economy effects",()=>{
+  assert.deepEqual(DEFINITION.payments?.map((payment)=>payment.kind),["resource","resource"]);
+  assert.deepEqual(DEFINITION.entryPoints[0].operations.map((operation)=>operation.kind),["economy.modify"]);
+
   const state=preparedState();
   const pending=compileCommonPlayEntryPointOperations(PROFILE,state,DEFINITION,executionInput());
   assert.equal(pending.sourceId,DEFINITION.id);
@@ -105,7 +108,7 @@ test("Common Play lowers an unknown resource/economy action into existing generi
   assert.deepEqual(resolved.state.combatants.hero.economy.extraActions?.map((entry)=>entry.allowsMagicAction),[false]);
 });
 
-test("Common Play resource/economy lowering is atomic when a later resource cannot be spent",()=>{
+test("Common Play resource payments and economy effect commit atomically",()=>{
   const state=preparedState();
   const sameTurn=state.combatants.hero.resources.find((entry)=>entry.id==="resource.external.same-turn");
   assert.ok(sameTurn);
