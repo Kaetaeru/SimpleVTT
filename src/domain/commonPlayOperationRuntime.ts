@@ -145,6 +145,13 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
   return {schemaVersion:"0.2-draft",id,...(payments?{payments}:{}),entryPoints};
 }
 
+export function parseManualCommonPlayOperationDefinition(value:unknown,label="Common Play definition"):CommonPlayOperationDefinition {
+  const definition=parseCommonPlayOperationDefinition(value,label);
+  const nonManual=definition.entryPoints.find((entry)=>entry.invocation!=="manual");
+  if(nonManual) throw new DomainEvaluationError(`${label} supports manual entry points only: ${nonManual.invocation}`);
+  return definition;
+}
+
 function literalInteger(expression:CommonPlayExpression|undefined,label:string) {
   if(!expression||typeof expression!=="object"||!("value" in expression)) {
     throw new DomainEvaluationError(`${label} requires a supported literal expression`);
