@@ -3,6 +3,7 @@ name: M1 Portable RuleModule Mechanics
 on:
   pull_request:
     paths:
+      - "schemas/installed-content.schema.json"
       - "src/app/ruleModulePackageImport.ts"
       - "src/app/installedContentContracts.ts"
       - "src/app/installedContentPersistence.ts"
