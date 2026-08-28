@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "policy": "Grandfathered class/subclass-specific execution adapters may be deleted as Common Play migration lands, but this set must not grow. Content/progression/presentation exceptions are explicit and do not authorize named execution semantics.",
+  "legacyExecutionAdapters": [
+    "src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts",
+    "src/app/barbarianRageRuntimeAdapter.ts",
+    "src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts",
+    "src/app/bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter.ts",
+    "src/app/bardicInspirationActionRuntimeAdapter.ts",
+    "src/app/bardicInspirationFollowUpRuntimeAdapter.ts",
+    "src/app/clericDivineSparkActionRuntimeAdapter.ts",
+    "src/app/clericTurnUndeadActionRuntimeAdapter.ts",
+    "src/app/druidWildShapeRuntimeAdapter.ts",
+    "src/app/fighterActionSurgeRuntimeAdapter.ts",
+    "src/app/fighterIndomitableFollowUpRuntimeAdapter.ts",
+    "src/app/fighterTacticalMindFollowUpRuntimeAdapter.ts",
+    "src/app/monkFocusRuntimeAdapter.ts",
+    "src/app/monkOpenHandFleetStepRuntimeAdapter.ts",
+    "src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts",
+    "src/app/monkOpenHandWholenessRuntimeAdapter.ts",
+    "src/app/paladinAbjureFoesActionRuntimeAdapter.ts",
+    "src/app/paladinDevotionHolyNimbusRuntimeAdapter.ts",
+    "src/app/paladinDevotionSmiteOfProtectionRuntimeAdapter.ts",
+    "src/app/paladinDivineSenseActionRuntimeAdapter.ts",
+    "src/app/paladinLayOnHandsActionRuntimeAdapter.ts",
+    "src/app/rogueCoreRuntimeAdapter.ts",
+    "src/app/rogueCunningHideEventRuntimeAdapter.ts",
+    "src/app/sorceryRuntimeAdapter.ts",
+    "src/app/subclassRuntimeAdapter.ts",
+    "src/app/warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts"
+  ],
+  "contentPresentationExceptions": [
+    "src/app/druidCircleLandSpellRuntimeAdapter.ts"
+  ]
+}
