@@ -62,14 +62,17 @@ function portableMechanics(value:unknown,label:string):InstalledCommonPlayMechan
   if (value===undefined) return [];
   if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
   return value.map((item,index)=>{
-    const mechanic=object(item,`${label}[${index}]`);
+    const mechanicLabel=`${label}[${index}]`;
+    const mechanic=object(item,mechanicLabel);
+    const unsupported=Object.keys(mechanic).filter((key)=>key!=="kind"&&key!=="config");
+    if (unsupported.length) throw new Error(`${mechanicLabel} contains unsupported fields: ${unsupported.join(", ")}`);
     if (mechanic.kind!=="common-play") {
       throw new Error(`${label} cannot be activated by the generic Catalog: unsupported mechanic kind ${String(mechanic.kind)}`);
     }
     try {
-      return {kind:"common-play",config:parseCommonPlayOperationDefinition(mechanic.config,`${label}[${index}].config`)};
+      return {kind:"common-play",config:parseCommonPlayOperationDefinition(mechanic.config,`${mechanicLabel}.config`)};
     } catch(error) {
-      throw new Error(`${label}[${index}] contains unsupported Common Play mechanics: ${error instanceof Error?error.message:String(error)}`);
+      throw new Error(`${mechanicLabel} contains unsupported Common Play mechanics: ${error instanceof Error?error.message:String(error)}`);
     }
   });
 }
