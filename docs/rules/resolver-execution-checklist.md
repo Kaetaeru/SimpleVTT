@@ -292,20 +292,31 @@ Gate E is merged and green:
 
 # PHASE 2 — LEGACY CONVERGENCE / STRANGLER MIGRATION
 
-Status: **ACTIVE — NEXT QUEUE AFTER GATE E**.
+Status: **ACTIVE**.
 
 The purpose is not a big-bang rewrite. Existing named execution remains temporarily as a behavior oracle until each path is replaced and verified through JSON/Common Play. Then the absorbed named execution code is deleted.
 
-## M0 — Freeze and inventory named execution
+## M0 — Freeze and inventory named execution — DONE
 
-- [ ] Enumerate runtime/session/resolver/app code that recognizes known content IDs/names or imports known-content constants to decide execution semantics.
-- [ ] Classify every finding:
+- [x] Enumerate runtime/session/resolver/app code that recognizes known content IDs/names or imports known-content constants to decide execution semantics.
+- [x] Classify every finding:
   - `CONTENT/PRESENTATION` — allowed named data/label/catalog code;
   - `LEGACY_EXECUTION` — must migrate/delete;
   - `GENERIC_ENGINE` — allowed primitive/capability code;
   - `UNCLEAR` — requires architecture review before editing.
-- [ ] Record file, symbol, recognized content identity, mechanism family, current tests, authority/lifetime dependencies, and likely Common Play composition.
-- [ ] Add a narrow architecture guard for execution directories when feasible; allowlist content/presentation/fixtures rather than banning IDs repository-wide.
+- [x] Record file, symbol, recognized content identity, mechanism family, current tests, authority/lifetime dependencies, and likely Common Play composition.
+- [x] Add a narrow architecture guard for execution directories when feasible; allowlist content/presentation/fixtures rather than banning IDs repository-wide.
+
+M0 source of truth and frozen-debt evidence:
+
+- inventory: `docs/rules/legacy-execution-inventory.md`;
+- machine baseline: `.agents/NAMED_EXECUTION_BASELINE.json`;
+- scanner/test: `scripts/check-named-execution-boundary.mjs`, `tests/ui/namedExecutionBoundary.test.mjs`;
+- CI guard: `.github/workflows/named-execution-boundary.yml`;
+- first red candidate `2e16b245792d80d68d956e26c596f712c9a3d93e` proved the current baseline was incomplete;
+- scanner refinement candidate `46540925138f9a280b89e514fbfa4689f242cdaf` removed type-only false positives and still failed on real unclassified execution candidates;
+- classified guard candidate `8d0cf36d0bc7d4311111734a1c92eef8769fe365`: Named execution boundary run `33132427949`, job `98724768487`, **3/3 PASS**; Contract validation `33132427882` SUCCESS; UI `33132427939` SUCCESS;
+- no product runtime source was changed in M0 and Gate F-M remain dormant.
 
 ## M1 — Establish the generic migration harness
 
@@ -629,7 +640,8 @@ artifact/run: <workflow/job/artifact if applicable>
 
 - Gate D is `DONE` on canonical history.
 - Gate E is `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`; Foundation is frozen through E.
-- Phase 2 Legacy Convergence is now the active next queue, beginning with M0 inventory and then the migration harness/probes.
+- Phase 2 M0 inventory/freeze is complete on the branch containing this checklist; its source of truth is `docs/rules/legacy-execution-inventory.md` plus the named-execution boundary baseline/scanner/CI guard.
+- M1 generic migration harness is the next product slice after M0 lands on the Rerun working branch.
 - Gate F-M remain dormant until a concrete Phase-2 migration/V1 scenario satisfies the activation rule.
 - The previous post-Gate-D rule that automatically returned to named-feature/V1 R2 implementation is superseded by this owner direction.
 - PR #140's remote-owner Cutting Words test scenario is useful migration evidence; the PR's adapter-local named implementation direction is **not** the architecture to merge as the final solution.
@@ -640,10 +652,11 @@ artifact/run: <workflow/job/artifact if applicable>
 
 ## 8. Current next action
 
-1. Treat Phase 2 M0 as `ACTIVE` and keep the no-new-named-adapter freeze in force.
-2. Inventory runtime/session/resolver/app execution paths that recognize known content IDs/names or import known-content constants for execution decisions.
-3. Classify each finding as `CONTENT/PRESENTATION`, `LEGACY_EXECUTION`, `GENERIC_ENGINE`, or `UNCLEAR`, recording mechanism family, current tests, authority/lifetime dependencies, and likely Common Play composition.
-4. Add only a narrow architecture guard if the inventory shows a safe execution-directory boundary; do not ban IDs repository-wide.
-5. Use the inventory to choose the smallest representative migration probe. Preserve existing behavior tests as golden evidence, execute the replacement through JSON/Common Play with arbitrary-ID/rename invariance, then delete only the absorbed named execution path.
-6. If an actual migration cannot compose safely from Gates A-E, capture the deterministic generic failure before considering Gate F-M activation.
-7. Do not activate Gate F merely because Gate E completed.
+1. Land the M0 inventory/frozen-debt guard without changing product runtime semantics.
+2. Begin M1 by defining the reusable migration harness around one smallest simple action/resource/economy legacy path whose existing behavior already has a deterministic golden oracle.
+3. Build an equivalent RuleModule/content JSON fixture and normalize it to Common Play IR.
+4. Execute that fixture through the generic resolver/session path with arbitrary external ID and ID/name rename invariance.
+5. Compare relevant StateChanges, authority/lifetime, resource/economy behavior, retry/reconnect/Undo requirements against the frozen legacy oracle.
+6. Delete the named execution path only after generic parity is authoritative and regressions are green.
+7. If the migration cannot compose safely from Gates A-E, record the exact deterministic generic failure before considering any Gate F-M activation.
+8. Do not activate Gate F merely because M0 completed.
