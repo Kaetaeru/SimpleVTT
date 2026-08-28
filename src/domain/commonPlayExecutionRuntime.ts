@@ -13,6 +13,16 @@ export type CommonPlayExpression =
       args: CommonPlayExpression[];
     };
 
+type CommonPlayReferencePredicateOp =
+  | "exists"
+  | "has-tag"
+  | "activation-is"
+  | "mode-is"
+  | "source-active"
+  | "resource-at-least"
+  | "progression-at-least"
+  | "relation-matches";
+
 export type CommonPlayPredicate =
   | boolean
   | { op:"all" | "any"; args:CommonPlayPredicate[] }
@@ -22,7 +32,7 @@ export type CommonPlayPredicate =
       left:CommonPlayExpression;
       right:CommonPlayExpression;
     }
-  | { op:string; ref:string; value?:CommonPlayScalar };
+  | { op:CommonPlayReferencePredicateOp; ref:string; value?:CommonPlayScalar };
 
 export interface CommonPlayResourceChangeOperation {
   kind:"resource.change";
@@ -146,7 +156,7 @@ function evaluatePredicate(context:EvaluationContext, predicate:CommonPlayPredic
       : predicate.args.some((entry)=>evaluatePredicate(context,entry));
   }
   if (predicate.op==="not") return !evaluatePredicate(context,predicate.arg);
-  if ("left" in predicate && "right" in predicate) {
+  if (predicate.op==="eq" || predicate.op==="ne" || predicate.op==="lt" || predicate.op==="lte" || predicate.op==="gt" || predicate.op==="gte" || predicate.op==="contains") {
     const left=evaluateExpression(context,predicate.left);
     const right=evaluateExpression(context,predicate.right);
     switch (predicate.op) {
@@ -212,9 +222,6 @@ function lowerEconomyModify(
   }
   const policy=profile.commonPlay?.economyBuckets?.[operation.bucket];
   if (!policy) throw new DomainEvaluationError(`unsupported Common Play economy bucket: ${operation.bucket}`);
-  if (policy.kind!=="extra-action") {
-    throw new DomainEvaluationError(`unsupported Common Play economy bucket kind: ${String((policy as {kind:string}).kind)}`);
-  }
   return Array.from({ length:amount },(_,index)=>({
     id:amount===1 ? operationId : `${operationId}:${index + 1}`,
     kind:"grant-extra-action" as const,
