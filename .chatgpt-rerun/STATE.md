@@ -14,11 +14,13 @@
 
 ## Durable checkpoint
 
-The owner explicitly directed this continuation to preserve the architectural intent for future agents and remove stale Rerun blockers. Mandatory preflight was performed in README -> control -> STATE -> PLAN order, followed by `CANONICAL_ROOT.md`, the rules plan, PR #159, and current exact-head workflow evidence.
+The owner explicitly directed this continuation to preserve the architectural intent for future agents and remove stale Rerun blockers. Mandatory preflight was performed in README -> control -> STATE -> PLAN order, followed by `CANONICAL_ROOT.md`, the current rules planning documents, PR #159, and current exact-head workflow evidence.
 
 The old blocker in control/STATE was stale: PR #159 candidate `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` no longer had queued workflows. All seven old exact-head runs had completed, exposing actionable evidence rather than queue congestion.
 
-The active plan pointer is now `docs/rules/resolver-execution-checklist-v2.md`. The durable owner intent is locked in `docs/rules/common-play-resolver-architecture-charter.md`, and Rerun README now requires that charter during post-preflight routing.
+The active plan pointer is now `docs/rules/resolver-execution-checklist-v2.md`. The durable owner intent is locked in `docs/rules/common-play-resolver-architecture-charter.md`, and Rerun README requires that charter during post-preflight routing. The charter itself is aligned to checklist v2; the older checklist is historical/evidence detail only where v2 has not restated it.
+
+The live parent after the architecture-alignment write is `a45d1fa689d5ac86b54bdbed84260506995e4bee`.
 
 ## Architecture intent retained
 
@@ -61,6 +63,7 @@ Corrections made in this owner continuation:
 1. Child branch `agent/m1-rulemodule-portable-activation` commit `87945628c31a751c697a8c67b4096fae7c374e0c` adds only contextual typing for parsed `entryPoints`, preserving the literal invocation union without adding semantics or a named branch.
 2. Parent branch corrected the unrelated persistence baseline invariant in `tests/ui/installedContentRuntimeAdapter.test.ts`: instead of hard-coding catalog total `496`, it asserts the initial catalog contains only canonical builtin entries. A compare against the pre-change parent confirmed the final correction is exactly one addition / one deletion in that file.
 3. Architecture charter and v2 plan were added on the parent; Rerun README/PLAN routing now points agents through them.
+4. PR #159 description was refreshed to remove stale queued-run claims, record the latest child candidate/evidence, and restate the architecture boundary.
 
 Latest observed exact-head workflow evidence for child `87945628c31a751c697a8c67b4096fae7c374e0c`:
 
@@ -68,11 +71,13 @@ Latest observed exact-head workflow evidence for child `87945628c31a751c697a8c67
 - Contract validation `33148877810`: SUCCESS;
 - Rules Domain `33148877904`: SUCCESS;
 - UI `33148877892`: SUCCESS;
-- Persistence `33148877863`: in progress at checkpoint;
-- Phase 11 Playable `33148877783`: in progress at checkpoint;
-- Phase 12 Connected Session `33148877843`: in progress at checkpoint.
+- Persistence `33148877863`: FAILURE only on the same unrelated stale parent `501 !== 496` assertion because this child run was created before the parent baseline correction entered its merge context;
+- Phase 11 Playable `33148877783`: in progress at latest observation;
+- Phase 12 Connected Session `33148877843`: in progress at latest observation.
 
-These in-progress runs are normal verification, not a reason to publish Rerun `blocked`. The stale queue blocker is removed.
+PR #159 is currently open, mergeable, and still reports exactly seven changed files. The unrelated persistence baseline correction remains on the parent and is not part of the seven-file portable bridge diff.
+
+Phase 11/12 in-progress verification is normal active work, not an external/technical blocker. The stale queue blocker is removed and Rerun remains authorized to continue.
 
 ## Next Exact Action
 
@@ -82,9 +87,9 @@ On the next Rerun execution of sequence `2`:
 2. read `CANONICAL_ROOT.md`, then the architecture charter, then `resolver-execution-checklist-v2.md`;
 3. re-fetch parent and PR #159 child tips because either may have advanced;
 4. read only the current exact-head workflows for the latest child candidate; do not rerun obsolete `60c5...` evidence;
-5. if Persistence/Phase11/Phase12 have completed, inspect only any actual failures; if they are green, proceed to bounded diff/ancestry review;
-6. ensure the parent persistence baseline correction is included in the PR merge ancestry/base context without adding it to the seven-file portable product diff;
-7. confirm PR #159 still contains no named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback;
+5. inspect only actual current failures; do not treat the already-corrected parent catalog-total baseline as a product failure;
+6. reconcile current parent ancestry/base context so the persistence-baseline correction participates in merge verification while PR #159's product diff remains the bounded seven files;
+7. confirm PR #159 contains no named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback;
 8. when current verification and ancestry are acceptable, follow the Rerun owner-approval rule for PR #159 merge rather than inventing another waiting reason;
 9. after #159 integration, immediately create the deterministic RED for installed portable mechanics -> real production/session action dispatch through `commonPlayOperationRuntime` + generic Resolver;
 10. keep the named Fighter Action Surge production seam until end-to-end generic parity, then remove only the absorbed named execution and shrink legacy baseline/inventory;
