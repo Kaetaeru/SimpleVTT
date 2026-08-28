@@ -1,26 +1,22 @@
-# SimpleVTT canonical development root
+# SimpleVTT canonical development routing
 
-This file is the repository-level routing authority for humans and coding agents.
+This file defines branch roles. It does not replace the current-work pointer in [`docs/CURRENT.md`](docs/CURRENT.md).
 
 ```yaml
-canonical_branch: work/v1-composite
-canonical_worktree_hint: work/SimpleVTT-v1
-canonical_purpose: V1 implementation, build, preview, test, and release preparation
-historical_branches:
+product_integration_target: work/v1-composite
+current_convergence_parent: agent/resolver-foundation-convergence
+historical_or_reference_branches:
   - main
   - work/v1-latest
-last_declared_checkpoint: 266a6d5
-declared_at: 2026-08-23 Asia/Seoul
 ```
 
-Rules:
+## Rules
 
-1. Start all new V1 product work from `work/v1-composite`.
-2. Run the local preview and production build from the worktree checked out to `work/v1-composite`.
-3. Do not identify `main`, `work/v1-latest`, or a newer commit timestamp alone as the latest playable V1.
-4. Before changing code, verify `git branch --show-current` returns `work/v1-composite`.
-5. `main` is a landing/reference branch until the V1 composite history is deliberately promoted; this declaration does not imply that its older code is canonical.
+1. `work/v1-composite` is the V1 product integration target. Do not route V1 product merges to `main` unless the owner explicitly promotes the integration model.
+2. An explicitly named active working/convergence branch may be ahead of `work/v1-composite`. That does not make the integration target obsolete; it means the current slice has not yet been integrated.
+3. Before editing, read `docs/CURRENT.md`. It names the current parent, active child PR, and immediate boundary. Do not infer current work from commit recency or an old phase/handoff document.
+4. Default new independent product work to the integration target. Work that belongs to an explicitly active convergence sequence must branch from the parent named in `docs/CURRENT.md` or its automation state.
+5. `main` and `work/v1-latest` are historical/landing references until deliberately promoted.
+6. Historical files under `docs/archive/` and old PR bodies are evidence only, never routing authority.
 
-The checkpoint above records when this declaration was introduced. The branch head can advance beyond it; use `git log -1 --oneline work/v1-composite` to find the latest canonical commit.
-
-For the exact active implementation slice, completed work, remaining checklist, and validation commands, read `.agents/V1_CURRENT_HANDOFF.md` before editing code.
+For ChatGPT Rerun, `.chatgpt-rerun/README.md`, `control.json`, `STATE.md`, and `PLAN.md` remain the automation source of truth and may name a temporary working parent. Product architecture and current human-readable status live under `docs/`.
