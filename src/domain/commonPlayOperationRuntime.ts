@@ -45,6 +45,80 @@ export interface CommonPlayOperationExecutionInput {
   entryPointId:string;
 }
 
+type Obj=Record<string,unknown>;
+const cp=<T,>(value:T):T=>structuredClone(value);
+function object(value:unknown,label:string):Obj {
+  if(!value||typeof value!=="object"||Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an object`);
+  return value as Obj;
+}
+function nonEmptyString(value:unknown,label:string) {
+  if(typeof value!=="string"||!value.trim()) throw new DomainEvaluationError(`${label} must be a non-empty string`);
+  return value.trim();
+}
+function literalExpression(value:unknown,label:string):LiteralNumberExpression {
+  const expression=object(value,label);
+  if(!("value" in expression)) throw new DomainEvaluationError(`${label} requires a supported literal expression`);
+  const literal=expression.value;
+  if(typeof literal!=="number"||!Number.isFinite(literal)||!Number.isInteger(literal)) {
+    throw new DomainEvaluationError(`${label} requires a finite integer literal`);
+  }
+  return {value:literal};
+}
+
+export function parseCommonPlayOperationDefinition(value:unknown):CommonPlayOperationDefinition {
+  const definition=object(value,"Common Play definition");
+  if(definition.schemaVersion!=="0.2-draft") throw new DomainEvaluationError("Common Play operation definition schemaVersion must be 0.2-draft");
+  const id=nonEmptyString(definition.id,"Common Play definition id");
+  const paymentsRaw=definition.payments;
+  const payments=paymentsRaw===undefined?undefined:(()=>{
+    if(!Array.isArray(paymentsRaw)) throw new DomainEvaluationError("Common Play payments must be an array");
+    return paymentsRaw.map((item,index):CommonPlayPayment=>{
+      const payment=object(item,`Common Play payments[${index}]`);
+      const kind=nonEmptyString(payment.kind,`Common Play payments[${index}].kind`);
+      if(kind!=="resource") throw new DomainEvaluationError(`unsupported Common Play payment kind: ${kind}`);
+      const resource=nonEmptyString(payment.resource,`Common Play payments[${index}].resource`);
+      const consumeAt=nonEmptyString(payment.consumeAt,`Common Play payments[${index}].consumeAt`);
+      if(consumeAt!=="commit") throw new DomainEvaluationError(`unsupported Common Play resource payment consumeAt: ${consumeAt}`);
+      const amount=literalExpression(payment.amount,`Common Play payments[${index}].amount`);
+      if(amount.value<=0) throw new DomainEvaluationError("Common Play resource payment amount must be a positive integer");
+      return {kind,resource,amount,consumeAt};
+    });
+  })();
+  if(!Array.isArray(definition.entryPoints)||!definition.entryPoints.length) throw new DomainEvaluationError("Common Play entryPoints must contain at least one entry");
+  const entryPoints=definition.entryPoints.map((item,index)=>{
+    const entry=object(item,`Common Play entryPoints[${index}]`);
+    const entryId=nonEmptyString(entry.id,`Common Play entryPoints[${index}].id`);
+    const invocation=nonEmptyString(entry.invocation,`Common Play entryPoints[${index}].invocation`);
+    if(invocation!=="manual") throw new DomainEvaluationError(`Common Play operation runtime supports manual entry points only: ${invocation}`);
+    if(!Array.isArray(entry.operations)) throw new DomainEvaluationError(`Common Play entryPoints[${index}].operations must be an array`);
+    const operations=entry.operations.map((rawOperation,operationIndex):CommonPlayOperation=>{
+      const operation=object(rawOperation,`Common Play entryPoints[${index}].operations[${operationIndex}]`);
+      const kind=nonEmptyString(operation.kind,`Common Play entryPoints[${index}].operations[${operationIndex}].kind`);
+      if(kind==="resource.change") {
+        const target=operation.target===undefined?undefined:nonEmptyString(operation.target,`Common Play entryPoints[${index}].operations[${operationIndex}].target`);
+        return {
+          kind,
+          resource:nonEmptyString(operation.resource,`Common Play entryPoints[${index}].operations[${operationIndex}].resource`),
+          amount:literalExpression(operation.amount,`Common Play entryPoints[${index}].operations[${operationIndex}].amount`),
+          ...(target?{target}:{}),
+        };
+      }
+      if(kind==="economy.modify") {
+        const amount=literalExpression(operation.amount,`Common Play entryPoints[${index}].operations[${operationIndex}].amount`);
+        if(amount.value<=0) throw new DomainEvaluationError("economy.modify grant amount must be a positive integer");
+        return {
+          kind,
+          bucket:nonEmptyString(operation.bucket,`Common Play entryPoints[${index}].operations[${operationIndex}].bucket`),
+          amount,
+        };
+      }
+      throw new DomainEvaluationError(`unsupported Common Play operation: ${kind}`);
+    });
+    return {id:entryId,invocation:"manual" as const,operations};
+  });
+  return {schemaVersion:"0.2-draft",id,payments:payments?cp(payments):undefined,entryPoints:cp(entryPoints)};
+}
+
 function literalInteger(expression:CommonPlayExpression|undefined,label:string) {
   if(!expression||typeof expression!=="object"||!("value" in expression)) {
     throw new DomainEvaluationError(`${label} requires a supported literal expression`);
