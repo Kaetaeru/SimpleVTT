@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 2,
   "status": "continue",
-  "reason": "M0 remains DONE and Gate E validation remains retained. M1 is now bounded on Fighter Action Surge as the first action/resource/economy migration probe. Existing golden behavior shows the named compiler already lowers to generic Resolver resource spends plus a restricted extra-action grant. Current Common Play v0.2 has resource.change/economy.modify but lacks profile-registered restricted extra-action lowering, so this is a concrete schema/evaluator/profile-semantics parity gap inside the existing economy primitive, not evidence to activate Gate F-M. Child branch agent/m1-action-surge-common-play was created from 0f22b912397f88d5fbbdc0043c62a0c68c615931. Resume from STATE.md by adding the deterministic unknown-ID red fixture/test there; do not repeat the completed analysis, delete legacy code before parity, activate Gate F-M, or route to main.",
+  "reason": "M0 remains DONE and Gate E evidence remains retained. M1 Fighter Action Surge has advanced to a green persisted Common Play IR/lowering slice: parent candidate 40a10a0d87e70c73636e5a4d88669a81c91db3c0 passed Rules Domain run 33133833124 and Legacy Execution Boundary run 33133833183. Concurrent work also advanced child branch agent/m1-action-surge-common-play to 343feac90f9129d0a3425bc38cc903a7eb9da6d8. Resume from STATE.md by reconciling parent/child without repeating green work, then capture the remaining RuleModule mechanics activation/persistence gap and route installed portable content through the same generic lowering/Resolver path. Do not delete the named Action Surge execution seam before production/session parity, activate Gate F-M, reopen M0, rerun unchanged Gate E validation, or route to main.",
   "task_id": "common-play-foundation-convergence",
-  "updated_at": "2026-08-28T10:38:10+09:00"
+  "updated_at": "2026-08-28T10:47:17+09:00"
 }
