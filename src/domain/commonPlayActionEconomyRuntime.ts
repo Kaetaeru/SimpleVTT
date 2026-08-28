@@ -83,6 +83,9 @@ export function compileCommonPlayActionEconomyEntryPoint(
       continue;
     }
 
+    if(operation.kind!=="economy.modify") {
+      throw new DomainEvaluationError(`unsupported Common Play action economy operation: ${(operation as {kind?:unknown}).kind}`);
+    }
     const amount=literalInteger(operation.amount,"economy.modify amount");
     if(amount<=0) throw new DomainEvaluationError("economy.modify extra-action amount must be a positive integer");
     const bucket=profile.actionEconomy?.buckets[operation.bucket];
@@ -105,7 +108,7 @@ export function compileCommonPlayActionEconomyEntryPoint(
   return {
     id:request.resolutionId,
     actorId:request.actorId,
-    sourceId:`common-play:${definition.id}/${entryPoint.id}`,
+    sourceId:definition.id,
     expectedRevision:inputState.revision,
     operations,
   };
