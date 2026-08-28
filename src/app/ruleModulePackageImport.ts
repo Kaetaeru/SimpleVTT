@@ -7,6 +7,7 @@ import type {
   InstalledModuleManifestV1,
   InstalledModuleRefV1,
 } from "./installedContentContracts";
+import { parseInstalledPortableMechanics } from "./portableCommonPlayMechanics";
 
 const CATEGORIES=new Set<InstalledCatalogEntryV1["category"]>(["class","subclass","species","background","feat","spell","item","condition","combatant","option"]);
 const cp=<T,>(value:T):T=>structuredClone(value);
@@ -135,7 +136,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const category=categoryRaw as InstalledCatalogEntryV1["category"];
     const present=presentation(value.presentation,defaultLocale,`content[${index}]`);
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
-    if (Array.isArray(value.mechanics) && value.mechanics.length) throw new Error(`content[${index}].mechanics cannot be activated by the generic Catalog yet`);
+    const mechanics=parseInstalledPortableMechanics(value.mechanics,`content[${index}].mechanics`);
     if (Array.isArray(value.progressionContributions) && value.progressionContributions.length) throw new Error(`content[${index}].progressionContributions cannot be activated by the generic Catalog yet`);
     const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {
@@ -146,6 +147,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
       semanticRelationships:relations,
       extensionPoints:extensionPoints(value.extensionPoints,`content[${index}].extensionPoints`),
       module:cp(module),
+      ...(mechanics.length?{mechanics}:{}),
       ...(campaignProvider?{campaignProvider}:{}),
     } satisfies InstalledCatalogEntryV1;
   });
@@ -164,6 +166,7 @@ export function catalogEntryForPackagePreview(entry:InstalledCatalogEntryV1):Cat
   return {
     id:entry.contentId,category:entry.category,nameKo:entry.nameKo,nameEn:entry.nameEn,scope:"local",source:entry.source,version:entry.version,
     description:entry.description,relationships:cp(entry.relationships),capabilities:cp(entry.capabilities),contentId:entry.contentId,sourceId:entry.sourceId,
+    ...(entry.mechanics?{mechanics:cp(entry.mechanics)}:{}),
   };
 }
 
