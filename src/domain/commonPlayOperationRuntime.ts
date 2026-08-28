@@ -85,6 +85,9 @@ export function compileCommonPlayEntryPointOperations(
       continue;
     }
 
+    if(operation.kind!=="economy.modify") {
+      throw new DomainEvaluationError(`unsupported Common Play operation: ${(operation as {kind?:unknown}).kind}`);
+    }
     const amount=literalInteger(operation.amount,"economy.modify amount");
     if(amount<=0) throw new DomainEvaluationError("economy.modify grant amount must be a positive integer");
     const bucket=profile.economy?.grantBuckets?.[operation.bucket];
