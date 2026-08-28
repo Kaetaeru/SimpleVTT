@@ -80,6 +80,9 @@
       "reaction": {"kind": "count", "capacity": 1, "resetTiming": "turn.started", "resetOwner": "owner", "availability": "trigger-required"},
       "movement": {"kind": "budget", "capacityRef": "movement.walk", "resetTiming": "turn.started", "resetOwner": "actor", "availability": "always"}
     },
+    "grantBuckets": {
+      "action.extra.non-magic": {"kind": "extra-action", "allowsMagicAction": false, "activeTurnOnly": true}
+    },
     "freeformPolicy": {
       "turnLimitedSpendPersistence": "none",
       "realResourcesPersistent": true,
