@@ -42,6 +42,14 @@
         "targetVersion":{"type":"string","minLength":1}, "extensionPoint":{"type":"string","minLength":1}
       }
     },
+    "portableMechanic": {
+      "type":"object", "additionalProperties":false,
+      "required":["kind","config"],
+      "properties": {
+        "kind":{"const":"common-play"},
+        "config":{"$ref":"https://simplevtt.local/schemas/common-play-contract.schema.json"}
+      }
+    },
     "entry": {
       "type": "object",
       "additionalProperties": false,
@@ -57,7 +65,8 @@
         "requiresCapabilities": {"type":"array","items":{"type":"string","minLength":1},"uniqueItems":true},
         "semanticRelationships": {"type":"array","items":{"$ref":"#/$defs/semanticRelationship"}},
         "extensionPoints": {"type":"array","items":{"$ref":"#/$defs/extensionPoint"}},
-        "module": {"$ref":"#/$defs/moduleManifest"}
+        "module": {"$ref":"#/$defs/moduleManifest"},
+        "mechanics":{"type":"array","items":{"$ref":"#/$defs/portableMechanic"}}
       }
     }
   }
