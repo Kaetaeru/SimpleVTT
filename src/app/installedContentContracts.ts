@@ -1,4 +1,5 @@
 import type { CatalogEntry } from "./contracts";
+import type { InstalledCommonPlayMechanicV1 } from "./portableCommonPlayMechanics";
 
 export const INSTALLED_CONTENT_SCHEMA_ID = "simplevtt.installed-content" as const;
 export const INSTALLED_CONTENT_SCHEMA_VERSION = 1 as const;
@@ -73,6 +74,8 @@ export interface InstalledCatalogEntryV1 {
   semanticRelationships?:InstalledContentRelationshipV1[];
   extensionPoints?:InstalledModuleExtensionPointV1[];
   module?:InstalledModuleManifestV1;
+  /** Normalized, data-only Common Play mechanics. No executable user code is stored. */
+  mechanics?:InstalledCommonPlayMechanicV1[];
   /** Data-only optional Campaign capability profile. Never executable code. */
   campaignProvider?:InstalledCampaignProviderProfileV1;
 }
