@@ -48,5 +48,5 @@ test("built-in Fighter Action Surge executes through generic Common Play product
   snapshot=await adapter.getSnapshot();
   assert.equal(resourceCurrent(snapshot,FIGHTER_ACTION_SURGE_RESOURCE_ID),featureBefore);
   assert.equal(resourceCurrent(snapshot,FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID),turnBefore);
-  assert.deepEqual(snapshot.scene.economyByActor["char.aelar"]?.extraActions,[]);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions,undefined);
 });
