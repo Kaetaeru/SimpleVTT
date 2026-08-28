@@ -8,12 +8,11 @@ This is the human/agent entry point for **what is current now**. If an older pha
 
 - Product integration target: `work/v1-composite`
 - Active convergence parent: `agent/resolver-foundation-convergence`
-- Active implementation PR: #171, `rules: migrate built-in Action Surge to generic Common Play`
-- Active implementation branch: `agent/m1-action-surge-generic-production`
-- Current boundary: validate the bounded PR #171 candidate and advance Resource/Economy from `PRODUCTION` to `MIGRATED` only after approved merge
+- Latest integrated implementation: PR #171, `rules: migrate built-in Action Surge to generic Common Play`
+- Current boundary: Resource/Economy is `MIGRATED`; select the next smallest coherent mechanism-family slice from the canonical product plan and current legacy evidence
 - `main`: historical/landing reference, not the current V1 integration target
 
-The convergence parent is intentionally ahead of `work/v1-composite` while the Resolver program is integrated in bounded slices. PR #171 may temporarily be behind the convergence parent because Rerun coordination/documentation commits continue there; live GitHub ancestry and CI must be re-fetched before merge adjudication.
+The convergence parent is intentionally ahead of `work/v1-composite` while the Resolver program is integrated in bounded slices. Live GitHub state remains authoritative for exact branch ancestry and active PR status.
 
 ## Current product objective
 
@@ -45,18 +44,15 @@ Already established and not to be repeated without new regression evidence:
 - portable Resource/Economy RuleModule import, validation, persistence, rehydration, and runtime compilation
 - PR #159 integrated into the convergence parent
 - PR #168 merged as `c372c09353de58dfcc12ad3adbe6fd118fe28106`, establishing Resource/Economy `PRODUCTION` for arbitrary installed data-only Common Play mechanics through the real production/session authority
+- PR #171 merged as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f` from validated candidate `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`, advancing Resource/Economy to `MIGRATED`
 
-Current unfinished boundary:
+PR #171 proved built-in Fighter Action Surge through the same generic Common Play production path with its two-resource spend, RulesProfile-owned restricted extra Action, authoritative Character/session writeback, Undo, connected convergence, and ID/name-only rename invariance. The named `fighterActionSurgeRuntimeAdapter.ts` production path and its legacy baseline entry are removed.
 
-> `PRODUCTION -> MIGRATED` for Resource/Economy through the bounded PR #171 Fighter Action Surge migration candidate.
+`MIGRATED` is not the same as `ACCEPTED`. Any remaining universal acceptance obligations must still be demonstrated explicitly; do not promote the family merely from the migration merge.
 
-PR #171 must preserve the generic Common Play production path while proving built-in Fighter Action Surge parity for its two-resource spend, restricted extra Action semantics, authoritative commit/writeback, Undo, connected convergence, and ID/name-only rename invariance. Its candidate diff removes the named Fighter Action Surge production adapter and shrinks the legacy boundary; that removal is acceptable only with the parity evidence intact.
+The next Phase 2 slice must be selected by mechanism family from `resolver-execution-checklist-v2.md` and current legacy evidence. Do not revive a named class/spell/feat queue, reopen validated Resource/Economy work without affected-surface evidence, or speculatively activate Gates F-M.
 
-The convergence parent remains `PRODUCTION` until PR #171 is accepted and merged. Do not mark Resource/Economy `MIGRATED` from an unmerged candidate, and do not introduce a replacement Action Surge-specific dispatch key, evaluator, transport, state store, or hidden fallback.
-
-Do not reopen older Gate E/M0 work, revive the rejected broader Action Surge parity experiment, or start a competing implementation while PR #171 remains the bounded live candidate unless new repository evidence invalidates it.
-
-For transient exact-head CI and merge-readiness state, `.chatgpt-rerun/STATE.md` plus live GitHub is authoritative; this page intentionally records the durable product boundary rather than ephemeral queued/running workflow status.
+For transient exact-head CI and execution state, `.chatgpt-rerun/STATE.md` plus live GitHub is authoritative; this page intentionally records the durable product boundary.
 
 ## Source of truth
 
