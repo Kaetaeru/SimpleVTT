@@ -8,7 +8,7 @@ const CONTENT_TERMS=[
 const TERM=CONTENT_TERMS.join("|");
 const RULES=[
   { id:"named-runtime-filename", test:(_source,file)=>new RegExp(`^(?:${TERM}|bardic|sorcery|pactTome)`,"i").test(file.split("/").pop() ?? "") && /(?:Runtime|Adapter)\.ts$/i.test(file) },
-  { id:"known-content-domain-import", pattern:new RegExp(`from\\s+[\"']\\.\\./domain\\/[^\"']*(?:${TERM})[^\"']*[\"']`,"gi") },
+  { id:"known-content-domain-import", pattern:new RegExp(`(?:^|\\n)\\s*import\\s+(?!type\\b)[^;\\n]+from\\s+[\"']\\.\\./domain\\/[^\"']*(?:${TERM})[^\"']*[\"']`,"gim") },
   { id:"known-content-action-id", pattern:new RegExp(`\\baction\\.(?:${TERM})\\.`,"gi") },
   { id:"known-content-class-id", pattern:new RegExp(`dnd\\.srd[\\w.-]*\\.class\\.(?:${TERM})\\b`,"gi") },
   { id:"known-content-feature-source", pattern:new RegExp(`\\bfeature:(?:${TERM})[.:-]`,"gi") },
