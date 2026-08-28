@@ -10,39 +10,48 @@
 - control path: `.chatgpt-rerun/control.json`
 - architecture charter: `docs/rules/common-play-resolver-architecture-charter.md`
 - product plan: `docs/rules/resolver-execution-checklist-v2.md`
+- human current-work entrypoint: `docs/CURRENT.md`
 - checkpointed_at: `2026-08-28 Asia/Seoul`
 
 ## Durable checkpoint
 
-The owner explicitly authorized treating `리런 진행` as the same named-PR merge approval command as `Rerun 진행`, asked to clear the blocker, and authorized continuation. The Rerun README now records both forms for future agents.
+The Resolver convergence run remains authorized at sequence 2. PR #159 is already integrated and the canonical checklist records Resource/Economy at `PORTABLE`; Gate A-E and M0 evidence remain valid and must not be repeated without new affected-surface evidence.
 
-Mandatory preflight for the approved merge execution was completed in the required `README -> control -> STATE -> PLAN` order, followed by `CANONICAL_ROOT.md`, the architecture charter, checklist v2, current parent/child refs, PR #159 metadata, exact-head CI, and the current product diff. Already-validated Gate E, M0, obsolete candidate runs, and previously green workflow bodies were not repeated.
+Repository cleanup was completed without changing product source, tests, schemas, machine-readable rules/content, the architecture charter, checklist v2, or Rerun PLAN identity:
 
-## PR #159 — INTEGRATED
+- cleanup PR #169 exact head `68ab81fb2ade7b5b11800381f8d6cc6fd5d2c647` passed Contract validation, Persistence, Phase 11 Playable, and Phase 12 Connected Session;
+- PR #169 merged into `agent/resolver-foundation-convergence` as `70bc9d1a27db6f418d7485baadd15da104b58784`;
+- repository reading order is now `README.md -> docs/CURRENT.md -> docs/architecture/README.md -> docs/roadmap/CURRENT.md`;
+- historical `.agents` planning/checkpoint material is preserved losslessly under `docs/archive/agent-workspace-2026-08-28/`;
+- live `.agents/` contains only its routing README plus the two exact-path machine baselines required by structural gates;
+- superseded Resolver packets/checklist are under `docs/archive/rules/`;
+- old stacked Phase checkpoint PRs through Phase 12 and the parked Phase 14 mega-PR were closed without deleting branches, commits, comments, or history.
 
-PR #159 / `agent/m1-rulemodule-portable-activation` was approved and merged into `agent/resolver-foundation-convergence`.
+After cleanup, the only open product PR is #168, `rules: dispatch installed Common Play through production authority`.
 
-- validated child candidate: `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`;
-- exact-head product delta before merge: exactly seven portable-bridge files;
-- retained architecture review: no Fighter/Action-Surge named dispatch, no new transport, no second evaluator, no hidden fallback;
-- exact-head workflows all SUCCESS: M1 Resource/Economy, Contract validation, Rules Domain, UI, Persistence, Phase 11 Playable, Phase 12 Connected Session;
-- merge commit: `dfe9d4c9fa1483276f9edf40364d042f1b50f852`;
-- merge target was `agent/resolver-foundation-convergence`, never `main`.
+## PR #168 — current product candidate
 
-The canonical checklist now records Resource/Economy at `PORTABLE`, records the complete #159 evidence, and makes production/session generic dispatch the active next boundary.
+- child branch: `agent/m1-installed-common-play-production`;
+- exact observed child head: `5e8f75dd9c5bafafa2b23ffcac5c7ffd7deabd80`;
+- current parent after cleanup: `70bc9d1a27db6f418d7485baadd15da104b58784` before this Rerun checkpoint write;
+- current compare is diverged only because the parent gained the repository-cleanup lineage; the child-side delta remains exactly seven files:
+  - `.github/workflows/m1-common-play-resource-economy.yml`
+  - `src/app/fighterActionSurgeRuntimeAdapter.ts`
+  - `src/app/installedCommonPlayActionReference.ts`
+  - `src/app/installedCommonPlayRuntimeAdapter.ts`
+  - `src/app/offlineRuntimeAdapters.ts`
+  - `src/app/runtimeResolutionCommit.ts`
+  - `tests/ui/installedCommonPlayProductionRuntime.test.ts`
+- exact-head triggered workflows on `5e8f75dd...` are all SUCCESS: M1 Common Play Resource Economy, UI, Contract validation, Phase 11 Playable, and Phase 12 Connected Session.
 
-## Current unfinished point
-
-The portable data path is integrated, but installed Common Play mechanics are not yet proven to execute through the real production/session action path.
-
-Do not remove the named Fighter Action Surge production seam yet. It remains only a deterministic behavior oracle until the generic path proves end-to-end parity and arbitrary-ID invariance.
+The repository cleanup does not authorize deleting the named Fighter Action Surge seam or treating #168 as accepted without the checklist's production/parity evidence. It remains the behavior oracle until generic end-to-end parity and arbitrary-ID invariance are established.
 
 ## Next Exact Action
 
-1. Re-fetch the latest working parent before product work.
-2. Read the current production/session action-dispatch seam and the minimum related tests only.
-3. Create the smallest deterministic RED proving that an arbitrary installed portable Common Play Resource/Economy mechanic cannot yet execute through the real production/session path.
-4. Implement only the generic dispatch needed to connect installed portable mechanics to `commonPlayOperationRuntime` + the existing generic Resolver/authoritative transaction path.
-5. Prove Action Surge oracle parity and an arbitrary renamed/unknown mechanic before deleting any named Fighter execution.
-6. Keep the next implementation slice bounded; do not add a second evaluator, new transport, or named-content branch.
-7. Do not reopen Gate E/M0 and do not route product work to `main`.
+1. On the next product dispatch, perform the mandatory Rerun preflight and re-fetch the current parent and PR #168 head.
+2. Reuse the exact-head success evidence above if the child head is unchanged; do not rerun Gate A-E, M0, PR #159, or unrelated broad historical validation.
+3. Review only any delta newer than `5e8f75dd...` plus the seven-file production bridge surface.
+4. Because repository cleanup advanced the parent only in documentation/history, reconcile parent ancestry into #168 once if required for the real merge candidate; do not create a coordination-commit loop.
+5. Verify the resulting exact merge candidate as required, then complete the checklist's production/parity decision: arbitrary installed content must use the generic Resolver/authoritative transaction and remain invariant under content/definition ID rename.
+6. Remove named Fighter Action Surge execution only after that parity is proven.
+7. Do not route product work to `main`.
