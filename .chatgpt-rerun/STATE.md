@@ -8,82 +8,90 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T10:38:10+09:00`
+- checkpointed_at: `2026-08-28T10:47:17+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight for this dispatch was completed in the required order on `agent/resolver-foundation-convergence`:
+Mandatory preflight was completed in the required order on `agent/resolver-foundation-convergence`:
 
 1. `.chatgpt-rerun/README.md`
 2. `.chatgpt-rerun/control.json`
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain the routing/product-plan authorities. PLAN routing did not change.
+Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain the routing/product-plan authorities. PLAN routing did not change and was not rewritten.
+
+Because repeated watcher invocations advanced GitHub concurrently during this dispatch, the working branch and the bounded child branch were re-fetched repeatedly before making this checkpoint. Completed work was reused rather than repeated.
 
 ## Retained completed evidence
 
 Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`; validated candidate `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba` retains the previously recorded focused, Contract, Rules Domain, UI, Phase 11, Phase 12, and Windows evidence. Gate E validation was not repeated.
 
-M0 remains `DONE`. Inventory authority is `docs/rules/legacy-execution-inventory.md`; freeze authority is the composition root `src/app/offlineRuntimeAdapters.ts`, `.agents/LEGACY_EXECUTION_BASELINE.json`, `scripts/check-legacy-execution-boundary.mjs`, `tests/ui/legacyExecutionBoundary.test.mjs`, and `.github/workflows/legacy-execution-boundary.yml`. No canonical offline composition entry remains `UNCLEAR`.
+M0 remains `DONE`. Inventory authority is `docs/rules/legacy-execution-inventory.md`; freeze authority is `src/app/offlineRuntimeAdapters.ts`, `.agents/LEGACY_EXECUTION_BASELINE.json`, `scripts/check-legacy-execution-boundary.mjs`, `tests/ui/legacyExecutionBoundary.test.mjs`, and `.github/workflows/legacy-execution-boundary.yml`. No canonical offline composition entry remains `UNCLEAR`.
 
-Retained M0 closure/hardening evidence includes:
+Retained M0 evidence includes checklist transition `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118`, Legacy Execution Boundary run `33132952951`, and transitive-adapter hardening through exact head `0f22b912397f88d5fbbdc0043c62a0c68c615931` with run `33133249139`, job `98727324296`, all SUCCESS. Do not reopen M0 or repeat unchanged Gate E validation.
 
-- checklist transition `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118`, Legacy Execution Boundary run `33132952951`: SUCCESS;
-- transitive-adapter hardening through exact head `0f22b912397f88d5fbbdc0043c62a0c68c615931`, Legacy Execution Boundary run `33133249139`, job `98727324296`: SUCCESS;
-- later Rerun reconciliation continued M1 authorization without changing Gate E runtime behavior.
+## M1 first probe — Fighter Action Surge
 
-Do not reopen M0 or rerun unchanged Gate E validation.
+The first M1 / Probe S slice remains Fighter Action Surge, bounded by:
 
-## M1 first probe bounded — Fighter Action Surge
+`docs/rules/m1-action-surge-migration-packet.md`
 
-The smallest current action/resource/economy legacy probe selected from the inventory is Fighter Action Surge.
+Existing behavior oracle remains `tests/domain/fighterActionSurge.test.ts`, with legacy execution in `src/domain/fighterActionSurge.ts` and `src/app/fighterActionSurgeRuntimeAdapter.ts`.
 
-Existing golden oracle:
+The bounded conclusion remains that no new Resolver primitive or Gate F-M capability is justified. The named compiler already lowers the mechanic to generic resource spends plus `grant-extra-action { allowsMagicAction:false }`; the missing work is Common Play / RulesProfile / RuleModule wiring.
 
-- `tests/domain/fighterActionSurge.test.ts`;
-- legacy compiler/runtime: `src/domain/fighterActionSurge.ts`;
-- legacy app seam: `src/app/fighterActionSurgeRuntimeAdapter.ts`.
+## Concurrent M1 progress reconciled
 
-Observed golden semantics that must survive generic migration:
+During this dispatch the parent branch advanced from the previous M1 checkpoint to product/test commits before the watcher could checkpoint them. Current observed parent product candidate before this STATE write was:
 
-- two atomic resource spends: the normal Action Surge pool and the same-turn gate;
-- the normal Action remains available;
-- one extra Action credit is granted with `allowsMagicAction:false`;
-- a non-Magic action spends the restricted extra credit before the normal Action;
-- Magic Action cannot consume that restricted credit;
-- a second same-turn use rejects atomically;
-- out-of-turn use rejects;
-- turn start clears stale extra-action grants and recovers the turn gate.
+`40a10a0d87e70c73636e5a4d88669a81c91db3c0`
 
-The named domain compiler already lowers the effect to generic Resolver operations: two `spend-resource` operations plus `grant-extra-action { allowsMagicAction:false }`. This confirms the missing behavior is not an Action-Surge-specific resolver primitive.
+Observed parent changes leading to that candidate include:
 
-## Concrete Common Play parity gap
+- `f82a1eaf055538498bf85c46ad33c3b9784caebe` — adds a generic `RulesProfileLike.actionEconomy.buckets` registry with typed extra-action policy (`allowsMagicAction`, optional `activeTurnOnly`);
+- `cffafd0b725bd59046d4c2181039f70d6162a1fd` — adds `src/domain/commonPlayActionEconomyRuntime.ts`, lowering literal `resource.change` and registered `economy.modify` operations to existing generic Resolver operations without Fighter/Action-Surge identity branches;
+- `3940e068ab705f23fc1f9567a4e9756cb18d0a92` — adds persisted unknown-ID Common Play fixture `tests/fixtures/play-contract/action-resource-economy.json`;
+- `40a10a0d87e70c73636e5a4d88669a81c91db3c0` — drives the action/economy domain test from that persisted fixture.
 
-Current persisted Common Play v0.2 has `resource.change` and `economy.modify`, but `economy.modify` persists only `bucket + amount`. `RulesProfileLike` currently has no registered economy-bucket semantics, and the existing Common Play runtimes do not provide a generic arbitrary-entry-point lowering from `resource.change/economy.modify` to the Resolver's `spend-resource/gain-resource/grant-extra-action` operations.
+The focused domain test covers unknown external identity, ID/entry-point rename invariance, atomic rollback, explicit unregistered-bucket failure, active-turn policy, and state/economy parity against the existing Action Surge golden behavior. The named production adapter/compiler have not been deleted.
 
-The generic Resolver already supports `grant-extra-action` with `allowsMagicAction:boolean`, and `turnEconomy.ts` already enforces the restricted-credit spend behavior. Therefore the migration failure is currently classified as a **schema/evaluator/profile-semantics parity gap inside the existing Common Play economy primitive**, not evidence for activating Gate F-M and not justification for a named Action Surge branch.
+Exact parent evidence read rather than repeated:
 
-No new primitive or Gate F-M activation has been authorized or implemented.
+- Rules Domain run `33133833124` on exact head `40a10a0d87e70c73636e5a4d88669a81c91db3c0`: `SUCCESS`;
+- Legacy Execution Boundary run `33133833183` on the same head: `SUCCESS`.
 
-## Bounded implementation branch
+This proves the persisted Common Play IR/lowering slice is green. It does **not** prove M1 complete or make the generic path authoritative for production/session activation.
 
-Created from parent head `0f22b912397f88d5fbbdc0043c62a0c68c615931`:
+## Remaining RuleModule / production gap
+
+Repository inspection confirmed `src/app/ruleModulePackageImport.ts` still rejects non-empty `content[].mechanics` with `mechanics cannot be activated by the generic Catalog yet`. `InstalledCatalogEntryV1` also does not yet persist executable Common Play mechanics. Therefore the current persisted fixture is Common Play IR, not yet an end-to-end RuleModule/content JSON -> validation/normalization -> installed portable content -> production/session execution route.
+
+M1 is not complete and Action Surge legacy deletion is not authorized yet.
+
+## Child-branch reconciliation required
+
+The bounded child branch created for this slice has also advanced concurrently:
 
 `agent/m1-action-surge-common-play`
 
-No product/runtime/test commit has yet been added to that child branch. It exists to isolate the first M1 red->green parity slice from concurrent Rerun/M0 coordination commits on the parent.
+Latest observed child head before this checkpoint:
+
+`343feac90f9129d0a3425bc38cc903a7eb9da6d8` — `refactor: keep one Common Play operation lowerer`.
+
+The parent and child therefore both contain M1 work. Do not blindly continue editing either side or duplicate already-landed lowering/tests. The next execution must first compare the parent and child product diffs, retain the smallest non-duplicated generic implementation, and preserve already-green evidence where the resulting product files are unchanged.
 
 ## Next Exact Action
 
-On the next continuation of this sequence:
+On the next continuation of sequence `2`:
 
-1. perform mandatory preflight in exact order: README -> control -> STATE -> PLAN;
-2. reconcile the live parent branch and `agent/m1-action-surge-common-play`; do not repeat the Action Surge/Common Play analysis above while the referenced files are unchanged;
-3. on the child branch, add the first deterministic red RuleModule/Common Play fixture + focused domain test for an unknown external action that spends two resources and requests a profile-registered restricted extra-action economy bucket;
-4. prove the red is specifically the missing generic Common Play economy lowering/profile semantics, not a named-content condition;
-5. implement the smallest reusable generic lowering using the existing `resource.change`, `economy.modify`, and Resolver `grant-extra-action` semantics; do not add an Action Surge ID/name branch;
-6. prove arbitrary external ID and ID/name-only rename invariance plus the relevant Action Surge golden state/economy parity before deleting any legacy code;
-7. only after that generic path is authoritative and regressions are green should the named Action Surge compiler/app execution seam be removed in the same migration slice;
-8. keep Gate F-M dormant unless this bounded red proves a genuinely new reusable capability beyond the existing Common Play economy primitive;
-9. do not route product work to `main`.
+1. perform mandatory preflight README -> control -> STATE -> PLAN;
+2. re-fetch both `agent/resolver-foundation-convergence` and `agent/m1-action-surge-common-play` because concurrent watcher activity has been observed;
+3. compare the parent M1 candidate with child head `343feac90f9129d0a3425bc38cc903a7eb9da6d8`; do not repeat the already-green Common Play action/economy analysis or tests if the same product files/content are retained;
+4. choose one canonical minimal generic lowering implementation and eliminate duplicate/parallel implementations before any further product expansion;
+5. capture the next deterministic red at the actual remaining boundary: a RuleModule/content JSON entry carrying supported Common Play mechanics currently cannot survive `ruleModulePackageImport` / installed-content persistence into execution;
+6. implement the smallest data-only RuleModule -> validated/normalized Common Play persistence/lookup bridge needed for this probe, without arbitrary executable code, content-name branches, or a second evaluator;
+7. route that installed definition through the same generic lowering/Resolver path and prove external ID plus ID/name-only rename invariance and relevant authority/lifetime parity;
+8. only after the generic production/session activation path is authoritative and focused regressions are green may the named Fighter Action Surge execution seam be removed and the M0 baseline shrink;
+9. keep Gate F-M dormant unless a new deterministic failure proves a genuinely new reusable capability beyond existing Common Play semantics;
+10. do not route product work to `main`.
