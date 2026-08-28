@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
-  "sequence": 2,
+  "sequence": 3,
   "status": "continue",
-  "reason": "Repository cleanup PR #169 was verified on exact head 68ab81fb2ade7b5b11800381f8d6cc6fd5d2c647 with Contract validation, Persistence, Phase 11 Playable, and Phase 12 Connected Session all SUCCESS, then merged into agent/resolver-foundation-convergence at 70bc9d1a27db6f418d7485baadd15da104b58784. Historical agent/rules documents are archived, old stacked Phase PRs are closed without deleting history, and docs/CURRENT.md is now the human current-work entrypoint. The product plan, run identity, and active boundary are unchanged. PR #168 remains the only open product PR at observed head 5e8f75dd9c5bafafa2b23ffcac5c7ffd7deabd80; its triggered M1/UI/Contract/Phase11/Phase12 workflows are SUCCESS and its child-side delta remains the seven-file production bridge. Continue from #168 after mandatory preflight, reconcile the cleanup-only parent ancestry once if required, reuse still-valid evidence, prove generic production/parity and arbitrary-ID invariance before removing named Fighter Action Surge execution, and never route product work to main.",
+  "reason": "Owner requested a fresh Rerun dispatch. Control remains owned by agent/resolver-foundation-convergence, with work/v1-composite as the product integration target and main excluded from product routing. PR #168 is the current product candidate at observed head da4ffecd2de1b7f95d324e7170312cdd8d512797. Contract validation, M1 Common Play Resource Economy, Rules Domain, and UI are SUCCESS on that exact head; Phase 11 Playable and Phase 12 Connected Session were still IN PROGRESS at dispatch time. Resume after mandatory preflight, reuse still-valid evidence, verify the exact current head and remaining workflows, then complete the canonical Resource/Economy PRODUCTION/parity decision without deleting the named Fighter Action Surge oracle before generic-path parity is proven. This continue authorization is not explicit merge approval for PR #168.",
   "task_id": "common-play-foundation-convergence",
   "updated_at": "2026-08-28"
 }
