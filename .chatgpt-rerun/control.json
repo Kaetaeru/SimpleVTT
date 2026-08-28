@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
-  "sequence": 3,
-  "status": "needs_user",
-  "reason": "Sequence 3 preflight and PR #168 verification are complete. The exact candidate head da4ffecd2de1b7f95d324e7170312cdd8d512797 remains open, mergeable, and non-draft. Contract validation, M1 Common Play Resource Economy, Rules Domain, UI, Phase 11 Playable, and Phase 12 Connected Session are all SUCCESS on that exact head and were reused rather than rerun. Focused review confirms arbitrary installed data-only Common Play mechanics use the generic Resolver plus shared authoritative transaction with resource writeback, turn/session/history projection, Undo, and no Action Surge identity/name dispatch. This is sufficient as the Resource/Economy PRODUCTION integration candidate but not MIGRATED; the named Fighter Action Surge adapter remains the behavior oracle until built-in generic-path parity is proven. No further code or validation work is justified before integration. Wait solely for explicit owner merge approval of PR #168. Under the repository Rerun protocol, while this sole waiting condition remains current, `Rerun 진행` or `리런 진행` authorizes the normal preflight and merge of PR #168 only. Do not route product work to main.",
+  "sequence": 4,
+  "status": "continue",
+  "reason": "PR #168 has been merged into agent/resolver-foundation-convergence at c372c09353de58dfcc12ad3adbe6fd118fe28106, satisfying the sole sequence-3 waiting condition. The prior needs_user state was stale repository-side coordination after the merge. Resume on sequence 4 after mandatory preflight. Reconcile the canonical current-work/product-plan text to record Resource/Economy PRODUCTION, then continue the canonical built-in Fighter Action Surge generic-path parity boundary toward MIGRATED. Reuse still-valid Gate A-E, M0, PR #159, and PR #168 evidence; do not repeat unrelated validation. There is no current merge-approval, user-decision, or technical blocker recorded for this run. Do not route product work to main; product integration target remains work/v1-composite.",
   "task_id": "common-play-foundation-convergence",
   "updated_at": "2026-08-28"
 }
