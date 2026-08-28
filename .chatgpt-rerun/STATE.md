@@ -8,11 +8,13 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T11:34:42+09:00`
+- checkpointed_at: `2026-08-28T11:34+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight was completed in the required README -> control -> STATE -> PLAN order. Concurrent watcher activity was reconciled against the live Rerun parent before writes. Run identity remains sequence `2`, task `common-play-foundation-convergence`. PLAN routing did not change. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain authoritative. Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
+Mandatory preflight was completed in the required README -> control -> STATE -> PLAN order on `agent/resolver-foundation-convergence`. Run identity remains sequence `2`, task `common-play-foundation-convergence`. PLAN routing did not change. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` were re-read for current routing. Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
+
+The live Rerun parent was re-fetched immediately before coordination writes and remained at `b98d6950c88edc4d71badb69d6a518e7113c10bb` before this checkpoint write.
 
 ## Retained completed evidence
 
@@ -24,11 +26,11 @@ Mandatory preflight was completed in the required README -> control -> STATE -> 
 
 PR #159 / `agent/m1-rulemodule-portable-activation` remains the sole authoritative portable-mechanics bridge. Superseded duplicate bridge PRs must not be revived.
 
-Direct Git ref remains stable at exact candidate:
+Direct child ref remains stable at exact candidate:
 
 `60c5fbf79dfbf6007885edcac5fd2eb3f9153712`
 
-PR #159 remains open and unmerged with exactly seven changed files:
+No product file changed during this continuation. The retained bounded PR diff remains seven files:
 
 - `schemas/installed-content.schema.json`;
 - `src/app/installedContentContracts.ts`;
@@ -38,11 +40,11 @@ PR #159 remains open and unmerged with exactly seven changed files:
 - `tests/ui/installedContentPersistence.test.ts`;
 - `tests/ui/ruleModulePackageImport.test.ts`.
 
-The diff remains the bounded portable data/validation bridge recorded previously: schema/contracts preserve data-only Common Play mechanics; RuleModule import, persistence/rehydration, session-installed writes, and runtime compilation share the manual-only executable validator layered on the existing generic operation parser; regression coverage rejects unsupported/non-manual mechanics. No named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback is introduced. The named Fighter Action Surge production seam remains until installed portable mechanics execute end-to-end through the generic production/session path. Gate F-M remain dormant.
+The candidate remains the portable data/validation bridge recorded previously: data-only Common Play mechanics are preserved through import, persistence/rehydration, installed writes, and runtime compilation using the existing generic operation parser and shared manual-only executable validation. No named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback was added. The named Fighter Action Surge production seam remains until installed portable mechanics execute end-to-end through the generic production/session path. Gate F-M remain dormant.
 
 ## GitHub Actions queue blocker
 
-The seven required exact-head pull-request workflows for `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` were read again without rerunning them. All remain `queued`; representative M1 and Contract jobs are also queued with no logs, so there is still no product failure evidence to fix.
+The seven required exact-head pull-request workflows for `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` were read again without rerunning them. All remain `queued`; there is still no product failure evidence to fix.
 
 Exact-head runs:
 
@@ -54,9 +56,9 @@ Exact-head runs:
 - UI `33136035774`: queued;
 - Persistence `33136035784`: queued.
 
-Fresh repository Actions inspection at this checkpoint found **120 queued workflow runs on `agent/m1-rulemodule-portable-activation`**, down from the prior 126 but still establishing queue congestion rather than an observed product failure. No product code was changed, no existing workflow was rerun, and no new workflow was created.
+Fresh repository Actions inspection found **115 queued workflow runs on `agent/m1-rulemodule-portable-activation`**, down from 120 at the prior checkpoint but still establishing queue congestion rather than an observed product failure. No product code was changed, no existing workflow was rerun, and no new workflow was created.
 
-The available GitHub connector does not expose an authorized cancel action for clearing superseded queued runs. Adding more runs or changing product code without failure evidence would only add noise, so this sequence remains blocked on the existing GitHub Actions queue.
+The available GitHub connector does not expose an authorized cancel action for clearing superseded queued runs. Adding runs or changing product code without failure evidence would add noise, so sequence `2` remains blocked on the existing GitHub Actions queue.
 
 ## Next Exact Action
 
@@ -66,7 +68,7 @@ On the next owner continuation of sequence `2`:
 2. resolve PR #159 child tip from the direct Git ref;
 3. read the existing exact-head workflow runs only — do not manually rerun queued or completed evidence;
 4. if the child tip advanced, inspect only the bounded delta and use the new exact tip as the candidate;
-5. if required runs are still queued and branch queue congestion persists, keep the run blocked rather than creating more workflow runs or coordination churn;
+5. if required runs are still queued and branch queue congestion persists, keep the run blocked rather than creating more workflow runs or changing product code;
 6. if any required run fails, inspect only that failure and make the smallest parity fix;
 7. if all required runs become green, confirm the diff remains the bounded seven-file portable data/validation bridge, then reconcile coordination-only ancestry and publish `control.json` as `needs_user` solely for PR #159 merge approval;
 8. do not begin generic production/session action dispatch before #159 is integrated;
