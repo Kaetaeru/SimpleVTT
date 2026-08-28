@@ -18,12 +18,20 @@ type CommonPlayEconomyModify={
   amount:CommonPlayExpression;
 };
 
+type CommonPlayPayment={
+  kind:string;
+  resource?:string;
+  amount?:CommonPlayExpression;
+  consumeAt?:string;
+};
+
 export type CommonPlayEntryPointOperation=CommonPlayResourceChange|CommonPlayEconomyModify;
 
 export interface CommonPlayOperationDefinition {
   $schema?:string;
   schemaVersion:string;
   id:string;
+  payments?:CommonPlayPayment[];
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
@@ -37,7 +45,7 @@ export interface CommonPlayOperationExecutionInput {
   entryPointId:string;
 }
 
-function literalInteger(expression:CommonPlayExpression,label:string) {
+function literalInteger(expression:CommonPlayExpression|undefined,label:string) {
   if (!expression||typeof expression!=="object"||!("value" in expression)) {
     throw new DomainEvaluationError(`${label} requires a literal expression`);
   }
@@ -51,6 +59,27 @@ function literalInteger(expression:CommonPlayExpression,label:string) {
 function actorTarget(target:string|undefined,actorId:string,label:string) {
   if (target===undefined||target==="actor"||target==="self"||target===actorId) return actorId;
   throw new DomainEvaluationError(`${label} supports the acting actor only in this runtime slice`);
+}
+
+function compilePayments(definition:CommonPlayOperationDefinition,input:CommonPlayOperationExecutionInput):ResolutionOperation[] {
+  return (definition.payments??[]).map((payment,index)=>{
+    if (payment.kind!=="resource") {
+      throw new DomainEvaluationError(`unsupported Common Play payment kind: ${payment.kind}`);
+    }
+    if (payment.consumeAt!=="commit") {
+      throw new DomainEvaluationError(`unsupported Common Play resource payment consumeAt: ${payment.consumeAt??"<missing>"}`);
+    }
+    if (!payment.resource) throw new DomainEvaluationError("Common Play resource payment requires a resource id");
+    const amount=literalInteger(payment.amount,`resource payment ${index+1}`);
+    if (amount<0) throw new DomainEvaluationError(`resource payment ${index+1} requires a positive amount`);
+    return {
+      id:`${input.resolutionId}:payment:${index+1}`,
+      kind:"spend-resource" as const,
+      actorId:input.actorId,
+      resourceId:payment.resource,
+      amount,
+    };
+  });
 }
 
 export function compileCommonPlayEntryPointOperations(
@@ -72,7 +101,7 @@ export function compileCommonPlayEntryPointOperations(
   }
   if (!entryPoint.operations.length) throw new DomainEvaluationError(`Common Play entry point has no operations: ${entryPoint.id}`);
 
-  const operations:ResolutionOperation[]=[];
+  const operations:ResolutionOperation[]=[...compilePayments(definition,input)];
   entryPoint.operations.forEach((operation,index)=>{
     const operationId=`${input.resolutionId}:operation:${index+1}`;
     if (operation.kind==="resource.change") {
