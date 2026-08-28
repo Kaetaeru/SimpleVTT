@@ -8,7 +8,7 @@ import {
   setInstalledContentStoreForTests,
 } from "../../src/app/installedContentRuntimeAdapter";
 
-const portableMechanic={
+const commonPlayDefinition={
   schemaVersion:"0.2-draft",
   id:"external.portable.extra-action",
   payments:[{
@@ -28,6 +28,7 @@ const portableMechanic={
   }],
 };
 
+const portableMechanic={kind:"common-play",config:commonPlayDefinition};
 type PersistedPortableEntry={contentId:string;mechanics?:unknown[]};
 
 function packagePayload() {
