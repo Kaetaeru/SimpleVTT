@@ -216,7 +216,7 @@ Track each family independently through `SPEC -> KERNEL -> PORTABLE -> PRODUCTIO
 
 Initial families:
 
-- [ ] resource / action economy;
+- [x] resource / action economy — `PORTABLE`; production dispatch is the active next boundary;
 - [ ] tests / rolls / outcomes;
 - [ ] damage / healing / HP;
 - [ ] targeting / selectors / allocation;
@@ -231,7 +231,7 @@ Do not migrate by class/spell/feat list order. Migrate the smallest coherent mec
 
 ---
 
-## P3 — Current active slice: Resource / Economy portable bridge
+## P3 — Current active slice: Resource / Economy production convergence
 
 Named oracle: Fighter Action Surge only because it provides a deterministic existing behavior sample. `Action Surge` is not a primitive and must never become a dispatch key.
 
@@ -242,48 +242,52 @@ Retained generic harness evidence before PR #159:
 - restricted extra Action policy is RulesProfile-owned;
 - arbitrary-ID rename invariance is covered.
 
-### PR #159 portable bridge
+### PR #159 portable bridge — INTEGRATED
 
 PR: `#159`  
-Branch: `agent/m1-rulemodule-portable-activation`
+Branch: `agent/m1-rulemodule-portable-activation`  
+Validated candidate: `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`  
+Merge commit: `dfe9d4c9fa1483276f9edf40364d042f1b50f852`
 
 Required outcome:
 
-- [ ] registered data-only Common Play mechanics survive RuleModule preview/activation;
-- [ ] installed-content persistence/rehydration preserves them;
-- [ ] required session content / peer install preserves them;
-- [ ] one shared validator/parser boundary is used;
-- [ ] unsupported/custom mechanics remain explicit failures;
-- [ ] no named Fighter branch, second evaluator, new transport, or hidden fallback is introduced.
+- [x] registered data-only Common Play mechanics survive RuleModule preview/activation;
+- [x] installed-content persistence/rehydration preserves them;
+- [x] required session content / peer install preserves them;
+- [x] one shared validator/parser boundary is used;
+- [x] unsupported/custom mechanics remain explicit failures;
+- [x] no named Fighter branch, second evaluator, new transport, or hidden fallback is introduced.
 
-### Current observed failure evidence from candidate `60c5fbf79dfbf6007885edcac5fd2eb3f9153712`
+Historical red/fix evidence:
 
-The old queue blocker is obsolete. All seven runs completed.
+- old candidate `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` passed the focused M1 behavior 4/4 before failing TypeScript because parsed `entryPoints[].invocation` widened from its literal union to `string`;
+- Persistence exposed an unrelated stale hard-coded builtin catalog total `501 !== 496`;
+- child contextual typing fixed only the invocation literal typing;
+- parent persistence baseline was corrected independently to assert the intended builtin-only invariant instead of a stale count.
 
-- Contract validation: SUCCESS.
-- M1 focused resource/economy harness: **4/4 PASS**, then TypeScript compilation failed because parsed `entryPoints[].invocation` widened from its literal union to `string` in `commonPlayOperationRuntime.ts`.
-- Persistence application contract: **79/80 PASS**; the single failure was the unrelated stale hard-coded builtin catalog total `501 !== 496` in `installedContentRuntimeAdapter.test.ts`.
-- Other broad workflow failures reached shared typecheck/build gates and are consistent with the same TypeScript compile failure unless new exact-head evidence proves otherwise.
+Exact-head acceptance for `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`:
 
-Corrections already applied under the current owner continuation:
-
-- [x] child branch TypeScript contextual typing fix for parsed entry points, without new runtime semantics;
-- [x] parent branch persistence baseline test corrected to assert the intended invariant — initial catalog contains only canonical builtin content — rather than hard-code a stale total count;
-- [x] PR #159 remains bounded to its portable bridge concern; the unrelated persistence baseline correction lives on the parent branch.
+- [x] M1 Common Play Resource Economy `33149435346` — focused harness + TypeScript typecheck SUCCESS;
+- [x] Contract validation `33149435378` — SUCCESS;
+- [x] Rules Domain `33149435342` — SUCCESS;
+- [x] UI `33149435365` — SUCCESS including typecheck/build;
+- [x] Persistence `33149435419` — SUCCESS including persistence contracts, production build, and Tauri storage;
+- [x] Phase 11 Playable `33149435390` — SUCCESS including Windows playable artifact;
+- [x] Phase 12 Connected Session `33149435367` — SUCCESS including connected protocol, Tauri transport/persistence, and Windows connected-session artifact.
 
 ### PR #159 completion gate
 
-- [ ] resolve the latest child SHA after the typing fix;
-- [ ] use new exact-head workflow evidence, not the obsolete `60c5...` run conclusions;
-- [ ] verify the focused M1 harness still passes;
-- [ ] verify typecheck/build passes on affected workflows;
-- [ ] verify persistence baseline no longer blocks the merge candidate once current parent ancestry is included;
-- [ ] confirm PR product diff remains bounded and contains no named-content leakage;
-- [ ] reconcile parent/child ancestry only as needed for current base changes;
-- [ ] obtain owner merge approval when Rerun policy requires it;
-- [ ] merge #159 into `agent/resolver-foundation-convergence`, not `main`.
+- [x] latest child SHA resolved after the typing fix;
+- [x] exact-head evidence used instead of obsolete `60c5...` conclusions;
+- [x] focused M1 harness passes;
+- [x] typecheck/build passes on affected workflows;
+- [x] persistence baseline no longer blocks the reconciled candidate;
+- [x] product diff remained bounded to seven files and contained no named-content leakage;
+- [x] parent/child ancestry reconciled only as needed for product verification;
+- [x] owner merge approval obtained through the Rerun continuation command;
+- [x] PR #159 merged into `agent/resolver-foundation-convergence`, never `main`.
 
-### Immediately after #159 integration
+### Active next boundary after #159 integration
 
 - [ ] create deterministic RED for installed portable mechanics -> actual production/session action dispatch;
 - [ ] route that dispatch through `commonPlayOperationRuntime` + generic Resolver;
@@ -291,7 +295,7 @@ Corrections already applied under the current owner continuation:
 - [ ] prove arbitrary unknown content with the same mechanics executes identically;
 - [ ] only then delete/bypass Fighter Action Surge named production execution;
 - [ ] shrink Legacy Execution Boundary/inventory;
-- [ ] mark the resource/economy family at the correct maturity level.
+- [ ] advance the resource/economy family beyond `PORTABLE` only with corresponding evidence.
 
 ---
 
@@ -537,16 +541,3 @@ Stop and return to architecture review if:
 A future agent must not silently replace the charter/checklist philosophy with a preferred alternative. If it believes the architecture is wrong, it must identify the concrete contradiction/failure and surface the decision before changing direction.
 
 ---
-
-## 6. Current next action
-
-1. Treat the old Actions queue blocker as obsolete.
-2. Resolve the current PR #159 child SHA after the TypeScript fix.
-3. Reconcile the child with the current parent only as needed to include the independent persistence-baseline correction and planning ancestry.
-4. Use new exact-head CI evidence; do not rerun or cite stale `60c5...` failures as current evidence.
-5. Fix only newly observed failures attributable to the bounded bridge; classify unrelated red separately.
-6. Once #159 is verified, follow Rerun merge-approval policy and integrate it into `agent/resolver-foundation-convergence`.
-7. Immediately proceed to the production/session portable-action dispatch RED; do not delete Action Surge named execution before end-to-end parity.
-8. After the resource/economy family reaches production authority and migration parity, continue by capability family, not by named-content list.
-9. Before Gate N, explicitly resolve every F-M coverage disposition.
-10. Never route this work to `main`.
