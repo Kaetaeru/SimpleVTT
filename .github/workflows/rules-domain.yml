@@ -69,6 +69,7 @@ jobs:
           tests/domain/effectTurnActivity.test.ts
           tests/domain/resolutionAtomic.test.ts
           tests/domain/commonPlayReactionRuntime.test.ts
+          tests/domain/commonPlayActionEconomyRuntime.test.ts
           tests/domain/commonPlaySaveDamageRuntime.test.ts
           tests/domain/commonPlayEffectRuntime.test.ts
           tests/domain/commonPlayZoneRuntime.test.ts
