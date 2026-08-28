@@ -4,7 +4,7 @@ Status: **NORMATIVE OWNER INTENT — DO NOT REINTERPRET DURING EXECUTION**
 Working program: Common Play / Rules Resolver convergence  
 Integration target: `work/v1-composite`
 
-This document records the architectural intent that must survive agent, chat, and implementation handoffs. It is not a duplicate execution checklist. `docs/rules/resolver-execution-checklist.md` remains the detailed queue, evidence ledger, gate checklist, and Definition of Done. This charter defines what that checklist means and what it is trying to accomplish.
+This document records the architectural intent that must survive agent, chat, and implementation handoffs. It is not a duplicate execution checklist. `docs/rules/resolver-execution-checklist-v2.md` is the active product queue, evidence router, gate checklist, and Definition of Done. The older `docs/rules/resolver-execution-checklist.md` is retained only for historical detail/evidence where v2 has not restated it. This charter defines the intent that the active checklist must preserve.
 
 If an older handoff, packet, checklist sentence, issue, PR, or implementation comment can be read in a way that conflicts with this charter, **do not invent a new philosophy and do not silently follow the conflicting reading**. Preserve the owner intent here, reconcile current GitHub evidence, and repair the stale planning text before proceeding.
 
@@ -256,7 +256,7 @@ If changing only the external IDs/names changes mechanical semantics, Gate N fai
 Before changing architecture or choosing the next migration:
 
 1. read this charter;
-2. read `docs/rules/resolver-execution-checklist.md`;
+2. read `docs/rules/resolver-execution-checklist-v2.md`;
 3. reconcile current GitHub/Rerun evidence;
 4. distinguish capability maturity from expressive coverage;
 5. preserve already-proven evidence instead of redesigning from preference;
