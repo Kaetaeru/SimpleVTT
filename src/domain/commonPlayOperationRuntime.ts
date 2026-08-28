@@ -46,7 +46,7 @@ export interface CommonPlayOperationExecutionInput {
 }
 
 type Obj=Record<string,unknown>;
-const DEFINITION_KEYS=new Set(["schemaVersion","id","payments","entryPoints"]);
+const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
 const PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
 const ENTRY_POINT_KEYS=new Set(["id","invocation","operations"]);
 const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
