@@ -1,3 +1,4 @@
+import { parseCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import {
   INSTALLED_CONTENT_SCHEMA_ID,
   INSTALLED_CONTENT_SCHEMA_VERSION,
@@ -37,6 +38,13 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   const categories=["class","subclass","species","background","feat","spell","item","condition","combatant","option"];
   if (!categories.includes(String(value.category))) throw new Error(`installed content category is invalid: ${String(value.category)}`);
   if (!Array.isArray(value.relationships) || !Array.isArray(value.capabilities)) throw new Error("installed content collections are invalid");
+  if(value.mechanics!==undefined) {
+    if(!Array.isArray(value.mechanics)) throw new Error("installed content mechanics must be an array");
+    value.mechanics.forEach((mechanic,index)=>{
+      if(!isObject(mechanic)||mechanic.kind!=="common-play") throw new Error(`installed content mechanic ${index} is unsupported`);
+      parseCommonPlayOperationDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+    });
+  }
   if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);
 }
 
@@ -108,9 +116,9 @@ export interface InstalledContentHydration {
   changed:boolean;
 }
 
-export type InstalledContentInstallResult =
-  | { status:"committed"; hydration:InstalledContentHydration }
-  | { status:"conflict"; error:string; qualifiedId:string };
+export type InstalledContentInstallResult=
+  | {status:"committed";hydration:InstalledContentHydration}
+  | {status:"conflict";error:string;qualifiedId:string};
 
 export class InstalledContentCorruptError extends Error {}
 
