@@ -48,9 +48,10 @@ The guard is deliberately not a repository-wide ID ban or an exhaustive semantic
 
 ## LEGACY_EXECUTION — named gameplay families
 
+Fighter Action Surge is no longer part of this legacy ledger. PR #171 (`8c9978a8d3a30bf08ab492cc8d805c2d77d63094`, merged as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f`) proved generic Common Play production parity, deleted `src/app/fighterActionSurgeRuntimeAdapter.ts`, and removed its baseline entry. The canonical migration evidence is recorded in `resolver-execution-checklist-v2.md`.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
-| `fighterActionSurgeRuntimeAdapter.ts` | Fighter Action Surge; resource + action economy | Fighter Action Surge domain/build coverage | actor resource + turn economy | `resource.change` + `economy.modify` |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |
 | `druidWildShapeRuntimeAdapter.ts` | Wild Shape; resource + form state | `test:druid-wild-shape` | resource/economy, form/temp-HP lifetime | first attempt existing operations; activate form gate only on deterministic failure |
 | `monkFocusRuntimeAdapter.ts`, `monkOpenHandWholenessRuntimeAdapter.ts`, `monkOpenHandFleetStepRuntimeAdapter.ts`, `monkOpenHandQuiveringPalmRuntimeAdapter.ts` | Focus/Open Hand; resource, healing, movement, delayed mark | named Monk/Open Hand scripts in `package.json` | turn economy/resources; persistent target state | resource/economy/healing/movement/effect; later gate only from concrete failure |
