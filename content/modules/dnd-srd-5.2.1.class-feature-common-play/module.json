@@ -1,0 +1,74 @@
+{
+  "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+  "schemaVersion": "0.1-draft",
+  "moduleId": "dnd-srd-5.2.1.class-feature-common-play",
+  "moduleVersion": "0.1-draft",
+  "rulesProfile": { "id": "dnd.srd-5.2.1", "version": "0.1-draft" },
+  "defaultLocale": "ko-KR",
+  "source": {
+    "document": "System Reference Document",
+    "version": "5.2.1",
+    "license": "CC-BY-4.0",
+    "srdDerived": true
+  },
+  "dependencies": [
+    { "moduleId": "dnd-srd-5.2.1.classes", "version": "0.1-draft" }
+  ],
+  "conflicts": [],
+  "capabilities": ["dnd.economy.action-bonus-reaction.v1", "dnd.rest.short-long.v1"],
+  "extensionPoints": [],
+  "content": [
+    {
+      "id": "action.fighter.action-surge",
+      "category": "option",
+      "presentation": {
+        "originalName": "Action Surge",
+        "defaultLocale": "ko-KR",
+        "locales": {
+          "ko-KR": {
+            "name": "액션 서지",
+            "summary": "이번 턴에 Magic Action이 아닌 추가 행동 1회를 얻는다."
+          }
+        }
+      },
+      "tags": ["class-feature", "fighter", "common-play", "srd-5.2.1"],
+      "mechanics": [
+        {
+          "kind": "common-play",
+          "config": {
+            "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+            "schemaVersion": "0.2-draft",
+            "id": "feature:fighter.action-surge",
+            "payments": [
+              {
+                "kind": "resource",
+                "resource": "resource:dnd.srd521.class.fighter:action-surge",
+                "amount": { "value": 1 },
+                "consumeAt": "commit"
+              },
+              {
+                "kind": "resource",
+                "resource": "resource:dnd.srd521.class.fighter:action-surge-turn",
+                "amount": { "value": 1 },
+                "consumeAt": "commit"
+              }
+            ],
+            "entryPoints": [
+              {
+                "id": "activate",
+                "invocation": "manual",
+                "operations": [
+                  {
+                    "kind": "economy.modify",
+                    "bucket": "action.extra.non-magic",
+                    "amount": { "value": 1 }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
