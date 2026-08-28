@@ -1,0 +1,31 @@
+name: Execution Composition Boundary
+
+on:
+  pull_request:
+    paths:
+      - "src/app/offlineRuntimeAdapters.ts"
+      - ".agents/EXECUTION_COMPOSITION_BASELINE.json"
+      - "scripts/check-execution-composition-boundary.mjs"
+      - "docs/rules/legacy-execution-inventory.md"
+      - ".github/workflows/execution-composition-boundary.yml"
+  push:
+    branches:
+      - work/v1-composite
+      - agent/resolver-foundation-convergence
+    paths:
+      - "src/app/offlineRuntimeAdapters.ts"
+      - ".agents/EXECUTION_COMPOSITION_BASELINE.json"
+      - "scripts/check-execution-composition-boundary.mjs"
+      - "docs/rules/legacy-execution-inventory.md"
+      - ".github/workflows/execution-composition-boundary.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check execution composition boundary
+        run: node scripts/check-execution-composition-boundary.mjs
