@@ -128,6 +128,28 @@ test("registered Common Play mechanics persist, rehydrate, and survive installed
   assert.deepEqual(peerInstalled?.mechanics,[mechanic]);
 });
 
+test("portable Common Play resource targets are rejected before unsupported mechanics can be persisted", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic() as unknown as {
+    config:{entryPoints:Array<{operations:Array<Record<string,unknown>>}>};
+  };
+  mechanic.config.entryPoints[0].operations=[{
+    kind:"resource.change",
+    resource:"resource.external.primary",
+    amount:{value:-1},
+    target:"combatant.someone-else",
+  }];
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /target must be actor or self/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
 test("unsupported generic-catalog member data blocks package import instead of silently dropping mechanics", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
