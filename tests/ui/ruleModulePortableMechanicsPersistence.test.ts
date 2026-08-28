@@ -5,7 +5,10 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import {
   getInstalledContentPersistenceStateForTests,
+  installSessionInstalledContent,
+  requiredSessionInstalledContent,
   setInstalledContentStoreForTests,
+  snapshotSessionInstalledContent,
 } from "../../src/app/installedContentRuntimeAdapter";
 
 const commonPlayDefinition={
@@ -55,19 +58,37 @@ function persistedEntry(adapter:MockAdapter) {
     .find((entry)=>entry.contentId==="option.portable-action");
 }
 
-test("supported Common Play mechanics survive RuleModule preview, install, and hydration unchanged", async () => {
+async function installedWriter() {
   const store=new MemoryInstalledContentStore();
   const writer=new MockAdapter();
   setInstalledContentStoreForTests(writer,store);
-
   const preview=await writer.previewContentImport(packagePayload());
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-
   await writer.activateContentImport();
+  return {writer,store};
+}
+
+test("supported Common Play mechanics survive RuleModule preview, install, and hydration unchanged", async () => {
+  const {writer,store}=await installedWriter();
   assert.deepEqual(persistedEntry(writer)?.mechanics,[portableMechanic]);
 
   const reader=new MockAdapter();
   setInstalledContentStoreForTests(reader,store);
   await reader.getSnapshot();
   assert.deepEqual(persistedEntry(reader)?.mechanics,[portableMechanic]);
+});
+
+test("installed portable mechanics use the existing whole-entry session synchronization path", async () => {
+  const {writer}=await installedWriter();
+  const peer=new MockAdapter();
+  setInstalledContentStoreForTests(peer,new MemoryInstalledContentStore());
+  await peer.getSnapshot();
+
+  const required=await requiredSessionInstalledContent(writer,await snapshotSessionInstalledContent(peer));
+  assert.equal(required.length,1);
+  assert.deepEqual(required[0].mechanics,[portableMechanic]);
+
+  await installSessionInstalledContent(peer,required);
+  assert.deepEqual(persistedEntry(peer)?.mechanics,[portableMechanic]);
+  assert.deepEqual(await requiredSessionInstalledContent(writer,await snapshotSessionInstalledContent(peer)),[]);
 });
