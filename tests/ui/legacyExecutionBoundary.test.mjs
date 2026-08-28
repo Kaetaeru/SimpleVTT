@@ -22,7 +22,7 @@ function fixture(entries, imports) {
 }
 
 const legacy = { module: "./barbarianRageRuntimeAdapter", classification: "LEGACY_EXECUTION" };
-const generic = { module: "./productionPlayRuntimeAdapter", classification: "GENERIC_ENGINE" };
+const generic = { module: "./phase09RealResolutionAdapter", classification: "GENERIC_ENGINE" };
 
 test("classified legacy and generic composition is accepted", () => {
   const root = fixture([legacy, generic], [legacy.module, generic.module]);

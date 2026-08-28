@@ -2,105 +2,120 @@
 
 Status: **M0 inventory authority for Phase 2 Legacy Convergence**
 
-Working branch: `agent/resolver-foundation-convergence`
-Integration target: `work/v1-composite`
+Working branch: `agent/resolver-foundation-convergence`  
+Integration target: `work/v1-composite`  
 Initial scan base: `d6ab7ecc9cbfd4ec18cef74be92473877cc5598f`
 
-This inventory separates named content/data from code that chooses execution semantics by known content identity. A named file is not legacy merely because it contains a class, subclass, feat, spell, or item name. The migration target is executable ownership that depends on that identity.
+This inventory separates named content/data from code that chooses execution semantics by known content identity. A named file is not legacy merely because it contains a class, subclass, feat, spell, or item name. The migration target is executable ownership that depends on identity, plus explicit compatibility routers that preserve a second named/legacy engine.
 
 ## Classification rules
 
-- `CONTENT/PRESENTATION`: named catalog, progression, spell-selection, authoring, labels, and projections that do not choose the gameplay execution algorithm. These may remain named.
-- `LEGACY_EXECUTION`: runtime/application/domain behavior that recognizes known content identity or imports known-content constants/resolvers to decide runtime effects, costs, eligibility, reactions, persistent state, or rule execution. These must migrate to JSON/Common Play and then be deleted or reduced to data/projection.
-- `GENERIC_ENGINE`: identity-agnostic resolution, Common Play, session authority, persistence, RulesProfile/core-rule, and projection plumbing. These remain code.
-- `UNCLEAR`: evidence is insufficient to edit safely. No current adapter-level finding remains `UNCLEAR`; new findings must be classified before migration.
+- `CONTENT/PRESENTATION`: named catalog, labels, authoring data, reference fixtures, or projections that do not choose an execution algorithm.
+- `LEGACY_EXECUTION`: runtime/application/domain behavior that recognizes known content identity, imports known-content resolvers/definitions to choose effects, or preserves a compatibility route into a named engine. These must migrate/delete or be reduced to data/projection.
+- `GENERIC_ENGINE`: identity-agnostic resolution, Common Play, session authority, persistence, RulesProfile/core-rule, and projection plumbing.
+- `UNCLEAR`: evidence is insufficient to edit safely. The current composition has three explicitly `UNCLEAR` adapter imports; they require symbol-level review before any migration edit.
 
-## Scan boundary
+## Scan boundary and freeze
 
-M0 used `src/app/offlineRuntimeAdapters.ts` as the canonical offline production composition, then checked the class/subclass-named `src/app/*RuntimeAdapter.ts` surface. The freeze scanner is intentionally narrower than a repository-wide ID ban: content, tests, fixtures, and presentation legitimately contain known IDs.
+`src/app/offlineRuntimeAdapters.ts` is the canonical offline production composition. `.agents/LEGACY_EXECUTION_BASELINE.json` classifies every side-effect import in that composition. The checker `scripts/check-legacy-execution-boundary.mjs` and `tests/ui/legacyExecutionBoundary.test.mjs` enforce exact ledger discipline:
 
-The automated adapter scan currently detects **28** class/subclass-named runtime adapters. **27** are grandfathered `LEGACY_EXECUTION`; `druidCircleLandSpellRuntimeAdapter.ts` is the explicit `CONTENT/PRESENTATION` exception because it configures and projects Circle spell selections rather than choosing spell execution semantics.
+1. every current production import must already be classified;
+2. an invalid or duplicate classification fails;
+3. deleting an import requires deleting its baseline entry in the same migration, so the removed legacy path cannot later be silently reintroduced;
+4. adding any production runtime path fails until architecture review classifies it;
+5. the baseline must never grow merely to admit a new named-content adapter.
 
-## LEGACY_EXECUTION findings
+The guard is deliberately not a repository-wide ID ban. Tests, fixtures, catalogs, and presentation may legitimately contain known IDs. Transitive named code discovered during migration still belongs in this inventory even when the top-level composition entry is the module that installs it.
 
-| File / symbol boundary | Recognized identity / mechanism family | Current behavior oracle | Authority / lifetime dependency | Likely Common Play composition |
+## LEGACY_EXECUTION — central compatibility and dispatch
+
+| File / symbol boundary | Recognized identity / selection | Mechanism | Current behavior oracle | Authority / lifetime | Convergence target |
+| --- | --- | --- | --- | --- | --- |
+| `src/app/spellcastingRuntimeAdapter.ts` — `SPELL_META`, `commitFreeformSpellSlot`, `spellMechanicById` | explicit action IDs map to `dnd.srd521.spell.*`; mechanic looked up by spell ID | legacy spell execution / slot economy | `tests/ui/spellcastingRuntimeAdapter.test.ts`, `test:spellcasting` | runtime state, slots, target facts, Undo | RuleModule spell definition -> Common Play/generic resolver; delete action-ID table |
+| `src/app/productionSpellRuntimeAdapter.ts` — `spellMechanicById(metadata.spellId)`, `spellDice`, `resolveProductionSpell` | runtime spell ID selects `SpellMechanicDefinition` | production spell execution | `test:spellcasting`, production spell regressions | authoritative revision, dice, targeting, slots, ResolutionEvent/Undo | normalized Common Play spell IR; content ID only identifies data |
+| `src/app/phase09SpellcastingRuntimeRouter.ts` + `legacySpellRuntimeHandler.ts` | runtime presence selects authoritative vs legacy spell engine | compatibility fallback / second engine | `phase09AuthoritativeSpellcastingAdapter.test.ts`, spellcasting regressions | per-adapter legacy Undo pending state | delete fallback when supported spells use one generic engine |
+| `src/app/productionPlayRuntimeAdapter.ts` — `weaponAttacksPerAction`, feature/action projection | Fighter/Bard/Cleric/Paladin resource/class constants, class IDs/names and spell mechanics choose projected gameplay behavior | mixed production projection + named execution selection | production play/UI acceptance regressions | Character state, turn action projection, feature availability | preserve generic projection; migrate identity-dependent symbols to portable content/Common Play |
+| `src/app/classFeatureSpellRuntimeAdapter.ts` — `ensureClassFeatureSpellResources`, `ensureCoreClassResources` | imports Barbarian/Paladin/Warlock/Monk named resource definitions | feature resource materialization | `classFeatureSpellRuntimeAdapter.test.ts`, `coreClassResourceRuntimeAdapter.test.ts`, domain resource tests | Character resource lifetime/recovery | portable resource definitions + generic materializer |
+| `src/app/subclassRuntimeAdapter.ts` — Natural Recovery branch | Druid + Circle of the Land subclass ID | subclass resource materialization | `subclassRuntimeAdapter.test.ts`, Circle Land recovery tests | Character/subclass level, rest recovery | preserve generic subclass metadata; migrate named resource branch |
+| `src/app/druidCircleLandSpellRuntimeAdapter.ts` — `configureCircleLandSpells`, `circleLandCharacterSpellView` | Druid/Circle Land IDs select rest configuration and spell projection algorithm | subclass spell configuration execution | Circle Land spell/rest domain/runtime tests | Character prepared/cantrip state across rest | portable subclass spell-grant/rest data + generic spell-selection materializer |
+
+## LEGACY_EXECUTION — named gameplay families
+
+| Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
-| `src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` module install | Berserker / Intimidating Presence; action + condition/effect | `tests/ui/barbarianBerserkerIntimidatingPresenceRuntime.test.ts`, `tests/domain/barbarianBerserker.test.ts` | actor action economy; target save/effect lifetime; ResolutionEvent/Undo | entry point + save + `condition.apply`/effect lifetime |
-| `src/app/barbarianRageRuntimeAdapter.ts` module install | Barbarian Rage; resource + bonus action + damage/effect | `tests/ui/barbarianRageActionRuntime.test.ts`, `tests/ui/barbarianRageAttackDamage.test.ts` | actor resource/economy; persistent rage lifetime; attack events | resource/economy + persistent effect/interceptor |
-| `src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts` module install | College of Lore Cutting Words; cross-owner reaction / roll modification | `tests/domain/bardCollegeLore.test.ts`, `tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts` | responder ownership, reaction/resource payment, pending roll, stale/reconnect/Undo | Gate A Interaction/interceptor + payment + `roll.modify` |
-| `src/app/bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter.ts` module install | College of Lore Peerless Skill; self follow-up / roll modification | `tests/domain/bardCollegeLore.test.ts`, `tests/ui/bardCollegeLorePeerlessSkillRuntime.test.ts` | actor resource, pending check, retry/Undo | Gate A Interaction + resource + `roll.modify` |
-| `src/app/bardicInspirationRuntimeAdapter.ts` `ensureBardicInspirationResource` / snapshot patch | Bard class + Bardic Inspiration resource | `tests/domain/bardicInspiration.test.ts`, `tests/ui/bardicInspirationRuntimeAdapter.test.ts` | character class level; resource maximum/recovery | content-defined resource grant/recovery projection |
-| `src/app/bardicInspirationActionRuntimeAdapter.ts` module install | Bardic Inspiration grant action | `tests/domain/bardicInspiration.test.ts`, `tests/ui/bardicInspirationRuntimeAdapter.test.ts` | actor bonus action/resource; target-owned granted state | entry point + resource payment + source-bound effect/resource grant |
-| `src/app/bardicInspirationFollowUpRuntimeAdapter.ts` module install | Bardic Inspiration consumption / roll modification | `tests/domain/bardicInspiration.test.ts`, `tests/ui/bardicInspirationRuntimeAdapter.test.ts` | target-owned inspiration, pending roll, consumption/Undo | Interaction + stored resource/effect + `roll.modify` |
-| `src/app/clericDivineSparkActionRuntimeAdapter.ts` module install | Cleric Divine Spark; action/resource + damage/healing | `tests/domain/clericDivineSpark.test.ts` | Channel Divinity resource/economy; target resolution | entry point + resource + damage/healing operations |
-| `src/app/clericTurnUndeadActionRuntimeAdapter.ts` module install | Cleric Turn Undead; action/resource + multi-target condition | `tests/domain/clericTurnUndead.test.ts` | Channel Divinity; save/condition lifetime across targets | resource + selector/save + condition/effect |
-| `src/app/druidWildShapeRuntimeAdapter.ts` module install | Druid Wild Shape; resource + form state | `tests/domain/druidWildShape.test.ts`, `tests/ui/druidWildShapeActionRuntime.test.ts` | resource/economy; persistent form/temp-HP state; Undo | resource/economy + persistent state; migration must first prove whether existing primitives suffice before Gate J activation |
-| `src/app/fighterActionSurgeRuntimeAdapter.ts` module install | Fighter Action Surge; resource + action economy | `tests/domain/fighterActionSurge.test.ts` | actor resource; turn economy; Undo | resource payment + economy modification |
-| `src/app/fighterIndomitableFollowUpRuntimeAdapter.ts` module install | Fighter Indomitable; failed-save follow-up/reroll | `tests/domain/fighterIndomitable.test.ts` | actor resource; pending failed save; retry/Undo | Interaction + resource + typed reroll/recalculation path |
-| `src/app/fighterTacticalMindFollowUpRuntimeAdapter.ts` module install | Fighter Tactical Mind; failed ability-check follow-up | `tests/domain/fighterTacticalMind.test.ts` | Second Wind resource; pending check; retry/Undo | Interaction + resource + `roll.modify`/recalculate |
-| `src/app/monkFocusRuntimeAdapter.ts` module install | Monk Focus Points / focus actions | `tests/ui/monkFocusActionRuntime.test.ts` | class resource/recovery + turn economy | content-defined resource + generic action/economy operations |
-| `src/app/monkOpenHandFleetStepRuntimeAdapter.ts` module install | Open Hand Fleet Step | `tests/ui/monkOpenHandFleetStepRuntime.test.ts` | focus/economy and turn movement state | resource/economy + generic movement capability |
-| `src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts` module install | Open Hand Quivering Palm; delayed/persistent mark + later resolution | `tests/ui/monkOpenHandQuiveringPalmRuntime.test.ts` | focus/economy; source-bound persistent state; later trigger/Undo | Gate C effect/event composition; only activate another gate if a concrete parity failure proves it necessary |
-| `src/app/monkOpenHandWholenessRuntimeAdapter.ts` module install | Open Hand Wholeness of Body; limited healing action | `tests/ui/monkOpenHandWholenessRuntime.test.ts` | usage resource/economy; healing commit | resource + healing operation |
-| `src/app/paladinAbjureFoesActionRuntimeAdapter.ts` module install | Paladin Abjure Foes; Channel Divinity + saves/effects | `tests/domain/paladinAbjureFoes.test.ts` | resource/economy; multi-target save/effect lifetime | resource + selector/save + effect/condition |
-| `src/app/paladinDevotionHolyNimbusRuntimeAdapter.ts` module install | Devotion Holy Nimbus; persistent aura/damage | `tests/ui/paladinDevotionHolyNimbusRuntime.test.ts` | persistent source lifetime; nearby membership/events | effect + Gate D/E zone/fact composition |
-| `src/app/paladinDevotionSmiteOfProtectionRuntimeAdapter.ts` module install | Devotion Smite of Protection; source-bound protection effect | `tests/ui/paladinDevotionSmiteOfProtectionRuntime.test.ts` | smite/event causation; protected-target lifetime | event interceptor + source-bound effect |
-| `src/app/paladinDivineSenseActionRuntimeAdapter.ts` module install | Paladin Divine Sense; action + semantic detection | `tests/domain/paladinDivineSense.test.ts` | actor economy; semantic fact/provider/manual authority | entry point + Gate E semantic fact/adjudication |
-| `src/app/paladinLayOnHandsActionRuntimeAdapter.ts` module install | Paladin Lay on Hands; healing pool allocation | `tests/domain/paladinLayOnHands.test.ts` | healing-pool resource; target healing/condition state | resource allocation + healing/condition removal; prove existing selector/allocation composition before Gate G |
-| `src/app/rogueCoreRuntimeAdapter.ts` module install | Rogue core named actions/features | `tests/ui/rogueCoreActionRuntime.test.ts` | actor economy/resources/effects depending on action | split into generic entry points + resource/economy/effect operations by mechanism |
-| `src/app/rogueCunningHideEventRuntimeAdapter.ts` module install | Rogue Cunning Action: Hide; ability check + event/effect | `tests/ui/rogueCoreActionRuntime.test.ts` | actor bonus action; canonical ability-check event; hidden state lifetime | economy + ability-check event + effect/state change |
-| `src/app/sorceryRuntimeAdapter.ts` `ensureSorcerousRestorationUsage` / snapshot patch | Sorcerer class + Sorcerous Restoration usage resource | `tests/domain/sorcery.test.ts` and progression Sorcerer runtime coverage | class level; resource max/long-rest recovery | content-defined resource grant/recovery projection |
-| `src/app/subclassRuntimeAdapter.ts` `ensureSubclassRuntimeMetadata` Natural Recovery branch | Druid + Circle of the Land + Natural Recovery resources | `tests/ui/subclassRuntimeAdapter.test.ts`, `tests/domain/druidCircleLandRecovery.test.ts` | subclass identity/level; rest-resource lifetime | keep generic subclass metadata, migrate only named Natural Recovery resource branch to portable content |
-| `src/app/warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts` module install | Fiend Dark One's Own Luck; roll follow-up | `tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts` | owner resource; pending check/save timing; retry/Undo | Interaction + resource + roll modifier/recalculate |
+| `fighterActionSurgeRuntimeAdapter.ts` | Fighter Action Surge; resource + action economy | `fighterActionSurge` domain/build coverage | actor resource + turn economy | `resource.change` + `economy.modify` |
+| `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |
+| `druidWildShapeRuntimeAdapter.ts` | Wild Shape; resource + form state | `test:druid-wild-shape` | resource/economy, form/temp-HP lifetime | first attempt existing operations; activate form gate only on deterministic failure |
+| `monkFocusRuntimeAdapter.ts`, `monkOpenHandWholenessRuntimeAdapter.ts`, `monkOpenHandFleetStepRuntimeAdapter.ts`, `monkOpenHandQuiveringPalmRuntimeAdapter.ts` | Focus/Open Hand; resource, healing, movement, delayed mark | named Monk/Open Hand scripts in `package.json` | turn economy/resources; persistent target state | resource/economy/healing/movement/effect; later gate only from concrete failure |
+| `rogueCoreRuntimeAdapter.ts`, `rogueCunningHideEventRuntimeAdapter.ts` | Rogue core/Cunning Hide; economy/check/event/effect | `test:rogue-core` + ability-check regressions | turn economy and canonical check event | generic entry point + economy + check/event + effect |
+| `bardicInspirationRuntimeAdapter.ts` (transitively installed), `bardicInspirationActionRuntimeAdapter.ts`, `bardicInspirationFollowUpRuntimeAdapter.ts` | Bardic Inspiration resource/grant/follow-up | Bardic Inspiration domain/UI tests | source/owner resource, target-held die, pending roll | generic resource/content grant + Interaction + `roll.modify` |
+| `bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts`, `bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter.ts` | Lore roll interceptors | Lore domain + Cutting Words/Peerless Skill UI tests | connected responder/owner, reaction/resource, pending roll, retry/Undo | Gate A Interaction + payment + roll modification/recalculation |
+| `fighterTacticalMindFollowUpRuntimeAdapter.ts`, `fighterIndomitableFollowUpRuntimeAdapter.ts`, `warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts` | named post-roll modifier/reroll | corresponding domain/UI tests | owner resource + pending roll lifetime | Interaction + resource + typed modifier/reroll policy |
+| `clericDivineSparkActionRuntimeAdapter.ts`, `clericTurnUndeadActionRuntimeAdapter.ts` | Channel Divinity heal/damage/save/condition | named Cleric domain tests | resource/economy + target save/effect | resource + save + damage/healing + condition/effect |
+| `paladinLayOnHandsActionRuntimeAdapter.ts`, `paladinDivineSenseActionRuntimeAdapter.ts`, `paladinAbjureFoesActionRuntimeAdapter.ts` | healing allocation, semantic detection, save/effect | named Paladin domain tests | resource/economy + selection/facts | resource/healing + Gate E fact/selection + save/effect; Gate G only if allocation actually fails existing composition |
+| `paladinDevotionHolyNimbusRuntimeAdapter.ts`, `paladinDevotionSmiteOfProtectionRuntimeAdapter.ts` | persistent aura/protection | named Devotion UI tests | source-bound/persistent lifetime | effect/artifact + trigger/interceptor + Gate D/E when spatial |
+| `sorceryRuntimeAdapter.ts` | Sorcerer resource/rest behavior | Sorcery domain/progression tests | class level + resource recovery | portable resource grant/recovery + generic materializer |
 
-## CONTENT/PRESENTATION findings
+## LEGACY_EXECUTION — progression / portable character materialization
 
-These named paths may remain named so long as they continue to produce data/projection rather than select gameplay execution algorithms:
+These are migration debt when known class/subclass/feat identities select feature-specific state mutation. They should converge on portable progression/content data and a generic progression resolver; they do **not** need to be forced through combat Common Play IR when progression is the correct authority.
 
-- `src/app/druidCircleLandSpellRuntimeAdapter.ts` — Circle spell-rest configuration and prepared/cantrip projection. It is the explicit scanner exception.
-- `src/app/pactTomeRuntimeAdapter.ts` — Book of Shadows spell selection/prepared-spell projection.
-- `src/app/progressionPhase08*Adapter.ts`, `src/app/progressionRuntimeAdapter.ts`, and `src/app/progressionPersistentFeatureRuntimeAdapter.ts` — progression/choice persistence and portable character metadata.
-- `src/app/restSpellManagementRuntimeAdapter.ts` and `src/app/classFeatureSpellRuntimeAdapter.ts` — spell-selection/rest/content projection boundaries; if future edits add feature-specific execution, they must be reclassified.
-- Named domain catalog/progression/source constants and labels are data/provenance unless a runtime branch uses them to choose the execution algorithm.
+- `progressionPhase08SorcererAdapter.ts`
+- `progressionPhase08WarlockAdapter.ts`
+- `progressionPhase08EpicBoonAdapter.ts`
+- `progressionPhase08FighterStyleAdapter.ts`
+- `progressionPhase08BarbarianPrimalKnowledgeAdapter.ts`
+- `progressionPhase08SubclassAdapter.ts`
+- `progressionPhase08BardLoreAdapter.ts`
+- `progressionPhase08SorcererDraconicAdapter.ts`
+- `progressionPhase08WizardEvocationAdapter.ts`
+- `progressionPhase08MonkOpenHandAdapter.ts`
+- `progressionPhase08RogueThiefAdapter.ts`
+- `pactTomeRuntimeAdapter.ts`
 
-## GENERIC_ENGINE findings
+Behavior oracles are the matching `progressionPhase08*` domain/UI tests, `test:progression`, `test:creation-structure`, and named resource/spell-selection tests. Authority is Character revision/level-up or rest-time character materialization. Target composition is declarative progression/choice/resource/spell-grant data with generic application.
 
-The following are identity-agnostic execution infrastructure and are not migration targets merely because they are runtime code:
+## GENERIC_ENGINE
 
-- `src/domain/resolution.ts` and the Common Play runtimes (`commonPlayRuntime.ts`, `commonPlayEntryPointRuntime.ts`, `commonPlayEffectRuntime.ts`, `commonPlayZoneRuntime.ts`, Gate-E fact/movement runtimes);
-- `src/app/phase09Real*`, `phase09SpellcastingRuntimeRouter.ts`, `productionSpellRuntimeAdapter.ts`, `productionWeaponRuntimeFactAdapter.ts`, `productionDiceRuntimeAdapter.ts`, and other generic production/persistence/session plumbing;
-- `src/app/standardActionReactionAdapter.ts`, `deathSaveRuntimeAdapter.ts`, `stabilizeRuntimeAdapter.ts`, `unarmedControlRuntimeAdapter.ts`, and `abilityCheck*` adapters where behavior is a RulesProfile/core semantic rather than a known content identity;
-- connected-session routing/ownership/reconnect infrastructure from Gate E, which transports generic typed requests/responses and does not select a class/spell/feat implementation.
+Identity-agnostic execution infrastructure is not migration debt merely because it is an adapter:
 
-## Mixed-file rule
+- `src/domain/resolution.ts` and Common Play runtimes, including Gate-E fact/movement/authority paths;
+- `src/app/phase09Real*`, atomic resolution/economy/targeting adapters, and typed RulesProfile/core-rule services;
+- `src/app/installedContentRuntimeAdapter.ts`: RuleModule validation/persistence/catalog identity, not known-feature mechanic selection;
+- connected session/transport/reconnect infrastructure, persistence, campaign lifecycle, inventory persistence, dice provider, theater-of-mind semantic fact provider;
+- `standardActionReactionAdapter.ts`, death-save/stabilize/unarmed and ability-check infrastructure when their behavior is a RulesProfile/core semantic rather than named content;
+- generic progression plumbing such as `progressionRuntimeAdapter.ts` and `progressionPersistentFeatureRuntimeAdapter.ts`, while identity-specific callers remain legacy.
 
-Do not delete an entire named domain/application file when only one executable symbol is legacy. `subclassRuntimeAdapter.ts` is the concrete example: generic subclass metadata inference can remain while the Circle-of-the-Land Natural Recovery resource branch migrates. The same symbol-level rule applies to `barbarianRage.ts`, `barbarianBerserker.ts`, `bardCollegeLore.ts`, `bardicInspiration.ts`, and other named domain files that also own catalogs, constants, or pure calculations used as golden behavior or authoring data.
+## CONTENT/PRESENTATION
 
-## Freeze guard
+Allowed named data includes generated/builtin catalogs, spell presentation, creation options, labels/descriptions, stable relationship metadata, authoring drafts, and static reference fixture rows. A content ID used only to label, persist, select authored data, or display provenance is not an execution violation.
 
-Source of truth:
+`mockAdapter.ts` is mixed: static Aelar/Mira/reference rows are fixture/content; identity-keyed resolution behavior remains a legacy oracle and must not become the target architecture.
 
-- baseline: `.agents/LEGACY_EXECUTION_BASELINE.json`
-- scanner: `scripts/check-legacy-execution-boundary.mjs`
-- scanner regression: `tests/ui/legacyExecutionBoundary.test.mjs`
-- CI: `.github/workflows/legacy-execution-boundary.yml`
+## UNCLEAR — review before editing
 
-Semantics:
+The composition ledger intentionally retains three `UNCLEAR` imports rather than guessing:
 
-1. grandfathered `LEGACY_EXECUTION` adapter paths may disappear as migration deletes them;
-2. the legacy baseline must not grow to make a new named execution adapter pass;
-3. explicit `CONTENT/PRESENTATION` exceptions are allowed only while they remain non-execution projections/configuration;
-4. the scanner is deliberately scoped to class/subclass-named runtime adapters in `src/app`, not repository-wide IDs;
-5. any new identity-dependent execution discovered outside the scanner's narrow surface must be added to this inventory and migrated, not hidden by broadening an allowlist.
+- `characterCreationV10Adapter.ts`;
+- `characterCreationWeaponAttackAdapter.ts`;
+- `progressionPhase08WeaponMasteryAdapter.ts`.
 
-## Phase-2 migration ordering signal
+Before modifying one of these in Phase 2, inspect symbol-level identity selection and move its classification to `CONTENT/PRESENTATION`, `LEGACY_EXECUTION`, or `GENERIC_ENGINE`. `UNCLEAR` is not permission to add new behavior.
 
-Use mechanism families, not class order:
+## Golden behavior map
 
-1. simple resource/action/economy paths first (for example Action Surge, Wholeness of Body, resource projection debt);
-2. reaction/follow-up roll modifiers (Tactical Mind, Indomitable, Dark One's Own Luck, Peerless Skill, Cutting Words);
-3. persistent effects/events (Rage, Quivering Palm, Holy Nimbus, Smite of Protection, Cunning Hide);
-4. spatial/semantic-fact paths (Divine Sense, aura/zone behaviors);
-5. form/selector/allocation cases only after a deterministic migration attempt proves whether the existing A-E primitives are sufficient.
+M0 preserves current tests as migration oracles and does not rerun unrelated Gate E validation:
 
-This ordering does not activate Gate F-M by itself.
+- Rage: `barbarianRageActionRuntime.test.ts`, `barbarianRageAttackDamage.test.ts`.
+- Berserker: `barbarianBerserkerIntimidatingPresenceRuntime.test.ts`.
+- Bardic Inspiration: `bardicInspirationRuntimeAdapter.test.ts` + domain tests.
+- Cutting Words / Peerless Skill: corresponding Lore UI tests + `bardCollegeLore` domain tests.
+- Wild Shape / Monk / Rogue / Devotion / Fiend: their named package scripts and domain tests.
+- Named progression/resource materialization: `test:progression`, `test:creation-structure`, `test:rules-domain` and matching named tests.
+- Spell execution/fallback: `test:spellcasting`, `phase09AuthoritativeSpellcastingAdapter.test.ts`, production spell regressions.
+
+A migration must reproduce its relevant golden behavior, then prove unknown-ID and ID/name-only rename invariance on the generic path before deleting the named branch.
+
+## M0 exit / next action
+
+M0 exits only when this composition ledger and checker are green on an exact SHA and the product checklist records the evidence. The next queue is **M1 — generic migration harness**. Gate F-M remain dormant until a concrete migration failure satisfies the activation rule in `resolver-execution-checklist.md`.
