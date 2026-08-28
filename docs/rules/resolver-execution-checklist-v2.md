@@ -503,6 +503,25 @@ Deliberate boundary:
 
 ---
 
+## C5 — Object / actor / form / link / item / attunement primitives — bounded
+
+Evidence:
+
+- [x] RuntimeArtifact has distinct typed object, link, actor, and form families; none is disguised as a Creature or Zone;
+- [x] object AC/HP/damage threshold/defenses/repair/destruction/placement run through Resolver operations with reversible artifact state changes;
+- [x] links retain explicit endpoints and barrier/wall/portal/tether/rope semantics; dangling endpoints reject before commit;
+- [x] actor artifacts retain stat projection, actions, resources, owner, controller, placement, initiative policy, lifetime, and controller transfer data;
+- [x] form artifacts retain property overlays, retained/replaced properties, resource/action/HP/spellcasting policies, controller, replacement lifetime, and reversible state;
+- [x] a separate Character-durable inventory revision transaction covers grant, quantity, consume/destroy, charges, equip/wield, container ownership, two-owner transfer, and atomic rollback;
+- [x] attunement requires Short Rest completion, structural prerequisites, capacity, exclusive ownership, benefit activation, cursed removal rules, and rule-driven loss.
+
+Deliberate boundary:
+
+- production Character inventory persistence and connected journals remain the authority; C8 must adapt them to these semantics rather than replace their durability protocol;
+- summon combatant materialization, form projection into the live action catalog, and legacy item/attunement UI migration are still incomplete.
+
+---
+
 # PHASE 3 — ANTICIPATED D&D CAPABILITY COVERAGE F-M
 
 Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.

@@ -212,6 +212,27 @@ export type ResolutionOperation =
       metadataPatch:Record<string,string|number|boolean>;
     })
   | (OperationBase & {
+      kind:"damage-artifact";
+      artifactId:string;
+      damageType:string;
+      amount:number;
+    })
+  | (OperationBase & {
+      kind:"repair-artifact";
+      artifactId:string;
+      amount:number;
+    })
+  | (OperationBase & {
+      kind:"relocate-artifact";
+      artifactId:string;
+      placementRef:string;
+    })
+  | (OperationBase & {
+      kind:"set-artifact-controller";
+      artifactId:string;
+      controllerId:string;
+    })
+  | (OperationBase & {
       kind:"remove-artifact";
       artifactId:string;
     })
