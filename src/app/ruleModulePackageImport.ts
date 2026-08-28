@@ -70,7 +70,11 @@ function portableMechanics(value:unknown,label:string):InstalledCommonPlayMechan
       throw new Error(`${label} cannot be activated by the generic Catalog: unsupported mechanic kind ${String(mechanic.kind)}`);
     }
     try {
-      return {kind:"common-play",config:parseCommonPlayOperationDefinition(mechanic.config,`${mechanicLabel}.config`)};
+      const config=parseCommonPlayOperationDefinition(mechanic.config,`${mechanicLabel}.config`);
+      if(config.entryPoints.some((entry)=>entry.invocation!=="manual")) {
+        throw new Error("installed Common Play operation runtime supports manual entry points only");
+      }
+      return {kind:"common-play",config};
     } catch(error) {
       throw new Error(`${mechanicLabel} contains unsupported Common Play mechanics: ${error instanceof Error?error.message:String(error)}`);
     }
