@@ -32,8 +32,6 @@ export interface InstalledContentRelationshipV1 {
 }
 
 export interface InstalledCommonPlayMechanicV1 {
-  /** Optional data-owned action alias. It identifies authored content; it never selects an execution algorithm. */
-  id?:string;
   kind:"common-play";
   config:CommonPlayOperationDefinition;
 }
