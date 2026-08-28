@@ -49,7 +49,7 @@ function snapshot(state: ReturnType<typeof preparedState>) {
   return {
     daily:state.combatants.hero.resources.find((resource)=>resource.id==="probe.daily")?.current,
     turn:state.combatants.hero.resources.find((resource)=>resource.id==="probe.turn")?.current,
-    grants:state.combatants.hero.economy.extraActionGrants.map((grant)=>({
+    grants:(state.combatants.hero.economy.extraActions ?? []).map((grant)=>({
       allowsMagicAction:grant.allowsMagicAction,
     })),
   };
