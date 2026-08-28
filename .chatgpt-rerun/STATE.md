@@ -3,75 +3,90 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `2`
 - task_id: `common-play-foundation-convergence`
-- dispatch status to publish: `blocked`
+- dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T11:34+09:00`
+- architecture charter: `docs/rules/common-play-resolver-architecture-charter.md`
+- product plan: `docs/rules/resolver-execution-checklist-v2.md`
+- checkpointed_at: `2026-08-28 Asia/Seoul`
 
 ## Durable checkpoint
 
-Mandatory preflight was completed in the required README -> control -> STATE -> PLAN order on `agent/resolver-foundation-convergence`. Run identity remains sequence `2`, task `common-play-foundation-convergence`. PLAN routing did not change. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` were re-read for current routing. Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
+The owner explicitly directed this continuation to preserve the architectural intent for future agents and remove stale Rerun blockers. Mandatory preflight was performed in README -> control -> STATE -> PLAN order, followed by `CANONICAL_ROOT.md`, the rules plan, PR #159, and current exact-head workflow evidence.
 
-The live Rerun parent was re-fetched immediately before coordination writes and remained at `b98d6950c88edc4d71badb69d6a518e7113c10bb` before this checkpoint write.
+The old blocker in control/STATE was stale: PR #159 candidate `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` no longer had queued workflows. All seven old exact-head runs had completed, exposing actionable evidence rather than queue congestion.
+
+The active plan pointer is now `docs/rules/resolver-execution-checklist-v2.md`. The durable owner intent is locked in `docs/rules/common-play-resolver-architecture-charter.md`, and Rerun README now requires that charter during post-preflight routing.
+
+## Architecture intent retained
+
+Future agents must preserve these distinctions rather than invent a new philosophy during routine execution:
+
+- the product goal is a portable declarative D&D rule-execution language + generic Resolver, not legacy deletion by itself;
+- named spells, feats, classes, items, conditions, monster abilities, and other content are data/presentation identity, never execution dispatch keys;
+- capability maturity is tracked separately from expressive coverage;
+- maturity axis: `SPEC -> KERNEL -> PORTABLE -> PRODUCTION -> MIGRATED -> ACCEPTED`;
+- Gates A-M are the D&D expressive coverage map;
+- A-E retain their already-proven foundation/kernel evidence;
+- F-M remain implementation-dormant until evidence justifies implementation, but their coverage question may not be forgotten;
+- before Gate N, every F-M gate must have an explicit `IMPLEMENTED`, `PROVEN_UNNEEDED`, or `EXPLICITLY_OUT_OF_SCOPE` disposition from a deterministic representative D&D scenario;
+- a representative coverage probe may be a real legacy/product migration or a deliberately selected D&D scenario when historical SimpleVTT code does not exercise that mechanism;
+- one declarative rules language does not require forcing progression/module installation/durable-source transactions into fake combat PendingResolutions;
+- Gate N is final unknown-module/multi-category architecture acceptance, not a missing-primitive implementation gate.
+
+The full normative wording lives in the charter/plan and must not be reconstructed from this summary when those files are available.
 
 ## Retained completed evidence
 
 - Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`.
-- M0 remains `DONE`; `docs/rules/legacy-execution-inventory.md` and the no-new-named-execution boundary remain authoritative.
-- The generic M1 resource/economy harness remains integrated through merged PR #150. Reuse its retained green evidence unless subsequently touched product surfaces require revalidation.
+- M0/legacy inventory freeze remains `DONE`; reuse `docs/rules/legacy-execution-inventory.md` and the Legacy Execution Boundary rather than repeating inventory work.
+- The generic resource/economy harness integrated before PR #159 remains valid unless touched surfaces invalidate its evidence.
 
-## M1 / Probe S — portable RuleModule mechanics bridge
+## PR #159 — portable Resource/Economy bridge
 
-PR #159 / `agent/m1-rulemodule-portable-activation` remains the sole authoritative portable-mechanics bridge. Superseded duplicate bridge PRs must not be revived.
+PR #159 / `agent/m1-rulemodule-portable-activation` remains the sole authoritative portable mechanics bridge. Do not revive duplicate/superseded bridges.
 
-Direct child ref remains stable at exact candidate:
+Old candidate `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` evidence:
 
-`60c5fbf79dfbf6007885edcac5fd2eb3f9153712`
+- Contract validation: SUCCESS;
+- M1 Resource/Economy focused harness: 4/4 PASS, then typecheck failed;
+- typecheck failure was exactly `TS2322` in `src/domain/commonPlayOperationRuntime.ts`: parsed `entryPoints[].invocation` widened to `string` instead of the declared literal union;
+- Persistence application contract: 79/80 PASS; the single `501 !== 496` failure was the pre-existing stale hard-coded builtin catalog total, not a portable-bridge semantic failure;
+- broad Rules/UI/Phase failures were consistent with the same shared compile gate absent contrary evidence.
 
-No product file changed during this continuation. The retained bounded PR diff remains seven files:
+Corrections made in this owner continuation:
 
-- `schemas/installed-content.schema.json`;
-- `src/app/installedContentContracts.ts`;
-- `src/app/installedContentPersistence.ts`;
-- `src/app/ruleModulePackageImport.ts`;
-- `src/domain/commonPlayOperationRuntime.ts`;
-- `tests/ui/installedContentPersistence.test.ts`;
-- `tests/ui/ruleModulePackageImport.test.ts`.
+1. Child branch `agent/m1-rulemodule-portable-activation` commit `87945628c31a751c697a8c67b4096fae7c374e0c` adds only contextual typing for parsed `entryPoints`, preserving the literal invocation union without adding semantics or a named branch.
+2. Parent branch corrected the unrelated persistence baseline invariant in `tests/ui/installedContentRuntimeAdapter.test.ts`: instead of hard-coding catalog total `496`, it asserts the initial catalog contains only canonical builtin entries. A compare against the pre-change parent confirmed the final correction is exactly one addition / one deletion in that file.
+3. Architecture charter and v2 plan were added on the parent; Rerun README/PLAN routing now points agents through them.
 
-The candidate remains the portable data/validation bridge recorded previously: data-only Common Play mechanics are preserved through import, persistence/rehydration, installed writes, and runtime compilation using the existing generic operation parser and shared manual-only executable validation. No named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback was added. The named Fighter Action Surge production seam remains until installed portable mechanics execute end-to-end through the generic production/session path. Gate F-M remain dormant.
+Latest observed exact-head workflow evidence for child `87945628c31a751c697a8c67b4096fae7c374e0c`:
 
-## GitHub Actions queue blocker
+- M1 Common Play Resource Economy `33148877787`: SUCCESS;
+- Contract validation `33148877810`: SUCCESS;
+- Rules Domain `33148877904`: SUCCESS;
+- UI `33148877892`: SUCCESS;
+- Persistence `33148877863`: in progress at checkpoint;
+- Phase 11 Playable `33148877783`: in progress at checkpoint;
+- Phase 12 Connected Session `33148877843`: in progress at checkpoint.
 
-The seven required exact-head pull-request workflows for `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` were read again without rerunning them. All remain `queued`; there is still no product failure evidence to fix.
-
-Exact-head runs:
-
-- M1 Common Play Resource Economy `33136035747`: queued;
-- Contract validation `33136035750`: queued;
-- Rules Domain `33136035788`: queued;
-- Phase 11 Playable `33136035783`: queued;
-- Phase 12 Connected Session `33136035803`: queued;
-- UI `33136035774`: queued;
-- Persistence `33136035784`: queued.
-
-Fresh repository Actions inspection found **115 queued workflow runs on `agent/m1-rulemodule-portable-activation`**, down from 120 at the prior checkpoint but still establishing queue congestion rather than an observed product failure. No product code was changed, no existing workflow was rerun, and no new workflow was created.
-
-The available GitHub connector does not expose an authorized cancel action for clearing superseded queued runs. Adding runs or changing product code without failure evidence would add noise, so sequence `2` remains blocked on the existing GitHub Actions queue.
+These in-progress runs are normal verification, not a reason to publish Rerun `blocked`. The stale queue blocker is removed.
 
 ## Next Exact Action
 
-On the next owner continuation of sequence `2`:
+On the next Rerun execution of sequence `2`:
 
-1. perform mandatory preflight README -> control -> STATE -> PLAN and re-fetch the live parent;
-2. resolve PR #159 child tip from the direct Git ref;
-3. read the existing exact-head workflow runs only — do not manually rerun queued or completed evidence;
-4. if the child tip advanced, inspect only the bounded delta and use the new exact tip as the candidate;
-5. if required runs are still queued and branch queue congestion persists, keep the run blocked rather than creating more workflow runs or changing product code;
-6. if any required run fails, inspect only that failure and make the smallest parity fix;
-7. if all required runs become green, confirm the diff remains the bounded seven-file portable data/validation bridge, then reconcile coordination-only ancestry and publish `control.json` as `needs_user` solely for PR #159 merge approval;
-8. do not begin generic production/session action dispatch before #159 is integrated;
-9. after integration, capture the deterministic red for installed portable mechanics -> generic production/session action dispatch through `commonPlayOperationRuntime` + Resolver;
-10. only after end-to-end parity may the named Fighter Action Surge seam be deleted and the M0 legacy baseline shrink;
-11. keep Gate F-M dormant, do not reopen M0 or repeat unchanged Gate E/M1-harness validation, and do not route to `main`.
+1. perform mandatory README -> control -> STATE -> PLAN preflight;
+2. read `CANONICAL_ROOT.md`, then the architecture charter, then `resolver-execution-checklist-v2.md`;
+3. re-fetch parent and PR #159 child tips because either may have advanced;
+4. read only the current exact-head workflows for the latest child candidate; do not rerun obsolete `60c5...` evidence;
+5. if Persistence/Phase11/Phase12 have completed, inspect only any actual failures; if they are green, proceed to bounded diff/ancestry review;
+6. ensure the parent persistence baseline correction is included in the PR merge ancestry/base context without adding it to the seven-file portable product diff;
+7. confirm PR #159 still contains no named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback;
+8. when current verification and ancestry are acceptable, follow the Rerun owner-approval rule for PR #159 merge rather than inventing another waiting reason;
+9. after #159 integration, immediately create the deterministic RED for installed portable mechanics -> real production/session action dispatch through `commonPlayOperationRuntime` + generic Resolver;
+10. keep the named Fighter Action Surge production seam until end-to-end generic parity, then remove only the absorbed named execution and shrink legacy baseline/inventory;
+11. continue by mechanism/capability family, tracking pipeline maturity and F-M coverage dispositions according to the v2 plan;
+12. do not route product work to `main`.
