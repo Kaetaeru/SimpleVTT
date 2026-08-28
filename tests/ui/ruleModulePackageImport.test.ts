@@ -3,7 +3,12 @@ import test from "node:test";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
-import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import {
+  getInstalledContentPersistenceStateForTests,
+  installSessionInstalledContent,
+  requiredSessionInstalledContent,
+  setInstalledContentStoreForTests,
+} from "../../src/app/installedContentRuntimeAdapter";
 
 function packagePayload(overrides:Record<string,unknown>={}) {
   return JSON.stringify({
@@ -28,6 +33,25 @@ function packagePayload(overrides:Record<string,unknown>={}) {
     ],
     ...overrides,
   });
+}
+
+function portableCommonPlayMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.resource-economy-action",
+      payments:[
+        {kind:"resource",resource:"resource.external.primary",amount:{value:1},consumeAt:"commit"},
+        {kind:"resource",resource:"resource.external.same-turn",amount:{value:1},consumeAt:"commit"},
+      ],
+      entryPoints:[{
+        id:"activate",
+        invocation:"manual",
+        operations:[{kind:"economy.modify",bucket:"action.extra.non-magic",amount:{value:1}}],
+      }],
+    },
+  };
 }
 
 test("multi-entry RuleModule preview writes nothing and activation commits one generation", async () => {
@@ -68,6 +92,34 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.ok(child?.validation.some((entry)=>entry.severity==="blocking" && /relationship.target.missing/.test(entry.message)));
   await adapter.activateContentImport();
   assert.equal((await store.readGenerations()).length,0);
+});
+
+test("registered Common Play mechanics persist and survive installed-content session sync", async () => {
+  const hostStore=new MemoryInstalledContentStore();
+  const host=new MockAdapter();
+  setInstalledContentStoreForTests(host,hostStore);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic();
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await host.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await host.activateContentImport();
+
+  const installed=getInstalledContentPersistenceStateForTests(host)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(installed?.mechanics,[mechanic]);
+
+  const sessionEntries=await requiredSessionInstalledContent(host,[]);
+  const sessionEntry=sessionEntries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(sessionEntry?.mechanics,[mechanic]);
+
+  const peerStore=new MemoryInstalledContentStore();
+  const peer=new MockAdapter();
+  setInstalledContentStoreForTests(peer,peerStore);
+  await peer.getSnapshot();
+  await installSessionInstalledContent(peer,sessionEntries);
+  const peerInstalled=getInstalledContentPersistenceStateForTests(peer)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(peerInstalled?.mechanics,[mechanic]);
 });
 
 test("unsupported generic-catalog member data blocks package import instead of silently dropping mechanics", async () => {
