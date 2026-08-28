@@ -8,6 +8,7 @@
     "src/app/bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter.ts",
     "src/app/bardicInspirationActionRuntimeAdapter.ts",
     "src/app/bardicInspirationFollowUpRuntimeAdapter.ts",
+    "src/app/bardicInspirationRuntimeAdapter.ts",
     "src/app/clericDivineSparkActionRuntimeAdapter.ts",
     "src/app/clericTurnUndeadActionRuntimeAdapter.ts",
     "src/app/druidWildShapeRuntimeAdapter.ts",
