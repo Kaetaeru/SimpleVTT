@@ -87,4 +87,4 @@ The active task is to select the next smallest coherent Phase 2 mechanism-family
 
 Use `resolver-execution-checklist-v2.md` plus `legacy-execution-inventory.md` to choose the smallest coherent mechanism family that can retire real legacy execution while strengthening the portable generic language. Freeze that slice's behavior oracle and acceptance contract before handing repository-dependent implementation to Codex.
 
-Gates F-M are capability questions, not a requirement to implement speculative machinery. Each must eventually be `IMPLEMENTED`, `PROVEN_UNNEEDED`, or `EXPLICITLY_OUT_OF_SCOPE` before final external RuleModule acceptance.
+Gates F-M are capability questions, not permission to implement speculative machinery. Each must be `IMPLEMENTED` or deterministically `PROVEN_UNNEEDED` before final external RuleModule acceptance; V1 no longer permits `EXPLICITLY_OUT_OF_SCOPE` for a D&D mechanism.

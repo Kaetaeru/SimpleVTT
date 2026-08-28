@@ -164,6 +164,12 @@ Authority remains `docs/rules/legacy-execution-inventory.md` plus `.agents/LEGAC
 
 The inventory is a debt ledger and behavior-oracle map, not the product roadmap.
 
+## P0.5 — V1 mechanism coverage contract — ACTIVE
+
+`docs/rules/v1-mechanism-coverage-ledger.json` is the machine-readable Gate N authority for the complete D&D V1 coverage corpus. `scripts/check-v1-mechanism-coverage.mjs` requires every mandatory family A-AJ exactly once and rejects Gate N unless every row is `IMPLEMENTED` or `PROVEN_UNNEEDED`, has implementation/production/identity evidence, includes connected/persistence evidence where relevant, and has no remaining named execution seam.
+
+`INCOMPLETE` is allowed only while this convergence run is active. It is not a final disposition and it prevents Gate N.
+
 ## P1 — Universal migration harness
 
 Every migrated mechanism must satisfy the applicable pipeline:
@@ -472,7 +478,6 @@ Before Gate N, each gate must be exactly one of:
 
 - `IMPLEMENTED` — deterministic scenario proved a reusable missing semantic and the capability was implemented/verified;
 - `PROVEN_UNNEEDED` — deterministic representative D&D scenario composes safely from existing primitives, with tests proving that no new primitive is required;
-- `EXPLICITLY_OUT_OF_SCOPE` — owner/product scope explicitly declines that mechanism for the claimed V1 support boundary, and imported content requiring it is reported unsupported rather than silently approximated.
 
 `DORMANT`, `PLANNED`, or `TBD` is not a valid Gate-N-entry disposition.
 
@@ -546,8 +551,9 @@ Gate N is not another missing primitive. It is the final architecture acceptance
 
 ## N0 — Entry requirements
 
-- [ ] claimed V1 mechanism families have reached the required maturity for the product promise;
-- [ ] every F-M gate has `IMPLEMENTED`, `PROVEN_UNNEEDED`, or `EXPLICITLY_OUT_OF_SCOPE` disposition;
+- [ ] every D&D mechanism family in `v1-mechanism-coverage-ledger.json` is `IMPLEMENTED` or deterministically `PROVEN_UNNEEDED`;
+- [ ] every F-M gate has `IMPLEMENTED` or `PROVEN_UNNEEDED` disposition;
+- [ ] `node scripts/check-v1-mechanism-coverage.mjs --gate-n` succeeds;
 - [ ] no supported mechanic depends on a hidden named engine fallback;
 - [ ] unsupported capability behavior is explicit.
 

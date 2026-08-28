@@ -153,7 +153,6 @@ A gate must not be implemented speculatively merely because it exists. Existing 
 
 - `IMPLEMENTED` — the representative scenario proved a reusable missing semantic, the gate was activated, and the capability was implemented/verified;
 - `PROVEN_UNNEEDED` — the representative scenario composes safely and cleanly from existing generic primitives, with a test proving that no new primitive is required;
-- `EXPLICITLY_OUT_OF_SCOPE` — the owner/product scope explicitly declines that mechanism for the claimed V1 support boundary, and imported content requiring it is reported unsupported rather than silently approximated.
 
 An unresolved `DORMANT/TBD` F-M gate is **not sufficient for Gate N entry**.
 
@@ -229,8 +228,8 @@ Gate N exists to prove that the preceding design is genuinely a portable D&D rul
 
 Gate N may not begin until:
 
-- the claimed V1-supported mechanism families have reached the required pipeline maturity;
-- every anticipated F-M coverage area has an explicit `IMPLEMENTED`, `PROVEN_UNNEEDED`, or `EXPLICITLY_OUT_OF_SCOPE` disposition;
+- every D&D mechanism family in the V1 coverage ledger has reached `IMPLEMENTED` or deterministically `PROVEN_UNNEEDED`;
+- every anticipated F-M coverage area has an explicit `IMPLEMENTED` or `PROVEN_UNNEEDED` disposition;
 - unsupported requirements fail explicitly instead of entering a hidden second engine.
 
 Gate N must exercise an external RuleModule that did not exist when the app was built and must cross multiple content categories/mechanism families. Representative unknown content should include several of: spell, feat, class feature, item, condition, monster ability, or other portable entries.
