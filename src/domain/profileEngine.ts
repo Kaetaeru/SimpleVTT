@@ -14,6 +14,12 @@ export type ExpressionNode =
   | { ref: string }
   | { op: ArithmeticOperator; args: ExpressionNode[] };
 
+export interface ActionEconomyBucketDefinition {
+  kind:"extra-action";
+  allowsMagicAction:boolean;
+  activeTurnOnly?:boolean;
+}
+
 export interface RulesProfileLike {
   profileId: string;
   roundingPolicy?: { id: string; default?: "floor"|"ceil"|"round" };
@@ -23,6 +29,9 @@ export interface RulesProfileLike {
       sameSideStacks?: boolean;
       opposingCancel?: boolean;
     };
+  };
+  actionEconomy?: {
+    buckets:Record<string,ActionEconomyBucketDefinition>;
   };
 }
 
