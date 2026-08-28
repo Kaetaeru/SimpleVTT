@@ -8,11 +8,11 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T11:33:37+09:00`
+- checkpointed_at: `2026-08-28T11:34:42+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight was completed in the required README -> control -> STATE -> PLAN order and repeated whenever concurrent watcher activity advanced the Rerun parent. Run identity remains sequence `2`, task `common-play-foundation-convergence`. PLAN routing did not change. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain authoritative. Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
+Mandatory preflight was completed in the required README -> control -> STATE -> PLAN order. Concurrent watcher activity was reconciled against the live Rerun parent before writes. Run identity remains sequence `2`, task `common-play-foundation-convergence`. PLAN routing did not change. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain authoritative. Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
 
 ## Retained completed evidence
 
@@ -28,7 +28,7 @@ Direct Git ref remains stable at exact candidate:
 
 `60c5fbf79dfbf6007885edcac5fd2eb3f9153712`
 
-PR #159 remains open and unmerged. Raw PR metadata reports `mergeable: true`, `mergeable_state: unstable`, and exactly seven changed files:
+PR #159 remains open and unmerged with exactly seven changed files:
 
 - `schemas/installed-content.schema.json`;
 - `src/app/installedContentContracts.ts`;
@@ -38,11 +38,11 @@ PR #159 remains open and unmerged. Raw PR metadata reports `mergeable: true`, `m
 - `tests/ui/installedContentPersistence.test.ts`;
 - `tests/ui/ruleModulePackageImport.test.ts`.
 
-The seven-file patch was inspected. It remains a bounded portable data/validation bridge: schema/contracts preserve data-only Common Play mechanics; RuleModule import, persistence/rehydration, session-installed writes, and runtime compilation share the manual-only executable validator layered on the existing generic operation parser; the two test files add rejection regressions. No named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback is introduced. The named Fighter Action Surge production seam remains until installed portable mechanics execute end-to-end through the generic production/session path. Gate F-M remain dormant.
+The diff remains the bounded portable data/validation bridge recorded previously: schema/contracts preserve data-only Common Play mechanics; RuleModule import, persistence/rehydration, session-installed writes, and runtime compilation share the manual-only executable validator layered on the existing generic operation parser; regression coverage rejects unsupported/non-manual mechanics. No named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback is introduced. The named Fighter Action Surge production seam remains until installed portable mechanics execute end-to-end through the generic production/session path. Gate F-M remain dormant.
 
 ## GitHub Actions queue blocker
 
-The seven required exact-head pull-request workflows for `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` were read repeatedly without rerunning them. All remain `queued` and the M1 job `98736117227` remains queued with no logs, so there is no product failure evidence to fix.
+The seven required exact-head pull-request workflows for `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` were read again without rerunning them. All remain `queued`; representative M1 and Contract jobs are also queued with no logs, so there is still no product failure evidence to fix.
 
 Exact-head runs:
 
@@ -54,9 +54,9 @@ Exact-head runs:
 - UI `33136035774`: queued;
 - Persistence `33136035784`: queued.
 
-Repository Actions inspection found **126 queued workflow runs on `agent/m1-rulemodule-portable-activation`**. This establishes queue congestion rather than an observed product failure as the current blocker. No product code was changed in response.
+Fresh repository Actions inspection at this checkpoint found **120 queued workflow runs on `agent/m1-rulemodule-portable-activation`**, down from the prior 126 but still establishing queue congestion rather than an observed product failure. No product code was changed, no existing workflow was rerun, and no new workflow was created.
 
-The available GitHub connector exposes workflow reads and rerun actions but no authorized cancel action, so this execution cannot safely clear superseded queued runs. Starting additional runs or changing product code would only add noise and is explicitly avoided.
+The available GitHub connector does not expose an authorized cancel action for clearing superseded queued runs. Adding more runs or changing product code without failure evidence would only add noise, so this sequence remains blocked on the existing GitHub Actions queue.
 
 ## Next Exact Action
 
