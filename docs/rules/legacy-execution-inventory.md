@@ -11,7 +11,7 @@ This inventory separates named content/data from code that chooses execution sem
 ## Classification rules
 
 - `CONTENT/PRESENTATION`: named catalog, labels, authoring data, reference fixtures, or projections that do not choose an execution algorithm.
-- `LEGACY_EXECUTION`: runtime/application/domain behavior that recognizes known content identity, imports known-content resolvers/definitions to choose effects, or preserves a compatibility route into a named engine. These must migrate/delete or be reduced to data/projection.
+- `LEGACY_EXECUTION`: runtime/application/domain behavior that recognizes known content identity, imports known-content resolvers/definitions to choose effects, or preserves a compatibility route into a named engine. Mixed modules are classified here when any installed symbol still owns identity-dependent execution; migration may preserve their generic symbols.
 - `GENERIC_ENGINE`: identity-agnostic resolution, Common Play, session authority, persistence, RulesProfile/core-rule, and projection plumbing.
 - `UNCLEAR`: evidence is insufficient to edit safely. The current composition has three explicitly `UNCLEAR` adapter imports; they require symbol-level review before any migration edit.
 
@@ -27,7 +27,7 @@ This inventory separates named content/data from code that chooses execution sem
 
 The guard is deliberately not a repository-wide ID ban. Tests, fixtures, catalogs, and presentation may legitimately contain known IDs. Transitive named code discovered during migration still belongs in this inventory even when the top-level composition entry is the module that installs it.
 
-## LEGACY_EXECUTION — central compatibility and dispatch
+## LEGACY_EXECUTION — central compatibility, progression, and dispatch
 
 | File / symbol boundary | Recognized identity / selection | Mechanism | Current behavior oracle | Authority / lifetime | Convergence target |
 | --- | --- | --- | --- | --- | --- |
@@ -35,6 +35,8 @@ The guard is deliberately not a repository-wide ID ban. Tests, fixtures, catalog
 | `src/app/productionSpellRuntimeAdapter.ts` — `spellMechanicById(metadata.spellId)`, `spellDice`, `resolveProductionSpell` | runtime spell ID selects `SpellMechanicDefinition` | production spell execution | `test:spellcasting`, production spell regressions | authoritative revision, dice, targeting, slots, ResolutionEvent/Undo | normalized Common Play spell IR; content ID only identifies data |
 | `src/app/phase09SpellcastingRuntimeRouter.ts` + `legacySpellRuntimeHandler.ts` | runtime presence selects authoritative vs legacy spell engine | compatibility fallback / second engine | `phase09AuthoritativeSpellcastingAdapter.test.ts`, spellcasting regressions | per-adapter legacy Undo pending state | delete fallback when supported spells use one generic engine |
 | `src/app/productionPlayRuntimeAdapter.ts` — `weaponAttacksPerAction`, feature/action projection | Fighter/Bard/Cleric/Paladin resource/class constants, class IDs/names and spell mechanics choose projected gameplay behavior | mixed production projection + named execution selection | production play/UI acceptance regressions | Character state, turn action projection, feature availability | preserve generic projection; migrate identity-dependent symbols to portable content/Common Play |
+| `src/app/progressionRuntimeAdapter.ts` — `ensureSorceryPointResource`, `ensureSignatureSpellResources` and progression materialization | Sorcerer class/resource IDs and Wizard signature-spell resources trigger identity-specific state materialization | mixed generic progression + named resource execution | `tests/ui/progressionRuntimeAdapter.test.ts`, `test:progression`, `test:creation-structure` | Character level/revision; resource maximum/recovery | preserve generic progression planning/application; move named resources/grants to portable progression/content definitions |
+| `src/app/restSpellManagementRuntimeAdapter.ts` — `configureWizardLongRest`, `configurePactTomeRest`, `configureCircleLandRest` | named Wizard, Pact Tome, and Circle Land rest commands route into feature-specific resolvers | named rest/spell-selection dispatch | `tests/ui/restSpellManagementRuntimeAdapter.test.ts`, Pact Tome/Circle/Wizard rest tests | Character revision and rest-time prepared/resource state | generic rest-time selection/invocation driven by portable content; remove named dispatch methods |
 | `src/app/classFeatureSpellRuntimeAdapter.ts` — `ensureClassFeatureSpellResources`, `ensureCoreClassResources` | imports Barbarian/Paladin/Warlock/Monk named resource definitions | feature resource materialization | `classFeatureSpellRuntimeAdapter.test.ts`, `coreClassResourceRuntimeAdapter.test.ts`, domain resource tests | Character resource lifetime/recovery | portable resource definitions + generic materializer |
 | `src/app/subclassRuntimeAdapter.ts` — Natural Recovery branch | Druid + Circle of the Land subclass ID | subclass resource materialization | `subclassRuntimeAdapter.test.ts`, Circle Land recovery tests | Character/subclass level, rest recovery | preserve generic subclass metadata; migrate named resource branch |
 | `src/app/druidCircleLandSpellRuntimeAdapter.ts` — `configureCircleLandSpells`, `circleLandCharacterSpellView` | Druid/Circle Land IDs select rest configuration and spell projection algorithm | subclass spell configuration execution | Circle Land spell/rest domain/runtime tests | Character prepared/cantrip state across rest | portable subclass spell-grant/rest data + generic spell-selection materializer |
@@ -84,7 +86,7 @@ Identity-agnostic execution infrastructure is not migration debt merely because 
 - `src/app/installedContentRuntimeAdapter.ts`: RuleModule validation/persistence/catalog identity, not known-feature mechanic selection;
 - connected session/transport/reconnect infrastructure, persistence, campaign lifecycle, inventory persistence, dice provider, theater-of-mind semantic fact provider;
 - `standardActionReactionAdapter.ts`, death-save/stabilize/unarmed and ability-check infrastructure when their behavior is a RulesProfile/core semantic rather than named content;
-- generic progression plumbing such as `progressionRuntimeAdapter.ts` and `progressionPersistentFeatureRuntimeAdapter.ts`, while identity-specific callers remain legacy.
+- generic progression persistence such as `progressionPersistentFeatureRuntimeAdapter.ts`. Mixed `progressionRuntimeAdapter.ts` remains `LEGACY_EXECUTION` at module level until its identity-specific resource/grant symbols are strangled out.
 
 ## CONTENT/PRESENTATION
 
@@ -113,6 +115,7 @@ M0 preserves current tests as migration oracles and does not rerun unrelated Gat
 - Wild Shape / Monk / Rogue / Devotion / Fiend: their named package scripts and domain tests.
 - Named progression/resource materialization: `test:progression`, `test:creation-structure`, `test:rules-domain` and matching named tests.
 - Spell execution/fallback: `test:spellcasting`, `phase09AuthoritativeSpellcastingAdapter.test.ts`, production spell regressions.
+- Rest-time named dispatch: `restSpellManagementRuntimeAdapter.test.ts` plus Pact Tome, Circle Land, and Wizard long-rest tests.
 
 A migration must reproduce its relevant golden behavior, then prove unknown-ID and ID/name-only rename invariance on the generic path before deleting the named branch.
 
