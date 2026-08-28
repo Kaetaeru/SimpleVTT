@@ -1,7 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
   "compositionRoot": "src/app/offlineRuntimeAdapters.ts",
-  "policy": "Every canonical offline execution import must be classified before entering the runtime composition. LEGACY_EXECUTION may shrink only when the composition and baseline shrink together, preventing removed legacy paths from being silently reintroduced. New imports require explicit classification; the baseline must never grow merely to admit new named-content execution.",
+  "policy": "Every canonical offline execution import must be classified before entering the runtime composition. LEGACY_EXECUTION may shrink only when the composition and baseline shrink together, preventing removed legacy paths from being silently reintroduced. New imports require explicit classification; the baseline must never grow merely to admit new named-content execution. Class/subclass-named RuntimeAdapter files outside the top-level composition require an explicit transitive classification.",
   "entries": [
     { "module": "./characterCreationV10Adapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./characterCreationWeaponAttackAdapter", "classification": "GENERIC_ENGINE" },
@@ -88,5 +88,8 @@
     { "module": "./campaignRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./campaignPartyStashCapabilityRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./campaignRationConversionRuntimeAdapter", "classification": "GENERIC_ENGINE" }
+  ],
+  "transitiveEntries": [
+    { "path": "src/app/bardicInspirationRuntimeAdapter.ts", "classification": "LEGACY_EXECUTION" }
   ]
 }
