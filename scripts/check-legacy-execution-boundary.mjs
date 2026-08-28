@@ -1,31 +1,63 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const NAMED_RUNTIME_ADAPTER = /^(?:barbarian|bard(?:College|ic)?|cleric|druid|fighter|monk|paladin|ranger|rogue|sorcerer|sorcery|warlock|wizard|subclass).*RuntimeAdapter\.ts$/;
+const CLASSIFICATIONS = new Set([
+  "CONTENT/PRESENTATION",
+  "LEGACY_EXECUTION",
+  "GENERIC_ENGINE",
+  "UNCLEAR",
+]);
 
-export function scanNamedRuntimeAdapters(repoRoot) {
-  const appRoot = join(repoRoot, "src", "app");
-  if (!existsSync(appRoot)) return [];
-  return readdirSync(appRoot)
-    .filter((name) => NAMED_RUNTIME_ADAPTER.test(name))
-    .map((name) => relative(repoRoot, join(appRoot, name)).replaceAll("\\", "/"))
-    .sort();
+export function scanExecutionComposition(source) {
+  const modules = [];
+  const pattern = /(?:^|\n)\s*import\s+["'](\.\/[^"']+)["'];/g;
+  for (const match of source.matchAll(pattern)) modules.push(match[1]);
+  return modules;
 }
 
 export function checkLegacyExecutionBoundary(repoRoot) {
+  const compositionPath = join(repoRoot, "src", "app", "offlineRuntimeAdapters.ts");
   const baselinePath = join(repoRoot, ".agents", "LEGACY_EXECUTION_BASELINE.json");
-  const detected = scanNamedRuntimeAdapters(repoRoot);
-  if (!existsSync(baselinePath)) {
-    return { ok: false, errors: [`missing baseline: ${baselinePath}`], detected };
+  const errors = [];
+  if (!existsSync(compositionPath)) return { ok: false, errors: [`missing composition root: ${compositionPath}`] };
+  if (!existsSync(baselinePath)) return { ok: false, errors: [`missing baseline: ${baselinePath}`] };
+
+  const actual = scanExecutionComposition(readFileSync(compositionPath, "utf8"));
+  const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
+  if (baseline.compositionRoot !== "src/app/offlineRuntimeAdapters.ts") {
+    errors.push(`unexpected baseline compositionRoot: ${baseline.compositionRoot ?? "<missing>"}`);
   }
 
-  const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
-  const grandfathered = new Set(baseline.legacyExecutionAdapters ?? []);
-  const exceptions = new Set(baseline.contentPresentationExceptions ?? []);
-  const unexpected = detected.filter((path) => !grandfathered.has(path) && !exceptions.has(path));
-  const errors = unexpected.map((path) => `${path}: new class/subclass-named runtime adapter is not inventoried`);
-  return { ok: errors.length === 0, errors, detected, grandfathered: [...grandfathered].sort(), exceptions: [...exceptions].sort() };
+  const entries = Array.isArray(baseline.entries) ? baseline.entries : [];
+  const expected = [];
+  const seen = new Set();
+  for (const entry of entries) {
+    if (!entry || typeof entry.module !== "string") {
+      errors.push("baseline entry missing module");
+      continue;
+    }
+    if (seen.has(entry.module)) errors.push(`duplicate baseline module: ${entry.module}`);
+    seen.add(entry.module);
+    expected.push(entry.module);
+    if (!CLASSIFICATIONS.has(entry.classification)) {
+      errors.push(`${entry.module}: invalid classification ${entry.classification ?? "<missing>"}`);
+    }
+  }
+
+  const actualDuplicates = actual.filter((module, index) => actual.indexOf(module) !== index);
+  for (const module of [...new Set(actualDuplicates)]) errors.push(`duplicate composition import: ${module}`);
+
+  const expectedSet = new Set(expected);
+  const actualSet = new Set(actual);
+  for (const module of [...actualSet].sort()) {
+    if (!expectedSet.has(module)) errors.push(`unclassified composition import: ${module}`);
+  }
+  for (const module of [...expectedSet].sort()) {
+    if (!actualSet.has(module)) errors.push(`stale baseline module: ${module}`);
+  }
+
+  return { ok: errors.length === 0, errors, actual, entries };
 }
 
 const self = fileURLToPath(import.meta.url);
@@ -33,12 +65,15 @@ if (resolve(process.argv[1] ?? "") === self) {
   const repoRoot = resolve(dirname(self), "..");
   const result = checkLegacyExecutionBoundary(repoRoot);
   if (!result.ok) {
-    console.error("Legacy named-execution boundary drift detected:");
+    console.error("Legacy execution composition boundary drift detected:");
     for (const error of result.errors) console.error(`- ${error}`);
-    console.error("\nDetected class/subclass-named runtime adapters:");
-    for (const path of result.detected) console.error(`- ${path}`);
     process.exitCode = 1;
   } else {
-    console.log(`Legacy named-execution boundary OK: ${result.detected.length} detected adapter(s); grandfathered debt may shrink but not grow.`);
+    const counts = Object.fromEntries([...CLASSIFICATIONS].map((classification) => [
+      classification,
+      result.entries.filter((entry) => entry.classification === classification).length,
+    ]));
+    console.log(`Legacy execution composition boundary OK: ${result.actual.length} classified import(s).`);
+    console.log(Object.entries(counts).map(([key, value]) => `${key}=${value}`).join(" · "));
   }
 }
