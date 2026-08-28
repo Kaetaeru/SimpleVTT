@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "policy": "Grandfathered class/subclass-specific execution adapters may be deleted as Common Play migration lands, but this set must not grow. Content/progression/presentation exceptions are explicit and do not authorize named execution semantics.",
+  "version": 2,
+  "policy": "Every src/app/*RuntimeAdapter.ts path is classified. Grandfathered legacy execution may be deleted as Common Play migration lands, but no classified set may grow without explicit inventory review. Content/presentation and generic infrastructure classifications do not authorize named execution semantics.",
   "legacyExecutionAdapters": [
     "src/app/barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts",
     "src/app/barbarianRageRuntimeAdapter.ts",
@@ -11,6 +11,7 @@
     "src/app/bardicInspirationRuntimeAdapter.ts",
     "src/app/clericDivineSparkActionRuntimeAdapter.ts",
     "src/app/clericTurnUndeadActionRuntimeAdapter.ts",
+    "src/app/druidCircleLandSpellRuntimeAdapter.ts",
     "src/app/druidWildShapeRuntimeAdapter.ts",
     "src/app/fighterActionSurgeRuntimeAdapter.ts",
     "src/app/fighterIndomitableFollowUpRuntimeAdapter.ts",
@@ -30,7 +31,7 @@
     "src/app/subclassRuntimeAdapter.ts",
     "src/app/warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts"
   ],
-  "contentPresentationExceptions": [
-    "src/app/druidCircleLandSpellRuntimeAdapter.ts"
-  ]
+  "contentPresentationAdapters": [],
+  "genericInfrastructureAdapters": [],
+  "unclearAdapters": []
 }
