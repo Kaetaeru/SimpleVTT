@@ -101,6 +101,23 @@ function portableCommonPlayTargetingMechanic() {
   };
 }
 
+function portableCommonPlayInteractionMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.generic-interaction-action",
+      payments:[{kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+      entryPoints:[{
+        id:"reactive-mend",
+        invocation:"manual",
+        interaction:{id:"confirm-reaction",kind:"consent",responder:"actor",mode:"blocking",input:{type:"boolean"},revalidate:"always"},
+        operations:[{kind:"healing.apply",amount:{value:5},target:"self"}],
+      }],
+    },
+  };
+}
+
 test("multi-entry RuleModule preview writes nothing and activation commits one generation", async () => {
   const store=new MemoryInstalledContentStore();
   const writer=new MockAdapter();
@@ -141,12 +158,12 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.equal((await store.readGenerations()).length,0);
 });
 
-test("registered Common Play resource, d20, HP, and targeting mechanics persist, rehydrate, and survive installed-content session sync", async () => {
+test("registered Common Play resource, d20, HP, targeting, and interaction mechanics persist, rehydrate, and survive installed-content session sync", async () => {
   const hostStore=new MemoryInstalledContentStore();
   const host=new MockAdapter();
   setInstalledContentStoreForTests(host,hostStore);
   const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
-  const mechanics=[portableCommonPlayMechanic(),portableCommonPlayD20Mechanic(),portableCommonPlayHpMechanic(),portableCommonPlayTargetingMechanic()];
+  const mechanics=[portableCommonPlayMechanic(),portableCommonPlayD20Mechanic(),portableCommonPlayHpMechanic(),portableCommonPlayTargetingMechanic(),portableCommonPlayInteractionMechanic()];
   raw.content[0].mechanics=mechanics;
 
   const preview=await host.previewContentImport(JSON.stringify(raw));
@@ -288,6 +305,33 @@ test("installed Common Play rejects unsupported targeting authoring before persi
 
     const preview=await adapter.previewContentImport(JSON.stringify(raw));
     assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/targeting|unsupported fields/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+    await adapter.activateContentImport();
+    assert.equal((await store.readGenerations()).length,0);
+  }
+});
+
+test("installed Common Play rejects unsupported interaction and Reaction payment authoring before persistence",async()=>{
+  const mutations:Array<(mechanic:ReturnType<typeof portableCommonPlayInteractionMechanic>)=>void>=[
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.kind="choice";},
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.responder="target";},
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.mode="notice";},
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.input.type="text";},
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="if-revision-changed";},
+    (mechanic)=>{mechanic.config.payments[0].bucket="action";},
+    (mechanic)=>{mechanic.config.payments[0].amount.value=2;},
+    (mechanic)=>{mechanic.config.payments[0].consumeAt="stage";},
+    (mechanic)=>{mechanic.config.payments[0].refundOnCancel=false;},
+  ];
+  for(const mutate of mutations) {
+    const store=new MemoryInstalledContentStore();
+    const adapter=new MockAdapter();
+    setInstalledContentStoreForTests(adapter,store);
+    const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+    const mechanic=portableCommonPlayInteractionMechanic();
+    mutate(mechanic);
+    raw.content[0].mechanics=[mechanic];
+    const preview=await adapter.previewContentImport(JSON.stringify(raw));
+    assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/portable Common Play/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
     await adapter.activateContentImport();
     assert.equal((await store.readGenerations()).length,0);
   }

@@ -31,6 +31,7 @@ interface D20Identity {
 
 type HpIdentity=D20Identity;
 type TargetingIdentity=D20Identity;
+type InteractionIdentity=D20Identity;
 
 const D20_IDENTITY:D20Identity={
   moduleId:"homebrew.d20-production-probe",
@@ -54,6 +55,14 @@ const TARGETING_IDENTITY:TargetingIdentity={
   mechanicId:"external.unknown.generic-targeting-production-probe",
   entryPointId:"mend-other",
   displayName:"External Targeting Production Probe",
+};
+
+const INTERACTION_IDENTITY:InteractionIdentity={
+  moduleId:"homebrew.interaction-production-probe",
+  contentId:"option.external-interaction-production-probe",
+  mechanicId:"external.unknown.generic-interaction-production-probe",
+  entryPointId:"reactive-mend",
+  displayName:"External Interaction Production Probe",
 };
 
 function packagePayload() {
@@ -176,6 +185,40 @@ function targetingPackagePayload(identity=TARGETING_IDENTITY) {
   });
 }
 
+function interactionPackagePayload(identity=INTERACTION_IDENTITY,withResource=false) {
+  return JSON.stringify({
+    schemaVersion:"0.1-draft",
+    moduleId:identity.moduleId,
+    moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+    defaultLocale:"en",
+    source:{document:"External Interaction Production Probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{
+      id:identity.contentId,
+      category:"option",
+      presentation:{defaultLocale:"en",originalName:identity.displayName,locales:{en:{name:identity.displayName,description:"Portable actor consent production probe"}}},
+      mechanics:[{
+        kind:"common-play",
+        config:{
+          schemaVersion:"0.2-draft",
+          id:identity.mechanicId,
+          payments:[
+            {kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true},
+            ...(withResource?[{kind:"resource",resource:FIGHTER_SECOND_WIND_RESOURCE_ID,amount:{value:1},consumeAt:"commit"}]:[]),
+          ],
+          entryPoints:[{
+            id:identity.entryPointId,
+            invocation:"manual",
+            interaction:{id:"confirm-reaction",kind:"consent",responder:"actor",mode:"blocking",input:{type:"boolean"},revalidate:"always"},
+            operations:[{kind:"healing.apply",amount:{value:5},target:"self"}],
+          }],
+        },
+      }],
+    }],
+  });
+}
+
 async function installD20(adapter:MockAdapter,identity=D20_IDENTITY) {
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(d20PackagePayload(identity));
@@ -203,6 +246,18 @@ async function installHp(adapter:MockAdapter,identity=HP_IDENTITY) {
 async function installTargeting(adapter:MockAdapter,identity=TARGETING_IDENTITY) {
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(targetingPackagePayload(identity));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  return installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),
+    mechanicId:identity.mechanicId,
+    entryPointId:identity.entryPointId,
+  });
+}
+
+async function installInteraction(adapter:MockAdapter,identity=INTERACTION_IDENTITY,withResource=false) {
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(interactionPackagePayload(identity,withResource));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   return installedCommonPlayActionId({
@@ -543,4 +598,155 @@ test("connected Common Play targeting remains Host-authoritative and converges t
   assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
   assert.equal(clientSnapshot.resolution?.actionId,actionId);
   assert.deepEqual(clientSnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+});
+
+test("installed Common Play consent uses the existing interrupt presentation and decline mutates nothing",async()=>{
+  const adapter=new MockAdapter();
+  const actionId=await installInteraction(adapter);
+  injureActiveCharacter(adapter,10);
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const before=await adapter.getSnapshot();
+
+  await adapter.resolveAction(actionId,["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"interrupt");
+  assert.equal(snapshot.resolution?.canAdvance,false);
+  assert.equal(snapshot.resolution?.interrupt?.id,"confirm-reaction");
+  assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"].reaction,true);
+
+  await adapter.respondToInterrupt(false);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.interrupt,undefined);
+  assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"].reaction,true);
+  await adapter.respondToInterrupt(false);
+  assert.equal((await adapter.getSnapshot()).activeCharacter.hp,before.activeCharacter.hp,"decline replay must remain a no-op");
+});
+
+test("accepted Common Play consent spends Reaction with downstream healing, rejects replay/unavailable use, and Undo restores both",async()=>{
+  const adapter=new MockAdapter();
+  const actionId=await installInteraction(adapter);
+  injureActiveCharacter(adapter,10);
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const before=(await adapter.getSnapshot()).activeCharacter.hp;
+
+  await adapter.resolveAction(actionId,["char.aelar"]);
+  await adapter.respondToInterrupt(true);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.hp,before+5);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"].reaction,false);
+  assert.ok(snapshot.resolution?.stateChanges.some((change)=>/economy\.reaction/.test(change)));
+  assert.ok(snapshot.resolution?.stateChanges.some((change)=>/HP/.test(change)));
+  await adapter.respondToInterrupt(true);
+  assert.equal((await adapter.getSnapshot()).activeCharacter.hp,before+5,"accepted response replay must not execute twice");
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.hp,before);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"].reaction,true);
+
+  await adapter.resolveAction(actionId,["char.aelar"]);
+  await adapter.respondToInterrupt(true);
+  const once=await adapter.getSnapshot();
+  await adapter.resolveAction(actionId,["char.aelar"]);
+  assert.equal((await adapter.getSnapshot()).resolution?.stage,"interrupt");
+  await adapter.respondToInterrupt(true);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.hp,once.activeCharacter.hp,"unavailable Reaction must reject downstream healing");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"].reaction,false);
+});
+
+test("resource failure after Reaction validation remains atomic in production",async()=>{
+  const adapter=new MockAdapter();
+  const actionId=await installInteraction(adapter,INTERACTION_IDENTITY,true);
+  injureActiveCharacter(adapter,10);
+  const internal=adapter as unknown as {activeCharacter:{resources:Array<{id:string;current:number}>}};
+  internal.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)!.current=0;
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const before=(await adapter.getSnapshot()).activeCharacter.hp;
+  await adapter.resolveAction(actionId,["char.aelar"]);
+  await adapter.respondToInterrupt(true);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.hp,before);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"].reaction,true);
+  assert.match(snapshot.resolution?.finalOutcome??"",/적용 거부/);
+});
+
+test("Common Play consent mechanics are invariant under module, content, definition, entry point, interaction, action, and display rename",async()=>{
+  const execute=async(identity:InteractionIdentity,interactionId:string)=>{
+    const adapter=new MockAdapter();
+    const payload=JSON.parse(interactionPackagePayload(identity)) as {content:Array<{mechanics:Array<{config:{entryPoints:Array<{interaction:{id:string}}>}}>}>};
+    payload.content[0].mechanics[0].config.entryPoints[0].interaction.id=interactionId;
+    setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+    const preview=await adapter.previewContentImport(JSON.stringify(payload));
+    assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+    await adapter.activateContentImport();
+    const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
+    injureActiveCharacter(adapter,10);
+    await adapter.startInitiative();
+    await adapter.setCurrentActor("char.aelar");
+    const before=(await adapter.getSnapshot()).activeCharacter.hp;
+    await adapter.resolveAction(actionId,["char.aelar"]);
+    await adapter.respondToInterrupt(true);
+    const snapshot=await adapter.getSnapshot();
+    return {actionId,healed:snapshot.activeCharacter.hp-before,reaction:snapshot.scene.economyByActor["char.aelar"].reaction};
+  };
+  const original=await execute(INTERACTION_IDENTITY,"confirm-reaction");
+  const renamed=await execute({
+    moduleId:"homebrew.renamed-interaction-probe",
+    contentId:"option.previously-unseen.renamed-interaction",
+    mechanicId:"external.previously-unseen.renamed-interaction-definition",
+    entryPointId:"renamed-reactive-mend",
+    displayName:"Completely Renamed Consent",
+  },"renamed-confirmation");
+  assert.notEqual(original.actionId,renamed.actionId);
+  assert.deepEqual({healed:renamed.healed,reaction:renamed.reaction},{healed:original.healed,reaction:original.reaction});
+});
+
+test("Host-accepted Common Play consent converges Reaction and downstream state on Client through existing events",async()=>{
+  const sessionId="session.common-play-interaction";
+  const host=new MockAdapter();
+  const actionId=await installInteraction(host);
+  injureActiveCharacter(host,10);
+  await host.startInitiative();
+  await host.setCurrentActor("char.aelar");
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";
+  hostState.sessionId=sessionId;
+  hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const wires:string[]=[];
+  const originalSend=tauriSessionTransport.send;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try {
+    await host.resolveAction(actionId,["char.aelar"]);
+    assert.equal((await host.getSnapshot()).resolution?.stage,"interrupt");
+    await host.respondToInterrupt(true);
+  } finally {
+    tauriSessionTransport.send=originalSend;
+  }
+  const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+  assert.ok(batch,JSON.stringify(wires));
+  const kinds=batch.events.flatMap((event)=>event.payload.kind==="resolution"?event.payload.resolutionEvents.map((resolutionEvent)=>resolutionEvent.kind):[]);
+  assert.deepEqual(kinds,["use-economy","healing"]);
+
+  const client=new MockAdapter();
+  await installInteraction(client);
+  injureActiveCharacter(client,10);
+  await client.startInitiative();
+  await client.setCurrentActor("char.aelar");
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";
+  clientState.sessionId=sessionId;
+  clientState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"duplicate");
+  const hostSnapshot=await host.getSnapshot();
+  const clientSnapshot=await client.getSnapshot();
+  assert.equal(clientSnapshot.activeCharacter.hp,hostSnapshot.activeCharacter.hp);
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"].reaction,false);
 });

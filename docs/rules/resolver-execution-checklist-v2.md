@@ -220,7 +220,7 @@ Initial families:
 - [x] tests / rolls / outcomes — `PRODUCTION`; generic authored actor d20 tests cross validation, normalization, installed persistence/rehydration, existing Resolver lowering, production authority, connected presentation, and ID/name rename invariance. Named post-roll features remain legacy, so `MIGRATED`/`ACCEPTED` are not claimed;
 - [x] damage / healing / HP — `PRODUCTION`; authored literal/dice damage and literal healing cross validation, installed persistence/rehydration, existing Resolver lowering, single pre-resolved runtime target authority, HP writeback/Undo, connected convergence, and rename invariance. Deliberate HP/targeting boundaries remain below;
 - [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports the bounded `from:targets`, exact `min/max:1/1` selection-validator subset through validation, persistence/rehydration, existing Resolver targeting, production authority, Undo, connected convergence, and rename invariance. Rich selectors and allocation remain unsupported;
-- [ ] interactions / reactions / interceptors;
+- [x] interactions / reactions / interceptors — bounded `PRODUCTION`; manual actor boolean consent plus one Reaction economy payment executes accepted downstream Common Play operations through the existing production interrupt/authority path. Rich interactions, interceptors, and remote responder recovery remain unsupported;
 - [ ] persistent effects / triggers / frequency;
 - [ ] spatial facts / zones / movement;
 - [ ] item activation / mutable item state;
@@ -427,6 +427,34 @@ Deliberate boundary:
 - range, sight, cover, distance, LOS, and other spatial authoring/facts remain later provider-backed slices;
 - named target-dependent feature/spell adapters remain unchanged;
 - therefore this family is `PRODUCTION` only for the bounded single pre-resolved target subset, not `MIGRATED` or `ACCEPTED`.
+
+---
+
+## P7 — Interactions / Reactions / Interceptors production bridge — bounded PRODUCTION
+
+The first bounded slice connects canonical authored actor consent to the existing production `ResolutionView.interrupt` lifecycle. The canonical Reaction economy payment lowers to the existing generic `use-economy` Reaction slot inside the same `PendingResolution` as resource payments and downstream operations.
+
+Evidence:
+
+- [x] only manual `consent` + actor responder + blocking boolean input + `revalidate:"always"` is accepted; other interaction shapes fail explicitly;
+- [x] only one commit-time, refundable, amount-one `reaction` economy payment is accepted, and interaction/payment pairing is validated;
+- [x] interaction-bearing entry points require matching accepted authorization at the shared compiler boundary, preventing direct compiler bypass;
+- [x] invocation projects the existing interrupt presentation without consuming Reaction, resources, or applying downstream state;
+- [x] decline clears the interrupt and ends presentation without mechanical mutation or replay;
+- [x] accept looks up installed content again, snapshots current authority, revalidates action/actor/targets/payments, and commits Reaction plus downstream operations atomically;
+- [x] unavailable Reaction, insufficient resource, and invalid target reject without partial mutation;
+- [x] accepted Reaction plus healing support authoritative writeback, Undo, and duplicate-response safety;
+- [x] normalized interaction/payment data survives preview, activation, installed persistence/rehydration, and required-session peer transfer;
+- [x] Host acceptance converges Reaction and downstream state to Client through the existing event path without Client mechanics recalculation;
+- [x] module/content/definition/entry-point/interaction/action/display renames preserve semantics;
+- [x] no prompt framework, pending store, interaction/reaction engine, transport, fallback, or ID/name algorithm branch exists.
+
+Deliberate boundary:
+
+- `roll.modify`, reroll, interceptors, triggered dispatch, target/owner/DM responders, multiple options, and named post-roll migrations remain unsupported;
+- remote responder routing, reconnect continuation, stale restart, and persistent pending interaction are not claimed; the connected proof uses Host as responder;
+- Indomitable, Tactical Mind, Cutting Words, Peerless Skill, Bardic Inspiration follow-up, and Dark One's Own Luck remain unchanged behavior oracles;
+- therefore this family is bounded `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
 ---
 

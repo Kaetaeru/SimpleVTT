@@ -1,5 +1,5 @@
 import "./installedContentContracts";
-import type { AppSnapshot, CatalogEntry, CharacterSheet, DamageComponentView, SceneVm, SessionMode } from "./contracts";
+import type { AppSnapshot, CatalogEntry, CharacterSheet, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
@@ -24,6 +24,7 @@ interface AdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
   activeCharacter:CharacterSheet;
+  resolution:ResolutionView|null;
   d20(actionId:string,index?:number):number;
   getSnapshot():Promise<AppSnapshot>;
 }
@@ -38,6 +39,7 @@ type CommonPlayProductionAction = {
 };
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
+const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const builtinCatalogOverrides=new WeakMap<MockAdapter,CatalogEntry[]>();
 const cp=<T,>(value:T):T=>structuredClone(value);
 
@@ -90,8 +92,14 @@ async function installedCommonPlayAction(adapter:MockAdapter,actionId:string):Pr
   };
 }
 
+async function commonPlayAction(adapter:MockAdapter,actionId:string) {
+  return parseInstalledCommonPlayActionId(actionId)
+    ? installedCommonPlayAction(adapter,actionId)
+    : builtinCommonPlayAction(adapter,actionId);
+}
+
 function referencedResourceIds(definition:CommonPlayOperationDefinition) {
-  const ids=new Set((definition.payments??[]).map((payment)=>payment.resource));
+  const ids=new Set((definition.payments??[]).flatMap((payment)=>payment.kind==="resource"?[payment.resource]:[]));
   for (const entryPoint of definition.entryPoints) {
     for (const operation of entryPoint.operations) {
       if (operation.kind==="resource.change") ids.add(operation.resource);
@@ -200,55 +208,73 @@ function hpPresentation(
   };
 }
 
-MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAction(actionId:string,targetIds:string[]) {
-  const installed=parseInstalledCommonPlayActionId(actionId);
-  const action=installed
-    ? await installedCommonPlayAction(this,actionId)
-    : builtinCommonPlayAction(this,actionId);
-  if (!action) return previousResolveAction.call(this,actionId,targetIds);
+interface PreparedCommonPlayAction {
+  internal:AdapterState;
+  state:RulesRuntimeState;
+  actor:CharacterSheet;
+  actorEntity:SceneVm["entities"][number];
+  selectedTargetId:string;
+  selectedTargets:SceneVm["entities"];
+  projectedAction:SceneVm["actionsByActor"][string][number]|undefined;
+  entryPoint:CommonPlayOperationDefinition["entryPoints"][number];
+}
 
-  const internal=this as unknown as AdapterState;
+function prepareCommonPlayAction(
+  adapter:MockAdapter,
+  actionId:string,
+  targetIds:string[],
+  action:CommonPlayProductionAction,
+):PreparedCommonPlayAction|undefined {
+  const internal=adapter as unknown as AdapterState;
   const actor=internal.activeCharacter;
-  let state=internal.sessionMode==="initiative" ? snapshotAdapterTurnRuntimeState(this,internal.scene) : undefined;
-  if (state) state=seedReferencedResources(this,internal,state,action.definition);
-  if (!state||state.clock.activeActorId!==actor.id) return internal.getSnapshot();
+  let state=internal.sessionMode==="initiative" ? snapshotAdapterTurnRuntimeState(adapter,internal.scene) : undefined;
+  if (state) state=seedReferencedResources(adapter,internal,state,action.definition);
+  if (!state||state.clock.activeActorId!==actor.id) return undefined;
 
-  const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
-  const entryPoint=action.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
+  const entryPoint=action.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
+  if(!entryPoint) return undefined;
   const hasTargeting=entryPoint.targeting!==undefined;
-  if(!hasTargeting&&targetIds.length!==1) return internal.getSnapshot();
+  if(!hasTargeting&&targetIds.length!==1) return undefined;
   const selectedTargetId=targetIds[0];
   const actorEntity=internal.scene.entities.find((candidate)=>candidate.id===actor.id);
-  if(!actorEntity||!state.combatants[actor.id]) return internal.getSnapshot();
+  if(!actorEntity||!state.combatants[actor.id]) return undefined;
   const selectedTargets=targetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
-  if(selectedTargets.some((target,index)=>!target||!state.combatants[targetIds[index]])) return internal.getSnapshot();
-  const selectedTarget=selectedTargets[0];
+  if(selectedTargets.some((target,index)=>!target||!state!.combatants[targetIds[index]])) return undefined;
   const projectedAction=internal.scene.actionsByActor[actor.id]?.find((candidate)=>candidate.id===actionId);
   const needsSelectedTarget=entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   if(hasTargeting) {
-    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return internal.getSnapshot();
+    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
   } else if(needsSelectedTarget) {
-    if(!selectedTarget||projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return internal.getSnapshot();
-  } else if(selectedTargetId!==actor.id) return internal.getSnapshot();
+    if(!selectedTargets[0]||projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return undefined;
+  } else if(selectedTargetId!==actor.id) return undefined;
+  return {internal,state,actor,actorEntity,selectedTargetId,selectedTargets:selectedTargets as SceneVm["entities"],projectedAction,entryPoint};
+}
 
+async function executeCommonPlayAction(
+  adapter:MockAdapter,
+  actionId:string,
+  action:CommonPlayProductionAction,
+  prepared:PreparedCommonPlayAction,
+  resolutionId:string,
+  interactionId?:string,
+) {
+  const {internal,state,actor,actorEntity,selectedTargetId,selectedTargets,projectedAction,entryPoint}=prepared;
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
   const committed=resolveCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,action.definition,{
     resolutionId,
     actorId:actor.id,
     entryPointId:action.entryPointId,
     targetId:selectedTargetId,
-    targetingTargets:hasTargeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target!)):undefined,
+    targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,
     creatureKinds:Object.fromEntries([
       [actor.id,actorEntity.kind==="character"?"character":"monster"],
-      ...selectedTargets.map((target)=>[target!.id,target!.kind==="character"?"character":"monster"] as const),
+      ...selectedTargets.map((target)=>[target.id,target.kind==="character"?"character":"monster"] as const),
     ]),
     damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
-    ...(entryPoint.test?{d20:{
-      faces:d20Faces!,
-      targetId:selectedTargetId,
-    }}:{}),
+    ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId}}:{}),
+    ...(interactionId?{interactionResponse:{interactionId,accepted:true as const}}:{}),
   });
-  if(committed.status==="rejected") return internal.getSnapshot();
+  if(committed.status==="rejected") return {status:"rejected" as const,error:committed.error,snapshot:await internal.getSnapshot()};
   const roll=committed.results[`${resolutionId}:test`] as D20TestResult|undefined;
   const hp=hpPresentation(entryPoint,committed,resolutionId);
   const affectedTargetIds=[...new Set(entryPoint.operations
@@ -257,7 +283,7 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:[selectedTargetId];
   const presentationTargets=presentationTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id)!);
   const outcome=hp?.outcome??(roll?roll.outcome:"규칙 효과 적용");
-  return commitProductionRuntimeResolution(this,state,committed,{
+  return {status:"committed" as const,snapshot:await commitProductionRuntimeResolution(adapter,state,committed,{
     resolutionId,
     actionId,
     actionName:projectedAction?.name||action.nameKo||action.nameEn,
@@ -274,5 +300,85 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
     rollTotal:hp?.rollTotal??roll?.total,
     attackTotal:roll?.family==="attack-roll"?roll.total:undefined,
     damageComponents:hp?.damageComponents,
-  });
+  })};
+}
+
+function finishInteraction(internal:AdapterState,resolution:ResolutionView,message:string) {
+  resolution.interrupt=undefined;
+  resolution.stage="complete";
+  resolution.canAdvance=false;
+  resolution.nextLabel=undefined;
+  resolution.compact=message;
+  resolution.detail.push(message);
+  resolution.calculatedOutcome=message;
+  resolution.finalOutcome=message;
+  return internal.getSnapshot();
+}
+
+MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAction(actionId:string,targetIds:string[]) {
+  const action=await commonPlayAction(this,actionId);
+  if (!action) return previousResolveAction.call(this,actionId,targetIds);
+  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action);
+  if(!prepared) return (this as unknown as AdapterState).getSnapshot();
+  const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const interaction=prepared.entryPoint.interaction;
+  if(!interaction) return (await executeCommonPlayAction(this,actionId,action,prepared,resolutionId)).snapshot;
+
+  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;
+  prepared.internal.resolution={
+    id:resolutionId,
+    actorId:prepared.actor.id,
+    targetIds:[...targetIds],
+    actionId,
+    actionName,
+    rollKind:"effect",
+    stage:"interrupt",
+    authoritativeDice:[],
+    saveResults:[],
+    damageComponents:[],
+    compact:`${actionName} · 반응 사용 확인`,
+    detail:[`${action.definition.id} · ${action.entryPointId}`,"승인 전에는 비용과 효과를 적용하지 않습니다."],
+    provenance:[`${action.source} · ${action.contentId}`],
+    calculatedOutcome:"승인 대기",
+    finalOutcome:"승인 대기",
+    stateChanges:[],
+    adjudicated:false,
+    interrupt:{
+      id:interaction.id,
+      responderId:prepared.actor.id,
+      responderName:prepared.actor.name,
+      trigger:`${actionName} 사용 선언`,
+      optionName:actionName,
+      cost:"반응 1",
+      effect:"승인 시 선언된 Common Play 효과를 적용합니다.",
+      source:action.source,
+    },
+    canAdvance:false,
+  };
+  return prepared.internal.getSnapshot();
+};
+
+MockAdapter.prototype.respondToInterrupt=async function respondToCommonPlayInteraction(accept:boolean) {
+  const internal=this as unknown as AdapterState;
+  const resolution=internal.resolution;
+  const interrupt=resolution?.interrupt;
+  if(!resolution||resolution.stage!=="interrupt"||!interrupt) return previousRespondToInterrupt.call(this,accept);
+
+  const installedReference=parseInstalledCommonPlayActionId(resolution.actionId);
+  const action=await commonPlayAction(this,resolution.actionId);
+  if(!action) return installedReference
+    ? finishInteraction(internal,resolution,"Common Play 상호작용 재검증 실패")
+    : previousRespondToInterrupt.call(this,accept);
+  const entryPoint=action?.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
+  if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);
+  if(resolution.actorId!==internal.activeCharacter.id) {
+    return finishInteraction(internal,resolution,"Common Play 상호작용 재검증 실패");
+  }
+  if(!accept) return finishInteraction(internal,resolution,"Common Play 상호작용 거절");
+
+  const prepared=prepareCommonPlayAction(this,resolution.actionId,resolution.targetIds,action);
+  if(!prepared) return finishInteraction(internal,resolution,"Common Play 상호작용 현재 권한 재검증 실패");
+  const result=await executeCommonPlayAction(this,resolution.actionId,action,prepared,resolution.id,interrupt.id);
+  if(result.status==="rejected") return finishInteraction(internal,resolution,`Common Play 상호작용 적용 거부: ${result.error}`);
+  return result.snapshot;
 };
