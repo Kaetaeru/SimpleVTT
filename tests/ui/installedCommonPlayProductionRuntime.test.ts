@@ -7,7 +7,7 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID } from "../../src/domain/coreClassResources";
+import { FIGHTER_SECOND_WIND_RESOURCE_ID } from "../../src/domain/coreClassResources";
 
 const MODULE_ID="homebrew.production-probe";
 const MODULE_VERSION="1";
@@ -34,8 +34,7 @@ function packagePayload() {
           schemaVersion:"0.2-draft",
           id:MECHANIC_ID,
           payments:[
-            {kind:"resource",resource:FIGHTER_ACTION_SURGE_RESOURCE_ID,amount:{value:1},consumeAt:"commit"},
-            {kind:"resource",resource:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID,amount:{value:1},consumeAt:"commit"},
+            {kind:"resource",resource:FIGHTER_SECOND_WIND_RESOURCE_ID,amount:{value:1},consumeAt:"commit"},
           ],
           entryPoints:[{
             id:ENTRY_POINT_ID,
@@ -48,7 +47,7 @@ function packagePayload() {
   });
 }
 
-test("installed portable Common Play executes through the production resolveAction authority path", async () => {
+test("installed portable Common Play executes through the production resolveAction authority path without Action Surge identities", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,store);
@@ -59,6 +58,10 @@ test("installed portable Common Play executes through the production resolveActi
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
 
+  let snapshot=await adapter.getSnapshot();
+  const resourceBefore=snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)?.current;
+  assert.ok(resourceBefore !== undefined && resourceBefore > 0);
+
   const actionId=installedCommonPlayActionId({
     catalogId:catalogQualifiedId(CONTENT_ID,MODULE_ID,MODULE_VERSION),
     mechanicId:MECHANIC_ID,
@@ -66,16 +69,14 @@ test("installed portable Common Play executes through the production resolveActi
   });
   await adapter.resolveAction(actionId,["char.aelar"]);
 
-  let snapshot=await adapter.getSnapshot();
+  snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.resolution?.actionId,actionId);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.length,1);
-  assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current,0);
-  assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current,0);
+  assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)?.current,resourceBefore-1);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions,undefined);
-  assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current,1);
-  assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current,1);
+  assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)?.current,resourceBefore);
 });
