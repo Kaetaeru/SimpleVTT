@@ -541,6 +541,22 @@ Deliberate boundary:
 
 ---
 
+## C7 — Representative D&D composition proofs — bounded
+
+Evidence:
+
+- [x] `common-play-representative-scenarios.json` records every mandatory scenario from the master run and a contract test prevents missing or orphaned executable evidence;
+- [x] the composition suite executes 79 deterministic tests covering post-roll modification, shared multi-target saves, allocation, maintained triggers, Zones, mapless/provider targeting, movement, senses, Concentration, ordering, Ready attack/spell, artifacts/forms/controllers, items/attunement, Recharge/special timing, project/exposure/environment, and all eight Weapon Masteries;
+- [x] Sap/Vex reuse generic target-aware d20 modifier Effects, Slow reuses a generic speed-delta Effect, and the other masteries compose existing d20/economy/frequency/movement/damage/condition operations;
+- [x] the representative scenarios use unknown external identities or rename proofs; scenario names are evidence labels and never select an algorithm.
+
+Deliberate boundary:
+
+- deterministic domain composition is not production, connected, persistence, or UI acceptance evidence;
+- C8 must still move named production adapters onto these paths and reduce the legacy baseline before ledger rows can change final disposition.
+
+---
+
 # PHASE 3 — ANTICIPATED D&D CAPABILITY COVERAGE F-M
 
 Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.

@@ -1,7 +1,7 @@
 import { beginTurn } from "./turnEconomy";
 import { conditionActionAvailability, effectiveSpeed } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
+import { effectIsActive, expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
 import { expireBarbarianRageAtClock } from "./barbarianRageLifecycle";
 import { recoverResources } from "./resources";
 import { expireRuntimeArtifactsAtClock } from "./runtimeArtifact";
@@ -39,7 +39,8 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
   ctx.state.effects = resetEffectTurnActivity(expiry.active, operation.actorId);
 
   const conditions = conditionEffectsFor(ctx.state, operation.actorId);
-  const speed = effectiveSpeed(actor.baseSpeed, conditions);
+  const speedDelta=ctx.state.effects.reduce((sum,effect)=>effectIsActive(effect)&&effect.targetId===operation.actorId&&effect.kind==="modifier"&&typeof effect.metadata?.speedDelta==="number"?sum+effect.metadata.speedDelta:sum,0);
+  const speed = Math.max(0,effectiveSpeed(actor.baseSpeed, conditions)+speedDelta);
   const availability = conditionActionAvailability(conditions);
   const before = actor.economy;
   const fresh = beginTurn(speed);

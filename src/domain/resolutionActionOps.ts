@@ -246,15 +246,17 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     actorConditions:conditionEffectsFor(ctx.state, actorId),
     targetConditions:operation.targetId ? conditionEffectsFor(ctx.state, operation.targetId) : [],
   });
-  const spellModifiers=ctx.state.effects.filter((effect)=>{
+  const d20Modifiers=ctx.state.effects.filter((effect)=>{
     if(!effectIsActive(effect)) return false;
     if (effect.kind!=="modifier"||effect.metadata?.d20Family!==operation.request.family) return false;
     const ability=effect.metadata.d20Ability;
     if (typeof ability==="string"&&ability!==operation.condition?.ability) return false;
+    const targetId=effect.metadata.d20TargetId;
+    if(typeof targetId==="string"&&targetId!==operation.targetId)return false;
     const scope=effect.metadata.d20Scope;
     return scope==="target"?Boolean(operation.targetId&&effect.targetId===operation.targetId):effect.targetId===actorId;
   });
-  const spellRollStates=spellModifiers.flatMap((effect)=>effect.metadata?.d20RollState==="advantage"||effect.metadata?.d20RollState==="disadvantage"
+  const effectRollStates=d20Modifiers.flatMap((effect)=>effect.metadata?.d20RollState==="advantage"||effect.metadata?.d20RollState==="disadvantage"
     ? [{source:effect.sourceId,state:effect.metadata.d20RollState as "advantage"|"disadvantage"}]
     : []);
   let target = operation.request.target;
@@ -270,7 +272,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     ...operation.request,
     target,
     modifierContributions:modifiers,
-    rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions, ...spellRollStates],
+    rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions, ...effectRollStates],
   });
   if (adjustments.autoFailure) {
     resolved = {
@@ -287,7 +289,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
       provenance:[...resolved.provenance, { source:"condition:auto-critical", status:"applied", reason:"condition makes a hit within 5 feet a Critical Hit" }],
     };
   }
-  const consumed=spellModifiers.filter((effect)=>effect.metadata?.consumeOnUse===true);
+  const consumed=d20Modifiers.filter((effect)=>effect.metadata?.consumeOnUse===true);
   const consumedProvenance=consumed.map((effect)=>({source:effect.sourceId,status:"applied" as const,reason:`effect ${effect.id} consumed by ${operation.request.family}`}));
   if (consumed.length) ctx.state.effects=ctx.state.effects.filter((effect)=>!consumed.some((entry)=>entry.id===effect.id));
   if (consumedProvenance.length) resolved={...resolved,provenance:[...resolved.provenance,...consumedProvenance]};
