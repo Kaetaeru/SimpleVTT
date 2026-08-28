@@ -8,29 +8,31 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T11:30:30+09:00`
+- checkpointed_at: `2026-08-28T11:31:30+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight was reconciled in the required README -> control -> STATE -> PLAN order. Concurrent watcher activity was reconciled against live Git refs before writes. Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. PLAN routing did not change. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain authoritative. Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
+Mandatory preflight was completed in the required README -> control -> STATE -> PLAN order on the live Rerun branch. Run identity remains sequence `2`, task `common-play-foundation-convergence`. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` were re-read after preflight. PLAN routing did not change.
+
+Concurrent watcher activity was reconciled before this write. The live Rerun parent advanced only through coordination commits and was observed at `6b0c8d017d5b16d8adda4d57b7f2e8d1ac81c49c`; that commit only corrected `control.json` to the current PR #159 exact child candidate. No product file on the Rerun parent changed during this continuation.
+
+Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
 
 ## Retained completed evidence
 
-Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`.
-
-M0 remains `DONE`; its inventory and no-new-named-execution boundary remain authoritative.
-
-The generic M1 resource/economy harness remains integrated through merged PR #150. Reuse its retained green evidence unless subsequently touched product surfaces require revalidation.
+- Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`.
+- M0 remains `DONE`; `docs/rules/legacy-execution-inventory.md` and the no-new-named-execution boundary remain authoritative.
+- The generic M1 resource/economy harness remains integrated through merged PR #150. Reuse its retained green evidence unless subsequently touched product surfaces require revalidation.
 
 ## M1 / Probe S — portable RuleModule mechanics bridge
 
 PR #159 / `agent/m1-rulemodule-portable-activation` remains the sole authoritative portable-mechanics bridge. Superseded duplicate bridge PRs must not be revived.
 
-Direct Git ref is authoritative for the child tip. The child was read twice consecutively at the same exact candidate:
+The direct Git branch ref was resolved before relying on PR convenience metadata and remains unchanged at exact candidate:
 
 `60c5fbf79dfbf6007885edcac5fd2eb3f9153712`
 
-The live endpoint diff remains seven files:
+PR #159 remains open and unmerged. Its live metadata still reports exactly seven changed files:
 
 - `schemas/installed-content.schema.json`;
 - `src/app/installedContentContracts.ts`;
@@ -40,9 +42,7 @@ The live endpoint diff remains seven files:
 - `tests/ui/installedContentPersistence.test.ts`;
 - `tests/ui/ruleModulePackageImport.test.ts`.
 
-The two test files are regression coverage; no additional product execution path was introduced.
-
-Current bridge invariants:
+Current bridge invariants remain unchanged:
 
 - only registered data-only `mechanics[{kind:"common-play"}]` is accepted;
 - the existing generic `commonPlayOperationRuntime` parser owns supported operation parsing;
@@ -56,41 +56,39 @@ Current bridge invariants:
 - the named Fighter Action Surge production seam remains until installed portable mechanics execute end-to-end through the generic production/session path;
 - Gate F-M remain dormant.
 
-Recent bounded hardening on the child includes:
+Recent bounded hardening retained on the child:
 
 - `be517978826c65bad58aca9f7d7723080375bb5b` — shared manual executable validator layered on the generic parser;
 - `634b4dda69b50885afc3499a1f1e22487a7b669a` — RuleModule import reuses the shared validator;
 - `b5781df269cfa40ad1c9faba563ce21b7f499c02` — installed-content rehydration reuses the same validator;
 - `e235c87b5b892cbddd0d9416ed40f06e1664df66` — persisted non-manual decode/hydration rejection regression;
-- `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` — runtime compilation itself reuses the shared manual validator instead of duplicating the invocation check.
+- `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` — runtime compilation reuses the shared manual validator instead of duplicating the invocation check.
 
 None of these commits begins generic production/session action dispatch or deletes the named Fighter Action Surge seam.
 
-## Validation status for exact head `60c5fbf79dfbf6007885edcac5fd2eb3f9153712`
+## Exact-head validation status
 
-Seven required pull-request-triggered workflow runs were already registered and were read rather than manually rerun. All seven remain `queued`; therefore no green, failure, merge-ready, or merge-approval waiting conclusion is claimed.
+The seven already-created pull-request workflows for exact head `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` were read twice during this continuation. They remain queued; no workflow was rerun and no new workflow was created.
 
-Exact-head runs:
+- M1 Common Play Resource Economy `33136035747`: `queued`; job `98736117227` is also `queued` and has no logs yet;
+- Contract validation `33136035750`: `queued`;
+- Rules Domain `33136035788`: `queued`;
+- Phase 11 Playable `33136035783`: `queued`;
+- Phase 12 Connected Session `33136035803`: `queued`;
+- UI `33136035774`: `queued`;
+- Persistence `33136035784`: `queued`.
 
-- M1 Common Play Resource Economy `33136035747`: queued;
-- Contract validation `33136035750`: queued;
-- Rules Domain `33136035788`: queued;
-- Phase 11 Playable `33136035783`: queued;
-- Phase 12 Connected Session `33136035803`: queued;
-- UI `33136035774`: queued;
-- Persistence `33136035784`: queued.
+Workflow run `33136035747` confirms the pull-request event, head branch `agent/m1-rulemodule-portable-activation`, and exact head SHA `60c5fbf79dfbf6007885edcac5fd2eb3f9153712`. The queue currently provides no product failure evidence, so no product code was changed.
 
-The live Rerun parent observed immediately before this checkpoint was `39baa0516586bfe0d4fb3483d46c176e6db7d168`; no product file was changed on the parent during this continuation.
-
-Parent/child history is currently diverged because the Rerun parent continues to receive coordination commits. Do not reconcile ancestry while exact-head product CI is unresolved; re-evaluate ancestry only after the final candidate is green.
+Parent/child history remains diverged because the Rerun parent continues to receive coordination commits. Do not reconcile ancestry while exact-head product CI is unresolved; re-evaluate ancestry only after the final candidate is green.
 
 ## Next Exact Action
 
-On the next continuation of sequence `2`:
+On the next authorized continuation of sequence `2`:
 
 1. perform mandatory preflight README -> control -> STATE -> PLAN and re-fetch the live parent;
 2. resolve PR #159 child tip from the direct Git ref before trusting convenience endpoint metadata;
-3. read the already-created exact-head workflow runs for that SHA; do not rerun queued or already-completed evidence merely to refresh it;
+3. read the existing exact-head workflow runs for that SHA; do not rerun queued or already-completed evidence;
 4. if the child tip advanced, treat only the new exact tip as the candidate and inspect the bounded change before drawing any CI conclusion;
 5. if any required exact-head run fails, inspect only that failure and make the smallest parity fix;
 6. if all required runs are green, confirm the diff remains the bounded seven-file portable data/validation bridge with no named-content branch, second evaluator, new transport, or hidden fallback;
