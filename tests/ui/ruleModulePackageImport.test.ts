@@ -152,6 +152,30 @@ test("invalid Common Play config is rejected atomically instead of being persist
   assert.equal((await store.readGenerations()).length,0);
 });
 
+test("session-installed Common Play mechanics are revalidated before persistence", async () => {
+  const sourceStore=new MemoryInstalledContentStore();
+  const source=new MockAdapter();
+  setInstalledContentStoreForTests(source,sourceStore);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  raw.content[0].mechanics=[portableCommonPlayMechanic()];
+  await source.previewContentImport(JSON.stringify(raw));
+  await source.activateContentImport();
+  const sessionEntries=await requiredSessionInstalledContent(source,[]);
+  const tampered=structuredClone(sessionEntries) as unknown as Array<Record<string,any>>;
+  const target=tampered.find((entry)=>entry.contentId==="option.atomic-parent");
+  target!.mechanics[0].config.entryPoints[0].operations=[{kind:"arbitrary.execute",value:"boom"}];
+
+  const peerStore=new MemoryInstalledContentStore();
+  const peer=new MockAdapter();
+  setInstalledContentStoreForTests(peer,peerStore);
+  await peer.getSnapshot();
+  await assert.rejects(
+    installSessionInstalledContent(peer,tampered as any),
+    /operations\[0\]\.kind is unsupported/,
+  );
+  assert.equal((await peerStore.readGenerations()).length,0);
+});
+
 test("package storage failure keeps reviewed package and installs no members", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
