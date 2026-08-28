@@ -14,57 +14,49 @@
 
 ## Durable checkpoint
 
-Mandatory preflight for this continuation was completed in the required `README -> control -> STATE -> PLAN` order. `CANONICAL_ROOT.md`, the architecture charter, and checklist v2 were then read. Run identity remains sequence `2`, task `common-play-foundation-convergence`, authorized by `control=continue`.
+Mandatory preflight for this continuation was completed in the required `README -> control -> STATE -> PLAN` order, followed by `CANONICAL_ROOT.md`, the architecture charter, and the active checklist-v2 P3 slice. Run identity remains sequence `2`, task `common-play-foundation-convergence`, authorized by `control=continue`.
 
-Already-validated Gate E, M0 inventory/freeze, and obsolete exact-SHA workflow evidence were not repeated.
+Already-validated Gate E, M0 inventory/freeze, obsolete exact-SHA candidates, and completed workflow evidence were not repeated.
 
-Parent branch was re-fetched before ancestry work and remained `fe05b8da8987ac62af4861a63ddd454b626df272`.
+The live Rerun parent was re-fetched before this coordination write and remained `c43d93cee89410b79985d946c20470a6eeb5a467`.
 
-## PR #159 current candidate
+## PR #159 exact candidate
 
 PR #159 / `agent/m1-rulemodule-portable-activation` remains the authoritative portable Resource/Economy bridge.
 
-The pre-reconciliation child was `87945628c31a751c697a8c67b4096fae7c374e0c`. Current parent and child were diverged. Parent-to-child comparison showed the child product delta remained exactly the seven intended PR files.
+- exact candidate: `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`;
+- PR is open, mergeable, non-draft, and still reports exactly seven product files;
+- the current parent is ahead only by later coordination-state commits; no product ancestry change was introduced in this continuation;
+- the already-reviewed seven-file product delta remains the bounded portable bridge;
+- no previously observed Fighter/Action-Surge named dispatch, transport addition, second named evaluator, or hidden fallback has been introduced because the PR head did not move.
 
-A two-parent ancestry reconciliation commit was constructed and validated before moving the child ref:
+## Exact-head verification
 
-- current candidate: `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`;
-- parents: `87945628c31a751c697a8c67b4096fae7c374e0c` + `fe05b8da8987ac62af4861a63ddd454b626df272`;
-- candidate tree is current parent state plus the seven PR product blobs;
-- comparison `fe05b8d... -> 1bc7a42...` is exactly seven changed product files, with no extra parent coordination/baseline files in the PR diff;
-- parent commit `cf27f6051f3a00efd6377a0ada741990211d8f7b` deliberately removed the obsolete `action-economy-restricted-extra-action.json` fixture; reconciliation preserves that parent decision instead of resurrecting it.
+Completed SUCCESS on candidate `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`:
 
-PR #159 is open, mergeable, non-draft, and still reports exactly seven changed files. It has no submitted reviews and no unresolved review threads.
-
-The current seven-file patch was inspected for architecture leakage. No `Fighter` or `Action Surge` named execution dispatch appears in the diff, no transport file is added, and no separate named evaluator/compatibility fallback was found. The PR body has been refreshed to the current candidate and evidence.
-
-## Exact-head verification for `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`
-
-Completed SUCCESS:
-
-- M1 Common Play Resource Economy `33149435346` — focused resource/economy harness and application TypeScript typecheck both SUCCESS;
+- M1 Common Play Resource Economy `33149435346` — focused harness + application TypeScript typecheck SUCCESS;
 - Contract validation `33149435378` — SUCCESS;
-- Rules Domain `33149435342` — all domain/progression/integration checks and final application typecheck SUCCESS;
-- UI `33149435365` — named-rule boundary, UI regressions, final typecheck and build SUCCESS;
-- Persistence `33149435419` — application-contract/persistence suite, production build, and Tauri storage SUCCESS. This proves the former stale `501 !== 496` baseline no longer fails in the reconciled candidate.
+- Rules Domain `33149435342` — SUCCESS;
+- UI `33149435365` — SUCCESS including final typecheck/build;
+- Persistence `33149435419` — SUCCESS including application persistence contract, formerly stale catalog baseline, production build, and Tauri storage;
+- Phase 11 Playable `33149435390` — now fully SUCCESS, including offline/product frontend verification and Windows playable artifact job.
 
-Still active, with their product/protocol portions already green:
+Still active:
 
-- Phase 11 Playable `33149435390` — `offline-walkthrough` SUCCESS including full production frontend gate; `windows-playable` remains in progress at the Windows executable build step;
-- Phase 12 Connected Session `33149435367` — `connected-protocol` SUCCESS including authority protocol, Phase 11 regression, and production frontend gate; `windows-connected-playable` remains in progress at the Tauri transport/persistence / Windows artifact path.
+- Phase 12 Connected Session `33149435367` — connected protocol, authority checks, Phase 11 regression, production frontend gate, and Tauri session transport/persistence verification are SUCCESS; only `windows-connected-playable` remains in progress at the Windows executable build step.
 
-No current exact-head product failure is known. In-progress platform verification is not an external/technical blocker and must not be converted to `blocked` or manually rerun.
+There is no current exact-head product failure. The remaining Phase 12 platform job is active verification, not an external/technical blocker, and must not be manually rerun.
 
 ## Next Exact Action
 
 On the next execution of sequence `2`:
 
-1. perform mandatory `README -> control -> STATE -> PLAN` preflight, then read `CANONICAL_ROOT.md`, the architecture charter, and checklist v2;
-2. re-fetch the parent branch, PR #159, and direct child ref; GitHub current state wins if any ref advanced;
-3. use only exact-head workflow evidence for the current child candidate; do not rerun obsolete `60c5...` or `8794...` evidence;
-4. if Phase 11/12 platform jobs are still running, keep `control=continue` and inspect no unrelated work;
-5. if either exact-head workflow fails, inspect only that actual failure and make the smallest bounded correction;
-6. if both complete SUCCESS and the PR still has the same seven-file diff/no leakage, the verification gate is complete;
-7. at that point follow the README owner-approval rule: if explicit approval for PR #159 is present, merge it into `agent/resolver-foundation-convergence`; otherwise publish `needs_user` solely for PR #159 merge approval;
-8. after #159 integration, resume from checklist v2's next product action rather than deleting the named Fighter Action Surge seam prematurely;
+1. perform mandatory `README -> control -> STATE -> PLAN` preflight and required routing reads;
+2. re-fetch parent, PR #159, and current child head; GitHub current state wins if any ref moved;
+3. read only exact-head Phase 12 run `33149435367` for candidate `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`;
+4. if the final Windows job is still active, keep `control=continue` and do no unrelated work;
+5. if it fails, inspect only that concrete failure and make the smallest bounded correction;
+6. if Phase 12 completes SUCCESS and PR #159 still has the same seven-file product diff/no architecture leakage, the PR #159 verification gate is complete;
+7. then follow the README owner-approval rule: merge only with explicit PR #159 merge approval; otherwise publish `needs_user` solely for that approval;
+8. after #159 integration, resume checklist v2 from installed portable mechanics -> real production/session generic dispatch; do not remove the named Fighter Action Surge seam before end-to-end parity;
 9. do not reopen Gate E/M0 and do not route product work to `main`.
