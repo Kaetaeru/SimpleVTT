@@ -15,7 +15,7 @@
 
 ## Durable checkpoint
 
-Resource/Economy remains `MIGRATED` on the convergence parent. Tests/Rolls/Outcomes, Damage/Healing/HP, and the bounded single-target Targeting/Selectors/Allocation slice are `PRODUCTION` after their generic Common Play production bridges. Do not promote any family beyond its recorded maturity without explicit remaining evidence, and do not repeat already-valid validation without an affected-surface reason.
+Resource/Economy remains `MIGRATED` on the convergence parent. Tests/Rolls/Outcomes, Damage/Healing/HP, bounded single-target Targeting/Selectors/Allocation, and bounded manual actor-consent Interactions/Reactions/Interceptors are `PRODUCTION` after their generic Common Play production bridges. Do not promote any family beyond its recorded maturity without explicit remaining evidence, and do not repeat already-valid validation without an affected-surface reason.
 
 PR #171, `rules: migrate built-in Action Surge to generic Common Play`, was merged into `agent/resolver-foundation-convergence` as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f` from validated exact head `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`.
 
@@ -104,17 +104,46 @@ Reusable PR #174 evidence:
 - no selector evaluator, targeting engine, allocation engine, geometry engine, store, transport, fallback, or ID/name algorithm branch was introduced;
 - richer selectors, automatic discovery, multi-target, allocation/Gate G, harmful targeting semantics, spatial/range/sight/cover facts, and named target-dependent seams remain deliberately outside this slice, so Targeting/Selectors/Allocation is bounded `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
+PR #175, `rules: add bounded Common Play interaction reaction production bridge`, was merged into `agent/resolver-foundation-convergence` as `0e567d738c94000f059d351a21ef37637c28809e` from validated exact head `9b6c5cb564150ebf0e80eb01bd716ca77fc3ebbf`.
+
+Reusable PR #175 evidence:
+
+- focused Common Play production harness — `55/55` SUCCESS on the candidate;
+- affected regression harness — `35/35` SUCCESS on the candidate;
+- contract validation — SUCCESS;
+- TypeScript check — SUCCESS;
+- `npm run build` — SUCCESS;
+- exact-head workflow count — `11/11` SUCCESS;
+- M1 Common Play Interaction `33211213753` — `SUCCESS`;
+- Phase 12 Connected Session `33211213825` — `SUCCESS`;
+- Contract validation `33211213603` — `SUCCESS`;
+- M1 Common Play d20 `33211213478` — `SUCCESS`;
+- M1 Common Play Targeting `33211213494` — `SUCCESS`;
+- M1 Common Play HP `33211213542` — `SUCCESS`;
+- M1 Common Play Resource Economy `33211213489` — `SUCCESS`;
+- Rules Domain `33211213518` — `SUCCESS`;
+- UI `33211213543` — `SUCCESS`;
+- Persistence `33211213575` — `SUCCESS`;
+- Phase 11 Playable `33211213565` — `SUCCESS`;
+- only manual actor `consent` + blocking boolean input + `revalidate:"always"` is production-supported, paired with exactly one commit-time refundable amount-one Reaction economy payment;
+- invocation reuses the existing `ResolutionView.interrupt` presentation without pre-consent mutation; decline clears the interrupt with no mechanical mutation;
+- accept re-looks up installed content, snapshots current authority, revalidates action/actor/targets/payments, requires matching accepted compiler authorization, and lowers Reaction consumption to the existing generic `use-economy` Reaction slot;
+- Reaction, resource payments, and downstream operations commit in one existing `PendingResolution`; unavailable Reaction, insufficient resource, and invalid target reject without partial mutation;
+- accepted interaction supports authoritative writeback, Undo, duplicate-response safety, persistence/rehydration, required-session content transfer, Host-authoritative connected convergence, and ID/name rename invariance;
+- no prompt framework, pending store, interaction/reaction engine, transport, fallback, or ID/name algorithm branch was introduced;
+- `roll.modify`, reroll, interceptors, triggered dispatch, remote/non-actor responders, reconnect continuation, multiple options, and named post-roll seams remain outside this slice, so Interactions/Reactions/Interceptors is bounded `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
+
 The rejected `agent/m1-action-surge-generic-parity` experiment remains rejected as an integration candidate and must not be revived merely because later bounded migrations are complete.
 
 Repository routing remains unchanged: Rerun state/control belongs on `agent/resolver-foundation-convergence`, product integration target remains `work/v1-composite`, and product work must not be routed to `main`.
 
 ## Waiting condition
 
-None. PR #174 is merged and there is no current external blocker. Control remains `continue` so the canonical product plan may advance by mechanism family.
+None. PR #175 is merged and there is no current external blocker. Control remains `continue` so the canonical product plan may advance by mechanism family.
 
 ## Next Exact Action
 
-1. Perform mandatory preflight and read the current canonical product-plan maturity board plus `docs/rules/legacy-execution-inventory.md`; reuse Gate A-E, M0, PR #159, PR #168, PR #171, PR #172, PR #173, and PR #174 evidence unless new affected-surface evidence invalidates it.
+1. Perform mandatory preflight and read the current canonical product-plan maturity board plus `docs/rules/legacy-execution-inventory.md`; reuse Gate A-E, M0, PR #159, PR #168, PR #171, PR #172, PR #173, PR #174, and PR #175 evidence unless new affected-surface evidence invalidates it.
 2. Select the next smallest coherent Phase 2 mechanism-family slice from the product plan and current legacy debt. Do not select work by class/spell/feat name order.
 3. Inspect only the source, behavior oracles, authority/lifetime boundaries, and existing generic primitives needed for that slice. Attempt existing Common Play composition before proposing a new primitive or activating Gates F-M.
 4. Freeze a bounded behavior/acceptance contract before repository-dependent implementation. Use Codex for implementation once the contract is sufficiently fixed; return to architecture review if named-content branching, a speculative primitive, ambiguous authority/lifetime, or a conflicting contract appears necessary.
