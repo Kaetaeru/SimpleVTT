@@ -8,8 +8,8 @@ This is the human/agent entry point for **what is current now**. If an older pha
 
 - Product integration target: `work/v1-composite`
 - Active convergence parent: `agent/resolver-foundation-convergence`
-- Latest integrated implementation: PR #173, `rules: add generic Common Play damage and healing production bridge`
-- Current boundary: Resource/Economy is `MIGRATED`; Tests/Rolls/Outcomes and Damage/Healing/HP are `PRODUCTION`; select the next smallest coherent mechanism-family slice from the canonical product plan and current legacy evidence
+- Latest integrated implementation: PR #174, `rules: add bounded Common Play targeting production bridge`
+- Current boundary: Resource/Economy is `MIGRATED`; Tests/Rolls/Outcomes, Damage/Healing/HP, and bounded Targeting/Selectors/Allocation are `PRODUCTION`; select the next smallest coherent mechanism-family slice from the canonical product plan and current legacy evidence
 - `main`: historical/landing reference, not the current V1 integration target
 
 The convergence parent is intentionally ahead of `work/v1-composite` while the Resolver program is integrated in bounded slices. Live GitHub state remains authoritative for exact branch ancestry and active PR status.
@@ -47,6 +47,7 @@ Already established and not to be repeated without new regression evidence:
 - PR #171 merged as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f` from validated candidate `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`, advancing Resource/Economy to `MIGRATED`
 - PR #172 merged as `ff523a4b8b83f29b781720dcd174f0245e7c16ca` from validated candidate `350224dc10fe747ff52e8a8f2c428208edb9af2e`, establishing Tests/Rolls/Outcomes `PRODUCTION`
 - PR #173 merged as `284fcc9068292d90698d3d3ada5f128db72a77a7` from validated candidate `949d90f48fbd44cf101c47f7702c14208011a237`, establishing Damage/Healing/HP `PRODUCTION`
+- PR #174 merged as `4624a63dd8ea4a81f0716187e5ceb57a9a469497` from validated candidate `27ae09ebdc53431e57264934f58a59c70e4b023b`, establishing bounded Targeting/Selectors/Allocation `PRODUCTION`
 
 PR #171 proved built-in Fighter Action Surge through the same generic Common Play production path with its two-resource spend, RulesProfile-owned restricted extra Action, authoritative Character/session writeback, Undo, connected convergence, and ID/name-only rename invariance. The named `fighterActionSurgeRuntimeAdapter.ts` production path and its legacy baseline entry are removed.
 
@@ -54,9 +55,11 @@ PR #172 proved authored actor `ability-check`, `saving-throw`, and `attack-roll`
 
 PR #173 proved authored `damage.apply` and `healing.apply` Common Play operations through the existing generic Resolver `damage-roll`, `damage`, and `healing` semantics, installed persistence/rehydration, one pre-resolved runtime target, authoritative HP writeback/Undo, connected Host/Client convergence, and ID/name rename invariance. Temporary HP, compound damage, authored defenses, concentration, critical authoring, healing dice, selectors/allocation, spell execution, and named HP seams remain outside the absorbed boundary.
 
+PR #174 proved canonical `entryPoint.targeting` for the exact `{ from:"targets", min:1, max:1 }` selection-validator subset through validation, persistence/rehydration, existing generic Resolver targeting, authoritative production execution, Undo, connected Host/Client convergence, and ID/name rename invariance. Rich selectors, automatic discovery, multi-target, allocation, harmful targeting semantics, and spatial/range/sight/cover facts remain outside the absorbed boundary.
+
 `MIGRATED` and `PRODUCTION` are not the same as `ACCEPTED`. Do not promote any family beyond its recorded maturity without explicit remaining evidence.
 
-The next Phase 2 slice must be selected by mechanism family from `resolver-execution-checklist-v2.md` and current legacy evidence. Do not revive a named class/spell/feat queue, reopen validated Resource/Economy, d20, or HP production work without affected-surface evidence, or speculatively activate Gates F-M.
+The next Phase 2 slice must be selected by mechanism family from `resolver-execution-checklist-v2.md` and current legacy evidence. Do not revive a named class/spell/feat queue, reopen validated Resource/Economy, d20, HP, or bounded targeting production work without affected-surface evidence, or speculatively activate Gates F-M.
 
 For transient exact-head CI and execution state, `.chatgpt-rerun/STATE.md` plus live GitHub is authoritative; this page intentionally records the durable product boundary.
 
