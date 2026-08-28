@@ -1,0 +1,33 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.unknown.action-economy",
+  "entryPoints": [
+    {
+      "id": "activate",
+      "invocation": "manual",
+      "legality": {
+        "op": "eq",
+        "left": { "ref": "clock.activeActorId" },
+        "right": { "ref": "actor.id" }
+      },
+      "operations": [
+        {
+          "kind": "resource.change",
+          "resource": "probe.daily",
+          "amount": { "value": -1 }
+        },
+        {
+          "kind": "resource.change",
+          "resource": "probe.turn",
+          "amount": { "value": -1 }
+        },
+        {
+          "kind": "economy.modify",
+          "bucket": "extra-action.no-magic",
+          "amount": { "value": 1 }
+        }
+      ]
+    }
+  ]
+}
