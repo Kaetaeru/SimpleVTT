@@ -5,8 +5,8 @@ import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09Reference
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import { compileAttack, resolveAttack } from "../domain/attack";
-import { BARBARIAN_RAGE_TAG } from "../domain/barbarianRage";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
+import { effectIsActive } from "../domain/effects";
 import type { ConcentrationCheckRequest } from "../domain/concentration";
 import type { D20TestResult } from "../domain/d20";
 import type { CompoundDamageResolution, DamageDefenseContribution } from "../domain/damage";
@@ -182,15 +182,17 @@ function transactionInput(request:AtomicAttackTransactionRequest):RulesRuntimeSt
   return input;
 }
 
-function rageDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase09AttackFact) {
-  if (attackFact.ability!=="str") return [];
-  if (attackFact.sourceKind!=="weapon"&&attackFact.sourceKind!=="unarmed") return [];
-  const rage=state.effects.find((effect) => effect.targetId===actorId && effect.tags.includes(BARBARIAN_RAGE_TAG));
-  if (!rage) return [];
-  const value=rage.metadata?.rageDamageBonus;
-  return typeof value==="number" && value>0
-    ? [{ source:`effect:${rage.id}:rage-damage`,value }]
-    : [];
+function effectAttackDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase09AttackFact) {
+  return state.effects.flatMap((effect)=>{
+    if(effect.targetId!==actorId||!effectIsActive(effect))return [];
+    const value=effect.metadata?.attackDamageFlat;
+    const ability=effect.metadata?.attackDamageAbility;
+    const sourceKinds=effect.metadata?.attackDamageSourceKinds;
+    if(typeof value!=="number"||!Number.isFinite(value)||value<=0)return [];
+    if(typeof ability==="string"&&ability!==attackFact.ability)return [];
+    if(typeof sourceKinds==="string"&&!sourceKinds.split(",").map((entry)=>entry.trim()).includes(attackFact.sourceKind))return [];
+    return [{source:`effect:${effect.id}:attack-damage-flat`,value}];
+  });
 }
 
 function damageReductionFlat(request:AtomicAttackTransactionRequest) {
@@ -287,7 +289,7 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       dice:request.attackFact.damageDice,
       flat:[
         ...request.attackFact.flatDamage,
-        ...rageDamageFlat(input,request.actor.id,request.attackFact),
+        ...effectAttackDamageFlat(input,request.actor.id,request.attackFact),
         ...damageReductionFlat(request),
       ],
     },

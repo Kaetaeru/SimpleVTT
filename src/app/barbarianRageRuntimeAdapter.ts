@@ -98,8 +98,8 @@ function rageExtendAction(adapter:MockAdapter,internal:AdapterState,snapshot:App
   const canExtend=Boolean(barbarianRageExtensionUpdate(state.effects,character.id,state.clock));
   const available=ownTurn&&bonusAvailable&&canExtend;
   const disabledReason=!ownTurn?"자신의 턴에만 격노를 연장할 수 있습니다."
-    :!bonusAvailable?"추가 행동을 이미 사용했습니다."
-      :!canExtend?"이미 다음 턴 끝까지 격노가 연장되어 있습니다.":undefined;
+    :!canExtend?"이미 다음 턴 끝까지 격노가 연장되어 있습니다."
+      :!bonusAvailable?"추가 행동을 이미 사용했습니다.":undefined;
   return {
     id:EXTEND_ACTION_ID,actorId:character.id,name:"격노 연장",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",
     summary:"격노를 다음 턴 끝까지 연장",available,disabledReason,eligibleTargetIds:[character.id],

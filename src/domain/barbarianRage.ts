@@ -91,7 +91,9 @@ export function compileBarbarianRageStart(
       duration:{ kind:"special", key:BARBARIAN_RAGE_DURATION_KEY },
       termination:{ targetBecomesIncapacitated:true, targetDies:true },
       metadata:{
-        rageDamageBonus:damageBonus,
+        attackDamageFlat:damageBonus,
+        attackDamageAbility:"str",
+        attackDamageSourceKinds:"weapon,unarmed",
         publicLabel:"격노",
         ...barbarianRageStartMetadata(inputState.clock),
       },

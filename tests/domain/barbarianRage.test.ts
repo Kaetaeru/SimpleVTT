@@ -51,7 +51,9 @@ test("Rage start atomically spends one use, spends Bonus Action, and installs ph
   const rage = result.state.effects.find((effect) => effect.tags.includes(BARBARIAN_RAGE_TAG));
   assert.ok(rage);
   assert.equal(rage?.expiry.kind,"special");
-  assert.equal(rage?.metadata?.rageDamageBonus,2);
+  assert.equal(rage?.metadata?.attackDamageFlat,2);
+  assert.equal(rage?.metadata?.attackDamageAbility,"str");
+  assert.equal(rage?.metadata?.attackDamageSourceKinds,"weapon,unarmed");
   assert.equal(rage?.metadata?.rageExpiresAfterRound,2);
   assert.equal(rage?.metadata?.rageMaximumRound,101);
   assert.ok(rage?.tags.includes("damage-resistance:bludgeoning"));

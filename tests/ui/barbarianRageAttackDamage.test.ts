@@ -67,3 +67,19 @@ test("active Rage adds Rage Damage only to qualifying Strength weapon and Unarme
   assert.equal(damageRaw("weapon","dex",1,6,3),7);
   assert.equal(damageRaw("wild-shape","str",1,6,3),7);
 });
+
+test("attack damage contribution is invariant under effect identity rename",()=>{
+  const state=runtimeState();
+  state.effects.push({
+    id:"unknown.effect.renamed",sourceId:"unknown.source.renamed",sourceActorId:"hero",targetId:"hero",kind:"modifier",tags:["unknown-tag"],expiry:{kind:"permanent"},
+    metadata:{attackDamageFlat:2,attackDamageAbility:"str",attackDamageSourceKinds:"weapon,unarmed"},
+  });
+  const result=resolveAtomicAttackTransaction({
+    resolutionId:"unknown.effect.attack-damage",action:action("unknown.action", "1d6",3),actor,target,actorEconomy:economy,targetEconomy:economy,initiativeMode:false,
+    attackD20Face:15,effectiveTargetAc:10,attackFact:attackFact("weapon","str",1,6,3),targetingFact:{distanceFeet:5,visible:true,cover:"none",targetCanSeeAttacker:true},runtimeState:state,
+  });
+  assert.equal(result.status,"committed");
+  if(result.status!=="committed")throw new Error(result.error);
+  assert.equal(result.damage?.components[0]?.raw,9);
+  assert.ok(result.provenance.some((entry)=>entry.includes("effect:unknown.effect.renamed:attack-damage-flat")));
+});
