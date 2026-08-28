@@ -42,13 +42,13 @@
             "payments": [
               {
                 "kind": "resource",
-                "resource": "resource:dnd.srd521.class.fighter:action-surge",
+                "resource": "resource:fighter.action-surge",
                 "amount": { "value": 1 },
                 "consumeAt": "commit"
               },
               {
                 "kind": "resource",
-                "resource": "resource:dnd.srd521.class.fighter:action-surge-turn",
+                "resource": "resource:fighter.action-surge.turn",
                 "amount": { "value": 1 },
                 "consumeAt": "commit"
               }
