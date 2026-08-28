@@ -1,3 +1,4 @@
+import dndSrdRulesProfile from "../../rules/profiles/dnd.srd-5.2.1.profile.json";
 import type { AppSnapshot, CharacterSheet, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
@@ -8,6 +9,7 @@ import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { resolveCommonPlayEntryPointOperations, type CommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
+import type { RulesProfileLike } from "../domain/profileEngine";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -17,6 +19,10 @@ interface AdapterState {
 }
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
+const COMMON_PLAY_RULES_PROFILE:RulesProfileLike={
+  ...SIMPLEVTT_APP_RULES_PROFILE,
+  economy:dndSrdRulesProfile.economy as RulesProfileLike["economy"],
+};
 
 function referencedResourceIds(definition:CommonPlayOperationDefinition) {
   const ids=new Set((definition.payments??[]).map((payment)=>payment.resource));
@@ -71,7 +77,7 @@ MockAdapter.prototype.resolveAction=async function resolveInstalledCommonPlayAct
   if (!state||state.clock.activeActorId!==actor.id||targetIds.some((id)=>id!==actor.id)) return internal.getSnapshot();
 
   const resolutionId=`installed-common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
-  const committed=resolveCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,mechanic.config,{
+  const committed=resolveCommonPlayEntryPointOperations(COMMON_PLAY_RULES_PROFILE,state,mechanic.config,{
     resolutionId,
     actorId:actor.id,
     entryPointId:reference.entryPointId,
