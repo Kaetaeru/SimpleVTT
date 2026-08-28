@@ -17,15 +17,16 @@ This inventory separates named content/data from code that chooses execution sem
 
 ## Scan boundary and freeze
 
-`src/app/offlineRuntimeAdapters.ts` is the canonical offline production composition. `.agents/LEGACY_EXECUTION_BASELINE.json` classifies every side-effect import in that composition. The checker `scripts/check-legacy-execution-boundary.mjs` and `tests/ui/legacyExecutionBoundary.test.mjs` enforce exact ledger discipline:
+`src/app/offlineRuntimeAdapters.ts` is the canonical offline production composition. `.agents/LEGACY_EXECUTION_BASELINE.json` classifies every side-effect import in that composition and explicitly records grandfathered class/subclass-named runtime adapters that are installed transitively. The checker `scripts/check-legacy-execution-boundary.mjs` and `tests/ui/legacyExecutionBoundary.test.mjs` enforce exact ledger discipline:
 
 1. every current production import must already be classified;
-2. an invalid or duplicate classification fails;
+2. an invalid, duplicate, or unresolved `UNCLEAR` classification fails;
 3. deleting an import requires deleting its baseline entry in the same migration, so the removed legacy path cannot later be silently reintroduced;
 4. adding any production runtime path fails until architecture review classifies it;
-5. the baseline must never grow merely to admit a new named-content adapter.
+5. class/subclass-named `*RuntimeAdapter.ts` files under `src/app` must be either classified by the top-level composition ledger or explicitly listed as a transitive classification;
+6. the baseline must never grow merely to admit a new named-content adapter.
 
-The guard is deliberately not a repository-wide ID ban. Tests, fixtures, catalogs, and presentation may legitimately contain known IDs. **The composition ledger is a narrow import-boundary guard, not an exhaustive semantic scanner.** Transitive/helper code that directly recognizes known content identity must still be inventoried when discovered, even when its top-level installer remains a generic-looking module.
+The guard is deliberately not a repository-wide ID ban or an exhaustive semantic scanner. Tests, fixtures, catalogs, and presentation may legitimately contain known IDs. It combines the canonical import ledger with a narrow named-runtime-adapter file guard so a new transitive class/subclass adapter cannot bypass M0 merely by being imported through an already-classified module. Other helper/service code that directly recognizes known content identity remains an inventory obligation and is reviewed at symbol level.
 
 ## LEGACY_EXECUTION — central compatibility, progression, and dispatch
 
