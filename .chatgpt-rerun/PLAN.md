@@ -18,4 +18,6 @@
 
 `docs/rules/resolver-execution-checklist-v2.md`
 
+Rerun dispatch and merge-approval semantics for this run are governed by `.chatgpt-rerun/README.md`, including the rule that `Rerun 진행` / `리런 진행` performs the merge-approval adjudication defined there. This router references that protocol rather than duplicating it.
+
 Do not duplicate the architecture intent, checklist, scope, acceptance criteria, gate order, migration order, or next product action in this file.
