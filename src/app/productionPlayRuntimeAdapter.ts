@@ -15,6 +15,8 @@ import { clericDivineSparkDiceCount } from "../domain/clericDivineSpark";
 import { searUndeadDiceCount } from "../domain/clericTurnUndead";
 import { LAY_ON_HANDS_ACTION_ID } from "./paladinLayOnHandsRuntimeContracts";
 import { abjureFoesMaximumTargets } from "../domain/paladinAbjureFoes";
+import { catalogQualifiedId } from "./contentCatalogIdentity";
+import { installedCommonPlayActionId } from "./installedCommonPlayActionReference";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
@@ -38,6 +40,11 @@ const SKILLS:Array<{id:string;name:string;ability:AbilityKey}>=[
   {id:"performance",name:"공연",ability:"cha"},
   {id:"persuasion",name:"설득",ability:"cha"},
 ];
+const ACTION_SURGE_COMMON_PLAY_ACTION_ID=installedCommonPlayActionId({
+  catalogId:catalogQualifiedId("fighter.action-surge","dnd.srd-5.2.1","0.1-draft"),
+  mechanicId:"fighter.action-surge.activate",
+  entryPointId:"activate",
+});
 
 type ExtendedCharacter=CharacterSheet&{
   preparedSpells?:string[];
@@ -265,7 +272,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   if (fighterLevel>=2&&actionSurge&&actionSurgeGate) {
     const available=actionSurge.current>0&&actionSurgeGate.current>0;
     actions.push({
-      id:"action.fighter.action-surge",
+      id:ACTION_SURGE_COMMON_PLAY_ACTION_ID,
       actorId:character.id,
       name:"액션 서지",
       category:"basic",
