@@ -7,6 +7,23 @@ const ACTION_BRANCH_LITERAL = /\bactionId\s*(?:===|!==)\s*["'`](action\.[^"'`]+)
 const NAMED_DOMAIN_IMPORT = /import\s*\{([\s\S]*?)\}\s*from\s*["']\.\.\/domain\/[^"']+["'];?/g;
 const LEGACY_HANDLER_IMPORT = /from\s*["']\.\/legacySpellRuntimeHandler["']/g;
 
+const APP_GUARD_ALLOWLIST = new Set([
+  "src/app/characterCreationV09Adapter.ts",
+  "src/app/characterCreationV09Meta.ts",
+  "src/app/characterCreationV09Plan.ts",
+  "src/app/characterCreationV10Adapter.ts",
+  "src/app/characterCreationV10Choices.ts",
+  "src/app/characterCreationV10Data.ts",
+  "src/app/characterCreationV10Plan.ts",
+  "src/app/characterResourcePresentation.ts",
+  "src/app/characterSheetV10Projection.ts",
+  "src/app/mockAdapter.ts",
+  "src/app/productionSpellcasterProjectionAdapter.ts",
+  "src/app/realRuntimeAttackFactProvider.ts",
+  "src/app/rulePresentation.ts",
+  "src/app/srdCatalogBridge.ts",
+]);
+
 function tsFiles(root) {
   const files=[];
   const walk=(path)=>{
@@ -30,6 +47,10 @@ function pushMatches(findings,source,file,rule,pattern,transform=(match)=>match[
   for (const match of source.matchAll(pattern)) {
     findings.push({ file,rule,line:lineNumber(source,match.index ?? 0),match:transform(match).replace(/\s+/g," ").trim() });
   }
+}
+
+export function isLegacyExecutionGuardAllowlisted(file) {
+  return APP_GUARD_ALLOWLIST.has(file.replaceAll("\\","/"));
 }
 
 export function scanLegacyExecutionSource(source,file="fixture.ts") {
@@ -56,10 +77,11 @@ export function scanLegacyExecutionSource(source,file="fixture.ts") {
 
 export function scanLegacyExecutionTree(repoRoot) {
   const appRoot=join(repoRoot,"src","app");
-  return tsFiles(appRoot).flatMap((file)=>scanLegacyExecutionSource(
-    readFileSync(file,"utf8"),
-    relative(repoRoot,file).replaceAll("\\","/"),
-  ));
+  return tsFiles(appRoot).flatMap((file)=>{
+    const relativeFile=relative(repoRoot,file).replaceAll("\\","/");
+    if (isLegacyExecutionGuardAllowlisted(relativeFile)) return [];
+    return scanLegacyExecutionSource(readFileSync(file,"utf8"),relativeFile);
+  });
 }
 
 function grouped(findings) {
@@ -72,6 +94,15 @@ function grouped(findings) {
     map.set(key,entry);
   }
   return [...map.values()].sort((a,b)=>`${a.file}:${a.rule}`.localeCompare(`${b.file}:${b.rule}`));
+}
+
+export function baselineProposal(actual) {
+  return {
+    version:1,
+    policy:"High-signal named execution debt under src/app is frozen. Existing findings may decrease as behavior migrates to Common Play; new files, new finding kinds, or higher occurrence counts fail the boundary gate.",
+    scope:"src/app/**/*.ts excluding exact CONTENT/PRESENTATION/fixture/generic-mapping allowlist in scripts/check-legacy-execution-boundary.mjs",
+    entries:actual.map((entry)=>({ file:entry.file,rule:entry.rule,maxCount:entry.count })),
+  };
 }
 
 export function compareLegacyExecutionBoundary(findings,baseline) {
@@ -106,6 +137,8 @@ if (resolve(process.argv[1] ?? "")===self) {
       console.error(`- ${entry.file} :: ${entry.rule} x${entry.count}`);
       for (const match of entry.matches) console.error(`    L${match.line}: ${match.match}`);
     }
+    console.error("\nBaseline proposal:");
+    console.error(JSON.stringify(baselineProposal(result.actual),null,2));
     process.exitCode=1;
   } else {
     console.log(`Legacy execution boundary OK: ${result.findings.length} frozen high-signal finding(s); debt may shrink but may not grow.`);
