@@ -8,7 +8,7 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T10:30:03+09:00`
+- checkpointed_at: `2026-08-28T10:34:08+09:00`
 
 ## Durable checkpoint
 
@@ -19,21 +19,19 @@ Mandatory preflight for this dispatch was completed in the required order on `ag
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and the product plan `docs/rules/resolver-execution-checklist.md` were reconciled before product-plan changes. PLAN routing did not change and was not rewritten.
+Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and the product plan `docs/rules/resolver-execution-checklist.md` were reconciled. PLAN routing did not change and was not rewritten.
 
 ## Retained Gate E evidence
 
-Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`. The validated runtime/test candidate remains `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba` with the previously recorded focused, Contract, Rules Domain, UI, Phase 11, Phase 12, and Windows evidence. No Gate E product/runtime file was changed by M0, so that validation was not repeated.
+Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`. The validated runtime/test candidate remains `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba` with the previously recorded focused, Contract, Rules Domain, UI, Phase 11, Phase 12, and Windows evidence. No Gate E product/runtime file was changed by M0 or the M0 freeze hardening, so Gate E validation was not manually repeated.
 
-## Phase 2 M0 completed
+## Phase 2 M0 completed and reconciled
 
-M0 — Freeze and inventory named execution — is now `DONE` in the canonical product checklist.
+M0 — Freeze and inventory named execution — remains `DONE` in the canonical product checklist. M1 — generic migration harness — remains the active next queue.
 
 Inventory authority:
 
 `docs/rules/legacy-execution-inventory.md`
-
-The inventory records central compatibility/fallback engines, named gameplay families, mixed progression/resource/rest execution, content/presentation boundaries, generic engine boundaries, golden behavior tests, authority/lifetime dependencies, and likely Common Play convergence paths. Mixed modules remain symbol-level migration targets rather than whole-file deletion targets.
 
 Freeze authority:
 
@@ -43,36 +41,42 @@ Freeze authority:
 - regression: `tests/ui/legacyExecutionBoundary.test.mjs`;
 - CI: `.github/workflows/legacy-execution-boundary.yml`.
 
-The guard now classifies every canonical offline production side-effect import. A new production import fails until explicitly classified; stale baseline entries fail; removed legacy debt must shrink from composition and baseline together; the ledger must not grow merely to admit new named-content execution. This is intentionally not a repository-wide content-ID ban.
+The completed inventory records central compatibility/fallback engines, named gameplay families, mixed progression/resource/rest execution, hidden identity-dependent branches, current behavior oracles, authority/lifetime dependencies, and likely convergence compositions. No canonical offline composition entry remains `UNCLEAR` after symbol-level review.
 
-No canonical offline composition entry remains `UNCLEAR` after the final M0 symbol-level review. `characterCreationV10Adapter` and `progressionPhase08WeaponMasteryAdapter` are classified `LEGACY_EXECUTION`; `characterCreationWeaponAttackAdapter` is `GENERIC_ENGINE` because it derives behavior from generic weapon-definition metadata rather than known weapon identity.
+### Retained M0 closure evidence
 
-### M0 commit/evidence chain
+- checklist transition commit `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118` marked M0 `DONE` and M1 `ACTIVE`;
+- Legacy Execution Boundary run `33132952951` on that checklist head: `SUCCESS`;
+- later classification reconciliation resolved the remaining `UNCLEAR` entries and recorded hidden named branches without changing Gate E runtime behavior.
 
-- `0a62339046df291aececd460622cd3653db563fe` — initial legacy-execution freeze baseline;
-- `ae360de71450b44459d2ba22bb27a3b00da3626d` — boundary scanner;
-- `a8daea03f2e83fa0f85937bc4e1d85e7ca95e9be` — boundary regression;
-- `64db95d3020c9a1d4388e4328728431b64e54b36` — CI workflow;
-- `c74746aa6f434621d9bd156af4795eb0c2287265` — Bardic Inspiration debt correction after the first red boundary run;
-- `49137e3fd8726ffdd9701465463affc49f3dbb34` — initial detailed inventory;
-- `bddc048075a19cd1731df9b8873d2c09c0c875a5`, `8399feeb273f7a6e12e8beb978229cd32f9261ca`, `effcf6544f271078d1b7a953d999cac7228e1559` — full production-composition classification and regression hardening;
-- `9894e9feee046edb83ca22f01aca3ce74e88bf2a`, `2b5128a43048aaa4e290dd595e98a4148408e688`, `c2241520c622df6ad22b0588e901b51cd69099c0` — classification/inventory reconciliation for compatibility, progression, resource, and rest dispatch;
-- `c155d3e0aa1f21f79eedc7e7a944718438c2403a`, `6b584db76e9681abf0a2bb0b00a60c1ec90d8770` — final M0 symbol-level classification and inventory alignment with zero remaining `UNCLEAR` composition entries;
-- `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118` — canonical checklist transition to M0 `DONE` / M1 `ACTIVE`.
+### M0 freeze hardening in this dispatch
 
-Exact closure evidence:
+Preflight/reconciliation found one material guard gap after M0 had been marked done: the checker classified only top-level imports from `offlineRuntimeAdapters.ts`, so a new class/subclass-named `*RuntimeAdapter.ts` could be installed transitively through an already-classified module without changing the composition root. Existing `src/app/bardicInspirationRuntimeAdapter.ts` is the concrete current example of this topology.
 
-- Legacy Execution Boundary run `33132952951` on head `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118`: `SUCCESS`;
-- the same-head Gate E workflow `33132952953` completed `SUCCESS` automatically; no Gate E validation was manually repeated for M0.
+The narrow M0 guard was strengthened without changing product runtime behavior:
 
-## Product-plan transition
+- `695c7f36de55efb57a75273723076ee3e6f3ceeb` — baseline version 3 adds an explicit transitive `LEGACY_EXECUTION` classification for `src/app/bardicInspirationRuntimeAdapter.ts`;
+- `d21f72bf88e27ec7489e20868d14d731fe4620ad` — checker now combines the canonical composition ledger with a narrow class/subclass-named RuntimeAdapter file scan, rejects unresolved `UNCLEAR`, and requires transitive classification for detected named adapters outside the composition root;
+- `7752948c01f96cc91f6cd8337fdbe7b653ce15ee` — regression tests cover accepted transitive debt, unclassified transitive adapter failure, stale transitive baseline failure, and `UNCLEAR` failure;
+- `0f22b912397f88d5fbbdc0043c62a0c68c615931` — inventory wording reconciled with the strengthened freeze boundary.
 
-`docs/rules/resolver-execution-checklist.md` now records:
+Exact strengthened-boundary evidence:
 
-- Common Play Foundation remains frozen through Gate E;
+- Legacy Execution Boundary run `33133249139` on exact head `0f22b912397f88d5fbbdc0043c62a0c68c615931`: `SUCCESS`;
+- job `98727324296`: `SUCCESS`;
+- `Check grandfathered named execution boundary`: `SUCCESS`;
+- `Run boundary regression tests`: `SUCCESS`.
+
+No broader Gate E or product regression suite was repeated because these changes are limited to the M0 classification ledger, Node boundary checker/regression, and inventory documentation.
+
+## Product-plan state
+
+`docs/rules/resolver-execution-checklist.md` remains the product-plan authority and currently records:
+
+- Common Play Foundation frozen through Gate E;
 - M0 inventory/freeze: `DONE`;
-- M1 generic migration harness: current active queue;
-- Gate F-M: dormant unless a concrete migration failure satisfies the activation rule;
+- M1 generic migration harness: `ACTIVE` current queue;
+- Gate F-M dormant unless a concrete migration failure satisfies the activation rule;
 - no route to `main`.
 
 ## Next Exact Action
@@ -82,7 +86,8 @@ On the next continuation of this sequence:
 1. perform mandatory preflight in exact order: README -> control -> STATE -> PLAN;
 2. read `CANONICAL_ROOT.md` and the current next action in `docs/rules/resolver-execution-checklist.md`;
 3. do not reopen M0 or repeat Gate E validation while their affected files remain unchanged;
-4. begin M1 from the smallest action/resource/economy legacy path identified by the inventory, using its existing deterministic behavior test as the golden oracle;
-5. bound the first RuleModule/Common Play parity scenario before deleting any legacy code;
-6. keep Gate F-M dormant unless that real migration produces a deterministic generic capability failure;
-7. do not route product work to `main`.
+4. begin M1 from the smallest action/resource/economy `LEGACY_EXECUTION` path identified by `docs/rules/legacy-execution-inventory.md`, using its existing deterministic behavior test as the golden oracle;
+5. bound the first RuleModule/content JSON -> validation/normalization -> Common Play IR -> generic resolver/session parity scenario before deleting legacy code;
+6. prove arbitrary external ID and ID/name-only rename invariance and relevant authority/lifetime parity before removing the absorbed named path;
+7. if that real migration cannot compose safely from Gates A-E, capture the deterministic generic failure before considering Gate F-M activation;
+8. do not route product work to `main`.
