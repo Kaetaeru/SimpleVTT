@@ -1,0 +1,33 @@
+name: M1 Portable Common Play Production
+
+on:
+  pull_request:
+    paths:
+      - "src/app/ruleModulePackageImport.ts"
+      - "src/app/installedContentContracts.ts"
+      - "src/app/installedContentRuntimeAdapter.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "tests/ui/installedCommonPlayRuntimeAdapter.test.ts"
+      - ".github/workflows/m1-portable-common-play-production.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  portable-common-play-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify installed portable Common Play production path
+        run: npx tsx --test tests/ui/installedCommonPlayRuntimeAdapter.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit
