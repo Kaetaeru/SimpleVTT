@@ -1,0 +1,33 @@
+name: Legacy Execution Boundary
+
+on:
+  pull_request:
+    paths:
+      - "src/app/**"
+      - "scripts/check-legacy-execution-boundary.mjs"
+      - "tests/ui/legacyExecutionBoundary.test.mjs"
+      - ".agents/LEGACY_EXECUTION_BASELINE.json"
+      - ".github/workflows/legacy-execution-boundary.yml"
+  push:
+    branches:
+      - "agent/**"
+      - "work/v1-composite"
+    paths:
+      - "src/app/**"
+      - "scripts/check-legacy-execution-boundary.mjs"
+      - "tests/ui/legacyExecutionBoundary.test.mjs"
+      - ".agents/LEGACY_EXECUTION_BASELINE.json"
+      - ".github/workflows/legacy-execution-boundary.yml"
+
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify scanner semantics
+        run: node --test tests/ui/legacyExecutionBoundary.test.mjs
+      - name: Verify frozen legacy execution debt
+        run: node scripts/check-legacy-execution-boundary.mjs
