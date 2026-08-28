@@ -36,7 +36,7 @@
     { "module": "./phase09ManualMovementReactionAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./phase09RealAtomicHealingAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./phase09RealAtomicItemAdapter", "classification": "GENERIC_ENGINE" },
-    { "module": "./phase09RealAtomicSavingThrowAdapter", "classification": "LEGACY_EXECUTION" },
+    { "module": "./phase09RealAtomicSavingThrowAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./subclassRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./pactTomeRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./druidCircleLandSpellRuntimeAdapter", "classification": "LEGACY_EXECUTION" },

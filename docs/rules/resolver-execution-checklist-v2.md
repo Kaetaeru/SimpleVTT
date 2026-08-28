@@ -557,6 +557,22 @@ Deliberate boundary:
 
 ---
 
+## C8 — Legacy strangler — in progress
+
+Verified migration slices:
+
+- [x] the atomic saving-throw transaction no longer imports or looks up Fighter Indomitable identity; it replays the authoritative generic save preview (`d20`, `total`, outcome) and rejects drift in the existing transaction;
+- [x] projected Character resource synchronization now matches generic resource identities from authoritative runtime state, including forward application and Undo;
+- [x] the obsolete Indomitable modifier WeakMap was deleted and the atomic saving-throw adapter was reclassified as `GENERIC_ENGINE`;
+- [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
+
+Remaining boundary:
+
+- the named Indomitable offer/payment/reroll orchestration adapter and the other named post-roll adapters remain `LEGACY_EXECUTION`;
+- no coverage-ledger row is promoted by this bounded migration alone.
+
+---
+
 # PHASE 3 — ANTICIPATED D&D CAPABILITY COVERAGE F-M
 
 Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.

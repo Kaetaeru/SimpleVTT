@@ -35,7 +35,6 @@ The guard is deliberately not a repository-wide ID ban or an exhaustive semantic
 | `src/app/spellcastingRuntimeAdapter.ts` — `SPELL_META`, `commitFreeformSpellSlot`, `spellMechanicById` | explicit action IDs map to `dnd.srd521.spell.*`; mechanic looked up by spell ID | legacy spell execution / slot economy | `tests/ui/spellcastingRuntimeAdapter.test.ts`, `test:spellcasting` | runtime state, slots, target facts, Undo | RuleModule spell definition -> Common Play/generic resolver; delete action-ID table |
 | `src/app/productionSpellRuntimeAdapter.ts` — `spellMechanicById(metadata.spellId)`, `spellDice`, `resolveProductionSpell` | runtime spell ID selects `SpellMechanicDefinition` | production spell execution | `test:spellcasting`, production spell regressions | authoritative revision, dice, targeting, slots, ResolutionEvent/Undo | normalized Common Play spell IR; content ID only identifies data |
 | `src/app/phase09SpellcastingRuntimeRouter.ts` + `legacySpellRuntimeHandler.ts` | runtime presence selects authoritative vs legacy spell engine | compatibility fallback / second engine | `phase09AuthoritativeSpellcastingAdapter.test.ts`, spellcasting regressions | per-adapter legacy Undo pending state | delete fallback when supported spells use one generic engine |
-| `src/app/phase09RealAtomicSavingThrowAdapter.ts` — Indomitable modifier lookup/application | Fighter Indomitable source/resource identity injects a feature-specific modifier into an otherwise generic atomic saving throw | hidden named save interceptor | atomic saving-throw regressions + Fighter Indomitable domain/follow-up tests | pending authoritative save, owner resource, atomic resolution | Gate A/Common Play interaction + resource payment + generic reroll/modifier contribution; remove the Fighter branch from the atomic save adapter |
 | `src/app/productionPlayRuntimeAdapter.ts` — `weaponAttacksPerAction`, feature/action projection | Fighter/Bard/Cleric/Paladin resource/class constants, class IDs/names and spell mechanics choose projected gameplay behavior | mixed production projection + named execution selection | production play/UI acceptance regressions | Character state, turn action projection, feature availability | preserve generic projection; migrate identity-dependent symbols to portable content/Common Play |
 | `src/app/characterSessionProjectionReconstruction.ts` — class/action/resource reconstruction branches | Rogue/Fighter/Barbarian/Monk and other known identities synthesize action/resource/stat semantics during session reconstruction | hidden named session projection execution | `tests/ui/characterSessionProjectionReconstruction.test.ts` | Host/session projection, reconnect/reconstruction lifetime | reconstruct from portable content/runtime state and generic action/resource projections; remove class-ID synthesis |
 | `src/app/realAttackTransactionService.ts` — Rage damage rider | `BARBARIAN_RAGE_TAG` selects a flat Rage damage contribution inside the attack transaction | hidden named attack interceptor | `tests/ui/barbarianRageAttackDamage.test.ts` + attack transaction regressions | authoritative attack state and Rage effect lifetime | generic effect/interceptor contributes to `damage.apply`; delete Rage identity branch from attack service |
@@ -49,6 +48,8 @@ The guard is deliberately not a repository-wide ID ban or an exhaustive semantic
 ## LEGACY_EXECUTION — named gameplay families
 
 Fighter Action Surge is no longer part of this legacy ledger. PR #171 (`8c9978a8d3a30bf08ab492cc8d805c2d77d63094`, merged as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f`) proved generic Common Play production parity, deleted `src/app/fighterActionSurgeRuntimeAdapter.ts`, and removed its baseline entry. The canonical migration evidence is recorded in `resolver-execution-checklist-v2.md`.
+
+The atomic saving-throw adapter's Fighter Indomitable lookup is also removed on the C8 convergence branch. Atomic replay now consumes the authoritative save preview's generic `d20` and `total`, while projected Character resources synchronize by resource identity rather than feature identity. The named Indomitable prompt/orchestration adapter remains legacy until its interaction definition itself moves to Common Play.
 
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
@@ -82,7 +83,7 @@ These are migration debt when known class/subclass/feat identities select featur
 Identity-agnostic execution infrastructure is not migration debt merely because it is an adapter:
 
 - `src/domain/resolution.ts` and Common Play runtimes, including Gate-E fact/movement/authority paths;
-- identity-agnostic Phase 09 atomic resolution/economy/targeting adapters and typed RulesProfile/core-rule services; **`phase09RealAtomicSavingThrowAdapter.ts` is excluded from this generic set until its Fighter Indomitable branch is migrated**;
+- identity-agnostic Phase 09 atomic resolution/economy/targeting adapters and typed RulesProfile/core-rule services;
 - `src/app/installedContentRuntimeAdapter.ts`: RuleModule validation/persistence/catalog identity, not known-feature mechanic selection;
 - connected session/transport/reconnect infrastructure, persistence, campaign lifecycle, inventory persistence, dice provider, theater-of-mind semantic fact provider;
 - `standardActionReactionAdapter.ts`, death-save/stabilize/unarmed and ability-check infrastructure when their behavior is a RulesProfile/core semantic rather than named content;
@@ -107,7 +108,7 @@ M0 preserves current tests as migration oracles and does not rerun unrelated Gat
 - Named progression/resource materialization: `test:progression`, `test:creation-structure`, `test:rules-domain` and matching named tests.
 - Spell execution/fallback: `test:spellcasting`, `phase09AuthoritativeSpellcastingAdapter.test.ts`, production spell regressions.
 - Rest-time named dispatch: `restSpellManagementRuntimeAdapter.test.ts` plus Pact Tome, Circle Land, and Wizard long-rest tests.
-- Hidden/transitive named branches: atomic saving-throw/Fighter Indomitable regressions, `characterSessionProjectionReconstruction.test.ts`, and Rage attack-damage/attack-transaction regressions.
+- Hidden/transitive named branches: `characterSessionProjectionReconstruction.test.ts` and Rage attack-damage/attack-transaction regressions.
 
 A migration must reproduce its relevant golden behavior, then prove unknown-ID and ID/name-only rename invariance on the generic path before deleting the named branch.
 
