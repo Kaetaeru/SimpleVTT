@@ -47,6 +47,8 @@ export function executeFreeMove(ctx:ResolutionExecutionContext,operation:FreeMov
     maximumDistanceFeet:operation.maximumDistanceFeet,
     regularMovementSpent:0,
     doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks === true,
+    ...(operation.movementMode?{movementMode:operation.movementMode}:{}),
+    ...(operation.destinationRef?{destinationRef:operation.destinationRef}:{}),
   };
   return {
     result,

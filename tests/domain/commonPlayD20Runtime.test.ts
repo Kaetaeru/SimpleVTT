@@ -71,3 +71,51 @@ test("portable Common Play d20 rejects unsupported or malformed authored payload
     assert.throws(()=>parseManualCommonPlayOperationDefinition(invalid),message);
   }
 });
+
+test("generic roll.modify operations recalculate one authoritative d20 result",()=>{
+  const definition=structuredClone(AUTHORED);
+  definition.entryPoints[0].operations=[
+    {kind:"roll.modify",mode:"advantage"},
+    {kind:"roll.modify",mode:"reroll",dice:"1d20"},
+    {kind:"roll.modify",mode:"minimum",value:{value:10}},
+    {kind:"roll.modify",mode:"replace",value:{value:12}},
+    {kind:"roll.modify",mode:"add-flat",value:{value:2}},
+    {kind:"roll.modify",mode:"add-die",dice:"1d4+1"},
+    {kind:"roll.modify",mode:"target-add",value:{value:1}},
+  ];
+  const state=runtimeState();
+  const parsed=parseManualCommonPlayOperationDefinition(definition);
+  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,{
+    resolutionId:"generic-roll-modifiers",
+    actorId:"hero",
+    entryPointId:"attempt",
+    d20:{
+      faces:[2,19],
+      modifierContributions:[{source:"actor:ability",value:2}],
+      modifierDiceFaces:{1:[8,18],5:[3]},
+    },
+  });
+  assert.equal(committed.status,"committed");
+  if(committed.status!=="committed") return;
+  const result=committed.results["generic-roll-modifiers:test"] as {rollState:string;natural:number;modifier:number;total:number;target:number;outcome:string;provenance:Array<{source:string}>};
+  assert.deepEqual(
+    {rollState:result.rollState,natural:result.natural,modifier:result.modifier,total:result.total,target:result.target,outcome:result.outcome},
+    {rollState:"advantage",natural:12,modifier:8,total:20,target:16,outcome:"success"},
+  );
+  assert.ok(result.provenance.some((entry)=>entry.source.endsWith(":operation:1")),"reroll provenance retained");
+  assert.ok(result.provenance.some((entry)=>entry.source.endsWith(":operation:5")),"additional die provenance retained");
+});
+
+test("roll.modify semantics are structural and reject missing authority before commit",()=>{
+  const definition=structuredClone(AUTHORED);
+  definition.id="external.unknown.renamed-roll-modifier";
+  definition.entryPoints[0].operations=[{kind:"roll.modify",mode:"reroll",dice:"1d20"}];
+  const state=runtimeState();
+  const parsed=parseManualCommonPlayOperationDefinition(definition);
+  const rejected=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,{
+    resolutionId:"missing-reroll-authority",actorId:"hero",entryPointId:"attempt",d20:{faces:[20]},
+  });
+  assert.equal(rejected.status,"rejected");
+  assert.match(rejected.status==="rejected"?rejected.error:"",/requires authoritative die face/);
+  assert.equal(rejected.state.revision,state.revision);
+});

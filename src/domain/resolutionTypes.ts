@@ -66,7 +66,11 @@ export type ResolutionOperation =
   | (OperationBase & {
       kind: "move";
       actorId?: string;
+      movementMode?:"walk"|"climb"|"swim"|"fly"|"crawl"|"jump";
       distanceFeet: number;
+      distanceTraveledFeet?:number;
+      destinationRef?:string;
+      doesNotProvokeOpportunityAttacks?:boolean;
       destinationMovesCloserToVisibleFrighteningSource?: boolean;
       visibleSourceIds?: string[];
     })
@@ -75,6 +79,8 @@ export type ResolutionOperation =
       actorId?:string;
       distanceFeet:number;
       maximumDistanceFeet:number;
+      movementMode?:"teleport"|"push"|"pull"|"forced";
+      destinationRef?:string;
       doesNotProvokeOpportunityAttacks?:boolean;
       destinationMovesCloserToVisibleFrighteningSource?:boolean;
       visibleSourceIds?:string[];

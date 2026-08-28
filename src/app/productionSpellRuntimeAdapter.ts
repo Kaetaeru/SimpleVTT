@@ -14,6 +14,7 @@ import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RulesRuntimeState } from "../domain/combatState";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
+import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
 
 type Internal={
   scene:AppSnapshot["scene"];
@@ -235,9 +236,23 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
   const selected=selectedCombatSpellSlot(sourceAction.actorId,metadata.baseLevel||1);
   const slotLevel=metadata.baseLevel===0 ? undefined : Math.max(metadata.baseLevel,selected);
   const turnId=internal.sessionMode==="initiative"?currentTurnId(runtime):undefined;
+  const projectileCount=definition.primary.kind==="automatic-projectiles"?definition.primary.baseProjectiles+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(definition.primary.projectilesPerSlotAboveBase??0):0;
+  const allocation=projectileCount?resolveCommonPlayAllocation({
+    id:`${metadata.spellId}:projectile-allocation`,idempotencyKey:`${metadata.spellId}:${runtime.revision}:projectile-allocation`,
+    expectedRevision:runtime.revision,authority:internal.sessionMode==="initiative"?"actor-owner":"dm",responderId:sourceAction.actorId,
+    plan:{units:{value:projectileCount},minimumPerTarget:1,maximumPerTarget:projectileCount,totalMustMatch:true},
+    candidateTargetIds:[...new Set(targetIds)],allocations:allocationEntriesFromTargetSequence(targetIds),
+  },runtime.revision):undefined;
+  if(allocation&&allocation.status!=="resolved") {
+    internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
+      status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:allocation.reason,events:[],results:{},
+    },[]);
+    return this.getSnapshot();
+  }
+  const uniqueTargetIds=allocation&&allocation.status==="resolved"?allocation.allocations.map((entry)=>entry.targetId):targetIds;
   let targets:SpellCastTarget[];
   try {
-    targets=targetIds.map((targetId)=>targetFacts(internal,sourceAction.actorId,targetId));
+    targets=uniqueTargetIds.map((targetId)=>targetFacts(internal,sourceAction.actorId,targetId));
   } catch(error) {
     internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
       status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,
@@ -246,9 +261,8 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     return this.getSnapshot();
   }
 
-  const dice=spellDice(this,actionId,definition,slotLevel,caster.characterLevel,targetIds);
-  const projectileCount=definition.primary.kind==="automatic-projectiles"?definition.primary.baseProjectiles+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(definition.primary.projectilesPerSlotAboveBase??0):0;
-  const projectileAllocations=projectileCount&&targetIds.length?targetIds.map((targetId,index)=>({targetId,count:Math.floor(projectileCount/targetIds.length)+(index<projectileCount%targetIds.length?1:0)})).filter((entry)=>entry.count>0):undefined;
+  const dice=spellDice(this,actionId,definition,slotLevel,caster.characterLevel,uniqueTargetIds);
+  const projectileAllocations=allocation?.status==="resolved"?allocation.allocations.map((entry)=>({targetId:entry.targetId,count:entry.units})):undefined;
   const result=resolveSpellCast(SIMPLEVTT_APP_RULES_PROFILE,definition,runtime,{
     id:`production-spell-cast.${metadata.spellId}.${Date.now()}`,
     actorId:sourceAction.actorId,

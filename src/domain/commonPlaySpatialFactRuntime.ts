@@ -6,6 +6,23 @@ export interface CommonPlayFactDefinition {
 
 export type CommonPlayFactRegistry=Record<string,CommonPlayFactDefinition>;
 
+export const COMMON_PLAY_STANDARD_FACTS:CommonPlayFactRegistry={
+  "spatial.distance-feet":{valueType:"number"},
+  "spatial.adjacent":{valueType:"boolean"},
+  "spatial.within-reach":{valueType:"boolean"},
+  "spatial.line-of-effect":{valueType:"boolean"},
+  "spatial.total-cover":{valueType:"boolean"},
+  "spatial.area-members":{valueType:"targets"},
+  "spatial.legal-destination":{valueType:"destination"},
+  "spatial.placement":{valueType:"destination"},
+  "sense.can-see":{valueType:"boolean"},
+  "sense.can-hear":{valueType:"boolean"},
+  "sense.detected":{valueType:"boolean"},
+  "sense.light":{valueType:"string"},
+  "sense.obscurement":{valueType:"string"},
+  "sense.hidden":{valueType:"boolean"},
+};
+
 export interface CommonPlayFactQuery {
   id:string;
   fact:string;

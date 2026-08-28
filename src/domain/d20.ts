@@ -26,11 +26,17 @@ export interface ModifierContribution {
   value: number;
 }
 
+export type D20RollModification =
+  | { source:string; mode:"advantage"|"disadvantage" }
+  | { source:string; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:number }
+  | { source:string; mode:"add-die"|"reroll"; dice:FixedDiceInput };
+
 export interface D20TestRequest {
   family: D20TestFamily;
   target: number;
   modifierContributions: ModifierContribution[];
   rollStateContributions?: RollStateContribution[];
+  rollModifications?: D20RollModification[];
   dice: FixedDiceInput;
   targetSource?: string;
   criticalThreshold?: number;
@@ -99,17 +105,47 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
     }
   }
 
-  const rollStateResolution = resolveRollState(profile, request.rollStateContributions ?? []);
+  const modifications=request.rollModifications??[];
+  for(const entry of request.modifierContributions) {
+    if(!Number.isFinite(entry.value)) throw new DomainEvaluationError(`d20 modifier must be finite: ${entry.source}`);
+  }
+  for(const entry of modifications) {
+    if("value" in entry&&!Number.isFinite(entry.value)) throw new DomainEvaluationError(`d20 roll modification must be finite: ${entry.source}`);
+    if((entry.mode==="replace"||entry.mode==="minimum")&&(!Number.isInteger(entry.value)||entry.value<1||entry.value>20)) {
+      throw new DomainEvaluationError(`${entry.mode} d20 value must be an integer from 1 to 20`);
+    }
+  }
+  const rollStateResolution = resolveRollState(profile, [
+    ...(request.rollStateContributions ?? []),
+    ...modifications.flatMap((entry)=>entry.mode==="advantage"||entry.mode==="disadvantage"
+      ? [{source:entry.source,state:entry.mode}]
+      : []),
+  ]);
   const d20Policy = profile.d20Test?.advantageDisadvantage as
     | { sameSideStacks?: boolean; opposingCancel?: boolean; defaultDiceCount?: number }
     | undefined;
   const defaultDiceCount = d20Policy?.defaultDiceCount ?? 2;
-  const dice = selectD20(rollStateResolution.rollState, request.dice, defaultDiceCount);
-  const modifier = request.modifierContributions.reduce((sum, entry) => sum + entry.value, 0);
-  const natural = dice.selectedFace;
+  const reroll=modifications.filter((entry):entry is D20RollModification&{mode:"reroll";dice:FixedDiceInput}=>entry.mode==="reroll").at(-1);
+  const dice = selectD20(rollStateResolution.rollState, reroll?.dice??request.dice, defaultDiceCount);
+  const additionalDice=modifications.filter((entry):entry is D20RollModification&{mode:"add-die";dice:FixedDiceInput}=>entry.mode==="add-die");
+  for(const entry of additionalDice) {
+    if(!Number.isInteger(entry.dice.sides)||entry.dice.sides<2) throw new DomainEvaluationError(`additional die must have at least 2 sides: ${entry.source}`);
+    if(!entry.dice.faces.length||entry.dice.faces.some((face)=>!Number.isInteger(face)||face<1||face>entry.dice.sides)) {
+      throw new DomainEvaluationError(`invalid additional die face: ${entry.source}`);
+    }
+  }
+  const modifier = request.modifierContributions.reduce((sum, entry) => sum + entry.value, 0)
+    + modifications.reduce((sum,entry)=>sum+(entry.mode==="add-flat"?entry.value:0),0)
+    + additionalDice.reduce((sum,entry)=>sum+entry.dice.faces.reduce((subtotal,face)=>subtotal+face,0),0);
+  let natural = dice.selectedFace;
+  for(const entry of modifications) {
+    if(entry.mode==="replace") natural=entry.value;
+    else if(entry.mode==="minimum") natural=Math.max(natural,entry.value);
+  }
+  const target=request.target+modifications.reduce((sum,entry)=>sum+(entry.mode==="target-add"?entry.value:0),0);
   const total = natural + modifier;
 
-  let outcome: "success" | "failure" = total >= request.target ? "success" : "failure";
+  let outcome: "success" | "failure" = total >= target ? "success" : "failure";
   let critical = false;
 
   if (request.family === "attack-roll") {
@@ -134,10 +170,18 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
       status: "applied" as const,
       reason: `${entry.value >= 0 ? "+" : ""}${entry.value} to d20 total`,
     })),
+    ...modifications.flatMap((entry):ProvenanceRecord[]=>{
+      if(entry.mode==="advantage"||entry.mode==="disadvantage") return [];
+      if(entry.mode==="reroll") return [{source:entry.source,status:"applied",reason:`rerolled d20 using [${entry.dice.faces.join(", ")}]`}];
+      if(entry.mode==="add-die") return [{source:entry.source,status:"applied",reason:`added d${entry.dice.sides} roll [${entry.dice.faces.join(", ")}]`}];
+      if(entry.mode==="add-flat") return [{source:entry.source,status:"applied",reason:`${entry.value>=0?"+":""}${entry.value} to d20 total`}];
+      if(entry.mode==="target-add") return [{source:entry.source,status:"applied",reason:`${entry.value>=0?"+":""}${entry.value} to target`}];
+      return [{source:entry.source,status:"applied",reason:`${entry.mode} d20 result with ${"value" in entry?entry.value:"<invalid>"}`}];
+    }),
     {
       source: request.targetSource ?? (request.family === "attack-roll" ? "target:ac" : "target:dc"),
       status: "applied",
-      reason: `${total} vs ${request.target} => ${outcome}`,
+      reason: `${total} vs ${target} => ${outcome}`,
     },
   ];
 
@@ -167,7 +211,7 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
     natural,
     modifier,
     total,
-    target: request.target,
+    target,
     outcome,
     critical,
     provenance,

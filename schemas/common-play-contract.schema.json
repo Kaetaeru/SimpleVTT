@@ -218,14 +218,23 @@
     },
     "instantArea": {
       "type": "object",
-      "required": ["kind", "shape", "origin", "radiusFeet"],
+      "required": ["kind", "shape", "origin"],
       "properties": {
         "kind": { "const": "instant" },
-        "shape": { "const": "sphere" },
+        "shape": { "enum": ["line", "cone", "cube", "sphere", "cylinder", "emanation"] },
         "origin": { "enum": ["self", "point"] },
         "radiusFeet": { "type": "number", "exclusiveMinimum": 0 },
+        "lengthFeet": { "type": "number", "exclusiveMinimum": 0 },
+        "widthFeet": { "type": "number", "exclusiveMinimum": 0 },
+        "heightFeet": { "type": "number", "exclusiveMinimum": 0 },
         "rangeFeet": { "type": "number", "minimum": 0 }
       },
+      "anyOf": [
+        { "required": ["radiusFeet"] },
+        { "required": ["lengthFeet"] },
+        { "required": ["widthFeet"] },
+        { "required": ["heightFeet"] }
+      ],
       "additionalProperties": false
     },
     "selector": {
@@ -354,7 +363,7 @@
       "required": ["kind", "mode"],
       "properties": {
         "kind": { "const": "roll.modify" },
-        "mode": { "enum": ["advantage", "disadvantage", "add-die", "add-flat", "reroll"] },
+        "mode": { "enum": ["advantage", "disadvantage", "add-die", "add-flat", "target-add", "reroll", "replace", "minimum"] },
         "value": { "$ref": "#/$defs/expression" },
         "dice": { "type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$" },
         "when": { "$ref": "#/$defs/predicate" }
@@ -478,8 +487,11 @@
       "properties": {
         "kind": { "const": "movement.relocate" },
         "mode": { "enum": ["teleport", "push", "pull", "move"] },
+        "movementType": { "enum": ["walk", "climb", "swim", "fly", "crawl", "jump"] },
         "target": { "type": "string", "minLength": 1 },
         "distance": { "$ref": "#/$defs/expression" },
+        "costMultiplier": { "$ref": "#/$defs/expression" },
+        "doesNotProvokeOpportunityAttacks": { "type": "boolean" },
         "destinationFact": { "$ref": "#/$defs/factQuery" },
         "when": { "$ref": "#/$defs/predicate" }
       },

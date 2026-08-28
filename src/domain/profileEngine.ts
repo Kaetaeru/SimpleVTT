@@ -14,6 +14,18 @@ export type ExpressionNode =
   | { ref: string }
   | { op: ArithmeticOperator; args: ExpressionNode[] };
 
+export type SemanticValue=number|string|boolean|null|SemanticValue[];
+export type SemanticExpression=
+  | {value:SemanticValue}
+  | {ref:string}
+  | {op:ArithmeticOperator;args:SemanticExpression[]};
+export type SemanticPredicate=
+  | boolean
+  | {op:"all"|"any";args:SemanticPredicate[]}
+  | {op:"not";arg:SemanticPredicate}
+  | {op:"eq"|"ne"|"lt"|"lte"|"gt"|"gte"|"contains";left:SemanticExpression;right:SemanticExpression}
+  | {op:"exists"|"has-tag"|"activation-is"|"mode-is"|"source-active"|"resource-at-least"|"progression-at-least"|"relation-matches";ref:string;value?:number|string|boolean};
+
 export interface EconomyGrantBucketDefinition {
   kind:"extra-action";
   allowsMagicAction:boolean;
@@ -116,6 +128,61 @@ export function evaluateExpression(
       assertArgs(expression.op, expression.args, 1);
       return Math.round(values[0]);
   }
+}
+
+export function evaluateSemanticExpression(
+  expression:SemanticExpression,
+  resolveReference:(property:string)=>SemanticValue|undefined,
+):SemanticValue {
+  if("value" in expression) return expression.value;
+  if("ref" in expression) {
+    const value=resolveReference(expression.ref);
+    if(value===undefined) throw new DomainEvaluationError(`unresolved semantic reference: ${expression.ref}`);
+    return value;
+  }
+  const values=expression.args.map((arg)=>evaluateSemanticExpression(arg,resolveReference));
+  if(values.some((value)=>typeof value!=="number")) throw new DomainEvaluationError(`${expression.op} requires numeric semantic arguments`);
+  return evaluateExpression({op:expression.op,args:(values as number[]).map((value)=>({value}))},()=>{throw new DomainEvaluationError("normalized semantic arithmetic cannot contain references");});
+}
+
+function compareSemantic(left:SemanticValue,right:SemanticValue,operator:"lt"|"lte"|"gt"|"gte") {
+  if(typeof left==="number"&&typeof right==="number") {
+    if(operator==="lt") return left<right;
+    if(operator==="lte") return left<=right;
+    if(operator==="gt") return left>right;
+    return left>=right;
+  }
+  if(typeof left==="string"&&typeof right==="string") {
+    if(operator==="lt") return left<right;
+    if(operator==="lte") return left<=right;
+    if(operator==="gt") return left>right;
+    return left>=right;
+  }
+  throw new DomainEvaluationError(`${operator} requires comparable operands of the same type`);
+}
+
+export function evaluateSemanticPredicate(
+  predicate:SemanticPredicate,
+  resolveReference:(property:string)=>SemanticValue|undefined,
+):boolean {
+  if(typeof predicate==="boolean") return predicate;
+  if("args" in predicate) return predicate.op==="all"
+    ? predicate.args.every((entry)=>evaluateSemanticPredicate(entry,resolveReference))
+    : predicate.args.some((entry)=>evaluateSemanticPredicate(entry,resolveReference));
+  if(predicate.op==="not") return !evaluateSemanticPredicate(predicate.arg,resolveReference);
+  if("left" in predicate) {
+    const left=evaluateSemanticExpression(predicate.left,resolveReference);
+    const right=evaluateSemanticExpression(predicate.right,resolveReference);
+    if(predicate.op==="eq") return Object.is(left,right);
+    if(predicate.op==="ne") return !Object.is(left,right);
+    if(predicate.op==="contains") return Array.isArray(left)?left.some((entry)=>Object.is(entry,right)):typeof left==="string"&&typeof right==="string"?left.includes(right):false;
+    return compareSemantic(left,right,predicate.op);
+  }
+  const value=resolveReference(predicate.ref);
+  if(predicate.op==="exists") return value!==undefined;
+  if(predicate.op==="has-tag") return Array.isArray(value)&&value.some((entry)=>Object.is(entry,predicate.value));
+  if(predicate.op==="resource-at-least"||predicate.op==="progression-at-least") return typeof value==="number"&&typeof predicate.value==="number"&&value>=predicate.value;
+  return Object.is(value,predicate.value);
 }
 
 function stripOuterParens(value: string) {

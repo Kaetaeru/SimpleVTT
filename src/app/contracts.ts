@@ -299,6 +299,7 @@ export interface ActionVm {
   eligibleTargetIds: string[];
   eligibleTargetReasons?: Record<string,string>;
   maxTargets?: number;
+  allocation?: {units:number;minimumPerTarget:number;maximumPerTarget:number;totalMustMatch:true};
   attackBonus?: number;
   checkBonus?: number;
   saveDc?: number;

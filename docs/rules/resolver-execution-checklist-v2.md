@@ -464,6 +464,28 @@ Deliberate boundary:
 
 ---
 
+## C3 — Generic roll / selector / allocation / spatial / movement primitives — bounded
+
+This checkpoint supersedes the older P6/P7 notes that called `roll.modify`, allocation, and provider-backed spatial facts wholly unsupported.
+
+Evidence:
+
+- [x] one existing d20 path applies structural advantage/disadvantage, flat/additional-die modifiers, target/DC changes, reroll, replacement, minimum roll, and outcome recalculation from authoritative inputs;
+- [x] missing modifier dice authority rejects before commit and content/definition renames preserve mechanics;
+- [x] fixed-pool allocation validates exact integer sums, target bounds, identity, revision, and retry before downstream execution;
+- [x] Magic Missile production selection preserves the player's authored projectile sequence instead of inventing an equal distribution;
+- [x] selectors filter and order structural candidates; area selection requires authoritative membership and never invents geometry;
+- [x] standard spatial/sense facts distinguish sight, hearing, detection, cover, light, and obscurement without treating absent facts as false geometry;
+- [x] movement uses existing Resolver operations for profile-scaled movement, push, pull, and teleport with opaque provider/manual destinations.
+
+Deliberate boundary:
+
+- these are reusable primitives and bounded production wiring, not full A-AJ acceptance;
+- rich post-roll responder routing, triggered dispatch, persisted decisions, native geometry calculation, and remaining named adapters are still incomplete;
+- the V1 mechanism ledger remains `INCOMPLETE` until production, identity, connected, persistence, and strangler evidence for each row is complete.
+
+---
+
 # PHASE 3 — ANTICIPATED D&D CAPABILITY COVERAGE F-M
 
 Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.

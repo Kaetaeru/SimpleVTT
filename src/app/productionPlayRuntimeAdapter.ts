@@ -428,7 +428,10 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
     const dice=formula?`${formula.count}d${formula.sides}`:undefined;
     const harmful=primary?.kind==="attack-damage"||primary?.kind==="multi-attack-damage"||primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"||primary?.kind==="power-word-kill"||primary?.kind==="automatic-projectiles";
     const multiAttackTargets=mechanic&&primary?.kind==="multi-attack-damage"?spellMultiAttackCount(mechanic,character.level,level===0?undefined:Math.max(level,selectedCombatSpellSlot(character.id,level))):0;
-    const maxTargets=multiAttackTargets||mechanic?.targeting.maxTargets;
+    const projectileUnits=mechanic&&primary?.kind==="automatic-projectiles"
+      ? primary.baseProjectiles+Math.max(0,Math.max(level,selectedCombatSpellSlot(character.id,level))-mechanic.baseLevel)*(primary.projectilesPerSlotAboveBase??0)
+      : 0;
+    const maxTargets=projectileUnits||multiAttackTargets||mechanic?.targeting.maxTargets;
     const many=(maxTargets??1)>1;
     const selfOnly=mechanic?.targeting.allowedRelations?.length===1&&mechanic.targeting.allowedRelations[0]==="self";
     const target:ActionVm["target"]=(mechanic?.targeting.maxTargets??0)===0?"none":selfOnly?"self":primary?.kind==="healing"||primary?.kind==="full-healing"||primary?.kind==="temporary-hp"?"ally":harmful?(many?"multi-enemy":"enemy"):"any";
@@ -446,6 +449,7 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
       economy:mechanic?.castingEconomy==="bonus-action"?"추가 행동":mechanic?.castingEconomy==="reaction"?"반응":"행동",resolutionKind,
       summary:executable?(spell?.summary??`${level===0?"소마법":`${level}레벨 주문`} · 자동 판정 지원`):(spell?`${spellLevelLabel(spell)} · ${spell.castingTime} · ${spell.range}`:`${level===0?"소마법":`${level}레벨 주문`} · 자동 판정 미지원`),
       available:executable,disabledReason:executable?undefined:(mechanic?.unsupportedInteractions?.join(" ")||reason),eligibleTargetIds:[],maxTargets:many?maxTargets:undefined,
+      allocation:projectileUnits?{units:projectileUnits,minimumPerTarget:1,maximumPerTarget:projectileUnits,totalMustMatch:true}:undefined,
       attackBonus:primary?.kind==="attack-damage"||primary?.kind==="multi-attack-damage"?character.proficiencyBonus+spellMod:undefined,
       saveDc:primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"?dc:undefined,
       saveAbility:primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"?ABILITY_LABEL[primary.saveAbility]:undefined,

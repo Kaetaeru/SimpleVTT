@@ -200,7 +200,14 @@ export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):Op
     },
   ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
-  const result = { distanceFeet:operation.distanceFeet, remaining:actor.economy.movement };
+  const result = {
+    distanceFeet:operation.distanceTraveledFeet??operation.distanceFeet,
+    remaining:actor.economy.movement,
+    ...(operation.distanceTraveledFeet===undefined?{}:{movementCostFeet:operation.distanceFeet}),
+    ...(operation.movementMode?{movementMode:operation.movementMode}:{}),
+    ...(operation.destinationRef?{destinationRef:operation.destinationRef}:{}),
+    ...(operation.doesNotProvokeOpportunityAttacks===undefined?{}:{doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks}),
+  };
   return {
     result,
     event:makeEvent(ctx.pending, operation, `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),

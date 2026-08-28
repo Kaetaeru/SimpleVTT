@@ -65,7 +65,7 @@ test("Gate E4 provider and manual destination answers compile to the same resolv
   assert.equal(providerCompiled.destination,"point:b4");
   assert.equal(manualCompiled.destination,"point:b4");
   assert.deepEqual(providerCompiled.operation,manualCompiled.operation);
-  assert.deepEqual(providerCompiled.operation,{id:"move",kind:"move",actorId:"hero",distanceFeet:15});
+  assert.deepEqual(providerCompiled.operation,{id:"move",kind:"move",actorId:"hero",movementMode:"walk",distanceFeet:15,distanceTraveledFeet:15,destinationRef:"point:b4",doesNotProvokeOpportunityAttacks:false});
 
   const committed=resolvePendingResolution(TEST_PROFILE,runtimeState(),{
     id:"common-play-move",
@@ -79,7 +79,7 @@ test("Gate E4 provider and manual destination answers compile to the same resolv
   assert.equal(committed.state.combatants.hero.economy.movement,15);
 });
 
-test("Gate E4 refuses movement modes that existing Core primitives cannot represent exactly",()=>{
+test("generic movement lowers push, pull, and teleport to authoritative free movement",()=>{
   for(const mode of ["push","pull","teleport"] as const){
     const compiled=compileCommonPlayMovement({
       id:`move-${mode}`,
@@ -93,8 +93,12 @@ test("Gate E4 refuses movement modes that existing Core primitives cannot repres
         provenance:{kind:"authority",responderId:"dm"},
       },
     });
-    assert.equal(compiled.status,"unsupported");
-    if(compiled.status==="unsupported")assert.match(compiled.reason,new RegExp(mode,"i"));
+    assert.equal(compiled.status,"compiled");
+    if(compiled.status==="compiled") {
+      assert.equal(compiled.operation.kind,"free-move");
+      assert.equal(compiled.operation.movementMode,mode);
+      assert.equal(compiled.operation.doesNotProvokeOpportunityAttacks,mode==="teleport");
+    }
   }
 });
 
@@ -115,10 +119,11 @@ test("Gate E4 rejects a destination answer that does not belong to the movement 
   if(compiled.status==="rejected")assert.match(compiled.reason,/query/i);
 });
 
-test("Gate E4 rejects non-literal movement distance instead of inventing an evaluator",()=>{
+test("generic movement reuses profile expressions for speed costs",()=>{
   const compiled=compileCommonPlayMovement({
     id:"move",
-    definition:{...movement,distance:{ref:"runtime.speed"}},
+    definition:{...movement,movementType:"crawl",distance:{ref:"runtime.speed"},costMultiplier:{value:2}},
+    properties:{"runtime.speed":10},
     answer:{
       queryId:"legal-destination",
       fact:"spatial.legal-destination",
@@ -128,6 +133,6 @@ test("Gate E4 rejects non-literal movement distance instead of inventing an eval
       provenance:{kind:"authority",responderId:"dm"},
     },
   });
-  assert.equal(compiled.status,"unsupported");
-  if(compiled.status==="unsupported")assert.match(compiled.reason,/distance|expression/i);
+  assert.equal(compiled.status,"compiled");
+  if(compiled.status==="compiled")assert.deepEqual(compiled.operation,{id:"move",kind:"move",actorId:"hero",movementMode:"crawl",distanceFeet:20,distanceTraveledFeet:10,destinationRef:"point:b4",doesNotProvokeOpportunityAttacks:false});
 });

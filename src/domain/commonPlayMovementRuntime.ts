@@ -1,19 +1,22 @@
 import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 import type { ResolutionOperation } from "./resolutionTypes";
+import { evaluateExpression, type ExpressionNode } from "./profileEngine";
 
 type CommonPlayMovementMode="teleport"|"push"|"pull"|"move";
-type LiteralDistance={value:number};
-type CommonPlayDistanceExpression=LiteralDistance|Record<string,unknown>;
+type CommonPlayMovementType="walk"|"climb"|"swim"|"fly"|"crawl"|"jump";
 
 export interface CommonPlayMovementDefinition {
   kind:"movement.relocate";
   mode:CommonPlayMovementMode;
+  movementType?:CommonPlayMovementType;
   target:string;
-  distance?:CommonPlayDistanceExpression;
+  distance?:ExpressionNode;
+  costMultiplier?:ExpressionNode;
+  doesNotProvokeOpportunityAttacks?:boolean;
   destinationFact?:CommonPlayFactQuery;
 }
 
-type CompiledMoveOperation=Extract<ResolutionOperation,{kind:"move"}>;
+type CompiledMoveOperation=Extract<ResolutionOperation,{kind:"move"|"free-move"}>;
 
 export type CommonPlayMovementCompileResult=
   | {status:"compiled";destination:string;operation:CompiledMoveOperation}
@@ -24,23 +27,24 @@ export interface CompileCommonPlayMovementInput {
   id:string;
   definition:CommonPlayMovementDefinition;
   answer?:CommonPlayFactAnswer;
+  properties?:Record<string,number>;
 }
 
-function literalDistance(expression:CommonPlayDistanceExpression|undefined) {
-  if(!expression||typeof expression!=="object"||!("value" in expression))return undefined;
-  const value=(expression as {value?:unknown}).value;
-  return typeof value==="number"&&Number.isFinite(value)&&value>=0?value:undefined;
+function numeric(expression:ExpressionNode|undefined,properties:Record<string,number>|undefined,label:string) {
+  if(!expression)return undefined;
+  const value=evaluateExpression(expression,(property)=>{
+    const resolved=properties?.[property];
+    if(resolved===undefined)throw new Error(`unresolved ${label} property: ${property}`);
+    return resolved;
+  });
+  return Number.isFinite(value)&&value>=0?value:undefined;
 }
 
 export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):CommonPlayMovementCompileResult {
   const {definition,answer}=input;
-  if(definition.mode!=="move") {
-    return {status:"unsupported",reason:`movement mode ${definition.mode} is not represented exactly by current Core movement primitives`};
-  }
-
-  const distanceFeet=literalDistance(definition.distance);
+  const distanceFeet=numeric(definition.distance,input.properties,"movement distance");
   if(distanceFeet===undefined) {
-    return {status:"unsupported",reason:"movement distance requires a supported literal expression"};
+    return {status:"unsupported",reason:"movement distance requires a supported numeric expression"};
   }
 
   const query=definition.destinationFact;
@@ -51,6 +55,16 @@ export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):
   if(answer.subject!==query.subject) return {status:"rejected",reason:"movement destination answer subject mismatch"};
   if(typeof answer.value!=="string"||!answer.value) return {status:"rejected",reason:"movement destination answer must be an opaque destination string"};
 
+  if(definition.mode!=="move") return {
+    status:"compiled",destination:answer.value,
+    operation:{
+      id:input.id,kind:"free-move",actorId:definition.target,distanceFeet,maximumDistanceFeet:distanceFeet,
+      movementMode:definition.mode,destinationRef:answer.value,
+      doesNotProvokeOpportunityAttacks:definition.mode==="teleport"||definition.doesNotProvokeOpportunityAttacks===true,
+    },
+  };
+  const multiplier=numeric(definition.costMultiplier,input.properties,"movement cost multiplier")??1;
+  const cost=Math.ceil(distanceFeet*multiplier);
   return {
     status:"compiled",
     destination:answer.value,
@@ -58,7 +72,11 @@ export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):
       id:input.id,
       kind:"move",
       actorId:definition.target,
-      distanceFeet,
+      movementMode:definition.movementType??"walk",
+      distanceFeet:cost,
+      distanceTraveledFeet:distanceFeet,
+      destinationRef:answer.value,
+      doesNotProvokeOpportunityAttacks:definition.doesNotProvokeOpportunityAttacks===true,
     },
   };
 }

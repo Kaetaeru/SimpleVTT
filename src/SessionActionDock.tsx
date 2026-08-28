@@ -198,7 +198,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
       </div>
       <div className="session-command-context">
         {targeting&&<><span className="session-command-context-label">{targeting.action.name}<br/>액터를 클릭하세요</span><button type="button" onClick={onCancelTargeting}>취소</button></>}
-        {targeting&&multiTarget&&<button type="button" className="primary" disabled={!targeting.selectedTargetIds.length||targeting.pending} onClick={onExecuteTargeting}>실행 · {targeting.selectedTargetIds.length}</button>}
+        {targeting&&multiTarget&&<button type="button" className="primary" disabled={!targeting.selectedTargetIds.length||Boolean(targeting.action.allocation&&targeting.selectedTargetIds.length!==targeting.action.allocation.units)||targeting.pending} onClick={onExecuteTargeting}>실행 · {targeting.selectedTargetIds.length}{targeting.action.allocation?`/${targeting.action.allocation.units}`:""}</button>}
         {!targeting&&snapshot.sessionMode==="initiative"&&<button type="button" className="primary" disabled={!canEndTurn||pendingTurn} onClick={()=>void finishTurn()}>{pendingTurn?"…":role==="dm"?"다음 턴":"턴 종료"}</button>}
         {!targeting&&snapshot.sessionMode==="freeform"&&<span className="session-command-context-label">자유 진행</span>}
       </div>

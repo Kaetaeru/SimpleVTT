@@ -1,5 +1,5 @@
 import type { RulesRuntimeState } from "./combatState";
-import type { D20TestFamily, ModifierContribution } from "./d20";
+import type { D20RollModification, D20TestFamily, ModifierContribution } from "./d20";
 import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
@@ -56,6 +56,13 @@ type CommonPlayHealingApply={
   target?:CommonPlayHpTarget;
 };
 
+type CommonPlayRollModify={
+  kind:"roll.modify";
+  mode:"advantage"|"disadvantage"|"add-die"|"add-flat"|"target-add"|"reroll"|"replace"|"minimum";
+  value?:LiteralNumberExpression;
+  dice?:string;
+};
+
 type CommonPlayResourcePayment={
   kind:"resource";
   resource:string;
@@ -77,7 +84,8 @@ export type CommonPlayOperation=
   |CommonPlayResourceChange
   |CommonPlayEconomyModify
   |CommonPlayDamageApply
-  |CommonPlayHealingApply;
+  |CommonPlayHealingApply
+  |CommonPlayRollModify;
 
 export interface CommonPlayD20TestDefinition {
   kind:D20TestFamily;
@@ -109,6 +117,7 @@ export interface CommonPlayOperationExecutionInput {
     targetId?:string;
     modifierContributions?:ModifierContribution[];
     rollStateContributions?:RollStateContribution[];
+    modifierDiceFaces?:Record<number,number[]>;
   };
   targetId?:string;
   targetingTargets?:TargetingFactInput[];
@@ -133,6 +142,7 @@ const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
+const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
 function object(value:unknown,label:string):Obj {
@@ -237,6 +247,22 @@ function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentIn
 
 function parseOperation(value:unknown,label:string):CommonPlayOperation {
   const operation=object(value,label);
+  if(operation.kind==="roll.modify") {
+    supportedKeys(operation,ROLL_MODIFY_KEYS,label);
+    const modes=new Set(["advantage","disadvantage","add-die","add-flat","target-add","reroll","replace","minimum"]);
+    if(typeof operation.mode!=="string"||!modes.has(operation.mode)) throw new DomainEvaluationError(`${label}.mode is unsupported`);
+    const needsValue=operation.mode==="add-flat"||operation.mode==="target-add"||operation.mode==="replace"||operation.mode==="minimum";
+    const needsDice=operation.mode==="add-die"||operation.mode==="reroll";
+    if(needsValue!==Boolean(operation.value!==undefined)) throw new DomainEvaluationError(`${label}.value ${needsValue?"is required":"is not allowed"} for ${operation.mode}`);
+    if(needsDice!==Boolean(operation.dice!==undefined)) throw new DomainEvaluationError(`${label}.dice ${needsDice?"is required":"is not allowed"} for ${operation.mode}`);
+    if(needsDice) parseCommonPlayDamageDiceFormula(nonEmptyString(operation.dice,`${label}.dice`),`${label}.dice`);
+    return {
+      kind:"roll.modify",
+      mode:operation.mode as CommonPlayRollModify["mode"],
+      ...(needsValue?{value:literalExpression(operation.value,`${label}.value`)}:{}),
+      ...(needsDice?{dice:nonEmptyString(operation.dice,`${label}.dice`)}:{}),
+    };
+  }
   if(operation.kind==="resource.change") {
     supportedKeys(operation,RESOURCE_CHANGE_KEYS,label);
     const amount=literalExpression(operation.amount,`${label}.amount`);
@@ -422,6 +448,26 @@ export function compileCommonPlayEntryPointOperations(
   operations.push(...compilePayments(supported,input));
   if(entryPoint.test) {
     if(!input.d20) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires authoritative d20 input`);
+    const rollModifications: D20RollModification[]=entryPoint.operations.flatMap((operation,index)=>{
+      if(operation.kind!=="roll.modify") return [];
+      const source=`common-play:${supported.id}:${entryPoint.id}:operation:${index}`;
+      if(operation.mode==="advantage"||operation.mode==="disadvantage") return [{source,mode:operation.mode}];
+      if(operation.mode==="add-flat"||operation.mode==="target-add"||operation.mode==="replace"||operation.mode==="minimum") {
+        return [{source,mode:operation.mode,value:literalInteger(operation.value,`${operation.mode} value`)}];
+      }
+      const formula=parseCommonPlayDamageDiceFormula(operation.dice!,`${operation.mode} dice`);
+      if(operation.mode==="reroll"&&(formula.count!==1||formula.sides!==20||formula.flat!==0)) {
+        throw new DomainEvaluationError("reroll requires exactly 1d20");
+      }
+      const faces=input.d20!.modifierDiceFaces?.[index];
+      if(!faces||(operation.mode==="add-die"?faces.length!==formula.count:faces.length<formula.count)) {
+        throw new DomainEvaluationError(`Common Play roll modifier ${index} requires authoritative die face(s)`);
+      }
+      const dice={id:`${input.resolutionId}:roll-modifier:${index}`,purpose:source,sides:formula.sides,faces:[...faces]};
+      const result:D20RollModification[]=[{source,mode:operation.mode,dice}];
+      if(formula.flat!==0) result.push({source:`${source}:flat`,mode:"add-flat",value:formula.flat});
+      return result;
+    });
     operations.push({
       id:`${input.resolutionId}:test`,
       kind:"d20",
@@ -433,6 +479,7 @@ export function compileCommonPlayEntryPointOperations(
         targetSource:`common-play:${supported.id}:${entryPoint.id}:dc`,
         modifierContributions:input.d20.modifierContributions??[],
         rollStateContributions:input.d20.rollStateContributions,
+        ...(rollModifications.length?{rollModifications}:{}),
         dice:{
           id:`${input.resolutionId}:d20`,
           purpose:`common-play:${supported.id}:${entryPoint.id}:${entryPoint.test.kind}`,
@@ -444,6 +491,7 @@ export function compileCommonPlayEntryPointOperations(
   }
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
+    if(operation.kind==="roll.modify") continue;
     if(operation.kind==="resource.change") {
       if(operation.target!==undefined&&operation.target!=="actor"&&operation.target!=="self"&&operation.target!==input.actorId) {
         throw new DomainEvaluationError("Common Play resource.change currently supports the acting actor only");
