@@ -13,27 +13,22 @@
 
 ## Current result
 
-PR #159 has been reconciled with the current resolver parent without broadening its product diff.
+PR #159 exact candidate remains `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`, open/mergeable/non-draft with the same bounded seven-file product diff.
 
-- exact candidate: `1bc7a420b90378804a5b5994fa1ad1f59b963b1d`;
-- PR remains open, mergeable, non-draft, exactly seven changed product files;
-- no submitted reviews or unresolved review threads;
-- diff review found no Fighter/Action-Surge named dispatch, transport addition, second named evaluator, or hidden fallback.
+Exact-head workflow state:
 
-Exact-head workflows:
-
-- M1 Resource/Economy: SUCCESS, including focused harness + TypeScript typecheck;
+- M1 Resource/Economy: SUCCESS;
 - Contract validation: SUCCESS;
 - Rules Domain: SUCCESS;
-- UI: SUCCESS, including final typecheck/build;
-- Persistence: SUCCESS, including the formerly failing catalog baseline, production build, and Tauri storage;
-- Phase 11: offline/product gate SUCCESS; Windows executable build still in progress;
-- Phase 12: connected protocol/product gate SUCCESS; Windows connected-playable job still in progress.
+- UI: SUCCESS;
+- Persistence: SUCCESS;
+- Phase 11 Playable: fully SUCCESS, including Windows playable build/artifact;
+- Phase 12 Connected Session: connected protocol/product gate and Tauri transport/persistence SUCCESS; only the final Windows connected-session executable build remains in progress.
 
-There is no known product failure. The remaining platform jobs are active verification, not a `blocked` condition.
+There is no known product failure. The remaining Phase 12 job is active verification, not a blocked condition and not a reason to rerun any previously validated work.
 
 ## Next
 
-Read only the current exact-head Phase 11/12 results. If they become green and the seven-file diff is unchanged, follow the README owner-approval rule for PR #159. Do not repeat old Gate E/M0 work or obsolete workflow evidence.
+Read only the current exact-head Phase 12 result. If it completes SUCCESS and PR #159 remains the same bounded seven-file change, complete the verification gate and follow the README merge-approval rule. Otherwise inspect only a concrete new Phase 12 failure.
 
 `STATUS.md` is human-facing only. Authoritative state is STATE plus `control.json`, with control written last.
