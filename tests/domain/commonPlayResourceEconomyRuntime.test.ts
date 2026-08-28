@@ -83,7 +83,10 @@ function useAction(
   });
 }
 
-test("Common Play lowers an unknown resource/economy action into existing generic Resolver operations", () => {
+test("Common Play lowers committed resource payments before generic economy effects", () => {
+  assert.deepEqual(DEFINITION.payments?.map((payment) => payment.kind), ["resource", "resource"]);
+  assert.deepEqual(DEFINITION.entryPoints[0]?.operations.map((operation) => operation.kind), ["economy.modify"]);
+
   const state = preparedState();
   const pending = compileCommonPlayEntryPointOperations(PROFILE, state, DEFINITION, executionInput());
 
@@ -104,7 +107,7 @@ test("Common Play lowers an unknown resource/economy action into existing generi
   assert.deepEqual(resolved.state.combatants.hero.economy.extraActions?.map((entry) => entry.allowsMagicAction), [false]);
 });
 
-test("Common Play resource/economy lowering is atomic when a later resource cannot be spent", () => {
+test("Common Play resource payments and economy effect commit atomically", () => {
   const state = preparedState();
   const sameTurn = state.combatants.hero.resources.find((entry) => entry.id === "resource.external.same-turn");
   assert.ok(sameTurn);
@@ -113,7 +116,7 @@ test("Common Play resource/economy lowering is atomic when a later resource cann
   const rejected = resolveCommonPlayEntryPointOperations(PROFILE, state, DEFINITION, executionInput("atomic-rejection"));
   assert.equal(rejected.status, "rejected");
   assert.equal(rejected.state, state);
-  assert.equal(resourceCurrent(state, "resource.external.primary"), 1, "failed later spend must roll back the earlier spend");
+  assert.equal(resourceCurrent(state, "resource.external.primary"), 1, "failed later payment must roll back the earlier payment");
   assert.equal(state.combatants.hero.economy.extraActions?.length ?? 0, 0);
 });
 
