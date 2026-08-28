@@ -42,6 +42,15 @@
         "targetVersion":{"type":"string","minLength":1}, "extensionPoint":{"type":"string","minLength":1}
       }
     },
+    "portableMechanic": {
+      "type":"object", "additionalProperties":false,
+      "required":["id","kind","definition"],
+      "properties": {
+        "id":{"type":"string","minLength":1},
+        "kind":{"const":"common-play"},
+        "definition":{"type":"object"}
+      }
+    },
     "entry": {
       "type": "object",
       "additionalProperties": false,
@@ -57,7 +66,8 @@
         "requiresCapabilities": {"type":"array","items":{"type":"string","minLength":1},"uniqueItems":true},
         "semanticRelationships": {"type":"array","items":{"$ref":"#/$defs/semanticRelationship"}},
         "extensionPoints": {"type":"array","items":{"$ref":"#/$defs/extensionPoint"}},
-        "module": {"$ref":"#/$defs/moduleManifest"}
+        "module": {"$ref":"#/$defs/moduleManifest"},
+        "portableMechanics": {"type":"array","items":{"$ref":"#/$defs/portableMechanic"}}
       }
     }
   }
