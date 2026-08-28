@@ -15,9 +15,21 @@
 
 ## Durable checkpoint
 
-Sequence 3's sole waiting condition has been satisfied. PR #168 (`rules: dispatch installed Common Play through production authority`) was merged into `agent/resolver-foundation-convergence` at merge commit `c372c09353de58dfcc12ad3adbe6fd118fe28106`. The merged child head was the previously verified exact candidate `da4ffecd2de1b7f95d324e7170312cdd8d512797`.
+Resource/Economy remains `PRODUCTION` on the convergence parent. PR #168 and its already-validated evidence remain reusable and must not be repeated without affected-surface evidence.
 
-The repository-side Rerun blocker was stale after that merge: STATE/control still described PR #168 as awaiting owner approval even though GitHub showed it merged. Sequence 4 corrects that coordination state and authorizes continuation.
+The active implementation candidate is PR #171, `rules: migrate built-in Action Surge to generic Common Play`, from `agent/m1-action-surge-generic-production` into `agent/resolver-foundation-convergence`. The PR is open and mergeable. Its implementation is bounded to the Resource/Economy migration slice: built-in Common Play data/catalog projection, the existing generic Common Play production adapter, Action Surge parity coverage, named Action Surge adapter removal, legacy-boundary shrink, and the focused workflow.
+
+A separate experimental branch, `agent/m1-action-surge-generic-parity`, was inspected and rejected as the integration candidate because its final `2040179c83e9ae047a9fb08627ccdb664a40ee01` commit mixed the Action Surge dispatch change with a large unrelated `productionPlayRuntimeAdapter.ts` rewrite. Do not revive or merge that broader diff while PR #171 remains the bounded candidate.
+
+PR #171 exact-head history advanced during this checkpoint as CI exposed two narrow issues:
+
+- candidate `4cc3b062fd31da8632af9634c56d3d3009eaaf33` passed the focused Common Play/Action Surge behavior harness 8/8, including two-resource spend, restricted extra Action semantics, Undo, connected convergence, arbitrary installed Common Play production coverage, and action/content/definition/display-name rename invariance;
+- its M1 workflow then failed only because `./installedCommonPlayRuntimeAdapter` was not yet classified in the legacy execution baseline;
+- commit `90a45e56de3ca1236ffb6e714999896b23b7914a` classified that generic production adapter as `GENERIC_ENGINE` while keeping the removed named Fighter Action Surge adapter out of the baseline;
+- the same earlier candidate's Contract validation exposed a canonical module dependency typo (`dnd-srd-5.2.1.classes` instead of the live module id `dnd.srd-5.2.1.classes`);
+- commit `8c9978a8d3a30bf08ab492cc8d805c2d77d63094` corrected that dependency identity.
+
+At the end of this checkpoint, `8c9978a8d3a30bf08ab492cc8d805c2d77d63094` is the latest observed PR #171 head and its new exact-head workflows are queued. Do not treat the earlier `4cc3...` failures as current candidate failures, and do not manually repeat the already-passing focused 8-test harness unless a later diff touches its semantics.
 
 Repository routing remains unchanged:
 
@@ -25,23 +37,14 @@ Repository routing remains unchanged:
 - product integration target: `work/v1-composite`;
 - product work and Rerun control must not be routed to `main`.
 
-## Verified completed boundary
-
-PR #168 is merged. Its already-validated exact-head evidence established the real production/session dispatch for arbitrary installed data-only Common Play Resource/Economy mechanics through the existing generic Resolver and shared authoritative transaction path, with Character resource writeback, turn/session/history projection, and Undo.
-
-This satisfies the completed `PORTABLE -> PRODUCTION` integration boundary for the Resource/Economy family. It does not by itself establish `MIGRATED`: the named Fighter Action Surge production adapter remains the behavior oracle until built-in Action Surge has equivalent end-to-end generic-path parity and identity-invariance evidence.
-
-Gate A-E, M0, PR #159, and the exact-head PR #168 validation evidence remain reusable and must not be repeated without affected-surface evidence.
-
 ## Waiting condition
 
-None. There is no current merge-approval, user-decision, or technical blocker recorded for this run.
+No user decision or merge approval is requested yet. PR #171 exact-head CI is still in flight, so control remains `continue` for validation/fix continuation. This is not permission to merge a newly-created or materially-changed PR without a later Rerun approval adjudication.
 
 ## Next Exact Action
 
-1. Perform the mandatory Rerun preflight on sequence 4 and re-fetch the convergence parent before any write.
-2. Reconcile the canonical current-work/product-plan text with the already-merged PR #168 so it records Resource/Economy as `PRODUCTION` rather than the stale pre-merge `PORTABLE -> PRODUCTION` boundary.
-3. Continue the canonical next boundary: prove built-in Fighter Action Surge end-to-end through the same generic Common Play production path, including its two-resource spend, restricted extra Action semantics, authoritative commit/writeback, Undo, connected convergence, and ID/name-only rename invariance.
-4. Keep the named Fighter Action Surge adapter only as the behavior oracle until that generic-path parity is proven; then remove only the absorbed named execution and shrink the legacy inventory/boundary.
-5. Reuse still-valid Gate A-E, M0, PR #159, and PR #168 evidence; do not repeat unrelated validation.
-6. Do not route product work to `main`; eventual product integration remains `work/v1-composite` through an explicit integration action.
+1. Perform the mandatory Rerun preflight and re-fetch both the convergence parent and PR #171 head because the child advanced concurrently during this checkpoint.
+2. Continue from PR #171's latest exact head rather than any older candidate. Reuse the already-passing focused 8-test evidence unless the latest diff invalidates it.
+3. Inspect only failing exact-head workflows. If a new failure exists, fix the narrow cause on the existing PR #171 branch; do not reopen completed Gates A-E, M0, PR #159, or PR #168 validation.
+4. If all required exact-head workflows pass and the live PR remains bounded, mergeable, based on the convergence parent, and architecturally consistent, checkpoint the verified candidate and publish the protocol-defined merge-approval waiting state. Do not merge PR #171 in the same dispatch merely because it was created after that dispatch began.
+5. After an approved merge, reconcile canonical Resource/Economy evidence to `MIGRATED`, shrink only the absorbed named execution boundary, and continue toward the next product-plan boundary. Eventual product integration remains `work/v1-composite`, never `main`.
