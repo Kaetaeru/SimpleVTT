@@ -8,11 +8,11 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T11:18:30+09:00`
+- checkpointed_at: `2026-08-28T11:21:00+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight was reconciled in the required README -> control -> STATE -> PLAN order and repeated after concurrent watcher activity advanced the parent. Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. PLAN routing did not change. Gate E, M0, and the integrated M1 resource/economy harness were not repeated.
+Mandatory preflight was reconciled in the required README -> control -> STATE -> PLAN order against the live Rerun parent. Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. PLAN routing did not change. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain authoritative. Gate E, M0, and the already-integrated M1 generic resource/economy harness were not repeated.
 
 ## Retained completed evidence
 
@@ -24,63 +24,59 @@ The generic M1 resource/economy harness remains integrated through merged PR #15
 
 ## M1 / Probe S — portable RuleModule mechanics bridge
 
-PR #159 / `agent/m1-rulemodule-portable-activation` is the authoritative bridge.
+PR #159 / `agent/m1-rulemodule-portable-activation` remains the sole authoritative portable-mechanics bridge. Duplicate bridge PRs must not be revived.
 
-Latest observed exact head:
+Latest exact candidate:
 
-`8aeaf54b8fbdb3945aec38453f6b6aed9a08e117`
+`7399cf53650aaa442e3aa9552dc7e87233d8c8d7`
 
-PR #159 is open, mergeable, and unmerged. The live diff is bounded to six files:
+The bridge remains intentionally data-only and bounded:
 
-- `schemas/installed-content.schema.json`;
-- `src/app/installedContentContracts.ts`;
-- `src/app/installedContentPersistence.ts`;
-- `src/app/ruleModulePackageImport.ts`;
-- `src/domain/commonPlayOperationRuntime.ts`;
-- `tests/ui/ruleModulePackageImport.test.ts`.
+- registered `mechanics[{kind:"common-play"}]` may be imported and preserved;
+- config is parsed through the existing `commonPlayOperationRuntime` parser;
+- installed-content persistence re-validates the same mechanics on hydrate;
+- `schemas/installed-content.schema.json` now includes the portable Common Play mechanics field, closing the prior schema/type persistence mismatch;
+- existing whole-entry persistence and installed-content session synchronization carry mechanics; there is no new store, transport, or evaluator;
+- arbitrary/custom mechanic kinds and unsupported operation kinds remain explicit failures;
+- the importer rejects unsupported mechanic-envelope fields instead of silently dropping them;
+- static portable `resource.change.target` values are rejected at import unless `actor` or `self`, matching the current evaluator's acting-actor-only semantics instead of deferring failure until execution;
+- a deterministic regression in `tests/ui/ruleModulePackageImport.test.ts` covers that non-portable target rejection and atomic no-install result;
+- no Fighter/Action Surge identity branch was added;
+- the named Fighter Action Surge production seam remains until installed portable mechanics execute end-to-end through the generic production/session path.
 
-The additional schema file closes persisted schema/type parity and does not add another execution path.
+PR #159 description was reconciled to these invariants. The product diff remains a portable-data/validation bridge; M1 production dispatch is not included yet.
 
-Current bridge invariants:
+## Validation status for exact head `7399cf53650aaa442e3aa9552dc7e87233d8c8d7`
 
-- only registered data-only `mechanics[{kind:"common-play"}]` is accepted;
-- Common Play config is parsed through the existing generic operation parser;
-- installed-content rehydration validates mechanics again;
-- installed-content schema preserves the same mechanics contract;
-- existing whole-entry persistence and session installed-content synchronization carry mechanics; no new store or transport exists;
-- arbitrary mechanic kinds and unsupported Common Play operations remain explicit failures;
-- no Fighter/Action Surge identity branch is added;
-- the named Fighter Action Surge production seam remains until end-to-end generic production/session activation parity is authoritative;
-- Gate F-M remain dormant.
+The following pull-request-triggered workflows were automatically registered for this exact head and were read rather than manually duplicated:
 
-## Duplicate reconciliation
+- Persistence `33135497838`: queued;
+- Phase 12 Connected Session `33135497832`: queued;
+- M1 Common Play Resource Economy `33135497829`: queued;
+- Phase 11 Playable `33135497839`: queued;
+- Rules Domain `33135497856`: queued;
+- Contract validation `33135497843`: queued;
+- UI `33135497881`: queued.
 
-Do not revive parallel portable bridge PRs. PR #160 was already closed; PR #161 was already closed; PR #162 and PR #163 were closed unmerged as superseded duplicates during this continuation. PR #159 is the only authoritative bridge.
+Contract job `98734394387` and UI job `98734394627` were still waiting for a runner when last read. Therefore no green conclusion or merge-ready claim is recorded at this checkpoint.
 
-## PR #159 validation status
+## Concurrent reconciliation notes
 
-Existing exact-head Actions for `8aeaf54b8fbdb3945aec38453f6b6aed9a08e117` were read rather than rerun. At this checkpoint all remained `queued`, so no green conclusion or merge approval state is claimed:
-
-- Phase 11 Playable `33135353010`;
-- Phase 12 Connected Session `33135352988`;
-- UI `33135353005`;
-- Persistence `33135353015`;
-- M1 Common Play Resource Economy `33135352998`;
-- Rules Domain `33135352989`;
-- Contract validation `33135353048`.
-
-PR #159 is therefore graph-mergeable but not yet evidence-merge-ready.
+- PR #159 is authoritative.
+- PR #156 was closed unmerged because the parent had already absorbed the same generic resource/economy harness.
+- PR #160 and other parallel portable-bridge attempts were superseded/closed; do not revive them.
+- The live Rerun parent had advanced through coordination checkpoints only while this candidate was being refined. Re-fetch parent and PR ancestry before any merge.
 
 ## Next Exact Action
 
 On the next continuation of sequence `2`:
 
 1. perform mandatory preflight README -> control -> STATE -> PLAN and re-fetch the live parent;
-2. read PR #159 live head/diff before any write;
-3. read the already-created exact-head workflow runs and do not rerun them merely because they were queued here;
-4. if #159 is green, verify the diff remains the bounded six-file portable data bridge with no named-content branch, new transport, second evaluator, or unsupported fallback;
-5. if green and unchanged, checkpoint exact evidence and publish `control.json` as `needs_user` solely for PR #159 merge approval;
-6. do not begin generic production action dispatch before #159 is integrated;
-7. after integration, capture the deterministic red for installed portable mechanics -> generic production/session action dispatch through `commonPlayOperationRuntime` + Resolver;
-8. only after end-to-end parity may the named Fighter Action Surge seam be deleted and the M0 baseline shrink;
-9. do not activate Gate F-M, reopen M0, repeat unchanged Gate E/M1 harness validation, create another duplicate bridge PR, or route to `main`.
+2. read PR #159 live head and diff before any write;
+3. read the already-registered exact-head workflow runs for `7399cf53650aaa442e3aa9552dc7e87233d8c8d7`; do not rerun them merely because they were queued here;
+4. if any required run fails, inspect only that failure and make the smallest parity fix;
+5. if required runs are green, confirm the diff remains the bounded portable data/validation bridge with no named-content branch, second evaluator, new transport, or hidden fallback;
+6. reconcile coordination-only ancestry if necessary and merge #159 only through the normal owner/Rerun merge-approval semantics;
+7. after #159 integration, capture the next deterministic red for installed portable mechanics -> generic production/session action dispatch through `commonPlayOperationRuntime` + Resolver;
+8. only after end-to-end parity may the named Fighter Action Surge seam be deleted and the M0 legacy baseline shrink;
+9. keep Gate F-M dormant, do not reopen M0 or repeat unchanged Gate E/M1-harness validation, and do not route to `main`.
