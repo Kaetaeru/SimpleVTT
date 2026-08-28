@@ -7,6 +7,7 @@ import {
 } from "./installedContentContracts";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
+import { parseInstalledPortableMechanics } from "./portableCommonPlayMechanics";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -37,6 +38,7 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   const categories=["class","subclass","species","background","feat","spell","item","condition","combatant","option"];
   if (!categories.includes(String(value.category))) throw new Error(`installed content category is invalid: ${String(value.category)}`);
   if (!Array.isArray(value.relationships) || !Array.isArray(value.capabilities)) throw new Error("installed content collections are invalid");
+  if(value.mechanics!==undefined) value.mechanics=parseInstalledPortableMechanics(value.mechanics,"installed content entry mechanics");
   if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);
 }
 
