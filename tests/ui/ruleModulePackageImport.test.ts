@@ -82,6 +82,41 @@ test("unsupported generic-catalog member data blocks package import instead of s
   assert.equal((await store.readGenerations()).length,0);
 });
 
+test("supported Common Play mechanic survives RuleModule activation as installed data", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanics=[{
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.rule.quickstep",
+      payments:[
+        {kind:"resource",resource:"resource.external.primary",amount:{value:1},consumeAt:"commit",refundOnCancel:true},
+        {kind:"resource",resource:"resource.external.same-turn",amount:{value:1},consumeAt:"commit",refundOnCancel:true},
+      ],
+      entryPoints:[{
+        id:"activate",
+        invocation:"manual",
+        operations:[{kind:"economy.modify",bucket:"action.extra.non-magic",amount:{value:1}}],
+      }],
+    },
+  }];
+  raw.content[0].mechanics=mechanics;
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+
+  const generations=await store.readGenerations();
+  assert.equal(generations.length,1);
+  assert.ok(generations[0].payload);
+  const document=JSON.parse(generations[0].payload!) as {entries:Array<{contentId:string;mechanics?:unknown[]}>};
+  const installed=document.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(installed?.mechanics,mechanics);
+});
+
 test("package storage failure keeps reviewed package and installs no members", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
