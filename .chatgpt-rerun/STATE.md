@@ -8,120 +8,90 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T11:01:55+09:00`
+- architecture charter: `docs/rules/common-play-resolver-architecture-charter.md`
+- product plan: `docs/rules/resolver-execution-checklist-v2.md`
+- checkpointed_at: `2026-08-28 Asia/Seoul`
 
 ## Durable checkpoint
 
-Mandatory preflight for this dispatch was completed in the required order on `agent/resolver-foundation-convergence`:
+The owner explicitly directed this continuation to preserve the architectural intent for future agents and remove stale Rerun blockers. Mandatory preflight was performed in README -> control -> STATE -> PLAN order, followed by `CANONICAL_ROOT.md`, the current rules planning documents, PR #159, and current exact-head workflow evidence.
 
-1. `.chatgpt-rerun/README.md`
-2. `.chatgpt-rerun/control.json`
-3. `.chatgpt-rerun/STATE.md`
-4. `.chatgpt-rerun/PLAN.md`
+The old blocker in control/STATE was stale: PR #159 candidate `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` no longer had queued workflows. All seven old exact-head runs had completed, exposing actionable evidence rather than queue congestion.
 
-Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain the routing/product-plan authorities. PLAN routing did not change.
+The active plan pointer is now `docs/rules/resolver-execution-checklist-v2.md`. The durable owner intent is locked in `docs/rules/common-play-resolver-architecture-charter.md`, and Rerun README requires that charter during post-preflight routing. The charter itself is aligned to checklist v2; the older checklist is historical/evidence detail only where v2 has not restated it.
 
-Repeated watcher invocations advanced GitHub concurrently during this dispatch. Stale assumptions were discarded and live refs were re-fetched before coordination writes. Gate E and M0 evidence were not repeated.
+The live parent after the architecture-alignment write is `a45d1fa689d5ac86b54bdbed84260506995e4bee`.
+
+## Architecture intent retained
+
+Future agents must preserve these distinctions rather than invent a new philosophy during routine execution:
+
+- the product goal is a portable declarative D&D rule-execution language + generic Resolver, not legacy deletion by itself;
+- named spells, feats, classes, items, conditions, monster abilities, and other content are data/presentation identity, never execution dispatch keys;
+- capability maturity is tracked separately from expressive coverage;
+- maturity axis: `SPEC -> KERNEL -> PORTABLE -> PRODUCTION -> MIGRATED -> ACCEPTED`;
+- Gates A-M are the D&D expressive coverage map;
+- A-E retain their already-proven foundation/kernel evidence;
+- F-M remain implementation-dormant until evidence justifies implementation, but their coverage question may not be forgotten;
+- before Gate N, every F-M gate must have an explicit `IMPLEMENTED`, `PROVEN_UNNEEDED`, or `EXPLICITLY_OUT_OF_SCOPE` disposition from a deterministic representative D&D scenario;
+- a representative coverage probe may be a real legacy/product migration or a deliberately selected D&D scenario when historical SimpleVTT code does not exercise that mechanism;
+- one declarative rules language does not require forcing progression/module installation/durable-source transactions into fake combat PendingResolutions;
+- Gate N is final unknown-module/multi-category architecture acceptance, not a missing-primitive implementation gate.
+
+The full normative wording lives in the charter/plan and must not be reconstructed from this summary when those files are available.
 
 ## Retained completed evidence
 
-Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054` with its previously recorded focused, Contract, Rules Domain, UI, Phase 11, Phase 12, and Windows evidence.
+- Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`.
+- M0/legacy inventory freeze remains `DONE`; reuse `docs/rules/legacy-execution-inventory.md` and the Legacy Execution Boundary rather than repeating inventory work.
+- The generic resource/economy harness integrated before PR #159 remains valid unless touched surfaces invalidate its evidence.
 
-M0 remains `DONE`; `docs/rules/legacy-execution-inventory.md` and the no-new-named-execution boundary remain authoritative. Do not reopen M0.
+## PR #159 — portable Resource/Economy bridge
 
-## M1 / Probe S — retained green generic harness
+PR #159 / `agent/m1-rulemodule-portable-activation` remains the sole authoritative portable mechanics bridge. Do not revive duplicate/superseded bridges.
 
-The first M1 probe remains Fighter Action Surge, bounded by `docs/rules/m1-action-surge-migration-packet.md`. Fighter Action Surge remains only a golden oracle; no new Resolver primitive or Gate F-M capability is justified.
+Old candidate `60c5fbf79dfbf6007885edcac5fd2eb3f9153712` evidence:
 
-The validated generic candidate remains exact SHA:
+- Contract validation: SUCCESS;
+- M1 Resource/Economy focused harness: 4/4 PASS, then typecheck failed;
+- typecheck failure was exactly `TS2322` in `src/domain/commonPlayOperationRuntime.ts`: parsed `entryPoints[].invocation` widened to `string` instead of the declared literal union;
+- Persistence application contract: 79/80 PASS; the single `501 !== 496` failure was the pre-existing stale hard-coded builtin catalog total, not a portable-bridge semantic failure;
+- broad Rules/UI/Phase failures were consistent with the same shared compile gate absent contrary evidence.
 
-`2cf56f12778f533b03546df021afae5d5081e03d`
+Corrections made in this owner continuation:
 
-Retained evidence on that exact SHA:
+1. Child branch `agent/m1-rulemodule-portable-activation` commit `87945628c31a751c697a8c67b4096fae7c374e0c` adds only contextual typing for parsed `entryPoints`, preserving the literal invocation union without adding semantics or a named branch.
+2. Parent branch corrected the unrelated persistence baseline invariant in `tests/ui/installedContentRuntimeAdapter.test.ts`: instead of hard-coding catalog total `496`, it asserts the initial catalog contains only canonical builtin entries. A compare against the pre-change parent confirmed the final correction is exactly one addition / one deletion in that file.
+3. Architecture charter and v2 plan were added on the parent; Rerun README/PLAN routing now points agents through them.
+4. PR #159 description was refreshed to remove stale queued-run claims, record the latest child candidate/evidence, and restate the architecture boundary.
 
-- Rules Domain run `33134121916`: SUCCESS;
-- generic `src/domain/commonPlayOperationRuntime.ts` is the single operation lowerer;
-- RulesProfile economy grant-bucket semantics are persisted;
-- resource costs are Common Play payments and lower atomically into the existing Resolver;
-- payment/effect separation, unknown external identity, ID/name rename invariance, restricted extra-Action semantics, and Action Surge golden parity are covered.
+Latest observed exact-head workflow evidence for child `87945628c31a751c697a8c67b4096fae7c374e0c`:
 
-Do not repeat that exact-SHA Rules Domain run while those product files are unchanged.
+- M1 Common Play Resource Economy `33148877787`: SUCCESS;
+- Contract validation `33148877810`: SUCCESS;
+- Rules Domain `33148877904`: SUCCESS;
+- UI `33148877892`: SUCCESS;
+- Persistence `33148877863`: FAILURE only on the same unrelated stale parent `501 !== 496` assertion because this child run was created before the parent baseline correction entered its merge context;
+- Phase 11 Playable `33148877783`: in progress at latest observation;
+- Phase 12 Connected Session `33148877843`: in progress at latest observation.
 
-## Live-ref reconciliation
+PR #159 is currently open, mergeable, and still reports exactly seven changed files. The unrelated persistence baseline correction remains on the parent and is not part of the seven-file portable bridge diff.
 
-The original bounded branch `agent/m1-action-surge-common-play` no longer points at the green candidate. It was moved to parent coordination history and its transient PRs are not authoritative evidence.
-
-The validated product tree remains preserved at:
-
-`agent/m1-action-surge-common-play-green` -> `2cf56f12778f533b03546df021afae5d5081e03d`
-
-Current working parent at this checkpoint:
-
-`6a31e7ffe635f970cef2a69c296c4544918f8bf0`
-
-The green tree is not yet integrated into the parent. Do not advance to the RuleModule production gap as though it were already landed.
-
-Superseded/conflicted M1 PRs remain non-authoritative and must not be revived: #144, #147, and zero-diff #148.
-
-## Clean integration input fixed at hard-stop
-
-This dispatch re-read the latest parent and exact green tree and fixed the smallest clean-integration boundary before the 20-minute hard stop.
-
-A clean integration branch already exists from the exact current parent and is still untouched:
-
-`agent/m1-common-play-harness-integration-r4-20260828` -> `6a31e7ffe635f970cef2a69c296c4544918f8bf0`
-
-Use that branch rather than creating another duplicate integration branch.
-
-The parent currently contains the temporary mechanism-specific evaluator:
-
-- `src/domain/commonPlayActionEconomyRuntime.ts` blob `a1f239b94bbb94da6d7f06955edc4b1bd811af65` — DELETE in the clean integration.
-
-The exact green candidate intentionally has no file at that path and uses the single generic lowerer:
-
-- `src/domain/commonPlayOperationRuntime.ts` blob `2e08d8e380b92bf7035512d9ef8a38280d003396`.
-
-Exact green semantics/blobs already inspected and safe to transplant onto the integration branch:
-
-- `src/domain/profileEngine.ts` blob `15abcfaaa532e19ab4863ec1b306665d407ce774` — `RulesProfileLike.economy.grantBuckets`;
-- `schemas/rules-profile.schema.json` blob `818df91aa2960d8ded0ebc562c8dca70d3c6b3e9` — persisted `economy.grantBuckets` / `economyGrantBucket` schema parity;
-- `rules/profiles/dnd.srd-5.2.1.profile.json` blob `32d8b73009526ce4970a2f05159a7fe08ffabe13` — registered `action.extra.non-magic` policy;
-- `tests/domain/commonPlayActionEconomyRuntime.test.ts` blob `0788b96807476e1f19605eb682403797b4943df4` — generic lowerer parity/identity/rollback/profile-policy coverage despite the historical filename;
-- `tests/domain/commonPlayResourceEconomyRuntime.test.ts` blob `aa013521a41377853183e2a9415fb6d6db42fe85` — persisted payment/effect separation and atomicity coverage;
-- `tests/fixtures/play-contract/resource-economy-action.json` blob `cc9a4a74fff422165015140402b62d1e2edb1704` — canonical persisted probe using `payments` plus `economy.modify`;
-- `.github/workflows/rules-domain.yml` blob `a827825ac3b716f5fd4b7c1e14e43b774082db91` — includes both generic M1 domain tests;
-- `.github/workflows/m1-common-play-resource-economy.yml` blob `fd13aad9c9b8385456aaef8cb9779b8dc1762fdb` — focused M1 validation.
-
-Do not transplant the obsolete negative-effect duplicate fixture `tests/fixtures/play-contract/action-economy-restricted-extra-action.json`; the retained `resource-economy-action.json` owns the payment/effect model. Delete the parent duplicate `tests/fixtures/play-contract/action-resource-economy.json` when creating the clean integration tree.
-
-The exact green `commonPlayOperationRuntime.ts` lowers supported Common Play `payments` and `resource.change` / `economy.modify` into existing Resolver operations without Fighter/Action-Surge identity branches. The parent temporary evaluator must not survive beside it.
-
-## Remaining authoritative gap
-
-M1 is not complete. The named Fighter Action Surge execution seam is not removable yet.
-
-First integrate the clean generic harness above and verify the resulting tree. Only after that merge is the next product boundary:
-
-`RuleModule/content JSON -> structural validation -> normalization/Common Play IR -> installed portable content persistence/lookup -> generic production/session dispatch -> commonPlayOperationRuntime -> Resolver -> authoritative commit`
-
-Repository evidence already retained for the later bridge:
-
-- `src/app/ruleModulePackageImport.ts` explicitly rejects non-empty `content[].mechanics`;
-- `InstalledCatalogEntryV1` does not yet retain executable Common Play mechanics;
-- installed-content persistence/session sync already serializes whole installed entries, so the next bridge should remain data-only and reuse that path rather than add another transport/evaluator;
-- existing `tests/ui/ruleModulePackageImport.test.ts` has a blocking unsupported-mechanics case that can become the deterministic red boundary while continuing to reject arbitrary custom mechanics.
-
-Gate F-M remain dormant.
+Phase 11/12 in-progress verification is normal active work, not an external/technical blocker. The stale queue blocker is removed and Rerun remains authorized to continue.
 
 ## Next Exact Action
 
-On the next continuation of sequence `2`:
+On the next Rerun execution of sequence `2`:
 
-1. perform mandatory preflight README -> control -> STATE -> PLAN;
-2. re-fetch parent and `agent/m1-common-play-harness-integration-r4-20260828`; if the integration branch still equals the recorded parent, use it rather than creating a new branch;
-3. build one atomic integration commit/tree from the exact green blobs listed above, delete `src/domain/commonPlayActionEconomyRuntime.ts` and `tests/fixtures/play-contract/action-resource-economy.json`, and do not add the obsolete negative-effect duplicate fixture;
-4. verify the resulting integration tree with focused M1 + Contract first, then Rules Domain and Legacy Execution Boundary; reuse `33134121916` only for files that remain byte-equivalent to exact green candidate `2cf56f1...`;
-5. open one mergeable PR against `agent/resolver-foundation-convergence`; do not revive #144/#147/#148;
-6. once the clean generic harness is actually integrated, capture the deterministic RuleModule/content mechanics import/persistence/production-dispatch red and implement the smallest data-only bridge reusing `commonPlayOperationRuntime` and the Resolver;
-7. do not delete the named Fighter Action Surge seam until end-to-end production parity is authoritative;
-8. do not activate Gate F-M, reopen M0, repeat unchanged Gate E validation, or route product work to `main`.
+1. perform mandatory README -> control -> STATE -> PLAN preflight;
+2. read `CANONICAL_ROOT.md`, then the architecture charter, then `resolver-execution-checklist-v2.md`;
+3. re-fetch parent and PR #159 child tips because either may have advanced;
+4. read only the current exact-head workflows for the latest child candidate; do not rerun obsolete `60c5...` evidence;
+5. inspect only actual current failures; do not treat the already-corrected parent catalog-total baseline as a product failure;
+6. reconcile current parent ancestry/base context so the persistence-baseline correction participates in merge verification while PR #159's product diff remains the bounded seven files;
+7. confirm PR #159 contains no named Fighter/Action Surge execution branch, second evaluator, new transport, or hidden fallback;
+8. when current verification and ancestry are acceptable, follow the Rerun owner-approval rule for PR #159 merge rather than inventing another waiting reason;
+9. after #159 integration, immediately create the deterministic RED for installed portable mechanics -> real production/session action dispatch through `commonPlayOperationRuntime` + generic Resolver;
+10. keep the named Fighter Action Surge production seam until end-to-end generic parity, then remove only the absorbed named execution and shrink legacy baseline/inventory;
+11. continue by mechanism/capability family, tracking pipeline maturity and F-M coverage dispositions according to the v2 plan;
+12. do not route product work to `main`.

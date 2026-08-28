@@ -1,29 +1,40 @@
 # Rerun Status
 
-**Connection:** `work/v1-composite` · existing run · Common Play / Rules Resolver
+**Connection:** `work/v1-composite` · existing run · Common Play / D&D Rules Resolver
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Run: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- Sequence: `1`
-- Task: `phase14-production-play-session-ux`
+- Sequence: `2`
+- Task: `common-play-foundation-convergence`
 - Control to publish: `continue`
+- Architecture charter: `docs/rules/common-play-resolver-architecture-charter.md`
+- Product plan: `docs/rules/resolver-execution-checklist-v2.md`
 - Reconciled at: `2026-08-28 Asia/Seoul`
 
 ## Current result
 
-Rerun is re-authorized for the current resolver priority. Historical Lore Peerless / missing-Actions evidence is preserved but is not an active blocker or work selector.
+The stale GitHub Actions queue blocker has been removed. PR #159's old exact-head runs completed and exposed one bounded TypeScript typing failure plus an unrelated stale persistence catalog-total assertion.
 
-The unfinished ChatGPT design step for Gate D is complete:
-- Issue #136 and PR #137 now require mapless/manual Zone membership while keeping spatial automation optional;
-- already-proven Gate A/B/C and Gate D artifact/frequency behavior were not repeated;
-- actor-bound aura anchors, Zone relocation, and hidden-Zone visibility were removed from mandatory Gate D scope and left as deferred concrete scenarios;
-- bounded Codex Task Packet is posted on PR #137 (comment `5444398800`);
-- resolver checklist on `agent/138-resolver-execution-checklist` is updated at `b79b3983e599c07be68a7b0868e461e62974f7d6` and now routes directly to Codex implementation.
+Corrections are published:
+- child `agent/m1-rulemodule-portable-activation` at `87945628c31a751c697a8c67b4096fae7c374e0c` preserves the parsed Common Play invocation literal type;
+- parent persistence test now checks the intended builtin-only initial-catalog invariant instead of hard-coding `496`;
+- the architecture charter locks the owner intent that Common Play is a portable D&D execution language, A-M are expressive coverage, F-M require explicit disposition before Gate N, and legacy deletion is a migration consequence rather than the product goal;
+- Rerun PLAN routes to checklist v2;
+- PR #159 description is refreshed to the current architecture/evidence and still reports a bounded seven-file product diff.
 
-PR #137 remains open/mergeable; last observed product head is `af0d2cc791c3f7517aa1151590542fb7d6b3b675`. PR #139 remains open/mergeable and carries the permanent checklist/routing documentation. Neither PR was merged.
+Latest observed child CI:
+- M1 Resource/Economy: SUCCESS;
+- Contract validation: SUCCESS;
+- Rules Domain: SUCCESS;
+- UI: SUCCESS;
+- Persistence: FAILURE only on the stale `501 !== 496` parent baseline that has already been corrected independently on the parent;
+- Phase 11: in progress;
+- Phase 12: in progress.
+
+PR #159 is currently open and mergeable. In-progress verification and the already-corrected parent baseline are not reasons to return Rerun to `blocked`. Rerun is authorized to continue from current evidence without repeating old Gate E/M0 work or stale `60c5...` runs.
 
 ## Next
 
-Reconcile PR #137 head. If Codex has advanced it, review only the new implementation delta against Issue #136 and the resolver checklist, then validate only affected gates. If the head is unchanged, do not repeat the completed design or old regressions; the next implementation step remains Codex-owned under the frozen task packet.
+Re-fetch live parent/child, inspect only current exact-head verification, reconcile parent ancestry so the independent baseline correction participates in merge verification without entering the seven-file PR product diff, resolve only real new failures, then follow the existing merge-approval policy. After #159 integration, move directly to installed portable mechanics -> real production/session generic dispatch before removing the named Fighter Action Surge seam.
 
 `STATUS.md` is human-facing only. Authoritative state is STATE plus `control.json`, with control written last.
