@@ -1,3 +1,4 @@
+import { parseCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import {
   INSTALLED_CONTENT_SCHEMA_ID,
   INSTALLED_CONTENT_SCHEMA_VERSION,
@@ -28,6 +29,18 @@ function isObject(value:unknown):value is Record<string,unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function assertPortableMechanics(value:unknown) {
+  if (!Array.isArray(value)) throw new Error("installed content mechanics must be an array");
+  for (const [index,item] of value.entries()) {
+    if (!isObject(item)) throw new Error(`installed content mechanics[${index}] must be an object`);
+    const extra=Object.keys(item).find((key)=>!new Set(["id","kind","config"]).has(key));
+    if (extra) throw new Error(`installed content mechanics[${index}].${extra} is unsupported`);
+    if (item.kind!=="common-play") throw new Error(`installed content mechanics[${index}].kind is unsupported: ${String(item.kind)}`);
+    if (item.id!==undefined && (typeof item.id!=="string" || !item.id.trim())) throw new Error(`installed content mechanics[${index}].id is invalid`);
+    parseCommonPlayOperationDefinition(item.config,`installed content mechanics[${index}].config`);
+  }
+}
+
 function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   if (!isObject(value)) throw new Error("installed content entry must be an object");
   for (const field of ["contentId","nameKo","nameEn","sourceId","source","version","description"] as const) {
@@ -37,6 +50,7 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   const categories=["class","subclass","species","background","feat","spell","item","condition","combatant","option"];
   if (!categories.includes(String(value.category))) throw new Error(`installed content category is invalid: ${String(value.category)}`);
   if (!Array.isArray(value.relationships) || !Array.isArray(value.capabilities)) throw new Error("installed content collections are invalid");
+  if(value.mechanics!==undefined) assertPortableMechanics(value.mechanics);
   if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);
 }
 
@@ -108,9 +122,9 @@ export interface InstalledContentHydration {
   changed:boolean;
 }
 
-export type InstalledContentInstallResult =
-  | { status:"committed"; hydration:InstalledContentHydration }
-  | { status:"conflict"; error:string; qualifiedId:string };
+export type InstalledContentInstallResult=
+  |{status:"committed";hydration:InstalledContentHydration}
+  |{status:"conflict";error:string;qualifiedId:string};
 
 export class InstalledContentCorruptError extends Error {}
 
@@ -161,6 +175,7 @@ export class InstalledContentRepository {
   async installMany(entries:InstalledCatalogEntryV1[]):Promise<InstalledContentInstallResult> {
     if (!this.document) throw new Error("installed content repository must hydrate before install");
     if (!entries.length) return {status:"committed",hydration:this.result(false,false)};
+    entries.forEach(assertEntry);
 
     const incoming=new Map<string,InstalledCatalogEntryV1>();
     for (const entry of entries) {
