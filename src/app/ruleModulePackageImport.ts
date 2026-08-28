@@ -1,4 +1,4 @@
-import { parseCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
+import { parseManualCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./contracts";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 import type {
@@ -70,11 +70,7 @@ function portableMechanics(value:unknown,label:string):InstalledCommonPlayMechan
       throw new Error(`${label} cannot be activated by the generic Catalog: unsupported mechanic kind ${String(mechanic.kind)}`);
     }
     try {
-      const config=parseCommonPlayOperationDefinition(mechanic.config,`${mechanicLabel}.config`);
-      if(config.entryPoints.some((entry)=>entry.invocation!=="manual")) {
-        throw new Error("installed Common Play operation runtime supports manual entry points only");
-      }
-      return {kind:"common-play",config};
+      return {kind:"common-play",config:parseManualCommonPlayOperationDefinition(mechanic.config,`${mechanicLabel}.config`)};
     } catch(error) {
       throw new Error(`${mechanicLabel} contains unsupported Common Play mechanics: ${error instanceof Error?error.message:String(error)}`);
     }
