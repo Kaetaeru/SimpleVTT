@@ -62,7 +62,6 @@ import "./productionSpellRuntimeAdapter";
 import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
-import "./fighterActionSurgeRuntimeAdapter";
 import "./installedCommonPlayRuntimeAdapter";
 import "./barbarianRageRuntimeAdapter";
 import "./barbarianBerserkerIntimidatingPresenceRuntimeAdapter";
