@@ -58,13 +58,17 @@ MockAdapter.prototype.resolveAction=async function resolveInstalledCommonPlayAct
   const reference=parseInstalledCommonPlayActionId(actionId);
   if (!reference) return previousResolveAction.call(this,actionId,targetIds);
 
+  const internal=this as unknown as AdapterState;
   const installedEntries=await requiredSessionInstalledContent(this,[]);
-  const entry=installedEntries.find((candidate)=>catalogQualifiedId(candidate.contentId,candidate.sourceId,candidate.version)===reference.catalogId);
+  const installedEntry=installedEntries.find((candidate)=>catalogQualifiedId(candidate.contentId,candidate.sourceId,candidate.version)===reference.catalogId);
+  const builtinEntry=installedEntry
+    ? undefined
+    : (await internal.getSnapshot()).catalog.find((candidate)=>candidate.scope==="builtin"&&candidate.id===reference.catalogId);
+  const entry=installedEntry??builtinEntry;
   const mechanic=entry?.mechanics?.find((candidate)=>candidate.kind==="common-play"&&candidate.config.id===reference.mechanicId);
   const entryPoint=mechanic?.config.entryPoints.find((candidate)=>candidate.id===reference.entryPointId);
   if (!entry||!mechanic||!entryPoint) return previousResolveAction.call(this,actionId,targetIds);
 
-  const internal=this as unknown as AdapterState;
   const actor=internal.activeCharacter;
   let state=internal.sessionMode==="initiative" ? snapshotAdapterTurnRuntimeState(this,internal.scene) : undefined;
   if (state) state=seedReferencedResources(this,internal,state,mechanic.config);
