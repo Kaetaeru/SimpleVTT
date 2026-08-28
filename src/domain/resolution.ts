@@ -19,7 +19,7 @@ import {
   executeTurnFeature,
 } from "./resolutionActionOps";
 import { executeFreeMove } from "./resolutionMovementOps";
-import { executeGainResource, executeSetResourceRecoveryLockout } from "./resolutionResourceOps";
+import { executeGainResource, executeRechargeResource, executeSetResourceRecoveryLockout } from "./resolutionResourceOps";
 import {
   executeApplyEffect,
   executeEndConcentration,
@@ -52,6 +52,7 @@ function executeOperation(
     case "spend-resource": return executeResource(ctx, operation);
     case "gain-resource": return executeGainResource(ctx, operation);
     case "set-resource-recovery-lockout": return executeSetResourceRecoveryLockout(ctx, operation);
+    case "recharge-resource": return executeRechargeResource(ctx,operation);
     case "d20": return executeD20(ctx, operation);
     case "damage-roll": return executeDamageRoll(ctx, operation);
     case "damage": return executeDamage(ctx, operation);

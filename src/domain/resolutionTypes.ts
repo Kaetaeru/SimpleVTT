@@ -111,6 +111,14 @@ export type ResolutionOperation =
       rests:number;
     })
   | (OperationBase & {
+      kind:"recharge-resource";
+      actorId?:string;
+      resourceId:string;
+      timing:"turn-start";
+      die:{sides:number;faces:number[]};
+      succeedsOn:{minimum:number;maximum?:number};
+    })
+  | (OperationBase & {
       kind: "d20";
       actorId?: string;
       targetId?: string;

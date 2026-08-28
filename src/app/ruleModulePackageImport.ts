@@ -8,6 +8,7 @@ import type {
   InstalledModuleExtensionPointV1,
   InstalledModuleManifestV1,
   InstalledModuleRefV1,
+  InstalledProgressionContributionV1,
 } from "./installedContentContracts";
 
 const CATEGORIES=new Set<InstalledCatalogEntryV1["category"]>(["class","subclass","species","background","feat","spell","item","condition","combatant","option"]);
@@ -77,6 +78,19 @@ function portableMechanics(value:unknown,label:string,availableCapabilities:Iter
     } catch(error) {
       throw new Error(`${mechanicLabel} contains unsupported Common Play mechanics: ${error instanceof Error?error.message:String(error)}`);
     }
+  });
+}
+
+function progressionContributions(value:unknown,label:string):InstalledProgressionContributionV1[] {
+  if(value===undefined)return [];
+  if(!Array.isArray(value))throw new Error(`${label} must be an array`);
+  return value.map((item,index)=>{
+    const contribution=object(item,`${label}[${index}]`);
+    const threshold=contribution.threshold;
+    if(!Number.isInteger(threshold)||Number(threshold)<0)throw new Error(`${label}[${index}].threshold must be a non-negative integer`);
+    const grants=strings(contribution.grants,`${label}[${index}].grants`);
+    if(!grants.length||new Set(grants).size!==grants.length)throw new Error(`${label}[${index}].grants must be non-empty and unique`);
+    return {track:string(contribution.track,`${label}[${index}].track`),threshold:Number(threshold),grants};
   });
 }
 
@@ -159,7 +173,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const present=presentation(value.presentation,defaultLocale,`content[${index}]`);
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
     const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`,module.capabilities);
-    if (Array.isArray(value.progressionContributions) && value.progressionContributions.length) throw new Error(`content[${index}].progressionContributions cannot be activated by the generic Catalog yet`);
+    const contributions=progressionContributions(value.progressionContributions,`content[${index}].progressionContributions`);
     const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {
       contentId,category,nameKo:present.nameKo,nameEn:present.nameEn,
@@ -170,6 +184,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
       extensionPoints:extensionPoints(value.extensionPoints,`content[${index}].extensionPoints`),
       module:cp(module),
       ...(mechanics.length?{mechanics}:{}),
+      ...(contributions.length?{progressionContributions:contributions}:{}),
       ...(campaignProvider?{campaignProvider}:{}),
     } satisfies InstalledCatalogEntryV1;
   });

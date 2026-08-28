@@ -36,6 +36,12 @@ export interface InstalledCommonPlayMechanicV1 {
   config:CommonPlayDefinitionIR;
 }
 
+export interface InstalledProgressionContributionV1 {
+  track:string;
+  threshold:number;
+  grants:string[];
+}
+
 export interface InstalledCampaignCalendarProfileV1 {
   kind:"calendar";
   defaultEra:string;
@@ -81,6 +87,8 @@ export interface InstalledCatalogEntryV1 {
   module?:InstalledModuleManifestV1;
   /** Validated, data-only Common Play executable definitions. */
   mechanics?:InstalledCommonPlayMechanicV1[];
+  /** Generic grants activated when the named progression track reaches its threshold. */
+  progressionContributions?:InstalledProgressionContributionV1[];
   /** Data-only optional Campaign capability profile. Never executable code. */
   campaignProvider?:InstalledCampaignProviderProfileV1;
 }

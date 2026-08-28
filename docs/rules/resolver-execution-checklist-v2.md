@@ -522,6 +522,25 @@ Deliberate boundary:
 
 ---
 
+## C6 — Spellcasting / progression / project / hazard / special-timing primitives — bounded
+
+Evidence:
+
+- [x] typed spell-component facts enforce Verbal/Somatic/Material availability, silence, free hands, focus/pouch substitution, costly materials, and consumed-material output; long/ritual casting has an interruptible maintained activity primitive;
+- [x] unknown RuleModule progression contributions survive validation, installation, persistence shape, and a revision-bound track/threshold/grant transaction without class-ID dispatch;
+- [x] Recharge uses one authoritative die face inside the existing Resolver, changes the existing resource pool atomically, records reversible state changes, and rejects stale replay;
+- [x] owner-authorized off-turn and initiative-count timing compiles cost plus payload into the existing Resolver instead of a monster engine;
+- [x] revision-bound project and exposure owners cover accumulated work/payment, elapsed thresholds, periodic triggers, and recovery;
+- [x] mount size/controller/action facts and profile-driven environment movement, attack, damage-defense, and falling semantics compose without actor/weapon identity branches.
+
+Deliberate boundary:
+
+- legacy spell definitions without typed component declarations still use the deprecated `componentsSatisfied` compatibility input until C8 migration; material consumption output is not yet joined to the durable inventory transaction;
+- existing Phase08 progression/UI adapters and spell runtime routers remain named seams; imported contributions are preserved and executable by the generic transaction but are not yet projected into the current level-up UI;
+- special timing, project, exposure, mount, and environment primitives still require C7 composition proofs and C8 connected/persistence adapters before any ledger row can be marked complete.
+
+---
+
 # PHASE 3 — ANTICIPATED D&D CAPABILITY COVERAGE F-M
 
 Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.

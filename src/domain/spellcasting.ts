@@ -9,6 +9,7 @@ import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionEvent, ResolutionOperation } from "./resolutionTypes";
 import type { TargetFacts, TargetingRule } from "./targeting";
+import { resolveSpellComponents, type SpellComponentContext, type SpellComponentRequirements } from "./commonPlaySpellcastingMeta";
 
 export type SpellRuntimeSupport = "combat-executable" | "tracked-executable" | "partial" | "presentation-only";
 export type SpellCastingEconomy = "action" | "bonus-action" | "reaction";
@@ -125,6 +126,7 @@ export interface SpellMechanicDefinition {
   removesConditions?: ConditionId[];
   unsupportedInteractions?: string[];
   executionScope?: string;
+  components?:SpellComponentRequirements;
 }
 
 export interface SpellCasterContext {
@@ -174,7 +176,9 @@ export interface SpellCastRequest {
   caster: SpellCasterContext;
   targets: SpellCastTarget[];
   slotLevel?: number;
-  componentsSatisfied: boolean;
+  /** @deprecated Transitional legacy input. New definitions provide typed component facts. */
+  componentsSatisfied?: boolean;
+  componentContext?:SpellComponentContext;
   useActionEconomy: boolean;
   turnId?: string;
   dice: SpellCastDiceInput;
@@ -263,7 +267,10 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
         : "spell mechanics are not executable",
     );
   }
-  if (!request.componentsSatisfied) throw new DomainEvaluationError("spell components are not satisfied");
+  if(definition.components){
+    if(!request.componentContext)throw new DomainEvaluationError("typed spell component context is required");
+    resolveSpellComponents(definition.components,request.componentContext);
+  }else if(!request.componentsSatisfied)throw new DomainEvaluationError("spell components are not satisfied");
   if (!Number.isInteger(definition.baseLevel) || definition.baseLevel < 0 || definition.baseLevel > 9) {
     throw new DomainEvaluationError("invalid spell base level");
   }
