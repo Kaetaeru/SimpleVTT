@@ -31,6 +31,10 @@ export interface RuntimeResolutionPresentation {
   provenance:string[];
   calculatedOutcome:string;
   finalOutcome:string;
+  rollKind?:ResolutionView["rollKind"];
+  authoritativeDice?:number[];
+  rollTotal?:number;
+  attackTotal?:number;
 }
 
 export async function commitProductionRuntimeResolution(
@@ -59,9 +63,11 @@ export async function commitProductionRuntimeResolution(
     targetIds:presentation.targetIds,
     actionId:presentation.actionId,
     actionName:presentation.actionName,
-    rollKind:"effect",
+    rollKind:presentation.rollKind??"effect",
     stage:"complete",
-    authoritativeDice:[],
+    authoritativeDice:[...(presentation.authoritativeDice??[])],
+    rollTotal:presentation.rollTotal,
+    attackTotal:presentation.attackTotal,
     saveResults:[],
     damageComponents:[],
     compact:presentation.compact,
