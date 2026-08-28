@@ -9,11 +9,11 @@ import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import {
-  parseManualCommonPlayOperationDefinition,
   parseCommonPlayDamageDiceFormula,
   resolveCommonPlayEntryPointOperations,
   type CommonPlayOperationDefinition,
 } from "../domain/commonPlayOperationRuntime";
+import { lowerCommonPlay, parseCommonPlayDefinition } from "../domain/commonPlayDefinitionRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult } from "../domain/d20";
 import type { DamageResolution, HealingResolution } from "../domain/damage";
@@ -58,15 +58,19 @@ function builtinCommonPlayAction(adapter:MockAdapter,actionId:string):CommonPlay
   const mechanics=(entry.mechanics??[]).filter((candidate)=>candidate.kind==="common-play");
   if (!mechanics.length) return undefined;
   const candidates=mechanics.flatMap((mechanic,index)=>{
-    const definition=parseManualCommonPlayOperationDefinition(mechanic.config,`Builtin Common Play ${entry.contentId??entry.id} mechanic ${index}`);
-    return definition.entryPoints.map((entryPoint)=>({
+    const canonical=parseCommonPlayDefinition(mechanic.config,`Builtin Common Play ${entry.contentId??entry.id} mechanic ${index}`);
+    return (canonical.entryPoints??[]).map((entryPoint)=>{
+      const lowered=lowerCommonPlay(canonical,entryPoint.id);
+      if(lowered.kind!=="operations") throw new Error(`Builtin Common Play ${canonical.id} entry point ${entryPoint.id} is not connected to the production action adapter yet`);
+      return {
       contentId:entry.contentId??entry.id,
       nameKo:entry.nameKo,
       nameEn:entry.nameEn,
       source:entry.source,
-      definition,
+      definition:lowered.definition,
       entryPointId:entryPoint.id,
-    }));
+      };
+    });
   });
   if (candidates.length!==1) {
     throw new Error(`Builtin Common Play action ${actionId} must resolve to exactly one manual entry point, got ${candidates.length}`);
@@ -80,14 +84,16 @@ async function installedCommonPlayAction(adapter:MockAdapter,actionId:string):Pr
   const installedEntries=await requiredSessionInstalledContent(adapter,[]);
   const entry=installedEntries.find((candidate)=>catalogQualifiedId(candidate.contentId,candidate.sourceId,candidate.version)===reference.catalogId);
   const mechanic=entry?.mechanics?.find((candidate)=>candidate.kind==="common-play"&&candidate.config.id===reference.mechanicId);
-  const entryPoint=mechanic?.config.entryPoints.find((candidate)=>candidate.id===reference.entryPointId);
+  const entryPoint=mechanic?.config.entryPoints?.find((candidate)=>candidate.id===reference.entryPointId);
   if (!entry||!mechanic||!entryPoint) return undefined;
+  const lowered=lowerCommonPlay(mechanic.config,entryPoint.id);
+  if(lowered.kind!=="operations") throw new Error(`Installed Common Play ${mechanic.config.id} entry point ${entryPoint.id} is not connected to the production action adapter yet`);
   return {
     contentId:entry.contentId,
     nameKo:entry.nameKo,
     nameEn:entry.nameEn,
     source:entry.source,
-    definition:mechanic.config,
+    definition:lowered.definition,
     entryPointId:entryPoint.id,
   };
 }

@@ -94,7 +94,7 @@ test("extra Action grants apply and Undo as full runtime identities", async () =
   const snapshot=await new MockAdapter().getSnapshot();
   const runtime=createTurnRuntimeSession(snapshot.scene).state;
   const actorId=runtime.clock.activeActorId!;
-  const grant={id:"surge:1",source:"feature:fighter.action-surge",allowsMagicAction:false};
+  const grant={id:"surge:1",source:"feature.fighter.action-surge",allowsMagicAction:false};
   const event=eventWithChanges([{
     kind:"economy",targetId:actorId,field:"extraActions",before:[],after:[grant],
     provenance:[],lifetime:"session-runtime",writeBack:"session",

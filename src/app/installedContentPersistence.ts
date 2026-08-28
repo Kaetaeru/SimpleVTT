@@ -1,4 +1,4 @@
-import { parseManualCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
+import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommonPlayCapabilities } from "../domain/commonPlayDefinitionRuntime";
 import {
   INSTALLED_CONTENT_SCHEMA_ID,
   INSTALLED_CONTENT_SCHEMA_VERSION,
@@ -42,7 +42,9 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
     if(!Array.isArray(value.mechanics)) throw new Error("installed content mechanics must be an array");
     value.mechanics.forEach((mechanic,index)=>{
       if(!isObject(mechanic)||mechanic.kind!=="common-play") throw new Error(`installed content mechanic ${index} is unsupported`);
-      parseManualCommonPlayOperationDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+      const config=parseCommonPlayDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+      validateCommonPlayCapabilities(config,value.module&&isObject(value.module)&&Array.isArray(value.module.capabilities)?value.module.capabilities as string[]:[]);
+      lowerAllCommonPlayEntryPoints(config);
     });
   }
   if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);

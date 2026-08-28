@@ -31,3 +31,6 @@ jobs:
 
       - name: Validate V1 mechanism coverage ledger
         run: npm run test:v1-coverage
+
+      - name: Validate unified Common Play definition boundary
+        run: npm run test:common-play-definition

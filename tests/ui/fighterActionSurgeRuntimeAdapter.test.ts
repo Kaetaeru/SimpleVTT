@@ -36,7 +36,7 @@ test("Fighter hotbar Action Surge grants, spends, and Undo restores its exact ex
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.length,1);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.[0]?.allowsMagicAction,false);
-  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.[0]?.source,"feature:fighter.action-surge");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.[0]?.source,"feature.fighter.action-surge");
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current,0);
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current,0);
 
@@ -66,7 +66,7 @@ test("built-in Common Play Action Surge mechanics are invariant under action, co
   const original=actionSurgeBuiltinEntry();
   const renamed=structuredClone(original);
   const renamedActionId="action.previously-unseen.fighter-surge";
-  const renamedSourceId="feature:previously-unseen.fighter-surge";
+  const renamedSourceId="feature.previously-unseen.fighter-surge";
   renamed.id=renamedActionId;
   renamed.contentId=renamedActionId;
   renamed.nameKo="이름이 바뀐 추가 행동";
@@ -125,7 +125,7 @@ test("connected Action Surge converges the resource and exact extra Action grant
   const applied=await applyConnectedClientEvents(client,batch.events);
   assert.equal(applied.status,"applied");
   const snapshot=await client.getSnapshot();
-  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.[0]?.source,"feature:fighter.action-surge");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.[0]?.source,"feature.fighter.action-surge");
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.[0]?.allowsMagicAction,false);
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current,0);
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current,0);

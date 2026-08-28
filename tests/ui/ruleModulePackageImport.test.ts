@@ -192,7 +192,7 @@ test("registered Common Play resource, d20, HP, targeting, and interaction mecha
   assert.deepEqual(peerInstalled?.mechanics,mechanics);
 });
 
-test("rehydration rejects persisted non-manual Common Play mechanics", async () => {
+test("rehydration preserves canonical non-manual Common Play mechanics", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,store);
@@ -212,10 +212,12 @@ test("rehydration rejects persisted non-manual Common Play mechanics", async () 
   mechanic.config.entryPoints[0].invocation="triggered";
   const corruptedPayload=JSON.stringify(persisted);
 
-  assert.throws(()=>decodeInstalledContent(corruptedPayload),/manual/);
-  const corruptedStore=new MemoryInstalledContentStore([{generation:generation.generation,payload:corruptedPayload}]);
-  const repository=new InstalledContentRepository(corruptedStore);
-  await assert.rejects(repository.hydrate(),/no valid committed installed-content generation remains/);
+  const decoded=decodeInstalledContent(corruptedPayload);
+  assert.equal(decoded.entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0].config.entryPoints?.[0].invocation,"triggered");
+  const restoredStore=new MemoryInstalledContentStore([{generation:generation.generation,payload:corruptedPayload}]);
+  const repository=new InstalledContentRepository(restoredStore);
+  const hydration=await repository.hydrate();
+  assert.equal(hydration.document.entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0].config.entryPoints?.[0].invocation,"triggered");
 });
 
 test("portable Common Play resource targets are rejected before unsupported mechanics can be persisted", async () => {
@@ -240,7 +242,7 @@ test("portable Common Play resource targets are rejected before unsupported mech
   assert.equal((await store.readGenerations()).length,0);
 });
 
-test("installed Common Play rejects non-manual entry points before persistence", async () => {
+test("installed Common Play preserves non-manual entry points for trigger orchestration", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,store);
@@ -252,9 +254,11 @@ test("installed Common Play rejects non-manual entry points before persistence",
   raw.content[0].mechanics=[mechanic];
 
   const preview=await adapter.previewContentImport(JSON.stringify(raw));
-  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /manual/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
-  assert.equal((await store.readGenerations()).length,0);
+  const generations=await store.readGenerations();
+  assert.equal(generations.length,1);
+  assert.equal(decodeInstalledContent(generations[0].payload!).entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0].config.entryPoints?.[0].invocation,"triggered");
 });
 
 test("installed Common Play rejects unsupported d20 authoring before persistence",async()=>{

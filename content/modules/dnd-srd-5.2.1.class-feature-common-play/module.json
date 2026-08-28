@@ -38,7 +38,7 @@
           "config": {
             "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
             "schemaVersion": "0.2-draft",
-            "id": "feature:fighter.action-surge",
+            "id": "feature.fighter.action-surge",
             "payments": [
               {
                 "kind": "resource",

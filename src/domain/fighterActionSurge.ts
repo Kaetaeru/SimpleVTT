@@ -7,7 +7,7 @@ import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 
-export const FIGHTER_ACTION_SURGE_SOURCE = "feature:fighter.action-surge";
+export const FIGHTER_ACTION_SURGE_SOURCE = "feature.fighter.action-surge";
 
 export interface FighterActionSurgeRequest {
   id: string;

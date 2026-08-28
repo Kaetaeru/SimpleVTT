@@ -1,4 +1,4 @@
-import { parseManualCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
+import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommonPlayCapabilities } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./contracts";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 import type {
@@ -58,7 +58,7 @@ function semanticRelationships(value:unknown,label:string):InstalledContentRelat
     };
   });
 }
-function portableMechanics(value:unknown,label:string):InstalledCommonPlayMechanicV1[] {
+function portableMechanics(value:unknown,label:string,availableCapabilities:Iterable<string>):InstalledCommonPlayMechanicV1[] {
   if (value===undefined) return [];
   if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
   return value.map((item,index)=>{
@@ -70,7 +70,10 @@ function portableMechanics(value:unknown,label:string):InstalledCommonPlayMechan
       throw new Error(`${label} cannot be activated by the generic Catalog: unsupported mechanic kind ${String(mechanic.kind)}`);
     }
     try {
-      return {kind:"common-play",config:parseManualCommonPlayOperationDefinition(mechanic.config,`${mechanicLabel}.config`)};
+      const config=parseCommonPlayDefinition(mechanic.config,`${mechanicLabel}.config`);
+      validateCommonPlayCapabilities(config,availableCapabilities);
+      lowerAllCommonPlayEntryPoints(config);
+      return {kind:"common-play",config};
     } catch(error) {
       throw new Error(`${mechanicLabel} contains unsupported Common Play mechanics: ${error instanceof Error?error.message:String(error)}`);
     }
@@ -155,7 +158,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const category=categoryRaw as InstalledCatalogEntryV1["category"];
     const present=presentation(value.presentation,defaultLocale,`content[${index}]`);
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
-    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`);
+    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`,module.capabilities);
     if (Array.isArray(value.progressionContributions) && value.progressionContributions.length) throw new Error(`content[${index}].progressionContributions cannot be activated by the generic Catalog yet`);
     const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {

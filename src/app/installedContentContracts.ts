@@ -1,4 +1,4 @@
-import type { CommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
+import type { CommonPlayDefinitionIR } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry } from "./contracts";
 
 export const INSTALLED_CONTENT_SCHEMA_ID = "simplevtt.installed-content" as const;
@@ -33,7 +33,7 @@ export interface InstalledContentRelationshipV1 {
 
 export interface InstalledCommonPlayMechanicV1 {
   kind:"common-play";
-  config:CommonPlayOperationDefinition;
+  config:CommonPlayDefinitionIR;
 }
 
 export interface InstalledCampaignCalendarProfileV1 {
