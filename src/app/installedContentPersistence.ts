@@ -1,3 +1,4 @@
+import { parseCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import {
   INSTALLED_CONTENT_SCHEMA_ID,
   INSTALLED_CONTENT_SCHEMA_VERSION,
@@ -28,6 +29,15 @@ function isObject(value:unknown):value is Record<string,unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function assertMechanics(value:unknown) {
+  if (!Array.isArray(value)) throw new Error("installed content mechanics must be an array");
+  for (const [index,item] of value.entries()) {
+    if (!isObject(item)) throw new Error(`installed content mechanics[${index}] must be an object`);
+    if (item.kind!=="common-play") throw new Error(`unsupported installed content mechanic kind: ${String(item.kind)}`);
+    parseCommonPlayOperationDefinition(item.config,`installed content mechanics[${index}].config`);
+  }
+}
+
 function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   if (!isObject(value)) throw new Error("installed content entry must be an object");
   for (const field of ["contentId","nameKo","nameEn","sourceId","source","version","description"] as const) {
@@ -37,6 +47,7 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   const categories=["class","subclass","species","background","feat","spell","item","condition","combatant","option"];
   if (!categories.includes(String(value.category))) throw new Error(`installed content category is invalid: ${String(value.category)}`);
   if (!Array.isArray(value.relationships) || !Array.isArray(value.capabilities)) throw new Error("installed content collections are invalid");
+  if(value.mechanics!==undefined) assertMechanics(value.mechanics);
   if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);
 }
 
@@ -108,7 +119,7 @@ export interface InstalledContentHydration {
   changed:boolean;
 }
 
-export type InstalledContentInstallResult =
+export type InstalledContentInstallResult=
   | { status:"committed"; hydration:InstalledContentHydration }
   | { status:"conflict"; error:string; qualifiedId:string };
 
