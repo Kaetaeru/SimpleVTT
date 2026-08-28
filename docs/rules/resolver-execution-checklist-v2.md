@@ -216,7 +216,7 @@ Track each family independently through `SPEC -> KERNEL -> PORTABLE -> PRODUCTIO
 
 Initial families:
 
-- [x] resource / action economy — `PRODUCTION`; built-in Action Surge generic-path parity and named-seam removal are the active next boundary;
+- [x] resource / action economy — `MIGRATED`; PR #171 absorbed the built-in Action Surge named production seam after generic-path parity. `ACCEPTED` is not claimed by this migration alone;
 - [ ] tests / rolls / outcomes;
 - [ ] damage / healing / HP;
 - [ ] targeting / selectors / allocation;
@@ -231,7 +231,7 @@ Do not migrate by class/spell/feat list order. Migrate the smallest coherent mec
 
 ---
 
-## P3 — Current active slice: Resource / Economy migration convergence
+## P3 — Resource / Economy migration convergence — MIGRATED
 
 Named oracle: Fighter Action Surge only because it provides a deterministic existing behavior sample. `Action Surge` is not a primitive and must never become a dispatch key.
 
@@ -312,18 +312,42 @@ Exact-head acceptance for `da4ffecd2de1b7f95d324e7170312cdd8d512797` reused at m
 - [x] Phase 11 Playable — SUCCESS;
 - [x] Phase 12 Connected Session — SUCCESS.
 
-PR #168 establishes Resource/Economy `PRODUCTION`, not `MIGRATED`. The named Fighter Action Surge adapter remains only as the behavior oracle until built-in parity is proven through the generic path.
+PR #168 established Resource/Economy `PRODUCTION`; PR #171 subsequently absorbed the named Fighter Action Surge production seam.
 
-### Active next boundary after #168 integration
+### PR #171 built-in migration — INTEGRATED
 
-- [x] create deterministic coverage for installed portable mechanics -> actual production/session action dispatch;
-- [x] route that dispatch through `commonPlayOperationRuntime` + generic Resolver;
-- [ ] prove built-in Fighter Action Surge oracle parity end-to-end through the same generic production path, including its two-resource spend, restricted extra Action semantics, authoritative writeback, Undo, and connected convergence;
-- [x] prove arbitrary unknown content with the same mechanics reaches the generic production path without identity/name dispatch;
-- [ ] prove ID/name-only rename invariance for the built-in parity fixture/path where provenance changes but semantics do not;
-- [ ] only then delete/bypass Fighter Action Surge named production execution;
-- [ ] shrink Legacy Execution Boundary/inventory after removal;
-- [x] advance the resource/economy family from `PORTABLE` to `PRODUCTION` with PR #168 merge evidence.
+PR: `#171` — `rules: migrate built-in Action Surge to generic Common Play`  
+Branch: `agent/m1-action-surge-generic-production`  
+Validated candidate: `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`  
+Merge commit: `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f`
+
+Migration evidence:
+
+- [x] built-in Fighter Action Surge reaches the same generic Common Play production path;
+- [x] two-resource spend matches the existing behavior oracle atomically;
+- [x] restricted extra Action semantics remain RulesProfile-owned with `allowsMagicAction: false`;
+- [x] authoritative Character/session writeback and Undo remain correct;
+- [x] connected host/client convergence preserves the grant and resources;
+- [x] action/content/definition/display-name-only renames preserve mechanical semantics;
+- [x] arbitrary installed Common Play production coverage from PR #168 remains in the focused harness;
+- [x] the named `fighterActionSurgeRuntimeAdapter.ts` production path is deleted;
+- [x] `.agents/LEGACY_EXECUTION_BASELINE.json` no longer admits the removed adapter;
+- [x] no replacement named fallback, evaluator, store, transport, or content-ID/name algorithm branch is introduced.
+
+Exact-head acceptance for `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`:
+
+- [x] focused Common Play / Action Surge parity harness — 8/8 SUCCESS on the candidate lineage;
+- [x] Contract validation `33174441211` — SUCCESS;
+- [x] M1 Common Play Resource Economy `33174441198` — SUCCESS;
+- [x] Persistence `33174441162` — SUCCESS;
+- [x] Rules Domain `33174441191` — SUCCESS;
+- [x] UI `33174441234` — SUCCESS;
+- [x] Phase 12 Connected Session `33174441183` — SUCCESS including Windows connected-playable;
+- [x] Phase 11 Playable `33174441152` — SUCCESS including Windows playable.
+
+Resource/Economy therefore advances from `PRODUCTION` to `MIGRATED`. This does not by itself claim the stronger `ACCEPTED` maturity status; any remaining acceptance obligations must be proven explicitly under the universal criteria.
+
+The next Phase 2 implementation slice must be selected by mechanism family from the P2 maturity board and current legacy evidence. Do not resume a named class/spell/feat queue or speculatively activate Gates F-M merely because Resource/Economy is complete.
 
 ---
 
