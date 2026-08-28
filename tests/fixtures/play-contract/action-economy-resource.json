@@ -1,0 +1,28 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.rule.quickstep",
+  "entryPoints": [
+    {
+      "id": "activate",
+      "invocation": "manual",
+      "operations": [
+        {
+          "kind": "resource.change",
+          "resource": "external.resource.primary",
+          "amount": { "value": -1 }
+        },
+        {
+          "kind": "resource.change",
+          "resource": "external.resource.turn",
+          "amount": { "value": -1 }
+        },
+        {
+          "kind": "economy.modify",
+          "bucket": "test.extra-action.non-magic",
+          "amount": { "value": 1 }
+        }
+      ]
+    }
+  ]
+}
