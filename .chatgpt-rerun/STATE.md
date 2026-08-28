@@ -8,7 +8,7 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T11:13:00+09:00`
+- checkpointed_at: `2026-08-28T11:14:00+09:00`
 
 ## Durable checkpoint
 
@@ -25,48 +25,39 @@ Run identity remains sequence `2`, task `common-play-foundation-convergence`, wi
 
 Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`.
 
-M0 remains `DONE`; `docs/rules/legacy-execution-inventory.md` and the no-new-named-execution boundary remain authoritative. Do not reopen M0.
+M0 remains `DONE`; the legacy inventory and no-new-named-execution boundary remain authoritative.
 
-## M1 / Probe S — generic resource/economy harness is integrated
+The generic M1 resource/economy harness is integrated through merged PR #150:
 
-The converged generic Common Play resource/economy harness is already integrated into `agent/resolver-foundation-convergence` through merged PR #150:
+- PR head `2f9580ff536292bdbbc2fc1389e8504a558bfa9a`;
+- merge `0eac7051b29519c874b604d593ae544c8bd584e6`;
+- M1 Common Play Resource Economy `33134461968`: SUCCESS;
+- Contract validation `33134461810`: SUCCESS;
+- Rules Domain `33134461914`: SUCCESS;
+- UI `33134461869`: SUCCESS;
+- Phase 12 connected-protocol job `98731209794`: SUCCESS;
+- Persistence Windows `tauri-storage` job `98731209892`: SUCCESS; its application-contract job failed and must not be classified as a new M1 regression without the exact assertion.
 
-- PR #150 head: `2f9580ff536292bdbbc2fc1389e8504a558bfa9a`;
-- merge commit: `0eac7051b29519c874b604d593ae544c8bd584e6`;
-- `src/domain/commonPlayOperationRuntime.ts` retained green blob: `2e08d8e380b92bf7035512d9ef8a38280d003396`;
-- temporary `src/domain/commonPlayActionEconomyRuntime.ts` is absent;
-- duplicate/obsolete pre-separation fixtures were removed from the live parent.
+The live parent contains generic `commonPlayOperationRuntime` and no temporary `commonPlayActionEconomyRuntime`. Superseded harness integration PRs are closed and must not be revived.
 
-Exact PR #150 evidence already observed and must not be repeated unless affected files change:
+## M1 / Probe S — portable RuleModule mechanics bridge
 
-- M1 Common Play Resource Economy run `33134461968`: SUCCESS;
-- Contract validation run `33134461810`: SUCCESS;
-- Rules Domain run `33134461914`: SUCCESS;
-- UI run `33134461869`: SUCCESS;
-- Phase 11 run `33134461769`: SUCCESS for its completed product gate;
-- Phase 12 connected-protocol job `98731209794`: SUCCESS; its downstream Windows job was still running when read;
-- Persistence run `33134461867`: Windows `tauri-storage` job `98731209892` SUCCESS, application-contract job failed. Do not classify that failure as a new M1 regression without its exact assertion; persistence is directly exercised by the current portable-content slice.
+The active path is:
 
-Superseded integration PRs #152 and #154 are closed unmerged. Do not revive them.
+`RuleModule/content JSON -> validated portable Common Play mechanics -> installed content persistence/lookup -> existing session installed-content synchronization -> generic production dispatch -> commonPlayOperationRuntime -> Resolver`
 
-## M1 / Probe S — portable RuleModule mechanics bridge in progress
+Concurrent red branches were reconciled:
 
-The remaining product path is:
-
-`RuleModule/content JSON -> validated portable Common Play mechanics -> installed content persistence/lookup -> existing session content synchronization -> generic production dispatch -> commonPlayOperationRuntime -> Resolver`
-
-Two concurrent red branches were created. They were reconciled as follows:
-
-- PR #159 / branch `agent/m1-rulemodule-portable-activation` is the authoritative bridge;
-- PR #160 was closed unmerged as a duplicate because #159 reuses the existing canonical `tests/ui/ruleModulePackageImport.test.ts` and also covers installed-content session synchronization to a peer.
+- PR #159 / `agent/m1-rulemodule-portable-activation` is authoritative;
+- PR #160 was closed unmerged as a duplicate because #159 reuses the existing package-import regression and also covers installed-content session sync to a peer.
 
 ### PR #159 current exact candidate
 
-Current observed head:
+Latest observed head:
 
-`9826f83e699ca3e4a0e81d42a2633d25beddd480`
+`1859c3c87cb81cedfbde6061a8e6069b11c1d3e1`
 
-Current bounded diff is five files:
+Current diff remains bounded to five files:
 
 - `src/app/installedContentContracts.ts`;
 - `src/app/installedContentPersistence.ts`;
@@ -74,45 +65,46 @@ Current bounded diff is five files:
 - `src/domain/commonPlayOperationRuntime.ts`;
 - `tests/ui/ruleModulePackageImport.test.ts`.
 
-The branch started with a deterministic red expectation in the existing RuleModule package test: a registered data-only `mechanics[{kind:"common-play"}]` definition must survive preview -> activation -> installed persistence/lookup -> `requiredSessionInstalledContent` -> `installSessionInstalledContent`, while the existing arbitrary `custom-rule` mechanic remains blocking.
+The branch began from a deterministic package-import red: a registered data-only `mechanics[{kind:"common-play"}]` resource/economy definition must survive preview -> activation -> installed persistence/lookup -> `requiredSessionInstalledContent` -> `installSessionInstalledContent`, while arbitrary `custom-rule` mechanics remain blocking.
 
-The current implementation is intentionally data-only and bounded:
+Current implementation remains data-only and bounded:
 
-- `InstalledCatalogEntryV1` can retain validated Common Play mechanics;
-- importer accepts only the registered `common-play` envelope and parses the currently supported operation subset through the existing `commonPlayOperationRuntime` parser;
-- installed-content rehydration validates the mechanic again;
-- existing repository serialization and session installed-content synchronization carry the whole entry, so no new persistence store, transport, or evaluator was added;
+- `InstalledCatalogEntryV1` retains validated Common Play mechanics;
+- RuleModule import accepts only registered `common-play` mechanics and parses the currently supported operation subset through the existing generic runtime parser;
+- installed-content rehydration validates preserved mechanics again;
+- existing persistence and session-installed-content synchronization carry the whole entry; no new store, transport, or evaluator was added;
 - arbitrary mechanic kinds and unsupported Common Play operations remain explicit failures;
-- no Fighter/Action Surge content identity branch was added;
+- non-executable `$schema` metadata is allowed by the parser at head `1859c3c...`;
+- no Fighter/Action Surge identity branch was added and the named production seam remains intact;
 - Gate F-M remain dormant.
 
-PR #159 description was updated to match this live implementation state. PR #160 is closed superseded.
+PR #159 description was reconciled to the live implementation. PR #160 is closed superseded.
 
 ### PR #159 validation status
 
-On exact head `9826f83e699ca3e4a0e81d42a2633d25beddd480`, GitHub Actions were registered but still `queued` when last read:
+Exact-head runs registered for `1859c3c87cb81cedfbde6061a8e6069b11c1d3e1` were still `queued` when last read:
 
-- Rules Domain `33135154226`;
-- Phase 11 Playable `33135154235`;
-- Contract validation `33135154240`;
-- Phase 12 Connected Session `33135154251`;
-- Persistence `33135154280`;
-- M1 Common Play Resource Economy `33135154249`;
-- UI `33135154298`.
+- M1 Common Play Resource Economy `33135250939`;
+- Phase 11 Playable `33135250951`;
+- Rules Domain `33135250950`;
+- UI `33135250944`;
+- Contract validation `33135250982`;
+- Phase 12 Connected Session `33135250947`;
+- Persistence `33135250966`.
 
-No green conclusion is claimed for this exact head yet.
+No green conclusion is claimed for this exact head.
 
-The live Rerun parent was re-fetched immediately before this checkpoint and remained `6a8f23489d4c7cab49097a04bdfc283b5e163b92`.
+The live Rerun parent immediately before this checkpoint was `875a10a537efdcd3ffdc49faa6a1107872afffff`; that head contains only the preceding Rerun STATE/control checkpoint on top of the already-integrated product harness.
 
 ## Next Exact Action
 
 On the next continuation of sequence `2`:
 
 1. perform mandatory preflight README -> control -> STATE -> PLAN and re-fetch the live parent;
-2. read PR #159 live head before making any write; concurrent watchers may have advanced it;
+2. read PR #159 live head before any write because concurrent watchers may advance it;
 3. read the already-created exact-head workflow runs rather than rerunning them;
-4. if #159 is green, verify its live diff is still bounded to the portable data bridge and contains no named-content execution branch or new transport/evaluator;
-5. if green and unchanged, checkpoint the evidence and move to merge-approval waiting for #159; do not begin production action dispatch before the bridge is integrated;
-6. after #159 is integrated, capture the next deterministic red for installed portable mechanics -> generic production/session action dispatch through `commonPlayOperationRuntime` + Resolver;
+4. if #159 is green, verify the live diff remains the bounded portable data bridge with no named-content execution branch, new transport, or second evaluator;
+5. if green and unchanged, checkpoint exact evidence and move to merge-approval waiting for #159; do not begin production action dispatch before this bridge is integrated;
+6. after #159 integration, capture the next deterministic red for installed portable mechanics -> generic production/session action dispatch through `commonPlayOperationRuntime` + Resolver;
 7. only after end-to-end portable activation parity is authoritative may the named Fighter Action Surge execution seam be removed and the M0 legacy baseline shrink;
-8. do not activate Gate F-M, reopen M0, repeat unchanged Gate E/M1 harness validation, create another duplicate bridge PR, or route to `main`.
+8. do not activate Gate F-M, reopen M0, repeat unchanged Gate E/M1 harness validation, create another duplicate bridge PR, or route product work to `main`.
