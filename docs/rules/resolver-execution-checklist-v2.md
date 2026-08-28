@@ -218,7 +218,7 @@ Initial families:
 
 - [x] resource / action economy — `MIGRATED`; PR #171 absorbed the built-in Action Surge named production seam after generic-path parity. `ACCEPTED` is not claimed by this migration alone;
 - [x] tests / rolls / outcomes — `PRODUCTION`; generic authored actor d20 tests cross validation, normalization, installed persistence/rehydration, existing Resolver lowering, production authority, connected presentation, and ID/name rename invariance. Named post-roll features remain legacy, so `MIGRATED`/`ACCEPTED` are not claimed;
-- [ ] damage / healing / HP;
+- [x] damage / healing / HP — `PRODUCTION`; authored literal/dice damage and literal healing cross validation, installed persistence/rehydration, existing Resolver lowering, single pre-resolved runtime target authority, HP writeback/Undo, connected convergence, and rename invariance. Deliberate HP/targeting boundaries remain below;
 - [ ] targeting / selectors / allocation;
 - [ ] interactions / reactions / interceptors;
 - [ ] persistent effects / triggers / frequency;
@@ -371,6 +371,32 @@ Deliberate boundary:
 
 - property-backed stat/provider resolution, target/every-target rolls, and named post-roll features remain explicit later slices;
 - Tactical Mind, Indomitable, Cutting Words, Peerless Skill, Dark One's Own Luck, and other named roll/outcome seams remain unchanged;
+- therefore this family is `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
+
+---
+
+## P5 — Damage / Healing / HP production bridge — PRODUCTION
+
+The first bounded slice reuses the existing generic Resolver `damage-roll`, `damage`, and `healing` operations. Common Play does not own a second HP or dice evaluator.
+
+Evidence:
+
+- [x] authored `damage.apply` supports a non-negative literal integer or bounded `XdY±Z` formula and lowers dice damage through existing `damage-roll -> damage` semantics;
+- [x] authored `healing.apply` supports a non-negative literal integer and lowers directly to existing `healing` semantics;
+- [x] actor/self or one already-resolved target is accepted; the production adapter validates that the target exists in both the current scene and authoritative runtime combatants, and reuses an existing action projection's eligibility when one is present;
+- [x] runtime `creatureKind` comes from the typed scene entity classification, never content ID/name inference;
+- [x] unsupported target shapes, healing dice, temporary HP, damage multiplier/condition fields, malformed dice, and missing authoritative dice/target/classification fail explicitly;
+- [x] normalized mechanics survive package preview/activation, installed persistence/rehydration, and required-session peer transfer;
+- [x] arbitrary installed data reaches the existing production authoritative commit path, mutates HP, projects typed events, persists Character-owned HP, and supports Undo;
+- [x] Host-authored damage-roll/damage/healing events converge HP on the Client through the existing connected event path;
+- [x] content/action ID, definition ID, entry-point ID, and display-name-only renames preserve mechanics;
+- [x] Resource/Economy, built-in Action Surge, and Common Play d20 coverage remain in the focused regression harness;
+- [x] no new evaluator, Resolver, state store, transport, fallback, target selector, or content-ID/name algorithm branch exists.
+
+Deliberate boundary:
+
+- temporary HP, compound damage, authored defenses/resistance/immunity/vulnerability, concentration checks, critical authoring, property-backed amounts, healing dice, multi-target/every-target, selectors/allocation, and spell execution remain later slices;
+- Monk Wholeness of Body, Cleric damage/healing, Paladin healing/allocation, Rage riders, spell damage/healing, and other named HP seams remain unchanged;
 - therefore this family is `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
 ---

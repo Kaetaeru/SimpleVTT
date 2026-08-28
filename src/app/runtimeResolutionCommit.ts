@@ -1,4 +1,4 @@
-import type { ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneVm } from "./contracts";
+import type { ActivityEntry, AppSnapshot, CharacterSheet, DamageComponentView, ResolutionView, SceneVm } from "./contracts";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { ResolutionCommit } from "../domain/resolutionTypes";
 import { MockAdapter } from "./mockAdapter";
@@ -35,6 +35,7 @@ export interface RuntimeResolutionPresentation {
   authoritativeDice?:number[];
   rollTotal?:number;
   attackTotal?:number;
+  damageComponents?:DamageComponentView[];
 }
 
 export async function commitProductionRuntimeResolution(
@@ -69,7 +70,7 @@ export async function commitProductionRuntimeResolution(
     rollTotal:presentation.rollTotal,
     attackTotal:presentation.attackTotal,
     saveResults:[],
-    damageComponents:[],
+    damageComponents:structuredClone(presentation.damageComponents??[]),
     compact:presentation.compact,
     detail:presentation.detail,
     provenance:presentation.provenance,

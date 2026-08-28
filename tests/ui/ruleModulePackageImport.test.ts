@@ -71,6 +71,20 @@ function portableCommonPlayD20Mechanic() {
   };
 }
 
+function portableCommonPlayHpMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.generic-hp-action",
+      entryPoints:[
+        {id:"harm",invocation:"manual",operations:[{kind:"damage.apply",amount:"1d6+2",damageType:"force",target:"target"}]},
+        {id:"mend",invocation:"manual",operations:[{kind:"healing.apply",amount:{value:5},target:"self"}]},
+      ],
+    },
+  };
+}
+
 test("multi-entry RuleModule preview writes nothing and activation commits one generation", async () => {
   const store=new MemoryInstalledContentStore();
   const writer=new MockAdapter();
@@ -111,12 +125,12 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.equal((await store.readGenerations()).length,0);
 });
 
-test("registered Common Play resource and d20 mechanics persist, rehydrate, and survive installed-content session sync", async () => {
+test("registered Common Play resource, d20, and HP mechanics persist, rehydrate, and survive installed-content session sync", async () => {
   const hostStore=new MemoryInstalledContentStore();
   const host=new MockAdapter();
   setInstalledContentStoreForTests(host,hostStore);
   const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
-  const mechanics=[portableCommonPlayMechanic(),portableCommonPlayD20Mechanic()];
+  const mechanics=[portableCommonPlayMechanic(),portableCommonPlayD20Mechanic(),portableCommonPlayHpMechanic()];
   raw.content[0].mechanics=mechanics;
 
   const preview=await host.previewContentImport(JSON.stringify(raw));
@@ -221,6 +235,21 @@ test("installed Common Play rejects unsupported d20 authoring before persistence
 
   const preview=await adapter.previewContentImport(JSON.stringify(raw));
   assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/roller must be actor/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
+test("installed Common Play rejects unsupported HP authoring before persistence",async()=>{
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayHpMechanic() as unknown as {config:{entryPoints:Array<{operations:Array<Record<string,unknown>>}>}};
+  mechanic.config.entryPoints[1].operations[0].amount="1d8";
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/healing dice are not supported/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   assert.equal((await store.readGenerations()).length,0);
 });

@@ -1,5 +1,5 @@
 import "./installedContentContracts";
-import type { AppSnapshot, CatalogEntry, CharacterSheet, SceneVm, SessionMode } from "./contracts";
+import type { AppSnapshot, CatalogEntry, CharacterSheet, DamageComponentView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
@@ -10,11 +10,14 @@ import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import {
   parseManualCommonPlayOperationDefinition,
+  parseCommonPlayDamageDiceFormula,
   resolveCommonPlayEntryPointOperations,
   type CommonPlayOperationDefinition,
 } from "../domain/commonPlayOperationRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult } from "../domain/d20";
+import type { DamageResolution, HealingResolution } from "../domain/damage";
+import type { DamageRollResolution } from "../domain/damageRoll";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -122,6 +125,72 @@ function seedReferencedResources(
     : undefined;
 }
 
+function hpTargetId(target:string|undefined,actorId:string,selectedTargetId:string) {
+  return target==="target"?selectedTargetId:actorId;
+}
+
+function damageDiceFaces(
+  internal:AdapterState,
+  actionId:string,
+  entryPoint:CommonPlayOperationDefinition["entryPoints"][number],
+  startingDrawIndex:number,
+) {
+  const faces:Record<number,number[]>={};
+  let drawIndex=startingDrawIndex;
+  for(const [operationIndex,operation] of entryPoint.operations.entries()) {
+    if(operation.kind!=="damage.apply"||typeof operation.amount!=="string") continue;
+    const formula=parseCommonPlayDamageDiceFormula(operation.amount);
+    faces[operationIndex]=Array.from({length:formula.count},()=>{
+      const limit=20-(20%formula.sides);
+      let face:number;
+      do face=internal.d20(actionId,drawIndex++); while(face>limit);
+      return ((face-1)%formula.sides)+1;
+    });
+  }
+  return faces;
+}
+
+function hpPresentation(
+  entryPoint:CommonPlayOperationDefinition["entryPoints"][number],
+  committed:Extract<ReturnType<typeof resolveCommonPlayEntryPointOperations>,{status:"committed"}>,
+  resolutionId:string,
+) {
+  const damageComponents:DamageComponentView[]=[];
+  const dice:number[]=[];
+  let damage=0;
+  let healing=0;
+  let hasHealing=false;
+  for(const [index,operation] of entryPoint.operations.entries()) {
+    const operationId=`${resolutionId}:operation:${index}`;
+    if(operation.kind==="damage.apply") {
+      const result=committed.results[operationId] as DamageResolution;
+      damage+=result.finalDamage;
+      damageComponents.push({
+        type:result.damageType,
+        roll:typeof operation.amount==="string"?operation.amount:String(operation.amount.value),
+        raw:result.raw,
+        adjusted:result.finalDamage,
+        source:"Common Play · generic Resolver",
+      });
+      const roll=committed.results[`${operationId}:roll`] as DamageRollResolution|undefined;
+      if(roll) dice.push(...roll.dice.flatMap((component)=>component.selectedFaces));
+    }
+    if(operation.kind==="healing.apply") {
+      hasHealing=true;
+      healing+=(committed.results[operationId] as HealingResolution).restored;
+    }
+  }
+  if(!damageComponents.length&&!hasHealing) return undefined;
+  const outcome=[damageComponents.length?`${damage} 피해`:"",hasHealing?`${healing} HP 회복`:""].filter(Boolean).join(" · ");
+  return {
+    rollKind:(damageComponents.length?"damage":"healing") as "damage"|"healing",
+    authoritativeDice:dice,
+    rollTotal:damageComponents.length?damage:healing,
+    damageComponents,
+    outcome,
+  };
+}
+
 MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAction(actionId:string,targetIds:string[]) {
   const installed=parseInstalledCommonPlayActionId(actionId);
   const action=installed
@@ -133,38 +202,62 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   const actor=internal.activeCharacter;
   let state=internal.sessionMode==="initiative" ? snapshotAdapterTurnRuntimeState(this,internal.scene) : undefined;
   if (state) state=seedReferencedResources(this,internal,state,action.definition);
-  if (!state||state.clock.activeActorId!==actor.id||targetIds.length!==1||targetIds[0]!==actor.id) return internal.getSnapshot();
+  if (!state||state.clock.activeActorId!==actor.id||targetIds.length!==1) return internal.getSnapshot();
 
   const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const entryPoint=action.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
+  const selectedTargetId=targetIds[0];
+  const selectedTarget=internal.scene.entities.find((candidate)=>candidate.id===selectedTargetId);
+  const actorEntity=internal.scene.entities.find((candidate)=>candidate.id===actor.id);
+  const projectedAction=internal.scene.actionsByActor[actor.id]?.find((candidate)=>candidate.id===actionId);
+  const needsSelectedTarget=entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
+  if(!selectedTarget||!actorEntity||!state.combatants[selectedTargetId]) return internal.getSnapshot();
+  if(needsSelectedTarget) {
+    if(projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return internal.getSnapshot();
+  } else if(selectedTargetId!==actor.id) return internal.getSnapshot();
+
+  const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
   const committed=resolveCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,action.definition,{
     resolutionId,
     actorId:actor.id,
     entryPointId:action.entryPointId,
+    targetId:selectedTargetId,
+    creatureKinds:{
+      [actor.id]:actorEntity.kind==="character"?"character":"monster",
+      [selectedTargetId]:selectedTarget.kind==="character"?"character":"monster",
+    },
+    damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
     ...(entryPoint.test?{d20:{
-      faces:[internal.d20(actionId,0),internal.d20(actionId,1)],
-      targetId:actor.id,
+      faces:d20Faces!,
+      targetId:selectedTargetId,
     }}:{}),
   });
   const roll=committed.status==="committed"
     ? committed.results[`${resolutionId}:test`] as D20TestResult|undefined
     : undefined;
-  const projectedAction=internal.scene.actionsByActor[actor.id]?.find((candidate)=>candidate.id===actionId);
+  const hp=committed.status==="committed"?hpPresentation(entryPoint,committed,resolutionId):undefined;
+  const affectedTargetIds=[...new Set(entryPoint.operations
+    .filter((operation)=>operation.kind==="damage.apply"||operation.kind==="healing.apply")
+    .map((operation)=>hpTargetId(operation.target,actor.id,selectedTargetId)))];
+  const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:[selectedTargetId];
+  const presentationTargets=presentationTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id)!);
+  const outcome=hp?.outcome??(roll?roll.outcome:"규칙 효과 적용");
   return commitProductionRuntimeResolution(this,state,committed,{
     resolutionId,
     actionId,
     actionName:projectedAction?.name||action.nameKo||action.nameEn,
     actorId:actor.id,
-    targetIds:[actor.id],
-    targetNames:[actor.name],
-    compact:roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:"Common Play 규칙 적용",
-    detail:[`${action.definition.id} · ${action.entryPointId}`,...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[])],
+    targetIds:presentationTargetIds,
+    targetNames:presentationTargets.map((target)=>target.name),
+    compact:hp?.outcome??(roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:"Common Play 규칙 적용"),
+    detail:[`${action.definition.id} · ${action.entryPointId}`,...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.status==="committed"?committed.events.filter((event)=>event.kind==="damage"||event.kind==="healing").map((event)=>event.summary):[]],
     provenance:[`${action.source} · ${action.contentId}`],
-    calculatedOutcome:roll?roll.outcome:"규칙 효과 적용",
-    finalOutcome:roll?roll.outcome:"규칙 효과 적용",
-    rollKind:roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):undefined,
-    authoritativeDice:roll?.rollState==="normal"?[roll.natural]:roll?.dice.faces,
-    rollTotal:roll?.total,
+    calculatedOutcome:outcome,
+    finalOutcome:outcome,
+    rollKind:hp?.rollKind??(roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):undefined),
+    authoritativeDice:hp?.authoritativeDice??(roll?.rollState==="normal"?[roll.natural]:roll?.dice.faces),
+    rollTotal:hp?.rollTotal??roll?.total,
     attackTotal:roll?.family==="attack-roll"?roll.total:undefined,
+    damageComponents:hp?.damageComponents,
   });
 };

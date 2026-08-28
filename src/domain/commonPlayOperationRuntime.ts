@@ -6,6 +6,13 @@ import type { PendingResolution, ResolutionCommit, ResolutionOperation } from ".
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
+type CommonPlayHpTarget="actor"|"self"|"target";
+
+export interface CommonPlayDamageDiceFormula {
+  count:number;
+  sides:number;
+  flat:number;
+}
 
 type CommonPlayResourceChange={
   kind:"resource.change";
@@ -20,6 +27,19 @@ type CommonPlayEconomyModify={
   amount:CommonPlayExpression;
 };
 
+type CommonPlayDamageApply={
+  kind:"damage.apply";
+  amount:LiteralNumberExpression|string;
+  damageType:string;
+  target?:CommonPlayHpTarget;
+};
+
+type CommonPlayHealingApply={
+  kind:"healing.apply";
+  amount:LiteralNumberExpression;
+  target?:CommonPlayHpTarget;
+};
+
 type CommonPlayPayment={
   kind:"resource";
   resource:string;
@@ -27,7 +47,11 @@ type CommonPlayPayment={
   consumeAt:"commit";
 };
 
-export type CommonPlayOperation=CommonPlayResourceChange|CommonPlayEconomyModify;
+export type CommonPlayOperation=
+  |CommonPlayResourceChange
+  |CommonPlayEconomyModify
+  |CommonPlayDamageApply
+  |CommonPlayHealingApply;
 
 export interface CommonPlayD20TestDefinition {
   kind:D20TestFamily;
@@ -58,6 +82,9 @@ export interface CommonPlayOperationExecutionInput {
     modifierContributions?:ModifierContribution[];
     rollStateContributions?:RollStateContribution[];
   };
+  targetId?:string;
+  creatureKinds?:Record<string,"character"|"monster">;
+  damageDiceFaces?:Record<number,number[]>;
 }
 
 type Obj=Record<string,unknown>;
@@ -67,6 +94,9 @@ const ENTRY_POINT_KEYS=new Set(["id","invocation","test","operations"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
+const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
+const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
+const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
 function object(value:unknown,label:string):Obj {
   if(!value||typeof value!=="object"||Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an object`);
@@ -91,6 +121,31 @@ function literalExpression(value:unknown,label:string):LiteralNumberExpression {
     throw new DomainEvaluationError(`${label} requires a finite integer literal`);
   }
   return {value:number};
+}
+
+function nonNegativeLiteralExpression(value:unknown,label:string) {
+  const expression=literalExpression(value,label);
+  if(expression.value<0) throw new DomainEvaluationError(`${label} must be a non-negative integer literal`);
+  return expression;
+}
+
+export function parseCommonPlayDamageDiceFormula(value:string,label="Common Play damage amount"):CommonPlayDamageDiceFormula {
+  const match=DAMAGE_DICE.exec(value.trim());
+  if(!match) throw new DomainEvaluationError(`${label} must be a literal integer or XdY+Z damage formula`);
+  const count=Number(match[1]);
+  const sides=Number(match[2]);
+  const flat=Number(match[3]??0);
+  if(!Number.isInteger(count)||count<1||count>100) throw new DomainEvaluationError(`${label} dice count must be between 1 and 100`);
+  if(!Number.isInteger(sides)||sides<2||sides>20) throw new DomainEvaluationError(`${label} dice sides must be between 2 and 20`);
+  return {count,sides,flat};
+}
+
+function hpTarget(value:unknown,label:string):CommonPlayHpTarget|undefined {
+  if(value===undefined) return undefined;
+  if(value!=="actor"&&value!=="self"&&value!=="target") {
+    throw new DomainEvaluationError(`${label} must be actor, self, or target for portable Common Play HP operations`);
+  }
+  return value;
 }
 
 function parsePayment(value:unknown,label:string):CommonPlayPayment {
@@ -129,6 +184,31 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       kind:"economy.modify",
       bucket:nonEmptyString(operation.bucket,`${label}.bucket`),
       amount,
+    };
+  }
+  if(operation.kind==="damage.apply") {
+    supportedKeys(operation,DAMAGE_APPLY_KEYS,label);
+    let amount:LiteralNumberExpression|string;
+    if(typeof operation.amount==="string") {
+      parseCommonPlayDamageDiceFormula(operation.amount,`${label}.amount`);
+      amount=operation.amount.trim();
+    } else amount=nonNegativeLiteralExpression(operation.amount,`${label}.amount`);
+    return {
+      kind:"damage.apply",
+      amount,
+      damageType:nonEmptyString(operation.damageType,`${label}.damageType`),
+      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
+    };
+  }
+  if(operation.kind==="healing.apply") {
+    supportedKeys(operation,HEALING_APPLY_KEYS,label);
+    if(typeof operation.amount==="string") {
+      throw new DomainEvaluationError(`${label}.amount healing dice are not supported by this Common Play HP slice`);
+    }
+    return {
+      kind:"healing.apply",
+      amount:nonNegativeLiteralExpression(operation.amount,`${label}.amount`),
+      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
     };
   }
   throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);
@@ -213,6 +293,12 @@ function compilePayments(
   });
 }
 
+function hpOperationTarget(target:CommonPlayHpTarget|undefined,input:CommonPlayOperationExecutionInput) {
+  if(target===undefined||target==="actor"||target==="self") return input.actorId;
+  if(!input.targetId) throw new DomainEvaluationError("Common Play target HP operation requires one pre-resolved target");
+  return input.targetId;
+}
+
 export function compileCommonPlayEntryPointOperations(
   profile:RulesProfileLike,
   state:RulesRuntimeState,
@@ -265,6 +351,55 @@ export function compileCommonPlayEntryPointOperations(
         actorId:input.actorId,
         resourceId:operation.resource,
         amount,
+      });
+      continue;
+    }
+
+    if(operation.kind==="damage.apply") {
+      const targetId=hpOperationTarget(operation.target,input);
+      const creatureKind=input.creatureKinds?.[targetId];
+      if(!creatureKind) throw new DomainEvaluationError(`Common Play damage target is not a classified runtime combatant: ${targetId}`);
+      let amount:number|{operationId:string;field:"total"};
+      if(typeof operation.amount==="string") {
+        const formula=parseCommonPlayDamageDiceFormula(operation.amount);
+        const rollId=`${operationId}:roll`;
+        const faces=input.damageDiceFaces?.[index];
+        if(!faces) throw new DomainEvaluationError(`Common Play damage operation ${index} requires authoritative dice input`);
+        operations.push({
+          id:rollId,
+          kind:"damage-roll",
+          request:{
+            dice:[{
+              source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,
+              sides:formula.sides,
+              count:formula.count,
+              faces:[...faces],
+            }],
+            ...(formula.flat===0?{}:{flat:[{
+              source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}:flat`,
+              value:formula.flat,
+            }]}),
+          },
+        });
+        amount={operationId:rollId,field:"total"};
+      } else amount=literalInteger(operation.amount,"damage.apply amount");
+      operations.push({
+        id:operationId,
+        kind:"damage",
+        targetId,
+        damageType:operation.damageType,
+        amount,
+        creatureKind,
+      });
+      continue;
+    }
+
+    if(operation.kind==="healing.apply") {
+      operations.push({
+        id:operationId,
+        kind:"healing",
+        targetId:hpOperationTarget(operation.target,input),
+        amount:literalInteger(operation.amount,"healing.apply amount"),
       });
       continue;
     }
