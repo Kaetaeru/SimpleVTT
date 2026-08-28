@@ -6,7 +6,7 @@ import type { ConcentrationCheckRequest } from "./concentration";
 import type { EffectApplyRequest } from "./effects";
 import type { HitDieSpend } from "./rest";
 import type { ReactorOption } from "./reaction";
-import type { TargetFacts, TargetingRule } from "./targeting";
+import type { TargetingFactInput, TargetingRule } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { RulesRuntimeState } from "./combatState";
@@ -41,7 +41,7 @@ export type ResolutionOperation =
       kind: "targeting";
       sourceId?: string;
       rule: TargetingRule;
-      targets: TargetFacts[];
+      targets: TargetingFactInput[];
       harmful?: boolean;
     })
   | (OperationBase & {

@@ -46,6 +46,9 @@ function requireAvailableInScene(state:RulesRuntimeState,actorId:string,label:st
 export function executeTargeting(ctx: ResolutionExecutionContext, operation: TargetingOp): OperationExecution {
   const sourceId = operation.sourceId ?? ctx.pending.actorId;
   requireAvailableInScene(ctx.state,sourceId,"targeting source");
+  for (const target of operation.targets) {
+    if (target.kind === "creature") requireCombatant(ctx.state,target.id);
+  }
   const unavailableTarget = operation.targets.find((target) => temporarilyUnavailable(ctx.state,target.id));
   if (unavailableTarget) throw new DomainEvaluationError(`target is temporarily unavailable in the current scene: ${unavailableTarget.id}`);
   const restriction = operation.harmful

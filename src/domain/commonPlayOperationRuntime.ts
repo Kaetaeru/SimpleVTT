@@ -3,10 +3,17 @@ import type { D20TestFamily, ModifierContribution } from "./d20";
 import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
+import type { TargetingFactInput } from "./targeting";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
 type CommonPlayHpTarget="actor"|"self"|"target";
+
+export interface CommonPlayTargetingSelector {
+  from:"targets";
+  min:1;
+  max:1;
+}
 
 export interface CommonPlayDamageDiceFormula {
   count:number;
@@ -67,6 +74,7 @@ export interface CommonPlayOperationDefinition {
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
+    targeting?:CommonPlayTargetingSelector;
     test?:CommonPlayD20TestDefinition;
     operations:CommonPlayOperation[];
   }>;
@@ -83,6 +91,7 @@ export interface CommonPlayOperationExecutionInput {
     rollStateContributions?:RollStateContribution[];
   };
   targetId?:string;
+  targetingTargets?:TargetingFactInput[];
   creatureKinds?:Record<string,"character"|"monster">;
   damageDiceFaces?:Record<number,number[]>;
 }
@@ -90,7 +99,8 @@ export interface CommonPlayOperationExecutionInput {
 type Obj=Record<string,unknown>;
 const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
 const PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
-const ENTRY_POINT_KEYS=new Set(["id","invocation","test","operations"]);
+const ENTRY_POINT_KEYS=new Set(["id","invocation","targeting","test","operations"]);
+const TARGETING_KEYS=new Set(["from","min","max"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
@@ -146,6 +156,14 @@ function hpTarget(value:unknown,label:string):CommonPlayHpTarget|undefined {
     throw new DomainEvaluationError(`${label} must be actor, self, or target for portable Common Play HP operations`);
   }
   return value;
+}
+
+function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {
+  const selector=object(value,label);
+  supportedKeys(selector,TARGETING_KEYS,label);
+  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);
+  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label}.min and .max must both be 1 for portable Common Play targeting`);
+  return {from:"targets",min:1,max:1};
 }
 
 function parsePayment(value:unknown,label:string):CommonPlayPayment {
@@ -252,6 +270,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     return {
       id:nonEmptyString(entry.id,`${label}.entryPoints[${index}].id`),
       invocation,
+      ...(entry.targeting===undefined?{}:{targeting:parseTargetingSelector(entry.targeting,`${label}.entryPoints[${index}].targeting`)}),
       ...(entry.test===undefined?{}:{test:parseD20Test(entry.test,`${label}.entryPoints[${index}].test`)}),
       operations:entry.operations.map((operation,operationIndex)=>parseOperation(operation,`${label}.entryPoints[${index}].operations[${operationIndex}]`)),
     };
@@ -309,7 +328,21 @@ export function compileCommonPlayEntryPointOperations(
   const entryPoint=supported.entryPoints.find((entry)=>entry.id===input.entryPointId);
   if(!entryPoint) throw new DomainEvaluationError(`Common Play entry point not found: ${input.entryPointId}`);
 
-  const operations:ResolutionOperation[]=[...compilePayments(supported,input)];
+  const operations:ResolutionOperation[]=[];
+  if(entryPoint.targeting) {
+    if(!input.targetingTargets) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires pre-resolved targeting facts`);
+    if(input.targetingTargets.length===1&&input.targetId!==undefined&&input.targetId!==input.targetingTargets[0].id) {
+      throw new DomainEvaluationError("Common Play downstream target does not match the validated targeting selection");
+    }
+    operations.push({
+      id:`${input.resolutionId}:targeting`,
+      kind:"targeting",
+      sourceId:input.actorId,
+      rule:{kind:"creature",minTargets:1,maxTargets:1,directTarget:false},
+      targets:input.targetingTargets.map((target)=>({...target})),
+    });
+  }
+  operations.push(...compilePayments(supported,input));
   if(entryPoint.test) {
     if(!input.d20) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires authoritative d20 input`);
     operations.push({
