@@ -110,6 +110,8 @@ declare module "./contracts" {
     contentId?:string;
     /** Stable module/source identity; distinct from display source. */
     sourceId?:string;
+    /** Validated, data-only Common Play executable definitions. */
+    mechanics?:InstalledCommonPlayMechanicV1[];
     /** Read-only data-only Campaign provider projection from installed content. */
     campaignProvider?:InstalledCampaignProviderProfileV1;
   }
