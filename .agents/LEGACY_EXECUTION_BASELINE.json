@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "policy": "High-signal named execution debt under src/app is frozen. Existing findings may decrease as behavior migrates to Common Play; new files, new finding kinds, or higher occurrence counts fail the boundary gate.",
+  "scope": "src/app/**/*.ts",
+  "entries": []
+}
