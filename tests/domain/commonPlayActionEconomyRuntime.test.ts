@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   FIGHTER_ACTION_SURGE_RESOURCE_ID,
@@ -15,6 +16,9 @@ import type { RulesProfileLike } from "../../src/domain/profileEngine";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 const RESTRICTED_EXTRA_ACTION_BUCKET = "test.extra-action.non-magic";
+const PERSISTED_DEFINITION = JSON.parse(
+  readFileSync(new URL("../fixtures/play-contract/action-resource-economy.json", import.meta.url), "utf8"),
+) as CommonPlayActionEconomyDefinition;
 
 type ActionEconomyProfile = RulesProfileLike & {
   actionEconomy: {
@@ -39,20 +43,11 @@ const PROFILE:ActionEconomyProfile = {
   },
 };
 
-function genericDefinition(id="external.rule.quickstep",entryPointId="activate"):CommonPlayActionEconomyDefinition {
-  return {
-    schemaVersion:"0.2-draft",
-    id,
-    entryPoints:[{
-      id:entryPointId,
-      invocation:"manual",
-      operations:[
-        { kind:"resource.change", resource:"external.resource.primary", amount:{ value:-1 } },
-        { kind:"resource.change", resource:"external.resource.turn", amount:{ value:-1 } },
-        { kind:"economy.modify", bucket:RESTRICTED_EXTRA_ACTION_BUCKET, amount:{ value:1 } },
-      ],
-    }],
-  };
+function genericDefinition(id=PERSISTED_DEFINITION.id,entryPointId=PERSISTED_DEFINITION.entryPoints[0].id):CommonPlayActionEconomyDefinition {
+  const definition=structuredClone(PERSISTED_DEFINITION);
+  definition.id=id;
+  definition.entryPoints[0].id=entryPointId;
+  return definition;
 }
 
 function genericState(primary=1,turn=1) {
@@ -88,7 +83,7 @@ function resolveGeneric(
   });
 }
 
-test("unknown external Common Play action economy content spends resources atomically and grants a profile-defined restricted action", () => {
+test("persisted unknown external Common Play action economy content spends resources atomically and grants a profile-defined restricted action", () => {
   const state=genericState();
   const result=resolveGeneric(state);
   assert.equal(result.status,"committed");
@@ -159,19 +154,12 @@ test("generic action economy composition matches the Action Surge golden state c
     { id:FIGHTER_ACTION_SURGE_RESOURCE_ID, label:"Primary", current:1, maximum:1 },
     { id:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, label:"Turn", current:1, maximum:1 },
   );
-  const definition:CommonPlayActionEconomyDefinition={
-    schemaVersion:"0.2-draft",
-    id:"external.rule.not-fighter",
-    entryPoints:[{
-      id:"activate",
-      invocation:"manual",
-      operations:[
-        { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_RESOURCE_ID, amount:{ value:-1 } },
-        { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, amount:{ value:-1 } },
-        { kind:"economy.modify", bucket:RESTRICTED_EXTRA_ACTION_BUCKET, amount:{ value:1 } },
-      ],
-    }],
-  };
+  const definition=genericDefinition("external.rule.not-fighter","activate");
+  definition.entryPoints[0].operations=[
+    { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_RESOURCE_ID, amount:{ value:-1 } },
+    { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, amount:{ value:-1 } },
+    { kind:"economy.modify", bucket:RESTRICTED_EXTRA_ACTION_BUCKET, amount:{ value:1 } },
+  ];
   const generic=resolveCommonPlayActionEconomyEntryPoint(PROFILE,genericStateForParity,definition,{
     resolutionId:"external.parity",
     actorId:"hero",
