@@ -5,6 +5,7 @@ on:
     paths:
       - "src/app/ruleModulePackageImport.ts"
       - "src/app/installedContentContracts.ts"
+      - "src/app/installedContentPersistence.ts"
       - "src/app/installedContentRuntimeAdapter.ts"
       - "src/domain/commonPlayOperationRuntime.ts"
       - "tests/ui/ruleModulePackageImport.test.ts"
