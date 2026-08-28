@@ -14,7 +14,7 @@ export type ExpressionNode =
   | { ref: string }
   | { op: ArithmeticOperator; args: ExpressionNode[] };
 
-export interface ActionEconomyBucketDefinition {
+export interface EconomyGrantBucketDefinition {
   kind:"extra-action";
   allowsMagicAction:boolean;
   activeTurnOnly?:boolean;
@@ -30,8 +30,8 @@ export interface RulesProfileLike {
       opposingCancel?: boolean;
     };
   };
-  actionEconomy?: {
-    buckets:Record<string,ActionEconomyBucketDefinition>;
+  economy?: {
+    grantBuckets?:Record<string,EconomyGrantBucketDefinition>;
   };
 }
 
