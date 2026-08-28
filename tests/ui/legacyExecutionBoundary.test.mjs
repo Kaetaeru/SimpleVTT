@@ -31,6 +31,7 @@ if (actionId === "action.fighter.action-surge") legacySpellResolveAction();
 test("exact presentation, fixture, and generic-mapping paths are allowlisted without weakening other app files",()=>{
   assert.equal(isLegacyExecutionGuardAllowlisted("src/app/rulePresentation.ts"),true);
   assert.equal(isLegacyExecutionGuardAllowlisted("src/app/mockAdapter.ts"),true);
+  assert.equal(isLegacyExecutionGuardAllowlisted("src/app/productionAcceptanceRuntimeAdapter.ts"),true);
   assert.equal(isLegacyExecutionGuardAllowlisted("src/app/realRuntimeAttackFactProvider.ts"),true);
   assert.equal(isLegacyExecutionGuardAllowlisted("src/app/newNamedRuntimeAdapter.ts"),false);
 });
