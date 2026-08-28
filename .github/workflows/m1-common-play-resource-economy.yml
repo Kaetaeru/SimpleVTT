@@ -1,0 +1,33 @@
+name: M1 Common Play Resource Economy
+
+on:
+  pull_request:
+    paths:
+      - "schemas/common-play-contract.schema.json"
+      - "schemas/rules-profile.schema.json"
+      - "rules/profiles/dnd.srd-5.2.1.profile.json"
+      - "src/domain/profileEngine.ts"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "tests/fixtures/play-contract/resource-economy-action.json"
+      - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
+      - ".github/workflows/m1-common-play-resource-economy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  resource-economy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify M1 resource/economy migration harness
+        run: npx tsx --test tests/domain/commonPlayResourceEconomyRuntime.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit

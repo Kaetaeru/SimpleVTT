@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   FIGHTER_ACTION_SURGE_RESOURCE_ID,
@@ -8,32 +7,19 @@ import {
   coreClassResourceDefinitions,
 } from "../../src/domain/coreClassResources";
 import {
-  resolveCommonPlayActionEconomyEntryPoint,
-  type CommonPlayActionEconomyDefinition,
-} from "../../src/domain/commonPlayActionEconomyRuntime";
+  resolveCommonPlayEntryPointOperations,
+  type CommonPlayOperationDefinition,
+} from "../../src/domain/commonPlayOperationRuntime";
 import { resolveFighterActionSurge } from "../../src/domain/fighterActionSurge";
 import type { RulesProfileLike } from "../../src/domain/profileEngine";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 const RESTRICTED_EXTRA_ACTION_BUCKET = "test.extra-action.non-magic";
-const PERSISTED_DEFINITION = JSON.parse(
-  readFileSync(new URL("../fixtures/play-contract/action-resource-economy.json", import.meta.url), "utf8"),
-) as CommonPlayActionEconomyDefinition;
 
-type ActionEconomyProfile = RulesProfileLike & {
-  actionEconomy: {
-    buckets: Record<string, {
-      kind:"extra-action";
-      allowsMagicAction:boolean;
-      activeTurnOnly?:boolean;
-    }>;
-  };
-};
-
-const PROFILE:ActionEconomyProfile = {
+const PROFILE:RulesProfileLike = {
   ...TEST_PROFILE,
-  actionEconomy:{
-    buckets:{
+  economy:{
+    grantBuckets:{
       [RESTRICTED_EXTRA_ACTION_BUCKET]:{
         kind:"extra-action",
         allowsMagicAction:false,
@@ -43,11 +29,20 @@ const PROFILE:ActionEconomyProfile = {
   },
 };
 
-function genericDefinition(id=PERSISTED_DEFINITION.id,entryPointId=PERSISTED_DEFINITION.entryPoints[0].id):CommonPlayActionEconomyDefinition {
-  const definition=structuredClone(PERSISTED_DEFINITION);
-  definition.id=id;
-  definition.entryPoints[0].id=entryPointId;
-  return definition;
+function genericDefinition(id="external.rule.quickstep",entryPointId="activate"):CommonPlayOperationDefinition {
+  return {
+    schemaVersion:"0.2-draft",
+    id,
+    entryPoints:[{
+      id:entryPointId,
+      invocation:"manual",
+      operations:[
+        { kind:"resource.change", resource:"external.resource.primary", amount:{ value:-1 } },
+        { kind:"resource.change", resource:"external.resource.turn", amount:{ value:-1 } },
+        { kind:"economy.modify", bucket:RESTRICTED_EXTRA_ACTION_BUCKET, amount:{ value:1 } },
+      ],
+    }],
+  };
 }
 
 function genericState(primary=1,turn=1) {
@@ -76,14 +71,14 @@ function resolveGeneric(
   definition=genericDefinition(),
   entryPointId=definition.entryPoints[0].id,
 ) {
-  return resolveCommonPlayActionEconomyEntryPoint(PROFILE,state,definition,{
+  return resolveCommonPlayEntryPointOperations(PROFILE,state,definition,{
     resolutionId:`resolution.${definition.id}`,
     actorId:"hero",
     entryPointId,
   });
 }
 
-test("persisted unknown external Common Play action economy content spends resources atomically and grants a profile-defined restricted action", () => {
+test("unknown external Common Play action economy content spends resources atomically and grants a profile-defined restricted action", () => {
   const state=genericState();
   const result=resolveGeneric(state);
   assert.equal(result.status,"committed");
@@ -122,7 +117,7 @@ test("an unregistered economy bucket fails explicitly", () => {
   };
   const result=resolveGeneric(genericState(),definition);
   assert.equal(result.status,"rejected");
-  assert.match(result.status==="rejected"?result.error:"",/economy bucket|unregistered|unsupported/i);
+  assert.match(result.status==="rejected"?result.error:"",/economy.*bucket|unregistered|unsupported/i);
 });
 
 test("generic action economy composition matches the Action Surge golden state changes without knowing Fighter content identity", () => {
@@ -154,13 +149,20 @@ test("generic action economy composition matches the Action Surge golden state c
     { id:FIGHTER_ACTION_SURGE_RESOURCE_ID, label:"Primary", current:1, maximum:1 },
     { id:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, label:"Turn", current:1, maximum:1 },
   );
-  const definition=genericDefinition("external.rule.not-fighter","activate");
-  definition.entryPoints[0].operations=[
-    { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_RESOURCE_ID, amount:{ value:-1 } },
-    { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, amount:{ value:-1 } },
-    { kind:"economy.modify", bucket:RESTRICTED_EXTRA_ACTION_BUCKET, amount:{ value:1 } },
-  ];
-  const generic=resolveCommonPlayActionEconomyEntryPoint(PROFILE,genericStateForParity,definition,{
+  const definition:CommonPlayOperationDefinition={
+    schemaVersion:"0.2-draft",
+    id:"external.rule.not-fighter",
+    entryPoints:[{
+      id:"activate",
+      invocation:"manual",
+      operations:[
+        { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_RESOURCE_ID, amount:{ value:-1 } },
+        { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, amount:{ value:-1 } },
+        { kind:"economy.modify", bucket:RESTRICTED_EXTRA_ACTION_BUCKET, amount:{ value:1 } },
+      ],
+    }],
+  };
+  const generic=resolveCommonPlayEntryPointOperations(PROFILE,genericStateForParity,definition,{
     resolutionId:"external.parity",
     actorId:"hero",
     entryPointId:"activate",
