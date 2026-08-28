@@ -92,3 +92,50 @@ test("installed portable mechanics use the existing whole-entry session synchron
   assert.deepEqual(persistedEntry(peer)?.mechanics,[portableMechanic]);
   assert.deepEqual(await requiredSessionInstalledContent(writer,await snapshotSessionInstalledContent(peer)),[]);
 });
+
+test("invalid Common Play config blocks RuleModule activation atomically", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  raw.content[0].mechanics=[{
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.invalid",
+      entryPoints:[{
+        id:"activate",
+        invocation:"manual",
+        operations:[{kind:"arbitrary.execute",value:"boom"}],
+      }],
+    },
+  }];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(
+    preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /unsupported Common Play operation/.test(entry.message)),
+    JSON.stringify(preview.contentImport?.validation),
+  );
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
+test("tampered session mechanics are revalidated before peer persistence", async () => {
+  const {writer}=await installedWriter();
+  const required=await requiredSessionInstalledContent(writer,[]);
+  assert.equal(required.length,1);
+  const tampered=required as unknown as Array<{
+    mechanics?:Array<{config:{entryPoints:Array<{operations:unknown[]}>}}>;
+  }>;
+  tampered[0].mechanics![0].config.entryPoints[0].operations=[{kind:"arbitrary.execute",value:"boom"}];
+
+  const peerStore=new MemoryInstalledContentStore();
+  const peer=new MockAdapter();
+  setInstalledContentStoreForTests(peer,peerStore);
+  await peer.getSnapshot();
+  await assert.rejects(
+    installSessionInstalledContent(peer,required),
+    /unsupported Common Play operation/,
+  );
+  assert.equal((await peerStore.readGenerations()).length,0);
+});
