@@ -10,22 +10,26 @@ function fixture() {
   mkdirSync(join(root, ".agents"), { recursive: true });
   mkdirSync(join(root, "src", "app"), { recursive: true });
   writeFileSync(join(root, ".agents", "LEGACY_EXECUTION_BASELINE.json"), JSON.stringify({
-    version: 1,
+    version: 2,
     legacyExecutionAdapters: ["src/app/barbarianRageRuntimeAdapter.ts"],
-    contentPresentationExceptions: ["src/app/druidCircleLandSpellRuntimeAdapter.ts"],
+    contentPresentationAdapters: ["src/app/spellPresentationRuntimeAdapter.ts"],
+    genericInfrastructureAdapters: ["src/app/connectedSessionRuntimeAdapter.ts"],
+    unclearAdapters: ["src/app/exampleRuntimeAdapter.ts"],
   }));
   return root;
 }
 
-function touch(root, path) {
-  writeFileSync(join(root, "src", "app", path), "export {};\n");
+function touch(root, name) {
+  writeFileSync(join(root, "src", "app", name), "export {};\n");
 }
 
-test("grandfathered named execution may remain or shrink", () => {
+test("classified runtime adapters may remain or shrink", () => {
   const root = fixture();
   try {
     touch(root, "barbarianRageRuntimeAdapter.ts");
-    touch(root, "productionPlayRuntimeAdapter.ts");
+    touch(root, "spellPresentationRuntimeAdapter.ts");
+    touch(root, "connectedSessionRuntimeAdapter.ts");
+    touch(root, "exampleRuntimeAdapter.ts");
     assert.equal(checkLegacyExecutionBoundary(root).ok, true);
     rmSync(join(root, "src", "app", "barbarianRageRuntimeAdapter.ts"));
     assert.equal(checkLegacyExecutionBoundary(root).ok, true);
@@ -34,24 +38,33 @@ test("grandfathered named execution may remain or shrink", () => {
   }
 });
 
-test("explicit content/presentation exception is allowed", () => {
-  const root = fixture();
-  try {
-    touch(root, "druidCircleLandSpellRuntimeAdapter.ts");
-    assert.equal(checkLegacyExecutionBoundary(root).ok, true);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test("new class/subclass named runtime adapter fails", () => {
+test("new unclassified runtime adapter fails", () => {
   const root = fixture();
   try {
     touch(root, "wizardExampleRuntimeAdapter.ts");
     const result = checkLegacyExecutionBoundary(root);
     assert.equal(result.ok, false);
     assert.deepEqual(result.errors, [
-      "src/app/wizardExampleRuntimeAdapter.ts: new class/subclass-named runtime adapter is not inventoried",
+      "src/app/wizardExampleRuntimeAdapter.ts: runtime adapter is not inventoried",
+    ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the same runtime adapter cannot have two classifications", () => {
+  const root = fixture();
+  try {
+    writeFileSync(join(root, ".agents", "LEGACY_EXECUTION_BASELINE.json"), JSON.stringify({
+      version: 2,
+      legacyExecutionAdapters: ["src/app/barbarianRageRuntimeAdapter.ts"],
+      genericInfrastructureAdapters: ["src/app/barbarianRageRuntimeAdapter.ts"],
+    }));
+    touch(root, "barbarianRageRuntimeAdapter.ts");
+    const result = checkLegacyExecutionBoundary(root);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.errors, [
+      "src/app/barbarianRageRuntimeAdapter.ts: classified twice (legacyExecutionAdapters, genericInfrastructureAdapters)",
     ]);
   } finally {
     rmSync(root, { recursive: true, force: true });
