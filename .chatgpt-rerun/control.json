@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 2,
   "status": "continue",
-  "reason": "M0 remains DONE and Gate E evidence remains retained. M1 Fighter Action Surge has advanced to a green persisted Common Play IR/lowering slice: parent candidate 40a10a0d87e70c73636e5a4d88669a81c91db3c0 passed Rules Domain run 33133833124 and Legacy Execution Boundary run 33133833183. Concurrent work also advanced child branch agent/m1-action-surge-common-play to 343feac90f9129d0a3425bc38cc903a7eb9da6d8. Resume from STATE.md by reconciling parent/child without repeating green work, then capture the remaining RuleModule mechanics activation/persistence gap and route installed portable content through the same generic lowering/Resolver path. Do not delete the named Action Surge execution seam before production/session parity, activate Gate F-M, reopen M0, rerun unchanged Gate E validation, or route to main.",
+  "reason": "M0 remains DONE and Gate E evidence remains retained. M1 Fighter Action Surge has converged on child branch agent/m1-action-surge-common-play through exact head 2cf56f12778f533b03546df021afae5d5081e03d: one generic Common Play operation lowerer, persisted RulesProfile economy grant buckets, payments separated from effects, and atomic resource-payment lowering. Rules Domain run 33134121916 is SUCCESS on that exact head. Resume from STATE.md at the remaining RuleModule/content JSON -> installed portable mechanics -> generic production/session activation gap. Reuse already-green evidence, re-fetch concurrent branch/PR state before writes, do not delete the named Action Surge seam before end-to-end production parity, do not activate Gate F-M, reopen M0, repeat unchanged Gate E validation, or route to main.",
   "task_id": "common-play-foundation-convergence",
-  "updated_at": "2026-08-28T10:47:17+09:00"
+  "updated_at": "2026-08-28T10:52:45+09:00"
 }
