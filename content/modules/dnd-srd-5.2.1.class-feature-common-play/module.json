@@ -1,7 +1,7 @@
 {
   "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
   "schemaVersion": "0.1-draft",
-  "moduleId": "dnd-srd-5.2.1.class-feature-common-play",
+  "moduleId": "dnd.srd-5.2.1.class-feature-common-play",
   "moduleVersion": "0.1-draft",
   "rulesProfile": { "id": "dnd.srd-5.2.1", "version": "0.1-draft" },
   "defaultLocale": "ko-KR",
@@ -12,7 +12,7 @@
     "srdDerived": true
   },
   "dependencies": [
-    { "moduleId": "dnd-srd-5.2.1.classes", "version": "0.1-draft" }
+    { "moduleId": "dnd.srd-5.2.1.classes", "version": "0.1-draft" }
   ],
   "conflicts": [],
   "capabilities": ["dnd.economy.action-bonus-reaction.v1", "dnd.rest.short-long.v1"],
