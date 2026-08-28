@@ -1,7 +1,7 @@
 # Rerun State
 
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `2`
+- sequence: `3`
 - task_id: `common-play-foundation-convergence`
 - dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
@@ -15,43 +15,33 @@
 
 ## Durable checkpoint
 
-The Resolver convergence run remains authorized at sequence 2. PR #159 is already integrated and the canonical checklist records Resource/Economy at `PORTABLE`; Gate A-E and M0 evidence remain valid and must not be repeated without new affected-surface evidence.
+The Resolver convergence run is re-dispatched at sequence 3. PR #159 remains integrated and Resource/Economy remains `PORTABLE`; Gate A-E and M0 evidence remain valid and must not be repeated without affected-surface evidence.
 
-Repository cleanup was completed without changing product source, tests, schemas, machine-readable rules/content, the architecture charter, checklist v2, or Rerun PLAN identity:
-
-- cleanup PR #169 exact head `68ab81fb2ade7b5b11800381f8d6cc6fd5d2c647` passed Contract validation, Persistence, Phase 11 Playable, and Phase 12 Connected Session;
-- PR #169 merged into `agent/resolver-foundation-convergence` as `70bc9d1a27db6f418d7485baadd15da104b58784`;
-- repository reading order is now `README.md -> docs/CURRENT.md -> docs/architecture/README.md -> docs/roadmap/CURRENT.md`;
-- historical `.agents` planning/checkpoint material is preserved losslessly under `docs/archive/agent-workspace-2026-08-28/`;
-- live `.agents/` contains only its routing README plus the two exact-path machine baselines required by structural gates;
-- superseded Resolver packets/checklist are under `docs/archive/rules/`;
-- old stacked Phase checkpoint PRs through Phase 12 and the parked Phase 14 mega-PR were closed without deleting branches, commits, comments, or history.
-
-After cleanup, the only open product PR is #168, `rules: dispatch installed Common Play through production authority`.
+Repository cleanup PR #169 remains integrated into `agent/resolver-foundation-convergence`. The Rerun control/state/plan owner branch remains `agent/resolver-foundation-convergence`; product integration remains `work/v1-composite`; product work must not be routed to `main`.
 
 ## PR #168 — current product candidate
 
 - child branch: `agent/m1-installed-common-play-production`;
-- exact observed child head: `5e8f75dd9c5bafafa2b23ffcac5c7ffd7deabd80`;
-- current parent after cleanup: `70bc9d1a27db6f418d7485baadd15da104b58784` before this Rerun checkpoint write;
-- current compare is diverged only because the parent gained the repository-cleanup lineage; the child-side delta remains exactly seven files:
-  - `.github/workflows/m1-common-play-resource-economy.yml`
-  - `src/app/fighterActionSurgeRuntimeAdapter.ts`
-  - `src/app/installedCommonPlayActionReference.ts`
-  - `src/app/installedCommonPlayRuntimeAdapter.ts`
-  - `src/app/offlineRuntimeAdapters.ts`
-  - `src/app/runtimeResolutionCommit.ts`
-  - `tests/ui/installedCommonPlayProductionRuntime.test.ts`
-- exact-head triggered workflows on `5e8f75dd...` are all SUCCESS: M1 Common Play Resource Economy, UI, Contract validation, Phase 11 Playable, and Phase 12 Connected Session.
+- exact observed child head: `da4ffecd2de1b7f95d324e7170312cdd8d512797`;
+- observed parent head before this dispatch write: `c0bfdc2954a166430695166cedbdb065c4deae22`;
+- PR is open, mergeable, and not draft;
+- current bridge routes arbitrary installed data-only Common Play mechanics through existing production authority and centralized `SIMPLEVTT_APP_RULES_PROFILE`;
+- exact-head workflow evidence observed at dispatch:
+  - Contract validation: SUCCESS;
+  - M1 Common Play Resource Economy: SUCCESS;
+  - Rules Domain: SUCCESS;
+  - UI: SUCCESS;
+  - Phase 11 Playable: IN PROGRESS;
+  - Phase 12 Connected Session: IN PROGRESS.
 
-The repository cleanup does not authorize deleting the named Fighter Action Surge seam or treating #168 as accepted without the checklist's production/parity evidence. It remains the behavior oracle until generic end-to-end parity and arbitrary-ID invariance are established.
+This dispatch does not authorize deleting the named Fighter Action Surge seam until generic end-to-end parity, arbitrary-ID invariance, Undo, and connected convergence satisfy the canonical checklist. It also does not constitute explicit merge approval for PR #168.
 
 ## Next Exact Action
 
-1. On the next product dispatch, perform the mandatory Rerun preflight and re-fetch the current parent and PR #168 head.
-2. Reuse the exact-head success evidence above if the child head is unchanged; do not rerun Gate A-E, M0, PR #159, or unrelated broad historical validation.
-3. Review only any delta newer than `5e8f75dd...` plus the seven-file production bridge surface.
-4. Because repository cleanup advanced the parent only in documentation/history, reconcile parent ancestry into #168 once if required for the real merge candidate; do not create a coordination-commit loop.
-5. Verify the resulting exact merge candidate as required, then complete the checklist's production/parity decision: arbitrary installed content must use the generic Resolver/authoritative transaction and remain invariant under content/definition ID rename.
-6. Remove named Fighter Action Surge execution only after that parity is proven.
-7. Do not route product work to `main`.
+1. Perform the mandatory Rerun preflight and re-fetch `agent/resolver-foundation-convergence` plus PR #168 before any product write.
+2. Reuse still-valid exact-head evidence; do not repeat Gate A-E, M0, PR #159, or unrelated historical validation.
+3. If PR #168 head changed from `da4ffecd...`, inspect only the newer delta plus affected production-bridge surfaces.
+4. Check completion of Phase 11 Playable and Phase 12 Connected Session on the exact current PR head.
+5. Complete the canonical checklist's Resource/Economy PRODUCTION/parity decision: arbitrary installed content must execute through the generic Resolver and authoritative transaction, with behavior invariant under content/definition identity rename.
+6. Keep named Fighter Action Surge as the behavior oracle until its generic-path parity is proven; only then proceed toward MIGRATED.
+7. Do not route product work or Rerun control to `main`; integrate toward `work/v1-composite` only through an explicit integration action.
