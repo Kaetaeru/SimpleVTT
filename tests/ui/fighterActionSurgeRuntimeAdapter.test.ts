@@ -80,7 +80,6 @@ test("builtin Common Play production semantics survive ID and name-only renames"
   entry.contentId="renamed.portable-probe";
   entry.nameKo="이름 변경 프로브";
   entry.nameEn="Renamed Portable Probe";
-  mechanic.id="action.renamed.portable-probe";
   mechanic.config.id="renamed.portable-probe.activate";
   mechanic.config.entryPoints[0].id="invoke";
   const renamedActionId=installedCommonPlayActionId({
