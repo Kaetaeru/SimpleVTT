@@ -94,7 +94,7 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.equal((await store.readGenerations()).length,0);
 });
 
-test("registered Common Play mechanics persist and survive installed-content session sync", async () => {
+test("registered Common Play mechanics persist, rehydrate, and survive installed-content session sync", async () => {
   const hostStore=new MemoryInstalledContentStore();
   const host=new MockAdapter();
   setInstalledContentStoreForTests(host,hostStore);
@@ -109,7 +109,13 @@ test("registered Common Play mechanics persist and survive installed-content ses
   const installed=getInstalledContentPersistenceStateForTests(host)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
   assert.deepEqual(installed?.mechanics,[mechanic]);
 
-  const sessionEntries=await requiredSessionInstalledContent(host,[]);
+  const restoredHost=new MockAdapter();
+  setInstalledContentStoreForTests(restoredHost,hostStore);
+  await restoredHost.getSnapshot();
+  const restored=getInstalledContentPersistenceStateForTests(restoredHost)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(restored?.mechanics,[mechanic]);
+
+  const sessionEntries=await requiredSessionInstalledContent(restoredHost,[]);
   const sessionEntry=sessionEntries.find((entry)=>entry.contentId==="option.atomic-parent");
   assert.deepEqual(sessionEntry?.mechanics,[mechanic]);
 
@@ -130,6 +136,18 @@ test("unsupported generic-catalog member data blocks package import instead of s
   raw.content[0].mechanics=[{kind:"custom-rule",config:{value:1}}];
   const preview=await adapter.previewContentImport(JSON.stringify(raw));
   assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /mechanics cannot be activated/.test(entry.message)));
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
+test("invalid Common Play config is rejected atomically instead of being persisted as executable data", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  raw.content[0].mechanics=[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:"external.invalid",entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"arbitrary.execute",value:"boom"}]}]}}];
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /operations\[0\]\.kind is unsupported/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   assert.equal((await store.readGenerations()).length,0);
 });
