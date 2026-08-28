@@ -18,6 +18,7 @@ const APP_GUARD_ALLOWLIST = new Set([
   "src/app/characterResourcePresentation.ts",
   "src/app/characterSheetV10Projection.ts",
   "src/app/mockAdapter.ts",
+  "src/app/productionAcceptanceRuntimeAdapter.ts",
   "src/app/productionSpellcasterProjectionAdapter.ts",
   "src/app/realRuntimeAttackFactProvider.ts",
   "src/app/rulePresentation.ts",
