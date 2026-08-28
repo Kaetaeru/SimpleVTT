@@ -1,0 +1,30 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.unknown.resource-economy-action",
+  "entryPoints": [
+    {
+      "id": "activate",
+      "invocation": "manual",
+      "operations": [
+        {
+          "kind": "resource.change",
+          "resource": "resource.external.primary",
+          "amount": { "value": -1 },
+          "target": "actor"
+        },
+        {
+          "kind": "resource.change",
+          "resource": "resource.external.same-turn",
+          "amount": { "value": -1 },
+          "target": "actor"
+        },
+        {
+          "kind": "economy.modify",
+          "bucket": "action.extra.non-magic",
+          "amount": { "value": 1 }
+        }
+      ]
+    }
+  ]
+}
