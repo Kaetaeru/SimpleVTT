@@ -8,7 +8,7 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T10:34:08+09:00`
+- checkpointed_at: `2026-08-28T10:38:10+09:00`
 
 ## Durable checkpoint
 
@@ -19,75 +19,71 @@ Mandatory preflight for this dispatch was completed in the required order on `ag
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and the product plan `docs/rules/resolver-execution-checklist.md` were reconciled. PLAN routing did not change and was not rewritten.
+Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` remain the routing/product-plan authorities. PLAN routing did not change.
 
-## Retained Gate E evidence
+## Retained completed evidence
 
-Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`. The validated runtime/test candidate remains `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba` with the previously recorded focused, Contract, Rules Domain, UI, Phase 11, Phase 12, and Windows evidence. No Gate E product/runtime file was changed by M0 or the M0 freeze hardening, so Gate E validation was not manually repeated.
+Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`; validated candidate `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba` retains the previously recorded focused, Contract, Rules Domain, UI, Phase 11, Phase 12, and Windows evidence. Gate E validation was not repeated.
 
-## Phase 2 M0 completed and reconciled
+M0 remains `DONE`. Inventory authority is `docs/rules/legacy-execution-inventory.md`; freeze authority is the composition root `src/app/offlineRuntimeAdapters.ts`, `.agents/LEGACY_EXECUTION_BASELINE.json`, `scripts/check-legacy-execution-boundary.mjs`, `tests/ui/legacyExecutionBoundary.test.mjs`, and `.github/workflows/legacy-execution-boundary.yml`. No canonical offline composition entry remains `UNCLEAR`.
 
-M0 — Freeze and inventory named execution — remains `DONE` in the canonical product checklist. M1 — generic migration harness — remains the active next queue.
+Retained M0 closure/hardening evidence includes:
 
-Inventory authority:
+- checklist transition `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118`, Legacy Execution Boundary run `33132952951`: SUCCESS;
+- transitive-adapter hardening through exact head `0f22b912397f88d5fbbdc0043c62a0c68c615931`, Legacy Execution Boundary run `33133249139`, job `98727324296`: SUCCESS;
+- later Rerun reconciliation continued M1 authorization without changing Gate E runtime behavior.
 
-`docs/rules/legacy-execution-inventory.md`
+Do not reopen M0 or rerun unchanged Gate E validation.
 
-Freeze authority:
+## M1 first probe bounded — Fighter Action Surge
 
-- composition root: `src/app/offlineRuntimeAdapters.ts`;
-- classification ledger: `.agents/LEGACY_EXECUTION_BASELINE.json`;
-- checker: `scripts/check-legacy-execution-boundary.mjs`;
-- regression: `tests/ui/legacyExecutionBoundary.test.mjs`;
-- CI: `.github/workflows/legacy-execution-boundary.yml`.
+The smallest current action/resource/economy legacy probe selected from the inventory is Fighter Action Surge.
 
-The completed inventory records central compatibility/fallback engines, named gameplay families, mixed progression/resource/rest execution, hidden identity-dependent branches, current behavior oracles, authority/lifetime dependencies, and likely convergence compositions. No canonical offline composition entry remains `UNCLEAR` after symbol-level review.
+Existing golden oracle:
 
-### Retained M0 closure evidence
+- `tests/domain/fighterActionSurge.test.ts`;
+- legacy compiler/runtime: `src/domain/fighterActionSurge.ts`;
+- legacy app seam: `src/app/fighterActionSurgeRuntimeAdapter.ts`.
 
-- checklist transition commit `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118` marked M0 `DONE` and M1 `ACTIVE`;
-- Legacy Execution Boundary run `33132952951` on that checklist head: `SUCCESS`;
-- later classification reconciliation resolved the remaining `UNCLEAR` entries and recorded hidden named branches without changing Gate E runtime behavior.
+Observed golden semantics that must survive generic migration:
 
-### M0 freeze hardening in this dispatch
+- two atomic resource spends: the normal Action Surge pool and the same-turn gate;
+- the normal Action remains available;
+- one extra Action credit is granted with `allowsMagicAction:false`;
+- a non-Magic action spends the restricted extra credit before the normal Action;
+- Magic Action cannot consume that restricted credit;
+- a second same-turn use rejects atomically;
+- out-of-turn use rejects;
+- turn start clears stale extra-action grants and recovers the turn gate.
 
-Preflight/reconciliation found one material guard gap after M0 had been marked done: the checker classified only top-level imports from `offlineRuntimeAdapters.ts`, so a new class/subclass-named `*RuntimeAdapter.ts` could be installed transitively through an already-classified module without changing the composition root. Existing `src/app/bardicInspirationRuntimeAdapter.ts` is the concrete current example of this topology.
+The named domain compiler already lowers the effect to generic Resolver operations: two `spend-resource` operations plus `grant-extra-action { allowsMagicAction:false }`. This confirms the missing behavior is not an Action-Surge-specific resolver primitive.
 
-The narrow M0 guard was strengthened without changing product runtime behavior:
+## Concrete Common Play parity gap
 
-- `695c7f36de55efb57a75273723076ee3e6f3ceeb` — baseline version 3 adds an explicit transitive `LEGACY_EXECUTION` classification for `src/app/bardicInspirationRuntimeAdapter.ts`;
-- `d21f72bf88e27ec7489e20868d14d731fe4620ad` — checker now combines the canonical composition ledger with a narrow class/subclass-named RuntimeAdapter file scan, rejects unresolved `UNCLEAR`, and requires transitive classification for detected named adapters outside the composition root;
-- `7752948c01f96cc91f6cd8337fdbe7b653ce15ee` — regression tests cover accepted transitive debt, unclassified transitive adapter failure, stale transitive baseline failure, and `UNCLEAR` failure;
-- `0f22b912397f88d5fbbdc0043c62a0c68c615931` — inventory wording reconciled with the strengthened freeze boundary.
+Current persisted Common Play v0.2 has `resource.change` and `economy.modify`, but `economy.modify` persists only `bucket + amount`. `RulesProfileLike` currently has no registered economy-bucket semantics, and the existing Common Play runtimes do not provide a generic arbitrary-entry-point lowering from `resource.change/economy.modify` to the Resolver's `spend-resource/gain-resource/grant-extra-action` operations.
 
-Exact strengthened-boundary evidence:
+The generic Resolver already supports `grant-extra-action` with `allowsMagicAction:boolean`, and `turnEconomy.ts` already enforces the restricted-credit spend behavior. Therefore the migration failure is currently classified as a **schema/evaluator/profile-semantics parity gap inside the existing Common Play economy primitive**, not evidence for activating Gate F-M and not justification for a named Action Surge branch.
 
-- Legacy Execution Boundary run `33133249139` on exact head `0f22b912397f88d5fbbdc0043c62a0c68c615931`: `SUCCESS`;
-- job `98727324296`: `SUCCESS`;
-- `Check grandfathered named execution boundary`: `SUCCESS`;
-- `Run boundary regression tests`: `SUCCESS`.
+No new primitive or Gate F-M activation has been authorized or implemented.
 
-No broader Gate E or product regression suite was repeated because these changes are limited to the M0 classification ledger, Node boundary checker/regression, and inventory documentation.
+## Bounded implementation branch
 
-## Product-plan state
+Created from parent head `0f22b912397f88d5fbbdc0043c62a0c68c615931`:
 
-`docs/rules/resolver-execution-checklist.md` remains the product-plan authority and currently records:
+`agent/m1-action-surge-common-play`
 
-- Common Play Foundation frozen through Gate E;
-- M0 inventory/freeze: `DONE`;
-- M1 generic migration harness: `ACTIVE` current queue;
-- Gate F-M dormant unless a concrete migration failure satisfies the activation rule;
-- no route to `main`.
+No product/runtime/test commit has yet been added to that child branch. It exists to isolate the first M1 red->green parity slice from concurrent Rerun/M0 coordination commits on the parent.
 
 ## Next Exact Action
 
 On the next continuation of this sequence:
 
 1. perform mandatory preflight in exact order: README -> control -> STATE -> PLAN;
-2. read `CANONICAL_ROOT.md` and the current next action in `docs/rules/resolver-execution-checklist.md`;
-3. do not reopen M0 or repeat Gate E validation while their affected files remain unchanged;
-4. begin M1 from the smallest action/resource/economy `LEGACY_EXECUTION` path identified by `docs/rules/legacy-execution-inventory.md`, using its existing deterministic behavior test as the golden oracle;
-5. bound the first RuleModule/content JSON -> validation/normalization -> Common Play IR -> generic resolver/session parity scenario before deleting legacy code;
-6. prove arbitrary external ID and ID/name-only rename invariance and relevant authority/lifetime parity before removing the absorbed named path;
-7. if that real migration cannot compose safely from Gates A-E, capture the deterministic generic failure before considering Gate F-M activation;
-8. do not route product work to `main`.
+2. reconcile the live parent branch and `agent/m1-action-surge-common-play`; do not repeat the Action Surge/Common Play analysis above while the referenced files are unchanged;
+3. on the child branch, add the first deterministic red RuleModule/Common Play fixture + focused domain test for an unknown external action that spends two resources and requests a profile-registered restricted extra-action economy bucket;
+4. prove the red is specifically the missing generic Common Play economy lowering/profile semantics, not a named-content condition;
+5. implement the smallest reusable generic lowering using the existing `resource.change`, `economy.modify`, and Resolver `grant-extra-action` semantics; do not add an Action Surge ID/name branch;
+6. prove arbitrary external ID and ID/name-only rename invariance plus the relevant Action Surge golden state/economy parity before deleting any legacy code;
+7. only after that generic path is authoritative and regressions are green should the named Action Surge compiler/app execution seam be removed in the same migration slice;
+8. keep Gate F-M dormant unless this bounded red proves a genuinely new reusable capability beyond the existing Common Play economy primitive;
+9. do not route product work to `main`.
