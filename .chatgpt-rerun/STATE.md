@@ -8,94 +8,80 @@
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
 - control path: `.chatgpt-rerun/control.json`
-- checkpointed_at: `2026-08-28T08:17:00+09:00`
+- checkpointed_at: `2026-08-28T10:28:40+09:00`
 
 ## Durable checkpoint
 
-Mandatory preflight for this approval continuation was completed in the required order on `agent/resolver-foundation-convergence`:
+Mandatory preflight for this dispatch was completed in the required order on `agent/resolver-foundation-convergence`:
 
 1. `.chatgpt-rerun/README.md`
 2. `.chatgpt-rerun/control.json`
 3. `.chatgpt-rerun/STATE.md`
 4. `.chatgpt-rerun/PLAN.md`
 
-Run identity remained sequence `2`, task `common-play-foundation-convergence`. Control was `needs_user` solely because PR #141 required owner merge approval. `CANONICAL_ROOT.md` and `docs/rules/resolver-execution-checklist.md` were re-read before the merge operation. PLAN routing did not change and was not rewritten.
+Run identity remains sequence `2`, task `common-play-foundation-convergence`, with control authorization `continue`. `CANONICAL_ROOT.md` and the product plan `docs/rules/resolver-execution-checklist.md` were reconciled before product-plan changes. PLAN routing did not change and was not rewritten.
 
-## Owner approval semantics reconciled
+## Retained Gate E evidence
 
-The owner explicitly directed that **`Rerun 진행` is to be treated the same as merge approval**.
+Gate E remains `DONE` on PR #141 merge `00d3c9233bb678ec93bb828cb3941c3048c42054`. The validated runtime/test candidate remains `12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba` with the previously recorded focused, Contract, Rules Domain, UI, Phase 11, Phase 12, and Windows evidence. No Gate E product/runtime file was changed by M0, so that validation was not repeated.
 
-`.chatgpt-rerun/README.md` now records the bounded protocol rule:
+## Phase 2 M0 completed
 
-- when current STATE/control are waiting solely for explicit merge approval of a specifically named PR, owner command `Rerun 진행` is explicit approval for that PR;
-- normal preflight, live diff/CI/ancestry checks still apply;
-- this is not blanket approval for unrelated PRs, later gates, or a materially changed product diff.
+M0 — Freeze and inventory named execution — is now `DONE` in the canonical product checklist.
 
-Protocol commit: `14cacc6d25afeff843b52fe4e20b48b91f031c5f`.
+Inventory authority:
 
-## Gate E merge completed
+`docs/rules/legacy-execution-inventory.md`
 
-PR #141 — `rules: execute generic Common Play spatial fact answers` — is merged.
+The inventory records central compatibility/fallback engines, named gameplay families, mixed progression/resource/rest execution, content/presentation boundaries, generic engine boundaries, golden behavior tests, authority/lifetime dependencies, and likely Common Play convergence paths. Mixed modules remain symbol-level migration targets rather than whole-file deletion targets.
 
-Validated product/runtime/test candidate retained from the prior checkpoint:
+Freeze authority:
 
-`12950273ee00fb1d52e12ef8d191e4cbf1a5e5ba`
+- composition root: `src/app/offlineRuntimeAdapters.ts`;
+- classification ledger: `.agents/LEGACY_EXECUTION_BASELINE.json`;
+- checker: `scripts/check-legacy-execution-boundary.mjs`;
+- regression: `tests/ui/legacyExecutionBoundary.test.mjs`;
+- CI: `.github/workflows/legacy-execution-boundary.yml`.
 
-No validated product/runtime/test file was changed during approval reconciliation, so already-green Gate E evidence was not repeated.
+The guard now classifies every canonical offline production side-effect import. A new production import fails until explicitly classified; stale baseline entries fail; removed legacy debt must shrink from composition and baseline together; the ledger must not grow merely to admit new named-content execution. This is intentionally not a repository-wide content-ID ban.
 
-Existing exact-candidate evidence remains authoritative:
+Three composition imports remain explicitly classified `UNCLEAR`. `UNCLEAR` is an allowed M0 classification and is recorded as requiring symbol-level architecture review before those modules are edited; it is not treated as generic execution by default.
 
-- Gate E Spatial Fact `33124577135`, job `98699500259`: 15/15 PASS plus TypeScript typecheck;
-- Contract validation `33124577119`: SUCCESS;
-- Rules Domain `33124577116`, job `98699499753`: SUCCESS;
-- UI `33124577166`: SUCCESS;
-- Phase 11 Playable `33124577172`: offline/front-end gate SUCCESS;
-- Phase 12 Connected Session `33124577117`: connected-protocol/front-end gate SUCCESS;
-- Persistence `33124577216`: unrelated existing `501 !== 496` catalog-count baseline remains separately classified.
+### M0 commit/evidence chain
 
-The downstream Windows jobs that were still running at the previous checkpoint were read rather than rerun:
+- `0a62339046df291aececd460622cd3653db563fe` — initial legacy-execution freeze baseline;
+- `ae360de71450b44459d2ba22bb27a3b00da3626d` — boundary scanner;
+- `a8daea03f2e83fa0f85937bc4e1d85e7ca95e9be` — boundary regression;
+- `64db95d3020c9a1d4388e4328728431b64e54b36` — CI workflow;
+- `c74746aa6f434621d9bd156af4795eb0c2287265` — Bardic Inspiration debt correction after the first red boundary run;
+- `49137e3fd8726ffdd9701465463affc49f3dbb34` — initial detailed inventory;
+- `bddc048075a19cd1731df9b8873d2c09c0c875a5`, `8399feeb273f7a6e12e8beb978229cd32f9261ca`, `effcf6544f271078d1b7a953d999cac7228e1559` — full production-composition classification and regression hardening;
+- `9894e9feee046edb83ca22f01aca3ce74e88bf2a`, `2b5128a43048aaa4e290dd595e98a4148408e688`, `c2241520c622df6ad22b0588e901b51cd69099c0` — classification/inventory reconciliation for compatibility, progression, resource, and rest dispatch;
+- `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118` — canonical checklist transition to M0 `DONE` / M1 `ACTIVE`.
 
-- Phase 11 `windows-playable` job `98699870955`: SUCCESS;
-- Phase 12 `windows-connected-playable` job `98699751686`: SUCCESS.
+Exact closure evidence:
 
-### Approval reconciliation
-
-Before merge, the parent had advanced only through Rerun coordination/protocol commits while the child product diff remained the intended 13 Gate E files.
-
-- parent after protocol reconciliation: `14cacc6d25afeff843b52fe4e20b48b91f031c5f`;
-- child ancestry reconciliation commit: `3792168a83718efacb7f389a88683a6dac7f2e32`;
-- child coordination-state sync commit: `9d0a252a7e83f694cf45b7b6ffd7673febe98995`;
-- final compare before merge: `behind_by=0`, exactly 13 changed product/runtime/test/workflow/fixture files, no Rerun coordination files in the PR diff;
-- PR remained mergeable and was merged with expected head `9d0a252a7e83f694cf45b7b6ffd7673febe98995`.
-
-Canonical Gate E merge commit:
-
-`00d3c9233bb678ec93bb828cb3941c3048c42054`
+- Legacy Execution Boundary run `33132952951` on head `daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118`: `SUCCESS`;
+- the same-head Gate E workflow was automatic/unrelated and was not used as new M0 evidence.
 
 ## Product-plan transition
 
-`docs/rules/resolver-execution-checklist.md` was updated after the merge at commit:
+`docs/rules/resolver-execution-checklist.md` now records:
 
-`d3aa321dd20de0c6e785dc90cc1258bddea2efed`
-
-The canonical product-plan state is now:
-
-- Gate E: `DONE`;
-- Common Play Foundation: frozen through Gate E;
-- Phase 2 Legacy Convergence: active next queue, beginning with M0 inventory;
-- Gate F-M: dormant unless a concrete Phase-2 migration/V1 scenario satisfies the activation rule;
-- no route to `main` was introduced.
+- Common Play Foundation remains frozen through Gate E;
+- M0 inventory/freeze: `DONE`;
+- M1 generic migration harness: current active queue;
+- Gate F-M: dormant unless a concrete migration failure satisfies the activation rule;
+- no route to `main`.
 
 ## Next Exact Action
 
-On the next authorized dispatch:
+On the next continuation of this sequence:
 
 1. perform mandatory preflight in exact order: README -> control -> STATE -> PLAN;
-2. read `CANONICAL_ROOT.md` and the current section of `docs/rules/resolver-execution-checklist.md`;
-3. resume the checklist's active Phase 2 M0 inventory from current GitHub state;
-4. inventory and classify named execution paths without deleting or rewriting unrelated code prematurely;
-5. keep the no-new-named-adapter freeze in force;
-6. do not activate Gate F-M unless an actual bounded migration failure first proves Gates A-E cannot represent the mechanic safely;
+2. read `CANONICAL_ROOT.md` and the current next action in `docs/rules/resolver-execution-checklist.md`;
+3. do not reopen M0 or repeat Gate E validation while their affected files remain unchanged;
+4. begin M1 from the smallest action/resource/economy legacy path identified by the inventory, using its existing deterministic behavior test as the golden oracle;
+5. bound the first RuleModule/Common Play parity scenario before deleting any legacy code;
+6. keep Gate F-M dormant unless that real migration produces a deterministic generic capability failure;
 7. do not route product work to `main`.
-
-Do not repeat Gate E validation unless affected product/runtime/test files materially change.
