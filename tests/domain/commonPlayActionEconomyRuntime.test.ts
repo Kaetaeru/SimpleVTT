@@ -15,32 +15,17 @@ import { resolveFighterActionSurge } from "../../src/domain/fighterActionSurge";
 import type { RulesProfileLike } from "../../src/domain/profileEngine";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
-const RESTRICTED_EXTRA_ACTION_BUCKET = "test.extra-action.non-magic";
+const RESTRICTED_EXTRA_ACTION_BUCKET = "action.extra.non-magic";
 const PERSISTED_DEFINITION = JSON.parse(
   readFileSync(new URL("../fixtures/play-contract/action-resource-economy.json", import.meta.url), "utf8"),
 ) as CommonPlayActionEconomyDefinition;
+const PERSISTED_PROFILE = JSON.parse(
+  readFileSync(new URL("../../rules/profiles/dnd.srd-5.2.1.profile.json", import.meta.url), "utf8"),
+) as { economy?:RulesProfileLike["economy"] };
 
-type ActionEconomyProfile = RulesProfileLike & {
-  actionEconomy: {
-    buckets: Record<string, {
-      kind:"extra-action";
-      allowsMagicAction:boolean;
-      activeTurnOnly?:boolean;
-    }>;
-  };
-};
-
-const PROFILE:ActionEconomyProfile = {
+const PROFILE:RulesProfileLike = {
   ...TEST_PROFILE,
-  actionEconomy:{
-    buckets:{
-      [RESTRICTED_EXTRA_ACTION_BUCKET]:{
-        kind:"extra-action",
-        allowsMagicAction:false,
-        activeTurnOnly:true,
-      },
-    },
-  },
+  economy:PERSISTED_PROFILE.economy,
 };
 
 function genericDefinition(id=PERSISTED_DEFINITION.id,entryPointId=PERSISTED_DEFINITION.entryPoints[0].id):CommonPlayActionEconomyDefinition {
@@ -188,6 +173,15 @@ test("generic action economy composition matches the Action Surge golden state c
 test("profile policy rejects an active-turn-only extra action outside the actor's turn", () => {
   const state=genericState();
   state.clock.activeActorId="goblin";
+  const result=resolveGeneric(state);
+  assert.equal(result.status,"rejected");
+  assert.equal(result.state,state);
+  assert.match(result.status==="rejected"?result.error:"",/active turn|actor.*turn/i);
+});
+
+test("profile policy rejects an active-turn-only extra action after the actor's turn has ended", () => {
+  const state=genericState();
+  state.clock.phase="end";
   const result=resolveGeneric(state);
   assert.equal(result.status,"rejected");
   assert.equal(result.state,state);

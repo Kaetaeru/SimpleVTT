@@ -92,10 +92,10 @@ function compileEconomyModify(
 ):ResolutionOperation[] {
   const amount=literalInteger(operation.amount,`economy.modify ${index+1}`);
   if (amount<0) throw new Error(`economy.modify ${index+1} negative amounts are unsupported in this runtime slice`);
-  const bucket=profile.actionEconomy?.buckets[operation.bucket];
+  const bucket=profile.economy?.grantBuckets?.[operation.bucket];
   if (!bucket) throw new Error(`unregistered Common Play economy bucket: ${operation.bucket}`);
   if (bucket.kind!=="extra-action") throw new Error(`unsupported Common Play economy bucket kind: ${bucket.kind}`);
-  if (bucket.activeTurnOnly&&state.clock.activeActorId!==input.actorId) {
+  if (bucket.activeTurnOnly&&(state.clock.activeActorId!==input.actorId||state.clock.phase==="end")) {
     throw new Error(`economy bucket ${operation.bucket} requires the actor's active turn`);
   }
   return Array.from({length:amount},(_,grantIndex)=>({
