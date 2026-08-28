@@ -1,0 +1,75 @@
+{
+  "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+  "schemaVersion": "0.1-draft",
+  "moduleId": "external.wholeness-probe",
+  "moduleVersion": "1",
+  "rulesProfile": {
+    "id": "dnd.srd-5.2.1",
+    "version": "0.1-draft"
+  },
+  "defaultLocale": "ko",
+  "source": {
+    "document": "External Wholeness Probe",
+    "version": "1",
+    "license": "CC0",
+    "srdDerived": false
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "capabilities": [],
+  "content": [
+    {
+      "id": "feature.wholeness-probe",
+      "category": "feat",
+      "presentation": {
+        "defaultLocale": "ko",
+        "originalName": "Wholeness Probe",
+        "locales": {
+          "ko": {
+            "name": "회복 수련",
+            "description": "M1 generic migration harness fixture"
+          }
+        }
+      },
+      "mechanics": [
+        {
+          "id": "activate",
+          "kind": "common-play",
+          "config": {
+            "schemaVersion": "0.2-draft",
+            "id": "external.wholeness-probe.runtime",
+            "payments": [
+              {
+                "kind": "economy",
+                "bucket": "bonus-action",
+                "amount": { "value": 1 },
+                "consumeAt": "commit",
+                "refundOnCancel": true
+              },
+              {
+                "kind": "resource",
+                "resource": "resource.external.wholeness",
+                "amount": { "value": 1 },
+                "consumeAt": "commit",
+                "refundOnCancel": true
+              }
+            ],
+            "entryPoints": [
+              {
+                "id": "activate",
+                "invocation": "manual",
+                "operations": [
+                  {
+                    "kind": "healing.apply",
+                    "amount": "1d8+3",
+                    "target": "actor"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
