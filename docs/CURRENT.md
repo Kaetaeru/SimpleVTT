@@ -8,8 +8,8 @@ This is the human/agent entry point for **what is current now**. If an older pha
 
 - Product integration target: `work/v1-composite`
 - Active convergence parent: `agent/resolver-foundation-convergence`
-- Active implementation PR: #168 — `rules: dispatch installed Common Play through production authority`
-- Active child branch: `agent/m1-installed-common-play-production`
+- Active implementation PR: none at this checkpoint; PR #168 is merged
+- Next implementation boundary: built-in Fighter Action Surge generic Common Play parity
 - `main`: historical/landing reference, not the current V1 integration target
 
 At this checkpoint the convergence parent is ahead of `work/v1-composite`; that is intentional while the Resolver program is being integrated in bounded slices.
@@ -42,13 +42,14 @@ Already established and not to be repeated without new regression evidence:
 - Common Play foundation/kernel gates A-E
 - M0 legacy execution inventory/freeze
 - portable Resource/Economy RuleModule import, validation, persistence, rehydration, and runtime compilation
-- PR #159 integrated into the convergence parent; Resource/Economy is `PORTABLE`
+- PR #159 integrated into the convergence parent
+- PR #168 merged as `c372c09353de58dfcc12ad3adbe6fd118fe28106`, establishing Resource/Economy `PRODUCTION` for arbitrary installed data-only Common Play mechanics through the real production/session authority
 
 Current unfinished boundary:
 
-> `PORTABLE -> PRODUCTION` for installed Resource/Economy mechanics.
+> `PRODUCTION -> MIGRATED` for Resource/Economy by proving built-in Fighter Action Surge through the same generic path and then removing only its absorbed named execution seam.
 
-PR #168 is proving that an arbitrary installed Common Play mechanic can enter the real production/session action authority, use the existing generic Resolver, and commit through the existing authoritative transaction path. The named Fighter Action Surge path remains only as a parity oracle until generic end-to-end behavior and arbitrary-ID invariance are proven.
+The named Fighter Action Surge path remains only as a parity oracle until the generic path proves its two-resource spend, restricted extra Action semantics, authoritative commit/writeback, Undo, connected convergence, and ID/name-only rename invariance. Do not introduce a new Action Surge-specific dispatch key while doing this work.
 
 Do not reopen older Gate E/M0 work, revive stale named-content queues, or add a second evaluator/transport/store to solve this boundary.
 
