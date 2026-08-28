@@ -15,36 +15,18 @@ import { resolveFighterActionSurge } from "../../src/domain/fighterActionSurge";
 import type { RulesProfileLike } from "../../src/domain/profileEngine";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
-const RESTRICTED_EXTRA_ACTION_BUCKET = "test.extra-action.non-magic";
-const PERSISTED_DEFINITION = JSON.parse(
-  readFileSync(new URL("../fixtures/play-contract/action-resource-economy.json", import.meta.url), "utf8"),
-) as CommonPlayActionEconomyDefinition;
+const FIXTURE=JSON.parse(readFileSync(
+  new URL("../fixtures/play-contract/action-resource-economy.json",import.meta.url),
+  "utf8",
+)) as CommonPlayActionEconomyDefinition;
+const PROFILE=JSON.parse(readFileSync(
+  new URL("../../rules/profiles/dnd.srd-5.2.1.profile.json",import.meta.url),
+  "utf8",
+)) as RulesProfileLike;
+const RESTRICTED_EXTRA_ACTION_BUCKET="action.extra.non-magic";
 
-type ActionEconomyProfile = RulesProfileLike & {
-  actionEconomy: {
-    buckets: Record<string, {
-      kind:"extra-action";
-      allowsMagicAction:boolean;
-      activeTurnOnly?:boolean;
-    }>;
-  };
-};
-
-const PROFILE:ActionEconomyProfile = {
-  ...TEST_PROFILE,
-  actionEconomy:{
-    buckets:{
-      [RESTRICTED_EXTRA_ACTION_BUCKET]:{
-        kind:"extra-action",
-        allowsMagicAction:false,
-        activeTurnOnly:true,
-      },
-    },
-  },
-};
-
-function genericDefinition(id=PERSISTED_DEFINITION.id,entryPointId=PERSISTED_DEFINITION.entryPoints[0].id):CommonPlayActionEconomyDefinition {
-  const definition=structuredClone(PERSISTED_DEFINITION);
+function genericDefinition(id=FIXTURE.id,entryPointId=FIXTURE.entryPoints[0].id):CommonPlayActionEconomyDefinition {
+  const definition=structuredClone(FIXTURE);
   definition.id=id;
   definition.entryPoints[0].id=entryPointId;
   return definition;
@@ -71,11 +53,7 @@ function semantics(state:ReturnType<typeof runtimeState>) {
   };
 }
 
-function resolveGeneric(
-  state:ReturnType<typeof runtimeState>,
-  definition=genericDefinition(),
-  entryPointId=definition.entryPoints[0].id,
-) {
+function resolveGeneric(state:ReturnType<typeof runtimeState>,definition=genericDefinition(),entryPointId=definition.entryPoints[0].id) {
   return resolveCommonPlayActionEconomyEntryPoint(PROFILE,state,definition,{
     resolutionId:`resolution.${definition.id}`,
     actorId:"hero",
@@ -83,9 +61,12 @@ function resolveGeneric(
   });
 }
 
-test("persisted unknown external Common Play action economy content spends resources atomically and grants a profile-defined restricted action", () => {
-  const state=genericState();
-  const result=resolveGeneric(state);
+test("persisted unknown external Common Play action economy content pays resources atomically and grants a profile-defined restricted action", () => {
+  assert.deepEqual(FIXTURE.payments?.map((payment)=>({ kind:payment.kind, amount:payment.amount, consumeAt:payment.consumeAt })),[
+    { kind:"resource", amount:{ value:1 }, consumeAt:"commit" },
+    { kind:"resource", amount:{ value:1 }, consumeAt:"commit" },
+  ]);
+  const result=resolveGeneric(genericState());
   assert.equal(result.status,"committed");
   if (result.status!=="committed") return;
   assert.deepEqual(semantics(result.state),{
@@ -105,7 +86,7 @@ test("renaming only external definition and entry-point IDs preserves action eco
   assert.deepEqual(semantics(first.state),semantics(renamed.state));
 });
 
-test("a failed later resource change rolls back the earlier spend", () => {
+test("a failed later commit-time payment rolls back the earlier payment", () => {
   const state=genericState(1,0);
   const result=resolveGeneric(state);
   assert.equal(result.status,"rejected");
@@ -115,11 +96,7 @@ test("a failed later resource change rolls back the earlier spend", () => {
 
 test("an unregistered economy bucket fails explicitly", () => {
   const definition=genericDefinition();
-  definition.entryPoints[0].operations[2]={
-    kind:"economy.modify",
-    bucket:"external.unregistered-bucket",
-    amount:{ value:1 },
-  };
+  definition.entryPoints[0].operations[0]={ kind:"economy.modify", bucket:"external.unregistered-bucket", amount:{ value:1 } };
   const result=resolveGeneric(genericState(),definition);
   assert.equal(result.status,"rejected");
   assert.match(result.status==="rejected"?result.error:"",/economy bucket|unregistered|unsupported/i);
@@ -154,12 +131,10 @@ test("generic action economy composition matches the Action Surge golden state c
     { id:FIGHTER_ACTION_SURGE_RESOURCE_ID, label:"Primary", current:1, maximum:1 },
     { id:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, label:"Turn", current:1, maximum:1 },
   );
-  const definition=genericDefinition("external.rule.not-fighter","activate");
-  definition.entryPoints[0].operations=[
-    { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_RESOURCE_ID, amount:{ value:-1 } },
-    { kind:"resource.change", resource:FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, amount:{ value:-1 } },
-    { kind:"economy.modify", bucket:RESTRICTED_EXTRA_ACTION_BUCKET, amount:{ value:1 } },
-  ];
+  const definition=genericDefinition("external.rule.not-fighter");
+  if (!definition.payments||definition.payments.length!==2) throw new Error("fixture requires two resource payments");
+  definition.payments[0].resource=FIGHTER_ACTION_SURGE_RESOURCE_ID;
+  definition.payments[1].resource=FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID;
   const generic=resolveCommonPlayActionEconomyEntryPoint(PROFILE,genericStateForParity,definition,{
     resolutionId:"external.parity",
     actorId:"hero",
@@ -170,22 +145,14 @@ test("generic action economy composition matches the Action Surge golden state c
 
   const namedHero=named.state.combatants.hero;
   const genericHero=generic.state.combatants.hero;
-  assert.equal(
-    genericHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current,
-    namedHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current,
-  );
-  assert.equal(
-    genericHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current,
-    namedHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current,
-  );
+  assert.equal(genericHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current,namedHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_RESOURCE_ID)?.current);
+  assert.equal(genericHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current,namedHero.resources.find((entry)=>entry.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID)?.current);
   assert.equal(genericHero.economy.action,namedHero.economy.action);
-  assert.deepEqual(
-    (genericHero.economy.extraActions??[]).map((entry)=>entry.allowsMagicAction),
-    (namedHero.economy.extraActions??[]).map((entry)=>entry.allowsMagicAction),
-  );
+  assert.deepEqual((genericHero.economy.extraActions??[]).map((entry)=>entry.allowsMagicAction),(namedHero.economy.extraActions??[]).map((entry)=>entry.allowsMagicAction));
 });
 
-test("profile policy rejects an active-turn-only extra action outside the actor's turn", () => {
+test("persisted profile policy rejects an active-turn-only extra action outside the actor's turn", () => {
+  assert.equal(PROFILE.economy?.modifierBuckets?.[RESTRICTED_EXTRA_ACTION_BUCKET]?.activeTurnOnly,true);
   const state=genericState();
   state.clock.activeActorId="goblin";
   const result=resolveGeneric(state);
