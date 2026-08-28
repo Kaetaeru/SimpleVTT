@@ -1,0 +1,73 @@
+{
+  "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+  "schemaVersion": "0.1-draft",
+  "moduleId": "external.action-economy-probe",
+  "moduleVersion": "1",
+  "rulesProfile": {
+    "id": "dnd.srd-5.2.1",
+    "version": "0.1-draft"
+  },
+  "defaultLocale": "ko",
+  "source": {
+    "document": "External Action Economy Probe",
+    "version": "1",
+    "license": "CC0",
+    "srdDerived": false
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "capabilities": [],
+  "content": [
+    {
+      "id": "feat.external.quickstep",
+      "category": "feat",
+      "presentation": {
+        "defaultLocale": "ko",
+        "originalName": "Quickstep",
+        "locales": {
+          "ko": {
+            "name": "신속 행동",
+            "description": "외부 RuleModule의 제한된 추가 행동 테스트"
+          }
+        }
+      },
+      "mechanics": [
+        {
+          "id": "activate",
+          "kind": "common-play",
+          "config": {
+            "schemaVersion": "0.2-draft",
+            "id": "external.quickstep.runtime",
+            "payments": [
+              {
+                "kind": "resource",
+                "resource": "resource:fighter.action-surge",
+                "amount": { "value": 1 },
+                "consumeAt": "commit"
+              },
+              {
+                "kind": "resource",
+                "resource": "resource:fighter.action-surge.turn",
+                "amount": { "value": 1 },
+                "consumeAt": "commit"
+              }
+            ],
+            "entryPoints": [
+              {
+                "id": "activate",
+                "invocation": "manual",
+                "operations": [
+                  {
+                    "kind": "economy.modify",
+                    "bucket": "action.extra.non-magic",
+                    "amount": { "value": 1 }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
