@@ -5,6 +5,7 @@ import {
   type InstalledContentDocumentV1,
   type InstalledContentStore,
 } from "./installedContentContracts";
+import { parseInstalledContentMechanics } from "./installedCommonPlayMechanics";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 
@@ -37,6 +38,7 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   const categories=["class","subclass","species","background","feat","spell","item","condition","combatant","option"];
   if (!categories.includes(String(value.category))) throw new Error(`installed content category is invalid: ${String(value.category)}`);
   if (!Array.isArray(value.relationships) || !Array.isArray(value.capabilities)) throw new Error("installed content collections are invalid");
+  if(value.mechanics!==undefined) parseInstalledContentMechanics(value.mechanics,"installed content entry mechanics");
   if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);
 }
 
@@ -108,7 +110,7 @@ export interface InstalledContentHydration {
   changed:boolean;
 }
 
-export type InstalledContentInstallResult =
+export type InstalledContentInstallResult=
   | { status:"committed"; hydration:InstalledContentHydration }
   | { status:"conflict"; error:string; qualifiedId:string };
 
