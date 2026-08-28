@@ -72,7 +72,7 @@ Chrome Side Panel **Start/Stop controls the tab watcher only**. It is independen
 - `working` is not a valid control status.
 - If a waiting state becomes `continue` with the same sequence, that is a new work authorization and must resume from STATE.
 - A sequence change means the controller intentionally advanced dispatch state; reconcile task identity before acting.
-- When current `STATE.md` and `control.json` are waiting solely for explicit merge approval of a specifically named PR, an owner command of **`Rerun 진행`** is equivalent to explicit merge approval for that PR. It authorizes the normal mandatory preflight, live diff/CI/ancestry safety checks, and merge. It is not blanket approval for unrelated PRs, later gates, or materially changed product diffs.
+- When current `STATE.md` and `control.json` are waiting solely for explicit merge approval of a specifically named PR, an owner command of **`Rerun 진행`** or **`리런 진행`** is equivalent to explicit merge approval for that PR. It authorizes the normal mandatory preflight, live diff/CI/ancestry safety checks, and merge. It is not blanket approval for unrelated PRs, later gates, or materially changed product diffs.
 
 ## Current execution policy
 
