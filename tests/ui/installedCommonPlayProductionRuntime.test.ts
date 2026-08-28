@@ -29,12 +29,22 @@ interface D20Identity {
   displayName:string;
 }
 
+type HpIdentity=D20Identity;
+
 const D20_IDENTITY:D20Identity={
   moduleId:"homebrew.d20-production-probe",
   contentId:"option.external-d20-production-probe",
   mechanicId:"external.unknown.generic-d20-production-probe",
   entryPointId:"attempt",
   displayName:"External d20 Production Probe",
+};
+
+const HP_IDENTITY:HpIdentity={
+  moduleId:"homebrew.hp-production-probe",
+  contentId:"option.external-hp-production-probe",
+  mechanicId:"external.unknown.generic-hp-production-probe",
+  entryPointId:"harm",
+  displayName:"External HP Production Probe",
 };
 
 function packagePayload() {
@@ -99,6 +109,34 @@ function d20PackagePayload(identity=D20_IDENTITY) {
   });
 }
 
+function hpPackagePayload(identity=HP_IDENTITY) {
+  return JSON.stringify({
+    schemaVersion:"0.1-draft",
+    moduleId:identity.moduleId,
+    moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+    defaultLocale:"en",
+    source:{document:"External HP Production Probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{
+      id:identity.contentId,
+      category:"option",
+      presentation:{defaultLocale:"en",originalName:identity.displayName,locales:{en:{name:identity.displayName,description:"Portable generic HP production dispatch probe"}}},
+      mechanics:[{
+        kind:"common-play",
+        config:{
+          schemaVersion:"0.2-draft",
+          id:identity.mechanicId,
+          entryPoints:[
+            {id:identity.entryPointId,invocation:"manual",operations:[{kind:"damage.apply",amount:"1d6+2",damageType:"force",target:"target"}]},
+            {id:"mend",invocation:"manual",operations:[{kind:"healing.apply",amount:{value:5},target:"self"}]},
+          ],
+        },
+      }],
+    }],
+  });
+}
+
 async function installD20(adapter:MockAdapter,identity=D20_IDENTITY) {
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(d20PackagePayload(identity));
@@ -109,6 +147,25 @@ async function installD20(adapter:MockAdapter,identity=D20_IDENTITY) {
     mechanicId:identity.mechanicId,
     entryPointId:identity.entryPointId,
   });
+}
+
+async function installHp(adapter:MockAdapter,identity=HP_IDENTITY) {
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(hpPackagePayload(identity));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const catalogId=catalogQualifiedId(identity.contentId,identity.moduleId,"1");
+  return {
+    damage:installedCommonPlayActionId({catalogId,mechanicId:identity.mechanicId,entryPointId:identity.entryPointId}),
+    healing:installedCommonPlayActionId({catalogId,mechanicId:identity.mechanicId,entryPointId:"mend"}),
+  };
+}
+
+function injureActiveCharacter(adapter:MockAdapter,amount:number) {
+  const internal=adapter as unknown as {activeCharacter:{id:string;hp:number;maxHp:number};scene:{entities:Array<{id:string;hp:number}>}};
+  const hp=Math.max(0,internal.activeCharacter.maxHp-amount);
+  internal.activeCharacter.hp=hp;
+  internal.scene.entities.find((entity)=>entity.id===internal.activeCharacter.id)!.hp=hp;
 }
 
 test("installed portable Common Play executes through the production resolveAction authority path without Action Surge identities", async () => {
@@ -219,4 +276,115 @@ test("connected Common Play d20 preserves the Host-authoritative faces and outco
   assert.deepEqual(resolution?.authoritativeDice,[18]);
   assert.equal(resolution?.rollTotal,18);
   assert.equal(resolution?.finalOutcome,"success");
+});
+
+test("installed Common Play damage and healing use production authority, validate one runtime target, and Undo",async()=>{
+  const damageAdapter=new MockAdapter();
+  const damageActions=await installHp(damageAdapter);
+  await damageAdapter.startInitiative();
+  await damageAdapter.setCurrentActor("char.aelar");
+  const before=(await damageAdapter.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+
+  await damageAdapter.resolveAction(damageActions.damage,["combatant.missing"]);
+  assert.equal((await damageAdapter.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before,"missing runtime combatant must be rejected");
+
+  await damageAdapter.setQueuedD20(5);
+  await damageAdapter.resolveAction(damageActions.damage,["combatant.goblin-a"]);
+  let snapshot=await damageAdapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before-7);
+  assert.equal(snapshot.resolution?.rollKind,"damage");
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[5]);
+  assert.equal(snapshot.resolution?.rollTotal,7);
+  assert.equal(snapshot.resolution?.damageComponents[0]?.adjusted,7);
+  assert.ok(snapshot.resolution?.stateChanges.some((change)=>/HP/.test(change)));
+  await damageAdapter.undoLastResolution();
+  assert.equal((await damageAdapter.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before);
+
+  const healingAdapter=new MockAdapter();
+  const healingActions=await installHp(healingAdapter);
+  injureActiveCharacter(healingAdapter,10);
+  await healingAdapter.startInitiative();
+  await healingAdapter.setCurrentActor("char.aelar");
+  const healingBefore=(await healingAdapter.getSnapshot()).activeCharacter.hp;
+  await healingAdapter.resolveAction(healingActions.healing,["char.aelar"]);
+  snapshot=await healingAdapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.hp,healingBefore+5);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,healingBefore+5);
+  assert.equal(snapshot.resolution?.rollKind,"healing");
+  assert.equal(snapshot.resolution?.rollTotal,5);
+  await healingAdapter.undoLastResolution();
+  snapshot=await healingAdapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.hp,healingBefore);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,healingBefore);
+});
+
+test("installed Common Play HP is invariant under content, definition, action, and display rename",async()=>{
+  const execute=async(identity:HpIdentity)=>{
+    const adapter=new MockAdapter();
+    const actions=await installHp(adapter,identity);
+    await adapter.startInitiative();
+    await adapter.setCurrentActor("char.aelar");
+    await adapter.setQueuedD20(4);
+    await adapter.resolveAction(actions.damage,["combatant.goblin-a"]);
+    const resolution=(await adapter.getSnapshot()).resolution!;
+    return {actionId:actions.damage,mechanics:{
+      rollKind:resolution.rollKind,
+      authoritativeDice:resolution.authoritativeDice,
+      rollTotal:resolution.rollTotal,
+      damage:resolution.damageComponents.map((component)=>({type:component.type,raw:component.raw,adjusted:component.adjusted})),
+    }};
+  };
+  const original=await execute(HP_IDENTITY);
+  const renamed=await execute({
+    moduleId:"homebrew.renamed-hp-probe",
+    contentId:"option.previously-unseen.renamed-hp",
+    mechanicId:"external.previously-unseen.renamed-hp-definition",
+    entryPointId:"renamed-harm",
+    displayName:"Completely Renamed HP Action",
+  });
+  assert.notEqual(original.actionId,renamed.actionId);
+  assert.deepEqual(renamed.mechanics,original.mechanics);
+});
+
+test("connected Common Play HP converges Host-authoritative damage and healing on the Client",async()=>{
+  const sessionId="session.common-play-hp";
+  const host=new MockAdapter();
+  const hostActions=await installHp(host);
+  injureActiveCharacter(host,10);
+  await host.startInitiative();
+  await host.setCurrentActor("char.aelar");
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";
+  hostState.sessionId=sessionId;
+  hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const wires:string[]=[];
+  const originalSend=tauriSessionTransport.send;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try {
+    await host.setQueuedD20(4);
+    await host.resolveAction(hostActions.damage,["combatant.goblin-a"]);
+    await host.resolveAction(hostActions.healing,["char.aelar"]);
+  } finally {
+    tauriSessionTransport.send=originalSend;
+  }
+  const batches=wires.map((wire)=>JSON.parse(wire)).filter((wire)=>wire.type==="event-batch") as Array<{events:ConnectedSessionEvent[]}>;
+  assert.equal(batches.length,2,JSON.stringify(wires));
+  const resolutionKinds=batches.flatMap((batch)=>batch.events.flatMap((event)=>event.payload.kind==="resolution"?event.payload.resolutionEvents.map((resolutionEvent)=>resolutionEvent.kind):[]));
+  assert.deepEqual(resolutionKinds,["damage-roll","damage","healing"]);
+
+  const client=new MockAdapter();
+  await installHp(client);
+  injureActiveCharacter(client,10);
+  await client.startInitiative();
+  await client.setCurrentActor("char.aelar");
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";
+  clientState.sessionId=sessionId;
+  clientState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of batches) assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  const hostSnapshot=await host.getSnapshot();
+  const clientSnapshot=await client.getSnapshot();
+  assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,hostSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp);
+  assert.equal(clientSnapshot.activeCharacter.hp,hostSnapshot.activeCharacter.hp);
+  assert.equal(clientSnapshot.resolution?.actionId,hostActions.damage,"connected damage presentation remains Host-authored while both HP event batches converge");
 });
