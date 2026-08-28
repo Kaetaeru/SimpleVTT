@@ -18,6 +18,7 @@ import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult } from "../domain/d20";
 import type { DamageResolution, HealingResolution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
+import type { TargetingFactInput } from "../domain/targeting";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -129,6 +130,14 @@ function hpTargetId(target:string|undefined,actorId:string,selectedTargetId:stri
   return target==="target"?selectedTargetId:actorId;
 }
 
+function commonPlayTargetFact(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):TargetingFactInput {
+  return {
+    id:target.id,
+    kind:"creature",
+    relation:target.id===actor.id?"self":target.side===actor.side?"ally":"enemy",
+  };
+}
+
 function damageDiceFaces(
   internal:AdapterState,
   actionId:string,
@@ -202,18 +211,24 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   const actor=internal.activeCharacter;
   let state=internal.sessionMode==="initiative" ? snapshotAdapterTurnRuntimeState(this,internal.scene) : undefined;
   if (state) state=seedReferencedResources(this,internal,state,action.definition);
-  if (!state||state.clock.activeActorId!==actor.id||targetIds.length!==1) return internal.getSnapshot();
+  if (!state||state.clock.activeActorId!==actor.id) return internal.getSnapshot();
 
   const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const entryPoint=action.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
+  const hasTargeting=entryPoint.targeting!==undefined;
+  if(!hasTargeting&&targetIds.length!==1) return internal.getSnapshot();
   const selectedTargetId=targetIds[0];
-  const selectedTarget=internal.scene.entities.find((candidate)=>candidate.id===selectedTargetId);
   const actorEntity=internal.scene.entities.find((candidate)=>candidate.id===actor.id);
+  if(!actorEntity||!state.combatants[actor.id]) return internal.getSnapshot();
+  const selectedTargets=targetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
+  if(selectedTargets.some((target,index)=>!target||!state.combatants[targetIds[index]])) return internal.getSnapshot();
+  const selectedTarget=selectedTargets[0];
   const projectedAction=internal.scene.actionsByActor[actor.id]?.find((candidate)=>candidate.id===actionId);
   const needsSelectedTarget=entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
-  if(!selectedTarget||!actorEntity||!state.combatants[selectedTargetId]) return internal.getSnapshot();
-  if(needsSelectedTarget) {
-    if(projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return internal.getSnapshot();
+  if(hasTargeting) {
+    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return internal.getSnapshot();
+  } else if(needsSelectedTarget) {
+    if(!selectedTarget||projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return internal.getSnapshot();
   } else if(selectedTargetId!==actor.id) return internal.getSnapshot();
 
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
@@ -222,20 +237,20 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
     actorId:actor.id,
     entryPointId:action.entryPointId,
     targetId:selectedTargetId,
-    creatureKinds:{
-      [actor.id]:actorEntity.kind==="character"?"character":"monster",
-      [selectedTargetId]:selectedTarget.kind==="character"?"character":"monster",
-    },
+    targetingTargets:hasTargeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target!)):undefined,
+    creatureKinds:Object.fromEntries([
+      [actor.id,actorEntity.kind==="character"?"character":"monster"],
+      ...selectedTargets.map((target)=>[target!.id,target!.kind==="character"?"character":"monster"] as const),
+    ]),
     damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
     ...(entryPoint.test?{d20:{
       faces:d20Faces!,
       targetId:selectedTargetId,
     }}:{}),
   });
-  const roll=committed.status==="committed"
-    ? committed.results[`${resolutionId}:test`] as D20TestResult|undefined
-    : undefined;
-  const hp=committed.status==="committed"?hpPresentation(entryPoint,committed,resolutionId):undefined;
+  if(committed.status==="rejected") return internal.getSnapshot();
+  const roll=committed.results[`${resolutionId}:test`] as D20TestResult|undefined;
+  const hp=hpPresentation(entryPoint,committed,resolutionId);
   const affectedTargetIds=[...new Set(entryPoint.operations
     .filter((operation)=>operation.kind==="damage.apply"||operation.kind==="healing.apply")
     .map((operation)=>hpTargetId(operation.target,actor.id,selectedTargetId)))];
@@ -250,7 +265,7 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
     targetIds:presentationTargetIds,
     targetNames:presentationTargets.map((target)=>target.name),
     compact:hp?.outcome??(roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:"Common Play 규칙 적용"),
-    detail:[`${action.definition.id} · ${action.entryPointId}`,...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.status==="committed"?committed.events.filter((event)=>event.kind==="damage"||event.kind==="healing").map((event)=>event.summary):[]],
+    detail:[`${action.definition.id} · ${action.entryPointId}`,...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.events.filter((event)=>event.kind==="damage"||event.kind==="healing").map((event)=>event.summary)],
     provenance:[`${action.source} · ${action.contentId}`],
     calculatedOutcome:outcome,
     finalOutcome:outcome,

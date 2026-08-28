@@ -219,7 +219,7 @@ Initial families:
 - [x] resource / action economy — `MIGRATED`; PR #171 absorbed the built-in Action Surge named production seam after generic-path parity. `ACCEPTED` is not claimed by this migration alone;
 - [x] tests / rolls / outcomes — `PRODUCTION`; generic authored actor d20 tests cross validation, normalization, installed persistence/rehydration, existing Resolver lowering, production authority, connected presentation, and ID/name rename invariance. Named post-roll features remain legacy, so `MIGRATED`/`ACCEPTED` are not claimed;
 - [x] damage / healing / HP — `PRODUCTION`; authored literal/dice damage and literal healing cross validation, installed persistence/rehydration, existing Resolver lowering, single pre-resolved runtime target authority, HP writeback/Undo, connected convergence, and rename invariance. Deliberate HP/targeting boundaries remain below;
-- [ ] targeting / selectors / allocation;
+- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports the bounded `from:targets`, exact `min/max:1/1` selection-validator subset through validation, persistence/rehydration, existing Resolver targeting, production authority, Undo, connected convergence, and rename invariance. Rich selectors and allocation remain unsupported;
 - [ ] interactions / reactions / interceptors;
 - [ ] persistent effects / triggers / frequency;
 - [ ] spatial facts / zones / movement;
@@ -398,6 +398,35 @@ Deliberate boundary:
 - temporary HP, compound damage, authored defenses/resistance/immunity/vulnerability, concentration checks, critical authoring, property-backed amounts, healing dice, multi-target/every-target, selectors/allocation, and spell execution remain later slices;
 - Monk Wholeness of Body, Cleric damage/healing, Paladin healing/allocation, Rage riders, spell damage/healing, and other named HP seams remain unchanged;
 - therefore this family is `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
+
+---
+
+## P6 — Targeting / Selectors / Allocation production bridge — PRODUCTION
+
+The first bounded slice treats canonical `entryPoint.targeting` as a validator for one caller-selected target. It lowers directly to the existing generic Resolver `targeting` operation and never discovers targets.
+
+Evidence:
+
+- [x] only `{ from:"targets", min:1, max:1 }` is accepted; other sources, predicates, ordering, areas, and other counts fail explicitly;
+- [x] normalized targeting survives package preview/activation, installed persistence/rehydration, and required-session peer transfer;
+- [x] Common Play lowers targeting before payments and downstream operations to the existing `kind:"targeting"` / `resolveTargeting()` path;
+- [x] the neutral bounded rule uses `directTarget:false`, so it requires no fabricated distance, visibility, or cover facts;
+- [x] production facts contain only typed scene-derived creature identity and self/ally/enemy relation; selected creatures must exist in authoritative runtime combatants;
+- [x] zero, multiple, nonexistent, and temporarily unavailable targets reject without downstream HP mutation or partial events;
+- [x] actor/self and one other runtime combatant execute through authoritative commit, HP projection, and Undo;
+- [x] Host validates and emits targeting plus downstream events; Client converges without selector reevaluation;
+- [x] module/content/definition/entry-point/action/display renames preserve semantics;
+- [x] Resource/Economy, Action Surge, d20, and HP coverage remain in the focused regression harness;
+- [x] no selector evaluator, targeting engine, allocation engine, geometry engine, store, transport, fallback, or ID/name algorithm branch exists.
+
+Deliberate boundary:
+
+- selector predicates, filters, ordering, areas, automatic discovery/suggestion, multi-target, point/object targets, and target-selection UI remain unsupported;
+- allocation, pool/projectile distribution, and Gate G activation remain untouched;
+- harmful targeting intent and Sanctuary-like restrictions are not inferred from downstream damage;
+- range, sight, cover, distance, LOS, and other spatial authoring/facts remain later provider-backed slices;
+- named target-dependent feature/spell adapters remain unchanged;
+- therefore this family is `PRODUCTION` only for the bounded single pre-resolved target subset, not `MIGRATED` or `ACCEPTED`.
 
 ---
 
