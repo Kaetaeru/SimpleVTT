@@ -150,6 +150,23 @@ test("portable Common Play resource targets are rejected before unsupported mech
   assert.equal((await store.readGenerations()).length,0);
 });
 
+test("installed Common Play rejects non-manual entry points before persistence", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic() as unknown as {
+    config:{entryPoints:Array<{invocation:string}>};
+  };
+  mechanic.config.entryPoints[0].invocation="triggered";
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /manual/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
 test("unsupported generic-catalog member data blocks package import instead of silently dropping mechanics", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
