@@ -94,11 +94,15 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     supportedKeys(operation,RESOURCE_CHANGE_KEYS,label);
     const amount=literalExpression(operation.amount,`${label}.amount`);
     if(amount.value===0) throw new DomainEvaluationError("resource.change amount must be non-zero");
+    const target=operation.target===undefined?undefined:nonEmptyString(operation.target,`${label}.target`);
+    if(target!==undefined&&target!=="actor"&&target!=="self") {
+      throw new DomainEvaluationError(`${label}.target must be actor or self for portable Common Play resource.change`);
+    }
     return {
       kind:"resource.change",
       resource:nonEmptyString(operation.resource,`${label}.resource`),
       amount,
-      ...(operation.target===undefined?{}:{target:nonEmptyString(operation.target,`${label}.target`)}),
+      ...(target===undefined?{}:{target}),
     };
   }
   if(operation.kind==="economy.modify") {
