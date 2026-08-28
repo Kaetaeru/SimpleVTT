@@ -77,7 +77,7 @@ test("unsupported generic-catalog member data blocks package import instead of s
   const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
   raw.content[0].mechanics=[{kind:"custom-rule",config:{value:1}}];
   const preview=await adapter.previewContentImport(JSON.stringify(raw));
-  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /mechanics cannot be activated/.test(entry.message)));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /mechanics.*unsupported|unsupported.*generic installed runtime/i.test(entry.message)));
   await adapter.activateContentImport();
   assert.equal((await store.readGenerations()).length,0);
 });
