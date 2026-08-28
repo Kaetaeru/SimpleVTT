@@ -7,7 +7,7 @@
 - Product integration target: `work/v1-composite`
 - Control path: `.chatgpt-rerun/control.json`
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `3`
+- sequence: `4`
 - task_id: `common-play-foundation-convergence`
 
 ## Architecture charter
