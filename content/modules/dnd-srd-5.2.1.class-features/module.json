@@ -39,6 +39,7 @@
       },
       "mechanics": [
         {
+          "id": "action.fighter.action-surge",
           "kind": "common-play",
           "config": {
             "schemaVersion": "0.2-draft",
