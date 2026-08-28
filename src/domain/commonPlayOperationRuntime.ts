@@ -15,6 +15,15 @@ export interface CommonPlayTargetingSelector {
   max:1;
 }
 
+export interface CommonPlayConsentInteraction {
+  id:string;
+  kind:"consent";
+  responder:"actor";
+  mode:"blocking";
+  input:{type:"boolean"};
+  revalidate:"always";
+}
+
 export interface CommonPlayDamageDiceFormula {
   count:number;
   sides:number;
@@ -47,12 +56,22 @@ type CommonPlayHealingApply={
   target?:CommonPlayHpTarget;
 };
 
-type CommonPlayPayment={
+type CommonPlayResourcePayment={
   kind:"resource";
   resource:string;
   amount:CommonPlayExpression;
   consumeAt:"commit";
 };
+
+type CommonPlayReactionPayment={
+  kind:"economy";
+  bucket:"reaction";
+  amount:LiteralNumberExpression;
+  consumeAt:"commit";
+  refundOnCancel:true;
+};
+
+type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayReactionPayment;
 
 export type CommonPlayOperation=
   |CommonPlayResourceChange
@@ -74,6 +93,7 @@ export interface CommonPlayOperationDefinition {
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
+    interaction?:CommonPlayConsentInteraction;
     targeting?:CommonPlayTargetingSelector;
     test?:CommonPlayD20TestDefinition;
     operations:CommonPlayOperation[];
@@ -94,12 +114,19 @@ export interface CommonPlayOperationExecutionInput {
   targetingTargets?:TargetingFactInput[];
   creatureKinds?:Record<string,"character"|"monster">;
   damageDiceFaces?:Record<number,number[]>;
+  interactionResponse?:{
+    interactionId:string;
+    accepted:true;
+  };
 }
 
 type Obj=Record<string,unknown>;
 const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
-const PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
-const ENTRY_POINT_KEYS=new Set(["id","invocation","targeting","test","operations"]);
+const RESOURCE_PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
+const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel"]);
+const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","test","operations"]);
+const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate"]);
+const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","min","max"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
@@ -168,13 +195,44 @@ function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingS
 
 function parsePayment(value:unknown,label:string):CommonPlayPayment {
   const payment=object(value,label);
-  supportedKeys(payment,PAYMENT_KEYS,label);
-  if(payment.kind!=="resource") throw new DomainEvaluationError(`unsupported Common Play payment kind: ${String(payment.kind)}`);
-  if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`unsupported Common Play resource payment consumeAt: ${String(payment.consumeAt??"<missing>")}`);
-  const resource=nonEmptyString(payment.resource,`${label}.resource`);
-  const amount=literalExpression(payment.amount,`${label}.amount`);
-  if(amount.value<=0) throw new DomainEvaluationError("Common Play resource payment amount must be a positive integer");
-  return {kind:"resource",resource,amount,consumeAt:"commit"};
+  if(payment.kind==="resource") {
+    supportedKeys(payment,RESOURCE_PAYMENT_KEYS,label);
+    if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`unsupported Common Play resource payment consumeAt: ${String(payment.consumeAt??"<missing>")}`);
+    const resource=nonEmptyString(payment.resource,`${label}.resource`);
+    const amount=literalExpression(payment.amount,`${label}.amount`);
+    if(amount.value<=0) throw new DomainEvaluationError("Common Play resource payment amount must be a positive integer");
+    return {kind:"resource",resource,amount,consumeAt:"commit"};
+  }
+  if(payment.kind==="economy") {
+    supportedKeys(payment,ECONOMY_PAYMENT_KEYS,label);
+    if(payment.bucket!=="reaction") throw new DomainEvaluationError(`${label}.bucket must be reaction for portable Common Play consent`);
+    const amount=literalExpression(payment.amount,`${label}.amount`);
+    if(amount.value!==1) throw new DomainEvaluationError(`${label}.amount must be exactly 1 for portable Common Play Reaction payment`);
+    if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play Reaction payment`);
+    if(payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true for portable Common Play Reaction payment`);
+    return {kind:"economy",bucket:"reaction",amount,consumeAt:"commit",refundOnCancel:true};
+  }
+  throw new DomainEvaluationError(`unsupported Common Play payment kind: ${String(payment.kind)}`);
+}
+
+function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentInteraction {
+  const interaction=object(value,label);
+  supportedKeys(interaction,INTERACTION_KEYS,label);
+  if(interaction.kind!=="consent") throw new DomainEvaluationError(`${label}.kind must be consent for portable Common Play interaction`);
+  if(interaction.responder!=="actor") throw new DomainEvaluationError(`${label}.responder must be actor for portable Common Play interaction`);
+  if(interaction.mode!=="blocking") throw new DomainEvaluationError(`${label}.mode must be blocking for portable Common Play interaction`);
+  const input=object(interaction.input,`${label}.input`);
+  supportedKeys(input,INTERACTION_INPUT_KEYS,`${label}.input`);
+  if(input.type!=="boolean") throw new DomainEvaluationError(`${label}.input.type must be boolean for portable Common Play interaction`);
+  if(interaction.revalidate!=="always") throw new DomainEvaluationError(`${label}.revalidate must be always for portable Common Play interaction`);
+  return {
+    id:nonEmptyString(interaction.id,`${label}.id`),
+    kind:"consent",
+    responder:"actor",
+    mode:"blocking",
+    input:{type:"boolean"},
+    revalidate:"always",
+  };
 }
 
 function parseOperation(value:unknown,label:string):CommonPlayOperation {
@@ -270,11 +328,20 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     return {
       id:nonEmptyString(entry.id,`${label}.entryPoints[${index}].id`),
       invocation,
+      ...(entry.interaction===undefined?{}:{interaction:parseConsentInteraction(entry.interaction,`${label}.entryPoints[${index}].interaction`)}),
       ...(entry.targeting===undefined?{}:{targeting:parseTargetingSelector(entry.targeting,`${label}.entryPoints[${index}].targeting`)}),
       ...(entry.test===undefined?{}:{test:parseD20Test(entry.test,`${label}.entryPoints[${index}].test`)}),
       operations:entry.operations.map((operation,operationIndex)=>parseOperation(operation,`${label}.entryPoints[${index}].operations[${operationIndex}]`)),
     };
   });
+  const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy").length??0;
+  const interactionCount=entryPoints.filter((entry)=>entry.interaction).length;
+  if(interactionCount>0&&reactionPaymentCount!==1) {
+    throw new DomainEvaluationError(`${label} portable consent interaction requires exactly one Reaction economy payment`);
+  }
+  if(reactionPaymentCount>0&&interactionCount!==entryPoints.length) {
+    throw new DomainEvaluationError(`${label} Reaction economy payment requires every entry point to use the bounded consent interaction`);
+  }
   return {schemaVersion:"0.2-draft",id,...(payments?{payments}:{}),entryPoints};
 }
 
@@ -300,16 +367,21 @@ function compilePayments(
   definition:CommonPlayOperationDefinition,
   input:CommonPlayOperationExecutionInput,
 ):ResolutionOperation[] {
-  return (definition.payments??[]).map((payment,index)=>{
-    const amount=literalInteger(payment.amount,"resource payment amount");
-    return {
+  return (definition.payments??[])
+    .map((payment,index)=>({payment,index}))
+    .sort((left,right)=>Number(right.payment.kind==="economy")-Number(left.payment.kind==="economy"))
+    .map(({payment,index})=>payment.kind==="economy"?{
+      id:`${input.resolutionId}:payment:${index}`,
+      kind:"use-economy" as const,
+      actorId:input.actorId,
+      slot:"reaction" as const,
+    }:{
       id:`${input.resolutionId}:payment:${index}`,
       kind:"spend-resource" as const,
       actorId:input.actorId,
       resourceId:payment.resource,
-      amount,
-    };
-  });
+      amount:literalInteger(payment.amount,"resource payment amount"),
+    });
 }
 
 function hpOperationTarget(target:CommonPlayHpTarget|undefined,input:CommonPlayOperationExecutionInput) {
@@ -327,6 +399,11 @@ export function compileCommonPlayEntryPointOperations(
   const supported=parseManualCommonPlayOperationDefinition(definition);
   const entryPoint=supported.entryPoints.find((entry)=>entry.id===input.entryPointId);
   if(!entryPoint) throw new DomainEvaluationError(`Common Play entry point not found: ${input.entryPointId}`);
+  if(entryPoint.interaction) {
+    if(!input.interactionResponse) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires accepted interaction authorization`);
+    if(input.interactionResponse.interactionId!==entryPoint.interaction.id) throw new DomainEvaluationError("Common Play interaction authorization identity mismatch");
+    if(input.interactionResponse.accepted!==true) throw new DomainEvaluationError("Common Play interaction authorization must be accepted");
+  }
 
   const operations:ResolutionOperation[]=[];
   if(entryPoint.targeting) {

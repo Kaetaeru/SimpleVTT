@@ -1,0 +1,53 @@
+name: M1 Common Play Interaction
+
+on:
+  pull_request:
+    paths:
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/domain/reaction.ts"
+      - "src/domain/reactionWindow.ts"
+      - "src/domain/resolutionTypes.ts"
+      - "src/domain/resolutionActionOps.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/contracts.ts"
+      - "tests/fixtures/play-contract/generic-interaction-action.json"
+      - "tests/domain/commonPlayInteractionProductionRuntime.test.ts"
+      - "tests/domain/commonPlayReactionRuntime.test.ts"
+      - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
+      - "tests/domain/commonPlayD20Runtime.test.ts"
+      - "tests/domain/commonPlayHpRuntime.test.ts"
+      - "tests/domain/commonPlayTargetingRuntime.test.ts"
+      - "tests/ui/ruleModulePackageImport.test.ts"
+      - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
+      - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
+      - ".github/workflows/m1-common-play-interaction.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  interaction-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify bounded interaction bridge and established Common Play regressions
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayInteractionProductionRuntime.test.ts
+          tests/domain/commonPlayReactionRuntime.test.ts
+          tests/domain/commonPlayResourceEconomyRuntime.test.ts
+          tests/domain/commonPlayD20Runtime.test.ts
+          tests/domain/commonPlayHpRuntime.test.ts
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit
