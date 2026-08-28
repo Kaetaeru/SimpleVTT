@@ -8,8 +8,15 @@ on:
       - "rules/profiles/dnd.srd-5.2.1.profile.json"
       - "src/domain/profileEngine.ts"
       - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/app/fighterActionSurgeRuntimeAdapter.ts"
+      - "src/app/installedCommonPlayActionReference.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/installedContentRuntimeAdapter.ts"
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "src/app/runtimeResolutionCommit.ts"
       - "tests/fixtures/play-contract/resource-economy-action.json"
       - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
+      - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
       - ".github/workflows/m1-common-play-resource-economy.yml"
 
 permissions:
@@ -28,6 +35,6 @@ jobs:
       - name: Generate content catalogs
         run: npm run generate:content
       - name: Verify M1 resource/economy migration harness
-        run: npx tsx --test tests/domain/commonPlayResourceEconomyRuntime.test.ts
+        run: npx tsx --test tests/domain/commonPlayResourceEconomyRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
       - name: Typecheck application
         run: npx tsc --noEmit

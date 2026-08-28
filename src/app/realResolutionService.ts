@@ -1,3 +1,4 @@
+import dndSrdRulesProfile from "../../rules/profiles/dnd.srd-5.2.1.profile.json";
 import type { ActionVm, ResolutionView } from "./contracts";
 import { resolveD20Test, type ModifierContribution } from "../domain/d20";
 import { resolveOpenD20Roll } from "../domain/openD20";
@@ -8,6 +9,7 @@ export const SIMPLEVTT_APP_RULES_PROFILE:RulesProfileLike = {
   profileId:"dnd.srd-5.2.1",
   properties:{},
   d20Test:{ advantageDisadvantage:{ sameSideStacks:false, opposingCancel:true } },
+  economy:dndSrdRulesProfile.economy as RulesProfileLike["economy"],
 };
 
 export interface OpenAbilityCheckResolutionRequest {

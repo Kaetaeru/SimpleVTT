@@ -1,12 +1,9 @@
 import "./progressionContracts";
-import type { ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
+import type { AppSnapshot, CharacterSheet, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { applyResolutionEvents } from "./realEventApplyService";
-import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
-import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
-import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import {
   FIGHTER_ACTION_SURGE_RESOURCE_ID,
   FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID,
@@ -21,10 +18,6 @@ interface AdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
   activeCharacter:CharacterSheet;
-  resolution:ResolutionView|null;
-  activity:ActivityEntry[];
-  lastResolutionId:string|null;
-  lastBefore:unknown;
   syncChar():void;
   getSnapshot():Promise<AppSnapshot>;
 }
@@ -90,32 +83,19 @@ MockAdapter.prototype.resolveAction=async function resolveFighterActionSurgeFrom
     expectedRevision:state.revision,
     fighterLevel:level,
   });
-  if (committed.status==="rejected") return internal.getSnapshot();
-
-  const projected=applyResolutionEvents(internal.scene,committed.events,actor.resources);
-  if (projected.status==="rejected") return internal.getSnapshot();
-  const writeBack=await persistCharacterResolutionEvents(this,committed.events,"forward");
-  if (writeBack.status==="rejected") return internal.getSnapshot();
-  if (!commitAdapterTurnRuntimeState(this,internal.scene,state.revision,committed.state)) {
-    if (writeBack.changed) await persistCharacterResolutionEvents(this,committed.events,"inverse");
-    return internal.getSnapshot();
-  }
-
-  internal.scene=projected.scene;
-  internal.activeCharacter.resources=projected.resources;
-  const resolution:ResolutionView={
-    id:resolutionId,actorId:actor.id,targetIds:[actor.id],actionId:ACTION_ID,actionName:"액션 서지",
-    rollKind:"effect",stage:"complete",authoritativeDice:[],saveResults:[],damageComponents:[],
-    compact:"비마법 행동 1회 추가",detail:["이번 턴에 사용할 추가 행동을 얻었습니다."],
-    provenance:["SRD 5.2.1 · Fighter Action Surge"],calculatedOutcome:"추가 행동 획득",finalOutcome:"추가 행동 획득",
-    stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
-  };
-  internal.resolution=resolution;
-  internal.activity.unshift(projectResolutionEventsToActivity({resolution,events:committed.events,actorName:actor.name,targetNames:[actor.name]}));
-  internal.lastResolutionId=resolutionId;
-  internal.lastBefore=null;
-  recordRuntimeResolutionEvents(this,resolutionId,committed.events);
+  const snapshot=await commitProductionRuntimeResolution(this,state,committed,{
+    resolutionId,
+    actorId:actor.id,
+    targetIds:[actor.id],
+    targetNames:[actor.name],
+    actionId:ACTION_ID,
+    actionName:"액션 서지",
+    compact:"비마법 행동 1회 추가",
+    detail:["이번 턴에 사용할 추가 행동을 얻었습니다."],
+    provenance:["SRD 5.2.1 · Fighter Action Surge"],
+    calculatedOutcome:"추가 행동 획득",
+    finalOutcome:"추가 행동 획득",
+  });
   syncResourcesFromRuntime(this,internal);
-  internal.syncChar();
-  return internal.getSnapshot();
+  return snapshot;
 };
