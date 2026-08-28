@@ -1,3 +1,4 @@
+import { parseCommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import {
   INSTALLED_CONTENT_SCHEMA_ID,
   INSTALLED_CONTENT_SCHEMA_VERSION,
@@ -28,6 +29,17 @@ function isObject(value:unknown):value is Record<string,unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function assertPortableMechanics(value:unknown) {
+  if(value===undefined) return;
+  if(!Array.isArray(value)) throw new Error("installed content portableMechanics must be an array");
+  for(const [index,item] of value.entries()) {
+    if(!isObject(item)) throw new Error(`installed content portableMechanics[${index}] must be an object`);
+    if(typeof item.id!=="string"||!item.id.trim()) throw new Error(`installed content portableMechanics[${index}].id is invalid`);
+    if(item.kind!=="common-play") throw new Error(`installed content portableMechanics[${index}].kind is unsupported`);
+    parseCommonPlayOperationDefinition(item.definition);
+  }
+}
+
 function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   if (!isObject(value)) throw new Error("installed content entry must be an object");
   for (const field of ["contentId","nameKo","nameEn","sourceId","source","version","description"] as const) {
@@ -37,6 +49,7 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   const categories=["class","subclass","species","background","feat","spell","item","condition","combatant","option"];
   if (!categories.includes(String(value.category))) throw new Error(`installed content category is invalid: ${String(value.category)}`);
   if (!Array.isArray(value.relationships) || !Array.isArray(value.capabilities)) throw new Error("installed content collections are invalid");
+  assertPortableMechanics(value.portableMechanics);
   if(value.campaignProvider!==undefined) parseInstalledCampaignProviderProfile(value.campaignProvider);
 }
 
