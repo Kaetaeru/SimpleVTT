@@ -128,7 +128,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     return definition.payments.map((payment,index)=>parsePayment(payment,`${label}.payments[${index}]`));
   })();
   if(!Array.isArray(definition.entryPoints)||!definition.entryPoints.length) throw new DomainEvaluationError(`${label}.entryPoints must be a non-empty array`);
-  const entryPoints=definition.entryPoints.map((value,index)=>{
+  const entryPoints:CommonPlayOperationDefinition["entryPoints"]=definition.entryPoints.map((value,index)=>{
     const entry=object(value,`${label}.entryPoints[${index}]`);
     supportedKeys(entry,ENTRY_POINT_KEYS,`${label}.entryPoints[${index}]`);
     const invocation=entry.invocation;
