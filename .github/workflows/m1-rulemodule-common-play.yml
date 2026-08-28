@@ -1,0 +1,40 @@
+name: M1 RuleModule Common Play Bridge
+
+on:
+  pull_request:
+    paths:
+      - "src/app/ruleModulePackageImport.ts"
+      - "src/app/installedContentContracts.ts"
+      - "src/app/installedContentRuntimeAdapter.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "tests/ui/ruleModuleCommonPlayMechanicsImport.test.ts"
+      - "tests/ui/ruleModuleCommonPlayRuntime.test.ts"
+      - ".github/workflows/m1-rulemodule-common-play.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  rulemodule-common-play:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify RuleModule Common Play import and persistence
+        run: npx tsx --test tests/ui/ruleModuleCommonPlayMechanicsImport.test.ts
+      - name: Verify RuleModule Common Play production dispatch when present
+        shell: bash
+        run: |
+          if [ -f tests/ui/ruleModuleCommonPlayRuntime.test.ts ]; then
+            npx tsx --test tests/ui/ruleModuleCommonPlayRuntime.test.ts
+          fi
+      - name: Typecheck application
+        run: npx tsc --noEmit
