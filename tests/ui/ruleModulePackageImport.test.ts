@@ -3,7 +3,7 @@ import test from "node:test";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
-import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { getInstalledContentPersistenceStateForTests, setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 
 function packagePayload(overrides:Record<string,unknown>={}) {
   return JSON.stringify({
@@ -28,6 +28,25 @@ function packagePayload(overrides:Record<string,unknown>={}) {
     ],
     ...overrides,
   });
+}
+
+function portableCommonPlayMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.rule.quickstep",
+      payments:[
+        {kind:"resource",resource:"external.resource.primary",amount:{value:1},consumeAt:"commit"},
+        {kind:"resource",resource:"external.resource.turn",amount:{value:1},consumeAt:"commit"},
+      ],
+      entryPoints:[{
+        id:"activate",
+        invocation:"manual",
+        operations:[{kind:"economy.modify",bucket:"action.extra.non-magic",amount:{value:1}}],
+      }],
+    },
+  };
 }
 
 test("multi-entry RuleModule preview writes nothing and activation commits one generation", async () => {
@@ -70,6 +89,28 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.equal((await store.readGenerations()).length,0);
 });
 
+test("supported normalized Common Play mechanics survive package install and rehydrate without executing importer code", async () => {
+  const store=new MemoryInstalledContentStore();
+  const writer=new MockAdapter();
+  setInstalledContentStoreForTests(writer,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic();
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await writer.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await writer.activateContentImport();
+
+  const installed=getInstalledContentPersistenceStateForTests(writer)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(installed?.mechanics,[mechanic]);
+
+  const reader=new MockAdapter();
+  setInstalledContentStoreForTests(reader,store);
+  await reader.getSnapshot();
+  const restored=getInstalledContentPersistenceStateForTests(reader)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(restored?.mechanics,[mechanic]);
+});
+
 test("unsupported generic-catalog member data blocks package import instead of silently dropping mechanics", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();
@@ -77,7 +118,7 @@ test("unsupported generic-catalog member data blocks package import instead of s
   const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
   raw.content[0].mechanics=[{kind:"custom-rule",config:{value:1}}];
   const preview=await adapter.previewContentImport(JSON.stringify(raw));
-  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /mechanics cannot be activated/.test(entry.message)));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /(mechanics cannot be activated|unsupported mechanic)/.test(entry.message)));
   await adapter.activateContentImport();
   assert.equal((await store.readGenerations()).length,0);
 });
