@@ -94,7 +94,7 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.equal((await store.readGenerations()).length,0);
 });
 
-test("registered Common Play mechanics persist and survive installed-content session sync", async () => {
+test("registered Common Play mechanics persist, rehydrate, and survive installed-content session sync", async () => {
   const hostStore=new MemoryInstalledContentStore();
   const host=new MockAdapter();
   setInstalledContentStoreForTests(host,hostStore);
@@ -109,7 +109,13 @@ test("registered Common Play mechanics persist and survive installed-content ses
   const installed=getInstalledContentPersistenceStateForTests(host)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
   assert.deepEqual(installed?.mechanics,[mechanic]);
 
-  const sessionEntries=await requiredSessionInstalledContent(host,[]);
+  const rehydratedHost=new MockAdapter();
+  setInstalledContentStoreForTests(rehydratedHost,hostStore);
+  await rehydratedHost.getSnapshot();
+  const rehydrated=getInstalledContentPersistenceStateForTests(rehydratedHost)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(rehydrated?.mechanics,[mechanic]);
+
+  const sessionEntries=await requiredSessionInstalledContent(rehydratedHost,[]);
   const sessionEntry=sessionEntries.find((entry)=>entry.contentId==="option.atomic-parent");
   assert.deepEqual(sessionEntry?.mechanics,[mechanic]);
 
