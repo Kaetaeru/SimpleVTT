@@ -6,6 +6,7 @@ import type {
   InstalledModuleManifestV1,
   InstalledModuleRefV1,
 } from "./installedContentContracts";
+import { parseInstalledPortableMechanics } from "./portableCommonPlayMechanics";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -84,6 +85,7 @@ export function installedEntryFromPreview(entry:CatalogEntry):InstalledCatalogEn
     description:entry.description,
     relationships:entry.relationships,
     capabilities:entry.capabilities,
+    ...(entry.mechanics?{mechanics:entry.mechanics}:{}),
     ...(entry.campaignProvider?{campaignProvider:entry.campaignProvider}:{}),
   });
 }
@@ -97,6 +99,8 @@ export function installedEntryFromPayload(entry:CatalogEntry,payload:string):Ins
   installed.semanticRelationships=semanticRelationships(raw.relationships);
   installed.extensionPoints=extensionPoints(raw.extensionPoints);
   installed.module=moduleManifest(raw.module);
+  const mechanics=parseInstalledPortableMechanics(raw.mechanics,"mechanics");
+  if(mechanics.length) installed.mechanics=mechanics;
   return installed;
 }
 
@@ -114,6 +118,7 @@ export function resolvedCatalogEntryFromInstalled(entry:InstalledCatalogEntryV1)
     description:entry.description,
     relationships:cp(entry.relationships),
     capabilities:cp(entry.capabilities),
+    ...(entry.mechanics?{mechanics:cp(entry.mechanics)}:{}),
     ...(entry.campaignProvider?{campaignProvider:cp(entry.campaignProvider)}:{}),
   };
 }
