@@ -172,6 +172,7 @@ export class InstalledContentRepository {
 
     const incoming=new Map<string,InstalledCatalogEntryV1>();
     for (const entry of entries) {
+      assertEntry(entry);
       const qualifiedId=catalogQualifiedId(entry.contentId,entry.sourceId,entry.version);
       if (incoming.has(qualifiedId)) {
         return {status:"conflict",qualifiedId,error:`Installed content package contains duplicate qualified identity: ${qualifiedId}`};
