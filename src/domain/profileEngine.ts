@@ -14,7 +14,7 @@ export type ExpressionNode =
   | { ref: string }
   | { op: ArithmeticOperator; args: ExpressionNode[] };
 
-export interface ActionEconomyBucketDefinition {
+export interface EconomyModifierBucketDefinition {
   kind:"extra-action";
   allowsMagicAction:boolean;
   activeTurnOnly?:boolean;
@@ -24,8 +24,8 @@ export interface RulesProfileLike {
   profileId: string;
   roundingPolicy?: { id: string; default?: "floor"|"ceil"|"round" };
   properties: Record<string, { storage?: string; formula?: ExpressionNode }>;
-  actionEconomy?: {
-    buckets:Record<string,ActionEconomyBucketDefinition>;
+  economy?: {
+    modifierBuckets?:Record<string,EconomyModifierBucketDefinition>;
   };
   d20Test?: {
     advantageDisadvantage?: {
