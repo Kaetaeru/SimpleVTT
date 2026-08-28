@@ -3,18 +3,28 @@ name: Legacy Execution Boundary
 on:
   push:
     branches:
-      - agent/resolver-foundation-convergence
+      - "agent/**"
       - work/v1-composite
+    paths:
+      - "src/app/**"
+      - "scripts/check-legacy-execution-boundary.mjs"
+      - "tests/ui/legacyExecutionBoundary.test.mjs"
+      - ".agents/LEGACY_EXECUTION_BASELINE.json"
+      - ".github/workflows/legacy-execution-boundary.yml"
   pull_request:
-    branches:
-      - work/v1-composite
+    paths:
+      - "src/app/**"
+      - "scripts/check-legacy-execution-boundary.mjs"
+      - "tests/ui/legacyExecutionBoundary.test.mjs"
+      - ".agents/LEGACY_EXECUTION_BASELINE.json"
+      - ".github/workflows/legacy-execution-boundary.yml"
 
 jobs:
   boundary:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check grandfathered named execution boundary
+      - name: Check inventoried runtime adapter boundary
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Run boundary regression tests
         run: node --test tests/ui/legacyExecutionBoundary.test.mjs
