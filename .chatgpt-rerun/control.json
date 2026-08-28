@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 2,
   "status": "continue",
-  "reason": "Phase 2 M0 legacy-execution inventory/freeze is DONE and reconciled with zero remaining UNCLEAR canonical offline composition entries. The canonical inventory is docs/rules/legacy-execution-inventory.md; the full offline production composition is guarded by .agents/LEGACY_EXECUTION_BASELINE.json and Legacy Execution Boundary CI. Checklist head daf53c1adbeec43979ea1da6a9e1b0fb1c9f4118 passed boundary run 33132952951. Resume from STATE.md and the checklist at M1 generic migration harness using the smallest action/resource/economy legacy path and its existing golden behavior test. Do not reopen M0, repeat unchanged Gate E validation, activate Gate F-M without a concrete migration failure, or route to main.",
+  "reason": "Phase 2 M0 remains DONE and its no-new-named-adapter freeze has been strengthened after reconciliation found a transitive-adapter bypass. Exact guard candidate 0f22b912397f88d5fbbdc0043c62a0c68c615931 passed Legacy Execution Boundary run 33133249139 / job 98727324296, including the boundary checker and regression tests. The baseline now explicitly classifies transitive bardicInspirationRuntimeAdapter debt, the checker guards class/subclass-named RuntimeAdapter files outside the top-level composition, and unresolved UNCLEAR classifications fail. Resume from STATE.md and the checklist at M1 generic migration harness using the smallest action/resource/economy LEGACY_EXECUTION path and its existing golden behavior test. Do not reopen M0, repeat unchanged Gate E validation, activate Gate F-M without a concrete migration failure, or route to main.",
   "task_id": "common-play-foundation-convergence",
-  "updated_at": "2026-08-28T10:30:03+09:00"
+  "updated_at": "2026-08-28T10:36:00+09:00"
 }
