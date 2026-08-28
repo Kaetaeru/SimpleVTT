@@ -15,7 +15,7 @@
 
 ## Durable checkpoint
 
-Resource/Economy remains `MIGRATED` on the convergence parent. Tests/Rolls/Outcomes and Damage/Healing/HP are now `PRODUCTION` after their bounded generic Common Play production bridges. Do not promote any family beyond its recorded maturity without explicit remaining evidence, and do not repeat already-valid validation without an affected-surface reason.
+Resource/Economy remains `MIGRATED` on the convergence parent. Tests/Rolls/Outcomes, Damage/Healing/HP, and the bounded single-target Targeting/Selectors/Allocation slice are `PRODUCTION` after their generic Common Play production bridges. Do not promote any family beyond its recorded maturity without explicit remaining evidence, and do not repeat already-valid validation without an affected-surface reason.
 
 PR #171, `rules: migrate built-in Action Surge to generic Common Play`, was merged into `agent/resolver-foundation-convergence` as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f` from validated exact head `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`.
 
@@ -77,17 +77,44 @@ Reusable PR #173 evidence:
 - no new Resolver, evaluator, state store, transport, fallback, selector, or content-ID/name algorithm branch was introduced;
 - temporary HP, compound damage, defenses, concentration, critical authoring, healing dice, multi-target/selectors/allocation, spell execution, and named HP seams remain deliberately outside this slice, so Damage/Healing/HP is `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
+PR #174, `rules: add bounded Common Play targeting production bridge`, was merged into `agent/resolver-foundation-convergence` as `4624a63dd8ea4a81f0716187e5ceb57a9a469497` from validated exact head `27ae09ebdc53431e57264934f58a59c70e4b023b`.
+
+Reusable PR #174 evidence:
+
+- focused Common Play production harness — `39/39` SUCCESS on the candidate;
+- targeting/atomicity/persistence/connected regression harness — `37/37` SUCCESS on the candidate;
+- contract validation — SUCCESS;
+- TypeScript check — SUCCESS;
+- `npm run build` — SUCCESS;
+- exact-head workflow count — `10/10` SUCCESS;
+- Phase 11 Playable `33206073692` — `SUCCESS`;
+- Persistence `33206073674` — `SUCCESS`;
+- UI `33206073675` — `SUCCESS`;
+- Rules Domain `33206073640` — `SUCCESS`;
+- Contract validation `33206073765` — `SUCCESS`;
+- M1 Common Play HP `33206073641` — `SUCCESS`;
+- M1 Common Play Targeting `33206073764` — `SUCCESS`;
+- M1 Common Play Resource Economy `33206073736` — `SUCCESS`;
+- M1 Common Play d20 `33206073630` — `SUCCESS`;
+- Phase 12 Connected Session `33206073888` — `SUCCESS`;
+- only canonical `{ from:"targets", min:1, max:1 }` targeting is production-supported; it validates one already-selected authoritative combatant and lowers before downstream mutation to the existing generic Resolver `targeting` / `resolveTargeting()` path;
+- zero, multiple, nonexistent, and temporarily unavailable targets reject atomically without downstream HP mutation or partial authoritative events;
+- no fabricated distance, sight, or cover facts are supplied; the bounded neutral rule uses `directTarget:false`;
+- actor/self and one other runtime combatant, persistence/rehydration, authoritative commit/Undo, Host/Client convergence, and ID/name rename invariance are covered;
+- no selector evaluator, targeting engine, allocation engine, geometry engine, store, transport, fallback, or ID/name algorithm branch was introduced;
+- richer selectors, automatic discovery, multi-target, allocation/Gate G, harmful targeting semantics, spatial/range/sight/cover facts, and named target-dependent seams remain deliberately outside this slice, so Targeting/Selectors/Allocation is bounded `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
+
 The rejected `agent/m1-action-surge-generic-parity` experiment remains rejected as an integration candidate and must not be revived merely because later bounded migrations are complete.
 
 Repository routing remains unchanged: Rerun state/control belongs on `agent/resolver-foundation-convergence`, product integration target remains `work/v1-composite`, and product work must not be routed to `main`.
 
 ## Waiting condition
 
-None. PR #173 is merged and there is no current external blocker. Control remains `continue` so the canonical product plan may advance by mechanism family.
+None. PR #174 is merged and there is no current external blocker. Control remains `continue` so the canonical product plan may advance by mechanism family.
 
 ## Next Exact Action
 
-1. Perform mandatory preflight and read the current canonical product-plan maturity board plus `docs/rules/legacy-execution-inventory.md`; reuse Gate A-E, M0, PR #159, PR #168, PR #171, PR #172, and PR #173 evidence unless new affected-surface evidence invalidates it.
+1. Perform mandatory preflight and read the current canonical product-plan maturity board plus `docs/rules/legacy-execution-inventory.md`; reuse Gate A-E, M0, PR #159, PR #168, PR #171, PR #172, PR #173, and PR #174 evidence unless new affected-surface evidence invalidates it.
 2. Select the next smallest coherent Phase 2 mechanism-family slice from the product plan and current legacy debt. Do not select work by class/spell/feat name order.
 3. Inspect only the source, behavior oracles, authority/lifetime boundaries, and existing generic primitives needed for that slice. Attempt existing Common Play composition before proposing a new primitive or activating Gates F-M.
 4. Freeze a bounded behavior/acceptance contract before repository-dependent implementation. Use Codex for implementation once the contract is sufficiently fixed; return to architecture review if named-content branching, a speculative primitive, ambiguous authority/lifetime, or a conflicting contract appears necessary.
