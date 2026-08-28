@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+import { decodeInstalledContent, InstalledContentRepository } from "../../src/app/installedContentPersistence";
 import {
   getInstalledContentPersistenceStateForTests,
   installSessionInstalledContent,
@@ -126,6 +127,32 @@ test("registered Common Play mechanics persist, rehydrate, and survive installed
   await installSessionInstalledContent(peer,sessionEntries);
   const peerInstalled=getInstalledContentPersistenceStateForTests(peer)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
   assert.deepEqual(peerInstalled?.mechanics,[mechanic]);
+});
+
+test("rehydration rejects persisted non-manual Common Play mechanics", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  raw.content[0].mechanics=[portableCommonPlayMechanic()];
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+
+  const generation=(await store.readGenerations())[0];
+  if (!generation?.payload) throw new Error("expected persisted installed-content generation");
+  const persisted=JSON.parse(generation.payload) as {
+    entries:Array<{mechanics?:Array<{config:{entryPoints:Array<{invocation:string}>}}>}>
+  };
+  const mechanic=persisted.entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0];
+  assert.ok(mechanic);
+  mechanic.config.entryPoints[0].invocation="triggered";
+  const corruptedPayload=JSON.stringify(persisted);
+
+  assert.throws(()=>decodeInstalledContent(corruptedPayload),/manual/);
+  const corruptedStore=new MemoryInstalledContentStore([{generation:generation.generation,payload:corruptedPayload}]);
+  const repository=new InstalledContentRepository(corruptedStore);
+  await assert.rejects(repository.hydrate(),/no valid committed installed-content generation remains/);
 });
 
 test("portable Common Play resource targets are rejected before unsupported mechanics can be persisted", async () => {
