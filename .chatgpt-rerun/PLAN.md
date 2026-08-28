@@ -10,8 +10,12 @@
 - sequence: `2`
 - task_id: `common-play-foundation-convergence`
 
+## Architecture charter
+
+`docs/rules/common-play-resolver-architecture-charter.md`
+
 ## Product-plan document
 
-`docs/rules/resolver-execution-checklist.md`
+`docs/rules/resolver-execution-checklist-v2.md`
 
-Do not duplicate the checklist, scope, acceptance criteria, gate order, migration order, or next product action in this file.
+Do not duplicate the architecture intent, checklist, scope, acceptance criteria, gate order, migration order, or next product action in this file.
