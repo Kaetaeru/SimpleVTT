@@ -19,7 +19,7 @@
         },
         {
           "kind": "economy.modify",
-          "bucket": "test.extra-action.non-magic",
+          "bucket": "external.extra-action.restricted",
           "amount": { "value": 1 }
         }
       ]
