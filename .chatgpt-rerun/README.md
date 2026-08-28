@@ -28,8 +28,11 @@ Every Rerun dispatch must read these files in exactly this order before doing pr
 After the mandatory Rerun read order:
 
 1. read `CANONICAL_ROOT.md` for repository/integration routing;
-2. read the product-plan document referenced by `.chatgpt-rerun/PLAN.md`;
-3. read only the contracts, implementation, tests, issues, and PRs needed by that plan's current action.
+2. read `docs/rules/common-play-resolver-architecture-charter.md` for the non-negotiable owner intent and anti-drift architecture boundary;
+3. read the product-plan document referenced by `.chatgpt-rerun/PLAN.md`;
+4. read only the contracts, implementation, tests, issues, and PRs needed by that plan's current action.
+
+The architecture charter is normative for intent. A future agent must not silently replace its philosophy during routine execution. If current repository evidence proves a material contradiction, surface that contradiction and repair the canonical plan deliberately rather than inventing a new architecture implicitly.
 
 A later explicit owner priority change overrides older handoff or release pointers. Do not resume a stale named-feature queue merely because an older STATE, handoff, issue, or PR still describes it.
 
@@ -39,6 +42,7 @@ Rerun does not own a second copy of the product plan.
 
 - `.chatgpt-rerun/PLAN.md` is only a pointer to the canonical planning document for this run.
 - The referenced product-plan document owns scope, gate order, migration order, Definition of Done, and current next action.
+- `docs/rules/common-play-resolver-architecture-charter.md` owns the durable architectural intent that the product plan must preserve.
 - `.chatgpt-rerun/STATE.md` owns resumable execution state and observed evidence only.
 - `.chatgpt-rerun/control.json` owns dispatch authorization/status only.
 - Product behavior/architecture contracts remain under `docs/rules/` and `docs/design/`.
@@ -75,7 +79,7 @@ Chrome Side Panel **Start/Stop controls the tab watcher only**. It is independen
 The current explicit owner priority is the product plan referenced by `.chatgpt-rerun/PLAN.md`.
 
 - Select work only from that document's current next action.
-- Do not copy its checklist, feature details, acceptance criteria, or gate list into Rerun files.
+- Do not copy its checklist, feature details, acceptance criteria, gate list, or architecture philosophy into Rerun files.
 - Do not revive an older named-content implementation PR merely because it is green if the current architecture plan supersedes that implementation direction.
 - Use ChatGPT for architecture/mechanism decisions and bounded acceptance criteria; use Codex for repository-dependent implementation after the contract is sufficiently fixed.
 - If implementation discovers a need for a new primitive, undefined authority/lifetime, named-content branching, conflicting contracts, or materially different product choices, return to design review instead of inventing architecture inside the implementation task.
