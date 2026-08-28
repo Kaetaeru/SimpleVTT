@@ -3,7 +3,7 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `3`
 - task_id: `common-play-foundation-convergence`
-- dispatch status to publish: `continue`
+- dispatch status to publish: `needs_user`
 - repository: `Kaetaeru/SimpleVTT`
 - Rerun working branch/ref: `agent/resolver-foundation-convergence`
 - product integration target: `work/v1-composite`
@@ -15,33 +15,49 @@
 
 ## Durable checkpoint
 
-The Resolver convergence run is re-dispatched at sequence 3. PR #159 remains integrated and Resource/Economy remains `PORTABLE`; Gate A-E and M0 evidence remain valid and must not be repeated without affected-surface evidence.
+Sequence 3 preflight and the unfinished PR #168 verification boundary are complete. PR #159 remains integrated and Resource/Economy remains `PORTABLE` on the convergence parent until the current PRODUCTION candidate is explicitly approved and merged. Gate A-E, M0, PR #159, and their still-valid validation evidence were not repeated.
 
-Repository cleanup PR #169 remains integrated into `agent/resolver-foundation-convergence`. The Rerun control/state/plan owner branch remains `agent/resolver-foundation-convergence`; product integration remains `work/v1-composite`; product work must not be routed to `main`.
+Repository routing is unchanged:
 
-## PR #168 — current product candidate
+- Rerun control/state/plan owner branch: `agent/resolver-foundation-convergence`;
+- product integration target: `work/v1-composite`;
+- product work and Rerun control must not be routed to `main`.
 
+## PR #168 — verified PRODUCTION integration candidate
+
+- PR: `#168` — `rules: dispatch installed Common Play through production authority`;
 - child branch: `agent/m1-installed-common-play-production`;
-- exact observed child head: `da4ffecd2de1b7f95d324e7170312cdd8d512797`;
-- observed parent head before this dispatch write: `c0bfdc2954a166430695166cedbdb065c4deae22`;
-- PR is open, mergeable, and not draft;
-- current bridge routes arbitrary installed data-only Common Play mechanics through existing production authority and centralized `SIMPLEVTT_APP_RULES_PROFILE`;
-- exact-head workflow evidence observed at dispatch:
-  - Contract validation: SUCCESS;
-  - M1 Common Play Resource Economy: SUCCESS;
-  - Rules Domain: SUCCESS;
-  - UI: SUCCESS;
-  - Phase 11 Playable: IN PROGRESS;
-  - Phase 12 Connected Session: IN PROGRESS.
+- exact verified child head: `da4ffecd2de1b7f95d324e7170312cdd8d512797`;
+- PR remains open, mergeable, and non-draft;
+- convergence parent observed immediately before the sequence-3 status checkpoint: `a94f024708ae9a7f8071cf7837244ca16c1282cd`;
+- parent-only changes since the PR's recorded base are Rerun coordination state; no new product failure was observed.
 
-This dispatch does not authorize deleting the named Fighter Action Surge seam until generic end-to-end parity, arbitrary-ID invariance, Undo, and connected convergence satisfy the canonical checklist. It also does not constitute explicit merge approval for PR #168.
+Exact-head workflow evidence on `da4ffecd...` is fully complete and SUCCESS:
+
+- Contract validation: SUCCESS;
+- M1 Common Play Resource Economy: SUCCESS;
+- Rules Domain: SUCCESS;
+- UI: SUCCESS;
+- Phase 11 Playable: SUCCESS;
+- Phase 12 Connected Session: SUCCESS.
+
+Focused code/test review confirms the PR routes arbitrary installed data-only Common Play mechanics through the existing production authority, centralized `SIMPLEVTT_APP_RULES_PROFILE`, generic Resolver, and shared authoritative commit path. The resulting transaction performs Character resource writeback plus turn/session/history projection and supports Undo. The focused production regression uses arbitrary external package/content/mechanic/entry-point identities and consumes the unrelated Fighter `Second Wind` resource before granting the profile-owned `action.extra.non-magic` bucket, so production dispatch is not selected by Action Surge identity/name.
+
+This evidence is sufficient to treat PR #168 as the Resource/Economy `PRODUCTION` integration candidate. It is deliberately insufficient for `MIGRATED`: built-in Fighter Action Surge has not yet been proven end-to-end through the same generic installed-content path with full parity. The named Fighter Action Surge production adapter therefore remains the behavior oracle and must not be removed in this PR.
+
+No additional code change or CI rerun is justified before integration approval. The canonical product-plan maturity must not be advanced from `PORTABLE` to integrated `PRODUCTION` until PR #168 is actually merged into the convergence parent.
+
+## Waiting condition
+
+The run is waiting solely for explicit owner merge approval of PR #168 at exact head `da4ffecd2de1b7f95d324e7170312cdd8d512797`.
+
+Per `.chatgpt-rerun/README.md`, while STATE and control remain in this sole merge-approval waiting state, an owner command of `Rerun 진행` or `리런 진행` is explicit approval for PR #168 only. It is not approval for a later PR, for removing the named Action Surge oracle, or for unrelated integration work.
 
 ## Next Exact Action
 
-1. Perform the mandatory Rerun preflight and re-fetch `agent/resolver-foundation-convergence` plus PR #168 before any product write.
-2. Reuse still-valid exact-head evidence; do not repeat Gate A-E, M0, PR #159, or unrelated historical validation.
-3. If PR #168 head changed from `da4ffecd...`, inspect only the newer delta plus affected production-bridge surfaces.
-4. Check completion of Phase 11 Playable and Phase 12 Connected Session on the exact current PR head.
-5. Complete the canonical checklist's Resource/Economy PRODUCTION/parity decision: arbitrary installed content must execute through the generic Resolver and authoritative transaction, with behavior invariant under content/definition identity rename.
-6. Keep named Fighter Action Surge as the behavior oracle until its generic-path parity is proven; only then proceed toward MIGRATED.
-7. Do not route product work or Rerun control to `main`; integrate toward `work/v1-composite` only through an explicit integration action.
+1. On explicit approval, perform the mandatory Rerun preflight and re-fetch the convergence parent plus PR #168.
+2. Confirm the PR head is still `da4ffecd...`, remains mergeable/non-draft, and the exact-head successful validation evidence is still applicable; inspect only concrete new delta if any.
+3. Merge PR #168 into `agent/resolver-foundation-convergence` without deleting the named Fighter Action Surge oracle.
+4. Update the canonical product-plan/evidence to record Resource/Economy `PRODUCTION` only after the merge is observed on the convergence parent.
+5. Checkpoint STATE and publish control last for the next canonical boundary: built-in Action Surge generic-path parity toward `MIGRATED`.
+6. Do not route product work to `main`; eventual product integration remains `work/v1-composite` through an explicit integration action.
