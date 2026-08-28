@@ -185,12 +185,9 @@ export function compileCommonPlayEntryPointOperations(
   definition:CommonPlayOperationDefinition,
   input:CommonPlayOperationExecutionInput,
 ):PendingResolution {
-  const supported=parseCommonPlayOperationDefinition(definition);
+  const supported=parseManualCommonPlayOperationDefinition(definition);
   const entryPoint=supported.entryPoints.find((entry)=>entry.id===input.entryPointId);
   if(!entryPoint) throw new DomainEvaluationError(`Common Play entry point not found: ${input.entryPointId}`);
-  if(entryPoint.invocation!=="manual") {
-    throw new DomainEvaluationError(`Common Play operation runtime supports manual entry points only: ${entryPoint.invocation}`);
-  }
 
   const operations:ResolutionOperation[]=[...compilePayments(supported,input)];
   for(const [index,operation] of entryPoint.operations.entries()) {
