@@ -317,12 +317,14 @@ M0 freeze authority:
 - regression: `tests/ui/legacyExecutionBoundary.test.mjs`;
 - CI: `.github/workflows/legacy-execution-boundary.yml`.
 
-Completion evidence on classified composition candidate `c2241520c622df6ad22b0588e901b51cd69099c0`:
+Completion evidence on final classified composition candidate `e9e4ff4160eba5c5cc5fafbb2bcf761afb9c37d0`:
 
-- every current canonical offline composition import is classified as `CONTENT/PRESENTATION`, `LEGACY_EXECUTION`, `GENERIC_ENGINE`, or explicit `UNCLEAR` pending symbol-level architecture review;
+- every current canonical offline composition import is classified as `CONTENT/PRESENTATION`, `LEGACY_EXECUTION`, or `GENERIC_ENGINE`; no canonical offline composition entry remains `UNCLEAR`;
+- symbol-level review classified `characterCreationV10Adapter` and `progressionPhase08WeaponMasteryAdapter` as `LEGACY_EXECUTION`, and `characterCreationWeaponAttackAdapter` as `GENERIC_ENGINE`;
+- the inventory also records hidden/transitive named execution discovered outside the narrow composition ledger, including Fighter Indomitable injection in `phase09RealAtomicSavingThrowAdapter`, class/resource session reconstruction, and the Rage attack rider;
 - central legacy compatibility paths, named gameplay families, mixed progression/resource/rest dispatch, current golden tests, authority/lifetime dependencies, and likely convergence compositions are recorded in the inventory;
-- Legacy Execution Boundary run `33132812400`: SUCCESS on the exact candidate SHA;
-- Gate E validation was not repeated for M0; its unrelated automatic workflow remained green on the same documentation/classification head.
+- Legacy Execution Boundary run `33133005566`: SUCCESS on exact classification head `e9e4ff4160eba5c5cc5fafbb2bcf761afb9c37d0`;
+- Gate E validation was not manually repeated for M0; unrelated automatic Gate E workflow execution remained green.
 
 ## M1 — Establish the generic migration harness
 
