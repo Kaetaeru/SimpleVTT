@@ -55,7 +55,7 @@
     { "module": "./productionWeaponRuntimeFactAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./productionDiceRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./standardActionReactionAdapter", "classification": "GENERIC_ENGINE" },
-    { "module": "./fighterActionSurgeRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
+    { "module": "./installedCommonPlayRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./barbarianRageRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./barbarianBerserkerIntimidatingPresenceRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./druidWildShapeRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
