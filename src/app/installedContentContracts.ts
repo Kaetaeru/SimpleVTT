@@ -1,3 +1,4 @@
+import type { CommonPlayOperationDefinition } from "../domain/commonPlayOperationRuntime";
 import type { CatalogEntry } from "./contracts";
 
 export const INSTALLED_CONTENT_SCHEMA_ID = "simplevtt.installed-content" as const;
@@ -73,6 +74,8 @@ export interface InstalledCatalogEntryV1 {
   semanticRelationships?:InstalledContentRelationshipV1[];
   extensionPoints?:InstalledModuleExtensionPointV1[];
   module?:InstalledModuleManifestV1;
+  /** Validated, data-only Common Play definitions preserved from portable RuleModule mechanics. */
+  commonPlay?:CommonPlayOperationDefinition[];
   /** Data-only optional Campaign capability profile. Never executable code. */
   campaignProvider?:InstalledCampaignProviderProfileV1;
 }

@@ -57,7 +57,8 @@
         "requiresCapabilities": {"type":"array","items":{"type":"string","minLength":1},"uniqueItems":true},
         "semanticRelationships": {"type":"array","items":{"$ref":"#/$defs/semanticRelationship"}},
         "extensionPoints": {"type":"array","items":{"$ref":"#/$defs/extensionPoint"}},
-        "module": {"$ref":"#/$defs/moduleManifest"}
+        "module": {"$ref":"#/$defs/moduleManifest"},
+        "commonPlay": {"type":"array","items":{"$ref":"https://simplevtt.local/schemas/common-play-contract.schema.json"}}
       }
     }
   }

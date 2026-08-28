@@ -104,7 +104,7 @@ export function normalizePortableCommonPlayMechanics(value:unknown,label="mechan
   return value.map((candidate,index)=>{
     const mechanic=object(candidate,`${label}[${index}]`);
     exactKeys(mechanic,["kind","config"],`${label}[${index}]`);
-    if(mechanic.kind!=="common-play") throw new Error(`${label}[${index}] has unsupported mechanic kind: ${String(mechanic.kind)}`);
+    if(mechanic.kind!=="common-play") throw new Error(`${label} cannot be activated: unsupported mechanic kind ${String(mechanic.kind)}`);
     return normalizePortableCommonPlayDefinition(mechanic.config,`${label}[${index}].config`);
   });
 }
