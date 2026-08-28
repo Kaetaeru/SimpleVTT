@@ -1,0 +1,39 @@
+name: M1 Portable Common Play
+
+on:
+  pull_request:
+    paths:
+      - "src/app/**"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "schemas/installed-content.schema.json"
+      - "tests/ui/portableCommonPlayActivation.test.ts"
+      - ".github/workflows/m1-portable-common-play.yml"
+  push:
+    branches:
+      - "agent/m1-portable-common-play-activation"
+    paths:
+      - "src/app/**"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "schemas/installed-content.schema.json"
+      - "tests/ui/portableCommonPlayActivation.test.ts"
+      - ".github/workflows/m1-portable-common-play.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify portable Common Play import and persistence
+        run: npx tsx --test tests/ui/portableCommonPlayActivation.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
