@@ -66,7 +66,7 @@ async function installedZoneAction(adapter:MockAdapter,actionId:string) {
   if (!entry||!mechanic||!entryPoint) return undefined;
   const canonical=parseCommonPlayDefinition(mechanic.config,`Installed spatial Zone ${entry.contentId} · ${mechanic.config.id}`);
   const lowered=lowerCommonPlay(canonical,entryPoint.id);
-  return lowered.kind==="zone"?{entry,lowered}:undefined;
+  return lowered.kind==="zone"?{entry,lowered,entryPointId:entryPoint.id}:undefined;
 }
 
 async function resolveSpatialZoneActivation(adapter:MockAdapter,actionId:string,targetIds:string[]) {
@@ -82,7 +82,7 @@ async function resolveSpatialZoneActivation(adapter:MockAdapter,actionId:string,
   const committed=resolveCommonPlayZoneActivation(SIMPLEVTT_APP_RULES_PROFILE,state,action.lowered.definition,{
     resolutionId,
     actorId,
-    entryPointId:action.lowered.entryPoint.id,
+    entryPointId:action.entryPointId,
     membershipAuthority:"spatial",
     actionKind:action.entry.category==="spell"?"magic":"other",
   });
@@ -96,7 +96,7 @@ async function resolveSpatialZoneActivation(adapter:MockAdapter,actionId:string,
     targetIds:[actorId],
     targetNames:[actor.name],
     compact:"Common Play 규칙 적용",
-    detail:[`${action.lowered.definition.id} · ${action.lowered.entryPoint.id}`,...committed.events.map((event)=>event.summary)],
+    detail:[`${action.lowered.definition.id} · ${action.entryPointId}`,...committed.events.map((event)=>event.summary)],
     provenance:[`${action.entry.source} · ${action.entry.contentId}`,"authoritative spatial Zone membership provider"],
     calculatedOutcome:"규칙 효과 적용",
     finalOutcome:"규칙 효과 적용",
@@ -149,7 +149,7 @@ async function installedZoneActionByDefinition(adapter:MockAdapter,definitionId:
       const canonical=parseCommonPlayDefinition(mechanic.config,`Installed spatial Zone ${entry.contentId} · ${definitionId}`);
       for (const entryPoint of canonical.entryPoints??[]) {
         const lowered=lowerCommonPlay(canonical,entryPoint.id);
-        if (lowered.kind==="zone") return {entry,lowered};
+        if (lowered.kind==="zone") return {entry,lowered,entryPointId:entryPoint.id};
       }
     }
   }
