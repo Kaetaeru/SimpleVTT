@@ -7,7 +7,7 @@ export function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):
     resolutionId:undoId,
     operationId:`undo:${event.operationId}`,
     summary:`Undo · ${event.summary}`,
-    provenance:[...event.provenance,{source:`undo:${event.resolutionId}`,status:"applied",reason:"Host-authoritative compensating event"}],
+    provenance:[...event.provenance,{source:`undo:${event.resolutionId}`,status:"applied" as const,reason:"Host-authoritative compensating event"}],
     stateChanges:[...event.stateChanges].reverse().map((change)=>{
       if(change.kind==="effect")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="artifact")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
