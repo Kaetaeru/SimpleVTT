@@ -92,7 +92,7 @@ import "./paladinDevotionSmiteOfProtectionRuntimeAdapter";
 import "./abilityCheckResolutionEventAdapter";
 // Cunning Hide must stay outside the generic ability-check recorder so it can compose
 // the canonical check event with its session economy/effect changes instead of replacing it.
-import "./abilityCheckStatusEffectEventRuntimeAdapter";
+import "./sessionStatusEffectEventRuntimeAdapter";
 import "./abilityCheckDcRuntimeAdapter";
 // Human-acceptance projection stays outermost: it materializes the remaining legacy
 // reference Character summary, keeps the reference demo melee-playable, and projects

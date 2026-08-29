@@ -31,7 +31,9 @@ const pendingRevealEvents=new WeakMap<MockAdapter,{resolutionId:string;events:Re
 
 function statusEffect(action:ActionVm|undefined) {
   const effect=action?.sessionStatusEffect;
-  return action?.resolutionKind==="ability-check"&&effect?.minimumRoll!==undefined&&effect.operation!=="remove"?effect:undefined;
+  if(!action||!effect||effect.operation==="remove")return;
+  if(action.resolutionKind==="ability-check"&&effect.minimumRoll!==undefined)return effect;
+  if(action.resolutionKind==="no-roll"&&(effect.durationKey!==undefined||effect.expiresAtActorTurnBoundary!==undefined))return effect;
 }
 
 function targetId(action:ActionVm,resolution:ResolutionView) {
@@ -75,7 +77,9 @@ function commitStatusEffect(adapter:MockAdapter,internal:AdapterState,action:Act
     operations:succeeded?[{
       id:"status-effect:apply",kind:"apply-effect",effect:{
         id:`effect.session-status.${encodeURIComponent(action.id)}.${subjectId}`,sourceId:action.id,sourceActorId:resolution.actorId,targetId:subjectId,kind:"marker",
-        tags:[SESSION_STATUS_TAG,...(effect.endsOnAttack?["hidden"]:[])],duration:{kind:"special",key:effect.durationKey??"session-status-until-removed"},
+        tags:[SESSION_STATUS_TAG,...(effect.runtimeTags??[]),...(effect.endsOnAttack?["hidden"]:[])],duration:effect.expiresAtActorTurnBoundary
+          ?{kind:"until-turn-boundary",actorId:subjectId,round:state.clock.round+(effect.expiresAtActorTurnBoundary==="start"?1:0),boundary:effect.expiresAtActorTurnBoundary}
+          :{kind:"special",key:effect.durationKey!},
         metadata:{publicLabel:effect.status,sessionStatus:effect.status,endsOnAttack:effect.endsOnAttack??false},
       },
     }]:[{id:"status-effect:remove",kind:"remove-effect",effectId:current!.id}],
@@ -128,17 +132,18 @@ MockAdapter.prototype.resolveAction=async function resolveActionWithStatusEffect
   return snapshot;
 };
 
-MockAdapter.prototype.advanceResolution=async function advanceAbilityCheckStatusEffectEvents() {
+MockAdapter.prototype.advanceResolution=async function advanceSessionStatusEffectEvents() {
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
   const action=resolution?internal.action(resolution.actionId):undefined;
   const effect=statusEffect(action);
   if(!resolution||!action)return previousAdvanceResolution.call(this);
-  const before=effect&&resolution.stage==="roll-animation"&&internal.sessionMode==="initiative"?structuredClone(internal.scene.economyByActor[resolution.actorId]):undefined;
+  const expectedStage=action.resolutionKind==="ability-check"?"roll-animation":"effect-preview";
+  const before=effect&&resolution.stage===expectedStage&&internal.sessionMode==="initiative"?structuredClone(internal.scene.economyByActor[resolution.actorId]):undefined;
   const snapshot=await previousAdvanceResolution.call(this);
   if(before&&snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
     const after=internal.scene.economyByActor[resolution.actorId];
-    const succeeded=(resolution.rollTotal??0)>=effect!.minimumRoll!;
+    const succeeded=effect!.minimumRoll===undefined||(resolution.rollTotal??0)>=effect!.minimumRoll;
     const events=commitStatusEffect(this,internal,action,resolution,succeeded);
     if(after&&events) {
       combineEvents(this,resolution.id,[economyEvent(resolution,action.id,before,after),...events]);

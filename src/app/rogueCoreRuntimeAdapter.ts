@@ -1,13 +1,9 @@
 import "./progressionContracts";
-import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
+import type { ActionVm, ActivityEntry, AppSnapshot, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { queueAtomicAttackDamageMultiplier } from "./realAttackTransactionService";
-import { clearRuntimeResolutionEventHistory, recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
-import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { clearRuntimeResolutionEventHistory } from "./runtimeResolutionEventHistory";
 import { projectedCharacterById, projectedCharacterIds } from "./characterSessionProjectionRegistry";
-import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
-import { resolvePendingResolution } from "../domain/resolution";
-import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const ROGUE_CLASS_ID="dnd.srd521.class.rogue";
 export const CUNNING_DASH_ACTION_ID="action.rogue.cunning-action.dash";
@@ -75,6 +71,7 @@ function cunningDisengageAction(character:CharacterSheet):ActionVm {
     summary:"이동 중 기회 공격을 유발하지 않음",
     available:true,
     eligibleTargetIds:[],
+    sessionStatusEffect:{status:"이탈",target:"actor",successOutcome:"이탈 적용",expiresAtActorTurnBoundary:"end",runtimeTags:["disengage","no-opportunity-attacks"]},
     details:[
       {label:"대상",value:"자신"},
       {label:"효과",value:"이번 턴 이동 중 기회 공격을 유발하지 않음"},
@@ -158,94 +155,9 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithRogueCoreActions
   return snapshot;
 };
 
-function addStatus(entity:SceneEntity|undefined,status:string,resolution:ResolutionView) {
-  if(!entity||entity.status.includes(status))return;
-  entity.status.push(status);
-  resolution.stateChanges.push(`${entity.name} 상태 추가: ${status}`);
-}
-
 function markSnapshotUndo(adapter:MockAdapter,resolutionId:string) {
   clearRuntimeResolutionEventHistory(adapter);
   rogueUndoResolutionIds.set(adapter,resolutionId);
-}
-
-function economyEvent(
-  resolution:ResolutionView,
-  source:string,
-  kind:string,
-  operationId:string,
-  before:SceneVm["economyByActor"][string],
-  after:SceneVm["economyByActor"][string],
-):ResolutionEvent {
-  const provenance=[{source,status:"applied" as const,reason:`${resolution.actionName} authoritative economy`}];
-  const fields:Array<{field:"action"|"bonusAction"|"movement"|"movementMaximum";before:boolean|number;after:boolean|number}>=[
-    {field:"action",before:before.action,after:after.action},
-    {field:"bonusAction",before:before.bonusAction,after:after.bonusAction},
-    {field:"movement",before:before.movement,after:after.movement},
-    {field:"movementMaximum",before:before.movementMax,after:after.movementMax},
-  ];
-  return {
-    id:`${resolution.id}:${operationId}`,
-    resolutionId:resolution.id,
-    operationId,
-    kind,
-    actorId:resolution.actorId,
-    targetId:resolution.actorId,
-    summary:resolution.finalOutcome,
-    provenance,
-    stateChanges:fields.filter((entry)=>entry.before!==entry.after).map((entry)=>({
-      kind:"economy" as const,
-      targetId:resolution.actorId,
-      field:entry.field,
-      before:entry.before,
-      after:entry.after,
-      provenance,
-      lifetime:"session-runtime" as const,
-      writeBack:"session" as const,
-    })),
-    result:{action:after.action,bonusAction:after.bonusAction,movement:after.movement,movementMaximum:after.movementMax},
-  };
-}
-
-function recordCunningDisengageResolutionEvents(
-  adapter:MockAdapter,
-  internal:AdapterState,
-  resolution:ResolutionView,
-  before:SceneVm["economyByActor"][string],
-) {
-  const after=internal.scene.economyByActor[resolution.actorId];
-  const state=ensureAdapterTurnRuntimeState(adapter,internal.scene);
-  if(!after)return false;
-  const source="rogue:cunning-action:disengage";
-  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
-    id:resolution.id,
-    actorId:resolution.actorId,
-    sourceId:source,
-    expectedRevision:state.revision,
-    operations:[{
-      id:"cunning-action:disengage:effect",
-      kind:"apply-effect",
-      effect:{
-        id:`${resolution.id}:disengage`,
-        sourceId:source,
-        sourceActorId:resolution.actorId,
-        targetId:resolution.actorId,
-        kind:"marker",
-        tags:["disengage","no-opportunity-attacks"],
-        duration:{kind:"until-turn-boundary",actorId:resolution.actorId,round:state.clock.round,boundary:"end"},
-        metadata:{publicLabel:"이탈"},
-      },
-    }],
-  });
-  if(committed.status==="rejected")return false;
-  if(!commitAdapterTurnRuntimeState(adapter,internal.scene,state.revision,committed.state))return false;
-  const event=economyEvent(resolution,source,"cunning-action-disengage","cunning-action:disengage:economy",before,after);
-  recordRuntimeResolutionEvents(adapter,resolution.id,[event,...committed.events]);
-  const statusChange=`${internal.scene.entities.find((entry)=>entry.id===resolution.actorId)?.name??resolution.actorId} 상태 추가: 이탈`;
-  if(!resolution.stateChanges.includes(statusChange))resolution.stateChanges.push(statusChange);
-  const activity=internal.activity.find((entry)=>entry.id===resolution.id);
-  if(activity&&!activity.stateChanges.includes(statusChange))activity.stateChanges.push(statusChange);
-  return true;
 }
 
 function projectUncannyDodgeActivity(internal:AdapterState,resolution:ResolutionView) {
@@ -271,27 +183,11 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
   if(!resolution)return previousAdvanceResolution.call(this);
-  const cunningDisengageBefore=resolution.stage==="effect-preview"&&resolution.actionId===CUNNING_DISENGAGE_ACTION_ID
-    ? structuredClone(internal.scene.economyByActor[resolution.actorId])
-    : undefined;
-
-  if(resolution.stage==="effect-preview"&&ROGUE_ACTION_IDS.has(resolution.actionId)) {
-    const actor=internal.scene.entities.find((entry)=>entry.id===resolution.actorId);
-    const economy=internal.scene.economyByActor[resolution.actorId];
-    if(resolution.actionId===CUNNING_DISENGAGE_ACTION_ID) {
-      if(internal.sessionMode!=="initiative")addStatus(actor,"이탈",resolution);
-      resolution.finalOutcome="이탈 적용";
-    }
-  }
 
   const snapshot=await previousAdvanceResolution.call(this);
   if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
     const uncannyComplete=uncannyResolutionIds.get(this)===resolution.id;
-    if(resolution.actionId===CUNNING_DISENGAGE_ACTION_ID&&cunningDisengageBefore&&internal.sessionMode==="initiative") {
-      if(recordCunningDisengageResolutionEvents(this,internal,resolution,cunningDisengageBefore))return internal.getSnapshot();
-      addStatus(internal.scene.entities.find((entry)=>entry.id===resolution.actorId),"이탈",resolution);
-      markSnapshotUndo(this,resolution.id);
-    } else if(resolution.actionId!==CUNNING_DASH_ACTION_ID&&ROGUE_ACTION_IDS.has(resolution.actionId)) {
+    if(resolution.actionId!==CUNNING_DASH_ACTION_ID&&ROGUE_ACTION_IDS.has(resolution.actionId)) {
       markSnapshotUndo(this,resolution.id);
     }
     if(uncannyComplete) {

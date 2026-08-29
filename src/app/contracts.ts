@@ -321,6 +321,8 @@ export interface ActionVm {
     failureOutcome?:string;
     durationKey?:string;
     endsOnAttack?:boolean;
+    expiresAtActorTurnBoundary?:"start"|"end";
+    runtimeTags?:string[];
   };
   completionOutcome?:string;
   completionStateChange?:string;

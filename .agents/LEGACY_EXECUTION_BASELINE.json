@@ -81,7 +81,7 @@
     { "module": "./paladinDevotionHolyNimbusRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./paladinDevotionSmiteOfProtectionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./abilityCheckResolutionEventAdapter", "classification": "GENERIC_ENGINE" },
-    { "module": "./abilityCheckStatusEffectEventRuntimeAdapter", "classification": "GENERIC_ENGINE" },
+    { "module": "./sessionStatusEffectEventRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./abilityCheckDcRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./productionAcceptanceRuntimeAdapter", "classification": "CONTENT/PRESENTATION" },
     { "module": "./campaignRuntimeAdapter", "classification": "GENERIC_ENGINE" },

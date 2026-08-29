@@ -312,6 +312,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
     summary:"이 턴 동안 기회공격을 유발하지 않음",
     available:true,
     eligibleTargetIds:targetSelf,
+    sessionStatusEffect:{status:"이탈",target:"actor",successOutcome:"이탈 적용",expiresAtActorTurnBoundary:"end",runtimeTags:["disengage","no-opportunity-attacks"]},
     details:[
       {label:"대상",value:"자신"},
       {label:"효과",value:"이 턴 동안 기회공격을 유발하지 않음",source:"SRD 5.2.1 · Rogue · Cunning Action"},
