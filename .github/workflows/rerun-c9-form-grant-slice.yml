@@ -24,6 +24,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Apply bounded Family W form projection slice
         run: node .github/rerun-c9-form-grant-slice.mjs
+      - name: Generate content
+        run: npm run generate:content
       - name: Verify focused installed Common Play production
         run: npx tsx --test tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
       - name: Verify TypeScript build
