@@ -43,7 +43,23 @@ async function installSpatialZone(adapter:MockAdapter,prefix:string) {
     id:"stay",
     event:"zone.stay",
     frequency:"once-per-turn",
-    operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"event.subject"}],
+    operations:[
+      {kind:"damage.apply",amount:{value:1},damageType:"force",target:"event.subject"},
+      {kind:"effect.apply",template:"stay-effect",target:"event.subject"},
+    ],
+  });
+  config.artifactTemplates.push({
+    id:"stay-effect",
+    artifactKind:"effect",
+    duration:{kind:"durable"},
+    rules:[{
+      id:"consume-on-damage",
+      event:"damage.taken",
+      frequency:"once",
+      operations:[{kind:"damage.apply",amount:{value:1},damageType:"psychic",target:"event.actor"}],
+    }],
+    lifetime:{kind:"until-event",event:"damage.taken",onEnd:"destroy"},
+    instancePolicy:"stack",
   });
   const json=JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
@@ -83,6 +99,11 @@ function totalHp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,actorI
   const entity=snapshot.scene.entities.find((candidate)=>candidate.id===actorId);
   assert.ok(entity);
   return entity.hp+entity.tempHp;
+}
+
+function hasStayEffect(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,actorId:string) {
+  const runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  return runtime.effects.some((effect)=>effect.targetId===actorId&&effect.metadata?.commonPlayTemplateId==="stay-effect");
 }
 
 test("authoritative external spatial Zone membership converges through canonical connected events and Undo",async()=>{
@@ -156,7 +177,7 @@ test("authoritative external spatial Zone membership converges through canonical
   assert.equal(totalHp(clientSnapshot,currentActorId),hpBefore);
 });
 
-test("authoritative spatial Zone stay fact uses canonical frequency, reconnect, and Undo",async()=>{
+test("authoritative spatial Zone stay fact uses canonical frequency, effect lowering, reconnect, and Undo",async()=>{
   const prefix="unknown-provider-spatial-stay-zone",sessionId="session.common-play-spatial-stay-zone";
   const host=new MockAdapter();
   const createZone=await installSpatialZone(host,prefix);
@@ -191,6 +212,7 @@ test("authoritative spatial Zone stay fact uses canonical frequency, reconnect, 
   assert.ok(stayResolution&&stayResolution.payload.kind==="resolution");
   assert.ok(stayResolution.payload.provenance.includes(stayProvenance));
   assert.ok(stayResolution.payload.resolutionEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="hp")),"zone.stay must use canonical damage StateChanges");
+  assert.ok(stayResolution.payload.resolutionEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="effect"&&change.operation==="added")),"zone.stay effect.apply must use canonical Effect StateChanges");
   assert.ok(!stayResolution.payload.resolutionEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="zone-membership")),"zone.stay must not mutate membership");
   assert.equal((await applyConnectedClientEvents(client,stayBatch.events)).status,"applied");
 
@@ -198,12 +220,16 @@ test("authoritative spatial Zone stay fact uses canonical frequency, reconnect, 
   let clientSnapshot=await client.getSnapshot();
   assert.equal(totalHp(hostSnapshot,currentActorId),hpAfterEnter-1);
   assert.equal(totalHp(clientSnapshot,currentActorId),hpAfterEnter-1);
+  assert.ok(hasStayEffect(host,hostSnapshot,currentActorId));
+  assert.ok(hasStayEffect(client,clientSnapshot,currentActorId));
   assert.equal((await applyConnectedClientEvents(client,stayBatch.events)).status,"duplicate","duplicate connected replay must not reapply zone.stay");
 
   await submitAuthoritativeSpatialZoneStayFact(host,{
     artifactId:zone.id,subjectId:currentActorId,provenance:"provider:unknown-grid-engine:stay-repeat",
   });
-  assert.equal(totalHp(await host.getSnapshot(),currentActorId),hpAfterEnter-1,"once-per-turn stay must not fire twice from repeated provider facts");
+  hostSnapshot=await host.getSnapshot();
+  assert.equal(totalHp(hostSnapshot,currentActorId),hpAfterEnter-1,"once-per-turn stay must not fire twice from repeated provider facts");
+  assert.equal(snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)!.effects.filter((effect)=>effect.metadata?.commonPlayTemplateId==="stay-effect").length,1,"once-per-turn stay must not apply the effect twice");
 
   const reconnect=new MockAdapter();
   await installSpatialZone(reconnect,prefix);
@@ -214,6 +240,7 @@ test("authoritative spatial Zone stay fact uses canonical frequency, reconnect, 
   const reconnectRuntime=snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)!;
   assert.ok(reconnectRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id)?.memberIds.includes(currentActorId));
   assert.equal(totalHp(reconnectSnapshot,currentActorId),hpAfterEnter-1);
+  assert.ok(hasStayEffect(reconnect,reconnectSnapshot,currentActorId),"fresh reconnect must reconstruct the Zone-applied effect from canonical events");
 
   const undoBatch=await captureHostBatch(()=>host.undoLastResolution());
   assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
@@ -223,4 +250,6 @@ test("authoritative spatial Zone stay fact uses canonical frequency, reconnect, 
   assert.ok(afterUndoRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id)?.memberIds.includes(currentActorId),"Undoing stay must preserve membership");
   assert.equal(totalHp(hostSnapshot,currentActorId),hpAfterEnter);
   assert.equal(totalHp(clientSnapshot,currentActorId),hpAfterEnter);
+  assert.ok(!hasStayEffect(host,hostSnapshot,currentActorId),"Undo must remove the Zone-applied effect");
+  assert.ok(!hasStayEffect(client,clientSnapshot,currentActorId));
 });
