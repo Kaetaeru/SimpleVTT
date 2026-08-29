@@ -105,7 +105,7 @@ For each rule-mechanism family, distinguish:
 2. `KERNEL` — generic trusted runtime semantics exist and are tested;
 3. `PORTABLE` — an external RuleModule can import, validate, persist, rehydrate, and carry the semantics without loss;
 4. `PRODUCTION` — the real application/session execution route invokes the generic semantics;
-5. `MIGRATED` — corresponding obsolete named execution has been removed after parity;
+5. `MIGRATED` — corresponding obsolete named execution has been removed after normative rule proof;
 6. `ACCEPTED` — unknown-ID/rename, authority, retry/reconnect, lifetime/persistence/Undo as applicable are proven end-to-end.
 
 A Gate being `DONE` at the Kernel/foundation level does not automatically mean its semantics are fully portable or production-routed.
@@ -183,17 +183,17 @@ Do not add a primitive from imagination or from a content survey alone. Do not r
 
 ## 9. Migration philosophy
 
-Legacy execution is a behavior oracle and technical-debt ledger, not the roadmap's source of truth.
+Legacy execution is only a migration inventory and implementation-archeology aid. It is not a correctness oracle or parity target.
 
 For a migrated behavior:
 
 ```text
-existing named behavior oracle
-        -> equivalent unknown/portable RuleModule definition
+RulesProfile / SRD 5.2.1 rule
+        -> generic semantic contract and unknown/portable RuleModule definition
         -> validation + normalization
         -> generic lowering / Resolver or correct generic transaction domain
         -> production/session authority
-        -> parity / identity invariance / recovery evidence
+        -> deterministic rule-derived test + identity invariance / recovery evidence
         -> delete only the absorbed named execution
 ```
 
@@ -218,7 +218,7 @@ When selecting or reviewing work, reason in reusable families such as:
 - progression / grants / choices;
 - maintained effects, artifacts, summons, forms, stored invocations, and source-owned state when their coverage probes require them.
 
-Named examples such as Action Surge, Cutting Words, Rage, Fireball, Shield, Wild Shape, a summon, or a magic item are **probes/oracles**, never primitive names or dispatch keys.
+Named examples such as Action Surge, Cutting Words, Rage, Fireball, Shield, Wild Shape, a summon, or a magic item are **coverage probes/reference cases**, never correctness oracles, primitive names, or dispatch keys.
 
 ---
 

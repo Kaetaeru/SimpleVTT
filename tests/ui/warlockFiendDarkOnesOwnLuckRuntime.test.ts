@@ -9,7 +9,7 @@ import {
 } from "../../src/domain/warlockFiend";
 import { WARLOCK_ID } from "../../src/domain/warlockProgressionChoices";
 
-const INTERRUPT_ID="follow-up.warlock.fiend.dark-ones-own-luck";
+const INTERRUPT_ID="follow-up.d20-modification";
 const SAVE_ACTION="action.test.fiend-luck-save";
 const CASTER="char.test-fiend-luck-caster";
 type Internal={activeCharacter:CharacterSheet;characters:CharacterSheet[];scene:SceneVm;session:SessionVm};
@@ -133,6 +133,13 @@ test("Fiend Dark One's Own Luck can turn the Warlock's failed saving throw into 
 
   snapshot=await adapter.undoLastResolution();
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,beforeUses);
+});
+
+test("SRD 5.2.1 allows Dark One's Own Luck after seeing a successful roll but no more than once per roll",async()=>{
+  const adapter=new MockAdapter();await prepareFiend(adapter);await adapter.startInitiative();let snapshot=await adapter.getSnapshot();const actorId=snapshot.activeCharacter.id;await adapter.setCurrentActor(actorId);snapshot=await adapter.getSnapshot();const check=abilityCheckAction(snapshot);assert.ok(check);
+  const beforeUses=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)!.current;
+  await adapter.setQueuedD20(19);await adapter.resolveAction(check.id,[]);await adapter.advanceResolution();snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:10});assert.equal(snapshot.resolution?.checkOutcome,"성공");assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
+  await adapter.setQueuedD20(1);snapshot=await adapter.respondToInterrupt(true);assert.equal(snapshot.resolution?.checkOutcome,"성공");assert.equal(snapshot.resolution?.interrupt,undefined,"one feature use must not be offered twice for the same roll");assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,beforeUses-1);
 });
 
 test("Warlock below Fiend feature level does not receive Dark One's Own Luck",async()=>{

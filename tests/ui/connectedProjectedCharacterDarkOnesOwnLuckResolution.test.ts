@@ -27,7 +27,7 @@ import { WARLOCK_ID } from "../../src/domain/warlockProgressionChoices";
 const PEER="peer.r2.remote-dark-ones-own-luck";
 const RECONNECT_PEER="peer.r2.remote-dark-ones-own-luck.reconnect";
 const CHARACTER_ID="char.r2.remote-dark-ones-own-luck";
-const INTERRUPT_ID="follow-up.warlock.fiend.dark-ones-own-luck";
+const INTERRUPT_ID="follow-up.d20-modification";
 type ResolvedCatalogEntry=CatalogEntry & {contentId?:string};
 type MutableAdapterState={activeCharacter:CharacterSheet;characters:CharacterSummary[];scene:SceneVm};
 

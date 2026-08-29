@@ -10,7 +10,6 @@ import {
   FIEND_HURL_THROUGH_HELL_FEATURE_ID,
   FIEND_HURL_THROUGH_HELL_RESOURCE_ID,
   fiendishResilienceDefense,
-  resolveFiendDarkOnesOwnLuck,
   resolveFiendHurlThroughHell,
   resolveFiendHurlThroughHellRecovery,
   resolveFiendishResilienceSelection,
@@ -230,32 +229,6 @@ test("Fiend 6/10/14 progression relationships are stable and runtime resources f
     [FIEND_HURL_THROUGH_HELL_RESOURCE_ID,1],
   ]);
   assert.ok(definitions.every((entry) => entry.recovery.longRest === "all"));
-});
-
-test("Dark One's Own Luck adds the fixed d10 after the d20 and spends a use even when the final total still fails", () => {
-  const state = runtimeState();
-  state.combatants.hero.resources.push({
-    id:FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID,
-    label:"어둠의 존재의 행운",
-    current:2,
-    maximum:4,
-    recovery:{ longRest:"all" },
-  });
-  const result = resolveFiendDarkOnesOwnLuck(TEST_PROFILE,state,{
-    id:"fiend.luck",
-    actorId:"hero",
-    expectedRevision:state.revision,
-    warlockLevel:6,
-    subclassId:WARLOCK_FIEND_SUBCLASS_ID,
-    family:"saving-throw",
-    initialTotal:8,
-    target:15,
-    d10Face:6,
-  });
-  assert.equal(result.status,"committed");
-  assert.deepEqual(result.check,{ family:"saving-throw", initialTotal:8, target:15, bonus:6, finalTotal:14, outcome:"failure" });
-  if (result.status !== "committed") return;
-  assert.equal(result.state.combatants.hero.resources.find((entry) => entry.id === FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,1);
 });
 
 test("Fiendish Resilience rest selection replaces the prior type and its effect tag participates in the normal damage pipeline", () => {

@@ -28,6 +28,9 @@ import {
   type CharacterSessionProjectionV1,
 } from "./characterSessionProjection";
 import { materializeCreatedWeaponAttacks } from "./characterCreationWeaponAttackAdapter";
+import { FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID, FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID } from "../domain/warlockFiend";
+import { WARLOCK_FIEND_SUBCLASS_ID } from "../domain/srdSubclassCatalog";
+import { WARLOCK_ID } from "../domain/warlockProgressionChoices";
 
 export type CharacterSessionProjectionReconstruction =
   | {
@@ -392,6 +395,11 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
     });
   }
   actions.push(...projectedItemActions(sheet,targetSelf));
+  const warlockLevel=classLevel(projection,WARLOCK_ID);
+  const darkOnesOwnLuck=sheet.resources.find((resource)=>resource.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID);
+  if(warlockLevel>=6&&projection.source.progression.subclassIds?.[WARLOCK_ID]===WARLOCK_FIEND_SUBCLASS_ID&&darkOnesOwnLuck){
+    actions.at(-1)!.runtimeD20FollowUps=[...(actions.at(-1)!.runtimeD20FollowUps??[]),{sourceId:FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID,families:["ability-check","saving-throw"],trigger:"after-roll",modification:{mode:"add-die",diceSides:10},payment:{resourceId:darkOnesOwnLuck.id,amount:1,consumeWhen:"accept"},presentation:{optionName:"어둠의 존재의 행운 d10",cost:"사용 횟수 1회",effect:"d10을 판정 총합에 더합니다.",source:"SRD 5.2.1 · Fiend Patron · Dark One's Own Luck"}}];
+  }
   return actions;
 }
 

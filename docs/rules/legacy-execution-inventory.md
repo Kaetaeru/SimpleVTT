@@ -30,7 +30,7 @@ The guard is deliberately not a repository-wide ID ban or an exhaustive semantic
 
 ## LEGACY_EXECUTION — central compatibility, progression, and dispatch
 
-| File / symbol boundary | Recognized identity / selection | Mechanism | Current behavior oracle | Authority / lifetime | Convergence target |
+| File / symbol boundary | Recognized identity / selection | Mechanism | Legacy regression reference | Authority / lifetime | Convergence target |
 | --- | --- | --- | --- | --- | --- |
 | `src/app/spellcastingRuntimeAdapter.ts` — `SPELL_META`, `commitFreeformSpellSlot`, `spellMechanicById` | explicit action IDs map to `dnd.srd521.spell.*`; mechanic looked up by spell ID | legacy spell execution / slot economy | `tests/ui/spellcastingRuntimeAdapter.test.ts`, `test:spellcasting` | runtime state, slots, target facts, Undo | RuleModule spell definition -> Common Play/generic resolver; delete action-ID table |
 | `src/app/productionSpellRuntimeAdapter.ts` — `spellMechanicById(metadata.spellId)`, `spellDice`, `resolveProductionSpell` | runtime spell ID selects `SpellMechanicDefinition` | production spell execution | `test:spellcasting`, production spell regressions | authoritative revision, dice, targeting, slots, ResolutionEvent/Undo | normalized Common Play spell IR; content ID only identifies data |
@@ -46,7 +46,7 @@ The guard is deliberately not a repository-wide ID ban or an exhaustive semantic
 
 ## LEGACY_EXECUTION — named gameplay families
 
-Fighter Action Surge is no longer part of this legacy ledger. PR #171 (`8c9978a8d3a30bf08ab492cc8d805c2d77d63094`, merged as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f`) proved generic Common Play production parity, deleted `src/app/fighterActionSurgeRuntimeAdapter.ts`, and removed its baseline entry. The canonical migration evidence is recorded in `resolver-execution-checklist-v2.md`.
+Fighter Action Surge is no longer part of this legacy ledger. PR #171 (`8c9978a8d3a30bf08ab492cc8d805c2d77d63094`, merged as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f`) proved its normative resource/economy rule on generic Common Play production, deleted `src/app/fighterActionSurgeRuntimeAdapter.ts`, and removed its baseline entry. The canonical migration evidence is recorded in `resolver-execution-checklist-v2.md`.
 
 The atomic saving-throw adapter's Fighter Indomitable lookup is also removed on the C8 convergence branch. Atomic replay now consumes the authoritative save preview's generic `d20` and `total`, while projected Character resources synchronize by resource identity rather than feature identity. The named Indomitable prompt/orchestration adapter remains legacy until its interaction definition itself moves to Common Play.
 
@@ -58,7 +58,7 @@ Atomic item damage no longer recognizes `action.wand`. Any no-roll damage action
 
 The Phase 09 healing path no longer recognizes Second Wind, Healing Word, or healing-potion action IDs to select formula facts. Any authored healing action now enters the same roll/HP/cost path, with unknown-ID adapter evidence. Named feature/item projection and activation remain legacy until portable content definitions author those actions.
 
-The atomic self-healing commit adapter no longer recognizes `action.second-wind` either. It selects non-item, non-spell self-healing structurally and commits the authored economy/resource cost through the existing transaction; Second Wind remains only a named production projection/domain oracle until portable content owns that definition.
+The atomic self-healing commit adapter no longer recognizes `action.second-wind` either. It selects non-item, non-spell self-healing structurally and commits the authored economy/resource cost through the existing transaction; Second Wind remains named production-projection debt until portable content owns that definition.
 
 The duplicate Phase 09 `action.shortbow` atomic branch and its reference attack/target lookup tables are deleted. Canonical runtime attacks now consume explicit structural `runtimeAttack` facts, and the same transaction succeeds after an arbitrary action-ID rename. Weapon/content projection still has to author those portable facts, but action identity no longer selects the atomic attack algorithm.
 
@@ -80,7 +80,7 @@ Dash execution no longer recognizes `action.dash`. Any authored no-roll action w
 | `rogueCoreRuntimeAdapter.ts` | remaining Rogue action projection and Uncanny Dodge | `test:rogue-core` + connected Rogue regressions | Character projection and reaction | portable progression action grant + generic interceptor |
 | `bardicInspirationRuntimeAdapter.ts` (transitively installed) | Bardic Inspiration resource projection | Bardic Inspiration domain/UI tests | source/owner resource maximum and recovery | portable resource definition + generic materializer |
 | `bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts`, `bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter.ts` | Lore roll interceptors | Lore domain + Cutting Words/Peerless Skill UI tests | connected responder/owner, reaction/resource, pending roll, retry/Undo | Gate A Interaction + payment + roll modification/recalculation |
-| `fighterIndomitableFollowUpRuntimeAdapter.ts`, `warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter.ts` | named post-roll modifier/reroll | corresponding domain/UI tests | owner resource + pending roll lifetime | Interaction + resource + typed modifier/reroll policy |
+| `fighterIndomitableFollowUpRuntimeAdapter.ts` | named post-roll reroll | corresponding domain/UI regression references | owner resource + pending roll lifetime | Interaction + resource + typed reroll policy |
 | `clericDivineSparkActionRuntimeAdapter.ts`, `clericTurnUndeadActionRuntimeAdapter.ts` | Channel Divinity heal/damage/save/condition | named Cleric domain tests | resource/economy + target save/effect | resource + save + damage/healing + condition/effect |
 | `paladinLayOnHandsActionRuntimeAdapter.ts`, `paladinAbjureFoesActionRuntimeAdapter.ts` | healing allocation and multi-target save/effect | named Paladin domain tests | resource/economy + selection/facts | resource/healing + Gate E fact/selection + save/effect; Gate G only if allocation actually fails existing composition |
 | `paladinDevotionHolyNimbusRuntimeAdapter.ts`, `paladinDevotionSmiteOfProtectionRuntimeAdapter.ts` | persistent aura/protection | named Devotion UI tests | source-bound/persistent lifetime | effect/artifact + trigger/interceptor + Gate D/E when spatial |
@@ -90,7 +90,9 @@ The Bardic Inspiration grant and attack follow-up no longer own named execution 
 
 Divine Sense activation no longer owns a Paladin action adapter. The same structural effect-grant path now accepts termination facts and an optional creature-type awareness query; it commits resource/economy/Effect, uses authoritative module distance when present, treats an absent spatial fact as mapless theater-of-mind, and preserves connected replay and Undo. An unknown action and unknown creature type prove the query is not selected by Paladin identity. Sanctity facts remain unavailable in the live Scene and full sensing relations remain incomplete.
 
-Tactical Mind no longer owns a Fighter follow-up adapter. Production projection authors a structural failed-check add-die rule, and `d20FollowUpRuntimeAdapter.ts` lowers its authoritative prior d20, conditional resource payment, and action-authored success operation through the existing Resolver. Stabilize, open-DC checks, connected replay, Undo, and a fully unknown action/source identity use the same path. Indomitable, Peerless Skill, Cutting Words, and Dark One's Own Luck remain named post-roll seams.
+Tactical Mind no longer owns a Fighter follow-up adapter. Production projection authors a structural failed-check add-die rule, and `d20FollowUpRuntimeAdapter.ts` lowers its authoritative prior d20, conditional resource payment, and action-authored success operation through the existing Resolver. Stabilize, open-DC checks, connected replay, Undo, and a fully unknown action/source identity use the same path. Indomitable, Peerless Skill, and Cutting Words remain named post-roll seams.
+
+Dark One's Own Luck no longer owns a Warlock-specific runtime or domain Resolver. Its SRD 5.2.1 rule is authored as a structural after-roll d10 modifier for ability checks and saving throws with accept-time resource payment. The same generic d20 transaction proves both families, once-per-roll handling, Charisma-based Long-Rest resource state, connected owner authority, persistence, reconnect, Undo, and unknown-ID execution. The former named tests were retained only where rewritten/confirmed as normative rule or authority evidence; the obsolete named-domain-output test was deleted.
 
 `rogueCunningHideEventRuntimeAdapter.ts` and the duplicate Cunning Disengage execution branch are replaced by the identity-agnostic `sessionStatusEffectEventRuntimeAdapter.ts`. Authored no-roll or ability-check status actions now commit economy, Effect, connected replay, attack-ending cleanup, and Undo evidence through the same path. Completely unknown action IDs prove both production shapes. Rogue action projection remains legacy.
 
@@ -98,7 +100,7 @@ Tactical Mind no longer owns a Fighter follow-up adapter. Production projection 
 
 These are migration debt when known class/subclass/feat identities select feature-specific state mutation. They should converge on portable progression/content data and a generic progression resolver; they do **not** need to be forced through combat Common Play IR when progression is the correct authority.
 
-| Files / boundary | Known selection | Behavior oracle | Authority / lifetime | Convergence target |
+| Files / boundary | Known selection | Legacy regression reference | Authority / lifetime | Convergence target |
 | --- | --- | --- | --- | --- |
 | `progressionPhase08SorcererAdapter.ts`, `progressionPhase08WarlockAdapter.ts` | class-specific spell/resource progression | matching Phase08 Sorcerer/Warlock runtime tests + `test:progression` | Character revision / level-up | portable class progression definitions + generic application |
 | `progressionPhase08EpicBoonAdapter.ts` | class IDs + feat/boon resolution | Epic Boon domain/runtime tests | Character revision / level-up | portable feat/boon eligibility and grant data |
@@ -123,11 +125,11 @@ Identity-agnostic execution infrastructure is not migration debt merely because 
 
 Allowed named data includes generated/builtin catalogs, spell presentation, creation options, labels/descriptions, stable relationship metadata, authoring drafts, and static reference fixture rows. A content ID used only to label, persist, select authored data, or display provenance is not an execution violation.
 
-`mockAdapter.ts` is mixed: static Aelar/Mira/reference rows are fixture/content; identity-keyed resolution behavior remains a legacy oracle and must not become the target architecture.
+`mockAdapter.ts` is mixed: static Aelar/Mira/reference rows are fixture/content; identity-keyed resolution behavior remains obsolete implementation reference material and must not define correctness or the target architecture.
 
-## Golden behavior map
+## Legacy regression reference map
 
-M0 preserves current tests as migration oracles and does not rerun unrelated Gate E validation:
+M0 records current tests only to locate integration and regression coverage. Every test must be classified `KEEP`, `REWRITE`, or `DELETE` against RulesProfile/SRD 5.2.1 before it can count as migration evidence:
 
 - Rage: `barbarianRageActionRuntime.test.ts`, `barbarianRageAttackDamage.test.ts`.
 - Berserker: `barbarianBerserkerIntimidatingPresenceRuntime.test.ts`.
@@ -139,7 +141,7 @@ M0 preserves current tests as migration oracles and does not rerun unrelated Gat
 - Rest-time named dispatch: `restSpellManagementRuntimeAdapter.test.ts` plus Pact Tome, Circle Land, and Wizard long-rest tests.
 - Hidden/transitive named branches: `characterSessionProjectionReconstruction.test.ts`.
 
-A migration must reproduce its relevant golden behavior, then prove unknown-ID and ID/name-only rename invariance on the generic path before deleting the named branch.
+A migration must derive deterministic expectations from RulesProfile/SRD 5.2.1, prove production and unknown-ID/rename invariance on the generic path, and then delete the absorbed named branch. Legacy output is never a parity target.
 
 ## M0 exit / next action
 

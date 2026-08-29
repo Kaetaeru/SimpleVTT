@@ -69,7 +69,7 @@ switch (operation.kind) {
 
 - [ ] Read `common-play-resolver-architecture-charter.md` before architecture changes or gate selection.
 - [ ] No new named execution adapter/branch for a spell, feat, class, subclass, item, condition, monster ability, or other named content.
-- [ ] Existing named adapters are behavior oracles only until the generic production path owns their semantics.
+- [ ] Existing named adapters are migration inventory and implementation-archeology references only; RulesProfile/SRD 5.2.1 defines correctness.
 - [ ] Common Play capability support is never inferred merely because a schema field exists.
 - [ ] New primitives require deterministic evidence that existing generic composition is insufficient or unsafe.
 - [ ] New primitives must be reusable across unrelated content IDs.
@@ -162,7 +162,7 @@ Purpose: make the Common Play language actually cross the full product pipeline,
 
 Authority remains `docs/rules/legacy-execution-inventory.md` plus `.agents/LEGACY_EXECUTION_BASELINE.json` and the Legacy Execution Boundary regression.
 
-The inventory is a debt ledger and behavior-oracle map, not the product roadmap.
+The inventory is a debt ledger and regression-reference map, not the product roadmap or a correctness oracle.
 
 ## P0.5 — V1 mechanism coverage contract — ACTIVE
 
@@ -210,7 +210,8 @@ Every migrated mechanism must satisfy the applicable pipeline:
 
 ### Migration
 
-- [ ] existing named behavior oracle remains unchanged until parity is proven;
+- [ ] deterministic expectations are derived from RulesProfile/SRD 5.2.1 rather than legacy output;
+- [ ] affected legacy tests are classified `KEEP`, `REWRITE`, or `DELETE`;
 - [ ] production generic path becomes authoritative;
 - [ ] only then remove the absorbed named adapter/branch;
 - [ ] no hidden fallback routes supported mechanics back to the named engine;
@@ -222,7 +223,7 @@ Track each family independently through `SPEC -> KERNEL -> PORTABLE -> PRODUCTIO
 
 Initial families:
 
-- [x] resource / action economy — `MIGRATED`; PR #171 absorbed the built-in Action Surge named production seam after generic-path parity. `ACCEPTED` is not claimed by this migration alone;
+- [x] resource / action economy — `MIGRATED`; PR #171 absorbed the built-in Action Surge named production seam after normative resource/economy proof on the generic path. `ACCEPTED` is not claimed by this migration alone;
 - [x] tests / rolls / outcomes — `PRODUCTION`; generic authored actor d20 tests cross validation, normalization, installed persistence/rehydration, existing Resolver lowering, production authority, connected presentation, and ID/name rename invariance. Named post-roll features remain legacy, so `MIGRATED`/`ACCEPTED` are not claimed;
 - [x] damage / healing / HP — `PRODUCTION`; authored literal/dice damage and literal healing cross validation, installed persistence/rehydration, existing Resolver lowering, single pre-resolved runtime target authority, HP writeback/Undo, connected convergence, and rename invariance. Deliberate HP/targeting boundaries remain below;
 - [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports the bounded `from:targets`, exact `min/max:1/1` selection-validator subset through validation, persistence/rehydration, existing Resolver targeting, production authority, Undo, connected convergence, and rename invariance. Rich selectors and allocation remain unsupported;
@@ -239,7 +240,7 @@ Do not migrate by class/spell/feat list order. Migrate the smallest coherent mec
 
 ## P3 — Resource / Economy migration convergence — MIGRATED
 
-Named oracle: Fighter Action Surge only because it provides a deterministic existing behavior sample. `Action Surge` is not a primitive and must never become a dispatch key.
+Normative probe: Fighter Action Surge supplies a deterministic SRD resource/economy scenario. Its legacy implementation does not define expected output, and `Action Surge` is not a primitive or dispatch key.
 
 Retained generic harness evidence before PR #159:
 
@@ -330,7 +331,7 @@ Merge commit: `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f`
 Migration evidence:
 
 - [x] built-in Fighter Action Surge reaches the same generic Common Play production path;
-- [x] two-resource spend matches the existing behavior oracle atomically;
+- [x] the SRD-derived resource and turn-gate payments commit atomically;
 - [x] restricted extra Action semantics remain RulesProfile-owned with `allowsMagicAction: false`;
 - [x] authoritative Character/session writeback and Undo remain correct;
 - [x] connected host/client convergence preserves the grant and resources;
@@ -342,7 +343,7 @@ Migration evidence:
 
 Exact-head acceptance for `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`:
 
-- [x] focused Common Play / Action Surge parity harness — 8/8 SUCCESS on the candidate lineage;
+- [x] focused Common Play / Action Surge normative harness — 8/8 SUCCESS on the candidate lineage;
 - [x] Contract validation `33174441211` — SUCCESS;
 - [x] M1 Common Play Resource Economy `33174441198` — SUCCESS;
 - [x] Persistence `33174441162` — SUCCESS;
@@ -376,7 +377,7 @@ Evidence:
 Deliberate boundary:
 
 - property-backed stat/provider resolution, target/every-target rolls, and named post-roll features remain explicit later slices;
-- Tactical Mind, Indomitable, Cutting Words, Peerless Skill, Dark One's Own Luck, and other named roll/outcome seams remain unchanged;
+- Indomitable, Cutting Words, Peerless Skill, and other unstrangled roll/outcome seams remain migration debt;
 - therefore this family is `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
 ---
@@ -459,7 +460,7 @@ Deliberate boundary:
 
 - `roll.modify`, reroll, interceptors, triggered dispatch, target/owner/DM responders, multiple options, and named post-roll migrations remain unsupported;
 - remote responder routing, reconnect continuation, stale restart, and persistent pending interaction are not claimed; the connected proof uses Host as responder;
-- Indomitable, Tactical Mind, Cutting Words, Peerless Skill, Bardic Inspiration follow-up, and Dark One's Own Luck remain unchanged behavior oracles;
+- Indomitable, Cutting Words, and Peerless Skill remain legacy migration references only until each is re-derived from RulesProfile/SRD 5.2.1;
 - therefore this family is bounded `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
 ---
@@ -583,11 +584,12 @@ Verified migration slices:
 - [x] Bardic Inspiration grant execution moved onto a structural effect-grant action: authored economy/resource/duration/public metadata commit atomically, connected replay and Undo remain green, and an unknown action ID proves identity invariance; only its class-level resource materializer remains named;
 - [x] Divine Sense activation now composes the same structural effect grant with termination and a generic creature-type awareness query; its named action adapter is deleted while mapless/module distance behavior, connected replay, Undo, and unknown-identity evidence stay green;
 - [x] Tactical Mind now uses a structural failed-check add-die fact, conditional resource payment, and action-authored success operation through the existing d20/Resolver transaction; the named follow-up adapter is deleted while Stabilize, open-DC, connected replay, Undo, and unknown-ID evidence remain green;
+- [x] Dark One's Own Luck is re-derived from SRD 5.2.1 rather than its legacy output: a structural after-roll d10 rule covers ability checks and saving throws, accept-time payment, once-per-roll handling, Long-Rest resource state, connected owner persistence/reconnect/Undo, and unknown identities; the named app/domain Resolver paths are deleted;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:
 
-- the named Indomitable offer/payment/reroll orchestration adapter and the remaining Cutting Words, Peerless Skill, and Dark One's Own Luck post-roll adapters remain `LEGACY_EXECUTION`;
+- the named Indomitable offer/payment/reroll orchestration adapter and the remaining Cutting Words and Peerless Skill post-roll adapters remain `LEGACY_EXECUTION`;
 - named legacy spell/class consumers still call the compatibility targeting provider that fabricates mapless facts; only the canonical attack/concentration transaction is migrated by this slice;
 - no coverage-ledger row is promoted by this bounded migration alone.
 
@@ -613,7 +615,7 @@ Before Gate N, each gate must be exactly one of:
 A coverage probe may be triggered by either:
 
 1. a real shipping/legacy migration failure; or
-2. a deliberately selected representative D&D rule scenario where current SimpleVTT legacy code provides no suitable oracle.
+2. a deliberately selected representative RulesProfile/SRD 5.2.1 scenario, regardless of whether legacy code exists.
 
 For every probe:
 

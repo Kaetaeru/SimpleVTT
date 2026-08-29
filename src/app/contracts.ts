@@ -342,7 +342,7 @@ export interface ActionVm {
   runtimeD20FollowUps?:Array<{
     sourceId:string;
     families:Array<"ability-check"|"saving-throw"|"attack-roll">;
-    trigger:"failure";
+    trigger:"failure"|"after-roll";
     modification:{mode:"add-die";diceSides:number};
     payment:{resourceId:string;amount:number;consumeWhen:"accept"|"success"};
     presentation:{optionName:string;cost:string;effect:string;source:string};
