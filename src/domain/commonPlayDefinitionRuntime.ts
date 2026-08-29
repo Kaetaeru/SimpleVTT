@@ -43,7 +43,6 @@ const TOP_LEVEL_KEYS=new Set([
   "entryPoints","artifactTemplates","rules","interceptors",
 ]);
 const INVOCATIONS=new Set(["manual","triggered","automatic","granted"]);
-const ARTIFACT_LIFECYCLE_OPERATION_KINDS=new Set(["artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove"]);
 const STABLE_ID=/^[a-z0-9][a-z0-9._-]*$/;
 
 function object(value:unknown,label:string):Obj {
@@ -151,10 +150,7 @@ function base(definition:CommonPlayDefinitionIR) {
 }
 
 function referencedTemplates(entryPoint:CommonPlayEntryPointIR) {
-  return new Set(entryPoint.operations.flatMap((operation)=>[
-    ...(typeof operation.template==="string"?[operation.template]:[]),
-    ...(typeof operation.artifact==="string"?[operation.artifact]:[]),
-  ]));
+  return new Set(entryPoint.operations.flatMap((operation)=>typeof operation.template==="string"?[operation.template]:[]));
 }
 
 function referencedRuleTemplates(templates:Obj[]) {
@@ -214,17 +210,6 @@ export function lowerCommonPlay(
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
     };
     throw new DomainEvaluationError(`Common Play entry point ${entryPointId} references an unsupported artifact family`);
-  }
-  if([...operationKinds].some((kind)=>ARTIFACT_LIFECYCLE_OPERATION_KINDS.has(String(kind)))) {
-    if([...operationKinds].some((kind)=>!ARTIFACT_LIFECYCLE_OPERATION_KINDS.has(String(kind)))) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact lifecycle operations`);
-    const artifactKinds=new Set(templates.map((template)=>template.artifactKind));
-    if(templates.length!==referenced.size||![...artifactKinds].every((kind)=>kind==="object"||kind==="link")) {
-      throw new DomainEvaluationError(`Common Play entry point ${entryPointId} lifecycle operations require referenced object/link artifact templates`);
-    }
-    return {
-      kind:"artifacts",entryPointId,
-      definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
-    };
   }
   const test=entryPoint.test as Obj|undefined;
   if(test?.kind==="saving-throw"&&test.roller==="each-target") {
