@@ -2,8 +2,8 @@
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
-  "status": "continue",
-  "reason": "C8 scope is now Common Play Engine Core completion; global D&D legacy cleanup and Cutting Words migration are deferred backlog. Boundary 1/4 is complete and merged in PR #178. Boundary 2/4 is active in PR #179 at exact candidate head baa6d2604bd6b10c088270bfd7feb364e404d59c. The first focused run exposed only a passive ownership-discovery failure in 3 new tests (69/72 passed); the candidate was corrected with a narrow canonical owned-item fallback, and an accidental broader SessionProjection edit was fully restored so the final diff is again limited to 5 intended files. Fresh M1 Common Play Interaction run 33248457715 is in progress at checkpoint with focused tests running and typecheck pending. On resume, inspect that exact-head run; fix only concrete candidate failures or merge #179 if focused tests/typecheck are green. After #179, only two C8 Core boundaries remain: authoritative spatial/visibility facts, then damage-roll interception plus connected/retry/reconnect/persistence/Undo acceptance. Do not work global LEGACY_EXECUTION cleanup as part of C8 Core.",
+  "status": "blocked",
+  "reason": "C8 boundary 2 PR #179 has one locally validated correction at 623ce5f0c577cc8fce7c9bd540077195e88a139e: supplied authoritative attack modifier contributions no longer double-add the action bonus. Focused M1 Interaction is 79/79 green and TypeScript passes. The local child branch is one commit ahead of remote baa6d260 because Codex cannot access the Windows Git Credential Manager and no token is available. Push agent/c8-core-production-interceptor-discovery from the user-owned PowerShell session, then resume to inspect exact-head CI, merge #179, and begin boundary 3. Do not repeat PR #176-#178 validation.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }
