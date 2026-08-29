@@ -1,0 +1,27 @@
+name: C9 Spatial Zone Diagnostic
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - "src/app/spatialZoneMembershipRuntimeAdapter.ts"
+      - "tests/ui/connectedSpatialZoneMembershipProduction.test.ts"
+      - ".github/workflows/rerun-c9-spatial-zone-diagnostic.yml"
+
+jobs:
+  spatial-zone:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify authoritative spatial Zone membership
+        run: npx tsx --test tests/ui/connectedSpatialZoneMembershipProduction.test.ts
+      - name: Typecheck and production build
+        run: npm run build
