@@ -36,6 +36,7 @@ Retained exact evidence:
 
 - UI `33275769385`, job `99162085528`, head `a614c427194a0f436a7a3763a48808155d7865f3`: connected/live-lifecycle step 17 SUCCESS for Zone effect breadth; later focused steps green; broad Phase09 inherited red and build skipped.
 - UI `33276086024`, job `99162952306`, head `fda7436c5945d055d0231f9a65b8653e7b622443`: step 17 SUCCESS for authoritative spatial Zone placement replay; same inherited broad Phase09 red/build skip.
+- `9c287a175cbae621662fc883406b1463277a4f55`: restored the already-accepted authoritative `zone.stay` provider ingress after a concurrent Family U refactor accidentally dropped the export/dispatch. Descendant UI run `33279041449` at `255871dbabd40bc27a6c0a210fe56fe7b6f4c126` returned connected/live-lifecycle step 17 to SUCCESS; later broad Phase09 remained the inherited red. This is affected-surface regression recovery, not a reopening of Family T.
 
 ## Family P status
 
@@ -80,6 +81,17 @@ Retained implementation and acceptance evidence:
 - `525ac6204f4e966502654ea46393be313683f36a`: ledger promotion to `IMPLEMENTED` with implementation/production/identity/connected/persistence evidence.
 - `86e9b08b3af1d2eff9965abf4010c9485809f76c`: removes the temporary promotion helper workflow after the durable ledger write.
 
+## Family W audit — actual production projection gap
+
+Family W (`form-transformation-possession`) remains `INCOMPLETE`. The audit found a real production seam rather than merely missing test evidence:
+
+- `runtimeArtifact.ts` and `commonPlayArtifactRuntime.ts` persist/validate a typed form artifact with target/controller, property overlay/retention/replacement, HP policy, action policy, spellcasting policy, action IDs, resources, and generic expiry.
+- `realTurnRuntimeService.projectTurnRuntimeToScene()` currently materializes actor artifacts into live Scene/combatant state but has no corresponding form projection/restoration pass.
+- `installedCommonPlayRuntimeAdapter.projectRuntimeArtifactActions()` projects actor-artifact actions plus stored-invocation/Zone controls, but does not apply form `actionPolicy` or form spellcasting/property/HP overlays to the target.
+- Therefore the current production path can store and reconnect the form artifact identity but does not execute the ledger-required transformation semantics on the live target. Replacement/restoration and death/end ownership are also not defined by an existing production owner.
+
+Do not invent a second form engine or guess replacement/death policy in an adapter. Family W stays blocked until the existing typed form contract is deliberately connected to an authoritative target projection/restoration owner with deterministic rules for HP/actions/spellcasting/property overlays and end behavior.
+
 ## Next Exact Action
 
-Do not reopen Families S/T/U. Family V remains blocked only on repository-authoritative death/replacement semantics and should not be guessed. Move to the next non-blocked ledger audit, Family W (`form-transformation-possession`): reconcile the existing generic form artifact kernel/installed production evidence against the row's required property/resource/HP/action/movement/sense/spell/restoration/lifetime/controller semantics. If existing primitives already cover a requirement, add focused production/identity/reconnect/Undo evidence rather than a new form engine; if replacement/restoration or death/end ownership is genuinely undefined, preserve the row as `INCOMPLETE` and move to the next non-blocked family instead of inventing policy.
+Do not reopen Families S/T/U. Families V and W now have explicit authority/policy blockers and should not be guessed. Move to the next non-blocked ledger audit, Family X (`items-inventory-equipment`): reconcile the existing `commonPlayInventoryRuntime.ts`, Character inventory persistence/connected journal authority, and current production item action path against the row's grant/quantity/consume/destroy/charges/equip/wield/container/owner-transfer/durable-persistence/atomic-payment/Undo requirements. Reuse the existing durable inventory transaction rather than creating a second item store or forcing Character mutations into fake combat artifacts. If a required ownership/write-back seam is genuinely undefined, preserve X as `INCOMPLETE` and continue to the next non-blocked family instead of inventing policy.
