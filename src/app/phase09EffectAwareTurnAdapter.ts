@@ -7,6 +7,7 @@ import { projectTurnRuntimeToScene, synchronizeTurnRuntimeFromScene } from "./re
 import { clearReadyActionConfiguration, readyActionConfigurationFor, readyActionConfigurationsFor } from "./standardActionReadyState";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { compileInstalledCommonPlayZoneTurnOperations, installedCommonPlayZoneDefinitions } from "./commonPlayZoneTurnComposition";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface EffectAwareTurnAdapterState {
   sessionMode:SessionMode;
@@ -17,6 +18,7 @@ interface EffectAwareTurnAdapterState {
 
 const previousEndTurn=MockAdapter.prototype.endTurn;
 const previousEndInitiative=MockAdapter.prototype.endInitiative;
+const turnLifecycleEvents=new WeakMap<MockAdapter,ResolutionEvent[]>();
 
 const END_OF_TURN_STATUSES=["이탈"] as const;
 const START_OF_TURN_STATUSES=["회피","준비 행동"] as const;
@@ -38,9 +40,16 @@ function eventId() {
   return `phase09.turn-lifecycle.${Date.now()}.${Math.floor(Math.random()*1000)}`;
 }
 
+export function consumeAdapterTurnLifecycleEvents(adapter:MockAdapter) {
+  const events=turnLifecycleEvents.get(adapter)??[];
+  turnLifecycleEvents.delete(adapter);
+  return events.map((event)=>structuredClone(event));
+}
+
 MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   const internal=this as unknown as EffectAwareTurnAdapterState;
   const session=turnRuntimeSessions.get(this);
+  turnLifecycleEvents.delete(this);
   if (internal.sessionMode!=="initiative" || !session) return previousEndTurn.call(this);
 
   const endingActor=internal.scene.entities.find((entity)=>entity.id===internal.scene.currentActorId);
@@ -66,6 +75,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
     return internal.getSnapshot();
   }
 
+  turnLifecycleEvents.set(this,advanced.events.map((event)=>structuredClone(event)));
   projectTurnRuntimeToScene(session,internal.scene);
   const next=internal.scene.entities.find((entity)=>entity.id===advanced.activeActorId);
   const readyExpires=readyExpiresAtTurnStart(this,next);
