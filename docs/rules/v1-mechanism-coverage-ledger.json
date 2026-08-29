@@ -1703,7 +1703,7 @@
         "runtimeResolutionCommit.ts",
         "inventory and Character persistence"
       ],
-      "currentState": "Shared session authority is strong: canonical ResolutionEvents, revision checks, atomic commits, Host-authoritative connected application, duplicate/replay handling, reconnect reconstruction, and event-native Undo are production-proven across multiple completed and partial families. AJ is a cross-family acceptance row, however, so it cannot be final while mechanism families still lack their correctly-owned durable/session transaction. Current blockers include actor/form end ownership, durable item/attunement/progression/spell material ownership, special timing, mount/vehicle topology, campaign exposure/environment, project output, capacity facts, and standard-action dependencies.",
+      "currentState": "Shared production infrastructure already proves typed ResolutionEvent application, atomic session commit, Character write-back rollback, event history, Host/Client replay, duplicate idempotence, reconnect reconstruction, and event-native Undo across several implemented/advanced families. AJ remains cross-family INCOMPLETE because final acceptance requires every applicable mechanism to use its correct owner, while remote/persisted decisions and multiple durable/session domains are still explicitly undefined in other ledger rows.",
       "requiredSemantics": [
         "correct owner",
         "source ownership",
@@ -1721,27 +1721,37 @@
       "transactionDomain": "Per-mechanism correct authority with session orchestration",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "runtimeResolutionCommit.ts canonical authoritative commit",
-        "connectedSessionRuntimeAdapter.ts connected event application/replay",
-        "runtimeResolutionEventHistory.ts event-native Undo history"
+        "runtimeResolutionCommit.ts shared authoritative commit/write-back rollback",
+        "realEventApplyService.ts typed event replay",
+        "realEventUndoService.ts event-native inverse application",
+        "runtimeResolutionEventHistory.ts canonical runtime event history",
+        "connectedSessionProtocol.ts connected authoritative event transport"
       ],
       "productionEvidence": [
-        "Families S/T/U/AB completed production authority matrices",
-        "retained C9 connected replay/reconnect/Undo evidence in STATE"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts shared production commit and Undo",
+        "connectedTurnResolutionEventTransport.test.ts turn lifecycle replay/reconnect/Undo",
+        "connectedObjectLinkArtifactLifecycleProduction.test.ts object/link connected lifecycle",
+        "connectedActorTurnRuleProduction.test.ts automatic actor turn rule and Recharge authority"
       ],
-      "identityInvarianceEvidence": [],
+      "identityInvarianceEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary external identities",
+        "connectedObjectLinkArtifactLifecycleProduction.test.ts unknown object/link identities",
+        "connectedActorTurnRuleProduction.test.ts arbitrary actor-owned rule identity"
+      ],
       "connectedEvidenceIfRelevant": [
-        "completed Family T/U/AB Host/Client duplicate replay, reconnect, and Undo matrices"
+        "connectedTurnResolutionEventTransport.test.ts duplicate replay/reconnect/event-native Undo",
+        "connectedObjectLinkArtifactLifecycleProduction.test.ts Host/Client/reconnect/Undo",
+        "connectedActorTurnRuleProduction.test.ts Host/Client/reconnect/Undo"
       ],
       "persistenceEvidenceIfRelevant": [
-        "installed Common Play persistence/rehydration authority retained from PR #159",
-        "family-specific durable ownership remains required before AJ final disposition"
+        "PR #159 installed Common Play persistence/rehydration authority",
+        "resolutionCharacterWriteBackPort.ts Character-owned write-back/rollback boundary",
+        "connected actor/object lifecycle reconnect reconstruction evidence retained in STATE"
       ],
       "remainingNamedSeams": [
-        "cross-family final ownership acceptance cannot close while required mechanism rows remain INCOMPLETE",
-        "durable Character/source owners remain undefined for W/X/Y/Z/AA/AH/AI dependencies",
-        "session timing/topology/environment owners remain undefined for AC/AD/AE/AF",
-        "remaining supported named/dependency seams must be removed or proven non-blocking before final AJ disposition"
+        "Family Q/R remote or persisted decision ownership remains incomplete",
+        "Families V/W/X/Y/Z/AA/AC/AD/AE/AF/AH/AI retain explicit lifetime, durable-source, session-policy, or persistence owner gaps",
+        "AJ cannot become final while any applicable mechanism family lacks its correct authoritative transaction/recovery matrix"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
