@@ -319,6 +319,8 @@ export interface ActionVm {
     minimumRoll?:number;
     successOutcome:string;
     failureOutcome?:string;
+    durationKey?:string;
+    endsOnAttack?:boolean;
   };
   completionOutcome?:string;
   completionStateChange?:string;

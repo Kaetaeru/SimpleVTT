@@ -99,6 +99,7 @@ function cunningHideAction(character:CharacterSheet):ActionVm {
     available:true,
     eligibleTargetIds:[],
     checkBonus:bonus,
+    sessionStatusEffect:{status:"숨음",target:"actor",minimumRoll:15,successOutcome:"숨기 성공",failureOutcome:"숨기 실패",durationKey:"hidden-until-attack-or-discovery",endsOnAttack:true},
     details:[
       {label:"판정",value:"민첩(은신)"},
       {label:"보너스",value:signed},
