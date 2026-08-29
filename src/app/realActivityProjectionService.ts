@@ -41,6 +41,7 @@ function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "spellcasting-turn") {
     return `${change.targetId} spellcasting-turn ${spellcastingTurnLabel(change.before)} → ${spellcastingTurnLabel(change.after)}`;
   }
+  if (change.kind==="turn-clock") return `${change.targetId} turn-clock ${change.before.turnIndex} → ${change.after.turnIndex}`;
   if (change.kind==="death-save") return `${change.targetId} death-save.${change.field} ${change.before} → ${change.after}`;
   return `${change.targetId} life.${change.field} ${String(change.before)} → ${String(change.after)}`;
 }
