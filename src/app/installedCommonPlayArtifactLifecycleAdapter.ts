@@ -11,6 +11,7 @@ const PREFIX="artifact-lifecycle-common-play:";
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const cp=<T,>(value:T):T=>structuredClone(value);
+type GrantedEntryPoints=ReturnType<typeof commonPlayArtifactGrantedEntryPoints>;
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -56,7 +57,7 @@ async function projectedActions(adapter:MockAdapter,snapshot:AppSnapshot) {
     if(snapshot.role!=="dm"&&snapshot.activeCharacter.id!==artifact.sourceActorId) continue;
     const definition=await installedDefinition(adapter,artifact.sourceId);
     if(!definition) continue;
-    let entries;
+    let entries:GrantedEntryPoints;
     try { entries=commonPlayArtifactGrantedEntryPoints(state,definition,artifact.id); }
     catch { continue; }
     if(!entries.length) continue;
@@ -97,27 +98,28 @@ MockAdapter.prototype.resolveAction=async function resolvePortableArtifactLifecy
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
   const artifact=state?.artifacts?.find((candidate)=>candidate.id===reference.artifactId&&(candidate.artifactKind==="object"||candidate.artifactKind==="link"));
   if(!state||!artifact?.sourceActorId||targetIds.length!==1||targetIds[0]!==artifact.sourceActorId||state.clock.activeActorId!==artifact.sourceActorId||state.clock.phase==="end") return internal.getSnapshot();
+  const actorId=artifact.sourceActorId;
   const snapshot=await previousGetSnapshot.call(this);
-  if(snapshot.role!=="dm"&&snapshot.activeCharacter.id!==artifact.sourceActorId) return internal.getSnapshot();
+  if(snapshot.role!=="dm"&&snapshot.activeCharacter.id!==actorId) return internal.getSnapshot();
   const definition=await installedDefinition(this,artifact.sourceId);
   if(!definition) return internal.getSnapshot();
-  let entries;
+  let entries:GrantedEntryPoints;
   try { entries=commonPlayArtifactGrantedEntryPoints(state,definition,artifact.id); }
   catch { return internal.getSnapshot(); }
   if(!entries.some((entry)=>entry.id===reference.entryPointId)) return internal.getSnapshot();
   const resolutionId=`common-play-artifact-lifecycle.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const committed=resolveCommonPlayArtifactLifecycle(SIMPLEVTT_APP_RULES_PROFILE,state,definition,{
-    resolutionId,actorId:artifact.sourceActorId,artifactId:artifact.id,entryPointId:reference.entryPointId,
+    resolutionId,actorId,artifactId:artifact.id,entryPointId:reference.entryPointId,
   });
   if(committed.status==="rejected") return internal.getSnapshot();
-  const actorName=internal.scene.entities.find((entity)=>entity.id===artifact.sourceActorId)?.name??artifact.sourceActorId;
+  const actorName=internal.scene.entities.find((entity)=>entity.id===actorId)?.name??actorId;
   const outcome=committed.events.map((event)=>event.summary).join(" · ")||"Artifact lifecycle applied";
   return commitProductionRuntimeResolution(this,state,committed,{
     resolutionId,
     actionId,
     actionName:reference.entryPointId,
-    actorId:artifact.sourceActorId,
-    targetIds:[artifact.sourceActorId],
+    actorId,
+    targetIds:[actorId],
     targetNames:[actorName],
     compact:outcome,
     detail:[`${definition.id} · ${artifact.templateId} · ${reference.entryPointId}`,...committed.events.map((event)=>event.summary)],
