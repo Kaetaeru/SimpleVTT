@@ -70,8 +70,15 @@ Exact Family P slice verification:
 - Steps 18-27 also completed successfully.
 - Broad Phase09 step 28 remains the inherited FAILURE and typecheck/build step 29 is skipped; no full-build green is claimed.
 
+Rest-event audit after the damage-dealt slice:
+
+- `short-rest` and `long-rest` already exist as typed Resolver operations and produce authoritative events for the resting `targetId`.
+- `resolutionRestOps.ts` performs rest-bound Effect expiry inside the rest operation itself before returning that operation's event/result.
+- Therefore a generic persistent Effect rule bound to `short-rest`/`long-rest` would require a new ordering decision: whether its trigger is evaluated before rest expiry, after rest expiry, or against the pre-rest snapshot while downstream operations execute after the rest mutation. Current Common Play contracts do not determine that ordering/lifetime semantic.
+- Per the C9 anti-drift rule, no rest-trigger dispatcher was added. This is an architecture-semantic gap, not a missing one-line production hook.
+
 Coverage remains `IMPLEMENTED=2`, `INCOMPLETE=34`, `PROVEN_UNNEEDED=0`: Families S and T are final; P is still incomplete. `gateNBlockingNamedFallbacks` remains empty. Gate N remains blocked by the other incomplete rows. Overall verdict: `V1 INCOMPLETE`.
 
 ## Next Exact Action
 
-Continue Family P without repeating the final Zone matrix or the now-proven `damage.taken/dealt` slice. Audit the remaining required event families against typed existing ResolutionOperations/ResolutionEvents and choose the smallest event that can be composed atomically without inventing a second trigger engine. A high-value next candidate is the already-typed `short-rest`/`long-rest` operation family: first verify that a persistent effect can bind the resting actor and append its triggered operations inside the same rest PendingResolution; if that is mechanically unambiguous, add the narrow rest-event dispatch plus arbitrary-ID connected/reconnect/Undo proof. If rest requires a new target/event binding or lifetime semantic not already determined by current contracts, stop for architecture review before adding it. Keep Family P `INCOMPLETE` until its complete required event/frequency matrix is evidenced.
+Continue Family P without repeating the final Zone matrix or the now-proven `damage.taken/dealt` slice. Do not implement rest-trigger dispatch until the trigger-vs-rest-expiry ordering contract is deliberately resolved. Instead audit the already-typed `recharge-resource` turn-start operation and its current production callers to determine whether recharge/cooldown can be made portable/automatic by composition with existing turn lifecycle and resource ownership, with no new event vocabulary or state owner. If that path is already semantically owned, add the smallest arbitrary-ID production/connected/reconnect/Undo proof; if it also requires new authority/lifetime semantics, stop for architecture review and select another already-determined event family. Keep Family P `INCOMPLETE` until its complete required event/frequency matrix is evidenced.
