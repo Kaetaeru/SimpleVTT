@@ -1,13 +1,20 @@
 import type { RulesRuntimeState } from "./combatState";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
-import type { PendingResolution, ResolutionCommit } from "./resolutionTypes";
-import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest, StoredInvocationArtifactData } from "./runtimeArtifact";
+import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
+import type { RuntimeArtifactExpiry, RuntimeArtifactInstance, RuntimeArtifactSpawnRequest, StoredInvocationArtifactData } from "./runtimeArtifact";
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
 import type { ActionUseKind } from "./turnEconomy";
 
 type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form";
 type Obj=Record<string,unknown>;
+type ArtifactLifecycleOperation=
+  | {kind:"artifact.damage";artifact:string;amount:{value:number};damageType:string}
+  | {kind:"artifact.repair";artifact:string;amount:{value:number}}
+  | {kind:"artifact.relocate";artifact:string;placementRef:string}
+  | {kind:"artifact.update";artifact:string;metadataPatch:Record<string,string|number|boolean>}
+  | {kind:"artifact.remove";artifact:string};
+type ArtifactOperation={kind:"artifact.spawn";template:string}|ArtifactLifecycleOperation;
 
 export interface CommonPlayArtifactActivationDefinition {
   $schema?:string;
@@ -17,7 +24,7 @@ export interface CommonPlayArtifactActivationDefinition {
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
-    operations:Array<{kind:"artifact.spawn";template:string}>;
+    operations:ArtifactOperation[];
   }>;
   artifactTemplates:Array<{
     id:string;
@@ -119,6 +126,71 @@ function artifact(
   } as RuntimeArtifactSpawnRequest["form"]};
 }
 
+function positiveInteger(value:unknown,label:string) {
+  const amount=object(value,label).value;
+  if(typeof amount!=="number"||!Number.isInteger(amount)||amount<=0) throw new DomainEvaluationError(`${label}.value must be a positive integer`);
+  return amount;
+}
+
+function lifecycleArtifact(
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  actorId:string,
+  templateId:string,
+  allowedKinds:readonly PortableArtifactKind[],
+):RuntimeArtifactInstance {
+  const template=definition.artifactTemplates.find((candidate)=>candidate.id===templateId);
+  if(!template) throw new DomainEvaluationError(`artifact template not found: ${templateId}`);
+  if(!allowedKinds.includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${templateId} kind ${template.artifactKind} is not valid for this lifecycle operation`);
+  const matches=(state.artifacts??[]).filter((candidate)=>
+    candidate.sourceId===definition.id
+    && candidate.sourceActorId===actorId
+    && candidate.templateId===templateId
+    && allowedKinds.includes(candidate.artifactKind as PortableArtifactKind)
+  );
+  if(matches.length!==1) throw new DomainEvaluationError(`artifact lifecycle reference ${templateId} requires exactly one active source-owned instance, got ${matches.length}`);
+  return matches[0];
+}
+
+function metadataPatch(value:unknown,label:string) {
+  const patch=object(value,label);
+  if(!Object.keys(patch).length) throw new DomainEvaluationError(`${label} must not be empty`);
+  for(const [key,item] of Object.entries(patch)) {
+    if(!key||!(typeof item==="string"||typeof item==="number"||typeof item==="boolean")) throw new DomainEvaluationError(`${label}.${key} must be a string, number, or boolean`);
+  }
+  return structuredClone(patch) as Record<string,string|number|boolean>;
+}
+
+function lifecycleOperation(
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  input:CommonPlayArtifactActivationInput,
+  operation:ArtifactLifecycleOperation,
+  index:number,
+):ResolutionOperation {
+  const id=`common-play-artifact-lifecycle-${index+1}`;
+  if(operation.kind==="artifact.damage") {
+    const target=lifecycleArtifact(state,definition,input.actorId,operation.artifact,["object"]);
+    if(typeof operation.damageType!=="string"||!operation.damageType) throw new DomainEvaluationError("artifact.damage damageType is required");
+    return {id,kind:"damage-artifact",artifactId:target.id,amount:positiveInteger(operation.amount,"artifact.damage amount"),damageType:operation.damageType};
+  }
+  if(operation.kind==="artifact.repair") {
+    const target=lifecycleArtifact(state,definition,input.actorId,operation.artifact,["object"]);
+    return {id,kind:"repair-artifact",artifactId:target.id,amount:positiveInteger(operation.amount,"artifact.repair amount")};
+  }
+  if(operation.kind==="artifact.relocate") {
+    const target=lifecycleArtifact(state,definition,input.actorId,operation.artifact,["object","link"]);
+    if(typeof operation.placementRef!=="string"||!operation.placementRef) throw new DomainEvaluationError("artifact.relocate requires an opaque placementRef");
+    return {id,kind:"relocate-artifact",artifactId:target.id,placementRef:operation.placementRef};
+  }
+  if(operation.kind==="artifact.update") {
+    const target=lifecycleArtifact(state,definition,input.actorId,operation.artifact,["object","link"]);
+    return {id,kind:"update-artifact",artifactId:target.id,metadataPatch:metadataPatch(operation.metadataPatch,"artifact.update metadataPatch")};
+  }
+  const target=lifecycleArtifact(state,definition,input.actorId,operation.artifact,["object","link"]);
+  return {id,kind:"remove-artifact",artifactId:target.id};
+}
+
 export function compileCommonPlayArtifactActivation(
   state:RulesRuntimeState,
   definition:CommonPlayArtifactActivationDefinition,
@@ -127,9 +199,9 @@ export function compileCommonPlayArtifactActivation(
   const entryPoint=definition.entryPoints.find((candidate)=>candidate.id===input.entryPointId);
   if(!entryPoint||entryPoint.invocation!=="manual"||!entryPoint.operations.length) throw new DomainEvaluationError("artifact activation requires a non-empty manual entry point");
   const templates=new Map(definition.artifactTemplates.map((template)=>[template.id,template]));
-  const artifactIds=new Map(entryPoint.operations.map((operation,index)=>[operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`]));
-  const operations=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...entryPoint.operations.map((operation,index)=>{
-    if(operation.kind!=="artifact.spawn") throw new DomainEvaluationError(`entry point ${entryPoint.id} supports only artifact.spawn`);
+  const artifactIds=new Map(entryPoint.operations.flatMap((operation,index)=>operation.kind==="artifact.spawn"?[[operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`] as const]:[]));
+  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...entryPoint.operations.map((operation,index)=>{
+    if(operation.kind!=="artifact.spawn") return lifecycleOperation(state,definition,input,operation,index);
     const template=templates.get(operation.template);
     if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
     if(!["stored-invocation","object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
