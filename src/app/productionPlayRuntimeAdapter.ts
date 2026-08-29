@@ -236,6 +236,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
     summary:`이동 가능량 +${character.speed}피트`,
     available:true,
     eligibleTargetIds:[],
+    movementBudgetGainFeet:character.speed,
     details:[detail("효과",`이동 가능량 +${character.speed}피트`),detail("비용","행동 1")],
   },
   {

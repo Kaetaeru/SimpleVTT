@@ -68,6 +68,8 @@ Canonical Phase 09 runtime attacks and their concentration workflow no longer us
 
 The runtime-presence spell router and `legacySpellRuntimeHandler.ts` are deleted. Supported freeform and initiative spells now create or reuse the same authoritative TurnRuntime state and share event-native Undo. Spell identity still selects legacy mechanic data in the authoritative adapter and production adapter, so spell execution remains `LEGACY_EXECUTION` until Common Play definitions own that lookup.
 
+Dash execution no longer recognizes `action.dash`. Any authored no-roll action with a positive `movementBudgetGainFeet` uses the same economy/event path. The duplicate Rogue Cunning Dash mutation/event branch is deleted; its structural clone now records Bonus Action and movement through the shared event. An unknown action-ID proof covers the runtime projection; standard-action content projection and Ready routing remain named seams.
+
 `productionWeaponRuntimeFactAdapter.ts` is deleted. Canonical ItemInstance weapon definitions now supply ability and range inside the pure production Character action projection used by both a Host-mounted remote Character and its owning Client. That same projection includes the inactive Rage action from structural class/resource facts so first-render action catalogs converge; dynamic Rage lifecycle execution remains in the named legacy adapter.
 
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |

@@ -311,6 +311,7 @@ export interface ActionVm {
   saveHalf?: boolean;
   details: ActionDetailVm[];
   attacksPerAction?:number;
+  movementBudgetGainFeet?:number;
 }
 
 export interface EconomyVm {

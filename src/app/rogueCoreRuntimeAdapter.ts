@@ -270,9 +270,6 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
   if(!resolution)return previousAdvanceResolution.call(this);
-  const cunningDashBefore=resolution.stage==="effect-preview"&&resolution.actionId===CUNNING_DASH_ACTION_ID
-    ? structuredClone(internal.scene.economyByActor[resolution.actorId])
-    : undefined;
   const cunningDisengageBefore=resolution.stage==="effect-preview"&&resolution.actionId===CUNNING_DISENGAGE_ACTION_ID
     ? structuredClone(internal.scene.economyByActor[resolution.actorId])
     : undefined;
@@ -280,13 +277,7 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
   if(resolution.stage==="effect-preview"&&ROGUE_ACTION_IDS.has(resolution.actionId)) {
     const actor=internal.scene.entities.find((entry)=>entry.id===resolution.actorId);
     const economy=internal.scene.economyByActor[resolution.actorId];
-    if(resolution.actionId===CUNNING_DASH_ACTION_ID&&economy) {
-      const before=economy.movementMax;
-      economy.movementMax+=internal.activeCharacter.speed;
-      economy.movement+=internal.activeCharacter.speed;
-      resolution.stateChanges.push(`이동 가능량 ${before} → ${economy.movementMax}`);
-      resolution.finalOutcome="질주 적용";
-    } else if(resolution.actionId===CUNNING_DISENGAGE_ACTION_ID) {
+    if(resolution.actionId===CUNNING_DISENGAGE_ACTION_ID) {
       if(internal.sessionMode!=="initiative")addStatus(actor,"이탈",resolution);
       resolution.finalOutcome="이탈 적용";
     }
@@ -295,21 +286,11 @@ MockAdapter.prototype.advanceResolution=async function advanceRogueCoreResolutio
   const snapshot=await previousAdvanceResolution.call(this);
   if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
     const uncannyComplete=uncannyResolutionIds.get(this)===resolution.id;
-    if(resolution.actionId===CUNNING_DASH_ACTION_ID&&cunningDashBefore) {
-      const after=internal.scene.economyByActor[resolution.actorId];
-      if(after)recordRuntimeResolutionEvents(this,resolution.id,[economyEvent(
-        resolution,
-        "rogue:cunning-action:dash",
-        "cunning-action-dash",
-        "cunning-action:dash:economy",
-        cunningDashBefore,
-        after,
-      )]);
-    } else if(resolution.actionId===CUNNING_DISENGAGE_ACTION_ID&&cunningDisengageBefore&&internal.sessionMode==="initiative") {
+    if(resolution.actionId===CUNNING_DISENGAGE_ACTION_ID&&cunningDisengageBefore&&internal.sessionMode==="initiative") {
       if(recordCunningDisengageResolutionEvents(this,internal,resolution,cunningDisengageBefore))return internal.getSnapshot();
       addStatus(internal.scene.entities.find((entry)=>entry.id===resolution.actorId),"이탈",resolution);
       markSnapshotUndo(this,resolution.id);
-    } else if(ROGUE_ACTION_IDS.has(resolution.actionId)) {
+    } else if(resolution.actionId!==CUNNING_DASH_ACTION_ID&&ROGUE_ACTION_IDS.has(resolution.actionId)) {
       markSnapshotUndo(this,resolution.id);
     }
     if(uncannyComplete) {
