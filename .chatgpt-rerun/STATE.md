@@ -120,7 +120,7 @@ Family AA (`progression`) remains `INCOMPLETE`. Its installed progression contri
 - Family T (zones) is now ledger `IMPLEMENTED`: `connectedSpatialZoneStayProduction.test.ts` proves an explicit provider-authored stay fact through the canonical Zone resolution with Host/Client convergence, duplicate replay, reconnect, and Undo; Core still does not infer geometry.
 - Focused stay test and `tsc --noEmit` pass on the reconciliation head.
 - Actual ledger coverage is now `IMPLEMENTED=3`, `INCOMPLETE=33`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty.
-- Family AB Recharge production recovery is implemented and connected, but its new acceptance probe exposed a real remaining gap: the actor action does not yet consume its recovered resource (expected 1 -> 0, observed 1). Do not promote AB until availability/consumption is fixed and re-proven.
+- Family AB final availability/consumption acceptance is now closed by `0537062111c91c4af898802b27ab4a5d1e3cac17`: the recharged actor Action spends both its Action and recovered charge atomically, gates availability at zero, converges on Client, is duplicate-idempotent, reconstructs on reconnect, and restores through event-native Undo. UI run `33280926167`, job `99175842905`, step 17 SUCCESS; the later broad Phase09 step remains inherited red.
 
 ## Completed Family AB
 
@@ -146,6 +146,10 @@ Family AC (`legendary-lair-special-timing`) remains `INCOMPLETE` after repositor
 - No repository contract currently owns legendary/lair pool refresh, simultaneous special-action ordering, connected owner decision/reconnect, or persistence semantics. Adding those policies inside an adapter would violate the architecture charter.
 - No production source was changed for AC. Coverage remains `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty.
 
+## Family AC audit — authority contract missing
+
+Family AC (`legendary-lair-special-timing`) remains `INCOMPLETE`. `commonPlaySpecialTimingRuntime.ts` already compiles owner-authorized turn/after-turn/initiative-count events, option cost, and payload into the generic Resolver, but this is kernel-only. The persisted Common Play schema does not define special-action timing/initiative-count authoring, and authoritative `RuntimeClock` contains round/elapsed/active-actor/phase but no initiative-count datum. Production therefore has no repository-defined event source, refresh/order policy, or connected off-turn interaction owner for portable legendary/lair timing. Adding a dispatcher now would invent semantics forbidden by the charter.
+
 ## Next Exact Action
 
-Do not reopen Families S/T/U/AB, audited authority-blocked V/W/X/Y/Z/AA, Family P, or Family AC without a repository-defined authority contract. Audit the next non-blocked row, Family AD (`mount-vehicle-controller`): reconcile `commonPlayMountRuntime` plus existing object/controller/session topology against the ledger-required mount/dismount cost, controlled versus independent initiative/actions, fall-off/Prone, capacity, drawn vehicle, crew/speed, vehicle HP/AC/threshold, repair, connected replay/reconnect, and identity evidence. Implement only semantics whose authority/ownership already exists; otherwise preserve AD as `INCOMPLETE` with the exact missing contract and continue to the next non-blocked family.
+Do not reopen Families S/T/U/AB or the audited authority-blocked P/V/W/X/Y/Z/AA/AC seams. Move to Family AD (`mount-vehicle-controller`): audit whether the existing mount validator plus actor/object/link artifacts, controller transfer, movement, initiative, damage threshold, and repair production paths already define a bounded authoritative session composition. If controlled/independent initiative, mount/dismount cost, fall-off, capacity, crew, or persistence ownership is not defined by existing contracts, keep AD `INCOMPLETE` and record the exact authority gap rather than inventing mount/vehicle policy; otherwise add only the smallest production composition proof.

@@ -1393,7 +1393,7 @@
         "RulesProfile timing/economy",
         "reactionWindow.ts"
       ],
-      "currentState": "Generic kernel compiles owner-authorized turn-start/end, after-turn, and initiative-count special-action requests with option selection and atomic pool cost, but the persisted Common Play contract does not carry that special-action definition and the live TurnRuntime emits only ordinary begin/end-turn lifecycle. Pool refresh, initiative-count/after-turn dispatch, simultaneous ordering, connected owner interaction, replay/reconnect, and persistence authority remain undefined.",
+      "currentState": "Kernel compilation validates owner-authorized turn/after-turn/initiative-count timing, option selection, cost, and generic Resolver payloads, but the persisted Common Play contract has no special-timing/initiative-count authoring vocabulary and authoritative RuntimeClock has no initiative-count datum. No production session dispatcher can therefore schedule portable legendary/lair timing without inventing authority/order policy.",
       "requiredSemantics": [
         "off-turn pools",
         "refresh",
@@ -1417,9 +1417,9 @@
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "portable persisted special-action/timing definition is not present in the Common Play contract",
-        "live session after-turn/initiative-count dispatcher and connected owner interaction are undefined",
-        "pool refresh and simultaneous special-action ordering authority are undefined"
+        "persisted portable special-action timing/option contract",
+        "authoritative initiative-count event source and refresh/order semantics",
+        "session timing dispatcher plus connected off-turn interaction/replay/reconnect"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
