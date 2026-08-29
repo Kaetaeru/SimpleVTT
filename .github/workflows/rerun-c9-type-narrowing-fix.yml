@@ -41,6 +41,8 @@ jobs:
           replace('src/domain/commonPlayEffectRuntime.ts','    if(template.rules.some((rule)=>rule.event!==template.lifetime.event||ruleFrequency(rule)!=="once")) {','    if(template.rules.some((rule)=>rule.event!==lifetime.event||ruleFrequency(rule)!=="once")) {');
           replace('src/domain/commonPlayEffectRuntime.ts','    assertOnlyKeys(template.lifetime,["kind","onEnd"],`${label} lifetime`);','    assertOnlyKeys(lifetime,["kind","onEnd"],`${label} lifetime`);');
           replace('src/domain/commonPlayEffectRuntime.ts','    if(template.lifetime.kind!=="until-duration"||template.lifetime.onEnd!=="destroy") {','    if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") {');
+          replace('src/app/realActivityProjectionService.ts','  if (change.kind==="turn-clock") return `${change.targetId} turn-clock ${change.before.turnIndex} → ${change.after.turnIndex}`;','  if (change.kind==="turn-clock") return `${change.targetId} turn-clock ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;');
+          replace('src/app/resolutionEventUndo.ts','      return {...structuredClone(change),before:change.after,after:change.before};\n    }),','      return change;\n    }),');
           NODE
       - name: Generate content dependencies
         run: npm run generate:content
@@ -52,6 +54,6 @@ jobs:
         run: |
           git config user.name "Kaetaeru"
           git config user.email "131461278+Kaetaeru@users.noreply.github.com"
-          git add src/app/connectedActionRoutingAdapter.ts src/domain/commonPlayEffectRuntime.ts
-          git commit -m "fix(c9): finish runtime type narrowing"
+          git add src/app/connectedActionRoutingAdapter.ts src/domain/commonPlayEffectRuntime.ts src/app/realActivityProjectionService.ts src/app/resolutionEventUndo.ts
+          git commit -m "fix(c9): close runtime typecheck drift"
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
