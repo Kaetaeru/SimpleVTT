@@ -62,6 +62,7 @@ import "./productionSpellRuntimeAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./installedCommonPlayRuntimeAdapter";
+import "./installedCommonPlayArtifactLifecycleAdapter";
 import "./spatialZoneMembershipRuntimeAdapter";
 import "./barbarianRageRuntimeAdapter";
 import "./barbarianBerserkerIntimidatingPresenceRuntimeAdapter";
