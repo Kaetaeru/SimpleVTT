@@ -32,59 +32,51 @@ Previously validated C9 checkpoints remain authoritative and must not be repeate
 
 Family T (`zones`) is final. Installed arbitrary Zones cover spawn/opaque placement, manual and provider-supplied spatial membership, enter/leave/stay/start/end-turn events, frequency, elapsed cleanup, damage/effect triggers, Host/Client replay, duplicate replay, reconnect, Undo, and arbitrary identity. No Zone-specific Effect engine, geometry engine, timer, or transport was introduced.
 
-Exact retained evidence:
+Retained exact evidence:
 
 - UI `33275769385`, job `99162085528`, head `a614c427194a0f436a7a3763a48808155d7865f3`: connected/live-lifecycle step 17 SUCCESS for Zone effect breadth; later focused steps green; broad Phase09 inherited red and build skipped.
 - UI `33276086024`, job `99162952306`, head `fda7436c5945d055d0231f9a65b8653e7b622443`: step 17 SUCCESS for authoritative spatial Zone placement replay; same inherited broad Phase09 red/build skip.
 
-## Current Family P
+## Family P status
 
-Family P (`trigger-frequency-automatic`) remains `INCOMPLETE`, but the generic frequency-token matrix now has production evidence for `once`, `once-per-turn`, `once-per-round`, and `once-per-resolution`, in addition to already-proven damage events, actor turn boundaries, and retained post-roll interceptor timing.
+Family P (`trigger-frequency-automatic`) remains `INCOMPLETE`, but the generic frequency-token matrix has production evidence for `once`, `once-per-turn`, `once-per-round`, and `once-per-resolution`, plus automatic damage events, actor turn boundaries, Zone events, and retained post-roll interceptor timing.
 
-Damage / recurring trigger evidence:
+Retained evidence:
 
-- `2ad9a9da`, `cf5c4d05`, `e673e8ce`: structural `damage.taken | damage.dealt` automatic rules append to the originating Resolver transaction; arbitrary identity and connected replay/reconnect/Undo are proven.
-- UI `33276209929`, job `99163290985`, exact head `e673e8cee93fa0e173c724f5e15d10f45a2cbb79`: step 17 SUCCESS.
-- `63dced7e2116d568071a5349ce7bf8cdb23b0ec2`: `once-per-turn` and `once-per-round` suppress same-window repeats and re-arm on later authoritative clock windows, including connected marker convergence/Undo.
-- UI `33276658731`, job `99164452949`, exact head `63dced7e2116d568071a5349ce7bf8cdb23b0ec2`: step 17 SUCCESS.
+- `2ad9a9da`, `cf5c4d05`, `e673e8ce`: structural `damage.taken | damage.dealt` automatic rules append to the originating Resolver transaction; arbitrary identity and connected replay/reconnect/Undo proven.
+- `63dced7e2116d568071a5349ce7bf8cdb23b0ec2`: once-per-turn/round re-arm from authoritative clock windows.
+- `96ef2d038692f3ab65d7b01cca7d2c82f21e96f0`, `a3d602234157f9b6286ad762060e4ef787c4d07b`, `2da641307e85c354415be63136bb62962a830f73`: installed actor-owned turn-start/end rules in the existing turn transaction with connected/reconnect/Undo evidence.
+- `commonPlayRuntime.ts` plus retained PR #179 / `installedCommonPlayInterceptorProductionRuntime.test.ts`: `attack.outcome-determined`, `d20.outcome-determined`, and `damage.rolled` interceptor timings reuse authoritative PendingResolution semantics.
+- `connectedOnceFrequencyProduction.test.ts` and `connectedDamageDealtTriggerProduction.test.ts`: source-scoped `once` and `once-per-resolution` production/reconnect/Undo evidence.
+- UI `33277714480`, job `99167253569`, head `0af725b0a3bd6819532bc3d165ea4a22a4596fd1`: step 17 and steps 18-27 SUCCESS; inherited broad Phase09 step 28 fails and build is skipped.
 
-Actor turn-boundary evidence:
+Family P remains incomplete because repository authority still does not define or prove pre-roll automatic timing, top-level hit/miss/save trigger vocabulary and subject binding, state-applied/expiry ordering, rest trigger-vs-expiry ordering, or portable Recharge policy/die authority. Do not invent those semantics in an adapter.
 
-- `96ef2d038692f3ab65d7b01cca7d2c82f21e96f0` and `a3d602234157f9b6286ad762060e4ef787c4d07b`: installed actor-owned `turn-start | turn-end` rules compile into the existing authoritative turn PendingResolution.
-- `2da641307e85c354415be63136bb62962a830f73`: test-only fix follows authoritative initiative order rather than assuming the summoned actor is next.
-- UI `33277003153`, job `99165362025`, exact head `2da641307e85c354415be63136bb62962a830f73`: step 17 SUCCESS for identity, Host/Client convergence, duplicate replay, reconnect, and event-native Undo; steps 18-27 green; broad Phase09 inherited red/build skip.
+## Family V audit — lifetime/reconnect advanced, final disposition unchanged
 
-Post-roll/outcome retained evidence:
+Live GitHub advanced beyond the prior STATE checkpoint before this Rerun execution. Current product/test head before this STATE write was `77b533aaa4faed38dba7aa17d85f9068dd492e13`; the immediately preceding UI-registration head was `18a66247a175eacb099b70dbf16b59ca32257089`.
 
-- `commonPlayRuntime.ts` already owns structural `attack.outcome-determined`, `d20.outcome-determined`, and `damage.rolled` interceptor timings. They reuse the authoritative PendingResolution with atomic payment/recalculation rather than a second mechanical commit.
-- Retained C8/PR #179 evidence plus `installedCommonPlayInterceptorProductionRuntime.test.ts` proves arbitrary installed identity for d20 outcome recalculation and damage-roll reduction, atomic payment, duplicate-response safety, Host/Client event convergence, duplicate replay rejection, and event-native Undo.
-- A new speculative attack-outcome-specific connected scenario was intentionally discarded after it asserted behavior not owned by the existing production surface; the canonical retained interceptor suite remains the evidence. No new top-level hit/miss/save event semantics were claimed.
+No production source change was required for the new Family V lifetime proof. The added arbitrary installed actor-artifact regression uses the existing generic artifact expiry/removal, turn-clock, ResolutionEvent, connected replay, and event-native Undo path:
 
-`once` / `once-per-resolution` evidence completed in this checkpoint:
+- `afa2860f55ff498929984dca2905c1bbacf9e5b5`: `connectedActorArtifactLifecycleProduction.test.ts` proves an unknown elapsed 6-second actor artifact spawns with its typed combatant, reconstructs on a fresh connected replica, expires on normal round-wrap elapsed advance, removes both artifact and projected combatant, rejects duplicate replay, reconstructs the expired state on fresh reconnect, restores artifact + combatant through event-native Undo, and reconstructs the restored state on another fresh reconnect.
+- `18a66247a175eacb099b70dbf16b59ca32257089`: registers that lifecycle regression in the authoritative UI connected/live-lifecycle step.
+- UI run `33277978481`, job `99167998243`, exact head `18a66247a175eacb099b70dbf16b59ca32257089`: step 17 SUCCESS including `connectedActorArtifactLifecycleProduction.test.ts` and the existing `connectedActorArtifactReconnectProduction.test.ts`; steps 18-27 also SUCCESS. Broad Phase09 step 28 remains the inherited failure and Typecheck/build step 29 is skipped, so no full-build green is claimed.
+- `77b533aaa4faed38dba7aa17d85f9068dd492e13` removes only the temporary actor-lifecycle diagnostic workflow; it does not remove the main UI regression registration.
 
-- `commonPlayFrequencyRuntime.ts` remains the single generic frequency policy for `unlimited | once | once-per-turn | once-per-round | once-per-resolution`; no second frequency engine was added.
-- `connectedOnceFrequencyProduction.test.ts` proves a source-scoped `once` rule remains consumed across later resolutions and reconnect, and event-native Undo restores the consumed marker/state. `0af725b0a3bd6819532bc3d165ea4a22a4596fd1` adds the source-scoped regression.
-- `connectedDamageDealtTriggerProduction.test.ts` proves `once-per-resolution` suppresses a second matching damage event inside one multi-damage authoritative resolution and re-arms for the next resolution, with arbitrary identity and connected replay/reconnect/Undo.
-- UI `33277613401`, job `99166991572`, head `97e2dd8486c9f3c0dbf3769e90081fc10c1d1e85`: step 17 SUCCESS and steps 18-27 SUCCESS; only inherited broad Phase09 step 28 failed and build was skipped.
-- Focused frequency diagnostic `33277634944` at `5e732141bccce5919a03a7bd8d062388a1b23371`: SUCCESS.
-- UI `33277714480`, job `99167253569`, exact head `0af725b0a3bd6819532bc3d165ea4a22a4596fd1`: step 17 SUCCESS including the source-scoped `once` regression; steps 18-27 SUCCESS; broad Phase09 step 28 remains the inherited failure and build is skipped. No full-build green is claimed.
+This closes the previously stale **elapsed lifetime/despawn + connected reconnect/replay/Undo** evidence gap for Family V. It does not define the ledger-required **death/replacement policy**. The current generic artifact contract has elapsed/durable/source-lifetime forms and `remove-artifact` semantics, but no repository-authoritative rule was found that says actor death or replacement must select a particular removal/replacement transition. Per the architecture charter and the prior Next Exact Action, that semantic must not be invented merely to promote the ledger row.
 
-Family P unresolved semantic/production gaps remain explicit:
+Family V therefore remains `INCOMPLETE`. The ledger row should be reconciled later to record the new lifetime/reconnect evidence, but its `death/despawn/replacement` requirement remains a real blocker until repository authority supplies or proves the policy. Do not repeat actor spawn/action/lifetime evidence.
 
-- rest triggers: `short-rest`/`long-rest` are authoritative Resolver operations, but rest-bound Effect expiry occurs inside the operation and trigger-vs-expiry ordering is not defined. The discarded `f22d50cb` staging workflow attempted to choose this without authority, failed without pushing product code, and was removed by `7727cf2a`. Do not implement rest triggers until ordering/lifetime is deliberately defined.
-- recharge: `recharge-resource` exists generically, but no portable installed Recharge X-Y policy/die-authority binding exists. Do not infer it from monster/action identity.
-- hit/miss/save automatic triggers: no canonical portable top-level event names or subject/target binding are defined. Do not invent them in an adapter.
-- state-applied/expiry automatic triggers: `apply-effect`/`remove-effect` operations exist, but no canonical portable event identity and no single expiry ordering/lifetime contract exists across all lifecycle owners.
-- pre-roll automatic timing remains distinct from the already-proven outcome/post-roll interceptor points.
+## Next candidate: Family U portable object/link lifecycle
 
-Family P therefore stays `INCOMPLETE`; its frequency submatrix is no longer the blocker.
+Family U (`object-link-artifacts`) is a concrete non-blocked production gap, not merely a stale ledger row:
 
-## Next candidate outside the blocked Family P semantics
+- `commonPlayArtifactRuntime.ts` already lowers arbitrary object/link templates through generic `artifact.spawn`; `installedCommonPlayLoweredFamiliesProduction.test.ts` proves arbitrary object/link spawn and rename invariance in the installed production route.
+- `commonPlayArtifactFamiliesRuntime.test.ts` already proves the generic Resolver kernel for object AC/HP, damage threshold, defenses, repair, relocation, destruction/removal, link endpoints/relations, identity invariance, and dangling-link rejection.
+- However `commonPlayOperationRuntime.ts` currently exposes portable resource/economy/damage/healing/movement/roll operations only, while `commonPlayArtifactRuntime.ts` exposes only `artifact.spawn`. The existing generic Resolver artifact lifecycle operations (`damage-artifact`, `repair-artifact`, relocation/removal) are therefore not yet authorable/executable by an unknown installed Common Play module through the production operation surface.
 
-Family V (`actor-artifact-summon`) is the nearest high-value row with substantial existing production evidence. The generic artifact kernel already supports actor spawn and `remove-artifact`; `executeRemoveArtifact` removes the actor artifact and its projected combatant together and emits reversible artifact + combatant StateChanges. Existing C8 evidence already covers arbitrary actor identity, actions/resources projection, Host/Client execution, and Undo.
-
-The remaining Family V audit should therefore not invent a new despawn primitive. Determine the authoritative policy that maps actor death/lifetime/replacement to the existing `remove-artifact` operation, and prove fresh reconnect/restart reconstruction for the lifecycle. If the current artifact lifetime metadata already owns this policy, wire the smallest existing transaction seam and add focused arbitrary-identity Host/Client/reconnect/Undo evidence. If death/replacement policy is genuinely undefined, preserve that as an explicit contract gap and move to another non-blocked row rather than inferring behavior.
+This is the smallest clear Family U gap because it reuses existing Resolver semantics rather than adding a new object/link engine.
 
 ## Next Exact Action
 
-Start Family V from repository truth: inspect actor-artifact lifetime metadata and current death/despawn/replacement ownership only far enough to determine whether an existing generic policy can invoke `remove-artifact`. Reuse `resolutionArtifactOps.ts` removal semantics and the existing connected ResolutionEvent/reconnect path; do not repeat actor spawn/action evidence, do not add a named summon branch, and do not invent death/replacement semantics if the contract does not already define them. Keep Family V `INCOMPLETE` until death/lifetime plus persistence/reconnect requirements are actually evidenced.
+Start Family U from the existing generic artifact kernel. Inspect the persisted Common Play schema and exact `ResolutionOperation` shapes for artifact damage, repair, relocation, and removal, then expose only the smallest reusable portable operation vocabulary required for an unknown object/link RuleModule to use those already-existing operations. Route it through the existing installed Common Play production/ResolutionEvent path and add one focused arbitrary-identity Host/Client replay, duplicate replay, fresh reconnect, and Undo proof covering object damage/repair/destruction and link lifecycle as applicable. Do not create a second artifact engine or transport, and do not infer new link/portal behavior beyond fields already owned by the artifact contract.
