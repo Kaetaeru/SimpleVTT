@@ -52,7 +52,6 @@
     { "module": "./sessionInventoryRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./theaterOfMindSpatialAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./productionSpellRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
-    { "module": "./productionWeaponRuntimeFactAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./productionDiceRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./standardActionReactionAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./installedCommonPlayRuntimeAdapter", "classification": "GENERIC_ENGINE" },

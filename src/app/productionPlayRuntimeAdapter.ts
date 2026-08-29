@@ -15,6 +15,8 @@ import { clericDivineSparkDiceCount } from "../domain/clericDivineSpark";
 import { searUndeadDiceCount } from "../domain/clericTurnUndead";
 import { LAY_ON_HANDS_ACTION_ID } from "./paladinLayOnHandsRuntimeContracts";
 import { abjureFoesMaximumTargets } from "../domain/paladinAbjureFoes";
+import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
+import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
@@ -97,6 +99,28 @@ function attackRange(name:string) {
   return /bow|crossbow|활|석궁|sling|슬링/i.test(name)?80:5;
 }
 
+type WeaponDefinition={mode?:"melee"|"ranged";properties?:string[]};
+type ArmorDefinition={training?:"light"|"medium"|"heavy"};
+
+function weaponRuntimeFact(character:CharacterSheet,attack:CharacterSheet["attacks"][number]) {
+  const item=character.items.find((candidate)=>candidate.name===attack.name||candidate.nameEn===attack.name);
+  const entry=item&&itemEntryById(item.definitionId);
+  const definition=entry?.category==="weapon"?itemMechanic(entry,"weapon-definition") as WeaponDefinition|undefined:undefined;
+  if(!definition)return {rangeFeet:attackRange(attack.name)};
+  const rangeFeet=(definition.properties??[]).map((property)=>property.match(/^(?:ammunition|thrown):(\d+)(?:\/\d+)?$/i)?.[1]).find(Boolean);
+  const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);
+  const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!definition.properties?.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";
+  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{})};
+}
+
+function wearingHeavyArmor(character:CharacterSheet) {
+  return character.items.some((item)=>{
+    if(!item.equipped)return false;
+    const entry=itemEntryById(item.definitionId);
+    return entry?.category==="armor"&&(itemMechanic(entry,"armor-definition") as ArmorDefinition|undefined)?.training==="heavy";
+  });
+}
+
 function weaponAttacksPerAction(character:CharacterSheet) {
   const level=(classId:string)=>character.classLevels?.find((entry)=>entry.classId===classId)?.level ?? 0;
   const fighter=level(FIGHTER_ID);
@@ -112,6 +136,7 @@ function attackActions(character:CharacterSheet):ActionVm[] {
   const attacksPerAction=weaponAttacksPerAction(character);
   return character.attacks.map((attack,index)=>{
     const damage=parseDamage(attack.damage);
+    const runtimeFact=weaponRuntimeFact(character,attack);
     const id=attack.id?.startsWith("action.")?attack.id:`action.character-attack.${index}`;
     return {
       id,
@@ -129,7 +154,7 @@ function attackActions(character:CharacterSheet):ActionVm[] {
       attacksPerAction,
       runtimeAttack:{
         sourceKind:"weapon",
-        rangeFeet:attackRange(attack.name),
+        ...runtimeFact,
         diceSides:damage.sides,
         diceCount:damage.count,
         damageSource:`character:${character.id}:attack:${attack.name}`,
@@ -279,6 +304,13 @@ function featureActions(character:CharacterSheet):ActionVm[] {
       details:[detail("효과","이번 턴 비마법 행동 1회 추가"),detail("비용",`${actionSurge.label} 1회`,actionSurge.source),detail("제한","턴당 1회 · Magic Action 불가","SRD 5.2.1 · Fighter Action Surge")],
     });
   }
+  const barbarianLevel=character.classLevels?.find((entry)=>entry.classId===BARBARIAN_CLASS_ID)?.level??0;
+  const rage=character.resources.find((resource)=>resource.id===BARBARIAN_RAGE_RESOURCE_ID);
+  if(barbarianLevel&&rage){const heavy=wearingHeavyArmor(character);actions.push({
+    id:"action.barbarian.rage",actorId:character.id,name:"격노",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",
+    summary:`격노 시작 · ${rage.current}/${rage.max}`,available:rage.current>0&&!heavy,disabledReason:rage.current<=0?"격노 사용 횟수가 없습니다.":heavy?"중갑을 착용 중에는 격노를 시작할 수 없습니다.":undefined,eligibleTargetIds:[character.id],
+    resourceCost:{resourceId:rage.id,amount:1},details:[detail("효과","근력 판정/내성 이점 · 타격/관통/참격 저항 · 근력 공격 피해 보너스"),detail("비용","추가 행동 1 · 격노 1회"),detail("제한","중갑 착용 중 시작 불가"),detail("출처","SRD 5.2.1 · Barbarian Rage")],
+  });}
   const bardLevel=character.classLevels?.find((entry)=>entry.classId===BARD_ID)?.level??0;
   const inspiration=character.resources.find((resource)=>resource.id===BARDIC_INSPIRATION_RESOURCE_ID);
   if(bardLevel&&inspiration)actions.push({

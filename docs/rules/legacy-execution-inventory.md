@@ -64,6 +64,8 @@ The Phase 09 entity-ID save-modifier table is deleted too. Saving throws in cano
 
 Canonical Phase 09 runtime attacks and their concentration workflow no longer use the compatibility provider's fabricated mapless distance/visibility/cover values. They carry explicit `manual-unconstrained` authority when a user selects a target without a spatial module, and authoritative module facts otherwise. Named legacy spell/class adapters still consume `resolveRuntimeTargetingFact`; those callers remain migration debt and prevent any global “no fabricated facts” claim.
 
+`productionWeaponRuntimeFactAdapter.ts` is deleted. Canonical ItemInstance weapon definitions now supply ability and range inside the pure production Character action projection used by both a Host-mounted remote Character and its owning Client. That same projection includes the inactive Rage action from structural class/resource facts so first-render action catalogs converge; dynamic Rage lifecycle execution remains in the named legacy adapter.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |

@@ -59,7 +59,6 @@ import "./productionPlayRuntimeAdapter";
 import "./sessionInventoryRuntimeAdapter";
 import "./theaterOfMindSpatialAdapter";
 import "./productionSpellRuntimeAdapter";
-import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./installedCommonPlayRuntimeAdapter";

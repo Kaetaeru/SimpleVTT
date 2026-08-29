@@ -572,6 +572,7 @@ Verified migration slices:
 - [x] the duplicate `action.shortbow` atomic branch and reference attack/target maps were deleted; runtime attacks now require authored structural attack facts and an unknown renamed action proves the same atomic attack, event, and Undo path;
 - [x] the entity-ID save-modifier table and its inner saving-throw branch were deleted; canonical saves now enter the existing Character/Combatant runtime-stat provider, including explicit missing-authority rejection;
 - [x] canonical runtime attacks no longer fabricate zero distance, visibility, or cover when no spatial module is present; explicit target selection supplies typed `manual-unconstrained` authority, while an authoritative module relation still enforces range, sight, cover, and target sight;
+- [x] Host-mounted and owning-Client Characters now receive weapon ability/range facts and the inactive Rage action from the same pure Character action projection; the redundant active-Character-only weapon post-processor was deleted, and the complete connected UI suite proves initial action-bar parity plus inventory/Undo/retry convergence;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:
