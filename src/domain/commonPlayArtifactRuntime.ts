@@ -1,7 +1,7 @@
 import type { RulesRuntimeState } from "./combatState";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
-import type { PendingResolution, ResolutionCommit } from "./resolutionTypes";
+import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest, StoredInvocationArtifactData } from "./runtimeArtifact";
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
 import type { ActionUseKind } from "./turnEconomy";
@@ -128,13 +128,24 @@ export function compileCommonPlayArtifactActivation(
   if(!entryPoint||entryPoint.invocation!=="manual"||!entryPoint.operations.length) throw new DomainEvaluationError("artifact activation requires a non-empty manual entry point");
   const templates=new Map(definition.artifactTemplates.map((template)=>[template.id,template]));
   const artifactIds=new Map(entryPoint.operations.map((operation,index)=>[operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`]));
-  const operations=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...entryPoint.operations.map((operation,index)=>{
+  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input)];
+  entryPoint.operations.forEach((operation,index)=>{
     if(operation.kind!=="artifact.spawn") throw new DomainEvaluationError(`entry point ${entryPoint.id} supports only artifact.spawn`);
     const template=templates.get(operation.template);
     if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
     if(!["stored-invocation","object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
-    return {id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact" as const,artifact:artifact(state,definition,template,input,artifactIds)};
-  })];
+    const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);
+    if(template.artifactKind==="actor"&&lifetime.kind==="until-source-recast") {
+      (state.artifacts??[])
+        .filter((existing)=>existing.artifactKind==="actor"&&existing.sourceId===definition.id&&existing.sourceActorId===input.actorId&&existing.templateId===template.id)
+        .forEach((existing,replacementIndex)=>operations.push({
+          id:`common-play-artifact-recast-remove-${index+1}-${replacementIndex+1}`,
+          kind:"remove-artifact",
+          artifactId:existing.id,
+        }));
+    }
+    operations.push({id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact",artifact:artifact(state,definition,template,input,artifactIds)});
+  });
   return {id:input.resolutionId,actorId:input.actorId,sourceId:definition.id,expectedRevision:state.revision,operations};
 }
 
