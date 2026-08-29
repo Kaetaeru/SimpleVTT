@@ -115,6 +115,13 @@ Family Z (`spellcasting-meta`) remains `INCOMPLETE`. The typed component and mai
 
 Family AA (`progression`) remains `INCOMPLETE`. Its installed progression contributions belong to the existing ProgressionDraft/Character revision domain, while the live level-up projection still has named adapters. Do not force progression grants into a combat Resolution merely to satisfy Gate N evidence.
 
+## Latest C9 reconciliation — authoritative Zone stay
+
+- Family T (zones) is now ledger `IMPLEMENTED`: `connectedSpatialZoneStayProduction.test.ts` proves an explicit provider-authored stay fact through the canonical Zone resolution with Host/Client convergence, duplicate replay, reconnect, and Undo; Core still does not infer geometry.
+- Focused stay test and `tsc --noEmit` pass on the reconciliation head.
+- Actual ledger coverage is now `IMPLEMENTED=3`, `INCOMPLETE=33`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty.
+- Family AB Recharge production recovery is implemented and connected, but its new acceptance probe exposed a real remaining gap: the actor action does not yet consume its recovered resource (expected 1 -> 0, observed 1). Do not promote AB until availability/consumption is fixed and re-proven.
+
 ## Next Exact Action
 
-Do not reopen Families S/T/U or the audited authority-blocked V/W/X/Y/Z/AA seams. Move to Family AB (`recharge-cooldown`), whose generic `recharge-resource` Resolver operation already exists. Audit and, if structurally bounded, connect portable Recharge availability/consumption/turn-start recovery to the existing actor resource/action catalog and connected event path with authoritative die input, replay/reconnect, Undo, and arbitrary identity. Reuse the existing Resolver resource operation and turn lifecycle; do not create a monster-specific engine or invent die authority.
+Fix Family AB (`recharge-cooldown`) action availability/consumption: the portable turn-start Recharge now restores the actor resource to 1, but resolving the actor's linked `use-charge` action leaves it at 1. Trace the existing actor-artifact installed-action routing so the action consumes the same actor-owned resource through the generic authoritative transaction, reject replay/use at 0 without underflow, then re-prove turn-start recovery, arbitrary identity, Host/Client replay/reconnect, and Undo. Do not add a monster-specific engine and do not reopen S/T/U.
