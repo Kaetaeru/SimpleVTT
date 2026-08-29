@@ -74,6 +74,7 @@ jobs:
           tests/domain/commonPlaySaveDamageRuntime.test.ts
           tests/domain/commonPlayEffectRuntime.test.ts
           tests/domain/commonPlayZoneRuntime.test.ts
+          tests/domain/commonPlayZoneUnsupportedOperation.test.ts
           tests/domain/concentrationDamageResult.test.ts
           tests/domain/resourceRecoveryLockout.test.ts
           tests/domain/compoundDamage.test.ts
