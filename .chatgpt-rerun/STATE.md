@@ -46,11 +46,12 @@ Current validated C9 checkpoints:
 - `acc46a1a`: schema PaymentContract is preserved and atomically executed across operations, save-damage, effect, zone, and artifact lowerers with production Host/Client convergence and Undo.
 - `c87402f9`: canonical stored-invocation artifacts resolve arbitrary installed attack/spell payloads off turn with Reaction, exactly-once consumption, Host/Client event replay, reconnect, and Undo.
 - `5308c15e`: movement.relocate executes through the operations lowerer and stored invocation; Ready UI uses the authoritative artifact for installed content; cancel, Undo, and turn-boundary expiry are production-proven.
+- `50498ba6`: held-Concentration loss/release/cancel/Undo is production-proven and Family S stored-invocation-ready is promoted to `IMPLEMENTED`.
 
-Latest proof: TypeScript passed; 11/11 lowered-family production/connected, 6/6 atomic lifecycle, and 3/3 artifact family regressions passed; coverage checker reports exactly 36 `INCOMPLETE` rows. Family S remains incomplete only until held-Concentration is production-proven; legacy non-Common-Play Ready remains non-blocking migration debt only if unknown portable content never falls through to it. Code checkpoint is `5308c15e`.
+Latest proof: TypeScript passed; 12/12 lowered-family production/connected, 4/4 stored-invocation domain, and 6/6 representative composition regressions passed. Coverage is now `IMPLEMENTED=1`, `INCOMPLETE=35`. Legacy non-Common-Play Ready remains migration debt; unknown portable content does not select or fall through to it. Code checkpoint is `50498ba6`.
 
 ## Next Exact Action
 
-Add one installed production acceptance for a held-Concentration stored spell, covering capture, maintained-group loss no-match, successful release/end policy, cancel, reconnect, and Undo. If the full Family S matrix stays green, mark only S `IMPLEMENTED`; then select the next highest-impact incomplete family from the ledger.
+Build one canonical production event dispatcher for installed automatic/triggered Common Play definitions, starting with committed damage events feeding persistent effect rules. Prove arbitrary identity, frequency, Host/Client event convergence, reconnect, and Undo without a named feature adapter; then reconcile Families N and P without premature promotion.
 
 C8 Core is complete locally. C9 is active and Gate N is blocked by 36 `INCOMPLETE` ledger rows. Overall verdict: `V1 INCOMPLETE`.
