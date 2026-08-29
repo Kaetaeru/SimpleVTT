@@ -60,7 +60,6 @@ const freeformSpellSlotHistories = new WeakMap<MockAdapter,FreeformSpellSlotHist
 const HELPED_STATUS = "도움 받음";
 const HIDDEN_STATUS = "숨음";
 const DODGING_STATUS = "회피";
-const READY_STATUS = "준비 행동";
 
 function removeStatus(entity:SceneEntity|undefined,status:string) {
   if (!entity?.status.includes(status)) return false;
@@ -282,32 +281,33 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     return next;
   }
 
-  if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&action.id==="action.standard.hide.stealth") {
-    const actor=internal.entity(action.actorId);
-    const succeeded=(resolution.rollTotal??0)>=15;
-    if(succeeded&&actor&&!actor.status.includes(HIDDEN_STATUS)) {
-      actor.status.push(HIDDEN_STATUS);
-      resolution.stateChanges.push(`${actor.name} 상태 추가: ${HIDDEN_STATUS} · DC 15 충족`);
-    } else if(!succeeded&&removeStatus(actor,HIDDEN_STATUS)) {
-      resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HIDDEN_STATUS} · 숨기 실패`);
+  const statusEffect=action.sessionStatusEffect;
+  if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&statusEffect?.minimumRoll!==undefined) {
+    const target=internal.entity(statusEffect.target==="actor"?action.actorId:resolution.targetIds[0]);
+    const succeeded=(resolution.rollTotal??0)>=statusEffect.minimumRoll;
+    if(succeeded&&target&&!target.status.includes(statusEffect.status)) {
+      target.status.push(statusEffect.status);
+      resolution.stateChanges.push(`${target.name} 상태 추가: ${statusEffect.status} · DC ${statusEffect.minimumRoll} 충족`);
+    } else if(!succeeded&&removeStatus(target,statusEffect.status)) {
+      resolution.stateChanges.push(`${target?.name??action.actorId} 상태 제거: ${statusEffect.status} · ${statusEffect.failureOutcome??"판정 실패"}`);
     }
-    resolution.finalOutcome=`${resolution.rollTotal} · 숨기 ${succeeded ? "성공" : "실패"}`;
+    resolution.finalOutcome=`${resolution.rollTotal} · ${succeeded?statusEffect.successOutcome:statusEffect.failureOutcome??"실패"}`;
     resolution.compact=resolution.finalOutcome;
   }
 
-  if (resolution.stage==="effect-preview"&&action.resolutionKind==="no-roll"&&action.id.startsWith("action.standard.")) {
+  if (resolution.stage==="effect-preview"&&action.resolutionKind==="no-roll"&&(statusEffect||action.completionOutcome)) {
     const actor=internal.entity(action.actorId);
-    const target=internal.entity(resolution.targetIds[0]??action.actorId);
-    const applyStatus=(entity:SceneEntity|undefined,status:string)=>{if(entity&&!entity.status.includes(status)){entity.status.push(status);resolution.stateChanges.push(`${entity.name} 상태 추가: ${status}`);}};
-    if(action.id==="action.standard.disengage"){applyStatus(actor,"이탈");resolution.finalOutcome="이번 턴 기회 공격을 유발하지 않음";}
-    else if(action.id==="action.standard.dodge"){applyStatus(actor,"회피");resolution.finalOutcome="다음 턴 시작까지 회피";}
-    else if(action.id==="action.standard.help"){applyStatus(target,"도움 받음");resolution.finalOutcome=`${target?.name??"아군"} 지원`;}
-    else if(action.id==="action.standard.ready"){applyStatus(actor,READY_STATUS);resolution.finalOutcome="트리거와 반응 행동 준비";}
-    else if(action.id==="action.standard.ready.trigger"){
-      if(removeStatus(actor,READY_STATUS)) resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${READY_STATUS} · 반응 발동`);
-      resolution.finalOutcome=action.summary.includes("→ 이동")?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동";
+    const target=statusEffect?.target==="first-target"?internal.entity(resolution.targetIds[0]):actor;
+    if(statusEffect&&target) {
+      if(statusEffect.operation==="remove") {
+        if(removeStatus(target,statusEffect.status)) resolution.stateChanges.push(`${target.name} 상태 제거: ${statusEffect.status}`);
+      } else if(!target.status.includes(statusEffect.status)) {
+        target.status.push(statusEffect.status);
+        resolution.stateChanges.push(`${target.name} 상태 추가: ${statusEffect.status}`);
+      }
     }
-    else if(action.id==="action.standard.utilize"){resolution.stateChanges.push(`${actor?.name??action.actorId} 비마법 물체 사용 선언`);resolution.finalOutcome="물체 사용";}
+    if(action.completionStateChange) resolution.stateChanges.push(action.completionStateChange);
+    resolution.finalOutcome=statusEffect?.successOutcome??action.completionOutcome??resolution.finalOutcome;
     resolution.compact=resolution.finalOutcome;
     internal.commit(action);
     return internal.getSnapshot();

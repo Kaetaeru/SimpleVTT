@@ -219,8 +219,8 @@ function skillActions(character:CharacterSheet):ActionVm[] {
 }
 
 function featureActions(character:CharacterSheet):ActionVm[] {
-  const standardEffect=(id:string,name:string,target:ActionVm["target"],summary:string,details:ActionVm["details"]):ActionVm=>({id:`action.standard.${id}`,actorId:character.id,name,category:"basic",target,economy:"행동",resolutionKind:"no-roll",summary,available:true,eligibleTargetIds:[],details});
-  const standardCheck=(group:string,id:string,name:string,skill:string,ability:AbilityKey):ActionVm=>({id:`action.standard.${group}.${id}`,actorId:character.id,name,category:"basic",target:"none",economy:"행동",resolutionKind:"ability-check",summary:`${ABILITY_LABEL[ability]}(${skill}) ${signed(skillBonus(character,skill,ability))}`,available:true,eligibleTargetIds:[],checkBonus:skillBonus(character,skill,ability),details:[detail("기본 행동",group),detail("판정",`${ABILITY_LABEL[ability]}(${skill})`),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Action")]});
+  const standardEffect=(id:string,name:string,target:ActionVm["target"],summary:string,details:ActionVm["details"],execution:Pick<ActionVm,"sessionStatusEffect"|"completionOutcome"|"completionStateChange">={}):ActionVm=>({id:`action.standard.${id}`,actorId:character.id,name,category:"basic",target,economy:"행동",resolutionKind:"no-roll",summary,available:true,eligibleTargetIds:[],details,...execution});
+  const standardCheck=(group:string,id:string,name:string,skill:string,ability:AbilityKey,sessionStatusEffect?:ActionVm["sessionStatusEffect"]):ActionVm=>({id:`action.standard.${group}.${id}`,actorId:character.id,name,category:"basic",target:"none",economy:"행동",resolutionKind:"ability-check",summary:`${ABILITY_LABEL[ability]}(${skill}) ${signed(skillBonus(character,skill,ability))}`,available:true,eligibleTargetIds:[],checkBonus:skillBonus(character,skill,ability),sessionStatusEffect,details:[detail("기본 행동",group),detail("판정",`${ABILITY_LABEL[ability]}(${skill})`),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Action")]});
   const strength=mod(character.abilities.str);
   const unarmedDamage=Math.max(0,1+strength);
   const unarmedSaveDc=8+character.proficiencyBonus+strength;
@@ -256,15 +256,15 @@ function featureActions(character:CharacterSheet):ActionVm[] {
     summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,
     details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","넘어짐"),detail("공간 모듈","미연결 시 밀어내기 대신 넘어뜨리기만 자동 적용"),detail("출처","SRD 5.2.1 · Unarmed Strike")],
   },
-  standardEffect("disengage","이탈","self","이번 턴 이동이 기회 공격을 유발하지 않습니다.",[detail("효과","이번 턴 기회 공격 유발 안 함"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Disengage")]),
-  standardEffect("dodge","회피","self","다음 턴 시작까지 자신을 향한 공격에 불리, 민첩 내성에 유리.",[detail("효과","공격에 불리 · 민첩 내성에 유리"),detail("종료","자신의 다음 턴 시작"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Dodge")]),
-  standardEffect("help","도움","ally","아군의 다음 판정 또는 공격을 돕습니다.",[detail("대상","아군 1명"),detail("효과","다음 적격 판정 또는 공격에 유리"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Help")]),
-  standardCheck("hide","stealth","숨기","은신","dex"),
+  standardEffect("disengage","이탈","self","이번 턴 이동이 기회 공격을 유발하지 않습니다.",[detail("효과","이번 턴 기회 공격 유발 안 함"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Disengage")],{sessionStatusEffect:{status:"이탈",target:"actor",successOutcome:"이번 턴 기회 공격을 유발하지 않음"}}),
+  standardEffect("dodge","회피","self","다음 턴 시작까지 자신을 향한 공격에 불리, 민첩 내성에 유리.",[detail("효과","공격에 불리 · 민첩 내성에 유리"),detail("종료","자신의 다음 턴 시작"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Dodge")],{sessionStatusEffect:{status:"회피",target:"actor",successOutcome:"다음 턴 시작까지 회피"}}),
+  standardEffect("help","도움","ally","아군의 다음 판정 또는 공격을 돕습니다.",[detail("대상","아군 1명"),detail("효과","다음 적격 판정 또는 공격에 유리"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Help")],{sessionStatusEffect:{status:"도움 받음",target:"first-target",successOutcome:"지원"}}),
+  standardCheck("hide","stealth","숨기","은신","dex",{status:"숨음",target:"actor",minimumRoll:15,successOutcome:"숨기 성공",failureOutcome:"숨기 실패"}),
   ...([{"id":"animal-handling","skill":"동물 조련","ability":"wis"},{"id":"deception","skill":"기만","ability":"cha"},{"id":"intimidation","skill":"위협","ability":"cha"},{"id":"performance","skill":"공연","ability":"cha"},{"id":"persuasion","skill":"설득","ability":"cha"}] as const).map((entry)=>standardCheck("influence",entry.id,`영향 주기 · ${entry.skill}`,entry.skill,entry.ability)),
-  standardEffect("ready","준비","self","선언한 트리거에 반응해 행동하거나 이동합니다.",[detail("선언","감지 가능한 트리거와 반응 행동/이동"),detail("비용","행동 1 · 발동 시 반응 1"),detail("출처","SRD 5.2.1 · Ready")]),
+  standardEffect("ready","준비","self","선언한 트리거에 반응해 행동하거나 이동합니다.",[detail("선언","감지 가능한 트리거와 반응 행동/이동"),detail("비용","행동 1 · 발동 시 반응 1"),detail("출처","SRD 5.2.1 · Ready")],{sessionStatusEffect:{status:"준비 행동",target:"actor",successOutcome:"트리거와 반응 행동 준비"}}),
   ...([{"id":"insight","skill":"통찰"},{"id":"medicine","skill":"의학"},{"id":"perception","skill":"지각"},{"id":"survival","skill":"생존"}] as const).map((entry)=>standardCheck("search",entry.id,`탐색 · ${entry.skill}`,entry.skill,"wis")),
   ...([{"id":"arcana","skill":"비전"},{"id":"history","skill":"역사"},{"id":"investigation","skill":"조사"},{"id":"nature","skill":"자연"},{"id":"religion","skill":"종교"}] as const).map((entry)=>standardCheck("study",entry.id,`연구 · ${entry.skill}`,entry.skill,"int")),
-  standardEffect("utilize","물체 사용","self","비마법 물체를 사용합니다.",[detail("효과","비마법 물체 사용"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Utilize")]),
+  standardEffect("utilize","물체 사용","self","비마법 물체를 사용합니다.",[detail("효과","비마법 물체 사용"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Utilize")],{completionOutcome:"물체 사용",completionStateChange:`${character.name} 비마법 물체 사용 선언`}),
   ];
   const secondWind=character.resources.find((resource)=>/second-wind/i.test(resource.id)||/세컨드 윈드|재기의 바람/.test(resource.label));
   if (secondWind) {
@@ -368,6 +368,7 @@ function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:s
     available:true,
     eligibleTargetIds:[...prepared.eligibleTargetIds],
     maxTargets:prepared.maxTargets,
+    sessionStatusEffect:{status:"준비 행동",target:"actor",operation:"remove",successOutcome:prepared.id===READY_MOVEMENT_ACTION_ID?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동"},
     details:[
       detail("트리거",trigger),
       detail("예약 행동",prepared.name),

@@ -82,6 +82,7 @@ function readyTriggerAction(config:ReadyActionConfiguration,prepared:ActionVm|un
     available,
     disabledReason:available?undefined:"반응을 사용할 수 없습니다.",
     eligibleTargetIds:movement?[config.actorId]:[...(prepared?.eligibleTargetIds??[])],
+    sessionStatusEffect:{status:"준비 행동",target:"actor",operation:"remove",successOutcome:movement?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동"},
     details:[
       {label:"트리거",value:config.trigger,source:"Ready configuration"},
       {label:"준비 행동",value:preparedName,source:"Ready configuration"},

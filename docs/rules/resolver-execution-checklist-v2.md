@@ -578,6 +578,7 @@ Verified migration slices:
 - [x] the named Bardic Inspiration attack follow-up adapter was replaced by a structural consumable d20-bonus Effect path; generic d20 recalculation, Effect consumption, atomic attack preview parity, connected replay, Undo, and a fully renamed external Effect now share one execution path without the former action mutation or pending WeakMap;
 - [x] the runtime-presence spell router and legacy spell handler were deleted; supported freeform and initiative spells now create or reuse one authoritative TurnRuntime and use event-native Undo, while spell-ID mechanic lookup remains explicitly incomplete;
 - [x] Dash execution now reads a positive structural movement-budget grant rather than `action.dash`; a renamed unknown action and Cunning Action's structural clone use the same Bonus Action/movement event path, and the duplicate Rogue Dash mutation/event branch is deleted;
+- [x] standard no-roll status changes and check-threshold status changes execute from authored facts; Disengage, Dodge, Help, Hide, Ready, and Utilize IDs no longer select their production execution algorithm;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:

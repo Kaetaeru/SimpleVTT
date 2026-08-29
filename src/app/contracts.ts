@@ -312,6 +312,16 @@ export interface ActionVm {
   details: ActionDetailVm[];
   attacksPerAction?:number;
   movementBudgetGainFeet?:number;
+  sessionStatusEffect?:{
+    status:string;
+    target:"actor"|"first-target";
+    operation?:"add"|"remove";
+    minimumRoll?:number;
+    successOutcome:string;
+    failureOutcome?:string;
+  };
+  completionOutcome?:string;
+  completionStateChange?:string;
 }
 
 export interface EconomyVm {
