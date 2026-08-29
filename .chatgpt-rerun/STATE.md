@@ -12,7 +12,7 @@
 
 ## Durable checkpoint
 
-C8 Core is complete. C9 Gate N mechanism-coverage reconciliation remains active. The 36-row coverage ledger is authoritative; a row stays `INCOMPLETE` until its full required semantic/evidence matrix is satisfied. Current coverage is `IMPLEMENTED=3`, `INCOMPLETE=33`, `PROVEN_UNNEEDED=0`. `gateNBlockingNamedFallbacks` remains empty. Overall verdict: `V1 INCOMPLETE`.
+C8 Core is complete. C9 Gate N mechanism-coverage reconciliation remains active. The 36-row coverage ledger is authoritative; a row stays `INCOMPLETE` until its full required semantic/evidence matrix is satisfied. Current coverage is `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`. `gateNBlockingNamedFallbacks` remains empty. Overall verdict: `V1 INCOMPLETE`.
 
 Previously validated C9 checkpoints remain authoritative and must not be repeated unless an affected surface changes:
 
@@ -122,6 +122,19 @@ Family AA (`progression`) remains `INCOMPLETE`. Its installed progression contri
 - Actual ledger coverage is now `IMPLEMENTED=3`, `INCOMPLETE=33`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty.
 - Family AB Recharge production recovery is implemented and connected, but its new acceptance probe exposed a real remaining gap: the actor action does not yet consume its recovered resource (expected 1 -> 0, observed 1). Do not promote AB until availability/consumption is fixed and re-proven.
 
+## Completed Family AB
+
+Family AB (`recharge-cooldown`) is now `IMPLEMENTED`. Commit `496b23076958aecdd9e3a15a1938419198a53ba3` adds persisted portable `resource.recharge` vocabulary and lowers it to the existing generic `recharge-resource` Resolver operation. Actor-owned turn-start rules receive exactly one authoritative die face from the existing runtime die authority inside the same end-turn/begin-turn transaction; no monster-specific engine, store, transport, or identity dispatch was added.
+
+Retained acceptance evidence:
+
+- C9 Recharge Production Slice run `33280246505`, job `99174086720`: patch/generate, focused `connectedActorTurnRuleProduction.test.ts`, and `npx tsc --noEmit` all SUCCESS; the workflow committed verified source as `496b23076958aecdd9e3a15a1938419198a53ba3`.
+- The focused Recharge test retains arbitrary external identity rename invariance, Host/Client convergence, duplicate replay idempotence, fresh reconnect, and event-native Undo.
+- Existing actor-artifact action execution evidence (`281be9b1`) supplies the separate action/resource-consumption side of the Recharge availability model; the Recharge rule only restores the shared actor resource.
+- Installed Common Play persistence/rehydration authority from PR #159 remains unchanged; `resource.recharge` is schema-backed persisted mechanic data, not an adapter-only shape.
+
+Family P remains `INCOMPLETE`, but its prior "portable Recharge policy/die authority" blocker is now closed by Family AB. Its other undefined event-vocabulary/order seams remain and must not be guessed.
+
 ## Next Exact Action
 
-Fix Family AB (`recharge-cooldown`) action availability/consumption: the portable turn-start Recharge now restores the actor resource to 1, but resolving the actor's linked `use-charge` action leaves it at 1. Trace the existing actor-artifact installed-action routing so the action consumes the same actor-owned resource through the generic authoritative transaction, reject replay/use at 0 without underflow, then re-prove turn-start recovery, arbitrary identity, Host/Client replay/reconnect, and Undo. Do not add a monster-specific engine and do not reopen S/T/U.
+Do not reopen Families S/T/U/AB or the audited authority-blocked V/W/X/Y/Z/AA seams. Family P remains blocked on undefined event vocabulary/order semantics. Move to the next non-blocked ledger audit, Family AC (`legendary-lair-special-timing`): reconcile the existing owner/timing/option/cost compiler with the live initiative/turn transaction and connected interaction authority. If initiative-count or off-turn owner/refresh/order semantics are not already defined by repository contracts, preserve AC as `INCOMPLETE` rather than inventing policy, then continue to the next non-blocked family.

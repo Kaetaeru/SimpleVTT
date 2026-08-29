@@ -1336,7 +1336,7 @@
         "resource/frequency kernels",
         "monster action state"
       ],
-      "currentState": "Generic authoritative Resolver recharge exists; production action/catalog and connected proof missing",
+      "currentState": "Portable resource.recharge is persisted in Common Play data and lowers to the existing generic recharge-resource Resolver operation. Installed actor turn-start rules receive one authoritative die face from the existing runtime die authority, recover the actor resource in the same authoritative turn transaction, and reuse the existing action/resource catalog, connected replay/reconnect, and event-native Undo paths.",
       "requiredSemantics": [
         "recharge die/range/timing",
         "availability",
@@ -1347,17 +1347,36 @@
         "Undo/replay"
       ],
       "transactionDomain": "Session actor resource/frequency state",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "recharge-resource ResolutionOperation",
+        "schemas/common-play-contract.schema.json: resourceRecharge",
+        "commonPlayOperationRuntime.ts: resource.recharge -> recharge-resource",
+        "resolutionResourceOps.ts: executeRechargeResource",
+        "commonPlayActorTurnRuleComposition.ts",
+        "phase09EffectAwareTurnAdapter.ts",
         "commonPlayC6Runtime.test.ts"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
+      "productionEvidence": [
+        "496b23076958aecdd9e3a15a1938419198a53ba3",
+        "connectedActorTurnRuleProduction.test.ts",
+        "C9 Recharge Production Slice run 33280246505 job 99174086720",
+        "281be9b1 summoned actor installed action execution evidence"
+      ],
+      "identityInvarianceEvidence": [
+        "connectedActorTurnRuleProduction.test.ts arbitrary external prefix vs fully-renamed prefix",
+        "496b23076958aecdd9e3a15a1938419198a53ba3"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "connectedActorTurnRuleProduction.test.ts Host/Client convergence, duplicate replay, fresh reconnect, event-native Undo",
+        "C9 Recharge Production Slice run 33280246505 job 99174086720"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "retained installed Common Play preview/activation/persistence/rehydration authority from PR #159 exact candidate 1bc7a420b90378804a5b5994fa1ad1f59b963b1d",
+        "schemas/common-play-contract.schema.json persists resource.recharge inside installed Common Play mechanic config",
+        "connectedActorTurnRuleProduction.test.ts installs the unknown Recharge RuleModule through the normal installed-content store"
+      ],
       "remainingNamedSeams": [
-        "monster action catalog recharge projection"
+        "built-in monster recharge presentation remains migration debt; supported portable Recharge does not select or fall through to it"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
