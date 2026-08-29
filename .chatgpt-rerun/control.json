@@ -2,8 +2,8 @@
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
-  "status": "needs_user",
-  "reason": "PR #177 is the sole current merge candidate for sequence 5 at exact head d1a9940b8472acca252988d4e3332dbf5fa42b74. It extends the existing Gate A Common Play reaction kernel with generic d20.outcome-determined/d20.roll recalculation using the retained subtract-die semantic; it adds no named side engine and removes no legacy path yet. Exact-head M1 Common Play Interaction is green with 63/63 focused tests plus TypeScript typecheck, and Rules Domain plus typecheck is green. Contract validation and UI/Phase11/Phase12 retain the previously reconciled inherited workflow/product reds and are outside this two-file kernel diff. Waiting solely for explicit owner merge approval. Per protocol, `Rerun 진행` or `리런 진행` approves this specifically identified PR if live preflight confirms the head/diff/CI/ancestry/mergeability are materially unchanged. After merge, continue Section 9 with portable/schema and production/session interceptor discovery, then damage-roll and authoritative spatial/visibility work. C9 Gate N remains prohibited.",
+  "status": "continue",
+  "reason": "Owner authorized continuing all remaining C8 work. Live preflight confirmed PR #177 at exact head d1a9940b8472acca252988d4e3332dbf5fa42b74 was materially unchanged and mergeable; it merged into the Rerun working branch as aa20f7ad7f54983d8b63e7afbe081cee08cc0143. Retain PR #176/#177 evidence unless affected surfaces change. Continue Section 9 from portable/schema and production/session generic interceptor discovery/routing, then authoritative damage-roll and spatial/visibility work, built-in Cutting Words data, connected/reconnect/Undo proof, named Cutting Words deletion and legacy negative delta, then continue C8 until D&D named execution is zero. C9 Gate N remains prohibited until the C8 exit gate is satisfied.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }
