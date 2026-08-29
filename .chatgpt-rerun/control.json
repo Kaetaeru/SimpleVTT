@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AJ now records the shared ResolutionEvent/session/write-back/replay/reconnect/Undo evidence but remains INCOMPLETE because several mechanism families still lack their correct durable/session/decision owners. Next return to Family A expression/property and implement the earliest non-authority-blocked production gap.",
+  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AJ now records the proven shared Host/replay/reconnect/Undo ownership infrastructure but remains INCOMPLETE because multiple mandatory families still lack their correct durable/session/decision owners. Next return to Family A expression/property as the earliest non-authority-blocked implementation/evidence gap.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
