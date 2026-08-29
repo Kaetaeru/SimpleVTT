@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 6,
   "status": "continue",
-  "reason": "C8 Core is complete and C9 Gate N coverage implementation remains active. Checkpoint b4b5fc5e retains the exact advanceTurnRuntimeLifecycle ResolutionEvents and carries them on the existing connected mode-transition without a Zone-specific side channel; exact-head UI workflow 33268257210 at 5cbc7bb7 proves the connected/live-lifecycle batch 30/30 green including the new transport regression. Broad inherited Phase09 remains 106/118 and build is therefore skipped. Coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: apply mode-transition.resolutionEvents through the canonical Client/reconnect event-native path and prove arbitrary Zone Host/Client replay, reconnect, Undo, frequency, duration cleanup, and identity invariance before reconciling Families P/T.",
+  "reason": "C9 remains active. Automatic arbitrary installed Zone turn-end and next turn-start now converge through one authoritative turn transaction with canonical frequency metadata, Host/Client replay, duplicate idempotence, ordered reconnect, and event-native Undo; UI workflow 33270308747 at 0426859e proves the connected/live-lifecycle step green. Turn lifecycle Undo now reuses the canonical runtime ResolutionEvent history instead of a competing snapshot path. Gate N remains IMPLEMENTED=1, INCOMPLETE=35, PROVEN_UNNEEDED=0; Families P/T must be reconciled only to this obtained evidence and remain incomplete. Broad Phase09 still prevents the UI build step, and reducer projection drift remains outstanding.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
