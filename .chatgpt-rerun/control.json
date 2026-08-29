@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AD remains INCOMPLETE: mount validation and reusable actor/object/link primitives exist, but the portable schema and production authority do not define rider-mount topology, mount/dismount cost ownership, controlled/independent turn semantics, fall-off dispatch, or vehicle capacity/crew persistence; inventing these policies is forbidden. Next audit Family AE hazards/exposure/environment against the existing elapsed clock and generic save/effect/damage paths.",
+  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Families AC and AD are now audited authority gaps, not safe adapter tasks: AC lacks persisted/live special-timing ownership; AD has mount and artifact kernels but no persisted rider-mount/vehicle relationship or live topology, initiative/action, capacity/crew, reconnect/persistence owner. No policy was invented. Next audit Family AE hazards/exposure/environment against campaign/session clock ownership and periodic Resolver dispatch.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
