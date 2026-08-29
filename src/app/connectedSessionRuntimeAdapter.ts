@@ -288,6 +288,19 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   const app=connectedInternal(adapter);
   const state=connectedStateFor(adapter);
   if (payload.kind==="mode-transition") {
+    const resolutionEvents=payload.resolutionEvents??[];
+    let appliedStateChanges=[...payload.stateChanges];
+    if(resolutionEvents.length){
+      const projected=applyConnectedResolutionEvents(adapter,resolutionEvents);
+      if(projected.status==="rejected")return projected;
+      const writeBack=await persistCharacterResolutionEvents(adapter,resolutionEvents,"forward");
+      if(writeBack.status==="rejected")return {status:"rejected" as const,error:`Character turn-event write-back failed: ${writeBack.error}`};
+      app.scene=projected.scene;
+      app.activeCharacter.resources=projected.resources.map((entry)=>structuredClone(entry));
+      app.activeCharacter.items=projected.items.map((entry)=>structuredClone(entry));
+      app.syncChar();
+      appliedStateChanges=projected.stateChanges;
+    }
     state.sessionStarted=true;
     app.sessionMode=payload.sessionMode;
     app.scene.round=payload.round;
@@ -299,8 +312,8 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       actor:"Host",
       title:"원격 턴 상태 동기화",
       summary:`${payload.sessionMode} · round ${payload.round} · ${payload.currentActorId}`,
-      detail:[`eventId=${event.eventId}`,...payload.provenance],
-      stateChanges:[...payload.stateChanges],
+      detail:[`eventId=${event.eventId}`,...(resolutionEvents.length?[`ResolutionEvent ${resolutionEvents.length}개`,`host-authoritative turn event apply`]:[]),...payload.provenance],
+      stateChanges:appliedStateChanges,
     });
     return { status:"committed" as const };
   }
