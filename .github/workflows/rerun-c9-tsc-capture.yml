@@ -1,0 +1,36 @@
+name: C9 Family U Typecheck Capture
+
+on:
+  push:
+    branches:
+      - "diag/c9-family-u-tsc-20260830-0749"
+    paths:
+      - ".github/workflows/rerun-c9-tsc-capture.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "diag/c9-family-u-tsc-20260830-0749"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Capture TypeScript diagnostics
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit > .chatgpt-rerun/tsc-family-u-output.txt 2>&1
+          rc=$?
+          printf '\nexit_code=%s\n' "$rc" >> .chatgpt-rerun/tsc-family-u-output.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .chatgpt-rerun/tsc-family-u-output.txt
+          git commit -m "ci(c9): capture current tsc output"
+          git push origin HEAD:diag/c9-family-u-tsc-20260830-0749
