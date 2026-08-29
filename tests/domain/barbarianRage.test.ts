@@ -54,8 +54,8 @@ test("Rage start atomically spends one use, spends Bonus Action, and installs ph
   assert.equal(rage?.metadata?.attackDamageFlat,2);
   assert.equal(rage?.metadata?.attackDamageAbility,"str");
   assert.equal(rage?.metadata?.attackDamageSourceKinds,"weapon,unarmed");
-  assert.equal(rage?.metadata?.rageExpiresAfterRound,2);
-  assert.equal(rage?.metadata?.rageMaximumRound,101);
+  assert.equal(rage?.metadata?.extendableExpiresAfterRound,2);
+  assert.equal(rage?.metadata?.extendableMaximumRound,101);
   assert.ok(rage?.tags.includes("damage-resistance:bludgeoning"));
   assert.ok(rage?.tags.includes("damage-resistance:piercing"));
   assert.ok(rage?.tags.includes("damage-resistance:slashing"));
@@ -263,6 +263,12 @@ test("an attack roll against an enemy extends Rage even when the attack misses",
   });
   assert.equal(turn.status,"committed");
   if(turn.status!=="committed")return;
+  const renamed=turn.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG));
+  assert.ok(renamed);
+  if(!renamed)return;
+  renamed.id="unknown.extendable.effect";
+  renamed.sourceId="unknown.extendable.source";
+  renamed.tags=[];
   const attack=resolvePendingResolution(TEST_PROFILE,turn.state,{
     id:"rage.attack.roll",actorId:"hero",sourceId:"weapon:test",expectedRevision:turn.state.revision,
     operations:[
@@ -279,15 +285,15 @@ test("an attack roll against an enemy extends Rage even when the attack misses",
   });
   assert.equal(attack.status,"committed");
   if(attack.status!=="committed")return;
-  const marker=attack.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG));
-  assert.equal(marker?.metadata?.rageExpiresAfterRound,3);
+  const marker=attack.state.effects.find((effect)=>effect.id==="unknown.extendable.effect");
+  assert.equal(marker?.metadata?.extendableExpiresAfterRound,3);
   const endRound2=resolvePendingResolution(TEST_PROFILE,attack.state,{
     id:"rage.attack.end-2",actorId:"hero",sourceId:"turn:test",expectedRevision:attack.state.revision,
     operations:[{id:"rage.attack.end-2:turn",kind:"end-turn",actorId:"hero",round:2}],
   });
   assert.equal(endRound2.status,"committed");
   if(endRound2.status!=="committed")return;
-  assert.ok(endRound2.state.effects.some((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG)));
+  assert.ok(endRound2.state.effects.some((effect)=>effect.id==="unknown.extendable.effect"));
 });
 
 test("forcing an enemy saving throw on the Barbarian's turn extends Rage", () => {
@@ -318,7 +324,7 @@ test("forcing an enemy saving throw on the Barbarian's turn extends Rage", () =>
   });
   assert.equal(save.status,"committed");
   if(save.status!=="committed")return;
-  assert.equal(save.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG))?.metadata?.rageExpiresAfterRound,3);
+  assert.equal(save.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG))?.metadata?.extendableExpiresAfterRound,3);
 });
 
 test("Rage can spend a dedicated Bonus Action to extend and cannot stack that extension", () => {
@@ -339,7 +345,7 @@ test("Rage can spend a dedicated Bonus Action to extend and cannot stack that ex
   assert.equal(extended.status,"committed");
   if(extended.status!=="committed")return;
   assert.equal(extended.state.combatants.hero.economy.bonusAction,false);
-  assert.equal(extended.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG))?.metadata?.rageExpiresAfterRound,3);
+  assert.equal(extended.state.effects.find((effect)=>effect.tags.includes(BARBARIAN_RAGE_TAG))?.metadata?.extendableExpiresAfterRound,3);
   const duplicate=resolveBarbarianRageExtend(TEST_PROFILE,extended.state,{
     id:"rage.bonus.extend-again",actorId:"hero",expectedRevision:extended.state.revision,
   });

@@ -52,6 +52,8 @@ The atomic saving-throw adapter's Fighter Indomitable lookup is also removed on 
 
 The attack transaction's Rage tag lookup is removed too. Any active Effect can now contribute a source-bound flat attack-damage modifier through generic ability and attack-source predicates; a renamed unknown Effect proves the same transaction outcome. Rage remains a named activation/lifecycle adapter until that lifecycle is authored through Common Play.
 
+Core d20/turn execution no longer imports Rage lifecycle identity: hostile attack/save extension and linked special-duration expiry are driven by generic extendable-Effect metadata. Spellcasting likewise reads the active Effect's generic `spellcastingAllowed` flag instead of Rage or Wild Shape tags. Named activation and explicit class UI remain legacy.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |

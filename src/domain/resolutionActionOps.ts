@@ -6,7 +6,7 @@ import {
   conditionTargetingRestriction,
   frightenedMovementRestriction,
 } from "./conditions";
-import { applyRageEffectUpdate, barbarianRageD20ExtensionUpdate } from "./barbarianRageLifecycle";
+import { applyExtendableEffectUpdate, extendEffectFromHostileD20 } from "./extendableEffectLifecycle";
 import { effectStateChange } from "./runtimeStateChange";
 import { conditionEffectsFor, requireCombatant, type RulesRuntimeState } from "./combatState";
 import { selectEffectTurnActivity } from "./effects";
@@ -293,11 +293,11 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
   const consumedProvenance=consumed.map((effect)=>({source:effect.sourceId,status:"applied" as const,reason:`effect ${effect.id} consumed by ${operation.request.family}`}));
   if (consumed.length) ctx.state.effects=ctx.state.effects.filter((effect)=>!consumed.some((entry)=>entry.id===effect.id));
   if (consumedProvenance.length) resolved={...resolved,provenance:[...resolved.provenance,...consumedProvenance]};
-  const rageUpdate=barbarianRageD20ExtensionUpdate(ctx.state.effects,ctx.state.clock,ctx.pending,operation);
-  const rageProvenance:ProvenanceRecord[]=rageUpdate?[{source:rageUpdate.before.sourceId,status:"applied",reason:rageUpdate.reason}]:[];
-  if(rageUpdate){
-    ctx.state.effects=applyRageEffectUpdate(ctx.state.effects,rageUpdate);
-    resolved={...resolved,provenance:[...resolved.provenance,...rageProvenance]};
+  const extension=extendEffectFromHostileD20(ctx.state.effects,ctx.state.clock,ctx.pending,operation);
+  const extensionProvenance:ProvenanceRecord[]=extension?[{source:extension.before.sourceId,status:"applied",reason:extension.reason}]:[];
+  if(extension){
+    ctx.state.effects=applyExtendableEffectUpdate(ctx.state.effects,extension);
+    resolved={...resolved,provenance:[...resolved.provenance,...extensionProvenance]};
   }
   return {
     result:resolved,
@@ -309,7 +309,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
       resolved.provenance,
       [
         ...consumed.map((effect)=>effectStateChange(effect.targetId,effect.id,"removed",consumedProvenance,effect,undefined)),
-        ...(rageUpdate?[effectStateChange(rageUpdate.before.targetId,rageUpdate.before.id,"updated",rageProvenance,rageUpdate.before,rageUpdate.after)]:[]),
+        ...(extension?[effectStateChange(extension.before.targetId,extension.before.id,"updated",extensionProvenance,extension.before,extension.after)]:[]),
       ],
       operation.targetId,
     ),

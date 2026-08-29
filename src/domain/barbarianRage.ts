@@ -94,6 +94,7 @@ export function compileBarbarianRageStart(
         attackDamageFlat:damageBonus,
         attackDamageAbility:"str",
         attackDamageSourceKinds:"weapon,unarmed",
+        spellcastingAllowed:false,
         publicLabel:"격노",
         ...barbarianRageStartMetadata(inputState.clock),
       },

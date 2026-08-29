@@ -2,7 +2,7 @@ import { beginTurn } from "./turnEconomy";
 import { conditionActionAvailability, effectiveSpeed } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
 import { effectIsActive, expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
-import { expireBarbarianRageAtClock } from "./barbarianRageLifecycle";
+import { expireExtendableEffectsAtClock } from "./extendableEffectLifecycle";
 import { recoverResources } from "./resources";
 import { expireRuntimeArtifactsAtClock } from "./runtimeArtifact";
 import { economyStateChanges } from "./stateChange";
@@ -18,11 +18,11 @@ type AdvanceTimeOp = Extract<ResolutionOperation, { kind:"advance-time" }>;
 
 function expireRuntimeEffects(ctx:ResolutionExecutionContext) {
   const generic=expireEffectsAtClock(ctx.state.effects,ctx.state.clock);
-  const rage=expireBarbarianRageAtClock(generic.active,ctx.state.clock);
+  const extendable=expireExtendableEffectsAtClock(generic.active,ctx.state.clock);
   return {
-    active:rage.active,
-    expired:[...generic.expired,...rage.expired],
-    provenance:[...generic.provenance,...rage.provenance],
+    active:extendable.active,
+    expired:[...generic.expired,...extendable.expired],
+    provenance:[...generic.provenance,...extendable.provenance],
   };
 }
 
