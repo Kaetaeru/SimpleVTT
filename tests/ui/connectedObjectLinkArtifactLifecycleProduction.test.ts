@@ -34,6 +34,7 @@ function packagePayload(prefix:string) {
         grantedEntryPoints:[
           {id:"chip",invocation:"granted",operations:[{kind:"damage.apply",amount:{value:7},damageType:"force",target:"artifact"}]},
           {id:"repair",invocation:"granted",operations:[{kind:"healing.apply",amount:{value:3},target:"artifact"}]},
+          {id:"relocate",invocation:"granted",operations:[{kind:"artifact.relocate",artifact:"wall",placementRef:"provider:wall-b"}]},
           {id:"destroy",invocation:"granted",operations:[{kind:"damage.apply",amount:{value:30},damageType:"force",target:"artifact"}]},
         ],
       },
@@ -93,9 +94,10 @@ async function runRenamedObject(prefix:string) {
   let snapshot=await adapter.getSnapshot();
   const wall=artifacts(adapter,snapshot).find((artifact)=>artifact.templateId==="wall")!;
   await adapter.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"chip"),["char.aelar"]);
+  await adapter.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"relocate"),["char.aelar"]);
   snapshot=await adapter.getSnapshot();
   const after=artifacts(adapter,snapshot).find((artifact)=>artifact.templateId==="wall")!;
-  return {hp:after.object?.hp.current,armorClass:after.object?.armorClass,size:after.object?.size};
+  return {hp:after.object?.hp.current,armorClass:after.object?.armorClass,size:after.object?.size,placementRef:after.placementRef};
 }
 
 test("unknown object/link artifacts execute granted lifecycle actions through connected replay, reconnect, and Undo",async()=>{
@@ -129,6 +131,12 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"repair"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
   assert.equal(artifacts(host,await host.getSnapshot()).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,16);
+
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"relocate"),["char.aelar"]));
+  assert.equal((await applyFullLedger(host,client)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===wall.id)?.placementRef,"provider:wall-b");
+  assert.equal(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===wall.id)?.placementRef,"provider:wall-b");
 
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"destroy"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
