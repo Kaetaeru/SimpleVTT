@@ -9,7 +9,7 @@ import "../../src/app/installedContentRuntimeAdapter";
 import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { installedCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { installedCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId, parseZoneMembershipCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -243,6 +243,59 @@ test("portable zone and summoned Actor converge once through existing Host/Clien
   const clientAfterUndo=await client.getSnapshot();
   assert.equal(clientAfterUndo.scene.entities.some((entity)=>entity.id==="unknown-connected.summoned"),false);
   assert.equal(clientAfterUndo.scene.economyByActor["char.aelar"]?.action,true);
+});
+
+test("installed Zone membership is manually actionable and restores membership plus damage through Undo",async()=>{
+  const prefix="unknown-zone-membership";
+  const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
+  await adapter.resolveAction(action(2,"create-zone"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  const enter=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseZoneMembershipCommonPlayActionId(candidate.id)?.present);
+  assert.ok(enter,JSON.stringify(snapshot.scene.actionsByActor["char.aelar"]));
+  const before=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+  await adapter.resolveAction(enter.id,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before-2);
+  assert.ok(runtime.zoneMemberships?.some((membership)=>membership.memberIds.includes("combatant.goblin-a")));
+  const leave=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseZoneMembershipCommonPlayActionId(candidate.id)?.present===false);
+  assert.ok(leave?.eligibleTargetIds.includes("combatant.goblin-a"));
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before);
+  assert.equal(runtime.zoneMemberships?.some((membership)=>membership.memberIds.includes("combatant.goblin-a")),false);
+});
+
+test("Zone membership converges through connected replay, reconnect, and Undo",async()=>{
+  const prefix="unknown-connected-zone-membership",sessionId="session.common-play-zone-membership";
+  const host=new MockAdapter();const {action}=await install(host,prefix);
+  const connected=connectedStateFor(host);connected.mode="host";connected.sessionId=sessionId;connected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const originalSend=tauriSessionTransport.send;
+  const runHost=async(operation:()=>Promise<unknown>)=>{
+    const wires:string[]=[];tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+    try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+    const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+    assert.ok(batch,JSON.stringify(wires));return batch;
+  };
+  const createBatch=await runHost(()=>host.resolveAction(action(2,"create-zone"),["char.aelar"]));
+  const client=new MockAdapter();await install(client,prefix);
+  const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,createBatch.events)).status,"applied");
+  const enter=(await host.getSnapshot()).scene.actionsByActor["char.aelar"]?.find((candidate)=>parseZoneMembershipCommonPlayActionId(candidate.id)?.present);
+  assert.ok(enter);
+  const enterBatch=await runHost(()=>host.resolveAction(enter.id,["combatant.goblin-a"]));
+  assert.equal((await applyConnectedClientEvents(client,enterBatch.events)).status,"applied");
+  let hostSnapshot=await host.getSnapshot(),clientSnapshot=await client.getSnapshot();
+  assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,hostSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp);
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.zoneMemberships,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.zoneMemberships);
+  const undoBatch=await runHost(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.zoneMemberships,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.zoneMemberships);
+  const reconnect=new MockAdapter();await install(reconnect,prefix);
+  const reconnectState=connectedStateFor(reconnect);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,connected.ledger!.eventsAfter(0))).status,"applied");
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnect,(await reconnect.getSnapshot()).scene)?.zoneMemberships,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.zoneMemberships);
 });
 
 test("arbitrary installed stored invocation captures, fires off turn once, and restores through Undo",async()=>{

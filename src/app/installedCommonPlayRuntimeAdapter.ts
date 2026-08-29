@@ -4,7 +4,7 @@ import { MockAdapter } from "./mockAdapter";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
-import { installedCommonPlayActionId, parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId, runtimeArtifactCommonPlayActionId, storedInvocationCancelActionId, storedInvocationCommonPlayActionId } from "./installedCommonPlayActionReference";
+import { installedCommonPlayActionId, parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId, parseZoneMembershipCommonPlayActionId, runtimeArtifactCommonPlayActionId, storedInvocationCancelActionId, storedInvocationCommonPlayActionId, zoneMembershipCommonPlayActionId } from "./installedCommonPlayActionReference";
 import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
@@ -17,7 +17,7 @@ import {
 import { lowerCommonPlay, parseCommonPlayDefinition, type LoweredCommonPlayEntryPoint } from "../domain/commonPlayDefinitionRuntime";
 import { resolveCommonPlaySaveDamageEntryPoint } from "../domain/commonPlayEntryPointRuntime";
 import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";
-import { resolveCommonPlayZoneActivation } from "../domain/commonPlayZoneRuntime";
+import { resolveCommonPlayZoneActivation, resolveCommonPlayZoneMembershipChange } from "../domain/commonPlayZoneRuntime";
 import { resolveCommonPlayArtifactActivation } from "../domain/commonPlayArtifactRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult } from "../domain/d20";
@@ -136,6 +136,23 @@ async function storedInvocationDefinitionActionId(adapter:MockAdapter,definition
   return undefined;
 }
 
+async function installedZoneDefinitionAction(adapter:MockAdapter,definitionId:string) {
+  for(const entry of await requiredSessionInstalledContent(adapter,[])) {
+    const mechanic=entry.mechanics?.find((candidate)=>candidate.kind==="common-play"&&candidate.config.id===definitionId);
+    if(!mechanic) continue;
+    const canonical=parseCommonPlayDefinition(mechanic.config);
+    for(const point of canonical.entryPoints??[]) {
+      const lowered=lowerCommonPlay(canonical,point.id);
+      if(lowered.kind!=="zone") continue;
+      const definitionActionId=installedCommonPlayActionId({
+        catalogId:catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),mechanicId:definitionId,entryPointId:point.id,
+      });
+      return {definitionActionId,action:await commonPlayAction(adapter,definitionActionId)};
+    }
+  }
+  return undefined;
+}
+
 async function installedPersistentEffectDefinitions(adapter:MockAdapter) {
   const definitions=new Map<string,CommonPlayPersistentEffectDefinition>();
   for(const entry of await requiredSessionInstalledContent(adapter,[])) {
@@ -197,10 +214,10 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
   const state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene);
   if(!state) return;
   for(const [actorId,actions] of Object.entries(snapshot.scene.actionsByActor)) {
-    snapshot.scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id));
+    snapshot.scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id));
   }
   for(const [actorId,actions] of Object.entries((adapter as unknown as AdapterState).scene.actionsByActor)) {
-    (adapter as unknown as AdapterState).scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id));
+    (adapter as unknown as AdapterState).scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id));
   }
   for(const artifact of state.artifacts??[]) {
     const actor=artifact.artifactKind==="actor"?artifact.actor:undefined;
@@ -239,6 +256,30 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
       const actions=scene.actionsByActor[stored.ownerActorId]??[];
       actions.push(cp(triggerAction),cp(cancelAction));
       scene.actionsByActor[stored.ownerActorId]=actions;
+    }
+  }
+  for(const artifact of state.artifacts??[]) {
+    if(artifact.artifactKind!=="zone"||!artifact.sourceActorId||!state.combatants[artifact.sourceActorId]) continue;
+    if(snapshot.role!=="dm"&&artifact.sourceActorId!==snapshot.activeCharacter.id) continue;
+    const found=await installedZoneDefinitionAction(adapter,artifact.sourceId);
+    if(!found?.action||found.action.lowered.kind!=="zone") continue;
+    const members=new Set((state.zoneMemberships??[]).find((membership)=>membership.artifactId===artifact.id)?.memberIds??[]);
+    const candidates=snapshot.scene.entities.filter((entity)=>state.combatants[entity.id]);
+    const membershipActions:ActionVm[]=[true,false].map((present)=>{
+      const eligibleTargetIds=candidates.filter((candidate)=>members.has(candidate.id)!==present).map((candidate)=>candidate.id);
+      return {
+        id:zoneMembershipCommonPlayActionId(artifact.id,found.definitionActionId,present),
+        actorId:artifact.sourceActorId!,name:`${present?"구역에 포함":"구역에서 제외"} · ${artifact.templateId}`,
+        category:"basic",target:"any",economy:"없음",resolutionKind:"no-roll",
+        summary:`${artifact.templateId}의 수동 membership을 변경합니다.`,available:eligibleTargetIds.length>0,
+        disabledReason:eligibleTargetIds.length?undefined:"변경할 대상 없음",eligibleTargetIds,
+        details:[{label:"구역",value:`${artifact.sourceId} · ${artifact.templateId}`,source:"Common Play zone"}],
+      };
+    });
+    for(const scene of [snapshot.scene,(adapter as unknown as AdapterState).scene]) {
+      const actions=scene.actionsByActor[artifact.sourceActorId]??[];
+      actions.push(...cp(membershipActions));
+      scene.actionsByActor[artifact.sourceActorId]=actions;
     }
   }
 }
@@ -621,7 +662,41 @@ function failAction(internal:AdapterState,actorId:string,actionId:string,actionN
   return internal.getSnapshot();
 }
 
+async function changeZoneMembership(
+  adapter:MockAdapter,
+  actionId:string,
+  targetIds:string[],
+  reference:NonNullable<ReturnType<typeof parseZoneMembershipCommonPlayActionId>>,
+) {
+  const internal=adapter as unknown as AdapterState;
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  const artifact=state?.artifacts?.find((candidate)=>candidate.id===reference.artifactId&&candidate.artifactKind==="zone");
+  const action=await commonPlayAction(adapter,reference.definitionActionId);
+  const target=targetIds.length===1?internal.scene.entities.find((candidate)=>candidate.id===targetIds[0]):undefined;
+  const baseSnapshot=await previousGetSnapshot.call(adapter);
+  const resolutionId=`common-play-zone-membership.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const actionName=`구역 ${reference.present?"포함":"제외"}`;
+  if(!state||!artifact?.sourceActorId||!action||action.lowered.kind!=="zone"||action.lowered.definition.id!==artifact.sourceId||!target||!state.combatants[target.id]
+    ||baseSnapshot.role!=="dm"&&artifact.sourceActorId!==baseSnapshot.activeCharacter.id) {
+    return failAction(internal,artifact?.sourceActorId??internal.activeCharacter.id,actionId,actionName,targetIds,resolutionId,"현재 Zone, 대상 또는 조작 권한을 재검증할 수 없습니다.");
+  }
+  const committed=resolveCommonPlayZoneMembershipChange(SIMPLEVTT_APP_RULES_PROFILE,state,action.lowered.definition,{
+    id:resolutionId,artifactId:artifact.id,subjectId:target.id,
+    subjectCreatureKind:target.kind==="character"?"character":"monster",authority:"manual",present:reference.present,
+  });
+  if(committed.status==="no-match") return failAction(internal,artifact.sourceActorId,actionId,actionName,targetIds,resolutionId,committed.reason);
+  if(committed.status==="rejected") return failAction(internal,artifact.sourceActorId,actionId,actionName,targetIds,resolutionId,committed.error);
+  return commitProductionRuntimeResolution(adapter,state,committed,{
+    resolutionId,actionId,actionName,actorId:artifact.sourceActorId,targetIds:[target.id],targetNames:[target.name],
+    compact:`${target.name} · ${artifact.templateId} ${reference.present?"포함":"제외"}`,
+    detail:[`${artifact.sourceId} · ${artifact.templateId}`,reference.present?"zone.entered":"zone.left"],
+    provenance:["Common Play zone"],calculatedOutcome:reference.present?"구역 포함":"구역 제외",finalOutcome:reference.present?"구역 포함":"구역 제외",
+  });
+}
+
 MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAction(actionId:string,targetIds:string[]) {
+  const zoneMembershipReference=parseZoneMembershipCommonPlayActionId(actionId);
+  if(zoneMembershipReference) return changeZoneMembership(this,actionId,targetIds,zoneMembershipReference);
   const storedInvocationCancelReference=parseStoredInvocationCancelActionId(actionId);
   if(storedInvocationCancelReference) return cancelStoredInvocationAction(this,actionId,storedInvocationCancelReference.artifactId);
   const storedInvocationReference=parseStoredInvocationCommonPlayActionId(actionId);
