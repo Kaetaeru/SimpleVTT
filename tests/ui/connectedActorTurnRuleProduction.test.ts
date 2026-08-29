@@ -29,12 +29,14 @@ function packageJson(prefix:string) {
   });
   const actorRules={
     schemaVersion:"0.2-draft",id:actorRulesId,
-    entryPoints:[{id:"use-charge",invocation:"manual",operations:[
-      {kind:"resource.change",resource:resourceId,amount:{value:-1},target:"actor"},
-    ]}],
+    payments:[
+      {kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true},
+      {kind:"resource",resource:resourceId,amount:{value:1},consumeAt:"commit"},
+    ],
+    entryPoints:[{id:"use-charge",invocation:"manual",operations:[]}],
     rules:[
       {id:"turn-refresh",event:"turn-start",frequency:"once-per-turn",operations:[
-        {kind:"resource.recharge",resource:resourceId,die:{sides:6},succeedsOn:{minimum:1,maximum:6}},
+        {kind:"resource.recharge",resource:resourceId,die:{sides:6},succeedsOn:{minimum:5,maximum:6}},
       ]},
       {id:"turn-spend",event:"turn-end",frequency:"once-per-turn",operations:[
         {kind:"resource.change",resource:resourceId,amount:{value:-1},target:"actor"},
@@ -86,10 +88,11 @@ async function install(adapter:MockAdapter,prefix:string) {
 
 function actorState(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,summonId:string,resourceId:string) {
   const runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
-  const resource=runtime.combatants[summonId]?.resources.find((candidate)=>candidate.id===resourceId)?.current;
+  const combatant=runtime.combatants[summonId];
+  const resource=combatant?.resources.find((candidate)=>candidate.id===resourceId)?.current;
   const artifact=runtime.artifacts?.find((candidate)=>candidate.artifactKind==="actor"&&candidate.actor?.combatantId===summonId);
   const markers=Object.entries(artifact?.metadata??{}).filter(([key])=>key.startsWith("commonPlay.frequency:"));
-  return {resource,markers,clock:structuredClone(runtime.clock)};
+  return {resource,markers,clock:structuredClone(runtime.clock),economyAction:combatant?.economy.action};
 }
 
 async function captureHostBatch(operation:()=>Promise<unknown>) {
@@ -137,14 +140,27 @@ async function runIdentity(prefix:string) {
   const pack=await install(adapter,prefix);
   await adapter.resolveAction(pack.summonAction,["char.aelar"]);
   const before=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
+  await adapter.setQueuedD20(6);
   const after=actorState(adapter,await advanceUntilActor(adapter,pack.summonId),pack.summonId,pack.resourceId);
   return {beforeResource:before.resource,afterResource:after.resource,markers:after.markers.length,activeActorId:after.clock.activeActorId};
+}
+
+async function runRechargeFace(prefix:string,face:number) {
+  const adapter=new MockAdapter();
+  const pack=await install(adapter,prefix);
+  await adapter.resolveAction(pack.summonAction,["char.aelar"]);
+  await adapter.setQueuedD20(face);
+  const snapshot=await advanceUntilActor(adapter,pack.summonId);
+  const state=actorState(adapter,snapshot,pack.summonId,pack.resourceId);
+  const action=snapshot.scene.actionsByActor[pack.summonId]?.[0];
+  return {resource:state.resource,markers:state.markers.length,available:action?.available,economy:action?.economy,disabledReason:action?.disabledReason};
 }
 
 async function runTurnEndIdentity(prefix:string) {
   const adapter=new MockAdapter();
   const pack=await install(adapter,prefix);
   await adapter.resolveAction(pack.summonAction,["char.aelar"]);
+  await adapter.setQueuedD20(6);
   const before=actorState(adapter,await advanceUntilActor(adapter,pack.summonId),pack.summonId,pack.resourceId);
   await adapter.endTurn();
   const after=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
@@ -161,6 +177,19 @@ test("actor-owned turn-start Recharge Common Play rule is invariant under every 
   assert.equal(first.beforeResource,0);
   assert.equal(first.afterResource,1);
   assert.equal(first.markers,1);
+});
+
+test("actor-owned turn-start Recharge uses the authoritative die and gates its projected Action by charge availability",async()=>{
+  const failed=await runRechargeFace("unknown-recharge-fail",4);
+  const succeeded=await runRechargeFace("unknown-recharge-success",5);
+  assert.equal(failed.resource,0);
+  assert.equal(failed.markers,1);
+  assert.equal(failed.available,false);
+  assert.equal(failed.disabledReason,"자원 부족");
+  assert.equal(succeeded.resource,1);
+  assert.equal(succeeded.markers,1);
+  assert.equal(succeeded.available,true);
+  assert.equal(succeeded.economy,"행동");
 });
 
 test("actor-owned turn-end Common Play rule is invariant under every external identity rename",async()=>{
@@ -181,6 +210,7 @@ test("actor-owned turn-start Recharge rule converges, reconnects, deduplicates, 
 
   const client=new MockAdapter();
   await install(client,prefix);
+  await client.setQueuedD20(1);
   const clientConnected=connectedStateFor(client);
   clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
 
@@ -190,6 +220,7 @@ test("actor-owned turn-start Recharge rule converges, reconnects, deduplicates, 
   assert.equal(before.resource,0);
   assert.equal(before.markers.length,0);
 
+  await host.setQueuedD20(6);
   const reached=await advanceConnectedUntilActor(host,client,pack.summonId,pack.resourceId);
   assert.ok(reached.batch,"summoned actor should begin through an authoritative turn transition");
   assert.equal((await applyConnectedClientEvents(client,reached.batch.events)).status,"duplicate");
@@ -216,6 +247,61 @@ test("actor-owned turn-start Recharge rule converges, reconnects, deduplicates, 
   assert.deepEqual(clientState,hostState);
 });
 
+test("recharged actor Action spends its Action and charge atomically through connected replay, reconnect, and Undo",async()=>{
+  const prefix="unknown-connected-recharge-action",sessionId="session.common-play-recharge-action";
+  const host=new MockAdapter();
+  const pack=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const client=new MockAdapter();
+  await install(client,prefix);
+  await client.setQueuedD20(1);
+  const clientConnected=connectedStateFor(client);
+  clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
+
+  const spawnBatch=await captureHostBatch(()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  assert.equal((await applyConnectedClientEvents(client,spawnBatch.events)).status,"applied");
+  await host.setQueuedD20(6);
+  await advanceConnectedUntilActor(host,client,pack.summonId,pack.resourceId);
+
+  const readySnapshot=await host.getSnapshot();
+  const action=readySnapshot.scene.actionsByActor[pack.summonId]?.[0];
+  assert.ok(action,"recharged actor must project its portable action");
+  assert.equal(action.available,true);
+  assert.equal(action.economy,"행동");
+  let hostState=actorState(host,readySnapshot,pack.summonId,pack.resourceId);
+  assert.equal(hostState.resource,1);
+  assert.equal(hostState.economyAction,true);
+
+  const useBatch=await captureHostBatch(()=>host.resolveAction(action.id,[pack.summonId]));
+  assert.equal((await applyConnectedClientEvents(client,useBatch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,useBatch.events)).status,"duplicate");
+  hostState=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
+  let clientState=actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId);
+  assert.equal(hostState.resource,0);
+  assert.equal(hostState.economyAction,false);
+  assert.deepEqual(clientState,hostState);
+  assert.equal((await host.getSnapshot()).scene.actionsByActor[pack.summonId]?.[0]?.available,false);
+
+  const reconnect=new MockAdapter();
+  await install(reconnect,prefix);
+  const reconnectConnected=connectedStateFor(reconnect);
+  reconnectConnected.mode="client";reconnectConnected.sessionId=sessionId;reconnectConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0))).status,"applied");
+  assert.deepEqual(actorState(reconnect,await reconnect.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+  assert.equal((await reconnect.getSnapshot()).scene.actionsByActor[pack.summonId]?.[0]?.available,false);
+
+  const undoBatch=await captureHostBatch(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostState=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
+  clientState=actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId);
+  assert.equal(hostState.resource,1);
+  assert.equal(hostState.economyAction,true);
+  assert.deepEqual(clientState,hostState);
+  assert.equal((await host.getSnapshot()).scene.actionsByActor[pack.summonId]?.[0]?.available,true);
+});
+
 test("actor-owned turn-end rule converges, reconnects, deduplicates, and rolls back through turn event-native Undo",async()=>{
   const prefix="unknown-connected-actor-turn-end",sessionId="session.common-play-actor-turn-end";
   const host=new MockAdapter();
@@ -230,6 +316,7 @@ test("actor-owned turn-end rule converges, reconnects, deduplicates, and rolls b
 
   const spawnBatch=await captureHostBatch(()=>host.resolveAction(pack.summonAction,["char.aelar"]));
   assert.equal((await applyConnectedClientEvents(client,spawnBatch.events)).status,"applied");
+  await host.setQueuedD20(6);
   const reached=await advanceConnectedUntilActor(host,client,pack.summonId,pack.resourceId);
   assert.ok(reached.batch,"summoned actor should begin through an authoritative turn transition");
   const before=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
