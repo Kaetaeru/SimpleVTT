@@ -126,6 +126,7 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
     | undefined;
   const defaultDiceCount = d20Policy?.defaultDiceCount ?? 2;
   const reroll=modifications.filter((entry):entry is D20RollModification&{mode:"reroll";dice:FixedDiceInput}=>entry.mode==="reroll").at(-1);
+  const dice = selectD20(rollStateResolution.rollState, reroll?.dice??request.dice, defaultDiceCount);
   const modifierDice=modifications.filter((entry):entry is D20RollModification&{mode:"add-die"|"subtract-die";dice:FixedDiceInput}=>entry.mode==="add-die"||entry.mode==="subtract-die");
   for(const entry of modifierDice) {
     if(!Number.isInteger(entry.dice.sides)||entry.dice.sides<2) throw new DomainEvaluationError(`additional die must have at least 2 sides: ${entry.source}`);
