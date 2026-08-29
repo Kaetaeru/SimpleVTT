@@ -3,7 +3,7 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `5`
 - task_id: `v1-common-play-c8-rerun`
-- dispatch status to publish: `continue`
+- dispatch status to publish: `needs_user`
 - repository: `Kaetaeru/SimpleVTT`
 - Rerun working branch/ref: `agent/v1-common-play-full-convergence`
 - product integration target: `work/v1-composite`
@@ -14,87 +14,91 @@
 
 ## Durable checkpoint
 
-The recovered V1 Common Play Master Run checkpoint remains valid in ancestry and C8 has advanced by one bounded generic capability slice.
+The recovered V1 Common Play Master Run checkpoint remains valid in ancestry. PR #176's generic `roll.modify: subtract-die` evidence was retained without repetition, and the next bounded C8 kernel slice is now ready for merge approval.
 
 - recovered code checkpoint: `2bf3f0b0b16ac11e2e4e8a4cfd699b64a5f5b8b9`
 - recovered tree: `bb3e2f83ac1c4d169a3692a09f186daf63e5a217`
-- preflight branch HEAD for this execution: `ef33f663c11567a44f5f1efc58e962c5355ea909`
-- accepted candidate branch: `agent/c8-common-play-subtract-die`
-- accepted candidate exact head: `3f1de2b22aa8335cc95ca343e2b00b765ebd08b1`
-- merged PR: `#176` — `rules: add generic Common Play subtract-die semantic`
-- product merge commit: `bb53ef104a76547099673daa7deb33a5d7928016`
-- canonical C8 plan checkpoint commit: `9643cdacfb7739f4bb9b5a7f463e507a3ad4948e`
+- working-branch preflight HEAD for this execution: `526e125c0f75e30050517bcca5acdf1e88eaaf03`
+- retained PR #176 merge: `bb53ef104a76547099673daa7deb33a5d7928016`
+- active candidate branch: `agent/c8-common-play-d20-interceptor-production`
+- active candidate PR: `#177` — `rules: extend Common Play reaction kernel to d20 roll reduction`
+- active candidate exact head: `d1a9940b8472acca252988d4e3332dbf5fa42b74`
 
 Product integration remains `work/v1-composite`, never `main`.
 
 ## Work completed in this execution
 
-The unresolved design question from the previous checkpoint was answered against live implementation and tests.
+Preflight reconciliation confirmed sequence 5 identity and that PR #176 remains in working-branch ancestry. The retained subtract-die surface was not re-proven.
 
-Existing Common Play composition was **insufficient** for an authoritative rolled-die subtraction:
+Live implementation review found that the existing Gate A kernel in `src/domain/commonPlayRuntime.ts` already owns the required generic reaction transaction concepts:
 
-- the operation lowerer could add an authoritative modifier die but only as a positive contribution;
-- the bounded Gate A reaction kernel recalculated an attack after literal `defense.ac` modification but did not provide a reusable rolled-die reduction binding;
-- no existing production evaluator path could turn a separately rolled authoritative die into a signed subtraction without adding a new reusable semantic.
+- external responder identities including owner/DM/host forms;
+- blocking interaction pause/resume;
+- atomic Reaction/resource payment;
+- stale/replay protection;
+- provisional resolution and semantic recalculation.
 
-A side engine or Cutting-Words-specific replacement was therefore rejected. PR #176 added only generic `roll.modify: subtract-die` to the existing Common Play pipeline.
+The missing reusable capability was narrower: Gate A only recalculated `attack.outcome` through literal `defense.ac` modification. PR #177 extends that same kernel rather than creating a new interceptor engine.
 
-Changed product/test files in PR #176:
+Candidate behavior:
 
-- `schemas/common-play-contract.schema.json`
-- `src/domain/commonPlayOperationRuntime.ts`
-- `src/domain/d20.ts`
-- `tests/domain/commonPlayD20Runtime.test.ts`
+- adds structural `d20.outcome-determined` + `d20.roll` recalculation for already-successful ability checks and attack rolls;
+- reuses the existing Gate A interaction/payment lifecycle;
+- appends the retained central `D20RollModification` `subtract-die` semantic to the intercepted d20 operation;
+- requires authoritative modifier-die faces at accept time;
+- missing/invalid die authority rejects before Reaction/resource spend or revision mutation;
+- preserves attack natural-20 success/critical semantics through the central d20 evaluator;
+- preserves the existing `attack.outcome` reaction-defense behavior;
+- definition/interceptor/interaction identity renames preserve mechanical output.
 
-The integrated behavior is structural rather than identity-selected:
+PR #177 deliberately changes only:
 
-- arbitrary definition ID/name changes do not change mechanics;
-- authoritative modifier-die faces are required before commit;
-- the entire authored `XdY+Z`/`XdY-Z` reduction is subtracted, not just the die portion;
-- the central d20 evaluator remains authoritative for natural-1/natural-20/critical behavior;
-- missing modifier-die authority rejects without state mutation.
+- `src/domain/commonPlayRuntime.ts`
+- `tests/domain/commonPlayReactionRuntime.test.ts`
 
-During candidate diff review, an accidental omission of the existing `selectD20(...)` assignment was caught before acceptance and restored in candidate head `3f1de2b...`; the accepted PR diff contains no such deletion.
+It does **not** yet add portable/schema projection for this interceptor, production/session discovery/routing, spatial/visibility facts, damage-roll reduction, built-in Cutting Words data, or named Cutting Words deletion. Those remain later Section 9 work and must not be claimed from this kernel proof.
 
 ## Validation evidence
 
-Exact-head candidate `3f1de2b22aa8335cc95ca343e2b00b765ebd08b1`:
+Exact candidate head `d1a9940b8472acca252988d4e3332dbf5fa42b74`:
 
-- M1 Common Play d20 + TypeScript typecheck: **SUCCESS** (`33237579004`)
-- M1 Common Play Interaction: **SUCCESS**
-- M1 Common Play Targeting: **SUCCESS**
-- M1 Common Play Resource Economy: **SUCCESS**
-- M1 Common Play HP: **SUCCESS**
-- Rules Domain: **SUCCESS** (`33237579039`)
-- Persistence: **SUCCESS**
+- M1 Common Play Interaction run `33245302086`, job `99081625327`: **SUCCESS**
+  - focused Common Play interaction/regression suite: **63/63 passed**
+  - TypeScript typecheck: **SUCCESS**
+- Rules Domain run `33245302077`, job `99081625278`: **SUCCESS**
+  - resolution/class/progression integration gates: **SUCCESS**
+  - TypeScript typecheck: **SUCCESS**
 
-Known red workflows were investigated instead of attributed to this slice:
+Two candidate iterations exposed test/type-only issues before this exact head:
 
-- Contract validation: schema, fixture, and coverage stages pass; the unified-definition stage fails because the workflow invokes `tsx` without installing it (`sh: 1: tsx: not found`). This is a workflow environment defect, not a `subtract-die` semantic failure.
-- UI/Phase11/Phase12: candidate Phase09 reports 104/116 passing with 12 failures. The recovered product checkpoint `2bf3f0b0b16ac11e2e4e8a4cfd699b64a5f5b8b9` already produces the same 104/116 result with the same deterministic-dice, HP/Undo, and spatial-provenance failures. The red is inherited from the parent product state.
+- an assertion compared a full d20 result object against a mechanical subset; the test was corrected without changing runtime semantics;
+- TypeScript widened an error branch to `string | undefined`; the rejection boundary now normalizes an optional error to a deterministic fallback string without changing accepted-resolution mechanics.
 
-The broad Master Run evidence was not repeated because this bounded change touched only the generic d20/Common Play operation surface and the focused exact-head checks covered that surface.
+Known broad red workflows remain inherited and are not evidence against this two-file kernel slice:
 
-## C8 debt after this slice
+- Contract validation retains the previously documented workflow-environment failure where the unified-definition stage invokes `tsx` without the required executable installation; this PR does not touch schema/contract files.
+- UI / Phase 11 / Phase 12 retain the parent product checkpoint's previously reconciled Phase09 failure family. This bounded kernel change does not touch those product surfaces, so the unchanged broad red evidence was not re-proven.
 
-PR #176 deliberately removes no named migration path, so there is no legacy negative delta yet:
+## C8 debt after this candidate
+
+PR #177 is a generic kernel proof and removes no named execution path yet. Until the later production/session bridge and Cutting Words migration land, debt remains unchanged:
 
 - D&D `LEGACY_EXECUTION`: **40** total = 39 direct + 1 transitive;
 - class/subclass-named production RuntimeAdapter paths: **19**;
 - V1 coverage ledger: **36** mandatory families, all still `INCOMPLETE`.
 
-No ledger row is promoted by this primitive alone. Cutting Words remains the active migration slice.
+No coverage row is terminal and C9 Gate N remains prohibited.
 
 ## Waiting condition
 
-None. Sequence 5 remains authorized to continue directly on `agent/v1-common-play-full-convergence`.
+Waiting solely for explicit owner merge approval of PR #177 at exact head `d1a9940b8472acca252988d4e3332dbf5fa42b74`.
 
-C9 Gate N remains prohibited until all D&D named legacy execution is removed and the coverage ledger reaches terminal evidence.
+Per `.chatgpt-rerun/README.md`, an owner command of `Rerun 진행` or `리런 진행` is itself explicit approval for this specifically identified merge candidate, provided live preflight confirms the PR head/diff, CI, ancestry, and mergeability remain materially consistent.
 
 ## Next Exact Action
 
 Resume from Section 9 of `docs/rules/v1-common-play-c8-rerun-plan.md`.
 
-Do not re-prove PR #176 unless its surface changes. The next bounded product action is the generic production/session interceptor bridge that applies the retained `subtract-die` semantic to eligible d20 and damage-roll events with remote responder Reaction/resource payment and authoritative spatial/visibility facts. Then encode built-in Cutting Words through Common Play data; only after focused connected/Undo evidence is green may the named Cutting Words app/domain path be deleted and the legacy baseline shrunk.
+On explicit merge approval, re-read the mandatory Rerun files, reconcile live PR #177 head/diff/CI/mergeability, merge it into `agent/v1-common-play-full-convergence` if materially unchanged, then continue from the next unfinished Section 9 boundary: portable/schema plus production/session discovery for the generic interceptor, followed by the separately required damage-roll and authoritative spatial/visibility work. Do not repeat PR #176 or PR #177 validation unless their relevant surfaces materially change.
 
 Current verdict: `V1 INCOMPLETE`.
