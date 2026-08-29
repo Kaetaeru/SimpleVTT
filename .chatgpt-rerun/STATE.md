@@ -50,14 +50,14 @@ Current validated C9 checkpoints:
 - `458585cf`: installed damage.taken rules are structurally discovered and appended to the originating Resolver transaction with atomic effect consumption, connected replay/reconnect, and Undo.
 - `b659b063`: arbitrary installed Zone artifacts project manual enter/leave actions and commit membership, enter damage/frequency, Host/Client replay, reconnect, and Undo through the canonical Zone runtime.
 - `641c00fe`: installed Zone turn-start/end operations are composed into the same authoritative end-turn/begin-turn PendingResolution rather than a second mechanical commit.
-- `eb2559cf`: begin-turn, end-turn, and advance-time now emit canonical reversible `turn-clock` StateChanges; event-native apply/replay understands the clock snapshots, and a focused event-native Undo regression proves exact clock restoration.
+- `fbcee3c6`: begin-turn, end-turn, and advance-time emit canonical `turn-clock` StateChanges; event-native apply/replay and Undo now both read and restore exact RuntimeClock snapshots. The focused regression that exposed the missing Undo branch is retained at `tests/ui/phase09EffectConcentrationUndo.test.ts`.
 
-Verification for the `eb2559cf` code checkpoint was dispatched through exact-head UI workflow `33267621742` and Rules Domain workflow `33267621760`. At checkpoint publication they were still running. The preceding `641c00fe` branch state already had an inherited broad UI workflow failure while Rules Domain was green; do not treat broad pre-existing Phase09 deterministic/provenance reds as evidence against this bounded clock change without a changed-surface failure.
+Exact-head UI workflow `33267726004` for `fbcee3c6` was in progress at checkpoint publication. Its early repository/UI contract steps were green, but the Phase09 focused step and typecheck/build had not yet completed, so no final green claim is made here. The preceding broad UI workflow already contained inherited Phase09 deterministic/provenance reds; classify any later red against the changed turn-clock surface before treating it as a blocker.
 
-Coverage remains `IMPLEMENTED=1`, `INCOMPLETE=35`; no ledger row is promoted by the clock infrastructure alone.
+Coverage remains `IMPLEMENTED=1`, `INCOMPLETE=35`; no ledger row is promoted by the turn-clock infrastructure alone.
 
 ## Next Exact Action
 
-Carry the authoritative turn `ResolutionEvent[]` produced by `advanceTurnRuntimeLifecycle` through the existing connected `mode-transition` transport instead of adding a Zone-specific side channel. Apply the same canonical events on Clients/reconnect, then prove an arbitrary installed Zone turn-start/end rule converges across Host/Client with frequency, damage/effect results, duration cleanup, and event-native Undo. Reconcile Families P/T only to evidence actually obtained; do not promote either family until its full required event matrix is satisfied.
+After reconciling the exact-head `fbcee3c6` verification result, carry the authoritative turn `ResolutionEvent[]` produced by `advanceTurnRuntimeLifecycle` through the existing connected `mode-transition` transport instead of adding a Zone-specific side channel. Apply the same canonical events on Clients/reconnect, then prove an arbitrary installed Zone turn-start/end rule converges across Host/Client with frequency, damage/effect results, duration cleanup, and event-native Undo. Reconcile Families P/T only to evidence actually obtained; do not promote either family until its full required event matrix is satisfied.
 
 C8 Core is complete. C9 remains active and Gate N remains blocked by 35 `INCOMPLETE` coverage rows. Overall verdict: `V1 INCOMPLETE`.
