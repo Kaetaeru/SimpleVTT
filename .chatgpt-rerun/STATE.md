@@ -1,7 +1,7 @@
 # Rerun State
 
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `5`
+- sequence: `6`
 - task_id: `v1-common-play-c8-rerun`
 - dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
@@ -48,11 +48,12 @@ Current validated C9 checkpoints:
 - `5308c15e`: movement.relocate executes through the operations lowerer and stored invocation; Ready UI uses the authoritative artifact for installed content; cancel, Undo, and turn-boundary expiry are production-proven.
 - `50498ba6`: held-Concentration loss/release/cancel/Undo is production-proven and Family S stored-invocation-ready is promoted to `IMPLEMENTED`.
 - `458585cf`: installed damage.taken rules are structurally discovered and appended to the originating Resolver transaction with atomic effect consumption, connected replay/reconnect, and Undo.
+- `b659b063`: arbitrary installed Zone artifacts project manual enter/leave actions and commit membership, enter damage/frequency, Host/Client replay, reconnect, and Undo through the canonical Zone runtime.
 
-Latest proof: TypeScript passed; 14/14 lowered-family production/connected and 6/6 persistent-effect domain regressions passed. Coverage remains truthfully `IMPLEMENTED=1`, `INCOMPLETE=35`; Families N/P gained production evidence but are not promoted beyond their tested event matrix. Code checkpoint is `458585cf`.
+Latest proof: TypeScript passed; 16/16 lowered-family production/connected and 9/9 Zone domain regressions passed. Coverage remains truthfully `IMPLEMENTED=1`, `INCOMPLETE=35`; Families P/T gained production evidence but are not promoted beyond their tested event matrix. Code checkpoint is `b659b063`.
 
 ## Next Exact Action
 
-Connect canonical Zone membership/event operations to installed production: manual enter/leave plus turn-start/end dispatch must reuse commonPlayZoneRuntime frequency markers, then prove arbitrary identity, duration cleanup, Host/Client replay/reconnect, and Undo. Reconcile Families P/T only to the evidence actually obtained.
+Compose installed Zone turn-start/end rules into the authoritative turn transition without a second non-atomic commit. Reuse `resolveCommonPlayZoneTurnEvent` frequency semantics, then prove arbitrary identity, Host/Client replay/reconnect, Undo, and duration cleanup. Reconcile Families P/T only to the evidence actually obtained.
 
 C8 Core is complete locally. C9 is active and Gate N is blocked by 36 `INCOMPLETE` ledger rows. Overall verdict: `V1 INCOMPLETE`.

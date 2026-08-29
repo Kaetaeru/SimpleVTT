@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
-  "sequence": 5,
+  "sequence": 6,
   "status": "continue",
-  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint 458585cf composes installed damage.taken rules into the originating Resolver transaction and proves atomic effect consumption, Host/Client replay, reconnect, and Undo. TypeScript and 20 focused regressions are green; coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: connect canonical Zone manual membership and turn event dispatch through the existing frequency runtime with connected/reconnect/Undo proof.",
+  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint b659b063 connects arbitrary installed Zone manual enter/leave actions to canonical membership, frequency, damage, Host/Client replay, reconnect, and Undo. TypeScript and 25 focused regressions are green; coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: compose Zone turn-start/end rules atomically into authoritative turn transitions and prove duration cleanup.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }
