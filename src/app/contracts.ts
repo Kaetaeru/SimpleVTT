@@ -339,6 +339,16 @@ export interface ActionVm {
       radiusFeet?:number;
     };
   };
+  runtimeD20FollowUps?:Array<{
+    sourceId:string;
+    families:Array<"ability-check"|"saving-throw"|"attack-roll">;
+    trigger:"failure";
+    modification:{mode:"add-die";diceSides:number};
+    payment:{resourceId:string;amount:number;consumeWhen:"accept"|"success"};
+    presentation:{optionName:string;cost:string;effect:string;source:string};
+  }>;
+  checkSuccessOperations?:Array<{kind:"stabilize";target:"first-target"}>;
+  checkOutcomeLabels?:{success:string;failure:string};
 }
 
 export interface EconomyVm {
@@ -411,6 +421,7 @@ export interface ResolutionView {
   rollKind: "attack" | "check" | "save" | "damage" | "healing" | "effect";
   stage: ResolutionStage;
   authoritativeDice: number[];
+  naturalD20?:number;
   rollModifierContributions?: Array<{source:string;value:number}>;
   rollTotal?: number;
   checkTarget?:number;

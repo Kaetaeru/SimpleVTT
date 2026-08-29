@@ -582,11 +582,12 @@ Verified migration slices:
 - [x] no-roll and ability-check threshold status effects commit generic economy/Effect events, connected replay, attack-ending cleanup, and Undo without a Rogue or action-ID branch;
 - [x] Bardic Inspiration grant execution moved onto a structural effect-grant action: authored economy/resource/duration/public metadata commit atomically, connected replay and Undo remain green, and an unknown action ID proves identity invariance; only its class-level resource materializer remains named;
 - [x] Divine Sense activation now composes the same structural effect grant with termination and a generic creature-type awareness query; its named action adapter is deleted while mapless/module distance behavior, connected replay, Undo, and unknown-identity evidence stay green;
+- [x] Tactical Mind now uses a structural failed-check add-die fact, conditional resource payment, and action-authored success operation through the existing d20/Resolver transaction; the named follow-up adapter is deleted while Stabilize, open-DC, connected replay, Undo, and unknown-ID evidence remain green;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:
 
-- the named Indomitable offer/payment/reroll orchestration adapter and the remaining Tactical Mind, Cutting Words, Peerless Skill, and Dark One's Own Luck post-roll adapters remain `LEGACY_EXECUTION`;
+- the named Indomitable offer/payment/reroll orchestration adapter and the remaining Cutting Words, Peerless Skill, and Dark One's Own Luck post-roll adapters remain `LEGACY_EXECUTION`;
 - named legacy spell/class consumers still call the compatibility targeting provider that fabricates mapless facts; only the canonical attack/concentration transaction is migrated by this slice;
 - no coverage-ledger row is promoted by this bounded migration alone.
 

@@ -21,7 +21,7 @@ import {
   speciesDefinition,
 } from "./characterCreationV10Data";
 import { proficiencyBonusForTotalLevel } from "../domain/progressionCatalog";
-import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID } from "../domain/coreClassResources";
+import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_SECOND_WIND_RESOURCE_ID } from "../domain/coreClassResources";
 import {
   parseCharacterSessionProjectionV1,
   type CharacterProjectionContentIdentityV1,
@@ -346,7 +346,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
 
   const fighterLevel=classLevel(projection,"dnd.srd521.class.fighter");
   if (fighterLevel>=1) {
-    const secondWind=sheet.resources.find((resource)=>resource.id==="resource.second-wind" || resource.id.includes("second-wind"));
+    const secondWind=sheet.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)??sheet.resources.find((resource)=>resource.id==="resource.second-wind" || resource.id.includes("second-wind"));
     if (!secondWind) throw new Error("Fighter SessionProjection is missing canonical Second Wind resource state");
     actions.push({
       id:"action.second-wind",
@@ -362,6 +362,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       eligibleTargetIds:targetSelf,
       healing:{dice:"1d10",flat:fighterLevel,average:Math.floor(5.5+fighterLevel)},
       resourceCost:{resourceId:secondWind.id,amount:1},
+      runtimeD20FollowUps:fighterLevel>=2?[{sourceId:"feature:fighter.tactical-mind",families:["ability-check"],trigger:"failure",modification:{mode:"add-die",diceSides:10},payment:{resourceId:secondWind.id,amount:1,consumeWhen:"success"},presentation:{optionName:"전술적 정신 d10",cost:"성공 시 재기의 바람 1회",effect:"d10을 더합니다. 그래도 실패하면 사용 횟수를 소모하지 않습니다.",source:"SRD 5.2.1 · Fighter Tactical Mind"}}]:undefined,
       details:[
         {label:"대상",value:"자신"},
         {label:"회복",value:`1d10 + ${fighterLevel}`,source:"SRD Fighter · Second Wind"},

@@ -76,6 +76,7 @@ export function resolveOpenAbilityCheckResolution(
     rollKind:"check",
     stage:"roll-animation",
     authoritativeDice:[...roll.dice.faces],
+    naturalD20:roll.natural,
     rollTotal:roll.total,
     saveResults:[],
     damageComponents:[],

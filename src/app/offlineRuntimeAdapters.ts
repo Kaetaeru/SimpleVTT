@@ -75,7 +75,7 @@ import "./stabilizeRuntimeAdapter";
 import "./unarmedControlRuntimeAdapter";
 import "./effectGrantActionRuntimeAdapter";
 import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
-import "./fighterTacticalMindFollowUpRuntimeAdapter";
+import "./d20FollowUpRuntimeAdapter";
 import "./fighterIndomitableFollowUpRuntimeAdapter";
 import "./warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter";
 import "./bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter";

@@ -68,7 +68,7 @@
     { "module": "./unarmedControlRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./effectGrantActionRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./consumableD20BonusEffectFollowUpRuntimeAdapter", "classification": "GENERIC_ENGINE" },
-    { "module": "./fighterTacticalMindFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
+    { "module": "./d20FollowUpRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./fighterIndomitableFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },

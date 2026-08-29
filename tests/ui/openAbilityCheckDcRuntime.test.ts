@@ -54,7 +54,7 @@ test("a failed open ability check offers Tactical Mind and only spends Second Wi
   await adapter.advanceResolution();
   let snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",value:10,scope:"resolution"});
   assert.equal(snapshot.resolution?.checkOutcome,"실패");
-  assert.equal(snapshot.resolution?.interrupt?.id,"follow-up.fighter.tactical-mind");
+  assert.equal(snapshot.resolution?.interrupt?.id,"follow-up.d20-modification");
 
   await adapter.setQueuedD20(8);
   snapshot=await adapter.respondToInterrupt(true);
