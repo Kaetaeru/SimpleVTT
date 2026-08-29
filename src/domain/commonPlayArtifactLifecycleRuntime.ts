@@ -1,4 +1,5 @@
 // @ts-nocheck
+// Diagnostic only: adapter isolation pass.
 import type { RulesRuntimeState } from "./combatState";
 import type { CommonPlayDefinitionIR } from "./commonPlayDefinitionRuntime";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
