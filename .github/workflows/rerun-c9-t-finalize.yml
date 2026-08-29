@@ -1,0 +1,126 @@
+name: C9 Finalize Zone Stay
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-t-finalize.yml
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify authoritative Zone stay
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          if ! npx tsx --test tests/ui/connectedSpatialZoneStayProduction.test.ts 2>&1 | tee /tmp/stay.log; then
+            { echo '# C9 T finalize failed'; echo '```'; tail -120 /tmp/stay.log; echo '```'; } > /tmp/relay.md
+            gh issue edit 180 --repo Kaetaeru/SimpleVTT --body-file /tmp/relay.md
+            exit 1
+          fi
+          if ! npx tsc --noEmit 2>&1 | tee /tmp/tsc.log; then
+            { echo '# C9 T TypeScript failed'; echo '```'; tail -120 /tmp/tsc.log; echo '```'; } > /tmp/relay.md
+            gh issue edit 180 --repo Kaetaeru/SimpleVTT --body-file /tmp/relay.md
+            exit 1
+          fi
+      - name: Reconcile Family T ledger
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=ledger.rows.find(r=>r.family==='T'&&r.id==='zones');
+          if(!row) throw new Error('Family T row missing');
+          row.disposition='IMPLEMENTED';
+          row.currentState='Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/stay/start/end-turn events, canonical frequency, elapsed cleanup, damage/effect trigger lowering, atomic Undo, Host/Client replay, duplicate replay, and fresh reconnect. Provider stay is an explicit authoritative fact and Core does not infer geometry.';
+          row.productionEvidence=[...new Set([...(row.productionEvidence??[]),'connectedSpatialZoneStayProduction.test.ts authoritative provider stay through canonical connected events'])];
+          row.connectedEvidenceIfRelevant=[...new Set([...(row.connectedEvidenceIfRelevant??[]),'connectedSpatialZoneStayProduction.test.ts Host/Client stay convergence, duplicate replay, reconnect, and Undo'])];
+          row.persistenceEvidenceIfRelevant=[...new Set([...(row.persistenceEvidenceIfRelevant??[]),'connectedSpatialZoneStayProduction.test.ts fresh reconnect reconstruction of stay event history'])];
+          row.remainingNamedSeams=(row.remainingNamedSeams??[]).filter(s=>!s.includes('zone.stay'));
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs | tee /tmp/coverage.log
+          git diff --check
+      - name: Commit Family T coverage
+        run: |
+          rm .github/workflows/rerun-c9-t-finalize.yml
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add -A
+          git commit -m "test(c9): close authoritative Zone stay coverage"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          echo "PRODUCT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Update STATE after T
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledger=JSON.parse(fs.readFileSync('docs/rules/v1-mechanism-coverage-ledger.json','utf8'));
+          const counts=ledger.rows.reduce((a,r)=>(a[r.disposition]=(a[r.disposition]??0)+1,a),{});
+          const path='.chatgpt-rerun/STATE.md';
+          let text=fs.readFileSync(path,'utf8');
+          const marker='## Next Exact Action';
+          const idx=text.indexOf(marker);
+          if(idx<0) throw new Error('STATE Next Exact Action marker missing');
+          const section=`## Latest C9 reconciliation — authoritative Zone stay\n\n- Family T (zones) is now ledger \`IMPLEMENTED\`: \`connectedSpatialZoneStayProduction.test.ts\` proves an explicit provider-authored stay fact through the canonical Zone resolution with Host/Client convergence, duplicate replay, reconnect, and Undo; Core still does not infer geometry.\n- Focused stay test and \`tsc --noEmit\` pass on the reconciliation head.\n- Actual ledger coverage is now \`IMPLEMENTED=${counts.IMPLEMENTED??0}\`, \`INCOMPLETE=${counts.INCOMPLETE??0}\`, \`PROVEN_UNNEEDED=${counts.PROVEN_UNNEEDED??0}\`; \`gateNBlockingNamedFallbacks\` remains empty.\n- Family AB Recharge production recovery is implemented and connected, but its new acceptance probe exposed a real remaining gap: the actor action does not yet consume its recovered resource (expected 1 -> 0, observed 1). Do not promote AB until availability/consumption is fixed and re-proven.\n\n`;
+          text=text.slice(0,idx)+section+`${marker}\n\nFix Family AB (\`recharge-cooldown\`) action availability/consumption: the portable turn-start Recharge now restores the actor resource to 1, but resolving the actor's linked \`use-charge\` action leaves it at 1. Trace the existing actor-artifact installed-action routing so the action consumes the same actor-owned resource through the generic authoritative transaction, reject replay/use at 0 without underflow, then re-prove turn-start recovery, arbitrary identity, Host/Client replay/reconnect, and Undo. Do not add a monster-specific engine and do not reopen S/T/U.\n`;
+          fs.writeFileSync(path,text);
+          NODE
+          git add .chatgpt-rerun/STATE.md
+          git commit -m "docs(rerun): checkpoint authoritative Zone stay"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Update control last
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledger=JSON.parse(fs.readFileSync('docs/rules/v1-mechanism-coverage-ledger.json','utf8'));
+          const counts=ledger.rows.reduce((a,r)=>(a[r.disposition]=(a[r.disposition]??0)+1,a),{});
+          const path='.chatgpt-rerun/control.json';
+          const control=JSON.parse(fs.readFileSync(path,'utf8'));
+          control.status='continue';
+          control.reason=`C9 remains active at IMPLEMENTED=${counts.IMPLEMENTED??0}, INCOMPLETE=${counts.INCOMPLETE??0}, PROVEN_UNNEEDED=${counts.PROVEN_UNNEEDED??0} with gateNBlockingNamedFallbacks empty. Family T is now IMPLEMENTED after authoritative Zone stay acceptance. Family AB Recharge recovery/connected routing is present, but the acceptance probe found the linked actor action does not consume the recovered resource (1 stayed 1); next fix that generic actor-resource consumption path and re-prove AB without a monster engine.`;
+          control.updated_at='2026-08-30';
+          fs.writeFileSync(path,JSON.stringify(control,null,2)+'\n');
+          NODE
+          git add .chatgpt-rerun/control.json
+          git commit -m "docs(rerun): continue from Recharge consumption gap"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          FINAL_SHA=$(git rev-parse HEAD)
+          { echo '# C9 T finalize success'; echo "Product SHA: ${PRODUCT_SHA}"; echo "Final SHA: ${FINAL_SHA}"; node -e "const l=require('./docs/rules/v1-mechanism-coverage-ledger.json');const c=l.rows.reduce((a,r)=>(a[r.disposition]=(a[r.disposition]||0)+1,a),{});console.log('Coverage:',JSON.stringify(c));console.log('gateNBlockingNamedFallbacks:',JSON.stringify(l.gateNBlockingNamedFallbacks||[]));"; echo 'Next: Family AB Recharge action consumption gap'; } > /tmp/final.md
+          gh issue edit 180 --repo Kaetaeru/SimpleVTT --body-file /tmp/final.md
+      - name: Clean helper after failure
+        if: failure()
+        run: |
+          git reset --hard
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation || true
+          rm -f .github/workflows/rerun-c9-t-finalize.yml
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "ci(c9): remove failed T finalize helper"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
