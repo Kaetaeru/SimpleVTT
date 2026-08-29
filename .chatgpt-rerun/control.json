@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
-  "sequence": 6,
+  "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active. Ledger commit 5bea7af reconciles Families P/T to the already-proven automatic Zone turn-start/end and elapsed cleanup evidence without promotion; coverage remains IMPLEMENTED=1, INCOMPLETE=35, PROVEN_UNNEEDED=0. Spatial-Zone investigation found a real contract gap: installed production hardcodes manual Zone authority, while the existing spatial relation contract does not authoritatively express Zone inside/outside and Zone templates carry no geometry, so Core must not infer membership. Next is an explicit provider-supplied spatial Zone membership fact/command routed through the existing event-native Zone transaction and connected replay/reconnect/Undo path. No workflow was created for the docs-only ledger commit, so no new checker/build-green claim is made.",
+  "reason": "C9 remains active. Exact UI run 33273491509 at code/test head 2ed2ff8d proves authoritative external spatial Zone membership through the existing canonical Zone transaction and connected ResolutionEvent path: arbitrary identity, spatial authority, no manual controls, provider provenance, zone.entered same-transaction effect, Host/Client convergence, duplicate replay, fresh reconnect, and Undo all pass in the 33/33 connected step. Family T is still INCOMPLETE for stay/effect breadth and named aura/zone migration, Family P still lacks remaining event-family coverage, and overall ledger remains IMPLEMENTED=1 / INCOMPLETE=35 / PROVEN_UNNEEDED=0 until further reconciliation. Broad Phase09 remains inherited 106/118; build was skipped and is not claimed green. Next action is to reconcile only Family T's spatial-provider evidence/seam, then continue the next real T or P gap without repeating validated Zone work.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
