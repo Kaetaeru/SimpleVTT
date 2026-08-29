@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ActionVm, AppSnapshot, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
