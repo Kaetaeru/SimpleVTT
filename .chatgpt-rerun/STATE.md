@@ -43,11 +43,12 @@ Current validated C9 checkpoints:
 - `7be5c795`: actor artifact creates/removes typed combatants and projects Scene/Host/Client/expiry/Undo lifecycle;
 - `583ff38c`: generic Common Play payments atomically spend Action, Bonus Action, or Reaction with production Undo;
 - `281be9b1`: summoned actors project scoped installed Common Play actions and execute them through Host-authoritative connected events with Undo.
+- `acc46a1a`: schema PaymentContract is preserved and atomically executed across operations, save-damage, effect, zone, and artifact lowerers with production Host/Client convergence and Undo.
 
-Latest proof: TypeScript passed; 46/46 relevant domain/production/connected regressions passed; ledger contracts 2/2 passed; coverage checker reports exactly 36 `INCOMPLETE` rows. Worktree is clean at `281be9b1`.
+Latest proof: TypeScript passed; the 4/4 lowerer contract, 5/5 resource/economy, and 6/6 production/connected regressions passed; coverage checker reports exactly 36 `INCOMPLETE` rows. Payment coverage evidence is reconciled without falsely promoting families B or D. Code checkpoint is `acc46a1a`.
 
 ## Next Exact Action
 
-Preserve and atomically execute the schema-declared `PaymentContract` across non-operation Common Play lowerers (`save-damage`, `effect`, `zone`, and `artifacts`), beginning with a failing arbitrary-identity Action-payment regression and proving production connected convergence plus Undo. Do not promote any ledger row until its full matrix is green.
+Connect the already-implemented generic stored-invocation/Ready domain runtime to the installed Common Play production route using arbitrary identities, then prove capture, trigger, cancel/expiry, Host/Client convergence, persistence, and Undo without selecting the named Ready adapter. Do not promote family S until its full matrix is green.
 
 C8 Core is complete locally. C9 is active and Gate N is blocked by 36 `INCOMPLETE` ledger rows. Overall verdict: `V1 INCOMPLETE`.

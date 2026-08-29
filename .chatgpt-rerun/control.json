@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
   "status": "continue",
-  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoints 7be5c795, 583ff38c, and 281be9b1 add typed summoned-combatant lifecycle, generic Action/Bonus Action/Reaction payments, and scoped summoned-actor Common Play execution with Host/Client convergence and Undo. TypeScript, 46 relevant regressions, and 2 ledger contracts are green. The audited ledger still truthfully reports all 36 rows INCOMPLETE. Next: preserve and execute PaymentContract across save-damage/effect/zone/artifact lowerers; promote nothing without the full evidence matrix.",
+  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint acc46a1a preserves one shared PaymentContract across all five manual lowerers and proves atomic production Host/Client convergence plus Undo. TypeScript and 15 focused contract/domain/production regressions are green. The audited ledger still truthfully reports all 36 rows INCOMPLETE. Next: connect generic stored invocation/Ready to installed production, connected authority, persistence, and Undo; promote nothing without the full evidence matrix.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }
