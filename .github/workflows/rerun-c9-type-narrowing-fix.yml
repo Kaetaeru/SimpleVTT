@@ -48,8 +48,26 @@ jobs:
         run: npm run generate:content
       - name: Verify focused C9 production slices
         run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts tests/ui/connectedTurnResolutionEventTransport.test.ts tests/ui/connectedDamageDealtTriggerProduction.test.ts
-      - name: Verify TypeScript and production bundle
-        run: npx tsc --noEmit && npx vite build
+      - name: Capture TypeScript diagnostics
+        id: typecheck
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > c9-typecheck.txt 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          cat c9-typecheck.txt
+          exit 0
+      - name: Upload TypeScript diagnostics
+        if: steps.typecheck.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: c9-runtime-typecheck
+          path: c9-typecheck.txt
+      - name: Require TypeScript success
+        run: test "${{ steps.typecheck.outputs.status }}" = "0"
+      - name: Verify production bundle
+        run: npx vite build
       - name: Commit verified source fix
         run: |
           git config user.name "Kaetaeru"
