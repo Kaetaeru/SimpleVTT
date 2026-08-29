@@ -1,0 +1,61 @@
+name: C9 Runtime Type Narrowing Fix
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/rerun-c9-type-narrowing-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply bounded type-narrowing fixes
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          function replace(path,from,to){
+            let text=fs.readFileSync(path,'utf8');
+            if(!text.includes(from)) throw new Error(`expected text missing in ${path}`);
+            text=text.replace(from,to);
+            fs.writeFileSync(path,text);
+          }
+          const undoTail='if(change.kind==="death-save")return {...structuredClone(change),before:change.after,after:change.before};\n      return {...structuredClone(change),before:change.after,after:change.before};';
+          const narrowedTail='if(change.kind==="death-save")return {...structuredClone(change),before:change.after,after:change.before};\n      if(change.kind==="turn-clock")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};\n      if(change.kind==="life")return {...structuredClone(change),before:change.after,after:change.before};\n      return change;';
+          replace('src/app/connectedActionRoutingAdapter.ts',undoTail,narrowedTail);
+          replace('src/app/resolutionEventUndo.ts',undoTail,narrowedTail);
+          replace(
+            'src/app/realActivityProjectionService.ts',
+            '  if (change.kind==="death-save") return `${change.targetId} death-save.${change.field} ${change.before} → ${change.after}`;\n  return `${change.targetId} life.${change.field} ${String(change.before)} → ${String(change.after)}`;',
+            '  if (change.kind==="turn-clock") return `${change.targetId} turn-clock ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;\n  if (change.kind==="death-save") return `${change.targetId} death-save.${change.field} ${change.before} → ${change.after}`;\n  return `${change.targetId} life.${change.field} ${String(change.before)} → ${String(change.after)}`;'
+          );
+          replace('src/domain/commonPlayEffectRuntime.ts','  if(template.lifetime.kind==="until-event") {','  const lifetime=template.lifetime;\n  if(lifetime.kind==="until-event") {');
+          replace('src/domain/commonPlayEffectRuntime.ts','    assertOnlyKeys(template.lifetime,["kind","event","onEnd"],`${label} lifetime`);','    assertOnlyKeys(lifetime,["kind","event","onEnd"],`${label} lifetime`);');
+          replace('src/domain/commonPlayEffectRuntime.ts','    if ((template.lifetime.event!=="damage.taken"&&template.lifetime.event!=="damage.dealt")||template.lifetime.onEnd!=="destroy") {','    if ((lifetime.event!=="damage.taken"&&lifetime.event!=="damage.dealt")||lifetime.onEnd!=="destroy") {');
+          replace('src/domain/commonPlayEffectRuntime.ts','    if(template.rules.some((rule)=>rule.event!==template.lifetime.event||ruleFrequency(rule)!=="once")) {','    if(template.rules.some((rule)=>rule.event!==lifetime.event||ruleFrequency(rule)!=="once")) {');
+          replace('src/domain/commonPlayEffectRuntime.ts','    assertOnlyKeys(template.lifetime,["kind","onEnd"],`${label} lifetime`);','    assertOnlyKeys(lifetime,["kind","onEnd"],`${label} lifetime`);');
+          replace('src/domain/commonPlayEffectRuntime.ts','    if(template.lifetime.kind!=="until-duration"||template.lifetime.onEnd!=="destroy") {','    if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") {');
+          NODE
+      - name: Verify focused C9 production slices
+        run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts tests/ui/connectedTurnResolutionEventTransport.test.ts tests/ui/connectedDamageDealtTriggerProduction.test.ts
+      - name: Verify production build
+        run: npm run build
+      - name: Commit verified source fix
+        run: |
+          git config user.name "Kaetaeru"
+          git config user.email "131461278+Kaetaeru@users.noreply.github.com"
+          git add src/app/connectedActionRoutingAdapter.ts src/app/resolutionEventUndo.ts src/app/realActivityProjectionService.ts src/domain/commonPlayEffectRuntime.ts
+          git commit -m "fix(c9): narrow runtime state change types"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
