@@ -30,7 +30,7 @@ test("runtime attack provider consumes authored structural damage/range facts", 
   const fact = resolveRuntimeAttackFact(SHORTBOW,phase09DeterministicAttackFaces(SHORTBOW));
   assert.equal(fact.sourceKind,"weapon");
   assert.equal(fact.rangeFeet,80);
-  assert.deepEqual(fact.damageDice,[{ source:"external:weapon:damage",sides:6,count:1,faces:[4,4] }]);
+  assert.deepEqual(fact.damageDice,[{ source:"external:weapon:damage",sides:6,count:1,faces:[3,3] }]);
   assert.deepEqual(fact.flatDamage,[{ source:"runtime:action:action.shortbow:damage-flat",value:2 }]);
 });
 
@@ -78,7 +78,7 @@ test("atomic attack service keeps preview parity, domain events, and doubles onl
   const normal = resolveAtomicAttackTransaction({ ...common,resolutionId:"attack.normal",attackD20Face:11,expectedPreview:{ total:16,outcome:"명중",critical:false } });
   assert.equal(normal.status,"committed");
   if (normal.status === "committed") {
-    assert.equal(normal.damageComponent?.raw,6);assert.deepEqual(normal.damageFaces,[4]);assert.equal(normal.targetHp,6);assert.equal(normal.actorEconomy.action,false);
+    assert.equal(normal.damageComponent?.raw,5);assert.deepEqual(normal.damageFaces,[3]);assert.equal(normal.targetHp,7);assert.equal(normal.actorEconomy.action,false);
     assert.equal(normal.eventCount,normal.events.length);assert.ok(normal.events.length>0);
     assert.ok(normal.events.some((event)=>event.stateChanges.some((change)=>change.kind==="hp"&&change.targetId==="combatant.goblin-a")));
     assert.ok(normal.events.some((event)=>event.stateChanges.some((change)=>change.kind==="economy"&&change.targetId==="char.aelar"&&change.field==="action")));
@@ -86,8 +86,8 @@ test("atomic attack service keeps preview parity, domain events, and doubles onl
   const critical = resolveAtomicAttackTransaction({ ...common,resolutionId:"attack.critical",attackD20Face:20,expectedPreview:{ total:25,outcome:"명중",critical:true } });
   assert.equal(critical.status,"committed");
   if (critical.status === "committed") {
-    assert.equal(critical.damageComponent?.raw,10,"critical is 2d6 [4,4] + flat 2, not (1d6+2) x2");
-    assert.deepEqual(critical.damageFaces,[4,4]);assert.equal(critical.targetHp,2);assert.equal(critical.actorEconomy.action,false);assert.equal(critical.eventCount,critical.events.length);
+    assert.equal(critical.damageComponent?.raw,8,"critical is 2d6 [3,3] + flat 2, not (1d6+2) x2");
+    assert.deepEqual(critical.damageFaces,[3,3]);assert.equal(critical.targetHp,4);assert.equal(critical.actorEconomy.action,false);assert.equal(critical.eventCount,critical.events.length);
   }
 });
 
@@ -114,21 +114,21 @@ async function hitShortbow(adapter:MockAdapter,actionId="action.shortbow") {
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"roll-animation");assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
   await adapter.advanceResolution();snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"attack-result");
-  await adapter.advanceResolution();snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"damage-animation");assert.deepEqual(snapshot.resolution?.authoritativeDice,[4]);
+  await adapter.advanceResolution();snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"damage-animation");assert.deepEqual(snapshot.resolution?.authoritativeDice,[3]);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
   await adapter.advanceResolution();return adapter.getSnapshot();
 }
 
 test("MockAdapter Shortbow final apply uses explicit mapless targeting, event-native Activity, and event-native Undo", async () => {
   const adapter=new MockAdapter();const snapshot=await hitShortbow(adapter);const goblin=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a");
-  assert.equal(snapshot.resolution?.stage,"complete");assert.equal(goblin?.hp,6);assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
-  assert.equal(snapshot.resolution?.damageComponents[0]?.raw,6);assert.match(snapshot.resolution?.damageComponents[0]?.source??"",/atomic resolveAttack transaction/);
+  assert.equal(snapshot.resolution?.stage,"complete");assert.equal(goblin?.hp,7);assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.resolution?.damageComponents[0]?.raw,5);assert.match(snapshot.resolution?.damageComponents[0]?.source??"",/atomic resolveAttack transaction/);
   assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("reference:weapon:shortbow:damage")));
   assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("runtime:manual-targeting")));
   assert.ok(!snapshot.resolution?.provenance.some((entry)=>entry.includes("phase09:reference-attack")));
-  assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));assert.ok(snapshot.resolution?.stateChanges.includes("고블린 A HP 12 → 6"));
+  assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));assert.ok(snapshot.resolution?.stateChanges.includes("고블린 A HP 12 → 7"));
   const activity=snapshot.activity[0];assert.equal(activity.id,snapshot.resolution?.id);assert.ok(activity.detail.some((line)=>line.startsWith("ResolutionEvent ")));
-  assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.goblin-a HP 12 → 6")));assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar economy.action true → false")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.goblin-a HP 12 → 7")));assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar economy.action true → false")));
   (adapter as unknown as { lastBefore:unknown }).lastBefore=null;await adapter.undoLastResolution();const undone=await adapter.getSnapshot();
   assert.equal(undone.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);assert.equal(undone.scene.economyByActor["char.aelar"]?.action,true);assert.equal(undone.resolution,null);
   assert.ok(undone.activity[0]?.detail.includes("Before snapshot 미사용"));assert.ok(undone.activity.find((entry)=>entry.id===activity.id)?.reversed);
@@ -136,8 +136,8 @@ test("MockAdapter Shortbow final apply uses explicit mapless targeting, event-na
 
 test("event-native Undo rejects when current scene state drifted after the committed events", async () => {
   const adapter=new MockAdapter();await hitShortbow(adapter);await adapter.applyDmAdjudication({ type:"healing-correction",value:1,targetId:"combatant.goblin-a",scope:"resolution",reason:"stale undo guard fixture" });
-  let snapshot=await adapter.getSnapshot();assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);await adapter.undoLastResolution();snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);assert.match(snapshot.resolution?.finalOutcome??"",/Undo 거부/);assert.match(snapshot.resolution?.detail.at(-1)??"",/event-native undo drift/);
+  let snapshot=await adapter.getSnapshot();assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,8);await adapter.undoLastResolution();snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,8);assert.match(snapshot.resolution?.finalOutcome??"",/Undo 거부/);assert.match(snapshot.resolution?.detail.at(-1)??"",/event-native undo drift/);
 });
 
 test("runtime atomic attack is invariant to an unknown action id", async () => {
@@ -148,7 +148,7 @@ test("runtime atomic attack is invariant to an unknown action id", async () => {
   const snapshot=await hitShortbow(adapter,action.id);
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.resolution?.actionId,action.id);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);
   assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("reference:weapon:shortbow:damage")));
 });
 
@@ -166,5 +166,5 @@ test("runtime Combatant attack with no spatial-module relation stays valid and c
   snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"attack-result");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"damage-animation");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("runtime:manual-targeting")));
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.tempHp,0);assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,26);assert.equal(snapshot.scene.economyByActor[actorId]?.action,false);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.tempHp,0);assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,28);assert.equal(snapshot.scene.economyByActor[actorId]?.action,false);
 });

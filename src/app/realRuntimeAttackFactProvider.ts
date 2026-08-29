@@ -58,14 +58,8 @@ export function resolveRuntimeTargetingFact(scene:SceneVm,sourceId:string,target
 
 export function phase09DeterministicAttackFaces(action:ActionVm) {
   if (!action.runtimeAttack) throw new Error(`runtime attack requires authored runtimeAttack facts: ${action.id}`);
-  const damage=action.damage?.[0];
-  if (!damage) throw new Error(`runtime attack is missing structured ActionVm damage: ${action.id}`);
   const {diceCount,diceSides}=action.runtimeAttack;
-  const desired=Math.max(diceCount,Math.min(diceCount*diceSides,damage.average-damage.flat));
-  const faces=Array.from({length:diceCount},(_,index)=>{
-    const remaining=desired-index;
-    return Math.max(1,Math.min(diceSides,remaining-(diceCount-index-1)));
-  });
+  const faces=Array.from({length:diceCount},()=>Math.max(1,Math.ceil(diceSides/2)));
   return [...faces,...faces];
 }
 
