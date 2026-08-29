@@ -1,10 +1,10 @@
 import "./installedContentContracts";
-import type { AppSnapshot, CatalogEntry, CharacterSheet, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
+import type { ActionVm, AppSnapshot, CatalogEntry, CharacterSheet, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
-import { parseInstalledCommonPlayActionId } from "./installedCommonPlayActionReference";
+import { parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId, runtimeArtifactCommonPlayActionId } from "./installedCommonPlayActionReference";
 import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
@@ -45,6 +45,7 @@ type CommonPlayProductionAction = {
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
+const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const builtinCatalogOverrides=new WeakMap<MockAdapter,CatalogEntry[]>();
 const cp=<T,>(value:T):T=>structuredClone(value);
 
@@ -118,6 +119,74 @@ function referencedResourceIds(definition:CommonPlayOperationDefinition) {
   }
   return [...ids];
 }
+
+function projectedArtifactAction(
+  actionId:string,
+  actorId:string,
+  action:CommonPlayProductionAction,
+  scene:SceneVm,
+  state:RulesRuntimeState,
+):ActionVm {
+  const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
+  const operations=entryPoint.operations as Array<{kind:string;target?:string}>;
+  const targeting=(entryPoint as {targeting?:{min?:number;max?:number}}).targeting;
+  const payment=action.lowered.kind==="operations"
+    ?action.lowered.definition.payments?.find((candidate)=>candidate.kind==="economy")
+    :undefined;
+  const economy=payment?.kind==="economy"
+    ?payment.bucket==="action"?"행동":payment.bucket==="bonus-action"?"추가 행동":"반응"
+    :"없음";
+  const targeted=action.lowered.kind==="save-damage"||targeting!==undefined||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
+  const multi=action.lowered.kind==="save-damage";
+  const eligibleTargetIds=targeted
+    ?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id)
+    :[actorId];
+  const combatant=state.combatants[actorId];
+  const slotAvailable=payment?.kind!=="economy"?true:payment.bucket==="action"?combatant.economy.action:payment.bucket==="bonus-action"?combatant.economy.bonusAction:combatant.economy.reaction;
+  const resourcesAvailable=action.lowered.kind!=="operations"||(action.lowered.definition.payments??[]).every((candidate)=>candidate.kind!=="resource"||combatant.resources.some((resource)=>resource.id===candidate.resource&&resource.current>=Number(candidate.amount.value)));
+  const active=state.clock.activeActorId===actorId;
+  const test="test" in entryPoint?entryPoint.test:undefined;
+  const resolutionKind:ActionVm["resolutionKind"]=action.lowered.kind==="save-damage"?"saving-throw"
+    :test?.kind==="attack-roll"?"attack":test?.kind==="ability-check"?"ability-check":test?.kind==="saving-throw"?"saving-throw"
+    :operations.some((operation)=>operation.kind==="damage.apply")?"no-roll-damage"
+    :operations.some((operation)=>operation.kind==="healing.apply")?"healing":"no-roll";
+  return {
+    id:runtimeArtifactCommonPlayActionId(actorId,actionId),actorId,
+    name:action.nameKo||action.nameEn,category:action.category==="spell"?"magic":"basic",
+    target:targeted?"any":"self",economy,resolutionKind,
+    summary:`${action.lowered.definition.id} · ${action.entryPointId}`,
+    available:active&&slotAvailable&&resourcesAvailable,
+    disabledReason:active?(slotAvailable?(resourcesAvailable?undefined:"자원 부족"): `${economy} 사용 불가`):"현재 턴 아님",
+    eligibleTargetIds,
+    ...(multi?{maxTargets:targeting?.max??eligibleTargetIds.length}:{}),
+    details:[{label:"출처",value:`${action.source} · ${action.contentId}`}],
+  };
+}
+
+async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSnapshot) {
+  const state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene);
+  if(!state) return;
+  for(const artifact of state.artifacts??[]) {
+    const actor=artifact.artifactKind==="actor"?artifact.actor:undefined;
+    if(!actor||!snapshot.scene.entities.some((entity)=>entity.id===actor.combatantId)) continue;
+    if(snapshot.role!=="dm"&&actor.controllerId!==snapshot.activeCharacter.id) {
+      delete snapshot.scene.actionsByActor[actor.combatantId];
+      continue;
+    }
+    const actions=(await Promise.all(actor.actionDefinitionIds.map(async(actionId)=>{
+      const action=await commonPlayAction(adapter,actionId);
+      return action?projectedArtifactAction(actionId,actor.combatantId,action,snapshot.scene,state):undefined;
+    }))).filter((action):action is ActionVm=>Boolean(action));
+    snapshot.scene.actionsByActor[actor.combatantId]=actions;
+    (adapter as unknown as AdapterState).scene.actionsByActor[actor.combatantId]=cp(actions);
+  }
+}
+
+MockAdapter.prototype.getSnapshot=async function getSnapshotWithRuntimeArtifactActions() {
+  const snapshot=await previousGetSnapshot.call(this);
+  await projectRuntimeArtifactActions(this,snapshot);
+  return snapshot;
+};
 
 function operationDefinition(action:CommonPlayProductionAction) {
   return action.lowered.kind==="operations"?action.lowered.definition:undefined;
@@ -227,7 +296,7 @@ function hpPresentation(
 interface PreparedCommonPlayAction {
   internal:AdapterState;
   state:RulesRuntimeState;
-  actor:CharacterSheet;
+  actor:{id:string;name:string};
   actorEntity:SceneVm["entities"][number];
   selectedTargetId:string;
   selectedTargets:SceneVm["entities"];
@@ -239,11 +308,17 @@ function prepareCommonPlayAction(
   actionId:string,
   targetIds:string[],
   action:CommonPlayProductionAction,
+  actorIdOverride?:string,
 ):PreparedCommonPlayAction|undefined {
   const internal=adapter as unknown as AdapterState;
-  const actor=internal.activeCharacter;
+  const projectedAction=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);
+  const actorId=actorIdOverride??projectedAction?.actorId??internal.activeCharacter.id;
+  if(actorIdOverride&&projectedAction?.actorId!==actorIdOverride) return undefined;
+  const actorEntity=internal.scene.entities.find((candidate)=>candidate.id===actorId);
+  if(!actorEntity) return undefined;
+  const actor={id:actorId,name:actorEntity.name};
   let state=internal.sessionMode==="initiative" ? snapshotAdapterTurnRuntimeState(adapter,internal.scene) : undefined;
-  if (state) state=seedReferencedResources(adapter,internal,state,operationDefinition(action));
+  if (state&&actor.id===internal.activeCharacter.id) state=seedReferencedResources(adapter,internal,state,operationDefinition(action));
   if (!state||state.clock.activeActorId!==actor.id) return undefined;
 
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
@@ -252,11 +327,9 @@ function prepareCommonPlayAction(
   const hasTargeting=portableEntry.targeting!==undefined;
   if(!hasTargeting&&targetIds.length!==1) return undefined;
   const selectedTargetId=targetIds[0];
-  const actorEntity=internal.scene.entities.find((candidate)=>candidate.id===actor.id);
   if(!actorEntity||!state.combatants[actor.id]) return undefined;
   const selectedTargets=targetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
   if(selectedTargets.some((target,index)=>!target||!state!.combatants[targetIds[index]])) return undefined;
-  const projectedAction=internal.scene.actionsByActor[actor.id]?.find((candidate)=>candidate.id===actionId);
   const needsSelectedTarget=action.lowered.kind==="operations"&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   if(hasTargeting) {
     const targeting=portableEntry.targeting!;
@@ -369,9 +442,9 @@ function finishInteraction(internal:AdapterState,resolution:ResolutionView,messa
   return internal.getSnapshot();
 }
 
-function failAction(internal:AdapterState,actionId:string,actionName:string,targetIds:string[],resolutionId:string,error:string) {
+function failAction(internal:AdapterState,actorId:string,actionId:string,actionName:string,targetIds:string[],resolutionId:string,error:string) {
   internal.resolution={
-    id:resolutionId,actorId:internal.activeCharacter.id,targetIds,actionId,actionName,rollKind:"effect",stage:"complete",
+    id:resolutionId,actorId,targetIds,actionId,actionName,rollKind:"effect",stage:"complete",
     authoritativeDice:[],saveResults:[],damageComponents:[],compact:`Common Play 적용 거부: ${error}`,
     detail:[error],provenance:[],calculatedOutcome:"적용 거부",finalOutcome:"적용 거부",stateChanges:[],adjudicated:false,canAdvance:false,
   };
@@ -379,9 +452,11 @@ function failAction(internal:AdapterState,actionId:string,actionName:string,targ
 }
 
 MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAction(actionId:string,targetIds:string[]) {
-  const action=await commonPlayAction(this,actionId);
+  const runtimeArtifactReference=parseRuntimeArtifactCommonPlayActionId(actionId);
+  const definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;
+  const action=await commonPlayAction(this,definitionActionId);
   if (!action) return previousResolveAction.call(this,actionId,targetIds);
-  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action);
+  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action,runtimeArtifactReference?.actorId);
   if(!prepared) return (this as unknown as AdapterState).getSnapshot();
   const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const interaction=action.lowered.kind==="operations"
@@ -390,7 +465,7 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   if(!interaction) {
     const result=await executeCommonPlayAction(this,actionId,action,prepared,resolutionId);
     return result.status==="rejected"
-      ?failAction(prepared.internal,actionId,prepared.projectedAction?.name||action.nameKo||action.nameEn,targetIds,resolutionId,result.error)
+      ?failAction(prepared.internal,prepared.actor.id,actionId,prepared.projectedAction?.name||action.nameKo||action.nameEn,targetIds,resolutionId,result.error)
       :result.snapshot;
   }
 
@@ -434,20 +509,23 @@ MockAdapter.prototype.respondToInterrupt=async function respondToCommonPlayInter
   const interrupt=resolution?.interrupt;
   if(!resolution||resolution.stage!=="interrupt"||!interrupt) return previousRespondToInterrupt.call(this,accept);
 
-  const installedReference=parseInstalledCommonPlayActionId(resolution.actionId);
-  const action=await commonPlayAction(this,resolution.actionId);
+  const runtimeArtifactReference=parseRuntimeArtifactCommonPlayActionId(resolution.actionId);
+  const definitionActionId=runtimeArtifactReference?.definitionActionId??resolution.actionId;
+  const installedReference=parseInstalledCommonPlayActionId(definitionActionId);
+  const action=await commonPlayAction(this,definitionActionId);
   if(!action) return installedReference
     ? finishInteraction(internal,resolution,"Common Play 상호작용 재검증 실패")
     : previousRespondToInterrupt.call(this,accept);
   if(action.lowered.kind!=="operations") return previousRespondToInterrupt.call(this,accept);
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
   if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);
-  if(resolution.actorId!==internal.activeCharacter.id) {
+  const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);
+  if(resolution.actorId!==internal.activeCharacter.id&&!projected) {
     return finishInteraction(internal,resolution,"Common Play 상호작용 재검증 실패");
   }
   if(!accept) return finishInteraction(internal,resolution,"Common Play 상호작용 거절");
 
-  const prepared=prepareCommonPlayAction(this,resolution.actionId,resolution.targetIds,action);
+  const prepared=prepareCommonPlayAction(this,resolution.actionId,resolution.targetIds,action,runtimeArtifactReference?.actorId);
   if(!prepared) return finishInteraction(internal,resolution,"Common Play 상호작용 현재 권한 재검증 실패");
   const result=await executeCommonPlayAction(this,resolution.actionId,action,prepared,resolution.id,interrupt.id);
   if(result.status==="rejected") return finishInteraction(internal,resolution,`Common Play 상호작용 적용 거부: ${result.error}`);

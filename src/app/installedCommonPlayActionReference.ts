@@ -1,4 +1,5 @@
 const PREFIX="installed-common-play:";
+const ARTIFACT_PREFIX="runtime-artifact-common-play:";
 
 export interface InstalledCommonPlayActionReference {
   catalogId:string;
@@ -23,4 +24,16 @@ export function parseInstalledCommonPlayActionId(actionId:string):InstalledCommo
   } catch {
     return null;
   }
+}
+
+export function runtimeArtifactCommonPlayActionId(actorId:string,definitionActionId:string) {
+  return `${ARTIFACT_PREFIX}${encodeURIComponent(actorId)}#${encodeURIComponent(definitionActionId)}`;
+}
+
+export function parseRuntimeArtifactCommonPlayActionId(actionId:string) {
+  if(!actionId.startsWith(ARTIFACT_PREFIX)) return null;
+  const parts=actionId.slice(ARTIFACT_PREFIX.length).split("#");
+  if(parts.length!==2||parts.some((part)=>!part)) return null;
+  try { return {actorId:decodeURIComponent(parts[0]),definitionActionId:decodeURIComponent(parts[1])}; }
+  catch { return null; }
 }

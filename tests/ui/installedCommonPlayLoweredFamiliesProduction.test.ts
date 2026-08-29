@@ -4,6 +4,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/connectedTurnRoutingAdapter";
 import "../../src/app/installedContentRuntimeAdapter";
 import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
@@ -23,13 +24,20 @@ const ZONE=JSON.parse(readFileSync(new URL("../fixtures/play-contract/persistent
 
 function artifactConfig(prefix:string) {
   const duration={kind:"durable"};const lifetime={kind:"durable"};
+  const actorAction=installedCommonPlayActionId({catalogId:catalogQualifiedId(`${prefix}.actor-action`,`${prefix}.module`,"1"),mechanicId:`${prefix}.actor-action`,entryPointId:"bite"});
   return {schemaVersion:"0.2-draft",id:`${prefix}.artifacts`,entryPoints:[{id:"create-artifacts",invocation:"manual",operations:[
     {kind:"artifact.spawn",template:"summon"},{kind:"artifact.spawn",template:"wall"},{kind:"artifact.spawn",template:"form"},{kind:"artifact.spawn",template:"tether"},
   ]}],artifactTemplates:[
-    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},actionDefinitionIds:[`${prefix}.bite`],resources:[]}},
+    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},actionDefinitionIds:[actorAction],resources:[]}},
     {id:"wall",artifactKind:"object",duration,lifetime,initialState:{size:"large",armorClass:15,hp:{current:20,maximum:20},repairable:true}},
     {id:"form",artifactKind:"form",duration,lifetime,initialState:{targetActorId:"actor",propertyOverlay:{"movement.fly":30},retainedProperties:[],replacementProperties:["movement.fly"],hpPolicy:"retain",actionPolicy:"grant",spellcasting:"retain",actionDefinitionIds:[`${prefix}.claw`],resources:[]}},
     {id:"tether",artifactKind:"link",duration,lifetime,initialState:{endpointIds:["actor","artifact:summon"],relation:"tether",maximumLengthFeet:30}},
+  ]};
+}
+
+function actorActionConfig(prefix:string) {
+  return {schemaVersion:"0.2-draft",id:`${prefix}.actor-action`,payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],entryPoints:[
+    {id:"bite",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[{kind:"damage.apply",amount:"1d4+1",damageType:"piercing",target:"target"}]},
   ]};
 }
 
@@ -40,6 +48,7 @@ function payload(prefix="unknown-gate-n") {
     {id:`${prefix}.feat`,category:"feat",name:"Unknown Retaliatory Feat",config:{...EFFECT,id:`${prefix}.effect`}},
     {id:`${prefix}.condition`,category:"condition",name:"Unknown Persistent Condition",config:{...ZONE,id:`${prefix}.zone`}},
     {id:`${prefix}.option`,category:"option",name:"Unknown Artifact Family",config:artifactConfig(prefix)},
+    {id:`${prefix}.actor-action`,category:"option",name:"Unknown Bite",config:actorActionConfig(prefix)},
   ];
   return {moduleId,entries,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
@@ -135,6 +144,13 @@ test("portable zone and summoned Actor converge once through existing Host/Clien
     snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.artifacts,
   );
   assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="unknown-connected.summoned")?.name,"Unknown Summon");
+  const hostAction=hostSnapshot.scene.actionsByActor["unknown-connected.summoned"]?.[0];
+  const clientAction=clientSnapshot.scene.actionsByActor["unknown-connected.summoned"]?.[0];
+  assert.ok(hostAction&&clientAction);
+  assert.deepEqual(
+    {name:clientAction.name,economy:clientAction.economy,resolutionKind:clientAction.resolutionKind,target:clientAction.target},
+    {name:hostAction.name,economy:hostAction.economy,resolutionKind:hostAction.resolutionKind,target:hostAction.target},
+  );
 
   const undoWires:string[]=[];
   tauriSessionTransport.send=async(message)=>{undoWires.push(message);return 1;};
@@ -145,4 +161,64 @@ test("portable zone and summoned Actor converge once through existing Host/Clien
   assert.equal(undoWires.every((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true);
   assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
   assert.equal((await client.getSnapshot()).scene.entities.some((entity)=>entity.id==="unknown-connected.summoned"),false);
+});
+
+test("summoned Actor projects and executes its portable Common Play action with economy and Undo",async()=>{
+  const prefix="unknown-summoned-action";
+  const adapter=new MockAdapter();
+  const {action}=await install(adapter,prefix);
+  await adapter.resolveAction(action(3,"create-artifacts"),["char.aelar"]);
+  await adapter.setCurrentActor(`${prefix}.summoned`);
+  let snapshot=await adapter.getSnapshot();
+  const bite=snapshot.scene.actionsByActor[`${prefix}.summoned`]?.find((entry)=>entry.name==="Unknown Bite");
+  assert.ok(bite,JSON.stringify(snapshot.scene.actionsByActor[`${prefix}.summoned`]));
+  assert.equal(bite.actorId,`${prefix}.summoned`);
+  assert.equal(bite.economy,"행동");
+  const before=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+  await adapter.setQueuedD20(20);
+  await adapter.resolveAction(bite.id,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.ok(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp<before);
+  assert.equal(snapshot.scene.economyByActor[`${prefix}.summoned`]?.action,false);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before);
+  assert.equal(snapshot.scene.economyByActor[`${prefix}.summoned`]?.action,true);
+});
+
+test("summoned Actor action and Undo converge through Host-authoritative connected events",async()=>{
+  const prefix="unknown-connected-action",sessionId="session.common-play-summoned-action";
+  const host=new MockAdapter();const {action}=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const originalSend=tauriSessionTransport.send,spawnWires:string[]=[];
+  tauriSessionTransport.send=async(message)=>{spawnWires.push(message);return 1;};
+  try { await host.resolveAction(action(3,"create-artifacts"),["char.aelar"]); }
+  finally { tauriSessionTransport.send=originalSend; }
+  const spawnBatch=spawnWires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]};
+
+  const client=new MockAdapter();await install(client,prefix);
+  const clientConnected=connectedStateFor(client);clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,spawnBatch.events)).status,"applied");
+
+  const turnWires:string[]=[];tauriSessionTransport.send=async(message)=>{turnWires.push(message);return 1;};
+  try { await host.setCurrentActor(`${prefix}.summoned`); }
+  finally { tauriSessionTransport.send=originalSend; }
+  const turnBatch=turnWires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]};
+  assert.equal((await applyConnectedClientEvents(client,turnBatch.events)).status,"applied");
+
+  const before=(await host.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+  const bite=(await host.getSnapshot()).scene.actionsByActor[`${prefix}.summoned`]![0];
+  const actionWires:string[]=[];tauriSessionTransport.send=async(message)=>{actionWires.push(message);return 1;};
+  try { await host.setQueuedD20(20);await host.resolveAction(bite.id,["combatant.goblin-a"]); }
+  finally { tauriSessionTransport.send=originalSend; }
+  const actionBatch=actionWires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]};
+  assert.equal((await applyConnectedClientEvents(client,actionBatch.events)).status,"applied");
+  assert.equal((await client.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,(await host.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp);
+
+  const undoWires:string[]=[];tauriSessionTransport.send=async(message)=>{undoWires.push(message);return 1;};
+  try { await host.undoLastResolution(); }
+  finally { tauriSessionTransport.send=originalSend; }
+  const undoBatch=undoWires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]};
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  assert.equal((await client.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before);
 });
