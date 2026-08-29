@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 6,
   "status": "continue",
-  "reason": "C8 Core is complete and C9 Gate N coverage implementation remains active. Checkpoint eb2559cf makes begin/end/advance-time clocks canonical reversible StateChanges and adds focused event-native Undo proof; 641c00fe already composes installed Zone turn-start/end operations into the authoritative turn PendingResolution. Coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: carry those turn ResolutionEvents through connected mode-transition and prove arbitrary Zone Host/Client replay, reconnect, Undo, frequency, and duration cleanup before reconciling Families P/T.",
+  "reason": "C8 Core is complete and C9 Gate N coverage implementation remains active. Checkpoint fbcee3c6 makes begin/end/advance-time clocks canonical RuntimeClock StateChanges and adds the missing event-native Undo restore path; 641c00fe already composes installed Zone turn-start/end operations into the authoritative turn PendingResolution. Exact-head UI workflow 33267726004 is still running, so no final green claim is made. Coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: reconcile fbcee3c6 verification, then carry turn ResolutionEvents through connected mode-transition and prove arbitrary Zone Host/Client replay, reconnect, Undo, frequency, and duration cleanup before reconciling Families P/T.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
