@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AG has broad structural production coverage but remains INCOMPLETE because built-in Ready still selects off-turn behavior through action.standard.ready compatibility logic and Magic inherits Family Z spellMechanicById dispatch. Next audit Family AH tools/crafting/projects against durable project and output ownership.",
+  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AH remains INCOMPLETE: its project kernel has revision-safe work/payment math but no portable/durable project owner, contributors/prerequisites/daily validation/cancellation, persistence, or completion output joined to durable inventory. Next audit Family AI carrying-capacity/cargo derived constraints.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
