@@ -8,6 +8,8 @@ import type {
   ResolutionEvent,
   ResolutionOperation,
 } from "./resolutionTypes";
+import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
 type EffectTarget="actor";
@@ -59,6 +61,7 @@ export interface CommonPlayPersistentEffectDefinition {
   $schema?:string;
   schemaVersion:"0.2-draft";
   id:string;
+  payments?:CommonPlayPayment[];
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
@@ -71,6 +74,7 @@ export interface CommonPlayEffectActivationInput {
   resolutionId:string;
   actorId:string;
   entryPointId:string;
+  actionKind?:ActionUseKind;
 }
 
 export interface CommonPlayEffectEventInput {
@@ -86,7 +90,7 @@ export interface CommonPlayEffectEventNoMatch {
 
 export type CommonPlayEffectEventResult=ResolutionCommit|CommonPlayEffectEventNoMatch;
 
-const DEFINITION_KEYS=["$schema","schemaVersion","id","entryPoints","artifactTemplates"] as const;
+const DEFINITION_KEYS=["$schema","schemaVersion","id","payments","entryPoints","artifactTemplates"] as const;
 const EFFECT_METADATA_DEFINITION="commonPlayDefinitionId";
 const EFFECT_METADATA_TEMPLATE="commonPlayTemplateId";
 
@@ -222,7 +226,7 @@ export function compileCommonPlayEffectActivation(
   if (entryPoint.invocation!=="manual") throw new Error("effect activation runtime requires a manual entry point");
   if (!entryPoint.operations.length) throw new Error("effect activation entry point requires at least one operation");
 
-  const operations=entryPoint.operations.map((operation,index)=>{
+  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...entryPoint.operations.map((operation,index)=>{
     const label=`entry point ${entryPoint.id} operation ${index+1}`;
     assertOnlyKeys(operation,["kind","template","target"],label);
     if (operation.kind!=="effect.apply") throw new Error(`${label} supports only effect.apply`);
@@ -230,7 +234,7 @@ export function compileCommonPlayEffectActivation(
       throw new Error(`${label} target must be actor in this runtime slice`);
     }
     return effectForTemplate(definition,templateById(definition,operation.template),input,index);
-  });
+  })];
 
   return {
     id:input.resolutionId,

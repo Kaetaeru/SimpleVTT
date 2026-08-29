@@ -361,6 +361,7 @@ async function executeCommonPlayAction(
 ) {
   const {internal,state,actor,actorEntity,selectedTargetId,selectedTargets,projectedAction}=prepared;
   const lowered=action.lowered;
+  const actionKind=action.category==="spell"?"magic" as const:"other" as const;
   let committed;
   let operationEntryPoint:CommonPlayOperationDefinition["entryPoints"][number]|undefined;
   if(lowered.kind==="operations") {
@@ -379,7 +380,7 @@ async function executeCommonPlayAction(
       ]),
       damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
       ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId}}:{}),
-      actionKind:entryPoint.test?.kind==="attack-roll"?"attack":action.category==="spell"?"magic":"other",
+      actionKind:entryPoint.test?.kind==="attack-roll"?"attack":actionKind,
       ...(interactionId?{interactionResponse:{interactionId,accepted:true as const}}:{}),
     });
   } else if(lowered.kind==="save-damage") {
@@ -393,13 +394,14 @@ async function executeCommonPlayAction(
     committed=resolveCommonPlaySaveDamageEntryPoint(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{
       resolutionId,actorId:actor.id,entryPointId:action.entryPointId,targets:saves,
       damageFaces:rollFaces(internal,actionId,damage.count,damage.sides,selectedTargets.length),
+      actionKind,
     });
   } else if(lowered.kind==="effect") {
-    committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId});
+    committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});
   } else if(lowered.kind==="zone") {
-    committed=resolveCommonPlayZoneActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,membershipAuthority:"manual"});
+    committed=resolveCommonPlayZoneActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,membershipAuthority:"manual",actionKind});
   } else {
-    committed=resolveCommonPlayArtifactActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId});
+    committed=resolveCommonPlayArtifactActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});
   }
   if(committed.status==="rejected") return {status:"rejected" as const,error:committed.error,snapshot:await internal.getSnapshot()};
   const roll=committed.results[`${resolutionId}:test`] as D20TestResult|undefined;

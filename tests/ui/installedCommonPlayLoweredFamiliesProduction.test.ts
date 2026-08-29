@@ -41,7 +41,7 @@ function actorActionConfig(prefix:string) {
   ]};
 }
 
-function payload(prefix="unknown-gate-n") {
+function payload(prefix="unknown-gate-n",paidIndex?:number) {
   const moduleId=`${prefix}.module`;
   const entries=[
     {id:`${prefix}.spell`,category:"spell",name:"Unknown Save Spell",config:{...SAVE,id:`${prefix}.save`}},
@@ -50,6 +50,9 @@ function payload(prefix="unknown-gate-n") {
     {id:`${prefix}.option`,category:"option",name:"Unknown Artifact Family",config:artifactConfig(prefix)},
     {id:`${prefix}.actor-action`,category:"option",name:"Unknown Bite",config:actorActionConfig(prefix)},
   ];
+  if(paidIndex!==undefined) Object.assign(entries[paidIndex].config,{
+    payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+  });
   return {moduleId,entries,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
     rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
@@ -79,8 +82,8 @@ async function run(prefix:string) {
   return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};
 }
 
-async function install(adapter:MockAdapter,prefix:string) {
-  const pack=payload(prefix);
+async function install(adapter:MockAdapter,prefix:string,paidIndex?:number) {
+  const pack=payload(prefix,paidIndex);
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
@@ -113,10 +116,29 @@ test("renaming every external identity preserves lowered production semantics",a
   assert.deepEqual({hp:first.hpDelta,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,effects:renamed.effects,artifacts:renamed.artifactKinds});
 });
 
+test("every non-operation lowerer commits its PaymentContract with the result and restores both on Undo",async()=>{
+  const calls=[
+    {entryPoint:"release",targets:["combatant.goblin-a","combatant.goblin-b"]},
+    {entryPoint:"activate",targets:["char.aelar"]},
+    {entryPoint:"create-zone",targets:["char.aelar"]},
+    {entryPoint:"create-artifacts",targets:["char.aelar"]},
+  ];
+  for(const [index,call] of calls.entries()) {
+    const adapter=new MockAdapter();
+    const {action}=await install(adapter,`unknown-paid-${index}`,index);
+    await adapter.resolveAction(action(index,call.entryPoint),call.targets);
+    let snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false,`lowerer ${index} must commit its Action payment`);
+    await adapter.undoLastResolution();
+    snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true,`lowerer ${index} Undo must restore its Action payment`);
+  }
+});
+
 test("portable zone and summoned Actor converge once through existing Host/Client event transport",async()=>{
   const sessionId="session.common-play-lowered-zone";
   const host=new MockAdapter();
-  const {action}=await install(host,"unknown-connected");
+  const {action}=await install(host,"unknown-connected",3);
   const hostConnected=connectedStateFor(host);
   hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
   const wires:string[]=[];
@@ -132,7 +154,7 @@ test("portable zone and summoned Actor converge once through existing Host/Clien
   assert.equal(wires.every((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true,"runtime artifact event batches must cross the real wire decoder");
 
   const client=new MockAdapter();
-  await install(client,"unknown-connected");
+  await install(client,"unknown-connected",3);
   const clientConnected=connectedStateFor(client);
   clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
   for(const batch of batches) assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
@@ -143,6 +165,8 @@ test("portable zone and summoned Actor converge once through existing Host/Clien
     snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.artifacts,
     snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.artifacts,
   );
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(hostSnapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="unknown-connected.summoned")?.name,"Unknown Summon");
   const hostAction=hostSnapshot.scene.actionsByActor["unknown-connected.summoned"]?.[0];
   const clientAction=clientSnapshot.scene.actionsByActor["unknown-connected.summoned"]?.[0];
@@ -160,7 +184,9 @@ test("portable zone and summoned Actor converge once through existing Host/Clien
   assert.ok(undoBatch,JSON.stringify(undoWires));
   assert.equal(undoWires.every((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true);
   assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
-  assert.equal((await client.getSnapshot()).scene.entities.some((entity)=>entity.id==="unknown-connected.summoned"),false);
+  const clientAfterUndo=await client.getSnapshot();
+  assert.equal(clientAfterUndo.scene.entities.some((entity)=>entity.id==="unknown-connected.summoned"),false);
+  assert.equal(clientAfterUndo.scene.economyByActor["char.aelar"]?.action,true);
 });
 
 test("summoned Actor projects and executes its portable Common Play action with economy and Undo",async()=>{

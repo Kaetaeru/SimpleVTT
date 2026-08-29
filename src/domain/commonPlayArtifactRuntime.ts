@@ -3,6 +3,8 @@ import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit } from "./resolutionTypes";
 import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest } from "./runtimeArtifact";
+import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import type { ActionUseKind } from "./turnEconomy";
 
 type PortableArtifactKind="object"|"link"|"actor"|"form";
 type Obj=Record<string,unknown>;
@@ -11,6 +13,7 @@ export interface CommonPlayArtifactActivationDefinition {
   $schema?:string;
   schemaVersion:"0.2-draft";
   id:string;
+  payments?:CommonPlayPayment[];
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
@@ -30,6 +33,7 @@ export interface CommonPlayArtifactActivationInput {
   actorId:string;
   entryPointId:string;
   placementRefs?:Record<string,string>;
+  actionKind?:ActionUseKind;
 }
 
 function object(value:unknown,label:string):Obj {
@@ -109,13 +113,13 @@ export function compileCommonPlayArtifactActivation(
   if(!entryPoint||entryPoint.invocation!=="manual"||!entryPoint.operations.length) throw new DomainEvaluationError("artifact activation requires a non-empty manual entry point");
   const templates=new Map(definition.artifactTemplates.map((template)=>[template.id,template]));
   const artifactIds=new Map(entryPoint.operations.map((operation,index)=>[operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`]));
-  const operations=entryPoint.operations.map((operation,index)=>{
+  const operations=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...entryPoint.operations.map((operation,index)=>{
     if(operation.kind!=="artifact.spawn") throw new DomainEvaluationError(`entry point ${entryPoint.id} supports only artifact.spawn`);
     const template=templates.get(operation.template);
     if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
     if(!["object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
     return {id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact" as const,artifact:artifact(state,definition,template,input,artifactIds)};
-  });
+  })];
   return {id:input.resolutionId,actorId:input.actorId,sourceId:definition.id,expectedRevision:state.revision,operations};
 }
 

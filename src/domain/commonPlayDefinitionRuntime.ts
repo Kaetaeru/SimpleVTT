@@ -145,6 +145,7 @@ function base(definition:CommonPlayDefinitionIR) {
     ...(definition.$schema?{$schema:definition.$schema}:{}),
     schemaVersion:definition.schemaVersion,
     id:definition.id,
+    ...(definition.payments?{payments:structuredClone(definition.payments)}:{}),
   };
 }
 
@@ -190,11 +191,7 @@ export function lowerCommonPlay(
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)]} as CommonPlaySaveDamageDefinition,
     };
   }
-  const projected={
-    ...base(definition),
-    ...(definition.payments?{payments:structuredClone(definition.payments)}:{}),
-    entryPoints:[structuredClone(entryPoint)],
-  };
+  const projected={...base(definition),entryPoints:[structuredClone(entryPoint)]};
   return {kind:"operations",entryPointId,definition:parseCommonPlayOperationDefinition(projected)};
 }
 

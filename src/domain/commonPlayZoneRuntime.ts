@@ -4,6 +4,8 @@ import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { RuntimeArtifactExpiry, RuntimeArtifactInstance, ZoneMembershipAuthority, ZoneMembershipState } from "./runtimeArtifact";
 import { resolveCommonPlayFrequency, type CommonPlayFrequency } from "./commonPlayFrequencyRuntime";
+import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
 type ZoneEventKind="zone.entered"|"zone.left"|"zone.turn-start"|"zone.turn-end";
@@ -47,6 +49,7 @@ export interface CommonPlayZoneDefinition {
   $schema?:string;
   schemaVersion:"0.2-draft";
   id:string;
+  payments?:CommonPlayPayment[];
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
@@ -61,6 +64,7 @@ export interface CommonPlayZoneActivationInput {
   entryPointId:string;
   membershipAuthority:ZoneMembershipAuthority;
   placementRef?:string;
+  actionKind?:ActionUseKind;
 }
 
 export interface CommonPlayZoneEventInput {
@@ -96,7 +100,7 @@ export interface CommonPlayZoneEventNoMatch {
 
 export type CommonPlayZoneEventResult=ResolutionCommit|CommonPlayZoneEventNoMatch;
 
-const DEFINITION_KEYS=["$schema","schemaVersion","id","entryPoints","artifactTemplates"] as const;
+const DEFINITION_KEYS=["$schema","schemaVersion","id","payments","entryPoints","artifactTemplates"] as const;
 
 function rejected(state:RulesRuntimeState,error:string):Extract<ResolutionCommit,{status:"rejected"}> {
   return {status:"rejected",state,events:[],results:{},error};
@@ -240,12 +244,12 @@ export function compileCommonPlayZoneActivation(
   if (!Array.isArray(entryPoint.operations)||!entryPoint.operations.length) {
     throw new Error("zone activation entry point requires at least one operation");
   }
-  const operations=entryPoint.operations.map((operation,index)=>{
+  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...entryPoint.operations.map((operation,index)=>{
     const label=`entry point ${entryPoint.id} operation ${index+1}`;
     assertOnlyKeys(operation,["kind","template"],label);
     if (operation.kind!=="artifact.spawn") throw new Error(`${label} supports only artifact.spawn`);
     return artifactForTemplate(inputState,definition,templateById(definition,operation.template),input,index);
-  });
+  })];
   return {
     id:input.resolutionId,
     actorId:input.actorId,

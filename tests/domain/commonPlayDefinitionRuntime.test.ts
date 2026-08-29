@@ -10,6 +10,7 @@ import { compileCommonPlaySaveDamageEntryPoint } from "../../src/domain/commonPl
 import { compileCommonPlayEffectActivation } from "../../src/domain/commonPlayEffectRuntime";
 import { compileCommonPlayZoneActivation } from "../../src/domain/commonPlayZoneRuntime";
 import { compileCommonPlayEntryPointOperations } from "../../src/domain/commonPlayOperationRuntime";
+import { compileCommonPlayArtifactActivation } from "../../src/domain/commonPlayArtifactRuntime";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 const fixture=(name:string)=>JSON.parse(readFileSync(
@@ -86,4 +87,36 @@ test("canonical structural boundary rejects duplicate identities and unknown roo
   duplicate.entryPoints.push(structuredClone(duplicate.entryPoints[0]));
   assert.throws(()=>parseCommonPlayDefinition(duplicate),/duplicate id/);
   assert.throws(()=>parseCommonPlayDefinition({...combinedDefinition(),executeAs:"fireball"}),/unsupported fields/);
+});
+
+test("all manual lowerers preserve and atomically prepend the shared PaymentContract",()=>{
+  const payment={kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true};
+  const definition=parseCommonPlayDefinition({...combinedDefinition(),payments:[payment]});
+  const state=runtimeState();
+  const pending=lowerAllCommonPlayEntryPoints(definition).map((lowering,index)=>{
+    if(lowering.kind==="operations") return compileCommonPlayEntryPointOperations(TEST_PROFILE,state,lowering.definition,{
+      resolutionId:`paid-${index}`,actorId:"hero",entryPointId:lowering.entryPointId,d20:{faces:[10]},actionKind:"other",
+    });
+    if(lowering.kind==="save-damage") return compileCommonPlaySaveDamageEntryPoint(TEST_PROFILE,state,lowering.definition,{
+      resolutionId:`paid-${index}`,actorId:"hero",entryPointId:lowering.entryPointId,damageFaces:[1,1,1,1],actionKind:"magic",
+      targets:[{facts:{id:"goblin",kind:"creature",relation:"enemy"},creatureKind:"monster",save:{faces:[10]}}],
+    });
+    if(lowering.kind==="effect") return compileCommonPlayEffectActivation(state,lowering.definition,{
+      resolutionId:`paid-${index}`,actorId:"hero",entryPointId:lowering.entryPointId,actionKind:"other",
+    });
+    return compileCommonPlayZoneActivation(state,lowering.definition,{
+      resolutionId:`paid-${index}`,actorId:"hero",entryPointId:lowering.entryPointId,membershipAuthority:"manual",actionKind:"other",
+    });
+  });
+  const artifact=lowerAllCommonPlayEntryPoints(parseCommonPlayDefinition({
+    schemaVersion:"0.2-draft",id:"external.unseen.paid-artifact",payments:[payment],
+    entryPoints:[{id:"create",invocation:"manual",operations:[{kind:"artifact.spawn",template:"object"}]}],
+    artifactTemplates:[{id:"object",artifactKind:"object",duration:{kind:"durable"},lifetime:{kind:"durable"},initialState:{size:"small",armorClass:10,hp:{current:1,maximum:1},repairable:false}}],
+  }))[0];
+  assert.equal(artifact.kind,"artifacts");
+  if(artifact.kind==="artifacts") pending.push(compileCommonPlayArtifactActivation(state,artifact.definition,{
+    resolutionId:"paid-artifact",actorId:"hero",entryPointId:artifact.entryPointId,actionKind:"other",
+  }));
+  assert.equal(pending.length,5);
+  for(const resolution of pending) assert.equal(resolution.operations[0]?.kind,"use-economy");
 });

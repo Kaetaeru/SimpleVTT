@@ -64,14 +64,14 @@ type CommonPlayRollModify={
   dice?:string;
 };
 
-type CommonPlayResourcePayment={
+export type CommonPlayResourcePayment={
   kind:"resource";
   resource:string;
   amount:CommonPlayExpression;
   consumeAt:"commit";
 };
 
-type CommonPlayReactionPayment={
+export type CommonPlayEconomyPayment={
   kind:"economy";
   bucket:TurnSlot;
   amount:LiteralNumberExpression;
@@ -79,7 +79,7 @@ type CommonPlayReactionPayment={
   refundOnCancel:true;
 };
 
-type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayReactionPayment;
+export type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayEconomyPayment;
 
 export type CommonPlayOperation=
   |CommonPlayResourceChange
@@ -227,6 +227,12 @@ function parsePayment(value:unknown,label:string):CommonPlayPayment {
   throw new DomainEvaluationError(`unsupported Common Play payment kind: ${String(payment.kind)}`);
 }
 
+export function parseCommonPlayPayments(value:unknown,label="Common Play definition.payments"):CommonPlayPayment[]|undefined {
+  if(value===undefined) return undefined;
+  if(!Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an array`);
+  return value.map((payment,index)=>parsePayment(payment,`${label}[${index}]`));
+}
+
 function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentInteraction {
   const interaction=object(value,label);
   supportedKeys(interaction,INTERACTION_KEYS,label);
@@ -340,10 +346,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
   supportedKeys(definition,DEFINITION_KEYS,label);
   if(definition.schemaVersion!=="0.2-draft") throw new DomainEvaluationError(`${label}.schemaVersion must be 0.2-draft`);
   const id=nonEmptyString(definition.id,`${label}.id`);
-  const payments=definition.payments===undefined?undefined:(()=>{
-    if(!Array.isArray(definition.payments)) throw new DomainEvaluationError(`${label}.payments must be an array`);
-    return definition.payments.map((payment,index)=>parsePayment(payment,`${label}.payments[${index}]`));
-  })();
+  const payments=parseCommonPlayPayments(definition.payments,`${label}.payments`);
   if(!Array.isArray(definition.entryPoints)||!definition.entryPoints.length) throw new DomainEvaluationError(`${label}.entryPoints must be a non-empty array`);
   const entryPoints:CommonPlayOperationDefinition["entryPoints"]=definition.entryPoints.map((value,index)=>{
     const entry=object(value,`${label}.entryPoints[${index}]`);
@@ -391,11 +394,11 @@ function literalInteger(expression:CommonPlayExpression|undefined,label:string) 
   return value;
 }
 
-function compilePayments(
-  definition:CommonPlayOperationDefinition,
+export function compileCommonPlayPayments(
+  payments:CommonPlayPayment[]|undefined,
   input:CommonPlayOperationExecutionInput,
 ):ResolutionOperation[] {
-  return (definition.payments??[])
+  return (payments??[])
     .map((payment,index)=>({payment,index}))
     .sort((left,right)=>Number(right.payment.kind==="economy")-Number(left.payment.kind==="economy"))
     .map(({payment,index})=>payment.kind==="economy"?{
@@ -449,7 +452,7 @@ export function compileCommonPlayEntryPointOperations(
       targets:input.targetingTargets.map((target)=>({...target})),
     });
   }
-  operations.push(...compilePayments(supported,input));
+  operations.push(...compileCommonPlayPayments(supported.payments,input));
   if(entryPoint.test) {
     if(!input.d20) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires authoritative d20 input`);
     const rollModifications: D20RollModification[]=entryPoint.operations.flatMap((operation,index)=>{
