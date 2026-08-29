@@ -33,7 +33,7 @@ function inspirationUses(snapshot:AppSnapshot){
 }
 
 function abilityCheckAction(snapshot:AppSnapshot){
-  return snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.resolutionKind==="ability-check");
+  return snapshot.scene.actionsByActor[snapshot.activeCharacter.id]?.find((entry)=>entry.resolutionKind==="ability-check"&&entry.sessionStatusEffect?.minimumRoll===undefined);
 }
 
 async function startFailedCheck(adapter:MockAdapter,dcDelta:number){

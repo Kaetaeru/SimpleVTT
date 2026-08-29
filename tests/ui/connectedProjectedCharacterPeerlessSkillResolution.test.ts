@@ -77,7 +77,7 @@ test("host-unknown Lore Peerless Skill accepts owner interrupt, spends Inspirati
   const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
   await host.startInitiative();await host.setCurrentActor(remote.id);
   let snapshot=await host.getSnapshot();
-  const check=(snapshot.scene.actionsByActor[remote.id]??[]).find((action)=>action.resolutionKind==="ability-check");assert.ok(check,"projected Lore Bard must expose a canonical ability check");
+  const check=(snapshot.scene.actionsByActor[remote.id]??[]).find((action)=>action.resolutionKind==="ability-check"&&action.sessionStatusEffect?.minimumRoll===undefined);assert.ok(check,"projected Lore Bard must expose an open-DC ability check");
   const beforeUses=inspirationCurrent(projectedCharacterById(host,remote.id)!.sheet);assert.equal(beforeUses,4);
 
   const state=connectedStateFor(host);state.mode="host";state.sessionId="session.r2.remote-peerless-skill";state.ledger=new HostSessionLedger(state.sessionId,connectedManifest(host));state.peerManifests.set(PEER,structuredClone(remoteManifest));
@@ -137,7 +137,7 @@ test("host-unknown Lore Peerless Skill preserves Inspiration when the authoritat
   const accepted=acceptHostCharacterSessionProjection(host,PEER,remoteManifest,projection);assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
   await host.startInitiative();await host.setCurrentActor(remote.id);
   let snapshot=await host.getSnapshot();
-  const check=(snapshot.scene.actionsByActor[remote.id]??[]).find((action)=>action.resolutionKind==="ability-check");assert.ok(check);
+  const check=(snapshot.scene.actionsByActor[remote.id]??[]).find((action)=>action.resolutionKind==="ability-check"&&action.sessionStatusEffect?.minimumRoll===undefined);assert.ok(check);
   const beforeUses=inspirationCurrent(projectedCharacterById(host,remote.id)!.sheet);assert.equal(beforeUses,4);
 
   const state=connectedStateFor(host);state.mode="host";state.sessionId="session.r2.remote-peerless-skill.no-spend";state.ledger=new HostSessionLedger(state.sessionId,connectedManifest(host));state.peerManifests.set(PEER,structuredClone(remoteManifest));

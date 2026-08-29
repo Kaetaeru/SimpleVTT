@@ -72,7 +72,7 @@ async function installNpcSave(adapter:MockAdapter,targetId:string){
 
 function abilityCheckAction(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>){
   const actorId=snapshot.activeCharacter.id;
-  return snapshot.scene.actionsByActor[actorId]?.find((entry)=>entry.resolutionKind==="ability-check");
+  return snapshot.scene.actionsByActor[actorId]?.find((entry)=>entry.resolutionKind==="ability-check"&&entry.sessionStatusEffect?.minimumRoll===undefined);
 }
 
 test("Fiend level 6 failed ability check offers Dark One's Own Luck, spends one use, records Activity, and Undo restores it",async()=>{
