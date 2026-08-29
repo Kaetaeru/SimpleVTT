@@ -43,7 +43,7 @@
     { "module": "./restSpellManagementRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./classFeatureSpellRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./productionSpellcasterProjectionAdapter", "classification": "GENERIC_ENGINE" },
-    { "module": "./phase09SpellcastingRuntimeRouter", "classification": "LEGACY_EXECUTION" },
+    { "module": "./phase09AuthoritativeSpellcastingAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./characterLibraryRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./characterSessionProjectionPersistenceGuard", "classification": "GENERIC_ENGINE" },
     { "module": "./authoringDraftRuntimeAdapter", "classification": "CONTENT/PRESENTATION" },

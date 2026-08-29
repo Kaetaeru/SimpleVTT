@@ -8,7 +8,7 @@ import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
-import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import type { RulesRuntimeState } from "../domain/combatState";
 import { spellcastingTurnStateChange, type SpellcastingTurnSnapshot } from "../domain/runtimeStateChange";
@@ -257,10 +257,10 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
   const baseline=await previousGetSnapshot.call(this);
   const sourceAction=Object.values(baseline.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
   const metadata=sourceAction?.spellCast;
-  const existingRuntime=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  if (!sourceAction || !metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || !existingRuntime) {
+  if (!sourceAction || !metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport)) {
     return previousResolveAction.call(this,actionId,targetIds);
   }
+  const existingRuntime=snapshotAdapterTurnRuntimeState(this,internal.scene)??ensureAdapterTurnRuntimeState(this,internal.scene);
   const runtime=seedAuthoritativeSlots(this,internal,baseline,sourceAction.actorId);
   const hud=baseline.scene.spellcastingByActor?.[sourceAction.actorId];
   const caster=hud ? casterFromHud(baseline,sourceAction.actorId,hud) : undefined;
@@ -283,7 +283,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     return this.getSnapshot();
   }
 
-  const turnId=currentTurnId(runtime);
+  const turnId=internal.sessionMode==="initiative"?currentTurnId(runtime):undefined;
   const result=resolveSpellCast(SIMPLEVTT_APP_RULES_PROFILE,definition,runtime,{
     id:castId,
     actorId:sourceAction.actorId,
@@ -292,7 +292,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     expectedRevision:runtime.revision,
     caster,targets,slotLevel,
     componentsSatisfied:true,
-    useActionEconomy:true,
+    useActionEconomy:internal.sessionMode==="initiative",
     turnId,
     dice:thunderwave?.request??{ effectFaces:faces },
   });

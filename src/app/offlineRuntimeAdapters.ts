@@ -47,7 +47,7 @@ import "./classFeatureSpellRuntimeAdapter";
 // its underlying snapshot function, so the existing authoritative HUD/slot bridge can
 // seed TurnRuntime resources without any fixture-only caster registry.
 import "./productionSpellcasterProjectionAdapter";
-import "./phase09SpellcastingRuntimeRouter";
+import "./phase09AuthoritativeSpellcastingAdapter";
 import "./characterLibraryRuntimeAdapter";
 import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";

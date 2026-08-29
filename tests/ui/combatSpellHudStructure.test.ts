@@ -37,6 +37,6 @@ test("combat spell HUD reuses canonical SpellTile UI, shows slots separately, an
   assert.match(main, /CombatSpellHudBridge/);
   assert.match(main, /offlineRuntimeAdapters/);
   assert.match(offlineRuntime, /spellcastingRuntimeAdapter/);
-  assert.match(offlineRuntime, /phase09SpellcastingRuntimeRouter/);
+  assert.match(offlineRuntime, /phase09AuthoritativeSpellcastingAdapter/);
   assert.match(css, /phase06-magic-active/);
 });
