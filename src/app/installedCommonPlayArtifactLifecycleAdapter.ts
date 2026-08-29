@@ -81,8 +81,8 @@ async function projectedActions(adapter:MockAdapter,snapshot:AppSnapshot) {
         {label:"Source",value:`${definition.id} · ${actorName}`},
       ],
     }));
-    snapshot.scene.actionsByActor[actorId]=[...removeProjected(snapshot.scene.actionsByActor[actorId]),...additions.map(cp)];
-    internal.scene.actionsByActor[actorId]=[...removeProjected(internal.scene.actionsByActor[actorId]),...additions.map(cp)];
+    snapshot.scene.actionsByActor[actorId]=[...(snapshot.scene.actionsByActor[actorId]??[]),...additions.map(cp)];
+    internal.scene.actionsByActor[actorId]=[...(internal.scene.actionsByActor[actorId]??[]),...additions.map(cp)];
   }
   return snapshot;
 }
