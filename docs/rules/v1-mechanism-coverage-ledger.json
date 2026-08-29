@@ -1527,7 +1527,7 @@
         "SRD 5.2.1: Underwater Combat",
         "movement/attack/damage/senses kernels"
       ],
-      "currentState": "Profile-driven movement/attack/defense evaluation exists; session environment and breathing composition proof missing",
+      "currentState": "Profile-driven underwater movement, weapon attack restrictions/disadvantage, and damage-defense calculations exist as identity-independent kernel helpers, but the persisted Common Play contract and session state have no authoritative environment-profile activation/ownership. Breathing/suffocation also depends on the still-unowned durable exposure lifecycle in Family AE. Production therefore cannot apply underwater rules or reconnect them without inventing environment activation and breathing state policy.",
       "requiredSemantics": [
         "underwater movement",
         "Swim Speed",
@@ -1547,8 +1547,10 @@
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "session environment profile activation",
-        "breathing exposure composition"
+        "persisted portable environment-profile definition and session activation owner",
+        "authoritative session environment state projected into movement/attack/damage transactions",
+        "breathing/suffocation composition through a durable exposure owner",
+        "connected replay/reconnect and persistence of environment activation"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
