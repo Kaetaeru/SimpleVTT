@@ -32,43 +32,31 @@ Previously validated C9 checkpoints remain authoritative and must not be repeate
 - `91a7dc94`: initiative round wrap advances elapsed runtime by 6 seconds in the same PendingResolution.
 - `72a2c7fd`: arbitrary elapsed Zone expiry/cleanup converges Host/Client, duplicate replay, reconnect, Undo.
 - `5bea7af`: Families P/T ledger text reconciled to already-proven automatic turn dispatch and elapsed cleanup without promotion.
+- `34358920` / `742e5c70` / `d8e72006` / `ce09f959` / `2ed2ff8d`: authoritative external spatial Zone membership enters the existing canonical Zone transaction and standard connected ResolutionEvent path with arbitrary identity, no manual controls, provider provenance, Host/Client convergence, duplicate replay, reconnect, and Undo.
+- `bb154414`: Family T ledger text reconciled to the spatial-provider evidence without promotion.
 
 ## Current execution checkpoint
 
-The previously identified spatial-Zone contract gap is now implemented and production-proven without adding geometry inference or a Zone-specific connected protocol.
+The remaining Family T `stay` event gap is now implemented and focused-production proven without adding a second Zone timer, geometry engine, or connected transport.
 
 Source/test commits on this branch:
 
-- `34358920`: added `src/app/spatialZoneMembershipRuntimeAdapter.ts`, an explicit trusted external spatial-provider ingress.
-- `742e5c70`: installed that wrapper immediately outside `installedCommonPlayRuntimeAdapter` in canonical offline composition.
-- `d8e72006`: retained exact installed Zone entry-point identity through spatial activation.
-- `ce09f959`: added `tests/ui/connectedSpatialZoneMembershipProduction.test.ts`.
-- `2ed2ff8d`: registered the focused spatial acceptance in the existing UI connected/live-lifecycle workflow step.
-
-The seam is deliberately bounded:
-
-- an external spatial module explicitly registers for a Host adapter;
-- installed Zone activation then records membership authority as `spatial` instead of fabricating geometry in Core;
-- provider facts carry `artifactId`, `subjectId`, `present`, and provenance;
-- facts route through existing `resolveCommonPlayZoneMembershipChange(... authority: "spatial")` and `commitProductionRuntimeResolution`;
-- standard connected `resolution` payloads carry the exact canonical ResolutionEvents; there is no Zone-specific network message;
-- a Client cannot manufacture a provider fact by action ID alone because Host accepts only a matching Host-local pending provider fact;
-- manual enter/leave controls are removed from presentation for artifacts whose membership authority is `spatial`.
+- `f41fabf3`: `commonPlayZoneRuntime.ts` accepts canonical `zone.stay` rules/events and rejects stay for a subject that is not an active member of the Zone.
+- `3eddc991`: `spatialZoneMembershipRuntimeAdapter.ts` accepts an explicit authoritative provider stay fact and routes it through existing `resolveCommonPlayZoneEvent(... kind: "zone.stay")` plus `commitProductionRuntimeResolution`; the provider fact is distinct from membership enter/leave and does not mutate membership.
+- `7f0de733`: `connectedSpatialZoneMembershipProduction.test.ts` adds an arbitrary installed `zone.stay` rule and proves provider provenance, canonical HP StateChanges, no membership mutation, once-per-turn frequency, duplicate replay idempotence, fresh reconnect reconstruction, and event-native Undo while membership remains present.
 
 Exact verification:
 
-- UI workflow `33273491509`, job `99156065770`, exact code/test head `2ed2ff8d395c2171220a92eca4e3ee2878646ede`.
-- Connected/live-lifecycle step 17: SUCCESS, 33/33 tests passed.
-- New regression `authoritative external spatial Zone membership converges through canonical connected events and Undo`: PASS.
-- The regression proves arbitrary unknown installed identity, `spatial` authority on the Zone membership state, no manual membership controls, provider provenance in the standard connected resolution payload, canonical `zone-membership` StateChange, `zone.entered` damage in the same transaction, Host/Client convergence, duplicate replay idempotence, fresh reconnect reconstruction, and event-native Undo.
-- Existing turn-start/end and elapsed-duration Zone regressions also remained green in the same 33/33 connected step.
-- Authoritative spellcasting step 27: SUCCESS, 5/5.
-- Broad Phase09 step 28 remains an inherited failure at 106/118 with the same deterministic-dice/runtime-revision/legacy-provenance expectation mismatches seen before this spatial change. Typecheck/build step 29 was skipped by fail-fast and is not claimed green.
+- UI workflow `33275406982`, job `99161116014`, exact code/test head `7f0de73316c223601276f45ec704cc15b61ca9a0`.
+- Connected/live-lifecycle step 17: SUCCESS. The new regression `authoritative spatial Zone stay fact uses canonical frequency, reconnect, and Undo` passed together with the previously validated spatial membership, Zone turn-start/end, and elapsed-duration regressions.
+- Steps 18-27 also completed successfully, including authoritative spellcasting.
+- Broad Phase09 step 28 remains FAILURE on the inherited broad regression set; this run did not establish a new stay-specific Phase09 regression.
+- Typecheck/build step 29 was skipped by fail-fast and is not claimed green.
 
-Coverage ledger is still `IMPLEMENTED=1`, `INCOMPLETE=35`, `PROVEN_UNNEEDED=0` because the ledger row itself has not yet been rewritten for this new proof and many independent families remain incomplete. Family T must remain `INCOMPLETE`: the spatial-provider membership production seam is now resolved, but `stay/effect breadth` and named persistent aura/zone migration remain real work. Family P also still lacks its remaining event-family/frequency matrix.
+Coverage ledger remains `IMPLEMENTED=1`, `INCOMPLETE=35`, `PROVEN_UNNEEDED=0` until the ledger is explicitly reconciled. Family T must remain `INCOMPLETE`: spatial membership and stay are now production-proven, but Zone rule operation/effect breadth and named persistent aura/zone migration remain real work. Family P also still lacks its remaining event-family/frequency matrix.
 
 Gate N remains blocked. Overall verdict: `V1 INCOMPLETE`.
 
 ## Next Exact Action
 
-Reconcile Family T in `docs/rules/v1-mechanism-coverage-ledger.json` with the exact spatial-provider evidence above: add `spatialZoneMembershipRuntimeAdapter.ts` and `connectedSpatialZoneMembershipProduction.test.ts` to the applicable evidence arrays and remove only the stale `spatial provider membership production` seam. Do **not** promote Family T. Then inspect the minimum source/authority needed to close the next real Family T gap (`stay/effect breadth`) or, if the ledger/checklist makes it higher priority, the remaining Family P generic event-family dispatcher. Do not repeat validated manual membership, turn-start/end, elapsed-duration, connected replay, reconnect, or Undo work; do not infer Zone membership from pairwise spatial facts.
+Reconcile only Family T in `docs/rules/v1-mechanism-coverage-ledger.json` to the exact stay evidence at `f41fabf3` / `3eddc991` / `7f0de733`: add the applicable implementation/production/identity/connected/reconnect/Undo evidence and remove the stale `stay` seam without promoting Family T. Then inspect the minimum Common Play operation/effect lowering needed for the remaining Zone `effect breadth` gap; reuse existing generic effect operations and typed StateChanges if they already compose, and do not create a Zone-specific effect engine. If effect breadth requires a materially new semantic rather than generic composition, stop for architecture review. Do not repeat validated manual/spatial membership, turn-start/end, duration, stay, replay, reconnect, or Undo work.
