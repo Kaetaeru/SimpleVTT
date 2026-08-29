@@ -1,0 +1,43 @@
+{
+  "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "fixture.generic-d20-reaction",
+  "payments": [
+    {
+      "kind": "economy",
+      "bucket": "reaction",
+      "amount": { "value": 1 },
+      "consumeAt": "commit"
+    },
+    {
+      "kind": "resource",
+      "resource": "resource.portable-reaction-die",
+      "amount": { "value": 1 },
+      "consumeAt": "commit"
+    }
+  ],
+  "interceptors": [
+    {
+      "id": "reduce-successful-d20",
+      "timing": "d20.outcome-determined",
+      "interaction": {
+        "id": "choose-d20-reduction",
+        "kind": "choice",
+        "responder": "actor-owner",
+        "mode": "blocking",
+        "input": { "type": "boolean" },
+        "revalidate": "if-revision-changed",
+        "stalePolicy": "reject"
+      },
+      "operation": "recalculate",
+      "slot": "d20.roll",
+      "operations": [
+        {
+          "kind": "roll.modify",
+          "mode": "subtract-die",
+          "dice": "1d8+1"
+        }
+      ]
+    }
+  ]
+}
