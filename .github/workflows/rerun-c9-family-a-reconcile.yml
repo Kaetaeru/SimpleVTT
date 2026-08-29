@@ -1,0 +1,94 @@
+name: C9 Family A Reconcile
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-family-a-reconcile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile Family A contract boundary
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const counts=ledger.rows.reduce((a,r)=>(a[r.disposition]=(a[r.disposition]??0)+1,a),{});
+          if(ledger.rows.length!==36||counts.IMPLEMENTED!==4||counts.INCOMPLETE!==32||(counts.PROVEN_UNNEEDED??0)!==0) throw new Error(`unexpected coverage ${JSON.stringify(counts)}`);
+          if((ledger.gateNBlockingNamedFallbacks??[]).length) throw new Error('gateNBlockingNamedFallbacks is not empty');
+          const row=ledger.rows.find(r=>r.family==='A'&&r.id==='expression-property');
+          if(!row||row.disposition!=='INCOMPLETE') throw new Error('Family A must remain INCOMPLETE');
+          const schema=fs.readFileSync('schemas/common-play-contract.schema.json','utf8');
+          const opRuntime=fs.readFileSync('src/domain/commonPlayOperationRuntime.ts','utf8');
+          const resolutionTypes=fs.readFileSync('src/domain/resolutionTypes.ts','utf8');
+          const effects=fs.readFileSync('src/domain/effects.ts','utf8');
+          const profile=fs.readFileSync('src/domain/profileEngine.ts','utf8');
+          for(const token of ['"propertyModify"','"property.modify"','"operation": { "enum": ["add", "subtract", "set", "min", "max", "multiply"]']) if(!schema.includes(token)) throw new Error(`property contract changed: ${token}`);
+          for(const token of ['evaluateExpression','evaluateSemanticExpression','evaluateSemanticPredicate','resolveProfileProperty']) if(!profile.includes(token)) throw new Error(`profile evaluator changed: ${token}`);
+          if(opRuntime.includes('property.modify')) throw new Error('Family A lowerer now contains property.modify; re-audit instead of recording this boundary');
+          if(resolutionTypes.includes('modify-property')||resolutionTypes.includes('set-property')) throw new Error('Resolver property owner now exists; re-audit');
+          if(effects.includes('propertyModifiers')||effects.includes('propertyContributions')) throw new Error('Effect property owner now exists; re-audit');
+          row.currentState='The persisted contract exposes generic expressions, predicates, RulesProfile formulas, and property.modify, while profileEngine evaluates expressions/predicates/derived properties with provenance. Production parity is incomplete: commonPlayOperationRuntime does not lower property.modify, ResolutionOperation has no typed property contribution/mutation, and Effect state has no typed property modifier payload. The property.modify schema itself does not identify target, lifetime, source ownership, or owning transaction, so adding a runtime mutation now would invent stat ownership rather than reuse an existing contract.';
+          row.implementationEvidence=[
+            'schemas/common-play-contract.schema.json expression/predicate/property.modify vocabulary',
+            'profileEngine.ts evaluateExpression/evaluateSemanticExpression/evaluateSemanticPredicate/resolveProfileProperty'
+          ];
+          row.productionEvidence=[];
+          row.identityInvarianceEvidence=[];
+          row.persistenceEvidenceIfRelevant=[];
+          row.remainingNamedSeams=[
+            'property.modify has no portable production lowerer or typed ResolutionOperation owner',
+            'property.modify target/lifetime/source ownership is undefined in the persisted contract',
+            'runtime Effect state has no typed property contribution payload',
+            'named progression/runtime stat materialization remains outside a generic property owner'
+          ];
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+
+          const statePath='.chatgpt-rerun/STATE.md';
+          let state=fs.readFileSync(statePath,'utf8');
+          const marker='## Next Exact Action';
+          const idx=state.lastIndexOf(marker);
+          if(idx<0) throw new Error('STATE Next Exact Action marker missing');
+          const before=state.slice(0,idx).replace(/\n+$/,'')+'\n\n';
+          const section='## Family A audit — property ownership contract is incomplete\n\nFamily A (`expression-property`) remains `INCOMPLETE`. The persisted schema already defines expressions, predicates, and `property.modify`, and `profileEngine.ts` evaluates expressions, predicates, and derived profile properties. However the portable operations lowerer does not parse `property.modify`, the Resolver has no typed property contribution/mutation operation, and Effect state has no typed property modifier payload. More importantly, `property.modify` itself does not specify target, lifetime, source ownership, or the owning transaction. Adding a session or durable scalar mutation would therefore invent a second stat-ownership model. The failed diagnostic run `33281501040` is not product-red evidence: its inspection shell step failed before typecheck; this boundary is source-inspection evidence.\n\n';
+          const next='## Next Exact Action\n\nMove to Family B (`turn-action-economy-timing`) without repeating validated payment/turn-clock/Zone timing evidence. Audit only the remaining timing matrix against the current generic turn lifecycle, frequency runtime, off-turn stored invocation, and the already-recorded Family P/AC gaps. If B is blocked solely by undefined generic event/timing vocabulary already owned by P/AC, record that dependency and move to the next implementable row; do not invent timing points or a second turn engine.\n';
+          fs.writeFileSync(statePath,before+section+next);
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs || true
+          git diff --check
+      - name: Commit Family A audit
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .chatgpt-rerun/STATE.md
+          git commit -m "docs(c9): record property ownership gap"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Publish control last and remove helpers
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='.chatgpt-rerun/control.json';
+          const data=JSON.parse(fs.readFileSync(path,'utf8'));
+          data.status='continue';
+          data.reason='C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family A has expression/predicate/derived-property kernels but remains INCOMPLETE because property.modify lacks a portable lowerer, typed Resolver owner, and explicit target/lifetime/source transaction contract. Next audit Family B remaining timing matrix without repeating proven payment/turn-clock work.';
+          data.updated_at='2026-08-30';
+          fs.writeFileSync(path,JSON.stringify(data,null,2)+'\n');
+          NODE
+          rm -f .github/workflows/rerun-c9-family-a-diagnostic.yml .github/workflows/rerun-c9-family-a-reconcile.yml
+          git add .chatgpt-rerun/control.json .github/workflows/rerun-c9-family-a-diagnostic.yml .github/workflows/rerun-c9-family-a-reconcile.yml
+          git commit -m "docs(rerun): continue after Family A audit"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
