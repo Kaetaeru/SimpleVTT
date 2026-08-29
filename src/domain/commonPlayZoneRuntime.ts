@@ -8,7 +8,7 @@ import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPaym
 import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
-type ZoneEventKind="zone.entered"|"zone.left"|"zone.turn-start"|"zone.turn-end";
+type ZoneEventKind="zone.entered"|"zone.left"|"zone.stay"|"zone.turn-start"|"zone.turn-end";
 
 interface CommonPlayArtifactSpawnOperation {
   kind:"artifact.spawn";
@@ -141,7 +141,7 @@ function validateRule(rule:CommonPlayZoneRule,templateId:string,ruleIndex:number
   const label=`artifact ${templateId} rule ${ruleIndex+1}`;
   assertOnlyKeys(rule,["id","event","frequency","operations"],label);
   if (!rule.id) throw new Error(`${label} id is required`);
-  if (rule.event!=="zone.entered"&&rule.event!=="zone.left"&&rule.event!=="zone.turn-start"&&rule.event!=="zone.turn-end") {
+  if (rule.event!=="zone.entered"&&rule.event!=="zone.left"&&rule.event!=="zone.stay"&&rule.event!=="zone.turn-start"&&rule.event!=="zone.turn-end") {
     throw new Error(`${label} event is not supported by the zone runtime slice`);
   }
   if (!["unlimited","once","once-per-turn","once-per-round","once-per-resolution"].includes(rule.frequency)) throw new Error(`${label} frequency is unsupported`);
@@ -295,7 +295,7 @@ function activeMembership(state:RulesRuntimeState,artifactId:string):ZoneMembers
 
 function validateSemanticEvent(state:RulesRuntimeState,input:CommonPlayZoneEventInput) {
   if (!input.id||!input.artifactId||!input.subjectId) throw new Error("zone event id, artifactId, and subjectId are required");
-  if (input.kind!=="zone.entered"&&input.kind!=="zone.left"&&input.kind!=="zone.turn-start"&&input.kind!=="zone.turn-end") {
+  if (input.kind!=="zone.entered"&&input.kind!=="zone.left"&&input.kind!=="zone.stay"&&input.kind!=="zone.turn-start"&&input.kind!=="zone.turn-end") {
     throw new Error(`unsupported zone event: ${input.kind}`);
   }
   if (input.kind==="zone.turn-start") {
@@ -367,6 +367,9 @@ export function resolveCommonPlayZoneEvent(
     validateSemanticEvent(inputState,input);
     const artifact=activeUnexpiredZone(inputState,definition,input.artifactId);
     if ("status" in artifact) return artifact;
+    if (input.kind==="zone.stay"&&!activeMembership(inputState,artifact.id)?.memberIds.includes(input.subjectId)) {
+      return {status:"no-match",state:inputState,reason:"zone.stay subject is not an active member of the zone"};
+    }
     const operations=triggerOperations(inputState,definition,artifact,input);
     if (!operations.length) {
       return {status:"no-match",state:inputState,reason:"matching zone rules are already consumed for the active turn or no rule matches the event"};
