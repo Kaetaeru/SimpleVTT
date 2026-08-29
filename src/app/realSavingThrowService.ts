@@ -54,6 +54,8 @@ export function resolveSavingThrowResolution(request:SavingThrowResolutionReques
         total:roll.total,
         dc:dc!,
         outcome:(roll.outcome === "success" ? "성공" : "실패") as "성공"|"실패",
+        modifierContributions:[{source:target.modifierSource,value:target.modifier}],
+        rollStateContributions:target.rollStateContributions?.map((entry)=>({...entry})),
       },
     };
   });

@@ -1,6 +1,8 @@
 import type { CampaignDmLibraryEntry, CampaignMealCommand, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import type { ExtraActionGrant, ExtraAttackGrant } from "../domain/turnEconomy";
 import type { DurationSpec, EffectTermination } from "../domain/effects";
+import type { ModifierContribution } from "../domain/d20";
+import type { RollStateContribution } from "../domain/profileEngine";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -343,7 +345,9 @@ export interface ActionVm {
     sourceId:string;
     families:Array<"ability-check"|"saving-throw"|"attack-roll">;
     trigger:"failure"|"after-roll";
-    modification:{mode:"add-die";diceSides:number};
+    modification:
+      | {mode:"add-die";diceSides:number}
+      | {mode:"reroll";bonus:number};
     payment:{resourceId:string;amount:number;consumeWhen:"accept"|"success"};
     presentation:{optionName:string;cost:string;effect:string;source:string};
   }>;
@@ -389,6 +393,8 @@ export interface SaveResultVm {
   dc: number;
   outcome: "성공" | "실패";
   finalDamage?: number;
+  modifierContributions?:ModifierContribution[];
+  rollStateContributions?:RollStateContribution[];
 }
 
 export interface InterruptView {

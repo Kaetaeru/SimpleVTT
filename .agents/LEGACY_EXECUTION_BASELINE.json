@@ -69,7 +69,6 @@
     { "module": "./effectGrantActionRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./consumableD20BonusEffectFollowUpRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./d20FollowUpRuntimeAdapter", "classification": "GENERIC_ENGINE" },
-    { "module": "./fighterIndomitableFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./clericDivineSparkActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./clericTurnUndeadActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },

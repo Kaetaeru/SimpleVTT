@@ -9,7 +9,7 @@ import { spellMechanicById } from "../domain/spellMechanics";
 import { spellMultiAttackCount } from "../domain/spellcasting";
 import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
-import { CLERIC_CHANNEL_DIVINITY_RESOURCE_ID, CLERIC_ID, FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_ID, FIGHTER_SECOND_WIND_RESOURCE_ID, PALADIN_CHANNEL_DIVINITY_RESOURCE_ID, PALADIN_ID, PALADIN_LAY_ON_HANDS_RESOURCE_ID } from "../domain/coreClassResources";
+import { CLERIC_CHANNEL_DIVINITY_RESOURCE_ID, CLERIC_ID, FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_ID, FIGHTER_INDOMITABLE_RESOURCE_ID, FIGHTER_SECOND_WIND_RESOURCE_ID, PALADIN_CHANNEL_DIVINITY_RESOURCE_ID, PALADIN_ID, PALADIN_LAY_ON_HANDS_RESOURCE_ID } from "../domain/coreClassResources";
 import { BARDIC_INSPIRATION_RESOURCE_ID, BARD_ID, bardicInspirationDieSides } from "../domain/bardicInspiration";
 import { clericDivineSparkDiceCount } from "../domain/clericDivineSpark";
 import { searUndeadDiceCount } from "../domain/clericTurnUndead";
@@ -272,6 +272,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   ];
   const fighterLevel=character.classLevels?.find((entry)=>entry.classId===FIGHTER_ID)?.level ?? 0;
   const secondWind=character.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)??character.resources.find((resource)=>/second-wind/i.test(resource.id)||/세컨드 윈드|재기의 바람/.test(resource.label));
+  const indomitable=character.resources.find((resource)=>resource.id===FIGHTER_INDOMITABLE_RESOURCE_ID);
   if (secondWind) {
     actions.push({
       id:"action.second-wind",
@@ -290,6 +291,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
       runtimeD20FollowUps:fighterLevel>=2?[{sourceId:"feature:fighter.tactical-mind",families:["ability-check"],trigger:"failure",modification:{mode:"add-die",diceSides:10},payment:{resourceId:secondWind.id,amount:1,consumeWhen:"success"},presentation:{optionName:"전술적 정신 d10",cost:"성공 시 재기의 바람 1회",effect:"d10을 더합니다. 그래도 실패하면 사용 횟수를 소모하지 않습니다.",source:"SRD 5.2.1 · Fighter Tactical Mind"}}]:undefined,
       details:[detail("대상","자신"),detail("회복",`1d10 + ${character.level}`),detail("자원",`${secondWind.label} 1회`,secondWind.source)],
     });
+    if(fighterLevel>=9&&indomitable)actions.at(-1)!.runtimeD20FollowUps=[...(actions.at(-1)!.runtimeD20FollowUps??[]),{sourceId:"feature:fighter.indomitable",families:["saving-throw"],trigger:"failure",modification:{mode:"reroll",bonus:fighterLevel},payment:{resourceId:indomitable.id,amount:1,consumeWhen:"accept"},presentation:{optionName:"불굴 재굴림",cost:"불굴 1회",effect:`내성을 다시 굴리고 파이터 레벨 ${fighterLevel}을 더합니다. 새 결과를 사용합니다.`,source:"SRD 5.2.1 p.48 · Fighter Indomitable"}}];
   }
   const actionSurge=character.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID);
   const actionSurgeGate=character.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID);

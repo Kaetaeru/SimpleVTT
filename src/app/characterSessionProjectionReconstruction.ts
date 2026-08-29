@@ -21,7 +21,7 @@ import {
   speciesDefinition,
 } from "./characterCreationV10Data";
 import { proficiencyBonusForTotalLevel } from "../domain/progressionCatalog";
-import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_SECOND_WIND_RESOURCE_ID } from "../domain/coreClassResources";
+import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_INDOMITABLE_RESOURCE_ID, FIGHTER_SECOND_WIND_RESOURCE_ID } from "../domain/coreClassResources";
 import {
   parseCharacterSessionProjectionV1,
   type CharacterProjectionContentIdentityV1,
@@ -375,6 +375,8 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
         {label:"비용",value:"추가 행동 + 자원 1"},
       ],
     });
+    const indomitable=sheet.resources.find((resource)=>resource.id===FIGHTER_INDOMITABLE_RESOURCE_ID);
+    if(fighterLevel>=9&&indomitable)actions.at(-1)!.runtimeD20FollowUps=[...(actions.at(-1)!.runtimeD20FollowUps??[]),{sourceId:"feature:fighter.indomitable",families:["saving-throw"],trigger:"failure",modification:{mode:"reroll",bonus:fighterLevel},payment:{resourceId:indomitable.id,amount:1,consumeWhen:"accept"},presentation:{optionName:"불굴 재굴림",cost:"불굴 1회",effect:`내성을 다시 굴리고 파이터 레벨 ${fighterLevel}을 더합니다. 새 결과를 사용합니다.`,source:"SRD 5.2.1 p.48 · Fighter Indomitable"}}];
   }
   if (fighterLevel>=2) {
     const surge=sheet.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID);

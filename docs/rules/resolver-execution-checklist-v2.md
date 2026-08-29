@@ -377,7 +377,7 @@ Evidence:
 Deliberate boundary:
 
 - property-backed stat/provider resolution, target/every-target rolls, and named post-roll features remain explicit later slices;
-- Indomitable, Cutting Words, and other unstrangled roll/outcome seams remain migration debt;
+- Cutting Words and other unstrangled roll/outcome seams remain migration debt;
 - therefore this family is `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
 ---
@@ -458,9 +458,9 @@ Evidence:
 
 Deliberate boundary:
 
-- `roll.modify`, reroll, interceptors, triggered dispatch, target/owner/DM responders, multiple options, and named post-roll migrations remain unsupported;
+- broader `roll.modify`, roll reduction, triggered dispatch, target/owner/DM responders, multiple options, and remaining named post-roll migrations remain unsupported;
 - remote responder routing, reconnect continuation, stale restart, and persistent pending interaction are not claimed; the connected proof uses Host as responder;
-- Indomitable and Cutting Words remain legacy migration references only until each is re-derived from RulesProfile/SRD 5.2.1;
+- Cutting Words remains a legacy migration reference until re-derived from RulesProfile/SRD 5.2.1;
 - therefore this family is bounded `PRODUCTION`, not `MIGRATED` or `ACCEPTED`.
 
 ---
@@ -586,11 +586,12 @@ Verified migration slices:
 - [x] Tactical Mind now uses a structural failed-check add-die fact, conditional resource payment, and action-authored success operation through the existing d20/Resolver transaction; the named follow-up adapter is deleted while Stabilize, open-DC, connected replay, Undo, and unknown-ID evidence remain green;
 - [x] Dark One's Own Luck is re-derived from SRD 5.2.1 rather than its legacy output: a structural after-roll d10 rule covers ability checks and saving throws, accept-time payment, once-per-roll handling, Long-Rest resource state, connected owner persistence/reconnect/Undo, and unknown identities; the named app/domain Resolver paths are deleted;
 - [x] Peerless Skill is re-derived from SRD 5.2.1: failed ability checks and attack rolls share the structural add-die transaction, payment occurs only on rescued success, a rescued attack continues directly from authoritative hit state without action mutation, and connected owner persistence/reconnect/Undo plus unknown identities are proven; the named app/domain Resolver paths are deleted;
-- [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
+- [x] Indomitable is re-derived from SRD 5.2.1 p.48: a structural failed-save reroll preserves authoritative modifier and roll-state facts, adds the authored Fighter-level bonus, requires the new result, consumes its Long-Rest resource on acceptance, and uses the same generic d20 transaction for production owner prompting, Host/Client convergence, replay, persistence, Undo, and unknown identities; the named app/domain Resolver paths are deleted;
+- [x] focused d20 follow-up and Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:
 
-- the named Indomitable offer/payment/reroll orchestration adapter and Cutting Words post-roll adapter remain `LEGACY_EXECUTION`;
+- the Cutting Words post-roll adapter remains `LEGACY_EXECUTION`;
 - named legacy spell/class consumers still call the compatibility targeting provider that fabricates mapless facts; only the canonical attack/concentration transaction is migrated by this slice;
 - no coverage-ledger row is promoted by this bounded migration alone.
 
