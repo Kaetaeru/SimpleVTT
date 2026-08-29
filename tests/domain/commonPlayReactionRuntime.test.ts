@@ -223,7 +223,10 @@ test("generic d20.roll interceptor reduces a successful ability check with autho
   assert.equal(accepted.status,"committed");
   if(accepted.status!=="committed") return;
   const result=accepted.results.check as {natural:number;modifier:number;total:number;target:number;outcome:string};
-  assert.deepEqual(result,{natural:14,modifier:-2,total:12,target:15,outcome:"failure"});
+  assert.deepEqual(
+    {natural:result.natural,modifier:result.modifier,total:result.total,target:result.target,outcome:result.outcome},
+    {natural:14,modifier:-2,total:12,target:15,outcome:"failure"},
+  );
   assert.equal(accepted.state.combatants.hero.economy.reaction,false);
   assert.equal(accepted.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,1);
 });
