@@ -1703,7 +1703,7 @@
         "runtimeResolutionCommit.ts",
         "inventory and Character persistence"
       ],
-      "currentState": "Shared production infrastructure already proves typed ResolutionEvent application, atomic session commit, Character write-back rollback, event history, Host/Client replay, duplicate idempotence, reconnect reconstruction, and event-native Undo across several implemented/advanced families. AJ remains cross-family INCOMPLETE because final acceptance requires every applicable mechanism to use its correct owner, while remote/persisted decisions and multiple durable/session domains are still explicitly undefined in other ledger rows.",
+      "currentState": "Cross-family ownership infrastructure is production-proven on several final C9 families: runtime resolutions use typed revisioned StateChanges and Host-authoritative ResolutionEvents; connected replay/reconnect and event-native Undo are proven for stored invocations, Zones, object/link artifacts, and Recharge, while Character durable projections remain a distinct write-back domain. AJ is an aggregate acceptance row, however, and cannot be final while multiple mechanism families still lack their correct durable/session owner, remote decision ownership, or full persistence/reconnect contract.",
       "requiredSemantics": [
         "correct owner",
         "source ownership",
@@ -1725,33 +1725,55 @@
         "realEventApplyService.ts typed event replay",
         "realEventUndoService.ts event-native inverse application",
         "runtimeResolutionEventHistory.ts canonical runtime event history",
-        "connectedSessionProtocol.ts connected authoritative event transport"
+        "connectedSessionProtocol.ts connected authoritative event transport",
+        "src/app/runtimeResolutionCommit.ts",
+        "src/app/realEventApplyService.ts",
+        "src/app/realEventUndoService.ts",
+        "src/app/connectedSessionProtocol.ts",
+        "src/domain/runtimeArtifact.ts",
+        "src/domain/commonPlayInventoryRuntime.ts"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts shared production commit and Undo",
         "connectedTurnResolutionEventTransport.test.ts turn lifecycle replay/reconnect/Undo",
         "connectedObjectLinkArtifactLifecycleProduction.test.ts object/link connected lifecycle",
-        "connectedActorTurnRuleProduction.test.ts automatic actor turn rule and Recharge authority"
+        "connectedActorTurnRuleProduction.test.ts automatic actor turn rule and Recharge authority",
+        "c87402f9 stored-invocation authoritative replay/reconnect/Undo checkpoint",
+        "72a2c7fd Zone authoritative replay/reconnect/Undo checkpoint",
+        "C9 Family U Diagnostic run 33279420876 object/link authoritative lifecycle",
+        "C9 Recharge availability/consumption run 33280926167"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary external identities",
         "connectedObjectLinkArtifactLifecycleProduction.test.ts unknown object/link identities",
-        "connectedActorTurnRuleProduction.test.ts arbitrary actor-owned rule identity"
+        "connectedActorTurnRuleProduction.test.ts arbitrary actor-owned rule identity",
+        "arbitrary installed stored-invocation identity checkpoint c87402f9",
+        "Family T arbitrary installed Zone identity/reconnect acceptance",
+        "Family U object/link identity rename acceptance in run 33279420876",
+        "Family AB arbitrary Recharge identity acceptance in run 33280926167"
       ],
       "connectedEvidenceIfRelevant": [
         "connectedTurnResolutionEventTransport.test.ts duplicate replay/reconnect/event-native Undo",
         "connectedObjectLinkArtifactLifecycleProduction.test.ts Host/Client/reconnect/Undo",
-        "connectedActorTurnRuleProduction.test.ts Host/Client/reconnect/Undo"
+        "connectedActorTurnRuleProduction.test.ts Host/Client/reconnect/Undo",
+        "c87402f9 stored invocation Host/Client replay, reconnect, Undo",
+        "72a2c7fd Zone Host/Client replay, reconnect, Undo",
+        "run 33279420876 object/link Host/Client replay, reconnect, Undo",
+        "run 33280926167 Recharge Host/Client replay, reconnect, Undo"
       ],
       "persistenceEvidenceIfRelevant": [
         "PR #159 installed Common Play persistence/rehydration authority",
         "resolutionCharacterWriteBackPort.ts Character-owned write-back/rollback boundary",
-        "connected actor/object lifecycle reconnect reconstruction evidence retained in STATE"
+        "connected actor/object lifecycle reconnect reconstruction evidence retained in STATE",
+        "session RuntimeArtifact reconnect reconstruction retained for final S/T/U families",
+        "existing Character durable projection remains distinct from session RuntimeArtifact ownership"
       ],
       "remainingNamedSeams": [
-        "Family Q/R remote or persisted decision ownership remains incomplete",
-        "Families V/W/X/Y/Z/AA/AC/AD/AE/AF/AH/AI retain explicit lifetime, durable-source, session-policy, or persistence owner gaps",
-        "AJ cannot become final while any applicable mechanism family lacks its correct authoritative transaction/recovery matrix"
+        "AJ cannot be final until every mandatory family has its correct transaction owner and final disposition",
+        "durable Character/source write-back ownership remains unresolved for Families W/X/Y/Z/AH/AI",
+        "session/lifetime/topology ownership remains unresolved for Families V/AC/AD/AE/AF",
+        "remote decision/order/stale-response acceptance remains incomplete for interactive families including P/R/AC",
+        "Family Z still contains spellMechanicById identity dispatch and Family AG inherits that Magic path"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
