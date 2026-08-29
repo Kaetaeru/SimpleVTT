@@ -106,13 +106,38 @@ async function captureHostBatch(operation:()=>Promise<unknown>) {
   return batch;
 }
 
+async function advanceUntilActor(adapter:MockAdapter,actorId:string) {
+  for(let guard=0;guard<20;guard++) {
+    const snapshot=await adapter.getSnapshot();
+    if(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.clock.activeActorId===actorId) return snapshot;
+    await adapter.endTurn();
+  }
+  throw new Error(`initiative did not advance to ${actorId}`);
+}
+
+async function advanceConnectedUntilActor(
+  host:MockAdapter,
+  client:MockAdapter,
+  summonId:string,
+  resourceId:string,
+) {
+  for(let guard=0;guard<20;guard++) {
+    const before=actorState(host,await host.getSnapshot(),summonId,resourceId);
+    if(before.clock.activeActorId===summonId) return {batch:undefined,before};
+    const batch=await captureHostBatch(()=>host.endTurn());
+    assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+    const after=actorState(host,await host.getSnapshot(),summonId,resourceId);
+    if(after.clock.activeActorId===summonId) return {batch,before};
+  }
+  throw new Error(`initiative did not advance to ${summonId}`);
+}
+
 async function runIdentity(prefix:string) {
   const adapter=new MockAdapter();
   const pack=await install(adapter,prefix);
   await adapter.resolveAction(pack.summonAction,["char.aelar"]);
   const before=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
-  await adapter.endTurn();
-  const after=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
+  const after=actorState(adapter,await advanceUntilActor(adapter,pack.summonId),pack.summonId,pack.resourceId);
   return {beforeResource:before.resource,afterResource:after.resource,markers:after.markers.length,activeActorId:after.clock.activeActorId};
 }
 
@@ -120,8 +145,7 @@ async function runTurnEndIdentity(prefix:string) {
   const adapter=new MockAdapter();
   const pack=await install(adapter,prefix);
   await adapter.resolveAction(pack.summonAction,["char.aelar"]);
-  await adapter.endTurn();
-  const before=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
+  const before=actorState(adapter,await advanceUntilActor(adapter,pack.summonId),pack.summonId,pack.resourceId);
   await adapter.endTurn();
   const after=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
   return {beforeResource:before.resource,afterResource:after.resource,markerDelta:after.markers.length-before.markers.length};
@@ -166,9 +190,9 @@ test("actor-owned turn-start rule converges, reconnects, deduplicates, and rolls
   assert.equal(before.resource,0);
   assert.equal(before.markers.length,0);
 
-  const turnBatch=await captureHostBatch(()=>host.endTurn());
-  assert.equal((await applyConnectedClientEvents(client,turnBatch.events)).status,"applied");
-  assert.equal((await applyConnectedClientEvents(client,turnBatch.events)).status,"duplicate");
+  const reached=await advanceConnectedUntilActor(host,client,pack.summonId,pack.resourceId);
+  assert.ok(reached.batch,"summoned actor should begin through an authoritative turn transition");
+  assert.equal((await applyConnectedClientEvents(client,reached.batch.events)).status,"duplicate");
   let hostState=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
   let clientState=actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId);
   assert.equal(hostState.resource,1);
@@ -188,7 +212,7 @@ test("actor-owned turn-start rule converges, reconnects, deduplicates, and rolls
   clientState=actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId);
   assert.equal(hostState.resource,0);
   assert.equal(hostState.markers.length,0);
-  assert.deepEqual(hostState.clock,before.clock);
+  assert.deepEqual(hostState.clock,reached.before.clock);
   assert.deepEqual(clientState,hostState);
 });
 
@@ -206,8 +230,8 @@ test("actor-owned turn-end rule converges, reconnects, deduplicates, and rolls b
 
   const spawnBatch=await captureHostBatch(()=>host.resolveAction(pack.summonAction,["char.aelar"]));
   assert.equal((await applyConnectedClientEvents(client,spawnBatch.events)).status,"applied");
-  const startBatch=await captureHostBatch(()=>host.endTurn());
-  assert.equal((await applyConnectedClientEvents(client,startBatch.events)).status,"applied");
+  const reached=await advanceConnectedUntilActor(host,client,pack.summonId,pack.resourceId);
+  assert.ok(reached.batch,"summoned actor should begin through an authoritative turn transition");
   const before=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
   assert.equal(before.resource,1);
   assert.equal(before.markers.length,1);
