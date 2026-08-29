@@ -1567,7 +1567,7 @@
         "standardActionReactionAdapter.ts",
         "productionPlayRuntimeAdapter.ts"
       ],
-      "currentState": "Several generic actions exist; complete data-driven composition/Ready incomplete",
+      "currentState": "Attack, Dash, Disengage, Dodge, Help, Hide, Influence, Search, Study, and Utilize have structural production projections that execute through existing attack/movement/status/d20 completion paths. Family-wide portable no-edit acceptance is still blocked because built-in Ready uses the action.standard.ready/trigger adapter to select off-turn behavior, while Magic actions enter the Family Z spell path that still selects mechanics through spellMechanicById. Unknown installed Ready has separate generic stored-invocation evidence, but the standard-action family cannot be marked final while these production identity/dependency seams remain.",
       "requiredSemantics": [
         "Attack",
         "Dash",
@@ -1584,15 +1584,22 @@
       ],
       "transactionDomain": "Resolver action/effect/d20/item/stored invocation composition",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
+      "implementationEvidence": [
+        "productionPlayRuntimeAdapter.ts structural standard action projections",
+        "standardActionReactionAdapter.ts current Ready compatibility path",
+        "5308c15e installed Ready stored-invocation evidence"
+      ],
+      "productionEvidence": [
+        "C8 structural standard no-roll/check/movement production evidence retained in STATE",
+        "5308c15e installed Ready production capture/cancel/expiry/Undo"
+      ],
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "productionPlayRuntimeAdapter named projection",
-        "Ready workaround",
-        "Rogue Hide adapter"
+        "built-in action.standard.ready/trigger adapter still selects Ready off-turn execution",
+        "Magic action inherits Family Z productionSpellRuntimeAdapter spellMechanicById identity dispatch",
+        "full arbitrary-ID connected/persistence matrix for the complete standard-action composition set"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
