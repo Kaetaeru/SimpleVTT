@@ -1,4 +1,4 @@
-import type { D20TestResult } from "./d20";
+import type { D20RollModification, D20TestResult } from "./d20";
 import type { RulesRuntimeState } from "./combatState";
 import { resolvePendingResolution, stagePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
@@ -30,6 +30,12 @@ export interface CommonPlayPropertyModifyOperation {
   value:LiteralExpression;
 }
 
+export interface CommonPlayRollModifyOperation {
+  kind:"roll.modify";
+  mode:"subtract-die";
+  dice:string;
+}
+
 export interface CommonPlayInteractionDefinition {
   id:string;
   kind:"choice";
@@ -52,10 +58,19 @@ export interface CommonPlayAttackOutcomeInterceptor {
   operations:CommonPlayPropertyModifyOperation[];
 }
 
+export interface CommonPlayD20RollInterceptor {
+  id:string;
+  timing:"d20.outcome-determined";
+  interaction:CommonPlayInteractionDefinition;
+  operation:"recalculate";
+  slot:"d20.roll";
+  operations:CommonPlayRollModifyOperation[];
+}
+
 export interface CommonPlayReactionDefinition {
   id:string;
   payments:CommonPlayPayment[];
-  interceptors:CommonPlayAttackOutcomeInterceptor[];
+  interceptors:Array<CommonPlayAttackOutcomeInterceptor|CommonPlayD20RollInterceptor>;
 }
 
 export interface AwaitingCommonPlayInteraction {
@@ -75,7 +90,7 @@ export interface AwaitingCommonPlayInteraction {
     sourceActorId:string;
     definition:CommonPlayReactionDefinition;
     interceptorId:string;
-    attackOperationId:string;
+    interceptedOperationId:string;
     pending:PendingResolution;
   };
 }
@@ -94,6 +109,10 @@ export interface CommonPlayInteractionResponse {
   value:boolean;
 }
 
+export interface CommonPlayInteractionAuthority {
+  modifierDiceFaces?:Record<number,number[]>;
+}
+
 function rejected(state:RulesRuntimeState,error:string):Extract<ResolutionCommit,{status:"rejected"}> {
   return { status:"rejected", state, events:[], results:{}, error };
 }
@@ -103,12 +122,33 @@ function literalValue(expression:LiteralExpression,label:string) {
   return expression.value;
 }
 
+function parseDiceFormula(value:string,label:string) {
+  const match=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.exec(value.trim());
+  if(!match) throw new Error(`${label} must be XdY+Z`);
+  const count=Number(match[1]);
+  const sides=Number(match[2]);
+  const flat=Number(match[3]??0);
+  if(!Number.isInteger(count)||count<1||!Number.isInteger(sides)||sides<2) throw new Error(`${label} has invalid dice`);
+  return {count,sides,flat};
+}
+
 function findAttackOperation(pending:PendingResolution) {
   const index=pending.operations.findIndex((operation)=>operation.kind==="d20"&&operation.request.family==="attack-roll");
   if (index<0) return undefined;
   const operation=pending.operations[index];
   if (operation.kind!=="d20") return undefined;
   return { index, operation };
+}
+
+function findSuccessfulD20Operation(profile:RulesProfileLike,state:RulesRuntimeState,pending:PendingResolution) {
+  for(const [index,operation] of pending.operations.entries()) {
+    if(operation.kind!=="d20"||(operation.request.family!=="ability-check"&&operation.request.family!=="attack-roll")) continue;
+    const preview=stagePendingResolution(profile,state,{...pending,operations:pending.operations.slice(0,index+1)});
+    if(preview.status==="rejected") return {error:preview.error};
+    const result=preview.results[operation.id] as D20TestResult|undefined;
+    if(result?.outcome==="success") return {index,operation,result};
+  }
+  return undefined;
 }
 
 function applyDefenseModifier(base:number,modifier:CommonPlayPropertyModifyOperation) {
@@ -156,40 +196,60 @@ function paymentOperations(
   });
 }
 
-function acceptedPending(awaiting:AwaitingCommonPlayInteraction):PendingResolution {
-  const { definition, interceptorId, attackOperationId, pending, sourceActorId }=awaiting.context;
+function d20RollModifications(
+  definition:CommonPlayReactionDefinition,
+  interceptor:CommonPlayD20RollInterceptor,
+  authority:CommonPlayInteractionAuthority|undefined,
+):D20RollModification[] {
+  return interceptor.operations.flatMap((operation,index)=>{
+    if(operation.kind!=="roll.modify"||operation.mode!=="subtract-die") throw new Error("d20.roll interceptor supports subtract-die only in this bounded slice");
+    const formula=parseDiceFormula(operation.dice,"d20.roll subtract-die");
+    const faces=authority?.modifierDiceFaces?.[index];
+    if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {
+      throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);
+    }
+    const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;
+    const modifications:D20RollModification[]=[{source,mode:"subtract-die",dice:{id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]}}];
+    if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:-formula.flat});
+    return modifications;
+  });
+}
+
+function acceptedPending(awaiting:AwaitingCommonPlayInteraction,authority?:CommonPlayInteractionAuthority):PendingResolution {
+  const { definition, interceptorId, interceptedOperationId, pending, sourceActorId }=awaiting.context;
   const interceptor=definition.interceptors.find((entry)=>entry.id===interceptorId);
   if (!interceptor) throw new Error(`interceptor not found: ${interceptorId}`);
-  const attackIndex=pending.operations.findIndex((operation)=>operation.id===attackOperationId);
-  if (attackIndex<0) throw new Error(`attack operation not found: ${attackOperationId}`);
-  const attack=pending.operations[attackIndex];
-  if (attack.kind!=="d20"||attack.request.family!=="attack-roll") throw new Error("interceptor target is not an attack roll");
-  if (attack.targetId&&attack.targetId!==sourceActorId) {
-    throw new Error("reaction defense source actor must be the intercepted attack target in this runtime slice");
+  const operationIndex=pending.operations.findIndex((operation)=>operation.id===interceptedOperationId);
+  if (operationIndex<0) throw new Error(`intercepted operation not found: ${interceptedOperationId}`);
+  const intercepted=pending.operations[operationIndex];
+  const payments=paymentOperations(definition,sourceActorId,interceptor.id);
+
+  if(interceptor.slot==="d20.roll") {
+    if(intercepted.kind!=="d20"||(intercepted.request.family!=="ability-check"&&intercepted.request.family!=="attack-roll")) {
+      throw new Error("d20.roll interceptor target is not a supported d20 roll");
+    }
+    const recalculated:ResolutionOperation={
+      ...intercepted,
+      request:{
+        ...intercepted.request,
+        rollModifications:[...(intercepted.request.rollModifications??[]),...d20RollModifications(definition,interceptor,authority)],
+      },
+    };
+    return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
   }
 
-  let target=attack.request.target;
+  if(intercepted.kind!=="d20"||intercepted.request.family!=="attack-roll") throw new Error("interceptor target is not an attack roll");
+  if (intercepted.targetId&&intercepted.targetId!==sourceActorId) {
+    throw new Error("reaction defense source actor must be the intercepted attack target in this runtime slice");
+  }
+  let target=intercepted.request.target;
   for (const operation of interceptor.operations) target=applyDefenseModifier(target,operation);
   if (!Number.isFinite(target)) throw new Error("recalculated attack target must be finite");
-
   const recalculated:ResolutionOperation={
-    ...attack,
-    request:{
-      ...attack.request,
-      target,
-      targetSource:`common-play:${definition.id}:${interceptor.id}`,
-    },
+    ...intercepted,
+    request:{...intercepted.request,target,targetSource:`common-play:${definition.id}:${interceptor.id}`},
   };
-  const payments=paymentOperations(definition,sourceActorId,interceptor.id);
-  return {
-    ...pending,
-    operations:[
-      ...pending.operations.slice(0,attackIndex),
-      ...payments,
-      recalculated,
-      ...pending.operations.slice(attackIndex+1),
-    ],
-  };
+  return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
 }
 
 export function startCommonPlayResolution(
@@ -200,37 +260,45 @@ export function startCommonPlayResolution(
   sourceActorId:string,
 ):CommonPlayResolutionResult {
   const interceptor=definition.interceptors.find((entry)=>
-    entry.timing==="attack.outcome-determined"&&entry.operation==="recalculate"&&entry.slot==="attack.outcome"
+    (entry.timing==="attack.outcome-determined"&&entry.operation==="recalculate"&&entry.slot==="attack.outcome")
+    ||(entry.timing==="d20.outcome-determined"&&entry.operation==="recalculate"&&entry.slot==="d20.roll")
   );
   if (!interceptor) return resolvePendingResolution(profile,inputState,pending);
   if (interceptor.interaction.kind!=="choice"||interceptor.interaction.input?.type!=="boolean"||interceptor.interaction.mode!=="blocking") {
     return rejected(inputState,"reaction runtime requires a blocking boolean choice interaction");
   }
 
-  const attack=findAttackOperation(pending);
-  if (!attack) return rejected(inputState,"attack.outcome interceptor requires an attack-roll operation");
-  const preview=stagePendingResolution(profile,inputState,{
-    ...pending,
-    operations:pending.operations.slice(0,attack.index+1),
-  });
-  if (preview.status==="rejected") return preview;
-  const result=preview.results[attack.operation.id] as D20TestResult|undefined;
-  if (!result||result.family!=="attack-roll") return rejected(inputState,"provisional attack result is missing");
-  if (result.outcome!=="success") return resolvePendingResolution(profile,inputState,pending);
-  if (attack.operation.targetId&&attack.operation.targetId!==sourceActorId) {
-    return resolvePendingResolution(profile,inputState,pending);
+  let interceptedOperationId:string;
+  if(interceptor.slot==="d20.roll") {
+    const d20=findSuccessfulD20Operation(profile,inputState,pending);
+    if(d20&&"error" in d20) return rejected(inputState,d20.error);
+    if(!d20) return resolvePendingResolution(profile,inputState,pending);
+    interceptedOperationId=d20.operation.id;
+  } else {
+    const attack=findAttackOperation(pending);
+    if (!attack) return rejected(inputState,"attack.outcome interceptor requires an attack-roll operation");
+    const preview=stagePendingResolution(profile,inputState,{...pending,operations:pending.operations.slice(0,attack.index+1)});
+    if (preview.status==="rejected") return preview;
+    const result=preview.results[attack.operation.id] as D20TestResult|undefined;
+    if (!result||result.family!=="attack-roll") return rejected(inputState,"provisional attack result is missing");
+    if (result.outcome!=="success") return resolvePendingResolution(profile,inputState,pending);
+    if (attack.operation.targetId&&attack.operation.targetId!==sourceActorId) return resolvePendingResolution(profile,inputState,pending);
+    try {
+      let target=attack.operation.request.target;
+      for (const operation of interceptor.operations) target=applyDefenseModifier(target,operation);
+      if (!Number.isFinite(target)) return rejected(inputState,"recalculated attack target must be finite");
+    } catch (error) {
+      return rejected(inputState,error instanceof Error?error.message:String(error));
+    }
+    interceptedOperationId=attack.operation.id;
   }
 
   let payments:ResolutionOperation[];
   try {
-    let target=attack.operation.request.target;
-    for (const operation of interceptor.operations) target=applyDefenseModifier(target,operation);
-    if (!Number.isFinite(target)) return rejected(inputState,"recalculated attack target must be finite");
     payments=paymentOperations(definition,sourceActorId,interceptor.id);
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }
-
   const paymentEligibility=stagePendingResolution(profile,inputState,{
     id:`${pending.id}:eligibility:${interceptor.id}`,
     actorId:sourceActorId,
@@ -238,9 +306,7 @@ export function startCommonPlayResolution(
     expectedRevision:inputState.revision,
     operations:payments,
   });
-  if (paymentEligibility.status==="rejected") {
-    return resolvePendingResolution(profile,inputState,pending);
-  }
+  if (paymentEligibility.status==="rejected") return resolvePendingResolution(profile,inputState,pending);
 
   const interactionId=`${pending.id}:${definition.id}:${interceptor.interaction.id}`;
   const idempotencyKey=`${interceptor.interaction.idempotencyKey??interactionId}:${pending.id}`;
@@ -257,13 +323,7 @@ export function startCommonPlayResolution(
       resolutionId:pending.id,
       sourceId:definition.id,
     },
-    context:{
-      sourceActorId,
-      definition,
-      interceptorId:interceptor.id,
-      attackOperationId:attack.operation.id,
-      pending,
-    },
+    context:{sourceActorId,definition,interceptorId:interceptor.id,interceptedOperationId,pending},
   };
 }
 
@@ -272,6 +332,7 @@ export function resumeCommonPlayInteraction(
   inputState:RulesRuntimeState,
   awaiting:AwaitingCommonPlayInteraction,
   response:CommonPlayInteractionResponse,
+  authority?:CommonPlayInteractionAuthority,
 ):CommonPlayResolutionResult {
   if (response.interactionId!==awaiting.interaction.id||response.idempotencyKey!==awaiting.interaction.idempotencyKey) {
     return rejected(inputState,"interaction response identity mismatch");
@@ -281,25 +342,15 @@ export function resumeCommonPlayInteraction(
   if (!interceptor) return rejected(inputState,`interceptor not found: ${awaiting.context.interceptorId}`);
   if (inputState.revision!==awaiting.interaction.expectedRevision) {
     if (interceptor.interaction.stalePolicy==="restart") {
-      return startCommonPlayResolution(
-        profile,
-        inputState,
-        { ...awaiting.context.pending, expectedRevision:inputState.revision },
-        awaiting.context.definition,
-        awaiting.context.sourceActorId,
-      );
+      return startCommonPlayResolution(profile,inputState,{ ...awaiting.context.pending, expectedRevision:inputState.revision },awaiting.context.definition,awaiting.context.sourceActorId);
     }
-    return {
-      status:"invalidated",
-      state:inputState,
-      error:`interaction is stale: expected revision ${awaiting.interaction.expectedRevision}, current ${inputState.revision}`,
-    };
+    return {status:"invalidated",state:inputState,error:`interaction is stale: expected revision ${awaiting.interaction.expectedRevision}, current ${inputState.revision}`};
   }
 
   if (!response.value) return resolvePendingResolution(profile,inputState,awaiting.context.pending);
 
   try {
-    return resolvePendingResolution(profile,inputState,acceptedPending(awaiting));
+    return resolvePendingResolution(profile,inputState,acceptedPending(awaiting,authority));
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }
