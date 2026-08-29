@@ -15,6 +15,7 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import {
   registerAuthoritativeSpatialZoneMembershipProvider,
   submitAuthoritativeSpatialZoneMembershipFact,
+  submitAuthoritativeSpatialZoneStayFact,
 } from "../../src/app/spatialZoneMembershipRuntimeAdapter";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
@@ -38,6 +39,12 @@ async function installSpatialZone(adapter:MockAdapter,prefix:string) {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.condition`,mechanicId=`${prefix}.zone`;
   const config=structuredClone(ZONE);
   config.id=mechanicId;
+  config.artifactTemplates[0].rules.push({
+    id:"stay",
+    event:"zone.stay",
+    frequency:"once-per-turn",
+    operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"event.subject"}],
+  });
   const json=JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
     rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
@@ -147,4 +154,73 @@ test("authoritative external spatial Zone membership converges through canonical
   assert.ok(!clientRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id)?.memberIds.includes(currentActorId));
   assert.equal(totalHp(hostSnapshot,currentActorId),hpBefore);
   assert.equal(totalHp(clientSnapshot,currentActorId),hpBefore);
+});
+
+test("authoritative spatial Zone stay fact uses canonical frequency, reconnect, and Undo",async()=>{
+  const prefix="unknown-provider-spatial-stay-zone",sessionId="session.common-play-spatial-stay-zone";
+  const host=new MockAdapter();
+  const createZone=await installSpatialZone(host,prefix);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";
+  hostConnected.sessionId=sessionId;
+  hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const client=new MockAdapter();
+  await installSpatialZone(client,prefix);
+  connectClient(client,sessionId);
+
+  const currentActorId=(await host.getSnapshot()).scene.currentActorId;
+  const createBatch=await captureHostBatch(()=>host.resolveAction(createZone,[currentActorId]));
+  assert.equal((await applyConnectedClientEvents(client,createBatch.events)).status,"applied");
+  let hostSnapshot=await host.getSnapshot();
+  const hostRuntime=snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)!;
+  const zone=hostRuntime.artifacts?.find((artifact)=>artifact.artifactKind==="zone");
+  assert.ok(zone);
+
+  const membershipBatch=await captureHostBatch(()=>submitAuthoritativeSpatialZoneMembershipFact(host,{
+    artifactId:zone.id,subjectId:currentActorId,present:true,provenance:"provider:unknown-grid-engine:enter",
+  }));
+  assert.equal((await applyConnectedClientEvents(client,membershipBatch.events)).status,"applied");
+  const hpAfterEnter=totalHp(await host.getSnapshot(),currentActorId);
+
+  const stayProvenance="provider:unknown-grid-engine:stay";
+  const stayBatch=await captureHostBatch(()=>submitAuthoritativeSpatialZoneStayFact(host,{
+    artifactId:zone.id,subjectId:currentActorId,provenance:stayProvenance,
+  }));
+  const stayResolution=stayBatch.events.find((event)=>event.payload.kind==="resolution");
+  assert.ok(stayResolution&&stayResolution.payload.kind==="resolution");
+  assert.ok(stayResolution.payload.provenance.includes(stayProvenance));
+  assert.ok(stayResolution.payload.resolutionEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="hp")),"zone.stay must use canonical damage StateChanges");
+  assert.ok(!stayResolution.payload.resolutionEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="zone-membership")),"zone.stay must not mutate membership");
+  assert.equal((await applyConnectedClientEvents(client,stayBatch.events)).status,"applied");
+
+  hostSnapshot=await host.getSnapshot();
+  let clientSnapshot=await client.getSnapshot();
+  assert.equal(totalHp(hostSnapshot,currentActorId),hpAfterEnter-1);
+  assert.equal(totalHp(clientSnapshot,currentActorId),hpAfterEnter-1);
+  assert.equal((await applyConnectedClientEvents(client,stayBatch.events)).status,"duplicate","duplicate connected replay must not reapply zone.stay");
+
+  await submitAuthoritativeSpatialZoneStayFact(host,{
+    artifactId:zone.id,subjectId:currentActorId,provenance:"provider:unknown-grid-engine:stay-repeat",
+  });
+  assert.equal(totalHp(await host.getSnapshot(),currentActorId),hpAfterEnter-1,"once-per-turn stay must not fire twice from repeated provider facts");
+
+  const reconnect=new MockAdapter();
+  await installSpatialZone(reconnect,prefix);
+  connectClient(reconnect,sessionId);
+  const reconnectApplied=await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0));
+  assert.equal(reconnectApplied.status,"applied",JSON.stringify(reconnectApplied));
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  const reconnectRuntime=snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)!;
+  assert.ok(reconnectRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id)?.memberIds.includes(currentActorId));
+  assert.equal(totalHp(reconnectSnapshot,currentActorId),hpAfterEnter-1);
+
+  const undoBatch=await captureHostBatch(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostSnapshot=await host.getSnapshot();
+  clientSnapshot=await client.getSnapshot();
+  const afterUndoRuntime=snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)!;
+  assert.ok(afterUndoRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id)?.memberIds.includes(currentActorId),"Undoing stay must preserve membership");
+  assert.equal(totalHp(hostSnapshot,currentActorId),hpAfterEnter);
+  assert.equal(totalHp(clientSnapshot,currentActorId),hpAfterEnter);
 });
