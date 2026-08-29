@@ -3,6 +3,8 @@ import type { RulesRuntimeState } from "./combatState";
 import { resolvePendingResolution, stagePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { RulesProfileLike } from "./profileEngine";
+import type { SemanticPredicate } from "./profileEngine";
+import type { CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 import type { TurnSlot } from "./turnEconomy";
 
 type LiteralExpression = { value:number };
@@ -56,6 +58,7 @@ export interface CommonPlayAttackOutcomeInterceptor {
   operation:"recalculate";
   slot:"attack.outcome";
   operations:CommonPlayPropertyModifyOperation[];
+  eligibility?:CommonPlayInterceptorEligibility;
 }
 
 export interface CommonPlayD20RollInterceptor {
@@ -65,6 +68,12 @@ export interface CommonPlayD20RollInterceptor {
   operation:"recalculate";
   slot:"d20.roll";
   operations:CommonPlayRollModifyOperation[];
+  eligibility?:CommonPlayInterceptorEligibility;
+}
+
+export interface CommonPlayInterceptorEligibility {
+  factQueries:CommonPlayFactQuery[];
+  when:SemanticPredicate;
 }
 
 export interface CommonPlayReactionDefinition {

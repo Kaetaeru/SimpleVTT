@@ -116,6 +116,8 @@ Consent is not a factual predicate. A willing target should use an `Interaction`
 
 A spatial-capability adapter may answer spatial facts. Without one, the mapless core may request authoritative input or report unsupported according to the declared policy; it must not invent coordinates, pathfinding, line of sight, or target membership.
 
+Interceptor fact subjects are scoped references: `interceptor.source`, `intercepted.actor`, and `intercepted.target`. Spatial and sensory facts are evaluated from the interceptor source toward the resolved subject. Unknown subject references are unsupported rather than interpreted as entity IDs.
+
 ## 9. Interactions and DM-assisted adjudication
 
 `Interaction` is a first-class pause/input contract for choices, consent, and adjudication.

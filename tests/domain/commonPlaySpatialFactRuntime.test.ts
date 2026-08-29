@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   answerCommonPlayFactRequest,
+  resolveCommonPlayFactPredicate,
   resolveCommonPlayFactQuery,
   type CommonPlayFactQuery,
   type CommonPlayFactRegistry,
@@ -206,4 +207,35 @@ test("Gate E unknown external content identity does not participate in fact sema
     assert.equal(result.status,"resolved");
     if(result.status==="resolved")assert.equal(result.answer.value,true);
   }
+});
+
+test("interceptor fact predicates honor provider, treat-false, and manual authority without fabricated facts",async()=>{
+  const predicateRegistry:CommonPlayFactRegistry={...registry,"spatial.distance-feet":{valueType:"number"}};
+  const queries:CommonPlayFactQuery[]=[
+    {id:"distance",fact:"spatial.distance-feet",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+    {id:"visible",fact:"spatial.visible",authority:"target-owner",visibility:"authority-only",unknownPolicy:"request-authority"},
+  ];
+  const predicate={op:"all" as const,args:[
+    {op:"lte" as const,left:{ref:"distance"},right:{value:60}},
+    {op:"eq" as const,left:{ref:"visible"},right:{value:true}},
+  ]};
+  const providerResult=await resolveCommonPlayFactPredicate({
+    registry:predicateRegistry,queries,predicate,resolutionId:"resolution.interceptor",expectedRevision:3,
+    provider:{id:"provider.authoritative",resolve(query){return query.id==="distance"?{status:"answered",value:30}:{status:"answered",value:true};}},
+  });
+  assert.equal(providerResult.status,"eligible");
+
+  const manualResult=await resolveCommonPlayFactPredicate({
+    registry:predicateRegistry,queries,predicate,resolutionId:"resolution.interceptor.manual",expectedRevision:3,
+    provider:{id:"provider.partial",resolve(query){return query.id==="distance"?{status:"answered",value:30}:{status:"unknown"};}},
+  });
+  assert.equal(manualResult.status,"awaiting-authority");
+
+  const falseResult=await resolveCommonPlayFactPredicate({
+    registry:predicateRegistry,
+    queries:[{...queries[1],unknownPolicy:"treat-false"}],
+    predicate:{op:"eq",left:{ref:"visible"},right:{value:true}},
+    resolutionId:"resolution.interceptor.false",expectedRevision:3,
+  });
+  assert.equal(falseResult.status,"ineligible");
 });

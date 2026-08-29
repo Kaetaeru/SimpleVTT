@@ -25,6 +25,12 @@ import {
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult, ModifierContribution } from "../domain/d20";
 import type { PendingResolution, ResolutionEvent } from "../domain/resolutionTypes";
+import {
+  COMMON_PLAY_STANDARD_FACTS,
+  resolveCommonPlayFactPredicate,
+  type CommonPlayFactProvider,
+} from "../domain/commonPlaySpatialFactRuntime";
+import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -218,6 +224,46 @@ function pendingD20(resolution:ResolutionView,state:RulesRuntimeState):{pending:
   return undefined;
 }
 
+function factSubjectId(candidate:PassiveReactionCandidate,pending:PendingResolution,subject:string|undefined) {
+  const intercepted=pending.operations.find((operation)=>operation.kind==="d20"&&(operation.request.family==="ability-check"||operation.request.family==="attack-roll"));
+  if(!intercepted||intercepted.kind!=="d20")return undefined;
+  if(!subject||subject==="intercepted.actor")return intercepted.actorId;
+  if(subject==="intercepted.target")return intercepted.targetId;
+  if(subject==="interceptor.source")return candidate.sourceActorId;
+  return undefined;
+}
+
+function interceptorFactProvider(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution):CommonPlayFactProvider {
+  return {
+    id:"simplevtt.authoritative-spatial",
+    resolve(query){
+      const subjectId=factSubjectId(candidate,pending,query.subject);
+      if(!subjectId)return {status:"unsupported",reason:`unsupported interceptor fact subject: ${query.subject??"intercepted.actor"}`};
+      const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);
+      if(!relation)return {status:"unknown"};
+      if(query.fact==="spatial.distance-feet")return {status:"answered",value:relation.distanceFeet};
+      if(query.fact==="spatial.adjacent")return {status:"answered",value:relation.distanceFeet<=5};
+      if(query.fact==="spatial.total-cover")return {status:"answered",value:relation.cover==="total"};
+      if(query.fact==="sense.can-see")return {status:"answered",value:relation.visible};
+      return {status:"unknown"};
+    },
+  };
+}
+
+async function interceptorEligible(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution) {
+  const interceptor=candidate.definition.interceptors[0];
+  if(!interceptor?.eligibility)return true;
+  const result=await resolveCommonPlayFactPredicate({
+    registry:COMMON_PLAY_STANDARD_FACTS,
+    queries:interceptor.eligibility.factQueries,
+    predicate:interceptor.eligibility.when,
+    resolutionId:pending.id,
+    expectedRevision:pending.expectedRevision,
+    provider:interceptorFactProvider(internal,candidate,pending),
+  });
+  return result.status==="eligible";
+}
+
 function interactionCost(definition:CommonPlayReactionDefinition) {
   return definition.payments.map((payment)=>payment.kind==="economy"?payment.bucket:`${payment.resource} ${payment.amount.value}`).join(" + ")||"비용 없음";
 }
@@ -234,6 +280,10 @@ async function offerPassiveReaction(adapter:MockAdapter) {
   for(const candidate of await passiveReactionCandidates(adapter)){
     if(state.handled.has(candidate.key)||!runtime.combatants[candidate.sourceActorId])continue;
     const seeded=seededReactionState(runtime,candidate);
+    if(!await interceptorEligible(internal,candidate,projected.pending)){
+      state.handled.add(candidate.key);
+      continue;
+    }
     const started=startCommonPlayResolution(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId);
     if(started.status!=="awaiting-input"){
       state.handled.add(candidate.key);

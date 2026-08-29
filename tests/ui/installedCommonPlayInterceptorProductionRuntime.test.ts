@@ -6,6 +6,7 @@ import { setInstalledContentStoreForTests } from "../../src/app/installedContent
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { FIGHTER_SECOND_WIND_RESOURCE_ID } from "../../src/domain/coreClassResources";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 
 const OTHER_CHARACTER_ID="char.portable-interceptor-target";
 const OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";
@@ -20,7 +21,7 @@ const ORIGINAL:Identity={
   displayName:"Portable Reaction Charm",
 };
 
-function packagePayload(identity=ORIGINAL){
+function packagePayload(identity=ORIGINAL,withEligibility=false){
   return JSON.stringify({
     schemaVersion:"0.1-draft",
     moduleId:identity.moduleId,
@@ -45,6 +46,16 @@ function packagePayload(identity=ORIGINAL){
           interceptors:[{
             id:identity.interceptorId,
             timing:"d20.outcome-determined",
+            ...(withEligibility?{
+              factQueries:[
+                {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},
+              ],
+              when:{op:"all",args:[
+                {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
+                {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
+              ]},
+            }:{}),
             interaction:{id:identity.interactionId,kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},
             operation:"recalculate",
             slot:"d20.roll",
@@ -63,11 +74,11 @@ function otherCharacterCheckAction():ActionVm{
   };
 }
 
-async function prepare(identity=ORIGINAL){
+async function prepare(identity=ORIGINAL,withEligibility=false){
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   await adapter.startProductionLocalPlay("dm");
-  const preview=await adapter.previewContentImport(packagePayload(identity));
+  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
@@ -183,4 +194,22 @@ test("portable installed d20 interceptor can turn a successful production attack
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===responderId)?.hp,hpBefore);
   assert.equal(secondWind(snapshot),resourceBefore!-1);
   assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+});
+
+test("portable production interceptor uses only authoritative spatial and visibility facts",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.renamed-facts",contentId:"item.renamed-facts",mechanicId:"mechanic.renamed-facts",interceptorId:"interceptor.renamed-facts",interactionId:"interaction.renamed-facts",displayName:"Renamed Fact Reaction"};
+  for(const [index,identity] of [ORIGINAL,renamed].entries()){
+    const adapter=await prepare(identity,true);
+    const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true};
+    if(index===0)setSpatialRelation(internal.scene,{...relation,provenance:"module:test-map:spatial"});
+    else await adapter.setTheaterOfMindSpatialRelation(relation);
+    const snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    await adapter.respondToInterrupt(false);
+  }
+
+  const unavailable=await prepare(ORIGINAL,true);
+  const snapshot=await openAbilityCheckInterrupt(unavailable);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","missing authority must not fabricate distance or visibility");
 });

@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
   "status": "continue",
-  "reason": "C8 boundaries 1 and 2 are complete. PR #179 merged as 8278036108d48084666ea79a9d506ed681ee15bf from exact candidate 623ce5f0c577cc8fce7c9bd540077195e88a139e after M1 Common Play Interaction and Rules Domain succeeded. Boundary 3 is active: route interceptor eligibility through existing authoritative spatial/visibility/sensory fact providers and authored unknownPolicy without fabricated facts or named fallback. Do not repeat PR #176-#179 validation unless affected surfaces change.",
+  "reason": "C8 boundaries 1 and 2 are merged. Boundary 3 is complete in the local convergence stack: interceptor factQueries/when use the existing typed fact resolver and only authoritative module or DM theater-of-mind facts; 26 focused schema/domain/production checks, 4 connected authority checks, and typecheck are green. Boundary 4 is active: authoritative damage-roll interception and final connected/recovery/persistence/Undo acceptance. Do not repeat unaffected PR #176-#179 evidence.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }

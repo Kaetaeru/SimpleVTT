@@ -5,7 +5,8 @@ import type {
   CommonPlayInteractionDefinition,
   CommonPlayReactionDefinition,
 } from "./commonPlayRuntime";
-import { DomainEvaluationError } from "./profileEngine";
+import type { CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
+import { DomainEvaluationError, type SemanticPredicate } from "./profileEngine";
 
 type Obj=Record<string,unknown>;
 const STABLE_ID=/^[a-z0-9][a-z0-9._-]*$/;
@@ -13,6 +14,9 @@ const RESPONDERS=new Set(["actor","target","actor-owner","target-owner","dm","ho
 const VISIBILITIES=new Set(["public","actor","dm","actor-and-dm","authority-only"]);
 const STALE_POLICIES=new Set(["cancel","restart","reject"]);
 const PROPERTY_OPERATIONS=new Set(["add","subtract","set","min","max","multiply"]);
+const FACT_AUTHORITIES=new Set(["host","actor-owner","target-owner","dm","profile"]);
+const FACT_VISIBILITIES=new Set(["public","actor","dm","actor-and-dm","authority-only"]);
+const UNKNOWN_POLICIES=new Set(["block","request-authority","treat-false","unsupported"]);
 
 function object(value:unknown,label:string):Obj {
   if(!value||typeof value!=="object"||Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an object`);
@@ -30,6 +34,28 @@ function literalNumber(value:unknown,label:string) {
     throw new DomainEvaluationError(`${label} must be a finite literal number expression`);
   }
   return {value:expression.value};
+}
+
+function eligibility(value:Obj,label:string) {
+  if(value.when===undefined&&value.factQueries===undefined)return undefined;
+  if(value.when===undefined||!Array.isArray(value.factQueries)||!value.factQueries.length) {
+    throw new DomainEvaluationError(`${label}.when and non-empty factQueries must be declared together`);
+  }
+  const factQueries=value.factQueries.map((candidate,index)=>{
+    const raw=object(candidate,`${label}.factQueries[${index}]`);
+    const id=stableId(raw.id,`${label}.factQueries[${index}].id`);
+    if(typeof raw.fact!=="string"||!raw.fact)throw new DomainEvaluationError(`${label}.factQueries[${index}].fact must be a non-empty string`);
+    if(raw.subject!==undefined&&(typeof raw.subject!=="string"||!raw.subject))throw new DomainEvaluationError(`${label}.factQueries[${index}].subject must be a non-empty string`);
+    if(typeof raw.authority!=="string"||!FACT_AUTHORITIES.has(raw.authority))throw new DomainEvaluationError(`${label}.factQueries[${index}].authority is unsupported`);
+    if(typeof raw.visibility!=="string"||!FACT_VISIBILITIES.has(raw.visibility))throw new DomainEvaluationError(`${label}.factQueries[${index}].visibility is unsupported`);
+    if(typeof raw.unknownPolicy!=="string"||!UNKNOWN_POLICIES.has(raw.unknownPolicy))throw new DomainEvaluationError(`${label}.factQueries[${index}].unknownPolicy is unsupported`);
+    return {
+      id,fact:raw.fact,subject:raw.subject,
+      authority:raw.authority,visibility:raw.visibility,unknownPolicy:raw.unknownPolicy,
+    } as CommonPlayFactQuery;
+  });
+  if(new Set(factQueries.map((query)=>query.id)).size!==factQueries.length)throw new DomainEvaluationError(`${label}.factQueries contains duplicate ids`);
+  return {factQueries,when:structuredClone(value.when) as SemanticPredicate};
 }
 
 function interaction(value:unknown,label:string):CommonPlayInteractionDefinition {
@@ -90,7 +116,7 @@ function payment(value:Obj,index:number):CommonPlayReactionDefinition["payments"
 
 function lowerD20Interceptor(value:Obj,index:number):CommonPlayD20RollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
-  if(value.when!==undefined) throw new DomainEvaluationError(`${label}.when is not connected to the reaction runtime yet`);
+  const eligibilityDefinition=eligibility(value,label);
   if(value.timing!=="d20.outcome-determined"||value.operation!=="recalculate"||value.slot!=="d20.roll") {
     throw new DomainEvaluationError(`${label} is not a supported d20 recalculation interceptor`);
   }
@@ -102,6 +128,7 @@ function lowerD20Interceptor(value:Obj,index:number):CommonPlayD20RollIntercepto
     interaction:interaction(value.interaction,`${label}.interaction`),
     operation:"recalculate",
     slot:"d20.roll",
+    ...(eligibilityDefinition?{eligibility:eligibilityDefinition}:{}),
     operations:operations.map((candidate,operationIndex)=>{
       const raw=object(candidate,`${label}.operations[${operationIndex}]`);
       if(raw.when!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].when is not connected to the reaction runtime yet`);
@@ -115,7 +142,7 @@ function lowerD20Interceptor(value:Obj,index:number):CommonPlayD20RollIntercepto
 
 function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackOutcomeInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
-  if(value.when!==undefined) throw new DomainEvaluationError(`${label}.when is not connected to the reaction runtime yet`);
+  const eligibilityDefinition=eligibility(value,label);
   if(value.timing!=="attack.outcome-determined"||value.operation!=="recalculate"||value.slot!=="attack.outcome") {
     throw new DomainEvaluationError(`${label} is not a supported attack outcome recalculation interceptor`);
   }
@@ -127,6 +154,7 @@ function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackO
     interaction:interaction(value.interaction,`${label}.interaction`),
     operation:"recalculate",
     slot:"attack.outcome",
+    ...(eligibilityDefinition?{eligibility:eligibilityDefinition}:{}),
     operations:operations.map((candidate,operationIndex)=>{
       const raw=object(candidate,`${label}.operations[${operationIndex}]`);
       if(raw.when!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].when is not connected to the reaction runtime yet`);

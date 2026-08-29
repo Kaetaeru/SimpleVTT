@@ -12,6 +12,6 @@ PR #179 merged as `82780361`. C8 Core boundaries 1-2 are complete.
 
 ## Active work
 
-Boundary 3: authoritative spatial/visibility/sensory fact eligibility. No fabricated facts, no named fallback.
+Boundary 3: complete locally. Boundary 4: authoritative damage-roll interception and final production/connected acceptance.
 
 Authoritative detail is in `STATE.md`; `control.json` owns dispatch status.

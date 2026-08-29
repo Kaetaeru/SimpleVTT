@@ -67,6 +67,14 @@ export function authoritativeSpatialModuleRelation(scene:SceneVm,sourceId:string
   return { ...relation };
 }
 
+/** Spatial fact authority accepted by Common Play: external module or explicit DM theater-of-mind input. */
+export function authoritativeCommonPlaySpatialRelation(scene:SceneVm,sourceId:string,targetId:string):SpatialRelationVm|null {
+  const relation=scene.spatialByPair?.[spatialPairKey(sourceId,targetId)];
+  if(!relation)return null;
+  if(!relation.provenance.startsWith("module:")&&!relation.provenance.startsWith("production:theater-of-mind:"))return null;
+  return {...relation};
+}
+
 function validateMovementUpdate(scene:SceneVm,actorId:string,update:MovementSpatialUpdate) {
   if (update.sourceId===update.targetId) throw new Error("spatial movement update source and target must differ");
   if (update.sourceId!==actorId&&update.targetId!==actorId) throw new Error(`spatial movement update must involve moving actor ${actorId}: ${update.sourceId} -> ${update.targetId}`);

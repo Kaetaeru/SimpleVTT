@@ -56,6 +56,31 @@ test("portable d20 interceptor lowers into the existing Gate A reaction definiti
   });
 });
 
+test("portable interceptor fact eligibility lowers without content identity dispatch",()=>{
+  const definition=portableReaction();
+  Object.assign(definition.interceptors![0],{
+    factQueries:[
+      {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+      {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},
+    ],
+    when:{op:"all",args:[
+      {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
+      {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
+    ]},
+  });
+  const lowered=lowerCommonPlayReactionDefinition(definition)!;
+  assert.deepEqual(lowered.interceptors[0].eligibility,{
+    factQueries:[
+      {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+      {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},
+    ],
+    when:{op:"all",args:[
+      {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
+      {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
+    ]},
+  });
+});
+
 test("portable reaction lowering is invariant to definition, interceptor, and interaction identities",()=>{
   const first=lowerCommonPlayReactionDefinition(portableReaction())!;
   const renamed=lowerCommonPlayReactionDefinition(portableReaction({

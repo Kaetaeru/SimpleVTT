@@ -1,3 +1,5 @@
+import { DomainEvaluationError, evaluateSemanticPredicate, type SemanticPredicate } from "./profileEngine";
+
 export type CommonPlayFactValueType="boolean"|"number"|"string"|"targets"|"destination";
 
 export interface CommonPlayFactDefinition {
@@ -79,6 +81,10 @@ export type CommonPlayFactResolution=
   | {status:"unsupported";reason:string}
   | {status:"rejected";reason:string}
   | {status:"stale";reason:string};
+
+export type CommonPlayFactPredicateResolution=
+  | {status:"eligible"|"ineligible";answers:CommonPlayFactAnswer[]}
+  | Exclude<CommonPlayFactResolution,{status:"resolved"}>;
 
 export interface ResolveCommonPlayFactQueryInput {
   registry:CommonPlayFactRegistry;
@@ -184,6 +190,31 @@ export async function resolveCommonPlayFactQuery(input:ResolveCommonPlayFactQuer
         },
       };
     }
+  }
+}
+
+/** Resolves authored facts first, then evaluates the shared semantic predicate over query IDs. */
+export async function resolveCommonPlayFactPredicate(input:{
+  registry:CommonPlayFactRegistry;
+  queries:CommonPlayFactQuery[];
+  predicate:SemanticPredicate;
+  resolutionId:string;
+  expectedRevision:number;
+  provider?:CommonPlayFactProvider|null;
+}):Promise<CommonPlayFactPredicateResolution> {
+  const answers:CommonPlayFactAnswer[]=[];
+  const values=new Map<string,CommonPlayFactValue>();
+  for(const query of input.queries){
+    if(values.has(query.id))return {status:"rejected",reason:`duplicate fact query id: ${query.id}`};
+    const result=await resolveCommonPlayFactQuery({...input,query});
+    if(result.status!=="resolved")return result;
+    answers.push(result.answer);
+    values.set(query.id,result.answer.value);
+  }
+  try {
+    return {status:evaluateSemanticPredicate(input.predicate,(ref)=>values.get(ref))?"eligible":"ineligible",answers};
+  } catch(error) {
+    return {status:"rejected",reason:error instanceof DomainEvaluationError?error.message:String(error)};
   }
 }
 

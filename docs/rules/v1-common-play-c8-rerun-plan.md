@@ -122,14 +122,13 @@ Until the required Gate N evidence is reconciled, the overall V1 verdict remains
 
 ## 8. Active C8 Core checkpoint
 
-Boundaries 1 and 2 are complete.
+Boundaries 1, 2, and 3 are complete in the local convergence stack.
 
 - PR #178 lowered portable post-roll d20 interceptor structure into the existing Gate A reaction kernel.
 - PR #179 merged as `8278036108d48084666ea79a9d506ed681ee15bf`. It passively discovers actually-owned installed Common Play interceptor definitions, projects actor-owner responder authority through the existing interrupt contract, applies Host-authoritative modifier dice, and preserves atomic Reaction/resource payment for successful ability-check and attack-roll recalculation.
 - PR #179 exact head `623ce5f0c577cc8fce7c9bd540077195e88a139e` passed the focused M1 Common Play Interaction workflow and Rules Domain. Its attack production regression also proved that an authoritative modifier contribution set replaces, rather than duplicates, the action-bonus fallback.
+- Boundary 3 adds schema-backed interceptor `factQueries` + `when`, evaluates them through the existing typed Fact Provider/manual-authority resolver, and supplies only external-module or DM-authored theater-of-mind spatial facts in production. Missing authority follows the authored unknown policy; the production probe proves arbitrary identity rename invariance and refuses fabricated geometry or visibility.
 
 ## 9. Next Exact Action
 
-Implement only boundary 3: route interceptor eligibility predicates that require distance, visibility, or sensory facts through the existing authoritative Common Play fact provider/manual-authority infrastructure. Missing authority must follow the authored `unknownPolicy`; no fabricated `distance = 0` or `visible = true` fallback is allowed. Prove the boundary with an arbitrary external definition and identity rename invariance.
-
-After boundary 3 is green and merged, implement boundary 4 damage-roll interception and final connected/recovery/persistence/Undo acceptance. Then mark **C8 Core complete**. Cutting Words migration and global legacy-zero remain separate backlog.
+Implement boundary 4: extend the same generic interceptor path to authoritative damage-roll `subtract-die`, then prove connected responder, recovery/revalidation, persistence, canonical events, atomic cost/HP mutation, replay protection, and Undo acceptance. Then mark **C8 Core complete**. Cutting Words migration and global legacy-zero remain separate backlog.

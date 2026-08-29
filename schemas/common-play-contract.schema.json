@@ -569,6 +569,7 @@
       "properties": {
         "id": { "$ref": "#/$defs/stableId" },
         "timing": { "type": "string", "minLength": 1 },
+        "factQueries": { "type": "array", "items": { "$ref": "#/$defs/factQuery" } },
         "when": { "$ref": "#/$defs/predicate" },
         "interaction": { "$ref": "#/$defs/interaction" },
         "operation": { "enum": ["append", "replace", "prevent", "modify", "redirect", "recalculate"] },

@@ -29,7 +29,7 @@ Broad Contract/Resource/Phase/UI reds remain inherited workflow failures and wer
 
 ## Active boundary
 
-C8 Core boundary 3: authoritative spatial/visibility/sensory facts for interceptor eligibility.
+C8 Core boundary 4: authoritative damage-roll interceptor plus connected/recovery/persistence/Undo acceptance.
 
 Reuse the existing Common Play fact-provider/manual-authority infrastructure. If a required fact is unavailable, apply the authored `unknownPolicy` (`block`, `request-authority`, `treat-false`, or `unsupported`). Never fabricate distance, visibility, cover, hearing, detection, or similar facts. Prove with arbitrary external identities and rename invariance.
 
