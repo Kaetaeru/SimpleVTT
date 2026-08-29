@@ -14,52 +14,75 @@
 
 ## Durable checkpoint
 
-The large V1 Common Play Master Run checkpoint has been recovered on GitHub exactly as reported before Rerun continuation was activated.
+The recovered V1 Common Play Master Run checkpoint remains valid and in ancestry of the live working branch.
 
-Recovered code checkpoint:
+- recovered code checkpoint: `2bf3f0b0b16ac11e2e4e8a4cfd699b64a5f5b8b9`
+- recovered tree: `bb3e2f83ac1c4d169a3692a09f186daf63e5a217`
+- preflight live HEAD before this checkpoint write: `45282f9d851fbf6b4d6ad9837184f3eb7cad1f7c`
+- the checkpoint is the merge-base of that live HEAD;
+- the five commits after the recovered code checkpoint change only Rerun/planning documentation, not product `src/` code.
 
-- branch: `agent/v1-common-play-full-convergence`
-- HEAD: `2bf3f0b0b16ac11e2e4e8a4cfd699b64a5f5b8b9`
-- tree: `bb3e2f83ac1c4d169a3692a09f186daf63e5a217`
-- convergence base: `agent/resolver-foundation-convergence`
-- base SHA: `5fc742c5195930f92b2dfe8225f93f22f26038d6`
+Product integration remains `work/v1-composite`, never `main`.
 
-Rerun coordination commits now advance the same branch after this code checkpoint; do not reset back to the checkpoint or reconstruct the Master Run from the old base. Product integration remains `work/v1-composite`, never `main`.
+## Reconciled evidence reused without repetition
 
-## Recovered Master Run evidence
+Because product code is unchanged from the recovered code checkpoint, the still-valid broad Master Run evidence was not repeated:
 
-The Master Run handoff records:
+- last reported `npm run build`: green;
+- Common Play representative composition: 79/79 green;
+- foundation Gates A-E and already integrated production slices remain reusable unless a later affected-surface product change invalidates them.
 
-- C1: 36-row V1 coverage contract/checker;
-- C2: unified parse/normalize/validate/lower Common Play boundary;
-- C3-C7: generic primitives plus 79 representative compositions, while final production acceptance remains incomplete;
-- completed C8 slices: atomic save/attack/item/healing, effect lifecycle, mapless authority, spell router removal, Dash/status/effect grant, Bardic Inspiration, Divine Sense, Tactical Mind, Dark One's Own Luck, Peerless Skill, and Indomitable;
-- Indomitable checked against SRD 5.2.1;
-- last Master Run `npm run build` reported green;
-- Common Play composition reported 79/79 green;
-- Cutting Words not started;
-- coverage ledger reported as 36 rows, all `INCOMPLETE` pending final acceptance.
+The existing repository boundary/checker definitions and unchanged product tree reconcile the active C8 debt as:
 
-Live inspection on the recovered branch confirms `.agents/LEGACY_EXECUTION_BASELINE.json` contains 40 remaining legacy paths: 39 direct `LEGACY_EXECUTION` entries plus 1 transitive entry. The handoff also reports 19 named adapter paths remaining. Revalidate the named-adapter and coverage-ledger counts with the existing repository checks at the first sequence-5 execution rather than treating the chat report as final acceptance evidence.
+- D&D `LEGACY_EXECUTION`: **40** total = 39 direct + 1 transitive;
+- class/subclass-named production RuntimeAdapter paths: **19**;
+- V1 coverage ledger: **36** mandatory families, all still `INCOMPLETE`.
 
-## Correctness policy
+No coverage row was promoted by this checkpoint.
 
-Legacy behavior and legacy tests are not normative correctness or parity targets. Use explicit RulesProfile/product rules first, then SRD 5.2.1/current public Basic Rules, then Common Play architecture invariants. Legacy is only deletion inventory and implementation archaeology.
+## Current C8 slice — Cutting Words design review
 
-There is no required legacy-output parity step. If normative Common Play behavior differs from old named behavior, do not preserve the old result, add a compatibility fallback, or bend the generic architecture to match it.
+Live legacy evidence still supports College of Lore Cutting Words as the first unstarted coherent C8 slice.
+
+Normative behavior has been re-derived from SRD 5.2.1/current public Basic Rules rather than legacy output: a visible creature within 60 feet can be reacted to when it makes a damage roll or succeeds on an ability check or attack roll; the responder spends Reaction plus one Bardic Inspiration die and subtracts that die from the roll. Saving throws are not an eligible trigger.
+
+Repository inspection establishes these constraints:
+
+- `bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts` and `resolveLoreCuttingWords` are named legacy execution and must not be preserved as the migrated algorithm;
+- the named adapter currently calls a compatibility targeting provider that can fabricate mapless `0ft + visible` facts; the migrated path must not use that fallback;
+- existing Resolver operations already cover Reaction economy, resource spending, d20 semantic recalculation, and damage-roll transactions;
+- attack recalculation must reuse the existing d20 semantics so natural-1/natural-20/critical policy is not reduced to raw `total >= AC` arithmetic;
+- authoritative spatial eligibility must come from an actual provider/manual relation; absence of a fact must not synthesize visibility or distance;
+- connected interrupt routing is already responder-ID driven and does not require a Cutting-Words-specific transport.
+
+A proposed side contract such as `runtimeRollReductions` was deliberately rejected during design review because it would duplicate the canonical Common Play execution language.
+
+The canonical schema already contains the relevant structural vocabulary:
+
+- top-level `interceptors`;
+- blocking `interaction` with responder/revalidation semantics;
+- `roll.modify`;
+- interceptor operation `recalculate`;
+- slots including `attack.roll` and `primary.damage`.
+
+The built-in class-feature Common Play module already exists at `content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json`; therefore Cutting Words should enter through RuleModule/Common Play data plus a generic production bridge, not through another named runtime engine.
+
+One semantic question remains intentionally unresolved before implementation: the current `roll.modify` schema exposes additive dice and flat values but does not visibly expose a signed/subtractive die mode. Before adding any primitive, the next execution must inspect the existing Gate A/interceptor lowerer and representative tests to determine whether a Bardic-Inspiration die subtraction is already expressible through bindings/expressions or whether a reusable signed-die roll-modification semantic is genuinely missing. If a new semantic is required, follow the charter's gate-activation/design-review rule rather than inventing it inside a named migration.
+
+No product files were changed in this checkpoint, so the legacy/named counts remain 40/19 and no new validation run was required.
 
 ## Waiting condition
 
-None. The remote recovery blocker is resolved. Sequence 5 may continue directly on `agent/v1-common-play-full-convergence`.
+None. Sequence 5 remains authorized to continue directly on `agent/v1-common-play-full-convergence`.
 
-C9 Gate N remains prohibited until all D&D named legacy execution is removed.
+C9 Gate N remains prohibited until all D&D named legacy execution is removed and the coverage ledger reaches terminal evidence.
 
 ## Next Exact Action
 
-1. Perform mandatory Rerun preflight and confirm the recovered code checkpoint remains in ancestry of the live working branch.
-2. Run the existing legacy-boundary and coverage checks needed to reconcile the current 40 legacy paths, reported 19 named adapter paths, and 36 incomplete coverage rows without repeating unrelated broad validation.
-3. Read `docs/rules/v1-common-play-c8-rerun-plan.md` and select the smallest coherent remaining C8 mechanism-family slice from live debt. Cutting Words is the first reported unstarted candidate if current evidence still supports it.
-4. Establish normative RulesProfile/SRD behavior, attempt existing Common Play composition first, implement the smallest generic change, delete the absorbed named path, run focused verification, and checkpoint before the 20-minute hard stop.
-5. Continue C8 until named D&D execution reaches zero. Only then enter C9 Gate N.
+1. Read the existing Gate A interceptor/recalculation lowerer and its representative tests, focusing only on `interaction`, `interceptors`, `roll.modify`, bindings, and authoritative responder/spatial facts.
+2. Prove whether subtracting a rolled die can be represented with the existing Common Play contract. Do not add a new primitive if existing composition suffices.
+3. If composition suffices, author an arbitrary-ID Common Play interceptor fixture first and wire the smallest generic production/session bridge needed for remote responder + authoritative spatial eligibility; then encode built-in Cutting Words in the class-feature Common Play module.
+4. If composition does not suffice, document the deterministic Cutting Words failure against the existing contract and activate only the smallest reusable signed-die/roll-reduction semantic under the architecture charter before product wiring.
+5. Run focused generic/interceptor + Cutting Words + connected responder/Undo verification on the changed exact head, then delete the absorbed named app/domain execution, shrink the legacy baseline/inventory, and only then checkpoint the resulting negative delta.
 
 Current verdict: `V1 INCOMPLETE`.
