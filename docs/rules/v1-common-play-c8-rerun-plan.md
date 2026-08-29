@@ -112,10 +112,44 @@ Final V1 acceptance requires at minimum:
 
 Until then the verdict remains `V1 INCOMPLETE`.
 
-## 8. Next Exact Action
+## 8. Active Cutting Words slice checkpoint — generic roll reduction integrated
 
-1. Perform mandatory Rerun preflight on `agent/v1-common-play-full-convergence` and confirm the recovered code checkpoint remains in ancestry.
-2. Run the existing legacy-boundary and coverage checks needed to revalidate the current 40 legacy paths, reported 19 named adapter paths, and 36 incomplete coverage rows without repeating unrelated broad suites.
-3. Select the smallest coherent remaining C8 mechanism-family slice from live debt. Cutting Words is the first reported unstarted candidate if current evidence still supports that choice.
-4. Establish the normative RulesProfile/SRD contract, implement through existing Common Play composition first, remove the absorbed named path, run focused verification, and checkpoint before the Rerun hard stop.
-5. Continue C8 until named D&D execution reaches zero; only then enter C9 Gate N.
+The first Cutting Words composition review proved a concrete Common Play gap rather than a need for a named replacement engine. Existing Gate A/operation runtime could add modifier dice and recalculate d20 outcomes, but could not represent an authoritative rolled die as a subtraction. The bounded Gate A reaction slice also only recalculated a literal `defense.ac` property modification and did not supply this missing roll-reduction semantic.
+
+PR #176 (`rules: add generic Common Play subtract-die semantic`) therefore added only the smallest reusable missing operation:
+
+- candidate exact head: `3f1de2b22aa8335cc95ca343e2b00b765ebd08b1`;
+- merge commit on the Rerun working branch: `bb53ef104a76547099673daa7deb33a5d7928016`;
+- Common Play schema now permits structural `roll.modify` mode `subtract-die`;
+- the existing Common Play operation lowerer requires authoritative modifier-die faces before commit and lowers the full authored `XdY+Z`/`XdY-Z` formula as a subtraction;
+- the existing central d20 evaluator applies the signed die contribution while preserving its natural-1/natural-20/critical semantics;
+- arbitrary external definition ID/name rename preserves mechanical output;
+- missing modifier-die authority rejects before state mutation.
+
+Exact-head candidate evidence:
+
+- M1 Common Play d20, including TypeScript typecheck: SUCCESS;
+- M1 Common Play Interaction: SUCCESS;
+- M1 Common Play Targeting: SUCCESS;
+- M1 Common Play Resource Economy: SUCCESS;
+- M1 Common Play HP: SUCCESS;
+- Rules Domain: SUCCESS;
+- Persistence: SUCCESS.
+
+Two red workflow families were investigated rather than misclassified as candidate regressions:
+
+- Contract validation reaches schema/fixture/coverage checks successfully and then fails the unified-definition step because its workflow environment invokes `tsx` without installing it (`sh: 1: tsx: not found`);
+- UI/Phase11/Phase12 inherit the parent product checkpoint's pre-existing Phase09 failures. The recovered product checkpoint `2bf3f0b0b16ac11e2e4e8a4cfd699b64a5f5b8b9` produces the same Phase09 result, 104/116 passing with the same 12 failures and the same deterministic-dice/HP/spatial-provenance mismatches.
+
+PR #176 does **not** complete the Cutting Words migration. It removes no named execution path, so the C8 debt remains 40 `LEGACY_EXECUTION` paths, 19 named production RuntimeAdapter paths, and 36 `INCOMPLETE` coverage rows. No coverage family becomes terminal from this primitive alone.
+
+The next step is to use this generic semantic through the production/session interceptor path for the normative Cutting Words trigger families, including damage-roll reduction, remote responder Reaction/resource payment, and authoritative spatial/visibility facts. Only after that generic path and connected/Undo evidence exist should built-in Cutting Words data become authoritative and the named app/domain execution be deleted.
+
+## 9. Next Exact Action
+
+1. Perform mandatory Rerun preflight on `agent/v1-common-play-full-convergence`; confirm merge `bb53ef104a76547099673daa7deb33a5d7928016` remains in ancestry. Treat PR #176's generic `subtract-die` proof as retained evidence unless that surface changes.
+2. Extend the existing generic Common Play interceptor/production-session path — not a Cutting-Words-specific engine — so an eligible external responder can atomically pay Reaction/resource costs and apply `subtract-die` to an already-successful ability check or attack roll using the central d20 recalculation semantics.
+3. Extend the same generic interceptor path to authoritative damage-roll reduction. Do not fabricate spatial, visibility, or sensory facts when no provider/manual authority supplies them.
+4. Encode the built-in Cutting Words mechanic through the class-feature Common Play module and prove arbitrary-ID/name rename invariance plus the applicable connected-session/reconnect/Undo authority behavior.
+5. Delete the absorbed `bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter` and named Cutting Words domain execution only after the generic path is authoritative; then shrink the legacy baseline/inventory and verify the negative delta before any coverage-terminal claim.
+6. Continue C8 until all named D&D execution reaches zero. Do not enter C9 Gate N yet.
