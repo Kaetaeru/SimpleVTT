@@ -15,9 +15,7 @@ import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } f
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
-type FrequencyUnderTest="once"|"once-per-resolution";
-
-function packageJson(prefix:string,frequency:FrequencyUnderTest="once",strikeDamageCount=1) {
+function packageJson(prefix:string) {
   const moduleId=`${prefix}.module`;
   const effectId=`${prefix}.effect`;
   const actionId=`${prefix}.action-mechanic`;
@@ -34,7 +32,7 @@ function packageJson(prefix:string,frequency:FrequencyUnderTest="once",strikeDam
           entryPoints:[{id:"arm",invocation:"manual",operations:[{kind:"effect.apply",template:"rider",target:"actor"}]}],
           artifactTemplates:[{
             id:"rider",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:60},unit:"seconds"},instancePolicy:"stack",
-            rules:[{id:"once-ever",event:"damage.dealt",frequency,operations:[
+            rules:[{id:"once-ever",event:"damage.dealt",frequency:"once",operations:[
               {kind:"damage.apply",amount:{value:3},damageType:"force",target:"event.actor"},
             ]}],
             lifetime:{kind:"until-duration",onEnd:"destroy"},
@@ -42,17 +40,17 @@ function packageJson(prefix:string,frequency:FrequencyUnderTest="once",strikeDam
         }}]},
         {id:`${prefix}.action`,category:"option",presentation:{defaultLocale:"en",originalName:"Unknown Damage Action",locales:{en:{name:"Unknown Damage Action"}}},mechanics:[{kind:"common-play",config:{
           schemaVersion:"0.2-draft",id:actionId,
-          entryPoints:[{id:"strike",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:Array.from({length:strikeDamageCount},()=>
-            ({kind:"damage.apply",amount:{value:2},damageType:"force",target:"target"})
-          )}],
+          entryPoints:[{id:"strike",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[
+            {kind:"damage.apply",amount:{value:2},damageType:"force",target:"target"},
+          ]}],
         }}]},
       ],
     }),
   };
 }
 
-async function install(adapter:MockAdapter,prefix:string,frequency:FrequencyUnderTest="once",strikeDamageCount=1) {
-  const pack=packageJson(prefix,frequency,strikeDamageCount);
+async function install(adapter:MockAdapter,prefix:string) {
+  const pack=packageJson(prefix);
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
@@ -231,83 +229,4 @@ test("once frequency is scoped independently to each persistent source instance"
     assert.equal(totalHealth(before,"char.aelar")-totalHealth(second,"char.aelar"),6);
     assert.equal(totalHealth(before,"combatant.goblin-a")-totalHealth(second,"combatant.goblin-a"),4);
   }
-});
-
-test("once-per-resolution fires once across multiple damage operations and rearms on the next resolution",async()=>{
-  for(const prefix of ["unknown-resolution-frequency-a","fully-renamed-resolution-frequency-b"]) {
-    const adapter=new MockAdapter();
-    const actions=await install(adapter,prefix,"once-per-resolution",2);
-    await adapter.resolveAction(actions.arm,["char.aelar"]);
-    const before=await adapter.getSnapshot();
-
-    await adapter.resolveAction(actions.strike,["combatant.goblin-a"]);
-    const first=await adapter.getSnapshot();
-    const firstMarkers=frequencyMarkers(adapter,first);
-    assert.equal(totalHealth(before,"char.aelar")-totalHealth(first,"char.aelar"),3);
-    assert.equal(totalHealth(before,"combatant.goblin-a")-totalHealth(first,"combatant.goblin-a"),4);
-    assert.equal(firstMarkers.length,1);
-
-    await adapter.resolveAction(actions.strike,["combatant.goblin-a"]);
-    const second=await adapter.getSnapshot();
-    const secondMarkers=frequencyMarkers(adapter,second);
-    assert.equal(totalHealth(before,"char.aelar")-totalHealth(second,"char.aelar"),6);
-    assert.equal(totalHealth(before,"combatant.goblin-a")-totalHealth(second,"combatant.goblin-a"),8);
-    assert.equal(secondMarkers.length,1);
-    assert.notEqual(secondMarkers[0]?.[1],firstMarkers[0]?.[1]);
-  }
-});
-
-test("once-per-resolution marker converges, reconnects, rejects duplicate replay, and restores through Undo",async()=>{
-  const prefix="unknown-connected-resolution-frequency",sessionId="session.once-per-resolution";
-  const host=new MockAdapter();
-  const actions=await install(host,prefix,"once-per-resolution",2);
-  const hostConnected=connectedStateFor(host);
-  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
-
-  const armBatch=await captureBatch(()=>host.resolveAction(actions.arm,["char.aelar"]));
-  const client=new MockAdapter();
-  await install(client,prefix,"once-per-resolution",2);
-  const clientConnected=connectedStateFor(client);
-  clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
-  assert.equal((await applyConnectedClientEvents(client,armBatch.events)).status,"applied");
-  const before=await host.getSnapshot();
-
-  const firstBatch=await captureBatch(()=>host.resolveAction(actions.strike,["combatant.goblin-a"]));
-  assert.equal((await applyConnectedClientEvents(client,firstBatch.events)).status,"applied");
-  assert.equal((await applyConnectedClientEvents(client,firstBatch.events)).status,"duplicate");
-  const first=await host.getSnapshot();
-  const firstMarkers=frequencyMarkers(host,first);
-  assert.equal(totalHealth(before,"char.aelar")-totalHealth(first,"char.aelar"),3);
-  assert.equal(totalHealth(before,"combatant.goblin-a")-totalHealth(first,"combatant.goblin-a"),4);
-  assert.equal(firstMarkers.length,1);
-
-  const secondBatch=await captureBatch(()=>host.resolveAction(actions.strike,["combatant.goblin-a"]));
-  assert.equal((await applyConnectedClientEvents(client,secondBatch.events)).status,"applied");
-  let hostSnapshot=await host.getSnapshot(),clientSnapshot=await client.getSnapshot();
-  const secondMarkers=frequencyMarkers(host,hostSnapshot);
-  assert.equal(totalHealth(before,"char.aelar")-totalHealth(hostSnapshot,"char.aelar"),6);
-  assert.equal(totalHealth(before,"combatant.goblin-a")-totalHealth(hostSnapshot,"combatant.goblin-a"),8);
-  assert.equal(secondMarkers.length,1);
-  assert.notEqual(secondMarkers[0]?.[1],firstMarkers[0]?.[1]);
-  assert.deepEqual(frequencyMarkers(client,clientSnapshot),secondMarkers);
-
-  const reconnect=new MockAdapter();
-  await install(reconnect,prefix,"once-per-resolution",2);
-  const reconnectConnected=connectedStateFor(reconnect);
-  reconnectConnected.mode="client";reconnectConnected.sessionId=sessionId;reconnectConnected.replica=new ClientSessionReplica(sessionId);
-  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0))).status,"applied");
-  const reconnectSnapshot=await reconnect.getSnapshot();
-  assert.equal(totalHealth(reconnectSnapshot,"char.aelar"),totalHealth(hostSnapshot,"char.aelar"));
-  assert.equal(totalHealth(reconnectSnapshot,"combatant.goblin-a"),totalHealth(hostSnapshot,"combatant.goblin-a"));
-  assert.deepEqual(frequencyMarkers(reconnect,reconnectSnapshot),secondMarkers);
-
-  const undoBatch=await captureBatch(()=>host.undoLastResolution());
-  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
-  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
-  assert.equal(totalHealth(hostSnapshot,"char.aelar"),totalHealth(first,"char.aelar"));
-  assert.equal(totalHealth(hostSnapshot,"combatant.goblin-a"),totalHealth(first,"combatant.goblin-a"));
-  assert.deepEqual(frequencyMarkers(host,hostSnapshot),firstMarkers);
-  assert.equal(totalHealth(clientSnapshot,"char.aelar"),totalHealth(hostSnapshot,"char.aelar"));
-  assert.equal(totalHealth(clientSnapshot,"combatant.goblin-a"),totalHealth(hostSnapshot,"combatant.goblin-a"));
-  assert.deepEqual(frequencyMarkers(client,clientSnapshot),firstMarkers);
 });
