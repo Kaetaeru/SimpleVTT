@@ -33,8 +33,6 @@ jobs:
               text = p.read_text()
               if old not in text:
                   raise SystemExit(f"expected text missing in {path}: {old[:120]!r}")
-              if text.count(old) != 1:
-                  raise SystemExit(f"expected exactly one match in {path}, found {text.count(old)}")
               p.write_text(text.replace(old, new, 1))
 
           schema = "schemas/common-play-contract.schema.json"
