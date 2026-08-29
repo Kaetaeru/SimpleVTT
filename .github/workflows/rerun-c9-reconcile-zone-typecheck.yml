@@ -90,4 +90,6 @@ jobs:
             exit 0
           fi
           git commit -m "docs(c9): reconcile Zone evidence with current contract"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
