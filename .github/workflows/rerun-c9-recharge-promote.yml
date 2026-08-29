@@ -1,0 +1,130 @@
+name: C9 Recharge Coverage Promotion
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-recharge-promote.yml
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Reconfirm exact Recharge source ancestry
+        run: |
+          git merge-base --is-ancestor 496b23076958aecdd9e3a15a1938419198a53ba3 HEAD
+          test ! -e .github/workflows/rerun-c9-recharge-production.yml
+          grep -q 'resource.recharge' schemas/common-play-contract.schema.json
+          grep -q 'kind:"recharge-resource"' src/domain/commonPlayOperationRuntime.ts
+          grep -q 'rechargeDieFace' src/app/commonPlayActorTurnRuleComposition.ts
+          grep -q 'authoritativeRechargeFace' src/app/phase09EffectAwareTurnAdapter.ts
+          grep -q 'turn-start Recharge' tests/ui/connectedActorTurnRuleProduction.test.ts
+      - name: Reconfirm focused Recharge production
+        run: npx tsx --test tests/ui/connectedActorTurnRuleProduction.test.ts
+      - name: Reconfirm TypeScript
+        run: npx tsc --noEmit
+      - name: Promote Family AB and checkpoint STATE
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(ledger_path.read_text())
+          rows=ledger['families'] if 'families' in ledger else ledger.get('coverage',ledger.get('rows'))
+          if rows is None:
+              raise SystemExit('coverage rows array not found')
+          row=next((r for r in rows if r.get('family')=='AB'),None)
+          if not row:
+              raise SystemExit('Family AB row not found')
+          if row.get('disposition') not in ('INCOMPLETE','IMPLEMENTED'):
+              raise SystemExit(f"unexpected AB disposition: {row.get('disposition')}")
+          row['currentState']='Portable resource.recharge is persisted in Common Play data and lowers to the existing generic recharge-resource Resolver operation. Installed actor turn-start rules receive one authoritative die face from the existing runtime die authority, recover the actor resource in the same authoritative turn transaction, and reuse the existing action/resource catalog, connected replay/reconnect, and event-native Undo paths.'
+          row['disposition']='IMPLEMENTED'
+          row['implementationEvidence']=[
+              'schemas/common-play-contract.schema.json: resourceRecharge',
+              'commonPlayOperationRuntime.ts: resource.recharge -> recharge-resource',
+              'resolutionResourceOps.ts: executeRechargeResource',
+              'commonPlayActorTurnRuleComposition.ts',
+              'phase09EffectAwareTurnAdapter.ts',
+              'commonPlayC6Runtime.test.ts'
+          ]
+          row['productionEvidence']=[
+              '496b23076958aecdd9e3a15a1938419198a53ba3',
+              'connectedActorTurnRuleProduction.test.ts',
+              'C9 Recharge Production Slice run 33280246505 job 99174086720',
+              '281be9b1 summoned actor installed action execution evidence'
+          ]
+          row['identityInvarianceEvidence']=[
+              'connectedActorTurnRuleProduction.test.ts arbitrary external prefix vs fully-renamed prefix',
+              '496b23076958aecdd9e3a15a1938419198a53ba3'
+          ]
+          row['connectedEvidenceIfRelevant']=[
+              'connectedActorTurnRuleProduction.test.ts Host/Client convergence, duplicate replay, fresh reconnect, event-native Undo',
+              'C9 Recharge Production Slice run 33280246505 job 99174086720'
+          ]
+          row['persistenceEvidenceIfRelevant']=[
+              'retained installed Common Play preview/activation/persistence/rehydration authority from PR #159 exact candidate 1bc7a420b90378804a5b5994fa1ad1f59b963b1',
+              'schemas/common-play-contract.schema.json persists resource.recharge inside installed Common Play mechanic config',
+              'connectedActorTurnRuleProduction.test.ts installs the unknown Recharge RuleModule through the normal installed-content store'
+          ]
+          row['remainingNamedSeams']=[
+              'built-in monster recharge presentation remains migration debt; supported portable Recharge does not select or fall through to it'
+          ]
+          ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+
+          counts={}
+          for r in rows: counts[r['disposition']]=counts.get(r['disposition'],0)+1
+          if len(rows)!=36 or counts.get('IMPLEMENTED')!=4 or counts.get('INCOMPLETE')!=32 or counts.get('PROVEN_UNNEEDED',0)!=0:
+              raise SystemExit(f'unexpected coverage counts: rows={len(rows)} counts={counts}')
+          if ledger.get('gateNBlockingNamedFallbacks') not in ([],None):
+              raise SystemExit('gateNBlockingNamedFallbacks is not empty')
+
+          state_path=Path('.chatgpt-rerun/STATE.md')
+          state=state_path.read_text()
+          state=state.replace('Current coverage is `IMPLEMENTED=3`, `INCOMPLETE=33`, `PROVEN_UNNEEDED=0`.', 'Current coverage is `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`.')
+          marker='## Next Exact Action\n'
+          if marker not in state:
+              raise SystemExit('STATE Next Exact Action marker missing')
+          before,_=state.split(marker,1)
+          ab='''## Completed Family AB\n\nFamily AB (`recharge-cooldown`) is now `IMPLEMENTED`. Commit `496b23076958aecdd9e3a15a1938419198a53ba3` adds persisted portable `resource.recharge` vocabulary and lowers it to the existing generic `recharge-resource` Resolver operation. Actor-owned turn-start rules receive exactly one authoritative die face from the existing runtime die authority inside the same end-turn/begin-turn transaction; no monster-specific engine, store, transport, or identity dispatch was added.\n\nRetained acceptance evidence:\n\n- C9 Recharge Production Slice run `33280246505`, job `99174086720`: patch/generate, focused `connectedActorTurnRuleProduction.test.ts`, and `npx tsc --noEmit` all SUCCESS; the workflow committed verified source as `496b23076958aecdd9e3a15a1938419198a53ba3`.\n- The focused Recharge test retains arbitrary external identity rename invariance, Host/Client convergence, duplicate replay idempotence, fresh reconnect, and event-native Undo.\n- Existing actor-artifact action execution evidence (`281be9b1`) supplies the separate action/resource-consumption side of the Recharge availability model; the Recharge rule only restores the shared actor resource.\n- Installed Common Play persistence/rehydration authority from PR #159 remains unchanged; `resource.recharge` is schema-backed persisted mechanic data, not an adapter-only shape.\n\nFamily P remains `INCOMPLETE`, but its prior "portable Recharge policy/die authority" blocker is now closed by Family AB. Its other undefined event-vocabulary/order seams remain and must not be guessed.\n\n'''
+          next_text='''## Next Exact Action\n\nDo not reopen Families S/T/U/AB or the audited authority-blocked V/W/X/Y/Z/AA seams. Family P remains blocked on undefined event vocabulary/order semantics. Move to the next non-blocked ledger audit, Family AC (`legendary-lair-special-timing`): reconcile the existing owner/timing/option/cost compiler with the live initiative/turn transaction and connected interaction authority. If initiative-count or off-turn owner/refresh/order semantics are not already defined by repository contracts, preserve AC as `INCOMPLETE` rather than inventing policy, then continue to the next non-blocked family.\n'''
+          state_path.write_text(before+ab+next_text)
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs || true
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .chatgpt-rerun/STATE.md
+          git commit -m "docs(c9): promote verified recharge coverage"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Publish control last and remove helper
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('.chatgpt-rerun/control.json')
+          data=json.loads(path.read_text())
+          data['status']='continue'
+          data['reason']='C9 remains active. Family AB portable Recharge is IMPLEMENTED after schema-backed resource.recharge lowering to the existing generic recharge-resource operation and exact connected/typecheck evidence from run 33280246505; coverage is now IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Families V/W/X/Y/Z/AA retain explicit authority or durable-source blockers and Family P still lacks repository-defined event vocabulary/order semantics. Next audit Family AC legendary/lair special timing without inventing missing timing/owner policy.'
+          data['updated_at']='2026-08-30'
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          PY
+          rm .github/workflows/rerun-c9-recharge-promote.yml
+          git add .chatgpt-rerun/control.json .github/workflows/rerun-c9-recharge-promote.yml
+          git commit -m "docs(rerun): continue after recharge coverage"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
