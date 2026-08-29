@@ -165,6 +165,47 @@ test("once marker converges, reconnects, stays consumed across later resolutions
   assert.deepEqual(frequencyMarkers(client,clientSnapshot),firstMarkers);
 });
 
+test("once marker creation is reverted by connected event-native Undo",async()=>{
+  const prefix="unknown-connected-once-undo",sessionId="session.once-frequency-undo";
+  const host=new MockAdapter();
+  const actions=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const armBatch=await captureBatch(()=>host.resolveAction(actions.arm,["char.aelar"]));
+  const client=new MockAdapter();
+  await install(client,prefix);
+  const clientConnected=connectedStateFor(client);
+  clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,armBatch.events)).status,"applied");
+  const before=await host.getSnapshot();
+
+  const firstBatch=await captureBatch(()=>host.resolveAction(actions.strike,["combatant.goblin-a"]));
+  assert.equal((await applyConnectedClientEvents(client,firstBatch.events)).status,"applied");
+  assert.equal(frequencyMarkers(host,await host.getSnapshot()).length,1);
+  assert.equal(frequencyMarkers(client,await client.getSnapshot()).length,1);
+
+  const undoBatch=await captureBatch(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  const hostSnapshot=await host.getSnapshot(),clientSnapshot=await client.getSnapshot();
+  assert.equal(totalHealth(hostSnapshot,"char.aelar"),totalHealth(before,"char.aelar"));
+  assert.equal(totalHealth(hostSnapshot,"combatant.goblin-a"),totalHealth(before,"combatant.goblin-a"));
+  assert.equal(frequencyMarkers(host,hostSnapshot).length,0);
+  assert.equal(totalHealth(clientSnapshot,"char.aelar"),totalHealth(hostSnapshot,"char.aelar"));
+  assert.equal(totalHealth(clientSnapshot,"combatant.goblin-a"),totalHealth(hostSnapshot,"combatant.goblin-a"));
+  assert.equal(frequencyMarkers(client,clientSnapshot).length,0);
+
+  const reconnect=new MockAdapter();
+  await install(reconnect,prefix);
+  const reconnectConnected=connectedStateFor(reconnect);
+  reconnectConnected.mode="client";reconnectConnected.sessionId=sessionId;reconnectConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0))).status,"applied");
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  assert.equal(totalHealth(reconnectSnapshot,"char.aelar"),totalHealth(hostSnapshot,"char.aelar"));
+  assert.equal(totalHealth(reconnectSnapshot,"combatant.goblin-a"),totalHealth(hostSnapshot,"combatant.goblin-a"));
+  assert.equal(frequencyMarkers(reconnect,reconnectSnapshot).length,0);
+});
+
 test("once frequency is scoped independently to each persistent source instance",async()=>{
   for(const prefix of ["unknown-source-once-a","fully-renamed-source-once-b"]) {
     const adapter=new MockAdapter();
