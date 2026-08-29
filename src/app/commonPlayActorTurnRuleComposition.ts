@@ -47,8 +47,8 @@ function turnRule(value:RawRule,index:number):ActorTurnRule|undefined {
       throw new DomainEvaluationError(`Common Play turn rule ${value.id} operation ${operationIndex+1} must be an object`);
     }
     const record=structuredClone(operation as Record<string,unknown>);
-    if(record.kind!=="resource.change") {
-      throw new DomainEvaluationError(`Common Play actor turn rule ${value.id} currently supports resource.change only`);
+    if(record.kind!=="resource.change"&&record.kind!=="resource.recharge") {
+      throw new DomainEvaluationError(`Common Play actor turn rule ${value.id} currently supports resource.change or resource.recharge only`);
     }
     return record;
   });
@@ -87,7 +87,10 @@ export async function installedCommonPlayActorTurnRuleBindings(
 export function compileInstalledCommonPlayActorTurnRuleOperations(
   state:RulesRuntimeState,
   bindings:InstalledCommonPlayActorTurnRuleBinding[],
-  input:{id:string;kind:TurnBoundaryKind;actorId:string},
+  input:{
+    id:string;kind:TurnBoundaryKind;actorId:string;
+    rechargeDieFace?:(ruleId:string,operationIndex:number,sides:number)=>number;
+  },
 ):ResolutionOperation[] {
   const operations:ResolutionOperation[]=[];
   for(const binding of bindings) {
@@ -112,8 +115,18 @@ export function compileInstalledCommonPlayActorTurnRuleOperations(
         id:binding.definitionId,
         entryPoints:[{id:entryPointId,invocation:"manual",operations:rule.operations}],
       },`Common Play actor turn rule ${binding.definitionId}:${rule.id}`);
+      const rechargeDiceFaces=Object.fromEntries(rule.operations.flatMap((operation,index)=>{
+        if(operation.kind!=="resource.recharge") return [];
+        const die=operation.die as {sides?:unknown}|undefined;
+        if(!die||!Number.isInteger(die.sides)||Number(die.sides)<2||Number(die.sides)>20) {
+          throw new DomainEvaluationError(`Common Play actor turn rule ${rule.id} has an invalid recharge die`);
+        }
+        if(!input.rechargeDieFace) throw new DomainEvaluationError(`Common Play actor turn rule ${rule.id} requires authoritative recharge die input`);
+        return [[index,[input.rechargeDieFace(rule.id,index,Number(die.sides))]]];
+      }));
       const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,definition,{
         resolutionId,actorId:input.actorId,entryPointId,
+        ...(Object.keys(rechargeDiceFaces).length?{rechargeDiceFaces}:{}),
       });
       operations.push(...pending.operations);
       if(Object.keys(frequency.metadataPatch).length) operations.push({

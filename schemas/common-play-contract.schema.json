@@ -330,6 +330,7 @@
         { "$ref": "#/$defs/healingApply" },
         { "$ref": "#/$defs/tempHpGrant" },
         { "$ref": "#/$defs/resourceChange" },
+        { "$ref": "#/$defs/resourceRecharge" },
         { "$ref": "#/$defs/effectApply" },
         { "$ref": "#/$defs/effectRemove" },
         { "$ref": "#/$defs/artifactSpawn" },
@@ -419,6 +420,30 @@
         "amount": { "$ref": "#/$defs/expression" },
         "target": { "type": "string", "minLength": 1 },
         "when": { "$ref": "#/$defs/predicate" }
+      },
+      "additionalProperties": false
+    },
+    "resourceRecharge": {
+      "type": "object",
+      "required": ["kind", "resource", "die", "succeedsOn"],
+      "properties": {
+        "kind": { "const": "resource.recharge" },
+        "resource": { "type": "string", "minLength": 1 },
+        "die": {
+          "type": "object",
+          "required": ["sides"],
+          "properties": { "sides": { "type": "integer", "minimum": 2, "maximum": 20 } },
+          "additionalProperties": false
+        },
+        "succeedsOn": {
+          "type": "object",
+          "required": ["minimum"],
+          "properties": {
+            "minimum": { "type": "integer", "minimum": 1 },
+            "maximum": { "type": "integer", "minimum": 1 }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },

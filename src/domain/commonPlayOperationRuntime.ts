@@ -40,6 +40,13 @@ type CommonPlayResourceChange={
   target?:string;
 };
 
+type CommonPlayRechargeResource={
+  kind:"resource.recharge";
+  resource:string;
+  die:{sides:number};
+  succeedsOn:{minimum:number;maximum?:number};
+};
+
 type CommonPlayEconomyModify={
   kind:"economy.modify";
   bucket:string;
@@ -85,6 +92,7 @@ export type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayEconomyPayment
 
 export type CommonPlayOperation=
   |CommonPlayResourceChange
+  |CommonPlayRechargeResource
   |CommonPlayEconomyModify
   |CommonPlayDamageApply
   |CommonPlayHealingApply
@@ -127,6 +135,7 @@ export interface CommonPlayOperationExecutionInput {
   targetingTargets?:TargetingFactInput[];
   creatureKinds?:Record<string,"character"|"monster">;
   damageDiceFaces?:Record<number,number[]>;
+  rechargeDiceFaces?:Record<number,number[]>;
   movementFactAnswers?:Record<number,CommonPlayFactAnswer>;
   movementProperties?:Record<string,number>;
   interactionResponse?:{
@@ -146,6 +155,9 @@ const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","min","max"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
+const RESOURCE_RECHARGE_KEYS=new Set(["kind","resource","die","succeedsOn"]);
+const RECHARGE_DIE_KEYS=new Set(["sides"]);
+const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
@@ -322,6 +334,22 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       bucket:nonEmptyString(operation.bucket,`${label}.bucket`),
       amount,
     };
+  }
+  if(operation.kind==="resource.recharge") {
+    supportedKeys(operation,RESOURCE_RECHARGE_KEYS,label);
+    const resource=nonEmptyString(operation.resource,`${label}.resource`);
+    const die=object(operation.die,`${label}.die`);
+    supportedKeys(die,RECHARGE_DIE_KEYS,`${label}.die`);
+    if(!Number.isInteger(die.sides)||Number(die.sides)<2||Number(die.sides)>20) throw new DomainEvaluationError(`${label}.die.sides must be an integer between 2 and 20`);
+    const succeedsOn=object(operation.succeedsOn,`${label}.succeedsOn`);
+    supportedKeys(succeedsOn,RECHARGE_RANGE_KEYS,`${label}.succeedsOn`);
+    if(!Number.isInteger(succeedsOn.minimum)) throw new DomainEvaluationError(`${label}.succeedsOn.minimum must be an integer`);
+    if(succeedsOn.maximum!==undefined&&!Number.isInteger(succeedsOn.maximum)) throw new DomainEvaluationError(`${label}.succeedsOn.maximum must be an integer`);
+    const minimum=Number(succeedsOn.minimum);
+    const maximum=succeedsOn.maximum===undefined?undefined:Number(succeedsOn.maximum);
+    const upper=maximum??Number(die.sides);
+    if(minimum<1||upper>Number(die.sides)||minimum>upper) throw new DomainEvaluationError(`${label}.succeedsOn must fit within the recharge die`);
+    return {kind:"resource.recharge",resource,die:{sides:Number(die.sides)},succeedsOn:{minimum,...(maximum===undefined?{}:{maximum})}};
   }
   if(operation.kind==="damage.apply") {
     supportedKeys(operation,DAMAGE_APPLY_KEYS,label);
@@ -527,6 +555,15 @@ export function compileCommonPlayEntryPointOperations(
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
     if(operation.kind==="roll.modify") continue;
+    if(operation.kind==="resource.recharge") {
+      const faces=input.rechargeDiceFaces?.[index];
+      if(!faces||faces.length!==1) throw new DomainEvaluationError(`Common Play recharge operation ${index} requires exactly one authoritative die face`);
+      operations.push({
+        id:operationId,kind:"recharge-resource",actorId:input.actorId,resourceId:operation.resource,timing:"turn-start",
+        die:{sides:operation.die.sides,faces:[faces[0]]},succeedsOn:{...operation.succeedsOn},
+      });
+      continue;
+    }
     if(operation.kind==="resource.change") {
       if(operation.target!==undefined&&operation.target!=="actor"&&operation.target!=="self"&&operation.target!==input.actorId) {
         throw new DomainEvaluationError("Common Play resource.change currently supports the acting actor only");

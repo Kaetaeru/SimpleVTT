@@ -34,7 +34,7 @@ function packageJson(prefix:string) {
     ]}],
     rules:[
       {id:"turn-refresh",event:"turn-start",frequency:"once-per-turn",operations:[
-        {kind:"resource.change",resource:resourceId,amount:{value:1},target:"actor"},
+        {kind:"resource.recharge",resource:resourceId,die:{sides:6},succeedsOn:{minimum:1,maximum:6}},
       ]},
       {id:"turn-spend",event:"turn-end",frequency:"once-per-turn",operations:[
         {kind:"resource.change",resource:resourceId,amount:{value:-1},target:"actor"},
@@ -151,7 +151,7 @@ async function runTurnEndIdentity(prefix:string) {
   return {beforeResource:before.resource,afterResource:after.resource,markerDelta:after.markers.length-before.markers.length};
 }
 
-test("actor-owned turn-start Common Play rule is invariant under every external identity rename",async()=>{
+test("actor-owned turn-start Recharge Common Play rule is invariant under every external identity rename",async()=>{
   const first=await runIdentity("unknown-actor-turn-a");
   const renamed=await runIdentity("fully-renamed-actor-turn-b");
   assert.deepEqual(
@@ -172,7 +172,7 @@ test("actor-owned turn-end Common Play rule is invariant under every external id
   assert.equal(first.markerDelta,1);
 });
 
-test("actor-owned turn-start rule converges, reconnects, deduplicates, and rolls back through turn event-native Undo",async()=>{
+test("actor-owned turn-start Recharge rule converges, reconnects, deduplicates, and rolls back through turn event-native Undo",async()=>{
   const prefix="unknown-connected-actor-turn",sessionId="session.common-play-actor-turn";
   const host=new MockAdapter();
   const pack=await install(host,prefix);

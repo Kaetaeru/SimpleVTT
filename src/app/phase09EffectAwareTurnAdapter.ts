@@ -18,6 +18,7 @@ interface EffectAwareTurnAdapterState {
   lastResolutionId:string|null;
   lastBefore:unknown;
   getSnapshot():Promise<AppSnapshot>;
+  d20(actionId:string,index?:number):number;
 }
 
 export interface AdapterTurnLifecycleUndo {
@@ -51,6 +52,14 @@ function eventId() {
   return `phase09.turn-lifecycle.${Date.now()}.${Math.floor(Math.random()*1000)}`;
 }
 
+function authoritativeRechargeFace(adapter:MockAdapter,actionId:string,sides:number,drawIndex:{value:number}) {
+  const internal=adapter as unknown as EffectAwareTurnAdapterState;
+  const limit=20-(20%sides);
+  let face:number;
+  do face=internal.d20(actionId,drawIndex.value++); while(face>limit);
+  return ((face-1)%sides)+1;
+}
+
 export function consumeAdapterTurnLifecycleEvents(adapter:MockAdapter) {
   const events=turnLifecycleEvents.get(adapter)??[];
   turnLifecycleEvents.delete(adapter);
@@ -72,6 +81,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   synchronizeTurnRuntimeFromScene(session,internal.scene);
   const zoneDefinitions=await installedCommonPlayZoneDefinitions(this,session.state);
   const actorTurnRules=await installedCommonPlayActorTurnRuleBindings(this,session.state);
+  const rechargeDrawIndex={value:0};
   const advanced=advanceTurnRuntimeLifecycle(session,(boundary)=>[
     ...compileInstalledCommonPlayZoneTurnOperations(
       boundary.state,zoneDefinitions,{
@@ -81,6 +91,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
     ),
     ...compileInstalledCommonPlayActorTurnRuleOperations(boundary.state,actorTurnRules,{
       id:boundary.resolutionId,kind:boundary.kind,actorId:boundary.actorId,
+      rechargeDieFace:(_ruleId,_operationIndex,sides)=>authoritativeRechargeFace(this,`${boundary.resolutionId}:recharge`,sides,rechargeDrawIndex),
     }),
   ]);
   if (advanced.status==="rejected") {
