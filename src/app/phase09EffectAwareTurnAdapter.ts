@@ -8,6 +8,7 @@ import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, readyActionConfigurationsFor } from "./standardActionReadyState";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { compileInstalledCommonPlayZoneTurnOperations, installedCommonPlayZoneDefinitions } from "./commonPlayZoneTurnComposition";
+import { compileInstalledCommonPlayActorTurnRuleOperations, installedCommonPlayActorTurnRuleBindings } from "./commonPlayActorTurnRuleComposition";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface EffectAwareTurnAdapterState {
@@ -70,12 +71,18 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   const endingActor=internal.scene.entities.find((entity)=>entity.id===internal.scene.currentActorId);
   synchronizeTurnRuntimeFromScene(session,internal.scene);
   const zoneDefinitions=await installedCommonPlayZoneDefinitions(this,session.state);
-  const advanced=advanceTurnRuntimeLifecycle(session,(boundary)=>compileInstalledCommonPlayZoneTurnOperations(
-    boundary.state,zoneDefinitions,{
-      id:boundary.resolutionId,kind:boundary.kind==="turn-start"?"zone.turn-start":"zone.turn-end",actorId:boundary.actorId,
-      subjectCreatureKind:internal.scene.entities.find((entity)=>entity.id===boundary.actorId)?.kind==="character"?"character":"monster",
-    },
-  ));
+  const actorTurnRules=await installedCommonPlayActorTurnRuleBindings(this,session.state);
+  const advanced=advanceTurnRuntimeLifecycle(session,(boundary)=>[
+    ...compileInstalledCommonPlayZoneTurnOperations(
+      boundary.state,zoneDefinitions,{
+        id:boundary.resolutionId,kind:boundary.kind==="turn-start"?"zone.turn-start":"zone.turn-end",actorId:boundary.actorId,
+        subjectCreatureKind:internal.scene.entities.find((entity)=>entity.id===boundary.actorId)?.kind==="character"?"character":"monster",
+      },
+    ),
+    ...compileInstalledCommonPlayActorTurnRuleOperations(boundary.state,actorTurnRules,{
+      id:boundary.resolutionId,kind:boundary.kind,actorId:boundary.actorId,
+    }),
+  ]);
   if (advanced.status==="rejected") {
     internal.activity.unshift({
       id:eventId(),
