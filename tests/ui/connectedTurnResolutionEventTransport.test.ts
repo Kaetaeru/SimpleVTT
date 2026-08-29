@@ -32,10 +32,11 @@ function connectClient(adapter:MockAdapter,sessionId:string) {
   state.replica=new ClientSessionReplica(sessionId);
 }
 
-async function installTurnZone(adapter:MockAdapter,prefix:string) {
+async function installTurnZone(adapter:MockAdapter,prefix:string,durationSeconds?:number) {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.condition`,mechanicId=`${prefix}.zone`;
   const config=structuredClone(ZONE);
   config.id=mechanicId;
+  if(durationSeconds!==undefined) config.artifactTemplates[0].duration={kind:"elapsed",amount:{value:durationSeconds},unit:"seconds"};
   config.artifactTemplates[0].rules.push({
     id:"turn-end",event:"zone.turn-end",frequency:"once-per-turn",
     operations:[{kind:"damage.apply",amount:{value:4},damageType:"force",target:"event.subject"}],
@@ -226,4 +227,77 @@ test("arbitrary installed Zone turn-end and next turn-start converge through one
   assert.deepEqual(hostRuntimeUndo.artifacts?.find((artifact)=>artifact.artifactKind==="zone")?.metadata??{},metadataBefore,"Undo must restore frequency markers");
   assert.deepEqual(clientRuntimeUndo.artifacts,hostRuntimeUndo.artifacts);
   assert.deepEqual(clientRuntimeUndo.clock,hostRuntimeUndo.clock);
+});
+
+test("elapsed Zone duration expires on round wrap before the next turn-start and restores through connected Undo",async()=>{
+  const prefix="unknown-connected-zone-expiry",sessionId="session.common-play-zone-expiry";
+  const host=new MockAdapter();
+  const createZone=await installTurnZone(host,prefix,6);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const client=new MockAdapter();
+  await installTurnZone(client,prefix,6);
+  connectClient(client,sessionId);
+
+  const currentActorId=(await host.getSnapshot()).scene.currentActorId;
+  const createBatch=await captureHostBatch(()=>host.resolveAction(createZone,[currentActorId]));
+  assert.equal((await applyConnectedClientEvents(client,createBatch.events)).status,"applied");
+  const enter=(await host.getSnapshot()).scene.actionsByActor[currentActorId]?.find((candidate)=>parseZoneMembershipCommonPlayActionId(candidate.id)?.present);
+  assert.ok(enter?.eligibleTargetIds.includes("char.mira"));
+  const enterBatch=await captureHostBatch(()=>host.resolveAction(enter!.id,["char.mira"]));
+  assert.equal((await applyConnectedClientEvents(client,enterBatch.events)).status,"applied");
+
+  const afterEnter=await host.getSnapshot();
+  const miraAfterEnter=afterEnter.scene.entities.find((entity)=>entity.id==="char.mira")!;
+  const miraHealthAfterEnter=miraAfterEnter.hp+miraAfterEnter.tempHp;
+  const runtimeAfterEnter=snapshotAdapterTurnRuntimeState(host,afterEnter.scene)!;
+  const initialRound=runtimeAfterEnter.clock.round;
+  const initialElapsed=runtimeAfterEnter.clock.elapsedSeconds;
+  assert.ok(runtimeAfterEnter.artifacts?.some((artifact)=>artifact.artifactKind==="zone"));
+  assert.ok(runtimeAfterEnter.zoneMemberships?.some((membership)=>membership.memberIds.includes("char.mira")));
+
+  let finalBatch:Awaited<ReturnType<typeof captureHostBatch>>|undefined;
+  for(let guard=0;guard<20&&(await host.getSnapshot()).scene.round===initialRound;guard+=1) {
+    finalBatch=await captureHostBatch(()=>host.endTurn());
+    assert.equal((await applyConnectedClientEvents(client,finalBatch.events)).status,"applied");
+  }
+  assert.ok(finalBatch,"initiative must wrap within the bounded test loop");
+
+  let hostAfter=await host.getSnapshot(),clientAfter=await client.getSnapshot();
+  let hostRuntime=snapshotAdapterTurnRuntimeState(host,hostAfter.scene)!;
+  let clientRuntime=snapshotAdapterTurnRuntimeState(client,clientAfter.scene)!;
+  const hostMira=hostAfter.scene.entities.find((entity)=>entity.id==="char.mira")!;
+  const clientMira=clientAfter.scene.entities.find((entity)=>entity.id==="char.mira")!;
+  assert.equal(hostRuntime.clock.round,initialRound+1);
+  assert.equal(hostRuntime.clock.elapsedSeconds,initialElapsed+6,"one completed D&D round must advance elapsed runtime by six seconds");
+  assert.equal(hostMira.hp+hostMira.tempHp,miraHealthAfterEnter,"expired Zone must not fire its next-round turn-start rule");
+  assert.equal(clientMira.hp+clientMira.tempHp,miraHealthAfterEnter);
+  assert.equal(hostRuntime.artifacts?.some((artifact)=>artifact.artifactKind==="zone"),false);
+  assert.equal(hostRuntime.zoneMemberships?.some((membership)=>membership.memberIds.includes("char.mira")),false);
+  assert.deepEqual(clientRuntime.clock,hostRuntime.clock);
+  assert.deepEqual(clientRuntime.artifacts,hostRuntime.artifacts);
+  assert.deepEqual(clientRuntime.zoneMemberships,hostRuntime.zoneMemberships);
+  assert.equal((await applyConnectedClientEvents(client,finalBatch.events)).status,"duplicate");
+
+  const reconnect=new MockAdapter();
+  await installTurnZone(reconnect,prefix,6);
+  connectClient(reconnect,sessionId);
+  const reconnectApplied=await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0));
+  assert.equal(reconnectApplied.status,"applied",JSON.stringify(reconnectApplied));
+  const reconnectRuntime=snapshotAdapterTurnRuntimeState(reconnect,(await reconnect.getSnapshot()).scene)!;
+  assert.deepEqual(reconnectRuntime.clock,hostRuntime.clock);
+  assert.deepEqual(reconnectRuntime.artifacts,hostRuntime.artifacts);
+  assert.deepEqual(reconnectRuntime.zoneMemberships,hostRuntime.zoneMemberships);
+
+  const undoBatch=await captureHostBatch(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostAfter=await host.getSnapshot();clientAfter=await client.getSnapshot();
+  hostRuntime=snapshotAdapterTurnRuntimeState(host,hostAfter.scene)!;
+  clientRuntime=snapshotAdapterTurnRuntimeState(client,clientAfter.scene)!;
+  assert.equal(hostRuntime.clock.elapsedSeconds,initialElapsed);
+  assert.ok(hostRuntime.artifacts?.some((artifact)=>artifact.artifactKind==="zone"),"Undo must restore the expired Zone artifact");
+  assert.ok(hostRuntime.zoneMemberships?.some((membership)=>membership.memberIds.includes("char.mira")),"Undo must restore Zone membership cleanup");
+  assert.deepEqual(clientRuntime.clock,hostRuntime.clock);
+  assert.deepEqual(clientRuntime.artifacts,hostRuntime.artifacts);
+  assert.deepEqual(clientRuntime.zoneMemberships,hostRuntime.zoneMemberships);
 });
