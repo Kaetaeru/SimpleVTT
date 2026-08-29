@@ -26,5 +26,24 @@ jobs:
         run: npm run generate:content
       - name: Verify object/link artifact lifecycle
         run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts
-      - name: Typecheck and production build
+      - name: Capture typecheck diagnostic
+        id: typecheck
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > tsc-error.txt 2>&1
+          status=$?
+          first=$(head -n 1 tsc-error.txt | base64 -w 0 | tr '+/' '-_' | tr -d '=' | cut -c 1-180)
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "first=$first" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Publish typecheck diagnostic
+        if: steps.typecheck.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsc-${{ steps.typecheck.outputs.first }}
+          path: tsc-error.txt
+      - name: Require typecheck
+        run: test "${{ steps.typecheck.outputs.status }}" = "0"
+      - name: Production build
         run: npm run build
