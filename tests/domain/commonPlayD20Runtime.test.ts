@@ -6,6 +6,7 @@ import { resolveD20Test } from "../../src/domain/d20";
 import { TEST_PROFILE, runtimeState } from "./rulesTestState";
 
 const AUTHORED=JSON.parse(readFileSync(new URL("../fixtures/play-contract/generic-d20-action.json",import.meta.url),"utf8"));
+const COMMON_PLAY_SCHEMA=JSON.parse(readFileSync(new URL("../../schemas/common-play-contract.schema.json",import.meta.url),"utf8"));
 
 function execute(definition=AUTHORED,faces=[17,4]) {
   const state=runtimeState();
@@ -114,6 +115,80 @@ test("roll.modify semantics are structural and reject missing authority before c
   const parsed=parseManualCommonPlayOperationDefinition(definition);
   const rejected=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,{
     resolutionId:"missing-reroll-authority",actorId:"hero",entryPointId:"attempt",d20:{faces:[20]},
+  });
+  assert.equal(rejected.status,"rejected");
+  assert.match(rejected.status==="rejected"?rejected.error:"",/requires authoritative die face/);
+  assert.equal(rejected.state.revision,state.revision);
+});
+
+test("subtract-die is schema-backed, structural, rename-invariant, and subtracts the full dice formula",()=>{
+  assert.ok(COMMON_PLAY_SCHEMA.$defs.rollModify.properties.mode.enum.includes("subtract-die"));
+  const definition=structuredClone(AUTHORED);
+  definition.id="external.previously-unseen.roll-reduction";
+  definition.entryPoints[0].operations=[{kind:"roll.modify",mode:"subtract-die",dice:"1d12+1"}];
+
+  const run=(authored:typeof definition)=>{
+    const state=runtimeState();
+    const parsed=parseManualCommonPlayOperationDefinition(authored);
+    return resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,{
+      resolutionId:"generic-subtract-die",
+      actorId:"hero",
+      entryPointId:"attempt",
+      d20:{
+        faces:[18],
+        modifierContributions:[{source:"actor:ability",value:2}],
+        modifierDiceFaces:{0:[6]},
+      },
+    });
+  };
+
+  const original=run(definition);
+  const renamed=structuredClone(definition);
+  renamed.id="external.previously-unseen.renamed-roll-reduction";
+  const changed=run(renamed);
+  assert.equal(original.status,"committed");
+  assert.equal(changed.status,"committed");
+  if(original.status!=="committed"||changed.status!=="committed") return;
+
+  const mechanical=(value:typeof original)=>{
+    const result=value.results["generic-subtract-die:test"] as {natural:number;modifier:number;total:number;target:number;outcome:string;provenance:Array<{reason:string}>};
+    return {natural:result.natural,modifier:result.modifier,total:result.total,target:result.target,outcome:result.outcome};
+  };
+  assert.deepEqual(mechanical(original),{natural:18,modifier:-5,total:13,target:15,outcome:"failure"});
+  assert.deepEqual(mechanical(changed),mechanical(original));
+  const provenance=(original.results["generic-subtract-die:test"] as {provenance:Array<{reason:string}>}).provenance;
+  assert.ok(provenance.some((entry)=>entry.reason==="subtracted d12 roll [6]"));
+  assert.ok(provenance.some((entry)=>entry.reason==="-1 to d20 total"),"formula flat is subtracted with the die");
+});
+
+test("subtract-die preserves attack natural-20 semantics and rejects missing die authority",()=>{
+  const definition=structuredClone(AUTHORED);
+  definition.id="external.previously-unseen.attack-roll-reduction";
+  definition.entryPoints[0].test.kind="attack-roll";
+  definition.entryPoints[0].operations=[{kind:"roll.modify",mode:"subtract-die",dice:"1d12+1"}];
+  const state=runtimeState();
+  const parsed=parseManualCommonPlayOperationDefinition(definition);
+  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,{
+    resolutionId:"subtract-die-natural-20",
+    actorId:"hero",
+    entryPointId:"attempt",
+    d20:{
+      faces:[20],
+      modifierContributions:[{source:"actor:attack",value:2}],
+      modifierDiceFaces:{0:[12]},
+    },
+  });
+  assert.equal(committed.status,"committed");
+  if(committed.status==="committed") {
+    const result=committed.results["subtract-die-natural-20:test"] as {natural:number;modifier:number;total:number;target:number;outcome:string;critical:boolean};
+    assert.deepEqual(result&&{natural:result.natural,modifier:result.modifier,total:result.total,target:result.target,outcome:result.outcome,critical:result.critical},{natural:20,modifier:-11,total:9,target:15,outcome:"success",critical:true});
+  }
+
+  const rejected=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,{
+    resolutionId:"subtract-die-missing-authority",
+    actorId:"hero",
+    entryPointId:"attempt",
+    d20:{faces:[18],modifierContributions:[{source:"actor:attack",value:2}]},
   });
   assert.equal(rejected.status,"rejected");
   assert.match(rejected.status==="rejected"?rejected.error:"",/requires authoritative die face/);
