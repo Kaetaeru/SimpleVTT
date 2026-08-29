@@ -3,7 +3,9 @@ import { MockAdapter } from "./mockAdapter";
 import { HostSessionLedger } from "./connectedSessionProtocol";
 import { connectedStateFor } from "./connectedSessionState";
 import { broadcastConnectedWire, connectedInternal } from "./connectedSessionRuntimeAdapter";
+import { consumeAdapterTurnLifecycleEvents } from "./phase09EffectAwareTurnAdapter";
 import { readyActionConfigurationsFor, type ReadyActionConfiguration } from "./standardActionReadyState";
+import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 const previousStartInitiative=MockAdapter.prototype.startInitiative;
 const previousEndInitiative=MockAdapter.prototype.endInitiative;
@@ -22,6 +24,7 @@ export function commitConnectedTurnProjectionEvents(
   snapshot:AppSnapshot,
   label:string,
   readyClears:ConnectedReadyLifecycleClear[] = [],
+  resolutionEvents:ResolutionEvent[] = [],
 ) {
   const orderedReadyClears=[...readyClears].sort((left,right)=>left.actorId.localeCompare(right.actorId));
   for (const readyClear of orderedReadyClears) {
@@ -37,6 +40,7 @@ export function commitConnectedTurnProjectionEvents(
       round:snapshot.scene.round,
       currentActorId:snapshot.scene.currentActorId,
       economyByActor:structuredClone(snapshot.scene.economyByActor),
+      resolutionEvents:resolutionEvents.map((event)=>structuredClone(event)),
       stateChanges:[label,`round=${snapshot.scene.round}`,`currentActor=${snapshot.scene.currentActorId}`],
       provenance:["Phase 09 authoritative turn runtime projection"],
     },
@@ -64,12 +68,13 @@ export async function publishConnectedTurnProjection(
   adapter:MockAdapter,
   label:string,
   readyClears:ConnectedReadyLifecycleClear[] = [],
+  resolutionEvents:ResolutionEvent[] = [],
 ) {
   const state=connectedStateFor(adapter);
   const app=connectedInternal(adapter);
   if (state.mode!=="host"||!state.ledger) return app.getSnapshot();
   const snapshot=await app.getSnapshot();
-  const events=commitConnectedTurnProjectionEvents(state.ledger,snapshot,label,readyClears);
+  const events=commitConnectedTurnProjectionEvents(state.ledger,snapshot,label,readyClears,resolutionEvents);
   await broadcastConnectedWire({
     type:"event-batch",
     sessionId:state.ledger.sessionId,
@@ -125,9 +130,10 @@ MockAdapter.prototype.endTurn=async function endConnectedTurn() {
   if (blockedByRemotePending(this)) return connectedInternal(this).getSnapshot();
   const readyBefore=state.mode==="host"?readyActionConfigurationsFor(this):[];
   const next=await previousEndTurn.call(this);
+  const resolutionEvents=consumeAdapterTurnLifecycleEvents(this);
   if (state.mode!=="host") return next;
   const readyClears=readyLifecycleClears(readyBefore,readyActionConfigurationsFor(this),"next-turn-start");
-  return publishConnectedTurnProjection(this,"turn-end",readyClears);
+  return publishConnectedTurnProjection(this,"turn-end",readyClears,resolutionEvents);
 };
 
 MockAdapter.prototype.setCurrentActor=async function setConnectedCurrentActor(actorId:string) {
