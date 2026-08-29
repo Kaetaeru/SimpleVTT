@@ -89,6 +89,7 @@ function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateC
   if (change.kind==="zone-membership") return found(runtimeState.zoneMemberships?.find((membership)=>membership.artifactId===change.artifactId));
   if (change.kind==="concentration") return found(runtimeState.concentration[change.targetId]);
   if (change.kind==="spellcasting-turn") return found(runtimeState.spellcastingTurn);
+  if (change.kind==="turn-clock") return found(runtimeState.clock);
   if (change.kind==="combatant") return found(runtimeState.combatants[change.targetId]);
   const combatant=runtimeState.combatants[change.targetId];
   if (!combatant) return missing();
@@ -193,6 +194,10 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
     runtimeState.spellcastingTurn=change.after ? structuredClone(change.after) : undefined;
     return;
   }
+  if (change.kind==="turn-clock") {
+    runtimeState.clock=structuredClone(change.after);
+    return;
+  }
   if (change.kind==="combatant") {
     if (change.after) runtimeState.combatants[change.targetId]=structuredClone(change.after);
     else delete runtimeState.combatants[change.targetId];
@@ -226,7 +231,7 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
 }
 
 function runtimeOnly(change:RuntimeStateChange) {
-  return change.kind==="effect" || change.kind==="artifact" || change.kind==="zone-membership" || change.kind==="concentration" || change.kind==="spellcasting-turn" || change.kind==="combatant";
+  return change.kind==="effect" || change.kind==="artifact" || change.kind==="zone-membership" || change.kind==="concentration" || change.kind==="spellcasting-turn" || change.kind==="turn-clock" || change.kind==="combatant";
 }
 
 function changeField(change:RuntimeStateChange) {
@@ -236,6 +241,7 @@ function changeField(change:RuntimeStateChange) {
   if (change.kind==="zone-membership") return `zone-membership.${change.artifactId}`;
   if (change.kind==="concentration") return "concentration";
   if (change.kind==="spellcasting-turn") return "spellcasting-turn";
+  if (change.kind==="turn-clock") return "turn-clock";
   if (change.kind==="combatant") return "combatant";
   return `${change.kind}.${change.field}`;
 }
@@ -272,6 +278,10 @@ function spellcastingTurnLabel(state:Extract<RuntimeStateChange,{kind:"spellcast
   return state ? `${state.turnId} [${state.slottedCasterIds.join(", ") || "—"}]` : "—";
 }
 
+function clockLabel(state:Extract<RuntimeStateChange,{kind:"turn-clock"}>["after"]) {
+  return `round ${state.round} · ${state.activeActorId??"—"} · ${state.phase??"—"} · ${state.elapsedSeconds}s`;
+}
+
 function applyLabel(change:RuntimeStateChange) {
   if (change.kind==="hp") {
     const field=change.field==="current" ? "HP" : change.field==="maximum" ? "최대 HP" : "임시 HP";
@@ -300,6 +310,7 @@ function applyLabel(change:RuntimeStateChange) {
     return `${change.targetId} concentration ${before} → ${after}`;
   }
   if (change.kind==="combatant") return `${change.targetId} combatant ${change.operation}`;
+  if (change.kind==="turn-clock") return `${change.targetId} ${clockLabel(change.before)} → ${clockLabel(change.after)}`;
   return `${change.targetId} spellcasting-turn ${spellcastingTurnLabel(change.before)} → ${spellcastingTurnLabel(change.after)}`;
 }
 
