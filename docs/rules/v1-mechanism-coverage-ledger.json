@@ -27,7 +27,7 @@
         "common-play-contract.schema.json: expression/predicate/property.modify",
         "dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"
       ],
-      "currentState": "Schema and kernel evidence exist; production composition audit required",
+      "currentState": "The persisted contract exposes generic expressions, predicates, RulesProfile formulas, and property.modify, while profileEngine evaluates expressions/predicates/derived properties with provenance. Production parity is incomplete: commonPlayOperationRuntime does not lower property.modify, ResolutionOperation has no typed property contribution/mutation, and Effect state has no typed property modifier payload. The property.modify schema itself does not identify target, lifetime, source ownership, or owning transaction, so adding a runtime mutation now would invent stat ownership rather than reuse an existing contract.",
       "requiredSemantics": [
         "literals",
         "property refs",
@@ -44,13 +44,19 @@
       ],
       "transactionDomain": "RulesProfile evaluation and owning transaction",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
+      "implementationEvidence": [
+        "schemas/common-play-contract.schema.json expression/predicate/property.modify vocabulary",
+        "profileEngine.ts evaluateExpression/evaluateSemanticExpression/evaluateSemanticPredicate/resolveProfileProperty"
+      ],
       "productionEvidence": [],
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "named progression and runtime stat materialization"
+        "property.modify has no portable production lowerer or typed ResolutionOperation owner",
+        "property.modify target/lifetime/source ownership is undefined in the persisted contract",
+        "runtime Effect state has no typed property contribution payload",
+        "named progression/runtime stat materialization remains outside a generic property owner"
       ],
       "connectedRelevant": false,
       "persistenceRelevant": true
