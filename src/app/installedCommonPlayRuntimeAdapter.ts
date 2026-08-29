@@ -16,7 +16,7 @@ import {
 } from "../domain/commonPlayOperationRuntime";
 import { lowerCommonPlay, parseCommonPlayDefinition, type LoweredCommonPlayEntryPoint } from "../domain/commonPlayDefinitionRuntime";
 import { resolveCommonPlaySaveDamageEntryPoint } from "../domain/commonPlayEntryPointRuntime";
-import { resolveCommonPlayEffectActivation } from "../domain/commonPlayEffectRuntime";
+import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";
 import { resolveCommonPlayZoneActivation } from "../domain/commonPlayZoneRuntime";
 import { resolveCommonPlayArtifactActivation } from "../domain/commonPlayArtifactRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
@@ -26,6 +26,7 @@ import type { DamageRollResolution } from "../domain/damageRoll";
 import type { TargetingFactInput } from "../domain/targeting";
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
+import { resolvePendingResolution } from "../domain/resolution";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -133,6 +134,21 @@ async function storedInvocationDefinitionActionId(adapter:MockAdapter,definition
     });
   }
   return undefined;
+}
+
+async function installedPersistentEffectDefinitions(adapter:MockAdapter) {
+  const definitions=new Map<string,CommonPlayPersistentEffectDefinition>();
+  for(const entry of await requiredSessionInstalledContent(adapter,[])) {
+    for(const mechanic of entry.mechanics??[]) {
+      if(mechanic.kind!=="common-play") continue;
+      const canonical=parseCommonPlayDefinition(mechanic.config);
+      for(const point of canonical.entryPoints??[]) {
+        const lowered=lowerCommonPlay(canonical,point.id);
+        if(lowered.kind==="effect") definitions.set(lowered.definition.id,lowered.definition);
+      }
+    }
+  }
+  return [...definitions.values()];
 }
 
 function projectedArtifactAction(
@@ -531,7 +547,10 @@ async function executeCommonPlayAction(
   if(lowered.kind==="operations") {
     const entryPoint=lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
     operationEntryPoint=entryPoint;
-    committed=resolveCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
+    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
+    committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,appendCommonPlayDamageTakenTriggers(
+      state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",
+    ));
   } else if(lowered.kind==="save-damage") {
     const entryPoint=lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
     const damage=parseCommonPlayDamageDiceFormula(entryPoint.operations[0].amount);

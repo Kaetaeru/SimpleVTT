@@ -318,6 +318,44 @@ function triggerOperations(
   return operations;
 }
 
+export function appendCommonPlayDamageTakenTriggers(
+  inputState:RulesRuntimeState,
+  definitions:CommonPlayPersistentEffectDefinition[],
+  pending:PendingResolution,
+  actorCreatureKind:"character"|"monster",
+):PendingResolution {
+  const operations=[...pending.operations];
+  const handledTargets=new Set<string>();
+  for(const [damageIndex,damage] of pending.operations.entries()) {
+    if(damage.kind!=="damage"||damage.when||handledTargets.has(damage.targetId)) continue;
+    handledTargets.add(damage.targetId);
+    for(const [definitionIndex,definition] of definitions.entries()) {
+      validateDefinition(definition);
+      for(const [effectIndex,effect] of matchingEffects(inputState,definition,damage.targetId).entries()) {
+        const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
+        if(typeof templateId!=="string") throw new Error(`effect ${effect.id} is missing its Common Play template binding`);
+        const template=templateById(definition,templateId);
+        validateTemplate(template,effectIndex);
+        const when={operationId:damage.id,field:"finalDamage",greaterThan:0} as const;
+        for(const [ruleIndex,rule] of template.rules.entries()) {
+          if(rule.event!=="damage.taken") continue;
+          for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
+            id:`${pending.id}:automatic:${definitionIndex}:${effectIndex}:${damageIndex}:${ruleIndex}:${operationIndex}`,
+            kind:"damage",targetId:pending.actorId,damageType:operation.damageType,
+            amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
+            creatureKind:actorCreatureKind,when,
+          });
+        }
+        operations.push({
+          id:`${pending.id}:automatic:${definitionIndex}:${effectIndex}:${damageIndex}:remove`,
+          kind:"remove-effect",effectId:effect.id,when,
+        });
+      }
+    }
+  }
+  return operations.length===pending.operations.length?pending:{...pending,operations};
+}
+
 export function resolveCommonPlayEffectEvent(
   profile:RulesProfileLike,
   inputState:RulesRuntimeState,

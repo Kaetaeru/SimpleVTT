@@ -85,6 +85,12 @@ function storedConcentrationCaptureConfig(prefix:string) {
   return config;
 }
 
+function automaticDamageProbeConfig(prefix:string) {
+  return {schemaVersion:"0.2-draft",id:`${prefix}.automatic-damage-probe`,entryPoints:[{
+    id:"take-damage",invocation:"manual",operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"self"}],
+  }]};
+}
+
 function payload(prefix="unknown-gate-n",paidIndex?:number) {
   const moduleId=`${prefix}.module`;
   const entries=[
@@ -98,6 +104,7 @@ function payload(prefix="unknown-gate-n",paidIndex?:number) {
     {id:`${prefix}.ready-movement-payload-content`,category:"option",name:"Unknown Held Movement",config:storedMovementPayloadConfig(prefix)},
     {id:`${prefix}.ready-movement-capture-content`,category:"option",name:"Unknown Prepare Movement",config:storedMovementCaptureConfig(prefix)},
     {id:`${prefix}.ready-concentration-capture-content`,category:"option",name:"Unknown Prepare Concentration",config:storedConcentrationCaptureConfig(prefix)},
+    {id:`${prefix}.automatic-damage-probe-content`,category:"option",name:"Unknown Damage Probe",config:automaticDamageProbeConfig(prefix)},
   ];
   if(paidIndex!==undefined) Object.assign(entries[paidIndex].config,{
     payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
@@ -422,6 +429,63 @@ test("installed held-Concentration stored spell rejects after loss and restores 
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.concentration["char.aelar"]?.groupId,"held-spell");
   assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),true);
+});
+
+test("installed damage and persistent effect trigger commit atomically without a named dispatcher",async()=>{
+  const prefix="unknown-automatic-effect";
+  const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
+  await adapter.resolveAction(action(1,"activate"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  const actorBefore=snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!;
+  const hpBefore=actorBefore.hp,tempHpBefore=actorBefore.tempHp;
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.length,1);
+  await adapter.resolveAction(action(10,"take-damage"),["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  const actorAfter=snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!;
+  assert.equal(actorAfter.hp+actorAfter.tempHp,hpBefore+tempHpBefore-7,JSON.stringify(snapshot.resolution));
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.length,0);
+  assert.ok(snapshot.resolution?.stateChanges.some((change)=>change.includes("effect")));
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!.hp,hpBefore);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!.tempHp,tempHpBefore);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.length,1);
+});
+
+test("automatic persistent effect transaction converges through connected replay, reconnect, and Undo",async()=>{
+  const prefix="unknown-connected-automatic",sessionId="session.common-play-automatic";
+  const host=new MockAdapter();const {action}=await install(host,prefix);
+  const connected=connectedStateFor(host);connected.mode="host";connected.sessionId=sessionId;connected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const originalSend=tauriSessionTransport.send;
+  const runHost=async(operation:()=>Promise<unknown>)=>{
+    const wires:string[]=[];tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+    try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+    const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+    assert.ok(batch,JSON.stringify(wires));return batch;
+  };
+  const activateBatch=await runHost(()=>host.resolveAction(action(1,"activate"),["char.aelar"]));
+  const client=new MockAdapter();await install(client,prefix);
+  const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,activateBatch.events)).status,"applied");
+  const damageBatch=await runHost(()=>host.resolveAction(action(10,"take-damage"),["char.aelar"]));
+  assert.equal((await applyConnectedClientEvents(client,damageBatch.events)).status,"applied");
+  let hostSnapshot=await host.getSnapshot(),clientSnapshot=await client.getSnapshot();
+  const health=(snapshot:typeof hostSnapshot)=>{const actor=snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!;return actor.hp+actor.tempHp;};
+  assert.equal(health(clientSnapshot),health(hostSnapshot));
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.effects,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects);
+
+  const undoBatch=await runHost(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(health(clientSnapshot),health(hostSnapshot));
+  assert.equal(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.effects.length,1);
+
+  const reconnect=new MockAdapter();await install(reconnect,prefix);
+  const reconnectState=connectedStateFor(reconnect);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,connected.ledger!.eventsAfter(0))).status,"applied");
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  assert.equal(health(reconnectSnapshot),health(hostSnapshot));
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)?.effects,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects);
 });
 
 test("summoned Actor projects and executes its portable Common Play action with economy and Undo",async()=>{
