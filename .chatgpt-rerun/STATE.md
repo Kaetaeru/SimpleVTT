@@ -12,7 +12,7 @@
 
 ## Durable checkpoint
 
-C8 Core is complete. C9 Gate N mechanism-coverage reconciliation remains active. The 36-row coverage ledger is authoritative; a row stays `INCOMPLETE` until its full required semantic/evidence matrix is satisfied. Current coverage remains `IMPLEMENTED=2`, `INCOMPLETE=34`, `PROVEN_UNNEEDED=0`. `gateNBlockingNamedFallbacks` remains empty. Overall verdict: `V1 INCOMPLETE`.
+C8 Core is complete. C9 Gate N mechanism-coverage reconciliation remains active. The 36-row coverage ledger is authoritative; a row stays `INCOMPLETE` until its full required semantic/evidence matrix is satisfied. Current coverage is `IMPLEMENTED=3`, `INCOMPLETE=33`, `PROVEN_UNNEEDED=0`. `gateNBlockingNamedFallbacks` remains empty. Overall verdict: `V1 INCOMPLETE`.
 
 Previously validated C9 checkpoints remain authoritative and must not be repeated unless an affected surface changes:
 
@@ -54,29 +54,32 @@ Family P remains incomplete because repository authority still does not define o
 
 ## Family V audit — lifetime/reconnect advanced, final disposition unchanged
 
-Live GitHub advanced beyond the prior STATE checkpoint before this Rerun execution. Current product/test head before this STATE write was `77b533aaa4faed38dba7aa17d85f9068dd492e13`; the immediately preceding UI-registration head was `18a66247a175eacb099b70dbf16b59ca32257089`.
-
-No production source change was required for the new Family V lifetime proof. The added arbitrary installed actor-artifact regression uses the existing generic artifact expiry/removal, turn-clock, ResolutionEvent, connected replay, and event-native Undo path:
+No production source change was required for the Family V lifetime proof. The arbitrary installed actor-artifact regression uses the existing generic artifact expiry/removal, turn-clock, ResolutionEvent, connected replay, and event-native Undo path:
 
 - `afa2860f55ff498929984dca2905c1bbacf9e5b5`: `connectedActorArtifactLifecycleProduction.test.ts` proves an unknown elapsed 6-second actor artifact spawns with its typed combatant, reconstructs on a fresh connected replica, expires on normal round-wrap elapsed advance, removes both artifact and projected combatant, rejects duplicate replay, reconstructs the expired state on fresh reconnect, restores artifact + combatant through event-native Undo, and reconstructs the restored state on another fresh reconnect.
 - `18a66247a175eacb099b70dbf16b59ca32257089`: registers that lifecycle regression in the authoritative UI connected/live-lifecycle step.
 - UI run `33277978481`, job `99167998243`, exact head `18a66247a175eacb099b70dbf16b59ca32257089`: step 17 SUCCESS including `connectedActorArtifactLifecycleProduction.test.ts` and the existing `connectedActorArtifactReconnectProduction.test.ts`; steps 18-27 also SUCCESS. Broad Phase09 step 28 remains the inherited failure and Typecheck/build step 29 is skipped, so no full-build green is claimed.
-- `77b533aaa4faed38dba7aa17d85f9068dd492e13` removes only the temporary actor-lifecycle diagnostic workflow; it does not remove the main UI regression registration.
 
-This closes the previously stale **elapsed lifetime/despawn + connected reconnect/replay/Undo** evidence gap for Family V. It does not define the ledger-required **death/replacement policy**. The current generic artifact contract has elapsed/durable/source-lifetime forms and `remove-artifact` semantics, but no repository-authoritative rule was found that says actor death or replacement must select a particular removal/replacement transition. Per the architecture charter and the prior Next Exact Action, that semantic must not be invented merely to promote the ledger row.
+This closes elapsed lifetime/despawn + connected reconnect/replay/Undo. It does not define the ledger-required death/replacement policy. The generic artifact contract has elapsed/durable/source-lifetime forms and `remove-artifact` semantics, but no repository-authoritative rule says actor death or replacement must select a particular removal/replacement transition. Family V therefore remains `INCOMPLETE`; do not invent that policy merely to promote the row.
 
-Family V therefore remains `INCOMPLETE`. The ledger row should be reconciled later to record the new lifetime/reconnect evidence, but its `death/despawn/replacement` requirement remains a real blocker until repository authority supplies or proves the policy. Do not repeat actor spawn/action/lifetime evidence.
+## Completed Family U
 
-## Next candidate: Family U portable object/link lifecycle
+Family U (`object-link-artifacts`) is now `IMPLEMENTED` in the Gate N ledger.
 
-Family U (`object-link-artifacts`) is a concrete non-blocked production gap, not merely a stale ledger row:
+The final ownership is deliberately single-path: object/link creation remains in `commonPlayArtifactRuntime.ts`, while source-owned lifecycle actions are authored under persisted artifact-template `grantedEntryPoints` and execute through `commonPlayArtifactLifecycleRuntime.ts` into the existing generic Resolver artifact operations. A duplicate top-level lifecycle lowering attempt was removed so there is no second artifact engine.
 
-- `commonPlayArtifactRuntime.ts` already lowers arbitrary object/link templates through generic `artifact.spawn`; `installedCommonPlayLoweredFamiliesProduction.test.ts` proves arbitrary object/link spawn and rename invariance in the installed production route.
-- `commonPlayArtifactFamiliesRuntime.test.ts` already proves the generic Resolver kernel for object AC/HP, damage threshold, defenses, repair, relocation, destruction/removal, link endpoints/relations, identity invariance, and dangling-link rejection.
-- However `commonPlayOperationRuntime.ts` currently exposes portable resource/economy/damage/healing/movement/roll operations only, while `commonPlayArtifactRuntime.ts` exposes only `artifact.spawn`. The existing generic Resolver artifact lifecycle operations (`damage-artifact`, `repair-artifact`, relocation/removal) are therefore not yet authorable/executable by an unknown installed Common Play module through the production operation surface.
+Retained implementation and acceptance evidence:
 
-This is the smallest clear Family U gap because it reuses existing Resolver semantics rather than adding a new object/link engine.
+- `59bdb5d8de2468c4338dac4030e08dbbbac8b691`: persisted Common Play schema exposes artifact lifecycle vocabulary and template granted entry points.
+- `d1c98e8cb2b66e1d5b0f78857f23f01cb8338db3`: schema-backed granted artifact lifecycle operations lower to existing generic Resolver damage/repair/relocate/update/remove artifact operations.
+- `efa12bc784805e204b2189a41d4cde18f0ce6bec`: lifecycle action projection accumulates actions across multiple source-owned artifacts instead of replacing a prior artifact's actions.
+- `d9385c1e1ffd670c6da1900cedc3c6f7e9756721`: connected acceptance uses authoritative resolved link endpoints rather than the pre-resolution `actor` binding token.
+- `16741437419c0c80ec1da42df29aece09016eca2`: keeps lifecycle ownership on the granted-entry runtime and removes duplicate top-level lifecycle lowering.
+- C9 Family U Diagnostic run `33279420876`, job `99171917300`, head `612739d4a3f1877b293cb1b4d778724ae4fd220d`: focused `connectedObjectLinkArtifactLifecycleProduction.test.ts` is 2/2 green, proving unknown object/link spawn, AC/HP/threshold/defenses, damage/repair/destruction, relocation/opaque placement, portal/link/tether relations, elapsed cleanup, Host/Client replay, duplicate handling, fresh reconnect, event-native Undo, and identity rename invariance.
+- The same diagnostic's `npm run build` reached TypeScript and failed only in pre-existing/touched-by-other-slices files (`connectedActionRoutingAdapter.ts`, `realActivityProjectionService.ts`, `resolutionEventUndo.ts`, `commonPlayEffectRuntime.ts`), not Family U files. Those failures are classified separately and no full-build green is claimed for this head.
+- `525ac6204f4e966502654ea46393be313683f36a`: ledger promotion to `IMPLEMENTED` with implementation/production/identity/connected/persistence evidence.
+- `86e9b08b3af1d2eff9965abf4010c9485809f76c`: removes the temporary promotion helper workflow after the durable ledger write.
 
 ## Next Exact Action
 
-Start Family U from the existing generic artifact kernel. Inspect the persisted Common Play schema and exact `ResolutionOperation` shapes for artifact damage, repair, relocation, and removal, then expose only the smallest reusable portable operation vocabulary required for an unknown object/link RuleModule to use those already-existing operations. Route it through the existing installed Common Play production/ResolutionEvent path and add one focused arbitrary-identity Host/Client replay, duplicate replay, fresh reconnect, and Undo proof covering object damage/repair/destruction and link lifecycle as applicable. Do not create a second artifact engine or transport, and do not infer new link/portal behavior beyond fields already owned by the artifact contract.
+Do not reopen Families S/T/U. Family V remains blocked only on repository-authoritative death/replacement semantics and should not be guessed. Move to the next non-blocked ledger audit, Family W (`form-transformation-possession`): reconcile the existing generic form artifact kernel/installed production evidence against the row's required property/resource/HP/action/movement/sense/spell/restoration/lifetime/controller semantics. If existing primitives already cover a requirement, add focused production/identity/reconnect/Undo evidence rather than a new form engine; if replacement/restoration or death/end ownership is genuinely undefined, preserve the row as `INCOMPLETE` and move to the next non-blocked family instead of inventing policy.
