@@ -166,8 +166,10 @@ test("arbitrary installed Zone turn-end and next turn-start converge through one
   assert.equal((await applyConnectedClientEvents(client,enterNextBatch.events)).status,"applied");
 
   const before=await host.getSnapshot();
-  const currentBefore=before.scene.entities.find((entity)=>entity.id===currentActorId)!.hp;
-  const nextBefore=before.scene.entities.find((entity)=>entity.id===nextActorId)!.hp;
+  const currentEntityBefore=before.scene.entities.find((entity)=>entity.id===currentActorId)!;
+  const nextEntityBefore=before.scene.entities.find((entity)=>entity.id===nextActorId)!;
+  const currentBefore=currentEntityBefore.hp+currentEntityBefore.tempHp;
+  const nextBefore=nextEntityBefore.hp+nextEntityBefore.tempHp;
   const runtimeBefore=snapshotAdapterTurnRuntimeState(host,before.scene)!;
   const zoneBefore=runtimeBefore.artifacts?.find((artifact)=>artifact.artifactKind==="zone")!;
   const metadataBefore=structuredClone(zoneBefore.metadata??{});
@@ -179,10 +181,14 @@ test("arbitrary installed Zone turn-end and next turn-start converge through one
   assert.equal((await applyConnectedClientEvents(client,turnBatch.events)).status,"applied");
 
   let hostAfter=await host.getSnapshot(),clientAfter=await client.getSnapshot();
-  assert.equal(hostAfter.scene.entities.find((entity)=>entity.id===currentActorId)!.hp,currentBefore-4,"zone.turn-end must damage the ending actor exactly once");
-  assert.equal(hostAfter.scene.entities.find((entity)=>entity.id===nextActorId)!.hp,nextBefore-3,"zone.turn-start must damage the next actor exactly once");
-  assert.equal(clientAfter.scene.entities.find((entity)=>entity.id===currentActorId)!.hp,currentBefore-4);
-  assert.equal(clientAfter.scene.entities.find((entity)=>entity.id===nextActorId)!.hp,nextBefore-3);
+  let hostCurrent=hostAfter.scene.entities.find((entity)=>entity.id===currentActorId)!;
+  let hostNext=hostAfter.scene.entities.find((entity)=>entity.id===nextActorId)!;
+  let clientCurrent=clientAfter.scene.entities.find((entity)=>entity.id===currentActorId)!;
+  let clientNext=clientAfter.scene.entities.find((entity)=>entity.id===nextActorId)!;
+  assert.equal(hostCurrent.hp+hostCurrent.tempHp,currentBefore-4,"zone.turn-end must damage the ending actor exactly once after temporary HP absorption");
+  assert.equal(hostNext.hp+hostNext.tempHp,nextBefore-3,"zone.turn-start must damage the next actor exactly once after temporary HP absorption");
+  assert.equal(clientCurrent.hp+clientCurrent.tempHp,currentBefore-4);
+  assert.equal(clientNext.hp+clientNext.tempHp,nextBefore-3);
   const hostRuntimeAfter=snapshotAdapterTurnRuntimeState(host,hostAfter.scene)!;
   const clientRuntimeAfter=snapshotAdapterTurnRuntimeState(client,clientAfter.scene)!;
   const hostZoneAfter=hostRuntimeAfter.artifacts?.find((artifact)=>artifact.artifactKind==="zone")!;
@@ -197,18 +203,24 @@ test("arbitrary installed Zone turn-end and next turn-start converge through one
   const reconnectApplied=await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0));
   assert.equal(reconnectApplied.status,"applied",JSON.stringify(reconnectApplied));
   const reconnectAfter=await reconnect.getSnapshot();
-  assert.equal(reconnectAfter.scene.entities.find((entity)=>entity.id===currentActorId)!.hp,currentBefore-4);
-  assert.equal(reconnectAfter.scene.entities.find((entity)=>entity.id===nextActorId)!.hp,nextBefore-3);
+  const reconnectCurrent=reconnectAfter.scene.entities.find((entity)=>entity.id===currentActorId)!;
+  const reconnectNext=reconnectAfter.scene.entities.find((entity)=>entity.id===nextActorId)!;
+  assert.equal(reconnectCurrent.hp+reconnectCurrent.tempHp,currentBefore-4);
+  assert.equal(reconnectNext.hp+reconnectNext.tempHp,nextBefore-3);
   assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnect,reconnectAfter.scene)?.artifacts,hostRuntimeAfter.artifacts);
   assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnect,reconnectAfter.scene)?.clock,hostRuntimeAfter.clock);
 
   const undoBatch=await captureHostBatch(()=>host.undoLastResolution());
   assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
   hostAfter=await host.getSnapshot();clientAfter=await client.getSnapshot();
-  assert.equal(hostAfter.scene.entities.find((entity)=>entity.id===currentActorId)!.hp,currentBefore);
-  assert.equal(hostAfter.scene.entities.find((entity)=>entity.id===nextActorId)!.hp,nextBefore);
-  assert.equal(clientAfter.scene.entities.find((entity)=>entity.id===currentActorId)!.hp,currentBefore);
-  assert.equal(clientAfter.scene.entities.find((entity)=>entity.id===nextActorId)!.hp,nextBefore);
+  hostCurrent=hostAfter.scene.entities.find((entity)=>entity.id===currentActorId)!;
+  hostNext=hostAfter.scene.entities.find((entity)=>entity.id===nextActorId)!;
+  clientCurrent=clientAfter.scene.entities.find((entity)=>entity.id===currentActorId)!;
+  clientNext=clientAfter.scene.entities.find((entity)=>entity.id===nextActorId)!;
+  assert.equal(hostCurrent.hp+hostCurrent.tempHp,currentBefore);
+  assert.equal(hostNext.hp+hostNext.tempHp,nextBefore);
+  assert.equal(clientCurrent.hp+clientCurrent.tempHp,currentBefore);
+  assert.equal(clientNext.hp+clientNext.tempHp,nextBefore);
   const hostRuntimeUndo=snapshotAdapterTurnRuntimeState(host,hostAfter.scene)!;
   const clientRuntimeUndo=snapshotAdapterTurnRuntimeState(client,clientAfter.scene)!;
   assert.deepEqual(hostRuntimeUndo.artifacts?.find((artifact)=>artifact.artifactKind==="zone")?.metadata??{},metadataBefore,"Undo must restore frequency markers");
