@@ -84,6 +84,7 @@ function packagePayload() {
           schemaVersion:"0.2-draft",
           id:MECHANIC_ID,
           payments:[
+            {kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true},
             {kind:"resource",resource:FIGHTER_SECOND_WIND_RESOURCE_ID,amount:{value:1},consumeAt:"commit"},
           ],
           entryPoints:[{
@@ -306,11 +307,13 @@ test("installed portable Common Play executes through the production resolveActi
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.resolution?.actionId,actionId);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.length,1);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)?.current,resourceBefore-1);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions,undefined);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)?.current,resourceBefore);
 });
 

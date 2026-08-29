@@ -35,6 +35,7 @@ interface AdapterState {
 
 type CommonPlayProductionAction = {
   contentId:string;
+  category:CatalogEntry["category"];
   nameKo:string;
   nameEn:string;
   source:string;
@@ -67,6 +68,7 @@ function builtinCommonPlayAction(adapter:MockAdapter,actionId:string):CommonPlay
       const lowered=lowerCommonPlay(canonical,entryPoint.id);
       return {
       contentId:entry.contentId??entry.id,
+      category:entry.category,
       nameKo:entry.nameKo,
       nameEn:entry.nameEn,
       source:entry.source,
@@ -92,6 +94,7 @@ async function installedCommonPlayAction(adapter:MockAdapter,actionId:string):Pr
   const lowered=lowerCommonPlay(mechanic.config,entryPoint.id);
   return {
     contentId:entry.contentId,
+    category:entry.category,
     nameKo:entry.nameKo,
     nameEn:entry.nameEn,
     source:entry.source,
@@ -303,6 +306,7 @@ async function executeCommonPlayAction(
       ]),
       damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
       ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId}}:{}),
+      actionKind:entryPoint.test?.kind==="attack-roll"?"attack":action.category==="spell"?"magic":"other",
       ...(interactionId?{interactionResponse:{interactionId,accepted:true as const}}:{}),
     });
   } else if(lowered.kind==="save-damage") {

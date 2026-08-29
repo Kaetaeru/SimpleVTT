@@ -4,6 +4,7 @@ import { DomainEvaluationError, type RollStateContribution, type RulesProfileLik
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { TargetingFactInput } from "./targeting";
+import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -72,7 +73,7 @@ type CommonPlayResourcePayment={
 
 type CommonPlayReactionPayment={
   kind:"economy";
-  bucket:"reaction";
+  bucket:TurnSlot;
   amount:LiteralNumberExpression;
   consumeAt:"commit";
   refundOnCancel:true;
@@ -127,6 +128,7 @@ export interface CommonPlayOperationExecutionInput {
     interactionId:string;
     accepted:true;
   };
+  actionKind?:ActionUseKind;
 }
 
 type Obj=Record<string,unknown>;
@@ -215,12 +217,12 @@ function parsePayment(value:unknown,label:string):CommonPlayPayment {
   }
   if(payment.kind==="economy") {
     supportedKeys(payment,ECONOMY_PAYMENT_KEYS,label);
-    if(payment.bucket!=="reaction") throw new DomainEvaluationError(`${label}.bucket must be reaction for portable Common Play consent`);
+    if(payment.bucket!=="action"&&payment.bucket!=="bonus-action"&&payment.bucket!=="reaction") throw new DomainEvaluationError(`${label}.bucket must be action, bonus-action, or reaction`);
     const amount=literalExpression(payment.amount,`${label}.amount`);
-    if(amount.value!==1) throw new DomainEvaluationError(`${label}.amount must be exactly 1 for portable Common Play Reaction payment`);
-    if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play Reaction payment`);
+    if(amount.value!==1) throw new DomainEvaluationError(`${label}.amount must be exactly 1 for portable Common Play economy payment`);
+    if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play economy payment`);
     if(payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true for portable Common Play Reaction payment`);
-    return {kind:"economy",bucket:"reaction",amount,consumeAt:"commit",refundOnCancel:true};
+    return {kind:"economy",bucket:payment.bucket,amount,consumeAt:"commit",refundOnCancel:true};
   }
   throw new DomainEvaluationError(`unsupported Common Play payment kind: ${String(payment.kind)}`);
 }
@@ -360,7 +362,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
       operations:entry.operations.map((operation,operationIndex)=>parseOperation(operation,`${label}.entryPoints[${index}].operations[${operationIndex}]`)),
     };
   });
-  const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy").length??0;
+  const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;
   const interactionCount=entryPoints.filter((entry)=>entry.interaction).length;
   if(interactionCount>0&&reactionPaymentCount!==1) {
     throw new DomainEvaluationError(`${label} portable consent interaction requires exactly one Reaction economy payment`);
@@ -400,7 +402,9 @@ function compilePayments(
       id:`${input.resolutionId}:payment:${index}`,
       kind:"use-economy" as const,
       actorId:input.actorId,
-      slot:"reaction" as const,
+      slot:payment.bucket,
+      bonusActionGranted:payment.bucket==="bonus-action"||undefined,
+      actionKind:input.actionKind,
     }:{
       id:`${input.resolutionId}:payment:${index}`,
       kind:"spend-resource" as const,

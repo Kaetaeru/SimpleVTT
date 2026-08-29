@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   compileCommonPlayEntryPointOperations,
+  parseManualCommonPlayOperationDefinition,
   resolveCommonPlayEntryPointOperations,
   type CommonPlayOperationDefinition,
   type CommonPlayOperationExecutionInput,
@@ -118,6 +119,28 @@ test("Common Play resource payments and economy effect commit atomically", () =>
   assert.equal(rejected.state, state);
   assert.equal(resourceCurrent(state, "resource.external.primary"), 1, "failed later payment must roll back the earlier payment");
   assert.equal(state.combatants.hero.economy.extraActions?.length ?? 0, 0);
+});
+
+test("Common Play action and bonus-action payments spend the declared generic turn slot", () => {
+  for (const bucket of ["action", "bonus-action"] as const) {
+    const definition = parseManualCommonPlayOperationDefinition({
+      schemaVersion:"0.2-draft",
+      id:`external.unknown.${bucket}-payment`,
+      payments:[{kind:"economy",bucket,amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+      entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"healing.apply",amount:{value:1},target:"self"}]}],
+    });
+    const state=preparedState();
+    state.combatants.hero.life.hp.current=10;
+    const resolved=resolveCommonPlayEntryPointOperations(PROFILE,state,definition,executionInput(`${bucket}-payment`));
+    assert.equal(resolved.status,"committed",resolved.status==="rejected"?resolved.error:undefined);
+    if(resolved.status!=="committed") continue;
+    assert.equal(resolved.state.combatants.hero.economy[bucket==="action"?"action":"bonusAction"],false);
+    assert.equal(resolved.state.combatants.hero.life.hp.current,11);
+
+    const rejected=resolveCommonPlayEntryPointOperations(PROFILE,resolved.state,definition,executionInput(`${bucket}-payment-repeat`));
+    assert.equal(rejected.status,"rejected");
+    assert.equal(rejected.state.combatants.hero.life.hp.current,11,"unavailable economy and downstream result stay atomic");
+  }
 });
 
 test("profile-registered restricted extra Action preserves existing Magic Action policy", () => {

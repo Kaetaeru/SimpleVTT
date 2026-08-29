@@ -153,7 +153,7 @@ test("unsupported interaction and economy payment shapes fail explicitly",()=>{
     assert.throws(()=>parseManualCommonPlayOperationDefinition(candidate),/portable Common Play interaction|unsupported fields/);
   }
   const paymentCases:Array<Partial<Record<string,unknown>>>= [
-    {bucket:"action"},
+    {bucket:"free-action"},
     {amount:{value:2}},
     {consumeAt:"stage"},
     {refundOnCancel:false},
@@ -161,7 +161,7 @@ test("unsupported interaction and economy payment shapes fail explicitly",()=>{
   for(const patch of paymentCases) {
     const candidate=structuredClone(base);
     Object.assign(candidate.payments[0],patch);
-    assert.throws(()=>parseManualCommonPlayOperationDefinition(candidate),/portable Common Play/);
+    assert.throws(()=>parseManualCommonPlayOperationDefinition(candidate),/portable Common Play|bucket must be action/);
   }
   const missingReaction=structuredClone(base);
   missingReaction.payments=[];
