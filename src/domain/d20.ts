@@ -29,7 +29,7 @@ export interface ModifierContribution {
 export type D20RollModification =
   | { source:string; mode:"advantage"|"disadvantage" }
   | { source:string; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:number }
-  | { source:string; mode:"add-die"|"reroll"; dice:FixedDiceInput };
+  | { source:string; mode:"add-die"|"subtract-die"|"reroll"; dice:FixedDiceInput };
 
 export interface D20TestRequest {
   family: D20TestFamily;
@@ -126,9 +126,8 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
     | undefined;
   const defaultDiceCount = d20Policy?.defaultDiceCount ?? 2;
   const reroll=modifications.filter((entry):entry is D20RollModification&{mode:"reroll";dice:FixedDiceInput}=>entry.mode==="reroll").at(-1);
-  const dice = selectD20(rollStateResolution.rollState, reroll?.dice??request.dice, defaultDiceCount);
-  const additionalDice=modifications.filter((entry):entry is D20RollModification&{mode:"add-die";dice:FixedDiceInput}=>entry.mode==="add-die");
-  for(const entry of additionalDice) {
+  const modifierDice=modifications.filter((entry):entry is D20RollModification&{mode:"add-die"|"subtract-die";dice:FixedDiceInput}=>entry.mode==="add-die"||entry.mode==="subtract-die");
+  for(const entry of modifierDice) {
     if(!Number.isInteger(entry.dice.sides)||entry.dice.sides<2) throw new DomainEvaluationError(`additional die must have at least 2 sides: ${entry.source}`);
     if(!entry.dice.faces.length||entry.dice.faces.some((face)=>!Number.isInteger(face)||face<1||face>entry.dice.sides)) {
       throw new DomainEvaluationError(`invalid additional die face: ${entry.source}`);
@@ -136,7 +135,10 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
   }
   const modifier = request.modifierContributions.reduce((sum, entry) => sum + entry.value, 0)
     + modifications.reduce((sum,entry)=>sum+(entry.mode==="add-flat"?entry.value:0),0)
-    + additionalDice.reduce((sum,entry)=>sum+entry.dice.faces.reduce((subtotal,face)=>subtotal+face,0),0);
+    + modifierDice.reduce((sum,entry)=>{
+      const diceTotal=entry.dice.faces.reduce((subtotal,face)=>subtotal+face,0);
+      return sum+(entry.mode==="subtract-die"?-diceTotal:diceTotal);
+    },0);
   let natural = dice.selectedFace;
   for(const entry of modifications) {
     if(entry.mode==="replace") natural=entry.value;
@@ -174,6 +176,7 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
       if(entry.mode==="advantage"||entry.mode==="disadvantage") return [];
       if(entry.mode==="reroll") return [{source:entry.source,status:"applied",reason:`rerolled d20 using [${entry.dice.faces.join(", ")}]`}];
       if(entry.mode==="add-die") return [{source:entry.source,status:"applied",reason:`added d${entry.dice.sides} roll [${entry.dice.faces.join(", ")}]`}];
+      if(entry.mode==="subtract-die") return [{source:entry.source,status:"applied",reason:`subtracted d${entry.dice.sides} roll [${entry.dice.faces.join(", ")}]`}];
       if(entry.mode==="add-flat") return [{source:entry.source,status:"applied",reason:`${entry.value>=0?"+":""}${entry.value} to d20 total`}];
       if(entry.mode==="target-add") return [{source:entry.source,status:"applied",reason:`${entry.value>=0?"+":""}${entry.value} to target`}];
       return [{source:entry.source,status:"applied",reason:`${entry.mode} d20 result with ${"value" in entry?entry.value:"<invalid>"}`}];
