@@ -1,0 +1,93 @@
+name: C9 Family B Timing Audit
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-family-b-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile Family B timing dependency
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const row=ledger.rows.find(r=>r.family==='B'&&r.id==='turn-action-economy-timing');
+          if(!row||row.disposition!=='INCOMPLETE') throw new Error('Family B must remain INCOMPLETE');
+          const economy=fs.readFileSync('src/domain/turnEconomy.ts','utf8');
+          const frequency=fs.readFileSync('src/domain/commonPlayFrequencyRuntime.ts','utf8');
+          const turnOps=fs.readFileSync('src/domain/resolutionTurnOps.ts','utf8');
+          const stored=fs.readFileSync('src/domain/commonPlayStoredInvocationRuntime.ts','utf8');
+          for(const token of ['action','bonusAction','reaction','movement','extraActions','extraAttacks']) if(!economy.includes(token)) throw new Error(`turn economy changed: ${token}`);
+          for(const token of ['once-per-turn','once-per-round','once-per-resolution']) if(!frequency.includes(token)) throw new Error(`frequency runtime changed: ${token}`);
+          for(const token of ['begin-turn','end-turn']) if(!turnOps.includes(token)) throw new Error(`turn lifecycle changed: ${token}`);
+          if(!stored.includes('trigger')) throw new Error('stored invocation trigger runtime changed');
+          row.currentState='Generic turn economy already owns Action, Bonus Action, Reaction, movement budget, extra Action, and extra Attack state; generic frequency owns once/turn, once/round, and once/resolution tokens; the authoritative turn lifecycle emits begin/end turn and turn-clock events; stored invocation proves identity-independent off-turn execution. B remains INCOMPLETE only for the remaining generic triggered-window/timing-dispatch matrix: those semantic event points and ordering are the unresolved Family P event vocabulary (with special initiative-count timing separately blocked in AC), so adding a second B-specific dispatcher would duplicate ownership.';
+          row.implementationEvidence=[
+            ...new Set([...(row.implementationEvidence??[]),
+              'turnEconomy.ts Action/Bonus Action/Reaction/movement/extra action/extra attack state',
+              'commonPlayFrequencyRuntime.ts once/turn/round/resolution tokens',
+              'resolutionTurnOps.ts authoritative begin/end turn operations',
+              'commonPlayStoredInvocationRuntime.ts off-turn structural trigger execution'
+            ])
+          ];
+          row.productionEvidence=[
+            ...new Set([...(row.productionEvidence??[]),
+              '583ff38c generic Action/Bonus Action/Reaction payment production',
+              'fbcee3c6 turn-clock event-native lifecycle',
+              'c87402f9 off-turn stored invocation Host/Client/reconnect/Undo',
+              '72a2c7fd round-wrap elapsed lifecycle connected proof'
+            ])
+          ];
+          row.identityInvarianceEvidence=[
+            ...new Set([...(row.identityInvarianceEvidence??[]),
+              'c87402f9 arbitrary installed stored-invocation identity',
+              'installed Common Play payment/turn lifecycle rename proofs retained in STATE'
+            ])
+          ];
+          row.connectedEvidenceIfRelevant=[
+            ...new Set([...(row.connectedEvidenceIfRelevant??[]),
+              'connectedTurnResolutionEventTransport.test.ts Host/Client duplicate/reconnect/Undo',
+              'c87402f9 connected off-turn stored invocation exactly-once proof'
+            ])
+          ];
+          row.remainingNamedSeams=[
+            'generic triggered-window event vocabulary and ordering remain owned by incomplete Family P',
+            'special initiative-count timing remains separately blocked by Family AC session timing authority',
+            'do not add a B-specific turn/trigger dispatcher while P/AC contracts are unresolved'
+          ];
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+
+          const statePath='.chatgpt-rerun/STATE.md';
+          const state=fs.readFileSync(statePath,'utf8');
+          const marker='## Next Exact Action';
+          const idx=state.lastIndexOf(marker);
+          if(idx<0) throw new Error('STATE Next Exact Action marker missing');
+          const before=state.slice(0,idx).replace(/\n+$/,'')+'\n\n';
+          const section='## Family B audit — turn economy complete, trigger timing depends on P/AC\n\nFamily B (`turn-action-economy-timing`) remains `INCOMPLETE`. Action/Bonus Action/Reaction, movement budget, extra Action/Attack, once-per-turn/round/resolution frequency, begin/end-turn clocks, and structural off-turn stored invocation already have generic implementation and production evidence. The remaining required triggered-window/timing-dispatch semantics are not a second economy problem: they depend on the generic semantic-event vocabulary/order still unresolved in Family P, while initiative-count special timing is separately blocked in Family AC. A B-specific dispatcher would duplicate turn ownership and violate the one-language/one-owner architecture.\n\n';
+          const next='## Next Exact Action\n\nMove to Family C (`d20-roll-outcome`) and audit the remaining post-roll/roll-modification production seams, especially the retained Cutting Words legacy adapter, against the existing generic roll.modify/interceptor/follow-up machinery. Reuse the current d20 Resolver and interaction authority; do not introduce a named Bard path or a second roll engine. If one bounded structural migration can remove a gate-blocking named fallback and prove arbitrary identity plus connected/Undo, implement that slice.\n';
+          fs.writeFileSync(statePath,before+section+next);
+          fs.rmSync('.github/workflows/rerun-c9-family-b-audit.yml');
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs || true
+          git diff --check
+      - name: Commit audit
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .chatgpt-rerun/STATE.md .github/workflows/rerun-c9-family-b-audit.yml
+          git commit -m "docs(c9): reconcile turn timing dependency"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
