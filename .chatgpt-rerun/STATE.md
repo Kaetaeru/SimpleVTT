@@ -45,11 +45,12 @@ Current validated C9 checkpoints:
 - `281be9b1`: summoned actors project scoped installed Common Play actions and execute them through Host-authoritative connected events with Undo.
 - `acc46a1a`: schema PaymentContract is preserved and atomically executed across operations, save-damage, effect, zone, and artifact lowerers with production Host/Client convergence and Undo.
 - `c87402f9`: canonical stored-invocation artifacts resolve arbitrary installed attack/spell payloads off turn with Reaction, exactly-once consumption, Host/Client event replay, reconnect, and Undo.
+- `5308c15e`: movement.relocate executes through the operations lowerer and stored invocation; Ready UI uses the authoritative artifact for installed content; cancel, Undo, and turn-boundary expiry are production-proven.
 
-Latest proof: TypeScript passed; 2/2 artifact, 4/4 stored-invocation domain, and 8/8 lowered-family production/connected regressions passed; coverage checker reports exactly 36 `INCOMPLETE` rows. Family S evidence is reconciled but remains incomplete because generic stored movement and the legacy Ready UI execution seam remain. Code checkpoint is `c87402f9`.
+Latest proof: TypeScript passed; 11/11 lowered-family production/connected, 6/6 atomic lifecycle, and 3/3 artifact family regressions passed; coverage checker reports exactly 36 `INCOMPLETE` rows. Family S remains incomplete only until held-Concentration is production-proven; legacy non-Common-Play Ready remains non-blocking migration debt only if unknown portable content never falls through to it. Code checkpoint is `5308c15e`.
 
 ## Next Exact Action
 
-Add the missing generic Common Play movement operation to the operations lowerer and execute it as a stored-invocation payload without map geometry, then move the existing Ready UI capture/trigger onto the authoritative stored artifact path and delete its WeakMap/role/economy execution workaround. Do not promote family S until movement, expiry/cancel, reconnect, Undo, and Concentration remain green through production.
+Add one installed production acceptance for a held-Concentration stored spell, covering capture, maintained-group loss no-match, successful release/end policy, cancel, reconnect, and Undo. If the full Family S matrix stays green, mark only S `IMPLEMENTED`; then select the next highest-impact incomplete family from the ledger.
 
 C8 Core is complete locally. C9 is active and Gate N is blocked by 36 `INCOMPLETE` ledger rows. Overall verdict: `V1 INCOMPLETE`.
