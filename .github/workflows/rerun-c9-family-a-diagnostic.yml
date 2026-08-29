@@ -1,0 +1,36 @@
+name: C9 Family A Diagnostic
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-family-a-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Inspect Family A contract and callers
+        run: |
+          echo '--- property.modify / profile property code ---'
+          grep -RIn --include='*.ts' --include='*.json' -E 'property\.modify|resolveProfileProperty|evaluateExpression\(|evaluateSemanticPredicate\(' src schemas tests rules | head -n 800 || true
+          echo '--- property operation/runtime types ---'
+          grep -RIn --include='*.ts' -E 'kind:[[:space:]]*["'"'](modify|set)-property|propertyId|propertyModification|propertyContrib' src/domain src/app | head -n 500 || true
+          echo '--- source bound / modifier metadata ---'
+          grep -RIn --include='*.ts' -E 'source-active|sourceId.*modifier|modifier.*sourceId|property.*metadata' src/domain src/app tests | head -n 500 || true
+      - name: Verify current typecheck
+        run: npx tsc --noEmit
