@@ -54,6 +54,8 @@ The attack transaction's Rage tag lookup is removed too. Any active Effect can n
 
 Core d20/turn execution no longer imports Rage lifecycle identity: hostile attack/save extension and linked special-duration expiry are driven by generic extendable-Effect metadata. Spellcasting likewise reads the active Effect's generic `spellcastingAllowed` flag instead of Rage or Wild Shape tags. Named activation and explicit class UI remain legacy.
 
+Atomic item damage no longer recognizes `action.wand`. Any no-roll damage action with an authored damage formula and item cost now uses the same atomic item transaction; an unknown renamed action proves the damage, charge payment, event projection, and Undo boundary. Named item projection in `productionPlayRuntimeAdapter.ts` remains legacy content materialization debt.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |

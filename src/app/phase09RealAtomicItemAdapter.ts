@@ -4,7 +4,7 @@ import { MockAdapter } from "./mockAdapter";
 import { resolveAtomicItemAction } from "./realAtomicItemActionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
-import { phase09ReferenceNoRollDamageFact } from "./phase09ReferenceEffectFacts";
+import { noRollDamageFactFromFaces } from "./phase09ReferenceEffectFacts";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
@@ -35,8 +35,8 @@ const histories=new WeakMap<MockAdapter,ItemEventHistory>();
 const previousAdvance=MockAdapter.prototype.advanceResolution;
 const previousUndo=MockAdapter.prototype.undoLastResolution;
 
-function isPotion(action:ActionVm|undefined) { return action?.id==="action.healing-potion"&&action.resolutionKind==="healing"&&Boolean(action.itemCost); }
-function isWand(action:ActionVm|undefined) { return action?.id==="action.wand"&&action.resolutionKind==="no-roll-damage"&&Boolean(action.itemCost); }
+function isHealingItem(action:ActionVm|undefined) { return action?.resolutionKind==="healing"&&Boolean(action.itemCost); }
+function isDamageItem(action:ActionVm|undefined) { return action?.resolutionKind==="no-roll-damage"&&Boolean(action.itemCost); }
 
 function beforeEntity(before:BeforeState,id:string) { return before.scene.entities.find((entry)=>entry.id===id); }
 
@@ -105,9 +105,9 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
   const resolution=internal.resolution;
   const action=resolution ? internal.action(resolution.actionId) : undefined;
   if (!resolution||!action||resolution.adjudicated) return previousAdvance.call(this);
-  const potion=isPotion(action)&&resolution.stage==="effect-preview";
-  const wand=isWand(action)&&resolution.stage==="damage-animation";
-  if (!potion&&!wand) return previousAdvance.call(this);
+  const healing=isHealingItem(action)&&resolution.stage==="effect-preview";
+  const damage=isDamageItem(action)&&resolution.stage==="damage-animation";
+  if (!healing&&!damage) return previousAdvance.call(this);
   const before=internal.before;
   if (!before) {
     histories.delete(this);
@@ -122,15 +122,22 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
     reject(internal,"atomic item actor/target/economy state is missing");
     return internal.getSnapshot();
   }
-  const transaction=potion
-    ? resolveAtomicItemAction({
-        resolutionId:resolution.id,action,actor,target,economy,items:before.activeCharacter.items,initiativeMode:internal.sessionMode==="initiative",
-        kind:"healing",healingAmount:resolution.rollTotal ?? 0,
-      })
-    : resolveAtomicItemAction({
-        resolutionId:resolution.id,action,actor,target,economy,items:before.activeCharacter.items,initiativeMode:internal.sessionMode==="initiative",
-        kind:"damage",damageFact:phase09ReferenceNoRollDamageFact(action.id),
-      });
+  let transaction:ReturnType<typeof resolveAtomicItemAction>;
+  try {
+    transaction=healing
+      ? resolveAtomicItemAction({
+          resolutionId:resolution.id,action,actor,target,economy,items:before.activeCharacter.items,initiativeMode:internal.sessionMode==="initiative",
+          kind:"healing",healingAmount:resolution.rollTotal ?? 0,
+        })
+      : resolveAtomicItemAction({
+          resolutionId:resolution.id,action,actor,target,economy,items:before.activeCharacter.items,initiativeMode:internal.sessionMode==="initiative",
+          kind:"damage",damageFact:noRollDamageFactFromFaces(action,resolution.authoritativeDice),
+        });
+  } catch(error) {
+    histories.delete(this);
+    reject(internal,error instanceof Error ? error.message : String(error));
+    return internal.getSnapshot();
+  }
   if (transaction.status==="rejected") {
     histories.delete(this);
     reject(internal,transaction.error);
