@@ -8,44 +8,1679 @@
     "rules/profiles/dnd.srd-5.2.1.profile.json",
     "existing generic Resolver kernels"
   ],
-  "allowedFinalDispositions": ["IMPLEMENTED", "PROVEN_UNNEEDED"],
+  "allowedFinalDispositions": [
+    "IMPLEMENTED",
+    "PROVEN_UNNEEDED"
+  ],
   "gateNBlockingNamedFallbacks": [],
   "rows": [
-    {"id":"expression-property","family":"A","representativeRules":["ability and proficiency modifiers","level scaling","conditional overlays"],"sourceEvidence":["SRD 5.2.1: Tests and ability modifiers","common-play-contract.schema.json: expression/predicate/property.modify","dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"],"currentState":"Schema and kernel evidence exist; production composition audit required","requiredSemantics":["literals","property refs","arithmetic","predicates","derived properties","ability/proficiency modifiers","level scaling","source-bound modifiers","stacking/replacement","minimum/maximum","rounding","conditional overlay"],"transactionDomain":"RulesProfile evaluation and owning transaction","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named progression and runtime stat materialization"],"connectedRelevant":false,"persistenceRelevant":true},
-    {"id":"turn-action-economy-timing","family":"B","representativeRules":["turn economy","off-turn reactions","timing-bound grants"],"sourceEvidence":["SRD 5.2.1: Combat turn structure","dnd.srd-5.2.1.profile.json: timingPoints/economy","resolutionTurnOps.ts"],"currentState":"Schema payments atomically spend Action, Bonus Action, or Reaction through every manual Common Play lowerer with production Host/Client convergence and Undo; full timing/frequency acceptance remains incomplete","requiredSemantics":["Action","Bonus Action","Reaction","movement budget","extra action","extra attack","per-turn/round frequency","turn/round start/end","initiative","off-turn execution","triggered windows","timing-bound grants","once per turn"],"transactionDomain":"Session Resolver turn transaction","disposition":"INCOMPLETE","implementationEvidence":["commonPlayOperationRuntime.ts shared PaymentContract parsing/lowering","commonPlayDefinitionRuntime.test.ts all five manual lowerers"],"productionEvidence":["installedCommonPlayLoweredFamiliesProduction.test.ts all non-operation lowerers and Undo"],"identityInvarianceEvidence":["commonPlayResourceEconomyRuntime.test.ts renamed definition","installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary external identities"],"connectedEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client payment convergence and Undo"],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named class action projection and off-turn adapters","generic turn/round timing dispatch"],"connectedRelevant":true,"persistenceRelevant":false},
-    {"id":"d20-test-lifecycle","family":"C","representativeRules":["ability check","saving throw","attack roll","post-roll modification"],"sourceEvidence":["SRD 5.2.1: D20 Tests","SRD 5.2.1 p.35: Peerless Skill","SRD 5.2.1 p.48: Indomitable","SRD 5.2.1 p.76: Dark One's Own Luck","commonPlayD20Runtime.test.ts"],"currentState":"Generic production handles additional-die ability-check/save/attack decisions and failed-save rerolls with authored bonus; richer post-roll decisions remain incomplete","requiredSemantics":["checks","saves","attacks","proficiency","expertise","advantage/disadvantage","flat modifier","additional die","DC modification","reroll","replace roll","minimum roll","outcome recalculation","critical","post-roll decision","outcome follow-up"],"transactionDomain":"Resolver PendingResolution","disposition":"INCOMPLETE","implementationEvidence":["d20FollowUpRuntimeAdapter.ts"],"productionEvidence":["fighterTacticalMindFollowUpRuntime.test.ts","openAbilityCheckDcRuntime.test.ts","warlockFiendDarkOnesOwnLuckRuntime.test.ts","bardCollegeLorePeerlessSkillRuntime.test.ts","fighterIndomitableFollowUpRuntime.test.ts"],"identityInvarianceEvidence":["d20FollowUpRuntime.test.ts"],"connectedEvidenceIfRelevant":["fighterTacticalMindFollowUpRuntime.test.ts","connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts","connectedProjectedCharacterPeerlessSkillResolution.test.ts","fighterIndomitableFollowUpRuntime.test.ts"],"persistenceEvidenceIfRelevant":["fighterTacticalMindFollowUpRuntime.test.ts","connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts","connectedProjectedCharacterPeerlessSkillResolution.test.ts","fighterIndomitableFollowUpRuntime.test.ts"],"remainingNamedSeams":["Cutting Words"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"payment-resource","family":"D","representativeRules":["resource spend/recovery","charges","atomic multiple payments"],"sourceEvidence":["SRD 5.2.1: class resources and item charges","commonPlayResourceEconomyRuntime.test.ts","resourceRecoveryLockout.test.ts"],"currentState":"Generic resource/economy payments are identity-independent and atomic across every manual Common Play lowerer; complete pool/recovery/durable writeback audit remains","requiredSemantics":["spend/gain","multiple atomic resources","action economy payment","charges","rest recovery","turn-start recovery","temporary maximum","recovery lockout","scaling","refund cancellation","source-owned pools"],"transactionDomain":"Resolver plus Character resource writeback","disposition":"INCOMPLETE","implementationEvidence":["commonPlayOperationRuntime.ts shared PaymentContract compiler","commonPlayDefinitionRuntime.test.ts lowerer preservation"],"productionEvidence":["installedCommonPlayLoweredFamiliesProduction.test.ts result/payment atomic commit and Undo"],"identityInvarianceEvidence":["commonPlayResourceEconomyRuntime.test.ts renamed definition"],"connectedEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client economy convergence"],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named class resource materializers and rest dispatch","durable Character resource writeback across all lowerers"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"targeting-selectors","family":"E","representativeRules":["single creature target","area target set","range/sight/cover filters"],"sourceEvidence":["SRD 5.2.1: Targets and Areas of Effect","common-play-contract.schema.json: selector","commonPlayTargetingRuntime.test.ts"],"currentState":"One pre-resolved target is bounded PRODUCTION; rich selectors incomplete","requiredSemantics":["self","relation filters","creature","object","point","area","selected targets","min/max","predicates","ordering","range","reach","sight","cover","tags","direct/area","automatic/manual authority"],"transactionDomain":"Resolver targeting with spatial/manual fact authority","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named spell and feature target policy"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"allocation","family":"F","representativeRules":["Magic Missile projectile allocation","healing pool distribution"],"sourceEvidence":["SRD 5.2.1: Magic Missile and Lay on Hands","common-play-contract.schema.json: allocationPlan","legacy production spell allocation"],"currentState":"Schema only; authoritative selection/retry production path missing","requiredSemantics":["fixed pool","projectile/charge/die allocation","integer sum","per-target bounds","duplicate policy","pre-execution allocation","player/DM authority","retry/reconnect","atomic commit"],"transactionDomain":"Typed pending decision plus Resolver","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["production spell automatic allocation","Paladin healing allocation"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"spatial-geometry","family":"G","representativeRules":["AoE membership","reach and Total Cover","artifact placement"],"sourceEvidence":["SRD 5.2.1: Areas, distance, cover","commonPlaySpatialFactRuntime.test.ts","Gate E provider/manual authority"],"currentState":"Provider/manual fact kernel exists; geometry and production breadth incomplete","requiredSemantics":["distance","adjacency","reach","size/space","line","cone","cube","sphere","cylinder","emanation","origin","intersection","AoE membership","Total Cover","position/placement"],"transactionDomain":"Authoritative spatial provider or explicit manual authority","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":[],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"senses-visibility-hiding","family":"H","representativeRules":["Hide and Search","Invisible versus Blindsight","darkness"],"sourceEvidence":["SRD 5.2.1: Vision, senses, Hide","conditions.ts","sessionStatusEffectEventRuntimeAdapter.ts"],"currentState":"Generic status and creature-type awareness paths are production-proven; authoritative full sensing relation model remains incomplete","requiredSemantics":["normal sight","lighting","obscurement","Invisible","Blindsight","Darkvision","Tremorsense","Truesight","see/hear","Hidden","Hide","detection/search","reveal/end Hidden"],"transactionDomain":"Session sensing facts plus Resolver effects","disposition":"INCOMPLETE","implementationEvidence":["sessionStatusEffectEventRuntimeAdapter.ts","effectGrantActionRuntimeAdapter.ts"],"productionEvidence":["connectedProjectedCharacterCunningHideResolution.test.ts","connectedProjectedCharacterCunningDisengageResolution.test.ts","paladinDivineSenseActionRuntime.test.ts"],"identityInvarianceEvidence":["sessionStatusEffectEventRuntime.test.ts","effectGrantActionRuntime.test.ts"],"connectedEvidenceIfRelevant":["connectedProjectedCharacterCunningHideResolution.test.ts","connectedProjectedCharacterCunningDisengageResolution.test.ts","paladinDivineSenseActionRuntime.test.ts"],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["Rogue action projection","authoritative sensing relation","live sanctity facts"],"connectedRelevant":true,"persistenceRelevant":false},
-    {"id":"movement","family":"I","representativeRules":["Difficult Terrain","stand from Prone","forced movement and teleport"],"sourceEvidence":["SRD 5.2.1: Movement","commonPlayMovementRuntime.test.ts","resolutionMovementOps.ts"],"currentState":"Canonical movement.relocate now parses through the operations lowerer and executes actor-authority mapless destinations in installed production/Undo; complete modes, costs, connected breadth, and derived constraints remain incomplete","requiredSemantics":["walk","climb","swim","fly","crawl","jump","Difficult Terrain","stand Prone","forced movement","push/pull","teleport","no provoke","drag/carry","cost multipliers","alternate speed","zero speed"],"transactionDomain":"Session Resolver movement with spatial/manual authority","disposition":"INCOMPLETE","implementationEvidence":["commonPlayMovementRuntime.ts","commonPlayOperationRuntime.ts movement.relocate lowering"],"productionEvidence":["installedCommonPlayLoweredFamiliesProduction.test.ts mapless stored movement and Undo"],"identityInvarianceEvidence":["commonPlayMovementRuntime.test.ts external definition identity independence"],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named movement grants","complete movement mode/cost production matrix"],"connectedRelevant":true,"persistenceRelevant":false},
-    {"id":"attack-control","family":"J","representativeRules":["weapon and Unarmed Strike","Opportunity Attack","grapple/shove/escape"],"sourceEvidence":["SRD 5.2.1: Attacks and Unarmed Strike","realAttackTransactionService.ts","unarmedControlRuntimeAdapter.ts"],"currentState":"Generic attack/control pieces exist; portable Common Play convergence incomplete","requiredSemantics":["weapon attack","Unarmed Strike","Opportunity Attack","grapple","shove","escape","reach","long range","cover","critical","multiattack/Extra Attack","replace one attack","ammunition/loading constraints"],"transactionDomain":"Resolver attack transaction","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["Rage attack rider","named attack/action projection"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"weapon-mastery","family":"K","representativeRules":["Cleave","Graze","Nick","Push","Sap","Slow","Topple","Vex"],"sourceEvidence":["SRD 5.2.1: Weapon Mastery properties","progressionPhase08WeaponMasteryAdapter.ts","weapon rule catalog"],"currentState":"Named/progression semantics exist; generic trigger/effect composition proof missing","requiredSemantics":["Cleave","Graze","Nick","Push","Sap","Slow","Topple","Vex","generic hit/miss trigger","frequency","movement","save","extra attack/economy"],"transactionDomain":"Progression grant plus Resolver combat semantics","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["progressionPhase08WeaponMasteryAdapter"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"damage-life","family":"L","representativeRules":["compound typed damage","Temporary HP","death saves and objects"],"sourceEvidence":["SRD 5.2.1: Damage, Healing, Death","compoundDamage.test.ts","resolutionHealthOps.ts"],"currentState":"Bounded damage/healing is PRODUCTION; complete life/object semantics incomplete","requiredSemantics":["typed/compound damage","resistance","vulnerability","immunity","threshold","reduction","critical dice","Temporary HP","healing/full healing","max HP","0 HP","unconscious/death","death saves","stabilization","instant death","Object/Vehicle damage"],"transactionDomain":"Resolver health transaction and durable writeback","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named feature/spell HP execution"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"conditions","family":"M","representativeRules":["all SRD conditions","condition immunity","Exhaustion levels"],"sourceEvidence":["SRD 5.2.1: Conditions","conditions.ts","phase05Lifecycle.test.ts"],"currentState":"Condition kernel exists; exhaustive semantics/production/public UI audit incomplete","requiredSemantics":["Blinded","Charmed","Deafened","Exhaustion","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious","immunity","stacking/levels"],"transactionDomain":"Resolver effect/condition state","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named condition application adapters"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"effect-duration-maintained","family":"N","representativeRules":["persistent timed effect","suppression and dependent cleanup"],"sourceEvidence":["SRD 5.2.1: Durations","commonPlayEffectRuntime.test.ts","effects.ts"],"currentState":"Installed arbitrary-ID persistent effects now activate and automatically consume/retaliate inside the incoming damage transaction with Host/Client replay, reconnect, and Undo; the exhaustive duration/suppression/dependent-cleanup matrix remains under audit","requiredSemantics":["instant","rounds/turns/elapsed","until timing","rest","permanent","concentration","source/target death/incap end","damage end","consume-on-use","replacement/stacking","suppression","unsuppression","pause/resume","source/dependent cleanup"],"transactionDomain":"Resolver RuntimeArtifact/effect lifecycle","disposition":"INCOMPLETE","implementationEvidence":["commonPlayEffectRuntime.ts activation/event/atomic damage-trigger composition","effects.ts generic duration/suppression lifecycle","effectGrantActionRuntimeAdapter.ts","consumableD20BonusEffectFollowUpRuntimeAdapter.ts"],"productionEvidence":["installedCommonPlayLoweredFamiliesProduction.test.ts automatic persistent effect atomic transaction","bardicInspirationActionRuntime.test.ts","bardicInspirationFollowUpRuntime.test.ts"],"identityInvarianceEvidence":["commonPlayEffectRuntime.test.ts renamed definition","installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity"],"connectedEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect connected replay/Undo"],"persistenceEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect new-replica event replay"],"remainingNamedSeams":["named aura/form/mark effect adapters","exhaustive duration/suppression/dependent-cleanup acceptance"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"concentration","family":"O","representativeRules":["concentration replacement","damage save","readied/long-cast spell"],"sourceEvidence":["SRD 5.2.1: Concentration","concentration.ts","concentrationDamageResult.test.ts"],"currentState":"Generic concentration behavior exists; production composition/reconnect proof incomplete","requiredSemantics":["single source","replacement","damage save/DC","incapacitation","death","dependent cleanup","long casting","readied spell","Undo/reconnect"],"transactionDomain":"Resolver maintained effect lifecycle","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["spell-specific concentration routing"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"trigger-frequency-automatic","family":"P","representativeRules":["roll/outcome interceptors","turn/zone triggers","once-per-turn frequency"],"sourceEvidence":["SRD 5.2.1: triggers and feature frequency","commonPlayRuntime.ts","commonPlayEffectRuntime.ts","commonPlayZoneRuntime.ts"],"currentState":"Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, and canonical interactive interceptor timing points have production evidence. State/rest/expiry/recharge and automatic hit/save event families remain incomplete","requiredSemantics":["before/after roll/outcome","hit/miss","save outcomes","damage taken/dealt","state applied","turn/round","zone enter/leave","rest","expiry","once","once per turn/round","recharge/cooldown","source frequency"],"transactionDomain":"Resolver trigger orchestration","disposition":"INCOMPLETE","implementationEvidence":["commonPlayEffectRuntime.ts damage.taken|damage.dealt automatic composition","commonPlayFrequencyRuntime.ts","commonPlayZoneRuntime.ts","commonPlayActorTurnRuleComposition.ts actor-owned turn-start/end composition","commonPlayRuntime.ts canonical attack.outcome-determined, d20.outcome-determined, and damage.rolled interceptor timings"],"productionEvidence":["installedCommonPlayLoweredFamiliesProduction.test.ts atomic automatic damage trigger and Zone membership trigger","connectedDamageDealtTriggerProduction.test.ts damage.dealt and recurring frequency production","connectedTurnResolutionEventTransport.test.ts automatic Zone turn-start/end transaction","connectedActorTurnRuleProduction.test.ts actor-owned turn-start/end resource rules","installedCommonPlayInterceptorProductionRuntime.test.ts d20.outcome-determined and damage.rolled interactive production"],"identityInvarianceEvidence":["commonPlayEffectRuntime.test.ts renamed external definitions","commonPlayFrequencyRuntime.test.ts renamed rules","installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary Zone package identity","connectedDamageDealtTriggerProduction.test.ts arbitrary installed damage.dealt identity","connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity","connectedActorTurnRuleProduction.test.ts arbitrary installed actor-rule identities","installedCommonPlayInterceptorProductionRuntime.test.ts module/content/definition/interceptor/display rename"],"connectedEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect and Zone membership Host/Client replay plus Undo","connectedDamageDealtTriggerProduction.test.ts Host/Client replay, duplicate handling, reconnect, frequency markers, and Undo","connectedTurnResolutionEventTransport.test.ts turn lifecycle Host/Client replay, reconnect, and Undo","connectedActorTurnRuleProduction.test.ts Host/Client replay, duplicate handling, reconnect, and event-native Undo","installedCommonPlayInterceptorProductionRuntime.test.ts damage-roll Host/Client exactly-once convergence"],"persistenceEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts new replica full event replay","connectedDamageDealtTriggerProduction.test.ts ordered reconnect replay","connectedTurnResolutionEventTransport.test.ts ordered reconnect replay of Zone turn lifecycle","connectedActorTurnRuleProduction.test.ts ordered reconnect replay of actor turn lifecycle"],"remainingNamedSeams":["remaining event-family dispatcher composition","named post-roll and feature trigger adapters"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"interaction-reaction","family":"Q","representativeRules":["actor consent Reaction","remote owner choice","multiple options"],"sourceEvidence":["SRD 5.2.1: Reactions and decisions","commonPlayInteractionProductionRuntime.test.ts","ResolutionView.interrupt"],"currentState":"Manual actor boolean consent is bounded PRODUCTION; rich/remote lifecycle incomplete","requiredSemantics":["consent","choice","multiple options","actor/target/owners/DM/Host","blocking remote response","stale/reconnect/replay","decline","payment","atomic downstream"],"transactionDomain":"Existing resolution interrupt plus connected session authority","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["all named post-roll follow-up adapters"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"simultaneous-ordering","family":"R","representativeRules":["simultaneous start-turn effects"],"sourceEvidence":["SRD 5.2.1: Simultaneous Effects","RulesProfile timing points","session event batches"],"currentState":"No explicit generic ordering authority proof","requiredSemantics":["timing window","eligible effects","ordering authority","player/DM choice","deterministic ordered execution","Host authority","reconnect/replay"],"transactionDomain":"Typed pending decision plus session authority","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":[],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"stored-invocation-ready","family":"S","representativeRules":["Ready attack","Ready movement","Ready spell"],"sourceEvidence":["SRD 5.2.1: Ready action","commonPlayStoredInvocationRuntime.ts","standardActionReactionAdapter.ts"],"currentState":"Canonical stored invocation covers installed attack/spell and mapless movement payloads, Ready UI capture, structural trigger matching, Reaction, exactly-once consumption, cancel, turn-start expiry, held Concentration, Host replay/reconnect, and Undo","requiredSemantics":["capture now/trigger later","condition","snapshot/live binding","action/spell payload","Reaction payment","exactly once","expiry/cancel/ignored trigger","stale/reconnect/Undo","readied movement/attack/spell","concentration"],"transactionDomain":"Session stored-invocation artifact and Resolver","disposition":"IMPLEMENTED","implementationEvidence":["commonPlayStoredInvocationRuntime.ts","commonPlayArtifactRuntime.ts stored-invocation lowering","commonPlayOperationRuntime.ts movement.relocate lowering","resolutionTurnOps.ts artifact boundary expiry","installedCommonPlayRuntimeAdapter.ts stored invocation projection/trigger/cancel/Ready UI capture"],"productionEvidence":["installedCommonPlayLoweredFamiliesProduction.test.ts attack/spell/movement, held Concentration, cancel, expiry, Ready UI, and Undo"],"identityInvarianceEvidence":["commonPlayStoredInvocationRuntime.test.ts renamed definitions","installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity"],"connectedEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client capture/trigger/Undo convergence"],"persistenceEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts new replica full event-log replay"],"remainingNamedSeams":["standardActionReactionAdapter legacy non-Common-Play migration debt; unknown portable Common Play does not select or fall through to it"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"zones","family":"T","representativeRules":["persistent zone enter/leave and turn frequency"],"sourceEvidence":["SRD 5.2.1: persistent areas","commonPlayZoneRuntime.test.ts","Gate D"],"currentState":"Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/stay/start/end-turn events, canonical once-per-turn frequency, elapsed duration cleanup, damage and effect.apply triggers, atomic Undo, Host/Client replay, duplicate replay, and fresh reconnect through generic Resolver events","requiredSemantics":["spawn","placement","membership","enter/leave/stay/start/end turn","frequency","duration","manual/spatial authority","damage/effect triggers","cleanup","connected persistence"],"transactionDomain":"Session RuntimeArtifact plus Resolver triggers","disposition":"IMPLEMENTED","implementationEvidence":["commonPlayZoneRuntime.ts membership/stay/turn/duration plus generic damage/effect rule lowering","commonPlayEffectRuntime.ts reusable effect.apply -> apply-effect lowering","commonPlayDefinitionRuntime.ts retention of Zone rule-referenced effect templates","installedCommonPlayRuntimeAdapter.ts Zone projection and manual membership resolution","realTurnLifecycleService.ts Zone turn lifecycle composition and round-wrap advance-time","spatialZoneMembershipRuntimeAdapter.ts authoritative membership and stay provider ingress"],"productionEvidence":["installedCommonPlayLoweredFamiliesProduction.test.ts Zone membership, damage, and Undo","connectedTurnResolutionEventTransport.test.ts arbitrary Zone turn lifecycle and elapsed cleanup","connectedSpatialZoneMembershipProduction.test.ts authoritative spatial membership/stay plus Zone effect.apply production"],"identityInvarianceEvidence":["commonPlayZoneRuntime.test.ts","installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity","connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity","connectedSpatialZoneMembershipProduction.test.ts arbitrary installed Zone identity including effect trigger"],"connectedEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts Zone Host/Client membership and Undo convergence","connectedTurnResolutionEventTransport.test.ts turn lifecycle and elapsed cleanup Host/Client convergence, duplicate replay, reconnect, and Undo","connectedSpatialZoneMembershipProduction.test.ts spatial membership/stay/effect Host/Client convergence, duplicate replay, reconnect, and Undo"],"persistenceEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts Zone new-replica event replay","connectedTurnResolutionEventTransport.test.ts ordered reconnect reconstruction of Zone turn and elapsed cleanup events","connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for spatial membership/stay/effect"],"remainingNamedSeams":["named persistent aura/zone migration debt; unknown portable Common Play does not select or fall through to it"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"object-link-artifacts","family":"U","representativeRules":["damageable wall","portal/link","rope/tether"],"sourceEvidence":["SRD 5.2.1: Objects","common-play-contract.schema.json: object/link artifactKind","resolutionArtifactOps.ts"],"currentState":"Schema/artifact base exists; typed object/link production lifecycle missing","requiredSemantics":["object instance","size","AC/HP/threshold/defenses","placement/movement","damage/repair/destruction","source/lifetime","barrier/wall","portal/link","tether","reconnect","Undo"],"transactionDomain":"Session object/link artifact owner plus Resolver","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":[],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"actor-artifact-summon","family":"V","representativeRules":["controlled summon","independent summoned actor"],"sourceEvidence":["SRD 5.2.1: summoned creatures","common-play-contract.schema.json: actor artifactKind","session topology projection"],"currentState":"Portable actor spawn creates typed combatant state and projects Scene identity/HP/AC/initiative/controller plus definition-driven actions; scoped action execution, economy, Host/Client convergence, and Undo are production-proven; death/replacement and restart persistence remain incomplete","requiredSemantics":["spawn","stat/actions/resources projection","source","owner/controller","placement","initiative","controlled/independent","lifetime","death/despawn/replacement","reconnect","Undo"],"transactionDomain":"Session actor artifact authority","disposition":"INCOMPLETE","implementationEvidence":["resolutionArtifactOps.ts actor combatant lifecycle","runtimeStateChange.ts combatant StateChange","installedCommonPlayRuntimeAdapter.ts scoped actor action projection and execution"],"productionEvidence":["realTurnRuntimeService.ts actor Scene projection","installedCommonPlayLoweredFamiliesProduction.test.ts summoned action execution and Undo"],"identityInvarianceEvidence":["commonPlayArtifactActivationRuntime.test.ts","installedCommonPlayLoweredFamiliesProduction.test.ts renamed module run"],"connectedEvidenceIfRelevant":["installedCommonPlayLoweredFamiliesProduction.test.ts actor/action event transport, projection convergence, execution, and Undo"],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["full summoned actor death/despawn/replacement policy","restart/reconnect persistence proof"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"form-transformation-possession","family":"W","representativeRules":["Wild-Shape-like overlay","Polymorph-like replacement","possession"],"sourceEvidence":["SRD 5.2.1: Wild Shape/Polymorph","druidWildShapeRuntimeAdapter.ts","common-play-contract.schema.json: form artifactKind"],"currentState":"Named Wild Shape exists; generic form/controller artifact missing","requiredSemantics":["property overlay/replacement/retention","resource/HP/temp HP policy","actions","movement/senses","spell restrictions","replacement/restoration","duration/death/end","source/controller","reconnect","Undo"],"transactionDomain":"Session form artifact plus Character projection","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["druidWildShapeRuntimeAdapter"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"items-inventory-equipment","family":"X","representativeRules":["grant/consume item","equipment-owned action","owner transfer"],"sourceEvidence":["SRD 5.2.1: Equipment and magic items","inventory persistence adapters","phase09RealAtomicItemAdapter.ts"],"currentState":"Durable inventory authority exists; generic Common Play item lifecycle incomplete","requiredSemantics":["create/grant/copy","quantity","consume/destroy/update","charges/recharge","equip/unequip/wield","containers","item actions/effects/spellcasting","owner transfer","durable persistence","atomic payment/result","connected","Undo"],"transactionDomain":"Character inventory transaction with session orchestration","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named item/spell activation"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"attunement-magic-item","family":"Y","representativeRules":["Short Rest attunement","exclusive owner and item charges"],"sourceEvidence":["SRD 5.2.1: Attunement","dnd.srd-5.2.1.profile.json: item activation-attunement capability","inventory item state"],"currentState":"Activation state exists; rule-complete lifecycle/process missing","requiredSemantics":["attune/unattune","Short Rest process","prerequisite","maximum","exclusive owner","benefit activation","rule-driven loss","cursed constraints","charges/recharge","destruction/consumption"],"transactionDomain":"Durable Character/item transaction and rest activity","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named item activation"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"spellcasting-meta","family":"Z","representativeRules":["slot/upcast spell","component/cost checks","long cast/Ritual/Reaction"],"sourceEvidence":["SRD 5.2.1: Spellcasting","spellMechanics.ts","spellcastingRuntimeAdapter.ts","productionSpellRuntimeAdapter.ts"],"currentState":"Typed component and maintained-casting primitives exist; one authoritative runtime now serves freeform and initiative, but spell identity lookup and durable material payment remain incomplete","requiredSemantics":["access/preparation/source","cantrip/level/slot/upcast","one slot per turn","casting economy","Reaction trigger","V/S/M/focus/pouch/cost/consumption/free hand/silence","range/Touch/Self/AoE","attack/save/damage/heal/effect","Concentration/duration/dismiss","long cast/Ritual/interruption","item/scroll casting","counter interaction"],"transactionDomain":"Resolver plus Character spell/resource writeback","disposition":"INCOMPLETE","implementationEvidence":["commonPlaySpellcastingMeta.ts","commonPlayC6Runtime.test.ts"],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["spellcastingRuntimeAdapter","productionSpellRuntimeAdapter","phase09AuthoritativeSpellcastingAdapter","spellMechanicById","componentsSatisfied compatibility input","material consumption inventory join"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"progression","family":"AA","representativeRules":["unknown class/subclass/feat progression contribution","multiclass choices"],"sourceEvidence":["SRD 5.2.1: Character creation/progression","content-entry.schema.json: progressionContributions","progression.ts"],"currentState":"Unknown module contributions persist and execute by track/threshold; named level-up projection seams remain incomplete","requiredSemantics":["class/subclass/species/background/feat","multiclass/prerequisites/thresholds","automatic grants/choices/counts/replacement/upgrade","proficiency/expertise/language/ability/HP/hit dice","resources","spell lists/grants/choices","mastery","persistent options","cross-content contribution"],"transactionDomain":"ProgressionDraft to Character revision","disposition":"INCOMPLETE","implementationEvidence":["commonPlayProgressionContribution.ts","ruleModulePackageImport.ts","commonPlayC6Runtime.test.ts"],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":["InstalledCatalogEntryV1.progressionContributions"],"remainingNamedSeams":["named Phase08 progression adapters","progressionRuntimeAdapter identity branches","characterCreationV10Adapter grants","installed contribution level-up projection"],"connectedRelevant":false,"persistenceRelevant":true},
-    {"id":"recharge-cooldown","family":"AB","representativeRules":["monster Recharge 5-6","turn-start recovery"],"sourceEvidence":["SRD 5.2.1: Recharge","resource/frequency kernels","monster action state"],"currentState":"Generic authoritative Resolver recharge exists; production action/catalog and connected proof missing","requiredSemantics":["recharge die/range/timing","availability","consumption","turn-start recovery","resource/action distinction","connected state","Undo/replay"],"transactionDomain":"Session actor resource/frequency state","disposition":"INCOMPLETE","implementationEvidence":["recharge-resource ResolutionOperation","commonPlayC6Runtime.test.ts"],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["monster action catalog recharge projection"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"legendary-lair-special-timing","family":"AC","representativeRules":["Legendary-style off-turn pool","lair initiative-count timing"],"sourceEvidence":["SRD 5.2.1: Legendary Actions/Lair Actions where present","RulesProfile timing/economy","reactionWindow.ts"],"currentState":"Owner/timing/option/cost compilation exists; production dispatch, ordering interaction, and reconnect proof missing","requiredSemantics":["off-turn pools","refresh","eligible timing","cost","multiple options","initiative-count timing","owner","ordering","interaction","replay/reconnect"],"transactionDomain":"Session timing/economy and interaction authority","disposition":"INCOMPLETE","implementationEvidence":["commonPlaySpecialTimingRuntime.ts","commonPlayC6Runtime.test.ts"],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["session timing event dispatcher","connected special-action interaction"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"mount-vehicle-controller","family":"AD","representativeRules":["controlled/independent mount","drawn vehicle and repair"],"sourceEvidence":["SRD 5.2.1: Mounted Combat and Vehicles","session actor/object topology","movement and d20 kernels"],"currentState":"Generic mount validation and existing object/controller/repair pieces exist; full session composition proof missing","requiredSemantics":["rider/mount link","size","mount/dismount cost","controlled initiative/actions","independent initiative","fall-off save/Prone","capacity","drawn vehicle","crew/speed","vehicle HP/AC/threshold","repair"],"transactionDomain":"Session Actor/Object/Link plus movement and project owners","disposition":"INCOMPLETE","implementationEvidence":["commonPlayMountRuntime.ts","commonPlayArtifactFamiliesRuntime.test.ts","commonPlayC6Runtime.test.ts"],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["live mount/vehicle topology projection","capacity and crew composition proof"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"hazards-exposure-environment","family":"AE","representativeRules":["falling","suffocation","dehydration/exposure","trap/poison"],"sourceEvidence":["SRD 5.2.1: Hazards and Environment","calendar/rest state","trigger/effect/damage kernels"],"currentState":"Revision-bound exposure thresholds/recovery and profile falling primitive exist; durable campaign join and rule compositions missing","requiredSemantics":["falling","suffocation","dehydration","malnutrition","extreme exposure","poison","traps","environment saves","periodic damage/Exhaustion","elapsed thresholds","reset/recovery"],"transactionDomain":"Campaign/session clock plus Resolver effects","disposition":"INCOMPLETE","implementationEvidence":["commonPlayExposureRuntime.ts","commonPlayEnvironmentRuntime.ts","commonPlayC6Runtime.test.ts"],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["campaign clock exposure persistence","periodic Resolver dispatch","hazard composition proofs"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"underwater-special-environment","family":"AF","representativeRules":["underwater combat"],"sourceEvidence":["SRD 5.2.1: Underwater Combat","movement/attack/damage/senses kernels"],"currentState":"Profile-driven movement/attack/defense evaluation exists; session environment and breathing composition proof missing","requiredSemantics":["underwater movement","Swim Speed","weapon disadvantage/restriction","ranged normal-range restriction","Fire resistance","breathing/suffocation"],"transactionDomain":"Session environment profile plus Resolver","disposition":"INCOMPLETE","implementationEvidence":["commonPlayEnvironmentRuntime.ts","commonPlayC6Runtime.test.ts"],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["session environment profile activation","breathing exposure composition"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"standard-actions","family":"AG","representativeRules":["Attack/Dash/Disengage/Dodge/Help/Hide","Influence/Magic/Ready/Search/Study/Utilize"],"sourceEvidence":["SRD 5.2.1: Actions","standardActionReactionAdapter.ts","productionPlayRuntimeAdapter.ts"],"currentState":"Several generic actions exist; complete data-driven composition/Ready incomplete","requiredSemantics":["Attack","Dash","Disengage","Dodge","Help","Hide","Influence","Magic","Ready","Search","Study","Utilize"],"transactionDomain":"Resolver action/effect/d20/item/stored invocation composition","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["productionPlayRuntimeAdapter named projection","Ready workaround","Rogue Hide adapter"],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"tools-crafting-projects","family":"AH","representativeRules":["multi-day cooperative crafting","Potion/Spell Scroll","repair"],"sourceEvidence":["SRD 5.2.1: Tools and Crafting","Campaign persistence","item/inventory transaction"],"currentState":"No generic durable project/activity acceptance proof","requiredSemantics":["project instance","work units","non-consecutive progress","contributors","tool/proficiency/prepared-spell prerequisites","material/currency payment","daily validation","completion output","cancellation","persistence","craft item/Potion/Scroll/repair"],"transactionDomain":"Durable project/activity owner plus inventory transaction","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":[],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"carrying-capacity-cargo","family":"AI","representativeRules":["character carrying capacity","mount/vehicle/container cargo"],"sourceEvidence":["SRD 5.2.1: Carrying Capacity and Containers","RulesProfile properties","inventory item metadata"],"currentState":"Data exists; generic derived constraint and production enforcement proof missing","requiredSemantics":["carrying capacity","size scaling","mount cargo","vehicle cargo","container capacity","weight","equipment prerequisites"],"transactionDomain":"Derived properties plus inventory/vehicle constraints","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":[],"connectedRelevant":true,"persistenceRelevant":true},
-    {"id":"authority-persistence-ownership","family":"AJ","representativeRules":["Host-authoritative retry/reconnect","source-owned lifetime","durable Character writeback"],"sourceEvidence":["SRD 5.2.1 execution ownership requirements","connected session protocol","runtimeResolutionCommit.ts","inventory and Character persistence"],"currentState":"Strong infrastructure exists; every-mechanism ownership acceptance and remote decisions incomplete","requiredSemantics":["correct owner","source ownership","session vs Character durable","revision","atomicity","retry/replay/idempotency","reconnect","Host authority","Client convergence","Undo","cancellation","stale response"],"transactionDomain":"Per-mechanism correct authority with session orchestration","disposition":"INCOMPLETE","implementationEvidence":[],"productionEvidence":[],"identityInvarianceEvidence":[],"connectedEvidenceIfRelevant":[],"persistenceEvidenceIfRelevant":[],"remainingNamedSeams":["named session reconstruction and owner-specific follow-up state"],"connectedRelevant":true,"persistenceRelevant":true}
+    {
+      "id": "expression-property",
+      "family": "A",
+      "representativeRules": [
+        "ability and proficiency modifiers",
+        "level scaling",
+        "conditional overlays"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Tests and ability modifiers",
+        "common-play-contract.schema.json: expression/predicate/property.modify",
+        "dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"
+      ],
+      "currentState": "Schema and kernel evidence exist; production composition audit required",
+      "requiredSemantics": [
+        "literals",
+        "property refs",
+        "arithmetic",
+        "predicates",
+        "derived properties",
+        "ability/proficiency modifiers",
+        "level scaling",
+        "source-bound modifiers",
+        "stacking/replacement",
+        "minimum/maximum",
+        "rounding",
+        "conditional overlay"
+      ],
+      "transactionDomain": "RulesProfile evaluation and owning transaction",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named progression and runtime stat materialization"
+      ],
+      "connectedRelevant": false,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "turn-action-economy-timing",
+      "family": "B",
+      "representativeRules": [
+        "turn economy",
+        "off-turn reactions",
+        "timing-bound grants"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Combat turn structure",
+        "dnd.srd-5.2.1.profile.json: timingPoints/economy",
+        "resolutionTurnOps.ts"
+      ],
+      "currentState": "Schema payments atomically spend Action, Bonus Action, or Reaction through every manual Common Play lowerer with production Host/Client convergence and Undo; full timing/frequency acceptance remains incomplete",
+      "requiredSemantics": [
+        "Action",
+        "Bonus Action",
+        "Reaction",
+        "movement budget",
+        "extra action",
+        "extra attack",
+        "per-turn/round frequency",
+        "turn/round start/end",
+        "initiative",
+        "off-turn execution",
+        "triggered windows",
+        "timing-bound grants",
+        "once per turn"
+      ],
+      "transactionDomain": "Session Resolver turn transaction",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayOperationRuntime.ts shared PaymentContract parsing/lowering",
+        "commonPlayDefinitionRuntime.test.ts all five manual lowerers"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts all non-operation lowerers and Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayResourceEconomyRuntime.test.ts renamed definition",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary external identities"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client payment convergence and Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named class action projection and off-turn adapters",
+        "generic turn/round timing dispatch"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": false
+    },
+    {
+      "id": "d20-test-lifecycle",
+      "family": "C",
+      "representativeRules": [
+        "ability check",
+        "saving throw",
+        "attack roll",
+        "post-roll modification"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: D20 Tests",
+        "SRD 5.2.1 p.35: Peerless Skill",
+        "SRD 5.2.1 p.48: Indomitable",
+        "SRD 5.2.1 p.76: Dark One's Own Luck",
+        "commonPlayD20Runtime.test.ts"
+      ],
+      "currentState": "Generic production handles additional-die ability-check/save/attack decisions and failed-save rerolls with authored bonus; richer post-roll decisions remain incomplete",
+      "requiredSemantics": [
+        "checks",
+        "saves",
+        "attacks",
+        "proficiency",
+        "expertise",
+        "advantage/disadvantage",
+        "flat modifier",
+        "additional die",
+        "DC modification",
+        "reroll",
+        "replace roll",
+        "minimum roll",
+        "outcome recalculation",
+        "critical",
+        "post-roll decision",
+        "outcome follow-up"
+      ],
+      "transactionDomain": "Resolver PendingResolution",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "d20FollowUpRuntimeAdapter.ts"
+      ],
+      "productionEvidence": [
+        "fighterTacticalMindFollowUpRuntime.test.ts",
+        "openAbilityCheckDcRuntime.test.ts",
+        "warlockFiendDarkOnesOwnLuckRuntime.test.ts",
+        "bardCollegeLorePeerlessSkillRuntime.test.ts",
+        "fighterIndomitableFollowUpRuntime.test.ts"
+      ],
+      "identityInvarianceEvidence": [
+        "d20FollowUpRuntime.test.ts"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "fighterTacticalMindFollowUpRuntime.test.ts",
+        "connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts",
+        "connectedProjectedCharacterPeerlessSkillResolution.test.ts",
+        "fighterIndomitableFollowUpRuntime.test.ts"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "fighterTacticalMindFollowUpRuntime.test.ts",
+        "connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts",
+        "connectedProjectedCharacterPeerlessSkillResolution.test.ts",
+        "fighterIndomitableFollowUpRuntime.test.ts"
+      ],
+      "remainingNamedSeams": [
+        "Cutting Words"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "payment-resource",
+      "family": "D",
+      "representativeRules": [
+        "resource spend/recovery",
+        "charges",
+        "atomic multiple payments"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: class resources and item charges",
+        "commonPlayResourceEconomyRuntime.test.ts",
+        "resourceRecoveryLockout.test.ts"
+      ],
+      "currentState": "Generic resource/economy payments are identity-independent and atomic across every manual Common Play lowerer; complete pool/recovery/durable writeback audit remains",
+      "requiredSemantics": [
+        "spend/gain",
+        "multiple atomic resources",
+        "action economy payment",
+        "charges",
+        "rest recovery",
+        "turn-start recovery",
+        "temporary maximum",
+        "recovery lockout",
+        "scaling",
+        "refund cancellation",
+        "source-owned pools"
+      ],
+      "transactionDomain": "Resolver plus Character resource writeback",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayOperationRuntime.ts shared PaymentContract compiler",
+        "commonPlayDefinitionRuntime.test.ts lowerer preservation"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts result/payment atomic commit and Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayResourceEconomyRuntime.test.ts renamed definition"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client economy convergence"
+      ],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named class resource materializers and rest dispatch",
+        "durable Character resource writeback across all lowerers"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "targeting-selectors",
+      "family": "E",
+      "representativeRules": [
+        "single creature target",
+        "area target set",
+        "range/sight/cover filters"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Targets and Areas of Effect",
+        "common-play-contract.schema.json: selector",
+        "commonPlayTargetingRuntime.test.ts"
+      ],
+      "currentState": "One pre-resolved target is bounded PRODUCTION; rich selectors incomplete",
+      "requiredSemantics": [
+        "self",
+        "relation filters",
+        "creature",
+        "object",
+        "point",
+        "area",
+        "selected targets",
+        "min/max",
+        "predicates",
+        "ordering",
+        "range",
+        "reach",
+        "sight",
+        "cover",
+        "tags",
+        "direct/area",
+        "automatic/manual authority"
+      ],
+      "transactionDomain": "Resolver targeting with spatial/manual fact authority",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named spell and feature target policy"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "allocation",
+      "family": "F",
+      "representativeRules": [
+        "Magic Missile projectile allocation",
+        "healing pool distribution"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Magic Missile and Lay on Hands",
+        "common-play-contract.schema.json: allocationPlan",
+        "legacy production spell allocation"
+      ],
+      "currentState": "Schema only; authoritative selection/retry production path missing",
+      "requiredSemantics": [
+        "fixed pool",
+        "projectile/charge/die allocation",
+        "integer sum",
+        "per-target bounds",
+        "duplicate policy",
+        "pre-execution allocation",
+        "player/DM authority",
+        "retry/reconnect",
+        "atomic commit"
+      ],
+      "transactionDomain": "Typed pending decision plus Resolver",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "production spell automatic allocation",
+        "Paladin healing allocation"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "spatial-geometry",
+      "family": "G",
+      "representativeRules": [
+        "AoE membership",
+        "reach and Total Cover",
+        "artifact placement"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Areas, distance, cover",
+        "commonPlaySpatialFactRuntime.test.ts",
+        "Gate E provider/manual authority"
+      ],
+      "currentState": "Provider/manual fact kernel exists; geometry and production breadth incomplete",
+      "requiredSemantics": [
+        "distance",
+        "adjacency",
+        "reach",
+        "size/space",
+        "line",
+        "cone",
+        "cube",
+        "sphere",
+        "cylinder",
+        "emanation",
+        "origin",
+        "intersection",
+        "AoE membership",
+        "Total Cover",
+        "position/placement"
+      ],
+      "transactionDomain": "Authoritative spatial provider or explicit manual authority",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "senses-visibility-hiding",
+      "family": "H",
+      "representativeRules": [
+        "Hide and Search",
+        "Invisible versus Blindsight",
+        "darkness"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Vision, senses, Hide",
+        "conditions.ts",
+        "sessionStatusEffectEventRuntimeAdapter.ts"
+      ],
+      "currentState": "Generic status and creature-type awareness paths are production-proven; authoritative full sensing relation model remains incomplete",
+      "requiredSemantics": [
+        "normal sight",
+        "lighting",
+        "obscurement",
+        "Invisible",
+        "Blindsight",
+        "Darkvision",
+        "Tremorsense",
+        "Truesight",
+        "see/hear",
+        "Hidden",
+        "Hide",
+        "detection/search",
+        "reveal/end Hidden"
+      ],
+      "transactionDomain": "Session sensing facts plus Resolver effects",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "sessionStatusEffectEventRuntimeAdapter.ts",
+        "effectGrantActionRuntimeAdapter.ts"
+      ],
+      "productionEvidence": [
+        "connectedProjectedCharacterCunningHideResolution.test.ts",
+        "connectedProjectedCharacterCunningDisengageResolution.test.ts",
+        "paladinDivineSenseActionRuntime.test.ts"
+      ],
+      "identityInvarianceEvidence": [
+        "sessionStatusEffectEventRuntime.test.ts",
+        "effectGrantActionRuntime.test.ts"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "connectedProjectedCharacterCunningHideResolution.test.ts",
+        "connectedProjectedCharacterCunningDisengageResolution.test.ts",
+        "paladinDivineSenseActionRuntime.test.ts"
+      ],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "Rogue action projection",
+        "authoritative sensing relation",
+        "live sanctity facts"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": false
+    },
+    {
+      "id": "movement",
+      "family": "I",
+      "representativeRules": [
+        "Difficult Terrain",
+        "stand from Prone",
+        "forced movement and teleport"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Movement",
+        "commonPlayMovementRuntime.test.ts",
+        "resolutionMovementOps.ts"
+      ],
+      "currentState": "Canonical movement.relocate now parses through the operations lowerer and executes actor-authority mapless destinations in installed production/Undo; complete modes, costs, connected breadth, and derived constraints remain incomplete",
+      "requiredSemantics": [
+        "walk",
+        "climb",
+        "swim",
+        "fly",
+        "crawl",
+        "jump",
+        "Difficult Terrain",
+        "stand Prone",
+        "forced movement",
+        "push/pull",
+        "teleport",
+        "no provoke",
+        "drag/carry",
+        "cost multipliers",
+        "alternate speed",
+        "zero speed"
+      ],
+      "transactionDomain": "Session Resolver movement with spatial/manual authority",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayMovementRuntime.ts",
+        "commonPlayOperationRuntime.ts movement.relocate lowering"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts mapless stored movement and Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayMovementRuntime.test.ts external definition identity independence"
+      ],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named movement grants",
+        "complete movement mode/cost production matrix"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": false
+    },
+    {
+      "id": "attack-control",
+      "family": "J",
+      "representativeRules": [
+        "weapon and Unarmed Strike",
+        "Opportunity Attack",
+        "grapple/shove/escape"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Attacks and Unarmed Strike",
+        "realAttackTransactionService.ts",
+        "unarmedControlRuntimeAdapter.ts"
+      ],
+      "currentState": "Generic attack/control pieces exist; portable Common Play convergence incomplete",
+      "requiredSemantics": [
+        "weapon attack",
+        "Unarmed Strike",
+        "Opportunity Attack",
+        "grapple",
+        "shove",
+        "escape",
+        "reach",
+        "long range",
+        "cover",
+        "critical",
+        "multiattack/Extra Attack",
+        "replace one attack",
+        "ammunition/loading constraints"
+      ],
+      "transactionDomain": "Resolver attack transaction",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "Rage attack rider",
+        "named attack/action projection"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "weapon-mastery",
+      "family": "K",
+      "representativeRules": [
+        "Cleave",
+        "Graze",
+        "Nick",
+        "Push",
+        "Sap",
+        "Slow",
+        "Topple",
+        "Vex"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Weapon Mastery properties",
+        "progressionPhase08WeaponMasteryAdapter.ts",
+        "weapon rule catalog"
+      ],
+      "currentState": "Named/progression semantics exist; generic trigger/effect composition proof missing",
+      "requiredSemantics": [
+        "Cleave",
+        "Graze",
+        "Nick",
+        "Push",
+        "Sap",
+        "Slow",
+        "Topple",
+        "Vex",
+        "generic hit/miss trigger",
+        "frequency",
+        "movement",
+        "save",
+        "extra attack/economy"
+      ],
+      "transactionDomain": "Progression grant plus Resolver combat semantics",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "progressionPhase08WeaponMasteryAdapter"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "damage-life",
+      "family": "L",
+      "representativeRules": [
+        "compound typed damage",
+        "Temporary HP",
+        "death saves and objects"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Damage, Healing, Death",
+        "compoundDamage.test.ts",
+        "resolutionHealthOps.ts"
+      ],
+      "currentState": "Bounded damage/healing is PRODUCTION; complete life/object semantics incomplete",
+      "requiredSemantics": [
+        "typed/compound damage",
+        "resistance",
+        "vulnerability",
+        "immunity",
+        "threshold",
+        "reduction",
+        "critical dice",
+        "Temporary HP",
+        "healing/full healing",
+        "max HP",
+        "0 HP",
+        "unconscious/death",
+        "death saves",
+        "stabilization",
+        "instant death",
+        "Object/Vehicle damage"
+      ],
+      "transactionDomain": "Resolver health transaction and durable writeback",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named feature/spell HP execution"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "conditions",
+      "family": "M",
+      "representativeRules": [
+        "all SRD conditions",
+        "condition immunity",
+        "Exhaustion levels"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Conditions",
+        "conditions.ts",
+        "phase05Lifecycle.test.ts"
+      ],
+      "currentState": "Condition kernel exists; exhaustive semantics/production/public UI audit incomplete",
+      "requiredSemantics": [
+        "Blinded",
+        "Charmed",
+        "Deafened",
+        "Exhaustion",
+        "Frightened",
+        "Grappled",
+        "Incapacitated",
+        "Invisible",
+        "Paralyzed",
+        "Petrified",
+        "Poisoned",
+        "Prone",
+        "Restrained",
+        "Stunned",
+        "Unconscious",
+        "immunity",
+        "stacking/levels"
+      ],
+      "transactionDomain": "Resolver effect/condition state",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named condition application adapters"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "effect-duration-maintained",
+      "family": "N",
+      "representativeRules": [
+        "persistent timed effect",
+        "suppression and dependent cleanup"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Durations",
+        "commonPlayEffectRuntime.test.ts",
+        "effects.ts"
+      ],
+      "currentState": "Installed arbitrary-ID persistent effects now activate and automatically consume/retaliate inside the incoming damage transaction with Host/Client replay, reconnect, and Undo; the exhaustive duration/suppression/dependent-cleanup matrix remains under audit",
+      "requiredSemantics": [
+        "instant",
+        "rounds/turns/elapsed",
+        "until timing",
+        "rest",
+        "permanent",
+        "concentration",
+        "source/target death/incap end",
+        "damage end",
+        "consume-on-use",
+        "replacement/stacking",
+        "suppression",
+        "unsuppression",
+        "pause/resume",
+        "source/dependent cleanup"
+      ],
+      "transactionDomain": "Resolver RuntimeArtifact/effect lifecycle",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayEffectRuntime.ts activation/event/atomic damage-trigger composition",
+        "effects.ts generic duration/suppression lifecycle",
+        "effectGrantActionRuntimeAdapter.ts",
+        "consumableD20BonusEffectFollowUpRuntimeAdapter.ts"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts automatic persistent effect atomic transaction",
+        "bardicInspirationActionRuntime.test.ts",
+        "bardicInspirationFollowUpRuntime.test.ts"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayEffectRuntime.test.ts renamed definition",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect connected replay/Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect new-replica event replay"
+      ],
+      "remainingNamedSeams": [
+        "named aura/form/mark effect adapters",
+        "exhaustive duration/suppression/dependent-cleanup acceptance"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "concentration",
+      "family": "O",
+      "representativeRules": [
+        "concentration replacement",
+        "damage save",
+        "readied/long-cast spell"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Concentration",
+        "concentration.ts",
+        "concentrationDamageResult.test.ts"
+      ],
+      "currentState": "Generic concentration behavior exists; production composition/reconnect proof incomplete",
+      "requiredSemantics": [
+        "single source",
+        "replacement",
+        "damage save/DC",
+        "incapacitation",
+        "death",
+        "dependent cleanup",
+        "long casting",
+        "readied spell",
+        "Undo/reconnect"
+      ],
+      "transactionDomain": "Resolver maintained effect lifecycle",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "spell-specific concentration routing"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "trigger-frequency-automatic",
+      "family": "P",
+      "representativeRules": [
+        "roll/outcome interceptors",
+        "turn/zone triggers",
+        "once-per-turn frequency"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: triggers and feature frequency",
+        "commonPlayRuntime.ts",
+        "commonPlayEffectRuntime.ts",
+        "commonPlayZoneRuntime.ts"
+      ],
+      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, and canonical interactive interceptor timing points have production evidence. State/rest/expiry/recharge and automatic hit/save event families remain incomplete",
+      "requiredSemantics": [
+        "before/after roll/outcome",
+        "hit/miss",
+        "save outcomes",
+        "damage taken/dealt",
+        "state applied",
+        "turn/round",
+        "zone enter/leave",
+        "rest",
+        "expiry",
+        "once",
+        "once per turn/round",
+        "recharge/cooldown",
+        "source frequency"
+      ],
+      "transactionDomain": "Resolver trigger orchestration",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayEffectRuntime.ts damage.taken|damage.dealt automatic composition",
+        "commonPlayFrequencyRuntime.ts",
+        "commonPlayZoneRuntime.ts",
+        "commonPlayActorTurnRuleComposition.ts actor-owned turn-start/end composition",
+        "commonPlayRuntime.ts canonical attack.outcome-determined, d20.outcome-determined, and damage.rolled interceptor timings"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts atomic automatic damage trigger and Zone membership trigger",
+        "connectedDamageDealtTriggerProduction.test.ts damage.dealt and recurring frequency production",
+        "connectedTurnResolutionEventTransport.test.ts automatic Zone turn-start/end transaction",
+        "connectedActorTurnRuleProduction.test.ts actor-owned turn-start/end resource rules",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts d20.outcome-determined and damage.rolled interactive production"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayEffectRuntime.test.ts renamed external definitions",
+        "commonPlayFrequencyRuntime.test.ts renamed rules",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary Zone package identity",
+        "connectedDamageDealtTriggerProduction.test.ts arbitrary installed damage.dealt identity",
+        "connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity",
+        "connectedActorTurnRuleProduction.test.ts arbitrary installed actor-rule identities",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts module/content/definition/interceptor/display rename"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect and Zone membership Host/Client replay plus Undo",
+        "connectedDamageDealtTriggerProduction.test.ts Host/Client replay, duplicate handling, reconnect, frequency markers, and Undo",
+        "connectedTurnResolutionEventTransport.test.ts turn lifecycle Host/Client replay, reconnect, and Undo",
+        "connectedActorTurnRuleProduction.test.ts Host/Client replay, duplicate handling, reconnect, and event-native Undo",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts damage-roll Host/Client exactly-once convergence"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts new replica full event replay",
+        "connectedDamageDealtTriggerProduction.test.ts ordered reconnect replay",
+        "connectedTurnResolutionEventTransport.test.ts ordered reconnect replay of Zone turn lifecycle",
+        "connectedActorTurnRuleProduction.test.ts ordered reconnect replay of actor turn lifecycle"
+      ],
+      "remainingNamedSeams": [
+        "remaining event-family dispatcher composition",
+        "named post-roll and feature trigger adapters"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "interaction-reaction",
+      "family": "Q",
+      "representativeRules": [
+        "actor consent Reaction",
+        "remote owner choice",
+        "multiple options"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Reactions and decisions",
+        "commonPlayInteractionProductionRuntime.test.ts",
+        "ResolutionView.interrupt"
+      ],
+      "currentState": "Manual actor boolean consent is bounded PRODUCTION; rich/remote lifecycle incomplete",
+      "requiredSemantics": [
+        "consent",
+        "choice",
+        "multiple options",
+        "actor/target/owners/DM/Host",
+        "blocking remote response",
+        "stale/reconnect/replay",
+        "decline",
+        "payment",
+        "atomic downstream"
+      ],
+      "transactionDomain": "Existing resolution interrupt plus connected session authority",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "all named post-roll follow-up adapters"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "simultaneous-ordering",
+      "family": "R",
+      "representativeRules": [
+        "simultaneous start-turn effects"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Simultaneous Effects",
+        "RulesProfile timing points",
+        "session event batches"
+      ],
+      "currentState": "No explicit generic ordering authority proof",
+      "requiredSemantics": [
+        "timing window",
+        "eligible effects",
+        "ordering authority",
+        "player/DM choice",
+        "deterministic ordered execution",
+        "Host authority",
+        "reconnect/replay"
+      ],
+      "transactionDomain": "Typed pending decision plus session authority",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "stored-invocation-ready",
+      "family": "S",
+      "representativeRules": [
+        "Ready attack",
+        "Ready movement",
+        "Ready spell"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Ready action",
+        "commonPlayStoredInvocationRuntime.ts",
+        "standardActionReactionAdapter.ts"
+      ],
+      "currentState": "Canonical stored invocation covers installed attack/spell and mapless movement payloads, Ready UI capture, structural trigger matching, Reaction, exactly-once consumption, cancel, turn-start expiry, held Concentration, Host replay/reconnect, and Undo",
+      "requiredSemantics": [
+        "capture now/trigger later",
+        "condition",
+        "snapshot/live binding",
+        "action/spell payload",
+        "Reaction payment",
+        "exactly once",
+        "expiry/cancel/ignored trigger",
+        "stale/reconnect/Undo",
+        "readied movement/attack/spell",
+        "concentration"
+      ],
+      "transactionDomain": "Session stored-invocation artifact and Resolver",
+      "disposition": "IMPLEMENTED",
+      "implementationEvidence": [
+        "commonPlayStoredInvocationRuntime.ts",
+        "commonPlayArtifactRuntime.ts stored-invocation lowering",
+        "commonPlayOperationRuntime.ts movement.relocate lowering",
+        "resolutionTurnOps.ts artifact boundary expiry",
+        "installedCommonPlayRuntimeAdapter.ts stored invocation projection/trigger/cancel/Ready UI capture"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts attack/spell/movement, held Concentration, cancel, expiry, Ready UI, and Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayStoredInvocationRuntime.test.ts renamed definitions",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client capture/trigger/Undo convergence"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts new replica full event-log replay"
+      ],
+      "remainingNamedSeams": [
+        "standardActionReactionAdapter legacy non-Common-Play migration debt; unknown portable Common Play does not select or fall through to it"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "zones",
+      "family": "T",
+      "representativeRules": [
+        "persistent zone enter/leave and turn frequency"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: persistent areas",
+        "commonPlayZoneRuntime.test.ts",
+        "Gate D"
+      ],
+      "currentState": "Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/stay/start/end-turn events, canonical once-per-turn frequency, elapsed duration cleanup, damage and effect.apply triggers, atomic Undo, Host/Client replay, duplicate replay, and fresh reconnect through generic Resolver events",
+      "requiredSemantics": [
+        "spawn",
+        "placement",
+        "membership",
+        "enter/leave/stay/start/end turn",
+        "frequency",
+        "duration",
+        "manual/spatial authority",
+        "damage/effect triggers",
+        "cleanup",
+        "connected persistence"
+      ],
+      "transactionDomain": "Session RuntimeArtifact plus Resolver triggers",
+      "disposition": "IMPLEMENTED",
+      "implementationEvidence": [
+        "commonPlayZoneRuntime.ts membership/stay/turn/duration plus generic damage/effect rule lowering",
+        "commonPlayEffectRuntime.ts reusable effect.apply -> apply-effect lowering",
+        "commonPlayDefinitionRuntime.ts retention of Zone rule-referenced effect templates",
+        "installedCommonPlayRuntimeAdapter.ts Zone projection and manual membership resolution",
+        "realTurnLifecycleService.ts Zone turn lifecycle composition and round-wrap advance-time",
+        "spatialZoneMembershipRuntimeAdapter.ts authoritative membership and stay provider ingress"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts Zone membership, damage, and Undo",
+        "connectedTurnResolutionEventTransport.test.ts arbitrary Zone turn lifecycle and elapsed cleanup",
+        "connectedSpatialZoneMembershipProduction.test.ts authoritative spatial membership/stay plus Zone effect.apply production"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayZoneRuntime.test.ts",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity",
+        "connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity",
+        "connectedSpatialZoneMembershipProduction.test.ts arbitrary installed Zone identity including effect trigger"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts Zone Host/Client membership and Undo convergence",
+        "connectedTurnResolutionEventTransport.test.ts turn lifecycle and elapsed cleanup Host/Client convergence, duplicate replay, reconnect, and Undo",
+        "connectedSpatialZoneMembershipProduction.test.ts spatial membership/stay/effect Host/Client convergence, duplicate replay, reconnect, and Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts Zone new-replica event replay",
+        "connectedTurnResolutionEventTransport.test.ts ordered reconnect reconstruction of Zone turn and elapsed cleanup events",
+        "connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for spatial membership/stay/effect"
+      ],
+      "remainingNamedSeams": [
+        "named persistent aura/zone migration debt; unknown portable Common Play does not select or fall through to it"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "object-link-artifacts",
+      "family": "U",
+      "representativeRules": [
+        "damageable wall",
+        "portal/link",
+        "rope/tether"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Objects",
+        "common-play-contract.schema.json: object/link artifactKind",
+        "resolutionArtifactOps.ts"
+      ],
+      "currentState": "Schema-backed object/link artifacts now execute source-owned granted lifecycle actions for damage, repair, relocation, removal/destruction, opaque placement, link endpoints/relations, elapsed lifetime cleanup, Host/Client replay, duplicate handling, reconnect, Undo, and external identity rename through the generic artifact Resolver path.",
+      "requiredSemantics": [
+        "object instance",
+        "size",
+        "AC/HP/threshold/defenses",
+        "placement/movement",
+        "damage/repair/destruction",
+        "source/lifetime",
+        "barrier/wall",
+        "portal/link",
+        "tether",
+        "reconnect",
+        "Undo"
+      ],
+      "transactionDomain": "Session object/link artifact owner plus Resolver",
+      "disposition": "IMPLEMENTED",
+      "implementationEvidence": [
+        "schemas/common-play-contract.schema.json artifact lifecycle vocabulary and artifactTemplates[].grantedEntryPoints",
+        "src/domain/commonPlayArtifactLifecycleRuntime.ts schema-backed granted-entry lifecycle lowering",
+        "src/domain/resolutionArtifactOps.ts typed object/link artifact mutation and lifecycle operations",
+        "src/app/installedCommonPlayArtifactLifecycleAdapter.ts production lifecycle action projection and dispatch"
+      ],
+      "productionEvidence": [
+        "tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts#unknown object/link artifacts execute granted lifecycle actions through connected replay, reconnect, and Undo",
+        "C9 Family U Diagnostic run 33279420876 focused object/link lifecycle 2/2 passed"
+      ],
+      "identityInvarianceEvidence": [
+        "tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts#renaming the external object module preserves granted lifecycle semantics"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts Host/Client event replay, duplicate idempotence, reconnect, expiry, destruction, and event-native Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts fresh replica reconstructs object/link lifecycle from ordered authoritative event history",
+        "schemas/common-play-contract.schema.json plus installed-content activation preserve schema-backed granted lifecycle vocabulary"
+      ],
+      "remainingNamedSeams": [],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "actor-artifact-summon",
+      "family": "V",
+      "representativeRules": [
+        "controlled summon",
+        "independent summoned actor"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: summoned creatures",
+        "common-play-contract.schema.json: actor artifactKind",
+        "session topology projection"
+      ],
+      "currentState": "Portable actor spawn creates typed combatant state and projects Scene identity/HP/AC/initiative/controller plus definition-driven actions; scoped action execution, economy, Host/Client convergence, and Undo are production-proven; death/replacement and restart persistence remain incomplete",
+      "requiredSemantics": [
+        "spawn",
+        "stat/actions/resources projection",
+        "source",
+        "owner/controller",
+        "placement",
+        "initiative",
+        "controlled/independent",
+        "lifetime",
+        "death/despawn/replacement",
+        "reconnect",
+        "Undo"
+      ],
+      "transactionDomain": "Session actor artifact authority",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "resolutionArtifactOps.ts actor combatant lifecycle",
+        "runtimeStateChange.ts combatant StateChange",
+        "installedCommonPlayRuntimeAdapter.ts scoped actor action projection and execution"
+      ],
+      "productionEvidence": [
+        "realTurnRuntimeService.ts actor Scene projection",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts summoned action execution and Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayArtifactActivationRuntime.test.ts",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts renamed module run"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts actor/action event transport, projection convergence, execution, and Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "full summoned actor death/despawn/replacement policy",
+        "restart/reconnect persistence proof"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "form-transformation-possession",
+      "family": "W",
+      "representativeRules": [
+        "Wild-Shape-like overlay",
+        "Polymorph-like replacement",
+        "possession"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Wild Shape/Polymorph",
+        "druidWildShapeRuntimeAdapter.ts",
+        "common-play-contract.schema.json: form artifactKind"
+      ],
+      "currentState": "Named Wild Shape exists; generic form/controller artifact missing",
+      "requiredSemantics": [
+        "property overlay/replacement/retention",
+        "resource/HP/temp HP policy",
+        "actions",
+        "movement/senses",
+        "spell restrictions",
+        "replacement/restoration",
+        "duration/death/end",
+        "source/controller",
+        "reconnect",
+        "Undo"
+      ],
+      "transactionDomain": "Session form artifact plus Character projection",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "druidWildShapeRuntimeAdapter"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "items-inventory-equipment",
+      "family": "X",
+      "representativeRules": [
+        "grant/consume item",
+        "equipment-owned action",
+        "owner transfer"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Equipment and magic items",
+        "inventory persistence adapters",
+        "phase09RealAtomicItemAdapter.ts"
+      ],
+      "currentState": "Durable inventory authority exists; generic Common Play item lifecycle incomplete",
+      "requiredSemantics": [
+        "create/grant/copy",
+        "quantity",
+        "consume/destroy/update",
+        "charges/recharge",
+        "equip/unequip/wield",
+        "containers",
+        "item actions/effects/spellcasting",
+        "owner transfer",
+        "durable persistence",
+        "atomic payment/result",
+        "connected",
+        "Undo"
+      ],
+      "transactionDomain": "Character inventory transaction with session orchestration",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named item/spell activation"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "attunement-magic-item",
+      "family": "Y",
+      "representativeRules": [
+        "Short Rest attunement",
+        "exclusive owner and item charges"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Attunement",
+        "dnd.srd-5.2.1.profile.json: item activation-attunement capability",
+        "inventory item state"
+      ],
+      "currentState": "Activation state exists; rule-complete lifecycle/process missing",
+      "requiredSemantics": [
+        "attune/unattune",
+        "Short Rest process",
+        "prerequisite",
+        "maximum",
+        "exclusive owner",
+        "benefit activation",
+        "rule-driven loss",
+        "cursed constraints",
+        "charges/recharge",
+        "destruction/consumption"
+      ],
+      "transactionDomain": "Durable Character/item transaction and rest activity",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named item activation"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "spellcasting-meta",
+      "family": "Z",
+      "representativeRules": [
+        "slot/upcast spell",
+        "component/cost checks",
+        "long cast/Ritual/Reaction"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Spellcasting",
+        "spellMechanics.ts",
+        "spellcastingRuntimeAdapter.ts",
+        "productionSpellRuntimeAdapter.ts"
+      ],
+      "currentState": "Typed component and maintained-casting primitives exist; one authoritative runtime now serves freeform and initiative, but spell identity lookup and durable material payment remain incomplete",
+      "requiredSemantics": [
+        "access/preparation/source",
+        "cantrip/level/slot/upcast",
+        "one slot per turn",
+        "casting economy",
+        "Reaction trigger",
+        "V/S/M/focus/pouch/cost/consumption/free hand/silence",
+        "range/Touch/Self/AoE",
+        "attack/save/damage/heal/effect",
+        "Concentration/duration/dismiss",
+        "long cast/Ritual/interruption",
+        "item/scroll casting",
+        "counter interaction"
+      ],
+      "transactionDomain": "Resolver plus Character spell/resource writeback",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlaySpellcastingMeta.ts",
+        "commonPlayC6Runtime.test.ts"
+      ],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "spellcastingRuntimeAdapter",
+        "productionSpellRuntimeAdapter",
+        "phase09AuthoritativeSpellcastingAdapter",
+        "spellMechanicById",
+        "componentsSatisfied compatibility input",
+        "material consumption inventory join"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "progression",
+      "family": "AA",
+      "representativeRules": [
+        "unknown class/subclass/feat progression contribution",
+        "multiclass choices"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Character creation/progression",
+        "content-entry.schema.json: progressionContributions",
+        "progression.ts"
+      ],
+      "currentState": "Unknown module contributions persist and execute by track/threshold; named level-up projection seams remain incomplete",
+      "requiredSemantics": [
+        "class/subclass/species/background/feat",
+        "multiclass/prerequisites/thresholds",
+        "automatic grants/choices/counts/replacement/upgrade",
+        "proficiency/expertise/language/ability/HP/hit dice",
+        "resources",
+        "spell lists/grants/choices",
+        "mastery",
+        "persistent options",
+        "cross-content contribution"
+      ],
+      "transactionDomain": "ProgressionDraft to Character revision",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayProgressionContribution.ts",
+        "ruleModulePackageImport.ts",
+        "commonPlayC6Runtime.test.ts"
+      ],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [
+        "InstalledCatalogEntryV1.progressionContributions"
+      ],
+      "remainingNamedSeams": [
+        "named Phase08 progression adapters",
+        "progressionRuntimeAdapter identity branches",
+        "characterCreationV10Adapter grants",
+        "installed contribution level-up projection"
+      ],
+      "connectedRelevant": false,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "recharge-cooldown",
+      "family": "AB",
+      "representativeRules": [
+        "monster Recharge 5-6",
+        "turn-start recovery"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Recharge",
+        "resource/frequency kernels",
+        "monster action state"
+      ],
+      "currentState": "Generic authoritative Resolver recharge exists; production action/catalog and connected proof missing",
+      "requiredSemantics": [
+        "recharge die/range/timing",
+        "availability",
+        "consumption",
+        "turn-start recovery",
+        "resource/action distinction",
+        "connected state",
+        "Undo/replay"
+      ],
+      "transactionDomain": "Session actor resource/frequency state",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "recharge-resource ResolutionOperation",
+        "commonPlayC6Runtime.test.ts"
+      ],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "monster action catalog recharge projection"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "legendary-lair-special-timing",
+      "family": "AC",
+      "representativeRules": [
+        "Legendary-style off-turn pool",
+        "lair initiative-count timing"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Legendary Actions/Lair Actions where present",
+        "RulesProfile timing/economy",
+        "reactionWindow.ts"
+      ],
+      "currentState": "Owner/timing/option/cost compilation exists; production dispatch, ordering interaction, and reconnect proof missing",
+      "requiredSemantics": [
+        "off-turn pools",
+        "refresh",
+        "eligible timing",
+        "cost",
+        "multiple options",
+        "initiative-count timing",
+        "owner",
+        "ordering",
+        "interaction",
+        "replay/reconnect"
+      ],
+      "transactionDomain": "Session timing/economy and interaction authority",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlaySpecialTimingRuntime.ts",
+        "commonPlayC6Runtime.test.ts"
+      ],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "session timing event dispatcher",
+        "connected special-action interaction"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "mount-vehicle-controller",
+      "family": "AD",
+      "representativeRules": [
+        "controlled/independent mount",
+        "drawn vehicle and repair"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Mounted Combat and Vehicles",
+        "session actor/object topology",
+        "movement and d20 kernels"
+      ],
+      "currentState": "Generic mount validation and existing object/controller/repair pieces exist; full session composition proof missing",
+      "requiredSemantics": [
+        "rider/mount link",
+        "size",
+        "mount/dismount cost",
+        "controlled initiative/actions",
+        "independent initiative",
+        "fall-off save/Prone",
+        "capacity",
+        "drawn vehicle",
+        "crew/speed",
+        "vehicle HP/AC/threshold",
+        "repair"
+      ],
+      "transactionDomain": "Session Actor/Object/Link plus movement and project owners",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayMountRuntime.ts",
+        "commonPlayArtifactFamiliesRuntime.test.ts",
+        "commonPlayC6Runtime.test.ts"
+      ],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "live mount/vehicle topology projection",
+        "capacity and crew composition proof"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "hazards-exposure-environment",
+      "family": "AE",
+      "representativeRules": [
+        "falling",
+        "suffocation",
+        "dehydration/exposure",
+        "trap/poison"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Hazards and Environment",
+        "calendar/rest state",
+        "trigger/effect/damage kernels"
+      ],
+      "currentState": "Revision-bound exposure thresholds/recovery and profile falling primitive exist; durable campaign join and rule compositions missing",
+      "requiredSemantics": [
+        "falling",
+        "suffocation",
+        "dehydration",
+        "malnutrition",
+        "extreme exposure",
+        "poison",
+        "traps",
+        "environment saves",
+        "periodic damage/Exhaustion",
+        "elapsed thresholds",
+        "reset/recovery"
+      ],
+      "transactionDomain": "Campaign/session clock plus Resolver effects",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayExposureRuntime.ts",
+        "commonPlayEnvironmentRuntime.ts",
+        "commonPlayC6Runtime.test.ts"
+      ],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "campaign clock exposure persistence",
+        "periodic Resolver dispatch",
+        "hazard composition proofs"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "underwater-special-environment",
+      "family": "AF",
+      "representativeRules": [
+        "underwater combat"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Underwater Combat",
+        "movement/attack/damage/senses kernels"
+      ],
+      "currentState": "Profile-driven movement/attack/defense evaluation exists; session environment and breathing composition proof missing",
+      "requiredSemantics": [
+        "underwater movement",
+        "Swim Speed",
+        "weapon disadvantage/restriction",
+        "ranged normal-range restriction",
+        "Fire resistance",
+        "breathing/suffocation"
+      ],
+      "transactionDomain": "Session environment profile plus Resolver",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [
+        "commonPlayEnvironmentRuntime.ts",
+        "commonPlayC6Runtime.test.ts"
+      ],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "session environment profile activation",
+        "breathing exposure composition"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "standard-actions",
+      "family": "AG",
+      "representativeRules": [
+        "Attack/Dash/Disengage/Dodge/Help/Hide",
+        "Influence/Magic/Ready/Search/Study/Utilize"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Actions",
+        "standardActionReactionAdapter.ts",
+        "productionPlayRuntimeAdapter.ts"
+      ],
+      "currentState": "Several generic actions exist; complete data-driven composition/Ready incomplete",
+      "requiredSemantics": [
+        "Attack",
+        "Dash",
+        "Disengage",
+        "Dodge",
+        "Help",
+        "Hide",
+        "Influence",
+        "Magic",
+        "Ready",
+        "Search",
+        "Study",
+        "Utilize"
+      ],
+      "transactionDomain": "Resolver action/effect/d20/item/stored invocation composition",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "productionPlayRuntimeAdapter named projection",
+        "Ready workaround",
+        "Rogue Hide adapter"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "tools-crafting-projects",
+      "family": "AH",
+      "representativeRules": [
+        "multi-day cooperative crafting",
+        "Potion/Spell Scroll",
+        "repair"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Tools and Crafting",
+        "Campaign persistence",
+        "item/inventory transaction"
+      ],
+      "currentState": "No generic durable project/activity acceptance proof",
+      "requiredSemantics": [
+        "project instance",
+        "work units",
+        "non-consecutive progress",
+        "contributors",
+        "tool/proficiency/prepared-spell prerequisites",
+        "material/currency payment",
+        "daily validation",
+        "completion output",
+        "cancellation",
+        "persistence",
+        "craft item/Potion/Scroll/repair"
+      ],
+      "transactionDomain": "Durable project/activity owner plus inventory transaction",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "carrying-capacity-cargo",
+      "family": "AI",
+      "representativeRules": [
+        "character carrying capacity",
+        "mount/vehicle/container cargo"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1: Carrying Capacity and Containers",
+        "RulesProfile properties",
+        "inventory item metadata"
+      ],
+      "currentState": "Data exists; generic derived constraint and production enforcement proof missing",
+      "requiredSemantics": [
+        "carrying capacity",
+        "size scaling",
+        "mount cargo",
+        "vehicle cargo",
+        "container capacity",
+        "weight",
+        "equipment prerequisites"
+      ],
+      "transactionDomain": "Derived properties plus inventory/vehicle constraints",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    },
+    {
+      "id": "authority-persistence-ownership",
+      "family": "AJ",
+      "representativeRules": [
+        "Host-authoritative retry/reconnect",
+        "source-owned lifetime",
+        "durable Character writeback"
+      ],
+      "sourceEvidence": [
+        "SRD 5.2.1 execution ownership requirements",
+        "connected session protocol",
+        "runtimeResolutionCommit.ts",
+        "inventory and Character persistence"
+      ],
+      "currentState": "Strong infrastructure exists; every-mechanism ownership acceptance and remote decisions incomplete",
+      "requiredSemantics": [
+        "correct owner",
+        "source ownership",
+        "session vs Character durable",
+        "revision",
+        "atomicity",
+        "retry/replay/idempotency",
+        "reconnect",
+        "Host authority",
+        "Client convergence",
+        "Undo",
+        "cancellation",
+        "stale response"
+      ],
+      "transactionDomain": "Per-mechanism correct authority with session orchestration",
+      "disposition": "INCOMPLETE",
+      "implementationEvidence": [],
+      "productionEvidence": [],
+      "identityInvarianceEvidence": [],
+      "connectedEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [],
+      "remainingNamedSeams": [
+        "named session reconstruction and owner-specific follow-up state"
+      ],
+      "connectedRelevant": true,
+      "persistenceRelevant": true
+    }
   ]
 }
