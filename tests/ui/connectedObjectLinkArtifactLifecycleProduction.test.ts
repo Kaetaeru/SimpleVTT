@@ -14,6 +14,7 @@ import { setInstalledContentStoreForTests } from "../../src/app/installedContent
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { ClientSessionReplica, HostSessionLedger } from "../../src/app/connectedSessionProtocol";
+import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
 function packagePayload(prefix:string) {
@@ -78,6 +79,13 @@ async function applyFullLedger(host:MockAdapter,client:MockAdapter) {
   return applyConnectedClientEvents(client,ledger.eventsAfter(0));
 }
 
+async function withoutDesktopTransport<T>(operation:()=>Promise<T>) {
+  const originalSend=tauriSessionTransport.send;
+  tauriSessionTransport.send=async()=>1;
+  try { return await operation(); }
+  finally { tauriSessionTransport.send=originalSend; }
+}
+
 async function runRenamedObject(prefix:string) {
   const adapter=new MockAdapter();
   const pack=await install(adapter,prefix);
@@ -101,7 +109,7 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   const clientConnected=connectedStateFor(client);
   clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
 
-  await host.resolveAction(pack.createAction,["char.aelar"]);
+  await withoutDesktopTransport(()=>host.resolveAction(pack.createAction,["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
   let hostSnapshot=await host.getSnapshot();
   let clientSnapshot=await client.getSnapshot();
@@ -112,17 +120,17 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   assert.deepEqual(artifacts(client,clientSnapshot).map((artifact)=>artifact.templateId),["wall","tether"]);
   assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(wall.id,"chip")));
 
-  await host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"chip"),["char.aelar"]);
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"chip"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
   hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
   assert.equal(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,13);
   assert.equal(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,13);
 
-  await host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"repair"),["char.aelar"]);
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"repair"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
   assert.equal(artifacts(host,await host.getSnapshot()).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,16);
 
-  await host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"destroy"),["char.aelar"]);
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"destroy"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
   hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
   assert.equal(artifacts(host,hostSnapshot).some((artifact)=>artifact.id===wall.id),false);
@@ -130,7 +138,7 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   assert.equal(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id.includes(encodeURIComponent(wall.id))),false);
   assert.equal((await applyFullLedger(host,client)).status,"duplicate");
 
-  for(let guard=0;guard<12&&artifacts(host,await host.getSnapshot()).some((artifact)=>artifact.id===tether.id);guard+=1) await host.endTurn();
+  for(let guard=0;guard<12&&artifacts(host,await host.getSnapshot()).some((artifact)=>artifact.id===tether.id);guard+=1) await withoutDesktopTransport(()=>host.endTurn());
   assert.equal((await applyFullLedger(host,client)).status,"applied");
   hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
   assert.equal(artifacts(host,hostSnapshot).some((artifact)=>artifact.id===tether.id),false);
@@ -143,7 +151,7 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger.eventsAfter(0))).status,"applied");
   assert.equal(artifacts(reconnect,await reconnect.getSnapshot()).some((artifact)=>artifact.id===wall.id||artifact.id===tether.id),false);
 
-  await host.undoLastResolution();
+  await withoutDesktopTransport(()=>host.undoLastResolution());
   assert.equal((await applyFullLedger(host,client)).status,"applied");
   hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
   assert.equal(artifacts(host,hostSnapshot).some((artifact)=>artifact.id===tether.id),true);
