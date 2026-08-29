@@ -144,7 +144,7 @@ function findSuccessfulD20Operation(profile:RulesProfileLike,state:RulesRuntimeS
   for(const [index,operation] of pending.operations.entries()) {
     if(operation.kind!=="d20"||(operation.request.family!=="ability-check"&&operation.request.family!=="attack-roll")) continue;
     const preview=stagePendingResolution(profile,state,{...pending,operations:pending.operations.slice(0,index+1)});
-    if(preview.status==="rejected") return {error:preview.error};
+    if(preview.status==="rejected") return {error:preview.error??"d20 preview rejected"};
     const result=preview.results[operation.id] as D20TestResult|undefined;
     if(result?.outcome==="success") return {index,operation,result};
   }
