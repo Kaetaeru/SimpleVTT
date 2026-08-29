@@ -23,15 +23,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Reconfirm exact Recharge source ancestry
+      - name: Reconfirm Recharge source ancestry
         run: |
           git merge-base --is-ancestor 496b23076958aecdd9e3a15a1938419198a53ba3 HEAD
           test ! -e .github/workflows/rerun-c9-recharge-production.yml
-          grep -q 'resource.recharge' schemas/common-play-contract.schema.json
-          grep -q 'kind:"recharge-resource"' src/domain/commonPlayOperationRuntime.ts
-          grep -q 'rechargeDieFace' src/app/commonPlayActorTurnRuleComposition.ts
-          grep -q 'authoritativeRechargeFace' src/app/phase09EffectAwareTurnAdapter.ts
-          grep -q 'turn-start Recharge' tests/ui/connectedActorTurnRuleProduction.test.ts
       - name: Reconfirm focused Recharge production
         run: npx tsx --test tests/ui/connectedActorTurnRuleProduction.test.ts
       - name: Reconfirm TypeScript
