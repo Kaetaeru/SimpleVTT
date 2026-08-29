@@ -62,6 +62,8 @@ The duplicate Phase 09 `action.shortbow` atomic branch and its reference attack/
 
 The Phase 09 entity-ID save-modifier table is deleted too. Saving throws in canonical composition now use the existing runtime Character/Combatant stat provider, which derives structured abilities/proficiencies or rejects missing authority instead of selecting a modifier by fixture identity.
 
+Canonical Phase 09 runtime attacks and their concentration workflow no longer use the compatibility provider's fabricated mapless distance/visibility/cover values. They carry explicit `manual-unconstrained` authority when a user selects a target without a spatial module, and authoritative module facts otherwise. Named legacy spell/class adapters still consume `resolveRuntimeTargetingFact`; those callers remain migration debt and prevent any global “no fabricated facts” claim.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |

@@ -20,7 +20,7 @@ import { projectResolutionEventsToActivity } from "./realActivityProjectionServi
 import {
   phase09DeterministicAttackFaces,
   resolveRuntimeAttackFact,
-  resolveRuntimeTargetingFact,
+  resolveRuntimeAttackTargetingFact,
 } from "./realRuntimeAttackFactProvider";
 import { resolveRuntimeSaveModifier } from "./realRuntimeStatProvider";
 import {
@@ -57,7 +57,7 @@ interface ConcentrationAdapterState {
 
 type CommittedAttack=Extract<AtomicAttackTransactionResult,{ status:"committed" }>;
 type RuntimeAttackFact=ReturnType<typeof resolveRuntimeAttackFact>;
-type RuntimeTargetingFact=ReturnType<typeof resolveRuntimeTargetingFact>;
+type RuntimeTargetingFact=ReturnType<typeof resolveRuntimeAttackTargetingFact>;
 type RuntimeSaveFact=ReturnType<typeof resolveRuntimeSaveModifier>;
 
 interface PendingConcentrationPrompt {
@@ -181,7 +181,7 @@ function preparePrompt(
 
   try {
     const attackFact=resolveRuntimeAttackFact(action,phase09DeterministicAttackFaces(action));
-    const targetingFact=manual?.targetingFact ?? resolveRuntimeTargetingFact(internal.scene,action.actorId,target.id);
+    const targetingFact=manual?.targetingFact ?? resolveRuntimeAttackTargetingFact(internal.scene,action.actorId,target.id);
     const base={
       resolutionId:resolution.id,
       targetId:target.id,

@@ -7,6 +7,11 @@ export interface RuntimeTargetingFact extends Phase09TargetingFact {
   provenance:string[];
 }
 
+export type RuntimeAttackTargetingFact=(RuntimeTargetingFact&{authority:"authoritative"})|{
+  authority:"manual-unconstrained";
+  provenance:string[];
+};
+
 export function resolveRuntimeAttackFact(action:ActionVm,fixedFaces:number[]):Phase09AttackFact {
   const actionDamage = action.damage?.[0];
   if (!actionDamage) throw new Error(`runtime attack is missing structured ActionVm damage: ${action.id}`);
@@ -62,4 +67,16 @@ export function phase09DeterministicAttackFaces(action:ActionVm) {
     return Math.max(1,Math.min(diceSides,remaining-(diceCount-index-1)));
   });
   return [...faces,...faces];
+}
+
+export function resolveRuntimeAttackTargetingFact(scene:SceneVm,sourceId:string,targetId:string):RuntimeAttackTargetingFact {
+  const relation=authoritativeSpatialModuleRelation(scene,sourceId,targetId);
+  if(!relation)return {
+    authority:"manual-unconstrained",
+    provenance:[
+      `runtime:manual-targeting:${sourceId}->${targetId}:unconstrained`,
+      "explicit target selection supplied mapless theater-of-mind authority; no distance, visibility, or cover fact fabricated",
+    ],
+  };
+  return {...resolveRuntimeTargetingFact(scene,sourceId,targetId),authority:"authoritative"};
 }

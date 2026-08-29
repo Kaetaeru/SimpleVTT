@@ -1,5 +1,5 @@
 import type { ManualMovementReactionKind } from "./manualMovementReactionContracts";
-import type { RuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
+import type { RuntimeAttackTargetingFact } from "./realRuntimeAttackFactProvider";
 
 export interface PendingManualMovementReaction {
   kind:ManualMovementReactionKind;
@@ -11,7 +11,7 @@ export interface PendingManualMovementReaction {
   optionId:string;
   source:string;
   baseTargetAc:number;
-  targetingFact:RuntimeTargetingFact;
+  targetingFact:RuntimeAttackTargetingFact;
 }
 
 const pending = new WeakMap<object,PendingManualMovementReaction>();

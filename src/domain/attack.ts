@@ -5,16 +5,20 @@ import type { ConcentrationCheckRequest } from "./concentration";
 import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
-import type { TargetFacts } from "./targeting";
+import type { CoverDegree, TargetFacts } from "./targeting";
 import type { TurnSlot } from "./turnEconomy";
 
 export type AttackSourceKind = "weapon" | "unarmed" | "wild-shape";
 
-export interface AttackTarget extends TargetFacts {
+type AttackTargetIdentity=Pick<TargetFacts,"id"|"kind"|"relation">&{
   ac: number;
   creatureKind: "character" | "monster";
-  targetCanSeeAttacker: boolean;
-}
+};
+
+export type AttackTarget=AttackTargetIdentity&(
+  | { spatialAuthority:"manual-unconstrained";distanceFeet?:never;visible?:never;cover?:never;targetCanSeeAttacker?:never }
+  | { spatialAuthority?:"authoritative";distanceFeet:number;visible:boolean;cover:CoverDegree;targetCanSeeAttacker:boolean }
+);
 
 export interface AttackDamageComponent {
   sourceId: string;
@@ -80,6 +84,13 @@ function validateRequest(request: AttackRequest) {
   if (!Number.isFinite(request.target.ac) || request.target.ac < 0) {
     throw new DomainEvaluationError("attack target AC must be a non-negative finite number");
   }
+  if(request.target.spatialAuthority==="manual-unconstrained") {
+    if(request.target.distanceFeet!==undefined||request.target.visible!==undefined||request.target.cover!==undefined||request.target.targetCanSeeAttacker!==undefined) {
+      throw new DomainEvaluationError("manual-unconstrained attack target cannot contain fabricated spatial or sensory facts");
+    }
+  } else if(request.target.distanceFeet===undefined||request.target.visible===undefined||request.target.cover===undefined||request.target.targetCanSeeAttacker===undefined) {
+    throw new DomainEvaluationError("authoritative attack target requires distance, visibility, cover, and target sight facts");
+  }
   if (request.criticalRange) {
     if (!request.criticalRange.sourceId) throw new DomainEvaluationError("critical range source id is required");
     if (!Number.isInteger(request.criticalRange.threshold) || request.criticalRange.threshold < 2 || request.criticalRange.threshold > 20) {
@@ -110,6 +121,7 @@ function validateRequest(request: AttackRequest) {
 
 export function compileAttack(request: AttackRequest): PendingResolution {
   validateRequest(request);
+  const manualUnconstrained=request.target.spatialAuthority==="manual-unconstrained";
   const targetId = request.target.id;
   const targetingId = `${request.id}:target`;
   const attackId = `${request.id}:attack`;
@@ -120,12 +132,12 @@ export function compileAttack(request: AttackRequest): PendingResolution {
       sourceId:request.actorId,
       rule:{
         kind:"creature",
-        rangeFeet:request.rangeFeet,
+        rangeFeet:manualUnconstrained?undefined:request.rangeFeet,
         minTargets:1,
         maxTargets:1,
         allowedRelations:["ally","enemy","neutral"],
-        requiresSight:request.requiresSight ?? true,
-        directTarget:true,
+        requiresSight:manualUnconstrained?false:request.requiresSight ?? true,
+        directTarget:!manualUnconstrained,
       },
       targets:[request.target],
       harmful:true,

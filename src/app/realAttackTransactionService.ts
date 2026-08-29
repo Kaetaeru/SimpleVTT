@@ -43,7 +43,7 @@ export interface AtomicAttackTransactionRequest {
   attackD20Face:number;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
-  targetingFact:Phase09TargetingFact & { provenance?:string[] };
+  targetingFact:(Phase09TargetingFact & { authority?:"authoritative";provenance?:string[] })|{authority:"manual-unconstrained";provenance:string[]};
   expectedPreview?:AtomicAttackPreviewExpectation;
   runtimeState?:RulesRuntimeState;
   concentrationCheck?:Omit<ConcentrationCheckRequest,"damage">;
@@ -254,23 +254,37 @@ function projectLife(state:RulesRuntimeState,targetId:string):RuntimeLifeVm {
 function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
   const damageSpec=request.action.damage![0];
   const cost=economyCost(request.action,request.initiativeMode);
+  const targeting=request.targetingFact;
+  const manualUnconstrained=targeting.authority==="manual-unconstrained";
+  if(manualUnconstrained&&["distanceFeet","visible","cover","targetCanSeeAttacker"].some((key)=>Object.hasOwn(targeting,key))) {
+    throw new Error("manual-unconstrained attack target cannot contain fabricated spatial or sensory facts");
+  }
+  const target=manualUnconstrained?{
+    id:request.target.id,
+    kind:"creature" as const,
+    relation:attackRelation(request.actor,request.target),
+    ac:request.effectiveTargetAc,
+    creatureKind:request.target.kind === "character" ? "character" as const : "monster" as const,
+    spatialAuthority:"manual-unconstrained" as const,
+  }:{
+    id:request.target.id,
+    kind:"creature" as const,
+    relation:attackRelation(request.actor,request.target),
+    distanceFeet:targeting.distanceFeet,
+    visible:targeting.visible,
+    cover:targeting.cover,
+    ac:request.effectiveTargetAc,
+    creatureKind:request.target.kind === "character" ? "character" as const : "monster" as const,
+    targetCanSeeAttacker:targeting.targetCanSeeAttacker,
+    spatialAuthority:"authoritative" as const,
+  };
   return {
     id:request.resolutionId,
     actorId:request.actor.id,
     expectedRevision:input.revision,
     sourceId:request.action.id,
     sourceKind:request.attackFact.sourceKind,
-    target:{
-      id:request.target.id,
-      kind:"creature" as const,
-      relation:attackRelation(request.actor,request.target),
-      distanceFeet:request.targetingFact.distanceFeet,
-      visible:request.targetingFact.visible,
-      cover:request.targetingFact.cover,
-      ac:request.effectiveTargetAc,
-      creatureKind:request.target.kind === "character" ? "character" as const : "monster" as const,
-      targetCanSeeAttacker:request.targetingFact.targetCanSeeAttacker,
-    },
+    target,
     rangeFeet:request.attackFact.rangeFeet,
     attackDice:{
       id:`${request.resolutionId}:attack-d20`,
@@ -381,7 +395,12 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
     return { status:"rejected",error:error instanceof Error ? error.message : String(error) };
   }
   const runtimeInputRevision=request.runtimeState ? input.revision : undefined;
-  const transaction = resolveAttackTransaction(request,input);
+  let transaction:ReturnType<typeof resolveAttackTransaction>;
+  try {
+    transaction=resolveAttackTransaction(request,input);
+  } catch(error) {
+    return {status:"rejected",error:error instanceof Error?error.message:String(error)};
+  }
   if (transaction.status === "rejected") return { status:"rejected", error:transaction.error };
 
   const attack = transaction.results[`${request.resolutionId}:attack`] as D20TestResult;

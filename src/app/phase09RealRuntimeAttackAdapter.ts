@@ -8,7 +8,7 @@ import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "
 import { peekAtomicAttackDamageMultiplier, queueAtomicAttackDamageMultiplier, resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
-import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
+import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeAttackTargetingFact } from "./realRuntimeAttackFactProvider";
 import { clearPendingManualMovementReaction, manualMovementReactionFor, type PendingManualMovementReaction } from "./manualMovementReactionRuntime";
 import { runtimeResolutionEventHistories } from "./runtimeResolutionEventHistory";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
@@ -100,7 +100,7 @@ function build(
   }
   try {
     const attackFact = resolveRuntimeAttackFact(action,phase09DeterministicAttackFaces(action));
-    const targetingFact = manual?.targetingFact ?? resolveRuntimeTargetingFact(internal.scene,action.actorId,target.id);
+    const targetingFact = manual?.targetingFact ?? resolveRuntimeAttackTargetingFact(internal.scene,action.actorId,target.id);
     const runtimeState=internal.sessionMode === "initiative"
       ? snapshotAdapterTurnRuntimeState(adapter,internal.scene)
       : undefined;

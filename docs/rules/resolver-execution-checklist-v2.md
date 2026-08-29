@@ -571,11 +571,13 @@ Verified migration slices:
 - [x] healing previews now derive their fixed authoritative formula facts from any authored healing action instead of a three-action ID table; unknown-ID service and adapter proofs cover roll, HP application, economy/item payment, persistence, and Undo;
 - [x] the duplicate `action.shortbow` atomic branch and reference attack/target maps were deleted; runtime attacks now require authored structural attack facts and an unknown renamed action proves the same atomic attack, event, and Undo path;
 - [x] the entity-ID save-modifier table and its inner saving-throw branch were deleted; canonical saves now enter the existing Character/Combatant runtime-stat provider, including explicit missing-authority rejection;
+- [x] canonical runtime attacks no longer fabricate zero distance, visibility, or cover when no spatial module is present; explicit target selection supplies typed `manual-unconstrained` authority, while an authoritative module relation still enforces range, sight, cover, and target sight;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:
 
 - the named Indomitable offer/payment/reroll orchestration adapter and the other named post-roll adapters remain `LEGACY_EXECUTION`;
+- named legacy spell/class consumers still call the compatibility targeting provider that fabricates mapless facts; only the canonical attack/concentration transaction is migrated by this slice;
 - no coverage-ledger row is promoted by this bounded migration alone.
 
 ---

@@ -187,7 +187,7 @@ export function compileBerserkerRetaliation(request:BerserkerRetaliationRequest)
   if (request.attack.target.id !== request.triggeringDamageSourceActorId) {
     throw new DomainEvaluationError("Retaliation must target the creature that dealt the triggering damage");
   }
-  if (request.attack.target.distanceFeet > 5) {
+  if (request.attack.target.spatialAuthority === "manual-unconstrained" || request.attack.target.distanceFeet > 5) {
     throw new DomainEvaluationError("Retaliation requires the triggering creature to be within 5 feet");
   }
   return compileAttack({
