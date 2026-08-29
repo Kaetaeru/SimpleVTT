@@ -7,8 +7,8 @@
 - repository: `Kaetaeru/SimpleVTT`
 - Rerun working branch/ref: `agent/c9-gate-n-coverage-reconciliation`
 - product integration target: `work/v1-composite`
-- product plan: `docs/rules/v1-common-play-c8-rerun-plan.md`
-- checkpointed_at: `2026-08-29 Asia/Seoul`
+- product plan: `docs/rules/resolver-execution-checklist-v2.md`
+- checkpointed_at: `2026-08-30 Asia/Seoul`
 
 ## Durable checkpoint
 
@@ -36,7 +36,7 @@ Boundary 3/4 local evidence:
 
 ## Active boundary
 
-C9 Gate N coverage implementation. The complete 36-row audit is reconciled; every row remains truthfully `INCOMPLETE` until its required semantic/evidence matrix is complete.
+C9 Gate N coverage implementation. The complete 36-row audit remains the authority; a row stays `INCOMPLETE` until its required semantic/evidence matrix is complete.
 
 Current validated C9 checkpoints:
 
@@ -49,11 +49,15 @@ Current validated C9 checkpoints:
 - `50498ba6`: held-Concentration loss/release/cancel/Undo is production-proven and Family S stored-invocation-ready is promoted to `IMPLEMENTED`.
 - `458585cf`: installed damage.taken rules are structurally discovered and appended to the originating Resolver transaction with atomic effect consumption, connected replay/reconnect, and Undo.
 - `b659b063`: arbitrary installed Zone artifacts project manual enter/leave actions and commit membership, enter damage/frequency, Host/Client replay, reconnect, and Undo through the canonical Zone runtime.
+- `641c00fe`: installed Zone turn-start/end operations are composed into the same authoritative end-turn/begin-turn PendingResolution rather than a second mechanical commit.
+- `eb2559cf`: begin-turn, end-turn, and advance-time now emit canonical reversible `turn-clock` StateChanges; event-native apply/replay understands the clock snapshots, and a focused event-native Undo regression proves exact clock restoration.
 
-Latest proof: TypeScript passed; 16/16 lowered-family production/connected and 9/9 Zone domain regressions passed. Coverage remains truthfully `IMPLEMENTED=1`, `INCOMPLETE=35`; Families P/T gained production evidence but are not promoted beyond their tested event matrix. Code checkpoint is `b659b063`.
+Verification for the `eb2559cf` code checkpoint was dispatched through exact-head UI workflow `33267621742` and Rules Domain workflow `33267621760`. At checkpoint publication they were still running. The preceding `641c00fe` branch state already had an inherited broad UI workflow failure while Rules Domain was green; do not treat broad pre-existing Phase09 deterministic/provenance reds as evidence against this bounded clock change without a changed-surface failure.
+
+Coverage remains `IMPLEMENTED=1`, `INCOMPLETE=35`; no ledger row is promoted by the clock infrastructure alone.
 
 ## Next Exact Action
 
-Compose installed Zone turn-start/end rules into the authoritative turn transition without a second non-atomic commit. Reuse `resolveCommonPlayZoneTurnEvent` frequency semantics, then prove arbitrary identity, Host/Client replay/reconnect, Undo, and duration cleanup. Reconcile Families P/T only to the evidence actually obtained.
+Carry the authoritative turn `ResolutionEvent[]` produced by `advanceTurnRuntimeLifecycle` through the existing connected `mode-transition` transport instead of adding a Zone-specific side channel. Apply the same canonical events on Clients/reconnect, then prove an arbitrary installed Zone turn-start/end rule converges across Host/Client with frequency, damage/effect results, duration cleanup, and event-native Undo. Reconcile Families P/T only to evidence actually obtained; do not promote either family until its full required event matrix is satisfied.
 
-C8 Core is complete locally. C9 is active and Gate N is blocked by 36 `INCOMPLETE` ledger rows. Overall verdict: `V1 INCOMPLETE`.
+C8 Core is complete. C9 remains active and Gate N remains blocked by 35 `INCOMPLETE` coverage rows. Overall verdict: `V1 INCOMPLETE`.
