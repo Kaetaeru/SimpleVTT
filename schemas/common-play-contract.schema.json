@@ -572,7 +572,7 @@
         "when": { "$ref": "#/$defs/predicate" },
         "interaction": { "$ref": "#/$defs/interaction" },
         "operation": { "enum": ["append", "replace", "prevent", "modify", "redirect", "recalculate"] },
-        "slot": { "enum": ["declaration", "targets", "attack.roll", "attack.outcome", "primary.damage", "secondary.damage", "effects", "movement", "stateChanges"] },
+        "slot": { "enum": ["declaration", "targets", "d20.roll", "attack.roll", "attack.outcome", "primary.damage", "secondary.damage", "effects", "movement", "stateChanges"] },
         "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } }
       },
       "additionalProperties": false
