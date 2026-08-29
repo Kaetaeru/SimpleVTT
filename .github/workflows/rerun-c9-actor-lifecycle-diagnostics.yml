@@ -1,0 +1,27 @@
+name: Rerun C9 Actor Lifecycle Diagnostics
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/rerun-c9-actor-lifecycle-diagnostics.yml"
+      - "tests/ui/connectedActorArtifactExpiryProduction.test.ts"
+      - "src/domain/commonPlayArtifactRuntime.ts"
+      - "src/domain/resolutionTurnOps.ts"
+      - "src/domain/resolutionArtifactOps.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - run: npx tsx --test tests/ui/connectedActorArtifactExpiryProduction.test.ts
