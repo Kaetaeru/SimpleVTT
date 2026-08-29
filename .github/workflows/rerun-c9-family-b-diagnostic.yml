@@ -1,0 +1,41 @@
+name: C9 Family B Diagnostic
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-family-b-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Inspect turn/action-economy coverage
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'), path=require('node:path');
+          const roots=['src','tests'];
+          const needles=['attacksPerAction','grantExtraAttacks','spendExtraAttack','grant-extra-action','once-per-turn','once-per-round','stored-invocation','begin-turn','end-turn','advance-time','initiativeOrder','reaction'];
+          function files(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?files(path.join(dir,e.name)):/\.(ts|tsx)$/.test(e.name)?[path.join(dir,e.name)]:[])}
+          const all=roots.flatMap(files);
+          for(const needle of needles){
+            console.log(`\n--- ${needle} ---`);
+            for(const file of all){
+              const lines=fs.readFileSync(file,'utf8').split(/\r?\n/);
+              lines.forEach((line,i)=>{if(line.includes(needle)) console.log(`${file}:${i+1}:${line.trim()}`)});
+            }
+          }
+          NODE
+      - name: Current typecheck
+        run: |
+          npm ci
+          npm run generate:content
+          npx tsc --noEmit
