@@ -1,0 +1,247 @@
+name: Rerun C9 Rest Trigger Patch
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/rerun-c9-rest-trigger-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply bounded rest trigger slice
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          effect = Path("src/domain/commonPlayEffectRuntime.ts")
+          text = effect.read_text()
+
+          replacements = [
+            ('type AutomaticDamageEvent="damage.taken"|"damage.dealt";', 'type AutomaticEffectEvent="damage.taken"|"damage.dealt"|"short-rest"|"long-rest";'),
+            ('event:AutomaticDamageEvent;', 'event:AutomaticEffectEvent;'),
+            ('| {kind:"until-event";event:AutomaticDamageEvent;onEnd:"destroy"}', '| {kind:"until-event";event:AutomaticEffectEvent;onEnd:"destroy"}'),
+            ('if (rule.event!=="damage.taken"&&rule.event!=="damage.dealt") throw new Error(`${label} supports only damage.taken or damage.dealt`);', 'if (!["damage.taken","damage.dealt","short-rest","long-rest"].includes(rule.event)) throw new Error(`${label} uses an unsupported automatic effect event`);'),
+            ('if ((template.lifetime.event!=="damage.taken"&&template.lifetime.event!=="damage.dealt")||template.lifetime.onEnd!=="destroy") {\n      throw new Error(`${label} until-event lifetime must destroy on damage.taken or damage.dealt`);\n    }', 'if (!["damage.taken","damage.dealt","short-rest","long-rest"].includes(template.lifetime.event)||template.lifetime.onEnd!=="destroy") {\n      throw new Error(`${label} until-event lifetime uses an unsupported automatic effect event`);\n    }'),
+            ('eventKind:AutomaticDamageEvent,', 'eventKind:AutomaticEffectEvent,'),
+            ('const contexts:Array<{event:AutomaticDamageEvent;subjectId:string}>=[', 'const contexts:Array<{event:AutomaticEffectEvent;subjectId:string}>=['),
+            ('const candidates:Array<{event:AutomaticDamageEvent;subjectId:string}>=[', 'const candidates:Array<{event:AutomaticEffectEvent;subjectId:string}>=['),
+          ]
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f"missing expected effect-runtime text: {old[:80]}")
+            text = text.replace(old, new)
+
+          marker = '\nexport function resolveCommonPlayEffectEvent('
+          if marker not in text:
+            raise SystemExit("missing effect event resolver insertion point")
+          rest_helper = r'''
+export function appendCommonPlayRestTriggers(
+  inputState:RulesRuntimeState,
+  definitions:CommonPlayPersistentEffectDefinition[],
+  pending:PendingResolution,
+  actorCreatureKind:"character"|"monster",
+):PendingResolution {
+  const operations=[...pending.operations];
+  for(const [restIndex,rest] of pending.operations.entries()) {
+    if(rest.kind!=="short-rest"&&rest.kind!=="long-rest") continue;
+    const eventKind:AutomaticEffectEvent=rest.kind;
+    const subjectId=rest.targetId;
+    for(const [definitionIndex,definition] of definitions.entries()) {
+      validateDefinition(definition);
+      for(const [effectIndex,effect] of matchingEffects(inputState,definition,subjectId).entries()) {
+        const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
+        if(typeof templateId!=="string") throw new Error(`effect ${effect.id} is missing its Common Play template binding`);
+        const template=templateById(definition,templateId);
+        validateTemplate(template,effectIndex);
+        const rules=template.rules.filter((rule)=>rule.event===eventKind);
+        if(!rules.length) continue;
+        let fired=false;
+        for(const [ruleIndex,rule] of rules.entries()) {
+          const frequency=frequencyResolution(inputState,rule,effect,subjectId,pending.id);
+          if(!frequency.eligible) continue;
+          fired=true;
+          for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
+            id:`${pending.id}:automatic:${eventKind}:${definitionIndex}:${effectIndex}:${restIndex}:${ruleIndex}:${operationIndex}`,
+            kind:"damage",targetId:subjectId,damageType:operation.damageType,
+            amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
+            creatureKind:actorCreatureKind,
+          });
+          if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+            id:`${pending.id}:automatic:${eventKind}:${definitionIndex}:${effectIndex}:${restIndex}:${ruleIndex}:frequency`,
+            kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,
+          });
+        }
+        if(fired&&template.lifetime.kind==="until-event") operations.push({
+          id:`${pending.id}:automatic:${eventKind}:${definitionIndex}:${effectIndex}:${restIndex}:remove`,
+          kind:"remove-effect",effectId:effect.id,
+        });
+      }
+    }
+  }
+  return operations.length===pending.operations.length?pending:{...pending,operations};
+}
+'''
+          text = text.replace(marker, "\n" + rest_helper + marker, 1)
+          effect.write_text(text)
+
+          service = Path("src/app/installedCommonPlayRestTriggerRuntime.ts")
+          if service.exists():
+            raise SystemExit("rest trigger production service already exists")
+          service.write_text(r'''import type { MockAdapter } from "./mockAdapter";
+import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
+import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { parseCommonPlayDefinition, lowerCommonPlay } from "../domain/commonPlayDefinitionRuntime";
+import { appendCommonPlayRestTriggers, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";
+import { resolvePendingResolution } from "../domain/resolution";
+import type { RulesRuntimeState } from "../domain/combatState";
+import type { PendingResolution, ResolutionCommit } from "../domain/resolutionTypes";
+
+async function installedPersistentEffectDefinitions(adapter:MockAdapter) {
+  const definitions=new Map<string,CommonPlayPersistentEffectDefinition>();
+  for(const entry of await requiredSessionInstalledContent(adapter,[])) {
+    for(const mechanic of entry.mechanics??[]) {
+      if(mechanic.kind!=="common-play") continue;
+      const canonical=parseCommonPlayDefinition(mechanic.config);
+      for(const point of canonical.entryPoints??[]) {
+        const lowered=lowerCommonPlay(canonical,point.id);
+        if(lowered.kind==="effect") definitions.set(lowered.definition.id,lowered.definition);
+      }
+    }
+  }
+  return [...definitions.values()];
+}
+
+export async function resolveInstalledCommonPlayRestTransaction(
+  adapter:MockAdapter,
+  inputState:RulesRuntimeState,
+  pending:PendingResolution,
+  actorCreatureKind:"character"|"monster",
+):Promise<ResolutionCommit> {
+  const definitions=await installedPersistentEffectDefinitions(adapter);
+  return resolvePendingResolution(
+    SIMPLEVTT_APP_RULES_PROFILE,
+    inputState,
+    appendCommonPlayRestTriggers(inputState,definitions,pending,actorCreatureKind),
+  );
+}
+''')
+
+          test_file = Path("tests/ui/connectedDamageDealtTriggerProduction.test.ts")
+          test_text = test_file.read_text()
+          import_anchor = 'import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";\n'
+          if import_anchor not in test_text:
+            raise SystemExit("missing trigger production test import anchor")
+          test_text = test_text.replace(import_anchor, import_anchor + 'import { resolveInstalledCommonPlayRestTransaction } from "../../src/app/installedCommonPlayRestTriggerRuntime";\nimport type { PendingResolution } from "../../src/domain/resolutionTypes";\n', 1)
+          appendix = r'''
+
+type RestTriggerEvent="short-rest"|"long-rest";
+
+function restPackageJson(prefix:string,event:RestTriggerEvent) {
+  const moduleId=`${prefix}.module`;
+  const effectId=`${prefix}.rest-effect`;
+  return {
+    moduleId,effectId,
+    json:JSON.stringify({
+      schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+      rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+      source:{document:"Unknown rest trigger module",version:"1",license:"CC0",srdDerived:false},
+      dependencies:[],conflicts:[],capabilities:[],
+      content:[{
+        id:`${prefix}.feat`,category:"feat",
+        presentation:{defaultLocale:"en",originalName:"Unknown Rest Trigger",locales:{en:{name:"Unknown Rest Trigger"}}},
+        mechanics:[{kind:"common-play",config:{
+          schemaVersion:"0.2-draft",id:effectId,
+          entryPoints:[{id:"arm",invocation:"manual",operations:[{kind:"effect.apply",template:"rest-rider",target:"actor"}]}],
+          artifactTemplates:[{
+            id:"rest-rider",artifactKind:"effect",duration:{kind:"durable"},instancePolicy:"stack",
+            rules:[{id:"on-rest",event,frequency:"once",operations:[
+              {kind:"damage.apply",amount:{value:3},damageType:"force",target:"event.actor"},
+            ]}],
+            lifetime:{kind:"until-event",event,onEnd:"destroy"},
+          }],
+        }}],
+      }],
+    }),
+  };
+}
+
+async function runRestTrigger(prefix:string,event:RestTriggerEvent) {
+  const adapter=new MockAdapter();
+  const pack=restPackageJson(prefix,event);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const arm=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(`${prefix}.feat`,pack.moduleId,"1"),mechanicId:pack.effectId,entryPointId:"arm",
+  });
+  await adapter.resolveAction(arm,["char.aelar"]);
+  const snapshot=await adapter.getSnapshot();
+  const state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(state.effects.length,1);
+  const pending:PendingResolution={
+    id:`${prefix}.${event}.resolution`,actorId:"char.aelar",sourceId:`${prefix}.rest-source`,expectedRevision:state.revision,
+    operations:event==="short-rest"
+      ?[{id:`${prefix}.rest`,kind:"short-rest",targetId:"char.aelar",spends:[]}]
+      :[{id:`${prefix}.rest`,kind:"long-rest",targetId:"char.aelar"}],
+  };
+  const committed=await resolveInstalledCommonPlayRestTransaction(adapter,state,pending,"character");
+  assert.equal(committed.status,"committed");
+  if(committed.status!=="committed") throw new Error(committed.error);
+  const trigger=committed.events.find((candidate)=>candidate.operationId.includes(`:automatic:${event}:`)&&candidate.kind==="damage");
+  assert.ok(trigger,committed.events.map((candidate)=>`${candidate.operationId}:${candidate.kind}`).join(" | "));
+  assert.ok(committed.events.every((candidate)=>candidate.resolutionId===pending.id));
+  const finalDamage=(trigger.result as {finalDamage?:number}).finalDamage;
+  return {
+    triggerDamage:finalDamage,
+    effectCount:committed.state.effects.length,
+    hasRestEvent:committed.events.some((candidate)=>candidate.kind===event),
+    sameResolution:committed.events.every((candidate)=>candidate.resolutionId===pending.id),
+  };
+}
+
+test("installed short-rest and long-rest automatic effects append atomically and ignore external identity",async()=>{
+  for(const event of ["short-rest","long-rest"] as const) {
+    const expected={triggerDamage:3,effectCount:0,hasRestEvent:true,sameResolution:true};
+    assert.deepEqual(await runRestTrigger(`unknown-${event}-a`,event),expected);
+    assert.deepEqual(await runRestTrigger(`fully-renamed-${event}-b`,event),expected);
+  }
+});
+'''
+          if 'installed short-rest and long-rest automatic effects append atomically' in test_text:
+            raise SystemExit("rest trigger regression already present")
+          test_file.write_text(test_text + appendix)
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify focused effect and production trigger regressions
+        run: npx tsx --test tests/domain/commonPlayEffectRuntime.test.ts tests/ui/connectedDamageDealtTriggerProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified slice
+        shell: bash
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/domain/commonPlayEffectRuntime.ts src/app/installedCommonPlayRestTriggerRuntime.ts tests/ui/connectedDamageDealtTriggerProduction.test.ts
+          git diff --cached --check
+          git commit -m "feat(common-play): dispatch rest effect triggers"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
