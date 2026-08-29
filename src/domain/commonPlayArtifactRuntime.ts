@@ -2,11 +2,11 @@ import type { RulesRuntimeState } from "./combatState";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit } from "./resolutionTypes";
-import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest } from "./runtimeArtifact";
+import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest, StoredInvocationArtifactData } from "./runtimeArtifact";
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
 import type { ActionUseKind } from "./turnEconomy";
 
-type PortableArtifactKind="object"|"link"|"actor"|"form";
+type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form";
 type Obj=Record<string,unknown>;
 
 export interface CommonPlayArtifactActivationDefinition {
@@ -52,7 +52,8 @@ function seconds(value:unknown,label:string) {
   return amount*multiplier;
 }
 
-function expiry(state:RulesRuntimeState,template:CommonPlayArtifactActivationDefinition["artifactTemplates"][number]):RuntimeArtifactExpiry {
+function expiry(state:RulesRuntimeState,template:CommonPlayArtifactActivationDefinition["artifactTemplates"][number],actorId:string):RuntimeArtifactExpiry {
+  if(template.artifactKind==="stored-invocation") return {kind:"turn-boundary",actorId,round:state.clock.round+1,boundary:"start"};
   const elapsed=seconds(template.duration,`artifact ${template.id} duration`);
   if(elapsed!==undefined) return {kind:"time",elapsedSeconds:state.clock.elapsedSeconds+elapsed};
   const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);
@@ -83,9 +84,23 @@ function artifact(
   const initial=structuredClone(object(template.initialState,`artifact ${template.id} initialState`));
   const common={
     id:artifactIds.get(template.id)!,sourceId:definition.id,sourceActorId:input.actorId,templateId:template.id,
-    artifactKind:template.artifactKind,expiry:expiry(state,template),
+    artifactKind:template.artifactKind,expiry:expiry(state,template,input.actorId),
     ...(input.placementRefs?.[template.id]?{placementRef:input.placementRefs[template.id]}:{}),
   };
+  if(template.artifactKind==="stored-invocation") {
+    const definitionId=initial.definitionId,entryPointId=initial.entryPointId,definitionRevision=initial.definitionRevision,binding=initial.binding;
+    if(typeof definitionId!=="string"||typeof entryPointId!=="string"||typeof definitionRevision!=="string"||(binding!=="snapshot"&&binding!=="live")) {
+      throw new DomainEvaluationError(`artifact ${template.id} stored invocation identity is invalid`);
+    }
+    if(initial.trigger===undefined) throw new DomainEvaluationError(`artifact ${template.id} stored invocation trigger is required`);
+    return {...common,storedInvocation:{
+      ownerActorId:boundId(initial.ownerActorId??"actor",input.actorId,artifactIds,`artifact ${template.id} ownerActorId`),
+      definitionId,entryPointId,definitionRevision,binding,
+      trigger:structuredClone(initial.trigger) as StoredInvocationArtifactData["trigger"],
+      ...(typeof initial.concentrationGroupId==="string"?{concentrationGroupId:initial.concentrationGroupId}:{}),
+      ...(initial.onTriggerConcentration==="retain"||initial.onTriggerConcentration==="end"?{onTriggerConcentration:initial.onTriggerConcentration}:{}),
+    }};
+  }
   if(template.artifactKind==="object") return {...common,object:initial as unknown as RuntimeArtifactSpawnRequest["object"]};
   if(template.artifactKind==="link") {
     const endpointIds=initial.endpointIds;
@@ -117,7 +132,7 @@ export function compileCommonPlayArtifactActivation(
     if(operation.kind!=="artifact.spawn") throw new DomainEvaluationError(`entry point ${entryPoint.id} supports only artifact.spawn`);
     const template=templates.get(operation.template);
     if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
-    if(!["object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
+    if(!["stored-invocation","object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
     return {id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact" as const,artifact:artifact(state,definition,template,input,artifactIds)};
   })];
   return {id:input.resolutionId,actorId:input.actorId,sourceId:definition.id,expectedRevision:state.revision,operations};

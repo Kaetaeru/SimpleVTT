@@ -9,7 +9,7 @@ import "../../src/app/installedContentRuntimeAdapter";
 import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { installedCommonPlayActionId, parseStoredInvocationCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -41,6 +41,23 @@ function actorActionConfig(prefix:string) {
   ]};
 }
 
+function storedPayloadConfig(prefix:string) {
+  return {schemaVersion:"0.2-draft",id:`${prefix}.ready-payload`,entryPoints:[{
+    id:"release",invocation:"manual",targeting:{from:"targets",min:1,max:1},
+    test:{kind:"attack-roll",roller:"actor",dc:{value:10}},
+    operations:[{kind:"damage.apply",amount:"1d4+1",damageType:"force",target:"target"}],
+  }]};
+}
+
+function storedCaptureConfig(prefix:string) {
+  return {schemaVersion:"0.2-draft",id:`${prefix}.ready-capture`,payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+    entryPoints:[{id:"prepare",invocation:"manual",operations:[{kind:"artifact.spawn",template:"ready"}]}],
+    artifactTemplates:[{id:"ready",artifactKind:"stored-invocation",duration:{kind:"durable"},lifetime:{kind:"until-trigger"},initialState:{
+      ownerActorId:"actor",definitionId:`${prefix}.ready-payload`,entryPointId:"release",definitionRevision:"1",binding:"live",trigger:true,
+    }}],
+  };
+}
+
 function payload(prefix="unknown-gate-n",paidIndex?:number) {
   const moduleId=`${prefix}.module`;
   const entries=[
@@ -49,6 +66,8 @@ function payload(prefix="unknown-gate-n",paidIndex?:number) {
     {id:`${prefix}.condition`,category:"condition",name:"Unknown Persistent Condition",config:{...ZONE,id:`${prefix}.zone`}},
     {id:`${prefix}.option`,category:"option",name:"Unknown Artifact Family",config:artifactConfig(prefix)},
     {id:`${prefix}.actor-action`,category:"option",name:"Unknown Bite",config:actorActionConfig(prefix)},
+    {id:`${prefix}.ready-payload-content`,category:"spell",name:"Unknown Held Bolt",config:storedPayloadConfig(prefix)},
+    {id:`${prefix}.ready-capture-content`,category:"option",name:"Unknown Prepare Bolt",config:storedCaptureConfig(prefix)},
   ];
   if(paidIndex!==undefined) Object.assign(entries[paidIndex].config,{
     payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
@@ -187,6 +206,82 @@ test("portable zone and summoned Actor converge once through existing Host/Clien
   const clientAfterUndo=await client.getSnapshot();
   assert.equal(clientAfterUndo.scene.entities.some((entity)=>entity.id==="unknown-connected.summoned"),false);
   assert.equal(clientAfterUndo.scene.economyByActor["char.aelar"]?.action,true);
+});
+
+test("arbitrary installed stored invocation captures, fires off turn once, and restores through Undo",async()=>{
+  const prefix="unknown-stored-invocation";
+  const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
+  await adapter.resolveAction(action(6,"prepare"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(runtime.artifacts?.filter((artifact)=>artifact.artifactKind==="stored-invocation").length,1);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+
+  await adapter.endTurn();
+  snapshot=await adapter.getSnapshot();
+  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id));
+  assert.ok(trigger,JSON.stringify(snapshot.scene.actionsByActor["char.aelar"]));
+  assert.equal(trigger.economy,"반응");
+  assert.equal(trigger.available,true);
+  const before=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+  await adapter.setQueuedD20(20);
+  await adapter.resolveAction(trigger.id,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.ok(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp<before);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.equal(runtime.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),false);
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,true);
+  assert.equal(runtime.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),true);
+});
+
+test("stored invocation capture, trigger, and Undo converge through Host-authoritative event replay",async()=>{
+  const prefix="unknown-connected-stored",sessionId="session.common-play-stored";
+  const host=new MockAdapter();const {action}=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const originalSend=tauriSessionTransport.send;
+  const runHost=async(operation:()=>Promise<unknown>)=>{
+    const wires:string[]=[];tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+    try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+    const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+    assert.ok(batch,JSON.stringify(wires));return batch;
+  };
+  const captureBatch=await runHost(()=>host.resolveAction(action(6,"prepare"),["char.aelar"]));
+
+  const client=new MockAdapter();await install(client,prefix);
+  const clientConnected=connectedStateFor(client);clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,captureBatch.events)).status,"applied");
+  let clientSnapshot=await client.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),true);
+
+  const turnBatch=await runHost(()=>host.endTurn());
+  assert.equal((await applyConnectedClientEvents(client,turnBatch.events)).status,"applied");
+  const trigger=(await host.getSnapshot()).scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id));
+  assert.ok(trigger);
+  await host.setQueuedD20(20);
+  const triggerBatch=await runHost(()=>host.resolveAction(trigger.id,["combatant.goblin-a"]));
+  assert.equal((await applyConnectedClientEvents(client,triggerBatch.events)).status,"applied");
+  const hostAfter=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,hostAfter.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp);
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.artifacts,snapshotAdapterTurnRuntimeState(host,hostAfter.scene)?.artifacts);
+
+  const undoBatch=await runHost(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  clientSnapshot=await client.getSnapshot();
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"]?.reaction,true);
+  assert.equal(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),true);
+
+  const reconnected=new MockAdapter();await install(reconnected,prefix);
+  const reconnectState=connectedStateFor(reconnected);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnected,hostConnected.ledger!.eventsAfter(0))).status,"applied");
+  const reconnectSnapshot=await reconnected.getSnapshot();
+  const hostAfterUndo=await host.getSnapshot();
+  assert.equal(reconnectSnapshot.scene.economyByActor["char.aelar"]?.reaction,true);
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnected,reconnectSnapshot.scene)?.artifacts,snapshotAdapterTurnRuntimeState(host,hostAfterUndo.scene)?.artifacts);
 });
 
 test("summoned Actor projects and executes its portable Common Play action with economy and Undo",async()=>{

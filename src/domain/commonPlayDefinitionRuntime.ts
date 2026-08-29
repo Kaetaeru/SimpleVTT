@@ -178,7 +178,7 @@ export function lowerCommonPlay(
       kind:"zone",entryPointId,
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayZoneDefinition,
     };
-    if([...artifactKinds].every((kind)=>kind==="object"||kind==="link"||kind==="actor"||kind==="form")) return {
+    if([...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form")) return {
       kind:"artifacts",entryPointId,
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
     };
