@@ -3,13 +3,15 @@ import { MockAdapter } from "./mockAdapter";
 import { HostSessionLedger } from "./connectedSessionProtocol";
 import { connectedStateFor } from "./connectedSessionState";
 import { broadcastConnectedWire, connectedInternal } from "./connectedSessionRuntimeAdapter";
-import { consumeAdapterTurnLifecycleEvents } from "./phase09EffectAwareTurnAdapter";
+import { consumeAdapterTurnLifecycleEvents, peekAdapterTurnLifecycleUndo } from "./phase09EffectAwareTurnAdapter";
+import { inverseResolutionEvents } from "./resolutionEventUndo";
 import { readyActionConfigurationsFor, type ReadyActionConfiguration } from "./standardActionReadyState";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 const previousStartInitiative=MockAdapter.prototype.startInitiative;
 const previousEndInitiative=MockAdapter.prototype.endInitiative;
 const previousEndTurn=MockAdapter.prototype.endTurn;
+const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 const previousSetCurrentActor=MockAdapter.prototype.setCurrentActor;
 
 export type ConnectedReadyLifecycleReason="next-turn-start"|"initiative-ended";
@@ -134,6 +136,37 @@ MockAdapter.prototype.endTurn=async function endConnectedTurn() {
   if (state.mode!=="host") return next;
   const readyClears=readyLifecycleClears(readyBefore,readyActionConfigurationsFor(this),"next-turn-start");
   return publishConnectedTurnProjection(this,"turn-end",readyClears,resolutionEvents);
+};
+
+MockAdapter.prototype.undoLastResolution=async function undoConnectedTurnLifecycle() {
+  const state=connectedStateFor(this);
+  if (state.mode==="client") return connectedInternal(this).getSnapshot();
+  const lifecycleUndo=peekAdapterTurnLifecycleUndo(this);
+  const next=await previousUndoLastResolution.call(this);
+  if (!lifecycleUndo||state.mode!=="host"||!state.ledger) return next;
+  const committedUndo=next.activity.find((entry)=>entry.undoOf===lifecycleUndo.resolutionId);
+  if (!committedUndo) return next;
+
+  const undoId=`undo.${lifecycleUndo.resolutionId}.${state.ledger.cursor+1}`;
+  const inverse=inverseResolutionEvents(lifecycleUndo.events,undoId);
+  const event=state.ledger.commitHostEvent({
+    actorId:"dm",
+    payload:{
+      kind:"resolution-undo",
+      undoId,
+      undoOf:lifecycleUndo.resolutionId,
+      inverseResolutionEvents:inverse,
+      stateChanges:[...committedUndo.stateChanges],
+      provenance:["Host-authoritative turn lifecycle Undo","original turn event history retained"],
+    },
+  });
+  await broadcastConnectedWire({
+    type:"event-batch",
+    sessionId:state.ledger.sessionId,
+    afterCursor:event.sequence-1,
+    events:[event],
+  });
+  return next;
 };
 
 MockAdapter.prototype.setCurrentActor=async function setConnectedCurrentActor(actorId:string) {
