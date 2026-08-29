@@ -22,6 +22,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate canonical content
+        run: npm run generate:content
       - name: Apply remaining narrow fixes
         run: |
           node <<'NODE'
