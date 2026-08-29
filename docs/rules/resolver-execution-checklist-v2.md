@@ -574,6 +574,7 @@ Verified migration slices:
 - [x] canonical runtime attacks no longer fabricate zero distance, visibility, or cover when no spatial module is present; explicit target selection supplies typed `manual-unconstrained` authority, while an authoritative module relation still enforces range, sight, cover, and target sight;
 - [x] Host-mounted and owning-Client Characters now receive weapon ability/range facts and the inactive Rage action from the same pure Character action projection; the redundant active-Character-only weapon post-processor was deleted, and the complete connected UI suite proves initial action-bar parity plus inventory/Undo/retry convergence;
 - [x] deterministic runtime attack dice are derived only from authored dice structure, never from the presentation-only `average` field; the full build exposed and now proves the Rogue Uncanny Dodge raw/halved damage contract alongside the atomic attack rename proof;
+- [x] the atomic self-healing adapter no longer recognizes `action.second-wind`; any non-item, non-spell authored self-healing action uses the same HP/economy/resource/event/Undo transaction, with an unknown action-ID production proof;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:

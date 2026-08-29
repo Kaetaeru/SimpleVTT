@@ -58,6 +58,8 @@ Atomic item damage no longer recognizes `action.wand`. Any no-roll damage action
 
 The Phase 09 healing path no longer recognizes Second Wind, Healing Word, or healing-potion action IDs to select formula facts. Any authored healing action now enters the same roll/HP/cost path, with unknown-ID adapter evidence. Named feature/item projection and activation remain legacy until portable content definitions author those actions.
 
+The atomic self-healing commit adapter no longer recognizes `action.second-wind` either. It selects non-item, non-spell self-healing structurally and commits the authored economy/resource cost through the existing transaction; Second Wind remains only a named production projection/domain oracle until portable content owns that definition.
+
 The duplicate Phase 09 `action.shortbow` atomic branch and its reference attack/target lookup tables are deleted. Canonical runtime attacks now consume explicit structural `runtimeAttack` facts, and the same transaction succeeds after an arbitrary action-ID rename. Weapon/content projection still has to author those portable facts, but action identity no longer selects the atomic attack algorithm.
 
 The Phase 09 entity-ID save-modifier table is deleted too. Saving throws in canonical composition now use the existing runtime Character/Combatant stat provider, which derives structured abilities/proficiencies or rejects missing authority instead of selecting a modifier by fixture identity.
