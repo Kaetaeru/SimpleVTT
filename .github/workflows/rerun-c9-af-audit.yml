@@ -1,0 +1,87 @@
+name: C9 Family AF Authority Audit
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-af-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile AF authority boundary
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const rows=ledger.rows;
+          const counts=rows.reduce((a,r)=>(a[r.disposition]=(a[r.disposition]??0)+1,a),{});
+          if(rows.length!==36||counts.IMPLEMENTED!==4||counts.INCOMPLETE!==32||(counts.PROVEN_UNNEEDED??0)!==0) throw new Error(`unexpected coverage ${JSON.stringify(counts)}`);
+          if((ledger.gateNBlockingNamedFallbacks??[]).length) throw new Error('gateNBlockingNamedFallbacks is not empty');
+          const af=rows.find(r=>r.family==='AF'&&r.id==='underwater-special-environment');
+          const ae=rows.find(r=>r.family==='AE'&&r.id==='hazards-exposure-environment');
+          if(!af||af.disposition!=='INCOMPLETE'||!ae||ae.disposition!=='INCOMPLETE') throw new Error('Family AE/AF disposition changed; re-audit');
+          const environment=fs.readFileSync('src/domain/commonPlayEnvironmentRuntime.ts','utf8');
+          const schema=fs.readFileSync('schemas/common-play-contract.schema.json','utf8');
+          if(!environment.includes('resolveEnvironmentMovement')||!environment.includes('resolveEnvironmentAttack')||!environment.includes('environmentDamageDefense')) throw new Error('environment kernel changed; re-audit');
+          if(schema.includes('environmentProfile')) throw new Error('portable environment profile now exists; re-audit');
+          function sourceText(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?sourceText(path.join(dir,e.name)):/\.(ts|tsx)$/.test(e.name)?[fs.readFileSync(path.join(dir,e.name),'utf8')]:[]).join('\n');}
+          const app=sourceText('src/app');
+          if(app.includes('resolveEnvironmentMovement(')||app.includes('resolveEnvironmentAttack(')||app.includes('environmentDamageDefense(')) throw new Error('production environment caller now exists; re-audit rather than checkpointing');
+          af.currentState='Profile-driven underwater movement, weapon attack restrictions/disadvantage, and damage-defense calculations exist as identity-independent kernel helpers, but the persisted Common Play contract and session state have no authoritative environment-profile activation/ownership. Breathing/suffocation also depends on the still-unowned durable exposure lifecycle in Family AE. Production therefore cannot apply underwater rules or reconnect them without inventing environment activation and breathing state policy.';
+          af.remainingNamedSeams=[
+            'persisted portable environment-profile definition and session activation owner',
+            'authoritative session environment state projected into movement/attack/damage transactions',
+            'breathing/suffocation composition through a durable exposure owner',
+            'connected replay/reconnect and persistence of environment activation'
+          ];
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+
+          const statePath='.chatgpt-rerun/STATE.md';
+          let state=fs.readFileSync(statePath,'utf8');
+          const marker='## Next Exact Action';
+          const idx=state.indexOf(marker);
+          if(idx<0) throw new Error('STATE Next Exact Action marker missing');
+          const before=state.slice(0,idx).replace(/\n+$/,'')+'\n\n';
+          const section='## Family AF audit — underwater environment activation owner missing\n\nFamily AF (`underwater-special-environment`) remains `INCOMPLETE`. `commonPlayEnvironmentRuntime.ts` already evaluates profile-driven movement, attack restrictions/disadvantage, and damage defenses, but no persisted Common Play/session contract owns which environment profile is active for a subject or scene. Production has no caller for these helpers, and breathing/suffocation depends on the unresolved durable exposure owner from Family AE. Applying the underwater profile implicitly would fabricate session state and persistence semantics.\n\n';
+          const next='## Next Exact Action\n\nDo not reopen Families S/T/U/AB or audited authority-blocked P/V/W/X/Y/Z/AA/AC/AD/AE/AF seams. Move to Family AG (`standard-actions`): audit the existing structural production paths for Attack, Dash, Disengage, Dodge, Help, Hide, Ready, Search, Study, Influence, Magic, and Utilize. Reuse already-validated generic action/effect/d20/item/stored-invocation paths; identify exactly which standard actions still select named production logic or lack portable authoring/identity/connected/persistence evidence, and implement only a bounded missing generic composition that does not require new policy.\n';
+          fs.writeFileSync(statePath,before+section+next);
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs || true
+          git diff --check
+      - name: Commit AF audit and STATE
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .chatgpt-rerun/STATE.md
+          git commit -m "docs(c9): audit underwater environment authority gap"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Publish control last and remove helper
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='.chatgpt-rerun/control.json';
+          const data=JSON.parse(fs.readFileSync(path,'utf8'));
+          data.status='continue';
+          data.reason='C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AF remains INCOMPLETE: underwater environment calculations exist as kernels, but portable/session environment activation and persistence are undefined and breathing depends on the unresolved exposure owner. Next audit Family AG standard actions against existing structural production paths.';
+          data.updated_at='2026-08-30';
+          fs.writeFileSync(path,JSON.stringify(data,null,2)+'\n');
+          NODE
+          rm .github/workflows/rerun-c9-af-audit.yml
+          git add .chatgpt-rerun/control.json .github/workflows/rerun-c9-af-audit.yml
+          git commit -m "docs(rerun): continue after underwater environment audit"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
