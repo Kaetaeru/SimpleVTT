@@ -1,0 +1,59 @@
+name: C9 Family AB Detail Relay
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-ab-detail-relay.yml
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Relay ledger rows and Recharge test excerpts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node <<'NODE' > /tmp/ab-detail.md
+          const fs=require('node:fs');
+          const ledger=JSON.parse(fs.readFileSync('docs/rules/v1-mechanism-coverage-ledger.json','utf8'));
+          console.log('# C9 AB detail relay');
+          console.log('HEAD:',process.env.GITHUB_SHA);
+          for(const family of ['S','T','U','AB','AC','AD','AE']) {
+            const row=ledger.rows.find(r=>r.family===family);
+            if(!row) continue;
+            console.log(`\n## ${family} ${row.id}`);
+            console.log('```json');
+            console.log(JSON.stringify({disposition:row.disposition,currentState:row.currentState,requiredSemantics:row.requiredSemantics,productionEvidence:row.productionEvidence,identityInvarianceEvidence:row.identityInvarianceEvidence,connectedEvidenceIfRelevant:row.connectedEvidenceIfRelevant,persistenceEvidenceIfRelevant:row.persistenceEvidenceIfRelevant,remainingNamedSeams:row.remainingNamedSeams},null,2));
+            console.log('```');
+          }
+          const path='tests/ui/connectedActorTurnRuleProduction.test.ts';
+          const lines=fs.readFileSync(path,'utf8').split(/\r?\n/);
+          const hit=new Set();
+          lines.forEach((line,i)=>{if(/recharge|resource|resolveAction|actionDefinition|payment|current|max|actor-owned turn-start/i.test(line)) for(let j=Math.max(0,i-3);j<=Math.min(lines.length-1,i+3);j++) hit.add(j);});
+          console.log('\n## Recharge production test excerpts');
+          console.log('```ts');
+          [...hit].sort((a,b)=>a-b).forEach(i=>console.log(`${i+1}: ${lines[i]}`));
+          console.log('```');
+          NODE
+          gh issue edit 180 --repo Kaetaeru/SimpleVTT --body-file /tmp/ab-detail.md
+      - name: Remove detail relay workflow
+        if: always()
+        run: |
+          rm .github/workflows/rerun-c9-ab-detail-relay.yml
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "ci(c9): remove Recharge detail relay helper"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
