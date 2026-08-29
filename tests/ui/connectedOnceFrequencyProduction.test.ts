@@ -164,3 +164,28 @@ test("once marker converges, reconnects, stays consumed across later resolutions
   assert.equal(totalHealth(clientSnapshot,"combatant.goblin-a"),totalHealth(hostSnapshot,"combatant.goblin-a"));
   assert.deepEqual(frequencyMarkers(client,clientSnapshot),firstMarkers);
 });
+
+test("once frequency is scoped independently to each persistent source instance",async()=>{
+  for(const prefix of ["unknown-source-once-a","fully-renamed-source-once-b"]) {
+    const adapter=new MockAdapter();
+    const actions=await install(adapter,prefix);
+    await adapter.resolveAction(actions.arm,["char.aelar"]);
+    await adapter.resolveAction(actions.arm,["char.aelar"]);
+    const before=await adapter.getSnapshot();
+    const armedEffects=snapshotAdapterTurnRuntimeState(adapter,before.scene)?.effects??[];
+    assert.equal(armedEffects.length,2);
+
+    await adapter.resolveAction(actions.strike,["combatant.goblin-a"]);
+    const first=await adapter.getSnapshot();
+    const firstEffects=snapshotAdapterTurnRuntimeState(adapter,first.scene)?.effects??[];
+    assert.equal(totalHealth(before,"char.aelar")-totalHealth(first,"char.aelar"),6);
+    assert.equal(totalHealth(before,"combatant.goblin-a")-totalHealth(first,"combatant.goblin-a"),2);
+    assert.equal(firstEffects.length,2);
+    assert.ok(firstEffects.every((effect)=>Object.entries(effect.metadata??{}).some(([key,value])=>key.startsWith("commonPlay.frequency:")&&value==="consumed")));
+
+    await adapter.resolveAction(actions.strike,["combatant.goblin-a"]);
+    const second=await adapter.getSnapshot();
+    assert.equal(totalHealth(before,"char.aelar")-totalHealth(second,"char.aelar"),6);
+    assert.equal(totalHealth(before,"combatant.goblin-a")-totalHealth(second,"combatant.goblin-a"),4);
+  }
+});
