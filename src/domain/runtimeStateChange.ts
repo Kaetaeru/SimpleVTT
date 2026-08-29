@@ -1,6 +1,6 @@
 import type { ConcentrationState } from "./concentration";
 import type { CombatantRuntimeState } from "./combatState";
-import type { EffectInstance } from "./effects";
+import type { EffectInstance, RuntimeClock } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { ResourceRecoveryLockouts } from "./resources";
@@ -85,6 +85,16 @@ export interface SpellcastingTurnStateChange {
   writeBack:"session";
 }
 
+export interface TurnClockStateChange {
+  kind:"turn-clock";
+  targetId:"session:turn-clock";
+  before:RuntimeClock;
+  after:RuntimeClock;
+  provenance:ProvenanceRecord[];
+  lifetime:"session-runtime";
+  writeBack:"session";
+}
+
 export interface CombatantStateChange {
   kind:"combatant";
   targetId:string;
@@ -126,6 +136,7 @@ export type RuntimeStateChange =
   | ZoneMembershipStateChange
   | ConcentrationStateChange
   | SpellcastingTurnStateChange
+  | TurnClockStateChange
   | CombatantStateChange
   | LifeFlagStateChange
   | DeathSaveStateChange;
@@ -241,6 +252,22 @@ export function spellcastingTurnStateChange(
     targetId,
     before:before ? structuredClone(before) : undefined,
     after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
+}
+
+export function turnClockStateChange(
+  before:RuntimeClock,
+  after:RuntimeClock,
+  provenance:ProvenanceRecord[],
+):TurnClockStateChange {
+  return {
+    kind:"turn-clock",
+    targetId:"session:turn-clock",
+    before:structuredClone(before),
+    after:structuredClone(after),
     provenance,
     lifetime:"session-runtime",
     writeBack:"session",
