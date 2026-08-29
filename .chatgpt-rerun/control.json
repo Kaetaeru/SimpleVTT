@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=3, INCOMPLETE=33, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family U remains IMPLEMENTED and shared TypeScript narrowing is closed. Family V advanced: persisted until-source-recast actor lifetime now atomically removes the prior matching actor artifact and spawns its replacement through existing Resolver operations; corrected UI run 33279905204 step 17 proves connected convergence, duplicate replay, reconnect, Undo restoration, and identity invariance, while descendant run 33279838612 typechecks the source. V remains INCOMPLETE for undefined death-driven removal policy and full restart persistence. Families W/X/Y retain explicit ownership blockers and must not be guessed. Next audit Family Z spellcasting-meta against existing typed spell/runtime/payment owners, preserving INCOMPLETE if durable material/source ownership or named spell dispatch remains unresolved.",
+  "reason": "C9 remains active at IMPLEMENTED=3, INCOMPLETE=33, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family U is IMPLEMENTED. X/Y are blocked by an undefined portable Character-owned durable item source/write-back contract; Z remains blocked by spellMechanicById content-identity dispatch plus an unjoined durable material-consumption boundary; AA remains blocked at the existing progression/Character revision projection boundary. Next audit Family AB Recharge using the existing recharge-resource Resolver operation and turn/resource authority without a monster-specific engine.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
