@@ -34,6 +34,7 @@ Family T (`zones`) is final. Installed arbitrary Zones cover spawn/opaque placem
 
 Retained exact evidence:
 
+- `566cb1e2`: reconciles the stale Family T ledger row to the already-restored authoritative zone.stay source and connected acceptance; no mechanics changed.
 - UI `33275769385`, job `99162085528`, head `a614c427194a0f436a7a3763a48808155d7865f3`: connected/live-lifecycle step 17 SUCCESS for Zone effect breadth; later focused steps green; broad Phase09 inherited red and build skipped.
 - UI `33276086024`, job `99162952306`, head `fda7436c5945d055d0231f9a65b8653e7b622443`: step 17 SUCCESS for authoritative spatial Zone placement replay; same inherited broad Phase09 red/build skip.
 - `9c287a175cbae621662fc883406b1463277a4f55`: restored the already-accepted authoritative `zone.stay` provider ingress after a concurrent Family U refactor accidentally dropped the export/dispatch. Descendant UI run `33279041449` at `255871dbabd40bc27a6c0a210fe56fe7b6f4c126` returned connected/live-lifecycle step 17 to SUCCESS; later broad Phase09 remained the inherited red. This is affected-surface regression recovery, not a reopening of Family T.
