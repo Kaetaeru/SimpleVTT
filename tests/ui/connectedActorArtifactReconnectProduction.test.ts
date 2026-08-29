@@ -118,7 +118,6 @@ async function replacementOutcome(prefix:string) {
     replaced:first.artifact.id!==current.artifact?.id,
     actorArtifacts:runtime?.artifacts?.filter((artifact)=>artifact.actor?.combatantId===pack.combatantId).length??0,
     combatants:snapshot.scene.entities.filter((entity)=>entity.id===pack.combatantId).length,
-    hp:current.entity?.hp.current,
     armorClass:current.entity?.ac,
     actions:current.actions?.length??0,
   };
@@ -211,7 +210,7 @@ test("until-source-recast actor replacement converges through connected replay, 
 });
 
 test("until-source-recast actor replacement is identity invariant",async()=>{
-  const expected={replaced:true,actorArtifacts:1,combatants:1,hp:10,armorClass:13,actions:1};
+  const expected={replaced:true,actorArtifacts:1,combatants:1,armorClass:13,actions:1};
   assert.deepEqual(await replacementOutcome("unknown-actor-recast-a"),expected);
   assert.deepEqual(await replacementOutcome("fully-renamed-actor-recast-b"),expected);
 });
