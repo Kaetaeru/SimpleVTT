@@ -1,4 +1,5 @@
 import type { D20RollModification, D20TestResult } from "./d20";
+import type { DamageRollResolution } from "./damageRoll";
 import type { RulesRuntimeState } from "./combatState";
 import { resolvePendingResolution, stagePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
@@ -71,6 +72,16 @@ export interface CommonPlayD20RollInterceptor {
   eligibility?:CommonPlayInterceptorEligibility;
 }
 
+export interface CommonPlayDamageRollInterceptor {
+  id:string;
+  timing:"damage.rolled";
+  interaction:CommonPlayInteractionDefinition;
+  operation:"recalculate";
+  slot:"primary.damage";
+  operations:CommonPlayRollModifyOperation[];
+  eligibility?:CommonPlayInterceptorEligibility;
+}
+
 export interface CommonPlayInterceptorEligibility {
   factQueries:CommonPlayFactQuery[];
   when:SemanticPredicate;
@@ -79,7 +90,7 @@ export interface CommonPlayInterceptorEligibility {
 export interface CommonPlayReactionDefinition {
   id:string;
   payments:CommonPlayPayment[];
-  interceptors:Array<CommonPlayAttackOutcomeInterceptor|CommonPlayD20RollInterceptor>;
+  interceptors:Array<CommonPlayAttackOutcomeInterceptor|CommonPlayD20RollInterceptor|CommonPlayDamageRollInterceptor>;
 }
 
 export interface AwaitingCommonPlayInteraction {
@@ -147,6 +158,13 @@ function findAttackOperation(pending:PendingResolution) {
   const operation=pending.operations[index];
   if (operation.kind!=="d20") return undefined;
   return { index, operation };
+}
+
+function findDamageRollOperation(pending:PendingResolution) {
+  const index=pending.operations.findIndex((operation)=>operation.kind==="damage-roll");
+  if(index<0)return undefined;
+  const operation=pending.operations[index];
+  return operation.kind==="damage-roll"?{index,operation}:undefined;
 }
 
 function findSuccessfulD20Operation(profile:RulesProfileLike,state:RulesRuntimeState,pending:PendingResolution) {
@@ -224,6 +242,23 @@ function d20RollModifications(
   });
 }
 
+function damageRollReduction(
+  definition:CommonPlayReactionDefinition,
+  interceptor:CommonPlayDamageRollInterceptor,
+  authority:CommonPlayInteractionAuthority|undefined,
+) {
+  return interceptor.operations.map((operation,index)=>{
+    if(operation.kind!=="roll.modify"||operation.mode!=="subtract-die")throw new Error("primary.damage interceptor supports subtract-die only in this bounded slice");
+    const formula=parseDiceFormula(operation.dice,"primary.damage subtract-die");
+    const faces=authority?.modifierDiceFaces?.[index];
+    if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides))throw new Error(`primary.damage interceptor ${index} requires authoritative die face(s)`);
+    return {
+      source:`common-play:${definition.id}:${interceptor.id}:operation:${index}`,
+      value:-(faces.reduce((sum,face)=>sum+face,0)+formula.flat),
+    };
+  });
+}
+
 function acceptedPending(awaiting:AwaitingCommonPlayInteraction,authority?:CommonPlayInteractionAuthority):PendingResolution {
   const { definition, interceptorId, interceptedOperationId, pending, sourceActorId }=awaiting.context;
   const interceptor=definition.interceptors.find((entry)=>entry.id===interceptorId);
@@ -243,6 +278,15 @@ function acceptedPending(awaiting:AwaitingCommonPlayInteraction,authority?:Commo
         ...intercepted.request,
         rollModifications:[...(intercepted.request.rollModifications??[]),...d20RollModifications(definition,interceptor,authority)],
       },
+    };
+    return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
+  }
+
+  if(interceptor.slot==="primary.damage") {
+    if(intercepted.kind!=="damage-roll")throw new Error("primary.damage interceptor target is not a damage roll");
+    const recalculated:ResolutionOperation={
+      ...intercepted,
+      request:{...intercepted.request,flat:[...(intercepted.request.flat??[]),...damageRollReduction(definition,interceptor,authority)]},
     };
     return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
   }
@@ -271,6 +315,7 @@ export function startCommonPlayResolution(
   const interceptor=definition.interceptors.find((entry)=>
     (entry.timing==="attack.outcome-determined"&&entry.operation==="recalculate"&&entry.slot==="attack.outcome")
     ||(entry.timing==="d20.outcome-determined"&&entry.operation==="recalculate"&&entry.slot==="d20.roll")
+    ||(entry.timing==="damage.rolled"&&entry.operation==="recalculate"&&entry.slot==="primary.damage")
   );
   if (!interceptor) return resolvePendingResolution(profile,inputState,pending);
   if (interceptor.interaction.kind!=="choice"||interceptor.interaction.input?.type!=="boolean"||interceptor.interaction.mode!=="blocking") {
@@ -283,7 +328,7 @@ export function startCommonPlayResolution(
     if(d20&&"error" in d20) return rejected(inputState,d20.error);
     if(!d20) return resolvePendingResolution(profile,inputState,pending);
     interceptedOperationId=d20.operation.id;
-  } else {
+  } else if(interceptor.slot==="attack.outcome") {
     const attack=findAttackOperation(pending);
     if (!attack) return rejected(inputState,"attack.outcome interceptor requires an attack-roll operation");
     const preview=stagePendingResolution(profile,inputState,{...pending,operations:pending.operations.slice(0,attack.index+1)});
@@ -300,6 +345,14 @@ export function startCommonPlayResolution(
       return rejected(inputState,error instanceof Error?error.message:String(error));
     }
     interceptedOperationId=attack.operation.id;
+  } else {
+    const damage=findDamageRollOperation(pending);
+    if(!damage)return resolvePendingResolution(profile,inputState,pending);
+    const preview=stagePendingResolution(profile,inputState,{...pending,operations:pending.operations.slice(0,damage.index+1)});
+    if(preview.status==="rejected")return preview;
+    const result=preview.results[damage.operation.id] as DamageRollResolution|undefined;
+    if(!result||!Number.isFinite(result.total))return rejected(inputState,"provisional damage roll result is missing");
+    interceptedOperationId=damage.operation.id;
   }
 
   let payments:ResolutionOperation[];

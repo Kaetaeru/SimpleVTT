@@ -68,6 +68,18 @@ const EXTERNAL_D20_REDUCTION:CommonPlayReactionDefinition={
   }],
 };
 
+const EXTERNAL_DAMAGE_REDUCTION:CommonPlayReactionDefinition={
+  ...structuredClone(EXTERNAL_D20_REDUCTION),
+  id:"external.unknown.damage-reduction",
+  interceptors:[{
+    ...structuredClone(EXTERNAL_D20_REDUCTION.interceptors[0]),
+    id:"subtract-authoritative-damage-die",
+    timing:"damage.rolled",
+    slot:"primary.damage",
+    interaction:{...structuredClone(EXTERNAL_D20_REDUCTION.interceptors[0].interaction),id:"use-damage-reduction"},
+  }],
+};
+
 function attackPending():PendingResolution {
   return {
     id:"generic-reaction-attack",
@@ -117,6 +129,16 @@ function abilityCheckPending():PendingResolution {
         dice:{id:"external-check",purpose:"ability check",sides:20,faces:[14]},
       },
     }],
+  };
+}
+
+function damagePending():PendingResolution {
+  return {
+    id:"generic-reaction-damage",actorId:"goblin",sourceId:"external.damage",expectedRevision:0,
+    operations:[
+      {id:"damage-roll",kind:"damage-roll",request:{dice:[{source:"external.damage",count:1,sides:6,faces:[6]}],flat:[{source:"external.flat",value:4}]}},
+      {id:"apply-damage",kind:"damage",targetId:"goblin",damageType:"force",amount:{operationId:"damage-roll",field:"total"},creatureKind:"monster"},
+    ],
   };
 }
 
@@ -292,4 +314,50 @@ test("generic d20.roll interceptor mechanics are invariant under definition iden
     return {natural:result.natural,modifier:result.modifier,total:result.total,target:result.target,outcome:result.outcome};
   };
   assert.deepEqual(mechanical(changed),mechanical(original));
+});
+
+test("generic primary.damage interceptor subtracts authoritative dice, clamps centrally, and pays atomically",()=>{
+  const run=(definition=EXTERNAL_DAMAGE_REDUCTION,face=4)=>{
+    const state=runtimeState();
+    const awaiting=requireAwaiting(startCommonPlayResolution(TEST_PROFILE,state,damagePending(),definition,"hero"));
+    return resumeCommonPlayInteraction(TEST_PROFILE,state,awaiting,{
+      interactionId:awaiting.interaction.id,idempotencyKey:awaiting.interaction.idempotencyKey,value:true,
+    },{modifierDiceFaces:{0:[face]}});
+  };
+  const accepted=run();
+  assert.equal(accepted.status,"committed");
+  if(accepted.status!=="committed")return;
+  assert.equal((accepted.results["damage-roll"] as {total:number}).total,5);
+  assert.equal(accepted.state.combatants.goblin.life.hp.current,10);
+  assert.equal(accepted.state.combatants.hero.economy.reaction,false);
+  assert.equal(accepted.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,1);
+
+  const renamed=structuredClone(EXTERNAL_DAMAGE_REDUCTION);
+  renamed.id="external.renamed.damage-reduction";
+  renamed.interceptors[0].id="renamed-damage-interceptor";
+  renamed.interceptors[0].interaction.id="renamed-damage-choice";
+  const changed=run(renamed);
+  assert.equal(changed.status,"committed");
+  if(changed.status==="committed")assert.equal((changed.results["damage-roll"] as {total:number}).total,5);
+
+  const clamped=run(EXTERNAL_DAMAGE_REDUCTION,8);
+  assert.equal(clamped.status,"committed");
+  if(clamped.status==="committed")assert.equal((clamped.results["damage-roll"] as {total:number}).total,1);
+});
+
+test("generic primary.damage decline and missing die authority create no partial payment",()=>{
+  const state=runtimeState();
+  const awaiting=requireAwaiting(startCommonPlayResolution(TEST_PROFILE,state,damagePending(),EXTERNAL_DAMAGE_REDUCTION,"hero"));
+  const declined=resumeCommonPlayInteraction(TEST_PROFILE,state,awaiting,{interactionId:awaiting.interaction.id,idempotencyKey:awaiting.interaction.idempotencyKey,value:false});
+  assert.equal(declined.status,"committed");
+  if(declined.status==="committed"){
+    assert.equal(declined.state.combatants.goblin.life.hp.current,5);
+    assert.equal(declined.state.combatants.hero.economy.reaction,true);
+  }
+  const rejected=resumeCommonPlayInteraction(TEST_PROFILE,state,awaiting,{interactionId:awaiting.interaction.id,idempotencyKey:awaiting.interaction.idempotencyKey,value:true});
+  assert.equal(rejected.status,"rejected");
+  assert.equal(rejected.state.revision,0);
+  assert.equal(rejected.state.combatants.hero.economy.reaction,true);
+  assert.equal(rejected.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,2);
+  assert.equal(rejected.state.combatants.goblin.life.hp.current,15);
 });

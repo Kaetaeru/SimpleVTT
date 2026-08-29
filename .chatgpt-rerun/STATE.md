@@ -12,7 +12,7 @@
 
 ## Durable checkpoint
 
-C8 Core boundaries 1 and 2 are complete.
+C8 Core boundaries 1-4 are complete in the local convergence stack.
 
 - PR #178: portable interceptor lowering, merged as `fc6a45fb7905790ea01c947d39af5ab15f02f668`.
 - PR #179: production/session discovery and responder authority, merged as `8278036108d48084666ea79a9d506ed681ee15bf` from exact candidate `623ce5f0c577cc8fce7c9bd540077195e88a139e`.
@@ -27,14 +27,21 @@ PR #179 exact-head evidence:
 
 Broad Contract/Resource/Phase/UI reds remain inherited workflow failures and were not required for this boundary. Do not repeat PR #176-#179 validation unless their affected surfaces change.
 
+Boundary 3/4 local evidence:
+
+- authoritative interceptor facts: 26 focused schema/domain/production checks plus 4 connected authority checks passed;
+- damage-roll and final acceptance: exact M1 Common Play Interaction 87/87 passed;
+- connected/fact/atomic-attack focused regression 45/45 passed;
+- TypeScript `tsc --noEmit` passed.
+
 ## Active boundary
 
-C8 Core boundary 4: authoritative damage-roll interceptor plus connected/recovery/persistence/Undo acceptance.
+C9 pre-entry coverage reconciliation.
 
 Reuse the existing Common Play fact-provider/manual-authority infrastructure. If a required fact is unavailable, apply the authored `unknownPolicy` (`block`, `request-authority`, `treat-false`, or `unsupported`). Never fabricate distance, visibility, cover, hearing, detection, or similar facts. Prove with arbitrary external identities and rename invariance.
 
 ## Next Exact Action
 
-Trace the current interceptor predicate schema/lowering, `COMMON_PLAY_STANDARD_FACTS`, Common Play Fact Provider, authoritative spatial relation, and connected responder routing. Add only the smallest generic production bridge required to evaluate supported eligibility facts before opening the existing Gate A interaction.
+Audit the 36-row `v1-mechanism-coverage-ledger.json` against existing deterministic source/tests. Resolve F-M to `IMPLEMENTED` or `PROVEN_UNNEEDED`, promote only fully evidenced rows, and implement the highest-impact actual gap before Gate N. Do not restore global legacy-zero as a blanket prerequisite.
 
-C8 Core remains incomplete. C9 has not started. Overall verdict: `V1 INCOMPLETE`.
+C8 Core is complete locally. C9 is active but Gate N entry is blocked by 36 `INCOMPLETE` ledger rows and F-M `TBD`. Overall verdict: `V1 INCOMPLETE`.

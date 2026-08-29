@@ -24,6 +24,7 @@ import {
 } from "../domain/commonPlayRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult, ModifierContribution } from "../domain/d20";
+import type { DamageRollResolution } from "../domain/damageRoll";
 import type { PendingResolution, ResolutionEvent } from "../domain/resolutionTypes";
 import {
   COMMON_PLAY_STANDARD_FACTS,
@@ -31,6 +32,8 @@ import {
   type CommonPlayFactProvider,
 } from "../domain/commonPlaySpatialFactRuntime";
 import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
+import { previewRuntimeAtomicAttackDamage } from "./phase09RealRuntimeAttackAdapter";
+import { queueAtomicAttackDamageReduction } from "./realAttackTransactionService";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -56,6 +59,8 @@ type PassiveReactionCandidate={
 type PendingPassiveReaction={
   resolutionId:string;
   operationId:string;
+  kind:"d20"|"damage";
+  originalTotal?:number;
   candidate:PassiveReactionCandidate;
   awaiting:AwaitingCommonPlayInteraction;
 };
@@ -91,7 +96,7 @@ function drawDie(internal:AdapterState,purpose:string,sides:number,index:number)
 
 function modifierAuthority(internal:AdapterState,pending:PendingPassiveReaction):CommonPlayInteractionAuthority|undefined {
   const interceptor=pending.awaiting.context.definition.interceptors.find((entry)=>entry.id===pending.awaiting.context.interceptorId);
-  if(!interceptor||interceptor.slot!=="d20.roll")return undefined;
+  if(!interceptor||(interceptor.slot!=="d20.roll"&&interceptor.slot!=="primary.damage"))return undefined;
   const modifierDiceFaces:Record<number,number[]>={};
   let drawIndex=0;
   interceptor.operations.forEach((operation,index)=>{
@@ -154,17 +159,19 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
         const canonical=parseCommonPlayDefinition(mechanic.config,`Installed passive Common Play ${qualifiedId} mechanic ${mechanicIndex}`);
         const definition=lowerCommonPlayReactionDefinition(canonical);
         if(!definition)continue;
-        const responder=definition.interceptors[0]?.interaction.responder;
-        if(responder!=="actor"&&responder!=="actor-owner")continue;
-        candidates.push({
-          key:`${owner.sheet.id}:${qualifiedId}:${canonical.id}`,
-          sourceActorId:owner.sheet.id,
-          sourceActorName:owner.sheet.name,
-          source:entry.source,
-          optionName:entry.nameKo||entry.nameEn||entry.contentId,
-          sheet:structuredClone(owner.sheet),
-          definition,
-        });
+        for(const interceptor of definition.interceptors){
+          const responder=interceptor.interaction.responder;
+          if(responder!=="actor"&&responder!=="actor-owner")continue;
+          candidates.push({
+            key:`${owner.sheet.id}:${qualifiedId}:${canonical.id}:${interceptor.id}`,
+            sourceActorId:owner.sheet.id,
+            sourceActorName:owner.sheet.name,
+            source:entry.source,
+            optionName:entry.nameKo||entry.nameEn||entry.contentId,
+            sheet:structuredClone(owner.sheet),
+            definition:{...definition,interceptors:[interceptor]},
+          });
+        }
       }
     }
   }
@@ -224,9 +231,20 @@ function pendingD20(resolution:ResolutionView,state:RulesRuntimeState):{pending:
   return undefined;
 }
 
+function pendingDamage(adapter:MockAdapter,resolution:ResolutionView,state:RulesRuntimeState) {
+  const preview=previewRuntimeAtomicAttackDamage(adapter);
+  if(!preview)return undefined;
+  const operationId=`op.${resolution.actionId}.primary-damage`;
+  return {operationId,originalTotal:preview.total,pending:{
+    id:`${resolution.id}:common-play-damage-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
+    expectedRevision:state.revision,
+    operations:[{id:operationId,kind:"damage-roll" as const,request:{dice:[],flat:[{source:`production-resolution:${resolution.actionId}:authoritative-damage`,value:preview.total}]}}],
+  }};
+}
+
 function factSubjectId(candidate:PassiveReactionCandidate,pending:PendingResolution,subject:string|undefined) {
   const intercepted=pending.operations.find((operation)=>operation.kind==="d20"&&(operation.request.family==="ability-check"||operation.request.family==="attack-roll"));
-  if(!intercepted||intercepted.kind!=="d20")return undefined;
+  if(!intercepted||intercepted.kind!=="d20")return !subject||subject==="intercepted.actor"?pending.actorId:subject==="interceptor.source"?candidate.sourceActorId:undefined;
   if(!subject||subject==="intercepted.actor")return intercepted.actorId;
   if(subject==="intercepted.target")return intercepted.targetId;
   if(subject==="interceptor.source")return candidate.sourceActorId;
@@ -274,11 +292,13 @@ async function offerPassiveReaction(adapter:MockAdapter) {
   if(!resolution||resolution.interrupt||internal.sessionMode!=="initiative")return false;
   const runtime=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   if(!runtime)return false;
-  const projected=pendingD20(resolution,runtime);
-  if(!projected)return false;
   const state=reactionState(adapter,resolution.id);
   for(const candidate of await passiveReactionCandidates(adapter)){
     if(state.handled.has(candidate.key)||!runtime.combatants[candidate.sourceActorId])continue;
+    const interceptor=candidate.definition.interceptors[0];
+    const damage=interceptor?.slot==="primary.damage";
+    const projected=damage?pendingDamage(adapter,resolution,runtime):pendingD20(resolution,runtime);
+    if(!projected)continue;
     const seeded=seededReactionState(runtime,candidate);
     if(!await interceptorEligible(internal,candidate,projected.pending)){
       state.handled.add(candidate.key);
@@ -289,17 +309,20 @@ async function offerPassiveReaction(adapter:MockAdapter) {
       state.handled.add(candidate.key);
       continue;
     }
-    pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,candidate,awaiting:started});
+    pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,candidate,awaiting:started});
+    if(damage)resolution.rollKind="damage";
     resolution.interrupt={
       id:started.interaction.id,
       responderId:candidate.sourceActorId,
       responderName:candidate.sourceActorName,
-      trigger:resolution.rollKind==="attack"
+      trigger:damage
+        ? `${resolution.actionName} 피해 굴림 ${"originalTotal" in projected?projected.originalTotal:"—"}`
+        : resolution.rollKind==="attack"
         ? `${resolution.actionName} ${resolution.attackTotal} vs AC ${resolution.targetAc}`
         : `${resolution.actionName} ${resolution.rollTotal} vs DC ${resolution.checkTarget}`,
       optionName:candidate.optionName,
       cost:interactionCost(candidate.definition),
-      effect:"성공한 d20 결과를 Common Play 인터셉터로 재계산합니다.",
+      effect:damage?"피해 굴림을 Common Play 인터셉터로 재계산합니다.":"성공한 d20 결과를 Common Play 인터셉터로 재계산합니다.",
       source:candidate.source,
     };
     resolution.stage="interrupt";
@@ -364,9 +387,11 @@ function restoreInterruptedStage(resolution:ResolutionView) {
     resolution.canAdvance=true;
     resolution.nextLabel="판정 적용";
   }else{
+    const damage=resolution.rollKind==="damage";
+    resolution.rollKind="attack";
     resolution.stage="attack-result";
     resolution.canAdvance=true;
-    resolution.nextLabel=resolution.attackOutcome==="명중"?"판정 적용":"완료";
+    resolution.nextLabel=resolution.attackOutcome==="명중"?(damage?"피해 적용":"판정 적용"):"완료";
   }
 }
 
@@ -417,9 +442,19 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
       resolution.detail.push(`Common Play 인터셉터 적용 거부: ${committed.error}`);
       return internal.getSnapshot();
     }
-    const d20=resumed.results[pending.operationId] as D20TestResult|undefined;
-    if(!d20){restoreInterruptedStage(resolution);resolution.detail.push("Common Play 인터셉터 결과 누락");return internal.getSnapshot();}
-    updateD20Presentation(resolution,pending,d20,authority);
+    if(pending.kind==="damage"){
+      const damage=resumed.results[pending.operationId] as DamageRollResolution|undefined;
+      if(!damage||pending.originalTotal===undefined){restoreInterruptedStage(resolution);resolution.detail.push("Common Play 피해 인터셉터 결과 누락");return internal.getSnapshot();}
+      const reduction=pending.originalTotal-damage.total;
+      queueAtomicAttackDamageReduction(resolution.id,reduction,`common-play:${pending.candidate.definition.id}`);
+      const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];
+      resolution.detail.push(`${pending.candidate.optionName}: ${rolled.join(", ")} · 피해 ${pending.originalTotal} → ${damage.total}`);
+      resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic damage-roll interceptor`);
+    }else{
+      const d20=resumed.results[pending.operationId] as D20TestResult|undefined;
+      if(!d20){restoreInterruptedStage(resolution);resolution.detail.push("Common Play 인터셉터 결과 누락");return internal.getSnapshot();}
+      updateD20Presentation(resolution,pending,d20,authority);
+    }
   }
   restoreInterruptedStage(resolution);
   if(await offerPassiveReaction(this))return internal.getSnapshot();

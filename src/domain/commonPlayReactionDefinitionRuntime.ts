@@ -2,6 +2,7 @@ import type { CommonPlayDefinitionIR } from "./commonPlayDefinitionRuntime";
 import type {
   CommonPlayAttackOutcomeInterceptor,
   CommonPlayD20RollInterceptor,
+  CommonPlayDamageRollInterceptor,
   CommonPlayInteractionDefinition,
   CommonPlayReactionDefinition,
 } from "./commonPlayRuntime";
@@ -140,6 +141,12 @@ function lowerD20Interceptor(value:Obj,index:number):CommonPlayD20RollIntercepto
   };
 }
 
+function lowerDamageInterceptor(value:Obj,index:number):CommonPlayDamageRollInterceptor {
+  const label=`Common Play reaction interceptor[${index}]`;
+  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index);
+  return {...lowered,timing:"damage.rolled",slot:"primary.damage"};
+}
+
 function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackOutcomeInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
   const eligibilityDefinition=eligibility(value,label);
@@ -174,7 +181,8 @@ function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackO
 function supportedInterceptor(value:Obj) {
   if(value.operation!=="recalculate") return false;
   return (value.timing==="d20.outcome-determined"&&value.slot==="d20.roll")
-    ||(value.timing==="attack.outcome-determined"&&value.slot==="attack.outcome");
+    ||(value.timing==="attack.outcome-determined"&&value.slot==="attack.outcome")
+    ||(value.timing==="damage.rolled"&&value.slot==="primary.damage");
 }
 
 /**
@@ -198,7 +206,9 @@ export function lowerCommonPlayReactionDefinition(definition:CommonPlayDefinitio
     interceptors:rawInterceptors.map((candidate,index)=>
       candidate.slot==="d20.roll"
         ? lowerD20Interceptor(candidate,index)
-        : lowerAttackOutcomeInterceptor(candidate,index)
+        : candidate.slot==="primary.damage"
+          ? lowerDamageInterceptor(candidate,index)
+          : lowerAttackOutcomeInterceptor(candidate,index)
     ),
   };
 }

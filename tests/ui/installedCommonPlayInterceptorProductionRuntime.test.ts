@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
 import type { ActionVm, CharacterSheet, SceneVm } from "../../src/app/contracts";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { FIGHTER_SECOND_WIND_RESOURCE_ID } from "../../src/domain/coreClassResources";
 import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedStateFor } from "../../src/app/connectedSessionState";
+import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 
 const OTHER_CHARACTER_ID="char.portable-interceptor-target";
 const OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";
@@ -21,7 +27,7 @@ const ORIGINAL:Identity={
   displayName:"Portable Reaction Charm",
 };
 
-function packagePayload(identity=ORIGINAL,withEligibility=false){
+function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20"){
   return JSON.stringify({
     schemaVersion:"0.1-draft",
     moduleId:identity.moduleId,
@@ -45,7 +51,7 @@ function packagePayload(identity=ORIGINAL,withEligibility=false){
           ],
           interceptors:[{
             id:identity.interceptorId,
-            timing:"d20.outcome-determined",
+            timing:interceptorKind==="damage"?"damage.rolled":"d20.outcome-determined",
             ...(withEligibility?{
               factQueries:[
                 {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
@@ -58,7 +64,7 @@ function packagePayload(identity=ORIGINAL,withEligibility=false){
             }:{}),
             interaction:{id:identity.interactionId,kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},
             operation:"recalculate",
-            slot:"d20.roll",
+            slot:interceptorKind==="damage"?"primary.damage":"d20.roll",
             operations:[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
           }],
         },
@@ -74,11 +80,11 @@ function otherCharacterCheckAction():ActionVm{
   };
 }
 
-async function prepare(identity=ORIGINAL,withEligibility=false){
+async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20"){
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   await adapter.startProductionLocalPlay("dm");
-  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility));
+  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
@@ -212,4 +218,100 @@ test("portable production interceptor uses only authoritative spatial and visibi
   const unavailable=await prepare(ORIGINAL,true);
   const snapshot=await openAbilityCheckInterrupt(unavailable);
   assert.notEqual(snapshot.resolution?.stage,"interrupt","missing authority must not fabricate distance or visibility");
+});
+
+test("portable damage-roll interceptor reduces authoritative production damage and Undo restores HP, resource, and Reaction",async()=>{
+  const adapter=await prepare(ORIGINAL,false,"damage");
+  let snapshot=await adapter.setCurrentActor("combatant.goblin-a");
+  const responderId=snapshot.activeCharacter.id;
+  const targetBefore=snapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  const hpBefore=targetBefore.hp;
+  const tempHpBefore=targetBefore.tempHp;
+  const resourceBefore=secondWind(snapshot)!;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.resolveAction("action.scimitar",[responderId]);
+  for(let step=0;step<4&&snapshot.resolution?.stage!=="interrupt";step++)snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.rollKind,"damage");
+  await adapter.setQueuedD20(4);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(secondWind(snapshot),resourceBefore-1);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(secondWind(snapshot),resourceBefore-1,"duplicate response must not spend twice");
+  while(snapshot.resolution?.stage!=="complete")snapshot=await adapter.advanceResolution();
+  const damaged=snapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  assert.equal(damaged.hp+damaged.tempHp,hpBefore+tempHpBefore-1,JSON.stringify(snapshot.resolution));
+
+  snapshot=await adapter.undoLastResolution();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===responderId)?.hp,hpBefore);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===responderId)?.tempHp,tempHpBefore);
+  assert.equal(secondWind(snapshot),resourceBefore);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+});
+
+test("portable damage-roll decline and unavailable payment do not partially mutate reaction costs",async()=>{
+  const adapter=await prepare(ORIGINAL,false,"damage");
+  let snapshot=await adapter.setCurrentActor("combatant.goblin-a");
+  const responderId=snapshot.activeCharacter.id;
+  const resourceBefore=secondWind(snapshot)!;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.resolveAction("action.scimitar",[responderId]);
+  for(let step=0;step<4&&snapshot.resolution?.stage!=="interrupt";step++)snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"interrupt");
+  snapshot=await adapter.respondToInterrupt(false);
+  assert.equal(secondWind(snapshot),resourceBefore);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+
+  const unavailable=await prepare(ORIGINAL,false,"damage");
+  const internal=unavailable as unknown as {activeCharacter:CharacterSheet};
+  internal.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID)!.current=0;
+  snapshot=await unavailable.setCurrentActor("combatant.goblin-a");
+  await unavailable.setQueuedD20(18);
+  snapshot=await unavailable.resolveAction("action.scimitar",[snapshot.activeCharacter.id]);
+  for(let step=0;step<4&&snapshot.resolution?.stage!=="complete";step++)snapshot=await unavailable.advanceResolution();
+  assert.notEqual(snapshot.resolution?.stage,"interrupt");
+  assert.equal(secondWind(snapshot),0);
+  assert.equal(snapshot.scene.economyByActor[snapshot.activeCharacter.id]?.reaction,true);
+});
+
+test("portable damage-roll events converge exactly once from Host to Client",async()=>{
+  const sessionId="session.portable-damage-interceptor";
+  const renamed:Identity={...ORIGINAL,moduleId:"external.damage-module-renamed",contentId:"item.damage-content-renamed",mechanicId:"mechanic.damage-renamed",interceptorId:"interceptor.damage-renamed",interactionId:"interaction.damage-renamed",displayName:"Renamed Damage Reaction"};
+  const host=await prepare(renamed,false,"damage");
+  let hostSnapshot=await host.setCurrentActor("combatant.goblin-a");
+  const responderId=hostSnapshot.activeCharacter.id;
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const wires:string[]=[];
+  const send=tauriSessionTransport.send;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try{
+    await host.setQueuedD20(18);
+    hostSnapshot=await host.resolveAction("action.scimitar",[responderId]);
+    for(let step=0;step<4&&hostSnapshot.resolution?.stage!=="interrupt";step++)hostSnapshot=await host.advanceResolution();
+    await host.setQueuedD20(4);
+    hostSnapshot=await host.respondToInterrupt(true);
+    while(hostSnapshot.resolution?.stage!=="complete")hostSnapshot=await host.advanceResolution();
+  }finally{tauriSessionTransport.send=send;}
+  const batches=wires.map((wire)=>JSON.parse(wire)).filter((wire)=>wire.type==="event-batch") as Array<{events:ConnectedSessionEvent[]}>;
+  assert.ok(batches.length,JSON.stringify(wires));
+  const kinds=batches.flatMap((batch)=>batch.events).flatMap((event)=>event.payload.kind==="resolution"?event.payload.resolutionEvents.map((entry)=>entry.kind):[]);
+  assert.ok(kinds.includes("use-economy"),JSON.stringify(kinds));
+  assert.ok(kinds.includes("spend-resource"),JSON.stringify(kinds));
+  assert.ok(kinds.includes("damage-roll"),JSON.stringify(kinds));
+
+  const client=await prepare(renamed,false,"damage");
+  await client.setCurrentActor("combatant.goblin-a");
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of batches)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  const duplicate=await applyConnectedClientEvents(client,batches.at(-1)!.events);
+  assert.equal(duplicate.status,"duplicate");
+  const clientSnapshot=await client.getSnapshot();
+  const hostTarget=hostSnapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  const clientTarget=clientSnapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  assert.deepEqual({hp:clientTarget.hp,tempHp:clientTarget.tempHp},{hp:hostTarget.hp,tempHp:hostTarget.tempHp});
+  assert.equal(secondWind(clientSnapshot),secondWind(hostSnapshot));
+  assert.equal(clientSnapshot.scene.economyByActor[responderId]?.reaction,false);
 });

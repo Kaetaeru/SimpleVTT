@@ -115,17 +115,28 @@ test("existing attack outcome recalculation remains lowerable",()=>{
   assert.deepEqual(lowered.interceptors[0]?.operations,[{kind:"property.modify",property:"defense.ac",operation:"add",value:{value:3}}]);
 });
 
-test("unconnected interceptor families fail explicitly instead of falling through to a named engine",()=>{
+test("portable damage-roll reduction lowers through the generic reaction kernel",()=>{
   const definition=parseCommonPlayDefinition({
     schemaVersion:"0.2-draft",
     id:"damage-only",
     interceptors:[{
       id:"damage-reducer",
       timing:"damage.rolled",
+      interaction:{id:"choose-damage-reduction",kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"always"},
       operation:"recalculate",
       slot:"primary.damage",
       operations:[{kind:"roll.modify",mode:"subtract-die",dice:"1d6"}],
     }],
+  });
+  const lowered=lowerCommonPlayReactionDefinition(definition)!;
+  assert.equal(lowered.interceptors[0].slot,"primary.damage");
+  assert.deepEqual(lowered.interceptors[0].operations,[{kind:"roll.modify",mode:"subtract-die",dice:"1d6"}]);
+});
+
+test("unconnected interceptor families fail explicitly instead of falling through to a named engine",()=>{
+  const definition=parseCommonPlayDefinition({
+    schemaVersion:"0.2-draft",id:"secondary-damage-only",
+    interceptors:[{id:"secondary-reducer",timing:"damage.rolled",operation:"recalculate",slot:"secondary.damage",operations:[{kind:"roll.modify",mode:"subtract-die",dice:"1d6"}]}],
   });
   assert.throws(()=>lowerCommonPlayReactionDefinition(definition),/not connected to the generic reaction runtime/);
 });
