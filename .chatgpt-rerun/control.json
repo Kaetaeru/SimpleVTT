@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=3, INCOMPLETE=33, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family U object-link-artifacts is IMPLEMENTED with schema-backed granted lifecycle actions and focused connected/reconnect/Undo/identity evidence; shared TypeScript drift is now closed at 9f0fb6d, and run 33279701060 passed focused C9 production slices, tsc --noEmit, and the Vite production bundle. Families V and W remain INCOMPLETE on repository-authoritative death/replacement or live form projection/restoration ownership that must not be guessed. Next audit Family X against the existing durable inventory transaction and persistence/connected authority without creating a second item store.",
+  "reason": "C9 remains active at IMPLEMENTED=3, INCOMPLETE=33, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family U remains IMPLEMENTED and the shared TypeScript narrowing drift is already closed. Family W audit found live form projection/restoration ownership incomplete. Families X/Y also have real durable-source ownership gaps: the generic inventory/attunement kernels are richer than CharacterSourceSnapshotV1/CharacterRuntimeDurableSnapshotV1, while current production write-back only persists quantity/charges for existing items. Do not model those durable mutations as combat artifacts or mutate CharacterSheet.items outside source/runtime revision authority. Next audit Family Z spellcasting-meta against the existing typed spell/runtime/payment owners and preserve INCOMPLETE if durable material/source ownership or named spell dispatch remains unresolved.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
