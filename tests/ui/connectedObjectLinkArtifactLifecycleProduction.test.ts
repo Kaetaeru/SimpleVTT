@@ -129,6 +129,7 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   assert.equal(wall.object?.hp.current,20);
   assert.equal(tether.link?.relation,"tether");
   assert.equal(portal.link?.relation,"portal");
+  assert.deepEqual(portal.link?.endpointIds,["actor","combatant.goblin-a"]);
   assert.deepEqual(artifacts(client,clientSnapshot).map((artifact)=>artifact.templateId),["wall","tether","portal"]);
   assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(wall.id,"chip")));
   assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(portal.id,"close")));
@@ -148,6 +149,18 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
   assert.equal(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===wall.id)?.placementRef,"provider:wall-b");
   assert.equal(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===wall.id)?.placementRef,"provider:wall-b");
+
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(portal.id,"close"),["char.aelar"]));
+  assert.equal((await applyFullLedger(host,client)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(artifacts(host,hostSnapshot).some((artifact)=>artifact.id===portal.id),false);
+  assert.equal(artifacts(client,clientSnapshot).some((artifact)=>artifact.id===portal.id),false);
+
+  await withoutDesktopTransport(()=>host.undoLastResolution());
+  assert.equal((await applyFullLedger(host,client)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.deepEqual(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===portal.id)?.link?.endpointIds,["actor","combatant.goblin-a"]);
+  assert.deepEqual(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===portal.id)?.link?.endpointIds,["actor","combatant.goblin-a"]);
 
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(portal.id,"close"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
