@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Family AC special timing was audited and remains INCOMPLETE because the kernel owner/timing/option/cost compiler has no persisted Common Play special-action definition and live TurnRuntime does not define after-turn/initiative-count dispatch, pool refresh, simultaneous ordering, or connected owner interaction/reconnect authority. No AC production policy was invented. Next audit Family AD mount/vehicle/controller and implement only already-owned semantics.",
+  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AB final availability/consumption is proven by 05370621 and UI run 33280926167 step 17. Family AC remains INCOMPLETE because the kernel special-timing compiler has no persisted Common Play special-timing/initiative-count vocabulary and RuntimeClock has no authoritative initiative-count event datum; inventing dispatcher/order/refresh policy is forbidden. Next audit Family AD mount/vehicle composition against existing actor/object/link/controller/movement authority.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
