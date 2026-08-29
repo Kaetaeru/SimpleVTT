@@ -165,17 +165,18 @@ function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number
   runtimeDuration(template.duration,`${label} duration`);
   if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);
   template.rules.forEach((rule,ruleIndex)=>validateRule(rule,template.id,ruleIndex));
-  if(template.lifetime.kind==="until-event") {
-    assertOnlyKeys(template.lifetime,["kind","event","onEnd"],`${label} lifetime`);
-    if ((template.lifetime.event!=="damage.taken"&&template.lifetime.event!=="damage.dealt")||template.lifetime.onEnd!=="destroy") {
+  const lifetime=template.lifetime;
+  if(lifetime.kind==="until-event") {
+    assertOnlyKeys(lifetime,["kind","event","onEnd"],`${label} lifetime`);
+    if ((lifetime.event!=="damage.taken"&&lifetime.event!=="damage.dealt")||lifetime.onEnd!=="destroy") {
       throw new Error(`${label} until-event lifetime must destroy on damage.taken or damage.dealt`);
     }
-    if(template.rules.some((rule)=>rule.event!==template.lifetime.event||ruleFrequency(rule)!=="once")) {
+    if(template.rules.some((rule)=>rule.event!==lifetime.event||ruleFrequency(rule)!=="once")) {
       throw new Error(`${label} until-event lifetime requires matching once-frequency rules`);
     }
   } else {
-    assertOnlyKeys(template.lifetime,["kind","onEnd"],`${label} lifetime`);
-    if(template.lifetime.kind!=="until-duration"||template.lifetime.onEnd!=="destroy") {
+    assertOnlyKeys(lifetime,["kind","onEnd"],`${label} lifetime`);
+    if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") {
       throw new Error(`${label} recurring rules require until-duration destroy lifetime`);
     }
   }

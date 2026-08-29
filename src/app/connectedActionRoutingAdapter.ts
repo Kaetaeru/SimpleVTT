@@ -157,7 +157,9 @@ function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):Resolut
       if(change.kind==="economy")return {...structuredClone(change),before:change.after,after:change.before};
       if(change.kind==="resource")return {...structuredClone(change),before:change.after,after:change.before,recoveryLockouts:change.recoveryLockouts?{before:structuredClone(change.recoveryLockouts.after),after:structuredClone(change.recoveryLockouts.before)}:undefined};
       if(change.kind==="death-save")return {...structuredClone(change),before:change.after,after:change.before};
-      return {...structuredClone(change),before:change.after,after:change.before};
+      if(change.kind==="turn-clock")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="life")return {...structuredClone(change),before:change.after,after:change.before};
+      return change;
     }),result:{undoOf:event.id},
   }));
 }
