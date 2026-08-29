@@ -4,6 +4,8 @@ import { resolvePendingResolution } from "../domain/resolution";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ResolutionOperation } from "../domain/resolutionTypes";
 
+const DND_ROUND_SECONDS=6;
+
 export type TurnRuntimeLifecycleOperationCompiler=(input:{
   state:TurnRuntimeSession["state"];
   resolutionId:string;
@@ -33,15 +35,22 @@ export function advanceTurnRuntimeLifecycle(session:TurnRuntimeSession,compileAd
   if (currentIndex<0) return { status:"rejected",error:`active actor is not in initiative order: ${currentActorId}` };
   const nextIndex=(currentIndex+1)%session.initiativeOrder.length;
   const nextActorId=session.initiativeOrder[nextIndex];
-  const nextRound=session.state.clock.round+(nextIndex===0 ? 1 : 0);
+  const roundWrap=nextIndex===0;
+  const nextRound=session.state.clock.round+(roundWrap ? 1 : 0);
+  const nextElapsedSeconds=session.state.clock.elapsedSeconds+(roundWrap ? DND_ROUND_SECONDS : 0);
   const expectedRevision=session.state.revision;
   const resolutionId=`turn-runtime:${expectedRevision}:${currentActorId}->${nextActorId}`;
   const endState=structuredClone(session.state);
   endState.clock={...endState.clock,round:session.state.clock.round,activeActorId:currentActorId,phase:"end"};
   const beginState=structuredClone(session.state);
-  beginState.clock={...beginState.clock,round:nextRound,activeActorId:nextActorId,phase:"start"};
+  beginState.clock={...beginState.clock,round:nextRound,elapsedSeconds:nextElapsedSeconds,activeActorId:nextActorId,phase:"start"};
   const afterEnd=compileAdditional?.({state:endState,resolutionId,kind:"turn-end",actorId:currentActorId,round:session.state.clock.round})??[];
   const afterBegin=compileAdditional?.({state:beginState,resolutionId,kind:"turn-start",actorId:nextActorId,round:nextRound})??[];
+  const roundTimeOperations:ResolutionOperation[]=roundWrap ? [{
+    id:`${resolutionId}:advance-time`,
+    kind:"advance-time",
+    elapsedSeconds:nextElapsedSeconds,
+  }] : [];
   const resolved=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,session.state,{
     id:resolutionId,
     actorId:currentActorId,
@@ -55,6 +64,7 @@ export function advanceTurnRuntimeLifecycle(session:TurnRuntimeSession,compileAd
         round:session.state.clock.round,
       },
       ...afterEnd,
+      ...roundTimeOperations,
       {
         id:`${resolutionId}:begin`,
         kind:"begin-turn",
