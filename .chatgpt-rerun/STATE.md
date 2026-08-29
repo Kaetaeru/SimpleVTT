@@ -5,7 +5,7 @@
 - task_id: `v1-common-play-c8-rerun`
 - dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
-- Rerun working branch/ref: `agent/v1-common-play-full-convergence`
+- Rerun working branch/ref: `agent/c9-gate-n-coverage-reconciliation`
 - product integration target: `work/v1-composite`
 - product plan: `docs/rules/v1-common-play-c8-rerun-plan.md`
 - checkpointed_at: `2026-08-29 Asia/Seoul`
@@ -36,12 +36,18 @@ Boundary 3/4 local evidence:
 
 ## Active boundary
 
-C9 pre-entry coverage reconciliation.
+C9 Gate N coverage implementation. The complete 36-row audit is reconciled; every row remains truthfully `INCOMPLETE` until its required semantic/evidence matrix is complete.
 
-Reuse the existing Common Play fact-provider/manual-authority infrastructure. If a required fact is unavailable, apply the authored `unknownPolicy` (`block`, `request-authority`, `treat-false`, or `unsupported`). Never fabricate distance, visibility, cover, hearing, detection, or similar facts. Prove with arbitrary external identities and rename invariance.
+Current validated C9 checkpoints:
+
+- `7be5c795`: actor artifact creates/removes typed combatants and projects Scene/Host/Client/expiry/Undo lifecycle;
+- `583ff38c`: generic Common Play payments atomically spend Action, Bonus Action, or Reaction with production Undo;
+- `281be9b1`: summoned actors project scoped installed Common Play actions and execute them through Host-authoritative connected events with Undo.
+
+Latest proof: TypeScript passed; 46/46 relevant domain/production/connected regressions passed; ledger contracts 2/2 passed; coverage checker reports exactly 36 `INCOMPLETE` rows. Worktree is clean at `281be9b1`.
 
 ## Next Exact Action
 
-Audit the 36-row `v1-mechanism-coverage-ledger.json` against existing deterministic source/tests. Resolve F-M to `IMPLEMENTED` or `PROVEN_UNNEEDED`, promote only fully evidenced rows, and implement the highest-impact actual gap before Gate N. Do not restore global legacy-zero as a blanket prerequisite.
+Preserve and atomically execute the schema-declared `PaymentContract` across non-operation Common Play lowerers (`save-damage`, `effect`, `zone`, and `artifacts`), beginning with a failing arbitrary-identity Action-payment regression and proving production connected convergence plus Undo. Do not promote any ledger row until its full matrix is green.
 
-C8 Core is complete locally. C9 is active but Gate N entry is blocked by 36 `INCOMPLETE` ledger rows and F-M `TBD`. Overall verdict: `V1 INCOMPLETE`.
+C8 Core is complete locally. C9 is active and Gate N is blocked by 36 `INCOMPLETE` ledger rows. Overall verdict: `V1 INCOMPLETE`.

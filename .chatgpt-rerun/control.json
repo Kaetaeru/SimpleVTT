@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
   "status": "continue",
-  "reason": "C8 Core boundaries 1-4 are complete in the local convergence stack. Boundary 3 uses typed authoritative facts without fabricated geometry. Boundary 4 adds generic primary.damage subtract-die with production costs, Host/Client convergence, replay protection, and Undo. Exact M1 passed 87/87, connected/fact/attack focused regression 45/45, and typecheck passed. C9 coverage reconciliation is active: all 36 ledger rows remain INCOMPLETE and F-M remain TBD, so Gate N has not started. Promote only evidenced rows and do not restore global legacy-zero as a blanket prerequisite.",
+  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoints 7be5c795, 583ff38c, and 281be9b1 add typed summoned-combatant lifecycle, generic Action/Bonus Action/Reaction payments, and scoped summoned-actor Common Play execution with Host/Client convergence and Undo. TypeScript, 46 relevant regressions, and 2 ledger contracts are green. The audited ledger still truthfully reports all 36 rows INCOMPLETE. Next: preserve and execute PaymentContract across save-damage/effect/zone/artifact lowerers; promote nothing without the full evidence matrix.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }
