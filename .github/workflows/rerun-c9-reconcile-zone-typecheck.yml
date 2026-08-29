@@ -1,0 +1,118 @@
+name: C9 Reconcile Zone Evidence and Typecheck
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/rerun-c9-reconcile-zone-typecheck.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconcile latest branch
+        run: |
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+      - name: Apply bounded reconciliation
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+
+          const connectedPath='src/app/connectedActionRoutingAdapter.ts';
+          let connected=fs.readFileSync(connectedPath,'utf8');
+          const importLine='import type { ResolutionEvent } from "../domain/resolutionTypes";\n';
+          const sharedImport='import { inverseResolutionEvents } from "./resolutionEventUndo";\n';
+          if(!connected.includes(sharedImport)) connected=connected.replace(importLine,importLine+sharedImport);
+          const fnStart=connected.indexOf('function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):ResolutionEvent[] {');
+          if(fnStart>=0){
+            const next=connected.indexOf('\n\nasync function publishConnectedResolutionPresentation',fnStart);
+            if(next<0) throw new Error('connected inverse helper end marker not found');
+            connected=connected.slice(0,fnStart)+connected.slice(next+2);
+          }
+          fs.writeFileSync(connectedPath,connected);
+
+          const effectPath='src/domain/commonPlayEffectRuntime.ts';
+          let effect=fs.readFileSync(effectPath,'utf8');
+          const start=effect.indexOf('function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number) {');
+          const end=effect.indexOf('\nexport function validateCommonPlayEffectTemplate',start);
+          if(start<0||end<0) throw new Error('effect validateTemplate block not found');
+          let block=effect.slice(start,end);
+          if(!block.includes('const lifetime=template.lifetime;')){
+            block=block.replaceAll('template.lifetime','lifetime');
+            block=block.replace('  if(lifetime.kind==="until-event") {','  const lifetime=template.lifetime;\n  if(lifetime.kind==="until-event") {');
+          }
+          effect=effect.slice(0,start)+block+effect.slice(end);
+          fs.writeFileSync(effectPath,effect);
+
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const row=ledger.rows.find((candidate)=>candidate.family==='T'&&candidate.id==='zones');
+          if(!row) throw new Error('Family T zones row not found');
+          row.currentState='Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/start/end-turn events, canonical frequency, elapsed cleanup, damage/effect trigger lowering, atomic Undo, Host/Client replay, duplicate replay, and fresh reconnect. zone.stay remains kernel/schema-only because repository authority does not define a production stay timing/authority ingress after the unsupported provider stay command was removed.';
+          row.disposition='INCOMPLETE';
+          row.implementationEvidence=[
+            'commonPlayZoneRuntime.ts membership/turn/duration plus generic damage/effect rule lowering; zone.stay remains kernel-only',
+            'commonPlayEffectRuntime.ts reusable effect.apply -> apply-effect lowering',
+            'commonPlayDefinitionRuntime.ts retention of Zone rule-referenced effect templates',
+            'installedCommonPlayRuntimeAdapter.ts Zone projection and manual membership resolution',
+            'realTurnLifecycleService.ts Zone turn lifecycle composition and round-wrap advance-time',
+            'spatialZoneMembershipRuntimeAdapter.ts authoritative inside/outside membership provider ingress'
+          ];
+          row.productionEvidence=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts Zone membership, damage, and Undo',
+            'connectedTurnResolutionEventTransport.test.ts arbitrary Zone turn lifecycle and elapsed cleanup',
+            'connectedSpatialZoneMembershipProduction.test.ts authoritative spatial enter/leave/outside membership production'
+          ];
+          row.identityInvarianceEvidence=[
+            'commonPlayZoneRuntime.test.ts',
+            'installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity',
+            'connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity',
+            'connectedSpatialZoneMembershipProduction.test.ts arbitrary installed spatial Zone identity'
+          ];
+          row.connectedEvidenceIfRelevant=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts Zone Host/Client membership and Undo convergence',
+            'connectedTurnResolutionEventTransport.test.ts turn lifecycle and elapsed cleanup Host/Client convergence, duplicate replay, reconnect, and Undo',
+            'connectedSpatialZoneMembershipProduction.test.ts spatial membership Host/Client convergence, duplicate replay, reconnect, outside facts, and Undo'
+          ];
+          row.persistenceEvidenceIfRelevant=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts Zone new-replica event replay',
+            'connectedTurnResolutionEventTransport.test.ts ordered reconnect reconstruction of Zone turn and elapsed cleanup events',
+            'connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for authoritative spatial membership'
+          ];
+          row.remainingNamedSeams=[
+            'zone.stay production timing/authority semantics undefined after unsupported provider stay ingress removal',
+            'named persistent aura/zone migration debt; unknown portable Common Play does not select or fall through to it'
+          ];
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify TypeScript
+        run: npx tsc --noEmit --pretty false
+      - name: Verify Family U focused production
+        run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts
+      - name: Verify coverage ledger structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify diff
+        run: git diff --check
+      - name: Commit reconciliation
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add src/app/connectedActionRoutingAdapter.ts src/domain/commonPlayEffectRuntime.ts docs/rules/v1-mechanism-coverage-ledger.json
+          if git diff --cached --quiet; then
+            echo "No reconciliation changes required"
+            exit 0
+          fi
+          git commit -m "fix(c9): reconcile Zone evidence and typecheck"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
