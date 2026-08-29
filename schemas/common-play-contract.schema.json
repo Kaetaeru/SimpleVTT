@@ -333,6 +333,11 @@
         { "$ref": "#/$defs/effectApply" },
         { "$ref": "#/$defs/effectRemove" },
         { "$ref": "#/$defs/artifactSpawn" },
+        { "$ref": "#/$defs/artifactDamage" },
+        { "$ref": "#/$defs/artifactRepair" },
+        { "$ref": "#/$defs/artifactRelocate" },
+        { "$ref": "#/$defs/artifactUpdate" },
+        { "$ref": "#/$defs/artifactRemove" },
         { "$ref": "#/$defs/conditionChange" },
         { "$ref": "#/$defs/economyModify" },
         { "$ref": "#/$defs/contentGrant" },
@@ -445,6 +450,60 @@
         "kind": { "const": "artifact.spawn" },
         "template": { "$ref": "#/$defs/stableId" },
         "when": { "$ref": "#/$defs/predicate" }
+      },
+      "additionalProperties": false
+    },
+    "artifactDamage": {
+      "type": "object",
+      "required": ["kind", "artifact", "amount", "damageType"],
+      "properties": {
+        "kind": { "const": "artifact.damage" },
+        "artifact": { "$ref": "#/$defs/stableId" },
+        "amount": { "$ref": "#/$defs/expression" },
+        "damageType": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "artifactRepair": {
+      "type": "object",
+      "required": ["kind", "artifact", "amount"],
+      "properties": {
+        "kind": { "const": "artifact.repair" },
+        "artifact": { "$ref": "#/$defs/stableId" },
+        "amount": { "$ref": "#/$defs/expression" }
+      },
+      "additionalProperties": false
+    },
+    "artifactRelocate": {
+      "type": "object",
+      "required": ["kind", "artifact", "placementRef"],
+      "properties": {
+        "kind": { "const": "artifact.relocate" },
+        "artifact": { "$ref": "#/$defs/stableId" },
+        "placementRef": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "artifactUpdate": {
+      "type": "object",
+      "required": ["kind", "artifact", "metadataPatch"],
+      "properties": {
+        "kind": { "const": "artifact.update" },
+        "artifact": { "$ref": "#/$defs/stableId" },
+        "metadataPatch": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifactRemove": {
+      "type": "object",
+      "required": ["kind", "artifact"],
+      "properties": {
+        "kind": { "const": "artifact.remove" },
+        "artifact": { "$ref": "#/$defs/stableId" }
       },
       "additionalProperties": false
     },
