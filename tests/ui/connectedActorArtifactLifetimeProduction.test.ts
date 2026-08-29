@@ -92,7 +92,9 @@ async function identityOutcome(prefix:string) {
   await adapter.resolveAction(action,["char.aelar"]);
   const spawned=await adapter.getSnapshot();
   assert.equal(spawned.scene.entities.some((entity)=>entity.id===combatantId),true);
-  await advanceOneRound(adapter);
+  const initialRound=spawned.scene.round;
+  for(let guard=0;guard<20&&(await adapter.getSnapshot()).scene.round===initialRound;guard+=1) await adapter.endTurn();
+  assert.ok((await adapter.getSnapshot()).scene.round>initialRound,"initiative must wrap within guard");
   const expired=await adapter.getSnapshot();
   return {
     artifactPresent:snapshotAdapterTurnRuntimeState(adapter,expired.scene)?.artifacts?.some((artifact)=>artifact.actor?.combatantId===combatantId)??false,
