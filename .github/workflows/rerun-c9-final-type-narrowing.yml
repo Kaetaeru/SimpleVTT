@@ -1,0 +1,62 @@
+name: C9 Remaining Type Narrowing Fix
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/rerun-c9-final-type-narrowing.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply remaining narrow fixes
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          function replace(path,from,to){
+            let text=fs.readFileSync(path,'utf8');
+            if(!text.includes(from)) throw new Error(`expected text missing in ${path}`);
+            text=text.replace(from,to);
+            fs.writeFileSync(path,text);
+          }
+          replace(
+            'src/app/connectedActionRoutingAdapter.ts',
+            '      if(change.kind==="death-save")return {...structuredClone(change),before:change.after,after:change.before};\n      return {...structuredClone(change),before:change.after,after:change.before};',
+            '      if(change.kind==="death-save")return {...structuredClone(change),before:change.after,after:change.before};\n      if(change.kind==="turn-clock")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};\n      if(change.kind==="life")return {...structuredClone(change),before:change.after,after:change.before};\n      return change;'
+          );
+          replace('src/domain/commonPlayEffectRuntime.ts','  if(template.lifetime.kind==="until-event") {','  const lifetime=template.lifetime;\n  if(lifetime.kind==="until-event") {');
+          replace('src/domain/commonPlayEffectRuntime.ts','    assertOnlyKeys(template.lifetime,["kind","event","onEnd"],`${label} lifetime`);','    assertOnlyKeys(lifetime,["kind","event","onEnd"],`${label} lifetime`);');
+          replace('src/domain/commonPlayEffectRuntime.ts','    if ((template.lifetime.event!=="damage.taken"&&template.lifetime.event!=="damage.dealt")||template.lifetime.onEnd!=="destroy") {','    if ((lifetime.event!=="damage.taken"&&lifetime.event!=="damage.dealt")||lifetime.onEnd!=="destroy") {');
+          replace('src/domain/commonPlayEffectRuntime.ts','    if(template.rules.some((rule)=>rule.event!==template.lifetime.event||ruleFrequency(rule)!=="once")) {','    if(template.rules.some((rule)=>rule.event!==lifetime.event||ruleFrequency(rule)!=="once")) {');
+          replace('src/domain/commonPlayEffectRuntime.ts','    assertOnlyKeys(template.lifetime,["kind","onEnd"],`${label} lifetime`);','    assertOnlyKeys(lifetime,["kind","onEnd"],`${label} lifetime`);');
+          replace('src/domain/commonPlayEffectRuntime.ts','    if(template.lifetime.kind!=="until-duration"||template.lifetime.onEnd!=="destroy") {','    if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") {');
+          NODE
+      - name: Verify focused C9 production slices
+        run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts tests/ui/connectedTurnResolutionEventTransport.test.ts tests/ui/connectedDamageDealtTriggerProduction.test.ts
+      - name: Verify TypeScript and Vite build
+        run: |
+          npx tsc --noEmit
+          npx vite build
+      - name: Publish verified source fix
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git rm .github/workflows/rerun-c9-final-type-narrowing.yml
+          git add src/app/connectedActionRoutingAdapter.ts src/domain/commonPlayEffectRuntime.ts
+          git commit -m "fix(c9): narrow remaining runtime unions"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
