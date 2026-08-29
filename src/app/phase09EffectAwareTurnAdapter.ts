@@ -3,18 +3,19 @@ import type { ActivityEntry, AppSnapshot, SceneEntity, SceneVm, SessionMode } fr
 import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { advanceTurnRuntimeLifecycle } from "./realTurnLifecycleService";
-import { applyResolutionEvents } from "./realEventApplyService";
 import { projectTurnRuntimeToScene, synchronizeTurnRuntimeFromScene } from "./realTurnRuntimeService";
+import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, readyActionConfigurationsFor } from "./standardActionReadyState";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { compileInstalledCommonPlayZoneTurnOperations, installedCommonPlayZoneDefinitions } from "./commonPlayZoneTurnComposition";
-import { inverseResolutionEvents } from "./resolutionEventUndo";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface EffectAwareTurnAdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
   activity:ActivityEntry[];
+  lastResolutionId:string|null;
+  lastBefore:unknown;
   getSnapshot():Promise<AppSnapshot>;
 }
 
@@ -26,7 +27,6 @@ export interface AdapterTurnLifecycleUndo {
 
 const previousEndTurn=MockAdapter.prototype.endTurn;
 const previousEndInitiative=MockAdapter.prototype.endInitiative;
-const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 const turnLifecycleEvents=new WeakMap<MockAdapter,ResolutionEvent[]>();
 const turnLifecycleUndo=new WeakMap<MockAdapter,AdapterTurnLifecycleUndo>();
 
@@ -100,7 +100,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   ];
   if (readyExpires&&next) clearReadyActionConfiguration(this,next.id);
   const activity=projectRuntimeEventsToActivity({
-    id:eventId(),
+    id:advanced.resolutionId,
     actorName:"시스템",
     title:"턴 종료",
     summary:`→ ${next?.name ?? advanced.activeActorId}`,
@@ -109,37 +109,13 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   activity.detail.push(`RulesRuntimeState revision ${session.state.revision}`);
   activity.stateChanges.push(...standardActionChanges);
   internal.activity.unshift(activity);
+  recordRuntimeResolutionEvents(this,advanced.resolutionId,advanced.events);
+  internal.lastResolutionId=advanced.resolutionId;
+  internal.lastBefore=null;
   turnLifecycleUndo.set(this,{
     resolutionId:advanced.resolutionId,
     activityId:activity.id,
     events:advanced.events.map((event)=>structuredClone(event)),
-  });
-  return internal.getSnapshot();
-};
-
-MockAdapter.prototype.undoLastResolution=async function undoTurnLifecycleResolution() {
-  const internal=this as unknown as EffectAwareTurnAdapterState;
-  const session=turnRuntimeSessions.get(this);
-  const undo=turnLifecycleUndo.get(this);
-  if (!session||!undo||internal.activity[0]?.id!==undo.activityId) return previousUndoLastResolution.call(this);
-
-  const inverse=inverseResolutionEvents(undo.events,`undo.${undo.resolutionId}.local`);
-  const applied=applyResolutionEvents(internal.scene,inverse,[],[],session.state);
-  if (applied.status==="rejected"||!applied.runtimeState) {
-    internal.activity.unshift({
-      id:eventId(),time:"지금",actor:"시스템",title:"Resolution 되돌림 거부",summary:undo.resolutionId,
-      detail:[applied.status==="rejected"?applied.error:"turn lifecycle Undo did not return runtime state"],stateChanges:[],correction:true,
-    });
-    return internal.getSnapshot();
-  }
-
-  session.state=applied.runtimeState;
-  internal.scene=applied.scene;
-  projectTurnRuntimeToScene(session,internal.scene);
-  turnLifecycleUndo.delete(this);
-  internal.activity.unshift({
-    id:eventId(),time:"지금",actor:"시스템",title:"Resolution 되돌림",summary:undo.resolutionId,
-    detail:["Authoritative turn lifecycle ResolutionEvents 역적용"],stateChanges:applied.stateChanges,correction:true,undoOf:undo.resolutionId,
   });
   return internal.getSnapshot();
 };
