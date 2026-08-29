@@ -160,6 +160,18 @@ function resolveProjectionIdentities(source:CharacterSourceSnapshotV1,catalog:Ca
   return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
 }
 
+/**
+ * Resolve only the Character-owned executable content identities. Passive runtime
+ * discovery uses this source-model boundary without coupling eligibility to HP/runtime
+ * snapshot validation performed by the full SessionProjection envelope.
+ */
+export function resolveCharacterSessionContentIdentitiesV1(
+  sheet:CharacterSheet,
+  catalog:CatalogEntry[],
+):CharacterProjectionContentIdentityV1[] {
+  return resolveProjectionIdentities(projectCharacterSourceV1(sheet),catalog);
+}
+
 function clone<T>(value:T):T {
   return structuredClone(value);
 }
@@ -298,41 +310,29 @@ export function parseCharacterSessionProjectionV1(
       throw new Error(`projection runtime HP is outside source-owned max HP: ${runtime.hp}/${sourceAuthority.maxHp}`);
     }
     if (!Array.isArray(raw.contentIdentities)) throw new Error("projection contentIdentities must be an array");
-    if (raw.contentIdentities.length>2048) throw new Error("projection content identity list exceeds limit");
-    const identities=raw.contentIdentities.map(parseIdentity);
-    const ids=new Set<string>();
-    const hostById=new Map((hostCatalog as ResolvedCatalogEntry[]).map((entry)=>[entry.id,entry]));
-    for (const identity of identities) {
-      if (ids.has(identity.qualifiedId)) throw new Error(`duplicate projection content identity: ${identity.qualifiedId}`);
-      ids.add(identity.qualifiedId);
-      const host=hostById.get(identity.qualifiedId);
-      if (!host) throw new Error(`host is missing projected content: ${identity.qualifiedId}`);
-      const hostIdentity=entryIdentity(host);
-      if (hostIdentity.contentId!==identity.contentId || hostIdentity.sourceId!==identity.sourceId || hostIdentity.version!==identity.version || hostIdentity.category!==identity.category) {
-        throw new Error(`host content identity mismatch: ${identity.qualifiedId}`);
-      }
+    const contentIdentities=raw.contentIdentities.map(parseIdentity);
+    const unique=new Set(contentIdentities.map((entry)=>entry.qualifiedId));
+    if (unique.size!==contentIdentities.length) throw new Error("projection contentIdentities contains duplicates");
+    const expected=resolveProjectionIdentities(source,hostCatalog);
+    const actualIds=contentIdentities.map((entry)=>entry.qualifiedId).sort();
+    const expectedIds=expected.map((entry)=>entry.qualifiedId).sort();
+    if (JSON.stringify(actualIds)!==JSON.stringify(expectedIds)) {
+      throw new Error(`projection content identity set does not match Host canonical catalog: ${actualIds.join(", ")} != ${expectedIds.join(", ")}`);
     }
-    const required=[...resolveRequiredIdentities(source,hostCatalog),...resolveKnownItemIdentities(source,hostCatalog)];
-    for (const identity of required) {
-      if (!ids.has(identity.qualifiedId)) throw new Error(`projection omitted required content identity: ${identity.qualifiedId}`);
-    }
-    return {
-      status:"accepted",
-      projection:{
-        schemaId:CHARACTER_SESSION_PROJECTION_SCHEMA_ID,
-        schemaVersion:CHARACTER_SESSION_PROJECTION_SCHEMA_VERSION,
-        characterId:raw.characterId,
-        sourceRevision:raw.sourceRevision,
-        runtimeRevision:raw.runtimeRevision,
-        rulesProfile,
-        source,
-        sourceAuthority,
-        runtime,
-        contentIdentities:identities.sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en")),
-        ...(portrait?{portrait}:{}),
-      },
-    };
-  } catch (error) {
-    return { status:"rejected",error:error instanceof Error ? error.message : String(error) };
+    return {status:"accepted",projection:{
+      schemaId:CHARACTER_SESSION_PROJECTION_SCHEMA_ID,
+      schemaVersion:CHARACTER_SESSION_PROJECTION_SCHEMA_VERSION,
+      characterId:raw.characterId,
+      sourceRevision:raw.sourceRevision,
+      runtimeRevision:raw.runtimeRevision,
+      rulesProfile,
+      source,
+      sourceAuthority,
+      runtime,
+      contentIdentities,
+      ...(portrait?{portrait}:{}),
+    }};
+  } catch(error) {
+    return {status:"rejected",error:error instanceof Error?error.message:String(error)};
   }
 }
