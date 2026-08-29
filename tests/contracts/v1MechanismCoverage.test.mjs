@@ -11,7 +11,7 @@ test("V1 ledger contains every mandatory mechanism family exactly once",()=>{
   assert.equal(result.summary.total,REQUIRED_FAMILIES.length);
 });
 
-test("Gate N rejects incomplete rows, missing evidence, remaining named seams, and missing families",()=>{
+test("Gate N rejects incomplete rows, missing evidence, supported named fallbacks, and missing families",()=>{
   const incomplete=checkV1MechanismCoverage(ledger,{gateN:true});
   assert.equal(incomplete.ok,false);
   assert.ok(incomplete.errors.some((error)=>error.includes("not Gate-N complete")));
@@ -24,9 +24,11 @@ test("Gate N rejects incomplete rows, missing evidence, remaining named seams, a
     row.identityInvarianceEvidence=["test:rename"];
     row.connectedEvidenceIfRelevant=row.connectedRelevant?["test:connected"]:[];
     row.persistenceEvidenceIfRelevant=row.persistenceRelevant?["test:persistence"]:[];
-    row.remainingNamedSeams=[];
   }
   assert.equal(checkV1MechanismCoverage(candidate,{gateN:true}).ok,true);
+  candidate.gateNBlockingNamedFallbacks=["unknown supported mechanic -> named adapter"];
+  assert.ok(checkV1MechanismCoverage(candidate,{gateN:true}).errors.some((error)=>error.includes("gateNBlockingNamedFallbacks")));
+  candidate.gateNBlockingNamedFallbacks=[];
   candidate.rows.pop();
   assert.ok(checkV1MechanismCoverage(candidate,{gateN:true}).errors.some((error)=>error.includes("missing required family")));
 });

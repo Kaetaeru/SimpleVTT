@@ -18,6 +18,8 @@ function strings(value){return Array.isArray(value)&&value.every((entry)=>typeof
 export function checkV1MechanismCoverage(ledger,{gateN=false}={}){
   const errors=[];
   if(ledger?.schemaVersion!=="1") errors.push("ledger.schemaVersion must be 1");
+  if(!strings(ledger?.gateNBlockingNamedFallbacks)) errors.push("ledger.gateNBlockingNamedFallbacks must be a string array");
+  if(gateN&&ledger?.gateNBlockingNamedFallbacks?.length) errors.push("ledger.gateNBlockingNamedFallbacks must be empty for Gate N");
   if(!Array.isArray(ledger?.rows)) return {ok:false,errors:[...errors,"ledger.rows must be an array"],summary:null};
   const seenIds=new Set();
   const seenFamilies=new Set();
@@ -46,7 +48,6 @@ export function checkV1MechanismCoverage(ledger,{gateN=false}={}){
       }
       if(row.connectedRelevant===true&&row.connectedEvidenceIfRelevant.length===0) errors.push(`${label}.connectedEvidenceIfRelevant is required for Gate N`);
       if(row.persistenceRelevant===true&&row.persistenceEvidenceIfRelevant.length===0) errors.push(`${label}.persistenceEvidenceIfRelevant is required for Gate N`);
-      if(row.remainingNamedSeams.length>0) errors.push(`${label}.remainingNamedSeams must be empty for Gate N`);
     }
     if(gateN&&!FINAL_DISPOSITIONS.has(row.disposition)) errors.push(`${label} is not Gate-N complete: ${row.disposition}`);
   }

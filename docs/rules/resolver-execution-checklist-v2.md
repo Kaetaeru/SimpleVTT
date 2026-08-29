@@ -166,7 +166,7 @@ The inventory is a debt ledger and regression-reference map, not the product roa
 
 ## P0.5 — V1 mechanism coverage contract — ACTIVE
 
-`docs/rules/v1-mechanism-coverage-ledger.json` is the machine-readable Gate N authority for the complete D&D V1 coverage corpus. `scripts/check-v1-mechanism-coverage.mjs` requires every mandatory family A-AJ exactly once and rejects Gate N unless every row is `IMPLEMENTED` or `PROVEN_UNNEEDED`, has implementation/production/identity evidence, includes connected/persistence evidence where relevant, and has no remaining named execution seam.
+`docs/rules/v1-mechanism-coverage-ledger.json` is the machine-readable Gate N authority for the complete D&D V1 coverage corpus. `scripts/check-v1-mechanism-coverage.mjs` requires every mandatory family A-AJ exactly once and rejects Gate N unless every row is `IMPLEMENTED` or `PROVEN_UNNEEDED`, has implementation/production/identity evidence, includes connected/persistence evidence where relevant, and `gateNBlockingNamedFallbacks` is empty. `remainingNamedSeams` remains the general migration-debt inventory; a seam blocks Gate N only when unknown supported content actually selects or falls through to it.
 
 `INCOMPLETE` is allowed only while this convergence run is active. It is not a final disposition and it prevents Gate N.
 
@@ -599,7 +599,7 @@ Remaining boundary:
 
 # PHASE 3 — ANTICIPATED D&D CAPABILITY COVERAGE F-M
 
-Status: **IMPLEMENTATION DORMANT; COVERAGE DISPOSITION REQUIRED BEFORE GATE N**.
+Status: **COVERAGE DISPOSITIONS RESOLVED; LEDGER/PRODUCTION ACCEPTANCE REMAINS BEFORE GATE N**.
 
 The old rule “only a current legacy migration may activate F-M” is superseded.
 
@@ -632,49 +632,49 @@ For every probe:
 
 Representative risk: concentration-like maintained source, interruption, suppression vs removal, dependent cleanup.
 
-Disposition: `TBD`.
+Disposition: `PROVEN_UNNEEDED` — persistent effect, concentration, suppression/pause, duration, and dependent cleanup compose from existing Resolver primitives. Evidence: `commonPlayEffectRuntime.test.ts`, `commonPlayEffectSuppressionRuntime.test.ts`, `commonPlayRepresentativeGaps.test.ts`.
 
 ## Gate G — Selector + Allocation runtime
 
 Representative risk: fixed pool/projectile/charge distribution across selected targets.
 
-Disposition: `TBD`.
+Disposition: `IMPLEMENTED` — revision-bound fixed-pool allocation with target bounds, duplicate rejection, property-backed totals, and identity invariance exists in `commonPlayAllocationRuntime.ts`; evidence: `commonPlayAllocationRuntime.test.ts`. Its connected production decision path remains a coverage-ledger gap, not a missing primitive.
 
 ## Gate H — Object and Link artifacts
 
 Representative risk: walls/barriers/portals where Zone or Actor semantics are incorrect.
 
-Disposition: `TBD`.
+Disposition: `IMPLEMENTED` — typed object/link artifacts now cross canonical JSON lowering and the generic production Resolver route. Evidence: `commonPlayArtifactRuntime.ts`, `commonPlayArtifactActivationRuntime.test.ts`, `commonPlayArtifactFamiliesRuntime.test.ts`, `installedCommonPlayLoweredFamiliesProduction.test.ts`.
 
 ## Gate I — Actor artifact / summon runtime
 
 Representative risk: declarative summon/spawn with ownership, control, placement, lifetime, reconnect.
 
-Disposition: `TBD`.
+Disposition: `IMPLEMENTED` — typed actor artifacts carry stat/action/resource, owner/controller, initiative, placement, lifetime, connected state, and identity-invariant production activation through the same artifact runtime evidence as Gate H.
 
 ## Gate J — Form overlay / transformation
 
 Representative risk: Wild Shape/Polymorph-like state overlay, restoration, property/resource projection, Undo/reconnect.
 
-Disposition: `TBD`.
+Disposition: `IMPLEMENTED` — typed form artifacts carry target/controller, property overlay/retention/replacement, HP/action/spellcasting policies, lifetime, Undo, and connected state through the same artifact runtime evidence as Gate H.
 
 ## Gate K — Stored invocation / contingency-like behavior
 
 Representative risk: capture now, trigger later, snapshot-vs-live bindings, exactly-once consumption.
 
-Disposition: `TBD`.
+Disposition: `IMPLEMENTED` — stored invocation capture/trigger/cancel owns snapshot/live binding, Reaction payment, expiry, Concentration, exactly-once consumption, stale rejection, and identity invariance. Evidence: `commonPlayStoredInvocationRuntime.ts`, `commonPlayStoredInvocationRuntime.test.ts`, `commonPlayRepresentativeGaps.test.ts`. Generic production orchestration remains a ledger gap.
 
 ## Gate L — Item lifecycle operations
 
 Representative risk: create/copy/consume/destroy/update mutable ItemInstance state with atomic result/payment and durable ownership.
 
-Disposition: `TBD`.
+Disposition: `IMPLEMENTED` — revision-bound inventory transactions own grant/quantity/destroy/equip/wield/charges, owner transfer, containers, attunement, rollback, and identity invariance. Evidence: `commonPlayInventoryRuntime.ts`, `commonPlayInventoryRuntime.test.ts`, `commonPlayRepresentativeGaps.test.ts`. Generic Character production write-back remains a ledger gap.
 
 ## Gate M — Source-bound state ownership
 
 Representative risk: temporary/runtime state whose correct ownership is the generating source and cannot safely be inferred from unrelated scalar state.
 
-Disposition: `TBD`.
+Disposition: `PROVEN_UNNEEDED` — `sourceId`, `sourceActorId`, explicit owner/controller, concentration group, artifact expiry, and durable owner revisions already express source-bound ownership without another state primitive. Evidence: `commonPlayArtifactActivationRuntime.test.ts`, `commonPlayStoredInvocationRuntime.test.ts`, `commonPlayInventoryRuntime.test.ts`.
 
 ---
 
