@@ -6,7 +6,7 @@ This directory is the repository-side coordination contract for ChatGPT Rerun on
 
 - Repository: `Kaetaeru/SimpleVTT`
 - Canonical repository URL: `https://github.com/Kaetaeru/SimpleVTT`
-- Rerun working branch/ref: `agent/resolver-foundation-convergence`
+- Rerun working branch/ref: `agent/v1-common-play-full-convergence`
 - Product integration target: `work/v1-composite`
 - Control file: `.chatgpt-rerun/control.json`
 
@@ -83,7 +83,7 @@ The current explicit owner priority is the product plan referenced by `.chatgpt-
 - Select work only from that document's current next action.
 - Do not copy its checklist, feature details, acceptance criteria, gate list, or architecture philosophy into Rerun files.
 - Do not revive an older named-content implementation PR merely because it is green if the current architecture plan supersedes that implementation direction.
-- Use ChatGPT for architecture/mechanism decisions and bounded acceptance criteria; use Codex for repository-dependent implementation after the contract is sufficiently fixed.
+- For sequence 5 (`v1-common-play-c8-rerun`), ChatGPT Rerun performs the repository-dependent C8 implementation directly in bounded checkpoints. Do not hand C8 back to Codex unless the owner explicitly changes this direction.
 - If implementation discovers a need for a new primitive, undefined authority/lifetime, named-content branching, conflicting contracts, or materially different product choices, return to design review instead of inventing architecture inside the implementation task.
 
 ## Execution checkpoint discipline
