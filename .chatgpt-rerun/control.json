@@ -2,8 +2,8 @@
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
-  "status": "blocked",
-  "reason": "C8 boundary 2 PR #179 has one locally validated correction at 623ce5f0c577cc8fce7c9bd540077195e88a139e: supplied authoritative attack modifier contributions no longer double-add the action bonus. Focused M1 Interaction is 79/79 green and TypeScript passes. The local child branch is one commit ahead of remote baa6d260 because Codex cannot access the Windows Git Credential Manager and no token is available. Push agent/c8-core-production-interceptor-discovery from the user-owned PowerShell session, then resume to inspect exact-head CI, merge #179, and begin boundary 3. Do not repeat PR #176-#178 validation.",
+  "status": "continue",
+  "reason": "C8 boundaries 1 and 2 are complete. PR #179 merged as 8278036108d48084666ea79a9d506ed681ee15bf from exact candidate 623ce5f0c577cc8fce7c9bd540077195e88a139e after M1 Common Play Interaction and Rules Domain succeeded. Boundary 3 is active: route interceptor eligibility through existing authoritative spatial/visibility/sensory fact providers and authored unknownPolicy without fabricated facts or named fallback. Do not repeat PR #176-#179 validation unless affected surfaces change.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }

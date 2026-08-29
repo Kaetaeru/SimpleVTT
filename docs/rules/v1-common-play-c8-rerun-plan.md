@@ -122,23 +122,14 @@ Until the required Gate N evidence is reconciled, the overall V1 verdict remains
 
 ## 8. Active C8 Core checkpoint
 
-PR #176 established generic authored `subtract-die` semantics. PR #177 then proved the generic kernel can pause on a successful ability check or attack roll, receive a blocking boolean interaction, atomically pay Reaction/resource costs, consume authoritative modifier-die faces, recalculate through the central d20 evaluator, preserve natural-20 semantics, and reject invalid authority without mutation.
+Boundaries 1 and 2 are complete.
 
-The first unfinished Core boundary has already been inspected:
-
-- `schemas/common-play-contract.schema.json` carries portable interceptor and `roll.modify` structure, but the authoring vocabulary must lower into the runtime kernel rather than expose runtime-internal slot names casually;
-- `src/domain/commonPlayDefinitionRuntime.ts` retains interceptors structurally but does not yet provide the typed reaction lowering needed by production discovery;
-- `src/app/installedCommonPlayRuntimeAdapter.ts` is the generic installed Common Play production path, but does not yet passively discover installed interceptor candidates;
-- the current named Cutting Words adapter contains useful archaeology for responder/spatial/session behavior but is not the target architecture;
-- an unmerged bounded candidate branch, `agent/c8-common-play-interceptor-portable-production`, contains early parser/lowering tests from the prior execution and is **not authoritative until replayed/reconciled onto the current working-branch head and validated**.
+- PR #178 lowered portable post-roll d20 interceptor structure into the existing Gate A reaction kernel.
+- PR #179 merged as `8278036108d48084666ea79a9d506ed681ee15bf`. It passively discovers actually-owned installed Common Play interceptor definitions, projects actor-owner responder authority through the existing interrupt contract, applies Host-authoritative modifier dice, and preserves atomic Reaction/resource payment for successful ability-check and attack-roll recalculation.
+- PR #179 exact head `623ce5f0c577cc8fce7c9bd540077195e88a139e` passed the focused M1 Common Play Interaction workflow and Rules Domain. Its attack production regression also proved that an authoritative modifier contribution set replaces, rather than duplicates, the action-bonus fallback.
 
 ## 9. Next Exact Action
 
-Complete C8 Core in four bounded boundaries, without migrating unrelated named D&D content:
+Implement only boundary 3: route interceptor eligibility predicates that require distance, visibility, or sensory facts through the existing authoritative Common Play fact provider/manual-authority infrastructure. Missing authority must follow the authored `unknownPolicy`; no fabricated `distance = 0` or `visible = true` fallback is allowed. Prove the boundary with an arbitrary external definition and identity rename invariance.
 
-1. **Portable interceptor lowering** — reconcile/replay the existing bounded candidate onto the current working head; normalize portable post-roll interceptor structure and lower supported `roll.modify: subtract-die` shapes into the PR #177 `CommonPlayReactionDefinition`, with parser/lowering and identity-invariance tests.
-2. **Production/session discovery and responder authority** — make the installed Common Play production/session path passively discover eligible generic interceptor definitions and route accept/decline plus Reaction/resource payment through existing interaction/authority concepts, including external/remote responder ownership.
-3. **Authoritative spatial/visibility** — route required eligibility facts through existing provider/manual authority and explicitly block when those facts are unavailable; do not fabricate them.
-4. **Damage-roll + acceptance proof** — extend the same generic path to authoritative damage-roll subtraction and prove applicable connected Host/Client convergence, retry/replay/reconnect, persistence, Undo, unsupported-shape rejection, and arbitrary-ID/name invariance.
-
-When these four boundaries are green, mark **C8 Core complete**. Do not require Cutting Words migration or global legacy-zero before doing so. Move any desired Cutting Words conversion and broader D&D named-path deletion to the Legacy Migration backlog.
+After boundary 3 is green and merged, implement boundary 4 damage-roll interception and final connected/recovery/persistence/Undo acceptance. Then mark **C8 Core complete**. Cutting Words migration and global legacy-zero remain separate backlog.
