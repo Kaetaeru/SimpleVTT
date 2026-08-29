@@ -14,6 +14,7 @@ import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledConten
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { decodeConnectedWireMessage } from "../../src/app/connectedSessionWire";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
 const SAVE=JSON.parse(readFileSync(new URL("../fixtures/play-contract/multi-target-save-damage.json",import.meta.url),"utf8"));
@@ -114,6 +115,7 @@ test("portable zone artifact converges once through the existing Host/Client eve
   finally { tauriSessionTransport.send=originalSend; }
   const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
   assert.ok(batch,JSON.stringify(wires));
+  assert.equal(wires.some((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true,"runtime artifact event batch must cross the real wire decoder");
 
   const client=new MockAdapter();
   await install(client,"unknown-connected");
