@@ -1,6 +1,8 @@
-import type { AbilityKey } from "./contracts";
+import type { AbilityKey, ActionVm } from "./contracts";
+import { d20BackedFormulaFaces } from "./phase09ReferenceEffectFacts";
 import type { FixedDamageDice, FlatDamageContribution } from "../domain/damageRoll";
 import type { FixedFormulaDice, FlatFormulaContribution } from "../domain/diceFormula";
+import { parseCommonPlayDamageDiceFormula } from "../domain/commonPlayOperationRuntime";
 
 export interface Phase09SaveModifierFact {
   modifier:number;
@@ -54,21 +56,6 @@ const REFERENCE_ATTACK_FACTS:Record<string,Phase09AttackFact> = {
   },
 };
 
-const REFERENCE_HEALING_FACTS:Record<string,Phase09HealingFact> = {
-  "action.second-wind":{
-    dice:[{ source:"phase09:reference-healing:action.second-wind:d10", sides:10, count:1, faces:[5] }],
-    flat:[{ source:"phase09:reference-healing:action.second-wind:level", value:5 }],
-  },
-  "action.healing-word":{
-    dice:[{ source:"phase09:reference-healing:action.healing-word:d4", sides:4, count:1, faces:[3] }],
-    flat:[{ source:"phase09:reference-healing:action.healing-word:spellcasting", value:4 }],
-  },
-  "action.healing-potion":{
-    dice:[{ source:"phase09:reference-healing:action.healing-potion:d4", sides:4, count:2, faces:[3,4] }],
-    flat:[{ source:"phase09:reference-healing:action.healing-potion:flat", value:2 }],
-  },
-};
-
 const REFERENCE_TARGETING_FACTS:Record<string,Phase09TargetingFact> = {
   "combatant.goblin-a":{ distanceFeet:22, visible:true, cover:"none", targetCanSeeAttacker:true },
   "combatant.goblin-b":{ distanceFeet:35, visible:true, cover:"none", targetCanSeeAttacker:true },
@@ -93,10 +80,21 @@ export function phase09ReferenceAttackFact(actionId:string):Phase09AttackFact {
   return structuredClone(fact);
 }
 
-export function phase09ReferenceHealingFact(actionId:string):Phase09HealingFact {
-  const fact = REFERENCE_HEALING_FACTS[actionId];
-  if (!fact) throw new Error(`missing Phase 09 healing fact: ${actionId}`);
-  return structuredClone(fact);
+export function healingFactFromFaces(action:ActionVm,faces:number[]):Phase09HealingFact {
+  if(action.resolutionKind!=="healing"||!action.healing)throw new Error(`healing fact requires a healing action: ${action.id}`);
+  const parsed=parseCommonPlayDamageDiceFormula(action.healing.dice,`healing action ${action.id}`);
+  const flat=parsed.flat+action.healing.flat;
+  if(faces.length!==parsed.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>parsed.sides))throw new Error(`healing faces do not match ${parsed.count}d${parsed.sides}: ${action.id}`);
+  return {
+    dice:[{source:`action:${action.id}:healing-d${parsed.sides}`,sides:parsed.sides,count:parsed.count,faces:[...faces]}],
+    flat:flat?[{source:`action:${action.id}:healing-flat`,value:flat}]:[],
+  };
+}
+
+export function rollHealingFact(action:ActionVm,drawD20:(index:number)=>number):Phase09HealingFact {
+  if(!action.healing)throw new Error(`healing fact requires a healing action: ${action.id}`);
+  const parsed=parseCommonPlayDamageDiceFormula(action.healing.dice,`healing action ${action.id}`);
+  return healingFactFromFaces(action,d20BackedFormulaFaces(parsed.count,parsed.sides,drawD20));
 }
 
 export function phase09ReferenceTargetingFact(targetId:string):Phase09TargetingFact {

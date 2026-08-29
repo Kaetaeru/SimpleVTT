@@ -568,6 +568,7 @@ Verified migration slices:
 - [x] hostile attack/save extension and linked special-duration expiry moved out of the Resolver's Rage branch into generic extendable-Effect metadata; a renamed unknown Effect proves extension and turn survival;
 - [x] spellcasting restrictions now read active Effect metadata rather than Rage/Wild Shape tags, with an unknown external Effect proving identity invariance;
 - [x] atomic no-roll item damage now derives dice, flat damage, and item execution from the authored action shape rather than `action.wand`; an unknown renamed item action proves transaction, persistence projection, and damage provenance remain identical;
+- [x] healing previews now derive their fixed authoritative formula facts from any authored healing action instead of a three-action ID table; unknown-ID service and adapter proofs cover roll, HP application, economy/item payment, persistence, and Undo;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:

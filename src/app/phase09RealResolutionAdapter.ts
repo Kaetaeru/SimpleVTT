@@ -18,7 +18,7 @@ import {
 } from "./spellcastingRuntimeAdapter";
 import {
   phase09ReferenceAttackFact,
-  phase09ReferenceHealingFact,
+  rollHealingFact,
   phase09ReferenceSaveModifier,
   phase09ReferenceTargetingFact,
 } from "./phase09ReferenceRulesFacts";
@@ -68,7 +68,6 @@ interface FreeformSpellSlotHistory {
 
 const pendingAtomicAttacks = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
 const freeformSpellSlotHistories = new WeakMap<MockAdapter,FreeformSpellSlotHistory>();
-const REAL_HEALING_ACTION_IDS = new Set(["action.second-wind","action.healing-word","action.healing-potion"]);
 const HELPED_STATUS = "도움 받음";
 const HIDDEN_STATUS = "숨음";
 const DODGING_STATUS = "회피";
@@ -92,7 +91,7 @@ function migratedResolutionAction(action:ActionVm) {
   return action.resolutionKind === "ability-check"
     || action.resolutionKind === "attack"
     || action.resolutionKind === "saving-throw"
-    || (action.resolutionKind === "healing" && REAL_HEALING_ACTION_IDS.has(action.id));
+    || action.resolutionKind === "healing";
 }
 
 function atomicAttackAction(action:ActionVm) {
@@ -369,7 +368,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
       resolutionId:resolutionId(),
       action,
       targetIds,
-      healingFact:phase09ReferenceHealingFact(action.id),
+      healingFact:rollHealingFact(action,(index)=>internal.d20(action.id,index)),
     });
     return internal.getSnapshot();
   }

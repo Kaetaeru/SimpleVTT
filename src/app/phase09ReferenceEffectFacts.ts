@@ -1,5 +1,6 @@
 import type { ActionVm } from "./contracts";
 import type { FixedFormulaDice, FlatFormulaContribution } from "../domain/diceFormula";
+import { parseCommonPlayDamageDiceFormula } from "../domain/commonPlayOperationRuntime";
 
 export interface Phase09NoRollDamageFact {
   dice:FixedFormulaDice[];
@@ -8,13 +9,22 @@ export interface Phase09NoRollDamageFact {
 
 function formula(action:ActionVm) {
   const damage=action.damage?.[0];
-  const match=damage?.dice.trim().match(/^(\d+)d(\d+)(?:\s*\+\s*(\d+))?$/i);
-  if(!damage||!match)throw new Error(`no-roll damage action requires a simple dice formula: ${action.id}`);
-  const count=Number(match[1]);
-  const sides=Number(match[2]);
-  const flat=Number(match[3]??0)+damage.flat;
-  if(!Number.isInteger(count)||count<1||!Number.isInteger(sides)||sides<2||!Number.isFinite(flat))throw new Error(`invalid no-roll damage formula: ${action.id}`);
-  return {count,sides,flat};
+  if(!damage)throw new Error(`no-roll damage action requires a damage formula: ${action.id}`);
+  const parsed=parseCommonPlayDamageDiceFormula(damage.dice,`no-roll damage action ${action.id}`);
+  return {...parsed,flat:parsed.flat+damage.flat};
+}
+
+export function d20BackedFormulaFaces(count:number,sides:number,drawD20:(index:number)=>number) {
+  let drawIndex=0;
+  return Array.from({length:count},()=>{
+    const limit=20-(20%sides);
+    let face:number;
+    do {
+      face=drawD20(drawIndex++);
+      if(!Number.isInteger(face)||face<1||face>20)throw new Error(`invalid authoritative d20 face: ${face}`);
+    } while(face>limit);
+    return ((face+Math.floor(sides/2)-1)%sides)+1;
+  });
 }
 
 export function noRollDamageFactFromFaces(action:ActionVm,faces:number[]):Phase09NoRollDamageFact {
@@ -28,13 +38,6 @@ export function noRollDamageFactFromFaces(action:ActionVm,faces:number[]):Phase0
 
 export function rollNoRollDamageFact(action:ActionVm,drawD20:(index:number)=>number):Phase09NoRollDamageFact {
   const parsed=formula(action);
-  if(parsed.sides>20)throw new Error(`d20-backed no-roll damage preview cannot roll d${parsed.sides}: ${action.id}`);
-  let drawIndex=0;
-  const faces=Array.from({length:parsed.count},()=>{
-    const limit=20-(20%parsed.sides);
-    let face:number;
-    do face=drawD20(drawIndex++);while(face>limit);
-    return ((face+Math.floor(parsed.sides/2)-1)%parsed.sides)+1;
-  });
+  const faces=d20BackedFormulaFaces(parsed.count,parsed.sides,drawD20);
   return noRollDamageFactFromFaces(action,faces);
 }

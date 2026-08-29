@@ -56,6 +56,8 @@ Core d20/turn execution no longer imports Rage lifecycle identity: hostile attac
 
 Atomic item damage no longer recognizes `action.wand`. Any no-roll damage action with an authored damage formula and item cost now uses the same atomic item transaction; an unknown renamed action proves the damage, charge payment, event projection, and Undo boundary. Named item projection in `productionPlayRuntimeAdapter.ts` remains legacy content materialization debt.
 
+The Phase 09 healing path no longer recognizes Second Wind, Healing Word, or healing-potion action IDs to select formula facts. Any authored healing action now enters the same roll/HP/cost path, with unknown-ID adapter evidence. Named feature/item projection and activation remain legacy until portable content definitions author those actions.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |

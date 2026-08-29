@@ -60,7 +60,7 @@ test("Second Wind persists HP/resource once, reloads, and Undo persists the inve
   assert.equal(initial.persistence?.storageRevision,0);
 
   let snapshot=await applySecondWind(adapter);
-  assert.equal(snapshot.activeCharacter.hp,41);
+  assert.equal(snapshot.activeCharacter.hp,42);
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id==="resource.second-wind")?.current,0);
   assert.equal(snapshot.activeCharacter.runtimeRevision,2);
   assert.equal(snapshot.persistence?.storageRevision,1);
@@ -68,7 +68,7 @@ test("Second Wind persists HP/resource once, reloads, and Undo persists the inve
 
   const reader=adapterWithStore(store);
   const restored=await reader.getSnapshot();
-  assert.equal(restored.activeCharacter.hp,41);
+  assert.equal(restored.activeCharacter.hp,42);
   assert.equal(restored.activeCharacter.resources.find((entry)=>entry.id==="resource.second-wind")?.current,0);
   assert.equal(restored.activeCharacter.runtimeRevision,2);
 
@@ -91,14 +91,14 @@ test("healing potion persists HP and quantity in one generation and Undo restore
   const adapter=adapterWithStore(store);
   await adapter.getSnapshot();
   let snapshot=await applyPotion(adapter);
-  assert.equal(snapshot.activeCharacter.hp,40);
+  assert.equal(snapshot.activeCharacter.hp,37);
   assert.equal(snapshot.activeCharacter.items.find((entry)=>entry.id==="item.potion.aelar")?.quantity,1);
   assert.equal(snapshot.activeCharacter.runtimeRevision,2);
   assert.equal(snapshot.persistence?.storageRevision,1);
 
   const reader=adapterWithStore(store);
   const restored=await reader.getSnapshot();
-  assert.equal(restored.activeCharacter.hp,40);
+  assert.equal(restored.activeCharacter.hp,37);
   assert.equal(restored.activeCharacter.items.find((entry)=>entry.id==="item.potion.aelar")?.quantity,1);
 
   await adapter.undoLastResolution();
