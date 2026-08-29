@@ -1483,7 +1483,7 @@
         "calendar/rest state",
         "trigger/effect/damage kernels"
       ],
-      "currentState": "Revision-bound exposure thresholds/recovery and profile falling primitive exist; durable campaign join and rule compositions missing",
+      "currentState": "Exposure and environment kernels exist: a revision-bound exposure counter can advance/recover and report newly crossed intervals, while pure environment helpers calculate falling, movement, attack, and damage-defense semantics. The authoritative RuntimeClock is combat/session round+elapsed time, not a durable campaign exposure owner, and the persisted Common Play contract has no exposure/environment state. Production therefore has no authoritative campaign-clock join, periodic save/damage/Exhaustion dispatch, durable recovery transaction, or reconnect persistence for dehydration/suffocation/extreme exposure/traps.",
       "requiredSemantics": [
         "falling",
         "suffocation",
@@ -1509,9 +1509,10 @@
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "campaign clock exposure persistence",
-        "periodic Resolver dispatch",
-        "hazard composition proofs"
+        "persisted portable exposure/environment authoring and durable subject state",
+        "authoritative campaign/session elapsed-clock ownership and restart/reconnect persistence",
+        "periodic threshold scheduling into generic save/damage/effect Resolution transactions",
+        "recovery/reset transaction and representative hazard composition proof"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
