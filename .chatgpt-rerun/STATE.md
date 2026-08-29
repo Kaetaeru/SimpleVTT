@@ -51,19 +51,24 @@ Current validated C9 checkpoints:
 - `b659b063`: arbitrary installed Zone artifacts project manual enter/leave actions and commit membership, enter damage/frequency, Host/Client replay, reconnect, and Undo through the canonical Zone runtime.
 - `641c00fe`: installed Zone turn-start/end operations are composed into the same authoritative end-turn/begin-turn PendingResolution rather than a second mechanical commit.
 - `fbcee3c6`: begin-turn, end-turn, and advance-time emit canonical `turn-clock` StateChanges; event-native apply/replay and Undo both read and restore exact RuntimeClock snapshots. The focused clock Undo regression passes.
-- `b4b5fc5e`: the exact `ResolutionEvent[]` returned by `advanceTurnRuntimeLifecycle` is retained without recomputation and carried on the existing connected `mode-transition` payload; no Zone-specific side channel or second mechanical commit is introduced. The transport regression is registered in the authoritative UI workflow.
+- `b4b5fc5e`: the exact `ResolutionEvent[]` returned by `advanceTurnRuntimeLifecycle` is retained without recomputation and carried on the existing connected `mode-transition` payload; no Zone-specific side channel or second mechanical commit is introduced.
+- `4b5f40b8`: the connected Zone turn acceptance test was corrected to assert canonical HP + Temporary HP damage rather than treating Temporary HP absorption as missing damage.
+- `64a1ff5d`: turn lifecycle events are registered in the existing `runtimeResolutionEventHistory`/`lastResolutionId` authority instead of maintaining a competing snapshot Undo path. The final generic event-native Undo owner restores Host runtime state, and the connected turn wrapper publishes the same inverse ResolutionEvents as a `resolution-undo` event.
+- `0426859e`: shared connected Undo provenance preserves its literal `applied` type; this removes the TypeScript widening error observed at `64a1ff5d`.
 
-Verification at exact head `5cbc7bb7458f93a4c2ffa588f95d24069c98f6ca`:
+Verification for the Zone turn lifecycle slice:
 
-- UI workflow `33268257210` connected/live-lifecycle step: 30/30 passed, including `connected turn projection carries the exact authoritative lifecycle ResolutionEvents`;
-- authoritative spellcasting runtime step: passed;
-- the existing broad Phase09 step remains 106/118 with the same inherited deterministic-dice, runtime-revision, and legacy-provenance expectation failures already observed before this transport change;
-- TypeScript/build was skipped by workflow fail-fast after the inherited Phase09 red, so this head does not yet have a full-build green claim.
+- UI workflow `33270194527` at `64a1ff5d14248273320f6b645bc6214e1dc1a31d`, step 17: SUCCESS. The exact production regression `arbitrary installed Zone turn-end and next turn-start converge through one connected transaction, reconnect, and Undo` passed.
+- That regression proves arbitrary installed identity, automatic `zone.turn-end` and next `zone.turn-start` composition inside one authoritative turn transaction, canonical once-per-turn frequency metadata, Host/Client convergence, duplicate replay idempotence, ordered reconnect replay, and event-native Undo.
+- UI workflow `33270308747` at `0426859e1b73bb50dba40b0de36defa5d1fd3366`, step 17: SUCCESS again after the provenance typing fix.
+- The same UI workflow still fails the broad Phase09 step before Typecheck/build; this broad failure contains the previously observed deterministic-dice/runtime-revision/legacy-provenance expectation mismatches and is not claimed green.
+- A direct container checkout for independent `tsc --noEmit` verification was attempted but the execution environment cannot resolve `github.com`; therefore no unverified local TypeScript-green claim is recorded for `0426859e`.
+- The most recent Rules Domain run available for this slice (`33270194519` at `64a1ff5d`) had all 440 domain tests green and Phase09 compatibility 113/113 green, but correctly failed Gate N coverage (`IMPLEMENTED=1`, `INCOMPLETE=35`) and reducer projection drift (100 expected projected rows versus 98 checked in). Its TypeScript step exposed only the provenance-literal widening fixed by `0426859e`.
 
-Coverage remains `IMPLEMENTED=1`, `INCOMPLETE=35`; Host transport alone does not satisfy the connected/reconnect matrix for Families P/T and no ledger row is promoted.
+Coverage remains `IMPLEMENTED=1`, `INCOMPLETE=35`, `PROVEN_UNNEEDED=0`. Family P and Family T have materially stronger production/connected evidence, but neither is promoted: P still lacks its full required event-family/frequency matrix, and T still lacks spatial membership production plus stay/effect/cleanup breadth required by its row.
 
 ## Next Exact Action
 
-Consume `mode-transition.resolutionEvents` in the Client path of `src/app/connectedSessionRuntimeAdapter.ts` through the existing canonical event-native application seam rather than recomputing Zone mechanics or adding a second transport. Ensure ordered reconnect ledger replay uses the same application path. Then prove an arbitrary installed Zone turn-start/end rule converges across Host/Client and reconnect with frequency, damage/effect results, duration cleanup, event-native Undo, and identity invariance. Reconcile Families P/T only to evidence actually obtained; do not promote either family until its full required event matrix is satisfied.
+Reconcile Families P/T in `docs/rules/v1-mechanism-coverage-ledger.json` to the exact Zone turn-start/end evidence now obtained, removing only the stale automatic-turn-dispatch seams while leaving both rows `INCOMPLETE`. Then continue from the canonical Gate N audit with the highest-priority remaining missing semantics/evidence rather than repeating this validated Zone transaction. Also reconcile the reducer Common Play projection drift when its missing two projected rows are identified; do not claim a full exact-head build green until TypeScript/build is actually executed on a head containing `0426859e` or later.
 
 C8 Core is complete. C9 remains active and Gate N remains blocked by 35 `INCOMPLETE` coverage rows. Overall verdict: `V1 INCOMPLETE`.
