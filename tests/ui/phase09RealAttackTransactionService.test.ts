@@ -3,7 +3,7 @@ import test from "node:test";
 import type { ActionVm, EconomyVm, SceneEntity, SceneVm } from "../../src/app/contracts";
 import { resolveAtomicAttackTransaction } from "../../src/app/realAttackTransactionService";
 import { createTurnRuntimeSession } from "../../src/app/realTurnRuntimeService";
-import { phase09ReferenceAttackFact, phase09ReferenceTargetingFact } from "../../src/app/phase09ReferenceRulesFacts";
+import type { Phase09AttackFact, Phase09TargetingFact } from "../../src/app/phase09ReferenceRulesFacts";
 import { createEffect } from "../../src/domain/effects";
 
 const SHORTBOW:ActionVm = {
@@ -21,6 +21,12 @@ const SHORTBOW:ActionVm = {
   damage:[{ type:"관통", dice:"1d6", flat:2, average:6 }],
   details:[],
 };
+const attackFact=():Phase09AttackFact=>({
+  sourceKind:"weapon",ability:"dex",rangeFeet:80,
+  damageDice:[{source:"external:weapon:damage",sides:6,count:1,faces:[4,4]}],
+  flatDamage:[{source:"external:weapon:dexterity",value:2}],
+});
+const targetingFact=():Phase09TargetingFact=>({distanceFeet:22,visible:true,cover:"none",targetCanSeeAttacker:true});
 
 function entity(overrides:Partial<SceneEntity>):SceneEntity {
   return {
@@ -68,8 +74,8 @@ function commonRequest(actor:SceneEntity,target:SceneEntity) {
     initiativeMode:true,
     attackD20Face:15,
     effectiveTargetAc:15,
-    attackFact:phase09ReferenceAttackFact("action.shortbow"),
-    targetingFact:phase09ReferenceTargetingFact("combatant.goblin-a"),
+    attackFact:attackFact(),
+    targetingFact:targetingFact(),
     expectedPreview:{ total:20, outcome:"명중" as const, critical:false },
   };
 }
@@ -95,7 +101,7 @@ test("atomic shortbow transaction commits targeting, attack, damage, and Action 
   assert.equal(result.actorEconomy.action,false);
   assert.deepEqual(result.stateChanges,["행동 사용","고블린 A HP 12 → 6"]);
   assert.match(result.damageComponent?.source ?? "",/atomic resolveAttack/);
-  assert.ok(result.provenance.some((entry) => entry.includes("phase09:reference-attack:action.shortbow:d6")));
+  assert.ok(result.provenance.some((entry) => entry.includes("external:weapon:damage")));
   assert.ok(result.provenance.some((entry) => entry.includes("action.shortbow") && entry.includes("action spent")));
 });
 
@@ -110,8 +116,8 @@ test("atomic attack uses real critical dice semantics: damage dice double while 
     initiativeMode:true,
     attackD20Face:20,
     effectiveTargetAc:99,
-    attackFact:phase09ReferenceAttackFact("action.shortbow"),
-    targetingFact:phase09ReferenceTargetingFact("combatant.goblin-a"),
+    attackFact:attackFact(),
+    targetingFact:targetingFact(),
     expectedPreview:{ total:25, outcome:"명중", critical:true },
   });
 
@@ -124,7 +130,7 @@ test("atomic attack uses real critical dice semantics: damage dice double while 
 });
 
 test("atomic attack rejects out-of-range targeting without spending Action or changing HP", () => {
-  const targeting = phase09ReferenceTargetingFact("combatant.goblin-a");
+  const targeting = targetingFact();
   targeting.distanceFeet = 90;
   const result = resolveAtomicAttackTransaction({
     resolutionId:"phase09.atomic.shortbow.out-of-range",
@@ -136,7 +142,7 @@ test("atomic attack rejects out-of-range targeting without spending Action or ch
     initiativeMode:true,
     attackD20Face:15,
     effectiveTargetAc:15,
-    attackFact:phase09ReferenceAttackFact("action.shortbow"),
+    attackFact:attackFact(),
     targetingFact:targeting,
   });
 
@@ -156,8 +162,8 @@ test("atomic attack rejects if the staged preview drifts from the authoritative 
     initiativeMode:true,
     attackD20Face:15,
     effectiveTargetAc:15,
-    attackFact:phase09ReferenceAttackFact("action.shortbow"),
-    targetingFact:phase09ReferenceTargetingFact("combatant.goblin-a"),
+    attackFact:attackFact(),
+    targetingFact:targetingFact(),
     expectedPreview:{ total:19, outcome:"명중", critical:false },
   });
 

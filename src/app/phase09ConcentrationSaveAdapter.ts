@@ -86,7 +86,7 @@ function manualFor(adapter:MockAdapter,action:ActionVm|undefined,resolution:Reso
 function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMovementReaction) {
   return Boolean(action)
     && action!.resolutionKind === "attack"
-    && (Boolean(manual) || action!.id === "action.shortbow" || Boolean(action!.runtimeAttack))
+    && (Boolean(manual) || Boolean(action!.runtimeAttack))
     && !action!.itemCost
     && !action!.resourceCost;
 }

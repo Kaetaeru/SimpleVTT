@@ -41,7 +41,7 @@ test("current-turn controller can manually declare an opportunity attack without
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"damage-animation");
-  assert.deepEqual(snapshot.resolution?.authoritativeDice,[3]);
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[4]);
   assert.equal(snapshot.scene.economyByActor["combatant.goblin-a"]?.reaction,true,"staged damage has not committed yet");
 
   await adapter.advanceResolution();
@@ -49,8 +49,8 @@ test("current-turn controller can manually declare an opportunity attack without
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.scene.economyByActor["combatant.goblin-a"]?.reaction,false);
   assert.equal(snapshot.scene.economyByActor["combatant.goblin-a"]?.action,true);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.tempHp,0,"5 damage is absorbed by Aelar's 5 Temporary HP");
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.hp,31);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.tempHp,0,"Aelar's 5 Temporary HP is consumed before current HP");
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.hp,30);
   assert.ok(snapshot.activity[0]?.stateChanges.some((line)=>line.includes("combatant.goblin-a economy.reaction true → false")));
   assert.ok(snapshot.activity[0]?.detail.some((line)=>line.includes("reaction:manual-movement:opportunity-attack:action.scimitar")));
 

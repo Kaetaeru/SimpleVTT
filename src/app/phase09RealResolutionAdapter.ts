@@ -17,15 +17,9 @@ import {
   type FreeformSpellSlotChange,
 } from "./spellcastingRuntimeAdapter";
 import {
-  phase09ReferenceAttackFact,
   rollHealingFact,
   phase09ReferenceSaveModifier,
-  phase09ReferenceTargetingFact,
 } from "./phase09ReferenceRulesFacts";
-import {
-  resolveAtomicAttackTransaction,
-  type AtomicAttackTransactionResult,
-} from "./realAttackTransactionService";
 import { resolveActionCostTransaction } from "./realActionCostService";
 import { resolveSceneDamage, resolveSceneHealing } from "./realHealthService";
 import { resolveHealingRollResolution } from "./realHealingRollService";
@@ -66,7 +60,6 @@ interface FreeformSpellSlotHistory {
   change:FreeformSpellSlotChange;
 }
 
-const pendingAtomicAttacks = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
 const freeformSpellSlotHistories = new WeakMap<MockAdapter,FreeformSpellSlotHistory>();
 const HELPED_STATUS = "도움 받음";
 const HIDDEN_STATUS = "숨음";
@@ -94,48 +87,6 @@ function migratedResolutionAction(action:ActionVm) {
     || action.resolutionKind === "healing";
 }
 
-function atomicAttackAction(action:ActionVm) {
-  return action.id === "action.shortbow" && action.resolutionKind === "attack" && !action.itemCost && !action.resourceCost;
-}
-
-function finalizeWithoutAdditionalCosts(internal:Phase09ResolutionAdapterState) {
-  const resolution = internal.resolution;
-  if (!resolution) return;
-  resolution.stage = "complete";
-  resolution.canAdvance = false;
-  resolution.nextLabel = undefined;
-  internal.syncChar();
-  internal.activity.unshift({
-    id:resolution.id,
-    time:"지금",
-    actor:internal.entity(resolution.actorId)?.name ?? resolution.actorId,
-    title:`${resolution.actionName} → ${resolution.targetIds.map((id) => internal.entity(id)?.name ?? id).join(", ") || "—"}`,
-    summary:resolution.compact,
-    detail:[...resolution.detail,...resolution.provenance.map((entry) => `출처: ${entry}`)],
-    stateChanges:structuredClone(resolution.stateChanges),
-  });
-  internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
-  internal.lastResolutionId = resolution.id;
-  internal.before = null;
-}
-
-function rejectAtomicAttack(internal:Phase09ResolutionAdapterState,error:string) {
-  const resolution = internal.resolution;
-  if (!resolution) return;
-  if (internal.before) {
-    internal.scene = structuredClone(internal.before.scene);
-    internal.activeCharacter = structuredClone(internal.before.activeCharacter);
-    internal.characters = structuredClone(internal.before.characters);
-  }
-  resolution.stateChanges = [];
-  resolution.detail.push(`공격 transaction 거부: ${error}`);
-  resolution.finalOutcome = `적용 거부: ${error}`;
-  resolution.stage = "complete";
-  resolution.canAdvance = false;
-  resolution.nextLabel = undefined;
-  internal.before = null;
-}
-
 function rejectCost(internal:Phase09ResolutionAdapterState,error:string) {
   const resolution=internal.resolution;
   if (!resolution) return;
@@ -151,64 +102,6 @@ function rejectCost(internal:Phase09ResolutionAdapterState,error:string) {
   resolution.canAdvance=false;
   resolution.nextLabel=undefined;
   internal.before=null;
-}
-
-function buildAtomicAttack(
-  internal:Phase09ResolutionAdapterState,
-  action:ActionVm,
-  resolution:ResolutionView,
-):AtomicAttackTransactionResult {
-  const actor = internal.entity(action.actorId);
-  const target = internal.entity(resolution.targetIds[0]);
-  const actorEconomy = internal.scene.economyByActor[action.actorId];
-  const targetEconomy = target ? internal.scene.economyByActor[target.id] : undefined;
-  const attackD20Face = resolution.authoritativeDice[0];
-  if (!actor || !target || !actorEconomy || !targetEconomy || attackD20Face === undefined || resolution.attackTotal === undefined || resolution.targetAc === undefined || !resolution.attackOutcome) {
-    return { status:"rejected", error:"atomic attack projection is missing authoritative actor/target/roll state" };
-  }
-  try {
-    return resolveAtomicAttackTransaction({
-      resolutionId:`${resolution.id}:atomic`,
-      action,
-      actor,
-      target,
-      actorEconomy,
-      targetEconomy,
-      initiativeMode:internal.sessionMode === "initiative",
-      attackD20Face,
-      effectiveTargetAc:resolution.targetAc,
-      attackFact:phase09ReferenceAttackFact(action.id),
-      targetingFact:phase09ReferenceTargetingFact(target.id),
-      expectedPreview:{
-        total:resolution.attackTotal,
-        outcome:resolution.attackOutcome,
-        critical:resolution.critical === true,
-      },
-    });
-  } catch (error) {
-    return { status:"rejected", error:error instanceof Error ? error.message : String(error) };
-  }
-}
-
-function applyAtomicAttack(
-  internal:Phase09ResolutionAdapterState,
-  resolution:ResolutionView,
-  transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>,
-) {
-  const target = internal.entity(resolution.targetIds[0]);
-  if (!target) return false;
-  target.hp = transaction.targetHp;
-  target.tempHp = transaction.targetTempHp;
-  internal.scene.economyByActor[resolution.actorId] = { ...transaction.actorEconomy };
-  resolution.stateChanges.push(...transaction.stateChanges);
-  resolution.provenance.push(...transaction.provenance);
-  resolution.damageComponents = transaction.damageComponent ? [transaction.damageComponent] : [];
-  if (transaction.damageComponent) {
-    resolution.compact = `${resolution.attackTotal} vs AC ${resolution.targetAc} — ${resolution.attackOutcome}${resolution.critical ? " · 치명타" : ""} · ${transaction.damageComponent.adjusted} ${transaction.damageComponent.type} 피해`;
-  }
-  resolution.calculatedOutcome = resolution.compact;
-  if (!resolution.adjudicated) resolution.finalOutcome = resolution.compact;
-  return true;
 }
 
 const oldResolveAction = MockAdapter.prototype.resolveAction;
@@ -456,42 +349,6 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     else if(action.id==="action.standard.utilize"){resolution.stateChanges.push(`${actor?.name??action.actorId} 비마법 물체 사용 선언`);resolution.finalOutcome="물체 사용";}
     resolution.compact=resolution.finalOutcome;
     internal.commit(action);
-    return internal.getSnapshot();
-  }
-
-  if (atomicAttackAction(action) && !resolution.adjudicated && resolution.stage === "attack-result") {
-    const transaction = buildAtomicAttack(internal,action,resolution);
-    if (transaction.status === "rejected") {
-      pendingAtomicAttacks.delete(this);
-      rejectAtomicAttack(internal,transaction.error);
-      return internal.getSnapshot();
-    }
-    if (resolution.attackOutcome === "빗나감") {
-      applyAtomicAttack(internal,resolution,transaction);
-      finalizeWithoutAdditionalCosts(internal);
-      return internal.getSnapshot();
-    }
-    pendingAtomicAttacks.set(this,transaction);
-    resolution.stage = "damage-animation";
-    resolution.rollKind = "damage";
-    resolution.authoritativeDice = [...transaction.damageFaces];
-    resolution.canAdvance = true;
-    resolution.nextLabel = "피해 적용";
-    return internal.getSnapshot();
-  }
-
-  if (atomicAttackAction(action) && !resolution.adjudicated && resolution.stage === "damage-animation") {
-    const transaction = pendingAtomicAttacks.get(this);
-    pendingAtomicAttacks.delete(this);
-    if (!transaction) {
-      rejectAtomicAttack(internal,"missing staged atomic attack transaction");
-      return internal.getSnapshot();
-    }
-    if (!applyAtomicAttack(internal,resolution,transaction)) {
-      rejectAtomicAttack(internal,"atomic attack target disappeared before projection");
-      return internal.getSnapshot();
-    }
-    finalizeWithoutAdditionalCosts(internal);
     return internal.getSnapshot();
   }
 

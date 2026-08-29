@@ -10,7 +10,7 @@ import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 const SHORTBOW:ActionVm = {
   id:"action.shortbow",actorId:"char.aelar",name:"숏보우",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",
   summary:"+5 · 1d6+2 관통",available:true,eligibleTargetIds:["combatant.goblin-a"],attackBonus:5,
-  damage:[{ type:"관통", dice:"1d6", flat:2, average:6 }],details:[],
+  damage:[{ type:"관통", dice:"1d6", flat:2, average:6 }],runtimeAttack:{sourceKind:"weapon",ability:"dex",rangeFeet:80,diceSides:6,diceCount:1,damageSource:"external:weapon:damage"},details:[],
 };
 const ACTOR:SceneEntity = {
   id:"char.aelar",name:"Aelar",side:"ally",kind:"character",hp:31,maxHp:42,tempHp:5,ac:18,initiative:17,status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[],
@@ -26,11 +26,11 @@ const SCENE:SceneVm = {
 
 const spatialFact=()=>resolveRuntimeTargetingFact(SCENE,ACTOR.id,TARGET.id);
 
-test("runtime attack provider derives Shortbow damage/range from canonical weapon metadata", () => {
+test("runtime attack provider consumes authored structural damage/range facts", () => {
   const fact = resolveRuntimeAttackFact(SHORTBOW,phase09DeterministicAttackFaces(SHORTBOW));
   assert.equal(fact.sourceKind,"weapon");
   assert.equal(fact.rangeFeet,80);
-  assert.deepEqual(fact.damageDice,[{ source:"runtime:weapon:dnd.srd521.item.weapon.shortbow:damage",sides:6,count:1,faces:[4,4] }]);
+  assert.deepEqual(fact.damageDice,[{ source:"external:weapon:damage",sides:6,count:1,faces:[4,4] }]);
   assert.deepEqual(fact.flatDamage,[{ source:"runtime:action:action.shortbow:damage-flat",value:2 }]);
 });
 
@@ -97,8 +97,8 @@ test("atomic attack rejects preview/domain drift instead of silently applying", 
   assert.equal(result.status,"rejected");if(result.status==="rejected") assert.match(result.error,/preview drift/);
 });
 
-async function hitShortbow(adapter:MockAdapter) {
-  await adapter.setQueuedD20(11);await adapter.resolveAction("action.shortbow",["combatant.goblin-a"]);
+async function hitShortbow(adapter:MockAdapter,actionId="action.shortbow") {
+  await adapter.setQueuedD20(11);await adapter.resolveAction(actionId,["combatant.goblin-a"]);
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"roll-animation");assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12);assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
   await adapter.advanceResolution();snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"attack-result");
@@ -111,7 +111,7 @@ test("MockAdapter Shortbow final apply uses unconstrained default targeting, eve
   const adapter=new MockAdapter();const snapshot=await hitShortbow(adapter);const goblin=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a");
   assert.equal(snapshot.resolution?.stage,"complete");assert.equal(goblin?.hp,6);assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.equal(snapshot.resolution?.damageComponents[0]?.raw,6);assert.match(snapshot.resolution?.damageComponents[0]?.source??"",/atomic resolveAttack transaction/);
-  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("runtime:weapon:dnd.srd521.item.weapon.shortbow:damage")));
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("reference:weapon:shortbow:damage")));
   assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
   assert.ok(!snapshot.resolution?.provenance.some((entry)=>entry.includes("phase09:reference-attack")));
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));assert.ok(snapshot.resolution?.stateChanges.includes("고블린 A HP 12 → 6"));
@@ -128,6 +128,18 @@ test("event-native Undo rejects when current scene state drifted after the commi
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);assert.match(snapshot.resolution?.finalOutcome??"",/Undo 거부/);assert.match(snapshot.resolution?.detail.at(-1)??"",/event-native undo drift/);
 });
 
+test("runtime atomic attack is invariant to an unknown action id", async () => {
+  const adapter=new MockAdapter();
+  const internal=adapter as unknown as {scene:{actionsByActor:Record<string,Array<{id:string}>>}};
+  const action=internal.scene.actionsByActor["char.aelar"].find((entry)=>entry.id==="action.shortbow")!;
+  action.id="unknown.external.ranged-attack";
+  const snapshot=await hitShortbow(adapter,action.id);
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.actionId,action.id);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6);
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("reference:weapon:shortbow:damage")));
+});
+
 test("Shortbow miss still commits Action cost atomically and projects the economy event", async () => {
   const adapter=new MockAdapter();await adapter.setQueuedD20(6);await adapter.resolveAction("action.shortbow",["combatant.goblin-a"]);await adapter.advanceResolution();
   let snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.attackOutcome,"빗나감");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
@@ -142,5 +154,5 @@ test("runtime Combatant attack with no spatial-module relation stays valid and c
   snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"attack-result");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"damage-animation");await adapter.advanceResolution();snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.tempHp,0);assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,28);assert.equal(snapshot.scene.economyByActor[actorId]?.action,false);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.tempHp,0);assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,26);assert.equal(snapshot.scene.economyByActor[actorId]?.action,false);
 });

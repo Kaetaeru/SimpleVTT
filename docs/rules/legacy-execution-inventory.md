@@ -58,6 +58,8 @@ Atomic item damage no longer recognizes `action.wand`. Any no-roll damage action
 
 The Phase 09 healing path no longer recognizes Second Wind, Healing Word, or healing-potion action IDs to select formula facts. Any authored healing action now enters the same roll/HP/cost path, with unknown-ID adapter evidence. Named feature/item projection and activation remain legacy until portable content definitions author those actions.
 
+The duplicate Phase 09 `action.shortbow` atomic branch and its reference attack/target lookup tables are deleted. Canonical runtime attacks now consume explicit structural `runtimeAttack` facts, and the same transaction succeeds after an arbitrary action-ID rename. Weapon/content projection still has to author those portable facts, but action identity no longer selects the atomic attack algorithm.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |
