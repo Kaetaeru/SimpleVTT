@@ -1,0 +1,84 @@
+name: C9 Family AD Authority Audit
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-ad-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile AD authority boundary
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const rows=ledger.rows;
+          const counts=rows.reduce((a,r)=>(a[r.disposition]=(a[r.disposition]??0)+1,a),{});
+          if(rows.length!==36||counts.IMPLEMENTED!==4||counts.INCOMPLETE!==32||(counts.PROVEN_UNNEEDED??0)!==0) throw new Error(`unexpected coverage ${JSON.stringify(counts)}`);
+          if((ledger.gateNBlockingNamedFallbacks??[]).length) throw new Error('gateNBlockingNamedFallbacks is not empty');
+          const ad=rows.find(r=>r.family==='AD'&&r.id==='mount-vehicle-controller');
+          if(!ad||ad.disposition!=='INCOMPLETE') throw new Error('Family AD must still be INCOMPLETE');
+          const mount=fs.readFileSync('src/domain/commonPlayMountRuntime.ts','utf8');
+          const artifact=fs.readFileSync('src/domain/runtimeArtifact.ts','utf8');
+          const schema=fs.readFileSync('schemas/common-play-contract.schema.json','utf8');
+          if(!mount.includes('CommonPlayMountRelationship')||!mount.includes('mountFallOffOutcome')) throw new Error('mount kernel shape changed; re-audit');
+          if(!artifact.includes('initiative:"shared"|"independent"|"none"')||!artifact.includes('controllerId:string')) throw new Error('actor artifact controller/initiative shape changed; re-audit');
+          if(schema.includes('mountRelationship')||schema.includes('controlledMount')) throw new Error('portable mount contract now exists; re-audit instead of checkpointing');
+          ad.currentState='Kernel-only mount validation covers rider/mount identity, relative size, controller identity, a movement-cost datum, controlled action IDs, and fall-off outcome. Generic actor/object/link artifacts separately cover controller identity, shared/independent actor initiative data, object AC/HP/threshold/repair, and links, but the persisted Common Play contract has no mount/vehicle relationship or crew/capacity vocabulary and production has no authoritative rider-mount topology/turn ownership transaction. Composing these pieces now would invent controlled-vs-independent initiative, mount/dismount, capacity/crew, and persistence policy.';
+          ad.remainingNamedSeams=[
+            'persisted portable rider/mount and vehicle crew/capacity contract',
+            'authoritative session rider-mount topology plus mount/dismount transaction and cost ownership',
+            'controlled versus independent initiative/action ownership and fall-off trigger dispatch',
+            'drawn-vehicle capacity/crew/speed composition and durable topology persistence'
+          ];
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+
+          const statePath='.chatgpt-rerun/STATE.md';
+          let state=fs.readFileSync(statePath,'utf8');
+          const marker='## Next Exact Action';
+          const idx=state.indexOf(marker);
+          if(idx<0) throw new Error('STATE Next Exact Action marker missing');
+          const before=state.slice(0,idx).replace(/\n+$/,'')+'\n\n';
+          const section='## Family AD audit — mount/vehicle authority contract missing\n\nFamily AD (`mount-vehicle-controller`) remains `INCOMPLETE`. `commonPlayMountRuntime.ts` is a kernel validator only. Actor/object/link artifacts provide reusable controller, initiative, object durability/repair, and topology primitives, but the persisted Common Play schema has no rider/mount or vehicle crew/capacity relationship, and production has no authoritative transaction defining mount/dismount cost, controlled-vs-independent turn ownership, fall-off dispatch, capacity/crew, or durable rider/vehicle topology. Treating existing artifact fields as those rules would invent policy forbidden by the charter.\n\n';
+          const next='## Next Exact Action\n\nDo not reopen Families S/T/U/AB or the audited authority-blocked P/V/W/X/Y/Z/AA/AC/AD seams. Move to Family AE (`hazards-exposure-environment`): audit whether the existing exposure/environment kernels plus authoritative elapsed clock, effect/damage/save operations, and connected event-native turn progression already define a bounded production composition for falling and one periodic exposure/recovery scenario. If campaign-clock ownership, periodic scheduling, or durable recovery state is not defined, keep AE `INCOMPLETE` and record the exact authority/persistence gap instead of inventing campaign-time policy; otherwise add only the smallest production composition proof.\n';
+          fs.writeFileSync(statePath,before+section+next);
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs || true
+          git diff --check
+      - name: Commit AD audit and STATE
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .chatgpt-rerun/STATE.md
+          git commit -m "docs(c9): audit mount vehicle authority gap"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Publish control last and remove helper
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='.chatgpt-rerun/control.json';
+          const data=JSON.parse(fs.readFileSync(path,'utf8'));
+          data.status='continue';
+          data.reason='C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AD remains INCOMPLETE: mount validation and reusable actor/object/link primitives exist, but the portable schema and production authority do not define rider-mount topology, mount/dismount cost ownership, controlled/independent turn semantics, fall-off dispatch, or vehicle capacity/crew persistence; inventing these policies is forbidden. Next audit Family AE hazards/exposure/environment against the existing elapsed clock and generic save/effect/damage paths.';
+          data.updated_at='2026-08-30';
+          fs.writeFileSync(path,JSON.stringify(data,null,2)+'\n');
+          NODE
+          rm .github/workflows/rerun-c9-ad-audit.yml
+          git add .chatgpt-rerun/control.json .github/workflows/rerun-c9-ad-audit.yml
+          git commit -m "docs(rerun): continue after mount vehicle audit"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
