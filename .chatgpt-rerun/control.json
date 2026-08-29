@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 6,
   "status": "continue",
-  "reason": "C9 remains active. Automatic arbitrary installed Zone turn-end and next turn-start now converge through one authoritative turn transaction with canonical frequency metadata, Host/Client replay, duplicate idempotence, ordered reconnect, and event-native Undo; UI workflow 33270308747 at 0426859e proves the connected/live-lifecycle step green. Turn lifecycle Undo now reuses the canonical runtime ResolutionEvent history instead of a competing snapshot path. Gate N remains IMPLEMENTED=1, INCOMPLETE=35, PROVEN_UNNEEDED=0; Families P/T must be reconciled only to this obtained evidence and remain incomplete. Broad Phase09 still prevents the UI build step, and reducer projection drift remains outstanding.",
+  "reason": "C9 remains active. Exact head 72a2c7fd advances the generic elapsed runtime by 6 seconds on D&D initiative round wrap inside the same authoritative PendingResolution; UI workflow 33270906900 step 17 is 32/32 green and proves arbitrary installed elapsed Zone artifact/membership cleanup with Host/Client convergence, duplicate idempotence, ordered reconnect, and event-native Undo. Gate N remains IMPLEMENTED=1, INCOMPLETE=35, PROVEN_UNNEEDED=0; Families P/T still require ledger reconciliation and genuinely remaining event/spatial/stay/effect/persistence evidence. Broad Phase09 remains 106/118 and skips Typecheck/build, so no full exact-head build-green claim is made.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
