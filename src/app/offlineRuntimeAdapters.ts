@@ -83,7 +83,6 @@ import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";
-import "./paladinDivineSenseActionRuntimeAdapter";
 import "./paladinAbjureFoesActionRuntimeAdapter";
 import "./paladinDevotionHolyNimbusRuntimeAdapter";
 import "./paladinDevotionSmiteOfProtectionRuntimeAdapter";

@@ -1,4 +1,4 @@
-import type { ActionVm, ActivityEntry, AppRole, AppSnapshot, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
+import type { ActionVm, ActivityEntry, AppRole, AppSnapshot, CharacterSheet, CombatantDefinitionVm, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
@@ -7,10 +7,12 @@ import { projectTurnRuntimeToScene } from "./realTurnRuntimeService";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState, turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { authoritativeSpatialModuleRelation } from "./realSpatialRuntimeService";
+import { resolveRuntimeCreatureType } from "./realRuntimeStatProvider";
 import { resolvePendingResolution } from "../domain/resolution";
 import type { ResolutionOperation } from "../domain/resolutionTypes";
 
-type AdapterState={role:AppRole;sessionMode:SessionMode;scene:SceneVm;activeCharacter:CharacterSheet;resolution:ResolutionView|null;activity:ActivityEntry[];lastResolutionId:string|null;lastBefore:unknown;syncChar():void;getSnapshot():Promise<AppSnapshot>};
+type AdapterState={role:AppRole;sessionMode:SessionMode;scene:SceneVm;activeCharacter:CharacterSheet;combatantDefinitions:CombatantDefinitionVm[];resolution:ResolutionView|null;activity:ActivityEntry[];lastResolutionId:string|null;lastBefore:unknown;syncChar():void;getSnapshot():Promise<AppSnapshot>};
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 
@@ -32,6 +34,21 @@ function seedResource(adapter:MockAdapter,internal:AdapterState,source:ActionVm)
   combatant.resources.push({id:resource.id,label:resource.label,current:resource.current,maximum:resource.max,recovery:resource.recovery?structuredClone(resource.recovery):undefined});
   const expected=state.revision;state.revision+=1;
   return commitAdapterTurnRuntimeState(adapter,internal.scene,expected,state)?snapshotAdapterTurnRuntimeState(adapter,internal.scene):undefined;
+}
+
+function awareness(internal:AdapterState,source:ActionVm) {
+  const query=source.runtimeEffectGrant?.awarenessQuery;
+  if(!query)return;
+  const types=new Set(query.creatureTypes.map((type)=>type.toLowerCase()));
+  const found=internal.scene.entities.flatMap((entity)=>{
+    if(entity.id===source.actorId)return[];
+    const creatureType=resolveRuntimeCreatureType(entity,internal.combatantDefinitions)?.toLowerCase();
+    if(!creatureType||!types.has(creatureType))return[];
+    const relation=authoritativeSpatialModuleRelation(internal.scene,source.actorId,entity.id);
+    if(relation&&query.radiusFeet!==undefined&&relation.distanceFeet>query.radiusFeet)return[];
+    return [`${entity.name} (${creatureType})`];
+  });
+  return {outcome:found.length?`${found.length}개 존재 감지`:"감지된 존재 없음",detail:found.length?found:["현재 감지 조건과 일치하는 존재 없음"]};
 }
 
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithEffectGrantTargets() {
@@ -61,7 +78,7 @@ MockAdapter.prototype.resolveAction=async function resolveEffectGrantAction(acti
   const slot=source.economy==="행동"?"action":source.economy==="추가 행동"?"bonus-action":source.economy==="반응"?"reaction":undefined;
   if(internal.sessionMode==="initiative"&&slot)operations.push({id:`${resolutionId}:economy`,kind:"use-economy",actorId:source.actorId,slot,bonusActionGranted:slot==="bonus-action"||undefined,actionKind:source.category==="magic"?"magic":"other"});
   if(source.resourceCost)operations.push({id:`${resolutionId}:resource`,kind:"spend-resource",actorId:source.actorId,resourceId:source.resourceCost.resourceId,amount:source.resourceCost.amount});
-  operations.push({id:`${resolutionId}:effect`,kind:"apply-effect",effect:{id:`effect.grant.${encodeURIComponent(source.id)}.${targetId}.${resolutionId}`,sourceId:source.id,sourceActorId:source.actorId,targetId,kind:"marker",tags:[...grant.tags],duration:structuredClone(grant.duration),metadata:grant.metadata?structuredClone(grant.metadata):undefined}});
+  operations.push({id:`${resolutionId}:effect`,kind:"apply-effect",effect:{id:`effect.grant.${encodeURIComponent(source.id)}.${targetId}.${resolutionId}`,sourceId:source.id,sourceActorId:source.actorId,targetId,kind:"marker",tags:[...grant.tags],duration:structuredClone(grant.duration),termination:grant.termination?structuredClone(grant.termination):undefined,metadata:grant.metadata?structuredClone(grant.metadata):undefined}});
   const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{id:resolutionId,actorId:source.actorId,sourceId:source.id,expectedRevision:state.revision,operations});
   if(committed.status==="rejected")return snapshot;
   const projected=applyResolutionEvents(internal.scene,committed.events,internal.activeCharacter.resources,internal.activeCharacter.items,state);
@@ -73,8 +90,8 @@ MockAdapter.prototype.resolveAction=async function resolveEffectGrantAction(acti
   const session=turnRuntimeSessions.get(this);if(session)projectTurnRuntimeToScene(session,internal.scene);
   const target=internal.scene.entities.find((entry)=>entry.id===targetId)!;
   const label=typeof grant.metadata?.publicLabel==="string"?grant.metadata.publicLabel:source.name;
-  const outcome=`${target.name}에게 ${label} 적용`;
-  const resolution:ResolutionView={id:resolutionId,actorId:source.actorId,targetIds:[targetId],actionId:source.id,actionName:source.name,rollKind:"effect",stage:"complete",authoritativeDice:[],saveResults:[],damageComponents:[],compact:outcome,detail:[source.summary],provenance:[source.id],calculatedOutcome:outcome,finalOutcome:outcome,stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false};
+  const sensed=awareness(internal,source);const outcome=sensed?.outcome??`${target.name}에게 ${label} 적용`;
+  const resolution:ResolutionView={id:resolutionId,actorId:source.actorId,targetIds:[targetId],actionId:source.id,actionName:source.name,rollKind:"effect",stage:"complete",authoritativeDice:[],saveResults:[],damageComponents:[],compact:outcome,detail:sensed?.detail??[source.summary],provenance:[source.id],calculatedOutcome:outcome,finalOutcome:outcome,stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false};
   internal.resolution=resolution;internal.activity.unshift(projectResolutionEventsToActivity({resolution,events:committed.events,actorName:internal.activeCharacter.name,targetNames:[target.name]}));
   internal.lastResolutionId=resolutionId;internal.lastBefore=null;recordRuntimeResolutionEvents(this,resolutionId,committed.events);internal.syncChar();return internal.getSnapshot();
 };

@@ -76,7 +76,6 @@
     { "module": "./clericDivineSparkActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./clericTurnUndeadActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./paladinLayOnHandsActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
-    { "module": "./paladinDivineSenseActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./paladinAbjureFoesActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./paladinDevotionHolyNimbusRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./paladinDevotionSmiteOfProtectionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
