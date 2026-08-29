@@ -61,7 +61,7 @@ function packageJson(prefix:string) {
       source:{document:"Unknown actor turn trigger module",version:"1",license:"CC0",srdDerived:false},
       dependencies:[],conflicts:[],capabilities:[],
       content:[
-        {id:actorContentId,category:"monster-ability",presentation:{defaultLocale:"en",originalName:"Unknown Turn Refresh",locales:{en:{name:"Unknown Turn Refresh"}}},mechanics:[{kind:"common-play",config:actorRules}]},
+        {id:actorContentId,category:"option",presentation:{defaultLocale:"en",originalName:"Unknown Turn Refresh",locales:{en:{name:"Unknown Turn Refresh"}}},mechanics:[{kind:"common-play",config:actorRules}]},
         {id:creatorContentId,category:"option",presentation:{defaultLocale:"en",originalName:"Unknown Turn Actor Creator",locales:{en:{name:"Unknown Turn Actor Creator"}}},mechanics:[{kind:"common-play",config:creator}]},
       ],
     }),
