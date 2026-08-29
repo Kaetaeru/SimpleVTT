@@ -1,0 +1,46 @@
+name: C9 Family AB Audit
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-ab-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Print Family AB and coverage summary
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledger=JSON.parse(fs.readFileSync('docs/rules/v1-mechanism-coverage-ledger.json','utf8'));
+          const row=ledger.rows.find((candidate)=>candidate.family==='AB');
+          if(!row) throw new Error('Family AB row not found');
+          console.log('FAMILY_AB_START');
+          console.log(JSON.stringify(row,null,2));
+          console.log('FAMILY_AB_END');
+          const counts=ledger.rows.reduce((acc,row)=>(acc[row.disposition]=(acc[row.disposition]??0)+1,acc),{});
+          console.log('COVERAGE_COUNTS',JSON.stringify(counts));
+          console.log('GATE_N_BLOCKING_NAMED_FALLBACKS',JSON.stringify(ledger.gateNBlockingNamedFallbacks??[]));
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Remove audit workflow
+        if: always()
+        run: |
+          rm .github/workflows/rerun-c9-ab-audit.yml
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "ci(c9): remove Family AB audit helper"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
