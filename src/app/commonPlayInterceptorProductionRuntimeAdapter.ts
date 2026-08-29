@@ -1,7 +1,7 @@
 import "./installedContentContracts";
 import type { AppSnapshot, CatalogEntry, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { resolveCharacterSessionContentIdentitiesV1 } from "./characterSessionProjection";
+import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import {
   projectedCharacterById,
   projectedCharacterIds,
@@ -101,8 +101,26 @@ function modifierAuthority(internal:AdapterState,pending:PendingPassiveReaction)
   return {modifierDiceFaces};
 }
 
+function catalogEntryMatchesItem(entry:CatalogEntry,item:CharacterSheet["items"][number]) {
+  const token=item.definitionId.trim();
+  return entry.category==="item"&&Boolean(token)&&(
+    entry.id===token||entry.contentId===token||entry.nameKo===token||entry.nameEn===token
+  );
+}
+
 function contentIdentitySetForLocal(internal:AdapterState) {
-  return new Set(resolveCharacterSessionContentIdentitiesV1(internal.activeCharacter,internal.catalog).map((entry)=>entry.qualifiedId));
+  const identities=new Set<string>();
+  try {
+    for(const identity of buildCharacterSessionProjectionV1(internal.activeCharacter,internal.catalog).contentIdentities) identities.add(identity.qualifiedId);
+  } catch {
+    // Legacy/reference Characters can fail the full SessionProjection envelope for unrelated
+    // source-model reasons. Passive item ownership still has a direct canonical catalog fact.
+  }
+  for(const item of internal.activeCharacter.items) {
+    const matches=internal.catalog.filter((entry)=>catalogEntryMatchesItem(entry,item));
+    if(matches.length===1)identities.add(matches[0].id);
+  }
+  return identities;
 }
 
 async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveReactionCandidate[]> {
