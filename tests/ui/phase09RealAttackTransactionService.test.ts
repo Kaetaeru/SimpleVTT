@@ -172,6 +172,24 @@ test("atomic attack rejects if the staged preview drifts from the authoritative 
   assert.match(result.error,/attack preview drift/);
 });
 
+test("atomic attack treats supplied modifier contributions as the complete authoritative set", () => {
+  const actor=entity({ id:"char.aelar",name:"Aelar",side:"ally",ac:18,hp:31,maxHp:42,tempHp:5 });
+  const target=entity({ id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,ac:15 });
+  const result=resolveAtomicAttackTransaction({
+    resolutionId:"phase09.atomic.authoritative-modifiers",
+    ...commonRequest(actor,target),
+    attackModifierContributions:[
+      { source:"action:projected-attack-bonus",value:5 },
+      { source:"common-play:post-roll-subtract",value:-8 },
+    ],
+    expectedPreview:{ total:12,outcome:"빗나감",critical:false },
+  });
+  assert.equal(result.status,"committed");
+  if(result.status!=="committed")return;
+  assert.equal(result.attack.total,12);
+  assert.equal(result.attack.outcome,"failure");
+});
+
 test("supplied authoritative runtime effects participate in attack damage instead of being discarded", () => {
   const actor=entity({ id:"char.aelar",name:"Aelar",side:"ally",ac:18,hp:31,maxHp:42,tempHp:5 });
   const target=entity({ id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,ac:15 });

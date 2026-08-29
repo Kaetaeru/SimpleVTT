@@ -293,9 +293,8 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       sides:20,
       faces:[request.attackD20Face],
     },
-    attackModifierContributions:[
+    attackModifierContributions:request.attackModifierContributions ?? [
       {source:`action:${request.action.id}:attack-bonus`,value:request.action.attackBonus??0},
-      ...(request.attackModifierContributions??[]),
     ],
     requiresSight:true,
     baseDamage:{
