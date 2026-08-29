@@ -6,6 +6,7 @@ import { advanceTurnRuntimeLifecycle } from "./realTurnLifecycleService";
 import { projectTurnRuntimeToScene, synchronizeTurnRuntimeFromScene } from "./realTurnRuntimeService";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, readyActionConfigurationsFor } from "./standardActionReadyState";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
+import { compileInstalledCommonPlayZoneTurnOperations, installedCommonPlayZoneDefinitions } from "./commonPlayZoneTurnComposition";
 
 interface EffectAwareTurnAdapterState {
   sessionMode:SessionMode;
@@ -44,7 +45,13 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
 
   const endingActor=internal.scene.entities.find((entity)=>entity.id===internal.scene.currentActorId);
   synchronizeTurnRuntimeFromScene(session,internal.scene);
-  const advanced=advanceTurnRuntimeLifecycle(session);
+  const zoneDefinitions=await installedCommonPlayZoneDefinitions(this,session.state);
+  const advanced=advanceTurnRuntimeLifecycle(session,(boundary)=>compileInstalledCommonPlayZoneTurnOperations(
+    boundary.state,zoneDefinitions,{
+      id:boundary.resolutionId,kind:boundary.kind==="turn-start"?"zone.turn-start":"zone.turn-end",actorId:boundary.actorId,
+      subjectCreatureKind:internal.scene.entities.find((entity)=>entity.id===boundary.actorId)?.kind==="character"?"character":"monster",
+    },
+  ));
   if (advanced.status==="rejected") {
     internal.activity.unshift({
       id:eventId(),

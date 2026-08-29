@@ -92,6 +92,10 @@ export interface CommonPlayZoneTurnEventInput {
   subjectCreatureKind:"character"|"monster";
 }
 
+export type CommonPlayZoneTurnOperationsResult=
+  | {status:"compiled";actorId:string;operations:ResolutionOperation[]}
+  | CommonPlayZoneEventNoMatch;
+
 export interface CommonPlayZoneEventNoMatch {
   status:"no-match";
   state:RulesRuntimeState;
@@ -435,17 +439,36 @@ export function resolveCommonPlayZoneTurnEvent(
   input:CommonPlayZoneTurnEventInput,
 ):CommonPlayZoneEventResult {
   try {
-    validateDefinition(definition);
-    const event:CommonPlayZoneEventInput={...input};
-    validateSemanticEvent(inputState,event);
-    const artifact=activeUnexpiredZone(inputState,definition,input.artifactId);
-    if ("status" in artifact) return artifact;
-    const membership=activeMembership(inputState,artifact.id);
-    if (!membership?.memberIds.includes(input.subjectId)) {
-      return {status:"no-match",state:inputState,reason:"active subject is not a member of the zone"};
-    }
-    return resolveCommonPlayZoneEvent(profile,inputState,definition,event);
+    const compiled=compileCommonPlayZoneTurnEventOperations(inputState,definition,input);
+    if(compiled.status==="no-match") return compiled;
+    return resolvePendingResolution(profile,inputState,{
+      id:`${input.id}:${definition.id}:${input.artifactId}:zone-turn`,actorId:compiled.actorId,sourceId:definition.id,
+      expectedRevision:inputState.revision,operations:compiled.operations,
+    });
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }
+}
+
+export function compileCommonPlayZoneTurnEventOperations(
+  inputState:RulesRuntimeState,
+  definition:CommonPlayZoneDefinition,
+  input:CommonPlayZoneTurnEventInput,
+):CommonPlayZoneTurnOperationsResult {
+  validateDefinition(definition);
+  const event:CommonPlayZoneEventInput={...input};
+  validateSemanticEvent(inputState,event);
+  const artifact=activeUnexpiredZone(inputState,definition,input.artifactId);
+  if("status" in artifact) return artifact;
+  const membership=activeMembership(inputState,artifact.id);
+  if(!membership?.memberIds.includes(input.subjectId)) {
+    return {status:"no-match",state:inputState,reason:"active subject is not a member of the zone"};
+  }
+  const operations=triggerOperations(inputState,definition,artifact,event).map((operation)=>({
+    ...operation,id:`${input.id}:${artifact.id}:${operation.id}`,
+  }));
+  if(!operations.length) {
+    return {status:"no-match",state:inputState,reason:"matching zone rules are already consumed for the active turn or no rule matches the event"};
+  }
+  return {status:"compiled",actorId:artifact.sourceActorId??input.subjectId,operations};
 }
