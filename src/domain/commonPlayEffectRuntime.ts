@@ -14,6 +14,7 @@ import type { ActionUseKind } from "./turnEconomy";
 type LiteralNumberExpression={value:number};
 type EffectTarget="actor";
 type EventDamageTarget="event.actor";
+type AutomaticDamageEvent="damage.taken"|"damage.dealt";
 
 interface CommonPlayEffectApplyOperation {
   kind:"effect.apply";
@@ -28,9 +29,9 @@ interface CommonPlayTriggeredDamageOperation {
   target:EventDamageTarget;
 }
 
-interface CommonPlayDamageTakenRule {
+interface CommonPlayAutomaticDamageRule {
   id:string;
-  event:"damage.taken";
+  event:AutomaticDamageEvent;
   frequency?:"once";
   operations:CommonPlayTriggeredDamageOperation[];
 }
@@ -48,10 +49,10 @@ export interface CommonPlayEffectArtifactTemplate {
   id:string;
   artifactKind:"effect";
   duration:CommonPlayEffectDuration;
-  rules:CommonPlayDamageTakenRule[];
+  rules:CommonPlayAutomaticDamageRule[];
   lifetime:{
     kind:"until-event";
-    event:"damage.taken";
+    event:AutomaticDamageEvent;
     onEnd:"destroy";
   };
   instancePolicy?:"stack";
@@ -128,11 +129,11 @@ function runtimeDuration(duration:CommonPlayEffectDuration,label:string):Duratio
   throw new Error(`${label} unit is not supported by this event-effect runtime slice`);
 }
 
-function validateRule(rule:CommonPlayDamageTakenRule,templateId:string,ruleIndex:number) {
+function validateRule(rule:CommonPlayAutomaticDamageRule,templateId:string,ruleIndex:number) {
   const label=`artifact ${templateId} rule ${ruleIndex+1}`;
   assertOnlyKeys(rule,["id","event","frequency","operations"],label);
   if (!rule.id) throw new Error(`${label} id is required`);
-  if (rule.event!=="damage.taken") throw new Error(`${label} supports only damage.taken`);
+  if (rule.event!=="damage.taken"&&rule.event!=="damage.dealt") throw new Error(`${label} supports only damage.taken or damage.dealt`);
   if (rule.frequency!==undefined&&rule.frequency!=="once") {
     throw new Error(`${label} supports only once frequency in this runtime slice`);
   }
@@ -159,8 +160,11 @@ function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number
   if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);
   template.rules.forEach((rule,ruleIndex)=>validateRule(rule,template.id,ruleIndex));
   assertOnlyKeys(template.lifetime,["kind","event","onEnd"],`${label} lifetime`);
-  if (template.lifetime.kind!=="until-event"||template.lifetime.event!=="damage.taken"||template.lifetime.onEnd!=="destroy") {
-    throw new Error(`${label} lifetime must destroy on damage.taken in this runtime slice`);
+  if (template.lifetime.kind!=="until-event"||(template.lifetime.event!=="damage.taken"&&template.lifetime.event!=="damage.dealt")||template.lifetime.onEnd!=="destroy") {
+    throw new Error(`${label} lifetime must destroy on damage.taken or damage.dealt in this runtime slice`);
+  }
+  if(template.rules.some((rule)=>rule.event!==template.lifetime.event)) {
+    throw new Error(`${label} rules must match lifetime event ${template.lifetime.event} in this runtime slice`);
   }
   if (template.instancePolicy!==undefined&&template.instancePolicy!=="stack") {
     throw new Error(`${label} supports only stack instancePolicy in this runtime slice`);
@@ -277,7 +281,7 @@ export function resolveCommonPlayEffectActivation(
   }
 }
 
-function semanticDamageTaken(event:ResolutionEvent) {
+function semanticPositiveDamage(event:ResolutionEvent) {
   if (event.kind!=="damage"&&event.kind!=="compound-damage") return false;
   if (!event.targetId) throw new Error("authoritative damage event requires targetId");
   if (!event.actorId) throw new Error("authoritative damage event requires actorId");
@@ -306,6 +310,7 @@ function triggerOperations(
   definition:CommonPlayPersistentEffectDefinition,
   effects:EffectInstance[],
   event:ResolutionEvent,
+  eventKind:AutomaticDamageEvent,
   actorCreatureKind:CommonPlayEffectEventInput["actorCreatureKind"],
 ):ResolutionOperation[] {
   const operations:ResolutionOperation[]=[];
@@ -314,8 +319,9 @@ function triggerOperations(
     if (typeof templateId!=="string") throw new Error(`effect ${effect.id} is missing its Common Play template binding`);
     const template=templateById(definition,templateId);
     validateTemplate(template,effectIndex);
-    template.rules.forEach((rule,ruleIndex)=>{
-      if (rule.event!=="damage.taken") return;
+    const rules=template.rules.filter((rule)=>rule.event===eventKind);
+    if(!rules.length) return;
+    rules.forEach((rule,ruleIndex)=>{
       rule.operations.forEach((operation,operationIndex)=>{
         const amount=literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`);
         operations.push({
@@ -344,31 +350,40 @@ export function appendCommonPlayDamageTakenTriggers(
   actorCreatureKind:"character"|"monster",
 ):PendingResolution {
   const operations=[...pending.operations];
-  const handledTargets=new Set<string>();
+  const handled=new Set<string>();
   for(const [damageIndex,damage] of pending.operations.entries()) {
-    if(damage.kind!=="damage"||damage.when||handledTargets.has(damage.targetId)) continue;
-    handledTargets.add(damage.targetId);
-    for(const [definitionIndex,definition] of definitions.entries()) {
-      validateDefinition(definition);
-      for(const [effectIndex,effect] of matchingEffects(inputState,definition,damage.targetId).entries()) {
-        const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
-        if(typeof templateId!=="string") throw new Error(`effect ${effect.id} is missing its Common Play template binding`);
-        const template=templateById(definition,templateId);
-        validateTemplate(template,effectIndex);
-        const when={operationId:damage.id,field:"finalDamage",greaterThan:0} as const;
-        for(const [ruleIndex,rule] of template.rules.entries()) {
-          if(rule.event!=="damage.taken") continue;
-          for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
-            id:`${pending.id}:automatic:${definitionIndex}:${effectIndex}:${damageIndex}:${ruleIndex}:${operationIndex}`,
-            kind:"damage",targetId:pending.actorId,damageType:operation.damageType,
-            amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
-            creatureKind:actorCreatureKind,when,
+    if(damage.kind!=="damage"||damage.when) continue;
+    const when={operationId:damage.id,field:"finalDamage",greaterThan:0} as const;
+    const contexts:Array<{event:AutomaticDamageEvent;subjectId:string}>=[
+      {event:"damage.taken",subjectId:damage.targetId},
+      {event:"damage.dealt",subjectId:pending.actorId},
+    ];
+    for(const context of contexts) {
+      for(const [definitionIndex,definition] of definitions.entries()) {
+        validateDefinition(definition);
+        for(const [effectIndex,effect] of matchingEffects(inputState,definition,context.subjectId).entries()) {
+          const key=`${context.event}:${effect.id}`;
+          if(handled.has(key)) continue;
+          const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
+          if(typeof templateId!=="string") throw new Error(`effect ${effect.id} is missing its Common Play template binding`);
+          const template=templateById(definition,templateId);
+          validateTemplate(template,effectIndex);
+          const rules=template.rules.filter((rule)=>rule.event===context.event);
+          if(!rules.length) continue;
+          handled.add(key);
+          for(const [ruleIndex,rule] of rules.entries()) {
+            for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
+              id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:${ruleIndex}:${operationIndex}`,
+              kind:"damage",targetId:pending.actorId,damageType:operation.damageType,
+              amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
+              creatureKind:actorCreatureKind,when,
+            });
+          }
+          operations.push({
+            id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:remove`,
+            kind:"remove-effect",effectId:effect.id,when,
           });
         }
-        operations.push({
-          id:`${pending.id}:automatic:${definitionIndex}:${effectIndex}:${damageIndex}:remove`,
-          kind:"remove-effect",effectId:effect.id,when,
-        });
       }
     }
   }
@@ -383,18 +398,28 @@ export function resolveCommonPlayEffectEvent(
 ):CommonPlayEffectEventResult {
   try {
     validateDefinition(definition);
-    const fires=semanticDamageTaken(input.event);
+    const fires=semanticPositiveDamage(input.event);
     if (!fires) {
-      return {status:"no-match",state:inputState,reason:"event does not represent positive damage taken"};
+      return {status:"no-match",state:inputState,reason:"event does not represent positive damage"};
     }
-    const targetId=input.event.targetId!;
-    const effects=matchingEffects(inputState,definition,targetId);
-    if (!effects.length) return {status:"no-match",state:inputState,reason:"no active Common Play effect matches the event target"};
-    const operations=triggerOperations(definition,effects,input.event,input.actorCreatureKind);
-    if (!operations.length) return {status:"no-match",state:inputState,reason:"matching effects have no executable operations"};
+    const candidates:Array<{event:AutomaticDamageEvent;subjectId:string}>=[
+      {event:"damage.taken",subjectId:input.event.targetId!},
+      {event:"damage.dealt",subjectId:input.event.actorId!},
+    ];
+    const operations:ResolutionOperation[]=[];
+    let actorId:string|undefined;
+    for(const candidate of candidates) {
+      const effects=matchingEffects(inputState,definition,candidate.subjectId);
+      const triggered=triggerOperations(definition,effects,input.event,candidate.event,input.actorCreatureKind);
+      if(triggered.length) {
+        actorId??=candidate.subjectId;
+        operations.push(...triggered);
+      }
+    }
+    if (!operations.length) return {status:"no-match",state:inputState,reason:"no active Common Play effect matches the damage event"};
     return resolvePendingResolution(profile,inputState,{
       id:`${input.event.id}:${definition.id}:automatic-effects`,
-      actorId:targetId,
+      actorId:actorId!,
       sourceId:definition.id,
       expectedRevision:inputState.revision,
       operations,
