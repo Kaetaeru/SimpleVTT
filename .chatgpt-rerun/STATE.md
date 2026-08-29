@@ -10,21 +10,30 @@
 - control path: `.chatgpt-rerun/control.json`
 - architecture charter: `docs/rules/common-play-resolver-architecture-charter.md`
 - product plan: `docs/rules/v1-common-play-c8-rerun-plan.md`
-- checkpointed_at: `2026-08-29 Asia/Seoul`
+- checkpointed_at: `2026-08-29 19:19 Asia/Seoul`
 
 ## Durable checkpoint
 
-The recovered V1 Common Play Master Run checkpoint and PR #176 evidence remain valid in ancestry. Owner authorization in the current conversation covered continuing all remaining C8 work. Live preflight confirmed PR #177 was materially unchanged, mergeable, and retained its exact-head focused evidence; PR #177 was merged into the Rerun working branch as `aa20f7ad7f54983d8b63e7afbe081cee08cc0143`.
+Owner authorization covers continuing all remaining C8 work. PR #177 was live-reconciled and merged into the Rerun working branch as `aa20f7ad7f54983d8b63e7afbe081cee08cc0143`. Its exact-head evidence remains retained: M1 Common Play Interaction 63/63 plus TypeScript typecheck green, and Rules Domain plus TypeScript typecheck green. Do not repeat PR #176/#177 validation unless affected surfaces materially change.
 
-PR #177 extends the existing Gate A Common Play reaction kernel with structural `d20.outcome-determined` / `d20.roll` recalculation for successful ability checks and attack rolls using the retained generic `roll.modify: subtract-die` semantic. It reuses atomic Reaction/resource payment, requires authoritative modifier-die faces, preserves central d20 natural-20 semantics, and remains identity-rename invariant.
+The working branch reached `bcee2d53cab4c9897d34cb81162594ce7202b072` after publishing the post-merge Rerun continuation state/control. No product-code change was started after PR #177; the remainder of this execution was used to identify the first safe production boundary before the 20-minute stop.
 
-Retained exact-head evidence for candidate `d1a9940b8472acca252988d4e3332dbf5fa42b74`:
+## First unfinished Section 9 boundary now inspected
 
-- M1 Common Play Interaction: **SUCCESS**, 63/63 focused tests plus TypeScript typecheck;
-- Rules Domain plus TypeScript typecheck: **SUCCESS**;
-- known Contract/UI/Phase11/Phase12 reds remain the previously reconciled inherited workflow/product failures and were not caused by the two-file PR #177 diff.
+The repository already has the structural pieces needed for the next generic slice; no new named side engine is required:
 
-PR #177 removed no named execution path. Debt therefore remains at the last verified boundary until a later negative-delta check proves otherwise:
+- `schemas/common-play-contract.schema.json` is the authored Common Play 0.2 contract. It already exposes structural `interceptors` with trigger/timing/affected-rolls/operations/authority/provisional-result fields and already supports generic `roll.modify`, including `subtract-die`.
+- The portable schema expresses post-roll applicability through structural timing plus affected roll kinds such as attack/ability/damage. The PR #177 kernel's internal `d20.outcome-determined` / `d20.roll` vocabulary should therefore be reached by lowering rather than by casually exposing a new author-facing `d20.roll` schema slot.
+- `src/domain/commonPlayDefinitionRuntime.ts` currently retains `interceptors` only as raw `unknown[]`; it does not yet normalize them into the typed runtime interceptor shape.
+- `src/domain/commonPlayOperationRuntime.ts` lowers current Common Play operations/costs/provenance but does not yet project portable interceptors into the generic reaction runtime.
+- `src/app/installedCommonPlayRuntimeAdapter.ts` is already the generic production adapter for installed Common Play definitions and already participates in the real session interrupt/payment lifecycle, but it currently handles active/manual Common Play use rather than passively discovering installed interceptor candidates.
+- `src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts` still owns the named Cutting Words session wrapping and authoritative distance/visibility checks. Its generic session/targeting mechanics should be reused or extracted only where truly generic; the named adapter remains a strangling target, not a template for another side engine.
+
+This inspection resolves the immediate architecture choice: the next slice should type/normalize and lower portable interceptor data, then make the installed Common Play production path discover those generic interceptor candidates. Do not add class-name selection and do not invent a separate reaction engine.
+
+## C8 debt
+
+PR #177 removed no named execution path, so the last verified debt remains unchanged until a later negative-delta proof:
 
 - D&D `LEGACY_EXECUTION`: **40** total = 39 direct + 1 transitive;
 - class/subclass-named production RuntimeAdapter paths: **19**;
@@ -34,10 +43,18 @@ C9 Gate N remains prohibited.
 
 ## Waiting condition
 
-None. Sequence 5 is authorized to continue.
+None. Sequence 5 remains authorized to continue.
 
 ## Next Exact Action
 
-Resume Section 9 of `docs/rules/v1-common-play-c8-rerun-plan.md` from the first unfinished boundary after PR #177: inspect and extend the portable/schema plus real production/session discovery/routing path for the generic interceptor. Then add authoritative damage-roll reduction and spatial/visibility gating, encode built-in Cutting Words as Common Play data, prove connected/reconnect/Undo and identity invariance, delete the absorbed named Cutting Words app/domain execution, shrink the legacy baseline, and continue C8 mechanism-family strangling until D&D named execution reaches zero. Do not repeat retained PR #176/#177 validation unless affected surfaces materially change.
+Resume Section 9 without repeating the inspection above. Read only the directly relevant tests plus the `ProgressionContentRegistry`, `ProgressionSession` interrupt API, installed-overlay lookup, and the generic runtime-targeting helper needed for this slice. From the current working-branch head, create a bounded C8 child branch and implement the smallest generic portable/production bridge:
+
+1. normalize typed Common Play 0.2 interceptor data in the definition boundary;
+2. lower structural post-roll + affected-roll kinds + `roll.modify: subtract-die` into the PR #177 generic reaction kernel without class/race/name branching;
+3. discover eligible installed definitions in the real production/session path and route responder/cost data through existing generic authority/payment concepts;
+4. add focused parser/lowering/discovery/identity-invariance tests and run the narrowest relevant Actions plus typecheck;
+5. if green, merge the bounded slice under the owner's standing C8 authorization and continue with authoritative spatial/visibility and damage-roll support, then built-in Cutting Words data, connected/reconnect/Undo proof, named Cutting Words deletion, legacy negative delta, and the remaining C8 mechanism families until D&D named execution reaches zero.
+
+If inspection of the exact session/authority APIs reveals a genuinely undefined primitive or lifetime, return to the canonical design boundary instead of inventing it inside implementation.
 
 Current verdict: `V1 INCOMPLETE`.
