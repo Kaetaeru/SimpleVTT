@@ -1,7 +1,7 @@
 import "./installedContentContracts";
 import type { AppSnapshot, CatalogEntry, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
+import { resolveCharacterSessionContentIdentitiesV1 } from "./characterSessionProjection";
 import {
   projectedCharacterById,
   projectedCharacterIds,
@@ -102,11 +102,7 @@ function modifierAuthority(internal:AdapterState,pending:PendingPassiveReaction)
 }
 
 function contentIdentitySetForLocal(internal:AdapterState) {
-  try {
-    return new Set(buildCharacterSessionProjectionV1(internal.activeCharacter,internal.catalog).contentIdentities.map((entry)=>entry.qualifiedId));
-  } catch {
-    return new Set<string>();
-  }
+  return new Set(resolveCharacterSessionContentIdentitiesV1(internal.activeCharacter,internal.catalog).map((entry)=>entry.qualifiedId));
 }
 
 async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveReactionCandidate[]> {
