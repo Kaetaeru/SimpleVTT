@@ -318,6 +318,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
     id:"action.bard.bardic-inspiration",actorId:character.id,name:"바드의 영감",category:"basic",target:"ally",economy:"추가 행동",resolutionKind:"no-roll",
     summary:`d${bardicInspirationDieSides(bardLevel)} 지급 · ${inspiration.current}/${inspiration.max}`,available:inspiration.current>0,
     disabledReason:inspiration.current?undefined:"바드의 영감 사용 횟수가 없습니다.",eligibleTargetIds:[],resourceCost:{resourceId:inspiration.id,amount:1},
+    runtimeEffectGrant:{excludeActor:true,exclusiveTag:"bardic-inspiration",tags:["bardic-inspiration"],duration:{kind:"hours",amount:1},metadata:{dieSides:bardicInspirationDieSides(bardLevel),displayName:"바드의 영감",publicLabel:`바드의 영감 · d${bardicInspirationDieSides(bardLevel)}`,d20FollowUp:"failed-test-add-die",d20Families:"ability-check,saving-throw,attack-roll",consumeOnUse:true}},
     details:[detail("대상","자신이 아닌 아군 1명"),detail("효과",`d${bardicInspirationDieSides(bardLevel)} 영감 주사위 · 1시간`),detail("비용","추가 행동 1 · 바드의 영감 1회"),detail("출처","SRD 5.2.1 · Bardic Inspiration")],
   });
   const clericLevel=character.classLevels?.find((entry)=>entry.classId===CLERIC_ID)?.level??0;

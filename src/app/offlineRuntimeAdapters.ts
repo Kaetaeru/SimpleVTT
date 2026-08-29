@@ -73,7 +73,7 @@ import "./rogueCoreRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
 import "./unarmedControlRuntimeAdapter";
-import "./bardicInspirationActionRuntimeAdapter";
+import "./effectGrantActionRuntimeAdapter";
 import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
 import "./fighterTacticalMindFollowUpRuntimeAdapter";
 import "./fighterIndomitableFollowUpRuntimeAdapter";

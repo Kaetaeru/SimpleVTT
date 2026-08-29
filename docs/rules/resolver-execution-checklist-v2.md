@@ -580,6 +580,7 @@ Verified migration slices:
 - [x] Dash execution now reads a positive structural movement-budget grant rather than `action.dash`; a renamed unknown action and Cunning Action's structural clone use the same Bonus Action/movement event path, and the duplicate Rogue Dash mutation/event branch is deleted;
 - [x] standard no-roll status changes and check-threshold status changes execute from authored facts; Disengage, Dodge, Help, Hide, Ready, and Utilize IDs no longer select their production execution algorithm;
 - [x] no-roll and ability-check threshold status effects commit generic economy/Effect events, connected replay, attack-ending cleanup, and Undo without a Rogue or action-ID branch;
+- [x] Bardic Inspiration grant execution moved onto a structural effect-grant action: authored economy/resource/duration/public metadata commit atomically, connected replay and Undo remain green, and an unknown action ID proves identity invariance; only its class-level resource materializer remains named;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:

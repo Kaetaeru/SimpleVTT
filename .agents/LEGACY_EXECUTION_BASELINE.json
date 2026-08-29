@@ -66,7 +66,7 @@
     { "module": "./deathSaveRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./stabilizeRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./unarmedControlRuntimeAdapter", "classification": "GENERIC_ENGINE" },
-    { "module": "./bardicInspirationActionRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
+    { "module": "./effectGrantActionRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./consumableD20BonusEffectFollowUpRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./fighterTacticalMindFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },
     { "module": "./fighterIndomitableFollowUpRuntimeAdapter", "classification": "LEGACY_EXECUTION" },

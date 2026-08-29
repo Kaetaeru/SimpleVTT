@@ -1,5 +1,6 @@
 import type { CampaignDmLibraryEntry, CampaignMealCommand, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import type { ExtraActionGrant, ExtraAttackGrant } from "../domain/turnEconomy";
+import type { DurationSpec } from "../domain/effects";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -326,6 +327,13 @@ export interface ActionVm {
   };
   completionOutcome?:string;
   completionStateChange?:string;
+  runtimeEffectGrant?:{
+    excludeActor?:boolean;
+    exclusiveTag?:string;
+    tags:string[];
+    duration:DurationSpec;
+    metadata?:Record<string,string|number|boolean>;
+  };
 }
 
 export interface EconomyVm {
