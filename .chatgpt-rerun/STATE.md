@@ -56,7 +56,7 @@ Exact Family T verification:
 
 ## Current Family P checkpoint
 
-Family P (`trigger-frequency-automatic`) remains `INCOMPLETE`. Damage events, recurring once-per-turn/round frequency, and actor-owned turn-start/end resource rules now have exact production evidence without a parallel trigger engine.
+Family P (`trigger-frequency-automatic`) remains `INCOMPLETE`. Damage events, recurring once-per-turn/round frequency, actor-owned turn-start/end resource rules, and canonical post-roll/outcome interceptors now have production evidence without a parallel trigger engine.
 
 Damage event slices:
 
@@ -77,6 +77,14 @@ Actor-owned turn boundary slice:
 - UI run `33276867829`, job `99165007115`, head `f876ff6e8e1e988a8fe36043cbc293a54bece495`, step 17 exposed a test-only initiative-order assumption: the fixture expected one `endTurn()` from Aelar to reach an independently-ordered summoned actor, so four new actor-turn assertions observed resource `0 !== 1` before the actor's actual turn boundary.
 - `2da641307e85c354415be63136bb62962a830f73` corrects only that fixture: it advances through the authoritative initiative order until the summoned actor is actually active and preserves the exact event-native connected/Undo assertions. No production source was changed by this correction.
 - UI workflow `33277003153`, job `99165362025`, exact head `2da641307e85c354415be63136bb62962a830f73`: connected/live-lifecycle step 17 SUCCESS with the corrected actor turn-start/end identity, Host/Client convergence, duplicate replay, ordered reconnect, and event-native Undo proofs. Steps 18-27 also SUCCESS. Broad Phase09 step 28 remains inherited FAILURE and typecheck/build step 29 is skipped, so no full-build green is claimed.
+
+Post-roll/outcome interceptor audit:
+
+- `commonPlayRuntime.ts` already owns three structural post-resolution timing points: `attack.outcome-determined`, `d20.outcome-determined`, and `damage.rolled`. They preview the authoritative d20/damage operation, open the existing blocking interaction only when eligible, and on acceptance rebuild the same PendingResolution with atomic Reaction/resource payments plus recalculation rather than starting a second mechanical commit.
+- The current `commonPlayInterceptorProductionRuntimeAdapter.ts` passively discovers actually-owned installed Common Play interceptor definitions by structural timing/slot semantics; its latest source commit remains `af9e3554f93a9e4f758a56af260be4ecde6a99c8`, so the retained C8 boundary-3/4 verification still applies to this untouched surface.
+- PR #179 exact candidate `623ce5f0c577cc8fce7c9bd540077195e88a139e` and retained C8 evidence prove installed arbitrary-identity d20 outcome recalculation on successful ability checks and attacks, authoritative fact eligibility without fabricated spatial facts, atomic payment, and identity/name rename invariance.
+- `installedCommonPlayInterceptorProductionRuntime.test.ts` proves installed `d20.outcome-determined` can change a successful ability check or production attack outcome, and proves `damage.rolled` reduction with atomic payment, duplicate-response safety, Host/Client ResolutionEvent convergence, duplicate event replay rejection, and event-native Undo. The retained C8 boundary-4 checkpoint records exact M1 Common Play Interaction 87/87, connected/fact/atomic-attack focused 45/45, and TypeScript `tsc --noEmit` green.
+- This satisfies the already-owned **after-roll / outcome-determined** portion of Family P without adding an event dispatcher or new event name. It does not prove a distinct pre-roll timing point, and it does not define top-level automatic hit/miss/save trigger names. Those remain explicit gaps rather than being inferred from the interceptor implementation.
 
 Rest-event audit and discarded staging attempt:
 
@@ -112,4 +120,4 @@ Coverage remains `IMPLEMENTED=2`, `INCOMPLETE=34`, `PROVEN_UNNEEDED=0`: Families
 
 ## Next Exact Action
 
-Continue Family P without repeating final Zone, damage-event, recurring-frequency, or actor-turn evidence. Do not implement rest triggers until trigger-vs-expiry ordering is deliberately defined; do not productionize Recharge without a portable policy/die-authority binding; do not invent attack/save/state-applied/expiry event names or subject/lifetime ordering inside adapters. Audit the already-canonical interceptor timing points in `commonPlayRuntime.ts` (`attack.outcome-determined`, `d20.outcome-determined`, `damage.rolled`) against Family P's before/after roll/outcome semantics and existing production/identity/connected evidence. If that evidence satisfies part of P without new semantics, reconcile only that evidence; otherwise continue to another already-owned producer. Keep Family P `INCOMPLETE` until the complete event/frequency matrix is evidenced.
+Continue Family P without repeating final Zone, damage-event, recurring-frequency, actor-turn, or post-roll interceptor evidence. Audit the already-generic `once` and `once-per-resolution` tokens in `commonPlayFrequencyRuntime.ts` against installed production paths. If production evidence is missing, add the smallest focused arbitrary-identity proof through an existing automatic damage/Zone path and standard connected ResolutionEvents; do not create another frequency engine. Keep the unresolved pre-roll, hit/miss/save, state-applied/expiry, rest-ordering, and recharge-policy gaps explicit, and keep Family P `INCOMPLETE` until the complete event/frequency matrix is evidenced.
