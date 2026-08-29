@@ -570,6 +570,7 @@ Verified migration slices:
 - [x] atomic no-roll item damage now derives dice, flat damage, and item execution from the authored action shape rather than `action.wand`; an unknown renamed item action proves transaction, persistence projection, and damage provenance remain identical;
 - [x] healing previews now derive their fixed authoritative formula facts from any authored healing action instead of a three-action ID table; unknown-ID service and adapter proofs cover roll, HP application, economy/item payment, persistence, and Undo;
 - [x] the duplicate `action.shortbow` atomic branch and reference attack/target maps were deleted; runtime attacks now require authored structural attack facts and an unknown renamed action proves the same atomic attack, event, and Undo path;
+- [x] the entity-ID save-modifier table and its inner saving-throw branch were deleted; canonical saves now enter the existing Character/Combatant runtime-stat provider, including explicit missing-authority rejection;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:

@@ -60,6 +60,8 @@ The Phase 09 healing path no longer recognizes Second Wind, Healing Word, or hea
 
 The duplicate Phase 09 `action.shortbow` atomic branch and its reference attack/target lookup tables are deleted. Canonical runtime attacks now consume explicit structural `runtimeAttack` facts, and the same transaction succeeds after an arbitrary action-ID rename. Weapon/content projection still has to author those portable facts, but action identity no longer selects the atomic attack algorithm.
 
+The Phase 09 entity-ID save-modifier table is deleted too. Saving throws in canonical composition now use the existing runtime Character/Combatant stat provider, which derives structured abilities/proficiencies or rejects missing authority instead of selecting a modifier by fixture identity.
+
 | Files | Identity / mechanism family | Current tests | Authority / lifetime | Likely generic composition |
 | --- | --- | --- | --- | --- |
 | `barbarianRageRuntimeAdapter.ts`, `barbarianBerserkerIntimidatingPresenceRuntimeAdapter.ts` | Rage/Berserker; activation, persistent effect, rider, save/condition | Rage action/damage tests; `barbarianBerserkerIntimidatingPresenceRuntime.test.ts` | resource/economy, effect lifetime, target save | resource/economy + effect/condition + interceptor; Gate E facts when needed |

@@ -16,15 +16,11 @@ import {
   restoreFreeformSpellSlot,
   type FreeformSpellSlotChange,
 } from "./spellcastingRuntimeAdapter";
-import {
-  rollHealingFact,
-  phase09ReferenceSaveModifier,
-} from "./phase09ReferenceRulesFacts";
+import { rollHealingFact } from "./phase09ReferenceRulesFacts";
 import { resolveActionCostTransaction } from "./realActionCostService";
 import { resolveSceneDamage, resolveSceneHealing } from "./realHealthService";
 import { resolveHealingRollResolution } from "./realHealingRollService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
-import { resolveSavingThrowResolution } from "./realSavingThrowService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
@@ -66,10 +62,6 @@ const HIDDEN_STATUS = "숨음";
 const DODGING_STATUS = "회피";
 const READY_STATUS = "준비 행동";
 
-function isDexteritySave(action:ActionVm) {
-  return ["dex","dexterity","민첩"].includes(String(action.saveAbility??"").toLowerCase());
-}
-
 function removeStatus(entity:SceneEntity|undefined,status:string) {
   if (!entity?.status.includes(status)) return false;
   entity.status=entity.status.filter((entry)=>entry!==status);
@@ -83,7 +75,6 @@ function resolutionId() {
 function migratedResolutionAction(action:ActionVm) {
   return action.resolutionKind === "ability-check"
     || action.resolutionKind === "attack"
-    || action.resolutionKind === "saving-throw"
     || action.resolutionKind === "healing";
 }
 
@@ -221,37 +212,6 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
     if (helped) {
       internal.resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HELPED_STATUS} · 공격 판정에 유리점 적용`);
     }
-    return internal.getSnapshot();
-  }
-
-  if (action.resolutionKind === "saving-throw") {
-    const targets = targetIds.map((id) => {
-      const target = internal.entity(id);
-      if (!target) return undefined;
-      const fact = phase09ReferenceSaveModifier(id,action.saveAbility ?? "내성");
-      return {
-        id,
-        name:target.name,
-        modifier:fact.modifier,
-        modifierSource:fact.source,
-        rollStateContributions:isDexteritySave(action)&&target.status.includes(DODGING_STATUS)
-          ? [{ source:`condition:${DODGING_STATUS}:dexterity-save`,state:"advantage" as const }]
-          : undefined,
-      };
-    });
-    if (targets.some((target) => target === undefined)) return internal.getSnapshot();
-    internal.capture();
-    const primaryFaces=targetIds.map((_,index) => internal.d20(action.id,index));
-    const typedTargets=targets as Array<{id:string; rollStateContributions?:unknown[]}>;
-    internal.resolution = resolveSavingThrowResolution({
-      resolutionId:resolutionId(),
-      action,
-      targets:targets as Array<{ id:string; name:string; modifier:number; modifierSource:string }>,
-      diceFaces:primaryFaces,
-      diceFacesByTarget:Object.fromEntries(typedTargets.flatMap((target,index)=>target.rollStateContributions?.length
-        ? [[target.id,[primaryFaces[index],internal.d20(`${action.id}:dodge-save`,index)]]]
-        : [])),
-    });
     return internal.getSnapshot();
   }
 
