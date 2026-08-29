@@ -1,0 +1,28 @@
+name: Rerun C9 Object Link Artifact Diagnostic
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/rerun-c9-object-link-artifact-diagnostic.yml"
+      - "schemas/common-play-contract.schema.json"
+      - "src/domain/commonPlayArtifactLifecycleRuntime.ts"
+      - "src/app/installedCommonPlayArtifactLifecycleAdapter.ts"
+      - "tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts
+      - run: npm run build
