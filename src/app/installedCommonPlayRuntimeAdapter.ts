@@ -47,16 +47,41 @@ type CommonPlayProductionAction = {
   entryPointId:string;
 };
 
+type SpatialZoneMembershipCommand={
+  artifactId:string;
+  definitionActionId:string;
+  subjectId:string;
+  present:boolean;
+  provenance:string;
+};
+
+export interface InstalledCommonPlaySpatialZoneMembershipFact {
+  artifactId:string;
+  subjectId:string;
+  present:boolean;
+  provenance:string;
+}
+
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousConfigureReadyAction=MockAdapter.prototype.configureReadyAction;
 const builtinCatalogOverrides=new WeakMap<MockAdapter,CatalogEntry[]>();
+const spatialZoneDefinitions=new WeakMap<MockAdapter,Set<string>>();
+const pendingSpatialZoneMembershipCommands=new WeakMap<MockAdapter,Map<string,SpatialZoneMembershipCommand>>();
 const cp=<T,>(value:T):T=>structuredClone(value);
 
 export function setBuiltinCommonPlayCatalogForTests(adapter:MockAdapter,catalog:CatalogEntry[]|null) {
   if (catalog) builtinCatalogOverrides.set(adapter,cp(catalog));
   else builtinCatalogOverrides.delete(adapter);
+}
+
+export function registerInstalledCommonPlaySpatialZoneProvider(adapter:MockAdapter,definitionId:string) {
+  const normalized=definitionId.trim();
+  if(!normalized) throw new Error("spatial Zone provider definitionId is required");
+  const definitions=spatialZoneDefinitions.get(adapter)??new Set<string>();
+  definitions.add(normalized);
+  spatialZoneDefinitions.set(adapter,definitions);
 }
 
 function builtinCatalogFor(adapter:MockAdapter) {
@@ -263,7 +288,9 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
     if(snapshot.role!=="dm"&&artifact.sourceActorId!==snapshot.activeCharacter.id) continue;
     const found=await installedZoneDefinitionAction(adapter,artifact.sourceId);
     if(!found?.action||found.action.lowered.kind!=="zone") continue;
-    const members=new Set((state.zoneMemberships??[]).find((membership)=>membership.artifactId===artifact.id)?.memberIds??[]);
+    const membership=(state.zoneMemberships??[]).find((candidate)=>candidate.artifactId===artifact.id);
+    if(membership?.authority!=="manual") continue;
+    const members=new Set(membership.memberIds);
     const candidates=snapshot.scene.entities.filter((entity)=>state.combatants[entity.id]);
     const membershipActions:ActionVm[]=[true,false].map((present)=>{
       const eligibleTargetIds=candidates.filter((candidate)=>members.has(candidate.id)!==present).map((candidate)=>candidate.id);
@@ -608,7 +635,10 @@ async function executeCommonPlayAction(
   } else if(lowered.kind==="effect") {
     committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});
   } else if(lowered.kind==="zone") {
-    committed=resolveCommonPlayZoneActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,membershipAuthority:"manual",actionKind});
+    committed=resolveCommonPlayZoneActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{
+      resolutionId,actorId:actor.id,entryPointId:action.entryPointId,
+      membershipAuthority:spatialZoneDefinitions.get(adapter)?.has(lowered.definition.id)?"spatial":"manual",actionKind,
+    });
   } else {
     committed=resolveCommonPlayArtifactActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});
   }
@@ -666,7 +696,9 @@ async function changeZoneMembership(
   adapter:MockAdapter,
   actionId:string,
   targetIds:string[],
-  reference:NonNullable<ReturnType<typeof parseZoneMembershipCommonPlayActionId>>,
+  reference:{artifactId:string;definitionActionId:string;present:boolean},
+  authority:"manual"|"spatial"="manual",
+  provenance="Common Play zone",
 ) {
   const internal=adapter as unknown as AdapterState;
   const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
@@ -677,12 +709,12 @@ async function changeZoneMembership(
   const resolutionId=`common-play-zone-membership.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const actionName=`구역 ${reference.present?"포함":"제외"}`;
   if(!state||!artifact?.sourceActorId||!action||action.lowered.kind!=="zone"||action.lowered.definition.id!==artifact.sourceId||!target||!state.combatants[target.id]
-    ||baseSnapshot.role!=="dm"&&artifact.sourceActorId!==baseSnapshot.activeCharacter.id) {
+    ||authority==="manual"&&(baseSnapshot.role!=="dm"&&artifact.sourceActorId!==baseSnapshot.activeCharacter.id)) {
     return failAction(internal,artifact?.sourceActorId??internal.activeCharacter.id,actionId,actionName,targetIds,resolutionId,"현재 Zone, 대상 또는 조작 권한을 재검증할 수 없습니다.");
   }
   const committed=resolveCommonPlayZoneMembershipChange(SIMPLEVTT_APP_RULES_PROFILE,state,action.lowered.definition,{
     id:resolutionId,artifactId:artifact.id,subjectId:target.id,
-    subjectCreatureKind:target.kind==="character"?"character":"monster",authority:"manual",present:reference.present,
+    subjectCreatureKind:target.kind==="character"?"character":"monster",authority,present:reference.present,
   });
   if(committed.status==="no-match") return failAction(internal,artifact.sourceActorId,actionId,actionName,targetIds,resolutionId,committed.reason);
   if(committed.status==="rejected") return failAction(internal,artifact.sourceActorId,actionId,actionName,targetIds,resolutionId,committed.error);
@@ -690,11 +722,38 @@ async function changeZoneMembership(
     resolutionId,actionId,actionName,actorId:artifact.sourceActorId,targetIds:[target.id],targetNames:[target.name],
     compact:`${target.name} · ${artifact.templateId} ${reference.present?"포함":"제외"}`,
     detail:[`${artifact.sourceId} · ${artifact.templateId}`,reference.present?"zone.entered":"zone.left"],
-    provenance:["Common Play zone"],calculatedOutcome:reference.present?"구역 포함":"구역 제외",finalOutcome:reference.present?"구역 포함":"구역 제외",
+    provenance:[provenance],calculatedOutcome:reference.present?"구역 포함":"구역 제외",finalOutcome:reference.present?"구역 포함":"구역 제외",
   });
 }
 
+export async function submitInstalledCommonPlaySpatialZoneMembership(
+  adapter:MockAdapter,
+  fact:InstalledCommonPlaySpatialZoneMembershipFact,
+):Promise<AppSnapshot> {
+  const provenance=fact.provenance.trim();
+  if(!fact.artifactId||!fact.subjectId||!provenance) throw new Error("spatial Zone membership fact requires artifactId, subjectId, and provenance");
+  const internal=adapter as unknown as AdapterState;
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  const artifact=state?.artifacts?.find((candidate)=>candidate.id===fact.artifactId&&candidate.artifactKind==="zone");
+  const membership=state?.zoneMemberships?.find((candidate)=>candidate.artifactId===fact.artifactId);
+  if(!state||!artifact||membership?.authority!=="spatial") throw new Error("spatial Zone membership fact requires an active spatial-authority Zone");
+  if(!spatialZoneDefinitions.get(adapter)?.has(artifact.sourceId)) throw new Error(`no spatial Zone provider is registered for ${artifact.sourceId}`);
+  const found=await installedZoneDefinitionAction(adapter,artifact.sourceId);
+  if(!found?.action||found.action.lowered.kind!=="zone") throw new Error(`installed spatial Zone definition is unavailable: ${artifact.sourceId}`);
+  const actionId=`spatial-zone-membership-common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const commands=pendingSpatialZoneMembershipCommands.get(adapter)??new Map<string,SpatialZoneMembershipCommand>();
+  commands.set(actionId,{artifactId:fact.artifactId,definitionActionId:found.definitionActionId,subjectId:fact.subjectId,present:fact.present,provenance});
+  pendingSpatialZoneMembershipCommands.set(adapter,commands);
+  try { return await adapter.resolveAction(actionId,[fact.subjectId]); }
+  finally { commands.delete(actionId); }
+}
+
 MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAction(actionId:string,targetIds:string[]) {
+  const spatialZoneMembershipCommand=pendingSpatialZoneMembershipCommands.get(this)?.get(actionId);
+  if(spatialZoneMembershipCommand) {
+    pendingSpatialZoneMembershipCommands.get(this)?.delete(actionId);
+    return changeZoneMembership(this,actionId,[spatialZoneMembershipCommand.subjectId],spatialZoneMembershipCommand,"spatial",spatialZoneMembershipCommand.provenance);
+  }
   const zoneMembershipReference=parseZoneMembershipCommonPlayActionId(actionId);
   if(zoneMembershipReference) return changeZoneMembership(this,actionId,targetIds,zoneMembershipReference);
   const storedInvocationCancelReference=parseStoredInvocationCancelActionId(actionId);
