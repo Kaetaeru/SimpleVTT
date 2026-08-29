@@ -1703,7 +1703,7 @@
         "runtimeResolutionCommit.ts",
         "inventory and Character persistence"
       ],
-      "currentState": "Strong infrastructure exists; every-mechanism ownership acceptance and remote decisions incomplete",
+      "currentState": "Shared session authority is strong: canonical ResolutionEvents, revision checks, atomic commits, Host-authoritative connected application, duplicate/replay handling, reconnect reconstruction, and event-native Undo are production-proven across multiple completed and partial families. AJ is a cross-family acceptance row, however, so it cannot be final while mechanism families still lack their correctly-owned durable/session transaction. Current blockers include actor/form end ownership, durable item/attunement/progression/spell material ownership, special timing, mount/vehicle topology, campaign exposure/environment, project output, capacity facts, and standard-action dependencies.",
       "requiredSemantics": [
         "correct owner",
         "source ownership",
@@ -1720,13 +1720,28 @@
       ],
       "transactionDomain": "Per-mechanism correct authority with session orchestration",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
+      "implementationEvidence": [
+        "runtimeResolutionCommit.ts canonical authoritative commit",
+        "connectedSessionRuntimeAdapter.ts connected event application/replay",
+        "runtimeResolutionEventHistory.ts event-native Undo history"
+      ],
+      "productionEvidence": [
+        "Families S/T/U/AB completed production authority matrices",
+        "retained C9 connected replay/reconnect/Undo evidence in STATE"
+      ],
       "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
+      "connectedEvidenceIfRelevant": [
+        "completed Family T/U/AB Host/Client duplicate replay, reconnect, and Undo matrices"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "installed Common Play persistence/rehydration authority retained from PR #159",
+        "family-specific durable ownership remains required before AJ final disposition"
+      ],
       "remainingNamedSeams": [
-        "named session reconstruction and owner-specific follow-up state"
+        "cross-family final ownership acceptance cannot close while required mechanism rows remain INCOMPLETE",
+        "durable Character/source owners remain undefined for W/X/Y/Z/AA/AH/AI dependencies",
+        "session timing/topology/environment owners remain undefined for AC/AD/AE/AF",
+        "remaining supported named/dependency seams must be removed or proven non-blocking before final AJ disposition"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
