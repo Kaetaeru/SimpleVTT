@@ -35,7 +35,7 @@ function connectClient(adapter:MockAdapter,sessionId:string) {
   state.replica=new ClientSessionReplica(sessionId);
 }
 
-async function installSpatialZone(adapter:MockAdapter,prefix:string) {
+async function installSpatialZone(adapter:MockAdapter,prefix:string,placementRef?:string) {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.condition`,mechanicId=`${prefix}.zone`;
   const config=structuredClone(ZONE);
   config.id=mechanicId;
@@ -78,7 +78,9 @@ async function installSpatialZone(adapter:MockAdapter,prefix:string) {
   await adapter.activateContentImport();
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
-  registerAuthoritativeSpatialZoneMembershipProvider(adapter);
+  registerAuthoritativeSpatialZoneMembershipProvider(adapter,placementRef?{
+    placementRefForActivation:()=>placementRef,
+  }:{});
   return installedCommonPlayActionId({
     catalogId:catalogQualifiedId(contentId,moduleId,"1"),mechanicId,entryPointId:"create-zone",
   });
@@ -108,8 +110,9 @@ function hasStayEffect(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapt
 
 test("authoritative external spatial Zone membership converges through canonical connected events and Undo",async()=>{
   const prefix="unknown-provider-spatial-zone",sessionId="session.common-play-spatial-zone";
+  const placementRef="provider:unknown-grid-engine:zone-slot-17";
   const host=new MockAdapter();
-  const createZone=await installSpatialZone(host,prefix);
+  const createZone=await installSpatialZone(host,prefix,placementRef);
   const hostConnected=connectedStateFor(host);
   hostConnected.mode="host";
   hostConnected.sessionId=sessionId;
@@ -128,6 +131,9 @@ test("authoritative external spatial Zone membership converges through canonical
   let hostRuntime=snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)!;
   const zone=hostRuntime.artifacts?.find((artifact)=>artifact.artifactKind==="zone");
   assert.ok(zone);
+  assert.equal(zone.placementRef,placementRef,"provider-backed Zone activation must retain the opaque authoritative placement reference");
+  const clientAfterCreate=await client.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(client,clientAfterCreate.scene)!.artifacts?.find((artifact)=>artifact.id===zone.id)?.placementRef,placementRef,"Client replay must preserve the provider placement reference");
   const membership=hostRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id);
   assert.equal(membership?.authority,"spatial","provider-backed Zone activation must record spatial authority");
   assert.ok(!Object.values(hostSnapshot.scene.actionsByActor).flat().some((action)=>parseZoneMembershipCommonPlayActionId(action.id)?.artifactId===zone.id),"spatial-authority Zone must not project manual enter/leave controls");
@@ -161,6 +167,7 @@ test("authoritative external spatial Zone membership converges through canonical
   assert.equal(reconnectApplied.status,"applied",JSON.stringify(reconnectApplied));
   const reconnectSnapshot=await reconnect.getSnapshot();
   const reconnectRuntime=snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)!;
+  assert.equal(reconnectRuntime.artifacts?.find((artifact)=>artifact.id===zone.id)?.placementRef,placementRef,"fresh reconnect must reconstruct the opaque provider placement reference");
   assert.equal(reconnectRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id)?.authority,"spatial");
   assert.ok(reconnectRuntime.zoneMemberships?.find((candidate)=>candidate.artifactId===zone.id)?.memberIds.includes(currentActorId));
   assert.equal(totalHp(reconnectSnapshot,currentActorId),hpBefore-2);
