@@ -113,8 +113,8 @@ export interface CommonPlayInteractionAuthority {
   modifierDiceFaces?:Record<number,number[]>;
 }
 
-function rejected(state:RulesRuntimeState,error:string):Extract<ResolutionCommit,{status:"rejected"}> {
-  return { status:"rejected", state, events:[], results:{}, error };
+function rejected(state:RulesRuntimeState,error:string|undefined):Extract<ResolutionCommit,{status:"rejected"}> {
+  return { status:"rejected", state, events:[], results:{}, error:error??"Common Play reaction rejected" };
 }
 
 function literalValue(expression:LiteralExpression,label:string) {
