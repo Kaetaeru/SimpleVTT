@@ -50,14 +50,20 @@ Current validated C9 checkpoints:
 - `458585cf`: installed damage.taken rules are structurally discovered and appended to the originating Resolver transaction with atomic effect consumption, connected replay/reconnect, and Undo.
 - `b659b063`: arbitrary installed Zone artifacts project manual enter/leave actions and commit membership, enter damage/frequency, Host/Client replay, reconnect, and Undo through the canonical Zone runtime.
 - `641c00fe`: installed Zone turn-start/end operations are composed into the same authoritative end-turn/begin-turn PendingResolution rather than a second mechanical commit.
-- `fbcee3c6`: begin-turn, end-turn, and advance-time emit canonical `turn-clock` StateChanges; event-native apply/replay and Undo now both read and restore exact RuntimeClock snapshots. The focused regression that exposed the missing Undo branch is retained at `tests/ui/phase09EffectConcentrationUndo.test.ts`.
+- `fbcee3c6`: begin-turn, end-turn, and advance-time emit canonical `turn-clock` StateChanges; event-native apply/replay and Undo both read and restore exact RuntimeClock snapshots. The focused clock Undo regression passes.
+- `b4b5fc5e`: the exact `ResolutionEvent[]` returned by `advanceTurnRuntimeLifecycle` is retained without recomputation and carried on the existing connected `mode-transition` payload; no Zone-specific side channel or second mechanical commit is introduced. The transport regression is registered in the authoritative UI workflow.
 
-Exact-head UI workflow `33267726004` for `fbcee3c6` was in progress at checkpoint publication. Its early repository/UI contract steps were green, but the Phase09 focused step and typecheck/build had not yet completed, so no final green claim is made here. The preceding broad UI workflow already contained inherited Phase09 deterministic/provenance reds; classify any later red against the changed turn-clock surface before treating it as a blocker.
+Verification at exact head `5cbc7bb7458f93a4c2ffa588f95d24069c98f6ca`:
 
-Coverage remains `IMPLEMENTED=1`, `INCOMPLETE=35`; no ledger row is promoted by the turn-clock infrastructure alone.
+- UI workflow `33268257210` connected/live-lifecycle step: 30/30 passed, including `connected turn projection carries the exact authoritative lifecycle ResolutionEvents`;
+- authoritative spellcasting runtime step: passed;
+- the existing broad Phase09 step remains 106/118 with the same inherited deterministic-dice, runtime-revision, and legacy-provenance expectation failures already observed before this transport change;
+- TypeScript/build was skipped by workflow fail-fast after the inherited Phase09 red, so this head does not yet have a full-build green claim.
+
+Coverage remains `IMPLEMENTED=1`, `INCOMPLETE=35`; Host transport alone does not satisfy the connected/reconnect matrix for Families P/T and no ledger row is promoted.
 
 ## Next Exact Action
 
-After reconciling the exact-head `fbcee3c6` verification result, carry the authoritative turn `ResolutionEvent[]` produced by `advanceTurnRuntimeLifecycle` through the existing connected `mode-transition` transport instead of adding a Zone-specific side channel. Apply the same canonical events on Clients/reconnect, then prove an arbitrary installed Zone turn-start/end rule converges across Host/Client with frequency, damage/effect results, duration cleanup, and event-native Undo. Reconcile Families P/T only to evidence actually obtained; do not promote either family until its full required event matrix is satisfied.
+Consume `mode-transition.resolutionEvents` in the Client path of `src/app/connectedSessionRuntimeAdapter.ts` through the existing canonical event-native application seam rather than recomputing Zone mechanics or adding a second transport. Ensure ordered reconnect ledger replay uses the same application path. Then prove an arbitrary installed Zone turn-start/end rule converges across Host/Client and reconnect with frequency, damage/effect results, duration cleanup, event-native Undo, and identity invariance. Reconcile Families P/T only to evidence actually obtained; do not promote either family until its full required event matrix is satisfied.
 
 C8 Core is complete. C9 remains active and Gate N remains blocked by 35 `INCOMPLETE` coverage rows. Overall verdict: `V1 INCOMPLETE`.
