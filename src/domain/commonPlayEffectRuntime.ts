@@ -44,7 +44,7 @@ type CommonPlayEffectDuration=
       decrementAt?:string;
     };
 
-interface CommonPlayEffectArtifactTemplate {
+export interface CommonPlayEffectArtifactTemplate {
   id:string;
   artifactKind:"effect";
   duration:CommonPlayEffectDuration;
@@ -167,6 +167,11 @@ function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number
   }
 }
 
+export function validateCommonPlayEffectTemplate(template:CommonPlayEffectArtifactTemplate,index=0) {
+  validateTemplate(template,index);
+  return template;
+}
+
 function validateDefinition(definition:CommonPlayPersistentEffectDefinition) {
   assertOnlyKeys(definition,DEFINITION_KEYS,"Common Play definition");
   if (definition.schemaVersion!=="0.2-draft") throw new Error(`unsupported Common Play schema version: ${definition.schemaVersion}`);
@@ -189,28 +194,42 @@ function templateById(definition:CommonPlayPersistentEffectDefinition,id:string)
   return template;
 }
 
+export function compileCommonPlayEffectApplyOperation(
+  definitionId:string,
+  template:CommonPlayEffectArtifactTemplate,
+  input:{operationId:string;effectId:string;sourceActorId:string;targetId:string},
+):Extract<ResolutionOperation,{kind:"apply-effect"}> {
+  validateTemplate(template,0);
+  return {
+    id:input.operationId,
+    kind:"apply-effect",
+    effect:{
+      id:input.effectId,
+      sourceId:definitionId,
+      sourceActorId:input.sourceActorId,
+      targetId:input.targetId,
+      kind:"marker",
+      duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),
+      metadata:{
+        [EFFECT_METADATA_DEFINITION]:definitionId,
+        [EFFECT_METADATA_TEMPLATE]:template.id,
+      },
+    },
+  };
+}
+
 function effectForTemplate(
   definition:CommonPlayPersistentEffectDefinition,
   template:CommonPlayEffectArtifactTemplate,
   input:CommonPlayEffectActivationInput,
   operationIndex:number,
 ):Extract<ResolutionOperation,{kind:"apply-effect"}> {
-  return {
-    id:`common-play-effect-apply-${operationIndex+1}`,
-    kind:"apply-effect",
-    effect:{
-      id:`${input.resolutionId}:artifact:${operationIndex+1}:${template.id}`,
-      sourceId:definition.id,
-      sourceActorId:input.actorId,
-      targetId:input.actorId,
-      kind:"marker",
-      duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),
-      metadata:{
-        [EFFECT_METADATA_DEFINITION]:definition.id,
-        [EFFECT_METADATA_TEMPLATE]:template.id,
-      },
-    },
-  };
+  return compileCommonPlayEffectApplyOperation(definition.id,template,{
+    operationId:`common-play-effect-apply-${operationIndex+1}`,
+    effectId:`${input.resolutionId}:artifact:${operationIndex+1}:${template.id}`,
+    sourceActorId:input.actorId,
+    targetId:input.actorId,
+  });
 }
 
 export function compileCommonPlayEffectActivation(
