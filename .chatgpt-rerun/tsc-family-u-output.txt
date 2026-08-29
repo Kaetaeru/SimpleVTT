@@ -1,0 +1,19 @@
+src/app/connectedActionRoutingAdapter.ts(144,3): error TS2322: Type '{ id: string; resolutionId: string; operationId: string; summary: string; provenance: ProvenanceRecord[]; stateChanges: ({ operation: "added" | "updated" | "removed"; ... 7 more ...; writeBack: "session"; } | ... 12 more ... | { ...; })[]; result: { ...; }; kind: string; actorId: string; targetId?: string | undefine...' is not assignable to type 'ResolutionEvent[]'.
+  Type '{ id: string; resolutionId: string; operationId: string; summary: string; provenance: ProvenanceRecord[]; stateChanges: ({ operation: "added" | "updated" | "removed"; ... 7 more ...; writeBack: "session"; } | ... 12 more ... | { ...; })[]; result: { ...; }; kind: string; actorId: string; targetId?: string; }' is not assignable to type 'ResolutionEvent'.
+    Types of property 'stateChanges' are incompatible.
+      Type '({ operation: "added" | "updated" | "removed"; before: EffectInstance | undefined; after: EffectInstance | undefined; kind: "effect"; targetId: string; effectId: string; provenance: ProvenanceRecord[]; lifetime: "session-runtime"; writeBack: "session"; } | ... 12 more ... | { ...; })[]' is not assignable to type 'RuntimeStateChange[]'.
+        Type '{ operation: "added" | "updated" | "removed"; before: EffectInstance | undefined; after: EffectInstance | undefined; kind: "effect"; targetId: string; effectId: string; provenance: ProvenanceRecord[]; lifetime: "session-runtime"; writeBack: "session"; } | ... 12 more ... | { ...; }' is not assignable to type 'RuntimeStateChange'.
+          Type '{ before: boolean | RuntimeClock; after: boolean | RuntimeClock; kind: "turn-clock"; targetId: "session:turn-clock"; provenance: ProvenanceRecord[]; lifetime: "session-runtime"; writeBack: "session"; }' is not assignable to type 'RuntimeStateChange'.
+            Type '{ before: boolean | RuntimeClock; after: boolean | RuntimeClock; kind: "turn-clock"; targetId: "session:turn-clock"; provenance: ProvenanceRecord[]; lifetime: "session-runtime"; writeBack: "session"; }' is not assignable to type 'TurnClockStateChange'.
+              Types of property 'before' are incompatible.
+                Type 'boolean | RuntimeClock' is not assignable to type 'RuntimeClock'.
+                  Type 'boolean' is not assignable to type 'RuntimeClock'.
+src/app/realActivityProjectionService.ts(44,89): error TS2339: Property 'turnIndex' does not exist on type 'RuntimeClock'.
+src/app/realActivityProjectionService.ts(44,117): error TS2339: Property 'turnIndex' does not exist on type 'RuntimeClock'.
+src/app/resolutionEventUndo.ts(26,15): error TS2698: Spread types may only be created from object types.
+src/app/resolutionEventUndo.ts(26,56): error TS2339: Property 'after' does not exist on type 'never'.
+src/app/resolutionEventUndo.ts(26,75): error TS2339: Property 'before' does not exist on type 'never'.
+src/domain/commonPlayEffectRuntime.ts(173,67): error TS2339: Property 'event' does not exist on type 'CommonPlayEffectLifetime'.
+  Property 'event' does not exist on type '{ kind: "until-duration"; onEnd: "destroy"; }'.
+
+exit_code=2
