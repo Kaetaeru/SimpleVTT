@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 7,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=3, INCOMPLETE=33, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family T is now IMPLEMENTED after authoritative Zone stay acceptance. Family AB Recharge recovery/connected routing is present, but the acceptance probe found the linked actor action does not consume the recovered resource (1 stayed 1); next fix that generic actor-resource consumption path and re-prove AB without a monster engine.",
+  "reason": "C9 remains active. Family AB portable Recharge is IMPLEMENTED after schema-backed resource.recharge lowering to the existing generic recharge-resource operation and exact connected/typecheck evidence from run 33280246505; coverage is now IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Families V/W/X/Y/Z/AA retain explicit authority or durable-source blockers and Family P still lacks repository-defined event vocabulary/order semantics. Next audit Family AC legendary/lair special timing without inventing missing timing/owner policy.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
