@@ -951,7 +951,7 @@
         "commonPlayZoneRuntime.test.ts",
         "Gate D"
       ],
-      "currentState": "Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/start/end-turn events, canonical frequency, elapsed cleanup, damage/effect trigger lowering, atomic Undo, Host/Client replay, duplicate replay, and fresh reconnect. zone.stay remains kernel/schema-only because repository authority does not define a production stay timing/authority ingress after the unsupported provider stay command was removed.",
+      "currentState": "Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/stay/start/end-turn events, canonical frequency, elapsed cleanup, damage/effect trigger lowering, atomic Undo, Host/Client replay, duplicate replay, fresh reconnect, and arbitrary identity.",
       "requiredSemantics": [
         "spawn",
         "placement",
@@ -965,38 +965,38 @@
         "connected persistence"
       ],
       "transactionDomain": "Session RuntimeArtifact plus Resolver triggers",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "commonPlayZoneRuntime.ts membership/turn/duration plus generic damage/effect rule lowering; zone.stay remains kernel-only",
+        "commonPlayZoneRuntime.ts canonical membership/event/turn/duration resolution with generic damage/effect lowering",
         "commonPlayEffectRuntime.ts reusable effect.apply -> apply-effect lowering",
         "commonPlayDefinitionRuntime.ts retention of Zone rule-referenced effect templates",
         "installedCommonPlayRuntimeAdapter.ts Zone projection and manual membership resolution",
         "realTurnLifecycleService.ts Zone turn lifecycle composition and round-wrap advance-time",
-        "spatialZoneMembershipRuntimeAdapter.ts authoritative inside/outside membership provider ingress"
+        "spatialZoneMembershipRuntimeAdapter.ts authoritative inside/outside/stay provider ingress without Core geometry inference"
       ],
       "productionEvidence": [
-        "installedCommonPlayLoweredFamiliesProduction.test.ts Zone membership, damage, and Undo",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts Zone membership, damage/effect, and Undo",
         "connectedTurnResolutionEventTransport.test.ts arbitrary Zone turn lifecycle and elapsed cleanup",
-        "connectedSpatialZoneMembershipProduction.test.ts authoritative spatial enter/leave/outside membership production"
+        "connectedSpatialZoneMembershipProduction.test.ts authoritative spatial enter/leave/stay/placement production",
+        "UI run 33279041449 step 17 SUCCESS after zone.stay ingress restoration"
       ],
       "identityInvarianceEvidence": [
         "commonPlayZoneRuntime.test.ts",
         "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity",
         "connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity",
-        "connectedSpatialZoneMembershipProduction.test.ts arbitrary installed spatial Zone identity"
+        "connectedSpatialZoneMembershipProduction.test.ts arbitrary installed spatial Zone and stay identities"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts Zone Host/Client membership and Undo convergence",
         "connectedTurnResolutionEventTransport.test.ts turn lifecycle and elapsed cleanup Host/Client convergence, duplicate replay, reconnect, and Undo",
-        "connectedSpatialZoneMembershipProduction.test.ts spatial membership Host/Client convergence, duplicate replay, reconnect, outside facts, and Undo"
+        "connectedSpatialZoneMembershipProduction.test.ts spatial membership/stay Host/Client convergence, duplicate replay, reconnect, outside facts, placement, and Undo"
       ],
       "persistenceEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts Zone new-replica event replay",
         "connectedTurnResolutionEventTransport.test.ts ordered reconnect reconstruction of Zone turn and elapsed cleanup events",
-        "connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for authoritative spatial membership"
+        "connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for authoritative spatial membership/stay"
       ],
       "remainingNamedSeams": [
-        "zone.stay production timing/authority semantics undefined after unsupported provider stay ingress removal",
         "named persistent aura/zone migration debt; unknown portable Common Play does not select or fall through to it"
       ],
       "connectedRelevant": true,
