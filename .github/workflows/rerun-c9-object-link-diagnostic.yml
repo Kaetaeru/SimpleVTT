@@ -27,4 +27,21 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run generate:content
       - run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts
-      - run: npx tsc --noEmit
+      - name: Capture TypeScript diagnostics
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit > c9-object-link-tsc.txt 2>&1
+          status=$?
+          echo "$status" > c9-object-link-tsc-status.txt
+          cat c9-object-link-tsc.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: c9-object-link-tsc
+          path: |
+            c9-object-link-tsc.txt
+            c9-object-link-tsc-status.txt
+      - name: Enforce TypeScript success
+        shell: bash
+        run: test "$(cat c9-object-link-tsc-status.txt)" = "0"
