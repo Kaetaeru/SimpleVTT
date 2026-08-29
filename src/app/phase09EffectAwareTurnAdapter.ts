@@ -3,10 +3,12 @@ import type { ActivityEntry, AppSnapshot, SceneEntity, SceneVm, SessionMode } fr
 import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { advanceTurnRuntimeLifecycle } from "./realTurnLifecycleService";
+import { applyResolutionEvents } from "./realEventApplyService";
 import { projectTurnRuntimeToScene, synchronizeTurnRuntimeFromScene } from "./realTurnRuntimeService";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, readyActionConfigurationsFor } from "./standardActionReadyState";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { compileInstalledCommonPlayZoneTurnOperations, installedCommonPlayZoneDefinitions } from "./commonPlayZoneTurnComposition";
+import { inverseResolutionEvents } from "./resolutionEventUndo";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 interface EffectAwareTurnAdapterState {
@@ -16,9 +18,17 @@ interface EffectAwareTurnAdapterState {
   getSnapshot():Promise<AppSnapshot>;
 }
 
+export interface AdapterTurnLifecycleUndo {
+  resolutionId:string;
+  activityId:string;
+  events:ResolutionEvent[];
+}
+
 const previousEndTurn=MockAdapter.prototype.endTurn;
 const previousEndInitiative=MockAdapter.prototype.endInitiative;
+const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 const turnLifecycleEvents=new WeakMap<MockAdapter,ResolutionEvent[]>();
+const turnLifecycleUndo=new WeakMap<MockAdapter,AdapterTurnLifecycleUndo>();
 
 const END_OF_TURN_STATUSES=["이탈"] as const;
 const START_OF_TURN_STATUSES=["회피","준비 행동"] as const;
@@ -44,6 +54,11 @@ export function consumeAdapterTurnLifecycleEvents(adapter:MockAdapter) {
   const events=turnLifecycleEvents.get(adapter)??[];
   turnLifecycleEvents.delete(adapter);
   return events.map((event)=>structuredClone(event));
+}
+
+export function peekAdapterTurnLifecycleUndo(adapter:MockAdapter):AdapterTurnLifecycleUndo|undefined {
+  const undo=turnLifecycleUndo.get(adapter);
+  return undo?structuredClone(undo):undefined;
 }
 
 MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
@@ -94,11 +109,44 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   activity.detail.push(`RulesRuntimeState revision ${session.state.revision}`);
   activity.stateChanges.push(...standardActionChanges);
   internal.activity.unshift(activity);
+  turnLifecycleUndo.set(this,{
+    resolutionId:advanced.resolutionId,
+    activityId:activity.id,
+    events:advanced.events.map((event)=>structuredClone(event)),
+  });
+  return internal.getSnapshot();
+};
+
+MockAdapter.prototype.undoLastResolution=async function undoTurnLifecycleResolution() {
+  const internal=this as unknown as EffectAwareTurnAdapterState;
+  const session=turnRuntimeSessions.get(this);
+  const undo=turnLifecycleUndo.get(this);
+  if (!session||!undo||internal.activity[0]?.id!==undo.activityId) return previousUndoLastResolution.call(this);
+
+  const inverse=inverseResolutionEvents(undo.events,`undo.${undo.resolutionId}.local`);
+  const applied=applyResolutionEvents(internal.scene,inverse,[],[],session.state);
+  if (applied.status==="rejected"||!applied.runtimeState) {
+    internal.activity.unshift({
+      id:eventId(),time:"지금",actor:"시스템",title:"Resolution 되돌림 거부",summary:undo.resolutionId,
+      detail:[applied.status==="rejected"?applied.error:"turn lifecycle Undo did not return runtime state"],stateChanges:[],correction:true,
+    });
+    return internal.getSnapshot();
+  }
+
+  session.state=applied.runtimeState;
+  internal.scene=applied.scene;
+  projectTurnRuntimeToScene(session,internal.scene);
+  turnLifecycleUndo.delete(this);
+  internal.activity.unshift({
+    id:eventId(),time:"지금",actor:"시스템",title:"Resolution 되돌림",summary:undo.resolutionId,
+    detail:["Authoritative turn lifecycle ResolutionEvents 역적용"],stateChanges:applied.stateChanges,correction:true,undoOf:undo.resolutionId,
+  });
   return internal.getSnapshot();
 };
 
 MockAdapter.prototype.endInitiative=async function endInitiativeClearingStandardActionStatuses() {
   const internal=this as unknown as EffectAwareTurnAdapterState;
+  turnLifecycleUndo.delete(this);
   const hadReady=readyActionConfigurationsFor(this).length>0;
   const changes=internal.scene.entities.flatMap((entity)=>clearStatuses(entity,[...END_OF_TURN_STATUSES,...START_OF_TURN_STATUSES]));
   if (hadReady) clearReadyActionConfiguration(this);
