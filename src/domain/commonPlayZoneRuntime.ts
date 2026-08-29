@@ -1,4 +1,9 @@
 import type { RulesRuntimeState } from "./combatState";
+import {
+  compileCommonPlayEffectApplyOperation,
+  validateCommonPlayEffectTemplate,
+  type CommonPlayEffectArtifactTemplate,
+} from "./commonPlayEffectRuntime";
 import type { RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
@@ -22,11 +27,19 @@ interface CommonPlayZoneDamageOperation {
   target:"event.subject";
 }
 
+interface CommonPlayZoneEffectApplyOperation {
+  kind:"effect.apply";
+  template:string;
+  target:"event.subject";
+}
+
+type CommonPlayZoneRuleOperation=CommonPlayZoneDamageOperation|CommonPlayZoneEffectApplyOperation;
+
 interface CommonPlayZoneRule {
   id:string;
   event:ZoneEventKind;
   frequency:CommonPlayFrequency;
-  operations:CommonPlayZoneDamageOperation[];
+  operations:CommonPlayZoneRuleOperation[];
 }
 
 interface CommonPlayZoneDuration {
@@ -55,7 +68,7 @@ export interface CommonPlayZoneDefinition {
     invocation:"manual"|"triggered"|"automatic"|"granted";
     operations:CommonPlayArtifactSpawnOperation[];
   }>;
-  artifactTemplates:CommonPlayZoneArtifactTemplate[];
+  artifactTemplates:Array<CommonPlayZoneArtifactTemplate|CommonPlayEffectArtifactTemplate>;
 }
 
 export interface CommonPlayZoneActivationInput {
@@ -148,12 +161,17 @@ function validateRule(rule:CommonPlayZoneRule,templateId:string,ruleIndex:number
   if (!Array.isArray(rule.operations)||!rule.operations.length) throw new Error(`${label} requires at least one operation`);
   rule.operations.forEach((operation,index)=>{
     const operationLabel=`${label} operation ${index+1}`;
-    assertOnlyKeys(operation,["kind","amount","damageType","target"],operationLabel);
-    if (operation.kind!=="damage.apply") throw new Error(`${operationLabel} supports only damage.apply`);
-    const amount=literalNumber(operation.amount,`${operationLabel} amount`);
-    if (!Number.isInteger(amount)||amount<0) throw new Error(`${operationLabel} amount must be a non-negative integer`);
-    if (!operation.damageType) throw new Error(`${operationLabel} damageType is required`);
-    if (operation.target!=="event.subject") throw new Error(`${operationLabel} target must be event.subject in this runtime slice`);
+    if(operation.kind==="damage.apply") {
+      assertOnlyKeys(operation,["kind","amount","damageType","target"],operationLabel);
+      const amount=literalNumber(operation.amount,`${operationLabel} amount`);
+      if (!Number.isInteger(amount)||amount<0) throw new Error(`${operationLabel} amount must be a non-negative integer`);
+      if (!operation.damageType) throw new Error(`${operationLabel} damageType is required`);
+      if (operation.target!=="event.subject") throw new Error(`${operationLabel} target must be event.subject in this runtime slice`);
+      return;
+    }
+    assertOnlyKeys(operation,["kind","template","target"],operationLabel);
+    if(!operation.template) throw new Error(`${operationLabel} template is required`);
+    if(operation.target!=="event.subject") throw new Error(`${operationLabel} target must be event.subject in this runtime slice`);
   });
 }
 
@@ -179,6 +197,18 @@ function validateTemplate(template:CommonPlayZoneArtifactTemplate,index:number) 
   }
 }
 
+function zoneTemplateById(definition:CommonPlayZoneDefinition,id:string) {
+  const template=definition.artifactTemplates.find((candidate)=>candidate.id===id&&candidate.artifactKind==="zone");
+  if (!template||template.artifactKind!=="zone") throw new Error(`zone artifact template not found: ${id}`);
+  return template;
+}
+
+function effectTemplateById(definition:CommonPlayZoneDefinition,id:string) {
+  const template=definition.artifactTemplates.find((candidate)=>candidate.id===id&&candidate.artifactKind==="effect");
+  if (!template||template.artifactKind!=="effect") throw new Error(`effect artifact template not found: ${id}`);
+  return template;
+}
+
 function validateDefinition(definition:CommonPlayZoneDefinition) {
   assertOnlyKeys(definition,DEFINITION_KEYS,"Common Play definition");
   if (definition.schemaVersion!=="0.2-draft") throw new Error(`unsupported Common Play schema version: ${definition.schemaVersion}`);
@@ -189,16 +219,17 @@ function validateDefinition(definition:CommonPlayZoneDefinition) {
   }
   const templateIds=new Set<string>();
   definition.artifactTemplates.forEach((template,index)=>{
-    validateTemplate(template,index);
+    if(template.artifactKind==="zone") validateTemplate(template,index);
+    else validateCommonPlayEffectTemplate(template,index);
     if (templateIds.has(template.id)) throw new Error(`duplicate artifact template id: ${template.id}`);
     templateIds.add(template.id);
   });
-}
-
-function templateById(definition:CommonPlayZoneDefinition,id:string) {
-  const template=definition.artifactTemplates.find((candidate)=>candidate.id===id);
-  if (!template) throw new Error(`artifact template not found: ${id}`);
-  return template;
+  definition.artifactTemplates.forEach((template)=>{
+    if(template.artifactKind!=="zone") return;
+    template.rules.forEach((rule)=>rule.operations.forEach((operation)=>{
+      if(operation.kind==="effect.apply") effectTemplateById(definition,operation.template);
+    }));
+  });
 }
 
 function runtimeExpiry(state:RulesRuntimeState,template:CommonPlayZoneArtifactTemplate):RuntimeArtifactExpiry {
@@ -252,7 +283,7 @@ export function compileCommonPlayZoneActivation(
     const label=`entry point ${entryPoint.id} operation ${index+1}`;
     assertOnlyKeys(operation,["kind","template"],label);
     if (operation.kind!=="artifact.spawn") throw new Error(`${label} supports only artifact.spawn`);
-    return artifactForTemplate(inputState,definition,templateById(definition,operation.template),input,index);
+    return artifactForTemplate(inputState,definition,zoneTemplateById(definition,operation.template),input,index);
   })];
   return {
     id:input.resolutionId,
@@ -285,7 +316,7 @@ function activeZone(
     artifact.id===artifactId
     && artifact.artifactKind==="zone"
     && artifact.sourceId===definition.id
-    && definition.artifactTemplates.some((template)=>template.id===artifact.templateId)
+    && definition.artifactTemplates.some((template)=>template.artifactKind==="zone"&&template.id===artifact.templateId)
   );
 }
 
@@ -316,7 +347,7 @@ function triggerOperations(
   artifact:RuntimeArtifactInstance,
   input:CommonPlayZoneEventInput,
 ):ResolutionOperation[] {
-  const template=templateById(definition,artifact.templateId);
+  const template=zoneTemplateById(definition,artifact.templateId);
   const operations:ResolutionOperation[]=[];
   template.rules.forEach((rule,ruleIndex)=>{
     if (rule.event!==input.kind) return;
@@ -326,14 +357,24 @@ function triggerOperations(
     });
     if (!frequency.eligible) return;
     rule.operations.forEach((operation,operationIndex)=>{
-      operations.push({
-        id:`common-play-zone-rule-${ruleIndex+1}-damage-${operationIndex+1}`,
-        kind:"damage",
+      if(operation.kind==="damage.apply") {
+        operations.push({
+          id:`common-play-zone-rule-${ruleIndex+1}-damage-${operationIndex+1}`,
+          kind:"damage",
+          targetId:input.subjectId,
+          damageType:operation.damageType,
+          amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
+          creatureKind:input.subjectCreatureKind,
+        });
+        return;
+      }
+      const effectTemplate=effectTemplateById(definition,operation.template);
+      operations.push(compileCommonPlayEffectApplyOperation(definition.id,effectTemplate,{
+        operationId:`common-play-zone-rule-${ruleIndex+1}-effect-${operationIndex+1}`,
+        effectId:`${input.id}:artifact:${ruleIndex+1}:${operationIndex+1}:${effectTemplate.id}`,
+        sourceActorId:artifact.sourceActorId??input.subjectId,
         targetId:input.subjectId,
-        damageType:operation.damageType,
-        amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
-        creatureKind:input.subjectCreatureKind,
-      });
+      }));
     });
     if(Object.keys(frequency.metadataPatch).length) operations.push({
       id:`common-play-zone-rule-${ruleIndex+1}-frequency`,kind:"update-artifact",artifactId:artifact.id,
