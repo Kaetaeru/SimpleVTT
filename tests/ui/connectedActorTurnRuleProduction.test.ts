@@ -32,9 +32,14 @@ function packageJson(prefix:string) {
     entryPoints:[{id:"use-charge",invocation:"manual",operations:[
       {kind:"resource.change",resource:resourceId,amount:{value:-1},target:"actor"},
     ]}],
-    rules:[{id:"turn-refresh",event:"turn-start",frequency:"once-per-turn",operations:[
-      {kind:"resource.change",resource:resourceId,amount:{value:1},target:"actor"},
-    ]}],
+    rules:[
+      {id:"turn-refresh",event:"turn-start",frequency:"once-per-turn",operations:[
+        {kind:"resource.change",resource:resourceId,amount:{value:1},target:"actor"},
+      ]},
+      {id:"turn-spend",event:"turn-end",frequency:"once-per-turn",operations:[
+        {kind:"resource.change",resource:resourceId,amount:{value:-1},target:"actor"},
+      ]},
+    ],
   };
   const creator={
     schemaVersion:"0.2-draft",id:creatorId,
@@ -111,6 +116,17 @@ async function runIdentity(prefix:string) {
   return {beforeResource:before.resource,afterResource:after.resource,markers:after.markers.length,activeActorId:after.clock.activeActorId};
 }
 
+async function runTurnEndIdentity(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=await install(adapter,prefix);
+  await adapter.resolveAction(pack.summonAction,["char.aelar"]);
+  await adapter.endTurn();
+  const before=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
+  await adapter.endTurn();
+  const after=actorState(adapter,await adapter.getSnapshot(),pack.summonId,pack.resourceId);
+  return {beforeResource:before.resource,afterResource:after.resource,markerDelta:after.markers.length-before.markers.length};
+}
+
 test("actor-owned turn-start Common Play rule is invariant under every external identity rename",async()=>{
   const first=await runIdentity("unknown-actor-turn-a");
   const renamed=await runIdentity("fully-renamed-actor-turn-b");
@@ -121,6 +137,15 @@ test("actor-owned turn-start Common Play rule is invariant under every external 
   assert.equal(first.beforeResource,0);
   assert.equal(first.afterResource,1);
   assert.equal(first.markers,1);
+});
+
+test("actor-owned turn-end Common Play rule is invariant under every external identity rename",async()=>{
+  const first=await runTurnEndIdentity("unknown-actor-turn-end-a");
+  const renamed=await runTurnEndIdentity("fully-renamed-actor-turn-end-b");
+  assert.deepEqual(first,renamed);
+  assert.equal(first.beforeResource,1);
+  assert.equal(first.afterResource,0);
+  assert.equal(first.markerDelta,1);
 });
 
 test("actor-owned turn-start rule converges, reconnects, deduplicates, and rolls back through turn event-native Undo",async()=>{
@@ -163,6 +188,53 @@ test("actor-owned turn-start rule converges, reconnects, deduplicates, and rolls
   clientState=actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId);
   assert.equal(hostState.resource,0);
   assert.equal(hostState.markers.length,0);
+  assert.deepEqual(hostState.clock,before.clock);
+  assert.deepEqual(clientState,hostState);
+});
+
+test("actor-owned turn-end rule converges, reconnects, deduplicates, and rolls back through turn event-native Undo",async()=>{
+  const prefix="unknown-connected-actor-turn-end",sessionId="session.common-play-actor-turn-end";
+  const host=new MockAdapter();
+  const pack=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const client=new MockAdapter();
+  await install(client,prefix);
+  const clientConnected=connectedStateFor(client);
+  clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
+
+  const spawnBatch=await captureHostBatch(()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  assert.equal((await applyConnectedClientEvents(client,spawnBatch.events)).status,"applied");
+  const startBatch=await captureHostBatch(()=>host.endTurn());
+  assert.equal((await applyConnectedClientEvents(client,startBatch.events)).status,"applied");
+  const before=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
+  assert.equal(before.resource,1);
+  assert.equal(before.markers.length,1);
+  assert.equal(before.clock.activeActorId,pack.summonId);
+
+  const endBatch=await captureHostBatch(()=>host.endTurn());
+  assert.equal((await applyConnectedClientEvents(client,endBatch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,endBatch.events)).status,"duplicate");
+  let hostState=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
+  let clientState=actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId);
+  assert.equal(hostState.resource,0);
+  assert.equal(hostState.markers.length,2);
+  assert.deepEqual(clientState,hostState);
+
+  const reconnect=new MockAdapter();
+  await install(reconnect,prefix);
+  const reconnectConnected=connectedStateFor(reconnect);
+  reconnectConnected.mode="client";reconnectConnected.sessionId=sessionId;reconnectConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0))).status,"applied");
+  assert.deepEqual(actorState(reconnect,await reconnect.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+
+  const undoBatch=await captureHostBatch(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostState=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
+  clientState=actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId);
+  assert.equal(hostState.resource,1);
+  assert.equal(hostState.markers.length,1);
   assert.deepEqual(hostState.clock,before.clock);
   assert.deepEqual(clientState,hostState);
 });
