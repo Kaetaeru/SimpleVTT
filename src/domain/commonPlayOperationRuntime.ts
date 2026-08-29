@@ -58,7 +58,7 @@ type CommonPlayHealingApply={
 
 type CommonPlayRollModify={
   kind:"roll.modify";
-  mode:"advantage"|"disadvantage"|"add-die"|"add-flat"|"target-add"|"reroll"|"replace"|"minimum";
+  mode:"advantage"|"disadvantage"|"add-die"|"subtract-die"|"add-flat"|"target-add"|"reroll"|"replace"|"minimum";
   value?:LiteralNumberExpression;
   dice?:string;
 };
@@ -249,10 +249,10 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   const operation=object(value,label);
   if(operation.kind==="roll.modify") {
     supportedKeys(operation,ROLL_MODIFY_KEYS,label);
-    const modes=new Set(["advantage","disadvantage","add-die","add-flat","target-add","reroll","replace","minimum"]);
+    const modes=new Set(["advantage","disadvantage","add-die","subtract-die","add-flat","target-add","reroll","replace","minimum"]);
     if(typeof operation.mode!=="string"||!modes.has(operation.mode)) throw new DomainEvaluationError(`${label}.mode is unsupported`);
     const needsValue=operation.mode==="add-flat"||operation.mode==="target-add"||operation.mode==="replace"||operation.mode==="minimum";
-    const needsDice=operation.mode==="add-die"||operation.mode==="reroll";
+    const needsDice=operation.mode==="add-die"||operation.mode==="subtract-die"||operation.mode==="reroll";
     if(needsValue!==Boolean(operation.value!==undefined)) throw new DomainEvaluationError(`${label}.value ${needsValue?"is required":"is not allowed"} for ${operation.mode}`);
     if(needsDice!==Boolean(operation.dice!==undefined)) throw new DomainEvaluationError(`${label}.dice ${needsDice?"is required":"is not allowed"} for ${operation.mode}`);
     if(needsDice) parseCommonPlayDamageDiceFormula(nonEmptyString(operation.dice,`${label}.dice`),`${label}.dice`);
@@ -460,12 +460,13 @@ export function compileCommonPlayEntryPointOperations(
         throw new DomainEvaluationError("reroll requires exactly 1d20");
       }
       const faces=input.d20!.modifierDiceFaces?.[index];
-      if(!faces||(operation.mode==="add-die"?faces.length!==formula.count:faces.length<formula.count)) {
+      const exactModifierDice=operation.mode==="add-die"||operation.mode==="subtract-die";
+      if(!faces||(exactModifierDice?faces.length!==formula.count:faces.length<formula.count)) {
         throw new DomainEvaluationError(`Common Play roll modifier ${index} requires authoritative die face(s)`);
       }
       const dice={id:`${input.resolutionId}:roll-modifier:${index}`,purpose:source,sides:formula.sides,faces:[...faces]};
       const result:D20RollModification[]=[{source,mode:operation.mode,dice}];
-      if(formula.flat!==0) result.push({source:`${source}:flat`,mode:"add-flat",value:formula.flat});
+      if(formula.flat!==0) result.push({source:`${source}:flat`,mode:"add-flat",value:operation.mode==="subtract-die"?-formula.flat:formula.flat});
       return result;
     });
     operations.push({
