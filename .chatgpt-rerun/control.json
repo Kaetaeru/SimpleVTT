@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
   "status": "continue",
-  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint acc46a1a preserves one shared PaymentContract across all five manual lowerers and proves atomic production Host/Client convergence plus Undo. TypeScript and 15 focused contract/domain/production regressions are green. The audited ledger still truthfully reports all 36 rows INCOMPLETE. Next: connect generic stored invocation/Ready to installed production, connected authority, persistence, and Undo; promote nothing without the full evidence matrix.",
+  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint c87402f9 makes canonical stored-invocation JSON executable through arbitrary installed attack/spell actions with Reaction, exactly-once consumption, Host/Client event replay, reconnect, and Undo. TypeScript and 14 focused domain/production regressions are green. The ledger still truthfully reports all 36 rows INCOMPLETE. Next: add generic stored movement and strangle the legacy Ready WeakMap/role/economy execution workaround before considering family S complete.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }
