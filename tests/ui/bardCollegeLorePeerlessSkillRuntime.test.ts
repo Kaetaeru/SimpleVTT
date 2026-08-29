@@ -7,7 +7,7 @@ import { BARDIC_INSPIRATION_RESOURCE_ID } from "../../src/domain/bardicInspirati
 import { BARD_COLLEGE_LORE_SUBCLASS_ID } from "../../src/domain/bardCollegeLore";
 import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";
 
-const INTERRUPT_ID="follow-up.bard.college-of-lore.peerless-skill";
+const INTERRUPT_ID="follow-up.d20-modification";
 
 async function prepareLoreBard(adapter:MockAdapter,level=14){
   const internal=adapter as unknown as {activeCharacter:CharacterSheet};
@@ -91,7 +91,7 @@ test("Peerless Skill keeps Bardic Inspiration when the added die still leaves th
   snapshot=await adapter.respondToInterrupt(true);
   assert.equal(snapshot.resolution?.checkOutcome,"실패",JSON.stringify(snapshot.resolution));
   assert.equal(inspirationUses(snapshot),before);
-  assert.equal(snapshot.resolution?.detail.some((detail)=>detail.includes("영감 유지")),true);
+  assert.equal(snapshot.resolution?.detail.some((detail)=>detail.includes("자원 보존")),true);
 });
 
 test("Peerless Skill can turn the Lore Bard's missed production attack into a hit and Undo restores damage/resource/economy",async()=>{
@@ -124,7 +124,7 @@ test("Peerless Skill can turn the Lore Bard's missed production attack into a hi
   assert.equal(snapshot.resolution?.attackOutcome,"명중",JSON.stringify(snapshot.resolution));
   assert.equal(inspirationUses(snapshot),usesBefore!-1);
   assert.ok((snapshot.scene.entities.find((entry)=>entry.id===targetId)?.hp??0)<(hpBefore??0));
-  assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("비할 데 없는 기술"))),true);
+  assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("비할 데 없는 기술"))),true,JSON.stringify(snapshot.activity));
 
   snapshot=await adapter.undoLastResolution();
   assert.equal(inspirationUses(snapshot),usesBefore);

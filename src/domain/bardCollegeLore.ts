@@ -17,7 +17,6 @@ function validateLore(args:{ bardLevel:number; subclassId?:string; minimumLevel:
     throw new DomainEvaluationError(`${args.feature} requires College of Lore`);
   }
 }
-
 function requireInspiration(state:RulesRuntimeState,actorId:string,resourceId?:string) {
   const actor = requireCombatant(state,actorId);
   const found = findResource(actor.resources,resourceId ?? BARDIC_INSPIRATION_RESOURCE_ID);
@@ -105,80 +104,6 @@ export function resolveLoreCuttingWords(
       operations,
     });
     return { ...commit, adjustment };
-  } catch (error) {
-    return { status:"rejected", state, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
-  }
-}
-
-export interface LorePeerlessSkillRequest {
-  id:string;
-  actorId:string;
-  expectedRevision:number;
-  bardLevel:number;
-  subclassId?:string;
-  kind:"ability-check"|"attack-roll";
-  failedTotal:number;
-  target:number;
-  inspirationDieFace:number;
-  resourceId?:string;
-}
-
-export interface PeerlessSkillResult {
-  kind:"ability-check"|"attack-roll";
-  initialTotal:number;
-  target:number;
-  bonus:number;
-  finalTotal:number;
-  outcome:"success"|"failure";
-  inspirationExpended:boolean;
-}
-
-export function resolveLorePeerlessSkill(
-  profile:RulesProfileLike,
-  state:RulesRuntimeState,
-  request:LorePeerlessSkillRequest,
-):ResolutionCommit & { check?:PeerlessSkillResult } {
-  try {
-    validateLore({ bardLevel:request.bardLevel, subclassId:request.subclassId, minimumLevel:14, feature:"Peerless Skill" });
-    if (!Number.isFinite(request.failedTotal) || !Number.isFinite(request.target) || request.failedTotal >= request.target) {
-      throw new DomainEvaluationError("Peerless Skill can only follow a failed ability check or attack roll");
-    }
-    const sides = bardicInspirationDieSides(request.bardLevel);
-    if (!Number.isInteger(request.inspirationDieFace) || request.inspirationDieFace < 1 || request.inspirationDieFace > sides) {
-      throw new DomainEvaluationError(`Peerless Skill requires one fixed d${sides} face`);
-    }
-    requireInspiration(state,request.actorId,request.resourceId);
-    const finalTotal = request.failedTotal + request.inspirationDieFace;
-    const success = finalTotal >= request.target;
-    const check:PeerlessSkillResult = {
-      kind:request.kind,
-      initialTotal:request.failedTotal,
-      target:request.target,
-      bonus:request.inspirationDieFace,
-      finalTotal,
-      outcome:success ? "success" : "failure",
-      inspirationExpended:success,
-    };
-    const operations:ResolutionOperation[] = [{
-      id:`${request.id}:roll`,
-      kind:"damage-roll",
-      request:{ dice:[{ source:LORE_PEERLESS_SKILL_SOURCE, count:1, sides, faces:[request.inspirationDieFace] }] },
-    }];
-    if (success) operations.push({
-      id:`${request.id}:resource`,
-      kind:"spend-resource",
-      actorId:request.actorId,
-      resourceId:request.resourceId ?? BARDIC_INSPIRATION_RESOURCE_ID,
-      amount:1,
-    });
-    const commit = resolvePendingResolution(profile,state,{
-      id:request.id,
-      actorId:request.actorId,
-      sourceId:LORE_PEERLESS_SKILL_SOURCE,
-      expectedRevision:request.expectedRevision,
-      operations,
-    });
-    return { ...commit, check };
   } catch (error) {
     return { status:"rejected", state, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
   }

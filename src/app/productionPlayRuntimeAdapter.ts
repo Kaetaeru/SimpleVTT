@@ -20,6 +20,7 @@ import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
 import { FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID, FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID } from "../domain/warlockFiend";
 import { WARLOCK_FIEND_SUBCLASS_ID } from "../domain/srdSubclassCatalog";
 import { WARLOCK_ID } from "../domain/warlockProgressionChoices";
+import { BARD_COLLEGE_LORE_SUBCLASS_ID, LORE_PEERLESS_SKILL_SOURCE } from "../domain/bardCollegeLore";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
@@ -361,6 +362,9 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   const darkOnesOwnLuck=character.resources.find((resource)=>resource.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID);
   if(warlockLevel>=6&&character.subclassIds?.[WARLOCK_ID]===WARLOCK_FIEND_SUBCLASS_ID&&darkOnesOwnLuck){
     actions.at(-1)!.runtimeD20FollowUps=[...(actions.at(-1)!.runtimeD20FollowUps??[]),{sourceId:FIEND_DARK_ONES_OWN_LUCK_FEATURE_ID,families:["ability-check","saving-throw"],trigger:"after-roll",modification:{mode:"add-die",diceSides:10},payment:{resourceId:darkOnesOwnLuck.id,amount:1,consumeWhen:"accept"},presentation:{optionName:"어둠의 존재의 행운 d10",cost:"사용 횟수 1회",effect:"d10을 판정 총합에 더합니다.",source:"SRD 5.2.1 · Fiend Patron · Dark One's Own Luck"}}];
+  }
+  if(bardLevel>=14&&character.subclassIds?.[BARD_ID]===BARD_COLLEGE_LORE_SUBCLASS_ID&&inspiration){
+    const sides=bardicInspirationDieSides(bardLevel);actions.at(-1)!.runtimeD20FollowUps=[...(actions.at(-1)!.runtimeD20FollowUps??[]),{sourceId:LORE_PEERLESS_SKILL_SOURCE,families:["ability-check","attack-roll"],trigger:"failure",modification:{mode:"add-die",diceSides:sides},payment:{resourceId:inspiration.id,amount:1,consumeWhen:"success"},presentation:{optionName:`비할 데 없는 기술 d${sides}`,cost:"성공 시 바드의 영감 1회",effect:`d${sides}을 더합니다. 실패가 유지되면 영감을 소비하지 않습니다.`,source:"SRD 5.2.1 · College of Lore · Peerless Skill"}}];
   }
   return actions;
 }

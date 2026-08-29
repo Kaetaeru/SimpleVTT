@@ -26,7 +26,7 @@ import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";
 const PEER="peer.r2.remote-peerless-skill";
 const RECONNECT_PEER="peer.r2.remote-peerless-skill.reconnect";
 const CHARACTER_ID="char.r2.remote-peerless-skill";
-const INTERRUPT_ID="follow-up.bard.college-of-lore.peerless-skill";
+const INTERRUPT_ID="follow-up.d20-modification";
 type ResolvedCatalogEntry=CatalogEntry & {contentId?:string};
 type MutableAdapterState={activeCharacter:CharacterSheet;characters:CharacterSummary[];scene:SceneVm};
 

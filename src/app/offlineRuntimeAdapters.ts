@@ -77,7 +77,6 @@ import "./effectGrantActionRuntimeAdapter";
 import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
 import "./d20FollowUpRuntimeAdapter";
 import "./fighterIndomitableFollowUpRuntimeAdapter";
-import "./bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter";
 import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";

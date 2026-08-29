@@ -147,6 +147,7 @@ export function resolveAttackRollResolution(
     stage:"roll-animation",
     // Attack transaction consumers use index 0 as the selected natural face.
     authoritativeDice,
+    naturalD20:roll.natural,
     rollTotal:roll.total,
     attackTotal:roll.total,
     targetAc:request.target.ac,
