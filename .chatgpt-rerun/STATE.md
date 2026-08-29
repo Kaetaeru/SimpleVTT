@@ -77,9 +77,9 @@ Retained implementation and acceptance evidence:
 - `d9385c1e1ffd670c6da1900cedc3c6f7e9756721`: connected acceptance uses authoritative resolved link endpoints rather than the pre-resolution `actor` binding token.
 - `16741437419c0c80ec1da42df29aece09016eca2`: keeps lifecycle ownership on the granted-entry runtime and removes duplicate top-level lifecycle lowering.
 - C9 Family U Diagnostic run `33279420876`, job `99171917300`, head `612739d4a3f1877b293cb1b4d778724ae4fd220d`: focused `connectedObjectLinkArtifactLifecycleProduction.test.ts` is 2/2 green, proving unknown object/link spawn, AC/HP/threshold/defenses, damage/repair/destruction, relocation/opaque placement, portal/link/tether relations, elapsed cleanup, Host/Client replay, duplicate handling, fresh reconnect, event-native Undo, and identity rename invariance.
-- The same diagnostic's `npm run build` reached TypeScript and failed only in pre-existing/touched-by-other-slices files (`connectedActionRoutingAdapter.ts`, `realActivityProjectionService.ts`, `resolutionEventUndo.ts`, `commonPlayEffectRuntime.ts`), not Family U files. Those failures are classified separately and no full-build green is claimed for this head.
 - `525ac6204f4e966502654ea46393be313683f36a`: ledger promotion to `IMPLEMENTED` with implementation/production/identity/connected/persistence evidence.
 - `86e9b08b3af1d2eff9965abf4010c9485809f76c`: removes the temporary promotion helper workflow after the durable ledger write.
+- `9f0fb6d59bc816d037ea108f38cb34cd8f33aa41`: closes the shared turn-clock/life/effect TypeScript narrowing drift without changing mechanics. C9 Runtime Type Narrowing Fix run `33279701060`, job `99172653860`, passed the focused C9 production slices, `npx tsc --noEmit`, and `npx vite build`, then committed the verified source fix.
 
 ## Family W audit — actual production projection gap
 
