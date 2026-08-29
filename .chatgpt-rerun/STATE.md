@@ -47,11 +47,12 @@ Current validated C9 checkpoints:
 - `c87402f9`: canonical stored-invocation artifacts resolve arbitrary installed attack/spell payloads off turn with Reaction, exactly-once consumption, Host/Client event replay, reconnect, and Undo.
 - `5308c15e`: movement.relocate executes through the operations lowerer and stored invocation; Ready UI uses the authoritative artifact for installed content; cancel, Undo, and turn-boundary expiry are production-proven.
 - `50498ba6`: held-Concentration loss/release/cancel/Undo is production-proven and Family S stored-invocation-ready is promoted to `IMPLEMENTED`.
+- `458585cf`: installed damage.taken rules are structurally discovered and appended to the originating Resolver transaction with atomic effect consumption, connected replay/reconnect, and Undo.
 
-Latest proof: TypeScript passed; 12/12 lowered-family production/connected, 4/4 stored-invocation domain, and 6/6 representative composition regressions passed. Coverage is now `IMPLEMENTED=1`, `INCOMPLETE=35`. Legacy non-Common-Play Ready remains migration debt; unknown portable content does not select or fall through to it. Code checkpoint is `50498ba6`.
+Latest proof: TypeScript passed; 14/14 lowered-family production/connected and 6/6 persistent-effect domain regressions passed. Coverage remains truthfully `IMPLEMENTED=1`, `INCOMPLETE=35`; Families N/P gained production evidence but are not promoted beyond their tested event matrix. Code checkpoint is `458585cf`.
 
 ## Next Exact Action
 
-Build one canonical production event dispatcher for installed automatic/triggered Common Play definitions, starting with committed damage events feeding persistent effect rules. Prove arbitrary identity, frequency, Host/Client event convergence, reconnect, and Undo without a named feature adapter; then reconcile Families N and P without premature promotion.
+Connect canonical Zone membership/event operations to installed production: manual enter/leave plus turn-start/end dispatch must reuse commonPlayZoneRuntime frequency markers, then prove arbitrary identity, duration cleanup, Host/Client replay/reconnect, and Undo. Reconcile Families P/T only to the evidence actually obtained.
 
 C8 Core is complete locally. C9 is active and Gate N is blocked by 36 `INCOMPLETE` ledger rows. Overall verdict: `V1 INCOMPLETE`.

@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 5,
   "status": "continue",
-  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint 50498ba6 proves held-Concentration loss/release/cancel/Undo through installed production and promotes only Family S to IMPLEMENTED. TypeScript and 22 focused production/domain regressions are green; coverage is IMPLEMENTED=1, INCOMPLETE=35. Next: connect installed automatic/triggered definitions to one production event dispatcher, beginning with damage-fed persistent effects and full connected/reconnect/Undo proof.",
+  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint 458585cf composes installed damage.taken rules into the originating Resolver transaction and proves atomic effect consumption, Host/Client replay, reconnect, and Undo. TypeScript and 20 focused regressions are green; coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: connect canonical Zone manual membership and turn event dispatch through the existing frequency runtime with connected/reconnect/Undo proof.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-29"
 }
