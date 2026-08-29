@@ -16,7 +16,7 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { decodeConnectedWireMessage } from "../../src/app/connectedSessionWire";
-import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import { readyActionConfigurationFor } from "../../src/app/standardActionReadyState";
 
 const SAVE=JSON.parse(readFileSync(new URL("../fixtures/play-contract/multi-target-save-damage.json",import.meta.url),"utf8"));
@@ -76,6 +76,15 @@ function storedMovementCaptureConfig(prefix:string) {
   };
 }
 
+function storedConcentrationCaptureConfig(prefix:string) {
+  const config=storedCaptureConfig(prefix);
+  const initial=config.artifactTemplates[0].initialState as Record<string,unknown>;
+  initial.concentrationGroupId="held-spell";
+  initial.onTriggerConcentration="end";
+  config.id=`${prefix}.ready-concentration-capture`;
+  return config;
+}
+
 function payload(prefix="unknown-gate-n",paidIndex?:number) {
   const moduleId=`${prefix}.module`;
   const entries=[
@@ -88,6 +97,7 @@ function payload(prefix="unknown-gate-n",paidIndex?:number) {
     {id:`${prefix}.ready-capture-content`,category:"option",name:"Unknown Prepare Bolt",config:storedCaptureConfig(prefix)},
     {id:`${prefix}.ready-movement-payload-content`,category:"option",name:"Unknown Held Movement",config:storedMovementPayloadConfig(prefix)},
     {id:`${prefix}.ready-movement-capture-content`,category:"option",name:"Unknown Prepare Movement",config:storedMovementCaptureConfig(prefix)},
+    {id:`${prefix}.ready-concentration-capture-content`,category:"option",name:"Unknown Prepare Concentration",config:storedConcentrationCaptureConfig(prefix)},
   ];
   if(paidIndex!==undefined) Object.assign(entries[paidIndex].config,{
     payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
@@ -364,6 +374,54 @@ test("stored invocation expires at the owner's next turn start without firing",a
   assert.equal(snapshot.scene.currentActorId,"char.aelar");
   assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),false);
   assert.equal(snapshot.scene.actionsByActor["char.aelar"]?.some((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id)),false);
+});
+
+test("installed held-Concentration stored spell rejects after loss and restores release/cancel through Undo",async()=>{
+  const prefix="unknown-stored-concentration";
+  const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
+  const seedConcentration=(active:boolean)=>{
+    const before=snapshotAdapterTurnRuntimeState(adapter,(adapter as unknown as {scene:Parameters<typeof snapshotAdapterTurnRuntimeState>[1]}).scene)!;
+    const next=structuredClone(before);
+    next.concentration["char.aelar"]=active?{actorId:"char.aelar",groupId:"held-spell",sourceId:`${prefix}.ready-payload`}:undefined;
+    next.revision+=1;
+    assert.equal(commitAdapterTurnRuntimeState(adapter,(adapter as unknown as {scene:Parameters<typeof snapshotAdapterTurnRuntimeState>[1]}).scene,before.revision,next),true);
+  };
+  seedConcentration(true);
+  await adapter.resolveAction(action(9,"prepare"),["char.aelar"]);
+  await adapter.endTurn();
+  let snapshot=await adapter.getSnapshot();
+  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id));
+  assert.ok(trigger);
+  const hpBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+
+  seedConcentration(false);
+  await adapter.resolveAction(trigger.id,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hpBefore);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,true);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),true);
+
+  seedConcentration(true);
+  await adapter.setQueuedD20(20);
+  await adapter.resolveAction(trigger.id,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.ok(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp<hpBefore);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.concentration["char.aelar"],undefined);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hpBefore);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.concentration["char.aelar"]?.groupId,"held-spell");
+
+  const cancel=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCancelActionId(candidate.id));
+  assert.ok(cancel);
+  await adapter.resolveAction(cancel.id,["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.concentration["char.aelar"],undefined);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),false);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.concentration["char.aelar"]?.groupId,"held-spell");
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),true);
 });
 
 test("summoned Actor projects and executes its portable Common Play action with economy and Undo",async()=>{
