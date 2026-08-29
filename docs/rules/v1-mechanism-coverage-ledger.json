@@ -951,7 +951,7 @@
         "commonPlayZoneRuntime.test.ts",
         "Gate D"
       ],
-      "currentState": "Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/stay/start/end-turn events, canonical frequency, elapsed cleanup, damage/effect trigger lowering, atomic Undo, Host/Client replay, duplicate replay, fresh reconnect, and arbitrary identity.",
+      "currentState": "Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/stay/start/end-turn events, canonical frequency, elapsed cleanup, damage/effect trigger lowering, atomic Undo, Host/Client replay, duplicate replay, and fresh reconnect. Provider stay is an explicit authoritative fact and Core does not infer geometry.",
       "requiredSemantics": [
         "spawn",
         "placement",
@@ -978,7 +978,8 @@
         "installedCommonPlayLoweredFamiliesProduction.test.ts Zone membership, damage/effect, and Undo",
         "connectedTurnResolutionEventTransport.test.ts arbitrary Zone turn lifecycle and elapsed cleanup",
         "connectedSpatialZoneMembershipProduction.test.ts authoritative spatial enter/leave/stay/placement production",
-        "UI run 33279041449 step 17 SUCCESS after zone.stay ingress restoration"
+        "UI run 33279041449 step 17 SUCCESS after zone.stay ingress restoration",
+        "connectedSpatialZoneStayProduction.test.ts authoritative provider stay through canonical connected events"
       ],
       "identityInvarianceEvidence": [
         "commonPlayZoneRuntime.test.ts",
@@ -989,12 +990,14 @@
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts Zone Host/Client membership and Undo convergence",
         "connectedTurnResolutionEventTransport.test.ts turn lifecycle and elapsed cleanup Host/Client convergence, duplicate replay, reconnect, and Undo",
-        "connectedSpatialZoneMembershipProduction.test.ts spatial membership/stay Host/Client convergence, duplicate replay, reconnect, outside facts, placement, and Undo"
+        "connectedSpatialZoneMembershipProduction.test.ts spatial membership/stay Host/Client convergence, duplicate replay, reconnect, outside facts, placement, and Undo",
+        "connectedSpatialZoneStayProduction.test.ts Host/Client stay convergence, duplicate replay, reconnect, and Undo"
       ],
       "persistenceEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts Zone new-replica event replay",
         "connectedTurnResolutionEventTransport.test.ts ordered reconnect reconstruction of Zone turn and elapsed cleanup events",
-        "connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for authoritative spatial membership/stay"
+        "connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for authoritative spatial membership/stay",
+        "connectedSpatialZoneStayProduction.test.ts fresh reconnect reconstruction of stay event history"
       ],
       "remainingNamedSeams": [
         "named persistent aura/zone migration debt; unknown portable Common Play does not select or fall through to it"
