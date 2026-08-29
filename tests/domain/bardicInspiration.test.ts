@@ -105,6 +105,8 @@ test("using Bardic Inspiration after a failed d20 test always consumes the effec
     id:"bard.inspire.use",
     actorId:"goblin",
     expectedRevision:1,
+    family:"ability-check",
+    naturalFace:9,
     failedTotal:11,
     target:15,
     dieFace:5,

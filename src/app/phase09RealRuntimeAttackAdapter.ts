@@ -119,6 +119,7 @@ function build(
         source:manual.source,
       } : undefined,
       attackD20Face,
+      attackModifierContributions:resolution.rollModifierContributions,
       effectiveTargetAc,
       attackFact,
       targetingFact,

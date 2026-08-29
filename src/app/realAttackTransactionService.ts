@@ -41,6 +41,7 @@ export interface AtomicAttackTransactionRequest {
   damageReduction?:number;
   damageReductionSource?:string;
   attackD20Face:number;
+  attackModifierContributions?:Array<{source:string;value:number}>;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
   targetingFact:(Phase09TargetingFact & { authority?:"authoritative";provenance?:string[] })|{authority:"manual-unconstrained";provenance:string[]};
@@ -292,10 +293,10 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       sides:20,
       faces:[request.attackD20Face],
     },
-    attackModifierContributions:[{
-      source:`action:${request.action.id}:attack-bonus`,
-      value:request.action.attackBonus ?? 0,
-    }],
+    attackModifierContributions:[
+      {source:`action:${request.action.id}:attack-bonus`,value:request.action.attackBonus??0},
+      ...(request.attackModifierContributions??[]),
+    ],
     requiresSight:true,
     baseDamage:{
       sourceId:request.action.id,

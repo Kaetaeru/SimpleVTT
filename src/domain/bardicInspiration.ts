@@ -1,9 +1,9 @@
 import { requireCombatant, type RulesRuntimeState } from "./combatState";
-import type { EffectInstance } from "./effects";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import { findResource, type ResourceRecovery } from "./resources";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
+import { resolveConsumeD20BonusEffect, type ConsumeD20BonusEffectRequest } from "./consumableD20BonusEffect";
 
 export const BARD_ID = "dnd.srd521.class.bard";
 export const BARDIC_INSPIRATION_RESOURCE_ID = "resource:bard.bardic-inspiration";
@@ -116,7 +116,14 @@ export function compileGrantBardicInspiration(state:RulesRuntimeState,request:Gr
         kind:"marker",
         tags:[BARDIC_INSPIRATION_EFFECT_TAG],
         duration:{ kind:"hours", amount:1 },
-        metadata:{ dieSides:bardicInspirationDieSides(request.bardLevel),displayName:"바드의 영감",publicLabel:`바드의 영감 · d${bardicInspirationDieSides(request.bardLevel)}` },
+        metadata:{
+          dieSides:bardicInspirationDieSides(request.bardLevel),
+          displayName:"바드의 영감",
+          publicLabel:`바드의 영감 · d${bardicInspirationDieSides(request.bardLevel)}`,
+          d20FollowUp:"failed-test-add-die",
+          d20Families:"ability-check,saving-throw,attack-roll",
+          consumeOnUse:true,
+        },
       },
     },
   );
@@ -141,15 +148,7 @@ export function resolveGrantBardicInspiration(
   }
 }
 
-export interface UseBardicInspirationRequest {
-  id:string;
-  actorId:string;
-  expectedRevision:number;
-  failedTotal:number;
-  target:number;
-  dieFace:number;
-  effectId?:string;
-}
+export type UseBardicInspirationRequest=ConsumeD20BonusEffectRequest;
 
 export interface BardicInspirationCheckResult {
   initialTotal:number;
@@ -160,59 +159,21 @@ export interface BardicInspirationCheckResult {
   effectId:string;
 }
 
-function inspirationEffect(state:RulesRuntimeState,request:UseBardicInspirationRequest):EffectInstance {
-  const effect = request.effectId
-    ? state.effects.find((entry) => entry.id === request.effectId)
-    : bardicInspirationEffectForTarget(state,request.actorId);
-  if (!effect || effect.targetId !== request.actorId || !effect.tags.includes(BARDIC_INSPIRATION_EFFECT_TAG)) {
-    throw new DomainEvaluationError("Bardic Inspiration effect not found for the acting creature");
-  }
-  return effect;
-}
-
 export function resolveUseBardicInspiration(
   profile:RulesProfileLike,
   state:RulesRuntimeState,
   request:UseBardicInspirationRequest,
 ):ResolutionCommit & { check?:BardicInspirationCheckResult } {
-  try {
-    requireCombatant(state,request.actorId);
-    if (!Number.isFinite(request.failedTotal) || !Number.isFinite(request.target) || request.failedTotal >= request.target) {
-      throw new DomainEvaluationError("Bardic Inspiration can only follow a failed d20 test");
-    }
-    const effect = inspirationEffect(state,request);
-    const sides = Number(effect.metadata?.dieSides);
-    if (!Number.isInteger(sides) || ![6,8,10,12].includes(sides)) throw new DomainEvaluationError("Bardic Inspiration effect has an invalid die size");
-    if (!Number.isInteger(request.dieFace) || request.dieFace < 1 || request.dieFace > sides) {
-      throw new DomainEvaluationError(`Bardic Inspiration requires one fixed d${sides} face`);
-    }
-    const finalTotal = request.failedTotal + request.dieFace;
-    const check:BardicInspirationCheckResult = {
-      initialTotal:request.failedTotal,
-      target:request.target,
-      bonus:request.dieFace,
-      finalTotal,
-      outcome:finalTotal >= request.target ? "success" : "failure",
-      effectId:effect.id,
-    };
-    const commit = resolvePendingResolution(profile,state,{
-      id:request.id,
-      actorId:request.actorId,
-      sourceId:BARDIC_INSPIRATION_SOURCE,
-      expectedRevision:request.expectedRevision,
-      operations:[
-        {
-          id:`${request.id}:roll`,
-          kind:"damage-roll",
-          request:{ dice:[{ source:BARDIC_INSPIRATION_SOURCE, count:1, sides, faces:[request.dieFace] }] },
-        },
-        { id:`${request.id}:consume`, kind:"remove-effect", effectId:effect.id },
-      ],
-    });
-    return { ...commit, check };
-  } catch (error) {
-    return { status:"rejected", state, events:[], results:{}, error:error instanceof Error ? error.message : String(error) };
-  }
+  const committed=resolveConsumeD20BonusEffect(profile,state,request);
+  if(committed.status==="rejected"||!committed.test||!committed.effect)return committed;
+  return {...committed,check:{
+    initialTotal:request.failedTotal,
+    target:request.target,
+    bonus:request.dieFace,
+    finalTotal:committed.test.total,
+    outcome:committed.test.outcome,
+    effectId:committed.effect.id,
+  }};
 }
 
 export interface FontOfInspirationSlotRecoveryRequest {

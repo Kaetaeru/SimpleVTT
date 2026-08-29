@@ -74,7 +74,7 @@ import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
 import "./unarmedControlRuntimeAdapter";
 import "./bardicInspirationActionRuntimeAdapter";
-import "./bardicInspirationFollowUpRuntimeAdapter";
+import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
 import "./fighterTacticalMindFollowUpRuntimeAdapter";
 import "./fighterIndomitableFollowUpRuntimeAdapter";
 import "./warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter";

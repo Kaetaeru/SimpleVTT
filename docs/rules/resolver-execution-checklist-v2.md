@@ -575,11 +575,12 @@ Verified migration slices:
 - [x] Host-mounted and owning-Client Characters now receive weapon ability/range facts and the inactive Rage action from the same pure Character action projection; the redundant active-Character-only weapon post-processor was deleted, and the complete connected UI suite proves initial action-bar parity plus inventory/Undo/retry convergence;
 - [x] deterministic runtime attack dice are derived only from authored dice structure, never from the presentation-only `average` field; the full build exposed and now proves the Rogue Uncanny Dodge raw/halved damage contract alongside the atomic attack rename proof;
 - [x] the atomic self-healing adapter no longer recognizes `action.second-wind`; any non-item, non-spell authored self-healing action uses the same HP/economy/resource/event/Undo transaction, with an unknown action-ID production proof;
+- [x] the named Bardic Inspiration attack follow-up adapter was replaced by a structural consumable d20-bonus Effect path; generic d20 recalculation, Effect consumption, atomic attack preview parity, connected replay, Undo, and a fully renamed external Effect now share one execution path without the former action mutation or pending WeakMap;
 - [x] focused atomic save, Indomitable Host/Client/Undo, legacy boundary, TypeScript, and the 79-scenario Common Play composition suite pass.
 
 Remaining boundary:
 
-- the named Indomitable offer/payment/reroll orchestration adapter and the other named post-roll adapters remain `LEGACY_EXECUTION`;
+- the named Indomitable offer/payment/reroll orchestration adapter and the remaining Tactical Mind, Cutting Words, Peerless Skill, and Dark One's Own Luck post-roll adapters remain `LEGACY_EXECUTION`;
 - named legacy spell/class consumers still call the compatibility targeting provider that fabricates mapless facts; only the canonical attack/concentration transaction is migrated by this slice;
 - no coverage-ledger row is promoted by this bounded migration alone.
 

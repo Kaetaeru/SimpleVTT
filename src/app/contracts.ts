@@ -383,6 +383,7 @@ export interface ResolutionView {
   rollKind: "attack" | "check" | "save" | "damage" | "healing" | "effect";
   stage: ResolutionStage;
   authoritativeDice: number[];
+  rollModifierContributions?: Array<{source:string;value:number}>;
   rollTotal?: number;
   checkTarget?:number;
   checkOutcome?:"성공"|"실패";
