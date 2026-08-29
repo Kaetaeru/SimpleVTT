@@ -90,6 +90,9 @@ import "./abilityCheckResolutionEventAdapter";
 // the canonical check event with its session economy/effect changes instead of replacing it.
 import "./sessionStatusEffectEventRuntimeAdapter";
 import "./abilityCheckDcRuntimeAdapter";
+// Portable passive Common Play interceptors must observe the fully adjudicated d20
+// presentation, then lower into the existing Gate A reaction kernel before final commit.
+import "./commonPlayInterceptorProductionRuntimeAdapter";
 // Human-acceptance projection stays outermost: it materializes the remaining legacy
 // reference Character summary, keeps the reference demo melee-playable, and projects
 // runtime spatial legality into targetable attack options without changing mechanics authority.
