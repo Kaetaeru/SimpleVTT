@@ -1436,7 +1436,7 @@
         "session actor/object topology",
         "movement and d20 kernels"
       ],
-      "currentState": "Kernel-only mount validation covers rider/mount identity, relative size, controller identity, a movement-cost datum, controlled action IDs, and fall-off outcome. Generic actor/object/link artifacts separately cover controller identity, shared/independent actor initiative data, object AC/HP/threshold/repair, and links, but the persisted Common Play contract has no mount/vehicle relationship or crew/capacity vocabulary and production has no authoritative rider-mount topology/turn ownership transaction. Composing these pieces now would invent controlled-vs-independent initiative, mount/dismount, capacity/crew, and persistence policy.",
+      "currentState": "Kernel validation defines rider/mount/controller identity, size relation, controlled versus independent mode, movement cost, controlled action IDs, and fall-off/Prone outcome. Existing actor/object/link artifacts separately provide controller/initiative and vehicle-like HP/AC/threshold/repair pieces, but the persisted Common Play contract does not define a mount/vehicle relationship and live TurnRuntime has no authoritative rider-mount topology owner. Mount/dismount cost, controlled initiative/action substitution, fall-off save dispatch, capacity, drawn vehicle, crew/speed, reconnect, and persistence composition remain undefined.",
       "requiredSemantics": [
         "rider/mount link",
         "size",
@@ -1453,19 +1453,18 @@
       "transactionDomain": "Session Actor/Object/Link plus movement and project owners",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "commonPlayMountRuntime.ts",
-        "commonPlayArtifactFamiliesRuntime.test.ts",
-        "commonPlayC6Runtime.test.ts"
+        "commonPlayMountRuntime.ts relationship validation and fall-off outcome",
+        "runtimeArtifact.ts actor/object/link controller, initiative, HP/AC/threshold, repair primitives",
+        "commonPlayC6Runtime.test.ts controlled mount validation/fall-off kernel proof"
       ],
       "productionEvidence": [],
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "persisted portable rider/mount and vehicle crew/capacity contract",
-        "authoritative session rider-mount topology plus mount/dismount transaction and cost ownership",
-        "controlled versus independent initiative/action ownership and fall-off trigger dispatch",
-        "drawn-vehicle capacity/crew/speed composition and durable topology persistence"
+        "persisted portable mount/vehicle relationship and source ownership contract is missing",
+        "live rider-mount topology plus controlled/independent initiative/action and mount/dismount/fall-off authority are undefined",
+        "vehicle capacity, drawn-vehicle crew/speed, and connected persistence composition are undefined"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true

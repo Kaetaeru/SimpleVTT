@@ -137,23 +137,18 @@ Family P remains `INCOMPLETE`, but its prior "portable Recharge policy/die autho
 
 ## Family AC audit — authority contract gap
 
-Family AC (`legendary-lair-special-timing`) remains `INCOMPLETE` after repository-authority audit. This is a missing portable/production authority contract, not a safe adapter-wiring task.
+Family AC (`legendary-lair-special-timing`) remains `INCOMPLETE`: the kernel compiles owner/timing/option/cost, but the persisted Common Play contract has no portable special-action timing definition and live TurnRuntime has no authoritative after-turn/initiative-count event, refresh/order policy, connected owner interaction, or persistence owner. No production policy was invented.
 
-- `commonPlaySpecialTimingRuntime.ts` already compiles owner-authorized `turn-start|turn-end|after-turn|initiative-count` requests, option selection, and atomic pool-resource cost into `PendingResolution`.
-- `commonPlayC6Runtime.test.ts` proves the kernel after-turn owner/cost path only.
-- `schemas/common-play-contract.schema.json` does not persist an AC special-action/timing definition, so an unknown external RuleModule cannot currently carry the kernel contract through import/rehydration.
-- `realTurnRuntimeService.ts` retains ordered actor IDs and emits ordinary end-turn/begin-turn transitions; it does not define authoritative `after-turn`/`initiative-count` special-action events.
-- No repository contract currently owns legendary/lair pool refresh, simultaneous special-action ordering, connected owner decision/reconnect, or persistence semantics. Adding those policies inside an adapter would violate the architecture charter.
-- No production source was changed for AC. Coverage remains `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty.
+## Family AD audit — authority contract gap
 
-## Family AC audit — authority contract missing
+Family AD (`mount-vehicle-controller`) remains `INCOMPLETE` after repository-authority audit. The existing mount kernel and artifact primitives are insufficient to claim a production mount/vehicle composition.
 
-Family AC (`legendary-lair-special-timing`) remains `INCOMPLETE`. `commonPlaySpecialTimingRuntime.ts` already compiles owner-authorized turn/after-turn/initiative-count events, option cost, and payload into the generic Resolver, but this is kernel-only. The persisted Common Play schema does not define special-action timing/initiative-count authoring, and authoritative `RuntimeClock` contains round/elapsed/active-actor/phase but no initiative-count datum. Production therefore has no repository-defined event source, refresh/order policy, or connected off-turn interaction owner for portable legendary/lair timing. Adding a dispatcher now would invent semantics forbidden by the charter.
-
-## Family AD audit — mount/vehicle authority contract missing
-
-Family AD (`mount-vehicle-controller`) remains `INCOMPLETE`. `commonPlayMountRuntime.ts` is a kernel validator only. Actor/object/link artifacts provide reusable controller, initiative, object durability/repair, and topology primitives, but the persisted Common Play schema has no rider/mount or vehicle crew/capacity relationship, and production has no authoritative transaction defining mount/dismount cost, controlled-vs-independent turn ownership, fall-off dispatch, capacity/crew, or durable rider/vehicle topology. Treating existing artifact fields as those rules would invent policy forbidden by the charter.
+- `commonPlayMountRuntime.ts` validates rider/mount/controller identities, size, mode, movement cost, controlled action IDs, and a pure fall-off/Prone outcome.
+- `runtimeArtifact.ts` separately supplies actor controller/initiative plus object HP/AC/damage-threshold/repair and generic link primitives, but none of those contracts defines a rider-mount relationship or mounted-combat ownership.
+- `schemas/common-play-contract.schema.json` has no persisted mount/vehicle relationship vocabulary, and `realTurnRuntimeService.ts` has no live mount topology owner.
+- Mount/dismount cost, controlled action/initiative substitution, independent mount behavior, fall-off save dispatch, capacity, drawn-vehicle crew/speed, reconnect, and durable persistence are therefore not repository-defined production semantics.
+- No AD production source was changed. Coverage remains `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty.
 
 ## Next Exact Action
 
-Do not reopen Families S/T/U/AB or the audited authority-blocked P/V/W/X/Y/Z/AA/AC/AD seams. Move to Family AE (`hazards-exposure-environment`): audit whether the existing exposure/environment kernels plus authoritative elapsed clock, effect/damage/save operations, and connected event-native turn progression already define a bounded production composition for falling and one periodic exposure/recovery scenario. If campaign-clock ownership, periodic scheduling, or durable recovery state is not defined, keep AE `INCOMPLETE` and record the exact authority/persistence gap instead of inventing campaign-time policy; otherwise add only the smallest production composition proof.
+Do not reopen Families S/T/U/AB or audited authority-blocked P/V/W/X/Y/Z/AA/AC/AD without a repository-defined authority contract. Audit Family AE (`hazards-exposure-environment`): reconcile the existing exposure/environment/falling kernels with authoritative campaign/session clock ownership, periodic Resolver dispatch, recovery/reset, connected replay/reconnect, and persistence. Implement only an already-defined production composition; if campaign-clock persistence or periodic hazard ownership is undefined, keep AE `INCOMPLETE` with the exact contract gap and continue to the next non-blocked family.
