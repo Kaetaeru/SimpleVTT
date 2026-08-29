@@ -1,6 +1,7 @@
 const PREFIX="installed-common-play:";
 const ARTIFACT_PREFIX="runtime-artifact-common-play:";
 const STORED_INVOCATION_PREFIX="stored-invocation-common-play:";
+const STORED_INVOCATION_CANCEL_PREFIX="stored-invocation-cancel:";
 
 export interface InstalledCommonPlayActionReference {
   catalogId:string;
@@ -48,5 +49,15 @@ export function parseStoredInvocationCommonPlayActionId(actionId:string) {
   const parts=actionId.slice(STORED_INVOCATION_PREFIX.length).split("#");
   if(parts.length!==2||parts.some((part)=>!part)) return null;
   try { return {artifactId:decodeURIComponent(parts[0]),definitionActionId:decodeURIComponent(parts[1])}; }
+  catch { return null; }
+}
+
+export function storedInvocationCancelActionId(artifactId:string) {
+  return `${STORED_INVOCATION_CANCEL_PREFIX}${encodeURIComponent(artifactId)}`;
+}
+
+export function parseStoredInvocationCancelActionId(actionId:string) {
+  if(!actionId.startsWith(STORED_INVOCATION_CANCEL_PREFIX)) return null;
+  try { return {artifactId:decodeURIComponent(actionId.slice(STORED_INVOCATION_CANCEL_PREFIX.length))}; }
   catch { return null; }
 }

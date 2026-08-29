@@ -9,7 +9,7 @@ import "../../src/app/installedContentRuntimeAdapter";
 import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { installedCommonPlayActionId, parseStoredInvocationCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { installedCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -17,6 +17,7 @@ import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } f
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { decodeConnectedWireMessage } from "../../src/app/connectedSessionWire";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+import { readyActionConfigurationFor } from "../../src/app/standardActionReadyState";
 
 const SAVE=JSON.parse(readFileSync(new URL("../fixtures/play-contract/multi-target-save-damage.json",import.meta.url),"utf8"));
 const EFFECT=JSON.parse(readFileSync(new URL("../fixtures/play-contract/persistent-effect-trigger.json",import.meta.url),"utf8"));
@@ -58,6 +59,23 @@ function storedCaptureConfig(prefix:string) {
   };
 }
 
+function storedMovementPayloadConfig(prefix:string) {
+  return {schemaVersion:"0.2-draft",id:`${prefix}.ready-movement-payload`,entryPoints:[{
+    id:"release",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{value:10},destinationFact:{
+      id:"ready-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority",
+    }}],
+  }]};
+}
+
+function storedMovementCaptureConfig(prefix:string) {
+  return {schemaVersion:"0.2-draft",id:`${prefix}.ready-movement-capture`,payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+    entryPoints:[{id:"prepare",invocation:"manual",operations:[{kind:"artifact.spawn",template:"ready-movement"}]}],
+    artifactTemplates:[{id:"ready-movement",artifactKind:"stored-invocation",duration:{kind:"durable"},lifetime:{kind:"until-trigger"},initialState:{
+      ownerActorId:"actor",definitionId:`${prefix}.ready-movement-payload`,entryPointId:"release",definitionRevision:"1",binding:"live",trigger:true,
+    }}],
+  };
+}
+
 function payload(prefix="unknown-gate-n",paidIndex?:number) {
   const moduleId=`${prefix}.module`;
   const entries=[
@@ -68,6 +86,8 @@ function payload(prefix="unknown-gate-n",paidIndex?:number) {
     {id:`${prefix}.actor-action`,category:"option",name:"Unknown Bite",config:actorActionConfig(prefix)},
     {id:`${prefix}.ready-payload-content`,category:"spell",name:"Unknown Held Bolt",config:storedPayloadConfig(prefix)},
     {id:`${prefix}.ready-capture-content`,category:"option",name:"Unknown Prepare Bolt",config:storedCaptureConfig(prefix)},
+    {id:`${prefix}.ready-movement-payload-content`,category:"option",name:"Unknown Held Movement",config:storedMovementPayloadConfig(prefix)},
+    {id:`${prefix}.ready-movement-capture-content`,category:"option",name:"Unknown Prepare Movement",config:storedMovementCaptureConfig(prefix)},
   ];
   if(paidIndex!==undefined) Object.assign(entries[paidIndex].config,{
     payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
@@ -282,6 +302,68 @@ test("stored invocation capture, trigger, and Undo converge through Host-authori
   const hostAfterUndo=await host.getSnapshot();
   assert.equal(reconnectSnapshot.scene.economyByActor["char.aelar"]?.reaction,true);
   assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnected,reconnectSnapshot.scene)?.artifacts,snapshotAdapterTurnRuntimeState(host,hostAfterUndo.scene)?.artifacts);
+});
+
+test("stored invocation executes mapless movement from an actor-authority destination fact",async()=>{
+  const prefix="unknown-stored-movement";
+  const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
+  await adapter.resolveAction(action(8,"prepare"),["char.aelar"]);
+  await adapter.endTurn();
+  let snapshot=await adapter.getSnapshot();
+  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id));
+  assert.ok(trigger);
+  const before=snapshot.scene.economyByActor["char.aelar"]!.movement;
+  await adapter.resolveAction(trigger.id,["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-10);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.ok(snapshot.activity[0]?.stateChanges.some((change)=>change.includes("movement")));
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,true);
+});
+
+test("Ready UI captures an installed Common Play payload without the legacy WeakMap execution path",async()=>{
+  const prefix="unknown-ready-ui";
+  const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
+  const payloadAction=action(5,"release");
+  await adapter.configureReadyAction({actorId:"char.aelar",actionId:payloadAction,trigger:"적이 움직이면"});
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(readyActionConfigurationFor(adapter),undefined);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"&&artifact.metadata?.triggerLabel==="적이 움직이면"),true);
+  const cancel=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCancelActionId(candidate.id));
+  assert.ok(cancel);
+  await adapter.resolveAction(cancel.id,["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),false);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),true);
+  await adapter.endTurn();snapshot=await adapter.getSnapshot();
+  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id));
+  assert.ok(trigger);
+  assert.match(trigger.summary,/적이 움직이면/);
+  await adapter.setQueuedD20(20);
+  await adapter.resolveAction(trigger.id,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),false);
+});
+
+test("stored invocation expires at the owner's next turn start without firing",async()=>{
+  const prefix="unknown-stored-expiry";
+  const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
+  await adapter.resolveAction(action(6,"prepare"),["char.aelar"]);
+  for(let turns=0;turns<10;turns+=1) {
+    await adapter.endTurn();
+    if((await adapter.getSnapshot()).scene.currentActorId==="char.aelar") break;
+  }
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.currentActorId,"char.aelar");
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),false);
+  assert.equal(snapshot.scene.actionsByActor["char.aelar"]?.some((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id)),false);
 });
 
 test("summoned Actor projects and executes its portable Common Play action with economy and Undo",async()=>{

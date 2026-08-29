@@ -5,6 +5,8 @@ import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { TargetingFactInput } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
+import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";
+import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -86,6 +88,7 @@ export type CommonPlayOperation=
   |CommonPlayEconomyModify
   |CommonPlayDamageApply
   |CommonPlayHealingApply
+  |CommonPlayMovementDefinition
   |CommonPlayRollModify;
 
 export interface CommonPlayD20TestDefinition {
@@ -124,6 +127,8 @@ export interface CommonPlayOperationExecutionInput {
   targetingTargets?:TargetingFactInput[];
   creatureKinds?:Record<string,"character"|"monster">;
   damageDiceFaces?:Record<number,number[]>;
+  movementFactAnswers?:Record<number,CommonPlayFactAnswer>;
+  movementProperties?:Record<string,number>;
   interactionResponse?:{
     interactionId:string;
     accepted:true;
@@ -145,6 +150,8 @@ const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
+const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);
+const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
 function object(value:unknown,label:string):Obj {
@@ -255,6 +262,26 @@ function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentIn
 
 function parseOperation(value:unknown,label:string):CommonPlayOperation {
   const operation=object(value,label);
+  if(operation.kind==="movement.relocate") {
+    supportedKeys(operation,MOVEMENT_RELOCATE_KEYS,label);
+    if(operation.mode!=="move"&&operation.mode!=="push"&&operation.mode!=="pull"&&operation.mode!=="teleport") throw new DomainEvaluationError(`${label}.mode is unsupported`);
+    if(operation.movementType!==undefined&&!(["walk","climb","swim","fly","crawl","jump"] as unknown[]).includes(operation.movementType)) throw new DomainEvaluationError(`${label}.movementType is unsupported`);
+    if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);
+    if(operation.doesNotProvokeOpportunityAttacks!==undefined&&typeof operation.doesNotProvokeOpportunityAttacks!=="boolean") throw new DomainEvaluationError(`${label}.doesNotProvokeOpportunityAttacks must be boolean`);
+    const destinationFact=object(operation.destinationFact,`${label}.destinationFact`);
+    supportedKeys(destinationFact,FACT_QUERY_KEYS,`${label}.destinationFact`);
+    if(typeof destinationFact.id!=="string"||!destinationFact.id||destinationFact.fact!=="spatial.legal-destination") throw new DomainEvaluationError(`${label}.destinationFact requires a stable id and spatial.legal-destination`);
+    if(destinationFact.authority!=="host"&&destinationFact.authority!=="actor-owner"&&destinationFact.authority!=="target-owner"&&destinationFact.authority!=="dm"&&destinationFact.authority!=="profile") throw new DomainEvaluationError(`${label}.destinationFact.authority is unsupported`);
+    if(destinationFact.visibility!=="public"&&destinationFact.visibility!=="actor"&&destinationFact.visibility!=="dm"&&destinationFact.visibility!=="actor-and-dm"&&destinationFact.visibility!=="authority-only") throw new DomainEvaluationError(`${label}.destinationFact.visibility is unsupported`);
+    if(destinationFact.unknownPolicy!=="block"&&destinationFact.unknownPolicy!=="request-authority"&&destinationFact.unknownPolicy!=="treat-false"&&destinationFact.unknownPolicy!=="unsupported") throw new DomainEvaluationError(`${label}.destinationFact.unknownPolicy is unsupported`);
+    return {
+      kind:"movement.relocate",mode:operation.mode,movementType:operation.movementType as CommonPlayMovementDefinition["movementType"],target:operation.target,
+      distance:nonNegativeLiteralExpression(operation.distance,`${label}.distance`),
+      ...(operation.costMultiplier===undefined?{}:{costMultiplier:nonNegativeLiteralExpression(operation.costMultiplier,`${label}.costMultiplier`)}),
+      ...(operation.doesNotProvokeOpportunityAttacks===undefined?{}:{doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks===true}),
+      destinationFact:destinationFact as unknown as CommonPlayFactQuery,
+    };
+  }
   if(operation.kind==="roll.modify") {
     supportedKeys(operation,ROLL_MODIFY_KEYS,label);
     const modes=new Set(["advantage","disadvantage","add-die","subtract-die","add-flat","target-add","reroll","replace","minimum"]);
@@ -567,6 +594,14 @@ export function compileCommonPlayEntryPointOperations(
         targetId:hpOperationTarget(operation.target,input),
         amount:literalInteger(operation.amount,"healing.apply amount"),
       });
+      continue;
+    }
+
+    if(operation.kind==="movement.relocate") {
+      const definition={...operation,target:input.actorId,destinationFact:{...operation.destinationFact!,subject:operation.destinationFact!.subject==="actor"||operation.destinationFact!.subject==="self"?input.actorId:operation.destinationFact!.subject}};
+      const compiled=compileCommonPlayMovement({id:operationId,definition,answer:input.movementFactAnswers?.[index],properties:input.movementProperties});
+      if(compiled.status!=="compiled") throw new DomainEvaluationError(compiled.reason);
+      operations.push(compiled.operation);
       continue;
     }
 

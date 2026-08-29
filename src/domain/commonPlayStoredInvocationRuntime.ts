@@ -15,6 +15,7 @@ export interface CommonPlayStoredInvocationCapture {
   expiry?:RuntimeArtifactExpiry;
   concentrationGroupId?:string;
   onTriggerConcentration?:"retain"|"end";
+  metadata?:Record<string,string|number|boolean>;
   captureOperations?:ResolutionOperation[];
 }
 
@@ -55,6 +56,7 @@ export function compileCommonPlayStoredInvocationCapture(
           id:artifactId,sourceId:request.definitionId,sourceActorId:request.actorId,templateId:request.entryPointId,
           artifactKind:"stored-invocation",
           expiry:request.expiry??{kind:"turn-boundary",actorId:request.actorId,round:state.clock.round+1,boundary:"start"},
+          ...(request.metadata?{metadata:structuredClone(request.metadata)}:{}),
           storedInvocation:{
             ownerActorId:request.actorId,definitionId:request.definitionId,entryPointId:request.entryPointId,
             binding:request.binding,definitionRevision:request.definitionRevision,trigger:structuredClone(request.trigger),
