@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 6,
   "status": "continue",
-  "reason": "C8 Core is complete locally and C9 Gate N implementation is active. Checkpoint b659b063 connects arbitrary installed Zone manual enter/leave actions to canonical membership, frequency, damage, Host/Client replay, reconnect, and Undo. TypeScript and 25 focused regressions are green; coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: compose Zone turn-start/end rules atomically into authoritative turn transitions and prove duration cleanup.",
+  "reason": "C8 Core is complete and C9 Gate N coverage implementation remains active. Checkpoint eb2559cf makes begin/end/advance-time clocks canonical reversible StateChanges and adds focused event-native Undo proof; 641c00fe already composes installed Zone turn-start/end operations into the authoritative turn PendingResolution. Coverage remains IMPLEMENTED=1, INCOMPLETE=35. Next: carry those turn ResolutionEvents through connected mode-transition and prove arbitrary Zone Host/Client replay, reconnect, Undo, frequency, and duration cleanup before reconciling Families P/T.",
   "task_id": "v1-common-play-c8-rerun",
-  "updated_at": "2026-08-29"
+  "updated_at": "2026-08-30"
 }
