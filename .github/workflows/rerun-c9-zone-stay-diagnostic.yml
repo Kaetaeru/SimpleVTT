@@ -1,0 +1,24 @@
+name: C9 Spatial Zone Stay Diagnostic
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - "tests/ui/connectedSpatialZoneStayProduction.test.ts"
+      - ".github/workflows/rerun-c9-zone-stay-diagnostic.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify spatial Zone stay connected acceptance
+        run: npx tsx --test tests/ui/connectedSpatialZoneStayProduction.test.ts
