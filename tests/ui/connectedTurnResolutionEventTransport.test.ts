@@ -25,6 +25,7 @@ function connectClient(adapter:MockAdapter,sessionId:string) {
 
 test("connected turn projection carries and replays the exact authoritative lifecycle ResolutionEvents",async()=>{
   const host=new MockAdapter();
+  await host.startInitiative();
   const state=connectedStateFor(host);
   const sessionId="session.turn-resolution-events";
   state.mode="host";
@@ -35,8 +36,6 @@ test("connected turn projection carries and replays the exact authoritative life
   const originalSend=tauriSessionTransport.send;
   tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
   try {
-    await host.startInitiative();
-    wires.length=0;
     await host.endTurn();
   } finally {
     tauriSessionTransport.send=originalSend;
@@ -60,8 +59,10 @@ test("connected turn projection carries and replays the exact authoritative life
 
   const authoritativeHistory=state.ledger.eventsAfter(0);
   const client=new MockAdapter();
+  await client.startInitiative();
   connectClient(client,sessionId);
-  assert.equal((await applyConnectedClientEvents(client,authoritativeHistory)).status,"applied");
+  const clientApplied=await applyConnectedClientEvents(client,authoritativeHistory);
+  assert.equal(clientApplied.status,"applied",JSON.stringify(clientApplied));
   const clientSnapshot=await client.getSnapshot();
   assert.equal(clientSnapshot.scene.round,hostSnapshot.scene.round);
   assert.equal(clientSnapshot.scene.currentActorId,hostSnapshot.scene.currentActorId);
@@ -73,8 +74,10 @@ test("connected turn projection carries and replays the exact authoritative life
   assert.equal((await applyConnectedClientEvents(client,authoritativeHistory)).status,"duplicate");
 
   const reconnect=new MockAdapter();
+  await reconnect.startInitiative();
   connectClient(reconnect,sessionId);
-  assert.equal((await applyConnectedClientEvents(reconnect,authoritativeHistory)).status,"applied");
+  const reconnectApplied=await applyConnectedClientEvents(reconnect,authoritativeHistory);
+  assert.equal(reconnectApplied.status,"applied",JSON.stringify(reconnectApplied));
   const reconnectSnapshot=await reconnect.getSnapshot();
   assert.deepEqual(
     snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)?.clock,
