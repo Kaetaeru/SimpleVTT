@@ -7,6 +7,7 @@ import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const SIMPLEVTT_APP_RULES_PROFILE:RulesProfileLike = {
   profileId:"dnd.srd-5.2.1",
+  roundingPolicy:dndSrdRulesProfile.roundingPolicy as RulesProfileLike["roundingPolicy"],
   properties:{},
   d20Test:{ advantageDisadvantage:{ sameSideStacks:false, opposingCancel:true } },
   economy:dndSrdRulesProfile.economy as RulesProfileLike["economy"],

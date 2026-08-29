@@ -4,7 +4,7 @@ import type { RulesRuntimeState } from "./combatState";
 import type { RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
-import type { TargetFacts } from "./targeting";
+import type { TargetingFactInput } from "./targeting";
 
 type LiteralNumberExpression = { value:number };
 type SaveOutcome = "success"|"failure";
@@ -42,7 +42,7 @@ export interface CommonPlaySaveDamageDefinition {
 }
 
 export interface CommonPlaySaveDamageTargetInput {
-  facts:TargetFacts;
+  facts:TargetingFactInput;
   creatureKind:"character"|"monster";
   save:{
     faces:number[];

@@ -47,7 +47,7 @@ export async function commitProductionRuntimeResolution(
   const internal=adapter as unknown as AdapterState;
   if (committed.status==="rejected") return internal.getSnapshot();
 
-  const projected=applyResolutionEvents(internal.scene,committed.events,internal.activeCharacter.resources);
+  const projected=applyResolutionEvents(internal.scene,committed.events,internal.activeCharacter.resources,internal.activeCharacter.items,state);
   if (projected.status==="rejected") return internal.getSnapshot();
   const writeBack=await persistCharacterResolutionEvents(adapter,committed.events,"forward");
   if (writeBack.status==="rejected") return internal.getSnapshot();
@@ -58,6 +58,7 @@ export async function commitProductionRuntimeResolution(
 
   internal.scene=projected.scene;
   internal.activeCharacter.resources=projected.resources;
+  internal.activeCharacter.items=projected.items;
   const resolution:ResolutionView={
     id:presentation.resolutionId,
     actorId:presentation.actorId,

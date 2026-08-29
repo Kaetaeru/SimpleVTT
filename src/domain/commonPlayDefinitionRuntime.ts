@@ -6,6 +6,7 @@ import {
 import type { CommonPlaySaveDamageDefinition } from "./commonPlayEntryPointRuntime";
 import type { CommonPlayPersistentEffectDefinition } from "./commonPlayEffectRuntime";
 import type { CommonPlayZoneDefinition } from "./commonPlayZoneRuntime";
+import type { CommonPlayArtifactActivationDefinition } from "./commonPlayArtifactRuntime";
 
 type Obj=Record<string,unknown>;
 
@@ -34,7 +35,8 @@ export type LoweredCommonPlayEntryPoint=
   | {kind:"operations";definition:CommonPlayOperationDefinition;entryPointId:string}
   | {kind:"save-damage";definition:CommonPlaySaveDamageDefinition;entryPointId:string}
   | {kind:"effect";definition:CommonPlayPersistentEffectDefinition;entryPointId:string}
-  | {kind:"zone";definition:CommonPlayZoneDefinition;entryPointId:string};
+  | {kind:"zone";definition:CommonPlayZoneDefinition;entryPointId:string}
+  | {kind:"artifacts";definition:CommonPlayArtifactActivationDefinition;entryPointId:string};
 
 const TOP_LEVEL_KEYS=new Set([
   "$schema","schemaVersion","id","requiresCapabilities","castProcess","payments","bindings",
@@ -171,13 +173,15 @@ export function lowerCommonPlay(
   if(operationKinds.has("artifact.spawn")) {
     if([...operationKinds].some((kind)=>kind!=="artifact.spawn")) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact activation operations`);
     const artifactKinds=new Set(templates.map((template)=>template.artifactKind));
-    if(artifactKinds.size!==1||!artifactKinds.has("zone")) {
-      throw new DomainEvaluationError(`Common Play entry point ${entryPointId} references an unsupported artifact family`);
-    }
-    return {
+    if(artifactKinds.size===1&&artifactKinds.has("zone")) return {
       kind:"zone",entryPointId,
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayZoneDefinition,
     };
+    if([...artifactKinds].every((kind)=>kind==="object"||kind==="link"||kind==="actor"||kind==="form")) return {
+      kind:"artifacts",entryPointId,
+      definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
+    };
+    throw new DomainEvaluationError(`Common Play entry point ${entryPointId} references an unsupported artifact family`);
   }
   const test=entryPoint.test as Obj|undefined;
   if(test?.kind==="saving-throw"&&test.roller==="each-target") {

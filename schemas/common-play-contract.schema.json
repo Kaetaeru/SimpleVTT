@@ -531,6 +531,7 @@
         "artifactKind": { "enum": ["effect", "zone", "object", "actor", "link", "form", "stored-invocation", "item"] },
         "duration": { "$ref": "#/$defs/duration" },
         "stateSchema": { "type": "object" },
+        "initialState": { "type": "object" },
         "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
         "grantedEntryPoints": { "type": "array", "items": { "$ref": "#/$defs/entryPoint" } },
         "lifetime": { "$ref": "#/$defs/lifetime" },

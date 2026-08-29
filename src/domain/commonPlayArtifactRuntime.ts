@@ -1,0 +1,130 @@
+import type { RulesRuntimeState } from "./combatState";
+import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
+import { resolvePendingResolution } from "./resolution";
+import type { PendingResolution, ResolutionCommit } from "./resolutionTypes";
+import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest } from "./runtimeArtifact";
+
+type PortableArtifactKind="object"|"link"|"actor"|"form";
+type Obj=Record<string,unknown>;
+
+export interface CommonPlayArtifactActivationDefinition {
+  $schema?:string;
+  schemaVersion:"0.2-draft";
+  id:string;
+  entryPoints:Array<{
+    id:string;
+    invocation:"manual"|"triggered"|"automatic"|"granted";
+    operations:Array<{kind:"artifact.spawn";template:string}>;
+  }>;
+  artifactTemplates:Array<{
+    id:string;
+    artifactKind:PortableArtifactKind;
+    duration:Obj;
+    lifetime:Obj;
+    initialState:Obj;
+  }>;
+}
+
+export interface CommonPlayArtifactActivationInput {
+  resolutionId:string;
+  actorId:string;
+  entryPointId:string;
+  placementRefs?:Record<string,string>;
+}
+
+function object(value:unknown,label:string):Obj {
+  if(!value||typeof value!=="object"||Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an object`);
+  return value as Obj;
+}
+
+function seconds(value:unknown,label:string) {
+  const duration=object(value,label);
+  if(duration.kind==="durable"||duration.kind==="manual"||duration.kind==="instant") return undefined;
+  if(duration.kind!=="elapsed") throw new DomainEvaluationError(`${label}.kind is not connected to runtime artifact expiry`);
+  const amount=object(duration.amount,`${label}.amount`).value;
+  if(typeof amount!=="number"||!Number.isFinite(amount)||amount<0) throw new DomainEvaluationError(`${label}.amount.value must be non-negative`);
+  const multiplier=duration.unit==="seconds"?1:duration.unit==="minutes"?60:duration.unit==="hours"?3600:duration.unit==="days"?86400:undefined;
+  if(!multiplier) throw new DomainEvaluationError(`${label}.unit is unsupported`);
+  return amount*multiplier;
+}
+
+function expiry(state:RulesRuntimeState,template:CommonPlayArtifactActivationDefinition["artifactTemplates"][number]):RuntimeArtifactExpiry {
+  const elapsed=seconds(template.duration,`artifact ${template.id} duration`);
+  if(elapsed!==undefined) return {kind:"time",elapsedSeconds:state.clock.elapsedSeconds+elapsed};
+  const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);
+  if(!["durable","world-persistent","until-destroyed","with-parent","until-source-recast"].includes(String(lifetime.kind))) {
+    throw new DomainEvaluationError(`artifact ${template.id} lifetime is not connected to generic artifact activation`);
+  }
+  return {kind:"permanent"};
+}
+
+function boundId(value:unknown,actorId:string,artifacts:Map<string,string>,label:string) {
+  if(typeof value!=="string"||!value) throw new DomainEvaluationError(`${label} must be a non-empty string`);
+  if(value==="actor") return actorId;
+  if(value.startsWith("artifact:")) {
+    const id=artifacts.get(value.slice("artifact:".length));
+    if(!id) throw new DomainEvaluationError(`${label} references an artifact template that is not spawned by this entry point`);
+    return id;
+  }
+  return value;
+}
+
+function artifact(
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  template:CommonPlayArtifactActivationDefinition["artifactTemplates"][number],
+  input:CommonPlayArtifactActivationInput,
+  artifactIds:Map<string,string>,
+):RuntimeArtifactSpawnRequest {
+  const initial=structuredClone(object(template.initialState,`artifact ${template.id} initialState`));
+  const common={
+    id:artifactIds.get(template.id)!,sourceId:definition.id,sourceActorId:input.actorId,templateId:template.id,
+    artifactKind:template.artifactKind,expiry:expiry(state,template),
+    ...(input.placementRefs?.[template.id]?{placementRef:input.placementRefs[template.id]}:{}),
+  };
+  if(template.artifactKind==="object") return {...common,object:initial as unknown as RuntimeArtifactSpawnRequest["object"]};
+  if(template.artifactKind==="link") {
+    const endpointIds=initial.endpointIds;
+    if(!Array.isArray(endpointIds)||endpointIds.length!==2) throw new DomainEvaluationError(`artifact ${template.id} link endpointIds must contain two bindings`);
+    return {...common,link:{...initial,endpointIds:endpointIds.map((id,index)=>boundId(id,input.actorId,artifactIds,`artifact ${template.id} endpointIds[${index}]`))} as RuntimeArtifactSpawnRequest["link"]};
+  }
+  if(template.artifactKind==="actor") return {...common,actor:{
+    ...initial,
+    ownerId:boundId(initial.ownerId,input.actorId,artifactIds,`artifact ${template.id} ownerId`),
+    controllerId:boundId(initial.controllerId,input.actorId,artifactIds,`artifact ${template.id} controllerId`),
+  } as RuntimeArtifactSpawnRequest["actor"]};
+  return {...common,form:{
+    ...initial,
+    targetActorId:boundId(initial.targetActorId,input.actorId,artifactIds,`artifact ${template.id} targetActorId`),
+    ...(initial.controllerId===undefined?{}:{controllerId:boundId(initial.controllerId,input.actorId,artifactIds,`artifact ${template.id} controllerId`)}),
+  } as RuntimeArtifactSpawnRequest["form"]};
+}
+
+export function compileCommonPlayArtifactActivation(
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  input:CommonPlayArtifactActivationInput,
+):PendingResolution {
+  const entryPoint=definition.entryPoints.find((candidate)=>candidate.id===input.entryPointId);
+  if(!entryPoint||entryPoint.invocation!=="manual"||!entryPoint.operations.length) throw new DomainEvaluationError("artifact activation requires a non-empty manual entry point");
+  const templates=new Map(definition.artifactTemplates.map((template)=>[template.id,template]));
+  const artifactIds=new Map(entryPoint.operations.map((operation,index)=>[operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`]));
+  const operations=entryPoint.operations.map((operation,index)=>{
+    if(operation.kind!=="artifact.spawn") throw new DomainEvaluationError(`entry point ${entryPoint.id} supports only artifact.spawn`);
+    const template=templates.get(operation.template);
+    if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
+    if(!["object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
+    return {id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact" as const,artifact:artifact(state,definition,template,input,artifactIds)};
+  });
+  return {id:input.resolutionId,actorId:input.actorId,sourceId:definition.id,expectedRevision:state.revision,operations};
+}
+
+export function resolveCommonPlayArtifactActivation(
+  profile:RulesProfileLike,
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  input:CommonPlayArtifactActivationInput,
+):ResolutionCommit {
+  try { return resolvePendingResolution(profile,state,compileCommonPlayArtifactActivation(state,definition,input)); }
+  catch(error) { return {status:"rejected",state,events:[],results:{},error:error instanceof Error?error.message:String(error)}; }
+}
