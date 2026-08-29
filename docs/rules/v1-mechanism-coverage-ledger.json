@@ -1436,7 +1436,7 @@
         "session actor/object topology",
         "movement and d20 kernels"
       ],
-      "currentState": "Generic mount validation and existing object/controller/repair pieces exist; full session composition proof missing",
+      "currentState": "Kernel-only mount validation covers rider/mount identity, relative size, controller identity, a movement-cost datum, controlled action IDs, and fall-off outcome. Generic actor/object/link artifacts separately cover controller identity, shared/independent actor initiative data, object AC/HP/threshold/repair, and links, but the persisted Common Play contract has no mount/vehicle relationship or crew/capacity vocabulary and production has no authoritative rider-mount topology/turn ownership transaction. Composing these pieces now would invent controlled-vs-independent initiative, mount/dismount, capacity/crew, and persistence policy.",
       "requiredSemantics": [
         "rider/mount link",
         "size",
@@ -1462,8 +1462,10 @@
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "live mount/vehicle topology projection",
-        "capacity and crew composition proof"
+        "persisted portable rider/mount and vehicle crew/capacity contract",
+        "authoritative session rider-mount topology plus mount/dismount transaction and cost ownership",
+        "controlled versus independent initiative/action ownership and fall-off trigger dispatch",
+        "drawn-vehicle capacity/crew/speed composition and durable topology persistence"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
