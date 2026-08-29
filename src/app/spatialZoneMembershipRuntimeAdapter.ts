@@ -7,12 +7,18 @@ import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { lowerCommonPlay, parseCommonPlayDefinition } from "../domain/commonPlayDefinitionRuntime";
-import { resolveCommonPlayZoneActivation, resolveCommonPlayZoneMembershipChange } from "../domain/commonPlayZoneRuntime";
+import { resolveCommonPlayZoneActivation, resolveCommonPlayZoneEvent, resolveCommonPlayZoneMembershipChange } from "../domain/commonPlayZoneRuntime";
 
 export interface AuthoritativeSpatialZoneMembershipFact {
   artifactId:string;
   subjectId:string;
   present:boolean;
+  provenance:string;
+}
+
+export interface AuthoritativeSpatialZoneStayFact {
+  artifactId:string;
+  subjectId:string;
   provenance:string;
 }
 
@@ -23,10 +29,14 @@ interface AdapterState {
   getSnapshot():Promise<AppSnapshot>;
 }
 
+type PendingSpatialFact=
+  | {actionId:string;kind:"membership";fact:AuthoritativeSpatialZoneMembershipFact}
+  | {actionId:string;kind:"stay";fact:AuthoritativeSpatialZoneStayFact};
+
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const spatialProviders=new WeakSet<MockAdapter>();
-const pendingFacts=new WeakMap<MockAdapter,{actionId:string;fact:AuthoritativeSpatialZoneMembershipFact}>();
+const pendingFacts=new WeakMap<MockAdapter,PendingSpatialFact>();
 
 export function registerAuthoritativeSpatialZoneMembershipProvider(adapter:MockAdapter) {
   spatialProviders.add(adapter);
@@ -37,8 +47,8 @@ export function unregisterAuthoritativeSpatialZoneMembershipProvider(adapter:Moc
   pendingFacts.delete(adapter);
 }
 
-function spatialFactActionId(fact:AuthoritativeSpatialZoneMembershipFact) {
-  return `common-play-zone-spatial-membership:${encodeURIComponent(fact.artifactId)}:${Date.now()}:${Math.floor(Math.random()*1000)}`;
+function spatialFactActionId(kind:"membership"|"stay",artifactId:string) {
+  return `common-play-zone-spatial-${kind}:${encodeURIComponent(artifactId)}:${Date.now()}:${Math.floor(Math.random()*1000)}`;
 }
 
 export async function submitAuthoritativeSpatialZoneMembershipFact(
@@ -47,8 +57,23 @@ export async function submitAuthoritativeSpatialZoneMembershipFact(
 ) {
   if (!spatialProviders.has(adapter)) throw new Error("authoritative spatial Zone membership provider is not registered");
   if (!fact.artifactId||!fact.subjectId||!fact.provenance.trim()) throw new Error("spatial Zone membership fact requires artifactId, subjectId, and provenance");
-  const actionId=spatialFactActionId(fact);
-  pendingFacts.set(adapter,{actionId,fact:structuredClone(fact)});
+  const actionId=spatialFactActionId("membership",fact.artifactId);
+  pendingFacts.set(adapter,{actionId,kind:"membership",fact:structuredClone(fact)});
+  try {
+    return await adapter.resolveAction(actionId,[fact.subjectId]);
+  } finally {
+    if (pendingFacts.get(adapter)?.actionId===actionId) pendingFacts.delete(adapter);
+  }
+}
+
+export async function submitAuthoritativeSpatialZoneStayFact(
+  adapter:MockAdapter,
+  fact:AuthoritativeSpatialZoneStayFact,
+) {
+  if (!spatialProviders.has(adapter)) throw new Error("authoritative spatial Zone membership provider is not registered");
+  if (!fact.artifactId||!fact.subjectId||!fact.provenance.trim()) throw new Error("spatial Zone stay fact requires artifactId, subjectId, and provenance");
+  const actionId=spatialFactActionId("stay",fact.artifactId);
+  pendingFacts.set(adapter,{actionId,kind:"stay",fact:structuredClone(fact)});
   try {
     return await adapter.resolveAction(actionId,[fact.subjectId]);
   } finally {
@@ -142,6 +167,43 @@ async function resolveSpatialMembershipFact(
   });
 }
 
+async function resolveSpatialStayFact(
+  adapter:MockAdapter,
+  actionId:string,
+  fact:AuthoritativeSpatialZoneStayFact,
+) {
+  const internal=adapter as unknown as AdapterState;
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  const artifact=state?.artifacts?.find((candidate)=>candidate.id===fact.artifactId&&candidate.artifactKind==="zone");
+  const membership=state?.zoneMemberships?.find((candidate)=>candidate.artifactId===fact.artifactId);
+  const target=internal.scene.entities.find((candidate)=>candidate.id===fact.subjectId);
+  if (!state||!artifact?.sourceActorId||membership?.authority!=="spatial"||!membership.memberIds.includes(fact.subjectId)||!target||!state.combatants[target.id]) return internal.getSnapshot();
+  const found=await installedZoneActionByDefinition(adapter,artifact.sourceId);
+  if (!found) return internal.getSnapshot();
+  const resolutionId=`common-play-zone-spatial-stay.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const committed=resolveCommonPlayZoneEvent(SIMPLEVTT_APP_RULES_PROFILE,state,found.lowered.definition,{
+    id:resolutionId,
+    kind:"zone.stay",
+    artifactId:artifact.id,
+    subjectId:target.id,
+    subjectCreatureKind:target.kind==="character"?"character":"monster",
+  });
+  if (committed.status==="no-match"||committed.status==="rejected") return internal.getSnapshot();
+  return commitProductionRuntimeResolution(adapter,state,committed,{
+    resolutionId,
+    actionId,
+    actionName:"공간 판정 · 구역 유지",
+    actorId:artifact.sourceActorId,
+    targetIds:[target.id],
+    targetNames:[target.name],
+    compact:`${target.name} · ${artifact.templateId} 유지`,
+    detail:[`${artifact.sourceId} · ${artifact.templateId}`,"zone.stay"],
+    provenance:[fact.provenance,"Common Play zone · authoritative spatial stay"],
+    calculatedOutcome:"구역 유지",
+    finalOutcome:"구역 유지",
+  });
+}
+
 async function installedZoneActionByDefinition(adapter:MockAdapter,definitionId:string) {
   for (const entry of await requiredSessionInstalledContent(adapter,[])) {
     for (const mechanic of entry.mechanics??[]) {
@@ -181,7 +243,9 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithoutManualSpatial
 MockAdapter.prototype.resolveAction=async function resolveAuthoritativeSpatialZoneAction(actionId:string,targetIds:string[]) {
   const pending=pendingFacts.get(this);
   if (pending?.actionId===actionId&&targetIds.length===1&&targetIds[0]===pending.fact.subjectId) {
-    return resolveSpatialMembershipFact(this,actionId,pending.fact);
+    return pending.kind==="stay"
+      ? resolveSpatialStayFact(this,actionId,pending.fact)
+      : resolveSpatialMembershipFact(this,actionId,pending.fact);
   }
   if (spatialProviders.has(this)) {
     const spatialActivation=await resolveSpatialZoneActivation(this,actionId,targetIds);
