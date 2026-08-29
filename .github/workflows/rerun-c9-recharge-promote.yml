@@ -23,6 +23,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Reconfirm Recharge source ancestry
         run: |
           git merge-base --is-ancestor 496b23076958aecdd9e3a15a1938419198a53ba3 HEAD
@@ -73,7 +74,7 @@ jobs:
               'C9 Recharge Production Slice run 33280246505 job 99174086720'
           ]
           row['persistenceEvidenceIfRelevant']=[
-              'retained installed Common Play preview/activation/persistence/rehydration authority from PR #159 exact candidate 1bc7a420b90378804a5b5994fa1ad1f59b963b1',
+              'retained installed Common Play preview/activation/persistence/rehydration authority from PR #159 exact candidate 1bc7a420b90378804a5b5994fa1ad1f59b963b1d',
               'schemas/common-play-contract.schema.json persists resource.recharge inside installed Common Play mechanic config',
               'connectedActorTurnRuleProduction.test.ts installs the unknown Recharge RuleModule through the normal installed-content store'
           ]
