@@ -1,0 +1,42 @@
+name: C9 Audit Checkpoint
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-audit-checkpoint.yml
+
+permissions:
+  contents: write
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - name: Update Rerun state
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path=Path('.chatgpt-rerun/STATE.md')
+          text=path.read_text(encoding='utf-8')
+          marker='## Family AC-AF / AG audit after Recharge regression'
+          if marker not in text:
+              section='''\n## Family AC-AF / AG audit after Recharge regression\n\n- `0537062111c91c4af898802b27ab4a5d1e3cac17` strengthens the already-completed Family AB acceptance fixture so Recharge 5-6 uses the authoritative die boundary, the projected actor action is disabled while the recovered resource is 0, successful Recharge enables it, and invoking it atomically spends Action plus the recovered resource. This is additional regression evidence only; Family AB was already ledger `IMPLEMENTED` before this commit.\n- UI run `33280926167`, job `99175842905`, exact head `0537062111c91c4af898802b27ab4a5d1e3cac17`: connected/live-lifecycle step 17 SUCCESS, 58/58, including the new Recharge availability/consumption Host/Client replay, duplicate, reconnect, and Undo proof. Steps 18-27 are also SUCCESS. Broad Phase09 step 28 remains the inherited 106/118 failure and Typecheck/build step 29 is skipped, so no new full-build green is claimed.\n- Family AC (`legendary-lair-special-timing`) remains `INCOMPLETE`. `commonPlaySpecialTimingRuntime.ts` is only a kernel compiler: persisted `common-play-contract.schema.json` has no `after-turn` or `initiative-count` authoring vocabulary, and the kernel requires a runtime `ownerActorId` without a portable RuleModule binding contract. There is also no repository-defined session initiative-count/off-turn refresh/order dispatcher. Do not invent owner/timing policy in an adapter.\n- Family AD (`mount-vehicle-controller`) remains `INCOMPLETE`. `commonPlayMountRuntime.ts` validates a runtime relationship, but the persisted Common Play schema has no mount relationship vocabulary; live topology/capacity/crew ownership therefore cannot be claimed portable by wiring only a session adapter.\n- Families AE/AF remain `INCOMPLETE`. Exposure/environment kernels exist, but persisted Common Play has no exposure/environment-profile authoring contract; campaign/session clock ownership and breathing/periodic dispatch cannot be fabricated in production.\n- Family AG (`standard-actions`) remains `INCOMPLETE`. Existing production projection already expresses Influence/Search/Study as structural ability checks and several other standard actions as generic effect/check/action semantics, but `productionPlayRuntimeAdapter.ts` still owns built-in standard-action projection and `standardActionReactionAdapter.ts` still owns Ready presentation. Before promotion, prove equivalent unknown portable compositions and that supported external content does not select/fall through to those named projection/workaround paths.\n'''
+              replacement=section+'''\n## Next Exact Action\n\nDo not reopen Families S/T/U/AB. Preserve AC/AD/AE/AF as `INCOMPLETE` until their missing portable authority/authoring contracts are deliberately bounded by the canonical product plan rather than invented in adapters. Continue with Family AG: build the smallest deterministic unknown-identity Common Play proof for the standard-action compositions already supported by generic production (especially Influence/Search/Study/Utilize and the stored-invocation Ready path), then classify whether AG can be `PROVEN_UNNEEDED` as a dedicated primitive or still has a real production fallback gap. Reuse existing C8 Attack/Dash/status/Ready evidence and do not revalidate it unless the new proof touches those surfaces.\n'''
+              text=re.sub(r'\n## Next Exact Action\n[\s\S]*$', replacement, text)
+              path.write_text(text,encoding='utf-8')
+          PY
+      - name: Commit checkpoint and remove helper
+        run: |
+          git config user.name "chatgpt-rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git rm .github/workflows/c9-audit-checkpoint.yml
+          git add .chatgpt-rerun/STATE.md
+          git commit -m "docs(rerun): checkpoint AC through AG audit"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
