@@ -37,28 +37,41 @@ Previously validated C9 checkpoints remain authoritative and must not be repeate
 - `f41fabf3` / `3eddc991` / `7f0de733`: canonical `zone.stay` accepts provider stay facts only for active members and proves once-per-turn frequency, standard connected replay/reconnect, and Undo without membership mutation.
 - `a8698c55`: Family T ledger text reconciled to the stay evidence without promotion.
 
-## Current execution checkpoint
+## Completed Family T checkpoint
 
-Family T (`zones`) is now complete and promoted to `IMPLEMENTED` after closing the remaining effect-operation breadth by composition with the existing generic Effect path. No Zone-specific Effect engine, geometry engine, timer, or transport was added.
+Family T (`zones`) is complete and promoted to `IMPLEMENTED`. No Zone-specific Effect engine, geometry engine, timer, or transport was added.
 
-Source/test/evidence commits:
+- `b503364d`: `commonPlayEffectRuntime.ts` exposes reusable generic `effect.apply -> apply-effect` lowering and effect-template validation.
+- `aa15c643`: `commonPlayZoneRuntime.ts` composes Zone `effect.apply` rules through the same canonical `apply-effect` operation.
+- `c4dabadb`: `commonPlayDefinitionRuntime.ts` retains effect templates referenced transitively from Zone rules.
+- `a614c427`: arbitrary installed Zone effect trigger converges Host/Client, duplicate replay, reconnect, and event-native Undo.
+- `1766dfde`: Family T ledger row promoted to `IMPLEMENTED`; named aura/zone code remains non-fallback migration debt only.
+- `87faf94b`: authoritative spatial provider facts may carry opaque Zone `placementRef` without Core geometry inference.
+- `fda7436c`: connected spatial Zone proof verifies placementRef replay/reconnect alongside existing membership semantics.
 
-- `b503364d`: `commonPlayEffectRuntime.ts` exposes the existing generic `effect.apply -> apply-effect` lowering and effect-template validation as reusable helpers; the original effect activation path uses the same helper.
-- `aa15c643`: `commonPlayZoneRuntime.ts` accepts `effect.apply` as a Zone rule operation targeting `event.subject`, validates referenced effect templates through the shared Effect validator, and emits the same canonical `apply-effect` ResolutionOperation beside Zone damage/frequency operations.
-- `c4dabadb`: `commonPlayDefinitionRuntime.ts` retains effect templates referenced transitively from Zone rules when lowering an installed Zone entry point, so portable import/activation does not lose the effect definition.
-- `a614c427`: `connectedSpatialZoneMembershipProduction.test.ts` extends the arbitrary installed spatial Zone stay rule with an arbitrary effect template and proves the effect is emitted as a canonical Effect StateChange, converges Host/Client, is duplicate-idempotent through the same once-per-turn rule, reconstructs on fresh reconnect, and is removed by event-native Undo while Zone membership remains.
-- `1766dfde`: Family T ledger row is promoted to `IMPLEMENTED`; `remainingNamedSeams` records named persistent aura/zone migration only as legacy debt and explicitly states unknown portable Common Play does not select or fall through to it.
+Exact Family T verification:
 
-Exact verification:
+- UI workflow `33275769385`, job `99162085528`, exact head `a614c427194a0f436a7a3763a48808155d7865f3`: connected/live-lifecycle step 17 SUCCESS for Zone effect breadth; steps 18-27 also SUCCESS; broad Phase09 step 28 remains inherited FAILURE and typecheck/build step 29 was skipped.
+- UI workflow `33276086024`, job `99162952306`, exact head `fda7436c5945d055d0231f9a65b8653e7b622443`: connected/live-lifecycle step 17 SUCCESS for authoritative spatial Zone placement replay; the same inherited broad Phase09 failure remains and build was skipped.
 
-- UI workflow `33275769385`, job `99162085528`, exact head `a614c427194a0f436a7a3763a48808155d7865f3`.
-- Connected/live-lifecycle step 17: SUCCESS with the new Zone effect acceptance together with previously validated membership/stay/turn/duration tests.
+## Current Family P checkpoint
+
+Family P (`trigger-frequency-automatic`) remains `INCOMPLETE`, but the `damage.dealt` event-family slice is now production-proven without a parallel trigger engine.
+
+- `2ad9a9da`: `commonPlayEffectRuntime.ts` generalizes the existing positive-damage effect dispatcher from `damage.taken` to the structurally symmetric `damage.taken | damage.dealt` roles. A `damage.dealt` effect matches the authoritative pending actor, while `damage.taken` continues to match the damage target; both append downstream operations and effect removal into the originating Resolver transaction rather than a second commit.
+- The slice deliberately remains one-shot (`frequency:"once"` + `until-event` lifetime) and does not claim the broader once-per-turn/round/recharge/cooldown matrix already tracked by Family P.
+- `cf5c4d05`: arbitrary external IDs prove installed production semantics for the new `damage.dealt` trigger, including atomic source recoil plus target damage and identity rename invariance.
+- `e673e8ce`: the connected proof is registered in the existing UI live-lifecycle workflow.
+
+Exact Family P slice verification:
+
+- UI workflow `33276209929`, job `99163290985`, exact head `e673e8cee93fa0e173c724f5e15d10f45a2cbb79`.
+- Connected/live-lifecycle step 17: SUCCESS, proving Host/Client convergence, duplicate replay idempotence, ordered reconnect reconstruction, and event-native Undo for the arbitrary installed `damage.dealt` effect.
 - Steps 18-27 also completed successfully.
-- Broad Phase09 step 28 remains FAILURE on the inherited broad regression set; Typecheck/build step 29 was skipped by fail-fast and is not claimed green.
-- The docs-only Family T promotion commit `1766dfde` did not add new product code; no new checker/build-green claim is inferred solely from that documentation commit.
+- Broad Phase09 step 28 remains the inherited FAILURE and typecheck/build step 29 is skipped; no full-build green is claimed.
 
-Coverage is now `IMPLEMENTED=2`, `INCOMPLETE=34`, `PROVEN_UNNEEDED=0`: Families S and T are final. `gateNBlockingNamedFallbacks` remains empty. Gate N remains blocked by the other 34 `INCOMPLETE` rows. Overall verdict: `V1 INCOMPLETE`.
+Coverage remains `IMPLEMENTED=2`, `INCOMPLETE=34`, `PROVEN_UNNEEDED=0`: Families S and T are final; P is still incomplete. `gateNBlockingNamedFallbacks` remains empty. Gate N remains blocked by the other incomplete rows. Overall verdict: `V1 INCOMPLETE`.
 
 ## Next Exact Action
 
-Continue with Family P (`trigger-frequency-automatic`) without repeating the now-final Zone matrix. Audit its required event-family list against the existing structural event producers and representative Common Play proofs, then choose the smallest already-modeled event family that lacks production dispatch and route it through the existing `commonPlayFrequencyRuntime`/Resolver transaction rather than adding a parallel trigger engine. Preserve atomic frequency markers, arbitrary-ID identity, connected replay/reconnect, and Undo. If the audit shows a missing event semantic rather than a missing dispatcher/composition seam, stop for architecture review before adding a new primitive.
+Continue Family P without repeating the final Zone matrix or the now-proven `damage.taken/dealt` slice. Audit the remaining required event families against typed existing ResolutionOperations/ResolutionEvents and choose the smallest event that can be composed atomically without inventing a second trigger engine. A high-value next candidate is the already-typed `short-rest`/`long-rest` operation family: first verify that a persistent effect can bind the resting actor and append its triggered operations inside the same rest PendingResolution; if that is mechanically unambiguous, add the narrow rest-event dispatch plus arbitrary-ID connected/reconnect/Undo proof. If rest requires a new target/event binding or lifetime semantic not already determined by current contracts, stop for architecture review before adding it. Keep Family P `INCOMPLETE` until its complete required event/frequency matrix is evidenced.
