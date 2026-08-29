@@ -3,11 +3,11 @@
 ## Run identity
 
 - Repository: `Kaetaeru/SimpleVTT`
-- Rerun working branch/ref: `agent/v1-common-play-full-convergence`
+- Rerun working branch/ref: `agent/c9-gate-n-coverage-reconciliation`
 - Product integration target: `work/v1-composite`
 - Control path: `.chatgpt-rerun/control.json`
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `5`
+- sequence: `6`
 - task_id: `v1-common-play-c8-rerun`
 
 ## Architecture charter
@@ -16,8 +16,8 @@
 
 ## Product-plan document
 
-`docs/rules/v1-common-play-c8-rerun-plan.md`
+`docs/rules/resolver-execution-checklist-v2.md`
 
-Rerun dispatch and merge-approval semantics are governed by `.chatgpt-rerun/README.md`. The owner has explicitly chosen ChatGPT Rerun for direct sequence-5 C8 implementation; do not hand this work to Codex unless the owner later changes direction.
+Rerun dispatch and merge-approval semantics are governed by `.chatgpt-rerun/README.md`. The owner has explicitly continued direct implementation through C9 Gate N coverage reconciliation on sequence 6; resume from the current durable C9 checkpoint and do not repeat still-valid C8/C9 evidence.
 
 Do not duplicate architecture intent, checklist scope, acceptance criteria, gate order, migration order, or the next product action in this router.
