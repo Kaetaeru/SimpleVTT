@@ -26,6 +26,7 @@ function packagePayload(prefix:string) {
     entryPoints:[{id:"create",invocation:"manual",operations:[
       {kind:"artifact.spawn",template:"wall"},
       {kind:"artifact.spawn",template:"tether"},
+      {kind:"artifact.spawn",template:"portal"},
     ]}],
     artifactTemplates:[
       {
@@ -41,6 +42,13 @@ function packagePayload(prefix:string) {
       {
         id:"tether",artifactKind:"link",duration:{kind:"elapsed",amount:{value:6},unit:"seconds"},lifetime:{kind:"durable"},
         initialState:{endpointIds:["actor","combatant.goblin-a"],relation:"tether",maximumLengthFeet:30},
+      },
+      {
+        id:"portal",artifactKind:"link",duration:{kind:"durable"},lifetime:{kind:"durable"},
+        initialState:{endpointIds:["actor","combatant.goblin-a"],relation:"portal"},
+        grantedEntryPoints:[
+          {id:"close",invocation:"granted",operations:[{kind:"artifact.remove",artifact:"portal"}]},
+        ],
       },
     ],
   };
@@ -117,10 +125,13 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   let clientSnapshot=await client.getSnapshot();
   const wall=artifacts(host,hostSnapshot).find((artifact)=>artifact.templateId==="wall")!;
   const tether=artifacts(host,hostSnapshot).find((artifact)=>artifact.templateId==="tether")!;
+  const portal=artifacts(host,hostSnapshot).find((artifact)=>artifact.templateId==="portal")!;
   assert.equal(wall.object?.hp.current,20);
   assert.equal(tether.link?.relation,"tether");
-  assert.deepEqual(artifacts(client,clientSnapshot).map((artifact)=>artifact.templateId),["wall","tether"]);
+  assert.equal(portal.link?.relation,"portal");
+  assert.deepEqual(artifacts(client,clientSnapshot).map((artifact)=>artifact.templateId),["wall","tether","portal"]);
   assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(wall.id,"chip")));
+  assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(portal.id,"close")));
 
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"chip"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
@@ -137,6 +148,12 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
   assert.equal(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===wall.id)?.placementRef,"provider:wall-b");
   assert.equal(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===wall.id)?.placementRef,"provider:wall-b");
+
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(portal.id,"close"),["char.aelar"]));
+  assert.equal((await applyFullLedger(host,client)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(artifacts(host,hostSnapshot).some((artifact)=>artifact.id===portal.id),false);
+  assert.equal(artifacts(client,clientSnapshot).some((artifact)=>artifact.id===portal.id),false);
 
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"destroy"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
@@ -157,7 +174,7 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   const reconnectState=connectedStateFor(reconnect);
   reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
   assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger.eventsAfter(0))).status,"applied");
-  assert.equal(artifacts(reconnect,await reconnect.getSnapshot()).some((artifact)=>artifact.id===wall.id||artifact.id===tether.id),false);
+  assert.equal(artifacts(reconnect,await reconnect.getSnapshot()).some((artifact)=>artifact.id===wall.id||artifact.id===tether.id||artifact.id===portal.id),false);
 
   await withoutDesktopTransport(()=>host.undoLastResolution());
   assert.equal((await applyFullLedger(host,client)).status,"applied");
