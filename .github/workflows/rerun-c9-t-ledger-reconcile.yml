@@ -1,0 +1,120 @@
+name: C9 Family T Ledger Reconcile
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-t-ledger-reconcile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile proven Family T evidence
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const source=fs.readFileSync('src/app/spatialZoneMembershipRuntimeAdapter.ts','utf8');
+          const test=fs.readFileSync('tests/ui/connectedSpatialZoneMembershipProduction.test.ts','utf8');
+          if(!source.includes('submitAuthoritativeSpatialZoneStayFact')||!source.includes('kind:"zone.stay"')) {
+            throw new Error('current production source does not contain authoritative zone.stay ingress');
+          }
+          if(!test.includes('authoritative spatial Zone stay fact uses canonical frequency, reconnect, and Undo')) {
+            throw new Error('current connected acceptance does not contain the zone.stay proof');
+          }
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const row=ledger.rows.find((candidate)=>candidate.family==='T');
+          if(!row) throw new Error('Family T row not found');
+          row.currentState='Installed arbitrary Zone artifacts cover spawn/opaque placement, manual and authoritative spatial-provider membership, enter/leave/stay/start/end-turn events, canonical frequency, elapsed cleanup, damage/effect trigger lowering, atomic Undo, Host/Client replay, duplicate replay, fresh reconnect, and arbitrary identity.';
+          row.disposition='IMPLEMENTED';
+          row.implementationEvidence=[
+            'commonPlayZoneRuntime.ts canonical membership/event/turn/duration resolution with generic damage/effect lowering',
+            'commonPlayEffectRuntime.ts reusable effect.apply -> apply-effect lowering',
+            'commonPlayDefinitionRuntime.ts retention of Zone rule-referenced effect templates',
+            'installedCommonPlayRuntimeAdapter.ts Zone projection and manual membership resolution',
+            'realTurnLifecycleService.ts Zone turn lifecycle composition and round-wrap advance-time',
+            'spatialZoneMembershipRuntimeAdapter.ts authoritative inside/outside/stay provider ingress without Core geometry inference'
+          ];
+          row.productionEvidence=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts Zone membership, damage/effect, and Undo',
+            'connectedTurnResolutionEventTransport.test.ts arbitrary Zone turn lifecycle and elapsed cleanup',
+            'connectedSpatialZoneMembershipProduction.test.ts authoritative spatial enter/leave/stay/placement production',
+            'UI run 33279041449 step 17 SUCCESS after zone.stay ingress restoration'
+          ];
+          row.identityInvarianceEvidence=[
+            'commonPlayZoneRuntime.test.ts',
+            'installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity',
+            'connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity',
+            'connectedSpatialZoneMembershipProduction.test.ts arbitrary installed spatial Zone and stay identities'
+          ];
+          row.connectedEvidenceIfRelevant=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts Zone Host/Client membership and Undo convergence',
+            'connectedTurnResolutionEventTransport.test.ts turn lifecycle and elapsed cleanup Host/Client convergence, duplicate replay, reconnect, and Undo',
+            'connectedSpatialZoneMembershipProduction.test.ts spatial membership/stay Host/Client convergence, duplicate replay, reconnect, outside facts, placement, and Undo'
+          ];
+          row.persistenceEvidenceIfRelevant=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts Zone new-replica event replay',
+            'connectedTurnResolutionEventTransport.test.ts ordered reconnect reconstruction of Zone turn and elapsed cleanup events',
+            'connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for authoritative spatial membership/stay'
+          ];
+          row.remainingNamedSeams=[
+            'named persistent aura/zone migration debt; unknown portable Common Play does not select or fall through to it'
+          ];
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish ledger correction and remove helper
+        run: |
+          rm .github/workflows/rerun-c9-t-ledger-reconcile.yml
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/rerun-c9-t-ledger-reconcile.yml
+          git commit -m "docs(c9): restore Family T implemented ledger state"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Checkpoint Rerun state
+        run: |
+          ledger_sha=$(git rev-parse HEAD)
+          node - "$ledger_sha" <<'NODE'
+          const fs=require('node:fs');
+          const sha=process.argv[2];
+          const path='.chatgpt-rerun/STATE.md';
+          let text=fs.readFileSync(path,'utf8');
+          const marker='Retained exact evidence:\n\n';
+          const line=`- \`${sha.slice(0,8)}\`: reconciles the stale Family T ledger row to the already-restored authoritative zone.stay source and connected acceptance; no mechanics changed.\n`;
+          if(!text.includes(line)) {
+            if(!text.includes(marker)) throw new Error('Family T evidence marker not found in STATE');
+            text=text.replace(marker,marker+line);
+            fs.writeFileSync(path,text);
+          }
+          NODE
+          git add .chatgpt-rerun/STATE.md
+          if ! git diff --cached --quiet; then
+            git commit -m "docs(rerun): checkpoint Family T ledger reconciliation"
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+            git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          fi
+      - name: Publish control last
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='.chatgpt-rerun/control.json';
+          const control=JSON.parse(fs.readFileSync(path,'utf8'));
+          control.status='continue';
+          control.reason='C9 remains active at IMPLEMENTED=3, INCOMPLETE=33, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family T ledger drift is reconciled to the already-restored zone.stay production/connected evidence and Family U remains IMPLEMENTED. X/Y/Z/AA retain their documented authority blockers. Next continue Family AB Recharge: existing actor turn-start Recharge already has identity/connected/reconnect/Undo evidence; audit the remaining availability/consumption, Recharge 5-6 die authority, action/resource projection, and persistence requirements without a monster-specific engine.';
+          control.updated_at='2026-08-30';
+          fs.writeFileSync(path,JSON.stringify(control,null,2)+'\n');
+          NODE
+          git add .chatgpt-rerun/control.json
+          git commit -m "docs(rerun): continue with Family AB Recharge"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
