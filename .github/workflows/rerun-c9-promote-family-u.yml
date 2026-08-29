@@ -1,0 +1,69 @@
+name: C9 Promote Family U
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/rerun-c9-promote-family-u.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  promote-u:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconcile latest branch
+        run: |
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+      - name: Promote verified Family U
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=ledger.rows.find((candidate)=>candidate.family==='U'&&candidate.id==='object-link-artifacts');
+          if(!row) throw new Error('Family U object-link-artifacts row not found');
+          if(row.disposition==='IMPLEMENTED') process.exit(0);
+          if(row.disposition!=='INCOMPLETE') throw new Error(`Unexpected Family U disposition: ${row.disposition}`);
+          row.currentState='Schema-backed object/link artifacts now execute source-owned granted lifecycle actions for damage, repair, relocation, removal/destruction, opaque placement, link endpoints/relations, elapsed lifetime cleanup, Host/Client replay, duplicate handling, reconnect, Undo, and external identity rename through the generic artifact Resolver path.';
+          row.disposition='IMPLEMENTED';
+          row.implementationEvidence=[
+            'schemas/common-play-contract.schema.json artifact lifecycle vocabulary and artifactTemplates[].grantedEntryPoints',
+            'src/domain/commonPlayArtifactLifecycleRuntime.ts schema-backed granted-entry lifecycle lowering',
+            'src/domain/resolutionArtifactOps.ts typed object/link artifact mutation and lifecycle operations',
+            'src/app/installedCommonPlayArtifactLifecycleAdapter.ts production lifecycle action projection and dispatch'
+          ];
+          row.productionEvidence=[
+            'tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts#unknown object/link artifacts execute granted lifecycle actions through connected replay, reconnect, and Undo',
+            'C9 Family U Diagnostic run 33279420876 focused object/link lifecycle 2/2 passed'
+          ];
+          row.identityInvarianceEvidence=[
+            'tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts#renaming the external object module preserves granted lifecycle semantics'
+          ];
+          row.connectedEvidenceIfRelevant=[
+            'tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts Host/Client event replay, duplicate idempotence, reconnect, expiry, destruction, and event-native Undo'
+          ];
+          row.persistenceEvidenceIfRelevant=[
+            'tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts fresh replica reconstructs object/link lifecycle from ordered authoritative event history',
+            'schemas/common-play-contract.schema.json plus installed-content activation preserve schema-backed granted lifecycle vocabulary'
+          ];
+          row.remainingNamedSeams=[];
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+      - name: Commit ledger promotion
+        run: |
+          if git diff --quiet -- docs/rules/v1-mechanism-coverage-ledger.json; then
+            echo "Family U already promoted"
+            exit 0
+          fi
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): promote verified object-link artifacts"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
