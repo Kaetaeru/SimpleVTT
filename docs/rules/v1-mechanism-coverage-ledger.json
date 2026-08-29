@@ -1662,7 +1662,7 @@
         "RulesProfile properties",
         "inventory item metadata"
       ],
-      "currentState": "Data exists; generic derived constraint and production enforcement proof missing",
+      "currentState": "RulesProfile expression/property infrastructure could calculate a capacity once authoritative facts exist, but the portable Common Play/source contracts do not define item weight, container capacity, carrying-capacity/cargo facts, or an enforcement transaction. Family AD still lacks authoritative mount/vehicle cargo topology and Families X/Y still lack the portable durable item/container source model. A derived scalar alone cannot safely reject inventory/vehicle mutations without those owned source facts.",
       "requiredSemantics": [
         "carrying capacity",
         "size scaling",
@@ -1679,7 +1679,13 @@
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [],
+      "remainingNamedSeams": [
+        "portable item weight/container-capacity source data in the durable item model",
+        "RulesProfile-owned carrying-capacity/size-scaling derived property with authoritative inputs",
+        "inventory transaction enforcement for carried/container weight constraints",
+        "mount/vehicle cargo capacity enforcement dependent on Family AD topology ownership",
+        "connected/persistence projection of the same durable capacity facts"
+      ],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
