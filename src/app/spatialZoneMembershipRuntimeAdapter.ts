@@ -22,6 +22,10 @@ export interface AuthoritativeSpatialZoneStayFact {
   provenance:string;
 }
 
+export interface AuthoritativeSpatialZoneMembershipProvider {
+  placementRefForActivation?(input:{actionId:string;actorId:string}):string|undefined;
+}
+
 interface AdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
@@ -35,11 +39,14 @@ type PendingSpatialFact=
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
-const spatialProviders=new WeakSet<MockAdapter>();
+const spatialProviders=new WeakMap<MockAdapter,AuthoritativeSpatialZoneMembershipProvider>();
 const pendingFacts=new WeakMap<MockAdapter,PendingSpatialFact>();
 
-export function registerAuthoritativeSpatialZoneMembershipProvider(adapter:MockAdapter) {
-  spatialProviders.add(adapter);
+export function registerAuthoritativeSpatialZoneMembershipProvider(
+  adapter:MockAdapter,
+  provider:AuthoritativeSpatialZoneMembershipProvider={},
+) {
+  spatialProviders.set(adapter,provider);
 }
 
 export function unregisterAuthoritativeSpatialZoneMembershipProvider(adapter:MockAdapter) {
@@ -103,12 +110,15 @@ async function resolveSpatialZoneActivation(adapter:MockAdapter,actionId:string,
   if (!state||!actorId||targetIds.length!==1||targetIds[0]!==actorId||!state.combatants[actorId]) return internal.getSnapshot();
   const actor=internal.scene.entities.find((candidate)=>candidate.id===actorId);
   if (!actor) return internal.getSnapshot();
+  const placementRef=spatialProviders.get(adapter)?.placementRefForActivation?.({actionId,actorId});
+  if(placementRef!==undefined&&!placementRef.trim()) throw new Error("authoritative spatial Zone placementRef must be non-empty when provided");
   const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const committed=resolveCommonPlayZoneActivation(SIMPLEVTT_APP_RULES_PROFILE,state,action.lowered.definition,{
     resolutionId,
     actorId,
     entryPointId:action.entryPointId,
     membershipAuthority:"spatial",
+    ...(placementRef!==undefined?{placementRef}:{}),
     actionKind:action.entry.category==="spell"?"magic":"other",
   });
   if (committed.status==="rejected") return internal.getSnapshot();
