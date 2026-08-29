@@ -9,12 +9,14 @@ import type {
   ResolutionOperation,
 } from "./resolutionTypes";
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import { resolveCommonPlayFrequency, type CommonPlayFrequency } from "./commonPlayFrequencyRuntime";
 import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
 type EffectTarget="actor";
 type EventDamageTarget="event.actor";
 type AutomaticDamageEvent="damage.taken"|"damage.dealt";
+type AutomaticDamageFrequency=Exclude<CommonPlayFrequency,"unlimited">;
 
 interface CommonPlayEffectApplyOperation {
   kind:"effect.apply";
@@ -32,7 +34,7 @@ interface CommonPlayTriggeredDamageOperation {
 interface CommonPlayAutomaticDamageRule {
   id:string;
   event:AutomaticDamageEvent;
-  frequency?:"once";
+  frequency?:AutomaticDamageFrequency;
   operations:CommonPlayTriggeredDamageOperation[];
 }
 
@@ -45,16 +47,16 @@ type CommonPlayEffectDuration=
       decrementAt?:string;
     };
 
+type CommonPlayEffectLifetime=
+  | {kind:"until-event";event:AutomaticDamageEvent;onEnd:"destroy"}
+  | {kind:"until-duration";onEnd:"destroy"};
+
 export interface CommonPlayEffectArtifactTemplate {
   id:string;
   artifactKind:"effect";
   duration:CommonPlayEffectDuration;
   rules:CommonPlayAutomaticDamageRule[];
-  lifetime:{
-    kind:"until-event";
-    event:AutomaticDamageEvent;
-    onEnd:"destroy";
-  };
+  lifetime:CommonPlayEffectLifetime;
   instancePolicy?:"stack";
 }
 
@@ -129,13 +131,17 @@ function runtimeDuration(duration:CommonPlayEffectDuration,label:string):Duratio
   throw new Error(`${label} unit is not supported by this event-effect runtime slice`);
 }
 
+function ruleFrequency(rule:CommonPlayAutomaticDamageRule):AutomaticDamageFrequency {
+  return rule.frequency??"once";
+}
+
 function validateRule(rule:CommonPlayAutomaticDamageRule,templateId:string,ruleIndex:number) {
   const label=`artifact ${templateId} rule ${ruleIndex+1}`;
   assertOnlyKeys(rule,["id","event","frequency","operations"],label);
   if (!rule.id) throw new Error(`${label} id is required`);
   if (rule.event!=="damage.taken"&&rule.event!=="damage.dealt") throw new Error(`${label} supports only damage.taken or damage.dealt`);
-  if (rule.frequency!==undefined&&rule.frequency!=="once") {
-    throw new Error(`${label} supports only once frequency in this runtime slice`);
+  if (!["once","once-per-turn","once-per-round","once-per-resolution"].includes(ruleFrequency(rule))) {
+    throw new Error(`${label} frequency is unsupported in this runtime slice`);
   }
   if (!rule.operations.length) throw new Error(`${label} requires at least one operation`);
   rule.operations.forEach((operation,index)=>{
@@ -159,12 +165,19 @@ function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number
   runtimeDuration(template.duration,`${label} duration`);
   if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);
   template.rules.forEach((rule,ruleIndex)=>validateRule(rule,template.id,ruleIndex));
-  assertOnlyKeys(template.lifetime,["kind","event","onEnd"],`${label} lifetime`);
-  if (template.lifetime.kind!=="until-event"||(template.lifetime.event!=="damage.taken"&&template.lifetime.event!=="damage.dealt")||template.lifetime.onEnd!=="destroy") {
-    throw new Error(`${label} lifetime must destroy on damage.taken or damage.dealt in this runtime slice`);
-  }
-  if(template.rules.some((rule)=>rule.event!==template.lifetime.event)) {
-    throw new Error(`${label} rules must match lifetime event ${template.lifetime.event} in this runtime slice`);
+  if(template.lifetime.kind==="until-event") {
+    assertOnlyKeys(template.lifetime,["kind","event","onEnd"],`${label} lifetime`);
+    if ((template.lifetime.event!=="damage.taken"&&template.lifetime.event!=="damage.dealt")||template.lifetime.onEnd!=="destroy") {
+      throw new Error(`${label} until-event lifetime must destroy on damage.taken or damage.dealt`);
+    }
+    if(template.rules.some((rule)=>rule.event!==template.lifetime.event||ruleFrequency(rule)!=="once")) {
+      throw new Error(`${label} until-event lifetime requires matching once-frequency rules`);
+    }
+  } else {
+    assertOnlyKeys(template.lifetime,["kind","onEnd"],`${label} lifetime`);
+    if(template.lifetime.kind!=="until-duration"||template.lifetime.onEnd!=="destroy") {
+      throw new Error(`${label} recurring rules require until-duration destroy lifetime`);
+    }
   }
   if (template.instancePolicy!==undefined&&template.instancePolicy!=="stack") {
     throw new Error(`${label} supports only stack instancePolicy in this runtime slice`);
@@ -306,11 +319,30 @@ function matchingEffects(
   );
 }
 
+function frequencyResolution(
+  state:RulesRuntimeState,
+  rule:CommonPlayAutomaticDamageRule,
+  effect:EffectInstance,
+  subjectId:string,
+  resolutionId:string,
+) {
+  return resolveCommonPlayFrequency({
+    ruleId:rule.id,
+    subjectId,
+    frequency:ruleFrequency(rule),
+    resolutionId,
+    clock:state.clock,
+    markers:effect.metadata??{},
+  });
+}
+
 function triggerOperations(
+  state:RulesRuntimeState,
   definition:CommonPlayPersistentEffectDefinition,
   effects:EffectInstance[],
   event:ResolutionEvent,
   eventKind:AutomaticDamageEvent,
+  subjectId:string,
   actorCreatureKind:CommonPlayEffectEventInput["actorCreatureKind"],
 ):ResolutionOperation[] {
   const operations:ResolutionOperation[]=[];
@@ -321,7 +353,11 @@ function triggerOperations(
     validateTemplate(template,effectIndex);
     const rules=template.rules.filter((rule)=>rule.event===eventKind);
     if(!rules.length) return;
+    let fired=false;
     rules.forEach((rule,ruleIndex)=>{
+      const frequency=frequencyResolution(state,rule,effect,subjectId,event.resolutionId);
+      if(!frequency.eligible) return;
+      fired=true;
       rule.operations.forEach((operation,operationIndex)=>{
         const amount=literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`);
         operations.push({
@@ -333,8 +369,14 @@ function triggerOperations(
           creatureKind:actorCreatureKind,
         });
       });
+      if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+        id:`common-play-effect-${effectIndex+1}-rule-${ruleIndex+1}-frequency`,
+        kind:"update-effect",
+        effectId:effect.id,
+        metadataPatch:frequency.metadataPatch,
+      });
     });
-    operations.push({
+    if(fired&&template.lifetime.kind==="until-event") operations.push({
       id:`common-play-effect-${effectIndex+1}-remove`,
       kind:"remove-effect",
       effectId:effect.id,
@@ -370,16 +412,25 @@ export function appendCommonPlayDamageTakenTriggers(
           validateTemplate(template,effectIndex);
           const rules=template.rules.filter((rule)=>rule.event===context.event);
           if(!rules.length) continue;
-          handled.add(key);
+          let fired=false;
           for(const [ruleIndex,rule] of rules.entries()) {
+            const frequency=frequencyResolution(inputState,rule,effect,context.subjectId,pending.id);
+            if(!frequency.eligible) continue;
+            fired=true;
             for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
               id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:${ruleIndex}:${operationIndex}`,
               kind:"damage",targetId:pending.actorId,damageType:operation.damageType,
               amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
               creatureKind:actorCreatureKind,when,
             });
+            if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+              id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:${ruleIndex}:frequency`,
+              kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,when,
+            });
           }
-          operations.push({
+          if(!fired) continue;
+          handled.add(key);
+          if(template.lifetime.kind==="until-event") operations.push({
             id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:remove`,
             kind:"remove-effect",effectId:effect.id,when,
           });
@@ -410,7 +461,7 @@ export function resolveCommonPlayEffectEvent(
     let actorId:string|undefined;
     for(const candidate of candidates) {
       const effects=matchingEffects(inputState,definition,candidate.subjectId);
-      const triggered=triggerOperations(definition,effects,input.event,candidate.event,input.actorCreatureKind);
+      const triggered=triggerOperations(inputState,definition,effects,input.event,candidate.event,candidate.subjectId,input.actorCreatureKind);
       if(triggered.length) {
         actorId??=candidate.subjectId;
         operations.push(...triggered);
