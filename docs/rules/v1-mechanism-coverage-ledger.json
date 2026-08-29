@@ -1617,7 +1617,7 @@
         "Campaign persistence",
         "item/inventory transaction"
       ],
-      "currentState": "No generic durable project/activity acceptance proof",
+      "currentState": "The generic project kernel owns one revision-bound owner, cumulative work, cumulative scalar payments, and completion at a required-work threshold. It does not define contributors, tool/proficiency/prepared-spell prerequisites, daily validation, cancellation semantics, completion outputs, durable project persistence, or inventory write-back. The persisted Common Play contract has no project/crafting instance vocabulary and production has no durable project owner, so forcing this state through combat Resolution or mutating Character items on completion would violate the transaction-domain boundary.",
       "requiredSemantics": [
         "project instance",
         "work units",
@@ -1633,12 +1633,20 @@
       ],
       "transactionDomain": "Durable project/activity owner plus inventory transaction",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
+      "implementationEvidence": [
+        "commonPlayProjectRuntime.ts revision-bound owner/work/payment kernel",
+        "commonPlayC6Runtime.test.ts threshold composition proof"
+      ],
       "productionEvidence": [],
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [],
+      "remainingNamedSeams": [
+        "persisted portable durable project/activity contract with contributors and prerequisites",
+        "campaign/durable project repository and revision owner with non-consecutive progress/cancellation",
+        "daily validation and material/currency payment transaction ownership",
+        "completion output joined atomically to the durable inventory/item write-back boundary from Families X/Y"
+      ],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
