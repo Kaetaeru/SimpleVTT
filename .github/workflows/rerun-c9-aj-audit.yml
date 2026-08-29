@@ -1,0 +1,117 @@
+name: C9 Family AJ Ownership Audit
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/rerun-c9-aj-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile AJ ownership evidence
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const counts=ledger.rows.reduce((a,r)=>(a[r.disposition]=(a[r.disposition]??0)+1,a),{});
+          if(ledger.rows.length!==36||counts.IMPLEMENTED!==4||counts.INCOMPLETE!==32||(counts.PROVEN_UNNEEDED??0)!==0) throw new Error(`unexpected coverage ${JSON.stringify(counts)}`);
+          if((ledger.gateNBlockingNamedFallbacks??[]).length) throw new Error('gateNBlockingNamedFallbacks is not empty');
+          const aj=ledger.rows.find(r=>r.family==='AJ'&&r.id==='authority-persistence-ownership');
+          if(!aj||aj.disposition!=='INCOMPLETE') throw new Error('Family AJ must remain INCOMPLETE');
+          for(const path of [
+            'src/app/runtimeResolutionCommit.ts',
+            'src/app/realEventApplyService.ts',
+            'src/app/realEventUndoService.ts',
+            'src/app/connectedSessionProtocol.ts',
+            'src/app/resolutionCharacterWriteBackPort.ts',
+            'src/app/runtimeResolutionEventHistory.ts',
+            'tests/ui/connectedTurnResolutionEventTransport.test.ts',
+            'tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts',
+            'tests/ui/connectedActorTurnRuleProduction.test.ts'
+          ]) if(!fs.existsSync(path)) throw new Error(`AJ evidence path missing: ${path}`);
+          const commit=fs.readFileSync('src/app/runtimeResolutionCommit.ts','utf8');
+          for(const token of ['applyResolutionEvents','persistCharacterResolutionEvents','commitAdapterTurnRuntimeState','recordRuntimeResolutionEvents']) if(!commit.includes(token)) throw new Error(`runtime commit authority changed: ${token}`);
+          aj.currentState='Shared production infrastructure already proves typed ResolutionEvent application, atomic session commit, Character write-back rollback, event history, Host/Client replay, duplicate idempotence, reconnect reconstruction, and event-native Undo across several implemented/advanced families. AJ remains cross-family INCOMPLETE because final acceptance requires every applicable mechanism to use its correct owner, while remote/persisted decisions and multiple durable/session domains are still explicitly undefined in other ledger rows.';
+          aj.implementationEvidence=[
+            'runtimeResolutionCommit.ts shared authoritative commit/write-back rollback',
+            'realEventApplyService.ts typed event replay',
+            'realEventUndoService.ts event-native inverse application',
+            'runtimeResolutionEventHistory.ts canonical runtime event history',
+            'connectedSessionProtocol.ts connected authoritative event transport'
+          ];
+          aj.productionEvidence=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts shared production commit and Undo',
+            'connectedTurnResolutionEventTransport.test.ts turn lifecycle replay/reconnect/Undo',
+            'connectedObjectLinkArtifactLifecycleProduction.test.ts object/link connected lifecycle',
+            'connectedActorTurnRuleProduction.test.ts automatic actor turn rule and Recharge authority'
+          ];
+          aj.identityInvarianceEvidence=[
+            'installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary external identities',
+            'connectedObjectLinkArtifactLifecycleProduction.test.ts unknown object/link identities',
+            'connectedActorTurnRuleProduction.test.ts arbitrary actor-owned rule identity'
+          ];
+          aj.connectedEvidenceIfRelevant=[
+            'connectedTurnResolutionEventTransport.test.ts duplicate replay/reconnect/event-native Undo',
+            'connectedObjectLinkArtifactLifecycleProduction.test.ts Host/Client/reconnect/Undo',
+            'connectedActorTurnRuleProduction.test.ts Host/Client/reconnect/Undo'
+          ];
+          aj.persistenceEvidenceIfRelevant=[
+            'PR #159 installed Common Play persistence/rehydration authority',
+            'resolutionCharacterWriteBackPort.ts Character-owned write-back/rollback boundary',
+            'connected actor/object lifecycle reconnect reconstruction evidence retained in STATE'
+          ];
+          aj.remainingNamedSeams=[
+            'Family Q/R remote or persisted decision ownership remains incomplete',
+            'Families V/W/X/Y/Z/AA/AC/AD/AE/AF/AH/AI retain explicit lifetime, durable-source, session-policy, or persistence owner gaps',
+            'AJ cannot become final while any applicable mechanism family lacks its correct authoritative transaction/recovery matrix'
+          ];
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+
+          const statePath='.chatgpt-rerun/STATE.md';
+          let state=fs.readFileSync(statePath,'utf8');
+          const marker='## Next Exact Action';
+          const idx=state.indexOf(marker);
+          if(idx<0) throw new Error('STATE Next Exact Action marker missing');
+          const before=state.slice(0,idx).replace(/\n+$/,'')+'\n\n';
+          const section='## Family AJ audit — shared authority evidence reconciled, final blocked\n\nFamily AJ (`authority-persistence-ownership`) remains `INCOMPLETE`, but its ledger evidence is no longer blank. `runtimeResolutionCommit.ts` composes event application, Character write-back with rollback, session revision commit, event history, and presentation; the existing connected turn/object/actor suites prove Host/Client replay, duplicate idempotence, reconnect, and event-native Undo for representative portable mechanics. AJ cannot be promoted while other rows still lack their correct owners, notably Q/R remote or persisted decisions and the audited durable/session gaps in V/W/X/Y/Z/AA/AC/AD/AE/AF/AH/AI. This is a cross-family acceptance dependency, not a new global transaction engine.\n\n';
+          const next='## Next Exact Action\n\nReturn to the earliest non-authority-blocked incomplete row, Family A (`expression-property`). Audit the persisted expression/predicate/property.modify vocabulary against the generic RulesProfile evaluator and installed production lowerers. Implement only the smallest existing-contract production gap that can be proven with arbitrary identity and persistence; do not invent a second stat engine or force durable progression mutations into combat Resolution. If Family A proves authority-blocked at a specific derived-property/source-materialization boundary, record that exact gap and move to the next genuinely implementable row.\n';
+          fs.writeFileSync(statePath,before+section+next);
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs || true
+          git diff --check
+      - name: Commit AJ audit and STATE
+        run: |
+          git config user.name "ChatGPT Rerun"
+          git config user.email "chatgpt-rerun@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .chatgpt-rerun/STATE.md
+          git commit -m "docs(c9): reconcile ownership acceptance evidence"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Publish control last and remove helper
+        run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='.chatgpt-rerun/control.json';
+          const data=JSON.parse(fs.readFileSync(path,'utf8'));
+          data.status='continue';
+          data.reason='C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family AJ now records the shared ResolutionEvent/session/write-back/replay/reconnect/Undo evidence but remains INCOMPLETE because several mechanism families still lack their correct durable/session/decision owners. Next return to Family A expression/property and implement the earliest non-authority-blocked production gap.';
+          data.updated_at='2026-08-30';
+          fs.writeFileSync(path,JSON.stringify(data,null,2)+'\n');
+          NODE
+          rm .github/workflows/rerun-c9-aj-audit.yml
+          git add .chatgpt-rerun/control.json .github/workflows/rerun-c9-aj-audit.yml
+          git commit -m "docs(rerun): continue after ownership audit"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
