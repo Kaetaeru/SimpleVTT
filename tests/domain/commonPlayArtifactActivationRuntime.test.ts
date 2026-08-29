@@ -15,7 +15,7 @@ function definition(prefix="external.unknown"):CommonPlayArtifactActivationDefin
       {kind:"artifact.spawn",template:"tether"},
     ]}],
     artifactTemplates:[
-      {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",initiative:"shared",properties:{"defense.ac":13},actionDefinitionIds:[`${prefix}.bite`],resources:[]}},
+      {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},actionDefinitionIds:[`${prefix}.bite`],resources:[]}},
       {id:"wall",artifactKind:"object",duration,lifetime,initialState:{size:"large",armorClass:15,hp:{current:20,maximum:20},damageThreshold:5,repairable:true}},
       {id:"form",artifactKind:"form",duration,lifetime,initialState:{targetActorId:"actor",propertyOverlay:{"movement.fly":30},retainedProperties:[],replacementProperties:["movement.fly"],hpPolicy:"retain",actionPolicy:"grant",spellcasting:"retain",actionDefinitionIds:[`${prefix}.claw`],resources:[]}},
       {id:"tether",artifactKind:"link",duration,lifetime,initialState:{endpointIds:["actor","artifact:summon"],relation:"tether",maximumLengthFeet:30}},
@@ -32,6 +32,7 @@ test("portable artifact templates compile object, actor, form, and link through 
   if(resolved.status!=="committed") return;
   assert.deepEqual(resolved.state.artifacts?.map((artifact)=>artifact.artifactKind),["actor","object","form","link"]);
   assert.equal(resolved.state.artifacts?.find((artifact)=>artifact.artifactKind==="actor")?.actor?.ownerId,"hero");
+  assert.equal(resolved.state.combatants["external.unknown.summoned"]?.life.hp.maximum,10);
   assert.equal(resolved.state.artifacts?.find((artifact)=>artifact.artifactKind==="form")?.form?.targetActorId,"hero");
   assert.match(resolved.state.artifacts?.find((artifact)=>artifact.artifactKind==="link")?.link?.endpointIds[1]??"",/artifact:1:summon$/);
 });

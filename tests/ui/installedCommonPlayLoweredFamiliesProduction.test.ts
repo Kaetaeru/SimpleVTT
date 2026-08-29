@@ -26,7 +26,7 @@ function artifactConfig(prefix:string) {
   return {schemaVersion:"0.2-draft",id:`${prefix}.artifacts`,entryPoints:[{id:"create-artifacts",invocation:"manual",operations:[
     {kind:"artifact.spawn",template:"summon"},{kind:"artifact.spawn",template:"wall"},{kind:"artifact.spawn",template:"form"},{kind:"artifact.spawn",template:"tether"},
   ]}],artifactTemplates:[
-    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",initiative:"shared",properties:{"defense.ac":13},actionDefinitionIds:[`${prefix}.bite`],resources:[]}},
+    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},actionDefinitionIds:[`${prefix}.bite`],resources:[]}},
     {id:"wall",artifactKind:"object",duration,lifetime,initialState:{size:"large",armorClass:15,hp:{current:20,maximum:20},repairable:true}},
     {id:"form",artifactKind:"form",duration,lifetime,initialState:{targetActorId:"actor",propertyOverlay:{"movement.fly":30},retainedProperties:[],replacementProperties:["movement.fly"],hpPolicy:"retain",actionPolicy:"grant",spellcasting:"retain",actionDefinitionIds:[`${prefix}.claw`],resources:[]}},
     {id:"tether",artifactKind:"link",duration,lifetime,initialState:{endpointIds:["actor","artifact:summon"],relation:"tether",maximumLengthFeet:30}},
@@ -67,7 +67,7 @@ async function run(prefix:string) {
   await adapter.resolveAction(action(3,"create-artifacts"),["char.aelar"]);
   const afterAll=await adapter.getSnapshot();
   const runtime=snapshotAdapterTurnRuntimeState(adapter,afterAll.scene)!;
-  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind)};
+  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};
 }
 
 async function install(adapter:MockAdapter,prefix:string) {
@@ -91,9 +91,11 @@ test("unknown multi-category Common Play save, effect, and zone lower through on
   assert.deepEqual(result.hpDelta,[12,21],JSON.stringify(result.saveResolution));
   assert.equal(result.effects,1);
   assert.deepEqual(result.artifactKinds,["zone","actor","object","form","link"]);
+  assert.equal(result.summon?.name,"Unknown Summon");
   await result.adapter.undoLastResolution();
   const snapshot=await result.adapter.getSnapshot();
   assert.deepEqual(snapshotAdapterTurnRuntimeState(result.adapter,snapshot.scene)?.artifacts?.map((artifact)=>artifact.artifactKind),["zone"]);
+  assert.equal(snapshot.scene.entities.some((entity)=>entity.id==="unknown-gate-n.summoned"),false);
 });
 
 test("renaming every external identity preserves lowered production semantics",async()=>{
@@ -102,7 +104,7 @@ test("renaming every external identity preserves lowered production semantics",a
   assert.deepEqual({hp:first.hpDelta,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,effects:renamed.effects,artifacts:renamed.artifactKinds});
 });
 
-test("portable zone artifact converges once through the existing Host/Client event transport",async()=>{
+test("portable zone and summoned Actor converge once through existing Host/Client event transport",async()=>{
   const sessionId="session.common-play-lowered-zone";
   const host=new MockAdapter();
   const {action}=await install(host,"unknown-connected");
@@ -111,22 +113,36 @@ test("portable zone artifact converges once through the existing Host/Client eve
   const wires:string[]=[];
   const originalSend=tauriSessionTransport.send;
   tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
-  try { await host.resolveAction(action(2,"create-zone"),["char.aelar"]); }
+  try {
+    await host.resolveAction(action(2,"create-zone"),["char.aelar"]);
+    await host.resolveAction(action(3,"create-artifacts"),["char.aelar"]);
+  }
   finally { tauriSessionTransport.send=originalSend; }
-  const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
-  assert.ok(batch,JSON.stringify(wires));
-  assert.equal(wires.some((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true,"runtime artifact event batch must cross the real wire decoder");
+  const batches=wires.map((wire)=>JSON.parse(wire)).filter((wire)=>wire.type==="event-batch") as Array<{events:ConnectedSessionEvent[]}>;
+  assert.equal(batches.length,2,JSON.stringify(wires));
+  assert.equal(wires.every((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true,"runtime artifact event batches must cross the real wire decoder");
 
   const client=new MockAdapter();
   await install(client,"unknown-connected");
   const clientConnected=connectedStateFor(client);
   clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
-  assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
-  assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"duplicate");
+  for(const batch of batches) assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,batches[1].events)).status,"duplicate");
   const hostSnapshot=await host.getSnapshot();
   const clientSnapshot=await client.getSnapshot();
   assert.deepEqual(
     snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.artifacts,
     snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.artifacts,
   );
+  assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="unknown-connected.summoned")?.name,"Unknown Summon");
+
+  const undoWires:string[]=[];
+  tauriSessionTransport.send=async(message)=>{undoWires.push(message);return 1;};
+  try { await host.undoLastResolution(); }
+  finally { tauriSessionTransport.send=originalSend; }
+  const undoBatch=undoWires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+  assert.ok(undoBatch,JSON.stringify(undoWires));
+  assert.equal(undoWires.every((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true);
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  assert.equal((await client.getSnapshot()).scene.entities.some((entity)=>entity.id==="unknown-connected.summoned"),false);
 });

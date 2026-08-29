@@ -140,6 +140,19 @@ function isRecoveryLockoutChange(value:unknown) {
     &&isRecoveryLockouts(value.after);
 }
 
+function isRuntimeCombatant(value:unknown) {
+  if(!isRecord(value)||!isString(value.id)||typeof value.baseSpeed!=="number"||!isRecord(value.life)||!isRecord(value.economy)) return false;
+  const hp=isRecord(value.life.hp)?value.life.hp:undefined;
+  const saves=isRecord(value.life.deathSaves)?value.life.deathSaves:undefined;
+  return Boolean(hp&&saves
+    &&typeof hp.current==="number"&&typeof hp.maximum==="number"&&typeof hp.temporary==="number"
+    &&typeof saves.successes==="number"&&typeof saves.failures==="number"
+    &&typeof value.life.stable==="boolean"&&typeof value.life.unconscious==="boolean"&&typeof value.life.dead==="boolean"
+    &&typeof value.economy.action==="boolean"&&typeof value.economy.bonusAction==="boolean"&&typeof value.economy.reaction==="boolean"
+    &&typeof value.economy.movement==="number"&&typeof value.economy.movementMaximum==="number"
+    &&Array.isArray(value.resources)&&Array.isArray(value.hitDice));
+}
+
 function isCorrectionChange(value:unknown) {
   if (!isRecord(value)||!isString(value.kind)||!isString(value.targetId)) return false;
   if (value.kind==="hp") return typeof value.before==="number"&&typeof value.after==="number";
@@ -182,6 +195,9 @@ function isRuntimeStateChange(value:unknown) {
   if (value.kind==="death-save") return ["successes","failures"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
   if (value.kind==="effect") return isString(value.effectId)&&["added","updated","removed"].includes(String(value.operation));
   if (value.kind==="artifact") return isString(value.artifactId)&&["added","updated","removed"].includes(String(value.operation));
+  if (value.kind==="combatant") return ["added","updated","removed"].includes(String(value.operation))
+    &&(value.before===undefined||isRuntimeCombatant(value.before))
+    &&(value.after===undefined||isRuntimeCombatant(value.after));
   if (value.kind==="zone-membership") return isString(value.artifactId)&&["added","updated","removed"].includes(String(value.operation));
   if (value.kind==="concentration"||value.kind==="spellcasting-turn") return true;
   return false;

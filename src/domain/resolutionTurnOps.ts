@@ -6,7 +6,7 @@ import { expireExtendableEffectsAtClock } from "./extendableEffectLifecycle";
 import { recoverResources } from "./resources";
 import { expireRuntimeArtifactsAtClock } from "./runtimeArtifact";
 import { economyStateChanges } from "./stateChange";
-import { artifactStateChange, effectStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, combatantStateChange, effectStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
@@ -122,6 +122,13 @@ export function executeAdvanceTime(ctx:ResolutionExecutionContext, operation:Adv
       artifact,
       undefined,
     ));
+    if(artifact.actor) {
+      const combatant=ctx.state.combatants[artifact.actor.combatantId];
+      if(combatant) {
+        changes.push(combatantStateChange(combatant.id,"removed",artifactExpiry.provenance,combatant,undefined));
+        delete ctx.state.combatants[combatant.id];
+      }
+    }
   });
   expiredMemberships.forEach((membership)=>{
     changes.push(zoneMembershipStateChange(

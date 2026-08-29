@@ -2,10 +2,11 @@ import { requireCombatant } from "./combatState";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
-import { artifactStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, combatantStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { createRuntimeArtifact, type ZoneMembershipState } from "./runtimeArtifact";
 import type { ResolutionOperation } from "./resolutionTypes";
 import { resolveDamage, resolveHealing } from "./damage";
+import { beginTurn } from "./turnEconomy";
 
 type SpawnArtifactOp=Extract<ResolutionOperation,{kind:"spawn-artifact"}>;
 type UpdateArtifactOp=Extract<ResolutionOperation,{kind:"update-artifact"}>;
@@ -24,6 +25,23 @@ function zoneMemberships(ctx:ResolutionExecutionContext) {
   return ctx.state.zoneMemberships ?? (ctx.state.zoneMemberships=[]);
 }
 
+function actorCombatant(artifact:ReturnType<typeof createRuntimeArtifact>) {
+  const actor=artifact.actor!;
+  const maximum=Number(actor.properties["hp.maximum"]);
+  const speed=Number(actor.properties["movement.walk"]);
+  return {
+    id:actor.combatantId,
+    baseSpeed:speed,
+    life:{
+      hp:{current:Number(actor.properties["hp.current"]??maximum),maximum,temporary:Number(actor.properties["hp.temporary"]??0)},
+      deathSaves:{successes:0,failures:0},stable:false,unconscious:false,dead:false,
+    },
+    economy:beginTurn(speed),
+    resources:actor.resources.map((resource)=>({id:resource.id,label:resource.id,current:resource.current,maximum:resource.maximum})),
+    hitDice:[],
+  };
+}
+
 export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:SpawnArtifactOp):OperationExecution {
   if (artifacts(ctx).some((artifact)=>artifact.id===operation.artifact.id)) {
     throw new DomainEvaluationError(`runtime artifact already exists: ${operation.artifact.id}`);
@@ -35,7 +53,10 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
   if(artifact.artifactKind==="zone"&&operation.zoneMembershipAuthority!=="manual"&&operation.zoneMembershipAuthority!=="spatial") throw new DomainEvaluationError(`unsupported zone membership authority: ${operation.zoneMembershipAuthority}`);
   if(artifact.artifactKind!=="zone"&&operation.zoneMembershipAuthority!==undefined) throw new DomainEvaluationError("zone membership authority applies only to zone artifacts");
   if(artifact.artifactKind==="form") requireCombatant(ctx.state,artifact.form!.targetActorId);
-  if(artifact.artifactKind==="actor"&&(ctx.state.combatants[artifact.actor!.combatantId]||(ctx.state.artifacts??[]).some((entry)=>entry.actor?.combatantId===artifact.actor!.combatantId))) throw new DomainEvaluationError(`actor artifact combatant identity already exists: ${artifact.actor!.combatantId}`);
+  if(artifact.artifactKind==="actor") {
+    requireCombatant(ctx.state,artifact.actor!.ownerId);
+    if(ctx.state.combatants[artifact.actor!.combatantId]||(ctx.state.artifacts??[]).some((entry)=>entry.actor?.combatantId===artifact.actor!.combatantId)) throw new DomainEvaluationError(`actor artifact combatant identity already exists: ${artifact.actor!.combatantId}`);
+  }
   if(artifact.artifactKind==="link") for(const endpointId of artifact.link!.endpointIds) {
     if(!ctx.state.combatants[endpointId]&&!artifacts(ctx).some((entry)=>entry.id===endpointId)) throw new DomainEvaluationError(`link endpoint not found: ${endpointId}`);
   }
@@ -43,6 +64,8 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
     artifactId:artifact.id,authority:operation.zoneMembershipAuthority!,memberIds:[],
   }:undefined;
   ctx.state.artifacts!.push(artifact);
+  const spawnedCombatant=artifact.artifactKind==="actor"?actorCombatant(artifact):undefined;
+  if(spawnedCombatant) ctx.state.combatants[spawnedCombatant.id]=spawnedCombatant;
   if(membership) ctx.state.zoneMemberships!.push(membership);
   const provenance:ProvenanceRecord[]=[{
     source:artifact.sourceId,
@@ -54,6 +77,7 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
   const stateChanges:RuntimeStateChange[]=[
     artifactStateChange(artifact.id,artifact.id,"added",provenance,undefined,artifact),
   ];
+  if(spawnedCombatant) stateChanges.push(combatantStateChange(spawnedCombatant.id,"added",provenance,undefined,spawnedCombatant));
   if(membership) stateChanges.push(zoneMembershipStateChange(artifact.id,"added",provenance,undefined,membership));
   const result={spawned:true,artifact:structuredClone(artifact),...(membership?{membership:structuredClone(membership)}:{})};
   return {
@@ -141,12 +165,15 @@ export function executeRemoveArtifact(ctx:ResolutionExecutionContext,operation:R
   const membership=zoneMemberships(ctx).find((candidate)=>candidate.artifactId===operation.artifactId);
   ctx.state.artifacts=artifacts(ctx).filter((candidate)=>candidate.id!==operation.artifactId);
   ctx.state.zoneMemberships=zoneMemberships(ctx).filter((candidate)=>candidate.artifactId!==operation.artifactId);
+  const combatant=artifact.actor?structuredClone(ctx.state.combatants[artifact.actor.combatantId]):undefined;
+  if(artifact.actor) delete ctx.state.combatants[artifact.actor.combatantId];
   const provenance:ProvenanceRecord[]=[{
     source:artifact.sourceId,
     status:"applied",
     reason:`runtime artifact ${artifact.id} removed`,
   }];
   const stateChanges:RuntimeStateChange[]=[artifactStateChange(artifact.id,artifact.id,"removed",provenance,artifact,undefined)];
+  if(combatant) stateChanges.push(combatantStateChange(combatant.id,"removed",provenance,combatant,undefined));
   if (membership) stateChanges.push(zoneMembershipStateChange(artifact.id,"removed",provenance,membership,undefined));
   const result={removed:true,artifact:structuredClone(artifact),membership:membership?structuredClone(membership):undefined};
   return {

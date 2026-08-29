@@ -1,4 +1,5 @@
 import type { ConcentrationState } from "./concentration";
+import type { CombatantRuntimeState } from "./combatState";
 import type { EffectInstance } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
@@ -84,6 +85,17 @@ export interface SpellcastingTurnStateChange {
   writeBack:"session";
 }
 
+export interface CombatantStateChange {
+  kind:"combatant";
+  targetId:string;
+  operation:"added"|"updated"|"removed";
+  before?:CombatantRuntimeState;
+  after?:CombatantRuntimeState;
+  provenance:ProvenanceRecord[];
+  lifetime:"session-runtime";
+  writeBack:"session";
+}
+
 export interface LifeFlagStateChange {
   kind:"life";
   targetId:string;
@@ -114,6 +126,7 @@ export type RuntimeStateChange =
   | ZoneMembershipStateChange
   | ConcentrationStateChange
   | SpellcastingTurnStateChange
+  | CombatantStateChange
   | LifeFlagStateChange
   | DeathSaveStateChange;
 
@@ -226,6 +239,25 @@ export function spellcastingTurnStateChange(
   return {
     kind:"spellcasting-turn",
     targetId,
+    before:before ? structuredClone(before) : undefined,
+    after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
+}
+
+export function combatantStateChange(
+  targetId:string,
+  operation:"added"|"updated"|"removed",
+  provenance:ProvenanceRecord[],
+  before?:CombatantRuntimeState,
+  after?:CombatantRuntimeState,
+):CombatantStateChange {
+  return {
+    kind:"combatant",
+    targetId,
+    operation,
     before:before ? structuredClone(before) : undefined,
     after:after ? structuredClone(after) : undefined,
     provenance,

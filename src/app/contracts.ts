@@ -273,6 +273,8 @@ export interface SceneEntity {
   immunities: string[];
   vulnerabilities: string[];
   reactions: ReactionOptionVm[];
+  runtimeArtifactId?:string;
+  controllerId?:string;
 }
 
 export interface ActionDetailVm {

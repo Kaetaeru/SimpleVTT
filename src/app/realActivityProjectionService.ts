@@ -29,6 +29,9 @@ function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "artifact") {
     return `${change.targetId} artifact.${change.artifactId} ${change.operation}`;
   }
+  if (change.kind === "combatant") {
+    return `${change.targetId} combatant ${change.operation}`;
+  }
   if (change.kind === "zone-membership") {
     return `${change.targetId} zone-membership.${change.artifactId} ${change.operation}`;
   }

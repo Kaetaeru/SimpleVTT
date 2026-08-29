@@ -44,6 +44,7 @@ export interface ActorArtifactData {
   statDefinitionId:string;
   ownerId:string;
   controllerId:string;
+  side:"ally"|"enemy";
   initiative:"shared"|"independent"|"none";
   properties:Record<string,string|number|boolean>;
   actionDefinitionIds:string[];
@@ -129,8 +130,10 @@ export function createRuntimeArtifact(request:RuntimeArtifactSpawnRequest):Runti
   } else if(request.link) throw new DomainEvaluationError("only link artifacts can contain link data");
   if(request.artifactKind==="actor") {
     const actor=request.actor;
-    if(!actor?.combatantId||!actor.statDefinitionId||!actor.ownerId||!actor.controllerId) throw new DomainEvaluationError("actor artifact requires combatant, stat, owner, and controller identity");
+    if(!actor?.combatantId||!actor.statDefinitionId||!actor.ownerId||!actor.controllerId||(actor.side!=="ally"&&actor.side!=="enemy")) throw new DomainEvaluationError("actor artifact requires combatant, stat, owner, controller, and side");
     if(new Set(actor.actionDefinitionIds).size!==actor.actionDefinitionIds.length||actor.resources.some((resource)=>!resource.id||!Number.isInteger(resource.current)||!Number.isInteger(resource.maximum)||resource.current<0||resource.maximum<0||resource.current>resource.maximum)) throw new DomainEvaluationError("actor artifact action or resource projection is invalid");
+    const maximum=actor.properties["hp.maximum"],current=actor.properties["hp.current"]??maximum,temporary=actor.properties["hp.temporary"]??0,speed=actor.properties["movement.walk"],armorClass=actor.properties["defense.ac"],initiative=actor.properties.initiative;
+    if(!Number.isInteger(maximum)||Number(maximum)<1||!Number.isInteger(current)||Number(current)<0||Number(current)>Number(maximum)||!Number.isInteger(temporary)||Number(temporary)<0||!Number.isInteger(speed)||Number(speed)<0||!Number.isInteger(armorClass)||Number(armorClass)<0||(actor.initiative==="independent"&&!Number.isInteger(initiative))) throw new DomainEvaluationError("actor artifact requires valid HP, movement.walk, defense.ac, and independent initiative properties");
   } else if(request.actor) throw new DomainEvaluationError("only actor artifacts can contain actor data");
   if(request.artifactKind==="form") {
     const form=request.form;

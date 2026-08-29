@@ -136,6 +136,42 @@ export function addTurnRuntimeCombatant(session:TurnRuntimeSession,scene:SceneVm
 }
 
 export function projectTurnRuntimeToScene(session:TurnRuntimeSession,scene:SceneVm) {
+  const actorArtifacts=(session.state.artifacts??[]).filter((artifact)=>artifact.artifactKind==="actor"&&artifact.actor);
+  const artifactIds=new Set(actorArtifacts.map((artifact)=>artifact.id));
+  for(const entity of scene.entities.filter((candidate)=>candidate.runtimeArtifactId&&!artifactIds.has(candidate.runtimeArtifactId))) {
+    scene.entities=scene.entities.filter((candidate)=>candidate.id!==entity.id);
+    delete scene.actionsByActor[entity.id];
+    delete scene.economyByActor[entity.id];
+  }
+  for(const artifact of actorArtifacts) {
+    const actor=artifact.actor!;
+    const runtime=session.state.combatants[actor.combatantId];
+    if(!runtime) continue;
+    const owner=scene.entities.find((entity)=>entity.id===actor.ownerId);
+    const projected:SceneEntity={
+      id:actor.combatantId,
+      name:typeof actor.properties["presentation.name"]==="string"?actor.properties["presentation.name"]:actor.statDefinitionId,
+      side:actor.side,
+      kind:"combatant",
+      hp:runtime.life.hp.current,
+      maxHp:runtime.life.hp.maximum,
+      tempHp:runtime.life.hp.temporary,
+      ac:Number(actor.properties["defense.ac"]),
+      initiative:actor.initiative==="shared"?(owner?.initiative??0):Number(actor.properties.initiative??0),
+      status:[`${PUBLIC_EFFECT_PREFIX}${artifact.sourceId}`],
+      resistances:[],immunities:[],vulnerabilities:[],reactions:[],
+      runtimeArtifactId:artifact.id,
+      controllerId:actor.controllerId,
+    };
+    const index=scene.entities.findIndex((entity)=>entity.id===projected.id);
+    if(index>=0) scene.entities[index]={...scene.entities[index],...projected};
+    else scene.entities.push(projected);
+    scene.actionsByActor[actor.combatantId]??=[];
+  }
+  const nonInitiativeActors=new Set(actorArtifacts.filter((artifact)=>artifact.actor!.initiative==="none").map((artifact)=>artifact.actor!.combatantId));
+  session.initiativeOrder=initiativeOrder({...scene,entities:scene.entities.filter((entity)=>!nonInitiativeActors.has(entity.id))});
+  if(!session.initiativeOrder.includes(session.state.clock.activeActorId??"")) session.state.clock.activeActorId=session.initiativeOrder[0];
+  session.activeIndex=Math.max(0,session.initiativeOrder.indexOf(session.state.clock.activeActorId??""));
   scene.round=session.state.clock.round;
   if (session.state.clock.activeActorId) scene.currentActorId=session.state.clock.activeActorId;
   for (const id of session.initiativeOrder) {

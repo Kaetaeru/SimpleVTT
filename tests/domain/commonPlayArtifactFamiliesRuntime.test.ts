@@ -67,7 +67,7 @@ test("actor, form, and link artifacts retain explicit owner/controller/property/
   const created=resolvePendingResolution(TEST_PROFILE,state,{
     id:"artifact-families",actorId:"hero",sourceId:"external.unknown.artifacts",expectedRevision:0,
     operations:[
-      {id:"actor",kind:"spawn-artifact",artifact:{id:"summon",sourceId:"external.unknown.summon",sourceActorId:"hero",templateId:"summon-template",artifactKind:"actor",placementRef:"manual:summon",expiry:{kind:"time",elapsedSeconds:600},actor:{combatantId:"summoned-one",statDefinitionId:"external.stat.unknown",ownerId:"hero",controllerId:"player-one",initiative:"shared",properties:{"defense.ac":13,"life.hp.maximum":10},actionDefinitionIds:["attack.bite"],resources:[{id:"charge",current:1,maximum:1}]}}},
+      {id:"actor",kind:"spawn-artifact",artifact:{id:"summon",sourceId:"external.unknown.summon",sourceActorId:"hero",templateId:"summon-template",artifactKind:"actor",placementRef:"manual:summon",expiry:{kind:"time",elapsedSeconds:600},actor:{combatantId:"summoned-one",statDefinitionId:"external.stat.unknown",ownerId:"hero",controllerId:"player-one",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},actionDefinitionIds:["attack.bite"],resources:[{id:"charge",current:1,maximum:1}]}}},
       {id:"form",kind:"spawn-artifact",artifact:{id:"form",sourceId:"external.unknown.form",sourceActorId:"hero",templateId:"form-template",artifactKind:"form",expiry:{kind:"time",elapsedSeconds:600},form:{targetActorId:"hero",propertyOverlay:{"defense.ac":16,"movement.fly":30},retainedProperties:["abilities.int"],replacementProperties:["defense.ac","movement.fly"],hpPolicy:"temporary-hp",actionPolicy:"replace",spellcasting:"restricted",actionDefinitionIds:["attack.claw"],resources:[{id:"form-use",current:1,maximum:1}]}}},
       {id:"link",kind:"spawn-artifact",artifact:{id:"tether",sourceId:"external.unknown.link",sourceActorId:"hero",templateId:"link-template",artifactKind:"link",expiry:{kind:"permanent"},link:{endpointIds:["hero","summon"],relation:"tether",maximumLengthFeet:30}}},
     ],
@@ -75,6 +75,7 @@ test("actor, form, and link artifacts retain explicit owner/controller/property/
   assert.equal(created.status,"committed");
   if(created.status!=="committed") return;
   assert.deepEqual(created.state.artifacts?.map((artifact)=>artifact.artifactKind),["actor","form","link"]);
+  assert.equal(created.state.combatants["summoned-one"].life.hp.maximum,10);
 
   const controlled=resolvePendingResolution(TEST_PROFILE,created.state,{
     id:"controller",actorId:"hero",sourceId:"external.control",expectedRevision:1,
@@ -87,6 +88,15 @@ test("actor, form, and link artifacts retain explicit owner/controller/property/
   if(controlled.status==="committed") {
     assert.equal(controlled.state.artifacts?.find((artifact)=>artifact.id==="summon")?.actor?.controllerId,"dm");
     assert.equal(controlled.state.artifacts?.find((artifact)=>artifact.id==="form")?.form?.controllerId,"player-two");
+    const expired=resolvePendingResolution(TEST_PROFILE,controlled.state,{
+      id:"expire-actors",actorId:"hero",sourceId:"clock",expectedRevision:2,
+      operations:[{id:"advance",kind:"advance-time",elapsedSeconds:600}],
+    });
+    assert.equal(expired.status,"committed");
+    if(expired.status==="committed") {
+      assert.equal(expired.state.combatants["summoned-one"],undefined);
+      assert.ok(expired.events[0].stateChanges.some((change)=>change.kind==="combatant"&&change.operation==="removed"));
+    }
   }
 });
 
