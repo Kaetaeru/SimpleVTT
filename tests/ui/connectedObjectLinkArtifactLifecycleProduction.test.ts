@@ -33,10 +33,12 @@ function packagePayload(prefix:string) {
         id:"wall",artifactKind:"object",duration:{kind:"durable"},lifetime:{kind:"durable"},
         initialState:{size:"large",armorClass:15,hp:{current:20,maximum:20},damageThreshold:5,damageDefenses:[{source:"stone",kind:"resistance",damageType:"slashing"}],repairable:true},
         grantedEntryPoints:[
+          {id:"resist",invocation:"granted",operations:[{kind:"artifact.damage",artifact:"wall",amount:{value:8},damageType:"slashing"}]},
           {id:"chip",invocation:"granted",operations:[{kind:"damage.apply",amount:{value:7},damageType:"force",target:"artifact"}]},
-          {id:"repair",invocation:"granted",operations:[{kind:"healing.apply",amount:{value:3},target:"artifact"}]},
+          {id:"repair",invocation:"granted",operations:[{kind:"artifact.repair",artifact:"wall",amount:{value:3}}]},
+          {id:"mark",invocation:"granted",operations:[{kind:"artifact.update",artifact:"wall",metadataPatch:{lifecycle:"active"}}]},
           {id:"relocate",invocation:"granted",operations:[{kind:"artifact.relocate",artifact:"wall",placementRef:"provider:wall-b"}]},
-          {id:"destroy",invocation:"granted",operations:[{kind:"damage.apply",amount:{value:30},damageType:"force",target:"artifact"}]},
+          {id:"destroy",invocation:"granted",operations:[{kind:"artifact.damage",artifact:"wall",amount:{value:30},damageType:"force"}]},
         ],
       },
       {
@@ -101,11 +103,13 @@ async function runRenamedObject(prefix:string) {
   await adapter.resolveAction(pack.createAction,["char.aelar"]);
   let snapshot=await adapter.getSnapshot();
   const wall=artifacts(adapter,snapshot).find((artifact)=>artifact.templateId==="wall")!;
+  await adapter.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"resist"),["char.aelar"]);
   await adapter.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"chip"),["char.aelar"]);
+  await adapter.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"mark"),["char.aelar"]);
   await adapter.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"relocate"),["char.aelar"]);
   snapshot=await adapter.getSnapshot();
   const after=artifacts(adapter,snapshot).find((artifact)=>artifact.templateId==="wall")!;
-  return {hp:after.object?.hp.current,armorClass:after.object?.armorClass,size:after.object?.size,placementRef:after.placementRef};
+  return {hp:after.object?.hp.current,armorClass:after.object?.armorClass,size:after.object?.size,placementRef:after.placementRef,lifecycle:after.metadata?.lifecycle};
 }
 
 test("unknown object/link artifacts execute granted lifecycle actions through connected replay, reconnect, and Undo",async()=>{
@@ -127,12 +131,22 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
   const tether=artifacts(host,hostSnapshot).find((artifact)=>artifact.templateId==="tether")!;
   const portal=artifacts(host,hostSnapshot).find((artifact)=>artifact.templateId==="portal")!;
   assert.equal(wall.object?.hp.current,20);
+  assert.equal(wall.object?.damageThreshold,5);
+  assert.deepEqual(wall.object?.damageDefenses,[{source:"stone",kind:"resistance",damageType:"slashing"}]);
   assert.equal(tether.link?.relation,"tether");
+  assert.equal(tether.link?.maximumLengthFeet,30);
   assert.equal(portal.link?.relation,"portal");
   assert.deepEqual(portal.link?.endpointIds,["char.aelar","combatant.goblin-a"]);
   assert.deepEqual(artifacts(client,clientSnapshot).map((artifact)=>artifact.templateId),["wall","tether","portal"]);
+  assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(wall.id,"resist")));
   assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(wall.id,"chip")));
   assert.ok(hostSnapshot.scene.actionsByActor["char.aelar"]?.some((action)=>action.id===artifactLifecycleCommonPlayActionId(portal.id,"close")));
+
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"resist"),["char.aelar"]));
+  assert.equal((await applyFullLedger(host,client)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,20,"8 slashing must resist to 4 and remain below threshold 5");
+  assert.equal(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,20);
 
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"chip"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
@@ -142,7 +156,15 @@ test("unknown object/link artifacts execute granted lifecycle actions through co
 
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"repair"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
-  assert.equal(artifacts(host,await host.getSnapshot()).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,16);
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,16);
+  assert.equal(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===wall.id)?.object?.hp.current,16);
+
+  await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"mark"),["char.aelar"]));
+  assert.equal((await applyFullLedger(host,client)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(artifacts(host,hostSnapshot).find((artifact)=>artifact.id===wall.id)?.metadata?.lifecycle,"active");
+  assert.equal(artifacts(client,clientSnapshot).find((artifact)=>artifact.id===wall.id)?.metadata?.lifecycle,"active");
 
   await withoutDesktopTransport(()=>host.resolveAction(artifactLifecycleCommonPlayActionId(wall.id,"relocate"),["char.aelar"]));
   assert.equal((await applyFullLedger(host,client)).status,"applied");
