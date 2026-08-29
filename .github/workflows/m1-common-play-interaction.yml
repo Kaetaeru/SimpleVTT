@@ -3,7 +3,9 @@ name: M1 Common Play Interaction
 on:
   pull_request:
     paths:
+      - "schemas/common-play-contract.schema.json"
       - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/domain/commonPlayReactionDefinitionRuntime.ts"
       - "src/domain/reaction.ts"
       - "src/domain/reactionWindow.ts"
       - "src/domain/resolutionTypes.ts"
@@ -12,6 +14,7 @@ on:
       - "src/app/contracts.ts"
       - "tests/fixtures/play-contract/generic-interaction-action.json"
       - "tests/domain/commonPlayInteractionProductionRuntime.test.ts"
+      - "tests/domain/commonPlayReactionDefinitionRuntime.test.ts"
       - "tests/domain/commonPlayReactionRuntime.test.ts"
       - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
       - "tests/domain/commonPlayD20Runtime.test.ts"
@@ -41,6 +44,7 @@ jobs:
         run: >-
           npx tsx --test
           tests/domain/commonPlayInteractionProductionRuntime.test.ts
+          tests/domain/commonPlayReactionDefinitionRuntime.test.ts
           tests/domain/commonPlayReactionRuntime.test.ts
           tests/domain/commonPlayResourceEconomyRuntime.test.ts
           tests/domain/commonPlayD20Runtime.test.ts
