@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 6,
   "status": "continue",
-  "reason": "C9 remains active. Exact head 72a2c7fd advances the generic elapsed runtime by 6 seconds on D&D initiative round wrap inside the same authoritative PendingResolution; UI workflow 33270906900 step 17 is 32/32 green and proves arbitrary installed elapsed Zone artifact/membership cleanup with Host/Client convergence, duplicate idempotence, ordered reconnect, and event-native Undo. Gate N remains IMPLEMENTED=1, INCOMPLETE=35, PROVEN_UNNEEDED=0; Families P/T still require ledger reconciliation and genuinely remaining event/spatial/stay/effect/persistence evidence. Broad Phase09 remains 106/118 and skips Typecheck/build, so no full exact-head build-green claim is made.",
+  "reason": "C9 remains active. Ledger commit 5bea7af reconciles Families P/T to the already-proven automatic Zone turn-start/end and elapsed cleanup evidence without promotion; coverage remains IMPLEMENTED=1, INCOMPLETE=35, PROVEN_UNNEEDED=0. Spatial-Zone investigation found a real contract gap: installed production hardcodes manual Zone authority, while the existing spatial relation contract does not authoritatively express Zone inside/outside and Zone templates carry no geometry, so Core must not infer membership. Next is an explicit provider-supplied spatial Zone membership fact/command routed through the existing event-native Zone transaction and connected replay/reconnect/Undo path. No workflow was created for the docs-only ledger commit, so no new checker/build-green claim is made.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
