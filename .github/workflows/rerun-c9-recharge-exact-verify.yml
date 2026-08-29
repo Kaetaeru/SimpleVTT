@@ -1,0 +1,29 @@
+name: C9 Recharge Exact Verify
+
+on:
+  push:
+    branches:
+      - "tmp/c9-recharge-exact-verify"
+    paths:
+      - ".github/workflows/rerun-c9-recharge-exact-verify.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Recharge production slice
+        run: npx tsx --test tests/ui/connectedActorTurnRuleProduction.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify build
+        run: npx vite build
+      - name: Verify coverage ledger consistency
+        run: node scripts/check-v1-mechanism-coverage.mjs
