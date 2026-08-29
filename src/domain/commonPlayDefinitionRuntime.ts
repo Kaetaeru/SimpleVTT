@@ -153,6 +153,24 @@ function referencedTemplates(entryPoint:CommonPlayEntryPointIR) {
   return new Set(entryPoint.operations.flatMap((operation)=>typeof operation.template==="string"?[operation.template]:[]));
 }
 
+function referencedRuleTemplates(templates:Obj[]) {
+  const referenced=new Set<string>();
+  templates.forEach((template)=>{
+    if(!Array.isArray(template.rules)) return;
+    template.rules.forEach((rule)=>{
+      if(!rule||typeof rule!=="object"||Array.isArray(rule)) return;
+      const operations=(rule as Obj).operations;
+      if(!Array.isArray(operations)) return;
+      operations.forEach((operation)=>{
+        if(!operation||typeof operation!=="object"||Array.isArray(operation)) return;
+        const templateId=(operation as Obj).template;
+        if(typeof templateId==="string") referenced.add(templateId);
+      });
+    });
+  });
+  return referenced;
+}
+
 /** Selects a lowerer from authored structure, never content identity or display text. */
 export function lowerCommonPlay(
   definition:CommonPlayDefinitionIR,
@@ -174,10 +192,19 @@ export function lowerCommonPlay(
   if(operationKinds.has("artifact.spawn")) {
     if([...operationKinds].some((kind)=>kind!=="artifact.spawn")) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact activation operations`);
     const artifactKinds=new Set(templates.map((template)=>template.artifactKind));
-    if(artifactKinds.size===1&&artifactKinds.has("zone")) return {
-      kind:"zone",entryPointId,
-      definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayZoneDefinition,
-    };
+    if(artifactKinds.size===1&&artifactKinds.has("zone")) {
+      const ruleReferenced=referencedRuleTemplates(templates);
+      const zoneTemplates=[
+        ...templates,
+        ...(definition.artifactTemplates??[]).filter((template)=>
+          typeof template.id==="string"&&ruleReferenced.has(template.id)&&!referenced.has(template.id)
+        ),
+      ];
+      return {
+        kind:"zone",entryPointId,
+        definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(zoneTemplates)} as unknown as CommonPlayZoneDefinition,
+      };
+    }
     if([...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form")) return {
       kind:"artifacts",entryPointId,
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
