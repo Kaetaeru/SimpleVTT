@@ -1,0 +1,35 @@
+name: Rerun C9 Frequency Diagnostics
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/rerun-c9-frequency-diagnostics.yml"
+      - "tests/ui/connectedOnceFrequencyProduction.test.ts"
+      - "tests/ui/connectedOncePerResolutionFrequencyProduction.test.ts"
+      - "tests/ui/installedCommonPlayAttackOutcomeInterceptorProduction.test.ts"
+      - "src/domain/commonPlayEffectRuntime.ts"
+      - "src/domain/commonPlayFrequencyRuntime.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - tests/ui/connectedOnceFrequencyProduction.test.ts
+          - tests/ui/connectedOncePerResolutionFrequencyProduction.test.ts
+          - tests/ui/installedCommonPlayAttackOutcomeInterceptorProduction.test.ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - run: npx tsx --test ${{ matrix.test }}
