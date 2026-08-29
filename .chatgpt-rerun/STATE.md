@@ -135,6 +135,17 @@ Retained acceptance evidence:
 
 Family P remains `INCOMPLETE`, but its prior "portable Recharge policy/die authority" blocker is now closed by Family AB. Its other undefined event-vocabulary/order seams remain and must not be guessed.
 
+## Family AC audit — authority contract gap
+
+Family AC (`legendary-lair-special-timing`) remains `INCOMPLETE` after repository-authority audit. This is a missing portable/production authority contract, not a safe adapter-wiring task.
+
+- `commonPlaySpecialTimingRuntime.ts` already compiles owner-authorized `turn-start|turn-end|after-turn|initiative-count` requests, option selection, and atomic pool-resource cost into `PendingResolution`.
+- `commonPlayC6Runtime.test.ts` proves the kernel after-turn owner/cost path only.
+- `schemas/common-play-contract.schema.json` does not persist an AC special-action/timing definition, so an unknown external RuleModule cannot currently carry the kernel contract through import/rehydration.
+- `realTurnRuntimeService.ts` retains ordered actor IDs and emits ordinary end-turn/begin-turn transitions; it does not define authoritative `after-turn`/`initiative-count` special-action events.
+- No repository contract currently owns legendary/lair pool refresh, simultaneous special-action ordering, connected owner decision/reconnect, or persistence semantics. Adding those policies inside an adapter would violate the architecture charter.
+- No production source was changed for AC. Coverage remains `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty.
+
 ## Next Exact Action
 
-Do not reopen Families S/T/U/AB or the audited authority-blocked V/W/X/Y/Z/AA seams. Family P remains blocked on undefined event vocabulary/order semantics. Move to the next non-blocked ledger audit, Family AC (`legendary-lair-special-timing`): reconcile the existing owner/timing/option/cost compiler with the live initiative/turn transaction and connected interaction authority. If initiative-count or off-turn owner/refresh/order semantics are not already defined by repository contracts, preserve AC as `INCOMPLETE` rather than inventing policy, then continue to the next non-blocked family.
+Do not reopen Families S/T/U/AB, audited authority-blocked V/W/X/Y/Z/AA, Family P, or Family AC without a repository-defined authority contract. Audit the next non-blocked row, Family AD (`mount-vehicle-controller`): reconcile `commonPlayMountRuntime` plus existing object/controller/session topology against the ledger-required mount/dismount cost, controlled versus independent initiative/actions, fall-off/Prone, capacity, drawn vehicle, crew/speed, vehicle HP/AC/threshold, repair, connected replay/reconnect, and identity evidence. Implement only semantics whose authority/ownership already exists; otherwise preserve AD as `INCOMPLETE` with the exact missing contract and continue to the next non-blocked family.

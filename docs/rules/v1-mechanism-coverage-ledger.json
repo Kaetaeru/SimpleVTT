@@ -1393,7 +1393,7 @@
         "RulesProfile timing/economy",
         "reactionWindow.ts"
       ],
-      "currentState": "Owner/timing/option/cost compilation exists; production dispatch, ordering interaction, and reconnect proof missing",
+      "currentState": "Generic kernel compiles owner-authorized turn-start/end, after-turn, and initiative-count special-action requests with option selection and atomic pool cost, but the persisted Common Play contract does not carry that special-action definition and the live TurnRuntime emits only ordinary begin/end-turn lifecycle. Pool refresh, initiative-count/after-turn dispatch, simultaneous ordering, connected owner interaction, replay/reconnect, and persistence authority remain undefined.",
       "requiredSemantics": [
         "off-turn pools",
         "refresh",
@@ -1409,16 +1409,17 @@
       "transactionDomain": "Session timing/economy and interaction authority",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "commonPlaySpecialTimingRuntime.ts",
-        "commonPlayC6Runtime.test.ts"
+        "commonPlaySpecialTimingRuntime.ts owner/timing/option/cost compiler",
+        "commonPlayC6Runtime.test.ts owner-authorized after-turn cost/payload kernel proof"
       ],
       "productionEvidence": [],
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "session timing event dispatcher",
-        "connected special-action interaction"
+        "portable persisted special-action/timing definition is not present in the Common Play contract",
+        "live session after-turn/initiative-count dispatcher and connected owner interaction are undefined",
+        "pool refresh and simultaneous special-action ordering authority are undefined"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
