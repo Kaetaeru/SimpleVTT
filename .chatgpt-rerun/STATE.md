@@ -3,7 +3,7 @@
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
 - sequence: `7`
 - task_id: `v1-common-play-c8-rerun`
-- dispatch status to publish: `needs_user`
+- dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
 - Rerun working branch/ref: `agent/c9-gate-n-coverage-reconciliation`
 - product integration target: `work/v1-composite`
@@ -56,7 +56,7 @@ Exact Family T verification:
 
 ## Current Family P checkpoint
 
-Family P (`trigger-frequency-automatic`) remains `INCOMPLETE`. Damage events and recurring once-per-turn/round frequency have exact production evidence without a parallel trigger engine. Actor-owned turn boundary source wiring exists, but the dedicated acceptance must not be called green until an exact-head run passes after the initiative-order test correction.
+Family P (`trigger-frequency-automatic`) remains `INCOMPLETE`. Damage events, recurring once-per-turn/round frequency, and actor-owned turn-start/end resource rules now have exact production evidence without a parallel trigger engine.
 
 Damage event slices:
 
@@ -70,22 +70,22 @@ Recurring frequency slice:
 - `63dced7e2116d568071a5349ce7bf8cdb23b0ec2`: production tests prove recurring `damage.dealt` rules with both `once-per-turn` and `once-per-round` suppress a same-turn repeat and re-arm on the following round; the connected proof covers frequency-marker convergence and event-native rollback rather than a local-only marker assertion.
 - UI workflow `33276658731`, job `99164452949`, exact head `63dced7e2116d568071a5349ce7bf8cdb23b0ec2`: connected/live-lifecycle step 17 SUCCESS with the recurring-frequency proof; steps 18-27 also SUCCESS. Broad Phase09 step 28 remains the inherited FAILURE and typecheck/build step 29 is skipped, so no full-build green is claimed.
 
-Actor-owned turn boundary slice under verification:
+Actor-owned turn boundary slice:
 
 - `96ef2d038692f3ab65d7b01cca7d2c82f21e96f0`: `commonPlayActorTurnRuleComposition.ts` structurally discovers actor-owned `turn-start | turn-end` rules from installed actor artifact action definitions and compiles existing `resource.change` plus generic frequency metadata.
 - `a3d602234157f9b6286ad762060e4ef787c4d07b`: `phase09EffectAwareTurnAdapter.ts` composes those operations through the existing authoritative turn PendingResolution beside Zone turn rules.
-- Exact UI run `33276867829`, job `99165007115`, head `f876ff6e8e1e988a8fe36043cbc293a54bece495`, step 17 FAILED only the four new actor-turn tests after the earlier catalog-category fixture error was removed. The failing assertion was resource `0 !== 1`.
-- `2da641307e85c354415be63136bb62962a830f73` then corrected the tests to advance through the authoritative initiative order until the summoned actor is actually active instead of assuming one `endTurn()` reaches it. No exact-head workflow run was available for `2da64130` before the authority conflict below, so actor-owned turn-start/end acceptance is not yet claimed green.
+- UI run `33276867829`, job `99165007115`, head `f876ff6e8e1e988a8fe36043cbc293a54bece495`, step 17 exposed a test-only initiative-order assumption: the fixture expected one `endTurn()` from Aelar to reach an independently-ordered summoned actor, so four new actor-turn assertions observed resource `0 !== 1` before the actor's actual turn boundary.
+- `2da641307e85c354415be63136bb62962a830f73` corrects only that fixture: it advances through the authoritative initiative order until the summoned actor is actually active and preserves the exact event-native connected/Undo assertions. No production source was changed by this correction.
+- UI workflow `33277003153`, job `99165362025`, exact head `2da641307e85c354415be63136bb62962a830f73`: connected/live-lifecycle step 17 SUCCESS with the corrected actor turn-start/end identity, Host/Client convergence, duplicate replay, ordered reconnect, and event-native Undo proofs. Steps 18-27 also SUCCESS. Broad Phase09 step 28 remains inherited FAILURE and typecheck/build step 29 is skipped, so no full-build green is claimed.
 
-Rest-event audit and authority conflict:
+Rest-event audit and discarded staging attempt:
 
 - `short-rest` and `long-rest` already exist as typed Resolver operations and produce authoritative events for the resting `targetId`.
 - `resolutionRestOps.ts` performs rest-bound Effect expiry inside the rest operation itself before returning that operation's event/result.
-- Therefore a generic persistent Effect rule bound to `short-rest`/`long-rest` requires a deliberate ordering decision: trigger before rest expiry, trigger after rest expiry, or evaluate against the pre-rest snapshot while downstream operations execute after rest mutation. The current Common Play contract/checklist/STATE does not define that choice.
-- The previous durable instruction therefore explicitly said: do not implement rest triggers until trigger-vs-rest-expiry ordering is deliberately defined.
-- Concurrent commit `f22d50cb559f779c4070c208860036d6e12b6b83` added `.github/workflows/rerun-c9-rest-trigger-patch.yml`, which attempts to add `short-rest | long-rest` as Common Play automatic effect events and chooses an ordering/lifetime behavior without first reconciling that semantic decision in canonical authority.
-- Workflow run `33277045870` for `f22d50cb` completed `FAILURE`; the branch remained at the staging-workflow commit, so the attempted workflow did not push the proposed domain/app/test source changes.
-- This is an authority conflict, not permission to select one ordering silently. Per the architecture charter and Goal Runner execution contract, product implementation stops here until the rest-trigger ordering/lifetime contract is deliberately resolved or the conflicting staged workflow is explicitly discarded.
+- Therefore a generic persistent Effect rule bound to `short-rest`/`long-rest` requires a deliberate ordering decision: trigger before rest expiry, trigger after rest expiry, or evaluate against the pre-rest snapshot while downstream operations execute after rest mutation. The current Common Play contract/checklist does not define that choice.
+- Concurrent commit `f22d50cb559f779c4070c208860036d6e12b6b83` temporarily added `.github/workflows/rerun-c9-rest-trigger-patch.yml`, which attempted to choose one rest ordering/lifetime behavior without first reconciling that semantic decision. Workflow run `33277045870` failed immediately and did not push any proposed domain/app/test source changes.
+- `7727cf2af1f1af6bb9d257b183c214d5f9f3f7ab` explicitly deletes that staging workflow. The unauthorized rest-trigger approach is discarded; no rest-trigger product code entered the branch, and no owner decision is currently required merely to continue auditing other already-owned event producers.
+- Rest-trigger production remains intentionally unimplemented until its ordering/lifetime contract is deliberately defined.
 
 Recharge/cooldown audit:
 
@@ -101,8 +101,15 @@ Attack/save outcome audit:
 - However, the current portable contract does not define canonical top-level event names for attack hit/miss or save success/failure, nor the event subject/target binding for those rules. Defining those names/bindings inside a production adapter would silently create semantics rather than route an already-owned contract.
 - Therefore no hit/miss/save dispatcher was added. This remains a contract-vocabulary/subject-binding gap.
 
+State/effect application and expiry audit:
+
+- `resolutionEffectOps.ts` emits authoritative Resolver events for `apply-effect` and `remove-effect` operations with explicit target subjects and reversible Effect StateChanges.
+- The portable automatic-rule contract does not define a canonical top-level event identity/subject binding that maps the ledger's `state applied` semantic to those operation events. Reusing `apply-effect` as an authored trigger name inside an adapter would define new portable semantics rather than consume an existing contract.
+- Effect expiry is broader than explicit `remove-effect`: turn boundaries, elapsed advance, rest, Concentration, incapacitation/death, and other lifecycle owners can remove Effects as state changes inside their owning operation. There is no single existing portable `expiry` trigger event with defined pre/post-removal ordering and source-effect lifetime semantics.
+- No state-applied/expiry dispatcher was added. These remain contract-vocabulary/ordering gaps rather than missing transport or Resolver primitives.
+
 Coverage remains `IMPLEMENTED=2`, `INCOMPLETE=34`, `PROVEN_UNNEEDED=0`: Families S and T are final; P is still incomplete. `gateNBlockingNamedFallbacks` remains empty. Gate N remains blocked by the other incomplete rows. Overall verdict: `V1 INCOMPLETE`.
 
 ## Next Exact Action
 
-Owner/design reconciliation is required before more Family P product work: explicitly choose the `short-rest` / `long-rest` automatic-trigger ordering and lifetime semantics, or explicitly discard the staged rest-trigger approach and continue auditing another already-owned event producer. Do not run or reproduce the `f22d50cb` rest-trigger patch while the canonical contract remains undefined. After that conflict is resolved, first obtain an exact-head run for the corrected actor turn-start/end acceptance at `2da64130` or its descendant, then continue Family P without repeating final Zone, damage-event, or recurring-frequency evidence.
+Continue Family P without repeating final Zone, damage-event, recurring-frequency, or actor-turn evidence. Do not implement rest triggers until trigger-vs-expiry ordering is deliberately defined; do not productionize Recharge without a portable policy/die-authority binding; do not invent attack/save/state-applied/expiry event names or subject/lifetime ordering inside adapters. Audit the already-canonical interceptor timing points in `commonPlayRuntime.ts` (`attack.outcome-determined`, `d20.outcome-determined`, `damage.rolled`) against Family P's before/after roll/outcome semantics and existing production/identity/connected evidence. If that evidence satisfies part of P without new semantics, reconcile only that evidence; otherwise continue to another already-owned producer. Keep Family P `INCOMPLETE` until the complete event/frequency matrix is evidenced.
