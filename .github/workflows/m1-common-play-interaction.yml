@@ -12,6 +12,7 @@ on:
       - "src/domain/resolutionActionOps.ts"
       - "src/app/installedCommonPlayRuntimeAdapter.ts"
       - "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts"
+      - "src/app/realAttackTransactionService.ts"
       - "src/app/abilityCheckResolutionEventAdapter.ts"
       - "src/app/offlineRuntimeAdapters.ts"
       - "src/app/contracts.ts"
@@ -27,6 +28,7 @@ on:
       - "tests/ui/ruleModulePackageImport.test.ts"
       - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
       - "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts"
+      - "tests/ui/phase09RealAttackTransactionService.test.ts"
       - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
       - ".github/workflows/m1-common-play-interaction.yml"
 
@@ -58,6 +60,7 @@ jobs:
           tests/ui/ruleModulePackageImport.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
           tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          tests/ui/phase09RealAttackTransactionService.test.ts
           tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
       - name: Typecheck application
         run: npx tsc --noEmit
