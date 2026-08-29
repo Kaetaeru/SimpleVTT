@@ -169,6 +169,7 @@ function validateRule(rule:CommonPlayZoneRule,templateId:string,ruleIndex:number
       if (operation.target!=="event.subject") throw new Error(`${operationLabel} target must be event.subject in this runtime slice`);
       return;
     }
+    if(operation.kind!=="effect.apply") throw new Error(`${operationLabel} kind is not supported by the zone runtime slice`);
     assertOnlyKeys(operation,["kind","template","target"],operationLabel);
     if(!operation.template) throw new Error(`${operationLabel} template is required`);
     if(operation.target!=="event.subject") throw new Error(`${operationLabel} target must be event.subject in this runtime slice`);
