@@ -28,6 +28,17 @@ jobs:
           end=text.index('      - run: npx tsx --test',run)
           code='\n'.join(line[10:] if line.startswith('          ') else line for line in text[run:end].splitlines())
           exec(compile(code,'property-projection-stage','exec'))
+      - name: Align property projection test with turn economy state
+        shell: python
+        run: |
+          from pathlib import Path
+          path=Path('tests/ui/installedCommonPlayPropertyModifierProduction.test.ts')
+          source=path.read_text()
+          old='.combatants["char.aelar"].movement.remaining'
+          new='.combatants["char.aelar"].economy.movement'
+          if source.count(old)!=2:
+            raise SystemExit(f'movement budget assertion anchor count={source.count(old)}')
+          path.write_text(source.replace(old,new))
       - name: Allow numeric property expressions for movement distance
         shell: python
         run: |
