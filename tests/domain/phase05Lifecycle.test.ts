@@ -7,6 +7,18 @@ import {
   removeEffectGroup,
 } from "../../src/domain/effects";
 import {
+  SRD_521_CONDITIONS,
+  activeConditionIds,
+  conditionActionAvailability,
+  conditionDamageDefenses,
+  conditionD20Adjustments,
+  conditionImmunities,
+  conditionSenses,
+  effectiveSpeed,
+  exhaustionLevel,
+  type ConditionId,
+} from "../../src/domain/conditions";
+import {
   concentrationCheckDc,
   resolveConcentrationDamageCheck,
   startConcentration,
@@ -147,4 +159,55 @@ test("Short and Long Rest recover deterministic Hit Dice/resources and reduce Ex
   assert.equal(long.next.hitDice[0].current, 1);
   assert.equal(long.next.resources.find((pool) => pool.id === "spell-slot-1")?.current, 2);
   assert.equal(long.next.effects.filter((effect) => effect.conditionId === "exhaustion").length, 1);
+});
+
+test("Family M generic condition effects preserve SRD condition semantics across arbitrary identities", () => {
+  const conditionIds=Object.keys(SRD_521_CONDITIONS) as ConditionId[];
+  assert.deepEqual(conditionIds, [
+    "blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible",
+    "paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious",
+  ]);
+
+  const build=(identity:string)=>conditionIds.map((conditionId,index)=>createEffect({
+    id:`${identity}:effect:${index}`,
+    sourceId:`${identity}:source:${index}`,
+    sourceActorId:`${identity}:actor:${index}`,
+    targetId:"hero",
+    kind:"condition",
+    conditionId,
+    duration:{kind:"permanent"},
+  }, {round:1,elapsedSeconds:0}));
+
+  const alpha=build("external.module.alpha");
+  const renamed=build("external.completely-renamed.module");
+  assert.deepEqual(activeConditionIds(alpha),activeConditionIds(renamed));
+  assert.deepEqual(alpha.map((effect)=>effect.conditionId),conditionIds);
+  assert.deepEqual(renamed.map((effect)=>effect.conditionId),conditionIds);
+
+  const only=(...ids:ConditionId[])=>alpha.filter((effect)=>effect.conditionId&&ids.includes(effect.conditionId));
+  assert.deepEqual(conditionSenses(only("blinded","deafened")),{canSee:false,canHear:false,canSpeak:true});
+  assert.deepEqual(conditionActionAvailability(only("stunned")),{action:false,bonusAction:false,reaction:false,canSpeak:false});
+  assert.equal(effectiveSpeed(30,only("grappled")),0);
+  assert.deepEqual(conditionDamageDefenses(only("petrified")),[{source:"condition:petrified",kind:"resistance",damageType:"*"}]);
+  assert.deepEqual(conditionImmunities(only("petrified")),["poisoned"]);
+
+  const exhaustion=Array.from({length:7},(_,index)=>createEffect({
+    id:`exhaustion:${index}`,
+    sourceId:`external.exhaustion:${index}`,
+    targetId:"hero",
+    kind:"condition",
+    conditionId:"exhaustion",
+    duration:{kind:"permanent"},
+  }, {round:1,elapsedSeconds:0}));
+  assert.equal(exhaustionLevel(exhaustion),6);
+  assert.equal(effectiveSpeed(30,exhaustion),0);
+
+  const blindedAttack=conditionD20Adjustments({
+    actorId:"hero",
+    targetId:"enemy",
+    family:"attack-roll",
+    actorConditions:only("blinded"),
+    targetConditions:[],
+  });
+  assert.deepEqual(blindedAttack.rollStateContributions,[{source:"condition:blinded:actor",state:"disadvantage"}]);
 });
