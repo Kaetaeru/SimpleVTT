@@ -75,6 +75,23 @@ export function unregisterAuthoritativeCommonPlayAreaMembershipProvider(adapter:
   commonPlayAreaMembershipProviders.delete(adapter);
 }
 
+export interface AuthoritativeCommonPlayTargetCandidateProvider {
+  candidates(input:{sourceId:string;selector:CommonPlaySelector}):CommonPlaySelectorCandidate[];
+}
+
+const commonPlayTargetCandidateProviders=new WeakMap<MockAdapter,AuthoritativeCommonPlayTargetCandidateProvider>();
+
+export function registerAuthoritativeCommonPlayTargetCandidateProvider(
+  adapter:MockAdapter,
+  provider:AuthoritativeCommonPlayTargetCandidateProvider,
+) {
+  commonPlayTargetCandidateProviders.set(adapter,provider);
+}
+
+export function unregisterAuthoritativeCommonPlayTargetCandidateProvider(adapter:MockAdapter) {
+  commonPlayTargetCandidateProviders.delete(adapter);
+}
+
 
 export function setBuiltinCommonPlayCatalogForTests(adapter:MockAdapter,catalog:CatalogEntry[]|null) {
   if (catalog) builtinCatalogOverrides.set(adapter,cp(catalog));
@@ -191,6 +208,7 @@ async function installedPersistentEffectDefinitions(adapter:MockAdapter) {
 }
 
 function projectedArtifactAction(
+  adapter:MockAdapter,
   actionId:string,
   actorId:string,
   action:CommonPlayProductionAction,
@@ -199,7 +217,7 @@ function projectedArtifactAction(
 ):ActionVm {
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const operations=entryPoint.operations as Array<{kind:string;target?:string}>;
-  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;selection?:"manual"|"automatic"};allocation?:{targets:{min?:number;max?:number}}};
+  const portableEntry=entryPoint as {targeting?:CommonPlaySelector;allocation?:{targets:{min?:number;max?:number}}};
   const targeting=portableEntry.targeting;
   const allocation=portableEntry.allocation;
   const targetSelector=targeting??allocation?.targets;
@@ -211,9 +229,13 @@ function projectedArtifactAction(
   const targeted=action.lowered.kind==="save-damage"||targetSelector!==undefined||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   const automaticTargeting=targeting?.selection==="automatic";
   const multi=action.lowered.kind==="save-damage"||Boolean(targetSelector&&(targetSelector.max??1)>1);
+  const actorEntity=scene.entities.find((entity)=>entity.id===actorId);
+  const selectorTargetIds=targeting&&actorEntity
+    ?commonPlayTargetCandidates(adapter,scene,state,actorEntity,targeting).map((candidate)=>candidate.id)
+    :[];
   const eligibleTargetIds=automaticTargeting
     ?[actorId]
-    :targeted?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id):[actorId];
+    :targeting?selectorTargetIds:targeted?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id):[actorId];
   const combatant=state.combatants[actorId];
   const slotAvailable=payment?.kind!=="economy"?true:payment.bucket==="action"?combatant.economy.action:payment.bucket==="bonus-action"?combatant.economy.bonusAction:combatant.economy.reaction;
   const resourcesAvailable=(payments??[]).every((candidate)=>candidate.kind!=="resource"||combatant.resources.some((resource)=>resource.id===candidate.resource&&resource.current>=Number(candidate.amount.value)));
@@ -254,7 +276,7 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
     }
     const actions=(await Promise.all(actor.actionDefinitionIds.map(async(actionId)=>{
       const action=await commonPlayAction(adapter,actionId);
-      return action?projectedArtifactAction(actionId,actor.combatantId,action,snapshot.scene,state):undefined;
+      return action?projectedArtifactAction(adapter,actionId,actor.combatantId,action,snapshot.scene,state):undefined;
     }))).filter((action):action is ActionVm=>Boolean(action));
     snapshot.scene.actionsByActor[actor.combatantId]=actions;
     (adapter as unknown as AdapterState).scene.actionsByActor[actor.combatantId]=cp(actions);
@@ -265,7 +287,7 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
     const definitionActionId=await storedInvocationDefinitionActionId(adapter,stored.definitionId,stored.entryPointId);
     const action=definitionActionId?await commonPlayAction(adapter,definitionActionId):undefined;
     if(!definitionActionId||!action||action.lowered.kind!=="operations") continue;
-    const projected=projectedArtifactAction(definitionActionId,stored.ownerActorId,action,snapshot.scene,state);
+    const projected=projectedArtifactAction(adapter,definitionActionId,stored.ownerActorId,action,snapshot.scene,state);
     const available=Boolean(state.combatants[stored.ownerActorId]?.economy.reaction);
     const triggerAction:ActionVm={
       ...projected,id:storedInvocationCommonPlayActionId(artifact.id,definitionActionId),economy:"반응",available,
@@ -460,6 +482,27 @@ function commonPlaySelectorCandidate(
   };
 }
 
+function commonPlayTargetCandidates(
+  adapter:MockAdapter,
+  scene:SceneVm,
+  state:RulesRuntimeState,
+  actor:SceneVm["entities"][number],
+  selector:CommonPlaySelector,
+) {
+  const creatures=scene.entities
+    .filter((target)=>Boolean(state.combatants[target.id]))
+    .map((target)=>commonPlaySelectorCandidate(adapter,scene,actor,target,selector.area));
+  if(selector.from!=="targets") return creatures;
+  const reservedIds=new Set(creatures.map((candidate)=>candidate.id));
+  const supplied=commonPlayTargetCandidateProviders.get(adapter)?.candidates({sourceId:actor.id,selector:cp(selector)})??[];
+  const external=supplied.filter((candidate)=>
+    candidate.id===candidate.targeting?.id
+    &&(candidate.targeting.kind==="object"||candidate.targeting.kind==="point")
+    &&!reservedIds.has(candidate.id),
+  );
+  return [...creatures,...cp(external)];
+}
+
 function damageDiceFaces(
   internal:AdapterState,
   actionId:string,
@@ -529,6 +572,9 @@ interface PreparedCommonPlayAction {
   actorEntity:SceneVm["entities"][number];
   selectedTargetId:string;
   selectedTargets:SceneVm["entities"];
+  selectedTargetFacts:TargetingFactInput[];
+  selectedTargetNames:Record<string,string>;
+  targetingCandidates?:CommonPlaySelectorCandidate[];
   projectedAction:SceneVm["actionsByActor"][string][number]|undefined;
 }
 
@@ -565,17 +611,21 @@ function prepareCommonPlayAction(
   let effectiveTargetIds=[...targetIds];
   let selectedTargetId=effectiveTargetIds[0];
   if(!actorEntity||!state.combatants[actor.id]) return undefined;
-  let selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
-  if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;
-  let uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];
+  let selectedTargets=effectiveTargetIds
+    .map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id))
+    .filter((target):target is SceneVm["entities"][number]=>Boolean(target&&state!.combatants[target.id]));
+  if(!hasTargeting&&selectedTargets.length!==effectiveTargetIds.length) return undefined;
+  let selectedTargetFacts=selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target));
+  let selectedTargetNames=Object.fromEntries(selectedTargets.map((target)=>[target.id,target.name]));
+  let targetingCandidates:CommonPlaySelectorCandidate[]|undefined;
+  let uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target.id,target] as const)).values()];
   const needsSelectedTarget=action.lowered.kind==="operations"&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   if(hasTargeting) {
     const targeting=portableEntry.targeting!;
     const selectionMode=targeting.selection??"manual";
     if(selectionMode==="automatic"&&targetIds.length&&!(targetIds.length===1&&targetIds[0]===actor.id)) return undefined;
-    const candidates=internal.scene.entities
-      .filter((target)=>Boolean(state!.combatants[target.id]))
-      .map((target)=>commonPlaySelectorCandidate(adapter,internal.scene,actorEntity,target,targeting.area));
+    const candidates=commonPlayTargetCandidates(adapter,internal.scene,state,actorEntity,targeting);
+    targetingCandidates=candidates;
     const selection=resolveCommonPlaySelector({
       sourceId:actor.id,
       selector:targeting,
@@ -588,9 +638,19 @@ function prepareCommonPlayAction(
     if(selection.status!=="resolved") return undefined;
     effectiveTargetIds=selection.targetIds;
     selectedTargetId=effectiveTargetIds[0]??actor.id;
-    selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
-    if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;
-    uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];
+    const byId=new Map(candidates.map((candidate)=>[candidate.id,candidate]));
+    const selectedCandidates=effectiveTargetIds.map((id)=>byId.get(id));
+    if(selectedCandidates.some((candidate)=>!candidate?.targeting)) return undefined;
+    selectedTargetFacts=selectedCandidates.map((candidate)=>candidate!.targeting!);
+    selectedTargetNames=Object.fromEntries(selectedCandidates.map((candidate)=>[
+      candidate!.id,
+      typeof candidate!.properties.name==="string"?candidate!.properties.name:candidate!.id,
+    ]));
+    selectedTargets=effectiveTargetIds
+      .map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id))
+      .filter((target):target is SceneVm["entities"][number]=>Boolean(target&&state!.combatants[target.id]));
+    uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target.id,target] as const)).values()];
+    if((action.lowered.kind==="save-damage"||needsSelectedTarget)&&selectedTargetFacts.some((facts)=>facts.kind!=="creature")) return undefined;
     if(projectedAction&&(!projectedAction.available||selectionMode==="manual"&&targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
   } else if(hasAllocation) {
     const selector=portableEntry.allocation!.targets;
@@ -600,7 +660,7 @@ function prepareCommonPlayAction(
   } else if(needsSelectedTarget) {
     if(!selectedTargets[0]||projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return undefined;
   } else if(selectedTargetId!==actor.id) return undefined;
-  return {internal,state,actor,actorEntity,selectedTargetId,selectedTargets:selectedTargets as SceneVm["entities"],projectedAction};
+  return {internal,state,actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,selectedTargetNames,targetingCandidates,projectedAction};
 }
 
 async function executeStoredInvocationAction(
@@ -722,7 +782,7 @@ function operationExecutionInput(
   itemPaymentResourceIds?:Record<number,string>,
 ):import("../domain/commonPlayOperationRuntime").CommonPlayOperationExecutionInput {
   if(action.lowered.kind!=="operations") throw new Error("stored invocation payload requires an operations lowerer");
-  const {actor,actorEntity,selectedTargetId,selectedTargets,state}=prepared;
+  const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state}=prepared;
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
@@ -736,8 +796,8 @@ function operationExecutionInput(
   }));
   return {
     resolutionId,actorId:actor.id,entryPointId:action.entryPointId,targetId:selectedTargetId,
-    targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,
-    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal as unknown as MockAdapter,internal.scene,actorEntity,target,entryPoint.targeting?.area)):undefined,
+    targetingTargets:entryPoint.targeting?selectedTargetFacts:undefined,
+    targetingCandidates:entryPoint.targeting?targetingCandidates:undefined,
     creatureKinds:Object.fromEntries([
       [actor.id,actorEntity.kind==="character"?"character":"monster"],
       ...selectedTargets.map((target)=>[target.id,target.kind==="character"?"character":"monster"] as const),
@@ -760,7 +820,7 @@ async function executeCommonPlayAction(
   resolutionId:string,
   interactionId?:string,
 ) {
-  const {internal,state,actor,actorEntity,selectedTargetId,selectedTargets,projectedAction}=prepared;
+  const {internal,state,actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,selectedTargetNames,projectedAction}=prepared;
   const lowered=action.lowered;
   const actionKind=action.category==="spell"?"magic" as const:"other" as const;
   let committed;
@@ -770,7 +830,7 @@ async function executeCommonPlayAction(
     const entryPoint=lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
     operationEntryPoint=entryPoint;
     if(entryPoint.allocation) {
-      const candidateTargetIds=[...new Set(selectedTargets.map((target)=>target.id))];
+      const candidateTargetIds=[...new Set(selectedTargetFacts.map((target)=>target.id))];
       const allocation=resolveCommonPlayAllocation({
         id:`${resolutionId}:allocation`,
         idempotencyKey:`${actionId}:${state.revision}:${entryPoint.id}:allocation`,
@@ -784,7 +844,7 @@ async function executeCommonPlayAction(
           totalMustMatch:entryPoint.allocation.totalMustMatch,
         },
         candidateTargetIds,
-        allocations:allocationEntriesFromTargetSequence(selectedTargets.map((target)=>target.id)),
+        allocations:allocationEntriesFromTargetSequence(selectedTargetFacts.map((target)=>target.id)),
       },state.revision);
       if(allocation.status!=="resolved") return {status:"rejected" as const,error:allocation.reason,snapshot:await internal.getSnapshot()};
       allocationResult=allocation;
@@ -845,8 +905,8 @@ async function executeCommonPlayAction(
     .filter((operation)=>operation.kind==="damage.apply"||operation.kind==="healing.apply")
     .map((operation)=>hpTargetId(operation.target,actor.id,selectedTargetId)))]:lowered.kind==="save-damage"?[...selectedTargets.map((target)=>target.id)]:[];
   const allocationTargetIds=allocationResult?.allocations.map((entry)=>entry.targetId)??[];
-  const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:allocationTargetIds.length?allocationTargetIds:operationEntryPoint?.targeting?selectedTargets.map((target)=>target.id):lowered.kind==="save-damage"?selectedTargets.map((target)=>target.id):[selectedTargetId];
-  const presentationTargets=presentationTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id)!);
+  const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:allocationTargetIds.length?allocationTargetIds:operationEntryPoint?.targeting?selectedTargetFacts.map((target)=>target.id):lowered.kind==="save-damage"?selectedTargets.map((target)=>target.id):[selectedTargetId];
+  const presentationTargetNames=presentationTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id)?.name??selectedTargetNames[id]??id);
   const allocationOutcome=allocationResult?`분배 ${allocationResult.total} · ${allocationResult.allocations.map((entry)=>`${entry.targetId} ${entry.units}`).join(", ")}`:undefined;
   const outcome=hp?.outcome??(roll?roll.outcome:allocationOutcome??"규칙 효과 적용");
   return {status:"committed" as const,snapshot:await commitProductionRuntimeResolution(adapter,state,committed,{
@@ -855,7 +915,7 @@ async function executeCommonPlayAction(
     actionName:projectedAction?.name||action.nameKo||action.nameEn,
     actorId:actor.id,
     targetIds:presentationTargetIds,
-    targetNames:presentationTargets.map((target)=>target.name),
+    targetNames:presentationTargetNames,
     compact:hp?.outcome??(roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:allocationOutcome??"Common Play 규칙 적용"),
     detail:[`${lowered.definition.id} · ${action.entryPointId}`,...(allocationOutcome?[allocationOutcome]:[]),...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.events.map((event)=>event.summary)],
     provenance:[`${action.source} · ${action.contentId}`],

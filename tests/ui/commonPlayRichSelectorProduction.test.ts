@@ -9,7 +9,7 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { registerAuthoritativeCommonPlayAreaMembershipProvider } from "../../src/app/installedCommonPlayRuntimeAdapter";
+import { registerAuthoritativeCommonPlayAreaMembershipProvider, registerAuthoritativeCommonPlayTargetCandidateProvider } from "../../src/app/installedCommonPlayRuntimeAdapter";
 import type { SceneVm } from "../../src/app/contracts";
 import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 
@@ -197,4 +197,41 @@ test("unknown installed self-origin area selector consumes provider-backed membe
     return snapshot.resolution?.targetIds;
   }
   assert.deepEqual(await run(RENAMED),await run(ORIGINAL));
+});
+
+
+function externalTargetPayload(identity:Identity) {
+  const authored=JSON.parse(payload(identity));
+  authored.content[0].mechanics[0].config.entryPoints[0].targeting={from:"targets",min:1,max:1};
+  return JSON.stringify(authored);
+}
+
+async function executeExternalTarget(identity:Identity,kind:"object"|"point") {
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(externalTargetPayload(identity));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  registerAuthoritativeCommonPlayTargetCandidateProvider(adapter,{
+    candidates:()=>[
+      {id:"object.training-door",targeting:{id:"object.training-door",kind:"object",relation:"neutral",distanceFeet:10,visible:true,cover:"none"},properties:{name:"Training Door"}},
+      {id:"point.marker-alpha",targeting:{id:"point.marker-alpha",kind:"point",relation:"neutral",distanceFeet:20,visible:true,cover:"none"},properties:{name:"Marker Alpha"}},
+      {id:"combatant.goblin-a",targeting:{id:"combatant.goblin-a",kind:"object",relation:"neutral"},properties:{name:"Collision must not override creature"}},
+    ],
+  });
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
+  const targetId=kind==="object"?"object.training-door":"point.marker-alpha";
+  await adapter.resolveAction(actionId,[targetId]);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.deepEqual(snapshot.resolution?.targetIds,[targetId]);
+  return snapshot.resolution?.targetIds;
+}
+
+test("unknown installed Common Play selects provider-authored object and point targets without identity dispatch",async()=>{
+  assert.deepEqual(await executeExternalTarget(RENAMED,"object"),await executeExternalTarget(ORIGINAL,"object"));
+  assert.deepEqual(await executeExternalTarget(RENAMED,"point"),await executeExternalTarget(ORIGINAL,"point"));
 });

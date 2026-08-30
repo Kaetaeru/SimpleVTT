@@ -366,7 +366,7 @@
         "common-play-contract.schema.json: selector",
         "commonPlayTargetingRuntime.test.ts"
       ],
-      "currentState": "Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority. Production candidates consume authoritative Common Play spatial relations for distance, visibility, adjacency, Total Cover, provider-authored reach, and provider-backed self-origin area membership without fabricating geometry. Providerless area membership continues to fail closed; object/point selection remains incomplete, and point-origin areas remain blocked on the same point authority contract.",
+      "currentState": "Portable Common Play targeting preserves bounded selected target sets, generic predicates, automatic/manual authority, provider-backed spatial facts including reach and area membership, and provider-authored object/point candidates through the shared selector kernel without content identity dispatch or Core geometry fabrication.",
       "requiredSemantics": [
         "self",
         "relation filters",
@@ -387,7 +387,7 @@
         "automatic/manual authority"
       ],
       "transactionDomain": "Resolver targeting with spatial/manual fact authority",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayOperationRuntime.ts parses portable relation-matches targeting selectors and validates authoritative TargetingFactInput relation facts before downstream Resolver operations",
         "installedCommonPlayRuntimeAdapter.ts rejects ineligible relation selections at the production preparation boundary without content-name or content-ID dispatch",
@@ -402,7 +402,9 @@
         "commonPlayOperationRuntime.ts accepts schema-defined area selectors and routes entry-point targeting through resolveCommonPlaySelector with provider-owned/fail-closed area membership",
         "installedCommonPlayRuntimeAdapter.ts projects authoritativeCommonPlaySpatialRelation distance/visibility/Total Cover into canonical portable selector candidate facts and TargetingFactInput without content identity dispatch or Core geometry fabrication",
         "SpatialRelationVm and MovementSpatialUpdate carry optional provider-authored withinReach authority; installedCommonPlayRuntimeAdapter.ts projects it as spatial.within-reach and commonPlayInterceptorProductionRuntimeAdapter.ts answers the same standard fact only when the provider supplied it, never by distance inference",
-        "installedCommonPlayRuntimeAdapter.ts bridges provider-authored self-origin area membership into generic CommonPlaySelectorCandidate.areaMember without content identity dispatch or Core geometry fabrication"
+        "installedCommonPlayRuntimeAdapter.ts bridges provider-authored self-origin area membership into generic CommonPlaySelectorCandidate.areaMember without content identity dispatch or Core geometry fabrication",
+        "installedCommonPlayRuntimeAdapter.ts accepts authoritative provider-authored object/point CommonPlaySelectorCandidate facts alongside scene combatants while preventing provider override of creature identities and preserving creature-only damage/save execution boundaries",
+        "installedCommonPlayRuntimeAdapter.ts AuthoritativeCommonPlayAreaMembershipProvider supplies provider-owned area membership to the same generic selector kernel"
       ],
       "productionEvidence": [
         "commonPlayTargetingRuntime.test.ts portable relation filter accepts authoritative enemy facts, rejects self facts atomically, and preserves bounded multi-target semantics",
@@ -421,7 +423,9 @@
         "C9 Family E Area Selector staged verification run 33310249528: 36/36 focused selector/import/production tests, legacy execution boundary, and tsc --noEmit passed for the area bridge later landed as 0b20e8cae1b04d34b407dcee0e0d24d69b6b90f0",
         "c9FamilyESpatialSelectorProduction.test.ts proves unknown installed and fully renamed RuleModules reject out-of-range, unseen, and Total Cover targets and accept an authoritative in-range visible non-Total-Cover target through production Common Play; run 33311649433 passed all 11 targeted selector tests, legacy execution boundary, and coverage checker before unrelated concurrent type errors outside the Family E slice",
         "C9 Family E Reach Provider 71304 run 33312134693: unknown and fully renamed installed RuleModules selected 10ft/withinReach=true and rejected 5ft/withinReach=false through production Common Play; targeted spatial/selector tests, coverage checker, legacy boundary, and tsc --noEmit passed",
-        "7d3f4ba6c05a8300828b77d59c4b9727356a8334 feat(c9): bridge provider-backed area membership; commonPlayRichSelectorProduction.test.ts proves unknown and fully renamed installed RuleModules reject non-members, accept provider members, and execute through production resolveAction"
+        "7d3f4ba6c05a8300828b77d59c4b9727356a8334 feat(c9): bridge provider-backed area membership; commonPlayRichSelectorProduction.test.ts proves unknown and fully renamed installed RuleModules reject non-members, accept provider members, and execute through production resolveAction",
+        "commonPlayRichSelectorProduction.test.ts unknown installed self-origin area selector consumes provider-backed membership and remains identity invariant; C9 Family E Area Membership 7130 run 33312307575 passed targeted tests, legacy boundary, typecheck, and publish",
+        "commonPlayRichSelectorProduction.test.ts unknown installed Common Play selects provider-authored object and point targets through production resolveAction and presentation targetIds"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayProductionRuntime.test.ts targeting remains invariant under external identity and display rename",
@@ -433,7 +437,8 @@
         "c9FamilyETagSelectorProduction.test.ts completely renamed external module/content/mechanic/entry/display identities preserve has-tag selector semantics",
         "c9FamilyESpatialSelectorProduction.test.ts preserves authoritative range/sight/Total Cover selector semantics after complete external module/content/mechanic/entry/display rename",
         "commonPlayRichSelectorProduction.test.ts provider-owned spatial.within-reach semantics survive complete external module/content/mechanic/entry/display rename and deliberately disagree with distance to prove no Core reach inference",
-        "commonPlayRichSelectorProduction.test.ts preserves provider-backed self-origin area membership semantics after complete external module/content/mechanic/entry/display rename"
+        "commonPlayRichSelectorProduction.test.ts preserves provider-backed self-origin area membership semantics after complete external module/content/mechanic/entry/display rename",
+        "commonPlayRichSelectorProduction.test.ts provider-authored object and point target selection remains invariant under complete external module/content/mechanic/entry/display rename"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayProductionRuntime.test.ts connected Common Play targeting remains Host-authoritative and converges through existing targeting ResolutionEvents",
@@ -445,9 +450,7 @@
         "c9FamilyERelationSelectorAcceptance.test.ts relation selector survives installed-content persistence and fresh MockAdapter rehydration before production execution",
         "tests/ui/installedCommonPlayProductionRuntime.test.ts: connected Common Play targeting remains Host-authoritative and converges through existing events; the same event batch is duplicate-idempotent and a fresh ClientSessionReplica replays it from cursor zero to the same HP and targetIds"
       ],
-      "remainingNamedSeams": [
-        "object/point selection remains incomplete; point-origin area selection remains blocked on the same point authority contract"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
