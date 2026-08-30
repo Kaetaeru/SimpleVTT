@@ -42,19 +42,12 @@ jobs:
 
           adapter = Path('src/app/installedCommonPlayRuntimeAdapter.ts')
           text = adapter.read_text()
-          old = '''  const interactionResponder=interaction.responder==="target-owner"
-            ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined
-            :prepared.actorEntity;
-          if(!interactionResponder) {
-            return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"target-owner interaction requires exactly one selected target");
-          }'''
-          new = '''  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";
-          const interactionResponder=selectedTargetResponder
-            ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined
-            :prepared.actorEntity;
-          if(!interactionResponder) {
-            return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);
-          }'''
+          old = 'const interactionResponder=interaction.responder==="target-owner"'
+          new = 'const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=selectedTargetResponder'
+          assert text.count(old) == 1, text.count(old)
+          text = text.replace(old, new)
+          old = '"target-owner interaction requires exactly one selected target"'
+          new = '`${interaction.responder} interaction requires exactly one selected target`'
           assert text.count(old) == 1, text.count(old)
           adapter.write_text(text.replace(old, new))
 
