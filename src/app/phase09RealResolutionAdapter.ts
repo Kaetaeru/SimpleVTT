@@ -77,6 +77,13 @@ function migratedResolutionAction(action:ActionVm) {
     || action.resolutionKind === "healing";
 }
 
+async function projectedAction(internal:Phase09ResolutionAdapterState,actionId:string) {
+  const canonical=internal.action(actionId);
+  if (canonical) return canonical;
+  const snapshot=await internal.getSnapshot();
+  return Object.values(snapshot.scene.actionsByActor).flat().find((action)=>action.id===actionId);
+}
+
 function rejectCost(internal:Phase09ResolutionAdapterState,error:string) {
   const resolution=internal.resolution;
   if (!resolution) return;
@@ -165,7 +172,7 @@ phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
 
 MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(actionId:string,targetIds:string[]) {
   const internal = this as unknown as Phase09ResolutionAdapterState;
-  const action = internal.action(actionId);
+  const action = await projectedAction(internal,actionId);
   if (!action || !migratedResolutionAction(action)) {
     return oldResolveAction.call(this,actionId,targetIds);
   }
@@ -254,8 +261,39 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const resolution = internal.resolution;
   if (!resolution) return oldAdvanceResolution.call(this);
-  const action = internal.action(resolution.actionId);
+  const action = await projectedAction(internal,resolution.actionId);
   if (!action) return oldAdvanceResolution.call(this);
+
+  const projectedOnly=internal.action(resolution.actionId)===undefined;
+  if (projectedOnly&&resolution.stage==="roll-animation"&&resolution.rollKind==="attack") {
+    const target=internal.entity(resolution.targetIds[0]);
+    const canReact=Boolean(resolution.attackOutcome==="명중"&&target?.reactions.length&&internal.scene.economyByActor[target.id]?.reaction);
+    if (canReact&&target) {
+      const option=target.reactions[0];
+      resolution.interrupt={id:option.id,responderId:target.id,responderName:target.name,trigger:option.trigger,optionName:option.name,cost:option.cost,effect:option.effect,source:option.source};
+      resolution.stage="interrupt";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+    } else {
+      resolution.stage="attack-result";
+      resolution.canAdvance=true;
+      resolution.nextLabel=resolution.attackOutcome==="명중"?"피해 굴림":"판정 적용";
+    }
+    return internal.getSnapshot();
+  }
+  if (projectedOnly&&resolution.stage==="attack-result"&&action.resolutionKind==="attack") {
+    if (resolution.attackOutcome==="빗나감") {
+      internal.commit(action);
+      return internal.getSnapshot();
+    }
+    const base=action.damage?.[0]?.average??0;
+    resolution.stage="damage-animation";
+    resolution.rollKind="damage";
+    resolution.authoritativeDice=resolution.critical?[Math.ceil(base/2),Math.floor(base/2)]:[base];
+    resolution.canAdvance=true;
+    resolution.nextLabel="피해 적용";
+    return internal.getSnapshot();
+  }
 
   if(resolution.stage==="effect-preview"&&Number.isFinite(action.movementBudgetGainFeet)&&(action.movementBudgetGainFeet??0)>0){
     const before=structuredClone(internal.scene.economyByActor[action.actorId]);
