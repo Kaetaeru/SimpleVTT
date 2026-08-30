@@ -1,0 +1,61 @@
+name: C9 Family Q Ledger Sync
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-ledger-sync-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile latest branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Sync Family Q ledger evidence
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          text = path.read_text()
+          replacements = {
+            'Portable boolean consent now supports actor, actor-owner, and target-owner responders through the existing blocking Resolution interrupt.':
+              'Portable boolean consent now supports actor, target, actor-owner, and target-owner responders through the existing blocking Resolution interrupt.',
+            'Rich choice/multiple-option and the remaining target/DM/Host responder and reconnect/stale-replay matrix remain incomplete.':
+              'Rich choice/multiple-option and the remaining DM/Host responder and reconnect/stale-replay matrix remain incomplete.',
+            'commonPlayOperationRuntime.ts typed consent interaction supports actor|actor-owner responders, always|if-revision-changed revalidation, and reject stale policy':
+              'commonPlayOperationRuntime.ts typed consent interaction supports actor|target|actor-owner|target-owner responders, always|if-revision-changed revalidation, and reject stale policy',
+            'installedCommonPlayRuntimeAdapter.ts derives target-owner consent responderId from the single authoritative selected target; connectedActionRoutingAdapter routes and authorizes the interrupt by responder Character id':
+              'installedCommonPlayRuntimeAdapter.ts derives target and target-owner consent responderId from the single authoritative selected target; connectedActionRoutingAdapter routes and authorizes the interrupt by responder Character id',
+            'c9FamilyQTargetOwnerInteractionProduction.test.ts unknown installed target-owner consent routes only to the selected target owner peer, rejects the actor peer, and commits downstream damage plus Reaction payment atomically after approval':
+              'c9FamilyQTargetOwnerInteractionProduction.test.ts unknown installed target and target-owner consent each route only to the selected target responder peer, reject the actor peer, and commit downstream damage plus Reaction payment atomically after approval',
+            'c9FamilyQTargetOwnerInteractionProduction.test.ts sends the blocking prompt to the selected target owner peer, rejects a different peer as interrupt-not-authorized, and broadcasts the accepted authoritative event batch':
+              'c9FamilyQTargetOwnerInteractionProduction.test.ts sends target and target-owner blocking prompts to the selected target responder peer, rejects a different peer as interrupt-not-authorized, and broadcasts the accepted authoritative event batch',
+            'target, DM, and Host responder routing is not yet represented':
+              'DM and Host responder routing is not yet represented',
+          }
+          for old, new in replacements.items():
+            count = text.count(old)
+            assert count == 1, (old, count)
+            text = text.replace(old, new)
+          path.write_text(text)
+          PY
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit ledger sync and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-q-ledger-sync-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): record portable target responder evidence"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
