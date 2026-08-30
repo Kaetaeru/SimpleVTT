@@ -32,48 +32,7 @@ jobs:
           set -euo pipefail
           file=tests/ui/c9FamilyJPortableControlProduction.test.ts
           if ! grep -q 'unknown installed Common Play can escape Grappled' "$file"; then
-            cat >> "$file" <<'TS'
-
-function escapePackagePayload(prefix:string){
-  const moduleId=`${prefix}.module`,contentId=`${prefix}.escape`,mechanicId=`${prefix}.mechanic`;
-  const config={
-    schemaVersion:"0.2-draft",id:mechanicId,
-    entryPoints:[
-      {id:"seed-grapple",invocation:"manual",operations:[{kind:"condition.apply",condition:"grappled",target:"actor"}]},
-      {id:"escape-best-save-probe",invocation:"manual",test:{kind:"saving-throw",roller:"actor",property:{choose:"highest",from:["save.str.modifier","save.dex.modifier"]},dc:{value:5},perTarget:false},operations:[{kind:"condition.remove",condition:"grappled",target:"actor",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}}]},
-    ],
-  };
-  return {moduleId,contentId,mechanicId,json:JSON.stringify({schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"Family J portable escape probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Portable Escape Probe",locales:{en:{name:"Portable Escape Probe"}}},mechanics:[{kind:"common-play",config}]}]})};
-}
-
-async function exerciseEscape(prefix:string){
-  const adapter=new MockAdapter();
-  const pack=escapePackagePayload(prefix);
-  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-  let snapshot=await adapter.previewContentImport(pack.json);
-  assert.ok(!snapshot.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(snapshot.contentImport?.validation));
-  await adapter.activateContentImport();
-  await adapter.startInitiative();
-  await adapter.setCurrentActor("char.aelar");
-  const actionId=(entryPointId:string)=>installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId});
-  snapshot=await adapter.resolveAction(actionId("seed-grapple"),[]);
-  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId==="char.aelar"&&effect.conditionId==="grappled"),true);
-  await adapter.setQueuedD20(20);
-  snapshot=await adapter.resolveAction(actionId("escape-best-save-probe"),[]);
-  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  assert.equal(snapshot.resolution?.rollKind,"save");
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId==="char.aelar"&&effect.conditionId==="grappled"),false);
-  await adapter.undoLastResolution();
-  snapshot=await adapter.getSnapshot();
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId==="char.aelar"&&effect.conditionId==="grappled"),true);
-}
-
-test("unknown installed Common Play can escape Grappled with best STR/DEX save and Undo under identity rename",async()=>{
-  await exerciseEscape("unknown-family-j-escape");
-  await exerciseEscape("renamed-family-j-escape");
-});
-TS
+            printf '%s' 'CgpmdW5jdGlvbiBlc2NhcGVQYWNrYWdlUGF5bG9hZChwcmVmaXg6c3RyaW5nKXsKICBjb25zdCBtb2R1bGVJZD1gJHtwcmVmaXh9Lm1vZHVsZWAsY29udGVudElkPWAke3ByZWZpeH0uZXNjYXBlYCxtZWNoYW5pY0lkPWAke3ByZWZpeH0ubWVjaGFuaWNgOwogIGNvbnN0IGNvbmZpZz17CiAgICBzY2hlbWFWZXJzaW9uOiIwLjItZHJhZnQiLGlkOm1lY2hhbmljSWQsCiAgICBlbnRyeVBvaW50czpbCiAgICAgIHtpZDoic2VlZC1ncmFwcGxlIixpbnZvY2F0aW9uOiJtYW51YWwiLG9wZXJhdGlvbnM6W3traW5kOiJjb25kaXRpb24uYXBwbHkiLGNvbmRpdGlvbjoiZ3JhcHBsZWQiLHRhcmdldDoiYWN0b3IifV19LAogICAgICB7aWQ6ImVzY2FwZS1iZXN0LXNhdmUtcHJvYmUiLGludm9jYXRpb246Im1hbnVhbCIsdGVzdDp7a2luZDoic2F2aW5nLXRocm93Iixyb2xsZXI6ImFjdG9yIixwcm9wZXJ0eTp7Y2hvb3NlOiJoaWdoZXN0Iixmcm9tOlsic2F2ZS5zdHIubW9kaWZpZXIiLCJzYXZlLmRleC5tb2RpZmllciJdfSxkYzp7dmFsdWU6NX0scGVyVGFyZ2V0OmZhbHNlfSxvcGVyYXRpb25zOlt7a2luZDoiY29uZGl0aW9uLnJlbW92ZSIsY29uZGl0aW9uOiJncmFwcGxlZCIsdGFyZ2V0OiJhY3RvciIsd2hlbjp7b3A6ImVxIixsZWZ0OntyZWY6InRlc3Qub3V0Y29tZSJ9LHJpZ2h0Ont2YWx1ZToic3VjY2VzcyJ9fX1dfSwKICAgIF0sCiAgfTsKICByZXR1cm4ge21vZHVsZUlkLGNvbnRlbnRJZCxtZWNoYW5pY0lkLGpzb246SlNPTi5zdHJpbmdpZnkoe3NjaGVtYVZlcnNpb246IjAuMS1kcmFmdCIsbW9kdWxlSWQsbW9kdWxlVmVyc2lvbjoiMSIscnVsZXNQcm9maWxlOntpZDoiZG5kLnNyZC01LjIuMSIsdmVyc2lvbjoiMC4xLWRyYWZ0In0sZGVmYXVsdExvY2FsZToiZW4iLHNvdXJjZTp7ZG9jdW1lbnQ6IkZhbWlseSBKIHBvcnRhYmxlIGVzY2FwZSBwcm9iZSIsdmVyc2lvbjoiMSIsbGljZW5zZToiQ0MwIixzcmREZXJpdmVkOmZhbHNlfSxkZXBlbmRlbmNpZXM6W10sY29uZmxpY3RzOltdLGNhcGFiaWxpdGllczpbXSxjb250ZW50Olt7aWQ6Y29udGVudElkLGNhdGVnb3J5OiJvcHRpb24iLHByZXNlbnRhdGlvbjp7ZGVmYXVsdExvY2FsZToiZW4iLG9yaWdpbmFsTmFtZToiUG9ydGFibGUgRXNjYXBlIFByb2JlIixsb2NhbGVzOntlbjp7bmFtZToiUG9ydGFibGUgRXNjYXBlIFByb2JlIn19fSxtZWNoYW5pY3M6W3traW5kOiJjb21tb24tcGxheSIsY29uZmlnfV19XX0pfTsKfQoKYXN5bmMgZnVuY3Rpb24gZXhlcmNpc2VFc2NhcGUocHJlZml4OnN0cmluZyl7CiAgY29uc3QgYWRhcHRlcj1uZXcgTW9ja0FkYXB0ZXIoKTsKICBjb25zdCBwYWNrPWVzY2FwZVBhY2thZ2VQYXlsb2FkKHByZWZpeCk7CiAgc2V0SW5zdGFsbGVkQ29udGVudFN0b3JlRm9yVGVzdHMoYWRhcHRlcixuZXcgTWVtb3J5SW5zdGFsbGVkQ29udGVudFN0b3JlKCkpOwogIGxldCBzbmFwc2hvdD1hd2FpdCBhZGFwdGVyLnByZXZpZXdDb250ZW50SW1wb3J0KHBhY2suanNvbik7CiAgYXNzZXJ0Lm9rKCFzbmFwc2hvdC5jb250ZW50SW1wb3J0Py52YWxpZGF0aW9uLnNvbWUoKGVudHJ5KT0+ZW50cnkuc2V2ZXJpdHk9PT0iYmxvY2tpbmciKSxKU09OLnN0cmluZ2lmeShzbmFwc2hvdC5jb250ZW50SW1wb3J0Py52YWxpZGF0aW9uKSk7CiAgYXdhaXQgYWRhcHRlci5hY3RpdmF0ZUNvbnRlbnRJbXBvcnQoKTsKICBhd2FpdCBhZGFwdGVyLnN0YXJ0SW5pdGlhdGl2ZSgpOwogIGF3YWl0IGFkYXB0ZXIuc2V0Q3VycmVudEFjdG9yKCJjaGFyLmFlbGFyIik7CiAgY29uc3QgYWN0aW9uSWQ9KGVudHJ5UG9pbnRJZDpzdHJpbmcpPT5pbnN0YWxsZWRDb21tb25QbGF5QWN0aW9uSWQoe2NhdGFsb2dJZDpjYXRhbG9nUXVhbGlmaWVkSWQocGFjay5jb250ZW50SWQscGFjay5tb2R1bGVJZCwiMSIpLG1lY2hhbmljSWQ6cGFjay5tZWNoYW5pY0lkLGVudHJ5UG9pbnRJZH0pOwogIHNuYXBzaG90PWF3YWl0IGFkYXB0ZXIucmVzb2x2ZUFjdGlvbihhY3Rpb25JZCgic2VlZC1ncmFwcGxlIiksW10pOwogIGFzc2VydC5lcXVhbChzbmFwc2hvdC5yZXNvbHV0aW9uPy5zdGFnZSwiY29tcGxldGUiLEpTT04uc3RyaW5naWZ5KHNuYXBzaG90LnJlc29sdXRpb24pKTsKICBhc3NlcnQuZXF1YWwoc25hcHNob3RBZGFwdGVyVHVyblJ1bnRpbWVTdGF0ZShhZGFwdGVyLHNuYXBzaG90LnNjZW5lKT8uZWZmZWN0cy5zb21lKChlZmZlY3QpPT5lZmZlY3QudGFyZ2V0SWQ9PT0iY2hhci5hZWxhciImJmVmZmVjdC5jb25kaXRpb25JZD09PSJncmFwcGxlZCIpLHRydWUpOwogIGF3YWl0IGFkYXB0ZXIuc2V0UXVldWVkRDIwKDIwKTsKICBzbmFwc2hvdD1hd2FpdCBhZGFwdGVyLnJlc29sdmVBY3Rpb24oYWN0aW9uSWQoImVzY2FwZS1iZXN0LXNhdmUtcHJvYmUiKSxbXSk7CiAgYXNzZXJ0LmVxdWFsKHNuYXBzaG90LnJlc29sdXRpb24/LnN0YWdlLCJjb21wbGV0ZSIsSlNPTi5zdHJpbmdpZnkoc25hcHNob3QucmVzb2x1dGlvbikpOwogIGFzc2VydC5lcXVhbChzbmFwc2hvdC5yZXNvbHV0aW9uPy5yb2xsS2luZCwic2F2ZSIpOwogIGFzc2VydC5lcXVhbChzbmFwc2hvdEFkYXB0ZXJUdXJuUnVudGltZVN0YXRlKGFkYXB0ZXIsc25hcHNob3Quc2NlbmUpPy5lZmZlY3RzLnNvbWUoKGVmZmVjdCk9PmVmZmVjdC50YXJnZXRJZD09PSJjaGFyLmFlbGFyIiYmZWZmZWN0LmNvbmRpdGlvbklkPT09ImdyYXBwbGVkIiksZmFsc2UpOwogIGF3YWl0IGFkYXB0ZXIudW5kb0xhc3RSZXNvbHV0aW9uKCk7CiAgc25hcHNob3Q9YXdhaXQgYWRhcHRlci5nZXRTbmFwc2hvdCgpOwogIGFzc2VydC5lcXVhbChzbmFwc2hvdEFkYXB0ZXJUdXJuUnVudGltZVN0YXRlKGFkYXB0ZXIsc25hcHNob3Quc2NlbmUpPy5lZmZlY3RzLnNvbWUoKGVmZmVjdCk9PmVmZmVjdC50YXJnZXRJZD09PSJjaGFyLmFlbGFyIiYmZWZmZWN0LmNvbmRpdGlvbklkPT09ImdyYXBwbGVkIiksdHJ1ZSk7Cn0KCnRlc3QoInVua25vd24gaW5zdGFsbGVkIENvbW1vbiBQbGF5IGNhbiBlc2NhcGUgR3JhcHBsZWQgd2l0aCBiZXN0IFNUUi9ERVggc2F2ZSBhbmQgVW5kbyB1bmRlciBpZGVudGl0eSByZW5hbWUiLGFzeW5jKCk9PnsKICBhd2FpdCBleGVyY2lzZUVzY2FwZSgidW5rbm93bi1mYW1pbHktai1lc2NhcGUiKTsKICBhd2FpdCBleGVyY2lzZUVzY2FwZSgicmVuYW1lZC1mYW1pbHktai1lc2NhcGUiKTsKfSk7Cg==' | base64 -d >> "$file"
           fi
       - name: Verify Family J escape proof
         run: node --import tsx --test tests/ui/c9FamilyJPortableControlProduction.test.ts
@@ -81,7 +40,7 @@ TS
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, os
+          import json
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
