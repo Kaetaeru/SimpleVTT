@@ -1,4 +1,5 @@
 # Final Gate N one-shot verifier; verifies the exact triggering commit.
+# Retriggered after the latest Family I/L reconciliation.
 name: C9 Gate N Final Verification 71304
 
 on:
