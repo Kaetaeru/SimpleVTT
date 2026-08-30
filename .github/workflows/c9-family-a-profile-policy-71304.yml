@@ -1,0 +1,165 @@
+name: C9 Family A Profile Policy 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-profile-policy-71304.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-a-profile-policy-71304
+  cancel-in-progress: false
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Apply RulesProfile-owned property modifier policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          profile_engine=Path('src/domain/profileEngine.ts')
+          text=profile_engine.read_text()
+          old='  roundingPolicy?: { id: string; default?: "floor"|"ceil"|"round" };\n  properties: Record<string, { storage?: string; formula?: ExpressionNode }>;'
+          new='  roundingPolicy?: { id: string; default?: "floor"|"ceil"|"round" };\n  propertyModifierPolicy?: { defaultInstancePolicy: "stack"|"replace"|"unique-by-source" };\n  properties: Record<string, { storage?: string; formula?: ExpressionNode }>;'
+          if new not in text:
+            if old not in text: raise SystemExit('profileEngine RulesProfileLike anchor missing')
+            text=text.replace(old,new,1)
+          profile_engine.write_text(text)
+
+          effect_ops=Path('src/domain/resolutionEffectOps.ts')
+          text=effect_ops.read_text()
+          old='''function displacedPropertyModifierEffects(effects:EffectInstance[],effect:EffectInstance):EffectInstance[] {
+  const modifier=effect.propertyModifier;
+  if(!modifier||modifier.instancePolicy==="stack") return [];
+  if(modifier.instancePolicy==="profile-policy") {
+    throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");
+  }
+  return effects.filter((existing)=>{
+    const current=existing.propertyModifier;
+    if(existing.targetId!==effect.targetId||!current||current.property!==modifier.property) return false;
+    if(modifier.instancePolicy==="replace") return true;
+    return existing.sourceId===effect.sourceId;
+  });
+}
+'''
+          new='''function displacedPropertyModifierEffects(
+  effects:EffectInstance[],
+  effect:EffectInstance,
+  profile:ResolutionExecutionContext["profile"],
+):EffectInstance[] {
+  const modifier=effect.propertyModifier;
+  if(!modifier) return [];
+  const policy=modifier.instancePolicy==="profile-policy"
+    ? profile.propertyModifierPolicy?.defaultInstancePolicy
+    : modifier.instancePolicy;
+  if(!policy) throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");
+  if(policy==="stack") return [];
+  return effects.filter((existing)=>{
+    const current=existing.propertyModifier;
+    if(existing.targetId!==effect.targetId||!current||current.property!==modifier.property) return false;
+    if(policy==="replace") return true;
+    return existing.sourceId===effect.sourceId;
+  });
+}
+'''
+          if new not in text:
+            if old not in text: raise SystemExit('resolutionEffectOps policy anchor missing')
+            text=text.replace(old,new,1)
+          old_call='const displacedEffects=displacedPropertyModifierEffects(ctx.state.effects,effect);'
+          new_call='const displacedEffects=displacedPropertyModifierEffects(ctx.state.effects,effect,ctx.profile);'
+          if new_call not in text:
+            if old_call not in text: raise SystemExit('resolutionEffectOps policy call anchor missing')
+            text=text.replace(old_call,new_call,1)
+          effect_ops.write_text(text)
+
+          schema_path=Path('schemas/rules-profile.schema.json')
+          schema=json.loads(schema_path.read_text())
+          schema['properties']['propertyModifierPolicy']={
+            'type':'object',
+            'required':['defaultInstancePolicy'],
+            'properties':{
+              'defaultInstancePolicy':{'enum':['stack','replace','unique-by-source']},
+            },
+            'additionalProperties':False,
+          }
+          schema_path.write_text(json.dumps(schema,separators=(',',':')))
+
+          profile_path=Path('rules/profiles/dnd.srd-5.2.1.profile.json')
+          text=profile_path.read_text()
+          anchor='''  "roundingPolicy": {
+    "id": "dnd.rounding.default-floor",
+    "default": "floor"
+  },
+  "properties": {'''
+          replacement='''  "roundingPolicy": {
+    "id": "dnd.rounding.default-floor",
+    "default": "floor"
+  },
+  "propertyModifierPolicy": {
+    "defaultInstancePolicy": "unique-by-source"
+  },
+  "properties": {'''
+          if replacement not in text:
+            if anchor not in text: raise SystemExit('D&D profile policy anchor missing')
+            text=text.replace(anchor,replacement,1)
+          profile_path.write_text(text)
+
+          service=Path('src/app/realResolutionService.ts')
+          text=service.read_text()
+          old='  roundingPolicy:dndSrdRulesProfile.roundingPolicy as RulesProfileLike["roundingPolicy"],\n  properties:dndSrdRulesProfile.properties as RulesProfileLike["properties"],'
+          new='  roundingPolicy:dndSrdRulesProfile.roundingPolicy as RulesProfileLike["roundingPolicy"],\n  propertyModifierPolicy:dndSrdRulesProfile.propertyModifierPolicy as RulesProfileLike["propertyModifierPolicy"],\n  properties:dndSrdRulesProfile.properties as RulesProfileLike["properties"],'
+          if new not in text:
+            if old not in text: raise SystemExit('realResolutionService profile anchor missing')
+            text=text.replace(old,new,1)
+          service.write_text(text)
+
+          test_path=Path('tests/domain/propertyModifierProfilePolicyRuntime.test.ts')
+          test_path.write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\n\nimport { compileCommonPlayEntryPointOperations, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";\nimport { resolvePendingResolution } from "../../src/domain/resolution";\nimport type { RulesRuntimeState } from "../../src/domain/combatState";\nimport { runtimeState, TEST_PROFILE } from "./rulesTestState";\n\nconst PROFILE={...TEST_PROFILE,propertyModifierPolicy:{defaultInstancePolicy:"unique-by-source" as const}};\n\nfunction definition(id:string) {\n  return parseCommonPlayOperationDefinition({schemaVersion:"0.2-draft",id,entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"property.modify",property:"movement.walk",operation:"add",value:{value:5},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"profile-policy"}]}]});\n}\n\nfunction apply(state:RulesRuntimeState,id:string,resolutionId:string) {\n  const parsed=definition(id);\n  const pending=compileCommonPlayEntryPointOperations(PROFILE,state,parsed,{resolutionId,actorId:"hero",entryPointId:"activate"});\n  return resolvePendingResolution(PROFILE,state,pending);\n}\n\nfunction committed(result:ReturnType<typeof apply>) {\n  assert.equal(result.status,"committed",result.status==="rejected"?result.error:undefined);\n  if(result.status!=="committed") throw new Error("expected committed resolution");\n  return result;\n}\n\nfunction effects(state:RulesRuntimeState) {\n  return state.effects.filter((effect)=>effect.propertyModifier?.property==="movement.walk");\n}\n\ntest("profile-policy resolves through the RulesProfile structural stacking policy",()=>{\n  const first=committed(apply(runtimeState(),"external.profile.same","profile-policy-1"));\n  const firstEffect=effects(first.state)[0]!;\n  const second=committed(apply(first.state,"external.profile.same","profile-policy-2"));\n  assert.equal(effects(second.state).length,1);\n  const changes=second.events.flatMap((event)=>event.stateChanges).filter((change)=>change.kind==="effect");\n  assert.ok(changes.some((change)=>change.kind==="effect"&&change.effectId===firstEffect.id&&change.operation==="removed"));\n  const third=committed(apply(second.state,"external.profile.other","profile-policy-3"));\n  assert.equal(effects(third.state).length,2);\n});\n''')
+          PY
+      - run: npm run generate:content
+      - name: Verify profile-policy and existing property contracts
+        run: |
+          npx tsx --test tests/domain/propertyModifierProfilePolicyRuntime.test.ts tests/domain/propertyModifierInstancePolicyRuntime.test.ts
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified Family A policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-a-profile-policy-71304.yml
+          git add src/domain/profileEngine.ts src/domain/resolutionEffectOps.ts schemas/rules-profile.schema.json rules/profiles/dnd.srd-5.2.1.profile.json src/app/realResolutionService.ts tests/domain/propertyModifierProfilePolicyRuntime.test.ts
+          git diff --cached --check
+          git commit -m "feat(c9): resolve property modifier profile policy"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
