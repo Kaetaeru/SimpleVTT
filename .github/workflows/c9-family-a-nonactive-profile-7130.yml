@@ -61,6 +61,7 @@ jobs:
               'test("non-active runtime actor exposes generic profile properties to stored unknown Common Play",async()=>{',
               '  const actorId="combatant.goblin-a";',
               '  const adapter=new MockAdapter();',
+              '  await adapter.setReferenceRole("dm");',
               '  const {action}=await install(adapter,"external-property-non-active");',
               '  await adapter.setCurrentActor(actorId);',
               '  const before=await adapter.getSnapshot();',
