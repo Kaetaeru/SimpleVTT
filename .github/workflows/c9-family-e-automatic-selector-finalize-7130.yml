@@ -1,0 +1,81 @@
+name: C9 Family E Automatic Selector Finalize 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-automatic-selector-finalize-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply automatic selector bridge and guard delegation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+
+          workflow=Path('.github/workflows/c9-family-e-automatic-selector-runner-7130.yml').read_text()
+          start="          python - <<'PY'\n"
+          end="\n          PY\n"
+          script=dedent(workflow.split(start,1)[1].split(end,1)[0])
+          exec(compile(script,'automatic-selector-runner','exec'),{'__name__':'__main__'})
+
+          guard=Path('src/app/installedCommonPlaySelectorGuardAdapter.ts')
+          text=guard.read_text()
+          old='''  const found=await installedSelector(this,actionId);\n  if(!found?.selector) return previousResolveAction.call(this,actionId,targetIds);\n  const internal=this as unknown as AdapterState;\n'''
+          new='''  const found=await installedSelector(this,actionId);\n  if(!found?.selector) return previousResolveAction.call(this,actionId,targetIds);\n  if(found.selector.selection==="automatic") return previousResolveAction.call(this,actionId,targetIds);\n  const internal=this as unknown as AdapterState;\n'''
+          if old in text:
+              text=text.replace(old,new,1)
+          elif new not in text:
+              raise SystemExit('selector guard delegation anchor missing')
+          guard.write_text(text)
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family E automatic selector production
+        run: >-
+          node --import tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/commonPlayRichSelectorProduction.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify Gate N boundaries and types
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified source slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add schemas/common-play-contract.schema.json src/domain/commonPlaySelectorRuntime.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/installedCommonPlaySelectorGuardAdapter.ts tests/ui/commonPlayRichSelectorProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat(c9): bridge automatic selector authority"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
