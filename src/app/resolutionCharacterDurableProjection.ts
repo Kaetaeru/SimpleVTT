@@ -11,7 +11,11 @@ export type CharacterWriteBackProjection =
   | { status:"rejected"; error:string };
 
 type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange|DeathSaveStateChange;
-type DurableCharacterResource=CharacterSheet["resources"][number]&{recoveryLockouts?:ResourceRecoveryLockouts};
+type DurableCharacterResource=CharacterSheet["resources"][number]&{
+  recoveryLockouts?:ResourceRecoveryLockouts;
+  sourceMaximum?:number;
+  maximumAfterLongRest?:number;
+};
 
 const ITEM_PREFIX="phase09:item:";
 
@@ -71,6 +75,7 @@ function applyChange(
     const pseudo=itemResource(change.resourceId);
     if (pseudo) {
       if (change.recoveryLockouts) return `Character write-back item resource cannot carry recovery lockouts: ${change.resourceId}`;
+      if (change.capacity) return `Character write-back item resource cannot carry capacity changes: ${change.resourceId}`;
       const item=sheet.items.find((entry)=>entry.id===pseudo.itemId);
       if (!item) return `Character write-back item is missing: ${pseudo.itemId}`;
       const current=pseudo.field==="quantity" ? item.quantity : item.charges?.current;
@@ -112,6 +117,21 @@ function applyChange(
       }
       if (next) resource.recoveryLockouts=structuredClone(next);
       else delete resource.recoveryLockouts;
+    }
+    if (change.capacity) {
+      const expected=direction==="forward" ? change.capacity.before : change.capacity.after;
+      const next=direction==="forward" ? change.capacity.after : change.capacity.before;
+      const currentMarker=resource.maximumAfterLongRest ?? null;
+      if (resource.max!==expected.maximum || currentMarker!==expected.maximumAfterLongRest) {
+        return `Character write-back drift for ${change.targetId}/${label(change)}.capacity`;
+      }
+      if (next.maximum<0 || after>next.maximum) {
+        return `Character write-back invalid capacity for ${change.targetId}/${label(change)}: maximum ${next.maximum}, current ${after}`;
+      }
+      if (resource.sourceMaximum===undefined) resource.sourceMaximum=resource.max;
+      resource.max=next.maximum;
+      if (next.maximumAfterLongRest===null) delete resource.maximumAfterLongRest;
+      else resource.maximumAfterLongRest=next.maximumAfterLongRest;
     }
     resource.current=after;
     return;

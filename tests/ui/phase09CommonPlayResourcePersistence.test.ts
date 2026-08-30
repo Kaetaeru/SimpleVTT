@@ -13,6 +13,9 @@ import {
   setInstalledContentStoreForTests,
 } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+import { buildCharacterLibraryRecordV1, materializeCharacterRecordV1 } from "../../src/app/characterLibraryPersistence";
+import { projectResolutionCharacterWriteBack } from "../../src/app/resolutionCharacterDurableProjection";
+import type { ResolutionEvent } from "../../src/domain/resolutionTypes";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
@@ -268,4 +271,74 @@ test("unknown installed Common Play materialization Undo removes its source-owne
   assert.equal(snapshot.activeCharacter.resources.some((entry)=>entry.id===SOURCE_RESOURCE_ID),false);
   assert.equal(persistedResourceCurrent(adapter,characterId,SOURCE_RESOURCE_ID),undefined);
   assert.equal(await restartedResourceCurrent(characterStore,SOURCE_RESOURCE_ID),undefined);
+});
+
+
+test("temporary resource capacity overlay persists without mutating source maximum and reverses through Undo projection",async()=>{
+  const adapter=new MockAdapter();
+  const snapshot=await adapter.getSnapshot();
+  const sheet=structuredClone(snapshot.activeCharacter);
+  const resource=sheet.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID);
+  assert.ok(resource);
+  const baseMaximum=resource.max;
+  const event={
+    id:"family-d-capacity-persistence:event",
+    resolutionId:"family-d-capacity-persistence",
+    operationId:"family-d-capacity-persistence:resource",
+    kind:"resource-capacity-probe",
+    actorId:sheet.id,
+    targetId:sheet.id,
+    summary:"temporary capacity probe",
+    provenance:[],
+    stateChanges:[{
+      kind:"resource",
+      targetId:sheet.id,
+      resourceId:resource.id,
+      before:resource.current,
+      after:resource.current,
+      capacity:{
+        before:{maximum:baseMaximum,maximumAfterLongRest:null},
+        after:{maximum:baseMaximum+1,maximumAfterLongRest:baseMaximum},
+      },
+      provenance:[],
+      lifetime:"character-durable",
+      writeBack:"character",
+    }],
+    result:{},
+  } satisfies ResolutionEvent;
+
+  const forward=projectResolutionCharacterWriteBack(sheet,[event],"forward");
+  assert.equal(forward.status,"committed",forward.status==="rejected"?forward.error:undefined);
+  if (forward.status!=="committed") return;
+  const expanded=forward.sheet.resources.find((entry)=>entry.id===resource.id);
+  assert.equal(expanded?.max,baseMaximum+1);
+  assert.equal(expanded?.sourceMaximum,baseMaximum);
+  assert.equal(expanded?.maximumAfterLongRest,baseMaximum);
+
+  const record=buildCharacterLibraryRecordV1(forward.sheet);
+  assert.equal(record.source.resourceDefinitions?.find((entry)=>entry.id===resource.id)?.max,baseMaximum);
+  const durable=record.runtime.resources.find((entry)=>entry.id===resource.id);
+  assert.equal(durable?.maximum,baseMaximum+1);
+  assert.equal(durable?.maximumAfterLongRest,baseMaximum);
+
+  const restarted=materializeCharacterRecordV1(record);
+  const restoredResource=restarted.resources.find((entry)=>entry.id===resource.id);
+  assert.equal(restoredResource?.max,baseMaximum+1);
+  assert.equal(restoredResource?.sourceMaximum,baseMaximum);
+  assert.equal(restoredResource?.maximumAfterLongRest,baseMaximum);
+
+  const inverse=projectResolutionCharacterWriteBack(restarted,[event],"inverse");
+  assert.equal(inverse.status,"committed",inverse.status==="rejected"?inverse.error:undefined);
+  if (inverse.status!=="committed") return;
+  const normalized=inverse.sheet.resources.find((entry)=>entry.id===resource.id);
+  assert.equal(normalized?.max,baseMaximum);
+  assert.equal(normalized?.sourceMaximum,baseMaximum);
+  assert.equal(normalized?.maximumAfterLongRest,undefined);
+
+  const undoneRecord=buildCharacterLibraryRecordV1(inverse.sheet,record);
+  assert.equal(undoneRecord.sourceRevision,record.sourceRevision);
+  assert.equal(undoneRecord.source.resourceDefinitions?.find((entry)=>entry.id===resource.id)?.max,baseMaximum);
+  const undoneRuntime=undoneRecord.runtime.resources.find((entry)=>entry.id===resource.id);
+  assert.equal(undoneRuntime?.maximum,undefined);
+  assert.equal(undoneRuntime?.maximumAfterLongRest,undefined);
 });

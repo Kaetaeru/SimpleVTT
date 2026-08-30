@@ -14,6 +14,8 @@ declare module "./contracts" {
       shortRest?: number;
       longRest?: number;
     };
+    sourceMaximum?: number;
+    maximumAfterLongRest?: number;
   }
 
   interface CharacterSheet {

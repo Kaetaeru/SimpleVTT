@@ -89,7 +89,7 @@ function resourceSourceDefinition(resource:CharacterResourceVm) {
   return {
     id:resource.id,
     label:resource.label,
-    max:resource.max,
+    max:resource.sourceMaximum ?? resource.max,
     dieSides:resource.dieSides,
     source:resource.source,
     recovery:resource.recovery ? cp(resource.recovery) : undefined,
@@ -109,9 +109,12 @@ function itemRuntimeState(item:ItemInstanceVm):CharacterItemRuntimeStateV1 {
 }
 
 function resourceRuntimeState(resource:CharacterResourceVm):CharacterResourceRuntimeStateV1 {
+  const sourceMaximum=resource.sourceMaximum ?? resource.max;
   return {
     id:resource.id,
     current:resource.current,
+    maximum:resource.max===sourceMaximum ? undefined : resource.max,
+    maximumAfterLongRest:resource.maximumAfterLongRest,
     recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
   };
 }
@@ -175,6 +178,8 @@ function comparableRuntime(runtime:CharacterRuntimeDurableSnapshotV1):CharacterR
     resources:runtime.resources.map((resource) => ({
       id:resource.id,
       current:resource.current,
+      maximum:resource.maximum,
+      maximumAfterLongRest:resource.maximumAfterLongRest,
       recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
     })),
     items:runtime.items.map((item) => ({
@@ -284,11 +289,14 @@ function materializeResources(record:CharacterLibraryRecordV1):CharacterResource
   const runtimeById=new Map(record.runtime.resources.map((resource)=>[resource.id,resource]));
   return definitions.map((definition)=>{
     const runtime=runtimeById.get(definition.id);
+    const maximum=runtime?.maximum ?? definition.max;
     return {
       id:definition.id,
       label:definition.label,
-      current:Math.min(runtime?.current ?? definition.max,definition.max),
-      max:definition.max,
+      current:Math.min(runtime?.current ?? maximum,maximum),
+      max:maximum,
+      sourceMaximum:definition.max,
+      maximumAfterLongRest:runtime?.maximumAfterLongRest,
       dieSides:definition.dieSides,
       source:definition.source,
       recovery:definition.recovery ? cp(definition.recovery) : undefined,
