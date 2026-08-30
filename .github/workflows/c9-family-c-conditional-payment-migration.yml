@@ -1,0 +1,98 @@
+name: C9 Family C Conditional Payment Migration
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-c-conditional-payment-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply bounded product migration
+        run: python3 .github/c9-family-c-conditional-payment-migrate.py product
+
+      - name: Assert named seam boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q 'LORE_PEERLESS_SKILL_SOURCE' src/app/productionPlayRuntimeAdapter.ts
+          ! grep -q 'peerless-skill' src/app/productionPlayRuntimeAdapter.ts
+          grep -q 'feature:fighter.tactical-mind' src/app/productionPlayRuntimeAdapter.ts
+          grep -q 'feature:fighter.indomitable' src/app/productionPlayRuntimeAdapter.ts
+          grep -q '"kind":"d20-result"' content/modules/dnd-srd-5.2.1.subclasses/module.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate and validate content
+        run: npm run generate:content
+
+      - name: Focused Family C regressions
+        run: npx tsx --test tests/domain/commonPlayReactionRuntime.test.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts tests/ui/bardCollegeLorePeerlessSkillRuntime.test.ts tests/ui/connectedProjectedCharacterPeerlessSkillResolution.test.ts tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+
+      - name: Verify Vite build
+        run: npx vite build
+
+      - name: Commit verified product slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            schemas/common-play-contract.schema.json \
+            src/domain/commonPlayRuntime.ts \
+            src/domain/commonPlayReactionDefinitionRuntime.ts \
+            src/app/commonPlayInterceptorProductionRuntimeAdapter.ts \
+            src/app/productionPlayRuntimeAdapter.ts \
+            content/modules/dnd-srd-5.2.1.subclasses/module.json \
+            tests/domain/commonPlayReactionRuntime.test.ts \
+            tests/ui/bardCollegeLorePeerlessSkillRuntime.test.ts \
+            tests/ui/connectedProjectedCharacterPeerlessSkillResolution.test.ts
+          git diff --cached --check
+          git commit -m "feat(common-play): condition d20 payments and migrate Peerless Skill"
+          git push
+
+      - name: Reconcile Family C ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/c9-family-c-conditional-payment-migrate.py ledger
+          node scripts/check-v1-mechanism-coverage.mjs
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): record conditional payment and Peerless evidence"
+          git push
+
+      - name: Advance Rerun STATE checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/c9-family-c-conditional-payment-migrate.py state
+          git add .chatgpt-rerun/STATE.md
+          git diff --cached --check
+          git commit -m "docs(rerun): checkpoint Peerless migration"
+          git push
+
+      - name: Publish control last and remove migration helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/c9-family-c-conditional-payment-migrate.py control
+          git add .chatgpt-rerun/control.json
+          git rm .github/c9-family-c-conditional-payment-migrate.py .github/workflows/c9-family-c-conditional-payment-migration.yml
+          git diff --cached --check
+          git commit -m "docs(rerun): continue after Peerless migration"
+          git push
