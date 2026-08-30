@@ -74,7 +74,7 @@ jobs:
           replace_test('function packagePayload(prefix:string) {', 'function packagePayload(prefix:string,multiplier?:number) {')
           replace_test(
               'operations:[{kind:"damage.apply",amount:{value:8},damageType:"fire",target:"target"}],',
-              'operations:[{kind:"damage.apply",amount:{value:8},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target:"target"}],',
+              'operations:[{kind:"damage.apply",amount:{value:4},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target:"target"}],',
           )
           replace_test('async function execute(prefix:string,kind:DamageDefenseKind) {', 'async function execute(prefix:string,kind?:DamageDefenseKind,multiplier?:number) {')
           replace_test('  const pack=packagePayload(prefix);', '  const pack=packagePayload(prefix,multiplier);')
@@ -83,7 +83,7 @@ jobs:
               '  runtime.state.combatants[TARGET_ID].damageDefenses=kind?[{source:`${prefix}.runtime-defense`,kind,damageType:"fire"}]:[];',
           )
           marker = '''test("unknown installed damage.apply honors generic target damage defenses with rename invariance and Undo",async()=>{\n  const expected:Record<DamageDefenseKind,number>={resistance:4,vulnerability:16,immunity:0};\n  for(const kind of ["resistance","vulnerability","immunity"] as const) {\n    assert.equal(await execute(`external.family-l-${kind}`,kind),expected[kind]);\n    assert.equal(await execute(`completely.renamed-family-l-${kind}`,kind),expected[kind]);\n  }\n});'''
-          addition = marker + '''\n\ntest("unknown installed damage.apply honors schema-declared multiplier with profile rounding, rename invariance, and Undo",async()=>{\n  assert.equal(await execute("external.family-l-multiplier",undefined,0.6),4);\n  assert.equal(await execute("completely.renamed-family-l-multiplier",undefined,0.6),4);\n});'''
+          addition = '''test("unknown installed damage.apply honors generic target damage defenses with rename invariance and Undo",async()=>{\n  const expected:Record<DamageDefenseKind,number>={resistance:2,vulnerability:8,immunity:0};\n  for(const kind of ["resistance","vulnerability","immunity"] as const) {\n    assert.equal(await execute(`external.family-l-${kind}`,kind),expected[kind]);\n    assert.equal(await execute(`completely.renamed-family-l-${kind}`,kind),expected[kind]);\n  }\n});\n\ntest("unknown installed damage.apply honors schema-declared multiplier with profile rounding, rename invariance, and Undo",async()=>{\n  assert.equal(await execute("external.family-l-multiplier",undefined,0.6),2);\n  assert.equal(await execute("completely.renamed-family-l-multiplier",undefined,0.6),2);\n});'''
           if 'schema-declared multiplier with profile rounding' not in test:
               if marker not in test:
                   raise SystemExit('missing Family L damage defense test marker')
