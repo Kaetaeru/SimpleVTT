@@ -624,7 +624,9 @@
       "identityInvarianceEvidence": [
         "commonPlayMovementRuntime.test.ts external definition identity independence"
       ],
-      "connectedEvidenceIfRelevant": [],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts unknown stored movement converges through Host replay, duplicate handling, Undo, and reconnect"
+      ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "named movement grants",
