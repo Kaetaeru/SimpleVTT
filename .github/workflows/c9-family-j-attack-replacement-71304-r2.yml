@@ -1,0 +1,118 @@
+name: C9 Family J Attack Replacement 71304 R2
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-attack-replacement-71304-r2.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Add attack-replacement acceptance
+        shell: bash
+        run: |
+          cat > tests/ui/c9FamilyJAttackReplacementProduction71304R2.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+
+          async function ready(adapter:MockAdapter) {
+            await adapter.startInitiative();
+            await adapter.setCurrentActor("char.aelar");
+            await adapter.selectDmActor("char.aelar");
+          }
+
+          function hasStatus(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,targetId:string,text:string) {
+            return snapshot.scene.entities.find((entry)=>entry.id===targetId)?.status.some((status)=>status.includes(text))??false;
+          }
+
+          test("renamed Unarmed grapple can replace the first attack and renamed shove can replace the Extra Attack, with Undo restoring the grant",async()=>{
+            const adapter=new MockAdapter();
+            await ready(adapter);
+            const renamedGrapple="action.external.family-j-replacement.control-a";
+            const renamedShove="action.external.family-j-replacement.control-b";
+            const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+            adapter.getSnapshot=async()=>{
+              const snapshot=await originalGetSnapshot();
+              const actions=snapshot.scene.actionsByActor["char.aelar"]??[];
+              const grapple=actions.find((entry)=>entry.id==="action.unarmed-strike.grapple");
+              const shove=actions.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");
+              if(grapple){grapple.id=renamedGrapple;grapple.name="External Control Alpha";}
+              if(shove){shove.id=renamedShove;shove.name="External Control Beta";}
+              return snapshot;
+            };
+
+            await adapter.setQueuedD20(1);
+            await adapter.resolveAction(renamedGrapple,["combatant.goblin-a"]);
+            let snapshot=await adapter.getSnapshot();
+            let state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            assert.equal(snapshot.resolution?.actionId,renamedGrapple);
+            assert.equal(hasStatus(snapshot,"combatant.goblin-a","붙잡힘"),true);
+            assert.equal(state.combatants["char.aelar"].economy.action,false,"the first replaced attack must spend the standard Attack Action");
+            assert.equal(state.combatants["char.aelar"].economy.extraAttacks?.length,1,"the first replaced attack must preserve one remaining attack");
+
+            await adapter.setQueuedD20(1);
+            await adapter.resolveAction(renamedShove,["combatant.goblin-b"]);
+            snapshot=await adapter.getSnapshot();
+            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            assert.equal(snapshot.resolution?.actionId,renamedShove);
+            assert.equal(hasStatus(snapshot,"combatant.goblin-b","넘어짐"),true);
+            assert.equal(state.combatants["char.aelar"].economy.action,false,"the second replaced attack must not restore or spend another standard Action");
+            assert.equal(state.combatants["char.aelar"].economy.extraAttacks?.length,0,"the second replaced attack must consume the remaining attack grant");
+
+            const revisionAfterSecond=state.revision;
+            await adapter.setQueuedD20(1);
+            await adapter.resolveAction(renamedGrapple,["combatant.goblin-b"]);
+            snapshot=await adapter.getSnapshot();
+            assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.revision,revisionAfterSecond,"a third replacement must reject once all attack slots are exhausted");
+            assert.equal(hasStatus(snapshot,"combatant.goblin-b","붙잡힘"),false);
+
+            await adapter.undoLastResolution();
+            snapshot=await adapter.getSnapshot();
+            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            assert.equal(hasStatus(snapshot,"combatant.goblin-b","넘어짐"),false,"Undo must remove the second replacement's control effect");
+            assert.equal(hasStatus(snapshot,"combatant.goblin-a","붙잡힘"),true,"Undo must preserve the first replacement's earlier committed effect");
+            assert.equal(state.combatants["char.aelar"].economy.action,false);
+            assert.equal(state.combatants["char.aelar"].economy.extraAttacks?.length,1,"Undo must restore the consumed replacement attack grant");
+          });
+          EOF
+      - name: Verify Family J attack replacement
+        run: |
+          npm run generate:content
+          node --import tsx --test tests/ui/c9FamilyJAttackReplacementProduction71304R2.test.ts tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified acceptance and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-j-attack-replacement-71304-r2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm "$workflow"
+          git add tests/ui/c9FamilyJAttackReplacementProduction71304R2.test.ts
+          git commit -m "test(c9): prove unarmed attack replacement economy"
+          for attempt in $(seq 1 10); do
+            if git pull --rebase origin "$branch" && git push origin HEAD:"$branch"; then exit 0; fi
+            git rebase --abort >/dev/null 2>&1 || true
+            sleep 1
+          done
+          exit 1
