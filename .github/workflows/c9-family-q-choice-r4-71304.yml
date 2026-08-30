@@ -1,5 +1,5 @@
 name: C9 Family Q Choice R4 71304
-# rerun-trigger: 71304-q-choice-r4-20260830-2257
+# rerun-trigger: 71304-q-choice-r4-selection-forwarding
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Apply verified Q bridge and decouple HP fixture
+      - name: Apply verified Q bridge and preserve choice payload
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -70,6 +70,45 @@ jobs:
           elif reaction_diag not in text:
               raise SystemExit('Q reaction assertion anchor changed')
           test_path.write_text(text,encoding='utf-8')
+
+          forwarding=[
+              (
+                  'src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToQuiveringPalmSeed(accept:boolean){',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToQuiveringPalmSeed(accept:boolean,selectedIds?:string[]){',
+                  'return previousRespondToInterrupt.call(this,accept);',
+                  'return previousRespondToInterrupt.call(this,accept,selectedIds);',
+              ),
+              (
+                  'src/app/rogueCoreRuntimeAdapter.ts',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean){',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean,selectedIds?:string[]){',
+                  'const snapshot=await previousRespondToInterrupt.call(this,accept);',
+                  'const snapshot=await previousRespondToInterrupt.call(this,accept,selectedIds);',
+              ),
+              (
+                  'src/app/consumableD20BonusEffectFollowUpRuntimeAdapter.ts',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean){',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean,selectedIds?:string[]){',
+                  'return previousRespondToInterrupt.call(this,accept);',
+                  'return previousRespondToInterrupt.call(this,accept,selectedIds);',
+              ),
+              (
+                  'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean) {',
+                  'MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean,selectedIds?:string[]) {',
+                  'return previousRespondToInterrupt.call(this,accept);',
+                  'return previousRespondToInterrupt.call(this,accept,selectedIds);',
+              ),
+          ]
+          for file_path,old_sig,new_sig,old_call,new_call in forwarding:
+              path=Path(file_path)
+              source=path.read_text(encoding='utf-8')
+              if source.count(old_sig)!=1:
+                  raise SystemExit(f'{file_path}: interrupt signature anchor changed: {source.count(old_sig)}')
+              if source.count(old_call)!=1:
+                  raise SystemExit(f'{file_path}: interrupt forwarding anchor changed: {source.count(old_call)}')
+              path.write_text(source.replace(old_sig,new_sig,1).replace(old_call,new_call,1),encoding='utf-8')
           PY
       - name: Trace interrupt wrapper chain
         run: grep -R -n -E 'respondToInterrupt=async|previousRespondToInterrupt\.call' src/app
@@ -85,7 +124,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts src/app/rogueCoreRuntimeAdapter.ts src/app/consumableD20BonusEffectFollowUpRuntimeAdapter.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
           git rm -f --ignore-unmatch .github/workflows/c9-family-q-choice-71304.yml .github/workflows/c9-family-q-choice-r2-71304.yml .github/workflows/c9-family-q-choice-r3-71304.yml .github/workflows/c9-family-q-choice-r4-71304.yml .github/workflows/c9-family-q-choice-kernel-71304.yml .github/workflows/c9-family-q-choice-kernel-fix-71304.yml
           git commit -m "feat(c9): carry portable choice interactions through Resolver"
           for attempt in 1 2 3 4 5; do
