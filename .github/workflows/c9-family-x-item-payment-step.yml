@@ -22,7 +22,16 @@ jobs:
         with:
           node-version: 22
       - name: Patch portable item payment bridge
-        run: python .github/scripts/c9-family-x-item-payment-step.py
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/scripts/c9-family-x-item-payment-step.py')
+          text=p.read_text()
+          start=text.index('\nm1 = Path(".github/workflows/m1-common-play-resource-economy.yml")')
+          end=text.index('\n\nPath("tests/ui/installedCommonPlayItemPaymentProduction.test.ts")',start)
+          p.write_text(text[:start]+text[end:])
+          PY
+          python .github/scripts/c9-family-x-item-payment-step.py
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Generate content catalogs
@@ -39,7 +48,7 @@ jobs:
           rm .github/workflows/c9-family-x-item-payment-step.yml .github/scripts/c9-family-x-item-payment-step.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayItemPaymentProduction.test.ts .github/workflows/m1-common-play-resource-economy.yml .github/workflows/c9-family-x-item-payment-step.yml .github/scripts/c9-family-x-item-payment-step.py
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayItemPaymentProduction.test.ts .github/workflows/c9-family-x-item-payment-step.yml .github/scripts/c9-family-x-item-payment-step.py
           git commit -m "feat(c9): route portable item payments through resolver"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
