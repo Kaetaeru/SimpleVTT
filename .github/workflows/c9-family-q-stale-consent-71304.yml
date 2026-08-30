@@ -1,0 +1,33 @@
+name: C9 Family Q Stale Consent 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - "tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts"
+      - ".github/workflows/c9-family-q-stale-consent-71304.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify stale owner consent
+        run: npx tsx --test tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+      - name: Verify coverage and legacy boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
