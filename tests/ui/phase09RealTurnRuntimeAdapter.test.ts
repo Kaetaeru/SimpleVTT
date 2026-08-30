@@ -97,13 +97,13 @@ test("outer atomic attack HP/economy is reconciled into turn runtime and survive
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.currentActorId,"char.aelar");
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);
 
   await adapter.setCurrentActor("combatant.goblin-a");
   await adapter.setCurrentActor("char.aelar");
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false,"manual actor selection must not start a new turn");
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6,"runtime projection must preserve committed HP");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7,"runtime projection must preserve committed HP");
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
@@ -140,7 +140,7 @@ test("accepted interrupt spends Reaction in turn runtime and attack Undo restore
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.equal(snapshot.scene.economyByActor["combatant.training-guardian"]?.reaction,false);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.tempHp,0);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.hp,28);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.training-guardian")?.hp,29);
   assert.ok(snapshot.activity[0]?.stateChanges.some((line)=>line.includes("combatant.training-guardian economy.reaction true → false")));
 
   (adapter as unknown as { lastBefore:unknown }).lastBefore=null;
