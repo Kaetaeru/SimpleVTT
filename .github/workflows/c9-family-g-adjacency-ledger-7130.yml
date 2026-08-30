@@ -1,0 +1,65 @@
+name: C9 Family G Adjacency Ledger 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-adjacency-ledger-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Publish verified Family G adjacency evidence and retire verifier
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python - <<'PY'
+          from pathlib import Path
+          import json
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next((entry for entry in ledger['rows'] if entry.get('family')=='G' and entry.get('id')=='spatial-geometry'),None)
+          if not row:
+              raise SystemExit('Family G spatial-geometry row missing')
+          if row.get('disposition') not in ('INCOMPLETE','IMPLEMENTED','PROVEN_UNNEEDED'):
+              raise SystemExit(f"unexpected Family G disposition: {row.get('disposition')}")
+
+          implementation='commonPlayInterceptorProductionRuntimeAdapter.ts derives standard spatial.adjacent from authoritative module/theater-of-mind distance without content identity dispatch'
+          production='c9FamilyGAdjacencyProduction.test.ts proves unknown and fully renamed installed RuleModules accept 5ft adjacency and reject 10ft separation through production Common Play'
+          if implementation not in row['implementationEvidence']:
+              row['implementationEvidence'].append(implementation)
+          if production not in row['productionEvidence']:
+              row['productionEvidence'].append(production)
+          identity='c9FamilyGAdjacencyProduction.test.ts preserves adjacency semantics after module/content/mechanic/interceptor/interaction/display rename'
+          if identity not in row['identityInvarianceEvidence']:
+              row['identityInvarianceEvidence'].append(identity)
+
+          row['currentState']=row['currentState'].replace('engine-owned adjacency/reach/size-space','engine-owned reach/size-space')
+          row['remainingNamedSeams']=[entry.replace('engine-owned adjacency/reach/size-space','engine-owned reach/size-space') for entry in row['remainingNamedSeams']]
+          path.write_text(json.dumps(ledger,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          PY
+            git rm -f .github/workflows/c9-family-g-adjacency-ledger-7130.yml
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git diff --cached --check
+            git commit -m "docs(c9): record production adjacency evidence"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
