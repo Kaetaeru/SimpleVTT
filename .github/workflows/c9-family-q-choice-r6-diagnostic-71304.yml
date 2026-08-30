@@ -1,0 +1,45 @@
+name: C9 Family Q Choice R6 Diagnostic 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-r6-diagnostic-71304.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply R5 patch and expose accepted resolution
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          workflow=Path('.github/workflows/c9-family-q-choice-r5-71304.yml').read_text(encoding='utf-8')
+          marker="          python - <<'PY'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("\n          PY",start)
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in workflow[start:end].splitlines())
+          exec(compile(code,'q-choice-r5-patch','exec'),{'__name__':'__main__'})
+          path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
+          text=path.read_text(encoding='utf-8')
+          old='assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);'
+          new='assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false,JSON.stringify(snapshot.resolution));'
+          if text.count(old)!=1:
+              raise SystemExit(f'accepted reaction assertion anchor changed: {text.count(old)}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - run: node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
