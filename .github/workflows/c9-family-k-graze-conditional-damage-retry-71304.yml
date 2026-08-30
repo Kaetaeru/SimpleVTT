@@ -44,8 +44,8 @@ jobs:
           from pathlib import Path
           path=Path('tests/ui/c9FamilyKGrazeConditionalDamageProduction.test.ts')
           text=path.read_text(encoding='utf-8')
-          old='    return target.hp;'
-          new='    return target.life.hp.current;'
+          old='return target.hp;'
+          new='return target.life.hp.current;'
           if old not in text and new not in text:
               raise SystemExit('Family K HP observation anchor missing')
           path.write_text(text.replace(old,new,1),encoding='utf-8')
