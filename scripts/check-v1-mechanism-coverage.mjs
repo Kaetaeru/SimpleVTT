@@ -48,6 +48,7 @@ export function checkV1MechanismCoverage(ledger,{gateN=false}={}){
       }
       if(row.connectedRelevant===true&&row.connectedEvidenceIfRelevant.length===0) errors.push(`${label}.connectedEvidenceIfRelevant is required for Gate N`);
       if(row.persistenceRelevant===true&&row.persistenceEvidenceIfRelevant.length===0) errors.push(`${label}.persistenceEvidenceIfRelevant is required for Gate N`);
+      if(row.remainingNamedSeams.length>0) errors.push(`${label}.remainingNamedSeams must be empty for Gate N final dispositions`);
     }
     if(gateN&&!FINAL_DISPOSITIONS.has(row.disposition)) errors.push(`${label} (${row.family ?? "?"}:${row.id ?? "?"}) is not Gate-N complete: ${row.disposition}`);
   }
