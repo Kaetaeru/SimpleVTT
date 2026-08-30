@@ -1,0 +1,49 @@
+name: C9 Family G Spatial Reconnect 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-spatial-reconnect-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify Family G spatial authority reconnect slice
+        run: node --import tsx --test tests/domain/commonPlaySpatialFactRuntime.test.ts tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Verify V1 mechanism ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Typecheck
+        run: npm exec tsc -- --noEmit
+      - name: Retire verifier
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-g-spatial-reconnect-7130.yml
+          git commit -m "chore(c9): retire Family G spatial reconnect verifier"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
