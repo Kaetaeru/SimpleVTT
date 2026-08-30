@@ -1,5 +1,5 @@
 name: C9 Family C Class Feature Ownership
-# rerun: completed-check success-operation semantics
+# rerun: completed-check success-operation semantics v2
 
 on:
   push:
