@@ -71,6 +71,8 @@ jobs:
               raise SystemExit('Q reaction assertion anchor changed')
           test_path.write_text(text,encoding='utf-8')
           PY
+      - name: Trace interrupt wrapper chain
+        run: grep -R -n -E 'respondToInterrupt=async|previousRespondToInterrupt\.call' src/app
       - run: npm ci
       - run: npm run generate:content
       - name: Verify Family Q choice vertical slice
