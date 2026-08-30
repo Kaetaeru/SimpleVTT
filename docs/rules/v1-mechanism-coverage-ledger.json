@@ -27,7 +27,7 @@
         "common-play-contract.schema.json: expression/predicate/property.modify",
         "dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"
       ],
-      "currentState": "The persisted property.modify contract now carries explicit target, Effect ownership, definition source, elapsed duration, destroy-on-end lifetime, and instance policy. commonPlayOperationRuntime generically lowers arbitrary external property.modify definitions to the existing apply-effect ResolutionOperation with a typed propertyModifier payload, and Resolver commits that payload into EffectState without content-name or content-ID dispatch. Production parity remains incomplete because no production property-resolution consumer reads EffectInstance.propertyModifier: resolveProfileProperty currently has no callers, instancePolicy is stored but not enforced during property evaluation, and persistence/reconnect evidence for source-bound property modifiers is still absent.",
+      "currentState": "The persisted property.modify contract carries explicit target, Effect ownership, definition source, elapsed duration, destroy-on-end lifetime, and instance policy. commonPlayOperationRuntime generically lowers arbitrary external property.modify definitions to the existing apply-effect ResolutionOperation with a typed propertyModifier payload, Resolver commits that payload into EffectState, and installed Common Play now projects active movement.walk property effects into the existing movement expression consumer without content-name or content-ID dispatch. Family A remains incomplete because production property projection is not yet generic across the full property vocabulary, instancePolicy is stored but not enforced during property evaluation, and persistence/reconnect evidence for source-bound property modifiers is still absent.",
       "requiredSemantics": [
         "literals",
         "property refs",
@@ -52,16 +52,19 @@
       ],
       "productionEvidence": [
         "95f8b220a1aefc33374b033ef9ed325f53c86f97 feat(c9): lower property modifiers to typed effects",
-        "commonPlayPropertyContractRuntime.test.ts property.modify commits typed EffectState through Resolver"
+        "commonPlayPropertyContractRuntime.test.ts property.modify commits typed EffectState through Resolver",
+        "ad417a464f930db72e4d707c7e3ec79e549218bc feat(c9): project property effects into movement",
+        "installedCommonPlayPropertyModifierProduction.test.ts unknown external property.modify -> Effect -> movement.walk production projection"
       ],
       "identityInvarianceEvidence": [
-        "commonPlayPropertyContractRuntime.test.ts arbitrary external definition and renamed-definition structural equivalence"
+        "commonPlayPropertyContractRuntime.test.ts arbitrary external definition and renamed-definition structural equivalence",
+        "installedCommonPlayPropertyModifierProduction.test.ts renamed external module/content/mechanic preserves property-modified movement semantics"
       ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "EffectInstance.propertyModifier is not consumed by a production property evaluation path",
-        "resolveProfileProperty has no production caller that supplies active Effect-owned modifiers",
+        "EffectInstance.propertyModifier production projection currently covers movement.walk rather than the full generic property vocabulary",
+        "resolveProfileProperty still has no production caller that composes active Effect-owned modifiers across generic property refs",
         "property modifier instancePolicy is stored but stacking/replacement semantics are not enforced during evaluation",
         "source-bound property modifier persistence/reconnect evidence is absent",
         "named progression/runtime stat materialization remains outside a generic property owner"
