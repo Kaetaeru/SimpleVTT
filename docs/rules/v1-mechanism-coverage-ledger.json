@@ -596,7 +596,7 @@
         "conditions.ts",
         "sessionStatusEffectEventRuntimeAdapter.ts"
       ],
-      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Provider-authored line-of-sight, lighting, obscurement, and special-sense facts compose through the shared sensing kernel before production answers sense.can-see/detected; active Resolver-owned Invisible conditions are combined with provider target-invisibility rather than bypassing the generic sensing kernel. Portable Wisdom-based Search/discovery is production-proven through unknown external Common Play using the canonical ability.wis.modifier, Resolver-owned condition removal, failure preservation, event-native Undo, and full external identity rename. Family H remains incomplete only for rules-derived special-sense acquisition/derivation into authoritative observer sense profiles.",
+      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Provider-authored line-of-sight, lighting, obscurement, and special-sense facts compose through the shared sensing kernel before production answers sense.can-see/detected; active Resolver-owned Invisible conditions are combined with provider target-invisibility rather than bypassing the generic sensing kernel. Portable Wisdom-based Search/discovery is production-proven through unknown external Common Play using the canonical ability.wis.modifier, Resolver-owned condition removal, failure preservation, event-native Undo, and full external identity rename. Rules-derived Darkvision, Blindsight, Tremorsense, and Truesight acquisition now projects generic RulesProfile sense.<kind>.range-feet properties and Resolver-owned property modifiers into authoritative observer senses through the shared sensing kernel. Family H is complete.",
       "requiredSemantics": [
         "normal sight",
         "lighting",
@@ -613,7 +613,7 @@
         "reveal/end Hidden"
       ],
       "transactionDomain": "Session sensing facts plus Resolver effects",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "sessionStatusEffectEventRuntimeAdapter.ts",
         "effectGrantActionRuntimeAdapter.ts",
@@ -625,7 +625,8 @@
         "spatialRuntimeContracts.ts carries provider-authored observerSenses, targetInvisible, hearing, and shared-ground-contact facts while commonPlayInterceptorProductionRuntimeAdapter.ts composes them through resolveCommonPlaySenses without content identity dispatch",
         "commonPlayInterceptorProductionRuntimeAdapter.ts merges authoritative Resolver-owned Invisible Effect state into production sensing before answering sense.can-see/sense.detected",
         "commonPlayInterceptorProductionRuntimeAdapter.ts composes provider-authored observer senses/targetInvisible with active Resolver-owned Invisible Effects through resolveCommonPlaySenses rather than a named condition adapter",
-        "spatialRuntimeContracts.ts carries provider-authored observerSenses and targetInvisible facts while Core retains generic special-sense composition semantics"
+        "spatialRuntimeContracts.ts carries provider-authored observerSenses and targetInvisible facts while Core retains generic special-sense composition semantics",
+        "dnd.srd-5.2.1.profile.json sense.<kind>.range-feet properties and commonPlayInterceptorProductionRuntimeAdapter.ts generic runtime profile-property projection derive Darkvision/Blindsight/Tremorsense/Truesight from Resolver Effect modifiers without content identity dispatch"
       ],
       "productionEvidence": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
@@ -643,7 +644,8 @@
         "C9 Family H Invisible Sight run 33313436110 passed the focused sensing/interceptor tests, legacy execution boundary, and TypeScript before publishing the verified staging commit f7d39af47456666437d461f4159d73cd7da08411; identical source/test blobs are present on the target branch",
         "42fa3c47df4c8d8efc51c8b7912fd4304e74592d feat(c9): wire special senses into production facts; installedCommonPlayInterceptorProductionRuntime.test.ts proves provider-authored Darkvision, Blindsight, and Truesight production composition under external identity rename",
         "C9 Family H Invisible Sight 71304 run 33313630506: 21/21 targeted sensing/interceptor tests, legacy execution boundary, and tsc --noEmit passed; production normal sight consumed an active Resolver-owned Invisible condition",
-        "9f62fd3da8ad4dfaad0e436789c36fbeeddd7f55 test(c9): bind Search to Wisdom modifier; C9 Family H Search Discovery 71304 run 33314310761 passed unknown/renamed external Wisdom Search success/failure, Resolver condition removal, event-native Undo, existing sensing regressions, coverage checker, legacy boundary, and tsc --noEmit"
+        "9f62fd3da8ad4dfaad0e436789c36fbeeddd7f55 test(c9): bind Search to Wisdom modifier; C9 Family H Search Discovery 71304 run 33314310761 passed unknown/renamed external Wisdom Search success/failure, Resolver condition removal, event-native Undo, existing sensing regressions, coverage checker, legacy boundary, and tsc --noEmit",
+        "2b79dfc41013b9a20eed4c2ea779df6b922d6d10 and dabe88ee00dd104cf78640bb545d81aef745d487 add RulesProfile sense ranges and production projection; 434ae0ca6ba268c828da91af3660bfe633f74c25 adds the rename-invariant regression; C9 Family H Sense Profile run 33314316843 passed 29/29 targeted property/sensing/production tests, legacy execution boundary, and tsc --noEmit before publishing the regression proof"
       ],
       "identityInvarianceEvidence": [
         "sessionStatusEffectEventRuntime.test.ts",
@@ -653,7 +655,8 @@
         "installedCommonPlayInterceptorProductionRuntime.test.ts preserves identity.creature-type eligibility after module/content/mechanic/interceptor/interaction/display rename",
         "installedCommonPlayInterceptorProductionRuntime.test.ts special-sight matrix preserves Darkvision/Blindsight/Truesight and provider-authored Invisible semantics after module/content/mechanic/interceptor/interaction/display rename",
         "installedCommonPlayInterceptorProductionRuntime.test.ts special-sight matrix preserves provider-authored sensing semantics after full external module/content/mechanic/interceptor/interaction/display rename",
-        "c9FamilyHSearchDiscoveryProduction.test.ts proves portable Wisdom Search/discovery semantics are unchanged under fully renamed external module/content/mechanic identities"
+        "c9FamilyHSearchDiscoveryProduction.test.ts proves portable Wisdom Search/discovery semantics are unchanged under fully renamed external module/content/mechanic identities",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts proves RulesProfile-derived Darkvision remains unchanged after external module/content/mechanic/interceptor/interaction/display and sense-source identity rename"
       ],
       "connectedEvidenceIfRelevant": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
@@ -663,9 +666,7 @@
         "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts route sense.can-see through owner authority, privacy, idempotency, and stale-revision handling"
       ],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "rules-derived special-sense acquisition/derivation into authoritative observer sense profiles remains incomplete"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": false
     },
