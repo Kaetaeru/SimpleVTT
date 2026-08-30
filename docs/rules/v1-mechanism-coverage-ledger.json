@@ -1153,7 +1153,7 @@
         "concentration.ts",
         "concentrationDamageResult.test.ts"
       ],
-      "currentState": "Generic concentration kernel plus portable maintained-effect lowering now compose through the shared Resolver. Unknown installed RuleModule activation, Host/client replay, duplicate handling, Undo, fresh reconnect, and rename invariance are proven. Readied/long-cast concentration setup remains incomplete.",
+      "currentState": "Generic concentration kernel, portable maintained-effect lowering, and structural stored-invocation deferred-spell capture compose through the shared Resolver. Unknown installed RuleModule activation, damage-save/end cleanup, held Ready/deferred-casting concentration setup, Host/client replay, duplicate handling, Undo, fresh reconnect, and rename invariance are proven without content-name or content-ID dispatch. Full spellcasting cadence, slot/component/material, Ritual, and interruption policy remain Family Z spellcasting-meta responsibilities rather than a second concentration engine.",
       "requiredSemantics": [
         "single source",
         "replacement",
@@ -1166,19 +1166,23 @@
         "Undo/reconnect"
       ],
       "transactionDomain": "Resolver maintained effect lifecycle",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayEffectRuntime.ts maintained concentration lowering through shared start-concentration + apply-effect operations",
         "concentration.ts generic single-source replacement and damage save/DC behavior",
-        "resolutionEffectOps.ts concentration replacement, incap/death end, and dependent-effect cleanup"
+        "resolutionEffectOps.ts concentration replacement, incap/death end, and dependent-effect cleanup",
+        "commonPlayArtifactRuntime.ts structurally lowers a stored-invocation artifact with concentrationGroupId into start-concentration plus spawn-artifact in the same Resolver transaction"
       ],
       "productionEvidence": [
         "c9FamilyOConcentrationProduction.test.ts unknown installed maintained concentration production activation and Undo",
-        "concentrationDamageResult.test.ts reversible damage-save concentration cleanup"
+        "concentrationDamageResult.test.ts reversible damage-save concentration cleanup",
+        "tests/domain/c9FamilyODeferredConcentration.test.ts proves arbitrary-ID deferred spell capture starts held concentration through generic artifact lowering and commits the stored invocation atomically",
+        "C9 Family O Deferred Concentration 71304 run 33318301155 passed deferred concentration regression, existing stored-invocation/concentration production regressions, TypeScript, and verifier self-retirement"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts arbitrary renamed portable concentration definitions",
-        "c9FamilyOConcentrationProduction.test.ts renamed unknown installed identities preserve production semantics"
+        "c9FamilyOConcentrationProduction.test.ts renamed unknown installed identities preserve production semantics",
+        "tests/domain/c9FamilyODeferredConcentration.test.ts repeats deferred-spell concentration setup after complete external module/definition/group identity rename with identical structural behavior"
       ],
       "connectedEvidenceIfRelevant": [
         "c9FamilyOConcentrationProduction.test.ts Host/client event replay, duplicate handling, and Undo convergence"
@@ -1186,9 +1190,7 @@
       "persistenceEvidenceIfRelevant": [
         "c9FamilyOConcentrationProduction.test.ts fresh replica reconnect from authoritative Host ledger after Undo"
       ],
-      "remainingNamedSeams": [
-        "readied/long-cast concentration setup still originates from spell/stored-invocation-specific setup outside portable maintained-effect activation"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
