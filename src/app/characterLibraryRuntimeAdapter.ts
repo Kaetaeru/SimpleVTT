@@ -297,10 +297,30 @@ installCharacterResolutionWriteBackHandler(async (adapter,events,direction) => {
   }
 });
 
+function projectPersistedTemporaryResourceCapacity(adapter:MockAdapter,snapshot:AppSnapshot,context:PersistenceContext) {
+  const record=context.repository.snapshot()?.characters.find((entry)=>entry.characterId===snapshot.activeCharacter.id);
+  if (!record) return;
+  const runtimeById=new Map(record.runtime.resources.map((resource)=>[resource.id,resource]));
+  const sourceById=new Map((record.source.resourceDefinitions??[]).map((resource)=>[resource.id,resource]));
+  const apply=(sheet:CharacterSheet) => {
+    for (const resource of sheet.resources) {
+      const persisted=runtimeById.get(resource.id);
+      if (persisted?.maximum===undefined || persisted.maximumAfterLongRest===undefined) continue;
+      const source=sourceById.get(resource.id);
+      resource.max=persisted.maximum;
+      resource.sourceMaximum=source?.max ?? resource.sourceMaximum ?? resource.max;
+      resource.maximumAfterLongRest=persisted.maximumAfterLongRest;
+    }
+  };
+  apply(stateOf(adapter).activeCharacter);
+  apply(snapshot.activeCharacter);
+}
+
 MockAdapter.prototype.getSnapshot = async function getSnapshotWithCharacterLibrary() {
   await ensureHydrated(this);
   const snapshot = await oldGetSnapshot.call(this);
   const context = contextFor(this);
+  projectPersistedTemporaryResourceCapacity(this,snapshot,context);
   snapshot.persistence = cp(context.vm);
   projectDraftSaveError(snapshot,context);
   return snapshot;
