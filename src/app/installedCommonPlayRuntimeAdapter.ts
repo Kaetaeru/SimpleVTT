@@ -15,7 +15,7 @@ import {
   type CommonPlayOperationDefinition,
 } from "../domain/commonPlayOperationRuntime";
 import { lowerCommonPlay, parseCommonPlayDefinition, type LoweredCommonPlayEntryPoint } from "../domain/commonPlayDefinitionRuntime";
-import { resolveCommonPlaySaveDamageEntryPoint } from "../domain/commonPlayEntryPointRuntime";
+import { compileCommonPlaySaveDamageEntryPoint } from "../domain/commonPlayEntryPointRuntime";
 import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";
 import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../domain/commonPlaySemanticEventRuntime";
 import { resolveCommonPlayZoneActivation, resolveCommonPlayZoneMembershipChange } from "../domain/commonPlayZoneRuntime";
@@ -610,11 +610,19 @@ async function executeCommonPlayAction(
       creatureKind:(target.kind==="character"?"character":"monster") as "character"|"monster",
       save:{faces:[internal.d20(actionId,index)]},
     }));
-    committed=resolveCommonPlaySaveDamageEntryPoint(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{
+    const pending=compileCommonPlaySaveDamageEntryPoint(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{
       resolutionId,actorId:actor.id,entryPointId:action.entryPointId,targets:saves,
       damageFaces:rollFaces(internal,actionId,damage.count,damage.sides,selectedTargets.length),
       actionKind,
     });
+    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
+    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(
+      state,effectDefinitions,pending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),
+    );
+    committed=appendCommonPlaySemanticOutcomeEvents(
+      automaticPending,
+      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),
+    );
   } else if(lowered.kind==="effect") {
     committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});
   } else if(lowered.kind==="zone") {
