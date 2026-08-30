@@ -923,7 +923,7 @@
         "compoundDamage.test.ts",
         "resolutionHealthOps.ts"
       ],
-      "currentState": "Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill is production-proven with identity rename and Undo; remaining life/object semantics are incomplete Portable stabilization at 0 HP is production-proven with event-native Undo and external identity rename. Portable damage-at-zero is production-proven for unknown and fully renamed external RuleModules, including durable death-save failure write-back and event-native Undo.",
+      "currentState": "Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill, stabilization at 0 HP, damage-at-zero, and death saving throws are production-proven with event-native Undo and external identity rename. Damage-at-zero includes durable death-save failure write-back; remaining advanced damage-defense/max-HP and object/vehicle semantics are incomplete.",
       "requiredSemantics": [
         "typed/compound damage",
         "resistance",
@@ -947,7 +947,8 @@
       "implementationEvidence": [
         "commonPlayOperationRuntime.ts generic temp-hp.grant parsing/lowering preserves the existing TemporaryHpChoice contract into the Resolver temporary-hp operation",
         "temporaryHp.ts and resolutionHealthOps.ts remain the single Temporary HP non-stacking/choice and HpStateChange execution authority",
-        "commonPlayOperationRuntime.ts parses temp-hp.grant from the Common Play contract and lowers it directly to the shared Resolver temporary-hp operation, including explicit Temporary HP choice semantics"
+        "commonPlayOperationRuntime.ts parses temp-hp.grant from the Common Play contract and lowers it directly to the shared Resolver temporary-hp operation, including explicit Temporary HP choice semantics",
+        "commonPlayOperationRuntime.ts parses portable life.death-save and lowers it to the existing shared Resolver death-save operation; installedCommonPlayRuntimeAdapter.ts supplies the authoritative d20 face without content identity dispatch"
       ],
       "productionEvidence": [
         "4752de7dffc560684cb9d5ad04b3475e64de8673 feat(c9): lower portable Temporary HP",
@@ -956,14 +957,16 @@
         "c9FamilyLTemporaryHpProduction.test.ts executes an unknown installed temp-hp.grant through production Common Play, Resolver Temporary HP state change, and one-step Undo",
         "c59c47cad521bdd6dcfa6cffac09b353621cce17 test(c9): target active character for instant death; C9 Family L Damage Defense 71304 run 33315292373 passed unknown/renamed portable character instant-death overkill plus event-native Undo, V1 coverage checker, legacy execution boundary, and tsc --noEmit",
         "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit",
-        "c9FamilyLDamageAtZeroProduction71304.test.ts proves unknown installed Common Play damage at 0 HP records the SRD death-save failure through production Resolver, durable character write-back, and event-native Undo"
+        "c9FamilyLDamageAtZeroProduction71304.test.ts proves unknown installed Common Play damage at 0 HP records the SRD death-save failure through production Resolver, durable character write-back, and event-native Undo",
+        "e6d44f1587587668e3d1bb1e3aac7dd65850c228 feat(c9): bridge portable death saves; C9 Family L Portable Death Save 71304 run 33316957824 passed unknown/renamed RuleModule death-save production plus Undo, stabilization regression, V1 coverage checker, legacy execution boundary, and tsc --noEmit"
       ],
       "identityInvarianceEvidence": [
         "c9FamilyLTemporaryHpProduction.test.ts renamed external module/content/mechanic preserves Temporary HP semantics",
         "c9FamilyLTemporaryHpProduction.test.ts preserves Temporary HP behavior across unrelated external module/content/mechanic identities",
         "c9FamilyLDamageDefenseProduction.test.ts repeats the portable character instant-death threshold and Undo behavior under unrelated external module/content/mechanic identities",
         "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities",
-        "c9FamilyLDamageAtZeroProduction71304.test.ts repeats the damage-at-zero failure and Undo flow under unrelated external module/content/mechanic identities"
+        "c9FamilyLDamageAtZeroProduction71304.test.ts repeats the damage-at-zero failure and Undo flow under unrelated external module/content/mechanic identities",
+        "c9FamilyLDeathSaveProduction.test.ts repeats authoritative death-save success and event-native Undo under completely unrelated external module/content/mechanic identities"
       ],
       "connectedEvidenceIfRelevant": [
         "c9FamilyLTemporaryHpProduction.test.ts Host/Client authoritative replay, event-native Undo, and fresh reconnect converge Temporary HP",
@@ -974,7 +977,7 @@
       ],
       "remainingNamedSeams": [
         "complete generic threshold/reduction/critical-dice and max-HP acceptance remains incomplete",
-        "0 HP/unconscious and stabilization are production-proven; death-save production acceptance remains incomplete",
+        "0 HP/unconscious, stabilization, damage-at-zero, and death-save production acceptance are proven",
         "Object/Vehicle damage production acceptance remains incomplete",
         "named feature/spell HP execution remains migration debt where it bypasses portable Common Play"
       ],
