@@ -30,7 +30,7 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           doc=json.loads(path.read_text(encoding='utf-8'))
-          row=next(entry for entry in doc['mechanismFamilies'] if entry['family']=='X')
+          row=next(entry for entry in doc['rows'] if entry['family']=='X')
           row['currentState']=(
             'Durable inventory authority exists and unknown external Common Play item quantity and charge payments now execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. Generic create/grant/copy, broader item mutation/equipment ownership, recharge, item-owned action/effect/spellcasting, and transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.'
           )
