@@ -31,6 +31,22 @@ function moduleJson(prefix:string) {
       }],
     },
     {
+      id:"apply-drag-carry-rule",
+      invocation:"manual",
+      operations:[{
+        kind:"property.modify",
+        property:"movement.drag-carry.multiplier",
+        operation:"set",
+        value:{value:2},
+        target:"actor",
+        owner:"effect",
+        source:"definition",
+        duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},
+        lifetime:{kind:"until-duration",onEnd:"destroy"},
+        instancePolicy:"stack",
+      }],
+    },
+    {
       id:"move",
       invocation:"manual",
       operations:[{
@@ -70,7 +86,7 @@ function moduleJson(prefix:string) {
   };
 }
 
-async function run(prefix:string) {
+async function run(prefix:string,ruleEntryPoint="apply-cost-rule",property="movement.cost.multiplier") {
   const adapter=new MockAdapter();
   const pack=moduleJson(prefix);
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
@@ -86,11 +102,11 @@ async function run(prefix:string) {
   });
 
   const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
-  await adapter.resolveAction(action("apply-cost-rule"),["char.aelar"]);
+  await adapter.resolveAction(action(ruleEntryPoint),["char.aelar"]);
   const modified=await adapter.getSnapshot();
   assert.equal(modified.resolution?.stage,"complete",JSON.stringify(modified.resolution));
   assert.deepEqual(snapshotAdapterTurnRuntimeState(adapter,modified.scene)?.effects.at(-1)?.propertyModifier,{
-    property:"movement.cost.multiplier",operation:"set",value:{value:2},source:"definition",instancePolicy:"stack",
+    property,operation:"set",value:{value:2},source:"definition",instancePolicy:"stack",
   });
 
   await adapter.resolveAction(action("move"),["char.aelar"]);
@@ -109,4 +125,12 @@ test("unknown installed Common Play consumes a rules-derived movement cost Effec
 
 test("renaming the external movement-cost rule preserves production semantics",async()=>{
   assert.equal(await run("renamed-family-i-rules-cost"),10);
+});
+
+test("unknown installed Common Play consumes a drag/carry multiplier through production movement",async()=>{
+  assert.equal(await run("external-family-i-drag-carry","apply-drag-carry-rule","movement.drag-carry.multiplier"),10);
+});
+
+test("renaming the drag/carry rule preserves production movement semantics",async()=>{
+  assert.equal(await run("renamed-family-i-drag-carry","apply-drag-carry-rule","movement.drag-carry.multiplier"),10);
 });
