@@ -94,6 +94,7 @@ jobs:
         run: |
           npx tsx --test tests/domain/c9FamilyLStabilizationCommonPlay.test.ts tests/domain/lifeTransitions.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
+          npm run generate:content
           npx tsc --noEmit
       - name: Commit verified slice and retire workflow
         shell: bash
