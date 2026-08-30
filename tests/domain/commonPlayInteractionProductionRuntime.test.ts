@@ -133,7 +133,6 @@ test("unsupported interaction and economy payment shapes fail explicitly",()=>{
     ["kind","choice"],
     ["kind","adjudication"],
     ["responder","target"],
-    ["responder","actor-owner"],
     ["responder","target-owner"],
     ["responder","dm"],
     ["responder","host"],
@@ -143,7 +142,6 @@ test("unsupported interaction and economy payment shapes fail explicitly",()=>{
     ["input",{type:"text"}],
     ["input",{type:"targets"}],
     ["input",{type:"choice",selector:{from:"targets",min:1,max:1}}],
-    ["revalidate","if-revision-changed"],
     ["stalePolicy","restart"],
     ["idempotencyKey","external-key"],
   ];

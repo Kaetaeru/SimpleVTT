@@ -37,10 +37,11 @@ export interface CommonPlayAllocationDefinition {
 export interface CommonPlayConsentInteraction {
   id:string;
   kind:"consent";
-  responder:"actor";
+  responder:"actor"|"actor-owner";
   mode:"blocking";
   input:{type:"boolean"};
-  revalidate:"always";
+  revalidate:"always"|"if-revision-changed";
+  stalePolicy?:"reject";
 }
 
 export interface CommonPlayDamageDiceFormula {
@@ -197,7 +198,7 @@ const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","consumed","consum
 const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definitionId"]);
 const ITEM_PAYMENT_PREDICATE_KEYS=new Set(["op","left","right"]);
 const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","operations"]);
-const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate"]);
+const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate","stalePolicy"]);
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","where","min","max"]);
 const ALLOCATION_KEYS=new Set(["units","targets","minimumPerTarget","maximumPerTarget","totalMustMatch"]);
@@ -404,19 +405,16 @@ function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentIn
   const interaction=object(value,label);
   supportedKeys(interaction,INTERACTION_KEYS,label);
   if(interaction.kind!=="consent") throw new DomainEvaluationError(`${label}.kind must be consent for portable Common Play interaction`);
-  if(interaction.responder!=="actor") throw new DomainEvaluationError(`${label}.responder must be actor for portable Common Play interaction`);
+  if(interaction.responder!=="actor"&&interaction.responder!=="actor-owner") throw new DomainEvaluationError(`${label}.responder must be actor or actor-owner for portable Common Play interaction`);
   if(interaction.mode!=="blocking") throw new DomainEvaluationError(`${label}.mode must be blocking for portable Common Play interaction`);
   const input=object(interaction.input,`${label}.input`);
   supportedKeys(input,INTERACTION_INPUT_KEYS,`${label}.input`);
   if(input.type!=="boolean") throw new DomainEvaluationError(`${label}.input.type must be boolean for portable Common Play interaction`);
-  if(interaction.revalidate!=="always") throw new DomainEvaluationError(`${label}.revalidate must be always for portable Common Play interaction`);
+  if(interaction.revalidate!=="always"&&interaction.revalidate!=="if-revision-changed") throw new DomainEvaluationError(`${label}.revalidate must be always or if-revision-changed for portable Common Play interaction`);
+  if(interaction.stalePolicy!==undefined&&interaction.stalePolicy!=="reject") throw new DomainEvaluationError(`${label}.stalePolicy must be reject for portable Common Play interaction`);
   return {
-    id:nonEmptyString(interaction.id,`${label}.id`),
-    kind:"consent",
-    responder:"actor",
-    mode:"blocking",
-    input:{type:"boolean"},
-    revalidate:"always",
+    id:nonEmptyString(interaction.id,`${label}.id`),kind:"consent",responder:interaction.responder,mode:"blocking",input:{type:"boolean"},revalidate:interaction.revalidate,
+    ...(interaction.stalePolicy?{stalePolicy:"reject" as const}:{}),
   };
 }
 
