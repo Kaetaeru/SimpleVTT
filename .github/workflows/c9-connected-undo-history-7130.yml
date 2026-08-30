@@ -1,0 +1,54 @@
+name: C9 connected undo history repair
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-connected-undo-history-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Align connected Undo with authoritative runtime history
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/app/connectedActionRoutingAdapter.ts')
+          text = path.read_text()
+          old_import = 'import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";\n'
+          new_import = old_import + 'import { runtimeResolutionEventHistory } from "./runtimeResolutionEventHistory";\n'
+          if text.count(old_import) != 1:
+              raise SystemExit('expected manual movement import exactly once')
+          text = text.replace(old_import, new_import, 1)
+          old = '  const completed=app.resolution?.stage==="complete"?app.resolution:undefined;\n  const resolutionId=completed?.id;\n'
+          new = '  const completed=app.resolution?.stage==="complete"?app.resolution:undefined;\n  const history=runtimeResolutionEventHistory(this);\n  const resolutionId=history?.resolutionId??completed?.id;\n'
+          if text.count(old) != 1:
+              raise SystemExit('expected connected undo resolution lookup exactly once')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Verify connected actor artifact Undo
+        run: npx tsx --test tests/ui/connectedActorArtifactReconnectProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit repair and remove temporary workflow
+        run: |
+          rm .github/workflows/c9-connected-undo-history-7130.yml
+          git config user.name "ChatGPT C9 Connected Undo"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/app/connectedActionRoutingAdapter.ts .github/workflows/c9-connected-undo-history-7130.yml
+          git commit -m "fix(c9): align connected undo with runtime history"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
