@@ -1,0 +1,153 @@
+name: C9 Family X Item Payment Persistence 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-x-item-payment-persistence-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Add portable item-payment persistence proof
+        run: |
+          cat > tests/ui/c9FamilyXItemPaymentPersistence.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+
+          function packagePayload(prefix:string,definitionId:string) {
+            const moduleId=`${prefix}.module`;
+            const contentId=`${prefix}.content`;
+            const mechanicId=`${prefix}.mechanic`;
+            return {
+              moduleId,contentId,mechanicId,
+              json:JSON.stringify({
+                schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+                rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+                source:{document:"Family X Item Payment Probe",version:"1",license:"CC0",srdDerived:false},
+                dependencies:[],conflicts:[],capabilities:[],
+                content:[{
+                  id:contentId,category:"option",
+                  presentation:{defaultLocale:"en",originalName:"Portable Item Consumer",locales:{en:{name:"Portable Item Consumer"}}},
+                  mechanics:[{kind:"common-play",config:{
+                    schemaVersion:"0.2-draft",id:mechanicId,
+                    payments:[{
+                      kind:"item",selector:{from:"items",definitionId},quantity:{value:1},consumed:true,consumeAt:"commit",refundOnCancel:true,
+                    }],
+                    entryPoints:[{id:"activate",invocation:"manual",operations:[]}],
+                  }}],
+                }],
+              }),
+            };
+          }
+
+          async function restartedQuantity(store:MemoryCharacterLibraryStore,itemId:string) {
+            const restarted=new MockAdapter();
+            setCharacterLibraryStoreForTests(restarted,store);
+            const snapshot=await restarted.getSnapshot();
+            return snapshot.activeCharacter.items.find((entry)=>entry.id===itemId)?.quantity;
+          }
+
+          async function run(prefix:string) {
+            const characterStore=new MemoryCharacterLibraryStore();
+            const adapter=new MockAdapter();
+            setCharacterLibraryStoreForTests(adapter,characterStore);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+
+            let snapshot=await adapter.getSnapshot();
+            const characterId=snapshot.activeCharacter.id;
+            const items=snapshot.activeCharacter.items;
+            const item=items.find((candidate)=>candidate.quantity>0&&items.filter((entry)=>entry.definitionId===candidate.definitionId).length===1);
+            assert.ok(item,"fixture requires one positive-quantity item stack with a unique definitionId");
+            const before=item.quantity;
+            const pack=packagePayload(prefix,item.definitionId);
+
+            const preview=await adapter.previewContentImport(pack.json);
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor(characterId);
+
+            const actionId=installedCommonPlayActionId({
+              catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId:"activate",
+            });
+            await adapter.resolveAction(actionId,[characterId]);
+            snapshot=await adapter.getSnapshot();
+            assert.equal(snapshot.resolution?.stage,"complete");
+            assert.equal(snapshot.activeCharacter.items.find((entry)=>entry.id===item.id)?.quantity,before-1);
+            assert.equal(await restartedQuantity(characterStore,item.id),before-1);
+
+            await adapter.undoLastResolution();
+            snapshot=await adapter.getSnapshot();
+            assert.equal(snapshot.activeCharacter.items.find((entry)=>entry.id===item.id)?.quantity,before);
+            assert.equal(await restartedQuantity(characterStore,item.id),before);
+            return {delta:1,definitionId:item.definitionId};
+          }
+
+          test("unknown installed Common Play item payment persists through restart and Undo without named item dispatch",async()=>{
+            const first=await run("unknown-family-x-item-a");
+            const renamed=await run("completely-renamed-family-x-item-b");
+            assert.equal(first.delta,1);
+            assert.equal(renamed.delta,1);
+          });
+          EOF
+
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next(candidate for candidate in ledger['rows'] if candidate.get('family')=='X')
+          row['currentState']='Durable inventory authority exists; unknown installed Common Play item payments now consume a structurally selected item stack atomically through the shared Resolver and Character write-back with restart, Undo, and complete external identity rename proof. Generic item create/grant/copy, equipment/container ownership, transfer, item-owned actions/effects, and charge/recharge lifecycle remain incomplete.'
+          def add(field,value):
+            if value not in row[field]: row[field].append(value)
+          add('implementationEvidence','commonPlayOperationRuntime.ts generic item PaymentContract plus installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext project a definitionId-selected ItemInstance stack as an ephemeral Resolver resource without content-name dispatch')
+          add('productionEvidence','c9FamilyXItemPaymentPersistence.test.ts unknown installed Common Play consumes one selected durable item stack through the production action route and restores it through event-native Undo')
+          add('identityInvarianceEvidence','c9FamilyXItemPaymentPersistence.test.ts repeats the same durable item-consumption semantics after complete external module/content/mechanic identity rename')
+          add('persistenceEvidenceIfRelevant','c9FamilyXItemPaymentPersistence.test.ts fresh MockAdapter restart from the same CharacterLibrary store observes the consumed quantity, and a fresh restart after Undo observes the restored quantity')
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family X durable item-payment slice
+        run: |
+          node --import tsx --test tests/ui/c9FamilyXItemPaymentPersistence.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+          git diff --check
+      - name: Publish verified Family X evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/ui/c9FamilyXItemPaymentPersistence.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git rm -f .github/workflows/c9-family-x-item-payment-persistence-71304.yml
+          git commit -m "test(c9): prove portable item payment durability"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
