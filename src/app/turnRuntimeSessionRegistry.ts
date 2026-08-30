@@ -7,7 +7,7 @@ import {
 } from "./realTurnRuntimeService";
 import { resolveRuntimeProfileProperty } from "./realResolutionService";
 import { connectedStateFor } from "./connectedSessionState";
-import type { SceneVm } from "./contracts";
+import type { CharacterSheet, SceneVm } from "./contracts";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
 
 const sessions=new WeakMap<MockAdapter,TurnRuntimeSession>();
@@ -71,20 +71,40 @@ const PROFILE_SCENE_FIELDS=[
   ["initiative","initiative"],
 ] as const;
 
-function ensureProfilePropertyBases(session:TurnRuntimeSession,scene:SceneVm) {
+function activeCharacterFor(adapter:MockAdapter) {
+  return (adapter as unknown as {activeCharacter?:CharacterSheet}).activeCharacter;
+}
+
+function ensureProfilePropertyBases(adapter:MockAdapter,session:TurnRuntimeSession,scene:SceneVm) {
+  const activeCharacter=activeCharacterFor(adapter);
   for(const entity of scene.entities) {
     const runtime=session.state.combatants[entity.id];
-    if(!runtime||runtime.baseProperties) continue;
-    runtime.baseProperties={
+    if(!runtime) continue;
+    runtime.baseProperties??={
       "movement.walk":runtime.baseSpeed,
       "defense.ac":entity.ac,
       "initiative":entity.initiative,
     };
+    runtime.baseProperties["movement.walk"]=runtime.baseSpeed;
+    runtime.baseProperties["hp.current"]=runtime.life.hp.current;
+    runtime.baseProperties["hp.maximum"]=runtime.life.hp.maximum;
+    runtime.baseProperties["hp.temporary"]=runtime.life.hp.temporary;
+    if(activeCharacter?.id!==entity.id) continue;
+    Object.assign(runtime.baseProperties,{
+      "ability.str.score":activeCharacter.abilities.str,
+      "ability.dex.score":activeCharacter.abilities.dex,
+      "ability.con.score":activeCharacter.abilities.con,
+      "ability.int.score":activeCharacter.abilities.int,
+      "ability.wis.score":activeCharacter.abilities.wis,
+      "ability.cha.score":activeCharacter.abilities.cha,
+      "progression.character.level":activeCharacter.level,
+      "proficiency.bonus":activeCharacter.proficiencyBonus,
+    });
   }
 }
 
-function projectRuntimeProfileProperties(session:TurnRuntimeSession,scene:SceneVm) {
-  ensureProfilePropertyBases(session,scene);
+function projectRuntimeProfileProperties(adapter:MockAdapter,session:TurnRuntimeSession,scene:SceneVm) {
+  ensureProfilePropertyBases(adapter,session,scene);
   for(const entity of scene.entities) {
     const runtime=session.state.combatants[entity.id];
     if(!runtime?.baseProperties) continue;
@@ -156,10 +176,11 @@ export function ensureAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm)
 export function snapshotAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm):RulesRuntimeState|undefined {
   const session=sessions.get(adapter);
   if (!session) return undefined;
-  ensureProfilePropertyBases(session,scene);
+  ensureProfilePropertyBases(adapter,session,scene);
   synchronizeTurnRuntimeFromScene(session,scene);
+  ensureProfilePropertyBases(adapter,session,scene);
   projectTurnRuntimeToScene(session,scene);
-  projectRuntimeProfileProperties(session,scene);
+  projectRuntimeProfileProperties(adapter,session,scene);
   persist(adapter,session,scene);
   return cloneRuntimeState(session.state);
 }
@@ -176,7 +197,7 @@ export function commitAdapterTurnRuntimeState(
   if (nextState.revision!==expectedRevision+1) return false;
   session.state=cloneRuntimeState(nextState);
   projectTurnRuntimeToScene(session,scene);
-  projectRuntimeProfileProperties(session,scene);
+  projectRuntimeProfileProperties(adapter,session,scene);
   persist(adapter,session,scene);
   return true;
 }
