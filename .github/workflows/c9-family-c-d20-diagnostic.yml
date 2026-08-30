@@ -49,7 +49,7 @@ jobs:
             src/domain/commonPlayReactionDefinitionRuntime.ts \
             src/app/commonPlayInterceptorProductionRuntimeAdapter.ts \
             content/modules/dnd-srd-5.2.1.subclasses/module.json \
-            src/generated/builtinCatalog.generated.ts \
+            src/generated \
             tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
           git diff --cached --check
           git commit -m "feat(common-play): add structural d20 outcome selectors"
