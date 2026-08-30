@@ -102,11 +102,11 @@ function weaponRuntimeFact(character:CharacterSheet,attack:CharacterSheet["attac
   const item=character.items.find((candidate)=>candidate.grantedActionIds.includes(attack.id));
   const entry=item&&itemEntryById(item.definitionId);
   const definition=entry?.category==="weapon"?itemMechanic(entry,"weapon-definition") as WeaponDefinition|undefined:undefined;
-  if(!definition)return {rangeFeet:5};
+  if(!definition)return {rangeFeet:5,loading:false};
   const rangeFeet=(definition.properties??[]).map((property)=>property.match(/^(?:ammunition|thrown):(\d+)(?:\/\d+)?$/i)?.[1]).find(Boolean);
   const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);
   const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!definition.properties?.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";
-  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{})};
+  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{}),loading:definition.properties?.includes("loading")??false};
 }
 
 function wearingHeavyArmor(character:CharacterSheet) {
@@ -129,10 +129,11 @@ function weaponAttacksPerAction(character:CharacterSheet) {
 }
 
 function attackActions(character:CharacterSheet):ActionVm[] {
-  const attacksPerAction=weaponAttacksPerAction(character);
+  const baseAttacksPerAction=weaponAttacksPerAction(character);
   return character.attacks.map((attack,index)=>{
     const damage=parseDamage(attack.damage);
     const runtimeFact=weaponRuntimeFact(character,attack);
+    const attacksPerAction=runtimeFact.loading?1:baseAttacksPerAction;
     const id=attack.id?.startsWith("action.")?attack.id:`action.character-attack.${index}`;
     return {
       id,
@@ -150,7 +151,8 @@ function attackActions(character:CharacterSheet):ActionVm[] {
       attacksPerAction,
       runtimeAttack:{
         sourceKind:"weapon",
-        ...runtimeFact,
+        rangeFeet:runtimeFact.rangeFeet,
+        ...(runtimeFact.ability?{ability:runtimeFact.ability}:{}),
         diceSides:damage.sides,
         diceCount:damage.count,
         damageSource:`character:${character.id}:attack:${attack.name}`,
