@@ -8,6 +8,7 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { runtimeResolutionEventHistory } from "../../src/app/runtimeResolutionEventHistory";
 import { setSpatialRelation, type RuntimeCover } from "../../src/app/spatialRuntimeContracts";
 
 const TARGET_ID="combatant.goblin-a";
@@ -33,6 +34,7 @@ function packagePayload(identity:Identity) {
           targeting:{
             from:"targets",min:1,max:1,
             where:{op:"all",args:[
+              {op:"lte",left:{ref:"spatial.distance-feet"},right:{value:30}},
               {op:"eq",left:{ref:"spatial.within-reach"},right:{value:true}},
               {op:"eq",left:{ref:"spatial.total-cover"},right:{value:false}},
             ]},
@@ -45,9 +47,9 @@ function packagePayload(identity:Identity) {
   });
 }
 
-function setRelation(internal:{activeCharacter:CharacterSheet;scene:SceneVm},withinReach:boolean,cover:RuntimeCover) {
+function setRelation(internal:{activeCharacter:CharacterSheet;scene:SceneVm},distanceFeet:number,withinReach:boolean,cover:RuntimeCover) {
   setSpatialRelation(internal.scene,{
-    sourceId:internal.activeCharacter.id,targetId:TARGET_ID,distanceFeet:5,visible:true,cover,targetCanSeeAttacker:true,withinReach,
+    sourceId:internal.activeCharacter.id,targetId:TARGET_ID,distanceFeet,visible:true,cover,targetCanSeeAttacker:true,withinReach,
     provenance:"module:c9-family-j-spatial-attack",
   });
 }
@@ -63,30 +65,39 @@ async function exercise(identity:Identity) {
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
   const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
 
-  setRelation(internal,false,"none");
+  setRelation(internal,35,true,"none");
   let snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
   assert.equal(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
 
-  setRelation(internal,true,"total");
+  setRelation(internal,5,false,"none");
   snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
   assert.equal(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
 
-  setRelation(internal,true,"half");
+  setRelation(internal,5,true,"total");
+  snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
+  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
+
+  setRelation(internal,5,true,"half");
   await adapter.setQueuedD20(15);
   snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  assert.equal(snapshot.resolution?.rollTotal,17);
+  assert.equal(snapshot.resolution?.rollKind,"attack");
   assert.deepEqual(snapshot.resolution?.targetIds,[TARGET_ID]);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  const attack=runtimeResolutionEventHistory(adapter)?.events.find((event)=>event.kind==="attack.hit");
+  assert.ok(attack,JSON.stringify(runtimeResolutionEventHistory(adapter)));
+  assert.equal(attack.actorId,"char.aelar");
+  assert.equal(attack.targetId,TARGET_ID);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
 }
 
-test("unknown installed attack consumes authoritative reach and Total Cover facts under identity rename",async()=>{
+test("unknown installed attack consumes authoritative range, reach, and Total Cover facts under identity rename",async()=>{
   await exercise(ORIGINAL);
   await exercise(RENAMED);
 });
