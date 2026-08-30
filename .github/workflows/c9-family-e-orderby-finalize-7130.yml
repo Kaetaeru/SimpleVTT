@@ -1,0 +1,100 @@
+name: C9 Family E OrderBy Finalize 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-orderby-finalize-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Preserve shared selector ordering in portable Common Play
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          runtime=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=runtime.read_text(encoding='utf-8')
+          old='export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"|"orderBy"> {\n  from:"targets";\n  min:number;\n  max:number;\n}\n'
+          new='export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"> {\n  from:"targets";\n  min:number;\n  max:number;\n}\n'
+          if old in text:
+              text=text.replace(old,new,1)
+          elif new not in text:
+              raise SystemExit('unexpected CommonPlayTargetingSelector shape')
+          old='const TARGETING_KEYS=new Set(["from","where","min","max","area"]);'
+          new='const TARGETING_KEYS=new Set(["from","where","min","max","area","orderBy"]);'
+          if old in text:
+              text=text.replace(old,new,1)
+          elif new not in text:
+              raise SystemExit('unexpected TARGETING_KEYS shape')
+          old='  return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where}),...(parsed.area===undefined?{}:{area:parsed.area})};'
+          new='  return {...parsed,from:"targets",min:parsed.min,max:parsed.max};'
+          if old in text:
+              text=text.replace(old,new,1)
+          elif new not in text:
+              raise SystemExit('unexpected targeting parse projection')
+          runtime.write_text(text,encoding='utf-8')
+
+          adapter=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          app=adapter.read_text(encoding='utf-8')
+          duplicate='    if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;\n'
+          if duplicate in app:
+              app=app.replace(duplicate,'',1)
+          adapter.write_text(app,encoding='utf-8')
+          PY
+      - run: npm run generate:content
+      - name: Verify Family E shared selector slice
+        run: >-
+          node --import tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/domain/commonPlaySelectorRuntime.test.ts
+          tests/domain/commonPlayMaplessTargeting.test.ts
+          tests/ui/commonPlayRichSelectorProduction.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify Gate N boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified selector bridge and remove verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-orderby-finalize-7130.yml
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts
+          git diff --cached --check
+          git commit -m "feat(c9): preserve shared selector ordering"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              npm run generate:content
+              node --import tsx --test tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+              node scripts/check-v1-mechanism-coverage.mjs
+              node scripts/check-legacy-execution-boundary.mjs
+              npm exec tsc -- --noEmit
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
