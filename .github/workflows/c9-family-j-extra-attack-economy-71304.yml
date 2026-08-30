@@ -1,0 +1,118 @@
+name: C9 Family J Extra Attack Economy 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-extra-attack-economy-71304.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-j-extra-attack-economy-71304
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile latest branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - name: Expose structural Extra Attack economy through Common Play
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path=Path("src/domain/commonPlayOperationRuntime.ts")
+          text=path.read_text(encoding="utf-8")
+          replacements={
+            '''export type CommonPlayEconomyPayment={\n  kind:"economy";\n  bucket:TurnSlot;\n  amount:LiteralNumberExpression;\n  consumeAt:"commit";\n  refundOnCancel:true;\n};''':'''export type CommonPlayEconomyPayment={\n  kind:"economy";\n  bucket:TurnSlot;\n  amount:LiteralNumberExpression;\n  consumeAt:"commit";\n  refundOnCancel:true;\n  actionKind?:ActionUseKind;\n  attacksPerAction?:number;\n};''',
+            '''const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel"]);''':'''const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel","actionKind","attacksPerAction"]);''',
+            '''    if(payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true for portable Common Play Reaction payment`);\n    return {kind:"economy",bucket:payment.bucket,amount,consumeAt:"commit",refundOnCancel:true};''':'''    if(payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true for portable Common Play Reaction payment`);\n    const actionKind=payment.actionKind;\n    if(actionKind!==undefined&&actionKind!=="attack"&&actionKind!=="magic"&&actionKind!=="other") throw new DomainEvaluationError(`${label}.actionKind is unsupported`);\n    const attacksPerAction=payment.attacksPerAction;\n    if(attacksPerAction!==undefined&&(!Number.isInteger(attacksPerAction)||Number(attacksPerAction)<1)) throw new DomainEvaluationError(`${label}.attacksPerAction must be a positive integer`);\n    if(attacksPerAction!==undefined&&(payment.bucket!=="action"||actionKind!=="attack")) throw new DomainEvaluationError(`${label}.attacksPerAction requires bucket=action and actionKind=attack`);\n    return {\n      kind:"economy",bucket:payment.bucket,amount,consumeAt:"commit",refundOnCancel:true,\n      ...(actionKind===undefined?{}:{actionKind}),\n      ...(attacksPerAction===undefined?{}:{attacksPerAction:Number(attacksPerAction)}),\n    };''',
+            '''        bonusActionGranted:payment.bucket==="bonus-action"||undefined,actionKind:input.actionKind,\n''':'''        bonusActionGranted:payment.bucket==="bonus-action"||undefined,\n        actionKind:payment.actionKind??input.actionKind,\n        ...(payment.attacksPerAction===undefined?{}:{attacksPerAction:payment.attacksPerAction}),\n''',
+          }
+          for old,new in replacements.items():
+              if text.count(old)!=1:
+                  raise SystemExit(f"Common Play replacement count {text.count(old)} for {old[:80]!r}")
+              text=text.replace(old,new)
+          path.write_text(text,encoding="utf-8")
+
+          path=Path("schemas/common-play-contract.schema.json")
+          text=path.read_text(encoding="utf-8")
+          economy_marker='''            "kind": {\n              "const": "economy"\n            },'''
+          start=text.index(economy_marker)
+          end=text.index('''          },\n          "additionalProperties": false''',start)
+          section=text[start:end]
+          old='''            "refundOnCancel": {\n              "type": "boolean",\n              "default": true\n            },\n            "condition": {'''
+          new='''            "refundOnCancel": {\n              "type": "boolean",\n              "default": true\n            },\n            "actionKind": {\n              "enum": [\n                "attack",\n                "magic",\n                "other"\n              ]\n            },\n            "attacksPerAction": {\n              "type": "integer",\n              "minimum": 1\n            },\n            "condition": {'''
+          if section.count(old)!=1:
+              raise SystemExit(f"economy schema replacement count {section.count(old)}")
+          section=section.replace(old,new)
+          path.write_text(text[:start]+section+text[end:],encoding="utf-8")
+          PY
+      - name: Add Extra Attack economy contract regression
+        shell: bash
+        run: |
+          cat > tests/domain/c9FamilyJExtraAttackEconomy.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import { compileCommonPlayPayments, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";
+
+          const definition=(payment:Record<string,unknown>)=>parseCommonPlayOperationDefinition({
+            schemaVersion:"0.2-draft",id:"external.unknown.family-j-extra-attack",payments:[payment],
+            entryPoints:[{id:"replace-one-attack",invocation:"manual",operations:[]}],
+          });
+
+          test("portable economy payment lowers structural Attack action width into the shared Resolver",()=>{
+            const parsed=definition({kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true,actionKind:"attack",attacksPerAction:2});
+            assert.deepEqual(compileCommonPlayPayments(parsed.payments,{resolutionId:"resolution.family-j.extra-attack",actorId:"actor.external",entryPointId:"replace-one-attack",actionKind:"other"}),[{
+              id:"resolution.family-j.extra-attack:payment:0",kind:"use-economy",actorId:"actor.external",slot:"action",bonusActionGranted:undefined,actionKind:"attack",attacksPerAction:2,
+            }]);
+          });
+
+          test("portable replacement action can consume an existing Extra Attack without granting a new one",()=>{
+            const parsed=definition({kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true,actionKind:"attack"});
+            assert.deepEqual(compileCommonPlayPayments(parsed.payments,{resolutionId:"resolution.family-j.replace",actorId:"actor.external",entryPointId:"replace-one-attack",actionKind:"other"}),[{
+              id:"resolution.family-j.replace:payment:0",kind:"use-economy",actorId:"actor.external",slot:"action",bonusActionGranted:undefined,actionKind:"attack",
+            }]);
+          });
+
+          test("portable attack width rejects economy buckets and action kinds that cannot own Extra Attack",()=>{
+            assert.throws(()=>definition({kind:"economy",bucket:"bonus-action",amount:{value:1},consumeAt:"commit",refundOnCancel:true,actionKind:"attack",attacksPerAction:2}),/attacksPerAction requires bucket=action and actionKind=attack/);
+            assert.throws(()=>definition({kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true,actionKind:"other",attacksPerAction:2}),/attacksPerAction requires bucket=action and actionKind=attack/);
+          });
+          EOF
+      - name: Install and generate
+        run: npm install --no-audit --no-fund && npm run generate:content
+      - name: Verify Extra Attack economy contract
+        run: npx tsx --test tests/domain/c9FamilyJExtraAttackEconomy.test.ts tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJAttackPersistence.test.ts
+      - name: Verify V1 coverage checker
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Publish verified change
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-extra-attack-economy-71304.yml
+          git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json tests/domain/c9FamilyJExtraAttackEconomy.test.ts
+          git commit -m "feat(c9): expose portable extra attack economy"
+          for attempt in $(seq 1 8); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+          done
+          exit 1
