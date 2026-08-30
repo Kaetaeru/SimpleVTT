@@ -1,0 +1,214 @@
+name: C9 Family N Source Cleanup 71304
+
+on:
+  push:
+    paths:
+      - ".github/workflows/c9-family-n-source-cleanup-71304.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply minimal Family N source-cleanup extension
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              if old not in text:
+                  raise SystemExit(f"expected patch anchor not found in {path}: {old[:80]!r}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          path = "src/domain/commonPlayEffectRuntime.ts"
+          replace_once(
+              path,
+              'import type { DurationSpec, EffectInstance } from "./effects";',
+              'import type { DurationSpec, EffectInstance, EffectTermination } from "./effects";',
+          )
+          replace_once(
+              path,
+              '  lifetime:CommonPlayEffectLifetime;\n  instancePolicy?:"stack";',
+              '  lifetime:CommonPlayEffectLifetime;\n  termination?:EffectTermination;\n  instancePolicy?:"stack";',
+          )
+          replace_once(
+              path,
+              '  assertOnlyKeys(template,["id","artifactKind","duration","rules","lifetime","instancePolicy"],label);',
+              '  assertOnlyKeys(template,["id","artifactKind","duration","rules","lifetime","termination","instancePolicy"],label);',
+          )
+          replace_once(
+              path,
+              '  runtimeDuration(template.duration,`${label} duration`);\n  if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);',
+              '''  runtimeDuration(template.duration,`${label} duration`);\n  if(template.termination!==undefined) {\n    assertOnlyKeys(template.termination,["targetTakesDamage","targetBecomesIncapacitated","targetDies","sourceBecomesIncapacitated","sourceDies"],`${label} termination`);\n    const values=Object.values(template.termination);\n    if(!values.length||values.some((value)=>typeof value!=="boolean")||!values.some(Boolean)) {\n      throw new Error(`${label} termination requires at least one true boolean policy`);\n    }\n  }\n  if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);''',
+          )
+          replace_once(
+              path,
+              '      duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),\n      metadata:{',
+              '      duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),\n      ...(template.termination?{termination:{...template.termination}}:{}),\n      metadata:{',
+          )
+
+          schema_path = Path("schemas/common-play-contract.schema.json")
+          schema = json.loads(schema_path.read_text(encoding="utf-8"))
+          props = schema["$defs"]["artifactTemplate"]["properties"]
+          if "termination" in props:
+              raise SystemExit("artifactTemplate.termination already exists; verifier patch is stale")
+          props["termination"] = {
+              "type": "object",
+              "minProperties": 1,
+              "properties": {
+                  "targetTakesDamage": {"type": "boolean"},
+                  "targetBecomesIncapacitated": {"type": "boolean"},
+                  "targetDies": {"type": "boolean"},
+                  "sourceBecomesIncapacitated": {"type": "boolean"},
+                  "sourceDies": {"type": "boolean"},
+              },
+              "additionalProperties": False,
+          }
+          schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          test_path = Path("tests/ui/c9FamilyNEffectDurationProduction.test.ts")
+          test_text = test_path.read_text(encoding="utf-8")
+          marker = 'test("renamed external identities preserve portable effect suppression and pause-resume semantics",async()=>{\n  await exercisePortableSuppression("renamed-family-n-suppression");\n});\n'
+          if marker not in test_text:
+              raise SystemExit("Family N production test append anchor not found")
+          addition = r'''
+
+function sourceCleanupPackage(prefix:string) {
+  const moduleId=`${prefix}.module`;
+  const contentId=`${prefix}.content`;
+  const effectMechanicId=`${prefix}.dependent-effect`;
+  const sourceStateMechanicId=`${prefix}.source-state`;
+  const effectConfig={
+    schemaVersion:"0.2-draft",id:effectMechanicId,
+    entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"dependent",target:"actor"}]}],
+    artifactTemplates:[{
+      id:"dependent",artifactKind:"effect",duration:{kind:"durable"},
+      rules:[{id:"noop",event:"damage.taken",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],
+      lifetime:{kind:"until-duration",onEnd:"destroy"},
+      termination:{sourceBecomesIncapacitated:true,sourceDies:true},
+      instancePolicy:"stack",
+    }],
+  };
+  const sourceStateConfig={
+    schemaVersion:"0.2-draft",id:sourceStateMechanicId,
+    entryPoints:[{id:"drop-source",invocation:"manual",operations:[{kind:"damage.apply",amount:{value:999},damageType:"force",target:"actor"}]}],
+  };
+  return {moduleId,contentId,effectMechanicId,sourceStateMechanicId,json:JSON.stringify({
+    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+    source:{document:"Family N source cleanup probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Source Cleanup Probe",locales:{en:{name:"Source Cleanup Probe"}}},mechanics:[
+      {kind:"common-play",config:effectConfig},{kind:"common-play",config:sourceStateConfig},
+    ]}],
+  })};
+}
+
+function sourceCleanupAction(pack:ReturnType<typeof sourceCleanupPackage>,mechanicId:string,entryPointId:string) {
+  return installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId,entryPointId});
+}
+
+async function exercisePortableSourceCleanup(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=sourceCleanupPackage(prefix);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  let snapshot=await adapter.resolveAction(sourceCleanupAction(pack,pack.effectMechanicId,"activate"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  let effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.ok(effect,"portable dependent effect must materialize");
+  assert.deepEqual(effect.termination,{sourceBecomesIncapacitated:true,sourceDies:true});
+
+  snapshot=await adapter.resolveAction(sourceCleanupAction(pack,pack.sourceStateMechanicId,"drop-source"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId),false,"source incapacitation/death must remove its dependent portable effect in the same authoritative resolution");
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.ok(effect,"event-native Undo must restore the source-dependent effect");
+  assert.deepEqual(effect.termination,{sourceBecomesIncapacitated:true,sourceDies:true});
+}
+
+test("unknown installed Common Play removes a dependent effect when its source becomes incapacitated or dies and Undo restores it",async()=>{
+  await exercisePortableSourceCleanup("unknown-family-n-source-cleanup");
+});
+
+test("renamed external identities preserve source-dependent effect cleanup and Undo",async()=>{
+  await exercisePortableSourceCleanup("renamed-family-n-source-cleanup");
+});
+'''
+          test_path.write_text(test_text.replace(marker, marker + addition, 1), encoding="utf-8")
+
+          ledger_path = Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+          row = next(entry for entry in ledger["rows"] if entry["family"] == "N")
+          row["currentState"] = "Installed arbitrary-ID persistent effects execute through the shared Common Play/Resolver authority. Portable duration materialization, boundary expiry, automatic consume/retaliation, suppression/unsuppression with elapsed pause-resume, source-state dependent cleanup, connected replay/reconnect, persistence, and event-native Undo are proven under unknown and fully renamed external identities. Effect termination policy is structural Common Play authoring that lowers to the existing generic EffectTermination and Resolver lifecycle; named aura/form/mark adapters remain legacy content/projection migration debt recorded by the legacy inventory and are not supported portable execution fallbacks."
+          row["disposition"] = "IMPLEMENTED"
+          row["implementationEvidence"].extend([
+              "common-play-contract.schema.json artifactTemplates[].termination exposes target damage/incap/death and source incap/death structural lifecycle policy without content identity dispatch",
+              "commonPlayEffectRuntime.ts validates portable termination policy and carries it into the existing EffectTermination payload; resolutionHealthOps.ts and resolutionEffectOps.ts consume the generic source/target lifecycle through typed Effect StateChanges",
+          ])
+          row["productionEvidence"].append("c9FamilyNEffectDurationProduction.test.ts proves an unknown installed source-dependent effect is removed when its source becomes Incapacitated/dead in the authoritative damage resolution and event-native Undo restores it")
+          row["identityInvarianceEvidence"].append("c9FamilyNEffectDurationProduction.test.ts repeats source-dependent cleanup and Undo after complete external module/content/mechanic identity rename")
+          row["remainingNamedSeams"] = []
+          ledger_path.write_text(json.dumps(ledger, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+      - run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Family N portable lifecycle
+        run: >-
+          npx tsx --test
+          tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts
+          tests/domain/commonPlayEffectSuppressionRuntime.test.ts
+          tests/ui/c9FamilyNEffectDurationProduction.test.ts
+      - name: Verify build and repository boundaries
+        run: |
+          npm run build
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const ledger=JSON.parse(fs.readFileSync('docs/rules/v1-mechanism-coverage-ledger.json','utf8'));
+          const row=ledger.rows.find((entry)=>entry.family==='N');
+          if(row?.disposition!=='IMPLEMENTED') throw new Error('Family N must be IMPLEMENTED');
+          if(row.remainingNamedSeams.length) throw new Error('Family N remainingNamedSeams must be empty');
+          for(const field of ['implementationEvidence','productionEvidence','identityInvarianceEvidence','connectedEvidenceIfRelevant','persistenceEvidenceIfRelevant']) {
+            if(!row[field]?.length) throw new Error(`Family N ${field} must be non-empty`);
+          }
+          NODE
+          git diff --check
+      - name: Publish verified Family N slice
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-n-source-cleanup-71304.yml
+          git add src/domain/commonPlayEffectRuntime.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyNEffectDurationProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "feat(c9): complete portable effect source cleanup"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
