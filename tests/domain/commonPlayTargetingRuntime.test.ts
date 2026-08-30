@@ -93,6 +93,23 @@ test("multi-target Common Play rejects a singular target effect until an explici
   assert.throws(()=>parseManualCommonPlayOperationDefinition(authored),/explicit per-target effect contract/);
 });
 
+test("bounded Common Play selector permits an authored zero minimum through the shared targeting Resolver",()=>{
+  const authored=structuredClone(AUTHORED);
+  authored.entryPoints[0].targeting={from:"targets",min:0,max:1};
+  authored.entryPoints[0].operations=[];
+  const definition=parseManualCommonPlayOperationDefinition(authored);
+  assert.deepEqual(definition.entryPoints[0].targeting,{from:"targets",min:0,max:1});
+  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition,{
+    resolutionId:"external-zero-min-targeting",
+    actorId:"hero",
+    entryPointId:"mend-other",
+    targetingTargets:[],
+  });
+  assert.equal(committed.status,"committed");
+  if(committed.status!=="committed") return;
+  assert.deepEqual((committed.results["external-zero-min-targeting:targeting"] as {targets:Array<{targetId:string}>}).targets,[]);
+});
+
 test("unsupported Common Play selector shapes reject explicitly",()=>{
   const invalid:Array<[Record<string,unknown>,RegExp]>=[
     [{from:"actors",min:1,max:1},/from must be targets/],
@@ -100,7 +117,7 @@ test("unsupported Common Play selector shapes reject explicitly",()=>{
     [{from:"targets",where:{value:true},min:1,max:1},/unsupported fields: where/],
     [{from:"targets",orderBy:"distance",min:1,max:1},/unsupported fields: orderBy/],
     [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],
-    [{from:"targets",min:0,max:1},/min must be a positive integer/],
+    [{from:"targets",min:-1,max:1},/min must be a non-negative integer/],
     [{from:"targets",min:2,max:1},/max must be an integer >= min/],
   ];
   for(const [selector,message] of invalid) {

@@ -294,7 +294,7 @@ function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingS
   const selector=object(value,label);
   supportedKeys(selector,TARGETING_KEYS,label);
   if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);
-  if(!Number.isInteger(selector.min)||Number(selector.min)<1) throw new DomainEvaluationError(`${label}.min must be a positive integer for portable Common Play targeting`);
+  if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);
   if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);
   return {from:"targets",min:Number(selector.min),max:Number(selector.max)};
 }
