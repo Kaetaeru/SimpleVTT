@@ -144,30 +144,29 @@ When work stops before Gate N is finished, update this document with:
 
 ## Current checkpoint — 2026-08-31
 
-- Verified code/ledger HEAD before this handoff commit: `00bca5995a9cf1119d3d173e8ff50b287f3d05ef`.
-- Branch: `agent/codex-c9-gate-n-finalization` (local branch was five commits ahead of its remote at this checkpoint).
-- Family N is `IMPLEMENTED`: the first repository-wide build failure was a stale pre-Family-L maximum-HP rejection test. The already-landed generic dependent cleanup, identity rename, duration, suppression, persistence, connected replay, and Undo evidence all passed.
-- Family X is `IMPLEMENTED`: production Character/DM inventory paths now share `commonPlayItemInventoryProjection.ts` and `resolveCommonPlayInventoryTransaction`; arbitrary owned items project installed Common Play entry points; item payment, charge/recharge, durable restart, Party Stash transfer/compensation, connected replay/retry/reconnect, and Undo evidence passed.
-- Current ledger: 36 total, 25 `IMPLEMENTED`, 11 `INCOMPLETE`.
-- Current first incomplete family: Y `attunement-magic-item`.
-- Worktree was clean at `00bca599` before this documentation update.
+- Verified code/ledger HEAD before this handoff commit: `857b8c1e795513e73789f5b6bae397a07809646b` (tree `8330d05f88a006a6bbb9fcfc8f924cb99330d862`).
+- Branch: `agent/codex-c9-gate-n-finalization` (local branch is seven commits ahead of remote `8dbc130f2e6f138b3d3ab758413373a60c50dd6e`).
+- Families N, X, and Y are `IMPLEMENTED` on this lineage.
+- Family Y production Character UI now routes completed-Short-Rest attunement through `resolveCommonPlayAttunement`; prerequisite, maximum, exclusive owner, benefit activation, cursed release, rule-driven loss, charges/destruction, source policy, durable runtime, restart, and Host reconstruction evidence pass under renamed item instance identities.
+- Current ledger: 36 total, 26 `IMPLEMENTED`, 10 `INCOMPLETE`.
+- Current first incomplete family: Z `spellcasting-meta`.
+- Worktree was clean at `857b8c1e` before this documentation update.
 
 ### Validation completed on the checkpoint
 
-- Family N required focused suite: PASS (12/12).
-- Family X focused domain/production/connected/persistence suite: PASS (39/39).
-- `npm run build`: PASS on `00bca599` (content generation, typecheck, repository build suites, Vite production build).
-- `node scripts/check-v1-mechanism-coverage.mjs`: PASS, 25 implemented / 11 incomplete.
+- Family Y focused domain/production/connected/persistence suite: PASS (18/18).
+- `npm run build`: PASS on `857b8c1e` (content generation, typecheck, repository build suites, Vite production build).
+- `node scripts/check-v1-mechanism-coverage.mjs`: PASS, 26 implemented / 10 incomplete.
 - `node scripts/check-legacy-execution-boundary.mjs`: PASS, 84 classified imports / 18 guarded named adapter paths / 0 unclear.
 - `git diff --check`: PASS.
-- `node scripts/check-v1-mechanism-coverage.mjs --gate-n`: expected FAIL only for Y, Z, AA, AC, AD, AE, AF, AG, AH, AI, AJ.
+- `node scripts/check-v1-mechanism-coverage.mjs --gate-n`: expected FAIL only for Z, AA, AC, AD, AE, AF, AG, AH, AI, AJ.
 
 ### First unresolved blocker
 
-Family Y already has a generic normative domain resolver for Short-Rest attunement, prerequisites, capacity, exclusive ownership, benefit activation, curses, rule-driven loss, charge lifecycle, and identity rename. Production still exposes `toggleItemAttunement` as an immediate boolean mutation, which bypasses the Short Rest process and generic authority. Do not promote Y from the domain test alone.
+Family Z has typed component and casting-activity domain primitives, but production `productionSpellRuntimeAdapter.ts` still supplies `componentsSatisfied:true`, uses `spellMechanicById` as its legacy definition source, and does not join consumed material inventory into the authoritative spell transaction. The older `phase09AuthoritativeSpellcastingAdapter.ts` and `spellcastingRuntimeAdapter.ts` remain compatibility layers; do not add another spell router.
 
 ### Next Exact Action
 
-Replace the production instant attunement mutation with one durable app boundary that invokes `resolveCommonPlayAttunement` from an explicit completed-Short-Rest command, preserves source/runtime item state through restart, and produces connected replay/retry/reconnect/Undo evidence under an arbitrary renamed item identity. Then promote Family Y only if its complete focused verification passes.
+Consolidate Family Z at the existing `productionSpellRuntimeAdapter.ts` boundary: feed typed `SpellComponentContext` into `resolveSpellCast` from structural Character/inventory facts, make consumed material payment part of the same authoritative durable transaction, and add one unknown/renamed declarative spell-meta production regression covering rejection, consumption, restart, connected replay/retry/reconnect, and Undo. Do not preserve the `componentsSatisfied` compatibility input or add spell/action-ID dispatch.
 
 Push note: local GitHub push from this Codex host is blocked because no non-interactive GitHub credential is available; `git -c http.sslBackend=openssl push origin agent/codex-c9-gate-n-finalization` reaches GitHub but cannot read a username. No self-publishing workflow was added.
