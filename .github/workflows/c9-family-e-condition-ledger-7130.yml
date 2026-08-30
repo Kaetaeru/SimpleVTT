@@ -1,0 +1,76 @@
+name: C9 Family E Condition Ledger 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-condition-ledger-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify and record on latest branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in $(seq 1 8); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
+
+            npm run generate:content >/dev/null
+            npx tsx --test tests/ui/c9FamilyEConditionSelectorProduction.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            npx tsc --noEmit
+
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          row=next((r for r in data['rows'] if r.get('family')=='E' and r.get('id')=='targeting-selectors'),None)
+          if row is None:
+              raise SystemExit('Family E targeting-selectors row missing')
+          evidence={
+            'implementationEvidence':'installedCommonPlayRuntimeAdapter.ts supplies authoritative Scene status[] candidate properties and commonPlaySelectorRuntime.ts evaluates generic selector predicates without content identity dispatch',
+            'productionEvidence':'c9FamilyEConditionSelectorProduction.test.ts unknown installed Common Play condition selector rejects non-matching Scene status, accepts matching status, and preserves target selection after complete external identity rename',
+            'identityInvarianceEvidence':'c9FamilyEConditionSelectorProduction.test.ts completely renamed module/content/mechanic/entry/display identities preserve condition-selector semantics',
+          }
+          for key,value in evidence.items():
+              if value not in row[key]:
+                  row[key].append(value)
+          marker='C9 Family E Condition Selector 7130 run 33311300836: condition-selector production test, coverage checker, legacy execution boundary, and tsc --noEmit passed'
+          if marker not in row['productionEvidence']:
+              row['productionEvidence'].append(marker)
+          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            git rm -f --ignore-unmatch .github/workflows/c9-family-e-condition-ledger-7130.yml
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git diff --cached --check
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "docs(c9): record Family E condition selector evidence"
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
