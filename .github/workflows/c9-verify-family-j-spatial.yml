@@ -1,4 +1,4 @@
-name: C9 Verify Family J Spatial
+name: C9 Diagnose Family J Spatial
 
 on:
   push:
@@ -6,35 +6,28 @@ on:
     paths:
       - ".github/workflows/c9-verify-family-j-spatial.yml"
 
-permissions:
-  contents: write
-
 jobs:
-  verify:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/c9-gate-n-coverage-reconciliation
-          fetch-depth: 0
+          ref: 11db010a68de94c724aba9c48d07c5ebd10ca59f
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Generate content dependencies
-        run: npm run generate:content
-      - name: Verify Family J portable spatial attacks
-        run: npx tsx --test tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJSpatialAttackProduction.test.ts
-      - name: Typecheck
-        run: npx tsc --noEmit
-      - name: Remove one-shot workflow
-        if: always()
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Expose spatial rejection detail
         shell: bash
         run: |
-          rm .github/workflows/c9-verify-family-j-spatial.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/c9-verify-family-j-spatial.yml
-          git commit -m "chore(c9): remove spatial verification workflow"
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/ui/c9FamilyJSpatialAttackProduction.test.ts')
+          s=p.read_text()
+          old='assert.equal(snapshot.resolution?.rollKind,"attack");'
+          new='assert.equal(snapshot.resolution?.rollKind,"attack",JSON.stringify(snapshot.resolution));'
+          if s.count(old)!=1: raise SystemExit(f'expected assertion once, found {s.count(old)}')
+          p.write_text(s.replace(old,new))
+          PY
+          npx tsx --test tests/ui/c9FamilyJSpatialAttackProduction.test.ts
