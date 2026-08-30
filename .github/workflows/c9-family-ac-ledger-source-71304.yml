@@ -1,0 +1,62 @@
+name: C9 Family AC Ledger Source 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-ac-ledger-source-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Record verified AC source evidence
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text())
+          row=next(item for item in data['families'] if item['family']=='AC')
+          marker='turnRuntimeInitiativeCountService.ts exposes a session-owned set-initiative-count command through the shared Resolver and returns authoritative ResolutionEvents'
+          if marker not in row['implementationEvidence']:
+              row['implementationEvidence'].append(marker)
+          test_marker='tests/domain/c9FamilyACInitiativeCountSource.test.ts proves valid initiative-count changes emit one authoritative turn-clock event and invalid counts do not mutate session state'
+          if test_marker not in row['implementationEvidence']:
+              row['implementationEvidence'].append(test_marker)
+          sentence=' The session owner now has an authoritative initiative-count event source through turnRuntimeInitiativeCountService.ts; special-action refresh/order dispatch and connected off-turn interaction remain incomplete.'
+          if 'turnRuntimeInitiativeCountService.ts' not in row['currentState']:
+              row['currentState'] += sentence
+          row['remainingNamedSeams']=[entry for entry in row['remainingNamedSeams'] if not entry.startswith('authoritative initiative-count event source')]
+          refresh='special-action pool refresh/order semantics at authoritative timing windows'
+          if refresh not in row['remainingNamedSeams']:
+              row['remainingNamedSeams'].insert(0,refresh)
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish ledger evidence and retire recorder
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-ac-ledger-source-71304.yml
+          git commit -m "docs(c9): record initiative count source evidence"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
