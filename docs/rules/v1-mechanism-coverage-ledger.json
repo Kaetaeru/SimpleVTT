@@ -1699,7 +1699,7 @@
         "inventory persistence adapters",
         "phase09RealAtomicItemAdapter.ts"
       ],
-      "currentState": "Durable inventory authority exists; unknown installed Common Play item payments now consume a structurally selected item stack atomically through the shared Resolver and Character write-back with restart, Undo, and complete external identity rename proof. Generic item create/grant/copy, equipment/container ownership, transfer, item-owned actions/effects, and charge/recharge lifecycle remain incomplete.",
+      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity payment now executes through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. Generic create/grant/copy, broader item mutation/equipment ownership, item-owned action/effect/spellcasting, transfer, and connected lifecycle remain incomplete.",
       "requiredSemantics": [
         "create/grant/copy",
         "quantity",
@@ -1717,20 +1717,31 @@
       "transactionDomain": "Character inventory transaction with session orchestration",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "commonPlayOperationRuntime.ts generic item PaymentContract plus installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext project a definitionId-selected ItemInstance stack as an ephemeral Resolver resource without content-name dispatch"
+        "commonPlayOperationRuntime.ts CommonPlayItemPayment selector/quantity commit contract lowers portable item payment through canonical payment operations",
+        "installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext resolves exactly one durable ItemInstance by portable definitionId and seeds an ephemeral phase09:item:<id>:quantity Resolver resource without content identity dispatch",
+        "realEventApplyService.ts projects canonical phase09:item pseudo-resource state changes back into ItemInstance quantity/charges",
+        "resolutionCharacterDurableProjection.ts applies the same item pseudo-resource state changes to durable Character inventory for forward and inverse write-back",
+        "characterLibraryPersistence.ts stores ItemInstance quantity/equipment/attunement/charge runtime state separately from source item references"
       ],
       "productionEvidence": [
-        "c9FamilyXItemPaymentPersistence.test.ts unknown installed Common Play consumes one selected durable item stack through the production action route and restores it through event-native Undo"
+        "8b83ad86bd43fc35a512611bcd2d6b7f54de716a test(c9): prove portable item payment persistence",
+        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts unknown installed Common Play consumes one matching inventory stack through production resolveAction, durable write-back, fresh restart, and event-native Undo",
+        "C9 Family X Portable Item Payment 71304 run 33317994606: Family X production test, V1 coverage checker, and tsc --noEmit all pass; the run later fails only on concurrent legacy-boundary baseline drift outside Family X"
       ],
       "identityInvarianceEvidence": [
-        "c9FamilyXItemPaymentPersistence.test.ts repeats the same durable item-consumption semantics after complete external module/content/mechanic identity rename"
+        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts repeats the full consume/persist/restart/Undo proof after complete external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [
-        "c9FamilyXItemPaymentPersistence.test.ts fresh MockAdapter restart from the same CharacterLibrary store observes the consumed quantity, and a fresh restart after Undo observes the restored quantity"
+        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts MemoryCharacterLibraryStore preserves consumed quantity into a fresh adapter and preserves restored quantity after event-native Undo",
+        "characterLibraryPersistence.ts projects item quantity/equipped/wielded/attuned/charge current into CharacterRuntimeDurableSnapshotV1"
       ],
       "remainingNamedSeams": [
-        "named item/spell activation"
+        "generic create/grant/copy and destroy/update item lifecycle beyond quantity payment",
+        "generic charges/recharge, equip/unequip/wield, containers, and owner transfer",
+        "generic item-owned actions/effects/spellcasting activation",
+        "connected item lifecycle replay/reconnect/retry acceptance",
+        "named item/spell activation compatibility paths"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
