@@ -28,7 +28,7 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text())
-          row=next(item for item in data['families'] if item['family']=='AC')
+          row=next(item for item in data['rows'] if item['family']=='AC')
           marker='turnRuntimeInitiativeCountService.ts exposes a session-owned set-initiative-count command through the shared Resolver and returns authoritative ResolutionEvents'
           if marker not in row['implementationEvidence']:
               row['implementationEvidence'].append(marker)
@@ -49,7 +49,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git stash push -m c9-ac-ledger-evidence
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git stash pop
           git add docs/rules/v1-mechanism-coverage-ledger.json
           git rm .github/workflows/c9-family-ac-ledger-source-71304.yml
           git commit -m "docs(c9): record initiative count source evidence"
