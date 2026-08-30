@@ -18,7 +18,7 @@ jobs:
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
           fetch-depth: 0
-      - name: Reconcile stale selector assertions and retrigger bridge
+      - name: Reconcile current selector assertion and retrigger bridge
         shell: bash
         run: |
           set -euo pipefail
@@ -27,24 +27,19 @@ jobs:
 
           test=Path('tests/domain/commonPlayTargetingRuntime.test.ts')
           text=test.read_text(encoding='utf-8')
-          replacements=[
-            ('/relation filter rejected: hero/','/targeting selector rejected: manual selection contains an ineligible target/'),
-            ('[{from:"targets",orderBy:"distance",min:1,max:1},/unsupported fields: orderBy/],','[{from:"targets",orderBy:"",min:1,max:1},/orderBy must be a non-empty string/],'),
-            ('assert.match(missing.error,/pre-resolved target/);','assert.match(missing.error,/targeting selector rejected: selector requires 1-1 result\\(s\\)/);'),
-          ]
-          for old,new in replacements:
-              if text.count(old)!=1:
-                  raise SystemExit(f'stale selector assertion changed unexpectedly: {old}')
-              text=text.replace(old,new,1)
-          test.write_text(text,encoding='utf-8')
+          old='    [{from:"targets",area:{kind:"instant"},min:1,max:1},/shape is unsupported/],\n'
+          new='    [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],\n'
+          if text.count(old)!=1:
+              raise SystemExit(f'expected one stale area assertion, found {text.count(old)}')
+          test.write_text(text.replace(old,new,1),encoding='utf-8')
 
           helper=Path('.github/workflows/c9-family-e-rich-predicate-bridge-7130.yml')
           helper_text=helper.read_text(encoding='utf-8')
-          marker='# Rerun V2 goal 71304a3e: execute the prepared verified slice.\n'
-          replacement=marker+'# Stale selector assertions reconciled for generic selector ownership.\n'
+          marker='# Re-run on the current branch after targeting import regression expectations were reconciled.\n'
+          replacement=marker+'# Area rejection expectation reconciled with the current operation boundary.\n'
           if replacement not in helper_text:
               if helper_text.count(marker)!=1:
-                  raise SystemExit('rich predicate helper marker changed unexpectedly')
+                  raise SystemExit('rich predicate helper retrigger marker changed unexpectedly')
               helper.write_text(helper_text.replace(marker,replacement,1),encoding='utf-8')
           PY
           git config user.name "github-actions[bot]"
@@ -52,7 +47,7 @@ jobs:
           git rm .github/workflows/c9-family-e-rich-predicate-stale-tests-7130.yml
           git add tests/domain/commonPlayTargetingRuntime.test.ts .github/workflows/c9-family-e-rich-predicate-bridge-7130.yml
           git diff --cached --check
-          git commit -m "test(c9): align rich selector assertions"
+          git commit -m "test(c9): align current rich selector rejection"
           for attempt in $(seq 1 10); do
             git fetch origin agent/c9-gate-n-coverage-reconciliation
             if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
