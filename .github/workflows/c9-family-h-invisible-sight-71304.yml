@@ -25,7 +25,7 @@ jobs:
       - name: Reconcile branch
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
-      - run: npm run generate:builtin-catalog
+      - run: npm run generate:content
       - name: Patch Family H production visibility
         shell: bash
         run: |
