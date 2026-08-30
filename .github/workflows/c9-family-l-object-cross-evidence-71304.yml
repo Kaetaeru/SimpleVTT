@@ -23,6 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Verify existing portable object damage production proof
         run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts
       - name: Connect verified object damage evidence to Family L and retire this workflow
