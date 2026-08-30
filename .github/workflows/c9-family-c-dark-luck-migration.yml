@@ -21,6 +21,7 @@ jobs:
         run: |
           python3 .github/c9-family-c-dark-luck-migrate.py
           python3 .github/c9-family-c-dark-luck-fix.py
+          python3 .github/c9-family-c-dark-luck-timing.py
 
       - name: Assert named Dark Luck follow-up is gone
         shell: bash
@@ -66,6 +67,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/c9-family-c-dark-luck-migrate.py .github/c9-family-c-dark-luck-fix.py .github/workflows/c9-family-c-dark-luck-migration.yml
+          git rm .github/c9-family-c-dark-luck-migrate.py .github/c9-family-c-dark-luck-fix.py .github/c9-family-c-dark-luck-timing.py .github/workflows/c9-family-c-dark-luck-migration.yml
           git commit -m "ci(c9): remove Dark Luck migration helpers"
           git push
