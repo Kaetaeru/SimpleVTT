@@ -338,6 +338,22 @@ function factSubjectId(candidate:PassiveReactionCandidate,pending:PendingResolut
   return undefined;
 }
 
+function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>) {
+  if(relation.light===undefined||relation.obscurement===undefined)return undefined;
+  return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{
+    distanceFeet:relation.distanceFeet,
+    light:relation.light==="darkness"?"dark":relation.light,
+    obscurement:relation.obscurement,
+    lineOfSight:relation.visible,
+    lineOfEffect:relation.cover!=="total",
+    targetInvisible:relation.targetInvisible??false,
+    targetHidden:false,
+    targetAudible:relation.targetAudible??false,
+    observerCanHear:relation.observerCanHear??false,
+    sharedGroundContact:relation.sharedGroundContact??false,
+  });
+}
+
 function interceptorFactProvider(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution,runtime:RulesRuntimeState):CommonPlayFactProvider {
   return {
     id:"simplevtt.authoritative-spatial",
@@ -358,24 +374,16 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
       if(query.fact==="spatial.within-reach"&&relation.withinReach!==undefined)return {status:"answered",value:relation.withinReach};
       if(query.fact==="spatial.total-cover")return {status:"answered",value:relation.cover==="total"};
       if(query.fact==="sense.can-see"){
-        if(relation.light===undefined||relation.obscurement===undefined)return {status:"answered",value:relation.visible};
-        const composed=resolveCommonPlaySenses([{kind:"normal-sight"}],{
-          distanceFeet:relation.distanceFeet,
-          light:relation.light==="darkness"?"dark":relation.light,
-          obscurement:relation.obscurement,
-          lineOfSight:relation.visible,
-          lineOfEffect:relation.cover!=="total",
-          targetInvisible:false,
-          targetHidden:false,
-          targetAudible:false,
-          observerCanHear:false,
-          sharedGroundContact:false,
-        });
-        return {status:"answered",value:composed.canSee};
+        const composed=composedRelationSenses(relation);
+        return {status:"answered",value:composed?.canSee??relation.visible};
       }
       if(query.fact==="sense.light"&&relation.light!==undefined)return {status:"answered",value:relation.light};
       if(query.fact==="sense.obscurement"&&relation.obscurement!==undefined)return {status:"answered",value:relation.obscurement};
-      if(query.fact==="sense.detected"&&relation.detected!==undefined)return {status:"answered",value:relation.detected};
+      if(query.fact==="sense.detected"){
+        if(relation.detected!==undefined)return {status:"answered",value:relation.detected};
+        const composed=composedRelationSenses(relation);
+        if(composed)return {status:"answered",value:composed.detected};
+      }
       return {status:"unknown"};
     },
   };

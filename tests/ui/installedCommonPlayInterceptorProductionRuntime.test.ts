@@ -603,3 +603,29 @@ test("unknown portable add-die and reroll converge through connected duplicate, 
   await connectedPortableDiceCase("add-die");
   await connectedPortableDiceCase("reroll");
 });
+
+
+test("portable production special sight composes provider-authored senses under external identity rename",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.special-sight-renamed",contentId:"item.special-sight-renamed",mechanicId:"mechanic.special-sight-renamed",interceptorId:"interceptor.special-sight-renamed",interactionId:"interaction.special-sight-renamed",displayName:"Renamed Special Sight"};
+  const scenarios=[
+    {label:"darkvision in darkness",light:"darkness" as const,obscurement:"none" as const,targetInvisible:false,sense:{kind:"darkvision" as const,rangeFeet:60}},
+    {label:"blindsight through heavy obscurement and invisibility",light:"dim" as const,obscurement:"heavy" as const,targetInvisible:true,sense:{kind:"blindsight" as const,rangeFeet:60}},
+    {label:"truesight through darkness and invisibility",light:"darkness" as const,obscurement:"none" as const,targetInvisible:true,sense:{kind:"truesight" as const,rangeFeet:120}},
+  ];
+  for(const identity of [ORIGINAL,renamed]){
+    for(const scenario of scenarios){
+      const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:scenario.light,obscurement:scenario.obscurement});
+      const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+      setSpatialRelation(internal.scene,{
+        sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+        light:scenario.light,obscurement:scenario.obscurement,detected:true,targetInvisible:scenario.targetInvisible,observerSenses:[scenario.sense],
+        provenance:`module:test-special-sight:${scenario.sense.kind}`,
+      });
+      seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+      let snapshot=await openAbilityCheckInterrupt(adapter);
+      assert.equal(snapshot.resolution?.stage,"interrupt",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+      snapshot=await adapter.respondToInterrupt(false);
+      assert.equal(snapshot.resolution?.stage,"complete",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+    }
+  }
+});

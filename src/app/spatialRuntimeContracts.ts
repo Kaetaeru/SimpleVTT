@@ -1,4 +1,5 @@
 import type { SceneVm } from "./contracts";
+import type { CommonPlaySense } from "../domain/commonPlaySenseRuntime";
 
 export type RuntimeCover = "none"|"half"|"three-quarters"|"total";
 export type RuntimeLight = "bright"|"dim"|"darkness";
@@ -11,6 +12,12 @@ export interface SpatialRelationVm {
   visible:boolean;
   cover:RuntimeCover;
   targetCanSeeAttacker:boolean;
+  /** Provider-authored observer senses; Core only composes their rules and never invents them. */
+  observerSenses?:CommonPlaySense[];
+  targetInvisible?:boolean;
+  targetAudible?:boolean;
+  observerCanHear?:boolean;
+  sharedGroundContact?:boolean;
   /** Provider-authored reach eligibility; Core must not infer this from distance. */
   withinReach?:boolean;
   light?:RuntimeLight;
