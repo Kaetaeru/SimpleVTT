@@ -6,7 +6,7 @@ import { expireExtendableEffectsAtClock } from "./extendableEffectLifecycle";
 import { recoverResources } from "./resources";
 import { expireRuntimeArtifactsAtClock } from "./runtimeArtifact";
 import { economyStateChanges } from "./stateChange";
-import { artifactStateChange, combatantStateChange, effectStateChange, turnClockStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, combatantStateChange, effectStateChange, resourceStateChange, turnClockStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
@@ -74,6 +74,7 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
     reaction:availability.reaction,
   };
 
+  const resourcesBefore=actor.resources.map((resource)=>structuredClone(resource));
   const recovered = recoverResources(actor.resources, "turnStart");
   actor.resources = recovered.next;
   const provenance:ProvenanceRecord[] = [
@@ -83,6 +84,12 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
     { source:"turn:start", status:"applied", reason:`turn started for ${operation.actorId}` },
   ];
   const changes:RuntimeStateChange[] = [turnClockStateChange(clockBefore,ctx.state.clock,provenance),...economyStateChanges(operation.actorId, before, actor.economy, provenance)];
+  for(const resourceBefore of resourcesBefore) {
+    const resourceAfter=actor.resources.find((resource)=>resource.id===resourceBefore.id);
+    if(resourceAfter&&resourceAfter.current!==resourceBefore.current) {
+      changes.push(resourceStateChange(operation.actorId,resourceBefore.id,resourceBefore.current,resourceAfter.current,provenance));
+    }
+  }
   changes.push(...artifactExpiry.changes);
   expiry.expired.forEach((effect) => {
     changes.push(effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined));
@@ -90,7 +97,7 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
   const result = {
     round:operation.round,
     actorId:operation.actorId,
-    expiredEffectIds:expiry.expired.map((effect) => effect.id),
+    expiredEffectIds:expiry.expired.map((effect)=>effect.id),
     expiredArtifactIds:artifactExpiry.expiry.expired.map((artifact)=>artifact.id),
   };
   return {
@@ -120,7 +127,7 @@ export function executeEndTurn(ctx:ResolutionExecutionContext, operation:EndTurn
   const result = {
     round:operation.round,
     actorId:operation.actorId,
-    expiredEffectIds:expiry.expired.map((effect) => effect.id),
+    expiredEffectIds:expiry.expired.map((effect)=>effect.id),
     expiredArtifactIds:artifactExpiry.expiry.expired.map((artifact)=>artifact.id),
   };
   return {
@@ -146,7 +153,7 @@ export function executeAdvanceTime(ctx:ResolutionExecutionContext, operation:Adv
   changes.push(...artifacts.changes);
   const result = {
     elapsedSeconds:operation.elapsedSeconds,
-    expiredEffectIds:effectExpiry.expired.map((effect) => effect.id),
+    expiredEffectIds:effectExpiry.expired.map((effect)=>effect.id),
     expiredArtifactIds:artifacts.expiry.expired.map((artifact)=>artifact.id),
   };
   return {
