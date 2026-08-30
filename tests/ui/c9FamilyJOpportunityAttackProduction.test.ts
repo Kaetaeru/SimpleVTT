@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/phase09ManualMovementReactionAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import type { ActionVm, SceneVm } from "../../src/app/contracts";
 
