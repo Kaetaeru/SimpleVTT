@@ -210,7 +210,7 @@ test("the production Fighter 5 to 6 level-up persists source revision and reload
   assert.equal(committed.persistence?.storageRevision,1);
   const record = (await latestDocument(store)).characters.find((entry) => entry.characterId === "char.aelar")!;
   assert.equal(record.sourceRevision,2);
-  assert.equal(record.runtimeRevision,1);
+  assert.equal(record.runtimeRevision,2);
 
   const reader = new MockAdapter();
   setCharacterLibraryStoreForTests(reader,store);
@@ -219,5 +219,5 @@ test("the production Fighter 5 to 6 level-up persists source revision and reload
   assert.equal(restored.activeCharacter.abilities.str,20);
   assert.equal(restored.activeCharacter.maxHp,51);
   assert.equal(restored.activeCharacter.sourceRevision,2);
-  assert.equal(restored.activeCharacter.runtimeRevision,1);
+  assert.equal(restored.activeCharacter.runtimeRevision,2);
 });
