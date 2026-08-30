@@ -1,0 +1,40 @@
+name: C9 Verify Family J Spatial
+
+on:
+  push:
+    branches: ["agent/c9-gate-n-coverage-reconciliation"]
+    paths:
+      - ".github/workflows/c9-verify-family-j-spatial.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Family J portable spatial attacks
+        run: npx tsx --test tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJSpatialAttackProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Remove one-shot workflow
+        if: always()
+        shell: bash
+        run: |
+          rm .github/workflows/c9-verify-family-j-spatial.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c9-verify-family-j-spatial.yml
+          git commit -m "chore(c9): remove spatial verification workflow"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
