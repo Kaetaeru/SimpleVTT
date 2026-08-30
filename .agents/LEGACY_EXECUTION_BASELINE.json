@@ -268,7 +268,7 @@
       "classification": "GENERIC_ENGINE"
     },
     {
-      "module": "./unarmedControlRuntimeAdapter",
+      "module": "./structuralSaveConditionRuntimeAdapter",
       "classification": "GENERIC_ENGINE"
     },
     {
