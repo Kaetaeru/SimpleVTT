@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun on reconciled zero-INCOMPLETE head after concentration evidence
+# final verifier rerun on latest reconciled zero-INCOMPLETE head
 
 on:
   push:
