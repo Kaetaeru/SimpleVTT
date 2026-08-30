@@ -139,6 +139,24 @@ test("rules-derived movement cost applies without content-specific dispatch",()=
   assert.equal(compiled.operation.distanceTraveledFeet,5);
 });
 
+test("rules-derived drag/carry composes with movement cost without content-specific dispatch",()=>{
+  const compiled=compileCommonPlayMovement({
+    id:"move-drag-carry",
+    definition:{...movement,distance:{value:5}},
+    properties:{
+      "movement.walk":30,
+      "movement.cost.multiplier":2,
+      "movement.drag-carry.multiplier":2,
+    },
+    answer:authorityAnswer,
+  });
+  assert.equal(compiled.status,"compiled");
+  if(compiled.status!=="compiled")return;
+  assert.equal(compiled.operation.kind,"move");
+  assert.equal(compiled.operation.distanceFeet,20);
+  assert.equal(compiled.operation.distanceTraveledFeet,5);
+});
+
 test("rules-derived alternate speed caps regular movement structurally",()=>{
   const compiled=compileCommonPlayMovement({
     id:"move-climb",
